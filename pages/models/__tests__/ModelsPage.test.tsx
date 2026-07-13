@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import i18n from "@code-proxy/i18n";
 import { invalidateConfiguredModelAvailability } from "@features/model-availability";
 import { ModelsPage } from "@pages/models/ModelsPage";
+import { clearModelsPageSnapshots } from "@pages/models/modelsUtils";
 import { ThemeProvider } from "@code-proxy/ui";
 import { ToastProvider } from "@code-proxy/ui";
 
@@ -12,6 +13,8 @@ const mocks = vi.hoisted(() => ({
   apiPost: vi.fn(),
   apiPut: vi.fn(),
   apiDelete: vi.fn(),
+  apiKeyEntriesList: vi.fn(),
+  fetch: vi.fn(),
 }));
 
 vi.mock("@code-proxy/api-client", () => ({
@@ -21,6 +24,11 @@ vi.mock("@code-proxy/api-client", () => ({
     put: mocks.apiPut,
     delete: mocks.apiDelete,
   },
+  apiKeyEntriesApi: {
+    list: () => mocks.apiKeyEntriesList(),
+  },
+  detectApiBaseFromLocation: () => "http://localhost:8317",
+  normalizeApiBase: (base: string) => String(base || "http://localhost:8317").replace(/\/+$/, ""),
   authFilesApi: {
     list: () => mocks.apiGet("/auth-files"),
     getModelsForAuthFile: async (name: string) => {
@@ -124,7 +132,27 @@ describe("ModelsPage", () => {
     mocks.apiPost.mockReset();
     mocks.apiPut.mockReset();
     mocks.apiDelete.mockReset();
+    mocks.apiKeyEntriesList.mockReset();
+    mocks.fetch.mockReset();
+    mocks.apiKeyEntriesList.mockResolvedValue([
+      {
+        key: "sk-test-unrestricted",
+        name: "test-key",
+        disabled: false,
+        "allowed-channels": [],
+      },
+    ]);
+    mocks.fetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: async () =>
+        JSON.stringify({
+          choices: [{ message: { content: "Sunny in Los Angeles." } }],
+        }),
+    });
+    vi.stubGlobal("fetch", mocks.fetch);
     invalidateConfiguredModelAvailability();
+    clearModelsPageSnapshots();
     mocks.apiGet.mockImplementation((path: string) => {
       if (path === "/models/configured-availability") {
         return Promise.resolve({
@@ -138,6 +166,14 @@ describe("ModelsPage", () => {
               input_modalities: ["text"],
               output_modalities: ["image"],
               supports_vision: false,
+              sources: [
+                {
+                  label: "openai · Primary OpenAI",
+                  provider: "openai",
+                  channel: "Primary OpenAI",
+                  client_id: "openai-primary",
+                },
+              ],
               pricing: {
                 mode: "call",
                 price_per_call: 0.04,
@@ -151,6 +187,14 @@ describe("ModelsPage", () => {
               input_modalities: ["text", "image"],
               output_modalities: ["text"],
               supports_vision: true,
+              sources: [
+                {
+                  label: "qwen · Qwen Cloud",
+                  provider: "qwen",
+                  channel: "Qwen Cloud",
+                  client_id: "qwen-cloud",
+                },
+              ],
               pricing: {
                 mode: "token",
                 input_price_per_million: 1,
@@ -334,6 +378,66 @@ describe("ModelsPage", () => {
     expect(screen.queryByLabelText("Select gpt-image-2")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Delete gpt-image-2" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Delete selected/ })).not.toBeInTheDocument();
+  });
+
+  test("shows enabled/disabled status badges and sticky action icons", async () => {
+    renderPage();
+
+    const modelCell = await screen.findByText("gpt-image-2");
+    const row = modelCell.closest("tr");
+    expect(row).not.toBeNull();
+    expect(within(row!).getByText(/^Enabled$/i)).toBeInTheDocument();
+    expect(within(row!).queryByText(/^Priced$/i)).not.toBeInTheDocument();
+    expect(within(row!).getByRole("button", { name: "Click to disable" })).toBeInTheDocument();
+    expect(within(row!).getByRole("button", { name: "Test gpt-image-2" })).toBeInTheDocument();
+    expect(within(row!).getByRole("button", { name: "Edit gpt-image-2" })).toBeInTheDocument();
+  });
+
+  test("toggles model enabled state from the power action", async () => {
+    renderPage();
+    expect(await screen.findByText("gpt-image-2")).toBeInTheDocument();
+
+    const disableButtons = screen.getAllByRole("button", { name: "Click to disable" });
+    await userEvent.click(disableButtons[0]!);
+
+    await waitFor(() => {
+      expect(mocks.apiPut).toHaveBeenCalledWith(
+        "/model-configs/gpt-image-2",
+        expect.objectContaining({
+          id: "gpt-image-2",
+          enabled: false,
+        }),
+      );
+    });
+  });
+
+  test("opens the model test modal with default prompt and channel options", async () => {
+    renderPage();
+    expect(await screen.findByText("qwen3.5-plus")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Test qwen3.5-plus" }));
+
+    const dialog = await screen.findByRole("dialog", { name: /test model/i });
+    expect(within(dialog).getByLabelText(/test prompt/i)).toHaveValue(
+      "How is the weather in Los Angeles today?",
+    );
+    expect(within(dialog).getByText(/Qwen Cloud/i)).toBeInTheDocument();
+
+    await userEvent.click(within(dialog).getByRole("button", { name: /run test/i }));
+
+    await waitFor(() => {
+      expect(mocks.apiKeyEntriesList).toHaveBeenCalled();
+      expect(mocks.fetch).toHaveBeenCalledWith(
+        "http://localhost:8317/v1/chat/completions",
+        expect.objectContaining({
+          method: "POST",
+          headers: expect.objectContaining({
+            Authorization: "Bearer sk-test-unrestricted",
+          }),
+        }),
+      );
+    });
+    expect(await within(dialog).findByText("Sunny in Los Angeles.")).toBeInTheDocument();
   });
 
   test("filters current models by auth-file model owner group mapping", async () => {
@@ -1156,5 +1260,148 @@ describe("ModelsPage", () => {
         }),
       );
     });
+  });
+
+  test("soft-refreshes the active table without clearing rows or blocking the UI", async () => {
+    // Hold the release callback on an object so TS does not narrow the outer binding to never.
+    const deferred: { release: (() => void) | null } = { release: null };
+    let activeConfigCalls = 0;
+    const sampleConfig = {
+      data: [
+        {
+          id: "gpt-image-2",
+          owned_by: "openai",
+          description: "Image generation model billed per invocation",
+          enabled: true,
+          pricing: { mode: "call" as const, price_per_call: 0.04 },
+        },
+      ],
+    };
+
+    mocks.apiGet.mockImplementation((path: string) => {
+      if (path === "/models/configured-availability") {
+        return Promise.resolve({
+          scoped: true,
+          data: [
+            {
+              id: "gpt-image-2",
+              owned_by: "openai",
+              description: "Image generation model billed per invocation",
+              enabled: true,
+              pricing: { mode: "call", price_per_call: 0.04 },
+            },
+          ],
+        });
+      }
+      if (path === "/model-configs?scope=active" || path === "/model-configs") {
+        activeConfigCalls += 1;
+        if (activeConfigCalls === 1) {
+          return Promise.resolve(sampleConfig);
+        }
+        return new Promise<typeof sampleConfig>((resolve) => {
+          deferred.release = () => resolve(sampleConfig);
+        });
+      }
+      if (path === "/model-owner-presets") {
+        return Promise.resolve({ data: ownerPresetItems });
+      }
+      if (path.startsWith("/usage/logs")) {
+        return Promise.resolve({ stats: { total_cost: 12.34 } });
+      }
+      return Promise.resolve({});
+    });
+
+    renderPage();
+    expect(await screen.findByText("gpt-image-2")).toBeInTheDocument();
+
+    const refreshButton = screen.getByRole("button", { name: /refresh/i });
+    await userEvent.click(refreshButton);
+
+    // Soft refresh must keep existing rows painted (no skeleton wipe).
+    expect(screen.getByText("gpt-image-2")).toBeInTheDocument();
+    expect(refreshButton).toBeDisabled();
+
+    deferred.release?.();
+    await waitFor(() => expect(refreshButton).not.toBeDisabled());
+    expect(screen.getByText("gpt-image-2")).toBeInTheDocument();
+  });
+
+  test("repaints the active tab from session cache without a blocking skeleton", async () => {
+    const { unmount } = renderPage();
+    expect(await screen.findByText("gpt-image-2")).toBeInTheDocument();
+    unmount();
+
+    const deferred: { release: (() => void) | null } = { release: null };
+    const sampleConfig = {
+      data: [
+        {
+          id: "gpt-image-2",
+          owned_by: "openai",
+          description: "Image generation model billed per invocation",
+          enabled: true,
+          pricing: { mode: "call" as const, price_per_call: 0.04 },
+        },
+      ],
+    };
+    mocks.apiGet.mockImplementation((path: string) => {
+      if (path === "/models/configured-availability") {
+        return Promise.resolve({
+          scoped: true,
+          data: [
+            {
+              id: "gpt-image-2",
+              owned_by: "openai",
+              description: "Image generation model billed per invocation",
+              enabled: true,
+              pricing: { mode: "call", price_per_call: 0.04 },
+            },
+          ],
+        });
+      }
+      if (path === "/model-configs?scope=active" || path === "/model-configs") {
+        return new Promise<typeof sampleConfig>((resolve) => {
+          deferred.release = () => resolve(sampleConfig);
+        });
+      }
+      if (path === "/model-owner-presets") {
+        return Promise.resolve({ data: ownerPresetItems });
+      }
+      if (path.startsWith("/usage/logs")) {
+        return Promise.resolve({ stats: { total_cost: 12.34 } });
+      }
+      return Promise.resolve({});
+    });
+
+    renderPage();
+    // Session snapshot should paint immediately on remount.
+    expect(screen.getByText("gpt-image-2")).toBeInTheDocument();
+    expect(screen.queryByRole("status", { name: /loading/i })).not.toBeInTheDocument();
+
+    deferred.release?.();
+    await waitFor(() => expect(screen.getByText("gpt-image-2")).toBeInTheDocument());
+  });
+
+  test("does not re-fetch usage totals on every tab switch after the first load", async () => {
+    renderPage();
+    expect(await screen.findByText("gpt-image-2")).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(mocks.apiGet.mock.calls.some(([path]) => String(path).startsWith("/usage/logs"))).toBe(
+        true,
+      );
+    });
+    const usageCallsAfterActive = mocks.apiGet.mock.calls.filter(([path]) =>
+      String(path).startsWith("/usage/logs"),
+    ).length;
+
+    await userEvent.click(screen.getByRole("tab", { name: /model library/i }));
+    await screen.findByTestId("model-library-card");
+    await userEvent.click(screen.getByRole("tab", { name: /active models/i }));
+    expect(await screen.findByText("gpt-image-2")).toBeInTheDocument();
+
+    const usageCallsAfterTabSwitch = mocks.apiGet.mock.calls.filter(([path]) =>
+      String(path).startsWith("/usage/logs"),
+    ).length;
+    expect(usageCallsAfterTabSwitch).toBe(usageCallsAfterActive);
   });
 });

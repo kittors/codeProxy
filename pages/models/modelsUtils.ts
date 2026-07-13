@@ -23,6 +23,7 @@ import {
   normalizeModelConfigMetadataRows,
 } from "@features/model-availability";
 import { apiClient } from "@code-proxy/api-client";
+import { getActiveCacheTenantId } from "@code-proxy/domain";
 
 export const emptyForm: ModelFormState = {
   originalId: null,
@@ -143,8 +144,9 @@ function availabilityItemToModel(item: ModelAvailabilityItem): ModelItem {
     id: item.id,
     owned_by: item.owned_by ?? "",
     description: item.description ?? "",
-    enabled: true,
+    enabled: item.enabled !== false,
     source: item.source ?? "configured",
+    ...(item.sources?.length ? { sources: item.sources } : {}),
     pricing: item.pricing ?? emptyModelPricing(),
     inputModalities: item.inputModalities ?? [],
     outputModalities: item.outputModalities ?? [],
@@ -157,9 +159,23 @@ export function mergeConfiguredModelAvailability(
   availability: ConfiguredModelAvailability | null,
   pathItems: ModelPathAvailabilityItem[] = [],
 ): ModelItem[] {
-  const visible = availability?.scoped
-    ? filterByConfiguredModelAvailability(data, availability)
-    : [...data];
+  const availabilityById = new Map(
+    (availability?.items ?? []).map((item) => [item.id.toLowerCase(), item] as const),
+  );
+
+  // Prefer config-row fields, but keep runtime channel sources from availability.
+  const attachSources = (model: ModelItem): ModelItem => {
+    const fromAvailability = availabilityById.get(model.id.toLowerCase());
+    if (!fromAvailability?.sources?.length) return model;
+    return { ...model, sources: fromAvailability.sources };
+  };
+
+  const visible = (
+    availability?.scoped
+      ? filterByConfiguredModelAvailability(data, availability)
+      : [...data]
+  ).map(attachSources);
+
   const seen = new Set(visible.map((m) => m.id.toLowerCase()));
   for (const item of availability?.items ?? []) {
     const key = item.id.toLowerCase();
@@ -180,6 +196,25 @@ export function mergeConfiguredModelAvailability(
     seen.add(key);
   }
   return visible.sort((a, b) => a.id.localeCompare(b.id));
+}
+
+/** Default prompt used by the models catalog "Test" action. */
+export const DEFAULT_MODEL_TEST_PROMPT = "How is the weather in Los Angeles today?";
+
+export function formatModelSourceLabel(source: {
+  label?: string;
+  channel?: string;
+  provider?: string;
+  clientId?: string;
+}): string {
+  const label = String(source.label ?? "").trim();
+  if (label) return label;
+  const channel = String(source.channel ?? "").trim();
+  const provider = String(source.provider ?? "").trim();
+  if (channel && provider && !channel.toLowerCase().includes(provider.toLowerCase())) {
+    return `${provider} · ${channel}`;
+  }
+  return channel || provider || String(source.clientId ?? "").trim() || "-";
 }
 
 export function toFormState(model: ModelItem): ModelFormState {
@@ -394,4 +429,71 @@ export function formatSyncTimestamp(value: string, emptyLabel: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleString();
+}
+
+/** Session-scoped page snapshot so remounts paint immediately (SWR). */
+export type ModelsPageSnapshot = {
+  models: ModelItem[];
+  ownerPresets: ModelOwnerPreset[];
+  totalCost: number;
+  hasTotalCost: boolean;
+};
+
+const modelsPageSnapshots = new Map<string, ModelsPageSnapshot>();
+
+const modelsPageSnapshotKey = (scope: ModelScope, tenantId = getActiveCacheTenantId()): string =>
+  `${tenantId}\0${scope}`;
+
+export function getModelsPageSnapshot(scope: ModelScope): ModelsPageSnapshot | null {
+  return modelsPageSnapshots.get(modelsPageSnapshotKey(scope)) ?? null;
+}
+
+export function setModelsPageSnapshot(
+  scope: ModelScope,
+  snapshot: ModelsPageSnapshot,
+  tenantId = getActiveCacheTenantId(),
+): void {
+  modelsPageSnapshots.set(modelsPageSnapshotKey(scope, tenantId), {
+    models: snapshot.models,
+    ownerPresets: snapshot.ownerPresets,
+    totalCost: snapshot.totalCost,
+    hasTotalCost: snapshot.hasTotalCost,
+  });
+}
+
+export function patchModelsPageSnapshot(
+  scope: ModelScope,
+  patch: Partial<ModelsPageSnapshot>,
+  tenantId = getActiveCacheTenantId(),
+): void {
+  const key = modelsPageSnapshotKey(scope, tenantId);
+  const current = modelsPageSnapshots.get(key);
+  if (!current) return;
+  modelsPageSnapshots.set(key, {
+    ...current,
+    ...patch,
+  });
+}
+
+/** Test / logout helper — clears all scopes for the active tenant (or all when omitted). */
+export function clearModelsPageSnapshots(tenantId?: string): void {
+  if (tenantId === undefined) {
+    modelsPageSnapshots.clear();
+    return;
+  }
+  const prefix = `${tenantId}\0`;
+  for (const key of Array.from(modelsPageSnapshots.keys())) {
+    if (key.startsWith(prefix)) modelsPageSnapshots.delete(key);
+  }
+}
+
+export async function fetchModelsPageTotalCost(): Promise<number> {
+  try {
+    const usageData = await apiClient.get<{ stats?: { total_cost?: number } }>(
+      "/usage/logs?days=9999&size=1",
+    );
+    return usageData?.stats?.total_cost ?? 0;
+  } catch {
+    return 0;
+  }
 }

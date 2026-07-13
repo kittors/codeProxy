@@ -1,11 +1,15 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Check, Edit3, Trash2 } from "lucide-react";
-import { Button, Checkbox, OverflowTooltip, type DataTableColumn } from "@code-proxy/ui";
+import { Check, Edit3, FlaskConical, Power, Trash2 } from "lucide-react";
+import { Checkbox, HoverTooltip, OverflowTooltip, type DataTableColumn } from "@code-proxy/ui";
 import { ModelCapabilityBadges } from "../components/ModelCapabilityBadges";
 import { ModelVendorIcon as VendorIcon } from "../components/ModelVendorIcon";
-import { formatPrice, hasModelPricingData as hasPricing } from "../modelsUtils";
+import { formatPrice } from "../modelsUtils";
 import type { ModelItem } from "../types";
+
+const stickyActionsHeaderClass =
+  "text-center md:sticky md:z-40 md:bg-slate-100 md:dark:bg-neutral-800";
+const stickyActionsCellClass = "md:sticky md:z-30 md:bg-white md:dark:bg-neutral-950";
 
 interface UseModelColumnsOptions {
   canDeleteModels: boolean;
@@ -17,6 +21,9 @@ interface UseModelColumnsOptions {
   onSelectVisibleModels: (checked: boolean) => void;
   onEditModel: (modelId: string) => void;
   onDeleteModel: (model: ModelItem) => void;
+  onToggleEnabled?: (model: ModelItem) => void;
+  onTestModel?: (model: ModelItem) => void;
+  togglingModelId?: string | null;
 }
 
 export function useModelColumns({
@@ -29,6 +36,9 @@ export function useModelColumns({
   onSelectVisibleModels,
   onEditModel,
   onDeleteModel,
+  onToggleEnabled,
+  onTestModel,
+  togglingModelId = null,
 }: UseModelColumnsOptions): DataTableColumn<ModelItem>[] {
   const { t } = useTranslation();
 
@@ -112,58 +122,95 @@ export function useModelColumns({
       {
         key: "status",
         label: t("models_page.col_status"),
-        width: "w-32",
+        width: "w-28",
         headerClassName: "text-center",
         cellClassName: "text-center",
-        render: (row) => {
-          const priced = hasPricing(row);
-          return (
-            <span
-              className={[
-                "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-2xs font-semibold",
-                row.enabled && priced
-                  ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300"
-                  : "bg-slate-100 text-slate-500 dark:bg-neutral-800 dark:text-white/40",
-              ].join(" ")}
-            >
-              {row.enabled && priced ? <Check size={10} /> : null}
-              {row.enabled
-                ? priced
-                  ? t("models_page.priced")
-                  : t("models_page.not_priced")
-                : t("models_page.disabled")}
-            </span>
-          );
-        },
+        render: (row) => (
+          <span
+            className={[
+              "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-2xs font-semibold",
+              row.enabled
+                ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300"
+                : "bg-slate-100 text-slate-500 dark:bg-neutral-800 dark:text-white/40",
+            ].join(" ")}
+          >
+            {row.enabled ? <Check size={10} /> : null}
+            {row.enabled ? t("models_page.enabled") : t("models_page.disabled")}
+          </span>
+        ),
       },
       {
         key: "actions",
         label: t("models_page.col_actions"),
-        width: "w-24",
-        render: (row) => (
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="xs"
-              onClick={() => onEditModel(row.id)}
-              aria-label={t("models_page.edit_model_aria", { model: row.id })}
-              title={t("models_page.edit_model_aria", { model: row.id })}
-            >
-              <Edit3 size={14} />
-            </Button>
-            {canDeleteModels ? (
-              <Button
-                variant="ghost"
-                size="xs"
-                onClick={() => onDeleteModel(row)}
-                aria-label={t("models_page.delete_model_aria", { model: row.id })}
-                title={t("models_page.delete_model_aria", { model: row.id })}
-              >
-                <Trash2 size={14} />
-              </Button>
-            ) : null}
-          </div>
-        ),
+        width: onToggleEnabled || onTestModel ? "w-[168px] min-w-[168px]" : "w-24",
+        lockOrder: "end",
+        headerClassName: stickyActionsHeaderClass,
+        cellClassName: stickyActionsCellClass,
+        render: (row) => {
+          const toggleLabel = row.enabled
+            ? t("models_page.click_disable")
+            : t("models_page.click_enable");
+          const testLabel = t("models_page.test_model_aria", { model: row.id });
+          const editLabel = t("models_page.edit_model_aria", { model: row.id });
+          const deleteLabel = t("models_page.delete_model_aria", { model: row.id });
+          const isToggling = togglingModelId === row.id;
+
+          return (
+            <div className="flex items-center justify-center gap-1.5">
+              {onToggleEnabled ? (
+                <HoverTooltip content={toggleLabel}>
+                  <button
+                    type="button"
+                    onClick={() => onToggleEnabled(row)}
+                    disabled={isToggling}
+                    className={`rounded-lg p-1.5 transition-colors ${
+                      row.enabled
+                        ? "text-emerald-500 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-900/20"
+                        : "text-slate-400 hover:bg-red-50 hover:text-red-500 dark:text-white/30 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+                    } ${isToggling ? "opacity-50" : ""}`}
+                    aria-label={toggleLabel}
+                  >
+                    <Power size={15} />
+                  </button>
+                </HoverTooltip>
+              ) : null}
+              {onTestModel ? (
+                <HoverTooltip content={testLabel}>
+                  <button
+                    type="button"
+                    onClick={() => onTestModel(row)}
+                    className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-sky-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-sky-400"
+                    aria-label={testLabel}
+                  >
+                    <FlaskConical size={15} />
+                  </button>
+                </HoverTooltip>
+              ) : null}
+              <HoverTooltip content={editLabel}>
+                <button
+                  type="button"
+                  onClick={() => onEditModel(row.id)}
+                  className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-indigo-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-indigo-400"
+                  aria-label={editLabel}
+                >
+                  <Edit3 size={15} />
+                </button>
+              </HoverTooltip>
+              {canDeleteModels ? (
+                <HoverTooltip content={deleteLabel}>
+                  <button
+                    type="button"
+                    onClick={() => onDeleteModel(row)}
+                    className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-rose-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-rose-400"
+                    aria-label={deleteLabel}
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </HoverTooltip>
+              ) : null}
+            </div>
+          );
+        },
       },
     ],
     [
@@ -173,9 +220,12 @@ export function useModelColumns({
       onEditModel,
       onSelectModel,
       onSelectVisibleModels,
+      onTestModel,
+      onToggleEnabled,
       selectedModelIds,
       someVisibleModelsSelected,
       t,
+      togglingModelId,
       visibleModelCount,
     ],
   );
