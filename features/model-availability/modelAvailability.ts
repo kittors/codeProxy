@@ -1008,10 +1008,13 @@ export { invalidateConfiguredModelAvailability };
 
 export const loadConfiguredModelAvailability = async (options?: {
   allowedChannelGroups?: string[];
+  /** Channel-group editor: list every channel-servable model, not only AllowedModels. */
+  ignoreGroupAllowedModels?: boolean;
 }): Promise<ConfiguredModelAvailability> => {
   const validGroups = (options?.allowedChannelGroups ?? [])
     .map((g) => String(g ?? "").trim())
     .filter(Boolean);
+  const ignoreGroupAllowedModels = Boolean(options?.ignoreGroupAllowedModels);
   const loadFallback = async () =>
     loadConfiguredModelAvailabilityFallback(
       await loadAuthGroupOwnerMappingMap(),
@@ -1019,7 +1022,10 @@ export const loadConfiguredModelAvailability = async (options?: {
   const tenantId = tenantCacheKey();
 
   if (validGroups.length > 0) {
-    const cacheKey = validGroups.join(",");
+    // Separate cache keys so editor (ignore) and plaza (enforce) never share.
+    const cacheKey = ignoreGroupAllowedModels
+      ? `${validGroups.join(",")}|ignore_allowed`
+      : validGroups.join(",");
     const now = Date.now();
     const cacheVersion = getConfiguredAvailabilityCacheVersion();
     let tenantGroupCache = groupAvailabilityByTenant.get(tenantId);
@@ -1037,8 +1043,13 @@ export const loadConfiguredModelAvailability = async (options?: {
     }
     const promise = (async (): Promise<ConfiguredModelAvailability> => {
       try {
+        const params = new URLSearchParams();
+        params.set("allowed_channel_groups", validGroups.join(","));
+        if (ignoreGroupAllowedModels) {
+          params.set("ignore_group_allowed_models", "1");
+        }
         const result = await loadConfiguredAvailabilityEndpoint(
-          `/models/configured-availability?allowed_channel_groups=${encodeURIComponent(cacheKey)}`,
+          `/models/configured-availability?${params.toString()}`,
         );
         if (!result) return loadFallback();
         const current = groupAvailabilityByTenant.get(tenantId) ?? new Map();
@@ -1054,6 +1065,50 @@ export const loadConfiguredModelAvailability = async (options?: {
       }
     })();
     tenantGroupCache.set(cacheKey, {
+      expiresAt: now + GROUP_AVAILABILITY_TTL_MS,
+      cacheVersion,
+      promise,
+    });
+    return promise;
+  }
+
+  // Unscoped editor path (e.g. default group): still request full channel set.
+  if (ignoreGroupAllowedModels) {
+    const editorCacheKey = "__ignore_allowed__";
+    const now = Date.now();
+    const cacheVersion = getConfiguredAvailabilityCacheVersion();
+    let tenantGroupCache = groupAvailabilityByTenant.get(tenantId);
+    if (!tenantGroupCache) {
+      tenantGroupCache = new Map();
+      groupAvailabilityByTenant.set(tenantId, tenantGroupCache);
+    }
+    const cached = tenantGroupCache.get(editorCacheKey);
+    if (
+      cached &&
+      cached.cacheVersion === cacheVersion &&
+      now < cached.expiresAt
+    ) {
+      return cached.promise;
+    }
+    const promise = (async (): Promise<ConfiguredModelAvailability> => {
+      try {
+        const result = await loadConfiguredAvailabilityEndpoint(
+          "/models/configured-availability?ignore_group_allowed_models=1",
+        );
+        if (!result) return loadFallback();
+        const current = groupAvailabilityByTenant.get(tenantId) ?? new Map();
+        current.set(editorCacheKey, {
+          expiresAt: Date.now() + GROUP_AVAILABILITY_TTL_MS,
+          cacheVersion,
+          promise: Promise.resolve(result),
+        });
+        groupAvailabilityByTenant.set(tenantId, current);
+        return result;
+      } catch {
+        return loadFallback();
+      }
+    })();
+    tenantGroupCache.set(editorCacheKey, {
       expiresAt: now + GROUP_AVAILABILITY_TTL_MS,
       cacheVersion,
       promise,
