@@ -277,11 +277,14 @@ export function useAuthFilesFilesPresentation({
       const quotaWindow = formatRestrictionQuotaWindowLabel(badge);
       // Always surface the upstream reason (parsed status_message / quota reason).
       // Hiding it for quota-limited badges left 429 chips without any error detail.
+      // ponytail: multi-line string; HoverTooltip already uses whitespace-pre-line.
+      const reason =
+        badge.reason === "quota" ? t("auth_files.restriction_quota_label") : badge.reason;
       const parts = [
         badge.quotaLimited ? t("auth_files.restriction_limited") : "",
         quotaWindow ? t("auth_files.restriction_window", { window: quotaWindow }) : "",
         badge.model ? t("auth_files.restriction_model", { model: badge.model }) : "",
-        badge.reason ? t("auth_files.restriction_reason", { reason: badge.reason }) : "",
+        reason ? t("auth_files.restriction_reason", { reason }) : "",
       ].filter(Boolean);
       if (badge.recoverAtMs) {
         const remaining = formatAuthFileRestrictionRemaining(
@@ -298,7 +301,7 @@ export function useAuthFilesFilesPresentation({
       } else {
         parts.push(t("auth_files.restriction_recovery_unknown"));
       }
-      return parts.join(" · ");
+      return parts.join("\n");
     },
     [formatRestrictionQuotaWindowLabel, nowMs, restrictionUnitLabels, t],
   );
@@ -312,6 +315,7 @@ export function useAuthFilesFilesPresentation({
           {badges.map((badge) => (
             <HoverTooltip key={badge.key} content={formatRestrictionTooltip(badge)} placement="top">
               <span
+                data-testid="auth-file-restriction-badge"
                 className={[
                   "inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-2xs font-semibold tabular-nums",
                   RESTRICTION_TONE_CLASSES[badge.tone],
@@ -360,7 +364,7 @@ export function useAuthFilesFilesPresentation({
               })
             : "",
         ].filter(Boolean);
-        return parts.join(" · ");
+        return parts.join("\n");
       };
 
       return (
