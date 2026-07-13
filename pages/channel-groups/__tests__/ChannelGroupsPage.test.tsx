@@ -76,7 +76,11 @@ vi.mock("@code-proxy/api-client", () => ({
       const payload = await apiMocks.get("/auth-files/models", { params: { name } });
       const record =
         payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {};
-      return Array.isArray(record.models) ? record.models : [];
+      return {
+        models: Array.isArray(record.models) ? record.models : [],
+        source:
+          typeof record.source === "string" ? String(record.source) : "registry",
+      };
     },
     getModelDefinitions: async (channel: string) => {
       const normalizedChannel = String(channel ?? "")

@@ -425,6 +425,47 @@ describe("AuthFileDetailModal", () => {
     expectSummaryCard("Current weekly cycle", "116");
     // Remaining snapshot percent 75% => used 25%.
     expectSummaryCard("Weekly quota used", "25%");
+    // xAI shows weekly prediction (zero when cycle cost is missing), never the Codex 5h card.
+    expectSummaryCard("Predicted weekly window quota", "$0.0000");
+    expect(screen.queryByText("Predicted 5-hour window quota")).not.toBeInTheDocument();
+  });
+
+  test("predicts xAI weekly window quota from cycle cost and used percent", () => {
+    renderDetailModal({
+      detailFile: {
+        name: "xai-user.json",
+        label: "xAI Grok",
+        type: "xai",
+        provider: "xai",
+        size: 256,
+      },
+      modelsFileType: "xai",
+      quotaState: {
+        status: "success",
+        planType: "supergrok-heavy",
+        items: [],
+        updatedAt: Date.now(),
+      },
+      detailTrend: {
+        auth_index: "xai-auth",
+        days: 7,
+        hours: 5,
+        request_total: 180,
+        cycle_request_total: 180,
+        cycle_cost_total: 7.352,
+        weekly_quota_used_percent: 6,
+        cycle_known: true,
+        cycle_start: "2026-07-12T05:05:02Z",
+        daily_usage: [],
+        hourly_usage: [],
+        quota_series: [],
+      },
+    });
+
+    expectSummaryCard("Current cycle cost", "$7.3520");
+    expectSummaryCard("Weekly quota used", "6%");
+    // $7.352 / 6% ≈ $122.5333 full weekly window budget.
+    expectSummaryCard("Predicted weekly window quota", "$122.5333");
     expect(screen.queryByText("Predicted 5-hour window quota")).not.toBeInTheDocument();
   });
 

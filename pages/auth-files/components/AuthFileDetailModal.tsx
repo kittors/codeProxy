@@ -1102,10 +1102,12 @@ export function AuthFileDetailModal({
 
   const renderUsageTrend = () => {
     const isCodexDetail = detailProviderKey === "codex";
-    const summaryGridClassName = isCodexDetail
+    // xAI only has a weekly window (no Codex 5h slot); still show predicted weekly quota like Codex.
+    const showPredictedWeeklyQuota = isCodexDetail || detailProviderKey === "xai";
+    const summaryGridClassName = showPredictedWeeklyQuota
       ? "grid gap-3 sm:grid-cols-2 xl:grid-cols-6"
       : "grid gap-3 sm:grid-cols-2 xl:grid-cols-5";
-    const summarySkeletonCount = isCodexDetail ? 6 : 5;
+    const summarySkeletonCount = showPredictedWeeklyQuota ? 6 : 5;
 
     if (detailTrendLoading && !detailTrend) {
       const skeletonClass = "animate-pulse rounded-lg bg-slate-100/80 dark:bg-white/[0.06]";
@@ -1208,20 +1210,20 @@ export function AuthFileDetailModal({
             <p className={SUMMARY_VALUE_CLASS_NAME}>{formatCurrency(displayCycleCostTotal)}</p>
           </div>
           {isCodexDetail ? (
-            <>
-              <div className={SUMMARY_CARD_CLASS_NAME}>
-                <p className={SUMMARY_LABEL_CLASS_NAME}>
-                  {t("auth_files.trend_predicted_5h_window_quota")}
-                </p>
-                <p className={SUMMARY_VALUE_CLASS_NAME}>{formatCurrency(estimatedFiveHourQuota)}</p>
-              </div>
-              <div className={SUMMARY_CARD_CLASS_NAME}>
-                <p className={SUMMARY_LABEL_CLASS_NAME}>
-                  {t("auth_files.trend_predicted_week_window_quota")}
-                </p>
-                <p className={SUMMARY_VALUE_CLASS_NAME}>{formatCurrency(estimatedWeeklyQuota)}</p>
-              </div>
-            </>
+            <div className={SUMMARY_CARD_CLASS_NAME}>
+              <p className={SUMMARY_LABEL_CLASS_NAME}>
+                {t("auth_files.trend_predicted_5h_window_quota")}
+              </p>
+              <p className={SUMMARY_VALUE_CLASS_NAME}>{formatCurrency(estimatedFiveHourQuota)}</p>
+            </div>
+          ) : null}
+          {showPredictedWeeklyQuota ? (
+            <div className={SUMMARY_CARD_CLASS_NAME}>
+              <p className={SUMMARY_LABEL_CLASS_NAME}>
+                {t("auth_files.trend_predicted_week_window_quota")}
+              </p>
+              <p className={SUMMARY_VALUE_CLASS_NAME}>{formatCurrency(estimatedWeeklyQuota)}</p>
+            </div>
           ) : null}
           <div className={SUMMARY_CARD_CLASS_NAME}>
             <p className={SUMMARY_LABEL_CLASS_NAME}>{t("auth_files.trend_weekly_quota_used")}</p>

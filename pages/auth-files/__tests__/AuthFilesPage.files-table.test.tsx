@@ -66,7 +66,10 @@ const mocks = vi.hoisted(() => ({
   deleteFile: vi.fn(async () => ({})),
   downloadText: vi.fn(async () => "{}"),
   patchFields: vi.fn(async () => ({})),
-  getModelsForAuthFile: vi.fn(async () => [{ id: "live-only", owned_by: "runtime" }]),
+  getModelsForAuthFile: vi.fn(async () => ({
+    models: [{ id: "live-only", owned_by: "runtime" }],
+    source: "upstream",
+  })),
   getModelConfigs: vi.fn(async () => [
     { id: "gpt-4.1", owned_by: "openai" },
     { id: "claude-sonnet-4-5", owned_by: "anthropic" },
@@ -254,9 +257,10 @@ describe("AuthFilesPage files table", () => {
     mocks.patchFields.mockReset();
     mocks.patchFields.mockImplementation(async () => ({}));
     mocks.getModelsForAuthFile.mockReset();
-    mocks.getModelsForAuthFile.mockImplementation(async () => [
-      { id: "live-only", owned_by: "runtime" },
-    ]);
+    mocks.getModelsForAuthFile.mockImplementation(async () => ({
+      models: [{ id: "live-only", owned_by: "runtime" }],
+      source: "upstream",
+    }));
     mocks.getModelConfigs.mockReset();
     mocks.getModelConfigs.mockImplementation(async () => [
       { id: "gpt-4.1", owned_by: "openai" },

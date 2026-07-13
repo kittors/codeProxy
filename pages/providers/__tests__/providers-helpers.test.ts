@@ -4,6 +4,9 @@ import {
   buildProviderKeyDraft,
   maskApiKey,
   normalizeDiscoveredModels,
+  buildProviderModelsEndpoint,
+  DEFAULT_CLAUDE_MODELS_BASE,
+  DEFAULT_CODEX_MODELS_BASE,
 } from "@pages/providers/providers-helpers";
 import {
   buildCandidateUsageSourceIds,
@@ -147,4 +150,35 @@ describe("providers helpers", () => {
     expect(candidates.some((entry) => entry === normalized)).toBe(true);
     expect(normalizeUsageSourceId(masked, maskApiKey)).toBe(`m:${masked}`);
   });
+
+  test("builds Claude and Codex /models endpoints with defaults", () => {
+    expect(buildProviderModelsEndpoint("claude", "")).toBe(
+      `${DEFAULT_CLAUDE_MODELS_BASE}/v1/models`,
+    );
+    expect(buildProviderModelsEndpoint("codex", "")).toBe(
+      `${DEFAULT_CODEX_MODELS_BASE}/v1/models`,
+    );
+    expect(buildProviderModelsEndpoint("claude", "https://proxy.example/v1")).toBe(
+      "https://proxy.example/v1/models",
+    );
+    expect(buildProviderModelsEndpoint("codex", "https://gateway.example")).toBe(
+      "https://gateway.example/v1/models",
+    );
+  });
+
+  test("normalizes discovered models from id and slug payloads", () => {
+    expect(
+      normalizeDiscoveredModels({
+        models: [
+          { slug: "gpt-5.6-sol", owned_by: "openai" },
+          { id: "claude-sonnet-4", owned_by: "anthropic" },
+          { id: "gpt-5.6-sol" },
+        ],
+      }),
+    ).toEqual([
+      { id: "gpt-5.6-sol", owned_by: "openai" },
+      { id: "claude-sonnet-4", owned_by: "anthropic" },
+    ]);
+  });
+
 });

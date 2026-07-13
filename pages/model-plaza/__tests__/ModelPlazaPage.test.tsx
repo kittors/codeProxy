@@ -22,7 +22,11 @@ vi.mock("@code-proxy/api-client", () => ({
       const payload = await mocks.apiGet("/auth-files/models", { params: { name } });
       const record =
         payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {};
-      return Array.isArray(record.models) ? record.models : [];
+      return {
+        models: Array.isArray(record.models) ? record.models : [],
+        source:
+          typeof record.source === "string" ? String(record.source) : "registry",
+      };
     },
   },
   providersApi: {

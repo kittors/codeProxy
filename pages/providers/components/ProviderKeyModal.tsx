@@ -8,16 +8,24 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { Check } from "lucide-react";
-import { modelsApi } from "@code-proxy/api-client";
+import {
+  apiCallApi,
+  getApiCallErrorMessage,
+  modelsApi,
+} from "@code-proxy/api-client";
 import type { ProxyPoolEntry } from "@code-proxy/api-client/endpoints/proxies";
 import { Button } from "@code-proxy/ui";
 import { Modal } from "@code-proxy/ui";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@code-proxy/ui";
+import { useToast } from "@code-proxy/ui";
 import type { ProviderKeyDraft } from "../providers-helpers";
 import {
+  buildProviderModelsEndpoint,
   excludedModelsFromText,
   hasDisableAllModelsRule,
+  normalizeDiscoveredModels,
 } from "../providers-helpers";
+import { keyValueEntriesToRecord } from "../KeyValueInputList";
 import { createEmptyModelEntry, type ModelEntryDraft } from "../ModelInputList";
 import { ProviderKeyStatusBadges } from "./ProviderKeyStatusBadges";
 import { ProviderKeyBasicTab } from "./ProviderKeyBasicTab";
@@ -112,6 +120,7 @@ export function ProviderKeyModal({
   maskApiKey,
 }: ProviderKeyModalProps) {
   const { t } = useTranslation();
+  const { notify } = useToast();
   const [modalTab, setModalTab] = useState<ProviderKeyModalTab>("basic");
   const [openCodeModels, setOpenCodeModels] = useState<
     { id: string; owned_by?: string }[]
@@ -121,12 +130,22 @@ export function ProviderKeyModal({
     null,
   );
   const [openCodeModelQuery, setOpenCodeModelQuery] = useState("");
+  // Live /models discovery for Claude & Codex provider keys (issue #492).
+  const [discoveredModels, setDiscoveredModels] = useState<
+    { id: string; owned_by?: string }[]
+  >([]);
+  const [discovering, setDiscovering] = useState(false);
+  const [discoverSelected, setDiscoverSelected] = useState<Set<string>>(
+    () => new Set(),
+  );
 
   const isBedrock = editKeyType === "bedrock";
   const isOpenCodeGo = editKeyType === "opencode-go";
   const isCline = editKeyType === "cline";
   const isOllamaCloud = editKeyType === "ollama-cloud";
   const isModelAccessProvider = isOpenCodeGo || isCline || isOllamaCloud;
+  const supportsLiveDiscovery =
+    editKeyType === "claude" || editKeyType === "codex";
   const modelAccessProvider: ModelAccessProvider | null = isCline
     ? "cline"
     : isOllamaCloud
@@ -191,7 +210,137 @@ export function ProviderKeyModal({
     setModalTab("basic");
     setOpenCodeModelQuery("");
     setSelectedModelGroup("");
+    setDiscoveredModels([]);
+    setDiscoverSelected(new Set());
+    setDiscovering(false);
   }, [editKeyIndex, editKeyType, open]);
+
+  const discoverModels = useCallback(async () => {
+    if (!supportsLiveDiscovery) return;
+    const providerType = editKeyType === "claude" ? "claude" : "codex";
+    const endpoint = buildProviderModelsEndpoint(
+      providerType,
+      keyDraft.baseUrl,
+    );
+    if (!endpoint) {
+      notify({ type: "info", message: t("providers.fill_base_url_first") });
+      return;
+    }
+
+    setDiscovering(true);
+    setDiscoveredModels([]);
+    setDiscoverSelected(new Set());
+    try {
+      const customHeaders =
+        keyValueEntriesToRecord(keyDraft.headersEntries) ?? {};
+      const headers: Record<string, string> = { ...customHeaders };
+      const apiKey = keyDraft.apiKey.trim();
+
+      if (providerType === "claude") {
+        // Anthropic official + most compatible gateways accept x-api-key.
+        // Also send Authorization for gateways that only accept Bearer.
+        if (apiKey) {
+          if (
+            !Object.keys(headers).some(
+              (key) => key.toLowerCase() === "x-api-key",
+            )
+          ) {
+            headers["x-api-key"] = apiKey;
+          }
+          if (
+            !Object.keys(headers).some(
+              (key) => key.toLowerCase() === "authorization",
+            )
+          ) {
+            headers.Authorization = `Bearer ${apiKey}`;
+          }
+        }
+        if (
+          !Object.keys(headers).some(
+            (key) => key.toLowerCase() === "anthropic-version",
+          )
+        ) {
+          headers["anthropic-version"] = "2023-06-01";
+        }
+        if (
+          !Object.keys(headers).some((key) => key.toLowerCase() === "accept")
+        ) {
+          headers.Accept = "application/json";
+        }
+      } else {
+        // Codex / OpenAI-compatible: Bearer API key.
+        if (
+          apiKey &&
+          !Object.keys(headers).some(
+            (key) => key.toLowerCase() === "authorization",
+          )
+        ) {
+          headers.Authorization = `Bearer ${apiKey}`;
+        }
+        if (
+          !Object.keys(headers).some((key) => key.toLowerCase() === "accept")
+        ) {
+          headers.Accept = "application/json";
+        }
+      }
+
+      const result = await apiCallApi.request({
+        method: "GET",
+        url: endpoint,
+        header: Object.keys(headers).length ? headers : undefined,
+      });
+      if (result.statusCode < 200 || result.statusCode >= 300) {
+        throw new Error(getApiCallErrorMessage(result));
+      }
+      const list = normalizeDiscoveredModels(result.body ?? result.bodyText);
+      setDiscoveredModels(list);
+      setDiscoverSelected(new Set(list.map((model) => model.id)));
+      if (list.length === 0) {
+        notify({ type: "info", message: t("providers.no_discovered_models") });
+      }
+    } catch (err: unknown) {
+      notify({
+        type: "error",
+        message:
+          err instanceof Error ? err.message : t("providers.fetch_models_failed"),
+      });
+    } finally {
+      setDiscovering(false);
+    }
+  }, [
+    editKeyType,
+    keyDraft.apiKey,
+    keyDraft.baseUrl,
+    keyDraft.headersEntries,
+    notify,
+    supportsLiveDiscovery,
+    t,
+  ]);
+
+  const applyDiscoveredModels = useCallback(() => {
+    const selected = new Set(discoverSelected);
+    const picked = discoveredModels.filter((model) => selected.has(model.id));
+    if (picked.length === 0) {
+      notify({ type: "info", message: t("providers.no_models_selected") });
+      return;
+    }
+    setKeyDraft((prev) => {
+      const seen = new Set(
+        prev.modelEntries
+          .map((model) => model.name.trim().toLowerCase())
+          .filter(Boolean),
+      );
+      const merged = [...prev.modelEntries];
+      for (const model of picked) {
+        const key = model.id.toLowerCase();
+        if (seen.has(key)) continue;
+        seen.add(key);
+        merged.push({ ...createEmptyModelEntry(), name: model.id });
+      }
+      return { ...prev, modelEntries: merged };
+    });
+    notify({ type: "success", message: t("providers.models_merged") });
+  }, [discoverSelected, discoveredModels, notify, setKeyDraft, t]);
 
   useEffect(() => {
     if (!open || !showModelsTab) return;
@@ -607,6 +756,18 @@ export function ProviderKeyModal({
                 setKeyDraft={setKeyDraft}
                 editKeyExcludedCount={editKeyExcludedCount}
                 editKeyEnabledToggle={editKeyEnabledToggle}
+                discovering={discovering}
+                discoverModels={
+                  supportsLiveDiscovery ? discoverModels : undefined
+                }
+                applyDiscoveredModels={
+                  supportsLiveDiscovery ? applyDiscoveredModels : undefined
+                }
+                discoveredModels={discoveredModels}
+                discoverSelected={discoverSelected}
+                setDiscoverSelected={
+                  supportsLiveDiscovery ? setDiscoverSelected : undefined
+                }
               />
             </TabsContent>
           ) : null}

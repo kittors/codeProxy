@@ -85,14 +85,34 @@ export const authFilesApi = {
 
   getModelsForAuthFile: async (
     name: string,
-  ): Promise<{ id: string; display_name?: string; type?: string; owned_by?: string }[]> => {
+    options?: { force?: boolean },
+  ): Promise<{
+    models: { id: string; display_name?: string; type?: string; owned_by?: string }[];
+    source: "registry" | "upstream" | string;
+  }> => {
+    const params: Record<string, string> = { name };
+    // refresh=1 forces a re-fetch from upstream.
+    // claude/codex/xai: backend keeps a provider-level discovery cache (shared
+    // by same-type accounts); open auto-warms once, force refreshes the cache.
+    // antigravity may still update the runtime registry on force refresh.
+    if (options?.force) {
+      params.refresh = "1";
+    }
     const data = await apiClient.get<Record<string, unknown>>("/auth-files/models", {
-      params: { name },
+      params,
     });
     const models = data.models ?? data["models"];
-    return Array.isArray(models)
-      ? (models as { id: string; display_name?: string; type?: string; owned_by?: string }[])
-      : [];
+    const sourceRaw = data.source ?? data["source"];
+    const source =
+      typeof sourceRaw === "string" && sourceRaw.trim()
+        ? sourceRaw.trim().toLowerCase()
+        : "registry";
+    return {
+      models: Array.isArray(models)
+        ? (models as { id: string; display_name?: string; type?: string; owned_by?: string }[])
+        : [],
+      source,
+    };
   },
   getModelDefinitions: async (
     channel: string,

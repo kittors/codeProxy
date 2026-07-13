@@ -2876,7 +2876,9 @@
     "test_model_placeholder": "例如 gpt-4.1",
     "api_key_placeholder": "粘贴 API 密钥",
     "anthropic_processing_label": "Anthropic 专有处理",
-    "anthropic_processing_hint": "开启时将执行 Anthropic 专有处理（伪装、缓存控制、工具前缀等）。如 Base URL 指向第三方 Claude 兼容 API（如 Kimi），建议关闭以提升性能。"
+    "anthropic_processing_hint": "开启时将执行 Anthropic 专有处理（伪装、缓存控制、工具前缀等）。如 Base URL 指向第三方 Claude 兼容 API（如 Kimi），建议关闭以提升性能。",
+    "claude_models_discovery_hint": "使用当前密钥请求 Anthropic 兼容的 GET /v1/models（x-api-key + Bearer）。Base URL 为空时默认 https://api.anthropic.com。",
+    "codex_models_discovery_hint": "使用当前密钥请求 OpenAI 兼容的 GET /v1/models。Base URL 为空时默认 https://api.openai.com。ChatGPT OAuth 账号请在「认证文件 → 模型 → 刷新」拉取上游清单。"
   },
   "request_logs": {
     "title": "请求日志",

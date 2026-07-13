@@ -3616,7 +3616,9 @@
     "test_model_placeholder": "e.g. gpt-4.1",
     "api_key_placeholder": "Paste API key",
     "anthropic_processing_label": "Anthropic Processing",
-    "anthropic_processing_hint": "When enabled, applies Anthropic-specific processing (cloaking, cache control, tool prefix). Disable for third-party Claude-compatible APIs (e.g. Kimi) to improve performance."
+    "anthropic_processing_hint": "When enabled, applies Anthropic-specific processing (cloaking, cache control, tool prefix). Disable for third-party Claude-compatible APIs (e.g. Kimi) to improve performance.",
+    "claude_models_discovery_hint": "Fetches Anthropic-compatible GET /v1/models using this key (x-api-key + Bearer). Empty Base URL defaults to https://api.anthropic.com.",
+    "codex_models_discovery_hint": "Fetches OpenAI-compatible GET /v1/models using this key. Empty Base URL defaults to https://api.openai.com. For ChatGPT OAuth accounts, use Auth Files → Models → Refresh instead."
   },
   "logs_page": {
     "error_log_files": "Error Log Files",
