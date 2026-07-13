@@ -263,7 +263,9 @@ export function useAuthFilesDetailEditors(
       }
 
       try {
-        const list = await authFilesApi.getModelsForAuthFile(file.name);
+        const list = await authFilesApi.getModelsForAuthFile(file.name, {
+          force,
+        });
         modelsCacheRef.current.set(file.name, list);
         setModelsList(list);
       } catch (err: unknown) {
