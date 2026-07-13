@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   buildOpenAIDraft,
   buildProviderKeyDraft,
+  buildProviderModelsEndpoint,
   maskApiKey,
   normalizeDiscoveredModels,
 } from "@pages/providers/providers-helpers";
@@ -110,6 +111,34 @@ describe("providers helpers", () => {
         ],
       }),
     ).toEqual([{ id: "gpt-4.1", owned_by: "openai" }, { id: "gpt-4o-mini" }]);
+  });
+
+  test("normalizes Claude/Codex payloads via models, items, and slug fields", () => {
+    expect(
+      normalizeDiscoveredModels({
+        models: [{ id: "claude-sonnet-4-5", display_name: "Sonnet" }],
+      }),
+    ).toEqual([{ id: "claude-sonnet-4-5" }]);
+    expect(
+      normalizeDiscoveredModels({
+        items: [{ slug: "gpt-5.1-codex", title: "Codex" }],
+      }),
+    ).toEqual([{ id: "gpt-5.1-codex" }]);
+  });
+
+  test("builds Claude and Codex /models endpoints with defaults", () => {
+    expect(buildProviderModelsEndpoint("claude", "")).toBe(
+      "https://api.anthropic.com/v1/models",
+    );
+    expect(buildProviderModelsEndpoint("claude", "https://gw.example/v1")).toBe(
+      "https://gw.example/v1/models",
+    );
+    expect(buildProviderModelsEndpoint("codex", "")).toBe(
+      "https://api.openai.com/v1/models",
+    );
+    expect(
+      buildProviderModelsEndpoint("codex", "https://api.openai.com/v1"),
+    ).toBe("https://api.openai.com/v1/models");
   });
 
   test("normalizes discovered models from a JSON string payload", () => {

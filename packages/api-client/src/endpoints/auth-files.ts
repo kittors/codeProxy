@@ -85,9 +85,16 @@ export const authFilesApi = {
 
   getModelsForAuthFile: async (
     name: string,
+    options?: { force?: boolean },
   ): Promise<{ id: string; display_name?: string; type?: string; owned_by?: string }[]> => {
+    const params: Record<string, string> = { name };
+    // refresh=1 asks the backend to re-fetch live upstream /models for
+    // claude/codex (and other live-capable providers) and update the registry.
+    if (options?.force) {
+      params.refresh = "1";
+    }
     const data = await apiClient.get<Record<string, unknown>>("/auth-files/models", {
-      params: { name },
+      params,
     });
     const models = data.models ?? data["models"];
     return Array.isArray(models)

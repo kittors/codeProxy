@@ -2851,6 +2851,8 @@
     "fetch_models_failed": "获取模型失败",
     "no_models_selected": "未选择任何模型",
     "models_merged": "模型列表已合并",
+    "claude_models_discovery_hint": "使用当前密钥请求 Anthropic 兼容的 GET /v1/models（x-api-key + Bearer）。Base URL 为空时默认 https://api.anthropic.com。",
+    "codex_models_discovery_hint": "使用当前密钥请求 OpenAI 兼容的 GET /v1/models。Base URL 为空时默认 https://api.openai.com。ChatGPT OAuth 账号请在「认证文件 → 模型 → 刷新」拉取上游清单。",
     "ampcode_saved": "Ampcode 配置已保存",
     "current_status": "当前：{{status}} · 映射 {{count}} 条",
     "status_loaded": "已加载",

@@ -3591,6 +3591,8 @@
     "fetch_models_failed": "Failed to fetch models",
     "no_models_selected": "No models selected",
     "models_merged": "Model list merged",
+    "claude_models_discovery_hint": "Fetches Anthropic-compatible GET /v1/models using this key (x-api-key + Bearer). Empty Base URL defaults to https://api.anthropic.com.",
+    "codex_models_discovery_hint": "Fetches OpenAI-compatible GET /v1/models using this key. Empty Base URL defaults to https://api.openai.com. For ChatGPT OAuth accounts, use Auth Files → Models → Refresh instead.",
     "ampcode_saved": "Ampcode configuration saved",
     "current_status": "Current: {{status}} · {{count}} mappings",
     "status_loaded": "Loaded",
