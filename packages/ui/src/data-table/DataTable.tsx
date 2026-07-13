@@ -3512,16 +3512,13 @@ export function DataTable<T>({
                       Fill the remaining table viewport so EmptyState sits in the
                       middle of the blank body, not stuck under the header.
                     */}
-                    <div className="flex min-h-[min(22rem,calc(100dvh-26rem))] w-full items-center justify-center">
-                      {/* Keep empty card compact so it reads as a centerpiece, not a stretched dashed bar. */}
-                      <div className="mx-auto w-full max-w-sm sm:max-w-md">
-                        <EmptyState
-                          title={emptyText || t("common.no_data")}
-                          description={emptyDescription}
-                          icon={emptyIcon}
-                          action={emptyAction}
-                        />
-                      </div>
+                    <div className="flex min-h-[min(18rem,calc(100dvh-28rem))] w-full items-center justify-center">
+                      <EmptyState
+                        title={emptyText || t("common.no_data")}
+                        description={emptyDescription}
+                        icon={emptyIcon}
+                        action={emptyAction}
+                      />
                     </div>
                   </td>
                 </tr>

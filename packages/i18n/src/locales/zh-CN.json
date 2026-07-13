@@ -2966,7 +2966,7 @@
     "clear_status_filter": "清空状态筛选",
     "auth_type_api": "API",
     "auth_type_oauth": "OAuth",
-    "no_data_desc": "当前筛选条件下没有请求记录，可调整时间范围或筛选条件后重试。"
+    "no_data_desc": "调整时间范围或筛选条件后再试"
   },
   "ccswitch": {
     "import_to_ccswitch": "导入到 CC Switch",
