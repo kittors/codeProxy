@@ -150,6 +150,8 @@ vi.mock("@code-proxy/api-client/endpoints/proxies", () => ({
 
 describe("ProvidersPage OpenCode Go tab", () => {
   beforeEach(() => {
+    // Tenant-scoped provider cache is read at mount; clear so cases cannot seed each other.
+    localStorage.clear();
     Object.values(mocks).forEach((mock) => mock.mockReset());
     mocks.getGeminiKeys.mockImplementation(async () => []);
     mocks.getClaudeConfigs.mockImplementation(async () => []);

@@ -71,6 +71,7 @@ describe("ProvidersPage import/export", () => {
   const clickSpy = vi.fn();
 
   beforeEach(() => {
+    localStorage.clear();
     Object.values(mocks).forEach((mock) => mock.mockReset());
     mocks.getGeminiKeys.mockImplementation(async () => []);
     mocks.getClaudeConfigs.mockImplementation(async () => []);
@@ -181,9 +182,14 @@ describe("ProvidersPage import/export", () => {
 
   test("shows skeleton cards when switching to an unloaded provider tab", async () => {
     const user = userEvent.setup();
-    let resolveSwitch: ((configs: any[]) => void) | undefined;
-    mocks.getCodexConfigs.mockImplementationOnce(
-      () => new Promise<any[]>((resolve) => (resolveSwitch = resolve)),
+    // Keep Codex cold (no tenant cache, empty in-memory list) until the tab is opened.
+    // Mount refreshAll and the tab-click refresh may both call getCodexConfigs; release all.
+    const pendingResolvers: Array<(configs: any[]) => void> = [];
+    mocks.getCodexConfigs.mockImplementation(
+      () =>
+        new Promise<any[]>((resolve) => {
+          pendingResolvers.push(resolve);
+        }),
     );
 
     render(
@@ -203,15 +209,17 @@ describe("ProvidersPage import/export", () => {
 
     await waitFor(() => expect(refreshButton).toBeDisabled());
     expect(refreshButton.querySelector("svg")).toHaveClass("animate-spin");
-    expect(screen.getByTestId("providers-list-skeleton")).toBeInTheDocument();
+    // Cold tab (no tenant-scoped cache) still uses list skeleton, not a full-page overlay.
+    expect(await screen.findByTestId("providers-list-skeleton")).toBeInTheDocument();
     expect(screen.queryByText(/Loading/i)).not.toBeInTheDocument();
 
-    resolveSwitch?.([
+    const codexConfigs = [
       {
         name: "Codex Main",
         apiKey: "sk-old",
       },
-    ]);
+    ];
+    pendingResolvers.splice(0).forEach((resolve) => resolve(codexConfigs));
     expect(await screen.findByText("Codex Main")).toBeInTheDocument();
     await waitFor(() =>
       expect(screen.queryByTestId("providers-list-skeleton")).not.toBeInTheDocument(),
@@ -233,13 +241,20 @@ describe("ProvidersPage import/export", () => {
       </MemoryRouter>,
     );
 
+    // Mount refreshAll already loads every provider tab once.
+    await waitFor(() => expect(mocks.getCodexConfigs).toHaveBeenCalled());
+    const afterMount = mocks.getCodexConfigs.mock.calls.length;
+
     const codexTab = await screen.findByRole("tab", { name: /Codex/ });
     await user.click(codexTab);
     expect(await screen.findByText("Codex Main")).toBeInTheDocument();
-    await waitFor(() => expect(mocks.getCodexConfigs).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(mocks.getCodexConfigs).toHaveBeenCalledTimes(afterMount + 1),
+    );
 
+    // Re-clicking the active tab must not re-fetch.
     await user.click(codexTab);
-    expect(mocks.getCodexConfigs).toHaveBeenCalledTimes(1);
+    expect(mocks.getCodexConfigs).toHaveBeenCalledTimes(afterMount + 1);
   });
 
   test("keeps provider import, refresh, and export actions together in the batch toolbar", async () => {

@@ -194,6 +194,35 @@ const isModelAccessProvider = (
 ): tabId is ModelAccessProvider =>
   tabId === "opencode-go" || tabId === "cline" || tabId === "ollama-cloud";
 
+/** Provider list slots that seed from tenant-scoped localStorage. */
+const PROVIDER_LIST_CACHE_SLOTS: Record<
+  Exclude<ProviderTab, "ampcode">,
+  string
+> = {
+  gemini: "gemini",
+  claude: "claude",
+  codex: "codex",
+  "opencode-go": "opencode-go",
+  cline: "cline",
+  "ollama-cloud": "ollama-cloud",
+  vertex: "vertex",
+  bedrock: "bedrock",
+  openai: "openai",
+};
+
+/**
+ * Seed list state from the active tenant bucket only.
+ * DashboardLayout remounts on tenant switch; a one-shot mount read keeps
+ * paint tenant-isolated and avoids full-page skeleton when the bucket is warm.
+ */
+const readCachedProviderList = <T,>(slot: string): T[] =>
+  getCachedData<T[]>(slot) ?? [];
+
+const activeTabHasCachedList = (tabId: ProviderTab): boolean => {
+  if (tabId === "ampcode") return false;
+  return getCachedData(PROVIDER_LIST_CACHE_SLOTS[tabId]) != null;
+};
+
 export function ProvidersPage() {
   const { t } = useTranslation();
   const { notify } = useToast();
@@ -222,7 +251,10 @@ export function ProvidersPage() {
   useEffect(() => {
     if (!isSystemTenant && tab === "ampcode") setTab("gemini");
   }, [isSystemTenant, setTab, tab]);
-  const [loading, setLoading] = useState(true);
+  // `loading` = cold paint (no tenant cache for active tab) → list skeleton.
+  // `refreshing` = background / toolbar revalidate → spin button, keep cards.
+  const [loading, setLoading] = useState(() => !activeTabHasCachedList(tab));
+  const [refreshing, setRefreshing] = useState(false);
 
   const openCodeGoUsageStoreRef = useRef<OpenCodeGoUsageStore | null>(null);
   if (!openCodeGoUsageStoreRef.current) {
@@ -324,21 +356,33 @@ export function ProvidersPage() {
     [refreshProviderUsage],
   );
 
-  const [geminiKeys, setGeminiKeys] = useState<ProviderSimpleConfig[]>([]);
-  const [claudeKeys, setClaudeKeys] = useState<ProviderSimpleConfig[]>([]);
-  const [codexKeys, setCodexKeys] = useState<ProviderSimpleConfig[]>([]);
-  const [openCodeGoKeys, setOpenCodeGoKeys] = useState<ProviderSimpleConfig[]>(
-    () => getCachedData<ProviderSimpleConfig[]>("opencode-go") ?? [],
+  const [geminiKeys, setGeminiKeys] = useState<ProviderSimpleConfig[]>(() =>
+    readCachedProviderList<ProviderSimpleConfig>("gemini"),
   );
-  const [clineKeys, setClineKeys] = useState<ProviderSimpleConfig[]>(
-    () => getCachedData<ProviderSimpleConfig[]>("cline") ?? [],
+  const [claudeKeys, setClaudeKeys] = useState<ProviderSimpleConfig[]>(() =>
+    readCachedProviderList<ProviderSimpleConfig>("claude"),
+  );
+  const [codexKeys, setCodexKeys] = useState<ProviderSimpleConfig[]>(() =>
+    readCachedProviderList<ProviderSimpleConfig>("codex"),
+  );
+  const [openCodeGoKeys, setOpenCodeGoKeys] = useState<ProviderSimpleConfig[]>(
+    () => readCachedProviderList<ProviderSimpleConfig>("opencode-go"),
+  );
+  const [clineKeys, setClineKeys] = useState<ProviderSimpleConfig[]>(() =>
+    readCachedProviderList<ProviderSimpleConfig>("cline"),
   );
   const [ollamaCloudKeys, setOllamaCloudKeys] = useState<
     ProviderSimpleConfig[]
-  >(() => getCachedData<ProviderSimpleConfig[]>("ollama-cloud") ?? []);
-  const [vertexKeys, setVertexKeys] = useState<ProviderSimpleConfig[]>([]);
-  const [bedrockKeys, setBedrockKeys] = useState<BedrockProviderConfig[]>([]);
-  const [openaiProviders, setOpenaiProviders] = useState<OpenAIProvider[]>([]);
+  >(() => readCachedProviderList<ProviderSimpleConfig>("ollama-cloud"));
+  const [vertexKeys, setVertexKeys] = useState<ProviderSimpleConfig[]>(() =>
+    readCachedProviderList<ProviderSimpleConfig>("vertex"),
+  );
+  const [bedrockKeys, setBedrockKeys] = useState<BedrockProviderConfig[]>(() =>
+    readCachedProviderList<BedrockProviderConfig>("bedrock"),
+  );
+  const [openaiProviders, setOpenaiProviders] = useState<OpenAIProvider[]>(() =>
+    readCachedProviderList<OpenAIProvider>("openai"),
+  );
 
   // Auto-refresh dashboard usage when switching to providers with saved dashboard cookies.
   const PROVIDER_USAGE_STALE_MS = 5 * 60 * 1000;
@@ -580,7 +624,11 @@ export function ProvidersPage() {
 
   const refreshTab = useCallback(
     async (tabId: typeof tab) => {
-      setLoading(true);
+      // Skeleton only when this tenant has no list for the tab yet (cold paint).
+      // Cached remounts / tab revisits keep existing cards and toolbar-refresh only.
+      const shouldBlock = !activeTabHasCachedList(tabId);
+      if (shouldBlock) setLoading(true);
+      else setRefreshing(true);
       try {
         await loadProviderTab(tabId);
       } catch (err: unknown) {
@@ -590,7 +638,8 @@ export function ProvidersPage() {
             err instanceof Error ? err.message : t("providers.load_failed"),
         });
       } finally {
-        setLoading(false);
+        if (shouldBlock) setLoading(false);
+        else setRefreshing(false);
       }
     },
     [loadProviderTab, notify, t],
@@ -639,7 +688,11 @@ export function ProvidersPage() {
   });
 
   const refreshAll = useCallback(async () => {
-    setLoading(true);
+    // SWR: block with skeleton only when the active tab has no tenant cache.
+    // Toolbar refresh and warm tenant remounts keep cards visible.
+    const shouldBlock = !activeTabHasCachedList(tab);
+    if (shouldBlock) setLoading(true);
+    else setRefreshing(true);
     const tabsToRefresh: ProviderTab[] =
       isSystemTenant && tab === "ampcode"
         ? [...PROVIDER_LIST_TAB_VALUES, "ampcode"]
@@ -660,7 +713,8 @@ export function ProvidersPage() {
             : t("providers.load_failed"),
       });
     }
-    setLoading(false);
+    if (shouldBlock) setLoading(false);
+    else setRefreshing(false);
   }, [
     canReadProxies,
     canReadUsage,
@@ -1188,7 +1242,7 @@ export function ProvidersPage() {
         currentTabItemsCount={currentTabItems.length}
         selectedExportCount={selectedExportCount}
         allCurrentSelected={allCurrentSelected}
-        loading={loading}
+        loading={loading || refreshing}
         onImportClick={() => importInputRef.current?.click()}
         onExport={handleExport}
         onExportSelected={handleExportSelected}
@@ -1585,7 +1639,7 @@ export function ProvidersPage() {
               className="min-h-0 flex flex-1 flex-col"
             >
               <AmpcodePanel
-                loading={loading}
+                loading={loading || refreshing}
                 isPending={isPending}
                 saveAmpcode={saveAmpcode}
                 ampcode={ampcode}
