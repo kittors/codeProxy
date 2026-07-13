@@ -16,9 +16,18 @@ export type ModelInfo = {
 export type ModelConfigItem = {
   id: string;
   owned_by: string;
+  display_name?: string;
   description: string;
   enabled: boolean;
   source: string;
+  context_length?: number;
+  max_completion_tokens?: number;
+  supported_parameters?: string[];
+  reasoning?: unknown;
+  knowledge_cutoff?: string;
+  input_modalities?: string[];
+  output_modalities?: string[];
+  supports_vision?: boolean;
 };
 
 export type ModelOwnerPresetItem = {
@@ -132,12 +141,43 @@ const normalizeModelConfig = (raw: Record<string, unknown>): ModelConfigItem | n
   const id = String(raw.id ?? raw.model_id ?? raw.name ?? "").trim();
   if (!id) return null;
 
+  const supportedParameters = Array.isArray(raw.supported_parameters)
+    ? raw.supported_parameters.map((item) => String(item)).filter(Boolean)
+    : Array.isArray(raw.supportedParameters)
+      ? raw.supportedParameters.map((item) => String(item)).filter(Boolean)
+      : undefined;
+  const inputModalities = Array.isArray(raw.input_modalities)
+    ? raw.input_modalities.map((item) => String(item)).filter(Boolean)
+    : Array.isArray(raw.inputModalities)
+      ? raw.inputModalities.map((item) => String(item)).filter(Boolean)
+      : undefined;
+  const outputModalities = Array.isArray(raw.output_modalities)
+    ? raw.output_modalities.map((item) => String(item)).filter(Boolean)
+    : Array.isArray(raw.outputModalities)
+      ? raw.outputModalities.map((item) => String(item)).filter(Boolean)
+      : undefined;
+  const contextLength = Number(raw.context_length ?? raw.contextLength ?? 0);
+  const maxCompletionTokens = Number(raw.max_completion_tokens ?? raw.maxCompletionTokens ?? 0);
+
   return {
     id,
     owned_by: String(raw.owned_by ?? raw.owner ?? ""),
+    display_name: String(raw.display_name ?? raw.displayName ?? "").trim() || undefined,
     description: String(raw.description ?? ""),
     enabled: raw.enabled === false ? false : true,
     source: String(raw.source ?? ""),
+    ...(contextLength > 0 ? { context_length: contextLength } : {}),
+    ...(maxCompletionTokens > 0 ? { max_completion_tokens: maxCompletionTokens } : {}),
+    ...(supportedParameters?.length ? { supported_parameters: supportedParameters } : {}),
+    ...(raw.reasoning !== undefined && raw.reasoning !== null ? { reasoning: raw.reasoning } : {}),
+    ...(String(raw.knowledge_cutoff ?? raw.knowledgeCutoff ?? "").trim()
+      ? { knowledge_cutoff: String(raw.knowledge_cutoff ?? raw.knowledgeCutoff).trim() }
+      : {}),
+    ...(inputModalities?.length ? { input_modalities: inputModalities } : {}),
+    ...(outputModalities?.length ? { output_modalities: outputModalities } : {}),
+    ...(raw.supports_vision !== undefined || raw.supportsVision !== undefined
+      ? { supports_vision: Boolean(raw.supports_vision ?? raw.supportsVision) }
+      : {}),
   };
 };
 

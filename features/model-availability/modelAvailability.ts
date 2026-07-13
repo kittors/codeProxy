@@ -63,6 +63,7 @@ export interface ModelPricing {
 export interface ModelConfigMetadataItem {
   id: string;
   owned_by: string;
+  displayName?: string;
   description: string;
   enabled: boolean;
   source: string;
@@ -70,6 +71,11 @@ export interface ModelConfigMetadataItem {
   inputModalities: string[];
   outputModalities: string[];
   supportsVision: boolean;
+  contextLength?: number;
+  maxCompletionTokens?: number;
+  supportedParameters?: string[];
+  reasoning?: unknown;
+  knowledgeCutoff?: string;
 }
 
 export interface ModelPathItem {
@@ -287,16 +293,35 @@ export const normalizeModelConfigMetadata = (
   const outputModalities = normalizeModelModalities(
     item.output_modalities ?? item.outputModalities,
   );
+  const contextLength = Number(item.context_length ?? item.contextLength ?? 0);
+  const maxCompletionTokens = Number(
+    item.max_completion_tokens ?? item.maxCompletionTokens ?? 0,
+  );
+  const supportedParameters = normalizeModelModalities(
+    item.supported_parameters ?? item.supportedParameters,
+  );
+  const displayName = String(item.display_name ?? item.displayName ?? "").trim();
+  const knowledgeCutoff = String(
+    item.knowledge_cutoff ?? item.knowledgeCutoff ?? "",
+  ).trim();
   return {
     id,
     owned_by: String(item.owned_by ?? item.owner ?? ""),
-    description: String(item.description ?? item.display_name ?? ""),
+    ...(displayName ? { displayName } : {}),
+    description: String(item.description ?? item.display_name ?? item.displayName ?? ""),
     enabled: item.enabled === false ? false : true,
     source: String(item.source ?? ""),
     pricing: normalizeModelPricing(item),
     inputModalities,
     outputModalities,
     supportsVision: normalizeModelSupportsVision(item, inputModalities),
+    ...(contextLength > 0 ? { contextLength } : {}),
+    ...(maxCompletionTokens > 0 ? { maxCompletionTokens } : {}),
+    ...(supportedParameters.length ? { supportedParameters } : {}),
+    ...(item.reasoning !== undefined && item.reasoning !== null
+      ? { reasoning: item.reasoning }
+      : {}),
+    ...(knowledgeCutoff ? { knowledgeCutoff } : {}),
   };
 };
 
