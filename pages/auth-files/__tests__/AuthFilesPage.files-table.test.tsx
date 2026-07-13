@@ -1208,15 +1208,27 @@ describe("AuthFilesPage files table", () => {
     const card = title.closest("section");
     expect(card).not.toBeNull();
     expect(within(card as HTMLElement).queryByText("Restricted")).not.toBeInTheDocument();
-    const badge = within(card as HTMLElement).getByText("429 Error");
+    const errorBadges = within(card as HTMLElement).getByTestId("auth-file-card-error-badges");
+    const quota = within(card as HTMLElement).getByTestId("auth-file-card-quota");
+    expect(
+      Boolean(
+        errorBadges.compareDocumentPosition(quota) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ),
+    ).toBe(true);
+    const badge = within(errorBadges).getByText("429 Error");
     const tooltipTrigger = badge.closest("[aria-describedby]") ?? badge;
     fireEvent.mouseEnter(tooltipTrigger);
 
     const tooltip = await screen.findByRole("tooltip");
     expect(tooltip).toHaveTextContent("Requests are limited");
-    expect(tooltip).toHaveTextContent("5h");
+    expect(tooltip).toHaveTextContent("Limit window: 5h");
+    expect(tooltip).toHaveTextContent("Reason: usage limit");
+    expect(tooltip).toHaveTextContent("Refresh time:");
     expect(tooltip).toHaveTextContent("Auto recovery in");
     expect(tooltip).not.toHaveTextContent("usage_limit_reached");
+    // Multi-line tooltip: each fact on its own line for scanability.
+    expect(tooltip.textContent?.includes("\n")).toBe(true);
   });
 
   test("supports multi-select delete from the toolbar", async () => {

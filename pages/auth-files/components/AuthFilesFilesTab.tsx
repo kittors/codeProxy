@@ -1524,6 +1524,33 @@ export function AuthFilesFilesTab({
                     planType,
                   );
                   const subscriptionBadge = renderSubscriptionBadge(file);
+                  const restrictionBadges = renderRestrictionBadges(file);
+                  const claudeOAuthHealthBadges =
+                    renderClaudeOAuthHealthBadges(file);
+                  const quotaErrorBadge =
+                    provider && (state.status === "error" || state.error)
+                      ? renderQuotaErrorBadge(state.error ?? t("common.error"))
+                      : null;
+                  const cardErrorBadges: Array<{ key: string; node: ReactNode }> =
+                    [];
+                  if (restrictionBadges) {
+                    cardErrorBadges.push({
+                      key: "restriction",
+                      node: restrictionBadges,
+                    });
+                  }
+                  if (claudeOAuthHealthBadges) {
+                    cardErrorBadges.push({
+                      key: "claude-oauth",
+                      node: claudeOAuthHealthBadges,
+                    });
+                  }
+                  if (quotaErrorBadge) {
+                    cardErrorBadges.push({
+                      key: "quota-error",
+                      node: quotaErrorBadge,
+                    });
+                  }
                   const stats = resolveAuthFileStats(file, usageIndex);
                   const usageTotalCalls = stats.success + stats.failure;
                   const authIndex = normalizeAuthIndexValue(
@@ -1727,8 +1754,6 @@ export function AuthFilesFilesTab({
                                 : `${successRate.toFixed(1)}%`}
                             </span>
                           </span>
-                          {renderRestrictionBadges(file)}
-                          {renderClaudeOAuthHealthBadges(file)}
                           {subscriptionBadge}
                           {runtimeOnly ? (
                             <span className="inline-flex shrink-0 items-center rounded-full bg-slate-900 px-2 py-0.5 text-2xs font-semibold text-white dark:bg-white dark:text-neutral-950">
@@ -1750,19 +1775,23 @@ export function AuthFilesFilesTab({
                         ) : null}
                       </div>
 
+                      {cardErrorBadges.length > 0 ? (
+                        <div
+                          className="mt-3 min-w-0 flex flex-wrap items-center gap-1.5"
+                          data-testid="auth-file-card-error-badges"
+                        >
+                          {cardErrorBadges.map((item) => (
+                            <div key={item.key} className="min-w-0">
+                              {item.node}
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
+
                       <div
-                        className="mt-4 min-w-0 touch-pan-y rounded-2xl bg-slate-50/85 px-3 py-3 transition-colors duration-200 ease-out dark:bg-white/[0.03]"
+                        className="mt-3 min-w-0 touch-pan-y rounded-2xl bg-slate-50/85 px-3 py-3 transition-colors duration-200 ease-out dark:bg-white/[0.03]"
                         data-testid="auth-file-card-quota"
                       >
-                        {provider &&
-                        (state.status === "error" || state.error) ? (
-                          <div className="mb-2 min-w-0">
-                            {renderQuotaErrorBadge(
-                              state.error ?? t("common.error"),
-                            )}
-                          </div>
-                        ) : null}
-
                         {!provider && slots.length === 0 ? (
                           <div className="text-xs text-slate-400 dark:text-white/40">
                             --
