@@ -170,6 +170,43 @@ describe("DataTable sorting and row reordering", () => {
   });
 });
 
+describe("DataTable column reorder handle layout", () => {
+  test("reserves symmetric gutters so the grip never covers the header label", () => {
+    render(
+      <DataTable
+        tableId="column-reorder-overlap"
+        rows={initialRows}
+        columns={plainColumns}
+        rowKey={(row) => row.id}
+        naturalFlow
+        height="h-auto"
+        minHeight="min-h-0"
+        minWidth="min-w-[320px]"
+        showAllLoadedMessage={false}
+      />,
+    );
+
+    const header = document.querySelector<HTMLElement>(
+      'th[data-vt-column-key="name"]',
+    );
+    const content = header?.querySelector<HTMLElement>(
+      "[data-vt-column-header-content]",
+    );
+    const handle = header?.querySelector<HTMLElement>(
+      "[data-vt-column-reorder-handle]",
+    );
+    expect(header).not.toBeNull();
+    expect(content).not.toBeNull();
+    expect(handle).not.toBeNull();
+    expect(content).toHaveClass("px-5");
+    expect(content).not.toHaveClass(
+      "group-hover/column:pl-5",
+      "group-focus-within/column:pl-5",
+    );
+    expect(handle).toHaveClass("absolute", "left-1");
+  });
+});
+
 describe("DataTable scroll chrome and row dividers", () => {
   test("keeps header cells attached and forwards boundary wheel scrolling to the parent", () => {
     render(

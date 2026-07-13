@@ -3299,7 +3299,7 @@ export function DataTable<T>({
                             activeResizeColumnKey !== null
                               ? "pointer-events-none"
                               : activeReorderColumnKey === col.key
-                                ? "pointer-events-none"
+                                ? "pointer-events-none opacity-100"
                                 : "group-hover/column:opacity-100"
                           }`}
                           onPointerDown={(event) =>
@@ -3312,9 +3312,12 @@ export function DataTable<T>({
                           </span>
                         </button>
                       ) : null}
+                      {/* Always reserve handle-width gutters when reorderable so the absolute grip never covers the label; keep L/R symmetric so centered headers do not shift on hover. */}
                       <div
                         data-vt-column-header-content
-                        className="min-w-0 max-w-full overflow-hidden"
+                        className={`min-w-0 max-w-full overflow-hidden ${
+                          canReorder ? "px-5" : ""
+                        }`}
                       >
                         {isRowReorderColumn ? (
                           <span className="flex items-center justify-center text-slate-400/70 dark:text-white/35">

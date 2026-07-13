@@ -342,17 +342,10 @@ test("Request Logs: centers every header except ID over its column content", asy
   const channelLabel = channelHeader.locator(
     "[data-vt-column-header-content] > span > span",
   );
-  const centerBeforeHover = await channelLabel.evaluate((element) => {
-    const rect = element.getBoundingClientRect();
-    return rect.left + rect.width / 2;
-  });
-
-  await channelHeader.hover();
-  await expect(
-    channelHeader.locator("[data-vt-column-reorder-handle]"),
-  ).toHaveCSS("opacity", "1");
-
-  const hoverState = await channelLabel.evaluate((element) => {
+  const channelHandle = channelHeader.locator(
+    "[data-vt-column-reorder-handle]",
+  );
+  const beforeHover = await channelLabel.evaluate((element) => {
     const rect = element.getBoundingClientRect();
     const content = element.closest<HTMLElement>(
       "[data-vt-column-header-content]",
@@ -360,10 +353,46 @@ test("Request Logs: centers every header except ID over its column content", asy
     return {
       center: rect.left + rect.width / 2,
       paddingLeft: content ? getComputedStyle(content).paddingLeft : null,
+      paddingRight: content ? getComputedStyle(content).paddingRight : null,
     };
   });
-  expect(hoverState.paddingLeft).toBe("0px");
-  expect(Math.abs(hoverState.center - centerBeforeHover)).toBeLessThanOrEqual(
+  // Reorderable headers always reserve grip gutters (no hover-only padding shift).
+  expect(beforeHover.paddingLeft).toBe("20px");
+  expect(beforeHover.paddingRight).toBe("20px");
+
+  await channelHeader.hover();
+  await expect(channelHandle).toHaveCSS("opacity", "1");
+
+  const hoverState = await page.evaluate(() => {
+    const header = document.querySelector<HTMLElement>(
+      'th[data-vt-column-key="channelName"]',
+    );
+    const label = header?.querySelector<HTMLElement>(
+      "[data-vt-column-header-content] > span > span",
+    );
+    const handle = header?.querySelector<HTMLElement>(
+      "[data-vt-column-reorder-handle]",
+    );
+    const content = header?.querySelector<HTMLElement>(
+      "[data-vt-column-header-content]",
+    );
+    if (!label || !handle || !content) {
+      throw new Error("Missing channel header label/handle for overlap check");
+    }
+    const labelRect = label.getBoundingClientRect();
+    const handleRect = handle.getBoundingClientRect();
+    return {
+      center: labelRect.left + labelRect.width / 2,
+      paddingLeft: getComputedStyle(content).paddingLeft,
+      paddingRight: getComputedStyle(content).paddingRight,
+      // Positive means handle ends left of label start (no horizontal overlap).
+      gap: labelRect.left - handleRect.right,
+    };
+  });
+  expect(hoverState.paddingLeft).toBe("20px");
+  expect(hoverState.paddingRight).toBe("20px");
+  expect(hoverState.gap).toBeGreaterThanOrEqual(0);
+  expect(Math.abs(hoverState.center - beforeHover.center)).toBeLessThanOrEqual(
     1,
   );
 });
