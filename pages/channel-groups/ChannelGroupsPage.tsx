@@ -299,6 +299,9 @@ export function ChannelGroupsPage() {
       if (normalizedGroup) {
         params.set("allowed_channel_groups", normalizedGroup);
       }
+      // Editor picker must show every model the group's channels can serve so
+      // operators can (un)check AllowedModels. Plaza/catalog keep enforcement.
+      params.set("ignore_group_allowed_models", "1");
       const data = await apiClient.get<{ data?: Array<{ id?: string }> }>(
         `/models?${params.toString()}`,
       );
@@ -307,10 +310,14 @@ export function ChannelGroupsPage() {
         : [];
       // Group editors must use the same scope as the channel group; default
       // availability can be narrower and would drop owner-mapped catalog models.
+      // Always ignore AllowedModels here — that list is what this UI edits.
       const availability =
         normalizedGroup && normalizedGroup !== "default"
-          ? await loadConfiguredModelAvailability({ allowedChannelGroups: [normalizedGroup] })
-          : await loadConfiguredModelAvailability();
+          ? await loadConfiguredModelAvailability({
+              allowedChannelGroups: [normalizedGroup],
+              ignoreGroupAllowedModels: true,
+            })
+          : await loadConfiguredModelAvailability({ ignoreGroupAllowedModels: true });
       const detailsForGroup =
         (normalizedGroup ? availableChannelDetailsByGroup[normalizedGroup.toLowerCase()] : undefined) ??
         availableChannelDetails;
