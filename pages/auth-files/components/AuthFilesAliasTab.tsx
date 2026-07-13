@@ -1,9 +1,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
 import { Plus, RefreshCw, ShieldCheck, X } from "lucide-react";
-import { Button } from "@code-proxy/ui";
-import { EmptyState } from "@code-proxy/ui";
-import { TextInput } from "@code-proxy/ui";
+import { Button, Checkbox, EmptyState, TextInput } from "@code-proxy/ui";
 import type { AliasRow } from "@code-proxy/domain";
 
 interface AuthFilesAliasTabProps {
@@ -147,8 +145,11 @@ export function AuthFilesAliasTab({
 
                       <div className="mt-3 space-y-2">
                         {rows.map((row, idx) => (
-                          <div key={row.id} className="grid gap-2 lg:grid-cols-12">
-                            <div className="lg:col-span-5">
+                          <div
+                            key={row.id}
+                            className="flex flex-col gap-2 sm:flex-row sm:items-center"
+                          >
+                            <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-2">
                               <TextInput
                                 value={row.name}
                                 onChange={(e) => {
@@ -161,9 +162,8 @@ export function AuthFilesAliasTab({
                                   }));
                                 }}
                                 placeholder={t("auth_files.name_placeholder", "name")}
+                                aria-label={t("auth_files.name_placeholder", "name")}
                               />
-                            </div>
-                            <div className="lg:col-span-5">
                               <TextInput
                                 value={row.alias}
                                 onChange={(e) => {
@@ -176,28 +176,30 @@ export function AuthFilesAliasTab({
                                   }));
                                 }}
                                 placeholder={t("auth_files.alias_placeholder", "alias")}
+                                aria-label={t("auth_files.alias_placeholder", "alias")}
                               />
                             </div>
-                            <div className="lg:col-span-1 flex items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm transition-colors duration-200 ease-out dark:border-neutral-800 dark:bg-neutral-950/60">
-                              <span className="text-xs text-slate-600 dark:text-white/65">
-                                {t("auth_files.fork")}
-                              </span>
-                              <input
-                                type="checkbox"
-                                checked={Boolean(row.fork)}
-                                onChange={(e) => {
-                                  const checked = e.currentTarget.checked;
-                                  setAliasEditing((prev) => ({
-                                    ...prev,
-                                    [channel]: (prev[channel] ?? []).map((it, i) =>
-                                      i === idx ? { ...it, fork: checked } : it,
-                                    ),
-                                  }));
-                                }}
-                                className="h-4 w-4 rounded border-slate-300 text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:border-neutral-700 dark:bg-neutral-950 dark:text-white dark:focus-visible:ring-white/15"
-                              />
-                            </div>
-                            <div className="lg:col-span-1 flex items-center justify-end">
+                            <div className="flex shrink-0 items-center justify-between gap-2 sm:justify-end">
+                              <label
+                                className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-xl px-1 text-sm text-slate-600 transition-colors hover:text-slate-900 dark:text-white/70 dark:hover:text-white"
+                                title={t("auth_files.fork_hint")}
+                              >
+                                <Checkbox
+                                  checked={Boolean(row.fork)}
+                                  onCheckedChange={(checked) => {
+                                    setAliasEditing((prev) => ({
+                                      ...prev,
+                                      [channel]: (prev[channel] ?? []).map((it, i) =>
+                                        i === idx ? { ...it, fork: checked } : it,
+                                      ),
+                                    }));
+                                  }}
+                                  aria-label={t("auth_files.fork_label")}
+                                />
+                                <span className="whitespace-nowrap select-none">
+                                  {t("auth_files.fork_label")}
+                                </span>
+                              </label>
                               <Button
                                 variant="danger"
                                 size="sm"

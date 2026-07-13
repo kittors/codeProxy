@@ -847,7 +847,10 @@
     "claude_oauth_health_runtime_name": "Профиль runtime",
     "claude_oauth_health_runtime_identity": "Identity fingerprint",
     "claude_oauth_health_runtime_transport": "Транспорт",
-    "claude_oauth_health_updated_at": "Обновлено"
+    "claude_oauth_health_updated_at": "Обновлено",
+    "fork": "Сохранить оригинал",
+    "fork_label": "Сохранить оригинал",
+    "fork_hint": "Если включено, доступны и исходное имя модели, и псевдоним. Если выключено, наружу виден только псевдоним."
   },
   "antigravity_quota": {
     "title": "Квота Antigravity",
