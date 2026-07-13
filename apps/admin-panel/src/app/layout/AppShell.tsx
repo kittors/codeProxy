@@ -34,6 +34,7 @@ import {
   ThemeToggleButton,
 } from "@code-proxy/ui";
 import { preloadPageRoute } from "@pages/registry";
+import { recoverFromChunkLoadError } from "@pages/chunkLoadRecovery";
 import {
   identityApi,
   IDENTITY_TENANTS_UPDATED_EVENT,
@@ -780,6 +781,7 @@ function ShellSidebar({
   }, [railCollapsed]);
 
   const warmPageRoute = useCallback((to: string) => {
+    // Hover warm-up: ignore failures; click path handles chunk recovery.
     void preloadPageRoute(to).catch(() => undefined);
   }, []);
 
@@ -808,19 +810,32 @@ function ShellSidebar({
         progressTimers.current.push(timer);
       });
 
-      void Promise.all([preloadPageRoute(to).catch(() => undefined), minimumProgress]).then(() => {
-        if (navigationRequestId.current !== requestId) return;
-        setProgressDone(true);
-
-        const navigateTimer = setTimeout(() => {
+      // Do not swallow chunk-load failures: stale post-deploy assets must hard-reload
+      // instead of navigating into an empty Suspense tree.
+      void Promise.all([preloadPageRoute(to), minimumProgress])
+        .then(() => {
           if (navigationRequestId.current !== requestId) return;
-          navigate(to, { viewTransition: true });
+          setProgressDone(true);
+
+          const navigateTimer = setTimeout(() => {
+            if (navigationRequestId.current !== requestId) return;
+            navigate(to, { viewTransition: true });
+            setPendingTo("");
+            setProgressDone(false);
+            progressTimers.current = [];
+          }, ROUTE_PROGRESS_HIDE_MS);
+          progressTimers.current.push(navigateTimer);
+        })
+        .catch((error: unknown) => {
+          if (navigationRequestId.current !== requestId) return;
+          clearProgressTimers();
           setPendingTo("");
           setProgressDone(false);
-          progressTimers.current = [];
-        }, ROUTE_PROGRESS_HIDE_MS);
-        progressTimers.current.push(navigateTimer);
-      });
+          if (recoverFromChunkLoadError(error)) return;
+          // Non-chunk failure: fall back to navigation so Suspense can surface
+          // the error boundary on render rather than stranding the progress bar.
+          navigate(to, { viewTransition: true });
+        });
     },
     [clearProgressTimers, location.pathname, navigate, onNavigate],
   );
