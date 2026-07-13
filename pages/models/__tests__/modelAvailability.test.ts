@@ -1,8 +1,32 @@
 import { describe, expect, test } from "vitest";
 import {
+  emptyModelPricing,
   filterByConfiguredModelAvailability,
   normalizeConfiguredModelAvailability,
+  type ModelPathAvailabilityItem,
 } from "@features/model-availability";
+import { mergeConfiguredModelAvailability } from "../modelsUtils";
+import type { ModelItem } from "../types";
+
+const baseModel = (id: string, ownedBy = "xai"): ModelItem => ({
+  id,
+  owned_by: ownedBy,
+  description: "",
+  enabled: true,
+  source: "config",
+  pricing: emptyModelPricing(),
+  inputModalities: [],
+  outputModalities: [],
+  supportsVision: false,
+});
+
+const pathItem = (id: string, ownedBy: string): ModelPathAvailabilityItem => ({
+  id,
+  owned_by: ownedBy,
+  kind: "path",
+  alias: false,
+  paths: [],
+});
 
 describe("model availability normalization", () => {
   test("preserves an explicit scoped empty availability response", () => {
@@ -51,5 +75,45 @@ describe("model availability normalization", () => {
         clientId: "codex-1",
       },
     ]);
+  });
+});
+
+describe("mergeConfiguredModelAvailability path enrichment", () => {
+  test("does not re-add path-only models blocked by scoped AllowedModels", () => {
+    const availability = normalizeConfiguredModelAvailability({
+      scoped: true,
+      data: [{ id: "grok-4.5", owned_by: "xAI" }],
+    });
+    const pathItems = [
+      pathItem("grok-4.5", "xAI"),
+      pathItem("grok-composer-2.5-fast", "xAI"),
+    ];
+
+    const merged = mergeConfiguredModelAvailability(
+      [baseModel("grok-4.5")],
+      availability,
+      pathItems,
+    );
+
+    expect(merged.map((m) => m.id)).toEqual(["grok-4.5"]);
+  });
+
+  test("still merges path-only models when availability is unscoped", () => {
+    const availability = normalizeConfiguredModelAvailability({
+      scoped: false,
+      data: [{ id: "gpt-5", owned_by: "openai" }],
+    });
+    const pathItems = [
+      pathItem("gpt-5", "openai"),
+      pathItem("path-only-model", "openai"),
+    ];
+
+    const merged = mergeConfiguredModelAvailability(
+      [baseModel("gpt-5", "openai")],
+      availability,
+      pathItems,
+    );
+
+    expect(merged.map((m) => m.id).sort()).toEqual(["gpt-5", "path-only-model"]);
   });
 });

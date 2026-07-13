@@ -291,13 +291,20 @@ function mergePlazaModels(
   configuredItems: ModelAvailabilityItem[],
   pathModelIds: string[],
   useMappedOwnerModels: boolean,
+  configuredScoped: boolean,
 ): PlazaModel[] {
   const configuredById = new Map(
     configuredItems.map((item) => [item.id.toLowerCase(), item]),
   );
-  const nextIds = useMappedOwnerModels
-    ? configuredItems.map((item) => item.id)
-    : [...pathModelIds, ...configuredItems.map((item) => item.id)];
+  // When configured-availability is scoped (tenant channel-group allow-list),
+  // it is the source of truth. Path-only IDs used to re-introduce models that
+  // AllowedModels already removed (e.g. xAI live discovery via path-availability).
+  // Mapped-owner mode likewise trusts the configured list only.
+  // Unscoped tenants keep path ∪ configured enrichment.
+  const nextIds =
+    useMappedOwnerModels || configuredScoped
+      ? configuredItems.map((item) => item.id)
+      : [...pathModelIds, ...configuredItems.map((item) => item.id)];
 
   return Array.from(new Set(nextIds))
     .sort((a, b) => a.localeCompare(b))
@@ -340,6 +347,7 @@ export function ModelPlazaPage() {
       ]);
 
       const useMappedOwnerModels = configuredAvailability?.usesMappedOwners === true;
+      const configuredScoped = configuredAvailability?.scoped === true;
       const rootV1ModelIds =
         pathAvailability?.items
           .filter((item) =>
@@ -355,6 +363,7 @@ export function ModelPlazaPage() {
           configuredAvailability?.items ?? [],
           rootV1ModelIds,
           useMappedOwnerModels,
+          configuredScoped,
         ),
       );
     } catch (err: unknown) {
