@@ -4,10 +4,15 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { ThemeProvider } from "@code-proxy/ui";
 import { IDENTITY_TENANTS_UPDATED_EVENT, type MenuIdentity, type TenantIdentity } from "@code-proxy/api-client";
 import { preloadPageRoute } from "@pages/registry";
+import { recoverFromChunkLoadError } from "@pages/chunkLoadRecovery";
 import { AppShell } from "./AppShell";
 
 vi.mock("@pages/registry", () => ({
   preloadPageRoute: vi.fn(() => Promise.resolve()),
+}));
+
+vi.mock("@pages/chunkLoadRecovery", () => ({
+  recoverFromChunkLoadError: vi.fn(() => false),
 }));
 
 const tenantsMock = vi.fn<() => Promise<{ items: TenantIdentity[] }>>();
@@ -233,6 +238,8 @@ describe("AppShell route progress", () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.mocked(preloadPageRoute).mockClear();
+    vi.mocked(recoverFromChunkLoadError).mockReset();
+    vi.mocked(recoverFromChunkLoadError).mockReturnValue(false);
   });
 
   test("preloads the target route before navigating from the current page", async () => {
@@ -359,6 +366,27 @@ describe("AppShell route progress", () => {
     expect(document.querySelector(".rp")).not.toBeInTheDocument();
     expect(screen.getByTestId("location")).toHaveTextContent("/dashboard");
   });
+
+  test("recovers from chunk load failures instead of navigating into a blank route", async () => {
+    vi.useFakeTimers();
+    const chunkError = new TypeError("Failed to fetch dynamically imported module");
+    vi.mocked(preloadPageRoute).mockRejectedValueOnce(chunkError);
+    vi.mocked(recoverFromChunkLoadError).mockReturnValueOnce(true);
+
+    renderShell();
+    fireEvent.click(screen.getByRole("button", { name: /Access(?: & Credentials)?|接入(?:管理|与凭证)/i }));
+    fireEvent.click(document.querySelector<HTMLAnchorElement>('a[href="/access/ai-providers"]')!);
+
+    await act(async () => {
+      vi.advanceTimersByTime(680);
+      await Promise.resolve();
+    });
+
+    expect(recoverFromChunkLoadError).toHaveBeenCalledWith(chunkError);
+    expect(screen.getByTestId("location")).toHaveTextContent("/dashboard");
+    expect(document.querySelector(".rp")).not.toBeInTheDocument();
+  });
+
   test("groups sidebar routes and uses a compact neutral active state", () => {
     renderShell("/runtime/request-logs");
 

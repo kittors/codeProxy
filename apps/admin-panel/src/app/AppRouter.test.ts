@@ -61,7 +61,10 @@ describe("AppRouter", () => {
 
     expect(mainSource).toContain("dismissAppLoader(true)");
     expect(manageEntrySource).toContain("dismissAppLoader(true)");
+    expect(mainSource).toContain("installChunkLoadRecoveryHandlers()");
+    expect(manageEntrySource).toContain("installChunkLoadRecoveryHandlers()");
     expect(routerSource).toContain("const RouteFallback = () => null");
+    expect(routerSource).toContain("ChunkLoadErrorBoundary");
     expect(routerSource).not.toContain("PageLoader");
     expect(routerSource).not.toContain('variant="initial"');
     expect(routerSource).not.toContain('variant="inline"');

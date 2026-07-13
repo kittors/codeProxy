@@ -5,11 +5,14 @@ import { ProtectedRoute } from "@/app/guards/ProtectedRoute";
 import { DashboardLayout } from "@app/layout/DashboardLayout";
 import { ThemeProvider, ToastProvider } from "@code-proxy/ui";
 import { AutoUpdatePrompt } from "@app/update/AutoUpdatePrompt";
+import { ChunkLoadErrorBoundary } from "@/app/bootstrap/ChunkLoadErrorBoundary";
 import { dismissAppLoader } from "@/app/bootstrap/dismissAppLoader";
 import { pageRoutes, type PageRoute } from "@pages/registry";
 import { ForbiddenPage } from "@pages/forbidden/ForbiddenPage";
 import { EmbedPage } from "@pages/embed/EmbedPage";
 
+// Keep fallback empty so route transitions stay shell-only; chunk failures are
+// recovered by ChunkLoadErrorBoundary / hard reload instead of a second loader.
 const RouteFallback = () => null;
 
 /** Preserve deep-link suffixes when remapping legacy flat routes to nested secondary routes. */
@@ -119,65 +122,67 @@ function AuthenticatedRoutes() {
   return (
     <>
       <AutoUpdatePrompt />
-      <Suspense fallback={<RouteFallback />}>
-        <Routes>
-          {publicRoutes.flatMap((route) =>
-            (route.redirects ?? []).map((rd) => (
-              <Route key={rd.from} path={rd.from} element={<Navigate to={rd.to} replace />} />
-            )),
-          )}
-          <Route path="/login" element={<Navigate to="/dashboard" replace />} />
-          <Route element={<ProtectedRoute />}>
-            {authStandaloneRoutes.map((route) => (
-              <Route
-                key={route.path}
-                path={route.path}
-                element={<AuthorizedPage route={route} />}
-              />
-            ))}
-            <Route element={<DashboardLayout />}>
-              {authDashboardRoutes.map((route) => (
+      <ChunkLoadErrorBoundary>
+        <Suspense fallback={<RouteFallback />}>
+          <Routes>
+            {publicRoutes.flatMap((route) =>
+              (route.redirects ?? []).map((rd) => (
+                <Route key={rd.from} path={rd.from} element={<Navigate to={rd.to} replace />} />
+              )),
+            )}
+            <Route path="/login" element={<Navigate to="/dashboard" replace />} />
+            <Route element={<ProtectedRoute />}>
+              {authStandaloneRoutes.map((route) => (
                 <Route
                   key={route.path}
                   path={route.path}
                   element={<AuthorizedPage route={route} />}
                 />
               ))}
-              {authDashboardRoutes.flatMap((route) =>
-                (route.redirects ?? []).map((rd) => (
-                  <Route key={rd.from} path={rd.from} element={<Navigate to={rd.to} replace />} />
-                )),
-              )}
-              {/* Prefix redirects cover deep links under legacy flat paths (e.g. /ai-providers/openai). */}
-              {LEGACY_PREFIX_REDIRECTS.map((rd) => (
-                <Route
-                  key={`legacy:${rd.fromPrefix}`}
-                  path={`${rd.fromPrefix}/*`}
-                  element={<PrefixRedirect fromPrefix={rd.fromPrefix} toPrefix={rd.toPrefix} />}
-                />
-              ))}
-              {embedMenus.map((menu) => (
-                <Route
-                  key={`embed:${menu.code}`}
-                  path={menu.path}
-                  element={<AuthorizedEmbedPage path={menu.path} />}
-                />
-              ))}
-              {authDashboardRoutes
-                .filter((r) => r.hasWildcard)
-                .map((route) => (
+              <Route element={<DashboardLayout />}>
+                {authDashboardRoutes.map((route) => (
                   <Route
-                    key={`${route.path}-wildcard`}
-                    path={`${route.path}/*`}
+                    key={route.path}
+                    path={route.path}
                     element={<AuthorizedPage route={route} />}
                   />
                 ))}
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                {authDashboardRoutes.flatMap((route) =>
+                  (route.redirects ?? []).map((rd) => (
+                    <Route key={rd.from} path={rd.from} element={<Navigate to={rd.to} replace />} />
+                  )),
+                )}
+                {/* Prefix redirects cover deep links under legacy flat paths (e.g. /ai-providers/openai). */}
+                {LEGACY_PREFIX_REDIRECTS.map((rd) => (
+                  <Route
+                    key={`legacy:${rd.fromPrefix}`}
+                    path={`${rd.fromPrefix}/*`}
+                    element={<PrefixRedirect fromPrefix={rd.fromPrefix} toPrefix={rd.toPrefix} />}
+                  />
+                ))}
+                {embedMenus.map((menu) => (
+                  <Route
+                    key={`embed:${menu.code}`}
+                    path={menu.path}
+                    element={<AuthorizedEmbedPage path={menu.path} />}
+                  />
+                ))}
+                {authDashboardRoutes
+                  .filter((r) => r.hasWildcard)
+                  .map((route) => (
+                    <Route
+                      key={`${route.path}-wildcard`}
+                      path={`${route.path}/*`}
+                      element={<AuthorizedPage route={route} />}
+                    />
+                  ))}
+                <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              </Route>
             </Route>
-          </Route>
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        </Routes>
-      </Suspense>
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
+        </Suspense>
+      </ChunkLoadErrorBoundary>
     </>
   );
 }
@@ -192,32 +197,34 @@ export function AppRouter() {
     <ThemeProvider>
       <ToastProvider>
         <div className="font-sans antialiased">
-          <Suspense fallback={<RouteFallback />}>
-            <Routes>
-              {standalonePublicRoutes.map((route) => (
-                <Route key={route.path} path={route.path} element={readyRoute(route.element)} />
-              ))}
-              {loginRoute ? (
+          <ChunkLoadErrorBoundary>
+            <Suspense fallback={<RouteFallback />}>
+              <Routes>
+                {standalonePublicRoutes.map((route) => (
+                  <Route key={route.path} path={route.path} element={readyRoute(route.element)} />
+                ))}
+                {loginRoute ? (
+                  <Route
+                    path={loginRoute.path}
+                    element={
+                      <AuthProvider>
+                        <LoginRouteReady>{loginRoute.element}</LoginRouteReady>
+                      </AuthProvider>
+                    }
+                  />
+                ) : null}
+
                 <Route
-                  path={loginRoute.path}
+                  path="*"
                   element={
                     <AuthProvider>
-                      <LoginRouteReady>{loginRoute.element}</LoginRouteReady>
+                      <AuthenticatedRoutes />
                     </AuthProvider>
                   }
                 />
-              ) : null}
-
-              <Route
-                path="*"
-                element={
-                  <AuthProvider>
-                    <AuthenticatedRoutes />
-                  </AuthProvider>
-                }
-              />
-            </Routes>
-          </Suspense>
+              </Routes>
+            </Suspense>
+          </ChunkLoadErrorBoundary>
         </div>
       </ToastProvider>
     </ThemeProvider>
