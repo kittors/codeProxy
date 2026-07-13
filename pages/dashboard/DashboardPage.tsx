@@ -520,7 +520,7 @@ export function DashboardPage() {
     () => trends?.throughput_series ?? [],
     [trends?.throughput_series],
   );
-  // Latest minute from dashboard-summary series (tenant or all-tenants for platform admin).
+  // Latest point is a rolling last-60s window from the API (not an empty new calendar minute).
   const latestThroughput = throughputSeries[throughputSeries.length - 1];
   const tenantRpm = latestThroughput?.rpm ?? 0;
   const tenantTpm = latestThroughput?.tpm ?? 0;
@@ -700,7 +700,7 @@ export function DashboardPage() {
         points={throughputSeries}
         rpm={tenantRpm}
         tpm={tenantTpm}
-        // Series comes from dashboard-summary polling, not the system-stats websocket.
+        // Series from dashboard-summary polling; latest point is rolling 60s RPM/TPM.
         connected={false}
         showRPM={throughputLegend.rpm}
         showTPM={throughputLegend.tpm}
