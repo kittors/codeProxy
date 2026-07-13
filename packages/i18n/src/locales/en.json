@@ -2671,7 +2671,7 @@
     "cache_rate": "Cache Token Ratio",
     "auth_type_api": "API",
     "auth_type_oauth": "OAuth",
-    "no_data_desc": "No request logs match the current filters. Try another range or clear filters."
+    "no_data_desc": "Try another range or clear filters."
   },
   "ccswitch": {
     "import_to_ccswitch": "Import to CC Switch",

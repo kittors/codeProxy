@@ -660,7 +660,7 @@ export function RequestLogsPage() {
             caption={t("request_logs.table_caption")}
             emptyText={t("request_logs.no_data")}
             emptyDescription={t("request_logs.no_data_desc")}
-            emptyIcon={<ScrollText size={28} strokeWidth={1.6} aria-hidden />}
+            emptyIcon={<ScrollText size={20} strokeWidth={1.5} aria-hidden />}
             showAllLoadedMessage={false}
           />
 
