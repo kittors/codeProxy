@@ -4322,7 +4322,7 @@
     "time": "时间",
     "actor": "操作人",
     "action": "动作",
-    "what_happened": "干了啥",
+    "what_happened": "操作内容",
     "result_success": "成功",
     "result_failed": "失败",
     "request_id": "请求 ID",
