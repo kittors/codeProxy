@@ -64,7 +64,8 @@
     "reorder_row": "Перетащите, чтобы изменить порядок строки {{index}}",
     "sort_column": "Сортировать {{column}}",
     "sort_ascending": "По возрастанию",
-    "sort_descending": "По убыванию"
+    "sort_descending": "По убыванию",
+    "no_data": "Нет данных"
   },
   "ccswitch": {
     "import_to_ccswitch": "Импорт в CC Switch",

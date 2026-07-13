@@ -96,8 +96,14 @@ export interface DataTableProps<T> {
   minHeight?: string;
   /** Screen-reader caption */
   caption?: string;
-  /** Empty state message */
+  /** Empty state title shown via the shared EmptyState component */
   emptyText?: string;
+  /** Optional empty state description under the title */
+  emptyDescription?: string;
+  /** Optional empty state icon */
+  emptyIcon?: ReactNode;
+  /** Optional empty state action slot (button, link, etc.) */
+  emptyAction?: ReactNode;
   /** Show the "all records loaded" footer when there is no next page. */
   showAllLoadedMessage?: boolean;
   /** Show a straight divider between data rows. */

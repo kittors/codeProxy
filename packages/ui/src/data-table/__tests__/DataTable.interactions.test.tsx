@@ -207,6 +207,69 @@ describe("DataTable column reorder handle layout", () => {
   });
 });
 
+describe("DataTable empty state", () => {
+  test("renders EmptyState and collapses min-width so empty tables do not scroll sideways", () => {
+    const wideColumns: DataTableColumn<TestRow>[] = [
+      {
+        key: "id",
+        label: "ID",
+        width: "w-[320px] min-w-[320px]",
+        render: (row) => row.id,
+      },
+      {
+        key: "name",
+        label: "Name",
+        width: "w-[480px] min-w-[480px]",
+        render: (row) => row.name,
+      },
+      {
+        key: "extra",
+        label: "Extra",
+        width: "w-[640px] min-w-[640px]",
+        render: () => "extra",
+      },
+    ];
+
+    render(
+      <DataTable
+        tableId="empty-state-table"
+        rows={[]}
+        columns={wideColumns}
+        rowKey={(row) => row.id}
+        height="h-[240px]"
+        minHeight="min-h-[240px]"
+        minWidth="min-w-[1800px]"
+        emptyText="No request logs"
+        emptyDescription="Try a different filter range"
+        showAllLoadedMessage={false}
+      />,
+    );
+
+    const table = document.querySelector<HTMLTableElement>("table[data-vt-empty='true']");
+    const viewport = document.querySelector<HTMLElement>(
+      "[data-scrollbar-visibility='hover']",
+    );
+    const emptyRow = document.querySelector<HTMLTableRowElement>(
+      "tr[data-vt-empty-row]",
+    );
+
+    expect(table).not.toBeNull();
+    expect(table).toHaveClass("min-w-0");
+    expect(table).not.toHaveClass("min-w-[1800px]");
+    expect(viewport).toHaveClass("overflow-x-hidden");
+    expect(emptyRow).not.toBeNull();
+    expect(screen.getByText("No request logs")).toBeInTheDocument();
+    expect(screen.getByText("Try a different filter range")).toBeInTheDocument();
+
+    const firstHeader = document.querySelector<HTMLElement>(
+      'th[data-vt-column-key="id"]',
+    );
+    expect(firstHeader).not.toBeNull();
+    expect(firstHeader?.className).not.toMatch(/min-w-\[320px\]/);
+    expect(firstHeader).not.toHaveClass("sticky");
+  });
+});
+
 describe("DataTable scroll chrome and row dividers", () => {
   test("keeps header cells attached and forwards boundary wheel scrolling to the parent", () => {
     render(

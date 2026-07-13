@@ -86,7 +86,8 @@
     "reorder_row": "拖拽调整第 {{index}} 行位置",
     "sort_column": "排序 {{column}}",
     "sort_ascending": "升序",
-    "sort_descending": "降序"
+    "sort_descending": "降序",
+    "no_data": "暂无数据"
   },
   "title": {
     "main": "Code Proxy 管理后台",

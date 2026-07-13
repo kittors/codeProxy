@@ -84,7 +84,8 @@
     "reorder_row": "Drag to reorder row {{index}}",
     "sort_column": "Sort {{column}}",
     "sort_ascending": "Ascending",
-    "sort_descending": "Descending"
+    "sort_descending": "Descending",
+    "no_data": "No data"
   },
   "title": {
     "main": "Code Proxy Admin Dashboard",
