@@ -1,8 +1,8 @@
 name: PR review agent
 
+# Opt-in only: no auto-review on pull_request open/push.
+# Trigger via PR comment (/bot review) or Actions → workflow_dispatch.
 on:
-  pull_request:
-    types: [opened, reopened, synchronize, ready_for_review]
   issue_comment:
     types: [created]
   workflow_dispatch:
@@ -21,7 +21,6 @@ jobs:
     if: >-
       ${{
         github.event_name == 'workflow_dispatch' ||
-        github.event_name == 'pull_request' ||
         (
           github.event_name == 'issue_comment' &&
           github.event.issue.pull_request &&

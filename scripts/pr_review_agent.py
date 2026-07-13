@@ -632,13 +632,15 @@ def format_help() -> str:
     return f"""{COMMENT_MARKER}
 我是 CliProxy 的 PR 审查助手。
 
+默认**不会**在打开或推送 PR 时自动审查，需显式触发。
+
 可用指令：
 - `/bot help`：显示说明
-- `/bot review`：基于最新 diff 重新审查并发布详细报告（PR 作者或维护者）
-- `/bot quiet`：本 PR 静默，不再自动审查（维护者）
+- `/bot review`：基于最新 diff 审查并发布报告（PR 作者或维护者）
+- `/bot quiet`：本 PR 静默，忽略审查请求（维护者）
 - `/bot unquiet`：解除静默（维护者）
 
-打开/更新 PR 时会自动审查一次（同一 head commit 不重复）。
+也可在 Actions 中手动运行 **PR review agent**（workflow_dispatch）。
 """
 
 
@@ -762,7 +764,12 @@ def run_comment_command(repo: str, event: dict, token: str):
             "POST",
             f"/repos/{repo}/issues/{pr_number}/comments",
             token,
-            {"body": f"{COMMENT_MARKER}\n已开启静默。本 PR 不会再自动审查；需要时执行 `/bot unquiet` 或 `/bot review`。"},
+            {
+                "body": (
+                    f"{COMMENT_MARKER}\n已开启静默。本 PR 将忽略 `/bot review`；"
+                    "需要时执行 `/bot unquiet` 后再 `/bot review`。"
+                )
+            },
         )
         print("comment=quiet")
         return
@@ -773,7 +780,12 @@ def run_comment_command(repo: str, event: dict, token: str):
             "POST",
             f"/repos/{repo}/issues/{pr_number}/comments",
             token,
-            {"body": f"{COMMENT_MARKER}\n已解除静默。后续 PR 更新仍会自动审查。"},
+            {
+                "body": (
+                    f"{COMMENT_MARKER}\n已解除静默。"
+                    "审查仍为按需：评论 `/bot review` 或手动运行 workflow。"
+                )
+            },
         )
         print("comment=unquiet")
         return
@@ -799,14 +811,18 @@ def run():
         run_comment_command(repo, event, token)
         return
 
-    pr_number = get_pr_number(event, event_name)
-    pr = fetch_pr(repo, pr_number, token)
-    if pr.get("draft") and event_name != "workflow_dispatch":
-        print("review=skipped-draft")
+    # Auto-review on pull_request open/push is disabled; only explicit triggers.
+    if event_name == "pull_request":
+        print("review=skipped-opt-in-only")
         return
 
-    force = event_name == "workflow_dispatch"
-    run_review(repo, pr, token, trigger=event_name, force=force)
+    if event_name != "workflow_dispatch":
+        print(f"review=skipped-unsupported-event:{event_name}")
+        return
+
+    pr_number = get_pr_number(event, event_name)
+    pr = fetch_pr(repo, pr_number, token)
+    run_review(repo, pr, token, trigger=event_name, force=True)
 
 
 def self_test():
