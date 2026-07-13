@@ -1,20 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Check, Copy, Download, ExternalLink } from "lucide-react";
+import { Check, Copy, Download, ExternalLink, Inbox } from "lucide-react";
 import iconClaude from "@code-proxy/assets/icons/claude.svg";
 import iconCodex from "@code-proxy/assets/icons/codex.svg";
-import {
-  ApiClient,
-  detectApiBaseFromLocation,
-  publicApiClient,
-  readPersistedAuthSnapshot,
-} from "@code-proxy/api-client";
-import {
-  ccSwitchImportConfigsApi,
-  normalizeCcSwitchImportConfigs,
-} from "@code-proxy/api-client/endpoints/ccswitch-import-configs";
-import type { ApiKeyEntry } from "@code-proxy/api-client/endpoints/api-keys";
+import { detectApiBaseFromLocation, publicApiClient } from "@code-proxy/api-client";
+import { normalizeCcSwitchImportConfigs } from "@code-proxy/api-client/endpoints/ccswitch-import-configs";
 import {
   openCcSwitchImportUrl,
   type CcSwitchClientType,
@@ -24,7 +15,6 @@ import {
   buildCcSwitchImportUrlForConfig,
 } from "@code-proxy/domain/ccswitch/ccswitchImportLinks";
 import type { CcSwitchImportConfigListItem } from "@code-proxy/domain/ccswitch/ccswitchImportConfigList";
-import { ccSwitchConfigMatchesApiKeyPermissions } from "@code-proxy/domain/ccswitch/ccswitchImportCompatibility";
 import {
   getActiveCacheTenantId,
   readTenantBucketMapEntry,
@@ -32,14 +22,19 @@ import {
 } from "@code-proxy/domain";
 import { Button } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
+import { EmptyState } from "@code-proxy/ui";
 import { copyTextToClipboard } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
 
 const CC_SWITCH_RELEASES_URL = "https://github.com/farion1231/cc-switch/releases";
 const QUICK_IMPORT_CLIENTS: CcSwitchClientType[] = ["codex", "claude"];
-/** Tenant-scoped quick-import cache (v2). Legacy v1 migrates into the default tenant only. */
-const QUICK_IMPORT_CACHE_STORAGE_KEY = "apiKeyLookup.quickImportCache.v2";
-const QUICK_IMPORT_CACHE_STORAGE_KEY_V1 = "apiKeyLookup.quickImportCache.v1";
+/**
+ * Tenant-scoped quick-import cache (v3).
+ * Lookup always loads presets via the public endpoint keyed by API key, so residual
+ * management-session auth must not influence cache identity or filtering.
+ * Legacy v1/v2 buckets are not reused (different shape / wrong tenant mixing).
+ */
+const QUICK_IMPORT_CACHE_STORAGE_KEY = "apiKeyLookup.quickImportCache.v3";
 
 const iconByType: Record<"codex" | "claude", string> = {
   codex: iconCodex,
@@ -50,12 +45,6 @@ const clientLabelKey: Record<"codex" | "claude", string> = {
   codex: "apikey_lookup.quick_import_codex",
   claude: "apikey_lookup.quick_import_claude",
 };
-
-function readStoredManagementAuth(): { apiBase: string; managementKey: string } | null {
-  const snapshot = readPersistedAuthSnapshot();
-  if (!snapshot?.apiBase || !snapshot.managementKey) return null;
-  return { apiBase: snapshot.apiBase, managementKey: snapshot.managementKey };
-}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -89,37 +78,33 @@ function serializeQuickImportConfig(config: CcSwitchImportConfigListItem): Recor
 }
 
 function getQuickImportCacheKey(apiKey: string): string {
-  const auth = readStoredManagementAuth();
-  return [apiKey.trim(), auth?.apiBase ?? "public", auth?.managementKey ?? ""].join("|");
+  // Public lookup is scoped by the entered API key only (server resolves tenant).
+  return apiKey.trim();
 }
 
 type QuickImportCacheEntry = {
   configs: CcSwitchImportConfigListItem[];
-  apiKeyEntry: ApiKeyEntry | null;
 };
 
 function parseQuickImportCacheEntry(value: unknown): QuickImportCacheEntry | null {
   if (!isRecord(value)) return null;
   const configs = normalizeCcSwitchImportConfigs(value.configs);
-  const entries = normalizeApiKeyEntries([value.apiKeyEntry]);
-  return { configs, apiKeyEntry: entries[0] ?? null };
+  return { configs };
 }
 
 function readStoredQuickImportCache(cacheKey: string): QuickImportCacheEntry | null {
+  if (!cacheKey) return null;
   const raw = readTenantBucketMapEntry({
     key: QUICK_IMPORT_CACHE_STORAGE_KEY,
     kind: "session",
     tenantId: getActiveCacheTenantId(),
     entryKey: cacheKey,
-    legacyKey: QUICK_IMPORT_CACHE_STORAGE_KEY_V1,
   });
   return parseQuickImportCacheEntry(raw);
 }
 
-function writeStoredQuickImportCache(
-  cacheKey: string,
-  value: QuickImportCacheEntry,
-): void {
+function writeStoredQuickImportCache(cacheKey: string, value: QuickImportCacheEntry): void {
+  if (!cacheKey) return;
   updateTenantBucketMapEntry({
     key: QUICK_IMPORT_CACHE_STORAGE_KEY,
     kind: "session",
@@ -127,20 +112,21 @@ function writeStoredQuickImportCache(
     entryKey: cacheKey,
     entryValue: {
       configs: value.configs.map(serializeQuickImportConfig),
-      apiKeyEntry: value.apiKeyEntry,
     },
     maxEntries: 8,
-    legacyKey: QUICK_IMPORT_CACHE_STORAGE_KEY_V1,
-    legacyKeysToRemove: [QUICK_IMPORT_CACHE_STORAGE_KEY_V1],
   });
 }
 
 const sameJsonValue = (left: unknown, right: unknown): boolean =>
   JSON.stringify(left) === JSON.stringify(right);
 
-async function fetchPublicQuickImportConfigs(
-  apiKey: string,
-): Promise<CcSwitchImportConfigListItem[]> {
+/**
+ * Always use the public endpoint for API-key lookup.
+ * Residual admin auth in localStorage must not switch this to management GET,
+ * which is tenant-scoped by the admin session and can return the wrong tenant's
+ * presets (or none) for the looked-up key.
+ */
+async function fetchQuickImportConfigs(apiKey: string): Promise<CcSwitchImportConfigListItem[]> {
   const key = apiKey.trim();
   if (!key) return [];
 
@@ -148,52 +134,6 @@ async function fetchPublicQuickImportConfigs(
     api_key: key,
   });
   return normalizeCcSwitchImportConfigs(data["ccswitch-import-configs"] ?? data.items ?? data);
-}
-
-async function fetchQuickImportConfigs(apiKey: string): Promise<CcSwitchImportConfigListItem[]> {
-  const auth = readStoredManagementAuth();
-  if (!auth) {
-    try {
-      return await fetchPublicQuickImportConfigs(apiKey);
-    } catch {
-      // Backward compatible fallback for older servers that don't have the public endpoint yet.
-      return ccSwitchImportConfigsApi.list();
-    }
-  }
-
-  const client = new ApiClient();
-  client.setConfig(auth);
-  const data = await client.get<Record<string, unknown>>("/ccswitch-import-configs");
-  return normalizeCcSwitchImportConfigs(data["ccswitch-import-configs"] ?? data.items ?? data);
-}
-
-function normalizeApiKeyEntries(raw: unknown): ApiKeyEntry[] {
-  if (!Array.isArray(raw)) return [];
-  return raw.filter(
-    (entry): entry is ApiKeyEntry =>
-      entry !== null &&
-      typeof entry === "object" &&
-      !Array.isArray(entry) &&
-      typeof (entry as { key?: unknown }).key === "string",
-  );
-}
-
-async function fetchQuickImportApiKeyEntry(apiKey: string): Promise<ApiKeyEntry | null> {
-  const auth = readStoredManagementAuth();
-  if (!auth) return null;
-
-  const key = apiKey.trim();
-  if (!key) return null;
-
-  try {
-    const client = new ApiClient();
-    client.setConfig(auth);
-    const data = await client.get<Record<string, unknown>>("/api-key-entries");
-    const entries = normalizeApiKeyEntries(data["api-key-entries"] ?? data.items ?? data);
-    return entries.find((entry) => entry.key === key) ?? null;
-  } catch {
-    return null;
-  }
 }
 
 function QuickImportCard({
@@ -330,9 +270,6 @@ export function QuickImportTabContent({
   const [configs, setConfigs] = useState<CcSwitchImportConfigListItem[]>(
     () => initialCache?.configs ?? [],
   );
-  const [apiKeyEntry, setApiKeyEntry] = useState<ApiKeyEntry | null>(
-    () => initialCache?.apiKeyEntry ?? null,
-  );
   const [loading, setLoading] = useState(!initialCache);
   const [error, setError] = useState<string | null>(null);
   const [copiedImportConfigId, setCopiedImportConfigId] = useState<string | null>(null);
@@ -363,26 +300,21 @@ export function QuickImportTabContent({
     const cached = readStoredQuickImportCache(cacheKey);
     if (cached) {
       setConfigs((prev) => (sameJsonValue(prev, cached.configs) ? prev : cached.configs));
-      setApiKeyEntry((prev) =>
-        sameJsonValue(prev, cached.apiKeyEntry) ? prev : cached.apiKeyEntry,
-      );
     }
     setLoading(!cached);
     setError(null);
 
-    Promise.all([fetchQuickImportConfigs(apiKey), fetchQuickImportApiKeyEntry(apiKey)])
-      .then(([items, entry]) => {
+    fetchQuickImportConfigs(apiKey)
+      .then((items) => {
         if (cancelled) return;
         const nextConfigs = items.filter((item) => QUICK_IMPORT_CLIENTS.includes(item.clientType));
-        writeStoredQuickImportCache(cacheKey, { configs: nextConfigs, apiKeyEntry: entry });
+        writeStoredQuickImportCache(cacheKey, { configs: nextConfigs });
         setConfigs((prev) => (sameJsonValue(prev, nextConfigs) ? prev : nextConfigs));
-        setApiKeyEntry((prev) => (sameJsonValue(prev, entry) ? prev : entry));
       })
       .catch((err: unknown) => {
         if (cancelled) return;
         if (!cached) {
           setConfigs([]);
-          setApiKeyEntry(null);
         }
         setError(err instanceof Error ? err.message : t("apikey_lookup.quick_import_load_failed"));
       })
@@ -398,19 +330,14 @@ export function QuickImportTabContent({
 
   const groupedConfigs = useMemo(
     () => ({
-      codex: configs.filter(
-        (config) =>
-          config.clientType === "codex" &&
-          ccSwitchConfigMatchesApiKeyPermissions(config, apiKeyEntry),
-      ),
-      claude: configs.filter(
-        (config) =>
-          config.clientType === "claude" &&
-          ccSwitchConfigMatchesApiKeyPermissions(config, apiKeyEntry),
-      ),
+      // Server public endpoint already filters by the API key's effective permissions.
+      codex: configs.filter((config) => config.clientType === "codex"),
+      claude: configs.filter((config) => config.clientType === "claude"),
     }),
-    [apiKeyEntry, configs],
+    [configs],
   );
+
+  const visibleCount = groupedConfigs.codex.length + groupedConfigs.claude.length;
 
   const buildImportUrl = useCallback(
     (config: CcSwitchImportConfigListItem) => {
@@ -462,6 +389,7 @@ export function QuickImportTabContent({
   );
 
   const showSkeleton = loading && configs.length === 0;
+  const showEmpty = !showSkeleton && !error && visibleCount === 0;
 
   return (
     <div className="space-y-4">
@@ -494,13 +422,22 @@ export function QuickImportTabContent({
 
       {showSkeleton ? <QuickImportLoadingSkeleton /> : null}
 
-      {!showSkeleton ? (
+      {error ? (
+        <div className="rounded-2xl border border-rose-100 bg-rose-50 px-5 py-2.5 text-sm text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-200">
+          {error}
+        </div>
+      ) : null}
+
+      {showEmpty ? (
+        <EmptyState
+          icon={<Inbox size={28} className="opacity-50" />}
+          title={t("apikey_lookup.quick_import_empty_title")}
+          description={t("apikey_lookup.quick_import_empty_desc")}
+        />
+      ) : null}
+
+      {!showSkeleton && !showEmpty && visibleCount > 0 ? (
         <Card padding="none" className="overflow-hidden">
-          {error ? (
-            <div className="border-b border-rose-100 bg-rose-50 px-5 py-2.5 text-sm text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-200">
-              {error}
-            </div>
-          ) : null}
           <div className="space-y-5 px-5 py-4">
             <AnimatePresence initial={false}>
               {QUICK_IMPORT_CLIENTS.map((clientType) => {

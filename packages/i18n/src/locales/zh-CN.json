@@ -3440,6 +3440,8 @@
     "quick_import_claude": "Claude",
     "quick_import_load_failed": "加载 CC Switch 导入预设失败",
     "quick_import_group_aria": "{{client}} 快捷导入",
+    "quick_import_empty_title": "暂无可用的快捷导入预设",
+    "quick_import_empty_desc": "当前 API Key 没有匹配的 Codex / Claude 导入卡片。可能是密钥权限未覆盖任何预设，或管理员尚未配置导入卡片。",
     "empty_title": "查询 API 密钥用量",
     "empty_desc": "输入上方 API 密钥后，可查看详细用量统计和请求日志。",
     "login_title": "输入 API 密钥",

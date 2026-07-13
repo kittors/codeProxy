@@ -266,7 +266,7 @@ describe("QuickImportTabContent", () => {
     expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
   });
 
-  test("filters quick import cards by the looked up API key permissions", async () => {
+  test("always loads presets from the public endpoint even when admin auth is present", async () => {
     window.localStorage.setItem(
       "code-proxy-admin-auth",
       JSON.stringify({
@@ -275,46 +275,18 @@ describe("QuickImportTabContent", () => {
         expiresAt: Date.now() + 60_000,
       }),
     );
-    vi.mocked(globalThis.fetch).mockImplementation(async (input) => {
+
+    const fetchMock = vi.mocked(globalThis.fetch);
+    fetchMock.mockImplementation(async (input, init) => {
       const url = String(input);
-      if (url.endsWith("/ccswitch-import-configs")) {
+      const method = String(init?.method ?? "GET").toUpperCase();
+      if (url.includes("/public/ccswitch-import-configs") && method === "POST") {
         return new Response(
-          JSON.stringify({
-            "ccswitch-import-configs": [
-              quickImportConfigs[0],
-              {
-                ...quickImportConfigs[0],
-                id: "codex-blocked-model",
-                "provider-name": "Blocked Codex",
-                "default-model": "gpt-5.5",
-                "model-mappings": [
-                  {
-                    "request-model": "gpt-5.5",
-                    "target-model": "gpt-5.5",
-                  },
-                ],
-              },
-              quickImportConfigs[1],
-            ],
-          }),
+          JSON.stringify({ "ccswitch-import-configs": [quickImportConfigs[0]] }),
           { headers: { "Content-Type": "application/json" } },
         );
       }
-      if (url.endsWith("/api-key-entries")) {
-        return new Response(
-          JSON.stringify({
-            "api-key-entries": [
-              {
-                key: "sk-lookup-key",
-                "allowed-channel-groups": ["pro"],
-                "allowed-models": ["gpt-5.3-codex", "deepseek-chat"],
-              },
-            ],
-          }),
-          { headers: { "Content-Type": "application/json" } },
-        );
-      }
-      throw new Error(`Unexpected request: ${url}`);
+      throw new Error(`Unexpected request: ${method} ${url}`);
     });
 
     render(
@@ -326,9 +298,50 @@ describe("QuickImportTabContent", () => {
     );
 
     const codexSection = await screen.findByRole("region", { name: /codex quick imports/i });
-
     expect(within(codexSection).getByRole("button", { name: /team codex/i })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /blocked codex/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("region", { name: /claude quick imports/i })).not.toBeInTheDocument();
+
+    expect(fetchMock).toHaveBeenCalled();
+    const calledUrls = fetchMock.mock.calls.map(([input, init]) => ({
+      url: String(input),
+      method: String(init?.method ?? "GET").toUpperCase(),
+    }));
+    expect(
+      calledUrls.some(
+        (call) =>
+          call.url.includes("/public/ccswitch-import-configs") && call.method === "POST",
+      ),
+    ).toBe(true);
+    expect(
+      calledUrls.some(
+        (call) =>
+          call.url.includes("/ccswitch-import-configs") &&
+          !call.url.includes("/public/") &&
+          call.method === "GET",
+      ),
+    ).toBe(false);
+    expect(calledUrls.some((call) => call.url.includes("/api-key-entries"))).toBe(false);
+  });
+
+  test("renders EmptyState when the public endpoint returns no presets", async () => {
+    vi.mocked(globalThis.fetch).mockResolvedValue(
+      new Response(JSON.stringify({ "ccswitch-import-configs": [] }), {
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    render(
+      <ThemeProvider>
+        <ToastProvider>
+          <QuickImportTabContent apiKey="sk-lookup-key" />
+        </ToastProvider>
+      </ThemeProvider>,
+    );
+
+    expect(await screen.findByText(/no quick import presets available/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/this api key has no matching codex \/ claude import cards/i),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: /codex quick imports/i })).not.toBeInTheDocument();
+    expect(screen.queryByTestId("quick-import-loading-skeleton")).not.toBeInTheDocument();
   });
 });

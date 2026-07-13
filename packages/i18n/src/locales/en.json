@@ -3145,6 +3145,8 @@
     "quick_import_claude": "Claude",
     "quick_import_load_failed": "Failed to load CC Switch import presets",
     "quick_import_group_aria": "{{client}} quick imports",
+    "quick_import_empty_title": "No quick import presets available",
+    "quick_import_empty_desc": "This API key has no matching Codex / Claude import cards. The key may not cover any presets, or the admin has not configured import cards yet.",
     "empty_title": "Query your API key usage",
     "empty_desc": "Enter your API key above to view detailed usage statistics and request logs.",
     "login_title": "Enter API key",
