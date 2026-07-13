@@ -201,7 +201,12 @@ export function useAuthFilesDetailEditors(
 ) {
   const { t } = useTranslation();
   const { notify } = useToast();
+  // Per-auth-file list cache (any provider).
   const modelsCacheRef = useRef<Map<string, AuthFileModelItem[]>>(new Map());
+  // Shared live discovery list for claude/codex (same-type accounts reuse).
+  const providerDiscoveryCacheRef = useRef<Map<string, AuthFileModelItem[]>>(
+    new Map(),
+  );
   const detailTrendInFlightRef = useRef<Map<string, Promise<void>>>(new Map());
   const identityFingerprintDetailKeyRef = useRef("");
 
@@ -248,25 +253,50 @@ export function useAuthFilesDetailEditors(
   const loadModelsForDetail = useCallback(
     async (file: AuthFileItem, options?: { force?: boolean }) => {
       const force = Boolean(options?.force);
-      setModelsFileType(resolveFileType(file));
-      setModelsLoading(true);
-      setModelsList([]);
+      const fileType = resolveFileType(file);
+      const provider = normalizeProviderKey(fileType);
+      const sharedDiscovery = provider === "claude" || provider === "codex";
+      setModelsFileType(fileType);
       setModelsError(null);
 
-      if (!force) {
-        const cached = modelsCacheRef.current.get(file.name);
-        if (cached) {
-          setModelsList(cached);
+      // Prefer shared provider discovery cache so reopening the modal keeps the
+      // live list (not the static registry) after a successful warm/refresh.
+      if (!force && sharedDiscovery) {
+        const providerCached = providerDiscoveryCacheRef.current.get(provider);
+        if (providerCached && providerCached.length > 0) {
+          setModelsList(providerCached);
           setModelsLoading(false);
           return;
         }
       }
 
+      if (!force) {
+        const cached = modelsCacheRef.current.get(file.name);
+        if (cached && cached.length > 0) {
+          setModelsList(cached);
+          // For non-discovery providers, file cache is enough.
+          // For claude/codex, still call the API so backend can auto-warm the
+          // shared provider cache; keep showing the file cache meanwhile.
+          if (!sharedDiscovery) {
+            setModelsLoading(false);
+            return;
+          }
+        } else {
+          setModelsList([]);
+        }
+      }
+
+      setModelsLoading(true);
+
       try {
-        const list = await authFilesApi.getModelsForAuthFile(file.name, {
-          force,
-        });
+        const { models: list, source } = await authFilesApi.getModelsForAuthFile(
+          file.name,
+          { force },
+        );
         modelsCacheRef.current.set(file.name, list);
+        if (sharedDiscovery && source === "upstream" && list.length > 0) {
+          providerDiscoveryCacheRef.current.set(provider, list);
+        }
         setModelsList(list);
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : "";

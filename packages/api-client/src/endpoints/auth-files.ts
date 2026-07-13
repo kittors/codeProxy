@@ -86,11 +86,15 @@ export const authFilesApi = {
   getModelsForAuthFile: async (
     name: string,
     options?: { force?: boolean },
-  ): Promise<{ id: string; display_name?: string; type?: string; owned_by?: string }[]> => {
+  ): Promise<{
+    models: { id: string; display_name?: string; type?: string; owned_by?: string }[];
+    source: "registry" | "upstream" | string;
+  }> => {
     const params: Record<string, string> = { name };
-    // refresh=1 asks the backend to re-fetch live upstream /models for discovery.
-    // xai/antigravity may update the registry; claude/codex return upstream lists
-    // without replacing the static registry catalog.
+    // refresh=1 forces a re-fetch from upstream.
+    // claude/codex: backend keeps a provider-level discovery cache (shared by
+    // same-type accounts); open auto-warms once, force refreshes the cache.
+    // xai/antigravity may also update the runtime registry.
     if (options?.force) {
       params.refresh = "1";
     }
@@ -98,9 +102,17 @@ export const authFilesApi = {
       params,
     });
     const models = data.models ?? data["models"];
-    return Array.isArray(models)
-      ? (models as { id: string; display_name?: string; type?: string; owned_by?: string }[])
-      : [];
+    const sourceRaw = data.source ?? data["source"];
+    const source =
+      typeof sourceRaw === "string" && sourceRaw.trim()
+        ? sourceRaw.trim().toLowerCase()
+        : "registry";
+    return {
+      models: Array.isArray(models)
+        ? (models as { id: string; display_name?: string; type?: string; owned_by?: string }[])
+        : [],
+      source,
+    };
   },
   getModelDefinitions: async (
     channel: string,

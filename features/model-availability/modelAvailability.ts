@@ -699,7 +699,9 @@ const loadAuthFileModelItems = async (
       }
 
       try {
-        const liveModels = await authFilesApi.getModelsForAuthFile(file.name);
+        const { models: liveModels } = await authFilesApi.getModelsForAuthFile(
+          file.name,
+        );
         scoped = true;
         for (const model of liveModels) {
           addModel(
