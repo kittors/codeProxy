@@ -27,6 +27,7 @@ import {
   getModelVendorKey,
   type ModelVendorKey,
 } from "@features/model-tags";
+import { ModelCapabilityBadges } from "../models/components/ModelCapabilityBadges";
 
 type PlazaModel = {
   id: string;
@@ -34,6 +35,9 @@ type PlazaModel = {
   ownedBy: string;
   sources?: ModelAvailabilitySource[];
   pricing: ModelPricing;
+  inputModalities: string[];
+  outputModalities: string[];
+  supportsVision: boolean;
 };
 
 type VendorFilter = "all" | ModelVendorKey;
@@ -224,6 +228,18 @@ function ModelPlazaCard({
                 {copied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
               </button>
             </div>
+            <div className="mt-1.5">
+              <ModelCapabilityBadges
+                model={{
+                  id: model.id,
+                  inputModalities: model.inputModalities,
+                  outputModalities: model.outputModalities,
+                  supportsVision: model.supportsVision,
+                }}
+                size="sm"
+                showUnknown={false}
+              />
+            </div>
           </div>
         </div>
 
@@ -287,12 +303,19 @@ function mergePlazaModels(
     .sort((a, b) => a.localeCompare(b))
     .map((id) => {
       const configured = configuredById.get(id.toLowerCase());
+      const inputModalities = configured?.inputModalities ?? [];
+      const outputModalities = configured?.outputModalities ?? [];
       return {
         id,
         description: configured?.description?.trim() ?? "",
         ownedBy: configured?.owned_by?.trim() ?? "",
         sources: configured?.sources,
         pricing: configured?.pricing ?? emptyModelPricing(),
+        inputModalities,
+        outputModalities,
+        supportsVision:
+          configured?.supportsVision ??
+          inputModalities.some((m) => m.toLowerCase() === "image"),
       };
     });
 }

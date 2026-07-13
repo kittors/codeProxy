@@ -240,6 +240,82 @@ describe("ModelPlazaPage", () => {
     expect(source).toHaveTextContent(/mimo-v2\.5-pro/i);
   });
 
+  test("renders capability icon tags from modalities and model-id keywords", async () => {
+    mocks.apiGet.mockImplementation((path: string) => {
+      if (path === "/auth-group-model-owner-mappings") return Promise.resolve({ items: [] });
+      if (path === "/models/configured-availability") {
+        return Promise.resolve({
+          scoped: true,
+          data: [
+            {
+              id: "gpt-5.4",
+              description: "Chat",
+              input_modalities: ["text"],
+              output_modalities: ["text"],
+            },
+            {
+              id: "claude-sonnet-vision",
+              description: "Vision chat",
+              input_modalities: ["text", "image"],
+              output_modalities: ["text"],
+              supports_vision: true,
+            },
+            {
+              id: "gpt-image-2",
+              description: "Image gen",
+              input_modalities: ["text"],
+              output_modalities: ["image"],
+            },
+            {
+              id: "openai/sora-2-video",
+              description: "Video gen",
+            },
+            {
+              id: "gpt-4o-realtime-audio",
+              description: "Realtime",
+              input_modalities: ["text", "audio"],
+              output_modalities: ["text", "audio"],
+            },
+          ],
+        });
+      }
+      if (path === "/model-path-availability") return Promise.resolve({ data: [] });
+      return Promise.resolve({});
+    });
+
+    renderPage();
+
+    const chatCard = (await screen.findByText("gpt-5.4")).closest(
+      '[data-testid="model-plaza-card"]',
+    ) as HTMLElement;
+    expect(within(chatCard).getByText("Text")).toBeInTheDocument();
+    expect(within(chatCard).queryByText("Image")).not.toBeInTheDocument();
+
+    const visionCard = screen.getByText("claude-sonnet-vision").closest(
+      '[data-testid="model-plaza-card"]',
+    ) as HTMLElement;
+    expect(within(visionCard).getByText("Text")).toBeInTheDocument();
+    expect(within(visionCard).getByText("Vision")).toBeInTheDocument();
+
+    const imageCard = screen.getByText("gpt-image-2").closest(
+      '[data-testid="model-plaza-card"]',
+    ) as HTMLElement;
+    expect(within(imageCard).getByText("Image")).toBeInTheDocument();
+    expect(within(imageCard).queryByText("Text")).not.toBeInTheDocument();
+
+    const videoCard = screen.getByText("openai/sora-2-video").closest(
+      '[data-testid="model-plaza-card"]',
+    ) as HTMLElement;
+    expect(within(videoCard).getByText("Video")).toBeInTheDocument();
+    expect(within(videoCard).queryByText("Text")).not.toBeInTheDocument();
+
+    const audioCard = screen.getByText("gpt-4o-realtime-audio").closest(
+      '[data-testid="model-plaza-card"]',
+    ) as HTMLElement;
+    expect(within(audioCard).getByText("Text")).toBeInTheDocument();
+    expect(within(audioCard).getByText("Audio")).toBeInTheDocument();
+  });
+
   test("pins vendor tabs with sticky styles and keeps page overflow open", async () => {
     mocks.apiGet.mockImplementation((path: string) => {
       if (path === "/auth-group-model-owner-mappings") return Promise.resolve({ items: [] });

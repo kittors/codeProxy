@@ -19,6 +19,7 @@ import {
   formatModelPrice,
   hasModelPricing,
   invalidateConfiguredModelAvailability,
+  modelHasTextCapability as modelHasTextCapabilityFromMeta,
   normalizeModelConfigMetadataRows,
 } from "@features/model-availability";
 import { apiClient } from "@code-proxy/api-client";
@@ -268,10 +269,7 @@ export function payloadToModel(
 }
 
 export function modelHasTextCapability(model: ModelItem): boolean {
-  if (model.inputModalities.includes("text") || model.outputModalities.includes("text")) {
-    return true;
-  }
-  return model.inputModalities.length === 0 && model.outputModalities.length === 0;
+  return modelHasTextCapabilityFromMeta(model);
 }
 
 export function modelConfigCollectionPath(scope: ModelScope): string {
