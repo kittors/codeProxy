@@ -365,7 +365,7 @@ describe("DataTable scroll chrome and row dividers", () => {
     expect(parent.scrollTop).toBe(120);
     expect(viewport).toHaveClass("overscroll-y-auto");
     expect(viewport).not.toHaveClass("overscroll-y-none");
-    expect(document.querySelector("[data-vt-header-chrome]")).toBeNull();
+    expect(document.querySelector("[data-vt-header-chrome]")).not.toBeNull();
 
     const headerCells = Array.from(document.querySelectorAll("thead th"));
     expect(headerCells).not.toHaveLength(0);
@@ -413,7 +413,7 @@ describe("DataTable scroll chrome and row dividers", () => {
     });
   });
 
-  test("clips sticky header corners on the scrollport instead of sticky header cells", () => {
+  test("keeps sticky header corners rounded via header chrome and outer sticky cells", () => {
     const stickyColumns: DataTableColumn<TestRow>[] = [
       {
         key: "select",
@@ -450,23 +450,24 @@ describe("DataTable scroll chrome and row dividers", () => {
       />,
     );
 
-    const viewport = document.querySelector<HTMLElement>(
-      "[data-scrollbar-visibility='hover']",
-    );
-    expect(viewport).not.toBeNull();
-    expect(viewport).toHaveClass("rounded-l-xl");
+    const headerChrome = document.querySelector("[data-vt-header-chrome]");
+    expect(headerChrome).not.toBeNull();
 
     const selectHeader = document.querySelector('th[data-vt-column-key="select"]');
+    const nameHeader = document.querySelector('th[data-vt-column-key="name"]');
     const actionsHeader = document.querySelector(
       'th[data-vt-column-key="actions"]',
     );
     const headerGutter = document.querySelector("[data-vt-header-gutter]");
-    expect(selectHeader).not.toHaveClass("rounded-l-xl");
-    expect(actionsHeader).not.toHaveClass("rounded-r-xl");
+    expect(selectHeader).toHaveClass("rounded-l-xl", "bg-slate-100");
+    expect(nameHeader).toHaveClass("bg-transparent");
+    expect(actionsHeader).toHaveClass("rounded-r-xl");
+    // With a vertical gutter, chrome is left-only; otherwise full rounded-xl.
     if (headerGutter) {
       expect(headerGutter).toHaveClass("rounded-r-xl");
+      expect(headerChrome).toHaveClass("rounded-l-xl");
     } else {
-      expect(viewport).toHaveClass("rounded-r-xl");
+      expect(headerChrome).toHaveClass("rounded-xl");
     }
   });
 });

@@ -3230,12 +3230,7 @@ export function DataTable<T>({
         className={
           naturalFlow
             ? "relative z-10 min-h-0 overflow-visible rounded-xl"
-            : // Clip sticky headers to the scrollport radius so middle columns
-              // cannot square off the visible left/right header corners while
-              // scrolling. Keep left always rounded; right only when no v-gutter.
-              `relative col-start-1 row-start-1 h-full min-h-0 table-scrollbar overscroll-x-none rounded-l-xl ${
-                vThumb ? "" : "rounded-r-xl"
-              } ${
+            : `relative col-start-1 row-start-1 h-full min-h-0 table-scrollbar overscroll-x-none ${
                 isEmpty
                   ? "overflow-x-hidden overflow-y-auto"
                   : "overflow-auto"
@@ -3250,6 +3245,24 @@ export function DataTable<T>({
           data-vt-scroll-content
           className={`relative min-h-full ${scrollContentClassName ?? ""}`}
         >
+          {/* Sticky rounded header plate inside the scrollport. left:0 keeps it
+              pinned while scrolling horizontally; transparent middle headers let
+              this plate show through, including under outer sticky corner wedges. */}
+          {naturalFlow || isEmpty ? null : (
+            <div
+              data-vt-header-chrome
+              aria-hidden="true"
+              className={`pointer-events-none sticky left-0 top-0 z-40 ${
+                vThumb ? "rounded-l-xl" : "rounded-xl"
+              } bg-slate-100 dark:bg-neutral-800`}
+              style={{
+                width: scrollMetrics.clientWidth || "100%",
+                // Tests / first paint may not have measured headerHeight yet.
+                height: headerHeight > 0 ? headerHeight : "2.75rem",
+                marginBottom: headerHeight > 0 ? -headerHeight : "-2.75rem",
+              }}
+            />
+          )}
           {!naturalFlow && rowHoverOverlay ? (
             <div
               data-vt-row-hover-overlay
@@ -3310,13 +3323,32 @@ export function DataTable<T>({
                     naturalFlow || isEmpty
                       ? "relative"
                       : "sticky top-0 z-50";
-                  const headerChromeClass = "bg-slate-100 dark:bg-neutral-800";
-                  // Only naturalFlow paints radius on th cells. Sticky tables keep
-                  // square header cells so mid-scroll columns cannot fill the
-                  // transparent corner wedges; the scrollport radius clips instead.
+                  // Outer sticky headers paint full side radius (top+bottom).
+                  // Middle headers stay transparent so header-chrome shows through
+                  // while columns scroll — keeps the header bar 4-corner rounded.
+                  // Tables without locked sticky columns keep opaque headers.
+                  const hasStickyColumns =
+                    Object.keys(stickyColumnPlacements).length > 0;
+                  const isOuterStickyStart =
+                    stickyPlacement?.edge === "start" && stickyPlacement.offset === 0;
+                  const isOuterStickyEnd =
+                    stickyPlacement?.edge === "end" && stickyPlacement.offset === 0;
+                  const headerChromeClass =
+                    naturalFlow || isEmpty || stickyPlacement || !hasStickyColumns
+                      ? "bg-slate-100 dark:bg-neutral-800"
+                      : "bg-transparent";
                   const headerCornerClass = [
                     naturalFlow && colIndex === 0 ? "rounded-l-xl" : "",
                     naturalFlow && colIndex === orderedColumns.length - 1
+                      ? "rounded-r-xl"
+                      : "",
+                    !naturalFlow && (colIndex === 0 || isOuterStickyStart)
+                      ? "rounded-l-xl"
+                      : "",
+                    // Always round the outer end header; gutter only covers the
+                    // scrollbar strip, not the actions column itself.
+                    !naturalFlow &&
+                    (isOuterStickyEnd || colIndex === orderedColumns.length - 1)
                       ? "rounded-r-xl"
                       : "",
                   ]

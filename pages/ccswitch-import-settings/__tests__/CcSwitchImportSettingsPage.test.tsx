@@ -1388,10 +1388,10 @@ describe("CcSwitchImportSettingsPage", () => {
       tableViewport?.querySelectorAll("thead th") ?? [],
     );
     expect(headerCells).not.toHaveLength(0);
-    headerCells.forEach((cell) =>
-      expect(cell).toHaveClass("sticky", "top-0", "bg-slate-100"),
-    );
-    expect(mappingTable.querySelector("[data-vt-header-chrome]")).toBeNull();
+    headerCells.forEach((cell) => expect(cell).toHaveClass("sticky", "top-0"));
+    // rowReorderable injects a sticky start column, so DataTable paints a rounded
+    // header-chrome plate and keeps non-sticky middle headers transparent.
+    expect(mappingTable.querySelector("[data-vt-header-chrome]")).not.toBeNull();
     expect(mappingTable.querySelector("[data-vt-column-resizer]")).toBeNull();
 
     const mappingRows = Array.from(
