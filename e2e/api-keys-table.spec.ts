@@ -588,8 +588,10 @@ test("API Keys: fixed columns do not cover the created time at the right edge", 
       selectHeaderBottomLeftRadius: number;
       actionsHeaderTopRightRadius: number;
       actionsHeaderBottomRightRadius: number;
-      scrollportTopLeftRadius: number;
-      scrollportTopRightRadius: number;
+      headerChromeTopLeftRadius: number;
+      headerChromeBottomLeftRadius: number;
+      headerChromeTopRightRadius: number;
+      headerChromeBottomRightRadius: number;
       headerGutterTopRightRadius: number | null;
     }> = [];
     for (const scrollLeft of positions) {
@@ -640,7 +642,9 @@ test("API Keys: fixed columns do not cover the created time at the right edge", 
       const endBoundaryRect = endBoundary.getBoundingClientRect();
       const selectHeaderStyle = getComputedStyle(selectHeader);
       const actionsHeaderStyle = getComputedStyle(actionsHeader);
-      const scrollportStyle = getComputedStyle(container);
+      const headerChrome = document.querySelector<HTMLElement>("[data-vt-header-chrome]");
+      if (!headerChrome) throw new Error("Missing header chrome");
+      const headerChromeStyle = getComputedStyle(headerChrome);
       const headerGutter = document.querySelector<HTMLElement>("[data-vt-header-gutter]");
       const headerGutterStyle = headerGutter ? getComputedStyle(headerGutter) : null;
       const nameHeaderHit = document.elementFromPoint(
@@ -696,8 +700,14 @@ test("API Keys: fixed columns do not cover the created time at the right edge", 
         actionsHeaderBottomRightRadius: Number.parseFloat(
           actionsHeaderStyle.borderBottomRightRadius,
         ),
-        scrollportTopLeftRadius: Number.parseFloat(scrollportStyle.borderTopLeftRadius),
-        scrollportTopRightRadius: Number.parseFloat(scrollportStyle.borderTopRightRadius),
+        headerChromeTopLeftRadius: Number.parseFloat(headerChromeStyle.borderTopLeftRadius),
+        headerChromeBottomLeftRadius: Number.parseFloat(
+          headerChromeStyle.borderBottomLeftRadius,
+        ),
+        headerChromeTopRightRadius: Number.parseFloat(headerChromeStyle.borderTopRightRadius),
+        headerChromeBottomRightRadius: Number.parseFloat(
+          headerChromeStyle.borderBottomRightRadius,
+        ),
         headerGutterTopRightRadius: headerGutterStyle
           ? Number.parseFloat(headerGutterStyle.borderTopRightRadius)
           : null,
@@ -757,15 +767,18 @@ test("API Keys: fixed columns do not cover the created time at the right edge", 
     expect(state.endRailBottom).toBeGreaterThanOrEqual(state.fixedRailBottom - 1);
     expect(state.startBoundaryBottom).toBeGreaterThanOrEqual(state.fixedRailBottom - 1);
     expect(state.endBoundaryBottom).toBeGreaterThanOrEqual(state.fixedRailBottom - 1);
-    // Sticky header cells stay square so mid-scroll under-paint cannot square
-    // the corners; the scrollport (and optional header gutter) owns the radius.
-    expect(state.selectHeaderTopLeftRadius).toBe(0);
-    expect(state.selectHeaderBottomLeftRadius).toBe(0);
-    expect(state.actionsHeaderTopRightRadius).toBe(0);
-    expect(state.actionsHeaderBottomRightRadius).toBe(0);
-    expect(state.scrollportTopLeftRadius).toBeGreaterThan(0);
+    // Outer sticky headers keep full side radius (top+bottom) at every scroll
+    // offset. Header chrome fills corner wedges so mid-scroll columns cannot
+    // square them off.
+    expect(state.selectHeaderTopLeftRadius).toBeGreaterThan(0);
+    expect(state.selectHeaderBottomLeftRadius).toBeGreaterThan(0);
+    expect(state.actionsHeaderTopRightRadius).toBeGreaterThan(0);
+    expect(state.actionsHeaderBottomRightRadius).toBeGreaterThan(0);
+    expect(state.headerChromeTopLeftRadius).toBeGreaterThan(0);
+    expect(state.headerChromeBottomLeftRadius).toBeGreaterThan(0);
     if (state.headerGutterTopRightRadius === null) {
-      expect(state.scrollportTopRightRadius).toBeGreaterThan(0);
+      expect(state.headerChromeTopRightRadius).toBeGreaterThan(0);
+      expect(state.headerChromeBottomRightRadius).toBeGreaterThan(0);
     } else {
       expect(state.headerGutterTopRightRadius).toBeGreaterThan(0);
     }
