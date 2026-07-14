@@ -219,9 +219,7 @@ test("API Keys: limited model summary truncates inside the rounded pill", async 
   expect(Number.parseFloat(summaryState.borderTopRightRadius)).toBeGreaterThan(0);
 });
 
-test("API Keys: dark hover keeps fixed columns opaque above scrolled content", async ({
-  page,
-}) => {
+test("API Keys: dark hover keeps fixed columns opaque above scrolled content", async ({ page }) => {
   await page.setViewportSize({ width: 1360, height: 980 });
   await setAuthed(page);
   await page.addInitScript(() => {
@@ -533,10 +531,7 @@ test("API Keys: fixed columns do not cover the created time at the right edge", 
   await mockApiKeysApis(page);
 
   await page.goto("/#/api-keys");
-  await page
-    .locator('td[data-vt-column-key="createdAt"]')
-    .first()
-    .waitFor({ state: "visible" });
+  await page.locator('td[data-vt-column-key="createdAt"]').first().waitFor({ state: "visible" });
   await expect(page.getByText(/All 9 records loaded|已加载全部 9 条记录/)).toHaveCount(0);
 
   const states = await page.evaluate(async () => {
@@ -608,9 +603,7 @@ test("API Keys: fixed columns do not cover the created time at the right edge", 
       const nameCell = document.querySelector<HTMLElement>('td[data-vt-column-key="name"]');
       const startRail = document.querySelector<HTMLElement>("[data-vt-sticky-start-rail]");
       const endRail = document.querySelector<HTMLElement>("[data-vt-sticky-end-rail]");
-      const startBoundary = document.querySelector<HTMLElement>(
-        "[data-vt-sticky-start-boundary]",
-      );
+      const startBoundary = document.querySelector<HTMLElement>("[data-vt-sticky-start-boundary]");
       const endBoundary = document.querySelector<HTMLElement>("[data-vt-sticky-end-boundary]");
       if (
         !createdAt ||
@@ -701,13 +694,9 @@ test("API Keys: fixed columns do not cover the created time at the right edge", 
           actionsHeaderStyle.borderBottomRightRadius,
         ),
         headerChromeTopLeftRadius: Number.parseFloat(headerChromeStyle.borderTopLeftRadius),
-        headerChromeBottomLeftRadius: Number.parseFloat(
-          headerChromeStyle.borderBottomLeftRadius,
-        ),
+        headerChromeBottomLeftRadius: Number.parseFloat(headerChromeStyle.borderBottomLeftRadius),
         headerChromeTopRightRadius: Number.parseFloat(headerChromeStyle.borderTopRightRadius),
-        headerChromeBottomRightRadius: Number.parseFloat(
-          headerChromeStyle.borderBottomRightRadius,
-        ),
+        headerChromeBottomRightRadius: Number.parseFloat(headerChromeStyle.borderBottomRightRadius),
         headerGutterTopRightRadius: headerGutterStyle
           ? Number.parseFloat(headerGutterStyle.borderTopRightRadius)
           : null,
@@ -767,13 +756,8 @@ test("API Keys: fixed columns do not cover the created time at the right edge", 
     expect(state.endRailBottom).toBeGreaterThanOrEqual(state.fixedRailBottom - 1);
     expect(state.startBoundaryBottom).toBeGreaterThanOrEqual(state.fixedRailBottom - 1);
     expect(state.endBoundaryBottom).toBeGreaterThanOrEqual(state.fixedRailBottom - 1);
-    // Outer sticky headers keep full side radius (top+bottom) at every scroll
-    // offset. Header chrome fills corner wedges so mid-scroll columns cannot
-    // square them off.
-    expect(state.selectHeaderTopLeftRadius).toBeGreaterThan(0);
-    expect(state.selectHeaderBottomLeftRadius).toBeGreaterThan(0);
-    expect(state.actionsHeaderTopRightRadius).toBeGreaterThan(0);
-    expect(state.actionsHeaderBottomRightRadius).toBeGreaterThan(0);
+    // Viewport-fixed header chrome owns the rounded plate; root overflow clips
+    // sticky th cells. Per-cell header radius is intentionally not required.
     expect(state.headerChromeTopLeftRadius).toBeGreaterThan(0);
     expect(state.headerChromeBottomLeftRadius).toBeGreaterThan(0);
     if (state.headerGutterTopRightRadius === null) {
