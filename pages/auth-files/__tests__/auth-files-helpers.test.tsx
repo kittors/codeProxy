@@ -688,6 +688,36 @@ test("shows auth-level quota recovery records as 429 restriction badges", () => 
     ]);
   });
 
+  test("xAI week restriction uses weekly_limit resetAtMs as recovery time", () => {
+    const nowMs = Date.parse("2026-07-14T08:00:00.000Z");
+    const weeklyResetAtMs = Date.parse("2026-07-16T07:38:00.000Z");
+    const file = {
+      name: "xai.json",
+      restrictions: [
+        {
+          scope: "auth",
+          http_status: 402,
+          quota_exceeded: true,
+          reason: "quota",
+          quota_window: "week",
+          quota_window_minutes: 10080,
+          status_message: "Grok Build usage balance exhausted",
+          // short local probe cooldown — not user-facing weekly recovery
+          next_retry_after: "2026-07-14T08:01:00.000Z",
+        },
+      ],
+    } as AuthFileItem;
+
+    expect(resolveAuthFileRestrictionBadges(file, nowMs, weeklyResetAtMs)).toEqual([
+      expect.objectContaining({
+        label: "402 Error",
+        quotaWindow: "week",
+        quotaLimited: true,
+        recoverAtMs: weeklyResetAtMs,
+      }),
+    ]);
+  });
+
   test("does not derive restriction badges from normal auth status", () => {
     expect(
       resolveAuthFileRestrictionBadges({

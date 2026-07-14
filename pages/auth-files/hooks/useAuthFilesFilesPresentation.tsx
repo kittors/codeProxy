@@ -35,6 +35,7 @@ import {
   resolveAuthFileDisplayName,
   resolveAuthFilePlanType,
   resolveAuthFileRestrictionBadges,
+  resolveAuthFileWeeklyQuotaResetAtMs,
   resolveAuthFileSupplementalTags,
   resolveAuthFileStats,
   resolveAuthFileStatusBar,
@@ -308,7 +309,11 @@ export function useAuthFilesFilesPresentation({
 
   const renderRestrictionBadges = useCallback(
     (file: AuthFileItem): ReactNode | null => {
-      const badges = resolveAuthFileRestrictionBadges(file, nowMs);
+      // xAI week restriction recovery is the account weekly_limit reset, not probe cooldown.
+      const weeklyResetAtMs = resolveAuthFileWeeklyQuotaResetAtMs(
+        quotaByFileName[file.name]?.items,
+      );
+      const badges = resolveAuthFileRestrictionBadges(file, nowMs, weeklyResetAtMs);
       if (badges.length === 0) return null;
       return (
         <div className="flex min-w-0 flex-wrap gap-1.5">
@@ -329,7 +334,7 @@ export function useAuthFilesFilesPresentation({
         </div>
       );
     },
-    [formatRestrictionBadgeLabel, formatRestrictionTooltip, nowMs],
+    [formatRestrictionBadgeLabel, formatRestrictionTooltip, nowMs, quotaByFileName],
   );
 
   const renderClaudeOAuthHealthBadges = useCallback(

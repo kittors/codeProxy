@@ -697,6 +697,38 @@ export type AuthFileRestrictionBadge = {
 const readRestrictionDateMs = (restriction: AuthFileRestriction): number | null =>
   parseDateLikeMs(restriction.next_retry_after) ?? parseDateLikeMs(restriction.next_recover_at);
 
+// Grok/xAI weekly 402: user-facing recovery is the weekly period end (quota preview
+// weekly_limit.resetAtMs), not short local probe NextRetryAfter when upstream omits reset.
+const resolveRestrictionRecoverAtMs = (
+  restriction: AuthFileRestriction,
+  nowMs: number,
+  weeklyResetAtMs?: number | null,
+): number | null => {
+  const quotaWindow = normalizeRestrictionQuotaWindow(restriction);
+  const weekly =
+    typeof weeklyResetAtMs === "number" && Number.isFinite(weeklyResetAtMs) && weeklyResetAtMs > nowMs
+      ? weeklyResetAtMs
+      : null;
+  if (quotaWindow === "week" && weekly !== null) {
+    return weekly;
+  }
+  return readRestrictionDateMs(restriction);
+};
+
+export const resolveAuthFileWeeklyQuotaResetAtMs = (
+  items: Array<{ key?: string; label?: string; resetAtMs?: number }> | null | undefined,
+): number | null => {
+  if (!Array.isArray(items) || items.length === 0) return null;
+  const weekly = items.find((item) => {
+    const key = normalizeTagValue(item.key);
+    if (key === "weekly_limit" || key === "week" || key.includes("weekly")) return true;
+    const label = normalizeQuotaLabel(item.label ?? "");
+    return label.includes("weekly") || label.includes("week") || label.includes("周");
+  });
+  const resetAtMs = weekly?.resetAtMs;
+  return typeof resetAtMs === "number" && Number.isFinite(resetAtMs) ? resetAtMs : null;
+};
+
 const isLegacyAuthRestrictionActive = (file: AuthFileItem): boolean => {
   if (file.unavailable === true) return true;
   const status = normalizeTagValue(file.status);
@@ -996,6 +1028,7 @@ const resolveRestrictionReason = (restriction: AuthFileRestriction): string => {
 export const resolveAuthFileRestrictionBadges = (
   file: AuthFileItem,
   nowMs = Date.now(),
+  weeklyResetAtMs?: number | null,
 ): AuthFileRestrictionBadge[] => {
   const rawRestrictions = Array.isArray(file.restrictions) ? file.restrictions : [];
   const displayableRawRestrictions = rawRestrictions.filter((restriction) => {
@@ -1022,11 +1055,11 @@ export const resolveAuthFileRestrictionBadges = (
 
   return restrictions
     .map((restriction): AuthFileRestrictionBadge | null => {
-      const recoverAtMs = readRestrictionDateMs(restriction);
+      const recoverAtMs = resolveRestrictionRecoverAtMs(restriction, nowMs, weeklyResetAtMs);
       if (recoverAtMs !== null && recoverAtMs <= nowMs) return null;
       const model = typeof restriction.model === "string" ? restriction.model.trim() : "";
       const reason = resolveRestrictionReason(restriction);
-      const dateKey =
+      const restrictionDateKey =
         typeof restriction.next_retry_after === "string" ||
         typeof restriction.next_retry_after === "number"
           ? String(restriction.next_retry_after)
@@ -1034,6 +1067,9 @@ export const resolveAuthFileRestrictionBadges = (
               typeof restriction.next_recover_at === "number"
             ? String(restriction.next_recover_at)
             : "";
+      // Prefer raw restriction timestamps for key stability; weekly_limit only fills gaps.
+      const dateKey =
+        restrictionDateKey || (recoverAtMs !== null ? String(recoverAtMs) : "");
       const status = Number(restriction.http_status);
       const statusKey = Number.isFinite(status) && status > 0 ? String(Math.round(status)) : "";
       const quotaWindow = normalizeRestrictionQuotaWindow(restriction);
