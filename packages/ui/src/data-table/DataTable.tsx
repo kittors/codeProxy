@@ -2143,16 +2143,16 @@ export function DataTable<T>({
                   const isSettledReorderColumn = settledReorderColumnKey === col.key;
                   const stickyPlacement =
                     naturalFlow || isEmpty ? undefined : stickyColumnPlacements[col.key];
-                  // All headers stick vertically. Free headers stay low z so they
-                  // scroll under locked headers; locked headers use z-[70] (also set
-                  // inline in resolveColumnStyle) above free z-10 and chrome z-40.
+                  // Stack: chrome z-40 < free headers z-50 < locked headers z-70.
+                  // Free must sit above chrome so labels stay visible; locked must
+                  // sit above free so horizontal scroll cannot overlay titles.
                   // headerClassName may ship md:z-40 — put our z after it.
                   const headerPositionClass =
                     naturalFlow || isEmpty
                       ? "relative"
                       : stickyPlacement
                         ? "sticky top-0"
-                        : "sticky top-0 z-10";
+                        : "sticky top-0 z-50";
                   // Viewport header-chrome owns the top plate. Opaque sticky
                   // headers cover scrolling middle labels; outer sticky cells
                   // still need side radius so bottom corners aren't squared off.

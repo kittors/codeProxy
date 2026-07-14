@@ -427,10 +427,10 @@ describe("DataTable scroll chrome and row dividers", () => {
     const headerGutter = document.querySelector("[data-vt-header-gutter]");
     // Sticky cells stay opaque; free middle headers stay transparent over chrome.
     // Outer sticky headers own side radius (top+bottom) so fixed columns don't square corners.
-    // Locked headers (z-70) stack above free headers (z-10) during horizontal scroll.
+    // Stack: chrome z-40 < free z-50 < locked z-70.
     expect(selectHeader).toHaveClass("bg-slate-100", "rounded-l-xl", "z-[70]");
     expect(selectHeader).toHaveStyle({ zIndex: "70" });
-    expect(nameHeader).toHaveClass("bg-transparent", "z-10");
+    expect(nameHeader).toHaveClass("bg-transparent", "z-50");
     expect(nameHeader).not.toHaveClass("rounded-l-xl", "rounded-r-xl", "z-[70]");
     expect(actionsHeader).toHaveClass("bg-slate-100", "rounded-r-xl", "z-[70]");
     expect(actionsHeader).toHaveStyle({ zIndex: "70" });
