@@ -493,7 +493,7 @@ export function AuthFilesPage() {
     refreshUsageDataForFiles,
   });
 
-  const { callsByAuthIndex, refreshCycleUsageForFiles } =
+  const { callsByAuthIndex, cycleBudgetByAuthIndex, refreshCycleUsageForFiles } =
     useAuthFilesCycleUsageState();
 
   const refreshQuotaAndCycleUsage = useCallback(
@@ -819,6 +819,7 @@ export function AuthFilesPage() {
     connectivityState,
     checkAuthFileConnectivity,
     quotaByFileName,
+    cycleBudgetByAuthIndex,
     refreshQuota,
     requestResetCredit,
     resettingCreditFileName,
@@ -890,6 +891,7 @@ export function AuthFilesPage() {
         selectedFileNameSet={selectedFileNameSet}
         quotaByFileName={quotaByFileName}
         cycleCallsByAuthIndex={callsByAuthIndex}
+        cycleBudgetByAuthIndex={cycleBudgetByAuthIndex}
         resolveQuotaProvider={resolveQuotaProvider}
         resolveQuotaCardSlots={resolveQuotaCardSlots}
         refreshQuota={refreshQuotaAndCycleUsage}

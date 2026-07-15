@@ -58,12 +58,14 @@ import {
   normalizeProviderKey,
   normalizeTagValue,
   resolveAuthFileDisplayName,
+  resolveAuthFileDisplayPlanType,
   resolveAuthFilePlanType,
   resolveAuthFileSupplementalTags,
   resolveFileType,
   resolvePlanBadgeClass,
   shouldShowAuthFileDisplayTag,
   shouldShowAuthFilePlanBadge,
+  type AuthFileCycleBudgetStats,
 } from "@code-proxy/domain";
 import {
   parseIdTokenPayload,
@@ -637,6 +639,7 @@ interface AuthFilesFilesTabProps {
   selectedFileNameSet: Set<string>;
   quotaByFileName: Record<string, QuotaState>;
   cycleCallsByAuthIndex: Record<string, number>;
+  cycleBudgetByAuthIndex: Record<string, AuthFileCycleBudgetStats>;
   resolveQuotaProvider: (file: AuthFileItem) => QuotaProvider | null;
   resolveQuotaCardSlots: (
     provider: QuotaProvider,
@@ -725,6 +728,7 @@ export function AuthFilesFilesTab({
   selectedFileNameSet,
   quotaByFileName,
   cycleCallsByAuthIndex,
+  cycleBudgetByAuthIndex,
   resolveQuotaProvider,
   resolveQuotaCardSlots,
   refreshQuota,
@@ -1512,7 +1516,17 @@ export function AuthFilesFilesTab({
                     status: "idle",
                     items: [],
                   };
-                  const planType = resolveAuthFilePlanType(file, state);
+                  const authIndexForPlan = normalizeAuthIndexValue(
+                    file.auth_index ?? file.authIndex,
+                  );
+                  const basePlanType = resolveAuthFilePlanType(file, state);
+                  const planType = resolveAuthFileDisplayPlanType(
+                    file,
+                    state,
+                    authIndexForPlan
+                      ? cycleBudgetByAuthIndex[authIndexForPlan]
+                      : null,
+                  );
                   const displayTags = resolveAuthFileSupplementalTags(
                     file,
                     state,
@@ -1523,7 +1537,7 @@ export function AuthFilesFilesTab({
                   );
                   const showPlanBadge = shouldShowAuthFilePlanBadge(
                     file,
-                    planType,
+                    basePlanType,
                   );
                   const subscriptionBadge = renderSubscriptionBadge(file);
                   const restrictionBadges = renderRestrictionBadges(file);
