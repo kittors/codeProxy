@@ -33,8 +33,10 @@ import {
   formatPlanBadgeLabel,
   resolveClaudeOAuthHealthBadges,
   isRuntimeOnlyAuthFile,
+  normalizeAuthIndexValue,
   parseAdditionalQuotaWindowLabel,
   resolveAuthFileDisplayName,
+  resolveAuthFileDisplayPlanType,
   resolveAuthFilePlanType,
   resolveAuthFileRestrictionBadges,
   resolveAuthFileWeeklyQuotaResetAtMs,
@@ -46,6 +48,7 @@ import {
   resolvePlanBadgeClass,
   shouldShowAuthFileDisplayTag,
   shouldShowAuthFilePlanBadge,
+  type AuthFileCycleBudgetStats,
 } from "@code-proxy/domain";
 import { resolveQuotaProvider, type QuotaProvider } from "@features/quota-preview/quota-fetch";
 import {
@@ -154,6 +157,7 @@ interface UseAuthFilesFilesPresentationOptions {
   connectivityState: Map<string, { loading: boolean; latencyMs: number | null; error: boolean }>;
   checkAuthFileConnectivity: (name: string) => Promise<void>;
   quotaByFileName: Record<string, QuotaState>;
+  cycleBudgetByAuthIndex: Record<string, AuthFileCycleBudgetStats>;
   refreshQuota: (file: AuthFileItem, provider: QuotaProvider) => Promise<void>;
   requestResetCredit: (file: AuthFileItem) => void;
   resettingCreditFileName: string | null;
@@ -180,6 +184,7 @@ export function useAuthFilesFilesPresentation({
   connectivityState,
   checkAuthFileConnectivity,
   quotaByFileName,
+  cycleBudgetByAuthIndex,
   refreshQuota,
   requestResetCredit,
   resettingCreditFileName,
@@ -722,10 +727,16 @@ export function useAuthFilesFilesPresentation({
         render: (file) => {
           const typeKey = resolveFileType(file);
           const badgeClass = TYPE_BADGE_CLASSES[typeKey] ?? TYPE_BADGE_CLASSES.unknown;
-          const planType = resolveAuthFilePlanType(file, quotaByFileName[file.name]);
+          const authIndex = normalizeAuthIndexValue(file.auth_index ?? file.authIndex);
+          const basePlanType = resolveAuthFilePlanType(file, quotaByFileName[file.name]);
+          const planType = resolveAuthFileDisplayPlanType(
+            file,
+            quotaByFileName[file.name],
+            authIndex ? cycleBudgetByAuthIndex[authIndex] : null,
+          );
           const runtimeOnly = isRuntimeOnlyAuthFile(file);
           const showTypeBadge = shouldShowAuthFileDisplayTag(file, typeKey);
-          const showPlanBadge = shouldShowAuthFilePlanBadge(file, planType);
+          const showPlanBadge = shouldShowAuthFilePlanBadge(file, basePlanType);
 
           return (
             <div className="flex flex-col gap-1">
@@ -1078,6 +1089,7 @@ export function useAuthFilesFilesPresentation({
     allPageSelected,
     checkAuthFileConnectivity,
     connectivityState,
+    cycleBudgetByAuthIndex,
     downloadAuthFile,
     formatQuotaItemDetailText,
     formatPlanTypeLabel,

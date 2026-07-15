@@ -1,9 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usageApi, type AuthFileItem } from "@code-proxy/api-client";
-import { normalizeAuthIndexValue, normalizeProviderKey, resolveFileType } from "@code-proxy/domain";
+import {
+  normalizeAuthIndexValue,
+  normalizeProviderKey,
+  resolveFileType,
+  type AuthFileCycleBudgetStats,
+} from "@code-proxy/domain";
 
 type RefreshCycleUsageOptions = {
   force?: boolean;
+};
+
+export type AuthFileCycleUsageSnapshot = {
+  calls: number | null;
+  cycleCostTotal: number | null;
+  weeklyQuotaUsedPercent: number | null;
 };
 
 const supportsCycleUsage = (file: AuthFileItem): boolean => {
@@ -43,11 +54,24 @@ const resolveDisplayCycleCount = (trend: {
   return null;
 };
 
+const toFiniteOrNull = (value: unknown): number | null =>
+  typeof value === "number" && Number.isFinite(value) ? value : null;
+
+const readCycleBudgetStats = (trend: {
+  cycle_cost_total?: number;
+  weekly_quota_used_percent?: number | null;
+}): Pick<AuthFileCycleUsageSnapshot, "cycleCostTotal" | "weeklyQuotaUsedPercent"> => ({
+  cycleCostTotal: toFiniteOrNull(trend.cycle_cost_total),
+  weeklyQuotaUsedPercent: toFiniteOrNull(trend.weekly_quota_used_percent),
+});
+
 export function useAuthFilesCycleUsageState() {
   const mountedRef = useRef(true);
-  const inFlightRef = useRef<Map<string, Promise<number | null>>>(new Map());
-  const callsByAuthIndexRef = useRef<Record<string, number>>({});
-  const [callsByAuthIndex, setCallsByAuthIndex] = useState<Record<string, number>>({});
+  const inFlightRef = useRef<Map<string, Promise<AuthFileCycleUsageSnapshot | null>>>(new Map());
+  const snapshotByAuthIndexRef = useRef<Record<string, AuthFileCycleUsageSnapshot>>({});
+  const [snapshotByAuthIndex, setSnapshotByAuthIndex] = useState<
+    Record<string, AuthFileCycleUsageSnapshot>
+  >({});
 
   useEffect(() => {
     return () => {
@@ -56,37 +80,54 @@ export function useAuthFilesCycleUsageState() {
   }, []);
 
   useEffect(() => {
-    callsByAuthIndexRef.current = callsByAuthIndex;
-  }, [callsByAuthIndex]);
+    snapshotByAuthIndexRef.current = snapshotByAuthIndex;
+  }, [snapshotByAuthIndex]);
 
-  const fetchCycleUsage = useCallback(async (authIndex: string): Promise<number | null> => {
-    const existing = inFlightRef.current.get(authIndex);
-    if (existing) return existing;
+  const fetchCycleUsage = useCallback(
+    async (authIndex: string): Promise<AuthFileCycleUsageSnapshot | null> => {
+      const existing = inFlightRef.current.get(authIndex);
+      if (existing) return existing;
 
-    let request: Promise<number | null>;
-    request = usageApi
-      .getAuthFileTrend(authIndex, { days: 7, hours: 5 })
-      .then((trend) => {
-        const nextCount = resolveDisplayCycleCount(trend);
-        if (nextCount === null) return null;
+      let request: Promise<AuthFileCycleUsageSnapshot | null>;
+      request = usageApi
+        .getAuthFileTrend(authIndex, { days: 7, hours: 5 })
+        .then((trend) => {
+          const nextCount = resolveDisplayCycleCount(trend);
+          const budget = readCycleBudgetStats(trend);
+          const snapshot: AuthFileCycleUsageSnapshot = {
+            calls: nextCount,
+            cycleCostTotal: budget.cycleCostTotal,
+            weeklyQuotaUsedPercent: budget.weeklyQuotaUsedPercent,
+          };
 
-        if (mountedRef.current) {
-          setCallsByAuthIndex((prev) =>
-            prev[authIndex] === nextCount ? prev : { ...prev, [authIndex]: nextCount },
-          );
-        }
-        return nextCount;
-      })
-      .catch(() => null)
-      .finally(() => {
-        if (inFlightRef.current.get(authIndex) === request) {
-          inFlightRef.current.delete(authIndex);
-        }
-      });
+          if (mountedRef.current) {
+            setSnapshotByAuthIndex((prev) => {
+              const current = prev[authIndex];
+              if (
+                current &&
+                current.calls === snapshot.calls &&
+                current.cycleCostTotal === snapshot.cycleCostTotal &&
+                current.weeklyQuotaUsedPercent === snapshot.weeklyQuotaUsedPercent
+              ) {
+                return prev;
+              }
+              return { ...prev, [authIndex]: snapshot };
+            });
+          }
+          return snapshot;
+        })
+        .catch(() => null)
+        .finally(() => {
+          if (inFlightRef.current.get(authIndex) === request) {
+            inFlightRef.current.delete(authIndex);
+          }
+        });
 
-    inFlightRef.current.set(authIndex, request);
-    return request;
-  }, []);
+      inFlightRef.current.set(authIndex, request);
+      return request;
+    },
+    [],
+  );
 
   const refreshCycleUsageForFiles = useCallback(
     async (files: AuthFileItem[], options?: RefreshCycleUsageOptions): Promise<void> => {
@@ -99,7 +140,7 @@ export function useAuthFilesCycleUsageState() {
       );
       const targets = options?.force
         ? authIndexes
-        : authIndexes.filter((authIndex) => callsByAuthIndexRef.current[authIndex] === undefined);
+        : authIndexes.filter((authIndex) => snapshotByAuthIndexRef.current[authIndex] === undefined);
       if (targets.length === 0) return;
 
       await Promise.allSettled(targets.map((authIndex) => fetchCycleUsage(authIndex)));
@@ -107,8 +148,25 @@ export function useAuthFilesCycleUsageState() {
     [fetchCycleUsage],
   );
 
+  const callsByAuthIndex = Object.fromEntries(
+    Object.entries(snapshotByAuthIndex)
+      .filter(([, snapshot]) => typeof snapshot.calls === "number")
+      .map(([authIndex, snapshot]) => [authIndex, snapshot.calls as number]),
+  );
+
+  const cycleBudgetByAuthIndex: Record<string, AuthFileCycleBudgetStats> = Object.fromEntries(
+    Object.entries(snapshotByAuthIndex).map(([authIndex, snapshot]) => [
+      authIndex,
+      {
+        cycleCostTotal: snapshot.cycleCostTotal,
+        weeklyQuotaUsedPercent: snapshot.weeklyQuotaUsedPercent,
+      } satisfies AuthFileCycleBudgetStats,
+    ]),
+  );
+
   return {
     callsByAuthIndex,
+    cycleBudgetByAuthIndex,
     refreshCycleUsageForFiles,
   };
 }
