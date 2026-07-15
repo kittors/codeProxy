@@ -1279,6 +1279,55 @@ export const TYPE_BADGE_CLASSES: Record<string, string> = {
   unknown: "bg-slate-50 text-slate-600 dark:bg-white/10 dark:text-white/70",
 };
 
+/** Membership plan pills: solid/gradient chips, never the soft sky/amber tag look. */
+export const PLAN_BADGE_CLASSES: Record<string, string> = {
+  free: "bg-slate-100 text-slate-600 ring-1 ring-inset ring-slate-200/80 dark:bg-white/10 dark:text-white/65 dark:ring-white/10",
+  plus: "bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-sm shadow-sky-500/25 dark:from-sky-400 dark:to-blue-500",
+  pro: "bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500 text-white shadow-sm shadow-orange-500/30 dark:from-amber-300 dark:via-orange-400 dark:to-rose-400",
+  team: "bg-gradient-to-r from-violet-500 to-indigo-600 text-white shadow-sm shadow-violet-500/25 dark:from-violet-400 dark:to-indigo-500",
+  premium: "bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white shadow-sm shadow-fuchsia-500/25 dark:from-fuchsia-400 dark:to-purple-500",
+  business: "bg-gradient-to-r from-slate-700 to-slate-900 text-white shadow-sm shadow-slate-900/20 dark:from-slate-500 dark:to-slate-700",
+  enterprise: "bg-gradient-to-r from-zinc-800 via-slate-900 to-black text-amber-100 shadow-sm shadow-black/20 dark:from-zinc-600 dark:via-slate-700 dark:to-zinc-900",
+  supergrok:
+    "bg-gradient-to-r from-neutral-900 to-emerald-700 text-emerald-50 shadow-sm shadow-emerald-900/30 dark:from-neutral-800 dark:to-emerald-600",
+  "supergrok-heavy":
+    "bg-gradient-to-r from-black via-emerald-900 to-teal-700 text-emerald-50 shadow-sm shadow-emerald-950/40 dark:from-black dark:via-emerald-800 dark:to-teal-600",
+  supergrok_heavy:
+    "bg-gradient-to-r from-black via-emerald-900 to-teal-700 text-emerald-50 shadow-sm shadow-emerald-950/40 dark:from-black dark:via-emerald-800 dark:to-teal-600",
+  supergrokheavy:
+    "bg-gradient-to-r from-black via-emerald-900 to-teal-700 text-emerald-50 shadow-sm shadow-emerald-950/40 dark:from-black dark:via-emerald-800 dark:to-teal-600",
+  unknown:
+    "bg-gradient-to-r from-orange-400 to-amber-500 text-white shadow-sm shadow-orange-500/25 dark:from-orange-400 dark:to-amber-400",
+};
+
+export const resolvePlanBadgeClass = (planType: string | null | undefined): string => {
+  const normalized = normalizeTagValue(planType);
+  if (!normalized) return PLAN_BADGE_CLASSES.unknown;
+  return PLAN_BADGE_CLASSES[normalized] ?? PLAN_BADGE_CLASSES.unknown;
+};
+
+/** Short membership chip copy (PRO / PLUS), distinct from soft info tags. */
+export const formatPlanBadgeLabel = (planType: string | null | undefined): string => {
+  const normalized = normalizeTagValue(planType);
+  if (!normalized) return "";
+  if (
+    normalized === "supergrok-heavy" ||
+    normalized === "supergrok_heavy" ||
+    normalized === "supergrokheavy"
+  ) {
+    return "SUPERGROK HEAVY";
+  }
+  if (normalized === "supergrok") return "SUPERGROK";
+  if (normalized === "free") return "FREE";
+  if (normalized === "plus") return "PLUS";
+  if (normalized === "pro") return "PRO";
+  if (normalized === "team") return "TEAM";
+  if (normalized === "premium") return "PREMIUM";
+  if (normalized === "business") return "BUSINESS";
+  if (normalized === "enterprise") return "ENTERPRISE";
+  return normalized.replace(/[-_]+/g, " ").toUpperCase();
+};
+
 const KNOWN_AUTH_FILE_PROVIDER_KEYS = Object.keys(TYPE_BADGE_CLASSES)
   .filter((key) => key !== "empty" && key !== "unknown")
   .sort((left, right) => right.length - left.length);

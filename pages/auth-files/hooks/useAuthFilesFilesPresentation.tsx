@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import {
   AlertTriangle,
   CalendarClock,
+  Clock,
   Download,
   Eye,
   Gauge,
@@ -29,6 +30,7 @@ import {
   formatAuthFileRestrictionRemaining,
   formatFileSize,
   formatModified,
+  formatPlanBadgeLabel,
   resolveClaudeOAuthHealthBadges,
   isRuntimeOnlyAuthFile,
   parseAdditionalQuotaWindowLabel,
@@ -41,6 +43,7 @@ import {
   resolveAuthFileStatusBar,
   resolveAuthFileSubscriptionStatus,
   resolveFileType,
+  resolvePlanBadgeClass,
   shouldShowAuthFileDisplayTag,
   shouldShowAuthFilePlanBadge,
 } from "@code-proxy/domain";
@@ -219,25 +222,7 @@ export function useAuthFilesFilesPresentation({
     [t],
   );
 
-  const formatPlanTypeLabel = useCallback(
-    (planType: string) => {
-      const normalized = planType.trim().toLowerCase();
-      if (!normalized) return "";
-      if (normalized === "plus" || normalized === "team" || normalized === "free") {
-        return t(`codex_quota.plan_${normalized}`);
-      }
-      if (normalized === "supergrok") return t("xai_quota.plan_supergrok");
-      if (
-        normalized === "supergrok-heavy" ||
-        normalized === "supergrok_heavy" ||
-        normalized === "supergrokheavy"
-      ) {
-        return t("xai_quota.plan_supergrok_heavy");
-      }
-      return normalized.charAt(0).toUpperCase() + normalized.slice(1);
-    },
-    [t],
-  );
+  const formatPlanTypeLabel = useCallback((planType: string) => formatPlanBadgeLabel(planType), []);
 
   const restrictionUnitLabels = useMemo(
     () => ({
@@ -620,10 +605,11 @@ export function useAuthFilesFilesPresentation({
       const detailText = formatQuotaItemDetailText(item);
 
       return (
-        <div key={label} className="space-y-1">
+        <div key={label} className="space-y-1.5">
           <div className="flex items-center justify-between gap-2">
-            <span className="min-w-0 truncate text-xs font-semibold text-slate-700 dark:text-white/80">
-              {translateQuotaText(label)}
+            <span className="inline-flex min-w-0 items-center gap-1.5 text-xs font-medium text-slate-600 dark:text-white/70">
+              <Clock size={12} className="shrink-0 text-slate-400 dark:text-white/40" aria-hidden />
+              <span className="min-w-0 truncate">{translateQuotaText(label)}</span>
             </span>
             <span
               className={[
@@ -634,14 +620,14 @@ export function useAuthFilesFilesPresentation({
               {percentText}
             </span>
           </div>
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200/80 dark:bg-white/10">
+          <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-white/10">
             <div
               className={["h-full rounded-full", tone.fillClass].join(" ")}
               style={{ width: `${normalized ?? 0}%` }}
               aria-hidden="true"
             />
           </div>
-          <div className="min-h-[14px] truncate text-2xs tabular-nums text-slate-500 dark:text-white/45">
+          <div className="min-h-[14px] truncate text-right text-2xs tabular-nums text-slate-400 dark:text-white/40">
             {detailText ?? "\u00A0"}
           </div>
         </div>
@@ -752,8 +738,14 @@ export function useAuthFilesFilesPresentation({
                   </span>
                 ) : null}
                 {showPlanBadge && planType ? (
-                  <span className="inline-flex rounded-lg bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-200">
-                    {t("codex_quota.plan_label")} {formatPlanTypeLabel(planType)}
+                  <span
+                    data-testid="auth-file-plan-badge"
+                    className={[
+                      "inline-flex items-center rounded-md px-2 py-0.5 text-2xs font-bold tracking-wide",
+                      resolvePlanBadgeClass(planType),
+                    ].join(" ")}
+                  >
+                    {formatPlanTypeLabel(planType)}
                   </span>
                 ) : null}
               </div>

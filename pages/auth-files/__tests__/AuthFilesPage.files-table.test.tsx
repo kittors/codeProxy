@@ -1393,7 +1393,7 @@ describe("AuthFilesPage files table", () => {
       expect(quota).toHaveTextContent("$40.00 / $50.00");
       expect(quota).toHaveTextContent("Monthly credits");
       expect(quota).toHaveTextContent("$130.00 / $150.00");
-      expect(card as HTMLElement).toHaveTextContent("Plan SuperGrok");
+      expect(card as HTMLElement).toHaveTextContent("SUPERGROK");
     });
     expect(quota).not.toHaveTextContent("Used");
     expect(quota).not.toHaveTextContent("Requests");
@@ -1811,7 +1811,11 @@ describe("AuthFilesPage files table", () => {
     expect(card).not.toBeNull();
     expect(within(card as HTMLElement).getByText("vip-team")).toBeInTheDocument();
     expect(within(card as HTMLElement).getAllByText(/^codex$/i)).toHaveLength(1);
-    expect(within(card as HTMLElement).queryByText(/^pro$/i)).not.toBeInTheDocument();
+    // Membership chip is PRO (not soft sky "pro" tag); only one membership badge.
+    expect(within(card as HTMLElement).getByTestId("auth-file-plan-badge")).toHaveTextContent(
+      "PRO",
+    );
+    expect(within(card as HTMLElement).queryByText("pro")).not.toBeInTheDocument();
   });
 
   test("cards view shows the auth-file success rate beside call volume", async () => {
@@ -1982,7 +1986,7 @@ describe("AuthFilesPage files table", () => {
     expect(card).not.toBeNull();
     // Prefer request_total over a misleading cycle_request_total of 0 when cycle_known is false.
     expect(await within(card as HTMLElement).findByText("116 calls")).toBeInTheDocument();
-    expect(within(card as HTMLElement).getByText("Plan SuperGrok")).toBeInTheDocument();
+    expect(within(card as HTMLElement).getByText("SUPERGROK")).toBeInTheDocument();
     expect(mocks.getAuthFileTrend).toHaveBeenCalledWith("xai-auth", { days: 7, hours: 5 });
   });
 
@@ -2771,9 +2775,7 @@ describe("AuthFilesPage files table", () => {
     expect(screen.getAllByText("Beta Channel").length).toBeGreaterThan(0);
     expect(screen.queryByText("z-last.json")).not.toBeInTheDocument();
     expect(screen.queryByText("codex-prod.json")).not.toBeInTheDocument();
-    expect(
-      screen.getAllByText((_, node) => node?.textContent?.includes("Plan Plus") ?? false).length,
-    ).toBeGreaterThan(0);
+    expect(screen.getAllByText("PLUS").length).toBeGreaterThan(0);
     expect(screen.getByText("9 calls")).toBeInTheDocument();
 
     const cards = screen.getByTestId("auth-files-cards");
@@ -4883,10 +4885,7 @@ describe("AuthFilesPage files table", () => {
       "codex",
       expect.objectContaining({ name: "codex.json" }),
     );
-    expect(
-      (await screen.findAllByText((_, node) => node?.textContent?.includes("Plan Plus") ?? false))
-        .length,
-    ).toBeGreaterThan(0);
+    expect((await screen.findAllByText("PLUS")).length).toBeGreaterThan(0);
 
     await waitFor(() => {
       const raw = window.localStorage.getItem(AUTH_FILES_DATA_CACHE_KEY);
@@ -5024,8 +5023,8 @@ describe("AuthFilesPage files table", () => {
     );
 
     expect(await screen.findByText("Codex Main")).toBeInTheDocument();
-    expect(screen.getByText("Plan Free")).toBeInTheDocument();
-    expect(screen.queryByText("Plan Plus")).not.toBeInTheDocument();
+    expect(screen.getByText("FREE")).toBeInTheDocument();
+    expect(screen.queryByText("PLUS")).not.toBeInTheDocument();
   });
 
   test("cards view exposes quota refresh for Anthropic OAuth files", async () => {

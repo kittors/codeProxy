@@ -16,11 +16,13 @@ import {
   resolveAuthFileDisplayName,
   resolveAuthFileRestrictionBadges,
   resolveAuthFileDisplayTags,
+  formatPlanBadgeLabel,
   resolveAuthFilePlanType,
   resolveAuthFileSupplementalTags,
   resolveAuthFileSubscriptionStatus,
   resolveFileType,
   resolveAuthFileStats,
+  resolvePlanBadgeClass,
   sanitizeAuthFilesForCache,
   setActiveCacheTenantId,
   setCacheTenantResolver,
@@ -479,6 +481,19 @@ describe("Auth Files helper coverage", () => {
         "codex",
       ),
     ).toBe(true);
+  });
+
+  test("membership plan badges use distinct solid styles and short labels", () => {
+    expect(formatPlanBadgeLabel("pro")).toBe("PRO");
+    expect(formatPlanBadgeLabel("plus")).toBe("PLUS");
+    expect(formatPlanBadgeLabel("team")).toBe("TEAM");
+    expect(formatPlanBadgeLabel("supergrok-heavy")).toBe("SUPERGROK HEAVY");
+    expect(resolvePlanBadgeClass("pro")).toContain("from-amber-400");
+    expect(resolvePlanBadgeClass("plus")).toContain("from-sky-500");
+    expect(resolvePlanBadgeClass("team")).toContain("from-violet-500");
+    // Soft info tags use sky-50; membership chips must not.
+    expect(resolvePlanBadgeClass("pro")).not.toContain("bg-sky-50");
+    expect(resolvePlanBadgeClass("pro")).not.toContain("bg-amber-50");
   });
 
   test("always shows quota-derived plan badges even when display tags omit them", () => {
