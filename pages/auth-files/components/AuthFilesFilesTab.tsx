@@ -1499,7 +1499,7 @@ export function AuthFilesFilesTab({
                 data-testid="auth-files-cards"
                 className="items-stretch md:h-full"
                 viewportClassName="max-md:h-auto max-md:touch-pan-y max-md:overflow-visible max-md:overscroll-auto"
-                contentClassName="grid grid-cols-1 items-stretch justify-items-center gap-5 px-4 py-4 sm:px-5 sm:py-5 md:grid-cols-[repeat(auto-fill,minmax(20rem,34rem))] md:justify-items-stretch md:pr-8"
+                contentClassName="grid grid-cols-1 items-stretch justify-items-center gap-5 px-4 py-4 sm:px-5 sm:py-5 md:grid-cols-[repeat(auto-fill,minmax(18rem,24rem))] md:justify-items-stretch md:pr-8"
                 scrollbarTrackInset={0}
               >
                 {pageItems.map((file) => {
@@ -1642,7 +1642,7 @@ export function AuthFilesFilesTab({
                       padding="default"
                       bodyClassName="mt-0 flex min-h-0 flex-1 flex-col"
                       className={[
-                        "group/card flex h-full w-full max-w-[34rem] flex-col rounded-3xl border-slate-200/80 shadow-[0_8px_24px_rgb(15_23_42_/_0.04)] transition-colors duration-200 ease-out hover:border-slate-300 hover:bg-white dark:border-white/[0.08] dark:shadow-[0_8px_24px_rgb(0_0_0_/_0.28)] dark:hover:border-neutral-700 dark:hover:bg-neutral-950/70",
+                        "group/card flex h-full w-full max-w-[24rem] flex-col rounded-3xl border-slate-200/80 shadow-[0_8px_24px_rgb(15_23_42_/_0.04)] transition-colors duration-200 ease-out hover:border-slate-300 hover:bg-white dark:border-white/[0.08] dark:shadow-[0_8px_24px_rgb(0_0_0_/_0.28)] dark:hover:border-neutral-700 dark:hover:bg-neutral-950/70",
                         fileSelected
                           ? "border-slate-900 ring-1 ring-slate-300 dark:border-white dark:ring-white/20"
                           : "",

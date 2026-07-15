@@ -895,9 +895,9 @@ test("AI Accounts cards auto-fill with max width on wide desktop", async ({
   expect(columnCount).toBeGreaterThanOrEqual(3);
   expect(desktopCardLayout.justifyItems).toBe("stretch");
   expect(desktopCardLayout.cards).toHaveLength(3);
-  // 34rem @ 16px root = 544px; track max and card max-width both cap growth
+  // 24rem @ 16px root = 384px; track max and card max-width both cap growth
   expect(
-    desktopCardLayout.cards.every((card) => card.maxWidth === "544px"),
+    desktopCardLayout.cards.every((card) => card.maxWidth === "384px"),
   ).toBe(true);
   expect(desktopCardLayout.cards[1].x).toBeGreaterThan(
     desktopCardLayout.cards[0].x,
@@ -907,17 +907,17 @@ test("AI Accounts cards auto-fill with max width on wide desktop", async ({
   );
   expect(
     Math.min(...desktopCardLayout.cards.map((card) => card.width)),
-  ).toBeGreaterThan(320);
+  ).toBeGreaterThan(280);
   expect(
     Math.max(...desktopCardLayout.cards.map((card) => card.width)),
-  ).toBeLessThanOrEqual(544);
+  ).toBeLessThanOrEqual(384);
   // auto-fill may place 4+ tracks on 1920; cards themselves stay capped
   expect(
     desktopCardLayout.gridTemplateColumns
       .split(" ")
       .every((track) => {
         const px = Number.parseFloat(track);
-        return Number.isFinite(px) && px <= 544 + 1;
+        return Number.isFinite(px) && px <= 384 + 1;
       }),
   ).toBe(true);
 });
