@@ -73,6 +73,15 @@ const baseCodexOAuthAdmissionEditor: DetailModalProps["codexOAuthAdmissionEditor
   error: null,
 };
 
+const baseCodexImageGenerationBridgeEditor: DetailModalProps["codexImageGenerationBridgeEditor"] =
+  {
+    fileName: "codex.json",
+    supported: true,
+    enabled: false,
+    saving: false,
+    error: null,
+  };
+
 const codexIdentityFingerprintDetail: NonNullable<DetailModalProps["identityFingerprintDetail"]> = {
   summary: {
     provider: "codex",
@@ -251,6 +260,10 @@ const renderDetailModal = (overrides: Partial<DetailModalProps> = {}) => {
     setCodexOAuthAdmissionEditor: vi.fn(),
     codexOAuthAdmissionDirty: false,
     saveCodexOAuthAdmission: vi.fn(async () => true),
+    codexImageGenerationBridgeEditor: baseCodexImageGenerationBridgeEditor,
+    setCodexImageGenerationBridgeEditor: vi.fn(),
+    codexImageGenerationBridgeDirty: false,
+    saveCodexImageGenerationBridge: vi.fn(async () => true),
     ...overrides,
   };
 
@@ -944,6 +957,38 @@ describe("AuthFileDetailModal", () => {
     expect(saveCodexOAuthAdmission).toHaveBeenCalled();
   });
 
+  test("renders Codex image generation bridge controls and saves the dirty state", () => {
+    const saveCodexImageGenerationBridge = vi.fn(async () => true);
+    const props = renderDetailModal({
+      detailTab: "fields",
+      prefixProxyDirty: false,
+      codexImageGenerationBridgeDirty: true,
+      codexImageGenerationBridgeEditor: {
+        ...baseCodexImageGenerationBridgeEditor,
+        enabled: true,
+      },
+      saveCodexImageGenerationBridge,
+    });
+
+    const panel = screen.getByTestId("codex-image-generation-bridge-panel");
+    expect(within(panel).getByText("Codex image generation bridge")).toBeInTheDocument();
+    expect(
+      within(panel).getByRole("switch", {
+        name: "Inject image_generation tool",
+      }),
+    ).toHaveAttribute("aria-checked", "true");
+
+    fireEvent.click(
+      within(panel).getByRole("switch", {
+        name: "Inject image_generation tool",
+      }),
+    );
+    expect(props.setCodexImageGenerationBridgeEditor).toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(saveCodexImageGenerationBridge).toHaveBeenCalled();
+  });
+
   test("hides Codex OAuth admission controls when the server does not expose metadata", () => {
     renderDetailModal({
       detailTab: "fields",
@@ -953,6 +998,13 @@ describe("AuthFileDetailModal", () => {
         enabled: false,
         allowedClients: [],
         availableAllowedClients: [],
+        saving: false,
+        error: null,
+      },
+      codexImageGenerationBridgeEditor: {
+        fileName: "codex-api-key.json",
+        supported: false,
+        enabled: false,
         saving: false,
         error: null,
       },

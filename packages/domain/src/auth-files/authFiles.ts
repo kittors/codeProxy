@@ -1900,6 +1900,14 @@ export type CodexOAuthAdmissionEditorState = {
   error: string | null;
 };
 
+export type CodexImageGenerationBridgeEditorState = {
+  fileName: string;
+  supported: boolean;
+  enabled: boolean;
+  saving: boolean;
+  error: string | null;
+};
+
 export type AliasRow = OAuthModelAliasEntry & { id: string };
 
 export const buildAliasRows = (entries: OAuthModelAliasEntry[] | undefined): AliasRow[] => {

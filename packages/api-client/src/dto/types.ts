@@ -94,6 +94,10 @@ export interface AuthFileCodexOAuthAdmission {
   available_allowed_clients?: AuthFileCodexAllowedClientPresetInfo[];
 }
 
+export interface AuthFileCodexImageGenerationBridge {
+  enabled?: boolean;
+}
+
 export type AuthFileIdentityFingerprintProvider = "claude" | "codex" | "gemini" | "xai";
 export type AuthFileIdentityFingerprintSource = "learned" | "preset" | "builtin_default";
 
@@ -157,6 +161,7 @@ export interface AuthFileItem extends TagDisplayFields {
   subscriptionExpired?: boolean;
   claude_oauth_health?: ClaudeOAuthHealth;
   codex_oauth_admission?: AuthFileCodexOAuthAdmission;
+  codex_image_generation_bridge?: AuthFileCodexImageGenerationBridge;
   identity_fingerprint_summary?: AuthFileIdentityFingerprintSummary;
   codex_cli_only?: boolean;
   codex_cli_only_allowed_clients?: string[];

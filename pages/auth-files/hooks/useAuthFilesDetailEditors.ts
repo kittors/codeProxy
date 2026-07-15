@@ -25,6 +25,7 @@ import {
   resolveFileType,
   type AuthFileModelItem,
   type ChannelEditorState,
+  type CodexImageGenerationBridgeEditorState,
   type CodexOAuthAdmissionEditorState,
   type PrefixProxyEditorState,
 } from "@code-proxy/domain";
@@ -65,6 +66,15 @@ const createCodexOAuthAdmissionEditorState = (): CodexOAuthAdmissionEditorState 
   error: null,
 });
 
+const createCodexImageGenerationBridgeEditorState =
+  (): CodexImageGenerationBridgeEditorState => ({
+    fileName: "",
+    supported: false,
+    enabled: false,
+    saving: false,
+    error: null,
+  });
+
 const normalizeCodexAllowedClientId = (value: string): string => value.trim().toLowerCase();
 
 const normalizeCodexAllowedClientIds = (values: string[] | undefined): string[] => {
@@ -100,6 +110,22 @@ const buildCodexOAuthAdmissionEditorState = (
       label: preset.label,
       description: preset.description,
     })),
+    saving: false,
+    error: null,
+  };
+};
+
+const buildCodexImageGenerationBridgeEditorState = (
+  file: AuthFileItem,
+): CodexImageGenerationBridgeEditorState => {
+  const bridge = file.codex_image_generation_bridge;
+  if (!bridge) {
+    return { ...createCodexImageGenerationBridgeEditorState(), fileName: file.name };
+  }
+  return {
+    fileName: file.name,
+    supported: true,
+    enabled: Boolean(bridge.enabled),
     saving: false,
     error: null,
   };
@@ -183,6 +209,20 @@ const mergeSavedCodexOAuthAdmissionFields = (
   };
 };
 
+const mergeSavedCodexImageGenerationBridgeFields = (
+  file: AuthFileItem,
+  editor: CodexImageGenerationBridgeEditorState,
+): AuthFileItem => {
+  if (file.name !== editor.fileName || !file.codex_image_generation_bridge) return file;
+  return {
+    ...file,
+    codex_image_generation_bridge: {
+      ...file.codex_image_generation_bridge,
+      enabled: editor.enabled,
+    },
+  };
+};
+
 const supportsAuthFileTrend = (file: AuthFileItem): boolean => {
   const provider = normalizeProviderKey(resolveFileType(file));
   return provider === "kimi" || provider === "codex" || provider === "xai";
@@ -238,6 +278,10 @@ export function useAuthFilesDetailEditors(
   );
   const [codexOAuthAdmissionEditor, setCodexOAuthAdmissionEditor] =
     useState<CodexOAuthAdmissionEditorState>(() => createCodexOAuthAdmissionEditorState());
+  const [codexImageGenerationBridgeEditor, setCodexImageGenerationBridgeEditor] =
+    useState<CodexImageGenerationBridgeEditorState>(() =>
+      createCodexImageGenerationBridgeEditorState(),
+    );
 
   const applySavedAuthFilePatch = useCallback(
     (fileName: string, json: Record<string, unknown>) => {
@@ -688,6 +732,10 @@ export function useAuthFilesDetailEditors(
     setCodexOAuthAdmissionEditor(buildCodexOAuthAdmissionEditorState(file));
   }, []);
 
+  const openCodexImageGenerationBridgeEditor = useCallback((file: AuthFileItem) => {
+    setCodexImageGenerationBridgeEditor(buildCodexImageGenerationBridgeEditorState(file));
+  }, []);
+
   const saveChannelEditor = useCallback(async (): Promise<boolean> => {
     const fileName = channelEditor.fileName.trim();
     const label = channelEditor.label.trim();
@@ -778,6 +826,57 @@ export function useAuthFilesDetailEditors(
     }
   }, [codexOAuthAdmissionEditor, loadAll, notify, setFiles, t]);
 
+  const codexImageGenerationBridgeDirty = useMemo(() => {
+    if (!detailFile || !codexImageGenerationBridgeEditor.supported) return false;
+    if (codexImageGenerationBridgeEditor.fileName !== detailFile.name) return false;
+    const baseline = buildCodexImageGenerationBridgeEditorState(detailFile);
+    if (!baseline.supported) return false;
+    return baseline.enabled !== codexImageGenerationBridgeEditor.enabled;
+  }, [
+    codexImageGenerationBridgeEditor.enabled,
+    codexImageGenerationBridgeEditor.fileName,
+    codexImageGenerationBridgeEditor.supported,
+    detailFile,
+  ]);
+
+  const saveCodexImageGenerationBridge = useCallback(async (): Promise<boolean> => {
+    const fileName = codexImageGenerationBridgeEditor.fileName.trim();
+    if (!fileName || !codexImageGenerationBridgeEditor.supported) return false;
+
+    setCodexImageGenerationBridgeEditor((prev) => ({
+      ...prev,
+      saving: true,
+      error: null,
+    }));
+    try {
+      await authFilesApi.patchFields({
+        name: fileName,
+        codex_image_generation_bridge: codexImageGenerationBridgeEditor.enabled,
+      });
+      const applyPatch = (file: AuthFileItem): AuthFileItem =>
+        mergeSavedCodexImageGenerationBridgeFields(file, codexImageGenerationBridgeEditor);
+      setFiles?.((prev) => prev.map(applyPatch));
+      setDetailFile((prev) => (prev && prev.name === fileName ? applyPatch(prev) : prev));
+      notify({ type: "success", message: t("auth_files.saved") });
+      setCodexImageGenerationBridgeEditor((prev) => ({
+        ...prev,
+        saving: false,
+        error: null,
+      }));
+      void loadAll();
+      return true;
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : t("auth_files.save_failed");
+      setCodexImageGenerationBridgeEditor((prev) => ({
+        ...prev,
+        saving: false,
+        error: message,
+      }));
+      notify({ type: "error", message });
+      return false;
+    }
+  }, [codexImageGenerationBridgeEditor, loadAll, notify, setFiles, t]);
+
   useEffect(() => {
     if (!detailOpen || !detailFile) return;
     if (detailTab === "models") {
@@ -804,10 +903,14 @@ export function useAuthFilesDetailEditors(
       if (codexOAuthAdmissionEditor.fileName !== detailFile.name) {
         openCodexOAuthAdmissionEditor(detailFile);
       }
+      if (codexImageGenerationBridgeEditor.fileName !== detailFile.name) {
+        openCodexImageGenerationBridgeEditor(detailFile);
+      }
       return;
     }
   }, [
     channelEditor.fileName,
+    codexImageGenerationBridgeEditor.fileName,
     codexOAuthAdmissionEditor.fileName,
     detailFile,
     detailOpen,
@@ -817,6 +920,7 @@ export function useAuthFilesDetailEditors(
     loadModelsForDetail,
     loadIdentityFingerprintForDetail,
     openChannelEditor,
+    openCodexImageGenerationBridgeEditor,
     openCodexOAuthAdmissionEditor,
     openPrefixProxyEditor,
     prefixProxyEditor.fileName,
@@ -990,13 +1094,17 @@ export function useAuthFilesDetailEditors(
     setChannelEditor,
     codexOAuthAdmissionEditor,
     setCodexOAuthAdmissionEditor,
+    codexImageGenerationBridgeEditor,
+    setCodexImageGenerationBridgeEditor,
     loadModelsForDetail,
     openDetail,
     prefixProxyDirty,
     codexOAuthAdmissionDirty,
+    codexImageGenerationBridgeDirty,
     prefixProxyUpdatedText,
     savePrefixProxy,
     saveChannelEditor,
     saveCodexOAuthAdmission,
+    saveCodexImageGenerationBridge,
   };
 }

@@ -291,13 +291,17 @@ export function AuthFilesPage() {
     setChannelEditor,
     codexOAuthAdmissionEditor,
     setCodexOAuthAdmissionEditor,
+    codexImageGenerationBridgeEditor,
+    setCodexImageGenerationBridgeEditor,
     loadModelsForDetail,
     openDetail,
     prefixProxyDirty,
     codexOAuthAdmissionDirty,
+    codexImageGenerationBridgeDirty,
     savePrefixProxy,
     saveChannelEditor,
     saveCodexOAuthAdmission,
+    saveCodexImageGenerationBridge,
   } = useAuthFilesDetailEditors(loadAll, setFiles, identityFingerprintEnabled);
 
   const {
@@ -1072,6 +1076,10 @@ export function AuthFilesPage() {
         setCodexOAuthAdmissionEditor={setCodexOAuthAdmissionEditor}
         codexOAuthAdmissionDirty={codexOAuthAdmissionDirty}
         saveCodexOAuthAdmission={saveCodexOAuthAdmission}
+        codexImageGenerationBridgeEditor={codexImageGenerationBridgeEditor}
+        setCodexImageGenerationBridgeEditor={setCodexImageGenerationBridgeEditor}
+        codexImageGenerationBridgeDirty={codexImageGenerationBridgeDirty}
+        saveCodexImageGenerationBridge={saveCodexImageGenerationBridge}
       />
 
       <ImportModelsModal
