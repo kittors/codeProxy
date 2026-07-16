@@ -1376,6 +1376,9 @@ describe("AuthFilesPage files table", () => {
           Node.DOCUMENT_POSITION_FOLLOWING,
       ),
     ).toBe(true);
+    expect(
+      within(quota).getByTestId("auth-file-card-quota-empty"),
+    ).toHaveTextContent("Quota unavailable");
     const badge = within(errorBadges).getByText("429 Error");
     const tooltipTrigger = badge.closest("[aria-describedby]") ?? badge;
     fireEvent.mouseEnter(tooltipTrigger);
