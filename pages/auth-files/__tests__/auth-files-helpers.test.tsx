@@ -16,11 +16,16 @@ import {
   resolveAuthFileDisplayName,
   resolveAuthFileRestrictionBadges,
   resolveAuthFileDisplayTags,
+  estimateQuotaBudgetUsd,
+  formatPlanBadgeLabel,
+  resolveAuthFileDisplayPlanType,
   resolveAuthFilePlanType,
   resolveAuthFileSupplementalTags,
   resolveAuthFileSubscriptionStatus,
+  resolveCodexProMultiplierTier,
   resolveFileType,
   resolveAuthFileStats,
+  resolvePlanBadgeClass,
   sanitizeAuthFilesForCache,
   setActiveCacheTenantId,
   setCacheTenantResolver,
@@ -481,6 +486,54 @@ describe("Auth Files helper coverage", () => {
     ).toBe(true);
   });
 
+  test("membership plan badges use distinct solid styles and short labels", () => {
+    expect(formatPlanBadgeLabel("pro")).toBe("PRO");
+    expect(formatPlanBadgeLabel("pro_5x")).toBe("PRO 5X");
+    expect(formatPlanBadgeLabel("pro_20x")).toBe("PRO 20X");
+    expect(formatPlanBadgeLabel("plus")).toBe("PLUS");
+    expect(formatPlanBadgeLabel("team")).toBe("TEAM");
+    expect(formatPlanBadgeLabel("supergrok-heavy")).toBe("SUPERGROK HEAVY");
+    expect(resolvePlanBadgeClass("pro")).toContain("from-amber-300");
+    expect(resolvePlanBadgeClass("plus")).toContain("from-slate-100");
+    expect(resolvePlanBadgeClass("team")).toContain("from-violet-500");
+    expect(resolvePlanBadgeClass("pro_20x")).toContain("from-yellow-300");
+    // Soft info tags use sky-50; membership chips must not.
+    expect(resolvePlanBadgeClass("pro")).not.toContain("bg-sky-50");
+    expect(resolvePlanBadgeClass("plus")).not.toContain("bg-sky-50");
+  });
+
+  test("codex pro multiplier tiers use estimated weekly budget thresholds", () => {
+    expect(estimateQuotaBudgetUsd(100, 10)).toBe(1000);
+    expect(estimateQuotaBudgetUsd(50, 10)).toBe(500);
+    expect(estimateQuotaBudgetUsd(0, 10)).toBeNull();
+    expect(resolveCodexProMultiplierTier("pro", 1500)).toBe("pro_20x");
+    expect(resolveCodexProMultiplierTier("pro", 500)).toBe("pro_5x");
+    expect(resolveCodexProMultiplierTier("pro", 100)).toBe("pro");
+    expect(resolveCodexProMultiplierTier("pro", null)).toBe("pro");
+    expect(resolveCodexProMultiplierTier("plus", 2000)).toBe("plus");
+    expect(
+      resolveAuthFileDisplayPlanType(
+        { name: "codex.json", type: "codex", plan_type: "pro" } as AuthFileItem,
+        null,
+        { cycleCostTotal: 120, weeklyQuotaUsedPercent: 10 },
+      ),
+    ).toBe("pro_20x");
+    expect(
+      resolveAuthFileDisplayPlanType(
+        { name: "codex.json", type: "codex", plan_type: "pro" } as AuthFileItem,
+        null,
+        { cycleCostTotal: 30, weeklyQuotaUsedPercent: 10 },
+      ),
+    ).toBe("pro_5x");
+    expect(
+      resolveAuthFileDisplayPlanType(
+        { name: "xai.json", type: "xai", plan_type: "supergrok" } as AuthFileItem,
+        null,
+        { cycleCostTotal: 9999, weeklyQuotaUsedPercent: 10 },
+      ),
+    ).toBe("supergrok");
+  });
+
   test("always shows quota-derived plan badges even when display tags omit them", () => {
     // xAI SuperGrok is resolved from monthly credits, not auth-file default tags.
     expect(
@@ -684,6 +737,36 @@ test("shows auth-level quota recovery records as 429 restriction badges", () => 
         label: "429 Error",
         quotaWindow: "week",
         quotaWindowMinutes: 10080,
+      }),
+    ]);
+  });
+
+  test("xAI week restriction uses weekly_limit resetAtMs as recovery time", () => {
+    const nowMs = Date.parse("2026-07-14T08:00:00.000Z");
+    const weeklyResetAtMs = Date.parse("2026-07-16T07:38:00.000Z");
+    const file = {
+      name: "xai.json",
+      restrictions: [
+        {
+          scope: "auth",
+          http_status: 402,
+          quota_exceeded: true,
+          reason: "quota",
+          quota_window: "week",
+          quota_window_minutes: 10080,
+          status_message: "Grok Build usage balance exhausted",
+          // short local probe cooldown — not user-facing weekly recovery
+          next_retry_after: "2026-07-14T08:01:00.000Z",
+        },
+      ],
+    } as AuthFileItem;
+
+    expect(resolveAuthFileRestrictionBadges(file, nowMs, weeklyResetAtMs)).toEqual([
+      expect.objectContaining({
+        label: "402 Error",
+        quotaWindow: "week",
+        quotaLimited: true,
+        recoverAtMs: weeklyResetAtMs,
       }),
     ]);
   });

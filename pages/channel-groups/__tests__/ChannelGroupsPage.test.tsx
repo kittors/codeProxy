@@ -478,7 +478,7 @@ describe("ChannelGroupsPage", () => {
       }
       if (
         path ===
-        "/models/configured-availability?allowed_channel_groups=deepseekv4flash%2Bchatgpt"
+        "/models/configured-availability?allowed_channel_groups=deepseekv4flash%2Bchatgpt&ignore_group_allowed_models=1"
       ) {
         return Promise.resolve({
           scoped: true,
@@ -562,7 +562,7 @@ describe("ChannelGroupsPage", () => {
     expect(within(table).getByLabelText("gpt-5.6-ultra")).toBeInTheDocument();
     expect(within(table).queryByLabelText("gpt-5.5")).not.toBeInTheDocument();
     expect(mockedApiGet).toHaveBeenCalledWith(
-      "/models/configured-availability?allowed_channel_groups=deepseekv4flash%2Bchatgpt",
+      "/models/configured-availability?allowed_channel_groups=deepseekv4flash%2Bchatgpt&ignore_group_allowed_models=1",
     );
   });
 
@@ -1003,6 +1003,8 @@ describe("ChannelGroupsPage", () => {
       }),
     );
   });
+
+
 
   test("shows save button loading while routing-config update is in flight", async () => {
     const user = userEvent.setup();

@@ -12,6 +12,12 @@ const t = ((key: string, options?: Record<string, string>) => {
     "api_keys_page.col_spending_limit": "Spending limit",
     "api_keys_page.spending_limit_help":
       "Maximum cumulative API key cost in USD. Empty means unlimited.",
+    "api_keys_page.col_daily_spending_used": "Today spent",
+    "api_keys_page.col_daily_spending_remaining": "Remaining today",
+    "api_keys_page.daily_spending_used_help": "Effective USD cost today",
+    "api_keys_page.daily_spending_remaining_help": "Remaining daily budget",
+    "api_keys_page.reset_today_spending": "Reset today spending",
+    "api_keys_page.reset_today_spending_disabled": "Set a daily spending limit before resetting",
     "api_keys_page.unlimited": "Unlimited",
     "api_keys_page.view_usage": "View usage",
     "api_keys_page.copy_key": "Copy key",
@@ -53,6 +59,7 @@ const createColumns = (overrides: Partial<Parameters<typeof createApiKeyColumns>
     onImportToCcSwitch: vi.fn(),
     onToggleDisable: vi.fn(),
     onViewUsage: vi.fn(),
+    onResetDailySpending: vi.fn(),
     ...overrides,
   });
 
@@ -246,5 +253,71 @@ describe("ApiKeyColumns", () => {
     render(<div>{actionsColumn?.render(row, 0)}</div>);
 
     expect(screen.getByRole("button", { name: "Click to enable" })).toBeInTheDocument();
+  });
+
+  test("places daily spending columns immediately after name", () => {
+    const columns = createColumns();
+    const keys = columns.map((column) => column.key);
+    const nameIndex = keys.indexOf("name");
+    expect(keys[nameIndex + 1]).toBe("dailySpendingUsed");
+    expect(keys[nameIndex + 2]).toBe("dailySpendingRemaining");
+    expect(keys[nameIndex + 3]).toBe("key");
+  });
+
+  test("renders daily spending used and remaining amounts", () => {
+    const limited: ApiKeyEntry = {
+      key: "sk-limited",
+      name: "Limited",
+      "daily-spending-limit": 100,
+      "daily-spending-used": 20,
+      "daily-spending-remaining": 80,
+    };
+    const unlimited: ApiKeyEntry = {
+      key: "sk-free",
+      name: "Free",
+      "daily-spending-limit": 0,
+      "daily-spending-used": 5,
+      "daily-spending-remaining": null,
+    };
+    const columns = createColumns();
+    const usedColumn = columns.find((column) => column.key === "dailySpendingUsed");
+    const remainingColumn = columns.find((column) => column.key === "dailySpendingRemaining");
+
+    render(
+      <>
+        <div>{usedColumn?.render(limited, 0)}</div>
+        <div>{remainingColumn?.render(limited, 0)}</div>
+        <div>{remainingColumn?.render(unlimited, 1)}</div>
+      </>,
+    );
+
+    expect(screen.getByText("$20.00")).toBeInTheDocument();
+    expect(screen.getByText("$80.00")).toBeInTheDocument();
+    expect(screen.getByText("Unlimited")).toBeInTheDocument();
+  });
+
+  test("disables reset today spending without a daily limit and calls handler when enabled", async () => {
+    const onResetDailySpending = vi.fn();
+    const limited: ApiKeyEntry = {
+      key: "sk-limited",
+      name: "Limited",
+      "daily-spending-limit": 100,
+      "daily-spending-used": 20,
+    };
+    const unlimited: ApiKeyEntry = {
+      key: "sk-free",
+      name: "Free",
+    };
+    const columns = createColumns({ onResetDailySpending });
+    const actionsColumn = columns.find((column) => column.key === "actions");
+
+    const { rerender } = render(<div>{actionsColumn?.render(unlimited, 0)}</div>);
+    expect(screen.getByRole("button", { name: "Set a daily spending limit before resetting" })).toBeDisabled();
+
+    rerender(<div>{actionsColumn?.render(limited, 1)}</div>);
+    const enabled = screen.getByRole("button", { name: "Reset today spending" });
+    expect(enabled).not.toBeDisabled();
+    await userEvent.click(enabled);
+    expect(onResetDailySpending).toHaveBeenCalledWith(1);
   });
 });

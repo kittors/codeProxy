@@ -94,6 +94,10 @@ export interface AuthFileCodexOAuthAdmission {
   available_allowed_clients?: AuthFileCodexAllowedClientPresetInfo[];
 }
 
+export interface AuthFileCodexImageGenerationBridge {
+  enabled?: boolean;
+}
+
 export type AuthFileIdentityFingerprintProvider = "claude" | "codex" | "gemini" | "xai";
 export type AuthFileIdentityFingerprintSource = "learned" | "preset" | "builtin_default";
 
@@ -129,6 +133,9 @@ export interface AuthFileItem extends TagDisplayFields {
   size?: number;
   authIndex?: string | number | null;
   auth_index?: string | number | null;
+  /** Canonical subject id shared by multi-file accounts (status merge key). */
+  auth_subject_id?: string | null;
+  authSubjectId?: string | null;
   runtimeOnly?: boolean | string;
   runtime_only?: boolean | string;
   disabled?: boolean;
@@ -157,6 +164,7 @@ export interface AuthFileItem extends TagDisplayFields {
   subscriptionExpired?: boolean;
   claude_oauth_health?: ClaudeOAuthHealth;
   codex_oauth_admission?: AuthFileCodexOAuthAdmission;
+  codex_image_generation_bridge?: AuthFileCodexImageGenerationBridge;
   identity_fingerprint_summary?: AuthFileIdentityFingerprintSummary;
   codex_cli_only?: boolean;
   codex_cli_only_allowed_clients?: string[];
@@ -388,4 +396,114 @@ export interface ApiCallResult<T = unknown> {
   header: Record<string, string[]>;
   bodyText: string;
   body: T | null;
+}
+
+/** Backend AccountStatusView quota item (authoritative). */
+export interface AiAccountQuotaItemDto {
+  quota_key: string;
+  quota_label?: string;
+  percent?: number | null;
+  reset_at?: string | null;
+  window_seconds?: number | null;
+  /** Optional display value (xai / Gemini / Kiro cards). */
+  value?: string;
+  /** Optional secondary meta text. */
+  meta?: string;
+}
+
+/** Backend AccountStatusView usage summary (authoritative). */
+export interface AiAccountUsageSummaryDto {
+  auth_subject_id?: string;
+  request_total_7d?: number | null;
+  cost_total_7d?: number | null;
+  request_total_30d?: number | null;
+  success_total_30d?: number | null;
+  failure_total_30d?: number | null;
+  cycle_request_total?: number | null;
+  cycle_cost_total?: number | null;
+  cycle_known?: boolean;
+  cycle_start?: string | null;
+  weekly_quota_used_percent?: number | null;
+  updated_at?: string | null;
+}
+
+/**
+ * Backend currently returns restriction_summary as a plain string.
+ * Keep optional structured fields only if a future backend emits an object.
+ */
+export type AiAccountRestrictionSummaryDto = string;
+
+/** Backend AccountStatusView (authoritative read model). */
+export interface AiAccountLatestStatusDto {
+  auth_subject_id?: string;
+  auth_index: string;
+  provider?: string;
+  refresh_state?: string;
+  health_status?: string;
+  plan_type?: string | null;
+  /** Authoritative: string summary from backend. */
+  restriction_summary?: string | null;
+  error_summary?: string | null;
+  error_code?: string | null;
+  error_message?: string | null;
+  quotas: AiAccountQuotaItemDto[];
+  usage?: AiAccountUsageSummaryDto | null;
+  /** Optional Codex reset-credit fields retained by backend. */
+  reset_credit_count?: number | null;
+  reset_credit_expirations?: string[];
+  upstream_checked_at?: string | null;
+  usage_updated_at?: string | null;
+  expires_at?: string | null;
+  version?: number | string | null;
+  updated_at?: string | null;
+}
+
+/** GET /ai-accounts/status */
+export interface AiAccountsStatusSnapshotDto {
+  items: AiAccountLatestStatusDto[];
+}
+
+/** POST /ai-accounts/status-refresh */
+export interface AiAccountStatusRefreshRequest {
+  auth_indexes: string[];
+  force: boolean;
+}
+
+export interface AiAccountStatusRefreshAcceptedDto {
+  job_id: string;
+  accepted: number;
+  deduplicated: number;
+  /** Auth indexes skipped by the backend (not a count). */
+  skipped?: string[];
+}
+
+export type AiAccountStatusRefreshJobState = "running" | "completed";
+
+export type AiAccountStatusRefreshAccountState =
+  | "queued"
+  | "running"
+  | "success"
+  | "error";
+
+export interface AiAccountStatusRefreshAccountResultDto {
+  auth_index: string;
+  auth_subject_id?: string;
+  state: AiAccountStatusRefreshAccountState;
+  error_code?: string | null;
+  error_message?: string | null;
+  updated_at?: string | null;
+  result?: AiAccountLatestStatusDto | null;
+}
+
+/** GET /ai-accounts/status-refresh/:job_id */
+export interface AiAccountStatusRefreshJobDto {
+  job_id: string;
+  tenant_id?: string;
+  state: AiAccountStatusRefreshJobState;
+  total: number;
+  completed: number;
+  failed: number;
+  created_at?: string | null;
+  updated_at?: string | null;
+  results: AiAccountStatusRefreshAccountResultDto[];
 }

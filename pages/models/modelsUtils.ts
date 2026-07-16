@@ -183,9 +183,13 @@ export function mergeConfiguredModelAvailability(
     visible.push(availabilityItemToModel(item));
     seen.add(key);
   }
+  // Path-only rows enrich discovery when there is no scoped allow-list.
+  // When configured-availability is scoped, AllowedModels already decided the
+  // set — do not re-add path models that were filtered out (xAI live discovery).
   for (const item of pathItems) {
     const key = item.id.toLowerCase();
     if (seen.has(key)) continue;
+    if (availability?.scoped && !availabilityById.has(key)) continue;
     visible.push(
       availabilityItemToModel({
         id: item.id,

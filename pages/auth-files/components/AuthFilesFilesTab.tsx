@@ -52,16 +52,20 @@ import {
   AUTH_FILES_PAGE_SIZE,
   AUTH_FILE_STATUS_FILTERS,
   TYPE_BADGE_CLASSES,
+  formatPlanBadgeLabel,
   isRuntimeOnlyAuthFile,
   normalizeAuthIndexValue,
   normalizeProviderKey,
   normalizeTagValue,
   resolveAuthFileDisplayName,
+  resolveAuthFileDisplayPlanType,
   resolveAuthFilePlanType,
   resolveAuthFileSupplementalTags,
   resolveFileType,
+  resolvePlanBadgeClass,
   shouldShowAuthFileDisplayTag,
   shouldShowAuthFilePlanBadge,
+  type AuthFileCycleBudgetStats,
 } from "@code-proxy/domain";
 import {
   parseIdTokenPayload,
@@ -635,6 +639,7 @@ interface AuthFilesFilesTabProps {
   selectedFileNameSet: Set<string>;
   quotaByFileName: Record<string, QuotaState>;
   cycleCallsByAuthIndex: Record<string, number>;
+  cycleBudgetByAuthIndex: Record<string, AuthFileCycleBudgetStats>;
   resolveQuotaProvider: (file: AuthFileItem) => QuotaProvider | null;
   resolveQuotaCardSlots: (
     provider: QuotaProvider,
@@ -723,6 +728,7 @@ export function AuthFilesFilesTab({
   selectedFileNameSet,
   quotaByFileName,
   cycleCallsByAuthIndex,
+  cycleBudgetByAuthIndex,
   resolveQuotaProvider,
   resolveQuotaCardSlots,
   refreshQuota,
@@ -1265,10 +1271,8 @@ export function AuthFilesFilesTab({
                             value: "0",
                             label: t("auth_files.quota_refresh_off"),
                           },
-                          { value: "5000", label: "5s" },
-                          { value: "10000", label: "10s" },
-                          { value: "30000", label: "30s" },
                           { value: "60000", label: "60s" },
+                          { value: "300000", label: "300s" },
                         ]}
                         aria-label={t("auth_files.quota_auto_refresh")}
                         className="w-full"
@@ -1510,7 +1514,17 @@ export function AuthFilesFilesTab({
                     status: "idle",
                     items: [],
                   };
-                  const planType = resolveAuthFilePlanType(file, state);
+                  const authIndexForPlan = normalizeAuthIndexValue(
+                    file.auth_index ?? file.authIndex,
+                  );
+                  const basePlanType = resolveAuthFilePlanType(file, state);
+                  const planType = resolveAuthFileDisplayPlanType(
+                    file,
+                    state,
+                    authIndexForPlan
+                      ? cycleBudgetByAuthIndex[authIndexForPlan]
+                      : null,
+                  );
                   const displayTags = resolveAuthFileSupplementalTags(
                     file,
                     state,
@@ -1521,9 +1535,36 @@ export function AuthFilesFilesTab({
                   );
                   const showPlanBadge = shouldShowAuthFilePlanBadge(
                     file,
-                    planType,
+                    basePlanType,
                   );
                   const subscriptionBadge = renderSubscriptionBadge(file);
+                  const restrictionBadges = renderRestrictionBadges(file);
+                  const claudeOAuthHealthBadges =
+                    renderClaudeOAuthHealthBadges(file);
+                  const quotaErrorBadge =
+                    provider && (state.status === "error" || state.error)
+                      ? renderQuotaErrorBadge(state.error ?? t("common.error"))
+                      : null;
+                  const cardErrorBadges: Array<{ key: string; node: ReactNode }> =
+                    [];
+                  if (restrictionBadges) {
+                    cardErrorBadges.push({
+                      key: "restriction",
+                      node: restrictionBadges,
+                    });
+                  }
+                  if (claudeOAuthHealthBadges) {
+                    cardErrorBadges.push({
+                      key: "claude-oauth",
+                      node: claudeOAuthHealthBadges,
+                    });
+                  }
+                  if (quotaErrorBadge) {
+                    cardErrorBadges.push({
+                      key: "quota-error",
+                      node: quotaErrorBadge,
+                    });
+                  }
                   const stats = resolveAuthFileStats(file, usageIndex);
                   const usageTotalCalls = stats.success + stats.failure;
                   const authIndex = normalizeAuthIndexValue(
@@ -1599,7 +1640,7 @@ export function AuthFilesFilesTab({
                       padding="default"
                       bodyClassName="mt-0 flex min-h-0 flex-1 flex-col"
                       className={[
-                        "group/card flex h-full w-full max-w-[34rem] flex-col transition-colors duration-200 ease-out hover:border-slate-300 hover:bg-white md:max-w-none dark:hover:border-neutral-700 dark:hover:bg-neutral-950/70",
+                        "group/card flex h-full w-full max-w-[34rem] flex-col rounded-3xl border-slate-200/80 shadow-[0_8px_24px_rgb(15_23_42_/_0.04)] transition-colors duration-200 ease-out hover:border-slate-300 hover:bg-white md:max-w-none dark:border-white/[0.08] dark:shadow-[0_8px_24px_rgb(0_0_0_/_0.28)] dark:hover:border-neutral-700 dark:hover:bg-neutral-950/70",
                         fileSelected
                           ? "border-slate-900 ring-1 ring-slate-300 dark:border-white dark:ring-white/20"
                           : "",
@@ -1609,12 +1650,24 @@ export function AuthFilesFilesTab({
                         .filter(Boolean)
                         .join(" ")}
                     >
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="min-w-0 flex items-center gap-2">
-                            <span className="min-w-0 truncate text-sm font-semibold text-slate-900 dark:text-white">
+                      <div className="space-y-2.5">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex flex-1 items-center gap-2">
+                            <span className="min-w-0 truncate text-sm font-semibold tracking-tight text-slate-900 dark:text-white">
                               {displayTitle}
                             </span>
+                            {showPlanBadge && planType ? (
+                              <span
+                                data-testid="auth-file-plan-badge"
+                                className={[
+                                  "inline-flex shrink-0 items-center rounded-md px-2 py-0.5 text-2xs font-bold tracking-wide",
+                                  resolvePlanBadgeClass(planType),
+                                ].join(" ")}
+                              >
+                                {formatPlanTypeLabel(planType) ||
+                                  formatPlanBadgeLabel(planType)}
+                              </span>
+                            ) : null}
                           </div>
 
                           <div className="flex shrink-0 items-center gap-2">
@@ -1667,7 +1720,7 @@ export function AuthFilesFilesTab({
                           </div>
                         </div>
 
-                        <div className="min-w-0 flex flex-wrap items-center gap-2">
+                        <div className="min-w-0 flex flex-wrap items-center gap-1.5">
                           {showTypeBadge ? (
                             <span
                               className={[
@@ -1676,12 +1729,6 @@ export function AuthFilesFilesTab({
                               ].join(" ")}
                             >
                               {typeKey}
-                            </span>
-                          ) : null}
-                          {showPlanBadge && planType ? (
-                            <span className="inline-flex shrink-0 items-center rounded-full bg-amber-50 px-2 py-0.5 text-2xs font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-200">
-                              {t("codex_quota.plan_label")}{" "}
-                              {formatPlanTypeLabel(planType)}
                             </span>
                           ) : null}
                           {provider === "codex" ? (
@@ -1727,8 +1774,6 @@ export function AuthFilesFilesTab({
                                 : `${successRate.toFixed(1)}%`}
                             </span>
                           </span>
-                          {renderRestrictionBadges(file)}
-                          {renderClaudeOAuthHealthBadges(file)}
                           {subscriptionBadge}
                           {runtimeOnly ? (
                             <span className="inline-flex shrink-0 items-center rounded-full bg-slate-900 px-2 py-0.5 text-2xs font-semibold text-white dark:bg-white dark:text-neutral-950">
@@ -1750,37 +1795,53 @@ export function AuthFilesFilesTab({
                         ) : null}
                       </div>
 
+                      {cardErrorBadges.length > 0 ? (
+                        <div
+                          className="mt-3 min-w-0 flex flex-wrap items-center gap-1.5"
+                          data-testid="auth-file-card-error-badges"
+                        >
+                          {cardErrorBadges.map((item) => (
+                            <div key={item.key} className="min-w-0">
+                              {item.node}
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
+
                       <div
-                        className="mt-4 min-w-0 touch-pan-y rounded-2xl bg-slate-50/85 px-3 py-3 transition-colors duration-200 ease-out dark:bg-white/[0.03]"
+                        className={[
+                          "mt-3 min-h-0 min-w-0 flex-1 touch-pan-y px-0.5 py-1",
+                          slots.length === 0 ? "flex flex-col" : "space-y-3",
+                        ].join(" ")}
                         data-testid="auth-file-card-quota"
                       >
-                        {provider &&
-                        (state.status === "error" || state.error) ? (
-                          <div className="mb-2 min-w-0">
-                            {renderQuotaErrorBadge(
-                              state.error ?? t("common.error"),
-                            )}
-                          </div>
-                        ) : null}
-
-                        {!provider && slots.length === 0 ? (
-                          <div className="text-xs text-slate-400 dark:text-white/40">
-                            --
-                          </div>
-                        ) : slots.length > 0 ? (
-                          <div className="space-y-2.5">
+                        {slots.length > 0 ? (
+                          <div className="space-y-3">
                             {slots.map((slot) =>
                               renderQuotaBar(slot.label, slot.item),
                             )}
                           </div>
                         ) : (
-                          <div className="text-xs text-slate-400 dark:text-white/40">
-                            --
+                          <div
+                            className="flex flex-1 flex-col items-center justify-center gap-2 py-6 text-center"
+                            data-testid="auth-file-card-quota-empty"
+                          >
+                            <div
+                              className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100/90 text-slate-400 dark:bg-white/[0.06] dark:text-white/40"
+                              aria-hidden="true"
+                            >
+                              <Gauge size={16} strokeWidth={1.5} />
+                            </div>
+                            <p className="text-xs font-medium text-slate-500 dark:text-white/50">
+                              {quotaRefreshing
+                                ? t("common.loading_ellipsis")
+                                : t("auth_files.quota_unavailable")}
+                            </p>
                           </div>
                         )}
                       </div>
 
-                      <div className="mt-auto flex items-center justify-between gap-2 pt-3">
+                      <div className="mt-auto flex items-center justify-between gap-2 border-t border-slate-100 pt-3 dark:border-white/[0.06]">
                         <div className="inline-flex items-center gap-1">
                           {provider ? (
                             <HoverTooltip content={t("common.refresh")}>

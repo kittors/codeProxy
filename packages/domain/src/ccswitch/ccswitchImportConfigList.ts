@@ -68,7 +68,8 @@ const normalizeClaudeRole = (value: unknown): CcSwitchClaudeModelRole | undefine
   return normalized === "main" ||
     normalized === "haiku" ||
     normalized === "sonnet" ||
-    normalized === "opus"
+    normalized === "opus" ||
+    normalized === "fable"
     ? normalized
     : undefined;
 };

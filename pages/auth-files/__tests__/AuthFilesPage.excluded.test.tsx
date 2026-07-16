@@ -36,6 +36,22 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
       getAuthGroupModelOwnerMappingMap: mocks.getAuthGroupModelOwnerMappingMap,
     },
     usageApi: { ...mod.usageApi, getUsage: mocks.getUsage, getEntityStats: mocks.getEntityStats },
+    aiAccountsStatusApi: {
+      getStatus: vi.fn(async () => ({ items: [] })),
+      startStatusRefresh: vi.fn(async () => ({
+        job_id: "job-1",
+        accepted: 0,
+        deduplicated: 0,
+      })),
+      getStatusRefreshJob: vi.fn(async () => ({
+        job_id: "job-1",
+        state: "completed",
+        total: 0,
+        completed: 0,
+        failed: 0,
+        results: [],
+      })),
+    },
     oauthApi: {
       ...mod.oauthApi,
       startAuth: vi.fn(async () => ({ url: "", state: "" })),

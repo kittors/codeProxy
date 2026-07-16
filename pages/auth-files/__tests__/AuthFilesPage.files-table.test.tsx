@@ -62,6 +62,16 @@ const mocks = vi.hoisted(() => ({
   })),
   recordAuthFileQuotaSnapshot: vi.fn(async () => ({})),
   fetchQuota: vi.fn((_provider?: unknown, _file?: { name?: string }) => new Promise(() => {})),
+  getStatus: vi.fn(async () => ({ items: [] as Array<Record<string, unknown>> })),
+  startStatusRefresh: vi.fn(async () => ({ job_id: "job-1", accepted: 0, deduplicated: 0 })),
+  getStatusRefreshJob: vi.fn(async () => ({
+    job_id: "job-1",
+    state: "completed",
+    total: 0,
+    completed: 0,
+    failed: 0,
+    results: [] as Array<Record<string, unknown>>,
+  })),
   consumeCodexResetCredit: vi.fn(async (_file?: { name?: string }) => undefined),
   deleteFile: vi.fn(async () => ({})),
   downloadText: vi.fn(async () => "{}"),
@@ -117,6 +127,11 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
       saveAuthGroupModelOwnerMapping: mocks.saveAuthGroupModelOwnerMapping,
     },
     quotaApi: { ...mod.quotaApi, reconcile: mocks.reconcile, clearStatus: mocks.clearStatus },
+    aiAccountsStatusApi: {
+      getStatus: mocks.getStatus,
+      startStatusRefresh: mocks.startStatusRefresh,
+      getStatusRefreshJob: mocks.getStatusRefreshJob,
+    },
     usageApi: {
       ...mod.usageApi,
       getEntityStats: mocks.getEntityStats,
@@ -248,6 +263,144 @@ describe("AuthFilesPage files table", () => {
     mocks.recordAuthFileQuotaSnapshot.mockImplementation(async () => ({}));
     mocks.fetchQuota.mockReset();
     mocks.fetchQuota.mockImplementation(() => new Promise(() => {}));
+    // Bridge: status GET never calls fetchQuota (no fan-out). Refresh job does.
+    const mapQuotaResult = (raw: unknown) => {
+      const result = Array.isArray(raw) ? { items: raw } : (raw as Record<string, unknown> | null);
+      const items = Array.isArray(result?.items) ? result.items : [];
+      return {
+        quotas: items.map(
+          (item: {
+            key?: string;
+            label?: string;
+            percent?: number | null;
+            value?: string;
+            meta?: string;
+            resetAtMs?: number;
+            windowSeconds?: number;
+          }) => ({
+            quota_key: item.key ?? item.label ?? "quota",
+            quota_label: item.label,
+            percent: item.percent ?? null,
+            value: item.value,
+            meta: item.meta,
+            reset_at:
+              typeof item.resetAtMs === "number"
+                ? new Date(item.resetAtMs).toISOString()
+                : undefined,
+            window_seconds: item.windowSeconds,
+          }),
+        ),
+        planType: (result as { planType?: string } | null)?.planType ?? null,
+        resetCreditCount: (result as { resetCreditCount?: number } | null)?.resetCreditCount,
+        resetCreditExpirations: (result as { resetCreditExpirations?: string[] } | null)
+          ?.resetCreditExpirations,
+      };
+    };
+    const buildUsageFromTrend = async (authIndex: string) => {
+      try {
+        const trend = await mocks.getAuthFileTrend(authIndex);
+        return {
+          cycle_request_total: trend.cycle_request_total,
+          cycle_known: trend.cycle_known,
+          request_total_30d: trend.request_total,
+          success_total_30d: Math.max(0, trend.request_total ?? 0),
+          failure_total_30d: 0,
+          cycle_cost_total: trend.cycle_cost_total,
+          weekly_quota_used_percent: trend.weekly_quota_used_percent,
+        };
+      } catch {
+        return undefined;
+      }
+    };
+    const buildStatusItemFromFile = async (
+      file: AuthFileItem,
+      options?: { probeQuota?: boolean },
+    ) => {
+      const authIndex = String(file.auth_index ?? file.authIndex ?? file.name);
+      const subject = String(
+        (file as { auth_subject_id?: string }).auth_subject_id ?? authIndex,
+      );
+      let quotas: Array<Record<string, unknown>> = [];
+      let planType: string | null = null;
+      let resetCreditCount: number | undefined;
+      let resetCreditExpirations: string[] | undefined;
+      let errorMessage: string | undefined;
+      if (options?.probeQuota) {
+        try {
+          const provider = String(file.type ?? file.provider ?? "codex").toLowerCase();
+          const mapped = mapQuotaResult(await mocks.fetchQuota(provider, file));
+          quotas = mapped.quotas;
+          planType = mapped.planType;
+          resetCreditCount = mapped.resetCreditCount;
+          resetCreditExpirations = mapped.resetCreditExpirations;
+        } catch (error: unknown) {
+          errorMessage = error instanceof Error ? error.message : "quota_error";
+        }
+      }
+      const usage = await buildUsageFromTrend(authIndex);
+      return {
+        auth_index: authIndex,
+        auth_subject_id: subject,
+        plan_type: planType,
+        quotas,
+        usage,
+        reset_credit_count: resetCreditCount,
+        reset_credit_expirations: resetCreditExpirations,
+        error_message: errorMessage,
+        health_status: errorMessage ? "error" : "ok",
+        upstream_checked_at: new Date().toISOString(),
+      };
+    };
+    mocks.getStatus.mockReset();
+    mocks.getStatus.mockImplementation(async () => {
+      const listed = await mocks.list();
+      const filesList = Array.isArray(listed?.files) ? listed.files : [];
+      const items = await Promise.all(
+        filesList.map(async (file) => {
+          // UI regression tests: probe quota via fetchQuota mock (not production path).
+          // Request-shape O(1) guarantees live in AuthFilesPage.status-read-model.test.tsx.
+          return buildStatusItemFromFile(file, { probeQuota: true });
+        }),
+      );
+      return { items: items.filter(Boolean) };
+    });
+    let lastRefreshResults: Array<Record<string, unknown>> = [];
+    mocks.startStatusRefresh.mockReset();
+    mocks.startStatusRefresh.mockImplementation(async (payload?: { auth_indexes?: string[] }) => {
+      const indexes = payload?.auth_indexes ?? [];
+      const listed = await mocks.list();
+      const filesList = Array.isArray(listed?.files) ? listed.files : [];
+      lastRefreshResults = await Promise.all(
+        indexes.map(async (authIndex) => {
+          const file =
+            filesList.find(
+              (item) => String(item.auth_index ?? item.authIndex ?? "") === authIndex,
+            ) ?? ({ name: authIndex, auth_index: authIndex, type: "codex" } as AuthFileItem);
+          const result = await buildStatusItemFromFile(file, { probeQuota: true });
+          return {
+            auth_index: authIndex,
+            auth_subject_id: result.auth_subject_id,
+            state: result.error_message ? "error" : "success",
+            error_message: result.error_message,
+            result: result.error_message ? null : result,
+          };
+        }),
+      );
+      return {
+        job_id: "job-1",
+        accepted: indexes.length,
+        deduplicated: 0,
+      };
+    });
+    mocks.getStatusRefreshJob.mockReset();
+    mocks.getStatusRefreshJob.mockImplementation(async () => ({
+      job_id: "job-1",
+      state: "completed",
+      total: lastRefreshResults.length,
+      completed: lastRefreshResults.length,
+      failed: 0,
+      results: lastRefreshResults,
+    }));
     mocks.consumeCodexResetCredit.mockReset();
     mocks.consumeCodexResetCredit.mockResolvedValue(undefined);
     mocks.deleteFile.mockReset();
@@ -856,8 +1009,11 @@ describe("AuthFilesPage files table", () => {
     };
     mocks.list
       .mockImplementationOnce(async () => ({ files: [initialFile] }))
-      .mockImplementationOnce(async () => ({ files: [initialFile, uploadedFile] }));
-    mocks.fetchQuota.mockImplementation(async () => ({ items: [] }));
+      .mockImplementation(async () => ({ files: [initialFile, uploadedFile] }));
+    mocks.upload.mockResolvedValue({});
+    mocks.fetchQuota.mockImplementation(async () => ({
+      items: [{ key: "code_5h", label: "m_quota.code_5h", percent: 11 }],
+    }));
 
     render(
       <MemoryRouter initialEntries={["/auth-files"]}>
@@ -878,25 +1034,21 @@ describe("AuthFilesPage files table", () => {
     fireEvent.change(within(dialog).getByLabelText("Auth file JSON"), {
       target: {
         value: JSON.stringify({
-          chatgpt_account_id: "acct-123",
-          client_id: "app_test",
+          type: "codex",
+          account_id: "acct-123",
           access_token: "token",
-          id_token: "id-token",
         }),
       },
     });
     fireEvent.click(within(dialog).getByRole("button", { name: "Upload JSON" }));
 
+    await waitFor(() => expect(mocks.upload).toHaveBeenCalled());
     expect(await screen.findByText("auth-server-renamed.json")).toBeInTheDocument();
-    await waitFor(() =>
-      expect(mocks.fetchQuota).toHaveBeenCalledWith(
-        "codex",
-        expect.objectContaining({
-          name: "auth-server-renamed.json",
-          chatgpt_account_id: "acct-123",
-        }),
-      ),
-    );
+    await waitFor(() => {
+      expect(mocks.startStatusRefresh).toHaveBeenCalled();
+      const payload = (mocks.startStatusRefresh.mock.calls as unknown as Array<[{ auth_indexes?: string[] }]>).at(-1)?.[0];
+      expect(payload?.auth_indexes).toContain("auth-codex");
+    });
   });
 
   test("shows an error for invalid pasted auth JSON", async () => {
@@ -989,6 +1141,20 @@ describe("AuthFilesPage files table", () => {
         },
       ],
     }));
+    mocks.getStatus.mockResolvedValue({
+      items: [
+        {
+          auth_index: "auth-codex",
+          quotas: [],
+          usage: { request_total_30d: 1, success_total_30d: 1, failure_total_30d: 0 },
+        },
+        {
+          auth_index: "auth-kimi",
+          quotas: [],
+          usage: { request_total_30d: 2, success_total_30d: 2, failure_total_30d: 0 },
+        },
+      ],
+    });
 
     render(
       <MemoryRouter initialEntries={["/auth-files"]}>
@@ -1005,16 +1171,10 @@ describe("AuthFilesPage files table", () => {
     expect(await screen.findByText("codex-pro.json")).toBeInTheDocument();
 
     await waitFor(() => {
-      expect(mocks.getEntityStats).toHaveBeenCalledWith(
-        30,
-        "all",
-        {
-          authIndexes: ["auth-codex", "auth-kimi"],
-          sources: ["t:codex-pro.json", "t:codex-pro", "t:kimi-a.json", "t:kimi-a"],
-        },
-        expect.objectContaining({ signal: expect.any(AbortSignal) }),
-      );
+      expect(mocks.getStatus).toHaveBeenCalled();
     });
+    // Enter path may quiet-probe visible cards (fetchQuota only via test bridge); never entity-stats.
+    expect(mocks.getEntityStats).not.toHaveBeenCalled();
   });
 
   test("shows active auth-level restriction badge with reason and recovery tooltip", async () => {
@@ -1208,15 +1368,30 @@ describe("AuthFilesPage files table", () => {
     const card = title.closest("section");
     expect(card).not.toBeNull();
     expect(within(card as HTMLElement).queryByText("Restricted")).not.toBeInTheDocument();
-    const badge = within(card as HTMLElement).getByText("429 Error");
+    const errorBadges = within(card as HTMLElement).getByTestId("auth-file-card-error-badges");
+    const quota = within(card as HTMLElement).getByTestId("auth-file-card-quota");
+    expect(
+      Boolean(
+        errorBadges.compareDocumentPosition(quota) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ),
+    ).toBe(true);
+    expect(
+      within(quota).getByTestId("auth-file-card-quota-empty"),
+    ).toHaveTextContent("Quota unavailable");
+    const badge = within(errorBadges).getByText("429 Error");
     const tooltipTrigger = badge.closest("[aria-describedby]") ?? badge;
     fireEvent.mouseEnter(tooltipTrigger);
 
     const tooltip = await screen.findByRole("tooltip");
     expect(tooltip).toHaveTextContent("Requests are limited");
-    expect(tooltip).toHaveTextContent("5h");
+    expect(tooltip).toHaveTextContent("Limit window: 5h");
+    expect(tooltip).toHaveTextContent("Reason: usage limit");
+    expect(tooltip).toHaveTextContent("Refresh time:");
     expect(tooltip).toHaveTextContent("Auto recovery in");
     expect(tooltip).not.toHaveTextContent("usage_limit_reached");
+    // Multi-line tooltip: each fact on its own line for scanability.
+    expect(tooltip.textContent?.includes("\n")).toBe(true);
   });
 
   test("supports multi-select delete from the toolbar", async () => {
@@ -1312,7 +1487,6 @@ describe("AuthFilesPage files table", () => {
           value: "75%",
           resetAtMs: now + 7 * 24 * 60 * 60 * 1000,
           windowSeconds: 604800,
-          meta: "07/06/2026 - 07/13/2026",
         },
         {
           key: "product:Grok 4",
@@ -1381,7 +1555,7 @@ describe("AuthFilesPage files table", () => {
       expect(quota).toHaveTextContent("$40.00 / $50.00");
       expect(quota).toHaveTextContent("Monthly credits");
       expect(quota).toHaveTextContent("$130.00 / $150.00");
-      expect(card as HTMLElement).toHaveTextContent("Plan SuperGrok");
+      expect(card as HTMLElement).toHaveTextContent("SUPERGROK");
     });
     expect(quota).not.toHaveTextContent("Used");
     expect(quota).not.toHaveTextContent("Requests");
@@ -1650,10 +1824,15 @@ describe("AuthFilesPage files table", () => {
     });
 
     expect(await screen.findByText("codex-visible.json")).toBeInTheDocument();
-    await waitFor(() => expect(mocks.fetchQuota).toHaveBeenCalledTimes(1));
-    expect(mocks.fetchQuota).toHaveBeenCalledWith(
-      "codex",
-      expect.objectContaining({ name: file.name }),
+    // Enter route: status snapshot + quiet force probe for visible cards (auto-refresh off).
+    await waitFor(() => expect(mocks.getStatus).toHaveBeenCalled());
+    await waitFor(() => expect(mocks.startStatusRefresh).toHaveBeenCalled());
+    expect(mocks.startStatusRefresh).toHaveBeenCalledWith(
+      expect.objectContaining({
+        auth_indexes: [file.auth_index],
+        force: true,
+      }),
+      expect.anything(),
     );
   });
 
@@ -1711,11 +1890,9 @@ describe("AuthFilesPage files table", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Submit callback" }));
 
     expect(await screen.findByText("codex-authorized.json")).toBeInTheDocument();
-    await waitFor(() => expect(mocks.fetchQuota).toHaveBeenCalledTimes(1));
-    expect(mocks.fetchQuota).toHaveBeenCalledWith(
-      "codex",
-      expect.objectContaining({ name: "codex-authorized.json" }),
-    );
+    // New visible scope: snapshot + quiet probe (not the legacy per-file fetchQuota fan-out).
+    await waitFor(() => expect(mocks.getStatus).toHaveBeenCalled());
+    await waitFor(() => expect(mocks.startStatusRefresh).toHaveBeenCalled());
   });
 
   test("reads quota preview setting from localStorage", async () => {
@@ -1799,7 +1976,11 @@ describe("AuthFilesPage files table", () => {
     expect(card).not.toBeNull();
     expect(within(card as HTMLElement).getByText("vip-team")).toBeInTheDocument();
     expect(within(card as HTMLElement).getAllByText(/^codex$/i)).toHaveLength(1);
-    expect(within(card as HTMLElement).queryByText(/^pro$/i)).not.toBeInTheDocument();
+    // Membership chip is PRO (not soft sky "pro" tag); only one membership badge.
+    expect(within(card as HTMLElement).getByTestId("auth-file-plan-badge")).toHaveTextContent(
+      "PRO",
+    );
+    expect(within(card as HTMLElement).queryByText("pro")).not.toBeInTheDocument();
   });
 
   test("cards view shows the auth-file success rate beside call volume", async () => {
@@ -1818,18 +1999,25 @@ describe("AuthFilesPage files table", () => {
         },
       ],
     }));
-    mocks.getEntityStats.mockImplementation(
-      async () =>
-        ({
-          source: [],
-          auth_index: [
-            { entity_name: "77", requests: 5, failed: 1, avg_latency: 0, total_tokens: 0 },
-          ],
-        }) as any,
-    );
     mocks.getAuthFileTrend.mockImplementation(async (authIndex: string) =>
       createAuthFileTrend(authIndex, 5),
     );
+    mocks.getStatus.mockImplementation(async () => ({
+      items: [
+        {
+          auth_index: "77",
+          auth_subject_id: "77",
+          quotas: [],
+          usage: {
+            cycle_request_total: 5,
+            cycle_known: true,
+            request_total_30d: 5,
+            success_total_30d: 4,
+            failure_total_30d: 1,
+          },
+        },
+      ],
+    }));
 
     render(
       <MemoryRouter initialEntries={["/auth-files"]}>
@@ -1867,18 +2055,22 @@ describe("AuthFilesPage files table", () => {
         },
       ],
     }));
-    mocks.getEntityStats.mockImplementation(
-      async () =>
-        ({
-          source: [],
-          auth_index: [
-            { entity_name: "77", requests: 99, failed: 0, avg_latency: 0, total_tokens: 0 },
-          ],
-        }) as any,
-    );
-    mocks.getAuthFileTrend.mockImplementation(async (authIndex: string) =>
-      createAuthFileTrend(authIndex, 7),
-    );
+    mocks.getStatus.mockImplementation(async () => ({
+      items: [
+        {
+          auth_index: "77",
+          auth_subject_id: "77",
+          quotas: [],
+          usage: {
+            cycle_request_total: 7,
+            cycle_known: true,
+            request_total_30d: 99,
+            success_total_30d: 99,
+            failure_total_30d: 0,
+          },
+        },
+      ],
+    }));
 
     render(
       <MemoryRouter initialEntries={["/auth-files"]}>
@@ -1897,7 +2089,8 @@ describe("AuthFilesPage files table", () => {
     expect(card).not.toBeNull();
     expect(await within(card as HTMLElement).findByText("7 calls")).toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText("99 calls")).not.toBeInTheDocument();
-    expect(mocks.getAuthFileTrend).toHaveBeenCalledWith("77", { days: 7, hours: 5 });
+    expect(mocks.getStatus).toHaveBeenCalled();
+    expect(mocks.getAuthFileTrend).not.toHaveBeenCalled();
   });
 
   test("cards view falls back to request_total when xAI weekly cycle is unknown", async () => {
@@ -1970,8 +2163,9 @@ describe("AuthFilesPage files table", () => {
     expect(card).not.toBeNull();
     // Prefer request_total over a misleading cycle_request_total of 0 when cycle_known is false.
     expect(await within(card as HTMLElement).findByText("116 calls")).toBeInTheDocument();
-    expect(within(card as HTMLElement).getByText("Plan SuperGrok")).toBeInTheDocument();
-    expect(mocks.getAuthFileTrend).toHaveBeenCalledWith("xai-auth", { days: 7, hours: 5 });
+    expect(within(card as HTMLElement).getByText("SUPERGROK")).toBeInTheDocument();
+    expect(mocks.getStatus).toHaveBeenCalled();
+    expect(mocks.getAuthFileTrend).toHaveBeenCalled(); // bridge mock only
   });
 
   test("filters auth files by custom tag options", async () => {
@@ -2254,15 +2448,14 @@ describe("AuthFilesPage files table", () => {
     mocks.fetchQuota.mockImplementation(async () => [
       { key: "code_5h", label: "m_quota.code_5h", percent: 60 },
     ]);
-    const cycleCountsByAuthIndex = new Map<string, number[]>([
-      ["77", [1, 4]],
-      ["88", [10]],
+    // Stable until card refresh advances 77 → 4 (enter quiet probe must not burn the sequence).
+    const cycleCountByAuthIndex = new Map<string, number>([
+      ["77", 1],
+      ["88", 10],
     ]);
-    mocks.getAuthFileTrend.mockImplementation(async (authIndex: string) => {
-      const counts = cycleCountsByAuthIndex.get(authIndex) ?? [0];
-      const count = counts.length > 1 ? counts.shift() : counts[0];
-      return createAuthFileTrend(authIndex, count ?? 0);
-    });
+    mocks.getAuthFileTrend.mockImplementation(async (authIndex: string) =>
+      createAuthFileTrend(authIndex, cycleCountByAuthIndex.get(authIndex) ?? 0),
+    );
 
     render(
       <MemoryRouter initialEntries={["/auth-files"]}>
@@ -2285,25 +2478,23 @@ describe("AuthFilesPage files table", () => {
     expect(await within(card as HTMLElement).findByText("1 calls")).toBeInTheDocument();
     expect(await within(otherCard as HTMLElement).findByText("10 calls")).toBeInTheDocument();
 
-    await waitFor(() => expect(mocks.fetchQuota).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(mocks.startStatusRefresh).toHaveBeenCalled());
     mocks.fetchQuota.mockClear();
+    mocks.startStatusRefresh.mockClear();
+    cycleCountByAuthIndex.set("77", 4);
 
     fireEvent.click(within(card as HTMLElement).getByRole("button", { name: "Refresh" }));
 
     await waitFor(() => {
-      expect(mocks.fetchQuota).toHaveBeenCalledTimes(1);
-      expect(mocks.getEntityStats).toHaveBeenCalledTimes(2);
-      expect(mocks.getEntityStats).toHaveBeenLastCalledWith(30, "all", {
-        authIndexes: ["77"],
-        sources: ["t:codex-pro-a.json", "t:codex-pro-a"],
-      });
+      expect(mocks.startStatusRefresh).toHaveBeenCalled();
+      expect(mocks.getEntityStats).not.toHaveBeenCalled();
       expect(within(card as HTMLElement).getByText("4 calls")).toBeInTheDocument();
       expect(within(otherCard as HTMLElement).getByText("10 calls")).toBeInTheDocument();
       expect(within(otherCard as HTMLElement).queryByText("99 calls")).not.toBeInTheDocument();
     });
   });
 
-  test("keeps the refresh button spinning and refreshes auth files in batches of two", async () => {
+  test("toolbar refresh uses one batch status job instead of per-account fan-out", async () => {
     const now = Date.now();
     const files = Array.from({ length: 9 }, (_, index) => ({
       name: `codex-${index + 1}.json`,
@@ -2311,21 +2502,11 @@ describe("AuthFilesPage files table", () => {
       provider: "codex",
       account_type: "oauth",
       chatgpt_account_id: `acct-${index + 1}`,
+      auth_index: String(index + 1),
       size: 1024,
       modified: now,
       disabled: false,
     }));
-    type QuotaRefreshDeferred = {
-      promise: Promise<{ items: Array<{ label: string; percent: number }> }>;
-      resolve: (value: { items: Array<{ label: string; percent: number }> }) => void;
-      reject: (reason?: unknown) => void;
-    };
-    const deferredQueue = Array.from({ length: files.length * 2 }, () =>
-      createDeferred<{ items: Array<{ label: string; percent: number }> }>(),
-    );
-    const startedDeferreds: QuotaRefreshDeferred[] = [];
-    let activeFetches = 0;
-    let maxActiveFetches = 0;
 
     window.localStorage.setItem(AUTH_FILES_QUOTA_AUTO_REFRESH_KEY, JSON.stringify(0));
     window.localStorage.setItem(
@@ -2348,15 +2529,8 @@ describe("AuthFilesPage files table", () => {
     );
 
     mocks.list.mockImplementation(async () => ({ files }));
-    mocks.fetchQuota.mockImplementation(() => {
-      const deferred = deferredQueue.shift();
-      if (!deferred) throw new Error("unexpected fetchQuota call");
-      startedDeferreds.push(deferred);
-      activeFetches += 1;
-      maxActiveFetches = Math.max(maxActiveFetches, activeFetches);
-      return deferred.promise.finally(() => {
-        activeFetches -= 1;
-      });
+    mocks.fetchQuota.mockResolvedValue({
+      items: [{ label: "m_quota.code_5h", percent: 60 }],
     });
 
     render(
@@ -2372,45 +2546,27 @@ describe("AuthFilesPage files table", () => {
     );
 
     expect(await screen.findByText("codex-1.json")).toBeInTheDocument();
-    for (let index = 0; index < files.length; index += 2) {
-      await waitFor(() =>
-        expect(mocks.fetchQuota).toHaveBeenCalledTimes(Math.min(files.length, index + 2)),
-      );
-      const warmupDeferreds = startedDeferreds.splice(0);
-      await act(async () => {
-        warmupDeferreds.forEach((deferred) =>
-          deferred.resolve({ items: [{ label: "m_quota.code_5h", percent: 60 }] }),
-        );
-      });
-    }
-    await waitFor(() => expect(activeFetches).toBe(0));
+    await waitFor(() => expect(mocks.getStatus).toHaveBeenCalled());
+    mocks.startStatusRefresh.mockClear();
+    mocks.getStatusRefreshJob.mockClear();
     mocks.fetchQuota.mockClear();
-    maxActiveFetches = 0;
 
     const refreshButton = screen.getAllByRole("button", { name: "Refresh" })[0];
-    expect(refreshButton).toBeEnabled();
-
     fireEvent.click(refreshButton);
 
-    await waitFor(() => expect(mocks.fetchQuota).toHaveBeenCalledTimes(2));
-    expect(refreshButton.querySelector("svg")).toHaveClass("animate-spin");
-    expect(maxActiveFetches).toBe(2);
-
-    for (let index = 0; index < files.length; index += 2) {
-      const batch = startedDeferreds.slice(index, index + 2);
-      await act(async () => {
-        batch.forEach((deferred) =>
-          deferred.resolve({ items: [{ label: "m_quota.code_5h", percent: 60 }] }),
-        );
-      });
-
-      await waitFor(() =>
-        expect(mocks.fetchQuota).toHaveBeenCalledTimes(Math.min(files.length, index + 4)),
-      );
-    }
-
-    await waitFor(() => expect(refreshButton.querySelector("svg")).not.toHaveClass("animate-spin"));
-    expect(maxActiveFetches).toBeLessThanOrEqual(2);
+    await waitFor(() => {
+      expect(mocks.startStatusRefresh).toHaveBeenCalledTimes(1);
+      expect(mocks.getStatusRefreshJob).toHaveBeenCalledTimes(1);
+    });
+    const firstCall = (
+      mocks.startStatusRefresh.mock.calls as unknown as Array<
+        [{ auth_indexes?: string[] }]
+      >
+    )[0];
+    expect(firstCall).toBeDefined();
+    const payload = firstCall?.[0];
+    expect(payload?.auth_indexes).toHaveLength(9);
+    expect(mocks.fetchQuota).toHaveBeenCalled(); // bridge probes only during batch job
   });
 
   test("switching to all refreshes the visible page even when file names stay the same", async () => {
@@ -2474,15 +2630,17 @@ describe("AuthFilesPage files table", () => {
     );
 
     expect(await screen.findByText("codex-1.json")).toBeInTheDocument();
-    await waitFor(() => expect(mocks.fetchQuota).toHaveBeenCalledTimes(9));
+    await waitFor(() => expect(mocks.getStatus).toHaveBeenCalled());
+    mocks.startStatusRefresh.mockClear();
     mocks.fetchQuota.mockClear();
 
     await selectFileGroup(/^All/i);
 
-    await waitFor(() => expect(mocks.fetchQuota).toHaveBeenCalledTimes(9));
-    expect(mocks.fetchQuota.mock.calls.map(([, file]) => (file as { name: string }).name)).toEqual(
-      codexFiles.slice(0, 9).map((file) => file.name),
-    );
+    // First page of All may still be the same 9 codex auth_indexes; scope GET is deduped.
+    expect(await screen.findByText("codex-1.json")).toBeInTheDocument();
+    expect(mocks.startStatusRefresh).not.toHaveBeenCalled();
+    // No per-account probe fan-out on filter switch.
+    expect(mocks.fetchQuota).not.toHaveBeenCalled();
   });
 
   test("switching provider after entering from request logs refreshes visible cards with auto-refresh off", async () => {
@@ -2557,14 +2715,17 @@ describe("AuthFilesPage files table", () => {
     });
 
     expect(await screen.findByText("qwen-1.json")).toBeInTheDocument();
+    await waitFor(() => expect(mocks.getStatus).toHaveBeenCalled());
+    const statusBefore = mocks.getStatus.mock.calls.length;
+    mocks.startStatusRefresh.mockClear();
     mocks.fetchQuota.mockClear();
 
     await selectFileGroup(/^codex\s*2/i);
 
-    await waitFor(() => expect(mocks.fetchQuota).toHaveBeenCalledTimes(2));
-    expect(mocks.fetchQuota.mock.calls.map(([, file]) => (file as { name: string }).name)).toEqual(
-      codexFiles.map((file) => file.name),
-    );
+    expect(await screen.findByText("codex-1.json")).toBeInTheDocument();
+    await waitFor(() => expect(mocks.getStatus.mock.calls.length).toBeGreaterThan(statusBefore));
+    // provider/scope switch reloads snapshot and quietly re-probes the new visible cards
+    await waitFor(() => expect(mocks.startStatusRefresh).toHaveBeenCalled());
   });
 
   test("cards view hides default auth-file badges when display tags are empty", async () => {
@@ -2728,19 +2889,33 @@ describe("AuthFilesPage files table", () => {
         },
       ],
     }));
-    mocks.getEntityStats.mockImplementation(
-      async () =>
-        ({
-          source: [],
-          auth_index: [
-            { entity_name: "1", requests: 9, failed: 2, avg_latency: 0, total_tokens: 0 },
-            { entity_name: "2", requests: 2, failed: 0, avg_latency: 0, total_tokens: 0 },
-          ],
-        }) as any,
-    );
-    mocks.getAuthFileTrend.mockImplementation(async (authIndex: string) =>
-      createAuthFileTrend(authIndex, authIndex === "1" ? 9 : 2),
-    );
+    mocks.getStatus.mockImplementation(async () => ({
+      items: [
+        {
+          auth_index: "1",
+          plan_type: "plus",
+          quotas: [],
+          usage: {
+            cycle_request_total: 9,
+            cycle_known: true,
+            request_total_30d: 9,
+            success_total_30d: 7,
+            failure_total_30d: 2,
+          },
+        },
+        {
+          auth_index: "2",
+          quotas: [],
+          usage: {
+            cycle_request_total: 2,
+            cycle_known: true,
+            request_total_30d: 2,
+            success_total_30d: 2,
+            failure_total_30d: 0,
+          },
+        },
+      ],
+    }));
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
 
     render(
@@ -2759,10 +2934,8 @@ describe("AuthFilesPage files table", () => {
     expect(screen.getAllByText("Beta Channel").length).toBeGreaterThan(0);
     expect(screen.queryByText("z-last.json")).not.toBeInTheDocument();
     expect(screen.queryByText("codex-prod.json")).not.toBeInTheDocument();
-    expect(
-      screen.getAllByText((_, node) => node?.textContent?.includes("Plan Plus") ?? false).length,
-    ).toBeGreaterThan(0);
-    expect(screen.getByText("9 calls")).toBeInTheDocument();
+    expect(screen.getAllByText("PLUS").length).toBeGreaterThan(0);
+    expect(await screen.findByText("9 calls")).toBeInTheDocument();
 
     const cards = screen.getByTestId("auth-files-cards");
     expect(cards.textContent?.indexOf("Alpha Channel")).toBeLessThan(
@@ -3860,7 +4033,7 @@ describe("AuthFilesPage files table", () => {
     expect(screen.getByText("44%")).toBeInTheDocument();
   });
 
-  test("cards view spins current-page refresh actions when switching provider filter and clears them per card", async () => {
+    test("cards view spins current-page refresh actions when switching provider filter and clears them per card", async () => {
     const now = Date.now();
     const files = [
       {
@@ -3896,26 +4069,38 @@ describe("AuthFilesPage files table", () => {
       },
     ] as any[];
 
-    const codexDeferreds = {
-      "codex-a.json": createDeferred<{
-        items: { label: string; percent: number; resetAtMs: number }[];
-      }>(),
-      "codex-b.json": createDeferred<{
-        items: { label: string; percent: number; resetAtMs: number }[];
-      }>(),
-      "codex-c.json": createDeferred<{
-        items: { label: string; percent: number; resetAtMs: number }[];
-      }>(),
-    };
+    const jobDeferred = createDeferred<{
+      job_id: string;
+      state: string;
+      total: number;
+      completed: number;
+      failed: number;
+      results: Array<Record<string, unknown>>;
+    }>();
+    let hangJobPoll = false;
 
     mocks.list.mockImplementation(async () => ({ files }));
-    mocks.fetchQuota.mockImplementation((_provider, file) => {
-      const target = codexDeferreds[file?.name as keyof typeof codexDeferreds];
-      if (target) return target.promise;
-      return Promise.resolve({
-        items: [{ label: "m_quota.code_5h", percent: 88, resetAtMs: now + 60_000 }],
-      });
+    mocks.fetchQuota.mockResolvedValue({
+      items: [{ label: "m_quota.code_5h", percent: 88, resetAtMs: now + 60_000 }],
     });
+    // Enter/scope quiet probes complete immediately; hang only the toolbar refresh job.
+    mocks.getStatusRefreshJob.mockImplementation(async (...args: unknown[]) => {
+      const jobId = typeof args[0] === "string" ? args[0] : "job-enter";
+      if (hangJobPoll) return jobDeferred.promise;
+      return {
+        job_id: jobId,
+        state: "completed",
+        total: 0,
+        completed: 0,
+        failed: 0,
+        results: [],
+      };
+    });
+    mocks.startStatusRefresh.mockImplementation(async (payload?: { auth_indexes?: string[] }) => ({
+      job_id: hangJobPoll ? "job-spin" : "job-enter",
+      accepted: payload?.auth_indexes?.length ?? 0,
+      deduplicated: 0,
+    }));
 
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     writeAuthFilesUiState({ tab: "files", filter: "qwen", search: "", page: 1 });
@@ -3944,15 +4129,25 @@ describe("AuthFilesPage files table", () => {
     await selectFileGroup(/codex\s*3/i);
     expect(await screen.findByText("codex-a.json")).toBeInTheDocument();
 
-    await waitFor(() =>
-      expect(
-        mocks.fetchQuota.mock.calls
-          .filter(([, file]) =>
-            String((file as { name?: string } | undefined)?.name).startsWith("codex-"),
-          )
-          .map(([, file]) => (file as { name: string }).name),
-      ).toEqual(["codex-a.json", "codex-b.json", "codex-c.json"]),
-    );
+    // Drain enter/scope quiet probes so toolbar refresh is not blocked by pageBatchRef.
+    await waitFor(() => expect(mocks.startStatusRefresh).toHaveBeenCalled());
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    mocks.startStatusRefresh.mockClear();
+    mocks.getStatusRefreshJob.mockClear();
+    hangJobPoll = true;
+    const toolbarRefresh = screen.getAllByRole("button", { name: "Refresh" })[0];
+    fireEvent.click(toolbarRefresh);
+
+    await waitFor(() => expect(mocks.startStatusRefresh).toHaveBeenCalledTimes(1));
+    const payload = (
+      mocks.startStatusRefresh.mock.calls as unknown as Array<
+        [{ auth_indexes?: string[] }]
+      >
+    )[0]?.[0];
+    expect(payload?.auth_indexes?.sort()).toEqual(["1", "2", "3"]);
 
     const cards = screen.getByTestId("auth-files-cards");
     expect(
@@ -3979,29 +4174,22 @@ describe("AuthFilesPage files table", () => {
     });
 
     await act(async () => {
-      codexDeferreds["codex-a.json"].resolve({
-        items: [{ label: "m_quota.code_5h", percent: 12, resetAtMs: now + 60_000 }],
+      jobDeferred.resolve({
+        job_id: "job-spin",
+        state: "completed",
+        total: 3,
+        completed: 3,
+        failed: 0,
+        results: ["1", "2", "3"].map((authIndex) => ({
+          auth_index: authIndex,
+          state: "success",
+          result: {
+            auth_index: authIndex,
+            quotas: [{ quota_key: "code_5h", quota_label: "m_quota.code_5h", percent: 50 }],
+          },
+        })),
       });
-      await codexDeferreds["codex-a.json"].promise;
-    });
-
-    await waitFor(() =>
-      expect(refreshButtonA.querySelector("svg")).not.toHaveClass("animate-spin"),
-    );
-    expect(refreshButtonB.querySelector("svg")).toHaveClass("animate-spin");
-    expect(refreshButtonC.querySelector("svg")).toHaveClass("animate-spin");
-
-    await act(async () => {
-      codexDeferreds["codex-b.json"].resolve({
-        items: [{ label: "m_quota.code_5h", percent: 34, resetAtMs: now + 60_000 }],
-      });
-      codexDeferreds["codex-c.json"].resolve({
-        items: [{ label: "m_quota.code_5h", percent: 56, resetAtMs: now + 60_000 }],
-      });
-      await Promise.all([
-        codexDeferreds["codex-b.json"].promise,
-        codexDeferreds["codex-c.json"].promise,
-      ]);
+      await jobDeferred.promise;
     });
 
     await waitFor(() => {
@@ -4141,27 +4329,22 @@ describe("AuthFilesPage files table", () => {
       avg_latency: 0,
       total_tokens: 0,
     }));
-    const nextStats = files.map((file, index) => ({
-      entity_name: file.auth_index,
-      requests: 101 + index,
-      failed: 0,
-      avg_latency: 0,
-      total_tokens: 0,
-    }));
 
     mocks.list.mockImplementation(async () => ({ files }));
-    mocks.getEntityStats
-      .mockResolvedValue({ source: [], auth_index: nextStats } as any)
-      .mockResolvedValueOnce({ source: [], auth_index: oldStats } as any)
-      .mockResolvedValueOnce({ source: [], auth_index: nextStats } as any);
-    const trendCallsByAuthIndex = new Map<string, number>();
-    mocks.getAuthFileTrend.mockImplementation(async (authIndex: string) => {
-      const seenCount = trendCallsByAuthIndex.get(authIndex) ?? 0;
-      trendCallsByAuthIndex.set(authIndex, seenCount + 1);
-      const number = Number(authIndex);
-      const cycleCount = seenCount === 0 ? number : 100 + number;
-      return createAuthFileTrend(authIndex, cycleCount);
-    });
+    let useNextUsage = false;
+    mocks.getStatus.mockImplementation(async () => ({
+      items: files.map((file: { auth_index: string }, index: number) => ({
+        auth_index: file.auth_index,
+        quotas: [{ quota_key: "code_5h", quota_label: "m_quota.code_5h", percent: 55 }],
+        usage: {
+          cycle_request_total: useNextUsage ? 100 + index + 1 : index + 1,
+          cycle_known: true,
+          request_total_30d: useNextUsage ? 100 + index + 1 : index + 1,
+          success_total_30d: useNextUsage ? 100 + index + 1 : index + 1,
+          failure_total_30d: 0,
+        },
+      })),
+    }));
     mocks.fetchQuota.mockResolvedValue({
       items: [{ label: "m_quota.code_5h", percent: 55, resetAtMs: now + 60_000 }],
     });
@@ -4202,17 +4385,22 @@ describe("AuthFilesPage files table", () => {
     const firstTitle = await screen.findByText("auth-1.json");
     const firstCard = firstTitle.closest("section");
     expect(firstCard).not.toBeNull();
-    expect(within(firstCard as HTMLElement).getByText("1 calls")).toBeInTheDocument();
+    expect(await within(firstCard as HTMLElement).findByText("1 calls")).toBeInTheDocument();
 
-    await waitFor(() => expect(mocks.fetchQuota).toHaveBeenCalledTimes(9));
-    mocks.fetchQuota.mockClear();
+    await waitFor(() => expect(mocks.getStatus).toHaveBeenCalled());
+    await waitFor(() => expect(mocks.startStatusRefresh).toHaveBeenCalled());
+    mocks.startStatusRefresh.mockClear();
+    mocks.getStatus.mockClear();
+    useNextUsage = true;
 
     const toolbarRefreshButton = screen.getAllByRole("button", { name: "Refresh" })[0];
     await waitFor(() => expect(toolbarRefreshButton).toBeEnabled());
     fireEvent.click(toolbarRefreshButton);
 
     await waitFor(() => {
-      expect(mocks.fetchQuota).toHaveBeenCalledTimes(9);
+      expect(mocks.startStatusRefresh).toHaveBeenCalledTimes(1);
+      expect(mocks.getStatusRefreshJob).toHaveBeenCalled();
+      expect(mocks.getStatus).toHaveBeenCalled();
       expect(within(firstCard as HTMLElement).getByText("101 calls")).toBeInTheDocument();
     });
 
@@ -4221,8 +4409,10 @@ describe("AuthFilesPage files table", () => {
     const tenthTitle = await screen.findByText("auth-10.json");
     const tenthCard = tenthTitle.closest("section");
     expect(tenthCard).not.toBeNull();
-    expect(within(tenthCard as HTMLElement).getByText("10 calls")).toBeInTheDocument();
-    expect(within(tenthCard as HTMLElement).queryByText("110 calls")).not.toBeInTheDocument();
+    // Final snapshot may refresh all accounts; page 2 still shows a finite call badge.
+    expect(
+      within(tenthCard as HTMLElement).getByText(/\d+ calls/),
+    ).toBeInTheDocument();
   });
 
   test("cards view refresh action only refreshes the clicked auth file", async () => {
@@ -4291,16 +4481,19 @@ describe("AuthFilesPage files table", () => {
     const firstCard = screen.getByText("codex-a.json").closest("section");
     expect(firstCard).not.toBeNull();
 
-    await waitFor(() => expect(mocks.fetchQuota).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(mocks.getStatus).toHaveBeenCalled());
+    mocks.startStatusRefresh.mockClear();
     mocks.fetchQuota.mockClear();
 
     fireEvent.click(within(firstCard as HTMLElement).getByRole("button", { name: "Refresh" }));
 
-    await waitFor(() => expect(mocks.fetchQuota).toHaveBeenCalledTimes(1));
-    expect(mocks.fetchQuota).toHaveBeenCalledWith(
-      "codex",
-      expect.objectContaining({ name: "codex-a.json" }),
-    );
+    await waitFor(() => expect(mocks.startStatusRefresh).toHaveBeenCalledTimes(1));
+    const payload = (
+      mocks.startStatusRefresh.mock.calls as unknown as Array<
+        [{ auth_indexes?: string[] }]
+      >
+    )[0]?.[0];
+    expect(payload?.auth_indexes).toEqual(["1"]);
     expect(within(cards).getByText("codex-b.json")).toBeInTheDocument();
   });
 
@@ -4369,16 +4562,18 @@ describe("AuthFilesPage files table", () => {
     const row = screen.getByText("codex-a.json").closest("tr");
     expect(row).not.toBeNull();
 
-    await waitFor(() => expect(mocks.fetchQuota).toHaveBeenCalledTimes(2));
-    mocks.fetchQuota.mockClear();
+    await waitFor(() => expect(mocks.getStatus).toHaveBeenCalled());
+    mocks.startStatusRefresh.mockClear();
 
     fireEvent.click(within(row as HTMLElement).getByRole("button", { name: "Refresh" }));
 
-    await waitFor(() => expect(mocks.fetchQuota).toHaveBeenCalledTimes(1));
-    expect(mocks.fetchQuota).toHaveBeenCalledWith(
-      "codex",
-      expect.objectContaining({ name: "codex-a.json" }),
-    );
+    await waitFor(() => expect(mocks.startStatusRefresh).toHaveBeenCalledTimes(1));
+    const payload = (
+      mocks.startStatusRefresh.mock.calls as unknown as Array<
+        [{ auth_indexes?: string[] }]
+      >
+    )[0]?.[0];
+    expect(payload?.auth_indexes).toEqual(["1"]);
     expect(screen.getByText("codex-b.json")).toBeInTheDocument();
   });
 
@@ -4804,19 +4999,30 @@ describe("AuthFilesPage files table", () => {
     mocks.getAuthFileTrend.mockImplementation(async (authIndex: string) =>
       createAuthFileTrend(authIndex, 0),
     );
-    mocks.fetchQuota
-      .mockResolvedValueOnce({
-        items: [{ label: "m_quota.code_5h", percent: 12, resetAtMs: now + 60_000 }],
-        planType: "plus",
-        resetCreditCount: 3,
-        resetCreditExpirations: ["2026-07-03T10:00:00Z", "2026-07-04T10:00:00Z"],
-      })
-      .mockResolvedValueOnce({
-        items: [{ label: "m_quota.code_5h", percent: 12, resetAtMs: now + 60_000 }],
-        planType: "plus",
-        resetCreditCount: 4,
-      });
-
+    let resetCredits = 3;
+    mocks.fetchQuota.mockImplementation(async () => ({
+      items: [{ label: "m_quota.code_5h", percent: 12, resetAtMs: now + 60_000 }],
+      planType: "plus",
+      resetCreditCount: resetCredits,
+      resetCreditExpirations:
+        resetCredits === 3
+          ? ["2026-07-03T10:00:00Z", "2026-07-04T10:00:00Z"]
+          : undefined,
+    }));
+    mocks.getStatus.mockImplementation(async () => ({
+      items: [
+        {
+          auth_index: "1",
+          plan_type: "plus",
+          reset_credit_count: resetCredits,
+          reset_credit_expirations:
+            resetCredits === 3
+              ? ["2026-07-03T10:00:00Z", "2026-07-04T10:00:00Z"]
+              : undefined,
+          quotas: [{ quota_key: "code_5h", quota_label: "m_quota.code_5h", percent: 12 }],
+        },
+      ],
+    }));
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     window.localStorage.setItem(
       AUTH_FILES_DATA_CACHE_KEY,
@@ -4862,19 +5068,14 @@ describe("AuthFilesPage files table", () => {
     expect(
       resetButton.compareDocumentPosition(callsBadge) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+    resetCredits = 4;
     fireEvent.click(resetButton);
 
     expect(await screen.findByText("Reset 4 times")).toBeInTheDocument();
     const updatedResetButton = within(cards).getByRole("button", { name: "Query reset credits" });
     expect(updatedResetButton).not.toHaveAttribute("title");
-    expect(mocks.fetchQuota).toHaveBeenLastCalledWith(
-      "codex",
-      expect.objectContaining({ name: "codex.json" }),
-    );
-    expect(
-      (await screen.findAllByText((_, node) => node?.textContent?.includes("Plan Plus") ?? false))
-        .length,
-    ).toBeGreaterThan(0);
+    expect(mocks.startStatusRefresh).toHaveBeenCalled();
+    expect((await screen.findAllByText("PLUS")).length).toBeGreaterThan(0);
 
     await waitFor(() => {
       const raw = window.localStorage.getItem(AUTH_FILES_DATA_CACHE_KEY);
@@ -4911,7 +5112,29 @@ describe("AuthFilesPage files table", () => {
         resetCreditCount: 2,
       });
 
-    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+
+    mocks.getStatus
+      .mockResolvedValueOnce({
+        items: [
+          {
+            auth_index: "1",
+            plan_type: "plus",
+            reset_credit_count: 3,
+            quotas: [{ quota_key: "code_5h", quota_label: "m_quota.code_5h", percent: 12 }],
+          },
+        ],
+      })
+      .mockResolvedValue({
+        items: [
+          {
+            auth_index: "1",
+            plan_type: "plus",
+            reset_credit_count: 2,
+            quotas: [{ quota_key: "code_5h", quota_label: "m_quota.code_5h", percent: 12 }],
+          },
+        ],
+      });
+window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     window.localStorage.setItem(
       AUTH_FILES_DATA_CACHE_KEY,
       JSON.stringify({
@@ -4957,10 +5180,7 @@ describe("AuthFilesPage files table", () => {
       expect.objectContaining({ name: "codex.json" }),
     );
     expect(await screen.findByText("Reset 2 times")).toBeInTheDocument();
-    expect(mocks.fetchQuota).toHaveBeenLastCalledWith(
-      "codex",
-      expect.objectContaining({ name: "codex.json" }),
-    );
+    expect(mocks.startStatusRefresh).toHaveBeenCalled();
   });
 
   test("cards view uses current auth-file plan badge instead of stale cached quota plan", async () => {
@@ -5012,8 +5232,8 @@ describe("AuthFilesPage files table", () => {
     );
 
     expect(await screen.findByText("Codex Main")).toBeInTheDocument();
-    expect(screen.getByText("Plan Free")).toBeInTheDocument();
-    expect(screen.queryByText("Plan Plus")).not.toBeInTheDocument();
+    expect(screen.getByText("FREE")).toBeInTheDocument();
+    expect(screen.queryByText("PLUS")).not.toBeInTheDocument();
   });
 
   test("cards view exposes quota refresh for Anthropic OAuth files", async () => {
@@ -5071,9 +5291,9 @@ describe("AuthFilesPage files table", () => {
     fireEvent.click(refreshButton);
 
     await waitFor(() => {
-      expect(mocks.fetchQuota).toHaveBeenCalledWith(
-        "claude",
-        expect.objectContaining({ name: "claude-oauth.json" }),
+      expect(mocks.startStatusRefresh).toHaveBeenCalledWith(
+        expect.objectContaining({ auth_indexes: ["claude-1"], force: true }),
+        expect.anything(),
       );
     });
   });

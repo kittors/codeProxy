@@ -6,13 +6,38 @@ export const AUTH_PERSIST_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 export const VERSION_HEADER_KEYS = ["x-cpa-version", "x-server-version"];
 export const BUILD_DATE_HEADER_KEYS = ["x-cpa-build-date", "x-server-build-date"];
 
+const isLoopbackHost = (host: string): boolean => {
+  const normalized = host.trim().toLowerCase().replace(/^\[|\]$/g, "");
+  return (
+    normalized === "localhost" ||
+    normalized === "127.0.0.1" ||
+    normalized === "::1" ||
+    normalized === "0:0:0:0:0:0:0:1"
+  );
+};
+
+// Scheme-less remote hosts default to https so admin passwords are not sent in cleartext.
+// Loopback keeps http for local dev (vite / native binary on 8317).
+const withDefaultScheme = (input: string): string => {
+  if (/^https?:\/\//i.test(input)) return input;
+  // Parse host from authority without inventing a scheme first (IPv6: [::1]:8317).
+  const authority = input.split("/")[0] ?? "";
+  let host = authority;
+  if (authority.startsWith("[")) {
+    const end = authority.indexOf("]");
+    host = end >= 0 ? authority.slice(1, end) : authority;
+  } else {
+    host = authority.split(":")[0] ?? "";
+  }
+  const scheme = isLoopbackHost(host) ? "http" : "https";
+  return `${scheme}://${input}`;
+};
+
 export const normalizeApiBase = (input: string): string => {
   let base = input.trim();
   if (!base) return "";
 
-  if (!/^https?:\/\//i.test(base)) {
-    base = `http://${base}`;
-  }
+  base = withDefaultScheme(base);
 
   try {
     const url = new URL(base);

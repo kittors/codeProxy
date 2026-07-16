@@ -1,10 +1,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
 import { Search, ShieldCheck } from "lucide-react";
-import { Button } from "@code-proxy/ui";
-import { EmptyState } from "@code-proxy/ui";
-import { TextInput } from "@code-proxy/ui";
-import { Modal } from "@code-proxy/ui";
+import { Button, Checkbox, EmptyState, Modal, TextInput } from "@code-proxy/ui";
 import type { AuthFileModelItem } from "@code-proxy/domain";
 
 interface ImportModelsModalProps {
@@ -19,6 +16,13 @@ interface ImportModelsModalProps {
   setImportSelected: Dispatch<SetStateAction<Set<string>>>;
   setImportOpen: Dispatch<SetStateAction<boolean>>;
   applyImport: () => void;
+}
+
+function toggleModelId(prev: Set<string>, modelId: string): Set<string> {
+  const next = new Set(prev);
+  if (next.has(modelId)) next.delete(modelId);
+  else next.add(modelId);
+  return next;
 }
 
 export function ImportModelsModal({
@@ -83,32 +87,29 @@ export function ImportModelsModal({
                 selected: importSelected.size,
               })}
             </p>
-            <div className="mt-2 max-h-72 overflow-y-auto space-y-1">
+            <div className="mt-2 max-h-72 space-y-0.5 overflow-y-auto">
               {importFilteredModels.map((model) => {
                 const checked = importSelected.has(model.id);
                 return (
                   <label
                     key={model.id}
-                    className={
+                    className={[
+                      "flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm outline-none transition-colors",
+                      "hover:bg-[#EBEBEC] dark:hover:bg-[#46464C]",
                       checked
-                        ? "flex cursor-pointer items-center gap-2 rounded-xl bg-slate-900 px-2 py-1 text-xs font-mono text-white dark:bg-white dark:text-neutral-950"
-                        : "flex cursor-pointer items-center gap-2 rounded-xl px-2 py-1 text-xs font-mono hover:bg-slate-50 dark:hover:bg-white/5"
-                    }
+                        ? "bg-slate-100 font-medium text-[#18181B] dark:bg-white/10 dark:text-white"
+                        : "font-normal text-[#18181B] dark:text-[#9F9FA8]",
+                    ].join(" ")}
                   >
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={checked}
-                      onChange={() => {
-                        setImportSelected((prev) => {
-                          const next = new Set(prev);
-                          if (next.has(model.id)) next.delete(model.id);
-                          else next.add(model.id);
-                          return next;
-                        });
+                      onCheckedChange={() => {
+                        setImportSelected((prev) => toggleModelId(prev, model.id));
                       }}
-                      className="h-4 w-4 rounded border-slate-300 text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:border-neutral-700 dark:bg-neutral-950 dark:text-white dark:focus-visible:ring-white/15"
+                      className="shrink-0"
+                      aria-label={model.id}
                     />
-                    <span className="truncate">{model.id}</span>
+                    <span className="min-w-0 flex-1 truncate font-mono text-xs">{model.id}</span>
                   </label>
                 );
               })}

@@ -58,6 +58,8 @@ export { modelsApi } from "./endpoints/models";
 export type * from "./endpoints/models";
 export { versionApi } from "./endpoints/version";
 export { quotaApi } from "./endpoints/quota";
+export { aiAccountsStatusApi } from "./endpoints/ai-accounts-status";
+export type * from "./endpoints/ai-accounts-status";
 export { identityFingerprintApi } from "./endpoints/identity-fingerprint";
 export type * from "./endpoints/identity-fingerprint";
 export { updateApi } from "./endpoints/update";

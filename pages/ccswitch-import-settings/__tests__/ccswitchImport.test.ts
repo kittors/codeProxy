@@ -80,6 +80,7 @@ describe("ccswitchImport", () => {
         { role: "haiku", requestModel: "claude-haiku-router", targetModel: "claude-haiku-4-5" },
         { role: "sonnet", requestModel: "claude-sonnet-router", targetModel: "claude-sonnet-4-5" },
         { role: "opus", requestModel: "claude-opus-router", targetModel: "claude-opus-4-1" },
+        { role: "fable", requestModel: "claude-fable-router", targetModel: "claude-fable-5" },
       ],
     });
 
@@ -88,6 +89,7 @@ describe("ccswitchImport", () => {
     expect(parsed.searchParams.get("haikuModel")).toBe("claude-haiku-router");
     expect(parsed.searchParams.get("sonnetModel")).toBe("claude-sonnet-router");
     expect(parsed.searchParams.get("opusModel")).toBe("claude-opus-router");
+    expect(parsed.searchParams.get("fableModel")).toBe("claude-fable-router");
   });
 
   test("keeps legacy Claude role placeholders compatible when building deeplinks", () => {

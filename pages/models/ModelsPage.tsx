@@ -134,6 +134,11 @@ export function ModelsPage() {
     active: [],
     library: [],
   });
+  // Last configured-availability for the active tab. Secondary path merge must
+  // re-apply scoped AllowedModels; passing null re-adds path-only blocked models.
+  const lastAvailabilityRef = useRef<
+    import("@features/model-availability").ConfiguredModelAvailability | null
+  >(null);
   // After first successful paint (or warm snapshot), keep refreshes non-blocking.
   const warmPaintByScopeRef = useRef<Record<ModelScope, boolean>>({
     active: Boolean(initialActiveSnapshot),
@@ -196,6 +201,10 @@ export function ModelsPage() {
         ]);
         if (!isActive()) return;
 
+        if (scope === "active") {
+          lastAvailabilityRef.current = availability;
+        }
+
         // Reuse last path items for this scope during soft refresh so path-only rows do not vanish.
         const visibleData = mergeConfiguredModelAvailability(
           data,
@@ -220,6 +229,7 @@ export function ModelsPage() {
 
         // Secondary: enrich with path-only models without blanking the table.
         // Merge into the current list (not a stale critical snapshot) so in-flight saves/deletes win.
+        // Keep last configured-availability so scoped allow-lists still apply.
         void loadModelPathAvailability()
           .then((pathAvailability) => {
             if (!isActive()) return;
@@ -227,7 +237,13 @@ export function ModelsPage() {
             pathItemsByScopeRef.current[scope] = pathItems;
             if (!pathItems.length) return;
             const current = modelsRef.current;
-            const merged = mergeConfiguredModelAvailability(current, null, pathItems);
+            const availabilityForMerge =
+              scope === "active" ? lastAvailabilityRef.current : null;
+            const merged = mergeConfiguredModelAvailability(
+              current,
+              availabilityForMerge,
+              pathItems,
+            );
             if (merged.length === current.length) return;
             setModels(merged);
             setModelsPageSnapshot(scope, {

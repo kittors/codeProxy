@@ -8,6 +8,12 @@ export interface ApiKeyEntry {
   "daily-limit"?: number;
   "total-quota"?: number;
   "spending-limit"?: number;
+  /** Project-timezone daily USD cap; 0 = unlimited. Key-owned, independent of permission profiles. */
+  "daily-spending-limit"?: number;
+  /** Effective today cost after same-day reset baseline (management list). */
+  "daily-spending-used"?: number;
+  /** Remaining daily budget; null/undefined = unlimited. */
+  "daily-spending-remaining"?: number | null;
   "concurrency-limit"?: number;
   "rpm-limit"?: number;
   "tpm-limit"?: number;
@@ -17,6 +23,15 @@ export interface ApiKeyEntry {
   "permission-profile-id"?: string;
   "system-prompt"?: string;
   "created-at"?: string;
+}
+
+export interface ApiKeyDailySpendingResetResult {
+  status?: string;
+  id?: string;
+  key?: string;
+  "daily-spending-limit"?: number;
+  "daily-spending-used"?: number;
+  "daily-spending-remaining"?: number | null;
 }
 
 export const apiKeysApi = {
@@ -59,4 +74,11 @@ export const apiKeyEntriesApi = {
     }
     return apiClient.delete(`/api-key-entries?${query.toString()}`);
   },
+
+  /** Reset same-day effective daily spending for a key (does not delete request logs). */
+  resetDailySpending: (payload: { id?: string; key?: string }) =>
+    apiClient.post<ApiKeyDailySpendingResetResult>(
+      "/api-key-entries/daily-spending/reset",
+      payload,
+    ),
 };

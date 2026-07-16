@@ -23,6 +23,16 @@ describe("API base normalization", () => {
       "https://example.com/relay/v0/management",
     );
   });
+
+  test("defaults scheme-less remote hosts to https and loopback to http", () => {
+    expect(normalizeApiBase("relay.example.com")).toBe("https://relay.example.com");
+    expect(normalizeApiBase("relay.example.com/manage/login")).toBe("https://relay.example.com");
+    expect(normalizeApiBase("localhost:8317")).toBe("http://localhost:8317");
+    expect(normalizeApiBase("127.0.0.1:8317")).toBe("http://127.0.0.1:8317");
+    expect(normalizeApiBase("[::1]:8317")).toBe("http://[::1]:8317");
+    // Explicit remote http is preserved for controlled intranet use.
+    expect(normalizeApiBase("http://relay.example.com")).toBe("http://relay.example.com");
+  });
 });
 
 describe("ApiClient request standardization", () => {

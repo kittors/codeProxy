@@ -42,6 +42,7 @@ export const authFilesApi = {
     display_tags?: string[];
     codex_cli_only?: boolean;
     codex_cli_only_allowed_clients?: string[];
+    codex_image_generation_bridge?: boolean;
   }) => apiClient.patch("/auth-files/fields", payload),
 
   getOauthExcludedModels: async (): Promise<Record<string, string[]>> => {

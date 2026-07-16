@@ -1,9 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { RefreshCw } from "lucide-react";
-import { Modal } from "@code-proxy/ui";
-import { SearchableSelect } from "@code-proxy/ui";
-import { Select } from "@code-proxy/ui";
-import { TableCellOverflowTooltip } from "@code-proxy/ui";
+import { DataTable, Modal, SearchableSelect, Select } from "@code-proxy/ui";
 import {
   RequestLogsPaginationBar,
   RequestLogsTimeRangeSelector,
@@ -160,75 +157,20 @@ export function ApiKeyUsageModal({
         </div>
 
         <div className="relative min-h-[320px] flex-1 overflow-hidden pt-3">
-          <div className="h-full overflow-auto">
-            <table className="w-full min-w-[1320px] table-fixed border-separate border-spacing-0 text-sm">
-              <caption className="sr-only">{t("api_keys_page.usage_table_caption")}</caption>
-              <thead className="sticky top-0 z-10">
-                <tr className="text-left text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-white/55">
-                  {usageLogColumns.map((col, index) => {
-                    const isFirst = index === 0;
-                    const isLast = index === usageLogColumns.length - 1;
-                    const roundCls = [
-                      isFirst ? "first:rounded-l-xl" : "",
-                      isLast ? "last:rounded-r-xl" : "",
-                    ]
-                      .filter(Boolean)
-                      .join(" ");
-                    return (
-                      <th
-                        key={col.key}
-                        className={`whitespace-nowrap bg-slate-100 px-4 py-3 dark:bg-neutral-800 ${col.width ?? ""} ${col.headerClassName ?? ""} ${roundCls}`}
-                      >
-                        {col.label}
-                      </th>
-                    );
-                  })}
-                </tr>
-              </thead>
-              <tbody className="text-slate-900 dark:text-white">
-                {!usageLoading && usageRows.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={usageLogColumns.length}
-                      className="px-4 py-12 text-center text-sm text-slate-600 dark:text-white/70"
-                    >
-                      {t("api_keys_page.no_usage_records")}
-                    </td>
-                  </tr>
-                ) : (
-                  usageRows.map((row, rowIndex) => (
-                    <tr
-                      key={row.id}
-                      className="text-sm transition-colors hover:bg-slate-50 dark:hover:bg-white/[0.04]"
-                      style={{ height: 44 }}
-                    >
-                      {usageLogColumns.map((col, colIndex) => {
-                        const isFirst = colIndex === 0;
-                        const isLast = colIndex === usageLogColumns.length - 1;
-                        const roundCls = [
-                          isFirst ? "first:rounded-l-lg" : "",
-                          isLast ? "last:rounded-r-lg" : "",
-                        ]
-                          .filter(Boolean)
-                          .join(" ");
-                        return (
-                          <td
-                            key={col.key}
-                            className={`px-4 py-2.5 align-middle ${col.cellClassName ?? ""} ${roundCls}`}
-                          >
-                            <TableCellOverflowTooltip className={col.cellClassName}>
-                              {col.render(row, rowIndex)}
-                            </TableCellOverflowTooltip>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
+          <DataTable
+            tableId="api-key-usage-logs"
+            rows={usageRows}
+            columns={usageLogColumns}
+            rowKey={(row) => row.id}
+            loading={usageLoading}
+            virtualize={false}
+            minWidth="min-w-[1320px]"
+            height="h-full"
+            minHeight="min-h-full"
+            caption={t("api_keys_page.usage_table_caption")}
+            emptyText={t("api_keys_page.no_usage_records")}
+            showAllLoadedMessage={false}
+          />
           {usageLoading ? (
             <div className="absolute inset-0 z-10 flex items-center justify-center rounded-b-2xl bg-white/70 backdrop-blur-sm dark:bg-neutral-950/55">
               <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/85 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/70 dark:text-white/75">

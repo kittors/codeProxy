@@ -60,7 +60,8 @@ export const AUTH_FILES_FILES_VIEW_MODE_KEY = "authFilesPage.filesViewMode.v1";
 export const AUTH_FILES_MODEL_OWNER_GROUP_MAP_KEY = "authFilesPage.modelOwnerGroupMap.v1";
 
 export type QuotaPreviewMode = "5h" | "week";
-export type QuotaAutoRefreshMs = 0 | 5000 | 10000 | 30000 | 60000;
+/** Off / 60s / 300s only. Legacy 5s/10s/30s migrate safely via normalizeQuotaAutoRefreshMs. */
+export type QuotaAutoRefreshMs = 0 | 60000 | 300000;
 export type FilesViewMode = "table" | "cards";
 export type AuthFilesModelOwnerGroupMap = Record<string, string>;
 export type AuthFileStatusFilter =
@@ -697,6 +698,38 @@ export type AuthFileRestrictionBadge = {
 const readRestrictionDateMs = (restriction: AuthFileRestriction): number | null =>
   parseDateLikeMs(restriction.next_retry_after) ?? parseDateLikeMs(restriction.next_recover_at);
 
+// Grok/xAI weekly 402: user-facing recovery is the weekly period end (quota preview
+// weekly_limit.resetAtMs), not short local probe NextRetryAfter when upstream omits reset.
+const resolveRestrictionRecoverAtMs = (
+  restriction: AuthFileRestriction,
+  nowMs: number,
+  weeklyResetAtMs?: number | null,
+): number | null => {
+  const quotaWindow = normalizeRestrictionQuotaWindow(restriction);
+  const weekly =
+    typeof weeklyResetAtMs === "number" && Number.isFinite(weeklyResetAtMs) && weeklyResetAtMs > nowMs
+      ? weeklyResetAtMs
+      : null;
+  if (quotaWindow === "week" && weekly !== null) {
+    return weekly;
+  }
+  return readRestrictionDateMs(restriction);
+};
+
+export const resolveAuthFileWeeklyQuotaResetAtMs = (
+  items: Array<{ key?: string; label?: string; resetAtMs?: number }> | null | undefined,
+): number | null => {
+  if (!Array.isArray(items) || items.length === 0) return null;
+  const weekly = items.find((item) => {
+    const key = normalizeTagValue(item.key);
+    if (key === "weekly_limit" || key === "week" || key.includes("weekly")) return true;
+    const label = normalizeQuotaLabel(item.label ?? "");
+    return label.includes("weekly") || label.includes("week") || label.includes("周");
+  });
+  const resetAtMs = weekly?.resetAtMs;
+  return typeof resetAtMs === "number" && Number.isFinite(resetAtMs) ? resetAtMs : null;
+};
+
 const isLegacyAuthRestrictionActive = (file: AuthFileItem): boolean => {
   if (file.unavailable === true) return true;
   const status = normalizeTagValue(file.status);
@@ -996,6 +1029,7 @@ const resolveRestrictionReason = (restriction: AuthFileRestriction): string => {
 export const resolveAuthFileRestrictionBadges = (
   file: AuthFileItem,
   nowMs = Date.now(),
+  weeklyResetAtMs?: number | null,
 ): AuthFileRestrictionBadge[] => {
   const rawRestrictions = Array.isArray(file.restrictions) ? file.restrictions : [];
   const displayableRawRestrictions = rawRestrictions.filter((restriction) => {
@@ -1022,11 +1056,11 @@ export const resolveAuthFileRestrictionBadges = (
 
   return restrictions
     .map((restriction): AuthFileRestrictionBadge | null => {
-      const recoverAtMs = readRestrictionDateMs(restriction);
+      const recoverAtMs = resolveRestrictionRecoverAtMs(restriction, nowMs, weeklyResetAtMs);
       if (recoverAtMs !== null && recoverAtMs <= nowMs) return null;
       const model = typeof restriction.model === "string" ? restriction.model.trim() : "";
       const reason = resolveRestrictionReason(restriction);
-      const dateKey =
+      const restrictionDateKey =
         typeof restriction.next_retry_after === "string" ||
         typeof restriction.next_retry_after === "number"
           ? String(restriction.next_retry_after)
@@ -1034,6 +1068,9 @@ export const resolveAuthFileRestrictionBadges = (
               typeof restriction.next_recover_at === "number"
             ? String(restriction.next_recover_at)
             : "";
+      // Prefer raw restriction timestamps for key stability; weekly_limit only fills gaps.
+      const dateKey =
+        restrictionDateKey || (recoverAtMs !== null ? String(recoverAtMs) : "");
       const status = Number(restriction.http_status);
       const statusKey = Number.isFinite(status) && status > 0 ? String(Math.round(status)) : "";
       const quotaWindow = normalizeRestrictionQuotaWindow(restriction);
@@ -1241,6 +1278,145 @@ export const TYPE_BADGE_CLASSES: Record<string, string> = {
   vertex: "bg-cyan-50 text-cyan-800 dark:bg-cyan-500/15 dark:text-cyan-200",
   empty: "bg-slate-50 text-slate-600 dark:bg-white/10 dark:text-white/70",
   unknown: "bg-slate-50 text-slate-600 dark:bg-white/10 dark:text-white/70",
+};
+
+/** Membership plan pills: solid/gradient chips, never the soft sky/amber tag look. */
+export const PLAN_BADGE_CLASSES: Record<string, string> = {
+  // Codex Plus: silver / platinum
+  plus: "bg-gradient-to-r from-slate-100 via-zinc-200 to-slate-300 text-slate-800 ring-1 ring-inset ring-slate-300/70 shadow-sm shadow-slate-400/20 dark:from-zinc-300 dark:via-slate-400 dark:to-zinc-500 dark:text-slate-950 dark:ring-white/20",
+  // Codex Pro family: gold scale (base / 5X / 20X)
+  pro: "bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-500 text-amber-950 shadow-sm shadow-amber-500/30 dark:from-amber-300 dark:via-yellow-400 dark:to-amber-500 dark:text-amber-950",
+  pro_5x:
+    "bg-gradient-to-r from-amber-400 via-yellow-500 to-orange-400 text-amber-950 shadow-sm shadow-amber-500/35 dark:from-amber-400 dark:via-yellow-400 dark:to-orange-400 dark:text-amber-950",
+  "pro-5x":
+    "bg-gradient-to-r from-amber-400 via-yellow-500 to-orange-400 text-amber-950 shadow-sm shadow-amber-500/35 dark:from-amber-400 dark:via-yellow-400 dark:to-orange-400 dark:text-amber-950",
+  pro_20x:
+    "bg-gradient-to-r from-yellow-300 via-amber-500 to-orange-600 text-amber-950 shadow-sm shadow-orange-500/40 dark:from-yellow-300 dark:via-amber-400 dark:to-orange-500 dark:text-amber-950",
+  "pro-20x":
+    "bg-gradient-to-r from-yellow-300 via-amber-500 to-orange-600 text-amber-950 shadow-sm shadow-orange-500/40 dark:from-yellow-300 dark:via-amber-400 dark:to-orange-500 dark:text-amber-950",
+  chatgptpro:
+    "bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-500 text-amber-950 shadow-sm shadow-amber-500/30 dark:from-amber-300 dark:via-yellow-400 dark:to-amber-500 dark:text-amber-950",
+  free: "bg-slate-100 text-slate-600 ring-1 ring-inset ring-slate-200/80 dark:bg-white/10 dark:text-white/65 dark:ring-white/10",
+  team: "bg-gradient-to-r from-violet-500 to-indigo-600 text-white shadow-sm shadow-violet-500/25 dark:from-violet-400 dark:to-indigo-500",
+  // Claude Code family: warm clay / copper
+  max: "bg-gradient-to-r from-orange-400 via-amber-500 to-orange-600 text-white shadow-sm shadow-orange-500/30 dark:from-orange-400 dark:via-amber-500 dark:to-orange-500",
+  max_5x:
+    "bg-gradient-to-r from-orange-500 via-amber-500 to-rose-500 text-white shadow-sm shadow-orange-500/35 dark:from-orange-400 dark:via-amber-400 dark:to-rose-400",
+  "max-5x":
+    "bg-gradient-to-r from-orange-500 via-amber-500 to-rose-500 text-white shadow-sm shadow-orange-500/35 dark:from-orange-400 dark:via-amber-400 dark:to-rose-400",
+  max_20x:
+    "bg-gradient-to-r from-amber-500 via-orange-600 to-rose-600 text-white shadow-sm shadow-rose-500/35 dark:from-amber-400 dark:via-orange-500 dark:to-rose-500",
+  "max-20x":
+    "bg-gradient-to-r from-amber-500 via-orange-600 to-rose-600 text-white shadow-sm shadow-rose-500/35 dark:from-amber-400 dark:via-orange-500 dark:to-rose-500",
+  premium: "bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white shadow-sm shadow-fuchsia-500/25 dark:from-fuchsia-400 dark:to-purple-500",
+  business: "bg-gradient-to-r from-slate-700 to-slate-900 text-white shadow-sm shadow-slate-900/20 dark:from-slate-500 dark:to-slate-700",
+  enterprise: "bg-gradient-to-r from-zinc-800 via-slate-900 to-black text-amber-100 shadow-sm shadow-black/20 dark:from-zinc-600 dark:via-slate-700 dark:to-zinc-900",
+  // Grok: dark emerald
+  supergrok:
+    "bg-gradient-to-r from-neutral-900 to-emerald-700 text-emerald-50 shadow-sm shadow-emerald-900/30 dark:from-neutral-800 dark:to-emerald-600",
+  "supergrok-heavy":
+    "bg-gradient-to-r from-black via-emerald-900 to-teal-700 text-emerald-50 shadow-sm shadow-emerald-950/40 dark:from-black dark:via-emerald-800 dark:to-teal-600",
+  supergrok_heavy:
+    "bg-gradient-to-r from-black via-emerald-900 to-teal-700 text-emerald-50 shadow-sm shadow-emerald-950/40 dark:from-black dark:via-emerald-800 dark:to-teal-600",
+  supergrokheavy:
+    "bg-gradient-to-r from-black via-emerald-900 to-teal-700 text-emerald-50 shadow-sm shadow-emerald-950/40 dark:from-black dark:via-emerald-800 dark:to-teal-600",
+  unknown:
+    "bg-gradient-to-r from-slate-400 to-slate-500 text-white shadow-sm shadow-slate-500/20 dark:from-slate-500 dark:to-slate-600",
+};
+
+/** Codex-only: weekly budget (USD) thresholds for Pro multiplier badges. */
+export const CODEX_PRO_20X_WEEKLY_BUDGET_USD = 1000;
+export const CODEX_PRO_5X_WEEKLY_BUDGET_USD = 200;
+
+export type AuthFileCycleBudgetStats = {
+  cycleCostTotal?: number | null;
+  weeklyQuotaUsedPercent?: number | null;
+};
+
+/** cost / (used%/100) → estimated full-window budget; null when underdetermined. */
+export const estimateQuotaBudgetUsd = (
+  cost: number | null | undefined,
+  usedPercent: number | null | undefined,
+): number | null => {
+  if (typeof cost !== "number" || !Number.isFinite(cost) || cost <= 0) return null;
+  if (typeof usedPercent !== "number" || !Number.isFinite(usedPercent)) return null;
+  const normalizedUsed = Math.min(100, Math.max(0, usedPercent));
+  if (normalizedUsed <= 0) return null;
+  return cost / (normalizedUsed / 100);
+};
+
+/**
+ * Codex Pro only: map estimated weekly USD budget → pro_20x / pro_5x / pro.
+ * Non-pro base plans pass through unchanged; missing budget falls back to plain pro.
+ */
+export const resolveCodexProMultiplierTier = (
+  basePlan: string | null | undefined,
+  estimatedWeeklyBudgetUsd: number | null | undefined,
+): string | null => {
+  const base = normalizeTagValue(basePlan);
+  if (!base) return null;
+  if (base === "pro_20x" || base === "pro-20x") return "pro_20x";
+  if (base === "pro_5x" || base === "pro-5x") return "pro_5x";
+  if (base !== "pro" && base !== "chatgptpro") return base;
+  if (
+    typeof estimatedWeeklyBudgetUsd !== "number" ||
+    !Number.isFinite(estimatedWeeklyBudgetUsd) ||
+    estimatedWeeklyBudgetUsd <= 0
+  ) {
+    return "pro";
+  }
+  if (estimatedWeeklyBudgetUsd >= CODEX_PRO_20X_WEEKLY_BUDGET_USD) return "pro_20x";
+  if (estimatedWeeklyBudgetUsd >= CODEX_PRO_5X_WEEKLY_BUDGET_USD) return "pro_5x";
+  return "pro";
+};
+
+export const resolveAuthFileDisplayPlanType = (
+  file: AuthFileItem,
+  quotaState?: QuotaState | null,
+  cycleStats?: AuthFileCycleBudgetStats | null,
+): string | null => {
+  const base = resolveAuthFilePlanType(file, quotaState);
+  if (!base) return null;
+  if (normalizeProviderKey(resolveFileType(file)) !== "codex") return base;
+  const budget = estimateQuotaBudgetUsd(
+    cycleStats?.cycleCostTotal,
+    cycleStats?.weeklyQuotaUsedPercent,
+  );
+  return resolveCodexProMultiplierTier(base, budget);
+};
+
+export const resolvePlanBadgeClass = (planType: string | null | undefined): string => {
+  const normalized = normalizeTagValue(planType);
+  if (!normalized) return PLAN_BADGE_CLASSES.unknown;
+  if (normalized === "chatgptpro") return PLAN_BADGE_CLASSES.pro;
+  return PLAN_BADGE_CLASSES[normalized] ?? PLAN_BADGE_CLASSES.unknown;
+};
+
+/** Short membership chip copy (PRO / PLUS / PRO 20X), distinct from soft info tags. */
+export const formatPlanBadgeLabel = (planType: string | null | undefined): string => {
+  const normalized = normalizeTagValue(planType);
+  if (!normalized) return "";
+  if (
+    normalized === "supergrok-heavy" ||
+    normalized === "supergrok_heavy" ||
+    normalized === "supergrokheavy"
+  ) {
+    return "SUPERGROK HEAVY";
+  }
+  if (normalized === "supergrok") return "SUPERGROK";
+  if (normalized === "free") return "FREE";
+  if (normalized === "plus") return "PLUS";
+  if (normalized === "pro_20x" || normalized === "pro-20x") return "PRO 20X";
+  if (normalized === "pro_5x" || normalized === "pro-5x") return "PRO 5X";
+  if (normalized === "pro" || normalized === "chatgptpro") return "PRO";
+  if (normalized === "max_20x" || normalized === "max-20x") return "MAX 20X";
+  if (normalized === "max_5x" || normalized === "max-5x") return "MAX 5X";
+  if (normalized === "max") return "MAX";
+  if (normalized === "team") return "TEAM";
+  if (normalized === "premium") return "PREMIUM";
+  if (normalized === "business") return "BUSINESS";
+  if (normalized === "enterprise") return "ENTERPRISE";
+  return normalized.replace(/[-_]+/g, " ").toUpperCase();
 };
 
 const KNOWN_AUTH_FILE_PROVIDER_KEYS = Object.keys(TYPE_BADGE_CLASSES)
@@ -1548,14 +1724,51 @@ export const pickQuotaPreviewItem = (
 
 export const normalizeQuotaAutoRefreshMs = (value: unknown): QuotaAutoRefreshMs => {
   const parsed = typeof value === "number" ? value : Number(value);
-  if (!Number.isFinite(parsed)) return 10000;
+  // Default Off: never auto-fan-out on first visit.
+  if (!Number.isFinite(parsed)) return 0;
   const rounded = Math.max(0, Math.round(parsed));
   if (rounded === 0) return 0;
-  if (rounded === 5000) return 5000;
-  if (rounded === 10000) return 10000;
-  if (rounded === 30000) return 30000;
-  if (rounded === 60000) return 60000;
-  return 10000;
+  // Legacy 5s/10s/30s (and any sub-minute) → 60s so old localStorage cannot resume storms.
+  if (rounded > 0 && rounded < 60_000) return 60_000;
+  if (rounded === 60_000) return 60_000;
+  if (rounded === 300_000) return 300_000;
+  // Anything else ≥ 60s clamps to nearest allowed bucket (prefer 60s over inventing intervals).
+  if (rounded > 60_000 && rounded < 300_000) return 60_000;
+  if (rounded >= 300_000) return 300_000;
+  return 0;
+};
+
+/** Read + migrate auto-refresh localStorage immediately (write-back allowed buckets only). */
+export const readAndMigrateQuotaAutoRefreshMs = (
+  storageKey: string = AUTH_FILES_QUOTA_AUTO_REFRESH_KEY,
+): QuotaAutoRefreshMs => {
+  if (typeof window === "undefined") return 0;
+  try {
+    const raw = window.localStorage.getItem(storageKey);
+    if (raw == null) {
+      window.localStorage.setItem(storageKey, JSON.stringify(0));
+      return 0;
+    }
+    let parsed: unknown = raw;
+    try {
+      parsed = JSON.parse(raw) as unknown;
+    } catch {
+      // keep raw string
+    }
+    const normalized = normalizeQuotaAutoRefreshMs(parsed);
+    const rawNumber =
+      typeof parsed === "number"
+        ? parsed
+        : typeof parsed === "string"
+          ? Number(parsed)
+          : Number.NaN;
+    if (!Number.isFinite(rawNumber) || rawNumber !== normalized) {
+      window.localStorage.setItem(storageKey, JSON.stringify(normalized));
+    }
+    return normalized;
+  } catch {
+    return 0;
+  }
 };
 
 export type UsageIndex = {
@@ -1721,6 +1934,14 @@ export type CodexOAuthAdmissionEditorState = {
   enabled: boolean;
   allowedClients: string[];
   availableAllowedClients: CodexOAuthAdmissionAllowedClient[];
+  saving: boolean;
+  error: string | null;
+};
+
+export type CodexImageGenerationBridgeEditorState = {
+  fileName: string;
+  supported: boolean;
+  enabled: boolean;
   saving: boolean;
   error: string | null;
 };

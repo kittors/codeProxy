@@ -40,7 +40,11 @@ const normalizeModelMappings = (value: unknown): CcSwitchModelMapping[] => {
       if (!record) return null;
       const role = normalizeString(record.role)?.toLowerCase();
       const normalizedRole =
-        role === "main" || role === "haiku" || role === "sonnet" || role === "opus"
+        role === "main" ||
+        role === "haiku" ||
+        role === "sonnet" ||
+        role === "opus" ||
+        role === "fable"
           ? role
           : undefined;
       const targetModel = normalizeString(

@@ -171,6 +171,7 @@
     "config_claude_role_haiku": "Haiku default model",
     "config_claude_role_sonnet": "Sonnet default model",
     "config_claude_role_opus": "Opus default model",
+    "config_claude_role_fable": "Fable default model",
     "model_use_custom": "Use \"{{value}}\""
   },
   "title": {
@@ -606,6 +607,10 @@
     "quota_auto_refresh": "Автообновление",
     "quota_refresh_off": "Выкл",
     "quota_updated_at": "Обновлено",
+    "status_batch_unsupported": "Версия сервера не поддерживает пакетное обновление статуса аккаунтов",
+    "status_refresh_timeout": "Истекло время ожидания обновления статуса аккаунта",
+    "status_refresh_job_lost": "Задача обновления статуса потеряна; загружен последний снимок",
+    "status_refresh_in_progress": "Обновление статуса страницы уже выполняется",
     "reset_credits_badge": "Reset {{count}} times",
     "reset_credits_query": "Query reset credits",
     "reset_credit_expirations": "Reset credit expiration times:\n{{times}}",
@@ -725,6 +730,7 @@
     "quota_refresh_hint": "Обновить квоту только для этих учётных данных",
     "quota_refresh_success": "Квота для \"{{name}}\" обновлена",
     "quota_refresh_failed": "Не удалось обновить квоту для \"{{name}}\": {{message}}",
+    "quota_unavailable": "Квота недоступна",
     "view_auth_file": "Просмотр файла авторизации",
     "detail": "Details",
     "leave_empty_proxy_id": "Leave empty to remove proxy_id. proxy_url below is kept as fallback.",

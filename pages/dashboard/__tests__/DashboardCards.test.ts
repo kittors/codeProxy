@@ -27,7 +27,7 @@ describe("dashboard card composition", () => {
     expect(source).toContain("throughput_all_tenants_hint");
     expect(source).toContain("meta.generated_at");
     expect(source).toContain('<EChart option={option} className="h-10" overflowVisible />');
-    expect(source).toContain("}, 5000);");
+    expect(source).toContain("}, 20_000);");
     expect(source).not.toContain('replaceMerge="series"');
     expect(source).not.toContain('from "@features/monitor-widgets"');
     expect(source).not.toContain("<KpiCard");

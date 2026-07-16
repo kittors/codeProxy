@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import {
   AlertTriangle,
   CalendarClock,
+  Clock,
   Download,
   Eye,
   Gauge,
@@ -29,19 +30,25 @@ import {
   formatAuthFileRestrictionRemaining,
   formatFileSize,
   formatModified,
+  formatPlanBadgeLabel,
   resolveClaudeOAuthHealthBadges,
   isRuntimeOnlyAuthFile,
+  normalizeAuthIndexValue,
   parseAdditionalQuotaWindowLabel,
   resolveAuthFileDisplayName,
+  resolveAuthFileDisplayPlanType,
   resolveAuthFilePlanType,
   resolveAuthFileRestrictionBadges,
+  resolveAuthFileWeeklyQuotaResetAtMs,
   resolveAuthFileSupplementalTags,
   resolveAuthFileStats,
   resolveAuthFileStatusBar,
   resolveAuthFileSubscriptionStatus,
   resolveFileType,
+  resolvePlanBadgeClass,
   shouldShowAuthFileDisplayTag,
   shouldShowAuthFilePlanBadge,
+  type AuthFileCycleBudgetStats,
 } from "@code-proxy/domain";
 import { resolveQuotaProvider, type QuotaProvider } from "@features/quota-preview/quota-fetch";
 import {
@@ -150,6 +157,7 @@ interface UseAuthFilesFilesPresentationOptions {
   connectivityState: Map<string, { loading: boolean; latencyMs: number | null; error: boolean }>;
   checkAuthFileConnectivity: (name: string) => Promise<void>;
   quotaByFileName: Record<string, QuotaState>;
+  cycleBudgetByAuthIndex: Record<string, AuthFileCycleBudgetStats>;
   refreshQuota: (file: AuthFileItem, provider: QuotaProvider) => Promise<void>;
   requestResetCredit: (file: AuthFileItem) => void;
   resettingCreditFileName: string | null;
@@ -176,6 +184,7 @@ export function useAuthFilesFilesPresentation({
   connectivityState,
   checkAuthFileConnectivity,
   quotaByFileName,
+  cycleBudgetByAuthIndex,
   refreshQuota,
   requestResetCredit,
   resettingCreditFileName,
@@ -218,25 +227,7 @@ export function useAuthFilesFilesPresentation({
     [t],
   );
 
-  const formatPlanTypeLabel = useCallback(
-    (planType: string) => {
-      const normalized = planType.trim().toLowerCase();
-      if (!normalized) return "";
-      if (normalized === "plus" || normalized === "team" || normalized === "free") {
-        return t(`codex_quota.plan_${normalized}`);
-      }
-      if (normalized === "supergrok") return t("xai_quota.plan_supergrok");
-      if (
-        normalized === "supergrok-heavy" ||
-        normalized === "supergrok_heavy" ||
-        normalized === "supergrokheavy"
-      ) {
-        return t("xai_quota.plan_supergrok_heavy");
-      }
-      return normalized.charAt(0).toUpperCase() + normalized.slice(1);
-    },
-    [t],
-  );
+  const formatPlanTypeLabel = useCallback((planType: string) => formatPlanBadgeLabel(planType), []);
 
   const restrictionUnitLabels = useMemo(
     () => ({
@@ -277,11 +268,14 @@ export function useAuthFilesFilesPresentation({
       const quotaWindow = formatRestrictionQuotaWindowLabel(badge);
       // Always surface the upstream reason (parsed status_message / quota reason).
       // Hiding it for quota-limited badges left 429 chips without any error detail.
+      // ponytail: multi-line string; HoverTooltip already uses whitespace-pre-line.
+      const reason =
+        badge.reason === "quota" ? t("auth_files.restriction_quota_label") : badge.reason;
       const parts = [
         badge.quotaLimited ? t("auth_files.restriction_limited") : "",
         quotaWindow ? t("auth_files.restriction_window", { window: quotaWindow }) : "",
         badge.model ? t("auth_files.restriction_model", { model: badge.model }) : "",
-        badge.reason ? t("auth_files.restriction_reason", { reason: badge.reason }) : "",
+        reason ? t("auth_files.restriction_reason", { reason }) : "",
       ].filter(Boolean);
       if (badge.recoverAtMs) {
         const remaining = formatAuthFileRestrictionRemaining(
@@ -298,20 +292,25 @@ export function useAuthFilesFilesPresentation({
       } else {
         parts.push(t("auth_files.restriction_recovery_unknown"));
       }
-      return parts.join(" · ");
+      return parts.join("\n");
     },
     [formatRestrictionQuotaWindowLabel, nowMs, restrictionUnitLabels, t],
   );
 
   const renderRestrictionBadges = useCallback(
     (file: AuthFileItem): ReactNode | null => {
-      const badges = resolveAuthFileRestrictionBadges(file, nowMs);
+      // xAI week restriction recovery is the account weekly_limit reset, not probe cooldown.
+      const weeklyResetAtMs = resolveAuthFileWeeklyQuotaResetAtMs(
+        quotaByFileName[file.name]?.items,
+      );
+      const badges = resolveAuthFileRestrictionBadges(file, nowMs, weeklyResetAtMs);
       if (badges.length === 0) return null;
       return (
         <div className="flex min-w-0 flex-wrap gap-1.5">
           {badges.map((badge) => (
             <HoverTooltip key={badge.key} content={formatRestrictionTooltip(badge)} placement="top">
               <span
+                data-testid="auth-file-restriction-badge"
                 className={[
                   "inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-2xs font-semibold tabular-nums",
                   RESTRICTION_TONE_CLASSES[badge.tone],
@@ -325,7 +324,7 @@ export function useAuthFilesFilesPresentation({
         </div>
       );
     },
-    [formatRestrictionBadgeLabel, formatRestrictionTooltip, nowMs],
+    [formatRestrictionBadgeLabel, formatRestrictionTooltip, nowMs, quotaByFileName],
   );
 
   const renderClaudeOAuthHealthBadges = useCallback(
@@ -360,7 +359,7 @@ export function useAuthFilesFilesPresentation({
               })
             : "",
         ].filter(Boolean);
-        return parts.join(" · ");
+        return parts.join("\n");
       };
 
       return (
@@ -496,14 +495,20 @@ export function useAuthFilesFilesPresentation({
 
   const formatQuotaItemDetailText = useCallback(
     (item: QuotaItem | null | undefined) => {
-      const meta = item?.meta ? translateQuotaText(item.meta) : null;
       const reset = formatQuotaResetTextCompact(item?.resetAtMs);
       const resetLabel =
         reset && item?.label.startsWith("xai_quota.")
           ? t("xai_quota.reset_at", { time: reset })
           : reset;
-      const parts = [meta, resetLabel].filter(Boolean);
-      return parts.length > 0 ? parts.join(" · ") : null;
+      const rawMeta = item?.meta?.trim() ? translateQuotaText(item.meta) : null;
+      // Drop raw ISO period ranges (e.g. "2026-07-16T06:45:51+00:00 - …").
+      const meta =
+        rawMeta && !/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(rawMeta) ? rawMeta : null;
+      if (resetLabel && meta) {
+        // Keep money remaining ("$40 / $50") next to reset; skip other period labels.
+        return meta.includes("$") ? `${meta} · ${resetLabel}` : resetLabel;
+      }
+      return resetLabel ?? meta ?? null;
     },
     [formatQuotaResetTextCompact, t, translateQuotaText],
   );
@@ -611,10 +616,11 @@ export function useAuthFilesFilesPresentation({
       const detailText = formatQuotaItemDetailText(item);
 
       return (
-        <div key={label} className="space-y-1">
+        <div key={label} className="space-y-1.5">
           <div className="flex items-center justify-between gap-2">
-            <span className="min-w-0 truncate text-xs font-semibold text-slate-700 dark:text-white/80">
-              {translateQuotaText(label)}
+            <span className="inline-flex min-w-0 items-center gap-1.5 text-xs font-medium text-slate-600 dark:text-white/70">
+              <Clock size={12} className="shrink-0 text-slate-400 dark:text-white/40" aria-hidden />
+              <span className="min-w-0 truncate">{translateQuotaText(label)}</span>
             </span>
             <span
               className={[
@@ -625,14 +631,14 @@ export function useAuthFilesFilesPresentation({
               {percentText}
             </span>
           </div>
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200/80 dark:bg-white/10">
+          <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-white/10">
             <div
               className={["h-full rounded-full", tone.fillClass].join(" ")}
               style={{ width: `${normalized ?? 0}%` }}
               aria-hidden="true"
             />
           </div>
-          <div className="min-h-[14px] truncate text-2xs tabular-nums text-slate-500 dark:text-white/45">
+          <div className="min-h-[14px] truncate text-right text-2xs tabular-nums text-slate-400 dark:text-white/40">
             {detailText ?? "\u00A0"}
           </div>
         </div>
@@ -727,10 +733,16 @@ export function useAuthFilesFilesPresentation({
         render: (file) => {
           const typeKey = resolveFileType(file);
           const badgeClass = TYPE_BADGE_CLASSES[typeKey] ?? TYPE_BADGE_CLASSES.unknown;
-          const planType = resolveAuthFilePlanType(file, quotaByFileName[file.name]);
+          const authIndex = normalizeAuthIndexValue(file.auth_index ?? file.authIndex);
+          const basePlanType = resolveAuthFilePlanType(file, quotaByFileName[file.name]);
+          const planType = resolveAuthFileDisplayPlanType(
+            file,
+            quotaByFileName[file.name],
+            authIndex ? cycleBudgetByAuthIndex[authIndex] : null,
+          );
           const runtimeOnly = isRuntimeOnlyAuthFile(file);
           const showTypeBadge = shouldShowAuthFileDisplayTag(file, typeKey);
-          const showPlanBadge = shouldShowAuthFilePlanBadge(file, planType);
+          const showPlanBadge = shouldShowAuthFilePlanBadge(file, basePlanType);
 
           return (
             <div className="flex flex-col gap-1">
@@ -743,8 +755,14 @@ export function useAuthFilesFilesPresentation({
                   </span>
                 ) : null}
                 {showPlanBadge && planType ? (
-                  <span className="inline-flex rounded-lg bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-200">
-                    {t("codex_quota.plan_label")} {formatPlanTypeLabel(planType)}
+                  <span
+                    data-testid="auth-file-plan-badge"
+                    className={[
+                      "inline-flex items-center rounded-md px-2 py-0.5 text-2xs font-bold tracking-wide",
+                      resolvePlanBadgeClass(planType),
+                    ].join(" ")}
+                  >
+                    {formatPlanTypeLabel(planType)}
                   </span>
                 ) : null}
               </div>
@@ -1077,6 +1095,7 @@ export function useAuthFilesFilesPresentation({
     allPageSelected,
     checkAuthFileConnectivity,
     connectivityState,
+    cycleBudgetByAuthIndex,
     downloadAuthFile,
     formatQuotaItemDetailText,
     formatPlanTypeLabel,

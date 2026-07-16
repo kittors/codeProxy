@@ -320,6 +320,40 @@ describe("ModelPlazaPage", () => {
     expect(within(audioCard).getByText("Audio")).toBeInTheDocument();
   });
 
+  test("does not re-add path-only models when configured availability is scoped", async () => {
+    mocks.apiGet.mockImplementation((path: string) => {
+      if (path === "/auth-group-model-owner-mappings") return Promise.resolve({ items: [] });
+      if (path === "/models/configured-availability") {
+        return Promise.resolve({
+          scoped: true,
+          data: [{ id: "grok-4.5", description: "Allowed xAI model", owned_by: "xAI" }],
+        });
+      }
+      if (path === "/model-path-availability") {
+        return Promise.resolve({
+          data: [
+            {
+              id: "grok-4.5",
+              owned_by: "xAI",
+              paths: [{ scope: "root", method: "GET", path: "/v1/models" }],
+            },
+            {
+              id: "grok-composer-2.5-fast",
+              owned_by: "xAI",
+              paths: [{ scope: "root", method: "GET", path: "/v1/models" }],
+            },
+          ],
+        });
+      }
+      return Promise.resolve({});
+    });
+
+    renderPage();
+
+    expect(await screen.findByText("grok-4.5")).toBeInTheDocument();
+    expect(screen.queryByText("grok-composer-2.5-fast")).not.toBeInTheDocument();
+  });
+
   test("pins vendor tabs with sticky styles and keeps page overflow open", async () => {
     mocks.apiGet.mockImplementation((path: string) => {
       if (path === "/auth-group-model-owner-mappings") return Promise.resolve({ items: [] });

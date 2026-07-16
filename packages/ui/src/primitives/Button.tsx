@@ -1,5 +1,7 @@
 import {
   Children,
+  Fragment,
+  isValidElement,
   useContext,
   useId,
   useRef,
@@ -8,6 +10,7 @@ import {
   type FocusEventHandler,
   type MouseEventHandler,
   type PropsWithChildren,
+  type ReactElement,
   type ReactNode,
 } from "react";
 import { TooltipBubble, TooltipTriggerContext, type TooltipPlacement } from "../overlays/Tooltip";
@@ -40,6 +43,35 @@ const BUTTON_SIZE_CLASSES: Record<ButtonSize, { iconOnly: string; text: string }
     text: "h-10 px-4 text-sm",
   },
 };
+
+/**
+ * Flatten Fragments so icon-only detection counts real content nodes.
+ * Children.toArray keeps a Fragment as one child; spinner+label wrapped in
+ * <>...</> would otherwise pick the square icon-only size and clip the label.
+ */
+function flattenButtonChildren(children: ReactNode): ReactNode[] {
+  const nodes: ReactNode[] = [];
+  Children.forEach(children, (child) => {
+    if (child == null || typeof child === "boolean") return;
+    if (isValidElement(child) && child.type === Fragment) {
+      nodes.push(
+        ...flattenButtonChildren((child as ReactElement<{ children?: ReactNode }>).props.children),
+      );
+      return;
+    }
+    nodes.push(child);
+  });
+  return nodes;
+}
+
+function isIconOnlyButtonChildren(children: ReactNode): boolean {
+  const childNodes = flattenButtonChildren(children);
+  return (
+    childNodes.length === 1 &&
+    typeof childNodes[0] !== "string" &&
+    typeof childNodes[0] !== "number"
+  );
+}
 
 const BUTTON_VARIANT_CLASSES: Record<Exclude<ButtonVariant, "secondary" | "danger">, string> = {
   default:
@@ -103,11 +135,7 @@ export function Button({
   const hasTooltipParent = useContext(TooltipTriggerContext);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const [tooltipOpen, setTooltipOpen] = useState(false);
-  const childNodes = Children.toArray(children);
-  const iconOnly =
-    childNodes.length === 1 &&
-    typeof childNodes[0] !== "string" &&
-    typeof childNodes[0] !== "number";
+  const iconOnly = isIconOnlyButtonChildren(children);
 
   const tooltipContent = tooltip === false ? null : (tooltip ?? title ?? ariaLabel);
   const hasTooltipContent =

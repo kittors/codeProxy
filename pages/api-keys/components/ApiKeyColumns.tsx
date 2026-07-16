@@ -7,6 +7,7 @@ import {
   Info,
   Pencil,
   Power,
+  RotateCcw,
   ShieldCheck,
   Trash2,
   Upload,
@@ -15,6 +16,7 @@ import type { ApiKeyEntry } from "@code-proxy/api-client/endpoints/api-keys";
 import {
   formatApiKeyDate,
   formatApiKeyLimit,
+  formatApiKeySpendingAmount,
   formatApiKeySpendingLimit,
   maskApiKey,
   VendorIcon,
@@ -35,6 +37,8 @@ type CreateApiKeyColumnsOptions = {
   onImportToCcSwitch: (entry: ApiKeyEntry) => void;
   onEdit: (index: number) => void;
   onDelete: (index: number) => void;
+  onResetDailySpending: (index: number) => void;
+  resettingDailySpendingKey?: string | null;
 };
 
 type PermissionSummaryTone = "cyan" | "indigo" | "violet";
@@ -116,6 +120,8 @@ export const createApiKeyColumns = ({
   onImportToCcSwitch,
   onEdit,
   onDelete,
+  onResetDailySpending,
+  resettingDailySpendingKey = null,
 }: CreateApiKeyColumnsOptions): DataTableColumn<ApiKeyEntry>[] => [
   {
     key: "select",
@@ -158,6 +164,56 @@ export const createApiKeyColumns = ({
         </span>
       </OverflowTooltip>
     ),
+  },
+  {
+    key: "dailySpendingUsed",
+    label: t("api_keys_page.col_daily_spending_used"),
+    width: "w-[140px] min-w-[140px]",
+    cellClassName: "whitespace-nowrap text-slate-700 dark:text-white/70",
+    headerRender: () => (
+      <HoverTooltip
+        content={t("api_keys_page.daily_spending_used_help")}
+        className="inline-flex items-center gap-1"
+      >
+        <span>{t("api_keys_page.col_daily_spending_used")}</span>
+        <Info size={12} className="text-slate-400 dark:text-white/40" />
+      </HoverTooltip>
+    ),
+    render: (row) => (
+      <span className="tabular-nums">
+        {formatApiKeySpendingAmount(row["daily-spending-used"] ?? 0)}
+      </span>
+    ),
+  },
+  {
+    key: "dailySpendingRemaining",
+    label: t("api_keys_page.col_daily_spending_remaining"),
+    width: "w-[140px] min-w-[140px]",
+    cellClassName: "whitespace-nowrap text-slate-700 dark:text-white/70",
+    headerRender: () => (
+      <HoverTooltip
+        content={t("api_keys_page.daily_spending_remaining_help")}
+        className="inline-flex items-center gap-1"
+      >
+        <span>{t("api_keys_page.col_daily_spending_remaining")}</span>
+        <Info size={12} className="text-slate-400 dark:text-white/40" />
+      </HoverTooltip>
+    ),
+    render: (row) => {
+      const limit = row["daily-spending-limit"] ?? 0;
+      if (!(limit > 0)) {
+        return (
+          <span className="inline-flex items-center gap-1">
+            <InfinityIcon size={14} className="text-green-500" /> {t("api_keys_page.unlimited")}
+          </span>
+        );
+      }
+      const remaining =
+        row["daily-spending-remaining"] == null
+          ? Math.max(limit - (row["daily-spending-used"] ?? 0), 0)
+          : Math.max(row["daily-spending-remaining"], 0);
+      return <span className="tabular-nums">{formatApiKeySpendingAmount(remaining)}</span>;
+    },
   },
   {
     key: "key",
@@ -373,7 +429,7 @@ export const createApiKeyColumns = ({
   {
     key: "actions",
     label: t("api_keys_page.col_actions"),
-    width: "w-[224px] min-w-[224px]",
+    width: "w-[256px] min-w-[256px]",
     lockOrder: "end",
     headerClassName: stickyActionsHeaderClass,
     cellClassName: stickyActionsCellClass,
@@ -386,6 +442,11 @@ export const createApiKeyColumns = ({
       const importLabel = t("ccswitch.import_to_ccswitch");
       const editLabel = t("common.edit");
       const deleteLabel = t("common.delete");
+      const hasDailyLimit = (row["daily-spending-limit"] ?? 0) > 0;
+      const isResetting = resettingDailySpendingKey === row.key;
+      const resetLabel = hasDailyLimit
+        ? t("api_keys_page.reset_today_spending")
+        : t("api_keys_page.reset_today_spending_disabled");
 
       return (
         <div className="flex items-center justify-center gap-1.5">
@@ -431,6 +492,17 @@ export const createApiKeyColumns = ({
               aria-label={importLabel}
             >
               <Upload size={15} />
+            </button>
+          </HoverTooltip>
+          <HoverTooltip content={resetLabel}>
+            <button
+              type="button"
+              onClick={() => onResetDailySpending(idx)}
+              disabled={!hasDailyLimit || isResetting}
+              className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-orange-600 disabled:cursor-not-allowed disabled:opacity-40 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-orange-400"
+              aria-label={resetLabel}
+            >
+              <RotateCcw size={15} className={isResetting ? "animate-spin" : ""} />
             </button>
           </HoverTooltip>
           <HoverTooltip content={editLabel}>
