@@ -610,6 +610,7 @@
     "prefix_proxy_saved_success": "Updated auth file \"{{name}}\" successfully",
     "quota_refresh_success": "Quota refreshed for \"{{name}}\"",
     "quota_refresh_failed": "Failed to refresh quota for \"{{name}}\": {{message}}",
+    "quota_unavailable": "Quota unavailable",
     "reset_credits_badge": "Reset {{count}} times",
     "reset_credits_query": "Query reset credits",
     "reset_credit_expirations": "Reset credit expiration times:\n{{times}}",

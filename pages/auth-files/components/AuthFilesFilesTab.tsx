@@ -1812,19 +1812,17 @@ export function AuthFilesFilesTab({
                         className="mt-3 min-w-0 touch-pan-y space-y-3 px-0.5 py-1"
                         data-testid="auth-file-card-quota"
                       >
-                        {!provider && slots.length === 0 ? (
-                          <div className="text-xs text-slate-400 dark:text-white/40">
-                            --
-                          </div>
-                        ) : slots.length > 0 ? (
+                        {slots.length > 0 ? (
                           <div className="space-y-3">
                             {slots.map((slot) =>
                               renderQuotaBar(slot.label, slot.item),
                             )}
                           </div>
-                        ) : (
+                        ) : cardErrorBadges.length > 0 ? null : (
                           <div className="text-xs text-slate-400 dark:text-white/40">
-                            --
+                            {quotaRefreshing
+                              ? t("common.loading_ellipsis")
+                              : t("auth_files.quota_unavailable")}
                           </div>
                         )}
                       </div>

@@ -292,15 +292,6 @@ const remainingPercent = (usedPercent: number | null): number =>
 const formatRemainingPercent = (usedPercent: number | null): string =>
   `${remainingPercent(usedPercent)}%`;
 
-const formatPeriodRange = (start?: string, end?: string): string | undefined => {
-  const startMs = parseResetTimeToMs(start);
-  const endMs = parseResetTimeToMs(end);
-  const startLabel = startMs ? new Date(startMs).toLocaleDateString() : null;
-  const endLabel = endMs ? new Date(endMs).toLocaleDateString() : null;
-  if (startLabel && endLabel) return `${startLabel} - ${endLabel}`;
-  return endLabel ?? startLabel ?? undefined;
-};
-
 export const resolveXaiPlanType = (monthlyLimitCents: number | null): string | null => {
   if (monthlyLimitCents === 15_000) return "supergrok";
   if (monthlyLimitCents === 150_000) return "supergrok-heavy";
@@ -325,7 +316,7 @@ export const buildXaiItems = (billing: XaiBillingSummary): QuotaItem[] => {
       resetAtMs: parseResetTimeToMs(billing.periodEnd),
       // Required so backend can record weekly cycle start and power cycle call totals.
       windowSeconds: XAI_WEEKLY_WINDOW_SECONDS,
-      meta: formatPeriodRange(billing.periodStart, billing.periodEnd),
+      // Cards show relative reset from resetAtMs; skip raw period meta.
     });
   }
 

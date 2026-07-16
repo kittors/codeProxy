@@ -730,6 +730,7 @@
     "quota_refresh_hint": "Обновить квоту только для этих учётных данных",
     "quota_refresh_success": "Квота для \"{{name}}\" обновлена",
     "quota_refresh_failed": "Не удалось обновить квоту для \"{{name}}\": {{message}}",
+    "quota_unavailable": "Квота недоступна",
     "view_auth_file": "Просмотр файла авторизации",
     "detail": "Details",
     "leave_empty_proxy_id": "Leave empty to remove proxy_id. proxy_url below is kept as fallback.",

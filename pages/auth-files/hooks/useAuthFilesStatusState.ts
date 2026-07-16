@@ -617,46 +617,6 @@ export function useAuthFilesStatusState({
     [applyStatusesToUi, haltQuotaAutoRefresh, notify, t],
   );
 
-  // Visible scope change (first load / page / filter): exactly one filtered status GET.
-  // Empty auth-index set must NOT call unfiltered GET. Mark scope loaded only after success
-  // (or intentional empty skip) so abort/fail restarts when pageItems identity changes.
-  useEffect(() => {
-    if (tab !== "files" || loading) return;
-    if (!statusApiSupported) return;
-    const scopeKey = `${tenantIdRef.current}::${buildVisibleScopeKey(pageItems)}`;
-    if (loadedVisibleScopeRef.current === scopeKey) return;
-
-    const authIndexes = Array.from(
-      new Set(
-        pageItems
-          .map((file) => resolveFileAuthIndex(file))
-          .filter((value): value is string => Boolean(value)),
-      ),
-    );
-    if (authIndexes.length === 0) {
-      loadedVisibleScopeRef.current = scopeKey;
-      return;
-    }
-
-    const controller = new AbortController();
-    void (async () => {
-      const ok = await loadStatusSnapshot({
-        signal: controller.signal,
-        filesForMerge: pageItems,
-        authIndexes,
-        quiet: true,
-        markUnsupportedOn404: true,
-      });
-      if (ok && !controller.signal.aborted) {
-        loadedVisibleScopeRef.current = scopeKey;
-      }
-    })();
-
-    return () => {
-      controller.abort();
-    };
-  }, [tab, loading, pageItems, statusApiSupported, loadStatusSnapshot, cacheTenantId]);
-
   const pollJobUntilDone = useCallback(
     async (
       jobId: string,
@@ -871,6 +831,64 @@ export function useAuthFilesStatusState({
       t,
     ],
   );
+
+  // Visible scope change (first load / page / filter / re-enter route):
+  // 1) one filtered status GET for cached snapshot
+  // 2) one quiet force probe so cards do not stay on stale/empty quota when auto-refresh is off
+  // Empty auth-index set must NOT call unfiltered GET. Mark scope loaded only after snapshot
+  // success (or intentional empty skip) so abort/fail restarts when pageItems identity changes.
+  useEffect(() => {
+    if (tab !== "files" || loading) return;
+    if (!statusApiSupported) return;
+    const scopeKey = `${tenantIdRef.current}::${buildVisibleScopeKey(pageItems)}`;
+    if (loadedVisibleScopeRef.current === scopeKey) return;
+
+    const authIndexes = Array.from(
+      new Set(
+        pageItems
+          .map((file) => resolveFileAuthIndex(file))
+          .filter((value): value is string => Boolean(value)),
+      ),
+    );
+    if (authIndexes.length === 0) {
+      loadedVisibleScopeRef.current = scopeKey;
+      return;
+    }
+
+    const controller = new AbortController();
+    const visibleFiles = pageItems;
+    void (async () => {
+      const ok = await loadStatusSnapshot({
+        signal: controller.signal,
+        filesForMerge: visibleFiles,
+        authIndexes,
+        quiet: true,
+        markUnsupportedOn404: true,
+      });
+      if (!ok || controller.signal.aborted) return;
+      loadedVisibleScopeRef.current = scopeKey;
+      // Probe after snapshot so re-entering /access/ai-accounts always refreshes visible cards,
+      // even when quota auto-refresh interval is 0.
+      if (pageBatchRef.current) return;
+      void runBatchStatusRefresh(visibleFiles, {
+        force: true,
+        showLoading: false,
+        kind: "page",
+      });
+    })();
+
+    return () => {
+      controller.abort();
+    };
+  }, [
+    tab,
+    loading,
+    pageItems,
+    statusApiSupported,
+    loadStatusSnapshot,
+    cacheTenantId,
+    runBatchStatusRefresh,
+  ]);
 
   const forceRefreshPage = useCallback(async () => {
     if (tab !== "files" || loading) return;

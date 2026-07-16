@@ -1171,10 +1171,10 @@ describe("AuthFilesPage files table", () => {
     expect(await screen.findByText("codex-pro.json")).toBeInTheDocument();
 
     await waitFor(() => {
-      expect(mocks.getStatus).toHaveBeenCalledTimes(1);
+      expect(mocks.getStatus).toHaveBeenCalled();
     });
+    // Enter path may quiet-probe visible cards (fetchQuota only via test bridge); never entity-stats.
     expect(mocks.getEntityStats).not.toHaveBeenCalled();
-    expect(mocks.fetchQuota).not.toHaveBeenCalled();
   });
 
   test("shows active auth-level restriction badge with reason and recovery tooltip", async () => {
@@ -1484,7 +1484,6 @@ describe("AuthFilesPage files table", () => {
           value: "75%",
           resetAtMs: now + 7 * 24 * 60 * 60 * 1000,
           windowSeconds: 604800,
-          meta: "07/06/2026 - 07/13/2026",
         },
         {
           key: "product:Grok 4",
@@ -1822,10 +1821,15 @@ describe("AuthFilesPage files table", () => {
     });
 
     expect(await screen.findByText("codex-visible.json")).toBeInTheDocument();
-    await waitFor(() => expect(mocks.fetchQuota).toHaveBeenCalledTimes(1));
-    expect(mocks.fetchQuota).toHaveBeenCalledWith(
-      "codex",
-      expect.objectContaining({ name: file.name }),
+    // Enter route: status snapshot + quiet force probe for visible cards (auto-refresh off).
+    await waitFor(() => expect(mocks.getStatus).toHaveBeenCalled());
+    await waitFor(() => expect(mocks.startStatusRefresh).toHaveBeenCalled());
+    expect(mocks.startStatusRefresh).toHaveBeenCalledWith(
+      expect.objectContaining({
+        auth_indexes: [file.auth_index],
+        force: true,
+      }),
+      expect.anything(),
     );
   });
 
@@ -1883,9 +1887,9 @@ describe("AuthFilesPage files table", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Submit callback" }));
 
     expect(await screen.findByText("codex-authorized.json")).toBeInTheDocument();
-    // OAuth success only switches file group; status is loaded via snapshot, not per-file probe.
+    // New visible scope: snapshot + quiet probe (not the legacy per-file fetchQuota fan-out).
     await waitFor(() => expect(mocks.getStatus).toHaveBeenCalled());
-    expect(mocks.startStatusRefresh).not.toHaveBeenCalled();
+    await waitFor(() => expect(mocks.startStatusRefresh).toHaveBeenCalled());
   });
 
   test("reads quota preview setting from localStorage", async () => {
@@ -2441,15 +2445,14 @@ describe("AuthFilesPage files table", () => {
     mocks.fetchQuota.mockImplementation(async () => [
       { key: "code_5h", label: "m_quota.code_5h", percent: 60 },
     ]);
-    const cycleCountsByAuthIndex = new Map<string, number[]>([
-      ["77", [1, 4]],
-      ["88", [10]],
+    // Stable until card refresh advances 77 → 4 (enter quiet probe must not burn the sequence).
+    const cycleCountByAuthIndex = new Map<string, number>([
+      ["77", 1],
+      ["88", 10],
     ]);
-    mocks.getAuthFileTrend.mockImplementation(async (authIndex: string) => {
-      const counts = cycleCountsByAuthIndex.get(authIndex) ?? [0];
-      const count = counts.length > 1 ? counts.shift() : counts[0];
-      return createAuthFileTrend(authIndex, count ?? 0);
-    });
+    mocks.getAuthFileTrend.mockImplementation(async (authIndex: string) =>
+      createAuthFileTrend(authIndex, cycleCountByAuthIndex.get(authIndex) ?? 0),
+    );
 
     render(
       <MemoryRouter initialEntries={["/auth-files"]}>
@@ -2472,14 +2475,15 @@ describe("AuthFilesPage files table", () => {
     expect(await within(card as HTMLElement).findByText("1 calls")).toBeInTheDocument();
     expect(await within(otherCard as HTMLElement).findByText("10 calls")).toBeInTheDocument();
 
-    await waitFor(() => expect(mocks.fetchQuota).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(mocks.startStatusRefresh).toHaveBeenCalled());
     mocks.fetchQuota.mockClear();
+    mocks.startStatusRefresh.mockClear();
+    cycleCountByAuthIndex.set("77", 4);
 
     fireEvent.click(within(card as HTMLElement).getByRole("button", { name: "Refresh" }));
 
     await waitFor(() => {
       expect(mocks.startStatusRefresh).toHaveBeenCalled();
-      expect(mocks.fetchQuota).toHaveBeenCalled();
       expect(mocks.getEntityStats).not.toHaveBeenCalled();
       expect(within(card as HTMLElement).getByText("4 calls")).toBeInTheDocument();
       expect(within(otherCard as HTMLElement).getByText("10 calls")).toBeInTheDocument();
@@ -2717,8 +2721,8 @@ describe("AuthFilesPage files table", () => {
 
     expect(await screen.findByText("codex-1.json")).toBeInTheDocument();
     await waitFor(() => expect(mocks.getStatus.mock.calls.length).toBeGreaterThan(statusBefore));
-    // provider/scope switch reloads status snapshot; no automatic batch refresh
-    expect(mocks.startStatusRefresh).not.toHaveBeenCalled();
+    // provider/scope switch reloads snapshot and quietly re-probes the new visible cards
+    await waitFor(() => expect(mocks.startStatusRefresh).toHaveBeenCalled());
   });
 
   test("cards view hides default auth-file badges when display tags are empty", async () => {
@@ -4070,14 +4074,27 @@ describe("AuthFilesPage files table", () => {
       failed: number;
       results: Array<Record<string, unknown>>;
     }>();
+    let hangJobPoll = false;
 
     mocks.list.mockImplementation(async () => ({ files }));
     mocks.fetchQuota.mockResolvedValue({
       items: [{ label: "m_quota.code_5h", percent: 88, resetAtMs: now + 60_000 }],
     });
-    mocks.getStatusRefreshJob.mockImplementation(() => jobDeferred.promise);
+    // Enter/scope quiet probes complete immediately; hang only the toolbar refresh job.
+    mocks.getStatusRefreshJob.mockImplementation(async (...args: unknown[]) => {
+      const jobId = typeof args[0] === "string" ? args[0] : "job-enter";
+      if (hangJobPoll) return jobDeferred.promise;
+      return {
+        job_id: jobId,
+        state: "completed",
+        total: 0,
+        completed: 0,
+        failed: 0,
+        results: [],
+      };
+    });
     mocks.startStatusRefresh.mockImplementation(async (payload?: { auth_indexes?: string[] }) => ({
-      job_id: "job-spin",
+      job_id: hangJobPoll ? "job-spin" : "job-enter",
       accepted: payload?.auth_indexes?.length ?? 0,
       deduplicated: 0,
     }));
@@ -4109,8 +4126,15 @@ describe("AuthFilesPage files table", () => {
     await selectFileGroup(/codex\s*3/i);
     expect(await screen.findByText("codex-a.json")).toBeInTheDocument();
 
-    // Scope switch loads snapshot only; force page refresh to exercise progressive job UI.
+    // Drain enter/scope quiet probes so toolbar refresh is not blocked by pageBatchRef.
+    await waitFor(() => expect(mocks.startStatusRefresh).toHaveBeenCalled());
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
     mocks.startStatusRefresh.mockClear();
+    mocks.getStatusRefreshJob.mockClear();
+    hangJobPoll = true;
     const toolbarRefresh = screen.getAllByRole("button", { name: "Refresh" })[0];
     fireEvent.click(toolbarRefresh);
 
@@ -4304,24 +4328,20 @@ describe("AuthFilesPage files table", () => {
     }));
 
     mocks.list.mockImplementation(async () => ({ files }));
-    let statusRound = 0;
-    mocks.getStatus.mockImplementation(async () => {
-      statusRound += 1;
-      const useNext = statusRound > 1;
-      return {
-        items: files.map((file: { auth_index: string }, index: number) => ({
-          auth_index: file.auth_index,
-          quotas: [{ quota_key: "code_5h", quota_label: "m_quota.code_5h", percent: 55 }],
-          usage: {
-            cycle_request_total: useNext ? 100 + index + 1 : index + 1,
-            cycle_known: true,
-            request_total_30d: useNext ? 100 + index + 1 : index + 1,
-            success_total_30d: useNext ? 100 + index + 1 : index + 1,
-            failure_total_30d: 0,
-          },
-        })),
-      };
-    });
+    let useNextUsage = false;
+    mocks.getStatus.mockImplementation(async () => ({
+      items: files.map((file: { auth_index: string }, index: number) => ({
+        auth_index: file.auth_index,
+        quotas: [{ quota_key: "code_5h", quota_label: "m_quota.code_5h", percent: 55 }],
+        usage: {
+          cycle_request_total: useNextUsage ? 100 + index + 1 : index + 1,
+          cycle_known: true,
+          request_total_30d: useNextUsage ? 100 + index + 1 : index + 1,
+          success_total_30d: useNextUsage ? 100 + index + 1 : index + 1,
+          failure_total_30d: 0,
+        },
+      })),
+    }));
     mocks.fetchQuota.mockResolvedValue({
       items: [{ label: "m_quota.code_5h", percent: 55, resetAtMs: now + 60_000 }],
     });
@@ -4362,11 +4382,13 @@ describe("AuthFilesPage files table", () => {
     const firstTitle = await screen.findByText("auth-1.json");
     const firstCard = firstTitle.closest("section");
     expect(firstCard).not.toBeNull();
-    expect(within(firstCard as HTMLElement).getByText("1 calls")).toBeInTheDocument();
+    expect(await within(firstCard as HTMLElement).findByText("1 calls")).toBeInTheDocument();
 
     await waitFor(() => expect(mocks.getStatus).toHaveBeenCalled());
+    await waitFor(() => expect(mocks.startStatusRefresh).toHaveBeenCalled());
     mocks.startStatusRefresh.mockClear();
     mocks.getStatus.mockClear();
+    useNextUsage = true;
 
     const toolbarRefreshButton = screen.getAllByRole("button", { name: "Refresh" })[0];
     await waitFor(() => expect(toolbarRefreshButton).toBeEnabled());
@@ -4974,43 +4996,31 @@ describe("AuthFilesPage files table", () => {
     mocks.getAuthFileTrend.mockImplementation(async (authIndex: string) =>
       createAuthFileTrend(authIndex, 0),
     );
-    mocks.fetchQuota
-      .mockResolvedValueOnce({
-        items: [{ label: "m_quota.code_5h", percent: 12, resetAtMs: now + 60_000 }],
-        planType: "plus",
-        resetCreditCount: 3,
-        resetCreditExpirations: ["2026-07-03T10:00:00Z", "2026-07-04T10:00:00Z"],
-      })
-      .mockResolvedValueOnce({
-        items: [{ label: "m_quota.code_5h", percent: 12, resetAtMs: now + 60_000 }],
-        planType: "plus",
-        resetCreditCount: 4,
-      });
-
-
-    mocks.getStatus
-      .mockResolvedValueOnce({
-        items: [
-          {
-            auth_index: "1",
-            plan_type: "plus",
-            reset_credit_count: 3,
-            reset_credit_expirations: ["2026-07-03T10:00:00Z", "2026-07-04T10:00:00Z"],
-            quotas: [{ quota_key: "code_5h", quota_label: "m_quota.code_5h", percent: 12 }],
-          },
-        ],
-      })
-      .mockResolvedValue({
-        items: [
-          {
-            auth_index: "1",
-            plan_type: "plus",
-            reset_credit_count: 4,
-            quotas: [{ quota_key: "code_5h", quota_label: "m_quota.code_5h", percent: 12 }],
-          },
-        ],
-      });
-window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+    let resetCredits = 3;
+    mocks.fetchQuota.mockImplementation(async () => ({
+      items: [{ label: "m_quota.code_5h", percent: 12, resetAtMs: now + 60_000 }],
+      planType: "plus",
+      resetCreditCount: resetCredits,
+      resetCreditExpirations:
+        resetCredits === 3
+          ? ["2026-07-03T10:00:00Z", "2026-07-04T10:00:00Z"]
+          : undefined,
+    }));
+    mocks.getStatus.mockImplementation(async () => ({
+      items: [
+        {
+          auth_index: "1",
+          plan_type: "plus",
+          reset_credit_count: resetCredits,
+          reset_credit_expirations:
+            resetCredits === 3
+              ? ["2026-07-03T10:00:00Z", "2026-07-04T10:00:00Z"]
+              : undefined,
+          quotas: [{ quota_key: "code_5h", quota_label: "m_quota.code_5h", percent: 12 }],
+        },
+      ],
+    }));
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     window.localStorage.setItem(
       AUTH_FILES_DATA_CACHE_KEY,
       JSON.stringify({
@@ -5055,6 +5065,7 @@ window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("ca
     expect(
       resetButton.compareDocumentPosition(callsBadge) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+    resetCredits = 4;
     fireEvent.click(resetButton);
 
     expect(await screen.findByText("Reset 4 times")).toBeInTheDocument();

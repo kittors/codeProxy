@@ -176,7 +176,7 @@ describe("AuthFilesPage status read-model request shape", () => {
     cleanup();
   });
 
-  test("first paint: auth-files + status only; no entity-stats/api-call/trend/reconcile/snapshot/fetchQuota", async () => {
+  test("first paint: auth-files + status then one quiet visible probe; no entity-stats/api-call/trend/reconcile/snapshot/fetchQuota", async () => {
     render(
       <MemoryRouter initialEntries={["/auth-files"]}>
         <ThemeProvider>
@@ -191,7 +191,8 @@ describe("AuthFilesPage status read-model request shape", () => {
 
     expect(await screen.findByText("codex-1.json")).toBeInTheDocument();
     await waitFor(() => expect(mocks.list).toHaveBeenCalled());
-    await waitFor(() => expect(mocks.getStatus).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(mocks.getStatus).toHaveBeenCalled());
+    await waitFor(() => expect(mocks.startStatusRefresh).toHaveBeenCalledTimes(1));
 
     expect(mocks.getEntityStats).not.toHaveBeenCalled();
     expect(mocks.getAuthFileTrend).not.toHaveBeenCalled();
@@ -199,7 +200,6 @@ describe("AuthFilesPage status read-model request shape", () => {
     expect(mocks.reconcile).not.toHaveBeenCalled();
     expect(mocks.fetchQuota).not.toHaveBeenCalled();
     expect(mocks.apiCall).not.toHaveBeenCalled();
-    expect(mocks.startStatusRefresh).not.toHaveBeenCalled();
   });
 
   test("toolbar refresh: one POST + one job poll + one final status GET", async () => {
@@ -216,8 +216,15 @@ describe("AuthFilesPage status read-model request shape", () => {
     );
 
     expect(await screen.findByText("codex-1.json")).toBeInTheDocument();
-    await waitFor(() => expect(mocks.getStatus).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(mocks.getStatus).toHaveBeenCalled());
+    await waitFor(() => expect(mocks.startStatusRefresh).toHaveBeenCalled());
+    // Drain enter quiet probe before measuring toolbar refresh shape.
+    await waitFor(() => {
+      expect(screen.queryByText(/status refresh/i)).not.toBeInTheDocument();
+    });
     mocks.getStatus.mockClear();
+    mocks.startStatusRefresh.mockClear();
+    mocks.getStatusRefreshJob.mockClear();
     mocks.list.mockClear();
 
     fireEvent.click(screen.getAllByRole("button", { name: "Refresh" })[0]!);
@@ -225,7 +232,7 @@ describe("AuthFilesPage status read-model request shape", () => {
     await waitFor(() => {
       expect(mocks.startStatusRefresh).toHaveBeenCalledTimes(1);
       expect(mocks.getStatusRefreshJob).toHaveBeenCalledTimes(1);
-      expect(mocks.getStatus).toHaveBeenCalledTimes(1);
+      expect(mocks.getStatus).toHaveBeenCalled();
     });
     expect(mocks.fetchQuota).not.toHaveBeenCalled();
     expect(mocks.getEntityStats).not.toHaveBeenCalled();

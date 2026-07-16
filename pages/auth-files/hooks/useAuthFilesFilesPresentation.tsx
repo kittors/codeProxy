@@ -495,14 +495,20 @@ export function useAuthFilesFilesPresentation({
 
   const formatQuotaItemDetailText = useCallback(
     (item: QuotaItem | null | undefined) => {
-      const meta = item?.meta ? translateQuotaText(item.meta) : null;
       const reset = formatQuotaResetTextCompact(item?.resetAtMs);
       const resetLabel =
         reset && item?.label.startsWith("xai_quota.")
           ? t("xai_quota.reset_at", { time: reset })
           : reset;
-      const parts = [meta, resetLabel].filter(Boolean);
-      return parts.length > 0 ? parts.join(" · ") : null;
+      const rawMeta = item?.meta?.trim() ? translateQuotaText(item.meta) : null;
+      // Drop raw ISO period ranges (e.g. "2026-07-16T06:45:51+00:00 - …").
+      const meta =
+        rawMeta && !/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(rawMeta) ? rawMeta : null;
+      if (resetLabel && meta) {
+        // Keep money remaining ("$40 / $50") next to reset; skip other period labels.
+        return meta.includes("$") ? `${meta} · ${resetLabel}` : resetLabel;
+      }
+      return resetLabel ?? meta ?? null;
     },
     [formatQuotaResetTextCompact, t, translateQuotaText],
   );

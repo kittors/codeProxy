@@ -162,7 +162,7 @@ describe("useAuthFilesStatusState batch refresh", () => {
     });
   });
 
-  test("page open loads one status snapshot and never starts refresh automatically", async () => {
+  test("page open loads one status snapshot then quietly probes visible cards", async () => {
     const setFiles = vi.fn();
     const setDetailFile = vi.fn();
     renderHook(() =>
@@ -176,7 +176,11 @@ describe("useAuthFilesStatusState batch refresh", () => {
     );
 
     await waitFor(() => expect(mocks.getStatus).toHaveBeenCalledTimes(1));
-    expect(mocks.startStatusRefresh).not.toHaveBeenCalled();
+    await waitFor(() => expect(mocks.startStatusRefresh).toHaveBeenCalledTimes(1));
+    expect(mocks.startStatusRefresh).toHaveBeenCalledWith(
+      { auth_indexes: ["a1", "b1"], force: true },
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
   });
 
   test("forceRefreshPage posts one batch job then polls once and reloads snapshot", async () => {
@@ -195,7 +199,10 @@ describe("useAuthFilesStatusState batch refresh", () => {
     );
 
     await waitFor(() => expect(mocks.getStatus).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(mocks.startStatusRefresh).toHaveBeenCalledTimes(1));
     mocks.getStatus.mockClear();
+    mocks.startStatusRefresh.mockClear();
+    mocks.getStatusRefreshJob.mockClear();
     mocks.getStatus.mockResolvedValue({
       items: [
         {
@@ -526,7 +533,8 @@ describe("useAuthFilesStatusState batch refresh", () => {
     });
 
     // Aborted first request must not leave scope permanently skipped.
-    await waitFor(() => expect(getStatusCalls).toBe(2));
+    // Restarted snapshot (+ optional quiet probe final GET) must still paint 61/62.
+    await waitFor(() => expect(getStatusCalls).toBeGreaterThanOrEqual(2));
     await waitFor(() => {
       expect(result.current.quotaByFileName["a.json"]?.items[0]?.percent).toBe(61);
       expect(result.current.quotaByFileName["b.json"]?.items[0]?.percent).toBe(62);
@@ -551,10 +559,10 @@ describe("useAuthFilesStatusState batch refresh", () => {
     const setDetailFile = vi.fn();
     let resolvePageSnapshot!: (value: unknown) => void;
     let resolveSingleSnapshot!: (value: unknown) => void;
-    let getStatusCalls = 0;
+    let hangFinals = false;
+    let hungFinalCalls = 0;
     mocks.getStatus.mockImplementation(async () => {
-      getStatusCalls += 1;
-      if (getStatusCalls === 1) {
+      if (!hangFinals) {
         return {
           items: [
             {
@@ -574,7 +582,8 @@ describe("useAuthFilesStatusState batch refresh", () => {
           ],
         };
       }
-      if (getStatusCalls === 2) {
+      hungFinalCalls += 1;
+      if (hungFinalCalls === 1) {
         return await new Promise((resolve) => {
           resolvePageSnapshot = resolve;
         });
@@ -583,9 +592,11 @@ describe("useAuthFilesStatusState batch refresh", () => {
         resolveSingleSnapshot = resolve;
       });
     });
-    mocks.startStatusRefresh
-      .mockResolvedValueOnce({ job_id: "job-page", accepted: 2, deduplicated: 0 })
-      .mockResolvedValueOnce({ job_id: "job-single", accepted: 1, deduplicated: 0 });
+    mocks.startStatusRefresh.mockImplementation(async (payload?: { auth_indexes?: string[] }) => ({
+      job_id: payload?.auth_indexes?.length === 1 ? "job-single" : "job-page",
+      accepted: payload?.auth_indexes?.length ?? 0,
+      deduplicated: 0,
+    }));
     mocks.getStatusRefreshJob.mockImplementation(async (jobId: string) => ({
       job_id: jobId,
       state: "completed",
@@ -610,7 +621,14 @@ describe("useAuthFilesStatusState batch refresh", () => {
         setDetailFile,
       }),
     );
-    await waitFor(() => expect(mocks.getStatus).toHaveBeenCalledTimes(1));
+    // Drain enter snapshot + quiet probe before page/single concurrency.
+    await waitFor(() => expect(mocks.getStatus).toHaveBeenCalled());
+    await waitFor(() => expect(mocks.startStatusRefresh).toHaveBeenCalled());
+    await waitFor(() => expect(result.current.refreshingPage).toBe(false));
+    mocks.startStatusRefresh.mockClear();
+    mocks.getStatusRefreshJob.mockClear();
+    hangFinals = true;
+    hungFinalCalls = 0;
 
     await act(async () => {
       void result.current.forceRefreshPage();
@@ -620,7 +638,7 @@ describe("useAuthFilesStatusState batch refresh", () => {
       void result.current.refreshQuota(files[0]!, "codex");
     });
     await waitFor(() => expect(mocks.startStatusRefresh).toHaveBeenCalledTimes(2));
-    await waitFor(() => expect(getStatusCalls).toBeGreaterThanOrEqual(3));
+    await waitFor(() => expect(hungFinalCalls).toBeGreaterThanOrEqual(2));
 
     // Newer single result arrives first (version 5), then older page final (version 3 for a1).
     await act(async () => {
@@ -764,8 +782,13 @@ describe("useAuthFilesStatusState batch refresh", () => {
   test("final status GET failure clears loading without wiping prior snapshot", async () => {
     const setFiles = vi.fn();
     const setDetailFile = vi.fn();
-    mocks.getStatus
-      .mockResolvedValueOnce({
+    let failNextStatusGet = false;
+    mocks.getStatus.mockImplementation(async () => {
+      if (failNextStatusGet) {
+        failNextStatusGet = false;
+        throw new Error("snapshot_failed");
+      }
+      return {
         items: [
           {
             auth_index: "a1",
@@ -778,8 +801,8 @@ describe("useAuthFilesStatusState batch refresh", () => {
             quotas: [{ quota_key: "code_5h", percent: 42 }],
           },
         ],
-      })
-      .mockRejectedValueOnce(new Error("snapshot_failed"));
+      };
+    });
     mocks.startStatusRefresh.mockResolvedValue({
       job_id: "job-1",
       accepted: 2,
@@ -809,7 +832,9 @@ describe("useAuthFilesStatusState batch refresh", () => {
     await waitFor(() => {
       expect(result.current.quotaByFileName["a.json"]?.items[0]?.percent).toBe(41);
     });
+    await waitFor(() => expect(result.current.refreshingPage).toBe(false));
 
+    failNextStatusGet = true;
     await act(async () => {
       await result.current.forceRefreshPage();
     });
@@ -821,9 +846,10 @@ describe("useAuthFilesStatusState batch refresh", () => {
 
   test("single-card refresh does not abort page job", async () => {
     const jobIdsSeen: string[] = [];
-    mocks.startStatusRefresh
-      .mockResolvedValueOnce({ job_id: "job-page", accepted: 2, deduplicated: 0 })
-      .mockResolvedValueOnce({ job_id: "job-single", accepted: 1, deduplicated: 0 });
+    mocks.startStatusRefresh.mockImplementation(async (payload?: { auth_indexes?: string[] }) => {
+      const jobId = payload?.auth_indexes?.length === 1 ? "job-single" : "job-page";
+      return { job_id: jobId, accepted: payload?.auth_indexes?.length ?? 0, deduplicated: 0 };
+    });
     mocks.getStatusRefreshJob.mockImplementation(async (jobId: string) => {
       jobIdsSeen.push(jobId);
       if (jobId === "job-page") {
@@ -884,6 +910,9 @@ describe("useAuthFilesStatusState batch refresh", () => {
       }),
     );
     await waitFor(() => expect(mocks.getStatus).toHaveBeenCalled());
+    await waitFor(() => expect(result.current.refreshingPage).toBe(false));
+    mocks.startStatusRefresh.mockClear();
+    jobIdsSeen.length = 0;
 
     await act(async () => {
       const page = result.current.forceRefreshPage();
