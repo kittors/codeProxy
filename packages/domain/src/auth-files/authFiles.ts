@@ -60,7 +60,8 @@ export const AUTH_FILES_FILES_VIEW_MODE_KEY = "authFilesPage.filesViewMode.v1";
 export const AUTH_FILES_MODEL_OWNER_GROUP_MAP_KEY = "authFilesPage.modelOwnerGroupMap.v1";
 
 export type QuotaPreviewMode = "5h" | "week";
-export type QuotaAutoRefreshMs = 0 | 5000 | 10000 | 30000 | 60000;
+/** Off / 60s / 300s only. Legacy 5s/10s/30s migrate safely via normalizeQuotaAutoRefreshMs. */
+export type QuotaAutoRefreshMs = 0 | 60000 | 300000;
 export type FilesViewMode = "table" | "cards";
 export type AuthFilesModelOwnerGroupMap = Record<string, string>;
 export type AuthFileStatusFilter =
@@ -1723,14 +1724,51 @@ export const pickQuotaPreviewItem = (
 
 export const normalizeQuotaAutoRefreshMs = (value: unknown): QuotaAutoRefreshMs => {
   const parsed = typeof value === "number" ? value : Number(value);
-  if (!Number.isFinite(parsed)) return 10000;
+  // Default Off: never auto-fan-out on first visit.
+  if (!Number.isFinite(parsed)) return 0;
   const rounded = Math.max(0, Math.round(parsed));
   if (rounded === 0) return 0;
-  if (rounded === 5000) return 5000;
-  if (rounded === 10000) return 10000;
-  if (rounded === 30000) return 30000;
-  if (rounded === 60000) return 60000;
-  return 10000;
+  // Legacy 5s/10s/30s (and any sub-minute) → 60s so old localStorage cannot resume storms.
+  if (rounded > 0 && rounded < 60_000) return 60_000;
+  if (rounded === 60_000) return 60_000;
+  if (rounded === 300_000) return 300_000;
+  // Anything else ≥ 60s clamps to nearest allowed bucket (prefer 60s over inventing intervals).
+  if (rounded > 60_000 && rounded < 300_000) return 60_000;
+  if (rounded >= 300_000) return 300_000;
+  return 0;
+};
+
+/** Read + migrate auto-refresh localStorage immediately (write-back allowed buckets only). */
+export const readAndMigrateQuotaAutoRefreshMs = (
+  storageKey: string = AUTH_FILES_QUOTA_AUTO_REFRESH_KEY,
+): QuotaAutoRefreshMs => {
+  if (typeof window === "undefined") return 0;
+  try {
+    const raw = window.localStorage.getItem(storageKey);
+    if (raw == null) {
+      window.localStorage.setItem(storageKey, JSON.stringify(0));
+      return 0;
+    }
+    let parsed: unknown = raw;
+    try {
+      parsed = JSON.parse(raw) as unknown;
+    } catch {
+      // keep raw string
+    }
+    const normalized = normalizeQuotaAutoRefreshMs(parsed);
+    const rawNumber =
+      typeof parsed === "number"
+        ? parsed
+        : typeof parsed === "string"
+          ? Number(parsed)
+          : Number.NaN;
+    if (!Number.isFinite(rawNumber) || rawNumber !== normalized) {
+      window.localStorage.setItem(storageKey, JSON.stringify(normalized));
+    }
+    return normalized;
+  } catch {
+    return 0;
+  }
 };
 
 export type UsageIndex = {

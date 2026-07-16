@@ -26,7 +26,6 @@ import { AuthFileTagsModal } from "./components/AuthFileTagsModal";
 import { ImportModelsModal } from "./components/ImportModelsModal";
 import { GroupOverviewModal } from "./components/GroupOverviewModal";
 import { useAuthFilesDataState } from "./hooks/useAuthFilesDataState";
-import { useAuthFilesCycleUsageState } from "./hooks/useAuthFilesCycleUsageState";
 import { useAuthFilesDetailEditors } from "./hooks/useAuthFilesDetailEditors";
 import {
   useAuthFilesFileActions,
@@ -173,10 +172,10 @@ export function AuthFilesPage() {
     refreshingAll,
     usageLoading,
     usageData,
+    setUsageData,
     usageIndex,
     loadAll,
     refreshFilesForItems,
-    refreshUsageDataForFiles,
   } = useAuthFilesDataState();
 
   const [confirm, setConfirm] = useState<AuthFilesConfirmAction | null>(null);
@@ -480,35 +479,26 @@ export function AuthFilesPage() {
     checkAuthFileConnectivity,
     forceRefreshPage,
     runQuotaRefreshBatch,
+    callsByAuthIndex,
+    cycleBudgetByAuthIndex,
   } = useAuthFilesQuotaState({
     tab: "files",
     pageItems,
-    visibleScopeKey: [
-      filter,
-      tagFilter,
-      statusFilter,
-      search,
-      safePage,
-      ...pageItems.map((file) => file.name),
-    ].join("\n"),
     loading,
     setFiles,
     setDetailFile,
-    refreshUsageDataForFiles,
+    setUsageDataFromStatus: setUsageData,
   });
-
-  const { callsByAuthIndex, cycleBudgetByAuthIndex, refreshCycleUsageForFiles } =
-    useAuthFilesCycleUsageState();
 
   const refreshQuotaAndCycleUsage = useCallback(
     async (
       file: AuthFileItem,
       provider: NonNullable<ReturnType<typeof resolveQuotaProvider>>,
     ) => {
+      // Batch status API already embeds lightweight cycle usage; no separate trend force.
       await refreshQuota(file, provider);
-      await refreshCycleUsageForFiles([file], { force: true });
     },
-    [refreshCycleUsageForFiles, refreshQuota],
+    [refreshQuota],
   );
 
   const refreshQuotaForFiles = useCallback(
@@ -598,7 +588,6 @@ export function AuthFilesPage() {
       try {
         await consumeCodexResetCredit(file);
         await refreshQuota(file, "codex", { showLoading: true });
-        await refreshCycleUsageForFiles([file], { force: true });
         notify({
           type: "success",
           message: t("auth_files.reset_credit_success", { name }),
@@ -614,13 +603,7 @@ export function AuthFilesPage() {
         setResettingCreditFileName(null);
       }
     },
-    [
-      notify,
-      refreshCycleUsageForFiles,
-      refreshQuota,
-      resettingCreditFileName,
-      t,
-    ],
+    [notify, refreshQuota, resettingCreditFileName, t],
   );
 
   const clearAuthFileStatus = useCallback(
@@ -675,21 +658,11 @@ export function AuthFilesPage() {
     setRefreshingCurrentPage(true);
     const currentPageItems = pageItems;
     try {
-      const quotaRefreshPromise = forceRefreshPage();
-      const filesRefreshPromise = refreshFilesForItems(currentPageItems);
-      const [updatedFiles] = await Promise.all([
-        filesRefreshPromise,
-        quotaRefreshPromise,
+      // One batch status job + list refresh. No entity-stats / trend fan-out.
+      await Promise.all([
+        refreshFilesForItems(currentPageItems),
+        forceRefreshPage(),
       ]);
-      if (filesViewMode === "cards") {
-        const updatedByName = new Map(
-          updatedFiles.map((file) => [file.name, file]),
-        );
-        await refreshCycleUsageForFiles(
-          currentPageItems.map((file) => updatedByName.get(file.name) ?? file),
-          { force: true },
-        );
-      }
     } finally {
       refreshingFilesAndQuotaRef.current = false;
       if (isMountedRef.current) {
@@ -697,11 +670,9 @@ export function AuthFilesPage() {
       }
     }
   }, [
-    filesViewMode,
     forceRefreshPage,
     loading,
     pageItems,
-    refreshCycleUsageForFiles,
     refreshFilesForItems,
     refreshingAll,
     usageLoading,
@@ -738,10 +709,7 @@ export function AuthFilesPage() {
     })();
   }, [configModalTab, forceRefreshPage, loadAll]);
 
-  useEffect(() => {
-    if (filesViewMode !== "cards" || loading) return;
-    void refreshCycleUsageForFiles(pageItems);
-  }, [filesViewMode, loading, pageItems, refreshCycleUsageForFiles]);
+  // Cycle usage for cards comes from status snapshot; no per-card trend fan-out on open.
 
   const {
     groupOverviewOpen,
