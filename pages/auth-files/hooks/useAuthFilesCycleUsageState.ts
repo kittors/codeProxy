@@ -6,6 +6,7 @@ import {
   resolveFileType,
   type AuthFileCycleBudgetStats,
 } from "@code-proxy/domain";
+import { mapWithConcurrency } from "./mapWithConcurrency";
 
 type RefreshCycleUsageOptions = {
   force?: boolean;
@@ -64,6 +65,13 @@ const readCycleBudgetStats = (trend: {
   cycleCostTotal: toFiniteOrNull(trend.cycle_cost_total),
   weeklyQuotaUsedPercent: toFiniteOrNull(trend.weekly_quota_used_percent),
 });
+
+/**
+ * Limit concurrent /usage/auth-file-trend fan-out from the AI Accounts card view.
+ * Each trend call fans into multiple request_logs aggregates on the backend; unbounded
+ * Promise.all on a full page can peg CPU while leaving other features starved.
+ */
+const AUTH_FILE_TREND_FETCH_CONCURRENCY = 2;
 
 export function useAuthFilesCycleUsageState() {
   const mountedRef = useRef(true);
@@ -143,7 +151,11 @@ export function useAuthFilesCycleUsageState() {
         : authIndexes.filter((authIndex) => snapshotByAuthIndexRef.current[authIndex] === undefined);
       if (targets.length === 0) return;
 
-      await Promise.allSettled(targets.map((authIndex) => fetchCycleUsage(authIndex)));
+      // Force refresh (manual button) still uses the same concurrency cap so a
+      // single page action cannot open N simultaneous auth-file-trend storms.
+      await mapWithConcurrency(targets, AUTH_FILE_TREND_FETCH_CONCURRENCY, (authIndex) =>
+        fetchCycleUsage(authIndex),
+      );
     },
     [fetchCycleUsage],
   );
