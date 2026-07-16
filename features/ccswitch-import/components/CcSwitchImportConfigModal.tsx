@@ -60,7 +60,13 @@ const controlClassName =
   "h-10 rounded-xl border border-slate-200/80 bg-white px-3 text-sm text-slate-900 shadow-none hover:border-slate-300 hover:bg-white focus-visible:ring-2 focus-visible:ring-slate-900/10 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:hover:border-neutral-700 dark:focus-visible:ring-white/15";
 const fieldClassName = "flex flex-col gap-1.5";
 
-const CLAUDE_ROLE_ORDER: CcSwitchClaudeModelRole[] = ["main", "haiku", "sonnet", "opus"];
+const CLAUDE_ROLE_ORDER: CcSwitchClaudeModelRole[] = [
+  "main",
+  "haiku",
+  "sonnet",
+  "opus",
+  "fable",
+];
 const MODEL_MAPPING_LOADING_ROWS = ["short", "medium", "long"];
 const CONFIG_MODAL_CLIENTS = CC_SWITCH_CLIENTS.filter((client) => client.type !== "gemini");
 const DEFAULT_CODEX_CONTEXT_WINDOW = 128_000;
@@ -70,6 +76,8 @@ const rolePriority: Record<CcSwitchClaudeModelRole, string[]> = {
   haiku: ["haiku", "sonnet", "claude"],
   sonnet: ["sonnet", "claude"],
   opus: ["opus", "sonnet", "claude"],
+  // fable → opus fallback mirrors cc-switch / Claude Code official downgrade
+  fable: ["fable", "opus", "sonnet", "claude"],
 };
 
 type ConfigDraft = CcSwitchImportConfigListItem;
@@ -213,10 +221,14 @@ function reconcileClaudeMappings(
       pickClaudeRoleModel(role, models) ||
       (role === "main" ? fallbackModel.trim() : "");
     const existingRequestModel = existing?.requestModel.trim() ?? "";
+    // Claude Code sends claude-fable-5; cc-switch deeplink still ignores fableModel, so default request id for rewrite.
+    const defaultRequestModel = role === "fable" ? "claude-fable-5" : targetModel;
     return {
       role,
       requestModel:
-        existingRequestModel && existingRequestModel !== role ? existingRequestModel : targetModel,
+        existingRequestModel && existingRequestModel !== role
+          ? existingRequestModel
+          : defaultRequestModel,
       targetModel,
     };
   });

@@ -3089,6 +3089,7 @@
     "config_claude_role_haiku": "Haiku 默认模型",
     "config_claude_role_sonnet": "Sonnet 默认模型",
     "config_claude_role_opus": "Opus 默认模型",
+    "config_claude_role_fable": "Fable 默认模型",
     "model_use_custom": "使用“{{value}}”"
   },
   "api_keys_page": {

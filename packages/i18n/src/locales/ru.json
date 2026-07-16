@@ -171,6 +171,7 @@
     "config_claude_role_haiku": "Haiku default model",
     "config_claude_role_sonnet": "Sonnet default model",
     "config_claude_role_opus": "Opus default model",
+    "config_claude_role_fable": "Fable default model",
     "model_use_custom": "Use \"{{value}}\""
   },
   "title": {

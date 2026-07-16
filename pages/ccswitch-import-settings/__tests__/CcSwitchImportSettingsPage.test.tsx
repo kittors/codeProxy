@@ -871,6 +871,9 @@ describe("CcSwitchImportSettingsPage", () => {
     expect(
       await within(dialog).findAllByDisplayValue("kimi-k2.5"),
     ).toHaveLength(4);
+    expect(
+      await within(dialog).findByDisplayValue("claude-fable-5"),
+    ).toBeInTheDocument();
     await user.click(
       within(dialog).getByRole("combobox", { name: /^main model$/i }),
     );
@@ -1265,6 +1268,7 @@ describe("CcSwitchImportSettingsPage", () => {
       within(dialog).getByText(/sonnet default model/i),
     ).toBeInTheDocument();
     expect(within(dialog).getByText(/opus default model/i)).toBeInTheDocument();
+    expect(within(dialog).getByText(/fable default model/i)).toBeInTheDocument();
     expect(
       within(dialog).getByText(/cc switch request model/i),
     ).toBeInTheDocument();
@@ -1315,6 +1319,11 @@ describe("CcSwitchImportSettingsPage", () => {
             {
               role: "opus",
               requestModel: "claude-opus-4-1",
+              targetModel: "claude-opus-4-1",
+            },
+            {
+              role: "fable",
+              requestModel: "claude-fable-5",
               targetModel: "claude-opus-4-1",
             },
           ]),
@@ -1506,6 +1515,11 @@ describe("CcSwitchImportSettingsPage", () => {
             targetModel: "target-sonnet",
           },
           { role: "opus", requestModel: "b-opus", targetModel: "target-opus" },
+          {
+            role: "fable",
+            requestModel: "c-fable",
+            targetModel: "target-opus",
+          },
         ],
       },
     ]);
@@ -1531,6 +1545,7 @@ describe("CcSwitchImportSettingsPage", () => {
     expect(orderedRequestModels).toEqual([
       "a-haiku",
       "b-opus",
+      "c-fable",
       "m-sonnet",
       "z-main",
     ]);
@@ -1550,6 +1565,11 @@ describe("CcSwitchImportSettingsPage", () => {
             {
               role: "opus",
               requestModel: "b-opus",
+              targetModel: "target-opus",
+            },
+            {
+              role: "fable",
+              requestModel: "c-fable",
               targetModel: "target-opus",
             },
             {

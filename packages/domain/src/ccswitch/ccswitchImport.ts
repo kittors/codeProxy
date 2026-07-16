@@ -6,7 +6,7 @@ import {
 } from "./ccswitchImportSettings";
 
 export type CcSwitchClientType = "claude" | "codex" | "gemini";
-export type CcSwitchClaudeModelRole = "main" | "haiku" | "sonnet" | "opus";
+export type CcSwitchClaudeModelRole = "main" | "haiku" | "sonnet" | "opus" | "fable";
 
 export interface CcSwitchModelMappingInput {
   requestModel: string;
@@ -215,7 +215,8 @@ const normalizeModelMappings = (
         mapping.role === "main" ||
         mapping.role === "haiku" ||
         mapping.role === "sonnet" ||
-        mapping.role === "opus"
+        mapping.role === "opus" ||
+        mapping.role === "fable"
           ? mapping.role
           : undefined;
       const requestModel = String(mapping.requestModel ?? "").trim();
@@ -804,9 +805,12 @@ export function buildCcSwitchImportUrl(input: {
     const haikuModel = getRoleRequestModel(modelMappings, "haiku");
     const sonnetModel = getRoleRequestModel(modelMappings, "sonnet");
     const opusModel = getRoleRequestModel(modelMappings, "opus");
+    const fableModel = getRoleRequestModel(modelMappings, "fable");
     if (haikuModel) params.set("haikuModel", haikuModel);
     if (sonnetModel) params.set("sonnetModel", sonnetModel);
     if (opusModel) params.set("opusModel", opusModel);
+    // ponytail: cc-switch deeplink still only reads haiku/sonnet/opus; keep fable in model_mappings for route rewrite
+    if (fableModel) params.set("fableModel", fableModel);
   }
   if (input.clientType === "codex") {
     params.set("apiFormat", CC_SWITCH_CODEX_API_FORMAT);
