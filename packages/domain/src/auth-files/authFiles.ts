@@ -1946,6 +1946,15 @@ export type CodexImageGenerationBridgeEditorState = {
   error: string | null;
 };
 
+/** xAI OAuth endpoint mode: false = Grok Build/CLI, true = official API. */
+export type XAIEndpointEditorState = {
+  fileName: string;
+  supported: boolean;
+  usingApi: boolean;
+  saving: boolean;
+  error: string | null;
+};
+
 export type AliasRow = OAuthModelAliasEntry & { id: string };
 
 export const buildAliasRows = (entries: OAuthModelAliasEntry[] | undefined): AliasRow[] => {

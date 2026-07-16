@@ -292,15 +292,19 @@ export function AuthFilesPage() {
     setCodexOAuthAdmissionEditor,
     codexImageGenerationBridgeEditor,
     setCodexImageGenerationBridgeEditor,
+    xaiEndpointEditor,
+    setXAIEndpointEditor,
     loadModelsForDetail,
     openDetail,
     prefixProxyDirty,
     codexOAuthAdmissionDirty,
     codexImageGenerationBridgeDirty,
+    xaiEndpointDirty,
     savePrefixProxy,
     saveChannelEditor,
     saveCodexOAuthAdmission,
     saveCodexImageGenerationBridge,
+    saveXAIEndpoint,
   } = useAuthFilesDetailEditors(loadAll, setFiles, identityFingerprintEnabled);
 
   const {
@@ -1048,6 +1052,10 @@ export function AuthFilesPage() {
         setCodexImageGenerationBridgeEditor={setCodexImageGenerationBridgeEditor}
         codexImageGenerationBridgeDirty={codexImageGenerationBridgeDirty}
         saveCodexImageGenerationBridge={saveCodexImageGenerationBridge}
+        xaiEndpointEditor={xaiEndpointEditor}
+        setXAIEndpointEditor={setXAIEndpointEditor}
+        xaiEndpointDirty={xaiEndpointDirty}
+        saveXAIEndpoint={saveXAIEndpoint}
       />
 
       <ImportModelsModal

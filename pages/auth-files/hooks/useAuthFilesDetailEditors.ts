@@ -28,6 +28,7 @@ import {
   type CodexImageGenerationBridgeEditorState,
   type CodexOAuthAdmissionEditorState,
   type PrefixProxyEditorState,
+  type XAIEndpointEditorState,
 } from "@code-proxy/domain";
 
 type DetailTab = "usage" | "identity" | "fields" | "models";
@@ -74,6 +75,25 @@ const createCodexImageGenerationBridgeEditorState =
     saving: false,
     error: null,
   });
+
+const createXAIEndpointEditorState = (): XAIEndpointEditorState => ({
+  fileName: "",
+  supported: false,
+  usingApi: false,
+  saving: false,
+  error: null,
+});
+
+const isXAIOauthAuthFile = (file: AuthFileItem): boolean => {
+  const provider = normalizeProviderKey(resolveFileType(file));
+  if (provider !== "xai" && provider !== "grok" && provider !== "x-ai") {
+    return false;
+  }
+  const accountType = String(file.account_type ?? "").trim().toLowerCase();
+  if (accountType === "oauth") return true;
+  // List entries for OAuth usually expose email; API-key rows do not need this editor.
+  return Boolean(String(file.email ?? "").trim());
+};
 
 const normalizeCodexAllowedClientId = (value: string): string => value.trim().toLowerCase();
 
@@ -126,6 +146,19 @@ const buildCodexImageGenerationBridgeEditorState = (
     fileName: file.name,
     supported: true,
     enabled: Boolean(bridge.enabled),
+    saving: false,
+    error: null,
+  };
+};
+
+const buildXAIEndpointEditorState = (file: AuthFileItem): XAIEndpointEditorState => {
+  if (!isXAIOauthAuthFile(file)) {
+    return { ...createXAIEndpointEditorState(), fileName: file.name };
+  }
+  return {
+    fileName: file.name,
+    supported: true,
+    usingApi: file.using_api === true,
     saving: false,
     error: null,
   };
@@ -223,6 +256,17 @@ const mergeSavedCodexImageGenerationBridgeFields = (
   };
 };
 
+const mergeSavedXAIEndpointFields = (
+  file: AuthFileItem,
+  editor: XAIEndpointEditorState,
+): AuthFileItem => {
+  if (file.name !== editor.fileName || !editor.supported) return file;
+  return {
+    ...file,
+    using_api: editor.usingApi,
+  };
+};
+
 const supportsAuthFileTrend = (file: AuthFileItem): boolean => {
   const provider = normalizeProviderKey(resolveFileType(file));
   return provider === "kimi" || provider === "codex" || provider === "xai";
@@ -282,6 +326,9 @@ export function useAuthFilesDetailEditors(
     useState<CodexImageGenerationBridgeEditorState>(() =>
       createCodexImageGenerationBridgeEditorState(),
     );
+  const [xaiEndpointEditor, setXAIEndpointEditor] = useState<XAIEndpointEditorState>(() =>
+    createXAIEndpointEditorState(),
+  );
 
   const applySavedAuthFilePatch = useCallback(
     (fileName: string, json: Record<string, unknown>) => {
@@ -736,6 +783,10 @@ export function useAuthFilesDetailEditors(
     setCodexImageGenerationBridgeEditor(buildCodexImageGenerationBridgeEditorState(file));
   }, []);
 
+  const openXAIEndpointEditor = useCallback((file: AuthFileItem) => {
+    setXAIEndpointEditor(buildXAIEndpointEditorState(file));
+  }, []);
+
   const saveChannelEditor = useCallback(async (): Promise<boolean> => {
     const fileName = channelEditor.fileName.trim();
     const label = channelEditor.label.trim();
@@ -877,6 +928,60 @@ export function useAuthFilesDetailEditors(
     }
   }, [codexImageGenerationBridgeEditor, loadAll, notify, setFiles, t]);
 
+  const xaiEndpointDirty = useMemo(() => {
+    if (!detailFile || !xaiEndpointEditor.supported) return false;
+    if (xaiEndpointEditor.fileName !== detailFile.name) return false;
+    const baseline = buildXAIEndpointEditorState(detailFile);
+    if (!baseline.supported) return false;
+    return baseline.usingApi !== xaiEndpointEditor.usingApi;
+  }, [
+    detailFile,
+    xaiEndpointEditor.fileName,
+    xaiEndpointEditor.supported,
+    xaiEndpointEditor.usingApi,
+  ]);
+
+  const saveXAIEndpoint = useCallback(async (): Promise<boolean> => {
+    const fileName = xaiEndpointEditor.fileName.trim();
+    if (!fileName || !xaiEndpointEditor.supported) return false;
+
+    setXAIEndpointEditor((prev) => ({
+      ...prev,
+      saving: true,
+      error: null,
+    }));
+    try {
+      await authFilesApi.patchFields({
+        name: fileName,
+        using_api: xaiEndpointEditor.usingApi,
+      });
+      const applyPatch = (file: AuthFileItem): AuthFileItem =>
+        mergeSavedXAIEndpointFields(file, xaiEndpointEditor);
+      setFiles?.((prev) => prev.map(applyPatch));
+      setDetailFile((prev) => (prev && prev.name === fileName ? applyPatch(prev) : prev));
+      // Endpoint switch can change upstream model catalog for this provider.
+      providerDiscoveryCacheRef.current.delete("xai");
+      modelsCacheRef.current.delete(fileName);
+      notify({ type: "success", message: t("auth_files.saved") });
+      setXAIEndpointEditor((prev) => ({
+        ...prev,
+        saving: false,
+        error: null,
+      }));
+      void loadAll();
+      return true;
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : t("auth_files.save_failed");
+      setXAIEndpointEditor((prev) => ({
+        ...prev,
+        saving: false,
+        error: message,
+      }));
+      notify({ type: "error", message });
+      return false;
+    }
+  }, [loadAll, notify, setFiles, t, xaiEndpointEditor]);
+
   useEffect(() => {
     if (!detailOpen || !detailFile) return;
     if (detailTab === "models") {
@@ -906,6 +1011,9 @@ export function useAuthFilesDetailEditors(
       if (codexImageGenerationBridgeEditor.fileName !== detailFile.name) {
         openCodexImageGenerationBridgeEditor(detailFile);
       }
+      if (xaiEndpointEditor.fileName !== detailFile.name) {
+        openXAIEndpointEditor(detailFile);
+      }
       return;
     }
   }, [
@@ -923,8 +1031,10 @@ export function useAuthFilesDetailEditors(
     openCodexImageGenerationBridgeEditor,
     openCodexOAuthAdmissionEditor,
     openPrefixProxyEditor,
+    openXAIEndpointEditor,
     prefixProxyEditor.fileName,
     refreshDetailTrend,
+    xaiEndpointEditor.fileName,
   ]);
 
   const prefixProxyDirty = useMemo(() => {
@@ -1096,15 +1206,19 @@ export function useAuthFilesDetailEditors(
     setCodexOAuthAdmissionEditor,
     codexImageGenerationBridgeEditor,
     setCodexImageGenerationBridgeEditor,
+    xaiEndpointEditor,
+    setXAIEndpointEditor,
     loadModelsForDetail,
     openDetail,
     prefixProxyDirty,
     codexOAuthAdmissionDirty,
     codexImageGenerationBridgeDirty,
+    xaiEndpointDirty,
     prefixProxyUpdatedText,
     savePrefixProxy,
     saveChannelEditor,
     saveCodexOAuthAdmission,
     saveCodexImageGenerationBridge,
+    saveXAIEndpoint,
   };
 }

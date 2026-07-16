@@ -168,6 +168,8 @@ export interface AuthFileItem extends TagDisplayFields {
   identity_fingerprint_summary?: AuthFileIdentityFingerprintSummary;
   codex_cli_only?: boolean;
   codex_cli_only_allowed_clients?: string[];
+  /** xAI OAuth: true = official API quota, false = Grok Build/CLI subscription. */
+  using_api?: boolean;
   [key: string]: unknown;
 }
 
