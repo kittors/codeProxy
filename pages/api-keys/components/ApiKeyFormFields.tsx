@@ -67,6 +67,24 @@ export function ApiKeyFormFields({
           {t("api_keys_page.form_permission_profile_desc")}
         </p>
       </div>
+
+      <div>
+        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
+          {t("api_keys_page.form_daily_spending_limit")}
+        </label>
+        <TextInput
+          type="number"
+          min={0}
+          step="0.01"
+          value={form.dailySpendingLimit}
+          onChange={(e) => setForm((prev) => ({ ...prev, dailySpendingLimit: e.target.value }))}
+          placeholder={t("api_keys_page.form_unlimited_hint")}
+          aria-label={t("api_keys_page.form_daily_spending_limit")}
+        />
+        <p className="mt-1 text-xs text-slate-400 dark:text-white/40">
+          {t("api_keys_page.form_daily_spending_limit_desc")}
+        </p>
+      </div>
     </div>
   );
 }
