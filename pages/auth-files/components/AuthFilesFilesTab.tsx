@@ -1809,7 +1809,10 @@ export function AuthFilesFilesTab({
                       ) : null}
 
                       <div
-                        className="mt-3 min-w-0 touch-pan-y space-y-3 px-0.5 py-1"
+                        className={[
+                          "mt-3 min-h-0 min-w-0 flex-1 touch-pan-y px-0.5 py-1",
+                          slots.length === 0 ? "flex flex-col" : "space-y-3",
+                        ].join(" ")}
                         data-testid="auth-file-card-quota"
                       >
                         {slots.length > 0 ? (
@@ -1818,11 +1821,22 @@ export function AuthFilesFilesTab({
                               renderQuotaBar(slot.label, slot.item),
                             )}
                           </div>
-                        ) : cardErrorBadges.length > 0 ? null : (
-                          <div className="text-xs text-slate-400 dark:text-white/40">
-                            {quotaRefreshing
-                              ? t("common.loading_ellipsis")
-                              : t("auth_files.quota_unavailable")}
+                        ) : (
+                          <div
+                            className="flex flex-1 flex-col items-center justify-center gap-2 py-6 text-center"
+                            data-testid="auth-file-card-quota-empty"
+                          >
+                            <div
+                              className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100/90 text-slate-400 dark:bg-white/[0.06] dark:text-white/40"
+                              aria-hidden="true"
+                            >
+                              <Gauge size={16} strokeWidth={1.5} />
+                            </div>
+                            <p className="text-xs font-medium text-slate-500 dark:text-white/50">
+                              {quotaRefreshing
+                                ? t("common.loading_ellipsis")
+                                : t("auth_files.quota_unavailable")}
+                            </p>
                           </div>
                         )}
                       </div>
