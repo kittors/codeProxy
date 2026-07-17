@@ -1,3 +1,6 @@
+import type { ComponentType, ReactNode } from "react";
+import { Coins, Gauge, Hash, Wallet } from "lucide-react";
+import { KpiCard } from "@features/monitor-widgets";
 import type { PublicUsageLimits } from "../types";
 
 function formatUsd(value: number): string {
@@ -8,91 +11,104 @@ function formatCount(value: number): string {
   return Math.round(value).toLocaleString();
 }
 
-type QuotaRow = {
+export type QuotaKpiItem = {
   key: string;
-  label: string;
-  usedLabel: string;
-  limitLabel: string;
+  title: string;
+  used: number;
+  limit: number;
+  format: (value: number) => string;
+  icon: ComponentType<{ size?: number; className?: string }>;
 };
 
-export function QuotaLimitsBanner({
-  t,
-  limits,
-}: {
-  t: (key: string, options?: Record<string, unknown>) => string;
-  limits: PublicUsageLimits | null | undefined;
-}) {
-  if (!limits) return null;
+export function buildQuotaKpiItems(
+  t: (key: string, options?: Record<string, unknown>) => string,
+  limits: PublicUsageLimits | null | undefined,
+): QuotaKpiItem[] {
+  if (!limits) return [];
 
-  const rows: QuotaRow[] = [];
+  const items: QuotaKpiItem[] = [];
   if (typeof limits["daily-limit"] === "number" && limits["daily-limit"] > 0) {
-    rows.push({
+    items.push({
       key: "daily-limit",
-      label: t("apikey_lookup.quota_daily_requests"),
-      usedLabel: formatCount(limits["daily-used"] ?? 0),
-      limitLabel: formatCount(limits["daily-limit"]),
+      title: t("apikey_lookup.quota_daily_requests"),
+      used: limits["daily-used"] ?? 0,
+      limit: limits["daily-limit"],
+      format: formatCount,
+      icon: Hash,
     });
   }
   if (typeof limits["total-quota"] === "number" && limits["total-quota"] > 0) {
-    rows.push({
+    items.push({
       key: "total-quota",
-      label: t("apikey_lookup.quota_total_requests"),
-      usedLabel: formatCount(limits["total-used"] ?? 0),
-      limitLabel: formatCount(limits["total-quota"]),
+      title: t("apikey_lookup.quota_total_requests"),
+      used: limits["total-used"] ?? 0,
+      limit: limits["total-quota"],
+      format: formatCount,
+      icon: Gauge,
     });
   }
   if (
     typeof limits["daily-spending-limit"] === "number" &&
     limits["daily-spending-limit"] > 0
   ) {
-    rows.push({
+    items.push({
       key: "daily-spending",
-      label: t("apikey_lookup.quota_daily_spending"),
-      usedLabel: formatUsd(limits["daily-spending-used"] ?? 0),
-      limitLabel: formatUsd(limits["daily-spending-limit"]),
+      title: t("apikey_lookup.quota_daily_spending"),
+      used: limits["daily-spending-used"] ?? 0,
+      limit: limits["daily-spending-limit"],
+      format: formatUsd,
+      icon: Wallet,
     });
   }
   if (
     typeof limits["spending-limit"] === "number" &&
     limits["spending-limit"] > 0
   ) {
-    rows.push({
+    items.push({
       key: "spending",
-      label: t("apikey_lookup.quota_total_spending"),
-      usedLabel: formatUsd(limits["spending-used"] ?? 0),
-      limitLabel: formatUsd(limits["spending-limit"]),
+      title: t("apikey_lookup.quota_total_spending"),
+      used: limits["spending-used"] ?? 0,
+      limit: limits["spending-limit"],
+      format: formatUsd,
+      icon: Coins,
     });
   }
+  return items;
+}
 
-  if (rows.length === 0) return null;
+/** Renders configured quota limits as the same KPI cards used for usage stats. */
+export function QuotaLimitKpiCards({
+  t,
+  limits,
+  renderValue,
+}: {
+  t: (key: string, options?: Record<string, unknown>) => string;
+  limits: PublicUsageLimits | null | undefined;
+  renderValue: (value: ReactNode) => ReactNode;
+}) {
+  const items = buildQuotaKpiItems(t, limits);
+  if (items.length === 0) return null;
 
   return (
-    <div
-      className="rounded-2xl border border-amber-200/80 bg-amber-50/70 px-4 py-3 dark:border-amber-500/20 dark:bg-amber-500/10"
-      data-testid="api-key-lookup-quota-limits"
-    >
-      <div className="mb-2 text-sm font-semibold text-amber-900 dark:text-amber-100">
-        {t("apikey_lookup.quota_limits_title")}
-      </div>
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-        {rows.map((row) => (
-          <div
-            key={row.key}
-            className="rounded-xl border border-amber-100/80 bg-white/70 px-3 py-2 dark:border-amber-500/10 dark:bg-neutral-950/40"
-          >
-            <div className="text-xs text-amber-800/80 dark:text-amber-100/70">
-              {row.label}
-            </div>
-            <div className="mt-0.5 text-sm font-semibold tabular-nums text-amber-950 dark:text-amber-50">
-              {row.usedLabel}
-              <span className="mx-1 font-normal text-amber-700/60 dark:text-amber-100/40">
-                /
-              </span>
-              {row.limitLabel}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
+    <>
+      {items.map((item) => (
+        <div key={item.key} data-testid={`api-key-lookup-quota-${item.key}`}>
+          <KpiCard
+            title={item.title}
+            icon={item.icon}
+            hint={t("apikey_lookup.quota_used_of_limit")}
+            value={renderValue(
+              <span className="tabular-nums">
+                {item.format(item.used)}
+                <span className="mx-1 text-base font-normal text-slate-400 dark:text-white/40">
+                  /
+                </span>
+                {item.format(item.limit)}
+              </span>,
+            )}
+          />
+        </div>
+      ))}
+    </>
   );
 }

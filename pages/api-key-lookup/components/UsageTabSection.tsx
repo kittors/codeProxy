@@ -18,7 +18,7 @@ import type {
   DailySeriesPoint,
 } from "@features/monitor-widgets/chart-options/types";
 import type { PublicUsageLimits } from "../types";
-import { QuotaLimitsBanner } from "./QuotaLimitsBanner";
+import { QuotaLimitKpiCards } from "./QuotaLimitsBanner";
 
 const DAILY_LEGEND_KEYS = {
   input: "daily_input",
@@ -277,8 +277,12 @@ export function UsageTabSection({
   return (
     <Reveal>
       <div className="space-y-5">
-        <QuotaLimitsBanner t={t} limits={quotaLimits} />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          <QuotaLimitKpiCards
+            t={t}
+            limits={quotaLimits}
+            renderValue={renderKpiValue}
+          />
           <KpiCard
             title={t("apikey_lookup.total_requests")}
             icon={Activity}

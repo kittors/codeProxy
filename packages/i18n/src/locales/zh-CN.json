@@ -3449,6 +3449,7 @@
     "total_sessions": "总会话",
     "total_cost": "总费用",
     "quota_limits_title": "额度限制",
+    "quota_used_of_limit": "已用 / 上限",
     "quota_daily_requests": "每日请求",
     "quota_total_requests": "总请求配额",
     "quota_daily_spending": "每日消费额度",

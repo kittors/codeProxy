@@ -3152,6 +3152,7 @@
     "total_sessions": "Total Sessions",
     "total_cost": "Total Cost",
     "quota_limits_title": "Quota limits",
+    "quota_used_of_limit": "Used / limit",
     "quota_daily_requests": "Daily requests",
     "quota_total_requests": "Total request quota",
     "quota_daily_spending": "Daily spending",
