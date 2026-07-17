@@ -19,6 +19,7 @@ export interface EndUser {
   created_at: string;
   updated_at: string;
   version: number;
+  api_key_count?: number;
 }
 
 export interface EndUserAPIKey {
@@ -53,8 +54,10 @@ export const endUsersApi = {
   list: () => apiClient.get<{ items: EndUser[] }>("/end-users"),
   create: (body: { username?: string; display_name: string; password?: string }) =>
     apiClient.post<CreateEndUserResult>("/end-users", body),
-  update: (id: string, body: { display_name?: string; status?: string }) =>
-    apiClient.patch<EndUser>(`/end-users/${id}`, body),
+  update: (
+    id: string,
+    body: { username?: string; display_name?: string; password?: string; status?: string },
+  ) => apiClient.patch<EndUser>(`/end-users/${id}`, body),
   remove: (id: string) => apiClient.delete(`/end-users/${id}`),
   resetPassword: (id: string, password?: string) =>
     apiClient.post<{ generated_password?: string }>(`/end-users/${id}/reset-password`, {

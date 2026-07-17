@@ -959,6 +959,7 @@ export function ApiKeyLookupPage() {
     portalUser?.username ||
     apiKeyName ||
     (queriedKey ? t("apikey_lookup.unnamed_key") : "");
+  const extraKeyCount = Math.max(0, portalKeys.length - 1);
   const keyMenuOptions = useMemo<SelectOption[]>(
     () => [
       ...(portalUser
@@ -1045,6 +1046,11 @@ export function ApiKeyLookupPage() {
                   <span className="flex min-w-0 items-center gap-1.5">
                     <Key size={14} className="shrink-0" />
                     <span className="min-w-0 truncate">{displayName}</span>
+                    {extraKeyCount > 0 ? (
+                      <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-600 dark:bg-white/10 dark:text-white/70">
+                        +{extraKeyCount}
+                      </span>
+                    ) : null}
                   </span>
                 }
                 aria-label={displayName}
