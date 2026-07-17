@@ -1670,6 +1670,7 @@
     "nav_ai_accounts": "AI Accounts",
     "nav_oauth": "OAuth Login",
     "nav_api_keys": "API Keys",
+    "nav_end_users": "Учётные записи",
     "nav_api_key_permissions": "Key Permission Profiles",
     "nav_ccswitch_import_settings": "CC Switch Config",
     "nav_image_generation": "Image Models",

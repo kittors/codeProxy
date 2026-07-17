@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { ApiKeyLookupPage } from "../ApiKeyLookupPage";
@@ -100,6 +100,7 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
       logout: vi.fn(async () => undefined),
       me: vi.fn(),
       listKeys: vi.fn(async () => ({ items: [] })),
+      keySecret: vi.fn(),
       createKey: vi.fn(),
       updateKey: vi.fn(),
       rotateKey: vi.fn(),
@@ -117,7 +118,43 @@ describe("ApiKeyLookupPage", () => {
     vi.clearAllMocks();
   });
 
-  test("opens the API key login modal when no key is stored", async () => {
+  test("opens the account login modal when no session is stored", async () => {
+    const { portalApi } = await import("@code-proxy/api-client");
+    vi.mocked(portalApi.login).mockResolvedValue({
+      user: {
+        id: "u1",
+        tenant_id: "t1",
+        username: "alice",
+        display_name: "Alice",
+        status: "active",
+        must_change_password: false,
+        failed_login_count: 0,
+        lock_stage: 0,
+        created_at: "",
+        updated_at: "",
+        version: 1,
+      },
+      access_token: "cpt_test",
+      refresh_token: "cpr_test",
+      must_change_password: false,
+    } as never);
+    vi.mocked(portalApi.listKeys).mockResolvedValue({
+      items: [
+        {
+          id: "k1",
+          tenant_id: "t1",
+          end_user_id: "u1",
+          name: "default",
+          key_masked: "sk-****",
+          disabled: false,
+          is_default: true,
+          created_at: "",
+          updated_at: "",
+        },
+      ],
+    } as never);
+    vi.mocked(portalApi.keySecret).mockResolvedValue({ id: "k1", key: "sk-new-key" });
+
     render(
       <ThemeProvider>
         <ToastProvider>
@@ -126,22 +163,20 @@ describe("ApiKeyLookupPage", () => {
       </ThemeProvider>,
     );
 
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/enter username|请输入账号/i)).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText(/enter api key|输入 API 密钥/i)).not.toBeInTheDocument();
 
-    await userEvent.type(
-      screen.getByPlaceholderText(/enter api key to lookup usage/i),
-      "sk-new-key",
-    );
+    await userEvent.type(screen.getByPlaceholderText(/enter username|请输入账号/i), "alice");
+    await userEvent.type(screen.getByPlaceholderText(/enter password|请输入密码/i), "password123");
     await userEvent.click(
-      screen.getByRole("button", { name: /query with key|用 key 查询|用 Key 查询/i }),
+      within(dialog).getByRole("button", { name: /^(login|sign in|登录)$/i }),
     );
 
     await waitFor(() => {
-      expect(mocks.fetchPublicChartData).toHaveBeenCalledWith(
-        expect.objectContaining({ apiKey: "sk-new-key" }),
-      );
+      expect(portalApi.login).toHaveBeenCalledWith("alice", "password123", true);
     });
-    expect(mocks.fetchPublicLogs).not.toHaveBeenCalled();
   });
 
   test("restores the last looked up API key after page refresh and shows its name", async () => {

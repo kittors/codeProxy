@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { KeyRound, Trash2, Unlock } from "lucide-react";
+import { KeyRound, Pencil, Trash2, Unlock } from "lucide-react";
 import { endUsersApi, type CreateEndUserResult, type EndUser } from "@code-proxy/api-client";
 import {
   Button,
@@ -25,6 +25,8 @@ export function EndUsersPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [createdSecrets, setCreatedSecrets] = useState<CreateEndUserResult | null>(null);
+  const [editUser, setEditUser] = useState<EndUser | null>(null);
+  const [editForm, setEditForm] = useState(emptyForm);
   const [resetUser, setResetUser] = useState<EndUser | null>(null);
   const [generatedReset, setGeneratedReset] = useState("");
   const [deleteUser, setDeleteUser] = useState<EndUser | null>(null);
@@ -68,15 +70,25 @@ export function EndUsersPage() {
       {
         key: "username",
         label: t("end_users.username", { defaultValue: "用户名" }),
-        width: "w-40",
-        render: (row) => (
-          <div className="min-w-0">
-            <div className="truncate font-medium text-slate-900 dark:text-white">
-              {row.display_name}
+        width: "w-48",
+        render: (row) => {
+          const extraKeys = Math.max(0, (row.api_key_count ?? 0) - 1);
+          return (
+            <div className="min-w-0">
+              <div className="flex min-w-0 items-center gap-1.5">
+                <span className="truncate font-medium text-slate-900 dark:text-white">
+                  {row.display_name}
+                </span>
+                {extraKeys > 0 ? (
+                  <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-2xs font-medium text-slate-600 dark:bg-white/10 dark:text-white/70">
+                    +{extraKeys}
+                  </span>
+                ) : null}
+              </div>
+              <div className="truncate text-xs text-slate-400">{row.username}</div>
             </div>
-            <div className="truncate text-xs text-slate-400">{row.username}</div>
-          </div>
-        ),
+          );
+        },
       },
       {
         key: "status",
@@ -93,9 +105,26 @@ export function EndUsersPage() {
       {
         key: "actions",
         label: t("common.actions", { defaultValue: "操作" }),
-        width: "w-36",
+        width: "w-40",
         render: (row) => (
           <div className="flex items-center gap-1">
+            {canWrite ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                title={t("end_users.edit", { defaultValue: "编辑" })}
+                onClick={() => {
+                  setEditUser(row);
+                  setEditForm({
+                    username: row.username,
+                    displayName: row.display_name,
+                    password: "",
+                  });
+                }}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+            ) : null}
             {canWrite && row.status === "locked" ? (
               <Button size="sm" variant="ghost" title="解冻" onClick={() => void unlock(row)}>
                 <Unlock className="h-4 w-4" />
@@ -161,6 +190,37 @@ export function EndUsersPage() {
     }
   };
 
+  const onEdit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!editUser) return;
+    setBusy(true);
+    try {
+      const body: {
+        username?: string;
+        display_name?: string;
+        password?: string;
+      } = {};
+      const nextUsername = editForm.username.trim();
+      const nextDisplay = editForm.displayName.trim();
+      if (nextUsername && nextUsername !== editUser.username) body.username = nextUsername;
+      if (nextDisplay && nextDisplay !== editUser.display_name) body.display_name = nextDisplay;
+      if (editForm.password.trim()) body.password = editForm.password;
+      if (!body.username && !body.display_name && !body.password) {
+        setEditUser(null);
+        return;
+      }
+      await endUsersApi.update(editUser.id, body);
+      notify({ type: "success", message: t("end_users.updated", { defaultValue: "已保存" }) });
+      setEditUser(null);
+      setEditForm(emptyForm);
+      await load();
+    } catch (err) {
+      notify({ type: "error", message: err instanceof Error ? err.message : "failed" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const onDelete = async () => {
     if (!deleteUser) return;
     setBusy(true);
@@ -182,9 +242,9 @@ export function EndUsersPage() {
           <div className="flex flex-wrap items-start justify-between gap-3 px-5 pt-5 pb-3">
             <div>
               <h2 className="text-base font-semibold text-slate-950 dark:text-white">
-                {t("end_users.title", { defaultValue: "终端用户" })}
+                {t("end_users.title", { defaultValue: "用户账号" })}
               </h2>
-              <p className="text-sm text-slate-500">
+              <p className="mt-1 text-sm text-slate-500 dark:text-white/55">
                 {t("end_users.subtitle", {
                   defaultValue: "门户账号（与后台管理员隔离），每人可持有多把 API Key。",
                 })}
@@ -207,7 +267,7 @@ export function EndUsersPage() {
               rowHeight={60}
               height="h-full"
               minHeight="min-h-full"
-              emptyText={t("end_users.empty", { defaultValue: "暂无终端用户" })}
+              emptyText={t("end_users.empty", { defaultValue: "暂无用户账号" })}
               showAllLoadedMessage={false}
             />
           </div>
@@ -302,6 +362,71 @@ export function EndUsersPage() {
       </Modal>
 
       <Modal
+        open={Boolean(editUser)}
+        onClose={() => {
+          setEditUser(null);
+          setEditForm(emptyForm);
+        }}
+        title={t("end_users.edit", { defaultValue: "编辑用户账号" })}
+        maxWidth="max-w-xl"
+        footer={
+          <>
+            <Button
+              onClick={() => {
+                setEditUser(null);
+                setEditForm(emptyForm);
+              }}
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button
+              type="submit"
+              form="edit-end-user-form"
+              variant="primary"
+              disabled={busy || !editForm.displayName.trim() || !editForm.username.trim()}
+            >
+              {t("common.save", { defaultValue: "保存" })}
+            </Button>
+          </>
+        }
+      >
+        <form id="edit-end-user-form" className="space-y-3" onSubmit={onEdit}>
+          <label className="block space-y-1.5">
+            <span className="text-sm font-medium">
+              {t("end_users.display_name", { defaultValue: "昵称" })}
+            </span>
+            <TextInput
+              value={editForm.displayName}
+              onChange={(e) => setEditForm((f) => ({ ...f, displayName: e.target.value }))}
+              required
+            />
+          </label>
+          <label className="block space-y-1.5">
+            <span className="text-sm font-medium">
+              {t("end_users.username", { defaultValue: "用户名" })}
+            </span>
+            <TextInput
+              value={editForm.username}
+              onChange={(e) => setEditForm((f) => ({ ...f, username: e.target.value }))}
+              required
+            />
+          </label>
+          <label className="block space-y-1.5">
+            <span className="text-sm font-medium">
+              {t("end_users.password", { defaultValue: "新密码（可选）" })}
+            </span>
+            <TextInput
+              type="password"
+              value={editForm.password}
+              onChange={(e) => setEditForm((f) => ({ ...f, password: e.target.value }))}
+              placeholder={t("end_users.password_keep", { defaultValue: "留空则不改密码" })}
+              autoComplete="new-password"
+            />
+          </label>
+        </form>
+      </Modal>
+
+      <Modal
         open={Boolean(generatedReset)}
         onClose={() => setGeneratedReset("")}
         title="新密码（请立即复制）"
@@ -321,7 +446,7 @@ export function EndUsersPage() {
       <ConfirmModal
         open={Boolean(deleteUser)}
         onClose={() => setDeleteUser(null)}
-        title="删除终端用户"
+        title={t("end_users.delete_title", { defaultValue: "删除用户账号" })}
         description={`删除 ${deleteUser?.username ?? ""}？其 API Key 将被禁用并解除归属，且无法再用于调用。`}
         confirmText="删除"
         busy={busy}
