@@ -321,8 +321,11 @@ describe("useAuthFilesStatusState batch refresh", () => {
     );
   });
 
-  test("status GET 404 marks unsupported and never starts refresh", async () => {
+  test("status GET 404 marks unsupported; force refresh re-probes instead of sticky lock", async () => {
     mocks.getStatus.mockRejectedValue(new ApiError({ message: "missing", status: 404 }));
+    mocks.startStatusRefresh.mockRejectedValue(
+      new ApiError({ message: "missing", status: 404 }),
+    );
     const setFiles = vi.fn();
     const setDetailFile = vi.fn();
     const { result } = renderHook(() =>
@@ -339,7 +342,83 @@ describe("useAuthFilesStatusState batch refresh", () => {
     await act(async () => {
       await result.current.forceRefreshPage();
     });
-    expect(mocks.startStatusRefresh).not.toHaveBeenCalled();
+    // Manual force must re-probe; sticky unsupported must not skip the POST forever.
+    expect(mocks.startStatusRefresh).toHaveBeenCalled();
+    expect(result.current.statusApiSupported).toBe(false);
+    expect(mocks.notify).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "auth_files.status_batch_unsupported" }),
+    );
+  });
+
+  test("force refresh recovers after a transient unsupported mark", async () => {
+    mocks.getStatus.mockRejectedValueOnce(new ApiError({ message: "missing", status: 404 }));
+    mocks.getStatus.mockResolvedValue({
+      items: [
+        {
+          auth_index: "a1",
+          auth_subject_id: "sub-a",
+          quotas: [{ quota_key: "code_5h", quota_label: "m_quota.code_5h", percent: 11 }],
+        },
+        {
+          auth_index: "b1",
+          auth_subject_id: "sub-b",
+          quotas: [{ quota_key: "code_5h", quota_label: "m_quota.code_5h", percent: 22 }],
+        },
+      ],
+    });
+    mocks.startStatusRefresh.mockResolvedValue({
+      job_id: "job-recover",
+      accepted: 2,
+      deduplicated: 0,
+    });
+    mocks.getStatusRefreshJob.mockResolvedValue({
+      job_id: "job-recover",
+      state: "completed",
+      total: 2,
+      completed: 2,
+      failed: 0,
+      results: [
+        {
+          auth_index: "a1",
+          auth_subject_id: "sub-a",
+          state: "success",
+          result: {
+            auth_index: "a1",
+            auth_subject_id: "sub-a",
+            quotas: [{ quota_key: "code_5h", quota_label: "m_quota.code_5h", percent: 11 }],
+          },
+        },
+        {
+          auth_index: "b1",
+          auth_subject_id: "sub-b",
+          state: "success",
+          result: {
+            auth_index: "b1",
+            auth_subject_id: "sub-b",
+            quotas: [{ quota_key: "code_5h", quota_label: "m_quota.code_5h", percent: 22 }],
+          },
+        },
+      ],
+    });
+    const setFiles = vi.fn();
+    const setDetailFile = vi.fn();
+    const { result } = renderHook(() =>
+      useAuthFilesStatusState({
+        tab: "files",
+        pageItems: files,
+        loading: false,
+        setFiles,
+        setDetailFile,
+      }),
+    );
+
+    await waitFor(() => expect(result.current.statusApiSupported).toBe(false));
+    mocks.startStatusRefresh.mockClear();
+    await act(async () => {
+      await result.current.forceRefreshPage();
+    });
+    await waitFor(() => expect(result.current.statusApiSupported).toBe(true));
+    expect(mocks.startStatusRefresh).toHaveBeenCalled();
   });
 
   test("tenant switch aborts in-flight job so old result cannot paint 99%", async () => {
