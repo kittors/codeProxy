@@ -14,11 +14,14 @@ export const KpiCard = ({
   value,
   hint,
   icon: Icon,
+  valueClassName = "text-2xl",
 }: {
   title: string;
   value: ReactNode;
   hint: string;
   icon: ComponentType<{ size?: number; className?: string }>;
+  /** Optional size override when the value node does not carry its own text size. */
+  valueClassName?: string;
 }) => {
   const reduceMotion = useReducedMotion();
   const cardRef = useResizeLayoutAnimation<HTMLElement>(!reduceMotion);
@@ -26,16 +29,18 @@ export const KpiCard = ({
   return (
     <article
       ref={cardRef}
-      className="rounded-2xl border border-black/[0.06] bg-white p-5 shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] dark:border-white/[0.06] dark:bg-neutral-950/70 dark:shadow-[0_1px_2px_rgb(0_0_0_/_0.22)]"
+      className="flex h-full min-w-0 flex-col rounded-2xl border border-black/[0.06] bg-white p-5 shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] dark:border-white/[0.06] dark:bg-neutral-950/70 dark:shadow-[0_1px_2px_rgb(0_0_0_/_0.22)]"
     >
-      <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-white/55">
-        <Icon size={14} className="text-slate-900 dark:text-white" />
-        <span>{title}</span>
+      <p className="flex min-w-0 items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-white/55">
+        <Icon size={14} className="shrink-0 text-slate-900 dark:text-white" />
+        <span className="min-w-0 truncate">{title}</span>
       </p>
-      <p className="mt-3 text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">
+      <p
+        className={`mt-3 min-w-0 overflow-hidden font-semibold tracking-tight text-slate-900 dark:text-white ${valueClassName}`}
+      >
         {value}
       </p>
-      <p className="mt-2 text-xs text-slate-600 dark:text-white/65">{hint}</p>
+      <p className="mt-auto pt-2 text-xs text-slate-600 dark:text-white/65">{hint}</p>
     </article>
   );
 };

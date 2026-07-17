@@ -2,14 +2,11 @@ import type { ComponentType, ReactNode } from "react";
 import { Coins, Gauge, Hash, Wallet } from "lucide-react";
 import { KpiCard } from "@features/monitor-widgets";
 import type { PublicUsageLimits } from "../types";
-
-function formatUsd(value: number): string {
-  return `$${value.toFixed(4)}`;
-}
-
-function formatCount(value: number): string {
-  return Math.round(value).toLocaleString();
-}
+import {
+  formatQuotaCount,
+  formatQuotaUsd,
+  kpiValueSizeClass,
+} from "./kpiValueSize";
 
 export type QuotaKpiItem = {
   key: string;
@@ -33,7 +30,7 @@ export function buildQuotaKpiItems(
       title: t("apikey_lookup.quota_daily_requests"),
       used: limits["daily-used"] ?? 0,
       limit: limits["daily-limit"],
-      format: formatCount,
+      format: formatQuotaCount,
       icon: Hash,
     });
   }
@@ -43,7 +40,7 @@ export function buildQuotaKpiItems(
       title: t("apikey_lookup.quota_total_requests"),
       used: limits["total-used"] ?? 0,
       limit: limits["total-quota"],
-      format: formatCount,
+      format: formatQuotaCount,
       icon: Gauge,
     });
   }
@@ -56,7 +53,7 @@ export function buildQuotaKpiItems(
       title: t("apikey_lookup.quota_daily_spending"),
       used: limits["daily-spending-used"] ?? 0,
       limit: limits["daily-spending-limit"],
-      format: formatUsd,
+      format: formatQuotaUsd,
       icon: Wallet,
     });
   }
@@ -69,14 +66,14 @@ export function buildQuotaKpiItems(
       title: t("apikey_lookup.quota_total_spending"),
       used: limits["spending-used"] ?? 0,
       limit: limits["spending-limit"],
-      format: formatUsd,
+      format: formatQuotaUsd,
       icon: Coins,
     });
   }
   return items;
 }
 
-/** Renders configured quota limits as the same KPI cards used for usage stats. */
+/** Renders configured quota limits as fixed-width KPI cards. */
 export function QuotaLimitKpiCards({
   t,
   limits,
@@ -91,24 +88,35 @@ export function QuotaLimitKpiCards({
 
   return (
     <>
-      {items.map((item) => (
-        <div key={item.key} data-testid={`api-key-lookup-quota-${item.key}`}>
-          <KpiCard
-            title={item.title}
-            icon={item.icon}
-            hint={t("apikey_lookup.quota_used_of_limit")}
-            value={renderValue(
-              <span className="tabular-nums">
-                {item.format(item.used)}
-                <span className="mx-1 text-base font-normal text-slate-400 dark:text-white/40">
-                  /
-                </span>
-                {item.format(item.limit)}
-              </span>,
-            )}
-          />
-        </div>
-      ))}
+      {items.map((item) => {
+        const usedText = item.format(item.used);
+        const limitText = item.format(item.limit);
+        const display = `${usedText} / ${limitText}`;
+        const sizeClass = kpiValueSizeClass(display);
+        return (
+          <div
+            key={item.key}
+            className="min-w-0"
+            data-testid={`api-key-lookup-quota-${item.key}`}
+          >
+            <KpiCard
+              title={item.title}
+              icon={item.icon}
+              hint={t("apikey_lookup.quota_used_of_limit")}
+              valueClassName={sizeClass}
+              value={renderValue(
+                <span className="block whitespace-nowrap tabular-nums leading-tight">
+                  {usedText}
+                  <span className="mx-1 font-normal text-slate-400 dark:text-white/40">
+                    /
+                  </span>
+                  {limitText}
+                </span>,
+              )}
+            />
+          </div>
+        );
+      })}
     </>
   );
 }

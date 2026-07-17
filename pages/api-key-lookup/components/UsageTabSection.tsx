@@ -19,6 +19,7 @@ import type {
 } from "@features/monitor-widgets/chart-options/types";
 import type { PublicUsageLimits } from "../types";
 import { QuotaLimitKpiCards } from "./QuotaLimitsBanner";
+import { formatQuotaUsd, kpiValueSizeClass } from "./kpiValueSize";
 
 const DAILY_LEGEND_KEYS = {
   input: "daily_input",
@@ -277,67 +278,102 @@ export function UsageTabSection({
   return (
     <Reveal>
       <div className="space-y-5">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           <QuotaLimitKpiCards
             t={t}
             limits={quotaLimits}
             renderValue={renderKpiValue}
           />
-          <KpiCard
-            title={t("apikey_lookup.total_requests")}
-            icon={Activity}
-            hint={t("apikey_lookup.last_n_days", { days: timeRange })}
-            value={renderKpiValue(
-              <AnimatedNumber
-                value={chartStats?.total ?? 0}
-                format={formatInteger}
-              />,
-            )}
-          />
-          <KpiCard
-            title={t("common.success_rate")}
-            icon={ShieldCheck}
-            hint={t("apikey_lookup.last_n_days", { days: timeRange })}
-            value={renderKpiValue(
-              <AnimatedNumber
-                value={chartStats?.success_rate ?? 0}
-                format={(value) => `${value.toFixed(1)}%`}
-              />,
-            )}
-          />
-          <KpiCard
-            title={t("apikey_lookup.total_tokens")}
-            icon={Sigma}
-            hint={t("apikey_lookup.last_n_days", { days: timeRange })}
-            value={renderKpiValue(
-              <AnimatedNumber
-                value={chartStats?.total_tokens ?? 0}
-                format={formatInteger}
-              />,
-            )}
-          />
-          <KpiCard
-            title={t("apikey_lookup.total_sessions")}
-            icon={MessagesSquare}
-            hint={t("apikey_lookup.last_n_days", { days: timeRange })}
-            value={renderKpiValue(
-              <AnimatedNumber
-                value={chartStats?.total_sessions ?? 0}
-                format={formatInteger}
-              />,
-            )}
-          />
-          <KpiCard
-            title={t("apikey_lookup.total_cost")}
-            icon={Coins}
-            hint={t("apikey_lookup.last_n_days", { days: timeRange })}
-            value={renderKpiValue(
-              <AnimatedNumber
-                value={chartStats?.total_cost ?? 0}
-                format={(value) => `$${value.toFixed(4)}`}
-              />,
-            )}
-          />
+          <div className="min-w-0">
+            <KpiCard
+              title={t("apikey_lookup.total_requests")}
+              icon={Activity}
+              hint={t("apikey_lookup.last_n_days", { days: timeRange })}
+              valueClassName={kpiValueSizeClass(
+                formatInteger(chartStats?.total ?? 0),
+              )}
+              value={renderKpiValue(
+                <span className="block whitespace-nowrap tabular-nums">
+                  <AnimatedNumber
+                    value={chartStats?.total ?? 0}
+                    format={formatInteger}
+                  />
+                </span>,
+              )}
+            />
+          </div>
+          <div className="min-w-0">
+            <KpiCard
+              title={t("common.success_rate")}
+              icon={ShieldCheck}
+              hint={t("apikey_lookup.last_n_days", { days: timeRange })}
+              valueClassName={kpiValueSizeClass(
+                `${(chartStats?.success_rate ?? 0).toFixed(1)}%`,
+              )}
+              value={renderKpiValue(
+                <span className="block whitespace-nowrap tabular-nums">
+                  <AnimatedNumber
+                    value={chartStats?.success_rate ?? 0}
+                    format={(value) => `${value.toFixed(1)}%`}
+                  />
+                </span>,
+              )}
+            />
+          </div>
+          <div className="min-w-0">
+            <KpiCard
+              title={t("apikey_lookup.total_tokens")}
+              icon={Sigma}
+              hint={t("apikey_lookup.last_n_days", { days: timeRange })}
+              valueClassName={kpiValueSizeClass(
+                formatInteger(chartStats?.total_tokens ?? 0),
+              )}
+              value={renderKpiValue(
+                <span className="block whitespace-nowrap tabular-nums">
+                  <AnimatedNumber
+                    value={chartStats?.total_tokens ?? 0}
+                    format={formatInteger}
+                  />
+                </span>,
+              )}
+            />
+          </div>
+          <div className="min-w-0">
+            <KpiCard
+              title={t("apikey_lookup.total_sessions")}
+              icon={MessagesSquare}
+              hint={t("apikey_lookup.last_n_days", { days: timeRange })}
+              valueClassName={kpiValueSizeClass(
+                formatInteger(chartStats?.total_sessions ?? 0),
+              )}
+              value={renderKpiValue(
+                <span className="block whitespace-nowrap tabular-nums">
+                  <AnimatedNumber
+                    value={chartStats?.total_sessions ?? 0}
+                    format={formatInteger}
+                  />
+                </span>,
+              )}
+            />
+          </div>
+          <div className="min-w-0">
+            <KpiCard
+              title={t("apikey_lookup.total_cost")}
+              icon={Coins}
+              hint={t("apikey_lookup.last_n_days", { days: timeRange })}
+              valueClassName={kpiValueSizeClass(
+                formatQuotaUsd(chartStats?.total_cost ?? 0),
+              )}
+              value={renderKpiValue(
+                <span className="block whitespace-nowrap tabular-nums">
+                  <AnimatedNumber
+                    value={chartStats?.total_cost ?? 0}
+                    format={formatQuotaUsd}
+                  />
+                </span>,
+              )}
+            />
+          </div>
         </div>
 
         <Card

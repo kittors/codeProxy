@@ -104,32 +104,24 @@ export const formatApiKeyLimit = (limit: number | undefined) => {
   return limit.toLocaleString();
 };
 
+const usdFormatter = new Intl.NumberFormat("en-US", {
+  currency: "USD",
+  maximumFractionDigits: 2,
+  minimumFractionDigits: 2,
+  style: "currency",
+});
+
 export const formatApiKeySpendingLimit = (limit: number | undefined) => {
   if (!limit || limit <= 0 || !Number.isFinite(limit)) return null;
-  return new Intl.NumberFormat("en-US", {
-    currency: "USD",
-    maximumFractionDigits: 4,
-    minimumFractionDigits: 2,
-    style: "currency",
-  }).format(limit);
+  return usdFormatter.format(limit);
 };
 
 /** Format a USD amount for display, including $0.00. */
 export const formatApiKeySpendingAmount = (amount: number | undefined | null) => {
   if (amount == null || !Number.isFinite(amount)) {
-    return new Intl.NumberFormat("en-US", {
-      currency: "USD",
-      maximumFractionDigits: 4,
-      minimumFractionDigits: 2,
-      style: "currency",
-    }).format(0);
+    return usdFormatter.format(0);
   }
-  return new Intl.NumberFormat("en-US", {
-    currency: "USD",
-    maximumFractionDigits: 4,
-    minimumFractionDigits: 2,
-    style: "currency",
-  }).format(Math.max(amount, 0));
+  return usdFormatter.format(Math.max(amount, 0));
 };
 
 export const normalizeChannelKey = (value: string) => value.trim().toLowerCase();

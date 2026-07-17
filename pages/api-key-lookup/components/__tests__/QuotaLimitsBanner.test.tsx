@@ -45,7 +45,7 @@ describe("QuotaLimitKpiCards", () => {
     expect(screen.getByText("Daily spending")).toBeInTheDocument();
     expect(screen.getByText("Total spending")).toBeInTheDocument();
     expect(screen.getByText(/12/)).toBeInTheDocument();
-    expect(screen.getByText(/\$1\.2500/)).toBeInTheDocument();
+    expect(screen.getByText(/\$1\.25/)).toBeInTheDocument();
   });
 
   test("hides unset limits", () => {

@@ -61,7 +61,8 @@ const limitFromText = (value: string) => {
 };
 
 const spendingLimitFromText = (value: string) => {
-  const parsed = Number.parseFloat(value.trim());
+  // Spending limits are whole USD dollars only.
+  const parsed = Number.parseInt(value.trim(), 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 };
 
@@ -69,7 +70,7 @@ const formatSpendingLimit = (value: number, unlimited: string) =>
   value > 0
     ? new Intl.NumberFormat("en-US", {
         currency: "USD",
-        maximumFractionDigits: 4,
+        maximumFractionDigits: 2,
         minimumFractionDigits: 2,
         style: "currency",
       }).format(value)
@@ -494,7 +495,7 @@ export function ApiKeyPermissionsPage() {
               [
                 ["dailyLimit", "form_daily_limit", "1"],
                 ["totalQuota", "form_total_quota", "1"],
-                ["dailySpendingLimit", "form_daily_spending_limit", "0.01"],
+                ["dailySpendingLimit", "form_daily_spending_limit", "1"],
                 ["concurrencyLimit", "form_concurrency_limit", "1"],
                 ["rpmLimit", "form_rpm_limit", "1"],
                 ["tpmLimit", "form_tpm_limit", "1"],
@@ -508,10 +509,17 @@ export function ApiKeyPermissionsPage() {
                   type="number"
                   min={0}
                   step={step}
+                  inputMode="numeric"
                   value={draft[key]}
                   aria-label={t(`api_key_permissions_page.${labelKey}`)}
                   placeholder={t("api_key_permissions_page.form_unlimited_hint")}
-                  onChange={(event) => setDraft((prev) => ({ ...prev, [key]: event.target.value }))}
+                  onChange={(event) => {
+                    const raw = event.target.value;
+                    // Keep empty for unlimited; otherwise only whole numbers.
+                    if (raw === "" || /^\d+$/.test(raw)) {
+                      setDraft((prev) => ({ ...prev, [key]: raw }));
+                    }
+                  }}
                 />
               </div>
             ))}
