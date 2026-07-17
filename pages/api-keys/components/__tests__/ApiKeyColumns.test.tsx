@@ -115,6 +115,47 @@ describe("ApiKeyColumns", () => {
     expect(keyColumn?.width).toBe("w-[320px] min-w-[320px]");
   });
 
+  test("centers metric columns and keeps wider min widths for Chinese headers", () => {
+    const columns = createColumns();
+    const centeredKeys = [
+      "select",
+      "dailySpending",
+      "dailySpendingResetCount",
+      "dailyLimit",
+      "totalQuota",
+      "spendingLimit",
+      "rpmLimit",
+      "tpmLimit",
+      "createdAt",
+      "actions",
+    ];
+
+    for (const key of centeredKeys) {
+      const column = columns.find((item) => item.key === key);
+      expect(column?.headerClassName).toContain("text-center");
+      expect(column?.cellClassName).toContain("text-center");
+    }
+
+    expect(columns.find((column) => column.key === "dailySpending")?.width).toBe(
+      "w-[196px] min-w-[196px]",
+    );
+    expect(columns.find((column) => column.key === "dailySpendingResetCount")?.width).toBe(
+      "w-[120px] min-w-[120px]",
+    );
+    expect(columns.find((column) => column.key === "dailyLimit")?.width).toBe(
+      "w-[140px] min-w-[140px]",
+    );
+    expect(columns.find((column) => column.key === "rpmLimit")?.width).toBe(
+      "w-[124px] min-w-[124px]",
+    );
+    expect(columns.find((column) => column.key === "name")?.headerClassName).not.toContain(
+      "text-center",
+    );
+    expect(columns.find((column) => column.key === "key")?.cellClassName).not.toContain(
+      "text-center",
+    );
+  });
+
   test("truncates API key text inside an intact rounded badge", () => {
     const row: ApiKeyEntry = {
       key: "sk-abcdefghijklmnopqrstuvwxyz0123456789",

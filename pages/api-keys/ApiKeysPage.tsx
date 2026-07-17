@@ -698,7 +698,7 @@ export function ApiKeysPage() {
               rowHeight={44}
               height="h-[calc(100dvh-260px)] md:h-auto md:flex-1"
               minHeight="min-h-[320px] md:min-h-0"
-              minWidth="min-w-[2314px]"
+              minWidth="min-w-[2400px]"
               caption={t("api_keys_page.table_caption")}
               emptyText={t("api_keys_page.no_api_keys")}
               showAllLoadedMessage={false}
