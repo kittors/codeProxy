@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Key, LogOut, Search, KeyRound } from "lucide-react";
+import { Key, LogOut, KeyRound } from "lucide-react";
 import { portalApi, type EndUser, type EndUserAPIKey } from "@code-proxy/api-client";
 import { useTheme } from "@code-proxy/ui";
 import { ThemeToggleButton } from "@code-proxy/ui";
@@ -1184,94 +1184,62 @@ export function ApiKeyLookupPage() {
 
       <Modal
         open={loginModalOpen}
-        title={t("apikey_lookup.login_title", { defaultValue: "登录 / 查询" })}
+        title={t("apikey_lookup.login_title", { defaultValue: "账号登录" })}
         description={t("apikey_lookup.login_desc", {
-          defaultValue: "使用账号密码管理自己的 Key，或粘贴 API Key 直接查询。",
+          defaultValue: "使用账号密码登录，查看用量、请求日志和可用模型。",
         })}
-        maxWidth="max-w-lg"
+        maxWidth="max-w-md"
         onClose={closeLoginModal}
       >
-        <div className="space-y-5">
-          <form
-            className="space-y-3 rounded-2xl border border-slate-200/80 bg-slate-50/70 p-4 dark:border-neutral-800 dark:bg-neutral-900/50"
-            onSubmit={(e) => {
-              e.preventDefault();
-              void handlePortalLogin();
-            }}
-          >
-            <div className="text-sm font-semibold text-slate-800 dark:text-white">
-              {t("apikey_lookup.account_login", { defaultValue: "账号登录" })}
-            </div>
-            <label className="block space-y-1.5">
-              <span className="text-sm font-medium">
-                {t("apikey_lookup.username", { defaultValue: "账号" })}
-              </span>
-              <TextInput
-                value={loginUsername}
-                onChange={(e) => setLoginUsername(e.target.value)}
-                autoComplete="username"
-              />
-            </label>
-            <label className="block space-y-1.5">
-              <span className="text-sm font-medium">
-                {t("apikey_lookup.password", { defaultValue: "密码" })}
-              </span>
-              <TextInput
-                type="password"
-                value={loginPassword}
-                onChange={(e) => setLoginPassword(e.target.value)}
-                autoComplete="current-password"
-              />
-            </label>
-            {loginError ? (
-              <p className="text-sm text-rose-600 dark:text-rose-300">{loginError}</p>
-            ) : null}
-            <Button
-              type="submit"
-              variant="primary"
-              className="w-full"
-              disabled={loginBusy || !loginUsername.trim() || !loginPassword}
-            >
-              {loginBusy
-                ? t("common.loading", { defaultValue: "登录中…" })
-                : t("common.login", { defaultValue: "登录" })}
-            </Button>
-          </form>
-
-          <div className="relative text-center text-xs text-slate-400">
-            <span className="bg-white px-2 dark:bg-neutral-950">
-              {t("apikey_lookup.or_paste_key", { defaultValue: "或粘贴 API Key 查询" })}
+        <form
+          className="space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void handlePortalLogin();
+          }}
+        >
+          <label className="block space-y-1.5">
+            <span className="text-sm font-medium text-slate-700 dark:text-white/80">
+              {t("apikey_lookup.username", { defaultValue: "账号" })}
             </span>
-          </div>
-
-          <form id="apikey-login-form" onSubmit={handleSubmit} className="space-y-2">
-            <label
-              htmlFor="apikey-login-input"
-              className="block text-sm font-medium text-slate-700 dark:text-white/80"
-            >
-              {t("apikey_lookup.api_key_label")}
-            </label>
+            <TextInput
+              value={loginUsername}
+              onChange={(e) => setLoginUsername(e.target.value)}
+              autoComplete="username"
+              autoFocus
+              placeholder={t("apikey_lookup.username_placeholder", {
+                defaultValue: "请输入账号",
+              })}
+            />
+          </label>
+          <label className="block space-y-1.5">
+            <span className="text-sm font-medium text-slate-700 dark:text-white/80">
+              {t("apikey_lookup.password", { defaultValue: "密码" })}
+            </span>
             <TextInput
               type="password"
-              id="apikey-login-input"
-              value={apiKeyInput}
-              onChange={(e) => handleApiKeyInputChange(e.target.value)}
-              placeholder={t("apikey_lookup.placeholder")}
-              autoComplete="off"
-              spellCheck={false}
-              startAdornment={<Search size={16} className="text-slate-400 dark:text-white/40" />}
+              value={loginPassword}
+              onChange={(e) => setLoginPassword(e.target.value)}
+              autoComplete="current-password"
+              placeholder={t("apikey_lookup.password_placeholder", {
+                defaultValue: "请输入密码",
+              })}
             />
-            {error ? <p className="text-sm text-rose-600 dark:text-rose-300">{error}</p> : null}
-            <Button
-              variant="secondary"
-              type="submit"
-              className="w-full"
-              disabled={!apiKeyInput.trim() || loading}
-            >
-              {t("apikey_lookup.query_with_key", { defaultValue: "用 Key 查询" })}
-            </Button>
-          </form>
-        </div>
+          </label>
+          {loginError ? (
+            <p className="text-sm text-rose-600 dark:text-rose-300">{loginError}</p>
+          ) : null}
+          <Button
+            type="submit"
+            variant="primary"
+            className="w-full"
+            disabled={loginBusy || !loginUsername.trim() || !loginPassword}
+          >
+            {loginBusy
+              ? t("common.loading", { defaultValue: "登录中…" })
+              : t("common.login", { defaultValue: "登录" })}
+          </Button>
+        </form>
       </Modal>
 
       <Modal

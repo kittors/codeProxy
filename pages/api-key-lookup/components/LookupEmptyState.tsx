@@ -1,4 +1,4 @@
-import { Search } from "lucide-react";
+import { LogIn } from "lucide-react";
 import { EmptyState } from "@code-proxy/ui";
 
 export function LookupEmptyState({
@@ -11,7 +11,7 @@ export function LookupEmptyState({
       <EmptyState
         title={t("apikey_lookup.empty_title")}
         description={t("apikey_lookup.empty_desc")}
-        icon={<Search size={20} strokeWidth={1.5} aria-hidden />}
+        icon={<LogIn size={20} strokeWidth={1.5} aria-hidden />}
       />
     </section>
   );

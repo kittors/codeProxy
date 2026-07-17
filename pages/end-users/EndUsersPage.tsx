@@ -182,9 +182,9 @@ export function EndUsersPage() {
           <div className="flex flex-wrap items-start justify-between gap-3 px-5 pt-5 pb-3">
             <div>
               <h2 className="text-base font-semibold text-slate-950 dark:text-white">
-                {t("end_users.title", { defaultValue: "终端用户" })}
+                {t("end_users.title", { defaultValue: "用户账号" })}
               </h2>
-              <p className="text-sm text-slate-500">
+              <p className="mt-1 text-sm text-slate-500 dark:text-white/55">
                 {t("end_users.subtitle", {
                   defaultValue: "门户账号（与后台管理员隔离），每人可持有多把 API Key。",
                 })}
@@ -207,7 +207,7 @@ export function EndUsersPage() {
               rowHeight={60}
               height="h-full"
               minHeight="min-h-full"
-              emptyText={t("end_users.empty", { defaultValue: "暂无终端用户" })}
+              emptyText={t("end_users.empty", { defaultValue: "暂无用户账号" })}
               showAllLoadedMessage={false}
             />
           </div>
@@ -321,7 +321,7 @@ export function EndUsersPage() {
       <ConfirmModal
         open={Boolean(deleteUser)}
         onClose={() => setDeleteUser(null)}
-        title="删除终端用户"
+        title={t("end_users.delete_title", { defaultValue: "删除用户账号" })}
         description={`删除 ${deleteUser?.username ?? ""}？其 API Key 将被禁用并解除归属，且无法再用于调用。`}
         confirmText="删除"
         busy={busy}
