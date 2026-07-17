@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Key, LogOut, KeyRound } from "lucide-react";
+import { Eye, EyeOff, Key, KeyRound, LogOut, UserRound } from "lucide-react";
 import { portalApi, type EndUser, type EndUserAPIKey } from "@code-proxy/api-client";
 import { useTheme } from "@code-proxy/ui";
 import { ThemeToggleButton } from "@code-proxy/ui";
@@ -764,6 +764,7 @@ export function ApiKeyLookupPage() {
   const [loginPassword, setLoginPassword] = useState("");
   const [loginError, setLoginError] = useState<string | null>(null);
   const [loginBusy, setLoginBusy] = useState(false);
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const [manageKeysOpen, setManageKeysOpen] = useState(false);
   const [pwdForm, setPwdForm] = useState({ current: "", next: "" });
@@ -1155,61 +1156,97 @@ export function ApiKeyLookupPage() {
       <Modal
         open={loginModalOpen}
         title={t("apikey_lookup.login_title", { defaultValue: "账号登录" })}
-        description={t("apikey_lookup.login_desc", {
-          defaultValue: "使用账号密码登录，查看用量、请求日志和可用模型。",
-        })}
+        hideHeader
         maxWidth="max-w-md"
+        panelClassName="rounded-3xl border-white/70 bg-white/95 shadow-xl shadow-slate-300/25 backdrop-blur-xl dark:border-white/10 dark:bg-neutral-950/90 dark:shadow-black/25"
+        bodyClassName="!px-7 !py-8 sm:!px-9 sm:!py-9"
+        bodyHeightClassName="max-h-none"
+        bodyOverflowClassName="overflow-visible"
         onClose={closeLoginModal}
       >
-        <form
-          className="space-y-4"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void handlePortalLogin();
-          }}
-        >
-          <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-slate-700 dark:text-white/80">
-              {t("apikey_lookup.username", { defaultValue: "账号" })}
-            </span>
-            <TextInput
-              value={loginUsername}
-              onChange={(e) => setLoginUsername(e.target.value)}
-              autoComplete="username"
-              autoFocus
-              placeholder={t("apikey_lookup.username_placeholder", {
-                defaultValue: "请输入账号",
+        <div className="space-y-8">
+          <div className="space-y-2 pr-8">
+            <div className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-900 shadow-sm dark:bg-white">
+              <KeyRound size={18} className="text-white dark:text-neutral-950" />
+            </div>
+            <h2 className="text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">
+              {t("apikey_lookup.login_title", { defaultValue: "账号登录" })}
+            </h2>
+            <p className="text-sm text-slate-500 dark:text-white/55">
+              {t("apikey_lookup.login_desc", {
+                defaultValue: "使用账号密码登录，查看用量、请求日志和可用模型。",
               })}
-            />
-          </label>
-          <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-slate-700 dark:text-white/80">
-              {t("apikey_lookup.password", { defaultValue: "密码" })}
-            </span>
-            <TextInput
-              type="password"
-              value={loginPassword}
-              onChange={(e) => setLoginPassword(e.target.value)}
-              autoComplete="current-password"
-              placeholder={t("apikey_lookup.password_placeholder", {
-                defaultValue: "请输入密码",
-              })}
-            />
-          </label>
-          {loginError ? (
-            <p className="text-sm text-rose-600 dark:text-rose-300">{loginError}</p>
-          ) : null}
-          <Button
-            type="submit"
-            variant="primary"
-            className="w-full"
-            disabled={loginBusy || !loginUsername.trim() || !loginPassword}
+            </p>
+          </div>
+          <form
+            className="space-y-5"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void handlePortalLogin();
+            }}
           >
-            {loginBusy
-              ? t("common.loading", { defaultValue: "登录中…" })
-              : t("common.login", { defaultValue: "登录" })}
-          </Button>
-        </form>
+            <label className="block space-y-2">
+              <span className="text-xs font-medium text-slate-600 dark:text-white/60">
+                {t("apikey_lookup.username", { defaultValue: "账号" })}
+              </span>
+              <TextInput
+                value={loginUsername}
+                onChange={(e) => setLoginUsername(e.target.value)}
+                autoComplete="username"
+                autoFocus
+                className="rounded-full px-5"
+                placeholder={t("apikey_lookup.username_placeholder", {
+                  defaultValue: "请输入账号",
+                })}
+                startAdornment={<UserRound size={17} />}
+              />
+            </label>
+            <label className="block space-y-2">
+              <span className="text-xs font-medium text-slate-600 dark:text-white/60">
+                {t("apikey_lookup.password", { defaultValue: "密码" })}
+              </span>
+              <TextInput
+                type={showLoginPassword ? "text" : "password"}
+                value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)}
+                autoComplete="current-password"
+                className="rounded-full px-5"
+                placeholder={t("apikey_lookup.password_placeholder", {
+                  defaultValue: "请输入密码",
+                })}
+                startAdornment={<KeyRound size={17} />}
+                endAdornment={
+                  <button
+                    type="button"
+                    onClick={() => setShowLoginPassword((value) => !value)}
+                    className="rounded-full p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-white/10"
+                    aria-label={
+                      showLoginPassword
+                        ? t("login.hide_key", { defaultValue: "隐藏密码" })
+                        : t("login.show_key", { defaultValue: "显示密码" })
+                    }
+                  >
+                    {showLoginPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                }
+              />
+            </label>
+            {loginError ? (
+              <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-300">
+                {loginError}
+              </div>
+            ) : null}
+            <button
+              type="submit"
+              disabled={loginBusy || !loginUsername.trim() || !loginPassword}
+              className="w-full rounded-full bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-70 dark:bg-white/10 dark:hover:bg-white/15"
+            >
+              {loginBusy
+                ? t("common.loading", { defaultValue: "登录中…" })
+                : t("common.login", { defaultValue: "登录" })}
+            </button>
+          </form>
+        </div>
       </Modal>
 
       <Modal
