@@ -48,6 +48,8 @@ const VENDOR_ICONS: Record<string, { light: string; dark: string }> = {
   o3: { light: iconOpenaiLight, dark: iconOpenaiDark },
   o4: { light: iconOpenaiLight, dark: iconOpenaiDark },
   opencode: { light: iconOpencodeLight, dark: iconOpencodeDark },
+  "opencode-go": { light: iconOpencodeLight, dark: iconOpencodeDark },
+  "opencode_go": { light: iconOpencodeLight, dark: iconOpencodeDark },
   openai: { light: iconOpenaiLight, dark: iconOpenaiDark },
   qwen: { light: iconQwen, dark: iconQwen },
   vertex: { light: iconVertex, dark: iconVertex },
