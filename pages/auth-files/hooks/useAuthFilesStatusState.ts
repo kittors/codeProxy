@@ -67,7 +67,10 @@ export function isFatalQuotaRefreshError(error: unknown): boolean {
   );
 }
 
-/** Only initial status GET / start POST 404 marks API unsupported — not job poll 404. */
+/**
+ * Only status GET / start POST 404|405|501 mark API unsupported — not job poll 404.
+ * Transient network/proxy blips can also surface as those codes; force refresh re-probes.
+ */
 export function isStatusApiUnsupportedError(error: unknown): boolean {
   if (!isApiClientError(error)) return false;
   return error.status === 404 || error.status === 405 || error.status === 501;
@@ -704,15 +707,15 @@ export function useAuthFilesStatusState({
       options?: { force?: boolean; showLoading?: boolean; kind?: "page" | "single" },
     ): Promise<void> => {
       if (!targetFiles.length) return;
-      if (!statusApiSupported) {
-        notify({
-          type: "error",
-          message: t("auth_files.status_batch_unsupported"),
-        });
+
+      const kind = options?.kind ?? (targetFiles.length > 1 ? "page" : "single");
+      const force = options?.force ?? true;
+      // Auto paths skip while unsupported. Manual/force re-probes so a transient 404
+      // cannot lock the page until full reload.
+      if (!statusApiSupported && !force) {
         return;
       }
 
-      const kind = options?.kind ?? (targetFiles.length > 1 ? "page" : "single");
       const withAuth = targetFiles
         .map((file) => ({ file, authIndex: resolveFileAuthIndex(file) }))
         .filter((entry): entry is { file: AuthFileItem; authIndex: string } =>
@@ -757,11 +760,13 @@ export function useAuthFilesStatusState({
 
       try {
         const accepted = await aiAccountsStatusApi.startStatusRefresh(
-          { auth_indexes: authIndexes, force: options?.force ?? true },
+          { auth_indexes: authIndexes, force },
           { signal: controller.signal },
         );
         if (controller.signal.aborted || !mountedRef.current) return;
         if (tenantIdRef.current !== tenantId) return;
+        // Probe succeeded — clear sticky unsupported from an earlier false 404.
+        setStatusApiSupported(true);
         batch.jobId = accepted.job_id;
 
         const pollResult = await pollJobUntilDone(
