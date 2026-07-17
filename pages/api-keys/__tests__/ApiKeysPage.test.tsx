@@ -442,6 +442,7 @@ describe("ApiKeysPage", () => {
         name: "Standard",
         "daily-limit": 15000,
         "total-quota": 0,
+        "daily-spending-limit": 150,
         "concurrency-limit": 0,
         "rpm-limit": 0,
         "tpm-limit": 0,
@@ -473,6 +474,7 @@ describe("ApiKeysPage", () => {
 
     expect(screen.queryByText(/Daily request limit/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/System prompt/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("spinbutton", { name: /daily spending limit/i })).toBeNull();
 
     await userEvent.click(screen.getByRole("button", { name: /^Create$/i }));
 
@@ -487,6 +489,7 @@ describe("ApiKeysPage", () => {
         "permission-profile-id": "standard",
         "daily-limit": 15000,
         "total-quota": 0,
+        "daily-spending-limit": 150,
         "concurrency-limit": 0,
         "rpm-limit": 0,
         "tpm-limit": 0,
@@ -1033,88 +1036,6 @@ describe("ApiKeysPage", () => {
     expect(screen.queryByRole("button", { name: /deepseek\+gpt/i })).toBeNull();
     expect(screen.queryByRole("button", { name: /chatgpt-pro/i })).toBeNull();
     expect(screen.getByRole("button", { name: /kimi\+deepseek/i })).toBeInTheDocument();
-  });
-
-  test("saves key-owned daily spending limit on create", async () => {
-    state.permissionProfiles = [
-      {
-        id: "standard",
-        name: "Standard",
-        "daily-limit": 0,
-        "total-quota": 0,
-        "concurrency-limit": 0,
-        "rpm-limit": 0,
-        "tpm-limit": 0,
-        "allowed-channel-groups": [],
-        "allowed-channels": [],
-        "allowed-models": [],
-        "system-prompt": "",
-      },
-    ];
-
-    render(
-      <MemoryRouter>
-        <ThemeProvider>
-          <ToastProvider>
-            <ApiKeysPage />
-          </ToastProvider>
-        </ThemeProvider>
-      </MemoryRouter>,
-    );
-
-    await userEvent.click(await screen.findByRole("button", { name: /create key/i }));
-    await userEvent.type(screen.getByPlaceholderText(/team-a/i), "Spend Key");
-    const dailyInput = screen.getByRole("spinbutton", { name: /daily spending limit/i });
-    await userEvent.clear(dailyInput);
-    await userEvent.type(dailyInput, "100.5");
-    await userEvent.click(screen.getByRole("button", { name: /^create$/i }));
-
-    await waitFor(() => {
-      expect(mocks.apiKeyEntriesReplace).toHaveBeenCalled();
-    });
-    const created = mocks.apiKeyEntriesReplace.mock.calls.at(-1)?.[0] as any[];
-    expect(created?.at(-1)?.["daily-spending-limit"]).toBe(100.5);
-  });
-
-  test("saves key-owned daily spending limit on edit", async () => {
-    state.entries = [
-      {
-        id: "id-1",
-        key: "sk-spend-1",
-        name: "Spend Key",
-        "daily-spending-limit": 100.5,
-        "daily-spending-used": 20,
-        "daily-spending-remaining": 80.5,
-        "created-at": "2026-04-14T00:00:00.000Z",
-      },
-    ];
-
-    render(
-      <MemoryRouter>
-        <ThemeProvider>
-          <ToastProvider>
-            <ApiKeysPage />
-          </ToastProvider>
-        </ThemeProvider>
-      </MemoryRouter>,
-    );
-
-    expect(await screen.findByText("Spend Key")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Edit" }));
-    const editDaily = await screen.findByRole("spinbutton", { name: /daily spending limit/i });
-    await userEvent.clear(editDaily);
-    await userEvent.type(editDaily, "50");
-    await userEvent.click(screen.getByRole("button", { name: /save/i }));
-    await waitFor(() => {
-      expect(mocks.apiKeyEntriesUpdate).toHaveBeenCalled();
-    });
-    expect(mocks.apiKeyEntriesUpdate).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        value: expect.objectContaining({
-          "daily-spending-limit": 50,
-        }),
-      }),
-    );
   });
 
   test("resets today spending and refreshes the list", async () => {

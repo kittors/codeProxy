@@ -26,6 +26,7 @@ type ProfileDraft = {
   name: string;
   dailyLimit: string;
   totalQuota: string;
+  dailySpendingLimit: string;
   concurrencyLimit: string;
   rpmLimit: string;
   tpmLimit: string;
@@ -41,6 +42,7 @@ const emptyDraft = (): ProfileDraft => ({
   name: "",
   dailyLimit: "",
   totalQuota: "",
+  dailySpendingLimit: "",
   concurrencyLimit: "",
   rpmLimit: "",
   tpmLimit: "",
@@ -58,11 +60,27 @@ const limitFromText = (value: string) => {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 };
 
+const spendingLimitFromText = (value: string) => {
+  const parsed = Number.parseFloat(value.trim());
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+};
+
+const formatSpendingLimit = (value: number, unlimited: string) =>
+  value > 0
+    ? new Intl.NumberFormat("en-US", {
+        currency: "USD",
+        maximumFractionDigits: 4,
+        minimumFractionDigits: 2,
+        style: "currency",
+      }).format(value)
+    : unlimited;
+
 const readDraft = (profile: ApiKeyPermissionProfile): ProfileDraft => ({
   id: profile.id,
   name: profile.name,
   dailyLimit: limitToText(profile["daily-limit"]),
   totalQuota: limitToText(profile["total-quota"]),
+  dailySpendingLimit: limitToText(profile["daily-spending-limit"]),
   concurrencyLimit: limitToText(profile["concurrency-limit"]),
   rpmLimit: limitToText(profile["rpm-limit"]),
   tpmLimit: limitToText(profile["tpm-limit"]),
@@ -78,6 +96,7 @@ const draftToProfile = (draft: ProfileDraft): ApiKeyPermissionProfile => ({
   name: draft.name.trim(),
   "daily-limit": limitFromText(draft.dailyLimit),
   "total-quota": limitFromText(draft.totalQuota),
+  "daily-spending-limit": spendingLimitFromText(draft.dailySpendingLimit),
   "concurrency-limit": limitFromText(draft.concurrencyLimit),
   "rpm-limit": limitFromText(draft.rpmLimit),
   "tpm-limit": limitFromText(draft.tpmLimit),
@@ -295,6 +314,14 @@ export function ApiKeyPermissionsPage() {
               })}
             </div>
             <div>
+              {t("api_key_permissions_page.limit_daily_spending", {
+                value: formatSpendingLimit(
+                  profile["daily-spending-limit"],
+                  t("api_keys_page.unlimited"),
+                ),
+              })}
+            </div>
+            <div>
               {t("api_key_permissions_page.limit_rpm_tpm", {
                 rpm: formatLimit(profile["rpm-limit"], t("api_keys_page.unlimited")),
                 tpm: formatLimit(profile["tpm-limit"], t("api_keys_page.unlimited")),
@@ -463,13 +490,16 @@ export function ApiKeyPermissionsPage() {
           </div>
 
           <div className="grid gap-4 lg:grid-cols-3">
-            {[
-              ["dailyLimit", "form_daily_limit"],
-              ["totalQuota", "form_total_quota"],
-              ["concurrencyLimit", "form_concurrency_limit"],
-              ["rpmLimit", "form_rpm_limit"],
-              ["tpmLimit", "form_tpm_limit"],
-            ].map(([key, labelKey]) => (
+            {(
+              [
+                ["dailyLimit", "form_daily_limit", "1"],
+                ["totalQuota", "form_total_quota", "1"],
+                ["dailySpendingLimit", "form_daily_spending_limit", "0.01"],
+                ["concurrencyLimit", "form_concurrency_limit", "1"],
+                ["rpmLimit", "form_rpm_limit", "1"],
+                ["tpmLimit", "form_tpm_limit", "1"],
+              ] as const
+            ).map(([key, labelKey, step]) => (
               <div key={key}>
                 <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
                   {t(`api_key_permissions_page.${labelKey}`)}
@@ -477,7 +507,8 @@ export function ApiKeyPermissionsPage() {
                 <TextInput
                   type="number"
                   min={0}
-                  value={draft[key as keyof ProfileDraft] as string}
+                  step={step}
+                  value={draft[key]}
                   aria-label={t(`api_key_permissions_page.${labelKey}`)}
                   placeholder={t("api_key_permissions_page.form_unlimited_hint")}
                   onChange={(event) => setDraft((prev) => ({ ...prev, [key]: event.target.value }))}

@@ -62,6 +62,7 @@ describe("apiKeyPermissionProfilesApi", () => {
         name: "Standard",
         "daily-limit": 15000,
         "total-quota": 0,
+        "daily-spending-limit": 100.5,
         "concurrency-limit": 0,
         "rpm-limit": 0,
         "tpm-limit": 0,
@@ -77,6 +78,7 @@ describe("apiKeyPermissionProfilesApi", () => {
         id: "standard",
         name: "Standard",
         "daily-limit": 15000,
+        "daily-spending-limit": 100.5,
         "allowed-channel-groups": ["pro"],
       }),
     ]);
@@ -90,6 +92,7 @@ describe("apiKeyPermissionProfilesApi", () => {
         name: "Unrestricted",
         "daily-limit": 0,
         "total-quota": 0,
+        "daily-spending-limit": 0,
         "concurrency-limit": 0,
         "rpm-limit": 0,
         "tpm-limit": 0,

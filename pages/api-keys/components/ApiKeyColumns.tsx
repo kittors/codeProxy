@@ -166,53 +166,40 @@ export const createApiKeyColumns = ({
     ),
   },
   {
-    key: "dailySpendingUsed",
-    label: t("api_keys_page.col_daily_spending_used"),
-    width: "w-[140px] min-w-[140px]",
+    key: "dailySpending",
+    label: t("api_keys_page.col_daily_spending"),
+    width: "w-[180px] min-w-[180px]",
     cellClassName: "whitespace-nowrap text-slate-700 dark:text-white/70",
     headerRender: () => (
       <HoverTooltip
-        content={t("api_keys_page.daily_spending_used_help")}
+        content={t("api_keys_page.daily_spending_help")}
         className="inline-flex items-center gap-1"
       >
-        <span>{t("api_keys_page.col_daily_spending_used")}</span>
-        <Info size={12} className="text-slate-400 dark:text-white/40" />
-      </HoverTooltip>
-    ),
-    render: (row) => (
-      <span className="tabular-nums">
-        {formatApiKeySpendingAmount(row["daily-spending-used"] ?? 0)}
-      </span>
-    ),
-  },
-  {
-    key: "dailySpendingRemaining",
-    label: t("api_keys_page.col_daily_spending_remaining"),
-    width: "w-[140px] min-w-[140px]",
-    cellClassName: "whitespace-nowrap text-slate-700 dark:text-white/70",
-    headerRender: () => (
-      <HoverTooltip
-        content={t("api_keys_page.daily_spending_remaining_help")}
-        className="inline-flex items-center gap-1"
-      >
-        <span>{t("api_keys_page.col_daily_spending_remaining")}</span>
+        <span>{t("api_keys_page.col_daily_spending")}</span>
         <Info size={12} className="text-slate-400 dark:text-white/40" />
       </HoverTooltip>
     ),
     render: (row) => {
+      const used = formatApiKeySpendingAmount(row["daily-spending-used"] ?? 0);
       const limit = row["daily-spending-limit"] ?? 0;
       if (!(limit > 0)) {
         return (
-          <span className="inline-flex items-center gap-1">
-            <InfinityIcon size={14} className="text-green-500" /> {t("api_keys_page.unlimited")}
+          <span className="inline-flex items-center gap-1 tabular-nums">
+            {used}
+            <span className="text-slate-400 dark:text-white/40">/</span>
+            <span className="inline-flex items-center gap-1">
+              <InfinityIcon size={14} className="text-green-500" /> {t("api_keys_page.unlimited")}
+            </span>
           </span>
         );
       }
-      const remaining =
-        row["daily-spending-remaining"] == null
-          ? Math.max(limit - (row["daily-spending-used"] ?? 0), 0)
-          : Math.max(row["daily-spending-remaining"], 0);
-      return <span className="tabular-nums">{formatApiKeySpendingAmount(remaining)}</span>;
+      return (
+        <span className="tabular-nums">
+          {used}
+          <span className="text-slate-400 dark:text-white/40"> / </span>
+          {formatApiKeySpendingAmount(limit)}
+        </span>
+      );
     },
   },
   {

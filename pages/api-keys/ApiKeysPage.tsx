@@ -16,12 +16,7 @@ import {
 import { ccSwitchImportConfigsApi } from "@code-proxy/api-client/endpoints/ccswitch-import-configs";
 import { detectApiBaseFromLocation } from "@code-proxy/api-client";
 import { useOptionalAuth } from "@app/providers/AuthProvider";
-import {
-  generateApiKey,
-  makeEmptyApiKeyForm,
-  maskApiKey,
-  parseDailySpendingLimitInput,
-} from "./apiKeyPageUtils";
+import { generateApiKey, makeEmptyApiKeyForm, maskApiKey } from "./apiKeyPageUtils";
 import { createApiKeyColumns } from "./components/ApiKeyColumns";
 import { DeleteApiKeyModal } from "./components/DeleteApiKeyModal";
 import { copyTextToClipboard } from "@code-proxy/ui";
@@ -296,25 +291,17 @@ export function ApiKeysPage() {
       notify({ type: "error", message: t("api_keys_page.key_empty") });
       return;
     }
-    const dailySpendingLimit = parseDailySpendingLimitInput(form.dailySpendingLimit);
-    if (dailySpendingLimit === null) {
-      notify({ type: "error", message: t("api_keys_page.daily_spending_limit_invalid") });
-      return;
-    }
     setSaving(true);
     try {
       const newEntry: ApiKeyEntry = {
         key: form.key.trim(),
         name: form.name.trim(),
         "created-at": new Date().toISOString(),
-        "daily-spending-limit": dailySpendingLimit,
       };
       const profiledEntry = applyApiKeyPermissionProfile(
         newEntry,
         selectedPermissionProfile(form.permissionProfileId),
       );
-      // applyApiKeyPermissionProfile spreads entry; keep key-owned daily spending limit.
-      profiledEntry["daily-spending-limit"] = dailySpendingLimit;
       await apiKeyEntriesApi.replace([...entries, profiledEntry]);
       notify({ type: "success", message: t("api_keys_page.created_success") });
       setShowCreate(false);
@@ -340,10 +327,6 @@ export function ApiKeysPage() {
       dailyLimit: entry["daily-limit"]?.toString() || "",
       totalQuota: entry["total-quota"]?.toString() || "",
       spendingLimit: entry["spending-limit"]?.toString() || "",
-      dailySpendingLimit:
-        entry["daily-spending-limit"] && entry["daily-spending-limit"] > 0
-          ? String(entry["daily-spending-limit"])
-          : "",
       concurrencyLimit: entry["concurrency-limit"]?.toString() || "",
       rpmLimit: entry["rpm-limit"]?.toString() || "",
       tpmLimit: entry["tpm-limit"]?.toString() || "",
@@ -369,11 +352,6 @@ export function ApiKeysPage() {
       notify({ type: "error", message: t("api_keys_page.key_empty") });
       return;
     }
-    const dailySpendingLimit = parseDailySpendingLimitInput(form.dailySpendingLimit);
-    if (dailySpendingLimit === null) {
-      notify({ type: "error", message: t("api_keys_page.daily_spending_limit_invalid") });
-      return;
-    }
     setSaving(true);
     try {
       const permissionPatch =
@@ -383,6 +361,7 @@ export function ApiKeysPage() {
               "daily-limit": entries[editIndex]["daily-limit"] ?? 0,
               "total-quota": entries[editIndex]["total-quota"] ?? 0,
               "spending-limit": entries[editIndex]["spending-limit"] ?? 0,
+              "daily-spending-limit": entries[editIndex]["daily-spending-limit"] ?? 0,
               "concurrency-limit": entries[editIndex]["concurrency-limit"] ?? 0,
               "rpm-limit": entries[editIndex]["rpm-limit"] ?? 0,
               "tpm-limit": entries[editIndex]["tpm-limit"] ?? 0,
@@ -402,7 +381,6 @@ export function ApiKeysPage() {
           ...(newKey !== originalKey ? { key: newKey } : {}),
           name: form.name.trim(),
           ...permissionPatch,
-          "daily-spending-limit": dailySpendingLimit,
         },
       });
       notify({ type: "success", message: t("api_keys_page.updated_success") });

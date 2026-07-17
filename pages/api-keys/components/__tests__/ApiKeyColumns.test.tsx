@@ -12,10 +12,8 @@ const t = ((key: string, options?: Record<string, string>) => {
     "api_keys_page.col_spending_limit": "Spending limit",
     "api_keys_page.spending_limit_help":
       "Maximum cumulative API key cost in USD. Empty means unlimited.",
-    "api_keys_page.col_daily_spending_used": "Today spent",
-    "api_keys_page.col_daily_spending_remaining": "Remaining today",
-    "api_keys_page.daily_spending_used_help": "Effective USD cost today",
-    "api_keys_page.daily_spending_remaining_help": "Remaining daily budget",
+    "api_keys_page.col_daily_spending": "Daily spending",
+    "api_keys_page.daily_spending_help": "Used / limit",
     "api_keys_page.reset_today_spending": "Reset today spending",
     "api_keys_page.reset_today_spending_disabled": "Set a daily spending limit before resetting",
     "api_keys_page.unlimited": "Unlimited",
@@ -255,16 +253,15 @@ describe("ApiKeyColumns", () => {
     expect(screen.getByRole("button", { name: "Click to enable" })).toBeInTheDocument();
   });
 
-  test("places daily spending columns immediately after name", () => {
+  test("places daily spending column immediately after name", () => {
     const columns = createColumns();
     const keys = columns.map((column) => column.key);
     const nameIndex = keys.indexOf("name");
-    expect(keys[nameIndex + 1]).toBe("dailySpendingUsed");
-    expect(keys[nameIndex + 2]).toBe("dailySpendingRemaining");
-    expect(keys[nameIndex + 3]).toBe("key");
+    expect(keys[nameIndex + 1]).toBe("dailySpending");
+    expect(keys[nameIndex + 2]).toBe("key");
   });
 
-  test("renders daily spending used and remaining amounts", () => {
+  test("renders daily spending used and limit amounts", () => {
     const limited: ApiKeyEntry = {
       key: "sk-limited",
       name: "Limited",
@@ -280,20 +277,17 @@ describe("ApiKeyColumns", () => {
       "daily-spending-remaining": null,
     };
     const columns = createColumns();
-    const usedColumn = columns.find((column) => column.key === "dailySpendingUsed");
-    const remainingColumn = columns.find((column) => column.key === "dailySpendingRemaining");
-
-    render(
-      <>
-        <div>{usedColumn?.render(limited, 0)}</div>
-        <div>{remainingColumn?.render(limited, 0)}</div>
-        <div>{remainingColumn?.render(unlimited, 1)}</div>
-      </>,
+    const spendingColumn = columns.find((column) => column.key === "dailySpending");
+    const { container: limitedContainer } = render(
+      <div>{spendingColumn?.render(limited, 0)}</div>,
     );
-
-    expect(screen.getByText("$20.00")).toBeInTheDocument();
-    expect(screen.getByText("$80.00")).toBeInTheDocument();
-    expect(screen.getByText("Unlimited")).toBeInTheDocument();
+    const { container: unlimitedContainer } = render(
+      <div>{spendingColumn?.render(unlimited, 1)}</div>,
+    );
+    expect(limitedContainer.textContent).toContain("$20.00");
+    expect(limitedContainer.textContent).toContain("$100.00");
+    expect(unlimitedContainer.textContent).toContain("$5.00");
+    expect(unlimitedContainer.textContent).toContain("Unlimited");
   });
 
   test("disables reset today spending without a daily limit and calls handler when enabled", async () => {

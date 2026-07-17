@@ -8,6 +8,7 @@ export interface ApiKeyPermissionProfile {
   name: string;
   "daily-limit": number;
   "total-quota": number;
+  "daily-spending-limit": number;
   "concurrency-limit": number;
   "rpm-limit": number;
   "tpm-limit": number;
@@ -71,6 +72,9 @@ export function normalizeApiKeyPermissionProfiles(raw: unknown): ApiKeyPermissio
         name,
         "daily-limit": normalizeLimit(record["daily-limit"] ?? record.dailyLimit),
         "total-quota": normalizeLimit(record["total-quota"] ?? record.totalQuota),
+        "daily-spending-limit": normalizeSpendingLimit(
+          record["daily-spending-limit"] ?? record.dailySpendingLimit,
+        ),
         "concurrency-limit": normalizeLimit(record["concurrency-limit"] ?? record.concurrencyLimit),
         "rpm-limit": normalizeLimit(record["rpm-limit"] ?? record.rpmLimit),
         "tpm-limit": normalizeLimit(record["tpm-limit"] ?? record.tpmLimit),
@@ -92,6 +96,7 @@ export const serializeApiKeyPermissionProfile = (profile: ApiKeyPermissionProfil
   name: profile.name,
   "daily-limit": normalizeLimit(profile["daily-limit"]),
   "total-quota": normalizeLimit(profile["total-quota"]),
+  "daily-spending-limit": normalizeSpendingLimit(profile["daily-spending-limit"]),
   "concurrency-limit": normalizeLimit(profile["concurrency-limit"]),
   "rpm-limit": normalizeLimit(profile["rpm-limit"]),
   "tpm-limit": normalizeLimit(profile["tpm-limit"]),
@@ -112,6 +117,7 @@ export function applyApiKeyPermissionProfile(
       "daily-limit": 0,
       "total-quota": 0,
       "spending-limit": 0,
+      "daily-spending-limit": 0,
       "concurrency-limit": 0,
       "rpm-limit": 0,
       "tpm-limit": 0,
@@ -128,6 +134,7 @@ export function applyApiKeyPermissionProfile(
     "daily-limit": profile["daily-limit"],
     "total-quota": profile["total-quota"],
     "spending-limit": 0,
+    "daily-spending-limit": profile["daily-spending-limit"],
     "concurrency-limit": profile["concurrency-limit"],
     "rpm-limit": profile["rpm-limit"],
     "tpm-limit": profile["tpm-limit"],
@@ -143,6 +150,7 @@ export function hasApiKeyPermissionSettings(entry: ApiKeyEntry): boolean {
     (entry["daily-limit"] ?? 0) > 0 ||
     (entry["total-quota"] ?? 0) > 0 ||
     normalizeSpendingLimit(entry["spending-limit"]) > 0 ||
+    normalizeSpendingLimit(entry["daily-spending-limit"]) > 0 ||
     (entry["concurrency-limit"] ?? 0) > 0 ||
     (entry["rpm-limit"] ?? 0) > 0 ||
     (entry["tpm-limit"] ?? 0) > 0 ||
@@ -169,6 +177,7 @@ export function findMatchingPermissionProfile(
         normalizeLimit(entry["daily-limit"]) === profile["daily-limit"] &&
         normalizeLimit(entry["total-quota"]) === profile["total-quota"] &&
         normalizeSpendingLimit(entry["spending-limit"]) === 0 &&
+        normalizeSpendingLimit(entry["daily-spending-limit"]) === profile["daily-spending-limit"] &&
         normalizeLimit(entry["concurrency-limit"]) === profile["concurrency-limit"] &&
         normalizeLimit(entry["rpm-limit"]) === profile["rpm-limit"] &&
         normalizeLimit(entry["tpm-limit"]) === profile["tpm-limit"] &&

@@ -60,7 +60,6 @@ export const makeEmptyApiKeyForm = (key = ""): ApiKeyFormValues => ({
   dailyLimit: "",
   totalQuota: "",
   spendingLimit: "",
-  dailySpendingLimit: "",
   concurrencyLimit: "",
   rpmLimit: "",
   tpmLimit: "",
@@ -131,15 +130,6 @@ export const formatApiKeySpendingAmount = (amount: number | undefined | null) =>
     minimumFractionDigits: 2,
     style: "currency",
   }).format(Math.max(amount, 0));
-};
-
-/** Parse form daily spending limit: empty/0 = 0 (unlimited); rejects negatives/NaN. */
-export const parseDailySpendingLimitInput = (raw: string): number | null => {
-  const trimmed = raw.trim();
-  if (!trimmed) return 0;
-  const value = Number(trimmed);
-  if (!Number.isFinite(value) || value < 0) return null;
-  return value;
 };
 
 export const normalizeChannelKey = (value: string) => value.trim().toLowerCase();
