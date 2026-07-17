@@ -80,7 +80,7 @@ export function EndUsersPage() {
                   {row.display_name}
                 </span>
                 {extraKeys > 0 ? (
-                  <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-600 dark:bg-white/10 dark:text-white/70">
+                  <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-2xs font-medium text-slate-600 dark:bg-white/10 dark:text-white/70">
                     +{extraKeys}
                   </span>
                 ) : null}

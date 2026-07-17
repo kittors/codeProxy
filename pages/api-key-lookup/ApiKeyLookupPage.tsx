@@ -294,7 +294,7 @@ export function ApiKeyLookupPage() {
   }, []);
 
   const initialLookupKey = useMemo(() => readLegacyLookupKeyFromUrl() || readStoredLookupKey(), []);
-  const [apiKeyInput, setApiKeyInput] = useState(initialLookupKey);
+  const [, setApiKeyInput] = useState(initialLookupKey);
   const [queriedKey, setQueriedKey] = useState(initialLookupKey);
   const [apiKeyName, setApiKeyName] = useState("");
   const [loginModalOpen, setLoginModalOpen] = useState(!initialLookupKey);
@@ -717,42 +717,6 @@ export function ApiKeyLookupPage() {
     void fetchChartDataFn(initialLookupKey, timeRange);
   }, [fetchChartDataFn, initialLookupKey, timeRange]);
 
-  const handleSubmit = useCallback(
-    (event?: React.FormEvent) => {
-      event?.preventDefault();
-      const val = apiKeyInput.trim();
-      if (val) {
-        setSelectedModels(null);
-        setSelectedChannels(null);
-        setSelectedStatuses(null);
-        setFilterOptions({
-          models: [],
-          channels: [],
-          statuses: ["success", "failed"],
-        });
-        setRawItems([]);
-        setCurrentPage(1);
-        setApiKeyName("");
-        if (val !== queriedKey) {
-          setChartData(null);
-          setQuotaLimits(null);
-          setAvailableModels([]);
-        }
-        chartCacheRef.current = {};
-        if (activeTab === "usage") {
-          void fetchChartDataFn(val, timeRange);
-        } else if (activeTab === "models") {
-          void fetchChartDataFn(val, timeRange);
-          void fetchModelsFn(val);
-        } else {
-          fetchLogs(val, 1);
-          void fetchChartDataFn(val, timeRange);
-        }
-      }
-    },
-    [apiKeyInput, queriedKey, activeTab, timeRange, fetchLogs, fetchChartDataFn, fetchModelsFn],
-  );
-
   const handleApiKeyInputChange = useCallback((value: string) => {
     setApiKeyInput(value);
     setError(null);
@@ -1047,7 +1011,7 @@ export function ApiKeyLookupPage() {
                     <Key size={14} className="shrink-0" />
                     <span className="min-w-0 truncate">{displayName}</span>
                     {extraKeyCount > 0 ? (
-                      <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-600 dark:bg-white/10 dark:text-white/70">
+                      <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-2xs font-medium text-slate-600 dark:bg-white/10 dark:text-white/70">
                         +{extraKeyCount}
                       </span>
                     ) : null}
