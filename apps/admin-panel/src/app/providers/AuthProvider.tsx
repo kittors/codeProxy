@@ -234,6 +234,7 @@ const LEGACY_SERVICE_MENUS: MenuIdentity[] = [
     type: "menu",
     path: "/access/end-users",
     component: "end-users",
+    // Prefer end_users.read; legacy key admins also get the menu via api_keys.read in can() OR at route gate.
     label_key: "shell.nav_end_users",
     icon: "user-round",
     permission_code: "end_users.read",

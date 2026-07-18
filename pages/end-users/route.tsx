@@ -16,6 +16,8 @@ export const endUsersRoute: PageRoute = {
   layout: "app",
   nav: { labelKey: "shell.nav_end_users" },
   requiredPermission: "end_users.read",
+  // Legacy key-admin roles: seed grants end_users.read from api_keys.read; keep OR for safety.
+  requiredAnyPermissions: ["api_keys.read"],
   component: "end-users",
   preload: () => import("./EndUsersPage"),
 };

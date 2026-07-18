@@ -656,12 +656,22 @@ function ShellSidebar({
     if (principal?.menus?.length) return buildSidebarFromMenus(principal.menus);
     return { primaryItems: [FALLBACK_DASHBOARD_ITEM], groups: [...FALLBACK_NAV_GROUPS] };
   }, [principal?.menus]);
+  const canSeeMenuItem = useCallback(
+    (item: { permission?: string; menuCode?: string }) => {
+      if (!item.permission) return true;
+      if (can(item.permission)) return true;
+      // After API Keys → 用户账号 entry move: legacy key admins still see the user menu.
+      if (item.menuCode === "access.end-users" && can("api_keys.read")) return true;
+      return false;
+    },
+    [can],
+  );
   const visiblePrimaryItems = useMemo(
     () =>
       builtNav.primaryItems.filter(
-        (item) => (!item.permission || can(item.permission)) && menuIsVisible(item.menuCode),
+        (item) => canSeeMenuItem(item) && menuIsVisible(item.menuCode),
       ),
-    [builtNav.primaryItems, can, menuIsVisible],
+    [builtNav.primaryItems, canSeeMenuItem, menuIsVisible],
   );
   const visibleNavGroups = useMemo(
     () =>
@@ -669,11 +679,11 @@ function ShellSidebar({
         .map((group) => ({
           ...group,
           items: group.items.filter(
-            (item) => (!item.permission || can(item.permission)) && menuIsVisible(item.menuCode),
+            (item) => canSeeMenuItem(item) && menuIsVisible(item.menuCode),
           ),
         }))
         .filter((group) => menuIsVisible(group.menuCode) && group.items.length > 0),
-    [builtNav.groups, can, menuIsVisible],
+    [builtNav.groups, canSeeMenuItem, menuIsVisible],
   );
   // Interleave top-level leaves and groups by sort_order so a primary leaf
   // (e.g. 系统信息 at 70) can sit below every directory group.

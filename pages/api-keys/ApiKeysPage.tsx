@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Plus, KeyRound, RefreshCw, Trash2 } from "lucide-react";
 import {
@@ -761,6 +761,14 @@ export function ApiKeysPage() {
         }
         actions={
           <div className="flex flex-wrap justify-end gap-2">
+            {endUserIdFilter ? (
+              <Link
+                to="/access/end-users"
+                className="inline-flex h-8 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white/80 dark:hover:bg-neutral-800"
+              >
+                {t("end_users.back_to_users", { defaultValue: "返回用户账号" })}
+              </Link>
+            ) : null}
             <Button variant="primary" size="sm" onClick={handleOpenCreate}>
               <Plus size={14} />
               {t("api_keys_page.create_key")}

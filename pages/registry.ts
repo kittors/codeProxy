@@ -37,6 +37,8 @@ export interface PageRoute {
   hasWildcard?: boolean;
   preload?: () => Promise<unknown>;
   requiredPermission?: string;
+  /** Any-of alternative permissions (OR with requiredPermission). */
+  requiredAnyPermissions?: string[];
   /** Stable key for dynamic menu component binding */
   component?: string;
 }
