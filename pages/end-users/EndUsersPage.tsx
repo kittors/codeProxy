@@ -15,6 +15,7 @@ import {
   ConfirmModal,
   DataTable,
   Modal,
+  SecretRevealModal,
   Select,
   TextInput,
   type DataTableColumn,
@@ -652,13 +653,15 @@ export function EndUsersPage() {
         </form>
       </Modal>
 
-      <Modal
+      <SecretRevealModal
         open={Boolean(generatedReset)}
         onClose={() => setGeneratedReset("")}
-        title="新密码（请立即复制）"
-      >
-        <code className="select-all break-all">{generatedReset}</code>
-      </Modal>
+        title={t("end_users.new_password_title", { defaultValue: "新密码（请立即复制）" })}
+        secret={generatedReset}
+        warning={t("end_users.new_password_warning", {
+          defaultValue: "请立即复制新密码，关闭后将无法再次查看。",
+        })}
+      />
 
       <ConfirmModal
         open={Boolean(resetUser)}
