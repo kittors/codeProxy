@@ -41,8 +41,9 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 const extractModelItems = (payload: V1ModelsResponse): unknown[] => {
   if (Array.isArray(payload)) return payload;
-  if (isRecord(payload) && Array.isArray(payload.data)) return payload.data;
-  if (isRecord(payload) && Array.isArray(payload.models)) return payload.models;
+  if (!isRecord(payload)) return [];
+  if (Array.isArray(payload.data)) return payload.data as unknown[];
+  if (Array.isArray(payload.models)) return payload.models as unknown[];
   return [];
 };
 
