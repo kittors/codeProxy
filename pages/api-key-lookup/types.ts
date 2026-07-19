@@ -2,7 +2,11 @@ export interface PublicLogItem {
   id: number;
   timestamp: string;
   api_key?: string;
+  api_key_id?: string;
+  api_key_masked?: string;
   api_key_name?: string;
+  api_key_own_name?: string;
+  end_user_display_name?: string;
   channel_name?: string;
   model: string;
   upstream_model?: string;

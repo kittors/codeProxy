@@ -6,6 +6,8 @@ import {
   Key,
   KeyRound,
   Pencil,
+  RotateCcw,
+  Snowflake,
   Trash2,
   Unlock,
 } from "lucide-react";
@@ -69,6 +71,29 @@ function formatAccountSpending(limit: number | undefined, unlimitedLabel: string
   );
 }
 
+function formatTodaySpending(
+  used: number | undefined,
+  limit: number | undefined,
+  unlimitedLabel: string,
+) {
+  if (!limit || limit <= 0 || !Number.isFinite(limit)) {
+    return (
+      <span className="inline-flex items-center justify-center gap-1 text-green-600 dark:text-green-400">
+        <InfinityIcon size={14} /> {unlimitedLabel}
+      </span>
+    );
+  }
+  const format = (value: number) =>
+    new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(
+      Number.isFinite(value) ? Math.max(0, value) : 0,
+    );
+  return (
+    <span className="tabular-nums">
+      {format(used ?? 0)}/{format(limit)}$
+    </span>
+  );
+}
+
 const stickyActionsHeaderClass =
   "text-center md:sticky md:z-40 md:bg-slate-100 md:dark:bg-neutral-800";
 const stickyActionsCellClass = "md:sticky md:z-30 md:bg-white md:dark:bg-neutral-950";
@@ -96,6 +121,7 @@ export function EndUsersPage() {
   const [permissionProfiles, setPermissionProfiles] = useState<ApiKeyPermissionProfile[]>([]);
   const canWrite = can("end_users.write");
   const unlimitedLabel = t("api_keys_page.unlimited", { defaultValue: "无限制" });
+  const todayUnlimitedLabel = t("end_users.unlimited", { defaultValue: "未限制" });
   const { channelGroupByName, refreshPermissionOptions } = useApiKeyPermissionOptions();
   const {
     usageViewKey,
@@ -170,18 +196,47 @@ export function EndUsersPage() {
 
   const permissionProfileOptions = useMemo(
     () => [
-      { value: "", label: t("api_keys_page.permission_profile_unrestricted", { defaultValue: "不限制" }) },
+      {
+        value: "",
+        label: t("api_keys_page.permission_profile_unrestricted", { defaultValue: "不限制" }),
+      },
       ...permissionProfiles.map((p) => ({ value: p.id, label: p.name })),
     ],
     [permissionProfiles, t],
   );
 
-  const unlock = useCallback(
+  const setFrozen = useCallback(
+    async (row: EndUser, frozen: boolean) => {
+      setBusy(true);
+      try {
+        await endUsersApi.update(row.id, { status: frozen ? "locked" : "active" });
+        notify({
+          type: "success",
+          message: frozen
+            ? t("end_users.frozen_success", { defaultValue: "账号已冻结" })
+            : t("end_users.activated_success", { defaultValue: "账号已激活" }),
+        });
+        await load();
+      } catch (e) {
+        notify({ type: "error", message: e instanceof Error ? e.message : "failed" });
+      } finally {
+        setBusy(false);
+      }
+    },
+    [load, notify, t],
+  );
+
+  const resetTodaySpending = useCallback(
     async (row: EndUser) => {
       setBusy(true);
       try {
-        await endUsersApi.update(row.id, { status: "active" });
-        notify({ type: "success", message: t("end_users.unlocked", { defaultValue: "已解冻" }) });
+        await endUsersApi.resetDailySpending(row.id);
+        notify({
+          type: "success",
+          message: t("end_users.reset_today_spending_success", {
+            defaultValue: "已重置该账号今日消费",
+          }),
+        });
         await load();
       } catch (e) {
         notify({ type: "error", message: e instanceof Error ? e.message : "failed" });
@@ -257,11 +312,27 @@ export function EndUsersPage() {
         maxWidthPx: 220,
         headerClassName: "text-center",
         cellClassName: "text-center",
-        render: (row) => row.status,
+        render: (row) => {
+          const active = row.status === "active";
+          return (
+            <span
+              className={[
+                "inline-flex rounded-full px-2.5 py-1 text-xs font-medium",
+                active
+                  ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
+                  : "bg-sky-50 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300",
+              ].join(" ")}
+            >
+              {active
+                ? t("end_users.status_active", { defaultValue: "激活" })
+                : t("end_users.status_frozen", { defaultValue: "冻结" })}
+            </span>
+          );
+        },
       },
       {
         key: "permission",
-        label: t("end_users.col_permission", { defaultValue: "权限配置" }),
+        label: t("end_users.account_permission_profile", { defaultValue: "账户权限模板" }),
         width: "w-36 min-w-[9rem]",
         minWidthPx: 120,
         maxWidthPx: 280,
@@ -288,6 +359,21 @@ export function EndUsersPage() {
         headerClassName: "text-center",
         cellClassName: "text-center whitespace-nowrap text-slate-700 dark:text-white/70",
         render: (row) => formatAccountLimit(row["daily-limit"], unlimitedLabel),
+      },
+      {
+        key: "todaySpending",
+        label: t("end_users.today_spending", { defaultValue: "今日用量" }),
+        width: "w-[140px] min-w-[130px]",
+        minWidthPx: 120,
+        maxWidthPx: 220,
+        headerClassName: "text-center",
+        cellClassName: "text-center whitespace-nowrap text-slate-700 dark:text-white/70",
+        render: (row) =>
+          formatTodaySpending(
+            row["daily-spending-used"],
+            row["daily-spending-limit"],
+            todayUnlimitedLabel,
+          ),
       },
       {
         key: "totalQuota",
@@ -342,9 +428,9 @@ export function EndUsersPage() {
       {
         key: "actions",
         label: t("common.actions", { defaultValue: "操作" }),
-        width: "w-52 min-w-[13rem]",
-        minWidthPx: 200,
-        maxWidthPx: 260,
+        width: "w-64 min-w-[16rem]",
+        minWidthPx: 240,
+        maxWidthPx: 320,
         resizable: false,
         lockOrder: "end",
         headerClassName: stickyActionsHeaderClass,
@@ -387,9 +473,40 @@ export function EndUsersPage() {
                 <Pencil className="h-4 w-4" />
               </Button>
             ) : null}
-            {canWrite && row.status === "locked" ? (
-              <Button size="sm" variant="ghost" title="解冻" onClick={() => void unlock(row)}>
-                <Unlock className="h-4 w-4" />
+            {canWrite ? (
+              row.status === "active" ? (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={busy}
+                  title={t("end_users.freeze", { defaultValue: "冻结账号" })}
+                  onClick={() => void setFrozen(row, true)}
+                >
+                  <Snowflake className="h-4 w-4" />
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={busy}
+                  title={t("end_users.activate", { defaultValue: "激活账号" })}
+                  onClick={() => void setFrozen(row, false)}
+                >
+                  <Unlock className="h-4 w-4" />
+                </Button>
+              )
+            ) : null}
+            {canWrite ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={busy}
+                title={t("end_users.reset_today_spending", {
+                  defaultValue: "重置账号今日消费",
+                })}
+                onClick={() => void resetTodaySpending(row)}
+              >
+                <RotateCcw className="h-4 w-4" />
               </Button>
             ) : null}
             {canWrite ? (
@@ -406,7 +523,18 @@ export function EndUsersPage() {
         ),
       },
     ],
-    [can, canWrite, handleViewUserUsage, profileNameById, t, unlimitedLabel, unlock],
+    [
+      busy,
+      can,
+      canWrite,
+      handleViewUserUsage,
+      profileNameById,
+      resetTodaySpending,
+      setFrozen,
+      t,
+      todayUnlimitedLabel,
+      unlimitedLabel,
+    ],
   );
 
   const onCreate = async (e: FormEvent) => {
@@ -648,7 +776,7 @@ export function EndUsersPage() {
             ) : null}
             {createdSecrets.default_api_key?.key ? (
               <div>
-                默认 API Key：
+                {t("end_users.initial_api_key", { defaultValue: "初始 API Key" })}：
                 <code className="select-all break-all">{createdSecrets.default_api_key.key}</code>
               </div>
             ) : null}
@@ -721,15 +849,17 @@ export function EndUsersPage() {
           </label>
           <label className="block space-y-1.5">
             <span className="text-sm font-medium">
-              {t("api_keys_page.form_permission_profile", { defaultValue: "权限配置" })}
+              {t("end_users.account_permission_profile", { defaultValue: "账户权限模板" })}
             </span>
             <Select
               value={editForm.permissionProfileId}
               onChange={(value) => setEditForm((f) => ({ ...f, permissionProfileId: value }))}
               options={permissionProfileOptions}
-              aria-label={t("api_keys_page.form_permission_profile", { defaultValue: "权限配置" })}
-              placeholder={t("api_keys_page.form_permission_profile_placeholder", {
-                defaultValue: "选择权限模板",
+              aria-label={t("end_users.account_permission_profile", {
+                defaultValue: "账户权限模板",
+              })}
+              placeholder={t("end_users.account_permission_profile_placeholder", {
+                defaultValue: "选择账户权限模板",
               })}
             />
             <p className="text-xs text-slate-400 dark:text-white/40">
@@ -785,7 +915,8 @@ export function EndUsersPage() {
             : t("end_users.manage_keys_title", { defaultValue: "用户 API 密钥" })
         }
         description={t("end_users.manage_keys_desc", {
-          defaultValue: "管理该用户账号下的 API 密钥（名称、启停、默认密钥等）。限额与权限请在账号编辑中配置。",
+          defaultValue:
+            "管理该用户账号下的多把 API Key（名称、启停与轮换）。账号限额与权限请在账号编辑中配置。",
         })}
         maxWidth="max-w-[96vw]"
         panelClassName="h-[min(90dvh,920px)]"

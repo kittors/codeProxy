@@ -78,6 +78,10 @@ const parseJsonOrText = async (response: Response): Promise<unknown> => {
   }
 };
 
+interface PortalRequestOptions {
+  signal?: AbortSignal;
+}
+
 export class PortalApiClient {
   private accessToken = "";
   private refreshToken = "";
@@ -160,10 +164,19 @@ export class PortalApiClient {
     return this.refreshing;
   }
 
-  async request<T>(method: string, path: string, body?: unknown, retried = false): Promise<T> {
+  async request<T>(
+    method: string,
+    path: string,
+    body?: unknown,
+    retried = false,
+    options?: PortalRequestOptions,
+  ): Promise<T> {
     const headers = new Headers({ "Content-Type": "application/json" });
     if (this.accessToken) headers.set("Authorization", `Bearer ${this.accessToken}`);
     const controller = new AbortController();
+    const abortFromCaller = () => controller.abort();
+    if (options?.signal?.aborted) controller.abort();
+    else options?.signal?.addEventListener("abort", abortFromCaller, { once: true });
     const timer = globalThis.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     try {
       const response = await fetch(this.url(path), {
@@ -174,7 +187,7 @@ export class PortalApiClient {
       });
       if (response.status === 401 && !retried && this.refreshToken) {
         const ok = await this.tryRefresh();
-        if (ok) return this.request<T>(method, path, body, true);
+        if (ok) return this.request<T>(method, path, body, true, options);
       }
       if (response.status === 204) return undefined as T;
       const payload = await parseJsonOrText(response);
@@ -191,23 +204,24 @@ export class PortalApiClient {
       return payload as T;
     } finally {
       globalThis.clearTimeout(timer);
+      options?.signal?.removeEventListener("abort", abortFromCaller);
     }
   }
 
-  get<T>(path: string) {
-    return this.request<T>("GET", path);
+  get<T>(path: string, options?: PortalRequestOptions) {
+    return this.request<T>("GET", path, undefined, false, options);
   }
-  post<T>(path: string, body?: unknown) {
-    return this.request<T>("POST", path, body);
+  post<T>(path: string, body?: unknown, options?: PortalRequestOptions) {
+    return this.request<T>("POST", path, body, false, options);
   }
-  put<T>(path: string, body?: unknown) {
-    return this.request<T>("PUT", path, body);
+  put<T>(path: string, body?: unknown, options?: PortalRequestOptions) {
+    return this.request<T>("PUT", path, body, false, options);
   }
-  patch<T>(path: string, body?: unknown) {
-    return this.request<T>("PATCH", path, body);
+  patch<T>(path: string, body?: unknown, options?: PortalRequestOptions) {
+    return this.request<T>("PATCH", path, body, false, options);
   }
-  delete<T>(path: string) {
-    return this.request<T>("DELETE", path);
+  delete<T>(path: string, options?: PortalRequestOptions) {
+    return this.request<T>("DELETE", path, undefined, false, options);
   }
 }
 

@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Pencil, Plus, RefreshCw, ShieldCheck, Trash2 } from "lucide-react";
-import { apiKeyEntriesApi, type ApiKeyEntry } from "@code-proxy/api-client/endpoints/api-keys";
 import {
-  applyApiKeyPermissionProfile,
+  endUsersApi,
+  type EndUser,
+  type EndUserUpdateBody,
+} from "@code-proxy/api-client/endpoints/end-users";
+import {
   apiKeyPermissionProfilesApi,
   makePermissionProfileId,
-  resolveEntryPermissionProfileId,
   type ApiKeyPermissionProfile,
 } from "@code-proxy/api-client/endpoints/api-key-permission-profiles";
 import { RestrictionMultiSelect } from "@features/api-key-restrictions";
@@ -113,15 +115,29 @@ const formatLimit = (value: number, unlimited: string) =>
 const formatRestrictionCount = (count: number, unlimited: string) =>
   count > 0 ? count.toLocaleString() : unlimited;
 
-const boundProfileCount = (profile: ApiKeyPermissionProfile, entries: ApiKeyEntry[]) =>
-  entries.filter((entry) => resolveEntryPermissionProfileId(entry, [profile]) === profile.id)
-    .length;
+const boundProfileCount = (profile: ApiKeyPermissionProfile, accounts: EndUser[]) =>
+  accounts.filter((account) => account["permission-profile-id"] === profile.id).length;
+
+const profileToAccountUpdate = (profile: ApiKeyPermissionProfile): EndUserUpdateBody => ({
+  "permission-profile-id": profile.id,
+  "daily-limit": profile["daily-limit"],
+  "total-quota": profile["total-quota"],
+  "spending-limit": 0,
+  "daily-spending-limit": profile["daily-spending-limit"],
+  "concurrency-limit": profile["concurrency-limit"],
+  "rpm-limit": profile["rpm-limit"],
+  "tpm-limit": profile["tpm-limit"],
+  "allowed-models": [...profile["allowed-models"]],
+  "allowed-channels": [...profile["allowed-channels"]],
+  "allowed-channel-groups": [...profile["allowed-channel-groups"]],
+  "system-prompt": profile["system-prompt"],
+});
 
 export function ApiKeyPermissionsPage() {
   const { t } = useTranslation();
   const { notify } = useToast();
   const [profiles, setProfiles] = useState<ApiKeyPermissionProfile[]>([]);
-  const [entries, setEntries] = useState<ApiKeyEntry[]>([]);
+  const [accounts, setAccounts] = useState<EndUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [draft, setDraft] = useState<ProfileDraft>(() => emptyDraft());
@@ -139,13 +155,13 @@ export function ApiKeyPermissionsPage() {
   const loadPage = useCallback(async () => {
     setLoading(true);
     try {
-      const [nextProfiles, nextEntries] = await Promise.all([
+      const [nextProfiles, accountResponse] = await Promise.all([
         apiKeyPermissionProfilesApi.list(),
-        apiKeyEntriesApi.list().catch(() => [] as ApiKeyEntry[]),
+        endUsersApi.list().catch(() => ({ items: [] as EndUser[] })),
         refreshPermissionOptions(),
       ]);
       setProfiles(nextProfiles);
-      setEntries(nextEntries);
+      setAccounts(accountResponse.items ?? []);
     } catch (err: unknown) {
       notify({
         type: "error",
@@ -226,29 +242,26 @@ export function ApiKeyPermissionsPage() {
     setSaving(true);
     try {
       const isEdit = profiles.some((item) => item.id === profile.id);
-      const previousProfile = profiles.find((item) => item.id === profile.id) ?? null;
       const nextProfiles = isEdit
         ? profiles.map((item) => (item.id === profile.id ? profile : item))
         : [...profiles, profile];
       await apiKeyPermissionProfilesApi.replace(nextProfiles);
 
-      const latestEntries = isEdit ? await apiKeyEntriesApi.list().catch(() => entries) : entries;
-      let nextEntries = latestEntries;
+      let nextAccounts = accounts;
       if (isEdit) {
-        nextEntries = latestEntries.map((entry) => {
-          const wasBound =
-            entry["permission-profile-id"] === profile.id ||
-            (previousProfile !== null &&
-              resolveEntryPermissionProfileId(entry, [previousProfile]) === previousProfile.id);
-          return wasBound ? applyApiKeyPermissionProfile(entry, profile) : entry;
-        });
-        if (JSON.stringify(nextEntries) !== JSON.stringify(latestEntries)) {
-          await apiKeyEntriesApi.replace(nextEntries);
-        }
+        const boundAccounts = accounts.filter(
+          (account) => account["permission-profile-id"] === profile.id,
+        );
+        const update = profileToAccountUpdate(profile);
+        const updatedAccounts = await Promise.all(
+          boundAccounts.map((account) => endUsersApi.update(account.id, update)),
+        );
+        const updatedById = new Map(updatedAccounts.map((account) => [account.id, account]));
+        nextAccounts = accounts.map((account) => updatedById.get(account.id) ?? account);
       }
 
       setProfiles(nextProfiles);
-      setEntries(nextEntries);
+      setAccounts(nextAccounts);
       setModalOpen(false);
       notify({ type: "success", message: t("api_key_permissions_page.profile_saved") });
     } catch (err: unknown) {
@@ -267,16 +280,17 @@ export function ApiKeyPermissionsPage() {
     try {
       const nextProfiles = profiles.filter((profile) => profile.id !== deleteTarget.id);
       await apiKeyPermissionProfilesApi.replace(nextProfiles);
-      const nextEntries = entries.map((entry) =>
-        entry["permission-profile-id"] === deleteTarget.id
-          ? { ...entry, "permission-profile-id": "" }
-          : entry,
+      const boundAccounts = accounts.filter(
+        (account) => account["permission-profile-id"] === deleteTarget.id,
       );
-      if (JSON.stringify(nextEntries) !== JSON.stringify(entries)) {
-        await apiKeyEntriesApi.replace(nextEntries);
-      }
+      const updatedAccounts = await Promise.all(
+        boundAccounts.map((account) =>
+          endUsersApi.update(account.id, { "permission-profile-id": "" }),
+        ),
+      );
+      const updatedById = new Map(updatedAccounts.map((account) => [account.id, account]));
       setProfiles(nextProfiles);
-      setEntries(nextEntries);
+      setAccounts(accounts.map((account) => updatedById.get(account.id) ?? account));
       setDeleteTarget(null);
       notify({ type: "success", message: t("api_key_permissions_page.profile_deleted") });
     } catch (err: unknown) {
@@ -371,7 +385,7 @@ export function ApiKeyPermissionsPage() {
         width: "w-[120px] min-w-[120px]",
         render: (profile) =>
           t("api_key_permissions_page.bound_count", {
-            count: boundProfileCount(profile, entries),
+            count: boundProfileCount(profile, accounts),
           }),
       },
       {
@@ -400,7 +414,7 @@ export function ApiKeyPermissionsPage() {
         ),
       },
     ],
-    [entries, t],
+    [accounts, t],
   );
 
   return (

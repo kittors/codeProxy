@@ -1,9 +1,5 @@
 import { apiClient } from "../client/client";
-import type {
-  UsageData,
-  ChartDataResponse,
-  EntityStatsResponse,
-} from "../dto/types";
+import type { UsageData, ChartDataResponse, EntityStatsResponse } from "../dto/types";
 
 export interface UsageExportPayload {
   version?: number;
@@ -107,11 +103,7 @@ export interface EntityStatsScope {
   sources?: string[];
 }
 
-const appendUniqueParams = (
-  qs: URLSearchParams,
-  key: string,
-  values?: string[],
-) => {
+const appendUniqueParams = (qs: URLSearchParams, key: string, values?: string[]) => {
   const seen = new Set<string>();
   (values ?? []).forEach((value) => {
     const trimmed = String(value ?? "").trim();
@@ -147,10 +139,7 @@ export function normalizeChannelOptions(
         asTrimmedString(record.value) ||
         asTrimmedString(record.auth_index) ||
         asTrimmedString(record.label);
-      const label =
-        asTrimmedString(record.label) ||
-        asTrimmedString(record.value) ||
-        value;
+      const label = asTrimmedString(record.label) || asTrimmedString(record.value) || value;
       if (!value || !label) continue;
       const dedupeKey = value.toLowerCase();
       if (seen.has(dedupeKey)) continue;
@@ -159,9 +148,7 @@ export function normalizeChannelOptions(
       const authType =
         authTypeRaw === "oauth"
           ? "oauth"
-          : authTypeRaw === "api" ||
-              authTypeRaw === "api_key" ||
-              authTypeRaw === "apikey"
+          : authTypeRaw === "api" || authTypeRaw === "api_key" || authTypeRaw === "apikey"
             ? "api"
             : authTypeRaw || undefined;
       options.push({
@@ -196,9 +183,7 @@ export const usageApi = {
       ({ usage?: Partial<UsageData> } & Partial<UsageData>) | null
     >("/usage");
     const candidate =
-      response?.usage && typeof response.usage === "object"
-        ? response.usage
-        : response;
+      response?.usage && typeof response.usage === "object" ? response.usage : response;
 
     if (!candidate || typeof candidate !== "object") {
       return {
@@ -255,18 +240,10 @@ export const usageApi = {
     });
     return {
       daily_series: Array.isArray(resp?.daily_series) ? resp.daily_series : [],
-      model_distribution: Array.isArray(resp?.model_distribution)
-        ? resp.model_distribution
-        : [],
-      hourly_tokens: Array.isArray(resp?.hourly_tokens)
-        ? resp.hourly_tokens
-        : [],
-      hourly_models: Array.isArray(resp?.hourly_models)
-        ? resp.hourly_models
-        : [],
-      apikey_distribution: Array.isArray(resp?.apikey_distribution)
-        ? resp.apikey_distribution
-        : [],
+      model_distribution: Array.isArray(resp?.model_distribution) ? resp.model_distribution : [],
+      hourly_tokens: Array.isArray(resp?.hourly_tokens) ? resp.hourly_tokens : [],
+      hourly_models: Array.isArray(resp?.hourly_models) ? resp.hourly_models : [],
+      apikey_distribution: Array.isArray(resp?.apikey_distribution) ? resp.apikey_distribution : [],
     };
   },
 
@@ -290,10 +267,7 @@ export const usageApi = {
     };
   },
 
-  async getAuthFileGroupTrend(
-    group: string,
-    days = 7,
-  ): Promise<AuthFileGroupTrendResponse> {
+  async getAuthFileGroupTrend(group: string, days = 7): Promise<AuthFileGroupTrendResponse> {
     const qs = new URLSearchParams({ group, days: String(days) });
     const resp = await apiClient.get<AuthFileGroupTrendResponse>(
       `/usage/auth-file-group-trend?${qs.toString()}`,
@@ -340,9 +314,7 @@ export const usageApi = {
     };
   },
 
-  async recordAuthFileQuotaSnapshot(
-    payload: AuthFileQuotaSnapshotPayload,
-  ): Promise<void> {
+  async recordAuthFileQuotaSnapshot(payload: AuthFileQuotaSnapshotPayload): Promise<void> {
     await apiClient.post("/usage/auth-file-quota-snapshot", payload);
   },
 
@@ -380,13 +352,10 @@ export const usageApi = {
     if (params.channels_empty) qs.set("channels_empty", "1");
     if (params.statuses_empty) qs.set("statuses_empty", "1");
     // Backward compatibility: fallback to single-value params if no multi-value
-    if (!params.api_keys?.length && params.api_key)
-      qs.set("api_key", params.api_key);
+    if (!params.api_keys?.length && params.api_key) qs.set("api_key", params.api_key);
     if (!params.models?.length && params.model) qs.set("model", params.model);
-    if (!params.channels?.length && params.channel)
-      qs.set("channel", params.channel);
-    if (!params.statuses?.length && params.status)
-      qs.set("status", params.status);
+    if (!params.channels?.length && params.channel) qs.set("channel", params.channel);
+    if (!params.statuses?.length && params.status) qs.set("status", params.status);
     const query = qs.toString();
     const path = `/usage/logs${query ? `?${query}` : ""}`;
     const resp = await (options?.signal
@@ -416,10 +385,7 @@ export const usageApi = {
     };
   },
 
-
-  clearUsageLogs(
-    payload: ClearUsageLogsPayload,
-  ): Promise<ClearUsageLogsResponse> {
+  clearUsageLogs(payload: ClearUsageLogsPayload): Promise<ClearUsageLogsResponse> {
     return apiClient.delete<ClearUsageLogsResponse>("/usage/logs", payload);
   },
 
@@ -452,11 +418,7 @@ export const usageApi = {
 
     if (resp && typeof resp === "object") {
       const record = resp as Record<string, unknown>;
-      if (
-        record.part === "input" ||
-        record.part === "output" ||
-        record.part === "details"
-      ) {
+      if (record.part === "input" || record.part === "output" || record.part === "details") {
         return {
           id: Number(record.id ?? id),
           model: String(record.model ?? ""),
@@ -557,7 +519,11 @@ export interface UsageLogItem {
   id: number;
   timestamp: string;
   api_key: string;
+  api_key_id?: string;
+  api_key_masked?: string;
   api_key_name: string;
+  api_key_own_name?: string;
+  end_user_display_name?: string;
   model: string;
   upstream_model?: string;
   vision_fallback_model?: string;
@@ -609,7 +575,6 @@ type UsageLogsFilterPayload = {
   channel_options?: unknown;
   statuses?: unknown;
 };
-
 
 type UsageLogsPayload = {
   items?: UsageLogItem[] | null;
