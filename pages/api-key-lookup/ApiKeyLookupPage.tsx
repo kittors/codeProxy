@@ -28,6 +28,7 @@ import {
   fetchPublicLogContent,
   fetchPublicLogs,
   fetchPublicUsageSummary,
+  type PublicModelItem,
 } from "./api";
 import { LookupEmptyState } from "./components/LookupEmptyState";
 import { LookupResultsToolbar, type ApiKeyLookupTab } from "./components/LookupResultsToolbar";
@@ -62,7 +63,8 @@ const LOOKUP_LAST_API_KEY_STORAGE_KEY = "apiKeyLookup.lastApiKey.v1";
 /** Tenant-scoped chart cache (v2). Legacy v1 migrates into the default tenant only. */
 const LOOKUP_CHART_CACHE_STORAGE_KEY = "apiKeyLookup.chartCache.v2";
 const LOOKUP_CHART_CACHE_STORAGE_KEY_V1 = "apiKeyLookup.chartCache.v1";
-const LOOKUP_MODELS_CACHE_STORAGE_KEY = "apiKeyLookup.modelsCache.v2";
+const LOOKUP_MODELS_CACHE_STORAGE_KEY = "apiKeyLookup.modelsCache.v3";
+const LOOKUP_MODELS_CACHE_STORAGE_KEY_V2 = "apiKeyLookup.modelsCache.v2";
 const LOOKUP_MODELS_CACHE_STORAGE_KEY_V1 = "apiKeyLookup.modelsCache.v1";
 const LOGOUT_SELECT_VALUE = "__api-key-lookup-logout__";
 const CHANGE_PASSWORD_SELECT_VALUE = "__api-key-lookup-change-password__";
@@ -139,24 +141,55 @@ const clearStoredChartCache = (): void => {
   }
 };
 
-const isStringArray = (value: unknown): value is string[] =>
-  Array.isArray(value) && value.every((item) => typeof item === "string");
+const isPublicModelItem = (value: unknown): value is PublicModelItem => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const item = value as PublicModelItem;
+  return (
+    typeof item.id === "string" &&
+    typeof item.description === "string" &&
+    typeof item.ownedBy === "string" &&
+    Boolean(item.pricing) &&
+    typeof item.pricing === "object" &&
+    Array.isArray(item.inputModalities) &&
+    Array.isArray(item.outputModalities) &&
+    typeof item.supportsVision === "boolean"
+  );
+};
 
-const sameStringArray = (left: string[], right: string[]): boolean =>
-  left.length === right.length && left.every((value, index) => value === right[index]);
+const isPublicModelArray = (value: unknown): value is PublicModelItem[] =>
+  Array.isArray(value) && value.every(isPublicModelItem);
 
-const readStoredModelsCache = (cacheKey: string): string[] | null => {
+const samePublicModelArray = (left: PublicModelItem[], right: PublicModelItem[]): boolean => {
+  if (left.length !== right.length) return false;
+  return left.every((item, index) => {
+    const other = right[index];
+    return (
+      item.id === other.id &&
+      item.description === other.description &&
+      item.ownedBy === other.ownedBy &&
+      item.supportsVision === other.supportsVision &&
+      item.pricing.mode === other.pricing.mode &&
+      item.pricing.inputPricePerMillion === other.pricing.inputPricePerMillion &&
+      item.pricing.outputPricePerMillion === other.pricing.outputPricePerMillion &&
+      item.pricing.cachedPricePerMillion === other.pricing.cachedPricePerMillion &&
+      item.pricing.cacheReadPricePerMillion === other.pricing.cacheReadPricePerMillion &&
+      item.pricing.cacheWritePricePerMillion === other.pricing.cacheWritePricePerMillion &&
+      item.pricing.pricePerCall === other.pricing.pricePerCall
+    );
+  });
+};
+
+const readStoredModelsCache = (cacheKey: string): PublicModelItem[] | null => {
   return readTenantBucketMapEntry({
     key: LOOKUP_MODELS_CACHE_STORAGE_KEY,
     kind: "session",
     tenantId: getActiveCacheTenantId(),
     entryKey: cacheKey,
-    legacyKey: LOOKUP_MODELS_CACHE_STORAGE_KEY_V1,
-    isEntry: isStringArray,
+    isEntry: isPublicModelArray,
   });
 };
 
-const writeStoredModelsCache = (cacheKey: string, models: string[]): void => {
+const writeStoredModelsCache = (cacheKey: string, models: PublicModelItem[]): void => {
   updateTenantBucketMapEntry({
     key: LOOKUP_MODELS_CACHE_STORAGE_KEY,
     kind: "session",
@@ -164,8 +197,7 @@ const writeStoredModelsCache = (cacheKey: string, models: string[]): void => {
     entryKey: cacheKey,
     entryValue: models,
     maxEntries: 8,
-    legacyKey: LOOKUP_MODELS_CACHE_STORAGE_KEY_V1,
-    legacyKeysToRemove: [LOOKUP_MODELS_CACHE_STORAGE_KEY_V1],
+    legacyKeysToRemove: [LOOKUP_MODELS_CACHE_STORAGE_KEY_V2, LOOKUP_MODELS_CACHE_STORAGE_KEY_V1],
   });
 };
 
@@ -346,11 +378,11 @@ export function ApiKeyLookupPage() {
   const summaryFetchIdRef = useRef(0);
 
   // ── Models state ──
-  const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [availableModels, setAvailableModels] = useState<PublicModelItem[]>([]);
   const [modelsLoading, setModelsLoading] = useState(false);
   const [modelsError, setModelsError] = useState<string | null>(null);
   const [modelsSearchFilter, setModelsSearchFilter] = useState("");
-  const modelsCacheRef = useRef<Record<string, string[]>>({});
+  const modelsCacheRef = useRef<Record<string, PublicModelItem[]>>({});
 
   // ── Filters ──
   const [timeRange, setTimeRange] = useState<TimeRange>(7);
@@ -669,16 +701,16 @@ export function ApiKeyLookupPage() {
         : modelsCacheRef.current[trimmedKey] || readStoredModelsCache(trimmedKey);
       if (cached) {
         modelsCacheRef.current[trimmedKey] = cached;
-        setAvailableModels((prev) => (sameStringArray(prev, cached) ? prev : cached));
+        setAvailableModels((prev) => (samePublicModelArray(prev, cached) ? prev : cached));
       }
 
       setModelsLoading(true);
       setModelsError(null);
       try {
-        const ids = await fetchAvailableModels(trimmedKey);
-        modelsCacheRef.current[trimmedKey] = ids;
-        writeStoredModelsCache(trimmedKey, ids);
-        setAvailableModels((prev) => (sameStringArray(prev, ids) ? prev : ids));
+        const models = await fetchAvailableModels(trimmedKey);
+        modelsCacheRef.current[trimmedKey] = models;
+        writeStoredModelsCache(trimmedKey, models);
+        setAvailableModels((prev) => (samePublicModelArray(prev, models) ? prev : models));
       } catch (err: unknown) {
         if (!cached) {
           setModelsError(localizeLookupError(t, err, "apikey_lookup.load_models_failed"));
