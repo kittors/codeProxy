@@ -183,9 +183,19 @@ describe("ApiKeyLookupPage", () => {
 
     const landing = screen.getByTestId("apikey-lookup-landing");
     expect(landing).toBeInTheDocument();
+    expect(landing.closest(".bg-zinc-50")).not.toBeNull();
+    expect(within(screen.getByTestId("apikey-lookup-header")).getByText("Code Proxy")).toBeInTheDocument();
+    expect(
+      within(landing).getByRole("heading", {
+        level: 1,
+        name: /one entry point|一个入口/i,
+      }),
+    ).toBeInTheDocument();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 
-    await userEvent.click(within(landing).getByRole("button", { name: /^(login|sign in|登录)$/i }));
+    await userEvent.click(
+      within(landing).getByRole("button", { name: /^(login|sign in|登录)$/i }),
+    );
 
     const dialog = await screen.findByRole("dialog");
     expect(dialog).toBeInTheDocument();
@@ -201,6 +211,10 @@ describe("ApiKeyLookupPage", () => {
     await waitFor(() => {
       expect(portalApi.login).toHaveBeenCalledWith("alice", "password123", true);
     });
+    await waitFor(() => {
+      expect(screen.queryByTestId("apikey-lookup-landing")).not.toBeInTheDocument();
+    });
+    expect(await screen.findByTestId("usage-tab")).toBeInTheDocument();
   });
 
   test("allows dismissing the login modal from the landing page", async () => {
@@ -213,10 +227,12 @@ describe("ApiKeyLookupPage", () => {
     );
 
     const landing = screen.getByTestId("apikey-lookup-landing");
-    await userEvent.click(within(landing).getByRole("button", { name: /^(login|sign in|登录)$/i }));
-    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    await userEvent.click(
+      within(landing).getByRole("button", { name: /^(login|sign in|登录)$/i }),
+    );
+    const dialog = await screen.findByRole("dialog");
 
-    await userEvent.keyboard("{Escape}");
+    await userEvent.click(within(dialog).getByRole("button", { name: /close/i }));
     await waitFor(() => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
@@ -242,7 +258,9 @@ describe("ApiKeyLookupPage", () => {
     );
 
     const landing = screen.getByTestId("apikey-lookup-landing");
-    await userEvent.click(within(landing).getByRole("button", { name: /^(login|sign in|登录)$/i }));
+    await userEvent.click(
+      within(landing).getByRole("button", { name: /^(login|sign in|登录)$/i }),
+    );
     const dialog = await screen.findByRole("dialog");
     await userEvent.type(screen.getByPlaceholderText(/enter username|请输入账号/i), "alice");
     await userEvent.type(screen.getByPlaceholderText(/enter password|请输入密码/i), "bad-pass");
