@@ -25,7 +25,12 @@ const mocks = vi.hoisted(() => ({
     }),
   ),
   fetchPublicChartData: vi.fn(
-    async (_params?: { apiKey: string; days?: number; signal?: AbortSignal }) => ({
+    async (_params?: {
+      apiKey: string;
+      portalAccount?: boolean;
+      days?: number;
+      signal?: AbortSignal;
+    }) => ({
       daily_series: [],
       heatmap_series: [],
       model_distribution: [],
@@ -39,25 +44,27 @@ const mocks = vi.hoisted(() => ({
       },
     }),
   ),
-  fetchAvailableModels: vi.fn(async (): Promise<
-    Array<{
-      id: string;
-      description: string;
-      ownedBy: string;
-      pricing: {
-        mode: "token" | "call";
-        inputPricePerMillion: number;
-        outputPricePerMillion: number;
-        cachedPricePerMillion: number;
-        cacheReadPricePerMillion: number;
-        cacheWritePricePerMillion: number;
-        pricePerCall: number;
-      };
-      inputModalities: string[];
-      outputModalities: string[];
-      supportsVision: boolean;
-    }>
-  > => []),
+  fetchAvailableModels: vi.fn(
+    async (): Promise<
+      Array<{
+        id: string;
+        description: string;
+        ownedBy: string;
+        pricing: {
+          mode: "token" | "call";
+          inputPricePerMillion: number;
+          outputPricePerMillion: number;
+          cachedPricePerMillion: number;
+          cacheReadPricePerMillion: number;
+          cacheWritePricePerMillion: number;
+          pricePerCall: number;
+        };
+        inputModalities: string[];
+        outputModalities: string[];
+        supportsVision: boolean;
+      }>
+    > => [],
+  ),
   fetchPublicUsageSummary: vi.fn(async () => ({
     found: true,
     range: "today",
@@ -112,7 +119,7 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
   return {
     ...actual,
     portalApi: {
-      loadSession: () => null,
+      loadSession: vi.fn(() => null),
       clearSession: () => undefined,
       login: vi.fn(),
       logout: vi.fn(async () => undefined),
@@ -129,11 +136,13 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
 });
 
 describe("ApiKeyLookupPage", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     window.sessionStorage.clear();
     window.localStorage.clear();
     window.history.replaceState({}, "", "/manage/apikey-lookup");
     vi.clearAllMocks();
+    const { portalApi } = await import("@code-proxy/api-client");
+    vi.mocked(portalApi.loadSession).mockReturnValue(null);
   });
 
   test("shows landing first, then opens login modal from CTA", async () => {
@@ -184,7 +193,9 @@ describe("ApiKeyLookupPage", () => {
     const landing = screen.getByTestId("apikey-lookup-landing");
     expect(landing).toBeInTheDocument();
     expect(landing.closest(".bg-zinc-50")).not.toBeNull();
-    expect(within(screen.getByTestId("apikey-lookup-header")).getByText("Code Proxy")).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId("apikey-lookup-header")).getByText("Code Proxy"),
+    ).toBeInTheDocument();
     expect(
       within(landing).getByRole("heading", {
         level: 1,
@@ -193,9 +204,7 @@ describe("ApiKeyLookupPage", () => {
     ).toBeInTheDocument();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 
-    await userEvent.click(
-      within(landing).getByRole("button", { name: /^(login|sign in|登录)$/i }),
-    );
+    await userEvent.click(within(landing).getByRole("button", { name: /^(login|sign in|登录)$/i }));
 
     const dialog = await screen.findByRole("dialog");
     expect(dialog).toBeInTheDocument();
@@ -204,9 +213,7 @@ describe("ApiKeyLookupPage", () => {
 
     await userEvent.type(screen.getByPlaceholderText(/enter username|请输入账号/i), "alice");
     await userEvent.type(screen.getByPlaceholderText(/enter password|请输入密码/i), "password123");
-    await userEvent.click(
-      within(dialog).getByRole("button", { name: /^(login|sign in|登录)$/i }),
-    );
+    await userEvent.click(within(dialog).getByRole("button", { name: /^(login|sign in|登录)$/i }));
 
     await waitFor(() => {
       expect(portalApi.login).toHaveBeenCalledWith("alice", "password123", true);
@@ -227,9 +234,7 @@ describe("ApiKeyLookupPage", () => {
     );
 
     const landing = screen.getByTestId("apikey-lookup-landing");
-    await userEvent.click(
-      within(landing).getByRole("button", { name: /^(login|sign in|登录)$/i }),
-    );
+    await userEvent.click(within(landing).getByRole("button", { name: /^(login|sign in|登录)$/i }));
     const dialog = await screen.findByRole("dialog");
 
     await userEvent.click(within(dialog).getByRole("button", { name: /close/i }));
@@ -258,24 +263,22 @@ describe("ApiKeyLookupPage", () => {
     );
 
     const landing = screen.getByTestId("apikey-lookup-landing");
-    await userEvent.click(
-      within(landing).getByRole("button", { name: /^(login|sign in|登录)$/i }),
-    );
+    await userEvent.click(within(landing).getByRole("button", { name: /^(login|sign in|登录)$/i }));
     const dialog = await screen.findByRole("dialog");
     await userEvent.type(screen.getByPlaceholderText(/enter username|请输入账号/i), "alice");
     await userEvent.type(screen.getByPlaceholderText(/enter password|请输入密码/i), "bad-pass");
-    await userEvent.click(
-      within(dialog).getByRole("button", { name: /^(login|sign in|登录)$/i }),
-    );
+    await userEvent.click(within(dialog).getByRole("button", { name: /^(login|sign in|登录)$/i }));
 
     await waitFor(() => {
-      expect(within(dialog).getByText(/incorrect username or password|用户名或密码错误/i)).toBeInTheDocument();
+      expect(
+        within(dialog).getByText(/incorrect username or password|用户名或密码错误/i),
+      ).toBeInTheDocument();
     });
     expect(within(dialog).queryByText(/invalid credentials/i)).not.toBeInTheDocument();
   });
 
-  test("restores the last looked up API key after page refresh and shows its name", async () => {
-    window.sessionStorage.setItem("apiKeyLookup.lastApiKey.v1", "sk-restored-key");
+  test("loads an explicit legacy API key from the URL without persisting the secret", async () => {
+    window.history.replaceState({}, "", "/manage/apikey-lookup?api_key=sk-restored-key");
 
     render(
       <ThemeProvider>
@@ -292,15 +295,84 @@ describe("ApiKeyLookupPage", () => {
     });
     expect(mocks.fetchPublicLogs).not.toHaveBeenCalled();
     expect(await screen.findByRole("combobox", { name: /primary key/i })).toBeInTheDocument();
+    expect(window.sessionStorage.getItem("apiKeyLookup.lastApiKey.v1")).toBeNull();
+    expect(window.location.search).toBe("");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
+  test("portal account usage ignores a stale stored secret and does not expose set-default", async () => {
+    const { portalApi } = await import("@code-proxy/api-client");
+    window.sessionStorage.setItem("apiKeyLookup.lastApiKey.v1", "sk-stale-empty-key");
+    vi.mocked(portalApi.loadSession).mockReturnValue({
+      apiBase: "http://relay.test",
+      accessToken: "cpt_account",
+      refreshToken: "cpr_account",
+      remember: false,
+      expiresAt: Date.now() + 60_000,
+    });
+    vi.mocked(portalApi.me).mockResolvedValue({
+      user: {
+        id: "u-account",
+        tenant_id: "t-account",
+        username: "alice",
+        display_name: "Alice",
+        status: "active",
+        must_change_password: false,
+        created_at: "",
+        updated_at: "",
+        version: 1,
+      },
+    } as never);
+    vi.mocked(portalApi.listKeys).mockResolvedValue({
+      items: [
+        {
+          id: "k-empty",
+          tenant_id: "t-account",
+          end_user_id: "u-account",
+          name: "New empty key",
+          key_masked: "sk-****",
+          disabled: false,
+          is_default: false,
+        },
+      ],
+    } as never);
+    vi.mocked(portalApi.keySecret).mockResolvedValue({ id: "k-empty", key: "sk-empty" });
+    mocks.fetchPublicChartData.mockResolvedValueOnce(chartResponse(37, "Alice"));
+
+    render(
+      <ThemeProvider>
+        <ToastProvider>
+          <ApiKeyLookupPage />
+        </ToastProvider>
+      </ThemeProvider>,
+    );
+
+    await waitFor(() => {
+      expect(mocks.fetchPublicChartData).toHaveBeenCalledWith(
+        expect.objectContaining({ apiKey: "", portalAccount: true }),
+      );
+    });
+    expect(await screen.findByTestId("usage-tab")).toHaveTextContent("37");
+    expect(window.sessionStorage.getItem("apiKeyLookup.lastApiKey.v1")).toBeNull();
+
+    await userEvent.click(
+      await screen.findByRole("tab", { name: /manage api keys|管理 api key/i }),
+    );
+    expect(
+      screen.queryByRole("button", { name: /set as default|设默认/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/^default$|^默认$/i)).not.toBeInTheDocument();
+  });
+
   test("loads public logs only after switching to the request logs tab", async () => {
-    window.sessionStorage.setItem("apiKeyLookup.lastApiKey.v1", "sk-restored-key");
+    window.history.replaceState({}, "", "/manage/apikey-lookup?api_key=sk-restored-key");
     const logItem: PublicLogItem = {
       id: 1,
       timestamp: new Date("2026-07-05T03:01:18Z").toISOString(),
       channel_name: "Codex 主渠道",
+      api_key_name: "Alice",
+      end_user_display_name: "Alice",
+      api_key_own_name: "Laptop",
       model: "gpt-5.5",
       failed: false,
       streaming: true,
@@ -357,13 +429,14 @@ describe("ApiKeyLookupPage", () => {
     });
     expect(screen.getAllByText(/response metrics/i).length).toBeGreaterThan(0);
     expect(await screen.findByText("Codex 主渠道")).toBeInTheDocument();
-    // Multi-key accounts need a Key name column to tell request sources apart.
-    expect(screen.getByRole("columnheader", { name: /key name|账户名称|account name/i })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: /user name|用户名称/i })).toBeInTheDocument();
+    expect(screen.getByText("Alice")).toBeInTheDocument();
+    expect(screen.getByText("Laptop")).toBeInTheDocument();
     expect(screen.queryByRole("columnheader", { name: /^duration$/i })).not.toBeInTheDocument();
   });
 
   test("uses the shared linked request-log filters on the public logs tab", async () => {
-    window.sessionStorage.setItem("apiKeyLookup.lastApiKey.v1", "sk-restored-key");
+    window.history.replaceState({}, "", "/manage/apikey-lookup?api_key=sk-restored-key");
     mocks.fetchPublicLogs
       .mockResolvedValueOnce({
         items: [],
@@ -441,7 +514,7 @@ describe("ApiKeyLookupPage", () => {
   });
 
   test("keeps cached models visible while refreshing the available models tab", async () => {
-    window.sessionStorage.setItem("apiKeyLookup.lastApiKey.v1", "sk-restored-key");
+    window.history.replaceState({}, "", "/manage/apikey-lookup?api_key=sk-restored-key");
     const asModel = (id: string) => ({
       id,
       description: "",
@@ -496,7 +569,7 @@ describe("ApiKeyLookupPage", () => {
   });
 
   test("does not duplicate the current key in the header menu", async () => {
-    window.sessionStorage.setItem("apiKeyLookup.lastApiKey.v1", "sk-restored-key");
+    window.history.replaceState({}, "", "/manage/apikey-lookup?api_key=sk-restored-key");
 
     render(
       <ThemeProvider>
@@ -574,9 +647,7 @@ describe("ApiKeyLookupPage", () => {
     );
 
     const landing = screen.getByTestId("apikey-lookup-landing");
-    await userEvent.click(
-      within(landing).getByRole("button", { name: /^(login|sign in|登录)$/i }),
-    );
+    await userEvent.click(within(landing).getByRole("button", { name: /^(login|sign in|登录)$/i }));
     const loginDialog = await screen.findByRole("dialog");
     await userEvent.type(screen.getByPlaceholderText(/enter username|请输入账号/i), "alice");
     await userEvent.type(screen.getByPlaceholderText(/enter password|请输入密码/i), "password123");
@@ -600,9 +671,7 @@ describe("ApiKeyLookupPage", () => {
     expect(confirmDialog).toHaveTextContent(/delete api key|删除 api key/i);
     expect(confirmDialog).toHaveTextContent("secondary");
 
-    await userEvent.click(
-      within(confirmDialog).getByRole("button", { name: /^(cancel|取消)$/i }),
-    );
+    await userEvent.click(within(confirmDialog).getByRole("button", { name: /^(cancel|取消)$/i }));
     await waitFor(() => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
@@ -621,7 +690,7 @@ describe("ApiKeyLookupPage", () => {
   });
 
   test("logs out from the header menu and returns to the landing page", async () => {
-    window.sessionStorage.setItem("apiKeyLookup.lastApiKey.v1", "sk-restored-key");
+    window.history.replaceState({}, "", "/manage/apikey-lookup?api_key=sk-restored-key");
 
     render(
       <ThemeProvider>
@@ -640,7 +709,7 @@ describe("ApiKeyLookupPage", () => {
   });
 
   test("shows cached usage data while refreshing chart data", async () => {
-    window.sessionStorage.setItem("apiKeyLookup.lastApiKey.v1", "sk-restored-key");
+    window.history.replaceState({}, "", "/manage/apikey-lookup?api_key=sk-restored-key");
     // Legacy v1 unscoped chart cache migrates into the default tenant bucket.
     window.sessionStorage.setItem(
       "apiKeyLookup.chartCache.v1",
@@ -703,14 +772,14 @@ describe("ApiKeyLookupPage", () => {
   });
 
   test("ignores stale chart responses after rapid time range changes", async () => {
-    window.sessionStorage.setItem("apiKeyLookup.lastApiKey.v1", "sk-restored-key");
+    window.history.replaceState({}, "", "/manage/apikey-lookup?api_key=sk-restored-key");
     const pending: Array<{
       days: number;
       signal?: AbortSignal;
       resolve: (value: ChartResponse) => void;
     }> = [];
     mocks.fetchPublicChartData.mockImplementation(
-      (params?: { apiKey: string; days?: number; signal?: AbortSignal }) =>
+      (params?: { apiKey: string; portalAccount?: boolean; days?: number; signal?: AbortSignal }) =>
         new Promise<ChartResponse>((resolve) => {
           pending.push({
             days: params?.days ?? 7,
@@ -772,7 +841,7 @@ describe("ApiKeyLookupPage", () => {
       return originalGetBoundingClientRect.call(this);
     };
 
-    window.sessionStorage.setItem("apiKeyLookup.lastApiKey.v1", "sk-restored-key");
+    window.history.replaceState({}, "", "/manage/apikey-lookup?api_key=sk-restored-key");
 
     try {
       render(

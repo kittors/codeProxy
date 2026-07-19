@@ -60,7 +60,6 @@ import {
 } from "@code-proxy/domain";
 
 const DEFAULT_PAGE_SIZE = 50;
-const LOOKUP_LAST_API_KEY_STORAGE_KEY = "apiKeyLookup.lastApiKey.v1";
 /** Tenant-scoped chart cache (v2). Legacy v1 migrates into the default tenant only. */
 const LOOKUP_CHART_CACHE_STORAGE_KEY = "apiKeyLookup.chartCache.v2";
 const LOOKUP_CHART_CACHE_STORAGE_KEY_V1 = "apiKeyLookup.chartCache.v1";
@@ -69,28 +68,11 @@ const LOOKUP_MODELS_CACHE_STORAGE_KEY_V2 = "apiKeyLookup.modelsCache.v2";
 const LOOKUP_MODELS_CACHE_STORAGE_KEY_V1 = "apiKeyLookup.modelsCache.v1";
 const LOGOUT_SELECT_VALUE = "__api-key-lookup-logout__";
 const CHANGE_PASSWORD_SELECT_VALUE = "__api-key-lookup-change-password__";
+type UsageLookupSubject =
+  | { mode: "portal"; apiKey: ""; cacheKey: string }
+  | { mode: "legacy"; apiKey: string; cacheKey: string };
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
-
-const readStoredLookupKey = (): string => {
-  try {
-    return window.sessionStorage.getItem(LOOKUP_LAST_API_KEY_STORAGE_KEY)?.trim() ?? "";
-  } catch {
-    return "";
-  }
-};
-
-const writeStoredLookupKey = (value: string): void => {
-  try {
-    if (value) {
-      window.sessionStorage.setItem(LOOKUP_LAST_API_KEY_STORAGE_KEY, value);
-    } else {
-      window.sessionStorage.removeItem(LOOKUP_LAST_API_KEY_STORAGE_KEY);
-    }
-  } catch {
-    // ignore storage failures
-  }
-};
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -266,13 +248,16 @@ function toLogRow(item: PublicLogItem): RequestLogsRow {
     timestamp: item.timestamp,
     timestampMs: new Date(item.timestamp).getTime(),
     apiKey: item.api_key || "",
+    apiKeyId: item.api_key_id || "",
     apiKeyName: item.api_key_name || "",
+    apiKeyOwnName: item.api_key_own_name || "",
+    endUserDisplayName: item.end_user_display_name || item.api_key_name || "",
     isSystemCall: false,
     channelName: item.channel_name || "",
     // Public lookup logs do not currently expose provider/auth metadata.
     channelProvider: undefined,
     channelAuthType: undefined,
-    maskedApiKey: maskRequestLogApiKey(item.api_key || ""),
+    maskedApiKey: item.api_key_masked || maskRequestLogApiKey(item.api_key || ""),
     model: item.model,
     upstreamModel: item.upstream_model || "",
     visionFallbackModel: item.vision_fallback_model || "",
@@ -334,10 +319,36 @@ export function ApiKeyLookupPage() {
     };
   }, []);
 
-  const initialLookupKey = useMemo(() => readLegacyLookupKeyFromUrl() || readStoredLookupKey(), []);
+  const initialLookupKey = useMemo(() => readLegacyLookupKeyFromUrl(), []);
   const [, setApiKeyInput] = useState(initialLookupKey);
   const [queriedKey, setQueriedKey] = useState(initialLookupKey);
+  const [operationalKeyId, setOperationalKeyId] = useState("");
   const [apiKeyName, setApiKeyName] = useState("");
+  const [portalUser, setPortalUser] = useState<EndUser | null>(null);
+  const [portalKeys, setPortalKeys] = useState<EndUserAPIKey[]>([]);
+  const [loginUsername, setLoginUsername] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [loginBusy, setLoginBusy] = useState(false);
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
+  const [pwdForm, setPwdForm] = useState({ current: "", next: "" });
+  const [pwdError, setPwdError] = useState<string | null>(null);
+  const [secretOnce, setSecretOnce] = useState<string | null>(null);
+  const [createKeyOpen, setCreateKeyOpen] = useState(false);
+  const [createKeyName, setCreateKeyName] = useState("");
+  const [createKeyError, setCreateKeyError] = useState<string | null>(null);
+  const [deleteKeyTarget, setDeleteKeyTarget] = useState<EndUserAPIKey | null>(null);
+  const [portalKeysBusy, setPortalKeysBusy] = useState(false);
+  const [portalKeysLoading, setPortalKeysLoading] = useState(false);
+  const usageSubject = useMemo<UsageLookupSubject | null>(() => {
+    if (portalUser) {
+      return { mode: "portal", apiKey: "", cacheKey: `account:${portalUser.id}` };
+    }
+    const apiKey = queriedKey.trim();
+    return apiKey ? { mode: "legacy", apiKey, cacheKey: apiKey } : null;
+  }, [portalUser, queriedKey]);
+  const usageReady = usageSubject !== null;
   // ponytail: landing first; open login only via CTA / header
   const [loginModalOpen, setLoginModalOpen] = useState(false);
 
@@ -495,9 +506,7 @@ export function ApiKeyLookupPage() {
   // ================================================================
 
   const fetchLogs = useCallback(
-    async (key: string, page: number, size?: number) => {
-      if (!key.trim()) return;
-
+    async (subject: UsageLookupSubject, page: number, size?: number) => {
       if (paginationInFlightRef.current) return;
       paginationInFlightRef.current = true;
 
@@ -511,7 +520,8 @@ export function ApiKeyLookupPage() {
 
       try {
         const resp = await fetchPublicLogs({
-          apiKey: key.trim(),
+          apiKey: subject.apiKey,
+          portalAccount: subject.mode === "portal",
           page,
           size: size ?? pageSize,
           days: timeRange,
@@ -543,9 +553,7 @@ export function ApiKeyLookupPage() {
           statuses: resp.filters?.statuses ?? ["success", "failed"],
         });
         setLastUpdatedAt(Date.now());
-        setQueriedKey(key.trim());
         setApiKeyName(resp.api_key_name?.trim() ?? "");
-        writeStoredLookupKey(key.trim());
         setLoginModalOpen(false);
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") return;
@@ -570,16 +578,15 @@ export function ApiKeyLookupPage() {
   //  Chart data fetching (with caching)
   // ================================================================
 
-  const fetchQuotaLimits = useCallback(async (key: string) => {
-    const trimmedKey = key.trim();
-    if (!trimmedKey) return;
+  const fetchQuotaLimits = useCallback(async (subject: UsageLookupSubject) => {
     summaryAbortControllerRef.current?.abort();
     const controller = new AbortController();
     summaryAbortControllerRef.current = controller;
     const myFetchId = ++summaryFetchIdRef.current;
     try {
       const summary = await fetchPublicUsageSummary({
-        apiKey: trimmedKey,
+        apiKey: subject.apiKey,
+        portalAccount: subject.mode === "portal",
         signal: controller.signal,
       });
       if (myFetchId !== summaryFetchIdRef.current || controller.signal.aborted) return;
@@ -595,11 +602,8 @@ export function ApiKeyLookupPage() {
   }, []);
 
   const fetchChartDataFn = useCallback(
-    async (key: string, days: number, options?: { force?: boolean }) => {
-      const trimmedKey = key.trim();
-      if (!trimmedKey) return;
-
-      const cacheKey = `${trimmedKey}|${days}`;
+    async (subject: UsageLookupSubject, days: number, options?: { force?: boolean }) => {
+      const cacheKey = `${subject.cacheKey}|${days}`;
       const cached = options?.force
         ? null
         : chartCacheRef.current[cacheKey] || readStoredChartCache(cacheKey);
@@ -608,8 +612,6 @@ export function ApiKeyLookupPage() {
         const cachedName = cached.api_key_name?.trim() ?? "";
         if (cachedName) setApiKeyName(cachedName);
         setChartData(cached);
-        setQueriedKey(trimmedKey);
-        writeStoredLookupKey(trimmedKey);
         setLoginModalOpen(false);
       }
 
@@ -620,10 +622,11 @@ export function ApiKeyLookupPage() {
 
       setChartLoading(true);
       setError(null);
-      void fetchQuotaLimits(trimmedKey);
+      void fetchQuotaLimits(subject);
       try {
         const data = await fetchPublicChartData({
-          apiKey: trimmedKey,
+          apiKey: subject.apiKey,
+          portalAccount: subject.mode === "portal",
           days,
           signal: controller.signal,
         });
@@ -634,8 +637,6 @@ export function ApiKeyLookupPage() {
         const nextName = data.api_key_name?.trim() ?? "";
         if (nextName) setApiKeyName(nextName);
         setChartData(data);
-        setQueriedKey(trimmedKey);
-        writeStoredLookupKey(trimmedKey);
         setLoginModalOpen(false);
       } catch (err) {
         if (controller.signal.aborted || myFetchId !== chartFetchIdRef.current) return;
@@ -664,31 +665,29 @@ export function ApiKeyLookupPage() {
 
   const handlePageChange = useCallback(
     (page: number) => {
-      if (!queriedKey) return;
+      if (!usageSubject) return;
       const clamped = Math.max(1, Math.min(page, totalPages));
-      fetchLogs(queriedKey, clamped);
+      fetchLogs(usageSubject, clamped);
     },
-    [fetchLogs, queriedKey, totalPages],
+    [fetchLogs, totalPages, usageSubject],
   );
 
   const handlePageSizeChange = useCallback(
     (newSize: number) => {
       setPageSize(newSize);
-      if (queriedKey) fetchLogs(queriedKey, 1, newSize);
+      if (usageSubject) fetchLogs(usageSubject, 1, newSize);
     },
-    [fetchLogs, queriedKey],
+    [fetchLogs, usageSubject],
   );
 
   // ================================================================
   //  Effects
   // ================================================================
 
-  // Refetch page 1 when filters change (only if we have a queried key)
+  // Refetch page 1 when filters change for the current account / legacy key subject.
   useEffect(() => {
-    if (queriedKey) {
-      if (activeTab === "logs") {
-        fetchLogs(queriedKey, 1);
-      }
+    if (usageSubject && activeTab === "logs") {
+      fetchLogs(usageSubject, 1);
     }
   }, [timeRange, selectedModels, selectedChannels, selectedStatuses]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -724,37 +723,35 @@ export function ApiKeyLookupPage() {
     [t],
   );
 
-  // When tab changes, fetch the appropriate data
+  // Account usage is bound to portal authentication; models / quick import still use an operational key.
   useEffect(() => {
-    if (!queriedKey) return;
-    if (initialLookupKey && !restoredLookupFetchedRef.current) return;
-    if (activeTab === "usage") {
-      void fetchChartDataFn(queriedKey, timeRange);
-    } else if (activeTab === "models") {
+    if (initialLookupKey && !portalUser && !restoredLookupFetchedRef.current) return;
+    if (activeTab === "usage" && usageSubject) {
+      void fetchChartDataFn(usageSubject, timeRange);
+    } else if (activeTab === "models" && queriedKey) {
       void fetchModelsFn(queriedKey);
-    } else {
-      // Always refetch when switching to logs tab to ensure
-      // data matches the current timeRange & filters
-      fetchLogs(queriedKey, 1);
+    } else if (activeTab === "logs" && usageSubject) {
+      fetchLogs(usageSubject, 1);
     }
-  }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeTab, usageSubject?.cacheKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // When time range changes, refetch current tab
   useEffect(() => {
-    if (!queriedKey) return;
-    if (initialLookupKey && !restoredLookupFetchedRef.current) return;
-    if (activeTab === "usage") {
-      void fetchChartDataFn(queriedKey, timeRange);
+    if (initialLookupKey && !portalUser && !restoredLookupFetchedRef.current) return;
+    if (activeTab === "usage" && usageSubject) {
+      void fetchChartDataFn(usageSubject, timeRange);
     }
   }, [timeRange]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (!initialLookupKey || restoredLookupFetchedRef.current) return;
+    if (!initialLookupKey || portalUser || restoredLookupFetchedRef.current) return;
 
     restoredLookupFetchedRef.current = true;
     chartCacheRef.current = {};
-    void fetchChartDataFn(initialLookupKey, timeRange);
-  }, [fetchChartDataFn, initialLookupKey, timeRange]);
+    void fetchChartDataFn(
+      { mode: "legacy", apiKey: initialLookupKey, cacheKey: initialLookupKey },
+      timeRange,
+    );
+  }, [fetchChartDataFn, initialLookupKey, portalUser, timeRange]);
 
   const handleApiKeyInputChange = useCallback((value: string) => {
     setApiKeyInput(value);
@@ -793,41 +790,19 @@ export function ApiKeyLookupPage() {
     setSelectedStatuses(null);
 
     setQueriedKey("");
+    setOperationalKeyId("");
     setApiKeyName("");
-    writeStoredLookupKey("");
   }, []);
 
-  const [portalUser, setPortalUser] = useState<EndUser | null>(null);
-  const [portalKeys, setPortalKeys] = useState<EndUserAPIKey[]>([]);
-  const [loginUsername, setLoginUsername] = useState("");
-  const [loginPassword, setLoginPassword] = useState("");
-  const [loginError, setLoginError] = useState<string | null>(null);
-  const [loginBusy, setLoginBusy] = useState(false);
-  const [showLoginPassword, setShowLoginPassword] = useState(false);
-  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
-  const [pwdForm, setPwdForm] = useState({ current: "", next: "" });
-  const [pwdError, setPwdError] = useState<string | null>(null);
-  const [secretOnce, setSecretOnce] = useState<string | null>(null);
-  const [createKeyOpen, setCreateKeyOpen] = useState(false);
-  const [createKeyName, setCreateKeyName] = useState("");
-  const [createKeyError, setCreateKeyError] = useState<string | null>(null);
-  const [deleteKeyTarget, setDeleteKeyTarget] = useState<EndUserAPIKey | null>(null);
-  const [portalKeysBusy, setPortalKeysBusy] = useState(false);
-  const [portalKeysLoading, setPortalKeysLoading] = useState(false);
-
-  const activateOwnedKey = useCallback(
-    async (keyId: string) => {
-      const secret = await portalApi.keySecret(keyId);
-      const plain = secret.key?.trim();
-      if (!plain) return;
-      setApiKeyInput(plain);
-      writeStoredLookupKey(plain);
-      setLoginModalOpen(false);
-      chartCacheRef.current = {};
-      void fetchChartDataFn(plain, timeRange);
-    },
-    [fetchChartDataFn, timeRange],
-  );
+  const activateOwnedKey = useCallback(async (keyId: string) => {
+    const secret = await portalApi.keySecret(keyId);
+    const plain = secret.key?.trim();
+    if (!plain) return;
+    setOperationalKeyId(keyId);
+    setApiKeyInput(plain);
+    setQueriedKey(plain);
+    setLoginModalOpen(false);
+  }, []);
 
   useEffect(() => {
     const snap = portalApi.loadSession();
@@ -845,12 +820,8 @@ export function ApiKeyLookupPage() {
           const keys = await portalApi.listKeys();
           const items = keys.items ?? [];
           setPortalKeys(items);
-          if (!queriedKey) {
-            const usable = items.filter((k) => !k.disabled);
-            const def = usable.find((k) => k.is_default) ?? usable[0];
-            if (def) await activateOwnedKey(def.id);
-            else if (items.length) setActiveTab("keys");
-          }
+          const firstUsable = items.find((key) => !key.disabled);
+          if (firstUsable) await activateOwnedKey(firstUsable.id);
         } catch {
           setPortalKeys([]);
         }
@@ -875,13 +846,8 @@ export function ApiKeyLookupPage() {
         const keys = await portalApi.listKeys();
         const items = keys.items ?? [];
         setPortalKeys(items);
-        const usable = items.filter((k) => !k.disabled);
-        const def = usable.find((k) => k.is_default) ?? usable[0];
-        if (def) {
-          await activateOwnedKey(def.id);
-        } else {
-          setActiveTab("keys");
-        }
+        const firstUsable = items.find((key) => !key.disabled);
+        if (firstUsable) await activateOwnedKey(firstUsable.id);
       }
     } catch (err) {
       setLoginError(
@@ -902,6 +868,7 @@ export function ApiKeyLookupPage() {
     void portalApi.logout();
     setPortalUser(null);
     setPortalKeys([]);
+    setOperationalKeyId("");
     handleApiKeyInputChange("");
     setLoginModalOpen(false);
   }, [handleApiKeyInputChange]);
@@ -923,16 +890,14 @@ export function ApiKeyLookupPage() {
       void refreshPortalKeys();
       return;
     }
-    if (queriedKey) {
-      if (activeTab === "usage") {
-        void fetchChartDataFn(queriedKey, timeRange, { force: true });
-      } else if (activeTab === "models") {
-        void fetchModelsFn(queriedKey, { force: true });
-      } else if (activeTab === "quickImport") {
-        setQuickImportReloadToken((value) => value + 1);
-      } else {
-        fetchLogs(queriedKey, 1);
-      }
+    if (activeTab === "usage" && usageSubject) {
+      void fetchChartDataFn(usageSubject, timeRange, { force: true });
+    } else if (activeTab === "models" && queriedKey) {
+      void fetchModelsFn(queriedKey, { force: true });
+    } else if (activeTab === "quickImport" && queriedKey) {
+      setQuickImportReloadToken((value) => value + 1);
+    } else if (activeTab === "logs" && usageSubject) {
+      fetchLogs(usageSubject, 1);
     }
   }, [
     queriedKey,
@@ -942,14 +907,13 @@ export function ApiKeyLookupPage() {
     fetchChartDataFn,
     fetchModelsFn,
     refreshPortalKeys,
+    usageSubject,
   ]);
 
   // Strip legacy sensitive query params from the URL on mount.
   useEffect(() => {
-    if (initialLookupKey) {
-      writeStoredLookupKey(initialLookupKey);
-    }
     try {
+      window.sessionStorage.removeItem("apiKeyLookup.lastApiKey.v1");
       const url = new URL(window.location.href);
       let changed = false;
       if (url.searchParams.has("api_key")) {
@@ -1057,393 +1021,393 @@ export function ApiKeyLookupPage() {
             : "bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-neutral-950 dark:via-neutral-900 dark:to-neutral-950",
         ].join(" ")}
       >
-      {/* Header：滚动后上滑淡出，给 sticky tabs 让位 */}
-      <header
-        data-testid="apikey-lookup-header"
-        data-collapsed={headerCollapsed ? "true" : "false"}
-        aria-hidden={headerCollapsed || undefined}
-        className={[
-          "fixed inset-x-0 top-0 z-30 border-b border-slate-200/60 bg-white/70 backdrop-blur-xl dark:border-neutral-800/60 dark:bg-neutral-950/70",
-          "motion-safe:transition-[transform,opacity,border-color] motion-safe:duration-300 motion-safe:ease-[cubic-bezier(0.22,1,0.36,1)]",
-          headerCollapsed
-            ? "pointer-events-none -translate-y-full border-transparent opacity-0"
-            : "translate-y-0 opacity-100",
-        ].join(" ")}
-      >
-        <div className="mx-auto flex h-14 max-w-screen-xl items-center justify-between px-4 sm:px-6">
-          <div className="flex items-center gap-2.5">
-            <div
-              className={[
-                "flex h-8 w-8 items-center justify-center rounded-xl",
-                showLanding
-                  ? "border border-slate-200 bg-white/70 text-slate-600 dark:border-white/10 dark:bg-white/[0.05] dark:text-white/65"
-                  : "bg-slate-900 shadow-sm dark:bg-white",
-              ].join(" ")}
-            >
-              {showLanding ? (
-                <KeyRound size={16} />
-              ) : (
-                <Key size={16} className="text-white dark:text-neutral-950" />
-              )}
+        {/* Header：滚动后上滑淡出，给 sticky tabs 让位 */}
+        <header
+          data-testid="apikey-lookup-header"
+          data-collapsed={headerCollapsed ? "true" : "false"}
+          aria-hidden={headerCollapsed || undefined}
+          className={[
+            "fixed inset-x-0 top-0 z-30 border-b border-slate-200/60 bg-white/70 backdrop-blur-xl dark:border-neutral-800/60 dark:bg-neutral-950/70",
+            "motion-safe:transition-[transform,opacity,border-color] motion-safe:duration-300 motion-safe:ease-[cubic-bezier(0.22,1,0.36,1)]",
+            headerCollapsed
+              ? "pointer-events-none -translate-y-full border-transparent opacity-0"
+              : "translate-y-0 opacity-100",
+          ].join(" ")}
+        >
+          <div className="mx-auto flex h-14 max-w-screen-xl items-center justify-between px-4 sm:px-6">
+            <div className="flex items-center gap-2.5">
+              <div
+                className={[
+                  "flex h-8 w-8 items-center justify-center rounded-xl",
+                  showLanding
+                    ? "border border-slate-200 bg-white/70 text-slate-600 dark:border-white/10 dark:bg-white/[0.05] dark:text-white/65"
+                    : "bg-slate-900 shadow-sm dark:bg-white",
+                ].join(" ")}
+              >
+                {showLanding ? (
+                  <KeyRound size={16} />
+                ) : (
+                  <Key size={16} className="text-white dark:text-neutral-950" />
+                )}
+              </div>
+              <span className="text-base font-bold tracking-tight text-slate-900 dark:text-white">
+                {showLanding ? "Code Proxy" : t("apikey_lookup.title")}
+              </span>
             </div>
-            <span className="text-base font-bold tracking-tight text-slate-900 dark:text-white">
-              {showLanding ? "Code Proxy" : t("apikey_lookup.title")}
-            </span>
+            <div className="flex items-center gap-2">
+              {queriedKey || portalUser ? (
+                <Select
+                  value={queriedKey || portalUser?.id || ""}
+                  onChange={handleKeyMenuChange}
+                  options={keyMenuOptions}
+                  placeholder={
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      <Key size={14} className="shrink-0" />
+                      <span className="min-w-0 truncate">{displayName}</span>
+                      {extraKeyCount > 0 ? (
+                        <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-2xs font-medium text-slate-600 dark:bg-white/10 dark:text-white/70">
+                          +{extraKeyCount}
+                        </span>
+                      ) : null}
+                    </span>
+                  }
+                  aria-label={displayName}
+                  className="max-w-[34vw] !border-0 !bg-transparent !px-1 !shadow-none hover:!bg-transparent dark:!bg-transparent dark:!shadow-none dark:hover:!bg-transparent sm:max-w-56"
+                  size="sm"
+                />
+              ) : (
+                <Button
+                  size="sm"
+                  variant={showLanding ? "primary" : "ghost"}
+                  onClick={() => setLoginModalOpen(true)}
+                  className={showLanding ? "rounded-full px-4" : undefined}
+                >
+                  {t("common.login", { defaultValue: "登录" })}
+                </Button>
+              )}
+              <LanguageSelector className="inline-flex items-center rounded-xl p-2 text-slate-600 transition hover:bg-slate-100 dark:text-white/70 dark:hover:bg-white/10" />
+              <ThemeToggleButton className="rounded-xl p-2 text-slate-600 transition hover:bg-slate-100 dark:text-white/70 dark:hover:bg-white/10" />
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            {queriedKey || portalUser ? (
-              <Select
-                value={queriedKey || portalUser?.id || ""}
-                onChange={handleKeyMenuChange}
-                options={keyMenuOptions}
-                placeholder={
-                  <span className="flex min-w-0 items-center gap-1.5">
-                    <Key size={14} className="shrink-0" />
-                    <span className="min-w-0 truncate">{displayName}</span>
-                    {extraKeyCount > 0 ? (
-                      <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-2xs font-medium text-slate-600 dark:bg-white/10 dark:text-white/70">
-                        +{extraKeyCount}
-                      </span>
-                    ) : null}
-                  </span>
-                }
-                aria-label={displayName}
-                className="max-w-[34vw] !border-0 !bg-transparent !px-1 !shadow-none hover:!bg-transparent dark:!bg-transparent dark:!shadow-none dark:hover:!bg-transparent sm:max-w-56"
-                size="sm"
-              />
-            ) : (
-              <Button
-                size="sm"
-                variant={showLanding ? "primary" : "ghost"}
-                onClick={() => setLoginModalOpen(true)}
-                className={showLanding ? "rounded-full px-4" : undefined}
-              >
-                {t("common.login", { defaultValue: "登录" })}
-              </Button>
-            )}
-            <LanguageSelector className="inline-flex items-center rounded-xl p-2 text-slate-600 transition hover:bg-slate-100 dark:text-white/70 dark:hover:bg-white/10" />
-            <ThemeToggleButton className="rounded-xl p-2 text-slate-600 transition hover:bg-slate-100 dark:text-white/70 dark:hover:bg-white/10" />
-          </div>
-        </div>
-      </header>
+        </header>
 
-      <main
-        className={
-          showLanding ? "w-full" : "mx-auto max-w-screen-xl space-y-5 px-4 py-6 sm:px-6"
-        }
-      >
-        {/* Error */}
-        {error && (
-          <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-300">
-            {error}
-          </div>
-        )}
+        <main
+          className={showLanding ? "w-full" : "mx-auto max-w-screen-xl space-y-5 px-4 py-6 sm:px-6"}
+        >
+          {/* Error */}
+          {error && (
+            <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-300">
+              {error}
+            </div>
+          )}
 
-        {/* Results: portal keys tab can show without an activated key */}
-        {(queriedKey || portalUser) && !error && (
-          <>
-            <LookupResultsToolbar
-              t={t}
-              activeTab={activeTab}
-              setActiveTab={setActiveTab}
-              timeRange={timeRange}
-              setTimeRange={setTimeRange}
-              handleRefresh={handleRefresh}
-              loading={loading || portalKeysLoading}
-              chartLoading={chartLoading}
-              modelsLoading={modelsLoading}
-              showKeysTab={Boolean(portalUser)}
-              keysHeader={
-                portalUser
-                  ? {
-                      loading: portalKeysLoading,
-                      busy: portalKeysBusy,
-                      onRefresh: () => void refreshPortalKeys(),
-                      onCreate: () => {
-                        setCreateKeyName("");
-                        setCreateKeyError(null);
-                        setCreateKeyOpen(true);
-                      },
-                    }
-                  : undefined
-              }
-            />
-
-            {activeTab === "usage" && queriedKey ? (
-              <UsageTabSection
+          {/* Results: portal keys tab can show without an activated key */}
+          {(queriedKey || portalUser) && !error && (
+            <>
+              <LookupResultsToolbar
                 t={t}
+                activeTab={activeTab}
+                setActiveTab={setActiveTab}
                 timeRange={timeRange}
-                chartStats={chartStats}
+                setTimeRange={setTimeRange}
+                handleRefresh={handleRefresh}
+                loading={loading || portalKeysLoading}
                 chartLoading={chartLoading}
-                quotaLimits={quotaLimits}
-                modelMetric={modelMetric}
-                setModelMetric={setModelMetric}
-                heatmapSeries={heatmapSeries}
-                modelDistributionData={modelDistributionData}
-                modelDistributionOption={modelDistributionOption as Record<string, unknown>}
-                modelDistributionLegend={modelDistributionLegend}
-                dailySeries={dailySeries}
-                dailyTrendOption={dailyTrendOption as Record<string, unknown>}
-                dailyLegendAvailability={dailyLegendAvailability}
-                dailyLegendSelected={dailyLegendSelected}
-                toggleDailyLegend={toggleDailyLegend}
+                modelsLoading={modelsLoading}
+                showKeysTab={Boolean(portalUser)}
+                keysHeader={
+                  portalUser
+                    ? {
+                        loading: portalKeysLoading,
+                        busy: portalKeysBusy,
+                        onRefresh: () => void refreshPortalKeys(),
+                        onCreate: () => {
+                          setCreateKeyName("");
+                          setCreateKeyError(null);
+                          setCreateKeyOpen(true);
+                        },
+                      }
+                    : undefined
+                }
               />
-            ) : null}
 
-            {activeTab === "keys" && portalUser ? (
-              <Reveal>
-                <ManageKeysTabContent
+              {activeTab === "usage" && usageReady ? (
+                <UsageTabSection
                   t={t}
-                  keys={portalKeys}
-                  busy={portalKeysBusy}
-                  onSetDefault={(key) => {
-                    setPortalKeysBusy(true);
-                    void portalApi
-                      .updateKey(key.id, { is_default: true })
-                      .then(async () => {
-                        await refreshPortalKeys();
-                        await activateOwnedKey(key.id);
-                      })
-                      .finally(() => setPortalKeysBusy(false));
-                  }}
-                  onRotate={(key) => {
-                    setPortalKeysBusy(true);
-                    void portalApi
-                      .rotateKey(key.id)
-                      .then(async (res) => {
-                        if (res.plaintext_key) {
-                          setSecretOnce(res.plaintext_key);
-                          setApiKeyInput(res.plaintext_key);
-                          writeStoredLookupKey(res.plaintext_key);
-                          setQueriedKey(res.plaintext_key);
-                        }
-                        await refreshPortalKeys();
-                      })
-                      .finally(() => setPortalKeysBusy(false));
-                  }}
-                  onDelete={(key) => {
-                    if (portalKeys.length <= 1) return;
-                    setDeleteKeyTarget(key);
-                  }}
+                  timeRange={timeRange}
+                  chartStats={chartStats}
+                  chartLoading={chartLoading}
+                  quotaLimits={quotaLimits}
+                  modelMetric={modelMetric}
+                  setModelMetric={setModelMetric}
+                  heatmapSeries={heatmapSeries}
+                  modelDistributionData={modelDistributionData}
+                  modelDistributionOption={modelDistributionOption as Record<string, unknown>}
+                  modelDistributionLegend={modelDistributionLegend}
+                  dailySeries={dailySeries}
+                  dailyTrendOption={dailyTrendOption as Record<string, unknown>}
+                  dailyLegendAvailability={dailyLegendAvailability}
+                  dailyLegendSelected={dailyLegendSelected}
+                  toggleDailyLegend={toggleDailyLegend}
                 />
-              </Reveal>
-            ) : null}
+              ) : null}
 
-            {activeTab === "logs" && queriedKey ? (
-              <PublicLogsSection
-                t={t}
-                modelOptions={modelOptions}
-                channelOptions={channelOptions}
-                statusOptions={statusOptions}
-                selectedModels={selectedModels}
-                selectedChannels={selectedChannels}
-                selectedStatuses={selectedStatuses}
-                onModelsChange={handleModelsChange}
-                onChannelsChange={handleChannelsChange}
-                onStatusesChange={handleStatusesChange}
-                onModelsClear={clearModelFilter}
-                onChannelsClear={clearChannelFilter}
-                onStatusesClear={clearStatusFilter}
-                stats={stats}
-                lastUpdatedText={lastUpdatedText}
-                loading={loading}
-                logColumns={logColumns}
-                rows={rows}
-                currentPage={currentPage}
-                totalPages={totalPages}
-                totalCount={totalCount}
-                pageSize={pageSize}
-                onPageChange={handlePageChange}
-                onPageSizeChange={handlePageSizeChange}
-              />
-            ) : null}
+              {activeTab === "keys" && portalUser ? (
+                <Reveal>
+                  <ManageKeysTabContent
+                    t={t}
+                    keys={portalKeys}
+                    busy={portalKeysBusy}
+                    onRotate={(key) => {
+                      setPortalKeysBusy(true);
+                      void portalApi
+                        .rotateKey(key.id)
+                        .then(async (res) => {
+                          if (res.plaintext_key) {
+                            setSecretOnce(res.plaintext_key);
+                            setOperationalKeyId(key.id);
+                            setApiKeyInput(res.plaintext_key);
+                            setQueriedKey(res.plaintext_key);
+                          }
+                          await refreshPortalKeys();
+                        })
+                        .finally(() => setPortalKeysBusy(false));
+                    }}
+                    onDelete={(key) => {
+                      if (portalKeys.length <= 1) return;
+                      setDeleteKeyTarget(key);
+                    }}
+                  />
+                </Reveal>
+              ) : null}
 
-            {activeTab === "models" && queriedKey ? (
-              <Reveal>
-                <ModelsTabContent
-                  models={availableModels}
-                  loading={modelsLoading}
-                  error={modelsError}
-                  searchFilter={modelsSearchFilter}
-                  onSearchChange={setModelsSearchFilter}
+              {activeTab === "logs" && usageReady ? (
+                <PublicLogsSection
+                  t={t}
+                  modelOptions={modelOptions}
+                  channelOptions={channelOptions}
+                  statusOptions={statusOptions}
+                  selectedModels={selectedModels}
+                  selectedChannels={selectedChannels}
+                  selectedStatuses={selectedStatuses}
+                  onModelsChange={handleModelsChange}
+                  onChannelsChange={handleChannelsChange}
+                  onStatusesChange={handleStatusesChange}
+                  onModelsClear={clearModelFilter}
+                  onChannelsClear={clearChannelFilter}
+                  onStatusesClear={clearStatusFilter}
+                  stats={stats}
+                  lastUpdatedText={lastUpdatedText}
+                  loading={loading}
+                  logColumns={logColumns}
+                  rows={rows}
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalCount={totalCount}
+                  pageSize={pageSize}
+                  onPageChange={handlePageChange}
+                  onPageSizeChange={handlePageSizeChange}
                 />
-              </Reveal>
-            ) : null}
+              ) : null}
 
-            {activeTab === "quickImport" && queriedKey ? (
-              <Reveal>
-                <QuickImportTabContent apiKey={queriedKey} reloadToken={quickImportReloadToken} />
-              </Reveal>
-            ) : null}
+              {activeTab === "models" && queriedKey ? (
+                <Reveal>
+                  <ModelsTabContent
+                    models={availableModels}
+                    loading={modelsLoading}
+                    error={modelsError}
+                    searchFilter={modelsSearchFilter}
+                    onSearchChange={setModelsSearchFilter}
+                  />
+                </Reveal>
+              ) : null}
 
-            {activeTab !== "keys" && !queriedKey && portalUser ? (
-              <div className="rounded-2xl border border-dashed border-slate-200 px-6 py-12 text-center text-sm text-slate-500 dark:border-neutral-800 dark:text-white/55">
-                {t("apikey_lookup.pick_key_for_tab", {
-                  defaultValue: "请先在「管理 API Key」中选择一把 Key 查看用量。",
-                })}
-              </div>
-            ) : null}
-          </>
-        )}
+              {activeTab === "quickImport" && queriedKey ? (
+                <Reveal>
+                  <QuickImportTabContent apiKey={queriedKey} reloadToken={quickImportReloadToken} />
+                </Reveal>
+              ) : null}
 
-        {/* Log Content Modal */}
-        <LogContentModal
-          open={contentModalOpen}
-          logId={contentModalLogId}
-          initialTab={contentModalTab}
-          onClose={() => setContentModalOpen(false)}
-          fetchPartFn={
-            queriedKey
-              ? async (
-                  id: number,
-                  part: "input" | "output",
-                  options?: { signal?: AbortSignal },
-                ) => {
-                  return fetchPublicLogContent({
-                    id,
-                    apiKey: queriedKey,
-                    part,
-                    signal: options?.signal,
-                  });
-                }
-              : undefined
-          }
-        />
+              {(activeTab === "models" || activeTab === "quickImport") &&
+              !queriedKey &&
+              portalUser ? (
+                <div className="rounded-2xl border border-dashed border-slate-200 px-6 py-12 text-center text-sm text-slate-500 dark:border-neutral-800 dark:text-white/55">
+                  {t("apikey_lookup.operational_key_required", {
+                    defaultValue:
+                      "请先创建一把可用 Key；模型列表和快速导入需要凭证，用量与日志仍按账号聚合。",
+                  })}
+                </div>
+              ) : null}
+            </>
+          )}
 
-        {showLanding ? (
-          <LookupEmptyState t={t} onLogin={() => setLoginModalOpen(true)} />
-        ) : null}
-      </main>
+          {/* Log Content Modal */}
+          <LogContentModal
+            open={contentModalOpen}
+            logId={contentModalLogId}
+            initialTab={contentModalTab}
+            onClose={() => setContentModalOpen(false)}
+            fetchPartFn={
+              usageSubject
+                ? async (
+                    id: number,
+                    part: "input" | "output",
+                    options?: { signal?: AbortSignal },
+                  ) => {
+                    return fetchPublicLogContent({
+                      id,
+                      apiKey: usageSubject.apiKey,
+                      portalAccount: usageSubject.mode === "portal",
+                      part,
+                      signal: options?.signal,
+                    });
+                  }
+                : undefined
+            }
+          />
 
-      <Modal
-        open={loginModalOpen}
-        title={t("apikey_lookup.login_title", { defaultValue: "账号登录" })}
-        hideHeader
-        maxWidth="max-w-md"
-        panelClassName="rounded-3xl border-white/70 bg-white/95 shadow-xl shadow-slate-300/25 backdrop-blur-xl dark:border-white/10 dark:bg-neutral-950/90 dark:shadow-black/25"
-        bodyClassName="!px-7 !py-8 sm:!px-9 sm:!py-9"
-        bodyHeightClassName="max-h-none"
-        bodyOverflowClassName="overflow-visible"
-        onClose={closeLoginModal}
-      >
-        <div className="space-y-6">
-          <h2 className="pr-8 text-xl font-semibold tracking-tight text-slate-950 dark:text-white">
-            {t("apikey_lookup.login_title", { defaultValue: "登录" })}
-          </h2>
-          <form
-            className="space-y-4"
-            onSubmit={(e) => {
-              e.preventDefault();
-              void handlePortalLogin();
-            }}
-          >
-            <label className="block space-y-2">
-              <span className="text-xs font-medium text-slate-600 dark:text-white/60">
-                {t("apikey_lookup.username", { defaultValue: "账号" })}
-              </span>
-              <TextInput
-                value={loginUsername}
-                onChange={(e) => setLoginUsername(e.target.value)}
-                autoComplete="username"
-                autoFocus
-                className="rounded-full px-5"
-                placeholder={t("apikey_lookup.username_placeholder", {
-                  defaultValue: "请输入账号",
-                })}
-                startAdornment={<UserRound size={17} />}
-              />
-            </label>
-            <label className="block space-y-2">
-              <span className="text-xs font-medium text-slate-600 dark:text-white/60">
-                {t("apikey_lookup.password", { defaultValue: "密码" })}
-              </span>
-              <TextInput
-                type={showLoginPassword ? "text" : "password"}
-                value={loginPassword}
-                onChange={(e) => setLoginPassword(e.target.value)}
-                autoComplete="current-password"
-                className="rounded-full px-5"
-                placeholder={t("apikey_lookup.password_placeholder", {
-                  defaultValue: "请输入密码",
-                })}
-                startAdornment={<KeyRound size={17} />}
-                endAdornment={
-                  <button
-                    type="button"
-                    onClick={() => setShowLoginPassword((value) => !value)}
-                    className="rounded-full p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-white/10"
-                    aria-label={
-                      showLoginPassword
-                        ? t("login.hide_key", { defaultValue: "隐藏密码" })
-                        : t("login.show_key", { defaultValue: "显示密码" })
-                    }
-                  >
-                    {showLoginPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                }
-              />
-            </label>
-            {loginError ? (
-              <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-300">
-                {loginError}
-              </div>
-            ) : null}
-            <Button
-              type="submit"
-              variant="primary"
-              disabled={loginBusy || !loginUsername.trim() || !loginPassword}
-              className="h-11 w-full rounded-full"
+          {showLanding ? <LookupEmptyState t={t} onLogin={() => setLoginModalOpen(true)} /> : null}
+        </main>
+
+        <Modal
+          open={loginModalOpen}
+          title={t("apikey_lookup.login_title", { defaultValue: "账号登录" })}
+          hideHeader
+          maxWidth="max-w-md"
+          panelClassName="rounded-3xl border-white/70 bg-white/95 shadow-xl shadow-slate-300/25 backdrop-blur-xl dark:border-white/10 dark:bg-neutral-950/90 dark:shadow-black/25"
+          bodyClassName="!px-7 !py-8 sm:!px-9 sm:!py-9"
+          bodyHeightClassName="max-h-none"
+          bodyOverflowClassName="overflow-visible"
+          onClose={closeLoginModal}
+        >
+          <div className="space-y-6">
+            <h2 className="pr-8 text-xl font-semibold tracking-tight text-slate-950 dark:text-white">
+              {t("apikey_lookup.login_title", { defaultValue: "登录" })}
+            </h2>
+            <form
+              className="space-y-4"
+              onSubmit={(e) => {
+                e.preventDefault();
+                void handlePortalLogin();
+              }}
             >
-              {loginBusy
-                ? t("common.loading", { defaultValue: "登录中…" })
-                : t("common.login", { defaultValue: "登录" })}
-            </Button>
-          </form>
-        </div>
-      </Modal>
-
-      <Modal
-        open={changePasswordOpen}
-        title={t("apikey_lookup.change_password", { defaultValue: "修改密码" })}
-        maxWidth="max-w-md"
-        onClose={() => {
-          // Force password change: only allow close after success clears the flag.
-          if (portalUser?.must_change_password) return;
-          setChangePasswordOpen(false);
-        }}
-        footer={
-          <>
-            {!portalUser?.must_change_password ? (
+              <label className="block space-y-2">
+                <span className="text-xs font-medium text-slate-600 dark:text-white/60">
+                  {t("apikey_lookup.username", { defaultValue: "账号" })}
+                </span>
+                <TextInput
+                  value={loginUsername}
+                  onChange={(e) => setLoginUsername(e.target.value)}
+                  autoComplete="username"
+                  autoFocus
+                  className="rounded-full px-5"
+                  placeholder={t("apikey_lookup.username_placeholder", {
+                    defaultValue: "请输入账号",
+                  })}
+                  startAdornment={<UserRound size={17} />}
+                />
+              </label>
+              <label className="block space-y-2">
+                <span className="text-xs font-medium text-slate-600 dark:text-white/60">
+                  {t("apikey_lookup.password", { defaultValue: "密码" })}
+                </span>
+                <TextInput
+                  type={showLoginPassword ? "text" : "password"}
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  autoComplete="current-password"
+                  className="rounded-full px-5"
+                  placeholder={t("apikey_lookup.password_placeholder", {
+                    defaultValue: "请输入密码",
+                  })}
+                  startAdornment={<KeyRound size={17} />}
+                  endAdornment={
+                    <button
+                      type="button"
+                      onClick={() => setShowLoginPassword((value) => !value)}
+                      className="rounded-full p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-white/10"
+                      aria-label={
+                        showLoginPassword
+                          ? t("login.hide_key", { defaultValue: "隐藏密码" })
+                          : t("login.show_key", { defaultValue: "显示密码" })
+                      }
+                    >
+                      {showLoginPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  }
+                />
+              </label>
+              {loginError ? (
+                <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-300">
+                  {loginError}
+                </div>
+              ) : null}
               <Button
-                variant="secondary"
-                onClick={() => setChangePasswordOpen(false)}
-                disabled={portalKeysBusy}
+                type="submit"
+                variant="primary"
+                disabled={loginBusy || !loginUsername.trim() || !loginPassword}
+                className="h-11 w-full rounded-full"
               >
-                {t("common.cancel", { defaultValue: "取消" })}
+                {loginBusy
+                  ? t("common.loading", { defaultValue: "登录中…" })
+                  : t("common.login", { defaultValue: "登录" })}
               </Button>
-            ) : null}
-            <Button
-              variant="primary"
-              disabled={!pwdForm.current || pwdForm.next.length < 8 || portalKeysBusy}
-              onClick={() => {
-                setPwdError(null);
-                setPortalKeysBusy(true);
-                void portalApi
-                  .changePassword(pwdForm.current, pwdForm.next)
-                  .then(async () => {
-                    setPortalUser((u) => (u ? { ...u, must_change_password: false } : u));
-                    try {
-                      const items = (await portalApi.listKeys()).items ?? [];
-                      setPortalKeys(items);
-                      const usable = items.filter((k) => !k.disabled);
-                      const def = usable.find((k) => k.is_default) ?? usable[0];
-                      if (def) await activateOwnedKey(def.id);
-                      else if (items.length) setActiveTab("keys");
-                      setPwdForm({ current: "", next: "" });
-                      setPwdError(null);
-                      setChangePasswordOpen(false);
-                    } catch (err) {
-                      setPortalKeys([]);
+            </form>
+          </div>
+        </Modal>
+
+        <Modal
+          open={changePasswordOpen}
+          title={t("apikey_lookup.change_password", { defaultValue: "修改密码" })}
+          maxWidth="max-w-md"
+          onClose={() => {
+            // Force password change: only allow close after success clears the flag.
+            if (portalUser?.must_change_password) return;
+            setChangePasswordOpen(false);
+          }}
+          footer={
+            <>
+              {!portalUser?.must_change_password ? (
+                <Button
+                  variant="secondary"
+                  onClick={() => setChangePasswordOpen(false)}
+                  disabled={portalKeysBusy}
+                >
+                  {t("common.cancel", { defaultValue: "取消" })}
+                </Button>
+              ) : null}
+              <Button
+                variant="primary"
+                disabled={!pwdForm.current || pwdForm.next.length < 8 || portalKeysBusy}
+                onClick={() => {
+                  setPwdError(null);
+                  setPortalKeysBusy(true);
+                  void portalApi
+                    .changePassword(pwdForm.current, pwdForm.next)
+                    .then(async () => {
+                      setPortalUser((u) => (u ? { ...u, must_change_password: false } : u));
+                      try {
+                        const items = (await portalApi.listKeys()).items ?? [];
+                        setPortalKeys(items);
+                        const firstUsable = items.find((key) => !key.disabled);
+                        if (firstUsable) await activateOwnedKey(firstUsable.id);
+                        setPwdForm({ current: "", next: "" });
+                        setPwdError(null);
+                        setChangePasswordOpen(false);
+                      } catch (err) {
+                        setPortalKeys([]);
+                        setPwdError(
+                          resolveLoginErrorMessage({
+                            t,
+                            code: isApiClientError(err) ? extractApiErrorCode(err.payload) : "",
+                            status: isApiClientError(err) ? err.status : 0,
+                            isTimeout: isApiClientError(err) ? err.isTimeout : false,
+                            fallbackMessage: err instanceof Error ? err.message : "",
+                          }),
+                        );
+                      }
+                    })
+                    .catch((err) =>
                       setPwdError(
                         resolveLoginErrorMessage({
                           t,
@@ -1452,234 +1416,229 @@ export function ApiKeyLookupPage() {
                           isTimeout: isApiClientError(err) ? err.isTimeout : false,
                           fallbackMessage: err instanceof Error ? err.message : "",
                         }),
-                      );
-                    }
-                  })
-                  .catch((err) =>
-                    setPwdError(
-                      resolveLoginErrorMessage({
-                        t,
-                        code: isApiClientError(err) ? extractApiErrorCode(err.payload) : "",
-                        status: isApiClientError(err) ? err.status : 0,
-                        isTimeout: isApiClientError(err) ? err.isTimeout : false,
-                        fallbackMessage: err instanceof Error ? err.message : "",
-                      }),
-                    ),
-                  )
-                  .finally(() => setPortalKeysBusy(false));
-              }}
-            >
-              {t("common.save", { defaultValue: "保存" })}
-            </Button>
-          </>
-        }
-      >
-        <form
-          className="space-y-4"
-          onSubmit={(e) => {
-            e.preventDefault();
-          }}
+                      ),
+                    )
+                    .finally(() => setPortalKeysBusy(false));
+                }}
+              >
+                {t("common.save", { defaultValue: "保存" })}
+              </Button>
+            </>
+          }
         >
-          <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-slate-700 dark:text-white/75">
-              {t("apikey_lookup.current_password", { defaultValue: "当前密码" })}
-            </span>
-            <TextInput
-              type="password"
-              value={pwdForm.current}
-              onChange={(e) => setPwdForm((f) => ({ ...f, current: e.target.value }))}
-              autoComplete="current-password"
-            />
-          </label>
-          <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-slate-700 dark:text-white/75">
-              {t("apikey_lookup.new_password", { defaultValue: "新密码" })}
-            </span>
-            <TextInput
-              type="password"
-              value={pwdForm.next}
-              onChange={(e) => setPwdForm((f) => ({ ...f, next: e.target.value }))}
-              autoComplete="new-password"
-              placeholder={t("apikey_lookup.new_password_hint", {
-                defaultValue: "至少 8 位",
-              })}
-            />
-          </label>
-          {pwdError ? <p className="text-sm text-rose-600 dark:text-rose-300">{pwdError}</p> : null}
-        </form>
-      </Modal>
+          <form
+            className="space-y-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+            }}
+          >
+            <label className="block space-y-1.5">
+              <span className="text-sm font-medium text-slate-700 dark:text-white/75">
+                {t("apikey_lookup.current_password", { defaultValue: "当前密码" })}
+              </span>
+              <TextInput
+                type="password"
+                value={pwdForm.current}
+                onChange={(e) => setPwdForm((f) => ({ ...f, current: e.target.value }))}
+                autoComplete="current-password"
+              />
+            </label>
+            <label className="block space-y-1.5">
+              <span className="text-sm font-medium text-slate-700 dark:text-white/75">
+                {t("apikey_lookup.new_password", { defaultValue: "新密码" })}
+              </span>
+              <TextInput
+                type="password"
+                value={pwdForm.next}
+                onChange={(e) => setPwdForm((f) => ({ ...f, next: e.target.value }))}
+                autoComplete="new-password"
+                placeholder={t("apikey_lookup.new_password_hint", {
+                  defaultValue: "至少 8 位",
+                })}
+              />
+            </label>
+            {pwdError ? (
+              <p className="text-sm text-rose-600 dark:text-rose-300">{pwdError}</p>
+            ) : null}
+          </form>
+        </Modal>
 
-      <Modal
-        open={Boolean(deleteKeyTarget)}
-        title={t("apikey_lookup.confirm_delete_title")}
-        description={t("apikey_lookup.confirm_delete_desc")}
-        maxWidth="max-w-md"
-        onClose={() => {
-          if (portalKeysBusy) return;
-          setDeleteKeyTarget(null);
-        }}
-        footer={
-          <>
-            <Button
-              variant="secondary"
-              disabled={portalKeysBusy}
-              onClick={() => setDeleteKeyTarget(null)}
-            >
-              {t("common.cancel", { defaultValue: "取消" })}
-            </Button>
-            <Button
-              variant="danger"
-              disabled={portalKeysBusy || !deleteKeyTarget}
-              onClick={() => {
-                const key = deleteKeyTarget;
-                if (!key || portalKeys.length <= 1) return;
-                setPortalKeysBusy(true);
-                void portalApi
-                  .deleteKey(key.id)
-                  .then(async () => {
-                    setDeleteKeyTarget(null);
-                    const items = (await portalApi.listKeys()).items ?? [];
-                    setPortalKeys(items);
-                    const next = items.find((x) => x.is_default) ?? items[0];
-                    if (next) await activateOwnedKey(next.id);
-                    else handleApiKeyInputChange("");
-                  })
-                  .finally(() => setPortalKeysBusy(false));
-              }}
-            >
-              {portalKeysBusy
-                ? t("apikey_lookup.deleting")
-                : t("apikey_lookup.confirm_delete")}
-            </Button>
-          </>
-        }
-      >
-        {deleteKeyTarget ? (
-          <div className="rounded-xl bg-red-50 p-3 dark:bg-red-900/20">
-            <div className="text-sm font-medium text-red-800 dark:text-red-300">
-              {deleteKeyTarget.name || deleteKeyTarget.id.slice(0, 8)}
+        <Modal
+          open={Boolean(deleteKeyTarget)}
+          title={t("apikey_lookup.confirm_delete_title")}
+          description={t("apikey_lookup.confirm_delete_desc")}
+          maxWidth="max-w-md"
+          onClose={() => {
+            if (portalKeysBusy) return;
+            setDeleteKeyTarget(null);
+          }}
+          footer={
+            <>
+              <Button
+                variant="secondary"
+                disabled={portalKeysBusy}
+                onClick={() => setDeleteKeyTarget(null)}
+              >
+                {t("common.cancel", { defaultValue: "取消" })}
+              </Button>
+              <Button
+                variant="danger"
+                disabled={portalKeysBusy || !deleteKeyTarget}
+                onClick={() => {
+                  const key = deleteKeyTarget;
+                  if (!key || portalKeys.length <= 1) return;
+                  setPortalKeysBusy(true);
+                  void portalApi
+                    .deleteKey(key.id)
+                    .then(async () => {
+                      setDeleteKeyTarget(null);
+                      const items = (await portalApi.listKeys()).items ?? [];
+                      setPortalKeys(items);
+                      if (operationalKeyId === key.id) {
+                        const next = items.find((item) => !item.disabled);
+                        if (next) await activateOwnedKey(next.id);
+                        else handleApiKeyInputChange("");
+                      }
+                    })
+                    .finally(() => setPortalKeysBusy(false));
+                }}
+              >
+                {portalKeysBusy ? t("apikey_lookup.deleting") : t("apikey_lookup.confirm_delete")}
+              </Button>
+            </>
+          }
+        >
+          {deleteKeyTarget ? (
+            <div className="rounded-xl bg-red-50 p-3 dark:bg-red-900/20">
+              <div className="text-sm font-medium text-red-800 dark:text-red-300">
+                {deleteKeyTarget.name || deleteKeyTarget.id.slice(0, 8)}
+              </div>
+              <code className="text-xs text-red-600 dark:text-red-400">
+                {deleteKeyTarget.key_masked}
+              </code>
             </div>
-            <code className="text-xs text-red-600 dark:text-red-400">
-              {deleteKeyTarget.key_masked}
-            </code>
-          </div>
-        ) : null}
-      </Modal>
-
-      <Modal
-        open={createKeyOpen}
-        title={t("apikey_lookup.create_key", { defaultValue: "新建 Key" })}
-        description={t("apikey_lookup.create_key_desc", {
-          defaultValue: "为新 Key 填写名称，便于在请求日志中区分来源。",
-        })}
-        maxWidth="max-w-md"
-        onClose={() => {
-          if (portalKeysBusy) return;
-          setCreateKeyOpen(false);
-          setCreateKeyError(null);
-        }}
-        footer={
-          <>
-            <Button
-              variant="secondary"
-              disabled={portalKeysBusy}
-              onClick={() => {
-                setCreateKeyOpen(false);
-                setCreateKeyError(null);
-              }}
-            >
-              {t("common.cancel", { defaultValue: "取消" })}
-            </Button>
-            <Button
-              type="submit"
-              form="portal-create-key-form"
-              variant="primary"
-              disabled={portalKeysBusy || !createKeyName.trim()}
-            >
-              {t("apikey_lookup.create_key", { defaultValue: "新建 Key" })}
-            </Button>
-          </>
-        }
-      >
-        <form
-          id="portal-create-key-form"
-          className="space-y-3"
-          onSubmit={(e) => {
-            e.preventDefault();
-            const name = createKeyName.trim();
-            if (!name) {
-              setCreateKeyError(
-                t("apikey_lookup.key_name_required", { defaultValue: "请输入 Key 名称" }),
-              );
-              return;
-            }
-            const nameTaken = portalKeys.some(
-              (key) => (key.name || "").trim().toLowerCase() === name.toLowerCase(),
-            );
-            if (nameTaken) {
-              setCreateKeyError(
-                t("apikey_lookup.key_name_duplicate", {
-                  defaultValue: "Key 名称已存在，请换一个。",
-                }),
-              );
-              return;
-            }
-            setCreateKeyError(null);
-            setPortalKeysBusy(true);
-            void portalApi
-              .createKey(name)
-              .then(async (res) => {
-                if (res.plaintext_key) setSecretOnce(res.plaintext_key);
-                setCreateKeyOpen(false);
-                setCreateKeyName("");
-                await refreshPortalKeys();
-              })
-              .catch((err) => {
-                const code = isApiClientError(err) ? extractApiErrorCode(err.payload) : "";
-                if (code === "duplicate_key_name") {
-                  setCreateKeyError(
-                    t("apikey_lookup.key_name_duplicate", {
-                      defaultValue: "Key 名称已存在，请换一个。",
-                    }),
-                  );
-                  return;
-                }
-                setCreateKeyError(err instanceof Error ? err.message : "failed");
-              })
-              .finally(() => setPortalKeysBusy(false));
-          }}
-        >
-          <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-slate-700 dark:text-white/75">
-              {t("apikey_lookup.key_name", { defaultValue: "Key 名称" })}
-            </span>
-            <TextInput
-              value={createKeyName}
-              onChange={(e) => {
-                setCreateKeyName(e.target.value);
-                if (createKeyError) setCreateKeyError(null);
-              }}
-              autoFocus
-              placeholder={t("apikey_lookup.key_name_placeholder", {
-                defaultValue: "例如：Claude Desktop / 生产环境",
-              })}
-            />
-          </label>
-          {createKeyError ? (
-            <p className="text-sm text-rose-600 dark:text-rose-300">{createKeyError}</p>
           ) : null}
-        </form>
-      </Modal>
+        </Modal>
 
-      <SecretRevealModal
-        open={Boolean(secretOnce)}
-        title={t("apikey_lookup.copy_secret", { defaultValue: "请立即复制" })}
-        secret={secretOnce ?? ""}
-        warning={t("apikey_lookup.secret_once_warning", {
-          defaultValue: "离开后无法再查看明文 Key，请立即复制保存。",
-        })}
-        onClose={() => setSecretOnce(null)}
-      />
+        <Modal
+          open={createKeyOpen}
+          title={t("apikey_lookup.create_key", { defaultValue: "新建 Key" })}
+          description={t("apikey_lookup.create_key_desc", {
+            defaultValue: "为新 Key 填写名称，便于在请求日志中区分来源。",
+          })}
+          maxWidth="max-w-md"
+          onClose={() => {
+            if (portalKeysBusy) return;
+            setCreateKeyOpen(false);
+            setCreateKeyError(null);
+          }}
+          footer={
+            <>
+              <Button
+                variant="secondary"
+                disabled={portalKeysBusy}
+                onClick={() => {
+                  setCreateKeyOpen(false);
+                  setCreateKeyError(null);
+                }}
+              >
+                {t("common.cancel", { defaultValue: "取消" })}
+              </Button>
+              <Button
+                type="submit"
+                form="portal-create-key-form"
+                variant="primary"
+                disabled={portalKeysBusy || !createKeyName.trim()}
+              >
+                {t("apikey_lookup.create_key", { defaultValue: "新建 Key" })}
+              </Button>
+            </>
+          }
+        >
+          <form
+            id="portal-create-key-form"
+            className="space-y-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const name = createKeyName.trim();
+              if (!name) {
+                setCreateKeyError(
+                  t("apikey_lookup.key_name_required", { defaultValue: "请输入 Key 名称" }),
+                );
+                return;
+              }
+              const nameTaken = portalKeys.some(
+                (key) => (key.name || "").trim().toLowerCase() === name.toLowerCase(),
+              );
+              if (nameTaken) {
+                setCreateKeyError(
+                  t("apikey_lookup.key_name_duplicate", {
+                    defaultValue: "Key 名称已存在，请换一个。",
+                  }),
+                );
+                return;
+              }
+              setCreateKeyError(null);
+              setPortalKeysBusy(true);
+              void portalApi
+                .createKey(name)
+                .then(async (res) => {
+                  if (res.plaintext_key) {
+                    setSecretOnce(res.plaintext_key);
+                    setOperationalKeyId(res.api_key.id);
+                    setApiKeyInput(res.plaintext_key);
+                    setQueriedKey(res.plaintext_key);
+                  }
+                  setCreateKeyOpen(false);
+                  setCreateKeyName("");
+                  await refreshPortalKeys();
+                })
+                .catch((err) => {
+                  const code = isApiClientError(err) ? extractApiErrorCode(err.payload) : "";
+                  if (code === "duplicate_key_name") {
+                    setCreateKeyError(
+                      t("apikey_lookup.key_name_duplicate", {
+                        defaultValue: "Key 名称已存在，请换一个。",
+                      }),
+                    );
+                    return;
+                  }
+                  setCreateKeyError(err instanceof Error ? err.message : "failed");
+                })
+                .finally(() => setPortalKeysBusy(false));
+            }}
+          >
+            <label className="block space-y-1.5">
+              <span className="text-sm font-medium text-slate-700 dark:text-white/75">
+                {t("apikey_lookup.key_name", { defaultValue: "Key 名称" })}
+              </span>
+              <TextInput
+                value={createKeyName}
+                onChange={(e) => {
+                  setCreateKeyName(e.target.value);
+                  if (createKeyError) setCreateKeyError(null);
+                }}
+                autoFocus
+                placeholder={t("apikey_lookup.key_name_placeholder", {
+                  defaultValue: "例如：Claude Desktop / 生产环境",
+                })}
+              />
+            </label>
+            {createKeyError ? (
+              <p className="text-sm text-rose-600 dark:text-rose-300">{createKeyError}</p>
+            ) : null}
+          </form>
+        </Modal>
+
+        <SecretRevealModal
+          open={Boolean(secretOnce)}
+          title={t("apikey_lookup.copy_secret", { defaultValue: "请立即复制" })}
+          secret={secretOnce ?? ""}
+          warning={t("apikey_lookup.secret_once_warning", {
+            defaultValue: "离开后无法再查看明文 Key，请立即复制保存。",
+          })}
+          onClose={() => setSecretOnce(null)}
+        />
       </div>
     </PageBackground>
   );

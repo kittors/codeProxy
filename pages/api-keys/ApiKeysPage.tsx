@@ -315,23 +315,6 @@ export function ApiKeysPage({
     setShowCreate(true);
   };
 
-  const handleSetDefault = useCallback(
-    async (entry: ApiKeyEntry) => {
-      if (!endUserIdFilter || !entry.id || entry.is_default) return;
-      try {
-        await endUsersApi.setDefaultKey(endUserIdFilter, entry.id);
-        notify({ type: "success", message: t("end_users.default_key_set", { defaultValue: "已设为默认 Key" }) });
-        await loadEntries();
-      } catch (err: unknown) {
-        notify({
-          type: "error",
-          message: err instanceof Error ? err.message : t("api_keys_page.operation_failed"),
-        });
-      }
-    },
-    [endUserIdFilter, loadEntries, notify, t],
-  );
-
   const handleCreate = async () => {
     if (!form.name.trim()) {
       notify({ type: "error", message: t("api_keys_page.name_required") });
@@ -476,9 +459,7 @@ export function ApiKeysPage({
       if (!entry || !((entry["daily-spending-limit"] ?? 0) > 0)) return;
       setResettingDailySpendingKey(entry.key);
       try {
-        await apiKeyEntriesApi.resetDailySpending(
-          entry.id ? { id: entry.id } : { key: entry.key },
-        );
+        await apiKeyEntriesApi.resetDailySpending(entry.id ? { id: entry.id } : { key: entry.key });
         notify({ type: "success", message: t("api_keys_page.reset_today_spending_success") });
         await loadEntries();
       } catch (err: unknown) {
@@ -534,7 +515,7 @@ export function ApiKeysPage({
           });
           return;
         }
-        // Owner-scoped delete promotes default key when needed; never use filtered index.
+        // Owner-scoped delete enforces the account's at-least-one-key invariant server-side.
         await endUsersApi.deleteKey(endUserIdFilter, target.id);
         notify({ type: "success", message: t("api_keys_page.deleted_success") });
       } else {
@@ -706,7 +687,6 @@ export function ApiKeysPage({
         onDelete: handleOpenDelete,
         onResetDailySpending: (index) => void handleResetDailySpending(index),
         onViewResetHistory: (entry) => void handleViewResetHistory(entry),
-        onSetDefault: endUserIdFilter ? (entry) => void handleSetDefault(entry) : undefined,
         resettingDailySpendingKey,
         accountScoped: Boolean(endUserIdFilter),
       }),
@@ -720,7 +700,6 @@ export function ApiKeysPage({
       handleOpenDelete,
       handleResetDailySpending,
       handleViewResetHistory,
-      handleSetDefault,
       handleSelectAll,
       handleSelectRow,
       t,
@@ -786,11 +765,7 @@ export function ApiKeysPage({
           columns={apiKeyColumns}
           rowKey={(row) => row.key}
           rowHeight={44}
-          height={
-            embed
-              ? "min-h-0 flex-1"
-              : "h-[calc(100dvh-260px)] md:h-auto md:flex-1"
-          }
+          height={embed ? "min-h-0 flex-1" : "h-[calc(100dvh-260px)] md:h-auto md:flex-1"}
           minHeight={embed ? "min-h-0" : "min-h-[320px] md:min-h-0"}
           // Full key table needs all quota/permission columns; account-scoped embed only keeps credentials.
           minWidth={endUserIdFilter ? "min-w-[876px]" : "min-w-[2314px]"}
@@ -809,9 +784,7 @@ export function ApiKeysPage({
           <div className="flex shrink-0 items-center justify-end border-b border-slate-100 px-4 py-3 dark:border-white/10">
             {toolbar}
           </div>
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 py-3">
-            {tableBody}
-          </div>
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 py-3">{tableBody}</div>
         </div>
       ) : (
         <Card
@@ -924,10 +897,7 @@ export function ApiKeysPage({
           setResetHistoryEntry(null);
           setResetHistoryEvents([]);
         }}
-        keyName={
-          resetHistoryEntry?.name?.trim() ||
-          t("api_keys_page.unnamed")
-        }
+        keyName={resetHistoryEntry?.name?.trim() || t("api_keys_page.unnamed")}
         maskedKey={resetHistoryEntry ? maskApiKey(resetHistoryEntry.key) : ""}
         loading={resetHistoryLoading}
         events={resetHistoryEvents}

@@ -20,6 +20,7 @@ export interface EndUser {
   updated_at: string;
   version: number;
   api_key_count?: number;
+  "daily-spending-used"?: number;
   /** Account-level quota/permissions (shared by all keys). */
   "permission-profile-id"?: string;
   "daily-limit"?: number;
@@ -93,6 +94,14 @@ export const endUsersApi = {
     apiClient.post<{ generated_password?: string }>(`/end-users/${id}/reset-password`, {
       password: password || "",
     }),
+  resetDailySpending: (id: string) =>
+    apiClient.post<{
+      status: string;
+      end_user_id: string;
+      "daily-spending-used": number;
+      "effective-used-before": number;
+      "raw-today-cost": number;
+    }>(`/end-users/${id}/daily-spending/reset`, {}),
   listKeys: (id: string) => apiClient.get<{ items: EndUserAPIKey[] }>(`/end-users/${id}/api-keys`),
   createKey: (id: string, name?: string) =>
     apiClient.post<{ api_key: EndUserAPIKey; plaintext_key?: string }>(
@@ -101,8 +110,6 @@ export const endUsersApi = {
     ),
   deleteKey: (userId: string, keyId: string) =>
     apiClient.delete(`/end-users/${userId}/api-keys/${keyId}`),
-  setDefaultKey: (userId: string, keyId: string) =>
-    apiClient.post(`/end-users/${userId}/api-keys/${keyId}/default`, {}),
 };
 
 export const portalApi = {
@@ -148,7 +155,7 @@ export const portalApi = {
     portalClient.post<{ api_key: EndUserAPIKey; plaintext_key?: string }>("/v0/portal/api-keys", {
       name: name || "",
     }),
-  updateKey: (id: string, body: { name?: string; is_default?: boolean }) =>
+  updateKey: (id: string, body: { name?: string }) =>
     portalClient.patch<EndUserAPIKey>(`/v0/portal/api-keys/${id}`, body),
   rotateKey: (id: string) =>
     portalClient.post<{ api_key: EndUserAPIKey; plaintext_key?: string }>(

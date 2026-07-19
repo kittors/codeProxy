@@ -1,5 +1,7 @@
 import {
+  MANAGEMENT_API_PREFIX,
   detectApiBaseFromLocation,
+  portalClient,
   publicApiClient,
 } from "@code-proxy/api-client";
 import {
@@ -8,11 +10,7 @@ import {
   normalizeModelPricing,
   type ModelPricing,
 } from "@features/model-availability";
-import type {
-  ChartDataResponse,
-  PublicLogsResponse,
-  PublicUsageSummaryResponse,
-} from "./types";
+import type { ChartDataResponse, PublicLogsResponse, PublicUsageSummaryResponse } from "./types";
 
 type LogContentBodyPart = "input" | "output";
 
@@ -45,9 +43,7 @@ export const normalizePublicModelItem = (item: unknown): PublicModelItem | null 
   if (!isRecord(item)) return null;
   const id = String(item.id ?? item.model_id ?? item.name ?? "").trim();
   if (!id) return null;
-  const inputModalities = normalizeModelModalities(
-    item.input_modalities ?? item.inputModalities,
-  );
+  const inputModalities = normalizeModelModalities(item.input_modalities ?? item.inputModalities);
   const outputModalities = normalizeModelModalities(
     item.output_modalities ?? item.outputModalities,
   );
@@ -61,13 +57,25 @@ export const normalizePublicModelItem = (item: unknown): PublicModelItem | null 
     id,
     description: String(item.description ?? "").trim(),
     ownedBy: String(item.owned_by ?? item.ownedBy ?? "").trim(),
-    pricing: isRecord(item.pricing)
-      ? normalizeModelPricing(item)
-      : emptyModelPricing(),
+    pricing: isRecord(item.pricing) ? normalizeModelPricing(item) : emptyModelPricing(),
     inputModalities,
     outputModalities,
     supportsVision,
   };
+};
+
+const postPublicUsage = <T>(params: {
+  path: string;
+  body: Record<string, unknown>;
+  portalAccount?: boolean;
+  signal?: AbortSignal;
+}): Promise<T> => {
+  if (params.portalAccount) {
+    return portalClient.post<T>(`${MANAGEMENT_API_PREFIX}/public${params.path}`, params.body, {
+      signal: params.signal,
+    });
+  }
+  return publicApiClient.post<T>(params.path, params.body, { signal: params.signal });
 };
 
 const extractModels = (payload: unknown): PublicModelItem[] => {
@@ -91,12 +99,14 @@ export async function fetchPublicLogs(params: {
   modelsEmpty?: boolean;
   channelsEmpty?: boolean;
   statusesEmpty?: boolean;
+  portalAccount?: boolean;
   signal?: AbortSignal;
 }): Promise<PublicLogsResponse> {
-  return publicApiClient.post<PublicLogsResponse>(
-    "/usage/logs",
-    {
-      api_key: params.apiKey,
+  return postPublicUsage<PublicLogsResponse>({
+    path: "/usage/logs",
+    portalAccount: params.portalAccount,
+    body: {
+      ...(params.portalAccount ? {} : { api_key: params.apiKey }),
       page: params.page,
       size: params.size,
       days: params.days,
@@ -107,55 +117,61 @@ export async function fetchPublicLogs(params: {
       channels_empty: params.channelsEmpty,
       statuses_empty: params.statusesEmpty,
     },
-    { signal: params.signal },
-  );
+    signal: params.signal,
+  });
 }
 
 export async function fetchPublicChartData(params: {
   apiKey: string;
   days?: number;
+  portalAccount?: boolean;
   signal?: AbortSignal;
 }): Promise<ChartDataResponse> {
-  return publicApiClient.post<ChartDataResponse>(
-    "/usage/chart-data",
-    {
-      api_key: params.apiKey,
+  return postPublicUsage<ChartDataResponse>({
+    path: "/usage/chart-data",
+    portalAccount: params.portalAccount,
+    body: {
+      ...(params.portalAccount ? {} : { api_key: params.apiKey }),
       days: params.days,
     },
-    { signal: params.signal },
-  );
+    signal: params.signal,
+  });
 }
 
 export async function fetchPublicUsageSummary(params: {
   apiKey: string;
+  portalAccount?: boolean;
   signal?: AbortSignal;
 }): Promise<PublicUsageSummaryResponse> {
-  return publicApiClient.post<PublicUsageSummaryResponse>(
-    "/usage/summary",
-    { api_key: params.apiKey },
-    { signal: params.signal },
-  );
+  return postPublicUsage<PublicUsageSummaryResponse>({
+    path: "/usage/summary",
+    portalAccount: params.portalAccount,
+    body: params.portalAccount ? {} : { api_key: params.apiKey },
+    signal: params.signal,
+  });
 }
 
 export async function fetchPublicLogContent(params: {
   id: number;
   apiKey: string;
   part: LogContentBodyPart;
+  portalAccount?: boolean;
   signal?: AbortSignal;
 }): Promise<PublicLogContentResponse> {
   if (!Number.isInteger(params.id) || params.id <= 0) {
     throw new Error("Invalid log id");
   }
 
-  return publicApiClient.post<PublicLogContentResponse>(
-    `/usage/logs/${params.id}/content`,
-    {
-      api_key: params.apiKey,
+  return postPublicUsage<PublicLogContentResponse>({
+    path: `/usage/logs/${params.id}/content`,
+    portalAccount: params.portalAccount,
+    body: {
+      ...(params.portalAccount ? {} : { api_key: params.apiKey }),
       part: params.part,
       format: "json",
     },
-    { signal: params.signal },
-  );
+    signal: params.signal,
+  });
 }
 
 export async function fetchAvailableModels(apiKey: string): Promise<PublicModelItem[]> {
