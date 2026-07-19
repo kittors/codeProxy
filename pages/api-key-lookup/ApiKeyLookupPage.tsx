@@ -1,7 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Eye, EyeOff, Key, KeyRound, LogOut, UserRound } from "lucide-react";
-import { portalApi, type EndUser, type EndUserAPIKey } from "@code-proxy/api-client";
+import {
+  extractApiErrorCode,
+  isApiClientError,
+  portalApi,
+  type EndUser,
+  type EndUserAPIKey,
+} from "@code-proxy/api-client";
+import { resolveLoginErrorMessage } from "../login/loginErrors";
 import { useTheme } from "@code-proxy/ui";
 import { ThemeToggleButton } from "@code-proxy/ui";
 import { LanguageSelector } from "@code-proxy/ui";
@@ -881,11 +888,19 @@ export function ApiKeyLookupPage() {
         }
       }
     } catch (err) {
-      setLoginError(err instanceof Error ? err.message : "login failed");
+      setLoginError(
+        resolveLoginErrorMessage({
+          t,
+          code: isApiClientError(err) ? extractApiErrorCode(err.payload) : "",
+          status: isApiClientError(err) ? err.status : 0,
+          isTimeout: isApiClientError(err) ? err.isTimeout : false,
+          fallbackMessage: err instanceof Error ? err.message : "",
+        }),
+      );
     } finally {
       setLoginBusy(false);
     }
-  }, [activateOwnedKey, loginUsername, loginPassword]);
+  }, [activateOwnedKey, loginPassword, loginUsername, t]);
 
   const handleLogout = useCallback(() => {
     void portalApi.logout();
@@ -1159,6 +1174,20 @@ export function ApiKeyLookupPage() {
               chartLoading={chartLoading}
               modelsLoading={modelsLoading}
               showKeysTab={Boolean(portalUser)}
+              keysHeader={
+                portalUser
+                  ? {
+                      loading: portalKeysLoading,
+                      busy: portalKeysBusy,
+                      onRefresh: () => void refreshPortalKeys(),
+                      onCreate: () => {
+                        setCreateKeyName("");
+                        setCreateKeyError(null);
+                        setCreateKeyOpen(true);
+                      },
+                    }
+                  : undefined
+              }
             />
 
             {activeTab === "usage" && queriedKey ? (
@@ -1187,14 +1216,7 @@ export function ApiKeyLookupPage() {
                 <ManageKeysTabContent
                   t={t}
                   keys={portalKeys}
-                  loading={portalKeysLoading}
                   busy={portalKeysBusy}
-                  onRefresh={() => void refreshPortalKeys()}
-                  onCreate={() => {
-                    setCreateKeyName("");
-                    setCreateKeyError(null);
-                    setCreateKeyOpen(true);
-                  }}
                   onViewUsage={(key) => openUsagePreview(key)}
                   onSetDefault={(key) => {
                     setPortalKeysBusy(true);
@@ -1461,10 +1483,28 @@ export function ApiKeyLookupPage() {
                       setChangePasswordOpen(false);
                     } catch (err) {
                       setPortalKeys([]);
-                      setPwdError(err instanceof Error ? err.message : "failed");
+                      setPwdError(
+                        resolveLoginErrorMessage({
+                          t,
+                          code: isApiClientError(err) ? extractApiErrorCode(err.payload) : "",
+                          status: isApiClientError(err) ? err.status : 0,
+                          isTimeout: isApiClientError(err) ? err.isTimeout : false,
+                          fallbackMessage: err instanceof Error ? err.message : "",
+                        }),
+                      );
                     }
                   })
-                  .catch((err) => setPwdError(err instanceof Error ? err.message : "failed"))
+                  .catch((err) =>
+                    setPwdError(
+                      resolveLoginErrorMessage({
+                        t,
+                        code: isApiClientError(err) ? extractApiErrorCode(err.payload) : "",
+                        status: isApiClientError(err) ? err.status : 0,
+                        isTimeout: isApiClientError(err) ? err.isTimeout : false,
+                        fallbackMessage: err instanceof Error ? err.message : "",
+                      }),
+                    ),
+                  )
                   .finally(() => setPortalKeysBusy(false));
               }}
             >

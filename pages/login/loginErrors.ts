@@ -33,8 +33,10 @@ export function resolveLoginErrorMessage({
     case "tenant_suspended":
       return t("login.tenant_suspended");
     case "login_rate_limited":
+    case "login_cooldown":
       return t("login.error_rate_limited");
     case "identity_unavailable":
+    case "internal_error":
       return t("login.error_server");
     case "validation_failed":
       return t("login.error_required");

@@ -39,7 +39,12 @@ describe("resolveLoginErrorMessage", () => {
     expect(resolveLoginErrorMessage({ t, code: "login_rate_limited", status: 429 })).toBe(
       "尝试过多",
     );
+    expect(resolveLoginErrorMessage({ t, code: "login_cooldown", status: 429 })).toBe("尝试过多");
     expect(resolveLoginErrorMessage({ t, status: 429 })).toBe("尝试过多");
+  });
+
+  test("maps portal internal_error code", () => {
+    expect(resolveLoginErrorMessage({ t, code: "internal_error", status: 500 })).toBe("服务器错误");
   });
 
   test("falls back to status-based messages", () => {

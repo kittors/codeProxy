@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { RefreshCw } from "lucide-react";
-import { HoverTooltip, Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
+import { Plus, RefreshCw } from "lucide-react";
+import { Button, HoverTooltip, Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { TimeRangeSelector } from "@features/monitor-widgets";
 import type { TimeRange } from "@features/monitor-widgets/monitor-constants";
 
@@ -22,6 +22,7 @@ export function LookupResultsToolbar({
   chartLoading,
   modelsLoading,
   showKeysTab = false,
+  keysHeader,
 }: {
   t: (key: string, options?: Record<string, unknown>) => string;
   activeTab: ApiKeyLookupTab;
@@ -34,9 +35,17 @@ export function LookupResultsToolbar({
   modelsLoading: boolean;
   /** Portal login: show “管理 API Key” as the 2nd tab. */
   showKeysTab?: boolean;
+  /** keys tab：标题 + 刷新/新建 与 tabs 同吸顶，避免滚动后消失。 */
+  keysHeader?: {
+    loading?: boolean;
+    busy?: boolean;
+    onRefresh: () => void;
+    onCreate: () => void;
+  };
 }) {
   const toolbarRef = useRef<HTMLDivElement>(null);
   const [stuck, setStuck] = useState(false);
+  const showKeysHeader = activeTab === "keys" && keysHeader;
 
   // 不要再用短 relative 包裹 sticky：sticky 只能在「包含块」高度内钉住，
   // 外层高度≈自身时，一滚就会整段被带走，表现为「没吸顶、飘走」。
@@ -74,7 +83,7 @@ export function LookupResultsToolbar({
       data-testid="apikey-lookup-toolbar-sticky"
       data-stuck={stuck ? "true" : "false"}
       className={[
-        "sticky top-3 z-20 -mx-1 rounded-2xl px-1.5 py-1.5 backdrop-blur-md",
+        "sticky top-3 z-20 -mx-1 space-y-3 rounded-2xl px-1.5 py-1.5 backdrop-blur-md",
         "motion-safe:transition-[border-color,box-shadow,background-color] motion-safe:duration-300 motion-safe:ease-[cubic-bezier(0.22,1,0.36,1)]",
         stuck
           ? "border border-slate-200/80 bg-white/90 shadow-sm shadow-slate-900/5 dark:border-white/10 dark:bg-neutral-950/85 dark:shadow-black/25"
@@ -103,23 +112,58 @@ export function LookupResultsToolbar({
             <TimeRangeSelector value={timeRange} onChange={setTimeRange} />
           ) : null}
         </div>
-        <div className="flex items-center gap-2">
-          <HoverTooltip content={t("common.refresh")}>
-            <button
-              type="button"
-              onClick={handleRefresh}
-              disabled={loading || chartLoading || modelsLoading}
-              aria-label={t("common.refresh")}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40 dark:text-white/55 dark:hover:bg-white/10 dark:hover:text-white"
-            >
-              <RefreshCw
-                size={16}
-                className={loading || chartLoading || modelsLoading ? "animate-spin" : ""}
-              />
-            </button>
-          </HoverTooltip>
-        </div>
+        {!showKeysHeader ? (
+          <div className="flex items-center gap-2">
+            <HoverTooltip content={t("common.refresh")}>
+              <button
+                type="button"
+                onClick={handleRefresh}
+                disabled={loading || chartLoading || modelsLoading}
+                aria-label={t("common.refresh")}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40 dark:text-white/55 dark:hover:bg-white/10 dark:hover:text-white"
+              >
+                <RefreshCw
+                  size={16}
+                  className={loading || chartLoading || modelsLoading ? "animate-spin" : ""}
+                />
+              </button>
+            </HoverTooltip>
+          </div>
+        ) : null}
       </div>
+
+      {showKeysHeader ? (
+        <div
+          data-testid="apikey-lookup-keys-header-sticky"
+          className="flex flex-wrap items-start justify-between gap-3 px-0.5 pb-0.5"
+        >
+          <div>
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+              {t("apikey_lookup.manage_keys", { defaultValue: "管理 API Key" })}
+            </h3>
+            <p className="mt-1 text-xs text-slate-500 dark:text-white/55">
+              {t("apikey_lookup.manage_keys_desc", {
+                defaultValue: "管理本账号下全部 API Key。查看用量以弹窗打开，不会离开当前页。",
+              })}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={keysHeader.onRefresh}
+              disabled={keysHeader.loading || keysHeader.busy}
+            >
+              <RefreshCw size={14} className={keysHeader.loading ? "animate-spin" : ""} />
+              {t("common.refresh")}
+            </Button>
+            <Button size="sm" variant="primary" onClick={keysHeader.onCreate} disabled={keysHeader.busy}>
+              <Plus size={14} />
+              {t("apikey_lookup.create_key", { defaultValue: "新建 Key" })}
+            </Button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

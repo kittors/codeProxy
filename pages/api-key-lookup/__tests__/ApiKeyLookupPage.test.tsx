@@ -197,6 +197,37 @@ describe("ApiKeyLookupPage", () => {
     });
   });
 
+  test("localizes invalid credentials on portal login failure", async () => {
+    const { portalApi, ApiClientError } = await import("@code-proxy/api-client");
+    vi.mocked(portalApi.login).mockRejectedValue(
+      new ApiClientError({
+        message: "invalid credentials",
+        status: 401,
+        data: { error: { code: "invalid_credentials", message: "invalid credentials" } },
+      }),
+    );
+
+    render(
+      <ThemeProvider>
+        <ToastProvider>
+          <ApiKeyLookupPage />
+        </ToastProvider>
+      </ThemeProvider>,
+    );
+
+    const dialog = screen.getByRole("dialog");
+    await userEvent.type(screen.getByPlaceholderText(/enter username|请输入账号/i), "alice");
+    await userEvent.type(screen.getByPlaceholderText(/enter password|请输入密码/i), "bad-pass");
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: /^(login|sign in|登录)$/i }),
+    );
+
+    await waitFor(() => {
+      expect(within(dialog).getByText(/incorrect username or password|用户名或密码错误/i)).toBeInTheDocument();
+    });
+    expect(within(dialog).queryByText(/invalid credentials/i)).not.toBeInTheDocument();
+  });
+
   test("restores the last looked up API key after page refresh and shows its name", async () => {
     window.sessionStorage.setItem("apiKeyLookup.lastApiKey.v1", "sk-restored-key");
 
