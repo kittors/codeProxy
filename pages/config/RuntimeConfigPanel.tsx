@@ -138,6 +138,10 @@ export function RuntimeConfigPanel() {
   const loadRuntimeConfig = useCallback(async () => {
     setLoading(true);
     try {
+      // Process-global toggles (request-log, logging-to-file, …) must come from
+      // dedicated GET endpoints. GET /config is tenant-scoped for business tenants
+      // and omits those fields; readBool would default missing keys to false while
+      // the host still wrote multi-MB request files.
       const [
         config,
         logsLimit,
@@ -147,6 +151,13 @@ export function RuntimeConfigPanel() {
         autoUpdateChannelValue,
         codexOAuthAdmission,
         requestLogBodyStorage,
+        debugEnabledValue,
+        usageStatisticsEnabledValue,
+        requestLogEnabledValue,
+        loggingToFileEnabledValue,
+        wsAuthEnabledValue,
+        switchProjectEnabledValue,
+        switchPreviewModelEnabledValue,
       ] = await Promise.all([
         configApi.getConfig(),
         configApi.getLogsMaxTotalSizeMb().catch(() => 0),
@@ -158,23 +169,26 @@ export function RuntimeConfigPanel() {
           return emptyCodexOAuthAdmission;
         }),
         configApi.getRequestLogBodyStorage().catch(() => false),
+        configApi.getDebug().catch(() => false),
+        configApi.getUsageStatisticsEnabled().catch(() => false),
+        configApi.getRequestLog().catch(() => false),
+        configApi.getLoggingToFile().catch(() => false),
+        configApi.getWsAuth().catch(() => false),
+        configApi.getSwitchProject().catch(() => false),
+        configApi.getSwitchPreviewModel().catch(() => false),
       ]);
 
       const record = isRecord(config) ? (config as Record<string, unknown>) : null;
       setRawConfig(record);
 
-      setDebugEnabled(readBool(record, "debug", "debug-enabled", "debugEnabled"));
-      setUsageStatisticsEnabled(
-        readBool(record, "usage-statistics-enabled", "usageStatisticsEnabled"),
-      );
-      setRequestLogEnabled(readBool(record, "request-log", "requestLog"));
+      setDebugEnabled(debugEnabledValue);
+      setUsageStatisticsEnabled(usageStatisticsEnabledValue);
+      setRequestLogEnabled(requestLogEnabledValue);
       setRequestLogBodyStorageEnabled(requestLogBodyStorage);
-      setLoggingToFileEnabled(readBool(record, "logging-to-file", "loggingToFile"));
-      setWsAuthEnabled(readBool(record, "ws-auth", "wsAuth"));
-      setSwitchProjectEnabled(readBool(record, "quota-exceeded.switch-project", "switchProject"));
-      setSwitchPreviewModelEnabled(
-        readBool(record, "quota-exceeded.switch-preview-model", "switchPreviewModel"),
-      );
+      setLoggingToFileEnabled(loggingToFileEnabledValue);
+      setWsAuthEnabled(wsAuthEnabledValue);
+      setSwitchProjectEnabled(switchProjectEnabledValue);
+      setSwitchPreviewModelEnabled(switchPreviewModelEnabledValue);
 
       setProxyUrl(readString(record, "proxy-url", "proxyUrl"));
       const retry = readNumber(record, "request-retry", "requestRetry");

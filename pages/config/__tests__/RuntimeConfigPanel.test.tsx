@@ -23,6 +23,13 @@ const mocks = vi.hoisted(() => ({
   getAutoUpdateChannel: vi.fn(),
   getCodexOAuthAdmission: vi.fn(),
   getRequestLogBodyStorage: vi.fn(),
+  getDebug: vi.fn(),
+  getUsageStatisticsEnabled: vi.fn(),
+  getRequestLog: vi.fn(),
+  getLoggingToFile: vi.fn(),
+  getWsAuth: vi.fn(),
+  getSwitchProject: vi.fn(),
+  getSwitchPreviewModel: vi.fn(),
   updateProxyUrl: vi.fn(),
   clearProxyUrl: vi.fn(),
   updateRequestRetry: vi.fn(),
@@ -52,6 +59,13 @@ vi.mock("@code-proxy/api-client/endpoints/config", () => ({
     getAutoUpdateChannel: mocks.getAutoUpdateChannel,
     getCodexOAuthAdmission: mocks.getCodexOAuthAdmission,
     getRequestLogBodyStorage: mocks.getRequestLogBodyStorage,
+    getDebug: mocks.getDebug,
+    getUsageStatisticsEnabled: mocks.getUsageStatisticsEnabled,
+    getRequestLog: mocks.getRequestLog,
+    getLoggingToFile: mocks.getLoggingToFile,
+    getWsAuth: mocks.getWsAuth,
+    getSwitchProject: mocks.getSwitchProject,
+    getSwitchPreviewModel: mocks.getSwitchPreviewModel,
     updateProxyUrl: mocks.updateProxyUrl,
     clearProxyUrl: mocks.clearProxyUrl,
     updateRequestRetry: mocks.updateRequestRetry,
@@ -86,11 +100,8 @@ describe("RuntimeConfigPanel", () => {
   beforeEach(async () => {
     await i18n.changeLanguage("en");
     mocks.getConfig.mockResolvedValue({
-      debug: false,
-      "usage-statistics-enabled": true,
-      "request-log": false,
-      "logging-to-file": false,
-      "ws-auth": true,
+      // Tenant-scoped /config may omit process-global toggles; dedicated GETs below
+      // are the source of truth for request-log and related switches.
       proxyUrl: "http://127.0.0.1:7890",
       requestRetry: 2,
     });
@@ -110,6 +121,13 @@ describe("RuntimeConfigPanel", () => {
       ],
     });
     mocks.getRequestLogBodyStorage.mockResolvedValue(true);
+    mocks.getDebug.mockResolvedValue(false);
+    mocks.getUsageStatisticsEnabled.mockResolvedValue(true);
+    mocks.getRequestLog.mockResolvedValue(true);
+    mocks.getLoggingToFile.mockResolvedValue(false);
+    mocks.getWsAuth.mockResolvedValue(true);
+    mocks.getSwitchProject.mockResolvedValue(false);
+    mocks.getSwitchPreviewModel.mockResolvedValue(false);
     mocks.updateProxyUrl.mockResolvedValue({});
     mocks.clearProxyUrl.mockResolvedValue({});
     mocks.updateRequestRetry.mockResolvedValue({});
@@ -119,6 +137,21 @@ describe("RuntimeConfigPanel", () => {
     mocks.updateAutoUpdateChannel.mockResolvedValue({});
     mocks.updateCodexOAuthAdmission.mockResolvedValue({});
     mocks.updateRequestLogBodyStorage.mockResolvedValue({ enabled: false });
+  });
+
+  test("loads request-log from dedicated endpoint when /config omits it", async () => {
+    mocks.getConfig.mockResolvedValue({
+      proxyUrl: "http://127.0.0.1:7890",
+      requestRetry: 2,
+    });
+    mocks.getRequestLog.mockResolvedValue(true);
+    renderPanel();
+
+    const toggle = await screen.findByRole("switch", { name: /request logs/i });
+    await waitFor(() => {
+      expect(toggle).toHaveAttribute("aria-checked", "true");
+    });
+    expect(mocks.getRequestLog).toHaveBeenCalled();
   });
 
   test("confirms disabling body storage, clears existing bodies, and shows progress", async () => {
