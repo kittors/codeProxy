@@ -462,7 +462,8 @@ export const createApiKeyColumns = ({
   {
     key: "actions",
     label: t("api_keys_page.col_actions"),
-    width: "w-[256px] min-w-[256px]",
+    // accountScoped drops usage + daily-reset; keep room for set-default.
+    width: accountScoped ? "w-[220px] min-w-[220px]" : "w-[256px] min-w-[256px]",
     lockOrder: "end",
     headerClassName: stickyActionsHeaderClass,
     cellClassName: stickyActionsCellClass,
@@ -497,16 +498,18 @@ export const createApiKeyColumns = ({
               <Power size={15} />
             </button>
           </HoverTooltip>
-          <HoverTooltip content={viewUsageLabel}>
-            <button
-              type="button"
-              onClick={() => onViewUsage(row)}
-              className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-blue-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-blue-400"
-              aria-label={viewUsageLabel}
-            >
-              <BarChart3 size={15} />
-            </button>
-          </HoverTooltip>
+          {!accountScoped ? (
+            <HoverTooltip content={viewUsageLabel}>
+              <button
+                type="button"
+                onClick={() => onViewUsage(row)}
+                className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-blue-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-blue-400"
+                aria-label={viewUsageLabel}
+              >
+                <BarChart3 size={15} />
+              </button>
+            </HoverTooltip>
+          ) : null}
           <HoverTooltip content={copyKeyLabel}>
             <button
               type="button"
@@ -527,17 +530,19 @@ export const createApiKeyColumns = ({
               <Upload size={15} />
             </button>
           </HoverTooltip>
-          <HoverTooltip content={resetLabel}>
-            <button
-              type="button"
-              onClick={() => onResetDailySpending(idx)}
-              disabled={!hasDailyLimit || isResetting}
-              className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-orange-600 disabled:cursor-not-allowed disabled:opacity-40 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-orange-400"
-              aria-label={resetLabel}
-            >
-              <RotateCcw size={15} className={isResetting ? "animate-spin" : ""} />
-            </button>
-          </HoverTooltip>
+          {!accountScoped ? (
+            <HoverTooltip content={resetLabel}>
+              <button
+                type="button"
+                onClick={() => onResetDailySpending(idx)}
+                disabled={!hasDailyLimit || isResetting}
+                className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-orange-600 disabled:cursor-not-allowed disabled:opacity-40 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-orange-400"
+                aria-label={resetLabel}
+              >
+                <RotateCcw size={15} className={isResetting ? "animate-spin" : ""} />
+              </button>
+            </HoverTooltip>
+          ) : null}
           {onSetDefault && !row.is_default ? (
             <HoverTooltip content={t("end_users.set_default_key", { defaultValue: "设为默认" })}>
               <button
