@@ -19,7 +19,7 @@ describe("dashboard card composition", () => {
     expect(source).toContain("useInterval");
     expect(source).toContain("summary?.trends");
     expect(source).toContain('can("system.status.read")');
-    expect(source).toContain("useSystemStats(5, canViewSystemMonitor)");
+    expect(source).toContain("useSystemStats(15, canViewSystemMonitor && pageVisible)");
     expect(source).toContain("rpm={tenantRpm}");
     expect(source).toContain("tpm={tenantTpm}");
     expect(source).toContain("canViewSystemMonitor");
@@ -27,7 +27,7 @@ describe("dashboard card composition", () => {
     expect(source).toContain("throughput_all_tenants_hint");
     expect(source).toContain("meta.generated_at");
     expect(source).toContain('<EChart option={option} className="h-10" overflowVisible />');
-    expect(source).toContain("}, 20_000);");
+    expect(source).toContain("pageVisible ? 20_000 : null");
     expect(source).not.toContain('replaceMerge="series"');
     expect(source).not.toContain('from "@features/monitor-widgets"');
     expect(source).not.toContain("<KpiCard");

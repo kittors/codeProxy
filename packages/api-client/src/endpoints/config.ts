@@ -10,7 +10,6 @@ export interface CodexOAuthAdmissionConfig {
   allowed_clients?: string[];
 }
 
-
 export interface RequestLogBodyStorageResponse {
   enabled: boolean;
   cleanup?: {
@@ -19,6 +18,10 @@ export interface RequestLogBodyStorageResponse {
     cleared_body_rows: number;
     cleared_detail_rows: number;
     cleared_legacy_rows: number;
+    sanitized_detail_rows?: number;
+    removed_detail_bytes?: number;
+    reclaimed_storage?: boolean;
+    physical_reclaim_deferred?: boolean;
   };
 }
 

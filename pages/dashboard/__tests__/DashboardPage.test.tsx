@@ -7,7 +7,9 @@ const mocks = vi.hoisted(() => ({
   getDashboardSummary: vi.fn(),
   notify: vi.fn(),
   useSystemStats: vi.fn(),
-  can: vi.fn((permission: string) => permission === "system.status.read" || permission === "dashboard.read"),
+  can: vi.fn(
+    (permission: string) => permission === "system.status.read" || permission === "dashboard.read",
+  ),
   principal: null as null | { platform_admin?: boolean },
   intervalCallback: null as null | (() => void),
 }));
@@ -125,7 +127,8 @@ describe("DashboardPage", () => {
     mocks.getDashboardSummary.mockReset();
     mocks.can.mockReset();
     mocks.can.mockImplementation(
-      (permission: string) => permission === "system.status.read" || permission === "dashboard.read",
+      (permission: string) =>
+        permission === "system.status.read" || permission === "dashboard.read",
     );
     mocks.principal = null;
     mocks.intervalCallback = null;
@@ -222,7 +225,7 @@ describe("DashboardPage", () => {
     // RPM/TPM cards use the latest tenant-scoped series point, not host system-stats.
     expect(screen.getByText("12")).toBeInTheDocument();
     expect(screen.getByText("345")).toBeInTheDocument();
-    expect(mocks.useSystemStats).toHaveBeenCalledWith(5, false);
+    expect(mocks.useSystemStats).toHaveBeenCalledWith(15, false);
   });
 
   test("shows system monitor when system.status.read is granted", async () => {
@@ -233,7 +236,7 @@ describe("DashboardPage", () => {
     await waitFor(() => {
       expect(screen.getByTestId("system-monitor-section")).toBeInTheDocument();
     });
-    expect(mocks.useSystemStats).toHaveBeenCalledWith(5, true);
+    expect(mocks.useSystemStats).toHaveBeenCalledWith(15, true);
   });
 
   test("shows all-tenants throughput hint for platform super-admin", async () => {
@@ -264,8 +267,6 @@ describe("DashboardPage", () => {
     await waitFor(() => {
       expect(screen.getByText("Throughput Trend")).toBeInTheDocument();
     });
-    expect(
-      screen.queryByLabelText("Shows request throughput across all tenants"),
-    ).toBeNull();
+    expect(screen.queryByLabelText("Shows request throughput across all tenants")).toBeNull();
   });
 });
