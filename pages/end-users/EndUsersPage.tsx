@@ -1,7 +1,16 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { Infinity as InfinityIcon, Key, KeyRound, Pencil, Trash2, Unlock } from "lucide-react";
 import {
+  BarChart3,
+  Infinity as InfinityIcon,
+  Key,
+  KeyRound,
+  Pencil,
+  Trash2,
+  Unlock,
+} from "lucide-react";
+import {
+  apiKeyEntriesApi,
   apiKeyPermissionProfilesApi,
   endUsersApi,
   type ApiKeyPermissionProfile,
@@ -23,6 +32,10 @@ import {
 } from "@code-proxy/ui";
 import { PermissionGate } from "@app/guards/PermissionGate";
 import { useAuth } from "@app/providers/AuthProvider";
+import { useApiKeyPermissionOptions } from "@features/api-key-restrictions";
+import { ErrorDetailModal, LogContentModal } from "@features/log-content-viewer";
+import { ApiKeyUsageModal } from "../api-keys/components/ApiKeyUsageModal";
+import { useApiKeyUsageView } from "../api-keys/hooks/useApiKeyUsageView";
 
 const emptyForm = { username: "", displayName: "", password: "", permissionProfileId: "" };
 
@@ -83,6 +96,44 @@ export function EndUsersPage() {
   const [permissionProfiles, setPermissionProfiles] = useState<ApiKeyPermissionProfile[]>([]);
   const canWrite = can("end_users.write");
   const unlimitedLabel = t("api_keys_page.unlimited", { defaultValue: "无限制" });
+  const { channelGroupByName, refreshPermissionOptions } = useApiKeyPermissionOptions();
+  const {
+    usageViewKey,
+    usageViewName,
+    usageLoading,
+    usageTotalCount,
+    usageCurrentPage,
+    usagePageSize,
+    setUsagePageSize,
+    usageLastUpdatedText,
+    usageTimeRange,
+    setUsageTimeRange,
+    usageChannelQuery,
+    setUsageChannelQuery,
+    usageChannelGroupQuery,
+    setUsageChannelGroupQuery,
+    usageModelQuery,
+    setUsageModelQuery,
+    usageStatusFilter,
+    setUsageStatusFilter,
+    usageContentModalOpen,
+    setUsageContentModalOpen,
+    usageContentModalLogId,
+    usageContentModalTab,
+    usageErrorModalOpen,
+    setUsageErrorModalOpen,
+    usageErrorModalLogId,
+    usageErrorModalModel,
+    usageLogColumns,
+    usageRows,
+    usageTotalPages,
+    usageChannelOptions,
+    usageChannelGroupOptions,
+    usageModelOptions,
+    fetchUsageLogs,
+    openUsageView,
+    closeUsageModal,
+  } = useApiKeyUsageView({ channelGroupByName });
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -108,7 +159,8 @@ export function EndUsersPage() {
   useEffect(() => {
     void load();
     void loadProfiles();
-  }, [load, loadProfiles]);
+    void refreshPermissionOptions();
+  }, [load, loadProfiles, refreshPermissionOptions]);
 
   const profileNameById = useMemo(() => {
     const map = new Map<string, string>();
@@ -138,6 +190,34 @@ export function EndUsersPage() {
       }
     },
     [load, notify, t],
+  );
+
+  const handleViewUserUsage = useCallback(
+    async (row: EndUser) => {
+      const name = row.display_name || row.username || t("end_users.unnamed", { defaultValue: "未命名用户" });
+      try {
+        const entries = await apiKeyEntriesApi.list();
+        const keys = entries
+          .filter((e) => e.end_user_id === row.id && e.key?.trim())
+          .map((e) => e.key.trim());
+        if (keys.length === 0) {
+          notify({
+            type: "info",
+            message: t("end_users.no_keys_for_usage", {
+              defaultValue: "该用户暂无 API 密钥，无法查看用量",
+            }),
+          });
+          return;
+        }
+        openUsageView(keys, name);
+      } catch (e) {
+        notify({
+          type: "error",
+          message: e instanceof Error ? e.message : t("api_keys_page.load_usage_failed"),
+        });
+      }
+    },
+    [notify, openUsageView, t],
   );
 
   const columns = useMemo<DataTableColumn<EndUser>[]>(
@@ -262,15 +342,23 @@ export function EndUsersPage() {
       {
         key: "actions",
         label: t("common.actions", { defaultValue: "操作" }),
-        width: "w-44 min-w-[11rem]",
-        minWidthPx: 168,
-        maxWidthPx: 220,
+        width: "w-52 min-w-[13rem]",
+        minWidthPx: 200,
+        maxWidthPx: 260,
         resizable: false,
         lockOrder: "end",
         headerClassName: stickyActionsHeaderClass,
         cellClassName: stickyActionsCellClass,
         render: (row) => (
           <div className="flex items-center justify-center gap-1">
+            <Button
+              size="sm"
+              variant="ghost"
+              title={t("end_users.view_usage", { defaultValue: "查看用量" })}
+              onClick={() => void handleViewUserUsage(row)}
+            >
+              <BarChart3 className="h-4 w-4" />
+            </Button>
             {can("api_keys.read") ? (
               <Button
                 size="sm"
@@ -318,7 +406,7 @@ export function EndUsersPage() {
         ),
       },
     ],
-    [can, canWrite, profileNameById, t, unlimitedLabel, unlock],
+    [can, canWrite, handleViewUserUsage, profileNameById, t, unlimitedLabel, unlock],
   );
 
   const onCreate = async (e: FormEvent) => {
@@ -717,6 +805,56 @@ export function EndUsersPage() {
           </Suspense>
         ) : null}
       </Modal>
+
+      <ApiKeyUsageModal
+        open={usageViewKey !== null}
+        onClose={closeUsageModal}
+        usageViewName={usageViewName}
+        maskedKey={
+          usageViewKey
+            ? t("end_users.usage_keys_summary", {
+                defaultValue: "账号下全部密钥",
+              })
+            : ""
+        }
+        usageTotalCount={usageTotalCount}
+        usageTimeRange={usageTimeRange}
+        setUsageTimeRange={setUsageTimeRange}
+        fetchUsageLogs={fetchUsageLogs}
+        usagePageSize={usagePageSize}
+        usageLoading={usageLoading}
+        usageLastUpdatedText={usageLastUpdatedText}
+        usageChannelGroupQuery={usageChannelGroupQuery}
+        setUsageChannelGroupQuery={setUsageChannelGroupQuery}
+        setUsageChannelQuery={setUsageChannelQuery}
+        usageChannelGroupOptions={usageChannelGroupOptions}
+        usageChannelQuery={usageChannelQuery}
+        setUsageChannelQueryDirect={setUsageChannelQuery}
+        usageChannelOptions={usageChannelOptions}
+        usageModelQuery={usageModelQuery}
+        setUsageModelQuery={setUsageModelQuery}
+        usageModelOptions={usageModelOptions}
+        usageStatusFilter={usageStatusFilter}
+        setUsageStatusFilter={setUsageStatusFilter}
+        usageLogColumns={usageLogColumns}
+        usageRows={usageRows}
+        usageCurrentPage={usageCurrentPage}
+        usageTotalPages={usageTotalPages}
+        setUsagePageSize={setUsagePageSize}
+      />
+
+      <LogContentModal
+        open={usageContentModalOpen}
+        logId={usageContentModalLogId}
+        initialTab={usageContentModalTab}
+        onClose={() => setUsageContentModalOpen(false)}
+      />
+      <ErrorDetailModal
+        open={usageErrorModalOpen}
+        logId={usageErrorModalLogId}
+        model={usageErrorModalModel}
+        onClose={() => setUsageErrorModalOpen(false)}
+      />
     </PermissionGate>
   );
 }

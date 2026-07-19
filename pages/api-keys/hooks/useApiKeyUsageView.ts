@@ -42,7 +42,7 @@ export function useApiKeyUsageView({
   const { t } = useTranslation();
   const { notify } = useToast();
 
-  const [usageViewKey, setUsageViewKey] = useState<string | null>(null);
+  const [usageViewKeys, setUsageViewKeys] = useState<string[]>([]);
   const [usageViewName, setUsageViewName] = useState("");
   const [usageLoading, setUsageLoading] = useState(false);
   const [usageRawItems, setUsageRawItems] = useState<UsageLogItem[]>([]);
@@ -73,6 +73,8 @@ export function useApiKeyUsageView({
   const [usageErrorModalLogId, setUsageErrorModalLogId] = useState<number | null>(null);
   const [usageErrorModalModel, setUsageErrorModalModel] = useState("");
   const usageFetchInFlightRef = useRef(false);
+  /** First key — keeps ApiKeysPage mask display working. */
+  const usageViewKey = usageViewKeys[0] ?? null;
 
   const handleUsageContentClick = useCallback((logId: number, tab: "input" | "output") => {
     setUsageContentModalLogId(logId);
@@ -120,7 +122,7 @@ export function useApiKeyUsageView({
 
   const fetchUsageLogs = useCallback(
     async (page: number, size: number) => {
-      if (!usageViewKey || usageFetchInFlightRef.current) return;
+      if (usageViewKeys.length === 0 || usageFetchInFlightRef.current) return;
       usageFetchInFlightRef.current = true;
       setUsageLoading(true);
 
@@ -130,7 +132,7 @@ export function useApiKeyUsageView({
           page,
           size,
           days: usageTimeRange,
-          api_key: usageViewKey,
+          api_keys: usageViewKeys,
           model: usageModelQuery || undefined,
           channel: channelQuery || undefined,
           status: usageStatusFilter || undefined,
@@ -163,7 +165,7 @@ export function useApiKeyUsageView({
       usageModelQuery,
       usageStatusFilter,
       usageTimeRange,
-      usageViewKey,
+      usageViewKeys,
     ],
   );
 
@@ -181,13 +183,24 @@ export function useApiKeyUsageView({
     setUsageStatusFilter("");
   }, []);
 
+  const openUsageView = useCallback(
+    (keys: string[], name: string) => {
+      const cleaned = Array.from(
+        new Set(keys.map((k) => k.trim()).filter(Boolean)),
+      );
+      if (cleaned.length === 0) return;
+      resetUsageViewState();
+      setUsageViewKeys(cleaned);
+      setUsageViewName(name);
+    },
+    [resetUsageViewState],
+  );
+
   const handleViewUsage = useCallback(
     async (entry: ApiKeyEntry) => {
-      resetUsageViewState();
-      setUsageViewKey(entry.key);
-      setUsageViewName(entry.name || t("api_keys_page.unnamed"));
+      openUsageView([entry.key], entry.name || t("api_keys_page.unnamed"));
     },
-    [resetUsageViewState, t],
+    [openUsageView, t],
   );
 
   const usageChannelOptions = useMemo(
@@ -232,7 +245,7 @@ export function useApiKeyUsageView({
   }, [usageFilterOptions]);
 
   useEffect(() => {
-    if (!usageViewKey) return;
+    if (usageViewKeys.length === 0) return;
     void fetchUsageLogs(1, usagePageSize);
   }, [
     fetchUsageLogs,
@@ -242,18 +255,20 @@ export function useApiKeyUsageView({
     usagePageSize,
     usageStatusFilter,
     usageTimeRange,
-    usageViewKey,
+    usageViewKeys,
   ]);
 
   const closeUsageModal = useCallback(() => {
-    setUsageViewKey(null);
+    setUsageViewKeys([]);
     setUsageViewName("");
     resetUsageViewState();
   }, [resetUsageViewState]);
 
   return {
     usageViewKey,
+    usageViewKeys,
     usageViewName,
+    openUsageView,
     usageLoading,
     usageTotalCount,
     usageCurrentPage,
