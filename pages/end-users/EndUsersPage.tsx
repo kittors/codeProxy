@@ -4,6 +4,7 @@ import { Key, KeyRound, Pencil, Trash2, Unlock } from "lucide-react";
 import { endUsersApi, type CreateEndUserResult, type EndUser } from "@code-proxy/api-client";
 import {
   Button,
+  Card,
   ConfirmModal,
   DataTable,
   Modal,
@@ -274,45 +275,41 @@ export function EndUsersPage() {
 
   return (
     <PermissionGate permission="end_users.read" anyOf={["api_keys.read"]}>
-      <section className="flex flex-1 flex-col">
-        <div className="flex flex-1 flex-col rounded-2xl border border-black/[0.06] bg-white shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] dark:border-white/[0.06] dark:bg-neutral-950/70">
-          <div className="flex flex-wrap items-start justify-between gap-3 px-5 pt-5 pb-3">
-            <div>
-              <h2 className="text-base font-semibold text-slate-950 dark:text-white">
-                {t("end_users.title", { defaultValue: "用户账号" })}
-              </h2>
-              <p className="mt-1 text-sm text-slate-500 dark:text-white/55">
-                {t("end_users.subtitle", {
-                  defaultValue:
-                    "门户用户账号（与后台管理员隔离）。点击「密钥」管理该用户下全部 API Key（限额/权限/启停等）。",
-                })}
-              </p>
-            </div>
-            {canWrite ? (
-              <Button variant="primary" onClick={() => setCreateOpen(true)}>
+      {/* Match AI accounts / api-keys card height so top/bottom shell padding stay even on large screens. */}
+      <div className="space-y-6">
+        <Card
+          className="md:flex md:h-[calc(100dvh-112px)] md:min-h-0 md:flex-col md:overflow-hidden"
+          bodyClassName="md:flex md:min-h-0 md:flex-1 md:flex-col"
+          title={t("end_users.title", { defaultValue: "用户账号" })}
+          description={t("end_users.subtitle", {
+            defaultValue:
+              "门户用户账号（与后台管理员隔离）。点击「密钥」管理该用户下全部 API Key（限额/权限/启停等）。",
+          })}
+          actions={
+            canWrite ? (
+              <Button variant="primary" size="sm" onClick={() => setCreateOpen(true)}>
                 {t("end_users.create", { defaultValue: "创建用户" })}
               </Button>
-            ) : null}
-          </div>
-          <div className="relative h-[calc(100dvh-250px)] min-h-[360px] overflow-hidden px-5 pb-5">
-            <DataTable
-              tableId="end-users"
-              rows={users}
-              columns={columns}
-              rowKey={(r) => r.id}
-              loading={loading}
-              virtualize={false}
-              rowHeight={60}
-              height="h-full"
-              minHeight="min-h-full"
-              minWidth="min-w-[720px]"
-              emptyText={t("end_users.empty", { defaultValue: "暂无用户账号" })}
-              showAllLoadedMessage={false}
-              columnResizable
-            />
-          </div>
-        </div>
-      </section>
+            ) : null
+          }
+          loading={loading}
+        >
+          <DataTable
+            tableId="end-users"
+            rows={users}
+            columns={columns}
+            rowKey={(r) => r.id}
+            virtualize={false}
+            rowHeight={60}
+            height="h-[calc(100dvh-260px)] md:h-auto md:flex-1"
+            minHeight="min-h-[320px] md:min-h-0"
+            minWidth="min-w-[720px]"
+            emptyText={t("end_users.empty", { defaultValue: "暂无用户账号" })}
+            showAllLoadedMessage={false}
+            columnResizable
+          />
+        </Card>
+      </div>
 
       <Modal
         open={createOpen}
