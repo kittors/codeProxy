@@ -250,7 +250,7 @@ export function EndUsersPage() {
   };
 
   return (
-    <PermissionGate permission="end_users.read">
+    <PermissionGate permission="end_users.read" anyOf={["api_keys.read"]}>
       <section className="flex flex-1 flex-col">
         <div className="flex flex-1 flex-col rounded-2xl border border-black/[0.06] bg-white shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] dark:border-white/[0.06] dark:bg-neutral-950/70">
           <div className="flex flex-wrap items-start justify-between gap-3 px-5 pt-5 pb-3">
