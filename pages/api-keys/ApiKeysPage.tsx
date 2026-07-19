@@ -46,12 +46,19 @@ import { LogContentModal } from "@features/log-content-viewer";
 import { ErrorDetailModal } from "@features/log-content-viewer";
 import type { ApiKeyFormValues } from "./types";
 
-export function ApiKeysPage() {
+export function ApiKeysPage({
+  endUserId,
+  embed = false,
+}: {
+  endUserId?: string;
+  /** When true, hide outer card chrome for modal embedding. */
+  embed?: boolean;
+} = {}) {
   const { t, i18n } = useTranslation();
   const { notify } = useToast();
   const auth = useOptionalAuth();
   const [searchParams] = useSearchParams();
-  const endUserIdFilter = searchParams.get("endUserId")?.trim() || "";
+  const endUserIdFilter = (endUserId ?? searchParams.get("endUserId") ?? "").trim();
 
   const [entries, setEntries] = useState<ApiKeyEntry[]>([]);
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(() => new Set());
@@ -742,86 +749,105 @@ export function ApiKeysPage() {
 
   /* ─── main render ─── */
 
-  return (
-    <div className="space-y-6">
-      <Card
-        className="md:flex md:h-[calc(100dvh-112px)] md:min-h-0 md:flex-col md:overflow-hidden"
-        bodyClassName="md:flex md:min-h-0 md:flex-1 md:flex-col"
-        title={
-          endUserIdFilter
-            ? t("end_users.manage_keys_title", { defaultValue: "用户 API 密钥" })
-            : t("api_keys_page.title")
+  const toolbar = (
+    <div className="flex flex-wrap justify-end gap-2">
+      {endUserIdFilter && !embed ? (
+        <Link
+          to="/access/end-users"
+          className="inline-flex h-8 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white/80 dark:hover:bg-neutral-800"
+        >
+          {t("end_users.back_to_users", { defaultValue: "返回用户账号" })}
+        </Link>
+      ) : null}
+      <Button variant="primary" size="sm" onClick={handleOpenCreate}>
+        <Plus size={14} />
+        {t("api_keys_page.create_key")}
+      </Button>
+      {selectedEntries.length > 0 && !endUserIdFilter ? (
+        <Button
+          variant="danger"
+          size="sm"
+          onClick={() => setBatchDeleteOpen(true)}
+          disabled={saving}
+        >
+          <Trash2 size={14} />
+          {t("api_keys_page.batch_delete")}
+        </Button>
+      ) : null}
+      <Button variant="secondary" size="sm" onClick={() => void loadEntries()} disabled={loading}>
+        <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+        {t("api_keys_page.refresh")}
+      </Button>
+    </div>
+  );
+
+  const tableBody =
+    entries.length === 0 ? (
+      <EmptyState
+        title={t("api_keys_page.no_keys")}
+        description={t("api_keys_page.no_keys_desc")}
+        icon={<KeyRound size={32} className="text-slate-400" />}
+      />
+    ) : (
+      <div
+        className={
+          embed
+            ? "flex min-h-0 flex-1 flex-col"
+            : "space-y-3 md:flex md:min-h-0 md:flex-1 md:flex-col"
         }
-        description={
-          endUserIdFilter
-            ? t("end_users.manage_keys_desc", {
-                defaultValue: "管理该用户账号下的全部 API 密钥（限额、权限、启停等）。",
-              })
-            : t("api_keys_page.description")
-        }
-        actions={
-          <div className="flex flex-wrap justify-end gap-2">
-            {endUserIdFilter ? (
-              <Link
-                to="/access/end-users"
-                className="inline-flex h-8 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white/80 dark:hover:bg-neutral-800"
-              >
-                {t("end_users.back_to_users", { defaultValue: "返回用户账号" })}
-              </Link>
-            ) : null}
-            <Button variant="primary" size="sm" onClick={handleOpenCreate}>
-              <Plus size={14} />
-              {t("api_keys_page.create_key")}
-            </Button>
-            {selectedEntries.length > 0 && !endUserIdFilter ? (
-              <Button
-                variant="danger"
-                size="sm"
-                onClick={() => setBatchDeleteOpen(true)}
-                disabled={saving}
-              >
-                <Trash2 size={14} />
-                {t("api_keys_page.batch_delete")}
-              </Button>
-            ) : null}
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => void loadEntries()}
-              disabled={loading}
-            >
-              <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-              {t("api_keys_page.refresh")}
-            </Button>
-          </div>
-        }
-        loading={loading}
       >
-        {entries.length === 0 ? (
-          <EmptyState
-            title={t("api_keys_page.no_keys")}
-            description={t("api_keys_page.no_keys_desc")}
-            icon={<KeyRound size={32} className="text-slate-400" />}
-          />
-        ) : (
-          <div className="space-y-3 md:flex md:min-h-0 md:flex-1 md:flex-col">
-            <DataTable<ApiKeyEntry>
-              tableId="api-keys"
-              rows={entries}
-              columns={apiKeyColumns}
-              rowKey={(row) => row.key}
-              rowHeight={44}
-              height="h-[calc(100dvh-260px)] md:h-auto md:flex-1"
-              minHeight="min-h-[320px] md:min-h-0"
-              minWidth="min-w-[2314px]"
-              caption={t("api_keys_page.table_caption")}
-              emptyText={t("api_keys_page.no_api_keys")}
-              showAllLoadedMessage={false}
-              rowClassName={(row) => (row.disabled ? "opacity-50" : "")}
-            />
+        <DataTable<ApiKeyEntry>
+          tableId={endUserIdFilter ? "api-keys-end-user" : "api-keys"}
+          rows={entries}
+          columns={apiKeyColumns}
+          rowKey={(row) => row.key}
+          rowHeight={44}
+          height={
+            embed
+              ? "h-full"
+              : "h-[calc(100dvh-260px)] md:h-auto md:flex-1"
+          }
+          minHeight={embed ? "min-h-0" : "min-h-[320px] md:min-h-0"}
+          minWidth="min-w-[2314px]"
+          caption={t("api_keys_page.table_caption")}
+          emptyText={t("api_keys_page.no_api_keys")}
+          showAllLoadedMessage={false}
+          rowClassName={(row) => (row.disabled ? "opacity-50" : "")}
+        />
+      </div>
+    );
+
+  return (
+    <div className={embed ? "flex h-full min-h-0 flex-col" : "space-y-6"}>
+      {embed ? (
+        <div className="flex h-full min-h-0 flex-col">
+          <div className="flex shrink-0 items-center justify-end border-b border-slate-100 px-4 py-3 dark:border-white/10">
+            {toolbar}
           </div>
-        )}
-      </Card>
+          <div className="min-h-0 flex-1 overflow-hidden px-4 py-3">{tableBody}</div>
+        </div>
+      ) : (
+        <Card
+          className="md:flex md:h-[calc(100dvh-112px)] md:min-h-0 md:flex-col md:overflow-hidden"
+          bodyClassName="md:flex md:min-h-0 md:flex-1 md:flex-col"
+          title={
+            endUserIdFilter
+              ? t("end_users.manage_keys_title", { defaultValue: "用户 API 密钥" })
+              : t("api_keys_page.title")
+          }
+          description={
+            endUserIdFilter
+              ? t("end_users.manage_keys_desc", {
+                  defaultValue: "管理该用户账号下的全部 API 密钥（限额、权限、启停等）。",
+                })
+              : t("api_keys_page.description")
+          }
+          actions={toolbar}
+          loading={loading}
+        >
+          {tableBody}
+        </Card>
+      )}
 
       <ApiKeyFormModal
         t={t}

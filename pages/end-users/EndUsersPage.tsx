@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Key, KeyRound, Pencil, Trash2, Unlock } from "lucide-react";
 import { endUsersApi, type CreateEndUserResult, type EndUser } from "@code-proxy/api-client";
@@ -17,10 +16,17 @@ import { useAuth } from "@app/providers/AuthProvider";
 
 const emptyForm = { username: "", displayName: "", password: "" };
 
+const stickyActionsHeaderClass =
+  "text-center md:sticky md:z-40 md:bg-slate-100 md:dark:bg-neutral-800";
+const stickyActionsCellClass = "md:sticky md:z-30 md:bg-white md:dark:bg-neutral-950";
+
+const ApiKeysPage = lazy(() =>
+  import("../api-keys/ApiKeysPage").then((m) => ({ default: m.ApiKeysPage })),
+);
+
 export function EndUsersPage() {
   const { notify } = useToast();
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const { can } = useAuth();
   const [users, setUsers] = useState<EndUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,6 +38,7 @@ export function EndUsersPage() {
   const [resetUser, setResetUser] = useState<EndUser | null>(null);
   const [generatedReset, setGeneratedReset] = useState("");
   const [deleteUser, setDeleteUser] = useState<EndUser | null>(null);
+  const [keysUser, setKeysUser] = useState<EndUser | null>(null);
   const [busy, setBusy] = useState(false);
   const canWrite = can("end_users.write");
 
@@ -72,7 +79,11 @@ export function EndUsersPage() {
       {
         key: "username",
         label: t("end_users.username", { defaultValue: "用户名" }),
-        width: "w-48",
+        width: "w-56 min-w-[14rem]",
+        minWidthPx: 160,
+        maxWidthPx: 480,
+        headerClassName: "text-left",
+        cellClassName: "text-left",
         render: (row) => {
           const extraKeys = Math.max(0, (row.api_key_count ?? 0) - 1);
           return (
@@ -95,29 +106,41 @@ export function EndUsersPage() {
       {
         key: "status",
         label: t("end_users.status", { defaultValue: "状态" }),
-        width: "w-28",
+        width: "w-28 min-w-[7rem]",
+        minWidthPx: 96,
+        maxWidthPx: 220,
+        headerClassName: "text-center",
+        cellClassName: "text-center",
         render: (row) => row.status,
       },
       {
         key: "last_login",
         label: t("end_users.last_login", { defaultValue: "最近登录" }),
-        width: "w-44",
+        width: "w-48 min-w-[12rem]",
+        minWidthPx: 140,
+        maxWidthPx: 320,
+        headerClassName: "text-center",
+        cellClassName: "text-center whitespace-nowrap text-slate-700 dark:text-white/70",
         render: (row) => row.last_login_at?.slice(0, 19).replace("T", " ") || "—",
       },
       {
         key: "actions",
         label: t("common.actions", { defaultValue: "操作" }),
-        width: "w-40",
+        width: "w-44 min-w-[11rem]",
+        minWidthPx: 168,
+        maxWidthPx: 220,
+        resizable: false,
+        lockOrder: "end",
+        headerClassName: stickyActionsHeaderClass,
+        cellClassName: stickyActionsCellClass,
         render: (row) => (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center justify-center gap-1">
             {can("api_keys.read") ? (
               <Button
                 size="sm"
                 variant="ghost"
                 title={t("end_users.manage_keys", { defaultValue: "管理密钥" })}
-                onClick={() =>
-                  navigate(`/access/api-keys?endUserId=${encodeURIComponent(row.id)}`)
-                }
+                onClick={() => setKeysUser(row)}
               >
                 <Key className="h-4 w-4" />
               </Button>
@@ -158,7 +181,7 @@ export function EndUsersPage() {
         ),
       },
     ],
-    [can, canWrite, navigate, t, unlock],
+    [can, canWrite, t, unlock],
   );
 
   const onCreate = async (e: FormEvent) => {
@@ -282,8 +305,10 @@ export function EndUsersPage() {
               rowHeight={60}
               height="h-full"
               minHeight="min-h-full"
+              minWidth="min-w-[720px]"
               emptyText={t("end_users.empty", { defaultValue: "暂无用户账号" })}
               showAllLoadedMessage={false}
+              columnResizable
             />
           </div>
         </div>
@@ -467,6 +492,42 @@ export function EndUsersPage() {
         busy={busy}
         onConfirm={() => void onDelete()}
       />
+
+      <Modal
+        open={Boolean(keysUser)}
+        onClose={() => {
+          setKeysUser(null);
+          void load();
+        }}
+        title={
+          keysUser
+            ? t("end_users.manage_keys_title_for", {
+                defaultValue: "管理密钥 · {{name}}",
+                name: keysUser.display_name || keysUser.username,
+              })
+            : t("end_users.manage_keys_title", { defaultValue: "用户 API 密钥" })
+        }
+        description={t("end_users.manage_keys_desc", {
+          defaultValue: "管理该用户账号下的全部 API 密钥（限额、权限、启停等）。",
+        })}
+        maxWidth="max-w-[96vw]"
+        panelClassName="h-[min(90dvh,920px)]"
+        bodyHeightClassName="h-[calc(min(90dvh,920px)-7.5rem)]"
+        bodyOverflowClassName="overflow-hidden"
+        bodyClassName="!p-0"
+      >
+        {keysUser ? (
+          <Suspense
+            fallback={
+              <div className="flex h-full items-center justify-center text-sm text-slate-500">
+                Loading…
+              </div>
+            }
+          >
+            <ApiKeysPage endUserId={keysUser.id} embed />
+          </Suspense>
+        ) : null}
+      </Modal>
     </PermissionGate>
   );
 }
