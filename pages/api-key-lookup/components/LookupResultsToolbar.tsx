@@ -143,7 +143,7 @@ export function LookupResultsToolbar({
             </h3>
             <p className="mt-1 text-xs text-slate-500 dark:text-white/55">
               {t("apikey_lookup.manage_keys_desc", {
-                defaultValue: "管理本账号下全部 API Key。查看用量以弹窗打开，不会离开当前页。",
+                defaultValue: "管理本账号下全部 API Key。",
               })}
             </p>
           </div>

@@ -812,13 +812,6 @@ export function ApiKeyLookupPage() {
   const [createKeyError, setCreateKeyError] = useState<string | null>(null);
   const [portalKeysBusy, setPortalKeysBusy] = useState(false);
   const [portalKeysLoading, setPortalKeysLoading] = useState(false);
-  const [usagePreviewKey, setUsagePreviewKey] = useState<EndUserAPIKey | null>(null);
-  const [usagePreviewPlain, setUsagePreviewPlain] = useState("");
-  const [usagePreviewLoading, setUsagePreviewLoading] = useState(false);
-  const [usagePreviewError, setUsagePreviewError] = useState<string | null>(null);
-  const [usagePreviewChart, setUsagePreviewChart] = useState<ChartDataResponse | null>(null);
-  const [usagePreviewQuota, setUsagePreviewQuota] = useState<PublicUsageLimits | null>(null);
-  const [usagePreviewTimeRange, setUsagePreviewTimeRange] = useState<TimeRange>(7);
 
   const activateOwnedKey = useCallback(
     async (keyId: string) => {
@@ -1041,54 +1034,6 @@ export function ApiKeyLookupPage() {
     [handleLogout],
   );
 
-  const loadUsagePreview = useCallback(
-    async (keyId: string, days: TimeRange) => {
-      setUsagePreviewLoading(true);
-      setUsagePreviewError(null);
-      try {
-        const secret = await portalApi.keySecret(keyId);
-        const plain = secret.key?.trim();
-        if (!plain) throw new Error("empty key secret");
-        setUsagePreviewPlain(plain);
-        const [chart, summary] = await Promise.all([
-          fetchPublicChartData({ apiKey: plain, days }),
-          fetchPublicUsageSummary({ apiKey: plain }).catch(() => null),
-        ]);
-        setUsagePreviewChart(chart);
-        setUsagePreviewQuota(summary?.limits ?? null);
-      } catch (err) {
-        setUsagePreviewError(
-          localizeLookupError(t, err, "apikey_lookup.query_failed"),
-        );
-        setUsagePreviewChart(null);
-        setUsagePreviewQuota(null);
-      } finally {
-        setUsagePreviewLoading(false);
-      }
-    },
-    [t],
-  );
-
-  const openUsagePreview = useCallback(
-    (key: EndUserAPIKey) => {
-      setUsagePreviewKey(key);
-      setUsagePreviewTimeRange(timeRange);
-      void loadUsagePreview(key.id, timeRange);
-    },
-    [loadUsagePreview, timeRange],
-  );
-
-  useEffect(() => {
-    if (!usagePreviewKey) return;
-    void loadUsagePreview(usagePreviewKey.id, usagePreviewTimeRange);
-  }, [usagePreviewKey?.id, usagePreviewTimeRange]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const usagePreviewCharts = useApiKeyLookupCharts({
-    chartData: usagePreviewChart,
-    compact,
-    isDark,
-    t,
-  });
   const closeLoginModal = useCallback(() => {
     if (queriedKey || portalUser) setLoginModalOpen(false);
   }, [queriedKey, portalUser]);
@@ -1232,7 +1177,6 @@ export function ApiKeyLookupPage() {
                   t={t}
                   keys={portalKeys}
                   busy={portalKeysBusy}
-                  onViewUsage={(key) => openUsagePreview(key)}
                   onSetDefault={(key) => {
                     setPortalKeysBusy(true);
                     void portalApi
@@ -1612,6 +1556,17 @@ export function ApiKeyLookupPage() {
               );
               return;
             }
+            const nameTaken = portalKeys.some(
+              (key) => (key.name || "").trim().toLowerCase() === name.toLowerCase(),
+            );
+            if (nameTaken) {
+              setCreateKeyError(
+                t("apikey_lookup.key_name_duplicate", {
+                  defaultValue: "Key 名称已存在，请换一个。",
+                }),
+              );
+              return;
+            }
             setCreateKeyError(null);
             setPortalKeysBusy(true);
             void portalApi
@@ -1622,7 +1577,18 @@ export function ApiKeyLookupPage() {
                 setCreateKeyName("");
                 await refreshPortalKeys();
               })
-              .catch((err) => setCreateKeyError(err instanceof Error ? err.message : "failed"))
+              .catch((err) => {
+                const code = isApiClientError(err) ? extractApiErrorCode(err.payload) : "";
+                if (code === "duplicate_key_name") {
+                  setCreateKeyError(
+                    t("apikey_lookup.key_name_duplicate", {
+                      defaultValue: "Key 名称已存在，请换一个。",
+                    }),
+                  );
+                  return;
+                }
+                setCreateKeyError(err instanceof Error ? err.message : "failed");
+              })
               .finally(() => setPortalKeysBusy(false));
           }}
         >
@@ -1632,7 +1598,10 @@ export function ApiKeyLookupPage() {
             </span>
             <TextInput
               value={createKeyName}
-              onChange={(e) => setCreateKeyName(e.target.value)}
+              onChange={(e) => {
+                setCreateKeyName(e.target.value);
+                if (createKeyError) setCreateKeyError(null);
+              }}
               autoFocus
               placeholder={t("apikey_lookup.key_name_placeholder", {
                 defaultValue: "例如：Claude Desktop / 生产环境",
@@ -1643,96 +1612,6 @@ export function ApiKeyLookupPage() {
             <p className="text-sm text-rose-600 dark:text-rose-300">{createKeyError}</p>
           ) : null}
         </form>
-      </Modal>
-
-      <Modal
-        open={Boolean(usagePreviewKey)}
-        onClose={() => {
-          setUsagePreviewKey(null);
-          setUsagePreviewPlain("");
-          setUsagePreviewChart(null);
-          setUsagePreviewQuota(null);
-          setUsagePreviewError(null);
-        }}
-        title={t("apikey_lookup.usage_preview_title", {
-          defaultValue: "Key 用量 · {{name}}",
-          name:
-            usagePreviewKey?.name ||
-            usagePreviewKey?.key_masked ||
-            usagePreviewKey?.id?.slice(0, 8) ||
-            "",
-        })}
-        description={usagePreviewKey?.key_masked}
-        maxWidth="max-w-[96vw]"
-        panelClassName="h-[min(90dvh,920px)]"
-        bodyHeightClassName="h-[calc(min(90dvh,920px)-7.5rem)]"
-        bodyOverflowClassName="overflow-y-auto"
-      >
-        <div className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex flex-wrap gap-1.5">
-              {([1, 7, 14, 30] as TimeRange[]).map((days) => (
-                <button
-                  key={days}
-                  type="button"
-                  onClick={() => setUsagePreviewTimeRange(days)}
-                  className={[
-                    "rounded-full px-3 py-1 text-xs font-medium transition",
-                    usagePreviewTimeRange === days
-                      ? "bg-slate-900 text-white dark:bg-white dark:text-neutral-950"
-                      : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-white/10 dark:text-white/70",
-                  ].join(" ")}
-                >
-                  {days === 1
-                    ? t("apikey_lookup.today", { defaultValue: "今天" })
-                    : t("apikey_lookup.days", { defaultValue: "{{n}} 天", n: days })}
-                </button>
-              ))}
-            </div>
-            <Button
-              size="sm"
-              variant="secondary"
-              disabled={usagePreviewLoading || !usagePreviewKey}
-              onClick={() => {
-                if (usagePreviewKey) void loadUsagePreview(usagePreviewKey.id, usagePreviewTimeRange);
-              }}
-            >
-              {t("common.refresh")}
-            </Button>
-          </div>
-          {usagePreviewError ? (
-            <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-300">
-              {usagePreviewError}
-            </div>
-          ) : null}
-          <UsageTabSection
-            t={t}
-            timeRange={usagePreviewTimeRange}
-            chartStats={usagePreviewCharts.chartStats}
-            chartLoading={usagePreviewLoading}
-            quotaLimits={usagePreviewQuota}
-            modelMetric={usagePreviewCharts.modelMetric}
-            setModelMetric={usagePreviewCharts.setModelMetric}
-            heatmapSeries={usagePreviewCharts.heatmapSeries}
-            modelDistributionData={usagePreviewCharts.modelDistributionData}
-            modelDistributionOption={
-              usagePreviewCharts.modelDistributionOption as Record<string, unknown>
-            }
-            modelDistributionLegend={usagePreviewCharts.modelDistributionLegend}
-            dailySeries={usagePreviewCharts.dailySeries}
-            dailyTrendOption={usagePreviewCharts.dailyTrendOption as Record<string, unknown>}
-            dailyLegendAvailability={usagePreviewCharts.dailyLegendAvailability}
-            dailyLegendSelected={usagePreviewCharts.dailyLegendSelected}
-            toggleDailyLegend={usagePreviewCharts.toggleDailyLegend}
-          />
-          {usagePreviewPlain ? (
-            <p className="text-xs text-slate-400">
-              {t("apikey_lookup.usage_preview_hint", {
-                defaultValue: "此为弹窗预览，不影响主页面当前选中的 Key。",
-              })}
-            </p>
-          ) : null}
-        </div>
       </Modal>
 
       <SecretRevealModal
