@@ -1142,6 +1142,20 @@ export function ApiKeyLookupPage() {
               chartLoading={chartLoading}
               modelsLoading={modelsLoading}
               showKeysTab={Boolean(portalUser)}
+              keysHeader={
+                portalUser
+                  ? {
+                      loading: portalKeysLoading,
+                      busy: portalKeysBusy,
+                      onRefresh: () => void refreshPortalKeys(),
+                      onCreate: () => {
+                        setCreateKeyName("");
+                        setCreateKeyError(null);
+                        setCreateKeyOpen(true);
+                      },
+                    }
+                  : undefined
+              }
             />
 
             {activeTab === "usage" && queriedKey ? (
@@ -1170,14 +1184,7 @@ export function ApiKeyLookupPage() {
                 <ManageKeysTabContent
                   t={t}
                   keys={portalKeys}
-                  loading={portalKeysLoading}
                   busy={portalKeysBusy}
-                  onRefresh={() => void refreshPortalKeys()}
-                  onCreate={() => {
-                    setCreateKeyName("");
-                    setCreateKeyError(null);
-                    setCreateKeyOpen(true);
-                  }}
                   onViewUsage={(key) => openUsagePreview(key)}
                   onSetDefault={(key) => {
                     setPortalKeysBusy(true);
