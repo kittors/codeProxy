@@ -91,6 +91,7 @@ export { useLocalStorage } from "./hooks/useLocalStorage";
 export { useResizeLayoutAnimation } from "./hooks/useResizeLayoutAnimation";
 
 export { copyTextToClipboard } from "./utils/clipboard";
+export { SecretRevealModal } from "./overlays/SecretRevealModal";
 export {
   type ControlSize,
   controlHeightBySize,

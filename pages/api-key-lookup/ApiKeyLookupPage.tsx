@@ -8,6 +8,7 @@ import { LanguageSelector } from "@code-proxy/ui";
 import { Reveal } from "@code-proxy/ui";
 import { Button } from "@code-proxy/ui";
 import { Modal } from "@code-proxy/ui";
+import { SecretRevealModal } from "@code-proxy/ui";
 import { Select, type SelectOption } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
 import type { SearchableCheckboxMultiSelectOption } from "@code-proxy/ui";
@@ -311,10 +312,7 @@ export function ApiKeyLookupPage() {
   }, []);
 
   const logColumns = useMemo(
-    () =>
-      buildRequestLogsColumns((key) => t(key), handleContentClick).filter(
-        (column) => column.key !== "apiKeyName",
-      ),
+    () => buildRequestLogsColumns((key) => t(key), handleContentClick),
     [t, handleContentClick],
   );
   // ── Tab state ──
@@ -769,6 +767,9 @@ export function ApiKeyLookupPage() {
   const [pwdForm, setPwdForm] = useState({ current: "", next: "" });
   const [pwdError, setPwdError] = useState<string | null>(null);
   const [secretOnce, setSecretOnce] = useState<string | null>(null);
+  const [createKeyOpen, setCreateKeyOpen] = useState(false);
+  const [createKeyName, setCreateKeyName] = useState("");
+  const [createKeyError, setCreateKeyError] = useState<string | null>(null);
   const [portalKeysBusy, setPortalKeysBusy] = useState(false);
   const [portalKeysLoading, setPortalKeysLoading] = useState(false);
   const [usagePreviewKey, setUsagePreviewKey] = useState<EndUserAPIKey | null>(null);
@@ -1158,14 +1159,9 @@ export function ApiKeyLookupPage() {
                   busy={portalKeysBusy}
                   onRefresh={() => void refreshPortalKeys()}
                   onCreate={() => {
-                    setPortalKeysBusy(true);
-                    void portalApi
-                      .createKey()
-                      .then(async (res) => {
-                        if (res.plaintext_key) setSecretOnce(res.plaintext_key);
-                        await refreshPortalKeys();
-                      })
-                      .finally(() => setPortalKeysBusy(false));
+                    setCreateKeyName("");
+                    setCreateKeyError(null);
+                    setCreateKeyOpen(true);
                   }}
                   onViewUsage={(key) => openUsagePreview(key)}
                   onSetDefault={(key) => {
@@ -1394,67 +1390,169 @@ export function ApiKeyLookupPage() {
       <Modal
         open={changePasswordOpen}
         title={t("apikey_lookup.change_password", { defaultValue: "修改密码" })}
+        maxWidth="max-w-md"
         onClose={() => {
           // Force password change: only allow close after success clears the flag.
           if (portalUser?.must_change_password) return;
           setChangePasswordOpen(false);
         }}
+        footer={
+          <>
+            {!portalUser?.must_change_password ? (
+              <Button
+                variant="secondary"
+                onClick={() => setChangePasswordOpen(false)}
+                disabled={portalKeysBusy}
+              >
+                {t("common.cancel", { defaultValue: "取消" })}
+              </Button>
+            ) : null}
+            <Button
+              variant="primary"
+              disabled={!pwdForm.current || pwdForm.next.length < 8 || portalKeysBusy}
+              onClick={() => {
+                setPwdError(null);
+                setPortalKeysBusy(true);
+                void portalApi
+                  .changePassword(pwdForm.current, pwdForm.next)
+                  .then(async () => {
+                    setPortalUser((u) => (u ? { ...u, must_change_password: false } : u));
+                    try {
+                      const items = (await portalApi.listKeys()).items ?? [];
+                      setPortalKeys(items);
+                      const usable = items.filter((k) => !k.disabled);
+                      const def = usable.find((k) => k.is_default) ?? usable[0];
+                      if (def) await activateOwnedKey(def.id);
+                      else if (items.length) setActiveTab("keys");
+                      setPwdForm({ current: "", next: "" });
+                      setPwdError(null);
+                      setChangePasswordOpen(false);
+                    } catch (err) {
+                      setPortalKeys([]);
+                      setPwdError(err instanceof Error ? err.message : "failed");
+                    }
+                  })
+                  .catch((err) => setPwdError(err instanceof Error ? err.message : "failed"))
+                  .finally(() => setPortalKeysBusy(false));
+              }}
+            >
+              {t("common.save", { defaultValue: "保存" })}
+            </Button>
+          </>
+        }
       >
         <form
-          className="space-y-3"
+          className="space-y-4"
           onSubmit={(e) => {
             e.preventDefault();
-            setPwdError(null);
-            void portalApi
-              .changePassword(pwdForm.current, pwdForm.next)
-              .then(async () => {
-                setPortalUser((u) => (u ? { ...u, must_change_password: false } : u));
-                try {
-                  const items = (await portalApi.listKeys()).items ?? [];
-                  setPortalKeys(items);
-                  const usable = items.filter((k) => !k.disabled);
-                  const def = usable.find((k) => k.is_default) ?? usable[0];
-                  if (def) await activateOwnedKey(def.id);
-                  else if (items.length) setActiveTab("keys");
-                  setPwdForm({ current: "", next: "" });
-                  setPwdError(null);
-                  setChangePasswordOpen(false);
-                } catch (err) {
-                  setPortalKeys([]);
-                  setPwdError(err instanceof Error ? err.message : "failed");
-                }
-              })
-              .catch((err) => setPwdError(err instanceof Error ? err.message : "failed"));
           }}
         >
           <label className="block space-y-1.5">
-            <span className="text-sm font-medium">
+            <span className="text-sm font-medium text-slate-700 dark:text-white/75">
               {t("apikey_lookup.current_password", { defaultValue: "当前密码" })}
             </span>
             <TextInput
               type="password"
               value={pwdForm.current}
               onChange={(e) => setPwdForm((f) => ({ ...f, current: e.target.value }))}
+              autoComplete="current-password"
             />
           </label>
           <label className="block space-y-1.5">
-            <span className="text-sm font-medium">
+            <span className="text-sm font-medium text-slate-700 dark:text-white/75">
               {t("apikey_lookup.new_password", { defaultValue: "新密码" })}
             </span>
             <TextInput
               type="password"
               value={pwdForm.next}
               onChange={(e) => setPwdForm((f) => ({ ...f, next: e.target.value }))}
+              autoComplete="new-password"
+              placeholder={t("apikey_lookup.new_password_hint", {
+                defaultValue: "至少 8 位",
+              })}
             />
           </label>
           {pwdError ? <p className="text-sm text-rose-600 dark:text-rose-300">{pwdError}</p> : null}
-          <Button
-            type="submit"
-            variant="primary"
-            disabled={!pwdForm.current || pwdForm.next.length < 8}
-          >
-            {t("common.save", { defaultValue: "保存" })}
-          </Button>
+        </form>
+      </Modal>
+
+      <Modal
+        open={createKeyOpen}
+        title={t("apikey_lookup.create_key", { defaultValue: "新建 Key" })}
+        description={t("apikey_lookup.create_key_desc", {
+          defaultValue: "为新 Key 填写名称，便于在请求日志中区分来源。",
+        })}
+        maxWidth="max-w-md"
+        onClose={() => {
+          if (portalKeysBusy) return;
+          setCreateKeyOpen(false);
+          setCreateKeyError(null);
+        }}
+        footer={
+          <>
+            <Button
+              variant="secondary"
+              disabled={portalKeysBusy}
+              onClick={() => {
+                setCreateKeyOpen(false);
+                setCreateKeyError(null);
+              }}
+            >
+              {t("common.cancel", { defaultValue: "取消" })}
+            </Button>
+            <Button
+              type="submit"
+              form="portal-create-key-form"
+              variant="primary"
+              disabled={portalKeysBusy || !createKeyName.trim()}
+            >
+              {t("apikey_lookup.create_key", { defaultValue: "新建 Key" })}
+            </Button>
+          </>
+        }
+      >
+        <form
+          id="portal-create-key-form"
+          className="space-y-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const name = createKeyName.trim();
+            if (!name) {
+              setCreateKeyError(
+                t("apikey_lookup.key_name_required", { defaultValue: "请输入 Key 名称" }),
+              );
+              return;
+            }
+            setCreateKeyError(null);
+            setPortalKeysBusy(true);
+            void portalApi
+              .createKey(name)
+              .then(async (res) => {
+                if (res.plaintext_key) setSecretOnce(res.plaintext_key);
+                setCreateKeyOpen(false);
+                setCreateKeyName("");
+                await refreshPortalKeys();
+              })
+              .catch((err) => setCreateKeyError(err instanceof Error ? err.message : "failed"))
+              .finally(() => setPortalKeysBusy(false));
+          }}
+        >
+          <label className="block space-y-1.5">
+            <span className="text-sm font-medium text-slate-700 dark:text-white/75">
+              {t("apikey_lookup.key_name", { defaultValue: "Key 名称" })}
+            </span>
+            <TextInput
+              value={createKeyName}
+              onChange={(e) => setCreateKeyName(e.target.value)}
+              autoFocus
+              placeholder={t("apikey_lookup.key_name_placeholder", {
+                defaultValue: "例如：Claude Desktop / 生产环境",
+              })}
+            />
+          </label>
+          {createKeyError ? (
+            <p className="text-sm text-rose-600 dark:text-rose-300">{createKeyError}</p>
+          ) : null}
         </form>
       </Modal>
 
@@ -1548,16 +1646,15 @@ export function ApiKeyLookupPage() {
         </div>
       </Modal>
 
-      <Modal
+      <SecretRevealModal
         open={Boolean(secretOnce)}
         title={t("apikey_lookup.copy_secret", { defaultValue: "请立即复制" })}
+        secret={secretOnce ?? ""}
+        warning={t("apikey_lookup.secret_once_warning", {
+          defaultValue: "离开后无法再查看明文 Key，请立即复制保存。",
+        })}
         onClose={() => setSecretOnce(null)}
-      >
-        <p className="mb-2 text-sm text-amber-600">离开后无法再查看明文 Key。</p>
-        <code className="block select-all break-all rounded bg-slate-100 p-3 text-sm dark:bg-neutral-900">
-          {secretOnce}
-        </code>
-      </Modal>
+      />
     </div>
   );
 }

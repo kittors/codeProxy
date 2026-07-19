@@ -262,7 +262,8 @@ describe("ApiKeyLookupPage", () => {
     });
     expect(screen.getAllByText(/response metrics/i).length).toBeGreaterThan(0);
     expect(await screen.findByText("Codex 主渠道")).toBeInTheDocument();
-    expect(screen.queryByText(/key name/i)).not.toBeInTheDocument();
+    // Multi-key accounts need a Key name column to tell request sources apart.
+    expect(screen.getByRole("columnheader", { name: /key name|账户名称|account name/i })).toBeInTheDocument();
     expect(screen.queryByRole("columnheader", { name: /^duration$/i })).not.toBeInTheDocument();
   });
 
