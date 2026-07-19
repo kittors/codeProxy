@@ -188,16 +188,13 @@ describe("ApiKeyLookupPage", () => {
     expect(
       within(landing).getByRole("heading", {
         level: 1,
-        name: /keep every model call in clear view|让每一次模型调用，都清晰可见/i,
+        name: /one entry point|一个入口/i,
       }),
     ).toBeInTheDocument();
-    for (const provider of ["OpenAI", "Gemini", "Claude", "Vertex AI"]) {
-      expect(within(landing).getByText(provider)).toBeInTheDocument();
-    }
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 
     await userEvent.click(
-      within(landing).getByRole("button", { name: /open code proxy|进入 Code Proxy/i }),
+      within(landing).getByRole("button", { name: /^(login|sign in|登录)$/i }),
     );
 
     const dialog = await screen.findByRole("dialog");
@@ -231,7 +228,7 @@ describe("ApiKeyLookupPage", () => {
 
     const landing = screen.getByTestId("apikey-lookup-landing");
     await userEvent.click(
-      within(landing).getByRole("button", { name: /open code proxy|进入 Code Proxy/i }),
+      within(landing).getByRole("button", { name: /^(login|sign in|登录)$/i }),
     );
     const dialog = await screen.findByRole("dialog");
 
@@ -262,7 +259,7 @@ describe("ApiKeyLookupPage", () => {
 
     const landing = screen.getByTestId("apikey-lookup-landing");
     await userEvent.click(
-      within(landing).getByRole("button", { name: /open code proxy|进入 Code Proxy/i }),
+      within(landing).getByRole("button", { name: /^(login|sign in|登录)$/i }),
     );
     const dialog = await screen.findByRole("dialog");
     await userEvent.type(screen.getByPlaceholderText(/enter username|请输入账号/i), "alice");

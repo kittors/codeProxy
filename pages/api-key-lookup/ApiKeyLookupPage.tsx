@@ -1113,13 +1113,9 @@ export function ApiKeyLookupPage() {
             ) : (
               <Button
                 size="sm"
-                variant={showLanding ? "default" : "ghost"}
+                variant={showLanding ? "primary" : "ghost"}
                 onClick={() => setLoginModalOpen(true)}
-                className={
-                  showLanding
-                    ? "border border-slate-200 bg-white/75 px-3 text-slate-700 hover:bg-white dark:border-white/10 dark:bg-white/[0.06] dark:text-white/75 dark:hover:bg-white/10"
-                    : undefined
-                }
+                className={showLanding ? "rounded-full px-4" : undefined}
               >
                 {t("common.login", { defaultValue: "登录" })}
               </Button>
@@ -1339,27 +1335,12 @@ export function ApiKeyLookupPage() {
         bodyOverflowClassName="overflow-visible"
         onClose={closeLoginModal}
       >
-        <div className="space-y-8">
-          <div className="space-y-2 pr-8">
-            <div className="flex items-center gap-3 pb-2">
-              <div className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-slate-100 text-slate-600 dark:border-white/10 dark:bg-white/[0.06] dark:text-white/65">
-                <KeyRound size={18} />
-              </div>
-              <span className="text-sm font-semibold tracking-tight text-slate-900 dark:text-white">
-                Code Proxy
-              </span>
-            </div>
-            <h2 className="text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">
-              {t("apikey_lookup.login_title", { defaultValue: "账号登录" })}
-            </h2>
-            <p className="text-sm text-slate-500 dark:text-white/55">
-              {t("apikey_lookup.login_desc", {
-                defaultValue: "使用账号密码登录，查看用量、请求日志和模型广场。",
-              })}
-            </p>
-          </div>
+        <div className="space-y-6">
+          <h2 className="pr-8 text-xl font-semibold tracking-tight text-slate-950 dark:text-white">
+            {t("apikey_lookup.login_title", { defaultValue: "登录" })}
+          </h2>
           <form
-            className="space-y-5"
+            className="space-y-4"
             onSubmit={(e) => {
               e.preventDefault();
               void handlePortalLogin();
@@ -1418,9 +1399,9 @@ export function ApiKeyLookupPage() {
             ) : null}
             <Button
               type="submit"
-              variant="default"
+              variant="primary"
               disabled={loginBusy || !loginUsername.trim() || !loginPassword}
-              className="h-11 w-full border border-slate-200 bg-slate-100 text-slate-800 hover:bg-slate-200 dark:border-white/10 dark:bg-white/[0.08] dark:text-white dark:hover:bg-white/[0.12]"
+              className="h-11 w-full rounded-full"
             >
               {loginBusy
                 ? t("common.loading", { defaultValue: "登录中…" })
