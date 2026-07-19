@@ -220,7 +220,8 @@ describe("ApiKeyLookupPage", () => {
       </ThemeProvider>,
     );
 
-    const dialog = screen.getByRole("dialog");
+    await userEvent.click(screen.getByRole("button", { name: /登录查看|sign in/i }));
+    const dialog = await screen.findByRole("dialog");
     await userEvent.type(screen.getByPlaceholderText(/enter username|请输入账号/i), "alice");
     await userEvent.type(screen.getByPlaceholderText(/enter password|请输入密码/i), "bad-pass");
     await userEvent.click(
