@@ -365,12 +365,12 @@ describe("ApiKeyLookupPage", () => {
     );
 
     await screen.findByTestId("usage-tab");
-    await userEvent.click(screen.getByRole("tab", { name: /models/i }));
+    await userEvent.click(screen.getByRole("tab", { name: /model plaza/i }));
 
     expect(await screen.findByText("gpt-5.3-codex")).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("tab", { name: /usage/i }));
-    await userEvent.click(screen.getByRole("tab", { name: /models/i }));
+    await userEvent.click(screen.getByRole("tab", { name: /model plaza/i }));
 
     expect(screen.getByText("gpt-5.3-codex")).toBeInTheDocument();
     expect(mocks.fetchAvailableModels).toHaveBeenCalledTimes(2);

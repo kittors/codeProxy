@@ -1312,7 +1312,7 @@ export function ApiKeyLookupPage() {
             </h2>
             <p className="text-sm text-slate-500 dark:text-white/55">
               {t("apikey_lookup.login_desc", {
-                defaultValue: "使用账号密码登录，查看用量、请求日志和可用模型。",
+                defaultValue: "使用账号密码登录，查看用量、请求日志和模型广场。",
               })}
             </p>
           </div>

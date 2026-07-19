@@ -95,7 +95,7 @@ export function LookupResultsToolbar({
                 </TabsTrigger>
               ) : null}
               <TabsTrigger value="logs">{t("apikey_lookup.request_logs")}</TabsTrigger>
-              <TabsTrigger value="models">{t("apikey_lookup.available_models")}</TabsTrigger>
+              <TabsTrigger value="models">{t("model_plaza.title")}</TabsTrigger>
               <TabsTrigger value="quickImport">{t("apikey_lookup.quick_import")}</TabsTrigger>
             </TabsList>
           </Tabs>

@@ -11,10 +11,10 @@ describe("ModelsTabContent", () => {
     vi.restoreAllMocks();
   });
 
-  test("filters available models by vendor and uses the shared scroll area", async () => {
+  test("filters available models by vendor tabs and shows plaza-style cards", async () => {
     await i18n.changeLanguage("en");
 
-    const { container } = render(
+    render(
       <ThemeProvider>
         <ToastProvider>
           <ModelsTabContent
@@ -28,22 +28,20 @@ describe("ModelsTabContent", () => {
       </ThemeProvider>,
     );
 
+    expect(screen.getByText("Model Plaza")).toBeInTheDocument();
+    expect(screen.getByTestId("apikey-lookup-model-grid")).toBeInTheDocument();
     expect(screen.getByText("gpt-5.4")).toBeInTheDocument();
     expect(screen.getByText("qwen3.5-plus")).toBeInTheDocument();
     expect(screen.getByText("deepseek-chat")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/search models/i)).toBeInTheDocument();
 
-    const viewport = container.querySelector(
-      '[data-testid="apikey-lookup-models-scroll-area"] [data-scroll-area-viewport]',
-    );
-    expect(viewport).toHaveAttribute("data-scrollbar-visibility", "track-hover");
-
-    await userEvent.click(screen.getByRole("button", { name: /^qwen 1$/i }));
+    await userEvent.click(screen.getByRole("tab", { name: /qwen/i }));
 
     expect(screen.getByText("qwen3.5-plus")).toBeInTheDocument();
     expect(screen.queryByText("gpt-5.4")).not.toBeInTheDocument();
     expect(screen.queryByText("deepseek-chat")).not.toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: /^All 3$/i }));
+    await userEvent.click(screen.getByRole("tab", { name: /all/i }));
 
     expect(screen.getByText("gpt-5.4")).toBeInTheDocument();
     expect(screen.getByText("qwen3.5-plus")).toBeInTheDocument();

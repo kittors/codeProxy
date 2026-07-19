@@ -3440,7 +3440,7 @@
     "load_failed": "加载渠道分组配置失败"
   },
   "apikey_lookup": {
-    "available_models": "可用模型",
+    "available_models": "模型广场",
     "usage_stats": "使用统计",
     "request_logs": "请求日志",
     "quick_import": "快捷导入",
@@ -3495,9 +3495,9 @@
     "quick_import_empty_title": "暂无可用的快捷导入预设",
     "quick_import_empty_desc": "当前 API Key 没有匹配的 Codex / Claude 导入卡片。可能是密钥权限未覆盖任何预设，或管理员尚未配置导入卡片。",
     "empty_title": "登录后查看用量",
-    "empty_desc": "使用账号密码登录后，可查看用量统计、请求日志和可用模型。",
+    "empty_desc": "使用账号密码登录后，可查看用量统计、请求日志和模型广场。",
     "login_title": "账号登录",
-    "login_desc": "使用账号密码登录，查看用量、请求日志和可用模型。",
+    "login_desc": "使用账号密码登录，查看用量、请求日志和模型广场。",
     "username": "账号",
     "password": "密码",
     "username_placeholder": "请输入账号",

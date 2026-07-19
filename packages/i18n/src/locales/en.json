@@ -3143,7 +3143,7 @@
     "load_failed": "Failed to load channel group configuration"
   },
   "apikey_lookup": {
-    "available_models": "Available Models",
+    "available_models": "Model Plaza",
     "usage_stats": "Usage Stats",
     "request_logs": "Request Logs",
     "quick_import": "Quick Import",
@@ -3198,9 +3198,9 @@
     "quick_import_empty_title": "No quick import presets available",
     "quick_import_empty_desc": "This API key has no matching Codex / Claude import cards. The key may not cover any presets, or the admin has not configured import cards yet.",
     "empty_title": "Sign in to view usage",
-    "empty_desc": "Sign in with your account to view usage stats, request logs, and available models.",
+    "empty_desc": "Sign in with your account to view usage stats, request logs, and the model plaza.",
     "login_title": "Sign in",
-    "login_desc": "Use your account credentials to view usage stats, request logs, and available models.",
+    "login_desc": "Use your account credentials to view usage stats, request logs, and the model plaza.",
     "username": "Username",
     "password": "Password",
     "username_placeholder": "Enter username",
