@@ -4,7 +4,7 @@ import { HoverTooltip, Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { TimeRangeSelector } from "@features/monitor-widgets";
 import type { TimeRange } from "@features/monitor-widgets/monitor-constants";
 
-export type ApiKeyLookupTab = "usage" | "logs" | "models" | "quickImport";
+export type ApiKeyLookupTab = "usage" | "keys" | "logs" | "models" | "quickImport";
 
 /** sticky top-3 = 0.75rem */
 const STICKY_TOP_OFFSET_PX = 12;
@@ -21,6 +21,7 @@ export function LookupResultsToolbar({
   loading,
   chartLoading,
   modelsLoading,
+  showKeysTab = false,
 }: {
   t: (key: string, options?: Record<string, unknown>) => string;
   activeTab: ApiKeyLookupTab;
@@ -31,6 +32,8 @@ export function LookupResultsToolbar({
   loading: boolean;
   chartLoading: boolean;
   modelsLoading: boolean;
+  /** Portal login: show “管理 API Key” as the 2nd tab. */
+  showKeysTab?: boolean;
 }) {
   const toolbarRef = useRef<HTMLDivElement>(null);
   const [stuck, setStuck] = useState(false);
@@ -86,6 +89,11 @@ export function LookupResultsToolbar({
           >
             <TabsList>
               <TabsTrigger value="usage">{t("apikey_lookup.usage_stats")}</TabsTrigger>
+              {showKeysTab ? (
+                <TabsTrigger value="keys">
+                  {t("apikey_lookup.manage_keys", { defaultValue: "管理 API Key" })}
+                </TabsTrigger>
+              ) : null}
               <TabsTrigger value="logs">{t("apikey_lookup.request_logs")}</TabsTrigger>
               <TabsTrigger value="models">{t("apikey_lookup.available_models")}</TabsTrigger>
               <TabsTrigger value="quickImport">{t("apikey_lookup.quick_import")}</TabsTrigger>

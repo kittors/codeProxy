@@ -23,6 +23,7 @@ import {
 } from "./api";
 import { LookupEmptyState } from "./components/LookupEmptyState";
 import { LookupResultsToolbar, type ApiKeyLookupTab } from "./components/LookupResultsToolbar";
+import { ManageKeysTabContent } from "./components/ManageKeysTabContent";
 import { ModelsTabContent } from "./components/ModelsTabContent";
 import { PublicLogsSection } from "./components/PublicLogsSection";
 import { QuickImportTabContent } from "./components/QuickImportTabContent";
@@ -57,7 +58,6 @@ const LOOKUP_MODELS_CACHE_STORAGE_KEY = "apiKeyLookup.modelsCache.v2";
 const LOOKUP_MODELS_CACHE_STORAGE_KEY_V1 = "apiKeyLookup.modelsCache.v1";
 const LOGOUT_SELECT_VALUE = "__api-key-lookup-logout__";
 const CHANGE_PASSWORD_SELECT_VALUE = "__api-key-lookup-change-password__";
-const MANAGE_KEYS_SELECT_VALUE = "__api-key-lookup-manage-keys__";
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -766,10 +766,18 @@ export function ApiKeyLookupPage() {
   const [loginBusy, setLoginBusy] = useState(false);
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
-  const [manageKeysOpen, setManageKeysOpen] = useState(false);
   const [pwdForm, setPwdForm] = useState({ current: "", next: "" });
   const [pwdError, setPwdError] = useState<string | null>(null);
   const [secretOnce, setSecretOnce] = useState<string | null>(null);
+  const [portalKeysBusy, setPortalKeysBusy] = useState(false);
+  const [portalKeysLoading, setPortalKeysLoading] = useState(false);
+  const [usagePreviewKey, setUsagePreviewKey] = useState<EndUserAPIKey | null>(null);
+  const [usagePreviewPlain, setUsagePreviewPlain] = useState("");
+  const [usagePreviewLoading, setUsagePreviewLoading] = useState(false);
+  const [usagePreviewError, setUsagePreviewError] = useState<string | null>(null);
+  const [usagePreviewChart, setUsagePreviewChart] = useState<ChartDataResponse | null>(null);
+  const [usagePreviewQuota, setUsagePreviewQuota] = useState<PublicUsageLimits | null>(null);
+  const [usagePreviewTimeRange, setUsagePreviewTimeRange] = useState<TimeRange>(7);
 
   const activateOwnedKey = useCallback(
     async (keyId: string) => {
@@ -805,7 +813,7 @@ export function ApiKeyLookupPage() {
             const usable = items.filter((k) => !k.disabled);
             const def = usable.find((k) => k.is_default) ?? usable[0];
             if (def) await activateOwnedKey(def.id);
-            else if (items.length) setManageKeysOpen(true);
+            else if (items.length) setActiveTab("keys");
           }
         } catch {
           setPortalKeys([]);
@@ -836,7 +844,7 @@ export function ApiKeyLookupPage() {
         if (def) {
           await activateOwnedKey(def.id);
         } else {
-          setManageKeysOpen(true);
+          setActiveTab("keys");
         }
       }
     } catch (err) {
@@ -854,7 +862,23 @@ export function ApiKeyLookupPage() {
     setLoginModalOpen(true);
   }, [handleApiKeyInputChange]);
 
+  const refreshPortalKeys = useCallback(async () => {
+    setPortalKeysLoading(true);
+    try {
+      const keys = await portalApi.listKeys();
+      setPortalKeys(keys.items ?? []);
+    } catch {
+      setPortalKeys([]);
+    } finally {
+      setPortalKeysLoading(false);
+    }
+  }, []);
+
   const handleRefresh = useCallback(() => {
+    if (activeTab === "keys") {
+      void refreshPortalKeys();
+      return;
+    }
     if (queriedKey) {
       if (activeTab === "usage") {
         void fetchChartDataFn(queriedKey, timeRange, { force: true });
@@ -866,7 +890,15 @@ export function ApiKeyLookupPage() {
         fetchLogs(queriedKey, 1);
       }
     }
-  }, [queriedKey, activeTab, timeRange, fetchLogs, fetchChartDataFn, fetchModelsFn]);
+  }, [
+    queriedKey,
+    activeTab,
+    timeRange,
+    fetchLogs,
+    fetchChartDataFn,
+    fetchModelsFn,
+    refreshPortalKeys,
+  ]);
 
   // Strip legacy sensitive query params from the URL on mount.
   useEffect(() => {
@@ -938,15 +970,6 @@ export function ApiKeyLookupPage() {
                 </span>
               ),
             },
-            {
-              value: MANAGE_KEYS_SELECT_VALUE,
-              label: (
-                <span className="flex items-center gap-2">
-                  <Key size={15} />
-                  {t("apikey_lookup.manage_keys", { defaultValue: "管理 API Key" })}
-                </span>
-              ),
-            },
           ]
         : []),
       {
@@ -965,10 +988,58 @@ export function ApiKeyLookupPage() {
     (value: string) => {
       if (value === LOGOUT_SELECT_VALUE) handleLogout();
       if (value === CHANGE_PASSWORD_SELECT_VALUE) setChangePasswordOpen(true);
-      if (value === MANAGE_KEYS_SELECT_VALUE) setManageKeysOpen(true);
     },
     [handleLogout],
   );
+
+  const loadUsagePreview = useCallback(
+    async (keyId: string, days: TimeRange) => {
+      setUsagePreviewLoading(true);
+      setUsagePreviewError(null);
+      try {
+        const secret = await portalApi.keySecret(keyId);
+        const plain = secret.key?.trim();
+        if (!plain) throw new Error("empty key secret");
+        setUsagePreviewPlain(plain);
+        const [chart, summary] = await Promise.all([
+          fetchPublicChartData({ apiKey: plain, days }),
+          fetchPublicUsageSummary({ apiKey: plain }).catch(() => null),
+        ]);
+        setUsagePreviewChart(chart);
+        setUsagePreviewQuota(summary?.limits ?? null);
+      } catch (err) {
+        setUsagePreviewError(
+          localizeLookupError(t, err, "apikey_lookup.query_failed"),
+        );
+        setUsagePreviewChart(null);
+        setUsagePreviewQuota(null);
+      } finally {
+        setUsagePreviewLoading(false);
+      }
+    },
+    [t],
+  );
+
+  const openUsagePreview = useCallback(
+    (key: EndUserAPIKey) => {
+      setUsagePreviewKey(key);
+      setUsagePreviewTimeRange(timeRange);
+      void loadUsagePreview(key.id, timeRange);
+    },
+    [loadUsagePreview, timeRange],
+  );
+
+  useEffect(() => {
+    if (!usagePreviewKey) return;
+    void loadUsagePreview(usagePreviewKey.id, usagePreviewTimeRange);
+  }, [usagePreviewKey?.id, usagePreviewTimeRange]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const usagePreviewCharts = useApiKeyLookupCharts({
+    chartData: usagePreviewChart,
+    compact,
+    isDark,
+    t,
+  });
   const closeLoginModal = useCallback(() => {
     if (queriedKey || portalUser) setLoginModalOpen(false);
   }, [queriedKey, portalUser]);
@@ -1041,8 +1112,8 @@ export function ApiKeyLookupPage() {
           </div>
         )}
 
-        {/* Results */}
-        {queriedKey && !error && (
+        {/* Results: portal keys tab can show without an activated key */}
+        {(queriedKey || portalUser) && !error && (
           <>
             <LookupResultsToolbar
               t={t}
@@ -1051,12 +1122,13 @@ export function ApiKeyLookupPage() {
               timeRange={timeRange}
               setTimeRange={setTimeRange}
               handleRefresh={handleRefresh}
-              loading={loading}
+              loading={loading || portalKeysLoading}
               chartLoading={chartLoading}
               modelsLoading={modelsLoading}
+              showKeysTab={Boolean(portalUser)}
             />
 
-            {activeTab === "usage" ? (
+            {activeTab === "usage" && queriedKey ? (
               <UsageTabSection
                 t={t}
                 timeRange={timeRange}
@@ -1077,7 +1149,69 @@ export function ApiKeyLookupPage() {
               />
             ) : null}
 
-            {activeTab === "logs" ? (
+            {activeTab === "keys" && portalUser ? (
+              <Reveal>
+                <ManageKeysTabContent
+                  t={t}
+                  keys={portalKeys}
+                  loading={portalKeysLoading}
+                  busy={portalKeysBusy}
+                  onRefresh={() => void refreshPortalKeys()}
+                  onCreate={() => {
+                    setPortalKeysBusy(true);
+                    void portalApi
+                      .createKey()
+                      .then(async (res) => {
+                        if (res.plaintext_key) setSecretOnce(res.plaintext_key);
+                        await refreshPortalKeys();
+                      })
+                      .finally(() => setPortalKeysBusy(false));
+                  }}
+                  onViewUsage={(key) => openUsagePreview(key)}
+                  onSetDefault={(key) => {
+                    setPortalKeysBusy(true);
+                    void portalApi
+                      .updateKey(key.id, { is_default: true })
+                      .then(async () => {
+                        await refreshPortalKeys();
+                        await activateOwnedKey(key.id);
+                      })
+                      .finally(() => setPortalKeysBusy(false));
+                  }}
+                  onRotate={(key) => {
+                    setPortalKeysBusy(true);
+                    void portalApi
+                      .rotateKey(key.id)
+                      .then(async (res) => {
+                        if (res.plaintext_key) {
+                          setSecretOnce(res.plaintext_key);
+                          setApiKeyInput(res.plaintext_key);
+                          writeStoredLookupKey(res.plaintext_key);
+                          setQueriedKey(res.plaintext_key);
+                        }
+                        await refreshPortalKeys();
+                      })
+                      .finally(() => setPortalKeysBusy(false));
+                  }}
+                  onDelete={(key) => {
+                    if (portalKeys.length <= 1) return;
+                    setPortalKeysBusy(true);
+                    void portalApi
+                      .deleteKey(key.id)
+                      .then(async () => {
+                        const items = (await portalApi.listKeys()).items ?? [];
+                        setPortalKeys(items);
+                        const next = items.find((x) => x.is_default) ?? items[0];
+                        if (next) await activateOwnedKey(next.id);
+                        else handleApiKeyInputChange("");
+                      })
+                      .finally(() => setPortalKeysBusy(false));
+                  }}
+                />
+              </Reveal>
+            ) : null}
+
+            {activeTab === "logs" && queriedKey ? (
               <PublicLogsSection
                 t={t}
                 modelOptions={modelOptions}
@@ -1106,7 +1240,7 @@ export function ApiKeyLookupPage() {
               />
             ) : null}
 
-            {activeTab === "models" ? (
+            {activeTab === "models" && queriedKey ? (
               <Reveal>
                 <ModelsTabContent
                   models={availableModels}
@@ -1118,10 +1252,18 @@ export function ApiKeyLookupPage() {
               </Reveal>
             ) : null}
 
-            {activeTab === "quickImport" ? (
+            {activeTab === "quickImport" && queriedKey ? (
               <Reveal>
                 <QuickImportTabContent apiKey={queriedKey} reloadToken={quickImportReloadToken} />
               </Reveal>
+            ) : null}
+
+            {activeTab !== "keys" && !queriedKey && portalUser ? (
+              <div className="rounded-2xl border border-dashed border-slate-200 px-6 py-12 text-center text-sm text-slate-500 dark:border-neutral-800 dark:text-white/55">
+                {t("apikey_lookup.pick_key_for_tab", {
+                  defaultValue: "请先在「管理 API Key」中选择一把 Key 查看用量。",
+                })}
+              </div>
             ) : null}
           </>
         )}
@@ -1150,7 +1292,7 @@ export function ApiKeyLookupPage() {
           }
         />
 
-        {!queriedKey && !error ? <LookupEmptyState t={t} /> : null}
+        {!queriedKey && !portalUser && !error ? <LookupEmptyState t={t} /> : null}
       </main>
 
       <Modal
@@ -1273,7 +1415,7 @@ export function ApiKeyLookupPage() {
                   const usable = items.filter((k) => !k.disabled);
                   const def = usable.find((k) => k.is_default) ?? usable[0];
                   if (def) await activateOwnedKey(def.id);
-                  else if (items.length) setManageKeysOpen(true);
+                  else if (items.length) setActiveTab("keys");
                   setPwdForm({ current: "", next: "" });
                   setPwdError(null);
                   setChangePasswordOpen(false);
@@ -1317,103 +1459,92 @@ export function ApiKeyLookupPage() {
       </Modal>
 
       <Modal
-        open={manageKeysOpen}
-        title={t("apikey_lookup.manage_keys", { defaultValue: "管理 API Key" })}
-        onClose={() => setManageKeysOpen(false)}
-        maxWidth="max-w-2xl"
+        open={Boolean(usagePreviewKey)}
+        onClose={() => {
+          setUsagePreviewKey(null);
+          setUsagePreviewPlain("");
+          setUsagePreviewChart(null);
+          setUsagePreviewQuota(null);
+          setUsagePreviewError(null);
+        }}
+        title={t("apikey_lookup.usage_preview_title", {
+          defaultValue: "Key 用量 · {{name}}",
+          name:
+            usagePreviewKey?.name ||
+            usagePreviewKey?.key_masked ||
+            usagePreviewKey?.id?.slice(0, 8) ||
+            "",
+        })}
+        description={usagePreviewKey?.key_masked}
+        maxWidth="max-w-[96vw]"
+        panelClassName="h-[min(90dvh,920px)]"
+        bodyHeightClassName="h-[calc(min(90dvh,920px)-7.5rem)]"
+        bodyOverflowClassName="overflow-y-auto"
       >
-        <div className="space-y-3">
-          <div className="flex justify-end">
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap gap-1.5">
+              {([1, 7, 14, 30] as TimeRange[]).map((days) => (
+                <button
+                  key={days}
+                  type="button"
+                  onClick={() => setUsagePreviewTimeRange(days)}
+                  className={[
+                    "rounded-full px-3 py-1 text-xs font-medium transition",
+                    usagePreviewTimeRange === days
+                      ? "bg-slate-900 text-white dark:bg-white dark:text-neutral-950"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-white/10 dark:text-white/70",
+                  ].join(" ")}
+                >
+                  {days === 1
+                    ? t("apikey_lookup.today", { defaultValue: "今天" })
+                    : t("apikey_lookup.days", { defaultValue: "{{n}} 天", n: days })}
+                </button>
+              ))}
+            </div>
             <Button
               size="sm"
+              variant="secondary"
+              disabled={usagePreviewLoading || !usagePreviewKey}
               onClick={() => {
-                void portalApi.createKey().then(async (res) => {
-                  if (res.plaintext_key) setSecretOnce(res.plaintext_key);
-                  setPortalKeys((await portalApi.listKeys()).items ?? []);
-                });
+                if (usagePreviewKey) void loadUsagePreview(usagePreviewKey.id, usagePreviewTimeRange);
               }}
             >
-              {t("apikey_lookup.create_key", { defaultValue: "新建 Key" })}
+              {t("common.refresh")}
             </Button>
           </div>
-          <div className="divide-y divide-slate-200 rounded-xl border dark:divide-neutral-800 dark:border-neutral-800">
-            {portalKeys.map((k) => (
-              <div key={k.id} className="flex items-center justify-between gap-3 p-3 text-sm">
-                <div className="min-w-0">
-                  <div className="font-medium">
-                    {k.name || k.id.slice(0, 8)}
-                    {k.is_default ? (
-                      <span className="ml-2 rounded bg-emerald-100 px-1.5 py-0.5 text-xs text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">
-                        default
-                      </span>
-                    ) : null}
-                  </div>
-                  <code className="text-xs text-slate-500">{k.key_masked}</code>
-                </div>
-                <div className="flex shrink-0 gap-1">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => {
-                      void activateOwnedKey(k.id).then(() => setManageKeysOpen(false));
-                    }}
-                  >
-                    查看用量
-                  </Button>
-                  {!k.is_default ? (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        void portalApi.updateKey(k.id, { is_default: true }).then(async () => {
-                          setPortalKeys((await portalApi.listKeys()).items ?? []);
-                          await activateOwnedKey(k.id);
-                        });
-                      }}
-                    >
-                      设默认
-                    </Button>
-                  ) : null}
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => {
-                      void portalApi.rotateKey(k.id).then(async (res) => {
-                        if (res.plaintext_key) {
-                          setSecretOnce(res.plaintext_key);
-                          setApiKeyInput(res.plaintext_key);
-                          writeStoredLookupKey(res.plaintext_key);
-                          setQueriedKey(res.plaintext_key);
-                        }
-                        setPortalKeys((await portalApi.listKeys()).items ?? []);
-                      });
-                    }}
-                  >
-                    重置
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => {
-                      void portalApi.deleteKey(k.id).then(async () => {
-                        const items = (await portalApi.listKeys()).items ?? [];
-                        setPortalKeys(items);
-                        const next = items.find((x) => x.is_default) ?? items[0];
-                        if (next) await activateOwnedKey(next.id);
-                        else handleApiKeyInputChange("");
-                      });
-                    }}
-                  >
-                    删除
-                  </Button>
-                </div>
-              </div>
-            ))}
-            {portalKeys.length === 0 ? (
-              <div className="p-4 text-sm text-slate-500">暂无 Key</div>
-            ) : null}
-          </div>
-          <p className="text-xs text-slate-500">至少保留一把 Key；重置后明文只展示一次。</p>
+          {usagePreviewError ? (
+            <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-300">
+              {usagePreviewError}
+            </div>
+          ) : null}
+          <UsageTabSection
+            t={t}
+            timeRange={usagePreviewTimeRange}
+            chartStats={usagePreviewCharts.chartStats}
+            chartLoading={usagePreviewLoading}
+            quotaLimits={usagePreviewQuota}
+            modelMetric={usagePreviewCharts.modelMetric}
+            setModelMetric={usagePreviewCharts.setModelMetric}
+            heatmapSeries={usagePreviewCharts.heatmapSeries}
+            modelDistributionData={usagePreviewCharts.modelDistributionData}
+            modelDistributionOption={
+              usagePreviewCharts.modelDistributionOption as Record<string, unknown>
+            }
+            modelDistributionLegend={usagePreviewCharts.modelDistributionLegend}
+            dailySeries={usagePreviewCharts.dailySeries}
+            dailyTrendOption={usagePreviewCharts.dailyTrendOption as Record<string, unknown>}
+            dailyLegendAvailability={usagePreviewCharts.dailyLegendAvailability}
+            dailyLegendSelected={usagePreviewCharts.dailyLegendSelected}
+            toggleDailyLegend={usagePreviewCharts.toggleDailyLegend}
+          />
+          {usagePreviewPlain ? (
+            <p className="text-xs text-slate-400">
+              {t("apikey_lookup.usage_preview_hint", {
+                defaultValue: "此为弹窗预览，不影响主页面当前选中的 Key。",
+              })}
+            </p>
+          ) : null}
         </div>
       </Modal>
 
