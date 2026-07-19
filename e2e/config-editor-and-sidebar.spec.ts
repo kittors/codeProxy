@@ -673,7 +673,16 @@ test("Config: unified visual editor confirms the low-resource profile cleanup", 
   await page.goto("/#/system/config");
 
   await expect(page.getByRole("tab", { name: /可视化编辑|Visual Editor/i })).toBeVisible();
+  await expect(page.getByText(/监控连接轮换周期|Monitor connection rotation/i)).toBeVisible();
   await expect(page.getByRole("tab", { name: /源码编辑|Source Editor/i })).toBeVisible();
+
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.setViewportSize({ width: 375, height: 812 });
+  await expect(page.getByText(/监控连接轮换周期|Monitor connection rotation/i)).toBeVisible();
+  const overflowX = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  expect(overflowX).toBeLessThanOrEqual(1);
   await expect(page.getByRole("tab", { name: /运行时配置|Runtime Config/i })).toHaveCount(0);
 
   await page.getByRole("button", { name: /应用推荐值|Apply recommended values/i }).click();
@@ -685,6 +694,7 @@ test("Config: unified visual editor confirms the low-resource profile cleanup", 
 
   await expect.poll(() => savedYaml.length).toBe(1);
   expect(savedYaml[0]).toContain("store-content: false");
+  expect(savedYaml[0]).toContain("system-stats-websocket-max-age-seconds: 300");
   await expect.poll(() => cleanupPayloads.length).toBe(1);
   expect(cleanupPayloads[0]).toEqual({ value: false, clear_existing: true });
 });

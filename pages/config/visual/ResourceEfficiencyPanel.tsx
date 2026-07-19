@@ -57,6 +57,7 @@ export function ResourceEfficiencyPanel({
       values.logsMaxTotalSizeMb === "128" &&
       values.errorLogsMaxFiles === "10" &&
       values.systemStatsCacheSeconds === "60" &&
+      values.systemStatsWebSocketMaxAgeSeconds === "300" &&
       values.requestLogStorage.maxTotalSizeMb === "256" &&
       values.requestLogStorage.contentRetentionDays === "30" &&
       values.requestLogStorage.cleanupIntervalMinutes === "1440" &&
@@ -74,6 +75,7 @@ export function ResourceEfficiencyPanel({
       logsMaxTotalSizeMb: "128",
       errorLogsMaxFiles: "10",
       systemStatsCacheSeconds: "60",
+      systemStatsWebSocketMaxAgeSeconds: "300",
       requestLogStorage: {
         ...values.requestLogStorage,
         storeContent: false,
@@ -198,6 +200,16 @@ export function ResourceEfficiencyPanel({
               placeholder="60"
               disabled={disabled}
               onChange={(systemStatsCacheSeconds) => onChange({ systemStatsCacheSeconds })}
+            />
+            <ResourceField
+              label={t("resource_config.ws_max_age_label")}
+              hint={t("resource_config.ws_max_age_hint")}
+              value={values.systemStatsWebSocketMaxAgeSeconds}
+              placeholder="300"
+              disabled={disabled}
+              onChange={(systemStatsWebSocketMaxAgeSeconds) =>
+                onChange({ systemStatsWebSocketMaxAgeSeconds })
+              }
             />
             <ResourceField
               label={t("resource_config.body_cap_label")}

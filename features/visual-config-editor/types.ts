@@ -106,6 +106,7 @@ export type VisualConfigValues = {
   requestLog: boolean;
   requestLogStorage: RequestLogStorageVisualConfig;
   systemStatsCacheSeconds: string;
+  systemStatsWebSocketMaxAgeSeconds: string;
   autoUpdateEnabled: boolean;
   autoUpdateChannel: "main" | "dev";
   autoUpdateDockerImage: string;
@@ -171,6 +172,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
     vacuumOnCleanup: true,
   },
   systemStatsCacheSeconds: "60",
+  systemStatsWebSocketMaxAgeSeconds: "300",
   autoUpdateEnabled: true,
   autoUpdateChannel: "main",
   autoUpdateDockerImage: "ghcr.io/kittors/clirelay",

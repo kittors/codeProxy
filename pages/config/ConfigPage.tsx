@@ -278,6 +278,7 @@ export function ConfigPage() {
       (!isValidResourceNumber(visualValues.logsMaxTotalSizeMb || "0", 0) ||
         !isValidResourceNumber(visualValues.errorLogsMaxFiles, 0) ||
         !isValidResourceNumber(visualValues.systemStatsCacheSeconds, 10) ||
+        !isValidResourceNumber(visualValues.systemStatsWebSocketMaxAgeSeconds, 60) ||
         !isValidResourceNumber(visualValues.requestLogStorage.contentRetentionDays, 0) ||
         !isValidResourceNumber(visualValues.requestLogStorage.cleanupIntervalMinutes, 60) ||
         !isValidResourceNumber(visualValues.requestLogStorage.maxTotalSizeMb, 0))

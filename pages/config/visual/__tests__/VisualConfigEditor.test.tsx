@@ -245,6 +245,7 @@ describe("VisualConfigEditor auto update config", () => {
         logsMaxTotalSizeMb: "128",
         errorLogsMaxFiles: "10",
         systemStatsCacheSeconds: "60",
+        systemStatsWebSocketMaxAgeSeconds: "300",
         requestLogStorage: expect.objectContaining({
           storeContent: false,
           maxTotalSizeMb: "256",
@@ -263,6 +264,7 @@ describe("VisualConfigEditor auto update config", () => {
           "request-log: true",
           "error-logs-max-files: 7",
           "system-stats-cache-seconds: 90",
+          "system-stats-websocket-max-age-seconds: 600",
           "request-log-storage:",
           "  store-content: true",
           "  content-retention-days: 14",
@@ -278,6 +280,7 @@ describe("VisualConfigEditor auto update config", () => {
         requestLog: true,
         errorLogsMaxFiles: "7",
         systemStatsCacheSeconds: "90",
+        systemStatsWebSocketMaxAgeSeconds: "600",
         requestLogStorage: {
           storeContent: true,
           contentRetentionDays: "14",
@@ -292,6 +295,7 @@ describe("VisualConfigEditor auto update config", () => {
       result.current.setVisualValues({
         requestLog: false,
         systemStatsCacheSeconds: "60",
+        systemStatsWebSocketMaxAgeSeconds: "300",
         requestLogStorage: {
           ...result.current.visualValues.requestLogStorage,
           storeContent: false,
@@ -303,6 +307,7 @@ describe("VisualConfigEditor auto update config", () => {
     await waitFor(() => {
       const yaml = result.current.applyVisualChangesToYaml("");
       expect(yaml).toContain("system-stats-cache-seconds: 60");
+      expect(yaml).toContain("system-stats-websocket-max-age-seconds: 300");
       expect(yaml).toContain("max-total-size-mb: 256");
       expect(yaml).toContain("vacuum-on-cleanup: false");
       expect(yaml).not.toContain("request-log: true");

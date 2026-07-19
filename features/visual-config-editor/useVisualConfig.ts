@@ -560,6 +560,9 @@ export function useVisualConfig() {
             vacuumOnCleanup: requestLogStorage?.["vacuum-on-cleanup"] !== false,
           },
           systemStatsCacheSeconds: String(parsed["system-stats-cache-seconds"] ?? "60"),
+          systemStatsWebSocketMaxAgeSeconds: String(
+            parsed["system-stats-websocket-max-age-seconds"] ?? "300",
+          ),
           autoUpdateEnabled: Boolean(autoUpdate?.enabled ?? true),
           autoUpdateChannel: normalizeAutoUpdateChannel(autoUpdate?.channel),
           autoUpdateDockerImage:
@@ -678,6 +681,11 @@ export function useVisualConfig() {
         setBoolean(parsed, "usage-statistics-enabled", values.usageStatisticsEnabled);
         setBoolean(parsed, "request-log", values.requestLog);
         setIntFromString(parsed, "system-stats-cache-seconds", values.systemStatsCacheSeconds);
+        setIntFromString(
+          parsed,
+          "system-stats-websocket-max-age-seconds",
+          values.systemStatsWebSocketMaxAgeSeconds,
+        );
 
         const requestLogStorageValues = values.requestLogStorage;
         if (

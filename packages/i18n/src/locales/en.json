@@ -4089,6 +4089,8 @@
     "error_files_hint": "Keep the latest compact error files. 10 is a practical production default.",
     "system_cache_label": "System stats cache",
     "system_cache_hint": "Cache expensive DB size, log scan, and latency queries. 60 seconds is recommended.",
+    "ws_max_age_label": "Monitor connection rotation",
+    "ws_max_age_hint": "Rotate only the management system-monitor connection so old nginx workers can exit. Model streaming is unaffected. 300 seconds is recommended.",
     "body_cap_label": "Request body storage cap",
     "body_cap_hint": "Compressed full-body cap if body storage is enabled. 256 MB is safer on this host.",
     "body_retention_label": "Full-body retention",
@@ -4100,7 +4102,7 @@
     "metadata_preserved": "These settings do not delete request metadata or disable quotas, spending limits, routing, usage history, token totals, cost totals, latency, or compact error details. Disabling body storage clears only full request/response bodies after confirmation.",
     "commercial_mode_desc": "Removes the request logging middleware entirely after restart. Keep off when compact error files and full protocol diagnostics are required.",
     "commercial_mode_warning": "This is not part of the safe recommended profile. Changing it requires a service restart and changes diagnostic behavior.",
-    "invalid_number": "Check the resource limits: use non-negative integers, keep cleanup at 60 minutes or more, and system stats cache at 10 seconds or more."
+    "invalid_number": "Check the resource limits: use non-negative integers, keep cleanup at 60 minutes or more, system stats cache at 10 seconds or more, and monitor connection rotation at 60 seconds or more."
   },
   "visual_config": {
     "api_keys": "API Keys",

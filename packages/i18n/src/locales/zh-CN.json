@@ -4308,6 +4308,8 @@
     "error_files_hint": "保留最近的精简错误文件，生产环境建议 10 个。",
     "system_cache_label": "系统监控缓存",
     "system_cache_hint": "缓存数据库大小、日志目录扫描和延迟聚合，建议 60 秒。",
+    "ws_max_age_label": "监控连接轮换周期",
+    "ws_max_age_hint": "仅轮换管理面板系统监控连接，帮助 nginx 旧 worker 退出；不影响模型流式请求。建议 300 秒。",
     "body_cap_label": "请求正文存储上限",
     "body_cap_hint": "开启正文存储时的压缩正文上限，本机建议 256MB。",
     "body_retention_label": "完整正文保留期",
@@ -4319,7 +4321,7 @@
     "metadata_preserved": "这些配置不会删除请求元数据，也不会停用配额、消费限制、路由、用量历史、Token、费用、延迟或精简错误详情。关闭正文存储只会在确认后清除完整请求与响应正文。",
     "commercial_mode_desc": "重启后完全移除请求日志中间件。需要精简错误文件或完整协议诊断时请保持关闭。",
     "commercial_mode_warning": "它不属于安全推荐配置。变更后需要重启服务，并会改变诊断能力。",
-    "invalid_number": "请检查资源限制：使用非负整数，清理周期至少 60 分钟，系统监控缓存至少 10 秒。"
+    "invalid_number": "请检查资源限制：使用非负整数，清理周期至少 60 分钟，系统监控缓存至少 10 秒，监控连接轮换至少 60 秒。"
   },
   "visual_config": {
     "api_keys": "API 密钥",
