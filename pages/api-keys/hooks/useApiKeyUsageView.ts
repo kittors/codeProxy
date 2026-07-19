@@ -89,7 +89,10 @@ export function useApiKeyUsageView({
   }, []);
 
   const usageLogColumns = useMemo(
-    () => buildRequestLogsColumns(t, handleUsageContentClick, handleUsageErrorClick),
+    () =>
+      buildRequestLogsColumns(t, handleUsageContentClick, handleUsageErrorClick, {
+        identityColumn: "key",
+      }),
     [t, handleUsageContentClick, handleUsageErrorClick],
   );
 
@@ -185,9 +188,7 @@ export function useApiKeyUsageView({
 
   const openUsageView = useCallback(
     (keys: string[], name: string) => {
-      const cleaned = Array.from(
-        new Set(keys.map((k) => k.trim()).filter(Boolean)),
-      );
+      const cleaned = Array.from(new Set(keys.map((k) => k.trim()).filter(Boolean)));
       if (cleaned.length === 0) return;
       resetUsageViewState();
       setUsageViewKeys(cleaned);

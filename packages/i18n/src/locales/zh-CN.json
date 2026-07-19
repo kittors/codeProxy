@@ -2926,6 +2926,7 @@
     "col_id": "ID",
     "col_time": "时间",
     "col_user_name": "用户名称",
+    "col_key_name": "Key 名称",
     "col_model": "模型",
     "real_model_id": "真实模型 ID",
     "vision_fallback_model_id": "视觉补位模型 ID",

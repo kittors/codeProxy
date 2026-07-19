@@ -429,8 +429,8 @@ describe("ApiKeyLookupPage", () => {
     });
     expect(screen.getAllByText(/response metrics/i).length).toBeGreaterThan(0);
     expect(await screen.findByText("Codex 主渠道")).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: /user name|用户名称/i })).toBeInTheDocument();
-    expect(screen.getByText("Alice")).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: /key name|Key 名称/i })).toBeInTheDocument();
+    expect(screen.queryByText("Alice")).not.toBeInTheDocument();
     expect(screen.getByText("Laptop")).toBeInTheDocument();
     expect(screen.queryByRole("columnheader", { name: /^duration$/i })).not.toBeInTheDocument();
   });

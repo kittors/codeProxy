@@ -1,3 +1,5 @@
+import { createElement } from "react";
+import { render, screen } from "@testing-library/react";
 import { describe, expect, test } from "vitest";
 import {
   buildRequestLogsColumns,
@@ -103,5 +105,40 @@ describe("requestLogsShared", () => {
     expect(keys.indexOf("cost")).toBeLessThan(keys.indexOf("model"));
     expect(columns.find((column) => column.key === "apiKeyName")?.width).toBe("w-40");
     expect(columns.find((column) => column.key === "model")?.width).toBe("w-44");
+  });
+
+  test("builds a key-primary identity column for account usage and portal logs", () => {
+    const row = toRequestLogsRow({
+      id: 9,
+      timestamp: "2026-07-19T12:00:00Z",
+      api_key: "sk-owned-123456",
+      api_key_id: "key-laptop-123456",
+      api_key_name: "Alice",
+      end_user_display_name: "Alice",
+      api_key_own_name: "Laptop",
+      model: "gpt-5.4",
+      source: "codex",
+      channel_name: "Codex",
+      auth_index: "auth-9",
+      failed: false,
+      latency_ms: 100,
+      first_token_ms: 20,
+      input_tokens: 1,
+      output_tokens: 1,
+      reasoning_tokens: 0,
+      cached_tokens: 0,
+      total_tokens: 2,
+      cost: 0,
+      has_content: false,
+    });
+    const column = buildRequestLogsColumns((key) => key, undefined, undefined, {
+      identityColumn: "key",
+    }).find((item) => item.key === "apiKeyName");
+
+    expect(column?.label).toBe("request_logs.col_key_name");
+    if (!column) throw new Error("missing apiKeyName column");
+    render(createElement("div", null, column.render(row, 0)));
+    expect(screen.getByText("Laptop")).toBeInTheDocument();
+    expect(screen.queryByText("Alice")).not.toBeInTheDocument();
   });
 });

@@ -2,19 +2,8 @@ import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Check, Copy, Layers, RefreshCw, Search, Store } from "lucide-react";
 import { VendorIcon } from "@code-proxy/assets";
-import {
-  Card,
-  EmptyState,
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TextInput,
-  useToast,
-} from "@code-proxy/ui";
-import {
-  formatModelPriceAmount,
-  hasModelPricing,
-} from "@features/model-availability";
+import { Card, EmptyState, Tabs, TabsList, TabsTrigger, TextInput, useToast } from "@code-proxy/ui";
+import { formatModelPriceAmount, hasModelPricing } from "@features/model-availability";
 import {
   buildModelVendorStats,
   getModelVendorKey,
@@ -63,13 +52,7 @@ function formatPriceCell(amount: number, notPriced: string): string {
   return `$${formatModelPriceAmount(amount)}`;
 }
 
-function ModelPlazaCard({
-  model,
-  onCopied,
-}: {
-  model: PublicModelItem;
-  onCopied: () => void;
-}) {
+function ModelPlazaCard({ model, onCopied }: { model: PublicModelItem; onCopied: () => void }) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const priced = hasModelPricing(model.pricing);
@@ -113,8 +96,7 @@ function ModelPlazaCard({
             notPriced,
           )}
           muted={
-            model.pricing.cacheReadPricePerMillion <= 0 &&
-            model.pricing.cachedPricePerMillion <= 0
+            model.pricing.cacheReadPricePerMillion <= 0 && model.pricing.cachedPricePerMillion <= 0
           }
         />
       </div>
@@ -179,9 +161,7 @@ function ModelPlazaCard({
             className="line-clamp-2 break-words text-xs leading-5 text-slate-500 dark:text-white/55"
             data-testid="model-description-clamp"
           >
-            {model.description?.trim()
-              ? model.description
-              : t("model_plaza.no_description")}
+            {model.description?.trim() ? model.description : t("model_plaza.no_description")}
           </p>
         </div>
 
@@ -274,18 +254,13 @@ export function ModelsTabContent({
             <span className="text-2xs text-slate-400 dark:text-white/30">/ {models.length}</span>
           ) : null}
         </div>
-        <TextInput
-          value={searchFilter}
-          onChange={(e) => onSearchChange(e.target.value)}
-          placeholder={t("model_plaza.search")}
-          className="!w-40 sm:!w-56"
-          startAdornment={<Search size={14} className="text-slate-400 dark:text-white/35" />}
-        />
       </div>
 
       {vendorStats.length > 0 && !loading ? (
-        // 不要 sticky：父页顶栏 toolbar 已 sticky，二级厂商 tabs 再 sticky 会压住「快捷导入」。
-        <div className="py-2.5">
+        <div
+          data-testid="apikey-lookup-model-tabs-sticky"
+          className="sticky top-20 z-10 -mx-1 flex flex-col gap-2 bg-white/95 px-1 py-2.5 backdrop-blur-sm sm:flex-row sm:items-center sm:justify-between dark:bg-neutral-950/90"
+        >
           <Tabs
             value={selectedVendor}
             onValueChange={(next) => setSelectedVendor(next as VendorFilter)}
@@ -295,19 +270,38 @@ export function ModelsTabContent({
               <TabsTrigger value="all">
                 <Layers size={12} aria-hidden="true" />
                 {t("common.all", { defaultValue: "All" })}
-                <span className="tabular-nums text-slate-400 dark:text-white/40">{models.length}</span>
+                <span className="tabular-nums text-slate-400 dark:text-white/40">
+                  {models.length}
+                </span>
               </TabsTrigger>
               {vendorStats.map((stat) => (
                 <TabsTrigger key={stat.key} value={stat.key}>
                   <VendorIcon modelId={stat.key} size={12} />
                   {stat.label}
-                  <span className="tabular-nums text-slate-400 dark:text-white/40">{stat.count}</span>
+                  <span className="tabular-nums text-slate-400 dark:text-white/40">
+                    {stat.count}
+                  </span>
                 </TabsTrigger>
               ))}
             </TabsList>
           </Tabs>
+          <TextInput
+            value={searchFilter}
+            onChange={(e) => onSearchChange(e.target.value)}
+            placeholder={t("model_plaza.search")}
+            className="!w-full sm:!w-56 sm:shrink-0"
+            startAdornment={<Search size={14} className="text-slate-400 dark:text-white/35" />}
+          />
         </div>
-      ) : null}
+      ) : (
+        <TextInput
+          value={searchFilter}
+          onChange={(e) => onSearchChange(e.target.value)}
+          placeholder={t("model_plaza.search")}
+          className="!w-full sm:!w-56"
+          startAdornment={<Search size={14} className="text-slate-400 dark:text-white/35" />}
+        />
+      )}
 
       <div className="mt-4 flex min-w-0 flex-col gap-4">
         {error ? (
@@ -335,9 +329,7 @@ export function ModelsTabContent({
             icon={<Store size={28} className="opacity-50" />}
             title={models.length === 0 ? t("model_plaza.no_models") : t("model_plaza.no_match")}
             description={
-              models.length === 0
-                ? t("model_plaza.no_models_desc")
-                : t("model_plaza.no_match_desc")
+              models.length === 0 ? t("model_plaza.no_models_desc") : t("model_plaza.no_match_desc")
             }
           />
         )}

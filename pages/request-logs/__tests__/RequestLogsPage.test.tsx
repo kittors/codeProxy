@@ -255,6 +255,11 @@ describe("RequestLogsPage", () => {
     expect(within(table).getByText("183ms")).toBeInTheDocument();
     expect(within(table).queryByText("First Token Latency")).not.toBeInTheDocument();
 
+    await user.hover(within(table).getByText("Zhang Bolun"));
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Zhang Bolun · Laptop");
+    await user.unhover(within(table).getByText("Zhang Bolun"));
+    await waitFor(() => expect(screen.queryByRole("tooltip")).not.toBeInTheDocument());
+
     await user.hover(within(table).getByLabelText("Duration: 1.20s"));
     expect(await screen.findByRole("tooltip")).toHaveTextContent("First Token Latency: 183ms");
   });
