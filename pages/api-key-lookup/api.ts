@@ -2,6 +2,12 @@ import {
   detectApiBaseFromLocation,
   publicApiClient,
 } from "@code-proxy/api-client";
+import {
+  emptyModelPricing,
+  normalizeModelModalities,
+  normalizeModelPricing,
+  type ModelPricing,
+} from "@features/model-availability";
 import type {
   ChartDataResponse,
   PublicLogsResponse,
@@ -14,32 +20,69 @@ type PublicLogContentResponse =
   | { id: number; model: string; part: LogContentBodyPart; content: string }
   | { input_content: string; output_content: string; model: string };
 
+export type PublicModelItem = {
+  id: string;
+  description: string;
+  ownedBy: string;
+  pricing: ModelPricing;
+  inputModalities: string[];
+  outputModalities: string[];
+  supportsVision: boolean;
+};
+
 type V1ModelsResponse =
-  | { data?: Array<{ id?: string }> }
-  | { models?: Array<{ id?: string }> }
-  | Array<{ id?: string }>
+  | { data?: unknown[] }
+  | { models?: unknown[] }
+  | unknown[]
   | Record<string, unknown>;
 
-const extractModelIds = (payload: V1ModelsResponse): string[] => {
-  const data = Array.isArray(payload)
-    ? payload
-    : Array.isArray((payload as { data?: unknown }).data)
-      ? ((payload as { data: unknown[] }).data as Array<{ id?: string }>)
-      : Array.isArray((payload as { models?: unknown }).models)
-        ? ((payload as { models: unknown[] }).models as Array<{ id?: string }>)
-        : [];
-  return Array.from(
-    new Set(
-      data
-        .map((item) =>
-          item && typeof item === "object"
-            ? String((item as { id?: unknown }).id)
-            : "",
-        )
-        .map((value) => value.trim())
-        .filter(Boolean),
-    ),
-  ).sort((a, b) => a.localeCompare(b));
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  Boolean(value) && typeof value === "object" && !Array.isArray(value);
+
+const extractModelItems = (payload: V1ModelsResponse): unknown[] => {
+  if (Array.isArray(payload)) return payload;
+  if (isRecord(payload) && Array.isArray(payload.data)) return payload.data;
+  if (isRecord(payload) && Array.isArray(payload.models)) return payload.models;
+  return [];
+};
+
+export const normalizePublicModelItem = (item: unknown): PublicModelItem | null => {
+  if (!isRecord(item)) return null;
+  const id = String(item.id ?? item.model_id ?? item.name ?? "").trim();
+  if (!id) return null;
+  const inputModalities = normalizeModelModalities(
+    item.input_modalities ?? item.inputModalities,
+  );
+  const outputModalities = normalizeModelModalities(
+    item.output_modalities ?? item.outputModalities,
+  );
+  const explicitVision = item.supports_vision ?? item.supportsVision;
+  const supportsVision =
+    typeof explicitVision === "boolean"
+      ? explicitVision
+      : inputModalities.some((m) => m.toLowerCase() === "image");
+
+  return {
+    id,
+    description: String(item.description ?? "").trim(),
+    ownedBy: String(item.owned_by ?? item.ownedBy ?? "").trim(),
+    pricing: isRecord(item.pricing)
+      ? normalizeModelPricing(item)
+      : emptyModelPricing(),
+    inputModalities,
+    outputModalities,
+    supportsVision,
+  };
+};
+
+const extractModels = (payload: V1ModelsResponse): PublicModelItem[] => {
+  const byId = new Map<string, PublicModelItem>();
+  for (const item of extractModelItems(payload)) {
+    const model = normalizePublicModelItem(item);
+    if (!model) continue;
+    byId.set(model.id.toLowerCase(), model);
+  }
+  return Array.from(byId.values()).sort((a, b) => a.id.localeCompare(b.id));
 };
 
 export async function fetchPublicLogs(params: {
@@ -120,7 +163,7 @@ export async function fetchPublicLogContent(params: {
   );
 }
 
-export async function fetchAvailableModels(apiKey: string): Promise<string[]> {
+export async function fetchAvailableModels(apiKey: string): Promise<PublicModelItem[]> {
   const base = detectApiBaseFromLocation();
   const resp = await fetch(`${base}/v1/models`, {
     headers: { Authorization: `Bearer ${apiKey.trim()}` },
@@ -130,5 +173,5 @@ export async function fetchAvailableModels(apiKey: string): Promise<string[]> {
     throw new Error(text || `Request failed (${resp.status})`);
   }
   const payload = (await resp.json()) as V1ModelsResponse;
-  return extractModelIds(payload);
+  return extractModels(payload);
 }

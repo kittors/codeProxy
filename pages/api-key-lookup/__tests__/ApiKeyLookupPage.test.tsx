@@ -39,7 +39,25 @@ const mocks = vi.hoisted(() => ({
       },
     }),
   ),
-  fetchAvailableModels: vi.fn(async (): Promise<string[]> => []),
+  fetchAvailableModels: vi.fn(async (): Promise<
+    Array<{
+      id: string;
+      description: string;
+      ownedBy: string;
+      pricing: {
+        mode: "token" | "call";
+        inputPricePerMillion: number;
+        outputPricePerMillion: number;
+        cachedPricePerMillion: number;
+        cacheReadPricePerMillion: number;
+        cacheWritePricePerMillion: number;
+        pricePerCall: number;
+      };
+      inputModalities: string[];
+      outputModalities: string[];
+      supportsVision: boolean;
+    }>
+  > => []),
   fetchPublicUsageSummary: vi.fn(async () => ({
     found: true,
     range: "today",
@@ -347,9 +365,26 @@ describe("ApiKeyLookupPage", () => {
 
   test("keeps cached models visible while refreshing the available models tab", async () => {
     window.sessionStorage.setItem("apiKeyLookup.lastApiKey.v1", "sk-restored-key");
-    let resolveModelsRefresh: (value: string[]) => void = () => {};
+    const asModel = (id: string) => ({
+      id,
+      description: "",
+      ownedBy: "",
+      pricing: {
+        mode: "token" as const,
+        inputPricePerMillion: 0,
+        outputPricePerMillion: 0,
+        cachedPricePerMillion: 0,
+        cacheReadPricePerMillion: 0,
+        cacheWritePricePerMillion: 0,
+        pricePerCall: 0,
+      },
+      inputModalities: ["text"],
+      outputModalities: ["text"],
+      supportsVision: false,
+    });
+    let resolveModelsRefresh: (value: ReturnType<typeof asModel>[]) => void = () => {};
     mocks.fetchAvailableModels
-      .mockResolvedValueOnce(["gpt-5.3-codex", "claude-sonnet-4-5"])
+      .mockResolvedValueOnce([asModel("gpt-5.3-codex"), asModel("claude-sonnet-4-5")])
       .mockReturnValueOnce(
         new Promise((resolve) => {
           resolveModelsRefresh = resolve;
@@ -375,7 +410,11 @@ describe("ApiKeyLookupPage", () => {
     expect(screen.getByText("gpt-5.3-codex")).toBeInTheDocument();
     expect(mocks.fetchAvailableModels).toHaveBeenCalledTimes(2);
 
-    resolveModelsRefresh(["gpt-5.3-codex", "claude-sonnet-4-5", "deepseek-v4"]);
+    resolveModelsRefresh([
+      asModel("gpt-5.3-codex"),
+      asModel("claude-sonnet-4-5"),
+      asModel("deepseek-v4"),
+    ]);
     expect(await screen.findByText("deepseek-v4")).toBeInTheDocument();
   });
 
