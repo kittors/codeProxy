@@ -516,6 +516,7 @@ export function useVisualConfig() {
         const payload = hasPayloadRuleSections(runtimePayload) ? runtimePayload : yamlPayload;
         const streaming = asRecord(parsed.streaming);
         const autoUpdate = asRecord(parsed["auto-update"]);
+        const requestLogStorage = asRecord(parsed["request-log-storage"]);
 
         const newValues: VisualConfigValues = {
           host: typeof parsed.host === "string" ? parsed.host : "",
@@ -546,7 +547,19 @@ export function useVisualConfig() {
           commercialMode: Boolean(parsed["commercial-mode"]),
           loggingToFile: Boolean(parsed["logging-to-file"]),
           logsMaxTotalSizeMb: String(parsed["logs-max-total-size-mb"] ?? ""),
+          errorLogsMaxFiles: String(parsed["error-logs-max-files"] ?? "10"),
           usageStatisticsEnabled: Boolean(parsed["usage-statistics-enabled"]),
+          requestLog: Boolean(parsed["request-log"]),
+          requestLogStorage: {
+            storeContent: Boolean(requestLogStorage?.["store-content"]),
+            contentRetentionDays: String(requestLogStorage?.["content-retention-days"] ?? "30"),
+            cleanupIntervalMinutes: String(
+              requestLogStorage?.["cleanup-interval-minutes"] ?? "1440",
+            ),
+            maxTotalSizeMb: String(requestLogStorage?.["max-total-size-mb"] ?? "1024"),
+            vacuumOnCleanup: requestLogStorage?.["vacuum-on-cleanup"] !== false,
+          },
+          systemStatsCacheSeconds: String(parsed["system-stats-cache-seconds"] ?? "60"),
           autoUpdateEnabled: Boolean(autoUpdate?.enabled ?? true),
           autoUpdateChannel: normalizeAutoUpdateChannel(autoUpdate?.channel),
           autoUpdateDockerImage:
@@ -661,7 +674,36 @@ export function useVisualConfig() {
         setBoolean(parsed, "commercial-mode", values.commercialMode);
         setBoolean(parsed, "logging-to-file", values.loggingToFile);
         setIntFromString(parsed, "logs-max-total-size-mb", values.logsMaxTotalSizeMb);
+        setIntFromString(parsed, "error-logs-max-files", values.errorLogsMaxFiles);
         setBoolean(parsed, "usage-statistics-enabled", values.usageStatisticsEnabled);
+        setBoolean(parsed, "request-log", values.requestLog);
+        setIntFromString(parsed, "system-stats-cache-seconds", values.systemStatsCacheSeconds);
+
+        const requestLogStorageValues = values.requestLogStorage;
+        if (
+          hasOwn(parsed, "request-log-storage") ||
+          requestLogStorageValues.storeContent ||
+          requestLogStorageValues.contentRetentionDays.trim() !== "30" ||
+          requestLogStorageValues.cleanupIntervalMinutes.trim() !== "1440" ||
+          requestLogStorageValues.maxTotalSizeMb.trim() !== "1024" ||
+          !requestLogStorageValues.vacuumOnCleanup
+        ) {
+          const storage = ensureRecord(parsed, "request-log-storage");
+          setBoolean(storage, "store-content", requestLogStorageValues.storeContent);
+          setIntFromString(
+            storage,
+            "content-retention-days",
+            requestLogStorageValues.contentRetentionDays,
+          );
+          setIntFromString(
+            storage,
+            "cleanup-interval-minutes",
+            requestLogStorageValues.cleanupIntervalMinutes,
+          );
+          setIntFromString(storage, "max-total-size-mb", requestLogStorageValues.maxTotalSizeMb);
+          storage["vacuum-on-cleanup"] = requestLogStorageValues.vacuumOnCleanup;
+          deleteIfEmpty(parsed, "request-log-storage");
+        }
 
         if (
           hasOwn(parsed, "auto-update") ||
@@ -828,6 +870,9 @@ export function useVisualConfig() {
       const next: VisualConfigValues = { ...prev, ...newValues } as VisualConfigValues;
       if (newValues.streaming) {
         next.streaming = { ...prev.streaming, ...newValues.streaming };
+      }
+      if (newValues.requestLogStorage) {
+        next.requestLogStorage = { ...prev.requestLogStorage, ...newValues.requestLogStorage };
       }
       if (newValues.kimiHeaderDefaults) {
         next.kimiHeaderDefaults = { ...prev.kimiHeaderDefaults, ...newValues.kimiHeaderDefaults };

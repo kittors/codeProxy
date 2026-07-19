@@ -33,6 +33,14 @@ export type PayloadFilterRule = {
   params: string[];
 };
 
+export interface RequestLogStorageVisualConfig {
+  storeContent: boolean;
+  contentRetentionDays: string;
+  cleanupIntervalMinutes: string;
+  maxTotalSizeMb: string;
+  vacuumOnCleanup: boolean;
+}
+
 export interface StreamingConfig {
   keepaliveSeconds: string;
   bootstrapRetries: string;
@@ -93,7 +101,11 @@ export type VisualConfigValues = {
   commercialMode: boolean;
   loggingToFile: boolean;
   logsMaxTotalSizeMb: string;
+  errorLogsMaxFiles: string;
   usageStatisticsEnabled: boolean;
+  requestLog: boolean;
+  requestLogStorage: RequestLogStorageVisualConfig;
+  systemStatsCacheSeconds: string;
   autoUpdateEnabled: boolean;
   autoUpdateChannel: "main" | "dev";
   autoUpdateDockerImage: string;
@@ -148,7 +160,17 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   commercialMode: false,
   loggingToFile: false,
   logsMaxTotalSizeMb: "",
+  errorLogsMaxFiles: "10",
   usageStatisticsEnabled: false,
+  requestLog: false,
+  requestLogStorage: {
+    storeContent: false,
+    contentRetentionDays: "30",
+    cleanupIntervalMinutes: "1440",
+    maxTotalSizeMb: "1024",
+    vacuumOnCleanup: true,
+  },
+  systemStatsCacheSeconds: "60",
   autoUpdateEnabled: true,
   autoUpdateChannel: "main",
   autoUpdateDockerImage: "ghcr.io/kittors/clirelay",
