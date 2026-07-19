@@ -28,9 +28,14 @@ const mocks = vi.hoisted(() => ({
     state.accounts = state.accounts.map((account) => (account.id === id ? updated : account));
     return updated;
   }),
-  apiClientPut: vi.fn(async (url: string, body: ApiKeyPermissionProfile[]) => {
-    if (url === "/api-key-permission-profiles") state.permissionProfiles = body;
-    return {};
+  apiClientPut: vi.fn(async (url: string, body: unknown) => {
+    if (url === "/api-key-permission-profiles") {
+      const items = Array.isArray(body)
+        ? body
+        : ((body as { items?: ApiKeyPermissionProfile[] } | null)?.items ?? []);
+      state.permissionProfiles = items;
+    }
+    return { applied_count: 2 };
   }),
   authFilesList: vi.fn(async () => ({ files: [] })),
   getGeminiKeys: vi.fn(async (): Promise<unknown[]> => []),
@@ -85,8 +90,16 @@ vi.mock("@code-proxy/api-client/endpoints/api-key-permission-profiles", async (i
             "api-key-permission-profiles"
           ] ?? [],
         ),
-      replace: async (profiles: ApiKeyPermissionProfile[]) =>
-        mocks.apiClientPut("/api-key-permission-profiles", profiles),
+      replace: async (
+        profiles: ApiKeyPermissionProfile[],
+        options?: { syncAccounts?: boolean },
+      ) => {
+        const response = await mocks.apiClientPut(
+          "/api-key-permission-profiles",
+          options?.syncAccounts ? { items: profiles, "sync-accounts": true } : profiles,
+        );
+        return { appliedCount: response.applied_count };
+      },
     },
   };
 });
@@ -206,20 +219,23 @@ describe("ApiKeyPermissionsPage", () => {
     await waitFor(() => {
       expect(mocks.apiClientPut).toHaveBeenCalledWith(
         "/api-key-permission-profiles",
-        expect.arrayContaining([
-          expect.objectContaining({
-            name: "专业配置",
-            "daily-limit": 15000,
-            "allowed-channel-groups": ["pro"],
-            "system-prompt": "专业系统提示词",
-          }),
-        ]),
+        expect.objectContaining({
+          "sync-accounts": true,
+          items: expect.arrayContaining([
+            expect.objectContaining({
+              name: "专业配置",
+              "daily-limit": 15000,
+              "allowed-channel-groups": ["pro"],
+              "system-prompt": "专业系统提示词",
+            }),
+          ]),
+        }),
       );
     });
     expect(mocks.endUsersUpdate).not.toHaveBeenCalled();
   });
 
-  test("applies an edited profile to every bound user account", async () => {
+  test("applies an edited profile through one atomic server request", async () => {
     renderPage();
     expect(await screen.findByText("标准配置")).toBeInTheDocument();
 
@@ -231,23 +247,20 @@ describe("ApiKeyPermissionsPage", () => {
     await userEvent.click(within(dialog).getByRole("button", { name: "保存配置" }));
 
     await waitFor(() => {
-      expect(mocks.endUsersUpdate).toHaveBeenCalledTimes(2);
-      expect(mocks.endUsersUpdate).toHaveBeenCalledWith(
-        "user-a",
+      expect(mocks.apiClientPut).toHaveBeenCalledWith(
+        "/api-key-permission-profiles",
         expect.objectContaining({
-          "permission-profile-id": "standard",
-          "daily-limit": 16000,
-        }),
-      );
-      expect(mocks.endUsersUpdate).toHaveBeenCalledWith(
-        "user-c",
-        expect.objectContaining({
-          "permission-profile-id": "standard",
-          "daily-limit": 16000,
+          "sync-accounts": true,
+          items: expect.arrayContaining([
+            expect.objectContaining({
+              id: "standard",
+              "daily-limit": 16000,
+            }),
+          ]),
         }),
       );
     });
-    expect(mocks.endUsersUpdate).not.toHaveBeenCalledWith("user-b", expect.anything());
+    expect(mocks.endUsersUpdate).not.toHaveBeenCalled();
   });
 
   test("loads provider channels from OpenCode Go, ClinePass and Ollama Cloud configs", async () => {

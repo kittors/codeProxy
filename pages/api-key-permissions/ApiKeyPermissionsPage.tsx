@@ -245,19 +245,14 @@ export function ApiKeyPermissionsPage() {
       const nextProfiles = isEdit
         ? profiles.map((item) => (item.id === profile.id ? profile : item))
         : [...profiles, profile];
-      await apiKeyPermissionProfilesApi.replace(nextProfiles);
+      await apiKeyPermissionProfilesApi.replace(nextProfiles, { syncAccounts: true });
 
       let nextAccounts = accounts;
       if (isEdit) {
-        const boundAccounts = accounts.filter(
-          (account) => account["permission-profile-id"] === profile.id,
-        );
         const update = profileToAccountUpdate(profile);
-        const updatedAccounts = await Promise.all(
-          boundAccounts.map((account) => endUsersApi.update(account.id, update)),
+        nextAccounts = accounts.map((account) =>
+          account["permission-profile-id"] === profile.id ? { ...account, ...update } : account,
         );
-        const updatedById = new Map(updatedAccounts.map((account) => [account.id, account]));
-        nextAccounts = accounts.map((account) => updatedById.get(account.id) ?? account);
       }
 
       setProfiles(nextProfiles);
@@ -279,18 +274,15 @@ export function ApiKeyPermissionsPage() {
     setSaving(true);
     try {
       const nextProfiles = profiles.filter((profile) => profile.id !== deleteTarget.id);
-      await apiKeyPermissionProfilesApi.replace(nextProfiles);
-      const boundAccounts = accounts.filter(
-        (account) => account["permission-profile-id"] === deleteTarget.id,
-      );
-      const updatedAccounts = await Promise.all(
-        boundAccounts.map((account) =>
-          endUsersApi.update(account.id, { "permission-profile-id": "" }),
+      await apiKeyPermissionProfilesApi.replace(nextProfiles, { syncAccounts: true });
+      setProfiles(nextProfiles);
+      setAccounts(
+        accounts.map((account) =>
+          account["permission-profile-id"] === deleteTarget.id
+            ? { ...account, "permission-profile-id": "" }
+            : account,
         ),
       );
-      const updatedById = new Map(updatedAccounts.map((account) => [account.id, account]));
-      setProfiles(nextProfiles);
-      setAccounts(accounts.map((account) => updatedById.get(account.id) ?? account));
       setDeleteTarget(null);
       notify({ type: "success", message: t("api_key_permissions_page.profile_deleted") });
     } catch (err: unknown) {

@@ -587,9 +587,11 @@ export function buildRequestLogsColumns(
   t: (key: string) => string,
   onContentClick?: (logId: number, tab: "input" | "output") => void,
   onErrorClick?: (logId: number, model: string) => void,
+  options: { identityColumn?: "user" | "key" } = {},
 ): RequestLogsTableColumn<RequestLogsRow>[] {
   const apiLabel = t("request_logs.auth_type_api");
   const oauthLabel = t("request_logs.auth_type_oauth");
+  const identityColumn = options.identityColumn ?? "user";
   return [
     {
       key: "id",
@@ -815,19 +817,36 @@ export function buildRequestLogsColumns(
     },
     {
       key: "apiKeyName",
-      label: t("request_logs.col_user_name"),
+      label:
+        identityColumn === "key" ? t("request_logs.col_key_name") : t("request_logs.col_user_name"),
       width: "w-40",
       headerClassName: CENTERED_REQUEST_LOG_HEADER_CLASS,
       cellClassName: "text-center",
       render: (row) => {
+        const keyFallback = row.maskedApiKey || (row.apiKeyId ? row.apiKeyId.slice(0, 8) : "");
+        const keyName =
+          row.apiKeyOwnName ||
+          (!row.endUserDisplayName ? row.apiKeyName : "") ||
+          keyFallback ||
+          "--";
+        if (identityColumn === "key") {
+          const displayName = row.isSystemCall ? t("request_logs.system_call") : keyName;
+          return (
+            <HoverTooltip content={displayName} className="block min-w-0">
+              <span
+                className={`block min-w-0 truncate text-xs font-medium ${displayName !== "--" ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400 dark:text-white/30"}`}
+              >
+                {displayName}
+              </span>
+            </HoverTooltip>
+          );
+        }
         const userName = row.isSystemCall
           ? t("request_logs.system_call")
           : row.endUserDisplayName || row.apiKeyName || "--";
-        const keyFallback = row.maskedApiKey || (row.apiKeyId ? row.apiKeyId.slice(0, 8) : "");
-        const keyName = row.apiKeyOwnName || keyFallback;
         const showKeyName = Boolean(keyName && keyName !== userName);
         return (
-          <OverflowTooltip
+          <HoverTooltip
             content={showKeyName ? `${userName} · ${keyName}` : userName}
             className="block min-w-0"
           >
@@ -843,7 +862,7 @@ export function buildRequestLogsColumns(
                 </span>
               ) : null}
             </span>
-          </OverflowTooltip>
+          </HoverTooltip>
         );
       },
     },

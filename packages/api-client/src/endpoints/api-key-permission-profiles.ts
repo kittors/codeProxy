@@ -18,6 +18,14 @@ export interface ApiKeyPermissionProfile {
   "system-prompt": string;
 }
 
+export interface ReplaceApiKeyPermissionProfilesOptions {
+  syncAccounts?: boolean;
+}
+
+export interface ReplaceApiKeyPermissionProfilesResult {
+  appliedCount: number;
+}
+
 const asRecord = (value: unknown): Record<string, unknown> | null =>
   value !== null && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
@@ -209,10 +217,16 @@ export const apiKeyPermissionProfilesApi = {
     );
   },
 
-  async replace(profiles: ApiKeyPermissionProfile[]): Promise<void> {
-    await apiClient.put(
+  async replace(
+    profiles: ApiKeyPermissionProfile[],
+    options: ReplaceApiKeyPermissionProfilesOptions = {},
+  ): Promise<ReplaceApiKeyPermissionProfilesResult> {
+    const items = profiles.map(serializeApiKeyPermissionProfile);
+    const data = await apiClient.put<{ applied_count?: unknown }>(
       "/api-key-permission-profiles",
-      profiles.map(serializeApiKeyPermissionProfile),
+      options.syncAccounts ? { items, "sync-accounts": true } : items,
     );
+    const appliedCount = Number(data?.applied_count ?? 0);
+    return { appliedCount: Number.isFinite(appliedCount) ? appliedCount : 0 };
   },
 };

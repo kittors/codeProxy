@@ -364,7 +364,10 @@ export function ApiKeyLookupPage() {
   }, []);
 
   const logColumns = useMemo(
-    () => buildRequestLogsColumns((key) => t(key), handleContentClick),
+    () =>
+      buildRequestLogsColumns((key) => t(key), handleContentClick, undefined, {
+        identityColumn: "key",
+      }),
     [t, handleContentClick],
   );
   // ── Tab state ──

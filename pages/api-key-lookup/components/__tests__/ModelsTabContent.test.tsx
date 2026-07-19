@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import i18n from "@code-proxy/i18n";
@@ -8,10 +8,7 @@ import { ThemeProvider } from "@code-proxy/ui";
 import { ToastProvider } from "@code-proxy/ui";
 import type { PublicModelItem } from "../../api";
 
-const model = (
-  id: string,
-  extras?: Partial<PublicModelItem>,
-): PublicModelItem => ({
+const model = (id: string, extras?: Partial<PublicModelItem>): PublicModelItem => ({
   id,
   description: extras?.description ?? "",
   ownedBy: extras?.ownedBy ?? "",
@@ -66,6 +63,10 @@ describe("ModelsTabContent", () => {
     expect(screen.getByText("qwen3.5-plus")).toBeInTheDocument();
     expect(screen.getByText("deepseek-chat")).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/search models/i)).toBeInTheDocument();
+    const sticky = screen.getByTestId("apikey-lookup-model-tabs-sticky");
+    expect(sticky).toHaveClass("sticky", "top-20", "z-10");
+    expect(within(sticky).getByRole("tablist", { name: /filter by vendor/i })).toBeInTheDocument();
+    expect(within(sticky).getByPlaceholderText(/search models/i)).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("tab", { name: /qwen/i }));
 
@@ -119,11 +120,7 @@ describe("ModelsTabContent", () => {
       <ThemeProvider>
         <ToastProvider>
           <ModelsTabContent
-            models={[
-              model("claude-sonnet-4-5"),
-              model("gpt-5.3-codex"),
-              model("gemini-2.5-pro"),
-            ]}
+            models={[model("claude-sonnet-4-5"), model("gpt-5.3-codex"), model("gemini-2.5-pro")]}
             loading={false}
             error={null}
             searchFilter=""

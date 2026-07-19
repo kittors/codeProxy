@@ -54,34 +54,42 @@ describe("apiKeyPermissionProfilesApi", () => {
   });
 
   test("replaces permission profiles through the management database endpoint", async () => {
-    mocks.put.mockResolvedValue({});
+    mocks.put.mockResolvedValue({ applied_count: 2 });
 
-    await apiKeyPermissionProfilesApi.replace([
-      {
-        id: "standard",
-        name: "Standard",
-        "daily-limit": 15000,
-        "total-quota": 0,
-        "daily-spending-limit": 100.5,
-        "concurrency-limit": 0,
-        "rpm-limit": 0,
-        "tpm-limit": 0,
-        "allowed-channel-groups": ["pro"],
-        "allowed-channels": [],
-        "allowed-models": [],
-        "system-prompt": "",
-      },
-    ]);
+    await expect(
+      apiKeyPermissionProfilesApi.replace(
+        [
+          {
+            id: "standard",
+            name: "Standard",
+            "daily-limit": 15000,
+            "total-quota": 0,
+            "daily-spending-limit": 100.5,
+            "concurrency-limit": 0,
+            "rpm-limit": 0,
+            "tpm-limit": 0,
+            "allowed-channel-groups": ["pro"],
+            "allowed-channels": [],
+            "allowed-models": [],
+            "system-prompt": "",
+          },
+        ],
+        { syncAccounts: true },
+      ),
+    ).resolves.toEqual({ appliedCount: 2 });
 
-    expect(mocks.put).toHaveBeenCalledWith("/api-key-permission-profiles", [
-      expect.objectContaining({
-        id: "standard",
-        name: "Standard",
-        "daily-limit": 15000,
-        "daily-spending-limit": 100.5,
-        "allowed-channel-groups": ["pro"],
-      }),
-    ]);
+    expect(mocks.put).toHaveBeenCalledWith("/api-key-permission-profiles", {
+      items: [
+        expect.objectContaining({
+          id: "standard",
+          name: "Standard",
+          "daily-limit": 15000,
+          "daily-spending-limit": 100.5,
+          "allowed-channel-groups": ["pro"],
+        }),
+      ],
+      "sync-accounts": true,
+    });
     expect(mocks.putRawText).not.toHaveBeenCalled();
   });
 
