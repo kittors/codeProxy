@@ -788,11 +788,12 @@ export function ApiKeysPage({
           rowHeight={44}
           height={
             embed
-              ? "h-full"
+              ? "min-h-0 flex-1"
               : "h-[calc(100dvh-260px)] md:h-auto md:flex-1"
           }
           minHeight={embed ? "min-h-0" : "min-h-[320px] md:min-h-0"}
-          minWidth="min-w-[2314px]"
+          // Full key table needs all quota/permission columns; account-scoped embed only keeps credentials.
+          minWidth={endUserIdFilter ? "min-w-[876px]" : "min-w-[2314px]"}
           caption={t("api_keys_page.table_caption")}
           emptyText={t("api_keys_page.no_api_keys")}
           showAllLoadedMessage={false}
@@ -808,7 +809,9 @@ export function ApiKeysPage({
           <div className="flex shrink-0 items-center justify-end border-b border-slate-100 px-4 py-3 dark:border-white/10">
             {toolbar}
           </div>
-          <div className="min-h-0 flex-1 overflow-hidden px-4 py-3">{tableBody}</div>
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 py-3">
+            {tableBody}
+          </div>
         </div>
       ) : (
         <Card
