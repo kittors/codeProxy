@@ -3496,6 +3496,7 @@
     "quick_import_empty_desc": "当前 API Key 没有匹配的 Codex / Claude 导入卡片。可能是密钥权限未覆盖任何预设，或管理员尚未配置导入卡片。",
     "empty_title": "登录后查看用量",
     "empty_desc": "使用账号密码登录后，可查看用量统计、请求日志和模型广场。",
+    "landing_badge": "统一入口 · 可观测",
     "landing_title_line1": "一个入口",
     "landing_title_line2": "接入多模型能力",
     "landing_desc": "管理 API Key，查看用量与请求日志，浏览模型广场。",

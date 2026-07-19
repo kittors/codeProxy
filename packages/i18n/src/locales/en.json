@@ -3199,6 +3199,7 @@
     "quick_import_empty_desc": "This API key has no matching Codex / Claude import cards. The key may not cover any presets, or the admin has not configured import cards yet.",
     "empty_title": "Sign in to view usage",
     "empty_desc": "Sign in with your account to view usage stats, request logs, and the model plaza.",
+    "landing_badge": "Unified · observable",
     "landing_title_line1": "One entry point",
     "landing_title_line2": "for multi-model access",
     "landing_desc": "Manage API keys, track usage and request logs, browse the model plaza.",

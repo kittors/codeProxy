@@ -1047,7 +1047,7 @@ export function ApiKeyLookupPage() {
   const showLanding = !queriedKey && !portalUser && !error;
 
   return (
-    <PageBackground variant="app">
+    <PageBackground variant={showLanding ? "login" : "app"}>
       <div
         className={[
           "relative min-h-dvh pt-14",
