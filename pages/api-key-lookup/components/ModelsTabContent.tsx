@@ -174,11 +174,16 @@ function ModelPlazaCard({
           </div>
         </div>
 
-        <p className="mt-3 line-clamp-2 min-h-10 min-w-0 flex-1 overflow-hidden break-all text-xs leading-5 text-slate-500 dark:text-white/55">
-          {model.description?.trim()
-            ? model.description
-            : t("model_plaza.no_description")}
-        </p>
+        <div className="mt-3 min-h-10 min-w-0 flex-1" data-testid="model-description-space">
+          <p
+            className="line-clamp-2 break-words text-xs leading-5 text-slate-500 dark:text-white/55"
+            data-testid="model-description-clamp"
+          >
+            {model.description?.trim()
+              ? model.description
+              : t("model_plaza.no_description")}
+          </p>
+        </div>
 
         <div className="mt-auto pt-2">
           <div className="mb-1.5 flex items-center justify-between gap-2">

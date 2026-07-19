@@ -174,6 +174,36 @@ describe("ModelPlazaPage", () => {
     expect(screen.queryByText("qwen3.5-plus")).not.toBeInTheDocument();
   });
 
+  test("keeps the model description clamp out of the flexible spacer", async () => {
+    mocks.apiGet.mockImplementation((path: string) => {
+      if (path === "/auth-group-model-owner-mappings") return Promise.resolve({ items: [] });
+      if (path === "/models/configured-availability") {
+        return Promise.resolve({
+          scoped: true,
+          data: [
+            {
+              id: "gpt-5",
+              description:
+                "A long model description that must end after two complete lines without exposing a clipped third line.",
+            },
+          ],
+        });
+      }
+      if (path === "/model-path-availability") return Promise.resolve({ data: [] });
+      return Promise.resolve({});
+    });
+
+    renderPage();
+
+    const clamp = await screen.findByTestId("model-description-clamp");
+    const spacer = screen.getByTestId("model-description-space");
+
+    expect(clamp).toHaveClass("line-clamp-2");
+    expect(clamp).not.toHaveClass("flex-1", "min-h-10");
+    expect(spacer).toHaveClass("flex-1", "min-h-10");
+    expect(spacer).toContainElement(clamp);
+  });
+
   test("copies model id from the card action", async () => {
     mocks.apiGet.mockImplementation((path: string) => {
       if (path === "/auth-group-model-owner-mappings") return Promise.resolve({ items: [] });

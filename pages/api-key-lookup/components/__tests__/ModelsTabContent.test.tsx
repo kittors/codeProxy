@@ -80,6 +80,38 @@ describe("ModelsTabContent", () => {
     expect(screen.getByText("deepseek-chat")).toBeInTheDocument();
   });
 
+  test("keeps the two-line clamp separate from the flexible description spacer", async () => {
+    await i18n.changeLanguage("en");
+
+    render(
+      <ThemeProvider>
+        <ToastProvider>
+          <ModelsTabContent
+            models={[
+              model("gpt-5", {
+                description:
+                  "A long model description that must be clamped to exactly two complete lines without painting a partially clipped third line below the ellipsis.",
+                ownedBy: "openai",
+              }),
+            ]}
+            loading={false}
+            error={null}
+            searchFilter=""
+            onSearchChange={() => {}}
+          />
+        </ToastProvider>
+      </ThemeProvider>,
+    );
+
+    const clamp = screen.getByTestId("model-description-clamp");
+    const spacer = screen.getByTestId("model-description-space");
+
+    expect(clamp).toHaveClass("line-clamp-2");
+    expect(clamp).not.toHaveClass("flex-1", "min-h-10");
+    expect(spacer).toHaveClass("flex-1", "min-h-10");
+    expect(spacer).toContainElement(clamp);
+  });
+
   test("does not render the CC Switch import action inside available models", async () => {
     await i18n.changeLanguage("en");
 

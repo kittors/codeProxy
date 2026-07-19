@@ -103,6 +103,52 @@ const mockLookupApisForQuickImport = async (page: Page) => {
   });
 };
 
+const mockLookupApisForModelCards = async (page: Page) => {
+  await page.route("**/v0/management/public/usage/logs", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ items: [], total: 0 }),
+    });
+  });
+
+  await page.route("**/v0/management/public/usage/chart-data", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        daily_series: [],
+        heatmap_series: [],
+        model_distribution: [],
+        stats: { total: 0, success_rate: 0, total_tokens: 0, total_sessions: 0, total_cost: 0 },
+      }),
+    });
+  });
+
+  await page.route("**/v1/models", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        data: [
+          {
+            id: "gpt-5",
+            owned_by: "openai",
+            description:
+              "GPT-5 is OpenAI’s most advanced model, offering major improvements in reasoning, code quality, and user experience. It is optimized for complex tasks that require step-by-step reasoning, instruction following, and reliable tool use.",
+            input_modalities: ["text", "image"],
+            pricing: {
+              input_price_per_million: 1.25,
+              output_price_per_million: 10,
+              cache_read_price_per_million: 0.125,
+            },
+          },
+        ],
+      }),
+    });
+  });
+};
+
 const localDateKey = (date: Date) => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -159,6 +205,33 @@ const decodeCodexConfigBlob = (url: string) => {
     modelCatalog?: { models: Array<Record<string, unknown>> };
   };
 };
+
+test("API Key Lookup: model description clamps to two complete lines", async ({ page }) => {
+  await page.setViewportSize({ width: 2048, height: 1100 });
+  await setQueriedLookupKey(page);
+  await mockLookupApisForModelCards(page);
+
+  await page.goto("/#/apikey-lookup");
+  await page.getByRole("tab", { name: /模型广场|Model Plaza/i }).click();
+
+  const description = page.getByTestId("model-description-clamp");
+  await expect(description).toBeVisible();
+
+  const metrics = await description.evaluate((element) => {
+    const style = window.getComputedStyle(element);
+    const lineHeight = Number.parseFloat(style.lineHeight);
+    return {
+      height: element.getBoundingClientRect().height,
+      lineHeight,
+      scrollHeight: element.scrollHeight,
+      lineClamp: style.webkitLineClamp,
+    };
+  });
+
+  expect(metrics.lineClamp).toBe("2");
+  expect(metrics.height).toBeCloseTo(metrics.lineHeight * 2, 0);
+  expect(metrics.scrollHeight).toBeGreaterThan(metrics.height);
+});
 
 test("API Key Lookup: Heatmap tooltip stays inside the heatmap card when hovering the top row", async ({
   page,
