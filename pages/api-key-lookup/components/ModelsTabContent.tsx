@@ -121,11 +121,11 @@ function ModelPlazaCard({
     );
 
   return (
-    <div data-testid="apikey-lookup-model-card" className="h-full min-h-[220px]">
+    <div data-testid="apikey-lookup-model-card" className="h-full min-h-[220px] min-w-0">
       <Card
         padding="compact"
-        bodyClassName="mt-0 flex h-full min-h-[196px] flex-col"
-        className="group h-full transition hover:border-indigo-200/70 hover:shadow-[2px_2px_10px_rgb(0_0_0_/_0.06)] dark:hover:border-indigo-500/25 dark:hover:shadow-[2px_2px_10px_rgb(0_0_0_/_0.28)]"
+        bodyClassName="mt-0 flex h-full min-h-[196px] min-w-0 flex-col"
+        className="group h-full min-w-0 overflow-hidden transition hover:border-indigo-200/70 hover:shadow-[2px_2px_10px_rgb(0_0_0_/_0.06)] dark:hover:border-indigo-500/25 dark:hover:shadow-[2px_2px_10px_rgb(0_0_0_/_0.28)]"
       >
         <div className="flex items-start gap-3">
           <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200/80 bg-slate-50 dark:border-neutral-700/70 dark:bg-neutral-900/70">
@@ -174,7 +174,7 @@ function ModelPlazaCard({
           </div>
         </div>
 
-        <p className="mt-3 line-clamp-2 min-h-10 flex-1 text-xs leading-5 text-slate-500 dark:text-white/55">
+        <p className="mt-3 line-clamp-2 min-h-10 min-w-0 flex-1 overflow-hidden break-all text-xs leading-5 text-slate-500 dark:text-white/55">
           {model.description?.trim()
             ? model.description
             : t("model_plaza.no_description")}

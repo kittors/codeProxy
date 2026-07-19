@@ -1034,9 +1034,10 @@ export function ApiKeyLookupPage() {
     [handleLogout],
   );
 
+  // Landing CTA opens login; always allow dismiss (backdrop / Esc / X).
   const closeLoginModal = useCallback(() => {
-    if (queriedKey || portalUser) setLoginModalOpen(false);
-  }, [queriedKey, portalUser]);
+    setLoginModalOpen(false);
+  }, []);
 
   // ================================================================
   //  Render
@@ -1045,14 +1046,7 @@ export function ApiKeyLookupPage() {
   const showLanding = !queriedKey && !portalUser && !error;
 
   return (
-    <div
-      className={[
-        "relative min-h-dvh pt-14",
-        showLanding
-          ? "bg-[#fafbfc] dark:bg-[#08090a]"
-          : "bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-neutral-950 dark:via-neutral-900 dark:to-neutral-950",
-      ].join(" ")}
-    >
+    <div className="relative min-h-dvh bg-gradient-to-br from-slate-50 via-white to-slate-100 pt-14 dark:from-neutral-950 dark:via-neutral-900 dark:to-neutral-950">
       {/* Header：滚动后上滑淡出，给 sticky tabs 让位 */}
       <header
         data-testid="apikey-lookup-header"

@@ -181,10 +181,11 @@ describe("ApiKeyLookupPage", () => {
       </ThemeProvider>,
     );
 
-    expect(screen.getByTestId("apikey-lookup-landing")).toBeInTheDocument();
+    const landing = screen.getByTestId("apikey-lookup-landing");
+    expect(landing).toBeInTheDocument();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: /登录查看|sign in/i }));
+    await userEvent.click(within(landing).getByRole("button", { name: /^(login|sign in|登录)$/i }));
 
     const dialog = await screen.findByRole("dialog");
     expect(dialog).toBeInTheDocument();
@@ -200,6 +201,26 @@ describe("ApiKeyLookupPage", () => {
     await waitFor(() => {
       expect(portalApi.login).toHaveBeenCalledWith("alice", "password123", true);
     });
+  });
+
+  test("allows dismissing the login modal from the landing page", async () => {
+    render(
+      <ThemeProvider>
+        <ToastProvider>
+          <ApiKeyLookupPage />
+        </ToastProvider>
+      </ThemeProvider>,
+    );
+
+    const landing = screen.getByTestId("apikey-lookup-landing");
+    await userEvent.click(within(landing).getByRole("button", { name: /^(login|sign in|登录)$/i }));
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+    expect(screen.getByTestId("apikey-lookup-landing")).toBeInTheDocument();
   });
 
   test("localizes invalid credentials on portal login failure", async () => {
@@ -220,7 +241,8 @@ describe("ApiKeyLookupPage", () => {
       </ThemeProvider>,
     );
 
-    await userEvent.click(screen.getByRole("button", { name: /登录查看|sign in/i }));
+    const landing = screen.getByTestId("apikey-lookup-landing");
+    await userEvent.click(within(landing).getByRole("button", { name: /^(login|sign in|登录)$/i }));
     const dialog = await screen.findByRole("dialog");
     await userEvent.type(screen.getByPlaceholderText(/enter username|请输入账号/i), "alice");
     await userEvent.type(screen.getByPlaceholderText(/enter password|请输入密码/i), "bad-pass");
