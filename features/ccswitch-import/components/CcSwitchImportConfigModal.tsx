@@ -683,6 +683,13 @@ export function CcSwitchImportConfigModal({
       ]),
     [availableModels, draft.modelMappings],
   );
+  const codexDefaultModelOptions = useMemo(() => {
+    const requestModels = draft.modelMappings
+      .filter((mapping) => !mapping.role)
+      .map((mapping) => mapping.requestModel.trim() || mapping.targetModel.trim())
+      .filter(Boolean);
+    return modelOptions([...requestModels, draft.defaultModel]);
+  }, [draft.defaultModel, draft.modelMappings]);
   const preparedDraft = prepareDraftForSave(draft);
   const hasRenderableMappings = draft.modelMappings.length > 0;
   const modelMappingsLoading = Boolean(selectedGroup && modelsLoading && !hasRenderableMappings);
@@ -771,18 +778,38 @@ export function CcSwitchImportConfigModal({
   const updateGenericRequestModel = (index: number, requestModel: string) => {
     setModelMappingSort(null);
     setDraft((current) => {
+      const currentDefault = current.defaultModel.trim().toLowerCase();
+      // Prefer the mapping that currently owns the default request name.
+      const defaultRowIndex = current.modelMappings.findIndex(
+        (mapping) =>
+          !mapping.role &&
+          currentDefault &&
+          mapping.requestModel.trim().toLowerCase() === currentDefault,
+      );
       const modelMappings = current.modelMappings.map((mapping, mappingIndex) =>
         !mapping.role && mappingIndex === index ? { ...mapping, requestModel } : mapping,
       );
+      if (defaultRowIndex === index) {
+        // Keep default glued to that row while typing (including empty mid-edit).
+        return {
+          ...current,
+          modelMappings,
+          defaultModel: requestModel.trim() || current.defaultModel.trim(),
+        };
+      }
       return {
         ...current,
         modelMappings,
-        defaultModel:
-          modelMappings
-            .find((mapping) => !mapping.role && mapping.requestModel.trim())
-            ?.requestModel.trim() ?? "",
+        defaultModel: resolveGenericDefaultModel(modelMappings, current.defaultModel),
       };
     });
+  };
+
+  const setCodexDefaultModel = (defaultModel: string) => {
+    setDraft((current) => ({
+      ...current,
+      defaultModel: defaultModel.trim(),
+    }));
   };
 
   const updateGenericContextWindow = (index: number, contextWindow: string) => {
@@ -1103,6 +1130,26 @@ export function CcSwitchImportConfigModal({
                 options={authFieldOptions}
                 aria-label={t("ccswitch.settings_auth_field", { client: clientLabel })}
                 className={controlClassName}
+              />
+            </label>
+          ) : null}
+
+          {draft.clientType === "codex" ? (
+            <label className={fieldClassName}>
+              <span className={labelClassName}>
+                {t("ccswitch.settings_default_model", { client: clientLabel })}
+              </span>
+              <SearchableSelect
+                value={draft.defaultModel}
+                onChange={setCodexDefaultModel}
+                options={codexDefaultModelOptions}
+                allowCreate
+                createLabel={(value) => t("ccswitch.model_use_custom", { value })}
+                placeholder={t("ccswitch.settings_default_model_placeholder")}
+                searchPlaceholder={t("ccswitch.config_model_search_placeholder")}
+                aria-label={t("ccswitch.settings_default_model", { client: clientLabel })}
+                className={`${controlClassName} w-full`}
+                disabled={!selectedGroup}
               />
             </label>
           ) : null}

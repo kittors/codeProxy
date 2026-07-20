@@ -2086,9 +2086,11 @@ export function DataTable<T>({
         className={
           naturalFlow
             ? "relative z-10 min-h-0 overflow-visible rounded-xl"
-            : `relative col-start-1 row-start-1 h-full min-h-0 table-scrollbar overscroll-x-none ${
+            : // Always contain vertical overscroll so sticky headers never rubber-band;
+              // boundary wheel handoff is handled in JS (handleWheel), not overscroll-behavior.
+              `relative col-start-1 row-start-1 h-full min-h-0 table-scrollbar overscroll-x-none overscroll-y-none ${
                 isEmpty ? "overflow-x-hidden overflow-y-auto" : "overflow-auto"
-              } ${allowWheelPropagationAtBoundary ? "overscroll-y-auto" : "overscroll-y-none"}`
+              }`
         }
       >
         <div
