@@ -560,11 +560,37 @@ export function useAuthFilesDetailEditors(
     ],
   );
 
+  const confirmIdentityFingerprintSharedImpact = useCallback(
+    (detail: IdentityFingerprintAccountDetail): boolean => {
+      if (detail.subject_scope !== "shared") return true;
+      return window.confirm(t("auth_files.identity_shared_policy_confirm"));
+    },
+    [t],
+  );
+
+  const identityFingerprintMutationError = useCallback(
+    (err: unknown, fallbackKey: string): string => {
+      const raw = err instanceof Error ? err.message : "";
+      if (/conflict|revision|409/i.test(raw)) {
+        return t("auth_files.identity_policy_revision_conflict");
+      }
+      return raw || t(fallbackKey);
+    },
+    [t],
+  );
+
   const selectIdentityFingerprintProfile = useCallback(
     async (profileKey: string) => {
       const detail = identityFingerprintDetail;
       const accountKey = detail?.summary.account_key;
-      if (!detail || detail.summary.provider !== "codex" || !accountKey || !profileKey) return;
+      if (
+        !detail ||
+        detail.summary.provider !== "codex" ||
+        !accountKey ||
+        !profileKey
+      )
+        return;
+      if (!confirmIdentityFingerprintSharedImpact(detail)) return;
       setIdentityFingerprintSaving(true);
       setIdentityFingerprintError(null);
       try {
@@ -581,21 +607,31 @@ export function useAuthFilesDetailEditors(
           message: t("auth_files.identity_profile_saved"),
         });
       } catch (err: unknown) {
-        const message =
-          err instanceof Error ? err.message : t("auth_files.identity_profile_save_failed");
+        const message = identityFingerprintMutationError(
+          err,
+          "auth_files.identity_profile_save_failed",
+        );
         setIdentityFingerprintError(message);
         notify({ type: "error", message });
       } finally {
         setIdentityFingerprintSaving(false);
       }
     },
-    [applyIdentityFingerprintDetail, identityFingerprintDetail, notify, t],
+    [
+      applyIdentityFingerprintDetail,
+      confirmIdentityFingerprintSharedImpact,
+      identityFingerprintDetail,
+      identityFingerprintMutationError,
+      notify,
+      t,
+    ],
   );
 
   const useIdentityFingerprintCLIPreferred = useCallback(async () => {
     const detail = identityFingerprintDetail;
     const accountKey = detail?.summary.account_key;
     if (!detail || detail.summary.provider !== "codex" || !accountKey) return;
+    if (!confirmIdentityFingerprintSharedImpact(detail)) return;
     setIdentityFingerprintSaving(true);
     setIdentityFingerprintError(null);
     try {
@@ -611,20 +647,36 @@ export function useAuthFilesDetailEditors(
         message: t("auth_files.identity_profile_saved"),
       });
     } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : t("auth_files.identity_profile_save_failed");
+      const message = identityFingerprintMutationError(
+        err,
+        "auth_files.identity_profile_save_failed",
+      );
       setIdentityFingerprintError(message);
       notify({ type: "error", message });
     } finally {
       setIdentityFingerprintSaving(false);
     }
-  }, [applyIdentityFingerprintDetail, identityFingerprintDetail, notify, t]);
+  }, [
+    applyIdentityFingerprintDetail,
+    confirmIdentityFingerprintSharedImpact,
+    identityFingerprintDetail,
+    identityFingerprintMutationError,
+    notify,
+    t,
+  ]);
 
   const deleteIdentityFingerprintProfile = useCallback(
     async (profileKey: string) => {
       const detail = identityFingerprintDetail;
       const accountKey = detail?.summary.account_key;
-      if (!detail || detail.summary.provider !== "codex" || !accountKey || !profileKey) return;
+      if (
+        !detail ||
+        detail.summary.provider !== "codex" ||
+        !accountKey ||
+        !profileKey
+      )
+        return;
+      if (!confirmIdentityFingerprintSharedImpact(detail)) return;
       setIdentityFingerprintSaving(true);
       setIdentityFingerprintError(null);
       try {
@@ -639,15 +691,24 @@ export function useAuthFilesDetailEditors(
           message: t("auth_files.identity_profile_deleted"),
         });
       } catch (err: unknown) {
-        const message =
-          err instanceof Error ? err.message : t("auth_files.identity_profile_delete_failed");
+        const message = identityFingerprintMutationError(
+          err,
+          "auth_files.identity_profile_delete_failed",
+        );
         setIdentityFingerprintError(message);
         notify({ type: "error", message });
       } finally {
         setIdentityFingerprintSaving(false);
       }
     },
-    [applyIdentityFingerprintDetail, identityFingerprintDetail, notify, t],
+    [
+      applyIdentityFingerprintDetail,
+      confirmIdentityFingerprintSharedImpact,
+      identityFingerprintDetail,
+      identityFingerprintMutationError,
+      notify,
+      t,
+    ],
   );
 
   const openDetail = useCallback(

@@ -755,6 +755,10 @@ describe("AuthFileDetailModal", () => {
       },
       identityFingerprintDetail: {
         ...codexIdentityFingerprintDetail,
+        status_scope: "shared_subject",
+        subject_scope: "shared",
+        share_eligible: true,
+        current_tenant_binding_count: 2,
         summary: cliProfile.summary,
         effective: cliProfile.effective,
         learned: cliProfile.learned,
@@ -772,6 +776,7 @@ describe("AuthFileDetailModal", () => {
       useIdentityFingerprintCLIPreferred: useCliPreferred,
     });
 
+    expect(screen.getByTestId("auth-file-identity-summary")).toHaveTextContent("Shared account");
     expect(screen.getByTestId("identity-profile-codex_cli_rs")).toHaveTextContent("In use");
     expect(screen.getByTestId("auth-file-identity-fields")).toHaveTextContent(
       "codex_cli_rs/0.144.1",

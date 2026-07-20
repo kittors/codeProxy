@@ -336,6 +336,7 @@ export function useAuthFilesStatusState({
         names: string[];
         authIndexes: string[];
         quotaKey: string | null;
+        account: AiAccountLatestStatusDto;
       };
       const groups: MatchedGroup[] = [];
       for (const account of freshAccounts) {
@@ -370,6 +371,7 @@ export function useAuthFilesStatusState({
           names: matched.map((file) => file.name),
           authIndexes,
           quotaKey,
+          account,
         });
       }
 
@@ -464,9 +466,20 @@ export function useAuthFilesStatusState({
         const planType =
           (group.quotaKey ? patch.planTypeByKey[group.quotaKey] : undefined) ??
           group.authIndexes.map((key) => patch.planTypeByKey[key]).find(Boolean);
-        if (!planType) continue;
         for (const name of group.names) {
-          patchAuthFileByName(name, { plan_type: planType, planType });
+          const file = filesForMerge.find((item) => item.name === name);
+          const hasPrivatePlan = Boolean(file?.plan_type ?? file?.planType);
+          patchAuthFileByName(name, {
+            account_status_scope: group.account.status_scope,
+            subject_scope: group.account.subject_scope,
+            share_eligible: group.account.share_eligible,
+            usage_history_complete: group.account.usage?.history_complete,
+            usage_projected_since: group.account.usage?.projected_since,
+            shared_subscription_started_at: group.account.subscription_started_at,
+            shared_subscription_expires_at: group.account.subscription_expires_at,
+            shared_subscription_source: group.account.subscription_source,
+            ...(!hasPrivatePlan && planType ? { plan_type: planType, planType } : {}),
+          });
         }
       }
     },

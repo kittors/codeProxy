@@ -85,8 +85,10 @@ export function useAuthFilesDataState() {
         return filesRef.current;
       } finally {
         if (isActive()) {
-          if (hasExisting) setRefreshingAll(false);
-          else setLoading(false);
+          // A StrictMode replay may turn a cold load into a warm refresh while the
+          // original loading state is still true. Always settle both state branches.
+          setLoading(false);
+          setRefreshingAll(false);
         }
       }
     },

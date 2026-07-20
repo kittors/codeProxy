@@ -8,7 +8,7 @@ import {
 import type { AiAccountLatestStatusDto } from "@code-proxy/api-client";
 
 describe("mapAccountStatusToUi", () => {
-  test("maps quota + 30d usage + reset credits by subject/index", () => {
+  test("maps quota + lifetime usage + reset credits by subject/index", () => {
     const accounts: AiAccountLatestStatusDto[] = [
       {
         auth_subject_id: "sub-77",
@@ -25,9 +25,12 @@ describe("mapAccountStatusToUi", () => {
           },
         ],
         usage: {
-          request_total_30d: 100,
-          success_total_30d: 90,
-          failure_total_30d: 10,
+          request_total: 100,
+          success_total: 90,
+          failure_total: 10,
+          request_total_30d: 80,
+          success_total_30d: 72,
+          failure_total_30d: 8,
           cycle_request_total: 4,
           cycle_cost_total: 0.5,
           weekly_quota_used_percent: 12,

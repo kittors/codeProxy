@@ -242,10 +242,21 @@ describe("useAuthFilesStatusState batch refresh", () => {
         {
           auth_index: "idx-1",
           auth_subject_id: "shared-sub",
+          status_scope: "shared_subject",
+          subject_scope: "shared",
+          share_eligible: true,
+          subscription_started_at: "2026-07-01T00:00:00Z",
+          subscription_expires_at: "2026-08-01T00:00:00Z",
+          subscription_source: "signed_claims",
           quotas: [{ quota_key: "code_5h", percent: 33 }],
           usage: {
             cycle_request_total: 5,
             cycle_known: true,
+            request_total: 60,
+            success_total: 48,
+            failure_total: 12,
+            projected_since: "2026-06-15T00:00:00Z",
+            history_complete: false,
             request_total_30d: 50,
             success_total_30d: 40,
             failure_total_30d: 10,
@@ -288,6 +299,19 @@ describe("useAuthFilesStatusState batch refresh", () => {
         (point: { entity_name: string }) => point.entity_name,
       );
       expect(names).toEqual(expect.arrayContaining(["idx-1", "idx-2"]));
+    });
+    await waitFor(() => {
+      let patched = twinSubjectFiles;
+      for (const [update] of setFiles.mock.calls) {
+        if (typeof update === "function") patched = update(patched);
+      }
+      for (const file of patched) {
+        expect(file.subject_scope).toBe("shared");
+        expect(file.share_eligible).toBe(true);
+        expect(file.usage_history_complete).toBe(false);
+        expect(file.usage_projected_since).toBe("2026-06-15T00:00:00Z");
+        expect(file.shared_subscription_expires_at).toBe("2026-08-01T00:00:00Z");
+      }
     });
   });
 

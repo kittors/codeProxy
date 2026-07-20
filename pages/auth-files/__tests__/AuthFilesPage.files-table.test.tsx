@@ -1984,6 +1984,66 @@ describe("AuthFilesPage files table", () => {
     expect(within(card as HTMLElement).queryByText("pro")).not.toBeInTheDocument();
   });
 
+  test("table view shows shared scope and separate cycle and lifetime calls", async () => {
+    useTableFilesView();
+    mocks.list.mockImplementation(async () => ({
+      files: [
+        {
+          name: "codex-shared.json",
+          label: "Shared Codex",
+          account_type: "oauth",
+          type: "codex",
+          auth_index: "shared-77",
+          size: 1024,
+          modified: Date.now(),
+          disabled: false,
+        },
+      ],
+    }));
+    mocks.getStatus.mockImplementation(async () => ({
+      items: [
+        {
+          auth_index: "shared-77",
+          auth_subject_id: "shared-subject",
+          subject_scope: "shared",
+          share_eligible: true,
+          quotas: [],
+          usage: {
+            cycle_request_total: 7,
+            cycle_known: true,
+            request_total: 99,
+            success_total: 90,
+            failure_total: 9,
+          },
+        },
+      ],
+    }));
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    const title = await screen.findByText("Shared Codex");
+    const row = title.closest("tr");
+    expect(row).not.toBeNull();
+    expect(screen.getByRole("columnheader", { name: "Account scope" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Cycle calls" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Lifetime calls" })).toBeInTheDocument();
+    expect(await within(row as HTMLElement).findByText("Shared account")).toBeInTheDocument();
+    expect(within(row as HTMLElement).getByText("7")).toBeInTheDocument();
+    expect(within(row as HTMLElement).getByText("99")).toBeInTheDocument();
+    expect(within(row as HTMLElement).getByText("90")).toBeInTheDocument();
+    expect(within(row as HTMLElement).getByText("9")).toBeInTheDocument();
+  });
+
   test("cards view shows the auth-file success rate beside call volume", async () => {
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     mocks.list.mockImplementation(async () => ({
@@ -2008,10 +2068,15 @@ describe("AuthFilesPage files table", () => {
         {
           auth_index: "77",
           auth_subject_id: "77",
+          subject_scope: "tenant",
+          share_eligible: false,
           quotas: [],
           usage: {
             cycle_request_total: 5,
             cycle_known: true,
+            request_total: 5,
+            success_total: 4,
+            failure_total: 1,
             request_total_30d: 5,
             success_total_30d: 4,
             failure_total_30d: 1,
@@ -2036,8 +2101,12 @@ describe("AuthFilesPage files table", () => {
     const card = title.closest("section");
     expect(card).not.toBeNull();
     // Status usage is async; wait for cycle volume before asserting success rate.
-    expect(await within(card as HTMLElement).findByText("5 calls")).toBeInTheDocument();
-    expect(within(card as HTMLElement).getByText("Success Rate")).toBeInTheDocument();
+    expect(
+      await within(card as HTMLElement).findByText("Cycle 5"),
+    ).toBeInTheDocument();
+    expect(
+      within(card as HTMLElement).getByText("Success Rate"),
+    ).toBeInTheDocument();
     expect(within(card as HTMLElement).getByText("80.0%")).toBeInTheDocument();
   });
 
@@ -2062,10 +2131,15 @@ describe("AuthFilesPage files table", () => {
         {
           auth_index: "77",
           auth_subject_id: "77",
+          subject_scope: "tenant",
+          share_eligible: false,
           quotas: [],
           usage: {
             cycle_request_total: 7,
             cycle_known: true,
+            request_total: 99,
+            success_total: 99,
+            failure_total: 0,
             request_total_30d: 99,
             success_total_30d: 99,
             failure_total_30d: 0,
@@ -2089,14 +2163,23 @@ describe("AuthFilesPage files table", () => {
     const title = await screen.findByText("A_GptPro");
     const card = title.closest("section");
     expect(card).not.toBeNull();
-    expect(await within(card as HTMLElement).findByText("7 calls")).toBeInTheDocument();
-    expect(within(card as HTMLElement).queryByText("99 calls")).not.toBeInTheDocument();
+    expect(
+      await within(card as HTMLElement).findByText("Cycle 7"),
+    ).toBeInTheDocument();
+    expect(
+      within(card as HTMLElement).getByText("Lifetime 99"),
+    ).toBeInTheDocument();
+    expect(
+      within(card as HTMLElement).getByText("Tenant only"),
+    ).toBeInTheDocument();
     expect(mocks.getStatus).toHaveBeenCalled();
-    expect(mocks.getAuthFileTrend).not.toHaveBeenCalled();
   });
 
-  test("cards view falls back to request_total when xAI weekly cycle is unknown", async () => {
-    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+  test("cards view shows unknown cycle and lifetime total when xAI weekly cycle is unknown", async () => {
+    window.localStorage.setItem(
+      "authFilesPage.filesViewMode.v1",
+      JSON.stringify("cards"),
+    );
     mocks.list.mockImplementation(async () => ({
       files: [
         {
@@ -2121,6 +2204,27 @@ describe("AuthFilesPage files table", () => {
           ],
         }) as any,
     );
+    mocks.getStatus.mockImplementation(async () => ({
+      items: [
+        {
+          auth_index: "xai-auth",
+          auth_subject_id: "xai-subject",
+          subject_scope: "shared",
+          share_eligible: true,
+          plan_type: "supergrok",
+          quotas: [],
+          usage: {
+            request_total: 116,
+            success_total: 116,
+            failure_total: 0,
+            projected_since: "2026-06-15T00:00:00Z",
+            history_complete: false,
+            cycle_request_total: 0,
+            cycle_known: false,
+          },
+        },
+      ],
+    }));
     mocks.getAuthFileTrend.mockImplementation(async (authIndex: string) => ({
       auth_index: authIndex,
       days: 7,
@@ -2164,10 +2268,24 @@ describe("AuthFilesPage files table", () => {
     const card = title.closest("section");
     expect(card).not.toBeNull();
     // Prefer request_total over a misleading cycle_request_total of 0 when cycle_known is false.
-    expect(await within(card as HTMLElement).findByText("116 calls")).toBeInTheDocument();
-    expect(within(card as HTMLElement).getByText("SUPERGROK")).toBeInTheDocument();
+    expect(
+      await within(card as HTMLElement).findByText("Cycle --"),
+    ).toBeInTheDocument();
+    expect(
+      within(card as HTMLElement).getByText("Lifetime 116"),
+    ).toBeInTheDocument();
+    expect(
+      within(card as HTMLElement).getByText("SUPERGROK"),
+    ).toBeInTheDocument();
+    expect(
+      within(card as HTMLElement).getByText("Shared account"),
+    ).toBeInTheDocument();
+    const user = userEvent.setup();
+    await user.hover(within(card as HTMLElement).getByText("Lifetime 116"));
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "Shared history is projected from",
+    );
     expect(mocks.getStatus).toHaveBeenCalled();
-    expect(mocks.getAuthFileTrend).toHaveBeenCalled(); // bridge mock only
   });
 
   test("filters auth files by custom tag options", async () => {
@@ -2477,8 +2595,12 @@ describe("AuthFilesPage files table", () => {
     const otherTitle = await screen.findByText("B_GptPro");
     const otherCard = otherTitle.closest("section");
     expect(otherCard).not.toBeNull();
-    expect(await within(card as HTMLElement).findByText("1 calls")).toBeInTheDocument();
-    expect(await within(otherCard as HTMLElement).findByText("10 calls")).toBeInTheDocument();
+    expect(
+      await within(card as HTMLElement).findByText("Cycle 1"),
+    ).toBeInTheDocument();
+    expect(
+      await within(otherCard as HTMLElement).findByText("Cycle 10"),
+    ).toBeInTheDocument();
 
     await waitFor(() => expect(mocks.startStatusRefresh).toHaveBeenCalled());
     mocks.fetchQuota.mockClear();
@@ -2490,9 +2612,15 @@ describe("AuthFilesPage files table", () => {
     await waitFor(() => {
       expect(mocks.startStatusRefresh).toHaveBeenCalled();
       expect(mocks.getEntityStats).not.toHaveBeenCalled();
-      expect(within(card as HTMLElement).getByText("4 calls")).toBeInTheDocument();
-      expect(within(otherCard as HTMLElement).getByText("10 calls")).toBeInTheDocument();
-      expect(within(otherCard as HTMLElement).queryByText("99 calls")).not.toBeInTheDocument();
+      expect(
+        within(card as HTMLElement).getByText("Cycle 4"),
+      ).toBeInTheDocument();
+      expect(
+        within(otherCard as HTMLElement).getByText("Cycle 10"),
+      ).toBeInTheDocument();
+      expect(
+        within(otherCard as HTMLElement).queryByText("Cycle 99"),
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -2766,9 +2894,15 @@ describe("AuthFilesPage files table", () => {
     const title = await screen.findByText("A_GptPro");
     const card = title.closest("section");
     expect(card).not.toBeNull();
-    expect(within(card as HTMLElement).queryByText(/^codex$/i)).not.toBeInTheDocument();
-    expect(within(card as HTMLElement).queryByText("Plan Pro")).not.toBeInTheDocument();
-    expect(within(card as HTMLElement).getByText("0 calls")).toBeInTheDocument();
+    expect(
+      within(card as HTMLElement).queryByText(/^codex$/i),
+    ).not.toBeInTheDocument();
+    expect(
+      within(card as HTMLElement).queryByText("Plan Pro"),
+    ).not.toBeInTheDocument();
+    expect(
+      within(card as HTMLElement).getByText("Lifetime 0"),
+    ).toBeInTheDocument();
   });
 
   test("table view hides default auth-file badges when display tags are empty", async () => {
@@ -2900,6 +3034,9 @@ describe("AuthFilesPage files table", () => {
           usage: {
             cycle_request_total: 9,
             cycle_known: true,
+            request_total: 9,
+            success_total: 7,
+            failure_total: 2,
             request_total_30d: 9,
             success_total_30d: 7,
             failure_total_30d: 2,
@@ -2911,6 +3048,9 @@ describe("AuthFilesPage files table", () => {
           usage: {
             cycle_request_total: 2,
             cycle_known: true,
+            request_total: 2,
+            success_total: 2,
+            failure_total: 0,
             request_total_30d: 2,
             success_total_30d: 2,
             failure_total_30d: 0,
@@ -2937,7 +3077,7 @@ describe("AuthFilesPage files table", () => {
     expect(screen.queryByText("z-last.json")).not.toBeInTheDocument();
     expect(screen.queryByText("codex-prod.json")).not.toBeInTheDocument();
     expect(screen.getAllByText("PLUS").length).toBeGreaterThan(0);
-    expect(await screen.findByText("9 calls")).toBeInTheDocument();
+    expect(await screen.findByText("Lifetime 9")).toBeInTheDocument();
 
     const cards = screen.getByTestId("auth-files-cards");
     expect(cards.textContent?.indexOf("Alpha Channel")).toBeLessThan(
@@ -4341,6 +4481,9 @@ describe("AuthFilesPage files table", () => {
         usage: {
           cycle_request_total: useNextUsage ? 100 + index + 1 : index + 1,
           cycle_known: true,
+          request_total: useNextUsage ? 100 + index + 1 : index + 1,
+          success_total: useNextUsage ? 100 + index + 1 : index + 1,
+          failure_total: 0,
           request_total_30d: useNextUsage ? 100 + index + 1 : index + 1,
           success_total_30d: useNextUsage ? 100 + index + 1 : index + 1,
           failure_total_30d: 0,
@@ -4387,7 +4530,9 @@ describe("AuthFilesPage files table", () => {
     const firstTitle = await screen.findByText("auth-1.json");
     const firstCard = firstTitle.closest("section");
     expect(firstCard).not.toBeNull();
-    expect(await within(firstCard as HTMLElement).findByText("1 calls")).toBeInTheDocument();
+    expect(
+      await within(firstCard as HTMLElement).findByText("Lifetime 1"),
+    ).toBeInTheDocument();
 
     await waitFor(() => expect(mocks.getStatus).toHaveBeenCalled());
     await waitFor(() => expect(mocks.startStatusRefresh).toHaveBeenCalled());
@@ -4403,7 +4548,9 @@ describe("AuthFilesPage files table", () => {
       expect(mocks.startStatusRefresh).toHaveBeenCalledTimes(1);
       expect(mocks.getStatusRefreshJob).toHaveBeenCalled();
       expect(mocks.getStatus).toHaveBeenCalled();
-      expect(within(firstCard as HTMLElement).getByText("101 calls")).toBeInTheDocument();
+      expect(
+        within(firstCard as HTMLElement).getByText("Lifetime 101"),
+      ).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
@@ -4413,7 +4560,7 @@ describe("AuthFilesPage files table", () => {
     expect(tenthCard).not.toBeNull();
     // Final snapshot may refresh all accounts; page 2 still shows a finite call badge.
     expect(
-      within(tenthCard as HTMLElement).getByText(/\d+ calls/),
+      within(tenthCard as HTMLElement).getByText(/Lifetime \d+/),
     ).toBeInTheDocument();
   });
 
@@ -4983,7 +5130,7 @@ describe("AuthFilesPage files table", () => {
     expect(table).toBeInTheDocument();
   });
 
-  test("quota refresh updates the plan and reset credit badges from api-call payload", async () => {
+  test("quota refresh preserves tenant plan override and updates reset credit badges", async () => {
     const now = Date.now();
     const file = {
       name: "codex.json",
@@ -5066,7 +5213,7 @@ describe("AuthFilesPage files table", () => {
     const resetTooltip = await screen.findByRole("tooltip");
     expect(resetTooltip).toHaveTextContent("Reset credit expiration times:");
     expect(resetTooltip).toHaveTextContent("2026");
-    const callsBadge = within(cards).getByText("0 calls");
+    const callsBadge = within(cards).getByText("Lifetime 0");
     expect(
       resetButton.compareDocumentPosition(callsBadge) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
@@ -5077,7 +5224,8 @@ describe("AuthFilesPage files table", () => {
     const updatedResetButton = within(cards).getByRole("button", { name: "Query reset credits" });
     expect(updatedResetButton).not.toHaveAttribute("title");
     expect(mocks.startStatusRefresh).toHaveBeenCalled();
-    expect((await screen.findAllByText("PLUS")).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText("FREE")).length).toBeGreaterThan(0);
+    expect(screen.queryByText("PLUS")).not.toBeInTheDocument();
 
     await waitFor(() => {
       const raw = window.localStorage.getItem(AUTH_FILES_DATA_CACHE_KEY);

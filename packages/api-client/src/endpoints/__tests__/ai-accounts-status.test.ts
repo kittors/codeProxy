@@ -27,6 +27,14 @@ describe("aiAccountsStatusApi (authoritative contract)", () => {
           refresh_state: "idle",
           health_status: "ok",
           plan_type: "plus",
+          status_scope: "shared_subject",
+          subject_scope: "shared",
+          share_eligible: true,
+          subject_seed_kind: "account_id",
+          current_tenant_binding_count: 2,
+          subscription_started_at: "2026-07-01T00:00:00Z",
+          subscription_expires_at: "2026-08-01T00:00:00Z",
+          subscription_source: "signed_claims",
           quotas: [
             {
               quota_key: "code_5h",
@@ -39,6 +47,13 @@ describe("aiAccountsStatusApi (authoritative contract)", () => {
           ],
           usage: {
             auth_subject_id: "sub-1",
+            request_total: 120,
+            success_total: 108,
+            failure_total: 12,
+            cost_total: 4.2,
+            success_rate: 0.9,
+            projected_since: "2026-06-01T00:00:00Z",
+            history_complete: false,
             request_total_30d: 100,
             success_total_30d: 90,
             failure_total_30d: 10,
@@ -64,6 +79,12 @@ describe("aiAccountsStatusApi (authoritative contract)", () => {
     expect(snapshot.items[0]?.quotas[0]?.quota_key).toBe("code_5h");
     expect(snapshot.items[0]?.quotas[0]?.value).toBe("42%");
     expect(snapshot.items[0]?.usage?.request_total_30d).toBe(100);
+    expect(snapshot.items[0]?.usage?.request_total).toBe(120);
+    expect(snapshot.items[0]?.usage?.success_rate).toBe(0.9);
+    expect(snapshot.items[0]?.usage?.history_complete).toBe(false);
+    expect(snapshot.items[0]?.subject_scope).toBe("shared");
+    expect(snapshot.items[0]?.current_tenant_binding_count).toBe(2);
+    expect(snapshot.items[0]?.subscription_source).toBe("signed_claims");
     expect(snapshot.items[0]?.reset_credit_count).toBe(2);
   });
 

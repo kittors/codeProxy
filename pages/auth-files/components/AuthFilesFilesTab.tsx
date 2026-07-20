@@ -1488,7 +1488,7 @@ export function AuthFilesFilesTab({
                 rowHeight={84}
                 caption={t("auth_files.table_caption")}
                 emptyText={t("auth_files_page.no_files_desc")}
-                minWidth="min-w-[1840px]"
+                minWidth="min-w-[2140px]"
                 height="h-full"
                 minHeight="min-h-[360px] md:min-h-0"
                 allowWheelPropagationAtBoundary
@@ -1590,10 +1590,6 @@ export function AuthFilesFilesTab({
                   const cycleCalls = authIndex
                     ? cycleCallsByAuthIndex[authIndex]
                     : undefined;
-                  const displayCalls =
-                    typeof cycleCalls === "number"
-                      ? cycleCalls
-                      : usageTotalCalls;
                   const successRate =
                     usageTotalCalls > 0
                       ? (stats.success / usageTotalCalls) * 100
@@ -1777,8 +1773,35 @@ export function AuthFilesFilesTab({
                             </HoverTooltip>
                           ) : null}
                           <span className="inline-flex shrink-0 items-center rounded-full bg-slate-100 px-2 py-0.5 text-2xs font-semibold text-slate-700 dark:bg-white/10 dark:text-white/70">
-                            {t("auth_files.calls_count", {
-                              count: displayCalls,
+                            {typeof cycleCalls === "number"
+                              ? t("auth_files.cycle_calls_count", {
+                                  count: cycleCalls,
+                                })
+                              : t("auth_files.cycle_calls_unknown")}
+                          </span>
+                          <HoverTooltip
+                            content={
+                              file.usage_history_complete === false
+                                ? t("auth_files.shared_history_incomplete", {
+                                    since: file.usage_projected_since
+                                      ? new Date(
+                                          file.usage_projected_since,
+                                        ).toLocaleString()
+                                      : "--",
+                                  })
+                                : t("auth_files.shared_usage_scope_help")
+                            }
+                          >
+                            <span className="inline-flex shrink-0 items-center rounded-full bg-slate-100 px-2 py-0.5 text-2xs font-semibold text-slate-700 dark:bg-white/10 dark:text-white/70">
+                              {t("auth_files.lifetime_calls_count", {
+                                count: usageTotalCalls,
+                              })}
+                            </span>
+                          </HoverTooltip>
+                          <span className="inline-flex shrink-0 items-center rounded-full bg-emerald-50 px-2 py-0.5 text-2xs font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">
+                            {t("auth_files.success_failure_count", {
+                              success: stats.success,
+                              failure: stats.failure,
                             })}
                           </span>
                           <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-2xs font-semibold text-slate-700 dark:bg-white/10 dark:text-white/70">
@@ -1791,6 +1814,24 @@ export function AuthFilesFilesTab({
                                 : `${successRate.toFixed(1)}%`}
                             </span>
                           </span>
+                          {file.subject_scope ? (
+                            <HoverTooltip
+                              content={t("auth_files.shared_usage_scope_help")}
+                            >
+                              <span
+                                className={[
+                                  "inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-2xs font-semibold",
+                                  file.subject_scope === "shared"
+                                    ? "bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-200"
+                                    : "bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-white/65",
+                                ].join(" ")}
+                              >
+                                {file.subject_scope === "shared"
+                                  ? t("auth_files.shared_subject")
+                                  : t("auth_files.tenant_subject")}
+                              </span>
+                            </HoverTooltip>
+                          ) : null}
                           {subscriptionBadge}
                           {runtimeOnly ? (
                             <span className="inline-flex shrink-0 items-center rounded-full bg-slate-900 px-2 py-0.5 text-2xs font-semibold text-white dark:bg-white dark:text-neutral-950">

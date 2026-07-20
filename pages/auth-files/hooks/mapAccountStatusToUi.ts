@@ -150,24 +150,13 @@ export const mapAccountStatusToCycleUsage = (
 ): AuthFileCycleUsageSnapshot | null => {
   const usage = account.usage;
   if (!usage) return null;
-  const cycleKnown = usage.cycle_known === true;
   const cycleTotal = usage.cycle_request_total;
-  let calls: number | null = null;
-  if (cycleKnown && typeof cycleTotal === "number" && Number.isFinite(cycleTotal)) {
-    calls = Math.max(0, Math.round(cycleTotal));
-  } else if (
-    typeof usage.request_total_30d === "number" &&
-    Number.isFinite(usage.request_total_30d)
-  ) {
-    calls = Math.max(0, Math.round(usage.request_total_30d));
-  } else if (
-    typeof usage.request_total_7d === "number" &&
-    Number.isFinite(usage.request_total_7d)
-  ) {
-    calls = Math.max(0, Math.round(usage.request_total_7d));
-  } else if (typeof cycleTotal === "number" && Number.isFinite(cycleTotal)) {
-    calls = Math.max(0, Math.round(cycleTotal));
-  }
+  const calls =
+    usage.cycle_known === true &&
+    typeof cycleTotal === "number" &&
+    Number.isFinite(cycleTotal)
+      ? Math.max(0, Math.round(cycleTotal))
+      : null;
   return {
     calls,
     cycleCostTotal:
@@ -243,21 +232,27 @@ export const applyAccountStatuses = (
     const usage = account.usage;
     if (authIndex && usage) {
       const requests =
-        typeof usage.request_total_30d === "number" && Number.isFinite(usage.request_total_30d)
-          ? Math.max(0, Math.round(usage.request_total_30d))
-          : typeof usage.success_total_30d === "number" ||
-              typeof usage.failure_total_30d === "number"
+        typeof usage.request_total === "number" &&
+        Number.isFinite(usage.request_total)
+          ? Math.max(0, Math.round(usage.request_total))
+          : typeof usage.success_total === "number" ||
+              typeof usage.failure_total === "number"
             ? Math.max(
                 0,
                 Math.round(
-                  (typeof usage.success_total_30d === "number" ? usage.success_total_30d : 0) +
-                    (typeof usage.failure_total_30d === "number" ? usage.failure_total_30d : 0),
+                  (typeof usage.success_total === "number"
+                    ? usage.success_total
+                    : 0) +
+                    (typeof usage.failure_total === "number"
+                      ? usage.failure_total
+                      : 0),
                 ),
               )
             : 0;
       const failed =
-        typeof usage.failure_total_30d === "number" && Number.isFinite(usage.failure_total_30d)
-          ? Math.max(0, Math.round(usage.failure_total_30d))
+        typeof usage.failure_total === "number" &&
+        Number.isFinite(usage.failure_total)
+          ? Math.max(0, Math.round(usage.failure_total))
           : 0;
       authIndexPoints.push({
         entity_name: authIndex,

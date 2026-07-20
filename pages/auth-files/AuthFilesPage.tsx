@@ -797,6 +797,7 @@ export function AuthFilesPage() {
     connectivityState,
     checkAuthFileConnectivity,
     quotaByFileName,
+    cycleCallsByAuthIndex: callsByAuthIndex,
     cycleBudgetByAuthIndex,
     refreshQuota,
     requestResetCredit,

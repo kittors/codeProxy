@@ -23,6 +23,7 @@ import { Button } from "@code-proxy/ui";
 import { Checkbox } from "@code-proxy/ui";
 import { DateTimePicker } from "@code-proxy/ui";
 import { EmptyState } from "@code-proxy/ui";
+import { HoverTooltip } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
 import { Modal } from "@code-proxy/ui";
 import { Select } from "@code-proxy/ui";
@@ -880,6 +881,24 @@ export function AuthFileDetailModal({
             className="min-w-0 rounded-lg bg-slate-50/80 px-4 py-4 lg:min-h-0 lg:overflow-y-auto dark:bg-white/[0.04]"
             data-testid="auth-file-identity-summary"
           >
+            {identityFingerprintDetail?.subject_scope ? (
+              <HoverTooltip content={t("auth_files.shared_usage_scope_help")}>
+                <span
+                  className={[
+                    "mb-3 inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold",
+                    identityFingerprintDetail.subject_scope === "shared"
+                      ? "bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-200"
+                      : "bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-white/65",
+                  ].join(" ")}
+                >
+                  {t(
+                    identityFingerprintDetail.subject_scope === "shared"
+                      ? "auth_files.shared_subject"
+                      : "auth_files.tenant_subject",
+                  )}
+                </span>
+              </HoverTooltip>
+            ) : null}
             {hasCodexProfiles ? (
               <div className="space-y-4" data-testid="auth-file-identity-profiles">
                 <div className="rounded-lg bg-white px-3 py-3 ring-1 ring-slate-200 dark:bg-neutral-950/40 dark:ring-white/10">

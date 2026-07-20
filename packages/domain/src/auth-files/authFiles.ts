@@ -1134,7 +1134,19 @@ const resolveSubscriptionStartMs = (file: AuthFileItem): number | null =>
       file.subscriptionStartedAt ??
       file.subscription_start_at ??
       file.subscriptionStartAt,
-  );
+  ) ??
+  parseDateLikeMs(file.shared_subscription_started_at);
+
+const hasTenantSubscriptionOverride = (file: AuthFileItem): boolean =>
+  parseDateLikeMs(
+    file.subscription_started_at_ms ?? file.subscriptionStartedAtMs,
+  ) !== null ||
+  parseDateLikeMs(
+    file.subscription_started_at ??
+      file.subscriptionStartedAt ??
+      file.subscription_start_at ??
+      file.subscriptionStartAt,
+  ) !== null;
 
 const addCalendarMonths = (startMs: number, months: number): number | null => {
   const date = new Date(startMs);
@@ -1160,7 +1172,13 @@ export const resolveAuthFileSubscriptionStatus = (
   const period = normalizeAuthFileSubscriptionPeriod(
     file.subscription_period ?? file.subscriptionPeriod,
   );
-  const expiresAtMs = addCalendarMonths(startedAtMs, period === "yearly" ? 12 : 1);
+  const sharedExpiresAtMs = parseDateLikeMs(
+    file.shared_subscription_expires_at,
+  );
+  const expiresAtMs =
+    !hasTenantSubscriptionOverride(file) && sharedExpiresAtMs !== null
+      ? sharedExpiresAtMs
+      : addCalendarMonths(startedAtMs, period === "yearly" ? 12 : 1);
   if (expiresAtMs === null) return null;
 
   const diffMs = expiresAtMs - nowMs;
