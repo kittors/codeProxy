@@ -1094,14 +1094,29 @@ export function ApiKeyLookupPage() {
     apiKeyName ||
     (queriedKey ? t("apikey_lookup.unnamed_key") : "");
   const extraKeyCount = Math.max(0, portalKeys.length - 1);
-  const otherPortalAccounts = useMemo(
-    () =>
-      savedPortalAccounts.filter((account) => {
-        if (!portalUser) return true;
-        return account.user.id !== portalUser.id;
-      }),
-    [portalUser, savedPortalAccounts],
-  );
+  const switchablePortalAccounts = useMemo(() => {
+    if (!portalUser) return savedPortalAccounts;
+    const currentKey =
+      savedPortalAccounts.find((row) => row.user.id === portalUser.id)?.accountKey ?? "";
+    const currentEntry =
+      savedPortalAccounts.find((row) => row.user.id === portalUser.id) ??
+      ({
+        accountKey: currentKey || `current:${portalUser.id}`,
+        apiBase: "",
+        accessToken: "",
+        refreshToken: "",
+        remember: true,
+        expiresAt: 0,
+        lastUsedAt: Date.now(),
+        user: {
+          id: portalUser.id,
+          username: portalUser.username,
+          display_name: portalUser.display_name || portalUser.username,
+        },
+      } satisfies SavedPortalAccount);
+    const others = savedPortalAccounts.filter((row) => row.user.id !== portalUser.id);
+    return [currentEntry, ...others];
+  }, [portalUser, savedPortalAccounts]);
 
   // Landing CTA opens login; always allow dismiss (backdrop / Esc / X).
   // Keep results UI when the add-account login modal is open over an active session.
@@ -1188,27 +1203,9 @@ export function ApiKeyLookupPage() {
                       className="min-w-48"
                       data-testid="apikey-lookup-account-menu-content"
                     >
-                      {portalUser ? (
-                        <DropdownMenu.Item
-                          disabled
-                          className="data-[disabled]:opacity-100"
-                          data-testid="apikey-lookup-current-account"
-                        >
-                          <Check size={15} className="shrink-0 text-emerald-600 dark:text-emerald-400" />
-                          <span className="min-w-0 flex-1 truncate">
-                            {portalUser.display_name || portalUser.username}
-                          </span>
-                        </DropdownMenu.Item>
-                      ) : null}
-                      {portalUser ? (
-                        <DropdownMenu.Item onSelect={() => setChangePasswordOpen(true)}>
-                          <KeyRound size={15} />
-                          {t("apikey_lookup.change_password", { defaultValue: "修改密码" })}
-                        </DropdownMenu.Item>
-                      ) : null}
-                      {otherPortalAccounts.length > 0 ? (
+                      {portalUser && switchablePortalAccounts.length > 1 ? (
                         <DropdownMenu.Sub>
-                          <DropdownMenu.SubTrigger>
+                          <DropdownMenu.SubTrigger data-testid="apikey-lookup-switch-account-trigger">
                             <Users size={15} />
                             <span className="min-w-0 flex-1">
                               {t("apikey_lookup.switch_account", { defaultValue: "切换账号" })}
@@ -1221,20 +1218,44 @@ export function ApiKeyLookupPage() {
                               className="min-w-44"
                               data-testid="apikey-lookup-switch-account-menu"
                             >
-                              {otherPortalAccounts.map((account) => (
-                                <DropdownMenu.Item
-                                  key={account.accountKey}
-                                  onSelect={() => void handleSwitchAccount(account.accountKey)}
-                                >
-                                  <Users size={15} className="shrink-0" />
-                                  <span className="min-w-0 truncate">
-                                    {account.user.display_name || account.user.username}
-                                  </span>
-                                </DropdownMenu.Item>
-                              ))}
+                              {switchablePortalAccounts.map((account) => {
+                                const isCurrent = account.user.id === portalUser.id;
+                                return (
+                                  <DropdownMenu.Item
+                                    key={account.accountKey}
+                                    disabled={isCurrent}
+                                    className={isCurrent ? "data-[disabled]:opacity-100" : undefined}
+                                    data-testid={
+                                      isCurrent
+                                        ? "apikey-lookup-current-account"
+                                        : `apikey-lookup-switch-${account.user.id}`
+                                    }
+                                    onSelect={() => {
+                                      if (!isCurrent) void handleSwitchAccount(account.accountKey);
+                                    }}
+                                  >
+                                    <Users size={15} className="shrink-0" />
+                                    <span className="min-w-0 flex-1 truncate">
+                                      {account.user.display_name || account.user.username}
+                                    </span>
+                                    {isCurrent ? (
+                                      <Check
+                                        size={15}
+                                        className="ml-auto shrink-0 text-emerald-600 dark:text-emerald-400"
+                                      />
+                                    ) : null}
+                                  </DropdownMenu.Item>
+                                );
+                              })}
                             </DropdownMenu.SubContent>
                           </DropdownMenu.Portal>
                         </DropdownMenu.Sub>
+                      ) : null}
+                      {portalUser ? (
+                        <DropdownMenu.Item onSelect={() => setChangePasswordOpen(true)}>
+                          <KeyRound size={15} />
+                          {t("apikey_lookup.change_password", { defaultValue: "修改密码" })}
+                        </DropdownMenu.Item>
                       ) : null}
                       {portalUser ? (
                         <DropdownMenu.Item onSelect={handleAddAccount}>
