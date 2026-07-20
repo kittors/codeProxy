@@ -172,7 +172,27 @@ export function useAuthFilesStatusState({
   );
   const [cycleByAuthIndex, setCycleByAuthIndex] = useState<
     Record<string, AuthFileCycleUsageSnapshot>
-  >({});
+  >(() => {
+    const cached = initialDataCache?.cycleByAuthIndex;
+    if (!cached) return {};
+    const seeded: Record<string, AuthFileCycleUsageSnapshot> = {};
+    for (const [authIndex, snapshot] of Object.entries(cached)) {
+      if (typeof snapshot?.calls !== "number" || !Number.isFinite(snapshot.calls)) continue;
+      seeded[authIndex] = {
+        calls: snapshot.calls,
+        cycleCostTotal:
+          typeof snapshot.cycleCostTotal === "number" && Number.isFinite(snapshot.cycleCostTotal)
+            ? snapshot.cycleCostTotal
+            : null,
+        weeklyQuotaUsedPercent:
+          typeof snapshot.weeklyQuotaUsedPercent === "number" &&
+          Number.isFinite(snapshot.weeklyQuotaUsedPercent)
+            ? snapshot.weeklyQuotaUsedPercent
+            : null,
+      };
+    }
+    return seeded;
+  });
   const [statusApiSupported, setStatusApiSupported] = useState(true);
   const [statusLoading, setStatusLoading] = useState(false);
   const [refreshingPage, setRefreshingPage] = useState(false);
@@ -242,8 +262,25 @@ export function useAuthFilesStatusState({
     statusLoadSeqRef.current += 1;
     loadedVisibleScopeRef.current = null;
     appliedFreshnessRef.current.clear();
-    setQuotaByFileName({});
-    setCycleByAuthIndex({});
+    const tenantCache = readAuthFilesDataCache(cacheTenantId);
+    setQuotaByFileName(tenantCache?.quotaByFileName ?? {});
+    const seeded: Record<string, AuthFileCycleUsageSnapshot> = {};
+    for (const [authIndex, snapshot] of Object.entries(tenantCache?.cycleByAuthIndex ?? {})) {
+      if (typeof snapshot?.calls !== "number" || !Number.isFinite(snapshot.calls)) continue;
+      seeded[authIndex] = {
+        calls: snapshot.calls,
+        cycleCostTotal:
+          typeof snapshot.cycleCostTotal === "number" && Number.isFinite(snapshot.cycleCostTotal)
+            ? snapshot.cycleCostTotal
+            : null,
+        weeklyQuotaUsedPercent:
+          typeof snapshot.weeklyQuotaUsedPercent === "number" &&
+          Number.isFinite(snapshot.weeklyQuotaUsedPercent)
+            ? snapshot.weeklyQuotaUsedPercent
+            : null,
+      };
+    }
+    setCycleByAuthIndex(seeded);
     setRefreshingPage(false);
     setStatusLoading(false);
     setStatusApiSupported(true);
@@ -285,15 +322,27 @@ export function useAuthFilesStatusState({
       const tenantId = getActiveCacheTenantId();
       const current = readAuthFilesDataCache(tenantId);
       if (!current || !Array.isArray(current.files)) return;
+      const cycleCache: Record<string, { calls: number; cycleCostTotal: number | null; weeklyQuotaUsedPercent: number | null }> = {};
+      for (const [authIndex, snapshot] of Object.entries(cycleByAuthIndex)) {
+        if (typeof snapshot.calls !== "number" || !Number.isFinite(snapshot.calls)) continue;
+        cycleCache[authIndex] = {
+          calls: snapshot.calls,
+          cycleCostTotal: snapshot.cycleCostTotal,
+          weeklyQuotaUsedPercent: snapshot.weeklyQuotaUsedPercent,
+        };
+      }
       writeAuthFilesDataCache({
         ...current,
         tenantId,
         savedAtMs: Date.now(),
         quotaByFileName,
+        // Keep last known cycle when state is still empty (first paint / tenant seed).
+        cycleByAuthIndex:
+          Object.keys(cycleCache).length > 0 ? cycleCache : current.cycleByAuthIndex,
       });
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [quotaByFileName]);
+  }, [quotaByFileName, cycleByAuthIndex]);
 
   const patchAuthFileByName = useCallback(
     (name: string, patch: Partial<AuthFileItem>) => {

@@ -90,6 +90,13 @@ export type AuthFilesUiState = {
   page?: number;
 };
 
+/** Last known 本周期 snapshot per auth_index for first paint after full reload. */
+export type AuthFileCycleCacheSnapshot = {
+  calls: number;
+  cycleCostTotal?: number | null;
+  weeklyQuotaUsedPercent?: number | null;
+};
+
 export type AuthFilesDataCache = {
   /** Effective tenant id that owns this cache bucket. Required to prevent cross-tenant reuse. */
   tenantId: string;
@@ -97,6 +104,8 @@ export type AuthFilesDataCache = {
   files: AuthFileItem[];
   usageData?: EntityStatsResponse | null;
   quotaByFileName?: Record<string, QuotaState>;
+  /** Seed card cycle badges so full reload is 93→98, not --→98. */
+  cycleByAuthIndex?: Record<string, AuthFileCycleCacheSnapshot>;
 };
 
 type AuthFilesDataCacheBucket = Omit<AuthFilesDataCache, "tenantId">;
@@ -572,6 +581,38 @@ const sanitizeQuotaByFileNameForCache = (
   return Object.keys(output).length > 0 ? output : undefined;
 };
 
+const sanitizeCycleByAuthIndexForCache = (
+  cycleByAuthIndex: unknown,
+): Record<string, AuthFileCycleCacheSnapshot> | undefined => {
+  if (!cycleByAuthIndex || typeof cycleByAuthIndex !== "object" || Array.isArray(cycleByAuthIndex)) {
+    return undefined;
+  }
+  const output: Record<string, AuthFileCycleCacheSnapshot> = {};
+  for (const [authIndex, raw] of Object.entries(
+    cycleByAuthIndex as Record<string, unknown>,
+  )) {
+    const key = typeof authIndex === "string" ? authIndex.trim() : "";
+    if (!key || !raw || typeof raw !== "object" || Array.isArray(raw)) continue;
+    const snapshot = raw as Record<string, unknown>;
+    const calls =
+      typeof snapshot.calls === "number" && Number.isFinite(snapshot.calls)
+        ? Math.max(0, Math.round(snapshot.calls))
+        : null;
+    if (calls === null) continue;
+    const cycleCostTotal =
+      typeof snapshot.cycleCostTotal === "number" && Number.isFinite(snapshot.cycleCostTotal)
+        ? snapshot.cycleCostTotal
+        : null;
+    const weeklyQuotaUsedPercent =
+      typeof snapshot.weeklyQuotaUsedPercent === "number" &&
+      Number.isFinite(snapshot.weeklyQuotaUsedPercent)
+        ? snapshot.weeklyQuotaUsedPercent
+        : null;
+    output[key] = { calls, cycleCostTotal, weeklyQuotaUsedPercent };
+  }
+  return Object.keys(output).length > 0 ? output : undefined;
+};
+
 const parseAuthFilesDataCacheBucket = (
   value: unknown,
 ): AuthFilesDataCacheBucket | null => {
@@ -591,6 +632,7 @@ const parseAuthFilesDataCacheBucket = (
         ? (parsed.usageData as EntityStatsResponse)
         : undefined,
     quotaByFileName: sanitizeQuotaByFileNameForCache(parsed.quotaByFileName),
+    cycleByAuthIndex: sanitizeCycleByAuthIndexForCache(parsed.cycleByAuthIndex),
   };
 };
 
@@ -628,6 +670,7 @@ export const writeAuthFilesDataCache = (cache: AuthFilesDataCache) => {
       files: cache.files,
       usageData: cache.usageData,
       quotaByFileName: cache.quotaByFileName,
+      cycleByAuthIndex: cache.cycleByAuthIndex,
     },
     merge: (previous, next) => {
       const fileNames = new Set(next.files.map((file) => file.name).filter(Boolean));
@@ -638,6 +681,9 @@ export const writeAuthFilesDataCache = (cache: AuthFilesDataCache) => {
         quotaByFileName: sanitizeQuotaByFileNameForCache(
           next.quotaByFileName ?? previous?.quotaByFileName,
           fileNames,
+        ),
+        cycleByAuthIndex: sanitizeCycleByAuthIndexForCache(
+          next.cycleByAuthIndex ?? previous?.cycleByAuthIndex,
         ),
       };
     },
