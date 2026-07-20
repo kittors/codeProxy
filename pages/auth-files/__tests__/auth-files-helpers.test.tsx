@@ -510,6 +510,9 @@ describe("Auth Files helper coverage", () => {
     expect(resolveCodexProMultiplierTier("pro", 500)).toBe("pro_5x");
     expect(resolveCodexProMultiplierTier("pro", 100)).toBe("pro");
     expect(resolveCodexProMultiplierTier("pro", null)).toBe("pro");
+    // Partial refresh without budget keeps last-known pro_Nx tier instead of flashing PRO.
+    expect(resolveCodexProMultiplierTier("pro", null, "pro_20x")).toBe("pro_20x");
+    expect(resolveCodexProMultiplierTier("pro", null, "pro_5x")).toBe("pro_5x");
     expect(resolveCodexProMultiplierTier("plus", 2000)).toBe("plus");
     expect(
       resolveAuthFileDisplayPlanType(
@@ -525,6 +528,14 @@ describe("Auth Files helper coverage", () => {
         { cycleCostTotal: 30, weeklyQuotaUsedPercent: 10 },
       ),
     ).toBe("pro_5x");
+    expect(
+      resolveAuthFileDisplayPlanType(
+        { name: "codex.json", type: "codex", plan_type: "pro" } as AuthFileItem,
+        null,
+        null,
+        "pro_20x",
+      ),
+    ).toBe("pro_20x");
     expect(
       resolveAuthFileDisplayPlanType(
         { name: "xai.json", type: "xai", plan_type: "supergrok" } as AuthFileItem,
@@ -1047,6 +1058,48 @@ test("shows auth-level quota recovery records as 429 restriction badges", () => 
         remainingDays: 5,
         expired: false,
         tone: "urgent",
+      }),
+    );
+  });
+
+  test("prefers shared provider subscription over tenant metadata", () => {
+    const status = resolveAuthFileSubscriptionStatus(
+      {
+        name: "codex.json",
+        subscription_started_at: "2026-01-01T00:00:00.000Z",
+        subscription_period: "monthly",
+        shared_subscription_started_at: "2026-07-01T00:00:00.000Z",
+        shared_subscription_expires_at: "2026-08-01T00:00:00.000Z",
+        shared_subscription_source: "signed_claims",
+      } as AuthFileItem,
+      Date.parse("2026-07-06T00:00:00.000Z"),
+    );
+    expect(status).toEqual(
+      expect.objectContaining({
+        startedAtMs: Date.parse("2026-07-01T00:00:00.000Z"),
+        expiresAtMs: Date.parse("2026-08-01T00:00:00.000Z"),
+        remainingDays: 26,
+        expired: false,
+        tone: "active",
+      }),
+    );
+  });
+
+  test("shows remaining days from shared expires alone", () => {
+    const status = resolveAuthFileSubscriptionStatus(
+      {
+        name: "codex.json",
+        shared_subscription_expires_at: "2026-08-01T00:00:00.000Z",
+        shared_subscription_source: "signed_claims",
+      } as AuthFileItem,
+      Date.parse("2026-07-06T00:00:00.000Z"),
+    );
+    expect(status).toEqual(
+      expect.objectContaining({
+        expiresAtMs: Date.parse("2026-08-01T00:00:00.000Z"),
+        remainingDays: 26,
+        expired: false,
+        tone: "active",
       }),
     );
   });

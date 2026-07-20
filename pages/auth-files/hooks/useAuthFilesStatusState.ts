@@ -468,7 +468,21 @@ export function useAuthFilesStatusState({
             changed = true;
           }
           for (const authIndex of group.authIndexes) {
-            next[authIndex] = cycle;
+            const previous = next[authIndex];
+            // Keep budget fields when partial payload omits them — plan tier (PRO 5X/20X)
+            // and other cycle-derived badges depend on these not flashing empty.
+            next[authIndex] = {
+              calls: cycle.calls,
+              cycleCostTotal:
+                typeof cycle.cycleCostTotal === "number" && Number.isFinite(cycle.cycleCostTotal)
+                  ? cycle.cycleCostTotal
+                  : (previous?.cycleCostTotal ?? null),
+              weeklyQuotaUsedPercent:
+                typeof cycle.weeklyQuotaUsedPercent === "number" &&
+                Number.isFinite(cycle.weeklyQuotaUsedPercent)
+                  ? cycle.weeklyQuotaUsedPercent
+                  : (previous?.weeklyQuotaUsedPercent ?? null),
+            };
           }
         }
         return next;
@@ -488,6 +502,15 @@ export function useAuthFilesStatusState({
                 )
               : undefined);
           if (!sourcePoint) continue;
+          // Ignore empty usage shells so success-rate / total do not flash to 0.
+          if (
+            !(
+              (typeof sourcePoint.requests === "number" && sourcePoint.requests > 0) ||
+              (typeof sourcePoint.failed === "number" && sourcePoint.failed > 0)
+            )
+          ) {
+            continue;
+          }
           for (const authIndex of group.authIndexes) {
             if (seen.has(authIndex)) continue;
             seen.add(authIndex);
@@ -519,17 +542,43 @@ export function useAuthFilesStatusState({
         for (const name of group.names) {
           const file = filesForMerge.find((item) => item.name === name);
           const hasPrivatePlan = Boolean(file?.plan_type ?? file?.planType);
-          patchAuthFileByName(name, {
-            account_status_scope: group.account.status_scope,
-            subject_scope: group.account.subject_scope,
-            share_eligible: group.account.share_eligible,
-            usage_history_complete: group.account.usage?.history_complete,
-            usage_projected_since: group.account.usage?.projected_since,
-            shared_subscription_started_at: group.account.subscription_started_at,
-            shared_subscription_expires_at: group.account.subscription_expires_at,
-            shared_subscription_source: group.account.subscription_source,
-            ...(!hasPrivatePlan && planType ? { plan_type: planType, planType } : {}),
-          });
+          // Partial refresh: only write subscription / scope / plan when present.
+          // Empty/null must not wipe known card badges (remaining days, plan, scope).
+          const started = group.account.subscription_started_at;
+          const expires = group.account.subscription_expires_at;
+          const source = group.account.subscription_source;
+          const filePatch: Partial<AuthFileItem> = {};
+          if (group.account.status_scope) {
+            filePatch.account_status_scope = group.account.status_scope;
+          }
+          if (group.account.subject_scope) {
+            filePatch.subject_scope = group.account.subject_scope;
+          }
+          if (typeof group.account.share_eligible === "boolean") {
+            filePatch.share_eligible = group.account.share_eligible;
+          }
+          if (typeof group.account.usage?.history_complete === "boolean") {
+            filePatch.usage_history_complete = group.account.usage.history_complete;
+          }
+          if (group.account.usage?.projected_since) {
+            filePatch.usage_projected_since = group.account.usage.projected_since;
+          }
+          if (typeof started === "string" && started.trim()) {
+            filePatch.shared_subscription_started_at = started;
+          }
+          if (typeof expires === "string" && expires.trim()) {
+            filePatch.shared_subscription_expires_at = expires;
+          }
+          if (typeof source === "string" && source.trim()) {
+            filePatch.shared_subscription_source = source;
+          }
+          if (!hasPrivatePlan && planType) {
+            filePatch.plan_type = planType;
+            filePatch.planType = planType;
+          }
+          if (Object.keys(filePatch).length > 0) {
+            patchAuthFileByName(name, filePatch);
+          }
         }
       }
     },

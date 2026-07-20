@@ -58,7 +58,6 @@ import {
   normalizeProviderKey,
   normalizeTagValue,
   resolveAuthFileDisplayName,
-  resolveAuthFileDisplayPlanType,
   resolveAuthFilePlanType,
   resolveAuthFileSupplementalTags,
   resolveFileType,
@@ -661,6 +660,11 @@ interface AuthFilesFilesTabProps {
   ) => { success: number; failure: number };
   toggleFileSelection: (name: string, checked: boolean) => void;
   formatPlanTypeLabel: (planType: string) => string;
+  resolveStickyDisplayPlanType: (
+    file: AuthFileItem,
+    quotaState?: QuotaState | null,
+    cycleStats?: AuthFileCycleBudgetStats | null,
+  ) => string | null;
   renderRestrictionBadges: (file: AuthFileItem) => ReactNode | null;
   renderClaudeOAuthHealthBadges: (file: AuthFileItem) => ReactNode | null;
   renderSubscriptionBadge: (file: AuthFileItem) => ReactNode | null;
@@ -746,6 +750,7 @@ export function AuthFilesFilesTab({
   resolveAuthFileStats,
   toggleFileSelection,
   formatPlanTypeLabel,
+  resolveStickyDisplayPlanType,
   renderRestrictionBadges,
   renderClaudeOAuthHealthBadges,
   renderSubscriptionBadge,
@@ -1535,7 +1540,7 @@ export function AuthFilesFilesTab({
                     file.auth_index ?? file.authIndex,
                   );
                   const basePlanType = resolveAuthFilePlanType(file, state);
-                  const planType = resolveAuthFileDisplayPlanType(
+                  const planType = resolveStickyDisplayPlanType(
                     file,
                     state,
                     authIndexForPlan
