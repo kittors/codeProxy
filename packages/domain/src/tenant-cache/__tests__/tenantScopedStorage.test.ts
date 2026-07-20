@@ -6,7 +6,9 @@ import {
   readTenantBucket,
   readTenantBucketMapEntry,
   readTenantTtlSlot,
+  setActiveCacheScopePrefix,
   setActiveCacheTenantId,
+  setCacheScopeResolver,
   setCacheTenantResolver,
   updateTenantBucketMapEntry,
   writeTenantBucket,
@@ -18,6 +20,8 @@ describe("tenant-scoped storage", () => {
     window.localStorage.clear();
     window.sessionStorage.clear();
     setCacheTenantResolver(null);
+    setCacheScopeResolver(null);
+    setActiveCacheScopePrefix("");
     setActiveCacheTenantId(DEFAULT_CACHE_TENANT_ID);
   });
 
@@ -36,6 +40,14 @@ describe("tenant-scoped storage", () => {
     expect(getActiveCacheTenantId()).toBe("tenant-b");
 
     setCacheTenantResolver(() => "  ");
+    expect(getActiveCacheTenantId()).toBe("tenant-a");
+  });
+
+  test("account scope prefixes tenant cache keys", () => {
+    setActiveCacheTenantId("tenant-a");
+    setActiveCacheScopePrefix("https://api.example::user-1");
+    expect(getActiveCacheTenantId()).toBe("https://api.example::user-1::tenant-a");
+    setActiveCacheScopePrefix("");
     expect(getActiveCacheTenantId()).toBe("tenant-a");
   });
 

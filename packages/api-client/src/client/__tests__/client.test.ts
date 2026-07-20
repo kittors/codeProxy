@@ -232,28 +232,37 @@ describe("ApiClient authentication failure handling", () => {
     }
   });
 
-  test("suspends an expired tenant session and exposes the server error code", async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          error: { code: "tenant_expired", message: "tenant expired" },
+  test("does not suspend the session for tenant override scope errors", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            error: { code: "tenant_expired", message: "tenant expired" },
+          }),
+          { status: 403, headers: { "Content-Type": "application/json" } },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
         }),
-        { status: 403, headers: { "Content-Type": "application/json" } },
-      ),
-    );
+      );
+    globalThis.fetch = fetchMock;
     const client = new ApiClient();
     client.setConfig({ apiBase: "http://localhost:8317", managementKey: "cps_test" });
-    let code = "";
-    const onUnauthorized = (event: Event) => {
-      code = (event as CustomEvent<{ code?: string }>).detail?.code ?? "";
+    let unauthorizedEvents = 0;
+    const onUnauthorized = () => {
+      unauthorizedEvents += 1;
     };
     window.addEventListener("unauthorized", onUnauthorized);
     try {
       await expect(client.get("/dashboard-summary")).rejects.toThrow("tenant expired");
-      expect(code).toBe("tenant_expired");
-      await expect(client.get("/auth-files")).rejects.toThrow(
-        "Management session is no longer valid",
-      );
+      expect(unauthorizedEvents).toBe(0);
+      // Session stays active so AuthProvider can drop the override and retry.
+      await expect(client.get("/auth-files")).resolves.toEqual({ ok: true });
+      expect(fetchMock).toHaveBeenCalledTimes(2);
     } finally {
       window.removeEventListener("unauthorized", onUnauthorized);
     }

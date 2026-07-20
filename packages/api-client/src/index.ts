@@ -1,6 +1,9 @@
 export { ApiClient, apiClient } from "./client/client";
 export type { RequestOptions } from "./client/client";
 export {
+  AUTH_ACCOUNTS_CHANGED_EVENT,
+  AUTH_ACCOUNTS_SESSION_STORAGE_KEY,
+  AUTH_ACCOUNTS_STORAGE_KEY,
   AUTH_PERSIST_TTL_MS,
   AUTH_STORAGE_KEY,
   BUILD_DATE_HEADER_KEYS,
@@ -24,10 +27,17 @@ export { ensureArrayPayload, isApiEnvelope, unwrapApiEnvelope } from "./client/r
 export type { ApiEnvelope, ApiListPayload, ApiSuccessEnvelope } from "./client/response";
 export { publicApiClient, PublicApiClient } from "./client/public-client";
 export {
+  buildAccountKey,
   clearPersistedAuthSnapshot,
+  clearSavedAuthAccounts,
+  getSavedAuthAccount,
   LEGACY_EFFECTIVE_TENANT_KEY,
+  listSavedAuthAccounts,
+  parseAccountKey,
   readPersistedAuthSnapshot,
+  removeSavedAuthAccount,
   updatePersistedEffectiveTenantId,
+  upsertSavedAuthAccount,
   writePersistedAuthSnapshot,
 } from "./client/auth-storage";
 export {

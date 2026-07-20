@@ -83,9 +83,18 @@ export class ApiClient {
 
   private authSuspended = false;
 
+  /** Bumped on every setConfig so stale refresh/401 from a prior account is ignored. */
+  private authGeneration = 0;
+
   private refreshInFlight: Promise<boolean> | null = null;
 
+  private refreshInFlightGeneration = 0;
+
   private defaultHeaders = new Headers();
+
+  getAuthGeneration(): number {
+    return this.authGeneration;
+  }
 
   setConfig(config: ApiClientConfig & { refreshToken?: string | null }): void {
     this.apiBase = computeManagementApiBase(config.apiBase);
@@ -95,6 +104,10 @@ export class ApiClient {
       this.refreshToken = (config.refreshToken ?? "").trim();
     }
     this.authSuspended = false;
+    // Invalidate in-flight refresh and any completion handlers from the previous session.
+    this.authGeneration += 1;
+    this.refreshInFlight = null;
+    this.refreshInFlightGeneration = 0;
   }
 
   setRefreshToken(token: string): void {
@@ -255,22 +268,22 @@ export class ApiClient {
     if (status === 401) return true;
     if (status !== 403) return false;
     const code = extractApiErrorCode(payload);
+    // tenant_expired / tenant_suspended / tenant_scope_forbidden are override-scope
+    // issues handled by AuthProvider (drop override / re-bootstrap), not full logout.
     return (
-      [
-        "account_disabled",
-        "account_locked",
-        "session_expired",
-        "session_revoked",
-        "tenant_expired",
-        "tenant_suspended",
-      ].includes(code) || /IP banned due to too many failed attempts/i.test(message)
+      ["account_disabled", "account_locked", "session_expired", "session_revoked"].includes(code) ||
+      /IP banned due to too many failed attempts/i.test(message)
     );
   }
 
   private suspendAuth(code = ""): void {
     if (this.authSuspended) return;
     this.authSuspended = true;
-    dispatchWindowEvent(new CustomEvent("unauthorized", { detail: { code } }));
+    dispatchWindowEvent(
+      new CustomEvent("unauthorized", {
+        detail: { code, authGeneration: this.authGeneration },
+      }),
+    );
   }
 
   private assertAuthActive(): void {
@@ -298,20 +311,29 @@ export class ApiClient {
 
   private async tryRefreshAccessToken(): Promise<boolean> {
     if (!this.refreshToken) return false;
-    if (this.refreshInFlight) return this.refreshInFlight;
+    const generation = this.authGeneration;
+    if (this.refreshInFlight && this.refreshInFlightGeneration === generation) {
+      return this.refreshInFlight;
+    }
+    const refreshToken = this.refreshToken;
+    const apiBase = this.apiBase;
+    this.refreshInFlightGeneration = generation;
     this.refreshInFlight = (async () => {
       try {
-        const base = this.apiBase.replace(/\/v0\/management\/?$/, "");
+        const base = apiBase.replace(/\/v0\/management\/?$/, "");
         const response = await fetch(`${base}/v0/auth/refresh`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ refresh_token: this.refreshToken }),
+          body: JSON.stringify({ refresh_token: refreshToken }),
         });
+        // Account switched while refresh was in flight — drop the result.
+        if (this.authGeneration !== generation) return false;
         if (!response.ok) return false;
         const payload = (await response.json()) as {
           access_token?: string;
           refresh_token?: string;
         };
+        if (this.authGeneration !== generation) return false;
         if (!payload.access_token) return false;
         this.managementKey = payload.access_token;
         if (payload.refresh_token) this.refreshToken = payload.refresh_token;
@@ -321,7 +343,7 @@ export class ApiClient {
           const { readPersistedAuthSnapshot, writePersistedAuthSnapshot } =
             await import("./auth-storage");
           const current = readPersistedAuthSnapshot();
-          if (current) {
+          if (current && this.authGeneration === generation) {
             writePersistedAuthSnapshot({
               ...current,
               managementKey: this.managementKey,
@@ -331,11 +353,13 @@ export class ApiClient {
         } catch {
           /* ignore */
         }
+        if (this.authGeneration !== generation) return false;
         dispatchWindowEvent(
           new CustomEvent("auth-token-refreshed", {
             detail: {
               accessToken: this.managementKey,
               refreshToken: this.refreshToken,
+              authGeneration: generation,
             },
           }),
         );
@@ -343,7 +367,10 @@ export class ApiClient {
       } catch {
         return false;
       } finally {
-        this.refreshInFlight = null;
+        if (this.refreshInFlightGeneration === generation) {
+          this.refreshInFlight = null;
+          this.refreshInFlightGeneration = 0;
+        }
       }
     })();
     return this.refreshInFlight;
@@ -364,6 +391,7 @@ export class ApiClient {
     } = {},
   ): Promise<T> {
     this.assertAuthActive();
+    const generation = this.authGeneration;
     const { controller, cleanup, didTimeout } = this.createAbortController(options);
 
     try {
@@ -376,17 +404,26 @@ export class ApiClient {
         headers,
       });
 
+      // Drop responses that arrived after an account switch.
+      if (this.authGeneration !== generation) {
+        throw new ApiError({
+          message: "Request cancelled because the management session changed.",
+          status: 0,
+          url: path,
+        });
+      }
+
       this.applyVersionHeaders(response);
 
       if (!response.ok) {
         if (response.status === 401 && !retried && this.refreshToken) {
           const refreshed = await this.tryRefreshAccessToken();
-          if (refreshed) {
+          if (refreshed && this.authGeneration === generation) {
             return this.request<T>(path, { init, options, responseType, retried: true });
           }
         }
         const error = await this.buildApiError(response);
-        if (error.isAuthError) {
+        if (error.isAuthError && this.authGeneration === generation) {
           this.suspendAuth(extractApiErrorCode(error.payload));
         }
         throw error;

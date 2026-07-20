@@ -9,6 +9,8 @@ const toastMocks = vi.hoisted(() => ({
 
 const authMocks = vi.hoisted(() => ({
   login: vi.fn(),
+  switchAccount: vi.fn(),
+  removeSavedAccount: vi.fn(),
   state: {
     isAuthenticated: false,
     isRestoring: false,
@@ -16,6 +18,11 @@ const authMocks = vi.hoisted(() => ({
     rememberPassword: false,
     principal: null,
     authFailureCode: "",
+    savedAccounts: [] as Array<{
+      accountId: string;
+      username: string;
+      displayName: string;
+    }>,
   },
 }));
 
@@ -28,7 +35,11 @@ vi.mock("react-i18next", () => ({
 vi.mock("@app/providers/AuthProvider", () => ({
   useAuth: () => ({
     state: authMocks.state,
-    actions: { login: authMocks.login },
+    actions: {
+      login: authMocks.login,
+      switchAccount: authMocks.switchAccount,
+      removeSavedAccount: authMocks.removeSavedAccount,
+    },
   }),
 }));
 

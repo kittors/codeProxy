@@ -5,6 +5,25 @@ export interface AuthSnapshot {
   rememberPassword: boolean;
   /** Platform-admin override; empty/omitted means home tenant (no X-Effective-Tenant-ID). */
   effectiveTenantId?: string;
+  /** User id within one apiBase (not globally unique). */
+  accountId?: string;
+  /** Composite key: normalizeApiBase(apiBase) + "\\0" + accountId. */
+  accountKey?: string;
+  username?: string;
+  displayName?: string;
+  /** Access-token wall clock expiry (ms). */
+  expiresAtMs?: number;
+  /** Refresh-token wall clock expiry (ms). */
+  refreshExpiresAtMs?: number;
+}
+
+/** Saved admin session for local multi-account switch. */
+export interface SavedAuthAccount extends AuthSnapshot {
+  accountId: string;
+  accountKey: string;
+  username: string;
+  displayName: string;
+  lastUsedAt: number;
 }
 
 export type AuthFileType =
