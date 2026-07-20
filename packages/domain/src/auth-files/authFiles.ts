@@ -1173,16 +1173,26 @@ export const normalizeAuthFileSubscriptionPeriod = (value: unknown): AuthFileSub
   return "monthly";
 };
 
-// Prefer provider-asserted shared subscription; tenant metadata is legacy fallback only.
+// Tenant manual override first (auth-file metadata); shared provider claims are fallback.
+// JWT chatgpt_subscription_* can lag after renewals, so manual must win when set.
+const hasTenantSubscriptionOverride = (file: AuthFileItem): boolean =>
+  parseDateLikeMs(file.subscription_started_at_ms ?? file.subscriptionStartedAtMs) !== null ||
+  parseDateLikeMs(
+    file.subscription_started_at ??
+      file.subscriptionStartedAt ??
+      file.subscription_start_at ??
+      file.subscriptionStartAt,
+  ) !== null;
+
 const resolveSubscriptionStartMs = (file: AuthFileItem): number | null =>
-  parseDateLikeMs(file.shared_subscription_started_at) ??
   parseDateLikeMs(file.subscription_started_at_ms ?? file.subscriptionStartedAtMs) ??
   parseDateLikeMs(
     file.subscription_started_at ??
       file.subscriptionStartedAt ??
       file.subscription_start_at ??
       file.subscriptionStartAt,
-  );
+  ) ??
+  parseDateLikeMs(file.shared_subscription_started_at);
 
 const addCalendarMonths = (startMs: number, months: number): number | null => {
   const date = new Date(startMs);
@@ -1202,22 +1212,45 @@ export const resolveAuthFileSubscriptionStatus = (
   file: AuthFileItem,
   nowMs = Date.now(),
 ): AuthFileSubscriptionStatus | null => {
-  const sharedExpiresAtMs = parseDateLikeMs(file.shared_subscription_expires_at);
   const startedAtMs = resolveSubscriptionStartMs(file);
-  // Auto path: provider shared expires alone is enough for the remaining badge.
-  if (startedAtMs === null && sharedExpiresAtMs === null) return null;
+  if (startedAtMs === null) {
+    // Shared expires alone still enough when no start is known.
+    const sharedOnly = parseDateLikeMs(file.shared_subscription_expires_at);
+    if (sharedOnly === null) return null;
+    const period = normalizeAuthFileSubscriptionPeriod(
+      file.subscription_period ?? file.subscriptionPeriod,
+    );
+    const diffMs = sharedOnly - nowMs;
+    const remainingDays =
+      diffMs === 0
+        ? 0
+        : diffMs > 0
+          ? Math.ceil(diffMs / DAY_MS)
+          : -Math.ceil(Math.abs(diffMs) / DAY_MS);
+    const expired = remainingDays <= 0;
+    const tone = expired ? "expired" : remainingDays <= 5 ? "urgent" : "active";
+    return {
+      startedAtMs: sharedOnly,
+      startedAtText: new Date(sharedOnly).toLocaleString(),
+      expiresAtMs: sharedOnly,
+      expiresAtText: new Date(sharedOnly).toLocaleString(),
+      remainingDays,
+      expired,
+      period,
+      tone,
+    };
+  }
 
   const period = normalizeAuthFileSubscriptionPeriod(
     file.subscription_period ?? file.subscriptionPeriod,
   );
+  const sharedExpiresAtMs = parseDateLikeMs(file.shared_subscription_expires_at);
   const expiresAtMs =
-    sharedExpiresAtMs !== null
+    !hasTenantSubscriptionOverride(file) && sharedExpiresAtMs !== null
       ? sharedExpiresAtMs
-      : startedAtMs === null
-        ? null
-        : addCalendarMonths(startedAtMs, period === "yearly" ? 12 : 1);
+      : addCalendarMonths(startedAtMs, period === "yearly" ? 12 : 1);
   if (expiresAtMs === null) return null;
-  const effectiveStartedAtMs = startedAtMs ?? expiresAtMs;
+  const effectiveStartedAtMs = startedAtMs;
 
   const diffMs = expiresAtMs - nowMs;
   const remainingDays =
@@ -1950,6 +1983,8 @@ export type PrefixProxyEditorState = {
   prefix: string;
   proxyUrl: string;
   proxyId: string;
+  subscriptionStartedAt: string;
+  subscriptionPeriod: AuthFileSubscriptionPeriod;
 };
 
 export type AuthFilesGroupOverview = {

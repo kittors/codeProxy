@@ -1062,23 +1062,24 @@ test("shows auth-level quota recovery records as 429 restriction badges", () => 
     );
   });
 
-  test("prefers shared provider subscription over tenant metadata", () => {
+  test("prefers tenant manual subscription override over shared provider claims", () => {
+    // Manual override exists so stale JWT claims (e.g. expired until 7/11 after renew) lose.
     const status = resolveAuthFileSubscriptionStatus(
       {
         name: "codex.json",
-        subscription_started_at: "2026-01-01T00:00:00.000Z",
+        subscription_started_at: "2026-07-11T00:00:00.000Z",
         subscription_period: "monthly",
-        shared_subscription_started_at: "2026-07-01T00:00:00.000Z",
-        shared_subscription_expires_at: "2026-08-01T00:00:00.000Z",
+        shared_subscription_started_at: "2026-06-11T00:00:00.000Z",
+        shared_subscription_expires_at: "2026-07-11T00:00:00.000Z",
         shared_subscription_source: "signed_claims",
       } as AuthFileItem,
-      Date.parse("2026-07-06T00:00:00.000Z"),
+      Date.parse("2026-07-21T00:00:00.000Z"),
     );
     expect(status).toEqual(
       expect.objectContaining({
-        startedAtMs: Date.parse("2026-07-01T00:00:00.000Z"),
-        expiresAtMs: Date.parse("2026-08-01T00:00:00.000Z"),
-        remainingDays: 26,
+        startedAtMs: Date.parse("2026-07-11T00:00:00.000Z"),
+        expiresAtMs: Date.parse("2026-08-11T00:00:00.000Z"),
+        remainingDays: 21,
         expired: false,
         tone: "active",
       }),
