@@ -28,7 +28,9 @@ vi.mock("react-i18next", () => ({
 vi.mock("@app/providers/AuthProvider", () => ({
   useAuth: () => ({
     state: authMocks.state,
-    actions: { login: authMocks.login },
+    actions: {
+      login: authMocks.login,
+    },
   }),
 }));
 

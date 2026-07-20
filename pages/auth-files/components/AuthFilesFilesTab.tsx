@@ -58,7 +58,6 @@ import {
   normalizeProviderKey,
   normalizeTagValue,
   resolveAuthFileDisplayName,
-  resolveAuthFileDisplayPlanType,
   resolveAuthFilePlanType,
   resolveAuthFileSupplementalTags,
   resolveFileType,
@@ -633,6 +632,8 @@ interface AuthFilesFilesTabProps {
   ) => void;
   selectedFileNames: string[];
   deletingAll: boolean;
+  batchStatusUpdating: boolean;
+  handleDisableSelection: (names: string[]) => Promise<void>;
   pageItems: AuthFileItem[];
   fileColumns: DataTableColumn<AuthFileItem>[];
   filesViewMode: FilesViewMode;
@@ -659,6 +660,11 @@ interface AuthFilesFilesTabProps {
   ) => { success: number; failure: number };
   toggleFileSelection: (name: string, checked: boolean) => void;
   formatPlanTypeLabel: (planType: string) => string;
+  resolveStickyDisplayPlanType: (
+    file: AuthFileItem,
+    quotaState?: QuotaState | null,
+    cycleStats?: AuthFileCycleBudgetStats | null,
+  ) => string | null;
   renderRestrictionBadges: (file: AuthFileItem) => ReactNode | null;
   renderClaudeOAuthHealthBadges: (file: AuthFileItem) => ReactNode | null;
   renderSubscriptionBadge: (file: AuthFileItem) => ReactNode | null;
@@ -722,6 +728,8 @@ export function AuthFilesFilesTab({
   setConfirm,
   selectedFileNames,
   deletingAll,
+  batchStatusUpdating,
+  handleDisableSelection,
   pageItems,
   fileColumns,
   filesViewMode,
@@ -742,6 +750,7 @@ export function AuthFilesFilesTab({
   resolveAuthFileStats,
   toggleFileSelection,
   formatPlanTypeLabel,
+  resolveStickyDisplayPlanType,
   renderRestrictionBadges,
   renderClaudeOAuthHealthBadges,
   renderSubscriptionBadge,
@@ -1035,7 +1044,7 @@ export function AuthFilesFilesTab({
 
   const selectionToolbar =
     selectedCount > 0 ? (
-      <div className="inline-flex h-9 max-w-full min-w-0 items-center gap-1.5 rounded-full bg-slate-50/90 px-1.5 text-xs transition-colors duration-200 ease-out dark:bg-white/[0.04]">
+      <div className="inline-flex h-9 max-w-full min-w-0 items-center gap-1.5 overflow-x-auto rounded-full bg-slate-50/90 px-1.5 text-xs transition-colors duration-200 ease-out dark:bg-white/[0.04]">
         {selectionActionsMenu}
         <span className="min-w-0 truncate px-1 font-medium text-slate-600 dark:text-white/65">
           {t("auth_files.batch_selected", { count: selectedCount })}
@@ -1049,6 +1058,16 @@ export function AuthFilesFilesTab({
           {t("auth_files.batch_clear")}
         </Button>
         <Button
+          variant="secondary"
+          size="xs"
+          className="px-2"
+          onClick={() => void handleDisableSelection([...selectedFileNames])}
+          disabled={deletingAll || batchStatusUpdating || selectedCount === 0}
+        >
+          <CircleOff size={13} className="shrink-0" />
+          <span>{t("auth_files.batch_disable")}</span>
+        </Button>
+        <Button
           variant="danger"
           size="xs"
           className="px-2"
@@ -1058,7 +1077,7 @@ export function AuthFilesFilesTab({
               names: [...selectedFileNames],
             })
           }
-          disabled={deletingAll}
+          disabled={deletingAll || batchStatusUpdating}
         >
           {t("auth_files.batch_delete_action", { count: selectedCount })}
         </Button>
@@ -1067,7 +1086,7 @@ export function AuthFilesFilesTab({
           size="xs"
           className="px-2"
           onClick={() => void handleDownloadSelection([...selectedFileNames])}
-          disabled={deletingAll || selectedCount === 0}
+          disabled={deletingAll || batchStatusUpdating || selectedCount === 0}
         >
           <Download size={13} className="shrink-0" />
           <span>{t("auth_files.batch_download_action", { count: selectedCount })}</span>
@@ -1313,7 +1332,7 @@ export function AuthFilesFilesTab({
                     {renderFilesViewModeTabs}
                   </div>
                   {modelOwnerToolbarButton}
-                  {selectionToolbar}
+                  {selectedCount === 0 ? selectionActionsMenu : null}
                 </div>
 
                 <div className="flex shrink-0 flex-wrap items-center gap-2">
@@ -1416,6 +1435,9 @@ export function AuthFilesFilesTab({
               </div>
             </div>
           </div>
+          {selectedCount > 0 ? (
+            <div className="min-w-0 overflow-x-auto">{selectionToolbar}</div>
+          ) : null}
         </div>
       </div>
 
@@ -1471,7 +1493,7 @@ export function AuthFilesFilesTab({
                 rowHeight={84}
                 caption={t("auth_files.table_caption")}
                 emptyText={t("auth_files_page.no_files_desc")}
-                minWidth="min-w-[1840px]"
+                minWidth="min-w-[2140px]"
                 height="h-full"
                 minHeight="min-h-[360px] md:min-h-0"
                 allowWheelPropagationAtBoundary
@@ -1518,7 +1540,7 @@ export function AuthFilesFilesTab({
                     file.auth_index ?? file.authIndex,
                   );
                   const basePlanType = resolveAuthFilePlanType(file, state);
-                  const planType = resolveAuthFileDisplayPlanType(
+                  const planType = resolveStickyDisplayPlanType(
                     file,
                     state,
                     authIndexForPlan
@@ -1573,10 +1595,6 @@ export function AuthFilesFilesTab({
                   const cycleCalls = authIndex
                     ? cycleCallsByAuthIndex[authIndex]
                     : undefined;
-                  const displayCalls =
-                    typeof cycleCalls === "number"
-                      ? cycleCalls
-                      : usageTotalCalls;
                   const successRate =
                     usageTotalCalls > 0
                       ? (stats.success / usageTotalCalls) * 100
@@ -1760,9 +1778,11 @@ export function AuthFilesFilesTab({
                             </HoverTooltip>
                           ) : null}
                           <span className="inline-flex shrink-0 items-center rounded-full bg-slate-100 px-2 py-0.5 text-2xs font-semibold text-slate-700 dark:bg-white/10 dark:text-white/70">
-                            {t("auth_files.calls_count", {
-                              count: displayCalls,
-                            })}
+                            {typeof cycleCalls === "number"
+                              ? t("auth_files.cycle_calls_count", {
+                                  count: cycleCalls,
+                                })
+                              : t("auth_files.cycle_calls_unknown")}
                           </span>
                           <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-2xs font-semibold text-slate-700 dark:bg-white/10 dark:text-white/70">
                             <span>{t("common.success_rate")}</span>

@@ -65,6 +65,7 @@ export function useAuthFilesFileActions({
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<AuthFilesUploadProgress>(IDLE_UPLOAD_PROGRESS);
   const [deletingAll, setDeletingAll] = useState(false);
+  const [batchStatusUpdating, setBatchStatusUpdating] = useState(false);
   const [statusUpdating, setStatusUpdating] = useState<Record<string, boolean>>({});
   const [tagSavingByName, setTagSavingByName] = useState<Record<string, boolean>>({});
 
@@ -311,41 +312,46 @@ export function useAuthFilesFileActions({
 
       setDeletingAll(true);
       try {
-        let success = 0;
-        let failed = 0;
-        const deletedNames: string[] = [];
+        const deletedNames = new Set<string>();
+        const requestFailures = new Set<string>();
 
         for (const name of targets) {
           try {
             await authFilesApi.deleteFile(name);
-            success += 1;
-            deletedNames.push(name);
+            deletedNames.add(name);
           } catch {
-            failed += 1;
+            requestFailures.add(name);
           }
         }
 
-        if (deletedNames.length > 0) {
+        // Re-read authoritative state: deletion can succeed before a trailing cleanup/response fails.
+        const refreshedFiles = await loadAll();
+        const remainingNames = new Set(refreshedFiles.map((file) => file.name));
+        requestFailures.forEach((name) => {
+          if (!remainingNames.has(name)) deletedNames.add(name);
+        });
+
+        if (deletedNames.size > 0) {
           invalidateConfiguredModelAvailability();
-          setFiles((prev) => prev.filter((file) => !deletedNames.includes(file.name)));
-          setSelectedFileNames((prev) => prev.filter((name) => !deletedNames.includes(name)));
-          setDetailFile((prev) => (prev && deletedNames.includes(prev.name) ? null : prev));
+          const deleted = Array.from(deletedNames);
+          setSelectedFileNames((prev) => prev.filter((name) => !deletedNames.has(name)));
+          setDetailFile((prev) => (prev && deletedNames.has(prev.name) ? null : prev));
           setDetailOpen((prev) =>
-            prev && detailFile && deletedNames.includes(detailFile.name) ? false : prev,
+            prev && detailFile && deletedNames.has(detailFile.name) ? false : prev,
           );
+          // loadAll normally replaced the list; this also covers aborted/stale refreshes.
+          setFiles((prev) => prev.filter((file) => !deleted.includes(file.name)));
         }
 
-        if (failed === 0) {
-          notify({
-            type: "success",
-            message: t("auth_files.batch_deleted_selected", { count: success }),
-          });
-        } else {
-          notify({
-            type: "error",
-            message: t("auth_files.batch_delete_partial", { success, failed }),
-          });
-        }
+        const success = deletedNames.size;
+        const failed = targets.length - success;
+        notify({
+          type: failed === 0 ? "success" : "error",
+          message:
+            failed === 0
+              ? t("auth_files.batch_deleted_selected", { count: success })
+              : t("auth_files.batch_delete_partial", { success, failed }),
+        });
       } catch (err: unknown) {
         notify({
           type: "error",
@@ -355,7 +361,70 @@ export function useAuthFilesFileActions({
         setDeletingAll(false);
       }
     },
-    [detailFile, notify, setDetailFile, setDetailOpen, setFiles, setSelectedFileNames, t],
+    [detailFile, loadAll, notify, setDetailFile, setDetailOpen, setFiles, setSelectedFileNames, t],
+  );
+
+  const handleDisableSelection = useCallback(
+    async (names: string[]) => {
+      const targets = Array.from(new Set(names.map((name) => name.trim()).filter(Boolean)));
+      if (targets.length === 0) return;
+
+      setBatchStatusUpdating(true);
+      setStatusUpdating((prev) => ({
+        ...prev,
+        ...Object.fromEntries(targets.map((name) => [name, true])),
+      }));
+      try {
+        const disabledNames = new Set<string>();
+        const requestFailures = new Set<string>();
+
+        for (const name of targets) {
+          try {
+            const result = await authFilesApi.setStatus(name, true);
+            if (result.disabled) disabledNames.add(name);
+            else requestFailures.add(name);
+          } catch {
+            requestFailures.add(name);
+          }
+        }
+
+        const refreshedFiles = await loadAll();
+        const filesByName = new Map(refreshedFiles.map((file) => [file.name, file]));
+        requestFailures.forEach((name) => {
+          if (filesByName.get(name)?.disabled === true) disabledNames.add(name);
+        });
+
+        if (disabledNames.size > 0) {
+          invalidateConfiguredModelAvailability();
+          setFiles((prev) =>
+            prev.map((file) =>
+              disabledNames.has(file.name) ? { ...file, disabled: true } : file,
+            ),
+          );
+          setDetailFile((prev) =>
+            prev && disabledNames.has(prev.name) ? { ...prev, disabled: true } : prev,
+          );
+        }
+
+        const success = disabledNames.size;
+        const failed = targets.length - success;
+        notify({
+          type: failed === 0 ? "success" : "error",
+          message:
+            failed === 0
+              ? t("auth_files.batch_status_success", { count: success })
+              : t("auth_files.batch_status_partial", { success, failed }),
+        });
+      } finally {
+        setBatchStatusUpdating(false);
+        setStatusUpdating((prev) => {
+          const next = { ...prev };
+          targets.forEach((name) => delete next[name]);
+          return next;
+        });
+      }
+    },
+    [loadAll, notify, setDetailFile, setFiles, t],
   );
 
   const setFileEnabled = useCallback(
@@ -450,12 +519,14 @@ export function useAuthFilesFileActions({
     uploading,
     uploadProgress,
     deletingAll,
+    batchStatusUpdating,
     statusUpdating,
     tagSavingByName,
     downloadAuthFile,
     handleDownloadSelection,
     handleUpload,
     handleDeleteSelection,
+    handleDisableSelection,
     setFileEnabled,
     saveAuthFileTags,
   };

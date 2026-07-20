@@ -52,7 +52,8 @@ export interface IdentityFingerprintConfig {
 }
 
 export type IdentityFingerprintProvider = "claude" | "codex" | "gemini" | "xai";
-export type IdentityFingerprintFieldSource = "learned" | "preset" | "builtin_default";
+export type IdentityFingerprintFieldSource =
+  "learned" | "preset" | "builtin_default";
 
 export interface IdentityFingerprintFieldValue {
   value: string;
@@ -121,7 +122,8 @@ export interface IdentityFingerprintAccountSummary {
   last_seen_at?: string;
 }
 
-export type IdentityFingerprintAccountStrategy = "cli_preferred" | "active_profile";
+export type IdentityFingerprintAccountStrategy =
+  "cli_preferred" | "active_profile";
 
 export interface IdentityFingerprintAccountPolicy {
   provider: IdentityFingerprintProvider;
@@ -141,6 +143,10 @@ export interface IdentityFingerprintProfileDetail {
 }
 
 export interface IdentityFingerprintAccountDetail {
+  status_scope?: "shared_subject" | string;
+  subject_scope?: "shared" | "tenant" | string;
+  share_eligible?: boolean;
+  current_tenant_binding_count?: number;
   summary: IdentityFingerprintAccountSummary;
   effective: IdentityFingerprintEffectiveRecord;
   learned?: IdentityFingerprintLearnedRecord;

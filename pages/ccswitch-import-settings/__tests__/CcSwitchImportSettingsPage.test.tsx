@@ -182,9 +182,10 @@ describe("CcSwitchImportSettingsPage", () => {
     expect(
       within(dialog).queryByLabelText(/codex endpoint path/i),
     ).not.toBeInTheDocument();
-    expect(
-      within(dialog).queryByRole("combobox", { name: /default model/i }),
-    ).not.toBeInTheDocument();
+    const defaultModelSelect = within(dialog).getByRole("combobox", {
+      name: /codex default model/i,
+    });
+    expect(defaultModelSelect).toBeDisabled();
     expect(
       within(dialog).queryByText(/for codex cli/i),
     ).not.toBeInTheDocument();
@@ -219,11 +220,16 @@ describe("CcSwitchImportSettingsPage", () => {
       await within(dialog).findByDisplayValue("kimi-k2"),
     ).toBeInTheDocument();
     expect(listAvailableModels).not.toHaveBeenCalled();
+    expect(defaultModelSelect).not.toBeDisabled();
+    expect(defaultModelSelect).toHaveTextContent("deepseek-v4-flash");
     const requestModelInput = within(dialog).getByLabelText(
       /cc switch request model for mapping 1/i,
     );
     await user.clear(requestModelInput);
     await user.type(requestModelInput, "gpt-5.5");
+    await waitFor(() =>
+      expect(defaultModelSelect).toHaveTextContent("gpt-5.5"),
+    );
     const contextWindowInput = within(dialog).getByLabelText(
       /context window for mapping 1/i,
     );
@@ -236,6 +242,9 @@ describe("CcSwitchImportSettingsPage", () => {
       "Relay Codex",
     );
     await user.type(within(dialog).getByLabelText(/remark/i), "Pro preset");
+
+    // Explicit default is already following the renamed first mapping row.
+    expect(defaultModelSelect).toHaveTextContent("gpt-5.5");
 
     await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
 
@@ -951,6 +960,16 @@ describe("CcSwitchImportSettingsPage", () => {
     expect(
       within(dialog).getByRole("combobox", { name: /actual channel model 2/i }),
     ).toHaveTextContent("gpt-5.5");
+    const defaultModelSelect = within(dialog).getByRole("combobox", {
+      name: /codex default model/i,
+    });
+    expect(defaultModelSelect).toHaveTextContent("gpt-5.5");
+
+    await user.click(defaultModelSelect);
+    await user.click(
+      await screen.findByRole("option", { name: "gpt-5.4-mini" }),
+    );
+    expect(defaultModelSelect).toHaveTextContent("gpt-5.4-mini");
 
     await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
 
@@ -958,7 +977,7 @@ describe("CcSwitchImportSettingsPage", () => {
       expect(replaceConfigs).toHaveBeenCalledWith([
         expect.objectContaining({
           id: "cfg-kimi",
-          defaultModel: "gpt-5.5",
+          defaultModel: "gpt-5.4-mini",
           allowedChannelGroups: ["kimicode"],
           modelMappings: [
             {
@@ -1391,8 +1410,9 @@ describe("CcSwitchImportSettingsPage", () => {
       "h-[320px]",
       "min-h-[320px]",
     );
-    expect(tableViewport).toHaveClass("overscroll-y-auto");
-    expect(tableViewport).not.toHaveClass("overscroll-y-none");
+    // Contain rubber-band overscroll so sticky headers never bounce with body.
+    expect(tableViewport).toHaveClass("overscroll-y-none");
+    expect(tableViewport).not.toHaveClass("overscroll-y-auto");
     const headerCells = Array.from(
       tableViewport?.querySelectorAll("thead th") ?? [],
     );

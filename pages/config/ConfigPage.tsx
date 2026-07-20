@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, ChevronUp, Code2, Eye, Search, Settings } from "lucide-react";
+import { ChevronDown, ChevronUp, Code2, Eye, Search } from "lucide-react";
 import { parse as parseYaml } from "yaml";
 import { configApi, configFileApi } from "@code-proxy/api-client";
 import { FloatingSaveBar } from "./FloatingSaveBar";
-import { RuntimeConfigPanel } from "./RuntimeConfigPanel";
+import { CodexOAuthAdmissionPanel } from "./CodexOAuthAdmissionPanel";
 import { VisualConfigEditor } from "./visual/VisualConfigEditor";
 import { useVisualConfig } from "@features/visual-config-editor";
 import { Card } from "@code-proxy/ui";
@@ -16,25 +16,118 @@ import { useTranslation } from "react-i18next";
 import { HoverTooltip } from "@code-proxy/ui";
 import { YamlCodeEditor } from "./YamlCodeEditor";
 
-type ConfigTab = "visual" | "source" | "runtime";
+type ConfigTab = "visual" | "source";
 
 const TAB_STORAGE_KEY = "config-panel:tab";
 
-function readCommercialModeFromYaml(yamlContent: string): boolean {
+type ConfigRiskSnapshot = {
+  commercialMode: boolean;
+  debug: boolean;
+  loggingToFile: boolean;
+  requestLog: boolean;
+  storeContent: boolean;
+  websocketAuth: boolean;
+  allowRemote: boolean;
+  autoUpdateChannel: string;
+  autoUpdateDockerImage: string;
+  contentRetentionDays: number;
+  bodyStorageMaxTotalSizeMb: number;
+  logsMaxTotalSizeMb: number;
+  listener: string;
+};
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+}
+
+function readConfigRiskSnapshot(yamlContent: string): ConfigRiskSnapshot {
   try {
-    const parsed = parseYaml(yamlContent);
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return false;
-    return Boolean((parsed as Record<string, unknown>)["commercial-mode"]);
+    const parsed = asRecord(parseYaml(yamlContent)) ?? {};
+    const requestLogStorage = asRecord(parsed["request-log-storage"]);
+    const remoteManagement = asRecord(parsed["remote-management"]);
+    const autoUpdate = asRecord(parsed["auto-update"]);
+    const tls = asRecord(parsed.tls);
+    return {
+      commercialMode: Boolean(parsed["commercial-mode"]),
+      debug: Boolean(parsed.debug),
+      loggingToFile: Boolean(parsed["logging-to-file"]),
+      requestLog: Boolean(parsed["request-log"]),
+      storeContent: Boolean(requestLogStorage?.["store-content"]),
+      websocketAuth: Boolean(parsed["ws-auth"]),
+      allowRemote: Boolean(remoteManagement?.["allow-remote"]),
+      autoUpdateChannel: String(autoUpdate?.channel ?? "main"),
+      autoUpdateDockerImage: String(autoUpdate?.["docker-image"] ?? "ghcr.io/kittors/clirelay"),
+      contentRetentionDays: Number(requestLogStorage?.["content-retention-days"] ?? 30),
+      bodyStorageMaxTotalSizeMb: Number(requestLogStorage?.["max-total-size-mb"] ?? 1024),
+      logsMaxTotalSizeMb: Number(parsed["logs-max-total-size-mb"] ?? 0),
+      listener: JSON.stringify({
+        host: parsed.host ?? "",
+        port: parsed.port ?? "",
+        tls: tls ?? {},
+      }),
+    };
   } catch {
-    return false;
+    return {
+      commercialMode: false,
+      debug: false,
+      loggingToFile: false,
+      requestLog: false,
+      storeContent: false,
+      websocketAuth: false,
+      allowRemote: false,
+      autoUpdateChannel: "main",
+      autoUpdateDockerImage: "ghcr.io/kittors/clirelay",
+      contentRetentionDays: 30,
+      bodyStorageMaxTotalSizeMb: 1024,
+      logsMaxTotalSizeMb: 0,
+      listener: "",
+    };
   }
+}
+
+function collectSaveWarningKeys(previous: ConfigRiskSnapshot, next: ConfigRiskSnapshot): string[] {
+  const warnings: string[] = [];
+  if (!previous.requestLog && next.requestLog) warnings.push("request_log");
+  if (!previous.storeContent && next.storeContent) warnings.push("body_storage_enable");
+  if (previous.storeContent && !next.storeContent) warnings.push("body_storage_disable");
+  if (!previous.debug && next.debug) warnings.push("debug");
+  if (!previous.loggingToFile && next.loggingToFile) warnings.push("file_logging");
+  if (previous.websocketAuth && !next.websocketAuth) warnings.push("ws_auth_disable");
+  if (!previous.allowRemote && next.allowRemote) warnings.push("remote_management");
+  if (previous.commercialMode !== next.commercialMode) warnings.push("commercial_mode");
+  if (previous.autoUpdateChannel !== "dev" && next.autoUpdateChannel === "dev") {
+    warnings.push("dev_updates");
+  }
+  if (
+    previous.autoUpdateDockerImage !== next.autoUpdateDockerImage &&
+    next.autoUpdateDockerImage !== "ghcr.io/kittors/clirelay"
+  ) {
+    warnings.push("custom_image");
+  }
+  if (next.storeContent && next.contentRetentionDays <= 0) warnings.push("unlimited_retention");
+  if (next.storeContent && next.bodyStorageMaxTotalSizeMb <= 0) {
+    warnings.push("unbounded_body_size");
+  }
+  if (next.loggingToFile && next.logsMaxTotalSizeMb <= 0) {
+    warnings.push("unbounded_file_logs");
+  }
+  if (previous.listener !== next.listener) warnings.push("listener");
+  return warnings;
+}
+
+function isValidResourceNumber(value: string, minimum: number): boolean {
+  const trimmed = value.trim();
+  if (!/^\d+$/.test(trimmed)) return false;
+  const parsed = Number(trimmed);
+  return Number.isSafeInteger(parsed) && parsed >= minimum;
 }
 
 function useStickyTab(): [ConfigTab, (next: ConfigTab) => void] {
   const [tab, setTab] = useState<ConfigTab>(() => {
     try {
       const saved = localStorage.getItem(TAB_STORAGE_KEY);
-      if (saved === "visual" || saved === "source" || saved === "runtime") return saved;
+      if (saved === "visual" || saved === "source") return saved;
       return "visual";
     } catch {
       return "visual";
@@ -74,6 +167,9 @@ export function ConfigPage() {
   const [yamlDirty, setYamlDirty] = useState(false);
 
   const [confirmReloadOpen, setConfirmReloadOpen] = useState(false);
+  const [confirmSaveOpen, setConfirmSaveOpen] = useState(false);
+  const [pendingSaveYaml, setPendingSaveYaml] = useState("");
+  const [pendingSaveWarnings, setPendingSaveWarnings] = useState<string[]>([]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [lastSearchedQuery, setLastSearchedQuery] = useState("");
@@ -122,35 +218,90 @@ export function ConfigPage() {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [isDirty]);
 
-  const handleSave = useCallback(async () => {
-    setSaving(true);
-    try {
-      const previousCommercialMode = readCommercialModeFromYaml(yamlText);
-      const nextYaml = tab === "visual" ? applyVisualChangesToYaml(yamlText) : yamlText;
-      const nextCommercialMode = readCommercialModeFromYaml(nextYaml);
-      const commercialModeChanged = previousCommercialMode !== nextCommercialMode;
+  const saveConfig = useCallback(
+    async (nextYaml: string) => {
+      setSaving(true);
+      const previous = readConfigRiskSnapshot(yamlText);
+      const next = readConfigRiskSnapshot(nextYaml);
+      const commercialModeChanged = previous.commercialMode !== next.commercialMode;
+      const disablingBodyStorage = previous.storeContent && !next.storeContent;
 
-      await configFileApi.saveConfigYaml(nextYaml);
-      const [latest, runtimeConfig] = await Promise.all([
-        configFileApi.fetchConfigYaml(),
-        configApi.getConfig().catch(() => undefined),
-      ]);
-      setYamlText(latest);
-      setYamlDirty(false);
-      loadVisualValuesFromYaml(latest, runtimeConfig);
-      notify({ type: "success", message: t("config_page.toast_saved") });
-      if (commercialModeChanged) {
-        notify({ type: "info", message: t("config_page.toast_commercial_changed") });
+      try {
+        await configFileApi.saveConfigYaml(nextYaml);
+        if (disablingBodyStorage) {
+          try {
+            const cleanup = await configApi.updateRequestLogBodyStorage(false, true);
+            if (cleanup.cleanup?.physical_reclaim_deferred) {
+              notify({ type: "info", message: t("config_page.body_cleanup_deferred") });
+            }
+          } catch (cleanupError: unknown) {
+            await loadYaml();
+            notify({
+              type: "error",
+              message:
+                cleanupError instanceof Error
+                  ? t("config_page.body_cleanup_failed_after_save", {
+                      error: cleanupError.message,
+                    })
+                  : t("config_page.body_cleanup_failed_after_save", { error: "" }),
+            });
+            return;
+          }
+        }
+
+        const [latest, runtimeConfig] = await Promise.all([
+          configFileApi.fetchConfigYaml(),
+          configApi.getConfig().catch(() => undefined),
+        ]);
+        setYamlText(latest);
+        setYamlDirty(false);
+        loadVisualValuesFromYaml(latest, runtimeConfig);
+        notify({ type: "success", message: t("config_page.toast_saved") });
+        if (commercialModeChanged) {
+          notify({ type: "info", message: t("config_page.toast_commercial_changed") });
+        }
+      } catch (err: unknown) {
+        notify({
+          type: "error",
+          message: err instanceof Error ? err.message : t("config_page.toast_save_failed"),
+        });
+      } finally {
+        setSaving(false);
       }
-    } catch (err: unknown) {
-      notify({
-        type: "error",
-        message: err instanceof Error ? err.message : t("config_page.toast_save_failed"),
-      });
-    } finally {
-      setSaving(false);
+    },
+    [loadVisualValuesFromYaml, loadYaml, notify, t, yamlText],
+  );
+
+  const requestSave = useCallback(() => {
+    if (
+      tab === "visual" &&
+      (!isValidResourceNumber(visualValues.logsMaxTotalSizeMb || "0", 0) ||
+        !isValidResourceNumber(visualValues.errorLogsMaxFiles, 0) ||
+        !isValidResourceNumber(visualValues.systemStatsCacheSeconds, 10) ||
+        !isValidResourceNumber(visualValues.systemStatsWebSocketMaxAgeSeconds, 60) ||
+        !isValidResourceNumber(visualValues.requestLogStorage.retentionDays, 1) ||
+        !isValidResourceNumber(visualValues.requestLogStorage.contentRetentionDays, 0) ||
+        !isValidResourceNumber(visualValues.requestLogStorage.cleanupIntervalMinutes, 1) ||
+        !isValidResourceNumber(visualValues.requestLogStorage.maxRows, 0) ||
+        !isValidResourceNumber(visualValues.requestLogStorage.maxMetadataSizeMb, 0) ||
+        !isValidResourceNumber(visualValues.requestLogStorage.maxTotalSizeMb, 0))
+    ) {
+      notify({ type: "error", message: t("resource_config.invalid_number") });
+      return;
     }
-  }, [applyVisualChangesToYaml, loadVisualValuesFromYaml, notify, t, tab, yamlText]);
+    const nextYaml = tab === "visual" ? applyVisualChangesToYaml(yamlText) : yamlText;
+    const warnings = collectSaveWarningKeys(
+      readConfigRiskSnapshot(yamlText),
+      readConfigRiskSnapshot(nextYaml),
+    );
+    if (warnings.length > 0) {
+      setPendingSaveYaml(nextYaml);
+      setPendingSaveWarnings(warnings);
+      setConfirmSaveOpen(true);
+      return;
+    }
+    void saveConfig(nextYaml);
+  }, [applyVisualChangesToYaml, notify, saveConfig, t, tab, visualValues, yamlText]);
 
   const buildSearchPositions = useCallback(
     (query: string) => {
@@ -292,7 +443,7 @@ export function ConfigPage() {
   const visualLayoutEnabled = tab === "visual";
   const saveDisabled = disableControls || loading || saving || !isDirty;
   const reloadDisabled = loading || saving;
-  const showFloatingBar = tab !== "runtime";
+  const showFloatingBar = true;
 
   return (
     <div
@@ -313,10 +464,6 @@ export function ConfigPage() {
               <TabsTrigger value="source">
                 <Code2 size={14} />
                 {t("config_page.source_editor")}
-              </TabsTrigger>
-              <TabsTrigger value="runtime">
-                <Settings size={14} />
-                {t("config_page.runtime_config")}
               </TabsTrigger>
             </TabsList>
           </div>
@@ -343,6 +490,9 @@ export function ConfigPage() {
                       disabled={disableControls || loading || saving}
                       onChange={setVisualValues}
                     />
+                    <div className="mt-6">
+                      <CodexOAuthAdmissionPanel />
+                    </div>
                   </div>
                 </Card>
               </div>
@@ -462,10 +612,6 @@ export function ConfigPage() {
                 </Card>
               </div>
             </TabsContent>
-
-            <TabsContent value="runtime">
-              <RuntimeConfigPanel />
-            </TabsContent>
           </div>
         </Tabs>
       </div>
@@ -473,12 +619,47 @@ export function ConfigPage() {
       {showFloatingBar && (
         <FloatingSaveBar
           status={saveBarStatus}
-          onSave={() => void handleSave()}
+          onSave={requestSave}
           onReload={requestReload}
           saveDisabled={saveDisabled}
           reloadDisabled={reloadDisabled}
         />
       )}
+
+      <ConfirmModal
+        open={confirmSaveOpen}
+        title={t("config_page.save_warning_title")}
+        description={t("config_page.save_warning_desc", {
+          warnings: pendingSaveWarnings
+            .map((key) => t(`config_page.save_warning_${key}`))
+            .join(t("config_page.save_warning_separator")),
+        })}
+        confirmText={saving ? t("config_page.saving") : t("config_page.save_warning_confirm")}
+        cancelText={t("ui.cancel_default")}
+        variant={
+          pendingSaveWarnings.some((key) =>
+            [
+              "body_storage_disable",
+              "ws_auth_disable",
+              "remote_management",
+              "listener",
+            ].includes(key),
+          )
+            ? "danger"
+            : "primary"
+        }
+        busy={saving}
+        onClose={() => {
+          if (!saving) setConfirmSaveOpen(false);
+        }}
+        onConfirm={() => {
+          setConfirmSaveOpen(false);
+          const nextYaml = pendingSaveYaml;
+          setPendingSaveYaml("");
+          setPendingSaveWarnings([]);
+          void saveConfig(nextYaml);
+        }}
+      />
 
       <ConfirmModal
         open={confirmReloadOpen}

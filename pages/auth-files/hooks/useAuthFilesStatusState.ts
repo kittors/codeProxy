@@ -172,7 +172,27 @@ export function useAuthFilesStatusState({
   );
   const [cycleByAuthIndex, setCycleByAuthIndex] = useState<
     Record<string, AuthFileCycleUsageSnapshot>
-  >({});
+  >(() => {
+    const cached = initialDataCache?.cycleByAuthIndex;
+    if (!cached) return {};
+    const seeded: Record<string, AuthFileCycleUsageSnapshot> = {};
+    for (const [authIndex, snapshot] of Object.entries(cached)) {
+      if (typeof snapshot?.calls !== "number" || !Number.isFinite(snapshot.calls)) continue;
+      seeded[authIndex] = {
+        calls: snapshot.calls,
+        cycleCostTotal:
+          typeof snapshot.cycleCostTotal === "number" && Number.isFinite(snapshot.cycleCostTotal)
+            ? snapshot.cycleCostTotal
+            : null,
+        weeklyQuotaUsedPercent:
+          typeof snapshot.weeklyQuotaUsedPercent === "number" &&
+          Number.isFinite(snapshot.weeklyQuotaUsedPercent)
+            ? snapshot.weeklyQuotaUsedPercent
+            : null,
+      };
+    }
+    return seeded;
+  });
   const [statusApiSupported, setStatusApiSupported] = useState(true);
   const [statusLoading, setStatusLoading] = useState(false);
   const [refreshingPage, setRefreshingPage] = useState(false);
@@ -242,8 +262,25 @@ export function useAuthFilesStatusState({
     statusLoadSeqRef.current += 1;
     loadedVisibleScopeRef.current = null;
     appliedFreshnessRef.current.clear();
-    setQuotaByFileName({});
-    setCycleByAuthIndex({});
+    const tenantCache = readAuthFilesDataCache(cacheTenantId);
+    setQuotaByFileName(tenantCache?.quotaByFileName ?? {});
+    const seeded: Record<string, AuthFileCycleUsageSnapshot> = {};
+    for (const [authIndex, snapshot] of Object.entries(tenantCache?.cycleByAuthIndex ?? {})) {
+      if (typeof snapshot?.calls !== "number" || !Number.isFinite(snapshot.calls)) continue;
+      seeded[authIndex] = {
+        calls: snapshot.calls,
+        cycleCostTotal:
+          typeof snapshot.cycleCostTotal === "number" && Number.isFinite(snapshot.cycleCostTotal)
+            ? snapshot.cycleCostTotal
+            : null,
+        weeklyQuotaUsedPercent:
+          typeof snapshot.weeklyQuotaUsedPercent === "number" &&
+          Number.isFinite(snapshot.weeklyQuotaUsedPercent)
+            ? snapshot.weeklyQuotaUsedPercent
+            : null,
+      };
+    }
+    setCycleByAuthIndex(seeded);
     setRefreshingPage(false);
     setStatusLoading(false);
     setStatusApiSupported(true);
@@ -285,15 +322,27 @@ export function useAuthFilesStatusState({
       const tenantId = getActiveCacheTenantId();
       const current = readAuthFilesDataCache(tenantId);
       if (!current || !Array.isArray(current.files)) return;
+      const cycleCache: Record<string, { calls: number; cycleCostTotal: number | null; weeklyQuotaUsedPercent: number | null }> = {};
+      for (const [authIndex, snapshot] of Object.entries(cycleByAuthIndex)) {
+        if (typeof snapshot.calls !== "number" || !Number.isFinite(snapshot.calls)) continue;
+        cycleCache[authIndex] = {
+          calls: snapshot.calls,
+          cycleCostTotal: snapshot.cycleCostTotal,
+          weeklyQuotaUsedPercent: snapshot.weeklyQuotaUsedPercent,
+        };
+      }
       writeAuthFilesDataCache({
         ...current,
         tenantId,
         savedAtMs: Date.now(),
         quotaByFileName,
+        // Keep last known cycle when state is still empty (first paint / tenant seed).
+        cycleByAuthIndex:
+          Object.keys(cycleCache).length > 0 ? cycleCache : current.cycleByAuthIndex,
       });
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [quotaByFileName]);
+  }, [quotaByFileName, cycleByAuthIndex]);
 
   const patchAuthFileByName = useCallback(
     (name: string, patch: Partial<AuthFileItem>) => {
@@ -336,6 +385,7 @@ export function useAuthFilesStatusState({
         names: string[];
         authIndexes: string[];
         quotaKey: string | null;
+        account: AiAccountLatestStatusDto;
       };
       const groups: MatchedGroup[] = [];
       for (const account of freshAccounts) {
@@ -370,6 +420,7 @@ export function useAuthFilesStatusState({
           names: matched.map((file) => file.name),
           authIndexes,
           quotaKey,
+          account,
         });
       }
 
@@ -410,13 +461,28 @@ export function useAuthFilesStatusState({
               : group.authIndexes.find((key) => patch.cycleByKey[key]);
           if (!sourceKey) continue;
           const cycle = patch.cycleByKey[sourceKey];
-          if (!cycle) continue;
+          // Skip unknown cycle: never wipe a known 本周期 with null after partial refresh.
+          if (!cycle || typeof cycle.calls !== "number") continue;
           if (!changed) {
             next = { ...prev };
             changed = true;
           }
           for (const authIndex of group.authIndexes) {
-            next[authIndex] = cycle;
+            const previous = next[authIndex];
+            // Keep budget fields when partial payload omits them — plan tier (PRO 5X/20X)
+            // and other cycle-derived badges depend on these not flashing empty.
+            next[authIndex] = {
+              calls: cycle.calls,
+              cycleCostTotal:
+                typeof cycle.cycleCostTotal === "number" && Number.isFinite(cycle.cycleCostTotal)
+                  ? cycle.cycleCostTotal
+                  : (previous?.cycleCostTotal ?? null),
+              weeklyQuotaUsedPercent:
+                typeof cycle.weeklyQuotaUsedPercent === "number" &&
+                Number.isFinite(cycle.weeklyQuotaUsedPercent)
+                  ? cycle.weeklyQuotaUsedPercent
+                  : (previous?.weeklyQuotaUsedPercent ?? null),
+            };
           }
         }
         return next;
@@ -436,6 +502,15 @@ export function useAuthFilesStatusState({
                 )
               : undefined);
           if (!sourcePoint) continue;
+          // Ignore empty usage shells so success-rate / total do not flash to 0.
+          if (
+            !(
+              (typeof sourcePoint.requests === "number" && sourcePoint.requests > 0) ||
+              (typeof sourcePoint.failed === "number" && sourcePoint.failed > 0)
+            )
+          ) {
+            continue;
+          }
           for (const authIndex of group.authIndexes) {
             if (seen.has(authIndex)) continue;
             seen.add(authIndex);
@@ -464,9 +539,46 @@ export function useAuthFilesStatusState({
         const planType =
           (group.quotaKey ? patch.planTypeByKey[group.quotaKey] : undefined) ??
           group.authIndexes.map((key) => patch.planTypeByKey[key]).find(Boolean);
-        if (!planType) continue;
         for (const name of group.names) {
-          patchAuthFileByName(name, { plan_type: planType, planType });
+          const file = filesForMerge.find((item) => item.name === name);
+          const hasPrivatePlan = Boolean(file?.plan_type ?? file?.planType);
+          // Partial refresh: only write subscription / scope / plan when present.
+          // Empty/null must not wipe known card badges (remaining days, plan, scope).
+          const started = group.account.subscription_started_at;
+          const expires = group.account.subscription_expires_at;
+          const source = group.account.subscription_source;
+          const filePatch: Partial<AuthFileItem> = {};
+          if (group.account.status_scope) {
+            filePatch.account_status_scope = group.account.status_scope;
+          }
+          if (group.account.subject_scope) {
+            filePatch.subject_scope = group.account.subject_scope;
+          }
+          if (typeof group.account.share_eligible === "boolean") {
+            filePatch.share_eligible = group.account.share_eligible;
+          }
+          if (typeof group.account.usage?.history_complete === "boolean") {
+            filePatch.usage_history_complete = group.account.usage.history_complete;
+          }
+          if (group.account.usage?.projected_since) {
+            filePatch.usage_projected_since = group.account.usage.projected_since;
+          }
+          if (typeof started === "string" && started.trim()) {
+            filePatch.shared_subscription_started_at = started;
+          }
+          if (typeof expires === "string" && expires.trim()) {
+            filePatch.shared_subscription_expires_at = expires;
+          }
+          if (typeof source === "string" && source.trim()) {
+            filePatch.shared_subscription_source = source;
+          }
+          if (!hasPrivatePlan && planType) {
+            filePatch.plan_type = planType;
+            filePatch.planType = planType;
+          }
+          if (Object.keys(filePatch).length > 0) {
+            patchAuthFileByName(name, filePatch);
+          }
         }
       }
     },

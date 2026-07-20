@@ -56,8 +56,16 @@ const normalizeUsageSummary = (value: unknown): AiAccountUsageSummaryDto | null 
   if (!isRecord(value)) return null;
   return {
     auth_subject_id:
-      normalizeString(value.auth_subject_id ?? value.authSubjectId) ?? undefined,
-    request_total_7d: toFiniteNumber(value.request_total_7d ?? value.requestTotal7d),
+      normalizeString(value.auth_subject_id ?? value.authSubjectId) ??
+      undefined,
+    request_total: toFiniteNumber(value.request_total ?? value.requestTotal),
+    success_total: toFiniteNumber(value.success_total ?? value.successTotal),
+    failure_total: toFiniteNumber(value.failure_total ?? value.failureTotal),
+    cost_total: toFiniteNumber(value.cost_total ?? value.costTotal),
+    success_rate: toFiniteNumber(value.success_rate ?? value.successRate),
+    request_total_7d: toFiniteNumber(
+      value.request_total_7d ?? value.requestTotal7d,
+    ),
     cost_total_7d: toFiniteNumber(value.cost_total_7d ?? value.costTotal7d),
     request_total_30d: toFiniteNumber(value.request_total_30d ?? value.requestTotal30d),
     success_total_30d: toFiniteNumber(value.success_total_30d ?? value.successTotal30d),
@@ -68,6 +76,12 @@ const normalizeUsageSummary = (value: unknown): AiAccountUsageSummaryDto | null 
     cycle_cost_total: toFiniteNumber(value.cycle_cost_total ?? value.cycleCostTotal),
     cycle_known: toOptionalBoolean(value.cycle_known ?? value.cycleKnown),
     cycle_start: normalizeString(value.cycle_start ?? value.cycleStart),
+    projected_since: normalizeString(
+      value.projected_since ?? value.projectedSince,
+    ),
+    history_complete: toOptionalBoolean(
+      value.history_complete ?? value.historyComplete,
+    ),
     weekly_quota_used_percent: toFiniteNumber(
       value.weekly_quota_used_percent ?? value.weeklyQuotaUsedPercent,
     ),
@@ -124,6 +138,19 @@ export const normalizeAccountStatusView = (
       normalizeString(value.auth_subject_id ?? value.authSubjectId) ?? undefined,
     auth_index: authIndex,
     provider: normalizeString(value.provider) ?? undefined,
+    status_scope:
+      normalizeString(value.status_scope ?? value.statusScope) ?? undefined,
+    subject_scope:
+      normalizeString(value.subject_scope ?? value.subjectScope) ?? undefined,
+    share_eligible: toOptionalBoolean(
+      value.share_eligible ?? value.shareEligible,
+    ),
+    subject_seed_kind:
+      normalizeString(value.subject_seed_kind ?? value.subjectSeedKind) ??
+      undefined,
+    current_tenant_binding_count: toFiniteNumber(
+      value.current_tenant_binding_count ?? value.currentTenantBindingCount,
+    ),
     refresh_state:
       normalizeString(value.refresh_state ?? value.refreshState) ?? undefined,
     health_status:
@@ -137,6 +164,15 @@ export const normalizeAccountStatusView = (
     error_message: normalizeString(value.error_message ?? value.errorMessage),
     quotas,
     usage: normalizeUsageSummary(value.usage),
+    subscription_started_at: normalizeString(
+      value.subscription_started_at ?? value.subscriptionStartedAt,
+    ),
+    subscription_expires_at: normalizeString(
+      value.subscription_expires_at ?? value.subscriptionExpiresAt,
+    ),
+    subscription_source: normalizeString(
+      value.subscription_source ?? value.subscriptionSource,
+    ),
     reset_credit_count: toFiniteNumber(
       value.reset_credit_count ?? value.resetCreditCount,
     ),

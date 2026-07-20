@@ -319,12 +319,14 @@ export function AuthFilesPage() {
     uploading,
     uploadProgress,
     deletingAll,
+    batchStatusUpdating,
     statusUpdating,
     tagSavingByName,
     downloadAuthFile,
     handleDownloadSelection,
     handleUpload,
     handleDeleteSelection,
+    handleDisableSelection,
     setFileEnabled,
     saveAuthFileTags,
   } = useAuthFilesFileActions({
@@ -773,6 +775,7 @@ export function AuthFilesPage() {
     : null;
   const {
     formatPlanTypeLabel,
+    resolveStickyDisplayPlanType,
     renderRestrictionBadges,
     renderClaudeOAuthHealthBadges,
     renderSubscriptionBadge,
@@ -795,6 +798,7 @@ export function AuthFilesPage() {
     connectivityState,
     checkAuthFileConnectivity,
     quotaByFileName,
+    cycleCallsByAuthIndex: callsByAuthIndex,
     cycleBudgetByAuthIndex,
     refreshQuota,
     requestResetCredit,
@@ -861,6 +865,8 @@ export function AuthFilesPage() {
         setConfirm={setConfirm}
         selectedFileNames={selectedFileNames}
         deletingAll={deletingAll}
+        batchStatusUpdating={batchStatusUpdating}
+        handleDisableSelection={handleDisableSelection}
         pageItems={pageItems}
         fileColumns={fileColumns}
         filesViewMode={filesViewMode}
@@ -881,6 +887,7 @@ export function AuthFilesPage() {
         resolveAuthFileStats={resolveAuthFileStats}
         toggleFileSelection={toggleFileSelection}
         formatPlanTypeLabel={formatPlanTypeLabel}
+        resolveStickyDisplayPlanType={resolveStickyDisplayPlanType}
         renderRestrictionBadges={renderRestrictionBadges}
         renderClaudeOAuthHealthBadges={renderClaudeOAuthHealthBadges}
         renderSubscriptionBadge={renderSubscriptionBadge}

@@ -30,6 +30,8 @@ const Trigger = DropdownMenuPrimitive.Trigger;
 const Portal = DropdownMenuPrimitive.Portal;
 const Group = DropdownMenuPrimitive.Group;
 const ItemIndicator = DropdownMenuPrimitive.ItemIndicator;
+const Sub = DropdownMenuPrimitive.Sub;
+const RadioGroup = DropdownMenuPrimitive.RadioGroup;
 
 const CONTENT_CLASS_BY_SIZE: Record<ControlSize, string> = {
   sm: "min-w-28 p-1",
@@ -94,6 +96,62 @@ const Separator = forwardRef<
   );
 });
 
+const SubTrigger = forwardRef<
+  ComponentRef<typeof DropdownMenuPrimitive.SubTrigger>,
+  ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.SubTrigger>
+>(function DropdownMenuSubTrigger({ className, ...props }, ref) {
+  const size = useContext(DropdownMenuSizeContext);
+  return (
+    <DropdownMenuPrimitive.SubTrigger
+      ref={ref}
+      className={cn(
+        "flex w-full cursor-default select-none items-center font-medium text-slate-700 outline-none transition-colors duration-150 focus:bg-slate-100 data-[highlighted]:bg-slate-100 data-[state=open]:bg-slate-100 data-[disabled]:pointer-events-none data-[disabled]:opacity-45 dark:text-white/75 dark:focus:bg-white/10 dark:data-[highlighted]:bg-white/10 dark:data-[state=open]:bg-white/10",
+        ITEM_CLASS_BY_SIZE[size],
+        className,
+      )}
+      {...props}
+    />
+  );
+});
+
+const SubContent = forwardRef<
+  ComponentRef<typeof DropdownMenuPrimitive.SubContent>,
+  ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.SubContent>
+>(function DropdownMenuSubContent({ className, sideOffset = 6, ...props }, ref) {
+  const size = useContext(DropdownMenuSizeContext);
+  return (
+    <DropdownMenuPrimitive.SubContent
+      ref={ref}
+      sideOffset={sideOffset}
+      className={cn(
+        "z-[9999] overflow-hidden outline-none",
+        floatingPanelSurface,
+        CONTENT_CLASS_BY_SIZE[size],
+        className,
+      )}
+      {...props}
+    />
+  );
+});
+
+const RadioItem = forwardRef<
+  ComponentRef<typeof DropdownMenuPrimitive.RadioItem>,
+  ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.RadioItem>
+>(function DropdownMenuRadioItem({ className, ...props }, ref) {
+  const size = useContext(DropdownMenuSizeContext);
+  return (
+    <DropdownMenuPrimitive.RadioItem
+      ref={ref}
+      className={cn(
+        "relative flex w-full cursor-default select-none items-center font-medium text-slate-700 outline-none transition-colors duration-150 focus:bg-slate-100 data-[highlighted]:bg-slate-100 data-[disabled]:pointer-events-none data-[disabled]:opacity-45 dark:text-white/75 dark:focus:bg-white/10 dark:data-[highlighted]:bg-white/10",
+        ITEM_CLASS_BY_SIZE[size],
+        className,
+      )}
+      {...props}
+    />
+  );
+});
+
 export const DropdownMenu = {
   Root,
   Trigger,
@@ -103,4 +161,9 @@ export const DropdownMenu = {
   Item,
   ItemIndicator,
   Separator,
+  Sub,
+  SubTrigger,
+  SubContent,
+  RadioGroup,
+  RadioItem,
 };

@@ -93,7 +93,11 @@ function menuChainEnabled(
 
 function AuthorizedPage({ route }: { route: PageRoute }) {
   const { can, state } = useAuth();
-  if (route.requiredPermission && !can(route.requiredPermission)) return <ForbiddenPage />;
+  const allowed =
+    !route.requiredPermission ||
+    can(route.requiredPermission) ||
+    (route.requiredAnyPermissions?.some((p) => can(p)) ?? false);
+  if (!allowed) return <ForbiddenPage />;
   if (!menuChainEnabled(state.principal?.menus, route.path)) return <ForbiddenPage />;
   return readyRoute(route.element);
 }

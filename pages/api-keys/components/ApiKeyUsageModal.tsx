@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { RefreshCw } from "lucide-react";
-import { DataTable, Modal, SearchableSelect, Select } from "@code-proxy/ui";
+import { DataTable, Modal, SearchableSelect, type SearchableSelectOption } from "@code-proxy/ui";
 import {
   RequestLogsPaginationBar,
   RequestLogsTimeRangeSelector,
@@ -23,18 +23,18 @@ export function ApiKeyUsageModal({
   usagePageSize,
   usageLoading,
   usageLastUpdatedText,
-  usageChannelGroupQuery,
-  setUsageChannelGroupQuery,
-  setUsageChannelQuery,
-  usageChannelGroupOptions,
+  usageKeyQuery,
+  setUsageKeyQuery,
+  usageKeyOptions,
   usageChannelQuery,
-  setUsageChannelQueryDirect,
+  setUsageChannelQuery,
   usageChannelOptions,
   usageModelQuery,
   setUsageModelQuery,
   usageModelOptions,
   usageStatusFilter,
   setUsageStatusFilter,
+  usageStatusOptions,
   usageLogColumns,
   usageRows,
   usageCurrentPage,
@@ -52,18 +52,18 @@ export function ApiKeyUsageModal({
   usagePageSize: number;
   usageLoading: boolean;
   usageLastUpdatedText: string;
-  usageChannelGroupQuery: string;
-  setUsageChannelGroupQuery: (value: string) => void;
-  setUsageChannelQuery: (value: string) => void;
-  usageChannelGroupOptions: Array<{ value: string; label: string }>;
+  usageKeyQuery: string;
+  setUsageKeyQuery: (value: string) => void;
+  usageKeyOptions: SearchableSelectOption[];
   usageChannelQuery: string;
-  setUsageChannelQueryDirect: (value: string) => void;
-  usageChannelOptions: Array<{ value: string; label: string }>;
+  setUsageChannelQuery: (value: string) => void;
+  usageChannelOptions: SearchableSelectOption[];
   usageModelQuery: string;
   setUsageModelQuery: (value: string) => void;
-  usageModelOptions: Array<{ value: string; label: string }>;
+  usageModelOptions: SearchableSelectOption[];
   usageStatusFilter: StatusFilter;
   setUsageStatusFilter: (value: StatusFilter) => void;
+  usageStatusOptions: SearchableSelectOption[];
   usageLogColumns: RequestLogsTableColumn<RequestLogsRow>[];
   usageRows: RequestLogsRow[];
   usageCurrentPage: number;
@@ -114,25 +114,24 @@ export function ApiKeyUsageModal({
 
         <div className="grid gap-2 border-b border-slate-100 py-3 dark:border-neutral-800/60 sm:flex sm:flex-wrap sm:items-center">
           <SearchableSelect
-            value={usageChannelGroupQuery}
-            onChange={(value) => {
-              setUsageChannelGroupQuery(value);
-              setUsageChannelQuery("");
-            }}
-            options={usageChannelGroupOptions}
-            placeholder={t("api_keys_page.all_channel_groups")}
-            searchPlaceholder={t("api_keys_page.search_channel_groups")}
-            aria-label={t("api_keys_page.filter_channel_group")}
+            value={usageKeyQuery}
+            onChange={setUsageKeyQuery}
+            options={usageKeyOptions}
+            placeholder={t("request_logs.all_keys_placeholder")}
+            searchPlaceholder={t("request_logs.search_keys")}
+            aria-label={t("request_logs.filter_key")}
             className="w-full sm:w-auto"
+            size="sm"
           />
           <SearchableSelect
             value={usageChannelQuery}
-            onChange={setUsageChannelQueryDirect}
+            onChange={setUsageChannelQuery}
             options={usageChannelOptions}
             placeholder={t("request_logs.all_channels_placeholder")}
             searchPlaceholder={t("request_logs.search_channels")}
             aria-label={t("request_logs.filter_channel")}
             className="w-full sm:w-auto"
+            size="sm"
           />
           <SearchableSelect
             value={usageModelQuery}
@@ -142,17 +141,17 @@ export function ApiKeyUsageModal({
             searchPlaceholder={t("request_logs.search_models")}
             aria-label={t("request_logs.filter_model")}
             className="w-full sm:w-auto"
+            size="sm"
           />
-          <Select
+          <SearchableSelect
             value={usageStatusFilter}
             onChange={(value) => setUsageStatusFilter(value as StatusFilter)}
-            options={[
-              { value: "", label: t("request_logs.all_status") },
-              { value: "success", label: t("request_logs.status_success") },
-              { value: "failed", label: t("request_logs.status_failed") },
-            ]}
+            options={usageStatusOptions}
+            placeholder={t("request_logs.all_status")}
+            searchPlaceholder={t("request_logs.all_status")}
             aria-label={t("request_logs.filter_status")}
             className="w-full sm:w-auto"
+            size="sm"
           />
         </div>
 

@@ -298,6 +298,27 @@ describe("ApiKeyColumns", () => {
     expect(screen.getByRole("button", { name: "Click to enable" })).toBeInTheDocument();
   });
 
+  test("account-scoped columns drop quota fields and usage/reset actions", () => {
+    const row: ApiKeyEntry = {
+      key: "sk-owned",
+      name: "Owned",
+      "daily-spending-limit": 10,
+      "created-at": "2026-04-28T00:00:00Z",
+    };
+    const columns = createColumns({ accountScoped: true });
+    const keys = columns.map((column) => column.key);
+    const actionsColumn = columns.find((column) => column.key === "actions");
+
+    expect(keys).toEqual(["select", "name", "key", "createdAt", "actions"]);
+    expect(actionsColumn?.width).toBe("w-[220px] min-w-[220px]");
+
+    render(<div>{actionsColumn?.render(row, 0)}</div>);
+
+    expect(screen.queryByRole("button", { name: "View usage" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Reset today spending" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Copy key" })).toBeInTheDocument();
+  });
+
   test("places daily spending column immediately after name", () => {
     const columns = createColumns();
     const keys = columns.map((column) => column.key);

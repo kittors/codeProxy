@@ -6,6 +6,7 @@ import { TextInput } from "@code-proxy/ui";
 import { Select } from "@code-proxy/ui";
 import { ToggleSwitch } from "@code-proxy/ui";
 import { PayloadFilterRulesEditor, PayloadRulesEditor } from "./PayloadRuleEditors";
+import { ResourceEfficiencyPanel } from "./ResourceEfficiencyPanel";
 
 function Field({
   label,
@@ -78,6 +79,8 @@ export function VisualConfigEditor({
 
   return (
     <div className="space-y-6">
+      <ResourceEfficiencyPanel values={values} disabled={disabled} onChange={update} />
+
       <div className="grid gap-6 lg:grid-cols-2">
         <Card title={t("visual_config.basics")} description={t("visual_config.basics_desc")}>
           <div className="space-y-4">
@@ -114,7 +117,7 @@ export function VisualConfigEditor({
               <p className="text-sm text-indigo-800 dark:text-indigo-300">
                 {t("visual_config.api_migrated")}
                 <a
-                  href="/access/api-keys"
+                  href="/access/end-users"
                   className="ml-1 font-semibold underline underline-offset-2 hover:text-indigo-600 dark:hover:text-indigo-200"
                 >
                   {t("visual_config.go_to_api_keys")}
@@ -226,33 +229,15 @@ export function VisualConfigEditor({
         <Card title={t("visual_config.switches")} description={t("visual_config.runtime_desc")}>
           <div className="space-y-4">
             <ToggleSwitch
-              label={t("visual_config.debug_label")}
-              description={t("visual_config.debug_desc")}
-              checked={values.debug}
-              onCheckedChange={(next) => update({ debug: next })}
-              disabled={disabled}
-            />
-            <ToggleSwitch
               label={t("visual_config.commercial")}
-              description={t("visual_config.commercial_mode")}
+              description={t("resource_config.commercial_mode_desc")}
               checked={values.commercialMode}
               onCheckedChange={(next) => update({ commercialMode: next })}
               disabled={disabled}
             />
-            <ToggleSwitch
-              label={t("visual_config.log_to_file_label")}
-              description={t("visual_config.log_to_file_desc")}
-              checked={values.loggingToFile}
-              onCheckedChange={(next) => update({ loggingToFile: next })}
-              disabled={disabled}
-            />
-            <ToggleSwitch
-              label={t("visual_config.usage_stats_label")}
-              description={t("visual_config.usage_stats_desc")}
-              checked={values.usageStatisticsEnabled}
-              onCheckedChange={(next) => update({ usageStatisticsEnabled: next })}
-              disabled={disabled}
-            />
+            <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
+              {t("resource_config.commercial_mode_warning")}
+            </p>
             <ToggleSwitch
               label={t("config_page.auto_update")}
               description={t("config_page.auto_update_desc")}
@@ -274,6 +259,7 @@ export function VisualConfigEditor({
                   { value: "main", label: t("config_page.auto_update_channel_main") },
                   { value: "dev", label: t("config_page.auto_update_channel_dev") },
                 ]}
+                disabled={disabled}
               />
             </Field>
             <Field
@@ -409,23 +395,6 @@ export function VisualConfigEditor({
       </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card
-          title={t("visual_config.log_limits")}
-          description={t("visual_config.log_limits_desc")}
-        >
-          <div className="space-y-4">
-            <Field label="logs-max-total-size-mb" hint={t("visual_config.log_max")}>
-              <TextInput
-                value={values.logsMaxTotalSizeMb}
-                onChange={(e) => update({ logsMaxTotalSizeMb: e.currentTarget.value })}
-                placeholder="0"
-                inputMode="numeric"
-                disabled={disabled}
-              />
-            </Field>
-          </div>
-        </Card>
-
         <Card
           title={t("visual_config.quota_strategy")}
           description={t("visual_config.quota_strategy_desc")}

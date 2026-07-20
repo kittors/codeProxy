@@ -12,12 +12,7 @@ import {
   type UsageMetricVariant,
 } from "@code-proxy/domain";
 import { parseUsageTimestampMs } from "@features/monitor-widgets/monitor-utils";
-import {
-  SearchableCheckboxMultiSelect,
-  Tabs,
-  TabsList,
-  TabsTrigger,
-} from "@code-proxy/ui";
+import { SearchableCheckboxMultiSelect, Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import type { SearchableCheckboxMultiSelectOption } from "@code-proxy/ui";
 import { HoverTooltip, OverflowTooltip } from "@code-proxy/ui";
 import { PaginationBar } from "@code-proxy/ui";
@@ -40,7 +35,10 @@ export type RequestLogsRow = {
   timestamp: string;
   timestampMs: number;
   apiKey: string;
+  apiKeyId: string;
   apiKeyName: string;
+  apiKeyOwnName: string;
+  endUserDisplayName: string;
   isSystemCall: boolean;
   channelName: string;
   channelProvider?: string;
@@ -61,9 +59,7 @@ export type RequestLogsRow = {
   hasContent: boolean;
 };
 
-export function normalizeChannelAuthType(
-  authType?: string | null,
-): "oauth" | "api" | "" {
+export function normalizeChannelAuthType(authType?: string | null): "oauth" | "api" | "" {
   const raw = String(authType ?? "")
     .trim()
     .toLowerCase();
@@ -111,28 +107,19 @@ export function ChannelIdentityLabel({
   const vendor = String(provider ?? "").trim();
   const normalizedAuth = normalizeChannelAuthType(authType);
   const badgeLabel =
-    normalizedAuth === "api"
-      ? apiLabel
-      : normalizedAuth === "oauth"
-        ? oauthLabel
-        : "";
+    normalizedAuth === "api" ? apiLabel : normalizedAuth === "oauth" ? oauthLabel : "";
   // Callers can fully override name typography via nameClassName; do not stack
   // conflicting text-* utilities (plain class join is not Tailwind-merge).
   const resolvedNameClassName =
     nameClassName ??
     [
       "text-xs font-medium",
-      trimmedName
-        ? "text-slate-700 dark:text-slate-200"
-        : "text-slate-400 dark:text-white/30",
+      trimmedName ? "text-slate-700 dark:text-slate-200" : "text-slate-400 dark:text-white/30",
     ].join(" ");
 
   return (
     <span
-      className={[
-        "inline-flex min-w-0 max-w-full items-center gap-1.5",
-        className,
-      ]
+      className={["inline-flex min-w-0 max-w-full items-center gap-1.5", className]
         .filter(Boolean)
         .join(" ")}
     >
@@ -141,9 +128,7 @@ export function ChannelIdentityLabel({
           <VendorIcon modelId={vendor} size={iconSize} />
         </span>
       ) : null}
-      <span className={["min-w-0 truncate", resolvedNameClassName].join(" ")}>
-        {displayName}
-      </span>
+      <span className={["min-w-0 truncate", resolvedNameClassName].join(" ")}>{displayName}</span>
       {badgeLabel ? (
         <span
           className={[
@@ -176,9 +161,7 @@ const computeOutputTokensPerSecond = (row: RequestLogsRow): number | null => {
   const totalSeconds = parseLatencyTextToSeconds(row.latencyText);
   if (totalSeconds === null || totalSeconds <= 0) return null;
 
-  const firstSeconds = row.streaming
-    ? (parseLatencyTextToSeconds(row.firstTokenText) ?? 0)
-    : 0;
+  const firstSeconds = row.streaming ? (parseLatencyTextToSeconds(row.firstTokenText) ?? 0) : 0;
   const generationSeconds = Math.max(0, totalSeconds - firstSeconds);
   if (generationSeconds <= 0) return null;
 
@@ -187,8 +170,7 @@ const computeOutputTokensPerSecond = (row: RequestLogsRow): number | null => {
 };
 
 const formatTokensPerSecond = (value: number | null): string => {
-  if (!Number.isFinite(value ?? Number.NaN) || !value || value <= 0)
-    return "--";
+  if (!Number.isFinite(value ?? Number.NaN) || !value || value <= 0) return "--";
   if (value >= 100) return `${Math.round(value)} t/s`;
   if (value >= 10) return `${value.toFixed(1)} t/s`;
   return `${value.toFixed(2)} t/s`;
@@ -236,13 +218,7 @@ function RequestLogMetricChip({
   );
 }
 
-function RequestLogModeChip({
-  label,
-  streaming,
-}: {
-  label: string;
-  streaming: boolean;
-}) {
+function RequestLogModeChip({ label, streaming }: { label: string; streaming: boolean }) {
   return (
     <span
       className={
@@ -293,11 +269,7 @@ export function RequestLogUsageMetricValue({
       placement="top"
       className={useCompact ? "cursor-help" : undefined}
     >
-      <span
-        className={["block min-w-0 truncate", className]
-          .filter(Boolean)
-          .join(" ")}
-      >
+      <span className={["block min-w-0 truncate", className].filter(Boolean).join(" ")}>
         {display}
       </span>
     </HoverTooltip>
@@ -318,9 +290,7 @@ export interface RequestLogsTableColumn<T> {
 
 export const DEFAULT_REQUEST_LOG_PAGE_SIZE = 50;
 export const REQUEST_LOG_PAGE_SIZE_OPTIONS = [20, 50, 100];
-export const REQUEST_LOG_TIME_RANGES: readonly TimeRange[] = [
-  1, 7, 14, 30,
-] as const;
+export const REQUEST_LOG_TIME_RANGES: readonly TimeRange[] = [1, 7, 14, 30] as const;
 export const SYSTEM_REQUEST_LOG_FILTER_VALUE = "__system__";
 
 export function normalizeFilterSelection<T extends string>(
@@ -368,6 +338,7 @@ export function RequestLogFacetFilters({
   onModelsClear,
   onChannelsClear,
   onStatusesClear,
+  hideChannel = false,
 }: {
   modelOptions: SearchableCheckboxMultiSelectOption[];
   channelOptions: SearchableCheckboxMultiSelectOption[];
@@ -381,6 +352,7 @@ export function RequestLogFacetFilters({
   onModelsClear: () => void;
   onChannelsClear: () => void;
   onStatusesClear: () => void;
+  hideChannel?: boolean;
 }) {
   const { t } = useTranslation();
   const statusChangeAdapter = useMemo(
@@ -402,9 +374,7 @@ export function RequestLogFacetFilters({
           searchPlaceholder={t("request_logs.search_models")}
           selectFilteredLabel={t("request_logs.select_filtered")}
           deselectFilteredLabel={t("request_logs.deselect_filtered")}
-          selectedCountLabel={(count: number) =>
-            t("request_logs.selected_count", { count })
-          }
+          selectedCountLabel={(count: number) => t("request_logs.selected_count", { count })}
           noResultsLabel={t("request_logs.no_filter_results")}
           aria-label={t("request_logs.filter_model")}
           clearLabel={t("request_logs.clear_model_filter")}
@@ -422,35 +392,35 @@ export function RequestLogFacetFilters({
           emptySelectionLabel={t("request_logs.none_selected")}
         />
       </div>
-      <div className="w-full min-[480px]:w-auto sm:w-[180px]">
-        <SearchableCheckboxMultiSelect
-          value={selectedChannels ?? []}
-          onChange={onChannelsChange}
-          options={channelOptions}
-          placeholder={t("request_logs.all_channels_placeholder")}
-          searchPlaceholder={t("request_logs.search_channels")}
-          selectFilteredLabel={t("request_logs.select_filtered")}
-          deselectFilteredLabel={t("request_logs.deselect_filtered")}
-          selectedCountLabel={(count: number) =>
-            t("request_logs.selected_count", { count })
-          }
-          noResultsLabel={t("request_logs.no_filter_results")}
-          aria-label={t("request_logs.filter_channel")}
-          clearLabel={t("request_logs.clear_channel_filter")}
-          onClear={onChannelsClear}
-          showClearButton
-          size="sm"
-          emptyValueMeansAllSelected
-          emptyValueRepresentsAllSelected={selectedChannels === null}
-          showFilteredToggleWithoutQuery={false}
-          applyMode="manual"
-          applyLabel={t("request_logs.apply_filters")}
-          cancelLabel={t("common.cancel")}
-          selectAllLabel={t("request_logs.select_all")}
-          deselectAllLabel={t("request_logs.deselect_all")}
-          emptySelectionLabel={t("request_logs.none_selected")}
-        />
-      </div>
+      {!hideChannel ? (
+        <div className="w-full min-[480px]:w-auto sm:w-[180px]">
+          <SearchableCheckboxMultiSelect
+            value={selectedChannels ?? []}
+            onChange={onChannelsChange}
+            options={channelOptions}
+            placeholder={t("request_logs.all_channels_placeholder")}
+            searchPlaceholder={t("request_logs.search_channels")}
+            selectFilteredLabel={t("request_logs.select_filtered")}
+            deselectFilteredLabel={t("request_logs.deselect_filtered")}
+            selectedCountLabel={(count: number) => t("request_logs.selected_count", { count })}
+            noResultsLabel={t("request_logs.no_filter_results")}
+            aria-label={t("request_logs.filter_channel")}
+            clearLabel={t("request_logs.clear_channel_filter")}
+            onClear={onChannelsClear}
+            showClearButton
+            size="sm"
+            emptyValueMeansAllSelected
+            emptyValueRepresentsAllSelected={selectedChannels === null}
+            showFilteredToggleWithoutQuery={false}
+            applyMode="manual"
+            applyLabel={t("request_logs.apply_filters")}
+            cancelLabel={t("common.cancel")}
+            selectAllLabel={t("request_logs.select_all")}
+            deselectAllLabel={t("request_logs.deselect_all")}
+            emptySelectionLabel={t("request_logs.none_selected")}
+          />
+        </div>
+      ) : null}
       <div className="w-full min-[480px]:w-auto sm:w-[150px]">
         <SearchableCheckboxMultiSelect
           value={selectedStatuses ?? []}
@@ -491,8 +461,7 @@ export type RequestLogKeyOption = {
 export const maskRequestLogApiKey = (value: string): string => {
   const trimmed = value.trim();
   if (!trimmed) return "--";
-  if (trimmed.length <= 10)
-    return `${trimmed.slice(0, 2)}***${trimmed.slice(-2)}`;
+  if (trimmed.length <= 10) return `${trimmed.slice(0, 2)}***${trimmed.slice(-2)}`;
   return `${trimmed.slice(0, 6)}***${trimmed.slice(-4)}`;
 };
 
@@ -525,12 +494,15 @@ export const toRequestLogsRow = (item: UsageLogItem): RequestLogsRow => {
     timestamp: item.timestamp,
     timestampMs: parseUsageTimestampMs(item.timestamp),
     apiKey: item.api_key,
+    apiKeyId: item.api_key_id || "",
     apiKeyName: item.api_key_name || "",
+    apiKeyOwnName: item.api_key_own_name || "",
+    endUserDisplayName: item.end_user_display_name || item.api_key_name || "",
     isSystemCall,
     channelName: item.channel_name || "",
     channelProvider: String(item.provider ?? "").trim() || undefined,
     channelAuthType: channelAuthType || undefined,
-    maskedApiKey: maskRequestLogApiKey(item.api_key),
+    maskedApiKey: item.api_key_masked || maskRequestLogApiKey(item.api_key),
     model: item.model,
     upstreamModel: item.upstream_model || "",
     visionFallbackModel: item.vision_fallback_model || "",
@@ -547,17 +519,11 @@ export const toRequestLogsRow = (item: UsageLogItem): RequestLogsRow => {
   };
 };
 
-export const isSystemRequestLogKey = (
-  apiKey: string,
-  apiKeyName?: string,
-): boolean => {
+export const isSystemRequestLogKey = (apiKey: string, apiKeyName?: string): boolean => {
   if (String(apiKeyName || "").trim()) return false;
   const trimmed = String(apiKey || "").trim();
   if (!trimmed) return true;
-  return (
-    /^(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD)\s+\//i.test(trimmed) ||
-    trimmed.startsWith("/")
-  );
+  return /^(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD)\s+\//i.test(trimmed) || trimmed.startsWith("/");
 };
 
 export const buildRequestLogKeyOptions = (
@@ -602,16 +568,11 @@ export function RequestLogsTimeRangeSelector({
 }) {
   const { t } = useTranslation();
   return (
-    <Tabs
-      value={String(value)}
-      onValueChange={(next) => onChange(Number(next) as TimeRange)}
-    >
+    <Tabs value={String(value)} onValueChange={(next) => onChange(Number(next) as TimeRange)}>
       <TabsList>
         {REQUEST_LOG_TIME_RANGES.map((range) => {
           const label =
-            range === 1
-              ? t("request_logs.today")
-              : t("request_logs.n_days", { count: range });
+            range === 1 ? t("request_logs.today") : t("request_logs.n_days", { count: range });
           return (
             <TabsTrigger key={range} value={String(range)}>
               {label}
@@ -630,17 +591,19 @@ export function buildRequestLogsColumns(
   t: (key: string) => string,
   onContentClick?: (logId: number, tab: "input" | "output") => void,
   onErrorClick?: (logId: number, model: string) => void,
+  options: { identityColumn?: "user" | "key"; hideChannel?: boolean } = {},
 ): RequestLogsTableColumn<RequestLogsRow>[] {
   const apiLabel = t("request_logs.auth_type_api");
   const oauthLabel = t("request_logs.auth_type_oauth");
-  return [
+  const identityColumn = options.identityColumn ?? "user";
+  const hideChannel = options.hideChannel === true;
+  const columns: RequestLogsTableColumn<RequestLogsRow>[] = [
     {
       key: "id",
       label: t("request_logs.col_id"),
       width: "w-20",
       headerClassName: "text-left",
-      cellClassName:
-        "text-left font-mono text-xs tabular-nums text-slate-500 dark:text-white/50",
+      cellClassName: "text-left font-mono text-xs tabular-nums text-slate-500 dark:text-white/50",
       render: (row) => (
         <OverflowTooltip content={`#${row.id}`} className="block min-w-0">
           <span className="block min-w-0 truncate">#{row.id}</span>
@@ -659,13 +622,13 @@ export function buildRequestLogsColumns(
           content={formatRequestLogTimestamp(row.timestamp)}
           className="block min-w-0"
         >
-          <span className="block min-w-0 truncate">
-            {formatRequestLogTimestamp(row.timestamp)}
-          </span>
+          <span className="block min-w-0 truncate">{formatRequestLogTimestamp(row.timestamp)}</span>
         </OverflowTooltip>
       ),
     },
-    {
+  ];
+  if (!hideChannel) {
+    columns.push({
       key: "channelName",
       label: t("request_logs.col_channel"),
       // Wider default so icon + name + auth badge can share the cell; DataTable
@@ -680,11 +643,9 @@ export function buildRequestLogsColumns(
             : row.channelAuthType === "oauth"
               ? oauthLabel
               : "";
-        const tooltipParts = [
-          row.channelName || "--",
-          authLabel,
-          row.channelProvider,
-        ].filter(Boolean);
+        const tooltipParts = [row.channelName || "--", authLabel, row.channelProvider].filter(
+          Boolean,
+        );
         return (
           <OverflowTooltip
             content={tooltipParts.join(" · ")}
@@ -702,7 +663,9 @@ export function buildRequestLogsColumns(
           </OverflowTooltip>
         );
       },
-    },
+    });
+  }
+  columns.push(
     {
       key: "status",
       label: t("request_logs.col_status"),
@@ -731,8 +694,7 @@ export function buildRequestLogsColumns(
       width: "w-64",
       minWidthPx: 240,
       headerClassName: CENTERED_REQUEST_LOG_HEADER_CLASS,
-      cellClassName:
-        "text-center text-xs tabular-nums text-slate-700 dark:text-slate-200",
+      cellClassName: "text-center text-xs tabular-nums text-slate-700 dark:text-slate-200",
       render: (row) => {
         const tps = computeOutputTokensPerSecond(row);
         const tpsText = formatTokensPerSecond(tps);
@@ -740,12 +702,8 @@ export function buildRequestLogsColumns(
         const hasFirstToken = hasRequestLogMetricText(row.firstTokenText);
         const hasTps = hasRequestLogMetricText(tpsText);
         const tooltipLines = [
-          hasLatency
-            ? `${t("request_logs.col_duration")}: ${row.latencyText}`
-            : null,
-          hasFirstToken
-            ? `${t("request_logs.col_first_token")}: ${row.firstTokenText}`
-            : null,
+          hasLatency ? `${t("request_logs.col_duration")}: ${row.latencyText}` : null,
+          hasFirstToken ? `${t("request_logs.col_first_token")}: ${row.firstTokenText}` : null,
           hasTps ? `${t("request_logs.tokens_per_second")}: ${tpsText}` : null,
         ].filter((line): line is string => Boolean(line));
 
@@ -854,8 +812,7 @@ export function buildRequestLogsColumns(
       label: t("request_logs.col_total_token"),
       width: "w-28",
       headerClassName: CENTERED_REQUEST_LOG_HEADER_CLASS,
-      cellClassName:
-        "text-center font-mono text-xs tabular-nums text-slate-900 dark:text-white",
+      cellClassName: "text-center font-mono text-xs tabular-nums text-slate-900 dark:text-white",
       render: (row) => <RequestLogUsageMetricValue value={row.totalTokens} />,
     },
     {
@@ -865,34 +822,58 @@ export function buildRequestLogsColumns(
       headerClassName: CENTERED_REQUEST_LOG_HEADER_CLASS,
       cellClassName:
         "text-center font-mono text-xs tabular-nums text-emerald-700 dark:text-emerald-400",
-      render: (row) => (
-        <RequestLogUsageMetricValue value={row.cost} variant="currency" />
-      ),
+      render: (row) => <RequestLogUsageMetricValue value={row.cost} variant="currency" />,
     },
     {
       key: "apiKeyName",
-      label: t("request_logs.col_key_name"),
-      width: "w-28",
+      label:
+        identityColumn === "key" ? t("request_logs.col_key_name") : t("request_logs.col_user_name"),
+      width: "w-40",
       headerClassName: CENTERED_REQUEST_LOG_HEADER_CLASS,
       cellClassName: "text-center",
-      render: (row) => (
-        <OverflowTooltip
-          content={
-            row.isSystemCall
-              ? t("request_logs.system_call")
-              : row.apiKeyName || "--"
-          }
-          className="block min-w-0"
-        >
-          <span
-            className={`block min-w-0 truncate text-xs font-medium ${row.apiKeyName || row.isSystemCall ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400 dark:text-white/30"}`}
+      render: (row) => {
+        const keyFallback = row.maskedApiKey || (row.apiKeyId ? row.apiKeyId.slice(0, 8) : "");
+        const keyName =
+          row.apiKeyOwnName ||
+          (!row.endUserDisplayName ? row.apiKeyName : "") ||
+          keyFallback ||
+          "--";
+        if (identityColumn === "key") {
+          const displayName = row.isSystemCall ? t("request_logs.system_call") : keyName;
+          return (
+            <HoverTooltip content={displayName} className="block min-w-0">
+              <span
+                className={`block min-w-0 truncate text-xs font-medium ${displayName !== "--" ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400 dark:text-white/30"}`}
+              >
+                {displayName}
+              </span>
+            </HoverTooltip>
+          );
+        }
+        const userName = row.isSystemCall
+          ? t("request_logs.system_call")
+          : row.endUserDisplayName || row.apiKeyName || "--";
+        const showKeyName = Boolean(keyName && keyName !== userName);
+        return (
+          <HoverTooltip
+            content={showKeyName ? `${userName} · ${keyName}` : userName}
+            className="block min-w-0"
           >
-            {row.isSystemCall
-              ? t("request_logs.system_call")
-              : row.apiKeyName || "--"}
-          </span>
-        </OverflowTooltip>
-      ),
+            <span className="block min-w-0">
+              <span
+                className={`block truncate text-xs font-medium ${userName !== "--" ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400 dark:text-white/30"}`}
+              >
+                {userName}
+              </span>
+              {showKeyName ? (
+                <span className="mt-0.5 block truncate text-2xs text-slate-400 dark:text-white/35">
+                  {keyName}
+                </span>
+              ) : null}
+            </span>
+          </HoverTooltip>
+        );
+      },
     },
     {
       key: "model",
@@ -917,8 +898,7 @@ export function buildRequestLogsColumns(
                 />
               </HoverTooltip>
             ) : null}
-            {row.visionFallbackModel &&
-            row.visionFallbackModel !== row.model ? (
+            {row.visionFallbackModel && row.visionFallbackModel !== row.model ? (
               <HoverTooltip
                 content={`${t("request_logs.vision_fallback_model_id")}\n${row.visionFallbackModel}`}
                 placement="top"
@@ -934,7 +914,8 @@ export function buildRequestLogsColumns(
           <span className="text-xs text-slate-400 dark:text-white/30">--</span>
         ),
     },
-  ];
+  );
+  return columns;
 }
 
 export function RequestLogsPaginationBar({
@@ -970,8 +951,7 @@ export function RequestLogsPaginationBar({
         nextPage: t("request_logs.next_page"),
         lastPage: t("request_logs.last_page"),
         rowsPerPage: t("request_logs.rows_per_page"),
-        pageInfo: ({ start, end, total }) =>
-          t("request_logs.page_info", { start, end, total }),
+        pageInfo: ({ start, end, total }) => t("request_logs.page_info", { start, end, total }),
       }}
     />
   );

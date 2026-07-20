@@ -19,6 +19,8 @@ export interface TenantIdentity {
   effective_status: "active" | "suspended" | "disabled" | "expired";
   expires_at: string | null;
   description: string;
+  access_token_ttl_seconds?: number;
+  refresh_token_ttl_seconds?: number;
   version: number;
   created_at: string;
   updated_at: string;
@@ -109,8 +111,10 @@ export interface ManagementPrincipal {
 
 export interface LoginResponse {
   access_token: string;
+  refresh_token?: string;
   token_type: "Bearer";
   expires_at: string;
+  refresh_expires_at?: string;
   principal: ManagementPrincipal;
 }
 
@@ -185,6 +189,8 @@ export interface AuditLogsResponse {
 export const identityApi = {
   login: (body: { username: string; password: string; remember_me: boolean }) =>
     apiClient.post<LoginResponse>("/../auth/login", body),
+  refresh: (refresh_token: string) =>
+    apiClient.post<LoginResponse>("/../auth/refresh", { refresh_token }),
   me: () => apiClient.get<{ principal: ManagementPrincipal }>("/../auth/me"),
   logout: () => apiClient.post<void>("/../auth/logout"),
   changePassword: (body: { current_password: string; new_password: string }) =>
@@ -212,6 +218,8 @@ export const identityApi = {
       description?: string;
       status?: string;
       expires_at?: string;
+      access_token_ttl_seconds?: number;
+      refresh_token_ttl_seconds?: number;
       version: number;
     },
   ) => {

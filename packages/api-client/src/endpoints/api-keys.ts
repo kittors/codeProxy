@@ -25,6 +25,9 @@ export interface ApiKeyEntry {
   "permission-profile-id"?: string;
   "system-prompt"?: string;
   "created-at"?: string;
+  /** Portal end-user ownership (management list). */
+  end_user_id?: string;
+  is_default?: boolean;
 }
 
 export interface ApiKeyDailySpendingResetResult {

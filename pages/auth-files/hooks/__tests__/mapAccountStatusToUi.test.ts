@@ -8,7 +8,7 @@ import {
 import type { AiAccountLatestStatusDto } from "@code-proxy/api-client";
 
 describe("mapAccountStatusToUi", () => {
-  test("maps quota + 30d usage + reset credits by subject/index", () => {
+  test("maps quota + lifetime usage + reset credits by subject/index", () => {
     const accounts: AiAccountLatestStatusDto[] = [
       {
         auth_subject_id: "sub-77",
@@ -25,9 +25,12 @@ describe("mapAccountStatusToUi", () => {
           },
         ],
         usage: {
-          request_total_30d: 100,
-          success_total_30d: 90,
-          failure_total_30d: 10,
+          request_total: 100,
+          success_total: 90,
+          failure_total: 10,
+          request_total_30d: 80,
+          success_total_30d: 72,
+          failure_total_30d: 8,
           cycle_request_total: 4,
           cycle_cost_total: 0.5,
           weekly_quota_used_percent: 12,
@@ -62,6 +65,23 @@ describe("mapAccountStatusToUi", () => {
     });
     expect(state.status).toBe("error");
     expect(state.error).toBe("upstream_timeout");
+  });
+
+  test("unknown cycle does not emit a cycle snapshot that would wipe local 本周期", () => {
+    const patch = applyAccountStatuses([
+      {
+        auth_index: "77",
+        auth_subject_id: "sub-77",
+        quotas: [],
+        usage: {
+          cycle_known: false,
+          cycle_request_total: 0,
+          request_total: 89,
+        },
+      },
+    ]);
+    expect(patch.cycleByKey["77"]).toBeUndefined();
+    expect(patch.cycleByKey["sub-77"]).toBeUndefined();
   });
 
   test("isAccountStatusFresher prefers version then time", () => {

@@ -21,8 +21,14 @@ const mocks = vi.hoisted(() => ({
     state.entries = entries;
     return {};
   }),
-  apiKeyEntriesUpdate: vi.fn(async ({ index, value }: any) => {
-    state.entries[index] = { ...state.entries[index], ...value };
+  apiKeyEntriesUpdate: vi.fn(async ({ id, index, value }: any) => {
+    const targetIndex =
+      typeof index === "number"
+        ? index
+        : state.entries.findIndex((entry) => (id ? entry.id === id : false));
+    if (targetIndex >= 0) {
+      state.entries[targetIndex] = { ...state.entries[targetIndex], ...value };
+    }
     return {};
   }),
   apiKeyEntriesDelete: vi.fn(async ({ id, index, key }: any) => {
@@ -200,13 +206,13 @@ vi.mock("../hooks/useApiKeyUsageView", () => ({
     usageLastUpdatedText: "--",
     usageTimeRange: 7,
     setUsageTimeRange: vi.fn(),
+    usageKeyQuery: "",
+    setUsageKeyQuery: vi.fn(),
     usageChannelQuery: "",
     setUsageChannelQuery: vi.fn(),
-    usageChannelGroupQuery: "",
-    setUsageChannelGroupQuery: vi.fn(),
     usageModelQuery: "",
     setUsageModelQuery: vi.fn(),
-    usageStatusFilter: "all",
+    usageStatusFilter: "",
     setUsageStatusFilter: vi.fn(),
     usageContentModalOpen: false,
     setUsageContentModalOpen: vi.fn(),
@@ -219,9 +225,10 @@ vi.mock("../hooks/useApiKeyUsageView", () => ({
     usageLogColumns: [],
     usageRows: [],
     usageTotalPages: 1,
+    usageKeyOptions: [],
     usageChannelOptions: [],
-    usageChannelGroupOptions: [],
     usageModelOptions: [],
+    usageStatusOptions: [],
     fetchUsageLogs: mocks.fetchUsageLogs,
     handleViewUsage: mocks.handleViewUsage,
     closeUsageModal: vi.fn(),

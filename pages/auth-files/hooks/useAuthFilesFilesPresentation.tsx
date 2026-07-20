@@ -1,4 +1,4 @@
-import { useCallback, useMemo, type ReactNode } from "react";
+import { useCallback, useMemo, useRef, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
   AlertTriangle,
@@ -157,6 +157,7 @@ interface UseAuthFilesFilesPresentationOptions {
   connectivityState: Map<string, { loading: boolean; latencyMs: number | null; error: boolean }>;
   checkAuthFileConnectivity: (name: string) => Promise<void>;
   quotaByFileName: Record<string, QuotaState>;
+  cycleCallsByAuthIndex: Record<string, number>;
   cycleBudgetByAuthIndex: Record<string, AuthFileCycleBudgetStats>;
   refreshQuota: (file: AuthFileItem, provider: QuotaProvider) => Promise<void>;
   requestResetCredit: (file: AuthFileItem) => void;
@@ -184,6 +185,7 @@ export function useAuthFilesFilesPresentation({
   connectivityState,
   checkAuthFileConnectivity,
   quotaByFileName,
+  cycleCallsByAuthIndex,
   cycleBudgetByAuthIndex,
   refreshQuota,
   requestResetCredit,
@@ -195,6 +197,17 @@ export function useAuthFilesFilesPresentation({
   setFileEnabled,
   usageIndex,
 }: UseAuthFilesFilesPresentationOptions) {
+  // Sticky last-good plan tier so PRO / PRO 5X / PRO 20X do not flash on partial refresh.
+  const stickyDisplayPlanRef = useRef<Map<string, string>>(new Map());
+  const resolveStickyDisplayPlanType = useCallback(
+    (file: AuthFileItem, quotaState?: QuotaState | null, cycleStats?: AuthFileCycleBudgetStats | null) => {
+      const previous = stickyDisplayPlanRef.current.get(file.name) ?? null;
+      const next = resolveAuthFileDisplayPlanType(file, quotaState, cycleStats, previous);
+      if (next) stickyDisplayPlanRef.current.set(file.name, next);
+      return next;
+    },
+    [],
+  );
   const { t } = useTranslation();
 
   const translateQuotaText = useCallback(
@@ -735,7 +748,7 @@ export function useAuthFilesFilesPresentation({
           const badgeClass = TYPE_BADGE_CLASSES[typeKey] ?? TYPE_BADGE_CLASSES.unknown;
           const authIndex = normalizeAuthIndexValue(file.auth_index ?? file.authIndex);
           const basePlanType = resolveAuthFilePlanType(file, quotaByFileName[file.name]);
-          const planType = resolveAuthFileDisplayPlanType(
+          const planType = resolveStickyDisplayPlanType(
             file,
             quotaByFileName[file.name],
             authIndex ? cycleBudgetByAuthIndex[authIndex] : null,
@@ -829,6 +842,22 @@ export function useAuthFilesFilesPresentation({
                 <Zap size={10} />
               )}
             </button>
+          );
+        },
+      },
+      {
+        key: "cycle_calls",
+        label: t("auth_files.col_cycle_calls"),
+        width: "w-24",
+        headerClassName: "text-right",
+        cellClassName: "text-right",
+        render: (file) => {
+          const authIndex = normalizeAuthIndexValue(file.auth_index ?? file.authIndex);
+          const calls = authIndex ? cycleCallsByAuthIndex[authIndex] : undefined;
+          return (
+            <span className="text-xs font-semibold tabular-nums text-slate-700 dark:text-white/70">
+              {typeof calls === "number" ? calls : "--"}
+            </span>
           );
         },
       },
@@ -1096,6 +1125,7 @@ export function useAuthFilesFilesPresentation({
     checkAuthFileConnectivity,
     connectivityState,
     cycleBudgetByAuthIndex,
+    cycleCallsByAuthIndex,
     downloadAuthFile,
     formatQuotaItemDetailText,
     formatPlanTypeLabel,
@@ -1106,6 +1136,7 @@ export function useAuthFilesFilesPresentation({
     quotaProgressCircle,
     refreshQuota,
     requestResetCredit,
+    resolveStickyDisplayPlanType,
     renderQuotaErrorBadge,
     renderRestrictionBadges,
     renderClaudeOAuthHealthBadges,
@@ -1127,6 +1158,7 @@ export function useAuthFilesFilesPresentation({
   return {
     translateQuotaText,
     formatPlanTypeLabel,
+    resolveStickyDisplayPlanType,
     renderRestrictionBadges,
     renderClaudeOAuthHealthBadges,
     renderSubscriptionBadge,

@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { ApiKeyLookupPage } from "../ApiKeyLookupPage";
@@ -7,24 +7,27 @@ import { ToastProvider } from "@code-proxy/ui";
 import type { PublicLogItem, PublicLogsResponse } from "../types";
 
 const mocks = vi.hoisted(() => ({
-  fetchPublicLogs: vi.fn(async (): Promise<PublicLogsResponse> => ({
-    items: [],
-    total: 0,
-    page: 1,
-    size: 50,
-    api_key_name: "Primary key",
-    stats: {
+  fetchPublicLogs: vi.fn(
+    async (): Promise<PublicLogsResponse> => ({
+      items: [],
       total: 0,
-      success_rate: 0,
-      total_tokens: 0,
-      total_sessions: 0,
-      total_cost: 0,
-    },
-    filters: { models: [], channels: [], statuses: ["success", "failed"] },
-  })),
+      page: 1,
+      size: 50,
+      api_key_name: "Primary key",
+      stats: {
+        total: 0,
+        success_rate: 0,
+        total_tokens: 0,
+        total_sessions: 0,
+        total_cost: 0,
+      },
+      filters: { models: [], channels: [], statuses: ["success", "failed"] },
+    }),
+  ),
   fetchPublicChartData: vi.fn(
     async (_params?: {
       apiKey: string;
+      portalAccount?: boolean;
       days?: number;
       signal?: AbortSignal;
     }) => ({
@@ -41,7 +44,27 @@ const mocks = vi.hoisted(() => ({
       },
     }),
   ),
-  fetchAvailableModels: vi.fn(async (): Promise<string[]> => []),
+  fetchAvailableModels: vi.fn(
+    async (): Promise<
+      Array<{
+        id: string;
+        description: string;
+        ownedBy: string;
+        pricing: {
+          mode: "token" | "call";
+          inputPricePerMillion: number;
+          outputPricePerMillion: number;
+          cachedPricePerMillion: number;
+          cacheReadPricePerMillion: number;
+          cacheWritePricePerMillion: number;
+          pricePerCall: number;
+        };
+        inputModalities: string[];
+        outputModalities: string[];
+        supportsVision: boolean;
+      }>
+    > => [],
+  ),
   fetchPublicUsageSummary: vi.fn(async () => ({
     found: true,
     range: "today",
@@ -52,10 +75,7 @@ const mocks = vi.hoisted(() => ({
 
 type ChartResponse = Awaited<ReturnType<typeof mocks.fetchPublicChartData>>;
 
-const chartResponse = (
-  total: number,
-  apiKeyName = "Primary key",
-): ChartResponse => ({
+const chartResponse = (total: number, apiKeyName = "Primary key"): ChartResponse => ({
   daily_series: [],
   heatmap_series: [],
   model_distribution: [],
@@ -94,14 +114,79 @@ vi.mock("@features/log-content-viewer", () => ({
   LogContentModal: () => null,
 }));
 
+vi.mock("@code-proxy/api-client", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@code-proxy/api-client")>();
+  return {
+    ...actual,
+    portalApi: {
+      loadSession: vi.fn(() => null),
+      clearSession: () => undefined,
+      listSavedAccounts: vi.fn(() => []),
+      removeSavedAccount: vi.fn(),
+      beginAddAccount: vi.fn(),
+      switchAccount: vi.fn(() => null),
+      client: { setSession: vi.fn() },
+      login: vi.fn(),
+      logout: vi.fn(async () => undefined),
+      me: vi.fn(),
+      listKeys: vi.fn(async () => ({ items: [] })),
+      keySecret: vi.fn(),
+      createKey: vi.fn(),
+      updateKey: vi.fn(),
+      rotateKey: vi.fn(),
+      deleteKey: vi.fn(),
+      changePassword: vi.fn(),
+    },
+  };
+});
+
 describe("ApiKeyLookupPage", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     window.sessionStorage.clear();
+    window.localStorage.clear();
     window.history.replaceState({}, "", "/manage/apikey-lookup");
     vi.clearAllMocks();
+    const { portalApi } = await import("@code-proxy/api-client");
+    vi.mocked(portalApi.loadSession).mockReturnValue(null);
   });
 
-  test("opens the API key login modal when no key is stored", async () => {
+  test("shows landing first, then opens login modal from CTA", async () => {
+    const { portalApi } = await import("@code-proxy/api-client");
+    vi.mocked(portalApi.login).mockResolvedValue({
+      user: {
+        id: "u1",
+        tenant_id: "t1",
+        username: "alice",
+        display_name: "Alice",
+        status: "active",
+        must_change_password: false,
+        failed_login_count: 0,
+        lock_stage: 0,
+        created_at: "",
+        updated_at: "",
+        version: 1,
+      },
+      access_token: "cpt_test",
+      refresh_token: "cpr_test",
+      must_change_password: false,
+    } as never);
+    vi.mocked(portalApi.listKeys).mockResolvedValue({
+      items: [
+        {
+          id: "k1",
+          tenant_id: "t1",
+          end_user_id: "u1",
+          name: "default",
+          key_masked: "sk-****",
+          disabled: false,
+          is_default: true,
+          created_at: "",
+          updated_at: "",
+        },
+      ],
+    } as never);
+    vi.mocked(portalApi.keySecret).mockResolvedValue({ id: "k1", key: "sk-new-key" });
+
     render(
       <ThemeProvider>
         <ToastProvider>
@@ -110,29 +195,95 @@ describe("ApiKeyLookupPage", () => {
       </ThemeProvider>,
     );
 
+    const landing = screen.getByTestId("apikey-lookup-landing");
+    expect(landing).toBeInTheDocument();
+    expect(landing.closest(".bg-zinc-50")).not.toBeNull();
     expect(
-      screen.getByRole("dialog", { name: /enter api key/i }),
+      within(screen.getByTestId("apikey-lookup-header")).getByText("Code Proxy"),
     ).toBeInTheDocument();
+    expect(
+      within(landing).getByRole("heading", {
+        level: 1,
+        name: /one entry point|一个入口/i,
+      }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 
-    await userEvent.type(
-      screen.getByPlaceholderText(/enter api key to lookup usage/i),
-      "sk-new-key",
-    );
-    await userEvent.click(screen.getByRole("button", { name: /login/i }));
+    await userEvent.click(within(landing).getByRole("button", { name: /^(login|sign in|登录)$/i }));
+
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/enter username|请输入账号/i)).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText(/enter api key|输入 API 密钥/i)).not.toBeInTheDocument();
+
+    await userEvent.type(screen.getByPlaceholderText(/enter username|请输入账号/i), "alice");
+    await userEvent.type(screen.getByPlaceholderText(/enter password|请输入密码/i), "password123");
+    await userEvent.click(within(dialog).getByRole("button", { name: /^(login|sign in|登录)$/i }));
 
     await waitFor(() => {
-      expect(mocks.fetchPublicChartData).toHaveBeenCalledWith(
-        expect.objectContaining({ apiKey: "sk-new-key" }),
-      );
+      expect(portalApi.login).toHaveBeenCalledWith("alice", "password123", true);
     });
-    expect(mocks.fetchPublicLogs).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(screen.queryByTestId("apikey-lookup-landing")).not.toBeInTheDocument();
+    });
+    expect(await screen.findByTestId("usage-tab")).toBeInTheDocument();
   });
 
-  test("restores the last looked up API key after page refresh and shows its name", async () => {
-    window.sessionStorage.setItem(
-      "apiKeyLookup.lastApiKey.v1",
-      "sk-restored-key",
+  test("allows dismissing the login modal from the landing page", async () => {
+    render(
+      <ThemeProvider>
+        <ToastProvider>
+          <ApiKeyLookupPage />
+        </ToastProvider>
+      </ThemeProvider>,
     );
+
+    const landing = screen.getByTestId("apikey-lookup-landing");
+    await userEvent.click(within(landing).getByRole("button", { name: /^(login|sign in|登录)$/i }));
+    const dialog = await screen.findByRole("dialog");
+
+    await userEvent.click(within(dialog).getByRole("button", { name: /close/i }));
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+    expect(screen.getByTestId("apikey-lookup-landing")).toBeInTheDocument();
+  });
+
+  test("localizes invalid credentials on portal login failure", async () => {
+    const { portalApi, ApiClientError } = await import("@code-proxy/api-client");
+    vi.mocked(portalApi.login).mockRejectedValue(
+      new ApiClientError({
+        message: "invalid credentials",
+        status: 401,
+        data: { error: { code: "invalid_credentials", message: "invalid credentials" } },
+      }),
+    );
+
+    render(
+      <ThemeProvider>
+        <ToastProvider>
+          <ApiKeyLookupPage />
+        </ToastProvider>
+      </ThemeProvider>,
+    );
+
+    const landing = screen.getByTestId("apikey-lookup-landing");
+    await userEvent.click(within(landing).getByRole("button", { name: /^(login|sign in|登录)$/i }));
+    const dialog = await screen.findByRole("dialog");
+    await userEvent.type(screen.getByPlaceholderText(/enter username|请输入账号/i), "alice");
+    await userEvent.type(screen.getByPlaceholderText(/enter password|请输入密码/i), "bad-pass");
+    await userEvent.click(within(dialog).getByRole("button", { name: /^(login|sign in|登录)$/i }));
+
+    await waitFor(() => {
+      expect(
+        within(dialog).getByText(/incorrect username or password|用户名或密码错误/i),
+      ).toBeInTheDocument();
+    });
+    expect(within(dialog).queryByText(/invalid credentials/i)).not.toBeInTheDocument();
+  });
+
+  test("loads an explicit legacy API key from the URL without persisting the secret", async () => {
+    window.history.replaceState({}, "", "/manage/apikey-lookup?api_key=sk-restored-key");
 
     render(
       <ThemeProvider>
@@ -148,23 +299,155 @@ describe("ApiKeyLookupPage", () => {
       );
     });
     expect(mocks.fetchPublicLogs).not.toHaveBeenCalled();
+    expect(await screen.findByTestId("apikey-lookup-account-menu")).toBeInTheDocument();
+    expect(window.sessionStorage.getItem("apiKeyLookup.lastApiKey.v1")).toBeNull();
+    expect(window.location.search).toBe("");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  test("portal account usage ignores a stale stored secret and does not expose set-default", async () => {
+    const { portalApi } = await import("@code-proxy/api-client");
+    window.sessionStorage.setItem("apiKeyLookup.lastApiKey.v1", "sk-stale-empty-key");
+    vi.mocked(portalApi.loadSession).mockReturnValue({
+      apiBase: "http://relay.test",
+      accessToken: "cpt_account",
+      refreshToken: "cpr_account",
+      remember: false,
+      expiresAt: Date.now() + 60_000,
+    });
+    vi.mocked(portalApi.me).mockResolvedValue({
+      user: {
+        id: "u-account",
+        tenant_id: "t-account",
+        username: "alice",
+        display_name: "Alice",
+        status: "active",
+        must_change_password: false,
+        created_at: "",
+        updated_at: "",
+        version: 1,
+      },
+    } as never);
+    vi.mocked(portalApi.listKeys).mockResolvedValue({
+      items: [
+        {
+          id: "k-empty",
+          tenant_id: "t-account",
+          end_user_id: "u-account",
+          name: "New empty key",
+          key_masked: "sk-****",
+          disabled: false,
+          is_default: false,
+        },
+      ],
+    } as never);
+    vi.mocked(portalApi.keySecret).mockResolvedValue({ id: "k-empty", key: "sk-empty" });
+    mocks.fetchPublicChartData.mockResolvedValueOnce(chartResponse(37, "Alice"));
+
+    render(
+      <ThemeProvider>
+        <ToastProvider>
+          <ApiKeyLookupPage />
+        </ToastProvider>
+      </ThemeProvider>,
+    );
+
+    // Stored portal session must not flash the public landing before /me resolves.
+    expect(screen.queryByTestId("apikey-lookup-landing")).not.toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(mocks.fetchPublicChartData).toHaveBeenCalledWith(
+        expect.objectContaining({ apiKey: "", portalAccount: true }),
+      );
+    });
+    expect(await screen.findByTestId("usage-tab")).toHaveTextContent("37");
+    expect(window.sessionStorage.getItem("apiKeyLookup.lastApiKey.v1")).toBeNull();
+
+    await userEvent.click(
+      await screen.findByRole("tab", { name: /manage api keys|管理 api key/i }),
+    );
     expect(
-      await screen.findByRole("combobox", { name: /primary key/i }),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("dialog", { name: /enter api key/i }),
+      screen.queryByRole("button", { name: /set as default|设默认/i }),
     ).not.toBeInTheDocument();
+    expect(screen.queryByText(/^default$|^默认$/i)).not.toBeInTheDocument();
+  });
+
+  test("hides channel column and channel filter on public request logs", async () => {
+    window.history.replaceState({}, "", "/manage/apikey-lookup?api_key=sk-restored-key");
+    mocks.fetchPublicLogs.mockResolvedValueOnce({
+      items: [
+        {
+          id: 1,
+          timestamp: new Date("2026-07-05T03:01:18Z").toISOString(),
+          channel_name: "owner@example.com",
+          provider: "codex",
+          auth_type: "oauth",
+          model: "gpt-5.5",
+          failed: false,
+          streaming: true,
+          latency_ms: 1000,
+          first_token_ms: 100,
+          input_tokens: 1,
+          cached_tokens: 0,
+          output_tokens: 1,
+          total_tokens: 2,
+          cost: 0,
+          has_content: false,
+        },
+      ],
+      total: 1,
+      page: 1,
+      size: 50,
+      api_key_name: "Primary key",
+      stats: {
+        total: 1,
+        success_rate: 100,
+        total_tokens: 2,
+        total_sessions: 1,
+        total_cost: 0,
+      },
+      filters: {
+        models: ["gpt-5.5"],
+        channels: ["owner@example.com"],
+        channel_options: [
+          {
+            value: "authsub_codex_owner",
+            label: "owner@example.com",
+            provider: "codex",
+            auth_type: "oauth",
+          },
+        ],
+        statuses: ["success", "failed"],
+      },
+    });
+
+    render(
+      <ThemeProvider>
+        <ToastProvider>
+          <ApiKeyLookupPage />
+        </ToastProvider>
+      </ThemeProvider>,
+    );
+
+    await userEvent.click(await screen.findByRole("tab", { name: /request logs/i }));
+    await waitFor(() => {
+      expect(mocks.fetchPublicLogs).toHaveBeenCalled();
+    });
+
+    expect(screen.queryByRole("columnheader", { name: /channel|渠道/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: /filter by channel/i })).not.toBeInTheDocument();
+    expect(screen.queryByText("owner@example.com")).not.toBeInTheDocument();
   });
 
   test("loads public logs only after switching to the request logs tab", async () => {
-    window.sessionStorage.setItem(
-      "apiKeyLookup.lastApiKey.v1",
-      "sk-restored-key",
-    );
+    window.history.replaceState({}, "", "/manage/apikey-lookup?api_key=sk-restored-key");
     const logItem: PublicLogItem = {
       id: 1,
       timestamp: new Date("2026-07-05T03:01:18Z").toISOString(),
       channel_name: "Codex 主渠道",
+      api_key_name: "Alice",
+      end_user_display_name: "Alice",
+      api_key_own_name: "Laptop",
       model: "gpt-5.5",
       failed: false,
       streaming: true,
@@ -193,6 +476,14 @@ describe("ApiKeyLookupPage", () => {
       filters: {
         models: ["gpt-5.5"],
         channels: ["Codex 主渠道"],
+        channel_options: [
+          {
+            value: "authsub_codex_main",
+            label: "Codex 主渠道",
+            provider: "codex",
+            auth_type: "oauth",
+          },
+        ],
         statuses: ["success", "failed"],
       },
     });
@@ -220,18 +511,15 @@ describe("ApiKeyLookupPage", () => {
       );
     });
     expect(screen.getAllByText(/response metrics/i).length).toBeGreaterThan(0);
-    expect(await screen.findByText("Codex 主渠道")).toBeInTheDocument();
-    expect(screen.queryByText(/key name/i)).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("columnheader", { name: /^duration$/i }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Codex 主渠道")).not.toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: /key name|Key 名称/i })).toBeInTheDocument();
+    expect(screen.queryByText("Alice")).not.toBeInTheDocument();
+    expect(screen.getByText("Laptop")).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: /^duration$/i })).not.toBeInTheDocument();
   });
 
   test("uses the shared linked request-log filters on the public logs tab", async () => {
-    window.sessionStorage.setItem(
-      "apiKeyLookup.lastApiKey.v1",
-      "sk-restored-key",
-    );
+    window.history.replaceState({}, "", "/manage/apikey-lookup?api_key=sk-restored-key");
     mocks.fetchPublicLogs
       .mockResolvedValueOnce({
         items: [],
@@ -280,48 +568,53 @@ describe("ApiKeyLookupPage", () => {
       </ThemeProvider>,
     );
 
-    await userEvent.click(
-      await screen.findByRole("tab", { name: /request logs/i }),
+    await userEvent.click(await screen.findByRole("tab", { name: /request logs/i }));
+
+    expect(await screen.findByRole("combobox", { name: /filter by model/i })).toHaveTextContent(
+      /all models/i,
+    );
+    expect(screen.queryByRole("combobox", { name: /filter by channel/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: /filter by status/i })).toHaveTextContent(
+      /all status/i,
     );
 
-    expect(
-      await screen.findByRole("combobox", { name: /filter by model/i }),
-    ).toHaveTextContent(/all models/i);
-    const channelFilter = screen.getByRole("combobox", {
-      name: /filter by channel/i,
-    });
-    expect(channelFilter).toHaveTextContent(/all channels/i);
-    expect(
-      screen.getByRole("combobox", { name: /filter by status/i }),
-    ).toHaveTextContent(/all status/i);
-
-    await userEvent.click(channelFilter);
-    await userEvent.click(
-      await screen.findByRole("option", { name: "OpenCode" }),
-    );
-    await userEvent.click(
-      screen.getByRole("button", { name: /apply filters/i }),
-    );
+    await userEvent.click(screen.getByRole("combobox", { name: /filter by status/i }));
+    await userEvent.click(await screen.findByRole("option", { name: /failed|失败/i }));
+    await userEvent.click(screen.getByRole("button", { name: /apply filters/i }));
 
     await waitFor(() => {
       expect(mocks.fetchPublicLogs).toHaveBeenLastCalledWith(
         expect.objectContaining({
           apiKey: "sk-restored-key",
-          channels: ["Codex 主渠道"],
-          channelsEmpty: false,
+          statuses: ["success"],
+          statusesEmpty: false,
         }),
       );
     });
   });
 
   test("keeps cached models visible while refreshing the available models tab", async () => {
-    window.sessionStorage.setItem(
-      "apiKeyLookup.lastApiKey.v1",
-      "sk-restored-key",
-    );
-    let resolveModelsRefresh: (value: string[]) => void = () => {};
+    window.history.replaceState({}, "", "/manage/apikey-lookup?api_key=sk-restored-key");
+    const asModel = (id: string) => ({
+      id,
+      description: "",
+      ownedBy: "",
+      pricing: {
+        mode: "token" as const,
+        inputPricePerMillion: 0,
+        outputPricePerMillion: 0,
+        cachedPricePerMillion: 0,
+        cacheReadPricePerMillion: 0,
+        cacheWritePricePerMillion: 0,
+        pricePerCall: 0,
+      },
+      inputModalities: ["text"],
+      outputModalities: ["text"],
+      supportsVision: false,
+    });
+    let resolveModelsRefresh: (value: ReturnType<typeof asModel>[]) => void = () => {};
     mocks.fetchAvailableModels
-      .mockResolvedValueOnce(["gpt-5.3-codex", "claude-sonnet-4-5"])
+      .mockResolvedValueOnce([asModel("gpt-5.3-codex"), asModel("claude-sonnet-4-5")])
       .mockReturnValueOnce(
         new Promise((resolve) => {
           resolveModelsRefresh = resolve;
@@ -337,25 +630,26 @@ describe("ApiKeyLookupPage", () => {
     );
 
     await screen.findByTestId("usage-tab");
-    await userEvent.click(screen.getByRole("tab", { name: /models/i }));
+    await userEvent.click(screen.getByRole("tab", { name: /model plaza/i }));
 
     expect(await screen.findByText("gpt-5.3-codex")).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("tab", { name: /usage/i }));
-    await userEvent.click(screen.getByRole("tab", { name: /models/i }));
+    await userEvent.click(screen.getByRole("tab", { name: /model plaza/i }));
 
     expect(screen.getByText("gpt-5.3-codex")).toBeInTheDocument();
     expect(mocks.fetchAvailableModels).toHaveBeenCalledTimes(2);
 
-    resolveModelsRefresh(["gpt-5.3-codex", "claude-sonnet-4-5", "deepseek-v4"]);
+    resolveModelsRefresh([
+      asModel("gpt-5.3-codex"),
+      asModel("claude-sonnet-4-5"),
+      asModel("deepseek-v4"),
+    ]);
     expect(await screen.findByText("deepseek-v4")).toBeInTheDocument();
   });
 
   test("does not duplicate the current key in the header menu", async () => {
-    window.sessionStorage.setItem(
-      "apiKeyLookup.lastApiKey.v1",
-      "sk-restored-key",
-    );
+    window.history.replaceState({}, "", "/manage/apikey-lookup?api_key=sk-restored-key");
 
     render(
       <ThemeProvider>
@@ -365,24 +659,61 @@ describe("ApiKeyLookupPage", () => {
       </ThemeProvider>,
     );
 
-    await userEvent.click(
-      await screen.findByRole("combobox", { name: /primary key/i }),
-    );
-
-    expect(
-      screen.queryByRole("option", { name: /primary key/i }),
-    ).not.toBeInTheDocument();
-    expect(screen.getByRole("option", { name: /logout/i })).toHaveAttribute(
-      "aria-selected",
-      "false",
-    );
+    await userEvent.click(await screen.findByTestId("apikey-lookup-account-menu"));
+    const menu = await screen.findByTestId("apikey-lookup-account-menu-content");
+    expect(within(menu).queryByText(/primary key/i)).not.toBeInTheDocument();
+    expect(within(menu).getByText(/logout|退出登录|登出/i)).toBeInTheDocument();
   });
 
-  test("logs out from the header menu and asks for the API key again", async () => {
-    window.sessionStorage.setItem(
-      "apiKeyLookup.lastApiKey.v1",
-      "sk-restored-key",
-    );
+  test("confirms before deleting a managed API key", async () => {
+    const { portalApi } = await import("@code-proxy/api-client");
+    const keys = [
+      {
+        id: "k1",
+        tenant_id: "t1",
+        end_user_id: "u1",
+        name: "primary",
+        key_masked: "sk-****1",
+        disabled: false,
+        is_default: true,
+        created_at: "",
+        updated_at: "",
+      },
+      {
+        id: "k2",
+        tenant_id: "t1",
+        end_user_id: "u1",
+        name: "secondary",
+        key_masked: "sk-****2",
+        disabled: false,
+        is_default: false,
+        created_at: "",
+        updated_at: "",
+      },
+    ];
+    vi.mocked(portalApi.login).mockResolvedValue({
+      user: {
+        id: "u1",
+        tenant_id: "t1",
+        username: "alice",
+        display_name: "Alice",
+        status: "active",
+        must_change_password: false,
+        failed_login_count: 0,
+        lock_stage: 0,
+        created_at: "",
+        updated_at: "",
+        version: 1,
+      },
+      access_token: "cpt_test",
+      refresh_token: "cpr_test",
+      must_change_password: false,
+    } as never);
+    vi.mocked(portalApi.listKeys)
+      .mockResolvedValueOnce({ items: keys } as never)
+      .mockResolvedValue({ items: [keys[0]] } as never);
+    vi.mocked(portalApi.keySecret).mockResolvedValue({ id: "k1", key: "sk-primary" });
+    vi.mocked(portalApi.deleteKey).mockResolvedValue(undefined as never);
 
     render(
       <ThemeProvider>
@@ -392,24 +723,74 @@ describe("ApiKeyLookupPage", () => {
       </ThemeProvider>,
     );
 
+    const landing = screen.getByTestId("apikey-lookup-landing");
+    await userEvent.click(within(landing).getByRole("button", { name: /^(login|sign in|登录)$/i }));
+    const loginDialog = await screen.findByRole("dialog");
+    await userEvent.type(screen.getByPlaceholderText(/enter username|请输入账号/i), "alice");
+    await userEvent.type(screen.getByPlaceholderText(/enter password|请输入密码/i), "password123");
     await userEvent.click(
-      await screen.findByRole("combobox", { name: /primary key/i }),
+      within(loginDialog).getByRole("button", { name: /^(login|sign in|登录)$/i }),
     );
-    await userEvent.click(screen.getByRole("option", { name: /logout/i }));
+    await waitFor(() => {
+      expect(screen.queryByTestId("apikey-lookup-landing")).not.toBeInTheDocument();
+    });
 
-    expect(
-      window.sessionStorage.getItem("apiKeyLookup.lastApiKey.v1"),
-    ).toBeNull();
-    expect(
-      screen.getByRole("dialog", { name: /enter api key/i }),
-    ).toBeInTheDocument();
+    await userEvent.click(
+      await screen.findByRole("tab", { name: /manage api keys|管理 api key/i }),
+    );
+    expect(await screen.findByText("secondary")).toBeInTheDocument();
+    const deleteButtons = screen.getAllByRole("button", { name: /^(delete|删除)$/i });
+    expect(deleteButtons.length).toBeGreaterThanOrEqual(2);
+    await userEvent.click(deleteButtons[1]);
+
+    expect(portalApi.deleteKey).not.toHaveBeenCalled();
+    const confirmDialog = await screen.findByRole("dialog");
+    expect(confirmDialog).toHaveTextContent(/delete api key|删除 api key/i);
+    expect(confirmDialog).toHaveTextContent("secondary");
+
+    await userEvent.click(within(confirmDialog).getByRole("button", { name: /^(cancel|取消)$/i }));
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+    expect(portalApi.deleteKey).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getAllByRole("button", { name: /^(delete|删除)$/i })[1]);
+    await userEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: /^(delete|删除)$/i,
+      }),
+    );
+
+    await waitFor(() => {
+      expect(portalApi.deleteKey).toHaveBeenCalledWith("k2");
+    });
+  });
+
+  test("logs out from the header menu and returns to the landing page", async () => {
+    window.history.replaceState({}, "", "/manage/apikey-lookup?api_key=sk-restored-key");
+
+    render(
+      <ThemeProvider>
+        <ToastProvider>
+          <ApiKeyLookupPage />
+        </ToastProvider>
+      </ThemeProvider>,
+    );
+
+    await userEvent.click(await screen.findByTestId("apikey-lookup-account-menu"));
+    await userEvent.click(
+      within(await screen.findByTestId("apikey-lookup-account-menu-content")).getByText(
+        /logout|退出登录|登出/i,
+      ),
+    );
+
+    expect(window.sessionStorage.getItem("apiKeyLookup.lastApiKey.v1")).toBeNull();
+    expect(screen.getByTestId("apikey-lookup-landing")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   test("shows cached usage data while refreshing chart data", async () => {
-    window.sessionStorage.setItem(
-      "apiKeyLookup.lastApiKey.v1",
-      "sk-restored-key",
-    );
+    window.history.replaceState({}, "", "/manage/apikey-lookup?api_key=sk-restored-key");
     // Legacy v1 unscoped chart cache migrates into the default tenant bucket.
     window.sessionStorage.setItem(
       "apiKeyLookup.chartCache.v1",
@@ -465,28 +846,151 @@ describe("ApiKeyLookupPage", () => {
       },
     });
 
-    await waitFor(() =>
-      expect(screen.getByTestId("usage-tab")).toHaveTextContent("24"),
-    );
+    await waitFor(() => expect(screen.getByTestId("usage-tab")).toHaveTextContent("24"));
     // After refresh, data is written under the tenant-scoped v2 key.
-    expect(
-      window.sessionStorage.getItem("apiKeyLookup.chartCache.v2"),
-    ).toContain('"total":24');
+    expect(window.sessionStorage.getItem("apiKeyLookup.chartCache.v2")).toContain('"total":24');
     expect(window.sessionStorage.getItem("apiKeyLookup.chartCache.v1")).toBeNull();
   });
 
-  test("ignores stale chart responses after rapid time range changes", async () => {
+  test("keeps warm account chart cache when switching portal accounts", async () => {
+    const { portalApi } = await import("@code-proxy/api-client");
+    const accountA = {
+      accountKey: "http://relay.test\0u-a",
+      apiBase: "http://relay.test",
+      accessToken: "cpt_a",
+      refreshToken: "cpr_a",
+      remember: true,
+      expiresAt: Date.now() + 60_000,
+      lastUsedAt: Date.now(),
+      user: { id: "u-a", username: "alice", display_name: "Alice" },
+    };
+    const accountB = {
+      accountKey: "http://relay.test\0u-b",
+      apiBase: "http://relay.test",
+      accessToken: "cpt_b",
+      refreshToken: "cpr_b",
+      remember: true,
+      expiresAt: Date.now() + 60_000,
+      lastUsedAt: Date.now() - 1_000,
+      user: { id: "u-b", username: "bob", display_name: "Bob" },
+    };
+
+    vi.mocked(portalApi.loadSession).mockReturnValue({
+      apiBase: accountA.apiBase,
+      accessToken: accountA.accessToken,
+      refreshToken: accountA.refreshToken,
+      remember: true,
+      expiresAt: accountA.expiresAt,
+      user: accountA.user,
+    });
+    vi.mocked(portalApi.listSavedAccounts).mockReturnValue([accountA, accountB] as never);
+    vi.mocked(portalApi.switchAccount).mockImplementation((key: string) => {
+      const target =
+        key === accountB.accountKey ? accountB : key === accountA.accountKey ? accountA : null;
+      if (!target) return null;
+      vi.mocked(portalApi.loadSession).mockReturnValue({
+        apiBase: target.apiBase,
+        accessToken: target.accessToken,
+        refreshToken: target.refreshToken,
+        remember: true,
+        expiresAt: target.expiresAt,
+        user: target.user,
+      });
+      return target as never;
+    });
+    vi.mocked(portalApi.me).mockImplementation(async () => {
+      const snap = portalApi.loadSession();
+      const id = snap?.user?.id === "u-b" ? "u-b" : "u-a";
+      return {
+        user: {
+          id,
+          tenant_id: "t1",
+          username: id === "u-b" ? "bob" : "alice",
+          display_name: id === "u-b" ? "Bob" : "Alice",
+          status: "active",
+          must_change_password: false,
+          created_at: "",
+          updated_at: "",
+          version: 1,
+        },
+      } as never;
+    });
+    vi.mocked(portalApi.listKeys).mockResolvedValue({
+      items: [
+        {
+          id: "k1",
+          tenant_id: "t1",
+          end_user_id: "u-a",
+          name: "default",
+          key_masked: "sk-****",
+          disabled: false,
+          is_default: true,
+        },
+      ],
+    } as never);
+    vi.mocked(portalApi.keySecret).mockResolvedValue({ id: "k1", key: "sk-op" });
+
     window.sessionStorage.setItem(
-      "apiKeyLookup.lastApiKey.v1",
-      "sk-restored-key",
+      "apiKeyLookup.chartCache.v2",
+      JSON.stringify({
+        byTenant: {
+          default: {
+            "account:u-a|7": chartResponse(11, "Alice"),
+            "account:u-b|7": chartResponse(77, "Bob"),
+          },
+        },
+      }),
     );
+
+    let resolveBChart: (value: ChartResponse) => void = () => {};
+    mocks.fetchPublicChartData.mockImplementation(async (params?: { portalAccount?: boolean }) => {
+      if (!params?.portalAccount) return chartResponse(0);
+      const snap = portalApi.loadSession();
+      if (snap?.user?.id === "u-b") {
+        return new Promise<ChartResponse>((resolve) => {
+          resolveBChart = resolve;
+        });
+      }
+      return chartResponse(11, "Alice");
+    });
+
+    render(
+      <ThemeProvider>
+        <ToastProvider>
+          <ApiKeyLookupPage />
+        </ToastProvider>
+      </ThemeProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("usage-tab")).toHaveTextContent("11"));
+
+    const accountMenuTrigger = await screen.findByTestId("apikey-lookup-account-menu");
+    await userEvent.click(accountMenuTrigger);
+    await userEvent.click(await screen.findByTestId("apikey-lookup-switch-account-trigger"));
+    await userEvent.click(await screen.findByTestId("apikey-lookup-switch-u-b"));
+
+    await waitFor(() => expect(accountMenuTrigger).not.toHaveFocus());
+
+    // Warm B: paint cached stats immediately (no skeleton / no-stats flash).
+    await waitFor(() => expect(screen.getByTestId("usage-tab")).toHaveTextContent("77"));
+    expect(screen.getByTestId("usage-tab")).not.toHaveTextContent("no-stats");
+    // Multi-account chart cache must survive the switch wipe path.
+    expect(window.sessionStorage.getItem("apiKeyLookup.chartCache.v2")).toContain("account:u-b|7");
+    expect(window.sessionStorage.getItem("apiKeyLookup.chartCache.v2")).toContain('"total":77');
+
+    resolveBChart(chartResponse(88, "Bob fresh"));
+    await waitFor(() => expect(screen.getByTestId("usage-tab")).toHaveTextContent("88"));
+  });
+
+  test("ignores stale chart responses after rapid time range changes", async () => {
+    window.history.replaceState({}, "", "/manage/apikey-lookup?api_key=sk-restored-key");
     const pending: Array<{
       days: number;
       signal?: AbortSignal;
       resolve: (value: ChartResponse) => void;
     }> = [];
     mocks.fetchPublicChartData.mockImplementation(
-      (params?: { apiKey: string; days?: number; signal?: AbortSignal }) =>
+      (params?: { apiKey: string; portalAccount?: boolean; days?: number; signal?: AbortSignal }) =>
         new Promise<ChartResponse>((resolve) => {
           pending.push({
             days: params?.days ?? 7,
@@ -514,29 +1018,22 @@ describe("ApiKeyLookupPage", () => {
     if (!latest) throw new Error("missing latest chart request");
 
     latest.resolve(chartResponse(7, "Range 7"));
-    await waitFor(() =>
-      expect(screen.getByTestId("usage-tab")).toHaveTextContent("7"),
-    );
+    await waitFor(() => expect(screen.getByTestId("usage-tab")).toHaveTextContent("7"));
 
     for (const request of pending) {
       if (request !== latest) {
-        request.resolve(
-          chartResponse(request.days * 100, `Range ${request.days}`),
-        );
+        request.resolve(chartResponse(request.days * 100, `Range ${request.days}`));
       }
     }
 
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(screen.getByTestId("usage-tab")).toHaveTextContent("7");
-    expect(
-      pending.some((request) => request.days === 30 && request.signal?.aborted),
-    ).toBe(true);
+    expect(pending.some((request) => request.days === 30 && request.signal?.aborted)).toBe(true);
   });
 
   test("pins results toolbar with sticky top offset and collapses header on scroll", async () => {
     let toolbarTop = 120;
-    const originalGetBoundingClientRect =
-      Element.prototype.getBoundingClientRect;
+    const originalGetBoundingClientRect = Element.prototype.getBoundingClientRect;
     Element.prototype.getBoundingClientRect = function getBoundingClientRect() {
       const el = this as HTMLElement;
       if (el.dataset?.testid === "apikey-lookup-toolbar-sticky") {
@@ -555,10 +1052,7 @@ describe("ApiKeyLookupPage", () => {
       return originalGetBoundingClientRect.call(this);
     };
 
-    window.sessionStorage.setItem(
-      "apiKeyLookup.lastApiKey.v1",
-      "sk-restored-key",
-    );
+    window.history.replaceState({}, "", "/manage/apikey-lookup?api_key=sk-restored-key");
 
     try {
       render(

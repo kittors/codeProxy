@@ -120,8 +120,7 @@ const mocks = vi.hoisted(() => ({
   getRequestLogBodyStorage: vi.fn(),
 }));
 
-const expectSignalOptions = () =>
-  expect.objectContaining({ signal: expect.any(AbortSignal) });
+const expectSignalOptions = () => expect.objectContaining({ signal: expect.any(AbortSignal) });
 
 function installLocalStorageMock() {
   const store = new Map<string, string>();
@@ -197,7 +196,10 @@ describe("RequestLogsPage", () => {
           id: 1,
           timestamp: "2026-04-08T12:00:00Z",
           api_key: "sk-test-123456",
-          api_key_name: "Primary",
+          api_key_id: "key-laptop-123456",
+          api_key_name: "Zhang Bolun",
+          end_user_display_name: "Zhang Bolun",
+          api_key_own_name: "Laptop",
           model: "gpt-5.4",
           source: "codex",
           channel_name: "Codex",
@@ -245,10 +247,18 @@ describe("RequestLogsPage", () => {
     expect(
       within(table).getByRole("columnheader", { name: "Response Metrics" }),
     ).toBeInTheDocument();
+    expect(within(table).getByRole("columnheader", { name: "User Name" })).toBeInTheDocument();
+    expect(within(table).getByText("Zhang Bolun")).toBeInTheDocument();
+    expect(within(table).getByText("Laptop")).toBeInTheDocument();
     expect(within(table).getByText("Streaming")).toBeInTheDocument();
     expect(within(table).getByText("1.20s")).toBeInTheDocument();
     expect(within(table).getByText("183ms")).toBeInTheDocument();
     expect(within(table).queryByText("First Token Latency")).not.toBeInTheDocument();
+
+    await user.hover(within(table).getByText("Zhang Bolun"));
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Zhang Bolun · Laptop");
+    await user.unhover(within(table).getByText("Zhang Bolun"));
+    await waitFor(() => expect(screen.queryByRole("tooltip")).not.toBeInTheDocument());
 
     await user.hover(within(table).getByLabelText("Duration: 1.20s"));
     expect(await screen.findByRole("tooltip")).toHaveTextContent("First Token Latency: 183ms");
@@ -429,7 +439,7 @@ describe("RequestLogsPage", () => {
 
     const [keyFilter, modelFilter, channelFilter, statusFilter] =
       await screen.findAllByRole("combobox");
-    expect(keyFilter).toHaveTextContent("All Keys");
+    expect(keyFilter).toHaveTextContent("All Users");
     expect(modelFilter).toHaveTextContent("All Models");
     expect(channelFilter).toHaveTextContent("All Channels");
     expect(statusFilter).toHaveTextContent("All Status");
@@ -591,7 +601,7 @@ describe("RequestLogsPage", () => {
     expect(await screen.findByRole("button", { name: "Deselect all" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Deselect all" }));
-    expect(screen.getByRole("combobox", { name: "Filter by Key name" })).toHaveTextContent(
+    expect(screen.getByRole("combobox", { name: "Filter by user name" })).toHaveTextContent(
       "0 selected",
     );
 

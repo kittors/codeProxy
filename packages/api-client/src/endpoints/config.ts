@@ -10,7 +10,6 @@ export interface CodexOAuthAdmissionConfig {
   allowed_clients?: string[];
 }
 
-
 export interface RequestLogBodyStorageResponse {
   enabled: boolean;
   cleanup?: {
@@ -19,6 +18,10 @@ export interface RequestLogBodyStorageResponse {
     cleared_body_rows: number;
     cleared_detail_rows: number;
     cleared_legacy_rows: number;
+    sanitized_detail_rows?: number;
+    removed_detail_bytes?: number;
+    reclaimed_storage?: boolean;
+    physical_reclaim_deferred?: boolean;
   };
 }
 
@@ -42,6 +45,18 @@ export const configApi = {
     apiClient.put("/quota-exceeded/switch-preview-model", { value: enabled }),
   updateUsageStatistics: (enabled: boolean) =>
     apiClient.put("/usage-statistics-enabled", { value: enabled }),
+  getUsageStatisticsEnabled: async (): Promise<boolean> => {
+    const data = await apiClient.get<Record<string, unknown>>("/usage-statistics-enabled");
+    return Boolean(data?.["usage-statistics-enabled"] ?? data?.usageStatisticsEnabled ?? false);
+  },
+  getDebug: async (): Promise<boolean> => {
+    const data = await apiClient.get<Record<string, unknown>>("/debug");
+    return Boolean(data?.debug ?? false);
+  },
+  getRequestLog: async (): Promise<boolean> => {
+    const data = await apiClient.get<Record<string, unknown>>("/request-log");
+    return Boolean(data?.["request-log"] ?? data?.requestLog ?? false);
+  },
   updateRequestLog: (enabled: boolean) => apiClient.put("/request-log", { value: enabled }),
   getRequestLogBodyStorage: async (): Promise<boolean> => {
     const data = await apiClient.get<RequestLogBodyStorageResponse>(
@@ -58,7 +73,25 @@ export const configApi = {
       },
       { timeoutMs: 10 * 60_000 },
     ),
+  getLoggingToFile: async (): Promise<boolean> => {
+    const data = await apiClient.get<Record<string, unknown>>("/logging-to-file");
+    return Boolean(data?.["logging-to-file"] ?? data?.loggingToFile ?? false);
+  },
   updateLoggingToFile: (enabled: boolean) => apiClient.put("/logging-to-file", { value: enabled }),
+  getWsAuth: async (): Promise<boolean> => {
+    const data = await apiClient.get<Record<string, unknown>>("/ws-auth");
+    return Boolean(data?.["ws-auth"] ?? data?.wsAuth ?? false);
+  },
+  getSwitchProject: async (): Promise<boolean> => {
+    const data = await apiClient.get<Record<string, unknown>>("/quota-exceeded/switch-project");
+    return Boolean(data?.["switch-project"] ?? data?.switchProject ?? false);
+  },
+  getSwitchPreviewModel: async (): Promise<boolean> => {
+    const data = await apiClient.get<Record<string, unknown>>(
+      "/quota-exceeded/switch-preview-model",
+    );
+    return Boolean(data?.["switch-preview-model"] ?? data?.switchPreviewModel ?? false);
+  },
   getLogsMaxTotalSizeMb: async (): Promise<number> => {
     const data = await apiClient.get<Record<string, unknown>>("/logs-max-total-size-mb");
     const value = data?.["logs-max-total-size-mb"] ?? data?.logsMaxTotalSizeMb ?? 0;

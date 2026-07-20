@@ -1,6 +1,6 @@
 # codeProxy Bundle Baseline
 
-更新时间：2026-07-13 11:32:00 +0800
+更新时间：2026-07-20 11:41:00 +0800
 
 ## 当前构建命令
 
@@ -17,7 +17,7 @@ bun run build
 | `vendor-markdown`    |  761.13 kB | 263.84 kB | Markdown + syntax highlighter 组合                                          |
 | `vendor-animation`   |  126.21 kB |  41.93 kB | 动画依赖独立 vendor chunk                                                   |
 | `vendor-charts`      |    0.07 kB |   0.08 kB | Chart.js 入口当前几乎未进入业务路径                                         |
-| `index`              |  372.68 kB | 115.07 kB | 纳入部署后懒加载 chunk 失效自动恢复（单次硬刷新 + ErrorBoundary）；后续仍需往下压 |
+| `index`              |  396.29 kB | 121.04 kB | 多账号切换（AuthProvider vault + AppShell 账号菜单）进入 shell 入口；后续可再拆 account menu |
 | `ConfigPage`         |  119.60 kB |  33.35 kB | 页面 chunk 低于预算                                                         |
 | `AuthFilesPage`      |  216.81 kB |  58.90 kB | 身份多档案与出站策略交互加入后仍低于页面 gzip 预算                          |
 | `ProvidersPage`      |  121.98 kB |  30.85 kB | 已低于 `< 80 kB gzip` 页面预算                                              |

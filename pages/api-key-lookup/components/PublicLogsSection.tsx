@@ -15,15 +15,11 @@ export function PublicLogsSection({
   t,
   statusOptions,
   modelOptions,
-  channelOptions,
   selectedModels,
-  selectedChannels,
   selectedStatuses,
   onModelsChange,
-  onChannelsChange,
   onStatusesChange,
   onModelsClear,
-  onChannelsClear,
   onStatusesClear,
   stats,
   lastUpdatedText,
@@ -39,16 +35,12 @@ export function PublicLogsSection({
 }: {
   t: (key: string, options?: Record<string, unknown>) => string;
   modelOptions: SearchableCheckboxMultiSelectOption[];
-  channelOptions: SearchableCheckboxMultiSelectOption[];
   statusOptions: SearchableCheckboxMultiSelectOption[];
   selectedModels: MultiSelectFilterState<string>;
-  selectedChannels: MultiSelectFilterState<string>;
   selectedStatuses: MultiSelectFilterState<StatusFilterValue>;
   onModelsChange: (value: string[]) => void;
-  onChannelsChange: (value: string[]) => void;
   onStatusesChange: (value: StatusFilterValue[]) => void;
   onModelsClear: () => void;
-  onChannelsClear: () => void;
   onStatusesClear: () => void;
   stats: {
     total: number;
@@ -75,17 +67,18 @@ export function PublicLogsSection({
             <div className="grid grid-cols-1 gap-2 sm:flex sm:items-center sm:gap-2">
               <RequestLogFacetFilters
                 modelOptions={modelOptions}
-                channelOptions={channelOptions}
+                channelOptions={[]}
                 statusOptions={statusOptions}
                 selectedModels={selectedModels}
-                selectedChannels={selectedChannels}
+                selectedChannels={null}
                 selectedStatuses={selectedStatuses}
                 onModelsChange={onModelsChange}
-                onChannelsChange={onChannelsChange}
+                onChannelsChange={() => {}}
                 onStatusesChange={onStatusesChange}
                 onModelsClear={onModelsClear}
-                onChannelsClear={onChannelsClear}
+                onChannelsClear={() => {}}
                 onStatusesClear={onStatusesClear}
+                hideChannel
               />
             </div>
 

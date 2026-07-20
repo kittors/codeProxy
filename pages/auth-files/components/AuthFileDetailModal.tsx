@@ -190,7 +190,7 @@ interface AuthFileDetailModalProps {
   deleteIdentityFingerprintProfile: (profileKey: string) => Promise<void>;
   refreshDetailTrend: (file?: AuthFileItem | null, options?: { silent?: boolean }) => Promise<void>;
   loadModelsForDetail: (file: AuthFileItem, options?: { force?: boolean }) => Promise<void>;
-  loadModelOwnerGroups: () => Promise<void>;
+  loadModelOwnerGroups: (options?: { silent?: boolean }) => Promise<void>;
   modelsLoading: boolean;
   modelsError: string | null;
   modelsList: AuthFileModelItem[];
@@ -1332,7 +1332,7 @@ export function AuthFileDetailModal({
               variant="secondary"
               onClick={() => {
                 if (usesMappedModelOwner) {
-                  void loadModelOwnerGroups();
+                  void loadModelOwnerGroups({ silent: true });
                 } else {
                   void loadModelsForDetail(detailFile, { force: true });
                 }

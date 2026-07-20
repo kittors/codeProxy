@@ -1,9 +1,18 @@
 export interface AuthSnapshot {
   apiBase: string;
   managementKey: string;
+  refreshToken?: string;
   rememberPassword: boolean;
   /** Platform-admin override; empty/omitted means home tenant (no X-Effective-Tenant-ID). */
   effectiveTenantId?: string;
+  /** User id for the active admin session. */
+  accountId?: string;
+  username?: string;
+  displayName?: string;
+  /** Access-token wall clock expiry (ms). */
+  expiresAtMs?: number;
+  /** Refresh-token wall clock expiry (ms). */
+  refreshExpiresAtMs?: number;
 }
 
 export type AuthFileType =
@@ -98,8 +107,10 @@ export interface AuthFileCodexImageGenerationBridge {
   enabled?: boolean;
 }
 
-export type AuthFileIdentityFingerprintProvider = "claude" | "codex" | "gemini" | "xai";
-export type AuthFileIdentityFingerprintSource = "learned" | "preset" | "builtin_default";
+export type AuthFileIdentityFingerprintProvider =
+  "claude" | "codex" | "gemini" | "xai";
+export type AuthFileIdentityFingerprintSource =
+  "learned" | "preset" | "builtin_default";
 
 export interface AuthFileIdentityFingerprintSummary {
   provider: AuthFileIdentityFingerprintProvider;
@@ -136,6 +147,14 @@ export interface AuthFileItem extends TagDisplayFields {
   /** Canonical subject id shared by multi-file accounts (status merge key). */
   auth_subject_id?: string | null;
   authSubjectId?: string | null;
+  account_status_scope?: string;
+  subject_scope?: "shared" | "tenant" | string;
+  share_eligible?: boolean;
+  usage_history_complete?: boolean;
+  usage_projected_since?: string | null;
+  shared_subscription_started_at?: string | null;
+  shared_subscription_expires_at?: string | null;
+  shared_subscription_source?: string | null;
   runtimeOnly?: boolean | string;
   runtime_only?: boolean | string;
   disabled?: boolean;
@@ -416,6 +435,12 @@ export interface AiAccountQuotaItemDto {
 /** Backend AccountStatusView usage summary (authoritative). */
 export interface AiAccountUsageSummaryDto {
   auth_subject_id?: string;
+  /** Shared physical-account lifetime projection, never tenant billing. */
+  request_total?: number | null;
+  success_total?: number | null;
+  failure_total?: number | null;
+  cost_total?: number | null;
+  success_rate?: number | null;
   request_total_7d?: number | null;
   cost_total_7d?: number | null;
   request_total_30d?: number | null;
@@ -425,6 +450,8 @@ export interface AiAccountUsageSummaryDto {
   cycle_cost_total?: number | null;
   cycle_known?: boolean;
   cycle_start?: string | null;
+  projected_since?: string | null;
+  history_complete?: boolean;
   weekly_quota_used_percent?: number | null;
   updated_at?: string | null;
 }
@@ -440,6 +467,11 @@ export interface AiAccountLatestStatusDto {
   auth_subject_id?: string;
   auth_index: string;
   provider?: string;
+  status_scope?: "shared_subject" | string;
+  subject_scope?: "shared" | "tenant" | string;
+  share_eligible?: boolean;
+  subject_seed_kind?: string;
+  current_tenant_binding_count?: number | null;
   refresh_state?: string;
   health_status?: string;
   plan_type?: string | null;
@@ -450,6 +482,9 @@ export interface AiAccountLatestStatusDto {
   error_message?: string | null;
   quotas: AiAccountQuotaItemDto[];
   usage?: AiAccountUsageSummaryDto | null;
+  subscription_started_at?: string | null;
+  subscription_expires_at?: string | null;
+  subscription_source?: "probe" | "signed_claims" | "migration" | string | null;
   /** Optional Codex reset-credit fields retained by backend. */
   reset_credit_count?: number | null;
   reset_credit_expirations?: string[];
@@ -482,10 +517,7 @@ export interface AiAccountStatusRefreshAcceptedDto {
 export type AiAccountStatusRefreshJobState = "running" | "completed";
 
 export type AiAccountStatusRefreshAccountState =
-  | "queued"
-  | "running"
-  | "success"
-  | "error";
+  "queued" | "running" | "success" | "error";
 
 export interface AiAccountStatusRefreshAccountResultDto {
   auth_index: string;

@@ -39,11 +39,23 @@ describe("auth-storage effective tenant persistence", () => {
 
     const raw = localStorage.getItem(AUTH_STORAGE_KEY);
     expect(raw).toContain("tenant-acme");
+    expect(sessionStorage.getItem(AUTH_STORAGE_KEY)).toBeNull();
     expect(localStorage.getItem(LEGACY_EFFECTIVE_TENANT_KEY)).toBeNull();
   });
 
+  test("remember=false stays in sessionStorage only", () => {
+    writePersistedAuthSnapshot({
+      apiBase: "http://127.0.0.1:8317",
+      managementKey: "cps_test",
+      rememberPassword: false,
+    });
+
+    expect(sessionStorage.getItem(AUTH_STORAGE_KEY)).toBeTruthy();
+    expect(localStorage.getItem(AUTH_STORAGE_KEY)).toBeNull();
+  });
+
   test("falls back to the legacy effective-tenant key once", () => {
-    localStorage.setItem(
+    sessionStorage.setItem(
       AUTH_STORAGE_KEY,
       JSON.stringify({
         apiBase: "http://127.0.0.1:8317",

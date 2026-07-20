@@ -40,6 +40,8 @@ type CreateApiKeyColumnsOptions = {
   onResetDailySpending: (index: number) => void;
   onViewResetHistory: (entry: ApiKeyEntry) => void;
   resettingDailySpendingKey?: string | null;
+  /** Owned keys share account quota; hide per-key limit columns. */
+  accountScoped?: boolean;
 };
 
 type PermissionSummaryTone = "cyan" | "indigo" | "violet";
@@ -58,21 +60,13 @@ const permissionCountToneClasses: Record<PermissionSummaryTone, string> = {
   violet: "bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-200",
 };
 
-const stickySelectHeaderClass =
-  "text-center md:sticky md:z-40 md:bg-slate-100 md:dark:bg-neutral-800";
-const stickySelectCellClass =
-  "text-center md:sticky md:z-30 md:bg-white md:dark:bg-neutral-950";
-const stickyNameHeaderClass =
-  "md:sticky md:z-40 md:bg-slate-100 md:dark:bg-neutral-800";
-const stickyNameCellClass =
-  "font-medium md:sticky md:z-30 md:bg-white md:dark:bg-neutral-950";
+const stickySelectHeaderClass = "md:sticky md:z-40 md:bg-slate-100 md:dark:bg-neutral-800";
+const stickySelectCellClass = "md:sticky md:z-30 md:bg-white md:dark:bg-neutral-950";
+const stickyNameHeaderClass = "md:sticky md:z-40 md:bg-slate-100 md:dark:bg-neutral-800";
+const stickyNameCellClass = "font-medium md:sticky md:z-30 md:bg-white md:dark:bg-neutral-950";
 const stickyActionsHeaderClass =
   "text-center md:sticky md:z-40 md:bg-slate-100 md:dark:bg-neutral-800";
-const stickyActionsCellClass =
-  "text-center md:sticky md:z-30 md:bg-white md:dark:bg-neutral-950";
-const centeredMetricHeaderClass = "text-center";
-const centeredMetricCellClass =
-  "whitespace-nowrap text-center text-slate-700 dark:text-white/70";
+const stickyActionsCellClass = "md:sticky md:z-30 md:bg-white md:dark:bg-neutral-950";
 
 function ApiKeyBadge({ value }: { value: string }) {
   return (
@@ -129,437 +123,465 @@ export const createApiKeyColumns = ({
   onResetDailySpending,
   onViewResetHistory,
   resettingDailySpendingKey = null,
-}: CreateApiKeyColumnsOptions): DataTableColumn<ApiKeyEntry>[] => [
-  {
-    key: "select",
-    label: t("api_keys_page.select_all_keys"),
-    width: "w-12 min-w-12",
-    lockOrder: "start",
-    headerClassName: stickySelectHeaderClass,
-    cellClassName: stickySelectCellClass,
-    headerRender: () => (
-      <Checkbox
-        checked={allRowsSelected}
-        indeterminate={someRowsSelected}
-        onCheckedChange={onSelectAll}
-        aria-label={t("api_keys_page.select_all_keys")}
-      />
-    ),
-    render: (row) => (
-      <Checkbox
-        checked={selectedKeys.has(row.key)}
-        onCheckedChange={(checked) => onSelectRow(row.key, checked)}
-        aria-label={t("api_keys_page.select_key", {
-          name: row.name || t("api_keys_page.unnamed"),
-        })}
-      />
-    ),
-  },
-  {
-    key: "name",
-    label: t("api_keys_page.col_name"),
-    width: "w-[120px] min-w-[120px]",
-    lockOrder: "start",
-    headerClassName: stickyNameHeaderClass,
-    cellClassName: stickyNameCellClass,
-    render: (row) => (
-      <OverflowTooltip content={row.name || t("api_keys_page.unnamed")} className="block min-w-0">
-        <span className="block min-w-0 truncate">
-          {row.name || (
-            <span className="text-slate-400 dark:text-white/40">{t("common.unnamed")}</span>
-          )}
-        </span>
-      </OverflowTooltip>
-    ),
-  },
-  {
-    key: "dailySpending",
-    label: t("api_keys_page.col_daily_spending"),
-    width: "w-[196px] min-w-[196px]",
-    headerClassName: centeredMetricHeaderClass,
-    cellClassName: centeredMetricCellClass,
-    headerRender: () => (
-      <HoverTooltip
-        content={t("api_keys_page.daily_spending_help")}
-        className="inline-flex items-center gap-1"
-      >
-        <span>{t("api_keys_page.col_daily_spending")}</span>
-        <Info size={12} className="text-slate-400 dark:text-white/40" />
-      </HoverTooltip>
-    ),
-    render: (row) => {
-      const used = formatApiKeySpendingAmount(row["daily-spending-used"] ?? 0);
-      const limit = row["daily-spending-limit"] ?? 0;
-      if (!(limit > 0)) {
-        return (
-          <span className="inline-flex items-center justify-center gap-1 tabular-nums">
-            {used}
-            <span className="text-slate-400 dark:text-white/40">/</span>
-            <span className="inline-flex items-center gap-1">
-              <InfinityIcon size={14} className="text-green-500" /> {t("api_keys_page.unlimited")}
+  accountScoped = false,
+}: CreateApiKeyColumnsOptions): DataTableColumn<ApiKeyEntry>[] => {
+  const columns: DataTableColumn<ApiKeyEntry>[] = [
+    {
+      key: "select",
+      label: t("api_keys_page.select_all_keys"),
+      width: "w-12 min-w-12",
+      lockOrder: "start",
+      headerClassName: stickySelectHeaderClass,
+      cellClassName: stickySelectCellClass,
+      headerRender: () => (
+        <Checkbox
+          checked={allRowsSelected}
+          indeterminate={someRowsSelected}
+          onCheckedChange={onSelectAll}
+          aria-label={t("api_keys_page.select_all_keys")}
+        />
+      ),
+      render: (row) => (
+        <Checkbox
+          checked={selectedKeys.has(row.key)}
+          onCheckedChange={(checked) => onSelectRow(row.key, checked)}
+          aria-label={t("api_keys_page.select_key", {
+            name: row.name || t("api_keys_page.unnamed"),
+          })}
+        />
+      ),
+    },
+    {
+      key: "name",
+      label: t("api_keys_page.col_name"),
+      width: "w-[120px] min-w-[120px]",
+      lockOrder: "start",
+      headerClassName: stickyNameHeaderClass,
+      cellClassName: stickyNameCellClass,
+      render: (row) => (
+        <div className="flex min-w-0 items-center gap-1.5">
+          <OverflowTooltip
+            content={row.name || t("api_keys_page.unnamed")}
+            className="block min-w-0"
+          >
+            <span className="block min-w-0 truncate">
+              {row.name || (
+                <span className="text-slate-400 dark:text-white/40">{t("common.unnamed")}</span>
+              )}
             </span>
+          </OverflowTooltip>
+          {!accountScoped && row.is_default ? (
+            <span className="shrink-0 rounded-full bg-emerald-50 px-1.5 py-0.5 text-2xs font-medium text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+              default
+            </span>
+          ) : null}
+        </div>
+      ),
+    },
+    {
+      key: "dailySpending",
+      label: t("api_keys_page.col_daily_spending"),
+      width: "w-[180px] min-w-[180px]",
+      cellClassName: "whitespace-nowrap text-slate-700 dark:text-white/70",
+      headerRender: () => (
+        <HoverTooltip
+          content={t("api_keys_page.daily_spending_help")}
+          className="inline-flex items-center gap-1"
+        >
+          <span>{t("api_keys_page.col_daily_spending")}</span>
+          <Info size={12} className="text-slate-400 dark:text-white/40" />
+        </HoverTooltip>
+      ),
+      render: (row) => {
+        const used = formatApiKeySpendingAmount(row["daily-spending-used"] ?? 0);
+        const limit = row["daily-spending-limit"] ?? 0;
+        if (!(limit > 0)) {
+          return (
+            <span className="inline-flex items-center gap-1 tabular-nums">
+              {used}
+              <span className="text-slate-400 dark:text-white/40">/</span>
+              <span className="inline-flex items-center gap-1">
+                <InfinityIcon size={14} className="text-green-500" /> {t("api_keys_page.unlimited")}
+              </span>
+            </span>
+          );
+        }
+        return (
+          <span className="tabular-nums">
+            {used}
+            <span className="text-slate-400 dark:text-white/40"> / </span>
+            {formatApiKeySpendingAmount(limit)}
           </span>
         );
-      }
-      return (
-        <span className="tabular-nums">
-          {used}
-          <span className="text-slate-400 dark:text-white/40"> / </span>
-          {formatApiKeySpendingAmount(limit)}
-        </span>
-      );
+      },
     },
-  },
-  {
-    key: "dailySpendingResetCount",
-    label: t("api_keys_page.col_reset_count"),
-    width: "w-[120px] min-w-[120px]",
-    headerClassName: centeredMetricHeaderClass,
-    cellClassName: centeredMetricCellClass,
-    headerRender: () => (
-      <HoverTooltip
-        content={t("api_keys_page.reset_count_help")}
-        className="inline-flex items-center gap-1"
-      >
-        <span>{t("api_keys_page.col_reset_count")}</span>
-        <Info size={12} className="text-slate-400 dark:text-white/40" />
-      </HoverTooltip>
-    ),
-    render: (row) => {
-      const count = row["daily-spending-reset-count"] ?? 0;
-      if (count <= 0) {
-        return <span className="tabular-nums text-slate-400 dark:text-white/40">0</span>;
-      }
-      return (
-        <button
-          type="button"
-          onClick={() => onViewResetHistory(row)}
-          className="tabular-nums font-medium text-orange-600 underline-offset-2 hover:underline dark:text-orange-400"
-          aria-label={t("api_keys_page.view_reset_history")}
+    {
+      key: "dailySpendingResetCount",
+      label: t("api_keys_page.col_reset_count"),
+      width: "w-[110px] min-w-[100px]",
+      cellClassName: "whitespace-nowrap text-slate-700 dark:text-white/70",
+      headerRender: () => (
+        <HoverTooltip
+          content={t("api_keys_page.reset_count_help")}
+          className="inline-flex items-center gap-1"
         >
-          {count}
-        </button>
-      );
+          <span>{t("api_keys_page.col_reset_count")}</span>
+          <Info size={12} className="text-slate-400 dark:text-white/40" />
+        </HoverTooltip>
+      ),
+      render: (row) => {
+        const count = row["daily-spending-reset-count"] ?? 0;
+        if (count <= 0) {
+          return <span className="tabular-nums text-slate-400 dark:text-white/40">0</span>;
+        }
+        return (
+          <button
+            type="button"
+            onClick={() => onViewResetHistory(row)}
+            className="tabular-nums font-medium text-orange-600 underline-offset-2 hover:underline dark:text-orange-400"
+            aria-label={t("api_keys_page.view_reset_history")}
+          >
+            {count}
+          </button>
+        );
+      },
     },
-  },
-  {
-    key: "key",
-    label: t("api_keys_page.col_key"),
-    width: "w-[320px] min-w-[320px]",
-    cellClassName: "whitespace-nowrap",
-    render: (row) => <ApiKeyBadge value={maskApiKey(row.key)} />,
-  },
-  {
-    key: "dailyLimit",
-    label: t("api_keys_page.col_daily_limit"),
-    width: "w-[140px] min-w-[140px]",
-    headerClassName: centeredMetricHeaderClass,
-    cellClassName: centeredMetricCellClass,
-    render: (row) => (
-      <span className="inline-flex items-center justify-center gap-1">
-        {!row["daily-limit"] ? (
-          <>
-            <InfinityIcon size={14} className="text-green-500" /> {t("api_keys_page.unlimited")}
-          </>
-        ) : (
-          formatApiKeyLimit(row["daily-limit"])
-        )}
-      </span>
-    ),
-  },
-  {
-    key: "totalQuota",
-    label: t("api_keys_page.col_total_quota"),
-    width: "w-[140px] min-w-[140px]",
-    headerClassName: centeredMetricHeaderClass,
-    cellClassName: centeredMetricCellClass,
-    render: (row) => (
-      <span className="inline-flex items-center justify-center gap-1">
-        {!row["total-quota"] ? (
-          <>
-            <InfinityIcon size={14} className="text-green-500" /> {t("api_keys_page.unlimited")}
-          </>
-        ) : (
-          formatApiKeyLimit(row["total-quota"])
-        )}
-      </span>
-    ),
-  },
-  {
-    key: "spendingLimit",
-    label: t("api_keys_page.col_spending_limit"),
-    width: "w-[156px] min-w-[156px]",
-    headerClassName: centeredMetricHeaderClass,
-    cellClassName: centeredMetricCellClass,
-    headerRender: () => (
-      <HoverTooltip
-        content={t("api_keys_page.spending_limit_help")}
-        className="inline-flex items-center gap-1"
-      >
-        <span>{t("api_keys_page.col_spending_limit")}</span>
-        <Info size={12} className="text-slate-400 dark:text-white/40" />
-      </HoverTooltip>
-    ),
-    render: (row) => (
-      <span className="inline-flex items-center justify-center gap-1">
-        {!row["spending-limit"] ? (
-          <>
-            <InfinityIcon size={14} className="text-green-500" /> {t("api_keys_page.unlimited")}
-          </>
-        ) : (
-          formatApiKeySpendingLimit(row["spending-limit"])
-        )}
-      </span>
-    ),
-  },
-  {
-    key: "rpmLimit",
-    label: "RPM",
-    width: "w-[124px] min-w-[124px]",
-    headerClassName: centeredMetricHeaderClass,
-    cellClassName: centeredMetricCellClass,
-    headerRender: () => (
-      <HoverTooltip content={t("api_keys.rpm_full")} className="inline-flex items-center gap-1">
-        <span>{t("api_keys_page.rpm")}</span>
-        <Info size={12} className="text-slate-400 dark:text-white/40" />
-      </HoverTooltip>
-    ),
-    render: (row) => (
-      <span className="inline-flex items-center justify-center gap-1">
-        {!row["rpm-limit"] ? (
-          <>
-            <InfinityIcon size={14} className="text-green-500" /> {t("api_keys_page.unlimited")}
-          </>
-        ) : (
-          formatApiKeyLimit(row["rpm-limit"])
-        )}
-      </span>
-    ),
-  },
-  {
-    key: "tpmLimit",
-    label: "TPM",
-    width: "w-[124px] min-w-[124px]",
-    headerClassName: centeredMetricHeaderClass,
-    cellClassName: centeredMetricCellClass,
-    headerRender: () => (
-      <HoverTooltip content={t("api_keys.tpm_full")} className="inline-flex items-center gap-1">
-        <span>{t("api_keys_page.tpm")}</span>
-        <Info size={12} className="text-slate-400 dark:text-white/40" />
-      </HoverTooltip>
-    ),
-    render: (row) => (
-      <span className="inline-flex items-center justify-center gap-1">
-        {!row["tpm-limit"] ? (
-          <>
-            <InfinityIcon size={14} className="text-green-500" /> {t("api_keys_page.unlimited")}
-          </>
-        ) : (
-          formatApiKeyLimit(row["tpm-limit"])
-        )}
-      </span>
-    ),
-  },
-  {
-    key: "allowedModels",
-    label: t("api_keys_page.col_models"),
-    width: "w-[150px] min-w-[150px]",
-    cellClassName: "min-w-0 overflow-hidden text-slate-700 dark:text-white/70",
-    render: (row) =>
-      row["allowed-models"]?.length ? (
-        <ApiKeyPermissionSummary
-          count={row["allowed-models"].length}
-          firstValue={row["allowed-models"][0]}
-          tone="indigo"
-          tooltipContent={
-            <div className="flex max-w-xs flex-wrap gap-1.5">
-              {row["allowed-models"].map((model) => (
-                <span
-                  key={model}
-                  className="inline-flex items-center gap-1 rounded-md border border-slate-200/60 bg-slate-50 px-2 py-0.5 font-mono text-xs text-slate-700 dark:border-neutral-700/40 dark:bg-neutral-800/60 dark:text-white/80"
-                >
-                  <VendorIcon modelId={model} size={12} />
-                  {model}
-                </span>
-              ))}
-            </div>
-          }
-        />
-      ) : (
-        <span className="inline-flex items-center gap-1 whitespace-nowrap text-green-600 dark:text-green-400">
-          <ShieldCheck size={14} /> {t("api_keys_page.all_models")}
+    {
+      key: "key",
+      label: t("api_keys_page.col_key"),
+      width: "w-[320px] min-w-[320px]",
+      cellClassName: "whitespace-nowrap",
+      render: (row) => <ApiKeyBadge value={maskApiKey(row.key)} />,
+    },
+    {
+      key: "dailyLimit",
+      label: t("api_keys_page.col_daily_limit"),
+      width: "w-[132px] min-w-[132px]",
+      cellClassName: "whitespace-nowrap text-slate-700 dark:text-white/70",
+      render: (row) => (
+        <span className="inline-flex items-center gap-1">
+          {!row["daily-limit"] ? (
+            <>
+              <InfinityIcon size={14} className="text-green-500" /> {t("api_keys_page.unlimited")}
+            </>
+          ) : (
+            formatApiKeyLimit(row["daily-limit"])
+          )}
         </span>
       ),
-  },
-  {
-    key: "allowedChannelGroups",
-    label: t("api_keys_page.col_channel_groups"),
-    width: "w-[172px] min-w-[172px]",
-    cellClassName: "min-w-0 overflow-hidden text-slate-700 dark:text-white/70",
-    render: (row) =>
-      row["allowed-channel-groups"]?.length ? (
-        <ApiKeyPermissionSummary
-          count={row["allowed-channel-groups"].length}
-          firstValue={row["allowed-channel-groups"][0]}
-          tone="violet"
-          tooltipContent={
-            <div className="flex max-w-xs flex-wrap gap-1.5">
-              {row["allowed-channel-groups"].map((group) => (
-                <span
-                  key={group}
-                  className="inline-flex items-center rounded-md border border-slate-200/60 bg-slate-50 px-2 py-0.5 font-mono text-xs text-slate-700 dark:border-neutral-700/40 dark:bg-neutral-800/60 dark:text-white/80"
-                >
-                  {group}
-                </span>
-              ))}
-            </div>
-          }
-        />
-      ) : (
-        <span className="inline-flex items-center gap-1 whitespace-nowrap text-green-600 dark:text-green-400">
-          <ShieldCheck size={14} /> {t("api_keys_page.all_channel_groups")}
+    },
+    {
+      key: "totalQuota",
+      label: t("api_keys_page.col_total_quota"),
+      width: "w-[132px] min-w-[132px]",
+      cellClassName: "whitespace-nowrap text-slate-700 dark:text-white/70",
+      render: (row) => (
+        <span className="inline-flex items-center gap-1">
+          {!row["total-quota"] ? (
+            <>
+              <InfinityIcon size={14} className="text-green-500" /> {t("api_keys_page.unlimited")}
+            </>
+          ) : (
+            formatApiKeyLimit(row["total-quota"])
+          )}
         </span>
       ),
-  },
-  {
-    key: "allowedChannels",
-    label: t("api_keys_page.col_channels"),
-    width: "w-[172px] min-w-[172px]",
-    cellClassName: "min-w-0 overflow-hidden text-slate-700 dark:text-white/70",
-    render: (row) =>
-      row["allowed-channels"]?.length ? (
-        <ApiKeyPermissionSummary
-          count={row["allowed-channels"].length}
-          firstValue={row["allowed-channels"][0]}
-          tone="cyan"
-          tooltipContent={
-            <div className="flex max-w-xs flex-wrap gap-1.5">
-              {row["allowed-channels"].map((channel) => (
-                <span
-                  key={channel}
-                  className="inline-flex items-center rounded-md border border-slate-200/60 bg-slate-50 px-2 py-0.5 font-mono text-xs text-slate-700 dark:border-neutral-700/40 dark:bg-neutral-800/60 dark:text-white/80"
-                >
-                  {channel}
-                </span>
-              ))}
-            </div>
-          }
-        />
-      ) : (
-        <span className="inline-flex items-center gap-1 whitespace-nowrap text-green-600 dark:text-green-400">
-          <ShieldCheck size={14} /> {t("api_keys_page.all_channels")}
+    },
+    {
+      key: "spendingLimit",
+      label: t("api_keys_page.col_spending_limit"),
+      width: "w-[148px] min-w-[148px]",
+      cellClassName: "whitespace-nowrap text-slate-700 dark:text-white/70",
+      headerRender: () => (
+        <HoverTooltip
+          content={t("api_keys_page.spending_limit_help")}
+          className="inline-flex items-center gap-1"
+        >
+          <span>{t("api_keys_page.col_spending_limit")}</span>
+          <Info size={12} className="text-slate-400 dark:text-white/40" />
+        </HoverTooltip>
+      ),
+      render: (row) => (
+        <span className="inline-flex items-center gap-1">
+          {!row["spending-limit"] ? (
+            <>
+              <InfinityIcon size={14} className="text-green-500" /> {t("api_keys_page.unlimited")}
+            </>
+          ) : (
+            formatApiKeySpendingLimit(row["spending-limit"])
+          )}
         </span>
       ),
-  },
-  {
-    key: "createdAt",
-    label: t("api_keys_page.col_created"),
-    width: "w-[168px] min-w-[168px]",
-    headerClassName: centeredMetricHeaderClass,
-    cellClassName: "whitespace-nowrap text-center text-slate-500 dark:text-white/50",
-    render: (row) => <>{formatApiKeyDate(row["created-at"])}</>,
-  },
-  {
-    key: "actions",
-    label: t("api_keys_page.col_actions"),
-    width: "w-[256px] min-w-[256px]",
-    lockOrder: "end",
-    headerClassName: stickyActionsHeaderClass,
-    cellClassName: stickyActionsCellClass,
-    render: (row, idx) => {
-      const toggleLabel = row.disabled
-        ? t("api_keys_page.click_enable")
-        : t("api_keys_page.click_disable");
-      const viewUsageLabel = t("api_keys_page.view_usage");
-      const copyKeyLabel = t("api_keys_page.copy_key");
-      const importLabel = t("ccswitch.import_to_ccswitch");
-      const editLabel = t("common.edit");
-      const deleteLabel = t("common.delete");
-      const hasDailyLimit = (row["daily-spending-limit"] ?? 0) > 0;
-      const isResetting = resettingDailySpendingKey === row.key;
-      const resetLabel = hasDailyLimit
-        ? t("api_keys_page.reset_today_spending")
-        : t("api_keys_page.reset_today_spending_disabled");
+    },
+    {
+      key: "rpmLimit",
+      label: "RPM",
+      width: "w-[108px] min-w-[108px]",
+      cellClassName: "whitespace-nowrap text-slate-700 dark:text-white/70",
+      headerRender: () => (
+        <HoverTooltip content={t("api_keys.rpm_full")} className="inline-flex items-center gap-1">
+          <span>{t("api_keys_page.rpm")}</span>
+          <Info size={12} className="text-slate-400 dark:text-white/40" />
+        </HoverTooltip>
+      ),
+      render: (row) => (
+        <span className="inline-flex items-center gap-1">
+          {!row["rpm-limit"] ? (
+            <>
+              <InfinityIcon size={14} className="text-green-500" /> {t("api_keys_page.unlimited")}
+            </>
+          ) : (
+            formatApiKeyLimit(row["rpm-limit"])
+          )}
+        </span>
+      ),
+    },
+    {
+      key: "tpmLimit",
+      label: "TPM",
+      width: "w-[108px] min-w-[108px]",
+      cellClassName: "whitespace-nowrap text-slate-700 dark:text-white/70",
+      headerRender: () => (
+        <HoverTooltip content={t("api_keys.tpm_full")} className="inline-flex items-center gap-1">
+          <span>{t("api_keys_page.tpm")}</span>
+          <Info size={12} className="text-slate-400 dark:text-white/40" />
+        </HoverTooltip>
+      ),
+      render: (row) => (
+        <span className="inline-flex items-center gap-1">
+          {!row["tpm-limit"] ? (
+            <>
+              <InfinityIcon size={14} className="text-green-500" /> {t("api_keys_page.unlimited")}
+            </>
+          ) : (
+            formatApiKeyLimit(row["tpm-limit"])
+          )}
+        </span>
+      ),
+    },
+    {
+      key: "allowedModels",
+      label: t("api_keys_page.col_models"),
+      width: "w-[150px] min-w-[150px]",
+      cellClassName: "min-w-0 overflow-hidden text-slate-700 dark:text-white/70",
+      render: (row) =>
+        row["allowed-models"]?.length ? (
+          <ApiKeyPermissionSummary
+            count={row["allowed-models"].length}
+            firstValue={row["allowed-models"][0]}
+            tone="indigo"
+            tooltipContent={
+              <div className="flex max-w-xs flex-wrap gap-1.5">
+                {row["allowed-models"].map((model) => (
+                  <span
+                    key={model}
+                    className="inline-flex items-center gap-1 rounded-md border border-slate-200/60 bg-slate-50 px-2 py-0.5 font-mono text-xs text-slate-700 dark:border-neutral-700/40 dark:bg-neutral-800/60 dark:text-white/80"
+                  >
+                    <VendorIcon modelId={model} size={12} />
+                    {model}
+                  </span>
+                ))}
+              </div>
+            }
+          />
+        ) : (
+          <span className="inline-flex items-center gap-1 whitespace-nowrap text-green-600 dark:text-green-400">
+            <ShieldCheck size={14} /> {t("api_keys_page.all_models")}
+          </span>
+        ),
+    },
+    {
+      key: "allowedChannelGroups",
+      label: t("api_keys_page.col_channel_groups"),
+      width: "w-[172px] min-w-[172px]",
+      cellClassName: "min-w-0 overflow-hidden text-slate-700 dark:text-white/70",
+      render: (row) =>
+        row["allowed-channel-groups"]?.length ? (
+          <ApiKeyPermissionSummary
+            count={row["allowed-channel-groups"].length}
+            firstValue={row["allowed-channel-groups"][0]}
+            tone="violet"
+            tooltipContent={
+              <div className="flex max-w-xs flex-wrap gap-1.5">
+                {row["allowed-channel-groups"].map((group) => (
+                  <span
+                    key={group}
+                    className="inline-flex items-center rounded-md border border-slate-200/60 bg-slate-50 px-2 py-0.5 font-mono text-xs text-slate-700 dark:border-neutral-700/40 dark:bg-neutral-800/60 dark:text-white/80"
+                  >
+                    {group}
+                  </span>
+                ))}
+              </div>
+            }
+          />
+        ) : (
+          <span className="inline-flex items-center gap-1 whitespace-nowrap text-green-600 dark:text-green-400">
+            <ShieldCheck size={14} /> {t("api_keys_page.all_channel_groups")}
+          </span>
+        ),
+    },
+    {
+      key: "allowedChannels",
+      label: t("api_keys_page.col_channels"),
+      width: "w-[172px] min-w-[172px]",
+      cellClassName: "min-w-0 overflow-hidden text-slate-700 dark:text-white/70",
+      render: (row) =>
+        row["allowed-channels"]?.length ? (
+          <ApiKeyPermissionSummary
+            count={row["allowed-channels"].length}
+            firstValue={row["allowed-channels"][0]}
+            tone="cyan"
+            tooltipContent={
+              <div className="flex max-w-xs flex-wrap gap-1.5">
+                {row["allowed-channels"].map((channel) => (
+                  <span
+                    key={channel}
+                    className="inline-flex items-center rounded-md border border-slate-200/60 bg-slate-50 px-2 py-0.5 font-mono text-xs text-slate-700 dark:border-neutral-700/40 dark:bg-neutral-800/60 dark:text-white/80"
+                  >
+                    {channel}
+                  </span>
+                ))}
+              </div>
+            }
+          />
+        ) : (
+          <span className="inline-flex items-center gap-1 whitespace-nowrap text-green-600 dark:text-green-400">
+            <ShieldCheck size={14} /> {t("api_keys_page.all_channels")}
+          </span>
+        ),
+    },
+    {
+      key: "createdAt",
+      label: t("api_keys_page.col_created"),
+      width: "w-[168px] min-w-[168px]",
+      cellClassName: "whitespace-nowrap text-slate-500 dark:text-white/50",
+      render: (row) => <>{formatApiKeyDate(row["created-at"])}</>,
+    },
+    {
+      key: "actions",
+      label: t("api_keys_page.col_actions"),
+      // accountScoped drops usage + daily-reset; keep room for set-default.
+      width: accountScoped ? "w-[220px] min-w-[220px]" : "w-[256px] min-w-[256px]",
+      lockOrder: "end",
+      headerClassName: stickyActionsHeaderClass,
+      cellClassName: stickyActionsCellClass,
+      render: (row, idx) => {
+        const toggleLabel = row.disabled
+          ? t("api_keys_page.click_enable")
+          : t("api_keys_page.click_disable");
+        const viewUsageLabel = t("api_keys_page.view_usage");
+        const copyKeyLabel = t("api_keys_page.copy_key");
+        const importLabel = t("ccswitch.import_to_ccswitch");
+        const editLabel = t("common.edit");
+        const deleteLabel = t("common.delete");
+        const hasDailyLimit = (row["daily-spending-limit"] ?? 0) > 0;
+        const isResetting = resettingDailySpendingKey === row.key;
+        const resetLabel = hasDailyLimit
+          ? t("api_keys_page.reset_today_spending")
+          : t("api_keys_page.reset_today_spending_disabled");
 
-      return (
-        <div className="flex items-center justify-center gap-1.5">
-          <HoverTooltip content={toggleLabel}>
-            <button
-              type="button"
-              onClick={() => onToggleDisable(idx)}
-              className={`rounded-lg p-1.5 transition-colors ${
-                row.disabled
-                  ? "text-slate-400 hover:bg-red-50 hover:text-red-500 dark:text-white/30 dark:hover:bg-red-900/20 dark:hover:text-red-400"
-                  : "text-emerald-500 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-900/20"
-              }`}
-              aria-label={toggleLabel}
-            >
-              <Power size={15} />
-            </button>
-          </HoverTooltip>
-          <HoverTooltip content={viewUsageLabel}>
-            <button
-              type="button"
-              onClick={() => onViewUsage(row)}
-              className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-blue-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-blue-400"
-              aria-label={viewUsageLabel}
-            >
-              <BarChart3 size={15} />
-            </button>
-          </HoverTooltip>
-          <HoverTooltip content={copyKeyLabel}>
-            <button
-              type="button"
-              onClick={() => onCopy(row.key)}
-              className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-indigo-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-indigo-400"
-              aria-label={copyKeyLabel}
-            >
-              <Copy size={15} />
-            </button>
-          </HoverTooltip>
-          <HoverTooltip content={importLabel}>
-            <button
-              type="button"
-              onClick={() => onImportToCcSwitch(row)}
-              className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-cyan-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-cyan-400"
-              aria-label={importLabel}
-            >
-              <Upload size={15} />
-            </button>
-          </HoverTooltip>
-          <HoverTooltip content={resetLabel}>
-            <button
-              type="button"
-              onClick={() => onResetDailySpending(idx)}
-              disabled={!hasDailyLimit || isResetting}
-              className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-orange-600 disabled:cursor-not-allowed disabled:opacity-40 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-orange-400"
-              aria-label={resetLabel}
-            >
-              <RotateCcw size={15} className={isResetting ? "animate-spin" : ""} />
-            </button>
-          </HoverTooltip>
-          <HoverTooltip content={editLabel}>
-            <button
-              type="button"
-              onClick={() => onEdit(idx)}
-              className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-amber-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-amber-400"
-              aria-label={editLabel}
-            >
-              <Pencil size={15} />
-            </button>
-          </HoverTooltip>
-          <HoverTooltip content={deleteLabel}>
-            <button
-              type="button"
-              onClick={() => onDelete(idx)}
-              className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:text-white/50 dark:hover:bg-red-900/20 dark:hover:text-red-400"
-              aria-label={deleteLabel}
-            >
-              <Trash2 size={15} />
-            </button>
-          </HoverTooltip>
-        </div>
-      );
+        return (
+          <div className="flex items-center justify-center gap-1.5">
+            <HoverTooltip content={toggleLabel}>
+              <button
+                type="button"
+                onClick={() => onToggleDisable(idx)}
+                className={`rounded-lg p-1.5 transition-colors ${
+                  row.disabled
+                    ? "text-slate-400 hover:bg-red-50 hover:text-red-500 dark:text-white/30 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+                    : "text-emerald-500 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-900/20"
+                }`}
+                aria-label={toggleLabel}
+              >
+                <Power size={15} />
+              </button>
+            </HoverTooltip>
+            {!accountScoped ? (
+              <HoverTooltip content={viewUsageLabel}>
+                <button
+                  type="button"
+                  onClick={() => onViewUsage(row)}
+                  className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-blue-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-blue-400"
+                  aria-label={viewUsageLabel}
+                >
+                  <BarChart3 size={15} />
+                </button>
+              </HoverTooltip>
+            ) : null}
+            <HoverTooltip content={copyKeyLabel}>
+              <button
+                type="button"
+                onClick={() => onCopy(row.key)}
+                className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-indigo-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-indigo-400"
+                aria-label={copyKeyLabel}
+              >
+                <Copy size={15} />
+              </button>
+            </HoverTooltip>
+            <HoverTooltip content={importLabel}>
+              <button
+                type="button"
+                onClick={() => onImportToCcSwitch(row)}
+                className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-cyan-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-cyan-400"
+                aria-label={importLabel}
+              >
+                <Upload size={15} />
+              </button>
+            </HoverTooltip>
+            {!accountScoped ? (
+              <HoverTooltip content={resetLabel}>
+                <button
+                  type="button"
+                  onClick={() => onResetDailySpending(idx)}
+                  disabled={!hasDailyLimit || isResetting}
+                  className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-orange-600 disabled:cursor-not-allowed disabled:opacity-40 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-orange-400"
+                  aria-label={resetLabel}
+                >
+                  <RotateCcw size={15} className={isResetting ? "animate-spin" : ""} />
+                </button>
+              </HoverTooltip>
+            ) : null}
+            <HoverTooltip content={editLabel}>
+              <button
+                type="button"
+                onClick={() => onEdit(idx)}
+                className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-amber-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-amber-400"
+                aria-label={editLabel}
+              >
+                <Pencil size={15} />
+              </button>
+            </HoverTooltip>
+            <HoverTooltip content={deleteLabel}>
+              <button
+                type="button"
+                onClick={() => onDelete(idx)}
+                className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:text-white/50 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+                aria-label={deleteLabel}
+              >
+                <Trash2 size={15} />
+              </button>
+            </HoverTooltip>
+          </div>
+        );
+      },
     },
-  },
-];
+  ];
+
+  if (!accountScoped) {
+    return columns;
+  }
+  // Account-owned keys: quota lives on the end-user; only show credential columns.
+  const hide = new Set([
+    "dailyLimit",
+    "totalQuota",
+    "spendingLimit",
+    "dailySpending",
+    "dailySpendingResetCount",
+    "rpmLimit",
+    "tpmLimit",
+    "allowedModels",
+    "allowedChannelGroups",
+    "allowedChannels",
+  ]);
+  return columns.filter((col) => !hide.has(String(col.key)));
+};

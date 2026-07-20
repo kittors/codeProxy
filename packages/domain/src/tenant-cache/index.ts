@@ -1,8 +1,11 @@
 export {
   DEFAULT_CACHE_TENANT_ID,
+  getActiveCacheScopePrefix,
   getActiveCacheTenantId,
   normalizeCacheTenantId,
+  setActiveCacheScopePrefix,
   setActiveCacheTenantId,
+  setCacheScopeResolver,
   setCacheTenantResolver,
 } from "./activeTenant";
 

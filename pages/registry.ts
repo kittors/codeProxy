@@ -7,6 +7,7 @@ import { providersRoute } from "./providers/route";
 import { accountSecurityRoute } from "./account-security/route";
 import { authFilesRoute } from "./auth-files/route";
 import { apiKeysRoute } from "./api-keys/route";
+import { endUsersRoute } from "./end-users/route";
 import { apiKeyPermissionsRoute } from "./api-key-permissions/route";
 import { modelsRoute } from "./models/route";
 import { modelPlazaRoute } from "./model-plaza/route";
@@ -36,6 +37,8 @@ export interface PageRoute {
   hasWildcard?: boolean;
   preload?: () => Promise<unknown>;
   requiredPermission?: string;
+  /** Any-of alternative permissions (OR with requiredPermission). */
+  requiredAnyPermissions?: string[];
   /** Stable key for dynamic menu component binding */
   component?: string;
 }
@@ -55,6 +58,7 @@ export const pageRoutes: PageRoute[] = [
   accountSecurityRoute,
   authFilesRoute,
   apiKeysRoute,
+  endUsersRoute,
   apiKeyPermissionsRoute,
   modelsRoute,
   modelPlazaRoute,

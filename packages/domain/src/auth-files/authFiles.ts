@@ -90,6 +90,13 @@ export type AuthFilesUiState = {
   page?: number;
 };
 
+/** Last known 本周期 snapshot per auth_index for first paint after full reload. */
+export type AuthFileCycleCacheSnapshot = {
+  calls: number;
+  cycleCostTotal?: number | null;
+  weeklyQuotaUsedPercent?: number | null;
+};
+
 export type AuthFilesDataCache = {
   /** Effective tenant id that owns this cache bucket. Required to prevent cross-tenant reuse. */
   tenantId: string;
@@ -97,6 +104,8 @@ export type AuthFilesDataCache = {
   files: AuthFileItem[];
   usageData?: EntityStatsResponse | null;
   quotaByFileName?: Record<string, QuotaState>;
+  /** Seed card cycle badges so full reload is 93→98, not --→98. */
+  cycleByAuthIndex?: Record<string, AuthFileCycleCacheSnapshot>;
 };
 
 type AuthFilesDataCacheBucket = Omit<AuthFilesDataCache, "tenantId">;
@@ -572,6 +581,38 @@ const sanitizeQuotaByFileNameForCache = (
   return Object.keys(output).length > 0 ? output : undefined;
 };
 
+const sanitizeCycleByAuthIndexForCache = (
+  cycleByAuthIndex: unknown,
+): Record<string, AuthFileCycleCacheSnapshot> | undefined => {
+  if (!cycleByAuthIndex || typeof cycleByAuthIndex !== "object" || Array.isArray(cycleByAuthIndex)) {
+    return undefined;
+  }
+  const output: Record<string, AuthFileCycleCacheSnapshot> = {};
+  for (const [authIndex, raw] of Object.entries(
+    cycleByAuthIndex as Record<string, unknown>,
+  )) {
+    const key = typeof authIndex === "string" ? authIndex.trim() : "";
+    if (!key || !raw || typeof raw !== "object" || Array.isArray(raw)) continue;
+    const snapshot = raw as Record<string, unknown>;
+    const calls =
+      typeof snapshot.calls === "number" && Number.isFinite(snapshot.calls)
+        ? Math.max(0, Math.round(snapshot.calls))
+        : null;
+    if (calls === null) continue;
+    const cycleCostTotal =
+      typeof snapshot.cycleCostTotal === "number" && Number.isFinite(snapshot.cycleCostTotal)
+        ? snapshot.cycleCostTotal
+        : null;
+    const weeklyQuotaUsedPercent =
+      typeof snapshot.weeklyQuotaUsedPercent === "number" &&
+      Number.isFinite(snapshot.weeklyQuotaUsedPercent)
+        ? snapshot.weeklyQuotaUsedPercent
+        : null;
+    output[key] = { calls, cycleCostTotal, weeklyQuotaUsedPercent };
+  }
+  return Object.keys(output).length > 0 ? output : undefined;
+};
+
 const parseAuthFilesDataCacheBucket = (
   value: unknown,
 ): AuthFilesDataCacheBucket | null => {
@@ -591,6 +632,7 @@ const parseAuthFilesDataCacheBucket = (
         ? (parsed.usageData as EntityStatsResponse)
         : undefined,
     quotaByFileName: sanitizeQuotaByFileNameForCache(parsed.quotaByFileName),
+    cycleByAuthIndex: sanitizeCycleByAuthIndexForCache(parsed.cycleByAuthIndex),
   };
 };
 
@@ -628,6 +670,7 @@ export const writeAuthFilesDataCache = (cache: AuthFilesDataCache) => {
       files: cache.files,
       usageData: cache.usageData,
       quotaByFileName: cache.quotaByFileName,
+      cycleByAuthIndex: cache.cycleByAuthIndex,
     },
     merge: (previous, next) => {
       const fileNames = new Set(next.files.map((file) => file.name).filter(Boolean));
@@ -638,6 +681,9 @@ export const writeAuthFilesDataCache = (cache: AuthFilesDataCache) => {
         quotaByFileName: sanitizeQuotaByFileNameForCache(
           next.quotaByFileName ?? previous?.quotaByFileName,
           fileNames,
+        ),
+        cycleByAuthIndex: sanitizeCycleByAuthIndexForCache(
+          next.cycleByAuthIndex ?? previous?.cycleByAuthIndex,
         ),
       };
     },
@@ -1127,6 +1173,17 @@ export const normalizeAuthFileSubscriptionPeriod = (value: unknown): AuthFileSub
   return "monthly";
 };
 
+// Tenant manual override first (auth-file metadata); shared provider claims are fallback.
+// JWT chatgpt_subscription_* can lag after renewals, so manual must win when set.
+const hasTenantSubscriptionOverride = (file: AuthFileItem): boolean =>
+  parseDateLikeMs(file.subscription_started_at_ms ?? file.subscriptionStartedAtMs) !== null ||
+  parseDateLikeMs(
+    file.subscription_started_at ??
+      file.subscriptionStartedAt ??
+      file.subscription_start_at ??
+      file.subscriptionStartAt,
+  ) !== null;
+
 const resolveSubscriptionStartMs = (file: AuthFileItem): number | null =>
   parseDateLikeMs(file.subscription_started_at_ms ?? file.subscriptionStartedAtMs) ??
   parseDateLikeMs(
@@ -1134,7 +1191,8 @@ const resolveSubscriptionStartMs = (file: AuthFileItem): number | null =>
       file.subscriptionStartedAt ??
       file.subscription_start_at ??
       file.subscriptionStartAt,
-  );
+  ) ??
+  parseDateLikeMs(file.shared_subscription_started_at);
 
 const addCalendarMonths = (startMs: number, months: number): number | null => {
   const date = new Date(startMs);
@@ -1155,13 +1213,44 @@ export const resolveAuthFileSubscriptionStatus = (
   nowMs = Date.now(),
 ): AuthFileSubscriptionStatus | null => {
   const startedAtMs = resolveSubscriptionStartMs(file);
-  if (startedAtMs === null) return null;
+  if (startedAtMs === null) {
+    // Shared expires alone still enough when no start is known.
+    const sharedOnly = parseDateLikeMs(file.shared_subscription_expires_at);
+    if (sharedOnly === null) return null;
+    const period = normalizeAuthFileSubscriptionPeriod(
+      file.subscription_period ?? file.subscriptionPeriod,
+    );
+    const diffMs = sharedOnly - nowMs;
+    const remainingDays =
+      diffMs === 0
+        ? 0
+        : diffMs > 0
+          ? Math.ceil(diffMs / DAY_MS)
+          : -Math.ceil(Math.abs(diffMs) / DAY_MS);
+    const expired = remainingDays <= 0;
+    const tone = expired ? "expired" : remainingDays <= 5 ? "urgent" : "active";
+    return {
+      startedAtMs: sharedOnly,
+      startedAtText: new Date(sharedOnly).toLocaleString(),
+      expiresAtMs: sharedOnly,
+      expiresAtText: new Date(sharedOnly).toLocaleString(),
+      remainingDays,
+      expired,
+      period,
+      tone,
+    };
+  }
 
   const period = normalizeAuthFileSubscriptionPeriod(
     file.subscription_period ?? file.subscriptionPeriod,
   );
-  const expiresAtMs = addCalendarMonths(startedAtMs, period === "yearly" ? 12 : 1);
+  const sharedExpiresAtMs = parseDateLikeMs(file.shared_subscription_expires_at);
+  const expiresAtMs =
+    !hasTenantSubscriptionOverride(file) && sharedExpiresAtMs !== null
+      ? sharedExpiresAtMs
+      : addCalendarMonths(startedAtMs, period === "yearly" ? 12 : 1);
   if (expiresAtMs === null) return null;
+  const effectiveStartedAtMs = startedAtMs;
 
   const diffMs = expiresAtMs - nowMs;
   const remainingDays =
@@ -1174,8 +1263,8 @@ export const resolveAuthFileSubscriptionStatus = (
   const tone = expired ? "expired" : remainingDays <= 5 ? "urgent" : "active";
 
   return {
-    startedAtMs,
-    startedAtText: new Date(startedAtMs).toLocaleString(),
+    startedAtMs: effectiveStartedAtMs,
+    startedAtText: new Date(effectiveStartedAtMs).toLocaleString(),
     expiresAtMs,
     expiresAtText: new Date(expiresAtMs).toLocaleString(),
     remainingDays,
@@ -1347,11 +1436,13 @@ export const estimateQuotaBudgetUsd = (
 
 /**
  * Codex Pro only: map estimated weekly USD budget → pro_20x / pro_5x / pro.
- * Non-pro base plans pass through unchanged; missing budget falls back to plain pro.
+ * Non-pro base plans pass through unchanged; missing budget falls back to plain pro,
+ * or keeps a previously resolved pro_Nx tier so partial refresh does not flash PRO.
  */
 export const resolveCodexProMultiplierTier = (
   basePlan: string | null | undefined,
   estimatedWeeklyBudgetUsd: number | null | undefined,
+  previousTier?: string | null,
 ): string | null => {
   const base = normalizeTagValue(basePlan);
   if (!base) return null;
@@ -1363,6 +1454,9 @@ export const resolveCodexProMultiplierTier = (
     !Number.isFinite(estimatedWeeklyBudgetUsd) ||
     estimatedWeeklyBudgetUsd <= 0
   ) {
+    const previous = normalizeTagValue(previousTier);
+    if (previous === "pro_20x" || previous === "pro-20x") return "pro_20x";
+    if (previous === "pro_5x" || previous === "pro-5x") return "pro_5x";
     return "pro";
   }
   if (estimatedWeeklyBudgetUsd >= CODEX_PRO_20X_WEEKLY_BUDGET_USD) return "pro_20x";
@@ -1374,6 +1468,7 @@ export const resolveAuthFileDisplayPlanType = (
   file: AuthFileItem,
   quotaState?: QuotaState | null,
   cycleStats?: AuthFileCycleBudgetStats | null,
+  previousDisplayPlan?: string | null,
 ): string | null => {
   const base = resolveAuthFilePlanType(file, quotaState);
   if (!base) return null;
@@ -1382,7 +1477,7 @@ export const resolveAuthFileDisplayPlanType = (
     cycleStats?.cycleCostTotal,
     cycleStats?.weeklyQuotaUsedPercent,
   );
-  return resolveCodexProMultiplierTier(base, budget);
+  return resolveCodexProMultiplierTier(base, budget, previousDisplayPlan);
 };
 
 export const resolvePlanBadgeClass = (planType: string | null | undefined): string => {

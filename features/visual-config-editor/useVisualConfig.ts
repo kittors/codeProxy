@@ -516,6 +516,7 @@ export function useVisualConfig() {
         const payload = hasPayloadRuleSections(runtimePayload) ? runtimePayload : yamlPayload;
         const streaming = asRecord(parsed.streaming);
         const autoUpdate = asRecord(parsed["auto-update"]);
+        const requestLogStorage = asRecord(parsed["request-log-storage"]);
 
         const newValues: VisualConfigValues = {
           host: typeof parsed.host === "string" ? parsed.host : "",
@@ -546,7 +547,26 @@ export function useVisualConfig() {
           commercialMode: Boolean(parsed["commercial-mode"]),
           loggingToFile: Boolean(parsed["logging-to-file"]),
           logsMaxTotalSizeMb: String(parsed["logs-max-total-size-mb"] ?? ""),
+          errorLogsMaxFiles: String(parsed["error-logs-max-files"] ?? "10"),
           usageStatisticsEnabled: Boolean(parsed["usage-statistics-enabled"]),
+          requestLog: Boolean(parsed["request-log"]),
+          requestLogStorage: {
+            storeContent: Boolean(requestLogStorage?.["store-content"]),
+            retentionDays: String(requestLogStorage?.["retention-days"] ?? "7"),
+            contentRetentionDays: String(requestLogStorage?.["content-retention-days"] ?? "3"),
+            cleanupEnabled: requestLogStorage?.["cleanup-enabled"] !== false,
+            cleanupIntervalMinutes: String(
+              requestLogStorage?.["cleanup-interval-minutes"] ?? "60",
+            ),
+            maxRows: String(requestLogStorage?.["max-rows"] ?? "100000"),
+            maxMetadataSizeMb: String(requestLogStorage?.["max-metadata-size-mb"] ?? "256"),
+            maxTotalSizeMb: String(requestLogStorage?.["max-total-size-mb"] ?? "128"),
+            vacuumOnCleanup: Boolean(requestLogStorage?.["vacuum-on-cleanup"]),
+          },
+          systemStatsCacheSeconds: String(parsed["system-stats-cache-seconds"] ?? "60"),
+          systemStatsWebSocketMaxAgeSeconds: String(
+            parsed["system-stats-websocket-max-age-seconds"] ?? "300",
+          ),
           autoUpdateEnabled: Boolean(autoUpdate?.enabled ?? true),
           autoUpdateChannel: normalizeAutoUpdateChannel(autoUpdate?.channel),
           autoUpdateDockerImage:
@@ -661,7 +681,53 @@ export function useVisualConfig() {
         setBoolean(parsed, "commercial-mode", values.commercialMode);
         setBoolean(parsed, "logging-to-file", values.loggingToFile);
         setIntFromString(parsed, "logs-max-total-size-mb", values.logsMaxTotalSizeMb);
+        setIntFromString(parsed, "error-logs-max-files", values.errorLogsMaxFiles);
         setBoolean(parsed, "usage-statistics-enabled", values.usageStatisticsEnabled);
+        setBoolean(parsed, "request-log", values.requestLog);
+        setIntFromString(parsed, "system-stats-cache-seconds", values.systemStatsCacheSeconds);
+        setIntFromString(
+          parsed,
+          "system-stats-websocket-max-age-seconds",
+          values.systemStatsWebSocketMaxAgeSeconds,
+        );
+
+        const requestLogStorageValues = values.requestLogStorage;
+        if (
+          hasOwn(parsed, "request-log-storage") ||
+          requestLogStorageValues.storeContent ||
+          requestLogStorageValues.retentionDays.trim() !== "7" ||
+          requestLogStorageValues.contentRetentionDays.trim() !== "3" ||
+          !requestLogStorageValues.cleanupEnabled ||
+          requestLogStorageValues.cleanupIntervalMinutes.trim() !== "60" ||
+          requestLogStorageValues.maxRows.trim() !== "100000" ||
+          requestLogStorageValues.maxMetadataSizeMb.trim() !== "256" ||
+          requestLogStorageValues.maxTotalSizeMb.trim() !== "128" ||
+          requestLogStorageValues.vacuumOnCleanup
+        ) {
+          const storage = ensureRecord(parsed, "request-log-storage");
+          setBoolean(storage, "store-content", requestLogStorageValues.storeContent);
+          setIntFromString(storage, "retention-days", requestLogStorageValues.retentionDays);
+          setIntFromString(
+            storage,
+            "content-retention-days",
+            requestLogStorageValues.contentRetentionDays,
+          );
+          storage["cleanup-enabled"] = requestLogStorageValues.cleanupEnabled;
+          setIntFromString(
+            storage,
+            "cleanup-interval-minutes",
+            requestLogStorageValues.cleanupIntervalMinutes,
+          );
+          setIntFromString(storage, "max-rows", requestLogStorageValues.maxRows);
+          setIntFromString(
+            storage,
+            "max-metadata-size-mb",
+            requestLogStorageValues.maxMetadataSizeMb,
+          );
+          setIntFromString(storage, "max-total-size-mb", requestLogStorageValues.maxTotalSizeMb);
+          storage["vacuum-on-cleanup"] = requestLogStorageValues.vacuumOnCleanup;
+          deleteIfEmpty(parsed, "request-log-storage");
+        }
 
         if (
           hasOwn(parsed, "auto-update") ||
@@ -828,6 +894,9 @@ export function useVisualConfig() {
       const next: VisualConfigValues = { ...prev, ...newValues } as VisualConfigValues;
       if (newValues.streaming) {
         next.streaming = { ...prev.streaming, ...newValues.streaming };
+      }
+      if (newValues.requestLogStorage) {
+        next.requestLogStorage = { ...prev.requestLogStorage, ...newValues.requestLogStorage };
       }
       if (newValues.kimiHeaderDefaults) {
         next.kimiHeaderDefaults = { ...prev.kimiHeaderDefaults, ...newValues.kimiHeaderDefaults };

@@ -15,6 +15,8 @@ export function ApiKeyFormModal({
   onClose,
   onSubmit,
   regenerateKey,
+  serverGeneratesKey = false,
+  hidePermissionProfile = false,
 }: {
   t: (key: string, options?: Record<string, unknown>) => string;
   open: boolean;
@@ -26,6 +28,8 @@ export function ApiKeyFormModal({
   onClose: () => void;
   onSubmit: () => Promise<void>;
   regenerateKey: () => void;
+  serverGeneratesKey?: boolean;
+  hidePermissionProfile?: boolean;
 }) {
   return (
     <Modal
@@ -57,6 +61,8 @@ export function ApiKeyFormModal({
         editMode={editMode}
         permissionProfileOptions={permissionProfileOptions}
         regenerateKey={regenerateKey}
+        serverGeneratesKey={serverGeneratesKey}
+        hidePermissionProfile={hidePermissionProfile}
       />
     </Modal>
   );

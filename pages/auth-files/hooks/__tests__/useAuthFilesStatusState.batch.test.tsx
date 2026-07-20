@@ -242,10 +242,21 @@ describe("useAuthFilesStatusState batch refresh", () => {
         {
           auth_index: "idx-1",
           auth_subject_id: "shared-sub",
+          status_scope: "shared_subject",
+          subject_scope: "shared",
+          share_eligible: true,
+          subscription_started_at: "2026-07-01T00:00:00Z",
+          subscription_expires_at: "2026-08-01T00:00:00Z",
+          subscription_source: "signed_claims",
           quotas: [{ quota_key: "code_5h", percent: 33 }],
           usage: {
             cycle_request_total: 5,
             cycle_known: true,
+            request_total: 60,
+            success_total: 48,
+            failure_total: 12,
+            projected_since: "2026-06-15T00:00:00Z",
+            history_complete: false,
             request_total_30d: 50,
             success_total_30d: 40,
             failure_total_30d: 10,
@@ -289,6 +300,70 @@ describe("useAuthFilesStatusState batch refresh", () => {
       );
       expect(names).toEqual(expect.arrayContaining(["idx-1", "idx-2"]));
     });
+    await waitFor(() => {
+      let patched = twinSubjectFiles;
+      for (const [update] of setFiles.mock.calls) {
+        if (typeof update === "function") patched = update(patched);
+      }
+      for (const file of patched) {
+        expect(file.subject_scope).toBe("shared");
+        expect(file.share_eligible).toBe(true);
+        expect(file.usage_history_complete).toBe(false);
+        expect(file.usage_projected_since).toBe("2026-06-15T00:00:00Z");
+        expect(file.shared_subscription_expires_at).toBe("2026-08-01T00:00:00Z");
+      }
+    });
+  });
+
+  test("partial status without subscription fields keeps existing badge fields", async () => {
+    const seeded: AuthFileItem[] = [
+      {
+        name: "a.json",
+        auth_index: "a1",
+        type: "codex",
+        shared_subscription_started_at: "2026-07-01T00:00:00Z",
+        shared_subscription_expires_at: "2026-08-01T00:00:00Z",
+        shared_subscription_source: "signed_claims",
+      } as AuthFileItem,
+    ];
+    mocks.getStatus.mockResolvedValue({
+      items: [
+        {
+          auth_index: "a1",
+          quotas: [{ quota_key: "code_5h", percent: 12 }],
+          usage: {
+            cycle_request_total: 3,
+            cycle_known: true,
+            request_total: 10,
+            success_total: 9,
+            failure_total: 1,
+          },
+        },
+      ],
+    });
+    const setFiles = vi.fn();
+    const setDetailFile = vi.fn();
+    const { result } = renderHook(() =>
+      useAuthFilesStatusState({
+        tab: "files",
+        pageItems: seeded,
+        loading: false,
+        setFiles,
+        setDetailFile,
+      }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.quotaByFileName["a.json"]?.items[0]?.percent).toBe(12);
+    });
+
+    let patched = seeded;
+    for (const [update] of setFiles.mock.calls) {
+      if (typeof update === "function") patched = update(patched);
+    }
+    expect(patched[0]?.shared_subscription_started_at).toBe("2026-07-01T00:00:00Z");
+    expect(patched[0]?.shared_subscription_expires_at).toBe("2026-08-01T00:00:00Z");
+    expect(patched[0]?.shared_subscription_source).toBe("signed_claims");
   });
 
   test("job poll 404 does not mark status API unsupported", async () => {
