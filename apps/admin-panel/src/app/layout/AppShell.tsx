@@ -21,9 +21,6 @@ import {
   PanelLeft,
   Settings,
   ShieldCheck,
-  UserPlus,
-  Users,
-  X,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -39,7 +36,6 @@ import {
 import { preloadPageRoute } from "@pages/registry";
 import { recoverFromChunkLoadError } from "@pages/chunkLoadRecovery";
 import {
-  buildAccountKey,
   identityApi,
   IDENTITY_TENANTS_UPDATED_EVENT,
   type MenuIdentity,
@@ -640,10 +636,6 @@ function ShellSidebar({
   const auth = useOptionalAuth();
   const can = auth?.can ?? (() => true);
   const principal = auth?.state.principal ?? null;
-  const savedAccounts = auth?.state.savedAccounts ?? [];
-  const switchAccount = auth?.actions.switchAccount;
-  const beginAddAccount = auth?.actions.beginAddAccount;
-  const removeSavedAccount = auth?.actions.removeSavedAccount;
   const menuByCode = useMemo(
     () => (principal?.menus ? new Map(principal.menus.map((menu) => [menu.code, menu])) : null),
     [principal?.menus],
@@ -871,36 +863,6 @@ function ShellSidebar({
     logout();
   }, [logout, navigate]);
 
-  const handleAddAccount = useCallback(() => {
-    beginAddAccount?.();
-    navigate("/login", { replace: true, viewTransition: true });
-  }, [beginAddAccount, navigate]);
-
-  const handleSwitchAccount = useCallback(
-    (accountId: string) => {
-      if (!switchAccount) return;
-      // On failure switchAccount rolls back; ProtectedRoute sends unauth to login.
-      void switchAccount(accountId).then((ok) => {
-        if (ok) navigate("/dashboard", { replace: true, viewTransition: true });
-      });
-    },
-    [navigate, switchAccount],
-  );
-
-  const currentAccountKey = useMemo(() => {
-    if (!principal?.user.id || !auth?.state.apiBase) return "";
-    return buildAccountKey(auth.state.apiBase, principal.user.id);
-  }, [auth?.state.apiBase, principal?.user.id]);
-
-  const otherAccounts = useMemo(
-    () =>
-      savedAccounts.filter((row) => {
-        if (row.accountKey && currentAccountKey) return row.accountKey !== currentAccountKey;
-        return row.accountId !== principal?.user.id;
-      }),
-    [currentAccountKey, principal?.user.id, savedAccounts],
-  );
-
   return (
     <>
       {pendingTo && <div className={progressDone ? "rp rp-done" : "rp"} />}
@@ -1079,60 +1041,6 @@ function ShellSidebar({
                       </DropdownMenu.Item>
                     ) : null}
                     <DropdownMenu.Separator />
-                    {otherAccounts.length > 0 ? (
-                      <>
-                        <div className="px-2 py-1.5 text-2xs font-medium uppercase tracking-wide text-slate-400">
-                          {t("shell.switch_account")}
-                        </div>
-                        {otherAccounts.map((account) => {
-                          const key = account.accountKey || account.accountId;
-                          return (
-                            <DropdownMenu.Item
-                              key={key}
-                              className="group/saved-account py-2.5"
-                              onSelect={(event) => {
-                                if (
-                                  event.target instanceof Element &&
-                                  event.target.closest("[data-remove-saved-account]")
-                                ) {
-                                  event.preventDefault();
-                                  removeSavedAccount?.(key);
-                                  return;
-                                }
-                                handleSwitchAccount(key);
-                              }}
-                            >
-                              <Users size={16} />
-                              <span className="min-w-0 flex-1 truncate leading-tight">
-                                <span className="block truncate">
-                                  {account.displayName || account.username}
-                                </span>
-                                <span className="block truncate text-2xs font-normal text-slate-400">
-                                  {account.username}
-                                  {account.apiBase
-                                    ? ` · ${account.apiBase.replace(/^https?:\/\//, "")}`
-                                    : ""}
-                                </span>
-                              </span>
-                              <span
-                                role="button"
-                                tabIndex={-1}
-                                data-remove-saved-account="true"
-                                aria-label={t("shell.forget_saved_account")}
-                                className="ml-1 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-slate-400 opacity-0 transition hover:bg-slate-100 hover:text-rose-600 group-hover/saved-account:opacity-100 group-focus-within/saved-account:opacity-100 dark:hover:bg-white/10"
-                              >
-                                <X size={12} />
-                              </span>
-                            </DropdownMenu.Item>
-                          );
-                        })}
-                        <DropdownMenu.Separator />
-                      </>
-                    ) : null}
-                    <DropdownMenu.Item onSelect={handleAddAccount} className="py-2.5">
-                      <UserPlus size={16} />
-                      {t("shell.add_account")}
-                    </DropdownMenu.Item>
                     <DropdownMenu.Item
                       onSelect={handleLogout}
                       className="py-2.5 text-rose-600 focus:text-rose-700 dark:text-rose-300"

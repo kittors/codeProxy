@@ -96,15 +96,13 @@ test("Login: successful sign in persists auth snapshot and restores dashboard af
 
   await expect(page).toHaveURL(/#\/dashboard$/);
 
-  // Active session is always sessionStorage (per-tab); vault may also land in localStorage.
-  const sessionSnapshot = await page.evaluate(() => sessionStorage.getItem("code-proxy-admin-auth"));
-  expect(sessionSnapshot).toBeTruthy();
-  expect(sessionSnapshot).toContain("cps_test");
-  expect(sessionSnapshot).toContain("expiresAt");
-
-  const vault = await page.evaluate(() => localStorage.getItem("code-proxy-admin-auth-accounts"));
-  expect(vault).toBeTruthy();
-  expect(vault).toContain("cps_test");
+  // remember=true → durable localStorage snapshot (single admin session, no multi-account vault).
+  const snapshot = await page.evaluate(() => localStorage.getItem("code-proxy-admin-auth"));
+  expect(snapshot).toBeTruthy();
+  expect(snapshot).toContain("cps_test");
+  expect(snapshot).toContain("expiresAt");
+  expect(await page.evaluate(() => sessionStorage.getItem("code-proxy-admin-auth"))).toBeNull();
+  expect(await page.evaluate(() => localStorage.getItem("code-proxy-admin-auth-accounts"))).toBeNull();
 
   await page.reload({ waitUntil: "domcontentloaded" });
   await expect(page).toHaveURL(/#\/dashboard$/);

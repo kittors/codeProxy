@@ -10,28 +10,20 @@ import {
 } from "react";
 import {
   apiClient,
-  AUTH_ACCOUNTS_CHANGED_EVENT,
-  AUTH_ACCOUNTS_STORAGE_KEY,
-  buildAccountKey,
   clearPersistedAuthSnapshot,
   computeManagementApiBase,
   detectApiBaseFromLocation,
-  getSavedAuthAccount,
   identityApi,
   IDENTITY_MENUS_UPDATED_EVENT,
   extractApiErrorCode,
   isApiClientError,
   configApi,
-  listSavedAuthAccounts,
   normalizeApiBase,
   readPersistedAuthSnapshot,
-  removeSavedAuthAccount,
   updatePersistedEffectiveTenantId,
-  upsertSavedAuthAccount,
   writePersistedAuthSnapshot,
   type ManagementPrincipal,
   type MenuIdentity,
-  type SavedAuthAccount,
 } from "@code-proxy/api-client";
 import {
   DEFAULT_CACHE_TENANT_ID,
@@ -54,7 +46,6 @@ interface AuthContextState {
     principal: ManagementPrincipal | null;
     authFailureCode: string;
     permissions: ReadonlySet<string>;
-    savedAccounts: SavedAuthAccount[];
   };
   actions: {
     login: (input: {
@@ -66,11 +57,6 @@ interface AuthContextState {
     logout: () => void;
     restore: () => Promise<void>;
     switchTenant: (tenantId: string) => Promise<void>;
-    /** Soft-switch: keep current session in vault, go to login to add another. */
-    beginAddAccount: () => void;
-    /** @returns true when the target session is active after switch. Accepts accountKey or legacy id. */
-    switchAccount: (accountKeyOrId: string) => Promise<boolean>;
-    removeSavedAccount: (accountKeyOrId: string) => void;
   };
   meta: { managementEndpoint: string };
   can: (permission: string) => boolean;
@@ -522,16 +508,6 @@ const legacyServicePrincipal = (): ManagementPrincipal => ({
   platform_admin: true,
 });
 
-const accountMetaFromPrincipal = (apiBase: string, principal: ManagementPrincipal) => {
-  const accountId = principal.user.id;
-  return {
-    accountId,
-    accountKey: buildAccountKey(apiBase, accountId),
-    username: principal.user.username,
-    displayName: principal.user.display_name || principal.user.username,
-  };
-};
-
 const parseExpiryMs = (value?: string | null): number | undefined => {
   if (!value) return undefined;
   const ms = Date.parse(value);
@@ -548,21 +524,23 @@ const persistSession = (input: {
   expiresAtMs?: number;
   refreshExpiresAtMs?: number;
 }) => {
-  const meta = input.principal ? accountMetaFromPrincipal(input.apiBase, input.principal) : {};
-  const expiry = {
-    ...(input.expiresAtMs ? { expiresAtMs: input.expiresAtMs } : {}),
-    ...(input.refreshExpiresAtMs ? { refreshExpiresAtMs: input.refreshExpiresAtMs } : {}),
-  };
+  const principal = input.principal;
   writePersistedAuthSnapshot({
     apiBase: input.apiBase,
     managementKey: input.managementKey,
     ...(input.refreshToken ? { refreshToken: input.refreshToken } : {}),
     rememberPassword: input.rememberPassword,
     effectiveTenantId: input.effectiveTenantId,
-    ...meta,
-    ...expiry,
+    ...(principal
+      ? {
+          accountId: principal.user.id,
+          username: principal.user.username,
+          displayName: principal.user.display_name || principal.user.username,
+        }
+      : {}),
+    ...(input.expiresAtMs ? { expiresAtMs: input.expiresAtMs } : {}),
+    ...(input.refreshExpiresAtMs ? { refreshExpiresAtMs: input.refreshExpiresAtMs } : {}),
   });
-  // writePersistedAuthSnapshot already upserts vault when accountKey is present.
 };
 
 export function AuthProvider({ children }: PropsWithChildren) {
@@ -576,15 +554,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [serverBuildDate, setServerBuildDate] = useState<string | null>(null);
   const [principal, setPrincipal] = useState<ManagementPrincipal | null>(null);
   const [authFailureCode, setAuthFailureCode] = useState("");
-  const [savedAccounts, setSavedAccounts] = useState<SavedAuthAccount[]>(() =>
-    listSavedAuthAccounts(),
-  );
-  // Monotonic op id so a slower bootstrap cannot overwrite a newer login/switch.
+  // Monotonic op id so a slower bootstrap cannot overwrite a newer login.
   const bootstrapOpRef = useRef(0);
-
-  const refreshSavedAccounts = useCallback(() => {
-    setSavedAccounts(listSavedAuthAccounts());
-  }, []);
 
   const configureClient = useCallback(
     (
@@ -729,7 +700,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
         expiresAtMs: snapshot?.expiresAtMs,
         refreshExpiresAtMs: snapshot?.refreshExpiresAtMs,
       });
-      refreshSavedAccounts();
       return true;
     } catch (error) {
       if (!isCurrent()) return false;
@@ -740,16 +710,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
       // Transient restore failures keep the snapshot (including tenant override)
       // so a refresh can retry the same context instead of wiping it.
       if (!isTransientRestoreError(error)) {
-        const staleKey = snapshot?.accountKey || snapshot?.accountId;
         clearPersistedAuthSnapshot();
-        if (staleKey) removeSavedAuthAccount(staleKey);
-        refreshSavedAccounts();
       }
       return false;
     } finally {
       if (isCurrent()) setIsRestoring(false);
     }
-  }, [configureClient, refreshSavedAccounts]);
+  }, [configureClient]);
 
   useEffect(() => void bootstrap(), [bootstrap]);
 
@@ -775,11 +742,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setIsAuthenticated(false);
       setPrincipal(null);
       syncActiveDataCacheTenant(DEFAULT_CACHE_TENANT_ID, { apiBase });
-      const snap = readPersistedAuthSnapshot();
-      const staleKey = snap?.accountKey || snap?.accountId;
       clearPersistedAuthSnapshot();
-      if (staleKey) removeSavedAuthAccount(staleKey);
-      setSavedAccounts(listSavedAuthAccounts());
     };
     const handleVersion = (event: Event) => {
       const detail = (event as CustomEvent<{ version?: string; buildDate?: string }>).detail;
@@ -803,23 +766,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
       if (detail?.accessToken) setAccessToken(detail.accessToken);
       if (detail?.refreshToken) setRefreshToken(detail.refreshToken);
     };
-    const handleAccountsChanged = () => setSavedAccounts(listSavedAuthAccounts());
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key === AUTH_ACCOUNTS_STORAGE_KEY || event.key === null) {
-        setSavedAccounts(listSavedAuthAccounts());
-      }
-    };
     window.addEventListener("unauthorized", handleUnauthorized);
     window.addEventListener("server-version-update", handleVersion as EventListener);
     window.addEventListener("auth-token-refreshed", handleTokenRefreshed as EventListener);
-    window.addEventListener(AUTH_ACCOUNTS_CHANGED_EVENT, handleAccountsChanged);
-    window.addEventListener("storage", handleStorage);
     return () => {
       window.removeEventListener("unauthorized", handleUnauthorized);
       window.removeEventListener("server-version-update", handleVersion as EventListener);
       window.removeEventListener("auth-token-refreshed", handleTokenRefreshed as EventListener);
-      window.removeEventListener(AUTH_ACCOUNTS_CHANGED_EVENT, handleAccountsChanged);
-      window.removeEventListener("storage", handleStorage);
     };
   }, [accessToken, apiBase, bootstrap, configureClient, principal, refreshToken]);
 
@@ -861,16 +814,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
         expiresAtMs: parseExpiryMs(response.expires_at),
         refreshExpiresAtMs: parseExpiryMs(response.refresh_expires_at),
       });
-      refreshSavedAccounts();
       return response.principal;
     },
-    [configureClient, refreshSavedAccounts],
+    [configureClient],
   );
 
   const logout = useCallback(() => {
-    const accountKey = principal
-      ? buildAccountKey(apiBase, principal.user.id)
-      : readPersistedAuthSnapshot()?.accountKey;
     void identityApi.logout().catch(() => undefined);
     setIsAuthenticated(false);
     setAccessToken("");
@@ -880,126 +829,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     configureClient(apiBase, "", "", "");
     syncActiveDataCacheTenant(DEFAULT_CACHE_TENANT_ID, { apiBase });
     clearPersistedAuthSnapshot();
-    if (accountKey) removeSavedAuthAccount(accountKey);
-    refreshSavedAccounts();
-  }, [apiBase, configureClient, principal, refreshSavedAccounts]);
-
-  const beginAddAccount = useCallback(() => {
-    // Soft logout: keep vault entry so user can switch back after adding another account.
-    if (principal && accessToken) {
-      const override =
-        principal.effective_tenant.id === principal.home_tenant.id
-          ? undefined
-          : principal.effective_tenant.id;
-      const meta = accountMetaFromPrincipal(apiBase, principal);
-      upsertSavedAuthAccount({
-        apiBase,
-        managementKey: accessToken,
-        ...(refreshToken ? { refreshToken } : {}),
-        rememberPassword,
-        effectiveTenantId: override,
-        ...meta,
-        lastUsedAt: Date.now(),
-      });
-      refreshSavedAccounts();
-    }
-    setIsAuthenticated(false);
-    setAccessToken("");
-    setRefreshToken("");
-    setPrincipal(null);
-    setAuthFailureCode("");
-    configureClient(apiBase, "", "", "");
-    syncActiveDataCacheTenant(DEFAULT_CACHE_TENANT_ID, { apiBase });
-    clearPersistedAuthSnapshot();
-  }, [
-    accessToken,
-    apiBase,
-    configureClient,
-    principal,
-    refreshSavedAccounts,
-    refreshToken,
-    rememberPassword,
-  ]);
-
-  const switchAccount = useCallback(
-    async (accountKeyOrId: string): Promise<boolean> => {
-      const target = getSavedAuthAccount(accountKeyOrId);
-      if (!target) return false;
-      const currentKey = principal ? buildAccountKey(apiBase, principal.user.id) : "";
-      if (currentKey && target.accountKey === currentKey) return true;
-
-      const previousSnapshot =
-        principal && accessToken
-          ? {
-              apiBase,
-              managementKey: accessToken,
-              ...(refreshToken ? { refreshToken } : {}),
-              rememberPassword,
-              effectiveTenantId:
-                principal.effective_tenant.id === principal.home_tenant.id
-                  ? undefined
-                  : principal.effective_tenant.id,
-              ...accountMetaFromPrincipal(apiBase, principal),
-            }
-          : null;
-
-      // Park current session before swapping active snapshot.
-      if (previousSnapshot) {
-        upsertSavedAuthAccount({
-          ...previousSnapshot,
-          lastUsedAt: Date.now(),
-        });
-      }
-
-      writePersistedAuthSnapshot({
-        apiBase: target.apiBase,
-        managementKey: target.managementKey,
-        ...(target.refreshToken ? { refreshToken: target.refreshToken } : {}),
-        rememberPassword: target.rememberPassword,
-        effectiveTenantId: target.effectiveTenantId,
-        accountId: target.accountId,
-        accountKey: target.accountKey,
-        username: target.username,
-        displayName: target.displayName,
-        ...(target.expiresAtMs ? { expiresAtMs: target.expiresAtMs } : {}),
-        ...(target.refreshExpiresAtMs ? { refreshExpiresAtMs: target.refreshExpiresAtMs } : {}),
-      });
-      refreshSavedAccounts();
-      setIsRestoring(true);
-      const ok = await bootstrap();
-      if (ok) return true;
-
-      // Target failed: roll back to the parked previous session when possible.
-      if (previousSnapshot) {
-        writePersistedAuthSnapshot(previousSnapshot);
-        refreshSavedAccounts();
-        setIsRestoring(true);
-        return bootstrap();
-      }
-      return false;
-    },
-    [
-      accessToken,
-      apiBase,
-      bootstrap,
-      principal,
-      refreshSavedAccounts,
-      refreshToken,
-      rememberPassword,
-    ],
-  );
-
-  const removeSavedAccount = useCallback(
-    (accountKeyOrId: string) => {
-      const currentKey = principal ? buildAccountKey(apiBase, principal.user.id) : "";
-      if (currentKey && (accountKeyOrId === currentKey || accountKeyOrId === principal?.user.id)) {
-        return;
-      }
-      removeSavedAuthAccount(accountKeyOrId);
-      refreshSavedAccounts();
-    },
-    [apiBase, principal, refreshSavedAccounts],
-  );
+  }, [apiBase, configureClient]);
 
   const restore = useCallback(async () => {
     setIsRestoring(true);
@@ -1073,16 +903,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
         principal,
         authFailureCode,
         permissions,
-        savedAccounts,
       },
       actions: {
         login,
         logout,
         restore,
         switchTenant,
-        beginAddAccount,
-        switchAccount,
-        removeSavedAccount,
       },
       meta: { managementEndpoint: computeManagementApiBase(apiBase) },
       can,
@@ -1091,7 +917,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
       accessToken,
       apiBase,
       authFailureCode,
-      beginAddAccount,
       can,
       isAuthenticated,
       isRestoring,
@@ -1100,12 +925,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
       permissions,
       principal,
       rememberPassword,
-      removeSavedAccount,
       restore,
-      savedAccounts,
       serverBuildDate,
       serverVersion,
-      switchAccount,
       switchTenant,
     ],
   );

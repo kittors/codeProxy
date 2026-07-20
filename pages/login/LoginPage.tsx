@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
-import { Eye, EyeOff, KeyRound, Lock, UserRound, Users, X } from "lucide-react";
+import { Eye, EyeOff, KeyRound, Lock, UserRound } from "lucide-react";
 import {
   detectApiBaseFromLocation,
   extractApiErrorCode,
@@ -28,9 +28,8 @@ export function LoginPage() {
       rememberPassword: persistedRemember,
       principal,
       authFailureCode,
-      savedAccounts,
     },
-    actions: { login, switchAccount, removeSavedAccount },
+    actions: { login },
   } = useAuth();
   const { notify } = useToast();
   const [apiBase, setApiBase] = useState(persistedBase || detectApiBaseFromLocation());
@@ -100,27 +99,6 @@ export function LoginPage() {
     [apiBase, login, navigate, notify, password, redirect, rememberPassword, t, username],
   );
 
-  const handleResumeAccount = useCallback(
-    async (accountId: string) => {
-      setLoading(true);
-      try {
-        const ok = await switchAccount(accountId);
-        if (!ok) {
-          notify({
-            type: "error",
-            message: t("login.switch_account_failed", "Could not restore that account. Sign in again."),
-          });
-          return;
-        }
-        notify({ type: "success", message: t("login.login_success") });
-        navigate(redirect, { replace: true, viewTransition: true });
-      } finally {
-        setLoading(false);
-      }
-    },
-    [navigate, notify, redirect, switchAccount, t],
-  );
-
   if (isRestoring) return null;
   if (isAuthenticated) {
     return (
@@ -182,56 +160,6 @@ export function LoginPage() {
                 {accessFailureMessage ? (
                   <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
                     {accessFailureMessage}
-                  </div>
-                ) : null}
-                {savedAccounts.length > 0 ? (
-                  <div className="space-y-2">
-                    <div className="text-xs font-medium text-slate-600 dark:text-white/60">
-                      {t("shell.switch_account")}
-                    </div>
-                    <div className="space-y-1.5">
-                      {savedAccounts.map((account) => {
-                        const key = account.accountKey || account.accountId;
-                        return (
-                          <div
-                            key={key}
-                            className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50/80 px-3 py-2 dark:border-white/10 dark:bg-white/5"
-                          >
-                            <button
-                              type="button"
-                              disabled={loading}
-                              onClick={() => void handleResumeAccount(key)}
-                              className="flex min-w-0 flex-1 items-center gap-2 text-left text-sm font-medium text-slate-800 transition hover:text-slate-950 disabled:opacity-60 dark:text-white/90"
-                            >
-                              <Users size={15} className="shrink-0 text-slate-400" />
-                              <span className="min-w-0 flex-1 truncate leading-tight">
-                                <span className="block truncate">
-                                  {account.displayName || account.username}
-                                </span>
-                                <span className="block truncate text-2xs font-normal text-slate-400">
-                                  {account.username}
-                                  {account.apiBase
-                                    ? ` · ${account.apiBase.replace(/^https?:\/\//, "")}`
-                                    : ""}
-                                </span>
-                              </span>
-                            </button>
-                            <button
-                              type="button"
-                              disabled={loading}
-                              aria-label={t("shell.forget_saved_account")}
-                              onClick={() => removeSavedAccount(key)}
-                              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-white hover:text-rose-600 dark:hover:bg-white/10"
-                            >
-                              <X size={13} />
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <div className="pt-1 text-center text-2xs text-slate-400">
-                      {t("login.or_sign_in", "or sign in with password")}
-                    </div>
                   </div>
                 ) : null}
                 <label className="block space-y-2">
