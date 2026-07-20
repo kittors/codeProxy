@@ -319,12 +319,14 @@ export function AuthFilesPage() {
     uploading,
     uploadProgress,
     deletingAll,
+    batchStatusUpdating,
     statusUpdating,
     tagSavingByName,
     downloadAuthFile,
     handleDownloadSelection,
     handleUpload,
     handleDeleteSelection,
+    handleDisableSelection,
     setFileEnabled,
     saveAuthFileTags,
   } = useAuthFilesFileActions({
@@ -861,6 +863,8 @@ export function AuthFilesPage() {
         setConfirm={setConfirm}
         selectedFileNames={selectedFileNames}
         deletingAll={deletingAll}
+        batchStatusUpdating={batchStatusUpdating}
+        handleDisableSelection={handleDisableSelection}
         pageItems={pageItems}
         fileColumns={fileColumns}
         filesViewMode={filesViewMode}

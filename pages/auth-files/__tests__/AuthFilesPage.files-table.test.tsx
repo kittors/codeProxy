@@ -1410,6 +1410,7 @@ describe("AuthFilesPage files table", () => {
     expect(await screen.findByText("qwen.json")).toBeInTheDocument();
 
     fireEvent.click(screen.getByLabelText("Select qwen.json"));
+    expect(screen.getByRole("button", { name: "Disable" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Delete selected (1)" }));
     fireEvent.click(await screen.findByRole("button", { name: "Delete" }));
 
