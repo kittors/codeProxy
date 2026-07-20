@@ -332,8 +332,9 @@ describe("DataTable scroll chrome and row dividers", () => {
 
     expect(viewport.scrollTop).toBe(240);
     expect(parent.scrollTop).toBe(120);
-    expect(viewport).toHaveClass("overscroll-y-auto");
-    expect(viewport).not.toHaveClass("overscroll-y-none");
+    // Wheel handoff is JS-driven; keep overscroll contained so sticky headers never bounce.
+    expect(viewport).toHaveClass("overscroll-y-none");
+    expect(viewport).not.toHaveClass("overscroll-y-auto");
     const headerChrome = document.querySelector("[data-vt-header-chrome]");
     expect(headerChrome).not.toBeNull();
     expect(headerChrome).toHaveClass("absolute", "left-0", "top-0");
