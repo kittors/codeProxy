@@ -157,6 +157,21 @@ vi.mock("@code-proxy/ui", async (importOriginal) => ({
   EChart: ({ className }: { className?: string }) => <div className={className}>chart</div>,
 }));
 
+const padDatePart = (value: number): string => String(value).padStart(2, "0");
+
+const toDateTimeLocalInput = (date: Date): string =>
+  [
+    date.getFullYear(),
+    "-",
+    padDatePart(date.getMonth() + 1),
+    "-",
+    padDatePart(date.getDate()),
+    "T",
+    padDatePart(date.getHours()),
+    ":",
+    padDatePart(date.getMinutes()),
+  ].join("");
+
 
 const decodeBase64UrlJson = (part: string): Record<string, unknown> =>
   JSON.parse(Buffer.from(part, "base64url").toString("utf8")) as Record<string, unknown>;
@@ -3266,7 +3281,7 @@ describe("AuthFilesPage files table", () => {
     expect(screen.getByText("<1d left")).toBeInTheDocument();
   });
 
-  test("does not show manual subscription editor in auth fields", async () => {
+  test("saves subscription start and period from the auth fields editor", async () => {
     mocks.list.mockImplementation(async () => ({
       files: [
         {
@@ -3277,9 +3292,6 @@ describe("AuthFilesPage files table", () => {
           size: 1024,
           modified: Date.now(),
           disabled: false,
-          shared_subscription_started_at: "2026-07-01T00:00:00Z",
-          shared_subscription_expires_at: "2026-08-01T00:00:00Z",
-          shared_subscription_source: "signed_claims",
         },
       ],
     }));
@@ -3289,6 +3301,7 @@ describe("AuthFilesPage files table", () => {
           type: "codex",
           subscription_started_at: "2027-01-02T03:04:00Z",
           subscription_period: "monthly",
+          subscription_expires_at: "2099-01-01T00:00:00Z",
         },
         null,
         2,
@@ -3311,10 +3324,19 @@ describe("AuthFilesPage files table", () => {
     fireEvent.click(screen.getByRole("button", { name: "Details" }));
     fireEvent.click(await screen.findByRole("tab", { name: "Fields" }));
 
-    expect(screen.queryByLabelText("Subscription start date")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("Subscription cycle")).not.toBeInTheDocument();
-    expect(screen.queryByText("Subscription start date")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Save" })).toBeInTheDocument();
+    const input = await screen.findByLabelText("Subscription start date");
+    fireEvent.change(input, { target: { value: "2027-01-03T04:05" } });
+    fireEvent.click(screen.getByRole("combobox", { name: "Subscription cycle" }));
+    fireEvent.click(await screen.findByRole("option", { name: "Yearly" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(mocks.upload).toHaveBeenCalledTimes(1));
+    const uploadCalls = mocks.upload.mock.calls as unknown as [[File]];
+    const uploaded = uploadCalls[0][0];
+    const uploadedJson = JSON.parse(await uploaded.text()) as Record<string, unknown>;
+    expect(uploadedJson.subscription_started_at).toBe(new Date("2027-01-03T04:05").toISOString());
+    expect(uploadedJson.subscription_period).toBe("yearly");
+    expect(uploadedJson.subscription_expires_at).toBeUndefined();
   });
 
   test("shows card subscription badge from shared provider subscription", async () => {
