@@ -983,23 +983,85 @@ export function ApiKeyLookupPage() {
     async (accountKey: string) => {
       const target = portalApi.switchAccount(accountKey);
       if (!target) return;
+
+      // Abort in-flight lookups for the previous account, but keep multi-account
+      // chart cache so warm accounts can paint immediately (SWR).
+      abortControllerRef.current?.abort();
+      fetchIdRef.current += 1;
+      paginationInFlightRef.current = false;
+      chartAbortControllerRef.current?.abort();
+      chartFetchIdRef.current += 1;
+      summaryAbortControllerRef.current?.abort();
+      summaryFetchIdRef.current += 1;
+
       setPortalSessionPending(true);
       setOperationalKeyId("");
-      handleApiKeyInputChange("");
+      setApiKeyInput("");
+      setQueriedKey("");
+      setApiKeyName("");
       setPortalKeys([]);
+      setError(null);
+      setModelsError(null);
+      setModelsSearchFilter("");
+      modelsCacheRef.current = {};
+      setAvailableModels([]);
+      setRawItems([]);
+      setTotalCount(0);
+      setCurrentPage(1);
+      setLastUpdatedAt(null);
+      setStats({ total: 0, success_rate: 0, total_tokens: 0, total_cost: 0 });
+      setFilterOptions({
+        models: [],
+        channels: [],
+        channel_options: [],
+        statuses: ["success", "failed"],
+      });
+      setSelectedModels(null);
+      setSelectedChannels(null);
+      setSelectedStatuses(null);
+      setQuotaLimits(null);
+
+      // Prefill usage from this account's cache; cold accounts still skeleton.
+      const nextChartKey = `account:${target.user.id}|${timeRange}`;
+      const cached =
+        chartCacheRef.current[nextChartKey] || readStoredChartCache(nextChartKey);
+      if (cached) {
+        chartCacheRef.current[nextChartKey] = cached;
+        setChartData(cached);
+        const cachedName = cached.api_key_name?.trim() ?? "";
+        if (cachedName) setApiKeyName(cachedName);
+      } else {
+        setChartData(null);
+      }
+      setChartLoading(false);
+
+      // Align usageSubject immediately so the effect can revalidate under the new id.
+      setPortalUser({
+        id: target.user.id,
+        tenant_id: "",
+        username: target.user.username,
+        display_name: target.user.display_name,
+        status: "active",
+        must_change_password: false,
+        created_at: "",
+        updated_at: "",
+        version: 0,
+      });
+
       try {
         await hydratePortalSession();
       } catch {
         portalApi.removeSavedAccount(accountKey);
         portalApi.clearSession();
         setPortalUser(null);
+        setChartData(null);
         setLoginModalOpen(true);
       } finally {
         setPortalSessionPending(false);
         setSavedPortalAccounts(portalApi.listSavedAccounts());
       }
     },
-    [handleApiKeyInputChange, hydratePortalSession],
+    [hydratePortalSession, timeRange],
   );
 
   const refreshPortalKeys = useCallback(async () => {
