@@ -863,6 +863,133 @@ describe("ApiKeyLookupPage", () => {
     expect(window.sessionStorage.getItem("apiKeyLookup.chartCache.v1")).toBeNull();
   });
 
+  test("keeps warm account chart cache when switching portal accounts", async () => {
+    const { portalApi } = await import("@code-proxy/api-client");
+    const accountA = {
+      accountKey: "http://relay.test\0u-a",
+      apiBase: "http://relay.test",
+      accessToken: "cpt_a",
+      refreshToken: "cpr_a",
+      remember: true,
+      expiresAt: Date.now() + 60_000,
+      lastUsedAt: Date.now(),
+      user: { id: "u-a", username: "alice", display_name: "Alice" },
+    };
+    const accountB = {
+      accountKey: "http://relay.test\0u-b",
+      apiBase: "http://relay.test",
+      accessToken: "cpt_b",
+      refreshToken: "cpr_b",
+      remember: true,
+      expiresAt: Date.now() + 60_000,
+      lastUsedAt: Date.now() - 1_000,
+      user: { id: "u-b", username: "bob", display_name: "Bob" },
+    };
+
+    vi.mocked(portalApi.loadSession).mockReturnValue({
+      apiBase: accountA.apiBase,
+      accessToken: accountA.accessToken,
+      refreshToken: accountA.refreshToken,
+      remember: true,
+      expiresAt: accountA.expiresAt,
+      user: accountA.user,
+    });
+    vi.mocked(portalApi.listSavedAccounts).mockReturnValue([accountA, accountB] as never);
+    vi.mocked(portalApi.switchAccount).mockImplementation((key: string) => {
+      const target =
+        key === accountB.accountKey ? accountB : key === accountA.accountKey ? accountA : null;
+      if (!target) return null;
+      vi.mocked(portalApi.loadSession).mockReturnValue({
+        apiBase: target.apiBase,
+        accessToken: target.accessToken,
+        refreshToken: target.refreshToken,
+        remember: true,
+        expiresAt: target.expiresAt,
+        user: target.user,
+      });
+      return target as never;
+    });
+    vi.mocked(portalApi.me).mockImplementation(async () => {
+      const snap = portalApi.loadSession();
+      const id = snap?.user?.id === "u-b" ? "u-b" : "u-a";
+      return {
+        user: {
+          id,
+          tenant_id: "t1",
+          username: id === "u-b" ? "bob" : "alice",
+          display_name: id === "u-b" ? "Bob" : "Alice",
+          status: "active",
+          must_change_password: false,
+          created_at: "",
+          updated_at: "",
+          version: 1,
+        },
+      } as never;
+    });
+    vi.mocked(portalApi.listKeys).mockResolvedValue({
+      items: [
+        {
+          id: "k1",
+          tenant_id: "t1",
+          end_user_id: "u-a",
+          name: "default",
+          key_masked: "sk-****",
+          disabled: false,
+          is_default: true,
+        },
+      ],
+    } as never);
+    vi.mocked(portalApi.keySecret).mockResolvedValue({ id: "k1", key: "sk-op" });
+
+    window.sessionStorage.setItem(
+      "apiKeyLookup.chartCache.v2",
+      JSON.stringify({
+        byTenant: {
+          default: {
+            "account:u-a|7": chartResponse(11, "Alice"),
+            "account:u-b|7": chartResponse(77, "Bob"),
+          },
+        },
+      }),
+    );
+
+    let resolveBChart: (value: ChartResponse) => void = () => {};
+    mocks.fetchPublicChartData.mockImplementation(async (params?: { portalAccount?: boolean }) => {
+      if (!params?.portalAccount) return chartResponse(0);
+      const snap = portalApi.loadSession();
+      if (snap?.user?.id === "u-b") {
+        return new Promise<ChartResponse>((resolve) => {
+          resolveBChart = resolve;
+        });
+      }
+      return chartResponse(11, "Alice");
+    });
+
+    render(
+      <ThemeProvider>
+        <ToastProvider>
+          <ApiKeyLookupPage />
+        </ToastProvider>
+      </ThemeProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("usage-tab")).toHaveTextContent("11"));
+
+    await userEvent.click(await screen.findByTestId("apikey-lookup-account-menu"));
+    await userEvent.click(await screen.findByTestId("apikey-lookup-switch-account-trigger"));
+    await userEvent.click(await screen.findByTestId("apikey-lookup-switch-u-b"));
+
+    // Warm B: paint cached stats immediately (no skeleton / no-stats flash).
+    await waitFor(() => expect(screen.getByTestId("usage-tab")).toHaveTextContent("77"));
+    expect(screen.getByTestId("usage-tab")).not.toHaveTextContent("no-stats");
+    // Multi-account chart cache must survive the switch wipe path.
+    expect(window.sessionStorage.getItem("apiKeyLookup.chartCache.v2")).toContain("account:u-b|7");
+    expect(window.sessionStorage.getItem("apiKeyLookup.chartCache.v2")).toContain('"total":77');
+
+    resolveBChart(chartResponse(88, "Bob fresh"));
+    await waitFor(() => expect(screen.getByTestId("usage-tab")).toHaveTextContent("88"));
+  });
+
   test("ignores stale chart responses after rapid time range changes", async () => {
     window.history.replaceState({}, "", "/manage/apikey-lookup?api_key=sk-restored-key");
     const pending: Array<{
