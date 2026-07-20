@@ -3186,6 +3186,7 @@
     "today_spending": "Today usage",
     "unlimited": "Unlimited",
     "reset_today_spending": "Reset account today's spending",
+    "reset_today_spending_disabled": "Set a daily spending limit in the permission config before resetting",
     "reset_today_spending_success": "Account today's spending reset",
     "account_permission_profile": "Account Permission Profile",
     "account_permission_profile_placeholder": "Select an account permission profile",

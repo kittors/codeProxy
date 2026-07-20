@@ -3483,6 +3483,7 @@
     "today_spending": "今日用量",
     "unlimited": "未限制",
     "reset_today_spending": "重置账号今日消费",
+    "reset_today_spending_disabled": "请先在权限配置中设置每日消费额度后再重置",
     "reset_today_spending_success": "已重置该账号今日消费",
     "account_permission_profile": "账户权限模板",
     "account_permission_profile_placeholder": "选择账户权限模板",

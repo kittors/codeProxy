@@ -229,6 +229,8 @@ export function EndUsersPage() {
 
   const resetTodaySpending = useCallback(
     async (row: EndUser) => {
+      // ponytail: same gate as API Key list — unlimited daily spending has nothing to reset
+      if (!((row["daily-spending-limit"] ?? 0) > 0)) return;
       setBusy(true);
       try {
         await endUsersApi.resetDailySpending(row.id);
@@ -441,92 +443,100 @@ export function EndUsersPage() {
         lockOrder: "end",
         headerClassName: stickyActionsHeaderClass,
         cellClassName: stickyActionsCellClass,
-        render: (row) => (
-          <div className="flex items-center justify-center gap-1">
-            <Button
-              size="sm"
-              variant="ghost"
-              title={t("end_users.view_usage", { defaultValue: "查看用量" })}
-              onClick={() => void handleViewUserUsage(row)}
-            >
-              <BarChart3 className="h-4 w-4" />
-            </Button>
-            {can("api_keys.read") ? (
+        render: (row) => {
+          const hasDailyLimit = (row["daily-spending-limit"] ?? 0) > 0;
+          const resetLabel = hasDailyLimit
+            ? t("end_users.reset_today_spending", {
+                defaultValue: "重置账号今日消费",
+              })
+            : t("end_users.reset_today_spending_disabled", {
+                defaultValue: "请先在权限配置中设置每日消费额度后再重置",
+              });
+          return (
+            <div className="flex items-center justify-center gap-1">
               <Button
                 size="sm"
                 variant="ghost"
-                title={t("end_users.manage_keys", { defaultValue: "管理密钥" })}
-                onClick={() => setKeysUser(row)}
+                title={t("end_users.view_usage", { defaultValue: "查看用量" })}
+                onClick={() => void handleViewUserUsage(row)}
               >
-                <Key className="h-4 w-4" />
+                <BarChart3 className="h-4 w-4" />
               </Button>
-            ) : null}
-            {canWrite ? (
-              <Button
-                size="sm"
-                variant="ghost"
-                title={t("end_users.edit", { defaultValue: "编辑" })}
-                onClick={() => {
-                  setEditUser(row);
-                  setEditForm({
-                    username: row.username,
-                    displayName: row.display_name,
-                    password: "",
-                    permissionProfileId: row["permission-profile-id"] ?? "",
-                  });
-                }}
-              >
-                <Pencil className="h-4 w-4" />
-              </Button>
-            ) : null}
-            {canWrite ? (
-              row.status === "active" ? (
+              {can("api_keys.read") ? (
                 <Button
                   size="sm"
                   variant="ghost"
-                  disabled={busy}
-                  title={t("end_users.freeze", { defaultValue: "冻结账号" })}
-                  onClick={() => void setFrozen(row, true)}
+                  title={t("end_users.manage_keys", { defaultValue: "管理密钥" })}
+                  onClick={() => setKeysUser(row)}
                 >
-                  <Snowflake className="h-4 w-4" />
+                  <Key className="h-4 w-4" />
                 </Button>
-              ) : (
+              ) : null}
+              {canWrite ? (
                 <Button
                   size="sm"
                   variant="ghost"
-                  disabled={busy}
-                  title={t("end_users.activate", { defaultValue: "激活账号" })}
-                  onClick={() => void setFrozen(row, false)}
+                  title={t("end_users.edit", { defaultValue: "编辑" })}
+                  onClick={() => {
+                    setEditUser(row);
+                    setEditForm({
+                      username: row.username,
+                      displayName: row.display_name,
+                      password: "",
+                      permissionProfileId: row["permission-profile-id"] ?? "",
+                    });
+                  }}
                 >
-                  <Unlock className="h-4 w-4" />
+                  <Pencil className="h-4 w-4" />
                 </Button>
-              )
-            ) : null}
-            {canWrite ? (
-              <Button
-                size="sm"
-                variant="ghost"
-                disabled={busy}
-                title={t("end_users.reset_today_spending", {
-                  defaultValue: "重置账号今日消费",
-                })}
-                onClick={() => void resetTodaySpending(row)}
-              >
-                <RotateCcw className="h-4 w-4" />
-              </Button>
-            ) : null}
-            {canWrite ? (
-              <Button size="sm" variant="ghost" title="重置密码" onClick={() => setResetUser(row)}>
-                <KeyRound className="h-4 w-4" />
-              </Button>
-            ) : null}
-            {canWrite ? (
-              <Button size="sm" variant="ghost" title="删除" onClick={() => setDeleteUser(row)}>
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            ) : null}
-          </div>
-        ),
+              ) : null}
+              {canWrite ? (
+                row.status === "active" ? (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={busy}
+                    title={t("end_users.freeze", { defaultValue: "冻结账号" })}
+                    onClick={() => void setFrozen(row, true)}
+                  >
+                    <Snowflake className="h-4 w-4" />
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={busy}
+                    title={t("end_users.activate", { defaultValue: "激活账号" })}
+                    onClick={() => void setFrozen(row, false)}
+                  >
+                    <Unlock className="h-4 w-4" />
+                  </Button>
+                )
+              ) : null}
+              {canWrite ? (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={busy || !hasDailyLimit}
+                  title={resetLabel}
+                  onClick={() => void resetTodaySpending(row)}
+                >
+                  <RotateCcw className="h-4 w-4" />
+                </Button>
+              ) : null}
+              {canWrite ? (
+                <Button size="sm" variant="ghost" title="重置密码" onClick={() => setResetUser(row)}>
+                  <KeyRound className="h-4 w-4" />
+                </Button>
+              ) : null}
+              {canWrite ? (
+                <Button size="sm" variant="ghost" title="删除" onClick={() => setDeleteUser(row)}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              ) : null}
+            </div>
+          );
+        },
       },
     ],
     [

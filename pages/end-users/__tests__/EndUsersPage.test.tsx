@@ -99,11 +99,17 @@ describe("EndUsersPage account semantics", () => {
       screen.getByRole("columnheader", { name: "Account Permission Profile" }),
     ).toBeInTheDocument();
 
+    expect(
+      screen.getByRole("button", {
+        name: "Set a daily spending limit in the permission config before resetting",
+      }),
+    ).toBeDisabled();
+
     await userEvent.click(
-      screen.getAllByRole("button", { name: "Reset account today's spending" })[0],
+      screen.getByRole("button", { name: "Reset account today's spending" }),
     );
     await waitFor(() => {
-      expect(mocks.resetDailySpending).toHaveBeenCalledWith("user-active");
+      expect(mocks.resetDailySpending).toHaveBeenCalledWith("user-frozen");
     });
 
     await userEvent.click(screen.getByRole("button", { name: "Freeze account" }));
