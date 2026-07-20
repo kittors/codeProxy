@@ -347,6 +347,9 @@ describe("ApiKeyLookupPage", () => {
       </ThemeProvider>,
     );
 
+    // Stored portal session must not flash the public landing before /me resolves.
+    expect(screen.queryByTestId("apikey-lookup-landing")).not.toBeInTheDocument();
+
     await waitFor(() => {
       expect(mocks.fetchPublicChartData).toHaveBeenCalledWith(
         expect.objectContaining({ apiKey: "", portalAccount: true }),
@@ -362,6 +365,81 @@ describe("ApiKeyLookupPage", () => {
       screen.queryByRole("button", { name: /set as default|设默认/i }),
     ).not.toBeInTheDocument();
     expect(screen.queryByText(/^default$|^默认$/i)).not.toBeInTheDocument();
+  });
+
+  test("renders channel filter options with provider icon and auth badge", async () => {
+    window.history.replaceState({}, "", "/manage/apikey-lookup?api_key=sk-restored-key");
+    mocks.fetchPublicLogs.mockResolvedValueOnce({
+      items: [
+        {
+          id: 1,
+          timestamp: new Date("2026-07-05T03:01:18Z").toISOString(),
+          channel_name: "owner@example.com",
+          provider: "codex",
+          auth_type: "oauth",
+          model: "gpt-5.5",
+          failed: false,
+          streaming: true,
+          latency_ms: 1000,
+          first_token_ms: 100,
+          input_tokens: 1,
+          cached_tokens: 0,
+          output_tokens: 1,
+          total_tokens: 2,
+          cost: 0,
+          has_content: false,
+        },
+      ],
+      total: 1,
+      page: 1,
+      size: 50,
+      api_key_name: "Primary key",
+      stats: {
+        total: 1,
+        success_rate: 100,
+        total_tokens: 2,
+        total_sessions: 1,
+        total_cost: 0,
+      },
+      filters: {
+        models: ["gpt-5.5"],
+        channels: ["owner@example.com"],
+        channel_options: [
+          {
+            value: "authsub_codex_owner",
+            label: "owner@example.com",
+            provider: "codex",
+            auth_type: "oauth",
+          },
+        ],
+        statuses: ["success", "failed"],
+      },
+    });
+
+    render(
+      <ThemeProvider>
+        <ToastProvider>
+          <ApiKeyLookupPage />
+        </ToastProvider>
+      </ThemeProvider>,
+    );
+
+    await userEvent.click(await screen.findByRole("tab", { name: /request logs/i }));
+    await waitFor(() => {
+      expect(mocks.fetchPublicLogs).toHaveBeenCalled();
+    });
+
+    // Table channel cell also uses ChannelIdentityLabel (icon + OAuth badge).
+    expect(await screen.findByText("owner@example.com")).toBeInTheDocument();
+    expect(screen.getByText("OAuth")).toBeInTheDocument();
+
+    const channelFilter = screen.getByRole("combobox", { name: /filter by channel/i });
+    await userEvent.click(channelFilter);
+    // Filter option value comes from channel_options, not the display label alone.
+    expect(
+      await screen.findByRole("option", { name: /owner@example.com/i }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText("OAuth").length).toBeGreaterThan(0);
   });
 
   test("loads public logs only after switching to the request logs tab", async () => {
@@ -401,6 +479,14 @@ describe("ApiKeyLookupPage", () => {
       filters: {
         models: ["gpt-5.5"],
         channels: ["Codex 主渠道"],
+        channel_options: [
+          {
+            value: "authsub_codex_main",
+            label: "Codex 主渠道",
+            provider: "codex",
+            auth_type: "oauth",
+          },
+        ],
         statuses: ["success", "failed"],
       },
     });

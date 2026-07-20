@@ -8,6 +8,10 @@ import {
   type EndUser,
   type EndUserAPIKey,
 } from "@code-proxy/api-client";
+import {
+  normalizeChannelOptions,
+  type UsageChannelFilterOption,
+} from "@code-proxy/api-client/endpoints/usage";
 import { resolveLoginErrorMessage } from "../login/loginErrors";
 import { useTheme } from "@code-proxy/ui";
 import { ThemeToggleButton } from "@code-proxy/ui";
@@ -42,8 +46,10 @@ import { useApiKeyLookupCharts } from "./hooks/useApiKeyLookupCharts";
 import type { ChartDataResponse, PublicLogItem, PublicUsageLimits } from "./types";
 import {
   buildRequestLogsColumns,
+  ChannelIdentityLabel,
   formatOptionalRequestLogLatencyMs,
   formatRequestLogLatencyMs,
+  normalizeChannelAuthType,
   normalizeFilterSelection,
   toFilterParam,
   toStatusFilterValues,
@@ -243,6 +249,7 @@ const readLegacyLookupKeyFromUrl = (): string => {
 };
 
 function toLogRow(item: PublicLogItem): RequestLogsRow {
+  const channelAuthType = normalizeChannelAuthType(item.auth_type);
   return {
     id: String(item.id),
     timestamp: item.timestamp,
@@ -254,9 +261,8 @@ function toLogRow(item: PublicLogItem): RequestLogsRow {
     endUserDisplayName: item.end_user_display_name || item.api_key_name || "",
     isSystemCall: false,
     channelName: item.channel_name || "",
-    // Public lookup logs do not currently expose provider/auth metadata.
-    channelProvider: undefined,
-    channelAuthType: undefined,
+    channelProvider: String(item.provider ?? "").trim() || undefined,
+    channelAuthType: channelAuthType || undefined,
     maskedApiKey: item.api_key_masked || maskRequestLogApiKey(item.api_key || ""),
     model: item.model,
     upstreamModel: item.upstream_model || "",
@@ -417,8 +423,9 @@ export function ApiKeyLookupPage() {
   const [filterOptions, setFilterOptions] = useState<{
     models: string[];
     channels: string[];
+    channel_options: UsageChannelFilterOption[];
     statuses: string[];
-  }>({ models: [], channels: [], statuses: ["success", "failed"] });
+  }>({ models: [], channels: [], channel_options: [], statuses: ["success", "failed"] });
 
   const modelOptions = useMemo<SearchableCheckboxMultiSelectOption[]>(() => {
     return filterOptions.models.map((model) => ({
@@ -429,12 +436,35 @@ export function ApiKeyLookupPage() {
   }, [filterOptions.models]);
 
   const channelOptions = useMemo<SearchableCheckboxMultiSelectOption[]>(() => {
-    return filterOptions.channels.map((channel) => ({
-      value: channel,
-      label: channel,
-      searchText: channel,
-    }));
-  }, [filterOptions.channels]);
+    const source: UsageChannelFilterOption[] =
+      filterOptions.channel_options.length > 0
+        ? filterOptions.channel_options
+        : filterOptions.channels.map((ch) => ({
+            value: ch,
+            label: ch,
+          }));
+    const apiLabel = t("request_logs.auth_type_api");
+    const oauthLabel = t("request_logs.auth_type_oauth");
+    return source.map((option) => {
+      const provider = String(option.provider ?? "").trim();
+      const authType = String(option.auth_type ?? "").trim();
+      return {
+        value: option.value,
+        label: (
+          <ChannelIdentityLabel
+            name={option.label}
+            provider={option.provider}
+            authType={option.auth_type}
+            apiLabel={apiLabel}
+            oauthLabel={oauthLabel}
+            className="w-full"
+            nameClassName="text-sm font-normal text-inherit"
+          />
+        ),
+        searchText: [option.label, provider, authType, option.value].filter(Boolean).join(" "),
+      };
+    });
+  }, [filterOptions.channel_options, filterOptions.channels, t]);
 
   const statusOptions = useMemo<SearchableCheckboxMultiSelectOption[]>(() => {
     const statuses =
@@ -553,6 +583,10 @@ export function ApiKeyLookupPage() {
         setFilterOptions({
           models: resp.filters?.models ?? [],
           channels: resp.filters?.channels ?? [],
+          channel_options: normalizeChannelOptions(
+            resp.filters?.channel_options,
+            resp.filters?.channels,
+          ),
           statuses: resp.filters?.statuses ?? ["success", "failed"],
         });
         setLastUpdatedAt(Date.now());
@@ -786,6 +820,7 @@ export function ApiKeyLookupPage() {
     setFilterOptions({
       models: [],
       channels: [],
+      channel_options: [],
       statuses: ["success", "failed"],
     });
     setSelectedModels(null);
@@ -807,12 +842,22 @@ export function ApiKeyLookupPage() {
     setLoginModalOpen(false);
   }, []);
 
+  // Avoid landing flash while a stored portal session is still hydrating.
+  const [portalSessionPending, setPortalSessionPending] = useState(
+    () => Boolean(portalApi.loadSession()?.accessToken),
+  );
+
   useEffect(() => {
     const snap = portalApi.loadSession();
-    if (!snap?.accessToken) return;
+    if (!snap?.accessToken) {
+      setPortalSessionPending(false);
+      return;
+    }
+    let cancelled = false;
     void portalApi
       .me()
       .then(async (res) => {
+        if (cancelled) return;
         setPortalUser(res.user);
         if (res.user.must_change_password) {
           setChangePasswordOpen(true);
@@ -821,17 +866,25 @@ export function ApiKeyLookupPage() {
         }
         try {
           const keys = await portalApi.listKeys();
+          if (cancelled) return;
           const items = keys.items ?? [];
           setPortalKeys(items);
           const firstUsable = items.find((key) => !key.disabled);
           if (firstUsable) await activateOwnedKey(firstUsable.id);
         } catch {
-          setPortalKeys([]);
+          if (!cancelled) setPortalKeys([]);
         }
       })
       .catch(() => {
+        if (cancelled) return;
         portalApi.clearSession();
+      })
+      .finally(() => {
+        if (!cancelled) setPortalSessionPending(false);
       });
+    return () => {
+      cancelled = true;
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handlePortalLogin = useCallback(async () => {
@@ -1012,7 +1065,7 @@ export function ApiKeyLookupPage() {
   //  Render
   // ================================================================
 
-  const showLanding = !queriedKey && !portalUser && !error;
+  const showLanding = !queriedKey && !portalUser && !portalSessionPending && !error;
 
   return (
     <PageBackground variant={showLanding ? "login" : "app"}>
