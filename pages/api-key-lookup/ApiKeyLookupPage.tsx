@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Eye, EyeOff, Key, KeyRound, LogOut, UserRound } from "lucide-react";
+import { Eye, EyeOff, Key, KeyRound, LogOut, UserPlus, Users, UserRound } from "lucide-react";
 import {
   extractApiErrorCode,
   isApiClientError,
   portalApi,
   type EndUser,
   type EndUserAPIKey,
+  type SavedPortalAccount,
 } from "@code-proxy/api-client";
 import {
   normalizeChannelOptions,
@@ -74,6 +75,8 @@ const LOOKUP_MODELS_CACHE_STORAGE_KEY_V2 = "apiKeyLookup.modelsCache.v2";
 const LOOKUP_MODELS_CACHE_STORAGE_KEY_V1 = "apiKeyLookup.modelsCache.v1";
 const LOGOUT_SELECT_VALUE = "__api-key-lookup-logout__";
 const CHANGE_PASSWORD_SELECT_VALUE = "__api-key-lookup-change-password__";
+const ADD_ACCOUNT_SELECT_VALUE = "__api-key-lookup-add-account__";
+const SWITCH_ACCOUNT_PREFIX = "__api-key-lookup-switch__:";
 type UsageLookupSubject =
   | { mode: "portal"; apiKey: ""; cacheKey: string }
   | { mode: "legacy"; apiKey: string; cacheKey: string };
@@ -332,6 +335,9 @@ export function ApiKeyLookupPage() {
   const [apiKeyName, setApiKeyName] = useState("");
   const [portalUser, setPortalUser] = useState<EndUser | null>(null);
   const [portalKeys, setPortalKeys] = useState<EndUserAPIKey[]>([]);
+  const [savedPortalAccounts, setSavedPortalAccounts] = useState<SavedPortalAccount[]>(() =>
+    portalApi.listSavedAccounts(),
+  );
   const [loginUsername, setLoginUsername] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [loginError, setLoginError] = useState<string | null>(null);
@@ -859,6 +865,7 @@ export function ApiKeyLookupPage() {
       .then(async (res) => {
         if (cancelled) return;
         setPortalUser(res.user);
+        setSavedPortalAccounts(portalApi.listSavedAccounts());
         if (res.user.must_change_password) {
           setChangePasswordOpen(true);
           setPortalKeys([]);
@@ -878,6 +885,7 @@ export function ApiKeyLookupPage() {
       .catch(() => {
         if (cancelled) return;
         portalApi.clearSession();
+        setSavedPortalAccounts(portalApi.listSavedAccounts());
       })
       .finally(() => {
         if (!cancelled) setPortalSessionPending(false);
@@ -887,12 +895,33 @@ export function ApiKeyLookupPage() {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const hydratePortalSession = useCallback(async () => {
+    const res = await portalApi.me();
+    setPortalUser(res.user);
+    setSavedPortalAccounts(portalApi.listSavedAccounts());
+    if (res.user.must_change_password) {
+      setChangePasswordOpen(true);
+      setPortalKeys([]);
+      return;
+    }
+    try {
+      const keys = await portalApi.listKeys();
+      const items = keys.items ?? [];
+      setPortalKeys(items);
+      const firstUsable = items.find((key) => !key.disabled);
+      if (firstUsable) await activateOwnedKey(firstUsable.id);
+    } catch {
+      setPortalKeys([]);
+    }
+  }, [activateOwnedKey]);
+
   const handlePortalLogin = useCallback(async () => {
     setLoginBusy(true);
     setLoginError(null);
     try {
       const result = await portalApi.login(loginUsername.trim(), loginPassword, true);
       setPortalUser(result.user);
+      setSavedPortalAccounts(portalApi.listSavedAccounts());
       setLoginModalOpen(false);
       setLoginPassword("");
       if (result.must_change_password || result.user.must_change_password) {
@@ -927,7 +956,44 @@ export function ApiKeyLookupPage() {
     setOperationalKeyId("");
     handleApiKeyInputChange("");
     setLoginModalOpen(false);
+    setSavedPortalAccounts(portalApi.listSavedAccounts());
   }, [handleApiKeyInputChange]);
+
+  const handleAddAccount = useCallback(() => {
+    portalApi.beginAddAccount();
+    setPortalUser(null);
+    setPortalKeys([]);
+    setOperationalKeyId("");
+    handleApiKeyInputChange("");
+    setLoginUsername("");
+    setLoginPassword("");
+    setLoginError(null);
+    setLoginModalOpen(true);
+    setSavedPortalAccounts(portalApi.listSavedAccounts());
+  }, [handleApiKeyInputChange]);
+
+  const handleSwitchAccount = useCallback(
+    async (accountKey: string) => {
+      const target = portalApi.switchAccount(accountKey);
+      if (!target) return;
+      setPortalSessionPending(true);
+      setOperationalKeyId("");
+      handleApiKeyInputChange("");
+      setPortalKeys([]);
+      try {
+        await hydratePortalSession();
+      } catch {
+        portalApi.removeSavedAccount(accountKey);
+        portalApi.clearSession();
+        setPortalUser(null);
+        setLoginModalOpen(true);
+      } finally {
+        setPortalSessionPending(false);
+        setSavedPortalAccounts(portalApi.listSavedAccounts());
+      }
+    },
+    [handleApiKeyInputChange, hydratePortalSession],
+  );
 
   const refreshPortalKeys = useCallback(async () => {
     setPortalKeysLoading(true);
@@ -1021,6 +1087,14 @@ export function ApiKeyLookupPage() {
     apiKeyName ||
     (queriedKey ? t("apikey_lookup.unnamed_key") : "");
   const extraKeyCount = Math.max(0, portalKeys.length - 1);
+  const otherPortalAccounts = useMemo(
+    () =>
+      savedPortalAccounts.filter((account) => {
+        if (!portalUser) return true;
+        return account.user.id !== portalUser.id;
+      }),
+    [portalUser, savedPortalAccounts],
+  );
   const keyMenuOptions = useMemo<SelectOption[]>(
     () => [
       ...(portalUser
@@ -1036,6 +1110,30 @@ export function ApiKeyLookupPage() {
             },
           ]
         : []),
+      ...otherPortalAccounts.map((account) => ({
+        value: `${SWITCH_ACCOUNT_PREFIX}${account.accountKey}`,
+        label: (
+          <span className="flex min-w-0 items-center gap-2">
+            <Users size={15} className="shrink-0" />
+            <span className="min-w-0 truncate">
+              {account.user.display_name || account.user.username}
+            </span>
+          </span>
+        ),
+      })),
+      ...(portalUser
+        ? [
+            {
+              value: ADD_ACCOUNT_SELECT_VALUE,
+              label: (
+                <span className="flex items-center gap-2">
+                  <UserPlus size={15} />
+                  {t("apikey_lookup.add_account", { defaultValue: "添加账号" })}
+                </span>
+              ),
+            },
+          ]
+        : []),
       {
         value: LOGOUT_SELECT_VALUE,
         label: (
@@ -1046,14 +1144,27 @@ export function ApiKeyLookupPage() {
         ),
       },
     ],
-    [portalUser, t],
+    [otherPortalAccounts, portalUser, t],
   );
   const handleKeyMenuChange = useCallback(
     (value: string) => {
-      if (value === LOGOUT_SELECT_VALUE) handleLogout();
-      if (value === CHANGE_PASSWORD_SELECT_VALUE) setChangePasswordOpen(true);
+      if (value === LOGOUT_SELECT_VALUE) {
+        handleLogout();
+        return;
+      }
+      if (value === CHANGE_PASSWORD_SELECT_VALUE) {
+        setChangePasswordOpen(true);
+        return;
+      }
+      if (value === ADD_ACCOUNT_SELECT_VALUE) {
+        handleAddAccount();
+        return;
+      }
+      if (value.startsWith(SWITCH_ACCOUNT_PREFIX)) {
+        void handleSwitchAccount(value.slice(SWITCH_ACCOUNT_PREFIX.length));
+      }
     },
-    [handleLogout],
+    [handleAddAccount, handleLogout, handleSwitchAccount],
   );
 
   // Landing CTA opens login; always allow dismiss (backdrop / Esc / X).

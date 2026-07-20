@@ -4,6 +4,8 @@ export { detectApiBaseFromLocation };
 import { ApiClientError, extractApiErrorMessage } from "./errors";
 
 export const PORTAL_AUTH_STORAGE_KEY = "code-proxy-portal-auth";
+/** Multi-account vault for portal (end-user) sessions. */
+export const PORTAL_ACCOUNTS_STORAGE_KEY = "code-proxy-portal-auth-accounts";
 
 export interface PortalAuthSnapshot {
   apiBase: string;
@@ -12,6 +14,16 @@ export interface PortalAuthSnapshot {
   remember: boolean;
   expiresAt: number;
   user?: {
+    id: string;
+    username: string;
+    display_name: string;
+  };
+}
+
+export interface SavedPortalAccount extends PortalAuthSnapshot {
+  accountKey: string;
+  lastUsedAt: number;
+  user: {
     id: string;
     username: string;
     display_name: string;
@@ -49,18 +61,135 @@ export const readPortalAuth = (): PortalAuthSnapshot | null => {
   return null;
 };
 
+export const buildPortalAccountKey = (apiBase: string, userId: string): string => {
+  const base = normalizeApiBase(apiBase.trim());
+  const id = userId.trim();
+  if (!base || !id) return "";
+  return `${base}\0${id}`;
+};
+
+const localOnly = (): Storage | null => {
+  try {
+    if (typeof window !== "undefined") return window.localStorage;
+  } catch {
+    /* unavailable */
+  }
+  return null;
+};
+
+const isSavedPortalAccount = (value: unknown): value is SavedPortalAccount => {
+  if (!value || typeof value !== "object") return false;
+  const row = value as Partial<SavedPortalAccount>;
+  return Boolean(
+    row.accessToken &&
+      row.apiBase &&
+      row.user &&
+      typeof row.user.id === "string" &&
+      row.user.id.trim(),
+  );
+};
+
+export const listSavedPortalAccounts = (): SavedPortalAccount[] => {
+  const storage = localOnly();
+  if (!storage) return [];
+  try {
+    const raw = storage.getItem(PORTAL_ACCOUNTS_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter(isSavedPortalAccount)
+      .map((row) => {
+        const apiBase = normalizeApiBase(row.apiBase);
+        const accountKey =
+          (typeof row.accountKey === "string" && row.accountKey.trim()) ||
+          buildPortalAccountKey(apiBase, row.user.id);
+        return {
+          ...row,
+          apiBase,
+          accountKey,
+          lastUsedAt: typeof row.lastUsedAt === "number" ? row.lastUsedAt : 0,
+          user: {
+            id: row.user.id.trim(),
+            username: row.user.username?.trim() || row.user.id,
+            display_name: row.user.display_name?.trim() || row.user.username || row.user.id,
+          },
+        };
+      })
+      .filter((row) => Boolean(row.accountKey && row.accessToken))
+      .sort((a, b) => b.lastUsedAt - a.lastUsedAt);
+  } catch {
+    return [];
+  }
+};
+
+const writeSavedPortalAccounts = (accounts: SavedPortalAccount[]): void => {
+  const storage = localOnly();
+  if (!storage) return;
+  try {
+    if (accounts.length === 0) storage.removeItem(PORTAL_ACCOUNTS_STORAGE_KEY);
+    else storage.setItem(PORTAL_ACCOUNTS_STORAGE_KEY, JSON.stringify(accounts));
+  } catch {
+    /* ignore quota */
+  }
+};
+
+export const upsertSavedPortalAccount = (snapshot: PortalAuthSnapshot): void => {
+  const user = snapshot.user;
+  if (!user?.id?.trim() || !snapshot.accessToken) return;
+  const apiBase = normalizeApiBase(snapshot.apiBase);
+  const accountKey = buildPortalAccountKey(apiBase, user.id);
+  if (!accountKey) return;
+  const next: SavedPortalAccount = {
+    apiBase,
+    accessToken: snapshot.accessToken,
+    refreshToken: snapshot.refreshToken || "",
+    remember: Boolean(snapshot.remember),
+    expiresAt: snapshot.expiresAt || Date.now() + 12 * 3600 * 1000,
+    user: {
+      id: user.id.trim(),
+      username: user.username?.trim() || user.id,
+      display_name: user.display_name?.trim() || user.username || user.id,
+    },
+    accountKey,
+    lastUsedAt: Date.now(),
+  };
+  const others = listSavedPortalAccounts().filter((row) => row.accountKey !== accountKey);
+  writeSavedPortalAccounts([next, ...others]);
+};
+
+export const removeSavedPortalAccount = (accountKeyOrId: string): void => {
+  const key = accountKeyOrId.trim();
+  if (!key) return;
+  writeSavedPortalAccounts(
+    listSavedPortalAccounts().filter(
+      (row) => row.accountKey !== key && row.user.id !== key,
+    ),
+  );
+};
+
+export const getSavedPortalAccount = (accountKeyOrId: string): SavedPortalAccount | null => {
+  const key = accountKeyOrId.trim();
+  if (!key) return null;
+  return (
+    listSavedPortalAccounts().find(
+      (row) => row.accountKey === key || row.user.id === key,
+    ) ?? null
+  );
+};
+
 export const writePortalAuth = (snapshot: PortalAuthSnapshot): void => {
   const [session, local] = storages();
   const target = snapshot.remember ? local : session;
   if (!target) return;
   clearPortalAuth();
-  target.setItem(
-    PORTAL_AUTH_STORAGE_KEY,
-    JSON.stringify({
-      ...snapshot,
-      apiBase: normalizeApiBase(snapshot.apiBase),
-    }),
-  );
+  const normalized: PortalAuthSnapshot = {
+    ...snapshot,
+    apiBase: normalizeApiBase(snapshot.apiBase),
+  };
+  target.setItem(PORTAL_AUTH_STORAGE_KEY, JSON.stringify(normalized));
+  // Keep multi-account vault in sync for switch-account.
+  if (normalized.user?.id) upsertSavedPortalAccount(normalized);
 };
 
 export const clearPortalAuth = (): void => {
@@ -109,6 +238,36 @@ export class PortalApiClient {
     this.accessToken = "";
     this.refreshToken = "";
     clearPortalAuth();
+  }
+
+  /** Soft clear: keep vault entry so the user can switch back after adding another account. */
+  parkSession(): void {
+    const current = readPortalAuth();
+    if (current?.user?.id && current.accessToken) {
+      upsertSavedPortalAccount({
+        ...current,
+        accessToken: this.accessToken || current.accessToken,
+        refreshToken: this.refreshToken || current.refreshToken,
+      });
+    }
+    this.clearSession();
+  }
+
+  switchToSavedAccount(accountKeyOrId: string): SavedPortalAccount | null {
+    const target = getSavedPortalAccount(accountKeyOrId);
+    if (!target) return null;
+    const current = readPortalAuth();
+    if (current?.user?.id && current.accessToken) {
+      const currentKey = buildPortalAccountKey(current.apiBase, current.user.id);
+      if (currentKey && currentKey === target.accountKey) return target;
+      upsertSavedPortalAccount({
+        ...current,
+        accessToken: this.accessToken || current.accessToken,
+        refreshToken: this.refreshToken || current.refreshToken,
+      });
+    }
+    this.setSession(target);
+    return target;
   }
 
   getAccessToken(): string {

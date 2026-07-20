@@ -3593,7 +3593,9 @@
     "confirm_delete_title": "删除 API Key？",
     "confirm_delete_desc": "删除后不可恢复，使用该 Key 的请求将失败。",
     "confirm_delete": "删除",
-    "deleting": "删除中…"
+    "deleting": "删除中…",
+    "add_account": "添加账号",
+    "switch_account": "切换账号"
   },
   "config_page": {
     "save_warning_title": "确认高影响配置变更",
