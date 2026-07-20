@@ -141,4 +141,11 @@ describe("requestLogsShared", () => {
     expect(screen.getByText("Laptop")).toBeInTheDocument();
     expect(screen.queryByText("Alice")).not.toBeInTheDocument();
   });
+
+  test("can omit the channel column for public api key lookup logs", () => {
+    const keys = buildRequestLogsColumns((key) => key, undefined, undefined, {
+      hideChannel: true,
+    }).map((column) => column.key);
+    expect(keys).not.toContain("channelName");
+  });
 });

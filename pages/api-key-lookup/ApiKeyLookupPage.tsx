@@ -20,10 +20,6 @@ import {
   type EndUserAPIKey,
   type SavedPortalAccount,
 } from "@code-proxy/api-client";
-import {
-  normalizeChannelOptions,
-  type UsageChannelFilterOption,
-} from "@code-proxy/api-client/endpoints/usage";
 import { resolveLoginErrorMessage } from "../login/loginErrors";
 import { useTheme } from "@code-proxy/ui";
 import { ThemeToggleButton } from "@code-proxy/ui";
@@ -58,7 +54,6 @@ import { useApiKeyLookupCharts } from "./hooks/useApiKeyLookupCharts";
 import type { ChartDataResponse, PublicLogItem, PublicUsageLimits } from "./types";
 import {
   buildRequestLogsColumns,
-  ChannelIdentityLabel,
   formatOptionalRequestLogLatencyMs,
   formatRequestLogLatencyMs,
   normalizeChannelAuthType,
@@ -387,6 +382,7 @@ export function ApiKeyLookupPage() {
     () =>
       buildRequestLogsColumns((key) => t(key), handleContentClick, undefined, {
         identityColumn: "key",
+        hideChannel: true,
       }),
     [t, handleContentClick],
   );
@@ -423,7 +419,6 @@ export function ApiKeyLookupPage() {
   // ── Filters ──
   const [timeRange, setTimeRange] = useState<TimeRange>(7);
   const [selectedModels, setSelectedModels] = useState<MultiSelectFilterState<string>>(null);
-  const [selectedChannels, setSelectedChannels] = useState<MultiSelectFilterState<string>>(null);
   const [selectedStatuses, setSelectedStatuses] =
     useState<MultiSelectFilterState<StatusFilterValue>>(null);
 
@@ -436,10 +431,8 @@ export function ApiKeyLookupPage() {
   }>({ total: 0, success_rate: 0, total_tokens: 0, total_cost: 0 });
   const [filterOptions, setFilterOptions] = useState<{
     models: string[];
-    channels: string[];
-    channel_options: UsageChannelFilterOption[];
     statuses: string[];
-  }>({ models: [], channels: [], channel_options: [], statuses: ["success", "failed"] });
+  }>({ models: [], statuses: ["success", "failed"] });
 
   const modelOptions = useMemo<SearchableCheckboxMultiSelectOption[]>(() => {
     return filterOptions.models.map((model) => ({
@@ -448,37 +441,6 @@ export function ApiKeyLookupPage() {
       searchText: model,
     }));
   }, [filterOptions.models]);
-
-  const channelOptions = useMemo<SearchableCheckboxMultiSelectOption[]>(() => {
-    const source: UsageChannelFilterOption[] =
-      filterOptions.channel_options.length > 0
-        ? filterOptions.channel_options
-        : filterOptions.channels.map((ch) => ({
-            value: ch,
-            label: ch,
-          }));
-    const apiLabel = t("request_logs.auth_type_api");
-    const oauthLabel = t("request_logs.auth_type_oauth");
-    return source.map((option) => {
-      const provider = String(option.provider ?? "").trim();
-      const authType = String(option.auth_type ?? "").trim();
-      return {
-        value: option.value,
-        label: (
-          <ChannelIdentityLabel
-            name={option.label}
-            provider={option.provider}
-            authType={option.auth_type}
-            apiLabel={apiLabel}
-            oauthLabel={oauthLabel}
-            className="w-full"
-            nameClassName="text-sm font-normal text-inherit"
-          />
-        ),
-        searchText: [option.label, provider, authType, option.value].filter(Boolean).join(" "),
-      };
-    });
-  }, [filterOptions.channel_options, filterOptions.channels, t]);
 
   const statusOptions = useMemo<SearchableCheckboxMultiSelectOption[]>(() => {
     const statuses =
@@ -499,10 +461,6 @@ export function ApiKeyLookupPage() {
     () => modelOptions.map((option) => option.value),
     [modelOptions],
   );
-  const channelFilterValues = useMemo(
-    () => channelOptions.map((option) => option.value),
-    [channelOptions],
-  );
   const statusFilterValues = useMemo<StatusFilterValue[]>(
     () => toStatusFilterValues(statusOptions.map((option) => option.value)),
     [statusOptions],
@@ -511,10 +469,6 @@ export function ApiKeyLookupPage() {
   const modelFilterParam = useMemo(
     () => toFilterParam(selectedModels, modelFilterValues),
     [modelFilterValues, selectedModels],
-  );
-  const channelFilterParam = useMemo(
-    () => toFilterParam(selectedChannels, channelFilterValues),
-    [channelFilterValues, selectedChannels],
   );
   const statusFilterParam = useMemo(
     () => toFilterParam(selectedStatuses, statusFilterValues),
@@ -527,12 +481,6 @@ export function ApiKeyLookupPage() {
     },
     [modelFilterValues],
   );
-  const handleChannelsChange = useCallback(
-    (value: string[]) => {
-      setSelectedChannels(normalizeFilterSelection(value, channelFilterValues));
-    },
-    [channelFilterValues],
-  );
   const handleStatusesChange = useCallback(
     (value: StatusFilterValue[]) => {
       setSelectedStatuses(normalizeFilterSelection(value, statusFilterValues));
@@ -540,7 +488,6 @@ export function ApiKeyLookupPage() {
     [statusFilterValues],
   );
   const clearModelFilter = useCallback(() => setSelectedModels(null), []);
-  const clearChannelFilter = useCallback(() => setSelectedChannels(null), []);
   const clearStatusFilter = useCallback(() => setSelectedStatuses(null), []);
 
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -574,10 +521,8 @@ export function ApiKeyLookupPage() {
           size: size ?? pageSize,
           days: timeRange,
           models: modelFilterParam.values,
-          channels: channelFilterParam.values,
           statuses: statusFilterParam.values,
           modelsEmpty: modelFilterParam.matchesNone,
-          channelsEmpty: channelFilterParam.matchesNone,
           statusesEmpty: statusFilterParam.matchesNone,
           signal: controller.signal,
         });
@@ -597,11 +542,6 @@ export function ApiKeyLookupPage() {
         );
         setFilterOptions({
           models: resp.filters?.models ?? [],
-          channels: resp.filters?.channels ?? [],
-          channel_options: normalizeChannelOptions(
-            resp.filters?.channel_options,
-            resp.filters?.channels,
-          ),
           statuses: resp.filters?.statuses ?? ["success", "failed"],
         });
         setLastUpdatedAt(Date.now());
@@ -623,7 +563,7 @@ export function ApiKeyLookupPage() {
         }
       }
     },
-    [channelFilterParam, modelFilterParam, pageSize, statusFilterParam, t, timeRange],
+    [modelFilterParam, pageSize, statusFilterParam, t, timeRange],
   );
 
   // ================================================================
@@ -741,7 +681,7 @@ export function ApiKeyLookupPage() {
     if (usageSubject && activeTab === "logs") {
       fetchLogs(usageSubject, 1);
     }
-  }, [timeRange, selectedModels, selectedChannels, selectedStatuses]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [timeRange, selectedModels, selectedStatuses]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Models fetching ──
   const fetchModelsFn = useCallback(
@@ -834,12 +774,9 @@ export function ApiKeyLookupPage() {
     setStats({ total: 0, success_rate: 0, total_tokens: 0, total_cost: 0 });
     setFilterOptions({
       models: [],
-      channels: [],
-      channel_options: [],
       statuses: ["success", "failed"],
     });
     setSelectedModels(null);
-    setSelectedChannels(null);
     setSelectedStatuses(null);
 
     setQueriedKey("");
@@ -1013,12 +950,9 @@ export function ApiKeyLookupPage() {
       setStats({ total: 0, success_rate: 0, total_tokens: 0, total_cost: 0 });
       setFilterOptions({
         models: [],
-        channels: [],
-        channel_options: [],
         statuses: ["success", "failed"],
       });
       setSelectedModels(null);
-      setSelectedChannels(null);
       setSelectedStatuses(null);
       setQuotaLimits(null);
 
@@ -1459,16 +1393,12 @@ export function ApiKeyLookupPage() {
                 <PublicLogsSection
                   t={t}
                   modelOptions={modelOptions}
-                  channelOptions={channelOptions}
                   statusOptions={statusOptions}
                   selectedModels={selectedModels}
-                  selectedChannels={selectedChannels}
                   selectedStatuses={selectedStatuses}
                   onModelsChange={handleModelsChange}
-                  onChannelsChange={handleChannelsChange}
                   onStatusesChange={handleStatusesChange}
                   onModelsClear={clearModelFilter}
-                  onChannelsClear={clearChannelFilter}
                   onStatusesClear={clearStatusFilter}
                   stats={stats}
                   lastUpdatedText={lastUpdatedText}

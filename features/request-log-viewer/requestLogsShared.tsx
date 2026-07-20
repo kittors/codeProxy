@@ -338,6 +338,7 @@ export function RequestLogFacetFilters({
   onModelsClear,
   onChannelsClear,
   onStatusesClear,
+  hideChannel = false,
 }: {
   modelOptions: SearchableCheckboxMultiSelectOption[];
   channelOptions: SearchableCheckboxMultiSelectOption[];
@@ -351,6 +352,7 @@ export function RequestLogFacetFilters({
   onModelsClear: () => void;
   onChannelsClear: () => void;
   onStatusesClear: () => void;
+  hideChannel?: boolean;
 }) {
   const { t } = useTranslation();
   const statusChangeAdapter = useMemo(
@@ -390,33 +392,35 @@ export function RequestLogFacetFilters({
           emptySelectionLabel={t("request_logs.none_selected")}
         />
       </div>
-      <div className="w-full min-[480px]:w-auto sm:w-[180px]">
-        <SearchableCheckboxMultiSelect
-          value={selectedChannels ?? []}
-          onChange={onChannelsChange}
-          options={channelOptions}
-          placeholder={t("request_logs.all_channels_placeholder")}
-          searchPlaceholder={t("request_logs.search_channels")}
-          selectFilteredLabel={t("request_logs.select_filtered")}
-          deselectFilteredLabel={t("request_logs.deselect_filtered")}
-          selectedCountLabel={(count: number) => t("request_logs.selected_count", { count })}
-          noResultsLabel={t("request_logs.no_filter_results")}
-          aria-label={t("request_logs.filter_channel")}
-          clearLabel={t("request_logs.clear_channel_filter")}
-          onClear={onChannelsClear}
-          showClearButton
-          size="sm"
-          emptyValueMeansAllSelected
-          emptyValueRepresentsAllSelected={selectedChannels === null}
-          showFilteredToggleWithoutQuery={false}
-          applyMode="manual"
-          applyLabel={t("request_logs.apply_filters")}
-          cancelLabel={t("common.cancel")}
-          selectAllLabel={t("request_logs.select_all")}
-          deselectAllLabel={t("request_logs.deselect_all")}
-          emptySelectionLabel={t("request_logs.none_selected")}
-        />
-      </div>
+      {!hideChannel ? (
+        <div className="w-full min-[480px]:w-auto sm:w-[180px]">
+          <SearchableCheckboxMultiSelect
+            value={selectedChannels ?? []}
+            onChange={onChannelsChange}
+            options={channelOptions}
+            placeholder={t("request_logs.all_channels_placeholder")}
+            searchPlaceholder={t("request_logs.search_channels")}
+            selectFilteredLabel={t("request_logs.select_filtered")}
+            deselectFilteredLabel={t("request_logs.deselect_filtered")}
+            selectedCountLabel={(count: number) => t("request_logs.selected_count", { count })}
+            noResultsLabel={t("request_logs.no_filter_results")}
+            aria-label={t("request_logs.filter_channel")}
+            clearLabel={t("request_logs.clear_channel_filter")}
+            onClear={onChannelsClear}
+            showClearButton
+            size="sm"
+            emptyValueMeansAllSelected
+            emptyValueRepresentsAllSelected={selectedChannels === null}
+            showFilteredToggleWithoutQuery={false}
+            applyMode="manual"
+            applyLabel={t("request_logs.apply_filters")}
+            cancelLabel={t("common.cancel")}
+            selectAllLabel={t("request_logs.select_all")}
+            deselectAllLabel={t("request_logs.deselect_all")}
+            emptySelectionLabel={t("request_logs.none_selected")}
+          />
+        </div>
+      ) : null}
       <div className="w-full min-[480px]:w-auto sm:w-[150px]">
         <SearchableCheckboxMultiSelect
           value={selectedStatuses ?? []}
@@ -587,12 +591,13 @@ export function buildRequestLogsColumns(
   t: (key: string) => string,
   onContentClick?: (logId: number, tab: "input" | "output") => void,
   onErrorClick?: (logId: number, model: string) => void,
-  options: { identityColumn?: "user" | "key" } = {},
+  options: { identityColumn?: "user" | "key"; hideChannel?: boolean } = {},
 ): RequestLogsTableColumn<RequestLogsRow>[] {
   const apiLabel = t("request_logs.auth_type_api");
   const oauthLabel = t("request_logs.auth_type_oauth");
   const identityColumn = options.identityColumn ?? "user";
-  return [
+  const hideChannel = options.hideChannel === true;
+  const columns: RequestLogsTableColumn<RequestLogsRow>[] = [
     {
       key: "id",
       label: t("request_logs.col_id"),
@@ -621,7 +626,9 @@ export function buildRequestLogsColumns(
         </OverflowTooltip>
       ),
     },
-    {
+  ];
+  if (!hideChannel) {
+    columns.push({
       key: "channelName",
       label: t("request_logs.col_channel"),
       // Wider default so icon + name + auth badge can share the cell; DataTable
@@ -656,7 +663,9 @@ export function buildRequestLogsColumns(
           </OverflowTooltip>
         );
       },
-    },
+    });
+  }
+  columns.push(
     {
       key: "status",
       label: t("request_logs.col_status"),
@@ -905,7 +914,8 @@ export function buildRequestLogsColumns(
           <span className="text-xs text-slate-400 dark:text-white/30">--</span>
         ),
     },
-  ];
+  );
+  return columns;
 }
 
 export function RequestLogsPaginationBar({

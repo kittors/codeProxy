@@ -372,7 +372,7 @@ describe("ApiKeyLookupPage", () => {
     expect(screen.queryByText(/^default$|^默认$/i)).not.toBeInTheDocument();
   });
 
-  test("renders channel filter options with provider icon and auth badge", async () => {
+  test("hides channel column and channel filter on public request logs", async () => {
     window.history.replaceState({}, "", "/manage/apikey-lookup?api_key=sk-restored-key");
     mocks.fetchPublicLogs.mockResolvedValueOnce({
       items: [
@@ -434,17 +434,9 @@ describe("ApiKeyLookupPage", () => {
       expect(mocks.fetchPublicLogs).toHaveBeenCalled();
     });
 
-    // Table channel cell also uses ChannelIdentityLabel (icon + OAuth badge).
-    expect(await screen.findByText("owner@example.com")).toBeInTheDocument();
-    expect(screen.getByText("OAuth")).toBeInTheDocument();
-
-    const channelFilter = screen.getByRole("combobox", { name: /filter by channel/i });
-    await userEvent.click(channelFilter);
-    // Filter option value comes from channel_options, not the display label alone.
-    expect(
-      await screen.findByRole("option", { name: /owner@example.com/i }),
-    ).toBeInTheDocument();
-    expect(screen.getAllByText("OAuth").length).toBeGreaterThan(0);
+    expect(screen.queryByRole("columnheader", { name: /channel|渠道/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: /filter by channel/i })).not.toBeInTheDocument();
+    expect(screen.queryByText("owner@example.com")).not.toBeInTheDocument();
   });
 
   test("loads public logs only after switching to the request logs tab", async () => {
@@ -519,7 +511,7 @@ describe("ApiKeyLookupPage", () => {
       );
     });
     expect(screen.getAllByText(/response metrics/i).length).toBeGreaterThan(0);
-    expect(await screen.findByText("Codex 主渠道")).toBeInTheDocument();
+    expect(screen.queryByText("Codex 主渠道")).not.toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: /key name|Key 名称/i })).toBeInTheDocument();
     expect(screen.queryByText("Alice")).not.toBeInTheDocument();
     expect(screen.getByText("Laptop")).toBeInTheDocument();
@@ -581,24 +573,21 @@ describe("ApiKeyLookupPage", () => {
     expect(await screen.findByRole("combobox", { name: /filter by model/i })).toHaveTextContent(
       /all models/i,
     );
-    const channelFilter = screen.getByRole("combobox", {
-      name: /filter by channel/i,
-    });
-    expect(channelFilter).toHaveTextContent(/all channels/i);
+    expect(screen.queryByRole("combobox", { name: /filter by channel/i })).not.toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: /filter by status/i })).toHaveTextContent(
       /all status/i,
     );
 
-    await userEvent.click(channelFilter);
-    await userEvent.click(await screen.findByRole("option", { name: "OpenCode" }));
+    await userEvent.click(screen.getByRole("combobox", { name: /filter by status/i }));
+    await userEvent.click(await screen.findByRole("option", { name: /failed|失败/i }));
     await userEvent.click(screen.getByRole("button", { name: /apply filters/i }));
 
     await waitFor(() => {
       expect(mocks.fetchPublicLogs).toHaveBeenLastCalledWith(
         expect.objectContaining({
           apiKey: "sk-restored-key",
-          channels: ["Codex 主渠道"],
-          channelsEmpty: false,
+          statuses: ["success"],
+          statusesEmpty: false,
         }),
       );
     });
