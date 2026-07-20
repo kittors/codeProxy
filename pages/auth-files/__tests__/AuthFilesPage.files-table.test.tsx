@@ -2177,6 +2177,75 @@ describe("AuthFilesPage files table", () => {
     expect(mocks.getStatus).toHaveBeenCalled();
   });
 
+  test("full reload seeds 本周期 from cache so first paint is not Cycle --", async () => {
+    window.localStorage.setItem(
+      "authFilesPage.filesViewMode.v1",
+      JSON.stringify("cards"),
+    );
+    setActiveCacheTenantId(DEFAULT_CACHE_TENANT_ID);
+    const file = {
+      name: "codex-cycle.json",
+      label: "Cycle Cached",
+      account_type: "oauth",
+      type: "codex",
+      auth_index: "cycle-93",
+      size: 1024,
+      modified: Date.now(),
+      disabled: false,
+    };
+    writeAuthFilesDataCache({
+      tenantId: DEFAULT_CACHE_TENANT_ID,
+      savedAtMs: Date.now(),
+      files: [file],
+      cycleByAuthIndex: {
+        "cycle-93": { calls: 93, cycleCostTotal: null, weeklyQuotaUsedPercent: null },
+      },
+    });
+    mocks.list.mockImplementation(async () => ({ files: [file] }));
+    // Delay status so first paint must come from cache, not network.
+    mocks.getStatus.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          setTimeout(
+            () =>
+              resolve({
+                items: [
+                  {
+                    auth_index: "cycle-93",
+                    quotas: [],
+                    usage: {
+                      cycle_request_total: 98,
+                      cycle_known: true,
+                      request_total: 200,
+                    },
+                  },
+                ],
+              }),
+            80,
+          );
+        }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    const title = await screen.findByText("Cycle Cached");
+    const card = title.closest("section");
+    expect(card).not.toBeNull();
+    expect(within(card as HTMLElement).getByText("Cycle 93")).toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText("Cycle --")).not.toBeInTheDocument();
+    expect(await within(card as HTMLElement).findByText("Cycle 98")).toBeInTheDocument();
+  });
+
   test("cards view shows unknown cycle without lifetime/scope noise when weekly cycle is unknown", async () => {
     window.localStorage.setItem(
       "authFilesPage.filesViewMode.v1",
