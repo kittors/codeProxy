@@ -3296,7 +3296,9 @@
     "confirm_delete_title": "Delete API key?",
     "confirm_delete_desc": "This cannot be undone. Requests using this key will stop working.",
     "confirm_delete": "Delete",
-    "deleting": "Deleting…"
+    "deleting": "Deleting…",
+    "add_account": "Add account",
+    "switch_account": "Switch account"
   },
   "auth_files_page": {
     "files_tab": "Files",

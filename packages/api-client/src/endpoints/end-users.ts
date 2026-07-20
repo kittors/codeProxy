@@ -1,7 +1,10 @@
 import { apiClient } from "../client/client";
 import {
+  buildPortalAccountKey,
   detectApiBaseFromLocation,
+  listSavedPortalAccounts,
   portalClient,
+  removeSavedPortalAccount,
   type PortalAuthSnapshot,
 } from "../client/portal-client";
 
@@ -116,6 +119,12 @@ export const portalApi = {
   client: portalClient,
   loadSession: () => portalClient.loadFromStorage(),
   clearSession: () => portalClient.clearSession(),
+  listSavedAccounts: () => listSavedPortalAccounts(),
+  removeSavedAccount: (accountKeyOrId: string) => removeSavedPortalAccount(accountKeyOrId),
+  beginAddAccount: () => {
+    portalClient.parkSession();
+  },
+  switchAccount: (accountKeyOrId: string) => portalClient.switchToSavedAccount(accountKeyOrId),
   async login(username: string, password: string, remember = true): Promise<PortalLoginResult> {
     portalClient.loadFromStorage();
     const result = await portalClient.post<PortalLoginResult>("/v0/portal/auth/login", {
@@ -138,10 +147,14 @@ export const portalApi = {
     return result;
   },
   logout: async () => {
+    const current = portalClient.loadFromStorage();
     try {
       await portalClient.post("/v0/portal/auth/logout", {});
     } catch {
       /* ignore */
+    }
+    if (current?.user?.id) {
+      removeSavedPortalAccount(buildPortalAccountKey(current.apiBase, current.user.id));
     }
     portalClient.clearSession();
   },

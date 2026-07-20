@@ -44,11 +44,17 @@ export {
   portalClient,
   PortalApiClient,
   PORTAL_AUTH_STORAGE_KEY,
+  PORTAL_ACCOUNTS_STORAGE_KEY,
+  buildPortalAccountKey,
   clearPortalAuth,
+  getSavedPortalAccount,
+  listSavedPortalAccounts,
   readPortalAuth,
+  removeSavedPortalAccount,
+  upsertSavedPortalAccount,
   writePortalAuth,
 } from "./client/portal-client";
-export type { PortalAuthSnapshot } from "./client/portal-client";
+export type { PortalAuthSnapshot, SavedPortalAccount } from "./client/portal-client";
 export type * from "./dto/types";
 export { endUsersApi, portalApi } from "./endpoints/end-users";
 export type * from "./endpoints/end-users";

@@ -121,6 +121,10 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
     portalApi: {
       loadSession: vi.fn(() => null),
       clearSession: () => undefined,
+      listSavedAccounts: vi.fn(() => []),
+      removeSavedAccount: vi.fn(),
+      beginAddAccount: vi.fn(),
+      switchAccount: vi.fn(() => null),
       login: vi.fn(),
       logout: vi.fn(async () => undefined),
       me: vi.fn(),
