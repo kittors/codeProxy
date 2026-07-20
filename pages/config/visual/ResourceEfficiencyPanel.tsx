@@ -338,7 +338,7 @@ export function ResourceEfficiencyPanel({
         <p>
           {t("resource_config.stats_preserved", {
             defaultValue:
-              "清理明细不会清理统计。Dashboard、终端用户、API Key 查询与 public usage 来自小型聚合投影表。",
+              "清理明细不会清理统计。KPI/限额/public usage 等已切到小型聚合投影的指标不受 request_logs 清理影响；仍依赖明细的趋势/诊断能力仅覆盖保留期内数据。",
           })}
         </p>
       </div>
