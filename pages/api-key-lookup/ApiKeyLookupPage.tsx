@@ -1,6 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Eye, EyeOff, Key, KeyRound, LogOut, UserPlus, Users, UserRound } from "lucide-react";
+import {
+  Check,
+  ChevronRight,
+  Eye,
+  EyeOff,
+  Key,
+  KeyRound,
+  LogOut,
+  UserPlus,
+  Users,
+  UserRound,
+} from "lucide-react";
 import {
   extractApiErrorCode,
   isApiClientError,
@@ -22,7 +33,7 @@ import { Button } from "@code-proxy/ui";
 import { Modal } from "@code-proxy/ui";
 import { PageBackground } from "@code-proxy/ui";
 import { SecretRevealModal } from "@code-proxy/ui";
-import { Select, type SelectOption } from "@code-proxy/ui";
+import { DropdownMenu } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
 import type { SearchableCheckboxMultiSelectOption } from "@code-proxy/ui";
 import type { TimeRange } from "@features/monitor-widgets/monitor-constants";
@@ -73,10 +84,7 @@ const LOOKUP_CHART_CACHE_STORAGE_KEY_V1 = "apiKeyLookup.chartCache.v1";
 const LOOKUP_MODELS_CACHE_STORAGE_KEY = "apiKeyLookup.modelsCache.v3";
 const LOOKUP_MODELS_CACHE_STORAGE_KEY_V2 = "apiKeyLookup.modelsCache.v2";
 const LOOKUP_MODELS_CACHE_STORAGE_KEY_V1 = "apiKeyLookup.modelsCache.v1";
-const LOGOUT_SELECT_VALUE = "__api-key-lookup-logout__";
-const CHANGE_PASSWORD_SELECT_VALUE = "__api-key-lookup-change-password__";
-const ADD_ACCOUNT_SELECT_VALUE = "__api-key-lookup-add-account__";
-const SWITCH_ACCOUNT_PREFIX = "__api-key-lookup-switch__:";
+
 type UsageLookupSubject =
   | { mode: "portal"; apiKey: ""; cacheKey: string }
   | { mode: "legacy"; apiKey: string; cacheKey: string };
@@ -960,17 +968,16 @@ export function ApiKeyLookupPage() {
   }, [handleApiKeyInputChange]);
 
   const handleAddAccount = useCallback(() => {
-    portalApi.beginAddAccount();
-    setPortalUser(null);
-    setPortalKeys([]);
-    setOperationalKeyId("");
-    handleApiKeyInputChange("");
+    // Keep current session/UI visible; only open login for the next account.
+    // Re-persist active session so it stays in the multi-account vault.
+    const snap = portalApi.loadSession();
+    if (snap?.user?.id) portalApi.client.setSession(snap);
     setLoginUsername("");
     setLoginPassword("");
     setLoginError(null);
     setLoginModalOpen(true);
     setSavedPortalAccounts(portalApi.listSavedAccounts());
-  }, [handleApiKeyInputChange]);
+  }, []);
 
   const handleSwitchAccount = useCallback(
     async (accountKey: string) => {
@@ -1095,79 +1102,9 @@ export function ApiKeyLookupPage() {
       }),
     [portalUser, savedPortalAccounts],
   );
-  const keyMenuOptions = useMemo<SelectOption[]>(
-    () => [
-      ...(portalUser
-        ? [
-            {
-              value: CHANGE_PASSWORD_SELECT_VALUE,
-              label: (
-                <span className="flex items-center gap-2">
-                  <KeyRound size={15} />
-                  {t("apikey_lookup.change_password", { defaultValue: "修改密码" })}
-                </span>
-              ),
-            },
-          ]
-        : []),
-      ...otherPortalAccounts.map((account) => ({
-        value: `${SWITCH_ACCOUNT_PREFIX}${account.accountKey}`,
-        label: (
-          <span className="flex min-w-0 items-center gap-2">
-            <Users size={15} className="shrink-0" />
-            <span className="min-w-0 truncate">
-              {account.user.display_name || account.user.username}
-            </span>
-          </span>
-        ),
-      })),
-      ...(portalUser
-        ? [
-            {
-              value: ADD_ACCOUNT_SELECT_VALUE,
-              label: (
-                <span className="flex items-center gap-2">
-                  <UserPlus size={15} />
-                  {t("apikey_lookup.add_account", { defaultValue: "添加账号" })}
-                </span>
-              ),
-            },
-          ]
-        : []),
-      {
-        value: LOGOUT_SELECT_VALUE,
-        label: (
-          <span className="flex items-center gap-2">
-            <LogOut size={15} />
-            {t("common.logout")}
-          </span>
-        ),
-      },
-    ],
-    [otherPortalAccounts, portalUser, t],
-  );
-  const handleKeyMenuChange = useCallback(
-    (value: string) => {
-      if (value === LOGOUT_SELECT_VALUE) {
-        handleLogout();
-        return;
-      }
-      if (value === CHANGE_PASSWORD_SELECT_VALUE) {
-        setChangePasswordOpen(true);
-        return;
-      }
-      if (value === ADD_ACCOUNT_SELECT_VALUE) {
-        handleAddAccount();
-        return;
-      }
-      if (value.startsWith(SWITCH_ACCOUNT_PREFIX)) {
-        void handleSwitchAccount(value.slice(SWITCH_ACCOUNT_PREFIX.length));
-      }
-    },
-    [handleAddAccount, handleLogout, handleSwitchAccount],
-  );
 
   // Landing CTA opens login; always allow dismiss (backdrop / Esc / X).
+  // Keep results UI when the add-account login modal is open over an active session.
   const closeLoginModal = useCallback(() => {
     setLoginModalOpen(false);
   }, []);
@@ -1223,12 +1160,14 @@ export function ApiKeyLookupPage() {
             </div>
             <div className="flex items-center gap-2">
               {queriedKey || portalUser ? (
-                <Select
-                  value={queriedKey || portalUser?.id || ""}
-                  onChange={handleKeyMenuChange}
-                  options={keyMenuOptions}
-                  placeholder={
-                    <span className="flex min-w-0 items-center gap-1.5">
+                <DropdownMenu.Root>
+                  <DropdownMenu.Trigger asChild>
+                    <button
+                      type="button"
+                      aria-label={displayName}
+                      data-testid="apikey-lookup-account-menu"
+                      className="inline-flex max-w-[34vw] items-center gap-1.5 rounded-xl px-1 py-1 text-sm font-medium text-slate-700 transition hover:bg-slate-100 dark:text-white/80 dark:hover:bg-white/10 sm:max-w-56"
+                    >
                       <Key size={14} className="shrink-0" />
                       <span className="min-w-0 truncate">{displayName}</span>
                       {extraKeyCount > 0 ? (
@@ -1236,12 +1175,84 @@ export function ApiKeyLookupPage() {
                           +{extraKeyCount}
                         </span>
                       ) : null}
-                    </span>
-                  }
-                  aria-label={displayName}
-                  className="max-w-[34vw] !border-0 !bg-transparent !px-1 !shadow-none hover:!bg-transparent dark:!bg-transparent dark:!shadow-none dark:hover:!bg-transparent sm:max-w-56"
-                  size="sm"
-                />
+                      <ChevronRight
+                        size={14}
+                        className="shrink-0 rotate-90 text-slate-400 dark:text-white/40"
+                      />
+                    </button>
+                  </DropdownMenu.Trigger>
+                  <DropdownMenu.Portal>
+                    <DropdownMenu.Content
+                      align="end"
+                      sideOffset={8}
+                      className="min-w-48"
+                      data-testid="apikey-lookup-account-menu-content"
+                    >
+                      {portalUser ? (
+                        <DropdownMenu.Item
+                          disabled
+                          className="data-[disabled]:opacity-100"
+                          data-testid="apikey-lookup-current-account"
+                        >
+                          <Check size={15} className="shrink-0 text-emerald-600 dark:text-emerald-400" />
+                          <span className="min-w-0 flex-1 truncate">
+                            {portalUser.display_name || portalUser.username}
+                          </span>
+                        </DropdownMenu.Item>
+                      ) : null}
+                      {portalUser ? (
+                        <DropdownMenu.Item onSelect={() => setChangePasswordOpen(true)}>
+                          <KeyRound size={15} />
+                          {t("apikey_lookup.change_password", { defaultValue: "修改密码" })}
+                        </DropdownMenu.Item>
+                      ) : null}
+                      {otherPortalAccounts.length > 0 ? (
+                        <DropdownMenu.Sub>
+                          <DropdownMenu.SubTrigger>
+                            <Users size={15} />
+                            <span className="min-w-0 flex-1">
+                              {t("apikey_lookup.switch_account", { defaultValue: "切换账号" })}
+                            </span>
+                            <ChevronRight size={14} className="ml-auto shrink-0 text-slate-400" />
+                          </DropdownMenu.SubTrigger>
+                          <DropdownMenu.Portal>
+                            <DropdownMenu.SubContent
+                              sideOffset={6}
+                              className="min-w-44"
+                              data-testid="apikey-lookup-switch-account-menu"
+                            >
+                              {otherPortalAccounts.map((account) => (
+                                <DropdownMenu.Item
+                                  key={account.accountKey}
+                                  onSelect={() => void handleSwitchAccount(account.accountKey)}
+                                >
+                                  <Users size={15} className="shrink-0" />
+                                  <span className="min-w-0 truncate">
+                                    {account.user.display_name || account.user.username}
+                                  </span>
+                                </DropdownMenu.Item>
+                              ))}
+                            </DropdownMenu.SubContent>
+                          </DropdownMenu.Portal>
+                        </DropdownMenu.Sub>
+                      ) : null}
+                      {portalUser ? (
+                        <DropdownMenu.Item onSelect={handleAddAccount}>
+                          <UserPlus size={15} />
+                          {t("apikey_lookup.add_account", { defaultValue: "添加账号" })}
+                        </DropdownMenu.Item>
+                      ) : null}
+                      <DropdownMenu.Separator />
+                      <DropdownMenu.Item
+                        onSelect={handleLogout}
+                        className="text-rose-600 focus:text-rose-700 dark:text-rose-300"
+                      >
+                        <LogOut size={15} />
+                        {t("common.logout")}
+                      </DropdownMenu.Item>
+                    </DropdownMenu.Content>
+                  </DropdownMenu.Portal>
+                </DropdownMenu.Root>
               ) : (
                 <Button
                   size="sm"

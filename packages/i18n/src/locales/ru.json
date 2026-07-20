@@ -2754,6 +2754,7 @@
     "confirm_delete": "Delete",
     "deleting": "Deleting…",
     "add_account": "Add account",
-    "switch_account": "Switch account"
+    "switch_account": "Switch account",
+    "current_account": "Current account"
   }
 }

@@ -3595,7 +3595,8 @@
     "confirm_delete": "删除",
     "deleting": "删除中…",
     "add_account": "添加账号",
-    "switch_account": "切换账号"
+    "switch_account": "切换账号",
+    "current_account": "当前账号"
   },
   "config_page": {
     "save_warning_title": "确认高影响配置变更",

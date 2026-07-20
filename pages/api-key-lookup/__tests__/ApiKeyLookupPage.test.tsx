@@ -125,6 +125,7 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
       removeSavedAccount: vi.fn(),
       beginAddAccount: vi.fn(),
       switchAccount: vi.fn(() => null),
+      client: { setSession: vi.fn() },
       login: vi.fn(),
       logout: vi.fn(async () => undefined),
       me: vi.fn(),
@@ -298,7 +299,7 @@ describe("ApiKeyLookupPage", () => {
       );
     });
     expect(mocks.fetchPublicLogs).not.toHaveBeenCalled();
-    expect(await screen.findByRole("combobox", { name: /primary key/i })).toBeInTheDocument();
+    expect(await screen.findByTestId("apikey-lookup-account-menu")).toBeInTheDocument();
     expect(window.sessionStorage.getItem("apiKeyLookup.lastApiKey.v1")).toBeNull();
     expect(window.location.search).toBe("");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -669,13 +670,10 @@ describe("ApiKeyLookupPage", () => {
       </ThemeProvider>,
     );
 
-    await userEvent.click(await screen.findByRole("combobox", { name: /primary key/i }));
-
-    expect(screen.queryByRole("option", { name: /primary key/i })).not.toBeInTheDocument();
-    expect(screen.getByRole("option", { name: /logout/i })).toHaveAttribute(
-      "aria-selected",
-      "false",
-    );
+    await userEvent.click(await screen.findByTestId("apikey-lookup-account-menu"));
+    const menu = await screen.findByTestId("apikey-lookup-account-menu-content");
+    expect(within(menu).queryByText(/primary key/i)).not.toBeInTheDocument();
+    expect(within(menu).getByText(/logout|退出登录|登出/i)).toBeInTheDocument();
   });
 
   test("confirms before deleting a managed API key", async () => {
@@ -790,8 +788,12 @@ describe("ApiKeyLookupPage", () => {
       </ThemeProvider>,
     );
 
-    await userEvent.click(await screen.findByRole("combobox", { name: /primary key/i }));
-    await userEvent.click(screen.getByRole("option", { name: /logout/i }));
+    await userEvent.click(await screen.findByTestId("apikey-lookup-account-menu"));
+    await userEvent.click(
+      within(await screen.findByTestId("apikey-lookup-account-menu-content")).getByText(
+        /logout|退出登录|登出/i,
+      ),
+    );
 
     expect(window.sessionStorage.getItem("apiKeyLookup.lastApiKey.v1")).toBeNull();
     expect(screen.getByTestId("apikey-lookup-landing")).toBeInTheDocument();
