@@ -230,7 +230,9 @@
     "signing_in": "Вход...",
     "show_key": "Показать пароль",
     "hide_key": "Скрыть пароль",
-    "sign_in": "Вход"
+    "sign_in": "Вход",
+    "switch_account_failed": "Could not restore that account. Sign in again.",
+    "or_sign_in": "or sign in with password"
   },
   "header": {
     "check_connection": "Проверить подключение",
@@ -1690,8 +1692,13 @@
     "expand_sidebar": "Expand Sidebar",
     "collapse_sidebar": "Collapse Sidebar",
     "logout_button": "Logout",
+    "switch_account": "Switch account",
+    "add_account": "Add account",
+    "current_account": "Current account",
+    "remove_saved_account": "Remove account",
     "skip_to_content": "Skip to main content",
-    "nav_menu_management": "Управление меню"
+    "nav_menu_management": "Управление меню",
+    "forget_saved_account": "Forget saved account"
   },
   "api_key_permissions_page": {
     "title": "API Key Permissions",

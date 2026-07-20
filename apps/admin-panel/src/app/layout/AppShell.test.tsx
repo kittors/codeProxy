@@ -194,9 +194,13 @@ vi.mock("@app/providers/AuthProvider", () => ({
     can: () => true,
     state: {
       principal: authPrincipal,
+      savedAccounts: [],
     },
     actions: {
       switchTenant: vi.fn(),
+      beginAddAccount: vi.fn(),
+      switchAccount: vi.fn(),
+      removeSavedAccount: vi.fn(),
     },
   }),
 }));

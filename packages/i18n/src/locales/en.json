@@ -152,7 +152,9 @@
     "password_label": "Password",
     "advanced_connection": "Advanced connection settings",
     "show_key": "Show password",
-    "hide_key": "Hide password"
+    "hide_key": "Hide password",
+    "switch_account_failed": "Could not restore that account. Sign in again.",
+    "or_sign_in": "or sign in with password"
   },
   "header": {
     "check_connection": "Check Connection",
@@ -2046,12 +2048,17 @@
     "expand_sidebar": "Expand Sidebar",
     "collapse_sidebar": "Collapse Sidebar",
     "logout_button": "Logout",
+    "switch_account": "Switch account",
+    "add_account": "Add account",
+    "current_account": "Current account",
+    "remove_saved_account": "Remove account",
     "skip_to_content": "Skip to main content",
     "upgrade_title": "Upgrade Plan",
     "upgrade_description": "Unlock higher throughput, deeper monitoring, and priority support.",
     "upgrade_action": "Upgrade now",
     "sidebar_account_role": "Super Admin",
-    "nav_menu_management": "Menu Management"
+    "nav_menu_management": "Menu Management",
+    "forget_saved_account": "Forget saved account"
   },
   "proxies": {
     "title": "Proxy Management",

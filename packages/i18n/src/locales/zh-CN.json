@@ -154,7 +154,9 @@
     "session_unavailable": "当前管理会话已失效，请重新登录。",
     "username_label": "用户名",
     "password_label": "密码",
-    "advanced_connection": "高级连接设置"
+    "advanced_connection": "高级连接设置",
+    "switch_account_failed": "无法恢复该账号，请重新登录。",
+    "or_sign_in": "或使用密码登录"
   },
   "header": {
     "check_connection": "检查连接",
@@ -2063,12 +2065,17 @@
     "expand_sidebar": "展开侧边栏",
     "collapse_sidebar": "收起侧边栏",
     "logout_button": "退出登录",
+    "switch_account": "切换账号",
+    "add_account": "添加账号",
+    "current_account": "当前账号",
+    "remove_saved_account": "移除账号",
     "skip_to_content": "跳到主要内容",
     "upgrade_title": "升级到专业版",
     "upgrade_description": "获得更高吞吐、更细粒度监控与优先技术支持。",
     "upgrade_action": "立即升级",
     "sidebar_account_role": "超级管理员",
-    "nav_menu_management": "菜单管理"
+    "nav_menu_management": "菜单管理",
+    "forget_saved_account": "忘记此账号"
   },
   "proxies": {
     "title": "代理管理",

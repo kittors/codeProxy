@@ -2,7 +2,13 @@ export const MANAGEMENT_API_PREFIX = "/v0/management";
 export const DEFAULT_API_PORT = 8317;
 export const REQUEST_TIMEOUT_MS = 30000;
 export const AUTH_STORAGE_KEY = "code-proxy-admin-auth";
+/** Remembered multi-account vault (localStorage). */
+export const AUTH_ACCOUNTS_STORAGE_KEY = "code-proxy-admin-auth-accounts";
+/** Non-remembered multi-account vault for the current tab (sessionStorage). */
+export const AUTH_ACCOUNTS_SESSION_STORAGE_KEY = "code-proxy-admin-auth-accounts-session";
 export const AUTH_PERSIST_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+/** Fired on window after vault mutations so other tabs/UI can refresh lists. */
+export const AUTH_ACCOUNTS_CHANGED_EVENT = "auth-accounts-changed";
 export const VERSION_HEADER_KEYS = ["x-cpa-version", "x-server-version"];
 export const BUILD_DATE_HEADER_KEYS = ["x-cpa-build-date", "x-server-build-date"];
 
