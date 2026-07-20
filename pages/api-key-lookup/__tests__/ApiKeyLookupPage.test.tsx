@@ -975,9 +975,12 @@ describe("ApiKeyLookupPage", () => {
 
     await waitFor(() => expect(screen.getByTestId("usage-tab")).toHaveTextContent("11"));
 
-    await userEvent.click(await screen.findByTestId("apikey-lookup-account-menu"));
+    const accountMenuTrigger = await screen.findByTestId("apikey-lookup-account-menu");
+    await userEvent.click(accountMenuTrigger);
     await userEvent.click(await screen.findByTestId("apikey-lookup-switch-account-trigger"));
     await userEvent.click(await screen.findByTestId("apikey-lookup-switch-u-b"));
+
+    await waitFor(() => expect(accountMenuTrigger).not.toHaveFocus());
 
     // Warm B: paint cached stats immediately (no skeleton / no-stats flash).
     await waitFor(() => expect(screen.getByTestId("usage-tab")).toHaveTextContent("77"));

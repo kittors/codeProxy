@@ -547,6 +547,7 @@ export function ApiKeyLookupPage() {
   const fetchIdRef = useRef(0);
   const paginationInFlightRef = useRef(false);
   const restoredLookupFetchedRef = useRef(false);
+  const suppressAccountMenuFocusRestoreRef = useRef(false);
 
   // ================================================================
   //  Logs fetching (with infinite scroll support)
@@ -1264,6 +1265,11 @@ export function ApiKeyLookupPage() {
                       sideOffset={8}
                       className="min-w-48"
                       data-testid="apikey-lookup-account-menu-content"
+                      onCloseAutoFocus={(event) => {
+                        if (!suppressAccountMenuFocusRestoreRef.current) return;
+                        suppressAccountMenuFocusRestoreRef.current = false;
+                        event.preventDefault();
+                      }}
                     >
                       {portalUser && switchablePortalAccounts.length > 1 ? (
                         <DropdownMenu.Sub>
@@ -1292,6 +1298,13 @@ export function ApiKeyLookupPage() {
                                         ? "apikey-lookup-current-account"
                                         : `apikey-lookup-switch-${account.user.id}`
                                     }
+                                    onClick={(event) => {
+                                      // A pointer-selected account changes the page context; do not let
+                                      // Radix restore focus to the now-updated trigger and leave its
+                                      // browser focus ring visible. Keyboard selection keeps the default
+                                      // focus restoration so the menu remains accessible.
+                                      suppressAccountMenuFocusRestoreRef.current = event.detail > 0;
+                                    }}
                                     onSelect={() => {
                                       if (!isCurrent) void handleSwitchAccount(account.accountKey);
                                     }}
