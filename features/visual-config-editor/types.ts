@@ -35,8 +35,12 @@ export type PayloadFilterRule = {
 
 export interface RequestLogStorageVisualConfig {
   storeContent: boolean;
+  retentionDays: string;
   contentRetentionDays: string;
+  cleanupEnabled: boolean;
   cleanupIntervalMinutes: string;
+  maxRows: string;
+  maxMetadataSizeMb: string;
   maxTotalSizeMb: string;
   vacuumOnCleanup: boolean;
 }
@@ -166,10 +170,14 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   requestLog: false,
   requestLogStorage: {
     storeContent: false,
-    contentRetentionDays: "30",
-    cleanupIntervalMinutes: "1440",
-    maxTotalSizeMb: "1024",
-    vacuumOnCleanup: true,
+    retentionDays: "7",
+    contentRetentionDays: "3",
+    cleanupEnabled: true,
+    cleanupIntervalMinutes: "60",
+    maxRows: "100000",
+    maxMetadataSizeMb: "256",
+    maxTotalSizeMb: "128",
+    vacuumOnCleanup: false,
   },
   systemStatsCacheSeconds: "60",
   systemStatsWebSocketMaxAgeSeconds: "300",

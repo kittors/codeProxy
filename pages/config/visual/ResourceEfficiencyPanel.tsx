@@ -58,9 +58,13 @@ export function ResourceEfficiencyPanel({
       values.errorLogsMaxFiles === "10" &&
       values.systemStatsCacheSeconds === "60" &&
       values.systemStatsWebSocketMaxAgeSeconds === "300" &&
-      values.requestLogStorage.maxTotalSizeMb === "256" &&
-      values.requestLogStorage.contentRetentionDays === "30" &&
-      values.requestLogStorage.cleanupIntervalMinutes === "1440" &&
+      values.requestLogStorage.retentionDays === "7" &&
+      values.requestLogStorage.contentRetentionDays === "3" &&
+      values.requestLogStorage.cleanupEnabled &&
+      values.requestLogStorage.cleanupIntervalMinutes === "60" &&
+      values.requestLogStorage.maxRows === "100000" &&
+      values.requestLogStorage.maxMetadataSizeMb === "256" &&
+      values.requestLogStorage.maxTotalSizeMb === "128" &&
       !values.requestLogStorage.vacuumOnCleanup,
     [values],
   );
@@ -79,9 +83,13 @@ export function ResourceEfficiencyPanel({
       requestLogStorage: {
         ...values.requestLogStorage,
         storeContent: false,
-        contentRetentionDays: "30",
-        cleanupIntervalMinutes: "1440",
-        maxTotalSizeMb: "256",
+        retentionDays: "7",
+        contentRetentionDays: "3",
+        cleanupEnabled: true,
+        cleanupIntervalMinutes: "60",
+        maxRows: "100000",
+        maxMetadataSizeMb: "256",
+        maxTotalSizeMb: "128",
         vacuumOnCleanup: false,
       },
     });
@@ -212,14 +220,18 @@ export function ResourceEfficiencyPanel({
               }
             />
             <ResourceField
-              label={t("resource_config.body_cap_label")}
-              hint={t("resource_config.body_cap_hint")}
-              value={values.requestLogStorage.maxTotalSizeMb}
-              placeholder="256"
+              label={t("resource_config.detail_retention_label", {
+                defaultValue: "请求明细保留天数",
+              })}
+              hint={t("resource_config.detail_retention_hint", {
+                defaultValue: "request_logs 仅用于排障，默认 7 天；统计在独立小投影表，不会随清理归零。",
+              })}
+              value={values.requestLogStorage.retentionDays}
+              placeholder="7"
               disabled={disabled}
-              onChange={(maxTotalSizeMb) =>
+              onChange={(retentionDays) =>
                 onChange({
-                  requestLogStorage: { ...values.requestLogStorage, maxTotalSizeMb },
+                  requestLogStorage: { ...values.requestLogStorage, retentionDays },
                 })
               }
             />
@@ -227,7 +239,7 @@ export function ResourceEfficiencyPanel({
               label={t("resource_config.body_retention_label")}
               hint={t("resource_config.retention_hint")}
               value={values.requestLogStorage.contentRetentionDays}
-              placeholder="30"
+              placeholder="3"
               disabled={disabled}
               onChange={(contentRetentionDays) =>
                 onChange({
@@ -239,7 +251,7 @@ export function ResourceEfficiencyPanel({
               label={t("resource_config.cleanup_label")}
               hint={t("resource_config.cleanup_hint")}
               value={values.requestLogStorage.cleanupIntervalMinutes}
-              placeholder="1440"
+              placeholder="60"
               disabled={disabled}
               onChange={(cleanupIntervalMinutes) =>
                 onChange({
@@ -247,8 +259,65 @@ export function ResourceEfficiencyPanel({
                 })
               }
             />
+            <ResourceField
+              label={t("resource_config.max_rows_label", { defaultValue: "明细最大行数" })}
+              hint={t("resource_config.max_rows_hint", {
+                defaultValue: "超过后按最旧优先删除明细；不影响聚合统计。",
+              })}
+              value={values.requestLogStorage.maxRows}
+              placeholder="100000"
+              disabled={disabled}
+              onChange={(maxRows) =>
+                onChange({
+                  requestLogStorage: { ...values.requestLogStorage, maxRows },
+                })
+              }
+            />
+            <ResourceField
+              label={t("resource_config.metadata_cap_label", {
+                defaultValue: "明细表体积上限 (MB)",
+              })}
+              hint={t("resource_config.metadata_cap_hint", {
+                defaultValue: "request_logs 关系体积保护（含索引，尽力而为）。",
+              })}
+              value={values.requestLogStorage.maxMetadataSizeMb}
+              placeholder="256"
+              disabled={disabled}
+              onChange={(maxMetadataSizeMb) =>
+                onChange({
+                  requestLogStorage: { ...values.requestLogStorage, maxMetadataSizeMb },
+                })
+              }
+            />
+            <ResourceField
+              label={t("resource_config.body_cap_label")}
+              hint={t("resource_config.body_cap_hint")}
+              value={values.requestLogStorage.maxTotalSizeMb}
+              placeholder="128"
+              disabled={disabled}
+              onChange={(maxTotalSizeMb) =>
+                onChange({
+                  requestLogStorage: { ...values.requestLogStorage, maxTotalSizeMb },
+                })
+              }
+            />
           </div>
-          <div className="mt-5 border-t border-slate-200 pt-5 dark:border-white/10">
+          <div className="mt-5 space-y-5 border-t border-slate-200 pt-5 dark:border-white/10">
+            <ToggleSwitch
+              label={t("resource_config.cleanup_enabled_title", {
+                defaultValue: "启用定时清理明细",
+              })}
+              description={t("resource_config.cleanup_enabled_desc", {
+                defaultValue: "按保留天数/行数/体积上限分批删除 request_logs；不会删除统计投影。",
+              })}
+              checked={values.requestLogStorage.cleanupEnabled}
+              onCheckedChange={(cleanupEnabled) =>
+                onChange({
+                  requestLogStorage: { ...values.requestLogStorage, cleanupEnabled },
+                })
+              }
+              disabled={disabled}
+            />
             <ToggleSwitch
               label={t("resource_config.vacuum_title")}
               description={t("resource_config.vacuum_desc")}
@@ -266,7 +335,12 @@ export function ResourceEfficiencyPanel({
 
       <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-white/70">
         <ShieldCheck size={18} className="mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
-        <p>{t("resource_config.metadata_preserved")}</p>
+        <p>
+          {t("resource_config.stats_preserved", {
+            defaultValue:
+              "清理明细不会清理统计。Dashboard、终端用户、API Key 查询与 public usage 来自小型聚合投影表。",
+          })}
+        </p>
       </div>
     </div>
   );

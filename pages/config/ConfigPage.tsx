@@ -279,8 +279,11 @@ export function ConfigPage() {
         !isValidResourceNumber(visualValues.errorLogsMaxFiles, 0) ||
         !isValidResourceNumber(visualValues.systemStatsCacheSeconds, 10) ||
         !isValidResourceNumber(visualValues.systemStatsWebSocketMaxAgeSeconds, 60) ||
+        !isValidResourceNumber(visualValues.requestLogStorage.retentionDays, 1) ||
         !isValidResourceNumber(visualValues.requestLogStorage.contentRetentionDays, 0) ||
-        !isValidResourceNumber(visualValues.requestLogStorage.cleanupIntervalMinutes, 60) ||
+        !isValidResourceNumber(visualValues.requestLogStorage.cleanupIntervalMinutes, 1) ||
+        !isValidResourceNumber(visualValues.requestLogStorage.maxRows, 0) ||
+        !isValidResourceNumber(visualValues.requestLogStorage.maxMetadataSizeMb, 0) ||
         !isValidResourceNumber(visualValues.requestLogStorage.maxTotalSizeMb, 0))
     ) {
       notify({ type: "error", message: t("resource_config.invalid_number") });

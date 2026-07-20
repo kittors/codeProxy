@@ -552,12 +552,16 @@ export function useVisualConfig() {
           requestLog: Boolean(parsed["request-log"]),
           requestLogStorage: {
             storeContent: Boolean(requestLogStorage?.["store-content"]),
-            contentRetentionDays: String(requestLogStorage?.["content-retention-days"] ?? "30"),
+            retentionDays: String(requestLogStorage?.["retention-days"] ?? "7"),
+            contentRetentionDays: String(requestLogStorage?.["content-retention-days"] ?? "3"),
+            cleanupEnabled: requestLogStorage?.["cleanup-enabled"] !== false,
             cleanupIntervalMinutes: String(
-              requestLogStorage?.["cleanup-interval-minutes"] ?? "1440",
+              requestLogStorage?.["cleanup-interval-minutes"] ?? "60",
             ),
-            maxTotalSizeMb: String(requestLogStorage?.["max-total-size-mb"] ?? "1024"),
-            vacuumOnCleanup: requestLogStorage?.["vacuum-on-cleanup"] !== false,
+            maxRows: String(requestLogStorage?.["max-rows"] ?? "100000"),
+            maxMetadataSizeMb: String(requestLogStorage?.["max-metadata-size-mb"] ?? "256"),
+            maxTotalSizeMb: String(requestLogStorage?.["max-total-size-mb"] ?? "128"),
+            vacuumOnCleanup: Boolean(requestLogStorage?.["vacuum-on-cleanup"]),
           },
           systemStatsCacheSeconds: String(parsed["system-stats-cache-seconds"] ?? "60"),
           systemStatsWebSocketMaxAgeSeconds: String(
@@ -691,22 +695,34 @@ export function useVisualConfig() {
         if (
           hasOwn(parsed, "request-log-storage") ||
           requestLogStorageValues.storeContent ||
-          requestLogStorageValues.contentRetentionDays.trim() !== "30" ||
-          requestLogStorageValues.cleanupIntervalMinutes.trim() !== "1440" ||
-          requestLogStorageValues.maxTotalSizeMb.trim() !== "1024" ||
-          !requestLogStorageValues.vacuumOnCleanup
+          requestLogStorageValues.retentionDays.trim() !== "7" ||
+          requestLogStorageValues.contentRetentionDays.trim() !== "3" ||
+          !requestLogStorageValues.cleanupEnabled ||
+          requestLogStorageValues.cleanupIntervalMinutes.trim() !== "60" ||
+          requestLogStorageValues.maxRows.trim() !== "100000" ||
+          requestLogStorageValues.maxMetadataSizeMb.trim() !== "256" ||
+          requestLogStorageValues.maxTotalSizeMb.trim() !== "128" ||
+          requestLogStorageValues.vacuumOnCleanup
         ) {
           const storage = ensureRecord(parsed, "request-log-storage");
           setBoolean(storage, "store-content", requestLogStorageValues.storeContent);
+          setIntFromString(storage, "retention-days", requestLogStorageValues.retentionDays);
           setIntFromString(
             storage,
             "content-retention-days",
             requestLogStorageValues.contentRetentionDays,
           );
+          storage["cleanup-enabled"] = requestLogStorageValues.cleanupEnabled;
           setIntFromString(
             storage,
             "cleanup-interval-minutes",
             requestLogStorageValues.cleanupIntervalMinutes,
+          );
+          setIntFromString(storage, "max-rows", requestLogStorageValues.maxRows);
+          setIntFromString(
+            storage,
+            "max-metadata-size-mb",
+            requestLogStorageValues.maxMetadataSizeMb,
           );
           setIntFromString(storage, "max-total-size-mb", requestLogStorageValues.maxTotalSizeMb);
           storage["vacuum-on-cleanup"] = requestLogStorageValues.vacuumOnCleanup;
