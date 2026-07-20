@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { modelsApi } from "@code-proxy/api-client";
 import type {
@@ -76,9 +76,26 @@ export function useAuthFilesModelOwnerGroups() {
   const [modelOwnerByAuthGroup, setModelOwnerByAuthGroup] = useState<AuthFilesModelOwnerGroupMap>(
     {},
   );
+  const hasLoadedRef = useRef(false);
 
-  const loadModelOwnerGroups = useCallback(async () => {
-    setModelOwnerGroupsLoading(true);
+  const sameGroups = (
+    a: AuthFileModelOwnerGroup[],
+    b: AuthFileModelOwnerGroup[],
+  ): boolean => {
+    if (a.length !== b.length) return false;
+    return a.every((group, index) => {
+      const other = b[index];
+      if (!other) return false;
+      if (group.value !== other.value || group.label !== other.label) return false;
+      if (group.models.length !== other.models.length) return false;
+      return group.models.every((model, modelIndex) => model.id === other.models[modelIndex]?.id);
+    });
+  };
+
+  const loadModelOwnerGroups = useCallback(async (options?: { silent?: boolean }) => {
+    // Keep the green owner chip / existing lists stable while revalidating.
+    const silent = options?.silent === true || hasLoadedRef.current;
+    if (!silent) setModelOwnerGroupsLoading(true);
     try {
       const [models, presets, mappings] = await Promise.all([
         modelsApi.getModelConfigs("library"),
@@ -86,15 +103,16 @@ export function useAuthFilesModelOwnerGroups() {
         modelsApi.getAuthGroupModelOwnerMappingMap(),
       ]);
       const groups = buildModelOwnerGroups(models, presets);
-      setModelOwnerGroups(groups);
+      setModelOwnerGroups((current) => (sameGroups(current, groups) ? current : groups));
       setModelOwnerByAuthGroup((current) => (sameMap(current, mappings) ? current : mappings));
+      hasLoadedRef.current = true;
     } catch (err: unknown) {
       notify({
         type: "error",
         message: err instanceof Error ? err.message : t("auth_files.failed_get_model_owners"),
       });
     } finally {
-      setModelOwnerGroupsLoading(false);
+      if (!silent) setModelOwnerGroupsLoading(false);
     }
   }, [notify, t]);
 

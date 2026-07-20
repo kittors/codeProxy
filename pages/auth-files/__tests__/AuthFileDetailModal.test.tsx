@@ -53,8 +53,6 @@ const basePrefixProxyEditor: DetailModalProps["prefixProxyEditor"] = {
   prefix: "team-a",
   proxyUrl: "http://127.0.0.1:7890",
   proxyId: "primary",
-  subscriptionStartedAt: "2026-04-01T08:30",
-  subscriptionPeriod: "monthly",
 };
 
 const baseCodexOAuthAdmissionEditor: DetailModalProps["codexOAuthAdmissionEditor"] = {
@@ -918,7 +916,7 @@ describe("AuthFileDetailModal", () => {
     expect(within(grid).getByPlaceholderText("e.g. http://127.0.0.1:7890")).toHaveValue(
       "http://127.0.0.1:7890",
     );
-    expect(within(grid).getByLabelText(/Subscription start/)).toBeInTheDocument();
+    expect(within(grid).queryByLabelText(/Subscription start/)).not.toBeInTheDocument();
     expect(screen.queryByTestId("auth-file-fields-preview")).not.toBeInTheDocument();
     expect(screen.queryByText(/"prefix"/)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Save" })).toBeEnabled();

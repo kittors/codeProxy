@@ -157,20 +157,6 @@ vi.mock("@code-proxy/ui", async (importOriginal) => ({
   EChart: ({ className }: { className?: string }) => <div className={className}>chart</div>,
 }));
 
-const padDatePart = (value: number): string => String(value).padStart(2, "0");
-
-const toDateTimeLocalInput = (date: Date): string =>
-  [
-    date.getFullYear(),
-    "-",
-    padDatePart(date.getMonth() + 1),
-    "-",
-    padDatePart(date.getDate()),
-    "T",
-    padDatePart(date.getHours()),
-    ":",
-    padDatePart(date.getMinutes()),
-  ].join("");
 
 const decodeBase64UrlJson = (part: string): Record<string, unknown> =>
   JSON.parse(Buffer.from(part, "base64url").toString("utf8")) as Record<string, unknown>;
@@ -3280,7 +3266,7 @@ describe("AuthFilesPage files table", () => {
     expect(screen.getByText("<1d left")).toBeInTheDocument();
   });
 
-  test("saves subscription start and period from the auth fields editor", async () => {
+  test("does not show manual subscription editor in auth fields", async () => {
     mocks.list.mockImplementation(async () => ({
       files: [
         {
@@ -3291,6 +3277,9 @@ describe("AuthFilesPage files table", () => {
           size: 1024,
           modified: Date.now(),
           disabled: false,
+          shared_subscription_started_at: "2026-07-01T00:00:00Z",
+          shared_subscription_expires_at: "2026-08-01T00:00:00Z",
+          shared_subscription_source: "signed_claims",
         },
       ],
     }));
@@ -3300,7 +3289,6 @@ describe("AuthFilesPage files table", () => {
           type: "codex",
           subscription_started_at: "2027-01-02T03:04:00Z",
           subscription_period: "monthly",
-          subscription_expires_at: "2099-01-01T00:00:00Z",
         },
         null,
         2,
@@ -3323,82 +3311,13 @@ describe("AuthFilesPage files table", () => {
     fireEvent.click(screen.getByRole("button", { name: "Details" }));
     fireEvent.click(await screen.findByRole("tab", { name: "Fields" }));
 
-    const input = await screen.findByLabelText("Subscription start date");
-    fireEvent.change(input, { target: { value: "2027-01-03T04:05" } });
-    fireEvent.click(screen.getByRole("combobox", { name: "Subscription cycle" }));
-    fireEvent.click(await screen.findByRole("option", { name: "Yearly" }));
-    fireEvent.click(screen.getByRole("button", { name: "Save" }));
-
-    await waitFor(() => expect(mocks.upload).toHaveBeenCalledTimes(1));
-    const uploadCalls = mocks.upload.mock.calls as unknown as [[File]];
-    const uploaded = uploadCalls[0][0];
-    const uploadedJson = JSON.parse(await uploaded.text()) as Record<string, unknown>;
-    expect(uploadedJson.subscription_started_at).toBe(new Date("2027-01-03T04:05").toISOString());
-    expect(uploadedJson.subscription_period).toBe("yearly");
-    expect(uploadedJson.subscription_expires_at).toBeUndefined();
+    expect(screen.queryByLabelText("Subscription start date")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Subscription cycle")).not.toBeInTheDocument();
+    expect(screen.queryByText("Subscription start date")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save" })).toBeInTheDocument();
   });
 
-  test("uses the subscription date picker from the auth fields editor", async () => {
-    const initialStartedAt = "2027-01-02T03:04:00Z";
-    const expectedStartedAt = new Date(initialStartedAt);
-    expectedStartedAt.setFullYear(2027, 0, 15);
-    mocks.list.mockImplementation(async () => ({
-      files: [
-        {
-          name: "codex-subscription.json",
-          label: "Codex Subscriber",
-          account_type: "oauth",
-          type: "codex",
-          size: 1024,
-          modified: Date.now(),
-          disabled: false,
-        },
-      ],
-    }));
-    mocks.downloadText.mockImplementation(async () =>
-      JSON.stringify(
-        {
-          type: "codex",
-          subscription_started_at: initialStartedAt,
-          subscription_period: "monthly",
-        },
-        null,
-        2,
-      ),
-    );
-
-    render(
-      <MemoryRouter initialEntries={["/auth-files"]}>
-        <ThemeProvider>
-          <ToastProvider>
-            <Routes>
-              <Route path="/auth-files" element={<AuthFilesPage />} />
-            </Routes>
-          </ToastProvider>
-        </ThemeProvider>
-      </MemoryRouter>,
-    );
-
-    expect(await screen.findByText("Codex Subscriber")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Details" }));
-    fireEvent.click(await screen.findByRole("tab", { name: "Fields" }));
-
-    fireEvent.click(await screen.findByLabelText("Subscription start date"));
-    expect(screen.getByRole("dialog", { name: "Date picker" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "15" }));
-    fireEvent.click(screen.getByRole("button", { name: "Save" }));
-
-    await waitFor(() => expect(mocks.upload).toHaveBeenCalledTimes(1));
-    const uploadCalls = mocks.upload.mock.calls as unknown as [[File]];
-    const uploaded = uploadCalls[0][0];
-    const uploadedJson = JSON.parse(await uploaded.text()) as Record<string, unknown>;
-    expect(uploadedJson.subscription_started_at).toBe(expectedStartedAt.toISOString());
-  });
-
-  test("closes the fields modal and refreshes the card subscription badge after saving", async () => {
-    const startedAt = new Date(Date.now() - 25 * 24 * 60 * 60 * 1000);
-    startedAt.setSeconds(0, 0);
-    const startedAtInput = toDateTimeLocalInput(startedAt);
+  test("shows card subscription badge from shared provider subscription", async () => {
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     mocks.list.mockImplementation(async () => ({
       files: [
@@ -3410,10 +3329,16 @@ describe("AuthFilesPage files table", () => {
           size: 1024,
           modified: Date.now(),
           disabled: false,
+          shared_subscription_started_at: new Date(
+            Date.now() - 5 * 24 * 60 * 60 * 1000,
+          ).toISOString(),
+          shared_subscription_expires_at: new Date(
+            Date.now() + 26 * 24 * 60 * 60 * 1000,
+          ).toISOString(),
+          shared_subscription_source: "signed_claims",
         },
       ],
     }));
-    mocks.downloadText.mockImplementation(async () => JSON.stringify({ type: "codex" }, null, 2));
 
     render(
       <MemoryRouter initialEntries={["/auth-files"]}>
@@ -3427,24 +3352,7 @@ describe("AuthFilesPage files table", () => {
       </MemoryRouter>,
     );
 
-    const cards = await screen.findByTestId("auth-files-cards");
-    expect(cards).not.toHaveTextContent(/d left/);
-    fireEvent.click(within(cards).getByRole("button", { name: "Details" }));
-    const dialog = await screen.findByRole("dialog", { name: "Codex Subscriber" });
-    fireEvent.click(within(dialog).getByRole("tab", { name: "Fields" }));
-
-    const input = await within(dialog).findByLabelText("Subscription start date");
-    fireEvent.change(input, { target: { value: startedAtInput } });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Save" }));
-
-    await waitFor(() => expect(mocks.upload).toHaveBeenCalledTimes(1));
-    const uploadCalls = mocks.upload.mock.calls as unknown as [[File]];
-    const uploadedJson = JSON.parse(await uploadCalls[0][0].text()) as Record<string, unknown>;
-    expect(uploadedJson.subscription_started_at).toBe(new Date(startedAtInput).toISOString());
-    await waitFor(() =>
-      expect(screen.queryByRole("dialog", { name: "Codex Subscriber" })).not.toBeInTheDocument(),
-    );
-    await waitFor(() => expect(screen.getByTestId("auth-files-cards")).toHaveTextContent(/d left/));
+    expect(await screen.findByTestId("auth-files-cards")).toHaveTextContent(/d left/);
   });
 
   test("opens usage trend cards for codex files inferred from dotted email file names", async () => {

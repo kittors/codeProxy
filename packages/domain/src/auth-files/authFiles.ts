@@ -1173,26 +1173,16 @@ export const normalizeAuthFileSubscriptionPeriod = (value: unknown): AuthFileSub
   return "monthly";
 };
 
+// Prefer provider-asserted shared subscription; tenant metadata is legacy fallback only.
 const resolveSubscriptionStartMs = (file: AuthFileItem): number | null =>
+  parseDateLikeMs(file.shared_subscription_started_at) ??
   parseDateLikeMs(file.subscription_started_at_ms ?? file.subscriptionStartedAtMs) ??
   parseDateLikeMs(
     file.subscription_started_at ??
       file.subscriptionStartedAt ??
       file.subscription_start_at ??
       file.subscriptionStartAt,
-  ) ??
-  parseDateLikeMs(file.shared_subscription_started_at);
-
-const hasTenantSubscriptionOverride = (file: AuthFileItem): boolean =>
-  parseDateLikeMs(
-    file.subscription_started_at_ms ?? file.subscriptionStartedAtMs,
-  ) !== null ||
-  parseDateLikeMs(
-    file.subscription_started_at ??
-      file.subscriptionStartedAt ??
-      file.subscription_start_at ??
-      file.subscriptionStartAt,
-  ) !== null;
+  );
 
 const addCalendarMonths = (startMs: number, months: number): number | null => {
   const date = new Date(startMs);
@@ -1212,20 +1202,22 @@ export const resolveAuthFileSubscriptionStatus = (
   file: AuthFileItem,
   nowMs = Date.now(),
 ): AuthFileSubscriptionStatus | null => {
+  const sharedExpiresAtMs = parseDateLikeMs(file.shared_subscription_expires_at);
   const startedAtMs = resolveSubscriptionStartMs(file);
-  if (startedAtMs === null) return null;
+  // Auto path: provider shared expires alone is enough for the remaining badge.
+  if (startedAtMs === null && sharedExpiresAtMs === null) return null;
 
   const period = normalizeAuthFileSubscriptionPeriod(
     file.subscription_period ?? file.subscriptionPeriod,
   );
-  const sharedExpiresAtMs = parseDateLikeMs(
-    file.shared_subscription_expires_at,
-  );
   const expiresAtMs =
-    !hasTenantSubscriptionOverride(file) && sharedExpiresAtMs !== null
+    sharedExpiresAtMs !== null
       ? sharedExpiresAtMs
-      : addCalendarMonths(startedAtMs, period === "yearly" ? 12 : 1);
+      : startedAtMs === null
+        ? null
+        : addCalendarMonths(startedAtMs, period === "yearly" ? 12 : 1);
   if (expiresAtMs === null) return null;
+  const effectiveStartedAtMs = startedAtMs ?? expiresAtMs;
 
   const diffMs = expiresAtMs - nowMs;
   const remainingDays =
@@ -1238,8 +1230,8 @@ export const resolveAuthFileSubscriptionStatus = (
   const tone = expired ? "expired" : remainingDays <= 5 ? "urgent" : "active";
 
   return {
-    startedAtMs,
-    startedAtText: new Date(startedAtMs).toLocaleString(),
+    startedAtMs: effectiveStartedAtMs,
+    startedAtText: new Date(effectiveStartedAtMs).toLocaleString(),
     expiresAtMs,
     expiresAtText: new Date(expiresAtMs).toLocaleString(),
     remainingDays,
@@ -1411,11 +1403,13 @@ export const estimateQuotaBudgetUsd = (
 
 /**
  * Codex Pro only: map estimated weekly USD budget → pro_20x / pro_5x / pro.
- * Non-pro base plans pass through unchanged; missing budget falls back to plain pro.
+ * Non-pro base plans pass through unchanged; missing budget falls back to plain pro,
+ * or keeps a previously resolved pro_Nx tier so partial refresh does not flash PRO.
  */
 export const resolveCodexProMultiplierTier = (
   basePlan: string | null | undefined,
   estimatedWeeklyBudgetUsd: number | null | undefined,
+  previousTier?: string | null,
 ): string | null => {
   const base = normalizeTagValue(basePlan);
   if (!base) return null;
@@ -1427,6 +1421,9 @@ export const resolveCodexProMultiplierTier = (
     !Number.isFinite(estimatedWeeklyBudgetUsd) ||
     estimatedWeeklyBudgetUsd <= 0
   ) {
+    const previous = normalizeTagValue(previousTier);
+    if (previous === "pro_20x" || previous === "pro-20x") return "pro_20x";
+    if (previous === "pro_5x" || previous === "pro-5x") return "pro_5x";
     return "pro";
   }
   if (estimatedWeeklyBudgetUsd >= CODEX_PRO_20X_WEEKLY_BUDGET_USD) return "pro_20x";
@@ -1438,6 +1435,7 @@ export const resolveAuthFileDisplayPlanType = (
   file: AuthFileItem,
   quotaState?: QuotaState | null,
   cycleStats?: AuthFileCycleBudgetStats | null,
+  previousDisplayPlan?: string | null,
 ): string | null => {
   const base = resolveAuthFilePlanType(file, quotaState);
   if (!base) return null;
@@ -1446,7 +1444,7 @@ export const resolveAuthFileDisplayPlanType = (
     cycleStats?.cycleCostTotal,
     cycleStats?.weeklyQuotaUsedPercent,
   );
-  return resolveCodexProMultiplierTier(base, budget);
+  return resolveCodexProMultiplierTier(base, budget, previousDisplayPlan);
 };
 
 export const resolvePlanBadgeClass = (planType: string | null | undefined): string => {
@@ -1952,8 +1950,6 @@ export type PrefixProxyEditorState = {
   prefix: string;
   proxyUrl: string;
   proxyId: string;
-  subscriptionStartedAt: string;
-  subscriptionPeriod: AuthFileSubscriptionPeriod;
 };
 
 export type AuthFilesGroupOverview = {

@@ -13,14 +13,11 @@ import type { AuthFileTrendResponse } from "@code-proxy/api-client/endpoints/usa
 import type { AuthFileItem, IdentityFingerprintAccountDetail } from "@code-proxy/api-client";
 import { useToast } from "@code-proxy/ui";
 import {
-  dateLikeToDateTimeLocalInput,
-  dateTimeLocalInputToIso,
   formatFileSize,
   MAX_AUTH_FILE_SIZE,
   canRenameAuthFileChannel,
   normalizeAuthIndexValue,
   normalizeProviderKey,
-  normalizeAuthFileSubscriptionPeriod,
   readAuthFileChannelName,
   resolveFileType,
   type AuthFileModelItem,
@@ -45,8 +42,6 @@ const createPrefixProxyEditorState = (): PrefixProxyEditorState => ({
   prefix: "",
   proxyUrl: "",
   proxyId: "",
-  subscriptionStartedAt: "",
-  subscriptionPeriod: "monthly",
 });
 
 const createChannelEditorState = (): ChannelEditorState => ({
@@ -164,65 +159,6 @@ const buildXAIEndpointEditorState = (file: AuthFileItem): XAIEndpointEditorState
   };
 };
 
-const readSubscriptionStartValue = (json: Record<string, unknown>): unknown =>
-  json.subscription_started_at ??
-  json.subscriptionStartedAt ??
-  json.subscription_start_at ??
-  json.subscriptionStartAt;
-
-const removeSubscriptionFields = (json: Record<string, unknown>) => {
-  delete json.subscription_started_at;
-  delete json.subscriptionStartedAt;
-  delete json.subscription_start_at;
-  delete json.subscriptionStartAt;
-  delete json.subscription_started_at_ms;
-  delete json.subscriptionStartedAtMs;
-  delete json.subscription_period;
-  delete json.subscriptionPeriod;
-  delete json.subscription_expires_at;
-  delete json.subscriptionExpiresAt;
-  delete json.subscription_expires_at_ms;
-  delete json.subscriptionExpiresAtMs;
-  delete json.subscription_remaining_minutes;
-  delete json.subscriptionRemainingMinutes;
-  delete json.subscription_expired;
-  delete json.subscriptionExpired;
-};
-
-const mergeSavedSubscriptionFields = (
-  file: AuthFileItem,
-  json: Record<string, unknown>,
-): AuthFileItem => {
-  const next = { ...file };
-  const startedAt = readSubscriptionStartValue(json);
-
-  delete next.subscription_started_at;
-  delete next.subscriptionStartedAt;
-  delete next.subscription_start_at;
-  delete next.subscriptionStartAt;
-  delete next.subscription_started_at_ms;
-  delete next.subscriptionStartedAtMs;
-  delete next.subscription_period;
-  delete next.subscriptionPeriod;
-  delete next.subscription_expires_at;
-  delete next.subscriptionExpiresAt;
-  delete next.subscription_expires_at_ms;
-  delete next.subscriptionExpiresAtMs;
-  delete next.subscription_remaining_minutes;
-  delete next.subscriptionRemainingMinutes;
-  delete next.subscription_expired;
-  delete next.subscriptionExpired;
-
-  if (typeof startedAt === "string" && startedAt.trim()) {
-    next.subscription_started_at = startedAt;
-    next.subscription_period = normalizeAuthFileSubscriptionPeriod(
-      json.subscription_period ?? json.subscriptionPeriod,
-    );
-  }
-
-  return next;
-};
-
 const mergeSavedCodexOAuthAdmissionFields = (
   file: AuthFileItem,
   editor: CodexOAuthAdmissionEditorState,
@@ -328,17 +264,6 @@ export function useAuthFilesDetailEditors(
     );
   const [xaiEndpointEditor, setXAIEndpointEditor] = useState<XAIEndpointEditorState>(() =>
     createXAIEndpointEditorState(),
-  );
-
-  const applySavedAuthFilePatch = useCallback(
-    (fileName: string, json: Record<string, unknown>) => {
-      const applyPatch = (file: AuthFileItem): AuthFileItem =>
-        file.name === fileName ? mergeSavedSubscriptionFields(file, json) : file;
-
-      setFiles?.((prev) => prev.map(applyPatch));
-      setDetailFile((prev) => (prev && prev.name === fileName ? applyPatch(prev) : prev));
-    },
-    [setFiles],
   );
 
   const loadModelsForDetail = useCallback(
@@ -760,8 +685,6 @@ export function useAuthFilesDetailEditors(
         prefix: "",
         proxyUrl: "",
         proxyId: "",
-        subscriptionStartedAt: "",
-        subscriptionPeriod: "monthly",
       });
 
       try {
@@ -793,12 +716,6 @@ export function useAuthFilesDetailEditors(
         const prefix = typeof json.prefix === "string" ? json.prefix : "";
         const proxyUrl = typeof json.proxy_url === "string" ? json.proxy_url : "";
         const proxyId = typeof json.proxy_id === "string" ? json.proxy_id : "";
-        const subscriptionStartedAt = dateLikeToDateTimeLocalInput(
-          readSubscriptionStartValue(json),
-        );
-        const subscriptionPeriod = normalizeAuthFileSubscriptionPeriod(
-          json.subscription_period ?? json.subscriptionPeriod,
-        );
 
         setPrefixProxyEditor((prev) => ({
           ...prev,
@@ -807,8 +724,6 @@ export function useAuthFilesDetailEditors(
           prefix,
           proxyUrl,
           proxyId,
-          subscriptionStartedAt,
-          subscriptionPeriod,
           error: null,
         }));
       } catch (err: unknown) {
@@ -1106,26 +1021,16 @@ export function useAuthFilesDetailEditors(
       typeof prefixProxyEditor.json.proxy_url === "string" ? prefixProxyEditor.json.proxy_url : "";
     const originalProxyId =
       typeof prefixProxyEditor.json.proxy_id === "string" ? prefixProxyEditor.json.proxy_id : "";
-    const originalSubscriptionStartedAt = dateLikeToDateTimeLocalInput(
-      readSubscriptionStartValue(prefixProxyEditor.json),
-    );
-    const originalSubscriptionPeriod = normalizeAuthFileSubscriptionPeriod(
-      prefixProxyEditor.json.subscription_period ?? prefixProxyEditor.json.subscriptionPeriod,
-    );
     return (
       originalPrefix !== prefixProxyEditor.prefix ||
       originalProxyUrl !== prefixProxyEditor.proxyUrl ||
-      originalProxyId !== prefixProxyEditor.proxyId ||
-      originalSubscriptionStartedAt !== prefixProxyEditor.subscriptionStartedAt ||
-      originalSubscriptionPeriod !== prefixProxyEditor.subscriptionPeriod
+      originalProxyId !== prefixProxyEditor.proxyId
     );
   }, [
     prefixProxyEditor.json,
     prefixProxyEditor.prefix,
     prefixProxyEditor.proxyId,
     prefixProxyEditor.proxyUrl,
-    prefixProxyEditor.subscriptionPeriod,
-    prefixProxyEditor.subscriptionStartedAt,
   ]);
 
   const prefixProxyUpdatedText = useMemo(() => {
@@ -1144,39 +1049,18 @@ export function useAuthFilesDetailEditors(
     if (proxyId) next.proxy_id = proxyId;
     else delete next.proxy_id;
 
-    removeSubscriptionFields(next);
-    const subscriptionStartedAt = prefixProxyEditor.subscriptionStartedAt.trim();
-    if (subscriptionStartedAt) {
-      const isoValue = dateTimeLocalInputToIso(subscriptionStartedAt);
-      if (isoValue) {
-        next.subscription_started_at = isoValue;
-        next.subscription_period = prefixProxyEditor.subscriptionPeriod;
-      }
-    }
-
+    // Subscription is provider-asserted (shared status); never write tenant overrides here.
     return JSON.stringify(next, null, 2);
   }, [
     prefixProxyEditor.json,
     prefixProxyEditor.prefix,
     prefixProxyEditor.proxyId,
     prefixProxyEditor.proxyUrl,
-    prefixProxyEditor.subscriptionPeriod,
-    prefixProxyEditor.subscriptionStartedAt,
   ]);
 
   const savePrefixProxy = useCallback(async () => {
     if (!prefixProxyEditor.json) return;
     if (!prefixProxyDirty) return;
-    if (
-      prefixProxyEditor.subscriptionStartedAt.trim() &&
-      dateTimeLocalInputToIso(prefixProxyEditor.subscriptionStartedAt) === null
-    ) {
-      notify({
-        type: "error",
-        message: t("auth_files.subscription_started_at_invalid"),
-      });
-      return;
-    }
 
     const payload = prefixProxyUpdatedText;
     const fileSize = new Blob([payload]).size;
@@ -1196,7 +1080,6 @@ export function useAuthFilesDetailEditors(
       const file = new File([payload], name, { type: "application/json" });
       await authFilesApi.upload(file);
       const parsedPayload = JSON.parse(payload) as Record<string, unknown>;
-      applySavedAuthFilePatch(name, parsedPayload);
       notify({ type: "success", message: t("auth_files.saved") });
       setPrefixProxyEditor((prev) => ({
         ...prev,
@@ -1211,7 +1094,7 @@ export function useAuthFilesDetailEditors(
       setDetailText((prev) => (name && detailFile?.name === name ? payload : prev));
       setDetailOpen(false);
       setDetailTab("fields");
-      void loadAll().finally(() => applySavedAuthFilePatch(name, parsedPayload));
+      void loadAll();
     } catch (err: unknown) {
       notify({
         type: "error",
@@ -1220,14 +1103,12 @@ export function useAuthFilesDetailEditors(
       setPrefixProxyEditor((prev) => ({ ...prev, saving: false }));
     }
   }, [
-    applySavedAuthFilePatch,
     detailFile?.name,
     loadAll,
     notify,
     prefixProxyDirty,
     prefixProxyEditor.fileName,
     prefixProxyEditor.json,
-    prefixProxyEditor.subscriptionStartedAt,
     prefixProxyUpdatedText,
     t,
   ]);
