@@ -4537,6 +4537,7 @@
     "expires_at_required": "Please enter an expiry date and time.",
     "expires_at_invalid": "The expiry date and time is invalid.",
     "field_required": "This field is required.",
+    "name_too_long": "Name cannot exceed {{max}} characters.",
     "admin_username": "Admin username",
     "admin_display_name": "Admin display name",
     "admin_password": "Admin password",

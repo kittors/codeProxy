@@ -4551,6 +4551,7 @@
     "expires_at_required": "请填写到期时间。",
     "expires_at_invalid": "到期时间格式无效。",
     "field_required": "请填写此字段。",
+    "name_too_long": "名称不能超过 {{max}} 个字符。",
     "admin_username": "管理员用户名",
     "admin_display_name": "管理员显示名称",
     "admin_password": "管理员密码",

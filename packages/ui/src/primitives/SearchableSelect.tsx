@@ -84,15 +84,18 @@ function OptionContent({
   trailing?: ReactNode;
   selected: boolean;
 }) {
+  const title = typeof label === "string" ? label : undefined;
   return (
     <>
       {icon ? <span className="inline-flex shrink-0 items-center">{icon}</span> : null}
-      <span className="min-w-0 flex-1 truncate text-left">{label}</span>
+      <span className="min-w-0 flex-1 truncate text-left" title={title}>
+        {label}
+      </span>
       {trailing ? <span className="inline-flex shrink-0 items-center">{trailing}</span> : null}
       {selected ? (
         <Check
           size={14}
-          className="shrink-0 text-[#96969B] dark:text-[#9F9FA8]"
+          className="ml-1 shrink-0 text-[#96969B] dark:text-[#9F9FA8]"
           aria-hidden="true"
         />
       ) : null}
@@ -146,10 +149,13 @@ export function SearchableSelect({
       Math.max(Math.min(minPanelHeight, maxPanelHeight), availableSpace),
     );
     const panelHeight = Math.min(estimatedHeight, maxHeight);
+    // Keep dropdown wider than the compact header trigger so long labels + check fit.
+    const width = Math.max(rect.width, 280);
+    const left = Math.min(rect.left, Math.max(gap, window.innerWidth - width - gap));
     setPos({
       top: openAbove ? Math.max(gap, rect.top - gap - panelHeight) : rect.bottom + gap,
-      left: rect.left,
-      width: Math.max(rect.width, 200),
+      left,
+      width,
       placement: openAbove ? "top" : "bottom",
       maxHeight,
     });
@@ -273,6 +279,13 @@ export function SearchableSelect({
         aria-expanded={open}
         aria-haspopup="listbox"
         aria-label={ariaLabel}
+        title={
+          typeof selectedOption?.label === "string"
+            ? selectedOption.label
+            : typeof selectedOption?.triggerLabel === "string"
+              ? selectedOption.triggerLabel
+              : undefined
+        }
         disabled={disabled}
         onClick={() => setOpen((prev) => !prev)}
         className={cn(
