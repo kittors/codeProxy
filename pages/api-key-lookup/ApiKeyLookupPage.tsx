@@ -404,6 +404,7 @@ export function ApiKeyLookupPage() {
   const [chartLoading, setChartLoading] = useState(false);
   const [quotaLimits, setQuotaLimits] = useState<PublicUsageLimits | null>(null);
   const chartCacheRef = useRef<Record<string, ChartDataResponse>>({});
+  const portalKeySyncIdRef = useRef(0);
   const chartAbortControllerRef = useRef<AbortController | null>(null);
   const chartFetchIdRef = useRef(0);
   const summaryAbortControllerRef = useRef<AbortController | null>(null);
@@ -1051,9 +1052,65 @@ export function ApiKeyLookupPage() {
     }
   }, []);
 
+  const syncPortalKeys = useCallback(async () => {
+    const syncId = portalKeySyncIdRef.current + 1;
+    portalKeySyncIdRef.current = syncId;
+    setPortalKeysLoading(true);
+    let listed = false;
+    try {
+      const keys = await portalApi.listKeys();
+      if (syncId !== portalKeySyncIdRef.current) return;
+      listed = true;
+      const items = keys.items ?? [];
+      setPortalKeys(items);
+      const activeKey = items.find((item) => item.id === operationalKeyId && !item.disabled);
+      const nextKey = activeKey ?? items.find((item) => !item.disabled);
+      if (!nextKey) {
+        handleApiKeyInputChange("");
+        return;
+      }
+      const secret = await portalApi.keySecret(nextKey.id);
+      if (syncId !== portalKeySyncIdRef.current) return;
+      const plaintext = secret.key?.trim();
+      if (!plaintext) {
+        handleApiKeyInputChange("");
+        return;
+      }
+      setOperationalKeyId(nextKey.id);
+      setApiKeyInput(plaintext);
+      setQueriedKey(plaintext);
+      setLoginModalOpen(false);
+    } catch {
+      // Once the authoritative key list was loaded, never retain a secret that
+      // could have been revoked by a concurrent management-side mutation.
+      if (syncId === portalKeySyncIdRef.current && listed) handleApiKeyInputChange("");
+    } finally {
+      if (syncId === portalKeySyncIdRef.current) setPortalKeysLoading(false);
+    }
+  }, [handleApiKeyInputChange, operationalKeyId]);
+
+  useEffect(() => {
+    if (activeTab !== "keys" || !portalUser || portalUser.must_change_password) return;
+    void syncPortalKeys();
+  }, [activeTab, portalUser, syncPortalKeys]);
+
+  useEffect(() => {
+    if (!portalUser || portalUser.must_change_password) return;
+    const syncOnFocus = () => void syncPortalKeys();
+    const syncOnVisibility = () => {
+      if (document.visibilityState === "visible") void syncPortalKeys();
+    };
+    window.addEventListener("focus", syncOnFocus);
+    document.addEventListener("visibilitychange", syncOnVisibility);
+    return () => {
+      window.removeEventListener("focus", syncOnFocus);
+      document.removeEventListener("visibilitychange", syncOnVisibility);
+    };
+  }, [portalUser, syncPortalKeys]);
+
   const handleRefresh = useCallback(() => {
     if (activeTab === "keys") {
-      void refreshPortalKeys();
+      void syncPortalKeys();
       return;
     }
     if (activeTab === "usage" && usageSubject) {
@@ -1072,7 +1129,7 @@ export function ApiKeyLookupPage() {
     fetchLogs,
     fetchChartDataFn,
     fetchModelsFn,
-    refreshPortalKeys,
+    syncPortalKeys,
     usageSubject,
   ]);
 
@@ -1368,7 +1425,7 @@ export function ApiKeyLookupPage() {
                     ? {
                         loading: portalKeysLoading,
                         busy: portalKeysBusy,
-                        onRefresh: () => void refreshPortalKeys(),
+                        onRefresh: () => void syncPortalKeys(),
                         onCreate: () => {
                           setCreateKeyName("");
                           setCreateKeyError(null);

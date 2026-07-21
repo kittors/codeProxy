@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, test, vi } from "vitest";
@@ -62,6 +62,35 @@ const mocks = vi.hoisted(() => ({
     total: 0,
   })),
   apiKeysList: vi.fn(async (): Promise<string[]> => []),
+  endUserCreateKey: vi.fn(async (userId: string, name: string) => {
+    const entry = {
+      id: "owned-created",
+      key: "sk-owned-created-secret",
+      name,
+      end_user_id: userId,
+      disabled: false,
+      is_default: state.entries.length === 0,
+      "created-at": "2026-07-21T00:00:00Z",
+    };
+    state.entries.push(entry);
+    return { api_key: entry, plaintext_key: entry.key };
+  }),
+  endUserUpdateKeyName: vi.fn(async (userId: string, keyId: string, name: string) => {
+    const entry = state.entries.find((item) => item.id === keyId && item.end_user_id === userId);
+    if (entry) entry.name = name;
+    return entry;
+  }),
+  endUserRotateKey: vi.fn(async (userId: string, keyId: string) => {
+    const entry = state.entries.find((item) => item.id === keyId && item.end_user_id === userId);
+    if (!entry) throw new Error("not found");
+    entry.key = "sk-owned-rotated-secret";
+    return { api_key: entry, plaintext_key: entry.key };
+  }),
+  endUserDeleteKey: vi.fn(async (userId: string, keyId: string) => {
+    state.entries = state.entries.filter(
+      (item) => !(item.id === keyId && item.end_user_id === userId),
+    );
+  }),
   fetchConfigYaml: vi.fn(async () => state.configYaml),
   saveConfigYaml: vi.fn(async (content: string) => {
     state.configYaml = content;
@@ -116,6 +145,15 @@ vi.mock("@code-proxy/api-client/endpoints/api-keys", () => ({
     delete: mocks.apiKeyEntriesDelete,
     resetDailySpending: mocks.apiKeyEntriesResetDailySpending,
     listDailySpendingResetHistory: mocks.apiKeyEntriesListDailySpendingResetHistory,
+  },
+}));
+
+vi.mock("@code-proxy/api-client/endpoints/end-users", () => ({
+  endUsersApi: {
+    createKey: mocks.endUserCreateKey,
+    updateKeyName: mocks.endUserUpdateKeyName,
+    rotateKey: mocks.endUserRotateKey,
+    deleteKey: mocks.endUserDeleteKey,
   },
 }));
 
@@ -277,6 +315,10 @@ describe("ApiKeysPage", () => {
     mocks.apiKeyEntriesUpdate.mockClear();
     mocks.apiKeyEntriesDelete.mockClear();
     mocks.apiKeysList.mockClear();
+    mocks.endUserCreateKey.mockClear();
+    mocks.endUserUpdateKeyName.mockClear();
+    mocks.endUserRotateKey.mockClear();
+    mocks.endUserDeleteKey.mockClear();
     mocks.fetchConfigYaml.mockClear();
     mocks.saveConfigYaml.mockClear();
     mocks.apiClientPut.mockClear();
@@ -394,6 +436,67 @@ describe("ApiKeysPage", () => {
         }),
       }),
     );
+  });
+
+  test("uses owner-scoped rename and explicit rotation for an end-user key", async () => {
+    state.entries = [
+      {
+        id: "owned-key-1",
+        key: "sk-owned-original-secret",
+        name: "Owned Key",
+        end_user_id: "end-user-1",
+        disabled: false,
+        is_default: true,
+        "created-at": "2026-07-21T00:00:00Z",
+      },
+    ];
+
+    render(
+      <MemoryRouter>
+        <ThemeProvider>
+          <ToastProvider>
+            <ApiKeysPage endUserId="end-user-1" embed />
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Owned Key")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Edit" }));
+
+    const editDialog = await screen.findByRole("dialog");
+    expect(
+      within(editDialog).queryByDisplayValue("sk-owned-original-secret"),
+    ).not.toBeInTheDocument();
+    expect(
+      within(editDialog).queryByRole("button", { name: /refresh key/i }),
+    ).not.toBeInTheDocument();
+    expect(editDialog).toHaveTextContent(/use the dedicated rotation action/i);
+
+    const nameInput = within(editDialog).getByPlaceholderText(/team-a/i);
+    await userEvent.clear(nameInput);
+    await userEvent.type(nameInput, "Renamed Owned Key");
+    await userEvent.click(within(editDialog).getByRole("button", { name: /save/i }));
+
+    await waitFor(() => {
+      expect(mocks.endUserUpdateKeyName).toHaveBeenCalledWith(
+        "end-user-1",
+        "owned-key-1",
+        "Renamed Owned Key",
+      );
+    });
+    expect(mocks.apiKeyEntriesUpdate).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole("button", { name: /rotate key/i }));
+    const rotateDialog = await screen.findByRole("dialog");
+    expect(rotateDialog).toHaveTextContent(/old key becomes invalid immediately/i);
+    await userEvent.click(within(rotateDialog).getByRole("button", { name: /rotate key/i }));
+
+    await waitFor(() => {
+      expect(mocks.endUserRotateKey).toHaveBeenCalledWith("end-user-1", "owned-key-1");
+    });
+    expect(await screen.findByText("sk-owned-rotated-secret")).toBeInTheDocument();
+    expect(state.entries[0]?.key).toBe("sk-owned-rotated-secret");
   });
 
   test("keeps permissions out of the edit modal and preserves them while saving basics", async () => {
@@ -1084,5 +1187,4 @@ describe("ApiKeysPage", () => {
       expect(mocks.apiKeyEntriesList).toHaveBeenCalledTimes(2);
     });
   });
-
 });
