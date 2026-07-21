@@ -868,14 +868,15 @@ function ShellSidebar({
       {pendingTo && <div className={progressDone ? "rp rp-done" : "rp"} />}
       <aside
         data-collapsed={railCollapsed ? "true" : "false"}
+        data-mobile-open={isMobile ? (collapsed ? "false" : "true") : undefined}
         className={[
           "group/sidebar shrink-0 overflow-visible bg-white/94 dark:bg-neutral-950/88",
           isMobile ? "fixed inset-y-0 left-0 z-40 w-60" : "relative z-30 h-[100dvh]",
           "border-r border-slate-200 shadow-[12px_0_28px_rgba(15,23,42,0.04)] dark:border-neutral-800",
-          "motion-reduce:transition-none motion-safe:transition-[width,transform,background-color,border-color] motion-safe:duration-300 motion-safe:ease-[cubic-bezier(0.22,1,0.36,1)]",
+          "motion-reduce:transition-none motion-safe:transition-[width,transform,background-color,border-color,box-shadow] motion-safe:duration-300 motion-safe:ease-[cubic-bezier(0.22,1,0.36,1)]",
           isMobile
             ? collapsed
-              ? "-translate-x-full"
+              ? "pointer-events-none -translate-x-full shadow-none"
               : "translate-x-0"
             : visualRailCollapsed
               ? "w-16"
@@ -1331,11 +1332,20 @@ export function AppShell({ children, onLogout }: PropsWithChildren<{ onLogout?: 
         >
           {t("shell.skip_to_content")}
         </a>
-        {isMobile && mobileSidebarOpen ? (
+        {isMobile ? (
           <button
             type="button"
-            className="fixed inset-0 z-30 bg-black/35 backdrop-blur-[1px]"
+            data-testid="app-shell-mobile-sidebar-backdrop"
+            className={[
+              "fixed inset-0 z-30 bg-black/35 backdrop-blur-[1px]",
+              "motion-reduce:transition-none motion-safe:transition-[opacity,backdrop-filter] motion-safe:duration-300 motion-safe:ease-[cubic-bezier(0.22,1,0.36,1)]",
+              mobileSidebarOpen
+                ? "opacity-100"
+                : "pointer-events-none opacity-0",
+            ].join(" ")}
             aria-label={t("common.close")}
+            aria-hidden={!mobileSidebarOpen}
+            tabIndex={mobileSidebarOpen ? 0 : -1}
             onClick={() => setMobileSidebarOpen(false)}
           />
         ) : null}

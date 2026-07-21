@@ -1757,12 +1757,12 @@ export function AuthFilesFilesTab({
                         .join(" ")}
                     >
                       <div className={denseCards ? "space-y-2" : "space-y-2.5"}>
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0 flex flex-1 items-center gap-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex min-w-0 flex-1 items-center gap-1.5">
                             <OverflowTooltip
                               content={displayTitle}
                               className={[
-                                "min-w-0 flex-1 truncate font-semibold tracking-tight text-slate-900 dark:text-white",
+                                "min-w-0 flex-1 truncate leading-5 font-semibold tracking-tight text-slate-900 dark:text-white",
                                 denseCards ? "text-xs" : "text-sm",
                               ].join(" ")}
                             >
@@ -1772,7 +1772,7 @@ export function AuthFilesFilesTab({
                               <span
                                 data-testid="auth-file-plan-badge"
                                 className={[
-                                  "inline-flex shrink-0 items-center rounded-md px-1.5 py-0.5 text-2xs font-bold tracking-wide",
+                                  "inline-flex h-5 shrink-0 items-center rounded-md px-1.5 text-2xs font-bold leading-none tracking-wide",
                                   resolvePlanBadgeClass(planType),
                                 ].join(" ")}
                               >
@@ -1782,11 +1782,11 @@ export function AuthFilesFilesTab({
                             ) : null}
                           </div>
 
-                          <div className="flex shrink-0 items-center gap-1.5">
+                          <div className="flex h-6 shrink-0 items-center gap-1.5">
                             {runtimeOnly ? null : (
                               <div
                                 className={[
-                                  "flex h-7 items-center justify-center px-0.5 transition-opacity",
+                                  "flex h-6 w-6 items-center justify-center transition-opacity",
                                   showSelectionControl
                                     ? "opacity-100 pointer-events-auto"
                                     : "opacity-100 pointer-events-auto md:opacity-0 md:pointer-events-none md:group-hover/card:opacity-100 md:group-focus-within/card:opacity-100 md:group-hover/card:pointer-events-auto md:group-focus-within/card:pointer-events-auto",
@@ -1809,7 +1809,7 @@ export function AuthFilesFilesTab({
                               </div>
                             )}
                             {runtimeOnly ? (
-                              <span className="text-xs text-slate-400 dark:text-white/40">
+                              <span className="text-xs leading-none text-slate-400 dark:text-white/40">
                                 --
                               </span>
                             ) : denseCards ? (
@@ -1840,7 +1840,7 @@ export function AuthFilesFilesTab({
                             ) : (
                               <div
                                 className={[
-                                  "flex h-8 items-center justify-center transition-opacity",
+                                  "flex h-6 items-center justify-center transition-opacity",
                                   "opacity-100 pointer-events-auto md:opacity-0 md:pointer-events-none md:group-hover/card:opacity-100 md:group-focus-within/card:opacity-100 md:group-hover/card:pointer-events-auto md:group-focus-within/card:pointer-events-auto",
                                 ].join(" ")}
                               >
