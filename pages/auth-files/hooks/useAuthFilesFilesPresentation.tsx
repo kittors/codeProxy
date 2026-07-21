@@ -16,19 +16,15 @@ import type { AuthFileItem } from "@code-proxy/api-client";
 import { formatLatency } from "@features/provider-latency";
 import { ProviderStatusBar } from "@features/provider-latency";
 import { Button } from "@code-proxy/ui";
-import { Select } from "@code-proxy/ui";
 import { Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { HoverTooltip } from "@code-proxy/ui";
 import { ToggleSwitch } from "@code-proxy/ui";
 import type { DataTableColumn } from "@code-proxy/ui";
 import {
-  pickQuotaPreviewItem,
   type FilesViewMode,
-  type QuotaPreviewMode,
   type UsageIndex,
   TYPE_BADGE_CLASSES,
   formatAuthFileRestrictionRemaining,
-  formatFileSize,
   formatModified,
   formatPlanBadgeLabel,
   resolveClaudeOAuthHealthBadges,
@@ -97,6 +93,40 @@ const CLAUDE_OAUTH_HEALTH_TONE_CLASSES = {
     "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/15 dark:text-amber-200",
 } as const;
 
+const STICKY_ACTIONS_HEADER_CLASS =
+  "text-center md:sticky md:z-40 md:bg-slate-100 md:dark:bg-neutral-800";
+const STICKY_ACTIONS_CELL_CLASS = "md:sticky md:z-30 md:bg-white md:dark:bg-neutral-950";
+const QUOTA_METRIC_WIDE_LABEL_UNITS = 30;
+
+const getQuotaMetricDisplayUnits = (value: string | null | undefined): number =>
+  Array.from(value ?? "").reduce(
+    (total, char) => total + ((char.codePointAt(0) ?? 0) > 0xff ? 2 : 1),
+    0,
+  );
+
+const resolveQuotaMetricWideFlags = (
+  metrics: { label: string; detailText: string | null }[],
+): boolean[] => {
+  const wideFlags = metrics.map(
+    ({ label, detailText }) =>
+      metrics.length === 1 ||
+      getQuotaMetricDisplayUnits(label) > QUOTA_METRIC_WIDE_LABEL_UNITS ||
+      getQuotaMetricDisplayUnits(detailText) > QUOTA_METRIC_WIDE_LABEL_UNITS,
+  );
+
+  let compactSegmentStart = 0;
+  for (let index = 0; index <= wideFlags.length; index += 1) {
+    if (index < wideFlags.length && !wideFlags[index]) continue;
+    const compactSegmentLength = index - compactSegmentStart;
+    if (compactSegmentLength % 2 === 1) {
+      wideFlags[index - 1] = true;
+    }
+    compactSegmentStart = index + 1;
+  }
+
+  return wideFlags;
+};
+
 type QuotaVisualTone = {
   normalized: number | null;
   fillClass: string;
@@ -145,8 +175,6 @@ const resolveQuotaVisualTone = (percent: number | null | undefined): QuotaVisual
 interface UseAuthFilesFilesPresentationOptions {
   filesViewMode: FilesViewMode;
   setFilesViewMode: (value: FilesViewMode) => void;
-  quotaPreviewMode: QuotaPreviewMode;
-  setQuotaPreviewMode: (value: QuotaPreviewMode) => void;
   nowMs: number;
   allPageSelected: boolean;
   somePageSelected: boolean;
@@ -157,6 +185,10 @@ interface UseAuthFilesFilesPresentationOptions {
   connectivityState: Map<string, { loading: boolean; latencyMs: number | null; error: boolean }>;
   checkAuthFileConnectivity: (name: string) => Promise<void>;
   quotaByFileName: Record<string, QuotaState>;
+  resolveQuotaCardSlots: (
+    provider: QuotaProvider,
+    items: QuotaItem[],
+  ) => { id: string; label: string; item: QuotaItem | null }[];
   cycleCallsByAuthIndex: Record<string, number>;
   cycleBudgetByAuthIndex: Record<string, AuthFileCycleBudgetStats>;
   refreshQuota: (file: AuthFileItem, provider: QuotaProvider) => Promise<void>;
@@ -173,8 +205,6 @@ interface UseAuthFilesFilesPresentationOptions {
 export function useAuthFilesFilesPresentation({
   filesViewMode,
   setFilesViewMode,
-  quotaPreviewMode,
-  setQuotaPreviewMode,
   nowMs,
   allPageSelected,
   somePageSelected,
@@ -185,6 +215,7 @@ export function useAuthFilesFilesPresentation({
   connectivityState,
   checkAuthFileConnectivity,
   quotaByFileName,
+  resolveQuotaCardSlots,
   cycleCallsByAuthIndex,
   cycleBudgetByAuthIndex,
   refreshQuota,
@@ -798,16 +829,6 @@ export function useAuthFilesFilesPresentation({
           ),
       },
       {
-        key: "size",
-        label: t("auth_files.file_size"),
-        width: "w-24",
-        render: (file) => (
-          <span className="text-xs tabular-nums text-slate-700 dark:text-white/70">
-            {formatFileSize(file.size)}
-          </span>
-        ),
-      },
-      {
         key: "modified",
         label: t("auth_files.file_modified"),
         width: "w-36",
@@ -903,27 +924,11 @@ export function useAuthFilesFilesPresentation({
       {
         key: "quota",
         label: t("auth_files.col_quota"),
-        width: "w-52",
+        width: "w-[36rem] min-w-[36rem]",
+        minWidthPx: 480,
+        maxWidthPx: 720,
         overflowTooltip: false,
         headerClassName: "text-center",
-        headerRender: () => (
-          <div className="flex items-center justify-center gap-2 normal-case">
-            <span className="text-xs font-semibold text-slate-500 dark:text-white/60">
-              {t("auth_files.col_quota")}
-            </span>
-            <Select
-              value={quotaPreviewMode}
-              onChange={(value) => setQuotaPreviewMode(value === "week" ? "week" : "5h")}
-              options={[
-                { value: "5h", label: t("auth_files.quota_preview_5h") },
-                { value: "week", label: t("auth_files.quota_preview_week") },
-              ]}
-              aria-label={t("auth_files.col_quota")}
-              className="w-[72px]"
-              variant="chip"
-            />
-          </div>
-        ),
         render: (file) => {
           const provider = resolveQuotaProvider(file);
           if (!provider) {
@@ -935,39 +940,17 @@ export function useAuthFilesFilesPresentation({
           const items =
             provider === "antigravity" ? filterAntigravityQuotaItems(rawItems) : rawItems;
           const displayState = items === rawItems ? state : { ...state, items };
+          const slots = resolveQuotaCardSlots(provider, items);
+          const quotaMetricDetails = slots.map((slot) => formatQuotaItemDetailText(slot.item));
+          const quotaMetricWideFlags = resolveQuotaMetricWideFlags(
+            slots.map((slot, index) => ({
+              label: slot.label,
+              detailText: quotaMetricDetails[index] ?? null,
+            })),
+          );
           const hasError = state.status === "error";
 
-          const renderQuotaLinePreview = (item: QuotaItem) => {
-            const tone = resolveQuotaVisualTone(item.percent);
-            const percentText =
-              (item.value ? translateQuotaText(item.value) : undefined) ??
-              (tone.normalized === null ? "--" : `${Math.round(tone.normalized)}%`);
-            const detailText = formatQuotaItemDetailText(item) ?? "--";
-            return (
-              <div
-                key={item.label}
-                className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_0.875rem_auto_3.25rem] items-center gap-1"
-              >
-                <span className="min-w-0 truncate text-2xs font-semibold text-slate-600 dark:text-white/70">
-                  {translateQuotaText(item.label)}
-                </span>
-                {quotaProgressCircle(item.percent)}
-                <span
-                  className={[
-                    "justify-self-end text-2xs font-semibold tabular-nums",
-                    tone.percentClass,
-                  ].join(" ")}
-                >
-                  {percentText}
-                </span>
-                <span className="min-w-0 truncate whitespace-nowrap text-right text-2xs tabular-nums text-slate-500 dark:text-white/40">
-                  {detailText}
-                </span>
-              </div>
-            );
-          };
-
-          if (hasError && items.length === 0) {
+          if (hasError && slots.length === 0) {
             return renderQuotaErrorBadge(state.error ?? t("common.error"));
           }
 
@@ -980,10 +963,63 @@ export function useAuthFilesFilesPresentation({
               })}
             >
               <div className="w-full min-w-0">
-                {items.length === 0 ? (
+                {slots.length === 0 ? (
                   <span className="text-xs text-slate-400 dark:text-white/40">--</span>
                 ) : (
-                  renderQuotaLinePreview(pickQuotaPreviewItem(items, quotaPreviewMode) ?? items[0])
+                  <div
+                    className="grid w-full min-w-0 grid-cols-2 gap-x-4 gap-y-3 py-0.5"
+                    data-testid="auth-file-quota-grid"
+                  >
+                    {hasError ? (
+                      <div className="col-span-2">
+                        {renderQuotaErrorBadge(state.error ?? t("common.error"))}
+                      </div>
+                    ) : null}
+                    {slots.map((slot, index) => {
+                      const tone = resolveQuotaVisualTone(slot.item?.percent);
+                      const normalized = tone.normalized;
+                      const percentText =
+                        (slot.item?.value
+                          ? translateQuotaText(slot.item.value)
+                          : undefined) ??
+                        (normalized === null ? "--" : `${Math.round(normalized)}%`);
+                      const detailText = quotaMetricDetails[index] ?? null;
+                      const wide = quotaMetricWideFlags[index] ?? false;
+
+                      return (
+                        <div
+                          key={slot.id}
+                          className={wide ? "col-span-2 min-w-0" : "min-w-0"}
+                          data-layout={wide ? "wide" : "compact"}
+                          data-testid="auth-file-quota-metric"
+                        >
+                          <div className="flex min-w-0 items-start justify-between gap-2">
+                            <span className="min-w-0 break-words text-2xs font-semibold leading-4 text-slate-600 dark:text-white/70">
+                              {slot.label}
+                            </span>
+                            <span
+                              className={[
+                                "shrink-0 text-2xs font-semibold tabular-nums",
+                                tone.percentClass,
+                              ].join(" ")}
+                            >
+                              {percentText}
+                            </span>
+                          </div>
+                          <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-white/10">
+                            <div
+                              className={["h-full rounded-full", tone.fillClass].join(" ")}
+                              style={{ width: `${normalized ?? 0}%` }}
+                              aria-hidden="true"
+                            />
+                          </div>
+                          <div className="mt-1 min-h-[14px] whitespace-nowrap text-right text-2xs tabular-nums text-slate-500 dark:text-white/40">
+                            {detailText ?? "\u00A0"}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
             </HoverTooltip>
@@ -1013,9 +1049,13 @@ export function useAuthFilesFilesPresentation({
       {
         key: "actions",
         label: t("common.action"),
-        width: "w-48",
-        headerClassName: "text-center",
-        cellClassName: "text-center",
+        width: "w-48 min-w-[12rem]",
+        minWidthPx: 192,
+        maxWidthPx: 192,
+        resizable: false,
+        lockOrder: "end",
+        headerClassName: STICKY_ACTIONS_HEADER_CLASS,
+        cellClassName: STICKY_ACTIONS_CELL_CLASS,
         render: (file) => {
           if (isRuntimeOnlyAuthFile(file)) {
             return (
@@ -1132,8 +1172,8 @@ export function useAuthFilesFilesPresentation({
     openDetail,
     openTagsEditor,
     quotaByFileName,
-    quotaPreviewMode,
     quotaProgressCircle,
+    resolveQuotaCardSlots,
     refreshQuota,
     requestResetCredit,
     resolveStickyDisplayPlanType,
@@ -1146,7 +1186,6 @@ export function useAuthFilesFilesPresentation({
     selectablePageNames.length,
     selectedFileNameSet,
     setFileEnabled,
-    setQuotaPreviewMode,
     somePageSelected,
     statusUpdating,
     t,

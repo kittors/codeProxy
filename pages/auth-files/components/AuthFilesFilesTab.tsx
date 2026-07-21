@@ -1493,7 +1493,7 @@ export function AuthFilesFilesTab({
                 rowHeight={84}
                 caption={t("auth_files.table_caption")}
                 emptyText={t("auth_files_page.no_files_desc")}
-                minWidth="min-w-[2140px]"
+                minWidth="min-w-[2420px]"
                 height="h-full"
                 minHeight="min-h-[360px] md:min-h-0"
                 allowWheelPropagationAtBoundary

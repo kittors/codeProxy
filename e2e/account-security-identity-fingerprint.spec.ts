@@ -126,6 +126,41 @@ const authFiles = [
   },
 ];
 
+const codexQuotaStatus = {
+  auth_index: "codex-oauth-1",
+  provider: "codex",
+  refresh_state: "success",
+  health_status: "ok",
+  plan_type: "plus",
+  quotas: [
+    {
+      quota_key: "code_5h",
+      quota_label: "m_quota.code_5h",
+      percent: 88,
+      reset_at: "2026-07-22T17:00:00Z",
+      window_seconds: 18000,
+    },
+    {
+      quota_key: "code_week",
+      quota_label: "m_quota.code_weekly",
+      percent: 63,
+      reset_at: "2026-07-28T10:00:00Z",
+      window_seconds: 604800,
+    },
+    {
+      quota_key: "spark_week",
+      quota_label: "GPT-5.3-Codex-Spark Extended Reasoning: Weekly",
+      percent: 94,
+      reset_at: "2026-07-28T10:00:00Z",
+      window_seconds: 604800,
+    },
+  ],
+  usage: { cycle_request_total: 42, cycle_known: true },
+  version: 1,
+  upstream_checked_at: "2026-07-21T10:00:00Z",
+  updated_at: "2026-07-21T10:00:00Z",
+};
+
 const codexCLIProfile = {
   selectable: true,
   summary: identitySummaries.codex,
@@ -419,7 +454,10 @@ const swipeVerticallyFromPoint = async (
   }
 };
 
-const routeManagementMocks = async (page: Page) => {
+const routeManagementMocks = async (
+  page: Page,
+  options?: { withQuotaStatus?: boolean },
+) => {
   let codexStrategy: "cli_preferred" | "active_profile" = "cli_preferred";
   let codexActiveProfileKey = "";
   let codexPolicyRevision = 0;
@@ -428,6 +466,48 @@ const routeManagementMocks = async (page: Page) => {
     const request = route.request();
     const url = new URL(request.url());
     const path = url.pathname;
+
+    if (
+      options?.withQuotaStatus &&
+      path.includes("/ai-accounts/status-refresh/") &&
+      request.method() === "GET"
+    ) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          job_id: "identity-refresh",
+          state: "completed",
+          total: 0,
+          completed: 0,
+          failed: 0,
+          results: [],
+        }),
+      });
+      return;
+    }
+
+    if (options?.withQuotaStatus && path.endsWith("/ai-accounts/status-refresh")) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          job_id: "identity-refresh",
+          accepted: 0,
+          deduplicated: 0,
+        }),
+      });
+      return;
+    }
+
+    if (options?.withQuotaStatus && path.endsWith("/ai-accounts/status")) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ items: [codexQuotaStatus] }),
+      });
+      return;
+    }
 
     if (
       path.endsWith("/v0/management/identity-fingerprint/account/policy") &&
@@ -762,6 +842,58 @@ test("AI Accounts shows auth files and account identity fingerprint details", as
   await expect(geminiPanel).toContainText(/System default|系统默认/i);
   await expect(geminiPanel).toContainText("google-api-nodejs-client/9.16.0");
   await expect(geminiPanel).toContainText("pluginType=GEMINI");
+});
+
+test("AI Accounts table shows direct quota metrics and keeps actions fixed", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await setAuthed(page, "table");
+  await routeManagementMocks(page, { withQuotaStatus: true });
+
+  await page.goto("/#/access/ai-accounts");
+
+  const table = page.getByRole("table");
+  const codexRow = page.locator("tr", { hasText: "Codex Terminal OAuth" });
+  await expect(codexRow).toBeVisible();
+  await expect(page.getByRole("combobox", { name: /Quota|配额/i })).toHaveCount(0);
+  await expect(codexRow.getByText("Code: 5h")).toBeVisible();
+  await expect(codexRow.getByText("Code: Weekly")).toBeVisible();
+  await expect(
+    codexRow.getByText("GPT-5.3-Codex-Spark Extended Reasoning: Weekly"),
+  ).toBeVisible();
+
+  const metrics = codexRow.getByTestId("auth-file-quota-metric");
+  await expect(metrics).toHaveCount(3);
+  await expect(metrics.nth(0)).toHaveAttribute("data-layout", "compact");
+  await expect(metrics.nth(1)).toHaveAttribute("data-layout", "compact");
+  await expect(metrics.nth(2)).toHaveAttribute("data-layout", "wide");
+
+  const viewport = table.locator(
+    "xpath=ancestor::div[@data-scrollbar-visibility='hover'][1]",
+  );
+  const actionsCell = codexRow.locator('td[data-vt-column-key="actions"]');
+  const viewportBox = await viewport.boundingBox();
+  const actionsBefore = await actionsCell.boundingBox();
+  if (!viewportBox || !actionsBefore) {
+    throw new Error("AI Accounts table viewport and fixed actions cell must be visible");
+  }
+
+  await viewport.evaluate((node: HTMLElement) => {
+    node.scrollLeft = node.scrollWidth;
+  });
+  await expect
+    .poll(async () => viewport.evaluate((node: HTMLElement) => node.scrollLeft))
+    .toBeGreaterThan(0);
+
+  const actionsAfter = await actionsCell.boundingBox();
+  if (!actionsAfter) {
+    throw new Error("AI Accounts fixed actions cell must remain visible after horizontal scroll");
+  }
+  expect(Math.abs(actionsAfter.x - actionsBefore.x)).toBeLessThanOrEqual(2);
+  expect(actionsAfter.x + actionsAfter.width).toBeLessThanOrEqual(
+    viewportBox.x + viewportBox.width + 2,
+  );
 });
 
 test("AI Accounts keeps card mode usable and redirects old identity route", async ({
