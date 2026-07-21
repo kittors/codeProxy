@@ -208,6 +208,12 @@ describe("Auth Files helper coverage", () => {
         size: 2048,
         runtimeOnly: true,
         planType: "pro",
+        shared_subscription_started_at: "2026-07-01T00:00:00.000Z",
+        shared_subscription_expires_at: "2026-08-01T00:00:00.000Z",
+        shared_subscription_source: "signed_claims",
+        account_status_scope: "shared",
+        subject_scope: "shared",
+        share_eligible: true,
         id_token: {
           chatgpt_account_id: "acct-1",
           plan_type: "pro",
@@ -252,6 +258,12 @@ describe("Auth Files helper coverage", () => {
         runtime_only: undefined,
         plan_type: undefined,
         planType: "pro",
+        shared_subscription_started_at: "2026-07-01T00:00:00.000Z",
+        shared_subscription_expires_at: "2026-08-01T00:00:00.000Z",
+        shared_subscription_source: "signed_claims",
+        account_status_scope: "shared",
+        subject_scope: "shared",
+        share_eligible: true,
         subscription_started_at: undefined,
         subscriptionStartedAt: undefined,
         subscription_start_at: undefined,
@@ -301,6 +313,12 @@ describe("Auth Files helper coverage", () => {
         runtime_only: undefined,
         plan_type: undefined,
         planType: undefined,
+        shared_subscription_started_at: undefined,
+        shared_subscription_expires_at: undefined,
+        shared_subscription_source: undefined,
+        account_status_scope: undefined,
+        subject_scope: undefined,
+        share_eligible: undefined,
         subscription_started_at: undefined,
         subscriptionStartedAt: undefined,
         subscription_start_at: undefined,
@@ -379,6 +397,34 @@ describe("Auth Files helper coverage", () => {
     });
     // Different tenant must not see tenant-a's list/quota payload.
     expect(readAuthFilesDataCache("tenant-b")).toBeNull();
+  });
+
+  test("keeps shared subscription status so the badge can warm-paint", () => {
+    const [cachedFile] = sanitizeAuthFilesForCache([
+      {
+        name: "codex.json",
+        type: "codex",
+        shared_subscription_started_at: "2026-07-01T00:00:00.000Z",
+        shared_subscription_expires_at: "2026-08-01T00:00:00.000Z",
+        shared_subscription_source: "signed_claims",
+      } as AuthFileItem,
+    ]);
+
+    expect(cachedFile).toMatchObject({
+      shared_subscription_started_at: "2026-07-01T00:00:00.000Z",
+      shared_subscription_expires_at: "2026-08-01T00:00:00.000Z",
+      shared_subscription_source: "signed_claims",
+    });
+    expect(
+      cachedFile &&
+        resolveAuthFileSubscriptionStatus(cachedFile, Date.parse("2026-07-05T00:00:00.000Z")),
+    ).toEqual(
+      expect.objectContaining({
+        expiresAtMs: Date.parse("2026-08-01T00:00:00.000Z"),
+        remainingDays: 27,
+        expired: false,
+      }),
+    );
   });
 
   test("keeps xAI identity fingerprint summary in sanitized cache", () => {
