@@ -11,6 +11,7 @@ import {
   BarChart3,
   CircleOff,
   ClipboardPaste,
+  Columns3,
   Download,
   Ellipsis,
   Eye,
@@ -18,6 +19,7 @@ import {
   ListChecks,
   Loader2,
   Plus,
+  Power,
   RefreshCw,
   Search,
   Settings2,
@@ -32,28 +34,33 @@ import { Card } from "@code-proxy/ui";
 import { EmptyState } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
 import { Modal } from "@code-proxy/ui";
-import { HoverTooltip } from "@code-proxy/ui";
+import { HoverTooltip, OverflowTooltip } from "@code-proxy/ui";
 import { PaginationBar } from "@code-proxy/ui";
 import { ScrollArea } from "@code-proxy/ui";
 import { Select } from "@code-proxy/ui";
 import { SearchableSelect, type SearchableSelectOption } from "@code-proxy/ui";
 import { DataTable, type DataTableColumn } from "@code-proxy/ui";
-import { ToggleSwitch } from "@code-proxy/ui";
+import { ToggleSwitch, useLocalStorage } from "@code-proxy/ui";
 import type { AuthFilesUploadProgress } from "@pages/auth-files/hooks/useAuthFilesFileActions";
 import type {
   AuthFileModelOwnerGroup,
   AuthFileStatusFilter,
+  AuthFilesCardColumns,
   FilesViewMode,
   OAuthDialogTab,
   QuotaAutoRefreshMs,
   UsageIndex,
 } from "@code-proxy/domain";
 import {
+  AUTH_FILES_CARD_COLUMN_OPTIONS,
+  AUTH_FILES_CARD_COLUMNS_KEY,
   AUTH_FILES_PAGE_SIZE,
   AUTH_FILE_STATUS_FILTERS,
+  DEFAULT_AUTH_FILES_CARD_COLUMNS,
   TYPE_BADGE_CLASSES,
   formatPlanBadgeLabel,
   isRuntimeOnlyAuthFile,
+  normalizeAuthFilesCardColumns,
   normalizeAuthIndexValue,
   normalizeProviderKey,
   normalizeTagValue,
@@ -79,6 +86,14 @@ const FILTER_LABEL_CLASS =
 const FILTER_FIELD_CLASS = "min-w-0 space-y-2";
 const FILTER_GRID_CLASS =
   "grid min-w-0 grid-cols-1 items-end gap-x-5 gap-y-3 sm:grid-cols-2 xl:grid-cols-[repeat(4,minmax(0,1fr))_minmax(320px,1.8fr)]";
+// Tailwind must see full class strings — keep the map static.
+const CARD_GRID_COLUMN_CLASS: Record<AuthFilesCardColumns, string> = {
+  2: "xl:grid-cols-[repeat(2,minmax(0,1fr))]",
+  3: "xl:grid-cols-[repeat(3,minmax(0,1fr))]",
+  4: "xl:grid-cols-[repeat(4,minmax(0,1fr))]",
+  5: "xl:grid-cols-[repeat(5,minmax(0,1fr))]",
+  6: "xl:grid-cols-[repeat(6,minmax(0,1fr))]",
+};
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -668,7 +683,11 @@ interface AuthFilesFilesTabProps {
   renderRestrictionBadges: (file: AuthFileItem) => ReactNode | null;
   renderClaudeOAuthHealthBadges: (file: AuthFileItem) => ReactNode | null;
   renderSubscriptionBadge: (file: AuthFileItem) => ReactNode | null;
-  renderQuotaBar: (label: string, item: QuotaItem | null) => ReactNode;
+  renderQuotaBar: (
+    label: string,
+    item: QuotaItem | null,
+    compact?: boolean,
+  ) => ReactNode;
   renderQuotaErrorBadge: (errorText: string) => ReactNode;
   openTagsEditor: (file: AuthFileItem) => void;
   openDetail: (file: AuthFileItem) => Promise<void>;
@@ -768,6 +787,23 @@ export function AuthFilesFilesTab({
   const { t } = useTranslation();
   const [modelOwnerDialogOpen, setModelOwnerDialogOpen] = useState(false);
   const [draftModelOwner, setDraftModelOwner] = useState(selectedModelOwner);
+  const [cardColumnsRaw, setCardColumnsRaw] = useLocalStorage<AuthFilesCardColumns>(
+    AUTH_FILES_CARD_COLUMNS_KEY,
+    DEFAULT_AUTH_FILES_CARD_COLUMNS,
+  );
+  const cardColumns = normalizeAuthFilesCardColumns(cardColumnsRaw);
+  useEffect(() => {
+    if (cardColumnsRaw !== cardColumns) setCardColumnsRaw(cardColumns);
+  }, [cardColumns, cardColumnsRaw, setCardColumnsRaw]);
+  const denseCards = cardColumns >= 4;
+  const cardColumnOptions = useMemo(
+    () =>
+      AUTH_FILES_CARD_COLUMN_OPTIONS.map((count) => ({
+        value: String(count),
+        label: t("auth_files.card_columns_option", { count }),
+      })),
+    [t],
+  );
   const [draftModelOwnerEnabled, setDraftModelOwnerEnabled] = useState(
     selectedModelOwner.trim() !== "",
   );
@@ -1331,6 +1367,31 @@ export function AuthFilesFilesTab({
                   >
                     {renderFilesViewModeTabs}
                   </div>
+                  {filesViewMode === "cards" ? (
+                    <HoverTooltip content={t("auth_files.card_columns")}>
+                      <div
+                        className="hidden min-w-[7.5rem] items-center gap-1.5 xl:flex"
+                        data-testid="auth-files-card-columns"
+                      >
+                        <Columns3
+                          size={15}
+                          className="shrink-0 text-slate-500 dark:text-white/50"
+                          aria-hidden
+                        />
+                        <Select
+                          value={String(cardColumns)}
+                          onChange={(value) =>
+                            setCardColumnsRaw(normalizeAuthFilesCardColumns(value))
+                          }
+                          options={cardColumnOptions}
+                          aria-label={t("auth_files.card_columns")}
+                          variant="chip"
+                          size="sm"
+                          className="min-w-[5.5rem]"
+                        />
+                      </div>
+                    </HoverTooltip>
+                  ) : null}
                   {modelOwnerToolbarButton}
                   {selectedCount === 0 ? selectionActionsMenu : null}
                 </div>
@@ -1519,7 +1580,14 @@ export function AuthFilesFilesTab({
                 data-testid="auth-files-cards"
                 className="items-stretch md:h-full"
                 viewportClassName="max-md:h-auto max-md:touch-pan-y max-md:overflow-visible max-md:overscroll-auto"
-                contentClassName="grid grid-cols-1 items-stretch justify-items-center gap-5 px-4 py-4 sm:px-5 sm:py-5 md:grid-cols-2 md:justify-items-stretch md:pr-8 xl:grid-cols-3"
+                contentClassName={[
+                  "grid grid-cols-1 items-stretch justify-items-center gap-5 px-4 py-4 sm:px-5 sm:py-5 md:grid-cols-2 md:justify-items-stretch md:pr-8",
+                  denseCards ? "xl:gap-3" : "",
+                  CARD_GRID_COLUMN_CLASS[cardColumns],
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                data-card-columns={cardColumns}
                 scrollbarTrackInset={0}
               >
                 {pageItems.map((file) => {
@@ -1651,14 +1719,31 @@ export function AuthFilesFilesTab({
                       ? t("auth_files.reset_credit_consume")
                       : t("auth_files.reset_credit_no_credits");
                   const showSelectionControl = fileSelected;
+                  const actionSize = denseCards ? "xs" : "sm";
+                  const actionIconSize = denseCards ? 14 : 16;
+                  const cycleCallsLabel =
+                    typeof cycleCalls === "number"
+                      ? t("auth_files.cycle_calls_count", { count: cycleCalls })
+                      : t("auth_files.cycle_calls_unknown");
+                  const successRateLabel =
+                    successRate === null
+                      ? "--"
+                      : `${successRate.toFixed(1)}%`;
+                  const visibleTags = denseCards
+                    ? displayTags.slice(0, 1)
+                    : displayTags;
+                  const hiddenTagCount = denseCards
+                    ? Math.max(0, displayTags.length - 1)
+                    : 0;
 
                   return (
                     <Card
                       key={file.name}
-                      padding="default"
+                      padding={denseCards ? "compact" : "default"}
                       bodyClassName="mt-0 flex min-h-0 flex-1 flex-col"
                       className={[
-                        "group/card flex h-full w-full max-w-[34rem] flex-col rounded-3xl border-slate-200/80 shadow-[0_8px_24px_rgb(15_23_42_/_0.04)] transition-colors duration-200 ease-out hover:border-slate-300 hover:bg-white md:max-w-none dark:border-white/[0.08] dark:shadow-[0_8px_24px_rgb(0_0_0_/_0.28)] dark:hover:border-neutral-700 dark:hover:bg-neutral-950/70",
+                        "group/card flex h-full w-full max-w-[34rem] flex-col border-slate-200/80 shadow-[0_8px_24px_rgb(15_23_42_/_0.04)] transition-colors duration-200 ease-out hover:border-slate-300 hover:bg-white md:max-w-none dark:border-white/[0.08] dark:shadow-[0_8px_24px_rgb(0_0_0_/_0.28)] dark:hover:border-neutral-700 dark:hover:bg-neutral-950/70",
+                        denseCards ? "rounded-2xl" : "rounded-3xl",
                         fileSelected
                           ? "border-slate-900 ring-1 ring-slate-300 dark:border-white dark:ring-white/20"
                           : "",
@@ -1668,17 +1753,23 @@ export function AuthFilesFilesTab({
                         .filter(Boolean)
                         .join(" ")}
                     >
-                      <div className="space-y-2.5">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0 flex flex-1 items-center gap-2">
-                            <span className="min-w-0 truncate text-sm font-semibold tracking-tight text-slate-900 dark:text-white">
+                      <div className={denseCards ? "space-y-2" : "space-y-2.5"}>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex flex-1 items-center gap-1.5">
+                            <OverflowTooltip
+                              content={displayTitle}
+                              className={[
+                                "min-w-0 flex-1 truncate font-semibold tracking-tight text-slate-900 dark:text-white",
+                                denseCards ? "text-xs" : "text-sm",
+                              ].join(" ")}
+                            >
                               {displayTitle}
-                            </span>
+                            </OverflowTooltip>
                             {showPlanBadge && planType ? (
                               <span
                                 data-testid="auth-file-plan-badge"
                                 className={[
-                                  "inline-flex shrink-0 items-center rounded-md px-2 py-0.5 text-2xs font-bold tracking-wide",
+                                  "inline-flex shrink-0 items-center rounded-md px-1.5 py-0.5 text-2xs font-bold tracking-wide",
                                   resolvePlanBadgeClass(planType),
                                 ].join(" ")}
                               >
@@ -1688,11 +1779,11 @@ export function AuthFilesFilesTab({
                             ) : null}
                           </div>
 
-                          <div className="flex shrink-0 items-center gap-2">
+                          <div className="flex shrink-0 items-center gap-1.5">
                             {runtimeOnly ? null : (
                               <div
                                 className={[
-                                  "flex h-8 items-center justify-center px-1 transition-opacity",
+                                  "flex h-7 items-center justify-center px-0.5 transition-opacity",
                                   showSelectionControl
                                     ? "opacity-100 pointer-events-auto"
                                     : "opacity-100 pointer-events-auto md:opacity-0 md:pointer-events-none md:group-hover/card:opacity-100 md:group-focus-within/card:opacity-100 md:group-hover/card:pointer-events-auto md:group-focus-within/card:pointer-events-auto",
@@ -1718,6 +1809,31 @@ export function AuthFilesFilesTab({
                               <span className="text-xs text-slate-400 dark:text-white/40">
                                 --
                               </span>
+                            ) : denseCards ? (
+                              <HoverTooltip content={t("auth_files.enable_disable")}>
+                                <button
+                                  type="button"
+                                  className={[
+                                    "inline-flex h-6 w-6 items-center justify-center rounded-md transition-colors",
+                                    fileDisabled
+                                      ? "bg-slate-100 text-slate-400 hover:bg-slate-200 dark:bg-white/10 dark:text-white/45"
+                                      : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-300",
+                                    statusUpdating[file.name]
+                                      ? "cursor-wait opacity-70"
+                                      : "",
+                                  ]
+                                    .filter(Boolean)
+                                    .join(" ")}
+                                  aria-label={t("auth_files.enable_disable")}
+                                  aria-pressed={!fileDisabled}
+                                  disabled={Boolean(statusUpdating[file.name])}
+                                  onClick={() =>
+                                    void setFileEnabled(file, fileDisabled)
+                                  }
+                                >
+                                  <Power size={13} />
+                                </button>
+                              </HoverTooltip>
                             ) : (
                               <div
                                 className={[
@@ -1738,16 +1854,32 @@ export function AuthFilesFilesTab({
                           </div>
                         </div>
 
-                        <div className="min-w-0 flex flex-wrap items-center gap-1.5">
+                        <div className="min-w-0 flex flex-wrap items-center gap-1">
                           {showTypeBadge ? (
-                            <span
-                              className={[
-                                "inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-2xs font-semibold",
-                                badgeClass,
-                              ].join(" ")}
-                            >
-                              {typeKey}
-                            </span>
+                            denseCards ? (
+                              <HoverTooltip content={typeKey} className="shrink-0">
+                                <span
+                                  className={[
+                                    "inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md",
+                                    badgeClass,
+                                  ].join(" ")}
+                                >
+                                  <VendorIcon
+                                    modelId={normalizeProviderKey(typeKey) || typeKey}
+                                    size={12}
+                                  />
+                                </span>
+                              </HoverTooltip>
+                            ) : (
+                              <span
+                                className={[
+                                  "inline-flex shrink-0 items-center rounded-md px-2 py-0.5 text-2xs font-semibold",
+                                  badgeClass,
+                                ].join(" ")}
+                              >
+                                {typeKey}
+                              </span>
+                            )
                           ) : null}
                           {provider === "codex" ? (
                             <HoverTooltip
@@ -1756,7 +1888,10 @@ export function AuthFilesFilesTab({
                             >
                               <button
                                 type="button"
-                                className="inline-flex shrink-0 items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-2xs font-semibold text-slate-700 transition-colors hover:bg-blue-50 hover:text-blue-700 disabled:cursor-wait disabled:opacity-70 dark:bg-white/10 dark:text-white/70 dark:hover:bg-blue-500/15 dark:hover:text-blue-200"
+                                className={[
+                                  "inline-flex shrink-0 items-center gap-1 rounded-md bg-slate-100 text-2xs font-semibold text-slate-700 transition-colors hover:bg-blue-50 hover:text-blue-700 disabled:cursor-wait disabled:opacity-70 dark:bg-white/10 dark:text-white/70 dark:hover:bg-blue-500/15 dark:hover:text-blue-200",
+                                  denseCards ? "h-5 px-1.5" : "px-2 py-0.5",
+                                ].join(" ")}
                                 disabled={quotaRefreshing}
                                 onClick={() =>
                                   void refreshQuota(file, provider)
@@ -1770,54 +1905,89 @@ export function AuthFilesFilesTab({
                                   }
                                 />
                                 <span className="tabular-nums">
-                                  {t("auth_files.reset_credits_badge", {
-                                    count: resetCreditCount,
-                                  })}
+                                  {denseCards
+                                    ? resetCreditCount
+                                    : t("auth_files.reset_credits_badge", {
+                                        count: resetCreditCount,
+                                      })}
                                 </span>
                               </button>
                             </HoverTooltip>
                           ) : null}
-                          <span className="inline-flex shrink-0 items-center rounded-full bg-slate-100 px-2 py-0.5 text-2xs font-semibold text-slate-700 dark:bg-white/10 dark:text-white/70">
-                            {typeof cycleCalls === "number"
-                              ? t("auth_files.cycle_calls_count", {
-                                  count: cycleCalls,
-                                })
-                              : t("auth_files.cycle_calls_unknown")}
-                          </span>
-                          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-2xs font-semibold text-slate-700 dark:bg-white/10 dark:text-white/70">
-                            <span>{t("common.success_rate")}</span>
+                          <HoverTooltip
+                            content={cycleCallsLabel}
+                            className="shrink-0"
+                          >
                             <span
-                              className={`tabular-nums ${successRateClass}`}
+                              className={[
+                                "inline-flex shrink-0 items-center rounded-md bg-slate-100 text-2xs font-semibold tabular-nums text-slate-700 dark:bg-white/10 dark:text-white/70",
+                                denseCards ? "h-5 px-1.5" : "px-2 py-0.5",
+                              ].join(" ")}
                             >
-                              {successRate === null
-                                ? "--"
-                                : `${successRate.toFixed(1)}%`}
+                              {denseCards
+                                ? typeof cycleCalls === "number"
+                                  ? cycleCalls
+                                  : "--"
+                                : cycleCallsLabel}
                             </span>
-                          </span>
+                          </HoverTooltip>
+                          <HoverTooltip
+                            content={`${t("common.success_rate")} ${successRateLabel}`}
+                            className="shrink-0"
+                          >
+                            <span
+                              className={[
+                                "inline-flex shrink-0 items-center rounded-md bg-slate-100 text-2xs font-semibold text-slate-700 dark:bg-white/10 dark:text-white/70",
+                                denseCards ? "h-5 gap-0 px-1.5" : "gap-1 px-2 py-0.5",
+                              ].join(" ")}
+                            >
+                              {denseCards ? null : (
+                                <span>{t("common.success_rate")}</span>
+                              )}
+                              <span
+                                className={`tabular-nums ${successRateClass}`}
+                              >
+                                {successRateLabel}
+                              </span>
+                            </span>
+                          </HoverTooltip>
                           {subscriptionBadge}
                           {runtimeOnly ? (
-                            <span className="inline-flex shrink-0 items-center rounded-full bg-slate-900 px-2 py-0.5 text-2xs font-semibold text-white dark:bg-white dark:text-neutral-950">
+                            <span className="inline-flex shrink-0 items-center rounded-md bg-slate-900 px-2 py-0.5 text-2xs font-semibold text-white dark:bg-white dark:text-neutral-950">
                               {t("auth_files.virtual_auth_file")}
                             </span>
                           ) : null}
                         </div>
                         {displayTags.length > 0 ? (
-                          <div className="min-w-0 flex flex-wrap gap-1.5">
-                            {displayTags.map((tag) => (
+                          <div className="min-w-0 flex flex-wrap gap-1">
+                            {visibleTags.map((tag) => (
                               <span
                                 key={tag}
-                                className="inline-flex items-center rounded-full bg-sky-50 px-2 py-0.5 text-2xs font-semibold text-sky-700 dark:bg-sky-500/15 dark:text-sky-200"
+                                className="inline-flex max-w-full items-center truncate rounded-md bg-sky-50 px-1.5 py-0.5 text-2xs font-semibold text-sky-700 dark:bg-sky-500/15 dark:text-sky-200"
                               >
                                 {tag}
                               </span>
                             ))}
+                            {hiddenTagCount > 0 ? (
+                              <HoverTooltip
+                                content={displayTags.join("\n")}
+                                className="shrink-0"
+                              >
+                                <span className="inline-flex items-center rounded-md bg-sky-50 px-1.5 py-0.5 text-2xs font-semibold text-sky-700 dark:bg-sky-500/15 dark:text-sky-200">
+                                  +{hiddenTagCount}
+                                </span>
+                              </HoverTooltip>
+                            ) : null}
                           </div>
                         ) : null}
                       </div>
 
                       {cardErrorBadges.length > 0 ? (
                         <div
-                          className="mt-3 min-w-0 flex flex-wrap items-center gap-1.5"
+                          className={[
+                            "min-w-0 flex flex-wrap items-center gap-1.5",
+                            denseCards ? "mt-2" : "mt-3",
+                          ].join(" ")}
                           data-testid="auth-file-card-error-badges"
                         >
                           {cardErrorBadges.map((item) => (
@@ -1830,27 +2000,38 @@ export function AuthFilesFilesTab({
 
                       <div
                         className={[
-                          "mt-3 min-h-0 min-w-0 flex-1 touch-pan-y px-0.5 py-1",
-                          slots.length === 0 ? "flex flex-col" : "space-y-3",
+                          "min-h-0 min-w-0 flex-1 touch-pan-y px-0.5",
+                          denseCards ? "mt-2 py-0.5" : "mt-3 py-1",
+                          slots.length === 0
+                            ? "flex flex-col"
+                            : denseCards
+                              ? "space-y-2"
+                              : "space-y-3",
                         ].join(" ")}
                         data-testid="auth-file-card-quota"
                       >
                         {slots.length > 0 ? (
-                          <div className="space-y-3">
+                          <div className={denseCards ? "space-y-2" : "space-y-3"}>
                             {slots.map((slot) =>
-                              renderQuotaBar(slot.label, slot.item),
+                              renderQuotaBar(slot.label, slot.item, denseCards),
                             )}
                           </div>
                         ) : (
                           <div
-                            className="flex flex-1 flex-col items-center justify-center gap-2 py-6 text-center"
+                            className={[
+                              "flex flex-1 flex-col items-center justify-center gap-2 text-center",
+                              denseCards ? "py-3" : "py-6",
+                            ].join(" ")}
                             data-testid="auth-file-card-quota-empty"
                           >
                             <div
-                              className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100/90 text-slate-400 dark:bg-white/[0.06] dark:text-white/40"
+                              className={[
+                                "flex items-center justify-center rounded-full bg-slate-100/90 text-slate-400 dark:bg-white/[0.06] dark:text-white/40",
+                                denseCards ? "h-7 w-7" : "h-9 w-9",
+                              ].join(" ")}
                               aria-hidden="true"
                             >
-                              <Gauge size={16} strokeWidth={1.5} />
+                              <Gauge size={denseCards ? 14 : 16} strokeWidth={1.5} />
                             </div>
                             <p className="text-xs font-medium text-slate-500 dark:text-white/50">
                               {quotaRefreshing
@@ -1861,13 +2042,18 @@ export function AuthFilesFilesTab({
                         )}
                       </div>
 
-                      <div className="mt-auto flex items-center justify-between gap-2 border-t border-slate-100 pt-3 dark:border-white/[0.06]">
-                        <div className="inline-flex items-center gap-1">
+                      <div
+                        className={[
+                          "mt-auto flex items-center justify-between gap-2 border-t border-slate-100 dark:border-white/[0.06]",
+                          denseCards ? "pt-2" : "pt-3",
+                        ].join(" ")}
+                      >
+                        <div className="inline-flex items-center gap-0.5">
                           {provider ? (
                             <HoverTooltip content={t("common.refresh")}>
                               <Button
                                 variant="ghost"
-                                size="sm"
+                                size={actionSize}
                                 onClick={() =>
                                   void refreshQuota(file, provider)
                                 }
@@ -1875,7 +2061,7 @@ export function AuthFilesFilesTab({
                                 aria-label={t("common.refresh")}
                               >
                                 <RefreshCw
-                                  size={16}
+                                  size={actionIconSize}
                                   className={
                                     quotaRefreshing ? "animate-spin" : ""
                                   }
@@ -1888,7 +2074,7 @@ export function AuthFilesFilesTab({
                             <HoverTooltip content={resetCreditTitle}>
                               <Button
                                 variant="ghost"
-                                size="sm"
+                                size={actionSize}
                                 disabled={resetCreditDisabled}
                                 onClick={() => requestResetCredit(file)}
                                 title={resetCreditTitle}
@@ -1897,9 +2083,12 @@ export function AuthFilesFilesTab({
                                 )}
                               >
                                 {resetCreditBusy ? (
-                                  <Loader2 size={16} className="animate-spin" />
+                                  <Loader2
+                                    size={actionIconSize}
+                                    className="animate-spin"
+                                  />
                                 ) : (
-                                  <Gauge size={16} />
+                                  <Gauge size={actionIconSize} />
                                 )}
                               </Button>
                             </HoverTooltip>
@@ -1908,12 +2097,12 @@ export function AuthFilesFilesTab({
                           <HoverTooltip content={t("auth_files.detail")}>
                             <Button
                               variant="ghost"
-                              size="sm"
+                              size={actionSize}
                               onClick={() => void openDetail(file)}
                               title={t("auth_files.detail")}
                               aria-label={t("auth_files.detail")}
                             >
-                              <Eye size={16} />
+                              <Eye size={actionIconSize} />
                             </Button>
                           </HoverTooltip>
 
@@ -1923,14 +2112,14 @@ export function AuthFilesFilesTab({
                                 type="button"
                                 className={buttonClassName({
                                   variant: "ghost",
-                                  size: "sm",
+                                  size: actionSize,
                                   iconOnly: true,
                                 })}
                                 aria-label={t("auth_files.more_actions")}
                                 title={t("auth_files.more_actions")}
                                 data-tooltip-placement="top"
                               >
-                                <Ellipsis size={16} />
+                                <Ellipsis size={actionIconSize} />
                               </button>
                             </DropdownMenu.Trigger>
                             <DropdownMenu.Portal>
