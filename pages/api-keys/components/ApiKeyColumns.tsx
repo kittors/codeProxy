@@ -35,6 +35,7 @@ type CreateApiKeyColumnsOptions = {
   onViewUsage: (entry: ApiKeyEntry) => void;
   onCopy: (key: string) => void;
   onImportToCcSwitch: (entry: ApiKeyEntry) => void;
+  onRotate: (index: number) => void;
   onEdit: (index: number) => void;
   onDelete: (index: number) => void;
   onResetDailySpending: (index: number) => void;
@@ -118,6 +119,7 @@ export const createApiKeyColumns = ({
   onViewUsage,
   onCopy,
   onImportToCcSwitch,
+  onRotate,
   onEdit,
   onDelete,
   onResetDailySpending,
@@ -460,7 +462,7 @@ export const createApiKeyColumns = ({
     {
       key: "actions",
       label: t("api_keys_page.col_actions"),
-      // accountScoped drops usage + daily-reset; keep room for set-default.
+      // Account-scoped keys expose credential rotation instead of per-key usage/reset.
       width: accountScoped ? "w-[220px] min-w-[220px]" : "w-[256px] min-w-[256px]",
       lockOrder: "end",
       headerClassName: stickyActionsHeaderClass,
@@ -472,6 +474,7 @@ export const createApiKeyColumns = ({
         const viewUsageLabel = t("api_keys_page.view_usage");
         const copyKeyLabel = t("api_keys_page.copy_key");
         const importLabel = t("ccswitch.import_to_ccswitch");
+        const rotateKeyLabel = t("end_users.rotate_key", { defaultValue: "轮换密钥" });
         const editLabel = t("common.edit");
         const deleteLabel = t("common.delete");
         const hasDailyLimit = (row["daily-spending-limit"] ?? 0) > 0;
@@ -528,7 +531,18 @@ export const createApiKeyColumns = ({
                 <Upload size={15} />
               </button>
             </HoverTooltip>
-            {!accountScoped ? (
+            {accountScoped ? (
+              <HoverTooltip content={rotateKeyLabel}>
+                <button
+                  type="button"
+                  onClick={() => onRotate(idx)}
+                  className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-orange-50 hover:text-orange-600 dark:text-white/50 dark:hover:bg-orange-900/20 dark:hover:text-orange-400"
+                  aria-label={rotateKeyLabel}
+                >
+                  <RotateCcw size={15} />
+                </button>
+              </HoverTooltip>
+            ) : (
               <HoverTooltip content={resetLabel}>
                 <button
                   type="button"
@@ -540,7 +554,7 @@ export const createApiKeyColumns = ({
                   <RotateCcw size={15} className={isResetting ? "animate-spin" : ""} />
                 </button>
               </HoverTooltip>
-            ) : null}
+            )}
             <HoverTooltip content={editLabel}>
               <button
                 type="button"

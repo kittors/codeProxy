@@ -1897,7 +1897,7 @@ describe("AuthFilesPage files table", () => {
     await waitFor(() => expect(mocks.startStatusRefresh).toHaveBeenCalled());
   });
 
-  test("reads quota preview setting from localStorage", async () => {
+  test("ignores the legacy quota preview setting and keeps a plain quota header", async () => {
     useTableFilesView();
     window.localStorage.setItem("authFilesPage.quotaPreview.v1", JSON.stringify("week"));
 
@@ -1914,8 +1914,9 @@ describe("AuthFilesPage files table", () => {
     );
 
     expect(await screen.findByText("qwen.json")).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "Quota" })).toBeInTheDocument();
-    expect(screen.getByText("Week")).toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "Quota" })).not.toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Quota" })).toHaveTextContent("Quota");
+    expect(screen.queryByRole("columnheader", { name: "Size" })).not.toBeInTheDocument();
   });
 
   test("reads files view mode from localStorage", async () => {
@@ -5074,7 +5075,7 @@ describe("AuthFilesPage files table", () => {
     expect(screen.getByText("89%")).toBeInTheDocument();
   });
 
-  test("table preview and hover mark depleted codex quotas red", async () => {
+  test("table lays out every quota metric directly and keeps long metrics full width", async () => {
     useTableFilesView();
     const now = Date.now();
     const file = {
@@ -5091,7 +5092,12 @@ describe("AuthFilesPage files table", () => {
       items: [
         { label: "m_quota.code_5h", percent: 88, resetAtMs: now + 60_000 },
         { label: "m_quota.code_weekly", percent: 0, resetAtMs: now + 120_000 },
-        { label: "m_quota.review_weekly", percent: 0, resetAtMs: now + 180_000 },
+        {
+          label: "GPT-5.3-Codex-Spark Extended Reasoning: Weekly",
+          percent: 96,
+          resetAtMs: now + 180_000,
+        },
+        { label: "Bonus daily", percent: 54, resetAtMs: now + 240_000 },
       ],
     });
     window.localStorage.setItem("authFilesPage.quotaPreview.v1", JSON.stringify("week"));
@@ -5116,14 +5122,37 @@ describe("AuthFilesPage files table", () => {
 
     fireEvent.click(within(row as HTMLElement).getByRole("button", { name: "Refresh" }));
 
-    const previewZero = await within(row as HTMLElement).findByText("0%");
+    expect(await within(row as HTMLElement).findByText("Code: 5h")).toBeInTheDocument();
+    expect(within(row as HTMLElement).getByText("Code: Weekly")).toBeInTheDocument();
+    expect(
+      within(row as HTMLElement).getByText("GPT-5.3-Codex-Spark Extended Reasoning: Weekly"),
+    ).toBeInTheDocument();
+    expect(within(row as HTMLElement).getByText("Bonus daily")).toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "Quota" })).not.toBeInTheDocument();
+
+    const metrics = within(row as HTMLElement).getAllByTestId("auth-file-quota-metric");
+    expect(metrics).toHaveLength(4);
+    expect(metrics[0]).toHaveAttribute("data-layout", "compact");
+    expect(metrics[1]).toHaveAttribute("data-layout", "compact");
+    expect(metrics[2]).toHaveAttribute("data-layout", "wide");
+    expect(metrics[3]).toHaveAttribute("data-layout", "wide");
+
+    const previewZero = within(row as HTMLElement).getByText("0%");
     expect(previewZero).toHaveClass("text-rose-700");
 
     fireEvent.mouseEnter(within(row as HTMLElement).getByText("Code: Weekly"));
     const tooltip = await screen.findByRole("tooltip");
     const tooltipPercents = within(tooltip).getAllByText("0%");
     expect(tooltipPercents[0]).toHaveClass("text-rose-700");
-    expect(table).toBeInTheDocument();
+
+    const actionsHeader = table.querySelector<HTMLElement>(
+      'th[data-vt-column-key="actions"]',
+    );
+    const actionsCell = row?.querySelector<HTMLElement>(
+      'td[data-vt-column-key="actions"]',
+    );
+    expect(actionsHeader).toHaveClass("md:sticky");
+    expect(actionsCell).toHaveClass("md:sticky");
   });
 
   test("quota refresh preserves tenant plan override and updates reset credit badges", async () => {

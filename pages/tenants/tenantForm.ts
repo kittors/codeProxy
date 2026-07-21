@@ -1,5 +1,11 @@
 /** Shared pure helpers for tenant create / renew forms. */
 
+/** Matches CliRelay identity service name limit (Go len(name) <= 128, UTF-8 bytes). */
+export const TENANT_NAME_MAX_LENGTH = 128;
+
+export const isTenantNameTooLong = (name: string): boolean =>
+  new TextEncoder().encode(name.trim()).length > TENANT_NAME_MAX_LENGTH;
+
 export const toLocalDateTimeInput = (value: string | null): string => {
   if (!value) return "";
   const date = new Date(value);

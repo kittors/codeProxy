@@ -28,6 +28,33 @@ describe("VisualConfigEditor auto update config", () => {
     await i18n.changeLanguage("en");
   });
 
+  test("moves persistent descriptions into info tooltips", async () => {
+    renderEditor();
+
+    const description = "Host/port, auth directory & API Keys.";
+    expect(screen.queryByText(description)).not.toBeInTheDocument();
+
+    await userEvent.hover(screen.getByRole("button", { name: description }));
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(description);
+  });
+
+  test("resource profile tooltip stays English when UI language is English", async () => {
+    renderEditor();
+
+    const enHint =
+      "Cleaning request details does not clear statistics. KPIs, quotas, public usage, and other metrics already on small aggregate projections are unaffected by request_logs cleanup; trend or diagnostic views that still rely on detail rows only cover the retention window.";
+    const zhLeak = "清理明细不会清理统计";
+
+    await userEvent.hover(
+      screen.getByRole("button", {
+        name: /A safe baseline for a 2 vCPU \/ 2 GB host[\s\S]*Cleaning request details does not clear statistics/,
+      }),
+    );
+    const tooltip = await screen.findByRole("tooltip");
+    expect(tooltip).toHaveTextContent(enHint);
+    expect(tooltip).not.toHaveTextContent(zhLeak);
+  });
+
   test("shows automatic update settings and exposes main/dev source branches", async () => {
     const onChange = renderEditor();
 

@@ -55,6 +55,7 @@ const createColumns = (overrides: Partial<Parameters<typeof createApiKeyColumns>
     onSelectAll: vi.fn(),
     onSelectRow: vi.fn(),
     onCopy: vi.fn(),
+    onRotate: vi.fn(),
     onDelete: vi.fn(),
     onEdit: vi.fn(),
     onImportToCcSwitch: vi.fn(),

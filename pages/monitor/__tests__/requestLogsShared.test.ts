@@ -5,6 +5,7 @@ import {
   buildRequestLogsColumns,
   buildRequestLogKeyOptions,
   isSystemRequestLogKey,
+  sortRequestLogKeyOptionsByCount,
   SYSTEM_REQUEST_LOG_FILTER_VALUE,
   toRequestLogsRow,
 } from "@features/request-log-viewer";
@@ -88,6 +89,36 @@ describe("requestLogsShared", () => {
       SYSTEM_REQUEST_LOG_FILTER_VALUE,
     );
     expect(options.find((option) => option.label === "Live Key")?.value).toBe("sk-live-123456");
+  });
+
+  test("aggregates system counts and sorts key options by count with stable ties", () => {
+    const options = buildRequestLogKeyOptions(
+      [
+        "POST /image-generation/test",
+        "/v0/management/image-generation/test",
+        "sk-zulu",
+        "sk-alpha",
+      ],
+      { "sk-zulu": "Zulu", "sk-alpha": "Alpha" },
+      { allKeys: "全部密钥", systemCall: "系统调用" },
+      {
+        "POST /image-generation/test": 4,
+        "/v0/management/image-generation/test": 6,
+        "sk-zulu": 8,
+        "sk-alpha": 8,
+      },
+    );
+
+    expect(options.find((option) => option.value === "")?.count).toBe(26);
+    expect(options.find((option) => option.value === SYSTEM_REQUEST_LOG_FILTER_VALUE)?.count).toBe(
+      10,
+    );
+    expect(sortRequestLogKeyOptionsByCount(options, "en").map((option) => option.label)).toEqual([
+      "全部密钥",
+      "系统调用",
+      "Alpha",
+      "Zulu",
+    ]);
   });
 
   test("keeps high-signal request metrics before bulky identifier columns", () => {

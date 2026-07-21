@@ -93,9 +93,11 @@ export async function fetchPublicLogs(params: {
   page?: number;
   size?: number;
   days?: number;
+  apiKeyIds?: string[];
   models?: string[];
   channels?: string[];
   statuses?: string[];
+  apiKeyIdsEmpty?: boolean;
   modelsEmpty?: boolean;
   channelsEmpty?: boolean;
   statusesEmpty?: boolean;
@@ -110,9 +112,11 @@ export async function fetchPublicLogs(params: {
       page: params.page,
       size: params.size,
       days: params.days,
+      api_key_ids: params.apiKeyIds,
       models: params.models,
       channels: params.channels,
       statuses: params.statuses,
+      api_key_ids_empty: params.apiKeyIdsEmpty,
       models_empty: params.modelsEmpty,
       channels_empty: params.channelsEmpty,
       statuses_empty: params.statusesEmpty,

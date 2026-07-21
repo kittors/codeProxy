@@ -57,7 +57,12 @@ export const AUTH_FILES_DATA_CACHE_KEY_V2 = "authFilesPage.dataCache.v2";
 export const AUTH_FILES_QUOTA_PREVIEW_KEY = "authFilesPage.quotaPreview.v1";
 export const AUTH_FILES_QUOTA_AUTO_REFRESH_KEY = "authFilesPage.quotaAutoRefreshMs.v1";
 export const AUTH_FILES_FILES_VIEW_MODE_KEY = "authFilesPage.filesViewMode.v1";
+export const AUTH_FILES_CARD_COLUMNS_KEY = "authFilesPage.cardColumns.v1";
 export const AUTH_FILES_MODEL_OWNER_GROUP_MAP_KEY = "authFilesPage.modelOwnerGroupMap.v1";
+
+export const AUTH_FILES_CARD_COLUMN_OPTIONS = [2, 3, 4, 5, 6] as const;
+export type AuthFilesCardColumns = (typeof AUTH_FILES_CARD_COLUMN_OPTIONS)[number];
+export const DEFAULT_AUTH_FILES_CARD_COLUMNS: AuthFilesCardColumns = 3;
 
 export type QuotaPreviewMode = "5h" | "week";
 /** Off / 60s / 300s only. Legacy 5s/10s/30s migrate safely via normalizeQuotaAutoRefreshMs. */
@@ -471,6 +476,12 @@ export const sanitizeAuthFilesForCache = (files: AuthFileItem[]): AuthFileItem[]
     runtime_only: file.runtime_only,
     plan_type: file.plan_type,
     planType: file.planType,
+    shared_subscription_started_at: file.shared_subscription_started_at,
+    shared_subscription_expires_at: file.shared_subscription_expires_at,
+    shared_subscription_source: file.shared_subscription_source,
+    account_status_scope: file.account_status_scope,
+    subject_scope: file.subject_scope,
+    share_eligible: file.share_eligible,
     subscription_started_at: file.subscription_started_at,
     subscriptionStartedAt: file.subscriptionStartedAt,
     subscription_start_at: file.subscription_start_at,
@@ -1831,6 +1842,15 @@ export const normalizeQuotaAutoRefreshMs = (value: unknown): QuotaAutoRefreshMs 
   if (rounded > 60_000 && rounded < 300_000) return 60_000;
   if (rounded >= 300_000) return 300_000;
   return 0;
+};
+
+export const normalizeAuthFilesCardColumns = (value: unknown): AuthFilesCardColumns => {
+  const parsed = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(parsed)) return DEFAULT_AUTH_FILES_CARD_COLUMNS;
+  const rounded = Math.round(parsed);
+  return (AUTH_FILES_CARD_COLUMN_OPTIONS as readonly number[]).includes(rounded)
+    ? (rounded as AuthFilesCardColumns)
+    : DEFAULT_AUTH_FILES_CARD_COLUMNS;
 };
 
 /** Read + migrate auto-refresh localStorage immediately (write-back allowed buckets only). */

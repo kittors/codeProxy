@@ -38,8 +38,12 @@ test("Config: page should not horizontally scroll; editor should allow horizonta
 }) => {
   await setAuthed(page);
 
-  const longValue = "a".repeat(2500);
-  const yaml = `long_key: "${longValue}"\n`;
+  const longValue = `${"a".repeat(2500)}horizontal-target`;
+  const yaml = [
+    `long_key: "${longValue}"`,
+    ...Array.from({ length: 80 }, (_, index) => `key-${index}: value-${index}`),
+    "target-key: target-value",
+  ].join("\n");
 
   await page.route("**/v0/management/config.yaml", async (route) => {
     await route.fulfill({
@@ -80,6 +84,55 @@ test("Config: page should not horizontally scroll; editor should allow horizonta
 
   expect(editorCanScroll.canOverflow).toBe(true);
   expect(editorCanScroll.moved).toBe(true);
+
+  const search = page.getByPlaceholder(/Search config content|搜索配置内容/i);
+  await editor.evaluate((element) => {
+    element.scrollLeft = 0;
+  });
+  await search.fill("horizontal-target");
+  await search.press("Enter");
+  await expect
+    .poll(async () => editor.evaluate((element) => element.scrollLeft))
+    .toBeGreaterThan(0);
+
+  await search.fill("target-key");
+  await search.press("Enter");
+  await expect
+    .poll(async () => editor.evaluate((element) => element.scrollTop))
+    .toBeGreaterThan(0);
+  const syncedScroll = await editor.evaluate((element) => ({
+    editor: element.scrollTop,
+    highlight: element.parentElement?.querySelector("pre")?.scrollTop,
+    gutter: element.parentElement?.previousElementSibling?.scrollTop,
+  }));
+  expect(syncedScroll.highlight).toBe(syncedScroll.editor);
+  expect(syncedScroll.gutter).toBe(syncedScroll.editor);
+});
+
+test("Config visual editor keeps descriptions in info tooltips", async ({ page }) => {
+  await setAuthed(page);
+
+  await page.route("**/v0/management/config.yaml", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "text/yaml; charset=utf-8",
+      body: "host: 0.0.0.0\nport: 8318\n",
+    });
+  });
+  await page.route("**/v0/management/config", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({}),
+    });
+  });
+
+  await page.goto("/#/system/config");
+
+  const description = "Host/port, auth directory & API Keys.";
+  await expect(page.getByText(description, { exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: description }).hover();
+  await expect(page.getByRole("tooltip")).toContainText(description);
 });
 
 test("Sidebar: collapse/expand should keep nav items nowrap and slide out of view", async ({

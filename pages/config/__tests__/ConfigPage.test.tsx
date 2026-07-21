@@ -101,6 +101,41 @@ describe("ConfigPage", () => {
     });
   });
 
+  test("scrolls the source editor to the active search match", async () => {
+    const user = userEvent.setup();
+    const yaml = [
+      "target-key: first",
+      ...Array.from({ length: 80 }, (_, index) => `key-${index}: value-${index}`),
+      "target-key: last",
+    ].join("\n");
+    mocks.fetchConfigYaml.mockResolvedValue(yaml);
+    renderPage();
+
+    await user.click(await screen.findByRole("tab", { name: /source editor/i }));
+    const editor = screen.getByRole("textbox", { name: "config.yaml editor" });
+    Object.defineProperties(editor, {
+      clientHeight: { configurable: true, value: 120 },
+      clientWidth: { configurable: true, value: 480 },
+    });
+
+    const search = screen.getByPlaceholderText(/search config content/i);
+    await user.type(search, "target-key{Enter}");
+
+    expect(editor).toHaveProperty("selectionStart", yaml.indexOf("target-key"));
+
+    await user.click(screen.getByRole("button", { name: /next match/i }));
+    await waitFor(() => {
+      expect(editor.scrollTop).toBeGreaterThan(0);
+      expect(editor).toHaveProperty("selectionStart", yaml.lastIndexOf("target-key"));
+    });
+
+    await user.click(screen.getByRole("button", { name: /previous match/i }));
+    await waitFor(() => {
+      expect(editor.scrollTop).toBe(0);
+      expect(editor).toHaveProperty("selectionStart", yaml.indexOf("target-key"));
+    });
+  });
+
   test("removes the duplicate runtime tab and confirms destructive body cleanup on save", async () => {
     const user = userEvent.setup();
     mocks.fetchConfigYaml.mockResolvedValue(

@@ -31,9 +31,11 @@ import {
   DEFAULT_REQUEST_LOG_PAGE_SIZE,
   hasActiveFilterSelection,
   normalizeFilterSelection,
+  RequestLogFilterCount,
   RequestLogUsageMetricValue,
   RequestLogsPaginationBar,
   RequestLogsTimeRangeSelector,
+  sortRequestLogKeyOptionsByCount,
   toFilterParam,
   toRequestLogsRow,
   toStatusFilterValues,
@@ -84,7 +86,7 @@ function RequestLogsRecordsCount({ count }: { count: number }) {
 // ---------------------------------------------------------------------------
 
 export function RequestLogsPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { notify } = useToast();
 
   // Content modal state
@@ -142,6 +144,7 @@ export function RequestLogsPage() {
   const [filterOptions, setFilterOptions] = useState<{
     api_keys: string[];
     api_key_names: Record<string, string>;
+    api_key_counts: Record<string, number>;
     models: string[];
     channels: string[];
     channel_options: UsageChannelFilterOption[];
@@ -149,6 +152,7 @@ export function RequestLogsPage() {
   }>({
     api_keys: [],
     api_key_names: {},
+    api_key_counts: {},
     models: [],
     channels: [],
     channel_options: [],
@@ -191,9 +195,23 @@ export function RequestLogsPage() {
         allKeys: t("request_logs.all_users"),
         systemCall: t("request_logs.system_call"),
       },
+      filterOptions.api_key_counts,
     );
-    return opts.filter((option) => option.value !== "");
-  }, [filterOptions.api_keys, filterOptions.api_key_names, t]);
+    return sortRequestLogKeyOptionsByCount(opts, i18n.resolvedLanguage)
+      .filter((option) => option.value !== "")
+      .map((option) => ({
+        value: option.value,
+        label: option.label,
+        searchText: option.searchText,
+        trailing: <RequestLogFilterCount count={option.count} />,
+      }));
+  }, [
+    filterOptions.api_key_counts,
+    filterOptions.api_key_names,
+    filterOptions.api_keys,
+    i18n.resolvedLanguage,
+    t,
+  ]);
 
   const modelOptions = useMemo<SearchableCheckboxMultiSelectOption[]>(() => {
     return filterOptions.models.map((m) => ({
@@ -370,6 +388,7 @@ export function RequestLogsPage() {
         setFilterOptions({
           api_keys: resp.filters?.api_keys ?? [],
           api_key_names: resp.filters?.api_key_names ?? {},
+          api_key_counts: resp.filters?.api_key_counts ?? {},
           models: resp.filters?.models ?? [],
           channels: resp.filters?.channels ?? [],
           channel_options: resp.filters?.channel_options ?? [],

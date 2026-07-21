@@ -21,7 +21,6 @@ import {
 import {
   AUTH_FILES_FILES_VIEW_MODE_KEY,
   AUTH_FILES_QUOTA_AUTO_REFRESH_KEY,
-  AUTH_FILES_QUOTA_PREVIEW_KEY,
   getActiveCacheTenantId,
   normalizeAuthIndexValue,
   parseAdditionalQuotaWindowLabel,
@@ -30,7 +29,6 @@ import {
   writeAuthFilesDataCache,
   type AuthFileCycleBudgetStats,
   type FilesViewMode,
-  type QuotaPreviewMode,
 } from "@code-proxy/domain";
 import { useInterval, useLocalStorage, useToast } from "@code-proxy/ui";
 import {
@@ -217,10 +215,6 @@ export function useAuthFilesStatusState({
   const tenantIdRef = useRef(cacheTenantId);
   const pageItemsRef = useRef(pageItems);
 
-  const [quotaPreviewMode, setQuotaPreviewMode] = useLocalStorage<QuotaPreviewMode>(
-    AUTH_FILES_QUOTA_PREVIEW_KEY,
-    "5h",
-  );
   const [quotaAutoRefreshMsRaw, setQuotaAutoRefreshMsRaw] = useLocalStorage<number>(
     AUTH_FILES_QUOTA_AUTO_REFRESH_KEY,
     initialAutoRefresh,
@@ -1302,8 +1296,6 @@ export function useAuthFilesStatusState({
     quotaByFileName,
     quotaAutoRefreshingRef,
     nowMs,
-    quotaPreviewMode,
-    setQuotaPreviewMode,
     quotaAutoRefreshMs: effectiveQuotaAutoRefreshMs,
     setQuotaAutoRefreshMsRaw: (value: number) => {
       if (value > 0) {

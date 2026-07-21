@@ -456,7 +456,44 @@ export type RequestLogKeyOption = {
   value: string;
   label: string;
   searchText?: string;
+  count: number;
 };
+
+export function RequestLogFilterCount({ count }: { count: number }) {
+  const { t, i18n } = useTranslation();
+  const safeCount = Number.isFinite(count) ? Math.max(0, Math.floor(count)) : 0;
+  const formattedCount = new Intl.NumberFormat(i18n.resolvedLanguage || undefined).format(
+    safeCount,
+  );
+  const accessibleLabel = t("request_logs.calls_count", { count: safeCount, formattedCount });
+
+  return (
+    <span
+      className="inline-flex min-w-[4.5rem] justify-end whitespace-nowrap text-xs font-semibold tabular-nums text-slate-500 dark:text-white/50"
+      aria-label={accessibleLabel}
+      title={accessibleLabel}
+    >
+      {formattedCount}
+    </span>
+  );
+}
+
+export function sortRequestLogKeyOptionsByCount(
+  options: RequestLogKeyOption[],
+  locale?: string,
+): RequestLogKeyOption[] {
+  const collator = new Intl.Collator(locale, { numeric: true, sensitivity: "base" });
+  const allOption = options.find((option) => option.value === "");
+  const sorted = options
+    .filter((option) => option.value !== "")
+    .sort(
+      (left, right) =>
+        right.count - left.count ||
+        collator.compare(left.label, right.label) ||
+        left.value.localeCompare(right.value),
+    );
+  return allOption ? [allOption, ...sorted] : sorted;
+}
 
 export const maskRequestLogApiKey = (value: string): string => {
   const trimmed = value.trim();
@@ -533,26 +570,43 @@ export const buildRequestLogKeyOptions = (
     allKeys: string;
     systemCall: string;
   },
+  apiKeyCounts: Record<string, number> = {},
 ): RequestLogKeyOption[] => {
-  const options: RequestLogKeyOption[] = [{ value: "", label: labels.allKeys }];
-  let systemIncluded = false;
+  const countFor = (key: string) => {
+    const count = apiKeyCounts[key];
+    return Number.isFinite(count) ? Math.max(0, Math.floor(count)) : 0;
+  };
+  const options: RequestLogKeyOption[] = [
+    {
+      value: "",
+      label: labels.allKeys,
+      count: apiKeys.reduce((total, key) => total + countFor(key), 0),
+    },
+  ];
+  let systemOption: RequestLogKeyOption | null = null;
 
   for (const key of apiKeys) {
     const name = apiKeyNames[key];
+    const count = countFor(key);
     if (isSystemRequestLogKey(key, name)) {
-      if (systemIncluded) continue;
-      options.push({
+      if (systemOption) {
+        systemOption.count += count;
+        continue;
+      }
+      systemOption = {
         value: SYSTEM_REQUEST_LOG_FILTER_VALUE,
         label: labels.systemCall,
         searchText: labels.systemCall,
-      });
-      systemIncluded = true;
+        count,
+      };
+      options.push(systemOption);
       continue;
     }
     options.push({
       value: key,
       label: name || maskRequestLogApiKey(key),
       searchText: `${name || ""} ${key}`,
+      count,
     });
   }
 
