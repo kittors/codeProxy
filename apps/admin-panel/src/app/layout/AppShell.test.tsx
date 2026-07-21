@@ -464,6 +464,61 @@ describe("AppShell route progress", () => {
   });
 });
 
+describe("AppShell mobile sidebar", () => {
+  beforeEach(() => {
+    authPrincipal = defaultPrincipal();
+    tenantsMock.mockReset();
+    tenantsMock.mockResolvedValue({ items: [] });
+    vi.spyOn(window, "matchMedia").mockImplementation(
+      (query) =>
+        ({
+          matches: query === "(max-width: 767px)",
+          media: query,
+          onchange: null,
+          addListener: () => undefined,
+          removeListener: () => undefined,
+          addEventListener: () => undefined,
+          removeEventListener: () => undefined,
+          dispatchEvent: () => false,
+        }) as MediaQueryList,
+    );
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  test("keeps the mobile drawer mounted in a body portal while opening and closing", () => {
+    renderShell();
+
+    const aside = document.querySelector("aside");
+    const backdrop = screen.getByTestId("app-shell-mobile-sidebar-backdrop");
+    expect(aside?.parentElement).toBe(document.body);
+    expect(backdrop.parentElement).toBe(document.body);
+    expect(aside).toHaveAttribute("data-mobile-open", "false");
+    expect(aside).toHaveClass(
+      "-translate-x-full",
+      "will-change-transform",
+      "motion-safe:duration-[320ms]",
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /Expand Sidebar|展开侧边栏/i }),
+    );
+
+    expect(aside).toHaveAttribute("data-mobile-open", "true");
+    expect(aside).toHaveClass("translate-x-0");
+    expect(backdrop).toHaveClass("opacity-100", "motion-safe:duration-[320ms]");
+
+    fireEvent.click(backdrop);
+
+    expect(aside).toHaveAttribute("data-mobile-open", "false");
+    expect(aside).toHaveClass("-translate-x-full");
+    expect(backdrop).toHaveClass("pointer-events-none", "opacity-0");
+    expect(document.body.contains(aside)).toBe(true);
+  });
+});
+
 describe("AppShell tenant switcher", () => {
   beforeEach(() => {
     authPrincipal = defaultPrincipal({ platform_admin: true });

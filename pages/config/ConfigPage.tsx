@@ -325,20 +325,43 @@ export function ConfigPage() {
   );
 
   const jumpToMatch = useCallback(
-    (index: number, query: string) => {
+    (index: number, query: string, positions = searchPositions) => {
       const el = textareaRef.current;
       if (!el) return;
       const q = query.trim();
-      if (!q) return;
-      const positions = searchPositions;
-      if (!positions.length) return;
+      if (!q || !positions.length) return;
       const safe = ((index % positions.length) + positions.length) % positions.length;
       const start = positions[safe];
+      const beforeMatch = yamlText.slice(0, start);
+      const lineStart = beforeMatch.lastIndexOf("\n") + 1;
+      const line = beforeMatch.split("\n").length - 1;
+      const column = beforeMatch.length - lineStart;
+      const styles = window.getComputedStyle(el);
+      const fontSize = Number.parseFloat(styles.fontSize) || 12;
+      const lineHeight = Number.parseFloat(styles.lineHeight) || fontSize * 2;
+      const paddingTop = Number.parseFloat(styles.paddingTop) || 0;
+      const paddingLeft = Number.parseFloat(styles.paddingLeft) || 0;
+      const targetTop = paddingTop + line * lineHeight;
+      const targetLeft = paddingLeft + column * fontSize * 0.6;
+      const verticalMargin = lineHeight * 2;
+      const horizontalMargin = fontSize * 4;
+
       el.focus();
       el.setSelectionRange(start, start + q.length);
+      if (targetTop < el.scrollTop + verticalMargin) {
+        el.scrollTop = Math.max(0, targetTop - verticalMargin);
+      } else if (targetTop + lineHeight > el.scrollTop + el.clientHeight - verticalMargin) {
+        el.scrollTop = Math.max(0, targetTop + lineHeight - el.clientHeight + verticalMargin);
+      }
+      if (targetLeft < el.scrollLeft + horizontalMargin) {
+        el.scrollLeft = Math.max(0, targetLeft - horizontalMargin);
+      } else if (targetLeft > el.scrollLeft + el.clientWidth - horizontalMargin) {
+        el.scrollLeft = Math.max(0, targetLeft - el.clientWidth + horizontalMargin);
+      }
+      el.dispatchEvent(new Event("scroll"));
       setSearchIndex(safe);
     },
-    [searchPositions],
+    [searchPositions, yamlText],
   );
 
   const executeSearch = useCallback(
@@ -355,7 +378,7 @@ export function ConfigPage() {
           notify({ type: "info", message: t("config_page.no_match_found") });
           return;
         }
-        jumpToMatch(0, q);
+        jumpToMatch(0, q, positions);
         return;
       }
 
@@ -367,7 +390,7 @@ export function ConfigPage() {
           notify({ type: "info", message: t("config_page.no_match_found") });
           return;
         }
-        jumpToMatch(0, q);
+        jumpToMatch(0, q, positions);
         return;
       }
 

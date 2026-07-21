@@ -77,9 +77,9 @@ export function RequestLogsFilters({
             applyMode="manual"
             applyLabel={t("request_logs.apply_filters")}
             cancelLabel={t("common.cancel")}
-            selectAllLabel={t("request_logs.select_all")}
-            deselectAllLabel={t("request_logs.deselect_all")}
-            emptySelectionLabel={t("request_logs.none_selected")}
+            neutralAllSelection
+            allSelectionLabel={t("request_logs.unrestricted")}
+            selectionHint={t("request_logs.calls_sorted_hint")}
           />
         </div>
         <RequestLogFacetFilters

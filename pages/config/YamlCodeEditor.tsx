@@ -520,6 +520,7 @@ export const YamlCodeEditor = forwardRef<
             aria-label={ariaLabel}
             className={[
               "absolute inset-0 resize-none overflow-auto bg-transparent px-4 py-3 font-mono text-xs leading-6 outline-none",
+              "[scrollbar-color:#C7C7C7_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-corner]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#C7C7C7] [&::-webkit-scrollbar-track]:bg-transparent",
               "text-transparent caret-slate-900 dark:caret-white",
               "selection:bg-sky-200/60 dark:selection:bg-white/15",
               disabled ? "cursor-not-allowed" : null,

@@ -1,12 +1,11 @@
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import type { VisualConfigValues } from "@features/visual-config-editor";
-import { Card } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
 import { Select } from "@code-proxy/ui";
-import { ToggleSwitch } from "@code-proxy/ui";
 import { PayloadFilterRulesEditor, PayloadRulesEditor } from "./PayloadRuleEditors";
 import { ResourceEfficiencyPanel } from "./ResourceEfficiencyPanel";
+import { HintCard as Card, HintLabel, HintToggle as ToggleSwitch } from "./VisualHint";
 
 function Field({
   label,
@@ -19,8 +18,9 @@ function Field({
 }) {
   return (
     <div className="space-y-1">
-      <div className="text-sm font-semibold text-slate-900 dark:text-white">{label}</div>
-      {hint ? <div className="text-xs text-slate-600 dark:text-white/65">{hint}</div> : null}
+      <div className="text-sm font-semibold text-slate-900 dark:text-white">
+        <HintLabel label={label} hint={hint} />
+      </div>
       <div className="pt-1">{children}</div>
     </div>
   );
@@ -198,10 +198,13 @@ export function VisualConfigEditor({
       </Card>
 
       <Card title={t("visual_config.cors_title")} description={t("visual_config.cors_desc")}>
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
+        <div>
           <Field
             label={t("visual_config.cors_origins_label")}
-            hint={t("visual_config.cors_origins_hint")}
+            hint={`${t("visual_config.cors_origins_hint")}
+
+${t("visual_config.cors_default_title")}: ${t("visual_config.cors_default_desc")}
+chrome-extension://<extension-id>`}
           >
             <MultilineField
               value={values.corsAllowOriginsText}
@@ -215,13 +218,6 @@ export function VisualConfigEditor({
               ].join("\n")}
             />
           </Field>
-          <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 px-4 py-3 text-xs leading-5 text-emerald-900 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-100">
-            <div className="font-semibold">{t("visual_config.cors_default_title")}</div>
-            <p className="mt-1">{t("visual_config.cors_default_desc")}</p>
-            <p className="mt-3 rounded-xl bg-white/65 px-3 py-2 font-mono text-xs text-emerald-950 dark:bg-black/20 dark:text-emerald-100">
-              chrome-extension://&lt;extension-id&gt;
-            </p>
-          </div>
         </div>
       </Card>
 
@@ -340,7 +336,8 @@ export function VisualConfigEditor({
 
       <Card
         title={t("visual_config.kimi_headers")}
-        description={t("visual_config.kimi_headers_desc")}
+        description={`${t("visual_config.kimi_headers_desc")}
+${t("visual_config.kimi_headers_note")}`}
       >
         <div className="grid gap-4 lg:grid-cols-3">
           <Field label="User-Agent" hint={t("visual_config.kimi_user_agent_hint")}>
@@ -389,9 +386,6 @@ export function VisualConfigEditor({
             />
           </Field>
         </div>
-        <p className="mt-4 text-xs text-slate-600 dark:text-white/65">
-          {t("visual_config.kimi_headers_note")}
-        </p>
       </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">

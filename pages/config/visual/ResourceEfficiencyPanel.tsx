@@ -1,8 +1,9 @@
-import { Gauge, Leaf, ShieldCheck } from "lucide-react";
+import { Gauge, Leaf } from "lucide-react";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { VisualConfigValues } from "@features/visual-config-editor";
-import { Button, Card, TextInput, ToggleSwitch } from "@code-proxy/ui";
+import { Button, TextInput } from "@code-proxy/ui";
+import { HintCard as Card, HintLabel, HintToggle as ToggleSwitch } from "./VisualHint";
 
 type ResourceEfficiencyPanelProps = {
   values: VisualConfigValues;
@@ -27,8 +28,9 @@ function ResourceField({
 }) {
   return (
     <div className="space-y-1.5">
-      <div className="text-sm font-semibold text-slate-900 dark:text-white">{label}</div>
-      <p className="text-xs leading-5 text-slate-600 dark:text-white/65">{hint}</p>
+      <div className="text-sm font-semibold text-slate-900 dark:text-white">
+        <HintLabel label={label} hint={hint} />
+      </div>
       <TextInput
         value={value}
         placeholder={placeholder}
@@ -106,7 +108,12 @@ export function ResourceEfficiencyPanel({
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <h3 className="text-base font-semibold text-emerald-950 dark:text-emerald-100">
-                  {t("resource_config.title")}
+                  <HintLabel
+                    label={t("resource_config.title")}
+                    hint={`${t("resource_config.description")}
+
+${t("resource_config.stats_preserved")}`}
+                  />
                 </h3>
                 <span className="rounded-full bg-emerald-200/80 px-2.5 py-1 text-2xs font-semibold text-emerald-900 dark:bg-emerald-300/15 dark:text-emerald-200">
                   {recommendedActive
@@ -114,9 +121,6 @@ export function ResourceEfficiencyPanel({
                     : t("resource_config.profile_custom")}
                 </span>
               </div>
-              <p className="mt-1 max-w-3xl text-sm leading-6 text-emerald-900/75 dark:text-emerald-100/70">
-                {t("resource_config.description")}
-              </p>
             </div>
           </div>
           <Button
@@ -220,12 +224,8 @@ export function ResourceEfficiencyPanel({
               }
             />
             <ResourceField
-              label={t("resource_config.detail_retention_label", {
-                defaultValue: "请求明细保留天数",
-              })}
-              hint={t("resource_config.detail_retention_hint", {
-                defaultValue: "request_logs 仅用于排障，默认 7 天；统计在独立小投影表，不会随清理归零。",
-              })}
+              label={t("resource_config.detail_retention_label")}
+              hint={t("resource_config.detail_retention_hint")}
               value={values.requestLogStorage.retentionDays}
               placeholder="7"
               disabled={disabled}
@@ -260,10 +260,8 @@ export function ResourceEfficiencyPanel({
               }
             />
             <ResourceField
-              label={t("resource_config.max_rows_label", { defaultValue: "明细最大行数" })}
-              hint={t("resource_config.max_rows_hint", {
-                defaultValue: "超过后按最旧优先删除明细；不影响聚合统计。",
-              })}
+              label={t("resource_config.max_rows_label")}
+              hint={t("resource_config.max_rows_hint")}
               value={values.requestLogStorage.maxRows}
               placeholder="100000"
               disabled={disabled}
@@ -274,12 +272,8 @@ export function ResourceEfficiencyPanel({
               }
             />
             <ResourceField
-              label={t("resource_config.metadata_cap_label", {
-                defaultValue: "明细表体积上限 (MB)",
-              })}
-              hint={t("resource_config.metadata_cap_hint", {
-                defaultValue: "request_logs 关系体积保护（含索引，尽力而为）。",
-              })}
+              label={t("resource_config.metadata_cap_label")}
+              hint={t("resource_config.metadata_cap_hint")}
               value={values.requestLogStorage.maxMetadataSizeMb}
               placeholder="256"
               disabled={disabled}
@@ -304,12 +298,8 @@ export function ResourceEfficiencyPanel({
           </div>
           <div className="mt-5 space-y-5 border-t border-slate-200 pt-5 dark:border-white/10">
             <ToggleSwitch
-              label={t("resource_config.cleanup_enabled_title", {
-                defaultValue: "启用定时清理明细",
-              })}
-              description={t("resource_config.cleanup_enabled_desc", {
-                defaultValue: "按保留天数/行数/体积上限分批删除 request_logs；不会删除统计投影。",
-              })}
+              label={t("resource_config.cleanup_enabled_title")}
+              description={t("resource_config.cleanup_enabled_desc")}
               checked={values.requestLogStorage.cleanupEnabled}
               onCheckedChange={(cleanupEnabled) =>
                 onChange({
@@ -331,16 +321,6 @@ export function ResourceEfficiencyPanel({
             />
           </div>
         </Card>
-      </div>
-
-      <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-white/70">
-        <ShieldCheck size={18} className="mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
-        <p>
-          {t("resource_config.stats_preserved", {
-            defaultValue:
-              "清理明细不会清理统计。KPI/限额/public usage 等已切到小型聚合投影的指标不受 request_logs 清理影响；仍依赖明细的趋势/诊断能力仅覆盖保留期内数据。",
-          })}
-        </p>
       </div>
     </div>
   );

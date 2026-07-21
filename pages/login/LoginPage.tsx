@@ -145,16 +145,10 @@ export function LoginPage() {
               </div>
             </aside>
             <section className="rounded-3xl border border-white/70 bg-white/90 p-7 shadow-xl shadow-slate-300/25 backdrop-blur-xl sm:p-9 dark:border-white/10 dark:bg-neutral-950/85 dark:shadow-black/25">
-              <div className="mb-8 space-y-2">
+              <div className="mb-8">
                 <h2 className="text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">
                   {t("login.sign_in")}
                 </h2>
-                <p className="text-sm text-slate-500 dark:text-white/55">
-                  {t(
-                    "login.account_login_hint",
-                    "Use your account credentials. Your tenant is resolved automatically.",
-                  )}
-                </p>
               </div>
               <form className="space-y-5" onSubmit={handleSubmit}>
                 {accessFailureMessage ? (

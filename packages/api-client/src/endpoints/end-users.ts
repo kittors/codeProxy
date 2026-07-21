@@ -24,6 +24,8 @@ export interface EndUser {
   version: number;
   api_key_count?: number;
   "daily-spending-used"?: number;
+  /** How many times daily spending was manually reset. */
+  "daily-spending-reset-count"?: number;
   /** Account-level quota/permissions (shared by all keys). */
   "permission-profile-id"?: string;
   "daily-limit"?: number;
@@ -58,6 +60,36 @@ export type EndUserUpdateBody = {
   "system-prompt"?: string;
 };
 
+export interface EndUserDailySpendingResetResult {
+  status?: string;
+  end_user_id?: string;
+  "daily-spending-used"?: number;
+  "daily-spending-reset-count"?: number;
+  "effective-used-before"?: number;
+  "raw-today-cost"?: number;
+}
+
+export interface EndUserDailySpendingResetEvent {
+  id: number;
+  tenant_id?: string;
+  end_user_id?: string;
+  day_key?: string;
+  reset_at: string;
+  actor_user_id?: string;
+  actor_username?: string;
+  actor_kind?: string;
+  cost_baseline?: number;
+  effective_used_before?: number;
+  raw_today_cost?: number;
+}
+
+export interface EndUserDailySpendingResetHistoryResponse {
+  items: EndUserDailySpendingResetEvent[];
+  total: number;
+  "raw-today-cost"?: number;
+  "daily-spending-used"?: number;
+}
+
 export interface EndUserAPIKey {
   id: string;
   tenant_id: string;
@@ -74,6 +106,11 @@ export interface CreateEndUserResult {
   user: EndUser;
   generated_password?: string;
   default_api_key?: EndUserAPIKey & { key?: string };
+}
+
+export interface EndUserAPIKeySecretResult {
+  api_key: EndUserAPIKey;
+  plaintext_key?: string;
 }
 
 export interface PortalLoginResult {
@@ -98,19 +135,24 @@ export const endUsersApi = {
       password: password || "",
     }),
   resetDailySpending: (id: string) =>
-    apiClient.post<{
-      status: string;
-      end_user_id: string;
-      "daily-spending-used": number;
-      "effective-used-before": number;
-      "raw-today-cost": number;
-    }>(`/end-users/${id}/daily-spending/reset`, {}),
+    apiClient.post<EndUserDailySpendingResetResult>(`/end-users/${id}/daily-spending/reset`, {}),
+  listDailySpendingResetHistory: (id: string, limit?: number) => {
+    const query = new URLSearchParams();
+    if (limit != null) query.set("limit", String(limit));
+    const suffix = query.size > 0 ? `?${query.toString()}` : "";
+    return apiClient.get<EndUserDailySpendingResetHistoryResponse>(
+      `/end-users/${id}/daily-spending/reset-history${suffix}`,
+    );
+  },
   listKeys: (id: string) => apiClient.get<{ items: EndUserAPIKey[] }>(`/end-users/${id}/api-keys`),
   createKey: (id: string, name?: string) =>
-    apiClient.post<{ api_key: EndUserAPIKey; plaintext_key?: string }>(
-      `/end-users/${id}/api-keys`,
-      { name: name || "" },
-    ),
+    apiClient.post<EndUserAPIKeySecretResult>(`/end-users/${id}/api-keys`, {
+      name: name || "",
+    }),
+  updateKeyName: (userId: string, keyId: string, name: string) =>
+    apiClient.patch<EndUserAPIKey>(`/end-users/${userId}/api-keys/${keyId}`, { name }),
+  rotateKey: (userId: string, keyId: string) =>
+    apiClient.post<EndUserAPIKeySecretResult>(`/end-users/${userId}/api-keys/${keyId}/rotate`, {}),
   deleteKey: (userId: string, keyId: string) =>
     apiClient.delete(`/end-users/${userId}/api-keys/${keyId}`),
 };

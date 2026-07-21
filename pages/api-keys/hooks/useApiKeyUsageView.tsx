@@ -11,8 +11,10 @@ import { ModelTag } from "@features/model-tags";
 import {
   buildRequestLogKeyOptions,
   buildRequestLogsColumns,
+  RequestLogFilterCount,
   ChannelIdentityLabel,
   DEFAULT_REQUEST_LOG_PAGE_SIZE,
+  sortRequestLogKeyOptionsByCount,
   toRequestLogsRow,
   type RequestLogsRow,
   type TimeRange,
@@ -21,7 +23,7 @@ import {
 type StatusFilter = "" | "success" | "failed";
 
 export function useApiKeyUsageView() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { notify } = useToast();
 
   const [usageViewKeys, setUsageViewKeys] = useState<string[]>([]);
@@ -35,12 +37,14 @@ export function useApiKeyUsageView() {
   const [usageFilterOptions, setUsageFilterOptions] = useState<{
     api_keys: string[];
     api_key_names: Record<string, string>;
+    api_key_counts: Record<string, number>;
     channels: string[];
     channel_options: UsageChannelFilterOption[];
     models: string[];
   }>({
     api_keys: [],
     api_key_names: {},
+    api_key_counts: {},
     channels: [],
     channel_options: [],
     models: [],
@@ -117,14 +121,15 @@ export function useApiKeyUsageView() {
         const responseKeys = Array.isArray(result.filters?.api_keys)
           ? result.filters.api_keys.filter((key) => scopeSet.has(key))
           : [];
-        const keys =
-          responseKeys.length > 0
-            ? responseKeys
-            : usageViewKeys;
+        const keys = responseKeys.length > 0 ? responseKeys : usageViewKeys;
         const names = { ...result.filters?.api_key_names };
+        const counts = Object.fromEntries(
+          Object.entries(result.filters?.api_key_counts ?? {}).filter(([key]) => scopeSet.has(key)),
+        );
         setUsageFilterOptions({
           api_keys: keys,
           api_key_names: names,
+          api_key_counts: counts,
           channels: Array.isArray(result.filters?.channels) ? result.filters.channels : [],
           channel_options: Array.isArray(result.filters?.channel_options)
             ? result.filters.channel_options
@@ -163,6 +168,7 @@ export function useApiKeyUsageView() {
     setUsageFilterOptions({
       api_keys: [],
       api_key_names: {},
+      api_key_counts: {},
       channels: [],
       channel_options: [],
       models: [],
@@ -185,6 +191,7 @@ export function useApiKeyUsageView() {
       setUsageFilterOptions({
         api_keys: cleaned,
         api_key_names: keyNames ?? {},
+        api_key_counts: {},
         channels: [],
         channel_options: [],
         models: [],
@@ -204,16 +211,30 @@ export function useApiKeyUsageView() {
   const usageKeyOptions = useMemo<SearchableSelectOption[]>(() => {
     const sourceKeys =
       usageFilterOptions.api_keys.length > 0 ? usageFilterOptions.api_keys : usageViewKeys;
-    const opts = buildRequestLogKeyOptions(sourceKeys, usageFilterOptions.api_key_names, {
-      allKeys: t("request_logs.all_keys"),
-      systemCall: t("request_logs.system_call"),
-    });
-    return opts.map((option) => ({
+    const opts = buildRequestLogKeyOptions(
+      sourceKeys,
+      usageFilterOptions.api_key_names,
+      {
+        allKeys: t("request_logs.all_keys"),
+        systemCall: t("request_logs.system_call"),
+      },
+      usageFilterOptions.api_key_counts,
+    );
+    return sortRequestLogKeyOptionsByCount(opts, i18n.resolvedLanguage).map((option) => ({
       value: option.value,
       label: option.label,
-      searchText: option.searchText ?? (typeof option.label === "string" ? option.label : option.value),
+      triggerLabel: option.label,
+      searchText: option.searchText ?? option.label,
+      trailing: <RequestLogFilterCount count={option.count} />,
     }));
-  }, [t, usageFilterOptions.api_key_names, usageFilterOptions.api_keys, usageViewKeys]);
+  }, [
+    i18n.resolvedLanguage,
+    t,
+    usageFilterOptions.api_key_counts,
+    usageFilterOptions.api_key_names,
+    usageFilterOptions.api_keys,
+    usageViewKeys,
+  ]);
 
   const usageChannelOptions = useMemo<SearchableSelectOption[]>(() => {
     const apiLabel = t("request_logs.auth_type_api");
@@ -226,7 +247,11 @@ export function useApiKeyUsageView() {
             label: ch,
           }));
     return [
-      { value: "", label: t("request_logs.all_channels"), searchText: t("request_logs.all_channels") },
+      {
+        value: "",
+        label: t("request_logs.all_channels"),
+        searchText: t("request_logs.all_channels"),
+      },
       ...source.map((option) => {
         const provider = String(option.provider ?? "").trim();
         const authType = String(option.auth_type ?? "").trim();

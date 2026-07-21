@@ -15,7 +15,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test-build:
+  quality_build_e2e:
+    name: quality-build-e2e
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -34,5 +35,74 @@ jobs:
           restore-keys: |
             bun-${{ runner.os }}-
 
-      - name: PR checks
-        run: ./scripts/ci-pr.sh
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Lint
+        run: bun run lint
+
+      - name: Design checks
+        run: bun run design:check
+
+      - name: Build
+        run: bun run build
+
+      - name: Bundle diff
+        run: bun run bundle:diff
+
+      - name: Install Chromium
+        run: bunx playwright install chromium
+
+      - name: Critical E2E
+        run: bunx playwright test e2e/multi-tenant-auth.spec.ts e2e/login-lifecycle.spec.ts --grep '@critical'
+
+  vitest:
+    name: vitest-${{ matrix.shard }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard:
+          - 1/2
+          - 2/2
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.2
+
+      - name: Cache Bun downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            bun-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Vitest shard ${{ matrix.shard }}
+        run: bun run test:ci -- --shard=${{ matrix.shard }}
+
+  test-build:
+    name: test-build
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - quality_build_e2e
+      - vitest
+    steps:
+      - name: Verify required jobs
+        env:
+          QUALITY_BUILD_E2E_RESULT: ${{ needs.quality_build_e2e.result }}
+          VITEST_RESULT: ${{ needs.vitest.result }}
+        run: |
+          if [[ "$QUALITY_BUILD_E2E_RESULT" != "success" || "$VITEST_RESULT" != "success" ]]; then
+            echo "quality-build-e2e=$QUALITY_BUILD_E2E_RESULT"
+            echo "vitest=$VITEST_RESULT"
+            exit 1
+          fi

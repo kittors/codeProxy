@@ -58,6 +58,8 @@ import {
   formatRequestLogLatencyMs,
   normalizeChannelAuthType,
   normalizeFilterSelection,
+  RequestLogFilterCount,
+  sortRequestLogKeyOptionsByCount,
   toFilterParam,
   toStatusFilterValues,
   maskRequestLogApiKey,
@@ -289,7 +291,7 @@ function toLogRow(item: PublicLogItem): RequestLogsRow {
 // ── Page Component ──────────────────────────────────────────────────────────
 
 export function ApiKeyLookupPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const {
     state: { mode },
   } = useTheme();
@@ -404,6 +406,7 @@ export function ApiKeyLookupPage() {
   const [chartLoading, setChartLoading] = useState(false);
   const [quotaLimits, setQuotaLimits] = useState<PublicUsageLimits | null>(null);
   const chartCacheRef = useRef<Record<string, ChartDataResponse>>({});
+  const portalKeySyncIdRef = useRef(0);
   const chartAbortControllerRef = useRef<AbortController | null>(null);
   const chartFetchIdRef = useRef(0);
   const summaryAbortControllerRef = useRef<AbortController | null>(null);
@@ -418,6 +421,7 @@ export function ApiKeyLookupPage() {
 
   // ── Filters ──
   const [timeRange, setTimeRange] = useState<TimeRange>(7);
+  const [selectedApiKeyIds, setSelectedApiKeyIds] = useState<MultiSelectFilterState<string>>(null);
   const [selectedModels, setSelectedModels] = useState<MultiSelectFilterState<string>>(null);
   const [selectedStatuses, setSelectedStatuses] =
     useState<MultiSelectFilterState<StatusFilterValue>>(null);
@@ -430,9 +434,41 @@ export function ApiKeyLookupPage() {
     total_cost: number;
   }>({ total: 0, success_rate: 0, total_tokens: 0, total_cost: 0 });
   const [filterOptions, setFilterOptions] = useState<{
+    api_key_ids: string[];
+    api_key_id_names: Record<string, string>;
+    api_key_id_counts: Record<string, number>;
     models: string[];
     statuses: string[];
-  }>({ models: [], statuses: ["success", "failed"] });
+  }>({
+    api_key_ids: [],
+    api_key_id_names: {},
+    api_key_id_counts: {},
+    models: [],
+    statuses: ["success", "failed"],
+  });
+
+  const keyOptions = useMemo<SearchableCheckboxMultiSelectOption[]>(() => {
+    const options = (filterOptions.api_key_ids ?? []).map((id) => {
+      const name = filterOptions.api_key_id_names?.[id] || id;
+      return {
+        value: id,
+        label: name,
+        searchText: name,
+        count: filterOptions.api_key_id_counts?.[id] ?? 0,
+      };
+    });
+    return sortRequestLogKeyOptionsByCount(options, i18n.resolvedLanguage).map((option) => ({
+      value: option.value,
+      label: option.label,
+      searchText: option.searchText,
+      trailing: <RequestLogFilterCount count={option.count} />,
+    }));
+  }, [
+    filterOptions.api_key_id_counts,
+    filterOptions.api_key_id_names,
+    filterOptions.api_key_ids,
+    i18n.resolvedLanguage,
+  ]);
 
   const modelOptions = useMemo<SearchableCheckboxMultiSelectOption[]>(() => {
     return filterOptions.models.map((model) => ({
@@ -457,6 +493,10 @@ export function ApiKeyLookupPage() {
     }));
   }, [filterOptions.statuses, t]);
 
+  const apiKeyIdFilterValues = useMemo(
+    () => keyOptions.map((option) => option.value),
+    [keyOptions],
+  );
   const modelFilterValues = useMemo(
     () => modelOptions.map((option) => option.value),
     [modelOptions],
@@ -466,6 +506,10 @@ export function ApiKeyLookupPage() {
     [statusOptions],
   );
 
+  const apiKeyIdFilterParam = useMemo(
+    () => toFilterParam(selectedApiKeyIds, apiKeyIdFilterValues),
+    [apiKeyIdFilterValues, selectedApiKeyIds],
+  );
   const modelFilterParam = useMemo(
     () => toFilterParam(selectedModels, modelFilterValues),
     [modelFilterValues, selectedModels],
@@ -475,6 +519,12 @@ export function ApiKeyLookupPage() {
     [selectedStatuses, statusFilterValues],
   );
 
+  const handleApiKeyIdsChange = useCallback(
+    (value: string[]) => {
+      setSelectedApiKeyIds(normalizeFilterSelection(value, apiKeyIdFilterValues));
+    },
+    [apiKeyIdFilterValues],
+  );
   const handleModelsChange = useCallback(
     (value: string[]) => {
       setSelectedModels(normalizeFilterSelection(value, modelFilterValues));
@@ -487,6 +537,7 @@ export function ApiKeyLookupPage() {
     },
     [statusFilterValues],
   );
+  const clearApiKeyIdFilter = useCallback(() => setSelectedApiKeyIds(null), []);
   const clearModelFilter = useCallback(() => setSelectedModels(null), []);
   const clearStatusFilter = useCallback(() => setSelectedStatuses(null), []);
 
@@ -520,8 +571,10 @@ export function ApiKeyLookupPage() {
           page,
           size: size ?? pageSize,
           days: timeRange,
+          apiKeyIds: apiKeyIdFilterParam.values,
           models: modelFilterParam.values,
           statuses: statusFilterParam.values,
+          apiKeyIdsEmpty: apiKeyIdFilterParam.matchesNone,
           modelsEmpty: modelFilterParam.matchesNone,
           statusesEmpty: statusFilterParam.matchesNone,
           signal: controller.signal,
@@ -541,6 +594,9 @@ export function ApiKeyLookupPage() {
           },
         );
         setFilterOptions({
+          api_key_ids: resp.filters?.api_key_ids ?? [],
+          api_key_id_names: resp.filters?.api_key_id_names ?? {},
+          api_key_id_counts: resp.filters?.api_key_id_counts ?? {},
           models: resp.filters?.models ?? [],
           statuses: resp.filters?.statuses ?? ["success", "failed"],
         });
@@ -563,7 +619,7 @@ export function ApiKeyLookupPage() {
         }
       }
     },
-    [modelFilterParam, pageSize, statusFilterParam, t, timeRange],
+    [apiKeyIdFilterParam, modelFilterParam, pageSize, statusFilterParam, t, timeRange],
   );
 
   // ================================================================
@@ -681,7 +737,7 @@ export function ApiKeyLookupPage() {
     if (usageSubject && activeTab === "logs") {
       fetchLogs(usageSubject, 1);
     }
-  }, [timeRange, selectedModels, selectedStatuses]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [timeRange, selectedApiKeyIds, selectedModels, selectedStatuses]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Models fetching ──
   const fetchModelsFn = useCallback(
@@ -773,9 +829,13 @@ export function ApiKeyLookupPage() {
     setLastUpdatedAt(null);
     setStats({ total: 0, success_rate: 0, total_tokens: 0, total_cost: 0 });
     setFilterOptions({
+      api_key_ids: [],
+      api_key_id_names: {},
+      api_key_id_counts: {},
       models: [],
       statuses: ["success", "failed"],
     });
+    setSelectedApiKeyIds(null);
     setSelectedModels(null);
     setSelectedStatuses(null);
 
@@ -795,8 +855,8 @@ export function ApiKeyLookupPage() {
   }, []);
 
   // Avoid landing flash while a stored portal session is still hydrating.
-  const [portalSessionPending, setPortalSessionPending] = useState(
-    () => Boolean(portalApi.loadSession()?.accessToken),
+  const [portalSessionPending, setPortalSessionPending] = useState(() =>
+    Boolean(portalApi.loadSession()?.accessToken),
   );
 
   useEffect(() => {
@@ -949,17 +1009,20 @@ export function ApiKeyLookupPage() {
       setLastUpdatedAt(null);
       setStats({ total: 0, success_rate: 0, total_tokens: 0, total_cost: 0 });
       setFilterOptions({
+        api_key_ids: [],
+        api_key_id_names: {},
+        api_key_id_counts: {},
         models: [],
         statuses: ["success", "failed"],
       });
+      setSelectedApiKeyIds(null);
       setSelectedModels(null);
       setSelectedStatuses(null);
       setQuotaLimits(null);
 
       // Prefill usage from this account's cache; cold accounts still skeleton.
       const nextChartKey = `account:${target.user.id}|${timeRange}`;
-      const cached =
-        chartCacheRef.current[nextChartKey] || readStoredChartCache(nextChartKey);
+      const cached = chartCacheRef.current[nextChartKey] || readStoredChartCache(nextChartKey);
       if (cached) {
         chartCacheRef.current[nextChartKey] = cached;
         setChartData(cached);
@@ -1011,9 +1074,65 @@ export function ApiKeyLookupPage() {
     }
   }, []);
 
+  const syncPortalKeys = useCallback(async () => {
+    const syncId = portalKeySyncIdRef.current + 1;
+    portalKeySyncIdRef.current = syncId;
+    setPortalKeysLoading(true);
+    let listed = false;
+    try {
+      const keys = await portalApi.listKeys();
+      if (syncId !== portalKeySyncIdRef.current) return;
+      listed = true;
+      const items = keys.items ?? [];
+      setPortalKeys(items);
+      const activeKey = items.find((item) => item.id === operationalKeyId && !item.disabled);
+      const nextKey = activeKey ?? items.find((item) => !item.disabled);
+      if (!nextKey) {
+        handleApiKeyInputChange("");
+        return;
+      }
+      const secret = await portalApi.keySecret(nextKey.id);
+      if (syncId !== portalKeySyncIdRef.current) return;
+      const plaintext = secret.key?.trim();
+      if (!plaintext) {
+        handleApiKeyInputChange("");
+        return;
+      }
+      setOperationalKeyId(nextKey.id);
+      setApiKeyInput(plaintext);
+      setQueriedKey(plaintext);
+      setLoginModalOpen(false);
+    } catch {
+      // Once the authoritative key list was loaded, never retain a secret that
+      // could have been revoked by a concurrent management-side mutation.
+      if (syncId === portalKeySyncIdRef.current && listed) handleApiKeyInputChange("");
+    } finally {
+      if (syncId === portalKeySyncIdRef.current) setPortalKeysLoading(false);
+    }
+  }, [handleApiKeyInputChange, operationalKeyId]);
+
+  useEffect(() => {
+    if (activeTab !== "keys" || !portalUser || portalUser.must_change_password) return;
+    void syncPortalKeys();
+  }, [activeTab, portalUser, syncPortalKeys]);
+
+  useEffect(() => {
+    if (!portalUser || portalUser.must_change_password) return;
+    const syncOnFocus = () => void syncPortalKeys();
+    const syncOnVisibility = () => {
+      if (document.visibilityState === "visible") void syncPortalKeys();
+    };
+    window.addEventListener("focus", syncOnFocus);
+    document.addEventListener("visibilitychange", syncOnVisibility);
+    return () => {
+      window.removeEventListener("focus", syncOnFocus);
+      document.removeEventListener("visibilitychange", syncOnVisibility);
+    };
+  }, [portalUser, syncPortalKeys]);
+
   const handleRefresh = useCallback(() => {
     if (activeTab === "keys") {
-      void refreshPortalKeys();
+      void syncPortalKeys();
       return;
     }
     if (activeTab === "usage" && usageSubject) {
@@ -1032,7 +1151,7 @@ export function ApiKeyLookupPage() {
     fetchLogs,
     fetchChartDataFn,
     fetchModelsFn,
-    refreshPortalKeys,
+    syncPortalKeys,
     usageSubject,
   ]);
 
@@ -1226,7 +1345,9 @@ export function ApiKeyLookupPage() {
                                   <DropdownMenu.Item
                                     key={account.accountKey}
                                     disabled={isCurrent}
-                                    className={isCurrent ? "data-[disabled]:opacity-100" : undefined}
+                                    className={
+                                      isCurrent ? "data-[disabled]:opacity-100" : undefined
+                                    }
                                     data-testid={
                                       isCurrent
                                         ? "apikey-lookup-current-account"
@@ -1328,7 +1449,7 @@ export function ApiKeyLookupPage() {
                     ? {
                         loading: portalKeysLoading,
                         busy: portalKeysBusy,
-                        onRefresh: () => void refreshPortalKeys(),
+                        onRefresh: () => void syncPortalKeys(),
                         onCreate: () => {
                           setCreateKeyName("");
                           setCreateKeyError(null);
@@ -1392,12 +1513,16 @@ export function ApiKeyLookupPage() {
               {activeTab === "logs" && usageReady ? (
                 <PublicLogsSection
                   t={t}
+                  keyOptions={keyOptions}
                   modelOptions={modelOptions}
                   statusOptions={statusOptions}
+                  selectedApiKeyIds={selectedApiKeyIds}
                   selectedModels={selectedModels}
                   selectedStatuses={selectedStatuses}
+                  onApiKeyIdsChange={handleApiKeyIdsChange}
                   onModelsChange={handleModelsChange}
                   onStatusesChange={handleStatusesChange}
+                  onApiKeyIdsClear={clearApiKeyIdFilter}
                   onModelsClear={clearModelFilter}
                   onStatusesClear={clearStatusFilter}
                   stats={stats}

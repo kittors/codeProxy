@@ -1,5 +1,23 @@
 import { describe, expect, it } from "vitest";
-import { toIsoDateTime, toLocalDateTimeInput } from "../tenantForm";
+import {
+  isTenantNameTooLong,
+  TENANT_NAME_MAX_LENGTH,
+  toIsoDateTime,
+  toLocalDateTimeInput,
+} from "../tenantForm";
+
+describe("tenant name length", () => {
+  it("allows names within the UTF-8 byte limit", () => {
+    expect(isTenantNameTooLong("a".repeat(TENANT_NAME_MAX_LENGTH))).toBe(false);
+    expect(isTenantNameTooLong("无境科技AI开发小组")).toBe(false);
+  });
+
+  it("rejects names over the UTF-8 byte limit", () => {
+    expect(isTenantNameTooLong("a".repeat(TENANT_NAME_MAX_LENGTH + 1))).toBe(true);
+    // 43 CJK chars * 3 bytes = 129 > 128
+    expect(isTenantNameTooLong("开".repeat(43))).toBe(true);
+  });
+});
 
 describe("toIsoDateTime", () => {
   it("returns null for empty expiry instead of throwing Invalid time value", () => {

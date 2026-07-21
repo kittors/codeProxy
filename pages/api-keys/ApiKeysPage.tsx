@@ -27,6 +27,7 @@ import { Card } from "@code-proxy/ui";
 import { Button } from "@code-proxy/ui";
 import { EmptyState } from "@code-proxy/ui";
 import { Modal } from "@code-proxy/ui";
+import { ConfirmModal } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
 import { DataTable } from "@code-proxy/ui";
 import { ApiKeyFormModal } from "./components/ApiKeyFormModal";
@@ -65,6 +66,7 @@ export function ApiKeysPage({
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
+  const [rotateIndex, setRotateIndex] = useState<number | null>(null);
   const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
   const [batchDeleteOpen, setBatchDeleteOpen] = useState(false);
   const [deleteLogsOnDelete, setDeleteLogsOnDelete] = useState(true);
@@ -386,11 +388,13 @@ export function ApiKeysPage({
 
   const handleEdit = async () => {
     if (editIndex === null) return;
+    const currentEntry = entries[editIndex];
+    if (!currentEntry) return;
     if (!form.name.trim()) {
       notify({ type: "error", message: t("api_keys_page.name_required") });
       return;
     }
-    const originalKey = entries[editIndex].key;
+    const originalKey = currentEntry.key;
     const newKey = form.key.trim();
     if (!endUserIdFilter && !newKey) {
       notify({ type: "error", message: t("api_keys_page.key_empty") });
@@ -398,41 +402,38 @@ export function ApiKeysPage({
     }
     setSaving(true);
     try {
-      if (!entries[editIndex].id && endUserIdFilter) {
-        notify({ type: "error", message: t("api_keys_page.update_failed") });
-        return;
-      }
       // Owned keys: only rename; account holds quota/permissions.
       if (endUserIdFilter) {
-        await apiKeyEntriesApi.update({
-          id: entries[editIndex].id,
-          value: { name: form.name.trim() },
-        });
+        if (!currentEntry.id) {
+          notify({ type: "error", message: t("api_keys_page.update_failed") });
+          return;
+        }
+        await endUsersApi.updateKeyName(endUserIdFilter, currentEntry.id, form.name.trim());
       } else {
         const permissionPatch =
           form.permissionProfileId === CUSTOM_PERMISSION_PROFILE_ID
             ? {
-                "permission-profile-id": entries[editIndex]["permission-profile-id"] ?? "",
-                "daily-limit": entries[editIndex]["daily-limit"] ?? 0,
-                "total-quota": entries[editIndex]["total-quota"] ?? 0,
-                "spending-limit": entries[editIndex]["spending-limit"] ?? 0,
-                "daily-spending-limit": entries[editIndex]["daily-spending-limit"] ?? 0,
-                "concurrency-limit": entries[editIndex]["concurrency-limit"] ?? 0,
-                "rpm-limit": entries[editIndex]["rpm-limit"] ?? 0,
-                "tpm-limit": entries[editIndex]["tpm-limit"] ?? 0,
-                "allowed-models": entries[editIndex]["allowed-models"] ?? [],
-                "allowed-channels": entries[editIndex]["allowed-channels"] ?? [],
-                "allowed-channel-groups": entries[editIndex]["allowed-channel-groups"] ?? [],
-                "system-prompt": entries[editIndex]["system-prompt"] ?? "",
+                "permission-profile-id": currentEntry["permission-profile-id"] ?? "",
+                "daily-limit": currentEntry["daily-limit"] ?? 0,
+                "total-quota": currentEntry["total-quota"] ?? 0,
+                "spending-limit": currentEntry["spending-limit"] ?? 0,
+                "daily-spending-limit": currentEntry["daily-spending-limit"] ?? 0,
+                "concurrency-limit": currentEntry["concurrency-limit"] ?? 0,
+                "rpm-limit": currentEntry["rpm-limit"] ?? 0,
+                "tpm-limit": currentEntry["tpm-limit"] ?? 0,
+                "allowed-models": currentEntry["allowed-models"] ?? [],
+                "allowed-channels": currentEntry["allowed-channels"] ?? [],
+                "allowed-channel-groups": currentEntry["allowed-channel-groups"] ?? [],
+                "system-prompt": currentEntry["system-prompt"] ?? "",
               }
             : applyApiKeyPermissionProfile(
                 { key: newKey },
                 selectedPermissionProfile(form.permissionProfileId),
               );
         await apiKeyEntriesApi.update({
-          id: entries[editIndex].id,
+          id: currentEntry.id,
           // Never pass filtered list index to tenant-wide index resolver.
-          ...(entries[editIndex].id ? {} : { index: editIndex }),
+          ...(currentEntry.id ? {} : { index: editIndex }),
           value: {
             ...(newKey !== originalKey ? { key: newKey } : {}),
             name: form.name.trim(),
@@ -447,6 +448,36 @@ export function ApiKeysPage({
       notify({
         type: "error",
         message: err instanceof Error ? err.message : t("api_keys_page.update_failed"),
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRotate = async () => {
+    if (rotateIndex === null || !endUserIdFilter) return;
+    const target = entries[rotateIndex];
+    if (!target?.id) {
+      notify({ type: "error", message: t("api_keys_page.operation_failed") });
+      return;
+    }
+    setSaving(true);
+    try {
+      const rotated = await endUsersApi.rotateKey(endUserIdFilter, target.id);
+      if (rotated.plaintext_key) {
+        setCreatedSecretOnce(rotated.plaintext_key);
+        void copyTextToClipboard(rotated.plaintext_key).catch(() => undefined);
+      }
+      setRotateIndex(null);
+      notify({
+        type: "success",
+        message: t("end_users.rotate_key_success", { defaultValue: "密钥已轮换，旧密钥已失效" }),
+      });
+      await loadEntries();
+    } catch (err: unknown) {
+      notify({
+        type: "error",
+        message: err instanceof Error ? err.message : t("api_keys_page.operation_failed"),
       });
     } finally {
       setSaving(false);
@@ -683,6 +714,7 @@ export function ApiKeysPage({
         onViewUsage: handleViewUsage,
         onCopy: (key) => void handleCopy(key),
         onImportToCcSwitch: handleOpenCcSwitchImport,
+        onRotate: setRotateIndex,
         onEdit: handleOpenEdit,
         onDelete: handleOpenDelete,
         onResetDailySpending: (index) => void handleResetDailySpending(index),
@@ -696,6 +728,7 @@ export function ApiKeysPage({
       handleViewUsage,
       handleCopy,
       handleOpenCcSwitchImport,
+      setRotateIndex,
       handleOpenEdit,
       handleOpenDelete,
       handleResetDailySpending,
@@ -835,7 +868,20 @@ export function ApiKeysPage({
         onClose={() => setEditIndex(null)}
         onSubmit={handleEdit}
         regenerateKey={() => setForm((prev) => ({ ...prev, key: generateApiKey() }))}
+        serverGeneratesKey={Boolean(endUserIdFilter)}
         hidePermissionProfile={Boolean(endUserIdFilter)}
+      />
+
+      <ConfirmModal
+        open={rotateIndex !== null}
+        onClose={() => setRotateIndex(null)}
+        title={t("end_users.rotate_key_title", { defaultValue: "轮换 API 密钥" })}
+        description={t("end_users.rotate_key_desc", {
+          defaultValue: "轮换后旧密钥会立即失效。新密钥只展示一次，请立即复制并更新调用方。",
+        })}
+        confirmText={t("end_users.rotate_key", { defaultValue: "轮换密钥" })}
+        busy={saving}
+        onConfirm={() => void handleRotate()}
       />
 
       <Modal

@@ -11,6 +11,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -868,14 +869,17 @@ function ShellSidebar({
       {pendingTo && <div className={progressDone ? "rp rp-done" : "rp"} />}
       <aside
         data-collapsed={railCollapsed ? "true" : "false"}
+        data-mobile-open={isMobile ? (collapsed ? "false" : "true") : undefined}
         className={[
           "group/sidebar shrink-0 overflow-visible bg-white/94 dark:bg-neutral-950/88",
           isMobile ? "fixed inset-y-0 left-0 z-40 w-60" : "relative z-30 h-[100dvh]",
           "border-r border-slate-200 shadow-[12px_0_28px_rgba(15,23,42,0.04)] dark:border-neutral-800",
-          "motion-reduce:transition-none motion-safe:transition-[width,transform,background-color,border-color] motion-safe:duration-300 motion-safe:ease-[cubic-bezier(0.22,1,0.36,1)]",
+          isMobile
+            ? "will-change-transform motion-reduce:transition-none motion-safe:transition-transform motion-safe:duration-[320ms] motion-safe:ease-[cubic-bezier(0.22,1,0.36,1)]"
+            : "motion-reduce:transition-none motion-safe:transition-[width,background-color,border-color,box-shadow] motion-safe:duration-300 motion-safe:ease-[cubic-bezier(0.22,1,0.36,1)]",
           isMobile
             ? collapsed
-              ? "-translate-x-full"
+              ? "pointer-events-none -translate-x-full shadow-none"
               : "translate-x-0"
             : visualRailCollapsed
               ? "w-16"
@@ -1204,7 +1208,7 @@ function ShellHeader({
               aria-label={t("shell.switch_tenant")}
               searchPlaceholder={t("shell.search_tenant")}
               placeholder={t("shell.switch_tenant")}
-              className="hidden w-auto max-w-48 min-w-0 gap-1 border-0 bg-transparent px-2 text-slate-600 shadow-none hover:border-0 hover:bg-slate-100 hover:text-slate-950 focus-visible:border-0 focus-visible:ring-2 focus-visible:ring-blue-500/25 sm:inline-flex dark:bg-transparent dark:text-slate-300 dark:hover:border-0 dark:hover:bg-white/10 dark:hover:text-white dark:focus-visible:border-0 [&>span:first-child]:flex-none [&>span:first-child]:max-w-36 [&>svg]:ml-0"
+              className="hidden w-auto max-w-64 min-w-0 gap-1 border-0 bg-transparent px-2 text-slate-600 shadow-none hover:border-0 hover:bg-slate-100 hover:text-slate-950 focus-visible:border-0 focus-visible:ring-2 focus-visible:ring-blue-500/25 sm:inline-flex dark:bg-transparent dark:text-slate-300 dark:hover:border-0 dark:hover:bg-white/10 dark:hover:text-white dark:focus-visible:border-0 [&>span:first-child]:flex-none [&>span:first-child]:max-w-52 [&>svg]:ml-0"
             />
           ) : null}
           <LanguageSelector className="inline-flex h-9 items-center justify-center gap-0.5 rounded-xl px-1.5 text-slate-500 transition-colors duration-200 ease-out hover:text-slate-900 dark:text-slate-400 dark:hover:text-white" />
@@ -1321,6 +1325,34 @@ export function AppShell({ children, onLogout }: PropsWithChildren<{ onLogout?: 
   );
 
   const sidebarCollapsed = isMobile ? !mobileSidebarOpen : desktopSidebarCollapsed;
+  const mobileSidebarLayer = isMobile
+    ? createPortal(
+        <>
+          <button
+            type="button"
+            data-testid="app-shell-mobile-sidebar-backdrop"
+            className={[
+              "fixed inset-0 z-30 bg-black/35 backdrop-blur-[1px]",
+              "motion-reduce:transition-none motion-safe:transition-[opacity,backdrop-filter] motion-safe:duration-[320ms] motion-safe:ease-[cubic-bezier(0.22,1,0.36,1)]",
+              mobileSidebarOpen
+                ? "opacity-100"
+                : "pointer-events-none opacity-0",
+            ].join(" ")}
+            aria-label={t("common.close")}
+            aria-hidden={!mobileSidebarOpen}
+            tabIndex={mobileSidebarOpen ? 0 : -1}
+            onClick={() => setMobileSidebarOpen(false)}
+          />
+          <ShellSidebar
+            collapsed={sidebarCollapsed}
+            mode="mobile"
+            onToggleSidebar={toggleSidebar}
+            onNavigate={() => setMobileSidebarOpen(false)}
+          />
+        </>,
+        document.body,
+      )
+    : null;
 
   return (
     <ShellContext value={value}>
@@ -1331,21 +1363,15 @@ export function AppShell({ children, onLogout }: PropsWithChildren<{ onLogout?: 
         >
           {t("shell.skip_to_content")}
         </a>
-        {isMobile && mobileSidebarOpen ? (
-          <button
-            type="button"
-            className="fixed inset-0 z-30 bg-black/35 backdrop-blur-[1px]"
-            aria-label={t("common.close")}
-            onClick={() => setMobileSidebarOpen(false)}
-          />
-        ) : null}
+        {mobileSidebarLayer}
         <div className="flex h-[100dvh] overflow-hidden">
-          <ShellSidebar
-            collapsed={sidebarCollapsed}
-            mode={isMobile ? "mobile" : "desktop"}
-            onToggleSidebar={toggleSidebar}
-            onNavigate={isMobile ? () => setMobileSidebarOpen(false) : undefined}
-          />
+          {isMobile ? null : (
+            <ShellSidebar
+              collapsed={sidebarCollapsed}
+              mode="desktop"
+              onToggleSidebar={toggleSidebar}
+            />
+          )}
           <div className="flex min-w-0 flex-1 flex-col">
             <ShellHeader
               isMobile={isMobile}

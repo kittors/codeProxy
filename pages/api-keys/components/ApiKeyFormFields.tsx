@@ -39,11 +39,16 @@ export function ApiKeyFormFields({
         />
       </div>
 
-      {serverGeneratesKey && !editMode ? (
+      {serverGeneratesKey ? (
         <p className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:border-neutral-800 dark:bg-neutral-900/50 dark:text-white/60">
-          {t("end_users.key_server_generated", {
-            defaultValue: "创建后由服务端生成唯一 API Key，并仅展示一次（将尝试复制到剪贴板）。",
-          })}
+          {editMode
+            ? t("end_users.key_rotate_only", {
+                defaultValue: "密钥值不能直接编辑。需要更换凭证时，请使用独立的“轮换密钥”操作。",
+              })
+            : t("end_users.key_server_generated", {
+                defaultValue:
+                  "创建后由服务端生成唯一 API Key，并仅展示一次（将尝试复制到剪贴板）。",
+              })}
         </p>
       ) : (
         <div>

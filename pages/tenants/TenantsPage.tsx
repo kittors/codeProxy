@@ -17,7 +17,12 @@ import {
   useToast,
 } from "@code-proxy/ui";
 import { PermissionGate } from "@app/guards/PermissionGate";
-import { toIsoDateTime, toLocalDateTimeInput } from "./tenantForm";
+import {
+  isTenantNameTooLong,
+  TENANT_NAME_MAX_LENGTH,
+  toIsoDateTime,
+  toLocalDateTimeInput,
+} from "./tenantForm";
 
 const emptyCreateForm = {
   name: "",
@@ -253,8 +258,10 @@ export function TenantsPage() {
   const validateCreateForm = useCallback((): CreateFormErrors => {
     const errors: CreateFormErrors = {};
     const requiredMsg = t("identity_admin.field_required");
+    const nameTooLongMsg = t("identity_admin.name_too_long", { max: TENANT_NAME_MAX_LENGTH });
 
     if (!createForm.name.trim()) errors.name = requiredMsg;
+    else if (isTenantNameTooLong(createForm.name)) errors.name = nameTooLongMsg;
     if (!createForm.admin_username.trim()) errors.admin_username = requiredMsg;
     if (!createForm.admin_display_name.trim()) errors.admin_display_name = requiredMsg;
 
@@ -311,6 +318,17 @@ export function TenantsPage() {
   const saveTenant = async (event: FormEvent) => {
     event.preventDefault();
     if (!editTenant) return;
+    if (!editForm.name.trim()) {
+      notify({ type: "error", message: t("identity_admin.field_required") });
+      return;
+    }
+    if (isTenantNameTooLong(editForm.name)) {
+      notify({
+        type: "error",
+        message: t("identity_admin.name_too_long", { max: TENANT_NAME_MAX_LENGTH }),
+      });
+      return;
+    }
     const success = await run(
       () =>
         identityApi.updateTenant(editTenant.id, {
@@ -423,6 +441,7 @@ export function TenantsPage() {
               <TextInput
                 aria-label={t("identity_admin.name")}
                 value={createForm.name}
+                maxLength={TENANT_NAME_MAX_LENGTH}
                 onChange={(event) => updateCreateField("name", event.target.value)}
               />
             </FormField>
@@ -540,6 +559,7 @@ export function TenantsPage() {
           <FormField label={t("identity_admin.name")} required orientation="horizontal">
             <TextInput
               value={editForm.name}
+              maxLength={TENANT_NAME_MAX_LENGTH}
               onChange={(event) => setEditForm({ ...editForm, name: event.target.value })}
               required
             />

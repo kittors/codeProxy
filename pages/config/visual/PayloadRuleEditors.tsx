@@ -14,9 +14,9 @@ import {
   VISUAL_CONFIG_PROTOCOL_OPTIONS,
 } from "@features/visual-config-editor";
 import { Button } from "@code-proxy/ui";
-import { Card } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
 import { Select } from "@code-proxy/ui";
+import { HintCard as Card } from "./VisualHint";
 
 function SelectInput({
   value,

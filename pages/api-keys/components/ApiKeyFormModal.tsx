@@ -36,7 +36,15 @@ export function ApiKeyFormModal({
       open={open}
       onClose={onClose}
       title={editMode ? t("api_keys_page.edit") : t("api_keys_page.create")}
-      description={editMode ? t("api_keys_page.edit_desc") : t("api_keys_page.create_desc")}
+      description={
+        editMode
+          ? serverGeneratesKey
+            ? t("end_users.edit_key_name_desc", {
+                defaultValue: "仅修改密钥名称；如需更换密钥值，请使用独立的轮换操作。",
+              })
+            : t("api_keys_page.edit_desc")
+          : t("api_keys_page.create_desc")
+      }
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>

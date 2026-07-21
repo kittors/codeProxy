@@ -190,7 +190,6 @@
   },
   "login": {
     "subtitle": "Введите данные подключения, чтобы получить доступ к панели управления",
-    "account_login_hint": "Используйте имя пользователя и пароль. Арендатор определяется автоматически.",
     "tenant_expired": "Срок действия арендатора истек. Обратитесь к администратору платформы для продления.",
     "tenant_suspended": "Арендатор приостановлен или отключен. Обратитесь к администратору платформы.",
     "account_unavailable": "Учетная запись отключена или заблокирована. Обратитесь к администратору арендатора.",
@@ -614,6 +613,9 @@
     "status_refresh_timeout": "Истекло время ожидания обновления статуса аккаунта",
     "status_refresh_job_lost": "Задача обновления статуса потеряна; загружен последний снимок",
     "status_refresh_in_progress": "Обновление статуса страницы уже выполняется",
+    "card_columns": "Карточек в ряду",
+    "card_columns_option": "{{count}} колонок",
+    "more_tags": "Ещё {{count}} меток",
     "reset_credits_badge": "Reset {{count}} times",
     "reset_credits_query": "Query reset credits",
     "reset_credit_expirations": "Reset credit expiration times:\n{{times}}",
@@ -2499,6 +2501,7 @@
     "expires_at_required": "Укажите дату и время окончания.",
     "expires_at_invalid": "Некорректная дата и время окончания.",
     "field_required": "Это поле обязательно.",
+    "name_too_long": "Название не может превышать {{max}} символов.",
     "admin_username": "Имя администратора",
     "admin_display_name": "Отображаемое имя администратора",
     "admin_password": "Пароль администратора",
@@ -2665,7 +2668,11 @@
     "no_project_method": "Метод проекта не записан.",
     "audit_log_detail_title": "Детали журнала аудита",
     "delete_audit_log_confirm": "Удалить эту запись аудита?",
-    "audit_log_deleted": "Запись аудита удалена."
+    "audit_log_deleted": "Запись аудита удалена.",
+    "clear_audit_logs": "Очистить все",
+    "clear_audit_logs_confirm": "Очистить все записи аудита в текущей области видимости? Это действие нельзя отменить.",
+    "clear_audit_logs_confirm_button": "Очистить все",
+    "audit_logs_cleared": "Очищено записей аудита: {{count}}."
   },
   "apikey_lookup": {
     "available_models": "Model Plaza",

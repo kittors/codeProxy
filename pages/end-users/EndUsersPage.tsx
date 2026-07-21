@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import {
   BarChart3,
   Infinity as InfinityIcon,
+  Info,
   Key,
   KeyRound,
   Pencil,
@@ -18,6 +19,7 @@ import {
   type ApiKeyPermissionProfile,
   type CreateEndUserResult,
   type EndUser,
+  type EndUserDailySpendingResetEvent,
   type EndUserUpdateBody,
 } from "@code-proxy/api-client";
 import {
@@ -25,6 +27,7 @@ import {
   Card,
   ConfirmModal,
   DataTable,
+  HoverTooltip,
   Modal,
   SecretRevealModal,
   Select,
@@ -38,6 +41,7 @@ import { useApiKeyPermissionOptions } from "@features/api-key-restrictions";
 import { ErrorDetailModal, LogContentModal } from "@features/log-content-viewer";
 import { ApiKeyUsageModal } from "../api-keys/components/ApiKeyUsageModal";
 import { useApiKeyUsageView } from "../api-keys/hooks/useApiKeyUsageView";
+import { EndUserResetHistoryModal } from "./components/EndUserResetHistoryModal";
 
 const emptyForm = { username: "", displayName: "", password: "", permissionProfileId: "" };
 
@@ -117,6 +121,13 @@ export function EndUsersPage() {
   const [generatedReset, setGeneratedReset] = useState("");
   const [deleteUser, setDeleteUser] = useState<EndUser | null>(null);
   const [keysUser, setKeysUser] = useState<EndUser | null>(null);
+  const [resetHistoryUser, setResetHistoryUser] = useState<EndUser | null>(null);
+  const [resetHistoryLoading, setResetHistoryLoading] = useState(false);
+  const [resetHistoryEvents, setResetHistoryEvents] = useState<EndUserDailySpendingResetEvent[]>(
+    [],
+  );
+  const [resetHistoryRawTodayCost, setResetHistoryRawTodayCost] = useState<number>();
+  const [resetHistoryDailySpendingUsed, setResetHistoryDailySpendingUsed] = useState<number>();
   const [busy, setBusy] = useState(false);
   const [permissionProfiles, setPermissionProfiles] = useState<ApiKeyPermissionProfile[]>([]);
   const canWrite = can("end_users.write");
@@ -233,14 +244,33 @@ export function EndUsersPage() {
       if (!((row["daily-spending-limit"] ?? 0) > 0)) return;
       setBusy(true);
       try {
-        await endUsersApi.resetDailySpending(row.id);
+        const result = await endUsersApi.resetDailySpending(row.id);
         notify({
           type: "success",
           message: t("end_users.reset_today_spending_success", {
             defaultValue: "已重置该账号今日消费",
           }),
         });
-        await load();
+        const resetCount = result["daily-spending-reset-count"];
+        if (typeof resetCount === "number" && Number.isFinite(resetCount)) {
+          const dailySpendingUsed = result["daily-spending-used"];
+          setUsers((current) =>
+            current.map((user) =>
+              user.id === row.id
+                ? {
+                    ...user,
+                    "daily-spending-reset-count": resetCount,
+                    "daily-spending-used":
+                      typeof dailySpendingUsed === "number" && Number.isFinite(dailySpendingUsed)
+                        ? dailySpendingUsed
+                        : user["daily-spending-used"],
+                  }
+                : user,
+            ),
+          );
+        } else {
+          await load();
+        }
       } catch (e) {
         notify({ type: "error", message: e instanceof Error ? e.message : "failed" });
       } finally {
@@ -250,9 +280,42 @@ export function EndUsersPage() {
     [load, notify, t],
   );
 
+  const handleViewResetHistory = useCallback(
+    async (row: EndUser) => {
+      setResetHistoryUser(row);
+      setResetHistoryEvents([]);
+      setResetHistoryRawTodayCost(undefined);
+      setResetHistoryDailySpendingUsed(row["daily-spending-used"]);
+      setResetHistoryLoading(true);
+      try {
+        const response = await endUsersApi.listDailySpendingResetHistory(row.id, 200);
+        setResetHistoryEvents(Array.isArray(response?.items) ? response.items : []);
+        setResetHistoryRawTodayCost(response?.["raw-today-cost"]);
+        setResetHistoryDailySpendingUsed(
+          response?.["daily-spending-used"] ?? row["daily-spending-used"],
+        );
+      } catch (e) {
+        notify({
+          type: "error",
+          message:
+            e instanceof Error
+              ? e.message
+              : t("end_users.reset_history_load_failed", {
+                  defaultValue: "加载重置历史失败",
+                }),
+        });
+        setResetHistoryUser(null);
+      } finally {
+        setResetHistoryLoading(false);
+      }
+    },
+    [notify, t],
+  );
+
   const handleViewUserUsage = useCallback(
     async (row: EndUser) => {
-      const name = row.display_name || row.username || t("end_users.unnamed", { defaultValue: "未命名用户" });
+      const name =
+        row.display_name || row.username || t("end_users.unnamed", { defaultValue: "未命名用户" });
       try {
         const entries = await apiKeyEntriesApi.list();
         const keyNames: Record<string, string> = {};
@@ -382,6 +445,42 @@ export function EndUsersPage() {
             row["daily-spending-limit"],
             todayUnlimitedLabel,
           ),
+      },
+      {
+        key: "dailySpendingResetCount",
+        label: t("end_users.daily_reset_count", { defaultValue: "当日重置次数" }),
+        width: "w-[120px] min-w-[110px]",
+        minWidthPx: 100,
+        maxWidthPx: 180,
+        headerClassName: "text-center",
+        cellClassName: "text-center whitespace-nowrap text-slate-700 dark:text-white/70",
+        headerRender: () => (
+          <HoverTooltip
+            content={t("end_users.reset_count_help", {
+              defaultValue: "该用户今日消费额度被手动重置的次数。点击可查看所有日期的详细历史。",
+            })}
+            className="inline-flex items-center gap-1"
+          >
+            <span>{t("end_users.daily_reset_count", { defaultValue: "当日重置次数" })}</span>
+            <Info size={12} className="text-slate-400 dark:text-white/40" />
+          </HoverTooltip>
+        ),
+        render: (row) => {
+          const count = row["daily-spending-reset-count"] ?? 0;
+          if (count <= 0) {
+            return <span className="tabular-nums text-slate-400 dark:text-white/40">0</span>;
+          }
+          return (
+            <button
+              type="button"
+              onClick={() => void handleViewResetHistory(row)}
+              className="tabular-nums font-medium text-orange-600 underline-offset-2 hover:underline dark:text-orange-400"
+              aria-label={t("end_users.view_reset_history", { defaultValue: "查看重置历史" })}
+            >
+              {count}
+            </button>
+          );
+        },
       },
       {
         key: "totalQuota",
@@ -525,7 +624,12 @@ export function EndUsersPage() {
                 </Button>
               ) : null}
               {canWrite ? (
-                <Button size="sm" variant="ghost" title="重置密码" onClick={() => setResetUser(row)}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  title="重置密码"
+                  onClick={() => setResetUser(row)}
+                >
                   <KeyRound className="h-4 w-4" />
                 </Button>
               ) : null}
@@ -543,6 +647,7 @@ export function EndUsersPage() {
       busy,
       can,
       canWrite,
+      handleViewResetHistory,
       handleViewUserUsage,
       profileNameById,
       resetTodaySpending,
@@ -952,6 +1057,28 @@ export function EndUsersPage() {
           </Suspense>
         ) : null}
       </Modal>
+
+      <EndUserResetHistoryModal
+        open={resetHistoryUser !== null}
+        onClose={() => {
+          setResetHistoryUser(null);
+          setResetHistoryEvents([]);
+          setResetHistoryRawTodayCost(undefined);
+          setResetHistoryDailySpendingUsed(undefined);
+        }}
+        userName={
+          resetHistoryUser
+            ? resetHistoryUser.display_name.trim() &&
+              resetHistoryUser.display_name.trim() !== resetHistoryUser.username.trim()
+              ? `${resetHistoryUser.display_name.trim()} / ${resetHistoryUser.username.trim()}`
+              : resetHistoryUser.display_name.trim() || resetHistoryUser.username.trim()
+            : ""
+        }
+        loading={resetHistoryLoading}
+        events={resetHistoryEvents}
+        rawTodayCost={resetHistoryRawTodayCost}
+        dailySpendingUsed={resetHistoryDailySpendingUsed}
+      />
 
       <ApiKeyUsageModal
         open={usageViewKey !== null}

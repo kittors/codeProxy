@@ -120,8 +120,9 @@ export function ApiKeyUsageModal({
             placeholder={t("request_logs.all_keys_placeholder")}
             searchPlaceholder={t("request_logs.search_keys")}
             aria-label={t("request_logs.filter_key")}
-            className="w-full sm:w-auto"
+            className="w-full sm:w-[220px]"
             size="sm"
+            dropdownMinWidth={300}
           />
           <SearchableSelect
             value={usageChannelQuery}

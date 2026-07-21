@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { useId, type ReactNode } from "react";
 
 export function ToggleSwitch({
   checked,
@@ -10,8 +10,8 @@ export function ToggleSwitch({
 }: {
   checked: boolean;
   onCheckedChange: (next: boolean) => void;
-  label?: string;
-  description?: string;
+  label?: ReactNode;
+  description?: ReactNode;
   disabled?: boolean;
   ariaLabel?: string;
 }) {
@@ -24,7 +24,7 @@ export function ToggleSwitch({
       type="button"
       role="switch"
       aria-checked={checked}
-      aria-label={label || ariaLabel}
+      aria-label={ariaLabel ?? (typeof label === "string" ? label : undefined)}
       disabled={disabled}
       onClick={() => onCheckedChange(!checked)}
       className={[
