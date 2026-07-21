@@ -17,12 +17,22 @@ vi.mock("../../client/client", () => ({
   },
 }));
 
-describe("endUsersApi key mutations", () => {
+describe("endUsersApi", () => {
   beforeEach(() => {
     mocks.get.mockReset();
     mocks.post.mockReset();
     mocks.patch.mockReset();
     mocks.delete.mockReset();
+  });
+
+  test("loads end-user daily spending reset history with a limit", async () => {
+    mocks.get.mockResolvedValue({ items: [], total: 0 });
+
+    await endUsersApi.listDailySpendingResetHistory("user-1", 200);
+
+    expect(mocks.get).toHaveBeenCalledWith(
+      "/end-users/user-1/daily-spending/reset-history?limit=200",
+    );
   });
 
   test("renames and rotates keys through owner-scoped endpoints", async () => {

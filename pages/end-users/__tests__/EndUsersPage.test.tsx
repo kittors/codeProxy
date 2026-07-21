@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   list: vi.fn(),
   update: vi.fn(),
   resetDailySpending: vi.fn(),
+  listDailySpendingResetHistory: vi.fn(),
   permissionProfiles: vi.fn(async () => []),
 }));
 
@@ -30,6 +31,7 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
       list: mocks.list,
       update: mocks.update,
       resetDailySpending: mocks.resetDailySpending,
+      listDailySpendingResetHistory: mocks.listDailySpendingResetHistory,
     },
   };
 });
@@ -47,6 +49,7 @@ const users = [
     version: 1,
     api_key_count: 2,
     "daily-spending-used": 12,
+    "daily-spending-reset-count": 0,
     "daily-spending-limit": 0,
   },
   {
@@ -61,9 +64,20 @@ const users = [
     version: 1,
     api_key_count: 1,
     "daily-spending-used": 120,
+    "daily-spending-reset-count": 2,
     "daily-spending-limit": 300,
   },
 ];
+
+function renderPage() {
+  render(
+    <ThemeProvider>
+      <ToastProvider>
+        <EndUsersPage />
+      </ToastProvider>
+    </ThemeProvider>,
+  );
+}
 
 describe("EndUsersPage account semantics", () => {
   beforeEach(async () => {
@@ -73,21 +87,37 @@ describe("EndUsersPage account semantics", () => {
     mocks.update.mockResolvedValue(users[0]);
     mocks.resetDailySpending.mockResolvedValue({
       status: "ok",
-      end_user_id: "user-active",
+      end_user_id: "user-frozen",
       "daily-spending-used": 0,
-      "effective-used-before": 12,
-      "raw-today-cost": 12,
+      "daily-spending-reset-count": 3,
+      "effective-used-before": 120,
+      "raw-today-cost": 120,
+    });
+    mocks.listDailySpendingResetHistory.mockResolvedValue({
+      items: [
+        {
+          id: 41,
+          reset_at: "2026-07-20T10:00:00Z",
+          actor_username: "admin-1",
+          effective_used_before: 12.5,
+          raw_today_cost: 92.25,
+        },
+        {
+          id: 42,
+          reset_at: "2026-07-21T11:00:00Z",
+          actor_kind: "service_credential",
+          effective_used_before: 28.25,
+          raw_today_cost: 148.25,
+        },
+      ],
+      total: 2,
+      "raw-today-cost": 175.5,
+      "daily-spending-used": 28.25,
     });
   });
 
-  test("shows account status, aggregated today usage, and account-level reset/freeze actions", async () => {
-    render(
-      <ThemeProvider>
-        <ToastProvider>
-          <EndUsersPage />
-        </ToastProvider>
-      </ThemeProvider>,
-    );
+  test("shows account status, reset count, and account-level actions", async () => {
+    renderPage();
 
     expect(await screen.findByText("Alice")).toBeInTheDocument();
     expect(screen.getByText("Active")).toBeInTheDocument();
@@ -95,6 +125,8 @@ describe("EndUsersPage account semantics", () => {
     expect(screen.getAllByText("Unlimited").length).toBeGreaterThan(0);
     expect(screen.getByText("120/300$")).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Today usage" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Daily reset count" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "View reset history" })).toHaveTextContent("2");
     expect(
       screen.getByRole("columnheader", { name: "Account Permission Profile" }),
     ).toBeInTheDocument();
@@ -105,16 +137,75 @@ describe("EndUsersPage account semantics", () => {
       }),
     ).toBeDisabled();
 
-    await userEvent.click(
-      screen.getByRole("button", { name: "Reset account today's spending" }),
-    );
+    await userEvent.click(screen.getByRole("button", { name: "Reset account today's spending" }));
     await waitFor(() => {
       expect(mocks.resetDailySpending).toHaveBeenCalledWith("user-frozen");
+      expect(screen.getByRole("button", { name: "View reset history" })).toHaveTextContent("3");
     });
 
     await userEvent.click(screen.getByRole("button", { name: "Freeze account" }));
     await waitFor(() => {
       expect(mocks.update).toHaveBeenCalledWith("user-active", { status: "locked" });
     });
+  });
+
+  test("reloads the list when reset response does not include a reset count", async () => {
+    mocks.resetDailySpending.mockResolvedValueOnce({
+      status: "ok",
+      end_user_id: "user-frozen",
+      "daily-spending-used": 0,
+    });
+    renderPage();
+
+    await screen.findByText("Alice");
+    await userEvent.click(screen.getByRole("button", { name: "Reset account today's spending" }));
+
+    await waitFor(() => {
+      expect(mocks.list).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  test("opens all-date reset history with true and effective today spending summaries", async () => {
+    renderPage();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View reset history" }));
+
+    await waitFor(() => {
+      expect(mocks.listDailySpendingResetHistory).toHaveBeenCalledWith("user-frozen", 200);
+    });
+    expect(await screen.findByText("Reset history · Bob / bob")).toBeInTheDocument();
+    expect(screen.getByText("Today's true spend")).toBeInTheDocument();
+    expect(screen.getByText("$175.50")).toBeInTheDocument();
+    expect(screen.getByText("Current effective today usage")).toBeInTheDocument();
+    expect(screen.getAllByText("$28.25").length).toBeGreaterThan(0);
+    expect(screen.getByText("$148.25")).toBeInTheDocument();
+    expect(screen.getByText("Management key")).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Reset ID" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Reset time" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Usage before reset" })).toBeInTheDocument();
+
+    const newerId = screen.getByText("42");
+    const olderId = screen.getByText("41");
+    expect(
+      newerId.compareDocumentPosition(olderId) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  test("falls back to the row's effective today usage when true spend is absent", async () => {
+    mocks.listDailySpendingResetHistory.mockResolvedValueOnce({
+      items: [],
+      total: 0,
+    });
+    renderPage();
+
+    await userEvent.click(await screen.findByRole("button", { name: "View reset history" }));
+
+    expect(await screen.findByText("Not returned")).toBeInTheDocument();
+    expect(screen.getByText("$120.00")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "All manual daily-spending reset records for this account. Today's true spend was not returned, so only current effective today usage is available.",
+      ),
+    ).toBeInTheDocument();
   });
 });

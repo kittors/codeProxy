@@ -24,6 +24,8 @@ export interface EndUser {
   version: number;
   api_key_count?: number;
   "daily-spending-used"?: number;
+  /** How many times daily spending was manually reset. */
+  "daily-spending-reset-count"?: number;
   /** Account-level quota/permissions (shared by all keys). */
   "permission-profile-id"?: string;
   "daily-limit"?: number;
@@ -57,6 +59,36 @@ export type EndUserUpdateBody = {
   "allowed-channel-groups"?: string[];
   "system-prompt"?: string;
 };
+
+export interface EndUserDailySpendingResetResult {
+  status?: string;
+  end_user_id?: string;
+  "daily-spending-used"?: number;
+  "daily-spending-reset-count"?: number;
+  "effective-used-before"?: number;
+  "raw-today-cost"?: number;
+}
+
+export interface EndUserDailySpendingResetEvent {
+  id: number;
+  tenant_id?: string;
+  end_user_id?: string;
+  day_key?: string;
+  reset_at: string;
+  actor_user_id?: string;
+  actor_username?: string;
+  actor_kind?: string;
+  cost_baseline?: number;
+  effective_used_before?: number;
+  raw_today_cost?: number;
+}
+
+export interface EndUserDailySpendingResetHistoryResponse {
+  items: EndUserDailySpendingResetEvent[];
+  total: number;
+  "raw-today-cost"?: number;
+  "daily-spending-used"?: number;
+}
 
 export interface EndUserAPIKey {
   id: string;
@@ -103,13 +135,15 @@ export const endUsersApi = {
       password: password || "",
     }),
   resetDailySpending: (id: string) =>
-    apiClient.post<{
-      status: string;
-      end_user_id: string;
-      "daily-spending-used": number;
-      "effective-used-before": number;
-      "raw-today-cost": number;
-    }>(`/end-users/${id}/daily-spending/reset`, {}),
+    apiClient.post<EndUserDailySpendingResetResult>(`/end-users/${id}/daily-spending/reset`, {}),
+  listDailySpendingResetHistory: (id: string, limit?: number) => {
+    const query = new URLSearchParams();
+    if (limit != null) query.set("limit", String(limit));
+    const suffix = query.size > 0 ? `?${query.toString()}` : "";
+    return apiClient.get<EndUserDailySpendingResetHistoryResponse>(
+      `/end-users/${id}/daily-spending/reset-history${suffix}`,
+    );
+  },
   listKeys: (id: string) => apiClient.get<{ items: EndUserAPIKey[] }>(`/end-users/${id}/api-keys`),
   createKey: (id: string, name?: string) =>
     apiClient.post<EndUserAPIKeySecretResult>(`/end-users/${id}/api-keys`, {
