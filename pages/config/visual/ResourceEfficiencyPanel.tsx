@@ -112,10 +112,7 @@ export function ResourceEfficiencyPanel({
                     label={t("resource_config.title")}
                     hint={`${t("resource_config.description")}
 
-${t("resource_config.stats_preserved", {
-  defaultValue:
-    "清理明细不会清理统计。KPI/限额/public usage 等已切到小型聚合投影的指标不受 request_logs 清理影响；仍依赖明细的趋势/诊断能力仅覆盖保留期内数据。",
-})}`}
+${t("resource_config.stats_preserved")}`}
                   />
                 </h3>
                 <span className="rounded-full bg-emerald-200/80 px-2.5 py-1 text-2xs font-semibold text-emerald-900 dark:bg-emerald-300/15 dark:text-emerald-200">
@@ -227,12 +224,8 @@ ${t("resource_config.stats_preserved", {
               }
             />
             <ResourceField
-              label={t("resource_config.detail_retention_label", {
-                defaultValue: "请求明细保留天数",
-              })}
-              hint={t("resource_config.detail_retention_hint", {
-                defaultValue: "request_logs 仅用于排障，默认 7 天；统计在独立小投影表，不会随清理归零。",
-              })}
+              label={t("resource_config.detail_retention_label")}
+              hint={t("resource_config.detail_retention_hint")}
               value={values.requestLogStorage.retentionDays}
               placeholder="7"
               disabled={disabled}
@@ -267,10 +260,8 @@ ${t("resource_config.stats_preserved", {
               }
             />
             <ResourceField
-              label={t("resource_config.max_rows_label", { defaultValue: "明细最大行数" })}
-              hint={t("resource_config.max_rows_hint", {
-                defaultValue: "超过后按最旧优先删除明细；不影响聚合统计。",
-              })}
+              label={t("resource_config.max_rows_label")}
+              hint={t("resource_config.max_rows_hint")}
               value={values.requestLogStorage.maxRows}
               placeholder="100000"
               disabled={disabled}
@@ -281,12 +272,8 @@ ${t("resource_config.stats_preserved", {
               }
             />
             <ResourceField
-              label={t("resource_config.metadata_cap_label", {
-                defaultValue: "明细表体积上限 (MB)",
-              })}
-              hint={t("resource_config.metadata_cap_hint", {
-                defaultValue: "request_logs 关系体积保护（含索引，尽力而为）。",
-              })}
+              label={t("resource_config.metadata_cap_label")}
+              hint={t("resource_config.metadata_cap_hint")}
               value={values.requestLogStorage.maxMetadataSizeMb}
               placeholder="256"
               disabled={disabled}
@@ -311,12 +298,8 @@ ${t("resource_config.stats_preserved", {
           </div>
           <div className="mt-5 space-y-5 border-t border-slate-200 pt-5 dark:border-white/10">
             <ToggleSwitch
-              label={t("resource_config.cleanup_enabled_title", {
-                defaultValue: "启用定时清理明细",
-              })}
-              description={t("resource_config.cleanup_enabled_desc", {
-                defaultValue: "按保留天数/行数/体积上限分批删除 request_logs；不会删除统计投影。",
-              })}
+              label={t("resource_config.cleanup_enabled_title")}
+              description={t("resource_config.cleanup_enabled_desc")}
               checked={values.requestLogStorage.cleanupEnabled}
               onCheckedChange={(cleanupEnabled) =>
                 onChange({
