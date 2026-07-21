@@ -33,6 +33,8 @@ export interface SearchableCheckboxMultiSelectOption {
   value: string;
   label: ReactNode;
   searchText?: string;
+  /** Optional fixed trailing content, such as a request count. */
+  trailing?: ReactNode;
 }
 
 export interface SearchableCheckboxMultiSelectProps {
@@ -63,6 +65,10 @@ export interface SearchableCheckboxMultiSelectProps {
   deselectAllLabel?: string;
   emptySelectionLabel?: string;
   emptyValueRepresentsAllSelected?: boolean;
+  /** Render the implicit all state as an unrestricted filter with no checked rows. */
+  neutralAllSelection?: boolean;
+  allSelectionLabel?: string;
+  selectionHint?: string;
 }
 
 function optionText(option: SearchableCheckboxMultiSelectOption): string {
@@ -102,6 +108,9 @@ export function SearchableCheckboxMultiSelect({
   deselectAllLabel = "",
   emptySelectionLabel,
   emptyValueRepresentsAllSelected,
+  neutralAllSelection = false,
+  allSelectionLabel = "",
+  selectionHint = "",
 }: SearchableCheckboxMultiSelectProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -119,9 +128,7 @@ export function SearchableCheckboxMultiSelect({
 
   const sanitizedExplicitValue = useMemo(() => {
     const allowed = new Set(options.map((option) => option.value));
-    return value.filter(
-      (item, index) => allowed.has(item) && value.indexOf(item) === index,
-    );
+    return value.filter((item, index) => allowed.has(item) && value.indexOf(item) === index);
   }, [options, value]);
 
   const [draftExplicitValue, setDraftExplicitValue] = useState<string[]>(sanitizedExplicitValue);
@@ -141,13 +148,16 @@ export function SearchableCheckboxMultiSelect({
     : committedEmptyMeansAllSelected;
 
   const implicitAllSelected =
-    emptyValueMeansAllSelected &&
-    activeEmptyMeansAllSelected &&
-    activeExplicitValue.length === 0;
+    emptyValueMeansAllSelected && activeEmptyMeansAllSelected && activeExplicitValue.length === 0;
 
   const effectiveValue = useMemo(
-    () => (implicitAllSelected ? options.map((option) => option.value) : activeExplicitValue),
-    [activeExplicitValue, implicitAllSelected, options],
+    () =>
+      implicitAllSelected
+        ? neutralAllSelection
+          ? []
+          : options.map((option) => option.value)
+        : activeExplicitValue,
+    [activeExplicitValue, implicitAllSelected, neutralAllSelection, options],
   );
 
   const allOptionsSelectedExplicitly =
@@ -198,7 +208,7 @@ export function SearchableCheckboxMultiSelect({
     const rect = trigger.getBoundingClientRect();
     const gap = 6;
     const maxHeight = 360;
-    const listChromeHeight = manualApply ? 132 : 84;
+    const listChromeHeight = (manualApply ? 132 : 84) + (selectionHint ? 14 : 0);
     const setPanelMaxHeight = (height: number) => {
       setListMaxHeight(Math.max(96, height - listChromeHeight));
       return height;
@@ -250,7 +260,7 @@ export function SearchableCheckboxMultiSelect({
         position: "fixed",
         bottom: window.innerHeight - rect.top + gap,
         left: rect.left,
-        width: Math.max(rect.width, 260),
+        width: Math.max(rect.width, options.some((option) => option.trailing) ? 300 : 260),
         maxHeight: panelMaxHeight,
         zIndex: 99999,
       });
@@ -263,11 +273,11 @@ export function SearchableCheckboxMultiSelect({
       position: "fixed",
       top: rect.bottom + gap,
       left: rect.left,
-      width: Math.max(rect.width, 260),
+      width: Math.max(rect.width, options.some((option) => option.trailing) ? 300 : 260),
       maxHeight: panelMaxHeight,
       zIndex: 99999,
     });
-  }, [manualApply, mobileBreakpoint]);
+  }, [manualApply, mobileBreakpoint, options, selectionHint]);
 
   useEffect(() => {
     if (!open) return;
@@ -311,9 +321,7 @@ export function SearchableCheckboxMultiSelect({
   const normalizeSelection = useCallback(
     (next: string[]) => {
       const allowed = new Set(options.map((option) => option.value));
-      return next.filter(
-        (item, index) => allowed.has(item) && next.indexOf(item) === index,
-      );
+      return next.filter((item, index) => allowed.has(item) && next.indexOf(item) === index);
     },
     [options],
   );
@@ -321,14 +329,26 @@ export function SearchableCheckboxMultiSelect({
   const updateSelection = useCallback(
     (next: string[], nextEmptyMeansAllSelected = false) => {
       const unique = normalizeSelection(next);
+      const representsAll =
+        emptyValueMeansAllSelected &&
+        (nextEmptyMeansAllSelected ||
+          (neutralAllSelection &&
+            (unique.length === 0 || (options.length > 0 && unique.length === options.length))));
       if (manualApply) {
-        setDraftExplicitValue(unique);
-        setDraftEmptyMeansAllSelected(unique.length === 0 && nextEmptyMeansAllSelected);
+        setDraftExplicitValue(representsAll ? [] : unique);
+        setDraftEmptyMeansAllSelected(representsAll);
         return;
       }
-      onChange(unique);
+      onChange(representsAll ? options.map((option) => option.value) : unique);
     },
-    [manualApply, normalizeSelection, onChange],
+    [
+      emptyValueMeansAllSelected,
+      manualApply,
+      neutralAllSelection,
+      normalizeSelection,
+      onChange,
+      options,
+    ],
   );
 
   const toggleOption = useCallback(
@@ -337,6 +357,8 @@ export function SearchableCheckboxMultiSelect({
         updateSelection(effectiveValue.filter((item) => item !== optionValue));
         return;
       }
+      // In neutral-all mode the unrestricted state has no checked rows, so the
+      // first click directly selects that item instead of excluding it from all.
       updateSelection([...effectiveValue, optionValue]);
     },
     [effectiveValue, selectedSet, updateSelection],
@@ -363,9 +385,21 @@ export function SearchableCheckboxMultiSelect({
 
   const applyDraftSelection = useCallback(() => {
     if (!manualApply) return;
-    onChange(normalizeSelection(draftExplicitValue));
+    onChange(
+      draftEmptyMeansAllSelected
+        ? options.map((option) => option.value)
+        : normalizeSelection(draftExplicitValue),
+    );
     closeDropdown(false);
-  }, [closeDropdown, draftExplicitValue, manualApply, normalizeSelection, onChange]);
+  }, [
+    closeDropdown,
+    draftEmptyMeansAllSelected,
+    draftExplicitValue,
+    manualApply,
+    normalizeSelection,
+    onChange,
+    options,
+  ]);
 
   const hasPendingChanges =
     manualApply &&
@@ -428,13 +462,13 @@ export function SearchableCheckboxMultiSelect({
           aria-label={ariaLabel}
           disabled={disabled}
           onClick={() => {
-              if (!open) {
-                if (manualApply) setDraftExplicitValue(sanitizedExplicitValue);
-                if (manualApply) setDraftEmptyMeansAllSelected(committedEmptyMeansAllSelected);
-                updatePosition();
-              }
-              setOpen((current) => !current);
-            }}
+            if (!open) {
+              if (manualApply) setDraftExplicitValue(sanitizedExplicitValue);
+              if (manualApply) setDraftEmptyMeansAllSelected(committedEmptyMeansAllSelected);
+              updatePosition();
+            }
+            setOpen((current) => !current);
+          }}
           className={cn(
             getSelectTriggerBase(size),
             "w-full justify-between text-left",
@@ -516,26 +550,45 @@ export function SearchableCheckboxMultiSelect({
                   spellCheck={false}
                 />
               </div>
-              {selectAllLabel || showFilteredToggle ? (
+              {selectAllLabel || neutralAllSelection || showFilteredToggle || selectionHint ? (
                 <div className="flex items-center justify-between gap-2 border-b border-slate-100 px-3 py-2 dark:border-neutral-800">
-                  <span
-                    className={cn(
-                      "text-xs font-medium",
-                      showAllSelectionSummary
-                        ? "text-emerald-600 dark:text-emerald-300"
-                        : "text-slate-500 dark:text-white/50",
-                    )}
-                  >
-                    {showAllSelectionSummary ? placeholder : selectedCountLabel(effectiveValue.length)}
+                  <span className="min-w-0">
+                    <span
+                      className={cn(
+                        "block text-xs font-medium",
+                        showAllSelectionSummary
+                          ? "text-emerald-600 dark:text-emerald-300"
+                          : "text-slate-500 dark:text-white/50",
+                      )}
+                    >
+                      {showAllSelectionSummary
+                        ? placeholder
+                        : selectedCountLabel(effectiveValue.length)}
+                    </span>
+                    {selectionHint ? (
+                      <span className="mt-0.5 block truncate text-2xs text-slate-400 dark:text-white/35">
+                        {selectionHint}
+                      </span>
+                    ) : null}
                   </span>
-                  <div className="flex items-center gap-2">
-                    {selectAllLabel ? (
+                  <div className="flex shrink-0 items-center gap-2">
+                    {neutralAllSelection ? (
+                      <button
+                        type="button"
+                        onClick={() => updateSelection([], true)}
+                        disabled={options.length === 0 || showAllSelectionSummary}
+                        className="rounded-md px-2 py-1 text-xs font-medium text-indigo-600 transition hover:bg-indigo-50 disabled:cursor-default disabled:text-slate-300 dark:text-indigo-300 dark:hover:bg-indigo-500/10 dark:disabled:text-white/20"
+                      >
+                        {allSelectionLabel || placeholder}
+                      </button>
+                    ) : selectAllLabel ? (
                       <button
                         type="button"
                         onClick={showAllSelectionSummary ? deselectAllOptions : selectAllOptions}
                         disabled={
                           options.length === 0 ||
-                          (!deselectAllLabel && (allOptionsSelectedExplicitly || implicitAllSelected))
+                          (!deselectAllLabel &&
+                            (allOptionsSelectedExplicitly || implicitAllSelected))
                         }
                         className="rounded-md px-2 py-1 text-xs font-medium text-indigo-600 transition hover:bg-indigo-50 disabled:cursor-not-allowed disabled:text-slate-300 dark:text-indigo-300 dark:hover:bg-indigo-500/10 dark:disabled:text-white/20"
                       >
@@ -595,7 +648,20 @@ export function SearchableCheckboxMultiSelect({
                         >
                           {checked ? <Check size={12} /> : null}
                         </span>
-                        <span className="min-w-0 flex-1 truncate">{option.label}</span>
+                        <span
+                          className="min-w-0 flex-1 truncate text-left"
+                          title={typeof option.label === "string" ? option.label : undefined}
+                        >
+                          {option.label}
+                        </span>
+                        {option.trailing ? (
+                          <>
+                            <span className="sr-only">, </span>
+                            <span className="inline-flex shrink-0 items-center">
+                              {option.trailing}
+                            </span>
+                          </>
+                        ) : null}
                       </button>
                     );
                   })

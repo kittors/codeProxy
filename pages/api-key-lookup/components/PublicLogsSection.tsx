@@ -99,9 +99,9 @@ export function PublicLogsSection({
                     applyMode="manual"
                     applyLabel={t("request_logs.apply_filters")}
                     cancelLabel={t("common.cancel")}
-                    selectAllLabel={t("request_logs.select_all")}
-                    deselectAllLabel={t("request_logs.deselect_all")}
-                    emptySelectionLabel={t("request_logs.none_selected")}
+                    neutralAllSelection
+                    allSelectionLabel={t("request_logs.unrestricted")}
+                    selectionHint={t("request_logs.calls_sorted_hint")}
                   />
                 </div>
               ) : null}
@@ -133,15 +133,10 @@ export function PublicLogsSection({
               </span>
               <span className="inline-flex items-center justify-end gap-1.5 whitespace-nowrap sm:justify-start">
                 {t("common.success_rate")}
-                <span className="font-mono tabular-nums">
-                  {stats.success_rate.toFixed(1)}%
-                </span>
+                <span className="font-mono tabular-nums">{stats.success_rate.toFixed(1)}%</span>
               </span>
               <span className="hidden sm:inline-flex items-center gap-1.5 whitespace-nowrap">
-                <span
-                  className="text-slate-300 dark:text-white/10"
-                  aria-hidden="true"
-                >
+                <span className="text-slate-300 dark:text-white/10" aria-hidden="true">
                   ·
                 </span>
                 {t("apikey_lookup.token")}
@@ -151,10 +146,7 @@ export function PublicLogsSection({
               </span>
               {lastUpdatedText ? (
                 <span className="hidden sm:inline-flex items-center gap-1.5 whitespace-nowrap">
-                  <span
-                    className="text-slate-300 dark:text-white/10"
-                    aria-hidden="true"
-                  >
+                  <span className="text-slate-300 dark:text-white/10" aria-hidden="true">
                     ·
                   </span>
                   <span className="text-slate-400 dark:text-white/40">

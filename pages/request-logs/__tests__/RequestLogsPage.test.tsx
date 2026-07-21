@@ -49,6 +49,10 @@ const responseWithFilterOptions = {
       "sk-primary": "Primary",
       "sk-secondary": "Secondary",
     },
+    api_key_counts: {
+      "sk-primary": 12,
+      "sk-secondary": 37,
+    },
     models: ["gpt-5.4", "gpt-4.1"],
     channels: ["Codex", "Relay"],
     channel_options: [
@@ -423,7 +427,7 @@ describe("RequestLogsPage", () => {
     await waitFor(() => expect(screen.queryByText("stale-model")).not.toBeInTheDocument());
   });
 
-  test("shows request-log multi-select filters as all-selected by default", async () => {
+  test("shows request-log user counts in descending order with an unrestricted default", async () => {
     await i18n.changeLanguage("en");
     const user = userEvent.setup();
 
@@ -446,14 +450,13 @@ describe("RequestLogsPage", () => {
 
     await user.click(keyFilter);
 
-    expect(await screen.findByRole("option", { name: "Primary" })).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
-    expect(screen.getByRole("option", { name: "Secondary" })).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
+    const options = await screen.findAllByRole("option");
+    expect(options).toHaveLength(2);
+    expect(options[0]).toHaveAccessibleName(/Secondary,?\s*37 calls/i);
+    expect(options[1]).toHaveAccessibleName(/Primary,?\s*12 calls/i);
+    expect(options[0]).toHaveAttribute("aria-selected", "false");
+    expect(options[1]).toHaveAttribute("aria-selected", "false");
+    expect(screen.getByText("Sorted by calls in the current log range")).toBeInTheDocument();
   });
 
   test("uses backend status filter candidates", async () => {
@@ -483,11 +486,25 @@ describe("RequestLogsPage", () => {
     expect(screen.queryByRole("option", { name: "Failed" })).not.toBeInTheDocument();
   });
 
-  test("only applies request-log multi-select changes after confirmation and restores full selection", async () => {
+  test("applies neutral user selections only after confirmation and supports multi-select", async () => {
     await i18n.changeLanguage("en");
     const user = userEvent.setup();
 
-    mocks.getUsageLogs.mockResolvedValue(responseWithFilterOptions);
+    mocks.getUsageLogs.mockResolvedValue({
+      ...responseWithFilterOptions,
+      filters: {
+        ...responseWithFilterOptions.filters,
+        api_keys: ["sk-primary", "sk-secondary", "sk-tertiary"],
+        api_key_names: {
+          ...responseWithFilterOptions.filters.api_key_names,
+          "sk-tertiary": "Tertiary",
+        },
+        api_key_counts: {
+          ...responseWithFilterOptions.filters.api_key_counts,
+          "sk-tertiary": 5,
+        },
+      },
+    });
 
     render(
       <ThemeProvider>
@@ -517,7 +534,7 @@ describe("RequestLogsPage", () => {
     );
 
     await user.click(keyFilter);
-    await user.click(await screen.findByRole("option", { name: "Primary" }));
+    await user.click(await screen.findByRole("option", { name: /Primary/i }));
 
     expect(mocks.getUsageLogs).toHaveBeenCalledTimes(1);
 
@@ -527,7 +544,7 @@ describe("RequestLogsPage", () => {
       expect(mocks.getUsageLogs).toHaveBeenNthCalledWith(
         2,
         expect.objectContaining({
-          api_keys: ["sk-secondary"],
+          api_keys: ["sk-primary"],
           api_keys_empty: false,
         }),
         expectSignalOptions(),
@@ -535,7 +552,7 @@ describe("RequestLogsPage", () => {
     );
 
     await user.click(keyFilter);
-    await user.click(screen.getByRole("button", { name: "Select all" }));
+    await user.click(screen.getByRole("option", { name: /Secondary/i }));
 
     expect(mocks.getUsageLogs).toHaveBeenCalledTimes(2);
 
@@ -545,7 +562,7 @@ describe("RequestLogsPage", () => {
       expect(mocks.getUsageLogs).toHaveBeenNthCalledWith(
         3,
         expect.objectContaining({
-          api_keys: undefined,
+          api_keys: ["sk-primary", "sk-secondary"],
           api_keys_empty: false,
         }),
         expectSignalOptions(),
@@ -553,25 +570,15 @@ describe("RequestLogsPage", () => {
     );
 
     await user.click(keyFilter);
-    await user.click(screen.getByRole("option", { name: "Primary" }));
+    await user.click(screen.getByRole("button", { name: "Any" }));
+
+    expect(mocks.getUsageLogs).toHaveBeenCalledTimes(3);
+
     await user.click(screen.getByRole("button", { name: "Apply filters" }));
 
     await waitFor(() =>
       expect(mocks.getUsageLogs).toHaveBeenNthCalledWith(
         4,
-        expect.objectContaining({
-          api_keys: ["sk-secondary"],
-          api_keys_empty: false,
-        }),
-        expectSignalOptions(),
-      ),
-    );
-
-    await user.click(await screen.findByText("Reset filters"));
-
-    await waitFor(() =>
-      expect(mocks.getUsageLogs).toHaveBeenNthCalledWith(
-        5,
         expect.objectContaining({
           api_keys: undefined,
           api_keys_empty: false,
@@ -581,7 +588,7 @@ describe("RequestLogsPage", () => {
     );
   });
 
-  test("supports deselecting all request-log filter options in one click", async () => {
+  test("returns to unrestricted when the last selected user is cleared", async () => {
     await i18n.changeLanguage("en");
     const user = userEvent.setup();
 
@@ -598,20 +605,36 @@ describe("RequestLogsPage", () => {
     const [keyFilter] = await screen.findAllByRole("combobox");
 
     await user.click(keyFilter);
-    expect(await screen.findByRole("button", { name: "Deselect all" })).toBeInTheDocument();
+    await user.click(await screen.findByRole("option", { name: /Primary/i }));
+    await user.click(screen.getByRole("button", { name: "Apply filters" }));
 
-    await user.click(screen.getByRole("button", { name: "Deselect all" }));
+    await waitFor(() =>
+      expect(mocks.getUsageLogs).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          api_keys: ["sk-primary"],
+          api_keys_empty: false,
+        }),
+        expectSignalOptions(),
+      ),
+    );
+
+    await user.click(keyFilter);
+    const selectedPrimary = await screen.findByRole("option", { name: /Primary/i });
+    expect(selectedPrimary).toHaveAttribute("aria-selected", "true");
+    await user.click(selectedPrimary);
     expect(screen.getByRole("combobox", { name: "Filter by user name" })).toHaveTextContent(
-      "0 selected",
+      "All Users",
     );
 
     await user.click(screen.getByRole("button", { name: "Apply filters" }));
 
     await waitFor(() =>
-      expect(mocks.getUsageLogs).toHaveBeenLastCalledWith(
+      expect(mocks.getUsageLogs).toHaveBeenNthCalledWith(
+        3,
         expect.objectContaining({
           api_keys: undefined,
-          api_keys_empty: true,
+          api_keys_empty: false,
         }),
         expectSignalOptions(),
       ),
