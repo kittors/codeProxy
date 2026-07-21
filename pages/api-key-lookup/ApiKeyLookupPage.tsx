@@ -58,6 +58,8 @@ import {
   formatRequestLogLatencyMs,
   normalizeChannelAuthType,
   normalizeFilterSelection,
+  RequestLogFilterCount,
+  sortRequestLogKeyOptionsByCount,
   toFilterParam,
   toStatusFilterValues,
   maskRequestLogApiKey,
@@ -289,7 +291,7 @@ function toLogRow(item: PublicLogItem): RequestLogsRow {
 // ── Page Component ──────────────────────────────────────────────────────────
 
 export function ApiKeyLookupPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const {
     state: { mode },
   } = useTheme();
@@ -419,8 +421,7 @@ export function ApiKeyLookupPage() {
 
   // ── Filters ──
   const [timeRange, setTimeRange] = useState<TimeRange>(7);
-  const [selectedApiKeyIds, setSelectedApiKeyIds] =
-    useState<MultiSelectFilterState<string>>(null);
+  const [selectedApiKeyIds, setSelectedApiKeyIds] = useState<MultiSelectFilterState<string>>(null);
   const [selectedModels, setSelectedModels] = useState<MultiSelectFilterState<string>>(null);
   const [selectedStatuses, setSelectedStatuses] =
     useState<MultiSelectFilterState<StatusFilterValue>>(null);
@@ -435,20 +436,39 @@ export function ApiKeyLookupPage() {
   const [filterOptions, setFilterOptions] = useState<{
     api_key_ids: string[];
     api_key_id_names: Record<string, string>;
+    api_key_id_counts: Record<string, number>;
     models: string[];
     statuses: string[];
-  }>({ api_key_ids: [], api_key_id_names: {}, models: [], statuses: ["success", "failed"] });
+  }>({
+    api_key_ids: [],
+    api_key_id_names: {},
+    api_key_id_counts: {},
+    models: [],
+    statuses: ["success", "failed"],
+  });
 
   const keyOptions = useMemo<SearchableCheckboxMultiSelectOption[]>(() => {
-    return (filterOptions.api_key_ids ?? []).map((id) => {
+    const options = (filterOptions.api_key_ids ?? []).map((id) => {
       const name = filterOptions.api_key_id_names?.[id] || id;
       return {
         value: id,
         label: name,
         searchText: name,
+        count: filterOptions.api_key_id_counts?.[id] ?? 0,
       };
     });
-  }, [filterOptions.api_key_ids, filterOptions.api_key_id_names]);
+    return sortRequestLogKeyOptionsByCount(options, i18n.resolvedLanguage).map((option) => ({
+      value: option.value,
+      label: option.label,
+      searchText: option.searchText,
+      trailing: <RequestLogFilterCount count={option.count} />,
+    }));
+  }, [
+    filterOptions.api_key_id_counts,
+    filterOptions.api_key_id_names,
+    filterOptions.api_key_ids,
+    i18n.resolvedLanguage,
+  ]);
 
   const modelOptions = useMemo<SearchableCheckboxMultiSelectOption[]>(() => {
     return filterOptions.models.map((model) => ({
@@ -576,6 +596,7 @@ export function ApiKeyLookupPage() {
         setFilterOptions({
           api_key_ids: resp.filters?.api_key_ids ?? [],
           api_key_id_names: resp.filters?.api_key_id_names ?? {},
+          api_key_id_counts: resp.filters?.api_key_id_counts ?? {},
           models: resp.filters?.models ?? [],
           statuses: resp.filters?.statuses ?? ["success", "failed"],
         });
@@ -810,6 +831,7 @@ export function ApiKeyLookupPage() {
     setFilterOptions({
       api_key_ids: [],
       api_key_id_names: {},
+      api_key_id_counts: {},
       models: [],
       statuses: ["success", "failed"],
     });
@@ -833,8 +855,8 @@ export function ApiKeyLookupPage() {
   }, []);
 
   // Avoid landing flash while a stored portal session is still hydrating.
-  const [portalSessionPending, setPortalSessionPending] = useState(
-    () => Boolean(portalApi.loadSession()?.accessToken),
+  const [portalSessionPending, setPortalSessionPending] = useState(() =>
+    Boolean(portalApi.loadSession()?.accessToken),
   );
 
   useEffect(() => {
@@ -989,6 +1011,7 @@ export function ApiKeyLookupPage() {
       setFilterOptions({
         api_key_ids: [],
         api_key_id_names: {},
+        api_key_id_counts: {},
         models: [],
         statuses: ["success", "failed"],
       });
@@ -999,8 +1022,7 @@ export function ApiKeyLookupPage() {
 
       // Prefill usage from this account's cache; cold accounts still skeleton.
       const nextChartKey = `account:${target.user.id}|${timeRange}`;
-      const cached =
-        chartCacheRef.current[nextChartKey] || readStoredChartCache(nextChartKey);
+      const cached = chartCacheRef.current[nextChartKey] || readStoredChartCache(nextChartKey);
       if (cached) {
         chartCacheRef.current[nextChartKey] = cached;
         setChartData(cached);
@@ -1323,7 +1345,9 @@ export function ApiKeyLookupPage() {
                                   <DropdownMenu.Item
                                     key={account.accountKey}
                                     disabled={isCurrent}
-                                    className={isCurrent ? "data-[disabled]:opacity-100" : undefined}
+                                    className={
+                                      isCurrent ? "data-[disabled]:opacity-100" : undefined
+                                    }
                                     data-testid={
                                       isCurrent
                                         ? "apikey-lookup-current-account"

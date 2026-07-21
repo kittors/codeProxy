@@ -3015,7 +3015,10 @@
     "clear_status_filter": "清空状态筛选",
     "auth_type_api": "API",
     "auth_type_oauth": "OAuth",
-    "no_data_desc": "调整时间范围或筛选条件后再试"
+    "no_data_desc": "调整时间范围或筛选条件后再试",
+    "calls_count": "{{formattedCount}} 次调用",
+    "calls_sorted_hint": "按当前日志范围内的调用次数排序",
+    "unrestricted": "不限"
   },
   "ccswitch": {
     "import_to_ccswitch": "导入到 CC Switch",

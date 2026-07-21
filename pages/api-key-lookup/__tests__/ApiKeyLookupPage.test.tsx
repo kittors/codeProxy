@@ -537,6 +537,7 @@ describe("ApiKeyLookupPage", () => {
         filters: {
           api_key_ids: ["key-laptop", "key-auto"],
           api_key_id_names: { "key-laptop": "Laptop", "key-auto": "Automation" },
+          api_key_id_counts: { "key-laptop": 12, "key-auto": 37 },
           models: ["gpt-5.5"],
           channels: ["Codex 主渠道", "OpenCode"],
           statuses: ["success", "failed"],
@@ -558,6 +559,7 @@ describe("ApiKeyLookupPage", () => {
         filters: {
           api_key_ids: ["key-laptop", "key-auto"],
           api_key_id_names: { "key-laptop": "Laptop", "key-auto": "Automation" },
+          api_key_id_counts: { "key-laptop": 12, "key-auto": 37 },
           models: ["gpt-5.5"],
           channels: ["Codex 主渠道"],
           statuses: ["success"],
@@ -586,15 +588,23 @@ describe("ApiKeyLookupPage", () => {
     );
 
     await userEvent.click(screen.getByRole("combobox", { name: /filter by key/i }));
-    // emptyValueMeansAllSelected: clicking one option deselects it from "all".
-    await userEvent.click(await screen.findByRole("option", { name: /Laptop/i }));
+    const keyOptions = await screen.findAllByRole("option");
+    expect(keyOptions[0]).toHaveAccessibleName(/Automation,?\s*37 calls/i);
+    expect(keyOptions[1]).toHaveAccessibleName(/Laptop,?\s*12 calls/i);
+    expect(keyOptions[0]).toHaveAttribute("aria-selected", "false");
+    expect(keyOptions[1]).toHaveAttribute("aria-selected", "false");
+    expect(screen.getByRole("listbox", { name: /filter by key/i })).not.toHaveTextContent(
+      "sk-restored-key",
+    );
+
+    await userEvent.click(screen.getByRole("option", { name: /Laptop/i }));
     await userEvent.click(screen.getByRole("button", { name: /apply filters/i }));
 
     await waitFor(() => {
       expect(mocks.fetchPublicLogs).toHaveBeenLastCalledWith(
         expect.objectContaining({
           apiKey: "sk-restored-key",
-          apiKeyIds: ["key-auto"],
+          apiKeyIds: ["key-laptop"],
           apiKeyIdsEmpty: false,
         }),
       );
