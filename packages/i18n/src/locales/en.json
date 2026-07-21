@@ -4733,6 +4733,10 @@
     "no_project_method": "No project method recorded.",
     "audit_log_detail_title": "Audit log detail",
     "delete_audit_log_confirm": "Delete this audit log?",
-    "audit_log_deleted": "Audit log deleted."
+    "audit_log_deleted": "Audit log deleted.",
+    "clear_audit_logs": "Clear all",
+    "clear_audit_logs_confirm": "Clear all audit logs in your current visible scope? This cannot be undone.",
+    "clear_audit_logs_confirm_button": "Clear all",
+    "audit_logs_cleared": "Cleared {{count}} audit logs."
   }
 }

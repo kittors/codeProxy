@@ -2668,7 +2668,11 @@
     "no_project_method": "Метод проекта не записан.",
     "audit_log_detail_title": "Детали журнала аудита",
     "delete_audit_log_confirm": "Удалить эту запись аудита?",
-    "audit_log_deleted": "Запись аудита удалена."
+    "audit_log_deleted": "Запись аудита удалена.",
+    "clear_audit_logs": "Очистить все",
+    "clear_audit_logs_confirm": "Очистить все записи аудита в текущей области видимости? Это действие нельзя отменить.",
+    "clear_audit_logs_confirm_button": "Очистить все",
+    "audit_logs_cleared": "Очищено записей аудита: {{count}}."
   },
   "apikey_lookup": {
     "available_models": "Model Plaza",
