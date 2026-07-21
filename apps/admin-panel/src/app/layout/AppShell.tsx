@@ -1204,7 +1204,7 @@ function ShellHeader({
               aria-label={t("shell.switch_tenant")}
               searchPlaceholder={t("shell.search_tenant")}
               placeholder={t("shell.switch_tenant")}
-              className="hidden w-auto max-w-48 min-w-0 gap-1 border-0 bg-transparent px-2 text-slate-600 shadow-none hover:border-0 hover:bg-slate-100 hover:text-slate-950 focus-visible:border-0 focus-visible:ring-2 focus-visible:ring-blue-500/25 sm:inline-flex dark:bg-transparent dark:text-slate-300 dark:hover:border-0 dark:hover:bg-white/10 dark:hover:text-white dark:focus-visible:border-0 [&>span:first-child]:flex-none [&>span:first-child]:max-w-36 [&>svg]:ml-0"
+              className="hidden w-auto max-w-64 min-w-0 gap-1 border-0 bg-transparent px-2 text-slate-600 shadow-none hover:border-0 hover:bg-slate-100 hover:text-slate-950 focus-visible:border-0 focus-visible:ring-2 focus-visible:ring-blue-500/25 sm:inline-flex dark:bg-transparent dark:text-slate-300 dark:hover:border-0 dark:hover:bg-white/10 dark:hover:text-white dark:focus-visible:border-0 [&>span:first-child]:flex-none [&>span:first-child]:max-w-52 [&>svg]:ml-0"
             />
           ) : null}
           <LanguageSelector className="inline-flex h-9 items-center justify-center gap-0.5 rounded-xl px-1.5 text-slate-500 transition-colors duration-200 ease-out hover:text-slate-900 dark:text-slate-400 dark:hover:text-white" />
