@@ -76,6 +76,11 @@ export interface CreateEndUserResult {
   default_api_key?: EndUserAPIKey & { key?: string };
 }
 
+export interface EndUserAPIKeySecretResult {
+  api_key: EndUserAPIKey;
+  plaintext_key?: string;
+}
+
 export interface PortalLoginResult {
   access_token: string;
   refresh_token: string;
@@ -107,10 +112,13 @@ export const endUsersApi = {
     }>(`/end-users/${id}/daily-spending/reset`, {}),
   listKeys: (id: string) => apiClient.get<{ items: EndUserAPIKey[] }>(`/end-users/${id}/api-keys`),
   createKey: (id: string, name?: string) =>
-    apiClient.post<{ api_key: EndUserAPIKey; plaintext_key?: string }>(
-      `/end-users/${id}/api-keys`,
-      { name: name || "" },
-    ),
+    apiClient.post<EndUserAPIKeySecretResult>(`/end-users/${id}/api-keys`, {
+      name: name || "",
+    }),
+  updateKeyName: (userId: string, keyId: string, name: string) =>
+    apiClient.patch<EndUserAPIKey>(`/end-users/${userId}/api-keys/${keyId}`, { name }),
+  rotateKey: (userId: string, keyId: string) =>
+    apiClient.post<EndUserAPIKeySecretResult>(`/end-users/${userId}/api-keys/${keyId}/rotate`, {}),
   deleteKey: (userId: string, keyId: string) =>
     apiClient.delete(`/end-users/${userId}/api-keys/${keyId}`),
 };

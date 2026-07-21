@@ -673,6 +673,74 @@ describe("ApiKeyLookupPage", () => {
     expect(within(menu).getByText(/logout|退出登录|登出/i)).toBeInTheDocument();
   });
 
+  test("refreshes the managed key and active secret when opening the key tab", async () => {
+    const { portalApi } = await import("@code-proxy/api-client");
+    const user = {
+      id: "u1",
+      tenant_id: "t1",
+      username: "alice",
+      display_name: "Alice",
+      status: "active",
+      must_change_password: false,
+      failed_login_count: 0,
+      lock_stage: 0,
+      created_at: "",
+      updated_at: "",
+      version: 1,
+    };
+    const oldKey = {
+      id: "k1",
+      tenant_id: "t1",
+      end_user_id: "u1",
+      name: "primary",
+      key_masked: "sk-old****111",
+      disabled: false,
+      is_default: true,
+      created_at: "",
+      updated_at: "",
+    };
+    const rotatedKey = { ...oldKey, key_masked: "sk-new****999" };
+    vi.mocked(portalApi.login).mockResolvedValue({
+      user,
+      access_token: "cpt_test",
+      refresh_token: "cpr_test",
+      must_change_password: false,
+    } as never);
+    vi.mocked(portalApi.listKeys)
+      .mockResolvedValueOnce({ items: [oldKey] } as never)
+      .mockResolvedValueOnce({ items: [rotatedKey] } as never);
+    vi.mocked(portalApi.keySecret)
+      .mockResolvedValueOnce({ id: "k1", key: "sk-old-secret" })
+      .mockResolvedValueOnce({ id: "k1", key: "sk-new-secret" });
+
+    render(
+      <ThemeProvider>
+        <ToastProvider>
+          <ApiKeyLookupPage />
+        </ToastProvider>
+      </ThemeProvider>,
+    );
+
+    const landing = screen.getByTestId("apikey-lookup-landing");
+    await userEvent.click(within(landing).getByRole("button", { name: /^(login|sign in|登录)$/i }));
+    const loginDialog = await screen.findByRole("dialog");
+    await userEvent.type(screen.getByPlaceholderText(/enter username|请输入账号/i), "alice");
+    await userEvent.type(screen.getByPlaceholderText(/enter password|请输入密码/i), "password123");
+    await userEvent.click(
+      within(loginDialog).getByRole("button", { name: /^(login|sign in|登录)$/i }),
+    );
+
+    await userEvent.click(
+      await screen.findByRole("tab", { name: /manage api keys|管理 api key/i }),
+    );
+
+    expect(await screen.findByText("sk-new****999")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(portalApi.listKeys).toHaveBeenCalledTimes(2);
+      expect(portalApi.keySecret).toHaveBeenLastCalledWith("k1");
+    });
+  });
+
   test("confirms before deleting a managed API key", async () => {
     const { portalApi } = await import("@code-proxy/api-client");
     const keys = [
@@ -718,6 +786,7 @@ describe("ApiKeyLookupPage", () => {
       must_change_password: false,
     } as never);
     vi.mocked(portalApi.listKeys)
+      .mockResolvedValueOnce({ items: keys } as never)
       .mockResolvedValueOnce({ items: keys } as never)
       .mockResolvedValue({ items: [keys[0]] } as never);
     vi.mocked(portalApi.keySecret).mockResolvedValue({ id: "k1", key: "sk-primary" });
