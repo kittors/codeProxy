@@ -49,6 +49,7 @@ export interface PublicLogsResponse {
   filters: {
     api_key_ids?: string[];
     api_key_id_names?: Record<string, string>;
+    api_key_id_counts?: Record<string, number>;
     models: string[];
     channels: string[];
     channel_options?: PublicChannelFilterOption[];

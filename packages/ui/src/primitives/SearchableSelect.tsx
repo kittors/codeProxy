@@ -67,6 +67,7 @@ export interface SearchableSelectProps {
   className?: string;
   disabled?: boolean;
   size?: ControlSize;
+  dropdownMinWidth?: number;
 }
 
 /* ------------------------------------------------------------------ */
@@ -92,13 +93,11 @@ function OptionContent({
         {label}
       </span>
       {trailing ? <span className="inline-flex shrink-0 items-center">{trailing}</span> : null}
-      {selected ? (
-        <Check
-          size={14}
-          className="ml-1 shrink-0 text-[#96969B] dark:text-[#9F9FA8]"
-          aria-hidden="true"
-        />
-      ) : null}
+      <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center">
+        {selected ? (
+          <Check size={14} className="text-[#96969B] dark:text-[#9F9FA8]" aria-hidden="true" />
+        ) : null}
+      </span>
     </>
   );
 }
@@ -118,6 +117,7 @@ export function SearchableSelect({
   className,
   disabled = false,
   size = "default",
+  dropdownMinWidth = 0,
 }: SearchableSelectProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -317,7 +317,7 @@ export function SearchableSelect({
               style={{
                 top: pos.top,
                 left: pos.left,
-                minWidth: pos.width,
+                minWidth: Math.max(pos.width, dropdownMinWidth),
                 maxWidth: "min(500px, 90vw)",
                 maxHeight: pos.maxHeight,
               }}

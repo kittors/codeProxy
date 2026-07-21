@@ -2718,7 +2718,10 @@
     "cache_rate": "Cache Token Ratio",
     "auth_type_api": "API",
     "auth_type_oauth": "OAuth",
-    "no_data_desc": "Try another range or clear filters."
+    "no_data_desc": "Try another range or clear filters.",
+    "calls_count": "{{formattedCount}} calls",
+    "calls_sorted_hint": "Sorted by calls in the current log range",
+    "unrestricted": "Any"
   },
   "ccswitch": {
     "import_to_ccswitch": "Import to CC Switch",

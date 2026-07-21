@@ -119,6 +119,14 @@ const isStringRecord = (value: unknown): value is Record<string, string> =>
   !Array.isArray(value) &&
   Object.values(value).every((entry) => typeof entry === "string");
 
+const isNumberRecord = (value: unknown): value is Record<string, number> =>
+  value !== null &&
+  typeof value === "object" &&
+  !Array.isArray(value) &&
+  Object.values(value).every(
+    (entry) => typeof entry === "number" && Number.isFinite(entry) && entry >= 0,
+  );
+
 function asTrimmedString(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
@@ -370,6 +378,7 @@ export const usageApi = {
       filters: {
         api_keys: Array.isArray(filters?.api_keys) ? filters.api_keys : [],
         api_key_names: isStringRecord(filters?.api_key_names) ? filters.api_key_names : {},
+        api_key_counts: isNumberRecord(filters?.api_key_counts) ? filters.api_key_counts : {},
         models: Array.isArray(filters?.models) ? filters.models : [],
         channels: Array.isArray(filters?.channels) ? filters.channels : [],
         channel_options: normalizeChannelOptions(filters?.channel_options, filters?.channels),
@@ -553,6 +562,7 @@ export interface UsageLogsResponse {
   filters: {
     api_keys: string[];
     api_key_names: Record<string, string>;
+    api_key_counts: Record<string, number>;
     models: string[];
     channels: string[];
     channel_options: UsageChannelFilterOption[];
@@ -570,6 +580,7 @@ export interface UsageLogsResponse {
 type UsageLogsFilterPayload = {
   api_keys?: unknown;
   api_key_names?: unknown;
+  api_key_counts?: unknown;
   models?: unknown;
   channels?: unknown;
   channel_options?: unknown;

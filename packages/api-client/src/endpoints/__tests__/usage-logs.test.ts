@@ -23,6 +23,7 @@ describe("usage logs api", () => {
       filters: {
         api_keys: null,
         api_key_names: null,
+        api_key_counts: null,
         models: null,
         channels: null,
       },
@@ -37,6 +38,7 @@ describe("usage logs api", () => {
       filters: {
         api_keys: [],
         api_key_names: {},
+        api_key_counts: {},
         models: [],
         channels: [],
         channel_options: [],
@@ -52,14 +54,31 @@ describe("usage logs api", () => {
     expect(getMock).toHaveBeenCalledWith("/usage/logs?page=1&size=50");
   });
 
-  test("normalizes channel_options and falls back to legacy channels", async () => {
-    const { usageApi, normalizeChannelOptions } = await import(
-      "@code-proxy/api-client/endpoints/usage"
-    );
+  test("preserves valid request counts and rejects malformed count maps", async () => {
+    const { usageApi } = await import("@code-proxy/api-client/endpoints/usage");
+    getMock
+      .mockResolvedValueOnce({
+        filters: { api_key_counts: { "sk-primary": 42 } },
+        stats: {},
+      })
+      .mockResolvedValueOnce({
+        filters: { api_key_counts: { "sk-primary": "42" } },
+        stats: {},
+      });
 
-    expect(
-      normalizeChannelOptions(undefined, ["Codex", "Relay", "codex"]),
-    ).toEqual([
+    await expect(usageApi.getUsageLogs({})).resolves.toMatchObject({
+      filters: { api_key_counts: { "sk-primary": 42 } },
+    });
+    await expect(usageApi.getUsageLogs({})).resolves.toMatchObject({
+      filters: { api_key_counts: {} },
+    });
+  });
+
+  test("normalizes channel_options and falls back to legacy channels", async () => {
+    const { usageApi, normalizeChannelOptions } =
+      await import("@code-proxy/api-client/endpoints/usage");
+
+    expect(normalizeChannelOptions(undefined, ["Codex", "Relay", "codex"])).toEqual([
       { value: "Codex", label: "Codex" },
       { value: "Relay", label: "Relay" },
     ]);
