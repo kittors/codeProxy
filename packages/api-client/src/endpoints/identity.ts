@@ -286,6 +286,8 @@ export const identityApi = {
     apiClient.get<AuditLogIdentity>(`/audit-logs/${encodeURIComponent(String(id))}`),
   deleteAuditLog: (id: number) =>
     apiClient.delete<void>(`/audit-logs/${encodeURIComponent(String(id))}`),
+  clearAuditLogs: () =>
+    apiClient.delete<{ deleted: number }>("/audit-logs"),
   deleteRole: (id: string) => apiClient.delete<void>(`/roles/${encodeURIComponent(id)}`),
   replaceRolePermissions: (id: string, permissions: string[], version: number) =>
     apiClient.put<RoleIdentity>(`/roles/${encodeURIComponent(id)}/permissions`, {

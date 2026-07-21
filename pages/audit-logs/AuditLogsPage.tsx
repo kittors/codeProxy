@@ -64,6 +64,7 @@ export function AuditLogsPage() {
   const [detail, setDetail] = useState<AuditLogIdentity | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<AuditLogIdentity | null>(null);
+  const [clearAllOpen, setClearAllOpen] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const requestSeqRef = useRef(0);
@@ -186,6 +187,32 @@ export function AuditLogsPage() {
     totalCount,
   ]);
 
+  const confirmClearAll = useCallback(async () => {
+    setBusy(true);
+    try {
+      const result = await identityApi.clearAuditLogs();
+      notify({
+        type: "success",
+        message: t("identity_admin.audit_logs_cleared", {
+          count: result.deleted ?? 0,
+        }),
+      });
+      setClearAllOpen(false);
+      setDetail(null);
+      await fetchLogs(1, pageSize);
+    } catch (error) {
+      notify({
+        type: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : t("identity_admin.operation_failed"),
+      });
+    } finally {
+      setBusy(false);
+    }
+  }, [fetchLogs, notify, pageSize, t]);
+
   const columns = useMemo<DataTableColumn<AuditLogIdentity>[]>(
     () => [
       {
@@ -267,13 +294,27 @@ export function AuditLogsPage() {
   return (
     <section className="flex flex-1 flex-col">
       <div className="flex flex-1 flex-col rounded-2xl border border-black/[0.06] bg-white shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] dark:border-white/[0.06] dark:bg-neutral-950/70 dark:shadow-[0_1px_2px_rgb(0_0_0_/_0.22)]">
-        <div className="px-5 pt-5 pb-3">
-          <h2 className="text-base font-semibold text-slate-950 dark:text-white">
-            {t("identity_admin.audit_logs_title")}
-          </h2>
-          <p className="text-sm text-slate-500">
-            {t("identity_admin.audit_logs_description")}
-          </p>
+        <div className="flex flex-wrap items-start justify-between gap-3 px-5 pt-5 pb-3">
+          <div className="min-w-0">
+            <h2 className="text-base font-semibold text-slate-950 dark:text-white">
+              {t("identity_admin.audit_logs_title")}
+            </h2>
+            <p className="text-sm text-slate-500">
+              {t("identity_admin.audit_logs_description")}
+            </p>
+          </div>
+          <PermissionGate permission="tenant.audit.delete">
+            <button
+              type="button"
+              onClick={() => setClearAllOpen(true)}
+              disabled={busy || loading || totalCount === 0}
+              aria-label={t("identity_admin.clear_audit_logs")}
+              title={t("identity_admin.clear_audit_logs")}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-rose-50 text-rose-600 transition hover:bg-rose-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-300/50 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-rose-500/15 dark:text-rose-300 dark:hover:bg-rose-500/25"
+            >
+              <Trash2 size={14} aria-hidden="true" />
+            </button>
+          </PermissionGate>
         </div>
         <div className="relative h-[calc(100dvh-300px)] min-h-[360px] overflow-hidden px-5">
           <DataTable<AuditLogIdentity>
@@ -443,6 +484,20 @@ export function AuditLogsPage() {
         onConfirm={() => void confirmDelete()}
         onClose={() => {
           if (!busy) setDeleteTarget(null);
+        }}
+      />
+
+      <ConfirmModal
+        open={clearAllOpen}
+        title={t("identity_admin.clear_audit_logs")}
+        description={t("identity_admin.clear_audit_logs_confirm")}
+        confirmText={t("identity_admin.clear_audit_logs_confirm_button")}
+        cancelText={t("common.cancel")}
+        variant="danger"
+        busy={busy}
+        onConfirm={() => void confirmClearAll()}
+        onClose={() => {
+          if (!busy) setClearAllOpen(false);
         }}
       />
     </section>

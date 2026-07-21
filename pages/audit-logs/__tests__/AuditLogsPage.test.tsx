@@ -6,12 +6,14 @@ import { AuditLogsPage } from "../AuditLogsPage";
 const auditLogs = vi.fn();
 const auditLog = vi.fn();
 const deleteAuditLog = vi.fn();
+const clearAuditLogs = vi.fn();
 
 vi.mock("@code-proxy/api-client", () => ({
   identityApi: {
     auditLogs: (...args: unknown[]) => auditLogs(...args),
     auditLog: (...args: unknown[]) => auditLog(...args),
     deleteAuditLog: (...args: unknown[]) => deleteAuditLog(...args),
+    clearAuditLogs: (...args: unknown[]) => clearAuditLogs(...args),
   },
 }));
 
@@ -42,6 +44,8 @@ describe("AuditLogsPage", () => {
     auditLogs.mockReset();
     auditLog.mockReset();
     deleteAuditLog.mockReset();
+    clearAuditLogs.mockReset();
+    clearAuditLogs.mockResolvedValue({ deleted: 2 });
     auditLogs.mockResolvedValue({
       items: [
         {
@@ -158,5 +162,28 @@ describe("AuditLogsPage", () => {
     expect(
       within(dialog).getByText("internal/api/handlers/management · POST /users"),
     ).toBeInTheDocument();
+  });
+
+  test("clears all audit logs from header action", async () => {
+    const user = userEvent.setup();
+    render(<AuditLogsPage />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText("Acme / Alice").length).toBeGreaterThan(0);
+    });
+
+    await user.click(
+      screen.getByRole("button", { name: "identity_admin.clear_audit_logs" }),
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: "identity_admin.clear_audit_logs_confirm_button",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(clearAuditLogs).toHaveBeenCalledTimes(1);
+    });
+    expect(auditLogs).toHaveBeenLastCalledWith({ page: 1, size: 50 });
   });
 });
