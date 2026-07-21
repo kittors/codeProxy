@@ -535,6 +535,8 @@ describe("ApiKeyLookupPage", () => {
           total_cost: 0,
         },
         filters: {
+          api_key_ids: ["key-laptop", "key-auto"],
+          api_key_id_names: { "key-laptop": "Laptop", "key-auto": "Automation" },
           models: ["gpt-5.5"],
           channels: ["Codex 主渠道", "OpenCode"],
           statuses: ["success", "failed"],
@@ -554,6 +556,8 @@ describe("ApiKeyLookupPage", () => {
           total_cost: 0,
         },
         filters: {
+          api_key_ids: ["key-laptop", "key-auto"],
+          api_key_id_names: { "key-laptop": "Laptop", "key-auto": "Automation" },
           models: ["gpt-5.5"],
           channels: ["Codex 主渠道"],
           statuses: ["success"],
@@ -570,6 +574,9 @@ describe("ApiKeyLookupPage", () => {
 
     await userEvent.click(await screen.findByRole("tab", { name: /request logs/i }));
 
+    expect(await screen.findByRole("combobox", { name: /filter by key/i })).toHaveTextContent(
+      /all keys/i,
+    );
     expect(await screen.findByRole("combobox", { name: /filter by model/i })).toHaveTextContent(
       /all models/i,
     );
@@ -578,16 +585,17 @@ describe("ApiKeyLookupPage", () => {
       /all status/i,
     );
 
-    await userEvent.click(screen.getByRole("combobox", { name: /filter by status/i }));
-    await userEvent.click(await screen.findByRole("option", { name: /failed|失败/i }));
+    await userEvent.click(screen.getByRole("combobox", { name: /filter by key/i }));
+    // emptyValueMeansAllSelected: clicking one option deselects it from "all".
+    await userEvent.click(await screen.findByRole("option", { name: /Laptop/i }));
     await userEvent.click(screen.getByRole("button", { name: /apply filters/i }));
 
     await waitFor(() => {
       expect(mocks.fetchPublicLogs).toHaveBeenLastCalledWith(
         expect.objectContaining({
           apiKey: "sk-restored-key",
-          statuses: ["success"],
-          statusesEmpty: false,
+          apiKeyIds: ["key-auto"],
+          apiKeyIdsEmpty: false,
         }),
       );
     });
