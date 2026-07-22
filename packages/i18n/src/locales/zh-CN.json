@@ -2593,7 +2593,7 @@
     "version": "版本",
     "build_time": "构建时间",
     "ui_version": "UI 版本",
-    "api_key_lookup": "API Key 查询",
+    "api_key_lookup": "用户门户",
     "available_models": "可用模型",
     "search_models": "搜索模型…",
     "refresh": "刷新",
@@ -2601,7 +2601,9 @@
     "no_models": "暂无模型数据",
     "no_match": "无匹配结果",
     "load_models_failed": "加载模型失败",
-    "other_vendor": "其他"
+    "other_vendor": "其他",
+    "api_key_portal": "用户门户",
+    "api_key_usage": "API 密钥用量查询"
   },
   "m_login": {
     "auto_connecting": "正在自动连接…",
@@ -2637,7 +2639,7 @@
     "exit_batch": "退出批量"
   },
   "m_apikey_lookup": {
-    "title": "API Key 查询",
+    "title": "用户门户",
     "input_placeholder": "输入 API Key 查询用量",
     "query": "查询",
     "querying": "查询中…",
@@ -3603,7 +3605,7 @@
     "token": "Token",
     "model_filter": "模型过滤",
     "status_filter": "状态过滤",
-    "title": "API 密钥用量查询",
+    "title": "用户门户",
     "api_key_label": "API 密钥",
     "query": "查询",
     "query_failed": "查询失败",
@@ -4349,13 +4351,14 @@
     "title": "系统信息",
     "subtitle": "服务连接与版本信息",
     "api_base": "API 地址",
-    "api_key_lookup": "API 密钥查询",
     "build_time": "构建时间",
     "version": "版本",
     "ui_version": "UI 版本",
     "mgmt_endpoint": "管理端点",
     "copy": "复制",
-    "copied": "已复制"
+    "copied": "已复制",
+    "api_key_portal": "用户门户",
+    "api_key_usage": "API 密钥用量查询"
   },
   "model_plaza": {
     "title": "模型广场",
@@ -4833,5 +4836,9 @@
     "tenant_administrator_role": "租户管理员",
     "super_administrator": "超级管理员",
     "more_actions": "更多操作"
+  },
+  "apikey_usage": {
+    "title": "API 密钥用量查询",
+    "subtitle": "输入 API 密钥查看请求日志与快捷导入"
   }
 }

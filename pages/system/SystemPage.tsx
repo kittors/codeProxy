@@ -115,7 +115,8 @@ export function SystemPage({
 } = {}) {
   const { t } = useTranslation();
   const auth = useAuth();
-  const apiKeyLookupUrl = `${window.location.origin}/manage/apikey-lookup`;
+  const apiKeyPortalUrl = `${window.location.origin}/manage/apikey-lookup`;
+  const apiKeyUsageUrl = `${window.location.origin}/manage/apikey-usage`;
 
   return (
     <div className="min-w-0 space-y-6 overflow-x-hidden">
@@ -168,8 +169,14 @@ export function SystemPage({
         />
         <InfoCard
           icon={KeyRound}
-          label={t("system_page.api_key_lookup")}
-          value={apiKeyLookupUrl}
+          label={t("system_page.api_key_portal")}
+          value={apiKeyPortalUrl}
+          link
+        />
+        <InfoCard
+          icon={KeyRound}
+          label={t("system_page.api_key_usage")}
+          value={apiKeyUsageUrl}
           link
         />
       </div>

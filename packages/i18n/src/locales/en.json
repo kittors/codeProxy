@@ -2576,7 +2576,7 @@
     "version": "Version",
     "build_time": "Build Time",
     "ui_version": "UI Version",
-    "api_key_lookup": "API Key Lookup",
+    "api_key_lookup": "User portal",
     "available_models": "Available Models",
     "search_models": "Search models…",
     "refresh": "Refresh",
@@ -2584,7 +2584,9 @@
     "no_models": "No model data",
     "no_match": "No results",
     "load_models_failed": "Failed to load models",
-    "other_vendor": "Other"
+    "other_vendor": "Other",
+    "api_key_portal": "User portal",
+    "api_key_usage": "API key usage"
   },
   "m_login": {
     "auto_connecting": "Auto connecting…",
@@ -2620,7 +2622,7 @@
     "exit_batch": "Exit Batch"
   },
   "m_apikey_lookup": {
-    "title": "API Key Lookup",
+    "title": "User portal",
     "input_placeholder": "Enter API Key to query usage",
     "query": "Query",
     "querying": "Querying…",
@@ -3306,7 +3308,7 @@
     "token": "Token",
     "model_filter": "Model filter",
     "status_filter": "Status filter",
-    "title": "API key usage",
+    "title": "User portal",
     "api_key_label": "API key",
     "query": "Query",
     "query_failed": "Query failed",
@@ -4130,13 +4132,14 @@
     "title": "System Info",
     "subtitle": "Service connection and version details",
     "api_base": "API Base",
-    "api_key_lookup": "API Key Lookup",
     "build_time": "Build Time",
     "version": "Version",
     "ui_version": "UI Version",
     "mgmt_endpoint": "Management Endpoint",
     "copy": "Copy",
-    "copied": "Copied"
+    "copied": "Copied",
+    "api_key_portal": "User portal",
+    "api_key_usage": "API key usage"
   },
   "model_plaza": {
     "title": "Model Plaza",
@@ -4819,5 +4822,9 @@
     "clear_audit_logs_confirm": "Clear all audit logs in your current visible scope? This cannot be undone.",
     "clear_audit_logs_confirm_button": "Clear all",
     "audit_logs_cleared": "Cleared {{count}} audit logs."
+  },
+  "apikey_usage": {
+    "title": "API key usage",
+    "subtitle": "Enter an API key to view request logs and quick import"
   }
 }

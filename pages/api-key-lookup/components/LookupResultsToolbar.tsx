@@ -11,6 +11,8 @@ const STICKY_TOP_OFFSET_PX = 12;
 /** 亚像素容差，避免临界抖动 */
 const STUCK_EPSILON_PX = 1;
 
+const DEFAULT_TABS: ApiKeyLookupTab[] = ["usage", "keys", "logs", "models", "quickImport"];
+
 export function LookupResultsToolbar({
   t,
   activeTab,
@@ -22,6 +24,7 @@ export function LookupResultsToolbar({
   chartLoading,
   modelsLoading,
   showKeysTab = false,
+  tabs,
   keysHeader,
 }: {
   t: (key: string, options?: Record<string, unknown>) => string;
@@ -35,6 +38,8 @@ export function LookupResultsToolbar({
   modelsLoading: boolean;
   /** Portal login: show “管理 API Key” as the 2nd tab. */
   showKeysTab?: boolean;
+  /** Restrict visible tabs (e.g. public key usage page only needs logs + quick import). */
+  tabs?: ApiKeyLookupTab[];
   /** keys tab：标题 + 刷新/新建 与 tabs 同吸顶，避免滚动后消失。 */
   keysHeader?: {
     loading?: boolean;
@@ -45,7 +50,9 @@ export function LookupResultsToolbar({
 }) {
   const toolbarRef = useRef<HTMLDivElement>(null);
   const [stuck, setStuck] = useState(false);
-  const showKeysHeader = activeTab === "keys" && keysHeader;
+  const visibleTabs = tabs?.length ? tabs : DEFAULT_TABS;
+  const showTab = (tab: ApiKeyLookupTab) => visibleTabs.includes(tab);
+  const showKeysHeader = activeTab === "keys" && keysHeader && showTab("keys");
 
   // 不要再用短 relative 包裹 sticky：sticky 只能在「包含块」高度内钉住，
   // 外层高度≈自身时，一滚就会整段被带走，表现为「没吸顶、飘走」。
@@ -97,15 +104,23 @@ export function LookupResultsToolbar({
             onValueChange={(value) => setActiveTab(value as typeof activeTab)}
           >
             <TabsList>
-              <TabsTrigger value="usage">{t("apikey_lookup.usage_stats")}</TabsTrigger>
-              {showKeysTab ? (
+              {showTab("usage") ? (
+                <TabsTrigger value="usage">{t("apikey_lookup.usage_stats")}</TabsTrigger>
+              ) : null}
+              {showTab("keys") && showKeysTab ? (
                 <TabsTrigger value="keys">
                   {t("apikey_lookup.manage_keys", { defaultValue: "管理 API Key" })}
                 </TabsTrigger>
               ) : null}
-              <TabsTrigger value="logs">{t("apikey_lookup.request_logs")}</TabsTrigger>
-              <TabsTrigger value="models">{t("model_plaza.title")}</TabsTrigger>
-              <TabsTrigger value="quickImport">{t("apikey_lookup.quick_import")}</TabsTrigger>
+              {showTab("logs") ? (
+                <TabsTrigger value="logs">{t("apikey_lookup.request_logs")}</TabsTrigger>
+              ) : null}
+              {showTab("models") ? (
+                <TabsTrigger value="models">{t("model_plaza.title")}</TabsTrigger>
+              ) : null}
+              {showTab("quickImport") ? (
+                <TabsTrigger value="quickImport">{t("apikey_lookup.quick_import")}</TabsTrigger>
+              ) : null}
             </TabsList>
           </Tabs>
           {activeTab === "usage" || activeTab === "logs" ? (
