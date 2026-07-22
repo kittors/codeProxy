@@ -4825,6 +4825,12 @@
   },
   "apikey_usage": {
     "title": "API key usage",
-    "subtitle": "Enter an API key to view request logs and quick import"
+    "subtitle": "Enter an API key to view request logs and quick import",
+    "modal_title": "Enter API key",
+    "modal_desc": "No account needed. Enter a key to view request logs and quick import.",
+    "empty_title": "Look up API key usage",
+    "empty_desc": "Enter a key to view request logs and quick import. The key is saved in localStorage on this device.",
+    "switch_key": "Switch key",
+    "logout": "Exit lookup"
   }
 }
