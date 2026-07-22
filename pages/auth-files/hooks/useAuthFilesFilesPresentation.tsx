@@ -190,6 +190,8 @@ interface UseAuthFilesFilesPresentationOptions {
   ) => { id: string; label: string; item: QuotaItem | null }[];
   cycleCallsByAuthIndex: Record<string, number>;
   cycleBudgetByAuthIndex: Record<string, AuthFileCycleBudgetStats>;
+  statusUsageReady: boolean;
+  statusUsageLoading: boolean;
   refreshQuota: (file: AuthFileItem, provider: QuotaProvider) => Promise<void>;
   requestResetCredit: (file: AuthFileItem) => void;
   resettingCreditFileName: string | null;
@@ -217,6 +219,8 @@ export function useAuthFilesFilesPresentation({
   resolveQuotaCardSlots,
   cycleCallsByAuthIndex,
   cycleBudgetByAuthIndex,
+  statusUsageReady,
+  statusUsageLoading,
   refreshQuota,
   requestResetCredit,
   resettingCreditFileName,
@@ -910,8 +914,14 @@ export function useAuthFilesFilesPresentation({
           const authIndex = normalizeAuthIndexValue(file.auth_index ?? file.authIndex);
           const calls = authIndex ? cycleCallsByAuthIndex[authIndex] : undefined;
           return (
-            <span className="text-xs font-semibold tabular-nums text-slate-700 dark:text-white/70">
-              {typeof calls === "number" ? calls : "--"}
+            <span className="inline-flex items-center justify-end gap-1 text-xs font-semibold tabular-nums text-slate-700 dark:text-white/70">
+              {!statusUsageReady && statusUsageLoading ? (
+                <Loader2 size={12} className="animate-spin" aria-label={t("common.loading")} />
+              ) : statusUsageReady && typeof calls === "number" ? (
+                calls
+              ) : (
+                "--"
+              )}
             </span>
           );
         },
@@ -926,7 +936,7 @@ export function useAuthFilesFilesPresentation({
           const stats = resolveAuthFileStats(file, usageIndex);
           return (
             <span className="text-xs font-semibold tabular-nums text-emerald-700 dark:text-emerald-200">
-              {stats.success}
+              {statusUsageReady ? stats.success : "--"}
             </span>
           );
         },
@@ -941,7 +951,7 @@ export function useAuthFilesFilesPresentation({
           const stats = resolveAuthFileStats(file, usageIndex);
           return (
             <span className="text-xs font-semibold tabular-nums text-rose-700 dark:text-rose-200">
-              {stats.failure}
+              {statusUsageReady ? stats.failure : "--"}
             </span>
           );
         },
@@ -951,6 +961,16 @@ export function useAuthFilesFilesPresentation({
         label: t("common.success_rate"),
         width: "w-44",
         render: (file) => {
+          if (!statusUsageReady) {
+            return statusUsageLoading ? (
+              <span className="inline-flex items-center gap-1 text-xs text-slate-500 dark:text-white/45">
+                <Loader2 size={12} className="animate-spin" />
+                {t("common.loading")}
+              </span>
+            ) : (
+              <span className="text-xs text-slate-400 dark:text-white/40">--</span>
+            );
+          }
           const statusData = resolveAuthFileStatusBar(file, usageIndex);
           return <ProviderStatusBar data={statusData} compact />;
         },
@@ -1170,6 +1190,8 @@ export function useAuthFilesFilesPresentation({
     connectivityState,
     cycleBudgetByAuthIndex,
     cycleCallsByAuthIndex,
+    statusUsageLoading,
+    statusUsageReady,
     downloadAuthFile,
     formatQuotaItemDetailText,
     formatPlanTypeLabel,

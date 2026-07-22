@@ -54,6 +54,8 @@ export const AUTH_FILES_UI_STATE_KEY = "authFilesPage.uiState.v3";
 /** Tenant-scoped auth-files list/quota cache (v3). Legacy v2 is read only for migration. */
 export const AUTH_FILES_DATA_CACHE_KEY = "authFilesPage.dataCache.v3";
 export const AUTH_FILES_DATA_CACHE_KEY_V2 = "authFilesPage.dataCache.v2";
+/** Cached status/usage is only a warm-paint hint; refetch after one minute. */
+export const AUTH_FILES_DATA_CACHE_TTL_MS = 60_000;
 export const AUTH_FILES_QUOTA_PREVIEW_KEY = "authFilesPage.quotaPreview.v1";
 export const AUTH_FILES_QUOTA_AUTO_REFRESH_KEY = "authFilesPage.quotaAutoRefreshMs.v1";
 export const AUTH_FILES_FILES_VIEW_MODE_KEY = "authFilesPage.filesViewMode.v1";
@@ -634,7 +636,8 @@ const parseAuthFilesDataCacheBucket = (
   const savedAtMs =
     typeof parsed.savedAtMs === "number" && Number.isFinite(parsed.savedAtMs)
       ? parsed.savedAtMs
-      : Date.now();
+      : null;
+  if (savedAtMs === null) return null;
   return {
     savedAtMs,
     files,
@@ -646,6 +649,11 @@ const parseAuthFilesDataCacheBucket = (
     cycleByAuthIndex: sanitizeCycleByAuthIndexForCache(parsed.cycleByAuthIndex),
   };
 };
+
+const isAuthFilesDataCacheFresh = (
+  cache: AuthFilesDataCacheBucket,
+  nowMs = Date.now(),
+): boolean => nowMs - cache.savedAtMs <= AUTH_FILES_DATA_CACHE_TTL_MS;
 
 /**
  * Read auth-files list/quota cache for a tenant.
@@ -663,7 +671,7 @@ export const readAuthFilesDataCache = (
     // v3 may still hold a single unscoped bucket mid-migration.
     acceptUnscopedCurrent: true,
   });
-  if (!bucket) return null;
+  if (!bucket || !isAuthFilesDataCacheFresh(bucket)) return null;
   return { tenantId: tenantKey, ...bucket };
 };
 
@@ -684,17 +692,18 @@ export const writeAuthFilesDataCache = (cache: AuthFilesDataCache) => {
       cycleByAuthIndex: cache.cycleByAuthIndex,
     },
     merge: (previous, next) => {
+      const freshPrevious = previous && isAuthFilesDataCacheFresh(previous) ? previous : null;
       const fileNames = new Set(next.files.map((file) => file.name).filter(Boolean));
       return {
         savedAtMs: next.savedAtMs,
         files: next.files,
-        usageData: next.usageData ?? previous?.usageData,
+        usageData: next.usageData ?? freshPrevious?.usageData,
         quotaByFileName: sanitizeQuotaByFileNameForCache(
-          next.quotaByFileName ?? previous?.quotaByFileName,
+          next.quotaByFileName ?? freshPrevious?.quotaByFileName,
           fileNames,
         ),
         cycleByAuthIndex: sanitizeCycleByAuthIndexForCache(
-          next.cycleByAuthIndex ?? previous?.cycleByAuthIndex,
+          next.cycleByAuthIndex ?? freshPrevious?.cycleByAuthIndex,
         ),
       };
     },

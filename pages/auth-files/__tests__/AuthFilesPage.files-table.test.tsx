@@ -2172,7 +2172,7 @@ describe("AuthFilesPage files table", () => {
     expect(mocks.getStatus).toHaveBeenCalled();
   });
 
-  test("full reload seeds 本周期 from cache so first paint is not Cycle --", async () => {
+  test("cached cycle stays loading until the first status GET resolves", async () => {
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     setActiveCacheTenantId(DEFAULT_CACHE_TENANT_ID);
     const file = {
@@ -2189,34 +2189,19 @@ describe("AuthFilesPage files table", () => {
       tenantId: DEFAULT_CACHE_TENANT_ID,
       savedAtMs: Date.now(),
       files: [file],
+      usageData: {
+        source: [],
+        auth_index: [
+          { entity_name: "cycle-93", requests: 93, failed: 1, avg_latency: 0, total_tokens: 0 },
+        ],
+      },
       cycleByAuthIndex: {
         "cycle-93": { calls: 93, cycleCostTotal: null, weeklyQuotaUsedPercent: null },
       },
     });
     mocks.list.mockImplementation(async () => ({ files: [file] }));
-    // Delay status so first paint must come from cache, not network.
-    mocks.getStatus.mockImplementation(
-      () =>
-        new Promise((resolve) => {
-          setTimeout(
-            () =>
-              resolve({
-                items: [
-                  {
-                    auth_index: "cycle-93",
-                    quotas: [],
-                    usage: {
-                      cycle_request_total: 98,
-                      cycle_known: true,
-                      request_total: 200,
-                    },
-                  },
-                ],
-              }),
-            80,
-          );
-        }),
-    );
+    const statusDeferred = createDeferred<{ items: Array<Record<string, unknown>> }>();
+    mocks.getStatus.mockImplementation(() => statusDeferred.promise);
 
     render(
       <MemoryRouter initialEntries={["/auth-files"]}>
@@ -2233,9 +2218,32 @@ describe("AuthFilesPage files table", () => {
     const title = await screen.findByText("Cycle Cached");
     const card = title.closest("section");
     expect(card).not.toBeNull();
-    expect(within(card as HTMLElement).getByText("Cycle 93")).toBeInTheDocument();
-    expect(within(card as HTMLElement).queryByText("Cycle --")).not.toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText("Cycle 93")).not.toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText("98.9%")).not.toBeInTheDocument();
+    expect(within(card as HTMLElement).getByText("Cycle --")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Refresh" })[0]?.querySelector("svg")).toHaveClass(
+      "animate-spin",
+    );
+
+    await act(async () => {
+      statusDeferred.resolve({
+        items: [
+          {
+            auth_index: "cycle-93",
+            quotas: [],
+            usage: {
+              cycle_request_total: 98,
+              cycle_known: true,
+              request_total: 200,
+            },
+          },
+        ],
+      });
+      await statusDeferred.promise;
+    });
+
     expect(await within(card as HTMLElement).findByText("Cycle 98")).toBeInTheDocument();
+    expect(await within(card as HTMLElement).findByText("100.0%")).toBeInTheDocument();
   });
 
   test("cards view shows unknown cycle without lifetime/scope noise when weekly cycle is unknown", async () => {
