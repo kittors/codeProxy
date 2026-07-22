@@ -23,6 +23,8 @@ import { useAuth } from "@app/providers/AuthProvider";
 import { buildPermissionTree, PermissionTree } from "./PermissionTree";
 
 const emptyForm = { name: "", description: "" };
+const hasProtectedRoleAssignments = (user: UserIdentity) =>
+  user.role_codes?.some((code) => code === "platform_super_admin" || code === "tenant_admin");
 
 export function RolesPage() {
   const { notify } = useToast();
@@ -229,8 +231,10 @@ export function RolesPage() {
               <Button
                 size="xs"
                 variant="ghost"
+                disabled={role.system_protected}
                 tooltip={t("identity_admin.assign_users")}
                 onClick={() => {
+                  if (role.system_protected) return;
                   setUserRole(role);
                   setSelectedUsers(
                     new Set(
@@ -291,7 +295,7 @@ export function RolesPage() {
   };
 
   const saveUsers = async () => {
-    if (!userRole) return;
+    if (!userRole || userRole.system_protected) return;
     const success = await run(
       () => identityApi.replaceRoleUsers(userRole.id, [...selectedUsers], userRole.version),
       t("identity_admin.role_users_saved"),
@@ -419,7 +423,11 @@ export function RolesPage() {
         footer={
           <>
             <Button onClick={() => setUserRole(null)}>{t("common.cancel")}</Button>
-            <Button variant="primary" disabled={busy} onClick={() => void saveUsers()}>
+            <Button
+              variant="primary"
+              disabled={busy || Boolean(userRole?.system_protected)}
+              onClick={() => void saveUsers()}
+            >
               {t("identity_admin.save")}
             </Button>
           </>
@@ -428,7 +436,7 @@ export function RolesPage() {
         <div className="space-y-2">
           {users.map((user) => {
             const checked = selectedUsers.has(user.id);
-            const disabled = user.role_codes?.includes("platform_super_admin");
+            const disabled = hasProtectedRoleAssignments(user);
             return (
               <label
                 key={user.id}

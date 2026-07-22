@@ -31,6 +31,8 @@ import {
   type CreateUserFormErrors,
 } from "./userForm";
 
+const isTenantAdmin = (user: UserIdentity) => user.role_codes?.includes("tenant_admin");
+
 export function UsersPage() {
   const { notify } = useToast();
   const { t, i18n } = useTranslation();
@@ -138,6 +140,14 @@ export function UsersPage() {
       user.id === principal?.user.id || user.role_codes?.includes("platform_super_admin"),
     [principal?.user.id],
   );
+  const cannotAssignRoles = useCallback(
+    (user: UserIdentity) => isProtected(user) || isTenantAdmin(user),
+    [isProtected],
+  );
+  const cannotDelete = useCallback(
+    (user: UserIdentity) => isProtected(user) || isTenantAdmin(user),
+    [isProtected],
+  );
 
   const closeCreate = () => {
     setCreateOpen(false);
@@ -242,15 +252,18 @@ export function UsersPage() {
         lockOrder: "end",
         render: (user) => {
           const protectedUser = isProtected(user);
+          const rolesDisabled = cannotAssignRoles(user);
+          const deleteDisabled = cannotDelete(user);
           return (
             <div className="flex items-center gap-1.5">
               <PermissionGate permission="tenant.users.assign_roles">
                 <Button
                   size="xs"
                   variant="ghost"
-                  disabled={protectedUser || busy || !canReadRoles}
+                  disabled={rolesDisabled || busy || !canReadRoles}
                   tooltip={t("identity_admin.set_roles")}
                   onClick={() => {
+                    if (cannotAssignRoles(user)) return;
                     setRolesUser(user);
                     setRolesDraft([...(user.role_ids ?? [])]);
                   }}
@@ -278,9 +291,11 @@ export function UsersPage() {
                   size="xs"
                   variant="ghost"
                   className="text-rose-600 hover:text-rose-700 dark:text-rose-300 dark:hover:text-rose-200"
-                  disabled={protectedUser || busy}
+                  disabled={deleteDisabled || busy}
                   tooltip={t("identity_admin.delete")}
-                  onClick={() => setDeleteUser(user)}
+                  onClick={() => {
+                    if (!cannotDelete(user)) setDeleteUser(user);
+                  }}
                 >
                   <Trash2 size={15} />
                 </Button>
@@ -290,7 +305,18 @@ export function UsersPage() {
         },
       },
     ],
-    [busy, canReadRoles, i18n.language, isProtected, roleNames, run, t, userName],
+    [
+      busy,
+      canReadRoles,
+      cannotAssignRoles,
+      cannotDelete,
+      i18n.language,
+      isProtected,
+      roleNames,
+      run,
+      t,
+      userName,
+    ],
   );
 
   const createUser = async (event: FormEvent) => {
@@ -342,7 +368,7 @@ export function UsersPage() {
 
   const submitRoles = async (event: FormEvent) => {
     event.preventDefault();
-    if (!rolesUser) return;
+    if (!rolesUser || cannotAssignRoles(rolesUser)) return;
     const success = await run(
       () => identityApi.assignUserRoles(rolesUser.id, rolesDraft),
       t("identity_admin.roles_saved"),
@@ -567,7 +593,12 @@ export function UsersPage() {
         footer={
           <>
             <Button onClick={() => setRolesUser(null)}>{t("common.cancel")}</Button>
-            <Button type="submit" form="set-user-roles-form" variant="primary" disabled={busy}>
+            <Button
+              type="submit"
+              form="set-user-roles-form"
+              variant="primary"
+              disabled={busy || Boolean(rolesUser && cannotAssignRoles(rolesUser))}
+            >
               {t("identity_admin.save")}
             </Button>
           </>
@@ -575,7 +606,12 @@ export function UsersPage() {
       >
         <Form id="set-user-roles-form" onSubmit={submitRoles}>
           <FormField label={t("identity_admin.roles")}>
-            <MultiSelect options={roleOptions} value={rolesDraft} onChange={setRolesDraft} />
+            <MultiSelect
+              options={roleOptions}
+              value={rolesDraft}
+              disabled={Boolean(rolesUser && cannotAssignRoles(rolesUser))}
+              onChange={setRolesDraft}
+            />
           </FormField>
         </Form>
       </Modal>
@@ -626,7 +662,7 @@ export function UsersPage() {
         busy={busy}
         onClose={() => setDeleteUser(null)}
         onConfirm={() => {
-          if (!deleteUser) return;
+          if (!deleteUser || cannotDelete(deleteUser)) return;
           void run(
             () => identityApi.deleteUser(deleteUser.id),
             t("identity_admin.user_deleted"),
