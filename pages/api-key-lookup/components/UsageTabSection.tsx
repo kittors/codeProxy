@@ -208,6 +208,12 @@ export function UsageTabSection({
   chartLoading,
   quotaLimits,
   quotaScopes,
+  showApiKeyDistribution,
+  apiKeyMetric,
+  setApiKeyMetric,
+  apiKeyDistributionData,
+  apiKeyDistributionOption,
+  apiKeyDistributionLegend,
   modelMetric,
   setModelMetric,
   heatmapSeries,
@@ -234,6 +240,17 @@ export function UsageTabSection({
   chartLoading: boolean;
   quotaLimits?: PublicUsageLimits | null;
   quotaScopes?: PublicQuotaScope[] | null;
+  showApiKeyDistribution: boolean;
+  apiKeyMetric: "requests" | "tokens";
+  setApiKeyMetric: (value: "requests" | "tokens") => void;
+  apiKeyDistributionData: ModelDistributionDatum[];
+  apiKeyDistributionOption: Record<string, unknown>;
+  apiKeyDistributionLegend: Array<{
+    name: string;
+    valueLabel: string;
+    percentLabel: string;
+    colorClass: string;
+  }>;
   modelMetric: "requests" | "tokens";
   setModelMetric: (value: "requests" | "tokens") => void;
   heatmapSeries: HeatmapPoint[];
@@ -349,6 +366,66 @@ export function UsageTabSection({
             <CalendarHeatmap t={t} heatmapSeries={heatmapSeries} />
           )}
         </Card>
+
+        {showApiKeyDistribution ? (
+          <Card
+            title={t("apikey_lookup.api_key_distribution")}
+            description={t("apikey_lookup.api_key_distribution_desc", {
+              days: timeRange,
+              metric:
+                apiKeyMetric === "requests"
+                  ? t("apikey_lookup.requests")
+                  : t("apikey_lookup.token"),
+            })}
+            actions={
+              <Tabs
+                value={apiKeyMetric}
+                onValueChange={(next) => setApiKeyMetric(next === "tokens" ? "tokens" : "requests")}
+              >
+                <TabsList>
+                  <TabsTrigger value="requests">{t("apikey_lookup.requests")}</TabsTrigger>
+                  <TabsTrigger value="tokens">{t("apikey_lookup.token")}</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            }
+            loading={false}
+          >
+            {showInitialLoading ? (
+              <ChartSkeleton />
+            ) : apiKeyDistributionData.length > 0 ? (
+              <div className="grid gap-4 md:h-72 md:grid-cols-[minmax(0,1fr)_minmax(16rem,20rem)]">
+                <EChart option={apiKeyDistributionOption} className="h-52 min-w-0 md:h-72" />
+                <div className="flex max-h-72 min-w-0 flex-col gap-2 overflow-y-auto pr-1">
+                  {apiKeyDistributionLegend.map((item) => (
+                    <div
+                      key={item.name}
+                      className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-2 text-sm"
+                    >
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span
+                          className={`h-3.5 w-3.5 shrink-0 rounded-full opacity-80 ring-1 ring-black/5 dark:ring-white/10 ${item.colorClass}`}
+                        />
+                        <span className="min-w-0 truncate text-slate-700 dark:text-white/80">
+                          {item.name}
+                        </span>
+                      </div>
+                      <span className="text-right font-semibold tabular-nums text-slate-900 dark:text-white">
+                        {item.valueLabel}
+                      </span>
+                      <span className="text-right tabular-nums text-slate-500 dark:text-white/55">
+                        {item.percentLabel}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p className="py-8 text-center text-sm text-slate-400 dark:text-white/30">
+                {t("apikey_lookup.no_data")}
+              </p>
+            )}
+          </Card>
+        ) : null}
 
         <section className="grid gap-4 lg:grid-cols-[minmax(0,560px)_minmax(0,1fr)]">
           <Card
