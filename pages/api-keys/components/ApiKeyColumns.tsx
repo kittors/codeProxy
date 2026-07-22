@@ -13,6 +13,8 @@ import {
   Upload,
 } from "lucide-react";
 import type { ApiKeyEntry } from "@code-proxy/api-client/endpoints/api-keys";
+import { normalizePeriodSpendingLimits } from "@code-proxy/api-client";
+import { PeriodSpendingCell } from "@features/period-spending";
 import {
   formatApiKeyDate,
   formatApiKeyLimit,
@@ -172,7 +174,7 @@ export const createApiKeyColumns = ({
               )}
             </span>
           </OverflowTooltip>
-          {!accountScoped && row.is_default ? (
+          {row.is_default ? (
             <span className="shrink-0 rounded-full bg-emerald-50 px-1.5 py-0.5 text-2xs font-medium text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
               default
             </span>
@@ -181,45 +183,72 @@ export const createApiKeyColumns = ({
       ),
     },
     {
-      key: "dailySpending",
-      label: t("api_keys_page.col_daily_spending"),
-      width: "w-[180px] min-w-[180px]",
-      cellClassName: "whitespace-nowrap text-slate-700 dark:text-white/70",
+      key: "quota",
+      label: t("quota.period_spending_column"),
+      width: "w-[360px] min-w-[280px]",
       headerRender: () => (
         <HoverTooltip
-          content={t("api_keys_page.daily_spending_help")}
+          content={t("api_keys_page.quota_help")}
           className="inline-flex items-center gap-1"
         >
-          <span>{t("api_keys_page.col_daily_spending")}</span>
+          <span>{t("quota.period_spending_column")}</span>
           <Info size={12} className="text-slate-400 dark:text-white/40" />
         </HoverTooltip>
       ),
       render: (row) => {
-        const used = formatApiKeySpendingAmount(row["daily-spending-used"] ?? 0);
-        const limit = row["daily-spending-limit"] ?? 0;
-        if (!(limit > 0)) {
-          return (
-            <span className="inline-flex items-center gap-1 tabular-nums">
-              {used}
-              <span className="text-slate-400 dark:text-white/40">/</span>
-              <span className="inline-flex items-center gap-1">
-                <InfinityIcon size={14} className="text-green-500" /> {t("api_keys_page.unlimited")}
-              </span>
-            </span>
-          );
-        }
-        return (
-          <span className="tabular-nums">
-            {used}
-            <span className="text-slate-400 dark:text-white/40"> / </span>
-            {formatApiKeySpendingAmount(limit)}
-          </span>
+        const limits = normalizePeriodSpendingLimits(
+          row["period-spending-limits"],
+          row["daily-spending-limit"],
         );
+        const fallbackItems =
+          limits.day > 0
+            ? [
+                {
+                  period: "day" as const,
+                  limit: limits.day,
+                  used: row["daily-spending-used"] ?? 0,
+                  remaining: Math.max(limits.day - (row["daily-spending-used"] ?? 0), 0),
+                },
+              ]
+            : [];
+        return <PeriodSpendingCell t={t} items={row["period-spending"] ?? fallbackItems} />;
       },
     },
     {
+      key: "dailySpending",
+      label: t("quota.daily_spending_column"),
+      width: "w-[130px] min-w-[130px]",
+      cellClassName: "whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
+      headerRender: () => (
+        <HoverTooltip
+          content={t("api_keys_page.daily_spending_fact_help")}
+          className="inline-flex items-center gap-1"
+        >
+          <span>{t("quota.daily_spending_column")}</span>
+          <Info size={12} className="text-slate-400 dark:text-white/40" />
+        </HoverTooltip>
+      ),
+      render: (row) => formatApiKeySpendingAmount(row["daily-spending-used"]),
+    },
+    {
+      key: "lifetimeSpending",
+      label: t("quota.lifetime_spending_column"),
+      width: "w-[140px] min-w-[140px]",
+      cellClassName: "whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
+      headerRender: () => (
+        <HoverTooltip
+          content={t("api_keys_page.lifetime_spending_help")}
+          className="inline-flex items-center gap-1"
+        >
+          <span>{t("quota.lifetime_spending_column")}</span>
+          <Info size={12} className="text-slate-400 dark:text-white/40" />
+        </HoverTooltip>
+      ),
+      render: (row) => formatApiKeySpendingAmount(row["lifetime-spending-used"]),
+    },
+    {
       key: "dailySpendingResetCount",
-      label: t("api_keys_page.col_reset_count"),
+      label: t("quota.total_resets"),
       width: "w-[110px] min-w-[100px]",
       cellClassName: "whitespace-nowrap text-slate-700 dark:text-white/70",
       headerRender: () => (
@@ -227,7 +256,7 @@ export const createApiKeyColumns = ({
           content={t("api_keys_page.reset_count_help")}
           className="inline-flex items-center gap-1"
         >
-          <span>{t("api_keys_page.col_reset_count")}</span>
+          <span>{t("quota.total_resets")}</span>
           <Info size={12} className="text-slate-400 dark:text-white/40" />
         </HoverTooltip>
       ),
@@ -542,19 +571,18 @@ export const createApiKeyColumns = ({
                   <RotateCcw size={15} />
                 </button>
               </HoverTooltip>
-            ) : (
-              <HoverTooltip content={resetLabel}>
-                <button
-                  type="button"
-                  onClick={() => onResetDailySpending(idx)}
-                  disabled={!hasDailyLimit || isResetting}
-                  className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-orange-600 disabled:cursor-not-allowed disabled:opacity-40 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-orange-400"
-                  aria-label={resetLabel}
-                >
-                  <RotateCcw size={15} className={isResetting ? "animate-spin" : ""} />
-                </button>
-              </HoverTooltip>
-            )}
+            ) : null}
+            <HoverTooltip content={resetLabel}>
+              <button
+                type="button"
+                onClick={() => onResetDailySpending(idx)}
+                disabled={!hasDailyLimit || isResetting}
+                className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-orange-600 disabled:cursor-not-allowed disabled:opacity-40 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-orange-400"
+                aria-label={resetLabel}
+              >
+                <RotateCcw size={15} className={isResetting ? "animate-spin" : ""} />
+              </button>
+            </HoverTooltip>
             <HoverTooltip content={editLabel}>
               <button
                 type="button"
@@ -584,13 +612,11 @@ export const createApiKeyColumns = ({
   if (!accountScoped) {
     return columns;
   }
-  // Account-owned keys: quota lives on the end-user; only show credential columns.
+  // Owned keys keep their own period quota and spending facts; account-managed fields stay hidden.
   const hide = new Set([
     "dailyLimit",
     "totalQuota",
     "spendingLimit",
-    "dailySpending",
-    "dailySpendingResetCount",
     "rpmLimit",
     "tpmLimit",
     "allowedModels",

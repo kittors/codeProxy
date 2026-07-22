@@ -258,7 +258,7 @@ describe("ApiKeyColumns", () => {
     expect(screen.getByRole("button", { name: "Click to enable" })).toBeInTheDocument();
   });
 
-  test("account-scoped columns drop quota fields and usage/reset actions", () => {
+  test("account-scoped columns keep key quota and spending facts", () => {
     const row: ApiKeyEntry = {
       key: "sk-owned",
       name: "Owned",
@@ -269,52 +269,60 @@ describe("ApiKeyColumns", () => {
     const keys = columns.map((column) => column.key);
     const actionsColumn = columns.find((column) => column.key === "actions");
 
-    expect(keys).toEqual(["select", "name", "key", "createdAt", "actions"]);
+    expect(keys).toEqual([
+      "select",
+      "name",
+      "quota",
+      "dailySpending",
+      "lifetimeSpending",
+      "dailySpendingResetCount",
+      "key",
+      "createdAt",
+      "actions",
+    ]);
     expect(actionsColumn?.width).toBe("w-[220px] min-w-[220px]");
 
     render(<div>{actionsColumn?.render(row, 0)}</div>);
 
     expect(screen.queryByRole("button", { name: "View usage" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Reset today spending" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Reset today spending" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Copy key" })).toBeInTheDocument();
   });
 
-  test("places daily spending column immediately after name", () => {
+  test("places quota and spending fact columns immediately after name", () => {
     const columns = createColumns();
     const keys = columns.map((column) => column.key);
     const nameIndex = keys.indexOf("name");
-    expect(keys[nameIndex + 1]).toBe("dailySpending");
-    expect(keys[nameIndex + 2]).toBe("dailySpendingResetCount");
-    expect(keys[nameIndex + 3]).toBe("key");
+    expect(keys[nameIndex + 1]).toBe("quota");
+    expect(keys[nameIndex + 2]).toBe("dailySpending");
+    expect(keys[nameIndex + 3]).toBe("lifetimeSpending");
+    expect(keys[nameIndex + 4]).toBe("dailySpendingResetCount");
   });
 
-  test("renders daily spending used and limit amounts", () => {
+  test("renders quota separately from daily spending facts", () => {
     const limited: ApiKeyEntry = {
       key: "sk-limited",
       name: "Limited",
       "daily-spending-limit": 100,
+      "period-spending-limits": { "5h": 0, day: 100, week: 0, month: 0 },
+      "period-spending": [{ period: "day", limit: 100, used: 20, remaining: 80 }],
       "daily-spending-used": 20,
-      "daily-spending-remaining": 80,
-    };
-    const unlimited: ApiKeyEntry = {
-      key: "sk-free",
-      name: "Free",
-      "daily-spending-limit": 0,
-      "daily-spending-used": 5,
-      "daily-spending-remaining": null,
+      "lifetime-spending-used": 300.12,
     };
     const columns = createColumns();
-    const spendingColumn = columns.find((column) => column.key === "dailySpending");
-    const { container: limitedContainer } = render(
-      <div>{spendingColumn?.render(limited, 0)}</div>,
+    const quotaColumn = columns.find((column) => column.key === "quota");
+    const dailyColumn = columns.find((column) => column.key === "dailySpending");
+    const lifetimeColumn = columns.find((column) => column.key === "lifetimeSpending");
+    const { container } = render(
+      <div>
+        <div>{quotaColumn?.render(limited, 0)}</div>
+        <div>{dailyColumn?.render(limited, 0)}</div>
+        <div>{lifetimeColumn?.render(limited, 0)}</div>
+      </div>,
     );
-    const { container: unlimitedContainer } = render(
-      <div>{spendingColumn?.render(unlimited, 1)}</div>,
-    );
-    expect(limitedContainer.textContent).toContain("$20.00");
-    expect(limitedContainer.textContent).toContain("$100.00");
-    expect(unlimitedContainer.textContent).toContain("$5.00");
-    expect(unlimitedContainer.textContent).toContain("Unlimited");
+    expect(container.textContent).toContain("$20 / $100");
+    expect(container.textContent).toContain("$20.00");
+    expect(container.textContent).toContain("$300.12");
   });
 
   test("disables reset today spending without a daily limit and calls handler when enabled", async () => {
@@ -333,7 +341,9 @@ describe("ApiKeyColumns", () => {
     const actionsColumn = columns.find((column) => column.key === "actions");
 
     const { rerender } = render(<div>{actionsColumn?.render(unlimited, 0)}</div>);
-    expect(screen.getByRole("button", { name: "Set a daily spending limit before resetting" })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Set a daily spending limit before resetting" }),
+    ).toBeDisabled();
 
     rerender(<div>{actionsColumn?.render(limited, 1)}</div>);
     const enabled = screen.getByRole("button", { name: "Reset today spending" });

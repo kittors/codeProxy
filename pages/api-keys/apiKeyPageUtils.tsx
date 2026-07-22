@@ -1,5 +1,6 @@
 import type { AuthFileItem } from "@code-proxy/api-client";
 import type { ApiKeyFormValues } from "./types";
+import { emptyPeriodSpendingDraft } from "@features/period-spending";
 
 import iconClaude from "@code-proxy/assets/icons/claude.svg";
 import iconCodex from "@code-proxy/assets/icons/codex.svg";
@@ -60,6 +61,7 @@ export const makeEmptyApiKeyForm = (key = ""): ApiKeyFormValues => ({
   dailyLimit: "",
   totalQuota: "",
   spendingLimit: "",
+  periodSpending: emptyPeriodSpendingDraft(),
   concurrencyLimit: "",
   rpmLimit: "",
   tpmLimit: "",

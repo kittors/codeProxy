@@ -2,8 +2,6 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type FormEve
 import { useTranslation } from "react-i18next";
 import {
   BarChart3,
-  Infinity as InfinityIcon,
-  Info,
   Key,
   KeyRound,
   Pencil,
@@ -27,7 +25,6 @@ import {
   Card,
   ConfirmModal,
   DataTable,
-  HoverTooltip,
   Modal,
   SecretRevealModal,
   Select,
@@ -42,61 +39,58 @@ import { ErrorDetailModal, LogContentModal } from "@features/log-content-viewer"
 import { ApiKeyUsageModal } from "../api-keys/components/ApiKeyUsageModal";
 import { useApiKeyUsageView } from "../api-keys/hooks/useApiKeyUsageView";
 import { EndUserResetHistoryModal } from "./components/EndUserResetHistoryModal";
+import {
+  PeriodSpendingCell,
+  PeriodSpendingFields,
+  emptyPeriodSpendingDraft,
+  formatQuotaValidationError,
+  formatQuotaUsdAmount,
+  limitsToPeriodSpendingDraft,
+  periodSpendingDraftToLimits,
+  type PeriodSpendingDraft,
+} from "@features/period-spending";
+import { normalizePeriodSpendingLimits } from "@code-proxy/api-client";
 
-const emptyForm = { username: "", displayName: "", password: "", permissionProfileId: "" };
+type EndUserForm = {
+  username: string;
+  displayName: string;
+  password: string;
+  permissionProfileId: string;
+  spendingLimit: string;
+  dailyLimit: string;
+  totalQuota: string;
+  concurrencyLimit: string;
+  rpmLimit: string;
+  tpmLimit: string;
+  periodSpending: PeriodSpendingDraft;
+};
 
-function formatAccountLimit(limit: number | undefined, unlimitedLabel: string) {
-  if (!limit || limit <= 0) {
-    return (
-      <span className="inline-flex items-center justify-center gap-1 text-green-600 dark:text-green-400">
-        <InfinityIcon size={14} /> {unlimitedLabel}
-      </span>
-    );
-  }
-  return <span className="tabular-nums">{limit.toLocaleString()}</span>;
-}
+const emptyForm = (): EndUserForm => ({
+  username: "",
+  displayName: "",
+  password: "",
+  permissionProfileId: "",
+  spendingLimit: "",
+  dailyLimit: "",
+  totalQuota: "",
+  concurrencyLimit: "",
+  rpmLimit: "",
+  tpmLimit: "",
+  periodSpending: emptyPeriodSpendingDraft(),
+});
 
-function formatAccountSpending(limit: number | undefined, unlimitedLabel: string) {
-  if (!limit || limit <= 0 || !Number.isFinite(limit)) {
-    return (
-      <span className="inline-flex items-center justify-center gap-1 text-green-600 dark:text-green-400">
-        <InfinityIcon size={14} /> {unlimitedLabel}
-      </span>
-    );
-  }
-  return (
-    <span className="tabular-nums">
-      {new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: "USD",
-        maximumFractionDigits: 2,
-      }).format(limit)}
-    </span>
-  );
-}
+const spendingLimitFromText = (value: string): number => {
+  const parsed = Number.parseFloat(value.trim());
+  return Number.isFinite(parsed) && parsed > 0 ? Math.ceil(parsed) : 0;
+};
 
-function formatTodaySpending(
-  used: number | undefined,
-  limit: number | undefined,
-  unlimitedLabel: string,
-) {
-  if (!limit || limit <= 0 || !Number.isFinite(limit)) {
-    return (
-      <span className="inline-flex items-center justify-center gap-1 text-green-600 dark:text-green-400">
-        <InfinityIcon size={14} /> {unlimitedLabel}
-      </span>
-    );
-  }
-  const format = (value: number) =>
-    new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(
-      Number.isFinite(value) ? Math.max(0, value) : 0,
-    );
-  return (
-    <span className="tabular-nums">
-      {format(used ?? 0)}/{format(limit)}$
-    </span>
-  );
-}
+const requestLimitFromText = (value: string): number => {
+  const parsed = Number.parseInt(value.trim(), 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+};
+
+const limitToText = (value: number | undefined): string =>
+  value && value > 0 ? String(value) : "";
 
 const stickyActionsHeaderClass =
   "text-center md:sticky md:z-40 md:bg-slate-100 md:dark:bg-neutral-800";
@@ -113,10 +107,10 @@ export function EndUsersPage() {
   const [users, setUsers] = useState<EndUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] = useState<EndUserForm>(() => emptyForm());
   const [createdSecrets, setCreatedSecrets] = useState<CreateEndUserResult | null>(null);
   const [editUser, setEditUser] = useState<EndUser | null>(null);
-  const [editForm, setEditForm] = useState(emptyForm);
+  const [editForm, setEditForm] = useState<EndUserForm>(() => emptyForm());
   const [resetUser, setResetUser] = useState<EndUser | null>(null);
   const [generatedReset, setGeneratedReset] = useState("");
   const [deleteUser, setDeleteUser] = useState<EndUser | null>(null);
@@ -131,8 +125,6 @@ export function EndUsersPage() {
   const [busy, setBusy] = useState(false);
   const [permissionProfiles, setPermissionProfiles] = useState<ApiKeyPermissionProfile[]>([]);
   const canWrite = can("end_users.write");
-  const unlimitedLabel = t("api_keys_page.unlimited", { defaultValue: "无限制" });
-  const todayUnlimitedLabel = t("end_users.unlimited", { defaultValue: "未限制" });
   const { refreshPermissionOptions } = useApiKeyPermissionOptions();
   const {
     usageViewKey,
@@ -217,6 +209,15 @@ export function EndUsersPage() {
     [permissionProfiles, t],
   );
 
+  const selectedEditProfile = useMemo(
+    () =>
+      editForm.permissionProfileId
+        ? (permissionProfiles.find((profile) => profile.id === editForm.permissionProfileId) ??
+          null)
+        : null,
+    [editForm.permissionProfileId, permissionProfiles],
+  );
+
   const setFrozen = useCallback(
     async (row: EndUser, frozen: boolean) => {
       setBusy(true);
@@ -241,36 +242,21 @@ export function EndUsersPage() {
   const resetTodaySpending = useCallback(
     async (row: EndUser) => {
       // ponytail: same gate as API Key list — unlimited daily spending has nothing to reset
-      if (!((row["daily-spending-limit"] ?? 0) > 0)) return;
+      if (
+        normalizePeriodSpendingLimits(row["period-spending-limits"], row["daily-spending-limit"])
+          .day <= 0
+      )
+        return;
       setBusy(true);
       try {
-        const result = await endUsersApi.resetDailySpending(row.id);
+        await endUsersApi.resetDailySpending(row.id);
         notify({
           type: "success",
           message: t("end_users.reset_today_spending_success", {
             defaultValue: "已重置该账号今日消费",
           }),
         });
-        const resetCount = result["daily-spending-reset-count"];
-        if (typeof resetCount === "number" && Number.isFinite(resetCount)) {
-          const dailySpendingUsed = result["daily-spending-used"];
-          setUsers((current) =>
-            current.map((user) =>
-              user.id === row.id
-                ? {
-                    ...user,
-                    "daily-spending-reset-count": resetCount,
-                    "daily-spending-used":
-                      typeof dailySpendingUsed === "number" && Number.isFinite(dailySpendingUsed)
-                        ? dailySpendingUsed
-                        : user["daily-spending-used"],
-                  }
-                : user,
-            ),
-          );
-        } else {
-          await load();
-        }
+        await load();
       } catch (e) {
         notify({ type: "error", message: e instanceof Error ? e.message : "failed" });
       } finally {
@@ -349,214 +335,130 @@ export function EndUsersPage() {
   const columns = useMemo<DataTableColumn<EndUser>[]>(
     () => [
       {
-        key: "username",
-        label: t("end_users.username", { defaultValue: "用户名" }),
+        key: "account",
+        label: t("end_users.username"),
         width: "w-56 min-w-[14rem]",
         minWidthPx: 160,
         maxWidthPx: 480,
         headerClassName: "text-left",
         cellClassName: "text-left",
-        render: (row) => {
-          const extraKeys = Math.max(0, (row.api_key_count ?? 0) - 1);
-          return (
-            <div className="min-w-0">
-              <div className="flex min-w-0 items-center gap-1.5">
-                <span className="truncate font-medium text-slate-900 dark:text-white">
-                  {row.display_name}
-                </span>
-                {extraKeys > 0 ? (
-                  <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-2xs font-medium text-slate-600 dark:bg-white/10 dark:text-white/70">
-                    +{extraKeys}
-                  </span>
-                ) : null}
-              </div>
-              <div className="truncate text-xs text-slate-400">{row.username}</div>
+        render: (row) => (
+          <div className="min-w-0">
+            <div className="flex min-w-0 items-center gap-1.5">
+              <span className="truncate font-medium text-slate-900 dark:text-white">
+                {row.display_name}
+              </span>
+              <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-2xs font-medium text-slate-600 dark:bg-white/10 dark:text-white/70">
+                {row.api_key_count ?? 0} Key
+              </span>
             </div>
-          );
-        },
+            <div className="truncate text-xs text-slate-400">{row.username}</div>
+          </div>
+        ),
       },
       {
         key: "status",
-        label: t("end_users.status", { defaultValue: "状态" }),
+        label: t("end_users.status"),
         width: "w-28 min-w-[7rem]",
-        minWidthPx: 96,
-        maxWidthPx: 220,
         headerClassName: "text-center",
         cellClassName: "text-center",
         render: (row) => {
           const active = row.status === "active";
           return (
             <span
-              className={[
-                "inline-flex rounded-full px-2.5 py-1 text-xs font-medium",
-                active
-                  ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
-                  : "bg-sky-50 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300",
-              ].join(" ")}
+              className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${active ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300" : "bg-sky-50 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300"}`}
             >
-              {active
-                ? t("end_users.status_active", { defaultValue: "激活" })
-                : t("end_users.status_frozen", { defaultValue: "冻结" })}
+              {active ? t("end_users.status_active") : t("end_users.status_frozen")}
             </span>
           );
         },
       },
       {
         key: "permission",
-        label: t("end_users.account_permission_profile", { defaultValue: "账户权限模板" }),
-        width: "w-36 min-w-[9rem]",
-        minWidthPx: 120,
-        maxWidthPx: 280,
+        label: t("end_users.account_permission_profile"),
+        width: "w-40 min-w-[10rem]",
         headerClassName: "text-center",
         cellClassName: "text-center text-slate-700 dark:text-white/70",
         render: (row) => {
           const id = row["permission-profile-id"]?.trim() ?? "";
-          if (!id) {
-            return (
-              <span className="text-green-600 dark:text-green-400">
-                {t("api_keys_page.permission_profile_unrestricted", { defaultValue: "不限制" })}
-              </span>
-            );
-          }
-          return profileNameById.get(id) || id;
+          return id
+            ? profileNameById.get(id) || id
+            : t("api_keys_page.permission_profile_unrestricted");
         },
       },
       {
-        key: "dailyLimit",
-        label: t("api_keys_page.col_daily_limit", { defaultValue: "每日限额" }),
-        width: "w-[120px] min-w-[110px]",
-        minWidthPx: 100,
-        maxWidthPx: 180,
-        headerClassName: "text-center",
-        cellClassName: "text-center whitespace-nowrap text-slate-700 dark:text-white/70",
-        render: (row) => formatAccountLimit(row["daily-limit"], unlimitedLabel),
+        key: "quota",
+        label: t("quota.period_spending_column"),
+        width: "w-[390px] min-w-[280px]",
+        render: (row) => <PeriodSpendingCell t={t} items={row["period-spending"]} />,
       },
       {
-        key: "todaySpending",
-        label: t("end_users.today_spending", { defaultValue: "今日用量" }),
-        width: "w-[140px] min-w-[130px]",
-        minWidthPx: 120,
-        maxWidthPx: 220,
-        headerClassName: "text-center",
-        cellClassName: "text-center whitespace-nowrap text-slate-700 dark:text-white/70",
-        render: (row) =>
-          formatTodaySpending(
-            row["daily-spending-used"],
-            row["daily-spending-limit"],
-            todayUnlimitedLabel,
-          ),
+        key: "dailySpending",
+        label: t("quota.daily_spending_column"),
+        width: "w-[130px] min-w-[130px]",
+        cellClassName:
+          "text-center whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
+        render: (row) => formatQuotaUsdAmount(row["daily-spending-used"]),
       },
       {
-        key: "dailySpendingResetCount",
-        label: t("end_users.daily_reset_count", { defaultValue: "当日重置次数" }),
-        width: "w-[120px] min-w-[110px]",
-        minWidthPx: 100,
-        maxWidthPx: 180,
+        key: "lifetimeSpending",
+        label: t("quota.lifetime_spending_column"),
+        width: "w-[130px] min-w-[130px]",
+        cellClassName:
+          "text-center whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
+        render: (row) => formatQuotaUsdAmount(row["lifetime-spending-used"]),
+      },
+      {
+        key: "totalResets",
+        label: t("quota.total_resets"),
+        width: "w-[120px] min-w-[120px]",
         headerClassName: "text-center",
-        cellClassName: "text-center whitespace-nowrap text-slate-700 dark:text-white/70",
-        headerRender: () => (
-          <HoverTooltip
-            content={t("end_users.reset_count_help", {
-              defaultValue: "该用户今日消费额度被手动重置的次数。点击可查看所有日期的详细历史。",
-            })}
-            className="inline-flex items-center gap-1"
-          >
-            <span>{t("end_users.daily_reset_count", { defaultValue: "当日重置次数" })}</span>
-            <Info size={12} className="text-slate-400 dark:text-white/40" />
-          </HoverTooltip>
-        ),
+        cellClassName: "text-center",
         render: (row) => {
           const count = row["daily-spending-reset-count"] ?? 0;
-          if (count <= 0) {
-            return <span className="tabular-nums text-slate-400 dark:text-white/40">0</span>;
-          }
-          return (
+          return count > 0 ? (
             <button
               type="button"
               onClick={() => void handleViewResetHistory(row)}
               className="tabular-nums font-medium text-orange-600 underline-offset-2 hover:underline dark:text-orange-400"
-              aria-label={t("end_users.view_reset_history", { defaultValue: "查看重置历史" })}
+              aria-label={t("end_users.view_reset_history")}
             >
               {count}
             </button>
+          ) : (
+            <span className="tabular-nums text-slate-400 dark:text-white/40">0</span>
           );
         },
       },
       {
-        key: "totalQuota",
-        label: t("api_keys_page.col_total_quota", { defaultValue: "总配额" }),
-        width: "w-[120px] min-w-[110px]",
-        minWidthPx: 100,
-        maxWidthPx: 180,
-        headerClassName: "text-center",
-        cellClassName: "text-center whitespace-nowrap text-slate-700 dark:text-white/70",
-        render: (row) => formatAccountLimit(row["total-quota"], unlimitedLabel),
-      },
-      {
-        key: "spendingLimit",
-        label: t("api_keys_page.col_spending_limit", { defaultValue: "消费限额" }),
-        width: "w-[130px] min-w-[120px]",
-        minWidthPx: 110,
-        maxWidthPx: 200,
-        headerClassName: "text-center",
-        cellClassName: "text-center whitespace-nowrap text-slate-700 dark:text-white/70",
-        render: (row) => formatAccountSpending(row["spending-limit"], unlimitedLabel),
-      },
-      {
-        key: "rpmLimit",
-        label: "RPM",
-        width: "w-[100px] min-w-[90px]",
-        minWidthPx: 80,
-        maxWidthPx: 140,
-        headerClassName: "text-center",
-        cellClassName: "text-center whitespace-nowrap text-slate-700 dark:text-white/70",
-        render: (row) => formatAccountLimit(row["rpm-limit"], unlimitedLabel),
-      },
-      {
-        key: "tpmLimit",
-        label: "TPM",
-        width: "w-[100px] min-w-[90px]",
-        minWidthPx: 80,
-        maxWidthPx: 140,
-        headerClassName: "text-center",
-        cellClassName: "text-center whitespace-nowrap text-slate-700 dark:text-white/70",
-        render: (row) => formatAccountLimit(row["tpm-limit"], unlimitedLabel),
-      },
-      {
-        key: "last_login",
-        label: t("end_users.last_login", { defaultValue: "最近登录" }),
-        width: "w-48 min-w-[12rem]",
-        minWidthPx: 140,
-        maxWidthPx: 320,
-        headerClassName: "text-center",
-        cellClassName: "text-center whitespace-nowrap text-slate-700 dark:text-white/70",
-        render: (row) => row.last_login_at?.slice(0, 19).replace("T", " ") || "—",
+        key: "lastLogin",
+        label: t("end_users.last_login"),
+        width: "w-[160px] min-w-[160px]",
+        cellClassName: "text-center text-xs text-slate-500 dark:text-white/50",
+        render: (row) => (row.last_login_at ? new Date(row.last_login_at).toLocaleString() : "-"),
       },
       {
         key: "actions",
-        label: t("common.actions", { defaultValue: "操作" }),
-        width: "w-64 min-w-[16rem]",
-        minWidthPx: 240,
-        maxWidthPx: 320,
-        resizable: false,
+        label: t("common.action"),
+        width: "w-[280px] min-w-[260px]",
         lockOrder: "end",
         headerClassName: stickyActionsHeaderClass,
         cellClassName: stickyActionsCellClass,
         render: (row) => {
-          const hasDailyLimit = (row["daily-spending-limit"] ?? 0) > 0;
+          const hasDailyLimit =
+            normalizePeriodSpendingLimits(
+              row["period-spending-limits"],
+              row["daily-spending-limit"],
+            ).day > 0;
           const resetLabel = hasDailyLimit
-            ? t("end_users.reset_today_spending", {
-                defaultValue: "重置账号今日消费",
-              })
-            : t("end_users.reset_today_spending_disabled", {
-                defaultValue: "请先在权限配置中设置每日消费额度后再重置",
-              });
+            ? t("end_users.reset_today_spending")
+            : t("end_users.reset_today_spending_disabled");
           return (
             <div className="flex items-center justify-center gap-1">
               <Button
                 size="sm"
                 variant="ghost"
-                title={t("end_users.view_usage", { defaultValue: "查看用量" })}
+                title={t("end_users.view_usage")}
                 onClick={() => void handleViewUserUsage(row)}
               >
                 <BarChart3 className="h-4 w-4" />
@@ -565,7 +467,7 @@ export function EndUsersPage() {
                 <Button
                   size="sm"
                   variant="ghost"
-                  title={t("end_users.manage_keys", { defaultValue: "管理密钥" })}
+                  title={t("end_users.manage_keys")}
                   onClick={() => setKeysUser(row)}
                 >
                   <Key className="h-4 w-4" />
@@ -575,14 +477,34 @@ export function EndUsersPage() {
                 <Button
                   size="sm"
                   variant="ghost"
-                  title={t("end_users.edit", { defaultValue: "编辑" })}
+                  title={t("end_users.edit")}
                   onClick={() => {
+                    const profile = row["permission-profile-id"]
+                      ? (permissionProfiles.find(
+                          (item) => item.id === row["permission-profile-id"],
+                        ) ?? null)
+                      : null;
                     setEditUser(row);
                     setEditForm({
                       username: row.username,
                       displayName: row.display_name,
                       password: "",
                       permissionProfileId: row["permission-profile-id"] ?? "",
+                      spendingLimit: limitToText(row["spending-limit"]),
+                      dailyLimit: limitToText(profile?.["daily-limit"] ?? row["daily-limit"]),
+                      totalQuota: limitToText(profile?.["total-quota"] ?? row["total-quota"]),
+                      concurrencyLimit: limitToText(
+                        profile?.["concurrency-limit"] ?? row["concurrency-limit"],
+                      ),
+                      rpmLimit: limitToText(profile?.["rpm-limit"] ?? row["rpm-limit"]),
+                      tpmLimit: limitToText(profile?.["tpm-limit"] ?? row["tpm-limit"]),
+                      periodSpending: limitsToPeriodSpendingDraft(
+                        profile?.["period-spending-limits"] ??
+                          normalizePeriodSpendingLimits(
+                            row["period-spending-limits"],
+                            row["daily-spending-limit"],
+                          ),
+                      ),
                     });
                   }}
                 >
@@ -595,7 +517,7 @@ export function EndUsersPage() {
                     size="sm"
                     variant="ghost"
                     disabled={busy}
-                    title={t("end_users.freeze", { defaultValue: "冻结账号" })}
+                    title={t("end_users.freeze")}
                     onClick={() => void setFrozen(row, true)}
                   >
                     <Snowflake className="h-4 w-4" />
@@ -605,7 +527,7 @@ export function EndUsersPage() {
                     size="sm"
                     variant="ghost"
                     disabled={busy}
-                    title={t("end_users.activate", { defaultValue: "激活账号" })}
+                    title={t("end_users.activate")}
                     onClick={() => void setFrozen(row, false)}
                   >
                     <Unlock className="h-4 w-4" />
@@ -627,14 +549,19 @@ export function EndUsersPage() {
                 <Button
                   size="sm"
                   variant="ghost"
-                  title="重置密码"
+                  title={t("end_users.reset_password")}
                   onClick={() => setResetUser(row)}
                 >
                   <KeyRound className="h-4 w-4" />
                 </Button>
               ) : null}
               {canWrite ? (
-                <Button size="sm" variant="ghost" title="删除" onClick={() => setDeleteUser(row)}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  title={t("common.delete")}
+                  onClick={() => setDeleteUser(row)}
+                >
                   <Trash2 className="h-4 w-4" />
                 </Button>
               ) : null}
@@ -649,12 +576,11 @@ export function EndUsersPage() {
       canWrite,
       handleViewResetHistory,
       handleViewUserUsage,
+      permissionProfiles,
       profileNameById,
       resetTodaySpending,
       setFrozen,
       t,
-      todayUnlimitedLabel,
-      unlimitedLabel,
     ],
   );
 
@@ -668,7 +594,7 @@ export function EndUsersPage() {
         password: form.password || undefined,
       });
       setCreateOpen(false);
-      setForm(emptyForm);
+      setForm(emptyForm());
       if (result.generated_password || result.default_api_key?.key) {
         setCreatedSecrets(result);
       } else {
@@ -710,58 +636,88 @@ export function EndUsersPage() {
       const nextUsername = editForm.username.trim();
       const nextDisplay = editForm.displayName.trim();
       const nextProfile = editForm.permissionProfileId.trim();
+      const prevProfile = (editUser["permission-profile-id"] ?? "").trim();
+      const nextSpendingLimit = spendingLimitFromText(editForm.spendingLimit);
+      const previousSpendingLimit = editUser["spending-limit"] ?? 0;
+      const directLimits = {
+        "daily-limit": requestLimitFromText(editForm.dailyLimit),
+        "total-quota": requestLimitFromText(editForm.totalQuota),
+        "concurrency-limit": requestLimitFromText(editForm.concurrencyLimit),
+        "rpm-limit": requestLimitFromText(editForm.rpmLimit),
+        "tpm-limit": requestLimitFromText(editForm.tpmLimit),
+      };
+
       if (nextUsername && nextUsername !== editUser.username) body.username = nextUsername;
       if (nextDisplay && nextDisplay !== editUser.display_name) body.display_name = nextDisplay;
       if (editForm.password.trim()) body.password = editForm.password;
-      const prevProfile = (editUser["permission-profile-id"] ?? "").trim();
+      if (nextSpendingLimit !== previousSpendingLimit) {
+        body["spending-limit"] = nextSpendingLimit;
+      }
+
       if (nextProfile !== prevProfile) {
         body["permission-profile-id"] = nextProfile;
-        // Applying a profile: copy limits from template; empty = unrestricted account.
-        if (nextProfile) {
-          const profile = permissionProfiles.find((p) => p.id === nextProfile);
-          if (profile) {
-            body["daily-limit"] = profile["daily-limit"];
-            body["total-quota"] = profile["total-quota"];
-            body["spending-limit"] = 0;
-            body["daily-spending-limit"] = profile["daily-spending-limit"];
-            body["concurrency-limit"] = profile["concurrency-limit"];
-            body["rpm-limit"] = profile["rpm-limit"];
-            body["tpm-limit"] = profile["tpm-limit"];
-            body["allowed-models"] = [...profile["allowed-models"]];
-            body["allowed-channels"] = [...profile["allowed-channels"]];
-            body["allowed-channel-groups"] = [...profile["allowed-channel-groups"]];
-            body["system-prompt"] = profile["system-prompt"];
-          }
-        } else {
-          body["daily-limit"] = 0;
-          body["total-quota"] = 0;
-          body["spending-limit"] = 0;
-          body["daily-spending-limit"] = 0;
-          body["concurrency-limit"] = 0;
-          body["rpm-limit"] = 0;
-          body["tpm-limit"] = 0;
-          body["allowed-models"] = [];
-          body["allowed-channels"] = [];
-          body["allowed-channel-groups"] = [];
-          body["system-prompt"] = "";
+      }
+
+      const profile = nextProfile
+        ? (permissionProfiles.find((item) => item.id === nextProfile) ?? null)
+        : null;
+      if (profile && nextProfile !== prevProfile) {
+        body["daily-limit"] = profile["daily-limit"];
+        body["total-quota"] = profile["total-quota"];
+        body["concurrency-limit"] = profile["concurrency-limit"];
+        body["rpm-limit"] = profile["rpm-limit"];
+        body["tpm-limit"] = profile["tpm-limit"];
+        body["allowed-models"] = [...profile["allowed-models"]];
+        body["allowed-channels"] = [...profile["allowed-channels"]];
+        body["allowed-channel-groups"] = [...profile["allowed-channel-groups"]];
+        body["system-prompt"] = profile["system-prompt"];
+      }
+
+      if (!profile) {
+        if (directLimits["daily-limit"] !== (editUser["daily-limit"] ?? 0)) {
+          body["daily-limit"] = directLimits["daily-limit"];
+        }
+        if (directLimits["total-quota"] !== (editUser["total-quota"] ?? 0)) {
+          body["total-quota"] = directLimits["total-quota"];
+        }
+        if (directLimits["concurrency-limit"] !== (editUser["concurrency-limit"] ?? 0)) {
+          body["concurrency-limit"] = directLimits["concurrency-limit"];
+        }
+        if (directLimits["rpm-limit"] !== (editUser["rpm-limit"] ?? 0)) {
+          body["rpm-limit"] = directLimits["rpm-limit"];
+        }
+        if (directLimits["tpm-limit"] !== (editUser["tpm-limit"] ?? 0)) {
+          body["tpm-limit"] = directLimits["tpm-limit"];
+        }
+        const nextLimits = periodSpendingDraftToLimits(editForm.periodSpending);
+        const previousLimits = normalizePeriodSpendingLimits(
+          editUser["period-spending-limits"],
+          editUser["daily-spending-limit"],
+        );
+        if (JSON.stringify(nextLimits) !== JSON.stringify(previousLimits)) {
+          body["daily-spending-limit"] = nextLimits.day;
+          body["period-spending-limits"] = nextLimits;
         }
       }
-      if (
-        !body.username &&
-        !body.display_name &&
-        !body.password &&
-        body["permission-profile-id"] === undefined
-      ) {
+
+      if (Object.keys(body).length === 0) {
         setEditUser(null);
         return;
       }
-      await endUsersApi.update(editUser.id, body);
-      notify({ type: "success", message: t("end_users.updated", { defaultValue: "已保存" }) });
+      const updated = await endUsersApi.update(editUser.id, body);
+      notify({
+        type: "success",
+        message: updated["capped-keys"]?.length
+          ? t("api_key_permissions_page.saved_with_caps", {
+              keys: updated["capped-keys"].length,
+            })
+          : t("end_users.updated"),
+      });
       setEditUser(null);
-      setEditForm(emptyForm);
+      setEditForm(emptyForm());
       await load();
     } catch (err) {
-      notify({ type: "error", message: err instanceof Error ? err.message : "failed" });
+      notify({ type: "error", message: formatQuotaValidationError(err, t) });
     } finally {
       setBusy(false);
     }
@@ -811,7 +767,7 @@ export function EndUsersPage() {
             rowHeight={60}
             height="h-[calc(100dvh-260px)] md:h-auto md:flex-1"
             minHeight="min-h-[320px] md:min-h-0"
-            minWidth="min-w-[1100px]"
+            minWidth="min-w-[1720px]"
             emptyText={t("end_users.empty", { defaultValue: "暂无用户账号" })}
             showAllLoadedMessage={false}
             columnResizable
@@ -910,16 +866,16 @@ export function EndUsersPage() {
         open={Boolean(editUser)}
         onClose={() => {
           setEditUser(null);
-          setEditForm(emptyForm);
+          setEditForm(emptyForm());
         }}
         title={t("end_users.edit", { defaultValue: "编辑用户账号" })}
-        maxWidth="max-w-xl"
+        maxWidth="max-w-2xl"
         footer={
           <>
             <Button
               onClick={() => {
                 setEditUser(null);
-                setEditForm(emptyForm);
+                setEditForm(emptyForm());
               }}
             >
               {t("common.cancel")}
@@ -974,7 +930,23 @@ export function EndUsersPage() {
             </span>
             <Select
               value={editForm.permissionProfileId}
-              onChange={(value) => setEditForm((f) => ({ ...f, permissionProfileId: value }))}
+              onChange={(value) => {
+                const profile = permissionProfiles.find((item) => item.id === value);
+                setEditForm((current) => ({
+                  ...current,
+                  permissionProfileId: value,
+                  dailyLimit: profile ? limitToText(profile["daily-limit"]) : current.dailyLimit,
+                  totalQuota: profile ? limitToText(profile["total-quota"]) : current.totalQuota,
+                  concurrencyLimit: profile
+                    ? limitToText(profile["concurrency-limit"])
+                    : current.concurrencyLimit,
+                  rpmLimit: profile ? limitToText(profile["rpm-limit"]) : current.rpmLimit,
+                  tpmLimit: profile ? limitToText(profile["tpm-limit"]) : current.tpmLimit,
+                  periodSpending: profile
+                    ? limitsToPeriodSpendingDraft(profile["period-spending-limits"])
+                    : current.periodSpending,
+                }));
+              }}
               options={permissionProfileOptions}
               aria-label={t("end_users.account_permission_profile", {
                 defaultValue: "账户权限模板",
@@ -989,6 +961,98 @@ export function EndUsersPage() {
               })}
             </p>
           </label>
+          <section className="rounded-2xl border border-indigo-200/80 bg-indigo-50/45 p-4 dark:border-indigo-500/20 dark:bg-indigo-500/5">
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+              {t("end_users.quota_preview")}
+            </h3>
+            <p className="mb-3 mt-1 text-xs text-slate-500 dark:text-white/50">
+              {selectedEditProfile
+                ? t("end_users.quota_profile_readonly_hint", { profile: selectedEditProfile.name })
+                : t("end_users.quota_direct_edit_hint")}
+            </p>
+            <PeriodSpendingFields
+              t={t}
+              value={
+                selectedEditProfile
+                  ? limitsToPeriodSpendingDraft(selectedEditProfile["period-spending-limits"])
+                  : editForm.periodSpending
+              }
+              onChange={(periodSpending) =>
+                setEditForm((current) => ({ ...current, periodSpending }))
+              }
+              disabled={Boolean(selectedEditProfile)}
+              idPrefix="end-user-period"
+            />
+          </section>
+
+          <section className="rounded-2xl border border-slate-200 p-4 dark:border-white/10">
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+              {t("end_users.other_limits")}
+            </h3>
+            <p className="mb-3 mt-1 text-xs text-slate-500 dark:text-white/50">
+              {selectedEditProfile
+                ? t("end_users.other_limits_profile_readonly_hint", {
+                    profile: selectedEditProfile.name,
+                  })
+                : t("end_users.other_limits_direct_hint")}
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {(
+                [
+                  ["dailyLimit", "api_keys_page.form_daily_limit"],
+                  ["totalQuota", "api_keys_page.form_total_quota"],
+                  ["concurrencyLimit", "api_keys_page.form_concurrency_limit"],
+                  ["rpmLimit", "api_keys_page.form_rpm_limit"],
+                  ["tpmLimit", "api_keys_page.form_tpm_limit"],
+                ] as const
+              ).map(([field, labelKey]) => (
+                <label key={field} className="block space-y-1.5">
+                  <span className="text-sm font-medium text-slate-700 dark:text-white/80">
+                    {t(labelKey)}
+                  </span>
+                  <TextInput
+                    type="number"
+                    min={0}
+                    step={1}
+                    inputMode="numeric"
+                    value={editForm[field]}
+                    disabled={Boolean(selectedEditProfile)}
+                    aria-label={t(labelKey)}
+                    placeholder={t("quota.input_unlimited")}
+                    onChange={(event) => {
+                      const raw = event.target.value;
+                      if (raw === "" || /^\d+$/.test(raw)) {
+                        setEditForm((current) => ({ ...current, [field]: raw }));
+                      }
+                    }}
+                  />
+                </label>
+              ))}
+              <label className="block space-y-1.5 sm:col-span-2 lg:col-span-1">
+                <span className="text-sm font-medium text-slate-700 dark:text-white/80">
+                  {t("end_users.lifetime_spending_limit")}
+                </span>
+                <TextInput
+                  type="number"
+                  min={0}
+                  step={1}
+                  inputMode="numeric"
+                  value={editForm.spendingLimit}
+                  aria-label={t("end_users.lifetime_spending_limit")}
+                  placeholder={t("quota.input_unlimited")}
+                  onChange={(event) => {
+                    const raw = event.target.value;
+                    if (raw === "" || /^\d*(?:\.\d*)?$/.test(raw)) {
+                      setEditForm((current) => ({ ...current, spendingLimit: raw }));
+                    }
+                  }}
+                />
+                <span className="block text-xs text-slate-400 dark:text-white/40">
+                  {t("end_users.lifetime_spending_limit_hint")}
+                </span>
+              </label>
+            </div>
+          </section>
         </form>
       </Modal>
 
@@ -1053,7 +1117,14 @@ export function EndUsersPage() {
               </div>
             }
           >
-            <ApiKeysPage endUserId={keysUser.id} embed />
+            <ApiKeysPage
+              endUserId={keysUser.id}
+              accountPeriodSpendingLimits={normalizePeriodSpendingLimits(
+                keysUser["period-spending-limits"],
+                keysUser["daily-spending-limit"],
+              )}
+              embed
+            />
           </Suspense>
         ) : null}
       </Modal>

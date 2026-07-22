@@ -24,7 +24,23 @@ const mocks = vi.hoisted(() => ({
   endUsersUpdate: vi.fn(async (id: string, body: EndUserUpdateBody) => {
     const current = state.accounts.find((account) => account.id === id);
     if (!current) throw new Error(`missing account ${id}`);
-    const updated = { ...current, ...body };
+    const updated: EndUser = {
+      ...current,
+      ...body,
+      "period-spending-limits": body["period-spending-limits"]
+        ? {
+            "5h":
+              body["period-spending-limits"]["5h"] ??
+              current["period-spending-limits"]?.["5h"] ??
+              0,
+            day: body["period-spending-limits"].day ?? current["period-spending-limits"]?.day ?? 0,
+            week:
+              body["period-spending-limits"].week ?? current["period-spending-limits"]?.week ?? 0,
+            month:
+              body["period-spending-limits"].month ?? current["period-spending-limits"]?.month ?? 0,
+          }
+        : current["period-spending-limits"],
+    };
     state.accounts = state.accounts.map((account) => (account.id === id ? updated : account));
     return updated;
   }),
@@ -35,7 +51,7 @@ const mocks = vi.hoisted(() => ({
         : ((body as { items?: ApiKeyPermissionProfile[] } | null)?.items ?? []);
       state.permissionProfiles = items;
     }
-    return { applied_count: 2 };
+    return { applied_count: 2, "capped-keys": [] };
   }),
   authFilesList: vi.fn(async () => ({ files: [] })),
   getGeminiKeys: vi.fn(async (): Promise<unknown[]> => []),
@@ -98,7 +114,10 @@ vi.mock("@code-proxy/api-client/endpoints/api-key-permission-profiles", async (i
           "/api-key-permission-profiles",
           options?.syncAccounts ? { items: profiles, "sync-accounts": true } : profiles,
         );
-        return { appliedCount: response.applied_count };
+        return {
+          appliedCount: response.applied_count,
+          cappedKeys: response["capped-keys"] ?? [],
+        };
       },
     },
   };
@@ -170,6 +189,7 @@ describe("ApiKeyPermissionsPage", () => {
         "daily-limit": 15000,
         "total-quota": 0,
         "daily-spending-limit": 0,
+        "period-spending-limits": { "5h": 100, day: 300, week: 800, month: 4000 },
         "concurrency-limit": 0,
         "rpm-limit": 0,
         "tpm-limit": 0,
@@ -199,7 +219,10 @@ describe("ApiKeyPermissionsPage", () => {
 
     expect(await screen.findByText("标准配置")).toBeInTheDocument();
     expect(screen.queryByText("Team A")).not.toBeInTheDocument();
-    expect(screen.getByText("每日 15,000")).toBeInTheDocument();
+    expect(screen.getByText("$100")).toBeInTheDocument();
+    expect(screen.getByText("$300")).toBeInTheDocument();
+    expect(screen.getByText("$800")).toBeInTheDocument();
+    expect(screen.getByText("$4,000")).toBeInTheDocument();
     expect(screen.getByText("分组 1 · 渠道 无限制 · 模型 无限制")).toBeInTheDocument();
     expect(screen.getByText("已绑定 2 个账号")).toBeInTheDocument();
     expect(screen.getByText("标准系统提示词")).toBeInTheDocument();
@@ -208,6 +231,11 @@ describe("ApiKeyPermissionsPage", () => {
     const dialog = await screen.findByRole("dialog", { name: "新增权限配置" });
     await userEvent.type(within(dialog).getByRole("textbox", { name: "配置名称" }), "专业配置");
     await userEvent.type(within(dialog).getByRole("spinbutton", { name: "每日请求限额" }), "15000");
+    await userEvent.type(
+      within(dialog).getByRole("spinbutton", { name: "5 小时额度 (USD)" }),
+      "100",
+    );
+    await userEvent.type(within(dialog).getByRole("spinbutton", { name: "每日额度 (USD)" }), "300");
     await userEvent.type(
       within(dialog).getByRole("textbox", { name: "系统提示词" }),
       "专业系统提示词",
@@ -225,6 +253,8 @@ describe("ApiKeyPermissionsPage", () => {
             expect.objectContaining({
               name: "专业配置",
               "daily-limit": 15000,
+              "daily-spending-limit": 300,
+              "period-spending-limits": { "5h": 100, day: 300, week: 0, month: 0 },
               "allowed-channel-groups": ["pro"],
               "system-prompt": "专业系统提示词",
             }),

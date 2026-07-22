@@ -65,6 +65,7 @@ describe("apiKeyPermissionProfilesApi", () => {
             "daily-limit": 15000,
             "total-quota": 0,
             "daily-spending-limit": 100.5,
+            "period-spending-limits": { "5h": 50, day: 100.5, week: 500, month: 2000 },
             "concurrency-limit": 0,
             "rpm-limit": 0,
             "tpm-limit": 0,
@@ -76,7 +77,7 @@ describe("apiKeyPermissionProfilesApi", () => {
         ],
         { syncAccounts: true },
       ),
-    ).resolves.toEqual({ appliedCount: 2 });
+    ).resolves.toEqual({ appliedCount: 2, cappedKeys: [] });
 
     expect(mocks.put).toHaveBeenCalledWith("/api-key-permission-profiles", {
       items: [
@@ -93,6 +94,41 @@ describe("apiKeyPermissionProfilesApi", () => {
     expect(mocks.putRawText).not.toHaveBeenCalled();
   });
 
+  test("returns validated capped key details from profile sync", async () => {
+    mocks.put.mockResolvedValue({
+      applied_count: 3,
+      "capped-keys": [
+        { id: "key-1", period: "day", from: 200, to: 100 },
+        { id: "key-2", period: "invalid", from: 20, to: 10 },
+        { id: "key-3", period: "week", from: "20", to: 10 },
+      ],
+    });
+
+    await expect(apiKeyPermissionProfilesApi.replace([], { syncAccounts: true })).resolves.toEqual({
+      appliedCount: 3,
+      cappedKeys: [{ id: "key-1", period: "day", from: 200, to: 100 }],
+    });
+  });
+
+  test("maps the legacy daily spending limit into the day period", async () => {
+    mocks.get.mockResolvedValue({
+      "api-key-permission-profiles": [
+        {
+          id: "legacy",
+          name: "Legacy",
+          "daily-spending-limit": 125,
+        },
+      ],
+    });
+
+    await expect(apiKeyPermissionProfilesApi.list()).resolves.toEqual([
+      expect.objectContaining({
+        "daily-spending-limit": 125,
+        "period-spending-limits": { "5h": 0, day: 125, week: 0, month: 0 },
+      }),
+    ]);
+  });
+
   test("uses explicit profile binding and does not infer unrestricted entries as bound", () => {
     const profiles = [
       {
@@ -101,6 +137,7 @@ describe("apiKeyPermissionProfilesApi", () => {
         "daily-limit": 0,
         "total-quota": 0,
         "daily-spending-limit": 0,
+        "period-spending-limits": { "5h": 0, day: 0, week: 0, month: 0 },
         "concurrency-limit": 0,
         "rpm-limit": 0,
         "tpm-limit": 0,

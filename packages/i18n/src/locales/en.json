@@ -87,7 +87,8 @@
     "sort_ascending": "Ascending",
     "sort_descending": "Descending",
     "no_data": "No data",
-    "disabled": "Disabled"
+    "disabled": "Disabled",
+    "enabled": "Enabled"
   },
   "title": {
     "main": "Code Proxy Admin Dashboard",
@@ -2904,9 +2905,11 @@
     "reset_history_empty": "No reset history yet",
     "reset_history_load_failed": "Failed to load reset history",
     "reset_history_col_time": "Reset time",
+    "reset_history_col_day": "Project day",
     "reset_history_col_actor": "Operator",
     "reset_history_col_cleared": "Cleared amount",
     "reset_history_col_raw_today": "True day spend",
+    "reset_history_col_baseline": "Stored baseline",
     "reset_history_actor_service": "Management key",
     "reset_history_actor_unknown": "Unknown",
     "col_models": "Models",
@@ -2987,7 +2990,14 @@
     "no_api_keys": "No API keys",
     "usage_table_caption": "Usage records",
     "no_usage_records": "No usage records",
-    "more_suffix": " more"
+    "more_suffix": " more",
+    "quota_help": "Configured USD period quotas and current usage.",
+    "daily_spending_fact_help": "Effective spending today after manual resets.",
+    "lifetime_spending_help": "Lifetime spending. Daily resets do not change this amount.",
+    "edit_key_quota": "Edit Key quota",
+    "key_quota_title": "Key sub-quota",
+    "key_quota_account_hint": "Key limits may not exceed a configured account limit.",
+    "quota_validation_failed": "Please correct the quota values before saving."
   },
   "api_key_permissions_page": {
     "title": "Account Permission Profiles",
@@ -3032,7 +3042,14 @@
     "delete_desc": "Delete {{name}}? User accounts using it will keep their copied settings as custom account configuration.",
     "load_failed": "Failed to load permission configs",
     "save_failed": "Failed to save permission config",
-    "delete_failed": "Failed to delete permission config"
+    "delete_failed": "Failed to delete permission config",
+    "quota_section": "Period spending",
+    "quota_section_desc": "Set account USD ceilings for four fixed periods.",
+    "request_limits_section": "Request limits",
+    "request_limits_desc": "Secondary request-count controls.",
+    "realtime_limits_section": "Real-time limits",
+    "saved_with_sync": "Permission config saved. Synced {{accounts}} accounts and adjusted {{keys}} key quota entries.",
+    "saved_with_caps": "Permission config saved. Adjusted {{keys}} key quota entries."
   },
   "channel_groups_page": {
     "title": "Channel Groups Management",
@@ -3193,8 +3210,8 @@
     "reset_today_spending": "Reset account today's spending",
     "reset_today_spending_disabled": "Set a daily spending limit in the permission config before resetting",
     "reset_today_spending_success": "Account today's spending reset",
-    "daily_reset_count": "Daily reset count",
-    "reset_count_help": "How many times this account's daily spending was manually reset today. Click to view history across all dates.",
+    "daily_reset_count": "Total resets",
+    "reset_count_help": "All-time count of manual daily-spending resets for this account. Click to view history.",
     "view_reset_history": "View reset history",
     "reset_history_title": "Reset history · {{name}}",
     "reset_history_desc": "All manual daily-spending reset records for this account. Request logs are kept.",
@@ -3203,8 +3220,10 @@
     "reset_history_load_failed": "Failed to load reset history",
     "reset_history_col_id": "Reset ID",
     "reset_history_col_time": "Reset time",
+    "reset_history_col_day": "Project day",
     "reset_history_col_cleared": "Usage before reset",
     "reset_history_col_raw_today": "True day spend snapshot",
+    "reset_history_col_baseline": "Stored baseline",
     "reset_history_col_actor": "Operator",
     "reset_history_raw_today_summary": "Today's true spend",
     "reset_history_effective_used_summary": "Current effective today usage",
@@ -3241,7 +3260,19 @@
     "copy_secret": "Copy API key",
     "copy_secret_hint": "This plaintext key is shown only once.",
     "back_to_users": "Back to user accounts",
-    "delete_title": "Delete user account"
+    "delete_title": "Delete user account",
+    "quota_preview": "Effective account quota",
+    "quota_direct_edit_hint": "No permission profile is selected. Edit the account quota directly.",
+    "quota_profile_readonly_hint": "This account uses {{profile}}. Period quotas come from the profile and are read-only here.",
+    "other_limits": "Other limits",
+    "lifetime_spending_limit": "Lifetime spending limit (USD)",
+    "lifetime_spending_limit_hint": "This limit is account-specific and is not managed by permission profiles.",
+    "daily_spending": "Today",
+    "lifetime_spending": "Lifetime",
+    "total_resets": "Total resets",
+    "reset_password": "Reset password",
+    "other_limits_profile_readonly_hint": "Request and realtime limits come from {{profile}} and are read-only here. The lifetime spending limit remains account-specific.",
+    "other_limits_direct_hint": "No permission profile is selected. Edit request and realtime limits directly; 0 means unlimited."
   },
   "apikey_lookup": {
     "available_models": "Model Plaza",
@@ -3342,7 +3373,16 @@
     "deleting": "Deleting…",
     "add_account": "Add account",
     "switch_account": "Switch account",
-    "current_account": "Current account"
+    "current_account": "Current account",
+    "edit_key_quota": "Edit Key quota",
+    "reset_daily_spending": "Reset today spending",
+    "reset_daily_spending_success": "Today spending reset",
+    "reset_daily_spending_failed": "Failed to reset today spending",
+    "view_reset_history": "View reset history",
+    "total_resets": "Total resets",
+    "account_scope": "Account quota",
+    "key_scope": "Key quota",
+    "quota_period_spending": "Period spending"
   },
   "auth_files_page": {
     "files_tab": "Files",
@@ -4519,7 +4559,39 @@
     "save": "Save"
   },
   "quota": {
-    "no_matching": "No matching auth files"
+    "no_matching": "No matching auth files",
+    "period": {
+      "5h": "5 hours",
+      "day": "Day",
+      "week": "Week",
+      "month": "Month"
+    },
+    "field": {
+      "5h": "5-hour quota (USD)",
+      "day": "Daily quota (USD)",
+      "week": "Weekly quota (USD)",
+      "month": "Monthly quota (USD)"
+    },
+    "period_spending_column": "Quota",
+    "daily_spending_column": "Today",
+    "lifetime_spending_column": "Lifetime",
+    "total_resets": "Total resets",
+    "unlimited": "Unlimited",
+    "input_unlimited": "0 = Unlimited",
+    "fields_hint": "Empty or 0 means unlimited.",
+    "key_fields_hint": "Empty or 0 means no key sub-limit. The account ceiling still applies.",
+    "account_limit_value": "Account limit {{value}}",
+    "account_unlimited": "Account unlimited",
+    "used_of_limit": "{{period}}: {{used}} of {{limit}} used",
+    "status": {
+      "warning": "Near quota limit",
+      "exceeded": "Quota exceeded"
+    },
+    "validation": {
+      "key_exceeds_account": "Key {{period}} quota {{keyLimit}} exceeds the account {{period}} quota {{accountLimit}}",
+      "period_day_legacy_conflict": "Daily quota conflicts with the legacy daily spending limit.",
+      "five_hour_projection_warming": "The 5-hour quota is temporarily unavailable while usage projection warms up."
+    }
   },
   "models": {
     "total_models_count": "{{count}} models"
