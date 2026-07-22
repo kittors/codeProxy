@@ -254,19 +254,6 @@ export const portalApi = {
     ),
   updateKey: (id: string, body: EndUserAPIKeyMutationBody) =>
     portalClient.patch<EndUserAPIKey>(`/v0/portal/api-keys/${id}`, body),
-  resetKeyDailySpending: (id: string) =>
-    portalClient.post<ApiKeyDailySpendingResetResult>(
-      `/v0/portal/api-keys/${id}/daily-spending/reset`,
-      {},
-    ),
-  listKeyDailySpendingResetHistory: (id: string, limit?: number) => {
-    const query = new URLSearchParams();
-    if (limit != null) query.set("limit", String(limit));
-    const suffix = query.size > 0 ? `?${query.toString()}` : "";
-    return portalClient.get<ApiKeyDailySpendingResetHistoryResponse>(
-      `/v0/portal/api-keys/${id}/daily-spending/reset-history${suffix}`,
-    );
-  },
   rotateKey: (id: string) =>
     portalClient.post<{ api_key: EndUserAPIKey; plaintext_key?: string }>(
       `/v0/portal/api-keys/${id}/rotate`,

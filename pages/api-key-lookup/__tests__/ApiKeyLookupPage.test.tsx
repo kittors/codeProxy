@@ -135,8 +135,6 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
       keySecret: vi.fn(),
       createKey: vi.fn(),
       updateKey: vi.fn(),
-      resetKeyDailySpending: vi.fn(),
-      listKeyDailySpendingResetHistory: vi.fn(),
       rotateKey: vi.fn(),
       deleteKey: vi.fn(),
       changePassword: vi.fn(),
@@ -751,7 +749,7 @@ describe("ApiKeyLookupPage", () => {
     });
   });
 
-  test("edits, resets, and opens history from the shared managed-key table", async () => {
+  test("edits quota from the shared managed-key table without reset actions", async () => {
     const { portalApi } = await import("@code-proxy/api-client");
     const user = {
       id: "u1",
@@ -794,19 +792,6 @@ describe("ApiKeyLookupPage", () => {
     vi.mocked(portalApi.listKeys).mockResolvedValue({ items: [key] } as never);
     vi.mocked(portalApi.keySecret).mockResolvedValue({ id: "k1", key: "sk-primary" });
     vi.mocked(portalApi.updateKey).mockResolvedValue({ ...key, name: "renamed" } as never);
-    vi.mocked(portalApi.resetKeyDailySpending).mockResolvedValue({ status: "ok" });
-    vi.mocked(portalApi.listKeyDailySpendingResetHistory).mockResolvedValue({
-      items: [
-        {
-          id: 7,
-          reset_at: "2026-07-21T11:00:00Z",
-          actor_username: "alice",
-          effective_used_before: 20,
-          raw_today_cost: 30,
-        },
-      ],
-      total: 1,
-    });
 
     render(
       <ThemeProvider>
@@ -831,7 +816,8 @@ describe("ApiKeyLookupPage", () => {
     expect(await screen.findByRole("columnheader", { name: "Quota" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Today" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Lifetime" })).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: "Total resets" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Reset today spending" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "View reset history" })).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Edit Key quota" }));
     const editDialog = await screen.findByRole("dialog", { name: "Edit Key quota" });
@@ -847,20 +833,6 @@ describe("ApiKeyLookupPage", () => {
         "period-spending-limits": { "5h": 50, day: 80, week: 300, month: 1000 },
       });
     });
-
-    await userEvent.click(screen.getByRole("button", { name: "Reset today spending" }));
-    await waitFor(() => {
-      expect(portalApi.resetKeyDailySpending).toHaveBeenCalledWith("k1");
-    });
-
-    await userEvent.click(screen.getAllByRole("button", { name: "View reset history" })[0]!);
-    await waitFor(() => {
-      expect(portalApi.listKeyDailySpendingResetHistory).toHaveBeenCalledWith("k1", 200);
-    });
-    expect(
-      await screen.findByRole("dialog", { name: "Reset history · primary" }),
-    ).toBeInTheDocument();
-    expect(screen.getAllByText("$20.00").length).toBeGreaterThan(0);
   });
 
   test("confirms before deleting a managed API key", async () => {
@@ -940,10 +912,10 @@ describe("ApiKeyLookupPage", () => {
     expect(await screen.findByText("secondary")).toBeInTheDocument();
     const secondaryRow = screen.getByText("secondary").closest("tr");
     expect(secondaryRow).not.toBeNull();
+    // Portal rows only expose rotate/edit/delete, so delete is a direct icon button.
     await userEvent.click(
-      within(secondaryRow as HTMLElement).getByRole("button", { name: "More actions" }),
+      within(secondaryRow as HTMLElement).getByRole("button", { name: /^(delete|删除)$/i }),
     );
-    await userEvent.click(await screen.findByRole("menuitem", { name: /^(delete|删除)$/i }));
 
     expect(portalApi.deleteKey).not.toHaveBeenCalled();
     const confirmDialog = await screen.findByRole("dialog");
@@ -957,9 +929,8 @@ describe("ApiKeyLookupPage", () => {
     expect(portalApi.deleteKey).not.toHaveBeenCalled();
 
     await userEvent.click(
-      within(secondaryRow as HTMLElement).getByRole("button", { name: "More actions" }),
+      within(secondaryRow as HTMLElement).getByRole("button", { name: /^(delete|删除)$/i }),
     );
-    await userEvent.click(await screen.findByRole("menuitem", { name: /^(delete|删除)$/i }));
     await userEvent.click(
       within(await screen.findByRole("dialog")).getByRole("button", {
         name: /^(delete|删除)$/i,
