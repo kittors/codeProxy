@@ -4,7 +4,12 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import { ApiKeyLookupPage } from "../ApiKeyLookupPage";
 import { ThemeProvider } from "@code-proxy/ui";
 import { ToastProvider } from "@code-proxy/ui";
-import type { PublicLogItem, PublicLogsResponse, PublicUsageSummaryResponse } from "../types";
+import type {
+  ChartDataResponse,
+  PublicLogItem,
+  PublicLogsResponse,
+  PublicUsageSummaryResponse,
+} from "../types";
 
 const mocks = vi.hoisted(() => ({
   fetchPublicLogs: vi.fn(
@@ -30,7 +35,7 @@ const mocks = vi.hoisted(() => ({
       portalAccount?: boolean;
       days?: number;
       signal?: AbortSignal;
-    }) => ({
+    }): Promise<ChartDataResponse> => ({
       daily_series: [],
       heatmap_series: [],
       model_distribution: [],
@@ -102,11 +107,17 @@ vi.mock("../components/UsageTabSection", () => ({
   UsageTabSection: ({
     chartLoading,
     chartStats,
+    showApiKeyDistribution,
   }: {
     chartLoading: boolean;
     chartStats?: { total: number };
+    showApiKeyDistribution: boolean;
   }) => (
-    <div data-testid="usage-tab" data-loading={String(chartLoading)}>
+    <div
+      data-testid="usage-tab"
+      data-loading={String(chartLoading)}
+      data-show-api-key-distribution={String(showApiKeyDistribution)}
+    >
       {chartStats?.total ?? "no-stats"}
     </div>
   ),
@@ -363,6 +374,10 @@ describe("ApiKeyLookupPage", () => {
       );
     });
     expect(await screen.findByTestId("usage-tab")).toHaveTextContent("37");
+    expect(screen.getByTestId("usage-tab")).toHaveAttribute(
+      "data-show-api-key-distribution",
+      "true",
+    );
     expect(window.sessionStorage.getItem("apiKeyLookup.lastApiKey.v1")).toBeNull();
 
     await userEvent.click(

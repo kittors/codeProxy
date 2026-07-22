@@ -78,6 +78,12 @@ export interface ChartDataResponse {
     requests: number;
     tokens: number;
   }>;
+  api_key_distribution?: Array<{
+    api_key_id: string;
+    name: string;
+    requests: number;
+    tokens: number;
+  }>;
   api_key_name?: string;
   stats: {
     total: number;
