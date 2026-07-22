@@ -372,7 +372,7 @@ describe("ApiKeyLookupPage", () => {
     expect(screen.queryByText(/^default$|^默认$/i)).not.toBeInTheDocument();
   });
 
-  test("hides channel column and channel filter on public request logs", async () => {
+  test("hides channel controls and keeps input/output cells non-interactive on public logs", async () => {
     window.history.replaceState({}, "", "/manage/apikey-lookup?api_key=sk-restored-key");
     mocks.fetchPublicLogs.mockResolvedValueOnce({
       items: [
@@ -387,12 +387,12 @@ describe("ApiKeyLookupPage", () => {
           streaming: true,
           latency_ms: 1000,
           first_token_ms: 100,
-          input_tokens: 1,
+          input_tokens: 12_345,
           cached_tokens: 0,
-          output_tokens: 1,
-          total_tokens: 2,
+          output_tokens: 6_789,
+          total_tokens: 19_134,
           cost: 0,
-          has_content: false,
+          has_content: true,
         },
       ],
       total: 1,
@@ -402,7 +402,7 @@ describe("ApiKeyLookupPage", () => {
       stats: {
         total: 1,
         success_rate: 100,
-        total_tokens: 2,
+        total_tokens: 19_134,
         total_sessions: 1,
         total_cost: 0,
       },
@@ -437,6 +437,10 @@ describe("ApiKeyLookupPage", () => {
     expect(screen.queryByRole("columnheader", { name: /channel|渠道/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("combobox", { name: /filter by channel/i })).not.toBeInTheDocument();
     expect(screen.queryByText("owner@example.com")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "12,345" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "6,789" })).not.toBeInTheDocument();
+    expect(screen.getByText("12,345")).toBeInTheDocument();
+    expect(screen.getByText("6,789")).toBeInTheDocument();
   });
 
   test("loads public logs only after switching to the request logs tab", async () => {

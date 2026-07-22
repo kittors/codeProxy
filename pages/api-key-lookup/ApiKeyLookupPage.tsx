@@ -33,12 +33,10 @@ import { DropdownMenu } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
 import type { SearchableCheckboxMultiSelectOption } from "@code-proxy/ui";
 import type { TimeRange } from "@features/monitor-widgets/monitor-constants";
-import { LogContentModal } from "@features/log-content-viewer";
 import { ModelTag } from "@features/model-tags";
 import {
   fetchAvailableModels,
   fetchPublicChartData,
-  fetchPublicLogContent,
   fetchPublicLogs,
   fetchPublicUsageSummary,
   type PublicModelItem,
@@ -369,24 +367,13 @@ export function ApiKeyLookupPage() {
   // ponytail: landing first; open login only via CTA / header
   const [loginModalOpen, setLoginModalOpen] = useState(false);
 
-  // ── Content modal state ──
-  const [contentModalOpen, setContentModalOpen] = useState(false);
-  const [contentModalLogId, setContentModalLogId] = useState<number | null>(null);
-  const [contentModalTab, setContentModalTab] = useState<"input" | "output">("input");
-
-  const handleContentClick = useCallback((logId: number, tab: "input" | "output") => {
-    setContentModalLogId(logId);
-    setContentModalTab(tab);
-    setContentModalOpen(true);
-  }, []);
-
   const logColumns = useMemo(
     () =>
-      buildRequestLogsColumns((key) => t(key), handleContentClick, undefined, {
+      buildRequestLogsColumns((key) => t(key), undefined, undefined, {
         identityColumn: "key",
         hideChannel: true,
       }),
-    [t, handleContentClick],
+    [t],
   );
   // ── Tab state ──
   const [activeTab, setActiveTab] = useState<ApiKeyLookupTab>("usage");
@@ -1569,31 +1556,6 @@ export function ApiKeyLookupPage() {
               ) : null}
             </>
           )}
-
-          {/* Log Content Modal */}
-          <LogContentModal
-            open={contentModalOpen}
-            logId={contentModalLogId}
-            initialTab={contentModalTab}
-            onClose={() => setContentModalOpen(false)}
-            fetchPartFn={
-              usageSubject
-                ? async (
-                    id: number,
-                    part: "input" | "output",
-                    options?: { signal?: AbortSignal },
-                  ) => {
-                    return fetchPublicLogContent({
-                      id,
-                      apiKey: usageSubject.apiKey,
-                      portalAccount: usageSubject.mode === "portal",
-                      part,
-                      signal: options?.signal,
-                    });
-                  }
-                : undefined
-            }
-          />
 
           {showLanding ? <LookupEmptyState t={t} onLogin={() => setLoginModalOpen(true)} /> : null}
         </main>
