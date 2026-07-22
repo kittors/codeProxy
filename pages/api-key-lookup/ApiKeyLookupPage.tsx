@@ -1412,23 +1412,6 @@ export function ApiKeyLookupPage() {
                 quotaLimits={quotaLimits}
                 quotaScopes={quotaScopes}
                 showKeysTab={Boolean(portalUser)}
-                keysHeader={
-                  portalUser
-                    ? {
-                        loading: portalKeysLoading,
-                        busy: portalKeysBusy,
-                        onRefresh: () => void syncPortalKeys(),
-                        onCreate: () => {
-                          setPortalKeyForm({
-                            name: "",
-                            periods: emptyPeriodSpendingDraft(),
-                          });
-                          setPortalKeyQuotaError("");
-                          setCreateKeyOpen(true);
-                        },
-                      }
-                    : undefined
-                }
               />
 
               {activeTab === "usage" && usageReady ? (
@@ -1460,6 +1443,15 @@ export function ApiKeyLookupPage() {
                     keys={portalKeys}
                     busy={portalKeysBusy}
                     loading={portalKeysLoading}
+                    onRefresh={() => void syncPortalKeys()}
+                    onCreate={() => {
+                      setPortalKeyForm({
+                        name: "",
+                        periods: emptyPeriodSpendingDraft(),
+                      });
+                      setPortalKeyQuotaError("");
+                      setCreateKeyOpen(true);
+                    }}
                     onRotate={(key) => {
                       setPortalKeysBusy(true);
                       void portalApi

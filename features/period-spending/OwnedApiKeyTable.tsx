@@ -224,6 +224,7 @@ export function OwnedApiKeysTable({
   loading = false,
   canDelete,
   height = "h-[460px]",
+  minHeight = "min-h-[320px]",
 }: {
   t: (key: string, options?: Record<string, unknown>) => string;
   keys: EndUserAPIKey[];
@@ -233,6 +234,7 @@ export function OwnedApiKeysTable({
   loading?: boolean;
   canDelete?: (key: EndUserAPIKey) => boolean;
   height?: string;
+  minHeight?: string;
 }) {
   // Avoid flashing the empty state while the owner-scoped list is still loading.
   if (loading && keys.length === 0) {
@@ -264,7 +266,7 @@ export function OwnedApiKeysTable({
       rowHeight={52}
       height={height}
       loading={loading}
-      minHeight="min-h-[320px]"
+      minHeight={minHeight}
       minWidth="min-w-[1580px]"
       caption={t("api_keys_page.table_caption")}
       emptyText={t("api_keys_page.no_api_keys")}

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Plus, RefreshCw } from "lucide-react";
-import { Button, HoverTooltip, Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
+import { RefreshCw } from "lucide-react";
+import { HoverTooltip, Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { TimeRangeSelector } from "@features/monitor-widgets";
 import type { TimeRange } from "@features/monitor-widgets/monitor-constants";
 import type { PublicQuotaScope, PublicUsageLimits } from "../types";
@@ -29,7 +29,6 @@ export function LookupResultsToolbar({
   quotaScopes,
   showKeysTab = false,
   tabs,
-  keysHeader,
 }: {
   t: (key: string, options?: Record<string, unknown>) => string;
   activeTab: ApiKeyLookupTab;
@@ -46,19 +45,11 @@ export function LookupResultsToolbar({
   showKeysTab?: boolean;
   /** Restrict visible tabs (e.g. public key usage page only needs logs + quick import). */
   tabs?: ApiKeyLookupTab[];
-  /** keys tab：标题 + 刷新/新建 与 tabs 同吸顶，避免滚动后消失。 */
-  keysHeader?: {
-    loading?: boolean;
-    busy?: boolean;
-    onRefresh: () => void;
-    onCreate: () => void;
-  };
 }) {
   const toolbarRef = useRef<HTMLDivElement>(null);
   const [stuck, setStuck] = useState(false);
   const visibleTabs = tabs?.length ? tabs : DEFAULT_TABS;
   const showTab = (tab: ApiKeyLookupTab) => visibleTabs.includes(tab);
-  const showKeysHeader = activeTab === "keys" && keysHeader && showTab("keys");
   const logsQuotaItems =
     activeTab === "logs" ? buildQuotaKpiItems(t, quotaLimits, quotaScopes) : [];
 
@@ -153,63 +144,27 @@ export function LookupResultsToolbar({
             </div>
           ) : null}
         </div>
-        {!showKeysHeader ? (
-          <div className="flex items-center gap-2">
-            <HoverTooltip content={t("common.refresh")}>
-              <button
-                type="button"
-                onClick={handleRefresh}
-                disabled={loading || chartLoading || modelsLoading}
-                aria-label={t("common.refresh")}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40 dark:text-white/55 dark:hover:bg-white/10 dark:hover:text-white"
-              >
-                <RefreshCw
-                  size={16}
-                  className={loading || chartLoading || modelsLoading ? "animate-spin" : ""}
-                />
-              </button>
-            </HoverTooltip>
-          </div>
-        ) : null}
-      </div>
-
-      {showKeysHeader ? (
         <div
-          data-testid="apikey-lookup-keys-header-sticky"
-          className="flex flex-wrap items-start justify-between gap-3 px-0.5 pb-0.5"
+          className={
+            activeTab === "keys" ? "hidden items-center gap-2 sm:flex" : "flex items-center gap-2"
+          }
         >
-          <div>
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
-              {t("apikey_lookup.manage_keys", { defaultValue: "管理 API Key" })}
-            </h3>
-            <p className="mt-1 text-xs text-slate-500 dark:text-white/55">
-              {t("apikey_lookup.manage_keys_desc", {
-                defaultValue: "管理本账号下全部 API Key。",
-              })}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={keysHeader.onRefresh}
-              disabled={keysHeader.loading || keysHeader.busy}
+          <HoverTooltip content={t("common.refresh")}>
+            <button
+              type="button"
+              onClick={handleRefresh}
+              disabled={loading || chartLoading || modelsLoading}
+              aria-label={t("common.refresh")}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40 dark:text-white/55 dark:hover:bg-white/10 dark:hover:text-white"
             >
-              <RefreshCw size={14} className={keysHeader.loading ? "animate-spin" : ""} />
-              {t("common.refresh")}
-            </Button>
-            <Button
-              size="sm"
-              variant="primary"
-              onClick={keysHeader.onCreate}
-              disabled={keysHeader.busy}
-            >
-              <Plus size={14} />
-              {t("apikey_lookup.create_key", { defaultValue: "新建 Key" })}
-            </Button>
-          </div>
+              <RefreshCw
+                size={16}
+                className={loading || chartLoading || modelsLoading ? "animate-spin" : ""}
+              />
+            </button>
+          </HoverTooltip>
         </div>
-      ) : null}
+      </div>
     </div>
   );
 }
