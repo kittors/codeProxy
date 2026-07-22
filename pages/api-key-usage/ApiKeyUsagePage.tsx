@@ -13,14 +13,14 @@ import { ThemeToggleButton } from "@code-proxy/ui";
 import type { SearchableCheckboxMultiSelectOption } from "@code-proxy/ui";
 import type { TimeRange } from "@features/monitor-widgets/monitor-constants";
 import { ModelTag } from "@features/model-tags";
-import { fetchPublicLogs } from "../api-key-lookup/api";
+import { fetchPublicLogs, fetchPublicUsageSummary } from "../api-key-lookup/api";
 import {
   LookupResultsToolbar,
   type ApiKeyLookupTab,
 } from "../api-key-lookup/components/LookupResultsToolbar";
 import { PublicLogsSection } from "../api-key-lookup/components/PublicLogsSection";
 import { QuickImportTabContent } from "../api-key-lookup/components/QuickImportTabContent";
-import type { PublicLogItem } from "../api-key-lookup/types";
+import type { PublicLogItem, PublicQuotaScope, PublicUsageLimits } from "../api-key-lookup/types";
 import {
   buildRequestLogsColumns,
   formatOptionalRequestLogLatencyMs,
@@ -211,10 +211,15 @@ export function ApiKeyUsagePage() {
   const paginationInFlightRef = useRef(false);
   const restoredLookupFetchedRef = useRef(false);
 
+  const [quotaLimits, setQuotaLimits] = useState<PublicUsageLimits | null>(null);
+  const [quotaScopes, setQuotaScopes] = useState<PublicQuotaScope[]>([]);
+  const summaryAbortControllerRef = useRef<AbortController | null>(null);
+  const summaryFetchIdRef = useRef(0);
+
   const logColumns = useMemo(
     () =>
       buildRequestLogsColumns((key) => t(key), undefined, undefined, {
-        identityColumn: "key",
+        identityColumn: "none",
         hideChannel: true,
       }),
     [t],
@@ -277,7 +282,9 @@ export function ApiKeyUsagePage() {
 
   const resetResults = useCallback(() => {
     abortControllerRef.current?.abort();
+    summaryAbortControllerRef.current?.abort();
     fetchIdRef.current += 1;
+    summaryFetchIdRef.current += 1;
     paginationInFlightRef.current = false;
     setLoading(false);
     setError(null);
@@ -293,6 +300,34 @@ export function ApiKeyUsagePage() {
     setSelectedModels(null);
     setSelectedStatuses(null);
     setApiKeyName("");
+    setQuotaLimits(null);
+    setQuotaScopes([]);
+  }, []);
+
+  const fetchQuotaLimits = useCallback(async (apiKey: string) => {
+    const trimmed = apiKey.trim();
+    if (!trimmed) return;
+    summaryAbortControllerRef.current?.abort();
+    const controller = new AbortController();
+    summaryAbortControllerRef.current = controller;
+    const myFetchId = ++summaryFetchIdRef.current;
+    try {
+      const summary = await fetchPublicUsageSummary({
+        apiKey: trimmed,
+        signal: controller.signal,
+      });
+      if (myFetchId !== summaryFetchIdRef.current || controller.signal.aborted) return;
+      setQuotaLimits(summary.limits ?? null);
+      setQuotaScopes(summary["quota-scopes"] ?? []);
+    } catch {
+      if (myFetchId !== summaryFetchIdRef.current || controller.signal.aborted) return;
+      setQuotaLimits(null);
+      setQuotaScopes([]);
+    } finally {
+      if (summaryAbortControllerRef.current === controller) {
+        summaryAbortControllerRef.current = null;
+      }
+    }
   }, []);
 
   const fetchLogs = useCallback(
@@ -343,6 +378,7 @@ export function ApiKeyUsagePage() {
         setApiKeyName(nextName);
         writeStoredUsageKey({ apiKey: trimmed, ...(nextName ? { name: nextName } : {}) });
         setKeyModalOpen(false);
+        void fetchQuotaLimits(trimmed);
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") return;
         if (myFetchId !== fetchIdRef.current) return;
@@ -350,12 +386,14 @@ export function ApiKeyUsagePage() {
         setRawItems([]);
         setTotalCount(0);
         setStats({ total: 0, success_rate: 0, total_tokens: 0, total_cost: 0 });
+        setQuotaLimits(null);
+        setQuotaScopes([]);
       } finally {
         paginationInFlightRef.current = false;
         if (myFetchId === fetchIdRef.current) setLoading(false);
       }
     },
-    [modelFilterParam, pageSize, statusFilterParam, t, timeRange],
+    [fetchQuotaLimits, modelFilterParam, pageSize, statusFilterParam, t, timeRange],
   );
 
   const rows = useMemo(() => rawItems.map((item) => toLogRow(item)), [rawItems]);
@@ -409,18 +447,23 @@ export function ApiKeyUsagePage() {
       setQuickImportReloadToken((value) => value + 1);
       return;
     }
+    void fetchQuotaLimits(queriedKey);
     fetchLogs(queriedKey, 1);
-  }, [activeTab, fetchLogs, queriedKey]);
+  }, [activeTab, fetchLogs, fetchQuotaLimits, queriedKey]);
 
   useEffect(() => {
-    if (queriedKey && activeTab === "logs") fetchLogs(queriedKey, 1);
+    if (queriedKey && activeTab === "logs") {
+      void fetchQuotaLimits(queriedKey);
+      fetchLogs(queriedKey, 1);
+    }
   }, [timeRange, selectedModels, selectedStatuses]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!bootstrap?.apiKey || restoredLookupFetchedRef.current) return;
     restoredLookupFetchedRef.current = true;
+    void fetchQuotaLimits(bootstrap.apiKey);
     fetchLogs(bootstrap.apiKey, 1);
-  }, [bootstrap, fetchLogs]);
+  }, [bootstrap, fetchLogs, fetchQuotaLimits]);
 
   useEffect(() => {
     try {
@@ -541,6 +584,8 @@ export function ApiKeyUsagePage() {
                 loading={loading}
                 chartLoading={false}
                 modelsLoading={false}
+                quotaLimits={quotaLimits}
+                quotaScopes={quotaScopes}
                 tabs={["logs", "quickImport"]}
               />
 
