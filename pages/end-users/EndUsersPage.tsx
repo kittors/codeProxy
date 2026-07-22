@@ -28,6 +28,8 @@ import {
   Modal,
   SecretRevealModal,
   Select,
+  TABLE_ROW_ACTIONS_COLUMN,
+  TableRowActions,
   TextInput,
   type DataTableColumn,
   useToast,
@@ -440,7 +442,7 @@ export function EndUsersPage() {
       {
         key: "actions",
         label: t("common.action"),
-        width: "w-[280px] min-w-[260px]",
+        ...TABLE_ROW_ACTIONS_COLUMN,
         lockOrder: "end",
         headerClassName: stickyActionsHeaderClass,
         cellClassName: stickyActionsCellClass,
@@ -454,31 +456,28 @@ export function EndUsersPage() {
             ? t("end_users.reset_today_spending")
             : t("end_users.reset_today_spending_disabled");
           return (
-            <div className="flex items-center justify-center gap-1">
-              <Button
-                size="sm"
-                variant="ghost"
-                title={t("end_users.view_usage")}
-                onClick={() => void handleViewUserUsage(row)}
-              >
-                <BarChart3 className="h-4 w-4" />
-              </Button>
-              {can("api_keys.read") ? (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  title={t("end_users.manage_keys")}
-                  onClick={() => setKeysUser(row)}
-                >
-                  <Key className="h-4 w-4" />
-                </Button>
-              ) : null}
-              {canWrite ? (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  title={t("end_users.edit")}
-                  onClick={() => {
+            <TableRowActions
+              moreLabel={t("common.more_actions")}
+              actions={[
+                {
+                  key: "usage",
+                  label: t("end_users.view_usage"),
+                  icon: <BarChart3 className="h-4 w-4" />,
+                  onClick: () => void handleViewUserUsage(row),
+                },
+                {
+                  key: "keys",
+                  label: t("end_users.manage_keys"),
+                  icon: <Key className="h-4 w-4" />,
+                  visible: can("api_keys.read"),
+                  onClick: () => setKeysUser(row),
+                },
+                {
+                  key: "edit",
+                  label: t("end_users.edit"),
+                  icon: <Pencil className="h-4 w-4" />,
+                  visible: canWrite,
+                  onClick: () => {
                     const profile = row["permission-profile-id"]
                       ? (permissionProfiles.find(
                           (item) => item.id === row["permission-profile-id"],
@@ -506,66 +505,46 @@ export function EndUsersPage() {
                           ),
                       ),
                     });
-                  }}
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
-              ) : null}
-              {canWrite ? (
-                row.status === "active" ? (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    disabled={busy}
-                    title={t("end_users.freeze")}
-                    onClick={() => void setFrozen(row, true)}
-                  >
-                    <Snowflake className="h-4 w-4" />
-                  </Button>
-                ) : (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    disabled={busy}
-                    title={t("end_users.activate")}
-                    onClick={() => void setFrozen(row, false)}
-                  >
-                    <Unlock className="h-4 w-4" />
-                  </Button>
-                )
-              ) : null}
-              {canWrite ? (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  disabled={busy || !hasDailyLimit}
-                  title={resetLabel}
-                  onClick={() => void resetTodaySpending(row)}
-                >
-                  <RotateCcw className="h-4 w-4" />
-                </Button>
-              ) : null}
-              {canWrite ? (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  title={t("end_users.reset_password")}
-                  onClick={() => setResetUser(row)}
-                >
-                  <KeyRound className="h-4 w-4" />
-                </Button>
-              ) : null}
-              {canWrite ? (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  title={t("common.delete")}
-                  onClick={() => setDeleteUser(row)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              ) : null}
-            </div>
+                  },
+                },
+                {
+                  key: "status",
+                  label: row.status === "active" ? t("end_users.freeze") : t("end_users.activate"),
+                  icon:
+                    row.status === "active" ? (
+                      <Snowflake className="h-4 w-4" />
+                    ) : (
+                      <Unlock className="h-4 w-4" />
+                    ),
+                  visible: canWrite,
+                  disabled: busy,
+                  onClick: () => void setFrozen(row, row.status === "active"),
+                },
+                {
+                  key: "reset-spending",
+                  label: resetLabel,
+                  icon: <RotateCcw className="h-4 w-4" />,
+                  visible: canWrite,
+                  disabled: busy || !hasDailyLimit,
+                  onClick: () => void resetTodaySpending(row),
+                },
+                {
+                  key: "reset-password",
+                  label: t("end_users.reset_password"),
+                  icon: <KeyRound className="h-4 w-4" />,
+                  visible: canWrite,
+                  onClick: () => setResetUser(row),
+                },
+                {
+                  key: "delete",
+                  label: t("common.delete"),
+                  icon: <Trash2 className="h-4 w-4" />,
+                  visible: canWrite,
+                  destructive: true,
+                  onClick: () => setDeleteUser(row),
+                },
+              ]}
+            />
           );
         },
       },

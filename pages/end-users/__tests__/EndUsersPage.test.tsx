@@ -23,8 +23,7 @@ vi.mock("@app/providers/AuthProvider", () => ({
 }));
 
 vi.mock("@code-proxy/api-client", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("@code-proxy/api-client")>();
+  const actual = await importOriginal<typeof import("@code-proxy/api-client")>();
   return {
     ...actual,
     apiKeyPermissionProfilesApi: { list: mocks.permissionProfiles },
@@ -92,6 +91,12 @@ function renderPage() {
   );
 }
 
+async function openRowMoreActions(displayName: string) {
+  const row = screen.getByText(displayName).closest("tr");
+  expect(row).not.toBeNull();
+  await userEvent.click(within(row as HTMLElement).getByRole("button", { name: "More actions" }));
+}
+
 describe("EndUsersPage account semantics", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -142,48 +147,34 @@ describe("EndUsersPage account semantics", () => {
     expect(screen.getAllByText("Unlimited").length).toBeGreaterThan(0);
     expect(screen.getByText("$120 / $300")).toBeInTheDocument();
     expect(screen.getByText("$95 / $100")).toBeInTheDocument();
-    expect(
-      screen.getByRole("columnheader", { name: "Quota" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("columnheader", { name: "Today" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("columnheader", { name: "Lifetime" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("columnheader", { name: "Total resets" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("columnheader", { name: "Daily limit" }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("columnheader", { name: "RPM" }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "View reset history" }),
-    ).toHaveTextContent("2");
+    expect(screen.getByRole("columnheader", { name: "Quota" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Today" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Lifetime" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Total resets" })).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "Daily limit" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "RPM" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "View reset history" })).toHaveTextContent("2");
     expect(
       screen.getByRole("columnheader", { name: "Account Permission Profile" }),
     ).toBeInTheDocument();
 
+    await openRowMoreActions("Alice");
     expect(
-      screen.getByRole("button", {
+      screen.getByRole("menuitem", {
         name: "Set a daily spending limit in the permission config before resetting",
       }),
-    ).toBeDisabled();
+    ).toHaveAttribute("data-disabled");
+    await userEvent.keyboard("{Escape}");
 
-    await userEvent.click(
-      screen.getByRole("button", { name: "Reset account today's spending" }),
-    );
+    await openRowMoreActions("Bob");
+    await userEvent.click(screen.getByRole("menuitem", { name: "Reset account today's spending" }));
     await waitFor(() => {
       expect(mocks.resetDailySpending).toHaveBeenCalledWith("user-frozen");
       expect(mocks.list.mock.calls.length).toBeGreaterThan(1);
     });
 
-    await userEvent.click(
-      screen.getByRole("button", { name: "Freeze account" }),
-    );
+    await openRowMoreActions("Alice");
+    await userEvent.click(screen.getByRole("menuitem", { name: "Freeze account" }));
     await waitFor(() => {
       expect(mocks.update).toHaveBeenCalledWith("user-active", {
         status: "locked",
@@ -195,9 +186,7 @@ describe("EndUsersPage account semantics", () => {
     renderPage();
     await screen.findByText("Alice");
 
-    await userEvent.click(
-      screen.getAllByRole("button", { name: "Edit user account" })[0]!,
-    );
+    await userEvent.click(screen.getAllByRole("button", { name: "Edit user account" })[0]!);
     const dialog = await screen.findByRole("dialog", {
       name: "Edit user account",
     });
@@ -224,14 +213,8 @@ describe("EndUsersPage account semantics", () => {
       }),
       "3",
     );
-    await userEvent.type(
-      within(dialog).getByRole("spinbutton", { name: "RPM limit" }),
-      "60",
-    );
-    await userEvent.type(
-      within(dialog).getByRole("spinbutton", { name: "TPM limit" }),
-      "12000",
-    );
+    await userEvent.type(within(dialog).getByRole("spinbutton", { name: "RPM limit" }), "60");
+    await userEvent.type(within(dialog).getByRole("spinbutton", { name: "TPM limit" }), "12000");
     await userEvent.type(
       within(dialog).getByRole("spinbutton", {
         name: "Lifetime spending limit (USD)",
@@ -283,9 +266,7 @@ describe("EndUsersPage account semantics", () => {
     renderPage();
     await screen.findByText("Alice");
 
-    await userEvent.click(
-      screen.getAllByRole("button", { name: "Edit user account" })[0]!,
-    );
+    await userEvent.click(screen.getAllByRole("button", { name: "Edit user account" })[0]!);
     const dialog = await screen.findByRole("dialog", {
       name: "Edit user account",
     });
@@ -294,16 +275,10 @@ describe("EndUsersPage account semantics", () => {
         name: "Account Permission Profile",
       }),
     );
-    await userEvent.click(
-      await screen.findByRole("option", { name: "Standard" }),
-    );
+    await userEvent.click(await screen.findByRole("option", { name: "Standard" }));
 
-    expect(
-      within(dialog).getByRole("spinbutton", { name: "Daily quota (USD)" }),
-    ).toBeDisabled();
-    expect(
-      within(dialog).getByRole("spinbutton", { name: "Daily request limit" }),
-    ).toBeDisabled();
+    expect(within(dialog).getByRole("spinbutton", { name: "Daily quota (USD)" })).toBeDisabled();
+    expect(within(dialog).getByRole("spinbutton", { name: "Daily request limit" })).toBeDisabled();
     expect(
       within(dialog).getByRole("spinbutton", {
         name: "Lifetime spending limit (USD)",
@@ -340,9 +315,8 @@ describe("EndUsersPage account semantics", () => {
     renderPage();
 
     await screen.findByText("Alice");
-    await userEvent.click(
-      screen.getByRole("button", { name: "Reset account today's spending" }),
-    );
+    await openRowMoreActions("Bob");
+    await userEvent.click(screen.getByRole("menuitem", { name: "Reset account today's spending" }));
 
     await waitFor(() => {
       expect(mocks.list).toHaveBeenCalledTimes(2);
@@ -352,49 +326,29 @@ describe("EndUsersPage account semantics", () => {
   test("opens all-date reset history with true and effective today spending summaries", async () => {
     renderPage();
 
-    await userEvent.click(
-      await screen.findByRole("button", { name: "View reset history" }),
-    );
+    await userEvent.click(await screen.findByRole("button", { name: "View reset history" }));
 
     await waitFor(() => {
-      expect(mocks.listDailySpendingResetHistory).toHaveBeenCalledWith(
-        "user-frozen",
-        200,
-      );
+      expect(mocks.listDailySpendingResetHistory).toHaveBeenCalledWith("user-frozen", 200);
     });
-    expect(
-      await screen.findByText("Reset history · Bob / bob"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("Reset history · Bob / bob")).toBeInTheDocument();
     expect(screen.getByText("Today's true spend")).toBeInTheDocument();
     expect(screen.getByText("$175.50")).toBeInTheDocument();
-    expect(
-      screen.getByText("Current effective today usage"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Current effective today usage")).toBeInTheDocument();
     expect(screen.getAllByText("$28.25").length).toBeGreaterThan(0);
     expect(screen.getAllByText("$148.25").length).toBeGreaterThan(0);
     expect(screen.getByText("Management key")).toBeInTheDocument();
-    expect(
-      screen.getByRole("columnheader", { name: "Reset ID" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("columnheader", { name: "Reset time" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("columnheader", { name: "Project day" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("columnheader", { name: "Usage before reset" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("columnheader", { name: "Stored baseline" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Reset ID" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Reset time" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Project day" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Usage before reset" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Stored baseline" })).toBeInTheDocument();
     expect(screen.getByText("2026-07-21")).toBeInTheDocument();
 
     const newerId = screen.getByText("42");
     const olderId = screen.getByText("41");
     expect(
-      newerId.compareDocumentPosition(olderId) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
+      newerId.compareDocumentPosition(olderId) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
   });
 
@@ -405,9 +359,7 @@ describe("EndUsersPage account semantics", () => {
     });
     renderPage();
 
-    await userEvent.click(
-      await screen.findByRole("button", { name: "View reset history" }),
-    );
+    await userEvent.click(await screen.findByRole("button", { name: "View reset history" }));
 
     expect(await screen.findByText("Not returned")).toBeInTheDocument();
     expect(screen.getAllByText("$120.00").length).toBeGreaterThan(0);

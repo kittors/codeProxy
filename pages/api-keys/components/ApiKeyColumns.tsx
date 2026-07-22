@@ -23,7 +23,13 @@ import {
   maskApiKey,
   VendorIcon,
 } from "../apiKeyPageUtils";
-import { Checkbox, HoverTooltip, OverflowTooltip } from "@code-proxy/ui";
+import {
+  Checkbox,
+  HoverTooltip,
+  OverflowTooltip,
+  TABLE_ROW_ACTIONS_COLUMN,
+  TableRowActions,
+} from "@code-proxy/ui";
 import type { DataTableColumn } from "@code-proxy/ui";
 
 type CreateApiKeyColumnsOptions = {
@@ -491,8 +497,7 @@ export const createApiKeyColumns = ({
     {
       key: "actions",
       label: t("api_keys_page.col_actions"),
-      // Account-scoped keys expose credential rotation instead of per-key usage/reset.
-      width: accountScoped ? "w-[220px] min-w-[220px]" : "w-[256px] min-w-[256px]",
+      ...TABLE_ROW_ACTIONS_COLUMN,
       lockOrder: "end",
       headerClassName: stickyActionsHeaderClass,
       cellClassName: stickyActionsCellClass,
@@ -513,97 +518,78 @@ export const createApiKeyColumns = ({
           : t("api_keys_page.reset_today_spending_disabled");
 
         return (
-          <div className="flex items-center justify-center gap-1.5">
-            <HoverTooltip content={toggleLabel}>
-              <button
-                type="button"
-                onClick={() => onToggleDisable(idx)}
-                className={`rounded-lg p-1.5 transition-colors ${
-                  row.disabled
-                    ? "text-slate-400 hover:bg-red-50 hover:text-red-500 dark:text-white/30 dark:hover:bg-red-900/20 dark:hover:text-red-400"
-                    : "text-emerald-500 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-900/20"
-                }`}
-                aria-label={toggleLabel}
-              >
-                <Power size={15} />
-              </button>
-            </HoverTooltip>
-            {!accountScoped ? (
-              <HoverTooltip content={viewUsageLabel}>
-                <button
-                  type="button"
-                  onClick={() => onViewUsage(row)}
-                  className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-blue-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-blue-400"
-                  aria-label={viewUsageLabel}
-                >
-                  <BarChart3 size={15} />
-                </button>
-              </HoverTooltip>
-            ) : null}
-            <HoverTooltip content={copyKeyLabel}>
-              <button
-                type="button"
-                onClick={() => onCopy(row.key)}
-                className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-indigo-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-indigo-400"
-                aria-label={copyKeyLabel}
-              >
-                <Copy size={15} />
-              </button>
-            </HoverTooltip>
-            <HoverTooltip content={importLabel}>
-              <button
-                type="button"
-                onClick={() => onImportToCcSwitch(row)}
-                className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-cyan-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-cyan-400"
-                aria-label={importLabel}
-              >
-                <Upload size={15} />
-              </button>
-            </HoverTooltip>
-            {accountScoped ? (
-              <HoverTooltip content={rotateKeyLabel}>
-                <button
-                  type="button"
-                  onClick={() => onRotate(idx)}
-                  className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-orange-50 hover:text-orange-600 dark:text-white/50 dark:hover:bg-orange-900/20 dark:hover:text-orange-400"
-                  aria-label={rotateKeyLabel}
-                >
-                  <RotateCcw size={15} />
-                </button>
-              </HoverTooltip>
-            ) : null}
-            <HoverTooltip content={resetLabel}>
-              <button
-                type="button"
-                onClick={() => onResetDailySpending(idx)}
-                disabled={!hasDailyLimit || isResetting}
-                className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-orange-600 disabled:cursor-not-allowed disabled:opacity-40 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-orange-400"
-                aria-label={resetLabel}
-              >
-                <RotateCcw size={15} className={isResetting ? "animate-spin" : ""} />
-              </button>
-            </HoverTooltip>
-            <HoverTooltip content={editLabel}>
-              <button
-                type="button"
-                onClick={() => onEdit(idx)}
-                className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-amber-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-amber-400"
-                aria-label={editLabel}
-              >
-                <Pencil size={15} />
-              </button>
-            </HoverTooltip>
-            <HoverTooltip content={deleteLabel}>
-              <button
-                type="button"
-                onClick={() => onDelete(idx)}
-                className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:text-white/50 dark:hover:bg-red-900/20 dark:hover:text-red-400"
-                aria-label={deleteLabel}
-              >
-                <Trash2 size={15} />
-              </button>
-            </HoverTooltip>
-          </div>
+          <TableRowActions
+            moreLabel={t("common.more_actions")}
+            actions={[
+              {
+                key: "toggle",
+                label: toggleLabel,
+                icon: <Power size={15} />,
+                className: row.disabled
+                  ? "text-slate-400 hover:bg-red-50 hover:text-red-500 dark:text-white/30 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+                  : "text-emerald-500 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-900/20",
+                onClick: () => onToggleDisable(idx),
+              },
+              {
+                key: "usage",
+                label: viewUsageLabel,
+                icon: <BarChart3 size={15} />,
+                visible: !accountScoped,
+                className:
+                  "text-slate-500 hover:bg-slate-100 hover:text-blue-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-blue-400",
+                onClick: () => onViewUsage(row),
+              },
+              {
+                key: "copy",
+                label: copyKeyLabel,
+                icon: <Copy size={15} />,
+                className:
+                  "text-slate-500 hover:bg-slate-100 hover:text-indigo-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-indigo-400",
+                onClick: () => onCopy(row.key),
+              },
+              {
+                key: "import",
+                label: importLabel,
+                icon: <Upload size={15} />,
+                className:
+                  "text-slate-500 hover:bg-slate-100 hover:text-cyan-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-cyan-400",
+                onClick: () => onImportToCcSwitch(row),
+              },
+              {
+                key: "rotate",
+                label: rotateKeyLabel,
+                icon: <RotateCcw size={15} />,
+                visible: accountScoped,
+                className:
+                  "text-slate-500 hover:bg-orange-50 hover:text-orange-600 dark:text-white/50 dark:hover:bg-orange-900/20 dark:hover:text-orange-400",
+                onClick: () => onRotate(idx),
+              },
+              {
+                key: "reset-spending",
+                label: resetLabel,
+                icon: <RotateCcw size={15} className={isResetting ? "animate-spin" : ""} />,
+                disabled: !hasDailyLimit || isResetting,
+                className:
+                  "text-slate-500 hover:bg-slate-100 hover:text-orange-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-orange-400",
+                onClick: () => onResetDailySpending(idx),
+              },
+              {
+                key: "edit",
+                label: editLabel,
+                icon: <Pencil size={15} />,
+                className:
+                  "text-slate-500 hover:bg-slate-100 hover:text-amber-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-amber-400",
+                onClick: () => onEdit(idx),
+              },
+              {
+                key: "delete",
+                label: deleteLabel,
+                icon: <Trash2 size={15} />,
+                destructive: true,
+                onClick: () => onDelete(idx),
+              },
+            ]}
+          />
         );
       },
     },

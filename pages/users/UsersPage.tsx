@@ -8,6 +8,7 @@ import {
   DataTable,
   Modal,
   MultiSelect,
+  TABLE_ROW_ACTIONS_COLUMN,
   TextInput,
   ToggleSwitch,
   type DataTableColumn,
@@ -214,8 +215,7 @@ export function UsersPage() {
       {
         key: "actions",
         label: t("identity_admin.actions"),
-        minWidthPx: 104,
-        width: "w-28",
+        ...TABLE_ROW_ACTIONS_COLUMN,
         lockOrder: "end",
         render: (user) => {
           const protectedUser = isProtected(user);

@@ -37,8 +37,7 @@ vi.mock("@code-proxy/api-client", () => ({
         payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {};
       return {
         models: Array.isArray(record.models) ? record.models : [],
-        source:
-          typeof record.source === "string" ? String(record.source) : "registry",
+        source: typeof record.source === "string" ? String(record.source) : "registry",
       };
     },
     getModelDefinitions: async (channel: string) => {
@@ -743,7 +742,12 @@ describe("ModelsPage", () => {
 
     await userEvent.click(await screen.findByRole("tab", { name: /model library/i }));
     expect(await screen.findByText("seed-only-model")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: /delete seed-only-model/i }));
+    const modelRow = screen.getByText("seed-only-model").closest("tr");
+    expect(modelRow).not.toBeNull();
+    await userEvent.click(
+      within(modelRow as HTMLElement).getByRole("button", { name: "More actions" }),
+    );
+    await userEvent.click(await screen.findByRole("menuitem", { name: /delete seed-only-model/i }));
 
     const confirmDialog = await screen.findByRole("dialog", {
       name: /delete model configuration/i,

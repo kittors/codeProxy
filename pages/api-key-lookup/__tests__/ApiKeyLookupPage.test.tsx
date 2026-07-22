@@ -944,9 +944,12 @@ describe("ApiKeyLookupPage", () => {
       await screen.findByRole("tab", { name: /manage api keys|管理 api key/i }),
     );
     expect(await screen.findByText("secondary")).toBeInTheDocument();
-    const deleteButtons = screen.getAllByRole("button", { name: /^(delete|删除)$/i });
-    expect(deleteButtons.length).toBeGreaterThanOrEqual(2);
-    await userEvent.click(deleteButtons[1]);
+    const secondaryRow = screen.getByText("secondary").closest("tr");
+    expect(secondaryRow).not.toBeNull();
+    await userEvent.click(
+      within(secondaryRow as HTMLElement).getByRole("button", { name: "More actions" }),
+    );
+    await userEvent.click(await screen.findByRole("menuitem", { name: /^(delete|删除)$/i }));
 
     expect(portalApi.deleteKey).not.toHaveBeenCalled();
     const confirmDialog = await screen.findByRole("dialog");
@@ -959,7 +962,10 @@ describe("ApiKeyLookupPage", () => {
     });
     expect(portalApi.deleteKey).not.toHaveBeenCalled();
 
-    await userEvent.click(screen.getAllByRole("button", { name: /^(delete|删除)$/i })[1]);
+    await userEvent.click(
+      within(secondaryRow as HTMLElement).getByRole("button", { name: "More actions" }),
+    );
+    await userEvent.click(await screen.findByRole("menuitem", { name: /^(delete|删除)$/i }));
     await userEvent.click(
       within(await screen.findByRole("dialog")).getByRole("button", {
         name: /^(delete|删除)$/i,

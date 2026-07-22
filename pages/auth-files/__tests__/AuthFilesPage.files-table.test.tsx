@@ -172,7 +172,6 @@ const toDateTimeLocalInput = (date: Date): string =>
     padDatePart(date.getMinutes()),
   ].join("");
 
-
 const decodeBase64UrlJson = (part: string): Record<string, unknown> =>
   JSON.parse(Buffer.from(part, "base64url").toString("utf8")) as Record<string, unknown>;
 
@@ -318,9 +317,7 @@ describe("AuthFilesPage files table", () => {
       options?: { probeQuota?: boolean },
     ) => {
       const authIndex = String(file.auth_index ?? file.authIndex ?? file.name);
-      const subject = String(
-        (file as { auth_subject_id?: string }).auth_subject_id ?? authIndex,
-      );
+      const subject = String((file as { auth_subject_id?: string }).auth_subject_id ?? authIndex);
       let quotas: Array<Record<string, unknown>> = [];
       let planType: string | null = null;
       let resetCreditCount: number | undefined;
@@ -1047,7 +1044,9 @@ describe("AuthFilesPage files table", () => {
     expect(await screen.findByText("auth-server-renamed.json")).toBeInTheDocument();
     await waitFor(() => {
       expect(mocks.startStatusRefresh).toHaveBeenCalled();
-      const payload = (mocks.startStatusRefresh.mock.calls as unknown as Array<[{ auth_indexes?: string[] }]>).at(-1)?.[0];
+      const payload = (
+        mocks.startStatusRefresh.mock.calls as unknown as Array<[{ auth_indexes?: string[] }]>
+      ).at(-1)?.[0];
       expect(payload?.auth_indexes).toContain("auth-codex");
     });
   });
@@ -1082,7 +1081,7 @@ describe("AuthFilesPage files table", () => {
     expect(mocks.upload).not.toHaveBeenCalled();
   });
 
-  test("keeps table action buttons on a single row", async () => {
+  test("keeps three table actions inline and collapses the tail into a fixed-width menu", async () => {
     useTableFilesView();
     mocks.list.mockImplementation(async () => ({
       files: [
@@ -1112,12 +1111,19 @@ describe("AuthFilesPage files table", () => {
     const row = await screen.findByRole("row", { name: /codex-pro\.json/ });
     const actionGroup = within(row).getByRole("button", { name: "Refresh" }).closest("div");
     const actionHeader = screen.getByRole("columnheader", { name: "Action" });
+    const actionCell = row.querySelector<HTMLElement>('td[data-vt-column-key="actions"]');
 
     expect(actionGroup).not.toBeNull();
-    expect(actionGroup).toHaveClass("inline-flex");
+    expect(actionGroup).toHaveClass("flex");
+    expect(actionGroup).toHaveClass("flex-nowrap");
     expect(actionGroup).toHaveClass("whitespace-nowrap");
     expect(actionGroup).not.toHaveClass("flex-wrap");
-    expect(actionHeader).toHaveClass("w-48");
+    expect(actionHeader).toHaveClass("w-40");
+    expect(actionCell).not.toBeNull();
+    expect(within(actionCell as HTMLElement).getAllByRole("button")).toHaveLength(4);
+    expect(
+      within(actionCell as HTMLElement).getByRole("button", { name: "More actions" }),
+    ).toBeInTheDocument();
   });
 
   test("loads initial usage stats only for listed auth files", async () => {
@@ -1372,14 +1378,11 @@ describe("AuthFilesPage files table", () => {
     const errorBadges = within(card as HTMLElement).getByTestId("auth-file-card-error-badges");
     const quota = within(card as HTMLElement).getByTestId("auth-file-card-quota");
     expect(
-      Boolean(
-        errorBadges.compareDocumentPosition(quota) &
-          Node.DOCUMENT_POSITION_FOLLOWING,
-      ),
+      Boolean(errorBadges.compareDocumentPosition(quota) & Node.DOCUMENT_POSITION_FOLLOWING),
     ).toBe(true);
-    expect(
-      within(quota).getByTestId("auth-file-card-quota-empty"),
-    ).toHaveTextContent("Quota unavailable");
+    expect(within(quota).getByTestId("auth-file-card-quota-empty")).toHaveTextContent(
+      "Quota unavailable",
+    );
     const badge = within(errorBadges).getByText("429 Error");
     const tooltipTrigger = badge.closest("[aria-describedby]") ?? badge;
     fireEvent.mouseEnter(tooltipTrigger);
@@ -2102,12 +2105,8 @@ describe("AuthFilesPage files table", () => {
     const card = title.closest("section");
     expect(card).not.toBeNull();
     // Status usage is async; wait for cycle volume before asserting success rate.
-    expect(
-      await within(card as HTMLElement).findByText("Cycle 5"),
-    ).toBeInTheDocument();
-    expect(
-      within(card as HTMLElement).getByText("Success Rate"),
-    ).toBeInTheDocument();
+    expect(await within(card as HTMLElement).findByText("Cycle 5")).toBeInTheDocument();
+    expect(within(card as HTMLElement).getByText("Success Rate")).toBeInTheDocument();
     expect(within(card as HTMLElement).getByText("80.0%")).toBeInTheDocument();
   });
 
@@ -2164,15 +2163,9 @@ describe("AuthFilesPage files table", () => {
     const title = await screen.findByText("A_GptPro");
     const card = title.closest("section");
     expect(card).not.toBeNull();
-    expect(
-      await within(card as HTMLElement).findByText("Cycle 7"),
-    ).toBeInTheDocument();
-    expect(
-      within(card as HTMLElement).queryByText("Lifetime 99"),
-    ).not.toBeInTheDocument();
-    expect(
-      within(card as HTMLElement).queryByText("Tenant only"),
-    ).not.toBeInTheDocument();
+    expect(await within(card as HTMLElement).findByText("Cycle 7")).toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText("Lifetime 99")).not.toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText("Tenant only")).not.toBeInTheDocument();
     expect(
       within(card as HTMLElement).queryByText("Success 99 / Failed 0"),
     ).not.toBeInTheDocument();
@@ -2180,10 +2173,7 @@ describe("AuthFilesPage files table", () => {
   });
 
   test("full reload seeds 本周期 from cache so first paint is not Cycle --", async () => {
-    window.localStorage.setItem(
-      "authFilesPage.filesViewMode.v1",
-      JSON.stringify("cards"),
-    );
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     setActiveCacheTenantId(DEFAULT_CACHE_TENANT_ID);
     const file = {
       name: "codex-cycle.json",
@@ -2249,10 +2239,7 @@ describe("AuthFilesPage files table", () => {
   });
 
   test("cards view shows unknown cycle without lifetime/scope noise when weekly cycle is unknown", async () => {
-    window.localStorage.setItem(
-      "authFilesPage.filesViewMode.v1",
-      JSON.stringify("cards"),
-    );
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     mocks.list.mockImplementation(async () => ({
       files: [
         {
@@ -2341,18 +2328,10 @@ describe("AuthFilesPage files table", () => {
     const card = title.closest("section");
     expect(card).not.toBeNull();
     // Prefer request_total over a misleading cycle_request_total of 0 when cycle_known is false.
-    expect(
-      await within(card as HTMLElement).findByText("Cycle --"),
-    ).toBeInTheDocument();
-    expect(
-      within(card as HTMLElement).queryByText("Lifetime 116"),
-    ).not.toBeInTheDocument();
-    expect(
-      within(card as HTMLElement).getByText("SUPERGROK"),
-    ).toBeInTheDocument();
-    expect(
-      within(card as HTMLElement).queryByText("Shared account"),
-    ).not.toBeInTheDocument();
+    expect(await within(card as HTMLElement).findByText("Cycle --")).toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText("Lifetime 116")).not.toBeInTheDocument();
+    expect(within(card as HTMLElement).getByText("SUPERGROK")).toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText("Shared account")).not.toBeInTheDocument();
     expect(mocks.getStatus).toHaveBeenCalled();
   });
 
@@ -2663,12 +2642,8 @@ describe("AuthFilesPage files table", () => {
     const otherTitle = await screen.findByText("B_GptPro");
     const otherCard = otherTitle.closest("section");
     expect(otherCard).not.toBeNull();
-    expect(
-      await within(card as HTMLElement).findByText("Cycle 1"),
-    ).toBeInTheDocument();
-    expect(
-      await within(otherCard as HTMLElement).findByText("Cycle 10"),
-    ).toBeInTheDocument();
+    expect(await within(card as HTMLElement).findByText("Cycle 1")).toBeInTheDocument();
+    expect(await within(otherCard as HTMLElement).findByText("Cycle 10")).toBeInTheDocument();
 
     await waitFor(() => expect(mocks.startStatusRefresh).toHaveBeenCalled());
     mocks.fetchQuota.mockClear();
@@ -2680,15 +2655,9 @@ describe("AuthFilesPage files table", () => {
     await waitFor(() => {
       expect(mocks.startStatusRefresh).toHaveBeenCalled();
       expect(mocks.getEntityStats).not.toHaveBeenCalled();
-      expect(
-        within(card as HTMLElement).getByText("Cycle 4"),
-      ).toBeInTheDocument();
-      expect(
-        within(otherCard as HTMLElement).getByText("Cycle 10"),
-      ).toBeInTheDocument();
-      expect(
-        within(otherCard as HTMLElement).queryByText("Cycle 99"),
-      ).not.toBeInTheDocument();
+      expect(within(card as HTMLElement).getByText("Cycle 4")).toBeInTheDocument();
+      expect(within(otherCard as HTMLElement).getByText("Cycle 10")).toBeInTheDocument();
+      expect(within(otherCard as HTMLElement).queryByText("Cycle 99")).not.toBeInTheDocument();
     });
   });
 
@@ -2757,9 +2726,7 @@ describe("AuthFilesPage files table", () => {
       expect(mocks.getStatusRefreshJob).toHaveBeenCalledTimes(1);
     });
     const firstCall = (
-      mocks.startStatusRefresh.mock.calls as unknown as Array<
-        [{ auth_indexes?: string[] }]
-      >
+      mocks.startStatusRefresh.mock.calls as unknown as Array<[{ auth_indexes?: string[] }]>
     )[0];
     expect(firstCall).toBeDefined();
     const payload = firstCall?.[0];
@@ -2962,15 +2929,9 @@ describe("AuthFilesPage files table", () => {
     const title = await screen.findByText("A_GptPro");
     const card = title.closest("section");
     expect(card).not.toBeNull();
-    expect(
-      within(card as HTMLElement).queryByText(/^codex$/i),
-    ).not.toBeInTheDocument();
-    expect(
-      within(card as HTMLElement).queryByText("Plan Pro"),
-    ).not.toBeInTheDocument();
-    expect(
-      within(card as HTMLElement).getByText("Cycle --"),
-    ).toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText(/^codex$/i)).not.toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText("Plan Pro")).not.toBeInTheDocument();
+    expect(within(card as HTMLElement).getByText("Cycle --")).toBeInTheDocument();
   });
 
   test("table view hides default auth-file badges when display tags are empty", async () => {
@@ -4172,7 +4133,7 @@ describe("AuthFilesPage files table", () => {
     expect(screen.getByText("44%")).toBeInTheDocument();
   });
 
-    test("cards view spins current-page refresh actions when switching provider filter and clears them per card", async () => {
+  test("cards view spins current-page refresh actions when switching provider filter and clears them per card", async () => {
     const now = Date.now();
     const files = [
       {
@@ -4282,9 +4243,7 @@ describe("AuthFilesPage files table", () => {
 
     await waitFor(() => expect(mocks.startStatusRefresh).toHaveBeenCalledTimes(1));
     const payload = (
-      mocks.startStatusRefresh.mock.calls as unknown as Array<
-        [{ auth_indexes?: string[] }]
-      >
+      mocks.startStatusRefresh.mock.calls as unknown as Array<[{ auth_indexes?: string[] }]>
     )[0]?.[0];
     expect(payload?.auth_indexes?.sort()).toEqual(["1", "2", "3"]);
 
@@ -4527,9 +4486,7 @@ describe("AuthFilesPage files table", () => {
     const firstTitle = await screen.findByText("auth-1.json");
     const firstCard = firstTitle.closest("section");
     expect(firstCard).not.toBeNull();
-    expect(
-      await within(firstCard as HTMLElement).findByText("Cycle 1"),
-    ).toBeInTheDocument();
+    expect(await within(firstCard as HTMLElement).findByText("Cycle 1")).toBeInTheDocument();
 
     await waitFor(() => expect(mocks.getStatus).toHaveBeenCalled());
     await waitFor(() => expect(mocks.startStatusRefresh).toHaveBeenCalled());
@@ -4545,9 +4502,7 @@ describe("AuthFilesPage files table", () => {
       expect(mocks.startStatusRefresh).toHaveBeenCalledTimes(1);
       expect(mocks.getStatusRefreshJob).toHaveBeenCalled();
       expect(mocks.getStatus).toHaveBeenCalled();
-      expect(
-        within(firstCard as HTMLElement).getByText("Cycle 101"),
-      ).toBeInTheDocument();
+      expect(within(firstCard as HTMLElement).getByText("Cycle 101")).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
@@ -4556,9 +4511,7 @@ describe("AuthFilesPage files table", () => {
     const tenthCard = tenthTitle.closest("section");
     expect(tenthCard).not.toBeNull();
     // Final snapshot may refresh all accounts; page 2 still shows a finite call badge.
-    expect(
-      within(tenthCard as HTMLElement).getByText(/Cycle \d+/),
-    ).toBeInTheDocument();
+    expect(within(tenthCard as HTMLElement).getByText(/Cycle \d+/)).toBeInTheDocument();
   });
 
   test("cards view refresh action only refreshes the clicked auth file", async () => {
@@ -4635,9 +4588,7 @@ describe("AuthFilesPage files table", () => {
 
     await waitFor(() => expect(mocks.startStatusRefresh).toHaveBeenCalledTimes(1));
     const payload = (
-      mocks.startStatusRefresh.mock.calls as unknown as Array<
-        [{ auth_indexes?: string[] }]
-      >
+      mocks.startStatusRefresh.mock.calls as unknown as Array<[{ auth_indexes?: string[] }]>
     )[0]?.[0];
     expect(payload?.auth_indexes).toEqual(["1"]);
     expect(within(cards).getByText("codex-b.json")).toBeInTheDocument();
@@ -4715,9 +4666,7 @@ describe("AuthFilesPage files table", () => {
 
     await waitFor(() => expect(mocks.startStatusRefresh).toHaveBeenCalledTimes(1));
     const payload = (
-      mocks.startStatusRefresh.mock.calls as unknown as Array<
-        [{ auth_indexes?: string[] }]
-      >
+      mocks.startStatusRefresh.mock.calls as unknown as Array<[{ auth_indexes?: string[] }]>
     )[0]?.[0];
     expect(payload?.auth_indexes).toEqual(["1"]);
     expect(screen.getByText("codex-b.json")).toBeInTheDocument();
@@ -5145,12 +5094,8 @@ describe("AuthFilesPage files table", () => {
     const tooltipPercents = within(tooltip).getAllByText("0%");
     expect(tooltipPercents[0]).toHaveClass("text-rose-700");
 
-    const actionsHeader = table.querySelector<HTMLElement>(
-      'th[data-vt-column-key="actions"]',
-    );
-    const actionsCell = row?.querySelector<HTMLElement>(
-      'td[data-vt-column-key="actions"]',
-    );
+    const actionsHeader = table.querySelector<HTMLElement>('th[data-vt-column-key="actions"]');
+    const actionsCell = row?.querySelector<HTMLElement>('td[data-vt-column-key="actions"]');
     expect(actionsHeader).toHaveClass("md:sticky");
     expect(actionsCell).toHaveClass("md:sticky");
   });
@@ -5179,9 +5124,7 @@ describe("AuthFilesPage files table", () => {
       planType: "plus",
       resetCreditCount: resetCredits,
       resetCreditExpirations:
-        resetCredits === 3
-          ? ["2026-07-03T10:00:00Z", "2026-07-04T10:00:00Z"]
-          : undefined,
+        resetCredits === 3 ? ["2026-07-03T10:00:00Z", "2026-07-04T10:00:00Z"] : undefined,
     }));
     mocks.getStatus.mockImplementation(async () => ({
       items: [
@@ -5190,9 +5133,7 @@ describe("AuthFilesPage files table", () => {
           plan_type: "plus",
           reset_credit_count: resetCredits,
           reset_credit_expirations:
-            resetCredits === 3
-              ? ["2026-07-03T10:00:00Z", "2026-07-04T10:00:00Z"]
-              : undefined,
+            resetCredits === 3 ? ["2026-07-03T10:00:00Z", "2026-07-04T10:00:00Z"] : undefined,
           quotas: [{ quota_key: "code_5h", quota_label: "m_quota.code_5h", percent: 12 }],
         },
       ],
@@ -5287,7 +5228,6 @@ describe("AuthFilesPage files table", () => {
         resetCreditCount: 2,
       });
 
-
     mocks.getStatus
       .mockResolvedValueOnce({
         items: [
@@ -5309,7 +5249,7 @@ describe("AuthFilesPage files table", () => {
           },
         ],
       });
-window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     window.localStorage.setItem(
       AUTH_FILES_DATA_CACHE_KEY,
       JSON.stringify({

@@ -13,6 +13,7 @@ import {
   ConfirmModal,
   DataTable,
   Modal,
+  TABLE_ROW_ACTIONS_COLUMN,
   TextInput,
   type DataTableColumn,
   useToast,
@@ -205,8 +206,7 @@ export function RolesPage() {
       {
         key: "actions",
         label: t("identity_admin.actions"),
-        minWidthPx: 132,
-        width: "w-36",
+        ...TABLE_ROW_ACTIONS_COLUMN,
         lockOrder: "end",
         render: (role) => (
           <div className="flex items-center gap-2">
