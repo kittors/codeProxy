@@ -934,12 +934,12 @@ export function useAuthFilesFilesPresentation({
               title={t("auth_files.check_connectivity")}
               aria-label={t("auth_files.check_connectivity")}
             >
-              {state?.loading ? (
-                <Loader2 size={10} className="animate-spin" />
-              ) : state?.error ? (
+              {state?.error ? (
                 <span className="font-bold text-rose-500">✕</span>
               ) : state?.latencyMs != null ? (
                 <span className="font-medium">{formatLatency(state.latencyMs)}</span>
+              ) : state?.loading ? (
+                <Loader2 size={10} className="animate-spin" />
               ) : (
                 <Zap size={10} />
               )}
@@ -958,10 +958,10 @@ export function useAuthFilesFilesPresentation({
           const calls = authIndex ? cycleCallsByAuthIndex[authIndex] : undefined;
           return (
             <span className="inline-flex items-center justify-end gap-1 text-xs font-semibold tabular-nums text-slate-700 dark:text-white/70">
-              {!statusUsageReady && statusUsageLoading ? (
-                <Loader2 size={12} className="animate-spin" aria-label={t("common.loading")} />
-              ) : statusUsageReady && typeof calls === "number" ? (
+              {typeof calls === "number" ? (
                 calls
+              ) : !statusUsageReady && statusUsageLoading ? (
+                <Loader2 size={12} className="animate-spin" aria-label={t("common.loading")} />
               ) : (
                 "--"
               )}
@@ -977,9 +977,10 @@ export function useAuthFilesFilesPresentation({
         cellClassName: "text-right",
         render: (file) => {
           const stats = resolveAuthFileStats(file, usageIndex);
+          const hasUsage = stats.success + stats.failure > 0;
           return (
             <span className="text-xs font-semibold tabular-nums text-emerald-700 dark:text-emerald-200">
-              {statusUsageReady ? stats.success : "--"}
+              {statusUsageReady || hasUsage ? stats.success : "--"}
             </span>
           );
         },
@@ -992,9 +993,10 @@ export function useAuthFilesFilesPresentation({
         cellClassName: "text-right",
         render: (file) => {
           const stats = resolveAuthFileStats(file, usageIndex);
+          const hasUsage = stats.success + stats.failure > 0;
           return (
             <span className="text-xs font-semibold tabular-nums text-rose-700 dark:text-rose-200">
-              {statusUsageReady ? stats.failure : "--"}
+              {statusUsageReady || hasUsage ? stats.failure : "--"}
             </span>
           );
         },
@@ -1004,7 +1006,9 @@ export function useAuthFilesFilesPresentation({
         label: t("common.success_rate"),
         width: "w-44",
         render: (file) => {
-          if (!statusUsageReady) {
+          const statusData = resolveAuthFileStatusBar(file, usageIndex);
+          const hasUsage = statusData.totalSuccess + statusData.totalFailure > 0;
+          if (!statusUsageReady && !hasUsage) {
             return statusUsageLoading ? (
               <span className="inline-flex items-center gap-1 text-xs text-slate-500 dark:text-white/45">
                 <Loader2 size={12} className="animate-spin" />
@@ -1014,7 +1018,6 @@ export function useAuthFilesFilesPresentation({
               <span className="text-xs text-slate-400 dark:text-white/40">--</span>
             );
           }
-          const statusData = resolveAuthFileStatusBar(file, usageIndex);
           return <ProviderStatusBar data={statusData} compact />;
         },
       },

@@ -145,6 +145,86 @@ type ActiveBatch = {
   files: AuthFileItem[];
 };
 
+type ConnectivityEntry = {
+  loading: boolean;
+  latencyMs: number | null;
+  error: boolean;
+};
+
+const seedConnectivityState = (
+  cached: ReturnType<typeof readAuthFilesDataCache>,
+): Map<string, ConnectivityEntry> =>
+  new Map(
+    Object.entries(cached?.connectivityByFileName ?? {}).map(([fileName, snapshot]) => [
+      fileName,
+      { loading: false, latencyMs: snapshot.latencyMs, error: snapshot.error },
+    ]),
+  );
+
+const quotaItemMergeKeys = (item: QuotaItem): string[] =>
+  Array.from(
+    new Set(
+      [item.key, item.label]
+        .filter((value): value is string => Boolean(value))
+        .map((value) =>
+          value
+            .trim()
+            .toLowerCase()
+            .replaceAll(/[^a-z0-9\u4e00-\u9fff]/g, ""),
+        )
+        .filter(Boolean),
+    ),
+  );
+
+const mergeQuotaItem = (previous: QuotaItem, incoming: QuotaItem): QuotaItem => ({
+  ...previous,
+  ...incoming,
+  label:
+    incoming.key && incoming.label === incoming.key && previous.label
+      ? previous.label
+      : incoming.label || previous.label,
+  percent: incoming.percent ?? previous.percent,
+  value: incoming.value ?? previous.value,
+  resetAtMs: incoming.resetAtMs ?? previous.resetAtMs,
+  windowSeconds: incoming.windowSeconds ?? previous.windowSeconds,
+  meta: incoming.meta ?? previous.meta,
+});
+
+const mergeQuotaState = (
+  previous: QuotaState | undefined,
+  incoming: QuotaState,
+): QuotaState => {
+  if (!previous) return incoming;
+  const remainingIncoming = [...incoming.items];
+  const mergedItems = previous.items.map((item) => {
+    const previousKeys = quotaItemMergeKeys(item);
+    const nextIndex = remainingIncoming.findIndex((candidate) =>
+      quotaItemMergeKeys(candidate).some((key) => previousKeys.includes(key)),
+    );
+    if (nextIndex < 0) return item;
+    const [next] = remainingIncoming.splice(nextIndex, 1);
+    if (!next) return item;
+    return mergeQuotaItem(item, next);
+  });
+  mergedItems.push(...remainingIncoming);
+  const resetCreditCountChanged =
+    incoming.resetCreditCount !== undefined &&
+    incoming.resetCreditCount !== previous.resetCreditCount;
+  return {
+    ...previous,
+    ...incoming,
+    items: mergedItems,
+    planType: incoming.planType ?? previous.planType,
+    resetCreditCount: incoming.resetCreditCount ?? previous.resetCreditCount,
+    resetCreditExpirations:
+      incoming.resetCreditExpirations ??
+      (resetCreditCountChanged ? undefined : previous.resetCreditExpirations),
+    updatedAt: incoming.updatedAt ?? previous.updatedAt,
+    error:
+      incoming.error ?? (incoming.status === "error" ? previous.error : undefined),
+  };
+};
+
 export function useAuthFilesStatusState({
   tab,
   pageItems,
@@ -164,9 +244,9 @@ export function useAuthFilesStatusState({
   );
   const initialAutoRefresh = useMemo(() => readAndMigrateQuotaAutoRefreshMs(), []);
 
-  const [connectivityState, setConnectivityState] = useState<
-    Map<string, { loading: boolean; latencyMs: number | null; error: boolean }>
-  >(new Map());
+  const [connectivityState, setConnectivityState] = useState<Map<string, ConnectivityEntry>>(
+    () => seedConnectivityState(initialDataCache),
+  );
   const [quotaByFileName, setQuotaByFileName] = useState<Record<string, QuotaState>>(
     () => initialDataCache?.quotaByFileName ?? {},
   );
@@ -267,6 +347,7 @@ export function useAuthFilesStatusState({
     setSettledVisibleScopeKey(null);
     appliedFreshnessRef.current.clear();
     const tenantCache = readAuthFilesDataCache(cacheTenantId);
+    setConnectivityState(seedConnectivityState(tenantCache));
     setQuotaByFileName(tenantCache?.quotaByFileName ?? {});
     const seeded: Record<string, AuthFileCycleUsageSnapshot> = {};
     for (const [authIndex, snapshot] of Object.entries(tenantCache?.cycleByAuthIndex ?? {})) {
@@ -285,7 +366,7 @@ export function useAuthFilesStatusState({
       };
     }
     setCycleByAuthIndex(seeded);
-    setUsageDataFromStatus?.({ source: [], auth_index: [] });
+    setUsageDataFromStatus?.(tenantCache?.usageData ?? { source: [], auth_index: [] });
     setRefreshingPage(false);
     setStatusLoading(false);
     setStatusApiSupported(true);
@@ -336,6 +417,14 @@ export function useAuthFilesStatusState({
           weeklyQuotaUsedPercent: snapshot.weeklyQuotaUsedPercent,
         };
       }
+      const connectivityCache = Object.fromEntries(
+        Array.from(connectivityState.entries())
+          .filter(([, snapshot]) => snapshot.latencyMs != null || snapshot.error)
+          .map(([fileName, snapshot]) => [
+            fileName,
+            { latencyMs: snapshot.latencyMs, error: snapshot.error },
+          ]),
+      );
       writeAuthFilesDataCache({
         ...current,
         tenantId,
@@ -344,10 +433,14 @@ export function useAuthFilesStatusState({
         // Keep last known cycle when state is still empty (first paint / tenant seed).
         cycleByAuthIndex:
           Object.keys(cycleCache).length > 0 ? cycleCache : current.cycleByAuthIndex,
+        connectivityByFileName:
+          Object.keys(connectivityCache).length > 0
+            ? connectivityCache
+            : current.connectivityByFileName,
       });
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [quotaByFileName, cycleByAuthIndex]);
+  }, [connectivityState, quotaByFileName, cycleByAuthIndex]);
 
   const patchAuthFileByName = useCallback(
     (name: string, patch: Partial<AuthFileItem>) => {
@@ -436,19 +529,7 @@ export function useAuthFilesStatusState({
           const quota = patch.quotaByKey[group.quotaKey] ?? patch.quotaByKey[group.authIndexes[0] ?? ""];
           if (!quota) continue;
           for (const name of group.names) {
-            const existing = next[name];
-            if (
-              quota.status === "success" &&
-              (!quota.items || quota.items.length === 0) &&
-              existing?.status === "success" &&
-              (existing.items?.length ?? 0) > 0 &&
-              !quota.error
-            ) {
-              quotaInFlightRef.current.delete(name);
-              quotaAutoRefreshingRef.current.delete(name);
-              continue;
-            }
-            next[name] = quota;
+            next[name] = mergeQuotaState(next[name], quota);
             quotaInFlightRef.current.delete(name);
             quotaAutoRefreshingRef.current.delete(name);
           }
@@ -1323,7 +1404,12 @@ export function useAuthFilesStatusState({
     setConnectivityState((prev) => {
       if (prev.get(fileName)?.loading) return prev;
       const next = new Map(prev);
-      next.set(fileName, { loading: true, latencyMs: null, error: false });
+      const current = prev.get(fileName);
+      next.set(fileName, {
+        loading: true,
+        latencyMs: current?.latencyMs ?? null,
+        error: current?.error ?? false,
+      });
       return next;
     });
 
