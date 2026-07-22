@@ -317,7 +317,7 @@ describe("AuthFileDetailModal", () => {
     expect(chartOptions.at(-1)?.series?.every((item: any) => item.animation === true)).toBe(true);
   });
 
-  test("renders zero predicted quota values when Codex trend data is incomplete", () => {
+  test("hides zero and empty summary cards when Codex trend data is incomplete", () => {
     renderDetailModal({
       detailTrend: {
         auth_index: "auth-1",
@@ -334,8 +334,12 @@ describe("AuthFileDetailModal", () => {
       },
     });
 
-    expectSummaryCard("Predicted 5-hour window quota", "$0.0000");
-    expectSummaryCard("Predicted weekly window quota", "$0.0000");
+    expectSummaryCard("Current weekly cycle", "2");
+    expect(screen.queryByText("Current cycle cost")).not.toBeInTheDocument();
+    expect(screen.queryByText("Predicted 5-hour window quota")).not.toBeInTheDocument();
+    expect(screen.queryByText("Predicted weekly window quota")).not.toBeInTheDocument();
+    expect(screen.queryByText("Weekly quota used")).not.toBeInTheDocument();
+    expect(screen.queryByText("Cycle start")).not.toBeInTheDocument();
   });
 
   test("disables trend chart animation after the first render completes", () => {
@@ -450,8 +454,8 @@ describe("AuthFileDetailModal", () => {
     expectSummaryCard("Current weekly cycle", "116");
     // Remaining snapshot percent 75% => used 25%.
     expectSummaryCard("Weekly quota used", "25%");
-    // xAI shows weekly prediction (zero when cycle cost is missing), never the Codex 5h card.
-    expectSummaryCard("Predicted weekly window quota", "$0.0000");
+    // xAI predicted weekly is 0 without cycle cost — hide the card; never show Codex 5h.
+    expect(screen.queryByText("Predicted weekly window quota")).not.toBeInTheDocument();
     expect(screen.queryByText("Predicted 5-hour window quota")).not.toBeInTheDocument();
   });
 

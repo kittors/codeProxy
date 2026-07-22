@@ -1225,11 +1225,22 @@ export function AuthFileDetailModal({
       fiveHourQuotaUsedPercent,
     );
     const estimatedWeeklyQuota = estimateQuotaBudget(displayCycleCostTotal, weeklyQuotaUsedPercent);
+    // ponytail: hide zero noise; null/"--" is already non-zero display path
+    const showLast7DaysRequests = !isCodexDetail && detailTrend.request_total > 0;
+    const showCycleRequests = displayCycleRequestTotal > 0;
+    const showCycleCost = displayCycleCostTotal > 0;
+    const showFiveHourQuota = isCodexDetail && estimatedFiveHourQuota > 0;
+    const showWeeklyQuota = showPredictedWeeklyQuota && estimatedWeeklyQuota > 0;
+    const showWeeklyUsed =
+      typeof weeklyQuotaUsedPercent === "number" &&
+      Number.isFinite(weeklyQuotaUsedPercent) &&
+      weeklyQuotaUsedPercent > 0;
+    const showCycleStart = Boolean(detailTrend.cycle_start);
 
     return (
       <div className="space-y-4">
         <div className={summaryGridClassName}>
-          {!isCodexDetail ? (
+          {showLast7DaysRequests ? (
             <div className={SUMMARY_CARD_CLASS_NAME}>
               <p className={SUMMARY_LABEL_CLASS_NAME}>
                 {t("auth_files.trend_last_7_days_requests")}
@@ -1237,15 +1248,19 @@ export function AuthFileDetailModal({
               <p className={SUMMARY_VALUE_CLASS_NAME}>{formatCount(detailTrend.request_total)}</p>
             </div>
           ) : null}
-          <div className={SUMMARY_CARD_CLASS_NAME}>
-            <p className={SUMMARY_LABEL_CLASS_NAME}>{t("auth_files.trend_current_weekly_cycle")}</p>
-            <p className={SUMMARY_VALUE_CLASS_NAME}>{formatCount(displayCycleRequestTotal)}</p>
-          </div>
-          <div className={SUMMARY_CARD_CLASS_NAME}>
-            <p className={SUMMARY_LABEL_CLASS_NAME}>{t("auth_files.trend_current_cycle_cost")}</p>
-            <p className={SUMMARY_VALUE_CLASS_NAME}>{formatCurrency(displayCycleCostTotal)}</p>
-          </div>
-          {isCodexDetail ? (
+          {showCycleRequests ? (
+            <div className={SUMMARY_CARD_CLASS_NAME}>
+              <p className={SUMMARY_LABEL_CLASS_NAME}>{t("auth_files.trend_current_weekly_cycle")}</p>
+              <p className={SUMMARY_VALUE_CLASS_NAME}>{formatCount(displayCycleRequestTotal)}</p>
+            </div>
+          ) : null}
+          {showCycleCost ? (
+            <div className={SUMMARY_CARD_CLASS_NAME}>
+              <p className={SUMMARY_LABEL_CLASS_NAME}>{t("auth_files.trend_current_cycle_cost")}</p>
+              <p className={SUMMARY_VALUE_CLASS_NAME}>{formatCurrency(displayCycleCostTotal)}</p>
+            </div>
+          ) : null}
+          {showFiveHourQuota ? (
             <div className={SUMMARY_CARD_CLASS_NAME}>
               <p className={SUMMARY_LABEL_CLASS_NAME}>
                 {t("auth_files.trend_predicted_5h_window_quota")}
@@ -1253,7 +1268,7 @@ export function AuthFileDetailModal({
               <p className={SUMMARY_VALUE_CLASS_NAME}>{formatCurrency(estimatedFiveHourQuota)}</p>
             </div>
           ) : null}
-          {showPredictedWeeklyQuota ? (
+          {showWeeklyQuota ? (
             <div className={SUMMARY_CARD_CLASS_NAME}>
               <p className={SUMMARY_LABEL_CLASS_NAME}>
                 {t("auth_files.trend_predicted_week_window_quota")}
@@ -1261,16 +1276,20 @@ export function AuthFileDetailModal({
               <p className={SUMMARY_VALUE_CLASS_NAME}>{formatCurrency(estimatedWeeklyQuota)}</p>
             </div>
           ) : null}
-          <div className={SUMMARY_CARD_CLASS_NAME}>
-            <p className={SUMMARY_LABEL_CLASS_NAME}>{t("auth_files.trend_weekly_quota_used")}</p>
-            <p className={SUMMARY_VALUE_CLASS_NAME}>{weeklyQuotaUsed}</p>
-          </div>
-          <div className={SUMMARY_CARD_CLASS_NAME}>
-            <p className={SUMMARY_LABEL_CLASS_NAME}>{t("auth_files.trend_cycle_start")}</p>
-            <p className="mt-2 truncate text-sm font-semibold text-slate-800 dark:text-white/85">
-              {cycleStart}
-            </p>
-          </div>
+          {showWeeklyUsed ? (
+            <div className={SUMMARY_CARD_CLASS_NAME}>
+              <p className={SUMMARY_LABEL_CLASS_NAME}>{t("auth_files.trend_weekly_quota_used")}</p>
+              <p className={SUMMARY_VALUE_CLASS_NAME}>{weeklyQuotaUsed}</p>
+            </div>
+          ) : null}
+          {showCycleStart ? (
+            <div className={SUMMARY_CARD_CLASS_NAME}>
+              <p className={SUMMARY_LABEL_CLASS_NAME}>{t("auth_files.trend_cycle_start")}</p>
+              <p className="mt-2 truncate text-sm font-semibold text-slate-800 dark:text-white/85">
+                {cycleStart}
+              </p>
+            </div>
+          ) : null}
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3">
