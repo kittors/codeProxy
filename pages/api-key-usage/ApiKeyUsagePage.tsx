@@ -13,14 +13,14 @@ import { ThemeToggleButton } from "@code-proxy/ui";
 import type { SearchableCheckboxMultiSelectOption } from "@code-proxy/ui";
 import type { TimeRange } from "@features/monitor-widgets/monitor-constants";
 import { ModelTag } from "@features/model-tags";
-import { fetchPublicLogs } from "../api-key-lookup/api";
+import { fetchPublicLogs, fetchPublicUsageSummary } from "../api-key-lookup/api";
 import {
   LookupResultsToolbar,
   type ApiKeyLookupTab,
 } from "../api-key-lookup/components/LookupResultsToolbar";
 import { PublicLogsSection } from "../api-key-lookup/components/PublicLogsSection";
 import { QuickImportTabContent } from "../api-key-lookup/components/QuickImportTabContent";
-import type { PublicLogItem } from "../api-key-lookup/types";
+import type { PublicLogItem, PublicQuotaScope, PublicUsageLimits } from "../api-key-lookup/types";
 import {
   buildRequestLogsColumns,
   formatOptionalRequestLogLatencyMs,
@@ -28,8 +28,6 @@ import {
   maskRequestLogApiKey,
   normalizeChannelAuthType,
   normalizeFilterSelection,
-  RequestLogFilterCount,
-  sortRequestLogKeyOptionsByCount,
   toFilterParam,
   toStatusFilterValues,
   type MultiSelectFilterState,
@@ -168,7 +166,7 @@ function toLogRow(item: PublicLogItem): RequestLogsRow {
 }
 
 export function ApiKeyUsagePage() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
 
   const bootstrap = useMemo(() => {
     const fromUrl = readLookupKeyFromUrl();
@@ -198,19 +196,12 @@ export function ApiKeyUsagePage() {
     total_cost: 0,
   });
   const [filterOptions, setFilterOptions] = useState<{
-    api_key_ids: string[];
-    api_key_id_names: Record<string, string>;
-    api_key_id_counts: Record<string, number>;
     models: string[];
     statuses: string[];
   }>({
-    api_key_ids: [],
-    api_key_id_names: {},
-    api_key_id_counts: {},
     models: [],
     statuses: ["success", "failed"],
   });
-  const [selectedApiKeyIds, setSelectedApiKeyIds] = useState<MultiSelectFilterState<string>>(null);
   const [selectedModels, setSelectedModels] = useState<MultiSelectFilterState<string>>(null);
   const [selectedStatuses, setSelectedStatuses] =
     useState<MultiSelectFilterState<StatusFilterValue>>(null);
@@ -220,37 +211,19 @@ export function ApiKeyUsagePage() {
   const paginationInFlightRef = useRef(false);
   const restoredLookupFetchedRef = useRef(false);
 
+  const [quotaLimits, setQuotaLimits] = useState<PublicUsageLimits | null>(null);
+  const [quotaScopes, setQuotaScopes] = useState<PublicQuotaScope[]>([]);
+  const summaryAbortControllerRef = useRef<AbortController | null>(null);
+  const summaryFetchIdRef = useRef(0);
+
   const logColumns = useMemo(
     () =>
       buildRequestLogsColumns((key) => t(key), undefined, undefined, {
-        identityColumn: "key",
+        identityColumn: "none",
         hideChannel: true,
       }),
     [t],
   );
-
-  const keyOptions = useMemo<SearchableCheckboxMultiSelectOption[]>(() => {
-    const options = (filterOptions.api_key_ids ?? []).map((id) => {
-      const name = filterOptions.api_key_id_names?.[id] || id;
-      return {
-        value: id,
-        label: name,
-        searchText: name,
-        count: filterOptions.api_key_id_counts?.[id] ?? 0,
-      };
-    });
-    return sortRequestLogKeyOptionsByCount(options, i18n.resolvedLanguage).map((option) => ({
-      value: option.value,
-      label: option.label,
-      searchText: option.searchText,
-      trailing: <RequestLogFilterCount count={option.count} />,
-    }));
-  }, [
-    filterOptions.api_key_id_counts,
-    filterOptions.api_key_id_names,
-    filterOptions.api_key_ids,
-    i18n.resolvedLanguage,
-  ]);
 
   const modelOptions = useMemo<SearchableCheckboxMultiSelectOption[]>(() => {
     return filterOptions.models.map((model) => ({
@@ -275,10 +248,6 @@ export function ApiKeyUsagePage() {
     }));
   }, [filterOptions.statuses, t]);
 
-  const apiKeyIdFilterValues = useMemo(
-    () => keyOptions.map((option) => option.value),
-    [keyOptions],
-  );
   const modelFilterValues = useMemo(
     () => modelOptions.map((option) => option.value),
     [modelOptions],
@@ -286,10 +255,6 @@ export function ApiKeyUsagePage() {
   const statusFilterValues = useMemo<StatusFilterValue[]>(
     () => toStatusFilterValues(statusOptions.map((option) => option.value)),
     [statusOptions],
-  );
-  const apiKeyIdFilterParam = useMemo(
-    () => toFilterParam(selectedApiKeyIds, apiKeyIdFilterValues),
-    [apiKeyIdFilterValues, selectedApiKeyIds],
   );
   const modelFilterParam = useMemo(
     () => toFilterParam(selectedModels, modelFilterValues),
@@ -300,12 +265,6 @@ export function ApiKeyUsagePage() {
     [selectedStatuses, statusFilterValues],
   );
 
-  const handleApiKeyIdsChange = useCallback(
-    (value: string[]) => {
-      setSelectedApiKeyIds(normalizeFilterSelection(value, apiKeyIdFilterValues));
-    },
-    [apiKeyIdFilterValues],
-  );
   const handleModelsChange = useCallback(
     (value: string[]) => {
       setSelectedModels(normalizeFilterSelection(value, modelFilterValues));
@@ -318,13 +277,14 @@ export function ApiKeyUsagePage() {
     },
     [statusFilterValues],
   );
-  const clearApiKeyIdFilter = useCallback(() => setSelectedApiKeyIds(null), []);
   const clearModelFilter = useCallback(() => setSelectedModels(null), []);
   const clearStatusFilter = useCallback(() => setSelectedStatuses(null), []);
 
   const resetResults = useCallback(() => {
     abortControllerRef.current?.abort();
+    summaryAbortControllerRef.current?.abort();
     fetchIdRef.current += 1;
+    summaryFetchIdRef.current += 1;
     paginationInFlightRef.current = false;
     setLoading(false);
     setError(null);
@@ -334,16 +294,40 @@ export function ApiKeyUsagePage() {
     setLastUpdatedAt(null);
     setStats({ total: 0, success_rate: 0, total_tokens: 0, total_cost: 0 });
     setFilterOptions({
-      api_key_ids: [],
-      api_key_id_names: {},
-      api_key_id_counts: {},
       models: [],
       statuses: ["success", "failed"],
     });
-    setSelectedApiKeyIds(null);
     setSelectedModels(null);
     setSelectedStatuses(null);
     setApiKeyName("");
+    setQuotaLimits(null);
+    setQuotaScopes([]);
+  }, []);
+
+  const fetchQuotaLimits = useCallback(async (apiKey: string) => {
+    const trimmed = apiKey.trim();
+    if (!trimmed) return;
+    summaryAbortControllerRef.current?.abort();
+    const controller = new AbortController();
+    summaryAbortControllerRef.current = controller;
+    const myFetchId = ++summaryFetchIdRef.current;
+    try {
+      const summary = await fetchPublicUsageSummary({
+        apiKey: trimmed,
+        signal: controller.signal,
+      });
+      if (myFetchId !== summaryFetchIdRef.current || controller.signal.aborted) return;
+      setQuotaLimits(summary.limits ?? null);
+      setQuotaScopes(summary["quota-scopes"] ?? []);
+    } catch {
+      if (myFetchId !== summaryFetchIdRef.current || controller.signal.aborted) return;
+      setQuotaLimits(null);
+      setQuotaScopes([]);
+    } finally {
+      if (summaryAbortControllerRef.current === controller) {
+        summaryAbortControllerRef.current = null;
+      }
+    }
   }, []);
 
   const fetchLogs = useCallback(
@@ -366,10 +350,8 @@ export function ApiKeyUsagePage() {
           page,
           size: size ?? pageSize,
           days: timeRange,
-          apiKeyIds: apiKeyIdFilterParam.values,
           models: modelFilterParam.values,
           statuses: statusFilterParam.values,
-          apiKeyIdsEmpty: apiKeyIdFilterParam.matchesNone,
           modelsEmpty: modelFilterParam.matchesNone,
           statusesEmpty: statusFilterParam.matchesNone,
           signal: controller.signal,
@@ -389,9 +371,6 @@ export function ApiKeyUsagePage() {
           },
         );
         setFilterOptions({
-          api_key_ids: resp.filters?.api_key_ids ?? [],
-          api_key_id_names: resp.filters?.api_key_id_names ?? {},
-          api_key_id_counts: resp.filters?.api_key_id_counts ?? {},
           models: resp.filters?.models ?? [],
           statuses: resp.filters?.statuses ?? ["success", "failed"],
         });
@@ -399,6 +378,7 @@ export function ApiKeyUsagePage() {
         setApiKeyName(nextName);
         writeStoredUsageKey({ apiKey: trimmed, ...(nextName ? { name: nextName } : {}) });
         setKeyModalOpen(false);
+        void fetchQuotaLimits(trimmed);
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") return;
         if (myFetchId !== fetchIdRef.current) return;
@@ -406,12 +386,14 @@ export function ApiKeyUsagePage() {
         setRawItems([]);
         setTotalCount(0);
         setStats({ total: 0, success_rate: 0, total_tokens: 0, total_cost: 0 });
+        setQuotaLimits(null);
+        setQuotaScopes([]);
       } finally {
         paginationInFlightRef.current = false;
         if (myFetchId === fetchIdRef.current) setLoading(false);
       }
     },
-    [apiKeyIdFilterParam, modelFilterParam, pageSize, statusFilterParam, t, timeRange],
+    [fetchQuotaLimits, modelFilterParam, pageSize, statusFilterParam, t, timeRange],
   );
 
   const rows = useMemo(() => rawItems.map((item) => toLogRow(item)), [rawItems]);
@@ -442,7 +424,6 @@ export function ApiKeyUsagePage() {
       // Drop previous key label immediately so a stale localStorage/account name cannot flash.
       setApiKeyName("");
       setActiveTab("logs");
-      setSelectedApiKeyIds(null);
       setSelectedModels(null);
       setSelectedStatuses(null);
       setQuickImportReloadToken((value) => value + 1);
@@ -466,18 +447,23 @@ export function ApiKeyUsagePage() {
       setQuickImportReloadToken((value) => value + 1);
       return;
     }
+    void fetchQuotaLimits(queriedKey);
     fetchLogs(queriedKey, 1);
-  }, [activeTab, fetchLogs, queriedKey]);
+  }, [activeTab, fetchLogs, fetchQuotaLimits, queriedKey]);
 
   useEffect(() => {
-    if (queriedKey && activeTab === "logs") fetchLogs(queriedKey, 1);
-  }, [timeRange, selectedApiKeyIds, selectedModels, selectedStatuses]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (queriedKey && activeTab === "logs") {
+      void fetchQuotaLimits(queriedKey);
+      fetchLogs(queriedKey, 1);
+    }
+  }, [timeRange, selectedModels, selectedStatuses]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!bootstrap?.apiKey || restoredLookupFetchedRef.current) return;
     restoredLookupFetchedRef.current = true;
+    void fetchQuotaLimits(bootstrap.apiKey);
     fetchLogs(bootstrap.apiKey, 1);
-  }, [bootstrap, fetchLogs]);
+  }, [bootstrap, fetchLogs, fetchQuotaLimits]);
 
   useEffect(() => {
     try {
@@ -554,10 +540,7 @@ export function ApiKeyUsagePage() {
                         <KeyRound size={14} />
                         {t("apikey_usage.switch_key")}
                       </DropdownMenu.Item>
-                      <DropdownMenu.Item
-                        data-testid="apikey-usage-logout"
-                        onSelect={handleLogout}
-                      >
+                      <DropdownMenu.Item data-testid="apikey-usage-logout" onSelect={handleLogout}>
                         <LogOut size={14} />
                         {t("apikey_usage.logout")}
                       </DropdownMenu.Item>
@@ -601,22 +584,20 @@ export function ApiKeyUsagePage() {
                 loading={loading}
                 chartLoading={false}
                 modelsLoading={false}
+                quotaLimits={quotaLimits}
+                quotaScopes={quotaScopes}
                 tabs={["logs", "quickImport"]}
               />
 
               {activeTab === "logs" ? (
                 <PublicLogsSection
                   t={t}
-                  keyOptions={keyOptions}
                   modelOptions={modelOptions}
                   statusOptions={statusOptions}
-                  selectedApiKeyIds={selectedApiKeyIds}
                   selectedModels={selectedModels}
                   selectedStatuses={selectedStatuses}
-                  onApiKeyIdsChange={handleApiKeyIdsChange}
                   onModelsChange={handleModelsChange}
                   onStatusesChange={handleStatusesChange}
-                  onApiKeyIdsClear={clearApiKeyIdFilter}
                   onModelsClear={clearModelFilter}
                   onStatusesClear={clearStatusFilter}
                   stats={stats}

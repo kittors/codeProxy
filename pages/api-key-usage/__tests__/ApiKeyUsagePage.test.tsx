@@ -8,10 +8,12 @@ import { ApiKeyUsagePage } from "../ApiKeyUsagePage";
 
 const mocks = vi.hoisted(() => ({
   fetchPublicLogs: vi.fn(),
+  fetchPublicUsageSummary: vi.fn(),
 }));
 
 vi.mock("../../api-key-lookup/api", () => ({
   fetchPublicLogs: mocks.fetchPublicLogs,
+  fetchPublicUsageSummary: mocks.fetchPublicUsageSummary,
 }));
 
 vi.mock("../../api-key-lookup/components/QuickImportTabContent", () => ({
@@ -36,6 +38,7 @@ describe("ApiKeyUsagePage", () => {
     window.history.replaceState({}, "", "/manage/apikey-usage");
     window.localStorage.clear();
     mocks.fetchPublicLogs.mockReset();
+    mocks.fetchPublicUsageSummary.mockReset();
     mocks.fetchPublicLogs.mockResolvedValue({
       items: [
         {
@@ -66,6 +69,16 @@ describe("ApiKeyUsagePage", () => {
         statuses: ["success", "failed"],
       },
     });
+    mocks.fetchPublicUsageSummary.mockResolvedValue({
+      found: true,
+      range: "today",
+      stats: { total_calls: 1, quota_cost: 0.12 },
+      limits: {
+        "daily-spending-limit": 10,
+        "daily-spending-used": 1.25,
+      },
+      "quota-scopes": [],
+    });
   });
 
   test("opens a key modal, stores the key in localStorage, and supports logout", async () => {
@@ -89,6 +102,13 @@ describe("ApiKeyUsagePage", () => {
     expect(screen.getByText("快捷导入")).toBeInTheDocument();
     expect(screen.getByText("张军宝")).toBeInTheDocument();
     expect(screen.queryByText("使用统计")).not.toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: /KEY 名称|Key name/i })).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(mocks.fetchPublicUsageSummary).toHaveBeenCalledWith(
+        expect.objectContaining({ apiKey: "sk-demo" }),
+      );
+    });
+    expect(await screen.findByTestId("apikey-lookup-logs-quota")).toBeInTheDocument();
     expect(JSON.parse(window.localStorage.getItem("apiKeyUsage.lastApiKey.v1") || "{}")).toEqual({
       apiKey: "sk-demo",
       name: "张军宝",

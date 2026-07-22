@@ -4,11 +4,11 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import { ApiKeyLookupPage } from "../ApiKeyLookupPage";
 import { ThemeProvider } from "@code-proxy/ui";
 import { ToastProvider } from "@code-proxy/ui";
-import type { PublicLogItem, PublicLogsResponse } from "../types";
+import type { PublicLogItem, PublicLogsResponse, PublicUsageSummaryResponse } from "../types";
 
 const mocks = vi.hoisted(() => ({
   fetchPublicLogs: vi.fn(
-    async (): Promise<PublicLogsResponse> => ({
+    async (_params?: Record<string, unknown>): Promise<PublicLogsResponse> => ({
       items: [],
       total: 0,
       page: 1,
@@ -65,12 +65,14 @@ const mocks = vi.hoisted(() => ({
       }>
     > => [],
   ),
-  fetchPublicUsageSummary: vi.fn(async () => ({
-    found: true,
-    range: "today",
-    stats: { total_calls: 0, quota_cost: 0 },
-    limits: null,
-  })),
+  fetchPublicUsageSummary: vi.fn(
+    async (): Promise<PublicUsageSummaryResponse> => ({
+      found: true,
+      range: "today",
+      stats: { total_calls: 0, quota_cost: 0 },
+      limits: null,
+    }),
+  ),
 }));
 
 type ChartResponse = Awaited<ReturnType<typeof mocks.fetchPublicChartData>>;
@@ -447,6 +449,16 @@ describe("ApiKeyLookupPage", () => {
 
   test("loads public logs only after switching to the request logs tab", async () => {
     window.history.replaceState({}, "", "/manage/apikey-lookup?api_key=sk-restored-key");
+    const quotaSummary: PublicUsageSummaryResponse = {
+      found: true,
+      range: "today",
+      stats: { total_calls: 25, quota_cost: 0 },
+      limits: { "daily-limit": 100, "daily-used": 25 },
+    };
+    mocks.fetchPublicUsageSummary
+      .mockResolvedValueOnce(quotaSummary)
+      .mockResolvedValueOnce(quotaSummary)
+      .mockResolvedValueOnce(quotaSummary);
     const logItem: PublicLogItem = {
       id: 1,
       timestamp: new Date("2026-07-05T03:01:18Z").toISOString(),
@@ -518,59 +530,48 @@ describe("ApiKeyLookupPage", () => {
     });
     expect(screen.getAllByText(/response metrics/i).length).toBeGreaterThan(0);
     expect(screen.queryByText("Codex 主渠道")).not.toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: /key name|Key 名称/i })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("columnheader", { name: /key name|Key 名称/i }),
+    ).not.toBeInTheDocument();
     expect(screen.queryByText("Alice")).not.toBeInTheDocument();
-    expect(screen.getByText("Laptop")).toBeInTheDocument();
+    expect(screen.queryByText("Laptop")).not.toBeInTheDocument();
     expect(screen.queryByRole("columnheader", { name: /^duration$/i })).not.toBeInTheDocument();
+
+    const logsQuota = await screen.findByTestId("apikey-lookup-logs-quota");
+    expect(logsQuota).toHaveTextContent(/daily requests/i);
+    expect(logsQuota).toHaveTextContent("25 / 100");
+    expect(mocks.fetchPublicUsageSummary).toHaveBeenCalledTimes(2);
+
+    await userEvent.click(screen.getByRole("button", { name: /refresh/i }));
+    await waitFor(() => {
+      expect(mocks.fetchPublicUsageSummary).toHaveBeenCalledTimes(3);
+    });
   });
 
-  test("uses the shared linked request-log filters on the public logs tab", async () => {
+  test("keeps model and status filters without a key filter on the public logs tab", async () => {
     window.history.replaceState({}, "", "/manage/apikey-lookup?api_key=sk-restored-key");
-    mocks.fetchPublicLogs
-      .mockResolvedValueOnce({
-        items: [],
+    mocks.fetchPublicLogs.mockResolvedValueOnce({
+      items: [],
+      total: 0,
+      page: 1,
+      size: 50,
+      api_key_name: "Primary key",
+      stats: {
         total: 0,
-        page: 1,
-        size: 50,
-        api_key_name: "Primary key",
-        stats: {
-          total: 0,
-          success_rate: 0,
-          total_tokens: 0,
-          total_sessions: 0,
-          total_cost: 0,
-        },
-        filters: {
-          api_key_ids: ["key-laptop", "key-auto"],
-          api_key_id_names: { "key-laptop": "Laptop", "key-auto": "Automation" },
-          api_key_id_counts: { "key-laptop": 12, "key-auto": 37 },
-          models: ["gpt-5.5"],
-          channels: ["Codex 主渠道", "OpenCode"],
-          statuses: ["success", "failed"],
-        },
-      })
-      .mockResolvedValueOnce({
-        items: [],
-        total: 0,
-        page: 1,
-        size: 50,
-        api_key_name: "Primary key",
-        stats: {
-          total: 0,
-          success_rate: 0,
-          total_tokens: 0,
-          total_sessions: 0,
-          total_cost: 0,
-        },
-        filters: {
-          api_key_ids: ["key-laptop", "key-auto"],
-          api_key_id_names: { "key-laptop": "Laptop", "key-auto": "Automation" },
-          api_key_id_counts: { "key-laptop": 12, "key-auto": 37 },
-          models: ["gpt-5.5"],
-          channels: ["Codex 主渠道"],
-          statuses: ["success"],
-        },
-      });
+        success_rate: 0,
+        total_tokens: 0,
+        total_sessions: 0,
+        total_cost: 0,
+      },
+      filters: {
+        api_key_ids: ["key-laptop", "key-auto"],
+        api_key_id_names: { "key-laptop": "Laptop", "key-auto": "Automation" },
+        api_key_id_counts: { "key-laptop": 12, "key-auto": 37 },
+        models: ["gpt-5.5"],
+        channels: ["Codex 主渠道", "OpenCode"],
+        statuses: ["success", "failed"],
+      },
+    });
 
     render(
       <ThemeProvider>
@@ -582,9 +583,7 @@ describe("ApiKeyLookupPage", () => {
 
     await userEvent.click(await screen.findByRole("tab", { name: /request logs/i }));
 
-    expect(await screen.findByRole("combobox", { name: /filter by key/i })).toHaveTextContent(
-      /all keys/i,
-    );
+    expect(screen.queryByRole("combobox", { name: /filter by key/i })).not.toBeInTheDocument();
     expect(await screen.findByRole("combobox", { name: /filter by model/i })).toHaveTextContent(
       /all models/i,
     );
@@ -592,29 +591,9 @@ describe("ApiKeyLookupPage", () => {
     expect(screen.getByRole("combobox", { name: /filter by status/i })).toHaveTextContent(
       /all status/i,
     );
-
-    await userEvent.click(screen.getByRole("combobox", { name: /filter by key/i }));
-    const keyOptions = await screen.findAllByRole("option");
-    expect(keyOptions[0]).toHaveAccessibleName(/Automation,?\s*37 calls/i);
-    expect(keyOptions[1]).toHaveAccessibleName(/Laptop,?\s*12 calls/i);
-    expect(keyOptions[0]).toHaveAttribute("aria-selected", "false");
-    expect(keyOptions[1]).toHaveAttribute("aria-selected", "false");
-    expect(screen.getByRole("listbox", { name: /filter by key/i })).not.toHaveTextContent(
-      "sk-restored-key",
-    );
-
-    await userEvent.click(screen.getByRole("option", { name: /Laptop/i }));
-    await userEvent.click(screen.getByRole("button", { name: /apply filters/i }));
-
-    await waitFor(() => {
-      expect(mocks.fetchPublicLogs).toHaveBeenLastCalledWith(
-        expect.objectContaining({
-          apiKey: "sk-restored-key",
-          apiKeyIds: ["key-laptop"],
-          apiKeyIdsEmpty: false,
-        }),
-      );
-    });
+    const params = mocks.fetchPublicLogs.mock.calls.at(-1)?.[0];
+    expect(params).not.toHaveProperty("apiKeyIds");
+    expect(params).not.toHaveProperty("apiKeyIdsEmpty");
   });
 
   test("keeps cached models visible while refreshing the available models tab", async () => {
@@ -751,6 +730,21 @@ describe("ApiKeyLookupPage", () => {
     );
 
     expect(await screen.findByText("sk-new****999")).toBeInTheDocument();
+    expect(
+      screen.queryByText(/manage all api keys under this account|管理本账号下全部 api key/i),
+    ).not.toBeInTheDocument();
+
+    const cardToolbar = screen.getByTestId("apikey-lookup-keys-card-toolbar");
+    expect(cardToolbar).toHaveClass("border-b", "px-3", "py-3", "sm:px-5");
+    expect(within(cardToolbar).getByRole("button", { name: /refresh|刷新/i })).toBeInTheDocument();
+    expect(
+      within(cardToolbar).getByRole("button", { name: /new key|新建 key/i }),
+    ).toBeInTheDocument();
+
+    const tableViewport = screen.getByTestId("apikey-lookup-keys-table-viewport");
+    expect(tableViewport).toHaveClass("min-h-[360px]", "h-[calc(100dvh-240px)]", "px-3", "sm:px-5");
+    expect(tableViewport.querySelector(".h-full.min-h-full")).not.toBeNull();
+
     await waitFor(() => {
       expect(portalApi.listKeys).toHaveBeenCalledTimes(2);
       expect(portalApi.keySecret).toHaveBeenLastCalledWith("k1");
