@@ -11,12 +11,15 @@ import {
   FormField,
   Modal,
   Select,
+  TABLE_ROW_ACTIONS_COLUMN,
+  TableRowActions,
   Textarea,
   TextInput,
   type DataTableColumn,
   useToast,
 } from "@code-proxy/ui";
 import { PermissionGate } from "@app/guards/PermissionGate";
+import { useAuth } from "@app/providers/AuthProvider";
 import {
   isTenantNameTooLong,
   TENANT_NAME_MAX_LENGTH,
@@ -39,6 +42,7 @@ type CreateFormErrors = Partial<Record<CreateFormKey, string>>;
 export function TenantsPage() {
   const { notify } = useToast();
   const { t, i18n } = useTranslation();
+  const { can } = useAuth();
   const [items, setItems] = useState<TenantIdentity[]>([]);
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
@@ -177,26 +181,27 @@ export function TenantsPage() {
       {
         key: "actions",
         label: t("identity_admin.actions"),
-        minWidthPx: 148,
-        width: "w-36",
+        ...TABLE_ROW_ACTIONS_COLUMN,
         lockOrder: "end",
-        render: (item) => (
-          <div className="flex items-center gap-1.5">
-            <Button
-              size="xs"
-              variant="ghost"
-              onClick={() => setDetailsTenant(item)}
-              title={t("identity_admin.view")}
-              aria-label={t("identity_admin.view")}
-            >
-              <Eye size={14} />
-            </Button>
-            {item.type !== "system" ? (
-              <PermissionGate permission="platform.tenants.update">
-                <Button
-                  size="xs"
-                  variant="ghost"
-                  onClick={() => {
+        render: (item) => {
+          const canUpdateTenant = item.type !== "system" && can("platform.tenants.update");
+          return (
+            <TableRowActions
+              moreLabel={t("common.more_actions")}
+              align="start"
+              actions={[
+                {
+                  key: "view",
+                  label: t("identity_admin.view"),
+                  icon: <Eye size={14} />,
+                  onClick: () => setDetailsTenant(item),
+                },
+                {
+                  key: "edit",
+                  label: t("identity_admin.edit"),
+                  icon: <Pencil size={14} />,
+                  visible: canUpdateTenant,
+                  onClick: () => {
                     setEditTenant(item);
                     setEditForm({
                       name: item.name,
@@ -205,41 +210,33 @@ export function TenantsPage() {
                       access_token_ttl_seconds: item.access_token_ttl_seconds ?? 43200,
                       refresh_token_ttl_seconds: item.refresh_token_ttl_seconds ?? 2592000,
                     });
-                  }}
-                  title={t("identity_admin.edit")}
-                  aria-label={t("identity_admin.edit")}
-                >
-                  <Pencil size={14} />
-                </Button>
-                <Button
-                  size="xs"
-                  variant="ghost"
-                  onClick={() => {
+                  },
+                },
+                {
+                  key: "renew",
+                  label: t("identity_admin.renew"),
+                  icon: <CalendarClock size={14} />,
+                  visible: canUpdateTenant,
+                  onClick: () => {
                     setRenewTenant(item);
                     setRenewAt(toLocalDateTimeInput(item.expires_at));
-                  }}
-                  title={t("identity_admin.renew")}
-                  aria-label={t("identity_admin.renew")}
-                >
-                  <CalendarClock size={14} />
-                </Button>
-                <Button
-                  size="xs"
-                  variant="ghost"
-                  className="text-rose-600 hover:bg-rose-50 hover:text-rose-700 dark:text-rose-400 dark:hover:bg-rose-500/10 dark:hover:text-rose-300"
-                  onClick={() => setDisableTenant(item)}
-                  title={t("identity_admin.disable")}
-                  aria-label={t("identity_admin.disable")}
-                >
-                  <Ban size={14} />
-                </Button>
-              </PermissionGate>
-            ) : null}
-          </div>
-        ),
+                  },
+                },
+                {
+                  key: "disable",
+                  label: t("identity_admin.disable"),
+                  icon: <Ban size={14} />,
+                  visible: canUpdateTenant,
+                  destructive: true,
+                  onClick: () => setDisableTenant(item),
+                },
+              ]}
+            />
+          );
+        },
       },
     ],
-    [i18n.language, statusLabel, t, tenantName],
+    [can, i18n.language, statusLabel, t, tenantName],
   );
 
   const updateCreateField = useCallback(

@@ -16,7 +16,7 @@ import { Button } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
 import { ConfirmModal } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
-import { DataTable, type DataTableColumn } from "@code-proxy/ui";
+import { DataTable, TABLE_ROW_ACTIONS_COLUMN, type DataTableColumn } from "@code-proxy/ui";
 import {
   CcSwitchImportConfigModal,
   type CcSwitchChannelGroupOption,
@@ -265,7 +265,7 @@ export function CcSwitchImportSettingsPage() {
       {
         key: "actions",
         label: t("ccswitch.config_table_actions"),
-        width: "w-28",
+        ...TABLE_ROW_ACTIONS_COLUMN,
         headerClassName: "text-right",
         cellClassName: "text-right",
         render: (row) => (

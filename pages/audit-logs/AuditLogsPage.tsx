@@ -12,6 +12,7 @@ import {
   DataTable,
   Modal,
   PaginationBar,
+  TABLE_ROW_ACTIONS_COLUMN,
   useToast,
   type DataTableColumn,
 } from "@code-proxy/ui";
@@ -30,11 +31,7 @@ function formatActor(item: AuditLogIdentity): string {
     item.actor_username?.trim() ||
     item.actor_user_id ||
     item.actor_kind;
-  const tenant =
-    item.tenant_name?.trim() ||
-    item.tenant_slug?.trim() ||
-    item.tenant_id ||
-    "—";
+  const tenant = item.tenant_name?.trim() || item.tenant_slug?.trim() || item.tenant_id || "—";
   return `${tenant} / ${user}`;
 }
 
@@ -48,8 +45,7 @@ function formatWhatHappened(item: AuditLogIdentity): string {
 function asCallChain(value: unknown): AuditLogCallChainStep[] {
   if (!Array.isArray(value)) return [];
   return value.filter(
-    (step): step is AuditLogCallChainStep =>
-      Boolean(step) && typeof step === "object",
+    (step): step is AuditLogCallChainStep => Boolean(step) && typeof step === "object",
   );
 }
 
@@ -88,10 +84,7 @@ export function AuditLogsPage() {
         if (seq !== requestSeqRef.current || controller.signal.aborted) return;
         notify({
           type: "error",
-          message:
-            error instanceof Error
-              ? error.message
-              : t("identity_admin.operation_failed"),
+          message: error instanceof Error ? error.message : t("identity_admin.operation_failed"),
         });
       } finally {
         if (requestAbortRef.current === controller) requestAbortRef.current = null;
@@ -141,10 +134,7 @@ export function AuditLogsPage() {
       } catch (error) {
         notify({
           type: "error",
-          message:
-            error instanceof Error
-              ? error.message
-              : t("identity_admin.operation_failed"),
+          message: error instanceof Error ? error.message : t("identity_admin.operation_failed"),
         });
       } finally {
         setDetailLoading(false);
@@ -168,24 +158,12 @@ export function AuditLogsPage() {
     } catch (error) {
       notify({
         type: "error",
-        message:
-          error instanceof Error
-            ? error.message
-            : t("identity_admin.operation_failed"),
+        message: error instanceof Error ? error.message : t("identity_admin.operation_failed"),
       });
     } finally {
       setBusy(false);
     }
-  }, [
-    currentPage,
-    deleteTarget,
-    detail?.id,
-    fetchLogs,
-    notify,
-    pageSize,
-    t,
-    totalCount,
-  ]);
+  }, [currentPage, deleteTarget, detail?.id, fetchLogs, notify, pageSize, t, totalCount]);
 
   const confirmClearAll = useCallback(async () => {
     setBusy(true);
@@ -203,10 +181,7 @@ export function AuditLogsPage() {
     } catch (error) {
       notify({
         type: "error",
-        message:
-          error instanceof Error
-            ? error.message
-            : t("identity_admin.operation_failed"),
+        message: error instanceof Error ? error.message : t("identity_admin.operation_failed"),
       });
     } finally {
       setBusy(false);
@@ -219,8 +194,7 @@ export function AuditLogsPage() {
         key: "time",
         label: t("identity_admin.time"),
         width: "w-52",
-        render: (item) =>
-          new Date(item.created_at).toLocaleString(i18n.language),
+        render: (item) => new Date(item.created_at).toLocaleString(i18n.language),
       },
       {
         key: "actor",
@@ -255,8 +229,7 @@ export function AuditLogsPage() {
       {
         key: "actions",
         label: t("identity_admin.actions"),
-        minWidthPx: 96,
-        width: "w-28",
+        ...TABLE_ROW_ACTIONS_COLUMN,
         lockOrder: "end",
         render: (item) => (
           <div className="flex items-center gap-1.5">
@@ -299,9 +272,7 @@ export function AuditLogsPage() {
             <h2 className="text-base font-semibold text-slate-950 dark:text-white">
               {t("identity_admin.audit_logs_title")}
             </h2>
-            <p className="text-sm text-slate-500">
-              {t("identity_admin.audit_logs_description")}
-            </p>
+            <p className="text-sm text-slate-500">{t("identity_admin.audit_logs_description")}</p>
           </div>
           <PermissionGate permission="tenant.audit.delete">
             <button
@@ -346,8 +317,7 @@ export function AuditLogsPage() {
             nextPage: t("request_logs.next_page"),
             lastPage: t("request_logs.last_page"),
             rowsPerPage: t("request_logs.rows_per_page"),
-            pageInfo: ({ start, end, total }) =>
-              t("request_logs.page_info", { start, end, total }),
+            pageInfo: ({ start, end, total }) => t("request_logs.page_info", { start, end, total }),
           }}
         />
       </div>
@@ -367,10 +337,7 @@ export function AuditLogsPage() {
                 label={t("identity_admin.time")}
                 value={new Date(detail.created_at).toLocaleString(i18n.language)}
               />
-              <DetailField
-                label={t("identity_admin.actor")}
-                value={formatActor(detail)}
-              />
+              <DetailField label={t("identity_admin.actor")} value={formatActor(detail)} />
               <DetailField
                 label={t("identity_admin.what_happened")}
                 value={formatWhatHappened(detail)}
@@ -459,9 +426,7 @@ export function AuditLogsPage() {
                   </div>
                   {projectMethod.route || projectMethod.resource ? (
                     <div className="mt-1 text-slate-500 dark:text-white/50">
-                      {[projectMethod.route, projectMethod.resource]
-                        .filter(Boolean)
-                        .join(" · ")}
+                      {[projectMethod.route, projectMethod.resource].filter(Boolean).join(" · ")}
                     </div>
                   ) : null}
                 </div>
@@ -507,9 +472,7 @@ export function AuditLogsPage() {
 function DetailField({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0">
-      <div className="text-xs font-medium text-slate-500 dark:text-white/50">
-        {label}
-      </div>
+      <div className="text-xs font-medium text-slate-500 dark:text-white/50">{label}</div>
       <div className="mt-0.5 break-all text-slate-900 dark:text-white">{value}</div>
     </div>
   );

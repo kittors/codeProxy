@@ -29,6 +29,7 @@ const t = ((key: string, options?: Record<string, string>) => {
     "ccswitch.import_to_ccswitch": "Import to CC Switch",
     "common.edit": "Edit",
     "common.delete": "Delete",
+    "common.more_actions": "More actions",
   };
   return labels[key] ?? key;
 }) as TFunction;
@@ -215,6 +216,10 @@ describe("ApiKeyColumns", () => {
     expect(nameColumn?.cellClassName).toContain("md:sticky");
     expect(actionsColumn?.headerClassName).toContain("md:sticky");
     expect(actionsColumn?.cellClassName).toContain("md:sticky");
+    expect(actionsColumn?.width).toBe("w-40 min-w-40 max-w-40");
+    expect(actionsColumn?.minWidthPx).toBe(160);
+    expect(actionsColumn?.maxWidthPx).toBe(160);
+    expect(actionsColumn?.resizable).toBe(false);
     expect(`${selectColumn?.headerClassName} ${selectColumn?.cellClassName}`).not.toMatch(
       /\bmd:(?:left|right)-/,
     );
@@ -256,9 +261,11 @@ describe("ApiKeyColumns", () => {
     render(<div>{actionsColumn?.render(row, 0)}</div>);
 
     expect(screen.getByRole("button", { name: "Click to enable" })).toBeInTheDocument();
+    expect(screen.getAllByRole("button")).toHaveLength(4);
+    expect(screen.queryByRole("button", { name: "Delete" })).not.toBeInTheDocument();
   });
 
-  test("account-scoped columns keep key quota and spending facts", () => {
+  test("account-scoped columns keep key quota and spending facts", async () => {
     const row: ApiKeyEntry = {
       key: "sk-owned",
       name: "Owned",
@@ -280,13 +287,16 @@ describe("ApiKeyColumns", () => {
       "createdAt",
       "actions",
     ]);
-    expect(actionsColumn?.width).toBe("w-[220px] min-w-[220px]");
+    expect(actionsColumn?.width).toBe("w-40 min-w-40 max-w-40");
 
     render(<div>{actionsColumn?.render(row, 0)}</div>);
 
     expect(screen.queryByRole("button", { name: "View usage" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Reset today spending" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Copy key" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "More actions" }));
+    expect(
+      await screen.findByRole("menuitem", { name: "Reset today spending" }),
+    ).toBeInTheDocument();
   });
 
   test("places quota and spending fact columns immediately after name", () => {
@@ -341,13 +351,16 @@ describe("ApiKeyColumns", () => {
     const actionsColumn = columns.find((column) => column.key === "actions");
 
     const { rerender } = render(<div>{actionsColumn?.render(unlimited, 0)}</div>);
+    await userEvent.click(screen.getByRole("button", { name: "More actions" }));
     expect(
-      screen.getByRole("button", { name: "Set a daily spending limit before resetting" }),
-    ).toBeDisabled();
+      screen.getByRole("menuitem", { name: "Set a daily spending limit before resetting" }),
+    ).toHaveAttribute("data-disabled");
+    await userEvent.keyboard("{Escape}");
 
     rerender(<div>{actionsColumn?.render(limited, 1)}</div>);
-    const enabled = screen.getByRole("button", { name: "Reset today spending" });
-    expect(enabled).not.toBeDisabled();
+    await userEvent.click(screen.getByRole("button", { name: "More actions" }));
+    const enabled = await screen.findByRole("menuitem", { name: "Reset today spending" });
+    expect(enabled).not.toHaveAttribute("data-disabled");
     await userEvent.click(enabled);
     expect(onResetDailySpending).toHaveBeenCalledWith(1);
   });
