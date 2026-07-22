@@ -22,6 +22,22 @@ function formatLocalDateLabel(dateStr: string): string {
   return `${date.getMonth() + 1}/${date.getDate()}`;
 }
 
+function buildDistributionLegend(data: ModelDistributionDatum[]) {
+  const total = data.reduce((acc, item) => acc + (Number.isFinite(item.value) ? item.value : 0), 0);
+  return data.map((item, index) => {
+    const colorClass =
+      index < CHART_COLOR_CLASSES.length ? CHART_COLOR_CLASSES[index] : "bg-slate-400";
+    const value = Number(item.value ?? 0);
+    const percent = total > 0 ? (value / total) * 100 : 0;
+    return {
+      name: item.name,
+      valueLabel: Intl.NumberFormat("en-US", { notation: "compact" }).format(value),
+      percentLabel: `${percent.toFixed(1)}%`,
+      colorClass,
+    };
+  });
+}
+
 export function useApiKeyLookupCharts({
   chartData,
   compact,
@@ -34,6 +50,7 @@ export function useApiKeyLookupCharts({
   t: (key: string, options?: Record<string, unknown>) => string;
 }) {
   const [modelMetric, setModelMetric] = useState<"requests" | "tokens">("requests");
+  const [apiKeyMetric, setApiKeyMetric] = useState<"requests" | "tokens">("requests");
   const [dailyLegendSelected, setDailyLegendSelected] = useState<Record<string, boolean>>({
     [DAILY_LEGEND_KEYS.input]: true,
     [DAILY_LEGEND_KEYS.output]: true,
@@ -95,6 +112,41 @@ export function useApiKeyLookupCharts({
     };
   }, [dailySeries]);
 
+  const apiKeyDistributionData: ModelDistributionDatum[] = useMemo(() => {
+    const points = Array.isArray(chartData?.api_key_distribution)
+      ? chartData.api_key_distribution
+      : [];
+    const items = points
+      .filter((point) => {
+        const value = apiKeyMetric === "requests" ? point.requests : point.tokens;
+        return point.api_key_id.trim() !== "" && Number.isFinite(value) && value > 0;
+      })
+      .map((point) => {
+        const apiKeyID = point.api_key_id.trim();
+        return {
+          model: point.name.trim() || `API Key ${apiKeyID.slice(0, 8)}`,
+          requests: point.requests,
+          tokens: point.tokens,
+        };
+      });
+    return buildModelDistributionData({
+      items,
+      metric: apiKeyMetric,
+      otherLabel: t("common.other"),
+      limit: 10,
+    });
+  }, [apiKeyMetric, chartData, t]);
+
+  const apiKeyDistributionOption = useMemo(
+    () => createModelDistributionOption({ isDark, data: apiKeyDistributionData }),
+    [apiKeyDistributionData, isDark],
+  );
+
+  const apiKeyDistributionLegend = useMemo(
+    () => buildDistributionLegend(apiKeyDistributionData),
+    [apiKeyDistributionData],
+  );
+
   const modelDistributionData: ModelDistributionDatum[] = useMemo(() => {
     return buildModelDistributionData({
       items: chartData?.model_distribution ?? [],
@@ -108,27 +160,18 @@ export function useApiKeyLookupCharts({
     [isDark, modelDistributionData],
   );
 
-  const modelDistributionLegend = useMemo(() => {
-    const total = modelDistributionData.reduce(
-      (acc, item) => acc + (Number.isFinite(item.value) ? item.value : 0),
-      0,
-    );
-    return modelDistributionData.map((item, index) => {
-      const colorClass =
-        index < CHART_COLOR_CLASSES.length ? CHART_COLOR_CLASSES[index] : "bg-slate-400";
-      const value = Number(item.value ?? 0);
-      const percent = total > 0 ? (value / total) * 100 : 0;
-      return {
-        name: item.name,
-        valueLabel: Intl.NumberFormat("en-US", { notation: "compact" }).format(value),
-        percentLabel: `${percent.toFixed(1)}%`,
-        colorClass,
-      };
-    });
-  }, [modelDistributionData]);
+  const modelDistributionLegend = useMemo(
+    () => buildDistributionLegend(modelDistributionData),
+    [modelDistributionData],
+  );
 
   return {
     chartStats,
+    apiKeyMetric,
+    setApiKeyMetric,
+    apiKeyDistributionData,
+    apiKeyDistributionOption,
+    apiKeyDistributionLegend,
     modelMetric,
     setModelMetric,
     dailyLegendSelected,

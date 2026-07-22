@@ -1140,6 +1140,11 @@ export function ApiKeyLookupPage() {
 
   const {
     chartStats,
+    apiKeyMetric,
+    setApiKeyMetric,
+    apiKeyDistributionData,
+    apiKeyDistributionOption,
+    apiKeyDistributionLegend,
     modelMetric,
     setModelMetric,
     heatmapSeries,
@@ -1417,6 +1422,12 @@ export function ApiKeyLookupPage() {
                   chartLoading={chartLoading}
                   quotaLimits={quotaLimits}
                   quotaScopes={quotaScopes}
+                  showApiKeyDistribution={Boolean(portalUser)}
+                  apiKeyMetric={apiKeyMetric}
+                  setApiKeyMetric={setApiKeyMetric}
+                  apiKeyDistributionData={apiKeyDistributionData}
+                  apiKeyDistributionOption={apiKeyDistributionOption}
+                  apiKeyDistributionLegend={apiKeyDistributionLegend}
                   modelMetric={modelMetric}
                   setModelMetric={setModelMetric}
                   heatmapSeries={heatmapSeries}
