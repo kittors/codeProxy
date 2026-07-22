@@ -61,6 +61,8 @@ export const createOwnedApiKeyColumns = ({
     key: "key",
     label: t("api_keys_page.col_key"),
     width: "w-[220px] min-w-[220px]",
+    // Masked secret is already shown in-cell; overflow tooltip only leaks noise.
+    overflowTooltip: false,
     render: (row) => (
       <code className="block truncate rounded-md bg-slate-100 px-2 py-1 font-mono text-xs text-slate-700 dark:bg-neutral-800 dark:text-white/70">
         {row.key_masked || row.key || row.id}
@@ -131,8 +133,11 @@ export const createOwnedApiKeyColumns = ({
   {
     key: "actions",
     label: t("api_keys_page.col_actions"),
-    width: "w-[250px] min-w-[220px]",
+    // 7 icon buttons + gaps; keep sticky actions fully visible without squeeze.
+    width: "w-[304px] min-w-[304px]",
+    minWidthPx: 304,
     lockOrder: "end",
+    overflowTooltip: false,
     headerClassName: "text-center md:sticky md:z-40 md:bg-slate-100 md:dark:bg-neutral-800",
     cellClassName: "md:sticky md:z-30 md:bg-white md:dark:bg-neutral-950",
     render: (row) => {
@@ -141,7 +146,7 @@ export const createOwnedApiKeyColumns = ({
         (row["period-spending-limits"]?.day ?? row["daily-spending-limit"] ?? 0) > 0;
       const deletable = canDelete(row);
       return (
-        <div className="flex items-center justify-center gap-1">
+        <div className="flex flex-nowrap items-center justify-center gap-0.5">
           {actions.onToggleDisabled ? (
             <HoverTooltip
               content={
@@ -259,6 +264,7 @@ export function OwnedApiKeysTable({
   actions,
   busyKeyId,
   busy = false,
+  loading = false,
   canDelete,
   height = "h-[460px]",
 }: {
@@ -267,10 +273,23 @@ export function OwnedApiKeysTable({
   actions: OwnedApiKeyActions;
   busyKeyId?: string | null;
   busy?: boolean;
+  loading?: boolean;
   canDelete?: (key: EndUserAPIKey) => boolean;
   height?: string;
 }) {
-  if (keys.length === 0) {
+  // Avoid flashing the empty state while the owner-scoped list is still loading.
+  if (loading && keys.length === 0) {
+    return (
+      <div
+        className="flex min-h-[240px] flex-1 items-center justify-center text-sm text-slate-500 dark:text-white/55"
+        role="status"
+        aria-live="polite"
+      >
+        {t("common.loading_ellipsis")}
+      </div>
+    );
+  }
+  if (!loading && keys.length === 0) {
     return (
       <EmptyState
         title={t("api_keys_page.no_keys")}
@@ -287,8 +306,9 @@ export function OwnedApiKeysTable({
       rowKey={(row) => row.id}
       rowHeight={52}
       height={height}
+      loading={loading}
       minHeight="min-h-[320px]"
-      minWidth="min-w-[1500px]"
+      minWidth="min-w-[1580px]"
       caption={t("api_keys_page.table_caption")}
       emptyText={t("api_keys_page.no_api_keys")}
       showAllLoadedMessage={false}
