@@ -439,6 +439,8 @@ export function ApiKeyUsagePage() {
       const next = apiKeyInput.trim();
       if (!next) return;
       setQueriedKey(next);
+      // Drop previous key label immediately so a stale localStorage/account name cannot flash.
+      setApiKeyName("");
       setActiveTab("logs");
       setSelectedApiKeyIds(null);
       setSelectedModels(null);
