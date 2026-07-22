@@ -84,6 +84,23 @@ describe("mapAccountStatusToUi", () => {
     expect(patch.cycleByKey["sub-77"]).toBeUndefined();
   });
 
+  test("partial usage totals do not emit a zero-filled success-rate shell", () => {
+    const patch = applyAccountStatuses([
+      {
+        auth_index: "77",
+        quotas: [],
+        usage: {
+          request_total: 200,
+          cycle_known: true,
+          cycle_request_total: 98,
+        },
+      },
+    ]);
+
+    expect(patch.cycleByKey["77"]?.calls).toBe(98);
+    expect(patch.entityStats.auth_index).toEqual([]);
+  });
+
   test("isAccountStatusFresher prefers version then time", () => {
     expect(
       isAccountStatusFresher({ version: 2, timeMs: 1 }, { version: 1, timeMs: 99 }),

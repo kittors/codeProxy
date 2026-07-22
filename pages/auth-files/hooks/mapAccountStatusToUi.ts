@@ -214,6 +214,48 @@ export type AppliedAccountStatusPatch = {
   entityStats: EntityStatsResponse;
 };
 
+const readFiniteUsageNumber = (value: number | null | undefined): number | null =>
+  typeof value === "number" && Number.isFinite(value) ? value : null;
+
+const mapAccountUsageToEntityStats = (
+  authIndex: string,
+  usage: NonNullable<AiAccountLatestStatusDto["usage"]>,
+): EntityStatsResponse["auth_index"][number] | null => {
+  const requestTotal = readFiniteUsageNumber(usage.request_total);
+  const successTotal = readFiniteUsageNumber(usage.success_total);
+  const failureTotal = readFiniteUsageNumber(usage.failure_total);
+  const requestTotal30d = readFiniteUsageNumber(usage.request_total_30d);
+  const successTotal30d = readFiniteUsageNumber(usage.success_total_30d);
+  const failureTotal30d = readFiniteUsageNumber(usage.failure_total_30d);
+
+  let requests: number | null = null;
+  let failed: number | null = null;
+  if (requestTotal !== null && failureTotal !== null) {
+    requests = requestTotal;
+    failed = failureTotal;
+  } else if (successTotal !== null && failureTotal !== null) {
+    requests = successTotal + failureTotal;
+    failed = failureTotal;
+  } else if (requestTotal30d !== null && failureTotal30d !== null) {
+    requests = requestTotal30d;
+    failed = failureTotal30d;
+  } else if (successTotal30d !== null && failureTotal30d !== null) {
+    requests = successTotal30d + failureTotal30d;
+    failed = failureTotal30d;
+  }
+  if (requests === null || failed === null) return null;
+
+  const normalizedRequests = Math.max(0, Math.round(requests));
+  const normalizedFailed = Math.min(normalizedRequests, Math.max(0, Math.round(failed)));
+  return {
+    entity_name: authIndex,
+    requests: normalizedRequests,
+    failed: normalizedFailed,
+    avg_latency: 0,
+    total_tokens: 0,
+  };
+};
+
 export const applyAccountStatuses = (
   accounts: AiAccountLatestStatusDto[],
 ): AppliedAccountStatusPatch => {
@@ -255,36 +297,8 @@ export const applyAccountStatuses = (
 
     const usage = account.usage;
     if (authIndex && usage) {
-      const requests =
-        typeof usage.request_total === "number" &&
-        Number.isFinite(usage.request_total)
-          ? Math.max(0, Math.round(usage.request_total))
-          : typeof usage.success_total === "number" ||
-              typeof usage.failure_total === "number"
-            ? Math.max(
-                0,
-                Math.round(
-                  (typeof usage.success_total === "number"
-                    ? usage.success_total
-                    : 0) +
-                    (typeof usage.failure_total === "number"
-                      ? usage.failure_total
-                      : 0),
-                ),
-              )
-            : 0;
-      const failed =
-        typeof usage.failure_total === "number" &&
-        Number.isFinite(usage.failure_total)
-          ? Math.max(0, Math.round(usage.failure_total))
-          : 0;
-      authIndexPoints.push({
-        entity_name: authIndex,
-        requests,
-        failed,
-        avg_latency: 0,
-        total_tokens: 0,
-      });
+      const point = mapAccountUsageToEntityStats(authIndex, usage);
+      if (point) authIndexPoints.push(point);
     }
   }
 

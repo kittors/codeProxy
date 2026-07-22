@@ -2172,7 +2172,7 @@ describe("AuthFilesPage files table", () => {
     expect(mocks.getStatus).toHaveBeenCalled();
   });
 
-  test("cached cycle stays loading until the first status GET resolves", async () => {
+  test("warm-paints cached cycle and success rate while a partial status GET resolves", async () => {
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     setActiveCacheTenantId(DEFAULT_CACHE_TENANT_ID);
     const file = {
@@ -2218,9 +2218,8 @@ describe("AuthFilesPage files table", () => {
     const title = await screen.findByText("Cycle Cached");
     const card = title.closest("section");
     expect(card).not.toBeNull();
-    expect(within(card as HTMLElement).queryByText("Cycle 93")).not.toBeInTheDocument();
-    expect(within(card as HTMLElement).queryByText("98.9%")).not.toBeInTheDocument();
-    expect(within(card as HTMLElement).getByText("Cycle --")).toBeInTheDocument();
+    expect(within(card as HTMLElement).getByText("Cycle 93")).toBeInTheDocument();
+    expect(within(card as HTMLElement).getByText("98.9%")).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Refresh" })[0]?.querySelector("svg")).toHaveClass(
       "animate-spin",
     );
@@ -2243,7 +2242,50 @@ describe("AuthFilesPage files table", () => {
     });
 
     expect(await within(card as HTMLElement).findByText("Cycle 98")).toBeInTheDocument();
-    expect(await within(card as HTMLElement).findByText("100.0%")).toBeInTheDocument();
+    expect(within(card as HTMLElement).getByText("98.9%")).toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText("100.0%")).not.toBeInTheDocument();
+  });
+
+  test("warm-paints cached connectivity while the status snapshot is pending", async () => {
+    useTableFilesView();
+    const file = {
+      name: "claude-connectivity.json",
+      label: "Claude Connectivity",
+      account_type: "oauth",
+      type: "anthropic",
+      auth_index: "claude-connectivity",
+      size: 1024,
+      modified: Date.now(),
+      disabled: false,
+    } as AuthFileItem;
+    writeAuthFilesDataCache({
+      tenantId: DEFAULT_CACHE_TENANT_ID,
+      savedAtMs: Date.now(),
+      files: [file],
+      connectivityByFileName: {
+        [file.name]: { latencyMs: 88, error: false },
+      },
+    });
+    mocks.list.mockResolvedValue({ files: [file] });
+    mocks.getStatus.mockImplementation(() => new Promise(() => {}));
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    const row = (await screen.findByText("Claude Connectivity")).closest("tr");
+    expect(row).not.toBeNull();
+    expect(
+      within(row as HTMLElement).getByRole("button", { name: "Check connectivity" }),
+    ).toHaveTextContent("88ms");
   });
 
   test("cards view shows unknown cycle without lifetime/scope noise when weekly cycle is unknown", async () => {

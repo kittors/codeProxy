@@ -59,8 +59,6 @@ import {
 
 const OAUTH_AUTH_FILES_REFRESH_TIMEOUT_MS = 12_000;
 const OAUTH_AUTH_FILES_REFRESH_INTERVAL_MS = 600;
-const EMPTY_STATUS_USAGE_INDEX = { statsBySource: {}, statsByAuthIndex: {} };
-const EMPTY_STATUS_USAGE_MAP = {};
 type AuthFilesConfigModalTab = "excluded" | "alias";
 type AuthFilesConfirmAction =
   | { type: "deleteSelection"; names: string[] }
@@ -498,14 +496,6 @@ export function AuthFilesPage() {
     setUsageDataFromStatus: setUsageData,
   });
 
-  const displayedCycleCallsByAuthIndex = statusUsageReady
-    ? callsByAuthIndex
-    : EMPTY_STATUS_USAGE_MAP;
-  const displayedCycleBudgetByAuthIndex = statusUsageReady
-    ? cycleBudgetByAuthIndex
-    : EMPTY_STATUS_USAGE_MAP;
-  const displayedUsageIndex = statusUsageReady ? usageIndex : EMPTY_STATUS_USAGE_INDEX;
-
   const refreshQuotaAndCycleUsage = useCallback(
     async (
       file: AuthFileItem,
@@ -807,8 +797,8 @@ export function AuthFilesPage() {
     checkAuthFileConnectivity,
     quotaByFileName,
     resolveQuotaCardSlots,
-    cycleCallsByAuthIndex: displayedCycleCallsByAuthIndex,
-    cycleBudgetByAuthIndex: displayedCycleBudgetByAuthIndex,
+    cycleCallsByAuthIndex: callsByAuthIndex,
+    cycleBudgetByAuthIndex,
     statusUsageReady,
     statusUsageLoading,
     refreshQuota,
@@ -819,7 +809,7 @@ export function AuthFilesPage() {
     openTagsEditor: (file) => setTagsEditorFileName(file.name),
     statusUpdating,
     setFileEnabled,
-    usageIndex: displayedUsageIndex,
+    usageIndex,
   });
 
   return (
@@ -883,8 +873,8 @@ export function AuthFilesPage() {
         filesViewMode={filesViewMode}
         selectedFileNameSet={selectedFileNameSet}
         quotaByFileName={quotaByFileName}
-        cycleCallsByAuthIndex={displayedCycleCallsByAuthIndex}
-        cycleBudgetByAuthIndex={displayedCycleBudgetByAuthIndex}
+        cycleCallsByAuthIndex={callsByAuthIndex}
+        cycleBudgetByAuthIndex={cycleBudgetByAuthIndex}
         statusUsageLoading={statusUsageLoading}
         resolveQuotaProvider={resolveQuotaProvider}
         resolveQuotaCardSlots={resolveQuotaCardSlots}
@@ -895,7 +885,7 @@ export function AuthFilesPage() {
         clearingStatusFileName={clearingStatusFileName}
         setFileEnabled={setFileEnabled}
         statusUpdating={statusUpdating}
-        usageIndex={displayedUsageIndex}
+        usageIndex={usageIndex}
         resolveAuthFileStats={resolveAuthFileStats}
         toggleFileSelection={toggleFileSelection}
         formatPlanTypeLabel={formatPlanTypeLabel}
