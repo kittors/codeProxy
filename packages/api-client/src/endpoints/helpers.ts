@@ -129,6 +129,8 @@ const modelAccessExcludedModels = (models?: string[]) =>
 
 export const serializeProviderKey = (config: ProviderSimpleConfig) => {
   const payload: Record<string, unknown> = { "api-key": config.apiKey };
+  const id = normalizeString(config.id);
+  if (id) payload.id = id;
   const name = normalizeString(config.name);
   if (name) payload.name = name;
   const prefix = normalizeString(config.prefix);
@@ -160,6 +162,8 @@ export const serializeOpenCodeGoKey = (
   options: SerializeProviderKeyOptions = {},
 ) => {
   const payload: Record<string, unknown> = {};
+  const id = normalizeString(config.id);
+  if (id) payload.id = id;
   if (options.includeApiKey !== false) payload["api-key"] = config.apiKey;
   if (config.disabled !== undefined) payload.disabled = config.disabled;
   const name = normalizeString(config.name);
@@ -193,6 +197,8 @@ export const serializeClineKey = (
   options: SerializeProviderKeyOptions = {},
 ) => {
   const payload: Record<string, unknown> = {};
+  const id = normalizeString(config.id);
+  if (id) payload.id = id;
   if (options.includeApiKey !== false) payload["api-key"] = config.apiKey;
   if (config.disabled !== undefined) payload.disabled = config.disabled;
   const name = normalizeString(config.name);
@@ -226,6 +232,8 @@ export const serializeOllamaCloudKey = (
   options: SerializeProviderKeyOptions = {},
 ) => {
   const payload: Record<string, unknown> = {};
+  const id = normalizeString(config.id);
+  if (id) payload.id = id;
   if (options.includeApiKey !== false) payload["api-key"] = config.apiKey;
   if (config.disabled !== undefined) payload.disabled = config.disabled;
   const name = normalizeString(config.name);
@@ -256,6 +264,8 @@ export const serializeOllamaCloudKey = (
 
 export const serializeGeminiKey = (config: ProviderSimpleConfig) => {
   const payload: Record<string, unknown> = { "api-key": config.apiKey };
+  const id = normalizeString(config.id);
+  if (id) payload.id = id;
   const name = normalizeString(config.name);
   if (name) payload.name = name;
   const prefix = normalizeString(config.prefix);
@@ -277,6 +287,8 @@ export const serializeGeminiKey = (config: ProviderSimpleConfig) => {
 export const serializeBedrockKey = (config: BedrockProviderConfig) => {
   const authMode = config.authMode === "sigv4" ? "sigv4" : "api-key";
   const payload: Record<string, unknown> = { "auth-mode": authMode };
+  const id = normalizeString(config.id);
+  if (id) payload.id = id;
   const name = normalizeString(config.name);
   if (name) payload.name = name;
   const prefix = normalizeString(config.prefix);
@@ -315,6 +327,8 @@ export const serializeBedrockKey = (config: BedrockProviderConfig) => {
 
 export const serializeOpenAIProvider = (provider: OpenAIProvider) => {
   const payload: Record<string, unknown> = { name: provider.name };
+  const id = normalizeString(provider.id);
+  if (id) payload.id = id;
   if (provider.disabled === true) payload.disabled = true;
   const baseUrl = normalizeString(provider.baseUrl);
   if (baseUrl) payload["base-url"] = baseUrl;
@@ -340,6 +354,8 @@ export const serializeOpenAIProvider = (provider: OpenAIProvider) => {
         const apiKey = normalizeString(entry.apiKey) ?? "";
         if (!apiKey) return null;
         const entryPayload: Record<string, unknown> = { "api-key": apiKey };
+        const entryID = normalizeString(entry.id);
+        if (entryID) entryPayload.id = entryID;
         if (entry.disabled === true) entryPayload.disabled = true;
         const proxyUrl = normalizeString(entry.proxyUrl);
         if (proxyUrl) entryPayload["proxy-url"] = proxyUrl;
@@ -430,6 +446,7 @@ export const normalizeApiKeyEntries = (
       if (!isRecord(entry)) return null;
       const apiKey = normalizeString(entry["api-key"] ?? entry.apiKey) ?? "";
       if (!apiKey) return null;
+      const id = normalizeString(entry.id) ?? undefined;
       const disabled = entry.disabled === true;
       const proxyUrl =
         normalizeString(entry["proxy-url"] ?? entry.proxyUrl) ?? undefined;
@@ -437,6 +454,7 @@ export const normalizeApiKeyEntries = (
         normalizeString(entry["proxy-id"] ?? entry.proxyId) ?? undefined;
       const entryHeaders = normalizeHeaders(entry.headers);
       return {
+        ...(id ? { id } : {}),
         apiKey,
         ...(disabled ? { disabled } : {}),
         ...(proxyUrl ? { proxyUrl } : {}),
