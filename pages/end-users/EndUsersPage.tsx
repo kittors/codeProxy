@@ -6,6 +6,7 @@ import {
   KeyRound,
   Pencil,
   RotateCcw,
+  Search,
   Snowflake,
   Trash2,
   Unlock,
@@ -26,6 +27,7 @@ import {
   ConfirmModal,
   DataTable,
   Modal,
+  PaginationBar,
   SecretRevealModal,
   Select,
   TABLE_ROW_ACTIONS_COLUMN,
@@ -66,6 +68,11 @@ type EndUserForm = {
   tpmLimit: string;
   periodSpending: PeriodSpendingDraft;
 };
+
+type EndUserStatusFilter = "all" | "active" | "frozen";
+
+const DEFAULT_END_USER_PAGE_SIZE = 20;
+const END_USER_PAGE_SIZE_OPTIONS = [20, 50, 100];
 
 const emptyForm = (): EndUserForm => ({
   username: "",
@@ -114,6 +121,7 @@ export function EndUsersPage() {
   const [editUser, setEditUser] = useState<EndUser | null>(null);
   const [editForm, setEditForm] = useState<EndUserForm>(() => emptyForm());
   const [resetUser, setResetUser] = useState<EndUser | null>(null);
+  const [resetSpendingUser, setResetSpendingUser] = useState<EndUser | null>(null);
   const [generatedReset, setGeneratedReset] = useState("");
   const [deleteUser, setDeleteUser] = useState<EndUser | null>(null);
   const [keysUser, setKeysUser] = useState<EndUser | null>(null);
@@ -126,6 +134,10 @@ export function EndUsersPage() {
   const [resetHistoryDailySpendingUsed, setResetHistoryDailySpendingUsed] = useState<number>();
   const [busy, setBusy] = useState(false);
   const [permissionProfiles, setPermissionProfiles] = useState<ApiKeyPermissionProfile[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<EndUserStatusFilter>("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_END_USER_PAGE_SIZE);
   const canWrite = can("end_users.write");
   const { refreshPermissionOptions } = useApiKeyPermissionOptions();
   const {
@@ -211,6 +223,41 @@ export function EndUsersPage() {
     [permissionProfiles, t],
   );
 
+  const statusFilterOptions = useMemo(
+    () => [
+      { value: "all", label: t("end_users.status_all", { defaultValue: "全部状态" }) },
+      { value: "active", label: t("end_users.status_active") },
+      { value: "frozen", label: t("end_users.status_frozen") },
+    ],
+    [t],
+  );
+
+  const filteredUsers = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    return users.filter((user) => {
+      const matchesStatus =
+        statusFilter === "all" ||
+        (statusFilter === "active" ? user.status === "active" : user.status !== "active");
+      if (!matchesStatus) return false;
+      if (!query) return true;
+      return [user.username, user.display_name, user.id].some((value) =>
+        value.toLowerCase().includes(query),
+      );
+    });
+  }, [searchQuery, statusFilter, users]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / pageSize));
+  const effectivePage = Math.min(currentPage, totalPages);
+  const paginatedUsers = useMemo(() => {
+    const start = (effectivePage - 1) * pageSize;
+    return filteredUsers.slice(start, start + pageSize);
+  }, [effectivePage, filteredUsers, pageSize]);
+  const hasActiveFilters = searchQuery.trim().length > 0 || statusFilter !== "all";
+
+  useEffect(() => {
+    setCurrentPage((page) => Math.min(page, totalPages));
+  }, [totalPages]);
+
   const selectedEditProfile = useMemo(
     () =>
       editForm.permissionProfileId
@@ -258,6 +305,7 @@ export function EndUsersPage() {
             defaultValue: "已重置该账号今日消费",
           }),
         });
+        setResetSpendingUser(null);
         await load();
       } catch (e) {
         notify({ type: "error", message: e instanceof Error ? e.message : "failed" });
@@ -526,7 +574,7 @@ export function EndUsersPage() {
                   icon: <RotateCcw className="h-4 w-4" />,
                   visible: canWrite,
                   disabled: busy || !hasDailyLimit,
-                  onClick: () => void resetTodaySpending(row),
+                  onClick: () => setResetSpendingUser(row),
                 },
                 {
                   key: "reset-password",
@@ -557,7 +605,6 @@ export function EndUsersPage() {
       handleViewUserUsage,
       permissionProfiles,
       profileNameById,
-      resetTodaySpending,
       setFrozen,
       t,
     ],
@@ -737,19 +784,95 @@ export function EndUsersPage() {
           }
           loading={loading}
         >
+          <div className="mb-3 flex flex-shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="min-w-0 flex-1 sm:max-w-sm">
+              <TextInput
+                size="sm"
+                value={searchQuery}
+                onChange={(event) => {
+                  setSearchQuery(event.target.value);
+                  setCurrentPage(1);
+                }}
+                placeholder={t("end_users.search_placeholder", {
+                  defaultValue: "搜索用户名、昵称或 ID",
+                })}
+                aria-label={t("end_users.search_label", { defaultValue: "搜索用户账号" })}
+                startAdornment={
+                  <Search className="h-4 w-4 text-slate-400 dark:text-white/40" aria-hidden />
+                }
+              />
+            </div>
+            <Select
+              size="sm"
+              value={statusFilter}
+              onChange={(value) => {
+                setStatusFilter(value === "active" || value === "frozen" ? value : "all");
+                setCurrentPage(1);
+              }}
+              options={statusFilterOptions}
+              aria-label={t("end_users.status_filter", { defaultValue: "按状态筛选" })}
+              className="w-full sm:w-40"
+            />
+            {hasActiveFilters ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="self-start"
+                onClick={() => {
+                  setSearchQuery("");
+                  setStatusFilter("all");
+                  setCurrentPage(1);
+                }}
+              >
+                <RotateCcw className="h-3.5 w-3.5" aria-hidden />
+                {t("end_users.clear_filters", { defaultValue: "清除筛选" })}
+              </Button>
+            ) : null}
+          </div>
           <DataTable
             tableId="end-users"
-            rows={users}
+            rows={paginatedUsers}
             columns={columns}
             rowKey={(r) => r.id}
             virtualize={false}
             rowHeight={60}
-            height="h-[calc(100dvh-260px)] md:h-auto md:flex-1"
+            height="h-[calc(100dvh-360px)] md:h-auto md:flex-1"
             minHeight="min-h-[320px] md:min-h-0"
             minWidth="min-w-[1720px]"
-            emptyText={t("end_users.empty", { defaultValue: "暂无用户账号" })}
+            emptyText={
+              hasActiveFilters
+                ? t("end_users.filtered_empty", { defaultValue: "没有符合筛选条件的用户账号" })
+                : t("end_users.empty", { defaultValue: "暂无用户账号" })
+            }
             showAllLoadedMessage={false}
             columnResizable
+          />
+          <PaginationBar
+            currentPage={effectivePage}
+            totalPages={totalPages}
+            totalCount={filteredUsers.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setCurrentPage(1);
+            }}
+            pageSizeOptions={END_USER_PAGE_SIZE_OPTIONS}
+            className="mt-3 border-t border-slate-100 pt-3 dark:border-neutral-800/60"
+            labels={{
+              firstPage: t("end_users.first_page", { defaultValue: "首页" }),
+              previousPage: t("end_users.previous_page", { defaultValue: "上一页" }),
+              nextPage: t("end_users.next_page", { defaultValue: "下一页" }),
+              lastPage: t("end_users.last_page", { defaultValue: "末页" }),
+              rowsPerPage: t("end_users.rows_per_page", { defaultValue: "每页行数" }),
+              pageInfo: ({ start, end, total }) =>
+                t("end_users.page_info", {
+                  defaultValue: "第 {{start}}-{{end}} 条，共 {{total}} 条",
+                  start,
+                  end,
+                  total,
+                }),
+            }}
           />
         </Card>
       </div>
@@ -1053,6 +1176,30 @@ export function EndUsersPage() {
         confirmText="重置"
         busy={busy}
         onConfirm={() => void onReset()}
+      />
+      <ConfirmModal
+        open={Boolean(resetSpendingUser)}
+        onClose={() => setResetSpendingUser(null)}
+        title={t("end_users.reset_today_spending_title", {
+          defaultValue: "重置今日消费",
+        })}
+        description={t("end_users.reset_today_spending_description", {
+          defaultValue:
+            "确认重置账号 {{name}} 的今日消费？当前有效今日消费将清零，请求日志仍会保留。",
+          name: resetSpendingUser
+            ? resetSpendingUser.display_name &&
+              resetSpendingUser.display_name !== resetSpendingUser.username
+              ? `${resetSpendingUser.display_name} / ${resetSpendingUser.username}`
+              : resetSpendingUser.username
+            : "",
+        })}
+        confirmText={t("end_users.reset_today_spending_confirm", {
+          defaultValue: "确认重置",
+        })}
+        busy={busy}
+        onConfirm={() => {
+          if (resetSpendingUser) void resetTodaySpending(resetSpendingUser);
+        }}
       />
       <ConfirmModal
         open={Boolean(deleteUser)}

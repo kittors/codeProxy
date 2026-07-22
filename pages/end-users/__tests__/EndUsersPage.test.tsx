@@ -167,11 +167,10 @@ describe("EndUsersPage account semantics", () => {
     await userEvent.keyboard("{Escape}");
 
     await openRowMoreActions("Bob");
-    await userEvent.click(screen.getByRole("menuitem", { name: "Reset account today's spending" }));
-    await waitFor(() => {
-      expect(mocks.resetDailySpending).toHaveBeenCalledWith("user-frozen");
-      expect(mocks.list.mock.calls.length).toBeGreaterThan(1);
-    });
+    expect(
+      screen.getByRole("menuitem", { name: "Reset account today's spending" }),
+    ).toBeInTheDocument();
+    await userEvent.keyboard("{Escape}");
 
     await openRowMoreActions("Alice");
     await userEvent.click(screen.getByRole("menuitem", { name: "Freeze account" }));
@@ -180,6 +179,86 @@ describe("EndUsersPage account semantics", () => {
         status: "locked",
       });
     });
+  });
+
+  test("requires confirmation before resetting today's spending", async () => {
+    renderPage();
+
+    await screen.findByText("Alice");
+    await openRowMoreActions("Bob");
+    await userEvent.click(screen.getByRole("menuitem", { name: "Reset account today's spending" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Reset today's spending" });
+    expect(within(dialog).getByText(/Bob \/ bob/)).toBeInTheDocument();
+    expect(mocks.resetDailySpending).not.toHaveBeenCalled();
+
+    await userEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "Reset today's spending" })).toBeNull();
+    });
+    expect(mocks.resetDailySpending).not.toHaveBeenCalled();
+
+    await openRowMoreActions("Bob");
+    await userEvent.click(screen.getByRole("menuitem", { name: "Reset account today's spending" }));
+    const confirmDialog = await screen.findByRole("dialog", { name: "Reset today's spending" });
+    await userEvent.click(within(confirmDialog).getByRole("button", { name: "Reset spending" }));
+
+    await waitFor(() => {
+      expect(mocks.resetDailySpending).toHaveBeenCalledWith("user-frozen");
+      expect(mocks.list.mock.calls.length).toBeGreaterThan(1);
+    });
+  });
+
+  test("filters and paginates the loaded accounts client-side", async () => {
+    const manyUsers = Array.from({ length: 25 }, (_, index) => {
+      const number = index + 1;
+      const suffix = String(number).padStart(2, "0");
+      return {
+        ...users[0],
+        id: `end-user-${suffix}`,
+        username: `user-${suffix}`,
+        display_name: `User ${suffix}`,
+        status: number % 5 === 0 ? "locked" : "active",
+      };
+    });
+    mocks.list.mockResolvedValueOnce({ items: manyUsers });
+    renderPage();
+
+    expect(await screen.findByText("User 01")).toBeInTheDocument();
+    expect(screen.getByText("User 20")).toBeInTheDocument();
+    expect(screen.queryByText("User 21")).toBeNull();
+    expect(screen.getByText("1-20 of 25")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Next page" }));
+    expect(await screen.findByText("User 21")).toBeInTheDocument();
+    expect(screen.queryByText("User 01")).toBeNull();
+
+    await userEvent.click(screen.getByRole("combobox", { name: "Rows per page" }));
+    await userEvent.click(screen.getByRole("option", { name: "50" }));
+    expect(await screen.findByText("User 01")).toBeInTheDocument();
+    expect(screen.getByText("User 25")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "1" })).toHaveAttribute("aria-current", "page");
+
+    await userEvent.click(screen.getByRole("combobox", { name: "Filter by status" }));
+    await userEvent.click(screen.getByRole("option", { name: "Frozen" }));
+    expect(await screen.findByText("User 05")).toBeInTheDocument();
+    expect(screen.queryByText("User 01")).toBeNull();
+    expect(screen.getByText("1-5 of 5")).toBeInTheDocument();
+
+    const searchInput = screen.getByRole("textbox", { name: "Search user accounts" });
+    await userEvent.type(searchInput, "end-user-25");
+    expect(await screen.findByText("User 25")).toBeInTheDocument();
+    expect(screen.queryByText("User 05")).toBeNull();
+    expect(screen.getByText("1-1 of 1")).toBeInTheDocument();
+
+    await userEvent.clear(searchInput);
+    await userEvent.type(searchInput, "missing");
+    expect(await screen.findByText("No user accounts match the filters")).toBeInTheDocument();
+    expect(screen.getByText("0-0 of 0")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+    expect(await screen.findByText("User 01")).toBeInTheDocument();
+    expect(screen.getByText("1-25 of 25")).toBeInTheDocument();
   });
 
   test("edits unbound account quota and secondary limits directly", async () => {
@@ -317,6 +396,8 @@ describe("EndUsersPage account semantics", () => {
     await screen.findByText("Alice");
     await openRowMoreActions("Bob");
     await userEvent.click(screen.getByRole("menuitem", { name: "Reset account today's spending" }));
+    const dialog = await screen.findByRole("dialog", { name: "Reset today's spending" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "Reset spending" }));
 
     await waitFor(() => {
       expect(mocks.list).toHaveBeenCalledTimes(2);
