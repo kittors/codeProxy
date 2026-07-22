@@ -1513,6 +1513,7 @@ export function ApiKeyLookupPage() {
                     t={t}
                     keys={portalKeys}
                     busy={portalKeysBusy}
+                    loading={portalKeysLoading}
                     onRotate={(key) => {
                       setPortalKeysBusy(true);
                       void portalApi

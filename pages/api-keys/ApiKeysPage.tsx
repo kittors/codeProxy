@@ -893,6 +893,7 @@ export function ApiKeysPage({
         keys={ownedKeys}
         busyKeyId={resettingDailySpendingKey}
         busy={saving}
+        loading={loading}
         canDelete={() => ownedKeys.length > 1}
         height={embed ? "min-h-0 flex-1" : "h-[calc(100dvh-260px)]"}
         actions={{
