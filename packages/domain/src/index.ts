@@ -9,4 +9,5 @@ export * from "./auth-files/zip";
 export * from "./quota";
 export * from "./usage";
 export * from "./tenant-cache";
+export * from "./identity";
 export { isRuntimeOnlyAuthFile, normalizeAuthIndexValue } from "./auth-files/authFiles";

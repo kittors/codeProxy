@@ -23,6 +23,7 @@ type FormFieldContextValue = {
   id: string;
   descriptionId?: string;
   errorId?: string;
+  countId?: string;
   invalid: boolean;
 };
 
@@ -66,11 +67,20 @@ export type FormFieldProps = PropsWithChildren<
     orientation?: FormFieldOrientation;
     /** Optional explicit control id; defaults to a generated id. */
     htmlFor?: string;
+    /** Reserve min height for meta rows so error appearance does not jump layout. Default true. */
+    reserveMeta?: boolean;
+    /** Current value length for the counter (pair with maxLength). */
+    valueLength?: number;
+    /** Max length shown in counter (display only; pass maxLength to control separately). */
+    maxLength?: number;
+    /** Horizontal label width class. Default w-28. */
+    labelWidth?: string;
+    /** Extra class for the label element. */
+    labelClassName?: string;
   }
 >;
 
-/** Fixed label column width so multi-field horizontal forms share one left edge. */
-const HORIZONTAL_LABEL_CLASS = "w-12 shrink-0 text-left leading-9";
+const DEFAULT_HORIZONTAL_LABEL_WIDTH = "w-28";
 
 function FormField({
   children,
@@ -81,26 +91,88 @@ function FormField({
   required = false,
   orientation = "vertical",
   htmlFor,
+  reserveMeta = true,
+  valueLength,
+  maxLength,
+  labelWidth,
+  labelClassName,
   ...props
 }: FormFieldProps) {
   const generatedId = useId();
   const id = htmlFor ?? generatedId;
+  const showCount = typeof maxLength === "number" && maxLength > 0;
   const descriptionId = description ? `${id}-description` : undefined;
   const errorId = error ? `${id}-error` : undefined;
+  const countId = showCount ? `${id}-count` : undefined;
   const invalid = Boolean(error);
   const isHorizontal = orientation === "horizontal";
+  const resolvedLabelWidth = labelWidth ?? DEFAULT_HORIZONTAL_LABEL_WIDTH;
+  const length = typeof valueLength === "number" ? valueLength : 0;
 
   const contextValue = useMemo<FormFieldContextValue>(
-    () => ({ id, descriptionId, errorId, invalid }),
-    [descriptionId, errorId, id, invalid],
+    () => ({ id, descriptionId, errorId, countId, invalid }),
+    [countId, descriptionId, errorId, id, invalid],
   );
 
-  const control = <FormControl className={isHorizontal ? "min-w-0 w-full" : undefined}>{children}</FormControl>;
+  const control = (
+    <FormControl className={isHorizontal ? "min-w-0 w-full" : undefined}>{children}</FormControl>
+  );
+
+  const infoRow =
+    description || showCount || reserveMeta ? (
+      <div
+        data-slot="form-field-info"
+        className={cn(
+          "flex min-h-5 items-start justify-between gap-3",
+          !description && !showCount && reserveMeta ? "invisible" : null,
+        )}
+      >
+        <div className="min-w-0 flex-1">
+          {description ? (
+            <FormDescription id={descriptionId}>{description}</FormDescription>
+          ) : reserveMeta ? (
+            <span className="block text-xs leading-5">&nbsp;</span>
+          ) : null}
+        </div>
+        {showCount ? (
+          <span
+            data-slot="form-field-count"
+            id={countId}
+            className={cn(
+              "shrink-0 text-xs leading-5 tabular-nums text-slate-400 dark:text-white/40",
+              length > maxLength! ? "text-rose-600 dark:text-rose-400" : null,
+            )}
+          >
+            {length} / {maxLength}
+          </span>
+        ) : null}
+      </div>
+    ) : null;
+
+  const errorRow =
+    error || reserveMeta ? (
+      <div
+        data-slot="form-field-error-slot"
+        className={cn("min-h-5", !error && reserveMeta ? "invisible" : null)}
+      >
+        {error ? (
+          <FormError id={errorId}>{error}</FormError>
+        ) : reserveMeta ? (
+          <span className="block text-xs leading-5">&nbsp;</span>
+        ) : null}
+      </div>
+    ) : null;
+
   const meta = (
-    <>
-      {description ? <FormDescription id={descriptionId}>{description}</FormDescription> : null}
-      {error ? <FormError id={errorId}>{error}</FormError> : null}
-    </>
+    <div data-slot="form-field-meta" className="space-y-0.5">
+      {infoRow}
+      {errorRow}
+    </div>
+  );
+
+  const labelClasses = cn(
+    isHorizontal ? cn(resolvedLabelWidth, "shrink-0 text-left leading-9") : null,
+    labelClassName,
   );
 
   return (
@@ -110,13 +182,13 @@ function FormField({
         data-orientation={orientation}
         data-invalid={invalid || undefined}
         className={cn(
-          isHorizontal ? "flex items-start gap-x-2" : "flex flex-col gap-1.5",
+          isHorizontal ? "flex items-start gap-x-3" : "flex flex-col gap-1.5",
           className,
         )}
         {...props}
       >
         {label != null && label !== false ? (
-          <FormLabel required={required} className={isHorizontal ? HORIZONTAL_LABEL_CLASS : undefined}>
+          <FormLabel required={required} className={labelClasses || undefined}>
             {label}
           </FormLabel>
         ) : null}
@@ -170,8 +242,8 @@ function FormLabel({ children, className, required = false, ...props }: FormLabe
 export type FormControlProps = PropsWithChildren<HTMLAttributes<HTMLDivElement>>;
 
 function FormControl({ children, className, ...props }: FormControlProps) {
-  const { id, descriptionId, errorId, invalid } = useFormFieldContext("FormControl");
-  const describedBy = [descriptionId, errorId].filter(Boolean).join(" ") || undefined;
+  const { id, descriptionId, errorId, countId, invalid } = useFormFieldContext("FormControl");
+  const describedBy = [descriptionId, countId, errorId].filter(Boolean).join(" ") || undefined;
 
   const child = Children.only(children);
   if (!isValidElement(child)) {

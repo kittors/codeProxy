@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { KeyRound, Trash2 } from "lucide-react";
+import { KeyRound, Shield, Trash2 } from "lucide-react";
 import { identityApi, type RoleIdentity, type UserIdentity } from "@code-proxy/api-client";
 import {
   Button,
   ConfirmModal,
   DataTable,
+  Form,
+  FormField,
   Modal,
   MultiSelect,
+  SecretRevealModal,
   TABLE_ROW_ACTIONS_COLUMN,
   TextInput,
   ToggleSwitch,
@@ -16,8 +19,17 @@ import {
 } from "@code-proxy/ui";
 import { PermissionGate } from "@app/guards/PermissionGate";
 import { useAuth } from "@app/providers/AuthProvider";
-
-const emptyForm = { username: "", displayName: "", password: "", roleIds: [] as string[] };
+import {
+  emptyCreateUserForm,
+  IDENTITY_DISPLAY_NAME_MAX_BYTES,
+  IDENTITY_USERNAME_MAX_BYTES,
+  normalizeUsername,
+  utf8ByteLength,
+  validateCreateUserForm,
+  validateResetPassword,
+  type CreateUserForm,
+  type CreateUserFormErrors,
+} from "./userForm";
 
 export function UsersPage() {
   const { notify } = useToast();
@@ -30,11 +42,16 @@ export function UsersPage() {
   const [roles, setRoles] = useState<RoleIdentity[]>([]);
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] = useState<CreateUserForm>(emptyCreateUserForm);
+  const [createErrors, setCreateErrors] = useState<CreateUserFormErrors>({});
   const [resetUser, setResetUser] = useState<UserIdentity | null>(null);
   const [resetPassword, setResetPassword] = useState("");
+  const [resetError, setResetError] = useState("");
+  const [rolesUser, setRolesUser] = useState<UserIdentity | null>(null);
+  const [rolesDraft, setRolesDraft] = useState<string[]>([]);
   const [deleteUser, setDeleteUser] = useState<UserIdentity | null>(null);
   const [disableUser, setDisableUser] = useState<UserIdentity | null>(null);
+  const [revealedPassword, setRevealedPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const canReadRoles = can("tenant.roles.read");
   const canAssignRoles = can("tenant.users.assign_roles");
@@ -121,6 +138,12 @@ export function UsersPage() {
       user.id === principal?.user.id || user.role_codes?.includes("platform_super_admin"),
     [principal?.user.id],
   );
+
+  const closeCreate = () => {
+    setCreateOpen(false);
+    setForm(emptyCreateUserForm());
+    setCreateErrors({});
+  };
 
   const columns = useMemo<DataTableColumn<UserIdentity>[]>(
     () => [
@@ -221,6 +244,20 @@ export function UsersPage() {
           const protectedUser = isProtected(user);
           return (
             <div className="flex items-center gap-1.5">
+              <PermissionGate permission="tenant.users.assign_roles">
+                <Button
+                  size="xs"
+                  variant="ghost"
+                  disabled={protectedUser || busy || !canReadRoles}
+                  tooltip={t("identity_admin.set_roles")}
+                  onClick={() => {
+                    setRolesUser(user);
+                    setRolesDraft([...(user.role_ids ?? [])]);
+                  }}
+                >
+                  <Shield size={15} />
+                </Button>
+              </PermissionGate>
               <PermissionGate permission="tenant.users.reset_password">
                 <Button
                   size="xs"
@@ -230,6 +267,7 @@ export function UsersPage() {
                   onClick={() => {
                     setResetUser(user);
                     setResetPassword("");
+                    setResetError("");
                   }}
                 >
                   <KeyRound size={15} />
@@ -252,35 +290,64 @@ export function UsersPage() {
         },
       },
     ],
-    [busy, i18n.language, isProtected, roleNames, run, t, userName],
+    [busy, canReadRoles, i18n.language, isProtected, roleNames, run, t, userName],
   );
 
   const createUser = async (event: FormEvent) => {
     event.preventDefault();
-    const success = await run(
-      () =>
-        identityApi.createUser({
-          username: form.username,
-          display_name: form.displayName,
-          password: form.password,
-          role_ids: canAssignRoles ? form.roleIds : [],
-        }),
-      t("identity_admin.user_created"),
-    );
-    if (success) {
-      setCreateOpen(false);
-      setForm(emptyForm);
+    const errors = validateCreateUserForm(form, t);
+    setCreateErrors(errors);
+    if (Object.keys(errors).length) return;
+
+    setBusy(true);
+    try {
+      const created = await identityApi.createUser({
+        username: normalizeUsername(form.username),
+        display_name: form.displayName.trim(),
+        password: form.passwordMode === "manual" ? form.password : "",
+        role_ids: canAssignRoles ? form.roleIds : [],
+      });
+      await load();
+      notify({ type: "success", message: t("identity_admin.user_created") });
+      closeCreate();
+      if (created.initial_password) {
+        setRevealedPassword(created.initial_password);
+      }
+    } catch (error) {
+      notify({
+        type: "error",
+        message: error instanceof Error ? error.message : t("identity_admin.operation_failed"),
+      });
+    } finally {
+      setBusy(false);
     }
   };
 
   const submitResetPassword = async (event: FormEvent) => {
     event.preventDefault();
     if (!resetUser) return;
+    const err = validateResetPassword(resetPassword, t);
+    setResetError(err);
+    if (err) return;
     const success = await run(
       () => identityApi.resetPassword(resetUser.id, resetPassword),
       t("identity_admin.password_reset"),
     );
-    if (success) setResetUser(null);
+    if (success) {
+      setResetUser(null);
+      setResetPassword("");
+      setResetError("");
+    }
+  };
+
+  const submitRoles = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!rolesUser) return;
+    const success = await run(
+      () => identityApi.assignUserRoles(rolesUser.id, rolesDraft),
+      t("identity_admin.roles_saved"),
+    );
+    if (success) setRolesUser(null);
   };
 
   return (
@@ -294,7 +361,14 @@ export function UsersPage() {
             <p className="text-sm text-slate-500">{t("identity_admin.users_description")}</p>
           </div>
           <PermissionGate permission="tenant.users.create">
-            <Button variant="primary" onClick={() => setCreateOpen(true)}>
+            <Button
+              variant="primary"
+              onClick={() => {
+                setForm(emptyCreateUserForm());
+                setCreateErrors({});
+                setCreateOpen(true);
+              }}
+            >
               {t("identity_admin.new_user")}
             </Button>
           </PermissionGate>
@@ -322,94 +396,197 @@ export function UsersPage() {
         open={createOpen}
         title={t("identity_admin.new_user")}
         description={t("identity_admin.users_description")}
-        onClose={() => setCreateOpen(false)}
+        onClose={closeCreate}
         maxWidth="max-w-xl"
         footer={
           <>
-            <Button onClick={() => setCreateOpen(false)}>{t("common.cancel")}</Button>
+            <Button onClick={closeCreate}>{t("common.cancel")}</Button>
             <Button type="submit" form="create-user-form" variant="primary" disabled={busy}>
               {t("identity_admin.create_user")}
             </Button>
           </>
         }
       >
-        <form id="create-user-form" onSubmit={createUser} className="space-y-4">
-          <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-              {t("identity_admin.username")}
-            </span>
+        <Form id="create-user-form" onSubmit={createUser} noValidate>
+          <FormField
+            label={t("identity_admin.username")}
+            required
+            description={t("identity_admin.username_hint")}
+            error={createErrors.username}
+            maxLength={IDENTITY_USERNAME_MAX_BYTES}
+            valueLength={utf8ByteLength(form.username)}
+          >
             <TextInput
               value={form.username}
-              onChange={(event) => setForm({ ...form, username: event.target.value })}
-              required
+              autoComplete="off"
+              onChange={(event) => {
+                setForm({ ...form, username: event.target.value });
+                if (createErrors.username) setCreateErrors({ ...createErrors, username: undefined });
+              }}
+              onBlur={() => setForm((prev) => ({ ...prev, username: normalizeUsername(prev.username) }))}
             />
-          </label>
-          <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-              {t("identity_admin.display_name")}
-            </span>
+          </FormField>
+          <FormField
+            label={t("identity_admin.display_name")}
+            required
+            description={t("identity_admin.display_name_hint")}
+            error={createErrors.displayName}
+            maxLength={IDENTITY_DISPLAY_NAME_MAX_BYTES}
+            valueLength={utf8ByteLength(form.displayName)}
+          >
             <TextInput
               value={form.displayName}
-              onChange={(event) => setForm({ ...form, displayName: event.target.value })}
-              required
+              autoComplete="off"
+              onChange={(event) => {
+                setForm({ ...form, displayName: event.target.value });
+                if (createErrors.displayName) {
+                  setCreateErrors({ ...createErrors, displayName: undefined });
+                }
+              }}
             />
-          </label>
-          <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-              {t("identity_admin.initial_password")}
-            </span>
-            <TextInput
-              type="password"
-              value={form.password}
-              onChange={(event) => setForm({ ...form, password: event.target.value })}
+          </FormField>
+          <FormField
+            label={t("identity_admin.initial_password_mode")}
+            description={
+              form.passwordMode === "auto"
+                ? t("identity_admin.password_auto_hint")
+                : t("identity_admin.password_requirement")
+            }
+            reserveMeta
+          >
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant={form.passwordMode === "auto" ? "primary" : "secondary"}
+                onClick={() => {
+                  setForm({ ...form, passwordMode: "auto", password: "" });
+                  setCreateErrors({ ...createErrors, password: undefined });
+                }}
+              >
+                {t("identity_admin.password_mode_auto")}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={form.passwordMode === "manual" ? "primary" : "secondary"}
+                onClick={() => setForm({ ...form, passwordMode: "manual" })}
+              >
+                {t("identity_admin.password_mode_manual")}
+              </Button>
+            </div>
+          </FormField>
+          {form.passwordMode === "manual" ? (
+            <FormField
+              label={t("identity_admin.initial_password")}
               required
-              minLength={12}
-            />
-          </label>
+              description={t("identity_admin.password_requirement")}
+              error={createErrors.password}
+            >
+              <TextInput
+                type="password"
+                value={form.password}
+                autoComplete="new-password"
+                onChange={(event) => {
+                  setForm({ ...form, password: event.target.value });
+                  if (createErrors.password) {
+                    setCreateErrors({ ...createErrors, password: undefined });
+                  }
+                }}
+              />
+            </FormField>
+          ) : null}
           {canAssignRoles && canReadRoles ? (
-            <div className="space-y-1.5">
-              <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-                {t("identity_admin.roles")}
-              </span>
+            <FormField label={t("identity_admin.roles")} description={t("identity_admin.no_role")}>
               <MultiSelect
                 options={roleOptions}
                 value={form.roleIds}
                 onChange={(roleIds) => setForm({ ...form, roleIds })}
               />
-            </div>
+            </FormField>
           ) : null}
-        </form>
+        </Form>
       </Modal>
 
       <Modal
         open={Boolean(resetUser)}
         title={t("identity_admin.reset_password")}
-        onClose={() => setResetUser(null)}
+        onClose={() => {
+          setResetUser(null);
+          setResetPassword("");
+          setResetError("");
+        }}
         maxWidth="max-w-md"
         footer={
           <>
-            <Button onClick={() => setResetUser(null)}>{t("common.cancel")}</Button>
+            <Button
+              onClick={() => {
+                setResetUser(null);
+                setResetPassword("");
+                setResetError("");
+              }}
+            >
+              {t("common.cancel")}
+            </Button>
             <Button type="submit" form="reset-user-password-form" variant="primary" disabled={busy}>
               {t("identity_admin.save")}
             </Button>
           </>
         }
       >
-        <form id="reset-user-password-form" onSubmit={submitResetPassword} className="space-y-2">
-          <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-              {t("identity_admin.new_password")}
-            </span>
+        <Form id="reset-user-password-form" onSubmit={submitResetPassword} noValidate>
+          <FormField
+            label={t("identity_admin.new_password")}
+            required
+            description={t("identity_admin.password_requirement")}
+            error={resetError}
+          >
             <TextInput
               type="password"
               value={resetPassword}
-              onChange={(event) => setResetPassword(event.target.value)}
-              required
-              minLength={12}
+              autoComplete="new-password"
+              onChange={(event) => {
+                setResetPassword(event.target.value);
+                if (resetError) setResetError("");
+              }}
             />
-          </label>
-        </form>
+          </FormField>
+        </Form>
       </Modal>
+
+      <Modal
+        open={Boolean(rolesUser)}
+        title={t("identity_admin.set_roles_title")}
+        description={
+          rolesUser
+            ? t("identity_admin.set_roles_description", { username: rolesUser.username })
+            : undefined
+        }
+        onClose={() => setRolesUser(null)}
+        maxWidth="max-w-md"
+        footer={
+          <>
+            <Button onClick={() => setRolesUser(null)}>{t("common.cancel")}</Button>
+            <Button type="submit" form="set-user-roles-form" variant="primary" disabled={busy}>
+              {t("identity_admin.save")}
+            </Button>
+          </>
+        }
+      >
+        <Form id="set-user-roles-form" onSubmit={submitRoles}>
+          <FormField label={t("identity_admin.roles")}>
+            <MultiSelect options={roleOptions} value={rolesDraft} onChange={setRolesDraft} />
+          </FormField>
+        </Form>
+      </Modal>
+
+      <SecretRevealModal
+        open={Boolean(revealedPassword)}
+        title={t("identity_admin.initial_password_title")}
+        description={t("identity_admin.initial_password_description")}
+        secret={revealedPassword}
+        onClose={() => setRevealedPassword("")}
+      />
 
       <ConfirmModal
         open={Boolean(disableUser)}
