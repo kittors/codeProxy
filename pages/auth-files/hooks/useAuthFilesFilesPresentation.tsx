@@ -1118,6 +1118,19 @@ export function useAuthFilesFilesPresentation({
             <TableRowActions
               moreLabel={t("common.more_actions")}
               actions={[
+                // Keep high-frequency open/edit actions inline; overflow rarer ops.
+                {
+                  key: "detail",
+                  label: t("auth_files.detail"),
+                  icon: <Eye size={16} />,
+                  onClick: () => void openDetail(file),
+                },
+                {
+                  key: "tags",
+                  label: t("auth_files.edit_tags"),
+                  icon: <Tags size={16} />,
+                  onClick: () => openTagsEditor(file),
+                },
                 {
                   key: "refresh",
                   label: t("common.refresh"),
@@ -1138,18 +1151,6 @@ export function useAuthFilesFilesPresentation({
                   visible: quotaProvider === "codex",
                   disabled: resetCreditDisabled,
                   onClick: () => requestResetCredit(file),
-                },
-                {
-                  key: "tags",
-                  label: t("auth_files.edit_tags"),
-                  icon: <Tags size={16} />,
-                  onClick: () => openTagsEditor(file),
-                },
-                {
-                  key: "detail",
-                  label: t("auth_files.detail"),
-                  icon: <Eye size={16} />,
-                  onClick: () => void openDetail(file),
                 },
                 {
                   key: "download",

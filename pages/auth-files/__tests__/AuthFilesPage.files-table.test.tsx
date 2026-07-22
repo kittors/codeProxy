@@ -3008,6 +3008,7 @@ describe("AuthFilesPage files table", () => {
 
     const user = userEvent.setup();
     expect(await screen.findByText("A_GptPro")).toBeInTheDocument();
+    // Cards view keeps tags under the overflow menu (table view may show it inline).
     await user.click(screen.getByRole("button", { name: "More actions" }));
     await user.click(screen.getByRole("menuitem", { name: "Edit Tags" }));
 
