@@ -43,10 +43,7 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(function T
 
   const ariaInvalid = props["aria-invalid"];
   const isInvalid =
-    invalid === true ||
-    ariaInvalid === true ||
-    ariaInvalid === "true" ||
-    ariaInvalid === "";
+    invalid === true || ariaInvalid === true || ariaInvalid === "true";
 
   const mergedClassName = [
     "w-full text-sm outline-none",
