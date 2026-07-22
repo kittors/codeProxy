@@ -117,6 +117,26 @@ const memberUser = {
   version: 3,
 };
 
+const tenantAdminRole = {
+  ...operatorRole,
+  id: "r-tenant-admin",
+  code: "tenant_admin",
+  name: "Tenant Administrator",
+  system_protected: true,
+  permissions: administratorRole.permissions.filter((permission) =>
+    permission.startsWith("tenant."),
+  ),
+};
+
+const tenantAdminUser = {
+  ...memberUser,
+  id: "u-tenant-admin",
+  username: "tenant-admin",
+  display_name: "Tenant Admin User",
+  role_ids: [tenantAdminRole.id, operatorRole.id],
+  role_codes: [tenantAdminRole.code, operatorRole.code],
+};
+
 const menuItems = [
   {
     code: "group.system",
@@ -679,6 +699,46 @@ test("uses a switch for the two user availability states", async ({ page }) => {
   await expect(memberRow.getByRole("button", { name: "More actions" })).toHaveCount(0);
   await memberRow.getByRole("switch").click();
   await expect(page.getByRole("dialog", { name: "Disable user" })).toBeVisible();
+});
+
+test("protects tenant admin role assignment and deletion actions", async ({ page }) => {
+  await page.addInitScript(() =>
+    sessionStorage.setItem(
+      "code-proxy-admin-auth",
+      JSON.stringify({
+        apiBase: "http://127.0.0.1:8317",
+        managementKey: "cps_test",
+        rememberPassword: false,
+        expiresAt: Date.now() + 60_000,
+      }),
+    ),
+  );
+  await mockIdentity(
+    page,
+    [principal.home_tenant],
+    [administratorRole, tenantAdminRole, operatorRole],
+    [principal.user, tenantAdminUser, memberUser],
+    menuItems,
+    roleMenuItems,
+  );
+
+  await page.goto("/#/governance/users");
+  const tenantAdminRow = page.locator('[data-vt-row-key="u-tenant-admin"]');
+  await expect(tenantAdminRow.getByRole("button", { name: "Set roles" })).toBeDisabled();
+  await expect(tenantAdminRow.getByRole("button", { name: "Delete" })).toBeDisabled();
+  await expect(tenantAdminRow.getByRole("button", { name: "Reset password" })).toBeEnabled();
+  await expect(tenantAdminRow.getByRole("switch")).toBeEnabled();
+
+  await page.goto("/#/roles");
+  const tenantAdminRoleRow = page.locator('[data-vt-row-key="r-tenant-admin"]');
+  await expect(tenantAdminRoleRow.getByRole("button", { name: "Assign users" })).toBeDisabled();
+
+  const operatorRoleRow = page.locator('[data-vt-row-key="r-operator"]');
+  await operatorRoleRow.getByRole("button", { name: "Assign users" }).click();
+  const dialog = page.getByRole("dialog", { name: "Assign users to Operator" });
+  const tenantAdminCheckbox = dialog.getByRole("checkbox", { name: /Tenant Admin User/ });
+  await expect(tenantAdminCheckbox).toBeChecked();
+  await expect(tenantAdminCheckbox).toBeDisabled();
 });
 
 test("edits role permissions and assigns users from action modals", async ({ page }) => {

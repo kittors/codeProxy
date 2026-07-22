@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { AuthFileItem } from "@code-proxy/api-client";
 import {
   AUTH_FILES_DATA_CACHE_KEY,
+  AUTH_FILES_DATA_CACHE_TTL_MS,
   AUTH_FILES_UI_STATE_KEY,
   buildUsageIndex,
   DEFAULT_CACHE_TENANT_ID,
@@ -18,6 +19,7 @@ import {
   resolveAuthFileDisplayTags,
   estimateQuotaBudgetUsd,
   formatPlanBadgeLabel,
+  mergeAuthFileWithLastGoodStatus,
   resolveAuthFileDisplayPlanType,
   resolveAuthFilePlanType,
   resolveAuthFileSupplementalTags,
@@ -367,9 +369,10 @@ describe("Auth Files helper coverage", () => {
     ]);
     expect(JSON.stringify(sanitized)).not.toContain("should-not-persist");
 
+    const savedAtMs = Date.now();
     writeAuthFilesDataCache({
       tenantId: "tenant-a",
-      savedAtMs: 123,
+      savedAtMs,
       files: sanitized,
       quotaByFileName: {
         "codex.json": {
@@ -380,11 +383,13 @@ describe("Auth Files helper coverage", () => {
         },
       },
     });
-    expect(window.localStorage.getItem(AUTH_FILES_DATA_CACHE_KEY)).toContain('"savedAtMs":123');
+    expect(window.localStorage.getItem(AUTH_FILES_DATA_CACHE_KEY)).toContain(
+      `"savedAtMs":${savedAtMs}`,
+    );
     expect(window.localStorage.getItem(AUTH_FILES_DATA_CACHE_KEY)).toContain("byTenant");
     expect(readAuthFilesDataCache("tenant-a")).toEqual({
       tenantId: "tenant-a",
-      savedAtMs: 123,
+      savedAtMs,
       files: sanitized,
       quotaByFileName: {
         "codex.json": {
@@ -397,6 +402,152 @@ describe("Auth Files helper coverage", () => {
     });
     // Different tenant must not see tenant-a's list/quota payload.
     expect(readAuthFilesDataCache("tenant-b")).toBeNull();
+  });
+
+  test("treats expired auth-files cache as a miss without reviving stale status data", () => {
+    const now = Date.now();
+    writeAuthFilesDataCache({
+      tenantId: "tenant-a",
+      savedAtMs: now - AUTH_FILES_DATA_CACHE_TTL_MS - 1,
+      files: [{ name: "stale.json", type: "codex" } as AuthFileItem],
+      quotaByFileName: {
+        "stale.json": {
+          status: "success",
+          items: [{ key: "code_5h", label: "m_quota.code_5h", percent: 99 }],
+        },
+      },
+      cycleByAuthIndex: { stale: { calls: 99 } },
+    });
+
+    expect(readAuthFilesDataCache("tenant-a")).toBeNull();
+
+    writeAuthFilesDataCache({
+      tenantId: "tenant-a",
+      savedAtMs: now,
+      files: [{ name: "fresh.json", type: "codex" } as AuthFileItem],
+    });
+    expect(readAuthFilesDataCache("tenant-a")).toEqual({
+      tenantId: "tenant-a",
+      savedAtMs: now,
+      files: [{ name: "fresh.json", type: "codex" }],
+    });
+  });
+
+  test("persists display plan tiers so membership chips warm-paint after remount", () => {
+    const savedAtMs = Date.now();
+    writeAuthFilesDataCache({
+      tenantId: "tenant-a",
+      savedAtMs,
+      files: [{ name: "codex.json", type: "codex" } as AuthFileItem],
+      displayPlanByFileName: {
+        "codex.json": "pro_20x",
+        "skip-me.json": "pro",
+      },
+    });
+    expect(readAuthFilesDataCache("tenant-a")).toEqual({
+      tenantId: "tenant-a",
+      savedAtMs,
+      files: [{ name: "codex.json", type: "codex" }],
+      displayPlanByFileName: { "codex.json": "pro_20x" },
+    });
+
+    // Partial write without displayPlan keeps last-good tiers (list refresh path).
+    writeAuthFilesDataCache({
+      tenantId: "tenant-a",
+      savedAtMs: savedAtMs + 1,
+      files: [{ name: "codex.json", type: "codex" } as AuthFileItem],
+      usageData: { source: [], auth_index: [] },
+    });
+    expect(readAuthFilesDataCache("tenant-a")?.displayPlanByFileName).toEqual({
+      "codex.json": "pro_20x",
+    });
+  });
+
+  test("persists complete quota/connectivity warm-paint data and status-only shells", () => {
+    const savedAtMs = Date.now();
+    writeAuthFilesDataCache({
+      tenantId: "tenant-a",
+      savedAtMs,
+      files: [
+        { name: "codex.json", type: "codex" } as AuthFileItem,
+        { name: "claude.json", type: "anthropic" } as AuthFileItem,
+      ],
+      quotaByFileName: {
+        "codex.json": {
+          status: "success",
+          items: [],
+          planType: "pro",
+          resetCreditCount: 2,
+          resetCreditExpirations: ["2026-08-01T00:00:00Z"],
+        },
+        "claude.json": {
+          status: "success",
+          items: [
+            {
+              key: "five_hour",
+              label: "claude_quota.five_hour",
+              percent: 72,
+              value: "72%",
+              resetAtMs: savedAtMs + 60_000,
+              windowSeconds: 18_000,
+              meta: "warm",
+              type: "rolling",
+            },
+          ],
+        },
+      },
+      connectivityByFileName: {
+        "codex.json": { latencyMs: 88, error: false },
+        "claude.json": { latencyMs: null, error: true },
+        "removed.json": { latencyMs: 9, error: false },
+      },
+    });
+
+    const cached = readAuthFilesDataCache("tenant-a");
+    expect(cached?.quotaByFileName?.["codex.json"]).toMatchObject({
+      items: [],
+      planType: "pro",
+      resetCreditCount: 2,
+      resetCreditExpirations: ["2026-08-01T00:00:00Z"],
+    });
+    expect(cached?.quotaByFileName?.["claude.json"]?.items[0]).toEqual({
+      key: "five_hour",
+      label: "claude_quota.five_hour",
+      percent: 72,
+      value: "72%",
+      resetAtMs: savedAtMs + 60_000,
+      windowSeconds: 18_000,
+      meta: "warm",
+      type: "rolling",
+    });
+    expect(cached?.connectivityByFileName).toEqual({
+      "codex.json": { latencyMs: 88, error: false },
+      "claude.json": { latencyMs: null, error: true },
+    });
+  });
+
+  test("list refresh keeps cached subscription/status projections when omitted", () => {
+    const previous = {
+      name: "claude.json",
+      type: "anthropic",
+      auth_index: "claude-1",
+      auth_subject_id: "subject-1",
+      plan_type: "max_5x",
+      subscription_started_at: "2026-07-01T00:00:00Z",
+      subscription_expires_at: "2026-08-01T00:00:00Z",
+      subscription_period: "monthly",
+      subscription_remaining_minutes: 14_400,
+      shared_subscription_expires_at: "2026-08-01T00:00:00Z",
+      usage_history_complete: true,
+      usage_projected_since: "2026-07-01T00:00:00Z",
+    } as AuthFileItem;
+
+    expect(
+      mergeAuthFileWithLastGoodStatus(
+        { name: "claude.json", type: "anthropic", disabled: false },
+        previous,
+      ),
+    ).toMatchObject(previous);
   });
 
   test("keeps shared subscription status so the badge can warm-paint", () => {

@@ -179,4 +179,11 @@ describe("requestLogsShared", () => {
     }).map((column) => column.key);
     expect(keys).not.toContain("channelName");
   });
+
+  test("can omit the identity column for public api key lookup logs", () => {
+    const keys = buildRequestLogsColumns((key) => key, undefined, undefined, {
+      identityColumn: "none",
+    }).map((column) => column.key);
+    expect(keys).not.toContain("apiKeyName");
+  });
 });

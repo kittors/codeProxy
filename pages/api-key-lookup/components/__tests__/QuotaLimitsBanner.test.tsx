@@ -10,6 +10,12 @@ const t = (key: string) => {
     "apikey_lookup.quota_total_requests": "Total request quota",
     "apikey_lookup.quota_daily_spending": "Daily spending",
     "apikey_lookup.quota_total_spending": "Total spending",
+    "apikey_lookup.account_scope": "Account quota",
+    "apikey_lookup.key_scope": "Key quota",
+    "quota.period.5h": "5 hours",
+    "quota.period.day": "Day",
+    "quota.period.week": "Week",
+    "quota.period.month": "Month",
   };
   return labels[key] ?? key;
 };
@@ -46,6 +52,50 @@ describe("QuotaLimitKpiCards", () => {
     expect(screen.getByText("Total spending")).toBeInTheDocument();
     expect(screen.getByText(/12/)).toBeInTheDocument();
     expect(screen.getByText(/\$1\.25/)).toBeInTheDocument();
+  });
+
+  test("prefers scope-aware period quotas over legacy limits", () => {
+    render(
+      <div className="grid">
+        <QuotaLimitKpiCards
+          t={t}
+          limits={{
+            "daily-spending-limit": 999,
+            "daily-spending-used": 1,
+          }}
+          quotaScopes={[
+            {
+              scope: "account",
+              "period-spending": [{ period: "day", limit: 300, used: 39, remaining: 261 }],
+              "daily-spending-used": 39,
+              "lifetime-spending-used": 900,
+            },
+            {
+              scope: "key",
+              "period-spending": [{ period: "5h", limit: 50, used: 12, remaining: 38 }],
+              "daily-spending-used": 20,
+              "lifetime-spending-used": 300,
+            },
+          ]}
+          renderValue={(value) => value}
+        />
+      </div>,
+    );
+
+    expect(screen.getByText("Account quota · Day")).toBeInTheDocument();
+    expect(screen.getByText("Key quota · 5 hours")).toBeInTheDocument();
+    expect(screen.getByText(/\$39/)).toBeInTheDocument();
+    expect(screen.queryByText("Daily spending")).not.toBeInTheDocument();
+  });
+
+  test("falls back to legacy limits when quota scopes are absent", () => {
+    const items = buildQuotaKpiItems(
+      t,
+      { "daily-spending-limit": 10, "daily-spending-used": 2 },
+      undefined,
+    );
+
+    expect(items).toEqual([expect.objectContaining({ key: "daily-spending", used: 2, limit: 10 })]);
   });
 
   test("hides unset limits", () => {

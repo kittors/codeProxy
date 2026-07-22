@@ -14,16 +14,16 @@ import {
 
 export function PublicLogsSection({
   t,
-  keyOptions,
+  keyOptions = [],
   statusOptions,
   modelOptions,
-  selectedApiKeyIds,
+  selectedApiKeyIds = null,
   selectedModels,
   selectedStatuses,
-  onApiKeyIdsChange,
+  onApiKeyIdsChange = () => {},
   onModelsChange,
   onStatusesChange,
-  onApiKeyIdsClear,
+  onApiKeyIdsClear = () => {},
   onModelsClear,
   onStatusesClear,
   stats,
@@ -39,16 +39,16 @@ export function PublicLogsSection({
   onPageSizeChange,
 }: {
   t: (key: string, options?: Record<string, unknown>) => string;
-  keyOptions: SearchableCheckboxMultiSelectOption[];
+  keyOptions?: SearchableCheckboxMultiSelectOption[];
   modelOptions: SearchableCheckboxMultiSelectOption[];
   statusOptions: SearchableCheckboxMultiSelectOption[];
-  selectedApiKeyIds: MultiSelectFilterState<string>;
+  selectedApiKeyIds?: MultiSelectFilterState<string>;
   selectedModels: MultiSelectFilterState<string>;
   selectedStatuses: MultiSelectFilterState<StatusFilterValue>;
-  onApiKeyIdsChange: (value: string[]) => void;
+  onApiKeyIdsChange?: (value: string[]) => void;
   onModelsChange: (value: string[]) => void;
   onStatusesChange: (value: StatusFilterValue[]) => void;
-  onApiKeyIdsClear: () => void;
+  onApiKeyIdsClear?: () => void;
   onModelsClear: () => void;
   onStatusesClear: () => void;
   stats: {

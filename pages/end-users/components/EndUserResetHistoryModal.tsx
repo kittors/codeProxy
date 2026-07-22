@@ -11,7 +11,10 @@ function formatResetAt(value: string | undefined): string {
   return date.toLocaleString();
 }
 
-function actorLabel(event: EndUserDailySpendingResetEvent, t: (key: string) => string): string {
+function actorLabel(
+  event: EndUserDailySpendingResetEvent,
+  t: (key: string) => string,
+): string {
   const name = event.actor_username?.trim();
   if (name) return name;
   if (event.actor_kind === "service_credential") {
@@ -47,7 +50,9 @@ export function EndUserResetHistoryModal({
     () =>
       [...events].sort((a, b) => {
         const timeDiff = Date.parse(b.reset_at) - Date.parse(a.reset_at);
-        return Number.isFinite(timeDiff) && timeDiff !== 0 ? timeDiff : b.id - a.id;
+        return Number.isFinite(timeDiff) && timeDiff !== 0
+          ? timeDiff
+          : b.id - a.id;
       }),
     [events],
   );
@@ -57,30 +62,56 @@ export function EndUserResetHistoryModal({
       key: "id",
       label: t("end_users.reset_history_col_id"),
       width: "w-[90px] min-w-[80px]",
-      cellClassName: "whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
+      cellClassName:
+        "whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
       render: (row) => row.id,
     },
     {
       key: "reset_at",
       label: t("end_users.reset_history_col_time"),
       width: "w-[190px] min-w-[170px]",
-      cellClassName: "whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
+      cellClassName:
+        "whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
       render: (row) => formatResetAt(row.reset_at),
+    },
+    {
+      key: "day_key",
+      label: t("end_users.reset_history_col_day"),
+      width: "w-[130px] min-w-[120px]",
+      cellClassName:
+        "whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
+      render: (row) => row.day_key || "—",
     },
     {
       key: "effective_used_before",
       label: t("end_users.reset_history_col_cleared"),
       width: "w-[160px] min-w-[140px]",
-      cellClassName: "whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
-      render: (row) => formatApiKeySpendingAmount(row.effective_used_before ?? 0),
+      cellClassName:
+        "whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
+      render: (row) =>
+        formatApiKeySpendingAmount(row.effective_used_before ?? 0),
     },
     {
       key: "raw_today_cost",
       label: t("end_users.reset_history_col_raw_today"),
       width: "w-[180px] min-w-[160px]",
-      cellClassName: "whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
+      cellClassName:
+        "whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
       render: (row) =>
-        isAmount(row.raw_today_cost) ? formatApiKeySpendingAmount(row.raw_today_cost) : "—",
+        isAmount(row.raw_today_cost)
+          ? formatApiKeySpendingAmount(row.raw_today_cost)
+          : "—",
+    },
+    {
+      key: "cost_baseline",
+      label: t("end_users.reset_history_col_baseline"),
+      width: "w-[160px] min-w-[140px]",
+      cellClassName:
+        "whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
+      render: (row) =>
+        isAmount(row.cost_baseline)
+          ? formatApiKeySpendingAmount(row.cost_baseline)
+          : "—",
     },
     {
       key: "actor",
@@ -135,7 +166,7 @@ export function EndUserResetHistoryModal({
         rowKey={(row) => String(row.id)}
         height="h-[360px]"
         minHeight="min-h-[200px]"
-        minWidth="min-w-[800px]"
+        minWidth="min-w-[1080px]"
       />
     </Modal>
   );

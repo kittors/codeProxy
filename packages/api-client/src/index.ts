@@ -75,6 +75,14 @@ export { modelsApi } from "./endpoints/models";
 export type * from "./endpoints/models";
 export { versionApi } from "./endpoints/version";
 export { quotaApi } from "./endpoints/quota";
+export type * from "./endpoints/period-spending";
+export {
+  EMPTY_PERIOD_SPENDING_LIMITS,
+  PERIOD_SPENDING_PERIODS,
+  extractQuotaValidationError,
+  hasPeriodSpendingLimits,
+  normalizePeriodSpendingLimits,
+} from "./endpoints/period-spending";
 export { aiAccountsStatusApi } from "./endpoints/ai-accounts-status";
 export type * from "./endpoints/ai-accounts-status";
 export { identityFingerprintApi } from "./endpoints/identity-fingerprint";

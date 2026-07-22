@@ -1,12 +1,8 @@
 import type { ComponentType, ReactNode } from "react";
 import { Coins, Gauge, Hash, Wallet } from "lucide-react";
 import { KpiCard } from "@features/monitor-widgets";
-import type { PublicUsageLimits } from "../types";
-import {
-  formatQuotaCount,
-  formatQuotaUsd,
-  kpiValueSizeClass,
-} from "./kpiValueSize";
+import type { PublicQuotaScope, PublicUsageLimits } from "../types";
+import { formatQuotaCount, formatQuotaUsd, kpiValueSizeClass } from "./kpiValueSize";
 
 export type QuotaKpiItem = {
   key: string;
@@ -20,7 +16,20 @@ export type QuotaKpiItem = {
 export function buildQuotaKpiItems(
   t: (key: string, options?: Record<string, unknown>) => string,
   limits: PublicUsageLimits | null | undefined,
+  quotaScopes?: PublicQuotaScope[] | null,
 ): QuotaKpiItem[] {
+  if (quotaScopes?.length) {
+    return quotaScopes.flatMap((scope) =>
+      scope["period-spending"].map((period) => ({
+        key: `${scope.scope}-${period.period}`,
+        title: `${t(`apikey_lookup.${scope.scope}_scope`)} · ${t(`quota.period.${period.period}`)}`,
+        used: period.used,
+        limit: period.limit,
+        format: formatQuotaUsd,
+        icon: Wallet,
+      })),
+    );
+  }
   if (!limits) return [];
 
   const items: QuotaKpiItem[] = [];
@@ -44,10 +53,7 @@ export function buildQuotaKpiItems(
       icon: Gauge,
     });
   }
-  if (
-    typeof limits["daily-spending-limit"] === "number" &&
-    limits["daily-spending-limit"] > 0
-  ) {
+  if (typeof limits["daily-spending-limit"] === "number" && limits["daily-spending-limit"] > 0) {
     items.push({
       key: "daily-spending",
       title: t("apikey_lookup.quota_daily_spending"),
@@ -57,10 +63,7 @@ export function buildQuotaKpiItems(
       icon: Wallet,
     });
   }
-  if (
-    typeof limits["spending-limit"] === "number" &&
-    limits["spending-limit"] > 0
-  ) {
+  if (typeof limits["spending-limit"] === "number" && limits["spending-limit"] > 0) {
     items.push({
       key: "spending",
       title: t("apikey_lookup.quota_total_spending"),
@@ -77,13 +80,15 @@ export function buildQuotaKpiItems(
 export function QuotaLimitKpiCards({
   t,
   limits,
+  quotaScopes,
   renderValue,
 }: {
   t: (key: string, options?: Record<string, unknown>) => string;
   limits: PublicUsageLimits | null | undefined;
+  quotaScopes?: PublicQuotaScope[] | null;
   renderValue: (value: ReactNode) => ReactNode;
 }) {
-  const items = buildQuotaKpiItems(t, limits);
+  const items = buildQuotaKpiItems(t, limits, quotaScopes);
   if (items.length === 0) return null;
 
   return (
@@ -94,11 +99,7 @@ export function QuotaLimitKpiCards({
         const display = `${usedText} / ${limitText}`;
         const sizeClass = kpiValueSizeClass(display);
         return (
-          <div
-            key={item.key}
-            className="min-w-0"
-            data-testid={`api-key-lookup-quota-${item.key}`}
-          >
+          <div key={item.key} className="min-w-0" data-testid={`api-key-lookup-quota-${item.key}`}>
             <KpiCard
               title={item.title}
               icon={item.icon}
@@ -107,9 +108,7 @@ export function QuotaLimitKpiCards({
               value={renderValue(
                 <span className="block whitespace-nowrap tabular-nums leading-tight">
                   {usedText}
-                  <span className="mx-1 font-normal text-slate-400 dark:text-white/40">
-                    /
-                  </span>
+                  <span className="mx-1 font-normal text-slate-400 dark:text-white/40">/</span>
                   {limitText}
                 </span>,
               )}

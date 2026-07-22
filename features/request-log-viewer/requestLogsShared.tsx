@@ -645,7 +645,7 @@ export function buildRequestLogsColumns(
   t: (key: string) => string,
   onContentClick?: (logId: number, tab: "input" | "output") => void,
   onErrorClick?: (logId: number, model: string) => void,
-  options: { identityColumn?: "user" | "key"; hideChannel?: boolean } = {},
+  options: { identityColumn?: "user" | "key" | "none"; hideChannel?: boolean } = {},
 ): RequestLogsTableColumn<RequestLogsRow>[] {
   const apiLabel = t("request_logs.auth_type_api");
   const oauthLabel = t("request_logs.auth_type_oauth");
@@ -969,7 +969,9 @@ export function buildRequestLogsColumns(
         ),
     },
   );
-  return columns;
+  return identityColumn === "none"
+    ? columns.filter((column) => column.key !== "apiKeyName")
+    : columns;
 }
 
 export function RequestLogsPaginationBar({

@@ -45,8 +45,17 @@ export function ApiKeyResetHistoryModal({
       key: "reset_at",
       label: t("api_keys_page.reset_history_col_time"),
       width: "w-[180px] min-w-[160px]",
-      cellClassName: "whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
+      cellClassName:
+        "whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
       render: (row) => formatResetAt(row.reset_at),
+    },
+    {
+      key: "day_key",
+      label: t("api_keys_page.reset_history_col_day"),
+      width: "w-[130px] min-w-[120px]",
+      cellClassName:
+        "whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
+      render: (row) => row.day_key || "—",
     },
     {
       key: "actor",
@@ -59,15 +68,26 @@ export function ApiKeyResetHistoryModal({
       key: "effective_used_before",
       label: t("api_keys_page.reset_history_col_cleared"),
       width: "w-[140px] min-w-[120px]",
-      cellClassName: "whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
-      render: (row) => formatApiKeySpendingAmount(row.effective_used_before ?? 0),
+      cellClassName:
+        "whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
+      render: (row) =>
+        formatApiKeySpendingAmount(row.effective_used_before ?? 0),
     },
     {
       key: "raw_today_cost",
       label: t("api_keys_page.reset_history_col_raw_today"),
       width: "w-[160px] min-w-[140px]",
-      cellClassName: "whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
+      cellClassName:
+        "whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
       render: (row) => formatApiKeySpendingAmount(row.raw_today_cost ?? 0),
+    },
+    {
+      key: "cost_baseline",
+      label: t("api_keys_page.reset_history_col_baseline"),
+      width: "w-[150px] min-w-[130px]",
+      cellClassName:
+        "whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
+      render: (row) => formatApiKeySpendingAmount(row.cost_baseline ?? 0),
     },
   ];
 
@@ -77,7 +97,7 @@ export function ApiKeyResetHistoryModal({
       onClose={onClose}
       title={t("api_keys_page.reset_history_title", { name: keyName })}
       description={t("api_keys_page.reset_history_desc", { key: maskedKey })}
-      maxWidth="max-w-4xl"
+      maxWidth="max-w-5xl"
       bodyHeightClassName="max-h-[70vh]"
     >
       <DataTable
@@ -88,7 +108,7 @@ export function ApiKeyResetHistoryModal({
         rowKey={(row) => String(row.id)}
         height="h-[360px]"
         minHeight="min-h-[200px]"
-        minWidth="min-w-[640px]"
+        minWidth="min-w-[940px]"
       />
     </Modal>
   );

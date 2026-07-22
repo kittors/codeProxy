@@ -34,14 +34,20 @@ import { useProxyPoolChecks } from "@features/proxy-pool";
 import {
   canRenameAuthFileChannel,
   downloadTextAsFile,
+  formatPlanBadgeLabel,
+  getActiveCacheTenantId,
   matchesModelPattern,
   normalizeProviderKey,
   parseAdditionalQuotaWindowLabel,
   readAuthFileChannelName,
+  readAuthFilesDataCache,
   resolveClaudeOAuthHealth,
   resolveAuthFileDisplayName,
+  resolveAuthFileDisplayPlanType,
   resolveAuthFilePlanType,
   resolveFileType,
+  resolvePlanBadgeClass,
+  shouldShowAuthFilePlanBadge,
   type AuthFileModelItem,
   type AuthFileModelOwnerGroup,
   type ChannelEditorState,
@@ -315,24 +321,33 @@ export function AuthFileDetailModal({
     ? resolveAuthFileDisplayName(detailFile) || String(detailFile.name || "")
     : t("auth_files.view_auth_file");
   const claudeOAuthHealth = detailFile ? resolveClaudeOAuthHealth(detailFile) : null;
-  const detailPlanType = detailFile ? resolveAuthFilePlanType(detailFile, quotaState) : null;
-  const detailPlanLabel = useMemo(() => {
-    if (!detailPlanType) return "";
-    const normalized = detailPlanType.trim().toLowerCase();
-    if (!normalized) return "";
-    if (normalized === "plus" || normalized === "team" || normalized === "free") {
-      return t(`codex_quota.plan_${normalized}`);
-    }
-    if (normalized === "supergrok") return t("xai_quota.plan_supergrok");
-    if (
-      normalized === "supergrok-heavy" ||
-      normalized === "supergrok_heavy" ||
-      normalized === "supergrokheavy"
-    ) {
-      return t("xai_quota.plan_supergrok_heavy");
-    }
-    return normalized.charAt(0).toUpperCase() + normalized.slice(1);
-  }, [detailPlanType, t]);
+  // Same membership chip as cards/table: display tier + solid gradient, not soft amber title pill.
+  const detailBasePlanType = detailFile ? resolveAuthFilePlanType(detailFile, quotaState) : null;
+  const detailPlanType = useMemo(() => {
+    if (!detailFile) return null;
+    const cachedPlan =
+      readAuthFilesDataCache(getActiveCacheTenantId())?.displayPlanByFileName?.[detailFile.name] ??
+      null;
+    return resolveAuthFileDisplayPlanType(
+      detailFile,
+      quotaState,
+      {
+        cycleCostTotal: detailTrend?.cycle_cost_total ?? null,
+        weeklyQuotaUsedPercent: detailTrend?.weekly_quota_used_percent ?? null,
+      },
+      cachedPlan ?? detailBasePlanType,
+    );
+  }, [
+    detailBasePlanType,
+    detailFile,
+    detailTrend?.cycle_cost_total,
+    detailTrend?.weekly_quota_used_percent,
+    quotaState,
+  ]);
+  const detailPlanLabel = detailPlanType ? formatPlanBadgeLabel(detailPlanType) : "";
+  const showDetailPlanBadge = detailFile
+    ? shouldShowAuthFilePlanBadge(detailFile, detailBasePlanType)
+    : false;
   const excludedModels = excluded[providerKey] ?? [];
   const canRenameChannel = detailFile ? canRenameAuthFileChannel(detailFile) : false;
   const channelBaseline = detailFile ? readAuthFileChannelName(detailFile) : "";
@@ -1225,11 +1240,22 @@ export function AuthFileDetailModal({
       fiveHourQuotaUsedPercent,
     );
     const estimatedWeeklyQuota = estimateQuotaBudget(displayCycleCostTotal, weeklyQuotaUsedPercent);
+    // ponytail: hide zero noise; null/"--" is already non-zero display path
+    const showLast7DaysRequests = !isCodexDetail && detailTrend.request_total > 0;
+    const showCycleRequests = displayCycleRequestTotal > 0;
+    const showCycleCost = displayCycleCostTotal > 0;
+    const showFiveHourQuota = isCodexDetail && estimatedFiveHourQuota > 0;
+    const showWeeklyQuota = showPredictedWeeklyQuota && estimatedWeeklyQuota > 0;
+    const showWeeklyUsed =
+      typeof weeklyQuotaUsedPercent === "number" &&
+      Number.isFinite(weeklyQuotaUsedPercent) &&
+      weeklyQuotaUsedPercent > 0;
+    const showCycleStart = Boolean(detailTrend.cycle_start);
 
     return (
       <div className="space-y-4">
         <div className={summaryGridClassName}>
-          {!isCodexDetail ? (
+          {showLast7DaysRequests ? (
             <div className={SUMMARY_CARD_CLASS_NAME}>
               <p className={SUMMARY_LABEL_CLASS_NAME}>
                 {t("auth_files.trend_last_7_days_requests")}
@@ -1237,15 +1263,19 @@ export function AuthFileDetailModal({
               <p className={SUMMARY_VALUE_CLASS_NAME}>{formatCount(detailTrend.request_total)}</p>
             </div>
           ) : null}
-          <div className={SUMMARY_CARD_CLASS_NAME}>
-            <p className={SUMMARY_LABEL_CLASS_NAME}>{t("auth_files.trend_current_weekly_cycle")}</p>
-            <p className={SUMMARY_VALUE_CLASS_NAME}>{formatCount(displayCycleRequestTotal)}</p>
-          </div>
-          <div className={SUMMARY_CARD_CLASS_NAME}>
-            <p className={SUMMARY_LABEL_CLASS_NAME}>{t("auth_files.trend_current_cycle_cost")}</p>
-            <p className={SUMMARY_VALUE_CLASS_NAME}>{formatCurrency(displayCycleCostTotal)}</p>
-          </div>
-          {isCodexDetail ? (
+          {showCycleRequests ? (
+            <div className={SUMMARY_CARD_CLASS_NAME}>
+              <p className={SUMMARY_LABEL_CLASS_NAME}>{t("auth_files.trend_current_weekly_cycle")}</p>
+              <p className={SUMMARY_VALUE_CLASS_NAME}>{formatCount(displayCycleRequestTotal)}</p>
+            </div>
+          ) : null}
+          {showCycleCost ? (
+            <div className={SUMMARY_CARD_CLASS_NAME}>
+              <p className={SUMMARY_LABEL_CLASS_NAME}>{t("auth_files.trend_current_cycle_cost")}</p>
+              <p className={SUMMARY_VALUE_CLASS_NAME}>{formatCurrency(displayCycleCostTotal)}</p>
+            </div>
+          ) : null}
+          {showFiveHourQuota ? (
             <div className={SUMMARY_CARD_CLASS_NAME}>
               <p className={SUMMARY_LABEL_CLASS_NAME}>
                 {t("auth_files.trend_predicted_5h_window_quota")}
@@ -1253,7 +1283,7 @@ export function AuthFileDetailModal({
               <p className={SUMMARY_VALUE_CLASS_NAME}>{formatCurrency(estimatedFiveHourQuota)}</p>
             </div>
           ) : null}
-          {showPredictedWeeklyQuota ? (
+          {showWeeklyQuota ? (
             <div className={SUMMARY_CARD_CLASS_NAME}>
               <p className={SUMMARY_LABEL_CLASS_NAME}>
                 {t("auth_files.trend_predicted_week_window_quota")}
@@ -1261,16 +1291,20 @@ export function AuthFileDetailModal({
               <p className={SUMMARY_VALUE_CLASS_NAME}>{formatCurrency(estimatedWeeklyQuota)}</p>
             </div>
           ) : null}
-          <div className={SUMMARY_CARD_CLASS_NAME}>
-            <p className={SUMMARY_LABEL_CLASS_NAME}>{t("auth_files.trend_weekly_quota_used")}</p>
-            <p className={SUMMARY_VALUE_CLASS_NAME}>{weeklyQuotaUsed}</p>
-          </div>
-          <div className={SUMMARY_CARD_CLASS_NAME}>
-            <p className={SUMMARY_LABEL_CLASS_NAME}>{t("auth_files.trend_cycle_start")}</p>
-            <p className="mt-2 truncate text-sm font-semibold text-slate-800 dark:text-white/85">
-              {cycleStart}
-            </p>
-          </div>
+          {showWeeklyUsed ? (
+            <div className={SUMMARY_CARD_CLASS_NAME}>
+              <p className={SUMMARY_LABEL_CLASS_NAME}>{t("auth_files.trend_weekly_quota_used")}</p>
+              <p className={SUMMARY_VALUE_CLASS_NAME}>{weeklyQuotaUsed}</p>
+            </div>
+          ) : null}
+          {showCycleStart ? (
+            <div className={SUMMARY_CARD_CLASS_NAME}>
+              <p className={SUMMARY_LABEL_CLASS_NAME}>{t("auth_files.trend_cycle_start")}</p>
+              <p className="mt-2 truncate text-sm font-semibold text-slate-800 dark:text-white/85">
+                {cycleStart}
+              </p>
+            </div>
+          ) : null}
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1314,8 +1348,14 @@ export function AuthFileDetailModal({
       open={open}
       title={detailTitle}
       titleAccessory={
-        detailPlanLabel ? (
-          <span className="inline-flex shrink-0 items-center rounded-full bg-amber-50 px-2 py-0.5 text-2xs font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-200">
+        showDetailPlanBadge && detailPlanLabel ? (
+          <span
+            data-testid="auth-file-plan-badge"
+            className={[
+              "inline-flex shrink-0 items-center rounded-md px-2 py-0.5 text-2xs font-bold tracking-wide",
+              resolvePlanBadgeClass(detailPlanType),
+            ].join(" ")}
+          >
             {detailPlanLabel}
           </span>
         ) : undefined

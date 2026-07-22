@@ -1,4 +1,9 @@
 import { apiClient } from "../client/client";
+import type {
+  PeriodSpendingItem,
+  PeriodSpendingLimits,
+  PeriodSpendingLimitsPatch,
+} from "./period-spending";
 
 export interface ApiKeyEntry {
   id?: string;
@@ -10,10 +15,13 @@ export interface ApiKeyEntry {
   "spending-limit"?: number;
   /** Project-timezone daily USD cap; 0 = unlimited. Key-owned, independent of permission profiles. */
   "daily-spending-limit"?: number;
+  "period-spending-limits"?: PeriodSpendingLimits | PeriodSpendingLimitsPatch;
+  "period-spending"?: PeriodSpendingItem[];
   /** Effective today cost after same-day reset baseline (management list). */
   "daily-spending-used"?: number;
   /** Remaining daily budget; null/undefined = unlimited. */
   "daily-spending-remaining"?: number | null;
+  "lifetime-spending-used"?: number;
   /** How many times daily spending was manually reset (management list). */
   "daily-spending-reset-count"?: number;
   "concurrency-limit"?: number;
@@ -107,11 +115,7 @@ export const apiKeyEntriesApi = {
       payload,
     ),
 
-  listDailySpendingResetHistory: (params: {
-    id?: string;
-    key?: string;
-    limit?: number;
-  }) => {
+  listDailySpendingResetHistory: (params: { id?: string; key?: string; limit?: number }) => {
     const query = new URLSearchParams();
     if (params.id) query.set("id", params.id);
     else if (params.key) query.set("key", params.key);

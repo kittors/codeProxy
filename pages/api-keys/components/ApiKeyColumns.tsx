@@ -13,6 +13,8 @@ import {
   Upload,
 } from "lucide-react";
 import type { ApiKeyEntry } from "@code-proxy/api-client/endpoints/api-keys";
+import { normalizePeriodSpendingLimits } from "@code-proxy/api-client";
+import { PeriodSpendingCell } from "@features/period-spending";
 import {
   formatApiKeyDate,
   formatApiKeyLimit,
@@ -21,7 +23,13 @@ import {
   maskApiKey,
   VendorIcon,
 } from "../apiKeyPageUtils";
-import { Checkbox, HoverTooltip, OverflowTooltip } from "@code-proxy/ui";
+import {
+  Checkbox,
+  HoverTooltip,
+  OverflowTooltip,
+  TABLE_ROW_ACTIONS_COLUMN,
+  TableRowActions,
+} from "@code-proxy/ui";
 import type { DataTableColumn } from "@code-proxy/ui";
 
 type CreateApiKeyColumnsOptions = {
@@ -172,7 +180,7 @@ export const createApiKeyColumns = ({
               )}
             </span>
           </OverflowTooltip>
-          {!accountScoped && row.is_default ? (
+          {row.is_default ? (
             <span className="shrink-0 rounded-full bg-emerald-50 px-1.5 py-0.5 text-2xs font-medium text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
               default
             </span>
@@ -181,45 +189,72 @@ export const createApiKeyColumns = ({
       ),
     },
     {
-      key: "dailySpending",
-      label: t("api_keys_page.col_daily_spending"),
-      width: "w-[180px] min-w-[180px]",
-      cellClassName: "whitespace-nowrap text-slate-700 dark:text-white/70",
+      key: "quota",
+      label: t("quota.period_spending_column"),
+      width: "w-[360px] min-w-[280px]",
       headerRender: () => (
         <HoverTooltip
-          content={t("api_keys_page.daily_spending_help")}
+          content={t("api_keys_page.quota_help")}
           className="inline-flex items-center gap-1"
         >
-          <span>{t("api_keys_page.col_daily_spending")}</span>
+          <span>{t("quota.period_spending_column")}</span>
           <Info size={12} className="text-slate-400 dark:text-white/40" />
         </HoverTooltip>
       ),
       render: (row) => {
-        const used = formatApiKeySpendingAmount(row["daily-spending-used"] ?? 0);
-        const limit = row["daily-spending-limit"] ?? 0;
-        if (!(limit > 0)) {
-          return (
-            <span className="inline-flex items-center gap-1 tabular-nums">
-              {used}
-              <span className="text-slate-400 dark:text-white/40">/</span>
-              <span className="inline-flex items-center gap-1">
-                <InfinityIcon size={14} className="text-green-500" /> {t("api_keys_page.unlimited")}
-              </span>
-            </span>
-          );
-        }
-        return (
-          <span className="tabular-nums">
-            {used}
-            <span className="text-slate-400 dark:text-white/40"> / </span>
-            {formatApiKeySpendingAmount(limit)}
-          </span>
+        const limits = normalizePeriodSpendingLimits(
+          row["period-spending-limits"],
+          row["daily-spending-limit"],
         );
+        const fallbackItems =
+          limits.day > 0
+            ? [
+                {
+                  period: "day" as const,
+                  limit: limits.day,
+                  used: row["daily-spending-used"] ?? 0,
+                  remaining: Math.max(limits.day - (row["daily-spending-used"] ?? 0), 0),
+                },
+              ]
+            : [];
+        return <PeriodSpendingCell t={t} items={row["period-spending"] ?? fallbackItems} />;
       },
     },
     {
+      key: "dailySpending",
+      label: t("quota.daily_spending_column"),
+      width: "w-[130px] min-w-[130px]",
+      cellClassName: "whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
+      headerRender: () => (
+        <HoverTooltip
+          content={t("api_keys_page.daily_spending_fact_help")}
+          className="inline-flex items-center gap-1"
+        >
+          <span>{t("quota.daily_spending_column")}</span>
+          <Info size={12} className="text-slate-400 dark:text-white/40" />
+        </HoverTooltip>
+      ),
+      render: (row) => formatApiKeySpendingAmount(row["daily-spending-used"]),
+    },
+    {
+      key: "lifetimeSpending",
+      label: t("quota.lifetime_spending_column"),
+      width: "w-[140px] min-w-[140px]",
+      cellClassName: "whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
+      headerRender: () => (
+        <HoverTooltip
+          content={t("api_keys_page.lifetime_spending_help")}
+          className="inline-flex items-center gap-1"
+        >
+          <span>{t("quota.lifetime_spending_column")}</span>
+          <Info size={12} className="text-slate-400 dark:text-white/40" />
+        </HoverTooltip>
+      ),
+      render: (row) => formatApiKeySpendingAmount(row["lifetime-spending-used"]),
+    },
+    {
       key: "dailySpendingResetCount",
-      label: t("api_keys_page.col_reset_count"),
+      label: t("quota.total_resets"),
       width: "w-[110px] min-w-[100px]",
       cellClassName: "whitespace-nowrap text-slate-700 dark:text-white/70",
       headerRender: () => (
@@ -227,7 +262,7 @@ export const createApiKeyColumns = ({
           content={t("api_keys_page.reset_count_help")}
           className="inline-flex items-center gap-1"
         >
-          <span>{t("api_keys_page.col_reset_count")}</span>
+          <span>{t("quota.total_resets")}</span>
           <Info size={12} className="text-slate-400 dark:text-white/40" />
         </HoverTooltip>
       ),
@@ -462,8 +497,7 @@ export const createApiKeyColumns = ({
     {
       key: "actions",
       label: t("api_keys_page.col_actions"),
-      // Account-scoped keys expose credential rotation instead of per-key usage/reset.
-      width: accountScoped ? "w-[220px] min-w-[220px]" : "w-[256px] min-w-[256px]",
+      ...TABLE_ROW_ACTIONS_COLUMN,
       lockOrder: "end",
       headerClassName: stickyActionsHeaderClass,
       cellClassName: stickyActionsCellClass,
@@ -484,98 +518,78 @@ export const createApiKeyColumns = ({
           : t("api_keys_page.reset_today_spending_disabled");
 
         return (
-          <div className="flex items-center justify-center gap-1.5">
-            <HoverTooltip content={toggleLabel}>
-              <button
-                type="button"
-                onClick={() => onToggleDisable(idx)}
-                className={`rounded-lg p-1.5 transition-colors ${
-                  row.disabled
-                    ? "text-slate-400 hover:bg-red-50 hover:text-red-500 dark:text-white/30 dark:hover:bg-red-900/20 dark:hover:text-red-400"
-                    : "text-emerald-500 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-900/20"
-                }`}
-                aria-label={toggleLabel}
-              >
-                <Power size={15} />
-              </button>
-            </HoverTooltip>
-            {!accountScoped ? (
-              <HoverTooltip content={viewUsageLabel}>
-                <button
-                  type="button"
-                  onClick={() => onViewUsage(row)}
-                  className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-blue-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-blue-400"
-                  aria-label={viewUsageLabel}
-                >
-                  <BarChart3 size={15} />
-                </button>
-              </HoverTooltip>
-            ) : null}
-            <HoverTooltip content={copyKeyLabel}>
-              <button
-                type="button"
-                onClick={() => onCopy(row.key)}
-                className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-indigo-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-indigo-400"
-                aria-label={copyKeyLabel}
-              >
-                <Copy size={15} />
-              </button>
-            </HoverTooltip>
-            <HoverTooltip content={importLabel}>
-              <button
-                type="button"
-                onClick={() => onImportToCcSwitch(row)}
-                className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-cyan-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-cyan-400"
-                aria-label={importLabel}
-              >
-                <Upload size={15} />
-              </button>
-            </HoverTooltip>
-            {accountScoped ? (
-              <HoverTooltip content={rotateKeyLabel}>
-                <button
-                  type="button"
-                  onClick={() => onRotate(idx)}
-                  className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-orange-50 hover:text-orange-600 dark:text-white/50 dark:hover:bg-orange-900/20 dark:hover:text-orange-400"
-                  aria-label={rotateKeyLabel}
-                >
-                  <RotateCcw size={15} />
-                </button>
-              </HoverTooltip>
-            ) : (
-              <HoverTooltip content={resetLabel}>
-                <button
-                  type="button"
-                  onClick={() => onResetDailySpending(idx)}
-                  disabled={!hasDailyLimit || isResetting}
-                  className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-orange-600 disabled:cursor-not-allowed disabled:opacity-40 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-orange-400"
-                  aria-label={resetLabel}
-                >
-                  <RotateCcw size={15} className={isResetting ? "animate-spin" : ""} />
-                </button>
-              </HoverTooltip>
-            )}
-            <HoverTooltip content={editLabel}>
-              <button
-                type="button"
-                onClick={() => onEdit(idx)}
-                className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-amber-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-amber-400"
-                aria-label={editLabel}
-              >
-                <Pencil size={15} />
-              </button>
-            </HoverTooltip>
-            <HoverTooltip content={deleteLabel}>
-              <button
-                type="button"
-                onClick={() => onDelete(idx)}
-                className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:text-white/50 dark:hover:bg-red-900/20 dark:hover:text-red-400"
-                aria-label={deleteLabel}
-              >
-                <Trash2 size={15} />
-              </button>
-            </HoverTooltip>
-          </div>
+          <TableRowActions
+            moreLabel={t("common.more_actions")}
+            actions={[
+              {
+                key: "toggle",
+                label: toggleLabel,
+                icon: <Power size={15} />,
+                className: row.disabled
+                  ? "text-slate-400 hover:bg-red-50 hover:text-red-500 dark:text-white/30 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+                  : "text-emerald-500 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-900/20",
+                onClick: () => onToggleDisable(idx),
+              },
+              {
+                key: "usage",
+                label: viewUsageLabel,
+                icon: <BarChart3 size={15} />,
+                visible: !accountScoped,
+                className:
+                  "text-slate-500 hover:bg-slate-100 hover:text-blue-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-blue-400",
+                onClick: () => onViewUsage(row),
+              },
+              {
+                key: "copy",
+                label: copyKeyLabel,
+                icon: <Copy size={15} />,
+                className:
+                  "text-slate-500 hover:bg-slate-100 hover:text-indigo-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-indigo-400",
+                onClick: () => onCopy(row.key),
+              },
+              {
+                key: "import",
+                label: importLabel,
+                icon: <Upload size={15} />,
+                className:
+                  "text-slate-500 hover:bg-slate-100 hover:text-cyan-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-cyan-400",
+                onClick: () => onImportToCcSwitch(row),
+              },
+              {
+                key: "rotate",
+                label: rotateKeyLabel,
+                icon: <RotateCcw size={15} />,
+                visible: accountScoped,
+                className:
+                  "text-slate-500 hover:bg-orange-50 hover:text-orange-600 dark:text-white/50 dark:hover:bg-orange-900/20 dark:hover:text-orange-400",
+                onClick: () => onRotate(idx),
+              },
+              {
+                key: "reset-spending",
+                label: resetLabel,
+                icon: <RotateCcw size={15} className={isResetting ? "animate-spin" : ""} />,
+                disabled: !hasDailyLimit || isResetting,
+                className:
+                  "text-slate-500 hover:bg-slate-100 hover:text-orange-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-orange-400",
+                onClick: () => onResetDailySpending(idx),
+              },
+              {
+                key: "edit",
+                label: editLabel,
+                icon: <Pencil size={15} />,
+                className:
+                  "text-slate-500 hover:bg-slate-100 hover:text-amber-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-amber-400",
+                onClick: () => onEdit(idx),
+              },
+              {
+                key: "delete",
+                label: deleteLabel,
+                icon: <Trash2 size={15} />,
+                destructive: true,
+                onClick: () => onDelete(idx),
+              },
+            ]}
+          />
         );
       },
     },
@@ -584,13 +598,11 @@ export const createApiKeyColumns = ({
   if (!accountScoped) {
     return columns;
   }
-  // Account-owned keys: quota lives on the end-user; only show credential columns.
+  // Owned keys keep their own period quota and spending facts; account-managed fields stay hidden.
   const hide = new Set([
     "dailyLimit",
     "totalQuota",
     "spendingLimit",
-    "dailySpending",
-    "dailySpendingResetCount",
     "rpmLimit",
     "tpmLimit",
     "allowedModels",

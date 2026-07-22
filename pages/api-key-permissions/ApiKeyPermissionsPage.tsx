@@ -1,17 +1,22 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Pencil, Plus, RefreshCw, ShieldCheck, Trash2 } from "lucide-react";
-import {
-  endUsersApi,
-  type EndUser,
-  type EndUserUpdateBody,
-} from "@code-proxy/api-client/endpoints/end-users";
+import { endUsersApi, type EndUser } from "@code-proxy/api-client/endpoints/end-users";
 import {
   apiKeyPermissionProfilesApi,
   makePermissionProfileId,
   type ApiKeyPermissionProfile,
 } from "@code-proxy/api-client/endpoints/api-key-permission-profiles";
 import { RestrictionMultiSelect } from "@features/api-key-restrictions";
+import {
+  PeriodSpendingFields,
+  PeriodSpendingLimitsCell,
+  formatQuotaValidationError,
+  emptyPeriodSpendingDraft,
+  limitsToPeriodSpendingDraft,
+  periodSpendingDraftToLimits,
+  type PeriodSpendingDraft,
+} from "@features/period-spending";
 import { useApiKeyPermissionOptions } from "@features/api-key-restrictions";
 import { Button } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
@@ -21,14 +26,14 @@ import { TextInput } from "@code-proxy/ui";
 import { Modal } from "@code-proxy/ui";
 import { ToggleSwitch } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
-import { DataTable, type DataTableColumn } from "@code-proxy/ui";
+import { DataTable, TABLE_ROW_ACTIONS_COLUMN, type DataTableColumn } from "@code-proxy/ui";
 
 type ProfileDraft = {
   id: string;
   name: string;
   dailyLimit: string;
   totalQuota: string;
-  dailySpendingLimit: string;
+  periodSpending: PeriodSpendingDraft;
   concurrencyLimit: string;
   rpmLimit: string;
   tpmLimit: string;
@@ -44,7 +49,7 @@ const emptyDraft = (): ProfileDraft => ({
   name: "",
   dailyLimit: "",
   totalQuota: "",
-  dailySpendingLimit: "",
+  periodSpending: emptyPeriodSpendingDraft(),
   concurrencyLimit: "",
   rpmLimit: "",
   tpmLimit: "",
@@ -62,28 +67,12 @@ const limitFromText = (value: string) => {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 };
 
-const spendingLimitFromText = (value: string) => {
-  // Spending limits are whole USD dollars only.
-  const parsed = Number.parseInt(value.trim(), 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
-};
-
-const formatSpendingLimit = (value: number, unlimited: string) =>
-  value > 0
-    ? new Intl.NumberFormat("en-US", {
-        currency: "USD",
-        maximumFractionDigits: 2,
-        minimumFractionDigits: 2,
-        style: "currency",
-      }).format(value)
-    : unlimited;
-
 const readDraft = (profile: ApiKeyPermissionProfile): ProfileDraft => ({
   id: profile.id,
   name: profile.name,
   dailyLimit: limitToText(profile["daily-limit"]),
   totalQuota: limitToText(profile["total-quota"]),
-  dailySpendingLimit: limitToText(profile["daily-spending-limit"]),
+  periodSpending: limitsToPeriodSpendingDraft(profile["period-spending-limits"]),
   concurrencyLimit: limitToText(profile["concurrency-limit"]),
   rpmLimit: limitToText(profile["rpm-limit"]),
   tpmLimit: limitToText(profile["tpm-limit"]),
@@ -99,7 +88,8 @@ const draftToProfile = (draft: ProfileDraft): ApiKeyPermissionProfile => ({
   name: draft.name.trim(),
   "daily-limit": limitFromText(draft.dailyLimit),
   "total-quota": limitFromText(draft.totalQuota),
-  "daily-spending-limit": spendingLimitFromText(draft.dailySpendingLimit),
+  "daily-spending-limit": periodSpendingDraftToLimits(draft.periodSpending).day,
+  "period-spending-limits": periodSpendingDraftToLimits(draft.periodSpending),
   "concurrency-limit": limitFromText(draft.concurrencyLimit),
   "rpm-limit": limitFromText(draft.rpmLimit),
   "tpm-limit": limitFromText(draft.tpmLimit),
@@ -109,21 +99,18 @@ const draftToProfile = (draft: ProfileDraft): ApiKeyPermissionProfile => ({
   "system-prompt": draft.systemPrompt.trim(),
 });
 
-const formatLimit = (value: number, unlimited: string) =>
-  value > 0 ? value.toLocaleString() : unlimited;
-
 const formatRestrictionCount = (count: number, unlimited: string) =>
   count > 0 ? count.toLocaleString() : unlimited;
 
 const boundProfileCount = (profile: ApiKeyPermissionProfile, accounts: EndUser[]) =>
   accounts.filter((account) => account["permission-profile-id"] === profile.id).length;
 
-const profileToAccountUpdate = (profile: ApiKeyPermissionProfile): EndUserUpdateBody => ({
+const profileToAccountUpdate = (profile: ApiKeyPermissionProfile) => ({
   "permission-profile-id": profile.id,
   "daily-limit": profile["daily-limit"],
   "total-quota": profile["total-quota"],
-  "spending-limit": 0,
-  "daily-spending-limit": profile["daily-spending-limit"],
+  "daily-spending-limit": profile["period-spending-limits"].day,
+  "period-spending-limits": { ...profile["period-spending-limits"] },
   "concurrency-limit": profile["concurrency-limit"],
   "rpm-limit": profile["rpm-limit"],
   "tpm-limit": profile["tpm-limit"],
@@ -245,7 +232,9 @@ export function ApiKeyPermissionsPage() {
       const nextProfiles = isEdit
         ? profiles.map((item) => (item.id === profile.id ? profile : item))
         : [...profiles, profile];
-      await apiKeyPermissionProfilesApi.replace(nextProfiles, { syncAccounts: true });
+      const result = await apiKeyPermissionProfilesApi.replace(nextProfiles, {
+        syncAccounts: true,
+      });
 
       let nextAccounts = accounts;
       if (isEdit) {
@@ -258,11 +247,20 @@ export function ApiKeyPermissionsPage() {
       setProfiles(nextProfiles);
       setAccounts(nextAccounts);
       setModalOpen(false);
-      notify({ type: "success", message: t("api_key_permissions_page.profile_saved") });
+      notify({
+        type: "success",
+        message:
+          result.appliedCount > 0 || result.cappedKeys.length > 0
+            ? t("api_key_permissions_page.saved_with_sync", {
+                accounts: result.appliedCount,
+                keys: result.cappedKeys.length,
+              })
+            : t("api_key_permissions_page.profile_saved"),
+      });
     } catch (err: unknown) {
       notify({
         type: "error",
-        message: err instanceof Error ? err.message : t("api_key_permissions_page.save_failed"),
+        message: formatQuotaValidationError(err, t),
       });
     } finally {
       setSaving(false);
@@ -306,35 +304,10 @@ export function ApiKeyPermissionsPage() {
       },
       {
         key: "limits",
-        label: t("api_key_permissions_page.col_limits"),
-        width: "w-[220px] min-w-[220px]",
+        label: t("quota.period_spending_column"),
+        width: "w-[360px] min-w-[300px]",
         render: (profile) => (
-          <div className="space-y-1 text-xs text-slate-600 dark:text-white/60">
-            <div>
-              {t("api_key_permissions_page.limit_daily", {
-                value: formatLimit(profile["daily-limit"], t("api_keys_page.unlimited")),
-              })}
-            </div>
-            <div>
-              {t("api_key_permissions_page.limit_total", {
-                value: formatLimit(profile["total-quota"], t("api_keys_page.unlimited")),
-              })}
-            </div>
-            <div>
-              {t("api_key_permissions_page.limit_daily_spending", {
-                value: formatSpendingLimit(
-                  profile["daily-spending-limit"],
-                  t("api_keys_page.unlimited"),
-                ),
-              })}
-            </div>
-            <div>
-              {t("api_key_permissions_page.limit_rpm_tpm", {
-                rpm: formatLimit(profile["rpm-limit"], t("api_keys_page.unlimited")),
-                tpm: formatLimit(profile["tpm-limit"], t("api_keys_page.unlimited")),
-              })}
-            </div>
-          </div>
+          <PeriodSpendingLimitsCell t={t} limits={profile["period-spending-limits"]} />
         ),
       },
       {
@@ -383,7 +356,7 @@ export function ApiKeyPermissionsPage() {
       {
         key: "actions",
         label: t("api_key_permissions_page.col_actions"),
-        width: "w-[120px] min-w-[120px]",
+        ...TABLE_ROW_ACTIONS_COLUMN,
         render: (profile) => (
           <div className="flex items-center gap-1.5">
             <button
@@ -496,40 +469,94 @@ export function ApiKeyPermissionsPage() {
             />
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-3">
-            {(
-              [
-                ["dailyLimit", "form_daily_limit", "1"],
-                ["totalQuota", "form_total_quota", "1"],
-                ["dailySpendingLimit", "form_daily_spending_limit", "1"],
-                ["concurrencyLimit", "form_concurrency_limit", "1"],
-                ["rpmLimit", "form_rpm_limit", "1"],
-                ["tpmLimit", "form_tpm_limit", "1"],
-              ] as const
-            ).map(([key, labelKey, step]) => (
-              <div key={key}>
-                <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-                  {t(`api_key_permissions_page.${labelKey}`)}
-                </label>
-                <TextInput
-                  type="number"
-                  min={0}
-                  step={step}
-                  inputMode="numeric"
-                  value={draft[key]}
-                  aria-label={t(`api_key_permissions_page.${labelKey}`)}
-                  placeholder={t("api_key_permissions_page.form_unlimited_hint")}
-                  onChange={(event) => {
-                    const raw = event.target.value;
-                    // Keep empty for unlimited; otherwise only whole numbers.
-                    if (raw === "" || /^\d+$/.test(raw)) {
-                      setDraft((prev) => ({ ...prev, [key]: raw }));
-                    }
-                  }}
-                />
-              </div>
-            ))}
-          </div>
+          <section className="rounded-2xl border border-indigo-200/80 bg-indigo-50/45 p-4 dark:border-indigo-500/20 dark:bg-indigo-500/5">
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+              {t("api_key_permissions_page.quota_section")}
+            </h3>
+            <p className="mb-3 mt-1 text-xs text-slate-500 dark:text-white/50">
+              {t("api_key_permissions_page.quota_section_desc")} {t("quota.fields_hint")}
+            </p>
+            <PeriodSpendingFields
+              t={t}
+              value={draft.periodSpending}
+              onChange={(periodSpending) => setDraft((prev) => ({ ...prev, periodSpending }))}
+              idPrefix="permission-profile-period"
+            />
+          </section>
+
+          <section className="rounded-2xl border border-slate-200 p-4 dark:border-white/10">
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+              {t("api_key_permissions_page.request_limits_section")}
+            </h3>
+            <p className="mb-3 mt-1 text-xs text-slate-500 dark:text-white/50">
+              {t("api_key_permissions_page.request_limits_desc")}
+            </p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {(
+                [
+                  ["dailyLimit", "form_daily_limit"],
+                  ["totalQuota", "form_total_quota"],
+                ] as const
+              ).map(([key, labelKey]) => (
+                <div key={key}>
+                  <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
+                    {t(`api_key_permissions_page.${labelKey}`)}
+                  </label>
+                  <TextInput
+                    type="number"
+                    min={0}
+                    step={1}
+                    inputMode="numeric"
+                    value={draft[key]}
+                    aria-label={t(`api_key_permissions_page.${labelKey}`)}
+                    placeholder={t("api_key_permissions_page.form_unlimited_hint")}
+                    onChange={(event) => {
+                      const raw = event.target.value;
+                      if (raw === "" || /^\d+$/.test(raw)) {
+                        setDraft((prev) => ({ ...prev, [key]: raw }));
+                      }
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="rounded-2xl border border-slate-200 p-4 dark:border-white/10">
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+              {t("api_key_permissions_page.realtime_limits_section")}
+            </h3>
+            <div className="mt-3 grid gap-4 sm:grid-cols-3">
+              {(
+                [
+                  ["concurrencyLimit", "form_concurrency_limit"],
+                  ["rpmLimit", "form_rpm_limit"],
+                  ["tpmLimit", "form_tpm_limit"],
+                ] as const
+              ).map(([key, labelKey]) => (
+                <div key={key}>
+                  <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
+                    {t(`api_key_permissions_page.${labelKey}`)}
+                  </label>
+                  <TextInput
+                    type="number"
+                    min={0}
+                    step={1}
+                    inputMode="numeric"
+                    value={draft[key]}
+                    aria-label={t(`api_key_permissions_page.${labelKey}`)}
+                    placeholder={t("api_key_permissions_page.form_unlimited_hint")}
+                    onChange={(event) => {
+                      const raw = event.target.value;
+                      if (raw === "" || /^\d+$/.test(raw)) {
+                        setDraft((prev) => ({ ...prev, [key]: raw }));
+                      }
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+          </section>
 
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">

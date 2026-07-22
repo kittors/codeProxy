@@ -20,6 +20,7 @@ import { identityFingerprintRoute } from "./identity-fingerprint/route";
 import { imageGenerationRoute } from "./image-generation/route";
 import { ccswitchImportSettingsRoute } from "./ccswitch-import-settings/route";
 import { apiKeyLookupRoute } from "./api-key-lookup/route";
+import { apiKeyUsageRoute } from "./api-key-usage/route";
 import { tenantsRoute } from "./tenants/route";
 import { usersRoute } from "./users/route";
 import { rolesRoute } from "./roles/route";
@@ -71,6 +72,7 @@ export const pageRoutes: PageRoute[] = [
   imageGenerationRoute,
   ccswitchImportSettingsRoute,
   apiKeyLookupRoute,
+  apiKeyUsageRoute,
 ];
 
 const normalizePathname = (to: string) => to.split(/[?#]/, 1)[0] || "/";

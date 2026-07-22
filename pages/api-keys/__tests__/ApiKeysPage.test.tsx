@@ -62,24 +62,75 @@ const mocks = vi.hoisted(() => ({
     total: 0,
   })),
   apiKeysList: vi.fn(async (): Promise<string[]> => []),
-  endUserCreateKey: vi.fn(async (userId: string, name: string) => {
-    const entry = {
-      id: "owned-created",
-      key: "sk-owned-created-secret",
-      name,
-      end_user_id: userId,
-      disabled: false,
-      is_default: state.entries.length === 0,
-      "created-at": "2026-07-21T00:00:00Z",
-    };
-    state.entries.push(entry);
-    return { api_key: entry, plaintext_key: entry.key };
-  }),
-  endUserUpdateKeyName: vi.fn(async (userId: string, keyId: string, name: string) => {
-    const entry = state.entries.find((item) => item.id === keyId && item.end_user_id === userId);
-    if (entry) entry.name = name;
-    return entry;
-  }),
+  endUserListKeys: vi.fn(async (userId: string) => ({
+    items: state.entries
+      .filter((entry) => entry.end_user_id === userId)
+      .map((entry) => ({
+        id: entry.id,
+        tenant_id: "tenant-1",
+        end_user_id: userId,
+        key_masked: entry.key ? `${entry.key.slice(0, 5)}•••${entry.key.slice(-3)}` : "",
+        name: entry.name,
+        disabled: Boolean(entry.disabled),
+        is_default: Boolean(entry.is_default),
+        created_at: entry["created-at"],
+        "daily-spending-limit": entry["daily-spending-limit"] ?? 0,
+        "period-spending-limits": entry["period-spending-limits"] ?? {
+          "5h": 0,
+          day: 0,
+          week: 0,
+          month: 0,
+        },
+        "period-spending": entry["period-spending"] ?? [],
+        "daily-spending-used": entry["daily-spending-used"] ?? 0,
+        "lifetime-spending-used": entry["lifetime-spending-used"] ?? 0,
+        "daily-spending-reset-count": entry["daily-spending-reset-count"] ?? 0,
+      })),
+  })),
+  endUserCreateKey: vi.fn(
+    async (
+      userId: string,
+      body: { name?: string; "period-spending-limits"?: Record<string, number> },
+    ) => {
+      const entry = {
+        id: "owned-created",
+        key: "sk-owned-created-secret",
+        name: body.name ?? "",
+        end_user_id: userId,
+        disabled: false,
+        is_default: state.entries.length === 0,
+        "created-at": "2026-07-21T00:00:00Z",
+        "period-spending-limits": body["period-spending-limits"] ?? {
+          "5h": 0,
+          day: 0,
+          week: 0,
+          month: 0,
+        },
+      };
+      state.entries.push(entry);
+      return { api_key: entry, plaintext_key: entry.key };
+    },
+  ),
+  endUserUpdateKey: vi.fn(
+    async (
+      userId: string,
+      keyId: string,
+      body: { name?: string; "period-spending-limits"?: Record<string, number> },
+    ) => {
+      const entry = state.entries.find((item) => item.id === keyId && item.end_user_id === userId);
+      if (entry)
+        Object.assign(entry, {
+          name: body.name ?? entry.name,
+          "period-spending-limits":
+            body["period-spending-limits"] ?? entry["period-spending-limits"],
+          "daily-spending-limit":
+            body["period-spending-limits"]?.day ?? entry["daily-spending-limit"],
+        });
+      return entry;
+    },
+  ),
+  endUserResetKeyDailySpending: vi.fn(async () => ({ status: "ok" })),
+  endUserListKeyDailySpendingResetHistory: vi.fn(async () => ({ items: [], total: 0 })),
   endUserRotateKey: vi.fn(async (userId: string, keyId: string) => {
     const entry = state.entries.find((item) => item.id === keyId && item.end_user_id === userId);
     if (!entry) throw new Error("not found");
@@ -150,8 +201,11 @@ vi.mock("@code-proxy/api-client/endpoints/api-keys", () => ({
 
 vi.mock("@code-proxy/api-client/endpoints/end-users", () => ({
   endUsersApi: {
+    listKeys: mocks.endUserListKeys,
     createKey: mocks.endUserCreateKey,
-    updateKeyName: mocks.endUserUpdateKeyName,
+    updateKey: mocks.endUserUpdateKey,
+    resetKeyDailySpending: mocks.endUserResetKeyDailySpending,
+    listKeyDailySpendingResetHistory: mocks.endUserListKeyDailySpendingResetHistory,
     rotateKey: mocks.endUserRotateKey,
     deleteKey: mocks.endUserDeleteKey,
   },
@@ -295,6 +349,10 @@ vi.mock("@code-proxy/ui", async (importOriginal) => ({
   ),
 }));
 
+async function openMoreActions(index = 0) {
+  await userEvent.click(screen.getAllByRole("button", { name: "More actions" })[index]!);
+}
+
 describe("ApiKeysPage", () => {
   beforeEach(async () => {
     await i18n.changeLanguage("en");
@@ -316,7 +374,7 @@ describe("ApiKeysPage", () => {
     mocks.apiKeyEntriesDelete.mockClear();
     mocks.apiKeysList.mockClear();
     mocks.endUserCreateKey.mockClear();
-    mocks.endUserUpdateKeyName.mockClear();
+    mocks.endUserUpdateKey.mockClear();
     mocks.endUserRotateKey.mockClear();
     mocks.endUserDeleteKey.mockClear();
     mocks.fetchConfigYaml.mockClear();
@@ -353,7 +411,8 @@ describe("ApiKeysPage", () => {
     });
     expect(await screen.findByText("New Key")).toBeInTheDocument();
 
-    await userEvent.click(screen.getAllByRole("button", { name: "Edit" })[1]!);
+    await openMoreActions(1);
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Edit" }));
     const nameInput = screen.getAllByPlaceholderText(/team-a/i).at(-1)!;
     await userEvent.clear(nameInput);
     await userEvent.type(nameInput, "Renamed Key");
@@ -363,7 +422,8 @@ describe("ApiKeysPage", () => {
       expect(mocks.apiKeyEntriesUpdate).toHaveBeenCalled();
     });
 
-    await userEvent.click(screen.getAllByRole("button", { name: "Delete" })[1]!);
+    await openMoreActions(1);
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Delete" }));
     await userEvent.click(screen.getByRole("button", { name: /confirm delete/i }));
 
     await waitFor(() => {
@@ -416,7 +476,8 @@ describe("ApiKeysPage", () => {
 
     expect(await screen.findByText("Existing Key")).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: "Edit" }));
+    await userEvent.click(screen.getByRole("button", { name: "More actions" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Edit" }));
 
     const keyInput = screen.getByDisplayValue("sk-existing-1234567890");
     await userEvent.clear(keyInput);
@@ -448,6 +509,12 @@ describe("ApiKeysPage", () => {
         disabled: false,
         is_default: true,
         "created-at": "2026-07-21T00:00:00Z",
+        "daily-spending-limit": 100,
+        "period-spending-limits": { "5h": 50, day: 100, week: 300, month: 1000 },
+        "period-spending": [{ period: "day", limit: 100, used: 20, remaining: 80 }],
+        "daily-spending-used": 20,
+        "lifetime-spending-used": 300.12,
+        "daily-spending-reset-count": 2,
       },
     ];
 
@@ -455,14 +522,19 @@ describe("ApiKeysPage", () => {
       <MemoryRouter>
         <ThemeProvider>
           <ToastProvider>
-            <ApiKeysPage endUserId="end-user-1" embed />
+            <ApiKeysPage
+              endUserId="end-user-1"
+              accountPeriodSpendingLimits={{ "5h": 100, day: 300, week: 800, month: 4000 }}
+              embed
+            />
           </ToastProvider>
         </ThemeProvider>
       </MemoryRouter>,
     );
 
     expect(await screen.findByText("Owned Key")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Edit" }));
+    await userEvent.click(screen.getByRole("button", { name: "More actions" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Edit Key quota" }));
 
     const editDialog = await screen.findByRole("dialog");
     expect(
@@ -471,7 +543,8 @@ describe("ApiKeysPage", () => {
     expect(
       within(editDialog).queryByRole("button", { name: /refresh key/i }),
     ).not.toBeInTheDocument();
-    expect(editDialog).toHaveTextContent(/use the dedicated rotation action/i);
+    expect(editDialog).toHaveTextContent(/Key sub-quota/i);
+    expect(editDialog).toHaveTextContent(/Account limit \$300/i);
 
     const nameInput = within(editDialog).getByPlaceholderText(/team-a/i);
     await userEvent.clear(nameInput);
@@ -479,13 +552,18 @@ describe("ApiKeysPage", () => {
     await userEvent.click(within(editDialog).getByRole("button", { name: /save/i }));
 
     await waitFor(() => {
-      expect(mocks.endUserUpdateKeyName).toHaveBeenCalledWith(
+      expect(mocks.endUserUpdateKey).toHaveBeenCalledWith(
         "end-user-1",
         "owned-key-1",
-        "Renamed Owned Key",
+        expect.objectContaining({
+          name: "Renamed Owned Key",
+          "period-spending-limits": { "5h": 50, day: 100, week: 300, month: 1000 },
+        }),
       );
     });
     expect(mocks.apiKeyEntriesUpdate).not.toHaveBeenCalled();
+    expect(await screen.findByText("Renamed Owned Key")).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
 
     await userEvent.click(screen.getByRole("button", { name: /rotate key/i }));
     const rotateDialog = await screen.findByRole("dialog");
@@ -524,7 +602,8 @@ describe("ApiKeysPage", () => {
 
     expect(await screen.findByText("Pinned Key")).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: "Edit" }));
+    await userEvent.click(screen.getByRole("button", { name: "More actions" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Edit" }));
 
     expect(screen.queryByText(/Allowed channel groups/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Allowed channels/i)).not.toBeInTheDocument();
@@ -751,7 +830,8 @@ describe("ApiKeysPage", () => {
 
     expect(await screen.findByText("Existing Key")).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: /import to cc switch/i }));
+    await openMoreActions();
+    await userEvent.click(await screen.findByRole("menuitem", { name: /import to cc switch/i }));
 
     const dialog = await screen.findByRole("dialog", { name: /import to cc switch/i });
     expect(dialog).toHaveTextContent(/select a cc switch preset to import/i);
@@ -807,7 +887,8 @@ describe("ApiKeysPage", () => {
 
     expect(await screen.findByText("Group Key")).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: /import to cc switch/i }));
+    await openMoreActions();
+    await userEvent.click(await screen.findByRole("menuitem", { name: /import to cc switch/i }));
     await screen.findByRole("dialog", { name: /import to cc switch/i });
     await userEvent.click(screen.getByRole("button", { name: /preset codex/i }));
 
@@ -882,7 +963,8 @@ describe("ApiKeysPage", () => {
 
       expect(await screen.findByText("Group Key")).toBeInTheDocument();
 
-      await userEvent.click(screen.getByRole("button", { name: /import to cc switch/i }));
+      await openMoreActions();
+      await userEvent.click(await screen.findByRole("menuitem", { name: /import to cc switch/i }));
       await screen.findByRole("dialog", { name: /import to cc switch/i });
 
       await userEvent.click(screen.getByRole("button", { name: /copy import link/i }));
@@ -961,7 +1043,8 @@ describe("ApiKeysPage", () => {
 
     expect(await screen.findByText("Claude Preset Key")).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: /import to cc switch/i }));
+    await openMoreActions();
+    await userEvent.click(await screen.findByRole("menuitem", { name: /import to cc switch/i }));
     await screen.findByRole("dialog", { name: /import to cc switch/i });
 
     await userEvent.click(screen.getByRole("button", { name: /preset claude/i }));
@@ -1046,7 +1129,8 @@ describe("ApiKeysPage", () => {
 
     expect(await screen.findByText("Preset Key")).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: /import to cc switch/i }));
+    await openMoreActions();
+    await userEvent.click(await screen.findByRole("menuitem", { name: /import to cc switch/i }));
     await screen.findByRole("dialog", { name: /import to cc switch/i });
 
     expect(screen.getByRole("button", { name: /team codex/i })).toBeInTheDocument();
@@ -1147,7 +1231,8 @@ describe("ApiKeysPage", () => {
 
     expect(await screen.findByText("KimiCode+DeepSeek")).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: /import to cc switch/i }));
+    await openMoreActions();
+    await userEvent.click(await screen.findByRole("menuitem", { name: /import to cc switch/i }));
     await screen.findByRole("dialog", { name: /import to cc switch/i });
 
     expect(screen.queryByRole("button", { name: /deepseek\+gpt/i })).toBeNull();
@@ -1179,7 +1264,8 @@ describe("ApiKeysPage", () => {
     );
 
     expect(await screen.findByText("Reset Me")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: /reset today spending/i }));
+    await openMoreActions();
+    await userEvent.click(await screen.findByRole("menuitem", { name: /reset today spending/i }));
     await waitFor(() => {
       expect(mocks.apiKeyEntriesResetDailySpending).toHaveBeenCalledWith({ id: "id-reset" });
     });

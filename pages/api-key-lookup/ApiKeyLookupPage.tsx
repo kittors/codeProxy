@@ -16,6 +16,7 @@ import {
   extractApiErrorCode,
   isApiClientError,
   portalApi,
+  normalizePeriodSpendingLimits,
   type EndUser,
   type EndUserAPIKey,
   type SavedPortalAccount,
@@ -33,12 +34,17 @@ import { DropdownMenu } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
 import type { SearchableCheckboxMultiSelectOption } from "@code-proxy/ui";
 import type { TimeRange } from "@features/monitor-widgets/monitor-constants";
-import { LogContentModal } from "@features/log-content-viewer";
 import { ModelTag } from "@features/model-tags";
+import {
+  OwnedApiKeyQuotaModal,
+  emptyPeriodSpendingDraft,
+  formatQuotaValidationError,
+  limitsToPeriodSpendingDraft,
+  periodSpendingDraftToLimits,
+} from "@features/period-spending";
 import {
   fetchAvailableModels,
   fetchPublicChartData,
-  fetchPublicLogContent,
   fetchPublicLogs,
   fetchPublicUsageSummary,
   type PublicModelItem,
@@ -51,7 +57,12 @@ import { PublicLogsSection } from "./components/PublicLogsSection";
 import { QuickImportTabContent } from "./components/QuickImportTabContent";
 import { UsageTabSection } from "./components/UsageTabSection";
 import { useApiKeyLookupCharts } from "./hooks/useApiKeyLookupCharts";
-import type { ChartDataResponse, PublicLogItem, PublicUsageLimits } from "./types";
+import type {
+  ChartDataResponse,
+  PublicLogItem,
+  PublicQuotaScope,
+  PublicUsageLimits,
+} from "./types";
 import {
   buildRequestLogsColumns,
   formatOptionalRequestLogLatencyMs,
@@ -353,11 +364,24 @@ export function ApiKeyLookupPage() {
   const [pwdError, setPwdError] = useState<string | null>(null);
   const [secretOnce, setSecretOnce] = useState<string | null>(null);
   const [createKeyOpen, setCreateKeyOpen] = useState(false);
-  const [createKeyName, setCreateKeyName] = useState("");
-  const [createKeyError, setCreateKeyError] = useState<string | null>(null);
+  const [portalKeyForm, setPortalKeyForm] = useState({
+    name: "",
+    periods: emptyPeriodSpendingDraft(),
+  });
+  const [editKeyTarget, setEditKeyTarget] = useState<EndUserAPIKey | null>(null);
+  const [portalKeyQuotaError, setPortalKeyQuotaError] = useState("");
   const [deleteKeyTarget, setDeleteKeyTarget] = useState<EndUserAPIKey | null>(null);
   const [portalKeysBusy, setPortalKeysBusy] = useState(false);
   const [portalKeysLoading, setPortalKeysLoading] = useState(false);
+  const portalAccountPeriodLimits = useMemo(
+    () =>
+      normalizePeriodSpendingLimits(
+        portalUser?.["period-spending-limits"],
+        portalUser?.["daily-spending-limit"],
+      ),
+    [portalUser],
+  );
+
   const usageSubject = useMemo<UsageLookupSubject | null>(() => {
     if (portalUser) {
       return { mode: "portal", apiKey: "", cacheKey: `account:${portalUser.id}` };
@@ -369,24 +393,13 @@ export function ApiKeyLookupPage() {
   // ponytail: landing first; open login only via CTA / header
   const [loginModalOpen, setLoginModalOpen] = useState(false);
 
-  // ── Content modal state ──
-  const [contentModalOpen, setContentModalOpen] = useState(false);
-  const [contentModalLogId, setContentModalLogId] = useState<number | null>(null);
-  const [contentModalTab, setContentModalTab] = useState<"input" | "output">("input");
-
-  const handleContentClick = useCallback((logId: number, tab: "input" | "output") => {
-    setContentModalLogId(logId);
-    setContentModalTab(tab);
-    setContentModalOpen(true);
-  }, []);
-
   const logColumns = useMemo(
     () =>
-      buildRequestLogsColumns((key) => t(key), handleContentClick, undefined, {
+      buildRequestLogsColumns((key) => t(key), undefined, undefined, {
         identityColumn: "key",
         hideChannel: true,
       }),
-    [t, handleContentClick],
+    [t],
   );
   // ── Tab state ──
   const [activeTab, setActiveTab] = useState<ApiKeyLookupTab>("usage");
@@ -405,6 +418,7 @@ export function ApiKeyLookupPage() {
   const [chartData, setChartData] = useState<ChartDataResponse | null>(null);
   const [chartLoading, setChartLoading] = useState(false);
   const [quotaLimits, setQuotaLimits] = useState<PublicUsageLimits | null>(null);
+  const [quotaScopes, setQuotaScopes] = useState<PublicQuotaScope[]>([]);
   const chartCacheRef = useRef<Record<string, ChartDataResponse>>({});
   const portalKeySyncIdRef = useRef(0);
   const chartAbortControllerRef = useRef<AbortController | null>(null);
@@ -639,9 +653,11 @@ export function ApiKeyLookupPage() {
       });
       if (myFetchId !== summaryFetchIdRef.current || controller.signal.aborted) return;
       setQuotaLimits(summary.limits ?? null);
+      setQuotaScopes(summary["quota-scopes"] ?? []);
     } catch {
       if (myFetchId !== summaryFetchIdRef.current || controller.signal.aborted) return;
       setQuotaLimits(null);
+      setQuotaScopes([]);
     } finally {
       if (summaryAbortControllerRef.current === controller) {
         summaryAbortControllerRef.current = null;
@@ -779,6 +795,7 @@ export function ApiKeyLookupPage() {
     } else if (activeTab === "models" && queriedKey) {
       void fetchModelsFn(queriedKey);
     } else if (activeTab === "logs" && usageSubject) {
+      void fetchQuotaLimits(usageSubject);
       fetchLogs(usageSubject, 1);
     }
   }, [activeTab, usageSubject?.cacheKey]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -822,6 +839,7 @@ export function ApiKeyLookupPage() {
     setAvailableModels([]);
     setChartData(null);
     setQuotaLimits(null);
+    setQuotaScopes([]);
 
     setRawItems([]);
     setTotalCount(0);
@@ -1019,6 +1037,7 @@ export function ApiKeyLookupPage() {
       setSelectedModels(null);
       setSelectedStatuses(null);
       setQuotaLimits(null);
+      setQuotaScopes([]);
 
       // Prefill usage from this account's cache; cold accounts still skeleton.
       const nextChartKey = `account:${target.user.id}|${timeRange}`;
@@ -1142,6 +1161,7 @@ export function ApiKeyLookupPage() {
     } else if (activeTab === "quickImport" && queriedKey) {
       setQuickImportReloadToken((value) => value + 1);
     } else if (activeTab === "logs" && usageSubject) {
+      void fetchQuotaLimits(usageSubject);
       fetchLogs(usageSubject, 1);
     }
   }, [
@@ -1150,6 +1170,7 @@ export function ApiKeyLookupPage() {
     timeRange,
     fetchLogs,
     fetchChartDataFn,
+    fetchQuotaLimits,
     fetchModelsFn,
     syncPortalKeys,
     usageSubject,
@@ -1179,6 +1200,11 @@ export function ApiKeyLookupPage() {
 
   const {
     chartStats,
+    apiKeyMetric,
+    setApiKeyMetric,
+    apiKeyDistributionData,
+    apiKeyDistributionOption,
+    apiKeyDistributionLegend,
     modelMetric,
     setModelMetric,
     heatmapSeries,
@@ -1443,21 +1469,9 @@ export function ApiKeyLookupPage() {
                 loading={loading || portalKeysLoading}
                 chartLoading={chartLoading}
                 modelsLoading={modelsLoading}
+                quotaLimits={quotaLimits}
+                quotaScopes={quotaScopes}
                 showKeysTab={Boolean(portalUser)}
-                keysHeader={
-                  portalUser
-                    ? {
-                        loading: portalKeysLoading,
-                        busy: portalKeysBusy,
-                        onRefresh: () => void syncPortalKeys(),
-                        onCreate: () => {
-                          setCreateKeyName("");
-                          setCreateKeyError(null);
-                          setCreateKeyOpen(true);
-                        },
-                      }
-                    : undefined
-                }
               />
 
               {activeTab === "usage" && usageReady ? (
@@ -1467,6 +1481,13 @@ export function ApiKeyLookupPage() {
                   chartStats={chartStats}
                   chartLoading={chartLoading}
                   quotaLimits={quotaLimits}
+                  quotaScopes={quotaScopes}
+                  showApiKeyDistribution={Boolean(portalUser)}
+                  apiKeyMetric={apiKeyMetric}
+                  setApiKeyMetric={setApiKeyMetric}
+                  apiKeyDistributionData={apiKeyDistributionData}
+                  apiKeyDistributionOption={apiKeyDistributionOption}
+                  apiKeyDistributionLegend={apiKeyDistributionLegend}
                   modelMetric={modelMetric}
                   setModelMetric={setModelMetric}
                   heatmapSeries={heatmapSeries}
@@ -1487,6 +1508,16 @@ export function ApiKeyLookupPage() {
                     t={t}
                     keys={portalKeys}
                     busy={portalKeysBusy}
+                    loading={portalKeysLoading}
+                    onRefresh={() => void syncPortalKeys()}
+                    onCreate={() => {
+                      setPortalKeyForm({
+                        name: "",
+                        periods: emptyPeriodSpendingDraft(),
+                      });
+                      setPortalKeyQuotaError("");
+                      setCreateKeyOpen(true);
+                    }}
                     onRotate={(key) => {
                       setPortalKeysBusy(true);
                       void portalApi
@@ -1501,6 +1532,19 @@ export function ApiKeyLookupPage() {
                           await refreshPortalKeys();
                         })
                         .finally(() => setPortalKeysBusy(false));
+                    }}
+                    onEdit={(key) => {
+                      setEditKeyTarget(key);
+                      setPortalKeyQuotaError("");
+                      setPortalKeyForm({
+                        name: key.name ?? "",
+                        periods: limitsToPeriodSpendingDraft(
+                          normalizePeriodSpendingLimits(
+                            key["period-spending-limits"],
+                            key["daily-spending-limit"],
+                          ),
+                        ),
+                      });
                     }}
                     onDelete={(key) => {
                       if (portalKeys.length <= 1) return;
@@ -1569,31 +1613,6 @@ export function ApiKeyLookupPage() {
               ) : null}
             </>
           )}
-
-          {/* Log Content Modal */}
-          <LogContentModal
-            open={contentModalOpen}
-            logId={contentModalLogId}
-            initialTab={contentModalTab}
-            onClose={() => setContentModalOpen(false)}
-            fetchPartFn={
-              usageSubject
-                ? async (
-                    id: number,
-                    part: "input" | "output",
-                    options?: { signal?: AbortSignal },
-                  ) => {
-                    return fetchPublicLogContent({
-                      id,
-                      apiKey: usageSubject.apiKey,
-                      portalAccount: usageSubject.mode === "portal",
-                      part,
-                      signal: options?.signal,
-                    });
-                  }
-                : undefined
-            }
-          />
 
           {showLanding ? <LookupEmptyState t={t} onLogin={() => setLoginModalOpen(true)} /> : null}
         </main>
@@ -1849,115 +1868,86 @@ export function ApiKeyLookupPage() {
           ) : null}
         </Modal>
 
-        <Modal
+        <OwnedApiKeyQuotaModal
+          t={t}
           open={createKeyOpen}
-          title={t("apikey_lookup.create_key", { defaultValue: "新建 Key" })}
-          description={t("apikey_lookup.create_key_desc", {
-            defaultValue: "为新 Key 填写名称，便于在请求日志中区分来源。",
-          })}
-          maxWidth="max-w-md"
+          mode="create"
+          value={portalKeyForm}
+          accountLimits={portalAccountPeriodLimits}
+          saving={portalKeysBusy}
+          serverError={portalKeyQuotaError}
+          onChange={setPortalKeyForm}
           onClose={() => {
             if (portalKeysBusy) return;
             setCreateKeyOpen(false);
-            setCreateKeyError(null);
+            setPortalKeyQuotaError("");
           }}
-          footer={
-            <>
-              <Button
-                variant="secondary"
-                disabled={portalKeysBusy}
-                onClick={() => {
-                  setCreateKeyOpen(false);
-                  setCreateKeyError(null);
-                }}
-              >
-                {t("common.cancel", { defaultValue: "取消" })}
-              </Button>
-              <Button
-                type="submit"
-                form="portal-create-key-form"
-                variant="primary"
-                disabled={portalKeysBusy || !createKeyName.trim()}
-              >
-                {t("apikey_lookup.create_key", { defaultValue: "新建 Key" })}
-              </Button>
-            </>
-          }
-        >
-          <form
-            id="portal-create-key-form"
-            className="space-y-3"
-            onSubmit={(e) => {
-              e.preventDefault();
-              const name = createKeyName.trim();
-              if (!name) {
-                setCreateKeyError(
-                  t("apikey_lookup.key_name_required", { defaultValue: "请输入 Key 名称" }),
-                );
-                return;
-              }
-              const nameTaken = portalKeys.some(
-                (key) => (key.name || "").trim().toLowerCase() === name.toLowerCase(),
-              );
-              if (nameTaken) {
-                setCreateKeyError(
-                  t("apikey_lookup.key_name_duplicate", {
-                    defaultValue: "Key 名称已存在，请换一个。",
-                  }),
-                );
-                return;
-              }
-              setCreateKeyError(null);
-              setPortalKeysBusy(true);
-              void portalApi
-                .createKey(name)
-                .then(async (res) => {
-                  if (res.plaintext_key) {
-                    setSecretOnce(res.plaintext_key);
-                    setOperationalKeyId(res.api_key.id);
-                    setApiKeyInput(res.plaintext_key);
-                    setQueriedKey(res.plaintext_key);
-                  }
-                  setCreateKeyOpen(false);
-                  setCreateKeyName("");
-                  await refreshPortalKeys();
-                })
-                .catch((err) => {
-                  const code = isApiClientError(err) ? extractApiErrorCode(err.payload) : "";
-                  if (code === "duplicate_key_name") {
-                    setCreateKeyError(
-                      t("apikey_lookup.key_name_duplicate", {
-                        defaultValue: "Key 名称已存在，请换一个。",
-                      }),
-                    );
-                    return;
-                  }
-                  setCreateKeyError(err instanceof Error ? err.message : "failed");
-                })
-                .finally(() => setPortalKeysBusy(false));
-            }}
-          >
-            <label className="block space-y-1.5">
-              <span className="text-sm font-medium text-slate-700 dark:text-white/75">
-                {t("apikey_lookup.key_name", { defaultValue: "Key 名称" })}
-              </span>
-              <TextInput
-                value={createKeyName}
-                onChange={(e) => {
-                  setCreateKeyName(e.target.value);
-                  if (createKeyError) setCreateKeyError(null);
-                }}
-                autoFocus
-                placeholder={t("apikey_lookup.key_name_placeholder", {
-                  defaultValue: "例如：Claude Desktop / 生产环境",
-                })}
-              />
-            </label>
-            {createKeyError ? (
-              <p className="text-sm text-rose-600 dark:text-rose-300">{createKeyError}</p>
-            ) : null}
-          </form>
-        </Modal>
+          onSubmit={() => {
+            const name = portalKeyForm.name.trim();
+            if (!name) return;
+            if (
+              portalKeys.some((key) => (key.name || "").trim().toLowerCase() === name.toLowerCase())
+            ) {
+              setPortalKeyQuotaError(t("apikey_lookup.key_name_duplicate"));
+              return;
+            }
+            const limits = periodSpendingDraftToLimits(portalKeyForm.periods);
+            setPortalKeysBusy(true);
+            setPortalKeyQuotaError("");
+            void portalApi
+              .createKey({
+                name,
+                "daily-spending-limit": limits.day,
+                "period-spending-limits": limits,
+              })
+              .then(async (response) => {
+                if (response.plaintext_key) {
+                  setSecretOnce(response.plaintext_key);
+                  setOperationalKeyId(response.api_key.id);
+                  setApiKeyInput(response.plaintext_key);
+                  setQueriedKey(response.plaintext_key);
+                }
+                setCreateKeyOpen(false);
+                await refreshPortalKeys();
+              })
+              .catch((err) => setPortalKeyQuotaError(formatQuotaValidationError(err, t)))
+              .finally(() => setPortalKeysBusy(false));
+          }}
+        />
+
+        <OwnedApiKeyQuotaModal
+          t={t}
+          open={editKeyTarget !== null}
+          mode="edit"
+          value={portalKeyForm}
+          accountLimits={portalAccountPeriodLimits}
+          saving={portalKeysBusy}
+          serverError={portalKeyQuotaError}
+          onChange={setPortalKeyForm}
+          onClose={() => {
+            if (portalKeysBusy) return;
+            setEditKeyTarget(null);
+            setPortalKeyQuotaError("");
+          }}
+          onSubmit={() => {
+            if (!editKeyTarget) return;
+            const limits = periodSpendingDraftToLimits(portalKeyForm.periods);
+            setPortalKeysBusy(true);
+            setPortalKeyQuotaError("");
+            void portalApi
+              .updateKey(editKeyTarget.id, {
+                name: portalKeyForm.name.trim(),
+                "daily-spending-limit": limits.day,
+                "period-spending-limits": limits,
+              })
+              .then(async () => {
+                setEditKeyTarget(null);
+                await refreshPortalKeys();
+              })
+              .catch((err) => setPortalKeyQuotaError(formatQuotaValidationError(err, t)))
+              .finally(() => setPortalKeysBusy(false));
+          }}
+        />
 
         <SecretRevealModal
           open={Boolean(secretOnce)}

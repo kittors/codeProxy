@@ -50,6 +50,8 @@ import type { AuthFileCycleUsageSnapshot } from "./useAuthFilesCycleUsageState";
 
 const STATUS_POLL_INTERVAL_MS = 1_500;
 const STATUS_REFRESH_TIMEOUT_MS = 120_000;
+/** Lightweight shared-status GET cadence; separate from 1.5s refresh-job polling. */
+const STATUS_SNAPSHOT_REFRESH_INTERVAL_MS = 60_000;
 
 export function isFatalQuotaRefreshError(error: unknown): boolean {
   if (!isApiClientError(error)) return false;
@@ -143,6 +145,86 @@ type ActiveBatch = {
   files: AuthFileItem[];
 };
 
+type ConnectivityEntry = {
+  loading: boolean;
+  latencyMs: number | null;
+  error: boolean;
+};
+
+const seedConnectivityState = (
+  cached: ReturnType<typeof readAuthFilesDataCache>,
+): Map<string, ConnectivityEntry> =>
+  new Map(
+    Object.entries(cached?.connectivityByFileName ?? {}).map(([fileName, snapshot]) => [
+      fileName,
+      { loading: false, latencyMs: snapshot.latencyMs, error: snapshot.error },
+    ]),
+  );
+
+const quotaItemMergeKeys = (item: QuotaItem): string[] =>
+  Array.from(
+    new Set(
+      [item.key, item.label]
+        .filter((value): value is string => Boolean(value))
+        .map((value) =>
+          value
+            .trim()
+            .toLowerCase()
+            .replaceAll(/[^a-z0-9\u4e00-\u9fff]/g, ""),
+        )
+        .filter(Boolean),
+    ),
+  );
+
+const mergeQuotaItem = (previous: QuotaItem, incoming: QuotaItem): QuotaItem => ({
+  ...previous,
+  ...incoming,
+  label:
+    incoming.key && incoming.label === incoming.key && previous.label
+      ? previous.label
+      : incoming.label || previous.label,
+  percent: incoming.percent ?? previous.percent,
+  value: incoming.value ?? previous.value,
+  resetAtMs: incoming.resetAtMs ?? previous.resetAtMs,
+  windowSeconds: incoming.windowSeconds ?? previous.windowSeconds,
+  meta: incoming.meta ?? previous.meta,
+});
+
+const mergeQuotaState = (
+  previous: QuotaState | undefined,
+  incoming: QuotaState,
+): QuotaState => {
+  if (!previous) return incoming;
+  const remainingIncoming = [...incoming.items];
+  const mergedItems = previous.items.map((item) => {
+    const previousKeys = quotaItemMergeKeys(item);
+    const nextIndex = remainingIncoming.findIndex((candidate) =>
+      quotaItemMergeKeys(candidate).some((key) => previousKeys.includes(key)),
+    );
+    if (nextIndex < 0) return item;
+    const [next] = remainingIncoming.splice(nextIndex, 1);
+    if (!next) return item;
+    return mergeQuotaItem(item, next);
+  });
+  mergedItems.push(...remainingIncoming);
+  const resetCreditCountChanged =
+    incoming.resetCreditCount !== undefined &&
+    incoming.resetCreditCount !== previous.resetCreditCount;
+  return {
+    ...previous,
+    ...incoming,
+    items: mergedItems,
+    planType: incoming.planType ?? previous.planType,
+    resetCreditCount: incoming.resetCreditCount ?? previous.resetCreditCount,
+    resetCreditExpirations:
+      incoming.resetCreditExpirations ??
+      (resetCreditCountChanged ? undefined : previous.resetCreditExpirations),
+    updatedAt: incoming.updatedAt ?? previous.updatedAt,
+    error:
+      incoming.error ?? (incoming.status === "error" ? previous.error : undefined),
+  };
+};
+
 export function useAuthFilesStatusState({
   tab,
   pageItems,
@@ -162,9 +244,9 @@ export function useAuthFilesStatusState({
   );
   const initialAutoRefresh = useMemo(() => readAndMigrateQuotaAutoRefreshMs(), []);
 
-  const [connectivityState, setConnectivityState] = useState<
-    Map<string, { loading: boolean; latencyMs: number | null; error: boolean }>
-  >(new Map());
+  const [connectivityState, setConnectivityState] = useState<Map<string, ConnectivityEntry>>(
+    () => seedConnectivityState(initialDataCache),
+  );
   const [quotaByFileName, setQuotaByFileName] = useState<Record<string, QuotaState>>(
     () => initialDataCache?.quotaByFileName ?? {},
   );
@@ -194,8 +276,13 @@ export function useAuthFilesStatusState({
   const [statusApiSupported, setStatusApiSupported] = useState(true);
   const [statusLoading, setStatusLoading] = useState(false);
   const [refreshingPage, setRefreshingPage] = useState(false);
+  const [readyVisibleScopeKey, setReadyVisibleScopeKey] = useState<string | null>(null);
+  const [settledVisibleScopeKey, setSettledVisibleScopeKey] = useState<string | null>(null);
   const [quotaRefreshHalted, setQuotaRefreshHalted] = useState(false);
   const [nowMs, setNowMs] = useState(() => Date.now());
+  const [pageVisible, setPageVisible] = useState(
+    () => typeof document === "undefined" || !document.hidden,
+  );
 
   const quotaInFlightRef = useRef<Set<string>>(new Set());
   const quotaAutoRefreshingRef = useRef<Set<string>>(new Set());
@@ -214,6 +301,7 @@ export function useAuthFilesStatusState({
   const mountedRef = useRef(true);
   const tenantIdRef = useRef(cacheTenantId);
   const pageItemsRef = useRef(pageItems);
+  const visibleStatusScopeKey = `${cacheTenantId}::${buildVisibleScopeKey(pageItems)}`;
 
   const [quotaAutoRefreshMsRaw, setQuotaAutoRefreshMsRaw] = useLocalStorage<number>(
     AUTH_FILES_QUOTA_AUTO_REFRESH_KEY,
@@ -255,8 +343,11 @@ export function useAuthFilesStatusState({
     singleBatchRef.current = null;
     statusLoadSeqRef.current += 1;
     loadedVisibleScopeRef.current = null;
+    setReadyVisibleScopeKey(null);
+    setSettledVisibleScopeKey(null);
     appliedFreshnessRef.current.clear();
     const tenantCache = readAuthFilesDataCache(cacheTenantId);
+    setConnectivityState(seedConnectivityState(tenantCache));
     setQuotaByFileName(tenantCache?.quotaByFileName ?? {});
     const seeded: Record<string, AuthFileCycleUsageSnapshot> = {};
     for (const [authIndex, snapshot] of Object.entries(tenantCache?.cycleByAuthIndex ?? {})) {
@@ -275,12 +366,13 @@ export function useAuthFilesStatusState({
       };
     }
     setCycleByAuthIndex(seeded);
+    setUsageDataFromStatus?.(tenantCache?.usageData ?? { source: [], auth_index: [] });
     setRefreshingPage(false);
     setStatusLoading(false);
     setStatusApiSupported(true);
     quotaInFlightRef.current.clear();
     quotaAutoRefreshingRef.current.clear();
-  }, [cacheTenantId]);
+  }, [cacheTenantId, setUsageDataFromStatus]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -325,6 +417,14 @@ export function useAuthFilesStatusState({
           weeklyQuotaUsedPercent: snapshot.weeklyQuotaUsedPercent,
         };
       }
+      const connectivityCache = Object.fromEntries(
+        Array.from(connectivityState.entries())
+          .filter(([, snapshot]) => snapshot.latencyMs != null || snapshot.error)
+          .map(([fileName, snapshot]) => [
+            fileName,
+            { latencyMs: snapshot.latencyMs, error: snapshot.error },
+          ]),
+      );
       writeAuthFilesDataCache({
         ...current,
         tenantId,
@@ -333,10 +433,14 @@ export function useAuthFilesStatusState({
         // Keep last known cycle when state is still empty (first paint / tenant seed).
         cycleByAuthIndex:
           Object.keys(cycleCache).length > 0 ? cycleCache : current.cycleByAuthIndex,
+        connectivityByFileName:
+          Object.keys(connectivityCache).length > 0
+            ? connectivityCache
+            : current.connectivityByFileName,
       });
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [quotaByFileName, cycleByAuthIndex]);
+  }, [connectivityState, quotaByFileName, cycleByAuthIndex]);
 
   const patchAuthFileByName = useCallback(
     (name: string, patch: Partial<AuthFileItem>) => {
@@ -425,19 +529,7 @@ export function useAuthFilesStatusState({
           const quota = patch.quotaByKey[group.quotaKey] ?? patch.quotaByKey[group.authIndexes[0] ?? ""];
           if (!quota) continue;
           for (const name of group.names) {
-            const existing = next[name];
-            if (
-              quota.status === "success" &&
-              (!quota.items || quota.items.length === 0) &&
-              existing?.status === "success" &&
-              (existing.items?.length ?? 0) > 0 &&
-              !quota.error
-            ) {
-              quotaInFlightRef.current.delete(name);
-              quotaAutoRefreshingRef.current.delete(name);
-              continue;
-            }
-            next[name] = quota;
+            next[name] = mergeQuotaState(next[name], quota);
             quotaInFlightRef.current.delete(name);
             quotaAutoRefreshingRef.current.delete(name);
           }
@@ -726,6 +818,64 @@ export function useAuthFilesStatusState({
     [applyStatusesToUi, haltQuotaAutoRefresh, notify, t],
   );
 
+  const loadVisibleStatusSnapshot = useCallback(async (): Promise<boolean> => {
+    if (tab !== "files" || loading || !statusApiSupported) return false;
+    const visibleFiles = pageItemsRef.current;
+    const tenantId = tenantIdRef.current;
+    const scopeKey = `${tenantId}::${buildVisibleScopeKey(visibleFiles)}`;
+    const authIndexes = Array.from(
+      new Set(
+        visibleFiles
+          .map((file) => resolveFileAuthIndex(file))
+          .filter((value): value is string => Boolean(value)),
+      ),
+    );
+    if (authIndexes.length === 0) return false;
+    const ok = await loadStatusSnapshot({
+      filesForMerge: visibleFiles,
+      authIndexes,
+      quiet: true,
+      markUnsupportedOn404: true,
+    });
+    if (
+      mountedRef.current &&
+      tenantIdRef.current === tenantId &&
+      `${tenantIdRef.current}::${buildVisibleScopeKey(pageItemsRef.current)}` === scopeKey
+    ) {
+      setSettledVisibleScopeKey(scopeKey);
+      if (ok) setReadyVisibleScopeKey(scopeKey);
+    }
+    return ok;
+  }, [loadStatusSnapshot, loading, statusApiSupported, tab]);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return undefined;
+    const handleVisibilityChange = () => {
+      const visible = !document.hidden;
+      setPageVisible(visible);
+      if (
+        visible &&
+        !statusLoading &&
+        !pageBatchRef.current &&
+        !singleBatchRef.current
+      ) {
+        void loadVisibleStatusSnapshot();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [loadVisibleStatusSnapshot, statusLoading]);
+
+  useInterval(
+    () => {
+      if (statusLoading || pageBatchRef.current || singleBatchRef.current) return;
+      void loadVisibleStatusSnapshot();
+    },
+    pageVisible && tab === "files" && !loading && statusApiSupported
+      ? STATUS_SNAPSHOT_REFRESH_INTERVAL_MS
+      : null,
+  );
+
   const pollJobUntilDone = useCallback(
     async (
       jobId: string,
@@ -895,7 +1045,15 @@ export function useAuthFilesStatusState({
             // page + single may finish together; both finals must be allowed to apply.
             allowConcurrentApply: true,
           });
-          if (!applied && !controller.signal.aborted && tenantIdRef.current === tenantId) {
+          if (applied && kind === "page") {
+            const scopeKey = `${tenantId}::${buildVisibleScopeKey(files)}`;
+            if (
+              `${tenantIdRef.current}::${buildVisibleScopeKey(pageItemsRef.current)}` === scopeKey
+            ) {
+              setReadyVisibleScopeKey(scopeKey);
+              setSettledVisibleScopeKey(scopeKey);
+            }
+          } else if (!applied && !controller.signal.aborted && tenantIdRef.current === tenantId) {
             // Keep previous snapshot values; only drop stuck loading spinners.
             clearFilesLoading(files);
           }
@@ -951,7 +1109,7 @@ export function useAuthFilesStatusState({
   useEffect(() => {
     if (tab !== "files" || loading) return;
     if (!statusApiSupported) return;
-    const scopeKey = `${tenantIdRef.current}::${buildVisibleScopeKey(pageItems)}`;
+    const scopeKey = visibleStatusScopeKey;
     if (loadedVisibleScopeRef.current === scopeKey) return;
 
     const authIndexes = Array.from(
@@ -963,6 +1121,8 @@ export function useAuthFilesStatusState({
     );
     if (authIndexes.length === 0) {
       loadedVisibleScopeRef.current = scopeKey;
+      setReadyVisibleScopeKey(scopeKey);
+      setSettledVisibleScopeKey(scopeKey);
       return;
     }
 
@@ -976,8 +1136,11 @@ export function useAuthFilesStatusState({
         quiet: true,
         markUnsupportedOn404: true,
       });
-      if (!ok || controller.signal.aborted) return;
+      if (controller.signal.aborted) return;
+      setSettledVisibleScopeKey(scopeKey);
+      if (!ok) return;
       loadedVisibleScopeRef.current = scopeKey;
+      setReadyVisibleScopeKey(scopeKey);
       // Probe after snapshot so re-entering /access/ai-accounts always refreshes visible cards,
       // even when quota auto-refresh interval is 0.
       if (pageBatchRef.current) return;
@@ -998,6 +1161,7 @@ export function useAuthFilesStatusState({
     statusApiSupported,
     loadStatusSnapshot,
     cacheTenantId,
+    visibleStatusScopeKey,
     runBatchStatusRefresh,
   ]);
 
@@ -1240,7 +1404,12 @@ export function useAuthFilesStatusState({
     setConnectivityState((prev) => {
       if (prev.get(fileName)?.loading) return prev;
       const next = new Map(prev);
-      next.set(fileName, { loading: true, latencyMs: null, error: false });
+      const current = prev.get(fileName);
+      next.set(fileName, {
+        loading: true,
+        latencyMs: current?.latencyMs ?? null,
+        error: current?.error ?? false,
+      });
       return next;
     });
 
@@ -1276,6 +1445,15 @@ export function useAuthFilesStatusState({
     }
     return result;
   }, [cycleByAuthIndex]);
+
+  const hasVisibleStatusTargets = pageItems.some((file) => resolveFileAuthIndex(file));
+  const statusUsageReady =
+    !hasVisibleStatusTargets ||
+    (readyVisibleScopeKey === visibleStatusScopeKey && !statusLoading);
+  const statusUsageLoading =
+    tab === "files" &&
+    hasVisibleStatusTargets &&
+    (settledVisibleScopeKey !== visibleStatusScopeKey || statusLoading || refreshingPage);
 
   const cycleBudgetByAuthIndex: Record<string, AuthFileCycleBudgetStats> = useMemo(
     () =>
@@ -1322,6 +1500,8 @@ export function useAuthFilesStatusState({
     resolveQuotaTargets,
     statusApiSupported,
     statusLoading,
+    statusUsageReady,
+    statusUsageLoading,
     refreshingPage,
     callsByAuthIndex,
     cycleBudgetByAuthIndex,

@@ -7,6 +7,7 @@ import {
   setActiveCacheTenantId,
   DEFAULT_CACHE_TENANT_ID,
   setCacheTenantResolver,
+  writeAuthFilesDataCache,
 } from "@code-proxy/domain";
 import { useAuthFilesStatusState } from "../useAuthFilesStatusState";
 
@@ -181,6 +182,32 @@ describe("useAuthFilesStatusState batch refresh", () => {
       { auth_indexes: ["a1", "b1"], force: true },
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
+  });
+
+  test("visibility refresh uses GET status without starting a provider probe", async () => {
+    const setFiles = vi.fn();
+    const setDetailFile = vi.fn();
+    const { result } = renderHook(() =>
+      useAuthFilesStatusState({
+        tab: "files",
+        pageItems: files,
+        loading: false,
+        setFiles,
+        setDetailFile,
+      }),
+    );
+
+    await waitFor(() => expect(mocks.startStatusRefresh).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(result.current.refreshingPage).toBe(false));
+    await waitFor(() => expect(mocks.getStatus).toHaveBeenCalledTimes(2));
+    mocks.getStatus.mockClear();
+    mocks.startStatusRefresh.mockClear();
+
+    Object.defineProperty(document, "hidden", { configurable: true, value: false });
+    document.dispatchEvent(new Event("visibilitychange"));
+
+    await waitFor(() => expect(mocks.getStatus).toHaveBeenCalledTimes(1));
+    expect(mocks.startStatusRefresh).not.toHaveBeenCalled();
   });
 
   test("forceRefreshPage posts one batch job then polls once and reloads snapshot", async () => {
@@ -364,6 +391,106 @@ describe("useAuthFilesStatusState batch refresh", () => {
     expect(patched[0]?.shared_subscription_started_at).toBe("2026-07-01T00:00:00Z");
     expect(patched[0]?.shared_subscription_expires_at).toBe("2026-08-01T00:00:00Z");
     expect(patched[0]?.shared_subscription_source).toBe("signed_claims");
+  });
+
+  test("cached provider metrics survive partial quota/status payloads on mount", async () => {
+    const mixedFiles: AuthFileItem[] = [
+      files[0]!,
+      {
+        name: "claude.json",
+        type: "anthropic",
+        auth_index: "claude-1",
+        size: 1,
+        modified: Date.now(),
+        disabled: false,
+      },
+    ];
+    writeAuthFilesDataCache({
+      tenantId: DEFAULT_CACHE_TENANT_ID,
+      savedAtMs: Date.now(),
+      files: mixedFiles,
+      quotaByFileName: {
+        "a.json": {
+          status: "success",
+          planType: "pro",
+          resetCreditCount: 3,
+          resetCreditExpirations: ["2026-08-01T00:00:00Z"],
+          items: [
+            {
+              key: "code_5h",
+              label: "m_quota.code_5h",
+              percent: 42,
+              value: "42%",
+              resetAtMs: 1234,
+              windowSeconds: 18_000,
+            },
+          ],
+        },
+        "claude.json": {
+          status: "success",
+          items: [
+            {
+              key: "five_hour",
+              label: "claude_quota.five_hour",
+              percent: 72,
+              resetAtMs: 5678,
+            },
+          ],
+        },
+      },
+      connectivityByFileName: {
+        "a.json": { latencyMs: 88, error: false },
+        "claude.json": { latencyMs: null, error: true },
+      },
+    });
+    mocks.getStatus.mockResolvedValue({
+      items: [
+        {
+          auth_index: "a1",
+          auth_subject_id: "sub-a",
+          plan_type: null,
+          reset_credit_count: null,
+          quotas: [{ quota_key: "code_5h", percent: null }],
+          usage: { request_total: 200 },
+        },
+        {
+          auth_index: "claude-1",
+          quotas: [],
+          usage: null,
+        },
+      ],
+    });
+    mocks.startStatusRefresh.mockImplementation(() => new Promise(() => {}));
+
+    const { result } = renderHook(() =>
+      useAuthFilesStatusState({
+        tab: "files",
+        pageItems: mixedFiles,
+        loading: false,
+        setFiles: vi.fn(),
+        setDetailFile: vi.fn(),
+      }),
+    );
+
+    expect(result.current.connectivityState.get("a.json")).toEqual({
+      loading: false,
+      latencyMs: 88,
+      error: false,
+    });
+    expect(result.current.connectivityState.get("claude.json")?.error).toBe(true);
+    await waitFor(() => expect(mocks.getStatus).toHaveBeenCalled());
+    await waitFor(() => {
+      expect(result.current.quotaByFileName["a.json"]?.items[0]).toMatchObject({
+        label: "m_quota.code_5h",
+        percent: 42,
+        value: "42%",
+        resetAtMs: 1234,
+        windowSeconds: 18_000,
+      });
+      expect(result.current.quotaByFileName["a.json"]?.planType).toBe("pro");
+      expect(result.current.quotaByFileName["a.json"]?.resetCreditCount).toBe(3);
+      expect(result.current.quotaByFileName["claude.json"]?.items[0]?.percent).toBe(72);
+    });
   });
 
   test("job poll 404 does not mark status API unsupported", async () => {

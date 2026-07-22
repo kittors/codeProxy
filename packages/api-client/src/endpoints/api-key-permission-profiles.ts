@@ -1,5 +1,13 @@
 import type { ApiKeyEntry } from "./api-keys";
+import {
+  EMPTY_PERIOD_SPENDING_LIMITS,
+  isPeriodSpendingPeriod,
+  normalizePeriodSpendingLimits,
+  type CappedKey,
+  type PeriodSpendingLimits,
+} from "./period-spending";
 import { apiClient } from "../client/client";
+import { isRecord } from "../client/response";
 
 export const CUSTOM_PERMISSION_PROFILE_ID = "__custom__";
 
@@ -9,6 +17,7 @@ export interface ApiKeyPermissionProfile {
   "daily-limit": number;
   "total-quota": number;
   "daily-spending-limit": number;
+  "period-spending-limits": PeriodSpendingLimits;
   "concurrency-limit": number;
   "rpm-limit": number;
   "tpm-limit": number;
@@ -24,12 +33,8 @@ export interface ReplaceApiKeyPermissionProfilesOptions {
 
 export interface ReplaceApiKeyPermissionProfilesResult {
   appliedCount: number;
+  cappedKeys: CappedKey[];
 }
-
-const asRecord = (value: unknown): Record<string, unknown> | null =>
-  value !== null && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : null;
 
 const normalizeString = (value: unknown): string => String(value ?? "").trim();
 
@@ -69,8 +74,8 @@ export function normalizeApiKeyPermissionProfiles(raw: unknown): ApiKeyPermissio
 
   return raw
     .map((item, index) => {
-      const record = asRecord(item);
-      if (!record) return null;
+      if (!isRecord(item)) return null;
+      const record = item;
       const name = normalizeString(record.name);
       const id = normalizeString(record.id) || `profile-${index + 1}`;
       if (!name) return null;
@@ -80,7 +85,12 @@ export function normalizeApiKeyPermissionProfiles(raw: unknown): ApiKeyPermissio
         name,
         "daily-limit": normalizeLimit(record["daily-limit"] ?? record.dailyLimit),
         "total-quota": normalizeLimit(record["total-quota"] ?? record.totalQuota),
-        "daily-spending-limit": normalizeSpendingLimit(
+        "daily-spending-limit": normalizePeriodSpendingLimits(
+          record["period-spending-limits"] ?? record.periodSpendingLimits,
+          record["daily-spending-limit"] ?? record.dailySpendingLimit,
+        ).day,
+        "period-spending-limits": normalizePeriodSpendingLimits(
+          record["period-spending-limits"] ?? record.periodSpendingLimits,
           record["daily-spending-limit"] ?? record.dailySpendingLimit,
         ),
         "concurrency-limit": normalizeLimit(record["concurrency-limit"] ?? record.concurrencyLimit),
@@ -104,7 +114,14 @@ export const serializeApiKeyPermissionProfile = (profile: ApiKeyPermissionProfil
   name: profile.name,
   "daily-limit": normalizeLimit(profile["daily-limit"]),
   "total-quota": normalizeLimit(profile["total-quota"]),
-  "daily-spending-limit": normalizeSpendingLimit(profile["daily-spending-limit"]),
+  "daily-spending-limit": normalizePeriodSpendingLimits(
+    profile["period-spending-limits"],
+    profile["daily-spending-limit"],
+  ).day,
+  "period-spending-limits": normalizePeriodSpendingLimits(
+    profile["period-spending-limits"],
+    profile["daily-spending-limit"],
+  ),
   "concurrency-limit": normalizeLimit(profile["concurrency-limit"]),
   "rpm-limit": normalizeLimit(profile["rpm-limit"]),
   "tpm-limit": normalizeLimit(profile["tpm-limit"]),
@@ -124,7 +141,7 @@ export function applyApiKeyPermissionProfile(
       "permission-profile-id": "",
       "daily-limit": 0,
       "total-quota": 0,
-      "spending-limit": 0,
+      "period-spending-limits": { ...EMPTY_PERIOD_SPENDING_LIMITS },
       "daily-spending-limit": 0,
       "concurrency-limit": 0,
       "rpm-limit": 0,
@@ -141,8 +158,8 @@ export function applyApiKeyPermissionProfile(
     "permission-profile-id": profile.id,
     "daily-limit": profile["daily-limit"],
     "total-quota": profile["total-quota"],
-    "spending-limit": 0,
-    "daily-spending-limit": profile["daily-spending-limit"],
+    "daily-spending-limit": profile["period-spending-limits"].day,
+    "period-spending-limits": { ...profile["period-spending-limits"] },
     "concurrency-limit": profile["concurrency-limit"],
     "rpm-limit": profile["rpm-limit"],
     "tpm-limit": profile["tpm-limit"],
@@ -158,7 +175,9 @@ export function hasApiKeyPermissionSettings(entry: ApiKeyEntry): boolean {
     (entry["daily-limit"] ?? 0) > 0 ||
     (entry["total-quota"] ?? 0) > 0 ||
     normalizeSpendingLimit(entry["spending-limit"]) > 0 ||
-    normalizeSpendingLimit(entry["daily-spending-limit"]) > 0 ||
+    Object.values(
+      normalizePeriodSpendingLimits(entry["period-spending-limits"], entry["daily-spending-limit"]),
+    ).some((limit) => limit > 0) ||
     (entry["concurrency-limit"] ?? 0) > 0 ||
     (entry["rpm-limit"] ?? 0) > 0 ||
     (entry["tpm-limit"] ?? 0) > 0 ||
@@ -184,8 +203,12 @@ export function findMatchingPermissionProfile(
       (profile) =>
         normalizeLimit(entry["daily-limit"]) === profile["daily-limit"] &&
         normalizeLimit(entry["total-quota"]) === profile["total-quota"] &&
-        normalizeSpendingLimit(entry["spending-limit"]) === 0 &&
-        normalizeSpendingLimit(entry["daily-spending-limit"]) === profile["daily-spending-limit"] &&
+        JSON.stringify(
+          normalizePeriodSpendingLimits(
+            entry["period-spending-limits"],
+            entry["daily-spending-limit"],
+          ),
+        ) === JSON.stringify(profile["period-spending-limits"]) &&
         normalizeLimit(entry["concurrency-limit"]) === profile["concurrency-limit"] &&
         normalizeLimit(entry["rpm-limit"]) === profile["rpm-limit"] &&
         normalizeLimit(entry["tpm-limit"]) === profile["tpm-limit"] &&
@@ -222,11 +245,24 @@ export const apiKeyPermissionProfilesApi = {
     options: ReplaceApiKeyPermissionProfilesOptions = {},
   ): Promise<ReplaceApiKeyPermissionProfilesResult> {
     const items = profiles.map(serializeApiKeyPermissionProfile);
-    const data = await apiClient.put<{ applied_count?: unknown }>(
+    const data = await apiClient.put<{ applied_count?: unknown; "capped-keys"?: unknown }>(
       "/api-key-permission-profiles",
       options.syncAccounts ? { items, "sync-accounts": true } : items,
     );
     const appliedCount = Number(data?.applied_count ?? 0);
-    return { appliedCount: Number.isFinite(appliedCount) ? appliedCount : 0 };
+    const cappedKeys = Array.isArray(data?.["capped-keys"])
+      ? data["capped-keys"].filter((item): item is CappedKey => {
+          if (!isRecord(item)) return false;
+          return (
+            typeof item.id === "string" &&
+            isPeriodSpendingPeriod(item.period) &&
+            typeof item.from === "number" &&
+            Number.isFinite(item.from) &&
+            typeof item.to === "number" &&
+            Number.isFinite(item.to)
+          );
+        })
+      : [];
+    return { appliedCount: Number.isFinite(appliedCount) ? appliedCount : 0, cappedKeys };
   },
 };

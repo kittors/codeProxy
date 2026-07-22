@@ -485,6 +485,8 @@ export function AuthFilesPage() {
     runQuotaRefreshBatch,
     callsByAuthIndex,
     cycleBudgetByAuthIndex,
+    statusUsageReady,
+    statusUsageLoading,
   } = useAuthFilesQuotaState({
     tab: "files",
     pageItems,
@@ -797,6 +799,8 @@ export function AuthFilesPage() {
     resolveQuotaCardSlots,
     cycleCallsByAuthIndex: callsByAuthIndex,
     cycleBudgetByAuthIndex,
+    statusUsageReady,
+    statusUsageLoading,
     refreshQuota,
     requestResetCredit,
     resettingCreditFileName,
@@ -871,6 +875,7 @@ export function AuthFilesPage() {
         quotaByFileName={quotaByFileName}
         cycleCallsByAuthIndex={callsByAuthIndex}
         cycleBudgetByAuthIndex={cycleBudgetByAuthIndex}
+        statusUsageLoading={statusUsageLoading}
         resolveQuotaProvider={resolveQuotaProvider}
         resolveQuotaCardSlots={resolveQuotaCardSlots}
         refreshQuota={refreshQuotaAndCycleUsage}

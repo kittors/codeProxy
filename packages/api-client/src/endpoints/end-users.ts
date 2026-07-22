@@ -1,4 +1,14 @@
 import { apiClient } from "../client/client";
+import type {
+  ApiKeyDailySpendingResetHistoryResponse,
+  ApiKeyDailySpendingResetResult,
+} from "./api-keys";
+import type {
+  CappedKey,
+  PeriodSpendingItem,
+  PeriodSpendingLimits,
+  PeriodSpendingLimitsPatch,
+} from "./period-spending";
 import {
   buildPortalAccountKey,
   detectApiBaseFromLocation,
@@ -24,6 +34,10 @@ export interface EndUser {
   version: number;
   api_key_count?: number;
   "daily-spending-used"?: number;
+  "lifetime-spending-used"?: number;
+  "period-spending-limits"?: PeriodSpendingLimits;
+  "period-spending"?: PeriodSpendingItem[];
+  "capped-keys"?: CappedKey[];
   /** How many times daily spending was manually reset. */
   "daily-spending-reset-count"?: number;
   /** Account-level quota/permissions (shared by all keys). */
@@ -51,6 +65,7 @@ export type EndUserUpdateBody = {
   "total-quota"?: number;
   "spending-limit"?: number;
   "daily-spending-limit"?: number;
+  "period-spending-limits"?: PeriodSpendingLimitsPatch;
   "concurrency-limit"?: number;
   "rpm-limit"?: number;
   "tpm-limit"?: number;
@@ -94,12 +109,25 @@ export interface EndUserAPIKey {
   id: string;
   tenant_id: string;
   end_user_id: string;
+  key?: string;
   key_masked?: string;
   name: string;
   disabled: boolean;
   is_default: boolean;
   created_at?: string;
   updated_at?: string;
+  "daily-spending-limit"?: number;
+  "period-spending-limits"?: PeriodSpendingLimits;
+  "period-spending"?: PeriodSpendingItem[];
+  "daily-spending-used"?: number;
+  "lifetime-spending-used"?: number;
+  "daily-spending-reset-count"?: number;
+}
+
+export interface EndUserAPIKeyMutationBody {
+  name?: string;
+  "daily-spending-limit"?: number;
+  "period-spending-limits"?: PeriodSpendingLimitsPatch;
 }
 
 export interface CreateEndUserResult {
@@ -145,12 +173,25 @@ export const endUsersApi = {
     );
   },
   listKeys: (id: string) => apiClient.get<{ items: EndUserAPIKey[] }>(`/end-users/${id}/api-keys`),
-  createKey: (id: string, name?: string) =>
-    apiClient.post<EndUserAPIKeySecretResult>(`/end-users/${id}/api-keys`, {
-      name: name || "",
-    }),
+  createKey: (id: string, body: EndUserAPIKeyMutationBody) =>
+    apiClient.post<EndUserAPIKeySecretResult>(`/end-users/${id}/api-keys`, body),
+  updateKey: (userId: string, keyId: string, body: EndUserAPIKeyMutationBody) =>
+    apiClient.patch<EndUserAPIKey>(`/end-users/${userId}/api-keys/${keyId}`, body),
   updateKeyName: (userId: string, keyId: string, name: string) =>
     apiClient.patch<EndUserAPIKey>(`/end-users/${userId}/api-keys/${keyId}`, { name }),
+  resetKeyDailySpending: (userId: string, keyId: string) =>
+    apiClient.post<ApiKeyDailySpendingResetResult>(
+      `/end-users/${userId}/api-keys/${keyId}/daily-spending/reset`,
+      {},
+    ),
+  listKeyDailySpendingResetHistory: (userId: string, keyId: string, limit?: number) => {
+    const query = new URLSearchParams();
+    if (limit != null) query.set("limit", String(limit));
+    const suffix = query.size > 0 ? `?${query.toString()}` : "";
+    return apiClient.get<ApiKeyDailySpendingResetHistoryResponse>(
+      `/end-users/${userId}/api-keys/${keyId}/daily-spending/reset-history${suffix}`,
+    );
+  },
   rotateKey: (userId: string, keyId: string) =>
     apiClient.post<EndUserAPIKeySecretResult>(`/end-users/${userId}/api-keys/${keyId}/rotate`, {}),
   deleteKey: (userId: string, keyId: string) =>
@@ -206,11 +247,12 @@ export const portalApi = {
   listKeys: () => portalClient.get<{ items: EndUserAPIKey[] }>("/v0/portal/api-keys"),
   keySecret: (id: string) =>
     portalClient.get<{ id: string; key: string }>(`/v0/portal/api-keys/${id}/secret`),
-  createKey: (name?: string) =>
-    portalClient.post<{ api_key: EndUserAPIKey; plaintext_key?: string }>("/v0/portal/api-keys", {
-      name: name || "",
-    }),
-  updateKey: (id: string, body: { name?: string }) =>
+  createKey: (body: EndUserAPIKeyMutationBody) =>
+    portalClient.post<{ api_key: EndUserAPIKey; plaintext_key?: string }>(
+      "/v0/portal/api-keys",
+      body,
+    ),
+  updateKey: (id: string, body: EndUserAPIKeyMutationBody) =>
     portalClient.patch<EndUserAPIKey>(`/v0/portal/api-keys/${id}`, body),
   rotateKey: (id: string) =>
     portalClient.post<{ api_key: EndUserAPIKey; plaintext_key?: string }>(

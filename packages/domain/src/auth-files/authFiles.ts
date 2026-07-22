@@ -54,6 +54,9 @@ export const AUTH_FILES_UI_STATE_KEY = "authFilesPage.uiState.v3";
 /** Tenant-scoped auth-files list/quota cache (v3). Legacy v2 is read only for migration. */
 export const AUTH_FILES_DATA_CACHE_KEY = "authFilesPage.dataCache.v3";
 export const AUTH_FILES_DATA_CACHE_KEY_V2 = "authFilesPage.dataCache.v2";
+/** Cached status/usage is only a warm-paint hint; refetch after one minute. */
+/** Warm paint for membership badges / quota / cycle across route remounts. */
+export const AUTH_FILES_DATA_CACHE_TTL_MS = 30 * 60_000;
 export const AUTH_FILES_QUOTA_PREVIEW_KEY = "authFilesPage.quotaPreview.v1";
 export const AUTH_FILES_QUOTA_AUTO_REFRESH_KEY = "authFilesPage.quotaAutoRefreshMs.v1";
 export const AUTH_FILES_FILES_VIEW_MODE_KEY = "authFilesPage.filesViewMode.v1";
@@ -102,6 +105,11 @@ export type AuthFileCycleCacheSnapshot = {
   weeklyQuotaUsedPercent?: number | null;
 };
 
+export type AuthFileConnectivityCacheSnapshot = {
+  latencyMs: number | null;
+  error: boolean;
+};
+
 export type AuthFilesDataCache = {
   /** Effective tenant id that owns this cache bucket. Required to prevent cross-tenant reuse. */
   tenantId: string;
@@ -111,6 +119,10 @@ export type AuthFilesDataCache = {
   quotaByFileName?: Record<string, QuotaState>;
   /** Seed card cycle badges so full reload is 93→98, not --→98. */
   cycleByAuthIndex?: Record<string, AuthFileCycleCacheSnapshot>;
+  /** Last measured auth-file connectivity so route remounts keep the last result. */
+  connectivityByFileName?: Record<string, AuthFileConnectivityCacheSnapshot>;
+  /** Last-good membership chip (PRO / PRO 5X / PRO 20X) for first paint after remount. */
+  displayPlanByFileName?: Record<string, string>;
 };
 
 type AuthFilesDataCacheBucket = Omit<AuthFilesDataCache, "tenantId">;
@@ -451,6 +463,62 @@ export const writeAuthFilesModelOwnerGroupMap = (map: AuthFilesModelOwnerGroupMa
   }
 };
 
+/** Keep status-owned fields when the list endpoint returns a partial file shell. */
+export const mergeAuthFileWithLastGoodStatus = (
+  fresh: AuthFileItem,
+  previous?: AuthFileItem,
+): AuthFileItem => {
+  if (!previous) return fresh;
+  const planType = fresh.plan_type ?? fresh.planType ?? previous.plan_type ?? previous.planType;
+  return {
+    ...fresh,
+    auth_index: fresh.auth_index ?? previous.auth_index,
+    authIndex: fresh.authIndex ?? previous.authIndex,
+    auth_subject_id: fresh.auth_subject_id ?? previous.auth_subject_id,
+    authSubjectId: fresh.authSubjectId ?? previous.authSubjectId,
+    shared_subscription_started_at:
+      fresh.shared_subscription_started_at ?? previous.shared_subscription_started_at,
+    shared_subscription_expires_at:
+      fresh.shared_subscription_expires_at ?? previous.shared_subscription_expires_at,
+    shared_subscription_source:
+      fresh.shared_subscription_source ?? previous.shared_subscription_source,
+    account_status_scope: fresh.account_status_scope ?? previous.account_status_scope,
+    subject_scope: fresh.subject_scope ?? previous.subject_scope,
+    share_eligible: fresh.share_eligible ?? previous.share_eligible,
+    usage_history_complete:
+      fresh.usage_history_complete ?? previous.usage_history_complete,
+    usage_projected_since: fresh.usage_projected_since ?? previous.usage_projected_since,
+    plan_type: planType,
+    planType,
+    subscription_started_at:
+      fresh.subscription_started_at ?? previous.subscription_started_at,
+    subscriptionStartedAt: fresh.subscriptionStartedAt ?? previous.subscriptionStartedAt,
+    subscription_start_at: fresh.subscription_start_at ?? previous.subscription_start_at,
+    subscriptionStartAt: fresh.subscriptionStartAt ?? previous.subscriptionStartAt,
+    subscription_started_at_ms:
+      fresh.subscription_started_at_ms ?? previous.subscription_started_at_ms,
+    subscriptionStartedAtMs:
+      fresh.subscriptionStartedAtMs ?? previous.subscriptionStartedAtMs,
+    subscription_period: fresh.subscription_period ?? previous.subscription_period,
+    subscriptionPeriod: fresh.subscriptionPeriod ?? previous.subscriptionPeriod,
+    subscription_expires_at:
+      fresh.subscription_expires_at ?? previous.subscription_expires_at,
+    subscriptionExpiresAt: fresh.subscriptionExpiresAt ?? previous.subscriptionExpiresAt,
+    subscription_expires_at_ms:
+      fresh.subscription_expires_at_ms ?? previous.subscription_expires_at_ms,
+    subscriptionExpiresAtMs:
+      fresh.subscriptionExpiresAtMs ?? previous.subscriptionExpiresAtMs,
+    subscription_remaining_minutes:
+      fresh.subscription_remaining_minutes ?? previous.subscription_remaining_minutes,
+    subscriptionRemainingMinutes:
+      fresh.subscriptionRemainingMinutes ?? previous.subscriptionRemainingMinutes,
+    subscription_expired: fresh.subscription_expired ?? previous.subscription_expired,
+    subscriptionExpired: fresh.subscriptionExpired ?? previous.subscriptionExpired,
+    restrictions: fresh.restrictions ?? previous.restrictions,
+    claude_oauth_health: fresh.claude_oauth_health ?? previous.claude_oauth_health,
+  };
+};
+
 export const sanitizeAuthFilesForCache = (files: AuthFileItem[]): AuthFileItem[] =>
   files.map((file) => ({
     id: file.id,
@@ -463,6 +531,8 @@ export const sanitizeAuthFilesForCache = (files: AuthFileItem[]): AuthFileItem[]
     account_type: file.account_type,
     auth_index: file.auth_index,
     authIndex: file.authIndex,
+    auth_subject_id: file.auth_subject_id,
+    authSubjectId: file.authSubjectId,
     disabled: file.disabled,
     status: file.status,
     status_message: file.status_message,
@@ -482,6 +552,8 @@ export const sanitizeAuthFilesForCache = (files: AuthFileItem[]): AuthFileItem[]
     account_status_scope: file.account_status_scope,
     subject_scope: file.subject_scope,
     share_eligible: file.share_eligible,
+    usage_history_complete: file.usage_history_complete,
+    usage_projected_since: file.usage_projected_since,
     subscription_started_at: file.subscription_started_at,
     subscriptionStartedAt: file.subscriptionStartedAt,
     subscription_start_at: file.subscription_start_at,
@@ -531,8 +603,23 @@ const sanitizeQuotaItemsForCache = (items: unknown): QuotaItem[] => {
         typeof record.resetAtMs === "number" && Number.isFinite(record.resetAtMs)
           ? record.resetAtMs
           : undefined;
+      const value = typeof record.value === "string" ? record.value : undefined;
+      const windowSeconds =
+        typeof record.windowSeconds === "number" && Number.isFinite(record.windowSeconds)
+          ? record.windowSeconds
+          : undefined;
       const meta = typeof record.meta === "string" ? record.meta : undefined;
-      return { ...(key ? { key } : {}), label, percent, resetAtMs, meta };
+      const type = typeof record.type === "string" ? record.type : undefined;
+      return {
+        ...(key ? { key } : {}),
+        label,
+        percent,
+        value,
+        resetAtMs,
+        windowSeconds,
+        meta,
+        type,
+      };
     })
     .filter((item): item is QuotaItem => Boolean(item));
 };
@@ -565,7 +652,6 @@ const sanitizeQuotaByFileNameForCache = (
     if (!rawState || typeof rawState !== "object" || Array.isArray(rawState)) return;
     const state = rawState as Record<string, unknown>;
     const items = sanitizeQuotaItemsForCache(state.items);
-    if (items.length === 0) return;
     const rawStatus = typeof state.status === "string" ? state.status : "success";
     const status = QUOTA_CACHE_STATUSES.has(rawStatus as QuotaStatus) ? rawStatus : "success";
     const updatedAt =
@@ -578,6 +664,20 @@ const sanitizeQuotaByFileNameForCache = (
       state.resetCreditExpirations,
     );
     const error = typeof state.error === "string" ? state.error : undefined;
+    const fetchedAt =
+      typeof state.fetchedAt === "number" && Number.isFinite(state.fetchedAt)
+        ? state.fetchedAt
+        : undefined;
+    const source = typeof state.source === "string" ? state.source : undefined;
+    if (
+      items.length === 0 &&
+      !planType &&
+      resetCreditCount === undefined &&
+      resetCreditExpirations === undefined &&
+      !error
+    ) {
+      return;
+    }
     output[fileName] = {
       status: status === "loading" ? "success" : (status as QuotaStatus),
       items,
@@ -585,10 +685,41 @@ const sanitizeQuotaByFileNameForCache = (
       resetCreditCount,
       resetCreditExpirations,
       updatedAt,
+      fetchedAt,
+      source,
       error: status === "error" ? error : undefined,
     };
   });
 
+  return Object.keys(output).length > 0 ? output : undefined;
+};
+
+const sanitizeConnectivityByFileNameForCache = (
+  connectivityByFileName: unknown,
+  fileNames?: Set<string>,
+): Record<string, AuthFileConnectivityCacheSnapshot> | undefined => {
+  if (
+    !connectivityByFileName ||
+    typeof connectivityByFileName !== "object" ||
+    Array.isArray(connectivityByFileName)
+  ) {
+    return undefined;
+  }
+  const output: Record<string, AuthFileConnectivityCacheSnapshot> = {};
+  for (const [fileName, raw] of Object.entries(
+    connectivityByFileName as Record<string, unknown>,
+  )) {
+    if (!fileName || (fileNames && !fileNames.has(fileName))) continue;
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) continue;
+    const snapshot = raw as Record<string, unknown>;
+    const latencyMs =
+      typeof snapshot.latencyMs === "number" && Number.isFinite(snapshot.latencyMs)
+        ? Math.max(0, snapshot.latencyMs)
+        : null;
+    const error = snapshot.error === true;
+    if (latencyMs === null && !error) continue;
+    output[fileName] = { latencyMs, error };
+  }
   return Object.keys(output).length > 0 ? output : undefined;
 };
 
@@ -624,6 +755,29 @@ const sanitizeCycleByAuthIndexForCache = (
   return Object.keys(output).length > 0 ? output : undefined;
 };
 
+const sanitizeDisplayPlanByFileNameForCache = (
+  displayPlanByFileName: unknown,
+  fileNames?: Set<string>,
+): Record<string, string> | undefined => {
+  if (
+    !displayPlanByFileName ||
+    typeof displayPlanByFileName !== "object" ||
+    Array.isArray(displayPlanByFileName)
+  ) {
+    return undefined;
+  }
+  const output: Record<string, string> = {};
+  for (const [fileName, raw] of Object.entries(
+    displayPlanByFileName as Record<string, unknown>,
+  )) {
+    if (!fileName || (fileNames && !fileNames.has(fileName))) continue;
+    const planType = normalizePlanType(raw);
+    if (!planType) continue;
+    output[fileName] = planType;
+  }
+  return Object.keys(output).length > 0 ? output : undefined;
+};
+
 const parseAuthFilesDataCacheBucket = (
   value: unknown,
 ): AuthFilesDataCacheBucket | null => {
@@ -634,7 +788,8 @@ const parseAuthFilesDataCacheBucket = (
   const savedAtMs =
     typeof parsed.savedAtMs === "number" && Number.isFinite(parsed.savedAtMs)
       ? parsed.savedAtMs
-      : Date.now();
+      : null;
+  if (savedAtMs === null) return null;
   return {
     savedAtMs,
     files,
@@ -644,8 +799,17 @@ const parseAuthFilesDataCacheBucket = (
         : undefined,
     quotaByFileName: sanitizeQuotaByFileNameForCache(parsed.quotaByFileName),
     cycleByAuthIndex: sanitizeCycleByAuthIndexForCache(parsed.cycleByAuthIndex),
+    connectivityByFileName: sanitizeConnectivityByFileNameForCache(
+      parsed.connectivityByFileName,
+    ),
+    displayPlanByFileName: sanitizeDisplayPlanByFileNameForCache(parsed.displayPlanByFileName),
   };
 };
+
+const isAuthFilesDataCacheFresh = (
+  cache: AuthFilesDataCacheBucket,
+  nowMs = Date.now(),
+): boolean => nowMs - cache.savedAtMs <= AUTH_FILES_DATA_CACHE_TTL_MS;
 
 /**
  * Read auth-files list/quota cache for a tenant.
@@ -663,7 +827,7 @@ export const readAuthFilesDataCache = (
     // v3 may still hold a single unscoped bucket mid-migration.
     acceptUnscopedCurrent: true,
   });
-  if (!bucket) return null;
+  if (!bucket || !isAuthFilesDataCacheFresh(bucket)) return null;
   return { tenantId: tenantKey, ...bucket };
 };
 
@@ -682,19 +846,30 @@ export const writeAuthFilesDataCache = (cache: AuthFilesDataCache) => {
       usageData: cache.usageData,
       quotaByFileName: cache.quotaByFileName,
       cycleByAuthIndex: cache.cycleByAuthIndex,
+      connectivityByFileName: cache.connectivityByFileName,
+      displayPlanByFileName: cache.displayPlanByFileName,
     },
     merge: (previous, next) => {
+      const freshPrevious = previous && isAuthFilesDataCacheFresh(previous) ? previous : null;
       const fileNames = new Set(next.files.map((file) => file.name).filter(Boolean));
       return {
         savedAtMs: next.savedAtMs,
         files: next.files,
-        usageData: next.usageData ?? previous?.usageData,
+        usageData: next.usageData ?? freshPrevious?.usageData,
         quotaByFileName: sanitizeQuotaByFileNameForCache(
-          next.quotaByFileName ?? previous?.quotaByFileName,
+          next.quotaByFileName ?? freshPrevious?.quotaByFileName,
           fileNames,
         ),
         cycleByAuthIndex: sanitizeCycleByAuthIndexForCache(
-          next.cycleByAuthIndex ?? previous?.cycleByAuthIndex,
+          next.cycleByAuthIndex ?? freshPrevious?.cycleByAuthIndex,
+        ),
+        connectivityByFileName: sanitizeConnectivityByFileNameForCache(
+          next.connectivityByFileName ?? freshPrevious?.connectivityByFileName,
+          fileNames,
+        ),
+        displayPlanByFileName: sanitizeDisplayPlanByFileNameForCache(
+          next.displayPlanByFileName ?? freshPrevious?.displayPlanByFileName,
+          fileNames,
         ),
       };
     },
