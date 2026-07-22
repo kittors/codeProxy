@@ -55,7 +55,8 @@ export const AUTH_FILES_UI_STATE_KEY = "authFilesPage.uiState.v3";
 export const AUTH_FILES_DATA_CACHE_KEY = "authFilesPage.dataCache.v3";
 export const AUTH_FILES_DATA_CACHE_KEY_V2 = "authFilesPage.dataCache.v2";
 /** Cached status/usage is only a warm-paint hint; refetch after one minute. */
-export const AUTH_FILES_DATA_CACHE_TTL_MS = 60_000;
+/** Warm paint for membership badges / quota / cycle across route remounts. */
+export const AUTH_FILES_DATA_CACHE_TTL_MS = 30 * 60_000;
 export const AUTH_FILES_QUOTA_PREVIEW_KEY = "authFilesPage.quotaPreview.v1";
 export const AUTH_FILES_QUOTA_AUTO_REFRESH_KEY = "authFilesPage.quotaAutoRefreshMs.v1";
 export const AUTH_FILES_FILES_VIEW_MODE_KEY = "authFilesPage.filesViewMode.v1";
@@ -113,6 +114,8 @@ export type AuthFilesDataCache = {
   quotaByFileName?: Record<string, QuotaState>;
   /** Seed card cycle badges so full reload is 93→98, not --→98. */
   cycleByAuthIndex?: Record<string, AuthFileCycleCacheSnapshot>;
+  /** Last-good membership chip (PRO / PRO 5X / PRO 20X) for first paint after remount. */
+  displayPlanByFileName?: Record<string, string>;
 };
 
 type AuthFilesDataCacheBucket = Omit<AuthFilesDataCache, "tenantId">;
@@ -626,6 +629,29 @@ const sanitizeCycleByAuthIndexForCache = (
   return Object.keys(output).length > 0 ? output : undefined;
 };
 
+const sanitizeDisplayPlanByFileNameForCache = (
+  displayPlanByFileName: unknown,
+  fileNames?: Set<string>,
+): Record<string, string> | undefined => {
+  if (
+    !displayPlanByFileName ||
+    typeof displayPlanByFileName !== "object" ||
+    Array.isArray(displayPlanByFileName)
+  ) {
+    return undefined;
+  }
+  const output: Record<string, string> = {};
+  for (const [fileName, raw] of Object.entries(
+    displayPlanByFileName as Record<string, unknown>,
+  )) {
+    if (!fileName || (fileNames && !fileNames.has(fileName))) continue;
+    const planType = normalizePlanType(raw);
+    if (!planType) continue;
+    output[fileName] = planType;
+  }
+  return Object.keys(output).length > 0 ? output : undefined;
+};
+
 const parseAuthFilesDataCacheBucket = (
   value: unknown,
 ): AuthFilesDataCacheBucket | null => {
@@ -647,6 +673,7 @@ const parseAuthFilesDataCacheBucket = (
         : undefined,
     quotaByFileName: sanitizeQuotaByFileNameForCache(parsed.quotaByFileName),
     cycleByAuthIndex: sanitizeCycleByAuthIndexForCache(parsed.cycleByAuthIndex),
+    displayPlanByFileName: sanitizeDisplayPlanByFileNameForCache(parsed.displayPlanByFileName),
   };
 };
 
@@ -690,6 +717,7 @@ export const writeAuthFilesDataCache = (cache: AuthFilesDataCache) => {
       usageData: cache.usageData,
       quotaByFileName: cache.quotaByFileName,
       cycleByAuthIndex: cache.cycleByAuthIndex,
+      displayPlanByFileName: cache.displayPlanByFileName,
     },
     merge: (previous, next) => {
       const freshPrevious = previous && isAuthFilesDataCacheFresh(previous) ? previous : null;
@@ -704,6 +732,10 @@ export const writeAuthFilesDataCache = (cache: AuthFilesDataCache) => {
         ),
         cycleByAuthIndex: sanitizeCycleByAuthIndexForCache(
           next.cycleByAuthIndex ?? freshPrevious?.cycleByAuthIndex,
+        ),
+        displayPlanByFileName: sanitizeDisplayPlanByFileNameForCache(
+          next.displayPlanByFileName ?? freshPrevious?.displayPlanByFileName,
+          fileNames,
         ),
       };
     },

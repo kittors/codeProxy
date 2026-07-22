@@ -26,6 +26,8 @@ import {
   formatAuthFileRestrictionRemaining,
   formatModified,
   formatPlanBadgeLabel,
+  getActiveCacheTenantId,
+  readAuthFilesDataCache,
   resolveClaudeOAuthHealthBadges,
   isRuntimeOnlyAuthFile,
   normalizeAuthIndexValue,
@@ -43,6 +45,7 @@ import {
   resolvePlanBadgeClass,
   shouldShowAuthFileDisplayTag,
   shouldShowAuthFilePlanBadge,
+  writeAuthFilesDataCache,
   type AuthFileCycleBudgetStats,
 } from "@code-proxy/domain";
 import { resolveQuotaProvider, type QuotaProvider } from "@features/quota-preview/quota-fetch";
@@ -231,20 +234,60 @@ export function useAuthFilesFilesPresentation({
   setFileEnabled,
   usageIndex,
 }: UseAuthFilesFilesPresentationOptions) {
-  // Sticky last-good plan tier so PRO / PRO 5X / PRO 20X do not flash on partial refresh.
-  const stickyDisplayPlanRef = useRef<Map<string, string>>(new Map());
+  // Sticky last-good plan tier so PRO / PRO 5X / PRO 20X do not flash on partial refresh
+  // or full remount. Seed from tenant cache; memory alone dies on route leave / F5.
+  const stickyDisplayPlanRef = useRef<Map<string, string> | null>(null);
+  if (stickyDisplayPlanRef.current === null) {
+    const seeded = new Map<string, string>();
+    const cached = readAuthFilesDataCache(getActiveCacheTenantId());
+    for (const [name, plan] of Object.entries(cached?.displayPlanByFileName ?? {})) {
+      if (name && plan) seeded.set(name, plan);
+    }
+    stickyDisplayPlanRef.current = seeded;
+  }
+  const persistDisplayPlanTimerRef = useRef<number | null>(null);
+  const schedulePersistDisplayPlans = useCallback(() => {
+    if (typeof window === "undefined") return;
+    if (persistDisplayPlanTimerRef.current != null) {
+      window.clearTimeout(persistDisplayPlanTimerRef.current);
+    }
+    persistDisplayPlanTimerRef.current = window.setTimeout(() => {
+      const tenantId = getActiveCacheTenantId();
+      const current = readAuthFilesDataCache(tenantId);
+      if (!current || !Array.isArray(current.files)) return;
+      const sticky = stickyDisplayPlanRef.current;
+      if (!sticky || sticky.size === 0) return;
+      const displayPlanByFileName: Record<string, string> = {
+        ...(current.displayPlanByFileName ?? {}),
+      };
+      for (const [name, plan] of sticky) {
+        if (name && plan) displayPlanByFileName[name] = plan;
+      }
+      writeAuthFilesDataCache({
+        ...current,
+        tenantId,
+        savedAtMs: Date.now(),
+        displayPlanByFileName,
+      });
+    }, 250);
+  }, []);
   const resolveStickyDisplayPlanType = useCallback(
     (
       file: AuthFileItem,
       quotaState?: QuotaState | null,
       cycleStats?: AuthFileCycleBudgetStats | null,
     ) => {
-      const previous = stickyDisplayPlanRef.current.get(file.name) ?? null;
+      const sticky = stickyDisplayPlanRef.current ?? new Map<string, string>();
+      stickyDisplayPlanRef.current = sticky;
+      const previous = sticky.get(file.name) ?? null;
       const next = resolveAuthFileDisplayPlanType(file, quotaState, cycleStats, previous);
-      if (next) stickyDisplayPlanRef.current.set(file.name, next);
+      if (next && sticky.get(file.name) !== next) {
+        sticky.set(file.name, next);
+        schedulePersistDisplayPlans();
+      }
       return next;
     },
-    [],
+    [schedulePersistDisplayPlans],
   );
   const { t } = useTranslation();
 

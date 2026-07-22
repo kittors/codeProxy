@@ -34,14 +34,20 @@ import { useProxyPoolChecks } from "@features/proxy-pool";
 import {
   canRenameAuthFileChannel,
   downloadTextAsFile,
+  formatPlanBadgeLabel,
+  getActiveCacheTenantId,
   matchesModelPattern,
   normalizeProviderKey,
   parseAdditionalQuotaWindowLabel,
   readAuthFileChannelName,
+  readAuthFilesDataCache,
   resolveClaudeOAuthHealth,
   resolveAuthFileDisplayName,
+  resolveAuthFileDisplayPlanType,
   resolveAuthFilePlanType,
   resolveFileType,
+  resolvePlanBadgeClass,
+  shouldShowAuthFilePlanBadge,
   type AuthFileModelItem,
   type AuthFileModelOwnerGroup,
   type ChannelEditorState,
@@ -315,24 +321,33 @@ export function AuthFileDetailModal({
     ? resolveAuthFileDisplayName(detailFile) || String(detailFile.name || "")
     : t("auth_files.view_auth_file");
   const claudeOAuthHealth = detailFile ? resolveClaudeOAuthHealth(detailFile) : null;
-  const detailPlanType = detailFile ? resolveAuthFilePlanType(detailFile, quotaState) : null;
-  const detailPlanLabel = useMemo(() => {
-    if (!detailPlanType) return "";
-    const normalized = detailPlanType.trim().toLowerCase();
-    if (!normalized) return "";
-    if (normalized === "plus" || normalized === "team" || normalized === "free") {
-      return t(`codex_quota.plan_${normalized}`);
-    }
-    if (normalized === "supergrok") return t("xai_quota.plan_supergrok");
-    if (
-      normalized === "supergrok-heavy" ||
-      normalized === "supergrok_heavy" ||
-      normalized === "supergrokheavy"
-    ) {
-      return t("xai_quota.plan_supergrok_heavy");
-    }
-    return normalized.charAt(0).toUpperCase() + normalized.slice(1);
-  }, [detailPlanType, t]);
+  // Same membership chip as cards/table: display tier + solid gradient, not soft amber title pill.
+  const detailBasePlanType = detailFile ? resolveAuthFilePlanType(detailFile, quotaState) : null;
+  const detailPlanType = useMemo(() => {
+    if (!detailFile) return null;
+    const cachedPlan =
+      readAuthFilesDataCache(getActiveCacheTenantId())?.displayPlanByFileName?.[detailFile.name] ??
+      null;
+    return resolveAuthFileDisplayPlanType(
+      detailFile,
+      quotaState,
+      {
+        cycleCostTotal: detailTrend?.cycle_cost_total ?? null,
+        weeklyQuotaUsedPercent: detailTrend?.weekly_quota_used_percent ?? null,
+      },
+      cachedPlan ?? detailBasePlanType,
+    );
+  }, [
+    detailBasePlanType,
+    detailFile,
+    detailTrend?.cycle_cost_total,
+    detailTrend?.weekly_quota_used_percent,
+    quotaState,
+  ]);
+  const detailPlanLabel = detailPlanType ? formatPlanBadgeLabel(detailPlanType) : "";
+  const showDetailPlanBadge = detailFile
+    ? shouldShowAuthFilePlanBadge(detailFile, detailBasePlanType)
+    : false;
   const excludedModels = excluded[providerKey] ?? [];
   const canRenameChannel = detailFile ? canRenameAuthFileChannel(detailFile) : false;
   const channelBaseline = detailFile ? readAuthFileChannelName(detailFile) : "";
@@ -1333,8 +1348,14 @@ export function AuthFileDetailModal({
       open={open}
       title={detailTitle}
       titleAccessory={
-        detailPlanLabel ? (
-          <span className="inline-flex shrink-0 items-center rounded-full bg-amber-50 px-2 py-0.5 text-2xs font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-200">
+        showDetailPlanBadge && detailPlanLabel ? (
+          <span
+            data-testid="auth-file-plan-badge"
+            className={[
+              "inline-flex shrink-0 items-center rounded-md px-2 py-0.5 text-2xs font-bold tracking-wide",
+              resolvePlanBadgeClass(detailPlanType),
+            ].join(" ")}
+          >
             {detailPlanLabel}
           </span>
         ) : undefined

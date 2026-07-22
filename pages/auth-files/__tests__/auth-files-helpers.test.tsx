@@ -432,6 +432,36 @@ describe("Auth Files helper coverage", () => {
     });
   });
 
+  test("persists display plan tiers so membership chips warm-paint after remount", () => {
+    const savedAtMs = Date.now();
+    writeAuthFilesDataCache({
+      tenantId: "tenant-a",
+      savedAtMs,
+      files: [{ name: "codex.json", type: "codex" } as AuthFileItem],
+      displayPlanByFileName: {
+        "codex.json": "pro_20x",
+        "skip-me.json": "pro",
+      },
+    });
+    expect(readAuthFilesDataCache("tenant-a")).toEqual({
+      tenantId: "tenant-a",
+      savedAtMs,
+      files: [{ name: "codex.json", type: "codex" }],
+      displayPlanByFileName: { "codex.json": "pro_20x" },
+    });
+
+    // Partial write without displayPlan keeps last-good tiers (list refresh path).
+    writeAuthFilesDataCache({
+      tenantId: "tenant-a",
+      savedAtMs: savedAtMs + 1,
+      files: [{ name: "codex.json", type: "codex" } as AuthFileItem],
+      usageData: { source: [], auth_index: [] },
+    });
+    expect(readAuthFilesDataCache("tenant-a")?.displayPlanByFileName).toEqual({
+      "codex.json": "pro_20x",
+    });
+  });
+
   test("keeps shared subscription status so the badge can warm-paint", () => {
     const [cachedFile] = sanitizeAuthFilesForCache([
       {
