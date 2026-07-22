@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { AuthFileItem } from "@code-proxy/api-client";
 import {
   AUTH_FILES_DATA_CACHE_KEY,
+  AUTH_FILES_DATA_CACHE_TTL_MS,
   AUTH_FILES_UI_STATE_KEY,
   buildUsageIndex,
   DEFAULT_CACHE_TENANT_ID,
@@ -367,9 +368,10 @@ describe("Auth Files helper coverage", () => {
     ]);
     expect(JSON.stringify(sanitized)).not.toContain("should-not-persist");
 
+    const savedAtMs = Date.now();
     writeAuthFilesDataCache({
       tenantId: "tenant-a",
-      savedAtMs: 123,
+      savedAtMs,
       files: sanitized,
       quotaByFileName: {
         "codex.json": {
@@ -380,11 +382,13 @@ describe("Auth Files helper coverage", () => {
         },
       },
     });
-    expect(window.localStorage.getItem(AUTH_FILES_DATA_CACHE_KEY)).toContain('"savedAtMs":123');
+    expect(window.localStorage.getItem(AUTH_FILES_DATA_CACHE_KEY)).toContain(
+      `"savedAtMs":${savedAtMs}`,
+    );
     expect(window.localStorage.getItem(AUTH_FILES_DATA_CACHE_KEY)).toContain("byTenant");
     expect(readAuthFilesDataCache("tenant-a")).toEqual({
       tenantId: "tenant-a",
-      savedAtMs: 123,
+      savedAtMs,
       files: sanitized,
       quotaByFileName: {
         "codex.json": {
@@ -397,6 +401,35 @@ describe("Auth Files helper coverage", () => {
     });
     // Different tenant must not see tenant-a's list/quota payload.
     expect(readAuthFilesDataCache("tenant-b")).toBeNull();
+  });
+
+  test("treats expired auth-files cache as a miss without reviving stale status data", () => {
+    const now = Date.now();
+    writeAuthFilesDataCache({
+      tenantId: "tenant-a",
+      savedAtMs: now - AUTH_FILES_DATA_CACHE_TTL_MS - 1,
+      files: [{ name: "stale.json", type: "codex" } as AuthFileItem],
+      quotaByFileName: {
+        "stale.json": {
+          status: "success",
+          items: [{ key: "code_5h", label: "m_quota.code_5h", percent: 99 }],
+        },
+      },
+      cycleByAuthIndex: { stale: { calls: 99 } },
+    });
+
+    expect(readAuthFilesDataCache("tenant-a")).toBeNull();
+
+    writeAuthFilesDataCache({
+      tenantId: "tenant-a",
+      savedAtMs: now,
+      files: [{ name: "fresh.json", type: "codex" } as AuthFileItem],
+    });
+    expect(readAuthFilesDataCache("tenant-a")).toEqual({
+      tenantId: "tenant-a",
+      savedAtMs: now,
+      files: [{ name: "fresh.json", type: "codex" }],
+    });
   });
 
   test("keeps shared subscription status so the badge can warm-paint", () => {

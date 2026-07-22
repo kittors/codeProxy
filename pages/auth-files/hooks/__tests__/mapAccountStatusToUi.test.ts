@@ -113,6 +113,43 @@ describe("mapAccountStatusToUi", () => {
     expect(isAccountStatusFresher({ version: 1, timeMs: null }, null)).toBe(true);
   });
 
+  test("allows usage updates when the status version does not change", () => {
+    const current = readAccountStatusFreshness({
+      version: 7,
+      updated_at: "2026-07-16T12:00:00.000Z",
+      usage: {
+        updated_at: "2026-07-16T11:00:00.000Z",
+        cycle_request_total: 10,
+      },
+    });
+    const newerUsage = readAccountStatusFreshness({
+      version: 7,
+      updated_at: "2026-07-16T10:00:00.000Z",
+      usage: {
+        updated_at: "2026-07-16T13:00:00.000Z",
+        cycle_request_total: 10,
+      },
+    });
+    const changedCycle = readAccountStatusFreshness({
+      version: 7,
+      updated_at: "2026-07-16T10:00:00.000Z",
+      usage: { cycle_request_total: 11 },
+    });
+
+    expect(isAccountStatusFresher(newerUsage, current)).toBe(true);
+    expect(isAccountStatusFresher(changedCycle, current)).toBe(true);
+    expect(
+      applyAccountStatuses([
+        {
+          auth_index: "77",
+          version: 7,
+          quotas: [],
+          usage: { cycle_known: true, cycle_request_total: 11 },
+        },
+      ]).cycleByKey["77"]?.calls,
+    ).toBe(11);
+  });
+
   test("readAccountStatusFreshness uses server fields only", () => {
     expect(
       readAccountStatusFreshness({
@@ -123,6 +160,8 @@ describe("mapAccountStatusToUi", () => {
     ).toEqual({
       version: 7,
       timeMs: Date.parse("2026-07-16T12:00:00.000Z"),
+      usageTimeMs: null,
+      cycleRequestTotal: null,
     });
   });
 });

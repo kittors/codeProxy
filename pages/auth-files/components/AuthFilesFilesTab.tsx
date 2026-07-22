@@ -660,6 +660,7 @@ interface AuthFilesFilesTabProps {
   quotaByFileName: Record<string, QuotaState>;
   cycleCallsByAuthIndex: Record<string, number>;
   cycleBudgetByAuthIndex: Record<string, AuthFileCycleBudgetStats>;
+  statusUsageLoading: boolean;
   resolveQuotaProvider: (file: AuthFileItem) => QuotaProvider | null;
   resolveQuotaCardSlots: (
     provider: QuotaProvider,
@@ -760,6 +761,7 @@ export function AuthFilesFilesTab({
   quotaByFileName,
   cycleCallsByAuthIndex,
   cycleBudgetByAuthIndex,
+  statusUsageLoading,
   resolveQuotaProvider,
   resolveQuotaCardSlots,
   refreshQuota,
@@ -1501,7 +1503,7 @@ export function AuthFilesFilesTab({
                       <RefreshCw
                         size={15}
                         className={
-                          loading || usageLoading || refreshingAll
+                          loading || usageLoading || refreshingAll || statusUsageLoading
                             ? "animate-spin"
                             : ""
                         }

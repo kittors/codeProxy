@@ -183,6 +183,32 @@ describe("useAuthFilesStatusState batch refresh", () => {
     );
   });
 
+  test("visibility refresh uses GET status without starting a provider probe", async () => {
+    const setFiles = vi.fn();
+    const setDetailFile = vi.fn();
+    const { result } = renderHook(() =>
+      useAuthFilesStatusState({
+        tab: "files",
+        pageItems: files,
+        loading: false,
+        setFiles,
+        setDetailFile,
+      }),
+    );
+
+    await waitFor(() => expect(mocks.startStatusRefresh).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(result.current.refreshingPage).toBe(false));
+    await waitFor(() => expect(mocks.getStatus).toHaveBeenCalledTimes(2));
+    mocks.getStatus.mockClear();
+    mocks.startStatusRefresh.mockClear();
+
+    Object.defineProperty(document, "hidden", { configurable: true, value: false });
+    document.dispatchEvent(new Event("visibilitychange"));
+
+    await waitFor(() => expect(mocks.getStatus).toHaveBeenCalledTimes(1));
+    expect(mocks.startStatusRefresh).not.toHaveBeenCalled();
+  });
+
   test("forceRefreshPage posts one batch job then polls once and reloads snapshot", async () => {
     const setFiles = vi.fn();
     const setDetailFile = vi.fn();
