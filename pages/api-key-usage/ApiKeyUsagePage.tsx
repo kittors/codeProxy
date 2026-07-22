@@ -28,8 +28,6 @@ import {
   maskRequestLogApiKey,
   normalizeChannelAuthType,
   normalizeFilterSelection,
-  RequestLogFilterCount,
-  sortRequestLogKeyOptionsByCount,
   toFilterParam,
   toStatusFilterValues,
   type MultiSelectFilterState,
@@ -168,7 +166,7 @@ function toLogRow(item: PublicLogItem): RequestLogsRow {
 }
 
 export function ApiKeyUsagePage() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
 
   const bootstrap = useMemo(() => {
     const fromUrl = readLookupKeyFromUrl();
@@ -198,19 +196,12 @@ export function ApiKeyUsagePage() {
     total_cost: 0,
   });
   const [filterOptions, setFilterOptions] = useState<{
-    api_key_ids: string[];
-    api_key_id_names: Record<string, string>;
-    api_key_id_counts: Record<string, number>;
     models: string[];
     statuses: string[];
   }>({
-    api_key_ids: [],
-    api_key_id_names: {},
-    api_key_id_counts: {},
     models: [],
     statuses: ["success", "failed"],
   });
-  const [selectedApiKeyIds, setSelectedApiKeyIds] = useState<MultiSelectFilterState<string>>(null);
   const [selectedModels, setSelectedModels] = useState<MultiSelectFilterState<string>>(null);
   const [selectedStatuses, setSelectedStatuses] =
     useState<MultiSelectFilterState<StatusFilterValue>>(null);
@@ -228,29 +219,6 @@ export function ApiKeyUsagePage() {
       }),
     [t],
   );
-
-  const keyOptions = useMemo<SearchableCheckboxMultiSelectOption[]>(() => {
-    const options = (filterOptions.api_key_ids ?? []).map((id) => {
-      const name = filterOptions.api_key_id_names?.[id] || id;
-      return {
-        value: id,
-        label: name,
-        searchText: name,
-        count: filterOptions.api_key_id_counts?.[id] ?? 0,
-      };
-    });
-    return sortRequestLogKeyOptionsByCount(options, i18n.resolvedLanguage).map((option) => ({
-      value: option.value,
-      label: option.label,
-      searchText: option.searchText,
-      trailing: <RequestLogFilterCount count={option.count} />,
-    }));
-  }, [
-    filterOptions.api_key_id_counts,
-    filterOptions.api_key_id_names,
-    filterOptions.api_key_ids,
-    i18n.resolvedLanguage,
-  ]);
 
   const modelOptions = useMemo<SearchableCheckboxMultiSelectOption[]>(() => {
     return filterOptions.models.map((model) => ({
@@ -275,10 +243,6 @@ export function ApiKeyUsagePage() {
     }));
   }, [filterOptions.statuses, t]);
 
-  const apiKeyIdFilterValues = useMemo(
-    () => keyOptions.map((option) => option.value),
-    [keyOptions],
-  );
   const modelFilterValues = useMemo(
     () => modelOptions.map((option) => option.value),
     [modelOptions],
@@ -286,10 +250,6 @@ export function ApiKeyUsagePage() {
   const statusFilterValues = useMemo<StatusFilterValue[]>(
     () => toStatusFilterValues(statusOptions.map((option) => option.value)),
     [statusOptions],
-  );
-  const apiKeyIdFilterParam = useMemo(
-    () => toFilterParam(selectedApiKeyIds, apiKeyIdFilterValues),
-    [apiKeyIdFilterValues, selectedApiKeyIds],
   );
   const modelFilterParam = useMemo(
     () => toFilterParam(selectedModels, modelFilterValues),
@@ -300,12 +260,6 @@ export function ApiKeyUsagePage() {
     [selectedStatuses, statusFilterValues],
   );
 
-  const handleApiKeyIdsChange = useCallback(
-    (value: string[]) => {
-      setSelectedApiKeyIds(normalizeFilterSelection(value, apiKeyIdFilterValues));
-    },
-    [apiKeyIdFilterValues],
-  );
   const handleModelsChange = useCallback(
     (value: string[]) => {
       setSelectedModels(normalizeFilterSelection(value, modelFilterValues));
@@ -318,7 +272,6 @@ export function ApiKeyUsagePage() {
     },
     [statusFilterValues],
   );
-  const clearApiKeyIdFilter = useCallback(() => setSelectedApiKeyIds(null), []);
   const clearModelFilter = useCallback(() => setSelectedModels(null), []);
   const clearStatusFilter = useCallback(() => setSelectedStatuses(null), []);
 
@@ -334,13 +287,9 @@ export function ApiKeyUsagePage() {
     setLastUpdatedAt(null);
     setStats({ total: 0, success_rate: 0, total_tokens: 0, total_cost: 0 });
     setFilterOptions({
-      api_key_ids: [],
-      api_key_id_names: {},
-      api_key_id_counts: {},
       models: [],
       statuses: ["success", "failed"],
     });
-    setSelectedApiKeyIds(null);
     setSelectedModels(null);
     setSelectedStatuses(null);
     setApiKeyName("");
@@ -366,10 +315,8 @@ export function ApiKeyUsagePage() {
           page,
           size: size ?? pageSize,
           days: timeRange,
-          apiKeyIds: apiKeyIdFilterParam.values,
           models: modelFilterParam.values,
           statuses: statusFilterParam.values,
-          apiKeyIdsEmpty: apiKeyIdFilterParam.matchesNone,
           modelsEmpty: modelFilterParam.matchesNone,
           statusesEmpty: statusFilterParam.matchesNone,
           signal: controller.signal,
@@ -389,9 +336,6 @@ export function ApiKeyUsagePage() {
           },
         );
         setFilterOptions({
-          api_key_ids: resp.filters?.api_key_ids ?? [],
-          api_key_id_names: resp.filters?.api_key_id_names ?? {},
-          api_key_id_counts: resp.filters?.api_key_id_counts ?? {},
           models: resp.filters?.models ?? [],
           statuses: resp.filters?.statuses ?? ["success", "failed"],
         });
@@ -411,7 +355,7 @@ export function ApiKeyUsagePage() {
         if (myFetchId === fetchIdRef.current) setLoading(false);
       }
     },
-    [apiKeyIdFilterParam, modelFilterParam, pageSize, statusFilterParam, t, timeRange],
+    [modelFilterParam, pageSize, statusFilterParam, t, timeRange],
   );
 
   const rows = useMemo(() => rawItems.map((item) => toLogRow(item)), [rawItems]);
@@ -442,7 +386,6 @@ export function ApiKeyUsagePage() {
       // Drop previous key label immediately so a stale localStorage/account name cannot flash.
       setApiKeyName("");
       setActiveTab("logs");
-      setSelectedApiKeyIds(null);
       setSelectedModels(null);
       setSelectedStatuses(null);
       setQuickImportReloadToken((value) => value + 1);
@@ -471,7 +414,7 @@ export function ApiKeyUsagePage() {
 
   useEffect(() => {
     if (queriedKey && activeTab === "logs") fetchLogs(queriedKey, 1);
-  }, [timeRange, selectedApiKeyIds, selectedModels, selectedStatuses]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [timeRange, selectedModels, selectedStatuses]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!bootstrap?.apiKey || restoredLookupFetchedRef.current) return;
@@ -554,10 +497,7 @@ export function ApiKeyUsagePage() {
                         <KeyRound size={14} />
                         {t("apikey_usage.switch_key")}
                       </DropdownMenu.Item>
-                      <DropdownMenu.Item
-                        data-testid="apikey-usage-logout"
-                        onSelect={handleLogout}
-                      >
+                      <DropdownMenu.Item data-testid="apikey-usage-logout" onSelect={handleLogout}>
                         <LogOut size={14} />
                         {t("apikey_usage.logout")}
                       </DropdownMenu.Item>
@@ -607,16 +547,12 @@ export function ApiKeyUsagePage() {
               {activeTab === "logs" ? (
                 <PublicLogsSection
                   t={t}
-                  keyOptions={keyOptions}
                   modelOptions={modelOptions}
                   statusOptions={statusOptions}
-                  selectedApiKeyIds={selectedApiKeyIds}
                   selectedModels={selectedModels}
                   selectedStatuses={selectedStatuses}
-                  onApiKeyIdsChange={handleApiKeyIdsChange}
                   onModelsChange={handleModelsChange}
                   onStatusesChange={handleStatusesChange}
-                  onApiKeyIdsClear={clearApiKeyIdFilter}
                   onModelsClear={clearModelFilter}
                   onStatusesClear={clearStatusFilter}
                   stats={stats}

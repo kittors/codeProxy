@@ -3,6 +3,8 @@ import { Plus, RefreshCw } from "lucide-react";
 import { Button, HoverTooltip, Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { TimeRangeSelector } from "@features/monitor-widgets";
 import type { TimeRange } from "@features/monitor-widgets/monitor-constants";
+import type { PublicQuotaScope, PublicUsageLimits } from "../types";
+import { buildQuotaKpiItems } from "./QuotaLimitsBanner";
 
 export type ApiKeyLookupTab = "usage" | "keys" | "logs" | "models" | "quickImport";
 
@@ -23,6 +25,8 @@ export function LookupResultsToolbar({
   loading,
   chartLoading,
   modelsLoading,
+  quotaLimits,
+  quotaScopes,
   showKeysTab = false,
   tabs,
   keysHeader,
@@ -36,6 +40,8 @@ export function LookupResultsToolbar({
   loading: boolean;
   chartLoading: boolean;
   modelsLoading: boolean;
+  quotaLimits?: PublicUsageLimits | null;
+  quotaScopes?: PublicQuotaScope[] | null;
   /** Portal login: show “管理 API Key” as the 2nd tab. */
   showKeysTab?: boolean;
   /** Restrict visible tabs (e.g. public key usage page only needs logs + quick import). */
@@ -53,6 +59,8 @@ export function LookupResultsToolbar({
   const visibleTabs = tabs?.length ? tabs : DEFAULT_TABS;
   const showTab = (tab: ApiKeyLookupTab) => visibleTabs.includes(tab);
   const showKeysHeader = activeTab === "keys" && keysHeader && showTab("keys");
+  const logsQuotaItems =
+    activeTab === "logs" ? buildQuotaKpiItems(t, quotaLimits, quotaScopes) : [];
 
   // 不要再用短 relative 包裹 sticky：sticky 只能在「包含块」高度内钉住，
   // 外层高度≈自身时，一滚就会整段被带走，表现为「没吸顶、飘走」。
@@ -126,6 +134,24 @@ export function LookupResultsToolbar({
           {activeTab === "usage" || activeTab === "logs" ? (
             <TimeRangeSelector value={timeRange} onChange={setTimeRange} />
           ) : null}
+          {logsQuotaItems.length > 0 ? (
+            <div
+              data-testid="apikey-lookup-logs-quota"
+              className="flex flex-wrap items-center gap-1.5"
+            >
+              {logsQuotaItems.map((item) => (
+                <div
+                  key={item.key}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white/80 px-2 py-1 text-xs text-slate-600 shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-white/60"
+                >
+                  <span>{item.title}</span>
+                  <span className="font-mono font-semibold tabular-nums text-slate-900 dark:text-white">
+                    {item.format(item.used)} / {item.format(item.limit)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : null}
         </div>
         {!showKeysHeader ? (
           <div className="flex items-center gap-2">
@@ -172,7 +198,12 @@ export function LookupResultsToolbar({
               <RefreshCw size={14} className={keysHeader.loading ? "animate-spin" : ""} />
               {t("common.refresh")}
             </Button>
-            <Button size="sm" variant="primary" onClick={keysHeader.onCreate} disabled={keysHeader.busy}>
+            <Button
+              size="sm"
+              variant="primary"
+              onClick={keysHeader.onCreate}
+              disabled={keysHeader.busy}
+            >
               <Plus size={14} />
               {t("apikey_lookup.create_key", { defaultValue: "新建 Key" })}
             </Button>

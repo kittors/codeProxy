@@ -2,7 +2,6 @@ import { Filter } from "lucide-react";
 import { Card } from "@code-proxy/ui";
 import { Reveal } from "@code-proxy/ui";
 import { DataTable, type DataTableColumn } from "@code-proxy/ui";
-import { SearchableCheckboxMultiSelect } from "@code-proxy/ui";
 import type { SearchableCheckboxMultiSelectOption } from "@code-proxy/ui";
 import {
   RequestLogFacetFilters,
@@ -14,16 +13,12 @@ import {
 
 export function PublicLogsSection({
   t,
-  keyOptions,
   statusOptions,
   modelOptions,
-  selectedApiKeyIds,
   selectedModels,
   selectedStatuses,
-  onApiKeyIdsChange,
   onModelsChange,
   onStatusesChange,
-  onApiKeyIdsClear,
   onModelsClear,
   onStatusesClear,
   stats,
@@ -39,16 +34,12 @@ export function PublicLogsSection({
   onPageSizeChange,
 }: {
   t: (key: string, options?: Record<string, unknown>) => string;
-  keyOptions: SearchableCheckboxMultiSelectOption[];
   modelOptions: SearchableCheckboxMultiSelectOption[];
   statusOptions: SearchableCheckboxMultiSelectOption[];
-  selectedApiKeyIds: MultiSelectFilterState<string>;
   selectedModels: MultiSelectFilterState<string>;
   selectedStatuses: MultiSelectFilterState<StatusFilterValue>;
-  onApiKeyIdsChange: (value: string[]) => void;
   onModelsChange: (value: string[]) => void;
   onStatusesChange: (value: StatusFilterValue[]) => void;
-  onApiKeyIdsClear: () => void;
   onModelsClear: () => void;
   onStatusesClear: () => void;
   stats: {
@@ -74,37 +65,6 @@ export function PublicLogsSection({
         <div className="border-b border-slate-100 px-3 py-3 sm:px-5 dark:border-neutral-800/60">
           <div className="grid gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-2">
             <div className="grid grid-cols-1 gap-2 sm:flex sm:items-center sm:gap-2">
-              {keyOptions.length > 0 ? (
-                <div className="w-full min-[480px]:w-auto sm:w-[180px]">
-                  <SearchableCheckboxMultiSelect
-                    value={selectedApiKeyIds ?? []}
-                    onChange={onApiKeyIdsChange}
-                    options={keyOptions}
-                    placeholder={t("request_logs.all_keys_placeholder")}
-                    searchPlaceholder={t("request_logs.search_keys")}
-                    selectFilteredLabel={t("request_logs.select_filtered")}
-                    deselectFilteredLabel={t("request_logs.deselect_filtered")}
-                    selectedCountLabel={(count: number) =>
-                      t("request_logs.selected_count", { count })
-                    }
-                    noResultsLabel={t("request_logs.no_filter_results")}
-                    aria-label={t("request_logs.filter_key")}
-                    clearLabel={t("request_logs.clear_key_filter")}
-                    onClear={onApiKeyIdsClear}
-                    showClearButton
-                    size="sm"
-                    emptyValueMeansAllSelected
-                    emptyValueRepresentsAllSelected={selectedApiKeyIds === null}
-                    showFilteredToggleWithoutQuery={false}
-                    applyMode="manual"
-                    applyLabel={t("request_logs.apply_filters")}
-                    cancelLabel={t("common.cancel")}
-                    neutralAllSelection
-                    allSelectionLabel={t("request_logs.unrestricted")}
-                    selectionHint={t("request_logs.calls_sorted_hint")}
-                  />
-                </div>
-              ) : null}
               <RequestLogFacetFilters
                 modelOptions={modelOptions}
                 channelOptions={[]}
