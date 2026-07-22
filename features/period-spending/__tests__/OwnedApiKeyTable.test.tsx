@@ -48,6 +48,30 @@ describe("OwnedApiKeysTable", () => {
     expect(screen.getByText("No API keys")).toBeInTheDocument();
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
+
+  test("allows a parent viewport to make the table fill its available height", () => {
+    const { container } = render(
+      <OwnedApiKeysTable
+        t={t}
+        keys={[
+          {
+            id: "key-1",
+            tenant_id: "tenant-1",
+            end_user_id: "user-1",
+            name: "Primary",
+            key_masked: "sk-****",
+            disabled: false,
+            is_default: true,
+          },
+        ]}
+        actions={{}}
+        height="h-full"
+        minHeight="min-h-full"
+      />,
+    );
+
+    expect(container.firstElementChild).toHaveClass("h-full", "min-h-full");
+  });
 });
 
 describe("createOwnedApiKeyColumns", () => {

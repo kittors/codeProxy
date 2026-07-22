@@ -730,6 +730,21 @@ describe("ApiKeyLookupPage", () => {
     );
 
     expect(await screen.findByText("sk-new****999")).toBeInTheDocument();
+    expect(
+      screen.queryByText(/manage all api keys under this account|管理本账号下全部 api key/i),
+    ).not.toBeInTheDocument();
+
+    const cardToolbar = screen.getByTestId("apikey-lookup-keys-card-toolbar");
+    expect(cardToolbar).toHaveClass("border-b", "px-3", "py-3", "sm:px-5");
+    expect(within(cardToolbar).getByRole("button", { name: /refresh|刷新/i })).toBeInTheDocument();
+    expect(
+      within(cardToolbar).getByRole("button", { name: /new key|新建 key/i }),
+    ).toBeInTheDocument();
+
+    const tableViewport = screen.getByTestId("apikey-lookup-keys-table-viewport");
+    expect(tableViewport).toHaveClass("min-h-[360px]", "h-[calc(100dvh-240px)]", "px-3", "sm:px-5");
+    expect(tableViewport.querySelector(".h-full.min-h-full")).not.toBeNull();
+
     await waitFor(() => {
       expect(portalApi.listKeys).toHaveBeenCalledTimes(2);
       expect(portalApi.keySecret).toHaveBeenLastCalledWith("k1");
