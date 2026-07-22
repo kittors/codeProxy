@@ -17,7 +17,6 @@ import {
   isApiClientError,
   portalApi,
   normalizePeriodSpendingLimits,
-  type ApiKeyDailySpendingResetEvent,
   type EndUser,
   type EndUserAPIKey,
   type SavedPortalAccount,
@@ -38,7 +37,6 @@ import type { TimeRange } from "@features/monitor-widgets/monitor-constants";
 import { ModelTag } from "@features/model-tags";
 import {
   OwnedApiKeyQuotaModal,
-  OwnedApiKeyResetHistoryModal,
   emptyPeriodSpendingDraft,
   formatQuotaValidationError,
   limitsToPeriodSpendingDraft,
@@ -370,9 +368,6 @@ export function ApiKeyLookupPage() {
   });
   const [editKeyTarget, setEditKeyTarget] = useState<EndUserAPIKey | null>(null);
   const [portalKeyQuotaError, setPortalKeyQuotaError] = useState("");
-  const [resetHistoryTarget, setResetHistoryTarget] = useState<EndUserAPIKey | null>(null);
-  const [resetHistoryEvents, setResetHistoryEvents] = useState<ApiKeyDailySpendingResetEvent[]>([]);
-  const [resetHistoryLoading, setResetHistoryLoading] = useState(false);
   const [deleteKeyTarget, setDeleteKeyTarget] = useState<EndUserAPIKey | null>(null);
   const [portalKeysBusy, setPortalKeysBusy] = useState(false);
   const [portalKeysLoading, setPortalKeysLoading] = useState(false);
@@ -1480,39 +1475,6 @@ export function ApiKeyLookupPage() {
                         ),
                       });
                     }}
-                    onResetDailySpending={(key) => {
-                      setPortalKeysBusy(true);
-                      void portalApi
-                        .resetKeyDailySpending(key.id)
-                        .then(async () => {
-                          await refreshPortalKeys();
-                        })
-                        .catch((err) => {
-                          setError(
-                            err instanceof Error
-                              ? err.message
-                              : t("apikey_lookup.reset_daily_spending_failed"),
-                          );
-                        })
-                        .finally(() => setPortalKeysBusy(false));
-                    }}
-                    onViewResetHistory={(key) => {
-                      setResetHistoryTarget(key);
-                      setResetHistoryEvents([]);
-                      setResetHistoryLoading(true);
-                      void portalApi
-                        .listKeyDailySpendingResetHistory(key.id, 200)
-                        .then((response) => setResetHistoryEvents(response.items ?? []))
-                        .catch((err) => {
-                          setError(
-                            err instanceof Error
-                              ? err.message
-                              : t("api_keys_page.reset_history_load_failed"),
-                          );
-                          setResetHistoryTarget(null);
-                        })
-                        .finally(() => setResetHistoryLoading(false));
-                    }}
                     onDelete={(key) => {
                       if (portalKeys.length <= 1) return;
                       setDeleteKeyTarget(key);
@@ -1910,19 +1872,6 @@ export function ApiKeyLookupPage() {
               .catch((err) => setPortalKeyQuotaError(formatQuotaValidationError(err, t)))
               .finally(() => setPortalKeysBusy(false));
           }}
-        />
-
-        <OwnedApiKeyResetHistoryModal
-          t={t}
-          open={resetHistoryTarget !== null}
-          onClose={() => {
-            setResetHistoryTarget(null);
-            setResetHistoryEvents([]);
-          }}
-          keyName={resetHistoryTarget?.name || t("api_keys_page.unnamed")}
-          maskedKey={resetHistoryTarget?.key_masked ?? ""}
-          loading={resetHistoryLoading}
-          events={resetHistoryEvents}
         />
 
         <SecretRevealModal

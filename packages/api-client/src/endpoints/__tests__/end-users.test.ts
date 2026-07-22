@@ -79,19 +79,6 @@ describe("endUsersApi", () => {
     );
   });
 
-  test("uses portal reset and reset-history endpoints", async () => {
-    const post = vi.spyOn(portalApi.client, "post").mockResolvedValue({ status: "ok" });
-    const get = vi.spyOn(portalApi.client, "get").mockResolvedValue({ items: [], total: 0 });
-
-    await portalApi.resetKeyDailySpending("key-1");
-    await portalApi.listKeyDailySpendingResetHistory("key-1", 100);
-
-    expect(post).toHaveBeenCalledWith("/v0/portal/api-keys/key-1/daily-spending/reset", {});
-    expect(get).toHaveBeenCalledWith(
-      "/v0/portal/api-keys/key-1/daily-spending/reset-history?limit=100",
-    );
-  });
-
   test("renames and rotates keys through owner-scoped endpoints", async () => {
     mocks.patch.mockResolvedValue({ id: "key-1", name: "Renamed" });
     mocks.post.mockResolvedValue({
