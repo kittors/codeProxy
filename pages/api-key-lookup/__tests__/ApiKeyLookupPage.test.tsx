@@ -543,11 +543,9 @@ describe("ApiKeyLookupPage", () => {
     });
     expect(screen.getAllByText(/response metrics/i).length).toBeGreaterThan(0);
     expect(screen.queryByText("Codex 主渠道")).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("columnheader", { name: /key name|Key 名称/i }),
-    ).not.toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: /key name|Key 名称/i })).toBeInTheDocument();
     expect(screen.queryByText("Alice")).not.toBeInTheDocument();
-    expect(screen.queryByText("Laptop")).not.toBeInTheDocument();
+    expect(screen.getByText("Laptop")).toBeInTheDocument();
     expect(screen.queryByRole("columnheader", { name: /^duration$/i })).not.toBeInTheDocument();
 
     const logsQuota = await screen.findByTestId("apikey-lookup-logs-quota");
@@ -561,30 +559,53 @@ describe("ApiKeyLookupPage", () => {
     });
   });
 
-  test("keeps model and status filters without a key filter on the public logs tab", async () => {
+  test("uses the shared linked request-log filters on the public logs tab", async () => {
     window.history.replaceState({}, "", "/manage/apikey-lookup?api_key=sk-restored-key");
-    mocks.fetchPublicLogs.mockResolvedValueOnce({
-      items: [],
-      total: 0,
-      page: 1,
-      size: 50,
-      api_key_name: "Primary key",
-      stats: {
+    mocks.fetchPublicLogs
+      .mockResolvedValueOnce({
+        items: [],
         total: 0,
-        success_rate: 0,
-        total_tokens: 0,
-        total_sessions: 0,
-        total_cost: 0,
-      },
-      filters: {
-        api_key_ids: ["key-laptop", "key-auto"],
-        api_key_id_names: { "key-laptop": "Laptop", "key-auto": "Automation" },
-        api_key_id_counts: { "key-laptop": 12, "key-auto": 37 },
-        models: ["gpt-5.5"],
-        channels: ["Codex 主渠道", "OpenCode"],
-        statuses: ["success", "failed"],
-      },
-    });
+        page: 1,
+        size: 50,
+        api_key_name: "Primary key",
+        stats: {
+          total: 0,
+          success_rate: 0,
+          total_tokens: 0,
+          total_sessions: 0,
+          total_cost: 0,
+        },
+        filters: {
+          api_key_ids: ["key-laptop", "key-auto"],
+          api_key_id_names: { "key-laptop": "Laptop", "key-auto": "Automation" },
+          api_key_id_counts: { "key-laptop": 12, "key-auto": 37 },
+          models: ["gpt-5.5"],
+          channels: ["Codex 主渠道", "OpenCode"],
+          statuses: ["success", "failed"],
+        },
+      })
+      .mockResolvedValueOnce({
+        items: [],
+        total: 0,
+        page: 1,
+        size: 50,
+        api_key_name: "Primary key",
+        stats: {
+          total: 0,
+          success_rate: 0,
+          total_tokens: 0,
+          total_sessions: 0,
+          total_cost: 0,
+        },
+        filters: {
+          api_key_ids: ["key-laptop", "key-auto"],
+          api_key_id_names: { "key-laptop": "Laptop", "key-auto": "Automation" },
+          api_key_id_counts: { "key-laptop": 12, "key-auto": 37 },
+          models: ["gpt-5.5"],
+          channels: ["Codex 主渠道"],
+          statuses: ["success"],
+        },
+      });
 
     render(
       <ThemeProvider>
@@ -596,7 +617,9 @@ describe("ApiKeyLookupPage", () => {
 
     await userEvent.click(await screen.findByRole("tab", { name: /request logs/i }));
 
-    expect(screen.queryByRole("combobox", { name: /filter by key/i })).not.toBeInTheDocument();
+    expect(await screen.findByRole("combobox", { name: /filter by key/i })).toHaveTextContent(
+      /all keys/i,
+    );
     expect(await screen.findByRole("combobox", { name: /filter by model/i })).toHaveTextContent(
       /all models/i,
     );
@@ -604,9 +627,29 @@ describe("ApiKeyLookupPage", () => {
     expect(screen.getByRole("combobox", { name: /filter by status/i })).toHaveTextContent(
       /all status/i,
     );
-    const params = mocks.fetchPublicLogs.mock.calls.at(-1)?.[0];
-    expect(params).not.toHaveProperty("apiKeyIds");
-    expect(params).not.toHaveProperty("apiKeyIdsEmpty");
+
+    await userEvent.click(screen.getByRole("combobox", { name: /filter by key/i }));
+    const keyOptions = await screen.findAllByRole("option");
+    expect(keyOptions[0]).toHaveAccessibleName(/Automation,?\s*37 calls/i);
+    expect(keyOptions[1]).toHaveAccessibleName(/Laptop,?\s*12 calls/i);
+    expect(keyOptions[0]).toHaveAttribute("aria-selected", "false");
+    expect(keyOptions[1]).toHaveAttribute("aria-selected", "false");
+    expect(screen.getByRole("listbox", { name: /filter by key/i })).not.toHaveTextContent(
+      "sk-restored-key",
+    );
+
+    await userEvent.click(screen.getByRole("option", { name: /Laptop/i }));
+    await userEvent.click(screen.getByRole("button", { name: /apply filters/i }));
+
+    await waitFor(() => {
+      expect(mocks.fetchPublicLogs).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          apiKey: "sk-restored-key",
+          apiKeyIds: ["key-laptop"],
+          apiKeyIdsEmpty: false,
+        }),
+      );
+    });
   });
 
   test("keeps cached models visible while refreshing the available models tab", async () => {

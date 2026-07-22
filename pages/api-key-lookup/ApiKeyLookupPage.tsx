@@ -69,6 +69,8 @@ import {
   formatRequestLogLatencyMs,
   normalizeChannelAuthType,
   normalizeFilterSelection,
+  RequestLogFilterCount,
+  sortRequestLogKeyOptionsByCount,
   toFilterParam,
   toStatusFilterValues,
   maskRequestLogApiKey,
@@ -300,7 +302,7 @@ function toLogRow(item: PublicLogItem): RequestLogsRow {
 // ── Page Component ──────────────────────────────────────────────────────────
 
 export function ApiKeyLookupPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const {
     state: { mode },
   } = useTheme();
@@ -394,7 +396,7 @@ export function ApiKeyLookupPage() {
   const logColumns = useMemo(
     () =>
       buildRequestLogsColumns((key) => t(key), undefined, undefined, {
-        identityColumn: "none",
+        identityColumn: "key",
         hideChannel: true,
       }),
     [t],
@@ -433,6 +435,7 @@ export function ApiKeyLookupPage() {
 
   // ── Filters ──
   const [timeRange, setTimeRange] = useState<TimeRange>(7);
+  const [selectedApiKeyIds, setSelectedApiKeyIds] = useState<MultiSelectFilterState<string>>(null);
   const [selectedModels, setSelectedModels] = useState<MultiSelectFilterState<string>>(null);
   const [selectedStatuses, setSelectedStatuses] =
     useState<MultiSelectFilterState<StatusFilterValue>>(null);
@@ -445,12 +448,41 @@ export function ApiKeyLookupPage() {
     total_cost: number;
   }>({ total: 0, success_rate: 0, total_tokens: 0, total_cost: 0 });
   const [filterOptions, setFilterOptions] = useState<{
+    api_key_ids: string[];
+    api_key_id_names: Record<string, string>;
+    api_key_id_counts: Record<string, number>;
     models: string[];
     statuses: string[];
   }>({
+    api_key_ids: [],
+    api_key_id_names: {},
+    api_key_id_counts: {},
     models: [],
     statuses: ["success", "failed"],
   });
+
+  const keyOptions = useMemo<SearchableCheckboxMultiSelectOption[]>(() => {
+    const options = (filterOptions.api_key_ids ?? []).map((id) => {
+      const name = filterOptions.api_key_id_names?.[id] || id;
+      return {
+        value: id,
+        label: name,
+        searchText: name,
+        count: filterOptions.api_key_id_counts?.[id] ?? 0,
+      };
+    });
+    return sortRequestLogKeyOptionsByCount(options, i18n.resolvedLanguage).map((option) => ({
+      value: option.value,
+      label: option.label,
+      searchText: option.searchText,
+      trailing: <RequestLogFilterCount count={option.count} />,
+    }));
+  }, [
+    filterOptions.api_key_id_counts,
+    filterOptions.api_key_id_names,
+    filterOptions.api_key_ids,
+    i18n.resolvedLanguage,
+  ]);
 
   const modelOptions = useMemo<SearchableCheckboxMultiSelectOption[]>(() => {
     return filterOptions.models.map((model) => ({
@@ -475,6 +507,10 @@ export function ApiKeyLookupPage() {
     }));
   }, [filterOptions.statuses, t]);
 
+  const apiKeyIdFilterValues = useMemo(
+    () => keyOptions.map((option) => option.value),
+    [keyOptions],
+  );
   const modelFilterValues = useMemo(
     () => modelOptions.map((option) => option.value),
     [modelOptions],
@@ -484,6 +520,10 @@ export function ApiKeyLookupPage() {
     [statusOptions],
   );
 
+  const apiKeyIdFilterParam = useMemo(
+    () => toFilterParam(selectedApiKeyIds, apiKeyIdFilterValues),
+    [apiKeyIdFilterValues, selectedApiKeyIds],
+  );
   const modelFilterParam = useMemo(
     () => toFilterParam(selectedModels, modelFilterValues),
     [modelFilterValues, selectedModels],
@@ -493,6 +533,12 @@ export function ApiKeyLookupPage() {
     [selectedStatuses, statusFilterValues],
   );
 
+  const handleApiKeyIdsChange = useCallback(
+    (value: string[]) => {
+      setSelectedApiKeyIds(normalizeFilterSelection(value, apiKeyIdFilterValues));
+    },
+    [apiKeyIdFilterValues],
+  );
   const handleModelsChange = useCallback(
     (value: string[]) => {
       setSelectedModels(normalizeFilterSelection(value, modelFilterValues));
@@ -505,6 +551,7 @@ export function ApiKeyLookupPage() {
     },
     [statusFilterValues],
   );
+  const clearApiKeyIdFilter = useCallback(() => setSelectedApiKeyIds(null), []);
   const clearModelFilter = useCallback(() => setSelectedModels(null), []);
   const clearStatusFilter = useCallback(() => setSelectedStatuses(null), []);
 
@@ -538,8 +585,10 @@ export function ApiKeyLookupPage() {
           page,
           size: size ?? pageSize,
           days: timeRange,
+          apiKeyIds: apiKeyIdFilterParam.values,
           models: modelFilterParam.values,
           statuses: statusFilterParam.values,
+          apiKeyIdsEmpty: apiKeyIdFilterParam.matchesNone,
           modelsEmpty: modelFilterParam.matchesNone,
           statusesEmpty: statusFilterParam.matchesNone,
           signal: controller.signal,
@@ -559,6 +608,9 @@ export function ApiKeyLookupPage() {
           },
         );
         setFilterOptions({
+          api_key_ids: resp.filters?.api_key_ids ?? [],
+          api_key_id_names: resp.filters?.api_key_id_names ?? {},
+          api_key_id_counts: resp.filters?.api_key_id_counts ?? {},
           models: resp.filters?.models ?? [],
           statuses: resp.filters?.statuses ?? ["success", "failed"],
         });
@@ -581,7 +633,7 @@ export function ApiKeyLookupPage() {
         }
       }
     },
-    [modelFilterParam, pageSize, statusFilterParam, t, timeRange],
+    [apiKeyIdFilterParam, modelFilterParam, pageSize, statusFilterParam, t, timeRange],
   );
 
   // ================================================================
@@ -701,7 +753,7 @@ export function ApiKeyLookupPage() {
     if (usageSubject && activeTab === "logs") {
       fetchLogs(usageSubject, 1);
     }
-  }, [timeRange, selectedModels, selectedStatuses]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [timeRange, selectedApiKeyIds, selectedModels, selectedStatuses]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Models fetching ──
   const fetchModelsFn = useCallback(
@@ -795,9 +847,13 @@ export function ApiKeyLookupPage() {
     setLastUpdatedAt(null);
     setStats({ total: 0, success_rate: 0, total_tokens: 0, total_cost: 0 });
     setFilterOptions({
+      api_key_ids: [],
+      api_key_id_names: {},
+      api_key_id_counts: {},
       models: [],
       statuses: ["success", "failed"],
     });
+    setSelectedApiKeyIds(null);
     setSelectedModels(null);
     setSelectedStatuses(null);
 
@@ -971,9 +1027,13 @@ export function ApiKeyLookupPage() {
       setLastUpdatedAt(null);
       setStats({ total: 0, success_rate: 0, total_tokens: 0, total_cost: 0 });
       setFilterOptions({
+        api_key_ids: [],
+        api_key_id_names: {},
+        api_key_id_counts: {},
         models: [],
         statuses: ["success", "failed"],
       });
+      setSelectedApiKeyIds(null);
       setSelectedModels(null);
       setSelectedStatuses(null);
       setQuotaLimits(null);
@@ -1497,12 +1557,16 @@ export function ApiKeyLookupPage() {
               {activeTab === "logs" && usageReady ? (
                 <PublicLogsSection
                   t={t}
+                  keyOptions={keyOptions}
                   modelOptions={modelOptions}
                   statusOptions={statusOptions}
+                  selectedApiKeyIds={selectedApiKeyIds}
                   selectedModels={selectedModels}
                   selectedStatuses={selectedStatuses}
+                  onApiKeyIdsChange={handleApiKeyIdsChange}
                   onModelsChange={handleModelsChange}
                   onStatusesChange={handleStatusesChange}
+                  onApiKeyIdsClear={clearApiKeyIdFilter}
                   onModelsClear={clearModelFilter}
                   onStatusesClear={clearStatusFilter}
                   stats={stats}
