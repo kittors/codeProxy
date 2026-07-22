@@ -1,3 +1,5 @@
+import type { PeriodSpendingDraft } from "@features/period-spending";
+
 export interface ApiKeyFormValues {
   name: string;
   key: string;
@@ -5,6 +7,7 @@ export interface ApiKeyFormValues {
   dailyLimit: string;
   totalQuota: string;
   spendingLimit: string;
+  periodSpending: PeriodSpendingDraft;
   concurrencyLimit: string;
   rpmLimit: string;
   tpmLimit: string;

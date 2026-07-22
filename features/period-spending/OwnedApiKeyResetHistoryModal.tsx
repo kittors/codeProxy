@@ -1,29 +1,14 @@
-import { useTranslation } from "react-i18next";
-import { DataTable, Modal } from "@code-proxy/ui";
-import type { DataTableColumn } from "@code-proxy/ui";
 import type { ApiKeyDailySpendingResetEvent } from "@code-proxy/api-client/endpoints/api-keys";
-import { formatApiKeySpendingAmount } from "../apiKeyPageUtils";
+import { DataTable, Modal, type DataTableColumn } from "@code-proxy/ui";
+import { formatQuotaUsdAmount } from "./PeriodSpendingCell";
 
-function formatResetAt(value: string | undefined): string {
-  if (!value) return "—";
+const formatResetAt = (value: string): string => {
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString();
-}
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
+};
 
-function actorLabel(
-  event: ApiKeyDailySpendingResetEvent,
-  t: (key: string) => string,
-): string {
-  const name = event.actor_username?.trim();
-  if (name) return name;
-  if (event.actor_kind === "service_credential") {
-    return t("api_keys_page.reset_history_actor_service");
-  }
-  return t("api_keys_page.reset_history_actor_unknown");
-}
-
-export function ApiKeyResetHistoryModal({
+export function OwnedApiKeyResetHistoryModal({
+  t,
   open,
   onClose,
   keyName,
@@ -31,6 +16,7 @@ export function ApiKeyResetHistoryModal({
   loading,
   events,
 }: {
+  t: (key: string, options?: Record<string, unknown>) => string;
   open: boolean;
   onClose: () => void;
   keyName: string;
@@ -38,56 +24,46 @@ export function ApiKeyResetHistoryModal({
   loading: boolean;
   events: ApiKeyDailySpendingResetEvent[];
 }) {
-  const { t } = useTranslation();
-
   const columns: DataTableColumn<ApiKeyDailySpendingResetEvent>[] = [
     {
       key: "reset_at",
       label: t("api_keys_page.reset_history_col_time"),
       width: "w-[180px] min-w-[160px]",
-      cellClassName:
-        "whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
       render: (row) => formatResetAt(row.reset_at),
     },
     {
       key: "day_key",
       label: t("api_keys_page.reset_history_col_day"),
       width: "w-[130px] min-w-[120px]",
-      cellClassName:
-        "whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
-      render: (row) => row.day_key || "—",
+      render: (row) => row.day_key || "-",
     },
     {
       key: "actor",
       label: t("api_keys_page.reset_history_col_actor"),
       width: "w-[140px] min-w-[120px]",
-      cellClassName: "text-slate-700 dark:text-white/70",
-      render: (row) => actorLabel(row, t),
+      render: (row) =>
+        row.actor_username?.trim() ||
+        (row.actor_kind === "service_credential"
+          ? t("api_keys_page.reset_history_actor_service")
+          : t("api_keys_page.reset_history_actor_unknown")),
     },
     {
       key: "effective_used_before",
       label: t("api_keys_page.reset_history_col_cleared"),
-      width: "w-[140px] min-w-[120px]",
-      cellClassName:
-        "whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
-      render: (row) =>
-        formatApiKeySpendingAmount(row.effective_used_before ?? 0),
+      width: "w-[150px] min-w-[130px]",
+      render: (row) => formatQuotaUsdAmount(row.effective_used_before),
     },
     {
       key: "raw_today_cost",
       label: t("api_keys_page.reset_history_col_raw_today"),
-      width: "w-[160px] min-w-[140px]",
-      cellClassName:
-        "whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
-      render: (row) => formatApiKeySpendingAmount(row.raw_today_cost ?? 0),
+      width: "w-[150px] min-w-[130px]",
+      render: (row) => formatQuotaUsdAmount(row.raw_today_cost),
     },
     {
       key: "cost_baseline",
       label: t("api_keys_page.reset_history_col_baseline"),
       width: "w-[150px] min-w-[130px]",
-      cellClassName:
-        "whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
-      render: (row) => formatApiKeySpendingAmount(row.cost_baseline ?? 0),
+      render: (row) => formatQuotaUsdAmount(row.cost_baseline),
     },
   ];
 

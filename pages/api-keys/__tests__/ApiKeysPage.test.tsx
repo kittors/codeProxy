@@ -62,24 +62,75 @@ const mocks = vi.hoisted(() => ({
     total: 0,
   })),
   apiKeysList: vi.fn(async (): Promise<string[]> => []),
-  endUserCreateKey: vi.fn(async (userId: string, name: string) => {
-    const entry = {
-      id: "owned-created",
-      key: "sk-owned-created-secret",
-      name,
-      end_user_id: userId,
-      disabled: false,
-      is_default: state.entries.length === 0,
-      "created-at": "2026-07-21T00:00:00Z",
-    };
-    state.entries.push(entry);
-    return { api_key: entry, plaintext_key: entry.key };
-  }),
-  endUserUpdateKeyName: vi.fn(async (userId: string, keyId: string, name: string) => {
-    const entry = state.entries.find((item) => item.id === keyId && item.end_user_id === userId);
-    if (entry) entry.name = name;
-    return entry;
-  }),
+  endUserListKeys: vi.fn(async (userId: string) => ({
+    items: state.entries
+      .filter((entry) => entry.end_user_id === userId)
+      .map((entry) => ({
+        id: entry.id,
+        tenant_id: "tenant-1",
+        end_user_id: userId,
+        key_masked: entry.key ? `${entry.key.slice(0, 5)}•••${entry.key.slice(-3)}` : "",
+        name: entry.name,
+        disabled: Boolean(entry.disabled),
+        is_default: Boolean(entry.is_default),
+        created_at: entry["created-at"],
+        "daily-spending-limit": entry["daily-spending-limit"] ?? 0,
+        "period-spending-limits": entry["period-spending-limits"] ?? {
+          "5h": 0,
+          day: 0,
+          week: 0,
+          month: 0,
+        },
+        "period-spending": entry["period-spending"] ?? [],
+        "daily-spending-used": entry["daily-spending-used"] ?? 0,
+        "lifetime-spending-used": entry["lifetime-spending-used"] ?? 0,
+        "daily-spending-reset-count": entry["daily-spending-reset-count"] ?? 0,
+      })),
+  })),
+  endUserCreateKey: vi.fn(
+    async (
+      userId: string,
+      body: { name?: string; "period-spending-limits"?: Record<string, number> },
+    ) => {
+      const entry = {
+        id: "owned-created",
+        key: "sk-owned-created-secret",
+        name: body.name ?? "",
+        end_user_id: userId,
+        disabled: false,
+        is_default: state.entries.length === 0,
+        "created-at": "2026-07-21T00:00:00Z",
+        "period-spending-limits": body["period-spending-limits"] ?? {
+          "5h": 0,
+          day: 0,
+          week: 0,
+          month: 0,
+        },
+      };
+      state.entries.push(entry);
+      return { api_key: entry, plaintext_key: entry.key };
+    },
+  ),
+  endUserUpdateKey: vi.fn(
+    async (
+      userId: string,
+      keyId: string,
+      body: { name?: string; "period-spending-limits"?: Record<string, number> },
+    ) => {
+      const entry = state.entries.find((item) => item.id === keyId && item.end_user_id === userId);
+      if (entry)
+        Object.assign(entry, {
+          name: body.name ?? entry.name,
+          "period-spending-limits":
+            body["period-spending-limits"] ?? entry["period-spending-limits"],
+          "daily-spending-limit":
+            body["period-spending-limits"]?.day ?? entry["daily-spending-limit"],
+        });
+      return entry;
+    },
+  ),
+  endUserResetKeyDailySpending: vi.fn(async () => ({ status: "ok" })),
+  endUserListKeyDailySpendingResetHistory: vi.fn(async () => ({ items: [], total: 0 })),
   endUserRotateKey: vi.fn(async (userId: string, keyId: string) => {
     const entry = state.entries.find((item) => item.id === keyId && item.end_user_id === userId);
     if (!entry) throw new Error("not found");
@@ -150,8 +201,11 @@ vi.mock("@code-proxy/api-client/endpoints/api-keys", () => ({
 
 vi.mock("@code-proxy/api-client/endpoints/end-users", () => ({
   endUsersApi: {
+    listKeys: mocks.endUserListKeys,
     createKey: mocks.endUserCreateKey,
-    updateKeyName: mocks.endUserUpdateKeyName,
+    updateKey: mocks.endUserUpdateKey,
+    resetKeyDailySpending: mocks.endUserResetKeyDailySpending,
+    listKeyDailySpendingResetHistory: mocks.endUserListKeyDailySpendingResetHistory,
     rotateKey: mocks.endUserRotateKey,
     deleteKey: mocks.endUserDeleteKey,
   },
@@ -316,7 +370,7 @@ describe("ApiKeysPage", () => {
     mocks.apiKeyEntriesDelete.mockClear();
     mocks.apiKeysList.mockClear();
     mocks.endUserCreateKey.mockClear();
-    mocks.endUserUpdateKeyName.mockClear();
+    mocks.endUserUpdateKey.mockClear();
     mocks.endUserRotateKey.mockClear();
     mocks.endUserDeleteKey.mockClear();
     mocks.fetchConfigYaml.mockClear();
@@ -448,6 +502,12 @@ describe("ApiKeysPage", () => {
         disabled: false,
         is_default: true,
         "created-at": "2026-07-21T00:00:00Z",
+        "daily-spending-limit": 100,
+        "period-spending-limits": { "5h": 50, day: 100, week: 300, month: 1000 },
+        "period-spending": [{ period: "day", limit: 100, used: 20, remaining: 80 }],
+        "daily-spending-used": 20,
+        "lifetime-spending-used": 300.12,
+        "daily-spending-reset-count": 2,
       },
     ];
 
@@ -455,14 +515,18 @@ describe("ApiKeysPage", () => {
       <MemoryRouter>
         <ThemeProvider>
           <ToastProvider>
-            <ApiKeysPage endUserId="end-user-1" embed />
+            <ApiKeysPage
+              endUserId="end-user-1"
+              accountPeriodSpendingLimits={{ "5h": 100, day: 300, week: 800, month: 4000 }}
+              embed
+            />
           </ToastProvider>
         </ThemeProvider>
       </MemoryRouter>,
     );
 
     expect(await screen.findByText("Owned Key")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Edit" }));
+    await userEvent.click(screen.getByRole("button", { name: "Edit Key quota" }));
 
     const editDialog = await screen.findByRole("dialog");
     expect(
@@ -471,7 +535,8 @@ describe("ApiKeysPage", () => {
     expect(
       within(editDialog).queryByRole("button", { name: /refresh key/i }),
     ).not.toBeInTheDocument();
-    expect(editDialog).toHaveTextContent(/use the dedicated rotation action/i);
+    expect(editDialog).toHaveTextContent(/Key sub-quota/i);
+    expect(editDialog).toHaveTextContent(/Account limit \$300/i);
 
     const nameInput = within(editDialog).getByPlaceholderText(/team-a/i);
     await userEvent.clear(nameInput);
@@ -479,10 +544,13 @@ describe("ApiKeysPage", () => {
     await userEvent.click(within(editDialog).getByRole("button", { name: /save/i }));
 
     await waitFor(() => {
-      expect(mocks.endUserUpdateKeyName).toHaveBeenCalledWith(
+      expect(mocks.endUserUpdateKey).toHaveBeenCalledWith(
         "end-user-1",
         "owned-key-1",
-        "Renamed Owned Key",
+        expect.objectContaining({
+          name: "Renamed Owned Key",
+          "period-spending-limits": { "5h": 50, day: 100, week: 300, month: 1000 },
+        }),
       );
     });
     expect(mocks.apiKeyEntriesUpdate).not.toHaveBeenCalled();

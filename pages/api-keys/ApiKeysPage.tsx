@@ -8,7 +8,7 @@ import {
   type ApiKeyEntry,
   type ApiKeyDailySpendingResetEvent,
 } from "@code-proxy/api-client/endpoints/api-keys";
-import { endUsersApi } from "@code-proxy/api-client/endpoints/end-users";
+import { endUsersApi, type EndUserAPIKey } from "@code-proxy/api-client/endpoints/end-users";
 import {
   applyApiKeyPermissionProfile,
   apiKeyPermissionProfilesApi,
@@ -17,7 +17,12 @@ import {
   type ApiKeyPermissionProfile,
 } from "@code-proxy/api-client/endpoints/api-key-permission-profiles";
 import { ccSwitchImportConfigsApi } from "@code-proxy/api-client/endpoints/ccswitch-import-configs";
-import { detectApiBaseFromLocation } from "@code-proxy/api-client";
+import {
+  detectApiBaseFromLocation,
+  EMPTY_PERIOD_SPENDING_LIMITS,
+  normalizePeriodSpendingLimits,
+  type PeriodSpendingLimits,
+} from "@code-proxy/api-client";
 import { useOptionalAuth } from "@app/providers/AuthProvider";
 import { generateApiKey, makeEmptyApiKeyForm, maskApiKey } from "./apiKeyPageUtils";
 import { createApiKeyColumns } from "./components/ApiKeyColumns";
@@ -46,12 +51,21 @@ import { ccSwitchConfigMatchesApiKeyPermissions } from "@code-proxy/domain/ccswi
 import { LogContentModal } from "@features/log-content-viewer";
 import { ErrorDetailModal } from "@features/log-content-viewer";
 import type { ApiKeyFormValues } from "./types";
+import {
+  OwnedApiKeyQuotaModal,
+  OwnedApiKeysTable,
+  formatQuotaValidationError,
+  limitsToPeriodSpendingDraft,
+  periodSpendingDraftToLimits,
+} from "@features/period-spending";
 
 export function ApiKeysPage({
   endUserId,
+  accountPeriodSpendingLimits = EMPTY_PERIOD_SPENDING_LIMITS,
   embed = false,
 }: {
   endUserId?: string;
+  accountPeriodSpendingLimits?: PeriodSpendingLimits;
   /** When true, hide outer card chrome for modal embedding. */
   embed?: boolean;
 } = {}) {
@@ -80,6 +94,7 @@ export function ApiKeysPage({
   const copiedCcSwitchImportTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [saving, setSaving] = useState(false);
   const [createdSecretOnce, setCreatedSecretOnce] = useState<string | null>(null);
+  const [quotaFormError, setQuotaFormError] = useState("");
   const [resettingDailySpendingKey, setResettingDailySpendingKey] = useState<string | null>(null);
   const [resetHistoryEntry, setResetHistoryEntry] = useState<ApiKeyEntry | null>(null);
   const [resetHistoryLoading, setResetHistoryLoading] = useState(false);
@@ -131,6 +146,45 @@ export function ApiKeysPage({
   const loadEntries = useCallback(async () => {
     setLoading(true);
     try {
+      if (endUserIdFilter) {
+        const ownerResponse = await endUsersApi.listKeys(endUserIdFilter);
+        const ownerKeys = ownerResponse.items ?? [];
+        const secretById = new Map<string, string>();
+        try {
+          const compatibilityEntries = await apiKeyEntriesApi.list();
+          for (const entry of compatibilityEntries) {
+            if (entry.id && entry.end_user_id === endUserIdFilter && entry.key) {
+              secretById.set(entry.id, entry.key);
+            }
+          }
+        } catch {
+          // Owner-scoped rows are authoritative; secret enrichment is compatibility-only.
+        }
+        setEntries(
+          ownerKeys.map((key) => ({
+            id: key.id,
+            key: secretById.get(key.id) ?? key.key ?? "",
+            name: key.name,
+            disabled: key.disabled,
+            end_user_id: key.end_user_id,
+            is_default: key.is_default,
+            "created-at": key.created_at,
+            "daily-spending-limit": key["daily-spending-limit"],
+            "period-spending-limits": normalizePeriodSpendingLimits(
+              key["period-spending-limits"],
+              key["daily-spending-limit"],
+            ),
+            "period-spending": key["period-spending"],
+            "daily-spending-used": key["daily-spending-used"],
+            "lifetime-spending-used": key["lifetime-spending-used"],
+            "daily-spending-reset-count": key["daily-spending-reset-count"],
+          })),
+        );
+        setPermissionProfiles([]);
+        setCcSwitchImportConfigs([]);
+        return;
+      }
+
       const [entriesData, legacyKeys, profilesData, configsData] = await Promise.all([
         apiKeyEntriesApi.list(),
         apiKeysApi.list().catch(() => [] as string[]),
@@ -140,14 +194,12 @@ export function ApiKeysPage({
       setPermissionProfiles(profilesData);
       setCcSwitchImportConfigs(configsData);
 
-      // Auto-migrate: old api-keys not in api-key-entries get added as unnamed entries
-      const entryKeySet = new Set(entriesData.map((e) => e.key));
+      const entryKeySet = new Set(entriesData.map((entry) => entry.key));
       const newEntries = legacyKeys
-        .filter((k: string) => k && !entryKeySet.has(k))
-        .map((k: string): ApiKeyEntry => ({ key: k, "created-at": new Date().toISOString() }));
+        .filter((key) => key && !entryKeySet.has(key))
+        .map((key): ApiKeyEntry => ({ key, "created-at": new Date().toISOString() }));
 
-      let finalEntries: ApiKeyEntry[];
-      if (newEntries.length > 0 && !endUserIdFilter) {
+      if (newEntries.length > 0) {
         const merged = [...entriesData, ...newEntries];
         try {
           await apiKeyEntriesApi.replace(merged);
@@ -155,18 +207,13 @@ export function ApiKeysPage({
             type: "success",
             message: t("api_keys_page.auto_import", { count: newEntries.length }),
           });
-          finalEntries = merged;
+          setEntries(merged);
         } catch {
-          finalEntries = entriesData;
+          setEntries(entriesData);
         }
       } else {
-        finalEntries = entriesData;
+        setEntries(entriesData);
       }
-      if (endUserIdFilter) {
-        finalEntries = finalEntries.filter((e) => e.end_user_id === endUserIdFilter);
-      }
-      setEntries(finalEntries);
-      // Load models after entries are available (needs a valid API key)
       void refreshPermissionOptions();
     } catch (err: unknown) {
       notify({
@@ -245,6 +292,30 @@ export function ApiKeysPage({
     () => entries.filter((entry) => selectedKeys.has(entry.key)),
     [entries, selectedKeys],
   );
+  const ownedKeys = useMemo<EndUserAPIKey[]>(
+    () =>
+      entries.map((entry) => ({
+        id: entry.id ?? entry.key,
+        tenant_id: "",
+        end_user_id: endUserIdFilter,
+        key: entry.key || undefined,
+        key_masked: entry.key ? maskApiKey(entry.key) : undefined,
+        name: entry.name ?? "",
+        disabled: Boolean(entry.disabled),
+        is_default: Boolean(entry.is_default),
+        created_at: entry["created-at"],
+        "daily-spending-limit": entry["daily-spending-limit"],
+        "period-spending-limits": normalizePeriodSpendingLimits(
+          entry["period-spending-limits"],
+          entry["daily-spending-limit"],
+        ),
+        "period-spending": entry["period-spending"],
+        "daily-spending-used": entry["daily-spending-used"],
+        "lifetime-spending-used": entry["lifetime-spending-used"],
+        "daily-spending-reset-count": entry["daily-spending-reset-count"],
+      })),
+    [endUserIdFilter, entries],
+  );
   const allRowsSelected =
     entries.length > 0 && entries.every((entry) => selectedKeys.has(entry.key));
   const someRowsSelected = selectedEntries.length > 0 && !allRowsSelected;
@@ -311,8 +382,8 @@ export function ApiKeysPage({
   /* ─── create ─── */
 
   const handleOpenCreate = () => {
-    // User-scoped create: server generates the secret; do not show a client-side fake key.
     const next = makeEmptyApiKeyForm(endUserIdFilter ? "" : generateApiKey());
+    setQuotaFormError("");
     setForm(next);
     setShowCreate(true);
   };
@@ -325,8 +396,12 @@ export function ApiKeysPage({
     setSaving(true);
     try {
       if (endUserIdFilter) {
-        // Owner-scoped create: server generates unique key; quota lives on the account.
-        const created = await endUsersApi.createKey(endUserIdFilter, form.name.trim());
+        const limits = periodSpendingDraftToLimits(form.periodSpending);
+        const created = await endUsersApi.createKey(endUserIdFilter, {
+          name: form.name.trim(),
+          "daily-spending-limit": limits.day,
+          "period-spending-limits": limits,
+        });
         const plain = created.plaintext_key;
         if (plain) {
           setCreatedSecretOnce(plain);
@@ -353,10 +428,13 @@ export function ApiKeysPage({
       setShowCreate(false);
       await loadEntries();
     } catch (err: unknown) {
-      notify({
-        type: "error",
-        message: err instanceof Error ? err.message : t("api_keys_page.create_failed"),
-      });
+      const message = endUserIdFilter
+        ? formatQuotaValidationError(err, t)
+        : err instanceof Error
+          ? err.message
+          : t("api_keys_page.create_failed");
+      if (endUserIdFilter) setQuotaFormError(message);
+      else notify({ type: "error", message });
     } finally {
       setSaving(false);
     }
@@ -373,6 +451,12 @@ export function ApiKeysPage({
       dailyLimit: entry["daily-limit"]?.toString() || "",
       totalQuota: entry["total-quota"]?.toString() || "",
       spendingLimit: entry["spending-limit"]?.toString() || "",
+      periodSpending: limitsToPeriodSpendingDraft(
+        normalizePeriodSpendingLimits(
+          entry["period-spending-limits"],
+          entry["daily-spending-limit"],
+        ),
+      ),
       concurrencyLimit: entry["concurrency-limit"]?.toString() || "",
       rpmLimit: entry["rpm-limit"]?.toString() || "",
       tpmLimit: entry["tpm-limit"]?.toString() || "",
@@ -382,6 +466,7 @@ export function ApiKeysPage({
       useExactChannelRestrictions: (entry["allowed-channels"] || []).length > 0,
       systemPrompt: entry["system-prompt"] || "",
     };
+    setQuotaFormError("");
     setForm(next);
     setEditIndex(index);
   };
@@ -402,13 +487,17 @@ export function ApiKeysPage({
     }
     setSaving(true);
     try {
-      // Owned keys: only rename; account holds quota/permissions.
       if (endUserIdFilter) {
         if (!currentEntry.id) {
           notify({ type: "error", message: t("api_keys_page.update_failed") });
           return;
         }
-        await endUsersApi.updateKeyName(endUserIdFilter, currentEntry.id, form.name.trim());
+        const limits = periodSpendingDraftToLimits(form.periodSpending);
+        await endUsersApi.updateKey(endUserIdFilter, currentEntry.id, {
+          name: form.name.trim(),
+          "daily-spending-limit": limits.day,
+          "period-spending-limits": limits,
+        });
       } else {
         const permissionPatch =
           form.permissionProfileId === CUSTOM_PERMISSION_PROFILE_ID
@@ -418,6 +507,10 @@ export function ApiKeysPage({
                 "total-quota": currentEntry["total-quota"] ?? 0,
                 "spending-limit": currentEntry["spending-limit"] ?? 0,
                 "daily-spending-limit": currentEntry["daily-spending-limit"] ?? 0,
+                "period-spending-limits": normalizePeriodSpendingLimits(
+                  currentEntry["period-spending-limits"],
+                  currentEntry["daily-spending-limit"],
+                ),
                 "concurrency-limit": currentEntry["concurrency-limit"] ?? 0,
                 "rpm-limit": currentEntry["rpm-limit"] ?? 0,
                 "tpm-limit": currentEntry["tpm-limit"] ?? 0,
@@ -445,10 +538,13 @@ export function ApiKeysPage({
       setEditIndex(null);
       await loadEntries();
     } catch (err: unknown) {
-      notify({
-        type: "error",
-        message: err instanceof Error ? err.message : t("api_keys_page.update_failed"),
-      });
+      const message = endUserIdFilter
+        ? formatQuotaValidationError(err, t)
+        : err instanceof Error
+          ? err.message
+          : t("api_keys_page.update_failed");
+      if (endUserIdFilter) setQuotaFormError(message);
+      else notify({ type: "error", message });
     } finally {
       setSaving(false);
     }
@@ -487,10 +583,20 @@ export function ApiKeysPage({
   const handleResetDailySpending = useCallback(
     async (index: number) => {
       const entry = entries[index];
-      if (!entry || !((entry["daily-spending-limit"] ?? 0) > 0)) return;
-      setResettingDailySpendingKey(entry.key);
+      const dayLimit = normalizePeriodSpendingLimits(
+        entry?.["period-spending-limits"],
+        entry?.["daily-spending-limit"],
+      ).day;
+      if (!entry || dayLimit <= 0) return;
+      setResettingDailySpendingKey(entry.id ?? entry.key);
       try {
-        await apiKeyEntriesApi.resetDailySpending(entry.id ? { id: entry.id } : { key: entry.key });
+        if (endUserIdFilter && entry.id) {
+          await endUsersApi.resetKeyDailySpending(endUserIdFilter, entry.id);
+        } else {
+          await apiKeyEntriesApi.resetDailySpending(
+            entry.id ? { id: entry.id } : { key: entry.key },
+          );
+        }
         notify({ type: "success", message: t("api_keys_page.reset_today_spending_success") });
         await loadEntries();
       } catch (err: unknown) {
@@ -503,7 +609,7 @@ export function ApiKeysPage({
         setResettingDailySpendingKey(null);
       }
     },
-    [entries, loadEntries, notify, t],
+    [endUserIdFilter, entries, loadEntries, notify, t],
   );
 
   const handleViewResetHistory = useCallback(
@@ -512,9 +618,12 @@ export function ApiKeysPage({
       setResetHistoryEvents([]);
       setResetHistoryLoading(true);
       try {
-        const resp = await apiKeyEntriesApi.listDailySpendingResetHistory(
-          entry.id ? { id: entry.id, limit: 200 } : { key: entry.key, limit: 200 },
-        );
+        const resp =
+          endUserIdFilter && entry.id
+            ? await endUsersApi.listKeyDailySpendingResetHistory(endUserIdFilter, entry.id, 200)
+            : await apiKeyEntriesApi.listDailySpendingResetHistory(
+                entry.id ? { id: entry.id, limit: 200 } : { key: entry.key, limit: 200 },
+              );
         setResetHistoryEvents(Array.isArray(resp?.items) ? resp.items : []);
       } catch (err: unknown) {
         notify({
@@ -527,7 +636,7 @@ export function ApiKeysPage({
         setResetHistoryLoading(false);
       }
     },
-    [notify, t],
+    [endUserIdFilter, notify, t],
   );
 
   /* ─── delete ─── */
@@ -777,38 +886,70 @@ export function ApiKeysPage({
     </div>
   );
 
-  const tableBody =
-    entries.length === 0 ? (
-      <EmptyState
-        title={t("api_keys_page.no_keys")}
-        description={t("api_keys_page.no_keys_desc")}
-        icon={<KeyRound size={32} className="text-slate-400" />}
+  const tableBody = endUserIdFilter ? (
+    <div className={embed ? "flex min-h-0 flex-1 flex-col" : "space-y-3"}>
+      <OwnedApiKeysTable
+        t={t}
+        keys={ownedKeys}
+        busyKeyId={resettingDailySpendingKey}
+        busy={saving}
+        canDelete={() => ownedKeys.length > 1}
+        height={embed ? "min-h-0 flex-1" : "h-[calc(100dvh-260px)]"}
+        actions={{
+          onToggleDisabled: (key) => {
+            const index = entries.findIndex((entry) => entry.id === key.id);
+            if (index >= 0) void handleToggleDisable(index);
+          },
+          onCopy: (key) => {
+            if (key.key) void handleCopy(key.key);
+          },
+          onRotate: (key) => {
+            const index = entries.findIndex((entry) => entry.id === key.id);
+            if (index >= 0) setRotateIndex(index);
+          },
+          onEdit: (key) => {
+            const index = entries.findIndex((entry) => entry.id === key.id);
+            if (index >= 0) handleOpenEdit(index);
+          },
+          onResetDailySpending: (key) => {
+            const index = entries.findIndex((entry) => entry.id === key.id);
+            if (index >= 0) void handleResetDailySpending(index);
+          },
+          onViewResetHistory: (key) => {
+            const entry = entries.find((item) => item.id === key.id);
+            if (entry) void handleViewResetHistory(entry);
+          },
+          onDelete: (key) => {
+            const index = entries.findIndex((entry) => entry.id === key.id);
+            if (index >= 0) handleOpenDelete(index);
+          },
+        }}
       />
-    ) : (
-      <div
-        className={
-          embed
-            ? "flex min-h-0 flex-1 flex-col"
-            : "space-y-3 md:flex md:min-h-0 md:flex-1 md:flex-col"
-        }
-      >
-        <DataTable<ApiKeyEntry>
-          tableId={endUserIdFilter ? "api-keys-end-user" : "api-keys"}
-          rows={entries}
-          columns={apiKeyColumns}
-          rowKey={(row) => row.key}
-          rowHeight={44}
-          height={embed ? "min-h-0 flex-1" : "h-[calc(100dvh-260px)] md:h-auto md:flex-1"}
-          minHeight={embed ? "min-h-0" : "min-h-[320px] md:min-h-0"}
-          // Full key table needs all quota/permission columns; account-scoped embed only keeps credentials.
-          minWidth={endUserIdFilter ? "min-w-[876px]" : "min-w-[2314px]"}
-          caption={t("api_keys_page.table_caption")}
-          emptyText={t("api_keys_page.no_api_keys")}
-          showAllLoadedMessage={false}
-          rowClassName={(row) => (row.disabled ? "opacity-50" : "")}
-        />
-      </div>
-    );
+    </div>
+  ) : entries.length === 0 ? (
+    <EmptyState
+      title={t("api_keys_page.no_keys")}
+      description={t("api_keys_page.no_keys_desc")}
+      icon={<KeyRound size={32} className="text-slate-400" />}
+    />
+  ) : (
+    <div className="space-y-3 md:flex md:min-h-0 md:flex-1 md:flex-col">
+      <DataTable<ApiKeyEntry>
+        tableId="api-keys"
+        rows={entries}
+        columns={apiKeyColumns}
+        rowKey={(row) => row.key}
+        rowHeight={52}
+        height="h-[calc(100dvh-260px)] md:h-auto md:flex-1"
+        minHeight="min-h-[320px] md:min-h-0"
+        minWidth="min-w-[2500px]"
+        caption={t("api_keys_page.table_caption")}
+        emptyText={t("api_keys_page.no_api_keys")}
+        showAllLoadedMessage={false}
+        rowClassName={(row) => (row.disabled ? "opacity-50" : "")}
+      />
+    </div>
+  );
 
   return (
     <div className={embed ? "flex h-full min-h-0 flex-col" : "space-y-6"}>
@@ -842,35 +983,79 @@ export function ApiKeysPage({
         </Card>
       )}
 
-      <ApiKeyFormModal
-        t={t}
-        open={showCreate}
-        editMode={false}
-        saving={saving}
-        form={form}
-        setForm={setForm}
-        permissionProfileOptions={permissionProfileOptions}
-        onClose={() => setShowCreate(false)}
-        onSubmit={handleCreate}
-        regenerateKey={() => setForm((prev) => ({ ...prev, key: generateApiKey() }))}
-        serverGeneratesKey={Boolean(endUserIdFilter)}
-        hidePermissionProfile={Boolean(endUserIdFilter)}
-      />
-
-      <ApiKeyFormModal
-        t={t}
-        open={editIndex !== null}
-        editMode
-        saving={saving}
-        form={form}
-        setForm={setForm}
-        permissionProfileOptions={permissionProfileOptions}
-        onClose={() => setEditIndex(null)}
-        onSubmit={handleEdit}
-        regenerateKey={() => setForm((prev) => ({ ...prev, key: generateApiKey() }))}
-        serverGeneratesKey={Boolean(endUserIdFilter)}
-        hidePermissionProfile={Boolean(endUserIdFilter)}
-      />
+      {endUserIdFilter ? (
+        <>
+          <OwnedApiKeyQuotaModal
+            t={t}
+            open={showCreate}
+            mode="create"
+            value={{ name: form.name, periods: form.periodSpending }}
+            accountLimits={accountPeriodSpendingLimits}
+            saving={saving}
+            serverError={quotaFormError}
+            onChange={(next) =>
+              setForm((current) => ({
+                ...current,
+                name: next.name,
+                periodSpending: next.periods,
+              }))
+            }
+            onClose={() => {
+              setShowCreate(false);
+              setQuotaFormError("");
+            }}
+            onSubmit={() => void handleCreate()}
+          />
+          <OwnedApiKeyQuotaModal
+            t={t}
+            open={editIndex !== null}
+            mode="edit"
+            value={{ name: form.name, periods: form.periodSpending }}
+            accountLimits={accountPeriodSpendingLimits}
+            saving={saving}
+            serverError={quotaFormError}
+            onChange={(next) =>
+              setForm((current) => ({
+                ...current,
+                name: next.name,
+                periodSpending: next.periods,
+              }))
+            }
+            onClose={() => {
+              setEditIndex(null);
+              setQuotaFormError("");
+            }}
+            onSubmit={() => void handleEdit()}
+          />
+        </>
+      ) : (
+        <>
+          <ApiKeyFormModal
+            t={t}
+            open={showCreate}
+            editMode={false}
+            saving={saving}
+            form={form}
+            setForm={setForm}
+            permissionProfileOptions={permissionProfileOptions}
+            onClose={() => setShowCreate(false)}
+            onSubmit={handleCreate}
+            regenerateKey={() => setForm((prev) => ({ ...prev, key: generateApiKey() }))}
+          />
+          <ApiKeyFormModal
+            t={t}
+            open={editIndex !== null}
+            editMode
+            saving={saving}
+            form={form}
+            setForm={setForm}
+            permissionProfileOptions={permissionProfileOptions}
+            onClose={() => setEditIndex(null)}
+            onSubmit={handleEdit}
+            regenerateKey={() => setForm((prev) => ({ ...prev, key: generateApiKey() }))}
+          />
+        </>
+      )}
 
       <ConfirmModal
         open={rotateIndex !== null}

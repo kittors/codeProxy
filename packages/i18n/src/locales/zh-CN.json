@@ -89,7 +89,8 @@
     "sort_ascending": "升序",
     "sort_descending": "降序",
     "no_data": "暂无数据",
-    "disabled": "已停用"
+    "disabled": "已停用",
+    "enabled": "已启用"
   },
   "title": {
     "main": "Code Proxy 管理后台",
@@ -3201,9 +3202,11 @@
     "reset_history_empty": "暂无重置记录",
     "reset_history_load_failed": "加载重置历史失败",
     "reset_history_col_time": "重置时间",
+    "reset_history_col_day": "项目日期",
     "reset_history_col_actor": "操作人",
     "reset_history_col_cleared": "清零额度",
     "reset_history_col_raw_today": "真实当日消耗",
+    "reset_history_col_baseline": "存储基线",
     "reset_history_actor_service": "管理密钥",
     "reset_history_actor_unknown": "未知",
     "col_models": "模型",
@@ -3284,7 +3287,14 @@
     "no_api_keys": "暂无 API 密钥",
     "usage_table_caption": "使用记录",
     "no_usage_records": "暂无使用记录",
-    "more_suffix": " 等更多"
+    "more_suffix": " 等更多",
+    "quota_help": "各周期 USD 配额及当前用量。",
+    "daily_spending_fact_help": "应用手动重置后的当日有效消费。",
+    "lifetime_spending_help": "累计消费，不受每日重置影响。",
+    "edit_key_quota": "编辑 Key 配额",
+    "key_quota_title": "Key 子配额",
+    "key_quota_account_hint": "Key 配额不能超过已配置的账号上限。",
+    "quota_validation_failed": "请先修正配额输入再保存。"
   },
   "api_key_permissions_page": {
     "title": "账户权限模板",
@@ -3329,7 +3339,14 @@
     "delete_desc": "删除 {{name}}？使用它的用户账号会保留已复制的设置并转为自定义账户配置。",
     "load_failed": "加载权限配置失败",
     "save_failed": "保存权限配置失败",
-    "delete_failed": "删除权限配置失败"
+    "delete_failed": "删除权限配置失败",
+    "quota_section": "配额",
+    "quota_section_desc": "设置账号四个固定周期的 USD 消费天花板。",
+    "request_limits_section": "请求限额",
+    "request_limits_desc": "次要的请求次数限制。",
+    "realtime_limits_section": "实时限制",
+    "saved_with_sync": "权限配置已保存，已同步 {{accounts}} 个账号，并调整 {{keys}} 个 Key 周期额度。",
+    "saved_with_caps": "权限配置已保存，并调整 {{keys}} 个 Key 周期额度。"
   },
   "channel_groups_page": {
     "title": "渠道分组管理",
@@ -3490,8 +3507,8 @@
     "reset_today_spending": "重置账号今日消费",
     "reset_today_spending_disabled": "请先在权限配置中设置每日消费额度后再重置",
     "reset_today_spending_success": "已重置该账号今日消费",
-    "daily_reset_count": "当日重置次数",
-    "reset_count_help": "该用户今日消费额度被手动重置的次数。点击可查看所有日期的详细历史。",
+    "daily_reset_count": "累计重置次数",
+    "reset_count_help": "该账号手动重置每日消费的全历史累计次数。点击可查看详细历史。",
     "view_reset_history": "查看重置历史",
     "reset_history_title": "重置历史 · {{name}}",
     "reset_history_desc": "该账号所有时间段的手动重置记录，请求日志会保留。",
@@ -3500,8 +3517,10 @@
     "reset_history_load_failed": "加载重置历史失败",
     "reset_history_col_id": "重置 ID",
     "reset_history_col_time": "重置时间",
+    "reset_history_col_day": "项目日期",
     "reset_history_col_cleared": "重置前消耗额度",
     "reset_history_col_raw_today": "当日实际消耗快照",
+    "reset_history_col_baseline": "存储基线",
     "reset_history_col_actor": "操作人",
     "reset_history_raw_today_summary": "当日实际消耗",
     "reset_history_effective_used_summary": "当前有效今日用量",
@@ -3538,7 +3557,19 @@
     "copy_secret": "复制 API Key",
     "copy_secret_hint": "明文 Key 仅展示一次。",
     "back_to_users": "返回用户账号",
-    "delete_title": "删除用户账号"
+    "delete_title": "删除用户账号",
+    "quota_preview": "账号生效配额",
+    "quota_direct_edit_hint": "当前未绑定权限模板，可直接编辑账号配额。",
+    "quota_profile_readonly_hint": "当前账号使用 {{profile}}，周期配额由模板管理，此处只读。",
+    "other_limits": "其他限制",
+    "lifetime_spending_limit": "累计消费限额 (USD)",
+    "lifetime_spending_limit_hint": "该限制属于账号，不由权限模板管理。",
+    "daily_spending": "当日消费",
+    "lifetime_spending": "累计消费",
+    "total_resets": "累计重置次数",
+    "reset_password": "重置密码",
+    "other_limits_profile_readonly_hint": "请求与实时限制来自 {{profile}}，此处只读；累计消费限额仍由账号独立配置。",
+    "other_limits_direct_hint": "未绑定权限模板，可直接编辑请求与实时限制；0 表示不限制。"
   },
   "apikey_lookup": {
     "available_models": "模型广场",
@@ -3639,7 +3670,16 @@
     "deleting": "删除中…",
     "add_account": "添加账号",
     "switch_account": "切换账号",
-    "current_account": "当前账号"
+    "current_account": "当前账号",
+    "edit_key_quota": "编辑 Key 配额",
+    "reset_daily_spending": "重置当日消费",
+    "reset_daily_spending_success": "当日消费已重置",
+    "reset_daily_spending_failed": "重置当日消费失败",
+    "view_reset_history": "查看重置历史",
+    "total_resets": "累计重置次数",
+    "account_scope": "账号配额",
+    "key_scope": "Key 配额",
+    "quota_period_spending": "周期配额"
   },
   "config_page": {
     "save_warning_title": "确认高影响配置变更",
@@ -4536,7 +4576,39 @@
     "save": "保存"
   },
   "quota": {
-    "no_matching": "暂无匹配的认证文件"
+    "no_matching": "暂无匹配的认证文件",
+    "period": {
+      "5h": "5小时",
+      "day": "一天",
+      "week": "一周",
+      "month": "一月"
+    },
+    "field": {
+      "5h": "5 小时额度 (USD)",
+      "day": "每日额度 (USD)",
+      "week": "每周额度 (USD)",
+      "month": "每月额度 (USD)"
+    },
+    "period_spending_column": "配额",
+    "daily_spending_column": "当日消费",
+    "lifetime_spending_column": "累计消费",
+    "total_resets": "累计重置次数",
+    "unlimited": "不限制",
+    "input_unlimited": "0 = 不限制",
+    "fields_hint": "空或 0 表示不限制。",
+    "key_fields_hint": "空或 0 表示无 Key 子限，仍受账号天花板限制。",
+    "account_limit_value": "账号上限 {{value}}",
+    "account_unlimited": "账号不限制",
+    "used_of_limit": "{{period}}：已用 {{used}}，上限 {{limit}}",
+    "status": {
+      "warning": "即将达到配额",
+      "exceeded": "已达到或超过配额"
+    },
+    "validation": {
+      "key_exceeds_account": "Key {{period}}额度 {{keyLimit}} 超过账号{{period}}额度 {{accountLimit}}",
+      "period_day_legacy_conflict": "每日额度与旧版每日消费限额冲突。",
+      "five_hour_projection_warming": "5 小时配额正在准备使用数据，请稍后再试。"
+    }
   },
   "identity_admin": {
     "operation_failed": "操作失败。",

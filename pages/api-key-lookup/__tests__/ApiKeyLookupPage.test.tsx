@@ -133,6 +133,8 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
       keySecret: vi.fn(),
       createKey: vi.fn(),
       updateKey: vi.fn(),
+      resetKeyDailySpending: vi.fn(),
+      listKeyDailySpendingResetHistory: vi.fn(),
       rotateKey: vi.fn(),
       deleteKey: vi.fn(),
       changePassword: vi.fn(),
@@ -753,6 +755,118 @@ describe("ApiKeyLookupPage", () => {
       expect(portalApi.listKeys).toHaveBeenCalledTimes(2);
       expect(portalApi.keySecret).toHaveBeenLastCalledWith("k1");
     });
+  });
+
+  test("edits, resets, and opens history from the shared managed-key table", async () => {
+    const { portalApi } = await import("@code-proxy/api-client");
+    const user = {
+      id: "u1",
+      tenant_id: "t1",
+      username: "alice",
+      display_name: "Alice",
+      status: "active",
+      must_change_password: false,
+      failed_login_count: 0,
+      lock_stage: 0,
+      created_at: "",
+      updated_at: "",
+      version: 1,
+      "daily-spending-limit": 300,
+      "period-spending-limits": { "5h": 100, day: 300, week: 800, month: 4000 },
+    };
+    const key = {
+      id: "k1",
+      tenant_id: "t1",
+      end_user_id: "u1",
+      name: "primary",
+      key_masked: "sk-****111",
+      disabled: false,
+      is_default: true,
+      created_at: "2026-07-20T00:00:00Z",
+      updated_at: "",
+      "daily-spending-limit": 100,
+      "period-spending-limits": { "5h": 50, day: 100, week: 300, month: 1000 },
+      "period-spending": [{ period: "day" as const, limit: 100, used: 20, remaining: 80 }],
+      "daily-spending-used": 20,
+      "lifetime-spending-used": 300.12,
+      "daily-spending-reset-count": 2,
+    };
+    vi.mocked(portalApi.login).mockResolvedValue({
+      user,
+      access_token: "cpt_test",
+      refresh_token: "cpr_test",
+      must_change_password: false,
+    } as never);
+    vi.mocked(portalApi.listKeys).mockResolvedValue({ items: [key] } as never);
+    vi.mocked(portalApi.keySecret).mockResolvedValue({ id: "k1", key: "sk-primary" });
+    vi.mocked(portalApi.updateKey).mockResolvedValue({ ...key, name: "renamed" } as never);
+    vi.mocked(portalApi.resetKeyDailySpending).mockResolvedValue({ status: "ok" });
+    vi.mocked(portalApi.listKeyDailySpendingResetHistory).mockResolvedValue({
+      items: [
+        {
+          id: 7,
+          reset_at: "2026-07-21T11:00:00Z",
+          actor_username: "alice",
+          effective_used_before: 20,
+          raw_today_cost: 30,
+        },
+      ],
+      total: 1,
+    });
+
+    render(
+      <ThemeProvider>
+        <ToastProvider>
+          <ApiKeyLookupPage />
+        </ToastProvider>
+      </ThemeProvider>,
+    );
+
+    const landing = screen.getByTestId("apikey-lookup-landing");
+    await userEvent.click(within(landing).getByRole("button", { name: /^(login|sign in|登录)$/i }));
+    const loginDialog = await screen.findByRole("dialog");
+    await userEvent.type(screen.getByPlaceholderText(/enter username|请输入账号/i), "alice");
+    await userEvent.type(screen.getByPlaceholderText(/enter password|请输入密码/i), "password123");
+    await userEvent.click(
+      within(loginDialog).getByRole("button", { name: /^(login|sign in|登录)$/i }),
+    );
+    await userEvent.click(
+      await screen.findByRole("tab", { name: /manage api keys|管理 api key/i }),
+    );
+
+    expect(await screen.findByRole("columnheader", { name: "Quota" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Today" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Lifetime" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Total resets" })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Edit Key quota" }));
+    const editDialog = await screen.findByRole("dialog", { name: "Edit Key quota" });
+    const dayInput = within(editDialog).getByRole("spinbutton", { name: "Daily quota (USD)" });
+    await userEvent.clear(dayInput);
+    await userEvent.type(dayInput, "80");
+    await userEvent.click(within(editDialog).getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      expect(portalApi.updateKey).toHaveBeenCalledWith("k1", {
+        name: "primary",
+        "daily-spending-limit": 80,
+        "period-spending-limits": { "5h": 50, day: 80, week: 300, month: 1000 },
+      });
+    });
+
+    await userEvent.click(screen.getByRole("button", { name: "Reset today spending" }));
+    await waitFor(() => {
+      expect(portalApi.resetKeyDailySpending).toHaveBeenCalledWith("k1");
+    });
+
+    await userEvent.click(screen.getAllByRole("button", { name: "View reset history" })[0]!);
+    await waitFor(() => {
+      expect(portalApi.listKeyDailySpendingResetHistory).toHaveBeenCalledWith("k1", 200);
+    });
+    expect(
+      await screen.findByRole("dialog", { name: "Reset history · primary" }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText("$20.00").length).toBeGreaterThan(0);
   });
 
   test("confirms before deleting a managed API key", async () => {
