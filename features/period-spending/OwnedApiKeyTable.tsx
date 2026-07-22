@@ -3,14 +3,12 @@ import type { EndUserAPIKey } from "@code-proxy/api-client";
 import {
   DataTable,
   EmptyState,
-  HoverTooltip,
   OverflowTooltip,
+  TABLE_ROW_ACTIONS_COLUMN,
+  TableRowActions,
   type DataTableColumn,
 } from "@code-proxy/ui";
 import { PeriodSpendingCell, formatQuotaUsdAmount } from "./PeriodSpendingCell";
-
-const iconButtonClass =
-  "rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-35 dark:text-white/50 dark:hover:bg-neutral-800";
 
 export interface OwnedApiKeyActions {
   onToggleDisabled?: (key: EndUserAPIKey) => void;
@@ -133,11 +131,8 @@ export const createOwnedApiKeyColumns = ({
   {
     key: "actions",
     label: t("api_keys_page.col_actions"),
-    // 7 icon buttons + gaps; keep sticky actions fully visible without squeeze.
-    width: "w-[304px] min-w-[304px]",
-    minWidthPx: 304,
+    ...TABLE_ROW_ACTIONS_COLUMN,
     lockOrder: "end",
-    overflowTooltip: false,
     headerClassName: "text-center md:sticky md:z-40 md:bg-slate-100 md:dark:bg-neutral-800",
     cellClassName: "md:sticky md:z-30 md:bg-white md:dark:bg-neutral-950",
     render: (row) => {
@@ -146,113 +141,75 @@ export const createOwnedApiKeyColumns = ({
         (row["period-spending-limits"]?.day ?? row["daily-spending-limit"] ?? 0) > 0;
       const deletable = canDelete(row);
       return (
-        <div className="flex flex-nowrap items-center justify-center gap-0.5">
-          {actions.onToggleDisabled ? (
-            <HoverTooltip
-              content={
-                row.disabled ? t("api_keys_page.click_enable") : t("api_keys_page.click_disable")
-              }
-            >
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => actions.onToggleDisabled?.(row)}
-                className={iconButtonClass}
-                aria-label={
-                  row.disabled ? t("api_keys_page.click_enable") : t("api_keys_page.click_disable")
-                }
-              >
-                <Power size={15} />
-              </button>
-            </HoverTooltip>
-          ) : null}
-          {actions.onCopy ? (
-            <HoverTooltip content={t("api_keys_page.copy_key")}>
-              <button
-                type="button"
-                disabled={busy || !row.key}
-                onClick={() => actions.onCopy?.(row)}
-                className={iconButtonClass}
-                aria-label={t("api_keys_page.copy_key")}
-              >
-                <Copy size={15} />
-              </button>
-            </HoverTooltip>
-          ) : null}
-          {actions.onRotate ? (
-            <HoverTooltip content={t("end_users.rotate_key")}>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => actions.onRotate?.(row)}
-                className={`${iconButtonClass} hover:text-orange-600`}
-                aria-label={t("end_users.rotate_key")}
-              >
-                <RotateCcw size={15} />
-              </button>
-            </HoverTooltip>
-          ) : null}
-          {actions.onEdit ? (
-            <HoverTooltip content={t("api_keys_page.edit_key_quota")}>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => actions.onEdit?.(row)}
-                className={`${iconButtonClass} hover:text-amber-600`}
-                aria-label={t("api_keys_page.edit_key_quota")}
-              >
-                <Pencil size={15} />
-              </button>
-            </HoverTooltip>
-          ) : null}
-          {actions.onResetDailySpending ? (
-            <HoverTooltip
-              content={
-                hasDayLimit
-                  ? t("api_keys_page.reset_today_spending")
-                  : t("api_keys_page.reset_today_spending_disabled")
-              }
-            >
-              <button
-                type="button"
-                disabled={busy || !hasDayLimit}
-                onClick={() => actions.onResetDailySpending?.(row)}
-                className={`${iconButtonClass} hover:text-orange-600`}
-                aria-label={t("api_keys_page.reset_today_spending")}
-              >
-                <RotateCcw size={15} className={busy ? "animate-spin" : ""} />
-              </button>
-            </HoverTooltip>
-          ) : null}
-          {actions.onViewResetHistory ? (
-            <HoverTooltip content={t("api_keys_page.view_reset_history")}>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => actions.onViewResetHistory?.(row)}
-                className={iconButtonClass}
-                aria-label={t("api_keys_page.view_reset_history")}
-              >
-                <History size={15} />
-              </button>
-            </HoverTooltip>
-          ) : null}
-          {actions.onDelete ? (
-            <HoverTooltip
-              content={deletable ? t("common.delete") : t("apikey_lookup.keep_one_key")}
-            >
-              <button
-                type="button"
-                disabled={busy || !deletable}
-                onClick={() => actions.onDelete?.(row)}
-                className={`${iconButtonClass} hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-900/20`}
-                aria-label={deletable ? t("common.delete") : t("apikey_lookup.keep_one_key")}
-              >
-                <Trash2 size={15} />
-              </button>
-            </HoverTooltip>
-          ) : null}
-        </div>
+        <TableRowActions
+          moreLabel={t("common.more_actions")}
+          actions={[
+            {
+              key: "toggle",
+              label: row.disabled
+                ? t("api_keys_page.click_enable")
+                : t("api_keys_page.click_disable"),
+              icon: <Power size={15} />,
+              visible: Boolean(actions.onToggleDisabled),
+              disabled: busy,
+              onClick: () => actions.onToggleDisabled?.(row),
+            },
+            {
+              key: "copy",
+              label: t("api_keys_page.copy_key"),
+              icon: <Copy size={15} />,
+              visible: Boolean(actions.onCopy),
+              disabled: busy || !row.key,
+              onClick: () => actions.onCopy?.(row),
+            },
+            {
+              key: "rotate",
+              label: t("end_users.rotate_key"),
+              icon: <RotateCcw size={15} />,
+              visible: Boolean(actions.onRotate),
+              disabled: busy,
+              className: "hover:text-orange-600 dark:hover:text-orange-400",
+              onClick: () => actions.onRotate?.(row),
+            },
+            {
+              key: "edit",
+              label: t("api_keys_page.edit_key_quota"),
+              icon: <Pencil size={15} />,
+              visible: Boolean(actions.onEdit),
+              disabled: busy,
+              className: "hover:text-amber-600 dark:hover:text-amber-400",
+              onClick: () => actions.onEdit?.(row),
+            },
+            {
+              key: "reset-spending",
+              label: hasDayLimit
+                ? t("api_keys_page.reset_today_spending")
+                : t("api_keys_page.reset_today_spending_disabled"),
+              icon: <RotateCcw size={15} className={busy ? "animate-spin" : ""} />,
+              visible: Boolean(actions.onResetDailySpending),
+              disabled: busy || !hasDayLimit,
+              className: "hover:text-orange-600 dark:hover:text-orange-400",
+              onClick: () => actions.onResetDailySpending?.(row),
+            },
+            {
+              key: "reset-history",
+              label: t("api_keys_page.view_reset_history"),
+              icon: <History size={15} />,
+              visible: Boolean(actions.onViewResetHistory),
+              disabled: busy,
+              onClick: () => actions.onViewResetHistory?.(row),
+            },
+            {
+              key: "delete",
+              label: deletable ? t("common.delete") : t("apikey_lookup.keep_one_key"),
+              icon: <Trash2 size={15} />,
+              visible: Boolean(actions.onDelete),
+              disabled: busy || !deletable,
+              destructive: true,
+              onClick: () => actions.onDelete?.(row),
+            },
+          ]}
+        />
       );
     },
   },

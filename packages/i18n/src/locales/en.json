@@ -41,6 +41,7 @@
     "copy": "Copy",
     "status": "Status",
     "action": "Action",
+    "more_actions": "More actions",
     "custom_headers_label": "Custom Headers",
     "custom_headers_hint": "Optional HTTP headers to send with the request. Leave blank to remove.",
     "custom_headers_add": "Add Header",

@@ -1,7 +1,13 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Check, Edit3, FlaskConical, Power, Trash2 } from "lucide-react";
-import { Checkbox, HoverTooltip, OverflowTooltip, type DataTableColumn } from "@code-proxy/ui";
+import {
+  Checkbox,
+  OverflowTooltip,
+  TABLE_ROW_ACTIONS_COLUMN,
+  TableRowActions,
+  type DataTableColumn,
+} from "@code-proxy/ui";
 import { ModelCapabilityBadges } from "../components/ModelCapabilityBadges";
 import { ModelVendorIcon as VendorIcon } from "../components/ModelVendorIcon";
 import { formatPrice } from "../modelsUtils";
@@ -142,7 +148,7 @@ export function useModelColumns({
       {
         key: "actions",
         label: t("models_page.col_actions"),
-        width: onToggleEnabled || onTestModel ? "w-[168px] min-w-[168px]" : "w-24",
+        ...TABLE_ROW_ACTIONS_COLUMN,
         lockOrder: "end",
         headerClassName: stickyActionsHeaderClass,
         cellClassName: stickyActionsCellClass,
@@ -156,59 +162,47 @@ export function useModelColumns({
           const isToggling = togglingModelId === row.id;
 
           return (
-            <div className="flex items-center justify-center gap-1.5">
-              {onToggleEnabled ? (
-                <HoverTooltip content={toggleLabel}>
-                  <button
-                    type="button"
-                    onClick={() => onToggleEnabled(row)}
-                    disabled={isToggling}
-                    className={`rounded-lg p-1.5 transition-colors ${
-                      row.enabled
-                        ? "text-emerald-500 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-900/20"
-                        : "text-slate-400 hover:bg-red-50 hover:text-red-500 dark:text-white/30 dark:hover:bg-red-900/20 dark:hover:text-red-400"
-                    } ${isToggling ? "opacity-50" : ""}`}
-                    aria-label={toggleLabel}
-                  >
-                    <Power size={15} />
-                  </button>
-                </HoverTooltip>
-              ) : null}
-              {onTestModel ? (
-                <HoverTooltip content={testLabel}>
-                  <button
-                    type="button"
-                    onClick={() => onTestModel(row)}
-                    className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-sky-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-sky-400"
-                    aria-label={testLabel}
-                  >
-                    <FlaskConical size={15} />
-                  </button>
-                </HoverTooltip>
-              ) : null}
-              <HoverTooltip content={editLabel}>
-                <button
-                  type="button"
-                  onClick={() => onEditModel(row.id)}
-                  className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-indigo-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-indigo-400"
-                  aria-label={editLabel}
-                >
-                  <Edit3 size={15} />
-                </button>
-              </HoverTooltip>
-              {canDeleteModels ? (
-                <HoverTooltip content={deleteLabel}>
-                  <button
-                    type="button"
-                    onClick={() => onDeleteModel(row)}
-                    className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-rose-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-rose-400"
-                    aria-label={deleteLabel}
-                  >
-                    <Trash2 size={15} />
-                  </button>
-                </HoverTooltip>
-              ) : null}
-            </div>
+            <TableRowActions
+              moreLabel={t("common.more_actions")}
+              actions={[
+                {
+                  key: "toggle",
+                  label: toggleLabel,
+                  icon: <Power size={15} />,
+                  visible: Boolean(onToggleEnabled),
+                  disabled: isToggling,
+                  className: row.enabled
+                    ? "text-emerald-500 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-900/20"
+                    : "text-slate-400 hover:bg-red-50 hover:text-red-500 dark:text-white/30 dark:hover:bg-red-900/20 dark:hover:text-red-400",
+                  onClick: () => onToggleEnabled?.(row),
+                },
+                {
+                  key: "test",
+                  label: testLabel,
+                  icon: <FlaskConical size={15} />,
+                  visible: Boolean(onTestModel),
+                  className:
+                    "text-slate-500 hover:bg-slate-100 hover:text-sky-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-sky-400",
+                  onClick: () => onTestModel?.(row),
+                },
+                {
+                  key: "edit",
+                  label: editLabel,
+                  icon: <Edit3 size={15} />,
+                  className:
+                    "text-slate-500 hover:bg-slate-100 hover:text-indigo-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-indigo-400",
+                  onClick: () => onEditModel(row.id),
+                },
+                {
+                  key: "delete",
+                  label: deleteLabel,
+                  icon: <Trash2 size={15} />,
+                  visible: canDeleteModels,
+                  destructive: true,
+                  onClick: () => onDeleteModel(row),
+                },
+              ]}
+            />
           );
         },
       },

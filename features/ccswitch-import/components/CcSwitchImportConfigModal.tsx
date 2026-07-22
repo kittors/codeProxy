@@ -6,7 +6,12 @@ import iconCodex from "@code-proxy/assets/icons/codex.svg";
 import iconGemini from "@code-proxy/assets/icons/gemini.svg";
 import { modelsApi } from "@code-proxy/api-client";
 import { Button } from "@code-proxy/ui";
-import { DataTable, type DataTableColumn, type DataTableSortState } from "@code-proxy/ui";
+import {
+  DataTable,
+  TABLE_ROW_ACTIONS_COLUMN,
+  type DataTableColumn,
+  type DataTableSortState,
+} from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
 import { Modal } from "@code-proxy/ui";
 import { SearchableSelect, type SearchableSelectOption } from "@code-proxy/ui";
@@ -60,13 +65,7 @@ const controlClassName =
   "h-10 rounded-xl border border-slate-200/80 bg-white px-3 text-sm text-slate-900 shadow-none hover:border-slate-300 hover:bg-white focus-visible:ring-2 focus-visible:ring-slate-900/10 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:hover:border-neutral-700 dark:focus-visible:ring-white/15";
 const fieldClassName = "flex flex-col gap-1.5";
 
-const CLAUDE_ROLE_ORDER: CcSwitchClaudeModelRole[] = [
-  "main",
-  "haiku",
-  "sonnet",
-  "opus",
-  "fable",
-];
+const CLAUDE_ROLE_ORDER: CcSwitchClaudeModelRole[] = ["main", "haiku", "sonnet", "opus", "fable"];
 const MODEL_MAPPING_LOADING_ROWS = ["short", "medium", "long"];
 const CONFIG_MODAL_CLIENTS = CC_SWITCH_CLIENTS.filter((client) => client.type !== "gemini");
 const DEFAULT_CODEX_CONTEXT_WINDOW = 128_000;
@@ -979,9 +978,8 @@ export function CcSwitchImportConfigModal({
           {
             key: "actions",
             label: t("ccswitch.config_table_actions"),
-            width: "w-20",
+            ...TABLE_ROW_ACTIONS_COLUMN,
             lockOrder: "end",
-            resizable: false,
             reorderable: false,
             headerClassName: "text-right",
             cellClassName: "text-right",

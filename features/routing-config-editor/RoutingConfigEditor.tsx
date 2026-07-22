@@ -22,7 +22,7 @@ import { Select } from "@code-proxy/ui";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
 import { HoverTooltip, OverflowTooltip } from "@code-proxy/ui";
-import { DataTable, type DataTableColumn } from "@code-proxy/ui";
+import { DataTable, TABLE_ROW_ACTIONS_COLUMN, type DataTableColumn } from "@code-proxy/ui";
 import { VendorIcon } from "@code-proxy/assets";
 import {
   emptyModelPricing,
@@ -37,7 +37,10 @@ function normalizeRoutingStrategy(value: unknown): RoutingStrategy {
   return value === "fill-first" || value === "session-sticky" ? value : "round-robin";
 }
 
-function routingStrategyLabel(t: ReturnType<typeof useTranslation>["t"], strategy: RoutingStrategy) {
+function routingStrategyLabel(
+  t: ReturnType<typeof useTranslation>["t"],
+  strategy: RoutingStrategy,
+) {
   if (strategy === "session-sticky") {
     return t("channel_groups_page.routing_strategy_session_sticky");
   }
@@ -366,9 +369,7 @@ export function RoutingConfigEditor({
     channels: string[],
     groupName?: string,
   ) => Promise<RoutingModelLoadResult[]>;
-  onChange: (
-    values: Partial<VisualConfigValues>,
-  ) => void | boolean | Promise<void | boolean>;
+  onChange: (values: Partial<VisualConfigValues>) => void | boolean | Promise<void | boolean>;
 }) {
   const { t } = useTranslation();
   const { notify } = useToast();
@@ -384,10 +385,7 @@ export function RoutingConfigEditor({
   const [modelsError, setModelsError] = useState("");
   const [modelsSelectionTouched, setModelsSelectionTouched] = useState(false);
 
-  const update = useCallback(
-    (patch: Partial<VisualConfigValues>) => onChange(patch),
-    [onChange],
-  );
+  const update = useCallback((patch: Partial<VisualConfigValues>) => onChange(patch), [onChange]);
 
   const routesByGroup = useMemo(() => {
     const map = new Map<string, RoutingPathRouteEntry[]>();
@@ -1226,7 +1224,7 @@ export function RoutingConfigEditor({
       {
         key: "actions",
         label: t("common.action"),
-        width: "w-[112px] min-w-[112px]",
+        ...TABLE_ROW_ACTIONS_COLUMN,
         cellClassName: "whitespace-nowrap",
         render: (group) => (
           <div className="flex items-center gap-1.5">
@@ -1337,7 +1335,7 @@ export function RoutingConfigEditor({
             {
               key: "actions",
               label: t("common.action"),
-              width: "w-[72px] min-w-[72px]",
+              ...TABLE_ROW_ACTIONS_COLUMN,
               headerClassName: "text-right",
               cellClassName: "whitespace-nowrap text-right",
               render: (channel) => (

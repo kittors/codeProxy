@@ -6,6 +6,8 @@ export { Reveal } from "./feedback/Reveal";
 export { ToastProvider, useToast } from "./feedback/ToastProvider";
 
 export { DataTable } from "./data-table/DataTable";
+export { TableRowActions, TABLE_ROW_ACTIONS_COLUMN } from "./data-table/TableRowActions";
+export type { TableRowAction } from "./data-table/TableRowActions";
 export type {
   DataTableColumn,
   DataTableColumnSort,
@@ -55,7 +57,14 @@ export { DateTimePicker } from "./primitives/DateTimePicker";
 export { DropdownMenu } from "./primitives/DropdownMenu";
 export type { DropdownMenuRootProps } from "./primitives/DropdownMenu";
 export { Fieldset } from "./primitives/Fieldset";
-export { Form, FormField, FormLabel, FormControl, FormDescription, FormError } from "./primitives/Form";
+export {
+  Form,
+  FormField,
+  FormLabel,
+  FormControl,
+  FormDescription,
+  FormError,
+} from "./primitives/Form";
 export type {
   FormProps,
   FormFieldProps,

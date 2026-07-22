@@ -26,7 +26,7 @@ import { TextInput } from "@code-proxy/ui";
 import { Modal } from "@code-proxy/ui";
 import { ToggleSwitch } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
-import { DataTable, type DataTableColumn } from "@code-proxy/ui";
+import { DataTable, TABLE_ROW_ACTIONS_COLUMN, type DataTableColumn } from "@code-proxy/ui";
 
 type ProfileDraft = {
   id: string;
@@ -356,7 +356,7 @@ export function ApiKeyPermissionsPage() {
       {
         key: "actions",
         label: t("api_key_permissions_page.col_actions"),
-        width: "w-[120px] min-w-[120px]",
+        ...TABLE_ROW_ACTIONS_COLUMN,
         render: (profile) => (
           <div className="flex items-center gap-1.5">
             <button

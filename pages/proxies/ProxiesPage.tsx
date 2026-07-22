@@ -14,7 +14,7 @@ import { TextInput } from "@code-proxy/ui";
 import { Modal } from "@code-proxy/ui";
 import { ToggleSwitch } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
-import { DataTable, type DataTableColumn } from "@code-proxy/ui";
+import { DataTable, TABLE_ROW_ACTIONS_COLUMN, type DataTableColumn } from "@code-proxy/ui";
 import {
   emptyProxyDraft,
   proxyEndpoint,
@@ -331,7 +331,7 @@ export function ProxiesPage() {
       {
         key: "actions",
         label: t("proxies.actions"),
-        width: "w-28",
+        ...TABLE_ROW_ACTIONS_COLUMN,
         headerClassName: "text-right",
         cellClassName: "text-right",
         render: (entry) => {
