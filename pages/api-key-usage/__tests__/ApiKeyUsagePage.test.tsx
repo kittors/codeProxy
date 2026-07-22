@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import i18n from "@code-proxy/i18n";
@@ -34,6 +34,7 @@ describe("ApiKeyUsagePage", () => {
   beforeEach(async () => {
     await i18n.changeLanguage("zh-CN");
     window.history.replaceState({}, "", "/manage/apikey-usage");
+    window.localStorage.clear();
     mocks.fetchPublicLogs.mockReset();
     mocks.fetchPublicLogs.mockResolvedValue({
       items: [
@@ -54,7 +55,7 @@ describe("ApiKeyUsagePage", () => {
       total: 1,
       page: 1,
       size: 50,
-      api_key_name: "demo-key",
+      api_key_name: "张军宝",
       stats: { total: 1, success_rate: 100, total_tokens: 3, total_cost: 0 },
       filters: {
         api_key_ids: [],
@@ -67,15 +68,15 @@ describe("ApiKeyUsagePage", () => {
     });
   });
 
-  test("queries logs with the entered API key and only shows logs + quick import tabs", async () => {
+  test("opens a key modal, stores the key in localStorage, and supports logout", async () => {
     renderPage();
 
     expect(screen.getByTestId("apikey-usage-header")).toHaveTextContent("API 密钥用量查询");
-    expect(screen.queryByText("使用统计")).not.toBeInTheDocument();
-    expect(screen.queryByText("模型广场")).not.toBeInTheDocument();
+    expect(screen.getByTestId("apikey-usage-empty")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/输入 API 密钥|Enter API Key/i)).toBeInTheDocument();
 
     await userEvent.type(screen.getByPlaceholderText(/输入 API 密钥|Enter API Key/i), "sk-demo");
-    await userEvent.click(screen.getByRole("button", { name: /查询|Query/i }));
+    await userEvent.click(screen.getByTestId("apikey-usage-submit"));
 
     await waitFor(() => {
       expect(mocks.fetchPublicLogs).toHaveBeenCalled();
@@ -86,6 +87,37 @@ describe("ApiKeyUsagePage", () => {
     });
     expect(await screen.findByText("请求日志")).toBeInTheDocument();
     expect(screen.getByText("快捷导入")).toBeInTheDocument();
-    expect(screen.getByText("demo-key")).toBeInTheDocument();
+    expect(screen.getByText("张军宝")).toBeInTheDocument();
+    expect(screen.queryByText("使用统计")).not.toBeInTheDocument();
+    expect(JSON.parse(window.localStorage.getItem("apiKeyUsage.lastApiKey.v1") || "{}")).toEqual({
+      apiKey: "sk-demo",
+      name: "张军宝",
+    });
+
+    await userEvent.click(screen.getByTestId("apikey-usage-key-menu"));
+    await userEvent.click(await screen.findByTestId("apikey-usage-logout"));
+
+    expect(window.localStorage.getItem("apiKeyUsage.lastApiKey.v1")).toBeNull();
+    expect(await screen.findByTestId("apikey-usage-empty")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/输入 API 密钥|Enter API Key/i)).toBeInTheDocument();
+  });
+
+  test("restores the last API key from localStorage", async () => {
+    window.localStorage.setItem(
+      "apiKeyUsage.lastApiKey.v1",
+      JSON.stringify({ apiKey: "sk-restored", name: "restored-name" }),
+    );
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(mocks.fetchPublicLogs).toHaveBeenCalled();
+    });
+    expect(mocks.fetchPublicLogs.mock.calls[0][0]).toMatchObject({
+      apiKey: "sk-restored",
+      page: 1,
+    });
+    expect(await screen.findByText("张军宝")).toBeInTheDocument();
+    expect(screen.queryByTestId("apikey-usage-empty")).not.toBeInTheDocument();
   });
 });

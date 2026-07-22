@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Key, KeyRound } from "lucide-react";
+import { ChevronRight, Key, KeyRound, LogOut, Search } from "lucide-react";
 import { isApiClientError } from "@code-proxy/api-client";
-import { ThemeToggleButton } from "@code-proxy/ui";
+import { Button } from "@code-proxy/ui";
+import { DropdownMenu } from "@code-proxy/ui";
 import { LanguageSelector } from "@code-proxy/ui";
-import { Reveal } from "@code-proxy/ui";
+import { Modal } from "@code-proxy/ui";
 import { PageBackground } from "@code-proxy/ui";
+import { Reveal } from "@code-proxy/ui";
+import { TextInput } from "@code-proxy/ui";
+import { ThemeToggleButton } from "@code-proxy/ui";
 import type { SearchableCheckboxMultiSelectOption } from "@code-proxy/ui";
 import type { TimeRange } from "@features/monitor-widgets/monitor-constants";
 import { ModelTag } from "@features/model-tags";
@@ -14,7 +18,6 @@ import {
   LookupResultsToolbar,
   type ApiKeyLookupTab,
 } from "../api-key-lookup/components/LookupResultsToolbar";
-import { LookupSearchSection } from "../api-key-lookup/components/LookupSearchSection";
 import { PublicLogsSection } from "../api-key-lookup/components/PublicLogsSection";
 import { QuickImportTabContent } from "../api-key-lookup/components/QuickImportTabContent";
 import type { PublicLogItem } from "../api-key-lookup/types";
@@ -35,8 +38,15 @@ import {
 } from "@features/request-log-viewer";
 
 const DEFAULT_PAGE_SIZE = 50;
+// ponytail: plain localStorage key; no multi-account until users ask
+const LAST_API_KEY_STORAGE_KEY = "apiKeyUsage.lastApiKey.v1";
 
 type UsageTab = "logs" | "quickImport";
+
+type StoredUsageKey = {
+  apiKey: string;
+  name?: string;
+};
 
 const extractServerErrorMessage = (raw: unknown): string => {
   if (isApiClientError(raw)) {
@@ -89,6 +99,42 @@ const readLookupKeyFromUrl = (): string => {
   }
 };
 
+const readStoredUsageKey = (): StoredUsageKey | null => {
+  try {
+    const raw = window.localStorage.getItem(LAST_API_KEY_STORAGE_KEY);
+    if (!raw) return null;
+    if (raw.startsWith("{")) {
+      const parsed = JSON.parse(raw) as Partial<StoredUsageKey>;
+      const apiKey = String(parsed.apiKey ?? "").trim();
+      if (!apiKey) return null;
+      const name = String(parsed.name ?? "").trim();
+      return name ? { apiKey, name } : { apiKey };
+    }
+    const apiKey = raw.trim();
+    return apiKey ? { apiKey } : null;
+  } catch {
+    return null;
+  }
+};
+
+const writeStoredUsageKey = (value: StoredUsageKey | null): void => {
+  try {
+    if (!value?.apiKey.trim()) {
+      window.localStorage.removeItem(LAST_API_KEY_STORAGE_KEY);
+      return;
+    }
+    window.localStorage.setItem(
+      LAST_API_KEY_STORAGE_KEY,
+      JSON.stringify({
+        apiKey: value.apiKey.trim(),
+        ...(value.name?.trim() ? { name: value.name.trim() } : {}),
+      }),
+    );
+  } catch {
+    // ignore storage failures
+  }
+};
+
 function toLogRow(item: PublicLogItem): RequestLogsRow {
   const channelAuthType = normalizeChannelAuthType(item.auth_type);
   return {
@@ -124,10 +170,16 @@ function toLogRow(item: PublicLogItem): RequestLogsRow {
 export function ApiKeyUsagePage() {
   const { t, i18n } = useTranslation();
 
-  const initialKey = useMemo(() => readLookupKeyFromUrl(), []);
-  const [apiKeyInput, setApiKeyInput] = useState(initialKey);
-  const [queriedKey, setQueriedKey] = useState(initialKey);
-  const [apiKeyName, setApiKeyName] = useState("");
+  const bootstrap = useMemo(() => {
+    const fromUrl = readLookupKeyFromUrl();
+    if (fromUrl) return { apiKey: fromUrl } satisfies StoredUsageKey;
+    return readStoredUsageKey();
+  }, []);
+
+  const [apiKeyInput, setApiKeyInput] = useState(bootstrap?.apiKey ?? "");
+  const [queriedKey, setQueriedKey] = useState(bootstrap?.apiKey ?? "");
+  const [apiKeyName, setApiKeyName] = useState(bootstrap?.name ?? "");
+  const [keyModalOpen, setKeyModalOpen] = useState(!bootstrap?.apiKey);
   const [activeTab, setActiveTab] = useState<UsageTab>("logs");
   const [quickImportReloadToken, setQuickImportReloadToken] = useState(0);
   const [timeRange, setTimeRange] = useState<TimeRange>(7);
@@ -270,6 +322,30 @@ export function ApiKeyUsagePage() {
   const clearModelFilter = useCallback(() => setSelectedModels(null), []);
   const clearStatusFilter = useCallback(() => setSelectedStatuses(null), []);
 
+  const resetResults = useCallback(() => {
+    abortControllerRef.current?.abort();
+    fetchIdRef.current += 1;
+    paginationInFlightRef.current = false;
+    setLoading(false);
+    setError(null);
+    setRawItems([]);
+    setTotalCount(0);
+    setCurrentPage(1);
+    setLastUpdatedAt(null);
+    setStats({ total: 0, success_rate: 0, total_tokens: 0, total_cost: 0 });
+    setFilterOptions({
+      api_key_ids: [],
+      api_key_id_names: {},
+      api_key_id_counts: {},
+      models: [],
+      statuses: ["success", "failed"],
+    });
+    setSelectedApiKeyIds(null);
+    setSelectedModels(null);
+    setSelectedStatuses(null);
+    setApiKeyName("");
+  }, []);
+
   const fetchLogs = useCallback(
     async (apiKey: string, page: number, size?: number) => {
       const trimmed = apiKey.trim();
@@ -300,6 +376,7 @@ export function ApiKeyUsagePage() {
         });
         if (myFetchId !== fetchIdRef.current) return;
 
+        const nextName = resp.api_key_name?.trim() ?? "";
         setRawItems(resp.items ?? []);
         setTotalCount(resp.total ?? 0);
         setCurrentPage(page);
@@ -319,7 +396,9 @@ export function ApiKeyUsagePage() {
           statuses: resp.filters?.statuses ?? ["success", "failed"],
         });
         setLastUpdatedAt(Date.now());
-        setApiKeyName(resp.api_key_name?.trim() ?? "");
+        setApiKeyName(nextName);
+        writeStoredUsageKey({ apiKey: trimmed, ...(nextName ? { name: nextName } : {}) });
+        setKeyModalOpen(false);
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") return;
         if (myFetchId !== fetchIdRef.current) return;
@@ -360,15 +439,26 @@ export function ApiKeyUsagePage() {
       const next = apiKeyInput.trim();
       if (!next) return;
       setQueriedKey(next);
+      // Drop previous key label immediately so a stale localStorage/account name cannot flash.
+      setApiKeyName("");
       setActiveTab("logs");
       setSelectedApiKeyIds(null);
       setSelectedModels(null);
       setSelectedStatuses(null);
       setQuickImportReloadToken((value) => value + 1);
+      writeStoredUsageKey({ apiKey: next });
       fetchLogs(next, 1);
     },
     [apiKeyInput, fetchLogs],
   );
+
+  const handleLogout = useCallback(() => {
+    writeStoredUsageKey(null);
+    setQueriedKey("");
+    setApiKeyInput("");
+    resetResults();
+    setKeyModalOpen(true);
+  }, [resetResults]);
 
   const handleRefresh = useCallback(() => {
     if (!queriedKey) return;
@@ -384,10 +474,10 @@ export function ApiKeyUsagePage() {
   }, [timeRange, selectedApiKeyIds, selectedModels, selectedStatuses]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (!initialKey || restoredLookupFetchedRef.current) return;
+    if (!bootstrap?.apiKey || restoredLookupFetchedRef.current) return;
     restoredLookupFetchedRef.current = true;
-    fetchLogs(initialKey, 1);
-  }, [fetchLogs, initialKey]);
+    fetchLogs(bootstrap.apiKey, 1);
+  }, [bootstrap, fetchLogs]);
 
   useEffect(() => {
     try {
@@ -405,7 +495,7 @@ export function ApiKeyUsagePage() {
     } catch {
       // ignore
     }
-  }, [initialKey]);
+  }, []);
 
   const lastUpdatedText = useMemo(() => {
     if (!lastUpdatedAt) return "";
@@ -415,6 +505,8 @@ export function ApiKeyUsagePage() {
   }, [lastUpdatedAt]);
 
   const displayName = apiKeyName || (queriedKey ? t("apikey_lookup.unnamed_key") : "");
+  const headerControlClass =
+    "inline-flex items-center rounded-xl p-2 text-slate-600 transition hover:bg-slate-100 dark:text-white/70 dark:hover:bg-white/10";
 
   return (
     <PageBackground variant="app">
@@ -423,47 +515,79 @@ export function ApiKeyUsagePage() {
           data-testid="apikey-usage-header"
           className="fixed inset-x-0 top-0 z-30 border-b border-slate-200/60 bg-white/70 backdrop-blur-xl dark:border-neutral-800/60 dark:bg-neutral-950/70"
         >
-          <div className="mx-auto flex h-14 max-w-screen-xl items-center justify-between px-4 sm:px-6">
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900 shadow-sm dark:bg-white">
+          <div className="mx-auto flex h-14 max-w-screen-xl items-center justify-between gap-3 px-4 sm:px-6">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-900 shadow-sm dark:bg-white">
                 <Key size={16} className="text-white dark:text-neutral-950" />
               </div>
-              <span className="text-base font-bold tracking-tight text-slate-900 dark:text-white">
+              <span className="truncate text-base font-bold tracking-tight text-slate-900 dark:text-white">
                 {t("apikey_usage.title")}
               </span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex shrink-0 items-center gap-1 sm:gap-2">
               {queriedKey ? (
-                <div className="inline-flex max-w-[34vw] items-center gap-1.5 rounded-xl px-1 py-1 text-sm font-medium text-slate-700 dark:text-white/80 sm:max-w-56">
-                  <KeyRound size={14} className="shrink-0" />
-                  <span className="min-w-0 truncate">{displayName}</span>
-                </div>
-              ) : null}
-              <LanguageSelector />
-              <ThemeToggleButton />
+                <DropdownMenu.Root>
+                  <DropdownMenu.Trigger asChild>
+                    <button
+                      type="button"
+                      aria-label={displayName}
+                      data-testid="apikey-usage-key-menu"
+                      className="inline-flex max-w-[34vw] items-center gap-1.5 rounded-xl px-1 py-1 text-sm font-medium text-slate-700 transition hover:bg-slate-100 dark:text-white/80 dark:hover:bg-white/10 sm:max-w-56"
+                    >
+                      <KeyRound size={14} className="shrink-0" />
+                      <span className="min-w-0 truncate">{displayName}</span>
+                      <ChevronRight
+                        size={14}
+                        className="shrink-0 rotate-90 text-slate-400 dark:text-white/40"
+                      />
+                    </button>
+                  </DropdownMenu.Trigger>
+                  <DropdownMenu.Portal>
+                    <DropdownMenu.Content align="end" sideOffset={8} className="min-w-44">
+                      <DropdownMenu.Item
+                        data-testid="apikey-usage-switch-key"
+                        onSelect={() => {
+                          setApiKeyInput(queriedKey);
+                          setKeyModalOpen(true);
+                        }}
+                      >
+                        <KeyRound size={14} />
+                        {t("apikey_usage.switch_key")}
+                      </DropdownMenu.Item>
+                      <DropdownMenu.Item
+                        data-testid="apikey-usage-logout"
+                        onSelect={handleLogout}
+                      >
+                        <LogOut size={14} />
+                        {t("apikey_usage.logout")}
+                      </DropdownMenu.Item>
+                    </DropdownMenu.Content>
+                  </DropdownMenu.Portal>
+                </DropdownMenu.Root>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  data-testid="apikey-usage-open-modal"
+                  onClick={() => setKeyModalOpen(true)}
+                >
+                  {t("apikey_lookup.query")}
+                </Button>
+              )}
+              <LanguageSelector className={headerControlClass} />
+              <ThemeToggleButton className={headerControlClass} />
             </div>
           </div>
         </header>
 
         <main className="mx-auto max-w-screen-xl space-y-4 px-4 py-6 sm:px-6">
-          <LookupSearchSection
-            t={t}
-            apiKeyInput={apiKeyInput}
-            setApiKeyInput={(value) => {
-              setApiKeyInput(value);
-              setError(null);
-            }}
-            handleSubmit={handleSubmit}
-            loading={loading}
-          />
-
-          {error ? (
+          {error && queriedKey ? (
             <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-300">
               {error}
             </div>
           ) : null}
 
-          {queriedKey && !error ? (
+          {queriedKey ? (
             <>
               <LookupResultsToolbar
                 t={t}
@@ -515,8 +639,96 @@ export function ApiKeyUsagePage() {
                 </Reveal>
               ) : null}
             </>
-          ) : null}
+          ) : (
+            <div
+              data-testid="apikey-usage-empty"
+              className="rounded-3xl border border-dashed border-slate-200 px-6 py-16 text-center dark:border-neutral-800"
+            >
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-500 dark:bg-white/10 dark:text-white/60">
+                <KeyRound size={22} />
+              </div>
+              <h2 className="mt-4 text-lg font-semibold text-slate-900 dark:text-white">
+                {t("apikey_usage.empty_title")}
+              </h2>
+              <p className="mx-auto mt-2 max-w-md text-sm text-slate-500 dark:text-white/55">
+                {t("apikey_usage.empty_desc")}
+              </p>
+              <div className="mt-6">
+                <Button variant="primary" onClick={() => setKeyModalOpen(true)}>
+                  {t("apikey_lookup.query")}
+                </Button>
+              </div>
+            </div>
+          )}
         </main>
+
+        <Modal
+          open={keyModalOpen}
+          title={t("apikey_usage.modal_title")}
+          hideHeader
+          maxWidth="max-w-md"
+          panelClassName="rounded-3xl border-white/70 bg-white/95 shadow-xl shadow-slate-300/25 backdrop-blur-xl dark:border-white/10 dark:bg-neutral-950/90 dark:shadow-black/25"
+          bodyClassName="!px-7 !py-8 sm:!px-9 sm:!py-9"
+          bodyHeightClassName="max-h-none"
+          bodyOverflowClassName="overflow-visible"
+          onClose={() => {
+            // Keep the modal when no key is active so users always have an entry point.
+            if (queriedKey) setKeyModalOpen(false);
+          }}
+        >
+          <div className="space-y-6">
+            <div className="space-y-2 pr-8">
+              <h2 className="text-xl font-semibold tracking-tight text-slate-950 dark:text-white">
+                {t("apikey_usage.modal_title")}
+              </h2>
+              <p className="text-sm text-slate-500 dark:text-white/55">
+                {t("apikey_usage.modal_desc")}
+              </p>
+            </div>
+            <form className="space-y-4" onSubmit={handleSubmit}>
+              <label className="block space-y-2">
+                <span className="text-xs font-medium text-slate-600 dark:text-white/60">
+                  {t("apikey_lookup.api_key_label")}
+                </span>
+                <TextInput
+                  type="password"
+                  id="apikey-usage-input"
+                  value={apiKeyInput}
+                  onChange={(e) => {
+                    setApiKeyInput(e.target.value);
+                    setError(null);
+                  }}
+                  autoComplete="off"
+                  spellCheck={false}
+                  autoFocus
+                  className="rounded-full px-5"
+                  placeholder={t("apikey_lookup.placeholder")}
+                  startAdornment={<Search size={16} />}
+                />
+              </label>
+              {error && !queriedKey ? (
+                <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-300">
+                  {error}
+                </div>
+              ) : null}
+              <Button
+                variant="primary"
+                type="submit"
+                data-testid="apikey-usage-submit"
+                disabled={!apiKeyInput.trim() || loading}
+                className="w-full"
+              >
+                {loading ? (
+                  <span
+                    className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white motion-reduce:animate-none motion-safe:animate-spin dark:border-neutral-950/30 dark:border-t-neutral-950"
+                    aria-hidden="true"
+                  />
+                ) : null}
+                {t("apikey_lookup.query")}
+              </Button>
+            </form>
+          </div>
+        </Modal>
       </div>
     </PageBackground>
   );

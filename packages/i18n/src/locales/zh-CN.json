@@ -4840,6 +4840,12 @@
   },
   "apikey_usage": {
     "title": "API 密钥用量查询",
-    "subtitle": "输入 API 密钥查看请求日志与快捷导入"
+    "subtitle": "输入 API 密钥查看请求日志与快捷导入",
+    "modal_title": "输入 API 密钥",
+    "modal_desc": "无需账号密码，输入密钥即可查看请求日志与快捷导入。",
+    "empty_title": "查询 API 密钥用量",
+    "empty_desc": "输入密钥后即可查看请求日志，并使用快捷导入。密钥会保存在本机 localStorage。",
+    "switch_key": "更换密钥",
+    "logout": "退出查询"
   }
 }
