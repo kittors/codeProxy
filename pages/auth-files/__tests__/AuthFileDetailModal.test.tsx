@@ -365,7 +365,7 @@ describe("AuthFileDetailModal", () => {
 
     expect(screen.getByRole("tab", { name: "Usage" })).toBeInTheDocument();
     expect(screen.getByRole("dialog", { name: "pcamtu927@gmail.com" })).toBeInTheDocument();
-    expect(screen.getByText("Plus")).toBeInTheDocument();
+    expect(screen.getByText("PLUS")).toBeInTheDocument();
     expect(screen.getByText("Current cycle cost")).toBeInTheDocument();
     expect(screen.getByText("$1.2345")).toBeInTheDocument();
   });
@@ -409,6 +409,46 @@ describe("AuthFileDetailModal", () => {
     expect(screen.queryByText(/resets/)).not.toBeInTheDocument();
   });
 
+  test("title membership chip matches card style and codex pro multiplier", () => {
+    renderDetailModal({
+      detailFile: {
+        name: "codex-pro.json",
+        label: "Codex Pro",
+        type: "codex",
+        provider: "codex",
+        plan_type: "pro",
+        size: 256,
+      },
+      modelsFileType: "codex",
+      quotaState: {
+        status: "success",
+        planType: "pro",
+        items: [],
+        updatedAt: Date.now(),
+      },
+      detailTrend: {
+        auth_index: "auth-pro",
+        days: 7,
+        hours: 5,
+        request_total: 100,
+        cycle_request_total: 100,
+        cycle_cost_total: 333.9,
+        weekly_quota_used_percent: 13,
+        cycle_known: true,
+        cycle_start: "2026-07-22T00:00:00Z",
+        daily_usage: [],
+        hourly_usage: [],
+        quota_series: [],
+      },
+    });
+
+    // $333.9 / 13% ≈ $2568 budget → PRO 20X solid chip, not soft "Pro".
+    const badge = screen.getByTestId("auth-file-plan-badge");
+    expect(badge).toHaveTextContent("PRO 20X");
+    expect(badge.className).toContain("from-yellow-300");
+    expect(badge.className).not.toContain("bg-amber-50");
+  });
+
   test("shows SuperGrok plan badge and falls back cycle totals for xAI when cycle is unknown", () => {
     renderDetailModal({
       detailFile: {
@@ -448,7 +488,8 @@ describe("AuthFileDetailModal", () => {
       },
     });
 
-    expect(screen.getByText("SuperGrok")).toBeInTheDocument();
+    expect(screen.getByText("SUPERGROK")).toBeInTheDocument();
+    expect(screen.getByTestId("auth-file-plan-badge")).toHaveClass("from-neutral-900");
     expectSummaryCard("Last 7 days requests", "116");
     // When cycle_known is false, fall back to request_total instead of showing 0.
     expectSummaryCard("Current weekly cycle", "116");
