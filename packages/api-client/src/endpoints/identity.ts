@@ -78,6 +78,8 @@ export interface UserIdentity {
   must_change_password: boolean;
   last_login_at: string | null;
   role_ids: string[];
+  /** Present only on create response when server auto-generated the password. */
+  initial_password?: string;
   role_codes: string[];
   version: number;
   created_at: string;
@@ -241,7 +243,8 @@ export const identityApi = {
   createUser: (body: {
     username: string;
     display_name: string;
-    password: string;
+    /** Empty string triggers server-side password generation. */
+    password?: string;
     role_ids: string[];
   }) => apiClient.post<UserIdentity>("/users", body),
   resetPassword: (id: string, password: string) =>
