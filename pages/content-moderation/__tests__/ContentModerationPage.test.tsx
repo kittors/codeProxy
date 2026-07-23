@@ -95,6 +95,10 @@ describe("ContentModerationPage", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Strict prompts")).toBeInTheDocument();
     expect(screen.getByText("4 channels")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Manage channels" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Edit Profile" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Delete Profile" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "More profile actions" })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Test profile" }));
     expect(screen.getByText(/does not save test input/i)).toBeInTheDocument();
@@ -106,6 +110,20 @@ describe("ContentModerationPage", () => {
     );
     expect(await screen.findByText("Would block")).toBeInTheDocument();
     expect(screen.getByText("Matched keyword: blocked")).toBeInTheDocument();
+  });
+
+  test("renders the card empty state when no profiles exist", async () => {
+    mocks.listProfiles.mockResolvedValue([]);
+    renderPage();
+
+    expect(await screen.findByRole("heading", { name: "Content Moderation" })).toBeInTheDocument();
+    expect(screen.getByText("No moderation profiles")).toBeInTheDocument();
+    expect(
+      screen.getByText("Create a profile first, then bind only the channels that should use it."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("table", { name: "Content moderation profile table" }),
+    ).not.toBeInTheDocument();
   });
 
   test("opens the tenant-scoped moderation metrics modal from the actions column", async () => {
