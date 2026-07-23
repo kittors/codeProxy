@@ -62,6 +62,7 @@ describe("ContentModerationPage", () => {
     mocks.listChannels.mockReset();
     mocks.patchBindings.mockReset();
     mocks.listProfiles.mockResolvedValue([profile]);
+    mocks.patchProfile.mockResolvedValue({ ...profile, mode: "off", version: 4 });
     mocks.testProfile.mockResolvedValue({
       would_block: true,
       action: "keyword_block",
@@ -92,5 +93,48 @@ describe("ContentModerationPage", () => {
     );
     expect(await screen.findByText("Would block")).toBeInTheDocument();
     expect(screen.getByText("Matched keyword: blocked")).toBeInTheDocument();
+  });
+
+  test("toggles profile mode from the table with version concurrency", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    const toggle = await screen.findByRole("switch", {
+      name: "Toggle moderation for Strict prompts",
+    });
+    expect(toggle).toBeChecked();
+
+    await user.click(toggle);
+
+    await waitFor(() =>
+      expect(mocks.patchProfile).toHaveBeenCalledWith("profile-1", {
+        mode: "off",
+        version: 3,
+      }),
+    );
+    expect(await screen.findByRole("switch", { name: /Strict prompts/ })).not.toBeChecked();
+  });
+
+  test("blocks enabling API moderation when no API key is configured", async () => {
+    const user = userEvent.setup();
+    mocks.listProfiles.mockResolvedValue([
+      {
+        ...profile,
+        mode: "off",
+        keyword_mode: "api_only",
+        api_key_configured: false,
+        api_key_masked: undefined,
+      },
+    ]);
+    renderPage();
+
+    await user.click(
+      await screen.findByRole("switch", { name: "Toggle moderation for Strict prompts" }),
+    );
+
+    expect(
+      await screen.findByText("Configure an API key before enabling this API moderation profile."),
+    ).toBeInTheDocument();
+    expect(mocks.patchProfile).not.toHaveBeenCalled();
   });
 });

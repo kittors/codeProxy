@@ -14,6 +14,7 @@ import {
   DataTable,
   TABLE_ROW_ACTIONS_COLUMN,
   TableRowActions,
+  ToggleSwitch,
   useToast,
   type DataTableColumn,
 } from "@code-proxy/ui";
@@ -38,6 +39,7 @@ export function ContentModerationPage() {
   const [profiles, setProfiles] = useState<ContentModerationProfileView[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [modeUpdatingId, setModeUpdatingId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorProfile, setEditorProfile] = useState<ContentModerationProfileView | null>(null);
@@ -125,6 +127,40 @@ export function ContentModerationPage() {
     }
   };
 
+  const updateProfileMode = useCallback(
+    async (profile: ContentModerationProfileView, enabled: boolean) => {
+      if (enabled && profile.keyword_mode !== "keyword_only" && !profile.api_key_configured) {
+        notify({
+          type: "error",
+          message: t("content_moderation.enable_api_key_required"),
+        });
+        return;
+      }
+
+      setModeUpdatingId(profile.id);
+      try {
+        const saved = await contentModerationApi.patchProfile(profile.id, {
+          mode: enabled ? "pre_block" : "off",
+          version: profile.version,
+        });
+        setProfiles((current) => current.map((item) => (item.id === saved.id ? saved : item)));
+        notify({ type: "success", message: t("content_moderation.profile_mode_updated") });
+      } catch (error) {
+        notify({
+          type: "error",
+          message:
+            error instanceof Error
+              ? error.message
+              : t("content_moderation.profile_mode_update_failed"),
+        });
+        await loadProfiles();
+      } finally {
+        setModeUpdatingId(null);
+      }
+    },
+    [loadProfiles, notify, t],
+  );
+
   const columns = useMemo<DataTableColumn<ContentModerationProfileView>[]>(
     () => [
       {
@@ -142,22 +178,26 @@ export function ContentModerationPage() {
       },
       {
         key: "mode",
-        label: t("content_moderation.mode"),
-        width: "w-32 min-w-32",
-        render: (profile) => (
-          <span
-            className={[
-              "rounded-full px-2.5 py-1 text-xs font-semibold",
-              profile.mode === "pre_block"
-                ? "bg-rose-600/10 text-rose-700 dark:bg-rose-500/15 dark:text-rose-200"
-                : "bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-white/60",
-            ].join(" ")}
-          >
-            {profile.mode === "pre_block"
-              ? t("content_moderation.mode_pre_block")
-              : t("content_moderation.mode_off")}
-          </span>
-        ),
+        label: t("content_moderation.enabled"),
+        width: "w-40 min-w-40",
+        render: (profile) => {
+          const enabled = profile.mode === "pre_block";
+          return (
+            <div className="flex items-center gap-2.5">
+              <ToggleSwitch
+                checked={enabled}
+                disabled={!canWrite || modeUpdatingId !== null}
+                ariaLabel={t("content_moderation.toggle_enabled", { name: profile.name })}
+                onCheckedChange={(next) => void updateProfileMode(profile, next)}
+              />
+              <span className="text-xs text-slate-600 dark:text-white/60">
+                {enabled
+                  ? t("content_moderation.mode_pre_block")
+                  : t("content_moderation.mode_off")}
+              </span>
+            </div>
+          );
+        },
       },
       {
         key: "method",
@@ -265,7 +305,7 @@ export function ContentModerationPage() {
         ),
       },
     ],
-    [canTest, canWrite, t],
+    [canTest, canWrite, modeUpdatingId, t, updateProfileMode],
   );
 
   return (
