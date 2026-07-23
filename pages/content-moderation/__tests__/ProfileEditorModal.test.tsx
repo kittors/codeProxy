@@ -5,6 +5,22 @@ import type { ContentModerationProfileView } from "@code-proxy/api-client";
 import i18n from "@code-proxy/i18n";
 import { ProfileEditorModal, type ProfileEditorModalProps } from "../components/ProfileEditorModal";
 
+const DEFAULT_THRESHOLDS = {
+  harassment: 0.98,
+  "harassment/threatening": 0.9,
+  hate: 0.65,
+  "hate/threatening": 0.65,
+  illicit: 0.95,
+  "illicit/violent": 0.95,
+  "self-harm": 0.65,
+  "self-harm/intent": 0.85,
+  "self-harm/instructions": 0.65,
+  sexual: 0.65,
+  "sexual/minors": 0.65,
+  violence: 0.95,
+  "violence/graphic": 0.95,
+};
+
 const profile: ContentModerationProfileView = {
   id: "profile-1",
   name: "Strict prompts",
@@ -48,12 +64,13 @@ describe("ProfileEditorModal", () => {
     await i18n.changeLanguage("en");
   });
 
-  test("uses shared FormField wiring and full-width Select controls", () => {
+  test("renders localized structured threshold fields with category help", async () => {
+    const user = userEvent.setup();
     renderEditor();
 
     const form = document.querySelector("form[data-slot='form']");
     expect(form).toHaveAttribute("id", "content-moderation-profile-form");
-    expect(document.querySelectorAll("[data-slot='form-field']")).toHaveLength(11);
+    expect(document.querySelectorAll("[data-slot='form-field']")).toHaveLength(23);
     expect(document.querySelector("[data-slot='form-field-info'].invisible")).toBeNull();
 
     expect(screen.getByRole("combobox", { name: "Mode" })).toHaveClass("w-full");
@@ -65,30 +82,56 @@ describe("ProfileEditorModal", () => {
     );
     expect(keywords).toHaveAttribute("aria-describedby", keywordsHint.id);
 
-    const thresholds = screen.getByLabelText("Category thresholds");
-    const thresholdsHint = screen.getByText(
-      "One category=value entry per line. Values must be between 0 and 1.",
+    expect(screen.getByRole("spinbutton", { name: "Harassment" })).toHaveValue(0.98);
+    expect(screen.getByRole("spinbutton", { name: "Harassment with threats" })).toHaveValue(0.9);
+    expect(screen.getByRole("spinbutton", { name: "Graphic violence" })).toHaveValue(0.95);
+    expect(screen.queryByRole("textbox", { name: "Category thresholds" })).toBeNull();
+    expect(
+      screen.getByText(
+        "Set the model score at which each category is blocked. Lower values make moderation stricter.",
+      ),
+    ).toBeInTheDocument();
+
+    const harassmentHelp = screen.getByRole("button", {
+      name: /Content that demeans, intimidates, or abuses a person or group/,
+    });
+    await user.hover(harassmentHelp);
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "A lower threshold flags lower-confidence matches, making moderation stricter.",
     );
-    expect(thresholds).toHaveAttribute("aria-describedby", thresholdsHint.id);
   });
 
-  test("keeps moderation API fields disabled in keyword-only mode", () => {
+  test("provides zh-CN category labels", async () => {
+    await i18n.changeLanguage("zh-CN");
+    renderEditor();
+
+    expect(screen.getByRole("spinbutton", { name: "骚扰" })).toBeInTheDocument();
+    expect(screen.getByRole("spinbutton", { name: "涉及未成年人的色情内容" })).toBeInTheDocument();
+  });
+
+  test("keeps moderation API fields and threshold inputs disabled in keyword-only mode", () => {
     renderEditor({ editedProfile: profile });
 
     expect(screen.getByLabelText("Moderation base URL")).toBeDisabled();
     expect(screen.getByLabelText("Moderation model")).toBeDisabled();
     expect(screen.getByLabelText("Moderation API key")).toBeDisabled();
-    expect(screen.getByLabelText("Category thresholds")).toBeDisabled();
+    expect(screen.getAllByRole("spinbutton")).toHaveLength(13);
+    for (const thresholdInput of screen.getAllByRole("spinbutton")) {
+      expect(thresholdInput).toBeDisabled();
+    }
     expect(screen.getByRole("switch", { name: "Clear the configured API key" })).not.toBeDisabled();
   });
 
-  test("submits the existing create payload through the form", async () => {
+  test("submits numeric thresholds through the existing create payload", async () => {
     const user = userEvent.setup();
     const onSave = vi.fn<ProfileEditorModalProps["onSave"]>().mockResolvedValue(undefined);
     renderEditor({ onSave });
 
     fireEvent.change(screen.getByRole("textbox", { name: "Profile name" }), {
       target: { value: "  New Profile  " },
+    });
+    fireEvent.change(screen.getByRole("spinbutton", { name: "Harassment" }), {
+      target: { value: "0.42" },
     });
     await user.click(screen.getByRole("button", { name: "Save" }));
 
@@ -102,11 +145,62 @@ describe("ProfileEditorModal", () => {
         timeout_ms: 3000,
         keyword_mode: "api_only",
         blocked_keywords: [],
+        thresholds: { ...DEFAULT_THRESHOLDS, harassment: 0.42 },
         block_http_status: 403,
         block_message: "Your request was blocked by the content moderation policy.",
       }),
     );
     expect(onSave.mock.calls[0]?.[0]).not.toHaveProperty("version");
     expect(onSave.mock.calls[0]?.[0]).not.toHaveProperty("clear_api_key");
+  });
+
+  test("preserves unknown server threshold keys when editing", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn<ProfileEditorModalProps["onSave"]>().mockResolvedValue(undefined);
+    renderEditor({
+      editedProfile: {
+        ...profile,
+        keyword_mode: "api_only",
+        thresholds: { violence: 0.8, "future/category": 0.4 },
+      },
+      onSave,
+    });
+
+    expect(screen.getByRole("spinbutton", { name: "Violence" })).toHaveValue(0.8);
+    fireEvent.change(screen.getByRole("spinbutton", { name: "Violence" }), {
+      target: { value: "0.77" },
+    });
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave.mock.calls[0]?.[0]).toEqual(
+      expect.objectContaining({
+        version: 3,
+        thresholds: {
+          ...DEFAULT_THRESHOLDS,
+          violence: 0.77,
+          "future/category": 0.4,
+        },
+      }),
+    );
+  });
+
+  test("rejects threshold values outside zero to one", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn<ProfileEditorModalProps["onSave"]>().mockResolvedValue(undefined);
+    renderEditor({ onSave });
+
+    fireEvent.change(screen.getByRole("textbox", { name: "Profile name" }), {
+      target: { value: "Invalid thresholds" },
+    });
+    fireEvent.change(screen.getByRole("spinbutton", { name: "Harassment" }), {
+      target: { value: "1.1" },
+    });
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Every category threshold must be a number from 0 to 1",
+    );
+    expect(onSave).not.toHaveBeenCalled();
   });
 });
