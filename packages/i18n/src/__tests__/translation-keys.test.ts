@@ -1,0 +1,36 @@
+import { describe, expect, test } from "vitest";
+import en from "../locales/en.json";
+import zhCN from "../locales/zh-CN.json";
+
+function resolve(resource: Record<string, unknown>, key: string): unknown {
+  let cur: unknown = resource;
+  for (const part of key.split(".")) {
+    if (!cur || typeof cur !== "object" || !(part in (cur as object))) {
+      return undefined;
+    }
+    cur = (cur as Record<string, unknown>)[part];
+  }
+  return cur;
+}
+
+// Keys used as DataTable column labels (uppercase CSS would expose missing keys loudly).
+const REQUIRED_KEYS = [
+  "providers.model_alias",
+  "providers.real_model_id",
+  "providers.model_enabled",
+  "common.model_alias_placeholder",
+] as const;
+
+describe("translation keys", () => {
+  test.each(REQUIRED_KEYS)("%s exists in zh-CN and en as a non-empty string", (key) => {
+    const zh = resolve(zhCN as Record<string, unknown>, key);
+    const enVal = resolve(en as Record<string, unknown>, key);
+    expect(typeof zh).toBe("string");
+    expect(String(zh).trim().length).toBeGreaterThan(0);
+    expect(typeof enVal).toBe("string");
+    expect(String(enVal).trim().length).toBeGreaterThan(0);
+    // Must not fall through to the raw key itself.
+    expect(zh).not.toBe(key);
+    expect(enVal).not.toBe(key);
+  });
+});
