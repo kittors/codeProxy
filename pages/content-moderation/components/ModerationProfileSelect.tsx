@@ -76,6 +76,7 @@ function BoundModerationProfileSelect({
       contentModerationApi.listProfiles(),
       contentModerationApi.listChannels({
         channel_type: channelType,
+        // Backend query is substring-based; narrow by stable id, then exact-match below.
         query: channelId,
         page: 1,
         page_size: 50,
@@ -90,7 +91,13 @@ function BoundModerationProfileSelect({
         setProfileId(exact?.profile_id ?? "");
       })
       .catch((error: unknown) => {
-        if (error instanceof DOMException && error.name === "AbortError") return;
+        if (
+          controller.signal.aborted ||
+          (error instanceof DOMException && error.name === "AbortError") ||
+          (isApiClientError(error) && error.message === "Request was cancelled")
+        ) {
+          return;
+        }
         notify({
           type: "error",
           message:
