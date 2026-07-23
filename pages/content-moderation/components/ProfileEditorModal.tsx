@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Info } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type {
   ContentModerationKeywordMode,
@@ -11,6 +12,7 @@ import {
   Button,
   Form,
   FormField,
+  HoverTooltip,
   Modal,
   Select,
   Textarea,
@@ -18,7 +20,25 @@ import {
   ToggleSwitch,
 } from "@code-proxy/ui";
 
-const DEFAULT_THRESHOLDS: Record<string, number> = {
+const THRESHOLD_CATEGORIES = [
+  { key: "harassment", i18nKey: "harassment" },
+  { key: "harassment/threatening", i18nKey: "harassment_threatening" },
+  { key: "hate", i18nKey: "hate" },
+  { key: "hate/threatening", i18nKey: "hate_threatening" },
+  { key: "illicit", i18nKey: "illicit" },
+  { key: "illicit/violent", i18nKey: "illicit_violent" },
+  { key: "self-harm", i18nKey: "self_harm" },
+  { key: "self-harm/intent", i18nKey: "self_harm_intent" },
+  { key: "self-harm/instructions", i18nKey: "self_harm_instructions" },
+  { key: "sexual", i18nKey: "sexual" },
+  { key: "sexual/minors", i18nKey: "sexual_minors" },
+  { key: "violence", i18nKey: "violence" },
+  { key: "violence/graphic", i18nKey: "violence_graphic" },
+] as const;
+
+type ThresholdCategory = (typeof THRESHOLD_CATEGORIES)[number]["key"];
+
+const DEFAULT_THRESHOLDS: Record<ThresholdCategory, number> = {
   harassment: 0.98,
   "harassment/threatening": 0.9,
   hate: 0.65,
@@ -34,6 +54,14 @@ const DEFAULT_THRESHOLDS: Record<string, number> = {
   "violence/graphic": 0.95,
 };
 
+const createThresholdDraft = (thresholds?: Record<string, number>): Record<string, string> => {
+  const result: Record<string, string> = {};
+  for (const { key } of THRESHOLD_CATEGORIES) {
+    result[key] = String(thresholds?.[key] ?? DEFAULT_THRESHOLDS[key]);
+  }
+  return result;
+};
+
 export interface ModerationProfileDraft {
   name: string;
   mode: ContentModerationMode;
@@ -44,16 +72,10 @@ export interface ModerationProfileDraft {
   timeoutMs: string;
   keywordMode: ContentModerationKeywordMode;
   blockedKeywordsText: string;
-  thresholdsText: string;
+  thresholds: Record<string, string>;
   blockHttpStatus: string;
   blockMessage: string;
 }
-
-const formatThresholds = (thresholds: Record<string, number>) =>
-  Object.entries(thresholds)
-    .sort(([left], [right]) => left.localeCompare(right))
-    .map(([category, threshold]) => `${category}=${threshold}`)
-    .join("\n");
 
 const createDraft = (profile: ContentModerationProfileView | null): ModerationProfileDraft => ({
   name: profile?.name ?? "",
@@ -65,7 +87,7 @@ const createDraft = (profile: ContentModerationProfileView | null): ModerationPr
   timeoutMs: String(profile?.timeout_ms ?? 3000),
   keywordMode: profile?.keyword_mode ?? "api_only",
   blockedKeywordsText: (profile?.blocked_keywords ?? []).join("\n"),
-  thresholdsText: formatThresholds(profile?.thresholds ?? DEFAULT_THRESHOLDS),
+  thresholds: createThresholdDraft(profile?.thresholds),
   blockHttpStatus: String(profile?.block_http_status ?? 403),
   blockMessage:
     profile?.block_message ?? "Your request was blocked by the content moderation policy.",
@@ -84,23 +106,18 @@ const parseKeywords = (value: string) => {
   return keywords;
 };
 
-export function parseThresholds(value: string): Record<string, number> | null {
+const parseThresholds = (values: Record<string, string>): Record<string, number> | null => {
   const result: Record<string, number> = {};
-  for (const rawLine of value.split("\n")) {
-    const line = rawLine.trim();
-    if (!line) continue;
-    const separator = line.includes("=") ? "=" : ":";
-    const index = line.indexOf(separator);
-    if (index <= 0) return null;
-    const category = line.slice(0, index).trim();
-    const threshold = Number(line.slice(index + 1).trim());
-    if (!category || !Number.isFinite(threshold) || threshold < 0 || threshold > 1) {
-      return null;
-    }
-    result[category] = threshold;
+  for (const { key } of THRESHOLD_CATEGORIES) {
+    const rawValue = values[key];
+    if (rawValue == null || rawValue.trim() === "") return null;
+
+    const threshold = Number(rawValue);
+    if (!Number.isFinite(threshold) || threshold < 0 || threshold > 1) return null;
+    result[key] = threshold;
   }
   return result;
-}
+};
 
 export interface ProfileEditorModalProps {
   open: boolean;
@@ -141,7 +158,7 @@ export function ProfileEditorModal({
     const name = draft.name.trim();
     const timeoutMs = Number(draft.timeoutMs);
     const blockHttpStatus = Number(draft.blockHttpStatus);
-    const thresholds = parseThresholds(draft.thresholdsText);
+    const fixedThresholds = parseThresholds(draft.thresholds);
     if (!name) {
       setError(t("content_moderation.validation_name"));
       return;
@@ -154,7 +171,7 @@ export function ProfileEditorModal({
       setError(t("content_moderation.validation_status"));
       return;
     }
-    if (!thresholds) {
+    if (!fixedThresholds) {
       setError(t("content_moderation.validation_thresholds"));
       return;
     }
@@ -167,7 +184,7 @@ export function ProfileEditorModal({
       timeout_ms: timeoutMs,
       keyword_mode: draft.keywordMode,
       blocked_keywords: parseKeywords(draft.blockedKeywordsText),
-      thresholds,
+      thresholds: { ...profile?.thresholds, ...fixedThresholds },
       block_http_status: blockHttpStatus,
       block_message: draft.blockMessage.trim(),
     };
@@ -377,22 +394,65 @@ export function ProfileEditorModal({
             ) : null}
           </div>
 
-          <FormField
-            className="mt-4"
-            label={t("content_moderation.thresholds")}
-            description={t("content_moderation.thresholds_hint")}
-            reserveMeta={false}
-          >
-            <Textarea
-              value={draft.thresholdsText}
-              disabled={!apiModeEnabled}
-              onChange={(event) => {
-                const thresholdsText = event.currentTarget.value;
-                setDraft((current) => ({ ...current, thresholdsText }));
-              }}
-              className="min-h-48 font-mono text-xs"
-            />
-          </FormField>
+          <div className="mt-5 border-t border-slate-200 pt-4 dark:border-neutral-800">
+            <div className="mb-4">
+              <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                {t("content_moderation.thresholds")}
+              </h3>
+              <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-white/45">
+                {t("content_moderation.thresholds_hint")}
+              </p>
+            </div>
+            <div className="grid gap-x-4 gap-y-3 md:grid-cols-2">
+              {THRESHOLD_CATEGORIES.map(({ key, i18nKey }) => {
+                const categoryName = t(`content_moderation.threshold_category.${i18nKey}`);
+                const categoryHelp = t(`content_moderation.threshold_category_help.${i18nKey}`);
+                return (
+                  <FormField
+                    key={key}
+                    label={
+                      <span className="inline-flex items-center gap-1.5">
+                        <span>{categoryName}</span>
+                        <HoverTooltip content={categoryHelp} placement="top">
+                          <span
+                            role="button"
+                            tabIndex={0}
+                            aria-label={categoryHelp}
+                            onClick={(event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                            }}
+                            className="inline-flex h-5 w-5 items-center justify-center rounded-full text-slate-400 transition hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:text-white/40 dark:hover:text-white/75 dark:focus-visible:ring-white/15"
+                          >
+                            <Info size={14} aria-hidden="true" />
+                          </span>
+                        </HoverTooltip>
+                      </span>
+                    }
+                    reserveMeta={false}
+                  >
+                    <TextInput
+                      type="number"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      inputMode="decimal"
+                      aria-label={categoryName}
+                      value={draft.thresholds[key] ?? ""}
+                      disabled={!apiModeEnabled}
+                      onChange={(event) => {
+                        const value = event.currentTarget.value;
+                        setDraft((current) => ({
+                          ...current,
+                          thresholds: { ...current.thresholds, [key]: value },
+                        }));
+                      }}
+                    />
+                  </FormField>
+                );
+              })}
+            </div>
+          </div>
         </section>
 
         <section className="rounded-xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
