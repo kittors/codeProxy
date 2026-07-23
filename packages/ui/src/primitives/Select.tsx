@@ -57,6 +57,8 @@ export interface SelectProps {
   name?: string;
   /** Extra className on the trigger button */
   className?: string;
+  /** Stretch the default trigger to its container width. Ignored by the compact chip variant. */
+  fullWidth?: boolean;
   /** Disable interactions */
   disabled?: boolean;
   /** Visual style variant */
@@ -80,6 +82,7 @@ export function Select({
   "aria-describedby": ariaDescribedBy,
   name,
   className,
+  fullWidth = true,
   disabled = false,
   variant = "default",
   size = "default",
@@ -180,6 +183,7 @@ export function Select({
         onClick={() => setOpen((prev) => !prev)}
         className={cn(
           variant === "chip" ? selectTriggerChip : getSelectTriggerBase(size),
+          variant !== "chip" && fullWidth ? "w-full" : null,
           open && selectTriggerOpen,
           disabled && selectTriggerDisabled,
           className,

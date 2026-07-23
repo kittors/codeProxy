@@ -7,7 +7,16 @@ import type {
   CreateContentModerationProfileInput,
   PatchContentModerationProfileInput,
 } from "@code-proxy/api-client";
-import { Button, Modal, Select, Textarea, TextInput, ToggleSwitch } from "@code-proxy/ui";
+import {
+  Button,
+  Form,
+  FormField,
+  Modal,
+  Select,
+  Textarea,
+  TextInput,
+  ToggleSwitch,
+} from "@code-proxy/ui";
 
 const DEFAULT_THRESHOLDS: Record<string, number> = {
   harassment: 0.98,
@@ -192,37 +201,48 @@ export function ProfileEditorModal({
       footer={
         <>
           {error ? (
-            <span className="mr-auto text-sm font-semibold text-rose-700 dark:text-rose-200">
+            <span
+              role="alert"
+              className="mr-auto text-sm font-semibold text-rose-700 dark:text-rose-200"
+            >
               {error}
             </span>
           ) : null}
-          <Button variant="secondary" onClick={onClose} disabled={saving}>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
             {t("common.cancel")}
           </Button>
-          <Button variant="primary" onClick={() => void submit()} disabled={saving}>
+          <Button
+            type="submit"
+            form="content-moderation-profile-form"
+            variant="primary"
+            disabled={saving}
+          >
             {saving ? t("common.saving") : t("common.save")}
           </Button>
         </>
       }
     >
-      <div className="space-y-5">
+      <Form
+        id="content-moderation-profile-form"
+        className="space-y-5"
+        noValidate
+        onSubmit={(event) => {
+          event.preventDefault();
+          void submit();
+        }}
+      >
         <section className="rounded-xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
           <div className="grid gap-4 md:grid-cols-2">
-            <label className="space-y-2">
-              <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                {t("content_moderation.profile_name")}
-              </span>
+            <FormField label={t("content_moderation.profile_name")} required reserveMeta={false}>
               <TextInput
                 value={draft.name}
-                onChange={(event) =>
-                  setDraft((current) => ({ ...current, name: event.currentTarget.value }))
-                }
+                onChange={(event) => {
+                  const name = event.currentTarget.value;
+                  setDraft((current) => ({ ...current, name }));
+                }}
               />
-            </label>
-            <div className="space-y-2">
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                {t("content_moderation.mode")}
-              </p>
+            </FormField>
+            <FormField label={t("content_moderation.mode")} reserveMeta={false}>
               <Select
                 value={draft.mode}
                 onChange={(value) => {
@@ -233,9 +253,8 @@ export function ProfileEditorModal({
                   { value: "off", label: t("content_moderation.mode_off") },
                   { value: "pre_block", label: t("content_moderation.mode_pre_block") },
                 ]}
-                aria-label={t("content_moderation.mode")}
               />
-            </div>
+            </FormField>
           </div>
           <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">
             {t("content_moderation.fail_open_notice")}
@@ -244,10 +263,7 @@ export function ProfileEditorModal({
 
         <section className="rounded-xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
           <div className="grid gap-4 md:grid-cols-2">
-            <label className="space-y-2">
-              <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                {t("content_moderation.keyword_mode")}
-              </span>
+            <FormField label={t("content_moderation.keyword_mode")} reserveMeta={false}>
               <Select
                 value={draft.keywordMode}
                 onChange={(value) => {
@@ -271,80 +287,68 @@ export function ProfileEditorModal({
                     label: t("content_moderation.keyword_mode_keyword_and_api"),
                   },
                 ]}
-                aria-label={t("content_moderation.keyword_mode")}
               />
-            </label>
-            <label className="space-y-2">
-              <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                {t("content_moderation.timeout_ms")}
-              </span>
+            </FormField>
+            <FormField label={t("content_moderation.timeout_ms")} reserveMeta={false}>
               <TextInput
                 value={draft.timeoutMs}
                 inputMode="numeric"
-                onChange={(event) =>
-                  setDraft((current) => ({
-                    ...current,
-                    timeoutMs: event.currentTarget.value,
-                  }))
-                }
+                onChange={(event) => {
+                  const timeoutMs = event.currentTarget.value;
+                  setDraft((current) => ({ ...current, timeoutMs }));
+                }}
               />
-            </label>
+            </FormField>
           </div>
 
-          <label className="mt-4 block space-y-2">
-            <span className="text-sm font-semibold text-slate-900 dark:text-white">
-              {t("content_moderation.blocked_keywords")}
-            </span>
+          <FormField
+            className="mt-4"
+            label={t("content_moderation.blocked_keywords")}
+            description={t("content_moderation.blocked_keywords_hint")}
+            reserveMeta={false}
+          >
             <Textarea
               value={draft.blockedKeywordsText}
-              onChange={(event) =>
-                setDraft((current) => ({
-                  ...current,
-                  blockedKeywordsText: event.currentTarget.value,
-                }))
-              }
+              onChange={(event) => {
+                const blockedKeywordsText = event.currentTarget.value;
+                setDraft((current) => ({ ...current, blockedKeywordsText }));
+              }}
               placeholder={t("content_moderation.blocked_keywords_placeholder")}
               className="min-h-28 font-mono text-xs"
             />
-            <span className="text-xs text-slate-500 dark:text-white/55">
-              {t("content_moderation.blocked_keywords_hint")}
-            </span>
-          </label>
+          </FormField>
         </section>
 
         <section className="rounded-xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
           <div className="grid gap-4 md:grid-cols-2">
-            <label className="space-y-2">
-              <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                {t("content_moderation.base_url")}
-              </span>
+            <FormField label={t("content_moderation.base_url")} reserveMeta={false}>
               <TextInput
                 value={draft.baseUrl}
                 disabled={!apiModeEnabled}
-                onChange={(event) =>
-                  setDraft((current) => ({ ...current, baseUrl: event.currentTarget.value }))
-                }
+                onChange={(event) => {
+                  const baseUrl = event.currentTarget.value;
+                  setDraft((current) => ({ ...current, baseUrl }));
+                }}
               />
-            </label>
-            <label className="space-y-2">
-              <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                {t("content_moderation.model")}
-              </span>
+            </FormField>
+            <FormField label={t("content_moderation.model")} reserveMeta={false}>
               <TextInput
                 value={draft.model}
                 disabled={!apiModeEnabled}
-                onChange={(event) =>
-                  setDraft((current) => ({ ...current, model: event.currentTarget.value }))
-                }
+                onChange={(event) => {
+                  const model = event.currentTarget.value;
+                  setDraft((current) => ({ ...current, model }));
+                }}
               />
-            </label>
+            </FormField>
           </div>
 
           <div className="mt-4 grid gap-4 md:grid-cols-2">
-            <label className="space-y-2">
-              <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                {t("content_moderation.api_key")}
-              </span>
+            <FormField
+              label={t("content_moderation.api_key")}
+              description={configuredKeyLabel}
+              reserveMeta={false}
+            >
               <TextInput
                 type="password"
                 autoComplete="new-password"
@@ -355,82 +359,66 @@ export function ProfileEditorModal({
                     ? t("content_moderation.api_key_keep_placeholder")
                     : t("content_moderation.api_key_placeholder")
                 }
-                onChange={(event) =>
-                  setDraft((current) => ({ ...current, apiKey: event.currentTarget.value }))
-                }
+                onChange={(event) => {
+                  const apiKey = event.currentTarget.value;
+                  setDraft((current) => ({ ...current, apiKey }));
+                }}
               />
-              <span className="text-xs text-slate-500 dark:text-white/55">
-                {configuredKeyLabel}
-              </span>
-            </label>
+            </FormField>
             {profile?.api_key_configured ? (
-              <div className="space-y-2 pt-7">
+              <FormField label={t("content_moderation.clear_api_key")} reserveMeta={false}>
                 <ToggleSwitch
                   checked={draft.clearApiKey}
                   onCheckedChange={(clearApiKey) =>
                     setDraft((current) => ({ ...current, clearApiKey, apiKey: "" }))
                   }
-                  label={t("content_moderation.clear_api_key")}
                 />
-              </div>
+              </FormField>
             ) : null}
           </div>
 
-          <label className="mt-4 block space-y-2">
-            <span className="text-sm font-semibold text-slate-900 dark:text-white">
-              {t("content_moderation.thresholds")}
-            </span>
+          <FormField
+            className="mt-4"
+            label={t("content_moderation.thresholds")}
+            description={t("content_moderation.thresholds_hint")}
+            reserveMeta={false}
+          >
             <Textarea
               value={draft.thresholdsText}
               disabled={!apiModeEnabled}
-              onChange={(event) =>
-                setDraft((current) => ({
-                  ...current,
-                  thresholdsText: event.currentTarget.value,
-                }))
-              }
+              onChange={(event) => {
+                const thresholdsText = event.currentTarget.value;
+                setDraft((current) => ({ ...current, thresholdsText }));
+              }}
               className="min-h-48 font-mono text-xs"
             />
-            <span className="text-xs text-slate-500 dark:text-white/55">
-              {t("content_moderation.thresholds_hint")}
-            </span>
-          </label>
+          </FormField>
         </section>
 
         <section className="rounded-xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
           <div className="grid gap-4 md:grid-cols-[180px_minmax(0,1fr)]">
-            <label className="space-y-2">
-              <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                {t("content_moderation.block_http_status")}
-              </span>
+            <FormField label={t("content_moderation.block_http_status")} reserveMeta={false}>
               <TextInput
                 value={draft.blockHttpStatus}
                 inputMode="numeric"
-                onChange={(event) =>
-                  setDraft((current) => ({
-                    ...current,
-                    blockHttpStatus: event.currentTarget.value,
-                  }))
-                }
+                onChange={(event) => {
+                  const blockHttpStatus = event.currentTarget.value;
+                  setDraft((current) => ({ ...current, blockHttpStatus }));
+                }}
               />
-            </label>
-            <label className="space-y-2">
-              <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                {t("content_moderation.block_message")}
-              </span>
+            </FormField>
+            <FormField label={t("content_moderation.block_message")} reserveMeta={false}>
               <TextInput
                 value={draft.blockMessage}
-                onChange={(event) =>
-                  setDraft((current) => ({
-                    ...current,
-                    blockMessage: event.currentTarget.value,
-                  }))
-                }
+                onChange={(event) => {
+                  const blockMessage = event.currentTarget.value;
+                  setDraft((current) => ({ ...current, blockMessage }));
+                }}
               />
-            </label>
+            </FormField>
           </div>
         </section>
-      </div>
+      </Form>
     </Modal>
   );
 }
