@@ -135,6 +135,7 @@ function ClaudeAuthFieldSelect({
         <span className="text-xs font-semibold text-slate-600 dark:text-white/55">{label}</span>
       )}
       <Select
+        fullWidth={!compact}
         value={settings.claude.apiKeyField ?? "ANTHROPIC_API_KEY"}
         onChange={onChange}
         options={options}
