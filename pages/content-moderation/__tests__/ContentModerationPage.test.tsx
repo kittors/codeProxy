@@ -108,7 +108,7 @@ describe("ContentModerationPage", () => {
     expect(screen.getByText("Matched keyword: blocked")).toBeInTheDocument();
   });
 
-  test("opens the process-global moderation metrics modal from the actions column", async () => {
+  test("opens the tenant-scoped moderation metrics modal from the actions column", async () => {
     const user = userEvent.setup();
     renderPage();
 
