@@ -154,6 +154,31 @@ function availabilityItemToModel(item: ModelAvailabilityItem): ModelItem {
   };
 }
 
+function modelPricingLookupIds(modelId: string): string[] {
+  // Keep candidate order aligned with usage.modelPricingLookupModelIDs.
+  const exact = modelId.trim().toLowerCase();
+  if (!exact) return [];
+
+  const candidates = [exact];
+  const add = (candidate: string) => {
+    const normalized = candidate.trim().toLowerCase();
+    if (normalized && !candidates.includes(normalized)) candidates.push(normalized);
+  };
+
+  const providerSeparator = exact.indexOf("/");
+  if (providerSeparator > 0) add(exact.slice(providerSeparator + 1));
+
+  const variantSeparator = exact.lastIndexOf(":");
+  if (variantSeparator > 0) add(exact.slice(0, variantSeparator));
+
+  if (providerSeparator < 0) {
+    const prefixSeparator = exact.indexOf("-");
+    if (prefixSeparator > 0) add(exact.slice(prefixSeparator + 1));
+  }
+
+  return candidates;
+}
+
 export function mergeConfiguredModelAvailability(
   data: ModelItem[],
   availability: ConfiguredModelAvailability | null,
@@ -162,6 +187,23 @@ export function mergeConfiguredModelAvailability(
   const availabilityById = new Map(
     (availability?.items ?? []).map((item) => [item.id.toLowerCase(), item] as const),
   );
+
+  const pricingById = new Map<string, ModelItem["pricing"]>();
+  const indexPricing = (id: string, pricing: ModelItem["pricing"] | undefined) => {
+    if (!pricing || !hasModelPricing(pricing)) return;
+    pricingById.set(id.trim().toLowerCase(), pricing);
+  };
+  (availability?.items ?? []).forEach((item) => indexPricing(item.id, item.pricing));
+  data.forEach((model) => indexPricing(model.id, model.pricing));
+
+  const attachPricing = (model: ModelItem): ModelItem => {
+    if (hasModelPricing(model.pricing)) return model;
+    for (const candidate of modelPricingLookupIds(model.id)) {
+      const pricing = pricingById.get(candidate);
+      if (pricing) return { ...model, pricing: { ...pricing } };
+    }
+    return model;
+  };
 
   // Prefer config-row fields, but keep runtime channel sources from availability.
   const attachSources = (model: ModelItem): ModelItem => {
@@ -174,13 +216,15 @@ export function mergeConfiguredModelAvailability(
     availability?.scoped
       ? filterByConfiguredModelAvailability(data, availability)
       : [...data]
-  ).map(attachSources);
+  )
+    .map(attachSources)
+    .map(attachPricing);
 
   const seen = new Set(visible.map((m) => m.id.toLowerCase()));
   for (const item of availability?.items ?? []) {
     const key = item.id.toLowerCase();
     if (seen.has(key)) continue;
-    visible.push(availabilityItemToModel(item));
+    visible.push(attachPricing(availabilityItemToModel(item)));
     seen.add(key);
   }
   // Path-only rows enrich discovery when there is no scoped allow-list.
@@ -191,11 +235,13 @@ export function mergeConfiguredModelAvailability(
     if (seen.has(key)) continue;
     if (availability?.scoped && !availabilityById.has(key)) continue;
     visible.push(
-      availabilityItemToModel({
-        id: item.id,
-        owned_by: item.owned_by,
-        source: item.kind || "path",
-      }),
+      attachPricing(
+        availabilityItemToModel({
+          id: item.id,
+          owned_by: item.owned_by,
+          source: item.kind || "path",
+        }),
+      ),
     );
     seen.add(key);
   }
