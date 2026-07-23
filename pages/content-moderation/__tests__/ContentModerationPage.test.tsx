@@ -6,6 +6,7 @@ import { ThemeProvider, ToastProvider } from "@code-proxy/ui";
 import { ContentModerationPage } from "../ContentModerationPage";
 
 const mocks = vi.hoisted(() => ({
+  getMetrics: vi.fn(),
   listProfiles: vi.fn(),
   createProfile: vi.fn(),
   patchProfile: vi.fn(),
@@ -54,6 +55,7 @@ function renderPage() {
 describe("ContentModerationPage", () => {
   beforeEach(async () => {
     await i18n.changeLanguage("en");
+    mocks.getMetrics.mockReset();
     mocks.listProfiles.mockReset();
     mocks.createProfile.mockReset();
     mocks.patchProfile.mockReset();
@@ -61,6 +63,17 @@ describe("ContentModerationPage", () => {
     mocks.testProfile.mockReset();
     mocks.listChannels.mockReset();
     mocks.patchBindings.mockReset();
+    mocks.getMetrics.mockResolvedValue({
+      requests: 12,
+      allows: 9,
+      blocks: 2,
+      errors: 1,
+      cache_hits: 3,
+      in_flight: 1,
+      latency_total_ms: 180,
+      latency_samples: 10,
+      avg_latency_ms: 18,
+    });
     mocks.listProfiles.mockResolvedValue([profile]);
     mocks.patchProfile.mockResolvedValue({ ...profile, mode: "off", version: 4 });
     mocks.testProfile.mockResolvedValue({
@@ -93,6 +106,22 @@ describe("ContentModerationPage", () => {
     );
     expect(await screen.findByText("Would block")).toBeInTheDocument();
     expect(screen.getByText("Matched keyword: blocked")).toBeInTheDocument();
+  });
+
+  test("opens the process-global moderation metrics modal from the actions column", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole("button", { name: "View status" }));
+
+    await waitFor(() => expect(mocks.getMetrics).toHaveBeenCalledTimes(1));
+    const dialog = await screen.findByRole("dialog", { name: "Pre-block moderation status" });
+    expect(dialog).toHaveTextContent("In progress");
+    expect(dialog).toHaveTextContent("Checked");
+    expect(dialog).toHaveTextContent("Allowed");
+    expect(dialog).toHaveTextContent("Blocked");
+    expect(dialog).toHaveTextContent("Moderation errors");
+    expect(dialog).toHaveTextContent("18 ms");
   });
 
   test("toggles profile mode from the table with version concurrency", async () => {

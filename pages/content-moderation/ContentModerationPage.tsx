@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FlaskConical, Link2, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { Activity, FlaskConical, Link2, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 import {
   contentModerationApi,
   type ContentModerationProfileView,
@@ -20,6 +20,7 @@ import {
 } from "@code-proxy/ui";
 import { useOptionalAuth } from "@app/providers/AuthProvider";
 import { ModerationChannelPickerModal } from "./components/ModerationChannelPickerModal";
+import { ModerationMetricsModal } from "./components/ModerationMetricsModal";
 import { ModerationTestModal } from "./components/ModerationTestModal";
 import { ProfileEditorModal } from "./components/ProfileEditorModal";
 
@@ -46,6 +47,7 @@ export function ContentModerationPage() {
   const [deleteTarget, setDeleteTarget] = useState<ContentModerationProfileView | null>(null);
   const [pickerProfile, setPickerProfile] = useState<ContentModerationProfileView | null>(null);
   const [testProfile, setTestProfile] = useState<ContentModerationProfileView | null>(null);
+  const [metricsOpen, setMetricsOpen] = useState(false);
 
   const loadProfiles = useCallback(async () => {
     setLoading(true);
@@ -272,6 +274,12 @@ export function ContentModerationPage() {
             moreLabel={t("content_moderation.more_actions")}
             actions={[
               {
+                key: "metrics",
+                label: t("content_moderation.view_status"),
+                icon: <Activity size={15} />,
+                onClick: () => setMetricsOpen(true),
+              },
+              {
                 key: "channels",
                 label: t("content_moderation.manage_channels"),
                 icon: <Link2 size={15} />,
@@ -375,6 +383,8 @@ export function ContentModerationPage() {
       />
 
       <ModerationTestModal profile={testProfile} onClose={() => setTestProfile(null)} />
+
+      <ModerationMetricsModal open={metricsOpen} onClose={() => setMetricsOpen(false)} />
 
       <ConfirmModal
         open={deleteTarget !== null}
