@@ -5,6 +5,7 @@ import { Select } from "@code-proxy/ui";
 import { ToggleSwitch } from "@code-proxy/ui";
 import type { ProxyPoolEntry } from "@code-proxy/api-client/endpoints/proxies";
 import { ProxyPoolSelect } from "@features/proxy-pool";
+import { ModerationProfileSelect } from "@pages/content-moderation/components/ModerationProfileSelect";
 import { KeyValueInputList } from "../KeyValueInputList";
 import type { ProviderKeyDraft } from "../providers-helpers";
 
@@ -77,6 +78,16 @@ export function ProviderKeyRequestTab({
 
   return (
     <div className="space-y-4">
+      <SectionCard>
+        <ModerationProfileSelect
+          channelType="provider_key"
+          channelId={keyDraft.id}
+          label={t("content_moderation.provider_key_profile_label")}
+          hint={t("content_moderation.provider_key_profile_hint")}
+          unpersistedHint={t("content_moderation.provider_key_profile_save_first")}
+        />
+      </SectionCard>
+
       {isOpenCodeGo ? (
         <SectionCard className="bg-slate-50/80 dark:bg-neutral-900/50">
           <p className="text-sm font-semibold text-slate-900 dark:text-white">

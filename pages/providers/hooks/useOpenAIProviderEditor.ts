@@ -85,6 +85,7 @@ export function useOpenAIProviderEditor({
         const proxyUrl = entry.proxyUrl.trim();
         const proxyId = entry.proxyId.trim();
         return {
+          ...(entry.channelId?.trim() ? { id: entry.channelId.trim() } : {}),
           apiKey,
           ...(entry.disabled ? { disabled: true } : {}),
           ...(proxyUrl ? { proxyUrl } : {}),
@@ -103,6 +104,7 @@ export function useOpenAIProviderEditor({
     setOpenaiDraftError(null);
 
     return {
+      ...(openaiDraft.id.trim() ? { id: openaiDraft.id.trim() } : {}),
       name,
       ...(openaiDraft.disabled ? { disabled: true } : {}),
       baseUrl,

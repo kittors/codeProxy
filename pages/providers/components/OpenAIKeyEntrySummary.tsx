@@ -42,6 +42,11 @@ export function OpenAIKeyEntrySummary({
                 <p className="truncate font-mono text-slate-900 dark:text-white">
                   {entryIndex + 1}. {maskApiKey(entry.apiKey)}
                 </p>
+                {entry.id ? (
+                  <p className="mt-0.5 truncate font-mono text-slate-500 dark:text-white/50" title={entry.id}>
+                    ID: {entry.id}
+                  </p>
+                ) : null}
                 {entry.proxyUrl ? (
                   <p className="mt-0.5 truncate font-mono text-slate-600 dark:text-white/55">
                     proxy: {entry.proxyUrl}

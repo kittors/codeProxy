@@ -279,6 +279,8 @@ export interface ProviderModel {
 }
 
 export interface ProviderApiKeyEntry {
+  /** Stable backend channel id used by moderation bindings. */
+  id?: string;
   apiKey: string;
   disabled?: boolean;
   proxyUrl?: string;
@@ -287,6 +289,8 @@ export interface ProviderApiKeyEntry {
 }
 
 export interface OpenAIProvider {
+  /** Stable backend provider channel id used by moderation bindings. */
+  id?: string;
   name: string;
   disabled?: boolean;
   baseUrl?: string;
@@ -299,6 +303,8 @@ export interface OpenAIProvider {
 }
 
 export interface ProviderSimpleConfig {
+  /** Stable backend provider-key channel id used by moderation bindings. */
+  id?: string;
   apiKey: string;
   disabled?: boolean;
   name?: string;

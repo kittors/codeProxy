@@ -41,6 +41,17 @@ export function ProviderKeyBasicTab({
     <div className="space-y-4">
       {statusBadges}
 
+      {keyDraft.id ? (
+        <SectionCard>
+          <p className="text-xs font-semibold text-slate-500 dark:text-white/55">
+            {t("content_moderation.channel_id")}
+          </p>
+          <p className="mt-1 break-all font-mono text-xs text-slate-700 dark:text-white/75">
+            {keyDraft.id}
+          </p>
+        </SectionCard>
+      ) : null}
+
       <SectionCard>
         <p className="text-sm font-semibold text-slate-900 dark:text-white">
           {t("providers.channel_name_label")}

@@ -242,6 +242,11 @@ export function ProviderKeyListCard({
                 }
                 footer={<ProviderStatusBar data={statusData} />}
               >
+                {item.id ? (
+                  <p className="mt-1 truncate font-mono text-xs text-slate-500 dark:text-white/50" title={item.id}>
+                    ID: {item.id}
+                  </p>
+                ) : null}
                 {showConnectionRows ? (
                   <ProviderConnectionRows
                     apiKey={item.apiKey}
