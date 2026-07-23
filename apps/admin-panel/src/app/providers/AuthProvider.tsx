@@ -188,6 +188,17 @@ const LEGACY_SERVICE_MENUS: MenuIdentity[] = [
     permission_code: "system.logs.read",
     sort_order: 30,
   }),
+  menu({
+    code: "runtime.content-moderation",
+    parent_code: "group.runtime",
+    type: "menu",
+    path: "/runtime/content-moderation",
+    component: "content-moderation",
+    label_key: "shell.nav_content_moderation",
+    icon: "shield-alert",
+    permission_code: "content_moderation.read",
+    sort_order: 40,
+  }),
   // Top-level leaf pinned after all groups (matches CliRelay MenuCatalog).
   menu({
     code: "runtime.system",

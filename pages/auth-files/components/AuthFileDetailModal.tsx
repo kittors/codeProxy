@@ -31,6 +31,7 @@ import { ToggleSwitch } from "@code-proxy/ui";
 import { EChart } from "@code-proxy/ui";
 import { ProxyPoolSelect } from "@features/proxy-pool";
 import { useProxyPoolChecks } from "@features/proxy-pool";
+import { ModerationProfileSelect } from "@pages/content-moderation/components/ModerationProfileSelect";
 import {
   canRenameAuthFileChannel,
   downloadTextAsFile,
@@ -1472,6 +1473,14 @@ export function AuthFileDetailModal({
                     className="grid max-w-none items-start gap-x-10 gap-y-5 lg:grid-cols-2"
                     data-testid="auth-file-fields-grid"
                   >
+                    <div className="min-w-0 rounded-lg bg-slate-50/80 px-4 py-4 lg:col-span-2 dark:bg-white/[0.04]">
+                      <ModerationProfileSelect
+                        channelType="auth_file"
+                        channelId={String(detailFile?.auth_index ?? detailFile?.authIndex ?? "")}
+                        label={t("content_moderation.auth_file_profile_label")}
+                        hint={t("content_moderation.auth_file_profile_hint")}
+                      />
+                    </div>
                     {claudeOAuthHealth ? (
                       <div
                         className="min-w-0 space-y-4 rounded-lg bg-slate-50/80 px-4 py-4 lg:col-span-2 dark:bg-white/[0.04]"
