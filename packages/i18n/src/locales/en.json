@@ -3818,6 +3818,7 @@
     "real_model_id": "Real model ID",
     "cline_public_model_name": "Public model name",
     "model_enabled": "Enabled",
+    "model_alias": "Model alias",
     "opencode_go_vision_fallback_title": "Vision fallback model",
     "opencode_go_vision_fallback_hint": "When a request includes images and the requested model lacks multimodal support, image requests are sent with this allowed vision-capable model. Text requests still use the requested model.",
     "opencode_go_vision_fallback_none": "Do not use vision fallback",
