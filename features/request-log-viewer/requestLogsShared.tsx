@@ -128,7 +128,12 @@ export function ChannelIdentityLabel({
           <VendorIcon modelId={vendor} size={iconSize} />
         </span>
       ) : null}
-      <span className={["min-w-0 truncate", resolvedNameClassName].join(" ")}>{displayName}</span>
+      <span
+        className={["min-w-0 truncate", resolvedNameClassName].join(" ")}
+        title={trimmedName ? displayName : undefined}
+      >
+        {displayName}
+      </span>
       {badgeLabel ? (
         <span
           className={[
