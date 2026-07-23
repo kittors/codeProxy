@@ -1,7 +1,7 @@
 import { type Dispatch, type SetStateAction, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { TextInput } from "@code-proxy/ui";
-import { Select } from "@code-proxy/ui";
+import { SearchableSelect } from "@code-proxy/ui";
 import { ToggleSwitch } from "@code-proxy/ui";
 import type { ProxyPoolEntry } from "@code-proxy/api-client/endpoints/proxies";
 import { ProxyPoolSelect } from "@features/proxy-pool";
@@ -190,10 +190,12 @@ export function ProviderKeyRequestTab({
             {t("providers.opencode_go_vision_fallback_title")}
           </p>
           <div className="mt-3">
-            <Select
+            <SearchableSelect
               value={keyDraft.visionFallbackModel}
               onChange={(value) => setKeyDraft((prev) => ({ ...prev, visionFallbackModel: value }))}
               options={openCodeVisionFallbackOptions}
+              placeholder={t("providers.opencode_go_vision_fallback_none")}
+              searchPlaceholder={t("providers.models_search_placeholder")}
               aria-label={t("providers.opencode_go_vision_fallback_title")}
               disabled={openCodeModelsLoading || openCodeVisionFallbackOptions.length <= 1}
             />

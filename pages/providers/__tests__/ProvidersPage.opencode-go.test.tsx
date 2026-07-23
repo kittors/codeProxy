@@ -712,7 +712,9 @@ describe("ProvidersPage OpenCode Go tab", () => {
       name: /Vision fallback model/i,
     });
     await user.click(fallbackSelect);
-    await user.click(await screen.findByRole("option", { name: /qwen3\.5-plus/ }));
+    await user.type(await screen.findByPlaceholderText(/Search models/i), "qwen3.5");
+    expect(screen.queryByRole("option", { name: /deepseek-v4-flash/ })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("option", { name: /qwen3\.5-plus/ }));
 
     await user.click(within(dialog).getByRole("tab", { name: /Basic/i }));
     await user.type(within(dialog).getByPlaceholderText("e.g. Gemini Primary"), "OpenCode Go");
