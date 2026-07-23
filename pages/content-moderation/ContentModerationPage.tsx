@@ -1,6 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Activity, FlaskConical, Link2, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
+import {
+  Activity,
+  FlaskConical,
+  Link2,
+  Pencil,
+  Plus,
+  RefreshCw,
+  ShieldCheck,
+  Trash2,
+} from "lucide-react";
 import {
   contentModerationApi,
   type ContentModerationProfileView,
@@ -12,6 +21,7 @@ import {
   Card,
   ConfirmModal,
   DataTable,
+  EmptyState,
   TABLE_ROW_ACTIONS_COLUMN,
   TableRowActions,
   ToggleSwitch,
@@ -168,20 +178,14 @@ export function ContentModerationPage() {
       {
         key: "name",
         label: t("content_moderation.profile_name"),
-        width: "w-[220px] min-w-[220px]",
-        render: (profile) => (
-          <div className="min-w-0">
-            <p className="truncate font-semibold text-slate-900 dark:text-white">{profile.name}</p>
-            <p className="mt-0.5 truncate font-mono text-xs text-slate-500 dark:text-white/50">
-              {profile.id}
-            </p>
-          </div>
-        ),
+        width: "w-[180px] min-w-[180px]",
+        cellClassName: "font-medium text-slate-900 dark:text-white",
+        render: (profile) => profile.name,
       },
       {
         key: "mode",
         label: t("content_moderation.enabled"),
-        width: "w-40 min-w-40",
+        width: "w-[140px] min-w-[140px]",
         render: (profile) => {
           const enabled = profile.mode === "pre_block";
           return (
@@ -204,13 +208,14 @@ export function ContentModerationPage() {
       {
         key: "method",
         label: t("content_moderation.moderation_method"),
-        width: "w-[200px] min-w-[200px]",
+        width: "w-[180px] min-w-[180px]",
+        cellClassName: "text-slate-700 dark:text-white/70",
         render: (profile) => t(`content_moderation.keyword_mode_${profile.keyword_mode}`),
       },
       {
         key: "endpoint",
         label: t("content_moderation.endpoint_model"),
-        width: "w-[280px] min-w-[280px]",
+        width: "w-[240px] min-w-[240px]",
         render: (profile) => (
           <div className="min-w-0 text-xs">
             <p className="truncate font-mono text-slate-700 dark:text-white/75">
@@ -223,7 +228,7 @@ export function ContentModerationPage() {
       {
         key: "apiKey",
         label: t("content_moderation.api_key"),
-        width: "w-36 min-w-36",
+        width: "w-[120px] min-w-[120px]",
         render: (profile) =>
           profile.api_key_configured ? (
             <span className="font-mono text-xs text-emerald-700 dark:text-emerald-200">
@@ -238,7 +243,7 @@ export function ContentModerationPage() {
       {
         key: "bindings",
         label: t("content_moderation.bindings"),
-        width: "w-40 min-w-40",
+        width: "w-[160px] min-w-[160px]",
         render: (profile) => (
           <div className="text-xs text-slate-700 dark:text-white/70">
             <p>{t("content_moderation.binding_total", { count: bindingCount(profile) })}</p>
@@ -255,7 +260,7 @@ export function ContentModerationPage() {
       {
         key: "updated",
         label: t("content_moderation.updated_at"),
-        width: "w-44 min-w-44",
+        width: "w-[160px] min-w-[160px]",
         render: (profile) => (
           <span className="text-xs tabular-nums text-slate-600 dark:text-white/60">
             {new Intl.DateTimeFormat(undefined, {
@@ -271,6 +276,8 @@ export function ContentModerationPage() {
         ...TABLE_ROW_ACTIONS_COLUMN,
         render: (profile) => (
           <TableRowActions
+            maxInline={5}
+            align="start"
             moreLabel={t("content_moderation.more_actions")}
             actions={[
               {
@@ -317,49 +324,55 @@ export function ContentModerationPage() {
   );
 
   return (
-    <section className="flex min-h-0 flex-1 flex-col gap-5 md:h-[calc(100dvh-112px)] md:overflow-hidden">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">
-            {t("content_moderation.title")}
-          </h2>
-          <p className="mt-1 max-w-3xl text-sm text-slate-600 dark:text-white/65">
-            {t("content_moderation.description")}
-          </p>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <Button size="sm" onClick={() => void loadProfiles()} disabled={loading}>
-            <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
-            {t("common.refresh")}
-          </Button>
-          {canWrite ? (
-            <Button size="sm" variant="primary" onClick={openCreate}>
-              <Plus size={15} />
-              {t("content_moderation.create_profile")}
-            </Button>
-          ) : null}
-        </div>
-      </div>
-
+    <div className="space-y-6">
       <Card
-        className="overflow-hidden md:flex md:min-h-0 md:flex-1 md:flex-col"
+        className="md:flex md:h-[calc(100dvh-112px)] md:min-h-0 md:flex-col md:overflow-hidden"
         bodyClassName="md:flex md:min-h-0 md:flex-1 md:flex-col"
-        loading={loading && profiles.length === 0}
+        title={t("content_moderation.title")}
+        description={t("content_moderation.description")}
+        actions={
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => void loadProfiles()}
+              disabled={loading}
+            >
+              <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+              {t("common.refresh")}
+            </Button>
+            {canWrite ? (
+              <Button size="sm" variant="primary" onClick={openCreate}>
+                <Plus size={14} />
+                {t("content_moderation.create_profile")}
+              </Button>
+            ) : null}
+          </div>
+        }
+        loading={loading}
       >
-        <DataTable<ContentModerationProfileView>
-          tableId="content-moderation-profiles"
-          rows={profiles}
-          columns={columns}
-          rowKey={(profile) => profile.id}
-          rowHeight={62}
-          minWidth="min-w-[1500px]"
-          height="h-auto max-h-[70vh] md:max-h-none md:flex-1"
-          minHeight="min-h-[280px] md:min-h-0"
-          caption={t("content_moderation.table_caption")}
-          emptyText={t("content_moderation.empty_title")}
-          emptyDescription={t("content_moderation.empty_description")}
-          showAllLoadedMessage={false}
-        />
+        {profiles.length === 0 ? (
+          <EmptyState
+            title={t("content_moderation.empty_title")}
+            description={t("content_moderation.empty_description")}
+            icon={<ShieldCheck size={32} />}
+          />
+        ) : (
+          <DataTable<ContentModerationProfileView>
+            tableId="content-moderation-profiles"
+            rows={profiles}
+            columns={columns}
+            rowKey={(profile) => profile.id}
+            loading={loading}
+            virtualize={false}
+            minWidth="min-w-[1280px]"
+            height="h-[calc(100dvh-260px)] md:h-auto md:flex-1"
+            minHeight="min-h-[320px] md:min-h-0"
+            caption={t("content_moderation.table_caption")}
+            emptyText={t("content_moderation.empty_title")}
+            showAllLoadedMessage={false}
+          />
+        )}
       </Card>
 
       <ProfileEditorModal
@@ -398,6 +411,6 @@ export function ContentModerationPage() {
         onClose={() => setDeleteTarget(null)}
         onConfirm={() => void deleteProfile()}
       />
-    </section>
+    </div>
   );
 }
