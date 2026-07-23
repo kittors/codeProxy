@@ -188,17 +188,6 @@ const LEGACY_SERVICE_MENUS: MenuIdentity[] = [
     permission_code: "system.logs.read",
     sort_order: 30,
   }),
-  menu({
-    code: "runtime.content-moderation",
-    parent_code: "group.runtime",
-    type: "menu",
-    path: "/runtime/content-moderation",
-    component: "content-moderation",
-    label_key: "shell.nav_content_moderation",
-    icon: "shield-alert",
-    permission_code: "content_moderation.read",
-    sort_order: 40,
-  }),
   // Top-level leaf pinned after all groups (matches CliRelay MenuCatalog).
   menu({
     code: "runtime.system",
@@ -278,6 +267,18 @@ const LEGACY_SERVICE_MENUS: MenuIdentity[] = [
     icon: "shield-check",
     permission_code: "api_key_profiles.read",
     sort_order: 40,
+  }),
+  // Stable code matches CliRelay while the page now belongs to Access & Credentials.
+  menu({
+    code: "runtime.content-moderation",
+    parent_code: "group.access",
+    type: "menu",
+    path: "/access/content-moderation",
+    component: "content-moderation",
+    label_key: "shell.nav_content_moderation",
+    icon: "shield-alert",
+    permission_code: "content_moderation.read",
+    sort_order: 45,
   }),
   menu({
     code: "access.ccswitch",

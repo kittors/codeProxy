@@ -1716,7 +1716,11 @@
     "skip_to_content": "Skip to main content",
     "nav_menu_management": "Управление меню",
     "forget_saved_account": "Forget saved account",
-    "nav_content_moderation": "Модерация контента"
+    "nav_content_moderation": "Модерация контента",
+    "stale_route_title": "Страница не найдена или версия интерфейса устарела",
+    "stale_route_description": "В этой версии интерфейса может не быть запрошенной страницы. Выполните жёсткое обновление, чтобы загрузить последнюю версию.",
+    "stale_route_shortcut": "Жёсткое обновление: Cmd+Shift+R в macOS; Ctrl+Shift+R в Windows/Linux.",
+    "stale_route_reload": "Перезагрузить страницу"
   },
   "api_key_permissions_page": {
     "title": "API Key Permissions",

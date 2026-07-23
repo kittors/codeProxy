@@ -5,12 +5,16 @@ const { Page: ContentModerationPage, preload: preloadContentModerationPage } = p
 );
 
 export const contentModerationRoute = {
-  path: "/runtime/content-moderation",
+  path: "/access/content-moderation",
   component: "content-moderation",
   element: <ContentModerationPage />,
   auth: true,
   layout: "dashboard",
   nav: { labelKey: "nav.content_moderation" },
+  redirects: [
+    { from: "/runtime/content-moderation", to: "/access/content-moderation" },
+    { from: "/manage/runtime/content-moderation", to: "/access/content-moderation" },
+  ],
   requiredPermission: "content_moderation.read",
   preload: preloadContentModerationPage,
 };
