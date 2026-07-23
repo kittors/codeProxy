@@ -4,6 +4,7 @@ import { describe, expect, test } from "vitest";
 import {
   buildRequestLogsColumns,
   buildRequestLogKeyOptions,
+  ChannelIdentityLabel,
   isSystemRequestLogKey,
   sortRequestLogKeyOptionsByCount,
   SYSTEM_REQUEST_LOG_FILTER_VALUE,
@@ -11,6 +12,22 @@ import {
 } from "@features/request-log-viewer";
 
 describe("requestLogsShared", () => {
+  test("exposes the full channel name on the truncated identity label", () => {
+    const name = "ryskt8qjfg@privaterelay.appleid.com";
+
+    render(
+      createElement(ChannelIdentityLabel, {
+        name,
+        provider: "codex",
+        authType: "oauth",
+        apiLabel: "API",
+        oauthLabel: "OAuth",
+      }),
+    );
+
+    expect(screen.getByText(name)).toHaveAttribute("title", name);
+  });
+
   test("recognizes management-triggered system request logs", () => {
     expect(isSystemRequestLogKey("POST /image-generation/test", "")).toBe(true);
     expect(isSystemRequestLogKey("", "")).toBe(true);
