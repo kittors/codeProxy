@@ -3,7 +3,6 @@ import { Info } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type {
   ContentModerationKeywordMode,
-  ContentModerationMode,
   ContentModerationProfileView,
   CreateContentModerationProfileInput,
   PatchContentModerationProfileInput,
@@ -64,7 +63,6 @@ const createThresholdDraft = (thresholds?: Record<string, number>): Record<strin
 
 export interface ModerationProfileDraft {
   name: string;
-  mode: ContentModerationMode;
   baseUrl: string;
   model: string;
   apiKey: string;
@@ -79,7 +77,6 @@ export interface ModerationProfileDraft {
 
 const createDraft = (profile: ContentModerationProfileView | null): ModerationProfileDraft => ({
   name: profile?.name ?? "",
-  mode: profile?.mode ?? "off",
   baseUrl: profile?.base_url ?? "https://api.openai.com",
   model: profile?.model ?? "omni-moderation-latest",
   apiKey: "",
@@ -119,6 +116,15 @@ const parseThresholds = (values: Record<string, string>): Record<string, number>
   return result;
 };
 
+const isAbsoluteHttpUrl = (value: string) => {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+};
+
 export interface ProfileEditorModalProps {
   open: boolean;
   profile: ContentModerationProfileView | null;
@@ -156,9 +162,14 @@ export function ProfileEditorModal({
 
   const submit = async () => {
     const name = draft.name.trim();
+    const baseUrl = draft.baseUrl.trim();
+    const model = draft.model.trim();
+    const apiKey = draft.apiKey.trim();
     const timeoutMs = Number(draft.timeoutMs);
     const blockHttpStatus = Number(draft.blockHttpStatus);
-    const fixedThresholds = parseThresholds(draft.thresholds);
+    const blockMessage = draft.blockMessage.trim();
+    const blockedKeywords = parseKeywords(draft.blockedKeywordsText);
+    const fixedThresholds = apiModeEnabled ? parseThresholds(draft.thresholds) : null;
     if (!name) {
       setError(t("content_moderation.validation_name"));
       return;
@@ -171,22 +182,47 @@ export function ProfileEditorModal({
       setError(t("content_moderation.validation_status"));
       return;
     }
-    if (!fixedThresholds) {
+    if (apiModeEnabled && !baseUrl) {
+      setError(t("content_moderation.validation_base_url_required"));
+      return;
+    }
+    if (apiModeEnabled && !isAbsoluteHttpUrl(baseUrl)) {
+      setError(t("content_moderation.validation_base_url_invalid"));
+      return;
+    }
+    if (apiModeEnabled && !model) {
+      setError(t("content_moderation.validation_model"));
+      return;
+    }
+    if (apiModeEnabled && !fixedThresholds) {
       setError(t("content_moderation.validation_thresholds"));
+      return;
+    }
+    if (apiModeEnabled && !apiKey && (!profile?.api_key_configured || draft.clearApiKey)) {
+      setError(t("content_moderation.validation_api_key"));
+      return;
+    }
+    if (!blockMessage) {
+      setError(t("content_moderation.validation_block_message"));
+      return;
+    }
+    if (draft.keywordMode !== "api_only" && blockedKeywords.length === 0) {
+      setError(t("content_moderation.validation_keywords"));
       return;
     }
 
     const shared = {
       name,
-      mode: draft.mode,
-      base_url: draft.baseUrl.trim(),
-      model: draft.model.trim(),
+      base_url: baseUrl,
+      model,
       timeout_ms: timeoutMs,
       keyword_mode: draft.keywordMode,
-      blocked_keywords: parseKeywords(draft.blockedKeywordsText),
-      thresholds: { ...profile?.thresholds, ...fixedThresholds },
+      blocked_keywords: blockedKeywords,
+      thresholds: apiModeEnabled
+        ? { ...profile?.thresholds, ...fixedThresholds }
+        : (profile?.thresholds ?? DEFAULT_THRESHOLDS),
       block_http_status: blockHttpStatus,
-      block_message: draft.blockMessage.trim(),
+      block_message: blockMessage,
     };
 
     setError("");
@@ -194,14 +230,15 @@ export function ProfileEditorModal({
       await onSave({
         ...shared,
         version: profile.version,
-        ...(draft.apiKey.trim() ? { api_key: draft.apiKey.trim() } : {}),
+        ...(apiKey ? { api_key: apiKey } : {}),
         ...(draft.clearApiKey ? { clear_api_key: true } : {}),
       });
       return;
     }
     await onSave({
       ...shared,
-      ...(draft.apiKey.trim() ? { api_key: draft.apiKey.trim() } : {}),
+      mode: "off",
+      ...(apiKey ? { api_key: apiKey } : {}),
     });
   };
 
@@ -249,33 +286,15 @@ export function ProfileEditorModal({
         }}
       >
         <section className="rounded-xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
-          <div className="grid gap-4 md:grid-cols-2">
-            <FormField label={t("content_moderation.profile_name")} required reserveMeta={false}>
-              <TextInput
-                value={draft.name}
-                onChange={(event) => {
-                  const name = event.currentTarget.value;
-                  setDraft((current) => ({ ...current, name }));
-                }}
-              />
-            </FormField>
-            <FormField label={t("content_moderation.mode")} reserveMeta={false}>
-              <Select
-                value={draft.mode}
-                onChange={(value) => {
-                  if (value !== "off" && value !== "pre_block") return;
-                  setDraft((current) => ({ ...current, mode: value }));
-                }}
-                options={[
-                  { value: "off", label: t("content_moderation.mode_off") },
-                  { value: "pre_block", label: t("content_moderation.mode_pre_block") },
-                ]}
-              />
-            </FormField>
-          </div>
-          <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">
-            {t("content_moderation.fail_open_notice")}
-          </p>
+          <FormField label={t("content_moderation.profile_name")} required reserveMeta={false}>
+            <TextInput
+              value={draft.name}
+              onChange={(event) => {
+                const name = event.currentTarget.value;
+                setDraft((current) => ({ ...current, name }));
+              }}
+            />
+          </FormField>
         </section>
 
         <section className="rounded-xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
@@ -306,7 +325,7 @@ export function ProfileEditorModal({
                 ]}
               />
             </FormField>
-            <FormField label={t("content_moderation.timeout_ms")} reserveMeta={false}>
+            <FormField label={t("content_moderation.timeout_ms")} required reserveMeta={false}>
               <TextInput
                 value={draft.timeoutMs}
                 inputMode="numeric"
@@ -322,6 +341,7 @@ export function ProfileEditorModal({
             className="mt-4"
             label={t("content_moderation.blocked_keywords")}
             description={t("content_moderation.blocked_keywords_hint")}
+            required={draft.keywordMode !== "api_only"}
             reserveMeta={false}
           >
             <Textarea
@@ -334,11 +354,18 @@ export function ProfileEditorModal({
               className="min-h-28 font-mono text-xs"
             />
           </FormField>
+          <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">
+            {t("content_moderation.fail_open_notice")}
+          </p>
         </section>
 
         <section className="rounded-xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
           <div className="grid gap-4 md:grid-cols-2">
-            <FormField label={t("content_moderation.base_url")} reserveMeta={false}>
+            <FormField
+              label={t("content_moderation.base_url")}
+              required={apiModeEnabled}
+              reserveMeta={false}
+            >
               <TextInput
                 value={draft.baseUrl}
                 disabled={!apiModeEnabled}
@@ -348,7 +375,11 @@ export function ProfileEditorModal({
                 }}
               />
             </FormField>
-            <FormField label={t("content_moderation.model")} reserveMeta={false}>
+            <FormField
+              label={t("content_moderation.model")}
+              required={apiModeEnabled}
+              reserveMeta={false}
+            >
               <TextInput
                 value={draft.model}
                 disabled={!apiModeEnabled}
@@ -364,6 +395,7 @@ export function ProfileEditorModal({
             <FormField
               label={t("content_moderation.api_key")}
               description={configuredKeyLabel}
+              required={apiModeEnabled && (!profile?.api_key_configured || draft.clearApiKey)}
               reserveMeta={false}
             >
               <TextInput
@@ -429,6 +461,7 @@ export function ProfileEditorModal({
                         </HoverTooltip>
                       </span>
                     }
+                    required={apiModeEnabled}
                     reserveMeta={false}
                   >
                     <TextInput
@@ -457,7 +490,11 @@ export function ProfileEditorModal({
 
         <section className="rounded-xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
           <div className="grid gap-4 md:grid-cols-[180px_minmax(0,1fr)]">
-            <FormField label={t("content_moderation.block_http_status")} reserveMeta={false}>
+            <FormField
+              label={t("content_moderation.block_http_status")}
+              required
+              reserveMeta={false}
+            >
               <TextInput
                 value={draft.blockHttpStatus}
                 inputMode="numeric"
@@ -467,7 +504,7 @@ export function ProfileEditorModal({
                 }}
               />
             </FormField>
-            <FormField label={t("content_moderation.block_message")} reserveMeta={false}>
+            <FormField label={t("content_moderation.block_message")} required reserveMeta={false}>
               <TextInput
                 value={draft.blockMessage}
                 onChange={(event) => {

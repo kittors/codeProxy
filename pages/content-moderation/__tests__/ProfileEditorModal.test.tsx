@@ -70,10 +70,10 @@ describe("ProfileEditorModal", () => {
 
     const form = document.querySelector("form[data-slot='form']");
     expect(form).toHaveAttribute("id", "content-moderation-profile-form");
-    expect(document.querySelectorAll("[data-slot='form-field']")).toHaveLength(23);
+    expect(document.querySelectorAll("[data-slot='form-field']")).toHaveLength(22);
     expect(document.querySelector("[data-slot='form-field-info'].invisible")).toBeNull();
 
-    expect(screen.getByRole("combobox", { name: "Mode" })).toHaveClass("w-full");
+    expect(screen.queryByRole("combobox", { name: "Mode" })).toBeNull();
     expect(screen.getByRole("combobox", { name: "Check strategy" })).toHaveClass("w-full");
 
     const keywords = screen.getByLabelText("Blocked keywords");
@@ -133,6 +133,9 @@ describe("ProfileEditorModal", () => {
     fireEvent.change(screen.getByRole("spinbutton", { name: "Harassment" }), {
       target: { value: "0.42" },
     });
+    fireEvent.change(screen.getByLabelText(/Moderation API key/), {
+      target: { value: "sk-test" },
+    });
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
@@ -142,6 +145,7 @@ describe("ProfileEditorModal", () => {
         mode: "off",
         base_url: "https://api.openai.com",
         model: "omni-moderation-latest",
+        api_key: "sk-test",
         timeout_ms: 3000,
         keyword_mode: "api_only",
         blocked_keywords: [],
@@ -152,6 +156,53 @@ describe("ProfileEditorModal", () => {
     );
     expect(onSave.mock.calls[0]?.[0]).not.toHaveProperty("version");
     expect(onSave.mock.calls[0]?.[0]).not.toHaveProperty("clear_api_key");
+  });
+
+  test.each([
+    ["Moderation base URL", "Moderation base URL is required"],
+    ["Moderation model", "Moderation model is required"],
+    ["Moderation API key", "Moderation API key is required for this check strategy"],
+  ])("requires %s in API mode", async (fieldLabel, message) => {
+    const user = userEvent.setup();
+    const onSave = vi.fn<ProfileEditorModalProps["onSave"]>().mockResolvedValue(undefined);
+    renderEditor({ onSave });
+
+    fireEvent.change(screen.getByRole("textbox", { name: "Profile name" }), {
+      target: { value: "Required fields" },
+    });
+    fireEvent.change(screen.getByLabelText(new RegExp(fieldLabel)), {
+      target: { value: " " },
+    });
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(message);
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  test("creates keyword-only profiles without moderation API credentials", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn<ProfileEditorModalProps["onSave"]>().mockResolvedValue(undefined);
+    renderEditor({ onSave });
+
+    fireEvent.change(screen.getByRole("textbox", { name: "Profile name" }), {
+      target: { value: "Keywords only" },
+    });
+    await user.click(screen.getByRole("combobox", { name: "Check strategy" }));
+    await user.click(screen.getByRole("option", { name: "Keywords only" }));
+    fireEvent.change(screen.getByLabelText(/Blocked keywords/), {
+      target: { value: " blocked \nBLOCKED\nsecond" },
+    });
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave.mock.calls[0]?.[0]).toEqual(
+      expect.objectContaining({
+        mode: "off",
+        keyword_mode: "keyword_only",
+        blocked_keywords: ["blocked", "second"],
+      }),
+    );
+    expect(onSave.mock.calls[0]?.[0]).not.toHaveProperty("api_key");
   });
 
   test("preserves unknown server threshold keys when editing", async () => {
@@ -183,6 +234,7 @@ describe("ProfileEditorModal", () => {
         },
       }),
     );
+    expect(onSave.mock.calls[0]?.[0]).not.toHaveProperty("mode");
   });
 
   test("rejects threshold values outside zero to one", async () => {
