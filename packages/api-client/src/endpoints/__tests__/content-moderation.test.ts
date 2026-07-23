@@ -41,6 +41,48 @@ describe("contentModerationApi", () => {
     });
   });
 
+  test("normalizes nullable channel list fields", async () => {
+    mocks.get
+      .mockResolvedValueOnce({ items: null, page: 1, page_size: 20, total: 0 })
+      .mockResolvedValueOnce({
+        items: [
+          {
+            channel_type: "auth_file",
+            channel_id: "auth-1",
+            name: "Codex Team",
+            provider: "codex",
+            tags: null,
+            disabled: false,
+          },
+        ],
+        page: 1,
+        page_size: 20,
+        total: 1,
+      });
+
+    await expect(contentModerationApi.listChannels()).resolves.toEqual({
+      items: [],
+      page: 1,
+      page_size: 20,
+      total: 0,
+    });
+    await expect(contentModerationApi.listChannels()).resolves.toEqual({
+      items: [
+        {
+          channel_type: "auth_file",
+          channel_id: "auth-1",
+          name: "Codex Team",
+          provider: "codex",
+          tags: [],
+          disabled: false,
+        },
+      ],
+      page: 1,
+      page_size: 20,
+      total: 1,
+    });
+  });
+
   test("serializes server-side channel picker filters and binding operations", async () => {
     const controller = new AbortController();
     mocks.get.mockResolvedValue({ items: [], page: 2, page_size: 20, total: 0 });

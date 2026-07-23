@@ -73,6 +73,10 @@ export interface ContentModerationChannelPage {
   total: number;
 }
 
+type ContentModerationChannelPageResponse = Omit<ContentModerationChannelPage, "items"> & {
+  items?: (Omit<ContentModerationChannelView, "tags"> & { tags?: string[] | null })[] | null;
+};
+
 export interface ContentModerationChannelQuery {
   channel_type?: ContentModerationChannelType;
   query?: string;
@@ -152,24 +156,38 @@ export const contentModerationApi = {
     );
   },
 
-  listChannels(query: ContentModerationChannelQuery = {}) {
+  async listChannels(
+    query: ContentModerationChannelQuery = {},
+  ): Promise<ContentModerationChannelPage> {
     const tags = query.tags
       ?.map((tag) => tag.trim())
       .filter(Boolean)
       .join(",");
-    return apiClient.get<ContentModerationChannelPage>("/content-moderation/channels", {
-      params: {
-        channel_type: query.channel_type,
-        query: query.query?.trim() || undefined,
-        tags: tags || undefined,
-        tag_mode: query.tag_mode,
-        provider: query.provider?.trim() || undefined,
-        profile_id: query.profile_id?.trim() || undefined,
-        page: query.page ?? 1,
-        page_size: query.page_size ?? 20,
+    const response = await apiClient.get<ContentModerationChannelPageResponse>(
+      "/content-moderation/channels",
+      {
+        params: {
+          channel_type: query.channel_type,
+          query: query.query?.trim() || undefined,
+          tags: tags || undefined,
+          tag_mode: query.tag_mode,
+          provider: query.provider?.trim() || undefined,
+          profile_id: query.profile_id?.trim() || undefined,
+          page: query.page ?? 1,
+          page_size: query.page_size ?? 20,
+        },
+        ...(query.signal ? { signal: query.signal } : {}),
       },
-      ...(query.signal ? { signal: query.signal } : {}),
-    });
+    );
+    return {
+      ...response,
+      items: Array.isArray(response.items)
+        ? response.items.map((channel) => ({
+            ...channel,
+            tags: Array.isArray(channel.tags) ? channel.tags : [],
+          }))
+        : [],
+    };
   },
 
   patchBindings(input: PatchContentModerationBindingsInput) {
