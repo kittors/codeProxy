@@ -120,7 +120,23 @@ export interface ContentModerationDecision {
   moderation_error?: string;
 }
 
+export interface ContentModerationMetrics {
+  requests: number;
+  allows: number;
+  blocks: number;
+  errors: number;
+  cache_hits: number;
+  in_flight: number;
+  latency_total_ms: number;
+  latency_samples: number;
+  avg_latency_ms: number;
+}
+
 export const contentModerationApi = {
+  getMetrics() {
+    return apiClient.get<ContentModerationMetrics>("/content-moderation/metrics");
+  },
+
   async listProfiles(): Promise<ContentModerationProfileView[]> {
     const response = await apiClient.get<{ items?: ContentModerationProfileView[] }>(
       "/content-moderation/profiles",

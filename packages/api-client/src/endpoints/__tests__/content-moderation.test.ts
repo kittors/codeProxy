@@ -20,6 +20,25 @@ describe("contentModerationApi", () => {
     mocks.delete.mockReset();
   });
 
+  test("loads process-local moderation metrics", async () => {
+    const metrics = {
+      requests: 12,
+      allows: 9,
+      blocks: 2,
+      errors: 1,
+      cache_hits: 3,
+      in_flight: 1,
+      latency_total_ms: 180,
+      latency_samples: 10,
+      avg_latency_ms: 18,
+    };
+    mocks.get.mockResolvedValue(metrics);
+
+    await expect(contentModerationApi.getMetrics()).resolves.toEqual(metrics);
+
+    expect(mocks.get).toHaveBeenCalledWith("/content-moderation/metrics");
+  });
+
   test("uses the profile contract and includes OCC version on patch", async () => {
     mocks.get.mockResolvedValue({ items: [{ id: "profile-1", name: "Primary" }] });
     mocks.patch.mockResolvedValue({ id: "profile-1", version: 4 });
