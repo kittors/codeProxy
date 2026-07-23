@@ -1476,7 +1476,7 @@ export function AuthFileDetailModal({
                     <div className="min-w-0 rounded-lg bg-slate-50/80 px-4 py-4 lg:col-span-2 dark:bg-white/[0.04]">
                       <ModerationProfileSelect
                         channelType="auth_file"
-                        channelId={String(detailFile?.auth_index ?? detailFile?.authIndex ?? "")}
+                        channelId={String(detailFile?.id ?? "")}
                         label={t("content_moderation.auth_file_profile_label")}
                         hint={t("content_moderation.auth_file_profile_hint")}
                       />

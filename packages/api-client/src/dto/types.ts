@@ -132,6 +132,8 @@ export interface AuthFileIdentityFingerprintSummary {
 }
 
 export interface AuthFileItem extends TagDisplayFields {
+  /** Stable backend auth-file channel id used by moderation bindings. */
+  id?: string;
   name: string;
   type?: AuthFileType | string;
   provider?: string;

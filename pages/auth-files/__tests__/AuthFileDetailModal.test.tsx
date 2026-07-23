@@ -9,6 +9,9 @@ type DetailModalProps = ComponentProps<typeof AuthFileDetailModal>;
 const chartOptions = vi.hoisted(() => [] as any[]);
 const chartEvents = vi.hoisted(() => [] as any[]);
 const chartProps = vi.hoisted(() => [] as any[]);
+const moderationProfileProps = vi.hoisted(
+  () => [] as { channelType: string; channelId?: string }[],
+);
 
 vi.mock("@code-proxy/ui", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@code-proxy/ui")>()),
@@ -36,6 +39,13 @@ vi.mock("@code-proxy/ui", async (importOriginal) => ({
         chart
       </div>
     );
+  },
+}));
+
+vi.mock("@pages/content-moderation/components/ModerationProfileSelect", () => ({
+  ModerationProfileSelect: (props: { channelType: string; channelId?: string }) => {
+    moderationProfileProps.push(props);
+    return <div data-testid="moderation-profile-select" />;
   },
 }));
 
@@ -290,6 +300,27 @@ describe("AuthFileDetailModal", () => {
     chartOptions.length = 0;
     chartEvents.length = 0;
     chartProps.length = 0;
+    moderationProfileProps.length = 0;
+  });
+
+  test("uses the stable auth file id for content moderation bindings", () => {
+    renderDetailModal({
+      detailTab: "fields",
+      detailFile: {
+        id: "auth-stable-id",
+        auth_index: "auth-hash-index",
+        authIndex: "auth-camel-hash-index",
+        name: "codex.json",
+        type: "codex",
+        size: 256,
+      },
+    });
+
+    expect(screen.getByTestId("moderation-profile-select")).toBeInTheDocument();
+    expect(moderationProfileProps.at(-1)).toMatchObject({
+      channelType: "auth_file",
+      channelId: "auth-stable-id",
+    });
   });
 
   test("uses usage trend as the primary view for Codex files", () => {
