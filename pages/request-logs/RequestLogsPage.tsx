@@ -248,6 +248,7 @@ export function RequestLogsPage() {
           />
         ),
         searchText: [option.label, provider, authType, option.value].filter(Boolean).join(" "),
+        title: option.label,
       };
     });
   }, [filterOptions.channel_options, filterOptions.channels, t]);
