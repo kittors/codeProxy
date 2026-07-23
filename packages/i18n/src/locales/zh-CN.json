@@ -2094,7 +2094,11 @@
     "sidebar_account_role": "超级管理员",
     "nav_menu_management": "菜单管理",
     "forget_saved_account": "忘记此账号",
-    "nav_content_moderation": "内容审核"
+    "nav_content_moderation": "内容审核",
+    "stale_route_title": "页面未找到或前端版本过旧",
+    "stale_route_description": "当前前端可能没有这个页面。请硬刷新后重试，以加载最新版本。",
+    "stale_route_shortcut": "硬刷新：macOS 按 Cmd+Shift+R；Windows/Linux 按 Ctrl+Shift+R。",
+    "stale_route_reload": "重新加载页面"
   },
   "proxies": {
     "title": "代理管理",

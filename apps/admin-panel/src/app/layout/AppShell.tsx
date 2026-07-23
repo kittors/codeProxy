@@ -198,7 +198,12 @@ const getPageTitleKey = (pathname: string, menus?: MenuIdentity[] | null): strin
     if (hit) return menuLabelKey(hit);
   }
   if (pathname.startsWith("/dashboard")) return "shell.nav_dashboard";
-  if (pathname.startsWith("/runtime/content-moderation")) return "shell.nav_content_moderation";
+  if (
+    pathname.startsWith("/access/content-moderation") ||
+    pathname.startsWith("/runtime/content-moderation")
+  ) {
+    return "shell.nav_content_moderation";
+  }
   if (
     pathname.startsWith("/access/ai-accounts") ||
     pathname.startsWith("/system/account-security") ||

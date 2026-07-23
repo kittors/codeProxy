@@ -19,6 +19,10 @@ const REQUIRED_KEYS = [
   "providers.real_model_id",
   "providers.model_enabled",
   "common.model_alias_placeholder",
+  "shell.stale_route_title",
+  "shell.stale_route_description",
+  "shell.stale_route_shortcut",
+  "shell.stale_route_reload",
 ] as const;
 
 describe("translation keys", () => {

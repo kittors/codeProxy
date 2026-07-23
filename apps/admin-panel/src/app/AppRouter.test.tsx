@@ -167,4 +167,23 @@ describe("AppRouter", () => {
     );
     expect(await screen.findByTestId("embed-page")).toBeInTheDocument();
   });
+
+  test("shows stale-route recovery instead of silently redirecting unknown paths", async () => {
+    render(
+      <MemoryRouter initialEntries={["/access/route-from-newer-shell"]}>
+        <AppRouter />
+      </MemoryRouter>,
+    );
+
+    expect(
+      await screen.findByRole("heading", {
+        name: /Page not found|页面未找到|Страница не найдена/i,
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Cmd\+Shift\+R/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Reload page|重新加载页面|Перезагрузить страницу/i }),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("dashboard-page")).not.toBeInTheDocument();
+  });
 });

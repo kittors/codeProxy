@@ -2077,7 +2077,11 @@
     "sidebar_account_role": "Super Admin",
     "nav_menu_management": "Menu Management",
     "forget_saved_account": "Forget saved account",
-    "nav_content_moderation": "Content Moderation"
+    "nav_content_moderation": "Content Moderation",
+    "stale_route_title": "Page not found or frontend version is outdated",
+    "stale_route_description": "This frontend may not include the requested page. Hard refresh to load the latest version and try again.",
+    "stale_route_shortcut": "Hard refresh: Cmd+Shift+R on macOS; Ctrl+Shift+R on Windows/Linux.",
+    "stale_route_reload": "Reload page"
   },
   "proxies": {
     "title": "Proxy Management",
