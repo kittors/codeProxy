@@ -107,6 +107,7 @@ export function ApiKeysPage({
     usageViewName,
     usageLoading,
     usageTotalCount,
+    usageSummary,
     usageCurrentPage,
     usagePageSize,
     setUsagePageSize,
@@ -1141,6 +1142,7 @@ export function ApiKeysPage({
         usageViewName={usageViewName}
         maskedKey={usageViewKey ? maskApiKey(usageViewKey) : ""}
         usageTotalCount={usageTotalCount}
+        usageSummary={usageSummary}
         usageTimeRange={usageTimeRange}
         setUsageTimeRange={setUsageTimeRange}
         fetchUsageLogs={fetchUsageLogs}

@@ -145,6 +145,7 @@ export function EndUsersPage() {
     usageViewName,
     usageLoading,
     usageTotalCount,
+    usageSummary,
     usageCurrentPage,
     usagePageSize,
     setUsagePageSize,
@@ -1289,6 +1290,7 @@ export function EndUsersPage() {
             : ""
         }
         usageTotalCount={usageTotalCount}
+        usageSummary={usageSummary}
         usageTimeRange={usageTimeRange}
         setUsageTimeRange={setUsageTimeRange}
         fetchUsageLogs={fetchUsageLogs}

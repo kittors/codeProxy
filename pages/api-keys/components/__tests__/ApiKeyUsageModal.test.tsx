@@ -16,6 +16,13 @@ describe("ApiKeyUsageModal", () => {
           usageViewName="Demo Key"
           maskedKey="sk-***demo"
           usageTotalCount={0}
+          usageSummary={{
+            inputTokens: 120,
+            outputTokens: 30,
+            totalTokens: 150,
+            requestCount: 8,
+            successRate: 87.5,
+          }}
           usageTimeRange={7}
           setUsageTimeRange={vi.fn()}
           fetchUsageLogs={vi.fn(async () => undefined)}
@@ -52,6 +59,15 @@ describe("ApiKeyUsageModal", () => {
     expect(await screen.findByText("No usage records")).toBeInTheDocument();
     expect(document.querySelector("[data-empty-state]")).not.toBeNull();
     expect(document.querySelector("table[data-vt-empty='true']")).not.toBeNull();
+    expect(screen.getByRole("region", { name: "Token usage" })).toHaveTextContent(
+      "Input120Current pageOutput30Current pageTotal tokens150Filtered results",
+    );
+    expect(screen.getByRole("region", { name: "Requests" })).toHaveTextContent(
+      "Requests8Filtered results",
+    );
+    expect(screen.getByRole("region", { name: "Success rate" })).toHaveTextContent(
+      "Success rate87.5%Filtered results",
+    );
   });
 
   test("renders key/channel/model/status filters without channel group", async () => {
@@ -65,6 +81,13 @@ describe("ApiKeyUsageModal", () => {
           usageViewName="Demo Key"
           maskedKey="sk-***demo"
           usageTotalCount={0}
+          usageSummary={{
+            inputTokens: 0,
+            outputTokens: 0,
+            totalTokens: 0,
+            requestCount: 0,
+            successRate: 0,
+          }}
           usageTimeRange={7}
           setUsageTimeRange={vi.fn()}
           fetchUsageLogs={vi.fn(async () => undefined)}

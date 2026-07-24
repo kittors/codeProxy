@@ -4,10 +4,12 @@ import { DataTable, Modal, SearchableSelect, type SearchableSelectOption } from 
 import {
   RequestLogsPaginationBar,
   RequestLogsTimeRangeSelector,
+  RequestLogUsageMetricValue,
   type RequestLogsRow,
   type RequestLogsTableColumn,
   type TimeRange,
 } from "@features/request-log-viewer";
+import type { ApiKeyUsageSummary } from "../types";
 
 type StatusFilter = "" | "success" | "failed";
 
@@ -17,6 +19,7 @@ export function ApiKeyUsageModal({
   usageViewName,
   maskedKey,
   usageTotalCount,
+  usageSummary,
   usageTimeRange,
   setUsageTimeRange,
   fetchUsageLogs,
@@ -46,6 +49,7 @@ export function ApiKeyUsageModal({
   usageViewName: string;
   maskedKey: string;
   usageTotalCount: number;
+  usageSummary: ApiKeyUsageSummary;
   usageTimeRange: TimeRange;
   setUsageTimeRange: (value: TimeRange) => void;
   fetchUsageLogs: (page: number, size: number) => Promise<void>;
@@ -154,6 +158,93 @@ export function ApiKeyUsageModal({
             className="w-full sm:w-auto"
             size="sm"
           />
+        </div>
+
+        <div
+          data-testid="api-key-usage-summary"
+          className="grid gap-2 border-b border-slate-100 py-3 dark:border-neutral-800/60 md:grid-cols-[minmax(0,2fr)_repeat(2,minmax(0,1fr))]"
+        >
+          <section
+            aria-label={t("api_keys_page.usage_summary_tokens")}
+            className="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3 dark:border-neutral-800 dark:bg-white/[0.035]"
+          >
+            <div className="text-xs font-medium text-slate-500 dark:text-white/50">
+              {t("api_keys_page.usage_summary_tokens")}
+            </div>
+            <div className="mt-2 grid grid-cols-3 gap-3">
+              <div className="min-w-0">
+                <div className="text-2xs text-slate-400 dark:text-white/35">
+                  {t("api_keys_page.col_input")}
+                </div>
+                <RequestLogUsageMetricValue
+                  value={usageSummary.inputTokens}
+                  compact
+                  className="mt-0.5 font-mono text-base font-semibold tabular-nums text-slate-900 dark:text-white"
+                />
+                <div className="mt-0.5 text-2xs text-slate-400 dark:text-white/35">
+                  {t("api_keys_page.usage_summary_current_page")}
+                </div>
+              </div>
+              <div className="min-w-0">
+                <div className="text-2xs text-slate-400 dark:text-white/35">
+                  {t("api_keys_page.col_output")}
+                </div>
+                <RequestLogUsageMetricValue
+                  value={usageSummary.outputTokens}
+                  compact
+                  className="mt-0.5 font-mono text-base font-semibold tabular-nums text-slate-900 dark:text-white"
+                />
+                <div className="mt-0.5 text-2xs text-slate-400 dark:text-white/35">
+                  {t("api_keys_page.usage_summary_current_page")}
+                </div>
+              </div>
+              <div className="min-w-0">
+                <div className="text-2xs text-slate-400 dark:text-white/35">
+                  {t("api_keys_page.col_total_token")}
+                </div>
+                <RequestLogUsageMetricValue
+                  value={usageSummary.totalTokens}
+                  compact
+                  className="mt-0.5 font-mono text-base font-semibold tabular-nums text-slate-900 dark:text-white"
+                />
+                <div className="mt-0.5 text-2xs text-slate-400 dark:text-white/35">
+                  {t("api_keys_page.usage_summary_filtered")}
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section
+            aria-label={t("api_keys_page.usage_summary_requests")}
+            className="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3 dark:border-neutral-800 dark:bg-white/[0.035]"
+          >
+            <div className="text-xs font-medium text-slate-500 dark:text-white/50">
+              {t("api_keys_page.usage_summary_requests")}
+            </div>
+            <RequestLogUsageMetricValue
+              value={usageSummary.requestCount}
+              compact
+              className="mt-2 font-mono text-xl font-semibold tabular-nums text-slate-900 dark:text-white"
+            />
+            <div className="mt-0.5 text-2xs text-slate-400 dark:text-white/35">
+              {t("api_keys_page.usage_summary_filtered")}
+            </div>
+          </section>
+
+          <section
+            aria-label={t("api_keys_page.usage_summary_success_rate")}
+            className="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3 dark:border-neutral-800 dark:bg-white/[0.035]"
+          >
+            <div className="text-xs font-medium text-slate-500 dark:text-white/50">
+              {t("api_keys_page.usage_summary_success_rate")}
+            </div>
+            <div className="mt-2 font-mono text-xl font-semibold tabular-nums text-emerald-700 dark:text-emerald-300">
+              {usageSummary.successRate.toFixed(1)}%
+            </div>
+            <div className="mt-0.5 text-2xs text-slate-400 dark:text-white/35">
+              {t("api_keys_page.usage_summary_filtered")}
+            </div>
+          </section>
         </div>
 
         <div className="relative min-h-[320px] flex-1 overflow-hidden pt-3">

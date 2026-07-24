@@ -154,6 +154,8 @@ describe("EndUsersPage account semantics", () => {
     expect(screen.queryByRole("columnheader", { name: "Daily limit" })).not.toBeInTheDocument();
     expect(screen.queryByRole("columnheader", { name: "RPM" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "View reset history" })).toHaveTextContent("2");
+    expect(screen.getAllByRole("button", { name: "View usage" })).toHaveLength(users.length);
+    expect(screen.queryByRole("button", { name: "end_users.view_usage" })).not.toBeInTheDocument();
     expect(
       screen.getByRole("columnheader", { name: "Account Permission Profile" }),
     ).toBeInTheDocument();
