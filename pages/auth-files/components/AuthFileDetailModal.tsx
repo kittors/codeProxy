@@ -1157,9 +1157,9 @@ export function AuthFileDetailModal({
     // xAI only has a weekly window (no Codex 5h slot); still show predicted weekly quota like Codex.
     const showPredictedWeeklyQuota = isCodexDetail || detailProviderKey === "xai";
     const summaryGridClassName = showPredictedWeeklyQuota
-      ? "grid gap-3 sm:grid-cols-2 xl:grid-cols-6"
-      : "grid gap-3 sm:grid-cols-2 xl:grid-cols-5";
-    const summarySkeletonCount = showPredictedWeeklyQuota ? 6 : 5;
+      ? "grid gap-3 sm:grid-cols-2 xl:grid-cols-7"
+      : "grid gap-3 sm:grid-cols-2 xl:grid-cols-6";
+    const summarySkeletonCount = showPredictedWeeklyQuota ? 7 : 6;
 
     if (detailTrendLoading && !detailTrend) {
       const skeletonClass = "animate-pulse rounded-lg bg-slate-100/80 dark:bg-white/[0.06]";
@@ -1209,6 +1209,11 @@ export function AuthFileDetailModal({
       detailTrend.cycle_known === true
         ? detailTrend.cycle_cost_total
         : detailTrend.cycle_cost_total;
+    const displayCycleTotalTokens =
+      typeof detailTrend.cycle_total_tokens === "number" &&
+      Number.isFinite(detailTrend.cycle_total_tokens)
+        ? Math.max(0, Math.round(detailTrend.cycle_total_tokens))
+        : null;
     const cycleStart = detailTrend.cycle_start
       ? new Date(detailTrend.cycle_start).toLocaleString()
       : "--";
@@ -1276,6 +1281,16 @@ export function AuthFileDetailModal({
               <p className={SUMMARY_VALUE_CLASS_NAME}>{formatCurrency(displayCycleCostTotal)}</p>
             </div>
           ) : null}
+          <div className={SUMMARY_CARD_CLASS_NAME}>
+            <p className={SUMMARY_LABEL_CLASS_NAME}>
+              {t("auth_files.trend_current_cycle_tokens")}
+            </p>
+            <p className={SUMMARY_VALUE_CLASS_NAME}>
+              {displayCycleTotalTokens === null
+                ? "--"
+                : displayCycleTotalTokens.toLocaleString(i18n.language)}
+            </p>
+          </div>
           {showFiveHourQuota ? (
             <div className={SUMMARY_CARD_CLASS_NAME}>
               <p className={SUMMARY_LABEL_CLASS_NAME}>

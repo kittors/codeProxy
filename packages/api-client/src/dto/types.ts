@@ -456,6 +456,7 @@ export interface AiAccountUsageSummaryDto {
   failure_total_30d?: number | null;
   cycle_request_total?: number | null;
   cycle_cost_total?: number | null;
+  cycle_total_tokens?: number | null;
   cycle_known?: boolean;
   cycle_start?: string | null;
   projected_since?: string | null;

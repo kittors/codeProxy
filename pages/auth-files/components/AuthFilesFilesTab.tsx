@@ -8,7 +8,7 @@ import {
   type RefObject,
   type ReactNode,
 } from "react";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import {
   BarChart3,
   CircleOff,
@@ -60,6 +60,7 @@ import {
   AUTH_FILE_STATUS_FILTERS,
   DEFAULT_AUTH_FILES_CARD_COLUMNS,
   TYPE_BADGE_CLASSES,
+  formatCompactNumber,
   formatPlanBadgeLabel,
   isRuntimeOnlyAuthFile,
   normalizeAuthFilesCardColumns,
@@ -659,6 +660,7 @@ interface AuthFilesFilesTabProps {
   selectedFileNameSet: Set<string>;
   quotaByFileName: Record<string, QuotaState>;
   cycleCallsByAuthIndex: Record<string, number>;
+  cycleTotalTokensByAuthIndex: Record<string, number | null>;
   cycleBudgetByAuthIndex: Record<string, AuthFileCycleBudgetStats>;
   statusUsageLoading: boolean;
   resolveQuotaProvider: (file: AuthFileItem) => QuotaProvider | null;
@@ -760,6 +762,7 @@ export function AuthFilesFilesTab({
   selectedFileNameSet,
   quotaByFileName,
   cycleCallsByAuthIndex,
+  cycleTotalTokensByAuthIndex,
   cycleBudgetByAuthIndex,
   statusUsageLoading,
   resolveQuotaProvider,
@@ -790,7 +793,7 @@ export function AuthFilesFilesTab({
   setPage,
   usageData,
 }: AuthFilesFilesTabProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [modelOwnerDialogOpen, setModelOwnerDialogOpen] = useState(false);
   const [draftModelOwner, setDraftModelOwner] = useState(selectedModelOwner);
   const [cardColumnsRaw, setCardColumnsRaw] = useLocalStorage<AuthFilesCardColumns>(
@@ -1758,6 +1761,9 @@ export function AuthFilesFilesTab({
                   const cycleCalls = authIndex
                     ? cycleCallsByAuthIndex[authIndex]
                     : undefined;
+                  const cycleTotalTokens = authIndex
+                    ? cycleTotalTokensByAuthIndex[authIndex]
+                    : null;
                   const successRate =
                     usageTotalCalls > 0
                       ? (stats.success / usageTotalCalls) * 100
@@ -1820,6 +1826,29 @@ export function AuthFilesFilesTab({
                     typeof cycleCalls === "number"
                       ? t("auth_files.cycle_calls_count", { count: cycleCalls })
                       : t("auth_files.cycle_calls_unknown");
+                  const cycleTokensKnown =
+                    typeof cycleTotalTokens === "number" && Number.isFinite(cycleTotalTokens);
+                  const cycleTokensCompact = cycleTokensKnown
+                    ? formatCompactNumber(cycleTotalTokens, { locale: i18n.language })
+                    : "--";
+                  const cycleTokensLabel = cycleTokensKnown ? (
+                    <Trans
+                      i18nKey="auth_files.cycle_tokens_count"
+                      values={{ count: cycleTokensCompact }}
+                    />
+                  ) : (
+                    t("auth_files.cycle_tokens_unknown")
+                  );
+                  const cycleTokensTooltip = cycleTokensKnown ? (
+                    <Trans
+                      i18nKey="auth_files.cycle_tokens_count"
+                      values={{
+                        count: Math.round(cycleTotalTokens).toLocaleString(i18n.language),
+                      }}
+                    />
+                  ) : (
+                    t("auth_files.cycle_tokens_unknown")
+                  );
                   const successRateLabel =
                     successRate === null
                       ? "--"
@@ -2024,6 +2053,16 @@ export function AuthFilesFilesTab({
                                   ? cycleCalls
                                   : "--"
                                 : cycleCallsLabel}
+                            </span>
+                          </HoverTooltip>
+                          <HoverTooltip content={cycleTokensTooltip} className="shrink-0">
+                            <span
+                              className={[
+                                "inline-flex shrink-0 items-center rounded-md bg-slate-100 text-2xs font-semibold tabular-nums text-slate-700 dark:bg-white/10 dark:text-white/70",
+                                denseCards ? "h-5 px-1.5" : "px-2 py-0.5",
+                              ].join(" ")}
+                            >
+                              {denseCards ? cycleTokensCompact : cycleTokensLabel}
                             </span>
                           </HoverTooltip>
                           <HoverTooltip

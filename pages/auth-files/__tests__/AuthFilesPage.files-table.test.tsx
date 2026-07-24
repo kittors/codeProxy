@@ -46,6 +46,7 @@ const mocks = vi.hoisted(() => ({
       request_total: 3,
       cycle_request_total: 2,
       cycle_cost_total: 1.2345,
+      cycle_total_tokens: 1234567,
       weekly_quota_used_percent: 8,
       cycle_known: true,
       cycle_start: "2026-04-27T16:01:21Z",
@@ -192,6 +193,7 @@ const createAuthFileTrend = (authIndex: string, cycleRequestTotal: number) => ({
   request_total: cycleRequestTotal,
   cycle_request_total: cycleRequestTotal,
   cycle_cost_total: 1.2345,
+  cycle_total_tokens: 1234567,
   weekly_quota_used_percent: 8,
   cycle_known: true,
   cycle_start: "2026-04-27T16:01:21Z",
@@ -239,6 +241,7 @@ describe("AuthFilesPage files table", () => {
       request_total: 3,
       cycle_request_total: 2,
       cycle_cost_total: 1.2345,
+      cycle_total_tokens: 1234567,
       weekly_quota_used_percent: 8,
       cycle_known: true,
       cycle_start: "2026-04-27T16:01:21Z",
@@ -306,6 +309,7 @@ describe("AuthFilesPage files table", () => {
           success_total_30d: Math.max(0, trend.request_total ?? 0),
           failure_total_30d: 0,
           cycle_cost_total: trend.cycle_cost_total,
+          cycle_total_tokens: trend.cycle_total_tokens,
           weekly_quota_used_percent: trend.weekly_quota_used_percent,
         };
       } catch {
@@ -2136,6 +2140,7 @@ describe("AuthFilesPage files table", () => {
           quotas: [],
           usage: {
             cycle_request_total: 7,
+            cycle_total_tokens: 1234567,
             cycle_known: true,
             request_total: 99,
             success_total: 99,
@@ -2164,6 +2169,10 @@ describe("AuthFilesPage files table", () => {
     const card = title.closest("section");
     expect(card).not.toBeNull();
     expect(await within(card as HTMLElement).findByText("Cycle 7")).toBeInTheDocument();
+    const tokenBadge = within(card as HTMLElement).getByText("Cycle tokens 1.2M");
+    expect(tokenBadge).toBeInTheDocument();
+    await userEvent.hover(tokenBadge);
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Cycle tokens 1,234,567");
     expect(within(card as HTMLElement).queryByText("Lifetime 99")).not.toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText("Tenant only")).not.toBeInTheDocument();
     expect(
@@ -2196,7 +2205,12 @@ describe("AuthFilesPage files table", () => {
         ],
       },
       cycleByAuthIndex: {
-        "cycle-93": { calls: 93, cycleCostTotal: null, weeklyQuotaUsedPercent: null },
+        "cycle-93": {
+          calls: 93,
+          cycleCostTotal: null,
+          cycleTotalTokens: 987654,
+          weeklyQuotaUsedPercent: null,
+        },
       },
     });
     mocks.list.mockImplementation(async () => ({ files: [file] }));
@@ -2219,6 +2233,7 @@ describe("AuthFilesPage files table", () => {
     const card = title.closest("section");
     expect(card).not.toBeNull();
     expect(within(card as HTMLElement).getByText("Cycle 93")).toBeInTheDocument();
+    expect(within(card as HTMLElement).getByText("Cycle tokens 987.7K")).toBeInTheDocument();
     expect(within(card as HTMLElement).getByText("98.9%")).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Refresh" })[0]?.querySelector("svg")).toHaveClass(
       "animate-spin",
@@ -2242,6 +2257,7 @@ describe("AuthFilesPage files table", () => {
     });
 
     expect(await within(card as HTMLElement).findByText("Cycle 98")).toBeInTheDocument();
+    expect(within(card as HTMLElement).getByText("Cycle tokens 987.7K")).toBeInTheDocument();
     expect(within(card as HTMLElement).getByText("98.9%")).toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText("100.0%")).not.toBeInTheDocument();
   });
@@ -2379,6 +2395,7 @@ describe("AuthFilesPage files table", () => {
     expect(card).not.toBeNull();
     // Prefer request_total over a misleading cycle_request_total of 0 when cycle_known is false.
     expect(await within(card as HTMLElement).findByText("Cycle --")).toBeInTheDocument();
+    expect(within(card as HTMLElement).getByText("Cycle tokens --")).toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText("Lifetime 116")).not.toBeInTheDocument();
     expect(within(card as HTMLElement).getByText("SUPERGROK")).toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText("Shared account")).not.toBeInTheDocument();
@@ -3429,6 +3446,8 @@ describe("AuthFilesPage files table", () => {
     expect(within(dialog).getByRole("tab", { name: "Usage" })).toBeInTheDocument();
     expect(await within(dialog).findByText("Current cycle cost")).toBeInTheDocument();
     expect(within(dialog).getByText("$1.2345")).toBeInTheDocument();
+    expect(within(dialog).getByText("Current cycle tokens")).toBeInTheDocument();
+    expect(within(dialog).getByText("1,234,567")).toBeInTheDocument();
     expect(mocks.getAuthFileTrend).toHaveBeenCalledWith("auth-1", { days: 7, hours: 5 });
   });
 
@@ -5230,7 +5249,7 @@ describe("AuthFilesPage files table", () => {
     const resetTooltip = await screen.findByRole("tooltip");
     expect(resetTooltip).toHaveTextContent("Reset credit expiration times:");
     expect(resetTooltip).toHaveTextContent("2026");
-    const callsBadge = within(cards).getByText(/Cycle/);
+    const callsBadge = within(cards).getByText(/^Cycle \d/);
     expect(
       resetButton.compareDocumentPosition(callsBadge) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();

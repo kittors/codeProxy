@@ -15,6 +15,7 @@ type RefreshCycleUsageOptions = {
 export type AuthFileCycleUsageSnapshot = {
   calls: number | null;
   cycleCostTotal: number | null;
+  cycleTotalTokens: number | null;
   weeklyQuotaUsedPercent: number | null;
 };
 
@@ -60,9 +61,14 @@ const toFiniteOrNull = (value: unknown): number | null =>
 
 const readCycleBudgetStats = (trend: {
   cycle_cost_total?: number;
+  cycle_total_tokens?: number | null;
   weekly_quota_used_percent?: number | null;
-}): Pick<AuthFileCycleUsageSnapshot, "cycleCostTotal" | "weeklyQuotaUsedPercent"> => ({
+}): Pick<
+  AuthFileCycleUsageSnapshot,
+  "cycleCostTotal" | "cycleTotalTokens" | "weeklyQuotaUsedPercent"
+> => ({
   cycleCostTotal: toFiniteOrNull(trend.cycle_cost_total),
+  cycleTotalTokens: toFiniteOrNull(trend.cycle_total_tokens),
   weeklyQuotaUsedPercent: toFiniteOrNull(trend.weekly_quota_used_percent),
 });
 
@@ -105,6 +111,7 @@ export function useAuthFilesCycleUsageState() {
           const snapshot: AuthFileCycleUsageSnapshot = {
             calls: nextCount,
             cycleCostTotal: budget.cycleCostTotal,
+            cycleTotalTokens: budget.cycleTotalTokens,
             weeklyQuotaUsedPercent: budget.weeklyQuotaUsedPercent,
           };
 
@@ -115,6 +122,7 @@ export function useAuthFilesCycleUsageState() {
                 current &&
                 current.calls === snapshot.calls &&
                 current.cycleCostTotal === snapshot.cycleCostTotal &&
+                current.cycleTotalTokens === snapshot.cycleTotalTokens &&
                 current.weeklyQuotaUsedPercent === snapshot.weeklyQuotaUsedPercent
               ) {
                 return prev;
@@ -176,9 +184,17 @@ export function useAuthFilesCycleUsageState() {
     ]),
   );
 
+  const cycleTotalTokensByAuthIndex: Record<string, number | null> = Object.fromEntries(
+    Object.entries(snapshotByAuthIndex).map(([authIndex, snapshot]) => [
+      authIndex,
+      snapshot.cycleTotalTokens,
+    ]),
+  );
+
   return {
     callsByAuthIndex,
     cycleBudgetByAuthIndex,
+    cycleTotalTokensByAuthIndex,
     refreshCycleUsageForFiles,
   };
 }

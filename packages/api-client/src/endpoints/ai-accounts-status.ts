@@ -74,6 +74,9 @@ const normalizeUsageSummary = (value: unknown): AiAccountUsageSummaryDto | null 
       value.cycle_request_total ?? value.cycleRequestTotal,
     ),
     cycle_cost_total: toFiniteNumber(value.cycle_cost_total ?? value.cycleCostTotal),
+    cycle_total_tokens: toFiniteNumber(
+      value.cycle_total_tokens ?? value.cycleTotalTokens,
+    ),
     cycle_known: toOptionalBoolean(value.cycle_known ?? value.cycleKnown),
     cycle_start: normalizeString(value.cycle_start ?? value.cycleStart),
     projected_since: normalizeString(
