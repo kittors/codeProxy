@@ -211,6 +211,7 @@ const renderDetailModal = (overrides: Partial<DetailModalProps> = {}) => {
       request_total: 3,
       cycle_request_total: 2,
       cycle_cost_total: 1.2345,
+      cycle_total_tokens: 1234567,
       weekly_quota_used_percent: 8,
       cycle_start: "2026-04-27T16:01:21Z",
       daily_usage: [
@@ -336,6 +337,7 @@ describe("AuthFileDetailModal", () => {
     expect(screen.queryByText("Last 7 days requests")).not.toBeInTheDocument();
     expectSummaryCard("Current weekly cycle", "2");
     expectSummaryCard("Current cycle cost", "$1.2345");
+    expectSummaryCard("Current cycle tokens", "1,234,567");
     expectSummaryCard("Predicted 5-hour window quota", "$0.0500");
     expectSummaryCard("Predicted weekly window quota", "$15.4312");
     expectSummaryCard("Weekly quota used", "8%");
@@ -366,6 +368,7 @@ describe("AuthFileDetailModal", () => {
     });
 
     expectSummaryCard("Current weekly cycle", "2");
+    expectSummaryCard("Current cycle tokens", "--");
     expect(screen.queryByText("Current cycle cost")).not.toBeInTheDocument();
     expect(screen.queryByText("Predicted 5-hour window quota")).not.toBeInTheDocument();
     expect(screen.queryByText("Predicted weekly window quota")).not.toBeInTheDocument();
@@ -426,7 +429,7 @@ describe("AuthFileDetailModal", () => {
     renderDetailModal({ detailTrend: null, detailTrendLoading: true });
 
     const loading = screen.getByTestId("auth-file-trend-loading");
-    expect(loading.querySelectorAll(".animate-pulse")).toHaveLength(9);
+    expect(loading.querySelectorAll(".animate-pulse")).toHaveLength(10);
     expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
     expect(screen.queryByTestId("auth-file-trend-chart")).not.toBeInTheDocument();
     expect(chartOptions).toHaveLength(0);

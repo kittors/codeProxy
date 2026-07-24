@@ -484,6 +484,7 @@ export function AuthFilesPage() {
     forceRefreshPage,
     runQuotaRefreshBatch,
     callsByAuthIndex,
+    cycleTotalTokensByAuthIndex,
     cycleBudgetByAuthIndex,
     statusUsageReady,
     statusUsageLoading,
@@ -874,6 +875,7 @@ export function AuthFilesPage() {
         selectedFileNameSet={selectedFileNameSet}
         quotaByFileName={quotaByFileName}
         cycleCallsByAuthIndex={callsByAuthIndex}
+        cycleTotalTokensByAuthIndex={cycleTotalTokensByAuthIndex}
         cycleBudgetByAuthIndex={cycleBudgetByAuthIndex}
         statusUsageLoading={statusUsageLoading}
         resolveQuotaProvider={resolveQuotaProvider}

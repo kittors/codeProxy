@@ -187,6 +187,10 @@ export const mapAccountStatusToCycleUsage = (
       typeof usage.cycle_cost_total === "number" && Number.isFinite(usage.cycle_cost_total)
         ? usage.cycle_cost_total
         : null,
+    cycleTotalTokens:
+      typeof usage.cycle_total_tokens === "number" && Number.isFinite(usage.cycle_total_tokens)
+        ? Math.max(0, Math.round(usage.cycle_total_tokens))
+        : null,
     weeklyQuotaUsedPercent:
       typeof usage.weekly_quota_used_percent === "number" &&
       Number.isFinite(usage.weekly_quota_used_percent)

@@ -75,6 +75,7 @@ export interface AuthFileTrendResponse {
   request_total: number;
   cycle_request_total: number;
   cycle_cost_total: number;
+  cycle_total_tokens?: number | null;
   weekly_quota_used_percent: number | null;
   cycle_known?: boolean;
   cycle_start: string;
@@ -309,6 +310,11 @@ export const usageApi = {
       request_total: resp?.request_total ?? 0,
       cycle_request_total: resp?.cycle_request_total ?? 0,
       cycle_cost_total: resp?.cycle_cost_total ?? 0,
+      cycle_total_tokens:
+        typeof resp?.cycle_total_tokens === "number" &&
+        Number.isFinite(resp.cycle_total_tokens)
+          ? resp.cycle_total_tokens
+          : null,
       weekly_quota_used_percent:
         typeof resp?.weekly_quota_used_percent === "number" &&
         Number.isFinite(resp.weekly_quota_used_percent)

@@ -102,6 +102,7 @@ export type AuthFilesUiState = {
 export type AuthFileCycleCacheSnapshot = {
   calls: number;
   cycleCostTotal?: number | null;
+  cycleTotalTokens?: number | null;
   weeklyQuotaUsedPercent?: number | null;
 };
 
@@ -745,12 +746,17 @@ const sanitizeCycleByAuthIndexForCache = (
       typeof snapshot.cycleCostTotal === "number" && Number.isFinite(snapshot.cycleCostTotal)
         ? snapshot.cycleCostTotal
         : null;
+    const cycleTotalTokens =
+      typeof snapshot.cycleTotalTokens === "number" &&
+      Number.isFinite(snapshot.cycleTotalTokens)
+        ? Math.max(0, Math.round(snapshot.cycleTotalTokens))
+        : null;
     const weeklyQuotaUsedPercent =
       typeof snapshot.weeklyQuotaUsedPercent === "number" &&
       Number.isFinite(snapshot.weeklyQuotaUsedPercent)
         ? snapshot.weeklyQuotaUsedPercent
         : null;
-    output[key] = { calls, cycleCostTotal, weeklyQuotaUsedPercent };
+    output[key] = { calls, cycleCostTotal, cycleTotalTokens, weeklyQuotaUsedPercent };
   }
   return Object.keys(output).length > 0 ? output : undefined;
 };
