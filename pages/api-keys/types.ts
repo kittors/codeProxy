@@ -17,3 +17,11 @@ export interface ApiKeyFormValues {
   useExactChannelRestrictions: boolean;
   systemPrompt: string;
 }
+
+export interface ApiKeyUsageSummary {
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  requestCount: number;
+  successRate: number;
+}

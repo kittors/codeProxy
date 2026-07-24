@@ -1767,6 +1767,19 @@
     "save_failed": "Failed to save permission config",
     "delete_failed": "Failed to delete permission config"
   },
+  "api_keys_page": {
+    "usage_summary_tokens": "Использование токенов",
+    "usage_summary_requests": "Запросы",
+    "usage_summary_success_rate": "Успешность",
+    "usage_summary_current_page": "Текущая страница",
+    "usage_summary_filtered": "Текущий фильтр",
+    "col_input": "Входные токены",
+    "col_output": "Выходные токены",
+    "col_total_token": "Всего токенов"
+  },
+  "end_users": {
+    "view_usage": "Просмотреть использование"
+  },
   "proxies": {
     "title": "Proxy Management",
     "description": "Manage reusable outbound proxies for AI providers and auth files that need a specific egress IP.",

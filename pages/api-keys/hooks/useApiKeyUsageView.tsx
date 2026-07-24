@@ -19,8 +19,17 @@ import {
   type RequestLogsRow,
   type TimeRange,
 } from "@features/request-log-viewer";
+import type { ApiKeyUsageSummary } from "../types";
 
 type StatusFilter = "" | "success" | "failed";
+
+const EMPTY_USAGE_SUMMARY: ApiKeyUsageSummary = {
+  inputTokens: 0,
+  outputTokens: 0,
+  totalTokens: 0,
+  requestCount: 0,
+  successRate: 0,
+};
 
 export function useApiKeyUsageView() {
   const { t, i18n } = useTranslation();
@@ -31,6 +40,7 @@ export function useApiKeyUsageView() {
   const [usageLoading, setUsageLoading] = useState(false);
   const [usageRawItems, setUsageRawItems] = useState<UsageLogItem[]>([]);
   const [usageTotalCount, setUsageTotalCount] = useState(0);
+  const [usageSummary, setUsageSummary] = useState<ApiKeyUsageSummary>(EMPTY_USAGE_SUMMARY);
   const [usageCurrentPage, setUsageCurrentPage] = useState(1);
   const [usagePageSize, setUsagePageSize] = useState(DEFAULT_REQUEST_LOG_PAGE_SIZE);
   const [usageLastUpdatedAt, setUsageLastUpdatedAt] = useState<number | null>(null);
@@ -113,8 +123,16 @@ export function useApiKeyUsageView() {
           status: usageStatusFilter || undefined,
         });
 
-        setUsageRawItems(result.items ?? []);
+        const items = result.items ?? [];
+        setUsageRawItems(items);
         setUsageTotalCount(result.total ?? 0);
+        setUsageSummary({
+          inputTokens: items.reduce((sum, item) => sum + item.input_tokens, 0),
+          outputTokens: items.reduce((sum, item) => sum + item.output_tokens, 0),
+          totalTokens: result.stats.total_tokens,
+          requestCount: result.stats.total || result.total || 0,
+          successRate: result.stats.success_rate,
+        });
         setUsageCurrentPage(page);
         // Keep key options within the opened scope; merge names from response.
         const scopeSet = new Set(usageViewKeys);
@@ -162,6 +180,7 @@ export function useApiKeyUsageView() {
   const resetUsageViewState = useCallback(() => {
     setUsageRawItems([]);
     setUsageTotalCount(0);
+    setUsageSummary(EMPTY_USAGE_SUMMARY);
     setUsageCurrentPage(1);
     setUsagePageSize(DEFAULT_REQUEST_LOG_PAGE_SIZE);
     setUsageLastUpdatedAt(null);
@@ -338,6 +357,7 @@ export function useApiKeyUsageView() {
     openUsageView,
     usageLoading,
     usageTotalCount,
+    usageSummary,
     usageCurrentPage,
     usagePageSize,
     setUsagePageSize,
