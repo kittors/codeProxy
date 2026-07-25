@@ -1321,6 +1321,7 @@ test("shows auth-level quota recovery records as 429 restriction badges", () => 
           statusFilter: "all",
           search: ".json",
           page,
+          pageSize: 2,
           setPage,
           selectedFileNames,
           setSelectedFileNames,
@@ -1330,12 +1331,13 @@ test("shows auth-level quota recovery records as 429 restriction badges", () => 
     );
 
     await waitFor(() => {
-      expect(result.current.safePage).toBe(1);
+      expect(result.current.safePage).toBe(2);
       expect(result.current.filteredFiles.map((file) => file.name)).toEqual([
         "alpha.json",
         "beta.json",
         "runtime.json",
       ]);
+      expect(result.current.pageItems.map((file) => file.name)).toEqual(["runtime.json"]);
       expect(Array.from(result.current.selectedFileNameSet)).toEqual(["alpha.json"]);
       expect(result.current.filterCounts.counts.codex).toBe(3);
       expect(result.current.selectableFilteredFiles.map((file) => file.name)).toEqual([

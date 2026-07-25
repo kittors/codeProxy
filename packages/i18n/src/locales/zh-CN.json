@@ -820,6 +820,7 @@
     "shared_history_incomplete": "共享统计从 {{since}} 开始投影；更早且已清理的明细未被虚构回填。",
     "success_count": "成功 {{count}}",
     "failed_count": "失败 {{count}}",
+    "rows_per_page": "每页条数",
     "total_page": "共 {{total}} 条 · 第 {{page}} / {{pages}} 页",
     "usage_stats_warning": "用量统计加载失败：文件管理不受影响，但成功/失败统计将显示 0。",
     "view_file_title": "查看：{{name}}",

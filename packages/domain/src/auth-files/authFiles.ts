@@ -61,11 +61,13 @@ export const AUTH_FILES_QUOTA_PREVIEW_KEY = "authFilesPage.quotaPreview.v1";
 export const AUTH_FILES_QUOTA_AUTO_REFRESH_KEY = "authFilesPage.quotaAutoRefreshMs.v1";
 export const AUTH_FILES_FILES_VIEW_MODE_KEY = "authFilesPage.filesViewMode.v1";
 export const AUTH_FILES_CARD_COLUMNS_KEY = "authFilesPage.cardColumns.v1";
+export const AUTH_FILES_PAGE_SIZE_KEY = "authFilesPage.pageSize.v1";
 export const AUTH_FILES_MODEL_OWNER_GROUP_MAP_KEY = "authFilesPage.modelOwnerGroupMap.v1";
 
 export const AUTH_FILES_CARD_COLUMN_OPTIONS = [2, 3, 4, 5, 6] as const;
 export type AuthFilesCardColumns = (typeof AUTH_FILES_CARD_COLUMN_OPTIONS)[number];
 export const DEFAULT_AUTH_FILES_CARD_COLUMNS: AuthFilesCardColumns = 3;
+export const AUTH_FILES_PAGE_SIZE_OPTIONS = [6, 9, 12, 15, 18, 24, 30, 36] as const;
 
 export type QuotaPreviewMode = "5h" | "week";
 /** Off / 60s / 300s only. Legacy 5s/10s/30s migrate safely via normalizeQuotaAutoRefreshMs. */
@@ -2032,6 +2034,30 @@ export const normalizeAuthFilesCardColumns = (value: unknown): AuthFilesCardColu
   return (AUTH_FILES_CARD_COLUMN_OPTIONS as readonly number[]).includes(rounded)
     ? (rounded as AuthFilesCardColumns)
     : DEFAULT_AUTH_FILES_CARD_COLUMNS;
+};
+
+export const normalizeAuthFilesPageSize = (value: unknown): number => {
+  const parsed =
+    typeof value === "number"
+      ? value
+      : typeof value === "string" && value.trim()
+        ? Number(value)
+        : Number.NaN;
+  if (!Number.isFinite(parsed)) return AUTH_FILES_PAGE_SIZE;
+  const rounded = Math.round(parsed);
+  return Math.min(
+    AUTH_FILES_PAGE_SIZE_OPTIONS[AUTH_FILES_PAGE_SIZE_OPTIONS.length - 1],
+    Math.max(AUTH_FILES_PAGE_SIZE_OPTIONS[0], rounded),
+  );
+};
+
+export const alignAuthFilesPageSizeToColumns = (
+  pageSize: unknown,
+  columns: unknown,
+): number => {
+  const normalizedColumns = normalizeAuthFilesCardColumns(columns);
+  const normalizedPageSize = normalizeAuthFilesPageSize(pageSize);
+  return normalizedColumns * Math.max(1, Math.round(normalizedPageSize / normalizedColumns));
 };
 
 /** Read + migrate auto-refresh localStorage immediately (write-back allowed buckets only). */
