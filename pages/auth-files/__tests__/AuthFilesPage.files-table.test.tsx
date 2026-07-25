@@ -12,7 +12,9 @@ import type {
   EntityStatsResponse,
 } from "@code-proxy/api-client";
 import {
+  AUTH_FILES_CARD_COLUMNS_KEY,
   AUTH_FILES_DATA_CACHE_KEY,
+  AUTH_FILES_PAGE_SIZE_KEY,
   AUTH_FILES_QUOTA_AUTO_REFRESH_KEY,
   DEFAULT_CACHE_TENANT_ID,
   setActiveCacheTenantId,
@@ -484,6 +486,36 @@ describe("AuthFilesPage files table", () => {
     expect(screen.queryByRole("button", { name: "Select current page" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Delete All" })).not.toBeInTheDocument();
     expect(screen.getByRole("switch", { name: "Enable/Disable" })).toBeInTheDocument();
+  });
+
+  test("persists page size and aligns it when card columns change", async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("qwen.json")).toBeInTheDocument();
+    const rowsPerPage = screen.getByRole("combobox", { name: "Rows per page" });
+    expect(rowsPerPage).toHaveTextContent("9");
+
+    await user.click(rowsPerPage);
+    await user.click(screen.getByRole("option", { name: "12" }));
+    expect(window.localStorage.getItem(AUTH_FILES_PAGE_SIZE_KEY)).toBe("12");
+
+    await user.click(screen.getByRole("combobox", { name: "Cards per row" }));
+    await user.click(screen.getByRole("option", { name: "5 columns" }));
+
+    expect(screen.getByRole("combobox", { name: "Rows per page" })).toHaveTextContent("10");
+    expect(window.localStorage.getItem(AUTH_FILES_CARD_COLUMNS_KEY)).toBe("5");
+    expect(window.localStorage.getItem(AUTH_FILES_PAGE_SIZE_KEY)).toBe("10");
   });
 
   test("collapses filters behind a single mobile filter control", async () => {

@@ -42,7 +42,7 @@ import { ScrollArea } from "@code-proxy/ui";
 import { Select } from "@code-proxy/ui";
 import { SearchableSelect, type SearchableSelectOption } from "@code-proxy/ui";
 import { DataTable, type DataTableColumn } from "@code-proxy/ui";
-import { ToggleSwitch, useLocalStorage } from "@code-proxy/ui";
+import { ToggleSwitch } from "@code-proxy/ui";
 import type { AuthFilesUploadProgress } from "@pages/auth-files/hooks/useAuthFilesFileActions";
 import type {
   AuthFileModelOwnerGroup,
@@ -54,11 +54,10 @@ import type {
   UsageIndex,
 } from "@code-proxy/domain";
 import {
+  alignAuthFilesPageSizeToColumns,
   AUTH_FILES_CARD_COLUMN_OPTIONS,
-  AUTH_FILES_CARD_COLUMNS_KEY,
-  AUTH_FILES_PAGE_SIZE,
+  AUTH_FILES_PAGE_SIZE_OPTIONS,
   AUTH_FILE_STATUS_FILTERS,
-  DEFAULT_AUTH_FILES_CARD_COLUMNS,
   TYPE_BADGE_CLASSES,
   formatCompactNumber,
   formatPlanBadgeLabel,
@@ -657,6 +656,10 @@ interface AuthFilesFilesTabProps {
   pageItems: AuthFileItem[];
   fileColumns: DataTableColumn<AuthFileItem>[];
   filesViewMode: FilesViewMode;
+  cardColumns: AuthFilesCardColumns;
+  setCardColumns: (value: AuthFilesCardColumns) => void;
+  pageSize: number;
+  setPageSize: (value: number) => void;
   selectedFileNameSet: Set<string>;
   quotaByFileName: Record<string, QuotaState>;
   cycleCallsByAuthIndex: Record<string, number>;
@@ -759,6 +762,10 @@ export function AuthFilesFilesTab({
   pageItems,
   fileColumns,
   filesViewMode,
+  cardColumns,
+  setCardColumns,
+  pageSize,
+  setPageSize,
   selectedFileNameSet,
   quotaByFileName,
   cycleCallsByAuthIndex,
@@ -796,17 +803,9 @@ export function AuthFilesFilesTab({
   const { t, i18n } = useTranslation();
   const [modelOwnerDialogOpen, setModelOwnerDialogOpen] = useState(false);
   const [draftModelOwner, setDraftModelOwner] = useState(selectedModelOwner);
-  const [cardColumnsRaw, setCardColumnsRaw] = useLocalStorage<AuthFilesCardColumns>(
-    AUTH_FILES_CARD_COLUMNS_KEY,
-    DEFAULT_AUTH_FILES_CARD_COLUMNS,
-  );
-  const cardColumns = normalizeAuthFilesCardColumns(cardColumnsRaw);
   const cardGridHostRef = useRef<HTMLDivElement>(null);
   const cardColumnFirstRectsRef = useRef<DOMRect[] | null>(null);
   const cardColumnAnimationsRef = useRef<Animation[]>([]);
-  useEffect(() => {
-    if (cardColumnsRaw !== cardColumns) setCardColumnsRaw(cardColumns);
-  }, [cardColumns, cardColumnsRaw, setCardColumnsRaw]);
   const cancelCardColumnAnimations = useCallback(() => {
     cardColumnAnimationsRef.current.forEach((animation) => animation.cancel());
     cardColumnAnimationsRef.current = [];
@@ -830,9 +829,11 @@ export function AuthFilesFilesTab({
               .filter((element): element is HTMLElement => element instanceof HTMLElement)
               .map((element) => element.getBoundingClientRect())
           : null;
-      setCardColumnsRaw(nextColumns);
+      setCardColumns(nextColumns);
+      setPageSize(alignAuthFilesPageSizeToColumns(pageSize, nextColumns));
+      setPage(1);
     },
-    [cancelCardColumnAnimations, cardColumns, setCardColumnsRaw],
+    [cancelCardColumnAnimations, cardColumns, pageSize, setCardColumns, setPage, setPageSize],
   );
 
   useLayoutEffect(() => {
@@ -909,6 +910,20 @@ export function AuthFilesFilesTab({
         };
       }),
     [t],
+  );
+  const pageSizeOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          [
+            pageSize,
+            ...AUTH_FILES_PAGE_SIZE_OPTIONS.map((size) =>
+              alignAuthFilesPageSizeToColumns(size, cardColumns),
+            ),
+          ].sort((a, b) => a - b),
+        ),
+      ),
+    [cardColumns, pageSize],
   );
   const [draftModelOwnerEnabled, setDraftModelOwnerEnabled] = useState(
     selectedModelOwner.trim() !== "",
@@ -1276,15 +1291,20 @@ export function AuthFilesFilesTab({
       currentPage={safePage}
       totalPages={totalPages}
       totalCount={filteredFiles.length}
-      pageSize={AUTH_FILES_PAGE_SIZE}
+      pageSize={pageSize}
       onPageChange={setPage}
-      showPageSize={false}
+      onPageSizeChange={(size) => {
+        setPageSize(alignAuthFilesPageSizeToColumns(size, cardColumns));
+        setPage(1);
+      }}
+      pageSizeOptions={pageSizeOptions}
       className="border-t border-slate-100 px-4 pb-4 pt-3 sm:px-5 sm:pb-5 dark:border-neutral-800/60"
       labels={{
         firstPage: t("request_logs.first_page"),
         previousPage: t("auth_files.prev"),
         nextPage: t("auth_files.next"),
         lastPage: t("request_logs.last_page"),
+        rowsPerPage: t("auth_files.rows_per_page"),
         pageInfo: ({ total, currentPage, totalPages: pages }) =>
           t("auth_files.total_page", {
             total,

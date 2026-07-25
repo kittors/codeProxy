@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, type Dispatch, type SetStateAction } from "react";
 import type { AuthFileItem } from "@code-proxy/api-client";
 import {
-  AUTH_FILES_PAGE_SIZE,
   authFileMatchesStatusFilter,
   authFilesSortCollator,
   normalizeProviderKey,
@@ -21,6 +20,7 @@ interface UseAuthFilesListStateOptions {
   statusFilter: AuthFileStatusFilter;
   search: string;
   page: number;
+  pageSize: number;
   setPage: Dispatch<SetStateAction<number>>;
   selectedFileNames: string[];
   setSelectedFileNames: Dispatch<SetStateAction<string[]>>;
@@ -33,6 +33,7 @@ export function useAuthFilesListState({
   statusFilter,
   search,
   page,
+  pageSize,
   setPage,
   selectedFileNames,
   setSelectedFileNames,
@@ -113,13 +114,13 @@ export function useAuthFilesListState({
       );
   }, [searchFilteredFiles, statusFilter, tagScopedFiles]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredFiles.length / AUTH_FILES_PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(filteredFiles.length / pageSize));
   const safePage = Math.min(totalPages, Math.max(1, page));
 
   const pageItems = useMemo(() => {
-    const start = (safePage - 1) * AUTH_FILES_PAGE_SIZE;
-    return filteredFiles.slice(start, start + AUTH_FILES_PAGE_SIZE);
-  }, [filteredFiles, safePage]);
+    const start = (safePage - 1) * pageSize;
+    return filteredFiles.slice(start, start + pageSize);
+  }, [filteredFiles, pageSize, safePage]);
 
   const selectableFilteredFiles = useMemo(
     () => filteredFiles.filter((file) => !isRuntimeOnlyAuthFile(file)),
