@@ -8,6 +8,7 @@ import type { ProxyPoolEntry } from "@code-proxy/api-client/endpoints/proxies";
 import { OpenAIProviderBasicSection } from "./OpenAIProviderBasicSection";
 import { OpenAIKeyEntriesEditor } from "./OpenAIKeyEntriesEditor";
 import { OpenAIProviderModelsSection } from "./OpenAIProviderModelsSection";
+import { ModerationProfileSelect } from "@pages/content-moderation/components/ModerationProfileSelect";
 
 interface OpenAIProviderModalProps {
   open: boolean;
@@ -83,6 +84,16 @@ export function OpenAIProviderModal({
     >
       <div className="space-y-5">
         <OpenAIProviderBasicSection openaiDraft={openaiDraft} setOpenaiDraft={setOpenaiDraft} />
+
+        <div className="rounded-xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+          <ModerationProfileSelect
+            channelType="provider"
+            channelId={openaiDraft.id}
+            label={t("content_moderation.provider_default_profile_label")}
+            hint={t("content_moderation.provider_default_profile_hint")}
+            unpersistedHint={t("content_moderation.provider_default_profile_save_first")}
+          />
+        </div>
 
         <div className="border-t border-slate-200/60 pt-5 dark:border-neutral-800/60">
           <OpenAIKeyEntriesEditor

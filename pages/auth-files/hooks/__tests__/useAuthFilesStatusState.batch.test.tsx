@@ -288,6 +288,7 @@ describe("useAuthFilesStatusState batch refresh", () => {
             success_total_30d: 40,
             failure_total_30d: 10,
             cycle_cost_total: 1.5,
+            cycle_total_tokens: 123456,
             weekly_quota_used_percent: 20,
           },
         },
@@ -312,6 +313,7 @@ describe("useAuthFilesStatusState batch refresh", () => {
       // cycle/budget must fan to every real auth_index of the subject, not only canonical.
       expect(result.current.callsByAuthIndex["idx-1"]).toBe(5);
       expect(result.current.callsByAuthIndex["idx-2"]).toBe(5);
+      expect(result.current.cycleTotalTokensByAuthIndex["idx-2"]).toBe(123456);
       expect(result.current.cycleBudgetByAuthIndex["idx-2"]?.cycleCostTotal).toBe(1.5);
     });
     await waitFor(() => {
@@ -339,6 +341,82 @@ describe("useAuthFilesStatusState batch refresh", () => {
         expect(file.usage_projected_since).toBe("2026-06-15T00:00:00Z");
         expect(file.shared_subscription_expires_at).toBe("2026-08-01T00:00:00Z");
       }
+    });
+  });
+
+  test("partial cycle refresh keeps the last known token total", async () => {
+    mocks.getStatus
+      .mockResolvedValueOnce({
+        items: [
+          {
+            auth_index: "a1",
+            auth_subject_id: "sub-a",
+            quotas: [],
+            usage: {
+              cycle_request_total: 5,
+              cycle_cost_total: 1.5,
+              cycle_total_tokens: 123456,
+              cycle_known: true,
+            },
+          },
+        ],
+      })
+      .mockResolvedValue({
+        items: [
+          {
+            auth_index: "a1",
+            auth_subject_id: "sub-a",
+            quotas: [],
+            usage: {
+              cycle_request_total: 6,
+              cycle_known: true,
+            },
+          },
+        ],
+      });
+    mocks.startStatusRefresh.mockResolvedValue({
+      job_id: "job-partial-cycle",
+      accepted: 1,
+      deduplicated: 0,
+    });
+    mocks.getStatusRefreshJob.mockResolvedValue({
+      job_id: "job-partial-cycle",
+      state: "completed",
+      total: 1,
+      completed: 1,
+      failed: 0,
+      results: [
+        {
+          auth_index: "a1",
+          auth_subject_id: "sub-a",
+          state: "success",
+          result: {
+            auth_index: "a1",
+            auth_subject_id: "sub-a",
+            quotas: [],
+            usage: {
+              cycle_request_total: 6,
+              cycle_known: true,
+            },
+          },
+        },
+      ],
+    });
+
+    const { result } = renderHook(() =>
+      useAuthFilesStatusState({
+        tab: "files",
+        pageItems: [files[0]!],
+        loading: false,
+        setFiles: vi.fn(),
+        setDetailFile: vi.fn(),
+      }),
+    );
+
+    await waitFor(() => expect(mocks.getStatusRefreshJob).toHaveBeenCalled());
+    await waitFor(() => {
+      expect(result.current.callsByAuthIndex.a1).toBe(6);
+      expect(result.current.cycleTotalTokensByAuthIndex.a1).toBe(123456);
     });
   });
 

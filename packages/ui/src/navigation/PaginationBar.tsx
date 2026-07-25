@@ -192,6 +192,7 @@ export function PaginationBar({
             {labels.rowsPerPage}
           </span>
           <Select
+            fullWidth={false}
             value={String(pageSize)}
             onChange={(value) => onPageSizeChange(Number(value))}
             options={pageSizeOptions.map((size) => ({

@@ -59,6 +59,7 @@ describe("aiAccountsStatusApi (authoritative contract)", () => {
             failure_total_30d: 10,
             cycle_request_total: 9,
             cycle_cost_total: 1.2,
+            cycle_total_tokens: 123456,
             weekly_quota_used_percent: 11,
             cycle_known: true,
           },
@@ -82,10 +83,25 @@ describe("aiAccountsStatusApi (authoritative contract)", () => {
     expect(snapshot.items[0]?.usage?.request_total).toBe(120);
     expect(snapshot.items[0]?.usage?.success_rate).toBe(0.9);
     expect(snapshot.items[0]?.usage?.history_complete).toBe(false);
+    expect(snapshot.items[0]?.usage?.cycle_total_tokens).toBe(123456);
     expect(snapshot.items[0]?.subject_scope).toBe("shared");
     expect(snapshot.items[0]?.current_tenant_binding_count).toBe(2);
     expect(snapshot.items[0]?.subscription_source).toBe("signed_claims");
     expect(snapshot.items[0]?.reset_credit_count).toBe(2);
+  });
+
+  test("normalizes camelCase cycle tokens and preserves missing versus zero", async () => {
+    const { aiAccountsStatusApi } = await import("../ai-accounts-status");
+    getMock.mockResolvedValue({
+      items: [
+        { auth_index: "auth-zero", quotas: [], usage: { cycleTotalTokens: 0 } },
+        { auth_index: "auth-missing", quotas: [], usage: {} },
+      ],
+    });
+
+    const snapshot = await aiAccountsStatusApi.getStatus();
+    expect(snapshot.items[0]?.usage?.cycle_total_tokens).toBe(0);
+    expect(snapshot.items[1]?.usage?.cycle_total_tokens).toBeNull();
   });
 
   test("filters status snapshot by auth_index query params", async () => {

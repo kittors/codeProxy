@@ -33,6 +33,7 @@ describe("mapAccountStatusToUi", () => {
           failure_total_30d: 8,
           cycle_request_total: 4,
           cycle_cost_total: 0.5,
+          cycle_total_tokens: 123456,
           weekly_quota_used_percent: 12,
           cycle_known: true,
         },
@@ -48,6 +49,7 @@ describe("mapAccountStatusToUi", () => {
     expect(patch.quotaByKey["77"]?.items[0]?.value).toBe("55%");
     expect(patch.quotaByKey["77"]?.resetCreditCount).toBe(3);
     expect(patch.cycleByKey["77"]?.calls).toBe(4);
+    expect(patch.cycleByKey["77"]?.cycleTotalTokens).toBe(123456);
     expect(patch.entityStats.auth_index[0]).toMatchObject({
       entity_name: "77",
       requests: 100,

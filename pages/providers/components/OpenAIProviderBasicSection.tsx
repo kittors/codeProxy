@@ -24,6 +24,16 @@ export function OpenAIProviderBasicSection({
   return (
     <div className="space-y-5">
       <SectionCard>
+        {openaiDraft.id ? (
+          <div className="mb-3 rounded-lg bg-slate-50 px-3 py-2 dark:bg-white/[0.04]">
+            <p className="text-xs font-semibold text-slate-500 dark:text-white/55">
+              {t("content_moderation.channel_id")}
+            </p>
+            <p className="mt-1 break-all font-mono text-xs text-slate-700 dark:text-white/75">
+              {openaiDraft.id}
+            </p>
+          </div>
+        ) : null}
         <div className="grid gap-3 md:grid-cols-2">
           <div className="space-y-2">
             <p className="text-sm font-semibold text-slate-900 dark:text-white">

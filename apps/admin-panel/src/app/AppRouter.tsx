@@ -1,9 +1,11 @@
 import { Suspense, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
+import { FileQuestion } from "lucide-react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@app/providers/AuthProvider";
 import { ProtectedRoute } from "@/app/guards/ProtectedRoute";
 import { DashboardLayout } from "@app/layout/DashboardLayout";
-import { ThemeProvider, ToastProvider } from "@code-proxy/ui";
+import { Button, ThemeProvider, ToastProvider } from "@code-proxy/ui";
 import { AutoUpdatePrompt } from "@app/update/AutoUpdatePrompt";
 import { ChunkLoadErrorBoundary } from "@/app/bootstrap/ChunkLoadErrorBoundary";
 import { dismissAppLoader } from "@/app/bootstrap/dismissAppLoader";
@@ -108,6 +110,30 @@ function AuthorizedEmbedPage({ path }: { path: string }) {
   return readyRoute(<EmbedPage />);
 }
 
+function StaleRoutePage() {
+  const { t } = useTranslation();
+
+  return (
+    <div className="mx-auto grid min-h-[60vh] max-w-xl place-items-center text-center">
+      <div>
+        <FileQuestion className="mx-auto mb-5 text-amber-500" size={48} />
+        <h2 className="text-2xl font-semibold text-slate-950 dark:text-white">
+          {t("shell.stale_route_title")}
+        </h2>
+        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+          {t("shell.stale_route_description")}
+        </p>
+        <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
+          {t("shell.stale_route_shortcut")}
+        </p>
+        <Button className="mt-6" variant="primary" onClick={() => window.location.reload()}>
+          {t("shell.stale_route_reload")}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 /** Must render Routes itself so embed <Route>s are direct children of <Routes>. */
 function AuthenticatedRoutes() {
   const { state } = useAuth();
@@ -181,9 +207,9 @@ function AuthenticatedRoutes() {
                     />
                   ))}
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                <Route path="*" element={readyRoute(<StaleRoutePage />)} />
               </Route>
             </Route>
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </Suspense>
       </ChunkLoadErrorBoundary>

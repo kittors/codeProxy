@@ -227,6 +227,7 @@ export function useProviderKeyEditor({
           ? []
           : undefined;
     const result: ProviderSimpleConfig | BedrockProviderConfig = {
+      ...(keyDraft.id.trim() ? { id: keyDraft.id.trim() } : {}),
       apiKey:
         editKeyType === "bedrock" && keyDraft.authMode === "sigv4"
           ? bedrockAccessKeyId

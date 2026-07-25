@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import { Form, FormField } from "../Form";
 import { TextInput } from "../Input";
 import { Textarea } from "../Textarea";
+import { ToggleSwitch } from "../ToggleSwitch";
 
 describe("FormField", () => {
   test("wires label, description, and control id for accessibility", () => {
@@ -88,6 +89,18 @@ describe("FormField", () => {
     );
     const input = screen.getByRole("textbox");
     expect(input.className).toMatch(/border-rose/);
+  });
+
+  test("wires FormField label and description to ToggleSwitch", () => {
+    render(
+      <FormField label="清除 API Key" description="保存后立即生效" htmlFor="clear-key">
+        <ToggleSwitch checked={false} onCheckedChange={() => undefined} />
+      </FormField>,
+    );
+
+    const toggle = screen.getByRole("switch", { name: "清除 API Key" });
+    expect(toggle).toHaveAttribute("id", "clear-key");
+    expect(toggle).toHaveAttribute("aria-describedby", "clear-key-description");
   });
 });
 

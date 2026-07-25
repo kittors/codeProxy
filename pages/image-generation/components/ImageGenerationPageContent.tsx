@@ -1009,6 +1009,7 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
               size="sm"
             />
             <Select
+              fullWidth={false}
               aria-label={t("image_generation.quality_label")}
               value={quality}
               onChange={(value) => setQuality(value as (typeof QUALITY_OPTIONS)[number])}
@@ -1020,6 +1021,7 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
               size="sm"
             />
             <Select
+              fullWidth={false}
               aria-label={t("image_generation.count_label")}
               value={String(count)}
               onChange={(value) => setCount(Number(value) as (typeof COUNT_OPTIONS)[number])}

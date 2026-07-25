@@ -91,6 +91,7 @@ export { Tabs, TabsList, TabsTrigger, TabsContent } from "./primitives/Tabs";
 export { Textarea } from "./primitives/Textarea";
 export type { TextareaProps } from "./primitives/Textarea";
 export { ToggleSwitch } from "./primitives/ToggleSwitch";
+export type { ToggleSwitchProps } from "./primitives/ToggleSwitch";
 
 export { ThemeProvider, useTheme, ThemeToggleButton } from "./theme/ThemeProvider";
 export { LanguageSelector } from "./theme/LanguageSelector";

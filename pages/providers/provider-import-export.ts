@@ -135,6 +135,7 @@ const normalizeEntryList = (
       if (!apiKey) return null;
       const headers = sortRecord(normalizeHeaders(entry.headers));
       return {
+        ...(normalizeString(entry.id) ? { id: normalizeString(entry.id)! } : {}),
         apiKey,
         ...(entry.disabled ? { disabled: true } : {}),
         ...(normalizeString(entry.proxyUrl) ? { proxyUrl: normalizeString(entry.proxyUrl)! } : {}),
@@ -179,6 +180,7 @@ const normalizeSimpleItem = (
 
   return {
     item: {
+      ...(normalizeString(value.id) ? { id: normalizeString(value.id)! } : {}),
       apiKey,
       ...(normalizeString(value.name) ? { name: normalizeString(value.name)! } : {}),
       ...(normalizeString(value.prefix) ? { prefix: normalizeString(value.prefix)! } : {}),
@@ -232,6 +234,7 @@ const normalizeBedrockItem = (
 
   return {
     item: {
+      ...(normalizeString(value.id) ? { id: normalizeString(value.id)! } : {}),
       apiKey: credential,
       authMode,
       ...(normalizeString(value.name) ? { name: normalizeString(value.name)! } : {}),
@@ -283,6 +286,7 @@ const normalizeOpenAIItem = (
 
   return {
     item: {
+      ...(normalizeString(value.id) ? { id: normalizeString(value.id)! } : {}),
       name,
       ...(value.disabled === true ? { disabled: true } : {}),
       ...(normalizeString(value["base-url"] ?? value.baseUrl)

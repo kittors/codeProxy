@@ -33,7 +33,7 @@ function normalizeSelection(options: MultiSelectOption[], selected: string[]): s
   const next = selected.filter(
     (item, index) => allowed.has(item) && selected.indexOf(item) === index,
   );
-  if (next.length === 0 || next.length === options.length) {
+  if (next.length === 0 || (options.length > 1 && next.length === options.length)) {
     return [];
   }
   return next;

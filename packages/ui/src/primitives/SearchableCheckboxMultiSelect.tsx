@@ -33,6 +33,8 @@ export interface SearchableCheckboxMultiSelectOption {
   value: string;
   label: ReactNode;
   searchText?: string;
+  /** Full text shown by the native tooltip when the rendered label is truncated. */
+  title?: string;
   /** Optional fixed trailing content, such as a request count. */
   trailing?: ReactNode;
 }
@@ -650,7 +652,10 @@ export function SearchableCheckboxMultiSelect({
                         </span>
                         <span
                           className="min-w-0 flex-1 truncate text-left"
-                          title={typeof option.label === "string" ? option.label : undefined}
+                          title={
+                            option.title ??
+                            (typeof option.label === "string" ? option.label : undefined)
+                          }
                         >
                           {option.label}
                         </span>

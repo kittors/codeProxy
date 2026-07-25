@@ -10,6 +10,7 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
+  useLocalStorage,
   useToast,
 } from "@code-proxy/ui";
 import { quotaApi, type AuthFileItem } from "@code-proxy/api-client";
@@ -42,8 +43,14 @@ import {
   resolveQuotaProvider,
 } from "@features/quota-preview/quota-fetch";
 import {
+  alignAuthFilesPageSizeToColumns,
+  AUTH_FILES_CARD_COLUMNS_KEY,
+  AUTH_FILES_PAGE_SIZE,
+  AUTH_FILES_PAGE_SIZE_KEY,
   AUTH_FILE_STATUS_FILTERS,
+  DEFAULT_AUTH_FILES_CARD_COLUMNS,
   getActiveCacheTenantId,
+  normalizeAuthFilesCardColumns,
   normalizeAuthIndexValue,
   normalizeProviderKey,
   normalizeQuotaAutoRefreshMs,
@@ -54,6 +61,7 @@ import {
   resolveProviderLabel,
   writeAuthFilesUiState,
   type AuthFileStatusFilter,
+  type AuthFilesCardColumns,
   type OAuthDialogTab,
 } from "@code-proxy/domain";
 
@@ -195,6 +203,16 @@ export function AuthFilesPage() {
   const [statusFilter, setStatusFilter] = useState<AuthFileStatusFilter>("all");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [cardColumnsRaw, setCardColumns] = useLocalStorage<AuthFilesCardColumns>(
+    AUTH_FILES_CARD_COLUMNS_KEY,
+    DEFAULT_AUTH_FILES_CARD_COLUMNS,
+  );
+  const cardColumns = normalizeAuthFilesCardColumns(cardColumnsRaw);
+  const [pageSizeRaw, setPageSize] = useLocalStorage<number>(
+    AUTH_FILES_PAGE_SIZE_KEY,
+    AUTH_FILES_PAGE_SIZE,
+  );
+  const pageSize = alignAuthFilesPageSizeToColumns(pageSizeRaw, cardColumns);
   const [selectedFileNames, setSelectedFileNames] = useState<string[]>([]);
   const [proxyPoolEntries, setProxyPoolEntries] = useState<ProxyPoolEntry[]>(
     [],
@@ -213,6 +231,14 @@ export function AuthFilesPage() {
   const previousConfigModalTabRef = useRef<AuthFilesConfigModalTab | null>(
     null,
   );
+
+  useEffect(() => {
+    if (cardColumnsRaw !== cardColumns) setCardColumns(cardColumns);
+  }, [cardColumns, cardColumnsRaw, setCardColumns]);
+
+  useEffect(() => {
+    if (pageSizeRaw !== pageSize) setPageSize(pageSize);
+  }, [pageSize, pageSizeRaw, setPageSize]);
 
   useEffect(() => {
     filesRef.current = files;
@@ -447,6 +473,7 @@ export function AuthFilesPage() {
     statusFilter,
     search,
     page,
+    pageSize,
     setPage,
     selectedFileNames,
     setSelectedFileNames,
@@ -484,6 +511,7 @@ export function AuthFilesPage() {
     forceRefreshPage,
     runQuotaRefreshBatch,
     callsByAuthIndex,
+    cycleTotalTokensByAuthIndex,
     cycleBudgetByAuthIndex,
     statusUsageReady,
     statusUsageLoading,
@@ -871,9 +899,14 @@ export function AuthFilesPage() {
         pageItems={pageItems}
         fileColumns={fileColumns}
         filesViewMode={filesViewMode}
+        cardColumns={cardColumns}
+        setCardColumns={setCardColumns}
+        pageSize={pageSize}
+        setPageSize={setPageSize}
         selectedFileNameSet={selectedFileNameSet}
         quotaByFileName={quotaByFileName}
         cycleCallsByAuthIndex={callsByAuthIndex}
+        cycleTotalTokensByAuthIndex={cycleTotalTokensByAuthIndex}
         cycleBudgetByAuthIndex={cycleBudgetByAuthIndex}
         statusUsageLoading={statusUsageLoading}
         resolveQuotaProvider={resolveQuotaProvider}

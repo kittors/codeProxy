@@ -121,6 +121,17 @@ const testMenus: MenuIdentity[] = [
     sort_order: 10,
   }),
   menu({
+    code: "runtime.content-moderation",
+    parent_code: "group.access",
+    type: "menu",
+    path: "/access/content-moderation",
+    component: "content-moderation",
+    label_key: "shell.nav_content_moderation",
+    icon: "shield-alert",
+    permission_code: "content_moderation.read",
+    sort_order: 45,
+  }),
+  menu({
     code: "group.models",
     type: "directory",
     path: "/models",
@@ -403,6 +414,45 @@ describe("AppShell route progress", () => {
     fireEvent.click(runtimeGroup);
     expect(runtimeGroup).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByRole("link", { name: /Request Logs|请求日志/i })).not.toBeInTheDocument();
+  });
+
+  test("places content moderation under access and uses the shield-alert icon", () => {
+    renderShell("/access/content-moderation");
+
+    const accessGroup = screen.getByRole("button", {
+      name: /Access(?: & Credentials)?|接入(?:管理|与凭证)/i,
+    });
+    const runtimeGroup = screen.getByRole("button", {
+      name: /Operations|Observability|运行监控|运行观测/i,
+    });
+    expect(accessGroup).toHaveAttribute("aria-expanded", "true");
+
+    const moderation = screen.getByRole("link", {
+      name: /Content Moderation|内容审核|Модерация контента/i,
+    });
+    const accessItems = document.getElementById(accessGroup.getAttribute("aria-controls") ?? "");
+    const runtimeItems = document.getElementById(runtimeGroup.getAttribute("aria-controls") ?? "");
+    expect(accessItems).toContainElement(moderation);
+    expect(runtimeItems).not.toContainElement(moderation);
+    expect(moderation).toHaveAttribute("href", "/access/content-moderation");
+    expect(moderation).toHaveAttribute("aria-current", "page");
+    expect(moderation.querySelector("svg")).toHaveClass("lucide-shield-alert");
+    expect(
+      screen.getByRole("heading", {
+        name: /Content Moderation|内容审核|Модерация контента/i,
+      }),
+    ).toBeInTheDocument();
+  });
+
+  test("keeps the legacy moderation path title as a stale-shell safety fallback", () => {
+    authPrincipal = defaultPrincipal({ menus: [] });
+    renderShell("/runtime/content-moderation");
+
+    expect(
+      screen.getByRole("heading", {
+        name: /Content Moderation|内容审核|Модерация контента/i,
+      }),
+    ).toBeInTheDocument();
   });
 
   test("renders system info as a top-level leaf after all nav groups", () => {

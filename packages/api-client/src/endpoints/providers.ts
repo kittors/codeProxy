@@ -58,6 +58,7 @@ export const providersApi = {
       .map((item) => {
         if (!isRecord(item)) return null;
         if (isOauthBackedProviderRow(item)) return null;
+        const id = normalizeString(item.id) ?? undefined;
         const apiKey = normalizeString(item["api-key"] ?? item.apiKey) ?? "";
         if (!apiKey) return null;
         const name = normalizeString(item.name) ?? undefined;
@@ -72,6 +73,7 @@ export const providersApi = {
           item["excluded-models"] ?? item.excludedModels,
         );
         return {
+          ...(id ? { id } : {}),
           apiKey,
           ...(name ? { name } : {}),
           ...(prefix ? { prefix } : {}),
@@ -103,6 +105,7 @@ export const providersApi = {
       .map((item) => {
         if (!isRecord(item)) return null;
         if (isOauthBackedProviderRow(item)) return null;
+        const id = normalizeString(item.id) ?? undefined;
         const apiKey = normalizeString(item["api-key"] ?? item.apiKey) ?? "";
         if (!apiKey) return null;
         const name = normalizeString(item.name) ?? undefined;
@@ -119,6 +122,7 @@ export const providersApi = {
           item["excluded-models"] ?? item.excludedModels,
         );
         return {
+          ...(id ? { id } : {}),
           apiKey,
           ...(name ? { name } : {}),
           ...(prefix ? { prefix } : {}),
@@ -151,6 +155,7 @@ export const providersApi = {
       .map((item) => {
         if (!isRecord(item)) return null;
         if (isOauthBackedProviderRow(item)) return null;
+        const id = normalizeString(item.id) ?? undefined;
         const apiKey = normalizeString(item["api-key"] ?? item.apiKey) ?? "";
         if (!apiKey) return null;
         const name = normalizeString(item.name) ?? undefined;
@@ -174,6 +179,7 @@ export const providersApi = {
         const authCookie =
           normalizeString(item["auth-cookie"] ?? item.authCookie) ?? undefined;
         return {
+          ...(id ? { id } : {}),
           apiKey,
           ...(item.disabled === true ? { disabled: true } : {}),
           ...(name ? { name } : {}),
@@ -223,6 +229,7 @@ export const providersApi = {
       .map((item) => {
         if (!isRecord(item)) return null;
         if (isOauthBackedProviderRow(item)) return null;
+        const id = normalizeString(item.id) ?? undefined;
         const apiKey = normalizeString(item["api-key"] ?? item.apiKey) ?? "";
         if (!apiKey) return null;
         const name = normalizeString(item.name) ?? undefined;
@@ -246,6 +253,7 @@ export const providersApi = {
         const authCookie =
           normalizeString(item["auth-cookie"] ?? item.authCookie) ?? undefined;
         return {
+          ...(id ? { id } : {}),
           apiKey,
           ...(item.disabled === true ? { disabled: true } : {}),
           ...(name ? { name } : {}),
@@ -295,6 +303,7 @@ export const providersApi = {
       .map((item) => {
         if (!isRecord(item)) return null;
         if (isOauthBackedProviderRow(item)) return null;
+        const id = normalizeString(item.id) ?? undefined;
         const apiKey = normalizeString(item["api-key"] ?? item.apiKey) ?? "";
         if (!apiKey) return null;
         const name = normalizeString(item.name) ?? undefined;
@@ -318,6 +327,7 @@ export const providersApi = {
         const authCookie =
           normalizeString(item["auth-cookie"] ?? item.authCookie) ?? undefined;
         return {
+          ...(id ? { id } : {}),
           apiKey,
           ...(item.disabled === true ? { disabled: true } : {}),
           ...(name ? { name } : {}),
@@ -403,6 +413,7 @@ export const providersApi = {
       .map((item) => {
         if (!isRecord(item)) return null;
         if (isOauthBackedProviderRow(item)) return null;
+        const id = normalizeString(item.id) ?? undefined;
         const apiKey = normalizeString(item["api-key"] ?? item.apiKey) ?? "";
         if (!apiKey) return null;
         const name = normalizeString(item.name) ?? undefined;
@@ -422,6 +433,7 @@ export const providersApi = {
           item["skip-anthropic-processing"] === true ||
           item.skipAnthropicProcessing === true;
         return {
+          ...(id ? { id } : {}),
           apiKey,
           ...(name ? { name } : {}),
           ...(prefix ? { prefix } : {}),
@@ -455,6 +467,7 @@ export const providersApi = {
       .map((item) => {
         if (!isRecord(item)) return null;
         if (isOauthBackedProviderRow(item)) return null;
+        const id = normalizeString(item.id) ?? undefined;
         const rawMode =
           normalizeString(item["auth-mode"] ?? item.authMode) ?? "sigv4";
         const authMode: BedrockAuthMode =
@@ -491,6 +504,7 @@ export const providersApi = {
           item["excluded-models"] ?? item.excludedModels,
         );
         return {
+          ...(id ? { id } : {}),
           apiKey: credential,
           authMode,
           ...(name ? { name } : {}),
@@ -529,6 +543,7 @@ export const providersApi = {
       .map((item) => {
         if (!isRecord(item)) return null;
         if (isOauthBackedProviderRow(item)) return null;
+        const id = normalizeString(item.id) ?? undefined;
         const apiKey = normalizeString(item["api-key"] ?? item.apiKey) ?? "";
         if (!apiKey) return null;
         const name = normalizeString(item.name) ?? undefined;
@@ -542,6 +557,7 @@ export const providersApi = {
         const headers = normalizeHeaders(item.headers);
         const models = normalizeModels(item.models);
         return {
+          ...(id ? { id } : {}),
           apiKey,
           ...(name ? { name } : {}),
           ...(prefix ? { prefix } : {}),
@@ -573,6 +589,7 @@ export const providersApi = {
       .map((item) => {
         if (!isRecord(item)) return null;
         if (isOauthBackedProviderRow(item)) return null;
+        const id = normalizeString(item.id) ?? undefined;
         const name = normalizeString(item.name) ?? "";
         if (!name) return null;
         const disabled = item.disabled === true;
@@ -592,6 +609,7 @@ export const providersApi = {
         const testModel =
           normalizeString(item["test-model"] ?? item.testModel) ?? undefined;
         return {
+          ...(id ? { id } : {}),
           name,
           ...(disabled ? { disabled } : {}),
           ...(baseUrl ? { baseUrl } : {}),

@@ -292,6 +292,13 @@ vi.mock("../hooks/useApiKeyUsageView", () => ({
     usageViewName: "",
     usageLoading: false,
     usageTotalCount: 0,
+    usageSummary: {
+      inputTokens: 0,
+      outputTokens: 0,
+      totalTokens: 0,
+      requestCount: 0,
+      successRate: 0,
+    },
     usageCurrentPage: 1,
     usagePageSize: 20,
     setUsagePageSize: vi.fn(),

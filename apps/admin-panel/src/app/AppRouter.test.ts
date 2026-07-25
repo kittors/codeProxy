@@ -16,6 +16,9 @@ describe("AppRouter", () => {
     const identityRoute = readRepoModule("pages/identity-fingerprint/route.tsx");
     const ccSwitchRoute = readRepoModule("pages/ccswitch-import-settings/route.tsx");
     const apiKeyPermissionsRoute = readRepoModule("pages/api-key-permissions/route.tsx");
+    const contentModerationRoute = readRepoModule("pages/content-moderation/route.tsx");
+    const authProvider = readAppModule("app/providers/AuthProvider.tsx");
+    const appShell = readAppModule("app/layout/AppShell.tsx");
 
     expect(source).toContain("pageRoutes");
     expect(modelsRoute).toMatch(/path:\s*"\/models\/catalog"/);
@@ -51,6 +54,19 @@ describe("AppRouter", () => {
     expect(apiKeyPermissionsRoute).toContain(
       '{ from: "/system/api-key-permissions", to: "/access/api-key-permissions" }',
     );
+
+    expect(contentModerationRoute).toMatch(/path:\s*"\/access\/content-moderation"/);
+    expect(contentModerationRoute).toContain(
+      '{ from: "/runtime/content-moderation", to: "/access/content-moderation" }',
+    );
+    expect(contentModerationRoute).toContain(
+      '{ from: "/manage/runtime/content-moderation", to: "/access/content-moderation" }',
+    );
+    expect(authProvider).toContain('code: "runtime.content-moderation"');
+    expect(authProvider).toContain('parent_code: "group.access"');
+    expect(authProvider).toContain('path: "/access/content-moderation"');
+    expect(appShell).toContain('pathname.startsWith("/access/content-moderation")');
+    expect(appShell).toContain('pathname.startsWith("/runtime/content-moderation")');
   });
 
   test("keeps the HTML app loader as the only initial page loader", () => {
@@ -69,5 +85,10 @@ describe("AppRouter", () => {
     expect(routerSource).not.toContain('variant="initial"');
     expect(routerSource).not.toContain('variant="inline"');
     expect(protectedRouteSource).toContain("if (hasAppLoader()) return null");
+    expect(routerSource).not.toContain(
+      '<Route path="*" element={<Navigate to="/dashboard" replace />} />',
+    );
+    expect(routerSource).toContain('<Route path="*" element={readyRoute(<StaleRoutePage />)} />');
+    expect(routerSource).toContain("window.location.reload()");
   });
 });

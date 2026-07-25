@@ -132,6 +132,8 @@ export interface AuthFileIdentityFingerprintSummary {
 }
 
 export interface AuthFileItem extends TagDisplayFields {
+  /** Stable backend auth-file channel id used by moderation bindings. */
+  id?: string;
   name: string;
   type?: AuthFileType | string;
   provider?: string;
@@ -279,6 +281,8 @@ export interface ProviderModel {
 }
 
 export interface ProviderApiKeyEntry {
+  /** Stable backend channel id used by moderation bindings. */
+  id?: string;
   apiKey: string;
   disabled?: boolean;
   proxyUrl?: string;
@@ -287,6 +291,8 @@ export interface ProviderApiKeyEntry {
 }
 
 export interface OpenAIProvider {
+  /** Stable backend provider channel id used by moderation bindings. */
+  id?: string;
   name: string;
   disabled?: boolean;
   baseUrl?: string;
@@ -299,6 +305,8 @@ export interface OpenAIProvider {
 }
 
 export interface ProviderSimpleConfig {
+  /** Stable backend provider-key channel id used by moderation bindings. */
+  id?: string;
   apiKey: string;
   disabled?: boolean;
   name?: string;
@@ -448,6 +456,7 @@ export interface AiAccountUsageSummaryDto {
   failure_total_30d?: number | null;
   cycle_request_total?: number | null;
   cycle_cost_total?: number | null;
+  cycle_total_tokens?: number | null;
   cycle_known?: boolean;
   cycle_start?: string | null;
   projected_since?: string | null;

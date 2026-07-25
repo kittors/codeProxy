@@ -9,6 +9,9 @@ type DetailModalProps = ComponentProps<typeof AuthFileDetailModal>;
 const chartOptions = vi.hoisted(() => [] as any[]);
 const chartEvents = vi.hoisted(() => [] as any[]);
 const chartProps = vi.hoisted(() => [] as any[]);
+const moderationProfileProps = vi.hoisted(
+  () => [] as { channelType: string; channelId?: string }[],
+);
 
 vi.mock("@code-proxy/ui", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@code-proxy/ui")>()),
@@ -36,6 +39,13 @@ vi.mock("@code-proxy/ui", async (importOriginal) => ({
         chart
       </div>
     );
+  },
+}));
+
+vi.mock("@pages/content-moderation/components/ModerationProfileSelect", () => ({
+  ModerationProfileSelect: (props: { channelType: string; channelId?: string }) => {
+    moderationProfileProps.push(props);
+    return <div data-testid="moderation-profile-select" />;
   },
 }));
 
@@ -201,6 +211,7 @@ const renderDetailModal = (overrides: Partial<DetailModalProps> = {}) => {
       request_total: 3,
       cycle_request_total: 2,
       cycle_cost_total: 1.2345,
+      cycle_total_tokens: 1234567,
       weekly_quota_used_percent: 8,
       cycle_start: "2026-04-27T16:01:21Z",
       daily_usage: [
@@ -290,6 +301,27 @@ describe("AuthFileDetailModal", () => {
     chartOptions.length = 0;
     chartEvents.length = 0;
     chartProps.length = 0;
+    moderationProfileProps.length = 0;
+  });
+
+  test("uses the stable auth file id for content moderation bindings", () => {
+    renderDetailModal({
+      detailTab: "fields",
+      detailFile: {
+        id: "auth-stable-id",
+        auth_index: "auth-hash-index",
+        authIndex: "auth-camel-hash-index",
+        name: "codex.json",
+        type: "codex",
+        size: 256,
+      },
+    });
+
+    expect(screen.getByTestId("moderation-profile-select")).toBeInTheDocument();
+    expect(moderationProfileProps.at(-1)).toMatchObject({
+      channelType: "auth_file",
+      channelId: "auth-stable-id",
+    });
   });
 
   test("uses usage trend as the primary view for Codex files", () => {
@@ -305,6 +337,7 @@ describe("AuthFileDetailModal", () => {
     expect(screen.queryByText("Last 7 days requests")).not.toBeInTheDocument();
     expectSummaryCard("Current weekly cycle", "2");
     expectSummaryCard("Current cycle cost", "$1.2345");
+    expectSummaryCard("Current cycle tokens", "1,234,567");
     expectSummaryCard("Predicted 5-hour window quota", "$0.0500");
     expectSummaryCard("Predicted weekly window quota", "$15.4312");
     expectSummaryCard("Weekly quota used", "8%");
@@ -335,6 +368,7 @@ describe("AuthFileDetailModal", () => {
     });
 
     expectSummaryCard("Current weekly cycle", "2");
+    expectSummaryCard("Current cycle tokens", "--");
     expect(screen.queryByText("Current cycle cost")).not.toBeInTheDocument();
     expect(screen.queryByText("Predicted 5-hour window quota")).not.toBeInTheDocument();
     expect(screen.queryByText("Predicted weekly window quota")).not.toBeInTheDocument();
@@ -395,7 +429,7 @@ describe("AuthFileDetailModal", () => {
     renderDetailModal({ detailTrend: null, detailTrendLoading: true });
 
     const loading = screen.getByTestId("auth-file-trend-loading");
-    expect(loading.querySelectorAll(".animate-pulse")).toHaveLength(9);
+    expect(loading.querySelectorAll(".animate-pulse")).toHaveLength(10);
     expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
     expect(screen.queryByTestId("auth-file-trend-chart")).not.toBeInTheDocument();
     expect(chartOptions).toHaveLength(0);

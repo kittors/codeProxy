@@ -264,6 +264,11 @@ export function useAuthFilesStatusState({
           typeof snapshot.cycleCostTotal === "number" && Number.isFinite(snapshot.cycleCostTotal)
             ? snapshot.cycleCostTotal
             : null,
+        cycleTotalTokens:
+          typeof snapshot.cycleTotalTokens === "number" &&
+          Number.isFinite(snapshot.cycleTotalTokens)
+            ? snapshot.cycleTotalTokens
+            : null,
         weeklyQuotaUsedPercent:
           typeof snapshot.weeklyQuotaUsedPercent === "number" &&
           Number.isFinite(snapshot.weeklyQuotaUsedPercent)
@@ -358,6 +363,11 @@ export function useAuthFilesStatusState({
           typeof snapshot.cycleCostTotal === "number" && Number.isFinite(snapshot.cycleCostTotal)
             ? snapshot.cycleCostTotal
             : null,
+        cycleTotalTokens:
+          typeof snapshot.cycleTotalTokens === "number" &&
+          Number.isFinite(snapshot.cycleTotalTokens)
+            ? snapshot.cycleTotalTokens
+            : null,
         weeklyQuotaUsedPercent:
           typeof snapshot.weeklyQuotaUsedPercent === "number" &&
           Number.isFinite(snapshot.weeklyQuotaUsedPercent)
@@ -408,12 +418,21 @@ export function useAuthFilesStatusState({
       const tenantId = getActiveCacheTenantId();
       const current = readAuthFilesDataCache(tenantId);
       if (!current || !Array.isArray(current.files)) return;
-      const cycleCache: Record<string, { calls: number; cycleCostTotal: number | null; weeklyQuotaUsedPercent: number | null }> = {};
+      const cycleCache: Record<
+        string,
+        {
+          calls: number;
+          cycleCostTotal: number | null;
+          cycleTotalTokens: number | null;
+          weeklyQuotaUsedPercent: number | null;
+        }
+      > = {};
       for (const [authIndex, snapshot] of Object.entries(cycleByAuthIndex)) {
         if (typeof snapshot.calls !== "number" || !Number.isFinite(snapshot.calls)) continue;
         cycleCache[authIndex] = {
           calls: snapshot.calls,
           cycleCostTotal: snapshot.cycleCostTotal,
+          cycleTotalTokens: snapshot.cycleTotalTokens,
           weeklyQuotaUsedPercent: snapshot.weeklyQuotaUsedPercent,
         };
       }
@@ -563,6 +582,11 @@ export function useAuthFilesStatusState({
                 typeof cycle.cycleCostTotal === "number" && Number.isFinite(cycle.cycleCostTotal)
                   ? cycle.cycleCostTotal
                   : (previous?.cycleCostTotal ?? null),
+              cycleTotalTokens:
+                typeof cycle.cycleTotalTokens === "number" &&
+                Number.isFinite(cycle.cycleTotalTokens)
+                  ? cycle.cycleTotalTokens
+                  : (previous?.cycleTotalTokens ?? null),
               weeklyQuotaUsedPercent:
                 typeof cycle.weeklyQuotaUsedPercent === "number" &&
                 Number.isFinite(cycle.weeklyQuotaUsedPercent)
@@ -1446,6 +1470,17 @@ export function useAuthFilesStatusState({
     return result;
   }, [cycleByAuthIndex]);
 
+  const cycleTotalTokensByAuthIndex: Record<string, number | null> = useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(cycleByAuthIndex).map(([authIndex, snapshot]) => [
+          authIndex,
+          snapshot.cycleTotalTokens,
+        ]),
+      ),
+    [cycleByAuthIndex],
+  );
+
   const hasVisibleStatusTargets = pageItems.some((file) => resolveFileAuthIndex(file));
   const statusUsageReady =
     !hasVisibleStatusTargets ||
@@ -1504,6 +1539,7 @@ export function useAuthFilesStatusState({
     statusUsageLoading,
     refreshingPage,
     callsByAuthIndex,
+    cycleTotalTokensByAuthIndex,
     cycleBudgetByAuthIndex,
     collectQuotaFetchTargets: (): { file: AuthFileItem; provider: QuotaProvider }[] => [],
   };

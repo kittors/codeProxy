@@ -268,6 +268,18 @@ const LEGACY_SERVICE_MENUS: MenuIdentity[] = [
     permission_code: "api_key_profiles.read",
     sort_order: 40,
   }),
+  // Stable code matches CliRelay while the page now belongs to Access & Credentials.
+  menu({
+    code: "runtime.content-moderation",
+    parent_code: "group.access",
+    type: "menu",
+    path: "/access/content-moderation",
+    component: "content-moderation",
+    label_key: "shell.nav_content_moderation",
+    icon: "shield-alert",
+    permission_code: "content_moderation.read",
+    sort_order: 45,
+  }),
   menu({
     code: "access.ccswitch",
     parent_code: "group.access",

@@ -133,6 +133,11 @@ export function OpenAIProvidersTab({
                 onEdit={canWrite ? () => openOpenAIEditor(idx) : undefined}
                 onDelete={canWrite ? () => confirmDelete(idx) : undefined}
               >
+                {provider.id ? (
+                  <p className="mt-1 truncate font-mono text-xs text-slate-500 dark:text-white/50" title={provider.id}>
+                    ID: {provider.id}
+                  </p>
+                ) : null}
                 {provider.prefix ? (
                   <p className="mt-1 truncate font-mono text-xs text-slate-700 dark:text-slate-200">
                     prefix: {provider.prefix}

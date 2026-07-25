@@ -155,6 +155,7 @@ export const normalizeDiscoveredModels = (
 };
 
 export type ProviderKeyDraft = {
+  id: string;
   name: string;
   apiKey: string;
   disabled: boolean;
@@ -240,6 +241,7 @@ export const buildProviderKeyDraft = (
   const bedrockInput = hasBedrockFields(input) ? input : null;
 
   return {
+    id: input?.id ?? "",
     name: input?.name ?? "",
     apiKey: input?.apiKey ?? "",
     disabled: input?.disabled === true,
@@ -265,6 +267,7 @@ export const buildProviderKeyDraft = (
 };
 
 export type OpenAIDraft = {
+  id: string;
   name: string;
   disabled: boolean;
   baseUrl: string;
@@ -274,6 +277,8 @@ export type OpenAIDraft = {
   testModel: string;
   apiKeyEntries: {
     apiKey: string;
+    /** Stable backend provider-key channel id. */
+    channelId?: string;
     disabled: boolean;
     proxyUrl: string;
     proxyId: string;
@@ -286,6 +291,7 @@ export type OpenAIDraft = {
 export const buildOpenAIDraft = (
   input?: OpenAIProvider | null,
 ): OpenAIDraft => ({
+  id: input?.id ?? "",
   name: input?.name ?? "",
   disabled: input?.disabled === true,
   baseUrl: input?.baseUrl ?? "",
@@ -297,6 +303,7 @@ export const buildOpenAIDraft = (
     Array.isArray(input?.apiKeyEntries) && input.apiKeyEntries.length
       ? input.apiKeyEntries.map((entry, idx) => ({
           id: `key-${idx}-${entry.apiKey}`,
+          ...(entry.id ? { channelId: entry.id } : {}),
           apiKey: entry.apiKey ?? "",
           disabled: entry.disabled === true,
           proxyUrl: entry.proxyUrl ?? "",
