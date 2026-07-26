@@ -791,10 +791,8 @@
     "calls_count": "{{count}} calls",
     "identity_shared_policy_confirm": "This changes the identity policy for every credential attached to the same physical AI account. Continue?",
     "identity_policy_revision_conflict": "The identity policy changed elsewhere. Refresh the account detail and try again.",
-    "cycle_calls_count": "Cycle {{count}}",
-    "cycle_calls_unknown": "Cycle --",
-    "cycle_tokens_count": "Cycle tokens {{count}}",
-    "cycle_tokens_unknown": "Cycle tokens --",
+    "cycle_calls_count": "Cycle {{value}}",
+    "cycle_tokens_count": "Cycle tokens {{value}}",
     "col_cycle_calls": "Cycle calls",
     "col_lifetime_calls": "Lifetime calls",
     "col_subject_scope": "Account scope",
@@ -1040,6 +1038,7 @@
     "seven_day_opus": "7-day Opus",
     "seven_day_sonnet": "7-day Sonnet",
     "seven_day_cowork": "7-day Cowork",
+    "model_weekly": "7-day {{name}}",
     "iguana_necktie": "Iguana Necktie",
     "extra_usage_label": "Extra Usage"
   },
@@ -2164,6 +2163,7 @@
     "channels_title": "Availability",
     "channels_description": "When no usable codex OAuth auth is configured, the page shows an unavailable hint and disables testing.",
     "channels_empty": "No channels are currently available for `gpt-image-2`.",
+    "channels_error": "Could not check channel availability for `gpt-image-2`. Verify you have the image-generation permission, then reload.",
     "test_title": "Test Generation",
     "test_description": "Open the test modal, enter a prompt, and run a live image generation check.",
     "open_test_button": "Test Generation",
@@ -3306,7 +3306,12 @@
     "total_resets": "Total resets",
     "reset_password": "Reset password",
     "other_limits_profile_readonly_hint": "Request and realtime limits come from {{profile}} and are read-only here. The lifetime spending limit remains account-specific.",
-    "other_limits_direct_hint": "No permission profile is selected. Edit request and realtime limits directly; 0 means unlimited."
+    "other_limits_direct_hint": "No permission profile is selected. Edit request and realtime limits directly; 0 means unlimited.",
+    "username_placeholder": "Leave empty to generate from nickname",
+    "password_placeholder": "Leave empty to generate randomly; copy it right away",
+    "secrets_one_time_hint": "The plaintext password / API key cannot be viewed again after leaving this window.",
+    "secrets_copied_close": "Copied, close",
+    "reset_password_title": "Reset Password"
   },
   "apikey_lookup": {
     "available_models": "Model Plaza",

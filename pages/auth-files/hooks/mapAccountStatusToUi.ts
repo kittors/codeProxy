@@ -8,7 +8,13 @@ import {
   type AuthFileCycleBudgetStats,
 } from "@code-proxy/domain";
 import type { QuotaItem, QuotaState } from "@features/quota-preview/quota-types";
-import type { AuthFileCycleUsageSnapshot } from "./useAuthFilesCycleUsageState";
+
+export type AuthFileCycleUsageSnapshot = {
+  calls: number | null;
+  cycleCostTotal: number | null;
+  cycleTotalTokens: number | null;
+  weeklyQuotaUsedPercent: number | null;
+};
 
 const parseTimestampMs = (value: string | null | undefined): number | undefined => {
   if (!value) return undefined;
@@ -115,9 +121,10 @@ export const mapQuotaItemDto = (item: AiAccountQuotaItemDto): QuotaItem => {
   return {
     key: item.quota_key,
     label: item.quota_label ?? item.quota_key,
+    // Clamp at the boundary: group averages consume percent directly.
     percent:
       typeof item.percent === "number" && Number.isFinite(item.percent)
-        ? item.percent
+        ? Math.min(100, Math.max(0, item.percent))
         : null,
     value: item.value,
     resetAtMs,

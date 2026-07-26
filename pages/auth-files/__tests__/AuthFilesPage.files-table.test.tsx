@@ -160,20 +160,7 @@ vi.mock("@code-proxy/ui", async (importOriginal) => ({
   EChart: ({ className }: { className?: string }) => <div className={className}>chart</div>,
 }));
 
-const padDatePart = (value: number): string => String(value).padStart(2, "0");
 
-const toDateTimeLocalInput = (date: Date): string =>
-  [
-    date.getFullYear(),
-    "-",
-    padDatePart(date.getMonth() + 1),
-    "-",
-    padDatePart(date.getDate()),
-    "T",
-    padDatePart(date.getHours()),
-    ":",
-    padDatePart(date.getMinutes()),
-  ].join("");
 
 const decodeBase64UrlJson = (part: string): Record<string, unknown> =>
   JSON.parse(Buffer.from(part, "base64url").toString("utf8")) as Record<string, unknown>;
@@ -2425,11 +2412,11 @@ describe("AuthFilesPage files table", () => {
     const title = await screen.findByText("user@example.com");
     const card = title.closest("section");
     expect(card).not.toBeNull();
-    // Prefer request_total over a misleading cycle_request_total of 0 when cycle_known is false.
-    expect(await within(card as HTMLElement).findByText("Cycle --")).toBeInTheDocument();
-    expect(within(card as HTMLElement).getByText("Cycle tokens --")).toBeInTheDocument();
+    // Unknown weekly cycle: hide the cycle chips entirely instead of rendering "--" noise.
+    expect(await within(card as HTMLElement).findByText("SUPERGROK")).toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText("Cycle --")).not.toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText("Cycle tokens --")).not.toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText("Lifetime 116")).not.toBeInTheDocument();
-    expect(within(card as HTMLElement).getByText("SUPERGROK")).toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText("Shared account")).not.toBeInTheDocument();
     expect(mocks.getStatus).toHaveBeenCalled();
   });
@@ -3030,7 +3017,9 @@ describe("AuthFilesPage files table", () => {
     expect(card).not.toBeNull();
     expect(within(card as HTMLElement).queryByText(/^codex$/i)).not.toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText("Plan Pro")).not.toBeInTheDocument();
-    expect(within(card as HTMLElement).getByText("Cycle --")).toBeInTheDocument();
+    // Unknown cycle data renders no "--" chip; the quota section is still present.
+    expect(within(card as HTMLElement).queryByText("Cycle --")).not.toBeInTheDocument();
+    expect(within(card as HTMLElement).getByTestId("auth-file-card-quota")).toBeInTheDocument();
   });
 
   test("table view hides default auth-file badges when display tags are empty", async () => {

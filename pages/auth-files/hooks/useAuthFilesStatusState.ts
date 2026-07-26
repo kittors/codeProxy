@@ -19,16 +19,16 @@ import {
   type EntityStatsResponse,
 } from "@code-proxy/api-client";
 import {
-  AUTH_FILES_FILES_VIEW_MODE_KEY,
   AUTH_FILES_QUOTA_AUTO_REFRESH_KEY,
   getActiveCacheTenantId,
   normalizeAuthIndexValue,
   parseAdditionalQuotaWindowLabel,
   readAndMigrateQuotaAutoRefreshMs,
   readAuthFilesDataCache,
+  translateParameterizedQuotaLabel,
+  translateXaiQuotaLabel,
   writeAuthFilesDataCache,
   type AuthFileCycleBudgetStats,
-  type FilesViewMode,
 } from "@code-proxy/domain";
 import { useInterval, useLocalStorage, useToast } from "@code-proxy/ui";
 import {
@@ -37,16 +37,16 @@ import {
   type QuotaState,
 } from "@features/quota-preview/quota-helpers";
 import {
-  resolveQuotaProvider,
   type QuotaProvider,
 } from "@features/quota-preview/quota-fetch";
+import { mergeQuotaState } from "./mergeQuotaState";
 import {
   applyAccountStatuses,
   isAccountStatusFresher,
   readAccountStatusFreshness,
   type AccountStatusFreshness,
+  type AuthFileCycleUsageSnapshot,
 } from "./mapAccountStatusToUi";
-import type { AuthFileCycleUsageSnapshot } from "./useAuthFilesCycleUsageState";
 
 const STATUS_POLL_INTERVAL_MS = 1_500;
 const STATUS_REFRESH_TIMEOUT_MS = 120_000;
@@ -161,70 +161,6 @@ const seedConnectivityState = (
     ]),
   );
 
-const quotaItemMergeKeys = (item: QuotaItem): string[] =>
-  Array.from(
-    new Set(
-      [item.key, item.label]
-        .filter((value): value is string => Boolean(value))
-        .map((value) =>
-          value
-            .trim()
-            .toLowerCase()
-            .replaceAll(/[^a-z0-9\u4e00-\u9fff]/g, ""),
-        )
-        .filter(Boolean),
-    ),
-  );
-
-const mergeQuotaItem = (previous: QuotaItem, incoming: QuotaItem): QuotaItem => ({
-  ...previous,
-  ...incoming,
-  label:
-    incoming.key && incoming.label === incoming.key && previous.label
-      ? previous.label
-      : incoming.label || previous.label,
-  percent: incoming.percent ?? previous.percent,
-  value: incoming.value ?? previous.value,
-  resetAtMs: incoming.resetAtMs ?? previous.resetAtMs,
-  windowSeconds: incoming.windowSeconds ?? previous.windowSeconds,
-  meta: incoming.meta ?? previous.meta,
-});
-
-const mergeQuotaState = (
-  previous: QuotaState | undefined,
-  incoming: QuotaState,
-): QuotaState => {
-  if (!previous) return incoming;
-  const remainingIncoming = [...incoming.items];
-  const mergedItems = previous.items.map((item) => {
-    const previousKeys = quotaItemMergeKeys(item);
-    const nextIndex = remainingIncoming.findIndex((candidate) =>
-      quotaItemMergeKeys(candidate).some((key) => previousKeys.includes(key)),
-    );
-    if (nextIndex < 0) return item;
-    const [next] = remainingIncoming.splice(nextIndex, 1);
-    if (!next) return item;
-    return mergeQuotaItem(item, next);
-  });
-  mergedItems.push(...remainingIncoming);
-  const resetCreditCountChanged =
-    incoming.resetCreditCount !== undefined &&
-    incoming.resetCreditCount !== previous.resetCreditCount;
-  return {
-    ...previous,
-    ...incoming,
-    items: mergedItems,
-    planType: incoming.planType ?? previous.planType,
-    resetCreditCount: incoming.resetCreditCount ?? previous.resetCreditCount,
-    resetCreditExpirations:
-      incoming.resetCreditExpirations ??
-      (resetCreditCountChanged ? undefined : previous.resetCreditExpirations),
-    updatedAt: incoming.updatedAt ?? previous.updatedAt,
-    error:
-      incoming.error ?? (incoming.status === "error" ? previous.error : undefined),
-  };
-};
-
 export function useAuthFilesStatusState({
   tab,
   pageItems,
@@ -312,11 +248,6 @@ export function useAuthFilesStatusState({
     AUTH_FILES_QUOTA_AUTO_REFRESH_KEY,
     initialAutoRefresh,
   );
-  const [filesViewMode, setFilesViewMode] = useLocalStorage<FilesViewMode>(
-    AUTH_FILES_FILES_VIEW_MODE_KEY,
-    "cards",
-  );
-
   // Always persist normalized bucket.
   const quotaAutoRefreshMs = useMemo(() => {
     const normalized = readAndMigrateQuotaAutoRefreshMs();
@@ -751,6 +682,8 @@ export function useAuthFilesStatusState({
           next[file.name] = {
             ...current,
             status: current.items?.length ? "success" : "idle",
+            // A finished refresh clears the sticky error carried through loading.
+            error: undefined,
           };
           changed = true;
         }
@@ -1209,9 +1142,8 @@ export function useAuthFilesStatusState({
     async (
       file: AuthFileItem,
       _provider: QuotaProvider,
-      options?: { showLoading?: boolean; refreshUsage?: boolean },
+      options?: { showLoading?: boolean },
     ) => {
-      void options?.refreshUsage;
       if (!resolveFileAuthIndex(file)) return;
       await runBatchStatusRefresh([file], {
         force: true,
@@ -1222,22 +1154,11 @@ export function useAuthFilesStatusState({
     [runBatchStatusRefresh],
   );
 
-  const resolveQuotaTargets = useCallback((targetFiles: AuthFileItem[]) => {
-    const targets: { file: AuthFileItem; provider: QuotaProvider }[] = [];
-    for (const file of targetFiles) {
-      const provider = resolveQuotaProvider(file);
-      if (provider) targets.push({ file, provider });
-    }
-    return targets;
-  }, []);
-
   const runQuotaRefreshBatch = useCallback(
     async (
       targets: { file: AuthFileItem; provider: QuotaProvider }[],
-      options?: { markAsAutoRefreshing?: boolean; showLoading?: boolean; refreshUsage?: boolean },
+      options?: { showLoading?: boolean },
     ) => {
-      void options?.markAsAutoRefreshing;
-      void options?.refreshUsage;
       await runBatchStatusRefresh(
         targets.map((target) => target.file),
         {
@@ -1265,25 +1186,6 @@ export function useAuthFilesStatusState({
 
   const resolveQuotaCardSlots = useCallback(
     (provider: QuotaProvider, items: QuotaItem[]) => {
-      const translateXaiQuotaText = (text: string) => {
-        const separatorIndex = text.indexOf("::");
-        const key = separatorIndex >= 0 ? text.slice(0, separatorIndex) : text;
-        const value = separatorIndex >= 0 ? text.slice(separatorIndex + 2) : "";
-        if (key === "xai_quota.product_usage_named" && value) {
-          return t(key, { product: value });
-        }
-        if (key === "xai_quota.used_percent" && value) {
-          return t(key, { percent: value });
-        }
-        if (key === "xai_quota.remaining_percent" && value) {
-          return t(key, { percent: value });
-        }
-        if (key === "xai_quota.reset_at" && value) {
-          return t(key, { time: value });
-        }
-        return t(text);
-      };
-
       const translateQuotaLabel = (text: string) => {
         if (!text) return text;
         if (text.startsWith("m_quota.")) return t(text);
@@ -1293,9 +1195,9 @@ export function useAuthFilesStatusState({
             name: additionalQuota.name,
           });
         }
-        if (text.startsWith("claude_quota.")) return t(text);
+        if (text.startsWith("claude_quota.")) return translateParameterizedQuotaLabel(t, text);
         if (text.startsWith("antigravity_quota.")) return t(text);
-        if (text.startsWith("xai_quota.")) return translateXaiQuotaText(text);
+        if (text.startsWith("xai_quota.")) return translateXaiQuotaLabel(t, text);
         return text;
       };
 
@@ -1323,8 +1225,14 @@ export function useAuthFilesStatusState({
 
       const supportsStableCodingSlots = provider === "codex" || provider === "kimi";
       if (!supportsStableCodingSlots) {
-        return items.slice(0, 3).map((item) => ({
-          id: item.label,
+        // Rank data-bearing windows first so placeholder rows (e.g. kiro's
+        // subscription entry with percent: null) never crowd out real quotas.
+        const ranked = [
+          ...items.filter((item) => typeof item.percent === "number" || Boolean(item.value)),
+          ...items.filter((item) => typeof item.percent !== "number" && !item.value),
+        ];
+        return ranked.slice(0, 3).map((item) => ({
+          id: item.key ?? item.label,
           label: translateQuotaLabel(item.label),
           item,
         }));
@@ -1389,7 +1297,15 @@ export function useAuthFilesStatusState({
           item: codeWeek,
         });
       }
-      if (provider === "kimi") return codingSlots;
+      if (provider === "kimi") {
+        // Unmatched kimi payloads fall back to raw items instead of an empty state.
+        if (codingSlots.length > 0) return codingSlots;
+        return items.slice(0, 3).map((item) => ({
+          id: item.key ?? item.label,
+          label: translateQuotaLabel(item.label),
+          item,
+        }));
+      }
 
       const codexSlots = [...codingSlots];
       if (reviewFiveHour) {
@@ -1447,14 +1363,13 @@ export function useAuthFilesStatusState({
         return next;
       });
     } catch {
-      const elapsed = performance.now() - start;
+      // The endpoint falls back to the registry when the live probe fails, so it
+      // answers 200 even for an unreachable provider. Any thrown error is a real
+      // failure (auth rejected, 5xx, network, timeout) and must not be painted
+      // as a healthy latency just because it came back quickly.
       setConnectivityState((prev) => {
         const next = new Map(prev);
-        if (elapsed < 20000) {
-          next.set(fileName, { loading: false, latencyMs: elapsed, error: false });
-        } else {
-          next.set(fileName, { loading: false, latencyMs: null, error: true });
-        }
+        next.set(fileName, { loading: false, latencyMs: null, error: true });
         return next;
       });
     }
@@ -1515,24 +1430,18 @@ export function useAuthFilesStatusState({
         quotaRefreshHaltedRef.current = false;
         setQuotaRefreshHalted(false);
       }
-      const normalized = readAndMigrateQuotaAutoRefreshMs();
-      void normalized;
-      // Persist only allowed buckets.
-      const next =
-        value <= 0 ? 0 : value >= 300_000 ? 300_000 : value >= 60_000 ? 60_000 : 60_000;
+      // Persist only allowed buckets (sub-minute inputs clamp up to 60s).
+      const next = value <= 0 ? 0 : value >= 300_000 ? 300_000 : 60_000;
       setQuotaAutoRefreshMsRaw(next);
       if (typeof window !== "undefined") {
         window.localStorage.setItem(AUTH_FILES_QUOTA_AUTO_REFRESH_KEY, JSON.stringify(next));
       }
     },
-    filesViewMode,
-    setFilesViewMode,
     resolveQuotaCardSlots,
     refreshQuota,
     checkAuthFileConnectivity,
     forceRefreshPage,
     runQuotaRefreshBatch,
-    resolveQuotaTargets,
     statusApiSupported,
     statusLoading,
     statusUsageReady,
@@ -1541,6 +1450,5 @@ export function useAuthFilesStatusState({
     callsByAuthIndex,
     cycleTotalTokensByAuthIndex,
     cycleBudgetByAuthIndex,
-    collectQuotaFetchTargets: (): { file: AuthFileItem; provider: QuotaProvider }[] => [],
   };
 }

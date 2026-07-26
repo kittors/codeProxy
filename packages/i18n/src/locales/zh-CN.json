@@ -805,10 +805,8 @@
     "calls_count": "已调用 {{count}} 次",
     "identity_shared_policy_confirm": "此操作会影响挂载到同一物理 AI 账号主体的所有凭据。是否继续？",
     "identity_policy_revision_conflict": "身份策略已在其他位置更新，请刷新账号详情后重试。",
-    "cycle_calls_count": "本周期 {{count}}",
-    "cycle_calls_unknown": "本周期 --",
-    "cycle_tokens_count": "本周期 Token {{count}}",
-    "cycle_tokens_unknown": "本周期 Token --",
+    "cycle_calls_count": "本周期 {{value}}",
+    "cycle_tokens_count": "本周期 Token {{value}}",
     "col_cycle_calls": "本周期调用",
     "col_lifetime_calls": "累计调用",
     "col_subject_scope": "账号范围",
@@ -1048,6 +1046,7 @@
     "seven_day_opus": "7 天 Opus",
     "seven_day_sonnet": "7 天 Sonnet",
     "seven_day_cowork": "7 天 Cowork",
+    "model_weekly": "7 天 {{name}}",
     "iguana_necktie": "Iguana Necktie",
     "extra_usage_label": "额外用量"
   },
@@ -2181,6 +2180,7 @@
     "channels_title": "可用状态",
     "channels_description": "当没有可用的 codex oauth 认证时，页面会提示当前不可用并禁用测试入口。",
     "channels_empty": "当前没有可用于 gpt-image-2 的渠道。",
+    "channels_error": "无法获取 gpt-image-2 的渠道可用性。请确认账号具有生图管理权限后重试。",
     "test_title": "测试生成",
     "test_description": "点击后打开测试弹窗，输入提示词即可发起一次测试调用。",
     "open_test_button": "测试生成",
@@ -3604,7 +3604,12 @@
     "total_resets": "累计重置次数",
     "reset_password": "重置密码",
     "other_limits_profile_readonly_hint": "请求与实时限制来自 {{profile}}，此处只读；累计消费限额仍由账号独立配置。",
-    "other_limits_direct_hint": "未绑定权限模板，可直接编辑请求与实时限制；0 表示不限制。"
+    "other_limits_direct_hint": "未绑定权限模板，可直接编辑请求与实时限制；0 表示不限制。",
+    "username_placeholder": "空则按昵称生成",
+    "password_placeholder": "空则随机生成，请立即复制",
+    "secrets_one_time_hint": "离开此窗口后无法再查看明文密码 / API Key。",
+    "secrets_copied_close": "已复制，关闭",
+    "reset_password_title": "重置密码"
   },
   "apikey_lookup": {
     "available_models": "模型广场",

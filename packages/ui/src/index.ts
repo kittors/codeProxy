@@ -31,6 +31,7 @@ export type { EChartProps, EChartEvents as EChartRendererEvents } from "./charts
 export { PageBackground } from "./layout/PageBackground";
 
 export { PaginationBar, getPaginationItems } from "./navigation/PaginationBar";
+export { resolveMenuIcon } from "./navigation/menuIconMap";
 export type {
   PaginationBarLabels,
   PaginationBarProps,

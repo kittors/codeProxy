@@ -15,7 +15,7 @@ import {
   maskApiKey,
   stripDisableAllModelsRule,
 } from "./providers-helpers";
-import { formatLatency } from "./hooks/useProviderLatency";
+import { formatLatency } from "@features/provider-latency";
 import { ProviderConnectionRows } from "./components/ProviderConnectionRows";
 import { ProviderMetricChip } from "./components/ProviderMetricChip";
 import { ProviderModelChips } from "./components/ProviderModelChips";

@@ -267,10 +267,10 @@ const mergeSavedXAIEndpointFields = (
   };
 };
 
-const supportsAuthFileTrend = (file: AuthFileItem): boolean => {
-  const provider = normalizeProviderKey(resolveFileType(file));
-  return provider === "kimi" || provider === "codex" || provider === "xai";
-};
+const supportsAuthFileTrend = (file: AuthFileItem): boolean =>
+  ["kimi", "codex", "xai", "claude", "anthropic"].includes(
+    normalizeProviderKey(resolveFileType(file)),
+  );
 
 const identityFingerprintDetailKey = (file: AuthFileItem): string => {
   const summary = file.identity_fingerprint_summary;

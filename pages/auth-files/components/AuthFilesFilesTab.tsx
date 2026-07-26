@@ -1842,37 +1842,30 @@ export function AuthFilesFilesTab({
                   const showSelectionControl = fileSelected;
                   const actionSize = denseCards ? "xs" : "sm";
                   const actionIconSize = denseCards ? 14 : 16;
-                  const cycleCallsLabel =
-                    typeof cycleCalls === "number"
-                      ? t("auth_files.cycle_calls_count", { count: cycleCalls })
-                      : t("auth_files.cycle_calls_unknown");
+                  // Chips render only with known data, so no unknown fallbacks here.
+                  const cycleCallsLabel = t("auth_files.cycle_calls_count", {
+                    value: (cycleCalls ?? 0).toLocaleString(i18n.language),
+                  });
                   const cycleTokensKnown =
                     typeof cycleTotalTokens === "number" && Number.isFinite(cycleTotalTokens);
                   const cycleTokensCompact = cycleTokensKnown
                     ? formatCompactNumber(cycleTotalTokens, { locale: i18n.language })
-                    : "--";
-                  const cycleTokensLabel = cycleTokensKnown ? (
+                    : "";
+                  const cycleTokensLabel = (
                     <Trans
                       i18nKey="auth_files.cycle_tokens_count"
-                      values={{ count: cycleTokensCompact }}
+                      values={{ value: cycleTokensCompact }}
                     />
-                  ) : (
-                    t("auth_files.cycle_tokens_unknown")
                   );
-                  const cycleTokensTooltip = cycleTokensKnown ? (
+                  const cycleTokensTooltip = (
                     <Trans
                       i18nKey="auth_files.cycle_tokens_count"
                       values={{
-                        count: Math.round(cycleTotalTokens).toLocaleString(i18n.language),
+                        value: Math.round(cycleTotalTokens ?? 0).toLocaleString(i18n.language),
                       }}
                     />
-                  ) : (
-                    t("auth_files.cycle_tokens_unknown")
                   );
-                  const successRateLabel =
-                    successRate === null
-                      ? "--"
-                      : `${successRate.toFixed(1)}%`;
+                  const successRateLabel = `${(successRate ?? 0).toFixed(1)}%`;
                   const visibleTags = denseCards
                     ? displayTags.slice(0, 1)
                     : displayTags;
@@ -2058,53 +2051,55 @@ export function AuthFilesFilesTab({
                               </button>
                             </HoverTooltip>
                           ) : null}
-                          <HoverTooltip
-                            content={cycleCallsLabel}
-                            className="shrink-0"
-                          >
-                            <span
-                              className={[
-                                "inline-flex shrink-0 items-center rounded-md bg-slate-100 text-2xs font-semibold tabular-nums text-slate-700 dark:bg-white/10 dark:text-white/70",
-                                denseCards ? "h-5 px-1.5" : "px-2 py-0.5",
-                              ].join(" ")}
+                          {typeof cycleCalls === "number" ? (
+                            <HoverTooltip
+                              content={cycleCallsLabel}
+                              className="shrink-0"
                             >
-                              {denseCards
-                                ? typeof cycleCalls === "number"
-                                  ? cycleCalls
-                                  : "--"
-                                : cycleCallsLabel}
-                            </span>
-                          </HoverTooltip>
-                          <HoverTooltip content={cycleTokensTooltip} className="shrink-0">
-                            <span
-                              className={[
-                                "inline-flex shrink-0 items-center rounded-md bg-slate-100 text-2xs font-semibold tabular-nums text-slate-700 dark:bg-white/10 dark:text-white/70",
-                                denseCards ? "h-5 px-1.5" : "px-2 py-0.5",
-                              ].join(" ")}
-                            >
-                              {denseCards ? cycleTokensCompact : cycleTokensLabel}
-                            </span>
-                          </HoverTooltip>
-                          <HoverTooltip
-                            content={`${t("common.success_rate")} ${successRateLabel}`}
-                            className="shrink-0"
-                          >
-                            <span
-                              className={[
-                                "inline-flex shrink-0 items-center rounded-md bg-slate-100 text-2xs font-semibold text-slate-700 dark:bg-white/10 dark:text-white/70",
-                                denseCards ? "h-5 gap-0 px-1.5" : "gap-1 px-2 py-0.5",
-                              ].join(" ")}
-                            >
-                              {denseCards ? null : (
-                                <span>{t("common.success_rate")}</span>
-                              )}
                               <span
-                                className={`tabular-nums ${successRateClass}`}
+                                className={[
+                                  "inline-flex shrink-0 items-center rounded-md bg-slate-100 text-2xs font-semibold tabular-nums text-slate-700 dark:bg-white/10 dark:text-white/70",
+                                  denseCards ? "h-5 px-1.5" : "px-2 py-0.5",
+                                ].join(" ")}
                               >
-                                {successRateLabel}
+                                {denseCards ? cycleCalls : cycleCallsLabel}
                               </span>
-                            </span>
-                          </HoverTooltip>
+                            </HoverTooltip>
+                          ) : null}
+                          {cycleTokensKnown ? (
+                            <HoverTooltip content={cycleTokensTooltip} className="shrink-0">
+                              <span
+                                className={[
+                                  "inline-flex shrink-0 items-center rounded-md bg-slate-100 text-2xs font-semibold tabular-nums text-slate-700 dark:bg-white/10 dark:text-white/70",
+                                  denseCards ? "h-5 px-1.5" : "px-2 py-0.5",
+                                ].join(" ")}
+                              >
+                                {denseCards ? cycleTokensCompact : cycleTokensLabel}
+                              </span>
+                            </HoverTooltip>
+                          ) : null}
+                          {successRate !== null ? (
+                            <HoverTooltip
+                              content={`${t("common.success_rate")} ${successRateLabel}`}
+                              className="shrink-0"
+                            >
+                              <span
+                                className={[
+                                  "inline-flex shrink-0 items-center rounded-md bg-slate-100 text-2xs font-semibold text-slate-700 dark:bg-white/10 dark:text-white/70",
+                                  denseCards ? "h-5 gap-0 px-1.5" : "gap-1 px-2 py-0.5",
+                                ].join(" ")}
+                              >
+                                {denseCards ? null : (
+                                  <span>{t("common.success_rate")}</span>
+                                )}
+                                <span
+                                  className={`tabular-nums ${successRateClass}`}
+                                >
+                                  {successRateLabel}
+                                </span>
+                              </span>
+                            </HoverTooltip>
+                          ) : null}
                           {subscriptionBadge}
                           {runtimeOnly ? (
                             <span className="inline-flex shrink-0 items-center rounded-md bg-slate-900 px-2 py-0.5 text-2xs font-semibold text-white dark:bg-white dark:text-neutral-950">

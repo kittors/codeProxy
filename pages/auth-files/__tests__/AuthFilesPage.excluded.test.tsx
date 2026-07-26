@@ -69,7 +69,7 @@ async function openExcludedConfig(user: ReturnType<typeof userEvent.setup>) {
 }
 
 async function closeDialog(user: ReturnType<typeof userEvent.setup>, dialog: HTMLElement) {
-  await user.click(within(dialog).getByRole("button", { name: "close" }));
+  await user.click(within(dialog).getAllByRole("button", { name: "Close" })[0]!);
   await waitFor(() => {
     expect(screen.queryByRole("dialog", { name: "OAuth Excluded Models" })).not.toBeInTheDocument();
   });

@@ -17,7 +17,7 @@ vi.mock("@code-proxy/api-client", () => ({
   },
 }));
 
-vi.mock("@app/guards/PermissionGate", () => ({
+vi.mock("@app/providers/PermissionGate", () => ({
   PermissionGate: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 

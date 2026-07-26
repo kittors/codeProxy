@@ -63,24 +63,31 @@ const loadInitialResource = async (language: Language) => {
 };
 
 const initialLanguage = resolveLanguage(getInitialLanguage());
-const initialLanguages = Array.from(new Set<Language>([initialLanguage, "zh-CN"]));
-const initialEntries = await Promise.all(initialLanguages.map(loadInitialResource));
+// Block startup on the active language only; fallback bundles stream in below.
+const initialEntries = [await loadInitialResource(initialLanguage)];
 
 if (!i18n.isInitialized) {
   i18n.use(initReactI18next).init({
     resources: Object.fromEntries(initialEntries),
     lng: initialLanguage,
-    fallbackLng: "zh-CN",
+    // en before zh-CN so partially translated locales (ru) degrade to English.
+    fallbackLng: ["en", "zh-CN"],
     interpolation: { escapeValue: false },
     defaultNS: "translation",
     fallbackNS: "translation",
     react: {
       useSuspense: false,
+      // Re-render when a lazily loaded fallback bundle lands.
+      bindI18n: "languageChanged added",
     },
   });
 }
 
-initialLanguages.forEach((language) => loadedLanguages.add(language));
+loadedLanguages.add(initialLanguage);
+// Load fallback languages in the background without delaying first paint.
+(["en", "zh-CN"] as Language[])
+  .filter((language) => language !== initialLanguage)
+  .forEach((language) => void ensureLanguageResources(language));
 
 const originalChangeLanguage = i18n.changeLanguage.bind(i18n);
 i18n.changeLanguage = (async (

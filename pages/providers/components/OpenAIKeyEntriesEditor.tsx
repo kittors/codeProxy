@@ -7,7 +7,8 @@ import { KeyValueInputList } from "../KeyValueInputList";
 import type { ProxyPoolEntry } from "@code-proxy/api-client/endpoints/proxies";
 import { ProxyPoolSelect } from "@features/proxy-pool";
 import type { OpenAIDraft } from "../providers-helpers";
-import { ModerationProfileSelect } from "@pages/content-moderation/components/ModerationProfileSelect";
+import { ModerationProfileSelect } from "@features/content-moderation";
+import { useModerationPermissions } from "@app/providers/useModerationPermissions";
 
 const SectionCard = ({ children }: { children: React.ReactNode }) => (
   <div className="rounded-xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
@@ -31,6 +32,7 @@ export function OpenAIKeyEntriesEditor({
   maskApiKey,
 }: OpenAIKeyEntriesEditorProps) {
   const { t } = useTranslation();
+  const moderationPerms = useModerationPermissions();
 
   return (
     <section className="space-y-2">
@@ -110,6 +112,8 @@ export function OpenAIKeyEntriesEditor({
 
             <div className="mt-3 rounded-lg bg-slate-50/80 p-3 dark:bg-white/[0.04]">
               <ModerationProfileSelect
+        canRead={moderationPerms.canRead}
+        canWrite={moderationPerms.canWrite}
                 channelType="provider_key"
                 channelId={entry.channelId ?? ""}
                 label={t("content_moderation.provider_key_override_profile_label")}

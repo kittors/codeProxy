@@ -33,6 +33,7 @@ import {
   SearchableSelect,
   type SearchableSelectOption,
   ThemeToggleButton,
+  resolveMenuIcon,
 } from "@code-proxy/ui";
 import { preloadPageRoute } from "@pages/registry";
 import { recoverFromChunkLoadError } from "@pages/chunkLoadRecovery";
@@ -43,7 +44,7 @@ import {
   type TenantIdentity,
 } from "@code-proxy/api-client";
 import { useOptionalAuth } from "@app/providers/AuthProvider";
-import { resolveMenuIcon } from "@app/navigation/menuIconMap";
+
 
 interface ShellContextState {
   state: {

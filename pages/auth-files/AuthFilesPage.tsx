@@ -45,6 +45,7 @@ import {
 import {
   alignAuthFilesPageSizeToColumns,
   AUTH_FILES_CARD_COLUMNS_KEY,
+  AUTH_FILES_FILES_VIEW_MODE_KEY,
   AUTH_FILES_PAGE_SIZE,
   AUTH_FILES_PAGE_SIZE_KEY,
   AUTH_FILE_STATUS_FILTERS,
@@ -62,6 +63,7 @@ import {
   writeAuthFilesUiState,
   type AuthFileStatusFilter,
   type AuthFilesCardColumns,
+  type FilesViewMode,
   type OAuthDialogTab,
 } from "@code-proxy/domain";
 
@@ -212,7 +214,16 @@ export function AuthFilesPage() {
     AUTH_FILES_PAGE_SIZE_KEY,
     AUTH_FILES_PAGE_SIZE,
   );
-  const pageSize = alignAuthFilesPageSizeToColumns(pageSizeRaw, cardColumns);
+  const [filesViewMode, setFilesViewMode] = useLocalStorage<FilesViewMode>(
+    AUTH_FILES_FILES_VIEW_MODE_KEY,
+    "cards",
+  );
+  // Only the card grid needs a page size divisible by the column count; the
+  // table view keeps whatever the user picked from the standard options.
+  const pageSize =
+    filesViewMode === "cards"
+      ? alignAuthFilesPageSizeToColumns(pageSizeRaw, cardColumns)
+      : pageSizeRaw;
   const [selectedFileNames, setSelectedFileNames] = useState<string[]>([]);
   const [proxyPoolEntries, setProxyPoolEntries] = useState<ProxyPoolEntry[]>(
     [],
@@ -503,8 +514,6 @@ export function AuthFilesPage() {
     nowMs,
     quotaAutoRefreshMs,
     setQuotaAutoRefreshMsRaw,
-    filesViewMode,
-    setFilesViewMode,
     resolveQuotaCardSlots,
     refreshQuota,
     checkAuthFileConnectivity,
@@ -542,10 +551,7 @@ export function AuthFilesPage() {
         return provider ? [{ file, provider }] : [];
       });
       if (!targets.length) return;
-      await runQuotaRefreshBatch(targets, {
-        markAsAutoRefreshing: true,
-        showLoading: true,
-      });
+      await runQuotaRefreshBatch(targets, { showLoading: true });
     },
     [runQuotaRefreshBatch],
   );
@@ -595,7 +601,7 @@ export function AuthFilesPage() {
     (file: Parameters<typeof openDetail>[0]) => {
       const openPromise = openDetail(file);
       const provider = resolveQuotaProvider(file);
-      if (provider === "codex" || provider === "kimi") {
+      if (provider === "codex" || provider === "kimi" || provider === "claude") {
         void refreshQuota(file, provider)
           .catch(() => undefined)
           .finally(() => void refreshDetailTrend(file, { silent: true }));

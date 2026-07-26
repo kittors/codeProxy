@@ -31,7 +31,8 @@ import { ToggleSwitch } from "@code-proxy/ui";
 import { EChart } from "@code-proxy/ui";
 import { ProxyPoolSelect } from "@features/proxy-pool";
 import { useProxyPoolChecks } from "@features/proxy-pool";
-import { ModerationProfileSelect } from "@pages/content-moderation/components/ModerationProfileSelect";
+import { ModerationProfileSelect } from "@features/content-moderation";
+import { useModerationPermissions } from "@app/providers/useModerationPermissions";
 import {
   canRenameAuthFileChannel,
   downloadTextAsFile,
@@ -49,6 +50,7 @@ import {
   resolveFileType,
   resolvePlanBadgeClass,
   shouldShowAuthFilePlanBadge,
+  translateParameterizedQuotaLabel,
   type AuthFileModelItem,
   type AuthFileModelOwnerGroup,
   type ChannelEditorState,
@@ -59,6 +61,12 @@ import {
   type PrefixProxyEditorState,
 } from "@code-proxy/domain";
 import type { QuotaState } from "@features/quota-preview/quota-helpers";
+import {
+  formatLocalDateKey,
+  formatLocalHourKey,
+  parseBucketKeyMs,
+  resolveNearestBucketKey,
+} from "./trendBuckets";
 
 type DetailTab = "usage" | "identity" | "fields" | "models";
 type DetailTrendWindow = "5h" | "week";
@@ -105,20 +113,6 @@ const useIdentityDesktopLayout = () => {
   }, []);
 
   return matches;
-};
-
-const padTwo = (value: number) => String(value).padStart(2, "0");
-
-const formatLocalDateKey = (timestamp: string) => {
-  const date = new Date(timestamp);
-  if (Number.isNaN(date.getTime())) return "";
-  return `${date.getFullYear()}-${padTwo(date.getMonth() + 1)}-${padTwo(date.getDate())}`;
-};
-
-const formatLocalHourKey = (timestamp: string) => {
-  const date = new Date(timestamp);
-  if (Number.isNaN(date.getTime())) return "";
-  return `${formatLocalDateKey(timestamp)} ${padTwo(date.getHours())}:00`;
 };
 
 const formatCurrency = (value: number) => `$${(Number.isFinite(value) ? value : 0).toFixed(4)}`;
@@ -285,6 +279,7 @@ export function AuthFileDetailModal({
   saveXAIEndpoint,
 }: AuthFileDetailModalProps) {
   const { t, i18n } = useTranslation();
+  const moderationPerms = useModerationPermissions();
   const isIdentityDesktopLayout = useIdentityDesktopLayout();
   const [viewedIdentityProfileKey, setViewedIdentityProfileKey] = useState("");
   const proxyCheckState = useProxyPoolChecks(proxyPoolEntries, open && detailTab === "fields");
@@ -296,8 +291,9 @@ export function AuthFileDetailModal({
   const visibleModelsError = usesMappedModelOwner ? null : modelsError;
   const providerKey = normalizeProviderKey(modelsFileType);
   const detailProviderKey = detailFile ? normalizeProviderKey(resolveFileType(detailFile)) : "";
-  const supportsUsageTrend =
-    detailProviderKey === "kimi" || detailProviderKey === "codex" || detailProviderKey === "xai";
+  const supportsUsageTrend = ["kimi", "codex", "xai", "claude", "anthropic"].includes(
+    detailProviderKey,
+  );
   const hasIdentityFingerprint = Boolean(detailFile?.identity_fingerprint_summary);
   useEffect(() => {
     const profiles = identityFingerprintDetail?.profiles ?? [];
@@ -377,11 +373,10 @@ export function AuthFileDetailModal({
     () => (label: string) => {
       if (!label) return label;
       if (label.startsWith("m_quota.")) return t(label);
+      if (label.startsWith("claude_quota.")) return translateParameterizedQuotaLabel(t, label);
       const additionalQuota = parseAdditionalQuotaWindowLabel(label);
       if (additionalQuota) {
-        return t(`m_quota.additional_${additionalQuota.window}`, {
-          name: additionalQuota.name,
-        });
+        return t(`m_quota.additional_${additionalQuota.window}`, { name: additionalQuota.name });
       }
       return label;
     },
@@ -440,15 +435,22 @@ export function AuthFileDetailModal({
       costByKey.set(key, point.cost ?? 0);
     });
 
+    const bucketKeys = Array.from(xKeys);
+    const bucketMsByKey = new Map(bucketKeys.map((key) => [key, parseBucketKeyMs(key)]));
+    const bucketToleranceMs = detailTrendWindow === "5h" ? 3_600_000 : 86_400_000;
     const quotaBySeries = activeQuotaSeries.map((series) => {
       const values = new Map<string, number | null>();
       series.points.forEach((point) => {
         if (!point.timestamp) return;
-        const key =
+        const localKey =
           detailTrendWindow === "5h"
             ? formatLocalHourKey(point.timestamp)
             : formatLocalDateKey(point.timestamp);
-        if (!key || !xKeys.has(key)) return;
+        const key =
+          localKey && xKeys.has(localKey)
+            ? localKey
+            : resolveNearestBucketKey(point.timestamp, bucketKeys, bucketMsByKey, bucketToleranceMs);
+        if (!key) return;
         values.set(key, toQuotaUsedPercent(point.percent));
       });
       return { series, values };
@@ -1154,8 +1156,13 @@ export function AuthFileDetailModal({
 
   const renderUsageTrend = () => {
     const isCodexDetail = detailProviderKey === "codex";
-    // xAI only has a weekly window (no Codex 5h slot); still show predicted weekly quota like Codex.
-    const showPredictedWeeklyQuota = isCodexDetail || detailProviderKey === "xai";
+    const isClaudeDetail = detailProviderKey === "claude" || detailProviderKey === "anthropic";
+    // Codex/claude expose a 5h window; xAI only weekly. All three show predicted weekly quota.
+    const fiveHourQuotaKey = isCodexDetail ? "code_5h" : isClaudeDetail ? "five_hour" : null;
+    const weeklyQuotaKey =
+      isCodexDetail ? "code_week" : isClaudeDetail ? "seven_day" : "weekly_limit";
+    const showPredictedWeeklyQuota =
+      isCodexDetail || isClaudeDetail || detailProviderKey === "xai";
     const summaryGridClassName = showPredictedWeeklyQuota
       ? "grid gap-3 sm:grid-cols-2 xl:grid-cols-7"
       : "grid gap-3 sm:grid-cols-2 xl:grid-cols-6";
@@ -1217,28 +1224,22 @@ export function AuthFileDetailModal({
     const cycleStart = detailTrend.cycle_start
       ? new Date(detailTrend.cycle_start).toLocaleString()
       : "--";
-    const fiveHourQuotaUsedPercent = isCodexDetail
+    const fiveHourQuotaUsedPercent = fiveHourQuotaKey
       ? latestQuotaUsedPercent(
           detailTrend.quota_series,
-          "code_5h",
+          fiveHourQuotaKey,
           (windowSeconds) => windowSeconds === FIVE_HOUR_WINDOW_SECONDS,
         )
       : null;
     const weeklyQuotaUsedPercent =
       detailTrend.weekly_quota_used_percent ??
-      (isCodexDetail
+      (showPredictedWeeklyQuota
         ? latestQuotaUsedPercent(
             detailTrend.quota_series,
-            "code_week",
+            weeklyQuotaKey,
             (windowSeconds) => windowSeconds >= WEEK_WINDOW_SECONDS,
           )
-        : detailProviderKey === "xai"
-          ? latestQuotaUsedPercent(
-              detailTrend.quota_series,
-              "weekly_limit",
-              (windowSeconds) => windowSeconds >= WEEK_WINDOW_SECONDS,
-            )
-          : null);
+        : null);
     // Prefer the backend weekly used percent; fall back to the latest weekly_limit snapshot for xAI.
     const weeklyQuotaUsed = formatPercent(weeklyQuotaUsedPercent);
     const estimatedFiveHourQuota = estimateQuotaBudget(
@@ -1250,7 +1251,7 @@ export function AuthFileDetailModal({
     const showLast7DaysRequests = !isCodexDetail && detailTrend.request_total > 0;
     const showCycleRequests = displayCycleRequestTotal > 0;
     const showCycleCost = displayCycleCostTotal > 0;
-    const showFiveHourQuota = isCodexDetail && estimatedFiveHourQuota > 0;
+    const showFiveHourQuota = fiveHourQuotaKey !== null && estimatedFiveHourQuota > 0;
     const showWeeklyQuota = showPredictedWeeklyQuota && estimatedWeeklyQuota > 0;
     const showWeeklyUsed =
       typeof weeklyQuotaUsedPercent === "number" &&
@@ -1490,6 +1491,8 @@ export function AuthFileDetailModal({
                   >
                     <div className="min-w-0 rounded-lg bg-slate-50/80 px-4 py-4 lg:col-span-2 dark:bg-white/[0.04]">
                       <ModerationProfileSelect
+        canRead={moderationPerms.canRead}
+        canWrite={moderationPerms.canWrite}
                         channelType="auth_file"
                         channelId={String(detailFile?.id ?? "")}
                         label={t("content_moderation.auth_file_profile_label")}
