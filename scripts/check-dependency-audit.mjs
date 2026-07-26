@@ -48,7 +48,15 @@ function runAudit() {
         exit(1);
       }
     }
-    console.error(`Failed to run \`bun audit\`: ${error.message}`);
+    // An older bun reports `bun audit` as a missing *script*. Fail loudly: a
+    // security gate that silently passes when its tool is unavailable is worse
+    // than no gate, because the green check implies the scan ran.
+    if (String(error.message).includes('Script not found "audit"')) {
+      console.error("`bun audit` is unavailable — bun >= 1.2.15 is required.");
+      console.error("Update the bun-version pin in .github/workflows/*.yml.");
+    } else {
+      console.error(`Failed to run \`bun audit\`: ${error.message}`);
+    }
     exit(1);
   }
 }
