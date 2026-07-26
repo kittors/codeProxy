@@ -1842,37 +1842,30 @@ export function AuthFilesFilesTab({
                   const showSelectionControl = fileSelected;
                   const actionSize = denseCards ? "xs" : "sm";
                   const actionIconSize = denseCards ? 14 : 16;
-                  const cycleCallsLabel =
-                    typeof cycleCalls === "number"
-                      ? t("auth_files.cycle_calls_count", { count: cycleCalls })
-                      : t("auth_files.cycle_calls_unknown");
+                  // Chips render only with known data, so no unknown fallbacks here.
+                  const cycleCallsLabel = t("auth_files.cycle_calls_count", {
+                    count: cycleCalls ?? 0,
+                  });
                   const cycleTokensKnown =
                     typeof cycleTotalTokens === "number" && Number.isFinite(cycleTotalTokens);
                   const cycleTokensCompact = cycleTokensKnown
                     ? formatCompactNumber(cycleTotalTokens, { locale: i18n.language })
-                    : "--";
-                  const cycleTokensLabel = cycleTokensKnown ? (
+                    : "";
+                  const cycleTokensLabel = (
                     <Trans
                       i18nKey="auth_files.cycle_tokens_count"
                       values={{ count: cycleTokensCompact }}
                     />
-                  ) : (
-                    t("auth_files.cycle_tokens_unknown")
                   );
-                  const cycleTokensTooltip = cycleTokensKnown ? (
+                  const cycleTokensTooltip = (
                     <Trans
                       i18nKey="auth_files.cycle_tokens_count"
                       values={{
-                        count: Math.round(cycleTotalTokens).toLocaleString(i18n.language),
+                        count: Math.round(cycleTotalTokens ?? 0).toLocaleString(i18n.language),
                       }}
                     />
-                  ) : (
-                    t("auth_files.cycle_tokens_unknown")
                   );
-                  const successRateLabel =
-                    successRate === null
-                      ? "--"
-                      : `${successRate.toFixed(1)}%`;
+                  const successRateLabel = `${(successRate ?? 0).toFixed(1)}%`;
                   const visibleTags = denseCards
                     ? displayTags.slice(0, 1)
                     : displayTags;

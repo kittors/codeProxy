@@ -220,3 +220,29 @@ export function parseKiroErrorPayload(
   }
   return null;
 }
+
+type QuotaLabelTranslate = (key: string, params?: Record<string, unknown>) => string;
+
+/** Translate "ns.key::Name" quota labels where Name feeds the {{name}} placeholder. */
+export function translateParameterizedQuotaLabel(t: QuotaLabelTranslate, label: string): string {
+  const separatorIndex = label.indexOf("::");
+  if (separatorIndex < 0) return t(label);
+  return t(label.slice(0, separatorIndex), { name: label.slice(separatorIndex + 2) });
+}
+
+const XAI_QUOTA_PARAM_BY_KEY: Record<string, string> = {
+  "xai_quota.product_usage_named": "product",
+  "xai_quota.used_percent": "percent",
+  "xai_quota.remaining_percent": "percent",
+  "xai_quota.reset_at": "time",
+};
+
+/** Translate "xai_quota.key::value" labels onto their per-key i18n params. */
+export function translateXaiQuotaLabel(t: QuotaLabelTranslate, label: string): string {
+  const separatorIndex = label.indexOf("::");
+  const key = separatorIndex >= 0 ? label.slice(0, separatorIndex) : label;
+  const value = separatorIndex >= 0 ? label.slice(separatorIndex + 2) : "";
+  const param = XAI_QUOTA_PARAM_BY_KEY[key];
+  if (param && value) return t(key, { [param]: value });
+  return t(key);
+}

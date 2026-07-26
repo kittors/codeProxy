@@ -45,6 +45,8 @@ import {
   resolvePlanBadgeClass,
   shouldShowAuthFileDisplayTag,
   shouldShowAuthFilePlanBadge,
+  translateParameterizedQuotaLabel,
+  translateXaiQuotaLabel,
   writeAuthFilesDataCache,
   type AuthFileCycleBudgetStats,
 } from "@code-proxy/domain";
@@ -308,26 +310,11 @@ export function useAuthFilesFilesPresentation({
   const translateQuotaText = useCallback(
     (text: string) => {
       if (!text) return text;
-      if (text.startsWith("xai_quota.")) {
-        const separatorIndex = text.indexOf("::");
-        const key = separatorIndex >= 0 ? text.slice(0, separatorIndex) : text;
-        const value = separatorIndex >= 0 ? text.slice(separatorIndex + 2) : "";
-        if (key === "xai_quota.product_usage_named" && value) return t(key, { product: value });
-        if (key === "xai_quota.used_percent" && value) return t(key, { percent: value });
-        if (key === "xai_quota.remaining_percent" && value) return t(key, { percent: value });
-        if (key === "xai_quota.reset_at" && value) return t(key, { time: value });
-        return t(key);
-      }
+      if (text.startsWith("xai_quota.")) return translateXaiQuotaLabel(t, text);
       if (text.startsWith("m_quota.")) return t(text);
       if (text.startsWith("auth_files.")) return t(text);
       if (text.startsWith("common.")) return t(text);
-      if (text.startsWith("claude_quota.")) {
-        const separatorIndex = text.indexOf("::");
-        if (separatorIndex >= 0) {
-          return t(text.slice(0, separatorIndex), { name: text.slice(separatorIndex + 2) });
-        }
-        return t(text);
-      }
+      if (text.startsWith("claude_quota.")) return translateParameterizedQuotaLabel(t, text);
       if (text.startsWith("antigravity_quota.")) return t(text);
       if (KNOWN_QUOTA_TEXT_KEYS.has(text)) return t(`m_quota.${text}`);
       const additionalQuota = parseAdditionalQuotaWindowLabel(text);

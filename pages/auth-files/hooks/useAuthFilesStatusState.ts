@@ -25,6 +25,8 @@ import {
   parseAdditionalQuotaWindowLabel,
   readAndMigrateQuotaAutoRefreshMs,
   readAuthFilesDataCache,
+  translateParameterizedQuotaLabel,
+  translateXaiQuotaLabel,
   writeAuthFilesDataCache,
   type AuthFileCycleBudgetStats,
 } from "@code-proxy/domain";
@@ -1258,25 +1260,6 @@ export function useAuthFilesStatusState({
 
   const resolveQuotaCardSlots = useCallback(
     (provider: QuotaProvider, items: QuotaItem[]) => {
-      const translateXaiQuotaText = (text: string) => {
-        const separatorIndex = text.indexOf("::");
-        const key = separatorIndex >= 0 ? text.slice(0, separatorIndex) : text;
-        const value = separatorIndex >= 0 ? text.slice(separatorIndex + 2) : "";
-        if (key === "xai_quota.product_usage_named" && value) {
-          return t(key, { product: value });
-        }
-        if (key === "xai_quota.used_percent" && value) {
-          return t(key, { percent: value });
-        }
-        if (key === "xai_quota.remaining_percent" && value) {
-          return t(key, { percent: value });
-        }
-        if (key === "xai_quota.reset_at" && value) {
-          return t(key, { time: value });
-        }
-        return t(text);
-      };
-
       const translateQuotaLabel = (text: string) => {
         if (!text) return text;
         if (text.startsWith("m_quota.")) return t(text);
@@ -1286,15 +1269,9 @@ export function useAuthFilesStatusState({
             name: additionalQuota.name,
           });
         }
-        if (text.startsWith("claude_quota.")) {
-          const separatorIndex = text.indexOf("::");
-          if (separatorIndex >= 0) {
-            return t(text.slice(0, separatorIndex), { name: text.slice(separatorIndex + 2) });
-          }
-          return t(text);
-        }
+        if (text.startsWith("claude_quota.")) return translateParameterizedQuotaLabel(t, text);
         if (text.startsWith("antigravity_quota.")) return t(text);
-        if (text.startsWith("xai_quota.")) return translateXaiQuotaText(text);
+        if (text.startsWith("xai_quota.")) return translateXaiQuotaLabel(t, text);
         return text;
       };
 
