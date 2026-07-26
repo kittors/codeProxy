@@ -962,7 +962,7 @@ export const resolveAuthFileWeeklyQuotaResetAtMs = (
   if (!Array.isArray(items) || items.length === 0) return null;
   const weekly = items.find((item) => {
     const key = normalizeTagValue(item.key);
-    if (key === "weekly_limit" || key === "week" || key.includes("weekly")) return true;
+    if (["weekly_limit", "week", "seven_day"].includes(key) || key.includes("weekly")) return true;
     const label = normalizeQuotaLabel(item.label ?? "");
     return label.includes("weekly") || label.includes("week") || label.includes("周");
   });

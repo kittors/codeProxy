@@ -604,7 +604,7 @@ export function AuthFilesPage() {
     (file: Parameters<typeof openDetail>[0]) => {
       const openPromise = openDetail(file);
       const provider = resolveQuotaProvider(file);
-      if (provider === "codex" || provider === "kimi") {
+      if (provider === "codex" || provider === "kimi" || provider === "claude") {
         void refreshQuota(file, provider)
           .catch(() => undefined)
           .finally(() => void refreshDetailTrend(file, { silent: true }));
