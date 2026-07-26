@@ -2058,53 +2058,55 @@ export function AuthFilesFilesTab({
                               </button>
                             </HoverTooltip>
                           ) : null}
-                          <HoverTooltip
-                            content={cycleCallsLabel}
-                            className="shrink-0"
-                          >
-                            <span
-                              className={[
-                                "inline-flex shrink-0 items-center rounded-md bg-slate-100 text-2xs font-semibold tabular-nums text-slate-700 dark:bg-white/10 dark:text-white/70",
-                                denseCards ? "h-5 px-1.5" : "px-2 py-0.5",
-                              ].join(" ")}
+                          {typeof cycleCalls === "number" ? (
+                            <HoverTooltip
+                              content={cycleCallsLabel}
+                              className="shrink-0"
                             >
-                              {denseCards
-                                ? typeof cycleCalls === "number"
-                                  ? cycleCalls
-                                  : "--"
-                                : cycleCallsLabel}
-                            </span>
-                          </HoverTooltip>
-                          <HoverTooltip content={cycleTokensTooltip} className="shrink-0">
-                            <span
-                              className={[
-                                "inline-flex shrink-0 items-center rounded-md bg-slate-100 text-2xs font-semibold tabular-nums text-slate-700 dark:bg-white/10 dark:text-white/70",
-                                denseCards ? "h-5 px-1.5" : "px-2 py-0.5",
-                              ].join(" ")}
-                            >
-                              {denseCards ? cycleTokensCompact : cycleTokensLabel}
-                            </span>
-                          </HoverTooltip>
-                          <HoverTooltip
-                            content={`${t("common.success_rate")} ${successRateLabel}`}
-                            className="shrink-0"
-                          >
-                            <span
-                              className={[
-                                "inline-flex shrink-0 items-center rounded-md bg-slate-100 text-2xs font-semibold text-slate-700 dark:bg-white/10 dark:text-white/70",
-                                denseCards ? "h-5 gap-0 px-1.5" : "gap-1 px-2 py-0.5",
-                              ].join(" ")}
-                            >
-                              {denseCards ? null : (
-                                <span>{t("common.success_rate")}</span>
-                              )}
                               <span
-                                className={`tabular-nums ${successRateClass}`}
+                                className={[
+                                  "inline-flex shrink-0 items-center rounded-md bg-slate-100 text-2xs font-semibold tabular-nums text-slate-700 dark:bg-white/10 dark:text-white/70",
+                                  denseCards ? "h-5 px-1.5" : "px-2 py-0.5",
+                                ].join(" ")}
                               >
-                                {successRateLabel}
+                                {denseCards ? cycleCalls : cycleCallsLabel}
                               </span>
-                            </span>
-                          </HoverTooltip>
+                            </HoverTooltip>
+                          ) : null}
+                          {cycleTokensKnown ? (
+                            <HoverTooltip content={cycleTokensTooltip} className="shrink-0">
+                              <span
+                                className={[
+                                  "inline-flex shrink-0 items-center rounded-md bg-slate-100 text-2xs font-semibold tabular-nums text-slate-700 dark:bg-white/10 dark:text-white/70",
+                                  denseCards ? "h-5 px-1.5" : "px-2 py-0.5",
+                                ].join(" ")}
+                              >
+                                {denseCards ? cycleTokensCompact : cycleTokensLabel}
+                              </span>
+                            </HoverTooltip>
+                          ) : null}
+                          {successRate !== null ? (
+                            <HoverTooltip
+                              content={`${t("common.success_rate")} ${successRateLabel}`}
+                              className="shrink-0"
+                            >
+                              <span
+                                className={[
+                                  "inline-flex shrink-0 items-center rounded-md bg-slate-100 text-2xs font-semibold text-slate-700 dark:bg-white/10 dark:text-white/70",
+                                  denseCards ? "h-5 gap-0 px-1.5" : "gap-1 px-2 py-0.5",
+                                ].join(" ")}
+                              >
+                                {denseCards ? null : (
+                                  <span>{t("common.success_rate")}</span>
+                                )}
+                                <span
+                                  className={`tabular-nums ${successRateClass}`}
+                                >
+                                  {successRateLabel}
+                                </span>
+                              </span>
+                            </HoverTooltip>
+                          ) : null}
                           {subscriptionBadge}
                           {runtimeOnly ? (
                             <span className="inline-flex shrink-0 items-center rounded-md bg-slate-900 px-2 py-0.5 text-2xs font-semibold text-white dark:bg-white dark:text-neutral-950">

@@ -1286,7 +1286,13 @@ export function useAuthFilesStatusState({
             name: additionalQuota.name,
           });
         }
-        if (text.startsWith("claude_quota.")) return t(text);
+        if (text.startsWith("claude_quota.")) {
+          const separatorIndex = text.indexOf("::");
+          if (separatorIndex >= 0) {
+            return t(text.slice(0, separatorIndex), { name: text.slice(separatorIndex + 2) });
+          }
+          return t(text);
+        }
         if (text.startsWith("antigravity_quota.")) return t(text);
         if (text.startsWith("xai_quota.")) return translateXaiQuotaText(text);
         return text;
