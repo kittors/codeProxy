@@ -121,9 +121,10 @@ export const mapQuotaItemDto = (item: AiAccountQuotaItemDto): QuotaItem => {
   return {
     key: item.quota_key,
     label: item.quota_label ?? item.quota_key,
+    // Clamp at the boundary: group averages consume percent directly.
     percent:
       typeof item.percent === "number" && Number.isFinite(item.percent)
-        ? item.percent
+        ? Math.min(100, Math.max(0, item.percent))
         : null,
     value: item.value,
     resetAtMs,

@@ -61,6 +61,12 @@ import {
   type PrefixProxyEditorState,
 } from "@code-proxy/domain";
 import type { QuotaState } from "@features/quota-preview/quota-helpers";
+import {
+  formatLocalDateKey,
+  formatLocalHourKey,
+  parseBucketKeyMs,
+  resolveNearestBucketKey,
+} from "./trendBuckets";
 
 type DetailTab = "usage" | "identity" | "fields" | "models";
 type DetailTrendWindow = "5h" | "week";
@@ -107,20 +113,6 @@ const useIdentityDesktopLayout = () => {
   }, []);
 
   return matches;
-};
-
-const padTwo = (value: number) => String(value).padStart(2, "0");
-
-const formatLocalDateKey = (timestamp: string) => {
-  const date = new Date(timestamp);
-  if (Number.isNaN(date.getTime())) return "";
-  return `${date.getFullYear()}-${padTwo(date.getMonth() + 1)}-${padTwo(date.getDate())}`;
-};
-
-const formatLocalHourKey = (timestamp: string) => {
-  const date = new Date(timestamp);
-  if (Number.isNaN(date.getTime())) return "";
-  return `${formatLocalDateKey(timestamp)} ${padTwo(date.getHours())}:00`;
 };
 
 const formatCurrency = (value: number) => `$${(Number.isFinite(value) ? value : 0).toFixed(4)}`;
@@ -443,15 +435,22 @@ export function AuthFileDetailModal({
       costByKey.set(key, point.cost ?? 0);
     });
 
+    const bucketKeys = Array.from(xKeys);
+    const bucketMsByKey = new Map(bucketKeys.map((key) => [key, parseBucketKeyMs(key)]));
+    const bucketToleranceMs = detailTrendWindow === "5h" ? 3_600_000 : 86_400_000;
     const quotaBySeries = activeQuotaSeries.map((series) => {
       const values = new Map<string, number | null>();
       series.points.forEach((point) => {
         if (!point.timestamp) return;
-        const key =
+        const localKey =
           detailTrendWindow === "5h"
             ? formatLocalHourKey(point.timestamp)
             : formatLocalDateKey(point.timestamp);
-        if (!key || !xKeys.has(key)) return;
+        const key =
+          localKey && xKeys.has(localKey)
+            ? localKey
+            : resolveNearestBucketKey(point.timestamp, bucketKeys, bucketMsByKey, bucketToleranceMs);
+        if (!key) return;
         values.set(key, toQuotaUsedPercent(point.percent));
       });
       return { series, values };

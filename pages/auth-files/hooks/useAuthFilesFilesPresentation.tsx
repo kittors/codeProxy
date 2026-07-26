@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, type ReactNode } from "react";
+import { useCallback, useMemo, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
   AlertTriangle,
@@ -26,14 +26,11 @@ import {
   formatAuthFileRestrictionRemaining,
   formatModified,
   formatPlanBadgeLabel,
-  getActiveCacheTenantId,
-  readAuthFilesDataCache,
   resolveClaudeOAuthHealthBadges,
   isRuntimeOnlyAuthFile,
   normalizeAuthIndexValue,
   parseAdditionalQuotaWindowLabel,
   resolveAuthFileDisplayName,
-  resolveAuthFileDisplayPlanType,
   resolveAuthFilePlanType,
   resolveAuthFileRestrictionBadges,
   resolveAuthFileWeeklyQuotaResetAtMs,
@@ -47,10 +44,10 @@ import {
   shouldShowAuthFilePlanBadge,
   translateParameterizedQuotaLabel,
   translateXaiQuotaLabel,
-  writeAuthFilesDataCache,
   type AuthFileCycleBudgetStats,
 } from "@code-proxy/domain";
 import { resolveQuotaProvider, type QuotaProvider } from "@features/quota-preview/quota-fetch";
+import { useStickyDisplayPlans } from "./useStickyDisplayPlans";
 import {
   clampPercent,
   filterAntigravityQuotaItems,
@@ -236,75 +233,7 @@ export function useAuthFilesFilesPresentation({
   setFileEnabled,
   usageIndex,
 }: UseAuthFilesFilesPresentationOptions) {
-  // Sticky last-good plan tier so PRO / PRO 5X / PRO 20X do not flash on partial refresh
-  // or full remount. Seed from tenant cache; memory alone dies on route leave / F5.
-  const stickyDisplayPlanRef = useRef<Map<string, string> | null>(null);
-  if (stickyDisplayPlanRef.current === null) {
-    const seeded = new Map<string, string>();
-    const cached = readAuthFilesDataCache(getActiveCacheTenantId());
-    for (const [name, plan] of Object.entries(cached?.displayPlanByFileName ?? {})) {
-      if (name && plan) seeded.set(name, plan);
-    }
-    stickyDisplayPlanRef.current = seeded;
-  }
-  const persistDisplayPlanTimerRef = useRef<number | null>(null);
-  useEffect(
-    () => () => {
-      if (typeof window !== "undefined" && persistDisplayPlanTimerRef.current != null) {
-        window.clearTimeout(persistDisplayPlanTimerRef.current);
-      }
-    },
-    [],
-  );
-  const schedulePersistDisplayPlans = useCallback(() => {
-    if (typeof window === "undefined") return;
-    if (persistDisplayPlanTimerRef.current != null) {
-      window.clearTimeout(persistDisplayPlanTimerRef.current);
-    }
-    // Pin the tenant at schedule time: the sticky map holds this tenant's plans,
-    // and a tenant switch inside the debounce window would otherwise write them
-    // into the next tenant's cache, where same-named auth files pick up the
-    // wrong plan badge during warm paint.
-    const scheduledTenantId = getActiveCacheTenantId();
-    persistDisplayPlanTimerRef.current = window.setTimeout(() => {
-      const tenantId = scheduledTenantId;
-      if (tenantId !== getActiveCacheTenantId()) return;
-      const current = readAuthFilesDataCache(tenantId);
-      if (!current || !Array.isArray(current.files)) return;
-      const sticky = stickyDisplayPlanRef.current;
-      if (!sticky || sticky.size === 0) return;
-      const displayPlanByFileName: Record<string, string> = {
-        ...current.displayPlanByFileName,
-      };
-      for (const [name, plan] of sticky) {
-        if (name && plan) displayPlanByFileName[name] = plan;
-      }
-      writeAuthFilesDataCache({
-        ...current,
-        tenantId,
-        savedAtMs: Date.now(),
-        displayPlanByFileName,
-      });
-    }, 250);
-  }, []);
-  const resolveStickyDisplayPlanType = useCallback(
-    (
-      file: AuthFileItem,
-      quotaState?: QuotaState | null,
-      cycleStats?: AuthFileCycleBudgetStats | null,
-    ) => {
-      const sticky = stickyDisplayPlanRef.current ?? new Map<string, string>();
-      stickyDisplayPlanRef.current = sticky;
-      const previous = sticky.get(file.name) ?? null;
-      const next = resolveAuthFileDisplayPlanType(file, quotaState, cycleStats, previous);
-      if (next && sticky.get(file.name) !== next) {
-        sticky.set(file.name, next);
-        schedulePersistDisplayPlans();
-      }
-      return next;
-    },
-    [schedulePersistDisplayPlans],
-  );
+  const resolveStickyDisplayPlanType = useStickyDisplayPlans();
   const { t } = useTranslation();
 
   const translateQuotaText = useCallback(
@@ -650,7 +579,7 @@ export function useAuthFilesFilesPresentation({
   const renderQuotaHoverContent = useCallback(
     (state: QuotaState, options?: { suppressItemMeta?: boolean }) => {
       const items = Array.isArray(state.items) ? (state.items as QuotaItem[]) : [];
-      const hasError = state.status === "error";
+      const hasError = state.status === "error" || Boolean(state.error);
 
       return (
         <div className="space-y-1">
@@ -1055,7 +984,7 @@ export function useAuthFilesFilesPresentation({
               detailText: quotaMetricDetails[index] ?? null,
             })),
           );
-          const hasError = state.status === "error";
+          const hasError = state.status === "error" || Boolean(state.error);
 
           if (hasError && slots.length === 0) {
             return renderQuotaErrorBadge(state.error ?? t("common.error"));
