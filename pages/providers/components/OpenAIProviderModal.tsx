@@ -8,7 +8,8 @@ import type { ProxyPoolEntry } from "@code-proxy/api-client/endpoints/proxies";
 import { OpenAIProviderBasicSection } from "./OpenAIProviderBasicSection";
 import { OpenAIKeyEntriesEditor } from "./OpenAIKeyEntriesEditor";
 import { OpenAIProviderModelsSection } from "./OpenAIProviderModelsSection";
-import { ModerationProfileSelect } from "@pages/content-moderation/components/ModerationProfileSelect";
+import { ModerationProfileSelect } from "@features/content-moderation";
+import { useModerationPermissions } from "@app/providers/useModerationPermissions";
 
 interface OpenAIProviderModalProps {
   open: boolean;
@@ -48,6 +49,7 @@ export function OpenAIProviderModal({
   maskApiKey,
 }: OpenAIProviderModalProps) {
   const { t } = useTranslation();
+  const moderationPerms = useModerationPermissions();
 
   useEffect(() => {
     if (!open) {
@@ -87,6 +89,8 @@ export function OpenAIProviderModal({
 
         <div className="rounded-xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
           <ModerationProfileSelect
+        canRead={moderationPerms.canRead}
+        canWrite={moderationPerms.canWrite}
             channelType="provider"
             channelId={openaiDraft.id}
             label={t("content_moderation.provider_default_profile_label")}

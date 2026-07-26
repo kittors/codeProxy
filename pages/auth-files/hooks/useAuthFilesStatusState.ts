@@ -19,7 +19,6 @@ import {
   type EntityStatsResponse,
 } from "@code-proxy/api-client";
 import {
-  AUTH_FILES_FILES_VIEW_MODE_KEY,
   AUTH_FILES_QUOTA_AUTO_REFRESH_KEY,
   getActiveCacheTenantId,
   normalizeAuthIndexValue,
@@ -28,7 +27,6 @@ import {
   readAuthFilesDataCache,
   writeAuthFilesDataCache,
   type AuthFileCycleBudgetStats,
-  type FilesViewMode,
 } from "@code-proxy/domain";
 import { useInterval, useLocalStorage, useToast } from "@code-proxy/ui";
 import {
@@ -312,11 +310,6 @@ export function useAuthFilesStatusState({
     AUTH_FILES_QUOTA_AUTO_REFRESH_KEY,
     initialAutoRefresh,
   );
-  const [filesViewMode, setFilesViewMode] = useLocalStorage<FilesViewMode>(
-    AUTH_FILES_FILES_VIEW_MODE_KEY,
-    "cards",
-  );
-
   // Always persist normalized bucket.
   const quotaAutoRefreshMs = useMemo(() => {
     const normalized = readAndMigrateQuotaAutoRefreshMs();
@@ -1447,14 +1440,13 @@ export function useAuthFilesStatusState({
         return next;
       });
     } catch {
-      const elapsed = performance.now() - start;
+      // The endpoint falls back to the registry when the live probe fails, so it
+      // answers 200 even for an unreachable provider. Any thrown error is a real
+      // failure (auth rejected, 5xx, network, timeout) and must not be painted
+      // as a healthy latency just because it came back quickly.
       setConnectivityState((prev) => {
         const next = new Map(prev);
-        if (elapsed < 20000) {
-          next.set(fileName, { loading: false, latencyMs: elapsed, error: false });
-        } else {
-          next.set(fileName, { loading: false, latencyMs: null, error: true });
-        }
+        next.set(fileName, { loading: false, latencyMs: null, error: true });
         return next;
       });
     }
@@ -1525,8 +1517,6 @@ export function useAuthFilesStatusState({
         window.localStorage.setItem(AUTH_FILES_QUOTA_AUTO_REFRESH_KEY, JSON.stringify(next));
       }
     },
-    filesViewMode,
-    setFilesViewMode,
     resolveQuotaCardSlots,
     refreshQuota,
     checkAuthFileConnectivity,

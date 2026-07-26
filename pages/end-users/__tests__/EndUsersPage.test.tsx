@@ -14,7 +14,7 @@ const mocks = vi.hoisted(() => ({
   permissionProfiles: vi.fn(async (): Promise<ApiKeyPermissionProfile[]> => []),
 }));
 
-vi.mock("@app/guards/PermissionGate", () => ({
+vi.mock("@app/providers/PermissionGate", () => ({
   PermissionGate: ({ children }: { children: React.ReactNode }) => children,
 }));
 

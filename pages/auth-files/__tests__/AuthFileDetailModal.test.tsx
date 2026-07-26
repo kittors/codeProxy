@@ -42,7 +42,7 @@ vi.mock("@code-proxy/ui", async (importOriginal) => ({
   },
 }));
 
-vi.mock("@pages/content-moderation/components/ModerationProfileSelect", () => ({
+vi.mock("@features/content-moderation", () => ({
   ModerationProfileSelect: (props: { channelType: string; channelId?: string }) => {
     moderationProfileProps.push(props);
     return <div data-testid="moderation-profile-select" />;

@@ -5,7 +5,8 @@ import { SearchableSelect } from "@code-proxy/ui";
 import { ToggleSwitch } from "@code-proxy/ui";
 import type { ProxyPoolEntry } from "@code-proxy/api-client/endpoints/proxies";
 import { ProxyPoolSelect } from "@features/proxy-pool";
-import { ModerationProfileSelect } from "@pages/content-moderation/components/ModerationProfileSelect";
+import { ModerationProfileSelect } from "@features/content-moderation";
+import { useModerationPermissions } from "@app/providers/useModerationPermissions";
 import { KeyValueInputList } from "../KeyValueInputList";
 import type { ProviderKeyDraft } from "../providers-helpers";
 
@@ -57,6 +58,7 @@ export function ProviderKeyRequestTab({
   openCodeModelsLoading,
 }: ProviderKeyRequestTabProps) {
   const { t } = useTranslation();
+  const moderationPerms = useModerationPermissions();
   const isBedrock = editKeyType === "bedrock";
   const clineChatUrl = useMemo(() => {
     const baseUrl = keyDraft.baseUrl.trim().replace(/\/+$/g, "") || CLINE_BASE_URL;
@@ -80,6 +82,8 @@ export function ProviderKeyRequestTab({
     <div className="space-y-4">
       <SectionCard>
         <ModerationProfileSelect
+        canRead={moderationPerms.canRead}
+        canWrite={moderationPerms.canWrite}
           channelType="provider_key"
           channelId={keyDraft.id}
           label={t("content_moderation.provider_key_profile_label")}

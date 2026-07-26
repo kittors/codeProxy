@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import { ApiError } from "@code-proxy/api-client";
 import i18n from "@code-proxy/i18n";
 import { ThemeProvider, ToastProvider } from "@code-proxy/ui";
-import { ModerationProfileSelect } from "../components/ModerationProfileSelect";
+import { ModerationProfileSelect } from "../ModerationProfileSelect";
 
 const mocks = vi.hoisted(() => ({
   listProfiles: vi.fn(),

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
   AlertTriangle,
@@ -246,13 +246,27 @@ export function useAuthFilesFilesPresentation({
     stickyDisplayPlanRef.current = seeded;
   }
   const persistDisplayPlanTimerRef = useRef<number | null>(null);
+  useEffect(
+    () => () => {
+      if (typeof window !== "undefined" && persistDisplayPlanTimerRef.current != null) {
+        window.clearTimeout(persistDisplayPlanTimerRef.current);
+      }
+    },
+    [],
+  );
   const schedulePersistDisplayPlans = useCallback(() => {
     if (typeof window === "undefined") return;
     if (persistDisplayPlanTimerRef.current != null) {
       window.clearTimeout(persistDisplayPlanTimerRef.current);
     }
+    // Pin the tenant at schedule time: the sticky map holds this tenant's plans,
+    // and a tenant switch inside the debounce window would otherwise write them
+    // into the next tenant's cache, where same-named auth files pick up the
+    // wrong plan badge during warm paint.
+    const scheduledTenantId = getActiveCacheTenantId();
     persistDisplayPlanTimerRef.current = window.setTimeout(() => {
-      const tenantId = getActiveCacheTenantId();
+      const tenantId = scheduledTenantId;
+      if (tenantId !== getActiveCacheTenantId()) return;
       const current = readAuthFilesDataCache(tenantId);
       if (!current || !Array.isArray(current.files)) return;
       const sticky = stickyDisplayPlanRef.current;
