@@ -50,6 +50,7 @@ import {
   resolveFileType,
   resolvePlanBadgeClass,
   shouldShowAuthFilePlanBadge,
+  translateParameterizedQuotaLabel,
   type AuthFileModelItem,
   type AuthFileModelOwnerGroup,
   type ChannelEditorState,
@@ -379,11 +380,10 @@ export function AuthFileDetailModal({
     () => (label: string) => {
       if (!label) return label;
       if (label.startsWith("m_quota.")) return t(label);
+      if (label.startsWith("claude_quota.")) return translateParameterizedQuotaLabel(t, label);
       const additionalQuota = parseAdditionalQuotaWindowLabel(label);
       if (additionalQuota) {
-        return t(`m_quota.additional_${additionalQuota.window}`, {
-          name: additionalQuota.name,
-        });
+        return t(`m_quota.additional_${additionalQuota.window}`, { name: additionalQuota.name });
       }
       return label;
     },
