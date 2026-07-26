@@ -45,8 +45,8 @@ import {
   isAccountStatusFresher,
   readAccountStatusFreshness,
   type AccountStatusFreshness,
+  type AuthFileCycleUsageSnapshot,
 } from "./mapAccountStatusToUi";
-import type { AuthFileCycleUsageSnapshot } from "./useAuthFilesCycleUsageState";
 
 const STATUS_POLL_INTERVAL_MS = 1_500;
 const STATUS_REFRESH_TIMEOUT_MS = 120_000;

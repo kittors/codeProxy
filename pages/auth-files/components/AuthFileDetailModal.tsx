@@ -299,8 +299,9 @@ export function AuthFileDetailModal({
   const visibleModelsError = usesMappedModelOwner ? null : modelsError;
   const providerKey = normalizeProviderKey(modelsFileType);
   const detailProviderKey = detailFile ? normalizeProviderKey(resolveFileType(detailFile)) : "";
-  const supportsUsageTrend =
-    detailProviderKey === "kimi" || detailProviderKey === "codex" || detailProviderKey === "xai";
+  const supportsUsageTrend = ["kimi", "codex", "xai", "claude", "anthropic"].includes(
+    detailProviderKey,
+  );
   const hasIdentityFingerprint = Boolean(detailFile?.identity_fingerprint_summary);
   useEffect(() => {
     const profiles = identityFingerprintDetail?.profiles ?? [];
@@ -1156,8 +1157,13 @@ export function AuthFileDetailModal({
 
   const renderUsageTrend = () => {
     const isCodexDetail = detailProviderKey === "codex";
-    // xAI only has a weekly window (no Codex 5h slot); still show predicted weekly quota like Codex.
-    const showPredictedWeeklyQuota = isCodexDetail || detailProviderKey === "xai";
+    const isClaudeDetail = detailProviderKey === "claude" || detailProviderKey === "anthropic";
+    // Codex/claude expose a 5h window; xAI only weekly. All three show predicted weekly quota.
+    const fiveHourQuotaKey = isCodexDetail ? "code_5h" : isClaudeDetail ? "five_hour" : null;
+    const weeklyQuotaKey =
+      isCodexDetail ? "code_week" : isClaudeDetail ? "seven_day" : "weekly_limit";
+    const showPredictedWeeklyQuota =
+      isCodexDetail || isClaudeDetail || detailProviderKey === "xai";
     const summaryGridClassName = showPredictedWeeklyQuota
       ? "grid gap-3 sm:grid-cols-2 xl:grid-cols-7"
       : "grid gap-3 sm:grid-cols-2 xl:grid-cols-6";
@@ -1219,28 +1225,22 @@ export function AuthFileDetailModal({
     const cycleStart = detailTrend.cycle_start
       ? new Date(detailTrend.cycle_start).toLocaleString()
       : "--";
-    const fiveHourQuotaUsedPercent = isCodexDetail
+    const fiveHourQuotaUsedPercent = fiveHourQuotaKey
       ? latestQuotaUsedPercent(
           detailTrend.quota_series,
-          "code_5h",
+          fiveHourQuotaKey,
           (windowSeconds) => windowSeconds === FIVE_HOUR_WINDOW_SECONDS,
         )
       : null;
     const weeklyQuotaUsedPercent =
       detailTrend.weekly_quota_used_percent ??
-      (isCodexDetail
+      (showPredictedWeeklyQuota
         ? latestQuotaUsedPercent(
             detailTrend.quota_series,
-            "code_week",
+            weeklyQuotaKey,
             (windowSeconds) => windowSeconds >= WEEK_WINDOW_SECONDS,
           )
-        : detailProviderKey === "xai"
-          ? latestQuotaUsedPercent(
-              detailTrend.quota_series,
-              "weekly_limit",
-              (windowSeconds) => windowSeconds >= WEEK_WINDOW_SECONDS,
-            )
-          : null);
+        : null);
     // Prefer the backend weekly used percent; fall back to the latest weekly_limit snapshot for xAI.
     const weeklyQuotaUsed = formatPercent(weeklyQuotaUsedPercent);
     const estimatedFiveHourQuota = estimateQuotaBudget(
@@ -1252,7 +1252,7 @@ export function AuthFileDetailModal({
     const showLast7DaysRequests = !isCodexDetail && detailTrend.request_total > 0;
     const showCycleRequests = displayCycleRequestTotal > 0;
     const showCycleCost = displayCycleCostTotal > 0;
-    const showFiveHourQuota = isCodexDetail && estimatedFiveHourQuota > 0;
+    const showFiveHourQuota = fiveHourQuotaKey !== null && estimatedFiveHourQuota > 0;
     const showWeeklyQuota = showPredictedWeeklyQuota && estimatedWeeklyQuota > 0;
     const showWeeklyUsed =
       typeof weeklyQuotaUsedPercent === "number" &&

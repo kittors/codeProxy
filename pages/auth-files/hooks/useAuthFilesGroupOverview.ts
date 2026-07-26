@@ -64,6 +64,28 @@ export function useAuthFilesGroupOverview({
     return `${Math.round(Math.max(0, Math.min(100, value)))}%`;
   }, []);
 
+  // Match by window length so claude (five_hour/seven_day), xai, etc. contribute
+  // to group averages — codex/kimi keep their stable slot ids as the fast path.
+  const resolveSlotWindowPercent = useCallback(
+    (
+      slots: { id: string; item: QuotaItem | null }[],
+      window: "5h" | "week",
+    ): number | null => {
+      const preferredId = window === "5h" ? "code_5h" : "code_week";
+      const matchesWindow = (item: QuotaItem | null): boolean => {
+        const windowSeconds = item?.windowSeconds;
+        if (typeof windowSeconds !== "number") return false;
+        return window === "5h" ? windowSeconds === 18000 : windowSeconds >= 604800;
+      };
+      const slot =
+        slots.find((candidate) => candidate.id === preferredId) ??
+        slots.find((candidate) => matchesWindow(candidate.item));
+      const percent = slot?.item?.percent;
+      return typeof percent === "number" && Number.isFinite(percent) ? percent : null;
+    },
+    [],
+  );
+
   const groupOverviewTabs = useMemo(() => ["all", ...providerOptions], [providerOptions]);
 
   const computeGroupOverview = useCallback(
@@ -84,12 +106,11 @@ export function useAuthFilesGroupOverview({
         if (items.length === 0) return;
 
         const slots = resolveQuotaCardSlots(provider, items);
-        const fiveHour = slots.find((slot) => slot.id === "code_5h")?.item?.percent;
-        const weekly = slots.find((slot) => slot.id === "code_week")?.item?.percent;
+        const fiveHour = resolveSlotWindowPercent(slots, "5h");
+        const weekly = resolveSlotWindowPercent(slots, "week");
 
-        if (typeof fiveHour === "number" && Number.isFinite(fiveHour))
-          fiveHourValues.push(fiveHour);
-        if (typeof weekly === "number" && Number.isFinite(weekly)) weeklyValues.push(weekly);
+        if (fiveHour !== null) fiveHourValues.push(fiveHour);
+        if (weekly !== null) weeklyValues.push(weekly);
       });
 
       const average = (values: number[]) =>
@@ -109,6 +130,7 @@ export function useAuthFilesGroupOverview({
       resolveAuthFileStats,
       resolveQuotaCardSlots,
       resolveQuotaProvider,
+      resolveSlotWindowPercent,
       usageIndex,
     ],
   );
@@ -135,14 +157,11 @@ export function useAuthFilesGroupOverview({
           const state = quotaByFileName[file.name];
           const items = Array.isArray(state?.items) ? state.items : [];
           const slots = provider ? resolveQuotaCardSlots(provider, items) : [];
-          const fiveHour = slots.find((slot) => slot.id === "code_5h")?.item?.percent ?? null;
-          const weekly = slots.find((slot) => slot.id === "code_week")?.item?.percent ?? null;
           return {
             name: resolveAuthFileDisplayName(file) || file.name,
             totalCalls: stats.success + stats.failure,
-            averageFiveHour:
-              typeof fiveHour === "number" && Number.isFinite(fiveHour) ? fiveHour : null,
-            averageWeekly: typeof weekly === "number" && Number.isFinite(weekly) ? weekly : null,
+            averageFiveHour: resolveSlotWindowPercent(slots, "5h"),
+            averageWeekly: resolveSlotWindowPercent(slots, "week"),
             hasQuota: items.length > 0,
           };
         })
@@ -165,6 +184,7 @@ export function useAuthFilesGroupOverview({
     resolveAuthFileStats,
     resolveQuotaCardSlots,
     resolveQuotaProvider,
+    resolveSlotWindowPercent,
     usageIndex,
   ]);
 

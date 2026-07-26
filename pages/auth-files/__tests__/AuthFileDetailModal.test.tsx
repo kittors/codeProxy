@@ -573,6 +573,55 @@ describe("AuthFileDetailModal", () => {
     expect(screen.queryByText("Predicted 5-hour window quota")).not.toBeInTheDocument();
   });
 
+  test("enables usage trend with 5h and weekly predictions for Claude files", () => {
+    renderDetailModal({
+      detailFile: {
+        name: "claude-user.json",
+        label: "Claude Max",
+        type: "claude",
+        provider: "claude",
+        size: 256,
+      },
+      modelsFileType: "claude",
+      quotaState: {
+        status: "success",
+        planType: "max_20x",
+        items: [],
+        updatedAt: Date.now(),
+      },
+      detailTrend: {
+        auth_index: "claude-auth",
+        days: 7,
+        hours: 5,
+        request_total: 90,
+        cycle_request_total: 42,
+        cycle_cost_total: 1.2,
+        weekly_quota_used_percent: 8,
+        cycle_known: true,
+        cycle_start: "2026-07-21T00:00:00Z",
+        daily_usage: [{ date: "2026-07-24", requests: 42, cost: 1.2 }],
+        hourly_usage: [{ hour: "2026-07-26 10:00", requests: 5, cost: 0.05 }],
+        quota_series: [
+          {
+            quota_key: "five_hour",
+            quota_label: "claude_quota.five_hour",
+            window_seconds: 18000,
+            points: [{ timestamp: "2026-07-26T10:00:00Z", percent: 80 }],
+          },
+        ],
+      },
+    });
+
+    expect(screen.getByRole("tab", { name: "Usage" })).toBeInTheDocument();
+    expect(screen.getByText("MAX 20X")).toBeInTheDocument();
+    expectSummaryCard("Last 7 days requests", "90");
+    expectSummaryCard("Current weekly cycle", "42");
+    expectSummaryCard("Weekly quota used", "8%");
+    // $1.2 / 8% = $15.0000 weekly budget; 5h remaining 80% => used 20%, $0.05 / 20% = $0.2500.
+    expectSummaryCard("Predicted weekly window quota", "$15.0000");
+    expectSummaryCard("Predicted 5-hour window quota", "$0.2500");
+  });
+
   test("hides empty identity fingerprint field rows", () => {
     renderDetailModal({
       detailTab: "identity",

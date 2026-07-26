@@ -8,7 +8,13 @@ import {
   type AuthFileCycleBudgetStats,
 } from "@code-proxy/domain";
 import type { QuotaItem, QuotaState } from "@features/quota-preview/quota-types";
-import type { AuthFileCycleUsageSnapshot } from "./useAuthFilesCycleUsageState";
+
+export type AuthFileCycleUsageSnapshot = {
+  calls: number | null;
+  cycleCostTotal: number | null;
+  cycleTotalTokens: number | null;
+  weeklyQuotaUsedPercent: number | null;
+};
 
 const parseTimestampMs = (value: string | null | undefined): number | undefined => {
   if (!value) return undefined;
