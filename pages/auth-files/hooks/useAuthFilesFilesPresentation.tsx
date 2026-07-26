@@ -274,7 +274,7 @@ export function useAuthFilesFilesPresentation({
       const sticky = stickyDisplayPlanRef.current;
       if (!sticky || sticky.size === 0) return;
       const displayPlanByFileName: Record<string, string> = {
-        ...(current.displayPlanByFileName ?? {}),
+        ...current.displayPlanByFileName,
       };
       for (const [name, plan] of sticky) {
         if (name && plan) displayPlanByFileName[name] = plan;

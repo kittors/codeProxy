@@ -915,7 +915,7 @@ export function EndUsersPage() {
             <TextInput
               value={form.username}
               onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))}
-              placeholder="空则按昵称生成"
+              placeholder={t("end_users.username_placeholder")}
             />
           </label>
           <label className="block space-y-1.5">
@@ -926,7 +926,7 @@ export function EndUsersPage() {
               type="password"
               value={form.password}
               onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-              placeholder="空则随机生成，请立即复制"
+              placeholder={t("end_users.password_placeholder")}
             />
           </label>
           <p className="text-xs text-amber-600">
@@ -944,7 +944,7 @@ export function EndUsersPage() {
       >
         {createdSecrets ? (
           <div className="space-y-3 text-sm">
-            <p className="font-medium text-amber-600">离开此窗口后无法再查看明文密码 / API Key。</p>
+            <p className="font-medium text-amber-600">{t("end_users.secrets_one_time_hint")}</p>
             <div>
               用户名：<code>{createdSecrets.user.username}</code>
             </div>
@@ -960,7 +960,7 @@ export function EndUsersPage() {
                 <code className="select-all break-all">{createdSecrets.default_api_key.key}</code>
               </div>
             ) : null}
-            <Button onClick={() => setCreatedSecrets(null)}>已复制，关闭</Button>
+            <Button onClick={() => setCreatedSecrets(null)}>{t("end_users.secrets_copied_close")}</Button>
           </div>
         ) : null}
       </Modal>
@@ -1172,7 +1172,7 @@ export function EndUsersPage() {
       <ConfirmModal
         open={Boolean(resetUser)}
         onClose={() => setResetUser(null)}
-        title="重置密码"
+        title={t("end_users.reset_password_title")}
         description={`将为 ${resetUser?.username ?? ""} 生成新随机密码，旧会话失效。`}
         confirmText="重置"
         busy={busy}

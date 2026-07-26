@@ -1,6 +1,7 @@
 import { createPortal } from "react-dom";
 import { useEffect, useId, useRef, useState, type PropsWithChildren, type ReactNode } from "react";
 import { X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 const ANIMATION_MS = 200;
 
@@ -22,6 +23,7 @@ export function Drawer({
   bodyClassName?: string;
   onClose: () => void;
 }>) {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(open);
   const [visible, setVisible] = useState(open);
   const timeoutRef = useRef<number | null>(null);
@@ -71,7 +73,7 @@ export function Drawer({
           if (!open) return;
           onClose();
         }}
-        aria-label="close"
+        aria-label={t("common.close")}
         className={[
           "absolute inset-0 cursor-default bg-slate-900/40 backdrop-blur-sm dark:bg-black/50",
           "transition-opacity duration-200 ease-out motion-reduce:transition-none",
@@ -105,7 +107,7 @@ export function Drawer({
             onClick={onClose}
             disabled={!open}
             className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-0 bg-transparent p-0 text-slate-500 shadow-none transition-colors hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
-            aria-label="close"
+            aria-label={t("common.close")}
           >
             <X size={16} />
           </button>

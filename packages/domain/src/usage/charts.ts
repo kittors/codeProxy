@@ -1,5 +1,12 @@
-import type { ScriptableContext } from "chart.js";
 import { collectUsageDetails, extractTotalTokens } from "./details";
+
+/** Minimal stand-in for chart.js's ScriptableContext<"line"> (dependency removed). */
+type ScriptableContext<_TType extends "line"> = {
+  chart: {
+    ctx: CanvasRenderingContext2D;
+    chartArea?: { top: number; bottom: number } | null;
+  };
+};
 import { formatDayLabel, formatHourLabel } from "./formatters";
 
 export interface ChartDataset {

@@ -792,9 +792,7 @@
     "identity_shared_policy_confirm": "This changes the identity policy for every credential attached to the same physical AI account. Continue?",
     "identity_policy_revision_conflict": "The identity policy changed elsewhere. Refresh the account detail and try again.",
     "cycle_calls_count": "Cycle {{count}}",
-    "cycle_calls_unknown": "Cycle --",
     "cycle_tokens_count": "Cycle tokens {{count}}",
-    "cycle_tokens_unknown": "Cycle tokens --",
     "col_cycle_calls": "Cycle calls",
     "col_lifetime_calls": "Lifetime calls",
     "col_subject_scope": "Account scope",
@@ -3308,7 +3306,12 @@
     "total_resets": "Total resets",
     "reset_password": "Reset password",
     "other_limits_profile_readonly_hint": "Request and realtime limits come from {{profile}} and are read-only here. The lifetime spending limit remains account-specific.",
-    "other_limits_direct_hint": "No permission profile is selected. Edit request and realtime limits directly; 0 means unlimited."
+    "other_limits_direct_hint": "No permission profile is selected. Edit request and realtime limits directly; 0 means unlimited.",
+    "username_placeholder": "Leave empty to generate from nickname",
+    "password_placeholder": "Leave empty to generate randomly; copy it right away",
+    "secrets_one_time_hint": "The plaintext password / API key cannot be viewed again after leaving this window.",
+    "secrets_copied_close": "Copied, close",
+    "reset_password_title": "Reset Password"
   },
   "apikey_lookup": {
     "available_models": "Model Plaza",

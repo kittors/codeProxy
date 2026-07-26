@@ -1,6 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
 
-const LOOKUP_SESSION_KEY = "apiKeyLookup.lastApiKey.v1";
 const TEST_API_KEY = "sk-e2e-lookup-quick-import";
 
 const setQueriedLookupKey = async (page: Page) => {
