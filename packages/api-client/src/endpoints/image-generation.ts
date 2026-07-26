@@ -58,7 +58,19 @@ export interface ImageGenerationSizePresetsResponse {
   sizes: string[];
 }
 
+export interface ImageGenerationChannelsResponse {
+  model: string;
+  channels: string[];
+}
+
 export const imageGenerationApi = {
+  // Channel availability comes from this dedicated endpoint rather than from the
+  // auth-files list: it is guarded by image_generation.read, the same permission that
+  // grants the page itself, and the server already filters out disabled channels.
+  getChannels: (): Promise<ImageGenerationChannelsResponse> => {
+    return apiClient.get<ImageGenerationChannelsResponse>("/image-generation/channels");
+  },
+
   getSizePresets: (): Promise<ImageGenerationSizePresetsResponse> => {
     return apiClient.get<ImageGenerationSizePresetsResponse>("/image-generation/size-presets");
   },

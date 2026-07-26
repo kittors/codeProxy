@@ -3,12 +3,13 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import i18n from "@code-proxy/i18n";
-import { authFilesApi, imageGenerationApi } from "@code-proxy/api-client";
+import { imageGenerationApi } from "@code-proxy/api-client";
 import { ImageGenerationPage } from "../ImageGenerationPage";
 import { ThemeProvider } from "@code-proxy/ui";
 import { ToastProvider } from "@code-proxy/ui";
 
-const authFilesListMock = () => authFilesApi.list as unknown as ReturnType<typeof vi.fn>;
+const imageGenerationGetChannelsMock = () =>
+  imageGenerationApi.getChannels as unknown as ReturnType<typeof vi.fn>;
 const imageGenerationStartTaskMock = () =>
   imageGenerationApi.startTestTask as unknown as ReturnType<typeof vi.fn>;
 const imageGenerationGetTaskMock = () =>
@@ -43,32 +44,14 @@ function renderPage() {
 describe("ImageGenerationPage", () => {
   beforeEach(async () => {
     await i18n.changeLanguage("zh-CN");
-    vi.spyOn(authFilesApi, "list");
+    vi.spyOn(imageGenerationApi, "getChannels");
     vi.spyOn(imageGenerationApi, "getSizePresets");
     vi.spyOn(imageGenerationApi, "updateSizePresets");
     vi.spyOn(imageGenerationApi, "startTestTask");
     vi.spyOn(imageGenerationApi, "getTestTask");
-    authFilesListMock().mockResolvedValue({
-      files: [
-        {
-          name: "codex-a.json",
-          type: "codex",
-          account_type: "oauth",
-          label: "设计号 A",
-        },
-        {
-          name: "codex-b.json",
-          provider: "codex",
-          account_type: "oauth",
-          label: "设计号 B",
-        },
-        {
-          name: "gemini.json",
-          type: "gemini-cli",
-          account_type: "oauth",
-          label: "Gemini 账号",
-        },
-      ],
+    imageGenerationGetChannelsMock().mockResolvedValue({
+      model: "gpt-image-2",
+      channels: ["设计号 A", "设计号 B"],
     });
     imageGenerationGetSizePresetsMock().mockResolvedValue({
       sizes: ["1024x1024", "1792x1024", "1024x1792", "2560x1440", "2160x3840"],
@@ -520,16 +503,10 @@ describe("ImageGenerationPage", () => {
     expect(within(dialog).getByTestId("image-generation-preview")).toHaveClass("bg-slate-100");
   });
 
-  test("greys related actions and shows the empty hint when no codex oauth channel is configured", async () => {
-    authFilesListMock().mockResolvedValue({
-      files: [
-        {
-          name: "gemini.json",
-          type: "gemini-cli",
-          account_type: "oauth",
-          label: "Gemini 账号",
-        },
-      ],
+  test("greys related actions and shows the empty hint when no channel is configured", async () => {
+    imageGenerationGetChannelsMock().mockResolvedValue({
+      model: "gpt-image-2",
+      channels: [],
     });
 
     renderPage();
@@ -540,5 +517,31 @@ describe("ImageGenerationPage", () => {
       within(callCard as HTMLElement).getByRole("button", { name: "测试生成" }),
     ).toBeDisabled();
     expect(screen.getByTestId("image-generation-disabled-state")).toHaveClass("opacity-60");
+  });
+
+  // Regression for issue #491: the page used to derive availability from the auth-files
+  // list, which requires auth_files.read while the page itself only needs
+  // image_generation.read. A role holding just the latter got a 403 that was swallowed
+  // and rendered as "no channels configured", hiding a working setup.
+  test("reads availability from the image-generation endpoint, not the auth-files list", async () => {
+    renderPage();
+
+    await waitFor(() => {
+      expect(imageGenerationGetChannelsMock()).toHaveBeenCalled();
+    });
+    expect(screen.queryByTestId("image-generation-disabled-state")).not.toBeInTheDocument();
+  });
+
+  test("distinguishes a failed availability lookup from an empty channel list", async () => {
+    imageGenerationGetChannelsMock().mockRejectedValue(new Error("403 forbidden"));
+
+    renderPage();
+
+    expect(
+      await screen.findByText(
+        "无法获取 gpt-image-2 的渠道可用性。请确认账号具有生图管理权限后重试。",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("当前没有可用于 gpt-image-2 的渠道。")).not.toBeInTheDocument();
   });
 });
