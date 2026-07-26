@@ -31,7 +31,8 @@ import { ToggleSwitch } from "@code-proxy/ui";
 import { EChart } from "@code-proxy/ui";
 import { ProxyPoolSelect } from "@features/proxy-pool";
 import { useProxyPoolChecks } from "@features/proxy-pool";
-import { ModerationProfileSelect } from "@pages/content-moderation/components/ModerationProfileSelect";
+import { ModerationProfileSelect } from "@features/content-moderation";
+import { useModerationPermissions } from "@app/providers/useModerationPermissions";
 import {
   canRenameAuthFileChannel,
   downloadTextAsFile,
@@ -285,6 +286,7 @@ export function AuthFileDetailModal({
   saveXAIEndpoint,
 }: AuthFileDetailModalProps) {
   const { t, i18n } = useTranslation();
+  const moderationPerms = useModerationPermissions();
   const isIdentityDesktopLayout = useIdentityDesktopLayout();
   const [viewedIdentityProfileKey, setViewedIdentityProfileKey] = useState("");
   const proxyCheckState = useProxyPoolChecks(proxyPoolEntries, open && detailTab === "fields");
@@ -1490,6 +1492,8 @@ export function AuthFileDetailModal({
                   >
                     <div className="min-w-0 rounded-lg bg-slate-50/80 px-4 py-4 lg:col-span-2 dark:bg-white/[0.04]">
                       <ModerationProfileSelect
+        canRead={moderationPerms.canRead}
+        canWrite={moderationPerms.canWrite}
                         channelType="auth_file"
                         channelId={String(detailFile?.id ?? "")}
                         label={t("content_moderation.auth_file_profile_label")}

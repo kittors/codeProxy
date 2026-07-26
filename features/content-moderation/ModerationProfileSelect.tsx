@@ -8,7 +8,6 @@ import {
   type ContentModerationProfileView,
 } from "@code-proxy/api-client";
 import { ConfirmModal, Select, useToast } from "@code-proxy/ui";
-import { useOptionalAuth } from "@app/providers/AuthProvider";
 
 export interface ModerationProfileSelectProps {
   channelType: ContentModerationChannelType;
@@ -18,6 +17,12 @@ export interface ModerationProfileSelectProps {
   unpersistedHint?: string;
   className?: string;
   onBindingChanged?: (profileId: string) => void;
+  /**
+   * Permission flags injected by the consuming page (features cannot read
+   * AuthProvider). Default to permissive for auth-less contexts (tests).
+   */
+  canRead?: boolean;
+  canWrite?: boolean;
 }
 
 function SelectShell({
@@ -202,9 +207,8 @@ function BoundModerationProfileSelect({
 
 export function ModerationProfileSelect(props: ModerationProfileSelectProps) {
   const { t } = useTranslation();
-  const auth = useOptionalAuth();
-  const canRead = auth?.can("content_moderation.read") ?? true;
-  const canWrite = auth?.can("content_moderation.write") ?? true;
+  const canRead = props.canRead ?? true;
+  const canWrite = props.canWrite ?? true;
   if (!canRead) return null;
 
   const resolvedLabel = props.label ?? t("content_moderation.profile_select_label");

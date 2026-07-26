@@ -36,7 +36,7 @@ import {
   type DataTableColumn,
   useToast,
 } from "@code-proxy/ui";
-import { PermissionGate } from "@app/guards/PermissionGate";
+import { PermissionGate } from "@app/providers/PermissionGate";
 import { useAuth } from "@app/providers/AuthProvider";
 import { useApiKeyPermissionOptions } from "@features/api-key-restrictions";
 import { ErrorDetailModal, LogContentModal } from "@features/log-content-viewer";

@@ -57,8 +57,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { TextInput } from "@code-proxy/ui";
-import { resolveMenuIcon } from "@app/navigation/menuIconMap";
+import { TextInput, resolveMenuIcon } from "@code-proxy/ui";
+
 
 type IconOption = { name: string; icon: LucideIcon };
 

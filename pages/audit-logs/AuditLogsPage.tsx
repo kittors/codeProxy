@@ -16,7 +16,7 @@ import {
   useToast,
   type DataTableColumn,
 } from "@code-proxy/ui";
-import { PermissionGate } from "@app/guards/PermissionGate";
+import { PermissionGate } from "@app/providers/PermissionGate";
 
 const DEFAULT_PAGE_SIZE = 50;
 const PAGE_SIZE_OPTIONS = [20, 50, 100];

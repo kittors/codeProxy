@@ -29,9 +29,10 @@ import {
   TextInput,
   type DataTableColumn,
   useToast,
+  resolveMenuIcon,
 } from "@code-proxy/ui";
 import { useAuth } from "@app/providers/AuthProvider";
-import { resolveMenuIcon } from "@app/navigation/menuIconMap";
+
 
 const MenuIconPicker = lazy(() =>
   import("./MenuIconPicker").then((module) => ({ default: module.MenuIconPicker })),

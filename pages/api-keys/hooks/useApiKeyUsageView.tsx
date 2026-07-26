@@ -70,7 +70,10 @@ export function useApiKeyUsageView() {
   const [usageErrorModalOpen, setUsageErrorModalOpen] = useState(false);
   const [usageErrorModalLogId, setUsageErrorModalLogId] = useState<number | null>(null);
   const [usageErrorModalModel, setUsageErrorModalModel] = useState("");
-  const usageFetchInFlightRef = useRef(false);
+  // Monotonic request id: every filter change fires a request and only the
+  // newest response is applied. A plain in-flight boolean would silently drop
+  // the new request, leaving the table showing data for the previous filters.
+  const usageFetchSeqRef = useRef(0);
   /** First key — keeps ApiKeysPage mask display working. */
   const usageViewKey = usageViewKeys[0] ?? null;
 
@@ -108,8 +111,8 @@ export function useApiKeyUsageView() {
 
   const fetchUsageLogs = useCallback(
     async (page: number, size: number) => {
-      if (usageViewKeys.length === 0 || usageFetchInFlightRef.current) return;
-      usageFetchInFlightRef.current = true;
+      if (usageViewKeys.length === 0) return;
+      const seq = ++usageFetchSeqRef.current;
       setUsageLoading(true);
 
       try {
@@ -123,6 +126,7 @@ export function useApiKeyUsageView() {
           status: usageStatusFilter || undefined,
         });
 
+        if (seq !== usageFetchSeqRef.current) return;
         const items = result.items ?? [];
         setUsageRawItems(items);
         setUsageTotalCount(result.total ?? 0);
@@ -156,13 +160,15 @@ export function useApiKeyUsageView() {
         });
         setUsageLastUpdatedAt(Date.now());
       } catch (err: unknown) {
+        if (seq !== usageFetchSeqRef.current) return;
         notify({
           type: "error",
           message: err instanceof Error ? err.message : t("api_keys_page.load_usage_failed"),
         });
       } finally {
-        usageFetchInFlightRef.current = false;
-        setUsageLoading(false);
+        if (seq === usageFetchSeqRef.current) {
+          setUsageLoading(false);
+        }
       }
     },
     [
