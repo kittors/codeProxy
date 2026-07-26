@@ -39,7 +39,7 @@ import {
   type OpenCodeGoUsageStore,
 } from "./OpenCodeGoUsageCardSection";
 import { useProviderKeyEditor } from "../hooks/useProviderKeyEditor";
-import { useProviderLatency } from "../hooks/useProviderLatency";
+import { useProviderLatency } from "@features/provider-latency";
 import { useProviderUsageSummary } from "../hooks/useProviderUsageSummary";
 import { normalizeUsageSourceId, type KeyStatBucket } from "@code-proxy/domain";
 import { getCachedData, setCachedData } from "../provider-cache";

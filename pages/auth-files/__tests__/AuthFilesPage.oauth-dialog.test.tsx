@@ -445,7 +445,7 @@ describe("AuthFilesPage OAuth login dialog", () => {
       "http://localhost:1455/auth/callback?code=test-code&state=oauth-state",
     );
 
-    await user.click(scoped.getByRole("button", { name: "Close" }));
+    await user.click(scoped.getAllByRole("button", { name: "Close" })[0]!);
     await waitFor(() =>
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
     );

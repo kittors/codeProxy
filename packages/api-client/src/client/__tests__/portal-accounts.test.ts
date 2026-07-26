@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import {
   PORTAL_ACCOUNTS_STORAGE_KEY,
   PORTAL_AUTH_STORAGE_KEY,

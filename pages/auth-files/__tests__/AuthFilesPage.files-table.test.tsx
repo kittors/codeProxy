@@ -160,20 +160,7 @@ vi.mock("@code-proxy/ui", async (importOriginal) => ({
   EChart: ({ className }: { className?: string }) => <div className={className}>chart</div>,
 }));
 
-const padDatePart = (value: number): string => String(value).padStart(2, "0");
 
-const toDateTimeLocalInput = (date: Date): string =>
-  [
-    date.getFullYear(),
-    "-",
-    padDatePart(date.getMonth() + 1),
-    "-",
-    padDatePart(date.getDate()),
-    "T",
-    padDatePart(date.getHours()),
-    ":",
-    padDatePart(date.getMinutes()),
-  ].join("");
 
 const decodeBase64UrlJson = (part: string): Record<string, unknown> =>
   JSON.parse(Buffer.from(part, "base64url").toString("utf8")) as Record<string, unknown>;

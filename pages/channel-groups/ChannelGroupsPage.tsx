@@ -263,7 +263,7 @@ export function ChannelGroupsPage() {
         const channelKey = name.toLowerCase();
         if (groupKey) {
           detailsByGroup[groupKey] = {
-            ...(detailsByGroup[groupKey] ?? {}),
+            ...detailsByGroup[groupKey],
             [channelKey]: detail,
           };
         }

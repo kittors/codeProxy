@@ -383,7 +383,8 @@ export function OverflowTooltip({
       onMouseLeave: scheduleHide,
       onFocus: tryShow,
       onBlur: hide,
-      "aria-describedby": id,
+      // Only reference the bubble while it exists; TooltipBubble unmounts when closed.
+      "aria-describedby": open ? id : undefined,
     },
     children,
     <TooltipBubble

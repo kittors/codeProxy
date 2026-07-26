@@ -632,7 +632,6 @@
     "identity_shared_policy_confirm": "Изменение затронет все учетные данные, привязанные к тому же физическому AI-аккаунту. Продолжить?",
     "identity_policy_revision_conflict": "Политика идентификации была изменена. Обновите сведения об аккаунте и повторите попытку.",
     "cycle_calls_count": "Цикл {{count}}",
-    "cycle_calls_unknown": "Цикл --",
     "col_cycle_calls": "Вызовы за цикл",
     "col_lifetime_calls": "Всего вызовов",
     "col_subject_scope": "Область аккаунта",
@@ -745,9 +744,6 @@
     "channel_name_placeholder": "например, Gemini Primary",
     "channel_name_hint": "Это имя появится в списке разрешённых каналов API-ключа и должно быть уникальным во всей системе.",
     "channel_name_required": "Введите название канала",
-    "card_tools_title": "Инструменты",
-    "quota_refresh_single": "Обновить квоту",
-    "quota_refresh_hint": "Обновить квоту только для этих учётных данных",
     "quota_refresh_success": "Квота для \"{{name}}\" обновлена",
     "quota_refresh_failed": "Не удалось обновить квоту для \"{{name}}\": {{message}}",
     "quota_unavailable": "Квота недоступна",
@@ -914,6 +910,20 @@
     "model_weekly": "7 дней {{name}}",
     "iguana_necktie": "Iguana Necktie",
     "extra_usage_label": "Дополнительное использование"
+  },
+  "xai_quota": {
+    "title": "Квота Grok",
+    "weekly_limit": "Недельный лимит",
+    "product_usage": "Использование продукта",
+    "product_usage_named": "Использование {{product}}",
+    "used_percent": "Использовано {{percent}}",
+    "remaining_percent": "Осталось {{percent}}",
+    "reset_at": "Сброс {{time}}",
+    "pay_as_you_go_label": "Оплата по факту",
+    "pay_as_you_go_disabled": "Не включено",
+    "monthly_credits": "Месячные кредиты",
+    "plan_supergrok": "SuperGrok",
+    "plan_supergrok_heavy": "SuperGrok Heavy"
   },
   "codex_quota": {
     "title": "Квота Codex",
@@ -1779,7 +1789,12 @@
     "col_total_token": "Всего токенов"
   },
   "end_users": {
-    "view_usage": "Просмотреть использование"
+    "view_usage": "Просмотреть использование",
+    "username_placeholder": "Пусто — сгенерировать из никнейма",
+    "password_placeholder": "Пусто — сгенерировать случайно; сразу скопируйте",
+    "secrets_one_time_hint": "После закрытия окна пароль / API-ключ в открытом виде больше не отображаются.",
+    "secrets_copied_close": "Скопировано, закрыть",
+    "reset_password_title": "Сброс пароля"
   },
   "proxies": {
     "title": "Proxy Management",
@@ -2276,7 +2291,11 @@
     "additional_weekly": "{{name}}: Weekly",
     "base_quota": "Base Quota",
     "trial_quota": "Trial Quota",
-    "subscription": "Subscription"
+    "subscription": "Subscription",
+    "parse_xai_failed": "Не удалось разобрать квоту Grok",
+    "empty_data": "Нет данных о квоте",
+    "code_subscription": "Код: подписка",
+    "review_subscription": "Ревью: подписка"
   },
   "m_system": {
     "title": "System Info",

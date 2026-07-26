@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { endUsersApi, portalApi } from "@code-proxy/api-client/endpoints/end-users";
+import { endUsersApi } from "@code-proxy/api-client/endpoints/end-users";
 
 const mocks = vi.hoisted(() => ({
   get: vi.fn(),

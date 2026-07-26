@@ -13,7 +13,6 @@ const mocks = vi.hoisted(() => ({
   apiPost: vi.fn(),
 }));
 
-const proxyCheckCacheKey = "proxiesPage.checkState.v2";
 const proxyCheckCacheKeyV1 = "proxiesPage.checkState.v1";
 
 vi.mock("@code-proxy/api-client", () => ({
