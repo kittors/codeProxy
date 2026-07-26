@@ -13,7 +13,7 @@ bun run build
 
 | Chunk                |       Size |      Gzip | 备注                                                                        |
 | -------------------- | ---------: | --------: | --------------------------------------------------------------------------- |
-| `vendor-echarts`     | 1110.90 kB | 369.08 kB | 图表主依赖，明显过大                                                        |
+| `vendor-echarts`     | 1118.03 kB | 375.96 kB | 图表主依赖，明显过大；6.1.0 为 XSS 安全修复（GHSA-fgmj-fm8m-jvvx）后的体积 |
 | `vendor-markdown`    |  761.13 kB | 263.84 kB | Markdown + syntax highlighter 组合                                          |
 | `vendor-animation`   |  126.21 kB |  41.93 kB | 动画依赖独立 vendor chunk                                                   |
 | `vendor-charts`      |    0.07 kB |   0.08 kB | Chart.js 入口当前几乎未进入业务路径                                         |

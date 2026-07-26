@@ -1,0 +1,11 @@
+{
+  "comment": "Advisories that do not apply to this project. Each waiver needs a reason that says why, not just that it is inconvenient to fix. Re-checked by scripts/check-dependency-audit.mjs, which reports waivers that no longer match a live advisory.",
+  "waivers": [
+    {
+      "advisory": "https://github.com/advisories/GHSA-qwww-vcr4-c8h2",
+      "package": "react-router",
+      "reason": "CSRF bypass in React Router's RSC mode. This app is a client-rendered SPA: it mounts createBrowserRouter/HashRouter and has no RSC entry, server actions, or single-fetch handlers, so the affected code path is never reached. The fix only ships in React Router 8.x, a breaking major. Revisit when upgrading to 8.x or if RSC/server-action APIs are adopted.",
+      "reviewed": "2026-07-26"
+    }
+  ]
+}

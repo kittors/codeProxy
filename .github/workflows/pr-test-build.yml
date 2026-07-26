@@ -47,6 +47,12 @@ jobs:
       - name: Import boundaries
         run: bun run boundary:imports
 
+      - name: File size gate
+        run: bun run size:check
+
+      - name: Dependency audit
+        run: bun run audit:deps
+
       - name: Build
         run: bun run build
 
