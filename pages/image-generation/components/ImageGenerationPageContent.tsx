@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
 import { ArrowUp, ChevronLeft, ChevronRight, Plus, Trash2, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { authFilesApi, imageGenerationApi } from "@code-proxy/api-client";
-import type { AuthFileItem } from "@code-proxy/api-client";
+import { imageGenerationApi } from "@code-proxy/api-client";
 import { Button } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
 import { ImagePreviewOverlay } from "@code-proxy/ui";
@@ -12,6 +11,7 @@ import { Select } from "@code-proxy/ui";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { DataTable, type DataTableColumn } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
+import { useImageGenerationChannels } from "../hooks/useImageGenerationChannels";
 
 const GPT_IMAGE_MODEL = "gpt-image-2";
 const GENERATION_STATUS_KEYS = [
@@ -117,16 +117,6 @@ function mergeImageGenerationSizePresets(values: string[]): string[] {
   }
   return merged;
 }
-
-const isCodexOauthFile = (file: AuthFileItem): boolean => {
-  const accountType = String(file.account_type ?? "")
-    .trim()
-    .toLowerCase();
-  const provider = String(file.type ?? file.provider ?? "")
-    .trim()
-    .toLowerCase();
-  return accountType === "oauth" && provider === "codex";
-};
 
 const textToImageCurl = [
   "curl http://127.0.0.1:8317/v1/images/generations \\",
@@ -273,38 +263,14 @@ export function ImageGenerationPage() {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState(GPT_IMAGE_MODEL);
   const [activeMode, setActiveMode] = useState<ImageMode>("generations");
-  const [hasCodexOauthChannel, setHasCodexOauthChannel] = useState(false);
-  const [channelsLoading, setChannelsLoading] = useState(true);
+  const {
+    loading: channelsLoading,
+    channels: availableChannels,
+    failed: channelsFailed,
+  } = useImageGenerationChannels();
   const [testOpen, setTestOpen] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadAvailability = async () => {
-      setChannelsLoading(true);
-      try {
-        const response = await authFilesApi.list();
-        if (cancelled) return;
-        setHasCodexOauthChannel((response.files ?? []).some(isCodexOauthFile));
-      } catch {
-        if (!cancelled) {
-          setHasCodexOauthChannel(false);
-        }
-      } finally {
-        if (!cancelled) {
-          setChannelsLoading(false);
-        }
-      }
-    };
-
-    void loadAvailability();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const disabled = !channelsLoading && !hasCodexOauthChannel;
+  const disabled = !channelsLoading && availableChannels.length === 0;
   const activeDoc = useMemo(
     () => VISIBLE_ENDPOINT_DOCS.find((doc) => doc.mode === activeMode) ?? VISIBLE_ENDPOINT_DOCS[0],
     [activeMode],
@@ -330,7 +296,9 @@ export function ImageGenerationPage() {
           <TabsContent value={GPT_IMAGE_MODEL} className="mt-4 space-y-4">
             {disabled ? (
               <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-100">
-                {t("image_generation.channels_empty")}
+                {channelsFailed
+                  ? t("image_generation.channels_error")
+                  : t("image_generation.channels_empty")}
               </div>
             ) : null}
 
