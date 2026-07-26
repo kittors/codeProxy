@@ -551,10 +551,7 @@ export function AuthFilesPage() {
         return provider ? [{ file, provider }] : [];
       });
       if (!targets.length) return;
-      await runQuotaRefreshBatch(targets, {
-        markAsAutoRefreshing: true,
-        showLoading: true,
-      });
+      await runQuotaRefreshBatch(targets, { showLoading: true });
     },
     [runQuotaRefreshBatch],
   );

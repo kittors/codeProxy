@@ -1844,7 +1844,7 @@ export function AuthFilesFilesTab({
                   const actionIconSize = denseCards ? 14 : 16;
                   // Chips render only with known data, so no unknown fallbacks here.
                   const cycleCallsLabel = t("auth_files.cycle_calls_count", {
-                    count: cycleCalls ?? 0,
+                    value: (cycleCalls ?? 0).toLocaleString(i18n.language),
                   });
                   const cycleTokensKnown =
                     typeof cycleTotalTokens === "number" && Number.isFinite(cycleTotalTokens);
@@ -1854,14 +1854,14 @@ export function AuthFilesFilesTab({
                   const cycleTokensLabel = (
                     <Trans
                       i18nKey="auth_files.cycle_tokens_count"
-                      values={{ count: cycleTokensCompact }}
+                      values={{ value: cycleTokensCompact }}
                     />
                   );
                   const cycleTokensTooltip = (
                     <Trans
                       i18nKey="auth_files.cycle_tokens_count"
                       values={{
-                        count: Math.round(cycleTotalTokens ?? 0).toLocaleString(i18n.language),
+                        value: Math.round(cycleTotalTokens ?? 0).toLocaleString(i18n.language),
                       }}
                     />
                   );
