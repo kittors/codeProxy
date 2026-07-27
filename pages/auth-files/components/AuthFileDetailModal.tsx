@@ -86,10 +86,11 @@ const FIVE_HOUR_WINDOW_SECONDS = 18000;
 const WEEK_WINDOW_SECONDS = 604800;
 const TREND_CHART_ANIMATION_MS = 680;
 const TREND_CHART_ANIMATION_GUARD_MS = TREND_CHART_ANIMATION_MS + 120;
-const SUMMARY_CARD_CLASS_NAME = "min-w-0 rounded-lg bg-slate-50/80 px-3 py-3 dark:bg-white/[0.04]";
+const SUMMARY_CARD_CLASS_NAME =
+  "h-full min-w-0 rounded-lg bg-slate-50/80 px-3 py-3 dark:bg-white/[0.04]";
 const SUMMARY_LABEL_CLASS_NAME = "text-xs font-semibold text-slate-500 dark:text-white/55";
 const SUMMARY_VALUE_CLASS_NAME =
-  "mt-2 min-w-0 break-words text-2xl font-semibold leading-tight text-slate-950 dark:text-white";
+  "mt-2 min-w-0 whitespace-nowrap text-lg font-semibold leading-tight tracking-tight tabular-nums text-slate-950 dark:text-white";
 const IDENTITY_FINGERPRINT_SOURCE_ORDER: IdentityFingerprintFieldSource[] = [
   "learned",
   "preset",
@@ -1163,9 +1164,8 @@ export function AuthFileDetailModal({
       isCodexDetail ? "code_week" : isClaudeDetail ? "seven_day" : "weekly_limit";
     const showPredictedWeeklyQuota =
       isCodexDetail || isClaudeDetail || detailProviderKey === "xai";
-    const summaryGridClassName = showPredictedWeeklyQuota
-      ? "grid gap-3 sm:grid-cols-2 xl:grid-cols-7"
-      : "grid gap-3 sm:grid-cols-2 xl:grid-cols-6";
+    const summaryGridClassName =
+      "grid gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-[repeat(auto-fit,minmax(9rem,1fr))]";
     const summarySkeletonCount = showPredictedWeeklyQuota ? 7 : 6;
 
     if (detailTrendLoading && !detailTrend) {
@@ -1317,7 +1317,7 @@ export function AuthFileDetailModal({
           {showCycleStart ? (
             <div className={SUMMARY_CARD_CLASS_NAME}>
               <p className={SUMMARY_LABEL_CLASS_NAME}>{t("auth_files.trend_cycle_start")}</p>
-              <p className="mt-2 truncate text-sm font-semibold text-slate-800 dark:text-white/85">
+              <p className="mt-2 whitespace-normal break-words text-sm font-semibold leading-tight text-slate-800 dark:text-white/85">
                 {cycleStart}
               </p>
             </div>
