@@ -550,6 +550,45 @@ describe("Auth Files helper coverage", () => {
     ).toMatchObject(previous);
   });
 
+  test("list refresh treats omitted runtime restrictions as cleared", () => {
+    const previous = {
+      name: "xai.json",
+      type: "xai",
+      status: "error",
+      unavailable: true,
+      restrictions: [
+        {
+          scope: "auth",
+          status: "error",
+          unavailable: true,
+          http_status: 401,
+          next_retry_after: "2026-07-27T05:49:08.000Z",
+        },
+      ],
+      claude_oauth_health: {
+        status: "refresh_pending",
+        temporary_unschedulable_reason: "oauth_401",
+      },
+    } as AuthFileItem;
+
+    const merged = mergeAuthFileWithLastGoodStatus(
+      {
+        name: "xai.json",
+        type: "xai",
+        status: "active",
+        status_message: "",
+        unavailable: false,
+      },
+      previous,
+    );
+
+    expect(merged.restrictions).toBeUndefined();
+    expect(merged.claude_oauth_health).toBeUndefined();
+    expect(resolveAuthFileRestrictionBadges(merged, Date.parse("2026-07-27T05:38:28.000Z"))).toEqual(
+      [],
+    );
+  });
+
   test("keeps shared subscription status so the badge can warm-paint", () => {
     const [cachedFile] = sanitizeAuthFilesForCache([
       {
