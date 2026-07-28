@@ -4596,7 +4596,9 @@
     "progress_stage_dependencies": "Starting dependencies",
     "progress_stage_application": "Recreating and waiting for health",
     "progress_message_stage_dependencies": "Starting the dependency services.",
-    "progress_message_stage_application": "Recreating the service container and waiting for its health check."
+    "progress_message_stage_application": "Recreating the service container and waiting for its health check.",
+    "service_version": "Service",
+    "ui_version": "Management panel"
   },
   "floating_save_bar": {
     "saved": "Saved",

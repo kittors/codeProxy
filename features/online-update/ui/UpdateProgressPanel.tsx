@@ -179,6 +179,19 @@ export function UpdateProgressPanel({
   const bytes = formatBytes(progress?.progress_bytes);
   const totalBytes = formatBytes(progress?.progress_total_bytes);
 
+  // Step counts are the only progress detail an older updater reports — it sends
+  // progress_current/progress_total but no stage timeline. Rendering them keeps
+  // those deployments from showing a bare percentage with no context.
+  const steps =
+    typeof progress?.progress_current === "number" &&
+    typeof progress.progress_total === "number" &&
+    progress.progress_total > 0
+      ? t("auto_update.progress_detail_steps", {
+          current: progress.progress_current,
+          total: progress.progress_total,
+        })
+      : "";
+
   return (
     <div data-testid="update-progress-console" className="min-w-0">
       <div className="flex items-baseline justify-between gap-3">
@@ -209,6 +222,15 @@ export function UpdateProgressPanel({
           className="mt-1.5 font-mono text-xs text-slate-500 dark:text-white/45"
         >
           {bytes} / {totalBytes}
+        </p>
+      ) : null}
+
+      {steps ? (
+        <p
+          data-testid="update-progress-details"
+          className="mt-1.5 text-xs text-slate-500 dark:text-white/45"
+        >
+          {steps}
         </p>
       ) : null}
 
