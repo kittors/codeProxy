@@ -1920,7 +1920,11 @@
     "image_preview_title": "Предпросмотр изображения",
     "revised_prompt_label": "Скорректированный prompt",
     "test_empty_result": "Верхний сервис не вернул изображение",
-    "test_failed_generic": "Не удалось сгенерировать изображение"
+    "test_failed_generic": "Не удалось сгенерировать изображение",
+    "provider": "Канал",
+    "model": "Модель",
+    "model_placeholder": "Выберите модель",
+    "tab_label": "Генерация изображений"
   },
   "identity_fingerprint": {
     "title": "Identity Fingerprint",

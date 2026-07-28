@@ -2228,7 +2228,11 @@
     "image_preview_title": "图片预览",
     "revised_prompt_label": "修订后的提示词",
     "test_empty_result": "上游未返回图片结果",
-    "test_failed_generic": "图片生成失败"
+    "test_failed_generic": "图片生成失败",
+    "provider": "渠道",
+    "model": "模型",
+    "model_placeholder": "选择模型",
+    "tab_label": "图片生成"
   },
   "identity_fingerprint": {
     "title": "身份指纹",

@@ -69,7 +69,7 @@ describe("ImageGenerationPage", () => {
   test("renders text-to-image call docs with structured endpoint tables", async () => {
     renderPage();
 
-    expect(await screen.findByRole("tab", { name: "gpt-image-2" })).toBeInTheDocument();
+    expect(await screen.findByRole("tab", { name: "图片生成" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "生图模型" })).toBeInTheDocument();
     const callCard = screen.getByText("调用方式").closest("section");
     expect(callCard).not.toBeNull();
@@ -132,7 +132,7 @@ describe("ImageGenerationPage", () => {
 
     renderPage();
 
-    await screen.findByRole("tab", { name: "gpt-image-2" });
+    await screen.findByRole("tab", { name: "图片生成" });
     await user.click(screen.getByRole("button", { name: "测试生成" }));
 
     const dialog = await screen.findByRole("dialog", { name: "测试生成" });
@@ -307,7 +307,7 @@ describe("ImageGenerationPage", () => {
 
     renderPage();
 
-    await screen.findByRole("tab", { name: "gpt-image-2" });
+    await screen.findByRole("tab", { name: "图片生成" });
     await user.click(screen.getByRole("button", { name: "测试生成" }));
 
     const dialog = await screen.findByRole("dialog", { name: "测试生成" });
@@ -351,7 +351,7 @@ describe("ImageGenerationPage", () => {
 
     renderPage();
 
-    await screen.findByRole("tab", { name: "gpt-image-2" });
+    await screen.findByRole("tab", { name: "图片生成" });
     await user.click(screen.getByRole("button", { name: "测试生成" }));
 
     const dialog = await screen.findByRole("dialog", { name: "测试生成" });
@@ -385,7 +385,7 @@ describe("ImageGenerationPage", () => {
 
     renderPage();
 
-    await screen.findByRole("tab", { name: "gpt-image-2" });
+    await screen.findByRole("tab", { name: "图片生成" });
     await user.click(screen.getByRole("button", { name: "测试生成" }));
 
     const dialog = await screen.findByRole("dialog", { name: "测试生成" });
@@ -420,7 +420,7 @@ describe("ImageGenerationPage", () => {
 
     renderPage();
 
-    await screen.findByRole("tab", { name: "gpt-image-2" });
+    await screen.findByRole("tab", { name: "图片生成" });
     await user.click(screen.getByRole("button", { name: "测试生成" }));
 
     const dialog = await screen.findByRole("dialog", { name: "测试生成" });
@@ -469,7 +469,7 @@ describe("ImageGenerationPage", () => {
 
     renderPage();
 
-    await screen.findByRole("tab", { name: "gpt-image-2" });
+    await screen.findByRole("tab", { name: "图片生成" });
     await userEvent.click(screen.getByRole("button", { name: "测试生成" }));
 
     const dialog = await screen.findByRole("dialog", { name: "测试生成" });

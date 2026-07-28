@@ -2211,7 +2211,11 @@
     "image_preview_title": "Image Preview",
     "revised_prompt_label": "Revised Prompt",
     "test_empty_result": "Upstream did not return an image result",
-    "test_failed_generic": "Image generation failed"
+    "test_failed_generic": "Image generation failed",
+    "provider": "Channel",
+    "model": "Model",
+    "model_placeholder": "Select a model",
+    "tab_label": "Image generation"
   },
   "identity_fingerprint": {
     "title": "Identity Fingerprint",

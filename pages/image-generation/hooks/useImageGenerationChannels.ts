@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { imageGenerationApi } from "@code-proxy/api-client";
+import { buildImageModelCatalog, type ImageModelCatalog } from "@features/image-model-picker";
 
 export interface ImageGenerationChannelsState {
   loading: boolean;
@@ -7,7 +8,11 @@ export interface ImageGenerationChannelsState {
   channels: string[];
   /** True when availability could not be determined, which is not the same as "no channels". */
   failed: boolean;
+  /** Providers and models the tenant can actually use, derived from the same response. */
+  catalog: ImageModelCatalog;
 }
+
+const EMPTY_CATALOG: ImageModelCatalog = { providers: [], models: [], legacy: false };
 
 /**
  * Loads image-generation channel availability from the dedicated management endpoint.
@@ -27,6 +32,7 @@ export function useImageGenerationChannels(): ImageGenerationChannelsState {
     loading: true,
     channels: [],
     failed: false,
+    catalog: EMPTY_CATALOG,
   });
 
   useEffect(() => {
@@ -36,12 +42,17 @@ export function useImageGenerationChannels(): ImageGenerationChannelsState {
       try {
         const response = await imageGenerationApi.getChannels();
         if (cancelled) return;
-        setState({ loading: false, channels: response.channels ?? [], failed: false });
+        setState({
+          loading: false,
+          channels: response.channels ?? [],
+          failed: false,
+          catalog: buildImageModelCatalog(response),
+        });
       } catch {
         // A failed lookup must not masquerade as "no channels configured": the two need
         // different guidance, and conflating them is what made the original bug invisible.
         if (!cancelled) {
-          setState({ loading: false, channels: [], failed: true });
+          setState({ loading: false, channels: [], failed: true, catalog: EMPTY_CATALOG });
         }
       }
     };
