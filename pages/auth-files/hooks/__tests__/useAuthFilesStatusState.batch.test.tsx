@@ -528,7 +528,9 @@ describe("useAuthFilesStatusState batch refresh", () => {
           auth_subject_id: "sub-a",
           plan_type: null,
           reset_credit_count: null,
-          quotas: [{ quota_key: "code_5h", percent: null }],
+          // Empty quotas model a partial payload that omitted provider metrics.
+          // An explicit percent: null intentionally clears stale cached values.
+          quotas: [],
           usage: { request_total: 200 },
         },
         {
