@@ -18,6 +18,32 @@ export type ModelCapabilitySource = {
   supportsVision?: boolean | null;
 };
 
+// Keep candidate order aligned with usage.modelPricingLookupModelIDs so
+// provider wrappers and variants can reuse their canonical catalog metadata.
+export function modelConfigLookupIds(modelId: string): string[] {
+  const exact = modelId.trim().toLowerCase();
+  if (!exact) return [];
+
+  const candidates = [exact];
+  const add = (candidate: string) => {
+    const normalized = candidate.trim().toLowerCase();
+    if (normalized && !candidates.includes(normalized)) candidates.push(normalized);
+  };
+
+  const providerSeparator = exact.indexOf("/");
+  if (providerSeparator > 0) add(exact.slice(providerSeparator + 1));
+
+  const variantSeparator = exact.lastIndexOf(":");
+  if (variantSeparator > 0) add(exact.slice(0, variantSeparator));
+
+  if (providerSeparator < 0) {
+    const prefixSeparator = exact.indexOf("-");
+    if (prefixSeparator > 0) add(exact.slice(prefixSeparator + 1));
+  }
+
+  return candidates;
+}
+
 const CAPABILITY_ORDER: ModelCapabilityKey[] = [
   "text",
   "vision",

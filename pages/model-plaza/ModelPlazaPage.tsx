@@ -18,6 +18,7 @@ import {
   hasModelPricing,
   loadConfiguredModelAvailability,
   loadModelPathAvailability,
+  modelConfigLookupIds,
   type ModelAvailabilityItem,
   type ModelAvailabilitySource,
   type ModelPricing,
@@ -314,14 +315,19 @@ function mergePlazaModels(
   return Array.from(new Set(nextIds))
     .sort((a, b) => a.localeCompare(b))
     .map((id) => {
-      const configured = configuredById.get(id.toLowerCase());
+      const exactConfigured = configuredById.get(id.toLowerCase());
+      let configured = exactConfigured;
+      for (const candidate of modelConfigLookupIds(id)) {
+        configured = configuredById.get(candidate);
+        if (configured) break;
+      }
       const inputModalities = configured?.inputModalities ?? [];
       const outputModalities = configured?.outputModalities ?? [];
       return {
         id,
         description: configured?.description?.trim() ?? "",
-        ownedBy: configured?.owned_by?.trim() ?? "",
-        sources: configured?.sources,
+        ownedBy: exactConfigured?.owned_by?.trim() ?? "",
+        sources: exactConfigured?.sources,
         pricing: configured?.pricing ?? emptyModelPricing(),
         inputModalities,
         outputModalities,
