@@ -6,7 +6,11 @@ export { Reveal } from "./feedback/Reveal";
 export { ToastProvider, useToast } from "./feedback/ToastProvider";
 
 export { DataTable } from "./data-table/DataTable";
-export { TableRowActions, TABLE_ROW_ACTIONS_COLUMN } from "./data-table/TableRowActions";
+export {
+  TableRowActions,
+  TABLE_ROW_ACTIONS_COLUMN,
+  TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
+} from "./data-table/TableRowActions";
 export type { TableRowAction } from "./data-table/TableRowActions";
 export type {
   DataTableColumn,

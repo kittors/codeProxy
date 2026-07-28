@@ -22,7 +22,7 @@ import { Select } from "@code-proxy/ui";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
 import { HoverTooltip, OverflowTooltip } from "@code-proxy/ui";
-import { DataTable, TABLE_ROW_ACTIONS_COLUMN, type DataTableColumn } from "@code-proxy/ui";
+import { DataTable, TABLE_ROW_ACTIONS_COLUMN, TABLE_ROW_ACTIONS_STICKY_END_COLUMN, type DataTableColumn } from "@code-proxy/ui";
 import { VendorIcon } from "@code-proxy/assets";
 import {
   emptyModelPricing,
@@ -1224,8 +1224,7 @@ export function RoutingConfigEditor({
       {
         key: "actions",
         label: t("common.action"),
-        ...TABLE_ROW_ACTIONS_COLUMN,
-        cellClassName: "whitespace-nowrap",
+        ...TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
         render: (group) => (
           <div className="flex items-center gap-1.5">
             <button
