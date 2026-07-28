@@ -2451,7 +2451,7 @@
     "progress_unknown": "Unknown",
     "progress_message_preparing_deployment": "Preparing the deployment configuration.",
     "progress_message_preparing_update": "Preparing the update workflow.",
-    "progress_message_pulling_target_image": "Pulling the target image.",
+    "progress_message_pulling_target_image": "Загрузка целевого образа.",
     "progress_message_starting_runtime_dependencies": "Starting PostgreSQL and Redis.",
     "progress_message_recreating_service": "Recreating the service container and waiting for its health check.",
     "progress_message_service_healthy": "The target service container is running and healthy.",
@@ -2490,7 +2490,14 @@
     "failed": "Не удалось обновить",
     "failed_description": "The updater reported a failure. Review the Docker logs below.",
     "timeout": "Обновление запущено, но heartbeat сервера не восстановился вовремя. Проверьте Docker logs.",
-    "version_mismatch": "Обновление запущено, но запущенная версия все еще не {{version}}. Проверьте логи updater и Docker Compose."
+    "version_mismatch": "Обновление запущено, но запущенная версия все еще не {{version}}. Проверьте логи updater и Docker Compose.",
+    "reconnecting": "Контейнер службы пересоздаётся. Соединение восстановится автоматически — не закрывайте страницу.",
+    "reconnecting_slow": "Обновлятор недоступен уже некоторое время. Обновление может всё ещё выполняться или быть прервано; проверьте журналы контейнеров на сервере.",
+    "unchanged": "без изменений",
+    "progress_stage_dependencies": "Запуск зависимостей",
+    "progress_stage_application": "Пересоздание и ожидание готовности",
+    "progress_message_stage_dependencies": "Запуск зависимых служб.",
+    "progress_message_stage_application": "Пересоздание контейнера службы и ожидание проверки готовности."
   },
   "identity_admin": {
     "operation_failed": "Операция не выполнена.",

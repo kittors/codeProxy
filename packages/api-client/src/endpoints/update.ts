@@ -34,6 +34,13 @@ export interface UpdateProgressLogEntry {
   message: string;
 }
 
+/** One entry of the updater's stage timeline. */
+export interface UpdateProgressStage {
+  id?: string;
+  /** "pending" | "active" | "done" | "failed" | "skipped" */
+  state?: string;
+}
+
 export interface UpdateProgressResponse {
   run_id?: number;
   event_id?: number;
@@ -45,6 +52,11 @@ export interface UpdateProgressResponse {
   progress_current?: number;
   progress_total?: number;
   progress_unit?: string;
+  /** Byte counters for the image pull; reported only while pulling. */
+  progress_bytes?: number;
+  progress_total_bytes?: number;
+  /** Mirrors the plan's stages so the panel can render a timeline. */
+  stages?: UpdateProgressStage[];
   service?: string;
   current_version?: string;
   current_commit?: string;
