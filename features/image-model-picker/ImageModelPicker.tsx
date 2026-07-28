@@ -19,6 +19,7 @@ export function ImageModelPicker({
   provider,
   model,
   disabled = false,
+  variant = "labelled",
   onProviderChange,
   onModelChange,
 }: {
@@ -26,6 +27,12 @@ export function ImageModelPicker({
   provider: string;
   model: string;
   disabled?: boolean;
+  /**
+   * "compact" drops the field labels so the selectors can sit inline with other
+   * pill-shaped controls. Used in the test modal, where a labelled two-column block
+   * would split the controls across the dialog instead of grouping them.
+   */
+  variant?: "labelled" | "compact";
   onProviderChange: (provider: string) => void;
   onModelChange: (model: string) => void;
 }) {
@@ -51,6 +58,32 @@ export function ImageModelPicker({
   // A deployment with a single provider gets no provider selector: a control with
   // one option is noise, and the legacy server shape reports no provider at all.
   const showProviderSelect = providerOptions.length > 1;
+
+  if (variant === "compact") {
+    return (
+      <>
+        {showProviderSelect ? (
+          <Select
+            aria-label={t("image_generation.provider")}
+            value={provider}
+            options={providerOptions}
+            disabled={disabled}
+            fullWidth={false}
+            onChange={onProviderChange}
+          />
+        ) : null}
+        <Select
+          aria-label={t("image_generation.model")}
+          value={model}
+          options={modelOptions}
+          disabled={disabled || modelOptions.length === 0}
+          placeholder={t("image_generation.model_placeholder")}
+          fullWidth={false}
+          onChange={onModelChange}
+        />
+      </>
+    );
+  }
 
   return (
     <div

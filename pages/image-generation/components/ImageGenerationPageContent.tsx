@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
-import { ArrowUp, ChevronLeft, ChevronRight, Plus, Trash2, X } from "lucide-react";
+import { ArrowUp, ChevronLeft, ChevronRight, CircleAlert, Plus, Trash2, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { imageGenerationApi } from "@code-proxy/api-client";
 import { Button } from "@code-proxy/ui";
@@ -18,6 +18,7 @@ import {
   resolveInitialProvider,
   supportsImageEditing,
 } from "@features/image-model-picker";
+import { imageStageClassName } from "./stageStyles";
 import {
   VISIBLE_ENDPOINT_DOCS,
   type EndpointDoc,
@@ -802,19 +803,11 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
     }
   };
 
-  const stageSizeClassName =
-    editingSupported && uploadedImages.length > 0
-      ? "h-[clamp(220px,34vh,320px)] sm:h-[clamp(240px,36vh,360px)]"
-      : "h-[clamp(240px,42vh,400px)] sm:h-[clamp(280px,44vh,440px)]";
-  const stageClassName = [
-    "relative overflow-hidden rounded-2xl border transition-all duration-200",
-    stageSizeClassName,
-    errorMessage
-      ? "border-slate-200 bg-slate-100 text-slate-700 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white/85"
-      : activeImage
-        ? "border-slate-200 bg-slate-100 dark:border-neutral-800 dark:bg-black"
-        : "border-slate-200 bg-slate-50 text-slate-500 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white/55",
-  ].join(" ");
+  const stageClassName = imageStageClassName({
+    errorMessage,
+    hasImage: Boolean(activeImage),
+    hasUploads: editingSupported && uploadedImages.length > 0,
+  });
   const statusText = t(GENERATION_STATUS_KEYS[statusIndex]);
   const showGeneratingState = submitting && !activeImage && !errorMessage;
   const showIdleCanvas = !submitting && !activeImage && !errorMessage;
@@ -838,7 +831,16 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
             void handleGenerate();
           }}
         >
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <ImageModelPicker
+              catalog={catalog}
+              provider={selectedProvider}
+              model={activeModel}
+              disabled={submitting || catalogLoading}
+              variant="compact"
+              onProviderChange={handleProviderChange}
+              onModelChange={setSelectedModel}
+            />
             <SearchableSelect
               aria-label={t("image_generation.size_label")}
               value={size}
@@ -998,10 +1000,11 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
               <div
                 data-testid="image-generation-preview"
                 className={[
-                  "relative flex h-full w-full overflow-hidden px-6 py-6 sm:px-8 sm:py-8",
-                  errorMessage
-                    ? "bg-slate-100 text-slate-700 dark:bg-neutral-900 dark:text-white"
-                    : "bg-transparent",
+                  "relative flex w-full overflow-hidden",
+                  errorMessage && !activeImage
+                    ? "px-4 py-3.5"
+                    : "h-full px-6 py-6 sm:px-8 sm:py-8",
+                  "bg-transparent",
                 ].join(" ")}
               >
                 <div className="relative z-10 flex h-full w-full items-start">
@@ -1029,10 +1032,9 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
                   ) : null}
 
                   {errorMessage ? (
-                    <div className="max-w-md">
-                      <p className="text-2xl font-semibold tracking-tight text-slate-800 dark:text-white">
-                        {errorMessage}
-                      </p>
+                    <div className="flex min-w-0 items-start gap-2.5">
+                      <CircleAlert size={16} className="mt-0.5 shrink-0" />
+                      <p className="min-w-0 break-words text-sm leading-6">{errorMessage}</p>
                     </div>
                   ) : null}
                 </div>
@@ -1098,16 +1100,6 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
                 ))}
               </div>
             ) : null}
-            <div className="mb-3">
-              <ImageModelPicker
-                catalog={catalog}
-                provider={selectedProvider}
-                model={activeModel}
-                disabled={submitting || catalogLoading}
-                onProviderChange={handleProviderChange}
-                onModelChange={setSelectedModel}
-              />
-            </div>
             <label htmlFor="image-generation-prompt" className="sr-only">
               {t("image_generation.prompt_label")}
             </label>
