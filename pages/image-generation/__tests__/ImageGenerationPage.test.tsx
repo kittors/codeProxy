@@ -449,7 +449,7 @@ describe("ImageGenerationPage", () => {
     });
   });
 
-  test("greys the preview area and shows the error message inside the modal when generation fails", async () => {
+  test("collapses the preview area into an alert when generation fails", async () => {
     const deferred = createDeferred<{
       task_id: string;
       status: "failed";
@@ -500,7 +500,13 @@ describe("ImageGenerationPage", () => {
 
     expect(await within(dialog).findByText("上游图片生成失败")).toBeInTheDocument();
     expect(within(dialog).getByText("00:02")).toBeInTheDocument();
-    expect(within(dialog).getByTestId("image-generation-preview")).toHaveClass("bg-slate-100");
+    // The failure now uses the panel's alert treatment and collapses the stage: a
+    // full-height grey canvas for one line of text is what forced the dialog to
+    // scroll. Asserting the tone on the stage keeps the intent without pinning the
+    // exact palette.
+    const stage = dialog.querySelector('[data-state="error"]');
+    expect(stage?.className).toContain("bg-rose-50");
+    expect(stage?.className).toContain("h-auto");
   });
 
   test("greys related actions and shows the empty hint when no channel is configured", async () => {
