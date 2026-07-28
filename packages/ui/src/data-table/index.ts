@@ -1,5 +1,9 @@
 export { DataTable } from "./DataTable";
-export { TableRowActions, TABLE_ROW_ACTIONS_COLUMN } from "./TableRowActions";
+export {
+  TableRowActions,
+  TABLE_ROW_ACTIONS_COLUMN,
+  TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
+} from "./TableRowActions";
 export type { TableRowAction } from "./TableRowActions";
 export type {
   DataTableColumn,

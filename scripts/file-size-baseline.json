@@ -9,7 +9,7 @@
     "features/model-availability/modelAvailability.ts": 1275,
     "features/oauth-login/components/OAuthLoginDialog.tsx": 912,
     "features/request-log-viewer/requestLogsShared.tsx": 1020,
-    "features/routing-config-editor/RoutingConfigEditor.tsx": 2045,
+    "features/routing-config-editor/RoutingConfigEditor.tsx": 2044,
     "features/visual-config-editor/useVisualConfig.ts": 957,
     "packages/domain/src/auth-files/authFiles.ts": 2291,
     "packages/domain/src/ccswitch/ccswitchImport.ts": 845,

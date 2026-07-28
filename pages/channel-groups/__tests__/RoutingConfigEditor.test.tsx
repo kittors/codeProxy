@@ -225,6 +225,36 @@ describe("RoutingConfigEditor", () => {
     expect(row).toHaveTextContent("会话粘性");
   });
 
+  test("pins the group actions column to the right edge", async () => {
+    await i18n.changeLanguage("zh-CN");
+
+    render(
+      <Harness
+        initialValues={{
+          ...DEFAULT_VISUAL_VALUES,
+          routingChannelGroups: [
+            {
+              id: "group-sticky-actions",
+              name: "sticky-actions",
+              description: "",
+              strategy: "round-robin",
+              channels: [{ id: "channel-main", name: "Main Codex", priority: "" }],
+              allowedModels: [],
+            },
+          ],
+        }}
+      />,
+    );
+
+    const actionsHeader = document.querySelector('th[data-vt-column-key="actions"]');
+    const actionsCell = document.querySelector('td[data-vt-column-key="actions"]');
+
+    expect(actionsHeader).toHaveClass("md:sticky", "md:right-[var(--vt-sticky-right)]", "z-[70]");
+    expect(actionsHeader).toHaveStyle({ zIndex: "70" });
+    expect(actionsCell).toHaveClass("md:sticky", "md:right-[var(--vt-sticky-right)]");
+    expect(actionsCell).toHaveStyle({ zIndex: "30" });
+  });
+
 
   test("defaults model tab selections to every channel-scoped model", async () => {
     await i18n.changeLanguage("zh-CN");
