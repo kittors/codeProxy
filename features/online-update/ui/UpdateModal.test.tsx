@@ -99,6 +99,26 @@ describe("UpdateModal", () => {
     expect(screen.getByTestId("update-progress-bytes").textContent).toBe("3.7MB / 10.0MB");
   });
 
+  /**
+   * An older updater reports progress_current/progress_total but no stage timeline.
+   * Those deployments must still get step context rather than a bare percentage.
+   */
+  test("falls back to step counts when the updater sends no stage timeline", () => {
+    render(
+      <UpdateModal
+        open
+        candidate={candidate}
+        progress={runningProgress({ stages: undefined, progress_current: 3, progress_total: 5 })}
+        updating
+        onApply={noop}
+        onClose={noop}
+      />,
+    );
+
+    expect(screen.getByTestId("update-progress-details").textContent).toContain("3");
+    expect(screen.queryByTestId("update-stage-timeline")).toBeNull();
+  });
+
   test("renders the stage timeline reported by the updater", () => {
     render(
       <UpdateModal

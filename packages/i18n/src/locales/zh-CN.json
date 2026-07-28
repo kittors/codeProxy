@@ -3930,7 +3930,9 @@
     "progress_stage_dependencies": "启动依赖",
     "progress_stage_application": "重建并等待健康",
     "progress_message_stage_dependencies": "正在启动依赖服务。",
-    "progress_message_stage_application": "正在重建业务容器并等待健康检查。"
+    "progress_message_stage_application": "正在重建业务容器并等待健康检查。",
+    "service_version": "服务版本",
+    "ui_version": "管理面板版本"
   },
   "auth_files_page": {
     "files_tab": "文件",

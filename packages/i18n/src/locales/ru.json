@@ -2497,7 +2497,9 @@
     "progress_stage_dependencies": "Запуск зависимостей",
     "progress_stage_application": "Пересоздание и ожидание готовности",
     "progress_message_stage_dependencies": "Запуск зависимых служб.",
-    "progress_message_stage_application": "Пересоздание контейнера службы и ожидание проверки готовности."
+    "progress_message_stage_application": "Пересоздание контейнера службы и ожидание проверки готовности.",
+    "service_version": "Служба",
+    "ui_version": "Панель управления"
   },
   "identity_admin": {
     "operation_failed": "Операция не выполнена.",

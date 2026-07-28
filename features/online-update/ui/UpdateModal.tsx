@@ -294,7 +294,7 @@ export function UpdateModal({
           <>
             <dl className="min-w-0 divide-y divide-slate-100 rounded-xl border border-slate-200 px-3 dark:divide-neutral-800 dark:border-neutral-800">
               <VersionRow
-                label={t("auto_update.current_service")}
+                label={t("auto_update.service_version")}
                 from={versionLabel(
                   display.current_version,
                   display.current_commit,
@@ -310,7 +310,7 @@ export function UpdateModal({
                 unchanged={serviceUnchanged}
               />
               <VersionRow
-                label={t("auto_update.current_ui")}
+                label={t("auto_update.ui_version")}
                 from={uiVersionLabel(
                   display.current_ui_version,
                   display.current_ui_commit,
