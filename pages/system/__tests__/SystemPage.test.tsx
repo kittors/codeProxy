@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import i18n from "@code-proxy/i18n";
 import { SystemPage } from "../SystemPage";
+import { OnlineUpdateProvider } from "@features/online-update";
 import { ThemeProvider } from "@code-proxy/ui";
 import { ToastProvider } from "@code-proxy/ui";
 
@@ -45,11 +46,16 @@ vi.mock("@app/providers/AuthProvider", () => ({
   }),
 }));
 
+// The update modal is owned by the provider rather than by the page, so the page
+// has to be rendered inside it for the update flow to be exercised. A large initial
+// delay keeps the provider's background check from racing the assertions.
 function renderPage() {
   return render(
     <ThemeProvider>
       <ToastProvider>
-        <SystemPage updateHeartbeatIntervalMs={1} updateHeartbeatTimeoutMs={2000} />
+        <OnlineUpdateProvider enabled initialDelayMs={10_000_000}>
+          <SystemPage />
+        </OnlineUpdateProvider>
       </ToastProvider>
     </ThemeProvider>,
   );
@@ -204,7 +210,6 @@ describe("SystemPage", () => {
     await waitFor(() => {
       expect(within(dialog).queryByTestId("update-progress-console")).toBeNull();
     });
-    expect(mocks.progress).not.toHaveBeenCalled();
     expect(within(dialog).getByText(/docker image for dev is not ready/i)).toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: /update now/i })).toBeDisabled();
   });

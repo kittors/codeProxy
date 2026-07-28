@@ -3923,7 +3923,14 @@
     "failed": "更新失败",
     "failed_description": "Updater 返回失败。请到服务器查看 updater 和容器日志定位原因。",
     "timeout": "已触发更新，但后端心跳未在预期时间内恢复。请检查 Docker 日志。",
-    "version_mismatch": "已触发更新，但当前运行版本仍未切换到 {{version}}。请检查 updater 和 Docker Compose 日志。"
+    "version_mismatch": "已触发更新，但当前运行版本仍未切换到 {{version}}。请检查 updater 和 Docker Compose 日志。",
+    "reconnecting": "服务容器正在重建，连接会自动恢复，请勿关闭页面。",
+    "reconnecting_slow": "已经较长时间未能连接到更新器。更新可能仍在进行，也可能已经中断，请检查服务器上的容器日志。",
+    "unchanged": "无变化",
+    "progress_stage_dependencies": "启动依赖",
+    "progress_stage_application": "重建并等待健康",
+    "progress_message_stage_dependencies": "正在启动依赖服务。",
+    "progress_message_stage_application": "正在重建业务容器并等待健康检查。"
   },
   "auth_files_page": {
     "files_tab": "文件",

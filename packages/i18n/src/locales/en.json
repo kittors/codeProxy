@@ -4589,7 +4589,14 @@
     "failed": "Update failed",
     "failed_description": "The updater reported a failure. Check the updater and container logs on the server.",
     "timeout": "Update was triggered, but the server heartbeat did not recover in time. Please check Docker logs.",
-    "version_mismatch": "Update was triggered, but the running version is still not {{version}}. Please check the updater and Docker Compose logs."
+    "version_mismatch": "Update was triggered, but the running version is still not {{version}}. Please check the updater and Docker Compose logs.",
+    "reconnecting": "The service container is being recreated. The connection will recover automatically — please keep this page open.",
+    "reconnecting_slow": "The updater has been unreachable for a while. The update may still be running, or it may have stopped; check the container logs on the server.",
+    "unchanged": "unchanged",
+    "progress_stage_dependencies": "Starting dependencies",
+    "progress_stage_application": "Recreating and waiting for health",
+    "progress_message_stage_dependencies": "Starting the dependency services.",
+    "progress_message_stage_application": "Recreating the service container and waiting for its health check."
   },
   "floating_save_bar": {
     "saved": "Saved",
