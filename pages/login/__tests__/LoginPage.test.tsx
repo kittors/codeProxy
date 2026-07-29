@@ -73,12 +73,17 @@ vi.mock("@code-proxy/ui", () => ({
   useToast: () => toastMocks,
 }));
 
-vi.mock("@code-proxy/assets", () => ({
-  OpenAILogo: () => null,
-  GeminiLogo: () => null,
-  ClaudeLogo: () => null,
-  VertexLogo: () => null,
-}));
+// 品牌名常量走真实导出，避免 mock 漂移后测试仍然「通过」却断言了错误的品牌。
+vi.mock("@code-proxy/assets", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@code-proxy/assets")>();
+  return {
+    ...actual,
+    OpenAILogo: () => null,
+    GeminiLogo: () => null,
+    ClaudeLogo: () => null,
+    VertexLogo: () => null,
+  };
+});
 
 vi.mock("@code-proxy/api-client", async () => {
   const actual = await vi.importActual<typeof import("@code-proxy/api-client")>(

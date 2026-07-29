@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
-import { Eye, EyeOff, KeyRound, Lock, UserRound } from "lucide-react";
+import { Eye, EyeOff, KeyRound, UserRound } from "lucide-react";
 import {
   detectApiBaseFromLocation,
   extractApiErrorCode,
@@ -9,7 +9,15 @@ import {
 } from "@code-proxy/api-client";
 import { useAuth } from "@app/providers/AuthProvider";
 import { PageBackground, Reveal, TextInput, ThemeToggleButton, useToast } from "@code-proxy/ui";
-import { OpenAILogo, GeminiLogo, ClaudeLogo, VertexLogo } from "@code-proxy/assets";
+import {
+  BRAND_NAME_PREFIX,
+  BRAND_NAME_SUFFIX,
+  ClaudeLogo,
+  GeminiLogo,
+  LogoMark,
+  OpenAILogo,
+  VertexLogo,
+} from "@code-proxy/assets";
 import { resolveLoginErrorMessage } from "./loginErrors";
 
 interface RedirectState {
@@ -117,10 +125,12 @@ export function LoginPage() {
             <aside className="space-y-10">
               <div className="flex items-center gap-3">
                 <div className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-white/70 ring-1 ring-slate-200 backdrop-blur dark:bg-neutral-950/60 dark:ring-neutral-800">
-                  <Lock size={18} className="text-slate-900 dark:text-white" />
+                  <LogoMark size={22} />
                 </div>
-                <div className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
-                  Code Proxy
+                {/* 标记已经单独放在左侧的圆角框里，这里只取词标文本，避免同屏出现两个 logo。 */}
+                <div className="text-lg font-normal tracking-tight text-slate-900 dark:text-white">
+                  {BRAND_NAME_PREFIX}
+                  <span className="font-semibold">{BRAND_NAME_SUFFIX}</span>
                 </div>
               </div>
               <div className="space-y-6">

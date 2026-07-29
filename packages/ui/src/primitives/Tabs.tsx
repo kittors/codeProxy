@@ -16,10 +16,17 @@ import type { ControlSize } from "../utils/controlStyles";
 
 type TabsValue = string;
 
+/**
+ * `neutral` 是管理后台一直在用的中性胶囊；`brand` 用品牌主色填充选中项，
+ * 供门户等需要跟落地页视觉统一的场景使用。默认保持 neutral，避免影响既有页面。
+ */
+export type TabsTone = "neutral" | "brand";
+
 interface TabsContextState {
   value: TabsValue;
   onValueChange: (next: TabsValue) => void;
   size: ControlSize;
+  tone: TabsTone;
 }
 
 const tabsListHeightBySize: Record<ControlSize, string> = {
@@ -52,15 +59,17 @@ export function Tabs({
   value,
   onValueChange,
   size = "default",
+  tone = "neutral",
   children,
 }: PropsWithChildren<{
   value: TabsValue;
   onValueChange: (next: TabsValue) => void;
   size?: ControlSize;
+  tone?: TabsTone;
 }>) {
   const valueObj = useMemo<TabsContextState>(
-    () => ({ value, onValueChange, size }),
-    [onValueChange, size, value],
+    () => ({ value, onValueChange, size, tone }),
+    [onValueChange, size, tone, value],
   );
   return <TabsContext value={valueObj}>{children}</TabsContext>;
 }
@@ -70,7 +79,7 @@ export function TabsList({
   className,
   ...divProps
 }: PropsWithChildren<HTMLAttributes<HTMLDivElement>>) {
-  const { size, value } = useTabs();
+  const { size, value, tone } = useTabs();
   const containerRef = useRef<HTMLDivElement>(null);
   const [indicator, setIndicator] = useState<{ x: number; width: number } | null>(null);
 
@@ -123,7 +132,12 @@ export function TabsList({
       {indicator ? (
         <motion.div
           aria-hidden="true"
-          className="pointer-events-none absolute bottom-0.5 left-0 top-0.5 z-0 rounded-full bg-white shadow-sm shadow-black/4 dark:bg-[#46464C] dark:shadow-none"
+          className={[
+            "pointer-events-none absolute bottom-0.5 left-0 top-0.5 z-0 rounded-full",
+            tone === "brand"
+              ? "bg-indigo-600 dark:bg-indigo-500"
+              : "bg-white shadow-sm shadow-black/4 dark:bg-[#46464C] dark:shadow-none",
+          ].join(" ")}
           initial={false}
           animate={{ x: indicator.x, width: indicator.width }}
           transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
@@ -143,7 +157,7 @@ export function TabsTrigger({
     value: TabsValue;
   } & Omit<ButtonHTMLAttributes<HTMLButtonElement>, "onClick" | "type" | "value">
 >) {
-  const { size, value: current, onValueChange } = useTabs();
+  const { size, value: current, onValueChange, tone } = useTabs();
   const active = current === value;
 
   const onClick = useCallback(() => {
@@ -164,7 +178,9 @@ export function TabsTrigger({
         tabsTriggerPaddingBySize[size],
         tabsTriggerTextBySize[size],
         active
-          ? "font-semibold text-[#18181B] dark:text-white"
+          ? tone === "brand"
+            ? "font-semibold text-white"
+            : "font-semibold text-[#18181B] dark:text-white"
           : "font-medium text-[#96969B] hover:text-[#18181B] dark:text-[#9F9FA8] dark:hover:text-white",
         buttonProps.className,
       ].join(" ")}

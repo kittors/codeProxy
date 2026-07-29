@@ -92,7 +92,7 @@ export { SearchableSelect } from "./primitives/SearchableSelect";
 export type { SearchableSelectOption, SearchableSelectProps } from "./primitives/SearchableSelect";
 export { Select } from "./primitives/Select";
 export type { SelectOption, SelectProps } from "./primitives/Select";
-export { Tabs, TabsList, TabsTrigger, TabsContent } from "./primitives/Tabs";
+export { Tabs, TabsList, TabsTrigger, TabsContent, type TabsTone } from "./primitives/Tabs";
 export { Textarea } from "./primitives/Textarea";
 export type { TextareaProps } from "./primitives/Textarea";
 export { ToggleSwitch } from "./primitives/ToggleSwitch";
