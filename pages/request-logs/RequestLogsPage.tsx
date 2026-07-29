@@ -633,9 +633,9 @@ export function RequestLogsPage() {
           {/* Loading overlay */}
           {loading ? (
             <div className="absolute inset-0 z-10 flex items-center justify-center rounded-b-2xl bg-white/70 backdrop-blur-sm dark:bg-neutral-950/55">
-              <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/85 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/70 dark:text-white/75">
+              <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-900/8 bg-white/85 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm dark:border-white/8 dark:bg-neutral-950/70 dark:text-white/75">
                 <span
-                  className="h-4 w-4 rounded-full border-2 border-slate-300 border-t-slate-900 motion-reduce:animate-none motion-safe:animate-spin dark:border-white/20 dark:border-t-white/80"
+                  className="h-4 w-4 rounded-full border-2 border-slate-300 border-t-indigo-600 motion-reduce:animate-none motion-safe:animate-spin dark:border-white/20 dark:border-t-white/80"
                   aria-hidden="true"
                 />
                 <span role="status">{t("common.loading_ellipsis")}</span>
@@ -704,11 +704,11 @@ export function RequestLogsPage() {
         }
       >
         <div className="space-y-4">
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:border-neutral-800 dark:bg-neutral-900/80 dark:text-white/65">
+          <div className="rounded-2xl border border-slate-900/8 bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:border-white/8 dark:bg-neutral-900/80 dark:text-white/65">
             {t("request_logs.clear_database_logs_keep_records_hint")}
           </div>
 
-          <label className="flex items-start gap-3 rounded-2xl border border-slate-200 px-4 py-3 dark:border-neutral-800">
+          <label className="flex items-start gap-3 rounded-2xl border border-slate-900/8 px-4 py-3 dark:border-white/8">
             <Checkbox
               checked={clearOptions.clear_body_content}
               onCheckedChange={handleClearBodyContentChange}
@@ -725,7 +725,7 @@ export function RequestLogsPage() {
             </span>
           </label>
 
-          <label className="flex items-start gap-3 rounded-2xl border border-slate-200 px-4 py-3 dark:border-neutral-800">
+          <label className="flex items-start gap-3 rounded-2xl border border-slate-900/8 px-4 py-3 dark:border-white/8">
             <Checkbox
               checked={clearOptions.clear_detail_content}
               onCheckedChange={handleClearDetailContentChange}

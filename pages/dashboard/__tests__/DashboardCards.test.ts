@@ -52,10 +52,10 @@ describe("dashboard card composition", () => {
     expect(source).toContain("connected?: boolean");
     expect(source).not.toContain("useSystemStats(3)");
     expect(source).not.toContain("ConcurrencyCard");
-    expect(source).not.toContain('className="rounded-2xl border border-slate-200 bg-white/50');
-    expect(source).not.toContain('className="rounded-xl border border-slate-200/80 bg-white');
+    expect(source).not.toContain('className="rounded-2xl border border-slate-900/8 bg-white/50');
+    expect(source).not.toContain('className="rounded-xl border border-slate-900/8 bg-white');
     expect(source).not.toContain(
-      'className="min-w-0 overflow-hidden rounded-xl border border-slate-200/80 bg-white',
+      'className="min-w-0 overflow-hidden rounded-xl border border-slate-900/8 bg-white',
     );
   });
 

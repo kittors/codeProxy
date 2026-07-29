@@ -165,7 +165,7 @@ function TagSection({
 }) {
   const [expanded, setExpanded] = useState(defaultExpanded);
   return (
-    <div className="overflow-hidden rounded-lg border border-slate-200/80 dark:border-neutral-700/60">
+    <div className="overflow-hidden rounded-lg border border-slate-900/8 dark:border-neutral-700/60">
       <button
         type="button"
         onClick={() => setExpanded((prev) => !prev)}
@@ -340,7 +340,7 @@ export function PlainPre({ text }: { text: string }) {
   }
 
   return (
-    <pre className="whitespace-pre-wrap break-words rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs leading-relaxed font-mono dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-200">
+    <pre className="whitespace-pre-wrap break-words rounded-xl border border-slate-900/8 bg-slate-50 p-4 text-xs leading-relaxed font-mono dark:border-white/8 dark:bg-neutral-900 dark:text-slate-200">
       {text}
     </pre>
   );
@@ -378,7 +378,7 @@ function VirtualPlainPre({ rows }: { rows: string[] }) {
   return (
     <div
       ref={parentRef}
-      className="h-[min(58vh,620px)] overflow-y-auto overscroll-contain rounded-xl border border-slate-200 bg-slate-50 text-xs leading-relaxed font-mono [contain:layout_paint] dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-200"
+      className="h-[min(58vh,620px)] overflow-y-auto overscroll-contain rounded-xl border border-slate-900/8 bg-slate-50 text-xs leading-relaxed font-mono [contain:layout_paint] dark:border-white/8 dark:bg-neutral-900 dark:text-slate-200"
     >
       <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
         {virtualRows.map((virtualRow) => (
@@ -513,14 +513,14 @@ export function ContentModal({
           <motion.div
             role="dialog"
             aria-modal="true"
-            className="relative z-10 flex h-[min(82dvh,760px)] w-[min(calc(100vw-2rem),1040px)] max-w-none flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-neutral-800 dark:bg-neutral-950"
+            className="relative z-10 flex h-[min(82dvh,760px)] w-[min(calc(100vw-2rem),1040px)] max-w-none flex-col overflow-hidden rounded-2xl border border-slate-900/8 bg-white shadow-xl dark:border-white/8 dark:bg-neutral-950"
             variants={{
               hidden: { opacity: 0, y: 18, scale: 0.96, filter: "blur(2px)" },
               show: { opacity: 1, y: 0, scale: 1, filter: "blur(0px)" },
             }}
             transition={{ type: "spring", stiffness: 420, damping: 34, mass: 0.8 }}
           >
-            <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-200 px-5 py-4 dark:border-neutral-800">
+            <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-900/8 px-5 py-4 dark:border-white/8">
               <div className="min-w-0">
                 <h2 className="truncate text-base font-semibold tracking-tight text-slate-900 dark:text-white">
                   {t("log_content.message_content")}
@@ -540,7 +540,7 @@ export function ContentModal({
               </button>
             </div>
             {tabs ? (
-              <div className="shrink-0 border-b border-slate-100 bg-white px-5 py-2 dark:border-neutral-800/60 dark:bg-neutral-950">
+              <div className="shrink-0 border-b border-slate-100 bg-white px-5 py-2 dark:border-white/8 dark:bg-neutral-950">
                 {tabs}
               </div>
             ) : null}

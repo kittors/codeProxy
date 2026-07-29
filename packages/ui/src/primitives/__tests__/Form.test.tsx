@@ -88,7 +88,7 @@ describe("FormField", () => {
       </FormField>,
     );
     const input = screen.getByRole("textbox");
-    expect(input.className).toMatch(/border-rose/);
+    expect(input.className).toMatch(/ring-rose/);
   });
 
   test("wires FormField label and description to ToggleSwitch", () => {

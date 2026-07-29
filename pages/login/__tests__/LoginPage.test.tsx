@@ -70,6 +70,15 @@ vi.mock("@code-proxy/ui", () => ({
     </div>
   ),
   ThemeToggleButton: () => <button type="button">theme</button>,
+  Button: ({
+    children,
+    loading,
+    ...props
+  }: React.ButtonHTMLAttributes<HTMLButtonElement> & { loading?: boolean }) => (
+    <button {...props} disabled={props.disabled || loading} aria-busy={loading || undefined}>
+      {children}
+    </button>
+  ),
   useToast: () => toastMocks,
 }));
 

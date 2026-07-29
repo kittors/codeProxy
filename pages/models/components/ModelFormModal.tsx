@@ -169,7 +169,7 @@ export function ModelFormModal({
               value={form.description}
               onChange={(event) => onUpdateForm({ description: event.target.value })}
               rows={3}
-              className="min-h-20 w-full resize-y rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-200/70 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:focus:border-neutral-700 dark:focus:ring-white/10"
+              className="min-h-20 w-full resize-y rounded-xl border border-slate-900/8 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-200/70 dark:border-white/8 dark:bg-neutral-950 dark:text-white dark:focus:border-neutral-700 dark:focus:ring-white/10"
               placeholder={t("models_page.description_placeholder")}
             />
           </div>

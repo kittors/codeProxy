@@ -64,7 +64,7 @@ export function DeleteApiKeyModal({
             </div>
             <code className="text-xs text-red-600 dark:text-red-400">{maskApiKey(entry.key)}</code>
           </div>
-          <label className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-3 text-sm text-slate-700 dark:border-neutral-800 dark:bg-neutral-900/60 dark:text-white/75">
+          <label className="flex items-start gap-3 rounded-xl border border-slate-900/8 bg-slate-50/70 px-3 py-3 text-sm text-slate-700 dark:border-white/8 dark:bg-neutral-900/60 dark:text-white/75">
             <input
               type="checkbox"
               checked={deleteLogsOnDelete}

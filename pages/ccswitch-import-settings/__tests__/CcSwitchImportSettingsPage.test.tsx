@@ -1430,7 +1430,7 @@ describe("CcSwitchImportSettingsPage", () => {
     );
     mappingRows.slice(0, -1).forEach((row) => {
       Array.from(row.cells).forEach((cell) => {
-        expect(cell).toHaveClass("border-b", "border-slate-200");
+        expect(cell).toHaveClass("border-b", "border-slate-900/8");
         expect(cell).not.toHaveClass("first:rounded-l-lg", "last:rounded-r-lg");
       });
     });

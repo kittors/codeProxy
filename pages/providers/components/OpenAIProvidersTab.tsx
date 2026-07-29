@@ -152,7 +152,7 @@ export function OpenAIProvidersTab({
                     {headerEntries.map(([key, value]) => (
                       <span
                         key={key}
-                        className="inline-flex max-w-full min-w-0 items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-xs text-slate-700 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/75"
+                        className="inline-flex max-w-full min-w-0 items-center gap-1 rounded-full border border-slate-900/8 bg-white px-2 py-0.5 text-xs text-slate-700 dark:border-white/8 dark:bg-neutral-950/60 dark:text-white/75"
                         title={`${key}: ${String(value)}`}
                       >
                         <span className="shrink-0 font-semibold">{key}:</span>

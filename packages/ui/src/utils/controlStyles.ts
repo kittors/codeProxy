@@ -18,5 +18,11 @@ export const controlPaddingBySize: Record<ControlSize, string> = {
   lg: "px-4",
 };
 
+/**
+ * 输入类控件的统一表面。
+ *
+ * 用「填充」而不是「描边」表达层级：静止态是一块柔和底色，聚焦时底色提亮、并补一条 1px
+ * 中性描边。刻意不做彩色发光环——密集表单里那圈光晕会盖住相邻控件，也让界面显得吵。
+ */
 export const controlSurface =
-  "rounded-xl border border-slate-200 bg-white text-slate-700 shadow-none outline-none transition-colors placeholder:text-slate-400 hover:border-slate-300 hover:bg-white hover:text-slate-900 focus-visible:border-slate-400 focus-visible:ring-0 focus-visible:ring-transparent dark:border-neutral-700 dark:bg-neutral-950 dark:text-slate-200 dark:shadow-none dark:placeholder:text-slate-500 dark:hover:border-neutral-600 dark:hover:bg-neutral-950 dark:hover:text-white dark:focus-visible:border-neutral-500 dark:focus-visible:ring-transparent";
+  "rounded-2xl border-0 bg-slate-100/80 text-slate-800 shadow-none outline-none transition-[color,background-color,box-shadow] duration-150 placeholder:text-slate-400 hover:bg-slate-100 focus:bg-white focus:ring-1 focus:ring-slate-900/12 focus-visible:bg-white focus-visible:ring-1 focus-visible:ring-slate-900/12 dark:bg-white/[0.055] dark:text-slate-100 dark:placeholder:text-white/30 dark:hover:bg-white/[0.08] dark:focus:bg-white/[0.09] dark:focus:ring-white/15 dark:focus-visible:bg-white/[0.09] dark:focus-visible:ring-white/15";

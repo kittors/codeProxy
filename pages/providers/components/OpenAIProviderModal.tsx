@@ -87,7 +87,7 @@ export function OpenAIProviderModal({
       <div className="space-y-5">
         <OpenAIProviderBasicSection openaiDraft={openaiDraft} setOpenaiDraft={setOpenaiDraft} />
 
-        <div className="rounded-xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+        <div className="rounded-xl border border-slate-900/8 bg-white/70 p-4 shadow-sm dark:border-white/8 dark:bg-neutral-950/60">
           <ModerationProfileSelect
         canRead={moderationPerms.canRead}
         canWrite={moderationPerms.canWrite}
@@ -99,7 +99,7 @@ export function OpenAIProviderModal({
           />
         </div>
 
-        <div className="border-t border-slate-200/60 pt-5 dark:border-neutral-800/60">
+        <div className="border-t border-slate-900/8 pt-5 dark:border-white/8">
           <OpenAIKeyEntriesEditor
             openaiDraft={openaiDraft}
             setOpenaiDraft={setOpenaiDraft}
@@ -109,7 +109,7 @@ export function OpenAIProviderModal({
           />
         </div>
 
-        <div className="border-t border-slate-200/60 pt-5 dark:border-neutral-800/60">
+        <div className="border-t border-slate-900/8 pt-5 dark:border-white/8">
           <OpenAIProviderModelsSection
             openaiDraft={openaiDraft}
             setOpenaiDraft={setOpenaiDraft}

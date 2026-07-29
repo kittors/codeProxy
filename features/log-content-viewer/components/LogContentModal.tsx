@@ -380,7 +380,7 @@ function RequestDetailRows({ rows }: { rows: RequestDetailRow[] }) {
 function RequestDetailGroupView({ group }: { group: RequestDetailGroup }) {
   if (group.rows.length === 0) return null;
   return (
-    <div className="border-t border-slate-100 dark:border-neutral-800/80">
+    <div className="border-t border-slate-100 dark:border-white/8">
       <div className="px-3 pt-3 pb-1.5 text-xs font-medium text-slate-400 dark:text-white/35">
         {group.title}
       </div>
@@ -397,9 +397,9 @@ function RequestDetailAttemptView({
   showTitle: boolean;
 }) {
   return (
-    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-neutral-800 dark:bg-neutral-950/60">
+    <div className="overflow-hidden rounded-lg border border-slate-900/8 bg-white dark:border-white/8 dark:bg-neutral-950/60">
       {showTitle && attempt.title ? (
-        <div className="border-b border-slate-100 px-3 py-2 font-mono text-xs text-slate-400 dark:border-neutral-800/80 dark:text-white/35">
+        <div className="border-b border-slate-100 px-3 py-2 font-mono text-xs text-slate-400 dark:border-white/8 dark:text-white/35">
           {attempt.title}
         </div>
       ) : null}
@@ -444,7 +444,7 @@ function RequestDetailSection({
   return (
     <section
       data-testid={testId}
-      className="overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-neutral-800 dark:bg-neutral-950"
+      className="overflow-hidden rounded-lg border border-slate-900/8 bg-white dark:border-white/8 dark:bg-neutral-950"
     >
       <button
         type="button"
@@ -479,7 +479,7 @@ function RequestDetailSection({
             transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
             className="overflow-hidden"
           >
-            <div className="space-y-2 border-t border-slate-100 bg-slate-50/40 p-2.5 dark:border-neutral-800/80 dark:bg-white/[0.02]">
+            <div className="space-y-2 border-t border-slate-100 bg-slate-50/40 p-2.5 dark:border-white/8 dark:bg-white/[0.02]">
               {visibleAttempts.length > 0 ? (
                 visibleAttempts.map((attempt, index) => (
                   <RequestDetailAttemptView
@@ -613,7 +613,7 @@ function StructuredRequestCard({
   return (
     <div
       data-testid={testId}
-      className="overflow-hidden rounded-3xl border border-slate-200 bg-slate-50/90 dark:border-neutral-800 dark:bg-neutral-900/75"
+      className="overflow-hidden rounded-3xl border border-slate-900/8 bg-slate-50/90 dark:border-white/8 dark:bg-neutral-900/75"
     >
       <div className="grid gap-0 divide-y divide-slate-200/90 dark:divide-neutral-800">
         {model ? (
@@ -645,7 +645,7 @@ function StructuredRequestCard({
               {parameters.map((item) => (
                 <div
                   key={item.key}
-                  className="rounded-2xl border border-slate-200 bg-white px-3 py-3 dark:border-neutral-800 dark:bg-neutral-950"
+                  className="rounded-2xl border border-slate-900/8 bg-white px-3 py-3 dark:border-white/8 dark:bg-neutral-950"
                 >
                   <p className="font-mono text-xs text-slate-500 dark:text-white/40">
                     {item.key}
@@ -1177,7 +1177,7 @@ export function LogContentModal({
           {imageGenerationOutput.images.map((image, index) => (
             <div
               key={`${image.src.slice(0, 48)}-${index}`}
-              className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-neutral-800 dark:bg-neutral-900"
+              className="rounded-2xl border border-slate-900/8 bg-slate-50 p-3 dark:border-white/8 dark:bg-neutral-900"
             >
               <div className="relative min-h-[160px] overflow-hidden rounded-xl bg-slate-100 dark:bg-black">
                 <img
@@ -1220,7 +1220,7 @@ export function LogContentModal({
 
     const view = outputParsed.view;
     const imagePreviewCard = outputImagePreviewSrc ? (
-      <div className="mb-4 rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-neutral-800 dark:bg-neutral-900">
+      <div className="mb-4 rounded-2xl border border-slate-900/8 bg-slate-50 p-3 dark:border-white/8 dark:bg-neutral-900">
         <div className="relative min-h-[160px] overflow-hidden rounded-xl bg-slate-100 dark:bg-black">
           <img
             src={outputImagePreviewSrc}

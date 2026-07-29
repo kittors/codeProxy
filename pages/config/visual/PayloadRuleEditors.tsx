@@ -67,8 +67,8 @@ function TextArea({
       rows={rows}
       spellCheck={false}
       className={[
-        "w-full resize-y rounded-xl border border-slate-200 bg-white px-3 py-2.5 font-mono text-xs text-slate-900 outline-none transition",
-        "focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-100 dark:focus-visible:ring-white/15",
+        "w-full resize-y rounded-xl border border-slate-900/8 bg-white px-3 py-2.5 font-mono text-xs text-slate-900 outline-none transition",
+        "focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:border-white/8 dark:bg-neutral-900 dark:text-slate-100 dark:focus-visible:ring-white/15",
         disabled ? "opacity-60" : null,
       ]
         .filter(Boolean)
@@ -199,7 +199,7 @@ export function PayloadRulesEditor({
       }
     >
       {rules.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-slate-200 bg-white/60 p-4 text-center text-sm text-slate-600 dark:border-neutral-800 dark:bg-neutral-950/40 dark:text-white/65">
+        <div className="rounded-2xl border border-dashed border-slate-900/8 bg-white/60 p-4 text-center text-sm text-slate-600 dark:border-white/8 dark:bg-neutral-950/40 dark:text-white/65">
           {t("visual_config.no_rules")}
         </div>
       ) : (
@@ -207,7 +207,7 @@ export function PayloadRulesEditor({
           {rules.map((rule, ruleIndex) => (
             <div
               key={rule.id}
-              className="space-y-3 rounded-2xl border border-slate-200 bg-white/60 p-4 dark:border-neutral-800 dark:bg-neutral-950/40"
+              className="space-y-3 rounded-2xl border border-slate-900/8 bg-white/60 p-4 dark:border-white/8 dark:bg-neutral-950/40"
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="text-sm font-semibold text-slate-900 dark:text-white">
@@ -293,7 +293,7 @@ export function PayloadRulesEditor({
                 </div>
 
                 {(rule.params || []).length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-slate-200 bg-white/60 p-3 text-center text-xs text-slate-600 dark:border-neutral-800 dark:bg-neutral-950/40 dark:text-white/65">
+                  <div className="rounded-2xl border border-dashed border-slate-900/8 bg-white/60 p-3 text-center text-xs text-slate-600 dark:border-white/8 dark:bg-neutral-950/40 dark:text-white/65">
                     {t("visual_config.no_params")}
                   </div>
                 ) : (
@@ -301,7 +301,7 @@ export function PayloadRulesEditor({
                     {(rule.params || []).map((param, paramIndex) => (
                       <div
                         key={param.id}
-                        className="space-y-2 rounded-2xl border border-slate-200 bg-white/60 p-3 dark:border-neutral-800 dark:bg-neutral-950/40"
+                        className="space-y-2 rounded-2xl border border-slate-900/8 bg-white/60 p-3 dark:border-white/8 dark:bg-neutral-950/40"
                       >
                         <div className="grid gap-2 lg:grid-cols-[1fr_180px_auto]">
                           <TextInput
@@ -448,7 +448,7 @@ export function PayloadFilterRulesEditor({
       }
     >
       {rules.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-slate-200 bg-white/60 p-4 text-center text-sm text-slate-600 dark:border-neutral-800 dark:bg-neutral-950/40 dark:text-white/65">
+        <div className="rounded-2xl border border-dashed border-slate-900/8 bg-white/60 p-4 text-center text-sm text-slate-600 dark:border-white/8 dark:bg-neutral-950/40 dark:text-white/65">
           {t("visual_config.no_rules")}
         </div>
       ) : (
@@ -456,7 +456,7 @@ export function PayloadFilterRulesEditor({
           {rules.map((rule, ruleIndex) => (
             <div
               key={rule.id}
-              className="space-y-3 rounded-2xl border border-slate-200 bg-white/60 p-4 dark:border-neutral-800 dark:bg-neutral-950/40"
+              className="space-y-3 rounded-2xl border border-slate-900/8 bg-white/60 p-4 dark:border-white/8 dark:bg-neutral-950/40"
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="text-sm font-semibold text-slate-900 dark:text-white">
@@ -542,7 +542,7 @@ export function PayloadFilterRulesEditor({
                 </div>
 
                 {(rule.params || []).length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-slate-200 bg-white/60 p-3 text-center text-xs text-slate-600 dark:border-neutral-800 dark:bg-neutral-950/40 dark:text-white/65">
+                  <div className="rounded-2xl border border-dashed border-slate-900/8 bg-white/60 p-3 text-center text-xs text-slate-600 dark:border-white/8 dark:bg-neutral-950/40 dark:text-white/65">
                     {t("visual_config.no_paths")}
                   </div>
                 ) : (

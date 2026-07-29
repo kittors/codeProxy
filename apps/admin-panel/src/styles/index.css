@@ -487,3 +487,52 @@ html.theme-transition-lock *::after {
     stroke-dashoffset: -12;
   }
 }
+
+/*
+ * Radix 浮层（下拉菜单、子菜单）的开合动画。
+ * 朝着触发元素的反方向滑入 4px，读起来像「从按钮长出来」；关闭更快收回。
+ */
+@keyframes ui-popover-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(var(--ui-popover-offset, -4px));
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes ui-popover-out {
+  to {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ui-popover-motion[data-state="open"] {
+    animation: ui-popover-in 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .ui-popover-motion[data-state="closed"] {
+    animation: ui-popover-out 100ms cubic-bezier(0.4, 0, 1, 1) forwards;
+  }
+  .ui-popover-motion[data-side="top"] {
+    --ui-popover-offset: 4px;
+  }
+  .ui-popover-motion[data-side="left"],
+  .ui-popover-motion[data-side="right"] {
+    --ui-popover-offset: 0px;
+  }
+}
+
+/* 骨架屏微光：只改透明度，避免 background-position 动画在长列表里造成重绘压力 */
+@keyframes skeleton-sweep {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}

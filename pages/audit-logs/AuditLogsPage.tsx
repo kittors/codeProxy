@@ -310,7 +310,7 @@ export function AuditLogsPage() {
           onPageChange={handlePageChange}
           onPageSizeChange={handlePageSizeChange}
           pageSizeOptions={PAGE_SIZE_OPTIONS}
-          className="border-t border-slate-100 px-3 py-3 sm:px-5 dark:border-neutral-800/60"
+          className="border-t border-slate-100 px-3 py-3 sm:px-5 dark:border-white/8"
           labels={{
             firstPage: t("request_logs.first_page"),
             previousPage: t("request_logs.prev_page"),
@@ -377,7 +377,7 @@ export function AuditLogsPage() {
                   {callChain.map((step, index) => (
                     <li
                       key={`${step.step ?? index}-${step.name ?? "step"}`}
-                      className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 dark:border-neutral-800 dark:bg-neutral-900/70"
+                      className="rounded-xl border border-slate-900/8 bg-slate-50 px-3 py-2 dark:border-white/8 dark:bg-neutral-900/70"
                     >
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-slate-200 px-1.5 text-2xs font-semibold text-slate-700 dark:bg-neutral-700 dark:text-white/80">
@@ -418,7 +418,7 @@ export function AuditLogsPage() {
               {detailLoading ? (
                 <p className="text-slate-500">{t("identity_admin.loading")}</p>
               ) : projectMethod ? (
-                <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-xs text-slate-700 dark:border-neutral-800 dark:bg-neutral-900/70 dark:text-white/75">
+                <div className="rounded-xl border border-slate-900/8 bg-slate-50 px-3 py-2 font-mono text-xs text-slate-700 dark:border-white/8 dark:bg-neutral-900/70 dark:text-white/75">
                   <div>
                     {[projectMethod.package, projectMethod.handler || projectMethod.method]
                       .filter(Boolean)

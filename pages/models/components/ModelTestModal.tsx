@@ -182,7 +182,7 @@ export function ModelTestModal({
               {t("models_page.test_channel")}
             </label>
             {noChannels ? (
-              <p className="rounded-lg border border-dashed border-slate-200 px-3 py-2 text-sm text-slate-500 dark:border-neutral-800 dark:text-white/45">
+              <p className="rounded-lg border border-dashed border-slate-900/8 px-3 py-2 text-sm text-slate-500 dark:border-white/8 dark:text-white/45">
                 {t("models_page.test_no_channels")}
               </p>
             ) : (

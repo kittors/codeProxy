@@ -80,7 +80,7 @@ export function SecretRevealModal({
               })}
           </p>
         </div>
-        <div className="relative rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-white/10 dark:bg-neutral-900">
+        <div className="relative rounded-xl border border-slate-900/8 bg-slate-50 p-3 dark:border-white/10 dark:bg-neutral-900">
           <code className="block select-all break-all pr-10 font-mono text-sm text-slate-900 dark:text-white">
             {secret}
           </code>

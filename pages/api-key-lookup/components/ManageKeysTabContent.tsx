@@ -28,7 +28,7 @@ export function ManageKeysTabContent({
     <Card padding="none" className="overflow-hidden" bodyClassName="mt-0">
       <div
         data-testid="apikey-lookup-keys-card-toolbar"
-        className="flex flex-wrap items-center justify-end gap-2 border-b border-slate-100 px-3 py-3 sm:px-5 dark:border-neutral-800/60"
+        className="flex flex-wrap items-center justify-end gap-2 border-b border-slate-100 px-3 py-3 sm:px-5 dark:border-white/8"
       >
         <Button size="sm" variant="secondary" onClick={onRefresh} disabled={loading || busy}>
           <RefreshCw size={14} className={loading ? "animate-spin" : ""} />

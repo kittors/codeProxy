@@ -129,7 +129,7 @@ export function ModerationMetricsModal({ open, onClose }: ModerationMetricsModal
       onClose={onClose}
     >
       <div className="space-y-4" aria-busy={loading}>
-        <div className="flex flex-wrap items-start justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3 dark:border-neutral-800 dark:bg-white/[0.04]">
+        <div className="flex flex-wrap items-start justify-between gap-3 rounded-2xl border border-slate-900/8 bg-slate-50/80 px-4 py-3 dark:border-white/8 dark:bg-white/[0.04]">
           <div className="min-w-0">
             <p className="text-sm font-semibold text-slate-900 dark:text-white">
               {t("content_moderation.metrics_card_title")}

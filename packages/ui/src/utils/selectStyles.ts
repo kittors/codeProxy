@@ -33,7 +33,7 @@ export const selectChevron =
   "ml-auto shrink-0 text-[#71717A] transition-transform duration-200 dark:text-[#A1A1AA]";
 
 export const floatingPanelSurface =
-  "code-proxy-floating-surface rounded-xl border border-slate-200 bg-white shadow-[0_16px_40px_rgba(15,23,42,0.14)] dark:border-neutral-800 dark:bg-neutral-950 dark:shadow-[0_16px_40px_rgba(0,0,0,0.38)]";
+  "code-proxy-floating-surface rounded-xl border border-slate-900/8 bg-white shadow-[0_16px_40px_rgba(15,23,42,0.14)] dark:border-white/8 dark:bg-neutral-950 dark:shadow-[0_16px_40px_rgba(0,0,0,0.38)]";
 
 export const selectPanel =
   `fixed z-[9999] overflow-hidden p-1 ${floatingPanelSurface}`;

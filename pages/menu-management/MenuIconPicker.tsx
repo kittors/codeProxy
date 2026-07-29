@@ -211,7 +211,7 @@ export function MenuIconPicker({
         <button
           type="button"
           disabled={disabled}
-          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition-colors hover:border-slate-300 hover:text-slate-800 disabled:opacity-50 dark:border-neutral-700 dark:bg-neutral-950 dark:hover:border-neutral-600 dark:hover:text-white"
+          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-900/8 bg-white text-slate-500 transition-colors hover:border-slate-300 hover:text-slate-800 disabled:opacity-50 dark:border-neutral-700 dark:bg-neutral-950 dark:hover:border-neutral-600 dark:hover:text-white"
           aria-label={t("identity_admin.menu_icon_picker")}
           onClick={() => {
             if (!disabled) setOpen((current) => !current);
@@ -225,10 +225,10 @@ export function MenuIconPicker({
         ? createPortal(
             <div
               ref={panelRef}
-              className="fixed z-[9999] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_16px_40px_rgba(15,23,42,0.14)] dark:border-neutral-800 dark:bg-neutral-950 dark:shadow-[0_16px_40px_rgba(0,0,0,0.38)]"
+              className="fixed z-[9999] overflow-hidden rounded-xl border border-slate-900/8 bg-white shadow-[0_16px_40px_rgba(15,23,42,0.14)] dark:border-white/8 dark:bg-neutral-950 dark:shadow-[0_16px_40px_rgba(0,0,0,0.38)]"
               style={{ top: pos.top, left: pos.left, width: pos.width }}
             >
-              <div className="flex items-center gap-2 border-b border-slate-200 px-3 py-2 dark:border-neutral-800">
+              <div className="flex items-center gap-2 border-b border-slate-900/8 px-3 py-2 dark:border-white/8">
                 <Search size={14} className="shrink-0 text-slate-400" aria-hidden="true" />
                 <input
                   autoFocus

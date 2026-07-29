@@ -93,7 +93,7 @@ export function ApiKeyUsageModal({
       bodyHeightClassName="h-[80vh]"
     >
       <div className="flex h-full flex-col">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-1 pb-3 dark:border-neutral-800/60">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-1 pb-3 dark:border-white/8">
           <div className="flex flex-wrap items-center gap-2">
             <RequestLogsTimeRangeSelector value={usageTimeRange} onChange={setUsageTimeRange} />
             <button
@@ -116,7 +116,7 @@ export function ApiKeyUsageModal({
           <span className="text-xs text-slate-400 dark:text-white/40">{usageLastUpdatedText}</span>
         </div>
 
-        <div className="grid gap-2 border-b border-slate-100 py-3 dark:border-neutral-800/60 sm:flex sm:flex-wrap sm:items-center">
+        <div className="grid gap-2 border-b border-slate-100 py-3 dark:border-white/8 sm:flex sm:flex-wrap sm:items-center">
           <SearchableSelect
             value={usageKeyQuery}
             onChange={setUsageKeyQuery}
@@ -162,11 +162,11 @@ export function ApiKeyUsageModal({
 
         <div
           data-testid="api-key-usage-summary"
-          className="grid gap-2 border-b border-slate-100 py-3 dark:border-neutral-800/60 md:grid-cols-[minmax(0,2fr)_repeat(2,minmax(0,1fr))]"
+          className="grid gap-2 border-b border-slate-100 py-3 dark:border-white/8 md:grid-cols-[minmax(0,2fr)_repeat(2,minmax(0,1fr))]"
         >
           <section
             aria-label={t("api_keys_page.usage_summary_tokens")}
-            className="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3 dark:border-neutral-800 dark:bg-white/[0.035]"
+            className="rounded-2xl border border-slate-900/8 bg-slate-50/80 px-4 py-3 dark:border-white/8 dark:bg-white/[0.035]"
           >
             <div className="text-xs font-medium text-slate-500 dark:text-white/50">
               {t("api_keys_page.usage_summary_tokens")}
@@ -216,7 +216,7 @@ export function ApiKeyUsageModal({
 
           <section
             aria-label={t("api_keys_page.usage_summary_requests")}
-            className="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3 dark:border-neutral-800 dark:bg-white/[0.035]"
+            className="rounded-2xl border border-slate-900/8 bg-slate-50/80 px-4 py-3 dark:border-white/8 dark:bg-white/[0.035]"
           >
             <div className="text-xs font-medium text-slate-500 dark:text-white/50">
               {t("api_keys_page.usage_summary_requests")}
@@ -233,7 +233,7 @@ export function ApiKeyUsageModal({
 
           <section
             aria-label={t("api_keys_page.usage_summary_success_rate")}
-            className="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3 dark:border-neutral-800 dark:bg-white/[0.035]"
+            className="rounded-2xl border border-slate-900/8 bg-slate-50/80 px-4 py-3 dark:border-white/8 dark:bg-white/[0.035]"
           >
             <div className="text-xs font-medium text-slate-500 dark:text-white/50">
               {t("api_keys_page.usage_summary_success_rate")}
@@ -264,8 +264,8 @@ export function ApiKeyUsageModal({
           />
           {usageLoading ? (
             <div className="absolute inset-0 z-10 flex items-center justify-center rounded-b-2xl bg-white/70 backdrop-blur-sm dark:bg-neutral-950/55">
-              <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/85 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/70 dark:text-white/75">
-                <span className="h-4 w-4 rounded-full border-2 border-slate-300 border-t-slate-900 motion-reduce:animate-none motion-safe:animate-spin dark:border-white/20 dark:border-t-white/80" />
+              <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-900/8 bg-white/85 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm dark:border-white/8 dark:bg-neutral-950/70 dark:text-white/75">
+                <span className="h-4 w-4 rounded-full border-2 border-slate-300 border-t-indigo-600 motion-reduce:animate-none motion-safe:animate-spin dark:border-white/20 dark:border-t-white/80" />
                 <span role="status">{t("common.loading_ellipsis")}</span>
               </div>
             </div>

@@ -12,7 +12,7 @@ export function ProviderAccessChips({ accessSummary }: ProviderAccessChipsProps)
 
   const accessTone =
     accessSummary.totalKeys === 0
-      ? "border-slate-200 bg-slate-50 text-slate-600 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white/65"
+      ? "border-slate-900/8 bg-slate-50 text-slate-600 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white/65"
       : accessSummary.reachableKeys === 0
         ? "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200"
         : accessSummary.reachableKeys < accessSummary.totalKeys
