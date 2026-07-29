@@ -1,17 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  Check,
-  ChevronRight,
-  Eye,
-  EyeOff,
-  Key,
-  KeyRound,
-  LogOut,
-  UserPlus,
-  Users,
-  UserRound,
-} from "lucide-react";
+import { Eye, EyeOff, KeyRound, UserRound } from "lucide-react";
 import {
   extractApiErrorCode,
   isApiClientError,
@@ -23,14 +12,11 @@ import {
 } from "@code-proxy/api-client";
 import { resolveLoginErrorMessage } from "../login/loginErrors";
 import { useTheme } from "@code-proxy/ui";
-import { ThemeToggleButton } from "@code-proxy/ui";
-import { LanguageSelector } from "@code-proxy/ui";
 import { Reveal } from "@code-proxy/ui";
 import { Button } from "@code-proxy/ui";
 import { Modal } from "@code-proxy/ui";
 import { PageBackground } from "@code-proxy/ui";
 import { SecretRevealModal } from "@code-proxy/ui";
-import { DropdownMenu } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
 import type { SearchableCheckboxMultiSelectOption } from "@code-proxy/ui";
 import type { TimeRange } from "@features/monitor-widgets/monitor-constants";
@@ -49,6 +35,9 @@ import {
   fetchPublicUsageSummary,
   type PublicModelItem,
 } from "./api";
+import { LogoMark } from "@code-proxy/assets";
+import { LandingButton } from "./components/landing/LandingButton";
+import { LookupHeader } from "./components/LookupHeader";
 import { LookupEmptyState } from "./components/LookupEmptyState";
 import { LookupResultsToolbar, type ApiKeyLookupTab } from "./components/LookupResultsToolbar";
 import { ManageKeysTabContent } from "./components/ManageKeysTabContent";
@@ -1273,7 +1262,7 @@ export function ApiKeyLookupPage() {
   const showLanding = !queriedKey && !portalUser && !portalSessionPending && !error;
 
   return (
-    <PageBackground variant={showLanding ? "login" : "app"}>
+    <PageBackground variant={showLanding ? "landing" : "app"}>
       <div
         className={[
           "relative min-h-dvh pt-14",
@@ -1282,169 +1271,23 @@ export function ApiKeyLookupPage() {
             : "bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-neutral-950 dark:via-neutral-900 dark:to-neutral-950",
         ].join(" ")}
       >
-        {/* Header：滚动后上滑淡出，给 sticky tabs 让位 */}
-        <header
-          data-testid="apikey-lookup-header"
-          data-collapsed={headerCollapsed ? "true" : "false"}
-          aria-hidden={headerCollapsed || undefined}
-          className={[
-            "fixed inset-x-0 top-0 z-30 border-b border-slate-200/60 bg-white/70 backdrop-blur-xl dark:border-neutral-800/60 dark:bg-neutral-950/70",
-            "motion-safe:transition-[transform,opacity,border-color] motion-safe:duration-300 motion-safe:ease-[cubic-bezier(0.22,1,0.36,1)]",
-            headerCollapsed
-              ? "pointer-events-none -translate-y-full border-transparent opacity-0"
-              : "translate-y-0 opacity-100",
-          ].join(" ")}
-        >
-          <div className="mx-auto flex h-14 max-w-screen-xl items-center justify-between px-4 sm:px-6">
-            <div className="flex items-center gap-2.5">
-              <div
-                className={[
-                  "flex h-8 w-8 items-center justify-center rounded-xl",
-                  showLanding
-                    ? "border border-slate-200 bg-white/70 text-slate-600 dark:border-white/10 dark:bg-white/[0.05] dark:text-white/65"
-                    : "bg-slate-900 shadow-sm dark:bg-white",
-                ].join(" ")}
-              >
-                {showLanding ? (
-                  <KeyRound size={16} />
-                ) : (
-                  <Key size={16} className="text-white dark:text-neutral-950" />
-                )}
-              </div>
-              <span className="text-base font-bold tracking-tight text-slate-900 dark:text-white">
-                {showLanding ? "Code Proxy" : t("apikey_lookup.title")}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              {queriedKey || portalUser ? (
-                <DropdownMenu.Root>
-                  <DropdownMenu.Trigger asChild>
-                    <button
-                      type="button"
-                      aria-label={displayName}
-                      data-testid="apikey-lookup-account-menu"
-                      className="inline-flex max-w-[34vw] items-center gap-1.5 rounded-xl px-1 py-1 text-sm font-medium text-slate-700 transition hover:bg-slate-100 dark:text-white/80 dark:hover:bg-white/10 sm:max-w-56"
-                    >
-                      <Key size={14} className="shrink-0" />
-                      <span className="min-w-0 truncate">{displayName}</span>
-                      {extraKeyCount > 0 ? (
-                        <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-2xs font-medium text-slate-600 dark:bg-white/10 dark:text-white/70">
-                          +{extraKeyCount}
-                        </span>
-                      ) : null}
-                      <ChevronRight
-                        size={14}
-                        className="shrink-0 rotate-90 text-slate-400 dark:text-white/40"
-                      />
-                    </button>
-                  </DropdownMenu.Trigger>
-                  <DropdownMenu.Portal>
-                    <DropdownMenu.Content
-                      align="end"
-                      sideOffset={8}
-                      className="min-w-48"
-                      data-testid="apikey-lookup-account-menu-content"
-                      onCloseAutoFocus={(event) => {
-                        if (!suppressAccountMenuFocusRestoreRef.current) return;
-                        suppressAccountMenuFocusRestoreRef.current = false;
-                        event.preventDefault();
-                      }}
-                    >
-                      {portalUser && switchablePortalAccounts.length > 1 ? (
-                        <DropdownMenu.Sub>
-                          <DropdownMenu.SubTrigger data-testid="apikey-lookup-switch-account-trigger">
-                            <Users size={15} />
-                            <span className="min-w-0 flex-1">
-                              {t("apikey_lookup.switch_account", { defaultValue: "切换账号" })}
-                            </span>
-                            <ChevronRight size={14} className="ml-auto shrink-0 text-slate-400" />
-                          </DropdownMenu.SubTrigger>
-                          <DropdownMenu.Portal>
-                            <DropdownMenu.SubContent
-                              sideOffset={6}
-                              className="min-w-44"
-                              data-testid="apikey-lookup-switch-account-menu"
-                            >
-                              {switchablePortalAccounts.map((account) => {
-                                const isCurrent = account.user.id === portalUser.id;
-                                return (
-                                  <DropdownMenu.Item
-                                    key={account.accountKey}
-                                    disabled={isCurrent}
-                                    className={
-                                      isCurrent ? "data-[disabled]:opacity-100" : undefined
-                                    }
-                                    data-testid={
-                                      isCurrent
-                                        ? "apikey-lookup-current-account"
-                                        : `apikey-lookup-switch-${account.user.id}`
-                                    }
-                                    onClick={(event) => {
-                                      // A pointer-selected account changes the page context; do not let
-                                      // Radix restore focus to the now-updated trigger and leave its
-                                      // browser focus ring visible. Keyboard selection keeps the default
-                                      // focus restoration so the menu remains accessible.
-                                      suppressAccountMenuFocusRestoreRef.current = event.detail > 0;
-                                    }}
-                                    onSelect={() => {
-                                      if (!isCurrent) void handleSwitchAccount(account.accountKey);
-                                    }}
-                                  >
-                                    <Users size={15} className="shrink-0" />
-                                    <span className="min-w-0 flex-1 truncate">
-                                      {account.user.display_name || account.user.username}
-                                    </span>
-                                    {isCurrent ? (
-                                      <Check
-                                        size={15}
-                                        className="ml-auto shrink-0 text-emerald-600 dark:text-emerald-400"
-                                      />
-                                    ) : null}
-                                  </DropdownMenu.Item>
-                                );
-                              })}
-                            </DropdownMenu.SubContent>
-                          </DropdownMenu.Portal>
-                        </DropdownMenu.Sub>
-                      ) : null}
-                      {portalUser ? (
-                        <DropdownMenu.Item onSelect={() => setChangePasswordOpen(true)}>
-                          <KeyRound size={15} />
-                          {t("apikey_lookup.change_password", { defaultValue: "修改密码" })}
-                        </DropdownMenu.Item>
-                      ) : null}
-                      {portalUser ? (
-                        <DropdownMenu.Item onSelect={handleAddAccount}>
-                          <UserPlus size={15} />
-                          {t("apikey_lookup.add_account", { defaultValue: "添加账号" })}
-                        </DropdownMenu.Item>
-                      ) : null}
-                      <DropdownMenu.Separator />
-                      <DropdownMenu.Item
-                        onSelect={handleLogout}
-                        className="text-rose-600 focus:text-rose-700 dark:text-rose-300"
-                      >
-                        <LogOut size={15} />
-                        {t("common.logout")}
-                      </DropdownMenu.Item>
-                    </DropdownMenu.Content>
-                  </DropdownMenu.Portal>
-                </DropdownMenu.Root>
-              ) : (
-                <Button
-                  size="sm"
-                  variant={showLanding ? "primary" : "ghost"}
-                  onClick={() => setLoginModalOpen(true)}
-                  className={showLanding ? "rounded-full px-4" : undefined}
-                >
-                  {t("common.login", { defaultValue: "登录" })}
-                </Button>
-              )}
-              <LanguageSelector className="inline-flex items-center rounded-xl p-2 text-slate-600 transition hover:bg-slate-100 dark:text-white/70 dark:hover:bg-white/10" />
-              <ThemeToggleButton className="rounded-xl p-2 text-slate-600 transition hover:bg-slate-100 dark:text-white/70 dark:hover:bg-white/10" />
-            </div>
-          </div>
-        </header>
+        <LookupHeader
+          t={t}
+          showLanding={showLanding}
+          collapsed={headerCollapsed && !showLanding}
+          scrolled={headerCollapsed}
+          hasAccount={Boolean(queriedKey || portalUser)}
+          displayName={displayName}
+          extraKeyCount={extraKeyCount}
+          portalUser={portalUser}
+          switchablePortalAccounts={switchablePortalAccounts}
+          onLogin={() => setLoginModalOpen(true)}
+          onLogout={handleLogout}
+          onAddAccount={handleAddAccount}
+          onChangePassword={() => setChangePasswordOpen(true)}
+          onSwitchAccount={(accountKey) => void handleSwitchAccount(accountKey)}
+          suppressAccountMenuFocusRestoreRef={suppressAccountMenuFocusRestoreRef}
+        />
 
         <main
           className={showLanding ? "w-full" : "mx-auto max-w-screen-xl space-y-5 px-4 py-6 sm:px-6"}
@@ -1629,9 +1472,12 @@ export function ApiKeyLookupPage() {
           onClose={closeLoginModal}
         >
           <div className="space-y-6">
-            <h2 className="pr-8 text-xl font-semibold tracking-tight text-slate-950 dark:text-white">
-              {t("apikey_lookup.login_title", { defaultValue: "登录" })}
-            </h2>
+            <div className="flex items-center gap-3 pr-8">
+              <LogoMark size={26} />
+              <h2 className="font-display text-xl font-bold tracking-tight text-slate-950 dark:text-white">
+                {t("apikey_lookup.login_title", { defaultValue: "登录" })}
+              </h2>
+            </div>
             <form
               className="space-y-4"
               onSubmit={(e) => {
@@ -1690,16 +1536,15 @@ export function ApiKeyLookupPage() {
                   {loginError}
                 </div>
               ) : null}
-              <Button
+              <LandingButton
                 type="submit"
-                variant="primary"
                 disabled={loginBusy || !loginUsername.trim() || !loginPassword}
-                className="h-11 w-full rounded-full"
+                className="h-11 w-full"
               >
                 {loginBusy
                   ? t("common.loading", { defaultValue: "登录中…" })
                   : t("common.login", { defaultValue: "登录" })}
-              </Button>
+              </LandingButton>
             </form>
           </div>
         </Modal>

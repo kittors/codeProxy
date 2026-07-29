@@ -29,12 +29,13 @@ type HeatmapPoint = {
   cost: number;
 };
 
+// 热力图跟随品牌主色（靛蓝），与门户其它强调元素统一
 const HEATMAP_LEVEL_CLASSES = [
   "bg-slate-100 dark:bg-white/10",
-  "bg-blue-100 dark:bg-blue-950",
-  "bg-blue-300 dark:bg-blue-700",
-  "bg-blue-500 dark:bg-blue-500",
-  "bg-blue-700 dark:bg-blue-300",
+  "bg-indigo-100 dark:bg-indigo-950",
+  "bg-indigo-300 dark:bg-indigo-800",
+  "bg-indigo-500 dark:bg-indigo-600",
+  "bg-indigo-600 dark:bg-indigo-400",
 ] as const;
 
 const formatInteger = (value: number) => Math.round(value).toLocaleString();
@@ -287,6 +288,7 @@ export function UsageTabSection({
           />
           <div className="min-w-0">
             <KpiCard
+              tone="portal"
               title={t("apikey_lookup.total_requests")}
               icon={Activity}
               hint={t("apikey_lookup.last_n_days", { days: timeRange })}
@@ -300,6 +302,7 @@ export function UsageTabSection({
           </div>
           <div className="min-w-0">
             <KpiCard
+              tone="portal"
               title={t("common.success_rate")}
               icon={ShieldCheck}
               hint={t("apikey_lookup.last_n_days", { days: timeRange })}
@@ -316,6 +319,7 @@ export function UsageTabSection({
           </div>
           <div className="min-w-0">
             <KpiCard
+              tone="portal"
               title={t("apikey_lookup.total_tokens")}
               icon={Sigma}
               hint={t("apikey_lookup.last_n_days", { days: timeRange })}
@@ -329,6 +333,7 @@ export function UsageTabSection({
           </div>
           <div className="min-w-0">
             <KpiCard
+              tone="portal"
               title={t("apikey_lookup.total_sessions")}
               icon={MessagesSquare}
               hint={t("apikey_lookup.last_n_days", { days: timeRange })}
@@ -342,6 +347,7 @@ export function UsageTabSection({
           </div>
           <div className="min-w-0">
             <KpiCard
+              tone="portal"
               title={t("apikey_lookup.total_cost")}
               icon={Coins}
               hint={t("apikey_lookup.last_n_days", { days: timeRange })}
@@ -355,7 +361,7 @@ export function UsageTabSection({
           </div>
         </div>
 
-        <Card
+        <Card tone="portal"
           title={t("apikey_lookup.calendar_heatmap")}
           description={t("apikey_lookup.calendar_heatmap_desc")}
           loading={false}
@@ -368,7 +374,7 @@ export function UsageTabSection({
         </Card>
 
         {showApiKeyDistribution ? (
-          <Card
+          <Card tone="portal"
             title={t("apikey_lookup.api_key_distribution")}
             description={t("apikey_lookup.api_key_distribution_desc", {
               days: timeRange,
@@ -428,7 +434,7 @@ export function UsageTabSection({
         ) : null}
 
         <section className="grid gap-4 lg:grid-cols-[minmax(0,560px)_minmax(0,1fr)]">
-          <Card
+          <Card tone="portal"
             title={t("apikey_lookup.model_distribution")}
             description={t(
               modelMetric === "requests"
@@ -484,7 +490,7 @@ export function UsageTabSection({
             )}
           </Card>
 
-          <Card
+          <Card tone="portal"
             title={t("apikey_lookup.daily_usage")}
             description={t("apikey_lookup.daily_usage_desc", {
               days: timeRange,

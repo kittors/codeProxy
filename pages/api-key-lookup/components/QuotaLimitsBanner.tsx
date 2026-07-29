@@ -101,6 +101,7 @@ export function QuotaLimitKpiCards({
         return (
           <div key={item.key} className="min-w-0" data-testid={`api-key-lookup-quota-${item.key}`}>
             <KpiCard
+          tone="portal"
               title={item.title}
               icon={item.icon}
               hint={t("apikey_lookup.quota_used_of_limit")}
