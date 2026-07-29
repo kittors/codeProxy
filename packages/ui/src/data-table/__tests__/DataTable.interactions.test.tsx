@@ -136,7 +136,7 @@ describe("DataTable sorting and row reordering", () => {
 
     const dragPreview = document.querySelector<HTMLElement>("[data-vt-row-reorder-preview]");
     expect(dragPreview).toHaveTextContent("alpha");
-    expect(dragPreview).toHaveClass("border", "border-slate-200/90");
+    expect(dragPreview).toHaveClass("border", "border-slate-900/8");
     expect(
       Array.from(dragPreview?.querySelectorAll("td") ?? []).every(
         (cell) => cell.style.borderTopWidth === "0px" && cell.style.borderBottomWidth === "0px",
@@ -373,7 +373,7 @@ describe("DataTable scroll chrome and row dividers", () => {
       const cells = Array.from(row.cells);
       expect(cells).toHaveLength(2);
       cells.forEach((cell) => {
-        expect(cell).toHaveClass("border-b", "border-slate-200");
+        expect(cell).toHaveClass("border-b", "border-slate-900/8");
         expect(cell).not.toHaveClass("first:rounded-l-lg", "last:rounded-r-lg");
       });
     });

@@ -200,7 +200,7 @@ export function ImageGenerationPage() {
                       </TabsContent>
                     ))}
                   </Tabs>
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs leading-6 text-slate-600 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white/55">
+                  <div className="rounded-2xl border border-slate-900/8 bg-slate-50 px-4 py-3 text-xs leading-6 text-slate-600 dark:border-white/8 dark:bg-neutral-900 dark:text-white/55">
                     {t("image_generation.active_endpoint_hint", {
                       method: activeDoc.method,
                       path: activeDoc.path,
@@ -236,7 +236,7 @@ function EndpointCallDoc({ doc }: { doc: EndpointDoc }) {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-neutral-800 dark:bg-neutral-900">
+      <div className="rounded-3xl border border-slate-900/8 bg-slate-50 p-4 dark:border-white/8 dark:bg-neutral-900">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-sm font-semibold text-slate-900 dark:text-white">
@@ -246,7 +246,7 @@ function EndpointCallDoc({ doc }: { doc: EndpointDoc }) {
               {t(doc.descriptionKey)}
             </p>
           </div>
-          <div className="flex max-w-full items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 font-mono text-xs dark:border-neutral-800 dark:bg-neutral-950">
+          <div className="flex max-w-full items-center gap-2 rounded-full border border-slate-900/8 bg-white px-3 py-1.5 font-mono text-xs dark:border-white/8 dark:bg-neutral-950">
             <span className="rounded-full bg-slate-900 px-2 py-0.5 font-semibold text-white dark:bg-white dark:text-neutral-950">
               {doc.method}
             </span>
@@ -820,7 +820,7 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
         title={t("image_generation.test_title")}
         onClose={onClose}
         maxWidth="max-w-[640px]"
-        panelClassName="w-full border-slate-200 bg-white shadow-2xl dark:border-neutral-800 dark:bg-neutral-950"
+        panelClassName="w-full border-slate-900/8 bg-white shadow-2xl dark:border-white/8 dark:bg-neutral-950"
         bodyHeightClassName="max-h-[calc(100vh-10rem)]"
         bodyClassName="!overflow-y-auto !px-4 !py-4 sm:!px-5"
       >
@@ -1043,7 +1043,7 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
           </div>
 
           {activeImage?.revisedPrompt ? (
-            <div className="shrink-0 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700 dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-200">
+            <div className="shrink-0 rounded-2xl border border-slate-900/8 bg-slate-50 px-4 py-3 text-slate-700 dark:border-white/8 dark:bg-neutral-900 dark:text-slate-200">
               <p className="text-xs font-medium text-slate-500 dark:text-white/40">
                 {t("image_generation.revised_prompt_label")}
               </p>
@@ -1053,7 +1053,7 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
 
           <div
             data-testid="image-generation-composer"
-            className="relative shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-white px-2.5 pt-2.5 pb-11 shadow-sm dark:border-neutral-800 dark:bg-neutral-950"
+            className="relative shrink-0 overflow-hidden rounded-2xl border border-slate-900/8 bg-white px-2.5 pt-2.5 pb-11 shadow-sm dark:border-white/8 dark:bg-neutral-950"
           >
             {editingSupported && uploadedImages.length > 0 ? (
               <div
@@ -1064,7 +1064,7 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
                   <div
                     key={item.id}
                     data-testid="image-generation-upload-chip"
-                    className="group flex h-10 max-w-[220px] shrink-0 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-2 py-1.5 dark:border-neutral-800 dark:bg-neutral-900"
+                    className="group flex h-10 max-w-[220px] shrink-0 items-center gap-2 rounded-xl border border-slate-900/8 bg-slate-50 px-2 py-1.5 dark:border-white/8 dark:bg-neutral-900"
                   >
                     <button
                       type="button"
@@ -1077,7 +1077,7 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
                         name: item.file.name,
                       })}
                     >
-                      <span className="h-8 w-8 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-neutral-700 dark:bg-neutral-950">
+                      <span className="h-8 w-8 shrink-0 overflow-hidden rounded-lg border border-slate-900/8 bg-white dark:border-neutral-700 dark:bg-neutral-950">
                         <img
                           src={item.previewUrl}
                           alt={item.file.name}

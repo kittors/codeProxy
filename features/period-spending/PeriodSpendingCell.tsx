@@ -47,7 +47,7 @@ const chipTone = (ratio: number) => {
   if (ratio >= 0.9) {
     return "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100";
   }
-  return "border-slate-200 bg-slate-50 text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-white/75";
+  return "border-slate-900/8 bg-slate-50 text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-white/75";
 };
 
 export function PeriodSpendingCell({

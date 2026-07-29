@@ -16,7 +16,7 @@ export function ProviderSummaryStrip({
   if (count === 0) return null;
 
   return (
-    <div className="flex items-center gap-3 border-b border-slate-100 px-4 py-2 text-xs dark:border-neutral-800">
+    <div className="flex items-center gap-3 border-b border-slate-100 px-4 py-2 text-xs dark:border-white/8">
       <span className="font-medium text-slate-500 dark:text-white/55">
         {t("providers.total_configs", { count })}
       </span>

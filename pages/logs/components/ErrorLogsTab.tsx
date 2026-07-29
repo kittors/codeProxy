@@ -31,7 +31,7 @@ const formatTimestamp = (value: number | undefined): string | undefined => {
 
 const statusBadgeClass = (status: number | undefined): string => {
   if (typeof status !== "number" || !Number.isFinite(status)) {
-    return "border-slate-200 bg-slate-50 text-slate-700 dark:border-neutral-800 dark:bg-white/5 dark:text-white/70";
+    return "border-slate-900/8 bg-slate-50 text-slate-700 dark:border-white/8 dark:bg-white/5 dark:text-white/70";
   }
   if (status >= 500) {
     return "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-200";
@@ -39,11 +39,11 @@ const statusBadgeClass = (status: number | undefined): string => {
   if (status >= 400) {
     return "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-200";
   }
-  return "border-slate-200 bg-slate-50 text-slate-700 dark:border-neutral-800 dark:bg-white/5 dark:text-white/70";
+  return "border-slate-900/8 bg-slate-50 text-slate-700 dark:border-white/8 dark:bg-white/5 dark:text-white/70";
 };
 
 const neutralBadgeClass =
-  "border-slate-200 bg-slate-50 text-slate-700 dark:border-neutral-800 dark:bg-white/5 dark:text-white/70";
+  "border-slate-900/8 bg-slate-50 text-slate-700 dark:border-white/8 dark:bg-white/5 dark:text-white/70";
 
 const buildDiagnosticBadges = (file: ErrorLogItem, t: Translate) => {
   const status = numberValue(file.status);
@@ -173,7 +173,7 @@ export function ErrorLogsTab({
       }
     >
       <div className="space-y-4 md:flex md:min-h-0 md:flex-1 md:flex-col md:space-y-0 md:gap-4">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:shrink-0 dark:border-neutral-800 dark:bg-neutral-950/60">
+        <div className="rounded-2xl border border-slate-900/8 bg-white p-4 shadow-sm md:shrink-0 dark:border-white/8 dark:bg-neutral-950/60">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0">
               <p className="text-sm font-semibold text-slate-900 dark:text-white">
@@ -205,7 +205,7 @@ export function ErrorLogsTab({
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:flex md:min-h-0 md:flex-1 md:flex-col dark:border-neutral-800 dark:bg-neutral-950/60">
+        <div className="rounded-2xl border border-slate-900/8 bg-white p-4 shadow-sm md:flex md:min-h-0 md:flex-1 md:flex-col dark:border-white/8 dark:bg-neutral-950/60">
           <p className="text-sm font-semibold text-slate-900 dark:text-white">
             {t("logs_page.error_log_files")}
           </p>
@@ -235,7 +235,7 @@ export function ErrorLogsTab({
                   return (
                     <div
                       key={file.name}
-                      className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 shadow-sm sm:flex-row sm:items-start sm:justify-between dark:border-neutral-800 dark:bg-neutral-950/60"
+                      className="flex flex-col gap-3 rounded-2xl border border-slate-900/8 bg-white/70 px-4 py-3 shadow-sm sm:flex-row sm:items-start sm:justify-between dark:border-white/8 dark:bg-neutral-950/60"
                     >
                       <div className="min-w-0 flex-1 space-y-2">
                         <div className="min-w-0">

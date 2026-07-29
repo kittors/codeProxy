@@ -983,11 +983,11 @@ export function ModelsPage() {
                 className="-mx-1 min-h-0 flex-1 space-y-2 overflow-x-hidden overflow-y-auto px-1 py-1"
               >
                 {libraryOwners.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-slate-200 px-3 py-6 text-center text-sm text-slate-500 dark:border-neutral-800 dark:text-white/45">
+                  <div className="rounded-xl border border-dashed border-slate-900/8 px-3 py-6 text-center text-sm text-slate-500 dark:border-white/8 dark:text-white/45">
                     {t("models_page.no_owner_presets")}
                   </div>
                 ) : filteredLibraryOwners.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-slate-200 px-3 py-6 text-center text-sm text-slate-500 dark:border-neutral-800 dark:text-white/45">
+                  <div className="rounded-xl border border-dashed border-slate-900/8 px-3 py-6 text-center text-sm text-slate-500 dark:border-white/8 dark:text-white/45">
                     {t("models_page.no_owner_search_results")}
                   </div>
                 ) : (
@@ -1095,7 +1095,7 @@ export function ModelsPage() {
               {canManageOpenRouterSync ? (
                 <div
                   data-testid="openrouter-sync-section"
-                  className="mb-3 border-b border-slate-200 pb-3 dark:border-neutral-800"
+                  className="mb-3 border-b border-slate-900/8 pb-3 dark:border-white/8"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">

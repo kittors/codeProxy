@@ -163,7 +163,7 @@ export function ModerationTestModal({ profile, onClose }: ModerationTestModalPro
                     {scoreRows.map(([category, score]) => (
                       <tr
                         key={category}
-                        className="border-t border-slate-200/70 dark:border-white/10"
+                        className="border-t border-slate-900/8 dark:border-white/10"
                       >
                         <td className="px-3 py-2 font-mono text-slate-700 dark:text-white/75">
                           {category}

@@ -26,13 +26,13 @@ const STATUS_TONE: Record<SaveBarStatus, { icon?: ReactNode; tone: string; dot?:
     tone: "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-400/20 dark:bg-sky-500/15 dark:text-sky-200",
   },
   loading: {
-    tone: "border-slate-200 bg-slate-50 text-slate-600 dark:border-neutral-700 dark:bg-neutral-800/60 dark:text-slate-300",
+    tone: "border-slate-900/8 bg-slate-50 text-slate-600 dark:border-neutral-700 dark:bg-neutral-800/60 dark:text-slate-300",
   },
   error: {
     tone: "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-400/20 dark:bg-rose-500/15 dark:text-rose-300",
   },
   offline: {
-    tone: "border-slate-200 bg-slate-100 text-slate-500 dark:border-neutral-700 dark:bg-neutral-800/60 dark:text-slate-400",
+    tone: "border-slate-900/8 bg-slate-100 text-slate-500 dark:border-neutral-700 dark:bg-neutral-800/60 dark:text-slate-400",
   },
 };
 
@@ -109,7 +109,7 @@ export function FloatingSaveBar({
           "pointer-events-auto flex items-center gap-3 rounded-2xl border px-4 py-2.5 shadow-lg shadow-black/5",
           "bg-white/85 backdrop-blur-xl backdrop-saturate-150",
           "dark:bg-neutral-950/80 dark:backdrop-blur-xl dark:backdrop-saturate-150",
-          "border-slate-200/80 dark:border-neutral-700/60",
+          "border-slate-900/8 dark:border-neutral-700/60",
           "transition-all duration-[400ms]",
           visible ? "translate-y-0 opacity-100 scale-100" : "translate-y-8 opacity-0 scale-[0.96]",
         ].join(" ")}

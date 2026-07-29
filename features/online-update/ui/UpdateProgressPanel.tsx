@@ -102,7 +102,7 @@ function LogConsole({ progress }: { progress?: UpdateProgressResponse | null }) 
   }, [expanded, logs.length]);
 
   return (
-    <div className="mt-4 border-t border-slate-200 pt-3 dark:border-neutral-800">
+    <div className="mt-4 border-t border-slate-900/8 pt-3 dark:border-white/8">
       <Button
         variant="ghost"
         size="xs"

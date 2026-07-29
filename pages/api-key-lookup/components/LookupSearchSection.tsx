@@ -43,7 +43,7 @@ export function LookupSearchSection({
         >
           {loading ? (
             <span
-              className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white motion-reduce:animate-none motion-safe:animate-spin dark:border-neutral-950/30 dark:border-t-neutral-950"
+              className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white motion-reduce:animate-none motion-safe:animate-spin dark:border-neutral-950/30 dark:border-t-indigo-400"
               aria-hidden="true"
             />
           ) : null}

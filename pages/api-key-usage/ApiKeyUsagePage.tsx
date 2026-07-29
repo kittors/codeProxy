@@ -499,7 +499,7 @@ export function ApiKeyUsagePage() {
       <div className="relative min-h-dvh bg-gradient-to-br from-slate-50 via-white to-slate-100 pt-14 dark:from-neutral-950 dark:via-neutral-900 dark:to-neutral-950">
         <header
           data-testid="apikey-usage-header"
-          className="fixed inset-x-0 top-0 z-30 border-b border-slate-200/60 bg-white/70 backdrop-blur-xl dark:border-neutral-800/60 dark:bg-neutral-950/70"
+          className="fixed inset-x-0 top-0 z-30 border-b border-slate-900/8 bg-white/70 backdrop-blur-xl dark:border-white/8 dark:bg-neutral-950/70"
         >
           <div className="mx-auto flex h-14 max-w-screen-xl items-center justify-between gap-3 px-4 sm:px-6">
             <div className="flex min-w-0 items-center gap-2.5">
@@ -623,7 +623,7 @@ export function ApiKeyUsagePage() {
           ) : (
             <div
               data-testid="apikey-usage-empty"
-              className="rounded-3xl border border-dashed border-slate-200 px-6 py-16 text-center dark:border-neutral-800"
+              className="rounded-3xl border border-dashed border-slate-900/8 px-6 py-16 text-center dark:border-white/8"
             >
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-500 dark:bg-white/10 dark:text-white/60">
                 <KeyRound size={22} />
@@ -701,7 +701,7 @@ export function ApiKeyUsagePage() {
               >
                 {loading ? (
                   <span
-                    className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white motion-reduce:animate-none motion-safe:animate-spin dark:border-neutral-950/30 dark:border-t-neutral-950"
+                    className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white motion-reduce:animate-none motion-safe:animate-spin dark:border-neutral-950/30 dark:border-t-indigo-400"
                     aria-hidden="true"
                   />
                 ) : null}

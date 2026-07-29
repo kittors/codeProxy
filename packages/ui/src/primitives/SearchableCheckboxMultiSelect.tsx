@@ -553,7 +553,7 @@ export function SearchableCheckboxMultiSelect({
                 />
               </div>
               {selectAllLabel || neutralAllSelection || showFilteredToggle || selectionHint ? (
-                <div className="flex items-center justify-between gap-2 border-b border-slate-100 px-3 py-2 dark:border-neutral-800">
+                <div className="flex items-center justify-between gap-2 border-b border-slate-100 px-3 py-2 dark:border-white/8">
                   <span className="min-w-0">
                     <span
                       className={cn(
@@ -673,7 +673,7 @@ export function SearchableCheckboxMultiSelect({
                 )}
               </ScrollArea>
               {manualApply ? (
-                <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-3 py-2 dark:border-neutral-800">
+                <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-3 py-2 dark:border-white/8">
                   <button
                     type="button"
                     onClick={() => closeDropdown(true)}

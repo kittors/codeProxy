@@ -732,7 +732,7 @@ export function MenuManagementPage() {
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-x-6 gap-y-2 border-t border-slate-200 pt-4 dark:border-neutral-800">
+          <div className="flex flex-wrap gap-x-6 gap-y-2 border-t border-slate-900/8 pt-4 dark:border-white/8">
             <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
               <input
                 type="checkbox"

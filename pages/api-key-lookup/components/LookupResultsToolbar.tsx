@@ -134,7 +134,7 @@ export function LookupResultsToolbar({
               {logsQuotaItems.map((item) => (
                 <div
                   key={item.key}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white/80 px-2 py-1 text-xs text-slate-600 shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-white/60"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-900/8 bg-white/80 px-2 py-1 text-xs text-slate-600 shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-white/60"
                 >
                   <span>{item.title}</span>
                   <span className="font-mono font-semibold tabular-nums text-slate-900 dark:text-white">

@@ -2448,7 +2448,7 @@ export function DataTable<T>({
                                 .join(" ");
                           const rowDividerClass =
                             rowDividers && globalIdx < rows.length - 1
-                              ? "border-b border-slate-200 dark:border-neutral-800"
+                              ? "border-b border-slate-900/8 dark:border-white/8"
                               : "";
                           const hoverChromeClass = naturalFlow
                             ? ""
@@ -2534,7 +2534,7 @@ export function DataTable<T>({
             <div className="flex items-center justify-center py-4">
               <div className="inline-flex items-center gap-2 text-sm text-slate-500 dark:text-white/55">
                 <span
-                  className="h-4 w-4 rounded-full border-2 border-slate-300 border-t-slate-900 motion-reduce:animate-none motion-safe:animate-spin dark:border-white/20 dark:border-t-white/80"
+                  className="h-4 w-4 rounded-full border-2 border-slate-300 border-t-indigo-600 motion-reduce:animate-none motion-safe:animate-spin dark:border-white/20 dark:border-t-white/80"
                   aria-hidden="true"
                 />
                 {t("common.loading_more")}

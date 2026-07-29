@@ -1017,7 +1017,7 @@ export function AuthFileDetailModal({
 
             <div
               className={
-                hasCodexProfiles ? "mt-5 border-t border-slate-200 pt-4 dark:border-white/10" : ""
+                hasCodexProfiles ? "mt-5 border-t border-slate-900/8 pt-4 dark:border-white/10" : ""
               }
             >
               <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">

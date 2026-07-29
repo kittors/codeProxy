@@ -44,7 +44,7 @@ export interface CcSwitchImportConfigOption {
 const labelClassName =
   "text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-white/45";
 const controlClassName =
-  "h-10 rounded-xl border border-slate-200/80 bg-white px-3 text-sm text-slate-900 shadow-none hover:border-slate-300 hover:bg-white focus-visible:ring-2 focus-visible:ring-slate-900/10 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:hover:border-neutral-700 dark:focus-visible:ring-white/15";
+  "h-10 rounded-xl border border-slate-900/8 bg-white px-3 text-sm text-slate-900 shadow-none hover:border-slate-300 hover:bg-white focus-visible:ring-2 focus-visible:ring-slate-900/10 dark:border-white/8 dark:bg-neutral-900 dark:text-white dark:hover:border-neutral-700 dark:focus-visible:ring-white/15";
 const fieldClassName = "flex flex-col gap-1.5";
 
 const iconByType: Record<CcSwitchClientType, string> = {
@@ -192,13 +192,13 @@ export function CcSwitchImportModal({
 
         <section
           data-testid="ccswitch-client-specific-panel"
-          className="min-h-[76px] rounded-2xl border border-slate-200/75 bg-white p-3.5 shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] dark:border-neutral-800 dark:bg-neutral-950/70"
+          className="min-h-[76px] rounded-2xl border border-slate-900/8 bg-white p-3.5 shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] dark:border-white/8 dark:bg-neutral-950/70"
         >
           {clientType === "claude" ? (
             <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(220px,0.9fr)] sm:items-center">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200/75 bg-slate-50 dark:border-neutral-800 dark:bg-neutral-900">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-900/8 bg-slate-50 dark:border-white/8 dark:bg-neutral-900">
                     <img src={iconByType.claude} alt="" className="h-5 w-5" />
                   </span>
                   <div className="min-w-0">
@@ -226,7 +226,7 @@ export function CcSwitchImportModal({
             </div>
           ) : (
             <div className="flex min-h-[54px] items-center gap-3">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200/75 bg-slate-50 dark:border-neutral-800 dark:bg-neutral-900">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-900/8 bg-slate-50 dark:border-white/8 dark:bg-neutral-900">
                 <img src={iconByType[clientType]} alt="" className="h-6 w-6" />
               </span>
               <div className="min-w-0 flex-1">
@@ -242,7 +242,7 @@ export function CcSwitchImportModal({
               </div>
             </div>
           )}
-          <div className="mt-3 rounded-xl border border-slate-200/70 bg-slate-50/70 px-3 py-2.5 dark:border-neutral-800 dark:bg-neutral-900/60">
+          <div className="mt-3 rounded-xl border border-slate-900/8 bg-slate-50/70 px-3 py-2.5 dark:border-white/8 dark:bg-neutral-900/60">
             <div className={labelClassName}>{t("ccswitch.import_base_url")}</div>
             <div className="mt-1.5 truncate rounded-lg bg-white px-2.5 py-2 font-mono text-xs text-slate-700 dark:bg-neutral-950 dark:text-white/70">
               {baseUrl || "--"}
@@ -306,7 +306,7 @@ export function CcSwitchImportModal({
             />
           </label>
 
-          <label className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200/75 bg-white px-3 text-sm font-semibold text-slate-700 shadow-none dark:border-neutral-800 dark:bg-neutral-900 dark:text-white/70">
+          <label className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-900/8 bg-white px-3 text-sm font-semibold text-slate-700 shadow-none dark:border-white/8 dark:bg-neutral-900 dark:text-white/70">
             <Checkbox
               checked={enabled}
               onCheckedChange={onEnabledChange}

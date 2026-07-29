@@ -141,7 +141,7 @@ function ReleaseNotes({ candidate }: { candidate: UpdateCheckResponse }) {
 
       <div
         data-testid="update-release-notes"
-        className={`mt-2 overflow-y-auto break-words rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 dark:border-neutral-800 dark:bg-neutral-900/50 dark:text-slate-200 ${
+        className={`mt-2 overflow-y-auto break-words rounded-lg border border-slate-900/8 bg-slate-50 p-3 text-sm text-slate-700 dark:border-white/8 dark:bg-neutral-900/50 dark:text-slate-200 ${
           expanded ? "max-h-72" : "max-h-32"
         }`}
       >
@@ -292,7 +292,7 @@ export function UpdateModal({
 
         {display ? (
           <>
-            <dl className="min-w-0 divide-y divide-slate-100 rounded-xl border border-slate-200 px-3 dark:divide-neutral-800 dark:border-neutral-800">
+            <dl className="min-w-0 divide-y divide-slate-100 rounded-xl border border-slate-900/8 px-3 dark:divide-neutral-800 dark:border-white/8">
               <VersionRow
                 label={t("auto_update.service_version")}
                 from={versionLabel(

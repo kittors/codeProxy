@@ -859,7 +859,7 @@ export function EndUsersPage() {
               setCurrentPage(1);
             }}
             pageSizeOptions={END_USER_PAGE_SIZE_OPTIONS}
-            className="mt-3 border-t border-slate-100 pt-3 dark:border-neutral-800/60"
+            className="mt-3 border-t border-slate-100 pt-3 dark:border-white/8"
             labels={{
               firstPage: t("end_users.first_page", { defaultValue: "首页" }),
               previousPage: t("end_users.previous_page", { defaultValue: "上一页" }),
@@ -1088,7 +1088,7 @@ export function EndUsersPage() {
             />
           </section>
 
-          <section className="rounded-2xl border border-slate-200 p-4 dark:border-white/10">
+          <section className="rounded-2xl border border-slate-900/8 p-4 dark:border-white/10">
             <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
               {t("end_users.other_limits")}
             </h3>

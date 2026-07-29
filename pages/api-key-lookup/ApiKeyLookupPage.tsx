@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Eye, EyeOff, KeyRound, UserRound } from "lucide-react";
 import {
   extractApiErrorCode,
   isApiClientError,
@@ -35,9 +34,8 @@ import {
   fetchPublicUsageSummary,
   type PublicModelItem,
 } from "./api";
-import { LogoMark } from "@code-proxy/assets";
-import { LandingButton } from "./components/landing/LandingButton";
 import { LookupHeader } from "./components/LookupHeader";
+import { PortalLoginForm } from "./components/PortalLoginForm";
 import { LookupEmptyState } from "./components/LookupEmptyState";
 import { LookupResultsToolbar, type ApiKeyLookupTab } from "./components/LookupResultsToolbar";
 import { ManageKeysTabContent } from "./components/ManageKeysTabContent";
@@ -1447,7 +1445,7 @@ export function ApiKeyLookupPage() {
               {(activeTab === "models" || activeTab === "quickImport") &&
               !queriedKey &&
               portalUser ? (
-                <div className="rounded-2xl border border-dashed border-slate-200 px-6 py-12 text-center text-sm text-slate-500 dark:border-neutral-800 dark:text-white/55">
+                <div className="rounded-2xl border border-dashed border-slate-900/8 px-6 py-12 text-center text-sm text-slate-500 dark:border-white/8 dark:text-white/55">
                   {t("apikey_lookup.operational_key_required", {
                     defaultValue:
                       "请先创建一把可用 Key；模型列表和快速导入需要凭证，用量与日志仍按账号聚合。",
@@ -1465,88 +1463,23 @@ export function ApiKeyLookupPage() {
           title={t("apikey_lookup.login_title", { defaultValue: "账号登录" })}
           hideHeader
           maxWidth="max-w-md"
-          panelClassName="rounded-3xl border-white/70 bg-white/95 shadow-xl shadow-slate-300/25 backdrop-blur-xl dark:border-white/10 dark:bg-neutral-950/90 dark:shadow-black/25"
-          bodyClassName="!px-7 !py-8 sm:!px-9 sm:!py-9"
+          bodyClassName="!px-7 !py-9 sm:!px-9"
           bodyHeightClassName="max-h-none"
           bodyOverflowClassName="overflow-visible"
           onClose={closeLoginModal}
         >
-          <div className="space-y-6">
-            <div className="flex items-center gap-3 pr-8">
-              <LogoMark size={26} />
-              <h2 className="font-display text-xl font-bold tracking-tight text-slate-950 dark:text-white">
-                {t("apikey_lookup.login_title", { defaultValue: "登录" })}
-              </h2>
-            </div>
-            <form
-              className="space-y-4"
-              onSubmit={(e) => {
-                e.preventDefault();
-                void handlePortalLogin();
-              }}
-            >
-              <label className="block space-y-2">
-                <span className="text-xs font-medium text-slate-600 dark:text-white/60">
-                  {t("apikey_lookup.username", { defaultValue: "账号" })}
-                </span>
-                <TextInput
-                  value={loginUsername}
-                  onChange={(e) => setLoginUsername(e.target.value)}
-                  autoComplete="username"
-                  autoFocus
-                  className="rounded-full px-5"
-                  placeholder={t("apikey_lookup.username_placeholder", {
-                    defaultValue: "请输入账号",
-                  })}
-                  startAdornment={<UserRound size={17} />}
-                />
-              </label>
-              <label className="block space-y-2">
-                <span className="text-xs font-medium text-slate-600 dark:text-white/60">
-                  {t("apikey_lookup.password", { defaultValue: "密码" })}
-                </span>
-                <TextInput
-                  type={showLoginPassword ? "text" : "password"}
-                  value={loginPassword}
-                  onChange={(e) => setLoginPassword(e.target.value)}
-                  autoComplete="current-password"
-                  className="rounded-full px-5"
-                  placeholder={t("apikey_lookup.password_placeholder", {
-                    defaultValue: "请输入密码",
-                  })}
-                  startAdornment={<KeyRound size={17} />}
-                  endAdornment={
-                    <button
-                      type="button"
-                      onClick={() => setShowLoginPassword((value) => !value)}
-                      className="rounded-full p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-white/10"
-                      aria-label={
-                        showLoginPassword
-                          ? t("login.hide_key", { defaultValue: "隐藏密码" })
-                          : t("login.show_key", { defaultValue: "显示密码" })
-                      }
-                    >
-                      {showLoginPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
-                  }
-                />
-              </label>
-              {loginError ? (
-                <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-300">
-                  {loginError}
-                </div>
-              ) : null}
-              <LandingButton
-                type="submit"
-                disabled={loginBusy || !loginUsername.trim() || !loginPassword}
-                className="h-11 w-full"
-              >
-                {loginBusy
-                  ? t("common.loading", { defaultValue: "登录中…" })
-                  : t("common.login", { defaultValue: "登录" })}
-              </LandingButton>
-            </form>
-          </div>
+          <PortalLoginForm
+            t={t}
+            username={loginUsername}
+            password={loginPassword}
+            showPassword={showLoginPassword}
+            error={loginError}
+            busy={loginBusy}
+            onUsernameChange={setLoginUsername}
+            onPasswordChange={setLoginPassword}
+            onTogglePassword={() => setShowLoginPassword((value) => !value)}
+            onSubmit={() => void handlePortalLogin()}
+          />
         </Modal>
 
         <Modal

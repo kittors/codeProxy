@@ -75,9 +75,10 @@ export function Drawer({
         }}
         aria-label={t("common.close")}
         className={[
-          "absolute inset-0 cursor-default bg-slate-900/40 backdrop-blur-sm dark:bg-black/50",
-          "transition-opacity duration-200 ease-out motion-reduce:transition-none",
-          visible ? "opacity-100" : "opacity-0",
+          "absolute inset-0 cursor-default bg-slate-950/45 dark:bg-black/60",
+          // 与 Modal 用同一套遮罩语言：模糊度随淡入一起上，不是一开始就糊。
+          "transition-[opacity,backdrop-filter] duration-[260ms] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none",
+          visible ? "opacity-100 backdrop-blur-md" : "opacity-0 backdrop-blur-none",
         ].join(" ")}
       />
       <div
@@ -85,12 +86,12 @@ export function Drawer({
         aria-modal="true"
         aria-labelledby={titleId}
         className={[
-          `relative z-10 flex h-full ${widthClassName} flex-col border-l border-slate-200 bg-white shadow-xl dark:border-neutral-800 dark:bg-neutral-950`,
-          "transition-transform duration-200 ease-out motion-reduce:transition-none",
+          `relative z-10 flex h-full ${widthClassName} flex-col bg-white shadow-[-24px_0_60px_-24px_rgba(15,23,42,0.35)] ring-1 ring-slate-900/10 dark:bg-[#0E0E12] dark:ring-white/10 dark:shadow-[-24px_0_60px_-24px_rgba(0,0,0,0.8)]`,
+          "transition-transform duration-[260ms] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none",
           visible ? "translate-x-0" : "translate-x-full",
         ].join(" ")}
       >
-        <div className="flex items-start justify-between gap-3 border-b border-slate-200 px-5 py-4 dark:border-neutral-800">
+        <div className="flex items-start justify-between gap-3 border-b border-slate-900/8 px-6 py-4 dark:border-white/8">
           <div className="min-w-0">
             <h2
               id={titleId}
@@ -106,7 +107,7 @@ export function Drawer({
             type="button"
             onClick={onClose}
             disabled={!open}
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-0 bg-transparent p-0 text-slate-500 shadow-none transition-colors hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
+            className="group inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-0 bg-transparent p-0 text-slate-400 shadow-none transition-colors hover:bg-slate-900/5 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60 dark:text-white/45 dark:hover:bg-white/10 dark:hover:text-white"
             aria-label={t("common.close")}
           >
             <X size={16} />
@@ -116,7 +117,7 @@ export function Drawer({
           {children}
         </div>
         {footer ? (
-          <div className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 px-5 py-4 dark:border-neutral-800">
+          <div className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-900/8 px-5 py-4 dark:border-white/8">
             {footer}
           </div>
         ) : null}

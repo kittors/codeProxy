@@ -195,7 +195,7 @@ export function CcSwitchImportSettingsPage() {
           const client = getCcSwitchClientConfig(row.clientType);
           return (
             <div className="flex min-w-0 items-center gap-3">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200/75 bg-slate-50 dark:border-neutral-800 dark:bg-neutral-900">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-900/8 bg-slate-50 dark:border-white/8 dark:bg-neutral-900">
                 <img src={iconByType[row.clientType]} alt="" className="h-5 w-5" />
               </span>
               <div className="min-w-0">
@@ -233,7 +233,7 @@ export function CcSwitchImportSettingsPage() {
         width: "w-52",
         overflowTooltip: true,
         render: (row) => (
-          <span className="inline-flex max-w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-slate-200/70 bg-white px-2 py-1 font-mono text-xs text-slate-600 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white/65">
+          <span className="inline-flex max-w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-slate-900/8 bg-white px-2 py-1 font-mono text-xs text-slate-600 dark:border-white/8 dark:bg-neutral-950 dark:text-white/65">
             {row.defaultModel}
           </span>
         ),
@@ -250,7 +250,7 @@ export function CcSwitchImportSettingsPage() {
               {row.allowedChannelGroups.map((group) => (
                 <span
                   key={group}
-                  className="rounded-full border border-slate-200/75 bg-slate-50 px-2 py-1 text-xs font-medium text-slate-600 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white/60"
+                  className="rounded-full border border-slate-900/8 bg-slate-50 px-2 py-1 text-xs font-medium text-slate-600 dark:border-white/8 dark:bg-neutral-900 dark:text-white/60"
                 >
                   {group}
                 </span>

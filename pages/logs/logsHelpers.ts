@@ -222,19 +222,19 @@ export const getLevelStyles = (level: LogLevel): { badge: string; row: string } 
     case "debug":
       return {
         badge:
-          "border-slate-200 bg-slate-100 text-slate-700 dark:border-neutral-800 dark:bg-white/10 dark:text-white/70",
+          "border-slate-900/8 bg-slate-100 text-slate-700 dark:border-white/8 dark:bg-white/10 dark:text-white/70",
         row: "",
       };
     case "trace":
       return {
         badge:
-          "border-slate-200 bg-slate-50 text-slate-600 dark:border-neutral-800 dark:bg-white/5 dark:text-white/55",
+          "border-slate-900/8 bg-slate-50 text-slate-600 dark:border-white/8 dark:bg-white/5 dark:text-white/55",
         row: "",
       };
     default:
       return {
         badge:
-          "border-slate-200 bg-slate-50 text-slate-700 dark:border-neutral-800 dark:bg-white/5 dark:text-white/70",
+          "border-slate-900/8 bg-slate-50 text-slate-700 dark:border-white/8 dark:bg-white/5 dark:text-white/70",
         row: "",
       };
   }
@@ -253,5 +253,5 @@ export const getStatusStyles = (statusCode: number): string => {
   if (statusCode >= 500) {
     return "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-200";
   }
-  return "border-slate-200 bg-slate-50 text-slate-700 dark:border-neutral-800 dark:bg-white/5 dark:text-white/70";
+  return "border-slate-900/8 bg-slate-50 text-slate-700 dark:border-white/8 dark:bg-white/5 dark:text-white/70";
 };

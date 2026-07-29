@@ -13,6 +13,7 @@ import {
   type ReactElement,
   type ReactNode,
 } from "react";
+import { Loader2 } from "lucide-react";
 import { TooltipBubble, TooltipTriggerContext, type TooltipPlacement } from "../overlays/Tooltip";
 
 type ButtonVariant =
@@ -27,7 +28,7 @@ type ButtonVariant =
 type ButtonSize = "xs" | "sm" | "md";
 
 const BUTTON_BASE_CLASS =
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full border-0 font-semibold shadow-none transition-all duration-150 ease-out active:translate-y-px active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-45";
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full border-0 font-semibold shadow-none transition-all duration-150 ease-out motion-safe:hover:-translate-y-px active:translate-y-0 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-45";
 
 const BUTTON_SIZE_CLASSES: Record<ButtonSize, { iconOnly: string; text: string }> = {
   xs: {
@@ -77,7 +78,7 @@ const BUTTON_VARIANT_CLASSES: Record<Exclude<ButtonVariant, "secondary" | "dange
   default:
     "bg-[#EBEBEC] text-[#18181B] hover:bg-[#E4E4E7] active:bg-[#D4D4D8] focus-visible:ring-black/10 dark:bg-[#27272A] dark:text-white dark:hover:bg-[#303036] dark:active:bg-[#3F3F46] dark:focus-visible:ring-white/15",
   primary:
-    "bg-[#18181B] text-white hover:bg-[#27272A] active:bg-[#09090B] focus-visible:ring-black/20 dark:bg-white dark:text-[#18181B] dark:hover:bg-[#E4E4E7] dark:active:bg-[#D4D4D8] dark:focus-visible:ring-white/15",
+    "bg-indigo-600 text-white hover:bg-indigo-500 active:bg-indigo-700 focus-visible:ring-indigo-500/35 dark:bg-indigo-500 dark:text-white dark:hover:bg-indigo-400 dark:active:bg-indigo-600 dark:focus-visible:ring-indigo-400/30",
   error:
     "bg-rose-600 text-white hover:bg-rose-500 active:bg-rose-700 focus-visible:ring-rose-400/35 dark:bg-rose-500 dark:hover:bg-rose-400 dark:active:bg-rose-600 dark:focus-visible:ring-rose-300/20",
   success:
@@ -122,6 +123,7 @@ export function Button({
   tooltipPlacement = "bottom",
   variant = "default",
   size = "md",
+  loading = false,
   ...props
 }: PropsWithChildren<
   ButtonHTMLAttributes<HTMLButtonElement> & {
@@ -129,12 +131,15 @@ export function Button({
     tooltipPlacement?: TooltipPlacement;
     variant?: ButtonVariant;
     size?: ButtonSize;
+    /** 提交中：插入 spinner 并禁用点击，但保留标签，避免按钮宽度跳动。 */
+    loading?: boolean;
   }
 >) {
   const tooltipId = useId();
   const hasTooltipParent = useContext(TooltipTriggerContext);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const [tooltipOpen, setTooltipOpen] = useState(false);
+  // loading 时会额外插入 spinner，图标独占判定要按原始 children 算，否则会误判成图标按钮。
   const iconOnly = isIconOnlyButtonChildren(children);
 
   const tooltipContent = tooltip === false ? null : (tooltip ?? title ?? ariaLabel);
@@ -188,8 +193,13 @@ export function Button({
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         title={shouldSuppressNativeTitle ? undefined : title}
+        disabled={props.disabled || loading}
+        aria-busy={loading ? true : props["aria-busy"]}
         className={buttonClassName({ className, iconOnly, size, variant })}
       >
+        {loading ? (
+          <Loader2 size={size === "xs" ? 13 : 15} className="shrink-0 animate-spin" aria-hidden />
+        ) : null}
         {children}
       </button>
       <TooltipBubble

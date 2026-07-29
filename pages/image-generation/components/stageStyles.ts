@@ -27,8 +27,8 @@ export function imageStageClassName({
   const tone = failed
     ? "border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-100"
     : hasImage
-      ? "border-slate-200 bg-slate-100 dark:border-neutral-800 dark:bg-black"
-      : "border-slate-200 bg-slate-50 text-slate-500 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white/55";
+      ? "border-slate-900/8 bg-slate-100 dark:border-white/8 dark:bg-black"
+      : "border-slate-900/8 bg-slate-50 text-slate-500 dark:border-white/8 dark:bg-neutral-900 dark:text-white/55";
 
   return ["relative overflow-hidden rounded-2xl border transition-all duration-200", size, tone].join(" ");
 }

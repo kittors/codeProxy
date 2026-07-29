@@ -80,7 +80,7 @@ export function ImportModelsModal({
             endAdornment={<Search size={16} className="text-slate-400" />}
           />
 
-          <div className="rounded-2xl border border-slate-200 bg-white/70 p-3 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+          <div className="rounded-2xl border border-slate-900/8 bg-white/70 p-3 shadow-sm dark:border-white/8 dark:bg-neutral-950/60">
             <p className="text-xs text-slate-600 dark:text-white/65 tabular-nums">
               {t("auth_files.models_selected", {
                 models: importFilteredModels.length,

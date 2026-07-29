@@ -8,7 +8,14 @@ import {
   isApiClientError,
 } from "@code-proxy/api-client";
 import { useAuth } from "@app/providers/AuthProvider";
-import { PageBackground, Reveal, TextInput, ThemeToggleButton, useToast } from "@code-proxy/ui";
+import {
+  Button,
+  PageBackground,
+  Reveal,
+  TextInput,
+  ThemeToggleButton,
+  useToast,
+} from "@code-proxy/ui";
 import {
   BRAND_NAME_PREFIX,
   BRAND_NAME_SUFFIX,
@@ -117,7 +124,7 @@ export function LoginPage() {
   return (
     <PageBackground variant="login">
       <div className="absolute right-6 top-6 z-20">
-        <ThemeToggleButton className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white/70 text-slate-700 shadow-sm backdrop-blur transition hover:bg-white dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-slate-200" />
+        <ThemeToggleButton className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-900/8 bg-white/70 text-slate-700 shadow-sm backdrop-blur transition hover:bg-white dark:border-white/8 dark:bg-neutral-950/60 dark:text-slate-200" />
       </div>
       <div className="relative mx-auto flex min-h-screen w-full max-w-6xl items-center px-6 py-12">
         <Reveal className="w-full">
@@ -134,7 +141,7 @@ export function LoginPage() {
                 </div>
               </div>
               <div className="space-y-6">
-                <h1 className="text-5xl font-semibold leading-[1.05] tracking-tight text-slate-900 sm:text-6xl dark:text-white">
+                <h1 className="font-display text-5xl font-bold leading-[1.05] tracking-tight text-slate-900 sm:text-6xl dark:text-white">
                   {t("login.hero_title_line1")}
                   <br />
                   {t("login.hero_title_line2")}
@@ -147,7 +154,7 @@ export function LoginPage() {
                 {[OpenAILogo, GeminiLogo, ClaudeLogo, VertexLogo].map((Logo, index) => (
                   <span
                     key={index}
-                    className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white/60 dark:border-white/10 dark:bg-white/5"
+                    className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-900/8 bg-white/60 dark:border-white/10 dark:bg-white/5"
                   >
                     <Logo size={22} />
                   </span>
@@ -226,13 +233,14 @@ export function LoginPage() {
                     className="rounded-full px-5"
                   />
                 ) : null}
-                <button
+                <Button
                   type="submit"
-                  disabled={loading}
-                  className="w-full rounded-full bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-70 dark:bg-white/10 dark:hover:bg-white/15"
+                  variant="primary"
+                  loading={loading}
+                  className="h-12 w-full"
                 >
                   {loading ? t("login.signing_in") : t("login.submit_button")}
-                </button>
+                </Button>
               </form>
             </section>
           </div>
