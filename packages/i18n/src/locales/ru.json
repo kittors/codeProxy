@@ -177,8 +177,8 @@
     "model_use_custom": "Use \"{{value}}\""
   },
   "title": {
-    "main": "Панель администратора Code Proxy",
-    "login": "Панель администратора Code Proxy",
+    "main": "Панель администратора CliRelay",
+    "login": "Панель администратора CliRelay",
     "abbr": "CPAD"
   },
   "splash": {
@@ -1545,7 +1545,7 @@
   },
   "system_info": {
     "title": "Информация о центре управления",
-    "about_title": "Панель администратора Code Proxy",
+    "about_title": "Панель администратора CliRelay",
     "connection_status_title": "Статус подключения",
     "api_status_label": "Статус API:",
     "config_status_label": "Статус конфигурации:",
@@ -1577,7 +1577,7 @@
     "link_main_repo": "Основной репозиторий",
     "link_main_repo_desc": "Исходный код основной программы CLI Proxy API",
     "link_webui_repo": "Репозиторий WebUI",
-    "link_webui_repo_desc": "Исходный код панели администратора Code Proxy",
+    "link_webui_repo_desc": "Исходный код панели администратора CliRelay",
     "link_docs": "Документация",
     "link_docs_desc": "Учебные пособия и руководства по настройке",
     "clear_login_title": "Локальные данные входа",

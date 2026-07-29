@@ -17,7 +17,6 @@ import { useTranslation } from "react-i18next";
 import {
   Building2,
   ChevronDown,
-  LayoutDashboard,
   LogOut,
   PanelLeft,
   Settings,
@@ -35,6 +34,7 @@ import {
   ThemeToggleButton,
   resolveMenuIcon,
 } from "@code-proxy/ui";
+import { BRAND_NAME, LogoMark } from "@code-proxy/assets";
 import { preloadPageRoute } from "@pages/registry";
 import { recoverFromChunkLoadError } from "@pages/chunkLoadRecovery";
 import {
@@ -909,9 +909,9 @@ function ShellSidebar({
             >
               <span
                 data-sidebar-logo="true"
-                className="grid h-8 w-8 place-items-center rounded-xl bg-blue-600 text-white"
+                className="grid h-8 w-8 place-items-center rounded-xl bg-indigo-50 ring-1 ring-indigo-500/15 dark:bg-indigo-500/10 dark:ring-indigo-400/20"
               >
-                <LayoutDashboard size={17} />
+                <LogoMark size={17} />
               </span>
             </span>
             <span
@@ -925,7 +925,7 @@ function ShellSidebar({
               <span className="block truncate text-base font-semibold tracking-tight">
                 {t("shell.console")}
               </span>
-              <span className="block text-2xs font-medium text-slate-400">CLI Proxy</span>
+              <span className="block font-display text-2xs text-slate-400">{BRAND_NAME}</span>
             </span>
           </div>
           <ScrollArea

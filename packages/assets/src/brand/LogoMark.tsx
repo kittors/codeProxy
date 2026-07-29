@@ -4,8 +4,8 @@ import markSolid from "./images/clirelay-mark-solid.png";
 /**
  * CliRelay 品牌标记。
  *
- * 图形语义：多条支路在中段汇聚，再合成一支箭头射出 —— 即「多家模型接入，一个入口输出」，
- * 与产品定位一一对应。
+ * 图形语义：多片曲面花瓣以螺旋方式向中心聚拢，形成有向心动势的旋涡 ——
+ * 即「多家模型汇聚到一个入口」，与产品定位对应。
  *
  * 两个变体：
  * - `inline`：无底板的渐变符号，用于顶栏、页脚等与文字并排的位置。
@@ -19,7 +19,7 @@ import markSolid from "./images/clirelay-mark-solid.png";
 export type LogoMarkVariant = "inline" | "solid";
 
 /** 内联标记的宽高比（箭头造型天然横向）。用 size 控制高度，宽度按此比例推导。 */
-const INLINE_ASPECT = 202 / 160;
+const INLINE_ASPECT = 201 / 200;
 
 export interface LogoMarkProps {
   /** 标记高度（px）。宽度由变体的宽高比决定。 */

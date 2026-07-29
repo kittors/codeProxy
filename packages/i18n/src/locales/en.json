@@ -92,8 +92,8 @@
     "enabled": "Enabled"
   },
   "title": {
-    "main": "Code Proxy Admin Dashboard",
-    "login": "Code Proxy Admin Dashboard",
+    "main": "CliRelay Admin Dashboard",
+    "login": "CliRelay Admin Dashboard",
     "abbr": "CPAD"
   },
   "splash": {
@@ -186,7 +186,7 @@
   },
   "dashboard": {
     "title": "Dashboard",
-    "subtitle": "Welcome to Code Proxy Admin Dashboard",
+    "subtitle": "Welcome to CliRelay Admin Dashboard",
     "openai_providers": "OpenAI Providers",
     "quick_actions": "Quick Actions",
     "current_config": "Current Configuration",
@@ -1695,7 +1695,7 @@
   },
   "system_info": {
     "title": "Management Center Info",
-    "about_title": "Code Proxy Admin Dashboard",
+    "about_title": "CliRelay Admin Dashboard",
     "connection_status_title": "Connection Status",
     "api_status_label": "API Status:",
     "config_status_label": "Config Status:",
@@ -1727,7 +1727,7 @@
     "link_main_repo": "Main Repository",
     "link_main_repo_desc": "CLI Proxy API core program source code",
     "link_webui_repo": "WebUI Repository",
-    "link_webui_repo_desc": "Code Proxy admin frontend source code",
+    "link_webui_repo_desc": "CliRelay admin frontend source code",
     "link_docs": "Documentation",
     "link_docs_desc": "Usage tutorials and configuration guides",
     "clear_login_title": "Local Login Data",
