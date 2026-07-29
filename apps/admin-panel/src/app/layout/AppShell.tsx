@@ -907,11 +907,8 @@ function ShellSidebar({
                 (visualRailCollapsed ? "opacity-100 group-hover/sidebar:opacity-0" : "opacity-100")
               }
             >
-              <span
-                data-sidebar-logo="true"
-                className="grid h-8 w-8 place-items-center rounded-xl bg-indigo-50 ring-1 ring-indigo-500/15 dark:bg-indigo-500/10 dark:ring-indigo-400/20"
-              >
-                <LogoMark size={17} />
+              <span data-sidebar-logo="true" className="grid h-8 w-8 place-items-center">
+                <LogoMark size={26} />
               </span>
             </span>
             <span

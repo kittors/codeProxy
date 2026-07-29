@@ -2,7 +2,7 @@
   "comment": "Files already over the line limit. They may only shrink — see scripts/check-file-size.mjs.",
   "maxLines": 800,
   "files": {
-    "apps/admin-panel/src/app/layout/AppShell.tsx": 1405,
+    "apps/admin-panel/src/app/layout/AppShell.tsx": 1402,
     "apps/admin-panel/src/app/providers/AuthProvider.tsx": 957,
     "features/ccswitch-import/components/CcSwitchImportConfigModal.tsx": 1287,
     "features/log-content-viewer/components/LogContentModal.tsx": 1534,

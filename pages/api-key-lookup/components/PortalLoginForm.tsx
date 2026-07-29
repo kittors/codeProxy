@@ -45,10 +45,7 @@ export function PortalLoginForm({
   return (
     <div>
       <div className="flex flex-col items-center pb-8 text-center">
-        {/* 标记外面套一层柔和方框，让它在纯白弹窗上有落点，而不是悬空 */}
-        <span className="mb-5 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50 ring-1 ring-indigo-500/15 dark:bg-indigo-500/10 dark:ring-indigo-400/20">
-          <LogoMark size={22} />
-        </span>
+        <LogoMark size={44} className="mb-5" />
         <h2 className="font-display text-2xl font-bold tracking-tight text-slate-950 dark:text-white">
           {t("apikey_lookup.login_title", { defaultValue: "登录" })}
         </h2>
