@@ -280,22 +280,10 @@ export function RequestLogsPage() {
     [statusOptions],
   );
 
-  const apiKeyFilterParam = useMemo(
-    () => toFilterParam(selectedApiKeys, apiKeyFilterValues),
-    [apiKeyFilterValues, selectedApiKeys],
-  );
-  const modelFilterParam = useMemo(
-    () => toFilterParam(selectedModels, modelFilterValues),
-    [modelFilterValues, selectedModels],
-  );
-  const channelFilterParam = useMemo(
-    () => toFilterParam(selectedChannels, channelFilterValues),
-    [channelFilterValues, selectedChannels],
-  );
-  const statusFilterParam = useMemo(
-    () => toFilterParam(selectedStatuses, statusFilterValues),
-    [selectedStatuses, statusFilterValues],
-  );
+  const apiKeyFilterParam = useMemo(() => toFilterParam(selectedApiKeys), [selectedApiKeys]);
+  const modelFilterParam = useMemo(() => toFilterParam(selectedModels), [selectedModels]);
+  const channelFilterParam = useMemo(() => toFilterParam(selectedChannels), [selectedChannels]);
+  const statusFilterParam = useMemo(() => toFilterParam(selectedStatuses), [selectedStatuses]);
 
   const hasActiveFilters =
     hasActiveFilterSelection(selectedApiKeys, apiKeyFilterValues) ||
