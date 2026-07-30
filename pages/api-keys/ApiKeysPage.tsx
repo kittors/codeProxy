@@ -860,7 +860,7 @@ export function ApiKeysPage({
       {endUserIdFilter && !embed ? (
         <Link
           to="/access/end-users"
-          className="inline-flex h-8 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white/80 dark:hover:bg-neutral-800"
+          className="inline-flex h-8 items-center rounded-xl border border-slate-900/8 bg-white px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white/80 dark:hover:bg-neutral-800"
         >
           {t("end_users.back_to_users", { defaultValue: "返回用户账号" })}
         </Link>

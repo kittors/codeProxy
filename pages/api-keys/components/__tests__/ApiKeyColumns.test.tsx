@@ -238,8 +238,8 @@ describe("ApiKeyColumns", () => {
       actionsColumn?.cellClassName,
     ].join(" ");
     expect(fixedColumnClassNames).not.toMatch(/\bmd:border-[lr]\b/);
-    expect(fixedColumnClassNames).not.toContain("md:border-slate-200");
-    expect(fixedColumnClassNames).not.toContain("md:dark:border-neutral-800");
+    expect(fixedColumnClassNames).not.toContain("md:border-slate-900/8");
+    expect(fixedColumnClassNames).not.toContain("md:dark:border-white/8");
     expect(selectColumn?.headerClassName).not.toMatch(/(^|\s)sticky(\s|$)/);
     expect(nameColumn?.cellClassName).not.toMatch(/(^|\s)sticky(\s|$)/);
     expect(actionsColumn?.cellClassName).not.toMatch(/(^|\s)sticky(\s|$)/);

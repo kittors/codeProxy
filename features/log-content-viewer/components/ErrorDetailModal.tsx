@@ -212,7 +212,7 @@ export function ErrorDetailModal({ open, logId, model, onClose }: ErrorDetailMod
                   </button>
                 </div>
                 <pre
-                  className="max-h-[40vh] overflow-auto rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs leading-relaxed text-slate-800 dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-200"
+                  className="max-h-[40vh] overflow-auto rounded-xl border border-slate-900/8 bg-slate-50 p-4 text-xs leading-relaxed text-slate-800 dark:border-white/8 dark:bg-neutral-900 dark:text-slate-200"
                   style={{
                     whiteSpace: "pre-wrap",
                     wordBreak: "break-all",

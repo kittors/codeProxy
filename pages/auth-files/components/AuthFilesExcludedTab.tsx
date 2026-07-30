@@ -148,7 +148,7 @@ export function AuthFilesExcludedTab({
                         placeholder={t("auth_files.one_model_per_line")}
                         aria-label={`${provider} ${t("auth_files_page.excluded_tab")}`}
                         disabled={excludedUnsupported}
-                        className="mt-3 min-h-[120px] w-full resize-y rounded-2xl border border-slate-200 bg-white px-3 py-2 font-mono text-xs text-slate-900 outline-none transition-colors duration-200 ease-out placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:border-neutral-800 dark:bg-neutral-950 dark:text-slate-100 dark:placeholder:text-neutral-500 dark:focus-visible:ring-white/15"
+                        className="mt-3 min-h-[120px] w-full resize-y rounded-2xl border border-slate-900/8 bg-white px-3 py-2 font-mono text-xs text-slate-900 outline-none transition-colors duration-200 ease-out placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:border-white/8 dark:bg-neutral-950 dark:text-slate-100 dark:placeholder:text-neutral-500 dark:focus-visible:ring-white/15"
                       />
                     </div>
                   );

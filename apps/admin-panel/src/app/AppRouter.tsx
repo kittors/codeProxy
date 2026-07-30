@@ -6,7 +6,7 @@ import { AuthProvider, useAuth } from "@app/providers/AuthProvider";
 import { ProtectedRoute } from "@/app/guards/ProtectedRoute";
 import { DashboardLayout } from "@app/layout/DashboardLayout";
 import { Button, ThemeProvider, ToastProvider } from "@code-proxy/ui";
-import { AutoUpdatePrompt } from "@app/update/AutoUpdatePrompt";
+import { OnlineUpdateProvider } from "@features/online-update";
 import { ChunkLoadErrorBoundary } from "@/app/bootstrap/ChunkLoadErrorBoundary";
 import { dismissAppLoader } from "@/app/bootstrap/dismissAppLoader";
 import { pageRoutes, type PageRoute } from "@pages/registry";
@@ -150,8 +150,7 @@ function AuthenticatedRoutes() {
   );
 
   return (
-    <>
-      <AutoUpdatePrompt />
+    <OnlineUpdateProvider enabled={state.isAuthenticated && !state.isRestoring}>
       <ChunkLoadErrorBoundary>
         <Suspense fallback={<RouteFallback />}>
           <Routes>
@@ -213,7 +212,7 @@ function AuthenticatedRoutes() {
           </Routes>
         </Suspense>
       </ChunkLoadErrorBoundary>
-    </>
+    </OnlineUpdateProvider>
   );
 }
 

@@ -130,7 +130,7 @@ const formatThroughputValue = (value: number) =>
   throughputNumberFormatter.format(Number.isFinite(value) ? value : 0);
 const formatRate = (rate: number) => `${rate.toFixed(2)}%`;
 const PANEL_SURFACE =
-  "rounded-2xl border border-slate-200/85 bg-white shadow-[0_10px_26px_rgba(15,23,42,0.05)] dark:border-neutral-800 dark:bg-neutral-950/85 dark:shadow-[0_10px_26px_rgba(0,0,0,0.28)]";
+  "rounded-2xl border border-slate-900/8 bg-white shadow-[0_10px_26px_rgba(15,23,42,0.05)] dark:border-white/8 dark:bg-neutral-950/85 dark:shadow-[0_10px_26px_rgba(0,0,0,0.28)]";
 
 const formatThroughputTooltip = (params: any) => {
   const items = Array.isArray(params) ? params : [params];
@@ -418,7 +418,7 @@ function ThroughputTrendChart({
           <div className="text-2xs font-semibold uppercase tracking-[0.18em] text-slate-400">
             RPM
           </div>
-          <div className="mt-1 text-xl font-semibold tabular-nums text-blue-600 dark:text-blue-400">
+          <div className="mt-1 text-xl font-semibold tabular-nums text-indigo-600 dark:text-indigo-400">
             <DashboardMetricValue value={rpm} />
           </div>
         </div>

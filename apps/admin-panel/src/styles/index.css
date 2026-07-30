@@ -14,7 +14,14 @@
    * 圆角：2 / 4 / 6 / 8 / 12 / 16 / 24 / 32 px，以及 full
    */
   --font-sans: "SF Pro Text", "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
-  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  --font-mono: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  /*
+   * 展示级字体：落地页大标题、章节序号、eyebrow 标签统一用等宽。
+   * CliRelay 是 CLI / 网关类基础设施产品，等宽字形本身就是这类产品的视觉母语；
+   * 中文回落到 sans，避免等宽字体缺中文字形时出现豆腐块与参差基线。
+   */
+  --font-display: "JetBrains Mono", "SFMono-Regular", Menlo, "PingFang SC", "Microsoft YaHei",
+    monospace;
 
   --text-2xs: 0.625rem;
   --text-2xs--line-height: 0.875rem;
@@ -456,5 +463,76 @@ html.theme-transition-lock *::after {
   100% {
     opacity: 1;
     transform: scale(1.05);
+  }
+}
+
+/*
+ * 落地页动效。
+ *
+ * landing-marquee：厂商墙渲染两份相同序列，位移 -50% 时第二份刚好补到第一份的起点，
+ * 因此循环无缝，且不需要 JS 参与测量。
+ * landing-flow：中继示意图的连线用 dash 位移表现「流量在走」，比逐点动画省一个数量级的合成开销。
+ */
+@keyframes landing-marquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+@keyframes landing-flow {
+  to {
+    stroke-dashoffset: -12;
+  }
+}
+
+/*
+ * Radix 浮层（下拉菜单、子菜单）的开合动画。
+ * 朝着触发元素的反方向滑入 4px，读起来像「从按钮长出来」；关闭更快收回。
+ */
+@keyframes ui-popover-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(var(--ui-popover-offset, -4px));
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes ui-popover-out {
+  to {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ui-popover-motion[data-state="open"] {
+    animation: ui-popover-in 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .ui-popover-motion[data-state="closed"] {
+    animation: ui-popover-out 100ms cubic-bezier(0.4, 0, 1, 1) forwards;
+  }
+  .ui-popover-motion[data-side="top"] {
+    --ui-popover-offset: 4px;
+  }
+  .ui-popover-motion[data-side="left"],
+  .ui-popover-motion[data-side="right"] {
+    --ui-popover-offset: 0px;
+  }
+}
+
+/* 骨架屏微光：只改透明度，避免 background-position 动画在长列表里造成重绘压力 */
+@keyframes skeleton-sweep {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
   }
 }

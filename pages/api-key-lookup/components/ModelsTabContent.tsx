@@ -28,8 +28,8 @@ function PriceChip({
       className={[
         "min-w-0 rounded-lg border px-2 py-1.5",
         muted
-          ? "border-slate-100 bg-slate-50/70 dark:border-neutral-800 dark:bg-neutral-900/40"
-          : "border-slate-200/80 bg-white dark:border-neutral-700/70 dark:bg-neutral-950/50",
+          ? "border-slate-100 bg-slate-50/70 dark:border-white/8 dark:bg-neutral-900/40"
+          : "border-slate-900/8 bg-white dark:border-neutral-700/70 dark:bg-neutral-950/50",
       ].join(" ")}
     >
       <div className="text-2xs font-medium uppercase tracking-wide text-slate-400 dark:text-white/35">
@@ -110,7 +110,7 @@ function ModelPlazaCard({ model, onCopied }: { model: PublicModelItem; onCopied:
         className="group h-full min-w-0 overflow-hidden transition hover:border-indigo-200/70 hover:shadow-[2px_2px_10px_rgb(0_0_0_/_0.06)] dark:hover:border-indigo-500/25 dark:hover:shadow-[2px_2px_10px_rgb(0_0_0_/_0.28)]"
       >
         <div className="flex items-start gap-3">
-          <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200/80 bg-slate-50 dark:border-neutral-700/70 dark:bg-neutral-900/70">
+          <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-900/8 bg-slate-50 dark:border-neutral-700/70 dark:bg-neutral-900/70">
             <span className="pointer-events-none absolute text-sm font-bold text-slate-300 dark:text-white/25">
               {vendorGlyph}
             </span>

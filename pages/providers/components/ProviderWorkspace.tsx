@@ -16,8 +16,8 @@ export function ProviderWorkspace({
   actions,
 }: ProviderWorkspaceProps) {
   return (
-    <section className="flex min-h-0 flex-1 flex-col rounded-xl border border-slate-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
-      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-4 py-3 dark:border-neutral-800">
+    <section className="flex min-h-0 flex-1 flex-col rounded-xl border border-slate-900/8 bg-white dark:border-white/8 dark:bg-neutral-900">
+      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-4 py-3 dark:border-white/8">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <h3 className="truncate text-sm font-semibold text-slate-900 dark:text-white">

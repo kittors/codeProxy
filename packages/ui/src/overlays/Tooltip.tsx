@@ -209,7 +209,12 @@ export function TooltipBubble({
   placement?: TooltipPlacement;
 }) {
   const tooltipRef = useRef<HTMLSpanElement>(null);
-  const [style, setStyle] = useState<React.CSSProperties>({ position: "fixed", opacity: 0 });
+  // 初始带一点下沉与缩小，定位算完后归位，配合上面的过渡形成「浮出」的观感。
+  const [style, setStyle] = useState<React.CSSProperties>({
+    position: "fixed",
+    opacity: 0,
+    transform: "translateY(2px) scale(0.98)",
+  });
 
   const updatePosition = useCallback(() => {
     const anchor = anchorElement ?? anchorRef?.current;
@@ -237,6 +242,7 @@ export function TooltipBubble({
       left,
       zIndex: 99999,
       opacity: 1,
+      transform: "translateY(0) scale(1)",
       ["--tooltip-placement" as string]: resolvedPlacement,
     });
   }, [anchorElement, anchorRef, placement]);
@@ -263,7 +269,9 @@ export function TooltipBubble({
       role="tooltip"
       className={[
         interactive ? "pointer-events-auto select-text" : "pointer-events-none",
-        "w-max max-w-[calc(100vw-2rem)] rounded-xl border border-slate-200 bg-white/95 px-2 py-1.5 text-xs shadow-lg backdrop-blur transition-opacity duration-150 sm:max-w-md dark:border-neutral-800 dark:bg-neutral-950/90 dark:text-white",
+        // 只淡入显得硬；补 2px 上浮与轻微放大后，提示读起来是「浮出来」而不是「闪出来」。
+        "w-max max-w-[calc(100vw-2rem)] rounded-xl bg-white/95 px-2.5 py-1.5 text-xs ring-1 ring-slate-900/10 shadow-[0_8px_24px_-8px_rgba(15,23,42,0.35)] backdrop-blur sm:max-w-md dark:bg-neutral-900/95 dark:text-white dark:ring-white/10",
+        "transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none",
       ].join(" ")}
       style={style}
       onMouseEnter={onMouseEnter}

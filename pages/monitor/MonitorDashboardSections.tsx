@@ -79,7 +79,7 @@ export function MonitorKpiSection({
 
       {!hasData && !isLoading ? (
         <Reveal>
-          <section className="rounded-2xl border border-dashed border-slate-200 bg-white p-10 text-center shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+          <section className="rounded-2xl border border-dashed border-slate-900/8 bg-white p-10 text-center shadow-sm dark:border-white/8 dark:bg-neutral-950/60">
             <div className="mx-auto flex max-w-md flex-col items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900/5 text-slate-700 dark:bg-white/10 dark:text-white/70">
                 <ChartSpline size={20} />

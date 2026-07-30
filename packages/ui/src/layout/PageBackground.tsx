@@ -1,6 +1,10 @@
 import { type PropsWithChildren } from "react";
 
-type BackgroundVariant = "login" | "app";
+/**
+ * `landing` 刻意不铺任何色斑与光晕：公开落地页靠排版、留白和单一强调色建立层次，
+ * 弥散渐变会把版面拉回「模板感」，与 hero 里精确的几何元素也互相打架。
+ */
+type BackgroundVariant = "login" | "app" | "landing";
 
 export function PageBackground({
   children,
@@ -9,11 +13,21 @@ export function PageBackground({
   variant: BackgroundVariant;
 }>) {
   return (
-    <div className="relative min-h-[100dvh] overflow-hidden bg-zinc-50 font-sans text-slate-900 antialiased dark:bg-neutral-950 dark:text-slate-50">
+    <div
+      className={[
+        "relative min-h-[100dvh] bg-zinc-50 font-sans text-slate-900 antialiased dark:text-slate-50",
+        // 落地页要能整页滚动，不能被 overflow-hidden 截断；同时用更深的底色拉开对比。
+        variant === "landing" ? "dark:bg-[#08080A]" : "overflow-hidden dark:bg-neutral-950",
+      ].join(" ")}
+    >
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -left-40 -top-44 h-[34rem] w-[34rem] rounded-full bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.14),transparent_70%)] blur-3xl dark:bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.22),transparent_70%)]" />
-        <div className="absolute -right-40 -top-28 h-[30rem] w-[30rem] rounded-full bg-[radial-gradient(circle_at_center,rgba(20,184,166,0.12),transparent_70%)] blur-3xl dark:bg-[radial-gradient(circle_at_center,rgba(45,212,191,0.16),transparent_70%)]" />
-        <div className="absolute -bottom-44 left-1/4 h-[34rem] w-[34rem] rounded-full bg-[radial-gradient(circle_at_center,rgba(168,85,247,0.10),transparent_70%)] blur-3xl dark:bg-[radial-gradient(circle_at_center,rgba(168,85,247,0.14),transparent_70%)]" />
+        {variant === "landing" ? null : (
+          <>
+            <div className="absolute -left-40 -top-44 h-[34rem] w-[34rem] rounded-full bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.14),transparent_70%)] blur-3xl dark:bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.22),transparent_70%)]" />
+            <div className="absolute -right-40 -top-28 h-[30rem] w-[30rem] rounded-full bg-[radial-gradient(circle_at_center,rgba(20,184,166,0.12),transparent_70%)] blur-3xl dark:bg-[radial-gradient(circle_at_center,rgba(45,212,191,0.16),transparent_70%)]" />
+            <div className="absolute -bottom-44 left-1/4 h-[34rem] w-[34rem] rounded-full bg-[radial-gradient(circle_at_center,rgba(168,85,247,0.10),transparent_70%)] blur-3xl dark:bg-[radial-gradient(circle_at_center,rgba(168,85,247,0.14),transparent_70%)]" />
+          </>
+        )}
 
         {variant === "login" ? (
           <>

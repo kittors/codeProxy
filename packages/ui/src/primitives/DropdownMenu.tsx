@@ -45,6 +45,15 @@ const ITEM_CLASS_BY_SIZE: Record<ControlSize, string> = {
   lg: "gap-2.5 rounded-lg px-3.5 py-2.5 text-sm",
 };
 
+/**
+ * 浮层进出动画的挂载点。
+ *
+ * 实现放在全局样式里（`.ui-popover-motion`）：Radix 用 data-state / data-side 暴露开合
+ * 状态与展开方向，用 CSS 属性选择器驱动比在类名里堆变体更直观，也不依赖
+ * tailwindcss-animate 这类本仓库没有引入的插件。
+ */
+const DROPDOWN_MOTION_CLASS = "ui-popover-motion";
+
 const Content = forwardRef<
   ComponentRef<typeof DropdownMenuPrimitive.Content>,
   ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Content>
@@ -56,6 +65,7 @@ const Content = forwardRef<
       sideOffset={sideOffset}
       className={cn(
         "z-[9999] overflow-hidden outline-none",
+        DROPDOWN_MOTION_CLASS,
         floatingPanelSurface,
         CONTENT_CLASS_BY_SIZE[size],
         className,
@@ -125,6 +135,7 @@ const SubContent = forwardRef<
       sideOffset={sideOffset}
       className={cn(
         "z-[9999] overflow-hidden outline-none",
+        DROPDOWN_MOTION_CLASS,
         floatingPanelSurface,
         CONTENT_CLASS_BY_SIZE[size],
         className,

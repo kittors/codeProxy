@@ -593,7 +593,7 @@ export function OAuthLoginDialog({
           }
         >
           {provider === "xai" ? (
-            <div className="mb-3 grid gap-2 rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+            <div className="mb-3 grid gap-2 rounded-2xl border border-slate-900/8 bg-white/70 p-4 shadow-sm dark:border-white/8 dark:bg-neutral-950/60">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-white/55">
                 {t("oauth.xai_endpoint_mode")}
               </p>
@@ -637,7 +637,7 @@ export function OAuthLoginDialog({
           ) : null}
 
           <div className="grid min-w-0 gap-3">
-            <div className="grid min-w-0 gap-2 rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+            <div className="grid min-w-0 gap-2 rounded-2xl border border-slate-900/8 bg-white/70 p-4 shadow-sm dark:border-white/8 dark:bg-neutral-950/60">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-white/55">
                   {t("oauth.auth_link")}
@@ -666,7 +666,7 @@ export function OAuthLoginDialog({
               </p>
             </div>
 
-            <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 text-sm shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+            <div className="flex items-center justify-between rounded-2xl border border-slate-900/8 bg-white/70 px-4 py-3 text-sm shadow-sm dark:border-white/8 dark:bg-neutral-950/60">
               <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-white/55">
                   {t("oauth.status")}
@@ -691,7 +691,7 @@ export function OAuthLoginDialog({
               </div>
             </div>
 
-            <div className="grid gap-2 rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+            <div className="grid gap-2 rounded-2xl border border-slate-900/8 bg-white/70 p-4 shadow-sm dark:border-white/8 dark:bg-neutral-950/60">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-white/55">
                   {t(manualCode ? "oauth.callback_code" : "oauth.callback")}
@@ -786,7 +786,7 @@ export function OAuthLoginDialog({
             <TabsTrigger value="vertex">{t("oauth.vertex_title")}</TabsTrigger>
           </TabsList>
 
-          <div className="mt-4 rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+          <div className="mt-4 rounded-2xl border border-slate-900/8 bg-white/70 p-4 shadow-sm dark:border-white/8 dark:bg-neutral-950/60">
             <ProxyPoolSelect
               value={selectedProxyID}
               onChange={setSelectedProxyID}
@@ -827,7 +827,7 @@ export function OAuthLoginDialog({
                 value={iflowCookie}
                 onChange={(e) => setIflowCookie(e.currentTarget.value)}
                 placeholder={t("oauth.cookie_placeholder")}
-                className="min-h-[160px] w-full resize-y rounded-2xl border border-slate-200 bg-white px-3 py-2 font-mono text-xs text-slate-900 outline-none transition placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:border-neutral-800 dark:bg-neutral-950 dark:text-slate-100 dark:placeholder:text-neutral-500 dark:focus-visible:ring-white/15"
+                className="min-h-[160px] w-full resize-y rounded-2xl border border-slate-900/8 bg-white px-3 py-2 font-mono text-xs text-slate-900 outline-none transition placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:border-white/8 dark:bg-neutral-950 dark:text-slate-100 dark:placeholder:text-neutral-500 dark:focus-visible:ring-white/15"
                 spellCheck={false}
                 aria-label={t("oauth.iflow_cookie")}
               />
@@ -870,7 +870,7 @@ export function OAuthLoginDialog({
                   onChange={(e) => setVertexLocation(e.currentTarget.value)}
                   placeholder={t("oauth.location_placeholder")}
                 />
-                <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 text-sm shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+                <div className="rounded-2xl border border-slate-900/8 bg-white/70 p-4 text-sm shadow-sm dark:border-white/8 dark:bg-neutral-950/60">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-white/55">
                     {t("oauth.recent_import")}
                   </p>

@@ -22,7 +22,7 @@ import { Select } from "@code-proxy/ui";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
 import { HoverTooltip, OverflowTooltip } from "@code-proxy/ui";
-import { DataTable, TABLE_ROW_ACTIONS_COLUMN, type DataTableColumn } from "@code-proxy/ui";
+import { DataTable, TABLE_ROW_ACTIONS_COLUMN, TABLE_ROW_ACTIONS_STICKY_END_COLUMN, type DataTableColumn } from "@code-proxy/ui";
 import { VendorIcon } from "@code-proxy/assets";
 import {
   emptyModelPricing,
@@ -1139,7 +1139,7 @@ export function RoutingConfigEditor({
                   {channels.map((channel) => (
                     <span
                       key={channel.id}
-                      className="inline-flex items-center rounded-md border border-slate-200/60 bg-slate-50 px-2 py-0.5 text-xs text-slate-700 dark:border-neutral-700/40 dark:bg-neutral-800/60 dark:text-white/80"
+                      className="inline-flex items-center rounded-md border border-slate-900/8 bg-slate-50 px-2 py-0.5 text-xs text-slate-700 dark:border-neutral-700/40 dark:bg-neutral-800/60 dark:text-white/80"
                     >
                       {channel.name}
                       {channel.priority.trim()
@@ -1206,7 +1206,7 @@ export function RoutingConfigEditor({
                   {routePaths.map((path) => (
                     <span
                       key={path}
-                      className="inline-flex items-center rounded-md border border-slate-200/60 bg-slate-50 px-2 py-0.5 font-mono text-xs text-slate-700 dark:border-neutral-700/40 dark:bg-neutral-800/60 dark:text-white/80"
+                      className="inline-flex items-center rounded-md border border-slate-900/8 bg-slate-50 px-2 py-0.5 font-mono text-xs text-slate-700 dark:border-neutral-700/40 dark:bg-neutral-800/60 dark:text-white/80"
                     >
                       {path}
                     </span>
@@ -1224,8 +1224,7 @@ export function RoutingConfigEditor({
       {
         key: "actions",
         label: t("common.action"),
-        ...TABLE_ROW_ACTIONS_COLUMN,
-        cellClassName: "whitespace-nowrap",
+        ...TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
         render: (group) => (
           <div className="flex items-center gap-1.5">
             <button
@@ -1621,7 +1620,7 @@ export function RoutingConfigEditor({
               </div>
             </div>
 
-            <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-neutral-800">
+            <div className="overflow-hidden rounded-2xl border border-slate-900/8 dark:border-white/8">
               <div className="grid grid-cols-[minmax(0,1fr)_88px] bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-500 dark:bg-neutral-900 dark:text-white/55">
                 <span>{t("channel_groups_page.table_channels")}</span>
                 <span>{t("channel_groups_page.table_status")}</span>
@@ -1646,7 +1645,7 @@ export function RoutingConfigEditor({
             </div>
           </div>
         ) : (
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500 dark:border-neutral-800 dark:bg-neutral-900/60 dark:text-white/55">
+          <div className="rounded-2xl border border-slate-900/8 bg-slate-50 px-4 py-6 text-sm text-slate-500 dark:border-white/8 dark:bg-neutral-900/60 dark:text-white/55">
             {t("channel_groups_page.issue_modal_empty")}
           </div>
         )}
@@ -1792,7 +1791,7 @@ export function RoutingConfigEditor({
 
                     {!editingSystemDefaultGroup ? (
                       <>
-                        <label className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-sm dark:border-neutral-800 dark:bg-neutral-900/60">
+                        <label className="flex items-start gap-3 rounded-lg border border-slate-900/8 bg-slate-50 px-3 py-3 text-sm dark:border-white/8 dark:bg-neutral-900/60">
                           <Checkbox
                             checked={groupDraft.excludeFromDefault}
                             onCheckedChange={(checked) =>
@@ -1987,7 +1986,7 @@ export function RoutingConfigEditor({
                   </div>
 
                   {!editingSystemDefaultGroup && resolvedDraftChannelValues.length === 0 ? (
-                    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500 dark:border-neutral-800 dark:bg-neutral-900/60 dark:text-white/55">
+                    <div className="rounded-2xl border border-slate-900/8 bg-slate-50 px-4 py-6 text-sm text-slate-500 dark:border-white/8 dark:bg-neutral-900/60 dark:text-white/55">
                       {t("channel_groups_page.models_need_channels")}
                     </div>
                   ) : modelsError ? (

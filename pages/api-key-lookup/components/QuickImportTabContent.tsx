@@ -158,14 +158,14 @@ function QuickImportCard({
       animate={reduceMotion ? undefined : { opacity: 1, y: 0, scale: 1 }}
       exit={reduceMotion ? undefined : { opacity: 0, y: -6, scale: 0.98 }}
       transition={reduceMotion ? { duration: 0 } : { type: "spring", stiffness: 420, damping: 36 }}
-      className="group/card grid min-h-[116px] w-full grid-cols-[minmax(0,1fr)_auto] rounded-2xl border border-black/[0.06] bg-white shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] transition hover:border-slate-200 hover:shadow-sm dark:border-white/[0.06] dark:bg-neutral-900 dark:hover:border-neutral-700"
+      className="group/card grid min-h-[116px] w-full grid-cols-[minmax(0,1fr)_auto] rounded-2xl border border-black/[0.06] bg-white shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] transition hover:border-slate-900/8 hover:shadow-sm dark:border-white/[0.06] dark:bg-neutral-900 dark:hover:border-neutral-700"
     >
       <button
         type="button"
         onClick={() => onSelect(config)}
         className="flex min-w-0 items-start gap-4 rounded-l-2xl p-4 text-left transition active:translate-y-px"
       >
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200/70 bg-white shadow-xs dark:border-neutral-800 dark:bg-neutral-950">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-900/8 bg-white shadow-xs dark:border-white/8 dark:bg-neutral-950">
           <img src={iconByType[clientType]} alt="" className="h-5 w-5" />
         </span>
         <span className="min-w-0 flex-1">
@@ -173,7 +173,7 @@ function QuickImportCard({
             <span className="truncate text-sm font-semibold text-slate-900 dark:text-white">
               {config.providerName}
             </span>
-            <span className="rounded-md border border-slate-200/70 bg-slate-50 px-1.5 py-0.5 text-2xs font-semibold text-slate-500 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white/45">
+            <span className="rounded-md border border-slate-900/8 bg-slate-50 px-1.5 py-0.5 text-2xs font-semibold text-slate-500 dark:border-white/8 dark:bg-neutral-950 dark:text-white/45">
               {t(clientLabelKey[clientType])}
             </span>
           </span>
@@ -183,7 +183,7 @@ function QuickImportCard({
             </span>
           ) : null}
           <span className="mt-3 flex flex-wrap items-center gap-2">
-            <span className="inline-flex max-w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-slate-200/70 bg-white px-1.5 py-0.5 font-mono text-2xs text-slate-500 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white/45">
+            <span className="inline-flex max-w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-slate-900/8 bg-white px-1.5 py-0.5 font-mono text-2xs text-slate-500 dark:border-white/8 dark:bg-neutral-950 dark:text-white/45">
               {config.defaultModel || t("common.no_model_data")}
             </span>
             {config.allowedChannelGroups.length > 0 ? (
@@ -200,7 +200,7 @@ function QuickImportCard({
           size="xs"
           title={copied ? t("ccswitch.copy_import_link_copied") : t("ccswitch.copy_import_link")}
           onClick={() => onCopyLink(config)}
-          className="rounded-lg border border-slate-200/70 bg-white text-slate-500 hover:text-slate-900 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white/55 dark:hover:text-white"
+          className="rounded-lg border border-slate-900/8 bg-white text-slate-500 hover:text-slate-900 dark:border-white/8 dark:bg-neutral-950 dark:text-white/55 dark:hover:text-white"
         >
           {copied ? <Check size={14} /> : <Copy size={14} />}
         </Button>
@@ -215,7 +215,7 @@ function QuickImportLoadingSkeleton() {
   return (
     <Card
       padding="none"
-      className="overflow-hidden border-slate-200/70 bg-white/90 dark:border-white/[0.06] dark:bg-neutral-950/70"
+      className="overflow-hidden border-slate-900/8 bg-white/90 dark:border-white/[0.06] dark:bg-neutral-950/70"
     >
       <div
         data-testid="quick-import-loading-skeleton"
@@ -393,7 +393,7 @@ export function QuickImportTabContent({
 
   return (
     <div className="space-y-4">
-      <Card padding="compact" className="border-slate-200/70 bg-white/85 dark:bg-neutral-950/70">
+      <Card padding="compact" className="border-slate-900/8 bg-white/85 dark:bg-neutral-950/70">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-3">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-white dark:bg-white dark:text-neutral-950">
@@ -412,7 +412,7 @@ export function QuickImportTabContent({
             href={CC_SWITCH_RELEASES_URL}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white/80 dark:hover:bg-white/10"
+            className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-slate-900/8 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-white/8 dark:bg-neutral-900 dark:text-white/80 dark:hover:bg-white/10"
           >
             {t("apikey_lookup.quick_import_download_latest")}
             <ExternalLink size={13} />

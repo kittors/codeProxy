@@ -542,7 +542,7 @@ export function ModerationChannelPickerModal({
           </TabsList>
         </Tabs>
 
-        <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3 dark:border-white/10 dark:bg-white/[0.035]">
+        <div className="rounded-xl border border-slate-900/8 bg-slate-50/70 p-3 dark:border-white/10 dark:bg-white/[0.035]">
           <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-8">
             <TextInput
               size="sm"
@@ -636,7 +636,7 @@ export function ModerationChannelPickerModal({
             />
           </div>
 
-          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-200/80 pt-3 dark:border-white/10">
+          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-900/8 pt-3 dark:border-white/10">
             <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
               {tags.length > 0 ? (
                 tags.map((tag) => (

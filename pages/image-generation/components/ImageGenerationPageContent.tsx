@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
-import { ArrowUp, ChevronLeft, ChevronRight, Plus, Trash2, X } from "lucide-react";
+import { ArrowUp, ChevronLeft, ChevronRight, CircleAlert, Plus, Trash2, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { imageGenerationApi } from "@code-proxy/api-client";
 import { Button } from "@code-proxy/ui";
@@ -12,8 +12,25 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { DataTable, type DataTableColumn } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
 import { useImageGenerationChannels } from "../hooks/useImageGenerationChannels";
+import {
+  ImageModelPicker,
+  resolveInitialModel,
+  resolveInitialProvider,
+  supportsImageEditing,
+} from "@features/image-model-picker";
+import { imageStageClassName } from "./stageStyles";
+import {
+  VISIBLE_ENDPOINT_DOCS,
+  type EndpointDoc,
+  type SpecRow,
+} from "./apiDocs";
 
-const GPT_IMAGE_MODEL = "gpt-image-2";
+/**
+ * Fallback model id, used only until the server's catalog arrives and as the tab
+ * key. The selected model itself comes from the catalog: hardcoding it here is what
+ * kept every non-codex image model unreachable from this page.
+ */
+const FALLBACK_IMAGE_MODEL = "gpt-image-2";
 const GENERATION_STATUS_KEYS = [
   "image_generation.generation_status_drafting",
   "image_generation.generation_status_creating",
@@ -46,30 +63,12 @@ const DEFAULT_SIZE_OPTIONS = new Set<string>(SIZE_OPTIONS);
 const QUALITY_OPTIONS = ["low", "medium", "high"] as const;
 const COUNT_OPTIONS = [1, 2, 3, 4] as const;
 const MAX_UPLOAD_IMAGES = 5;
-const IMAGE_EDITS_ENABLED = true;
 const IMAGE_GENERATION_SIZE_PATTERN = /^[1-9]\d*x[1-9]\d*$/;
 const IMAGE_GENERATION_MAX_SIZE_EDGE = 8192;
 const IMAGE_GENERATION_MAX_SIZE_PIXELS =
   IMAGE_GENERATION_MAX_SIZE_EDGE * IMAGE_GENERATION_MAX_SIZE_EDGE;
 
 type ImageMode = "generations" | "edits";
-type SpecRow = {
-  name: string;
-  type: string;
-  required: boolean;
-  descriptionKey: string;
-};
-type EndpointDoc = {
-  mode: ImageMode;
-  titleKey: string;
-  descriptionKey: string;
-  method: "POST";
-  path: string;
-  contentType: string;
-  requestRows: SpecRow[];
-  responseRows: SpecRow[];
-  curl: string;
-};
 type GeneratedImage = { src: string; revisedPrompt?: string };
 type UploadedImage = { id: string; file: File; previewUrl: string };
 
@@ -118,156 +117,17 @@ function mergeImageGenerationSizePresets(values: string[]): string[] {
   return merged;
 }
 
-const textToImageCurl = [
-  "curl http://127.0.0.1:8317/v1/images/generations \\",
-  '  -H "Authorization: Bearer $API_KEY" \\',
-  '  -H "Content-Type: application/json" \\',
-  "  -d '{",
-  '    "model": "gpt-image-2",',
-  '    "prompt": "你的中文描述",',
-  '    "size": "1024x1024",',
-  '    "quality": "high",',
-  '    "n": 1',
-  "  }'",
-].join("\n");
-
-const imageToImageCurl = [
-  "curl http://127.0.0.1:8317/v1/images/edits \\",
-  '  -H "Authorization: Bearer $API_KEY" \\',
-  '  -F "model=gpt-image-2" \\',
-  '  -F "prompt=把这张图改成蓝色图标风格" \\',
-  '  -F "size=1024x1024" \\',
-  '  -F "quality=high" \\',
-  '  -F "n=1" \\',
-  '  -F "image=@/path/to/image.png"',
-].join("\n");
-
-const RESPONSE_ROWS: SpecRow[] = [
-  {
-    name: "created",
-    type: "number",
-    required: false,
-    descriptionKey: "image_generation.response_created_desc",
-  },
-  {
-    name: "data[].b64_json",
-    type: "string",
-    required: true,
-    descriptionKey: "image_generation.response_b64_desc",
-  },
-  {
-    name: "data[].revised_prompt",
-    type: "string",
-    required: false,
-    descriptionKey: "image_generation.response_revised_prompt_desc",
-  },
-];
-
-const ENDPOINT_DOCS: EndpointDoc[] = [
-  {
-    mode: "generations",
-    titleKey: "image_generation.text_to_image_title",
-    descriptionKey: "image_generation.text_to_image_desc",
-    method: "POST",
-    path: "/v1/images/generations",
-    contentType: "application/json",
-    requestRows: [
-      {
-        name: "model",
-        type: "string",
-        required: true,
-        descriptionKey: "image_generation.param_model_desc",
-      },
-      {
-        name: "prompt",
-        type: "string",
-        required: true,
-        descriptionKey: "image_generation.param_prompt_desc",
-      },
-      {
-        name: "size",
-        type: "string",
-        required: false,
-        descriptionKey: "image_generation.param_size_desc",
-      },
-      {
-        name: "quality",
-        type: "string",
-        required: false,
-        descriptionKey: "image_generation.param_quality_desc",
-      },
-      {
-        name: "n",
-        type: "number",
-        required: false,
-        descriptionKey: "image_generation.param_n_desc",
-      },
-    ],
-    responseRows: RESPONSE_ROWS,
-    curl: textToImageCurl,
-  },
-  {
-    mode: "edits",
-    titleKey: "image_generation.image_to_image_title",
-    descriptionKey: "image_generation.image_to_image_desc",
-    method: "POST",
-    path: "/v1/images/edits",
-    contentType: "multipart/form-data",
-    requestRows: [
-      {
-        name: "model",
-        type: "string",
-        required: true,
-        descriptionKey: "image_generation.param_model_desc",
-      },
-      {
-        name: "prompt",
-        type: "string",
-        required: true,
-        descriptionKey: "image_generation.param_edit_prompt_desc",
-      },
-      {
-        name: "image",
-        type: "file",
-        required: true,
-        descriptionKey: "image_generation.param_images_desc",
-      },
-      {
-        name: "size",
-        type: "string",
-        required: false,
-        descriptionKey: "image_generation.param_size_desc",
-      },
-      {
-        name: "quality",
-        type: "string",
-        required: false,
-        descriptionKey: "image_generation.param_quality_desc",
-      },
-      {
-        name: "n",
-        type: "number",
-        required: false,
-        descriptionKey: "image_generation.param_n_desc",
-      },
-    ],
-    responseRows: RESPONSE_ROWS,
-    curl: imageToImageCurl,
-  },
-];
-const VISIBLE_ENDPOINT_DOCS = IMAGE_EDITS_ENABLED
-  ? ENDPOINT_DOCS
-  : ENDPOINT_DOCS.filter((doc) => doc.mode === "generations");
 
 export function ImageGenerationPage() {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState(GPT_IMAGE_MODEL);
+  const [activeTab, setActiveTab] = useState(FALLBACK_IMAGE_MODEL);
   const [activeMode, setActiveMode] = useState<ImageMode>("generations");
   const {
     loading: channelsLoading,
     channels: availableChannels,
     failed: channelsFailed,
   } = useImageGenerationChannels();
+
   const [testOpen, setTestOpen] = useState(false);
 
   const disabled = !channelsLoading && availableChannels.length === 0;
@@ -290,10 +150,10 @@ export function ImageGenerationPage() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
-            <TabsTrigger value={GPT_IMAGE_MODEL}>{GPT_IMAGE_MODEL}</TabsTrigger>
+            <TabsTrigger value={FALLBACK_IMAGE_MODEL}>{t("image_generation.tab_label")}</TabsTrigger>
           </TabsList>
 
-          <TabsContent value={GPT_IMAGE_MODEL} className="mt-4 space-y-4">
+          <TabsContent value={FALLBACK_IMAGE_MODEL} className="mt-4 space-y-4">
             {disabled ? (
               <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-100">
                 {channelsFailed
@@ -340,7 +200,7 @@ export function ImageGenerationPage() {
                       </TabsContent>
                     ))}
                   </Tabs>
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs leading-6 text-slate-600 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white/55">
+                  <div className="rounded-2xl border border-slate-900/8 bg-slate-50 px-4 py-3 text-xs leading-6 text-slate-600 dark:border-white/8 dark:bg-neutral-900 dark:text-white/55">
                     {t("image_generation.active_endpoint_hint", {
                       method: activeDoc.method,
                       path: activeDoc.path,
@@ -376,7 +236,7 @@ function EndpointCallDoc({ doc }: { doc: EndpointDoc }) {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-neutral-800 dark:bg-neutral-900">
+      <div className="rounded-3xl border border-slate-900/8 bg-slate-50 p-4 dark:border-white/8 dark:bg-neutral-900">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-sm font-semibold text-slate-900 dark:text-white">
@@ -386,7 +246,7 @@ function EndpointCallDoc({ doc }: { doc: EndpointDoc }) {
               {t(doc.descriptionKey)}
             </p>
           </div>
-          <div className="flex max-w-full items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 font-mono text-xs dark:border-neutral-800 dark:bg-neutral-950">
+          <div className="flex max-w-full items-center gap-2 rounded-full border border-slate-900/8 bg-white px-3 py-1.5 font-mono text-xs dark:border-white/8 dark:bg-neutral-950">
             <span className="rounded-full bg-slate-900 px-2 py-0.5 font-semibold text-white dark:bg-white dark:text-neutral-950">
               {doc.method}
             </span>
@@ -536,6 +396,35 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
   const [uploadPreviewOpen, setUploadPreviewOpen] = useState(false);
   const [uploadPreviewIndex, setUploadPreviewIndex] = useState(0);
   const [generationElapsedMs, setGenerationElapsedMs] = useState<number | null>(null);
+  const { loading: catalogLoading, catalog } = useImageGenerationChannels();
+  const [selectedProvider, setSelectedProvider] = useState("");
+  const [selectedModel, setSelectedModel] = useState("");
+
+  // The catalog arrives asynchronously, so the selection is seeded once it does and
+  // then left alone; re-deriving it on every render would fight the user's choice.
+  useEffect(() => {
+    if (catalog.models.length === 0) return;
+    setSelectedProvider((current) => resolveInitialProvider(catalog, current || null));
+  }, [catalog]);
+
+  useEffect(() => {
+    if (catalog.models.length === 0) return;
+    setSelectedModel((current) => resolveInitialModel(catalog, selectedProvider, current || null));
+  }, [catalog, selectedProvider]);
+
+  const activeModel = selectedModel || FALLBACK_IMAGE_MODEL;
+  const editingSupported = catalog.models.length === 0 || supportsImageEditing(catalog, activeModel);
+
+  const handleProviderChange = useCallback(
+    (provider: string) => {
+      setSelectedProvider(provider);
+      // The current model usually belongs to the previous provider, so it is
+      // reselected rather than left pointing at something this provider cannot serve.
+      setSelectedModel(resolveInitialModel(catalog, provider, null));
+    },
+    [catalog],
+  );
+
   const uploadedImagesRef = useRef<UploadedImage[]>([]);
   const resultSwipeRef = useRef<{ x: number; y: number } | null>(null);
   const generationStartedAtRef = useRef<number | null>(null);
@@ -629,7 +518,7 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
 
   const activeImage = images[activeImageIndex] ?? null;
   const requestMode: ImageMode =
-    IMAGE_EDITS_ENABLED && uploadedImages.length > 0 ? "edits" : "generations";
+    editingSupported && uploadedImages.length > 0 ? "edits" : "generations";
   const canSend = Boolean(prompt.trim()) && !submitting;
   const hasMultipleResults = images.length > 1;
   const canShowPrevImage = activeImageIndex > 0;
@@ -832,7 +721,7 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
         requestMode === "edits"
           ? await imageGenerationApi.startTestTask({
               mode: "edits",
-              model: GPT_IMAGE_MODEL,
+              model: activeModel,
               prompt: trimmedPrompt,
               size,
               quality,
@@ -841,7 +730,7 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
             })
           : await imageGenerationApi.startTestTask({
               mode: "generations",
-              model: GPT_IMAGE_MODEL,
+              model: activeModel,
               prompt: trimmedPrompt,
               size,
               quality,
@@ -914,19 +803,11 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
     }
   };
 
-  const stageSizeClassName =
-    IMAGE_EDITS_ENABLED && uploadedImages.length > 0
-      ? "h-[clamp(220px,34vh,320px)] sm:h-[clamp(240px,36vh,360px)]"
-      : "h-[clamp(240px,42vh,400px)] sm:h-[clamp(280px,44vh,440px)]";
-  const stageClassName = [
-    "relative overflow-hidden rounded-2xl border transition-all duration-200",
-    stageSizeClassName,
-    errorMessage
-      ? "border-slate-200 bg-slate-100 text-slate-700 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white/85"
-      : activeImage
-        ? "border-slate-200 bg-slate-100 dark:border-neutral-800 dark:bg-black"
-        : "border-slate-200 bg-slate-50 text-slate-500 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white/55",
-  ].join(" ");
+  const stageClassName = imageStageClassName({
+    errorMessage,
+    hasImage: Boolean(activeImage),
+    hasUploads: editingSupported && uploadedImages.length > 0,
+  });
   const statusText = t(GENERATION_STATUS_KEYS[statusIndex]);
   const showGeneratingState = submitting && !activeImage && !errorMessage;
   const showIdleCanvas = !submitting && !activeImage && !errorMessage;
@@ -939,7 +820,7 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
         title={t("image_generation.test_title")}
         onClose={onClose}
         maxWidth="max-w-[640px]"
-        panelClassName="w-full border-slate-200 bg-white shadow-2xl dark:border-neutral-800 dark:bg-neutral-950"
+        panelClassName="w-full border-slate-900/8 bg-white shadow-2xl dark:border-white/8 dark:bg-neutral-950"
         bodyHeightClassName="max-h-[calc(100vh-10rem)]"
         bodyClassName="!overflow-y-auto !px-4 !py-4 sm:!px-5"
       >
@@ -950,7 +831,16 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
             void handleGenerate();
           }}
         >
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <ImageModelPicker
+              catalog={catalog}
+              provider={selectedProvider}
+              model={activeModel}
+              disabled={submitting || catalogLoading}
+              variant="compact"
+              onProviderChange={handleProviderChange}
+              onModelChange={setSelectedModel}
+            />
             <SearchableSelect
               aria-label={t("image_generation.size_label")}
               value={size}
@@ -1058,7 +948,7 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
                             <img
                               src={image.src}
                               alt={t("image_generation.preview_alt", {
-                                model: GPT_IMAGE_MODEL,
+                                model: activeModel,
                               })}
                               className="block h-auto w-full cursor-zoom-in select-none"
                               draggable={false}
@@ -1110,10 +1000,11 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
               <div
                 data-testid="image-generation-preview"
                 className={[
-                  "relative flex h-full w-full overflow-hidden px-6 py-6 sm:px-8 sm:py-8",
-                  errorMessage
-                    ? "bg-slate-100 text-slate-700 dark:bg-neutral-900 dark:text-white"
-                    : "bg-transparent",
+                  "relative flex w-full overflow-hidden",
+                  errorMessage && !activeImage
+                    ? "px-4 py-3.5"
+                    : "h-full px-6 py-6 sm:px-8 sm:py-8",
+                  "bg-transparent",
                 ].join(" ")}
               >
                 <div className="relative z-10 flex h-full w-full items-start">
@@ -1141,10 +1032,9 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
                   ) : null}
 
                   {errorMessage ? (
-                    <div className="max-w-md">
-                      <p className="text-2xl font-semibold tracking-tight text-slate-800 dark:text-white">
-                        {errorMessage}
-                      </p>
+                    <div className="flex min-w-0 items-start gap-2.5">
+                      <CircleAlert size={16} className="mt-0.5 shrink-0" />
+                      <p className="min-w-0 break-words text-sm leading-6">{errorMessage}</p>
                     </div>
                   ) : null}
                 </div>
@@ -1153,7 +1043,7 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
           </div>
 
           {activeImage?.revisedPrompt ? (
-            <div className="shrink-0 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700 dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-200">
+            <div className="shrink-0 rounded-2xl border border-slate-900/8 bg-slate-50 px-4 py-3 text-slate-700 dark:border-white/8 dark:bg-neutral-900 dark:text-slate-200">
               <p className="text-xs font-medium text-slate-500 dark:text-white/40">
                 {t("image_generation.revised_prompt_label")}
               </p>
@@ -1163,9 +1053,9 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
 
           <div
             data-testid="image-generation-composer"
-            className="relative shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-white px-2.5 pt-2.5 pb-11 shadow-sm dark:border-neutral-800 dark:bg-neutral-950"
+            className="relative shrink-0 overflow-hidden rounded-2xl border border-slate-900/8 bg-white px-2.5 pt-2.5 pb-11 shadow-sm dark:border-white/8 dark:bg-neutral-950"
           >
-            {IMAGE_EDITS_ENABLED && uploadedImages.length > 0 ? (
+            {editingSupported && uploadedImages.length > 0 ? (
               <div
                 data-testid="image-generation-upload-strip"
                 className="absolute top-2.5 right-2.5 left-2.5 z-10 flex gap-2 overflow-x-auto overflow-y-hidden pb-1 [scrollbar-width:thin]"
@@ -1174,7 +1064,7 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
                   <div
                     key={item.id}
                     data-testid="image-generation-upload-chip"
-                    className="group flex h-10 max-w-[220px] shrink-0 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-2 py-1.5 dark:border-neutral-800 dark:bg-neutral-900"
+                    className="group flex h-10 max-w-[220px] shrink-0 items-center gap-2 rounded-xl border border-slate-900/8 bg-slate-50 px-2 py-1.5 dark:border-white/8 dark:bg-neutral-900"
                   >
                     <button
                       type="button"
@@ -1187,7 +1077,7 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
                         name: item.file.name,
                       })}
                     >
-                      <span className="h-8 w-8 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-neutral-700 dark:bg-neutral-950">
+                      <span className="h-8 w-8 shrink-0 overflow-hidden rounded-lg border border-slate-900/8 bg-white dark:border-neutral-700 dark:bg-neutral-950">
                         <img
                           src={item.previewUrl}
                           alt={item.file.name}
@@ -1213,7 +1103,7 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
             <label htmlFor="image-generation-prompt" className="sr-only">
               {t("image_generation.prompt_label")}
             </label>
-            {IMAGE_EDITS_ENABLED ? (
+            {editingSupported ? (
               <input
                 id="image-generation-reference"
                 aria-label={t("image_generation.upload_images_label")}
@@ -1237,10 +1127,10 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
               rows={4}
               className={[
                 "min-h-[112px] w-full resize-none border-0 bg-transparent px-1 pr-8 pb-10 text-sm leading-6 text-slate-900 outline-none placeholder:text-slate-400 dark:text-white dark:placeholder:text-white/30",
-                IMAGE_EDITS_ENABLED && uploadedImages.length > 0 ? "pt-12" : "pt-0",
+                editingSupported && uploadedImages.length > 0 ? "pt-12" : "pt-0",
               ].join(" ")}
             />
-            {IMAGE_EDITS_ENABLED ? (
+            {editingSupported ? (
               <label
                 htmlFor="image-generation-reference"
                 data-testid="image-generation-upload-trigger"
@@ -1272,20 +1162,20 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
       <ImagePreviewOverlay
         open={previewOpen && Boolean(activeImage)}
         imageSrc={activeImage?.src ?? null}
-        imageAlt={t("image_generation.preview_alt", { model: GPT_IMAGE_MODEL })}
+        imageAlt={t("image_generation.preview_alt", { model: activeModel })}
         title={t("image_generation.image_preview_title")}
-        downloadName={`${GPT_IMAGE_MODEL}-${activeImageIndex + 1}.png`}
+        downloadName={`${activeModel}-${activeImageIndex + 1}.png`}
         images={images.map((image, index) => ({
           src: image.src,
-          alt: t("image_generation.preview_alt", { model: GPT_IMAGE_MODEL }),
-          downloadName: `${GPT_IMAGE_MODEL}-${index + 1}.png`,
+          alt: t("image_generation.preview_alt", { model: activeModel }),
+          downloadName: `${activeModel}-${index + 1}.png`,
         }))}
         activeIndex={activeImageIndex}
         onActiveIndexChange={setActiveImageIndex}
         onClose={() => setPreviewOpen(false)}
       />
       <ImagePreviewOverlay
-        open={IMAGE_EDITS_ENABLED && uploadPreviewOpen && uploadedImages.length > 0}
+        open={editingSupported && uploadPreviewOpen && uploadedImages.length > 0}
         imageSrc={uploadedImages[uploadPreviewIndex]?.previewUrl ?? null}
         imageAlt={
           uploadedImages[uploadPreviewIndex]?.file.name ?? t("image_generation.upload_images_label")

@@ -5,7 +5,7 @@ import { buildModelsEndpoint } from "../providers-helpers";
 import type { OpenAIDraft } from "../providers-helpers";
 
 const SectionCard = ({ children }: { children: React.ReactNode }) => (
-  <div className="rounded-xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+  <div className="rounded-xl border border-slate-900/8 bg-white/70 p-4 shadow-sm dark:border-white/8 dark:bg-neutral-950/60">
     {children}
   </div>
 );

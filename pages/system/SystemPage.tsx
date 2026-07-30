@@ -14,7 +14,7 @@ import {
 import { useAuth } from "@app/providers/AuthProvider";
 import { Card } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
-import { UpdateDetailsCard } from "@app/update/UpdateDetailsCard";
+import { SystemUpdateCard } from "@features/online-update";
 
 /* ═══════════════════════════════════════════════════════════
    InfoCard — compact grid card with icon
@@ -106,13 +106,7 @@ function InfoCard({
    Main Page
    ═══════════════════════════════════════════════════════════ */
 
-export function SystemPage({
-  updateHeartbeatIntervalMs,
-  updateHeartbeatTimeoutMs,
-}: {
-  updateHeartbeatIntervalMs?: number;
-  updateHeartbeatTimeoutMs?: number;
-} = {}) {
+export function SystemPage() {
   const { t } = useTranslation();
   const auth = useAuth();
   const apiKeyPortalUrl = `${window.location.origin}/manage/apikey-lookup`;
@@ -181,10 +175,7 @@ export function SystemPage({
         />
       </div>
 
-      <UpdateDetailsCard
-        heartbeatIntervalMs={updateHeartbeatIntervalMs}
-        heartbeatTimeoutMs={updateHeartbeatTimeoutMs}
-      />
+      <SystemUpdateCard />
     </div>
   );
 }

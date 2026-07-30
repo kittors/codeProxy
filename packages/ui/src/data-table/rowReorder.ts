@@ -71,7 +71,7 @@ export function createRowReorderPreviewElement(sourceRow: HTMLTableRowElement) {
   preview.dataset.vtRowReorderPreview = "true";
   preview.setAttribute("aria-hidden", "true");
   preview.className =
-    "pointer-events-none fixed left-0 top-0 z-[1100] box-border overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-[0_0_20px_rgba(15,23,42,0.16)] dark:border-neutral-700 dark:bg-neutral-900 dark:shadow-[0_0_20px_rgba(0,0,0,0.42)]";
+    "pointer-events-none fixed left-0 top-0 z-[1100] box-border overflow-hidden rounded-xl border border-slate-900/8 bg-white shadow-[0_0_20px_rgba(15,23,42,0.16)] dark:border-neutral-700 dark:bg-neutral-900 dark:shadow-[0_0_20px_rgba(0,0,0,0.42)]";
   preview.style.left = `${rowRect.left}px`;
   preview.style.width = `${Math.max(1, rowRect.width)}px`;
   preview.style.height = `${Math.max(1, rowRect.height)}px`;

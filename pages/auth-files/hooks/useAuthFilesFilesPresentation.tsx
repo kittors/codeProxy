@@ -84,7 +84,7 @@ const RESTRICTION_TONE_CLASSES = {
   warning:
     "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/15 dark:text-amber-200",
   neutral:
-    "border-slate-200 bg-slate-50 text-slate-700 dark:border-white/10 dark:bg-white/[0.08] dark:text-white/70",
+    "border-slate-900/8 bg-slate-50 text-slate-700 dark:border-white/10 dark:bg-white/[0.08] dark:text-white/70",
 } as const;
 
 const CLAUDE_OAUTH_HEALTH_TONE_CLASSES = {
@@ -865,7 +865,7 @@ export function useAuthFilesFilesPresentation({
             <button
               type="button"
               disabled={state?.loading}
-              className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-xs tabular-nums text-slate-600 transition-colors hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-default disabled:opacity-40 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white/60 dark:hover:border-blue-600 dark:hover:bg-blue-950 dark:hover:text-blue-300"
+              className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-slate-900/8 bg-slate-50 px-2 py-1 text-xs tabular-nums text-slate-600 transition-colors hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-default disabled:opacity-40 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white/60 dark:hover:border-blue-600 dark:hover:bg-blue-950 dark:hover:text-blue-300"
               onClick={() => void checkAuthFileConnectivity(file.name)}
               title={t("auth_files.check_connectivity")}
               aria-label={t("auth_files.check_connectivity")}

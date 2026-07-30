@@ -189,7 +189,7 @@ const hasRequestLogMetricText = (value: string): boolean => {
 const resolveLatencyToneClasses = (latencyText: string): string => {
   const seconds = parseLatencyTextToSeconds(latencyText);
   if (seconds === null) {
-    return "border-slate-200 bg-slate-50 text-slate-500 dark:border-neutral-800 dark:bg-neutral-950/45 dark:text-white/55";
+    return "border-slate-900/8 bg-slate-50 text-slate-500 dark:border-white/8 dark:bg-neutral-950/45 dark:text-white/55";
   }
 
   if (seconds < 10) {
@@ -229,7 +229,7 @@ function RequestLogModeChip({ label, streaming }: { label: string; streaming: bo
       className={
         streaming
           ? "inline-flex shrink-0 items-center justify-center rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-xs font-semibold text-sky-600 dark:border-sky-500/25 dark:bg-sky-500/15 dark:text-sky-300"
-          : "inline-flex shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-semibold text-slate-500 dark:border-white/10 dark:bg-neutral-900 dark:text-white/55"
+          : "inline-flex shrink-0 items-center justify-center rounded-full border border-slate-900/8 bg-slate-50 px-2 py-0.5 text-xs font-semibold text-slate-500 dark:border-white/10 dark:bg-neutral-900 dark:text-white/55"
       }
     >
       {label}
@@ -314,12 +314,10 @@ export function normalizeFilterSelection<T extends string>(
 
 export function toFilterParam<T extends string>(
   selected: MultiSelectFilterState<T>,
-  allowedValues: T[],
 ): { values?: T[]; matchesNone: boolean } {
-  const normalized = normalizeFilterSelection(selected, allowedValues);
-  if (normalized === null) return { values: undefined, matchesNone: false };
-  if (normalized.length === 0) return { values: undefined, matchesNone: true };
-  return { values: normalized, matchesNone: false };
+  if (selected === null) return { values: undefined, matchesNone: false };
+  if (selected.length === 0) return { values: undefined, matchesNone: true };
+  return { values: selected, matchesNone: false };
 }
 
 export function hasActiveFilterSelection<T extends string>(
@@ -1005,7 +1003,7 @@ export function RequestLogsPaginationBar({
       onPageChange={onPageChange}
       onPageSizeChange={onPageSizeChange}
       pageSizeOptions={REQUEST_LOG_PAGE_SIZE_OPTIONS}
-      className="border-t border-slate-100 px-3 py-3 sm:px-5 dark:border-neutral-800/60"
+      className="border-t border-slate-100 px-3 py-3 sm:px-5 dark:border-white/8"
       labels={{
         firstPage: t("request_logs.first_page"),
         previousPage: t("request_logs.prev_page"),

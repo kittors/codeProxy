@@ -53,8 +53,8 @@ function ImportOptionButton({
       className={[
         "group inline-flex min-w-0 items-center text-left transition active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/10 dark:focus-visible:ring-white/15",
         compact
-          ? "h-8 gap-1.5 rounded-lg border border-transparent bg-white/80 px-2 text-slate-700 hover:border-slate-200 hover:bg-white hover:text-slate-950 dark:bg-neutral-950/60 dark:text-white/70 dark:hover:border-neutral-700 dark:hover:bg-neutral-900 dark:hover:text-white"
-          : "gap-3 rounded-xl border border-black/[0.06] bg-slate-50/55 p-3 shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] hover:border-slate-200 hover:bg-white hover:shadow-sm dark:border-white/[0.06] dark:bg-neutral-900/55 dark:hover:border-neutral-700 dark:hover:bg-neutral-900",
+          ? "h-8 gap-1.5 rounded-lg border border-transparent bg-white/80 px-2 text-slate-700 hover:border-slate-900/8 hover:bg-white hover:text-slate-950 dark:bg-neutral-950/60 dark:text-white/70 dark:hover:border-neutral-700 dark:hover:bg-neutral-900 dark:hover:text-white"
+          : "gap-3 rounded-xl border border-black/[0.06] bg-slate-50/55 p-3 shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] hover:border-slate-900/8 hover:bg-white hover:shadow-sm dark:border-white/[0.06] dark:bg-neutral-900/55 dark:hover:border-neutral-700 dark:hover:bg-neutral-900",
       ].join(" ")}
     >
       <span
@@ -62,7 +62,7 @@ function ImportOptionButton({
           "inline-flex shrink-0 items-center justify-center rounded-lg border bg-white dark:bg-neutral-950",
           compact
             ? "h-5 w-5 border-transparent"
-            : "h-10 w-10 border-slate-200/70 shadow-xs dark:border-neutral-800",
+            : "h-10 w-10 border-slate-900/8 shadow-xs dark:border-white/8",
         ].join(" ")}
       >
         <img
@@ -87,7 +87,7 @@ function ImportOptionButton({
           </span>
         )}
         {model && !compact ? (
-          <span className="mt-2 inline-flex max-w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-slate-200/70 bg-white px-1.5 py-0.5 font-mono text-2xs text-slate-500 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white/45">
+          <span className="mt-2 inline-flex max-w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-slate-900/8 bg-white px-1.5 py-0.5 font-mono text-2xs text-slate-500 dark:border-white/8 dark:bg-neutral-950 dark:text-white/45">
             {t("ccswitch.model_hint", { model })}
           </span>
         ) : null}
@@ -195,7 +195,7 @@ export function CcSwitchImportOptions({
     <div
       role="group"
       aria-label={t("ccswitch.import_to_ccswitch")}
-      className="inline-flex min-w-0 flex-wrap items-center gap-1 rounded-xl border border-slate-200/70 bg-slate-50/75 p-1 dark:border-neutral-800 dark:bg-neutral-900/45"
+      className="inline-flex min-w-0 flex-wrap items-center gap-1 rounded-xl border border-slate-900/8 bg-slate-50/75 p-1 dark:border-white/8 dark:bg-neutral-900/45"
     >
       <span className="px-1.5 text-xs font-semibold text-slate-500 dark:text-white/45">
         {t("ccswitch.import_to_ccswitch")}

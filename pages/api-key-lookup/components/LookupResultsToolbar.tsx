@@ -89,17 +89,18 @@ export function LookupResultsToolbar({
       data-testid="apikey-lookup-toolbar-sticky"
       data-stuck={stuck ? "true" : "false"}
       className={[
-        "sticky top-3 z-20 -mx-1 space-y-3 rounded-2xl px-1.5 py-1.5 backdrop-blur-md",
+        "sticky top-3 z-20 -mx-1 space-y-3 rounded-3xl px-2 py-2 backdrop-blur-md",
         "motion-safe:transition-[border-color,box-shadow,background-color] motion-safe:duration-300 motion-safe:ease-[cubic-bezier(0.22,1,0.36,1)]",
         stuck
-          ? "border border-slate-200/80 bg-white/90 shadow-sm shadow-slate-900/5 dark:border-white/10 dark:bg-neutral-950/85 dark:shadow-black/25"
-          : "border border-transparent bg-white/80 dark:bg-neutral-950/70",
+          ? "ring-1 ring-slate-900/8 bg-white/90 shadow-[0_10px_40px_-24px_rgba(15,23,42,0.35)] dark:bg-white/[0.05] dark:ring-white/10 dark:shadow-none"
+          : "ring-1 ring-transparent bg-transparent",
       ].join(" ")}
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
           <Tabs
             value={activeTab}
+            tone="brand"
             onValueChange={(value) => setActiveTab(value as typeof activeTab)}
           >
             <TabsList>
@@ -123,7 +124,7 @@ export function LookupResultsToolbar({
             </TabsList>
           </Tabs>
           {activeTab === "usage" || activeTab === "logs" ? (
-            <TimeRangeSelector value={timeRange} onChange={setTimeRange} />
+            <TimeRangeSelector value={timeRange} onChange={setTimeRange} tone="brand" />
           ) : null}
           {logsQuotaItems.length > 0 ? (
             <div
@@ -133,7 +134,7 @@ export function LookupResultsToolbar({
               {logsQuotaItems.map((item) => (
                 <div
                   key={item.key}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white/80 px-2 py-1 text-xs text-slate-600 shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-white/60"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-900/8 bg-white/80 px-2 py-1 text-xs text-slate-600 shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-white/60"
                 >
                   <span>{item.title}</span>
                   <span className="font-mono font-semibold tabular-nums text-slate-900 dark:text-white">
@@ -155,7 +156,7 @@ export function LookupResultsToolbar({
               onClick={handleRefresh}
               disabled={loading || chartLoading || modelsLoading}
               aria-label={t("common.refresh")}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40 dark:text-white/55 dark:hover:bg-white/10 dark:hover:text-white"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-900/5 hover:text-slate-900 disabled:opacity-40 dark:text-white/55 dark:hover:bg-white/10 dark:hover:text-white"
             >
               <RefreshCw
                 size={16}

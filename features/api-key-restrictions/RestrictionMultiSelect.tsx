@@ -206,7 +206,7 @@ export function RestrictionMultiSelect({
           data-side={dropdownPlacement}
           className={`flex flex-col overflow-hidden ${floatingPanelSurface}`}
         >
-          <div className="border-b border-slate-100 px-3 py-2 dark:border-neutral-800">
+          <div className="border-b border-slate-100 px-3 py-2 dark:border-white/8">
             <input
               ref={searchRef}
               type="text"
@@ -216,7 +216,7 @@ export function RestrictionMultiSelect({
               className="w-full rounded-lg bg-slate-50 px-2.5 py-2 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:bg-white dark:bg-neutral-800 dark:text-white dark:placeholder:text-white/30 dark:focus:bg-neutral-900"
             />
           </div>
-          <div className="flex items-center justify-between gap-2 border-b border-slate-100 px-3 py-2 dark:border-neutral-800">
+          <div className="flex items-center justify-between gap-2 border-b border-slate-100 px-3 py-2 dark:border-white/8">
             <span
               className={`text-xs font-medium ${
                 selectedValues.length === 0
@@ -298,10 +298,10 @@ export function RestrictionMultiSelect({
         }}
         className={`flex min-h-[42px] w-full items-center justify-between gap-2 rounded-xl border px-3 py-2 text-left text-sm transition-all ${
           disabled
-            ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-500 dark:border-neutral-700 dark:bg-neutral-800 dark:text-white/40"
+            ? "cursor-not-allowed border-slate-900/8 bg-slate-100 text-slate-500 dark:border-neutral-700 dark:bg-neutral-800 dark:text-white/40"
             : open
               ? "border-indigo-400 bg-white ring-2 ring-indigo-400/20 dark:border-indigo-500 dark:bg-neutral-900"
-              : "border-slate-200 bg-white hover:border-slate-300 dark:border-neutral-700 dark:bg-neutral-900 dark:hover:border-neutral-600"
+              : "border-slate-900/8 bg-white hover:border-slate-300 dark:border-neutral-700 dark:bg-neutral-900 dark:hover:border-neutral-600"
         }`}
       >
         <div className="min-w-0 flex-1">

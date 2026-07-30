@@ -71,7 +71,7 @@ export function GroupOverviewModal({
             </TabsList>
           </Tabs>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex h-9 items-center rounded-2xl border border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-700 dark:border-neutral-800 dark:bg-neutral-900/60 dark:text-white/75">
+            <span className="inline-flex h-9 items-center rounded-2xl border border-slate-900/8 bg-slate-50 px-3 text-sm font-medium text-slate-700 dark:border-white/8 dark:bg-neutral-900/60 dark:text-white/75">
               {t("auth_files.group_overview_fixed_7_days")}
             </span>
             <Button
@@ -93,7 +93,7 @@ export function GroupOverviewModal({
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+          <div className="rounded-2xl border border-slate-900/8 bg-white/70 px-4 py-3 shadow-sm dark:border-white/8 dark:bg-neutral-950/60">
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-white/45">
               {activeGroupTitle}
             </p>
@@ -104,7 +104,7 @@ export function GroupOverviewModal({
               {t("auth_files.group_overview_file_count")}
             </p>
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+          <div className="rounded-2xl border border-slate-900/8 bg-white/70 px-4 py-3 shadow-sm dark:border-white/8 dark:bg-neutral-950/60">
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-white/45">
               {t("auth_files.group_overview_total_calls_label")}
             </p>
@@ -115,7 +115,7 @@ export function GroupOverviewModal({
               {t("auth_files.group_overview_total_calls_help")}
             </p>
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+          <div className="rounded-2xl border border-slate-900/8 bg-white/70 px-4 py-3 shadow-sm dark:border-white/8 dark:bg-neutral-950/60">
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-white/45">
               {t("auth_files.group_overview_avg_week_label")}
             </p>
@@ -126,7 +126,7 @@ export function GroupOverviewModal({
               {t("auth_files.group_overview_avg_week_help")}
             </p>
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+          <div className="rounded-2xl border border-slate-900/8 bg-white/70 px-4 py-3 shadow-sm dark:border-white/8 dark:bg-neutral-950/60">
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-white/45">
               {t("auth_files.group_overview_sample_count", {
                 count: activeGroupOverview.quotaSampleCount,

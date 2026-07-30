@@ -851,7 +851,7 @@ export function IdentityFingerprintPage() {
 
           <TabsContent value="codex" className="mt-5">
             <div className="space-y-4">
-              <section className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 dark:border-neutral-800 dark:bg-neutral-900/45">
+              <section className="rounded-2xl border border-slate-900/8 bg-slate-50/70 p-4 dark:border-white/8 dark:bg-neutral-900/45">
                 <div className="flex flex-col gap-4 2xl:flex-row 2xl:items-start 2xl:justify-between">
                   <ToggleSwitch
                     checked={Boolean(codex.enabled)}
@@ -995,7 +995,7 @@ export function IdentityFingerprintPage() {
                         onChange={(event) => setCustomHeadersText(event.target.value)}
                         disabled={saving}
                         spellCheck={false}
-                        className="min-h-24 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 font-mono text-sm text-slate-900 shadow-sm outline-none dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-100"
+                        className="min-h-24 w-full rounded-2xl border border-slate-900/8 bg-white px-3 py-2 font-mono text-sm text-slate-900 shadow-sm outline-none dark:border-white/8 dark:bg-neutral-900 dark:text-slate-100"
                       />
                       <p className="mt-2 text-xs text-slate-500 dark:text-white/50">
                         {t("identity_fingerprint.custom_headers_hint")}
@@ -1033,7 +1033,7 @@ export function IdentityFingerprintPage() {
 
           <TabsContent value="claude" className="mt-5">
             <div className="space-y-4">
-              <section className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 dark:border-neutral-800 dark:bg-neutral-900/45">
+              <section className="rounded-2xl border border-slate-900/8 bg-slate-50/70 p-4 dark:border-white/8 dark:bg-neutral-900/45">
                 <div className="flex flex-col gap-4 2xl:flex-row 2xl:items-start 2xl:justify-between">
                   <ToggleSwitch
                     checked={Boolean(claude.enabled)}
@@ -1204,7 +1204,7 @@ export function IdentityFingerprintPage() {
                         onChange={(event) => setClaudeCustomHeadersText(event.target.value)}
                         disabled={saving}
                         spellCheck={false}
-                        className="min-h-24 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 font-mono text-sm text-slate-900 shadow-sm outline-none dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-100"
+                        className="min-h-24 w-full rounded-2xl border border-slate-900/8 bg-white px-3 py-2 font-mono text-sm text-slate-900 shadow-sm outline-none dark:border-white/8 dark:bg-neutral-900 dark:text-slate-100"
                       />
                       <p className="mt-2 text-xs text-slate-500 dark:text-white/50">
                         {t("identity_fingerprint.claude_custom_headers_hint")}
@@ -1240,7 +1240,7 @@ export function IdentityFingerprintPage() {
 
           <TabsContent value="gemini" className="mt-5">
             <div className="space-y-4">
-              <section className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 dark:border-neutral-800 dark:bg-neutral-900/45">
+              <section className="rounded-2xl border border-slate-900/8 bg-slate-50/70 p-4 dark:border-white/8 dark:bg-neutral-900/45">
                 <div className="flex flex-col gap-4 2xl:flex-row 2xl:items-start 2xl:justify-between">
                   <ToggleSwitch
                     checked={Boolean(geminiFingerprint.enabled)}
@@ -1318,7 +1318,7 @@ export function IdentityFingerprintPage() {
                         onChange={(event) => setGeminiCustomHeadersText(event.target.value)}
                         disabled={saving}
                         spellCheck={false}
-                        className="min-h-24 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 font-mono text-sm text-slate-900 shadow-sm outline-none dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-100"
+                        className="min-h-24 w-full rounded-2xl border border-slate-900/8 bg-white px-3 py-2 font-mono text-sm text-slate-900 shadow-sm outline-none dark:border-white/8 dark:bg-neutral-900 dark:text-slate-100"
                       />
                       <p className="mt-2 text-xs text-slate-500 dark:text-white/50">
                         {t("identity_fingerprint.gemini_custom_headers_hint")}
@@ -1336,7 +1336,7 @@ export function IdentityFingerprintPage() {
                         onChange={(event) => setGeminiHeadersText(event.target.value)}
                         disabled={saving}
                         spellCheck={false}
-                        className="min-h-36 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 font-mono text-sm text-slate-900 shadow-sm outline-none dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-100"
+                        className="min-h-36 w-full rounded-2xl border border-slate-900/8 bg-white px-3 py-2 font-mono text-sm text-slate-900 shadow-sm outline-none dark:border-white/8 dark:bg-neutral-900 dark:text-slate-100"
                       />
                       <p className="mt-2 text-xs text-slate-500 dark:text-white/50">
                         {t("identity_fingerprint.gemini_headers_hint")}
@@ -1393,7 +1393,7 @@ export function IdentityFingerprintPage() {
 
           <TabsContent value="xai" className="mt-5">
             <div className="space-y-4">
-              <section className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 dark:border-neutral-800 dark:bg-neutral-900/45">
+              <section className="rounded-2xl border border-slate-900/8 bg-slate-50/70 p-4 dark:border-white/8 dark:bg-neutral-900/45">
                 <div className="flex flex-col gap-4 2xl:flex-row 2xl:items-start 2xl:justify-between">
                   <ToggleSwitch
                     checked={Boolean(xaiFingerprint.enabled)}
@@ -1474,7 +1474,7 @@ export function IdentityFingerprintPage() {
                         onChange={(event) => setXAICustomHeadersText(event.target.value)}
                         disabled={saving}
                         spellCheck={false}
-                        className="min-h-24 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 font-mono text-sm text-slate-900 shadow-sm outline-none dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-100"
+                        className="min-h-24 w-full rounded-2xl border border-slate-900/8 bg-white px-3 py-2 font-mono text-sm text-slate-900 shadow-sm outline-none dark:border-white/8 dark:bg-neutral-900 dark:text-slate-100"
                       />
                       <p className="mt-2 text-xs text-slate-500 dark:text-white/50">
                         {t("identity_fingerprint.xai_custom_headers_hint")}
@@ -1632,7 +1632,7 @@ function RuntimeStatePanel({
           {effective.map((record, index) => (
             <div
               key={`${record.account_key || "default"}-${index}`}
-              className="rounded-xl border border-slate-200 bg-slate-50/70 p-3 dark:border-neutral-800 dark:bg-neutral-900/60"
+              className="rounded-xl border border-slate-900/8 bg-slate-50/70 p-3 dark:border-white/8 dark:bg-neutral-900/60"
             >
               <RecordHeader
                 accountKey={record.account_key}
@@ -1672,7 +1672,7 @@ function RuntimeStatePanel({
           {learned.map((record) => (
             <div
               key={record.account_key}
-              className="rounded-xl border border-slate-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-950"
+              className="rounded-xl border border-slate-900/8 bg-white p-3 dark:border-white/8 dark:bg-neutral-950"
             >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <RecordHeader
@@ -1843,7 +1843,7 @@ function SimplePanel({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-950/60">
+    <section className="rounded-2xl border border-slate-900/8 bg-white p-4 dark:border-white/8 dark:bg-neutral-950/60">
       <div className="mb-4">
         <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{title}</h3>
         {description ? (
