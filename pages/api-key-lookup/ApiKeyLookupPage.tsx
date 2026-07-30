@@ -507,18 +507,9 @@ export function ApiKeyLookupPage() {
     [statusOptions],
   );
 
-  const apiKeyIdFilterParam = useMemo(
-    () => toFilterParam(selectedApiKeyIds, apiKeyIdFilterValues),
-    [apiKeyIdFilterValues, selectedApiKeyIds],
-  );
-  const modelFilterParam = useMemo(
-    () => toFilterParam(selectedModels, modelFilterValues),
-    [modelFilterValues, selectedModels],
-  );
-  const statusFilterParam = useMemo(
-    () => toFilterParam(selectedStatuses, statusFilterValues),
-    [selectedStatuses, statusFilterValues],
-  );
+  const apiKeyIdFilterParam = useMemo(() => toFilterParam(selectedApiKeyIds), [selectedApiKeyIds]);
+  const modelFilterParam = useMemo(() => toFilterParam(selectedModels), [selectedModels]);
+  const statusFilterParam = useMemo(() => toFilterParam(selectedStatuses), [selectedStatuses]);
 
   const handleApiKeyIdsChange = useCallback(
     (value: string[]) => {

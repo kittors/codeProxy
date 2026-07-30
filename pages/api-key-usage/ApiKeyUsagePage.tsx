@@ -256,14 +256,8 @@ export function ApiKeyUsagePage() {
     () => toStatusFilterValues(statusOptions.map((option) => option.value)),
     [statusOptions],
   );
-  const modelFilterParam = useMemo(
-    () => toFilterParam(selectedModels, modelFilterValues),
-    [modelFilterValues, selectedModels],
-  );
-  const statusFilterParam = useMemo(
-    () => toFilterParam(selectedStatuses, statusFilterValues),
-    [selectedStatuses, statusFilterValues],
-  );
+  const modelFilterParam = useMemo(() => toFilterParam(selectedModels), [selectedModels]);
+  const statusFilterParam = useMemo(() => toFilterParam(selectedStatuses), [selectedStatuses]);
 
   const handleModelsChange = useCallback(
     (value: string[]) => {

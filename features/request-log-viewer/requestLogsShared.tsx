@@ -314,12 +314,10 @@ export function normalizeFilterSelection<T extends string>(
 
 export function toFilterParam<T extends string>(
   selected: MultiSelectFilterState<T>,
-  allowedValues: T[],
 ): { values?: T[]; matchesNone: boolean } {
-  const normalized = normalizeFilterSelection(selected, allowedValues);
-  if (normalized === null) return { values: undefined, matchesNone: false };
-  if (normalized.length === 0) return { values: undefined, matchesNone: true };
-  return { values: normalized, matchesNone: false };
+  if (selected === null) return { values: undefined, matchesNone: false };
+  if (selected.length === 0) return { values: undefined, matchesNone: true };
+  return { values: selected, matchesNone: false };
 }
 
 export function hasActiveFilterSelection<T extends string>(
