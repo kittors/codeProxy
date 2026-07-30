@@ -146,7 +146,7 @@ export function EndUserResetHistoryModal({
               : t("end_users.reset_history_amount_unavailable")}
           </div>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-neutral-800 dark:bg-neutral-900">
+        <div className="rounded-xl border border-slate-900/8 bg-slate-50 px-4 py-3 dark:border-white/8 dark:bg-neutral-900">
           <div className="text-xs font-medium text-slate-500 dark:text-white/50">
             {t("end_users.reset_history_effective_used_summary")}
           </div>

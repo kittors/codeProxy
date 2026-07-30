@@ -102,7 +102,7 @@ export function OpenAIModelDiscoveryPanel({
       {discoveredModels.length ? (
         <div
           ref={discoveredSectionRef}
-          className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 dark:border-neutral-800 dark:bg-neutral-900/40"
+          className="rounded-xl border border-slate-900/8 bg-slate-50/50 p-4 dark:border-white/8 dark:bg-neutral-900/40"
         >
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-xs font-medium text-slate-700 dark:text-white/70">
@@ -153,7 +153,7 @@ export function OpenAIModelDiscoveryPanel({
 
           <div
             ref={discoveredListRef}
-            className="mt-2.5 max-h-52 overflow-y-auto rounded-xl border border-slate-200/80 bg-white dark:border-neutral-800/60 dark:bg-neutral-950/60"
+            className="mt-2.5 max-h-52 overflow-y-auto rounded-xl border border-slate-900/8 bg-white dark:border-white/8 dark:bg-neutral-950/60"
             role="list"
             aria-label={t("providers.found_models", {
               count: discoveredModels.length,
@@ -185,7 +185,7 @@ export function OpenAIModelDiscoveryPanel({
                         type="checkbox"
                         checked={checked}
                         onChange={() => handleCheckboxChange(model.id)}
-                        className="h-3.5 w-3.5 shrink-0 rounded border-slate-300 text-blue-600 focus-visible:ring-2 focus-visible:ring-blue-400/35 dark:border-neutral-600 dark:bg-neutral-900 dark:text-blue-400 dark:focus-visible:ring-blue-400/20"
+                        className="h-3.5 w-3.5 shrink-0 rounded border-slate-300 text-indigo-600 focus-visible:ring-2 focus-visible:ring-indigo-400/35 dark:border-neutral-600 dark:bg-neutral-900 dark:text-indigo-400 dark:focus-visible:ring-indigo-400/20"
                       />
                       <span className="truncate">{model.id}</span>
                     </label>

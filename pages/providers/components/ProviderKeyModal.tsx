@@ -680,7 +680,7 @@ export function ProviderKeyModal({
         value={modalTab}
         onValueChange={(next) => setModalTab(next as ProviderKeyModalTab)}
       >
-        <div className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 px-5 py-3 backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/95">
+        <div className="sticky top-0 z-20 border-b border-slate-900/8 bg-white/95 px-5 py-3 backdrop-blur dark:border-white/8 dark:bg-neutral-950/95">
           <TabsList>
             <TabsTrigger value="basic">
               {t("providers.modal_tab_basic")}

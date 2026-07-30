@@ -53,7 +53,7 @@ export function RequestLogsFilters({
   const { t } = useTranslation();
 
   return (
-    <div className="border-t border-slate-100 px-5 py-3 dark:border-neutral-800/60">
+    <div className="border-t border-slate-100 px-5 py-3 dark:border-white/8">
       <div className="flex flex-wrap items-center gap-2">
         <div className="w-full min-[480px]:w-auto sm:w-[180px]">
           <SearchableCheckboxMultiSelect

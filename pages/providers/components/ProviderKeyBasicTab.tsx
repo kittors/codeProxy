@@ -7,7 +7,7 @@ import { ToggleSwitch } from "@code-proxy/ui";
 import type { ProviderKeyDraft } from "../providers-helpers";
 
 const SectionCard = ({ children }: { children: React.ReactNode }) => (
-  <div className="rounded-xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+  <div className="rounded-xl border border-slate-900/8 bg-white/70 p-4 shadow-sm dark:border-white/8 dark:bg-neutral-950/60">
     {children}
   </div>
 );
@@ -137,7 +137,7 @@ export function ProviderKeyBasicTab({
                   type="button"
                   onClick={() => void copyText(keyDraft.apiKey.trim())}
                   disabled={!keyDraft.apiKey.trim()}
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white/80 text-slate-700 shadow-sm transition hover:bg-white disabled:opacity-50 dark:border-neutral-800 dark:bg-neutral-950/70 dark:text-slate-200 dark:hover:bg-neutral-950"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-slate-900/8 bg-white/80 text-slate-700 shadow-sm transition hover:bg-white disabled:opacity-50 dark:border-white/8 dark:bg-neutral-950/70 dark:text-slate-200 dark:hover:bg-neutral-950"
                   aria-label={t("providers.copy_api_key")}
                   title={t("providers.copy")}
                 >

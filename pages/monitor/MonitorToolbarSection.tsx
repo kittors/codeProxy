@@ -51,7 +51,7 @@ export function MonitorToolbarSection({
           <button
             type="button"
             onClick={applyFilter}
-            className="inline-flex items-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/80 dark:hover:bg-white/10"
+            className="inline-flex items-center gap-1.5 rounded-2xl border border-slate-900/8 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-white/8 dark:bg-neutral-950/60 dark:text-white/80 dark:hover:bg-white/10"
           >
             <Filter size={14} />
             {t("monitor.apply")}

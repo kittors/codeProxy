@@ -67,7 +67,7 @@ export function AmpcodePanel({
             onChange={(e) => setAmpUpstreamApiKey(e.currentTarget.value)}
             placeholder={t("providers.upstream_key_hint")}
           />
-          <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+          <div className="rounded-2xl border border-slate-900/8 bg-white/70 p-4 shadow-sm dark:border-white/8 dark:bg-neutral-950/60">
             <ToggleSwitch
               label={t("providers.force_mapping")}
               description={t("providers.force_mapping_desc")}
@@ -75,7 +75,7 @@ export function AmpcodePanel({
               onCheckedChange={setAmpForceMappings}
             />
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+          <div className="rounded-2xl border border-slate-900/8 bg-white/70 p-4 shadow-sm dark:border-white/8 dark:bg-neutral-950/60">
             <p className="text-xs text-slate-600 dark:text-white/65">
               {t("providers.current_status", {
                 status: ampcode ? t("providers.status_loaded") : t("providers.status_not_loaded"),

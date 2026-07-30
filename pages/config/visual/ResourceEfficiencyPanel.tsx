@@ -296,7 +296,7 @@ ${t("resource_config.stats_preserved")}`}
               }
             />
           </div>
-          <div className="mt-5 space-y-5 border-t border-slate-200 pt-5 dark:border-white/10">
+          <div className="mt-5 space-y-5 border-t border-slate-900/8 pt-5 dark:border-white/10">
             <ToggleSwitch
               label={t("resource_config.cleanup_enabled_title")}
               description={t("resource_config.cleanup_enabled_desc")}

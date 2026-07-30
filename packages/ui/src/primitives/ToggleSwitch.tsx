@@ -44,7 +44,7 @@ export function ToggleSwitch({
         disabled ? "opacity-60" : null,
         checked
           ? "border-slate-900 bg-slate-900 dark:border-white dark:bg-white"
-          : "border-slate-200 bg-slate-100 dark:border-neutral-800 dark:bg-neutral-900",
+          : "border-slate-900/8 bg-slate-100 dark:border-white/8 dark:bg-neutral-900",
       ]
         .filter(Boolean)
         .join(" ")}

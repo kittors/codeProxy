@@ -1,15 +1,30 @@
 import { useCallback, useMemo, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
-import { Eye, EyeOff, KeyRound, Lock, UserRound } from "lucide-react";
+import { Eye, EyeOff, KeyRound, UserRound } from "lucide-react";
 import {
   detectApiBaseFromLocation,
   extractApiErrorCode,
   isApiClientError,
 } from "@code-proxy/api-client";
 import { useAuth } from "@app/providers/AuthProvider";
-import { PageBackground, Reveal, TextInput, ThemeToggleButton, useToast } from "@code-proxy/ui";
-import { OpenAILogo, GeminiLogo, ClaudeLogo, VertexLogo } from "@code-proxy/assets";
+import {
+  Button,
+  PageBackground,
+  Reveal,
+  TextInput,
+  ThemeToggleButton,
+  useToast,
+} from "@code-proxy/ui";
+import {
+  BRAND_NAME_PREFIX,
+  BRAND_NAME_SUFFIX,
+  ClaudeLogo,
+  GeminiLogo,
+  LogoMark,
+  OpenAILogo,
+  VertexLogo,
+} from "@code-proxy/assets";
 import { resolveLoginErrorMessage } from "./loginErrors";
 
 interface RedirectState {
@@ -109,7 +124,7 @@ export function LoginPage() {
   return (
     <PageBackground variant="login">
       <div className="absolute right-6 top-6 z-20">
-        <ThemeToggleButton className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white/70 text-slate-700 shadow-sm backdrop-blur transition hover:bg-white dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-slate-200" />
+        <ThemeToggleButton className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-900/8 bg-white/70 text-slate-700 shadow-sm backdrop-blur transition hover:bg-white dark:border-white/8 dark:bg-neutral-950/60 dark:text-slate-200" />
       </div>
       <div className="relative mx-auto flex min-h-screen w-full max-w-6xl items-center px-6 py-12">
         <Reveal className="w-full">
@@ -117,14 +132,16 @@ export function LoginPage() {
             <aside className="space-y-10">
               <div className="flex items-center gap-3">
                 <div className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-white/70 ring-1 ring-slate-200 backdrop-blur dark:bg-neutral-950/60 dark:ring-neutral-800">
-                  <Lock size={18} className="text-slate-900 dark:text-white" />
+                  <LogoMark size={22} />
                 </div>
-                <div className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
-                  Code Proxy
+                {/* 标记已经单独放在左侧的圆角框里，这里只取词标文本，避免同屏出现两个 logo。 */}
+                <div className="text-lg font-normal tracking-tight text-slate-900 dark:text-white">
+                  {BRAND_NAME_PREFIX}
+                  <span className="font-semibold">{BRAND_NAME_SUFFIX}</span>
                 </div>
               </div>
               <div className="space-y-6">
-                <h1 className="text-5xl font-semibold leading-[1.05] tracking-tight text-slate-900 sm:text-6xl dark:text-white">
+                <h1 className="font-display text-5xl font-bold leading-[1.05] tracking-tight text-slate-900 sm:text-6xl dark:text-white">
                   {t("login.hero_title_line1")}
                   <br />
                   {t("login.hero_title_line2")}
@@ -137,7 +154,7 @@ export function LoginPage() {
                 {[OpenAILogo, GeminiLogo, ClaudeLogo, VertexLogo].map((Logo, index) => (
                   <span
                     key={index}
-                    className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white/60 dark:border-white/10 dark:bg-white/5"
+                    className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-900/8 bg-white/60 dark:border-white/10 dark:bg-white/5"
                   >
                     <Logo size={22} />
                   </span>
@@ -216,13 +233,14 @@ export function LoginPage() {
                     className="rounded-full px-5"
                   />
                 ) : null}
-                <button
+                <Button
                   type="submit"
-                  disabled={loading}
-                  className="w-full rounded-full bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-70 dark:bg-white/10 dark:hover:bg-white/15"
+                  variant="primary"
+                  loading={loading}
+                  className="h-12 w-full"
                 >
                   {loading ? t("login.signing_in") : t("login.submit_button")}
-                </button>
+                </Button>
               </form>
             </section>
           </div>

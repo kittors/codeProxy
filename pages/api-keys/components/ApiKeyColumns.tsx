@@ -412,7 +412,7 @@ export const createApiKeyColumns = ({
                 {row["allowed-models"].map((model) => (
                   <span
                     key={model}
-                    className="inline-flex items-center gap-1 rounded-md border border-slate-200/60 bg-slate-50 px-2 py-0.5 font-mono text-xs text-slate-700 dark:border-neutral-700/40 dark:bg-neutral-800/60 dark:text-white/80"
+                    className="inline-flex items-center gap-1 rounded-md border border-slate-900/8 bg-slate-50 px-2 py-0.5 font-mono text-xs text-slate-700 dark:border-neutral-700/40 dark:bg-neutral-800/60 dark:text-white/80"
                   >
                     <VendorIcon modelId={model} size={12} />
                     {model}
@@ -443,7 +443,7 @@ export const createApiKeyColumns = ({
                 {row["allowed-channel-groups"].map((group) => (
                   <span
                     key={group}
-                    className="inline-flex items-center rounded-md border border-slate-200/60 bg-slate-50 px-2 py-0.5 font-mono text-xs text-slate-700 dark:border-neutral-700/40 dark:bg-neutral-800/60 dark:text-white/80"
+                    className="inline-flex items-center rounded-md border border-slate-900/8 bg-slate-50 px-2 py-0.5 font-mono text-xs text-slate-700 dark:border-neutral-700/40 dark:bg-neutral-800/60 dark:text-white/80"
                   >
                     {group}
                   </span>
@@ -473,7 +473,7 @@ export const createApiKeyColumns = ({
                 {row["allowed-channels"].map((channel) => (
                   <span
                     key={channel}
-                    className="inline-flex items-center rounded-md border border-slate-200/60 bg-slate-50 px-2 py-0.5 font-mono text-xs text-slate-700 dark:border-neutral-700/40 dark:bg-neutral-800/60 dark:text-white/80"
+                    className="inline-flex items-center rounded-md border border-slate-900/8 bg-slate-50 px-2 py-0.5 font-mono text-xs text-slate-700 dark:border-neutral-700/40 dark:bg-neutral-800/60 dark:text-white/80"
                   >
                     {channel}
                   </span>
@@ -536,7 +536,7 @@ export const createApiKeyColumns = ({
                 icon: <BarChart3 size={15} />,
                 visible: !accountScoped,
                 className:
-                  "text-slate-500 hover:bg-slate-100 hover:text-blue-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-blue-400",
+                  "text-slate-500 hover:bg-slate-100 hover:text-indigo-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-indigo-400",
                 onClick: () => onViewUsage(row),
               },
               {

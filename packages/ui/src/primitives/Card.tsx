@@ -35,7 +35,7 @@ export function Card({
     <section
       ref={cardRef}
       className={[
-        "relative min-w-0 rounded-2xl border border-black/[0.06] bg-white shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] dark:border-white/[0.06] dark:bg-neutral-950/70 dark:shadow-[0_1px_2px_rgb(0_0_0_/_0.22)]",
+        "relative min-w-0 rounded-3xl bg-white ring-1 ring-slate-900/8 dark:bg-white/[0.03] dark:ring-white/8",
         "motion-reduce:transition-none motion-safe:transition-colors motion-safe:duration-200 motion-safe:ease-out",
         paddingClass,
         className,
@@ -63,9 +63,9 @@ export function Card({
         {children}
       </div>
       {loading ? (
-        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-white/70 backdrop-blur-sm motion-safe:transition-colors motion-safe:duration-200 motion-safe:ease-out dark:bg-neutral-950/55">
-          <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/85 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm motion-safe:transition-colors motion-safe:duration-200 motion-safe:ease-out dark:border-neutral-800 dark:bg-neutral-950/80 dark:text-white">
-            <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-400 border-t-transparent dark:border-white/50 dark:border-t-transparent" />
+        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-3xl bg-white/70 backdrop-blur-sm motion-safe:transition-colors motion-safe:duration-200 motion-safe:ease-out dark:bg-neutral-950/55">
+          <div className="inline-flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 text-sm font-medium text-slate-700 ring-1 ring-slate-900/8 motion-safe:transition-colors motion-safe:duration-200 motion-safe:ease-out dark:bg-neutral-900/85 dark:text-white dark:ring-white/10">
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-indigo-500/30 border-t-indigo-600 dark:border-indigo-400/25 dark:border-t-indigo-400" />
             {t("common.loading_ellipsis")}
           </div>
         </div>

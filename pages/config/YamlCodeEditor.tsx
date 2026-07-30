@@ -467,7 +467,7 @@ export const YamlCodeEditor = forwardRef<
   return (
     <div
       className={[
-        "overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-neutral-800 dark:bg-neutral-950",
+        "overflow-hidden rounded-2xl border border-slate-900/8 bg-white dark:border-white/8 dark:bg-neutral-950",
         heightClass,
       ].join(" ")}
     >
@@ -476,7 +476,7 @@ export const YamlCodeEditor = forwardRef<
           ref={gutterRef}
           aria-hidden="true"
           className={[
-            "scrollbar-hidden w-14 shrink-0 overflow-y-scroll overflow-x-hidden border-r border-slate-200 bg-slate-50/70 px-3 py-3 text-right font-mono text-xs leading-6 text-slate-400 dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-white/35",
+            "scrollbar-hidden w-14 shrink-0 overflow-y-scroll overflow-x-hidden border-r border-slate-900/8 bg-slate-50/70 px-3 py-3 text-right font-mono text-xs leading-6 text-slate-400 dark:border-white/8 dark:bg-neutral-950/60 dark:text-white/35",
             "pointer-events-none",
           ].join(" ")}
         >

@@ -104,7 +104,7 @@ export const MODEL_VENDOR_COLORS: Record<ModelVendorKey, ModelVendorTone> = {
   grok: {
     bg: "bg-slate-50 dark:bg-slate-900/30",
     text: "text-slate-700 dark:text-slate-300",
-    border: "border-slate-200/60 dark:border-slate-700/30",
+    border: "border-slate-900/8 dark:border-slate-700/30",
   },
   hunyuan: {
     bg: "bg-blue-50 dark:bg-blue-950/20",
@@ -114,7 +114,7 @@ export const MODEL_VENDOR_COLORS: Record<ModelVendorKey, ModelVendorTone> = {
   kimi: {
     bg: "bg-slate-50 dark:bg-slate-900/30",
     text: "text-slate-700 dark:text-slate-300",
-    border: "border-slate-200/60 dark:border-slate-700/30",
+    border: "border-slate-900/8 dark:border-slate-700/30",
   },
   kiro: {
     bg: "bg-amber-50 dark:bg-amber-950/20",
@@ -154,7 +154,7 @@ export const MODEL_VENDOR_COLORS: Record<ModelVendorKey, ModelVendorTone> = {
   other: {
     bg: "bg-slate-50 dark:bg-neutral-900/40",
     text: "text-slate-600 dark:text-slate-300",
-    border: "border-slate-200/60 dark:border-neutral-700/40",
+    border: "border-slate-900/8 dark:border-neutral-700/40",
   },
 };
 

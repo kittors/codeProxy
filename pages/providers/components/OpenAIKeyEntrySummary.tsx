@@ -36,7 +36,7 @@ export function OpenAIKeyEntrySummary({
           return (
             <div
               key={`${entry.apiKey}:${entryIndex}`}
-              className="grid gap-2 rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-xs dark:border-neutral-800 dark:bg-neutral-950/60 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+              className="grid gap-2 rounded-xl border border-slate-900/8 bg-white/70 px-3 py-2 text-xs dark:border-white/8 dark:bg-neutral-950/60 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
             >
               <div className="min-w-0">
                 <p className="truncate font-mono text-slate-900 dark:text-white">

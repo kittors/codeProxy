@@ -484,7 +484,7 @@ export function ApiKeyPermissionsPage() {
             />
           </section>
 
-          <section className="rounded-2xl border border-slate-200 p-4 dark:border-white/10">
+          <section className="rounded-2xl border border-slate-900/8 p-4 dark:border-white/10">
             <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
               {t("api_key_permissions_page.request_limits_section")}
             </h3>
@@ -522,7 +522,7 @@ export function ApiKeyPermissionsPage() {
             </div>
           </section>
 
-          <section className="rounded-2xl border border-slate-200 p-4 dark:border-white/10">
+          <section className="rounded-2xl border border-slate-900/8 p-4 dark:border-white/10">
             <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
               {t("api_key_permissions_page.realtime_limits_section")}
             </h3>
@@ -657,7 +657,7 @@ export function ApiKeyPermissionsPage() {
               }
               placeholder={t("api_keys_page.system_prompt_hint")}
               rows={3}
-              className="w-full resize-y rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:focus:border-indigo-500"
+              className="w-full resize-y rounded-xl border border-slate-900/8 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:focus:border-indigo-500"
             />
           </div>
         </div>

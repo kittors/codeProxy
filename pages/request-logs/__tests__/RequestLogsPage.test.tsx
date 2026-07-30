@@ -427,6 +427,78 @@ describe("RequestLogsPage", () => {
     await waitFor(() => expect(screen.queryByText("stale-model")).not.toBeInTheDocument());
   });
 
+  test("keeps the committed channel filter when a time range has no facet options", async () => {
+    await i18n.changeLanguage("en");
+    const user = userEvent.setup();
+    const restoredResponse = responseWithRows([
+      buildUsageLogItem({ id: 7, model: "restored-model" }),
+    ]);
+
+    mocks.getUsageLogs.mockImplementation((params) => {
+      if (params.days === 1 || params.channels_empty) {
+        return Promise.resolve(emptyLogsResponse);
+      }
+      return Promise.resolve(restoredResponse);
+    });
+
+    render(
+      <ThemeProvider>
+        <ToastProvider>
+          <RequestLogsPage />
+        </ToastProvider>
+      </ThemeProvider>,
+    );
+
+    expect(await screen.findByText("restored-model")).toBeInTheDocument();
+
+    const [, , channelFilter] = await screen.findAllByRole("combobox");
+    await user.click(channelFilter);
+    await user.click(await screen.findByRole("option", { name: /Relay.*API/i }));
+    await user.click(screen.getByRole("button", { name: "Apply filters" }));
+
+    await waitFor(() =>
+      expect(mocks.getUsageLogs).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          days: 7,
+          channels: ["auth-codex"],
+          channels_empty: false,
+        }),
+        expectSignalOptions(),
+      ),
+    );
+
+    await user.click(screen.getByRole("tab", { name: "Today" }));
+
+    await waitFor(() =>
+      expect(mocks.getUsageLogs).toHaveBeenNthCalledWith(
+        3,
+        expect.objectContaining({
+          days: 1,
+          channels: ["auth-codex"],
+          channels_empty: false,
+        }),
+        expectSignalOptions(),
+      ),
+    );
+    await waitFor(() => expect(screen.queryByText("restored-model")).not.toBeInTheDocument());
+
+    await user.click(screen.getByRole("tab", { name: "7 days" }));
+
+    await waitFor(() =>
+      expect(mocks.getUsageLogs).toHaveBeenNthCalledWith(
+        4,
+        expect.objectContaining({
+          days: 7,
+          channels: ["auth-codex"],
+          channels_empty: false,
+        }),
+        expectSignalOptions(),
+      ),
+    );
+    expect(await screen.findByText("restored-model")).toBeInTheDocument();
+  });
+
   test("shows request-log user counts in descending order with an unrestricted default", async () => {
     await i18n.changeLanguage("en");
     const user = userEvent.setup();

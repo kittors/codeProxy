@@ -466,7 +466,7 @@ export const writeAuthFilesModelOwnerGroupMap = (map: AuthFilesModelOwnerGroupMa
   }
 };
 
-/** Keep status-owned fields when the list endpoint returns a partial file shell. */
+/** Keep optional projections from partial shells; runtime restriction absence means cleared. */
 export const mergeAuthFileWithLastGoodStatus = (
   fresh: AuthFileItem,
   previous?: AuthFileItem,
@@ -517,8 +517,8 @@ export const mergeAuthFileWithLastGoodStatus = (
       fresh.subscriptionRemainingMinutes ?? previous.subscriptionRemainingMinutes,
     subscription_expired: fresh.subscription_expired ?? previous.subscription_expired,
     subscriptionExpired: fresh.subscriptionExpired ?? previous.subscriptionExpired,
-    restrictions: fresh.restrictions ?? previous.restrictions,
-    claude_oauth_health: fresh.claude_oauth_health ?? previous.claude_oauth_health,
+    restrictions: fresh.restrictions,
+    claude_oauth_health: fresh.claude_oauth_health,
   };
 };
 

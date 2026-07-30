@@ -16,6 +16,8 @@ const FORBIDDEN_IMPORTS = [
 const FEATURE_IMPORT_ALLOWLIST = new Set([
   "features/ccswitch-import->features/model-availability",
   "features/oauth-login->features/proxy-pool",
+  // Release notes are markdown; the viewer already owns that renderer.
+  "features/online-update->features/log-content-viewer",
   "features/request-log-viewer->features/model-tags",
   "features/request-log-viewer->features/monitor-widgets",
   "features/routing-config-editor->features/model-availability",
@@ -85,10 +87,7 @@ function canImport(source, target, resolved) {
 
   if (source.layer === "pages") {
     if (target.layer === "apps") {
-      return (
-        resolved.startsWith("apps/admin-panel/src/app/providers/") ||
-        resolved.startsWith("apps/admin-panel/src/app/update/")
-      );
+      return resolved.startsWith("apps/admin-panel/src/app/providers/");
     }
     return ["apps", "features", "packages"].includes(target.layer);
   }

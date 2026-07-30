@@ -9,10 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { X } from "lucide-react";
-
-/** Exit animation duration — keep content mounted until this finishes. */
-const ANIMATION_MS = 220;
-const EASE = "cubic-bezier(0.16, 1, 0.3, 1)";
+import { cssEase, EASE_IN, EASE_OUT, OVERLAY_ENTER_MS, OVERLAY_EXIT_MS } from "../utils/motion";
 
 export function Modal({
   open,
@@ -94,7 +91,7 @@ export function Modal({
     timeoutRef.current = window.setTimeout(() => {
       setMounted(false);
       timeoutRef.current = null;
-    }, ANIMATION_MS);
+    }, OVERLAY_EXIT_MS);
 
     return () => {
       if (timeoutRef.current) {
@@ -120,8 +117,8 @@ export function Modal({
   const bodyHeightCls = bodyHeightClassName ?? "max-h-[70vh]";
   const bodyOverflowCls = bodyOverflowClassName ?? "overflow-y-auto";
   const transitionStyle = {
-    transitionDuration: `${ANIMATION_MS}ms`,
-    transitionTimingFunction: EASE,
+    transitionDuration: `${visible ? OVERLAY_ENTER_MS : OVERLAY_EXIT_MS}ms`,
+    transitionTimingFunction: cssEase(visible ? EASE_OUT : EASE_IN),
   } as const;
 
   return createPortal(
@@ -136,9 +133,9 @@ export function Modal({
         tabIndex={-1}
         style={transitionStyle}
         className={[
-          "absolute inset-0 cursor-default bg-slate-900/40 backdrop-blur-sm dark:bg-black/50",
-          "transition-opacity motion-reduce:transition-none",
-          visible ? "opacity-100" : "opacity-0",
+          "absolute inset-0 cursor-default bg-slate-950/45 dark:bg-black/60",
+          "transition-[opacity,backdrop-filter] motion-reduce:transition-none",
+          visible ? "opacity-100 backdrop-blur-md" : "opacity-0 backdrop-blur-none",
         ].join(" ")}
       />
 
@@ -149,12 +146,10 @@ export function Modal({
         aria-labelledby={hideHeader ? undefined : titleId}
         style={transitionStyle}
         className={[
-          `relative z-10 w-full ${maxWidth} overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-neutral-800 dark:bg-neutral-950`,
-          // Animate opacity + subtle rise only — avoid scale that makes height feel like it collapses.
+          `relative z-10 w-full ${maxWidth} overflow-hidden rounded-3xl bg-white ring-1 ring-slate-900/10 shadow-[0_32px_80px_-24px_rgba(15,23,42,0.45)] dark:bg-[#0E0E12] dark:ring-white/10 dark:shadow-[0_32px_80px_-24px_rgba(0,0,0,0.8)]`,
+          // 放大幅度压到 0.97：再大就会让面板高度看着像「塌下去又弹起来」。
           "transition-[opacity,transform] will-change-transform motion-reduce:transition-none motion-reduce:transform-none",
-          visible
-            ? "opacity-100 translate-y-0"
-            : "opacity-0 translate-y-3",
+          visible ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-2 scale-[0.97]",
           panelClassName,
         ].join(" ")}
       >
@@ -163,13 +158,16 @@ export function Modal({
             type="button"
             onClick={onClose}
             disabled={!open}
-            className="absolute top-4 right-4 z-20 inline-flex h-9 w-9 items-center justify-center rounded-full border-0 bg-transparent p-0 text-slate-500 shadow-none transition-colors hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
+            className="group absolute top-4 right-4 z-20 inline-flex h-9 w-9 items-center justify-center rounded-full border-0 bg-transparent p-0 text-slate-400 shadow-none transition-colors hover:bg-slate-900/5 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60 dark:text-white/45 dark:hover:bg-white/10 dark:hover:text-white"
             aria-label={t("common.close")}
           >
-            <X size={16} />
+            <X
+              size={16}
+              className="transition-transform duration-200 motion-safe:group-hover:rotate-90"
+            />
           </button>
         ) : (
-          <div className="flex items-start justify-between gap-3 border-b border-slate-200 px-5 py-4 dark:border-neutral-800">
+          <div className="flex items-start justify-between gap-3 border-b border-slate-900/8 px-6 py-4 dark:border-white/8">
             <div className="min-w-0">
               <h2 className="flex min-w-0 items-center gap-2 text-base font-semibold tracking-tight text-slate-900 dark:text-white">
                 <span id={titleId} className="min-w-0 truncate">
@@ -191,23 +189,26 @@ export function Modal({
               type="button"
               onClick={onClose}
               disabled={!open}
-              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-0 bg-transparent p-0 text-slate-500 shadow-none transition-colors hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
+              className="group inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-0 bg-transparent p-0 text-slate-400 shadow-none transition-colors hover:bg-slate-900/5 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60 dark:text-white/45 dark:hover:bg-white/10 dark:hover:text-white"
               aria-label={t("common.close")}
             >
-              <X size={16} />
+              <X
+                size={16}
+                className="transition-transform duration-200 motion-safe:group-hover:rotate-90"
+              />
             </button>
           </div>
         )}
 
         <div
           data-testid={bodyTestId}
-          className={`${bodyHeightCls} ${bodyOverflowCls} overscroll-contain px-5 py-4 ${bodyClassName ?? ""}`}
+          className={`${bodyHeightCls} ${bodyOverflowCls} overscroll-contain px-6 py-5 ${bodyClassName ?? ""}`}
         >
           {snapshot.children}
         </div>
 
         {snapshot.footer ? (
-          <div className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 px-5 py-4 dark:border-neutral-800">
+          <div className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-900/8 px-6 py-4 dark:border-white/8">
             {snapshot.footer}
           </div>
         ) : null}

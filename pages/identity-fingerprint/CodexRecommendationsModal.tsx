@@ -270,7 +270,7 @@ function RecommendationDetail({
   const { t } = useTranslation();
   if (!item) {
     return (
-      <div className="rounded-xl border border-dashed border-slate-200 p-4 text-sm text-slate-500 dark:border-neutral-800 dark:text-white/50">
+      <div className="rounded-xl border border-dashed border-slate-900/8 p-4 text-sm text-slate-500 dark:border-white/8 dark:text-white/50">
         {t("identity_fingerprint.recommend_detail_empty")}
       </div>
     );

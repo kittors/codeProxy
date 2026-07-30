@@ -90,6 +90,7 @@ export type * from "./endpoints/identity-fingerprint";
 export { updateApi } from "./endpoints/update";
 export type * from "./endpoints/update";
 export { imageGenerationApi } from "./endpoints/image-generation";
+export type * from "./endpoints/image-generation";
 export { proxiesApi } from "./endpoints/proxies";
 export type * from "./endpoints/proxies";
 export { contentModerationApi } from "./endpoints/content-moderation";

@@ -55,7 +55,7 @@ export function ChangePasswordPage() {
   return (
     <PageBackground variant="login">
       <div className="absolute right-6 top-6 z-20">
-        <ThemeToggleButton className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white/70 text-slate-700 shadow-sm backdrop-blur transition hover:bg-white dark:border-neutral-800 dark:bg-neutral-950/60 dark:text-slate-200" />
+        <ThemeToggleButton className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-900/8 bg-white/70 text-slate-700 shadow-sm backdrop-blur transition hover:bg-white dark:border-white/8 dark:bg-neutral-950/60 dark:text-slate-200" />
       </div>
       <main className="relative flex min-h-[100dvh] items-center justify-center px-6 py-12">
         <div className="w-full max-w-md">

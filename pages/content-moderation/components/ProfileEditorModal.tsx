@@ -285,7 +285,7 @@ export function ProfileEditorModal({
           void submit();
         }}
       >
-        <section className="rounded-xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+        <section className="rounded-xl border border-slate-900/8 bg-white/70 p-4 shadow-sm dark:border-white/8 dark:bg-neutral-950/60">
           <FormField label={t("content_moderation.profile_name")} required reserveMeta={false}>
             <TextInput
               value={draft.name}
@@ -297,7 +297,7 @@ export function ProfileEditorModal({
           </FormField>
         </section>
 
-        <section className="rounded-xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+        <section className="rounded-xl border border-slate-900/8 bg-white/70 p-4 shadow-sm dark:border-white/8 dark:bg-neutral-950/60">
           <div className="grid gap-4 md:grid-cols-2">
             <FormField label={t("content_moderation.keyword_mode")} reserveMeta={false}>
               <Select
@@ -359,7 +359,7 @@ export function ProfileEditorModal({
           </p>
         </section>
 
-        <section className="rounded-xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+        <section className="rounded-xl border border-slate-900/8 bg-white/70 p-4 shadow-sm dark:border-white/8 dark:bg-neutral-950/60">
           <div className="grid gap-4 md:grid-cols-2">
             <FormField
               label={t("content_moderation.base_url")}
@@ -426,7 +426,7 @@ export function ProfileEditorModal({
             ) : null}
           </div>
 
-          <div className="mt-5 border-t border-slate-200 pt-4 dark:border-neutral-800">
+          <div className="mt-5 border-t border-slate-900/8 pt-4 dark:border-white/8">
             <div className="mb-4">
               <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">
                 {t("content_moderation.thresholds")}
@@ -488,7 +488,7 @@ export function ProfileEditorModal({
           </div>
         </section>
 
-        <section className="rounded-xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+        <section className="rounded-xl border border-slate-900/8 bg-white/70 p-4 shadow-sm dark:border-white/8 dark:bg-neutral-950/60">
           <div className="grid gap-4 md:grid-cols-[180px_minmax(0,1fr)]">
             <FormField
               label={t("content_moderation.block_http_status")}

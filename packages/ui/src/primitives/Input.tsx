@@ -23,8 +23,9 @@ const VARIANT_STYLES: Record<InputVariant, string> = {
   ghost: "bg-transparent text-inherit placeholder:text-inherit placeholder:opacity-60",
 };
 
+/** 无效态：同样只用 1px 描边，与 focus 态保持一致的克制程度。 */
 const INVALID_SOLID =
-  "border-rose-400 hover:border-rose-500 focus-visible:border-rose-500 dark:border-rose-500/70 dark:hover:border-rose-400 dark:focus-visible:border-rose-400";
+  "ring-1 ring-rose-500/55 focus:ring-rose-500/70 focus-visible:ring-rose-500/70 dark:ring-rose-400/55 dark:focus:ring-rose-400/70 dark:focus-visible:ring-rose-400/70";
 
 export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(function TextInput(
   {
@@ -47,8 +48,7 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(function T
 
   const mergedClassName = [
     "w-full text-sm outline-none",
-    "focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0",
-    "transition",
+    "focus:outline-none focus-visible:outline-none",
     controlHeightBySize[size],
     controlTextBySize[size],
     variant === "solid" ? controlPaddingBySize[size] : null,

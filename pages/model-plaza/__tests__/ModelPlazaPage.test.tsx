@@ -350,6 +350,46 @@ describe("ModelPlazaPage", () => {
     expect(within(audioCard).getByText("Audio")).toBeInTheDocument();
   });
 
+  test("inherits canonical capabilities for provider-prefixed path models", async () => {
+    mocks.apiGet.mockImplementation((path: string) => {
+      if (path === "/auth-group-model-owner-mappings") return Promise.resolve({ items: [] });
+      if (path === "/models/configured-availability") {
+        return Promise.resolve({
+          scoped: false,
+          data: [
+            {
+              id: "kimi-k2.5",
+              description: "Vision chat",
+              input_modalities: ["text", "image"],
+              output_modalities: ["text"],
+              supports_vision: true,
+            },
+          ],
+        });
+      }
+      if (path === "/model-path-availability") {
+        return Promise.resolve({
+          data: [
+            {
+              id: "ollama/kimi-k2.5",
+              owned_by: "ollama",
+              paths: [{ scope: "root", method: "GET", path: "/v1/models" }],
+            },
+          ],
+        });
+      }
+      return Promise.resolve({});
+    });
+
+    renderPage();
+
+    const visionCard = (await screen.findByText("ollama/kimi-k2.5")).closest(
+      '[data-testid="model-plaza-card"]',
+    ) as HTMLElement;
+    expect(within(visionCard).getByText("Text")).toBeInTheDocument();
+    expect(within(visionCard).getByText("Vision")).toBeInTheDocument();
+  });
+
   test("does not re-add path-only models when configured availability is scoped", async () => {
     mocks.apiGet.mockImplementation((path: string) => {
       if (path === "/auth-group-model-owner-mappings") return Promise.resolve({ items: [] });

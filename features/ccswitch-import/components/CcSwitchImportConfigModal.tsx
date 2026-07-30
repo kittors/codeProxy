@@ -62,7 +62,7 @@ const iconByType: Record<CcSwitchClientType, string> = {
 const labelClassName =
   "text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-white/45";
 const controlClassName =
-  "h-10 rounded-xl border border-slate-200/80 bg-white px-3 text-sm text-slate-900 shadow-none hover:border-slate-300 hover:bg-white focus-visible:ring-2 focus-visible:ring-slate-900/10 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:hover:border-neutral-700 dark:focus-visible:ring-white/15";
+  "h-10 rounded-xl border border-slate-900/8 bg-white px-3 text-sm text-slate-900 shadow-none hover:border-slate-300 hover:bg-white focus-visible:ring-2 focus-visible:ring-slate-900/10 dark:border-white/8 dark:bg-neutral-900 dark:text-white dark:hover:border-neutral-700 dark:focus-visible:ring-white/15";
 const fieldClassName = "flex flex-col gap-1.5";
 
 const CLAUDE_ROLE_ORDER: CcSwitchClaudeModelRole[] = ["main", "haiku", "sonnet", "opus", "fable"];
@@ -1023,7 +1023,7 @@ export function CcSwitchImportConfigModal({
       }
     >
       <div className="space-y-4">
-        <section className="space-y-3 rounded-3xl border border-slate-200/80 bg-white p-4 shadow-[0_18px_44px_rgb(15_23_42_/_0.06)] dark:border-neutral-800 dark:bg-neutral-950/80">
+        <section className="space-y-3 rounded-3xl border border-slate-900/8 bg-white p-4 shadow-[0_18px_44px_rgb(15_23_42_/_0.06)] dark:border-white/8 dark:bg-neutral-950/80">
           <label className={fieldClassName}>
             <span className={labelClassName}>{t("ccswitch.config_select_channel_group")}</span>
             <SearchableSelect
@@ -1059,7 +1059,7 @@ export function CcSwitchImportConfigModal({
             </div>
             <div
               data-testid="ccswitch-config-endpoint-preview"
-              className="overflow-x-auto rounded-2xl border border-slate-200/80 bg-slate-950 px-3 py-2.5 font-mono text-sm text-emerald-200 shadow-inner dark:border-neutral-800"
+              className="overflow-x-auto rounded-2xl border border-slate-900/8 bg-slate-950 px-3 py-2.5 font-mono text-sm text-emerald-200 shadow-inner dark:border-white/8"
             >
               {fullBaseUrl || "--"}
             </div>
@@ -1083,7 +1083,7 @@ export function CcSwitchImportConfigModal({
           </TabsList>
         </Tabs>
 
-        <section className="grid grid-cols-1 gap-3 rounded-3xl border border-slate-200/80 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-950/80 sm:grid-cols-2">
+        <section className="grid grid-cols-1 gap-3 rounded-3xl border border-slate-900/8 bg-white p-4 dark:border-white/8 dark:bg-neutral-950/80 sm:grid-cols-2">
           <label className={fieldClassName}>
             <span className={labelClassName}>{t("ccswitch.import_provider_name")}</span>
             <TextInput
@@ -1175,8 +1175,8 @@ export function CcSwitchImportConfigModal({
           </label>
         </section>
 
-        <section className="overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-[0_18px_44px_rgb(15_23_42_/_0.05)] dark:border-neutral-800 dark:bg-neutral-950/80">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/75 px-4 py-3 dark:border-neutral-800">
+        <section className="overflow-hidden rounded-3xl border border-slate-900/8 bg-white shadow-[0_18px_44px_rgb(15_23_42_/_0.05)] dark:border-white/8 dark:bg-neutral-950/80">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-900/8 px-4 py-3 dark:border-white/8">
             <div>
               <div className="text-sm font-semibold text-slate-950 dark:text-white">
                 {t("ccswitch.config_model_mapping_title")}
@@ -1212,7 +1212,7 @@ export function CcSwitchImportConfigModal({
               data-testid="ccswitch-model-mapping-loading"
               className="px-4 py-5"
             >
-              <div className="flex items-center gap-3 rounded-2xl border border-slate-200/75 bg-slate-50/85 px-4 py-3 dark:border-neutral-800 dark:bg-neutral-900/55">
+              <div className="flex items-center gap-3 rounded-2xl border border-slate-900/8 bg-slate-50/85 px-4 py-3 dark:border-white/8 dark:bg-neutral-900/55">
                 <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-slate-500 shadow-sm ring-1 ring-slate-200/80 dark:bg-neutral-950 dark:text-white/60 dark:ring-neutral-800">
                   <LoaderCircle size={17} className="animate-spin" />
                 </span>
@@ -1229,7 +1229,7 @@ export function CcSwitchImportConfigModal({
                 {MODEL_MAPPING_LOADING_ROWS.map((row) => (
                   <div
                     key={row}
-                    className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] gap-3 rounded-xl border border-slate-200/70 bg-white px-3 py-3 dark:border-neutral-800 dark:bg-neutral-950/70"
+                    className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] gap-3 rounded-xl border border-slate-900/8 bg-white px-3 py-3 dark:border-white/8 dark:bg-neutral-950/70"
                   >
                     <span className="h-3 rounded-full bg-slate-200/80 dark:bg-white/10" />
                     <span

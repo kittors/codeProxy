@@ -1298,7 +1298,7 @@ export function AuthFilesFilesTab({
         setPage(1);
       }}
       pageSizeOptions={pageSizeOptions}
-      className="border-t border-slate-100 px-4 pb-4 pt-3 sm:px-5 sm:pb-5 dark:border-neutral-800/60"
+      className="border-t border-slate-100 px-4 pb-4 pt-3 sm:px-5 sm:pb-5 dark:border-white/8"
       labels={{
         firstPage: t("request_logs.first_page"),
         previousPage: t("auth_files.prev"),
@@ -1330,7 +1330,7 @@ export function AuthFilesFilesTab({
         onChange={(e) => void handleUpload(e.currentTarget.files)}
       />
 
-      <div className="shrink-0 border-b border-slate-100 p-3.5 dark:border-neutral-800/60">
+      <div className="shrink-0 border-b border-slate-100 p-3.5 dark:border-white/8">
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between gap-2 md:hidden">
             <Button
@@ -1879,7 +1879,7 @@ export function AuthFilesFilesTab({
                       padding={denseCards ? "compact" : "default"}
                       bodyClassName="mt-0 flex min-h-0 flex-1 flex-col"
                       className={[
-                        "group/card flex h-full w-full max-w-[34rem] flex-col border-slate-200/80 shadow-[0_8px_24px_rgb(15_23_42_/_0.04)] transition-colors duration-200 ease-out hover:border-slate-300 hover:bg-white md:max-w-none dark:border-white/[0.08] dark:shadow-[0_8px_24px_rgb(0_0_0_/_0.28)] dark:hover:border-neutral-700 dark:hover:bg-neutral-950/70",
+                        "group/card flex h-full w-full max-w-[34rem] flex-col border-slate-900/8 shadow-[0_8px_24px_rgb(15_23_42_/_0.04)] transition-colors duration-200 ease-out hover:border-slate-300 hover:bg-white md:max-w-none dark:border-white/[0.08] dark:shadow-[0_8px_24px_rgb(0_0_0_/_0.28)] dark:hover:border-neutral-700 dark:hover:bg-neutral-950/70",
                         denseCards ? "rounded-2xl" : "rounded-3xl",
                         fileSelected
                           ? "border-slate-900 ring-1 ring-slate-300 dark:border-white dark:ring-white/20"
@@ -2341,7 +2341,7 @@ export function AuthFilesFilesTab({
           data-testid="auth-files-upload-progress"
           aria-live="polite"
         >
-          <div className="overflow-hidden rounded-3xl border border-slate-200/80 bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.95),_rgba(241,245,249,0.95))] p-4 shadow-[0_20px_50px_rgb(15_23_42_/_0.08)] dark:border-white/10 dark:bg-[radial-gradient(circle_at_top_left,_rgba(39,39,42,0.98),_rgba(9,9,11,0.98))] dark:shadow-[0_24px_60px_rgb(0_0_0_/_0.28)]">
+          <div className="overflow-hidden rounded-3xl border border-slate-900/8 bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.95),_rgba(241,245,249,0.95))] p-4 shadow-[0_20px_50px_rgb(15_23_42_/_0.08)] dark:border-white/10 dark:bg-[radial-gradient(circle_at_top_left,_rgba(39,39,42,0.98),_rgba(9,9,11,0.98))] dark:shadow-[0_24px_60px_rgb(0_0_0_/_0.28)]">
             <div className="flex items-start gap-3">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-lg shadow-slate-900/15 dark:bg-white dark:text-neutral-950 dark:shadow-black/25">
                 <Loader2 size={18} className="animate-spin" />
@@ -2393,7 +2393,7 @@ export function AuthFilesFilesTab({
             ].map((label) => (
               <div
                 key={label}
-                className="rounded-2xl border border-slate-200 bg-slate-50/90 px-3 py-2 text-xs font-semibold text-slate-600 dark:border-white/10 dark:bg-white/[0.04] dark:text-white/65"
+                className="rounded-2xl border border-slate-900/8 bg-slate-50/90 px-3 py-2 text-xs font-semibold text-slate-600 dark:border-white/10 dark:bg-white/[0.04] dark:text-white/65"
               >
                 {label}
               </div>
@@ -2401,7 +2401,7 @@ export function AuthFilesFilesTab({
           </div>
 
           {uploadProgress.activeFileNames.length > 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-200 bg-white/80 px-3 py-3 dark:border-white/10 dark:bg-white/[0.02]">
+            <div className="rounded-2xl border border-dashed border-slate-900/8 bg-white/80 px-3 py-3 dark:border-white/10 dark:bg-white/[0.02]">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400 dark:text-white/35">
                 {t("auth_files.upload")}
               </p>
@@ -2538,7 +2538,7 @@ export function AuthFilesFilesTab({
         }
       >
         <div className="space-y-4">
-          <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 dark:border-neutral-800 dark:bg-white/[0.04]">
+          <div className="rounded-2xl border border-slate-900/8 bg-slate-50/70 p-4 dark:border-white/8 dark:bg-white/[0.04]">
             <ToggleSwitch
               checked={draftModelOwnerEnabled}
               onCheckedChange={setDraftModelOwnerEnabled}
@@ -2566,7 +2566,7 @@ export function AuthFilesFilesTab({
               />
             </div>
 
-            <div className="flex min-w-0 items-center rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3 dark:border-neutral-800 dark:bg-white/[0.04]">
+            <div className="flex min-w-0 items-center rounded-2xl border border-slate-900/8 bg-slate-50/70 px-4 py-3 dark:border-white/8 dark:bg-white/[0.04]">
               <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase text-slate-400 dark:text-white/35">
                   {t("auth_files.type_filter")}
@@ -2578,7 +2578,7 @@ export function AuthFilesFilesTab({
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/60">
+          <div className="rounded-2xl border border-slate-900/8 bg-white/70 p-4 shadow-sm dark:border-white/8 dark:bg-neutral-950/60">
             <div className="mb-3 flex items-center justify-between gap-3">
               <p className="text-sm font-semibold text-slate-900 dark:text-white">
                 {t("auth_files.detail_tab_models")}
@@ -2614,7 +2614,7 @@ export function AuthFilesFilesTab({
                     return (
                       <div
                         key={model.id}
-                        className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2 dark:border-neutral-800 dark:bg-white/[0.03]"
+                        className="rounded-xl border border-slate-900/8 bg-slate-50/70 px-3 py-2 dark:border-white/8 dark:bg-white/[0.03]"
                       >
                         <p className="truncate font-mono text-xs font-semibold text-slate-900 dark:text-white">
                           {model.id}

@@ -1,5 +1,6 @@
 import { useEffect, useState, type FC } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { BRAND_NAME, LogoMark } from "@code-proxy/assets";
 
 export type PageLoaderVariant = "initial" | "restoring" | "inline";
 
@@ -42,12 +43,12 @@ export const PageLoader: FC<PageLoaderProps> = ({
       <span
         role="status"
         aria-label={text ?? "Loading"}
-        className="inline-block h-5 w-5 shrink-0 rounded-full border-2 border-slate-300 border-t-slate-700 motion-reduce:animate-none motion-safe:animate-spin dark:border-white/30 dark:border-t-white"
+        className="inline-block h-5 w-5 shrink-0 rounded-full border-2 border-indigo-500/25 border-t-indigo-600 motion-reduce:animate-none motion-safe:animate-spin dark:border-indigo-400/25 dark:border-t-indigo-400"
       />
     );
   }
 
-  const label = text ?? "CLI Proxy";
+  const label = text ?? BRAND_NAME;
 
   return (
     <AnimatePresence>
@@ -77,31 +78,30 @@ export const PageLoader: FC<PageLoaderProps> = ({
             transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
             className="relative z-10 flex flex-col items-center"
           >
-            {/* Spinner: two concentric rings */}
-            <div className="relative mb-5 h-12 w-12">
-              {/* Outer ring — slow, thick */}
+            {/* 品牌标记呼吸 + 外圈旋转进度环 */}
+            <div className="relative mb-6 flex h-16 w-16 items-center justify-center">
               <motion.span
                 aria-hidden="true"
                 className="absolute inset-0 rounded-full border-[3px] border-transparent"
                 style={{ borderTopColor: "var(--pl-ring-outer)" }}
                 animate={{ rotate: 360 }}
-                transition={{ duration: 1.6, repeat: Infinity, ease: "linear" }}
+                transition={{ duration: 1.4, repeat: Infinity, ease: "linear" }}
               />
-              {/* Inner ring — fast, thin */}
               <motion.span
                 aria-hidden="true"
-                className="absolute inset-1 rounded-full border-[2px] border-transparent"
-                style={{ borderTopColor: "var(--pl-ring-inner)" }}
-                animate={{ rotate: -360 }}
-                transition={{ duration: 0.9, repeat: Infinity, ease: "linear" }}
-              />
+                className="flex items-center justify-center"
+                animate={{ scale: [1, 1.08, 1], opacity: [0.75, 1, 0.75] }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              >
+                <LogoMark size={22} />
+              </motion.span>
             </div>
 
             {/* Brand text with breathing pulse */}
             <motion.span
               role="status"
               aria-label={label}
-              className="text-sm font-medium tracking-widest"
+              className="font-display text-sm font-medium tracking-[0.2em]"
               style={{ color: "var(--pl-text)" }}
               animate={{ opacity: [0.45, 1, 0.45] }}
               transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}

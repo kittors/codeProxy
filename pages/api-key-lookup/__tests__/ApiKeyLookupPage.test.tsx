@@ -211,9 +211,8 @@ describe("ApiKeyLookupPage", () => {
     const landing = screen.getByTestId("apikey-lookup-landing");
     expect(landing).toBeInTheDocument();
     expect(landing.closest(".bg-zinc-50")).not.toBeNull();
-    expect(
-      within(screen.getByTestId("apikey-lookup-header")).getByText("Code Proxy"),
-    ).toBeInTheDocument();
+    // 词标把品牌名拆成两个字重片段，因此断言整块文本而不是单个文本节点。
+    expect(screen.getByTestId("apikey-lookup-header").textContent).toContain("CliRelay");
     expect(
       within(landing).getByRole("heading", {
         level: 1,
@@ -1303,7 +1302,7 @@ describe("ApiKeyLookupPage", () => {
       // sticky 必须是自身节点，不能再包一层短 relative 切断包含块。
       expect(toolbar.parentElement?.tagName.toLowerCase()).toBe("main");
       expect(toolbar).toHaveAttribute("data-stuck", "false");
-      expect(toolbar.className).toMatch(/border-transparent/);
+      expect(toolbar.className).toMatch(/ring-transparent/);
 
       const header = screen.getByTestId("apikey-lookup-header");
       expect(header).toHaveAttribute("data-collapsed", "false");
@@ -1321,8 +1320,8 @@ describe("ApiKeyLookupPage", () => {
       });
       expect(header.className).toMatch(/-translate-y-full/);
       expect(header.className).toMatch(/opacity-0/);
-      expect(toolbar.className).toMatch(/border-slate-200/);
-      expect(toolbar.className).not.toMatch(/border-transparent/);
+      expect(toolbar.className).toMatch(/ring-slate-900\/8/);
+      expect(toolbar.className).not.toMatch(/ring-transparent/);
 
       Object.defineProperty(window, "scrollY", {
         configurable: true,
@@ -1335,7 +1334,7 @@ describe("ApiKeyLookupPage", () => {
         expect(header).toHaveAttribute("data-collapsed", "false");
         expect(toolbar).toHaveAttribute("data-stuck", "false");
       });
-      expect(toolbar.className).toMatch(/border-transparent/);
+      expect(toolbar.className).toMatch(/ring-transparent/);
     } finally {
       Element.prototype.getBoundingClientRect = originalGetBoundingClientRect;
     }

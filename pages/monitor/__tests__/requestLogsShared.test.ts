@@ -8,10 +8,20 @@ import {
   isSystemRequestLogKey,
   sortRequestLogKeyOptionsByCount,
   SYSTEM_REQUEST_LOG_FILTER_VALUE,
+  toFilterParam,
   toRequestLogsRow,
 } from "@features/request-log-viewer";
 
 describe("requestLogsShared", () => {
+  test("builds request filters from the committed selection", () => {
+    expect(toFilterParam(null)).toEqual({ values: undefined, matchesNone: false });
+    expect(toFilterParam([])).toEqual({ values: undefined, matchesNone: true });
+    expect(toFilterParam(["auth-codex"])).toEqual({
+      values: ["auth-codex"],
+      matchesNone: false,
+    });
+  });
+
   test("exposes the full channel name on the truncated identity label", () => {
     const name = "ryskt8qjfg@privaterelay.appleid.com";
 
