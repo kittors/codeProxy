@@ -22,7 +22,6 @@ import {
   EMPTY_PERIOD_SPENDING_LIMITS,
   normalizePeriodSpendingLimits,
   type PeriodSpendingLimits,
-  type PeriodSpendingPeriod,
 } from "@code-proxy/api-client";
 import { useOptionalAuth } from "@app/providers/AuthProvider";
 import { generateApiKey, makeEmptyApiKeyForm, maskApiKey } from "./apiKeyPageUtils";
@@ -37,6 +36,7 @@ import { ConfirmModal } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
 import { DataTable } from "@code-proxy/ui";
 import { ApiKeyFormModal } from "./components/ApiKeyFormModal";
+import { ApiKeyPeriodQuotaResetModal } from "./components/ApiKeyPeriodQuotaResetModal";
 import { ApiKeyUsageModal } from "./components/ApiKeyUsageModal";
 import { ApiKeyResetHistoryModal } from "./components/ApiKeyResetHistoryModal";
 import { useApiKeyPermissionOptions } from "@features/api-key-restrictions";
@@ -55,7 +55,6 @@ import type { ApiKeyFormValues } from "./types";
 import {
   OwnedApiKeyQuotaModal,
   OwnedApiKeysTable,
-  PeriodQuotaResetModal,
   formatQuotaValidationError,
   limitsToPeriodSpendingDraft,
   periodSpendingDraftToLimits,
@@ -584,36 +583,6 @@ export function ApiKeysPage({
     }
   };
 
-  const handleResetPeriodSpending = useCallback(
-    async (periods: PeriodSpendingPeriod[]) => {
-      const entry = resetSpendingEntry;
-      if (!entry || periods.length === 0) return;
-      setResettingPeriodSpendingKey(entry.id ?? entry.key);
-      try {
-        if (endUserIdFilter) {
-          if (!entry.id) return;
-          await endUsersApi.resetKeyPeriodSpending(endUserIdFilter, entry.id, periods);
-        } else {
-          await apiKeyEntriesApi.resetPeriodSpending(
-            entry.id ? { id: entry.id, periods } : { key: entry.key, periods },
-          );
-        }
-        notify({ type: "success", message: t("api_keys_page.reset_period_spending_success") });
-        setResetSpendingEntry(null);
-        await loadEntries();
-      } catch (err: unknown) {
-        notify({
-          type: "error",
-          message:
-            err instanceof Error ? err.message : t("api_keys_page.reset_period_spending_failed"),
-        });
-      } finally {
-        setResettingPeriodSpendingKey(null);
-      }
-    },
-    [endUserIdFilter, loadEntries, notify, resetSpendingEntry, t],
-  );
-
   const handleViewResetHistory = useCallback(
     async (entry: ApiKeyEntry) => {
       setResetHistoryEntry(entry);
@@ -1137,24 +1106,13 @@ export function ApiKeysPage({
         events={resetHistoryEvents}
       />
 
-      <PeriodQuotaResetModal
-        open={resetSpendingEntry !== null}
-        scope="key"
-        subjectName={resetSpendingEntry?.name?.trim() || t("api_keys_page.unnamed")}
-        configuredLimits={
-          resetSpendingEntry
-            ? normalizePeriodSpendingLimits(
-                resetSpendingEntry["period-spending-limits"],
-                resetSpendingEntry["daily-spending-limit"],
-              )
-            : undefined
-        }
-        periodSpendingItems={resetSpendingEntry?.["period-spending"]}
-        busy={resettingPeriodSpendingKey !== null}
-        onClose={() => {
-          if (!resettingPeriodSpendingKey) setResetSpendingEntry(null);
-        }}
-        onConfirm={(periods) => void handleResetPeriodSpending(periods)}
+      <ApiKeyPeriodQuotaResetModal
+        entry={resetSpendingEntry}
+        endUserId={endUserIdFilter}
+        busyKey={resettingPeriodSpendingKey}
+        onBusyKeyChange={setResettingPeriodSpendingKey}
+        onClose={() => setResetSpendingEntry(null)}
+        onReset={loadEntries}
       />
 
       <ApiKeyUsageModal

@@ -22,7 +22,6 @@ import type { TimeRange } from "@features/monitor-widgets/monitor-constants";
 import { ModelTag } from "@features/model-tags";
 import {
   OwnedApiKeyQuotaModal,
-  PeriodQuotaResetModal,
   emptyPeriodSpendingDraft,
   formatQuotaValidationError,
   limitsToPeriodSpendingDraft,
@@ -37,6 +36,7 @@ import {
 } from "./api";
 import { LookupHeader } from "./components/LookupHeader";
 import { PortalLoginForm } from "./components/PortalLoginForm";
+import { PortalKeyPeriodQuotaResetModal } from "./components/PortalKeyPeriodQuotaResetModal";
 import { LookupEmptyState } from "./components/LookupEmptyState";
 import { LookupResultsToolbar, type ApiKeyLookupTab } from "./components/LookupResultsToolbar";
 import { ManageKeysTabContent } from "./components/ManageKeysTabContent";
@@ -1721,42 +1721,10 @@ export function ApiKeyLookupPage() {
           }}
         />
 
-        <PeriodQuotaResetModal
-          open={resetSpendingTarget !== null}
-          scope="key"
-          subjectName={resetSpendingTarget?.name || t("api_keys_page.unnamed")}
-          configuredLimits={
-            resetSpendingTarget
-              ? normalizePeriodSpendingLimits(
-                  resetSpendingTarget["period-spending-limits"],
-                  resetSpendingTarget["daily-spending-limit"],
-                )
-              : undefined
-          }
-          periodSpendingItems={resetSpendingTarget?.["period-spending"]}
-          busy={portalKeysBusy}
-          onClose={() => {
-            if (!portalKeysBusy) setResetSpendingTarget(null);
-          }}
-          onConfirm={(periods) => {
-            const key = resetSpendingTarget;
-            if (!key || periods.length === 0) return;
-            setPortalKeysBusy(true);
-            void portalApi
-              .resetKeyPeriodSpending(key.id, periods)
-              .then(async () => {
-                setResetSpendingTarget(null);
-                await refreshPortalKeys();
-              })
-              .catch((err) => {
-                setError(
-                  err instanceof Error
-                    ? err.message
-                    : t("api_keys_page.reset_period_spending_failed"),
-                );
-              })
-              .finally(() => setPortalKeysBusy(false));
-          }}
+        <PortalKeyPeriodQuotaResetModal
+          target={resetSpendingTarget} busy={portalKeysBusy}
+          onClose={() => setResetSpendingTarget(null)}
+          onReset={refreshPortalKeys} onError={setError} onBusyChange={setPortalKeysBusy}
         />
 
         <SecretRevealModal

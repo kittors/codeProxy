@@ -1199,9 +1199,7 @@ export function EndUsersPage() {
         periodSpendingItems={resetSpendingUser?.["period-spending"]}
         busy={busy}
         onClose={() => setResetSpendingUser(null)}
-        onConfirm={(periods) => {
-          if (resetSpendingUser) void resetPeriodSpending(resetSpendingUser, periods);
-        }}
+        onConfirm={(periods) => resetSpendingUser && void resetPeriodSpending(resetSpendingUser, periods)}
       />
       <ConfirmModal
         open={Boolean(deleteUser)}
