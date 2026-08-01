@@ -19,8 +19,10 @@ const t = (key: string) => {
     "api_keys_page.click_disable": "Disable key",
     "api_keys_page.copy_key": "Copy key",
     "api_keys_page.edit_key_quota": "Edit quota",
-    "api_keys_page.reset_today_spending": "Reset today spending",
-    "api_keys_page.view_reset_history": "View reset history",
+    "api_keys_page.reset_today_spending": "Reset this key today spending",
+    "api_keys_page.reset_today_spending_disabled":
+      "Edit Key quota and set a daily quota before resetting this key",
+    "api_keys_page.view_reset_history": "View this key reset history",
     "end_users.rotate_key": "Rotate key",
     "common.delete": "Delete",
     "common.enabled": "Enabled",
@@ -72,6 +74,47 @@ describe("OwnedApiKeysTable", () => {
 
     expect(container.firstElementChild).toHaveClass("h-full", "min-h-full");
   });
+  test("does not expose daily reset or reset history for owned keys", async () => {
+    const row = {
+      id: "key-week-only",
+      tenant_id: "tenant-1",
+      end_user_id: "user-1",
+      key: "sk-owned",
+      name: "Week-only key",
+      disabled: false,
+      is_default: false,
+      "period-spending-limits": { "5h": 0, day: 0, week: 300, month: 0 },
+      "daily-spending-reset-count": 2,
+    } satisfies EndUserAPIKey;
+    const columns = createOwnedApiKeyColumns({
+      t,
+      actions: {
+        onToggleDisabled: vi.fn(),
+        onCopy: vi.fn(),
+        onRotate: vi.fn(),
+        onEdit: vi.fn(),
+        onDelete: vi.fn(),
+      },
+    });
+
+    expect(columns.some((column) => column.key === "resetCount")).toBe(false);
+
+    const actionsColumn = columns.find((column) => column.key === "actions");
+    render(<div>{actionsColumn?.render(row, 0)}</div>);
+    await userEvent.click(screen.getByRole("button", { name: "More actions" }));
+
+    expect(
+      screen.queryByRole("menuitem", { name: "Reset this key today spending" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("menuitem", {
+        name: "Edit Key quota and set a daily quota before resetting this key",
+      }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("menuitem", { name: "View this key reset history" }),
+    ).not.toBeInTheDocument();
+  });
 });
 
 describe("createOwnedApiKeyColumns", () => {
@@ -101,8 +144,6 @@ describe("createOwnedApiKeyColumns", () => {
         onCopy: vi.fn(),
         onRotate: vi.fn(),
         onEdit,
-        onResetDailySpending: vi.fn(),
-        onViewResetHistory: vi.fn(),
         onDelete: vi.fn(),
       },
     });

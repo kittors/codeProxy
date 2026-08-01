@@ -190,19 +190,21 @@ describe("EndUsersPage account semantics", () => {
     await openRowMoreActions("Bob");
     await userEvent.click(screen.getByRole("menuitem", { name: "Reset account today's spending" }));
 
-    const dialog = await screen.findByRole("dialog", { name: "Reset today's spending" });
+    const dialog = await screen.findByRole("dialog", { name: "Reset account today's spending" });
     expect(within(dialog).getByText(/Bob \/ bob/)).toBeInTheDocument();
     expect(mocks.resetDailySpending).not.toHaveBeenCalled();
 
     await userEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
     await waitFor(() => {
-      expect(screen.queryByRole("dialog", { name: "Reset today's spending" })).toBeNull();
+      expect(screen.queryByRole("dialog", { name: "Reset account today's spending" })).toBeNull();
     });
     expect(mocks.resetDailySpending).not.toHaveBeenCalled();
 
     await openRowMoreActions("Bob");
     await userEvent.click(screen.getByRole("menuitem", { name: "Reset account today's spending" }));
-    const confirmDialog = await screen.findByRole("dialog", { name: "Reset today's spending" });
+    const confirmDialog = await screen.findByRole("dialog", {
+      name: "Reset account today's spending",
+    });
     await userEvent.click(within(confirmDialog).getByRole("button", { name: "Reset spending" }));
 
     await waitFor(() => {
@@ -398,7 +400,7 @@ describe("EndUsersPage account semantics", () => {
     await screen.findByText("Alice");
     await openRowMoreActions("Bob");
     await userEvent.click(screen.getByRole("menuitem", { name: "Reset account today's spending" }));
-    const dialog = await screen.findByRole("dialog", { name: "Reset today's spending" });
+    const dialog = await screen.findByRole("dialog", { name: "Reset account today's spending" });
     await userEvent.click(within(dialog).getByRole("button", { name: "Reset spending" }));
 
     await waitFor(() => {
