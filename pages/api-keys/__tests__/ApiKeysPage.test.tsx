@@ -57,6 +57,17 @@ const mocks = vi.hoisted(() => ({
       "daily-spending-reset-count": entry?.["daily-spending-reset-count"] ?? 0,
     };
   }),
+  apiKeyEntriesResetPeriodSpending: vi.fn(
+    async ({ id, key, periods }: { id?: string; key?: string; periods: string[] }) => {
+      const entry = state.entries.find((item) => (id ? item.id === id : item.key === key));
+      if (entry) {
+        entry["period-spending"] = (entry["period-spending"] ?? []).map((item: any) =>
+          periods.includes(item.period) ? { ...item, used: 0, remaining: item.limit } : item,
+        );
+      }
+      return { status: "ok" };
+    },
+  ),
   apiKeyEntriesListDailySpendingResetHistory: vi.fn(async () => ({
     items: [],
     total: 0,
@@ -129,7 +140,7 @@ const mocks = vi.hoisted(() => ({
       return entry;
     },
   ),
-  endUserResetKeyDailySpending: vi.fn(async () => ({ status: "ok" })),
+  endUserResetKeyPeriodSpending: vi.fn(async () => ({ status: "ok" })),
   endUserListKeyDailySpendingResetHistory: vi.fn(async () => ({ items: [], total: 0 })),
   endUserRotateKey: vi.fn(async (userId: string, keyId: string) => {
     const entry = state.entries.find((item) => item.id === keyId && item.end_user_id === userId);
@@ -195,6 +206,7 @@ vi.mock("@code-proxy/api-client/endpoints/api-keys", () => ({
     update: mocks.apiKeyEntriesUpdate,
     delete: mocks.apiKeyEntriesDelete,
     resetDailySpending: mocks.apiKeyEntriesResetDailySpending,
+    resetPeriodSpending: mocks.apiKeyEntriesResetPeriodSpending,
     listDailySpendingResetHistory: mocks.apiKeyEntriesListDailySpendingResetHistory,
   },
 }));
@@ -204,7 +216,7 @@ vi.mock("@code-proxy/api-client/endpoints/end-users", () => ({
     listKeys: mocks.endUserListKeys,
     createKey: mocks.endUserCreateKey,
     updateKey: mocks.endUserUpdateKey,
-    resetKeyDailySpending: mocks.endUserResetKeyDailySpending,
+    resetKeyPeriodSpending: mocks.endUserResetKeyPeriodSpending,
     listKeyDailySpendingResetHistory: mocks.endUserListKeyDailySpendingResetHistory,
     rotateKey: mocks.endUserRotateKey,
     deleteKey: mocks.endUserDeleteKey,
@@ -384,7 +396,8 @@ describe("ApiKeysPage", () => {
     mocks.endUserUpdateKey.mockClear();
     mocks.endUserRotateKey.mockClear();
     mocks.endUserDeleteKey.mockClear();
-    mocks.endUserResetKeyDailySpending.mockClear();
+    mocks.apiKeyEntriesResetPeriodSpending.mockClear();
+    mocks.endUserResetKeyPeriodSpending.mockClear();
     mocks.endUserListKeyDailySpendingResetHistory.mockClear();
     mocks.fetchConfigYaml.mockClear();
     mocks.saveConfigYaml.mockClear();
@@ -508,7 +521,7 @@ describe("ApiKeysPage", () => {
     );
   });
 
-  test("hides key reset and reset history in the owned-key embed", async () => {
+  test("uses owner-scoped period reset and reset history in the owned-key embed", async () => {
     state.entries = [
       {
         id: "owned-key-week-only",
@@ -541,16 +554,74 @@ describe("ApiKeysPage", () => {
     );
 
     expect(await screen.findByText("Week-only Owned Key")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "View reset history" }));
+    await waitFor(() => {
+      expect(mocks.endUserListKeyDailySpendingResetHistory).toHaveBeenCalledWith(
+        "end-user-1",
+        "owned-key-week-only",
+        200,
+      );
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Close" }));
+
     await userEvent.click(screen.getByRole("button", { name: "More actions" }));
 
     expect(screen.getByRole("menuitem", { name: "Edit Key quota" })).toBeInTheDocument();
-    expect(
-      screen.queryByRole("menuitem", { name: /reset today spending/i }),
-    ).not.toBeInTheDocument();
-    expect(screen.queryByRole("menuitem", { name: /permission config/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("menuitem", { name: /view reset history/i })).not.toBeInTheDocument();
-    expect(mocks.endUserResetKeyDailySpending).not.toHaveBeenCalled();
-    expect(mocks.endUserListKeyDailySpendingResetHistory).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole("menuitem", { name: "Reset this Key quota" }));
+    const resetDialog = await screen.findByRole("dialog", { name: "Reset Key quota" });
+    expect(resetDialog).toHaveTextContent(/only this Key's current Week usage/i);
+    await userEvent.click(within(resetDialog).getByRole("button", { name: "Reset quota" }));
+
+    await waitFor(() => {
+      expect(mocks.endUserResetKeyPeriodSpending).toHaveBeenCalledWith(
+        "end-user-1",
+        "owned-key-week-only",
+        ["week"],
+      );
+    });
+    expect(mocks.apiKeyEntriesResetPeriodSpending).not.toHaveBeenCalled();
+  });
+
+  test("keeps owner-scoped period reset on the endUserId query path", async () => {
+    state.entries = [
+      {
+        id: "owned-query-key",
+        key: "sk-owned-query",
+        name: "Query Owned Key",
+        end_user_id: "end-user-1",
+        disabled: false,
+        is_default: true,
+        "created-at": "2026-07-21T00:00:00Z",
+        "period-spending-limits": { "5h": 50, day: 0, week: 0, month: 0 },
+        "period-spending": [{ period: "5h", limit: 50, used: 10, remaining: 40 }],
+      },
+    ];
+
+    render(
+      <MemoryRouter initialEntries={["/access/api-keys?endUserId=end-user-1"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <ApiKeysPage />
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Query Owned Key")).toBeInTheDocument();
+    expect(mocks.endUserListKeys).toHaveBeenCalledWith("end-user-1");
+    await userEvent.click(screen.getByRole("button", { name: "More actions" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Reset this Key quota" }));
+    const dialog = await screen.findByRole("dialog", { name: "Reset Key quota" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "Reset quota" }));
+
+    await waitFor(() => {
+      expect(mocks.endUserResetKeyPeriodSpending).toHaveBeenCalledWith(
+        "end-user-1",
+        "owned-query-key",
+        ["5h"],
+      );
+    });
+    expect(mocks.apiKeyEntriesResetPeriodSpending).not.toHaveBeenCalled();
   });
 
   test("uses owner-scoped rename and explicit rotation for an end-user key", async () => {
@@ -1294,7 +1365,7 @@ describe("ApiKeysPage", () => {
     expect(screen.getByRole("button", { name: /kimi\+deepseek/i })).toBeInTheDocument();
   });
 
-  test("resets today spending and refreshes the list", async () => {
+  test("resets a configured period and refreshes the list", async () => {
     state.entries = [
       {
         id: "id-reset",
@@ -1319,9 +1390,14 @@ describe("ApiKeysPage", () => {
 
     expect(await screen.findByText("Reset Me")).toBeInTheDocument();
     await openMoreActions();
-    await userEvent.click(await screen.findByRole("menuitem", { name: /reset today spending/i }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Reset this Key quota" }));
+    const dialog = await screen.findByRole("dialog", { name: "Reset Key quota" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "Reset quota" }));
     await waitFor(() => {
-      expect(mocks.apiKeyEntriesResetDailySpending).toHaveBeenCalledWith({ id: "id-reset" });
+      expect(mocks.apiKeyEntriesResetPeriodSpending).toHaveBeenCalledWith({
+        id: "id-reset",
+        periods: ["day"],
+      });
     });
     await waitFor(() => {
       expect(mocks.apiKeyEntriesList).toHaveBeenCalledTimes(2);

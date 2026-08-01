@@ -19,9 +19,8 @@ const t = (key: string) => {
     "api_keys_page.click_disable": "Disable key",
     "api_keys_page.copy_key": "Copy key",
     "api_keys_page.edit_key_quota": "Edit quota",
-    "api_keys_page.reset_today_spending": "Reset this key today spending",
-    "api_keys_page.reset_today_spending_disabled":
-      "Edit Key quota and set a daily quota before resetting this key",
+    "api_keys_page.reset_period_spending": "Reset this Key quota",
+    "api_keys_page.reset_period_spending_disabled": "No resettable period quota; edit Key quota",
     "api_keys_page.view_reset_history": "View this key reset history",
     "end_users.rotate_key": "Rotate key",
     "common.delete": "Delete",
@@ -74,7 +73,7 @@ describe("OwnedApiKeysTable", () => {
 
     expect(container.firstElementChild).toHaveClass("h-full", "min-h-full");
   });
-  test("does not expose daily reset or reset history for owned keys", async () => {
+  test("exposes period reset and reset history for an owned week-only key", async () => {
     const row = {
       id: "key-week-only",
       tenant_id: "tenant-1",
@@ -86,6 +85,8 @@ describe("OwnedApiKeysTable", () => {
       "period-spending-limits": { "5h": 0, day: 0, week: 300, month: 0 },
       "daily-spending-reset-count": 2,
     } satisfies EndUserAPIKey;
+    const onResetPeriodSpending = vi.fn();
+    const onViewResetHistory = vi.fn();
     const columns = createOwnedApiKeyColumns({
       t,
       actions: {
@@ -93,27 +94,31 @@ describe("OwnedApiKeysTable", () => {
         onCopy: vi.fn(),
         onRotate: vi.fn(),
         onEdit: vi.fn(),
+        onResetPeriodSpending,
+        onViewResetHistory,
         onDelete: vi.fn(),
       },
     });
 
-    expect(columns.some((column) => column.key === "resetCount")).toBe(false);
+    const resetCountColumn = columns.find((column) => column.key === "resetCount");
+    expect(resetCountColumn).toBeDefined();
 
     const actionsColumn = columns.find((column) => column.key === "actions");
-    render(<div>{actionsColumn?.render(row, 0)}</div>);
-    await userEvent.click(screen.getByRole("button", { name: "More actions" }));
+    render(
+      <div>
+        {resetCountColumn?.render(row, 0)}
+        {actionsColumn?.render(row, 0)}
+      </div>,
+    );
 
-    expect(
-      screen.queryByRole("menuitem", { name: "Reset this key today spending" }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("menuitem", {
-        name: "Edit Key quota and set a daily quota before resetting this key",
-      }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("menuitem", { name: "View this key reset history" }),
-    ).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "View this key reset history" }));
+    expect(onViewResetHistory).toHaveBeenCalledWith(row);
+
+    await userEvent.click(screen.getByRole("button", { name: "More actions" }));
+    const resetAction = screen.getByRole("menuitem", { name: "Reset this Key quota" });
+    expect(resetAction).not.toHaveAttribute("data-disabled");
+    await userEvent.click(resetAction);
+    expect(onResetPeriodSpending).toHaveBeenCalledWith(row);
   });
 });
 

@@ -9,7 +9,7 @@ import { EndUsersPage } from "../EndUsersPage";
 const mocks = vi.hoisted(() => ({
   list: vi.fn(),
   update: vi.fn(),
-  resetDailySpending: vi.fn(),
+  resetPeriodSpending: vi.fn(),
   listDailySpendingResetHistory: vi.fn(),
   permissionProfiles: vi.fn(async (): Promise<ApiKeyPermissionProfile[]> => []),
 }));
@@ -31,7 +31,7 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
       ...actual.endUsersApi,
       list: mocks.list,
       update: mocks.update,
-      resetDailySpending: mocks.resetDailySpending,
+      resetPeriodSpending: mocks.resetPeriodSpending,
       listDailySpendingResetHistory: mocks.listDailySpendingResetHistory,
     },
   };
@@ -103,7 +103,7 @@ describe("EndUsersPage account semantics", () => {
     await i18n.changeLanguage("en");
     mocks.list.mockResolvedValue({ items: users });
     mocks.update.mockResolvedValue(users[0]);
-    mocks.resetDailySpending.mockResolvedValue({
+    mocks.resetPeriodSpending.mockResolvedValue({
       status: "ok",
       end_user_id: "user-frozen",
       "daily-spending-used": 0,
@@ -163,15 +163,13 @@ describe("EndUsersPage account semantics", () => {
     await openRowMoreActions("Alice");
     expect(
       screen.getByRole("menuitem", {
-        name: "Set a daily spending limit in the permission config before resetting",
+        name: "No resettable period quota; edit the account quota",
       }),
     ).toHaveAttribute("data-disabled");
     await userEvent.keyboard("{Escape}");
 
     await openRowMoreActions("Bob");
-    expect(
-      screen.getByRole("menuitem", { name: "Reset account today's spending" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Reset account quota" })).toBeInTheDocument();
     await userEvent.keyboard("{Escape}");
 
     await openRowMoreActions("Alice");
@@ -183,32 +181,35 @@ describe("EndUsersPage account semantics", () => {
     });
   });
 
-  test("requires confirmation before resetting today's spending", async () => {
+  test("requires period selection before resetting account quota", async () => {
     renderPage();
 
     await screen.findByText("Alice");
     await openRowMoreActions("Bob");
-    await userEvent.click(screen.getByRole("menuitem", { name: "Reset account today's spending" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Reset account quota" }));
 
-    const dialog = await screen.findByRole("dialog", { name: "Reset account today's spending" });
+    const dialog = await screen.findByRole("dialog", { name: "Reset account quota" });
     expect(within(dialog).getByText(/Bob \/ bob/)).toBeInTheDocument();
-    expect(mocks.resetDailySpending).not.toHaveBeenCalled();
+    expect(mocks.resetPeriodSpending).not.toHaveBeenCalled();
 
     await userEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
     await waitFor(() => {
-      expect(screen.queryByRole("dialog", { name: "Reset account today's spending" })).toBeNull();
+      expect(screen.queryByRole("dialog", { name: "Reset account quota" })).toBeNull();
     });
-    expect(mocks.resetDailySpending).not.toHaveBeenCalled();
+    expect(mocks.resetPeriodSpending).not.toHaveBeenCalled();
 
     await openRowMoreActions("Bob");
-    await userEvent.click(screen.getByRole("menuitem", { name: "Reset account today's spending" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Reset account quota" }));
     const confirmDialog = await screen.findByRole("dialog", {
-      name: "Reset account today's spending",
+      name: "Reset account quota",
     });
-    await userEvent.click(within(confirmDialog).getByRole("button", { name: "Reset spending" }));
+    await userEvent.click(within(confirmDialog).getByRole("checkbox", { name: "Reset Day quota" }));
+    await userEvent.click(
+      within(confirmDialog).getByRole("button", { name: "Reset selected quotas" }),
+    );
 
     await waitFor(() => {
-      expect(mocks.resetDailySpending).toHaveBeenCalledWith("user-frozen");
+      expect(mocks.resetPeriodSpending).toHaveBeenCalledWith("user-frozen", ["day"]);
       expect(mocks.list.mock.calls.length).toBeGreaterThan(1);
     });
   });
@@ -390,7 +391,7 @@ describe("EndUsersPage account semantics", () => {
   });
 
   test("reloads the list when reset response does not include a reset count", async () => {
-    mocks.resetDailySpending.mockResolvedValueOnce({
+    mocks.resetPeriodSpending.mockResolvedValueOnce({
       status: "ok",
       end_user_id: "user-frozen",
       "daily-spending-used": 0,
@@ -399,9 +400,10 @@ describe("EndUsersPage account semantics", () => {
 
     await screen.findByText("Alice");
     await openRowMoreActions("Bob");
-    await userEvent.click(screen.getByRole("menuitem", { name: "Reset account today's spending" }));
-    const dialog = await screen.findByRole("dialog", { name: "Reset account today's spending" });
-    await userEvent.click(within(dialog).getByRole("button", { name: "Reset spending" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Reset account quota" }));
+    const dialog = await screen.findByRole("dialog", { name: "Reset account quota" });
+    await userEvent.click(within(dialog).getByRole("checkbox", { name: "Reset Day quota" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Reset selected quotas" }));
 
     await waitFor(() => {
       expect(mocks.list).toHaveBeenCalledTimes(2);

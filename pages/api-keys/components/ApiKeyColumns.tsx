@@ -13,7 +13,7 @@ import {
   Upload,
 } from "lucide-react";
 import type { ApiKeyEntry } from "@code-proxy/api-client/endpoints/api-keys";
-import { normalizePeriodSpendingLimits } from "@code-proxy/api-client";
+import { hasPeriodSpendingLimits, normalizePeriodSpendingLimits } from "@code-proxy/api-client";
 import { PeriodSpendingCell } from "@features/period-spending";
 import {
   formatApiKeyDate,
@@ -46,9 +46,9 @@ type CreateApiKeyColumnsOptions = {
   onRotate: (index: number) => void;
   onEdit: (index: number) => void;
   onDelete: (index: number) => void;
-  onResetDailySpending: (index: number) => void;
+  onResetPeriodSpending: (index: number) => void;
   onViewResetHistory: (entry: ApiKeyEntry) => void;
-  resettingDailySpendingKey?: string | null;
+  resettingPeriodSpendingKey?: string | null;
   /** Owned keys share account quota; hide per-key limit columns. */
   accountScoped?: boolean;
 };
@@ -130,9 +130,9 @@ export const createApiKeyColumns = ({
   onRotate,
   onEdit,
   onDelete,
-  onResetDailySpending,
+  onResetPeriodSpending,
   onViewResetHistory,
-  resettingDailySpendingKey = null,
+  resettingPeriodSpendingKey = null,
   accountScoped = false,
 }: CreateApiKeyColumnsOptions): DataTableColumn<ApiKeyEntry>[] => {
   const columns: DataTableColumn<ApiKeyEntry>[] = [
@@ -511,11 +511,13 @@ export const createApiKeyColumns = ({
         const rotateKeyLabel = t("end_users.rotate_key", { defaultValue: "轮换密钥" });
         const editLabel = t("common.edit");
         const deleteLabel = t("common.delete");
-        const hasDailyLimit = (row["daily-spending-limit"] ?? 0) > 0;
-        const isResetting = resettingDailySpendingKey === row.key;
-        const resetLabel = hasDailyLimit
-          ? t("api_keys_page.reset_today_spending")
-          : t("api_keys_page.reset_today_spending_disabled");
+        const hasResettablePeriod = hasPeriodSpendingLimits(
+          normalizePeriodSpendingLimits(row["period-spending-limits"], row["daily-spending-limit"]),
+        );
+        const isResetting = resettingPeriodSpendingKey === (row.id ?? row.key);
+        const resetLabel = hasResettablePeriod
+          ? t("api_keys_page.reset_period_spending")
+          : t("api_keys_page.reset_period_spending_disabled");
 
         return (
           <TableRowActions
@@ -568,10 +570,10 @@ export const createApiKeyColumns = ({
                 key: "reset-spending",
                 label: resetLabel,
                 icon: <RotateCcw size={15} className={isResetting ? "animate-spin" : ""} />,
-                disabled: !hasDailyLimit || isResetting,
+                disabled: !hasResettablePeriod || isResetting,
                 className:
                   "text-slate-500 hover:bg-slate-100 hover:text-orange-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-orange-400",
-                onClick: () => onResetDailySpending(idx),
+                onClick: () => onResetPeriodSpending(idx),
               },
               {
                 key: "edit",

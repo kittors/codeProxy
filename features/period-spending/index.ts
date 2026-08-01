@@ -18,3 +18,5 @@ export type { OwnedApiKeyQuotaForm } from "./OwnedApiKeyQuotaModal";
 export { OwnedApiKeysTable, createOwnedApiKeyColumns } from "./OwnedApiKeyTable";
 export type { OwnedApiKeyActions } from "./OwnedApiKeyTable";
 export { OwnedApiKeyResetHistoryModal } from "./OwnedApiKeyResetHistoryModal";
+export { PeriodQuotaResetModal } from "./PeriodQuotaResetModal";
+export type { PeriodQuotaResetModalProps, PeriodQuotaResetScope } from "./PeriodQuotaResetModal";

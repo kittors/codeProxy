@@ -8,6 +8,7 @@ import type {
   PeriodSpendingItem,
   PeriodSpendingLimits,
   PeriodSpendingLimitsPatch,
+  PeriodSpendingPeriod,
 } from "./period-spending";
 import {
   buildPortalAccountKey,
@@ -164,6 +165,8 @@ export const endUsersApi = {
     }),
   resetDailySpending: (id: string) =>
     apiClient.post<EndUserDailySpendingResetResult>(`/end-users/${id}/daily-spending/reset`, {}),
+  resetPeriodSpending: (id: string, periods: PeriodSpendingPeriod[]) =>
+    apiClient.post<unknown>(`/end-users/${id}/period-spending/reset`, { periods }),
   listDailySpendingResetHistory: (id: string, limit?: number) => {
     const query = new URLSearchParams();
     if (limit != null) query.set("limit", String(limit));
@@ -184,6 +187,10 @@ export const endUsersApi = {
       `/end-users/${userId}/api-keys/${keyId}/daily-spending/reset`,
       {},
     ),
+  resetKeyPeriodSpending: (userId: string, keyId: string, periods: PeriodSpendingPeriod[]) =>
+    apiClient.post<unknown>(`/end-users/${userId}/api-keys/${keyId}/period-spending/reset`, {
+      periods,
+    }),
   listKeyDailySpendingResetHistory: (userId: string, keyId: string, limit?: number) => {
     const query = new URLSearchParams();
     if (limit != null) query.set("limit", String(limit));
@@ -254,6 +261,8 @@ export const portalApi = {
     ),
   updateKey: (id: string, body: EndUserAPIKeyMutationBody) =>
     portalClient.patch<EndUserAPIKey>(`/v0/portal/api-keys/${id}`, body),
+  resetKeyPeriodSpending: (id: string, periods: PeriodSpendingPeriod[]) =>
+    portalClient.post<unknown>(`/v0/portal/api-keys/${id}/period-spending/reset`, { periods }),
   rotateKey: (id: string) =>
     portalClient.post<{ api_key: EndUserAPIKey; plaintext_key?: string }>(
       `/v0/portal/api-keys/${id}/rotate`,

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { endUsersApi } from "@code-proxy/api-client/endpoints/end-users";
+import { endUsersApi, portalApi } from "@code-proxy/api-client/endpoints/end-users";
 
 const mocks = vi.hoisted(() => ({
   get: vi.fn(),
@@ -33,6 +33,32 @@ describe("endUsersApi", () => {
     expect(mocks.get).toHaveBeenCalledWith(
       "/end-users/user-1/daily-spending/reset-history?limit=200",
     );
+  });
+
+  test("resets selected account and owned-key periods through owner-scoped endpoints", async () => {
+    mocks.post.mockResolvedValue({ status: "ok" });
+
+    await endUsersApi.resetPeriodSpending("user-1", ["day", "week"]);
+    await endUsersApi.resetKeyPeriodSpending("user-1", "key-1", ["5h", "month"]);
+
+    expect(mocks.post).toHaveBeenNthCalledWith(1, "/end-users/user-1/period-spending/reset", {
+      periods: ["day", "week"],
+    });
+    expect(mocks.post).toHaveBeenNthCalledWith(
+      2,
+      "/end-users/user-1/api-keys/key-1/period-spending/reset",
+      { periods: ["5h", "month"] },
+    );
+  });
+
+  test("prepares the portal period reset path", async () => {
+    const post = vi.spyOn(portalApi.client, "post").mockResolvedValue({ status: "ok" });
+
+    await portalApi.resetKeyPeriodSpending("key-1", ["day", "week"]);
+
+    expect(post).toHaveBeenCalledWith("/v0/portal/api-keys/key-1/period-spending/reset", {
+      periods: ["day", "week"],
+    });
   });
 
   test("creates and updates owned keys with period spending limits", async () => {

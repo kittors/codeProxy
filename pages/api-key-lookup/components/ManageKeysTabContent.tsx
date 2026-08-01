@@ -13,6 +13,7 @@ export function ManageKeysTabContent({
   onRotate,
   onDelete,
   onEdit,
+  onResetPeriodSpending,
 }: {
   t: (key: string, options?: Record<string, unknown>) => string;
   keys: EndUserAPIKey[];
@@ -23,6 +24,7 @@ export function ManageKeysTabContent({
   onRotate: (key: EndUserAPIKey) => void;
   onDelete: (key: EndUserAPIKey) => void;
   onEdit: (key: EndUserAPIKey) => void;
+  onResetPeriodSpending: (key: EndUserAPIKey) => void;
 }) {
   return (
     <Card padding="none" className="overflow-hidden" bodyClassName="mt-0">
@@ -56,6 +58,7 @@ export function ManageKeysTabContent({
             onRotate,
             onDelete,
             onEdit,
+            onResetPeriodSpending,
           }}
         />
       </div>
