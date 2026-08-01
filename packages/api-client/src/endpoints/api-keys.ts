@@ -3,6 +3,7 @@ import type {
   PeriodSpendingItem,
   PeriodSpendingLimits,
   PeriodSpendingLimitsPatch,
+  PeriodSpendingPeriod,
 } from "./period-spending";
 
 export interface ApiKeyEntry {
@@ -114,6 +115,9 @@ export const apiKeyEntriesApi = {
       "/api-key-entries/daily-spending/reset",
       payload,
     ),
+
+  resetPeriodSpending: (params: { id?: string; key?: string; periods: PeriodSpendingPeriod[] }) =>
+    apiClient.post<unknown>("/api-key-entries/period-spending/reset", params),
 
   listDailySpendingResetHistory: (params: { id?: string; key?: string; limit?: number }) => {
     const query = new URLSearchParams();

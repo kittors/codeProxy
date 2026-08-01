@@ -36,6 +36,7 @@ import { ConfirmModal } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
 import { DataTable } from "@code-proxy/ui";
 import { ApiKeyFormModal } from "./components/ApiKeyFormModal";
+import { ApiKeyPeriodQuotaResetModal } from "./components/ApiKeyPeriodQuotaResetModal";
 import { ApiKeyUsageModal } from "./components/ApiKeyUsageModal";
 import { ApiKeyResetHistoryModal } from "./components/ApiKeyResetHistoryModal";
 import { useApiKeyPermissionOptions } from "@features/api-key-restrictions";
@@ -95,7 +96,8 @@ export function ApiKeysPage({
   const [saving, setSaving] = useState(false);
   const [createdSecretOnce, setCreatedSecretOnce] = useState<string | null>(null);
   const [quotaFormError, setQuotaFormError] = useState("");
-  const [resettingDailySpendingKey, setResettingDailySpendingKey] = useState<string | null>(null);
+  const [resetSpendingEntry, setResetSpendingEntry] = useState<ApiKeyEntry | null>(null);
+  const [resettingPeriodSpendingKey, setResettingPeriodSpendingKey] = useState<string | null>(null);
   const [resetHistoryEntry, setResetHistoryEntry] = useState<ApiKeyEntry | null>(null);
   const [resetHistoryLoading, setResetHistoryLoading] = useState(false);
   const [resetHistoryEvents, setResetHistoryEvents] = useState<ApiKeyDailySpendingResetEvent[]>([]);
@@ -313,6 +315,7 @@ export function ApiKeysPage({
         "period-spending": entry["period-spending"],
         "daily-spending-used": entry["daily-spending-used"],
         "lifetime-spending-used": entry["lifetime-spending-used"],
+        "daily-spending-reset-count": entry["daily-spending-reset-count"],
       })),
     [endUserIdFilter, entries],
   );
@@ -580,41 +583,18 @@ export function ApiKeysPage({
     }
   };
 
-  const handleResetDailySpending = useCallback(
-    async (index: number) => {
-      const entry = entries[index];
-      const dayLimit = normalizePeriodSpendingLimits(
-        entry?.["period-spending-limits"],
-        entry?.["daily-spending-limit"],
-      ).day;
-      if (!entry || dayLimit <= 0) return;
-      setResettingDailySpendingKey(entry.id ?? entry.key);
-      try {
-        await apiKeyEntriesApi.resetDailySpending(entry.id ? { id: entry.id } : { key: entry.key });
-        notify({ type: "success", message: t("api_keys_page.reset_today_spending_success") });
-        await loadEntries();
-      } catch (err: unknown) {
-        notify({
-          type: "error",
-          message:
-            err instanceof Error ? err.message : t("api_keys_page.reset_today_spending_failed"),
-        });
-      } finally {
-        setResettingDailySpendingKey(null);
-      }
-    },
-    [entries, loadEntries, notify, t],
-  );
-
   const handleViewResetHistory = useCallback(
     async (entry: ApiKeyEntry) => {
       setResetHistoryEntry(entry);
       setResetHistoryEvents([]);
       setResetHistoryLoading(true);
       try {
-        const resp = await apiKeyEntriesApi.listDailySpendingResetHistory(
-          entry.id ? { id: entry.id, limit: 200 } : { key: entry.key, limit: 200 },
-        );
+        const resp =
+          endUserIdFilter && entry.id
+            ? await endUsersApi.listKeyDailySpendingResetHistory(endUserIdFilter, entry.id, 200)
+            : await apiKeyEntriesApi.listDailySpendingResetHistory(
+                entry.id ? { id: entry.id, limit: 200 } : { key: entry.key, limit: 200 },
+              );
         setResetHistoryEvents(Array.isArray(resp?.items) ? resp.items : []);
       } catch (err: unknown) {
         notify({
@@ -627,7 +607,7 @@ export function ApiKeysPage({
         setResetHistoryLoading(false);
       }
     },
-    [notify, t],
+    [endUserIdFilter, notify, t],
   );
 
   /* ─── delete ─── */
@@ -817,9 +797,9 @@ export function ApiKeysPage({
         onRotate: setRotateIndex,
         onEdit: handleOpenEdit,
         onDelete: handleOpenDelete,
-        onResetDailySpending: (index) => void handleResetDailySpending(index),
+        onResetPeriodSpending: (index) => setResetSpendingEntry(entries[index] ?? null),
         onViewResetHistory: (entry) => void handleViewResetHistory(entry),
-        resettingDailySpendingKey,
+        resettingPeriodSpendingKey,
         accountScoped: Boolean(endUserIdFilter),
       }),
     [
@@ -831,7 +811,6 @@ export function ApiKeysPage({
       setRotateIndex,
       handleOpenEdit,
       handleOpenDelete,
-      handleResetDailySpending,
       handleViewResetHistory,
       handleSelectAll,
       handleSelectRow,
@@ -839,7 +818,8 @@ export function ApiKeysPage({
       selectedKeys,
       allRowsSelected,
       someRowsSelected,
-      resettingDailySpendingKey,
+      resettingPeriodSpendingKey,
+      entries,
     ],
   );
 
@@ -882,6 +862,7 @@ export function ApiKeysPage({
       <OwnedApiKeysTable
         t={t}
         keys={ownedKeys}
+        busyKeyId={resettingPeriodSpendingKey}
         busy={saving}
         loading={loading}
         canDelete={() => ownedKeys.length > 1}
@@ -901,6 +882,14 @@ export function ApiKeysPage({
           onEdit: (key) => {
             const index = entries.findIndex((entry) => entry.id === key.id);
             if (index >= 0) handleOpenEdit(index);
+          },
+          onResetPeriodSpending: (key) => {
+            const entry = entries.find((item) => item.id === key.id);
+            if (entry) setResetSpendingEntry(entry);
+          },
+          onViewResetHistory: (key) => {
+            const entry = entries.find((item) => item.id === key.id);
+            if (entry) void handleViewResetHistory(entry);
           },
           onDelete: (key) => {
             const index = entries.findIndex((entry) => entry.id === key.id);
@@ -1115,6 +1104,15 @@ export function ApiKeysPage({
         maskedKey={resetHistoryEntry ? maskApiKey(resetHistoryEntry.key) : ""}
         loading={resetHistoryLoading}
         events={resetHistoryEvents}
+      />
+
+      <ApiKeyPeriodQuotaResetModal
+        entry={resetSpendingEntry}
+        endUserId={endUserIdFilter}
+        busyKey={resettingPeriodSpendingKey}
+        onBusyKeyChange={setResettingPeriodSpendingKey}
+        onClose={() => setResetSpendingEntry(null)}
+        onReset={loadEntries}
       />
 
       <ApiKeyUsageModal

@@ -20,6 +20,7 @@ import {
   type EndUser,
   type EndUserDailySpendingResetEvent,
   type EndUserUpdateBody,
+  type PeriodSpendingPeriod,
 } from "@code-proxy/api-client";
 import {
   Button,
@@ -46,6 +47,7 @@ import { EndUserResetHistoryModal } from "./components/EndUserResetHistoryModal"
 import {
   PeriodSpendingCell,
   PeriodSpendingFields,
+  PeriodQuotaResetModal,
   emptyPeriodSpendingDraft,
   formatQuotaValidationError,
   formatQuotaUsdAmount,
@@ -289,27 +291,23 @@ export function EndUsersPage() {
     [load, notify, t],
   );
 
-  const resetTodaySpending = useCallback(
-    async (row: EndUser) => {
-      // ponytail: same gate as API Key list — unlimited daily spending has nothing to reset
-      if (
-        normalizePeriodSpendingLimits(row["period-spending-limits"], row["daily-spending-limit"])
-          .day <= 0
-      )
-        return;
+  const resetPeriodSpending = useCallback(
+    async (row: EndUser, periods: PeriodSpendingPeriod[]) => {
+      if (periods.length === 0) return;
       setBusy(true);
       try {
-        await endUsersApi.resetDailySpending(row.id);
+        await endUsersApi.resetPeriodSpending(row.id, periods);
         notify({
           type: "success",
-          message: t("end_users.reset_today_spending_success", {
-            defaultValue: "已重置该账号今日消费",
-          }),
+          message: t("end_users.reset_period_spending_success"),
         });
         setResetSpendingUser(null);
         await load();
       } catch (e) {
-        notify({ type: "error", message: e instanceof Error ? e.message : "failed" });
+        notify({
+          type: "error",
+          message: e instanceof Error ? e.message : t("end_users.reset_period_spending_failed"),
+        });
       } finally {
         setBusy(false);
       }
@@ -496,14 +494,15 @@ export function EndUsersPage() {
         headerClassName: stickyActionsHeaderClass,
         cellClassName: stickyActionsCellClass,
         render: (row) => {
-          const hasDailyLimit =
+          const hasResettablePeriod = Object.values(
             normalizePeriodSpendingLimits(
               row["period-spending-limits"],
               row["daily-spending-limit"],
-            ).day > 0;
-          const resetLabel = hasDailyLimit
-            ? t("end_users.reset_today_spending")
-            : t("end_users.reset_today_spending_disabled");
+            ),
+          ).some((limit) => limit > 0);
+          const resetLabel = hasResettablePeriod
+            ? t("end_users.reset_period_spending")
+            : t("end_users.reset_period_spending_disabled");
           return (
             <TableRowActions
               moreLabel={t("common.more_actions")}
@@ -574,7 +573,7 @@ export function EndUsersPage() {
                   label: resetLabel,
                   icon: <RotateCcw className="h-4 w-4" />,
                   visible: canWrite,
-                  disabled: busy || !hasDailyLimit,
+                  disabled: busy || !hasResettablePeriod,
                   onClick: () => setResetSpendingUser(row),
                 },
                 {
@@ -1178,29 +1177,29 @@ export function EndUsersPage() {
         busy={busy}
         onConfirm={() => void onReset()}
       />
-      <ConfirmModal
+      <PeriodQuotaResetModal
         open={Boolean(resetSpendingUser)}
-        onClose={() => setResetSpendingUser(null)}
-        title={t("end_users.reset_today_spending_title", {
-          defaultValue: "重置账号今日消费",
-        })}
-        description={t("end_users.reset_today_spending_description", {
-          defaultValue:
-            "确认重置账号 {{name}} 的今日消费？当前有效今日消费将清零，请求日志仍会保留。",
-          name: resetSpendingUser
+        scope="account"
+        subjectName={
+          resetSpendingUser
             ? resetSpendingUser.display_name &&
               resetSpendingUser.display_name !== resetSpendingUser.username
               ? `${resetSpendingUser.display_name} / ${resetSpendingUser.username}`
               : resetSpendingUser.username
-            : "",
-        })}
-        confirmText={t("end_users.reset_today_spending_confirm", {
-          defaultValue: "确认重置",
-        })}
+            : ""
+        }
+        configuredLimits={
+          resetSpendingUser
+            ? normalizePeriodSpendingLimits(
+                resetSpendingUser["period-spending-limits"],
+                resetSpendingUser["daily-spending-limit"],
+              )
+            : undefined
+        }
+        periodSpendingItems={resetSpendingUser?.["period-spending"]}
         busy={busy}
-        onConfirm={() => {
-          if (resetSpendingUser) void resetTodaySpending(resetSpendingUser);
-        }}
+        onClose={() => setResetSpendingUser(null)}
+        onConfirm={(periods) => resetSpendingUser && void resetPeriodSpending(resetSpendingUser, periods)}
       />
       <ConfirmModal
         open={Boolean(deleteUser)}

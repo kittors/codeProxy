@@ -17,8 +17,8 @@ const t = ((key: string, options?: Record<string, string>) => {
     "api_keys_page.col_reset_count": "Reset count",
     "api_keys_page.reset_count_help": "Click to open history",
     "api_keys_page.view_reset_history": "View reset history",
-    "api_keys_page.reset_today_spending": "Reset today spending",
-    "api_keys_page.reset_today_spending_disabled": "Set a daily spending limit before resetting",
+    "api_keys_page.reset_period_spending": "Reset this Key quota",
+    "api_keys_page.reset_period_spending_disabled": "No resettable period quota; edit Key quota",
     "api_keys_page.unlimited": "Unlimited",
     "api_keys_page.view_usage": "View usage",
     "api_keys_page.copy_key": "Copy key",
@@ -62,7 +62,7 @@ const createColumns = (overrides: Partial<Parameters<typeof createApiKeyColumns>
     onImportToCcSwitch: vi.fn(),
     onToggleDisable: vi.fn(),
     onViewUsage: vi.fn(),
-    onResetDailySpending: vi.fn(),
+    onResetPeriodSpending: vi.fn(),
     onViewResetHistory: vi.fn(),
     ...overrides,
   });
@@ -295,7 +295,7 @@ describe("ApiKeyColumns", () => {
     expect(screen.getByRole("button", { name: "Copy key" })).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "More actions" }));
     expect(
-      await screen.findByRole("menuitem", { name: "Reset today spending" }),
+      await screen.findByRole("menuitem", { name: "Reset this Key quota" }),
     ).toBeInTheDocument();
   });
 
@@ -335,34 +335,33 @@ describe("ApiKeyColumns", () => {
     expect(container.textContent).toContain("$300.12");
   });
 
-  test("disables reset today spending without a daily limit and calls handler when enabled", async () => {
-    const onResetDailySpending = vi.fn();
+  test("enables reset for any configured period and disables it when all periods are unlimited", async () => {
+    const onResetPeriodSpending = vi.fn();
     const limited: ApiKeyEntry = {
       key: "sk-limited",
       name: "Limited",
-      "daily-spending-limit": 100,
-      "daily-spending-used": 20,
+      "period-spending-limits": { "5h": 0, day: 0, week: 300, month: 0 },
     };
     const unlimited: ApiKeyEntry = {
       key: "sk-free",
       name: "Free",
     };
-    const columns = createColumns({ onResetDailySpending });
+    const columns = createColumns({ onResetPeriodSpending });
     const actionsColumn = columns.find((column) => column.key === "actions");
 
     const { rerender } = render(<div>{actionsColumn?.render(unlimited, 0)}</div>);
     await userEvent.click(screen.getByRole("button", { name: "More actions" }));
     expect(
-      screen.getByRole("menuitem", { name: "Set a daily spending limit before resetting" }),
+      screen.getByRole("menuitem", { name: "No resettable period quota; edit Key quota" }),
     ).toHaveAttribute("data-disabled");
     await userEvent.keyboard("{Escape}");
 
     rerender(<div>{actionsColumn?.render(limited, 1)}</div>);
     await userEvent.click(screen.getByRole("button", { name: "More actions" }));
-    const enabled = await screen.findByRole("menuitem", { name: "Reset today spending" });
+    const enabled = await screen.findByRole("menuitem", { name: "Reset this Key quota" });
     expect(enabled).not.toHaveAttribute("data-disabled");
     await userEvent.click(enabled);
-    expect(onResetDailySpending).toHaveBeenCalledWith(1);
+    expect(onResetPeriodSpending).toHaveBeenCalledWith(1);
   });
 
   test("shows clickable reset count and opens history", async () => {

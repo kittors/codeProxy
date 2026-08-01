@@ -1,5 +1,9 @@
-import { Copy, KeyRound, Pencil, Power, RotateCcw, Trash2 } from "lucide-react";
-import type { EndUserAPIKey } from "@code-proxy/api-client";
+import { Copy, History, KeyRound, Pencil, Power, RotateCcw, Trash2 } from "lucide-react";
+import {
+  hasPeriodSpendingLimits,
+  normalizePeriodSpendingLimits,
+  type EndUserAPIKey,
+} from "@code-proxy/api-client";
 import {
   DataTable,
   EmptyState,
@@ -15,17 +19,21 @@ export interface OwnedApiKeyActions {
   onCopy?: (key: EndUserAPIKey) => void;
   onRotate?: (key: EndUserAPIKey) => void;
   onEdit?: (key: EndUserAPIKey) => void;
+  onResetPeriodSpending?: (key: EndUserAPIKey) => void;
+  onViewResetHistory?: (key: EndUserAPIKey) => void;
   onDelete?: (key: EndUserAPIKey) => void;
 }
 
 export const createOwnedApiKeyColumns = ({
   t,
   actions,
+  busyKeyId,
   busy: busyAll = false,
   canDelete = () => true,
 }: {
   t: (key: string, options?: Record<string, unknown>) => string;
   actions: OwnedApiKeyActions;
+  busyKeyId?: string | null;
   busy?: boolean;
   canDelete?: (key: EndUserAPIKey) => boolean;
 }): DataTableColumn<EndUserAPIKey>[] => [
@@ -97,6 +105,27 @@ export const createOwnedApiKeyColumns = ({
     render: (row) => formatQuotaUsdAmount(row["lifetime-spending-used"]),
   },
   {
+    key: "resetCount",
+    label: t("quota.total_resets"),
+    width: "w-[118px] min-w-[118px]",
+    cellClassName: "text-center",
+    render: (row) => {
+      const count = row["daily-spending-reset-count"] ?? 0;
+      return actions.onViewResetHistory && count > 0 ? (
+        <button
+          type="button"
+          onClick={() => actions.onViewResetHistory?.(row)}
+          className="tabular-nums font-medium text-orange-600 underline-offset-2 hover:underline dark:text-orange-400"
+          aria-label={t("api_keys_page.view_reset_history")}
+        >
+          {count}
+        </button>
+      ) : (
+        <span className="tabular-nums text-slate-500 dark:text-white/55">{count}</span>
+      );
+    },
+  },
+  {
     key: "created",
     label: t("api_keys_page.col_created"),
     width: "w-[150px] min-w-[150px]",
@@ -111,7 +140,10 @@ export const createOwnedApiKeyColumns = ({
     headerClassName: "text-center md:sticky md:z-40 md:bg-slate-100 md:dark:bg-neutral-800",
     cellClassName: "md:sticky md:z-30 md:bg-white md:dark:bg-neutral-950",
     render: (row) => {
-      const busy = busyAll;
+      const busy = busyAll || busyKeyId === row.id;
+      const hasResettablePeriod = hasPeriodSpendingLimits(
+        normalizePeriodSpendingLimits(row["period-spending-limits"], row["daily-spending-limit"]),
+      );
       const deletable = canDelete(row);
       return (
         <TableRowActions
@@ -154,6 +186,25 @@ export const createOwnedApiKeyColumns = ({
               onClick: () => actions.onEdit?.(row),
             },
             {
+              key: "reset-spending",
+              label: hasResettablePeriod
+                ? t("api_keys_page.reset_period_spending")
+                : t("api_keys_page.reset_period_spending_disabled"),
+              icon: <RotateCcw size={15} className={busy ? "animate-spin" : ""} />,
+              visible: Boolean(actions.onResetPeriodSpending),
+              disabled: busy || !hasResettablePeriod,
+              className: "hover:text-orange-600 dark:hover:text-orange-400",
+              onClick: () => actions.onResetPeriodSpending?.(row),
+            },
+            {
+              key: "reset-history",
+              label: t("api_keys_page.view_reset_history"),
+              icon: <History size={15} />,
+              visible: Boolean(actions.onViewResetHistory),
+              disabled: busy,
+              onClick: () => actions.onViewResetHistory?.(row),
+            },
+            {
               key: "delete",
               label: deletable ? t("common.delete") : t("apikey_lookup.keep_one_key"),
               icon: <Trash2 size={15} />,
@@ -173,6 +224,7 @@ export function OwnedApiKeysTable({
   t,
   keys,
   actions,
+  busyKeyId,
   busy = false,
   loading = false,
   canDelete,
@@ -182,6 +234,7 @@ export function OwnedApiKeysTable({
   t: (key: string, options?: Record<string, unknown>) => string;
   keys: EndUserAPIKey[];
   actions: OwnedApiKeyActions;
+  busyKeyId?: string | null;
   busy?: boolean;
   loading?: boolean;
   canDelete?: (key: EndUserAPIKey) => boolean;
@@ -213,7 +266,7 @@ export function OwnedApiKeysTable({
     <DataTable
       tableId="owned-api-keys"
       rows={keys}
-      columns={createOwnedApiKeyColumns({ t, actions, busy, canDelete })}
+      columns={createOwnedApiKeyColumns({ t, actions, busyKeyId, busy, canDelete })}
       rowKey={(row) => row.id}
       rowHeight={52}
       height={height}
