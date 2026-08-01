@@ -1182,7 +1182,7 @@ export function EndUsersPage() {
         open={Boolean(resetSpendingUser)}
         onClose={() => setResetSpendingUser(null)}
         title={t("end_users.reset_today_spending_title", {
-          defaultValue: "重置今日消费",
+          defaultValue: "重置账号今日消费",
         })}
         description={t("end_users.reset_today_spending_description", {
           defaultValue:
@@ -1228,7 +1228,7 @@ export function EndUsersPage() {
         }
         description={t("end_users.manage_keys_desc", {
           defaultValue:
-            "管理该用户账号下的多把 API Key（名称、启停与轮换）。账号限额与权限请在账号编辑中配置。",
+            "管理该账号下各把 API Key 的名称、启停、轮换与 Key 子额度；账号额度与权限请在账号编辑中配置。",
         })}
         maxWidth="max-w-[96vw]"
         panelClassName="h-[min(90dvh,920px)]"

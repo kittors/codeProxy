@@ -384,6 +384,8 @@ describe("ApiKeysPage", () => {
     mocks.endUserUpdateKey.mockClear();
     mocks.endUserRotateKey.mockClear();
     mocks.endUserDeleteKey.mockClear();
+    mocks.endUserResetKeyDailySpending.mockClear();
+    mocks.endUserListKeyDailySpendingResetHistory.mockClear();
     mocks.fetchConfigYaml.mockClear();
     mocks.saveConfigYaml.mockClear();
     mocks.apiClientPut.mockClear();
@@ -504,6 +506,51 @@ describe("ApiKeysPage", () => {
         }),
       }),
     );
+  });
+
+  test("hides key reset and reset history in the owned-key embed", async () => {
+    state.entries = [
+      {
+        id: "owned-key-week-only",
+        key: "sk-owned-week-only",
+        name: "Week-only Owned Key",
+        end_user_id: "end-user-1",
+        disabled: false,
+        is_default: true,
+        "created-at": "2026-07-21T00:00:00Z",
+        "daily-spending-limit": 0,
+        "period-spending-limits": { "5h": 0, day: 0, week: 300, month: 0 },
+        "period-spending": [{ period: "week", limit: 300, used: 20, remaining: 280 }],
+        "daily-spending-used": 20,
+        "daily-spending-reset-count": 2,
+      },
+    ];
+
+    render(
+      <MemoryRouter>
+        <ThemeProvider>
+          <ToastProvider>
+            <ApiKeysPage
+              endUserId="end-user-1"
+              accountPeriodSpendingLimits={{ "5h": 100, day: 300, week: 800, month: 4000 }}
+              embed
+            />
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Week-only Owned Key")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "More actions" }));
+
+    expect(screen.getByRole("menuitem", { name: "Edit Key quota" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("menuitem", { name: /reset today spending/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: /permission config/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: /view reset history/i })).not.toBeInTheDocument();
+    expect(mocks.endUserResetKeyDailySpending).not.toHaveBeenCalled();
+    expect(mocks.endUserListKeyDailySpendingResetHistory).not.toHaveBeenCalled();
   });
 
   test("uses owner-scoped rename and explicit rotation for an end-user key", async () => {

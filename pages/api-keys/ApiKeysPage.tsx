@@ -313,7 +313,6 @@ export function ApiKeysPage({
         "period-spending": entry["period-spending"],
         "daily-spending-used": entry["daily-spending-used"],
         "lifetime-spending-used": entry["lifetime-spending-used"],
-        "daily-spending-reset-count": entry["daily-spending-reset-count"],
       })),
     [endUserIdFilter, entries],
   );
@@ -591,13 +590,7 @@ export function ApiKeysPage({
       if (!entry || dayLimit <= 0) return;
       setResettingDailySpendingKey(entry.id ?? entry.key);
       try {
-        if (endUserIdFilter && entry.id) {
-          await endUsersApi.resetKeyDailySpending(endUserIdFilter, entry.id);
-        } else {
-          await apiKeyEntriesApi.resetDailySpending(
-            entry.id ? { id: entry.id } : { key: entry.key },
-          );
-        }
+        await apiKeyEntriesApi.resetDailySpending(entry.id ? { id: entry.id } : { key: entry.key });
         notify({ type: "success", message: t("api_keys_page.reset_today_spending_success") });
         await loadEntries();
       } catch (err: unknown) {
@@ -610,7 +603,7 @@ export function ApiKeysPage({
         setResettingDailySpendingKey(null);
       }
     },
-    [endUserIdFilter, entries, loadEntries, notify, t],
+    [entries, loadEntries, notify, t],
   );
 
   const handleViewResetHistory = useCallback(
@@ -619,12 +612,9 @@ export function ApiKeysPage({
       setResetHistoryEvents([]);
       setResetHistoryLoading(true);
       try {
-        const resp =
-          endUserIdFilter && entry.id
-            ? await endUsersApi.listKeyDailySpendingResetHistory(endUserIdFilter, entry.id, 200)
-            : await apiKeyEntriesApi.listDailySpendingResetHistory(
-                entry.id ? { id: entry.id, limit: 200 } : { key: entry.key, limit: 200 },
-              );
+        const resp = await apiKeyEntriesApi.listDailySpendingResetHistory(
+          entry.id ? { id: entry.id, limit: 200 } : { key: entry.key, limit: 200 },
+        );
         setResetHistoryEvents(Array.isArray(resp?.items) ? resp.items : []);
       } catch (err: unknown) {
         notify({
@@ -637,7 +627,7 @@ export function ApiKeysPage({
         setResetHistoryLoading(false);
       }
     },
-    [endUserIdFilter, notify, t],
+    [notify, t],
   );
 
   /* ─── delete ─── */
@@ -892,7 +882,6 @@ export function ApiKeysPage({
       <OwnedApiKeysTable
         t={t}
         keys={ownedKeys}
-        busyKeyId={resettingDailySpendingKey}
         busy={saving}
         loading={loading}
         canDelete={() => ownedKeys.length > 1}
@@ -912,14 +901,6 @@ export function ApiKeysPage({
           onEdit: (key) => {
             const index = entries.findIndex((entry) => entry.id === key.id);
             if (index >= 0) handleOpenEdit(index);
-          },
-          onResetDailySpending: (key) => {
-            const index = entries.findIndex((entry) => entry.id === key.id);
-            if (index >= 0) void handleResetDailySpending(index);
-          },
-          onViewResetHistory: (key) => {
-            const entry = entries.find((item) => item.id === key.id);
-            if (entry) void handleViewResetHistory(entry);
           },
           onDelete: (key) => {
             const index = entries.findIndex((entry) => entry.id === key.id);
