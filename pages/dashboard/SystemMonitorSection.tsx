@@ -18,7 +18,7 @@ import { Card } from "@code-proxy/ui";
 import type { SystemStats } from "./useSystemStats";
 
 const PANEL_SURFACE =
-  "rounded-2xl border border-slate-900/8 bg-white shadow-[0_10px_26px_rgba(15,23,42,0.05)] dark:border-white/8 dark:bg-neutral-950/85 dark:shadow-[0_10px_26px_rgba(0,0,0,0.28)]";
+  "rounded-2xl bg-white shadow-[0_10px_26px_rgba(15,23,42,0.05)] dark:bg-neutral-950/85 dark:shadow-[0_10px_26px_rgba(0,0,0,0.28)]";
 
 /* ═══════════════════════════════════════════════════════════
    Helpers
