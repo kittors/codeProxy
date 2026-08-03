@@ -540,6 +540,7 @@ export interface UsageLogItem {
   api_key_own_name?: string;
   end_user_display_name?: string;
   model: string;
+  thinking_level?: string | null;
   upstream_model?: string;
   vision_fallback_model?: string;
   source: string;

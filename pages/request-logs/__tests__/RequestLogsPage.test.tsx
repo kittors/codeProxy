@@ -326,6 +326,30 @@ describe("RequestLogsPage", () => {
     expect(screen.queryByLabelText("First Token Latency: --")).not.toBeInTheDocument();
   });
 
+  test("shows a non-empty thinking level in the model tag", async () => {
+    await i18n.changeLanguage("en");
+
+    mocks.getUsageLogs.mockResolvedValue(
+      responseWithRows([
+        buildUsageLogItem({ id: 1, model: "gpt-5.6-sol", thinking_level: " max " }),
+        buildUsageLogItem({ id: 2, model: "gpt-5.4", thinking_level: "" }),
+      ]),
+    );
+
+    render(
+      <ThemeProvider>
+        <ToastProvider>
+          <RequestLogsPage />
+        </ToastProvider>
+      </ThemeProvider>,
+    );
+
+    const table = await screen.findByRole("table", { name: "Request Logs Table" });
+    expect(within(table).getByText("gpt-5.6-sol(max)")).toBeInTheDocument();
+    expect(within(table).getByText("gpt-5.4")).toBeInTheDocument();
+    expect(within(table).queryByText("gpt-5.4()")).not.toBeInTheDocument();
+  });
+
   test("shows vision fallback model separately from real model mapping", async () => {
     await i18n.changeLanguage("en");
     const user = userEvent.setup();

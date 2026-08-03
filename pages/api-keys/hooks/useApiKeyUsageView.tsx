@@ -66,6 +66,7 @@ export function useApiKeyUsageView() {
   const [usageStatusFilter, setUsageStatusFilter] = useState<StatusFilter>("");
   const [usageContentModalOpen, setUsageContentModalOpen] = useState(false);
   const [usageContentModalLogId, setUsageContentModalLogId] = useState<number | null>(null);
+  const [usageContentModalModel, setUsageContentModalModel] = useState("");
   const [usageContentModalTab, setUsageContentModalTab] = useState<"input" | "output">("input");
   const [usageErrorModalOpen, setUsageErrorModalOpen] = useState(false);
   const [usageErrorModalLogId, setUsageErrorModalLogId] = useState<number | null>(null);
@@ -77,11 +78,15 @@ export function useApiKeyUsageView() {
   /** First key — keeps ApiKeysPage mask display working. */
   const usageViewKey = usageViewKeys[0] ?? null;
 
-  const handleUsageContentClick = useCallback((logId: number, tab: "input" | "output") => {
-    setUsageContentModalLogId(logId);
-    setUsageContentModalTab(tab);
-    setUsageContentModalOpen(true);
-  }, []);
+  const handleUsageContentClick = useCallback(
+    (logId: number, tab: "input" | "output", model: string) => {
+      setUsageContentModalLogId(logId);
+      setUsageContentModalModel(model);
+      setUsageContentModalTab(tab);
+      setUsageContentModalOpen(true);
+    },
+    [],
+  );
 
   const handleUsageErrorClick = useCallback((logId: number, model: string) => {
     setUsageErrorModalLogId(logId);
@@ -381,6 +386,7 @@ export function useApiKeyUsageView() {
     usageContentModalOpen,
     setUsageContentModalOpen,
     usageContentModalLogId,
+    usageContentModalModel,
     usageContentModalTab,
     usageErrorModalOpen,
     setUsageErrorModalOpen,
