@@ -127,6 +127,7 @@ export function ApiKeysPage({
     usageContentModalOpen,
     setUsageContentModalOpen,
     usageContentModalLogId,
+    usageContentModalModel,
     usageContentModalTab,
     usageErrorModalOpen,
     setUsageErrorModalOpen,
@@ -1150,6 +1151,7 @@ export function ApiKeysPage({
       <LogContentModal
         open={usageContentModalOpen}
         logId={usageContentModalLogId}
+        displayModel={usageContentModalModel}
         initialTab={usageContentModalTab}
         onClose={() => setUsageContentModalOpen(false)}
       />

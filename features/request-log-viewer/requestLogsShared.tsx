@@ -45,6 +45,8 @@ export type RequestLogsRow = {
   channelAuthType?: string;
   maskedApiKey: string;
   model: string;
+  thinkingLevel?: string;
+  displayModel?: string;
   upstreamModel: string;
   visionFallbackModel: string;
   failed: boolean;
@@ -520,7 +522,6 @@ export const formatRequestLogLatencyMs = (value: number): string => {
   const trimmed = fixed.endsWith(".0") ? fixed.slice(0, -2) : fixed;
   return `${trimmed}s`;
 };
-
 export const formatOptionalRequestLogLatencyMs = (value: number): string => {
   if (!Number.isFinite(value) || value <= 0) return "--";
   return formatRequestLogLatencyMs(value);
@@ -529,6 +530,7 @@ export const formatOptionalRequestLogLatencyMs = (value: number): string => {
 export const toRequestLogsRow = (item: UsageLogItem): RequestLogsRow => {
   const isSystemCall = isSystemRequestLogKey(item.api_key, item.api_key_name);
   const channelAuthType = normalizeChannelAuthType(item.auth_type);
+  const thinkingLevel = String(item.thinking_level ?? "").trim();
   return {
     id: String(item.id),
     timestamp: item.timestamp,
@@ -544,6 +546,8 @@ export const toRequestLogsRow = (item: UsageLogItem): RequestLogsRow => {
     channelAuthType: channelAuthType || undefined,
     maskedApiKey: item.api_key_masked || maskRequestLogApiKey(item.api_key),
     model: item.model,
+    thinkingLevel,
+    displayModel: thinkingLevel ? `${item.model}(${thinkingLevel})` : item.model,
     upstreamModel: item.upstream_model || "",
     visionFallbackModel: item.vision_fallback_model || "",
     failed: item.failed,
@@ -558,7 +562,6 @@ export const toRequestLogsRow = (item: UsageLogItem): RequestLogsRow => {
     hasContent: item.has_content ?? false,
   };
 };
-
 export const isSystemRequestLogKey = (apiKey: string, apiKeyName?: string): boolean => {
   if (String(apiKeyName || "").trim()) return false;
   const trimmed = String(apiKey || "").trim();
@@ -640,13 +643,12 @@ export function RequestLogsTimeRangeSelector({
     </Tabs>
   );
 }
-
 // DataTable maps header text-center to flex justify-center on the label row.
 const CENTERED_REQUEST_LOG_HEADER_CLASS = "text-center";
 
 export function buildRequestLogsColumns(
   t: (key: string) => string,
-  onContentClick?: (logId: number, tab: "input" | "output") => void,
+  onContentClick?: (logId: number, tab: "input" | "output", model: string) => void,
   onErrorClick?: (logId: number, model: string) => void,
   options: { identityColumn?: "user" | "key" | "none"; hideChannel?: boolean } = {},
 ): RequestLogsTableColumn<RequestLogsRow>[] {
@@ -733,7 +735,7 @@ export function buildRequestLogsColumns(
         row.failed ? (
           <button
             type="button"
-            onClick={() => onErrorClick?.(Number(row.id), row.model)}
+            onClick={() => onErrorClick?.(Number(row.id), row.displayModel || row.model)}
             className="inline-flex min-w-[52px] cursor-pointer justify-center rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-600 transition hover:bg-rose-100 hover:shadow-sm dark:bg-rose-500/15 dark:text-rose-300 dark:hover:bg-rose-500/25"
             title={t("request_logs.view_error")}
           >
@@ -810,7 +812,7 @@ export function buildRequestLogsColumns(
         row.hasContent && onContentClick ? (
           <button
             type="button"
-            onClick={() => onContentClick(Number(row.id), "input")}
+            onClick={() => onContentClick(Number(row.id), "input", row.displayModel || row.model)}
             className="inline-block ml-auto cursor-pointer rounded px-1.5 py-0.5 transition hover:bg-sky-50 dark:hover:bg-sky-950/30"
             title={t("request_logs.view_input")}
           >
@@ -851,7 +853,7 @@ export function buildRequestLogsColumns(
         row.hasContent && onContentClick ? (
           <button
             type="button"
-            onClick={() => onContentClick(Number(row.id), "output")}
+            onClick={() => onContentClick(Number(row.id), "output", row.displayModel || row.model)}
             className="inline-block ml-auto cursor-pointer rounded px-1.5 py-0.5 transition hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
             title={t("request_logs.view_output")}
           >
@@ -941,8 +943,8 @@ export function buildRequestLogsColumns(
       render: (row) =>
         row.model ? (
           <span className="inline-flex max-w-full items-center justify-center gap-1 align-middle">
-            <OverflowTooltip content={row.model} className="min-w-0">
-              <ModelTag id={row.model} size="sm" className="align-middle" />
+            <OverflowTooltip content={row.displayModel || row.model} className="min-w-0">
+              <ModelTag id={row.displayModel || row.model} size="sm" className="align-middle" />
             </OverflowTooltip>
             {row.upstreamModel && row.upstreamModel !== row.model ? (
               <HoverTooltip

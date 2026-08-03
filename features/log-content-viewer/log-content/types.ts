@@ -6,6 +6,7 @@ export type LogContentPart = LogContentBodyPart | "details";
 export interface LogContentModalProps {
   open: boolean;
   logId: number | null;
+  displayModel?: string;
   initialTab?: LogContentBodyPart;
   onClose: () => void;
   showRequestDetails?: boolean;
