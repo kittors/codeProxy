@@ -183,7 +183,7 @@ describe("CcSwitchImportSettingsPage", () => {
       within(dialog).queryByLabelText(/codex endpoint path/i),
     ).not.toBeInTheDocument();
     const defaultModelSelect = within(dialog).getByRole("combobox", {
-      name: /codex default model/i,
+      name: /^default model$/i,
     });
     expect(defaultModelSelect).toBeDisabled();
     expect(
@@ -961,7 +961,7 @@ describe("CcSwitchImportSettingsPage", () => {
       within(dialog).getByRole("combobox", { name: /actual channel model 2/i }),
     ).toHaveTextContent("gpt-5.5");
     const defaultModelSelect = within(dialog).getByRole("combobox", {
-      name: /codex default model/i,
+      name: /^default model$/i,
     });
     expect(defaultModelSelect).toHaveTextContent("gpt-5.5");
 
@@ -1279,15 +1279,22 @@ describe("CcSwitchImportSettingsPage", () => {
       await screen.findByRole("option", { name: /pro.*\/pro/i }),
     );
 
-    expect(await within(dialog).findByText(/main model/i)).toBeInTheDocument();
+    const roleTable = await within(dialog).findByTestId(
+      "ccswitch-model-mapping-table",
+    );
+    expect(within(roleTable).getByText("Main model")).toBeInTheDocument();
     expect(
-      within(dialog).getByText(/haiku default model/i),
+      within(roleTable).getByText(/haiku default model/i),
     ).toBeInTheDocument();
     expect(
-      within(dialog).getByText(/sonnet default model/i),
+      within(roleTable).getByText(/sonnet default model/i),
     ).toBeInTheDocument();
-    expect(within(dialog).getByText(/opus default model/i)).toBeInTheDocument();
-    expect(within(dialog).getByText(/fable default model/i)).toBeInTheDocument();
+    expect(
+      within(roleTable).getByText(/opus default model/i),
+    ).toBeInTheDocument();
+    expect(
+      within(roleTable).getByText(/fable default model/i),
+    ).toBeInTheDocument();
     expect(
       within(dialog).getByText(/cc switch request model/i),
     ).toBeInTheDocument();
@@ -1303,7 +1310,7 @@ describe("CcSwitchImportSettingsPage", () => {
       "Relay Claude",
     );
     await user.click(
-      within(dialog).getByRole("combobox", { name: /claude code auth field/i }),
+      within(dialog).getByRole("combobox", { name: /^auth field$/i }),
     );
     await user.click(
       await screen.findByRole("option", { name: "ANTHROPIC_AUTH_TOKEN" }),
@@ -1401,26 +1408,22 @@ describe("CcSwitchImportSettingsPage", () => {
     const mappingTable = within(dialog).getByTestId(
       "ccswitch-model-mapping-table",
     );
-    const tableViewport = mappingTable.querySelector<HTMLElement>(
-      "[data-scrollbar-visibility='hover']",
-    );
     expect(mappingTable).toHaveClass("px-4", "pt-3", "pb-4");
-    expect(tableViewport).toHaveClass("h-full", "overflow-auto");
-    expect(tableViewport?.parentElement).toHaveClass(
-      "h-[320px]",
-      "min-h-[320px]",
-    );
-    // Contain rubber-band overscroll so sticky headers never bounce with body.
-    expect(tableViewport).toHaveClass("overscroll-y-none");
-    expect(tableViewport).not.toHaveClass("overscroll-y-auto");
+    // The table grows with its rows: a fixed inner height used to clip the last mapping
+    // behind a second scroll area that users could not find inside the scrolling modal body.
+    expect(
+      mappingTable.querySelector("[data-scrollbar-visibility='hover']"),
+    ).toBeNull();
+    expect(mappingTable.querySelector("[data-vt-natural-flow]")).not.toBeNull();
     const headerCells = Array.from(
-      tableViewport?.querySelectorAll("thead th") ?? [],
+      mappingTable.querySelectorAll("thead th"),
     );
     expect(headerCells).not.toHaveLength(0);
-    headerCells.forEach((cell) => expect(cell).toHaveClass("sticky", "top-0"));
-    // rowReorderable injects a sticky start column, so DataTable paints a rounded
-    // header-chrome plate and keeps non-sticky middle headers transparent.
-    expect(mappingTable.querySelector("[data-vt-header-chrome]")).not.toBeNull();
+    headerCells.forEach((cell) => expect(cell).not.toHaveClass("sticky"));
+    // The viewport-fixed header plate only exists for sticky headers; without an inner
+    // scrollport the thead scrolls with the rows and carries its own background.
+    expect(mappingTable.querySelector("[data-vt-header-chrome]")).toBeNull();
+    expect(mappingTable.querySelector("thead")).toHaveClass("bg-slate-100");
     expect(mappingTable.querySelector("[data-vt-column-resizer]")).toBeNull();
 
     const mappingRows = Array.from(
