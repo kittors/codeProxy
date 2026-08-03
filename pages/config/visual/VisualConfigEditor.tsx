@@ -203,8 +203,7 @@ export function VisualConfigEditor({
             label={t("visual_config.cors_origins_label")}
             hint={`${t("visual_config.cors_origins_hint")}
 
-${t("visual_config.cors_default_title")}: ${t("visual_config.cors_default_desc")}
-chrome-extension://<extension-id>`}
+${t("visual_config.cors_default_title")}: ${t("visual_config.cors_default_desc")}`}
           >
             <MultilineField
               value={values.corsAllowOriginsText}
@@ -213,6 +212,7 @@ chrome-extension://<extension-id>`}
               ariaLabel={t("visual_config.cors_origins_label")}
               placeholder={[
                 "chrome-extension://abcdefghijklmnop",
+                "chrome-extension://*",
                 "http://localhost:5173",
                 "https://admin.example.com",
               ].join("\n")}
