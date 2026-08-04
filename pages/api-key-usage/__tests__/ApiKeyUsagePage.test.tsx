@@ -7,13 +7,38 @@ import { ToastProvider } from "@code-proxy/ui";
 import { ApiKeyUsagePage } from "../ApiKeyUsagePage";
 
 const mocks = vi.hoisted(() => ({
+  fetchPublicLogContent: vi.fn(),
   fetchPublicLogs: vi.fn(),
   fetchPublicUsageSummary: vi.fn(),
 }));
 
 vi.mock("../../api-key-lookup/api", () => ({
+  fetchPublicLogContent: mocks.fetchPublicLogContent,
   fetchPublicLogs: mocks.fetchPublicLogs,
   fetchPublicUsageSummary: mocks.fetchPublicUsageSummary,
+}));
+
+vi.mock("@features/log-content-viewer", () => ({
+  LogContentModal: ({
+    open,
+    logId,
+    initialTab,
+    fetchPartFn,
+  }: {
+    open: boolean;
+    logId: number | null;
+    initialTab?: "input" | "output";
+    fetchPartFn?: (id: number, part: "input" | "output") => Promise<unknown>;
+  }) =>
+    open && logId ? (
+      <button
+        type="button"
+        data-testid="load-log-content"
+        onClick={() => fetchPartFn?.(logId, initialTab ?? "input")}
+      >
+        load content
+      </button>
+    ) : null,
 }));
 
 vi.mock("../../api-key-lookup/components/QuickImportTabContent", () => ({
@@ -37,8 +62,15 @@ describe("ApiKeyUsagePage", () => {
     await i18n.changeLanguage("zh-CN");
     window.history.replaceState({}, "", "/manage/apikey-usage");
     window.localStorage.clear();
+    mocks.fetchPublicLogContent.mockReset();
     mocks.fetchPublicLogs.mockReset();
     mocks.fetchPublicUsageSummary.mockReset();
+    mocks.fetchPublicLogContent.mockResolvedValue({
+      id: 1,
+      model: "gpt-test",
+      part: "input",
+      content: "hello",
+    });
     mocks.fetchPublicLogs.mockResolvedValue({
       items: [
         {
@@ -52,7 +84,7 @@ describe("ApiKeyUsagePage", () => {
           cached_tokens: 0,
           total_tokens: 3,
           cost: 0,
-          has_content: false,
+          has_content: true,
         },
       ],
       total: 1,
@@ -102,7 +134,9 @@ describe("ApiKeyUsagePage", () => {
     expect(screen.getByText("快捷导入")).toBeInTheDocument();
     expect(screen.getByText("张军宝")).toBeInTheDocument();
     expect(screen.queryByText("使用统计")).not.toBeInTheDocument();
-    expect(screen.queryByRole("columnheader", { name: /KEY 名称|Key name/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("columnheader", { name: /KEY 名称|Key name/i }),
+    ).not.toBeInTheDocument();
     await waitFor(() => {
       expect(mocks.fetchPublicUsageSummary).toHaveBeenCalledWith(
         expect.objectContaining({ apiKey: "sk-demo" }),
@@ -139,5 +173,19 @@ describe("ApiKeyUsagePage", () => {
     });
     expect(await screen.findByText("张军宝")).toBeInTheDocument();
     expect(screen.queryByTestId("apikey-usage-empty")).not.toBeInTheDocument();
+  });
+
+  test("loads key-scoped request content from the logs table", async () => {
+    renderPage();
+
+    await userEvent.type(screen.getByPlaceholderText(/输入 API 密钥|Enter API Key/i), "sk-demo");
+    await userEvent.click(screen.getByTestId("apikey-usage-submit"));
+
+    await userEvent.click(await screen.findByTitle(/查看输入|View input/i));
+    await userEvent.click(await screen.findByTestId("load-log-content"));
+
+    expect(mocks.fetchPublicLogContent).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 1, apiKey: "sk-demo", part: "input" }),
+    );
   });
 });
