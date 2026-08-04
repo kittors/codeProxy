@@ -1,5 +1,9 @@
 import { Copy, History, KeyRound, Pencil, Power, RotateCcw, Trash2 } from "lucide-react";
-import type { EndUserAPIKey } from "@code-proxy/api-client";
+import {
+  hasPeriodSpendingLimits,
+  normalizePeriodSpendingLimits,
+  type EndUserAPIKey,
+} from "@code-proxy/api-client";
 import {
   DataTable,
   EmptyState,
@@ -15,7 +19,7 @@ export interface OwnedApiKeyActions {
   onCopy?: (key: EndUserAPIKey) => void;
   onRotate?: (key: EndUserAPIKey) => void;
   onEdit?: (key: EndUserAPIKey) => void;
-  onResetDailySpending?: (key: EndUserAPIKey) => void;
+  onResetPeriodSpending?: (key: EndUserAPIKey) => void;
   onViewResetHistory?: (key: EndUserAPIKey) => void;
   onDelete?: (key: EndUserAPIKey) => void;
 }
@@ -137,8 +141,9 @@ export const createOwnedApiKeyColumns = ({
     cellClassName: "md:sticky md:z-30 md:bg-white md:dark:bg-neutral-950",
     render: (row) => {
       const busy = busyAll || busyKeyId === row.id;
-      const hasDayLimit =
-        (row["period-spending-limits"]?.day ?? row["daily-spending-limit"] ?? 0) > 0;
+      const hasResettablePeriod = hasPeriodSpendingLimits(
+        normalizePeriodSpendingLimits(row["period-spending-limits"], row["daily-spending-limit"]),
+      );
       const deletable = canDelete(row);
       return (
         <TableRowActions
@@ -182,14 +187,14 @@ export const createOwnedApiKeyColumns = ({
             },
             {
               key: "reset-spending",
-              label: hasDayLimit
-                ? t("api_keys_page.reset_today_spending")
-                : t("api_keys_page.reset_today_spending_disabled"),
+              label: hasResettablePeriod
+                ? t("api_keys_page.reset_period_spending")
+                : t("api_keys_page.reset_period_spending_disabled"),
               icon: <RotateCcw size={15} className={busy ? "animate-spin" : ""} />,
-              visible: Boolean(actions.onResetDailySpending),
-              disabled: busy || !hasDayLimit,
+              visible: Boolean(actions.onResetPeriodSpending),
+              disabled: busy || !hasResettablePeriod,
               className: "hover:text-orange-600 dark:hover:text-orange-400",
-              onClick: () => actions.onResetDailySpending?.(row),
+              onClick: () => actions.onResetPeriodSpending?.(row),
             },
             {
               key: "reset-history",

@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { LoaderCircle, Plus, Trash2 } from "lucide-react";
+import { Check, Copy, LoaderCircle, Plus, Trash2 } from "lucide-react";
 import iconClaude from "@code-proxy/assets/icons/claude.svg";
 import iconCodex from "@code-proxy/assets/icons/codex.svg";
 import iconGemini from "@code-proxy/assets/icons/gemini.svg";
@@ -19,9 +19,6 @@ import { Select } from "@code-proxy/ui";
 import { Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import {
   CC_SWITCH_CLIENTS,
-  CC_SWITCH_CODEX_MODEL_CATALOG_FILENAME,
-  buildCcSwitchCodexModelCatalog,
-  getCcSwitchClientConfig,
   type CcSwitchClientType,
 } from "@code-proxy/domain/ccswitch/ccswitchImport";
 import {
@@ -36,11 +33,26 @@ import {
 } from "@code-proxy/domain/ccswitch/ccswitchImportSettings";
 import {
   ensureCcSwitchRoutePath,
-  type CcSwitchImportCodexModelCatalog,
-  type CcSwitchImportConfigListItem,
   type CcSwitchModelMapping,
 } from "@code-proxy/domain/ccswitch/ccswitchImportConfigList";
 import type { CcSwitchClaudeModelRole } from "@code-proxy/domain/ccswitch/ccswitchImport";
+import {
+  DEFAULT_CODEX_CONTEXT_WINDOW,
+  appendUrlPath,
+  dedupeModels,
+  defaultProviderName,
+  getDuplicateGenericRequestModels,
+  isSpecificModelConfigOwnerKey,
+  modelMetadataMatchesOwnerKeys,
+  normalizeModelOwnerKey,
+  prepareDraftForSave,
+  reconcileModelMappings,
+  resolveGenericDefaultModel,
+  routeLabel,
+  withCodexMappingContextWindows,
+  type ConfigDraft,
+  type ModelMetadataLike,
+} from "./ccswitchConfigDraft";
 
 export interface CcSwitchChannelGroupOption {
   value: string;
@@ -59,218 +71,13 @@ const iconByType: Record<CcSwitchClientType, string> = {
   gemini: iconGemini,
 };
 
-const labelClassName =
-  "text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-white/45";
-const controlClassName =
-  "h-10 rounded-xl border border-slate-900/8 bg-white px-3 text-sm text-slate-900 shadow-none hover:border-slate-300 hover:bg-white focus-visible:ring-2 focus-visible:ring-slate-900/10 dark:border-white/8 dark:bg-neutral-900 dark:text-white dark:hover:border-neutral-700 dark:focus-visible:ring-white/15";
+const labelClassName = "text-sm font-medium text-slate-700 dark:text-white/80";
 const fieldClassName = "flex flex-col gap-1.5";
+const sectionClassName =
+  "rounded-2xl bg-white p-4 ring-1 ring-slate-900/8 dark:bg-white/[0.03] dark:ring-white/8";
 
-const CLAUDE_ROLE_ORDER: CcSwitchClaudeModelRole[] = ["main", "haiku", "sonnet", "opus", "fable"];
 const MODEL_MAPPING_LOADING_ROWS = ["short", "medium", "long"];
 const CONFIG_MODAL_CLIENTS = CC_SWITCH_CLIENTS.filter((client) => client.type !== "gemini");
-const DEFAULT_CODEX_CONTEXT_WINDOW = 128_000;
-
-const rolePriority: Record<CcSwitchClaudeModelRole, string[]> = {
-  main: ["sonnet", "opus", "haiku", "claude"],
-  haiku: ["haiku", "sonnet", "claude"],
-  sonnet: ["sonnet", "claude"],
-  opus: ["opus", "sonnet", "claude"],
-  // fable → opus fallback mirrors cc-switch / Claude Code official downgrade
-  fable: ["fable", "opus", "sonnet", "claude"],
-};
-
-type ConfigDraft = CcSwitchImportConfigListItem;
-type ModelMetadataLike = {
-  id: string;
-  owned_by?: string;
-  source?: string;
-  enabled?: boolean;
-};
-
-const GENERIC_MODEL_CONFIG_OWNER_KEYS = new Set([
-  "all",
-  "default",
-  "openai",
-  "openai-api",
-  "openai-compat",
-  "openai-compatible",
-  "provider",
-  "registry",
-]);
-
-const normalizeRoutePath = (path: string | undefined): string => {
-  const trimmed = String(path ?? "").trim();
-  if (!trimmed || trimmed === "/") return "";
-  return `/${trimmed.replace(/^\/+|\/+$/g, "")}`;
-};
-
-const appendUrlPath = (baseUrl: string, path: string): string => {
-  const normalizedBase = String(baseUrl ?? "")
-    .trim()
-    .replace(/\/+$/, "");
-  const normalizedPath = normalizeRoutePath(path);
-  if (!normalizedBase) return normalizedPath;
-  if (!normalizedPath) return normalizedBase;
-  if (normalizedBase.toLowerCase().endsWith(normalizedPath.toLowerCase())) {
-    return normalizedBase;
-  }
-  return `${normalizedBase}${normalizedPath}`;
-};
-
-const routeLabel = (routePath: string | undefined): string => normalizeRoutePath(routePath) || "/";
-
-function defaultProviderName(clientType: CcSwitchClientType) {
-  return `CliProxy ${getCcSwitchClientConfig(clientType).fallbackLabel}`;
-}
-
-function dedupeModels(models: readonly string[]): string[] {
-  const seen = new Set<string>();
-  const result: string[] = [];
-  models.forEach((model) => {
-    const normalized = String(model ?? "").trim();
-    const key = normalized.toLowerCase();
-    if (!normalized || seen.has(key)) return;
-    seen.add(key);
-    result.push(normalized);
-  });
-  return result.sort((a, b) => a.localeCompare(b));
-}
-
-const normalizeModelOwnerKey = (value: unknown): string =>
-  String(value ?? "")
-    .trim()
-    .replace(/\s+/g, "-")
-    .toLowerCase();
-
-const isSpecificModelConfigOwnerKey = (value: string): boolean => {
-  const key = normalizeModelOwnerKey(value);
-  return Boolean(key && !GENERIC_MODEL_CONFIG_OWNER_KEYS.has(key));
-};
-
-const modelMetadataMatchesOwnerKeys = (
-  model: ModelMetadataLike,
-  ownerKeys: ReadonlySet<string>,
-): boolean =>
-  model.enabled !== false &&
-  (ownerKeys.has(normalizeModelOwnerKey(model.owned_by)) ||
-    ownerKeys.has(normalizeModelOwnerKey(model.source)));
-
-function pickClaudeRoleModel(role: CcSwitchClaudeModelRole, models: readonly string[]): string {
-  const normalized = dedupeModels(models);
-  const priorities = rolePriority[role];
-  for (const priority of priorities) {
-    const match = normalized.find((model) => model.toLowerCase().includes(priority));
-    if (match) return match;
-  }
-  return normalized[0] ?? "";
-}
-
-function reconcileGenericMappings(
-  currentMappings: readonly CcSwitchModelMapping[],
-  models: readonly string[],
-  fallbackModel: string,
-): CcSwitchModelMapping[] {
-  const currentNonRole = currentMappings.filter((mapping) => !mapping.role);
-  if (currentNonRole.length > 0) {
-    return currentNonRole.map((mapping) => ({
-      ...mapping,
-      contextWindow: normalizeContextWindow(mapping.contextWindow),
-    }));
-  }
-
-  const autoMappings = dedupeModels(models).map((targetModel) => ({
-    requestModel: targetModel,
-    targetModel,
-    contextWindow: DEFAULT_CODEX_CONTEXT_WINDOW,
-  }));
-  if (autoMappings.length > 0) return autoMappings;
-
-  return dedupeModels([fallbackModel]).map((targetModel) => ({
-    requestModel: targetModel,
-    targetModel,
-    contextWindow: DEFAULT_CODEX_CONTEXT_WINDOW,
-  }));
-}
-
-function reconcileClaudeMappings(
-  currentMappings: readonly CcSwitchModelMapping[],
-  models: readonly string[],
-  fallbackModel: string,
-): CcSwitchModelMapping[] {
-  const currentByRole = new Map(
-    currentMappings.filter((mapping) => mapping.role).map((mapping) => [mapping.role, mapping]),
-  );
-  const seenRoles = new Set<CcSwitchClaudeModelRole>();
-  const orderedRoles: CcSwitchClaudeModelRole[] = [];
-  for (const mapping of currentMappings) {
-    if (!mapping.role || seenRoles.has(mapping.role)) continue;
-    seenRoles.add(mapping.role);
-    orderedRoles.push(mapping.role);
-  }
-  for (const role of CLAUDE_ROLE_ORDER) {
-    if (seenRoles.has(role)) continue;
-    seenRoles.add(role);
-    orderedRoles.push(role);
-  }
-
-  return orderedRoles.map((role) => {
-    const existing = currentByRole.get(role);
-    const targetModel =
-      existing?.targetModel.trim() ||
-      pickClaudeRoleModel(role, models) ||
-      (role === "main" ? fallbackModel.trim() : "");
-    const existingRequestModel = existing?.requestModel.trim() ?? "";
-    // Claude Code sends claude-fable-5; cc-switch deeplink still ignores fableModel, so default request id for rewrite.
-    const defaultRequestModel = role === "fable" ? "claude-fable-5" : targetModel;
-    return {
-      role,
-      requestModel:
-        existingRequestModel && existingRequestModel !== role
-          ? existingRequestModel
-          : defaultRequestModel,
-      targetModel,
-    };
-  });
-}
-
-function resolveGenericDefaultModel(
-  modelMappings: readonly CcSwitchModelMapping[],
-  fallbackModel: string,
-): string {
-  const normalizedFallback = fallbackModel.trim();
-  if (
-    normalizedFallback &&
-    modelMappings.some(
-      (mapping) =>
-        !mapping.role &&
-        mapping.requestModel.trim().toLowerCase() === normalizedFallback.toLowerCase(),
-    )
-  ) {
-    return normalizedFallback;
-  }
-  return (
-    modelMappings
-      .find((mapping) => !mapping.role && mapping.requestModel.trim())
-      ?.requestModel.trim() || ""
-  );
-}
-
-function reconcileModelMappings(draft: ConfigDraft, models: readonly string[]): ConfigDraft {
-  const modelMappings =
-    draft.clientType === "claude"
-      ? reconcileClaudeMappings(draft.modelMappings, models, draft.defaultModel)
-      : reconcileGenericMappings(draft.modelMappings, models, draft.defaultModel);
-  const defaultModel =
-    draft.clientType === "claude"
-      ? modelMappings.find((mapping) => mapping.role === "main")?.targetModel || ""
-      : resolveGenericDefaultModel(modelMappings, draft.defaultModel);
-
-  return {
-    ...draft,
-    modelMappings,
-    defaultModel,
-  };
-}
 
 function modelOptions(models: readonly string[]): SearchableSelectOption[] {
   return dedupeModels(models).map((model) => ({
@@ -280,166 +87,6 @@ function modelOptions(models: readonly string[]): SearchableSelectOption[] {
   }));
 }
 
-function getDuplicateGenericRequestModels(
-  modelMappings: readonly CcSwitchModelMapping[],
-): string[] {
-  const counts = new Map<string, { label: string; count: number }>();
-  for (const mapping of modelMappings) {
-    if (mapping.role) continue;
-    const requestModel = mapping.requestModel.trim();
-    if (!requestModel) continue;
-    const key = requestModel.toLowerCase();
-    const current = counts.get(key);
-    counts.set(key, { label: current?.label ?? requestModel, count: (current?.count ?? 0) + 1 });
-  }
-  return Array.from(counts.values())
-    .filter((item) => item.count > 1)
-    .map((item) => item.label);
-}
-
-const asRecord = (value: unknown): Record<string, unknown> | null =>
-  value !== null && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : null;
-
-const normalizeOptionalContextWindow = (value: unknown): number | undefined => {
-  const parsed = typeof value === "number" ? value : Number(String(value ?? ""));
-  if (!Number.isFinite(parsed) || parsed <= 0) return undefined;
-  return Math.round(parsed);
-};
-
-const normalizeContextWindow = (value: unknown): number =>
-  normalizeOptionalContextWindow(value) ?? DEFAULT_CODEX_CONTEXT_WINDOW;
-
-function getCodexCatalogContextWindow(draft: ConfigDraft, modelId: string): number | undefined {
-  const normalizedModelId = modelId.trim().toLowerCase();
-  if (!normalizedModelId) return undefined;
-  for (const model of draft.codexModelCatalog?.models ?? []) {
-    const id = String(model.slug ?? model.model ?? "")
-      .trim()
-      .toLowerCase();
-    if (id !== normalizedModelId) continue;
-    const topLevel = normalizeOptionalContextWindow(model.context_window ?? model.contextWindow);
-    if (topLevel) return topLevel;
-    const messages = asRecord(model.model_messages);
-    if (messages) {
-      const nested = normalizeOptionalContextWindow(
-        messages.context_window ?? messages.contextWindow,
-      );
-      if (nested) return nested;
-    }
-  }
-  return undefined;
-}
-
-function withCodexMappingContextWindows(draft: ConfigDraft): CcSwitchModelMapping[] {
-  if (draft.clientType !== "codex") return draft.modelMappings;
-  return draft.modelMappings.map((mapping) => {
-    if (mapping.role) return mapping;
-    return {
-      ...mapping,
-      contextWindow: normalizeContextWindow(
-        mapping.contextWindow ??
-          getCodexCatalogContextWindow(draft, mapping.requestModel || mapping.targetModel),
-      ),
-    };
-  });
-}
-
-function buildDraftCodexModelCatalog(
-  draft: ConfigDraft,
-): CcSwitchImportCodexModelCatalog | undefined {
-  if (draft.clientType !== "codex") return undefined;
-
-  const existingByModel = new Map<string, Record<string, unknown>>();
-  for (const entry of draft.codexModelCatalog?.models ?? []) {
-    const modelId = String(entry.slug ?? entry.model ?? "")
-      .trim()
-      .toLowerCase();
-    if (modelId) existingByModel.set(modelId, entry);
-  }
-
-  const models: Array<{ model: string; contextWindow?: number }> = [];
-  const addModel = (model: string, contextWindow?: number) => {
-    const normalized = model.trim();
-    if (normalized) models.push({ model: normalized, contextWindow });
-  };
-  for (const mapping of draft.modelMappings) {
-    if (mapping.role) continue;
-    addModel(
-      mapping.requestModel || mapping.targetModel,
-      normalizeContextWindow(mapping.contextWindow),
-    );
-  }
-  addModel(draft.defaultModel);
-  if (models.length === 0) return undefined;
-
-  const seen = new Set<string>();
-  const entries: Array<Record<string, unknown>> = [];
-  for (const model of models) {
-    const key = model.model.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-
-    const existing = existingByModel.get(key);
-    if (!existing) {
-      const generated = buildCcSwitchCodexModelCatalog([model]).models[0];
-      if (generated) entries.push({ ...generated, priority: 1000 + entries.length });
-      continue;
-    }
-
-    const entry = { ...existing };
-    if (model.contextWindow) {
-      entry.context_window = model.contextWindow;
-      const messages = asRecord(entry.model_messages);
-      if (messages) {
-        entry.model_messages = { ...messages, context_window: model.contextWindow };
-      }
-    }
-    entries.push(entry);
-  }
-  return entries.length > 0 ? { models: entries } : undefined;
-}
-
-function prepareDraftForSave(draft: ConfigDraft): ConfigDraft {
-  const endpointPath = DEFAULT_CC_SWITCH_IMPORT_SETTINGS[draft.clientType].endpointPath;
-  const selectedGroup = draft.allowedChannelGroups[0] ?? "";
-  const routePath = ensureCcSwitchRoutePath(draft.routePath, selectedGroup, draft.id);
-  const normalizedMappings = draft.modelMappings
-    .map((mapping) => {
-      const targetModel = mapping.targetModel.trim();
-      const requestModel = mapping.requestModel.trim() || targetModel;
-      return {
-        ...(mapping.role ? { role: mapping.role } : {}),
-        requestModel,
-        targetModel,
-        ...(!mapping.role ? { contextWindow: normalizeContextWindow(mapping.contextWindow) } : {}),
-      };
-    })
-    .filter((mapping) => mapping.targetModel && (mapping.role || mapping.requestModel));
-  const defaultModel =
-    draft.clientType === "claude"
-      ? normalizedMappings.find((mapping) => mapping.role === "main")?.targetModel || ""
-      : resolveGenericDefaultModel(normalizedMappings, draft.defaultModel);
-  const normalizedDraft = {
-    ...draft,
-    defaultModel,
-    modelMappings: normalizedMappings,
-  };
-  const codexModelCatalog = buildDraftCodexModelCatalog(normalizedDraft);
-
-  return {
-    ...normalizedDraft,
-    allowedChannelGroups: selectedGroup ? [selectedGroup] : [],
-    routePath,
-    endpointPath,
-    codexModelCatalogFilename:
-      draft.clientType === "codex" && codexModelCatalog
-        ? draft.codexModelCatalogFilename || CC_SWITCH_CODEX_MODEL_CATALOG_FILENAME
-        : undefined,
-    codexModelCatalog,
-  };
-}
 
 export function CcSwitchImportConfigModal({
   open,
@@ -465,6 +112,21 @@ export function CcSwitchImportConfigModal({
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [modelsLoading, setModelsLoading] = useState(false);
   const [modelMappingSort, setModelMappingSort] = useState<DataTableSortState | null>(null);
+  const [copiedBaseUrl, setCopiedBaseUrl] = useState(false);
+  const copiedResetRef = useRef<number | null>(null);
+
+  useEffect(
+    () => () => {
+      if (copiedResetRef.current) window.clearTimeout(copiedResetRef.current);
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (open) return;
+    setCopiedBaseUrl(false);
+    if (copiedResetRef.current) window.clearTimeout(copiedResetRef.current);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -622,8 +284,6 @@ export function CcSwitchImportConfigModal({
     [t],
   );
 
-  const client = getCcSwitchClientConfig(draft.clientType);
-  const clientLabel = t(client.labelKey);
   const groupSelectOptions = useMemo<SearchableSelectOption[]>(() => {
     const options = channelGroupOptions.map((option) => {
       const path = routeLabel(option.routePath);
@@ -672,6 +332,18 @@ export function CcSwitchImportConfigModal({
     appendUrlPath(baseUrl, previewRoutePath),
     DEFAULT_CC_SWITCH_IMPORT_SETTINGS[draft.clientType].endpointPath,
   );
+  const copyBaseUrl = async () => {
+    if (!fullBaseUrl) return;
+    try {
+      await navigator.clipboard.writeText(fullBaseUrl);
+      setCopiedBaseUrl(true);
+      if (copiedResetRef.current) window.clearTimeout(copiedResetRef.current);
+      copiedResetRef.current = window.setTimeout(() => setCopiedBaseUrl(false), 1600);
+    } catch {
+      // Clipboard can be blocked (insecure origin / denied permission); the preview text
+      // stays selectable, so failing silently beats a toast the user cannot act on.
+    }
+  };
   const currentModelOptions = useMemo(
     () =>
       modelOptions([
@@ -690,6 +362,7 @@ export function CcSwitchImportConfigModal({
     return modelOptions([...requestModels, draft.defaultModel]);
   }, [draft.defaultModel, draft.modelMappings]);
   const preparedDraft = prepareDraftForSave(draft);
+  const isClaudeMapping = draft.clientType === "claude";
   const hasRenderableMappings = draft.modelMappings.length > 0;
   const modelMappingsLoading = Boolean(selectedGroup && modelsLoading && !hasRenderableMappings);
   const duplicateRequestModels = getDuplicateGenericRequestModels(draft.modelMappings);
@@ -887,7 +560,6 @@ export function CcSwitchImportConfigModal({
                     if (role) updateClaudeRequestModel(role, event.currentTarget.value);
                   }}
                   aria-label={t("ccswitch.config_claude_request_model_for", { role: label })}
-                  className={controlClassName}
                 />
               );
             },
@@ -912,7 +584,7 @@ export function CcSwitchImportConfigModal({
                   placeholder={t("ccswitch.import_model_placeholder")}
                   searchPlaceholder={t("ccswitch.config_model_search_placeholder")}
                   aria-label={label}
-                  className={`${controlClassName} w-full`}
+                  className="w-full"
                 />
               );
             },
@@ -922,7 +594,7 @@ export function CcSwitchImportConfigModal({
           {
             key: "targetModel",
             label: t("ccswitch.config_actual_channel_model"),
-            width: "w-80",
+            width: "w-72",
             sort: { getValue: (mapping) => mapping.targetModel },
             render: (mapping, index) => (
               <SearchableSelect
@@ -936,7 +608,7 @@ export function CcSwitchImportConfigModal({
                 aria-label={t("ccswitch.config_actual_channel_model_for_mapping", {
                   index: index + 1,
                 })}
-                className={`${controlClassName} w-full`}
+                className="w-full"
               />
             ),
           },
@@ -952,14 +624,14 @@ export function CcSwitchImportConfigModal({
                 aria-label={t("ccswitch.config_request_model_for_mapping", {
                   index: index + 1,
                 })}
-                className={controlClassName}
               />
             ),
           },
           {
             key: "contextWindow",
+            // Header wraps below w-52 in en/ru, which reads as a truncated label.
             label: t("ccswitch.config_codex_context_window"),
-            width: "w-44",
+            width: "w-52",
             render: (mapping, index) => (
               <TextInput
                 type="number"
@@ -971,7 +643,6 @@ export function CcSwitchImportConfigModal({
                 aria-label={t("ccswitch.config_context_window_for_mapping", {
                   index: index + 1,
                 })}
-                className={controlClassName}
               />
             ),
           },
@@ -1003,9 +674,9 @@ export function CcSwitchImportConfigModal({
       open={open}
       title={t(mode === "create" ? "ccswitch.config_modal_create" : "ccswitch.config_modal_edit")}
       description={t("ccswitch.config_modal_description")}
-      maxWidth="max-w-[1180px]"
+      maxWidth="max-w-6xl"
       bodyHeightClassName="max-h-[78vh]"
-      bodyClassName="bg-slate-50/45 dark:bg-neutral-950/45"
+      bodyClassName="bg-slate-50/60 dark:bg-white/[0.015]"
       onClose={onClose}
       footer={
         <>
@@ -1023,7 +694,7 @@ export function CcSwitchImportConfigModal({
       }
     >
       <div className="space-y-4">
-        <section className="space-y-3 rounded-3xl border border-slate-900/8 bg-white p-4 shadow-[0_18px_44px_rgb(15_23_42_/_0.06)] dark:border-white/8 dark:bg-neutral-950/80">
+        <section className={`${sectionClassName} space-y-3`}>
           <label className={fieldClassName}>
             <span className={labelClassName}>{t("ccswitch.config_select_channel_group")}</span>
             <SearchableSelect
@@ -1046,22 +717,29 @@ export function CcSwitchImportConfigModal({
               }
               searchPlaceholder={t("ccswitch.config_channel_groups_search_placeholder")}
               aria-label={t("ccswitch.config_select_channel_group")}
-              className={controlClassName}
+              className="w-full"
             />
           </label>
 
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className={labelClassName}>{t("ccswitch.config_full_base_url")}</span>
-              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300">
-                {t("ccswitch.config_live_preview")}
-              </span>
-            </div>
-            <div
-              data-testid="ccswitch-config-endpoint-preview"
-              className="overflow-x-auto rounded-2xl border border-slate-900/8 bg-slate-950 px-3 py-2.5 font-mono text-sm text-emerald-200 shadow-inner dark:border-white/8"
-            >
-              {fullBaseUrl || "--"}
+          <div className={fieldClassName}>
+            <span className={labelClassName}>{t("ccswitch.config_full_base_url")}</span>
+            <div className="flex items-center gap-2">
+              <div
+                data-testid="ccswitch-config-endpoint-preview"
+                className="min-w-0 flex-1 overflow-x-auto rounded-2xl bg-slate-100/80 px-3.5 py-2.5 font-mono text-sm text-slate-700 dark:bg-white/[0.055] dark:text-white/80"
+              >
+                <span className="whitespace-nowrap">{fullBaseUrl || "--"}</span>
+              </div>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => void copyBaseUrl()}
+                disabled={!fullBaseUrl}
+                aria-label={copiedBaseUrl ? t("common.copied") : t("common.copy")}
+              >
+                {copiedBaseUrl ? <Check size={14} /> : <Copy size={14} />}
+                {copiedBaseUrl ? t("common.copied") : t("common.copy")}
+              </Button>
             </div>
           </div>
         </section>
@@ -1083,7 +761,7 @@ export function CcSwitchImportConfigModal({
           </TabsList>
         </Tabs>
 
-        <section className="grid grid-cols-1 gap-3 rounded-3xl border border-slate-900/8 bg-white p-4 dark:border-white/8 dark:bg-neutral-950/80 sm:grid-cols-2">
+        <section className={`grid grid-cols-1 gap-3 ${sectionClassName} sm:grid-cols-2`}>
           <label className={fieldClassName}>
             <span className={labelClassName}>{t("ccswitch.import_provider_name")}</span>
             <TextInput
@@ -1094,7 +772,6 @@ export function CcSwitchImportConfigModal({
               }}
               placeholder={t("ccswitch.import_provider_name_placeholder")}
               aria-label={t("ccswitch.import_provider_name")}
-              className={controlClassName}
             />
           </label>
 
@@ -1108,14 +785,13 @@ export function CcSwitchImportConfigModal({
               }}
               placeholder={t("ccswitch.config_remark_placeholder")}
               aria-label={t("ccswitch.config_remark")}
-              className={controlClassName}
             />
           </label>
 
           {draft.clientType === "claude" ? (
             <label className={fieldClassName}>
               <span className={labelClassName}>
-                {t("ccswitch.settings_auth_field", { client: clientLabel })}
+                {t("ccswitch.config_auth_field")}
               </span>
               <Select
                 value={draft.apiKeyField ?? "ANTHROPIC_API_KEY"}
@@ -1126,8 +802,8 @@ export function CcSwitchImportConfigModal({
                   }))
                 }
                 options={authFieldOptions}
-                aria-label={t("ccswitch.settings_auth_field", { client: clientLabel })}
-                className={controlClassName}
+                aria-label={t("ccswitch.config_auth_field")}
+                fullWidth
               />
             </label>
           ) : null}
@@ -1135,7 +811,7 @@ export function CcSwitchImportConfigModal({
           {draft.clientType === "codex" ? (
             <label className={fieldClassName}>
               <span className={labelClassName}>
-                {t("ccswitch.settings_default_model", { client: clientLabel })}
+                {t("ccswitch.config_default_model")}
               </span>
               <SearchableSelect
                 value={draft.defaultModel}
@@ -1145,8 +821,8 @@ export function CcSwitchImportConfigModal({
                 createLabel={(value) => t("ccswitch.model_use_custom", { value })}
                 placeholder={t("ccswitch.settings_default_model_placeholder")}
                 searchPlaceholder={t("ccswitch.config_model_search_placeholder")}
-                aria-label={t("ccswitch.settings_default_model", { client: clientLabel })}
-                className={`${controlClassName} w-full`}
+                aria-label={t("ccswitch.config_default_model")}
+                className="w-full"
                 disabled={!selectedGroup}
               />
             </label>
@@ -1154,7 +830,7 @@ export function CcSwitchImportConfigModal({
 
           <label className={fieldClassName}>
             <span className={labelClassName}>
-              {t("ccswitch.settings_usage_interval", { client: clientLabel })}
+              {t("ccswitch.config_usage_interval")}
             </span>
             <TextInput
               type="number"
@@ -1169,13 +845,12 @@ export function CcSwitchImportConfigModal({
                 }));
               }}
               placeholder="30"
-              aria-label={t("ccswitch.settings_usage_interval", { client: clientLabel })}
-              className={controlClassName}
+              aria-label={t("ccswitch.config_usage_interval")}
             />
           </label>
         </section>
 
-        <section className="overflow-hidden rounded-3xl border border-slate-900/8 bg-white shadow-[0_18px_44px_rgb(15_23_42_/_0.05)] dark:border-white/8 dark:bg-neutral-950/80">
+        <section className="overflow-hidden rounded-2xl bg-white ring-1 ring-slate-900/8 dark:bg-white/[0.03] dark:ring-white/8">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-900/8 px-4 py-3 dark:border-white/8">
             <div>
               <div className="text-sm font-semibold text-slate-950 dark:text-white">
@@ -1188,7 +863,7 @@ export function CcSwitchImportConfigModal({
               </p>
             </div>
             {modelMappingsLoading ? (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-500 dark:bg-neutral-900 dark:text-white/55">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-500 dark:bg-white/10 dark:text-white/55">
                 <LoaderCircle size={12} className="animate-spin" />
                 {t("ccswitch.import_model_loading")}
               </span>
@@ -1212,8 +887,8 @@ export function CcSwitchImportConfigModal({
               data-testid="ccswitch-model-mapping-loading"
               className="px-4 py-5"
             >
-              <div className="flex items-center gap-3 rounded-2xl border border-slate-900/8 bg-slate-50/85 px-4 py-3 dark:border-white/8 dark:bg-neutral-900/55">
-                <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-slate-500 shadow-sm ring-1 ring-slate-200/80 dark:bg-neutral-950 dark:text-white/60 dark:ring-neutral-800">
+              <div className="flex items-center gap-3 rounded-2xl bg-slate-100/80 px-4 py-3 dark:bg-white/[0.055]">
+                <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-slate-500 ring-1 ring-slate-900/8 dark:bg-white/10 dark:text-white/60 dark:ring-white/8">
                   <LoaderCircle size={17} className="animate-spin" />
                 </span>
                 <div className="min-w-0">
@@ -1229,11 +904,11 @@ export function CcSwitchImportConfigModal({
                 {MODEL_MAPPING_LOADING_ROWS.map((row) => (
                   <div
                     key={row}
-                    className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] gap-3 rounded-xl border border-slate-900/8 bg-white px-3 py-3 dark:border-white/8 dark:bg-neutral-950/70"
+                    className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] items-center gap-3 rounded-xl bg-slate-100/60 px-3 py-3.5 dark:bg-white/[0.035]"
                   >
-                    <span className="h-3 rounded-full bg-slate-200/80 dark:bg-white/10" />
+                    <span className="h-3 rounded-full bg-slate-200/90 dark:bg-white/10" />
                     <span
-                      className={`h-3 rounded-full bg-slate-200/80 dark:bg-white/10 ${
+                      className={`h-3 rounded-full bg-slate-200/90 dark:bg-white/10 ${
                         row === "short" ? "w-1/2" : row === "medium" ? "w-2/3" : "w-5/6"
                       }`}
                     />
@@ -1251,25 +926,31 @@ export function CcSwitchImportConfigModal({
             </div>
           ) : (
             <div data-testid="ccswitch-model-mapping-table" className="px-4 pt-3 pb-4">
-              <DataTable<CcSwitchModelMapping>
-                rows={draft.modelMappings}
-                columns={modelMappingColumns}
-                rowKey={(mapping, index) => mapping.role ?? `mapping-${index}`}
-                rowReorderable
-                onRowsChange={(rows) => replaceModelMappingRows(rows)}
-                sortState={modelMappingSort}
-                onSortStateChange={setModelMappingSort}
-                height="h-[320px]"
-                minHeight="min-h-[320px]"
-                minWidth={draft.clientType === "claude" ? "min-w-[800px]" : "min-w-[980px]"}
-                caption={t("ccswitch.config_model_mapping_title")}
-                showAllLoadedMessage={false}
-                rowDividers
-                allowWheelPropagationAtBoundary
-                columnResizable={false}
-                columnReorderable={false}
-                persistColumnOrder={false}
-              />
+              {/* naturalFlow: the table grows with its rows so the modal body owns the only
+                  scrollbar. A fixed inner height clipped the last Claude role behind a second,
+                  undiscoverable scroll area. */}
+              <div className="min-w-0 overflow-x-auto overscroll-x-contain rounded-xl">
+                <DataTable<CcSwitchModelMapping>
+                  rows={draft.modelMappings}
+                  columns={modelMappingColumns}
+                  rowKey={(mapping, index) => mapping.role ?? `mapping-${index}`}
+                  rowReorderable
+                  onRowsChange={(rows) => replaceModelMappingRows(rows)}
+                  sortState={modelMappingSort}
+                  onSortStateChange={setModelMappingSort}
+                  rowHeight={56}
+                  height="h-auto"
+                  minHeight="min-h-0"
+                  minWidth={isClaudeMapping ? "min-w-[760px]" : "min-w-[900px]"}
+                  caption={t("ccswitch.config_model_mapping_title")}
+                  showAllLoadedMessage={false}
+                  rowDividers
+                  naturalFlow
+                  columnResizable={false}
+                  columnReorderable={false}
+                  persistColumnOrder={false}
+                />
+              </div>
               {duplicateRequestModels.length > 0 ? (
                 <div className="mt-3 rounded-xl bg-rose-50 px-4 py-2 text-xs font-medium text-rose-700 dark:bg-rose-500/10 dark:text-rose-200">
                   {t("ccswitch.config_request_model_duplicate", {

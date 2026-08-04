@@ -146,6 +146,7 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
       keySecret: vi.fn(),
       createKey: vi.fn(),
       updateKey: vi.fn(),
+      resetKeyPeriodSpending: vi.fn(),
       rotateKey: vi.fn(),
       deleteKey: vi.fn(),
       changePassword: vi.fn(),
@@ -806,7 +807,7 @@ describe("ApiKeyLookupPage", () => {
     });
   });
 
-  test("edits quota from the shared managed-key table without reset actions", async () => {
+  test("edits quota and resets selected periods from the shared managed-key table", async () => {
     const { portalApi } = await import("@code-proxy/api-client");
     const user = {
       id: "u1",
@@ -849,6 +850,7 @@ describe("ApiKeyLookupPage", () => {
     vi.mocked(portalApi.listKeys).mockResolvedValue({ items: [key] } as never);
     vi.mocked(portalApi.keySecret).mockResolvedValue({ id: "k1", key: "sk-primary" });
     vi.mocked(portalApi.updateKey).mockResolvedValue({ ...key, name: "renamed" } as never);
+    vi.mocked(portalApi.resetKeyPeriodSpending).mockResolvedValue({ status: "ok" } as never);
 
     render(
       <ThemeProvider>
@@ -873,8 +875,7 @@ describe("ApiKeyLookupPage", () => {
     expect(await screen.findByRole("columnheader", { name: "Quota" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Today" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Lifetime" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Reset today spending" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "View reset history" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Reset this Key quota" })).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Edit Key quota" }));
     const editDialog = await screen.findByRole("dialog", { name: "Edit Key quota" });
@@ -889,6 +890,17 @@ describe("ApiKeyLookupPage", () => {
         "daily-spending-limit": 80,
         "period-spending-limits": { "5h": 50, day: 80, week: 300, month: 1000 },
       });
+    });
+
+    await userEvent.click(screen.getByRole("button", { name: "Reset this Key quota" }));
+    const resetDialog = await screen.findByRole("dialog", { name: "Reset Key quota" });
+    await userEvent.click(within(resetDialog).getByRole("checkbox", { name: "Reset Day quota" }));
+    await userEvent.click(within(resetDialog).getByRole("checkbox", { name: "Reset Week quota" }));
+    await userEvent.click(
+      within(resetDialog).getByRole("button", { name: "Reset selected quotas" }),
+    );
+    await waitFor(() => {
+      expect(portalApi.resetKeyPeriodSpending).toHaveBeenCalledWith("k1", ["day", "week"]);
     });
   });
 
@@ -969,10 +981,10 @@ describe("ApiKeyLookupPage", () => {
     expect(await screen.findByText("secondary")).toBeInTheDocument();
     const secondaryRow = screen.getByText("secondary").closest("tr");
     expect(secondaryRow).not.toBeNull();
-    // Portal rows only expose rotate/edit/delete, so delete is a direct icon button.
     await userEvent.click(
-      within(secondaryRow as HTMLElement).getByRole("button", { name: /^(delete|删除)$/i }),
+      within(secondaryRow as HTMLElement).getByRole("button", { name: "More actions" }),
     );
+    await userEvent.click(await screen.findByRole("menuitem", { name: /^(delete|删除)$/i }));
 
     expect(portalApi.deleteKey).not.toHaveBeenCalled();
     const confirmDialog = await screen.findByRole("dialog");
@@ -986,8 +998,9 @@ describe("ApiKeyLookupPage", () => {
     expect(portalApi.deleteKey).not.toHaveBeenCalled();
 
     await userEvent.click(
-      within(secondaryRow as HTMLElement).getByRole("button", { name: /^(delete|删除)$/i }),
+      within(secondaryRow as HTMLElement).getByRole("button", { name: "More actions" }),
     );
+    await userEvent.click(await screen.findByRole("menuitem", { name: /^(delete|删除)$/i }));
     await userEvent.click(
       within(await screen.findByRole("dialog")).getByRole("button", {
         name: /^(delete|删除)$/i,

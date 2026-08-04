@@ -36,6 +36,7 @@ import {
 } from "./api";
 import { LookupHeader } from "./components/LookupHeader";
 import { PortalLoginForm } from "./components/PortalLoginForm";
+import { PortalKeyPeriodQuotaResetModal } from "./components/PortalKeyPeriodQuotaResetModal";
 import { LookupEmptyState } from "./components/LookupEmptyState";
 import { LookupResultsToolbar, type ApiKeyLookupTab } from "./components/LookupResultsToolbar";
 import { ManageKeysTabContent } from "./components/ManageKeysTabContent";
@@ -357,6 +358,7 @@ export function ApiKeyLookupPage() {
   });
   const [editKeyTarget, setEditKeyTarget] = useState<EndUserAPIKey | null>(null);
   const [portalKeyQuotaError, setPortalKeyQuotaError] = useState("");
+  const [resetSpendingTarget, setResetSpendingTarget] = useState<EndUserAPIKey | null>(null);
   const [deleteKeyTarget, setDeleteKeyTarget] = useState<EndUserAPIKey | null>(null);
   const [portalKeysBusy, setPortalKeysBusy] = useState(false);
   const [portalKeysLoading, setPortalKeysLoading] = useState(false);
@@ -1378,6 +1380,7 @@ export function ApiKeyLookupPage() {
                         ),
                       });
                     }}
+                    onResetPeriodSpending={setResetSpendingTarget}
                     onDelete={(key) => {
                       if (portalKeys.length <= 1) return;
                       setDeleteKeyTarget(key);
@@ -1716,6 +1719,12 @@ export function ApiKeyLookupPage() {
               .catch((err) => setPortalKeyQuotaError(formatQuotaValidationError(err, t)))
               .finally(() => setPortalKeysBusy(false));
           }}
+        />
+
+        <PortalKeyPeriodQuotaResetModal
+          target={resetSpendingTarget} busy={portalKeysBusy}
+          onClose={() => setResetSpendingTarget(null)}
+          onReset={refreshPortalKeys} onError={setError} onBusyChange={setPortalKeysBusy}
         />
 
         <SecretRevealModal
