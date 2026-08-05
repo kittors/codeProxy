@@ -78,7 +78,9 @@ export { quotaApi } from "./endpoints/quota";
 export type * from "./endpoints/period-spending";
 export {
   EMPTY_PERIOD_SPENDING_LIMITS,
+  LIFETIME_QUOTA_PERIOD,
   PERIOD_SPENDING_PERIODS,
+  QUOTA_RESET_PERIODS,
   extractQuotaValidationError,
   hasPeriodSpendingLimits,
   normalizePeriodSpendingLimits,
