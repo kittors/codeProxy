@@ -4690,7 +4690,6 @@
     "remaining_value": "{{remaining}} left",
     "lifetime_remaining_detail": "Lifetime: {{used}} used, {{limit}} cap, {{remaining}} left",
     "lifetime_remaining_hint": "Cap {{limit}} · Used {{used}}",
-    "lifetime_remaining_field_hint": "Saving stores the entered value as the new lifetime cap",
     "reset": {
       "account_title": "Reset account quota",
       "key_title": "Reset Key quota",
@@ -4710,7 +4709,8 @@
       "key_exceeds_account": "Key {{period}} quota {{keyLimit}} exceeds the account {{period}} quota {{accountLimit}}",
       "period_day_legacy_conflict": "Daily quota conflicts with the legacy daily spending limit.",
       "five_hour_projection_warming": "The 5-hour quota is temporarily unavailable while usage projection warms up."
-    }
+    },
+    "lifetime_usage_hint": "{{used}} used this cycle · {{remaining}} left; grant again from Reset quota"
   },
   "models": {
     "total_models_count": "{{count}} models"

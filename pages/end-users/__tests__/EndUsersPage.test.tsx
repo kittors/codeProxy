@@ -484,17 +484,18 @@ describe("EndUsersPage lifetime allowance", () => {
     return screen.findByRole("dialog", { name: "Edit user account" });
   }
 
-  test("the lifetime field shows what is left, not the configured cap", async () => {
+  test("the lifetime field edits the cap, with usage shown alongside", async () => {
+    // Showing the remainder in a limit editor made "set 1000" read back as 405
+    // and forced operators to reverse-engineer what to type. The field is the
+    // cap; usage belongs next to it.
     const dialog = await openEditDialog();
 
     const field = within(dialog).getByRole("spinbutton", {
       name: "Lifetime spending limit (USD)",
     });
-    expect((field as HTMLInputElement).value).toBe("88");
-    // The cap itself must stay visible, otherwise the operator cannot tell what
-    // the number they are about to overwrite means.
-    expect(within(dialog).getByText(/\$100\.00/)).toBeTruthy();
-    expect(within(dialog).getByText(/\$12\.00/)).toBeTruthy();
+    expect((field as HTMLInputElement).value).toBe("100");
+    expect(within(dialog).getByText(/\$12\.00 used this cycle/)).toBeTruthy();
+    expect(within(dialog).getByText(/\$88\.00 left/)).toBeTruthy();
   });
 
   test("saving an untouched form sends nothing at all", async () => {
@@ -506,10 +507,7 @@ describe("EndUsersPage lifetime allowance", () => {
     expect(mocks.update).not.toHaveBeenCalled();
   });
 
-  test("editing another field does not silently rewrite the cap to the remaining amount", async () => {
-    // The real hazard: the field displays 88 while the stored cap is 100, so a
-    // naive "changed?" check treats every save as an edit and walks the cap down
-    // 100 → 88 → 76 each time an unrelated field is touched.
+  test("editing another field leaves the cap untouched", async () => {
     const dialog = await openEditDialog();
 
     await userEvent.type(within(dialog).getByRole("spinbutton", { name: "RPM limit" }), "60");

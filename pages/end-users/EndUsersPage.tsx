@@ -48,7 +48,6 @@ import { EndUserEditModal } from "./components/EndUserEditModal";
 import {
   emptyForm,
   limitToText,
-  lifetimeRemainingText,
   requestLimitFromText,
   spendingLimitFromText,
 } from "./endUserForm";
@@ -511,7 +510,7 @@ export function EndUsersPage() {
                       displayName: row.display_name,
                       password: "",
                       permissionProfileId: row["permission-profile-id"] ?? "",
-                      spendingLimit: lifetimeRemainingText(row),
+                      spendingLimit: limitToText(row["spending-limit"]),
                       dailyLimit: limitToText(profile?.["daily-limit"] ?? row["daily-limit"]),
                       totalQuota: limitToText(profile?.["total-quota"] ?? row["total-quota"]),
                       concurrencyLimit: limitToText(
@@ -638,7 +637,7 @@ export function EndUsersPage() {
       const nextProfile = editForm.permissionProfileId.trim();
       const prevProfile = (editUser["permission-profile-id"] ?? "").trim();
       const nextSpendingLimit = spendingLimitFromText(editForm.spendingLimit);
-      const displayedSpendingLimit = spendingLimitFromText(lifetimeRemainingText(editUser));
+      const previousSpendingLimit = editUser["spending-limit"] ?? 0;
       const directLimits = {
         "daily-limit": requestLimitFromText(editForm.dailyLimit),
         "total-quota": requestLimitFromText(editForm.totalQuota),
@@ -650,7 +649,7 @@ export function EndUsersPage() {
       if (nextUsername && nextUsername !== editUser.username) body.username = nextUsername;
       if (nextDisplay && nextDisplay !== editUser.display_name) body.display_name = nextDisplay;
       if (editForm.password.trim()) body.password = editForm.password;
-      if (nextSpendingLimit !== displayedSpendingLimit) {
+      if (nextSpendingLimit !== previousSpendingLimit) {
         body["spending-limit"] = nextSpendingLimit;
       }
 
