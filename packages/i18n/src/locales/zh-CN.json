@@ -4702,6 +4702,11 @@
     "account_limit_value": "账号上限 {{value}}",
     "account_unlimited": "账号不限制",
     "used_of_limit": "{{period}}：已用 {{used}}，上限 {{limit}}",
+    "lifetime_label": "累计",
+    "remaining_value": "剩 {{remaining}}",
+    "lifetime_remaining_detail": "累计：已用 {{used}}，上限 {{limit}}，剩余 {{remaining}}",
+    "lifetime_remaining_hint": "上限 {{limit}} · 已用 {{used}}",
+    "lifetime_remaining_field_hint": "填写后按新的累计上限保存",
     "reset": {
       "account_title": "重置账号配额",
       "key_title": "重置 Key 配额",
