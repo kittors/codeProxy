@@ -73,3 +73,39 @@ describe("PeriodQuotaResetModal", () => {
     expect(onConfirm).not.toHaveBeenCalled();
   });
 });
+
+describe("PeriodQuotaResetModal lifetime allowance", () => {
+  test("an account with only a lifetime allowance can still be granted again", async () => {
+    // Granting a fresh allowance is the only way to make a spent-out account
+    // usable again, so the dialog must offer it even with no rolling periods.
+    const onConfirm = vi.fn();
+    render(
+      <PeriodQuotaResetModal
+        open
+        scope="account"
+        subjectName="Kittors"
+        lifetimeLimit={1000}
+        onClose={vi.fn()}
+        onConfirm={onConfirm}
+      />,
+    );
+
+    const dialog = screen.getByRole("dialog", { name: "Reset account quota" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "Reset quota" }));
+    expect(onConfirm).toHaveBeenCalledWith(["lifetime"]);
+  });
+
+  test("no allowance configured means nothing to grant", () => {
+    const { container } = render(
+      <PeriodQuotaResetModal
+        open
+        scope="account"
+        subjectName="Kittors"
+        lifetimeLimit={0}
+        onClose={vi.fn()}
+        onConfirm={vi.fn()}
+      />,
+    );
+    expect(container.textContent).toBe("");
+  });
+});

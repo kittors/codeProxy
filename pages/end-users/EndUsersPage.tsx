@@ -20,7 +20,7 @@ import {
   type EndUser,
   type EndUserDailySpendingResetEvent,
   type EndUserUpdateBody,
-  type PeriodSpendingPeriod,
+  type QuotaResetPeriod,
 } from "@code-proxy/api-client";
 import {
   Button,
@@ -257,7 +257,7 @@ export function EndUsersPage() {
   );
 
   const resetPeriodSpending = useCallback(
-    async (row: EndUser, periods: PeriodSpendingPeriod[]) => {
+    async (row: EndUser, periods: QuotaResetPeriod[]) => {
       if (periods.length === 0) return;
       setBusy(true);
       try {
@@ -994,6 +994,7 @@ export function EndUsersPage() {
             : undefined
         }
         periodSpendingItems={resetSpendingUser?.["period-spending"]}
+        lifetimeLimit={resetSpendingUser?.["spending-limit"]}
         busy={busy}
         onClose={() => setResetSpendingUser(null)}
         onConfirm={(periods) => resetSpendingUser && void resetPeriodSpending(resetSpendingUser, periods)}

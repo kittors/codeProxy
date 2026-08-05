@@ -5,6 +5,18 @@ export const PERIOD_SPENDING_PERIODS = ["5h", "day", "week", "month"] as const;
 
 export type PeriodSpendingPeriod = (typeof PERIOD_SPENDING_PERIODS)[number];
 
+/**
+ * The cumulative allowance is resettable like a period, but it is not one of the
+ * rolling periods: it has no window, and its limit lives in `spending-limit`
+ * rather than the period limits. Keeping it out of PERIOD_SPENDING_PERIODS keeps
+ * the four-field limit editors and per-period cells untouched.
+ */
+export const LIFETIME_QUOTA_PERIOD = "lifetime" as const;
+
+export const QUOTA_RESET_PERIODS = [...PERIOD_SPENDING_PERIODS, LIFETIME_QUOTA_PERIOD] as const;
+
+export type QuotaResetPeriod = (typeof QUOTA_RESET_PERIODS)[number];
+
 export const isPeriodSpendingPeriod = (value: unknown): value is PeriodSpendingPeriod =>
   PERIOD_SPENDING_PERIODS.some((period) => period === value);
 

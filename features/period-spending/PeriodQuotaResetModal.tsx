@@ -4,7 +4,8 @@ import {
   PERIOD_SPENDING_PERIODS,
   type PeriodSpendingItem,
   type PeriodSpendingLimits,
-  type PeriodSpendingPeriod,
+  LIFETIME_QUOTA_PERIOD,
+  type QuotaResetPeriod,
 } from "@code-proxy/api-client";
 import { Button, Checkbox, ConfirmModal, Modal } from "@code-proxy/ui";
 import { formatQuotaUsd } from "./PeriodSpendingCell";
@@ -17,20 +18,29 @@ export interface PeriodQuotaResetModalProps {
   subjectName: string;
   configuredLimits?: PeriodSpendingLimits;
   periodSpendingItems?: PeriodSpendingItem[];
+  /** Account cumulative allowance; enables the "grant again" option. */
+  lifetimeLimit?: number;
   busy?: boolean;
   onClose: () => void;
-  onConfirm: (periods: PeriodSpendingPeriod[]) => void;
+  onConfirm: (periods: QuotaResetPeriod[]) => void;
 }
 
 const configuredPeriodsFrom = (
   limits: PeriodSpendingLimits | undefined,
   items: PeriodSpendingItem[] | undefined,
-): Array<{ period: PeriodSpendingPeriod; limit: number }> => {
+  lifetimeLimit: number | undefined,
+): Array<{ period: QuotaResetPeriod; limit: number }> => {
   const itemLimits = new Map(items?.map((item) => [item.period, item.limit]) ?? []);
-  return PERIOD_SPENDING_PERIODS.flatMap((period) => {
+  const rolling = PERIOD_SPENDING_PERIODS.flatMap((period) => {
     const limit = limits?.[period] ?? itemLimits.get(period) ?? 0;
-    return limit > 0 ? [{ period, limit }] : [];
+    return limit > 0 ? [{ period: period as QuotaResetPeriod, limit }] : [];
   });
+  // Resetting the cumulative allowance is what "grant a fresh allowance" means,
+  // so it belongs in the same dialog as the rolling-period resets.
+  if ((lifetimeLimit ?? 0) > 0) {
+    rolling.push({ period: LIFETIME_QUOTA_PERIOD, limit: lifetimeLimit as number });
+  }
+  return rolling;
 };
 
 export function PeriodQuotaResetModal({
@@ -39,16 +49,17 @@ export function PeriodQuotaResetModal({
   subjectName,
   configuredLimits,
   periodSpendingItems,
+  lifetimeLimit,
   busy = false,
   onClose,
   onConfirm,
 }: PeriodQuotaResetModalProps) {
   const { t } = useTranslation();
   const configuredPeriods = useMemo(
-    () => configuredPeriodsFrom(configuredLimits, periodSpendingItems),
-    [configuredLimits, periodSpendingItems],
+    () => configuredPeriodsFrom(configuredLimits, periodSpendingItems, lifetimeLimit),
+    [configuredLimits, periodSpendingItems, lifetimeLimit],
   );
-  const [selectedPeriods, setSelectedPeriods] = useState<Set<PeriodSpendingPeriod>>(
+  const [selectedPeriods, setSelectedPeriods] = useState<Set<QuotaResetPeriod>>(
     () => new Set(),
   );
 

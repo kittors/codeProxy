@@ -4666,7 +4666,8 @@
       "5h": "5 hours",
       "day": "Day",
       "week": "Week",
-      "month": "Month"
+      "month": "Month",
+      "lifetime": "Lifetime"
     },
     "field": {
       "5h": "5-hour quota (USD)",
