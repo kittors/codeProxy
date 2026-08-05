@@ -5,6 +5,7 @@ import {
   PeriodSpendingFields,
   formatQuotaUsdAmount,
   limitsToPeriodSpendingDraft,
+  remainingQuotaUsd,
 } from "@features/period-spending";
 import type { EndUserForm } from "../endUserForm";
 import { limitToText } from "../endUserForm";
@@ -222,13 +223,15 @@ export function EndUserEditModal({
               />
               {(editUser?.["spending-limit"] ?? 0) > 0 ? (
                 <span className="block text-xs text-slate-500 tabular-nums dark:text-white/55">
-                  {t("quota.lifetime_remaining_hint", {
-                    limit: formatQuotaUsdAmount(editUser?.["spending-limit"]),
+                  {t("quota.lifetime_usage_hint", {
                     used: formatQuotaUsdAmount(editUser?.["lifetime-spending-used"]),
+                    remaining: formatQuotaUsdAmount(
+                      remainingQuotaUsd(
+                        editUser?.["spending-limit"],
+                        editUser?.["lifetime-spending-used"],
+                      ),
+                    ),
                   })}
-                  <span className="ml-1 text-slate-400 dark:text-white/40">
-                    {t("quota.lifetime_remaining_field_hint")}
-                  </span>
                 </span>
               ) : null}
               <span className="block text-xs text-slate-400 dark:text-white/40">

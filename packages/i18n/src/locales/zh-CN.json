@@ -4707,7 +4707,6 @@
     "remaining_value": "剩 {{remaining}}",
     "lifetime_remaining_detail": "累计：已用 {{used}}，上限 {{limit}}，剩余 {{remaining}}",
     "lifetime_remaining_hint": "上限 {{limit}} · 已用 {{used}}",
-    "lifetime_remaining_field_hint": "填写后按新的累计上限保存",
     "reset": {
       "account_title": "重置账号配额",
       "key_title": "重置 Key 配额",
@@ -4727,7 +4726,8 @@
       "key_exceeds_account": "Key {{period}}额度 {{keyLimit}} 超过账号{{period}}额度 {{accountLimit}}",
       "period_day_legacy_conflict": "每日额度与旧版每日消费限额冲突。",
       "five_hour_projection_warming": "5 小时配额正在准备使用数据，请稍后再试。"
-    }
+    },
+    "lifetime_usage_hint": "本轮已用 {{used}} · 剩余 {{remaining}}；用完后可在「重置配额」中重新发放"
   },
   "identity_admin": {
     "operation_failed": "操作失败。",
