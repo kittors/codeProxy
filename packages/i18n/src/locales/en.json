@@ -4685,6 +4685,11 @@
     "account_limit_value": "Account limit {{value}}",
     "account_unlimited": "Account unlimited",
     "used_of_limit": "{{period}}: {{used}} of {{limit}} used",
+    "lifetime_label": "Lifetime",
+    "remaining_value": "{{remaining}} left",
+    "lifetime_remaining_detail": "Lifetime: {{used}} used, {{limit}} cap, {{remaining}} left",
+    "lifetime_remaining_hint": "Cap {{limit}} · Used {{used}}",
+    "lifetime_remaining_field_hint": "Saving stores the entered value as the new lifetime cap",
     "reset": {
       "account_title": "Reset account quota",
       "key_title": "Reset Key quota",

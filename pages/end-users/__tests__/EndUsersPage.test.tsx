@@ -457,3 +457,94 @@ describe("EndUsersPage account semantics", () => {
     ).toBeInTheDocument();
   });
 });
+
+describe("EndUsersPage lifetime allowance", () => {
+  // 100 cap with 12 spent is the operator-facing example: the field must read 88.
+  const cappedUser = {
+    ...users[0],
+    id: "user-capped",
+    username: "carol",
+    display_name: "Carol",
+    "spending-limit": 100,
+    "lifetime-spending-used": 12,
+  };
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    await i18n.changeLanguage("en");
+    mocks.permissionProfiles.mockResolvedValue([]);
+    mocks.list.mockResolvedValue({ items: [cappedUser] });
+    mocks.update.mockResolvedValue(cappedUser);
+  });
+
+  async function openEditDialog() {
+    renderPage();
+    await screen.findByText("Carol");
+    await userEvent.click(screen.getAllByRole("button", { name: "Edit user account" })[0]!);
+    return screen.findByRole("dialog", { name: "Edit user account" });
+  }
+
+  test("the lifetime field shows what is left, not the configured cap", async () => {
+    const dialog = await openEditDialog();
+
+    const field = within(dialog).getByRole("spinbutton", {
+      name: "Lifetime spending limit (USD)",
+    });
+    expect((field as HTMLInputElement).value).toBe("88");
+    // The cap itself must stay visible, otherwise the operator cannot tell what
+    // the number they are about to overwrite means.
+    expect(within(dialog).getByText(/\$100\.00/)).toBeTruthy();
+    expect(within(dialog).getByText(/\$12\.00/)).toBeTruthy();
+  });
+
+  test("saving an untouched form sends nothing at all", async () => {
+    const dialog = await openEditDialog();
+
+    await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(mocks.update).not.toHaveBeenCalled();
+  });
+
+  test("editing another field does not silently rewrite the cap to the remaining amount", async () => {
+    // The real hazard: the field displays 88 while the stored cap is 100, so a
+    // naive "changed?" check treats every save as an edit and walks the cap down
+    // 100 → 88 → 76 each time an unrelated field is touched.
+    const dialog = await openEditDialog();
+
+    await userEvent.type(within(dialog).getByRole("spinbutton", { name: "RPM limit" }), "60");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(mocks.update).toHaveBeenCalled());
+    const body = mocks.update.mock.calls[0]![1];
+    expect(body).toMatchObject({ "rpm-limit": 60 });
+    expect(body).not.toHaveProperty("spending-limit");
+  });
+
+  test("an edited value is stored as the new cap", async () => {
+    const dialog = await openEditDialog();
+
+    const field = within(dialog).getByRole("spinbutton", {
+      name: "Lifetime spending limit (USD)",
+    });
+    await userEvent.clear(field);
+    await userEvent.type(field, "200");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      expect(mocks.update).toHaveBeenCalledWith(
+        "user-capped",
+        expect.objectContaining({ "spending-limit": 200 }),
+      );
+    });
+  });
+
+  test("the quota column surfaces a lifetime-only cap instead of reading unlimited", async () => {
+    renderPage();
+    await screen.findByText("Carol");
+
+    const row = screen.getByText("Carol").closest("tr")!;
+    expect(within(row).getByText(/\$88 left/)).toBeTruthy();
+    expect(within(row).queryByText("Unlimited")).toBeNull();
+  });
+});

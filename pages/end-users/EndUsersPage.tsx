@@ -44,64 +44,28 @@ import { ErrorDetailModal, LogContentModal } from "@features/log-content-viewer"
 import { ApiKeyUsageModal } from "../api-keys/components/ApiKeyUsageModal";
 import { useApiKeyUsageView } from "../api-keys/hooks/useApiKeyUsageView";
 import { EndUserResetHistoryModal } from "./components/EndUserResetHistoryModal";
+import { EndUserEditModal } from "./components/EndUserEditModal";
+import {
+  emptyForm,
+  limitToText,
+  lifetimeRemainingText,
+  requestLimitFromText,
+  spendingLimitFromText,
+} from "./endUserForm";
+import type { EndUserForm } from "./endUserForm";
 import {
   PeriodSpendingCell,
-  PeriodSpendingFields,
   PeriodQuotaResetModal,
-  emptyPeriodSpendingDraft,
   formatQuotaValidationError,
   formatQuotaUsdAmount,
   limitsToPeriodSpendingDraft,
   periodSpendingDraftToLimits,
-  type PeriodSpendingDraft,
 } from "@features/period-spending";
 import { normalizePeriodSpendingLimits } from "@code-proxy/api-client";
 
-type EndUserForm = {
-  username: string;
-  displayName: string;
-  password: string;
-  permissionProfileId: string;
-  spendingLimit: string;
-  dailyLimit: string;
-  totalQuota: string;
-  concurrencyLimit: string;
-  rpmLimit: string;
-  tpmLimit: string;
-  periodSpending: PeriodSpendingDraft;
-};
-
 type EndUserStatusFilter = "all" | "active" | "frozen";
-
 const DEFAULT_END_USER_PAGE_SIZE = 20;
 const END_USER_PAGE_SIZE_OPTIONS = [20, 50, 100];
-
-const emptyForm = (): EndUserForm => ({
-  username: "",
-  displayName: "",
-  password: "",
-  permissionProfileId: "",
-  spendingLimit: "",
-  dailyLimit: "",
-  totalQuota: "",
-  concurrencyLimit: "",
-  rpmLimit: "",
-  tpmLimit: "",
-  periodSpending: emptyPeriodSpendingDraft(),
-});
-
-const spendingLimitFromText = (value: string): number => {
-  const parsed = Number.parseFloat(value.trim());
-  return Number.isFinite(parsed) && parsed > 0 ? Math.ceil(parsed) : 0;
-};
-
-const requestLimitFromText = (value: string): number => {
-  const parsed = Number.parseInt(value.trim(), 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
-};
-
-const limitToText = (value: number | undefined): string =>
-  value && value > 0 ? String(value) : "";
 
 const stickyActionsHeaderClass =
   "text-center md:sticky md:z-40 md:bg-slate-100 md:dark:bg-neutral-800";
@@ -440,7 +404,16 @@ export function EndUsersPage() {
         key: "quota",
         label: t("quota.period_spending_column"),
         width: "w-[390px] min-w-[280px]",
-        render: (row) => <PeriodSpendingCell t={t} items={row["period-spending"]} />,
+        render: (row) => (
+          <PeriodSpendingCell
+            t={t}
+            items={row["period-spending"]}
+            lifetime={{
+              used: row["lifetime-spending-used"],
+              limit: row["spending-limit"],
+            }}
+          />
+        ),
       },
       {
         key: "dailySpending",
@@ -538,7 +511,7 @@ export function EndUsersPage() {
                       displayName: row.display_name,
                       password: "",
                       permissionProfileId: row["permission-profile-id"] ?? "",
-                      spendingLimit: limitToText(row["spending-limit"]),
+                      spendingLimit: lifetimeRemainingText(row),
                       dailyLimit: limitToText(profile?.["daily-limit"] ?? row["daily-limit"]),
                       totalQuota: limitToText(profile?.["total-quota"] ?? row["total-quota"]),
                       concurrencyLimit: limitToText(
@@ -665,7 +638,7 @@ export function EndUsersPage() {
       const nextProfile = editForm.permissionProfileId.trim();
       const prevProfile = (editUser["permission-profile-id"] ?? "").trim();
       const nextSpendingLimit = spendingLimitFromText(editForm.spendingLimit);
-      const previousSpendingLimit = editUser["spending-limit"] ?? 0;
+      const displayedSpendingLimit = spendingLimitFromText(lifetimeRemainingText(editUser));
       const directLimits = {
         "daily-limit": requestLimitFromText(editForm.dailyLimit),
         "total-quota": requestLimitFromText(editForm.totalQuota),
@@ -677,7 +650,7 @@ export function EndUsersPage() {
       if (nextUsername && nextUsername !== editUser.username) body.username = nextUsername;
       if (nextDisplay && nextDisplay !== editUser.display_name) body.display_name = nextDisplay;
       if (editForm.password.trim()) body.password = editForm.password;
-      if (nextSpendingLimit !== previousSpendingLimit) {
+      if (nextSpendingLimit !== displayedSpendingLimit) {
         body["spending-limit"] = nextSpendingLimit;
       }
 
@@ -965,199 +938,22 @@ export function EndUsersPage() {
         ) : null}
       </Modal>
 
-      <Modal
+      <EndUserEditModal
+        t={t}
         open={Boolean(editUser)}
+        user={editUser}
+        form={editForm}
+        onFormChange={setEditForm}
+        permissionProfiles={permissionProfiles}
+        permissionProfileOptions={permissionProfileOptions}
+        selectedProfile={selectedEditProfile}
+        busy={busy}
+        onSubmit={onEdit}
         onClose={() => {
           setEditUser(null);
           setEditForm(emptyForm());
         }}
-        title={t("end_users.edit", { defaultValue: "编辑用户账号" })}
-        maxWidth="max-w-2xl"
-        footer={
-          <>
-            <Button
-              onClick={() => {
-                setEditUser(null);
-                setEditForm(emptyForm());
-              }}
-            >
-              {t("common.cancel")}
-            </Button>
-            <Button
-              type="submit"
-              form="edit-end-user-form"
-              variant="primary"
-              disabled={busy || !editForm.displayName.trim() || !editForm.username.trim()}
-            >
-              {t("common.save", { defaultValue: "保存" })}
-            </Button>
-          </>
-        }
-      >
-        <form id="edit-end-user-form" className="space-y-3" onSubmit={onEdit}>
-          <label className="block space-y-1.5">
-            <span className="text-sm font-medium">
-              {t("end_users.display_name", { defaultValue: "昵称" })}
-            </span>
-            <TextInput
-              value={editForm.displayName}
-              onChange={(e) => setEditForm((f) => ({ ...f, displayName: e.target.value }))}
-              required
-            />
-          </label>
-          <label className="block space-y-1.5">
-            <span className="text-sm font-medium">
-              {t("end_users.username", { defaultValue: "用户名" })}
-            </span>
-            <TextInput
-              value={editForm.username}
-              onChange={(e) => setEditForm((f) => ({ ...f, username: e.target.value }))}
-              required
-            />
-          </label>
-          <label className="block space-y-1.5">
-            <span className="text-sm font-medium">
-              {t("end_users.password", { defaultValue: "新密码（可选）" })}
-            </span>
-            <TextInput
-              type="password"
-              value={editForm.password}
-              onChange={(e) => setEditForm((f) => ({ ...f, password: e.target.value }))}
-              placeholder={t("end_users.password_keep", { defaultValue: "留空则不改密码" })}
-              autoComplete="new-password"
-            />
-          </label>
-          <label className="block space-y-1.5">
-            <span className="text-sm font-medium">
-              {t("end_users.account_permission_profile", { defaultValue: "账户权限模板" })}
-            </span>
-            <Select
-              value={editForm.permissionProfileId}
-              onChange={(value) => {
-                const profile = permissionProfiles.find((item) => item.id === value);
-                setEditForm((current) => ({
-                  ...current,
-                  permissionProfileId: value,
-                  dailyLimit: profile ? limitToText(profile["daily-limit"]) : current.dailyLimit,
-                  totalQuota: profile ? limitToText(profile["total-quota"]) : current.totalQuota,
-                  concurrencyLimit: profile
-                    ? limitToText(profile["concurrency-limit"])
-                    : current.concurrencyLimit,
-                  rpmLimit: profile ? limitToText(profile["rpm-limit"]) : current.rpmLimit,
-                  tpmLimit: profile ? limitToText(profile["tpm-limit"]) : current.tpmLimit,
-                  periodSpending: profile
-                    ? limitsToPeriodSpendingDraft(profile["period-spending-limits"])
-                    : current.periodSpending,
-                }));
-              }}
-              options={permissionProfileOptions}
-              aria-label={t("end_users.account_permission_profile", {
-                defaultValue: "账户权限模板",
-              })}
-              placeholder={t("end_users.account_permission_profile_placeholder", {
-                defaultValue: "选择账户权限模板",
-              })}
-            />
-            <p className="text-xs text-slate-400 dark:text-white/40">
-              {t("end_users.quota_on_account_hint", {
-                defaultValue: "限额与模型/渠道权限挂在账号上，该用户所有密钥共用。",
-              })}
-            </p>
-          </label>
-          <section className="rounded-2xl border border-indigo-200/80 bg-indigo-50/45 p-4 dark:border-indigo-500/20 dark:bg-indigo-500/5">
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
-              {t("end_users.quota_preview")}
-            </h3>
-            <p className="mb-3 mt-1 text-xs text-slate-500 dark:text-white/50">
-              {selectedEditProfile
-                ? t("end_users.quota_profile_readonly_hint", { profile: selectedEditProfile.name })
-                : t("end_users.quota_direct_edit_hint")}
-            </p>
-            <PeriodSpendingFields
-              t={t}
-              value={
-                selectedEditProfile
-                  ? limitsToPeriodSpendingDraft(selectedEditProfile["period-spending-limits"])
-                  : editForm.periodSpending
-              }
-              onChange={(periodSpending) =>
-                setEditForm((current) => ({ ...current, periodSpending }))
-              }
-              disabled={Boolean(selectedEditProfile)}
-              idPrefix="end-user-period"
-            />
-          </section>
-
-          <section className="rounded-2xl border border-slate-900/8 p-4 dark:border-white/10">
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
-              {t("end_users.other_limits")}
-            </h3>
-            <p className="mb-3 mt-1 text-xs text-slate-500 dark:text-white/50">
-              {selectedEditProfile
-                ? t("end_users.other_limits_profile_readonly_hint", {
-                    profile: selectedEditProfile.name,
-                  })
-                : t("end_users.other_limits_direct_hint")}
-            </p>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {(
-                [
-                  ["dailyLimit", "api_keys_page.form_daily_limit"],
-                  ["totalQuota", "api_keys_page.form_total_quota"],
-                  ["concurrencyLimit", "api_keys_page.form_concurrency_limit"],
-                  ["rpmLimit", "api_keys_page.form_rpm_limit"],
-                  ["tpmLimit", "api_keys_page.form_tpm_limit"],
-                ] as const
-              ).map(([field, labelKey]) => (
-                <label key={field} className="block space-y-1.5">
-                  <span className="text-sm font-medium text-slate-700 dark:text-white/80">
-                    {t(labelKey)}
-                  </span>
-                  <TextInput
-                    type="number"
-                    min={0}
-                    step={1}
-                    inputMode="numeric"
-                    value={editForm[field]}
-                    disabled={Boolean(selectedEditProfile)}
-                    aria-label={t(labelKey)}
-                    placeholder={t("quota.input_unlimited")}
-                    onChange={(event) => {
-                      const raw = event.target.value;
-                      if (raw === "" || /^\d+$/.test(raw)) {
-                        setEditForm((current) => ({ ...current, [field]: raw }));
-                      }
-                    }}
-                  />
-                </label>
-              ))}
-              <label className="block space-y-1.5 sm:col-span-2 lg:col-span-1">
-                <span className="text-sm font-medium text-slate-700 dark:text-white/80">
-                  {t("end_users.lifetime_spending_limit")}
-                </span>
-                <TextInput
-                  type="number"
-                  min={0}
-                  step={1}
-                  inputMode="numeric"
-                  value={editForm.spendingLimit}
-                  aria-label={t("end_users.lifetime_spending_limit")}
-                  placeholder={t("quota.input_unlimited")}
-                  onChange={(event) => {
-                    const raw = event.target.value;
-                    if (raw === "" || /^\d*(?:\.\d*)?$/.test(raw)) {
-                      setEditForm((current) => ({ ...current, spendingLimit: raw }));
-                    }
-                  }}
-                />
-                <span className="block text-xs text-slate-400 dark:text-white/40">
-                  {t("end_users.lifetime_spending_limit_hint")}
-                </span>
-              </label>
-            </div>
-          </section>
-        </form>
-      </Modal>
+      />
 
       <SecretRevealModal
         open={Boolean(generatedReset)}

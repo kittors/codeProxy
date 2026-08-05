@@ -88,6 +88,8 @@ export const createOwnedApiKeyColumns = ({
     key: "quota",
     label: t("quota.period_spending_column"),
     width: "w-[360px] min-w-[260px]",
+    // Keys have no lifetime cap of their own — it lives on the account and is
+    // enforced across all of the account's keys — so this column stays periodic.
     render: (row) => <PeriodSpendingCell t={t} items={row["period-spending"]} />,
   },
   {

@@ -26,6 +26,21 @@ export const formatQuotaUsd = (value: number): string =>
 export const formatQuotaUsdAmount = (value: number | null | undefined): string =>
   amountFormatter.format(Number.isFinite(value) ? Math.max(0, value ?? 0) : 0);
 
+/** Lifetime spend has no reset cycle, so an overspend must read as 0 left, never negative. */
+export const remainingQuotaUsd = (
+  limit: number | null | undefined,
+  used: number | null | undefined,
+): number => {
+  const safeLimit = Number.isFinite(limit) ? (limit ?? 0) : 0;
+  const safeUsed = Number.isFinite(used) ? (used ?? 0) : 0;
+  return Math.max(0, safeLimit - safeUsed);
+};
+
+export type LifetimeSpending = { used?: number | null; limit?: number | null };
+
+const hasLifetimeLimit = (lifetime: LifetimeSpending | undefined): boolean =>
+  Number.isFinite(lifetime?.limit) && (lifetime?.limit ?? 0) > 0;
+
 const periodLabel = (
   t: (key: string, options?: Record<string, unknown>) => string,
   period: PeriodSpendingPeriod,
@@ -53,12 +68,20 @@ const chipTone = (ratio: number) => {
 export function PeriodSpendingCell({
   t,
   items,
+  lifetime,
 }: {
   t: (key: string, options?: Record<string, unknown>) => string;
   items?: PeriodSpendingItem[];
+  /**
+   * Lifetime spending cap. It is not one of the rolling periods, so it used to be
+   * absent from this column entirely: an account with only a lifetime cap read as
+   * "unlimited" here while the lifetime column showed spend without its cap.
+   */
+  lifetime?: LifetimeSpending;
 }) {
   const visible = orderedItems(items);
-  if (visible.length === 0) {
+  const showLifetime = hasLifetimeLimit(lifetime);
+  if (visible.length === 0 && !showLifetime) {
     return (
       <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300">
         <InfinityIcon size={13} aria-hidden="true" />
@@ -94,7 +117,48 @@ export function PeriodSpendingCell({
           </span>
         );
       })}
+      {showLifetime ? <LifetimeSpendingChip t={t} lifetime={lifetime as LifetimeSpending} /> : null}
     </div>
+  );
+}
+
+/**
+ * Rolling periods are shown as used/limit because they refill on their own; the
+ * lifetime cap only ever counts down, so what operators need from it is how much
+ * is left before the account stops.
+ */
+function LifetimeSpendingChip({
+  t,
+  lifetime,
+}: {
+  t: (key: string, options?: Record<string, unknown>) => string;
+  lifetime: LifetimeSpending;
+}) {
+  const limit = lifetime.limit ?? 0;
+  const used = lifetime.used ?? 0;
+  const remaining = remainingQuotaUsd(limit, used);
+  const ratio = limit > 0 ? used / limit : 0;
+  const danger = ratio >= 1;
+  const warning = ratio >= 0.9 && !danger;
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs font-medium tabular-nums ${chipTone(ratio)}`}
+      title={t("quota.lifetime_remaining_detail", {
+        used: formatQuotaUsd(used),
+        limit: formatQuotaUsd(limit),
+        remaining: formatQuotaUsd(remaining),
+      })}
+    >
+      {danger ? <AlertCircle size={13} aria-hidden="true" /> : null}
+      {warning ? <AlertTriangle size={13} aria-hidden="true" /> : null}
+      <span className="font-semibold">{t("quota.lifetime_label")}</span>
+      <span>
+        {t("quota.remaining_value", { remaining: formatQuotaUsd(remaining) })} /{" "}
+        {formatQuotaUsd(limit)}
+      </span>
+      {danger ? <span className="sr-only">{t("quota.status.exceeded")}</span> : null}
+      {warning ? <span className="sr-only">{t("quota.status.warning")}</span> : null}
+    </span>
   );
 }
 
