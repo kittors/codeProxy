@@ -266,6 +266,43 @@ describe("ProxiesPage", () => {
     });
   });
 
+  test("creates CJK-named proxies without colliding on id=ip", async () => {
+    mocks.apiGet.mockResolvedValue({
+      items: [
+        {
+          id: "ip",
+          name: "住宅 ip",
+          url: "socks5://user:pass@69.17.3.25:1080",
+          enabled: true,
+        },
+      ],
+    });
+
+    renderPage();
+    await screen.findByText("住宅 ip");
+
+    await userEvent.click(await screen.findByRole("button", { name: /add proxy/i }));
+    const dialog = await screen.findByRole("dialog", { name: /add proxy/i });
+    await userEvent.type(within(dialog).getByLabelText(/name/i), "洛杉矶 ip");
+    await userEvent.type(
+      within(dialog).getByLabelText(/proxy url/i),
+      "socks5://user:pass@1.2.3.4:1080",
+    );
+    await userEvent.click(within(dialog).getByRole("button", { name: /^save$/i }));
+
+    await waitFor(() => {
+      expect(mocks.apiPut).toHaveBeenCalled();
+    });
+    const putBody = mocks.apiPut.mock.calls.at(-1)?.[1] as {
+      items: Array<{ id: string; name: string }>;
+    };
+    const ids = putBody.items.map((item) => item.id);
+    expect(ids).toContain("ip");
+    expect(ids.filter((id) => id === "ip")).toHaveLength(1);
+    expect(ids).toHaveLength(2);
+    expect(new Set(ids).size).toBe(2);
+  });
+
   test("deletes a proxy only after confirmation", async () => {
     renderPage();
 
