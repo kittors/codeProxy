@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Timer } from "lucide-react";
 import { Button, Modal, Select, Textarea } from "@code-proxy/ui";
+import { formatLatency } from "@features/provider-latency";
 import {
   DEFAULT_MODEL_TEST_PROMPT,
   formatModelSourceLabel,
@@ -98,6 +100,8 @@ export interface ModelTestModalProps {
   running: boolean;
   resultText: string | null;
   errorText: string | null;
+  /** Upstream round-trip duration of the last run, or null before one completes. */
+  durationMs?: number | null;
   onClose: () => void;
   onRun: (input: { channel: string; prompt: string }) => void;
 }
@@ -107,6 +111,7 @@ export function ModelTestModal({
   running,
   resultText,
   errorText,
+  durationMs = null,
   onClose,
   onRun,
 }: ModelTestModalProps) {
@@ -115,13 +120,15 @@ export function ModelTestModal({
   const [displayModel, setDisplayModel] = useState<ModelItem | null>(model);
   const [displayResult, setDisplayResult] = useState<string | null>(resultText);
   const [displayError, setDisplayError] = useState<string | null>(errorText);
+  const [displayDurationMs, setDisplayDurationMs] = useState<number | null>(durationMs);
 
   useEffect(() => {
     if (!model) return;
     setDisplayModel(model);
     setDisplayResult(resultText);
     setDisplayError(errorText);
-  }, [model, resultText, errorText]);
+    setDisplayDurationMs(durationMs);
+  }, [model, resultText, errorText, durationMs]);
 
   const channelOptions = useMemo(
     () => buildChannelOptions(displayModel),
@@ -142,6 +149,17 @@ export function ModelTestModal({
   const noChannels = Boolean(displayModel) && channelOptions.length === 0;
   const showSuccess = Boolean(displayResult) && !displayError;
   const showError = Boolean(displayError);
+
+  const durationBadge =
+    typeof displayDurationMs === "number" && Number.isFinite(displayDurationMs) ? (
+      <span
+        data-testid="model-test-duration"
+        className="inline-flex shrink-0 items-center gap-1 rounded-full border border-slate-900/8 bg-slate-50 px-2 py-0.5 text-2xs font-semibold tabular-nums text-slate-600 dark:border-white/10 dark:bg-white/[0.06] dark:text-white/70"
+      >
+        <Timer size={11} className="shrink-0" aria-hidden />
+        {t("models_page.test_duration", { duration: formatLatency(displayDurationMs) })}
+      </span>
+    ) : null;
 
   return (
     <Modal
@@ -230,8 +248,11 @@ export function ModelTestModal({
             <div className="min-h-0 overflow-hidden">
               {showError ? (
                 <div data-testid="model-test-error">
-                  <div className="mb-1 text-sm font-medium text-rose-700 dark:text-rose-300">
-                    {t("models_page.test_response")}
+                  <div className="mb-1 flex items-center gap-2">
+                    <span className="text-sm font-medium text-rose-700 dark:text-rose-300">
+                      {t("models_page.test_response")}
+                    </span>
+                    {durationBadge}
                   </div>
                   <div
                     role="alert"
@@ -244,8 +265,11 @@ export function ModelTestModal({
 
               {showSuccess ? (
                 <div data-testid="model-test-success">
-                  <div className="mb-1 text-sm font-medium text-emerald-700 dark:text-emerald-300">
-                    {t("models_page.test_response")}
+                  <div className="mb-1 flex items-center gap-2">
+                    <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
+                      {t("models_page.test_response")}
+                    </span>
+                    {durationBadge}
                   </div>
                   <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-900 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100">
                     {displayResult}
