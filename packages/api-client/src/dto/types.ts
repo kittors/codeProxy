@@ -13,6 +13,13 @@ export interface AuthSnapshot {
   expiresAtMs?: number;
   /** Refresh-token wall clock expiry (ms). */
   refreshExpiresAtMs?: number;
+  /**
+   * Monotonic rotation counter: 1 at login, +1 on every refresh. Tabs use it to
+   * decide which persisted token is newer. `refreshExpiresAtMs` cannot serve
+   * that role (the backend may shorten it) and token strings cannot be ordered
+   * at all. Missing on legacy snapshots, which are treated as 0.
+   */
+  rotationSeq?: number;
 }
 
 export type AuthFileType =

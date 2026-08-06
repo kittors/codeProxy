@@ -68,21 +68,43 @@ function isFatalSystemStatsError(error: unknown): boolean {
   );
 }
 
-/** Build WebSocket URL from auth context */
-function buildWsUrl(apiBase: string, managementKey: string): string | null {
+/**
+ * Build the WebSocket URL, or null when there is nothing to authenticate with.
+ *
+ * A socket opened without a token used to be a real request against the
+ * management API — WebSockets bypass ApiClient entirely, so none of its
+ * credential gating applied — and the server counted each rejected handshake
+ * against the client's throttle bucket. A signed-out dashboard could therefore
+ * lock its own user out of signing back in. Exported for direct testing.
+ */
+export function buildWsUrl(apiBase: string, managementKey: string): string | null {
+  if (!managementKey) return null;
   const httpBase = computeManagementApiBase(apiBase);
   if (!httpBase) return null;
   try {
     const abs = new URL(httpBase, window.location.origin);
     abs.protocol = abs.protocol === "https:" ? "wss:" : "ws:";
     abs.pathname += "/system-stats/ws";
-    if (managementKey) {
-      abs.searchParams.set("token", managementKey);
-    }
+    abs.searchParams.set("token", managementKey);
     return abs.toString();
   } catch {
     return null;
   }
+}
+
+/**
+ * Whether the monitor may talk to the server at all.
+ *
+ * Falling back to HTTP polling when there is no usable credential would just
+ * swap credential-less socket handshakes for credential-less HTTP requests, so
+ * the answer has to gate both transports.
+ */
+export function shouldConnectSystemStats(input: {
+  enabled: boolean;
+  managementKey: string;
+  authUsable: boolean;
+}): boolean {
+  return input.enabled && Boolean(input.managementKey) && input.authUsable;
 }
 
 export function useSystemStats(
@@ -168,11 +190,18 @@ export function useSystemStats(
   // --- WebSocket connection ---
   const connect = useCallback(() => {
     if (haltedRef.current) return;
+    if (!shouldConnectSystemStats({ enabled: true, managementKey, authUsable: apiClient.isAuthUsable() })) {
+      // Idle silently rather than polling. Every request from here would be
+      // credential-less, and the server counts those against the throttle.
+      setConnected(false);
+      return;
+    }
 
     const url = buildWsUrl(apiBase, managementKey);
     if (!url) {
-      // No WebSocket URL — use HTTP polling instead
-      startHttpFallback();
+      // A malformed base URL is a configuration problem, not a transient one:
+      // HTTP polling would fail the same way, just more noisily.
+      setConnected(false);
       return;
     }
 
@@ -215,6 +244,12 @@ export function useSystemStats(
         // Auth handshake failures close before open with 4xx-class codes.
         // Also stop if the socket never opened (common for rejected Upgrade).
         if (isFatalSystemStatsStatus(ev.code) || (!sawOpen && (ev.code === 1006 || ev.code === 1002))) {
+          // The probe below is a real management request; skip it once the gate
+          // has closed, or the diagnostic itself becomes credential-less traffic.
+          if (!apiClient.isAuthUsable()) {
+            haltPolling("");
+            return;
+          }
           // Confirm with one HTTP probe so we only halt on real 401/403, not network blips.
           void (async () => {
             try {
@@ -263,9 +298,15 @@ export function useSystemStats(
         mountedRef.current = false;
       };
     }
+    // Stop the moment the session dies instead of on the next 5s reconnect tick:
+    // that gap is long enough for the retry loop to fire several handshakes
+    // after the credential is already gone.
+    const onUnauthorized = () => haltPolling("");
+    window.addEventListener("unauthorized", onUnauthorized);
     connect();
     return () => {
       mountedRef.current = false;
+      window.removeEventListener("unauthorized", onUnauthorized);
       clearTimeout(reconnectTimer.current);
       stopHttpFallback();
       if (wsRef.current) {
@@ -273,7 +314,7 @@ export function useSystemStats(
         wsRef.current = null;
       }
     };
-  }, [connect, enabled, stopHttpFallback]);
+  }, [connect, enabled, haltPolling, stopHttpFallback]);
 
   if (!enabled) {
     return { stats: null, connected: false, error: null };

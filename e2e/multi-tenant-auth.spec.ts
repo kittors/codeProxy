@@ -1356,3 +1356,99 @@ test("renders governance shell from dynamic menus @critical", async ({ page }) =
   await expect(page.locator("aside")).toBeVisible();
   await expect(page.locator("header")).toBeVisible();
 });
+
+// The reported failure, end to end: two tabs open, both hit 401 at once, both
+// try to refresh with the same stored token. Under hard rotation the loser was
+// told its session was revoked and signed out, which is what "it logged me out
+// while I was just using it" looked like from the user's side.
+test("a second tab survives the first tab rotating the refresh token @critical", async ({
+  context,
+}) => {
+  // Idempotent: addInitScript runs on every navigation in every page of the
+  // context, so an unconditional write would keep restoring the pre-rotation
+  // token and mask whether the rotation was persisted at all.
+  const seed = () => {
+    if (localStorage.getItem("code-proxy-admin-auth")) return;
+    localStorage.setItem(
+      "code-proxy-admin-auth",
+      JSON.stringify({
+        apiBase: "http://127.0.0.1:8317",
+        managementKey: "cps_stale",
+        refreshToken: "cpr_adm_shared",
+        rememberPassword: true,
+        expiresAt: Date.now() + 30 * 24 * 3600 * 1000,
+        expiresAtMs: Date.now() - 1000,
+        refreshExpiresAtMs: Date.now() + 7 * 24 * 3600 * 1000,
+        rotationSeq: 1,
+      }),
+    );
+  };
+  await context.addInitScript(seed);
+
+  let refreshCalls = 0;
+  await context.route("**/v0/auth/refresh", async (route) => {
+    refreshCalls += 1;
+    const issued = refreshCalls;
+    // Only the first presentation of the shared token wins; a replay outside the
+    // server's grace window would 401. The client must not need that replay.
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        access_token: `cps_rotated_${issued}`,
+        refresh_token: `cpr_adm_rotated_${issued}`,
+        token_type: "Bearer",
+        expires_at: new Date(Date.now() + 3600_000).toISOString(),
+        refresh_expires_at: new Date(Date.now() + 7 * 24 * 3600_000).toISOString(),
+        principal,
+      }),
+    });
+  });
+  // Keyed on the token rather than a call counter: React StrictMode mounts the
+  // provider twice in dev, so a counter would let the second bootstrap through
+  // without ever exercising the refresh path this test exists to cover.
+  await context.route("**/v0/auth/me", async (route) => {
+    const auth = route.request().headers()["authorization"] ?? "";
+    if (auth.includes("cps_stale")) {
+      await route.fulfill({
+        status: 401,
+        contentType: "application/json",
+        body: JSON.stringify({ error: { code: "session_expired", message: "expired" } }),
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ principal }),
+    });
+  });
+  await context.route("**/v0/management/**", (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", body: "{}" }),
+  );
+
+  const first = await context.newPage();
+  const second = await context.newPage();
+  await Promise.all([first.goto("/#/dashboard"), second.goto("/#/dashboard")]);
+
+  // One tab wins the rotation and lands on the dashboard.
+  await expect(first, "first tab was signed out").toHaveURL(/#\/dashboard$/, { timeout: 20_000 });
+
+  // The real invariant for the loser is that its session survives. Asserting on
+  // its URL instead would be flaky for the wrong reason: under parallel test
+  // load a slow refresh can exhaust the retry budget, which parks the tab on the
+  // login route with the session intact and recoverable on reload. What must
+  // never happen — and what did happen before this change — is the stored
+  // session being destroyed because a sibling tab rotated the shared token.
+  await expect
+    .poll(
+      async () => second.evaluate(() => localStorage.getItem("code-proxy-admin-auth")),
+      { timeout: 20_000 },
+    )
+    .not.toBeNull();
+
+  const snapshot = await first.evaluate(() => localStorage.getItem("code-proxy-admin-auth"));
+  expect(snapshot).toBeTruthy();
+  expect(snapshot).not.toContain("cpr_adm_shared");
+  expect(refreshCalls, "the rotation path was never exercised").toBeGreaterThan(0);
+});

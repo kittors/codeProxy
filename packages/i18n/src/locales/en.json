@@ -1,4 +1,7 @@
 {
+  "errors": {
+    "auth_refresh_unavailable": "Cannot reach the authentication service right now. Please try again shortly."
+  },
   "common": {
     "login": "Login",
     "logout": "Logout",

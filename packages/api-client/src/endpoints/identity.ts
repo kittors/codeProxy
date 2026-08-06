@@ -189,10 +189,13 @@ export interface AuditLogsResponse {
 }
 
 export const identityApi = {
+  // The only endpoint allowed past the credential gate: it is the request that
+  // mints the credential, and AuthProvider clears the key before calling it.
+  // No other endpoint may opt out — logout included, which must still be signed.
+  // Rotation lives in the client's TokenRefresher; exposing a refresh() here
+  // would route it back through request() and recurse on its own 401.
   login: (body: { username: string; password: string; remember_me: boolean }) =>
-    apiClient.post<LoginResponse>("/../auth/login", body),
-  refresh: (refresh_token: string) =>
-    apiClient.post<LoginResponse>("/../auth/refresh", { refresh_token }),
+    apiClient.post<LoginResponse>("/../auth/login", body, { auth: "anonymous" }),
   me: () => apiClient.get<{ principal: ManagementPrincipal }>("/../auth/me"),
   logout: () => apiClient.post<void>("/../auth/logout"),
   changePassword: (body: { current_password: string; new_password: string }) =>

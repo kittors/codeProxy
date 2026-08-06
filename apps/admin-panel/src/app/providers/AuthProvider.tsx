@@ -19,12 +19,16 @@ import {
   isApiClientError,
   configApi,
   normalizeApiBase,
+  peekPersistedAuthSnapshot,
+  publishSignedOut,
   readPersistedAuthSnapshot,
+  subscribeAuthBroadcast,
   updatePersistedEffectiveTenantId,
   writePersistedAuthSnapshot,
   type ManagementPrincipal,
-  type MenuIdentity,
 } from "@code-proxy/api-client";
+import { legacyServicePrincipal } from "./legacyServiceMenus";
+import { shouldAdoptRotation } from "./authRotation";
 import {
   DEFAULT_CACHE_TENANT_ID,
   setActiveCacheScopePrefix,
@@ -107,342 +111,6 @@ const syncActiveDataCacheTenant = (
   invalidateConfiguredModelAvailability();
 };
 
-/** Mirrors CliRelay MenuCatalog so management-key / preview mode has a usable sidebar. */
-const menu = (
-  partial: Pick<
-    MenuIdentity,
-    "code" | "type" | "path" | "component" | "label_key" | "icon" | "sort_order"
-  > &
-    Partial<Pick<MenuIdentity, "parent_code" | "permission_code">>,
-): MenuIdentity => ({
-  code: partial.code,
-  parent_code: partial.parent_code ?? "",
-  type: partial.type,
-  path: partial.path,
-  component: partial.component,
-  link_url: "",
-  label_key: partial.label_key,
-  title: "",
-  icon: partial.icon,
-  permission_code: partial.permission_code ?? "",
-  sort_order: partial.sort_order,
-  visible: true,
-  enabled: true,
-  badge_type: "",
-  badge_content: "",
-  hide_menu: false,
-  system_protected: true,
-  version: 1,
-});
-
-const LEGACY_SERVICE_MENUS: MenuIdentity[] = [
-  menu({
-    code: "dashboard",
-    type: "menu",
-    path: "/dashboard",
-    component: "dashboard",
-    label_key: "shell.nav_dashboard",
-    icon: "layout-dashboard",
-    permission_code: "dashboard.read",
-    sort_order: 10,
-  }),
-  menu({
-    code: "group.runtime",
-    type: "directory",
-    path: "/runtime",
-    component: "Layout",
-    label_key: "shell.nav_group_runtime",
-    icon: "activity",
-    sort_order: 20,
-  }),
-  menu({
-    code: "runtime.monitor",
-    parent_code: "group.runtime",
-    type: "menu",
-    path: "/runtime/monitor",
-    component: "monitor",
-    label_key: "shell.nav_monitor",
-    icon: "activity",
-    permission_code: "monitor.read",
-    sort_order: 10,
-  }),
-  menu({
-    code: "runtime.request-logs",
-    parent_code: "group.runtime",
-    type: "menu",
-    path: "/runtime/request-logs",
-    component: "request-logs",
-    label_key: "shell.nav_request_logs",
-    icon: "scroll-text",
-    permission_code: "request_logs.read",
-    sort_order: 20,
-  }),
-  menu({
-    code: "runtime.logs",
-    parent_code: "group.runtime",
-    type: "menu",
-    path: "/runtime/logs",
-    component: "logs",
-    label_key: "shell.nav_logs",
-    icon: "file-text",
-    permission_code: "system.logs.read",
-    sort_order: 30,
-  }),
-  // Top-level leaf pinned after all groups (matches CliRelay MenuCatalog).
-  menu({
-    code: "runtime.system",
-    type: "menu",
-    path: "/runtime/system",
-    component: "system",
-    label_key: "shell.nav_system",
-    icon: "info",
-    permission_code: "system.status.read",
-    sort_order: 70,
-  }),
-  menu({
-    code: "group.access",
-    type: "directory",
-    path: "/access",
-    component: "Layout",
-    label_key: "shell.nav_group_access",
-    icon: "bot",
-    sort_order: 30,
-  }),
-  menu({
-    code: "access.providers",
-    parent_code: "group.access",
-    type: "menu",
-    path: "/access/ai-providers",
-    component: "providers",
-    label_key: "shell.nav_ai_providers",
-    icon: "bot",
-    permission_code: "providers.read",
-    sort_order: 10,
-  }),
-  menu({
-    code: "system.account-security",
-    parent_code: "group.access",
-    type: "menu",
-    path: "/access/ai-accounts",
-    component: "account-security",
-    label_key: "shell.nav_ai_accounts",
-    icon: "key-round",
-    permission_code: "auth_files.read",
-    sort_order: 20,
-  }),
-  // Hidden from sidebar: key management is under 用户账号 (?endUserId=). Route kept for deep links.
-  {
-    ...menu({
-      code: "access.api-keys",
-      parent_code: "group.access",
-      type: "menu",
-      path: "/access/api-keys",
-      component: "api-keys",
-      label_key: "shell.nav_api_keys",
-      icon: "sparkles",
-      permission_code: "api_keys.read",
-      sort_order: 30,
-    }),
-    hide_menu: true,
-  },
-  menu({
-    code: "access.end-users",
-    parent_code: "group.access",
-    type: "menu",
-    path: "/access/end-users",
-    component: "end-users",
-    // Prefer end_users.read; legacy key admins also get the menu via api_keys.read in can() OR at route gate.
-    label_key: "shell.nav_end_users",
-    icon: "user-round",
-    permission_code: "end_users.read",
-    sort_order: 25,
-  }),
-  menu({
-    code: "system.api-key-permissions",
-    parent_code: "group.access",
-    type: "menu",
-    path: "/access/api-key-permissions",
-    component: "api-key-permissions",
-    label_key: "shell.nav_api_key_permissions",
-    icon: "shield-check",
-    permission_code: "api_key_profiles.read",
-    sort_order: 40,
-  }),
-  // Stable code matches CliRelay while the page now belongs to Access & Credentials.
-  menu({
-    code: "runtime.content-moderation",
-    parent_code: "group.access",
-    type: "menu",
-    path: "/access/content-moderation",
-    component: "content-moderation",
-    label_key: "shell.nav_content_moderation",
-    icon: "shield-alert",
-    permission_code: "content_moderation.read",
-    sort_order: 45,
-  }),
-  menu({
-    code: "access.ccswitch",
-    parent_code: "group.access",
-    type: "menu",
-    path: "/access/ccswitch-import-settings",
-    component: "ccswitch-import-settings",
-    label_key: "shell.nav_ccswitch_import_settings",
-    icon: "arrow-down-to-line",
-    // Tenant-scoped: matches /ccswitch-import-configs API auth (routing.read/write).
-    // Must not use platform system.config.read, or ordinary tenants never see this menu.
-    permission_code: "routing.read",
-    sort_order: 50,
-  }),
-  menu({
-    code: "group.models",
-    type: "directory",
-    path: "/models",
-    component: "Layout",
-    label_key: "shell.nav_group_models",
-    icon: "layers",
-    sort_order: 40,
-  }),
-  menu({
-    code: "models.plaza",
-    parent_code: "group.models",
-    type: "menu",
-    path: "/models/plaza",
-    component: "model-plaza",
-    label_key: "shell.nav_model_plaza",
-    icon: "store",
-    // Same surface as former System Info "available models": tenant-visible model set.
-    permission_code: "system.status.read",
-    sort_order: 5,
-  }),
-  menu({
-    code: "models.catalog",
-    parent_code: "group.models",
-    type: "menu",
-    path: "/models/catalog",
-    component: "models",
-    label_key: "shell.nav_models",
-    icon: "cpu",
-    permission_code: "models.read",
-    sort_order: 10,
-  }),
-  menu({
-    code: "models.image-generation",
-    parent_code: "group.models",
-    type: "menu",
-    path: "/models/image-generation",
-    component: "image-generation",
-    label_key: "shell.nav_image_generation",
-    icon: "image",
-    permission_code: "system.config.read",
-    sort_order: 20,
-  }),
-  menu({
-    code: "models.channel-groups",
-    parent_code: "group.models",
-    type: "menu",
-    path: "/models/channel-groups",
-    component: "channel-groups",
-    label_key: "shell.nav_channel_groups",
-    icon: "layers",
-    permission_code: "routing.read",
-    sort_order: 30,
-  }),
-  menu({
-    code: "models.proxies",
-    parent_code: "group.models",
-    type: "menu",
-    path: "/models/proxies",
-    component: "proxies",
-    label_key: "shell.nav_proxies",
-    icon: "network",
-    permission_code: "proxies.read",
-    sort_order: 40,
-  }),
-  menu({
-    code: "group.governance",
-    type: "directory",
-    path: "/governance",
-    component: "Layout",
-    label_key: "shell.nav_group_governance",
-    icon: "users-round",
-    sort_order: 50,
-  }),
-  menu({
-    code: "governance.tenants",
-    parent_code: "group.governance",
-    type: "menu",
-    path: "/governance/tenants",
-    component: "tenants",
-    label_key: "shell.nav_tenants",
-    icon: "building-2",
-    permission_code: "platform.tenants.read",
-    sort_order: 10,
-  }),
-  menu({
-    code: "governance.users",
-    parent_code: "group.governance",
-    type: "menu",
-    path: "/governance/users",
-    component: "users",
-    label_key: "shell.nav_users",
-    icon: "user-round",
-    permission_code: "tenant.users.read",
-    sort_order: 20,
-  }),
-  menu({
-    code: "governance.roles",
-    parent_code: "group.governance",
-    type: "menu",
-    path: "/governance/roles",
-    component: "roles",
-    label_key: "shell.nav_roles",
-    icon: "shield-check",
-    permission_code: "tenant.roles.read",
-    sort_order: 30,
-  }),
-  menu({
-    code: "governance.audit",
-    parent_code: "group.governance",
-    type: "menu",
-    path: "/governance/audit-logs",
-    component: "audit-logs",
-    label_key: "shell.nav_audit_logs",
-    icon: "file-text",
-    permission_code: "tenant.audit.read",
-    sort_order: 40,
-  }),
-  menu({
-    code: "group.system",
-    type: "directory",
-    path: "/system",
-    component: "Layout",
-    label_key: "shell.nav_group_system",
-    icon: "settings",
-    sort_order: 60,
-  }),
-  menu({
-    code: "system.config",
-    parent_code: "group.system",
-    type: "menu",
-    path: "/system/config",
-    component: "config",
-    label_key: "shell.nav_config",
-    icon: "settings",
-    permission_code: "system.config.read",
-    sort_order: 10,
-  }),
-  menu({
-    code: "system.menus",
-    parent_code: "group.system",
-    type: "menu",
-    path: "/system/menu-management",
-    component: "menu-management",
-    label_key: "shell.nav_menu_management",
-    icon: "menu",
-    permission_code: "platform.menus.read",
-    sort_order: 20,
-  }),
-];
 
 /** Override is only dropped when the server explicitly rejects the tenant scope. */
 const RECOVERABLE_TENANT_OVERRIDE_CODES = new Set([
@@ -472,53 +140,6 @@ export function isTransientRestoreError(error: unknown): boolean {
   return false;
 }
 
-const legacyServicePrincipal = (): ManagementPrincipal => ({
-  kind: "service_credential",
-  user: {
-    id: "service",
-    tenant_id: "system",
-    username: "admin",
-    display_name: "Administrator",
-    status: "active",
-    must_change_password: false,
-    last_login_at: null,
-    role_ids: [],
-    role_codes: [],
-    version: 1,
-    created_at: "",
-    updated_at: "",
-  },
-  home_tenant: {
-    id: "system",
-    slug: "system",
-    name: "System Administration",
-    type: "system",
-    status: "active",
-    effective_status: "active",
-    expires_at: null,
-    description: "",
-    version: 1,
-    created_at: "",
-    updated_at: "",
-  },
-  effective_tenant: {
-    id: "system",
-    slug: "system",
-    name: "System Administration",
-    type: "system",
-    status: "active",
-    effective_status: "active",
-    expires_at: null,
-    description: "",
-    version: 1,
-    created_at: "",
-    updated_at: "",
-  },
-  roles: [],
-  menus: LEGACY_SERVICE_MENUS,
-  permissions: ["*"],
-  platform_admin: true,
-});
 
 const parseExpiryMs = (value?: string | null): number | undefined => {
   if (!value) return undefined;
@@ -535,6 +156,7 @@ const persistSession = (input: {
   principal?: ManagementPrincipal | null;
   expiresAtMs?: number;
   refreshExpiresAtMs?: number;
+  rotationSeq?: number;
 }) => {
   const principal = input.principal;
   writePersistedAuthSnapshot({
@@ -552,6 +174,7 @@ const persistSession = (input: {
       : {}),
     ...(input.expiresAtMs ? { expiresAtMs: input.expiresAtMs } : {}),
     ...(input.refreshExpiresAtMs ? { refreshExpiresAtMs: input.refreshExpiresAtMs } : {}),
+    ...(input.rotationSeq ? { rotationSeq: input.rotationSeq } : {}),
   });
 };
 
@@ -568,26 +191,39 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [authFailureCode, setAuthFailureCode] = useState("");
   // Monotonic op id so a slower bootstrap cannot overwrite a newer login.
   const bootstrapOpRef = useRef(0);
+  // Highest rotation sequence applied here, so a broadcast that predates this
+  // tab's own refresh cannot walk the session backwards to an older token.
+  const rotationSeqRef = useRef(0);
 
-  const configureClient = useCallback(
-    (
-      base: string,
-      token: string,
-      effectiveTenant = "",
-      /** undefined keeps current refresh; string/null replaces it */
-      nextRefresh?: string | null,
-    ) => {
+  /**
+   * Replace credentials. Omitting a token keeps whatever the client currently
+   * holds, which matters because the client rotates tokens on its own: React
+   * state here can lag a refresh by a render, and passing that stale value back
+   * would undo the rotation.
+   */
+  const configureCredentials = useCallback(
+    (base: string, token?: string, nextRefresh?: string | null) => {
       apiClient.setConfig({
         apiBase: base,
-        managementKey: token,
+        ...(token !== undefined ? { managementKey: token } : {}),
         ...(nextRefresh !== undefined ? { refreshToken: nextRefresh ?? "" } : {}),
       });
-      const tenantId = normalizeTenantOverride(effectiveTenant);
-      // Always replace headers so a previous tenant override cannot leak into home-tenant mode.
-      apiClient.setDefaultHeaders(tenantId ? { "X-Effective-Tenant-ID": tenantId } : {});
     },
     [],
   );
+
+  /**
+   * Replace the effective-tenant header only.
+   *
+   * Kept separate from credentials because switching tenant is not switching
+   * account: it must not bump the client's auth generation (that would cancel an
+   * in-flight refresh) and must not touch tokens. Cross-tenant data separation
+   * is handled by the cache bucketing in syncActiveDataCacheTenant plus the
+   * principal reload in switchTenant, not by resetting auth.
+   */
+  const configureTenant = useCallback((effectiveTenant: string) => {
+    apiClient.setTenantOverride(normalizeTenantOverride(effectiveTenant));
+  }, []);
 
   // Prefer live principal.effective_tenant for cache keys; fall back to last explicit pin.
   useEffect(() => {
@@ -621,7 +257,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setAccessToken(resolvedToken);
     setRefreshToken(snapshot?.refreshToken ?? "");
     setRememberPassword(resolvedRemember);
-    configureClient(resolvedBase, resolvedToken, requestedTenant, snapshot?.refreshToken ?? "");
+    rotationSeqRef.current = snapshot?.rotationSeq ?? 0;
+    configureCredentials(resolvedBase, resolvedToken, snapshot?.refreshToken ?? "");
+    configureTenant(requestedTenant);
     // Pin cache tenant before any page paints from localStorage/sessionStorage.
     syncActiveDataCacheTenant(requestedTenant || DEFAULT_CACHE_TENANT_ID, {
       apiBase: resolvedBase,
@@ -673,14 +311,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
           throw overrideError;
         }
         // Keep refresh token while clearing tenant override.
-        configureClient(resolvedBase, resolvedToken, "", snapshot?.refreshToken);
+        configureTenant("");
         syncActiveDataCacheTenant(DEFAULT_CACHE_TENANT_ID);
         restoredPrincipal = (await identityApi.me()).principal;
       }
       if (!isCurrent()) return false;
       // If the server ignored or could not apply the override, drop the stale value.
       if (requestedTenant && restoredPrincipal.effective_tenant.id !== requestedTenant) {
-        configureClient(resolvedBase, resolvedToken, "", snapshot?.refreshToken);
+        configureTenant("");
         if (restoredPrincipal.effective_tenant.id !== restoredPrincipal.home_tenant.id) {
           restoredPrincipal = (await identityApi.me()).principal;
           if (!isCurrent()) return false;
@@ -692,7 +330,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
           ? ""
           : restoredPrincipal.effective_tenant.id;
       if (confirmedOverride !== requestedTenant) {
-        configureClient(resolvedBase, resolvedToken, confirmedOverride, snapshot?.refreshToken);
+        configureTenant(confirmedOverride);
       }
       persistEffectiveTenantOverride(confirmedOverride);
       setPrincipal(restoredPrincipal);
@@ -702,15 +340,22 @@ export function AuthProvider({ children }: PropsWithChildren) {
       });
       setIsAuthenticated(true);
       setAuthFailureCode("");
+      // Re-read instead of writing back what this bootstrap started with. The
+      // /me call above can 401 and trigger a refresh, and the client persists
+      // the rotated pair itself; replaying the opening values here would roll
+      // that rotation back, so the next page load would present a token the
+      // server has already retired — a sign-out with no user action behind it.
+      const persisted = peekPersistedAuthSnapshot();
       persistSession({
         apiBase: resolvedBase,
-        managementKey: resolvedToken,
-        refreshToken: snapshot?.refreshToken,
+        managementKey: persisted?.managementKey || resolvedToken,
+        refreshToken: persisted?.refreshToken ?? snapshot?.refreshToken,
         rememberPassword: resolvedRemember,
         effectiveTenantId: confirmedOverride || undefined,
         principal: restoredPrincipal,
-        expiresAtMs: snapshot?.expiresAtMs,
-        refreshExpiresAtMs: snapshot?.refreshExpiresAtMs,
+        expiresAtMs: persisted?.expiresAtMs ?? snapshot?.expiresAtMs,
+        refreshExpiresAtMs: persisted?.refreshExpiresAtMs ?? snapshot?.refreshExpiresAtMs,
+        rotationSeq: persisted?.rotationSeq ?? snapshot?.rotationSeq,
       });
       return true;
     } catch (error) {
@@ -728,9 +373,49 @@ export function AuthProvider({ children }: PropsWithChildren) {
     } finally {
       if (isCurrent()) setIsRestoring(false);
     }
-  }, [configureClient]);
+  }, [configureCredentials, configureTenant]);
 
   useEffect(() => void bootstrap(), [bootstrap]);
+
+  // Cross-tab coordination. Without it, the tab that loses a concurrent refresh
+  // keeps replaying a refresh token the winner already rotated away, and gets
+  // signed out — the "it logged me out while I was working" report, reproduced
+  // by nothing more exotic than having the panel open twice.
+  useEffect(
+    () =>
+      subscribeAuthBroadcast((message) => {
+        if (isLocalPreviewMode()) return;
+        if (message.type === "signed-out") {
+          // Mirror handleUnauthorized's cleanup, minus the re-broadcast that
+          // would bounce the message back to the tab that sent it.
+          setAuthFailureCode(message.code);
+          setIsAuthenticated(false);
+          setPrincipal(null);
+          clearPersistedAuthSnapshot();
+          return;
+        }
+        if (
+          !shouldAdoptRotation({
+            currentAccountId: principal?.user.id,
+            message,
+            localRotationSeq: rotationSeqRef.current,
+          })
+        ) {
+          return;
+        }
+        // The broadcast carries no token by design; the shared snapshot is the
+        // only channel for the credential itself. A tab whose session lives in
+        // sessionStorage cannot see the winner's snapshot at all, and that is
+        // fine: it refreshes on its own and the server's grace window accepts it.
+        const snapshot = peekPersistedAuthSnapshot();
+        if (!snapshot?.managementKey) return;
+        rotationSeqRef.current = message.rotationSeq;
+        apiClient.adoptRotatedTokens(snapshot.managementKey, snapshot.refreshToken ?? "");
+        setAccessToken(snapshot.managementKey);
+        setRefreshToken(snapshot.refreshToken ?? "");
+      }),
+    [principal?.user.id],
+  );
 
   useEffect(() => {
     const refreshMenus = () => void bootstrap();
@@ -750,11 +435,16 @@ export function AuthProvider({ children }: PropsWithChildren) {
         return;
       }
       const code = detail?.code?.trim() ?? "";
+      // Deliberately no configureCredentials call: the client raised this because
+      // it already shut its own gate, and re-configuring would reopen it with an
+      // empty key. Transient refresh failures no longer land here, so reaching
+      // this point means the session really is gone.
       setAuthFailureCode(code);
       setIsAuthenticated(false);
       setPrincipal(null);
       syncActiveDataCacheTenant(DEFAULT_CACHE_TENANT_ID, { apiBase });
       clearPersistedAuthSnapshot();
+      publishSignedOut(code || "session_invalid");
     };
     const handleVersion = (event: Event) => {
       const detail = (event as CustomEvent<{ version?: string; buildDate?: string }>).detail;
@@ -767,6 +457,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
           accessToken?: string;
           refreshToken?: string;
           authGeneration?: number;
+          rotationSeq?: number;
         }>
       ).detail;
       if (
@@ -777,6 +468,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
       }
       if (detail?.accessToken) setAccessToken(detail.accessToken);
       if (detail?.refreshToken) setRefreshToken(detail.refreshToken);
+      // Own rotations advance the watermark too, so a broadcast describing the
+      // rotation this tab just performed is not re-applied.
+      if (typeof detail?.rotationSeq === "number" && detail.rotationSeq > rotationSeqRef.current) {
+        rotationSeqRef.current = detail.rotationSeq;
+      }
     };
     window.addEventListener("unauthorized", handleUnauthorized);
     window.addEventListener("server-version-update", handleVersion as EventListener);
@@ -786,7 +482,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       window.removeEventListener("server-version-update", handleVersion as EventListener);
       window.removeEventListener("auth-token-refreshed", handleTokenRefreshed as EventListener);
     };
-  }, [accessToken, apiBase, bootstrap, configureClient, principal, refreshToken]);
+  }, [accessToken, apiBase, bootstrap, principal, refreshToken]);
 
   const login = useCallback(
     async (input: {
@@ -797,16 +493,19 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }) => {
       const normalizedBase = normalizeApiBase(input.apiBase);
       // Login always starts on the home tenant; do not carry a previous override.
-      configureClient(normalizedBase, "", "");
+      configureCredentials(normalizedBase, "", null);
+      configureTenant("");
       const response = await identityApi.login({
         username: input.username.trim(),
         password: input.password,
         remember_me: input.rememberPassword,
       });
-      configureClient(normalizedBase, response.access_token, "", response.refresh_token ?? "");
+      configureCredentials(normalizedBase, response.access_token, response.refresh_token ?? "");
+      configureTenant("");
       setApiBase(normalizedBase);
       setAccessToken(response.access_token);
       setRefreshToken(response.refresh_token ?? "");
+      rotationSeqRef.current = 1;
       setRememberPassword(input.rememberPassword);
       setPrincipal(response.principal);
       syncActiveDataCacheTenant(response.principal.effective_tenant.id, {
@@ -825,23 +524,37 @@ export function AuthProvider({ children }: PropsWithChildren) {
         principal: response.principal,
         expiresAtMs: parseExpiryMs(response.expires_at),
         refreshExpiresAtMs: parseExpiryMs(response.refresh_expires_at),
+        rotationSeq: 1,
       });
       return response.principal;
     },
-    [configureClient],
+    [configureCredentials, configureTenant],
   );
 
+  // Order matters here, and it is the reverse of what reads naturally.
+  //
+  // Clearing React state first re-renders the tree synchronously, and effects
+  // keyed on managementKey (the system-stats socket among them) run during that
+  // render. If the client still accepted requests at that point, those effects
+  // would fire a burst of credential-less calls at the management API — which is
+  // exactly what used to fill the server's throttle bucket and lock the user out
+  // of logging back in. So: revoke, shut the gate, tell other tabs, drop the
+  // snapshot, and only then touch state.
   const logout = useCallback(() => {
+    // The client builds headers synchronously before its first await, so this
+    // still carries the live token.
     void identityApi.logout().catch(() => undefined);
+    configureCredentials(apiBase, "", null);
+    configureTenant("");
+    publishSignedOut("user_logout");
+    clearPersistedAuthSnapshot();
     setIsAuthenticated(false);
     setAccessToken("");
     setRefreshToken("");
     setPrincipal(null);
     setAuthFailureCode("");
-    configureClient(apiBase, "", "", "");
     syncActiveDataCacheTenant(DEFAULT_CACHE_TENANT_ID, { apiBase });
-    clearPersistedAuthSnapshot();
-  }, [apiBase, configureClient]);
+  }, [apiBase, configureCredentials, configureTenant]);
 
   const restore = useCallback(async () => {
     setIsRestoring(true);
@@ -858,7 +571,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
           : principal.effective_tenant.id;
       // Home tenant is represented as no override header.
       const nextOverride = nextTenant && nextTenant !== principal.home_tenant.id ? nextTenant : "";
-      configureClient(apiBase, accessToken, nextOverride, refreshToken);
+      configureTenant(nextOverride);
       persistEffectiveTenantOverride(nextOverride);
       // Switch cache bucket immediately so remounted pages never paint prior tenant data.
       syncActiveDataCacheTenant(nextTenant || principal.home_tenant.id, {
@@ -872,7 +585,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
           effective.id === response.principal.home_tenant.id ? "" : effective.id;
         // Align storage with what the server actually accepted.
         if (confirmedOverride !== nextOverride) {
-          configureClient(apiBase, accessToken, confirmedOverride, refreshToken);
+          configureTenant(confirmedOverride);
           persistEffectiveTenantOverride(confirmedOverride);
         }
         setPrincipal(response.principal);
@@ -881,7 +594,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
           accountId: response.principal.user.id,
         });
       } catch {
-        configureClient(apiBase, accessToken, previousTenant, refreshToken);
+        configureTenant(previousTenant);
         persistEffectiveTenantOverride(previousTenant);
         syncActiveDataCacheTenant(previousTenant || principal.home_tenant.id, {
           apiBase,
@@ -889,7 +602,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         });
       }
     },
-    [accessToken, apiBase, configureClient, principal, refreshToken],
+    [apiBase, configureTenant, principal],
   );
 
   const permissions = useMemo(

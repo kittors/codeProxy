@@ -1,4 +1,7 @@
 {
+  "errors": {
+    "auth_refresh_unavailable": "暂时无法连接认证服务，请稍后重试"
+  },
   "common": {
     "login": "登录",
     "logout": "登出",
