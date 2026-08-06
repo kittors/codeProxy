@@ -341,7 +341,7 @@ export function MenuManagementPage() {
       {
         key: "type",
         label: t("identity_admin.menu_type"),
-        width: "w-24",
+        width: COLUMN_WIDTH.badge,
         render: (menu) => (
           <span
             className={`inline-flex rounded-md px-2 py-0.5 text-xs font-medium ${typeBadgeClass(menu.type)}`}

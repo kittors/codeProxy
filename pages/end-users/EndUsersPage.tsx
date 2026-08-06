@@ -434,7 +434,7 @@ export function EndUsersPage() {
       {
         key: "totalResets",
         label: t("quota.total_resets"),
-        width: COLUMN_WIDTH.numericWide,
+        width: COLUMN_WIDTH.timestamp,
         headerClassName: "text-center",
         cellClassName: "text-center",
         render: (row) => {

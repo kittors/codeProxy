@@ -61,7 +61,7 @@ export function EndUserResetHistoryModal({
     {
       key: "id",
       label: t("end_users.reset_history_col_id"),
-      width: COLUMN_WIDTH.numeric,
+      width: COLUMN_WIDTH.compact,
       cellClassName:
         "whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
       render: (row) => row.id,

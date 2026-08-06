@@ -110,7 +110,7 @@ export const createOwnedApiKeyColumns = ({
   {
     key: "resetCount",
     label: t("quota.total_resets"),
-    width: COLUMN_WIDTH.numericWide,
+    width: COLUMN_WIDTH.timestamp,
     cellClassName: "text-center",
     render: (row) => {
       const count = row["daily-spending-reset-count"] ?? 0;
