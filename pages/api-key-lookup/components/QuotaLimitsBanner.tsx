@@ -11,6 +11,12 @@ export type QuotaKpiItem = {
   limit: number;
   format: (value: number) => string;
   icon: ComponentType<{ size?: number; className?: string }>;
+  /**
+   * Rolling quotas refill on their own, so used/limit answers "how am I doing
+   * this period". The lifetime cap only counts down, so what matters is what is
+   * left before the key stops working.
+   */
+  showRemaining?: boolean;
 };
 
 export function buildQuotaKpiItems(
@@ -71,6 +77,7 @@ export function buildQuotaKpiItems(
       limit: limits["spending-limit"],
       format: formatQuotaUsd,
       icon: Coins,
+      showRemaining: true,
     });
   }
   return items;
@@ -94,7 +101,10 @@ export function QuotaLimitKpiCards({
   return (
     <>
       {items.map((item) => {
-        const usedText = item.format(item.used);
+        const remaining = Math.max(0, item.limit - item.used);
+        const usedText = item.showRemaining
+          ? t("quota.remaining_value", { remaining: item.format(remaining) })
+          : item.format(item.used);
         const limitText = item.format(item.limit);
         const display = `${usedText} / ${limitText}`;
         const sizeClass = kpiValueSizeClass(display);
@@ -104,7 +114,14 @@ export function QuotaLimitKpiCards({
           tone="portal"
               title={item.title}
               icon={item.icon}
-              hint={t("apikey_lookup.quota_used_of_limit")}
+              hint={
+                item.showRemaining
+                  ? t("quota.lifetime_remaining_hint", {
+                      limit: item.format(item.limit),
+                      used: item.format(item.used),
+                    })
+                  : t("apikey_lookup.quota_used_of_limit")
+              }
               valueClassName={sizeClass}
               value={renderValue(
                 <span className="block whitespace-nowrap tabular-nums leading-tight">

@@ -73,7 +73,11 @@ export function ApiKeyPeriodQuotaResetModal({
       onClose={() => {
         if (!busy) onClose();
       }}
-      onConfirm={(periods) => void handleConfirm(periods)}
+      onConfirm={(periods) =>
+        // Keys have no cumulative allowance, so this dialog only ever yields
+        // rolling periods; narrow before handing them to the key-scoped API.
+        void handleConfirm(periods.filter((p): p is PeriodSpendingPeriod => p !== "lifetime"))
+      }
     />
   );
 }

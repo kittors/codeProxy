@@ -12,7 +12,7 @@ import {
 import { normalizeProviderKey } from "@code-proxy/domain";
 import { useOptionalAuth } from "@app/providers/AuthProvider";
 import { ccSwitchImportConfigsApi } from "@code-proxy/api-client/endpoints/ccswitch-import-configs";
-import { Button } from "@code-proxy/ui";
+import { Button, COLUMN_WIDTH } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
 import { ConfirmModal } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
@@ -213,7 +213,7 @@ export function CcSwitchImportSettingsPage() {
       {
         key: "provider",
         label: t("ccswitch.config_table_provider"),
-        width: "w-72",
+        width: COLUMN_WIDTH.nameStacked,
         overflowTooltip: (row) =>
           row.note ? `${row.providerName}\n${row.note}` : row.providerName,
         render: (row) => (
@@ -230,7 +230,7 @@ export function CcSwitchImportSettingsPage() {
       {
         key: "model",
         label: t("ccswitch.config_table_model"),
-        width: "w-52",
+        width: COLUMN_WIDTH.name,
         overflowTooltip: true,
         render: (row) => (
           <span className="inline-flex max-w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-slate-900/8 bg-white px-2 py-1 font-mono text-xs text-slate-600 dark:border-white/8 dark:bg-neutral-950 dark:text-white/65">
@@ -241,7 +241,7 @@ export function CcSwitchImportSettingsPage() {
       {
         key: "groups",
         label: t("ccswitch.config_table_groups"),
-        width: "w-72",
+        width: COLUMN_WIDTH.nameStacked,
         overflowTooltip: (row) =>
           row.allowedChannelGroups.length > 0 ? row.allowedChannelGroups.join(", ") : null,
         render: (row) =>

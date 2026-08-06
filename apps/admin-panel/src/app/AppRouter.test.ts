@@ -17,7 +17,9 @@ describe("AppRouter", () => {
     const ccSwitchRoute = readRepoModule("pages/ccswitch-import-settings/route.tsx");
     const apiKeyPermissionsRoute = readRepoModule("pages/api-key-permissions/route.tsx");
     const contentModerationRoute = readRepoModule("pages/content-moderation/route.tsx");
-    const authProvider = readAppModule("app/providers/AuthProvider.tsx");
+    // The management-key sidebar fixtures live beside AuthProvider rather than
+    // inside it; the assertions below still guard the same menu entries.
+    const authProvider = readAppModule("app/providers/legacyServiceMenus.ts");
     const appShell = readAppModule("app/layout/AppShell.tsx");
 
     expect(source).toContain("pageRoutes");

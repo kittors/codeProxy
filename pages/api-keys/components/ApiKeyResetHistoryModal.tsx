@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { DataTable, Modal } from "@code-proxy/ui";
+import { COLUMN_WIDTH, DataTable, Modal } from "@code-proxy/ui";
 import type { DataTableColumn } from "@code-proxy/ui";
 import type { ApiKeyDailySpendingResetEvent } from "@code-proxy/api-client/endpoints/api-keys";
 import { formatApiKeySpendingAmount } from "../apiKeyPageUtils";
@@ -44,7 +44,7 @@ export function ApiKeyResetHistoryModal({
     {
       key: "reset_at",
       label: t("api_keys_page.reset_history_col_time"),
-      width: "w-[180px] min-w-[160px]",
+      width: COLUMN_WIDTH.badgeGroup,
       cellClassName:
         "whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
       render: (row) => formatResetAt(row.reset_at),
@@ -52,7 +52,7 @@ export function ApiKeyResetHistoryModal({
     {
       key: "day_key",
       label: t("api_keys_page.reset_history_col_day"),
-      width: "w-[130px] min-w-[120px]",
+      width: COLUMN_WIDTH.numericWide,
       cellClassName:
         "whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
       render: (row) => row.day_key || "—",
@@ -60,14 +60,14 @@ export function ApiKeyResetHistoryModal({
     {
       key: "actor",
       label: t("api_keys_page.reset_history_col_actor"),
-      width: "w-[140px] min-w-[120px]",
+      width: COLUMN_WIDTH.numericWide,
       cellClassName: "text-slate-700 dark:text-white/70",
       render: (row) => actorLabel(row, t),
     },
     {
       key: "effective_used_before",
       label: t("api_keys_page.reset_history_col_cleared"),
-      width: "w-[140px] min-w-[120px]",
+      width: COLUMN_WIDTH.timestamp,
       cellClassName:
         "whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
       render: (row) =>
@@ -84,7 +84,7 @@ export function ApiKeyResetHistoryModal({
     {
       key: "cost_baseline",
       label: t("api_keys_page.reset_history_col_baseline"),
-      width: "w-[150px] min-w-[130px]",
+      width: COLUMN_WIDTH.timestamp,
       cellClassName:
         "whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
       render: (row) => formatApiKeySpendingAmount(row.cost_baseline ?? 0),

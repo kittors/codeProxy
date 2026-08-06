@@ -18,6 +18,7 @@ import {
 } from "@code-proxy/api-client";
 import {
   Button,
+  COLUMN_WIDTH,
   Card,
   ConfirmModal,
   DataTable,
@@ -178,14 +179,14 @@ export function ContentModerationPage() {
       {
         key: "name",
         label: t("content_moderation.profile_name"),
-        width: "w-[180px] min-w-[180px]",
+        width: COLUMN_WIDTH.badgeGroup,
         cellClassName: "font-medium text-slate-900 dark:text-white",
         render: (profile) => profile.name,
       },
       {
         key: "mode",
         label: t("content_moderation.enabled"),
-        width: "w-[140px] min-w-[140px]",
+        width: COLUMN_WIDTH.toggle,
         render: (profile) => {
           const enabled = profile.mode === "pre_block";
           return (
@@ -208,7 +209,7 @@ export function ContentModerationPage() {
       {
         key: "method",
         label: t("content_moderation.moderation_method"),
-        width: "w-[180px] min-w-[180px]",
+        width: COLUMN_WIDTH.badgeGroup,
         cellClassName: "text-slate-700 dark:text-white/70",
         render: (profile) => t(`content_moderation.keyword_mode_${profile.keyword_mode}`),
       },
@@ -228,7 +229,7 @@ export function ContentModerationPage() {
       {
         key: "apiKey",
         label: t("content_moderation.api_key"),
-        width: "w-[120px] min-w-[120px]",
+        width: COLUMN_WIDTH.name,
         render: (profile) =>
           profile.api_key_configured ? (
             <span className="font-mono text-xs text-emerald-700 dark:text-emerald-200">
@@ -243,7 +244,7 @@ export function ContentModerationPage() {
       {
         key: "bindings",
         label: t("content_moderation.bindings"),
-        width: "w-[160px] min-w-[160px]",
+        width: COLUMN_WIDTH.badgeStacked,
         render: (profile) => (
           <div className="text-xs text-slate-700 dark:text-white/70">
             <p>{t("content_moderation.binding_total", { count: bindingCount(profile) })}</p>
@@ -260,7 +261,7 @@ export function ContentModerationPage() {
       {
         key: "updated",
         label: t("content_moderation.updated_at"),
-        width: "w-[160px] min-w-[160px]",
+        width: COLUMN_WIDTH.timestamp,
         render: (profile) => (
           <span className="text-xs tabular-nums text-slate-600 dark:text-white/60">
             {new Intl.DateTimeFormat(undefined, {

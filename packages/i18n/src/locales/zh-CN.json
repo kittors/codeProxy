@@ -1,4 +1,7 @@
 {
+  "errors": {
+    "auth_refresh_unavailable": "暂时无法连接认证服务，请稍后重试"
+  },
   "common": {
     "login": "登录",
     "logout": "登出",
@@ -4128,6 +4131,7 @@
     "test_run": "开始测试",
     "test_running": "测试中…",
     "test_response": "响应",
+    "test_duration": "耗时 {{duration}}",
     "test_no_channels": "当前模型没有可用渠道来源。",
     "test_no_api_key": "未找到可用的 API Key。请先在 API Keys 中创建未禁用的 Key，最好将该渠道加入 allowed-channels。",
     "test_empty_response": "(空响应)",
@@ -4683,7 +4687,8 @@
       "5h": "5小时",
       "day": "一天",
       "week": "一周",
-      "month": "一月"
+      "month": "一月",
+      "lifetime": "累计"
     },
     "field": {
       "5h": "5 小时额度 (USD)",
@@ -4702,6 +4707,10 @@
     "account_limit_value": "账号上限 {{value}}",
     "account_unlimited": "账号不限制",
     "used_of_limit": "{{period}}：已用 {{used}}，上限 {{limit}}",
+    "lifetime_label": "累计",
+    "remaining_value": "剩 {{remaining}}",
+    "lifetime_remaining_detail": "累计：已用 {{used}}，上限 {{limit}}，剩余 {{remaining}}",
+    "lifetime_remaining_hint": "上限 {{limit}} · 已用 {{used}}",
     "reset": {
       "account_title": "重置账号配额",
       "key_title": "重置 Key 配额",
@@ -4721,7 +4730,8 @@
       "key_exceeds_account": "Key {{period}}额度 {{keyLimit}} 超过账号{{period}}额度 {{accountLimit}}",
       "period_day_legacy_conflict": "每日额度与旧版每日消费限额冲突。",
       "five_hour_projection_warming": "5 小时配额正在准备使用数据，请稍后再试。"
-    }
+    },
+    "lifetime_usage_hint": "本轮已用 {{used}} · 剩余 {{remaining}}；用完后可在「重置配额」中重新发放"
   },
   "identity_admin": {
     "operation_failed": "操作失败。",

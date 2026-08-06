@@ -16,7 +16,7 @@ import type { AuthFileItem } from "@code-proxy/api-client";
 import { formatLatency } from "@features/provider-latency";
 import { ProviderStatusBar } from "@features/provider-latency";
 import { Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
-import { HoverTooltip } from "@code-proxy/ui";
+import { COLUMN_WIDTH, HoverTooltip } from "@code-proxy/ui";
 import { ToggleSwitch } from "@code-proxy/ui";
 import { TABLE_ROW_ACTIONS_COLUMN, TableRowActions, type DataTableColumn } from "@code-proxy/ui";
 import {
@@ -48,8 +48,8 @@ import {
 } from "@code-proxy/domain";
 import { resolveQuotaProvider, type QuotaProvider } from "@features/quota-preview/quota-fetch";
 import { useStickyDisplayPlans } from "./useStickyDisplayPlans";
+import { QuotaMetricChips, resolveQuotaVisualTone } from "../components/QuotaMetricChips";
 import {
-  clampPercent,
   filterAntigravityQuotaItems,
   type QuotaItem,
   type QuotaState,
@@ -97,81 +97,6 @@ const CLAUDE_OAUTH_HEALTH_TONE_CLASSES = {
 const STICKY_ACTIONS_HEADER_CLASS =
   "text-center md:sticky md:z-40 md:bg-slate-100 md:dark:bg-neutral-800";
 const STICKY_ACTIONS_CELL_CLASS = "md:sticky md:z-30 md:bg-white md:dark:bg-neutral-950";
-const QUOTA_METRIC_WIDE_LABEL_UNITS = 30;
-
-const getQuotaMetricDisplayUnits = (value: string | null | undefined): number =>
-  Array.from(value ?? "").reduce(
-    (total, char) => total + ((char.codePointAt(0) ?? 0) > 0xff ? 2 : 1),
-    0,
-  );
-
-const resolveQuotaMetricWideFlags = (
-  metrics: { label: string; detailText: string | null }[],
-): boolean[] => {
-  const wideFlags = metrics.map(
-    ({ label, detailText }) =>
-      metrics.length === 1 ||
-      getQuotaMetricDisplayUnits(label) > QUOTA_METRIC_WIDE_LABEL_UNITS ||
-      getQuotaMetricDisplayUnits(detailText) > QUOTA_METRIC_WIDE_LABEL_UNITS,
-  );
-
-  let compactSegmentStart = 0;
-  for (let index = 0; index <= wideFlags.length; index += 1) {
-    if (index < wideFlags.length && !wideFlags[index]) continue;
-    const compactSegmentLength = index - compactSegmentStart;
-    if (compactSegmentLength % 2 === 1) {
-      wideFlags[index - 1] = true;
-    }
-    compactSegmentStart = index + 1;
-  }
-
-  return wideFlags;
-};
-
-type QuotaVisualTone = {
-  normalized: number | null;
-  fillClass: string;
-  percentClass: string;
-  fillHex: string;
-};
-
-const resolveQuotaVisualTone = (percent: number | null | undefined): QuotaVisualTone => {
-  const normalized = percent === null || percent == null ? null : clampPercent(percent);
-
-  if (normalized === null) {
-    return {
-      normalized,
-      fillClass: "bg-slate-300/50 dark:bg-white/10",
-      percentClass: "text-slate-900 dark:text-white",
-      fillHex: "#cbd5e1",
-    };
-  }
-
-  if (normalized >= 60) {
-    return {
-      normalized,
-      fillClass: "bg-emerald-500",
-      percentClass: "text-emerald-700 dark:text-emerald-200",
-      fillHex: "#10b981",
-    };
-  }
-
-  if (normalized >= 20) {
-    return {
-      normalized,
-      fillClass: "bg-amber-500",
-      percentClass: "text-amber-700 dark:text-amber-200",
-      fillHex: "#f59e0b",
-    };
-  }
-
-  return {
-    normalized,
-    fillClass: "bg-rose-500",
-    percentClass: "text-rose-700 dark:text-rose-200",
-    fillHex: "#f43f5e",
-  };
-};
 
 interface UseAuthFilesFilesPresentationOptions {
   filesViewMode: FilesViewMode;
@@ -472,6 +397,39 @@ export function useAuthFilesFilesPresentation({
     [nowMs, t],
   );
 
+  // Chips keep only the two largest units ("2d19h") so the countdown never
+  // squeezes the percent out of a half-width chip.
+  const formatQuotaResetTextChip = useCallback(
+    (resetAtMs?: number) => {
+      if (typeof resetAtMs !== "number" || !Number.isFinite(resetAtMs)) return null;
+
+      const diffMs = resetAtMs - nowMs;
+      if (diffMs <= 0) return t("m_quota.refresh_due");
+
+      let seconds = Math.max(1, Math.ceil(diffMs / 1000));
+      const days = Math.floor(seconds / 86400);
+      seconds -= days * 86400;
+      const hours = Math.floor(seconds / 3600);
+      seconds -= hours * 3600;
+      const minutes = Math.floor(seconds / 60);
+      seconds -= minutes * 60;
+
+      const units = [
+        days ? t("m_quota.duration_day_compact", { count: days }) : "",
+        hours ? t("m_quota.duration_hour_compact", { count: hours }) : "",
+        minutes ? t("m_quota.duration_minute_compact", { count: minutes }) : "",
+        seconds ? t("m_quota.duration_second_compact", { count: seconds }) : "",
+      ];
+      const firstIndex = units.findIndex(Boolean);
+      if (firstIndex < 0) return t("m_quota.duration_second_compact", { count: 0 });
+      return units
+        .slice(firstIndex, firstIndex + 2)
+        .filter(Boolean)
+        .join("");
+    },
+    [nowMs, t],
+  );
+
   const renderFilesViewModeTabs = useMemo(() => {
     const options: { value: FilesViewMode; label: string }[] = [
       { value: "table", label: t("common.view_mode_list") },
@@ -496,33 +454,6 @@ export function useAuthFilesFilesPresentation({
     );
   }, [filesViewMode, setFilesViewMode, t]);
 
-  const quotaProgressCircle = useCallback((percent: number | null) => {
-    const tone = resolveQuotaVisualTone(percent);
-    const normalized = tone.normalized;
-    const deg = normalized === null ? 0 : Math.max(0, Math.min(360, (normalized / 100) * 360));
-
-    return (
-      <span
-        className="relative inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center"
-        aria-hidden="true"
-      >
-        <span
-          className="absolute inset-0 rounded-full dark:hidden"
-          style={{
-            background: `conic-gradient(${tone.fillHex} ${deg}deg, rgba(148, 163, 184, 0.35) 0deg)`,
-          }}
-        />
-        <span
-          className="absolute inset-0 hidden rounded-full dark:block"
-          style={{
-            background: `conic-gradient(${tone.fillHex} ${deg}deg, rgba(255, 255, 255, 0.14) 0deg)`,
-          }}
-        />
-        <span className="absolute inset-[2px] rounded-full bg-white dark:bg-neutral-950" />
-      </span>
-    );
-  }, []);
-
   const formatQuotaItemDetailText = useCallback(
     (item: QuotaItem | null | undefined) => {
       const reset = formatQuotaResetTextCompact(item?.resetAtMs);
@@ -540,6 +471,21 @@ export function useAuthFilesFilesPresentation({
       return resetLabel ?? meta ?? null;
     },
     [formatQuotaResetTextCompact, t, translateQuotaText],
+  );
+
+  // Chips render meta and countdown in separate slots, so the meta half is
+  // resolved on its own instead of the merged "meta · reset" detail string.
+  const resolveQuotaItemMetaText = useCallback(
+    (item: QuotaItem | null | undefined) => {
+      const rawMeta = item?.meta?.trim() ? translateQuotaText(item.meta) : null;
+      // Drop raw ISO period ranges (e.g. "2026-07-16T06:45:51+00:00 - …").
+      if (!rawMeta || /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(rawMeta)) return null;
+      const hasReset = typeof item?.resetAtMs === "number" && Number.isFinite(item.resetAtMs);
+      // Non-money meta only restates the period the countdown already shows.
+      if (hasReset && !rawMeta.includes("$")) return null;
+      return rawMeta;
+    },
+    [translateQuotaText],
   );
 
   const resolveQuotaErrorBadgeLabel = useCallback(
@@ -574,63 +520,6 @@ export function useAuthFilesFilesPresentation({
       );
     },
     [resolveQuotaErrorBadgeLabel, t, translateQuotaText],
-  );
-
-  const renderQuotaHoverContent = useCallback(
-    (state: QuotaState, options?: { suppressItemMeta?: boolean }) => {
-      const items = Array.isArray(state.items) ? (state.items as QuotaItem[]) : [];
-      const hasError = state.status === "error" || Boolean(state.error);
-
-      return (
-        <div className="space-y-1">
-          {hasError ? (
-            <p className="max-w-80 whitespace-pre-wrap break-words text-xs font-semibold text-rose-700 dark:text-rose-200">
-              {translateQuotaText(state.error ?? t("common.error"))}
-            </p>
-          ) : null}
-
-          {items.length > 0 ? (
-            <div className="quota-tooltip-grid grid w-[min(26rem,calc(100vw-2rem))] grid-cols-[minmax(0,1fr)_0.875rem_max-content_max-content] items-center gap-x-2 gap-y-1">
-              {items.map((item) => {
-                const tone = resolveQuotaVisualTone(item.percent);
-                const percentText =
-                  (item.value ? translateQuotaText(item.value) : undefined) ??
-                  (tone.normalized === null ? "--" : `${Math.round(tone.normalized)}%`);
-                const resetText = formatQuotaItemDetailText(item);
-                const itemMeta = options?.suppressItemMeta || resetText ? undefined : item.meta;
-                return (
-                  <div key={item.label} className="contents">
-                    <span className="min-w-0 truncate text-2xs font-semibold text-slate-600 dark:text-white/70">
-                      {translateQuotaText(item.label)}
-                    </span>
-                    <span className="flex items-center justify-center">
-                      {quotaProgressCircle(item.percent)}
-                    </span>
-                    <span
-                      className={[
-                        "justify-self-end whitespace-nowrap text-2xs font-semibold tabular-nums",
-                        tone.percentClass,
-                      ].join(" ")}
-                    >
-                      {percentText}
-                    </span>
-                    <span className="whitespace-nowrap text-right text-2xs tabular-nums text-slate-500 dark:text-white/40">
-                      {resetText ?? "--"}
-                    </span>
-                    {itemMeta ? (
-                      <span className="col-span-4 truncate text-2xs text-slate-500 dark:text-white/55">
-                        {itemMeta}
-                      </span>
-                    ) : null}
-                  </div>
-                );
-              })}
-            </div>
-          ) : null}
-        </div>
-      );
-    },
-    [formatQuotaItemDetailText, quotaProgressCircle, t, translateQuotaText],
   );
 
   const renderQuotaBar = useCallback(
@@ -713,7 +602,7 @@ export function useAuthFilesFilesPresentation({
       {
         key: "select",
         label: "",
-        width: "w-14",
+        width: COLUMN_WIDTH.checkbox,
         headerClassName: "text-center",
         cellClassName: "text-center",
         headerRender: () => (
@@ -754,7 +643,7 @@ export function useAuthFilesFilesPresentation({
       {
         key: "name",
         label: t("auth_files.col_name"),
-        width: "w-72",
+        width: COLUMN_WIDTH.nameStacked,
         render: (file) => {
           const supplementalTags = resolveAuthFileSupplementalTags(
             file,
@@ -790,7 +679,7 @@ export function useAuthFilesFilesPresentation({
       {
         key: "type",
         label: t("auth_files.col_type"),
-        width: "w-32",
+        width: COLUMN_WIDTH.badgeStacked,
         render: (file) => {
           const typeKey = resolveFileType(file);
           const badgeClass = TYPE_BADGE_CLASSES[typeKey] ?? TYPE_BADGE_CLASSES.unknown;
@@ -839,7 +728,7 @@ export function useAuthFilesFilesPresentation({
       {
         key: "subscription",
         label: t("auth_files.col_subscription"),
-        width: "w-40",
+        width: COLUMN_WIDTH.metric,
         render: (file) =>
           renderSubscriptionBadge(file) ?? (
             <span className="text-xs text-slate-400 dark:text-white/40">--</span>
@@ -848,7 +737,7 @@ export function useAuthFilesFilesPresentation({
       {
         key: "modified",
         label: t("auth_files.file_modified"),
-        width: "w-36",
+        width: COLUMN_WIDTH.metric,
         render: (file) => (
           <span className="text-xs tabular-nums text-slate-700 dark:text-white/70">
             {formatModified(file)}
@@ -858,7 +747,7 @@ export function useAuthFilesFilesPresentation({
       {
         key: "connectivity",
         label: t("auth_files.col_connectivity"),
-        width: "w-28",
+        width: COLUMN_WIDTH.metric,
         render: (file) => {
           const state = connectivityState.get(file.name);
           return (
@@ -886,7 +775,7 @@ export function useAuthFilesFilesPresentation({
       {
         key: "cycle_calls",
         label: t("auth_files.col_cycle_calls"),
-        width: "w-24",
+        width: COLUMN_WIDTH.numericWide,
         headerClassName: "text-right",
         cellClassName: "text-right",
         render: (file) => {
@@ -908,7 +797,7 @@ export function useAuthFilesFilesPresentation({
       {
         key: "success",
         label: t("common.success"),
-        width: "w-20",
+        width: COLUMN_WIDTH.numeric,
         headerClassName: "text-right",
         cellClassName: "text-right",
         render: (file) => {
@@ -924,7 +813,7 @@ export function useAuthFilesFilesPresentation({
       {
         key: "failure",
         label: t("common.failure"),
-        width: "w-20",
+        width: COLUMN_WIDTH.numeric,
         headerClassName: "text-right",
         cellClassName: "text-right",
         render: (file) => {
@@ -940,7 +829,7 @@ export function useAuthFilesFilesPresentation({
       {
         key: "rate",
         label: t("common.success_rate"),
-        width: "w-44",
+        width: COLUMN_WIDTH.metric,
         render: (file) => {
           const statusData = resolveAuthFileStatusBar(file, usageIndex);
           const hasUsage = statusData.totalSuccess + statusData.totalFailure > 0;
@@ -960,9 +849,9 @@ export function useAuthFilesFilesPresentation({
       {
         key: "quota",
         label: t("auth_files.col_quota"),
-        width: "w-[36rem] min-w-[36rem]",
-        minWidthPx: 480,
-        maxWidthPx: 720,
+        width: COLUMN_WIDTH.composite, // chips 两列排布约 290px 够用；36rem 是旧进度条布局的尺寸
+        minWidthPx: 288,
+        maxWidthPx: 640,
         overflowTooltip: false,
         headerClassName: "text-center",
         render: (file) => {
@@ -975,95 +864,37 @@ export function useAuthFilesFilesPresentation({
           const rawItems = Array.isArray(state.items) ? (state.items as QuotaItem[]) : [];
           const items =
             provider === "antigravity" ? filterAntigravityQuotaItems(rawItems) : rawItems;
-          const displayState = items === rawItems ? state : { ...state, items };
           const slots = resolveQuotaCardSlots(provider, items);
-          const quotaMetricDetails = slots.map((slot) => formatQuotaItemDetailText(slot.item));
-          const quotaMetricWideFlags = resolveQuotaMetricWideFlags(
-            slots.map((slot, index) => ({
-              label: slot.label,
-              detailText: quotaMetricDetails[index] ?? null,
-            })),
-          );
           const hasError = state.status === "error" || Boolean(state.error);
 
           if (hasError && slots.length === 0) {
             return renderQuotaErrorBadge(state.error ?? t("common.error"));
           }
 
-          return (
-            <HoverTooltip
-              disabled={items.length === 0}
-              className="w-full min-w-0"
-              content={renderQuotaHoverContent(displayState, {
-                suppressItemMeta: provider === "antigravity",
-              })}
-            >
-              <div className="w-full min-w-0">
-                {slots.length === 0 ? (
-                  <span className="text-xs text-slate-400 dark:text-white/40">--</span>
-                ) : (
-                  <div
-                    className="grid w-full min-w-0 grid-cols-2 gap-x-4 gap-y-3 py-0.5"
-                    data-testid="auth-file-quota-grid"
-                  >
-                    {hasError ? (
-                      <div className="col-span-2">
-                        {renderQuotaErrorBadge(state.error ?? t("common.error"))}
-                      </div>
-                    ) : null}
-                    {slots.map((slot, index) => {
-                      const tone = resolveQuotaVisualTone(slot.item?.percent);
-                      const normalized = tone.normalized;
-                      const percentText =
-                        (slot.item?.value ? translateQuotaText(slot.item.value) : undefined) ??
-                        (normalized === null ? "--" : `${Math.round(normalized)}%`);
-                      const detailText = quotaMetricDetails[index] ?? null;
-                      const wide = quotaMetricWideFlags[index] ?? false;
+          if (slots.length === 0) {
+            return <span className="text-xs text-slate-400 dark:text-white/40">--</span>;
+          }
 
-                      return (
-                        <div
-                          key={slot.id}
-                          className={wide ? "col-span-2 min-w-0" : "min-w-0"}
-                          data-layout={wide ? "wide" : "compact"}
-                          data-testid="auth-file-quota-metric"
-                        >
-                          <div className="flex min-w-0 items-start justify-between gap-2">
-                            <span className="min-w-0 break-words text-2xs font-semibold leading-4 text-slate-600 dark:text-white/70">
-                              {slot.label}
-                            </span>
-                            <span
-                              className={[
-                                "shrink-0 text-2xs font-semibold tabular-nums",
-                                tone.percentClass,
-                              ].join(" ")}
-                            >
-                              {percentText}
-                            </span>
-                          </div>
-                          <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-white/10">
-                            <div
-                              className={["h-full rounded-full", tone.fillClass].join(" ")}
-                              style={{ width: `${normalized ?? 0}%` }}
-                              aria-hidden="true"
-                            />
-                          </div>
-                          <div className="mt-1 min-h-[14px] whitespace-nowrap text-right text-2xs tabular-nums text-slate-500 dark:text-white/40">
-                            {detailText ?? "\u00A0"}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </HoverTooltip>
+          return (
+            <QuotaMetricChips
+              slots={slots}
+              errorBadge={
+                hasError ? renderQuotaErrorBadge(state.error ?? t("common.error")) : undefined
+              }
+              resolveMetaText={resolveQuotaItemMetaText}
+              resolveResetText={(item) => formatQuotaResetTextChip(item?.resetAtMs)}
+              resolvePercentText={(item, tone) =>
+                (item?.value ? translateQuotaText(item.value) : undefined) ??
+                (tone.normalized === null ? "--" : `${Math.round(tone.normalized)}%`)
+              }
+            />
           );
         },
       },
       {
         key: "enabled",
         label: t("auth_files.enable"),
-        width: "w-24",
+        width: COLUMN_WIDTH.toggle,
         headerClassName: "text-center",
         cellClassName: "text-center",
         render: (file) => {
@@ -1175,12 +1006,12 @@ export function useAuthFilesFilesPresentation({
     statusUsageLoading,
     statusUsageReady,
     downloadAuthFile,
-    formatQuotaItemDetailText,
+    formatQuotaResetTextChip,
     formatPlanTypeLabel,
     openDetail,
     openTagsEditor,
     quotaByFileName,
-    quotaProgressCircle,
+    resolveQuotaItemMetaText,
     resolveQuotaCardSlots,
     refreshQuota,
     requestResetCredit,

@@ -6,6 +6,29 @@ export const AUTH_PERSIST_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 export const VERSION_HEADER_KEYS = ["x-cpa-version", "x-server-version"];
 export const BUILD_DATE_HEADER_KEYS = ["x-cpa-build-date", "x-server-build-date"];
 
+/** Timeout for a single refresh fetch. Must stay below REQUEST_TIMEOUT_MS. */
+export const REFRESH_TIMEOUT_MS = 8_000;
+/** One initial attempt plus one retry; more attempts would not fit the grace window. */
+export const REFRESH_MAX_ATTEMPTS = 2;
+/** Base retry delay, jittered by ±25% so concurrent tabs do not resonate. */
+export const REFRESH_RETRY_BACKOFF_MS = 500;
+/** Wall-clock ceiling for the whole refresh sequence: 8000 + 625(max) + 8000 = 16625. */
+export const REFRESH_TOTAL_BUDGET_MS = 17_000;
+export const REFRESH_LOCK_WAIT_MS = 6_000;
+/** Longer than REFRESH_TOTAL_BUDGET_MS so a working holder is never preempted mid-refresh. */
+export const REFRESH_LOCK_TTL_MS = 20_000;
+export const REFRESH_LOCK_POLL_MS = 150;
+
+/**
+ * Mirror of the backend `remote-management.auth.refresh-grace-seconds` (s → ms).
+ * Compile/test-time anchor for the cross-repo coupling invariant only; no runtime
+ * logic reads it. Changing the backend value without changing this one makes the
+ * refresh-budget assertion in __tests__/refreshBudget.test.ts fail, which is the
+ * point: a retry landing outside the grace window trips backend reuse detection
+ * and revokes the whole session.
+ */
+export const BACKEND_REFRESH_GRACE_MS = 30_000;
+
 const isLoopbackHost = (host: string): boolean => {
   const normalized = host.trim().toLowerCase().replace(/^\[|\]$/g, "");
   return (
