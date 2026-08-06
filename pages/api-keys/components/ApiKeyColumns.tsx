@@ -256,7 +256,7 @@ export const createApiKeyColumns = ({
     {
       key: "dailySpendingResetCount",
       label: t("quota.total_resets"),
-      width: COLUMN_WIDTH.numericWide,
+      width: COLUMN_WIDTH.timestamp,
       cellClassName: "whitespace-nowrap text-slate-700 dark:text-white/70",
       headerRender: () => (
         <HoverTooltip
@@ -294,7 +294,7 @@ export const createApiKeyColumns = ({
     {
       key: "dailyLimit",
       label: t("api_keys_page.col_daily_limit"),
-      width: "w-[132px] min-w-[132px]",
+      width: COLUMN_WIDTH.compact,
       cellClassName: "whitespace-nowrap text-slate-700 dark:text-white/70",
       render: (row) => (
         <span className="inline-flex items-center gap-1">
@@ -311,7 +311,7 @@ export const createApiKeyColumns = ({
     {
       key: "totalQuota",
       label: t("api_keys_page.col_total_quota"),
-      width: "w-[132px] min-w-[132px]",
+      width: COLUMN_WIDTH.compact,
       cellClassName: "whitespace-nowrap text-slate-700 dark:text-white/70",
       render: (row) => (
         <span className="inline-flex items-center gap-1">
