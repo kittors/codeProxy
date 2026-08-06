@@ -20,12 +20,12 @@
     "pages/auth-files/components/AuthFileDetailModal.tsx": 2070,
     "pages/auth-files/components/AuthFilesFilesTab.tsx": 2644,
     "pages/auth-files/hooks/useAuthFilesDetailEditors.ts": 1286,
-    "pages/auth-files/hooks/useAuthFilesFilesPresentation.tsx": 1218,
+    "pages/auth-files/hooks/useAuthFilesFilesPresentation.tsx": 1049,
     "pages/auth-files/hooks/useAuthFilesStatusState.ts": 1455,
     "pages/end-users/EndUsersPage.tsx": 1126,
     "pages/identity-fingerprint/IdentityFingerprintPage.tsx": 1880,
     "pages/image-generation/components/ImageGenerationPageContent.tsx": 1197,
-    "pages/models/ModelsPage.tsx": 1358,
+    "pages/models/ModelsPage.tsx": 1251,
     "pages/providers/components/ProvidersPageContent.tsx": 1853
   }
 }
