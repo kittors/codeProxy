@@ -3,7 +3,6 @@
   "maxLines": 800,
   "files": {
     "apps/admin-panel/src/app/layout/AppShell.tsx": 1402,
-    "apps/admin-panel/src/app/providers/AuthProvider.tsx": 957,
     "features/ccswitch-import/components/CcSwitchImportConfigModal.tsx": 968,
     "features/log-content-viewer/components/LogContentModal.tsx": 1534,
     "features/model-availability/modelAvailability.ts": 1275,

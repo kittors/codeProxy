@@ -2,6 +2,7 @@ import { detectApiBaseFromLocation, normalizeApiBase, REQUEST_TIMEOUT_MS } from 
 
 export { detectApiBaseFromLocation };
 import { ApiClientError, extractApiErrorMessage } from "./errors";
+import { classifyRefreshStatus } from "./refresh-classify";
 
 export const PORTAL_AUTH_STORAGE_KEY = "code-proxy-portal-auth";
 /** Multi-account vault for portal (end-user) sessions. */
@@ -296,7 +297,13 @@ export class PortalApiClient {
           expires_at?: string;
         };
         if (!response.ok || !payload?.access_token) {
-          this.clearSession();
+          // Only destroy the session when the server actually rejected this
+          // grant. A 429, a 502 or a gateway timeout says nothing about whether
+          // the refresh token is still valid, and treating them as invalid is
+          // how a momentary blip turned into "the portal signed me out".
+          if (classifyRefreshStatus(response.status) === "invalid") {
+            this.clearSession();
+          }
           return false;
         }
         this.accessToken = payload.access_token;
@@ -314,7 +321,8 @@ export class PortalApiClient {
         });
         return true;
       } catch {
-        this.clearSession();
+        // Network-level failure: no verdict from the server, so keep the session
+        // and let the caller surface the error.
         return false;
       } finally {
         this.refreshing = null;
