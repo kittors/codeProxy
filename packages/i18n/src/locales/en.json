@@ -1,4 +1,7 @@
 {
+  "errors": {
+    "auth_refresh_unavailable": "Cannot reach the authentication service right now. Please try again shortly."
+  },
   "common": {
     "login": "Login",
     "logout": "Logout",
@@ -3622,6 +3625,7 @@
     "test_run": "Run test",
     "test_running": "Testing…",
     "test_response": "Response",
+    "test_duration": "Took {{duration}}",
     "test_no_channels": "No channel sources are available for this model.",
     "test_no_api_key": "No usable API key found. Create an enabled key first; ideally allow the selected channel in allowed-channels.",
     "test_empty_response": "(empty response)",
@@ -4666,7 +4670,8 @@
       "5h": "5 hours",
       "day": "Day",
       "week": "Week",
-      "month": "Month"
+      "month": "Month",
+      "lifetime": "Lifetime"
     },
     "field": {
       "5h": "5-hour quota (USD)",
@@ -4685,6 +4690,10 @@
     "account_limit_value": "Account limit {{value}}",
     "account_unlimited": "Account unlimited",
     "used_of_limit": "{{period}}: {{used}} of {{limit}} used",
+    "lifetime_label": "Lifetime",
+    "remaining_value": "{{remaining}} left",
+    "lifetime_remaining_detail": "Lifetime: {{used}} used, {{limit}} cap, {{remaining}} left",
+    "lifetime_remaining_hint": "Cap {{limit}} · Used {{used}}",
     "reset": {
       "account_title": "Reset account quota",
       "key_title": "Reset Key quota",
@@ -4704,7 +4713,8 @@
       "key_exceeds_account": "Key {{period}} quota {{keyLimit}} exceeds the account {{period}} quota {{accountLimit}}",
       "period_day_legacy_conflict": "Daily quota conflicts with the legacy daily spending limit.",
       "five_hour_projection_warming": "The 5-hour quota is temporarily unavailable while usage projection warms up."
-    }
+    },
+    "lifetime_usage_hint": "{{used}} used this cycle · {{remaining}} left; grant again from Reset quota"
   },
   "models": {
     "total_models_count": "{{count}} models"

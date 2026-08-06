@@ -3,7 +3,6 @@
   "maxLines": 800,
   "files": {
     "apps/admin-panel/src/app/layout/AppShell.tsx": 1402,
-    "apps/admin-panel/src/app/providers/AuthProvider.tsx": 957,
     "features/ccswitch-import/components/CcSwitchImportConfigModal.tsx": 968,
     "features/log-content-viewer/components/LogContentModal.tsx": 1534,
     "features/model-availability/modelAvailability.ts": 1275,
@@ -20,12 +19,12 @@
     "pages/auth-files/components/AuthFileDetailModal.tsx": 2070,
     "pages/auth-files/components/AuthFilesFilesTab.tsx": 2644,
     "pages/auth-files/hooks/useAuthFilesDetailEditors.ts": 1286,
-    "pages/auth-files/hooks/useAuthFilesFilesPresentation.tsx": 1218,
+    "pages/auth-files/hooks/useAuthFilesFilesPresentation.tsx": 1049,
     "pages/auth-files/hooks/useAuthFilesStatusState.ts": 1455,
-    "pages/end-users/EndUsersPage.tsx": 1334,
+    "pages/end-users/EndUsersPage.tsx": 1126,
     "pages/identity-fingerprint/IdentityFingerprintPage.tsx": 1880,
-    "pages/image-generation/components/ImageGenerationPageContent.tsx": 1197,
-    "pages/models/ModelsPage.tsx": 1358,
+    "pages/image-generation/components/ImageGenerationPageContent.tsx": 1193,
+    "pages/models/ModelsPage.tsx": 1251,
     "pages/providers/components/ProvidersPageContent.tsx": 1853
   }
 }

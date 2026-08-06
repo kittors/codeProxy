@@ -3952,7 +3952,7 @@ describe("AuthFilesPage files table", () => {
     expect(within(cards).queryByText(/model=MODEL_PLACEHOLDER_M37/)).not.toBeInTheDocument();
   });
 
-  test("table quota hover does not show cached antigravity model metadata", async () => {
+  test("table quota chips do not show cached antigravity model metadata", async () => {
     useTableFilesView();
     const now = Date.now();
     const file = {
@@ -4006,23 +4006,18 @@ describe("AuthFilesPage files table", () => {
 
     const row = screen.getByText("antigravity.json").closest("tr");
     expect(row).not.toBeNull();
-    fireEvent.mouseEnter(within(row as HTMLElement).getByText("Gemini 3 Pro"));
 
-    const tooltip = await screen.findByRole("tooltip");
-    expect(within(tooltip).getByText("Gemini 3 Pro")).toBeInTheDocument();
+    const cell = within(row as HTMLElement);
+    expect(cell.getByText("Gemini 3 Pro")).toBeInTheDocument();
     expect(
-      within(tooltip).queryByText("Gemini 3.1 Pro (Low) [gemini-3.1-pro-low]"),
+      cell.queryByText("Gemini 3.1 Pro (Low) [gemini-3.1-pro-low]"),
     ).not.toBeInTheDocument();
-    expect(within(tooltip).queryByText(/maxTokens=1048576/)).not.toBeInTheDocument();
-    expect(
-      within(tooltip).queryByText(/apiProvider=API_PROVIDER_GOOGLE_GEMINI/),
-    ).not.toBeInTheDocument();
-    expect(
-      within(tooltip).queryByText(/modelProvider=MODEL_PROVIDER_GOOGLE/),
-    ).not.toBeInTheDocument();
+    expect(cell.queryByText(/maxTokens=1048576/)).not.toBeInTheDocument();
+    expect(cell.queryByText(/apiProvider=API_PROVIDER_GOOGLE_GEMINI/)).not.toBeInTheDocument();
+    expect(cell.queryByText(/modelProvider=MODEL_PROVIDER_GOOGLE/)).not.toBeInTheDocument();
   });
 
-  test("table quota hover opens only the quota details tooltip", async () => {
+  test("table quota chips stay inline and open no hover tooltip", async () => {
     useTableFilesView();
     vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(80);
     vi.spyOn(HTMLElement.prototype, "scrollWidth", "get").mockReturnValue(320);
@@ -4084,23 +4079,28 @@ describe("AuthFilesPage files table", () => {
 
     const row = screen.getByText("antigravity.json").closest("tr");
     expect(row).not.toBeNull();
-    fireEvent.mouseEnter(within(row as HTMLElement).getByText("Gemini 3 Pro"));
 
-    const tooltips = await screen.findAllByRole("tooltip");
-    expect(tooltips).toHaveLength(1);
-    expect(within(tooltips[0]).getByText("Claude")).toBeInTheDocument();
-    const resetText = Array.from(tooltips[0].querySelectorAll("span")).find(
+    // Both metrics are readable in the row itself, so no overlay is needed.
+    const geminiChip = within(row as HTMLElement).getByText("Gemini 3 Pro");
+    expect(within(row as HTMLElement).getByText("Claude")).toBeInTheDocument();
+
+    fireEvent.mouseEnter(geminiChip);
+    await Promise.resolve();
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+
+    // Countdown sits beside the percent unclipped instead of inside a tooltip.
+    const chips = Array.from(
+      (row as HTMLElement).querySelectorAll("[data-testid='auth-file-quota-metric']"),
+    );
+    expect(chips).toHaveLength(2);
+    const resetText = Array.from(chips[0].querySelectorAll("span")).find(
       (element) => element.textContent?.includes("s") && element.className.includes("tabular-nums"),
     );
     expect(resetText).toBeTruthy();
     expect(resetText).not.toHaveClass("truncate");
-    expect(tooltips[0]).not.toHaveClass("sm:max-w-[34rem]");
-    expect(tooltips[0].querySelector(".quota-tooltip-grid")).toHaveClass(
-      "w-[min(26rem,calc(100vw-2rem))]",
-    );
   });
 
-  test("table quota preview and hover hide cached antigravity models skipped by the reference implementation", async () => {
+  test("table quota chips hide cached antigravity models skipped by the reference implementation", async () => {
     useTableFilesView();
 
     const now = Date.now();
@@ -4155,19 +4155,9 @@ describe("AuthFilesPage files table", () => {
     const row = screen.getByText("antigravity.json").closest("tr");
     expect(row).not.toBeNull();
     expect(within(row as HTMLElement).queryByText("chat_20706")).not.toBeInTheDocument();
-    const visibleModel = within(row as HTMLElement).getByText("Gemini 3 Pro");
-    expect(visibleModel).toBeInTheDocument();
+    expect(within(row as HTMLElement).getByText("Gemini 3 Pro")).toBeInTheDocument();
     expect(
       within(row as HTMLElement).queryByText("Gemini 3.1 Pro (High) [gemini-3.1-pro-high]"),
-    ).not.toBeInTheDocument();
-
-    fireEvent.mouseEnter(visibleModel);
-
-    const tooltip = await screen.findByRole("tooltip");
-    expect(within(tooltip).queryByText("chat_20706")).not.toBeInTheDocument();
-    expect(within(tooltip).getByText("Gemini 3 Pro")).toBeInTheDocument();
-    expect(
-      within(tooltip).queryByText("Gemini 3.1 Pro (High) [gemini-3.1-pro-high]"),
     ).not.toBeInTheDocument();
   });
 
@@ -5180,10 +5170,13 @@ describe("AuthFilesPage files table", () => {
     const previewZero = within(row as HTMLElement).getByText("0%");
     expect(previewZero).toHaveClass("text-rose-700");
 
+    // Every chip carries its own countdown inline, so hovering opens nothing.
+    for (const metric of metrics) {
+      expect(within(metric).getByTestId("auth-file-quota-reset")).toBeInTheDocument();
+    }
     fireEvent.mouseEnter(within(row as HTMLElement).getByText("Code: Weekly"));
-    const tooltip = await screen.findByRole("tooltip");
-    const tooltipPercents = within(tooltip).getAllByText("0%");
-    expect(tooltipPercents[0]).toHaveClass("text-rose-700");
+    await Promise.resolve();
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
 
     const actionsHeader = table.querySelector<HTMLElement>('th[data-vt-column-key="actions"]');
     const actionsCell = row?.querySelector<HTMLElement>('td[data-vt-column-key="actions"]');

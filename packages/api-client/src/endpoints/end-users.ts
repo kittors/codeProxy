@@ -9,6 +9,7 @@ import type {
   PeriodSpendingLimits,
   PeriodSpendingLimitsPatch,
   PeriodSpendingPeriod,
+  QuotaResetPeriod,
 } from "./period-spending";
 import {
   buildPortalAccountKey,
@@ -165,7 +166,7 @@ export const endUsersApi = {
     }),
   resetDailySpending: (id: string) =>
     apiClient.post<EndUserDailySpendingResetResult>(`/end-users/${id}/daily-spending/reset`, {}),
-  resetPeriodSpending: (id: string, periods: PeriodSpendingPeriod[]) =>
+  resetPeriodSpending: (id: string, periods: QuotaResetPeriod[]) =>
     apiClient.post<unknown>(`/end-users/${id}/period-spending/reset`, { periods }),
   listDailySpendingResetHistory: (id: string, limit?: number) => {
     const query = new URLSearchParams();

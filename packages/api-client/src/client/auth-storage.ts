@@ -36,6 +36,12 @@ const normalizeOptionalMs = (value: unknown): number | undefined => {
   return value;
 };
 
+/** Snapshots written before rotation tracking existed are the oldest possible. */
+const normalizeRotationSeq = (value: unknown): number => {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return 0;
+  return Math.floor(value);
+};
+
 const isTokenExpired = (snapshot: {
   expiresAtMs?: number;
   refreshExpiresAtMs?: number;
@@ -81,6 +87,9 @@ const toAuthSnapshot = (parsed: Partial<PersistedAuthSnapshot>): AuthSnapshot | 
       : {}),
     ...(normalizeOptionalMs(parsed.refreshExpiresAtMs)
       ? { refreshExpiresAtMs: normalizeOptionalMs(parsed.refreshExpiresAtMs) }
+      : {}),
+    ...(normalizeRotationSeq(parsed.rotationSeq)
+      ? { rotationSeq: normalizeRotationSeq(parsed.rotationSeq) }
       : {}),
   };
   if (isTokenExpired(snapshot)) return null;
@@ -151,6 +160,9 @@ export const writePersistedAuthSnapshot = (snapshot: AuthSnapshot): void => {
     ...(normalizeOptionalMs(snapshot.refreshExpiresAtMs)
       ? { refreshExpiresAtMs: normalizeOptionalMs(snapshot.refreshExpiresAtMs) }
       : {}),
+    ...(normalizeRotationSeq(snapshot.rotationSeq)
+      ? { rotationSeq: normalizeRotationSeq(snapshot.rotationSeq) }
+      : {}),
   };
   try {
     target.setItem(AUTH_STORAGE_KEY, JSON.stringify(payload));
@@ -158,6 +170,109 @@ export const writePersistedAuthSnapshot = (snapshot: AuthSnapshot): void => {
     /* quota / private mode — session may still work in-memory */
   }
   clearLegacyEffectiveTenantId();
+};
+
+/**
+ * Locate the stored record without judging or deleting it.
+ *
+ * `readPersistedAuthSnapshot` drops expired records, which is right for reads
+ * but fatal for the refresh write-back: the record is expired precisely when a
+ * refresh just produced the long-lived token that would fix it, and deleting it
+ * first turns the write-back into a no-op.
+ */
+const readRawRecord = (): { storage: Storage; record: PersistedAuthSnapshot } | null => {
+  for (const storage of storages()) {
+    try {
+      const raw = storage.getItem(AUTH_STORAGE_KEY);
+      if (!raw) continue;
+      const record = JSON.parse(raw) as PersistedAuthSnapshot;
+      if (!record.apiBase || !record.managementKey) continue;
+      return { storage, record };
+    } catch {
+      /* Corrupt blob: leave it to readPersistedAuthSnapshot to clean up. */
+    }
+  }
+  return null;
+};
+
+/**
+ * Read the stored session without the expiry check, and without deleting it.
+ *
+ * `readPersistedAuthSnapshot` drops any record whose stored expiry has lapsed,
+ * which is right for restore but destructive during a refresh: the refresh path
+ * re-reads the snapshot to see whether another tab already rotated, and doing
+ * that through the pruning reader deletes the very record the rotation is about
+ * to write back — the session then survives in memory but vanishes on reload.
+ * Callers here are asking "what is stored right now", not "may I resume this".
+ */
+export const peekPersistedAuthSnapshot = (): AuthSnapshot | null => {
+  const found = readRawRecord();
+  if (!found) return null;
+  const { record } = found;
+  return {
+    apiBase: normalizeApiBase(record.apiBase),
+    managementKey: record.managementKey,
+    ...(record.refreshToken ? { refreshToken: record.refreshToken } : {}),
+    rememberPassword: Boolean(record.rememberPassword),
+    ...(record.effectiveTenantId ? { effectiveTenantId: record.effectiveTenantId } : {}),
+    ...(record.accountId ? { accountId: record.accountId } : {}),
+    ...(record.username ? { username: record.username } : {}),
+    ...(record.displayName ? { displayName: record.displayName } : {}),
+    ...(normalizeOptionalMs(record.expiresAtMs) ? { expiresAtMs: record.expiresAtMs } : {}),
+    ...(normalizeOptionalMs(record.refreshExpiresAtMs)
+      ? { refreshExpiresAtMs: record.refreshExpiresAtMs }
+      : {}),
+    ...(normalizeRotationSeq(record.rotationSeq)
+      ? { rotationSeq: normalizeRotationSeq(record.rotationSeq) }
+      : {}),
+  };
+};
+
+export interface RefreshedTokenPatch {
+  managementKey: string;
+  refreshToken?: string;
+  expiresAtMs?: number;
+  refreshExpiresAtMs?: number;
+}
+
+/**
+ * Write rotated tokens back into the live session and bump `rotationSeq`.
+ *
+ * Returns the new rotation sequence, or null when there is no session to patch
+ * — a no-op is required there so a late refresh cannot resurrect a session the
+ * user just signed out of. The record is rewritten into the storage it was
+ * found in, keeping the `rememberPassword` medium (local vs session) intact.
+ *
+ * Expiry fields are taken from the server verbatim: no max() against the old
+ * values, because the backend legitimately shortens the refresh window (it is
+ * capped by the absolute session deadline) and masking that only moves the
+ * eventual logout somewhere harder to diagnose.
+ */
+export const applyRefreshedTokens = (patch: RefreshedTokenPatch): number | null => {
+  const found = readRawRecord();
+  if (!found) return null;
+  const { storage, record } = found;
+  const rotationSeq = normalizeRotationSeq(record.rotationSeq) + 1;
+  const next: PersistedAuthSnapshot = {
+    ...record,
+    managementKey: patch.managementKey,
+    // Absent patch fields mean the server did not rotate that value, so the
+    // stored one is still current.
+    ...(patch.refreshToken ? { refreshToken: patch.refreshToken } : {}),
+    ...(normalizeOptionalMs(patch.expiresAtMs) ? { expiresAtMs: patch.expiresAtMs } : {}),
+    ...(normalizeOptionalMs(patch.refreshExpiresAtMs)
+      ? { refreshExpiresAtMs: patch.refreshExpiresAtMs }
+      : {}),
+    rotationSeq,
+    // The blob retention clock rides along with the session it describes.
+    expiresAt: Date.now() + AUTH_PERSIST_TTL_MS,
+  };
+  try {
+    storage.setItem(AUTH_STORAGE_KEY, JSON.stringify(next));
+  } catch {
+    return null;
+  }
+  return rotationSeq;
 };
 
 export const clearPersistedAuthSnapshot = (): void => {

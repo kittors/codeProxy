@@ -24,12 +24,29 @@ export { ensureArrayPayload, isApiEnvelope, unwrapApiEnvelope } from "./client/r
 export type { ApiEnvelope, ApiListPayload, ApiSuccessEnvelope } from "./client/response";
 export { publicApiClient, PublicApiClient } from "./client/public-client";
 export {
+  applyRefreshedTokens,
   clearPersistedAuthSnapshot,
   LEGACY_EFFECTIVE_TENANT_KEY,
+  peekPersistedAuthSnapshot,
   readPersistedAuthSnapshot,
   updatePersistedEffectiveTenantId,
   writePersistedAuthSnapshot,
 } from "./client/auth-storage";
+export type { RefreshedTokenPatch } from "./client/auth-storage";
+export {
+  AUTH_NOT_CONFIGURED,
+  AUTH_REFRESH_UNAVAILABLE,
+  AUTH_SUSPENDED,
+} from "./client/auth-state";
+export type { AuthRequirement, AuthState } from "./client/auth-state";
+export {
+  AUTH_CHANNEL_NAME,
+  AuthBroadcast,
+  publishSignedOut,
+  subscribeAuthBroadcast,
+} from "./client/auth-broadcast";
+export type { AuthBroadcastMessage } from "./client/auth-broadcast";
+export { AUTH_TOKEN_REFRESHED_EVENT } from "./client/token-refresher";
 export {
   portalClient,
   PortalApiClient,
@@ -78,7 +95,9 @@ export { quotaApi } from "./endpoints/quota";
 export type * from "./endpoints/period-spending";
 export {
   EMPTY_PERIOD_SPENDING_LIMITS,
+  LIFETIME_QUOTA_PERIOD,
   PERIOD_SPENDING_PERIODS,
+  QUOTA_RESET_PERIODS,
   extractQuotaValidationError,
   hasPeriodSpendingLimits,
   normalizePeriodSpendingLimits,

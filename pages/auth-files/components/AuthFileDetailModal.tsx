@@ -18,7 +18,7 @@ import type {
   IdentityFingerprintFieldSource,
 } from "@code-proxy/api-client";
 import type { ProxyPoolEntry } from "@code-proxy/api-client/endpoints/proxies";
-import { DataTable, type DataTableColumn } from "@code-proxy/ui";
+import { COLUMN_WIDTH, DataTable, type DataTableColumn } from "@code-proxy/ui";
 import { Button } from "@code-proxy/ui";
 import { Checkbox } from "@code-proxy/ui";
 import { DateTimePicker } from "@code-proxy/ui";
@@ -737,7 +737,7 @@ export function AuthFileDetailModal({
     {
       key: "section",
       label: t("auth_files.identity_fingerprint_table_section"),
-      width: "w-40",
+      width: COLUMN_WIDTH.badgeStacked,
       resizable: false,
       reorderable: false,
       overflowTooltip: (row) => identityFieldSectionLabel(row.section),
@@ -776,7 +776,7 @@ export function AuthFileDetailModal({
     {
       key: "source",
       label: t("auth_files.identity_fingerprint_table_source"),
-      width: "w-36",
+      width: COLUMN_WIDTH.toggle,
       resizable: false,
       reorderable: false,
       overflowTooltip: (row) => formatIdentitySource(row.source),

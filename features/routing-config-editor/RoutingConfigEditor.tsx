@@ -11,7 +11,7 @@ import type {
   VisualConfigValues,
 } from "@features/visual-config-editor";
 import { makeClientId } from "@features/visual-config-editor";
-import { Button } from "@code-proxy/ui";
+import { Button, COLUMN_WIDTH } from "@code-proxy/ui";
 import { Checkbox } from "@code-proxy/ui";
 import { ConfirmModal } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
@@ -1000,7 +1000,7 @@ export function RoutingConfigEditor({
       {
         key: "name",
         label: t("channel_groups_page.table_group"),
-        width: "w-[150px] min-w-[150px]",
+        width: COLUMN_WIDTH.numericWide,
         cellClassName: "min-w-0 whitespace-nowrap font-medium",
         render: (group, index) => {
           const name = group.system
@@ -1032,7 +1032,7 @@ export function RoutingConfigEditor({
       {
         key: "channelCount",
         label: t("channel_groups_page.table_channel_count"),
-        width: "w-[104px] min-w-[104px]",
+        width: COLUMN_WIDTH.toggle,
         headerClassName: "text-center",
         cellClassName: "whitespace-nowrap text-center",
         render: (group) => {
@@ -1054,7 +1054,7 @@ export function RoutingConfigEditor({
       {
         key: "status",
         label: t("channel_groups_page.table_status"),
-        width: "w-[112px] min-w-[112px]",
+        width: COLUMN_WIDTH.badge,
         cellClassName: "whitespace-nowrap",
         render: (group) => {
           const staleChannels = staleChannelsByGroup.get(group.id) ?? [];
@@ -1088,7 +1088,7 @@ export function RoutingConfigEditor({
             tooltip={t("channel_groups_page.table_default_scope_tooltip")}
           />
         ),
-        width: "w-[128px] min-w-[128px]",
+        width: COLUMN_WIDTH.compact,
         cellClassName: "whitespace-nowrap",
         render: (group) => {
           if (group.system) {
@@ -1112,7 +1112,7 @@ export function RoutingConfigEditor({
       {
         key: "channels",
         label: t("channel_groups_page.table_channels"),
-        width: "w-[280px] min-w-[280px]",
+        width: COLUMN_WIDTH.nameStacked,
         cellClassName: "min-w-0 whitespace-nowrap text-slate-700 dark:text-white/75",
         render: (group) => {
           if (group.system) {
@@ -1311,7 +1311,7 @@ export function RoutingConfigEditor({
       {
         key: "priority",
         label: t("channel_groups_page.channel_priority_label"),
-        width: "w-[156px] min-w-[156px]",
+        width: COLUMN_WIDTH.badgeGroup,
         cellClassName: "whitespace-nowrap",
         render: (channel) => (
           <TextInput
@@ -1370,7 +1370,7 @@ export function RoutingConfigEditor({
       {
         key: "select",
         label: "",
-        width: "w-12",
+        width: COLUMN_WIDTH.checkbox,
         headerClassName: "text-center",
         cellClassName: "text-center",
         headerRender: () => (
@@ -1422,7 +1422,7 @@ export function RoutingConfigEditor({
       {
         key: "owner",
         label: t("models_page.col_owner"),
-        width: "w-36",
+        width: COLUMN_WIDTH.numericWide,
         minWidthPx: 120,
         maxWidthPx: 360,
         cellClassName: "min-w-0 whitespace-nowrap text-slate-600 dark:text-white/60",

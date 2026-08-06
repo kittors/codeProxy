@@ -70,3 +70,53 @@ describe("PeriodSpendingCell", () => {
     expect(container).not.toHaveTextContent("Week");
   });
 });
+
+describe("PeriodSpendingCell lifetime cap", () => {
+  const lifetimeT = (key: string, options?: Record<string, unknown>) => {
+    const labels: Record<string, string> = {
+      "quota.unlimited": "Unlimited",
+      "quota.lifetime_label": "Lifetime",
+      "quota.remaining_value": `${String(options?.remaining ?? "")} left`,
+      "quota.lifetime_remaining_detail": `Lifetime: ${String(options?.used ?? "")} used, ${String(options?.limit ?? "")} cap, ${String(options?.remaining ?? "")} left`,
+      "quota.status.warning": "Near quota limit",
+      "quota.status.exceeded": "Quota exceeded",
+    };
+    return labels[key] ?? key;
+  };
+
+  test("an account with only a lifetime cap no longer reads as unlimited", () => {
+    render(<PeriodSpendingCell t={lifetimeT} items={[]} lifetime={{ used: 12, limit: 100 }} />);
+
+    expect(screen.queryByText("Unlimited")).toBeNull();
+    expect(screen.getByText("Lifetime")).toBeTruthy();
+    expect(screen.getByText(/\$88 left/)).toBeTruthy();
+  });
+
+  test("shows remaining, not spent, because a lifetime cap never refills", () => {
+    const { container } = render(
+      <PeriodSpendingCell
+        t={lifetimeT}
+        items={[{ period: "day", limit: 300, used: 120, remaining: 180 }]}
+        lifetime={{ used: 12, limit: 100 }}
+      />,
+    );
+
+    // Rolling period keeps used/limit; lifetime switches to what is left.
+    expect(container.textContent).toContain("$120 / $300");
+    expect(container.textContent).toContain("$88 left / $100");
+  });
+
+  test("an overspent lifetime cap clamps to zero left instead of going negative", () => {
+    render(<PeriodSpendingCell t={lifetimeT} items={[]} lifetime={{ used: 140, limit: 100 }} />);
+
+    expect(screen.getByText(/\$0 left/)).toBeTruthy();
+    expect(screen.getByText("Quota exceeded")).toBeTruthy();
+  });
+
+  test("no lifetime cap configured keeps the column periodic only", () => {
+    render(<PeriodSpendingCell t={lifetimeT} items={[]} lifetime={{ used: 88, limit: 0 }} />);
+
+    expect(screen.getByText("Unlimited")).toBeTruthy();
+    expect(screen.queryByText("Lifetime")).toBeNull();
+  });
+});

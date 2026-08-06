@@ -457,3 +457,106 @@ describe("EndUsersPage account semantics", () => {
     ).toBeInTheDocument();
   });
 });
+
+describe("EndUsersPage lifetime allowance", () => {
+  // 100 cap with 12 spent is the operator-facing example: the field must read 88.
+  const cappedUser = {
+    ...users[0],
+    id: "user-capped",
+    username: "carol",
+    display_name: "Carol",
+    "spending-limit": 100,
+    "lifetime-spending-used": 12,
+  };
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    await i18n.changeLanguage("en");
+    mocks.permissionProfiles.mockResolvedValue([]);
+    mocks.list.mockResolvedValue({ items: [cappedUser] });
+    mocks.update.mockResolvedValue(cappedUser);
+  });
+
+  async function openEditDialog() {
+    renderPage();
+    await screen.findByText("Carol");
+    await userEvent.click(screen.getAllByRole("button", { name: "Edit user account" })[0]!);
+    return screen.findByRole("dialog", { name: "Edit user account" });
+  }
+
+  test("the lifetime field edits the cap, with usage shown alongside", async () => {
+    // Showing the remainder in a limit editor made "set 1000" read back as 405
+    // and forced operators to reverse-engineer what to type. The field is the
+    // cap; usage belongs next to it.
+    const dialog = await openEditDialog();
+
+    const field = within(dialog).getByRole("spinbutton", {
+      name: "Lifetime spending limit (USD)",
+    });
+    expect((field as HTMLInputElement).value).toBe("100");
+    expect(within(dialog).getByText(/\$12\.00 used this cycle/)).toBeTruthy();
+    expect(within(dialog).getByText(/\$88\.00 left/)).toBeTruthy();
+  });
+
+  test("saving an untouched form sends nothing at all", async () => {
+    const dialog = await openEditDialog();
+
+    await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(mocks.update).not.toHaveBeenCalled();
+  });
+
+  test("editing another field leaves the cap untouched", async () => {
+    const dialog = await openEditDialog();
+
+    await userEvent.type(within(dialog).getByRole("spinbutton", { name: "RPM limit" }), "60");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(mocks.update).toHaveBeenCalled());
+    const body = mocks.update.mock.calls[0]![1];
+    expect(body).toMatchObject({ "rpm-limit": 60 });
+    expect(body).not.toHaveProperty("spending-limit");
+  });
+
+  test("an edited value is stored as the new cap", async () => {
+    const dialog = await openEditDialog();
+
+    const field = within(dialog).getByRole("spinbutton", {
+      name: "Lifetime spending limit (USD)",
+    });
+    await userEvent.clear(field);
+    await userEvent.type(field, "200");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      expect(mocks.update).toHaveBeenCalledWith(
+        "user-capped",
+        expect.objectContaining({ "spending-limit": 200 }),
+      );
+    });
+  });
+
+  test("an account with only a lifetime allowance can reach the reset action", async () => {
+    // The dialog gained a lifetime option, but the menu entry that opens it was
+    // still gated on the rolling period limits, so the one account type that
+    // needs granting most could never open it.
+    renderPage();
+    await screen.findByText("Carol");
+    await openRowMoreActions("Carol");
+
+    // Enabled label is "Reset account quota"; the disabled state renders the
+    // "No resettable period quota" label instead.
+    const action = screen.getByRole("menuitem", { name: "Reset account quota" });
+    expect(action.getAttribute("aria-disabled")).not.toBe("true");
+  });
+
+  test("the quota column surfaces a lifetime-only cap instead of reading unlimited", async () => {
+    renderPage();
+    await screen.findByText("Carol");
+
+    const row = screen.getByText("Carol").closest("tr")!;
+    expect(within(row).getByText(/\$88 left/)).toBeTruthy();
+    expect(within(row).queryByText("Unlimited")).toBeNull();
+  });
+});

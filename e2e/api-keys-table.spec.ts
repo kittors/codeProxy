@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-const API_KEYS_COLUMN_WIDTH_STORAGE_KEY = "codeProxy.dataTable.columnWidths.v1.api-keys";
+const API_KEYS_COLUMN_WIDTH_STORAGE_KEY = "codeProxy.dataTable.columnWidths.v2.api-keys";
 const STICKY_EDGE_SHADOW_WIDTH = 28;
 
 type SetAuthedOptions = {
@@ -12,11 +12,11 @@ const setAuthed = async (page: Page, options: SetAuthedOptions = {}) => {
     localStorage.removeItem("codeProxy.dataTable.columnOrder.v1.api-keys");
     if (authOptions.columnWidths) {
       localStorage.setItem(
-        "codeProxy.dataTable.columnWidths.v1.api-keys",
+        "codeProxy.dataTable.columnWidths.v2.api-keys",
         JSON.stringify(authOptions.columnWidths),
       );
     } else {
-      localStorage.removeItem("codeProxy.dataTable.columnWidths.v1.api-keys");
+      localStorage.removeItem("codeProxy.dataTable.columnWidths.v2.api-keys");
     }
     localStorage.setItem(
       "code-proxy-admin-auth",

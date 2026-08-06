@@ -9,12 +9,7 @@ import type { SearchableSelectOption } from "@code-proxy/ui";
 import { ToggleSwitch } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
 import { DataTable } from "@code-proxy/ui";
-import {
-  apiClient,
-  apiKeyEntriesApi,
-  detectApiBaseFromLocation,
-  normalizeApiBase,
-} from "@code-proxy/api-client";
+import { apiClient } from "@code-proxy/api-client";
 import { getActiveCacheTenantId } from "@code-proxy/domain";
 import { useOptionalAuth } from "@app/providers/AuthProvider";
 import { ModelFormModal } from "./components/ModelFormModal";
@@ -23,6 +18,7 @@ import { ModelsPageTabs } from "./components/ModelsPageTabs";
 import { ModelsStatsCards } from "./components/ModelsStatsCards";
 import { OwnerFormModal } from "./components/OwnerFormModal";
 import { useModelColumns } from "./hooks/useModelColumns";
+import { useModelTestRunner } from "./hooks/useModelTestRunner";
 import {
   invalidateConfiguredModelAvailability,
   loadConfiguredModelAvailability,
@@ -102,10 +98,7 @@ export function ModelsPage() {
   const [bulkDeleteTargetIds, setBulkDeleteTargetIds] = useState<string[] | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [togglingModelId, setTogglingModelId] = useState<string | null>(null);
-  const [testTarget, setTestTarget] = useState<ModelItem | null>(null);
-  const [testRunning, setTestRunning] = useState(false);
-  const [testResultText, setTestResultText] = useState<string | null>(null);
-  const [testErrorText, setTestErrorText] = useState<string | null>(null);
+  const modelTest = useModelTestRunner(auth?.state.apiBase);
   const [selectedModelIds, setSelectedModelIds] = useState<Set<string>>(() => new Set());
   const cachedOpenRouter = readOpenRouterSyncCache(cacheTenantKey);
   const [openRouterSyncState, setOpenRouterSyncState] = useState<OpenRouterModelSyncState>(
@@ -562,102 +555,6 @@ export function ModelsPage() {
     [modelScope, notify, t, togglingModelId],
   );
 
-  const openTestModel = useCallback((model: ModelItem) => {
-    setTestTarget(model);
-    setTestResultText(null);
-    setTestErrorText(null);
-  }, []);
-
-  const handleRunModelTest = useCallback(
-    async (input: { channel: string; prompt: string }) => {
-      if (!testTarget) return;
-      setTestRunning(true);
-      setTestResultText(null);
-      setTestErrorText(null);
-      try {
-        const entries = await apiKeyEntriesApi.list();
-        const channelNeedle = input.channel.trim().toLowerCase();
-        const enabledKeys = entries.filter((entry) => !entry.disabled && entry.key?.trim());
-        // Prefer keys whose allowed-channels pin the selected channel; fall back to unrestricted keys.
-        const scoreKey = (entry: (typeof enabledKeys)[number]): number => {
-          const allowed = (entry["allowed-channels"] ?? [])
-            .map((name) => name.trim().toLowerCase())
-            .filter(Boolean);
-          if (allowed.length === 0) return 1;
-          if (!allowed.includes(channelNeedle)) return -1;
-          // Exact single-channel restriction is the strongest pin available without a dedicated test API.
-          return allowed.length === 1 ? 3 : 2;
-        };
-        const matchingKey =
-          enabledKeys
-            .map((entry) => ({ entry, score: scoreKey(entry) }))
-            .filter((item) => item.score > 0)
-            .sort((a, b) => b.score - a.score)[0]?.entry ?? null;
-        if (!matchingKey) {
-          throw new Error(t("models_page.test_no_api_key"));
-        }
-
-        const base = normalizeApiBase(auth?.state.apiBase || detectApiBaseFromLocation());
-        const endpoint = `${base}/v1/chat/completions`;
-        const response = await fetch(endpoint, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${matchingKey.key}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: testTarget.id,
-            messages: [{ role: "user", content: input.prompt }],
-            stream: false,
-          }),
-        });
-        const rawText = await response.text();
-        let payload: unknown = null;
-        try {
-          payload = rawText ? JSON.parse(rawText) : null;
-        } catch {
-          payload = rawText;
-        }
-        if (!response.ok) {
-          const fallback = rawText || `HTTP ${response.status}`;
-          const message =
-            payload &&
-            typeof payload === "object" &&
-            payload !== null &&
-            "error" in payload
-              ? typeof (payload as { error: unknown }).error === "string"
-                ? (payload as { error: string }).error
-                : ((payload as { error?: { message?: string } }).error?.message ?? fallback)
-              : fallback;
-          throw new Error(message);
-        }
-
-        const content =
-          payload &&
-          typeof payload === "object" &&
-          payload !== null &&
-          Array.isArray((payload as { choices?: unknown }).choices)
-            ? (() => {
-                const choice = (payload as { choices: Array<{ message?: { content?: unknown } }> })
-                  .choices[0];
-                const text = choice?.message?.content;
-                return typeof text === "string" ? text : JSON.stringify(payload, null, 2);
-              })()
-            : typeof payload === "string"
-              ? payload
-              : JSON.stringify(payload, null, 2);
-        setTestResultText(content || t("models_page.test_empty_response"));
-      } catch (err: unknown) {
-        setTestErrorText(
-          err instanceof Error ? err.message : t("models_page.test_failed"),
-        );
-      } finally {
-        setTestRunning(false);
-      }
-    },
-    [auth?.state.apiBase, t, testTarget],
-  );
-
   const handleDelete = useCallback(async () => {
     if (!deleteTarget) return;
     setDeleting(true);
@@ -897,7 +794,7 @@ export function ModelsPage() {
     onEditModel: openEditModel,
     onDeleteModel: setDeleteTarget,
     onToggleEnabled: (model) => void handleToggleEnabled(model),
-    onTestModel: openTestModel,
+    onTestModel: modelTest.open,
     togglingModelId,
   });
   const selectionToolbar =
@@ -1340,17 +1237,13 @@ export function ModelsPage() {
       />
 
       <ModelTestModal
-        model={testTarget}
-        running={testRunning}
-        resultText={testResultText}
-        errorText={testErrorText}
-        onClose={() => {
-          if (testRunning) return;
-          setTestTarget(null);
-          setTestResultText(null);
-          setTestErrorText(null);
-        }}
-        onRun={(input) => void handleRunModelTest(input)}
+        model={modelTest.target}
+        running={modelTest.running}
+        resultText={modelTest.resultText}
+        errorText={modelTest.errorText}
+        durationMs={modelTest.durationMs}
+        onClose={modelTest.close}
+        onRun={(input) => void modelTest.run(input)}
       />
     </section>
   );

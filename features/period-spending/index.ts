@@ -3,7 +3,9 @@ export {
   PeriodSpendingLimitsCell,
   formatQuotaUsd,
   formatQuotaUsdAmount,
+  remainingQuotaUsd,
 } from "./PeriodSpendingCell";
+export type { LifetimeSpending } from "./PeriodSpendingCell";
 export {
   PeriodSpendingFields,
   emptyPeriodSpendingDraft,
