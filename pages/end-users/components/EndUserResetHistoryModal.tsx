@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { EndUserDailySpendingResetEvent } from "@code-proxy/api-client";
-import { DataTable, Modal, type DataTableColumn } from "@code-proxy/ui";
+import { COLUMN_WIDTH, DataTable, Modal, type DataTableColumn } from "@code-proxy/ui";
 import { formatApiKeySpendingAmount } from "../../api-keys/apiKeyPageUtils";
 
 function formatResetAt(value: string | undefined): string {
@@ -61,7 +61,7 @@ export function EndUserResetHistoryModal({
     {
       key: "id",
       label: t("end_users.reset_history_col_id"),
-      width: "w-[90px] min-w-[80px]",
+      width: COLUMN_WIDTH.compact,
       cellClassName:
         "whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
       render: (row) => row.id,
@@ -77,7 +77,7 @@ export function EndUserResetHistoryModal({
     {
       key: "day_key",
       label: t("end_users.reset_history_col_day"),
-      width: "w-[130px] min-w-[120px]",
+      width: COLUMN_WIDTH.numericWide,
       cellClassName:
         "whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
       render: (row) => row.day_key || "—",
@@ -85,7 +85,7 @@ export function EndUserResetHistoryModal({
     {
       key: "effective_used_before",
       label: t("end_users.reset_history_col_cleared"),
-      width: "w-[160px] min-w-[140px]",
+      width: COLUMN_WIDTH.name,
       cellClassName:
         "whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
       render: (row) =>
@@ -94,7 +94,7 @@ export function EndUserResetHistoryModal({
     {
       key: "raw_today_cost",
       label: t("end_users.reset_history_col_raw_today"),
-      width: "w-[180px] min-w-[160px]",
+      width: COLUMN_WIDTH.name,
       cellClassName:
         "whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
       render: (row) =>
@@ -116,7 +116,7 @@ export function EndUserResetHistoryModal({
     {
       key: "actor",
       label: t("end_users.reset_history_col_actor"),
-      width: "w-[140px] min-w-[120px]",
+      width: COLUMN_WIDTH.numericWide,
       cellClassName: "text-slate-700 dark:text-white/70",
       render: (row) => actorLabel(row, t),
     },

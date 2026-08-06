@@ -1,5 +1,5 @@
 import type { ApiKeyDailySpendingResetEvent } from "@code-proxy/api-client/endpoints/api-keys";
-import { DataTable, Modal, type DataTableColumn } from "@code-proxy/ui";
+import { COLUMN_WIDTH, DataTable, Modal, type DataTableColumn } from "@code-proxy/ui";
 import { formatQuotaUsdAmount } from "./PeriodSpendingCell";
 
 const formatResetAt = (value: string): string => {
@@ -28,19 +28,19 @@ export function OwnedApiKeyResetHistoryModal({
     {
       key: "reset_at",
       label: t("api_keys_page.reset_history_col_time"),
-      width: "w-[180px] min-w-[160px]",
+      width: COLUMN_WIDTH.badgeGroup,
       render: (row) => formatResetAt(row.reset_at),
     },
     {
       key: "day_key",
       label: t("api_keys_page.reset_history_col_day"),
-      width: "w-[130px] min-w-[120px]",
+      width: COLUMN_WIDTH.numericWide,
       render: (row) => row.day_key || "-",
     },
     {
       key: "actor",
       label: t("api_keys_page.reset_history_col_actor"),
-      width: "w-[140px] min-w-[120px]",
+      width: COLUMN_WIDTH.numericWide,
       render: (row) =>
         row.actor_username?.trim() ||
         (row.actor_kind === "service_credential"
@@ -50,19 +50,19 @@ export function OwnedApiKeyResetHistoryModal({
     {
       key: "effective_used_before",
       label: t("api_keys_page.reset_history_col_cleared"),
-      width: "w-[150px] min-w-[130px]",
+      width: COLUMN_WIDTH.timestamp,
       render: (row) => formatQuotaUsdAmount(row.effective_used_before),
     },
     {
       key: "raw_today_cost",
       label: t("api_keys_page.reset_history_col_raw_today"),
-      width: "w-[150px] min-w-[130px]",
+      width: COLUMN_WIDTH.timestamp,
       render: (row) => formatQuotaUsdAmount(row.raw_today_cost),
     },
     {
       key: "cost_baseline",
       label: t("api_keys_page.reset_history_col_baseline"),
-      width: "w-[150px] min-w-[130px]",
+      width: COLUMN_WIDTH.timestamp,
       render: (row) => formatQuotaUsdAmount(row.cost_baseline),
     },
   ];

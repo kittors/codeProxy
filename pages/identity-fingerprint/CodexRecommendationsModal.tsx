@@ -6,7 +6,14 @@ import {
   type CodexFingerprintRecommendation,
   type CodexIdentityFingerprint,
 } from "@code-proxy/api-client/endpoints/identity-fingerprint";
-import { Button, ConfirmModal, DataTable, Modal, type DataTableColumn } from "@code-proxy/ui";
+import {
+  Button,
+  COLUMN_WIDTH,
+  ConfirmModal,
+  DataTable,
+  Modal,
+  type DataTableColumn,
+} from "@code-proxy/ui";
 
 const RECOMMENDATIONS_TIMEOUT_MS = 15000;
 
@@ -134,7 +141,7 @@ export function CodexRecommendationsModal({
       {
         key: "last_seen",
         label: t("identity_fingerprint.recommend_last_seen"),
-        width: "w-36",
+        width: COLUMN_WIDTH.numericWide,
         resizable: false,
         reorderable: false,
         render: (item) => (
@@ -151,7 +158,7 @@ export function CodexRecommendationsModal({
       {
         key: "originator",
         label: t("identity_fingerprint.originator"),
-        width: "w-44",
+        width: COLUMN_WIDTH.badgeGroup,
         resizable: false,
         reorderable: false,
         overflowTooltip: (item) => item.headers.Originator || item.recommended.originator || "",

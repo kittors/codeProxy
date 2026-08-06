@@ -5,6 +5,7 @@ import {
   type EndUserAPIKey,
 } from "@code-proxy/api-client";
 import {
+  COLUMN_WIDTH,
   DataTable,
   EmptyState,
   OverflowTooltip,
@@ -40,7 +41,7 @@ export const createOwnedApiKeyColumns = ({
   {
     key: "name",
     label: t("api_keys_page.col_name"),
-    width: "w-[150px] min-w-[150px]",
+    width: COLUMN_WIDTH.numericWide,
     cellClassName: "font-medium",
     render: (row) => (
       <div className="min-w-0">
@@ -74,7 +75,7 @@ export const createOwnedApiKeyColumns = ({
   {
     key: "status",
     label: t("api_keys_page.col_status"),
-    width: "w-[92px] min-w-[92px]",
+    width: COLUMN_WIDTH.badge,
     cellClassName: "text-center",
     render: (row) => (
       <span
@@ -95,21 +96,21 @@ export const createOwnedApiKeyColumns = ({
   {
     key: "dailySpending",
     label: t("quota.daily_spending_column"),
-    width: "w-[130px] min-w-[130px]",
+    width: COLUMN_WIDTH.compact,
     cellClassName: "whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
     render: (row) => formatQuotaUsdAmount(row["daily-spending-used"]),
   },
   {
     key: "lifetimeSpending",
     label: t("quota.lifetime_spending_column"),
-    width: "w-[130px] min-w-[130px]",
+    width: COLUMN_WIDTH.compact,
     cellClassName: "whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
     render: (row) => formatQuotaUsdAmount(row["lifetime-spending-used"]),
   },
   {
     key: "resetCount",
     label: t("quota.total_resets"),
-    width: "w-[118px] min-w-[118px]",
+    width: COLUMN_WIDTH.timestamp,
     cellClassName: "text-center",
     render: (row) => {
       const count = row["daily-spending-reset-count"] ?? 0;
@@ -130,7 +131,7 @@ export const createOwnedApiKeyColumns = ({
   {
     key: "created",
     label: t("api_keys_page.col_created"),
-    width: "w-[150px] min-w-[150px]",
+    width: COLUMN_WIDTH.numericWide,
     cellClassName: "whitespace-nowrap text-xs text-slate-500 dark:text-white/50",
     render: (row) => (row.created_at ? new Date(row.created_at).toLocaleString() : "-"),
   },

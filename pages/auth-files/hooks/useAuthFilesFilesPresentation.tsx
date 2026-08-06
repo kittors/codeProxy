@@ -16,7 +16,7 @@ import type { AuthFileItem } from "@code-proxy/api-client";
 import { formatLatency } from "@features/provider-latency";
 import { ProviderStatusBar } from "@features/provider-latency";
 import { Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
-import { HoverTooltip } from "@code-proxy/ui";
+import { COLUMN_WIDTH, HoverTooltip } from "@code-proxy/ui";
 import { ToggleSwitch } from "@code-proxy/ui";
 import { TABLE_ROW_ACTIONS_COLUMN, TableRowActions, type DataTableColumn } from "@code-proxy/ui";
 import {
@@ -602,7 +602,7 @@ export function useAuthFilesFilesPresentation({
       {
         key: "select",
         label: "",
-        width: "w-14",
+        width: COLUMN_WIDTH.checkbox,
         headerClassName: "text-center",
         cellClassName: "text-center",
         headerRender: () => (
@@ -643,7 +643,7 @@ export function useAuthFilesFilesPresentation({
       {
         key: "name",
         label: t("auth_files.col_name"),
-        width: "w-72",
+        width: COLUMN_WIDTH.nameStacked,
         render: (file) => {
           const supplementalTags = resolveAuthFileSupplementalTags(
             file,
@@ -679,7 +679,7 @@ export function useAuthFilesFilesPresentation({
       {
         key: "type",
         label: t("auth_files.col_type"),
-        width: "w-32",
+        width: COLUMN_WIDTH.badgeStacked,
         render: (file) => {
           const typeKey = resolveFileType(file);
           const badgeClass = TYPE_BADGE_CLASSES[typeKey] ?? TYPE_BADGE_CLASSES.unknown;
@@ -728,7 +728,7 @@ export function useAuthFilesFilesPresentation({
       {
         key: "subscription",
         label: t("auth_files.col_subscription"),
-        width: "w-40",
+        width: COLUMN_WIDTH.metric,
         render: (file) =>
           renderSubscriptionBadge(file) ?? (
             <span className="text-xs text-slate-400 dark:text-white/40">--</span>
@@ -737,7 +737,7 @@ export function useAuthFilesFilesPresentation({
       {
         key: "modified",
         label: t("auth_files.file_modified"),
-        width: "w-36",
+        width: COLUMN_WIDTH.metric,
         render: (file) => (
           <span className="text-xs tabular-nums text-slate-700 dark:text-white/70">
             {formatModified(file)}
@@ -747,7 +747,7 @@ export function useAuthFilesFilesPresentation({
       {
         key: "connectivity",
         label: t("auth_files.col_connectivity"),
-        width: "w-28",
+        width: COLUMN_WIDTH.metric,
         render: (file) => {
           const state = connectivityState.get(file.name);
           return (
@@ -775,7 +775,7 @@ export function useAuthFilesFilesPresentation({
       {
         key: "cycle_calls",
         label: t("auth_files.col_cycle_calls"),
-        width: "w-24",
+        width: COLUMN_WIDTH.numericWide,
         headerClassName: "text-right",
         cellClassName: "text-right",
         render: (file) => {
@@ -797,7 +797,7 @@ export function useAuthFilesFilesPresentation({
       {
         key: "success",
         label: t("common.success"),
-        width: "w-20",
+        width: COLUMN_WIDTH.numeric,
         headerClassName: "text-right",
         cellClassName: "text-right",
         render: (file) => {
@@ -813,7 +813,7 @@ export function useAuthFilesFilesPresentation({
       {
         key: "failure",
         label: t("common.failure"),
-        width: "w-20",
+        width: COLUMN_WIDTH.numeric,
         headerClassName: "text-right",
         cellClassName: "text-right",
         render: (file) => {
@@ -829,7 +829,7 @@ export function useAuthFilesFilesPresentation({
       {
         key: "rate",
         label: t("common.success_rate"),
-        width: "w-44",
+        width: COLUMN_WIDTH.metric,
         render: (file) => {
           const statusData = resolveAuthFileStatusBar(file, usageIndex);
           const hasUsage = statusData.totalSuccess + statusData.totalFailure > 0;
@@ -849,9 +849,9 @@ export function useAuthFilesFilesPresentation({
       {
         key: "quota",
         label: t("auth_files.col_quota"),
-        width: "w-[36rem] min-w-[36rem]",
-        minWidthPx: 480,
-        maxWidthPx: 720,
+        width: COLUMN_WIDTH.composite, // chips 两列排布约 290px 够用；36rem 是旧进度条布局的尺寸
+        minWidthPx: 288,
+        maxWidthPx: 640,
         overflowTooltip: false,
         headerClassName: "text-center",
         render: (file) => {
@@ -894,7 +894,7 @@ export function useAuthFilesFilesPresentation({
       {
         key: "enabled",
         label: t("auth_files.enable"),
-        width: "w-24",
+        width: COLUMN_WIDTH.toggle,
         headerClassName: "text-center",
         cellClassName: "text-center",
         render: (file) => {

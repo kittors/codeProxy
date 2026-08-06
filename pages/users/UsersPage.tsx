@@ -4,6 +4,7 @@ import { KeyRound, Shield, Trash2 } from "lucide-react";
 import { identityApi, type RoleIdentity, type UserIdentity } from "@code-proxy/api-client";
 import {
   Button,
+  COLUMN_WIDTH,
   ConfirmModal,
   DataTable,
   Form,
@@ -14,8 +15,8 @@ import {
   TABLE_ROW_ACTIONS_COLUMN,
   TextInput,
   ToggleSwitch,
-  type DataTableColumn,
   useToast,
+  type DataTableColumn,
 } from "@code-proxy/ui";
 import { PermissionGate } from "@app/providers/PermissionGate";
 import { useAuth } from "@app/providers/AuthProvider";
@@ -160,7 +161,7 @@ export function UsersPage() {
       {
         key: "user",
         label: t("identity_admin.user"),
-        width: "w-52",
+        width: COLUMN_WIDTH.name,
         render: (user) => (
           <div className="min-w-0">
             <div className="truncate font-medium text-slate-900 dark:text-white">
@@ -173,7 +174,7 @@ export function UsersPage() {
       {
         key: "status",
         label: t("identity_admin.status"),
-        width: "w-44",
+        width: COLUMN_WIDTH.toggle,
         render: (user) => {
           const protectedUser = isProtected(user);
           const checked = user.status === "active";
@@ -214,7 +215,7 @@ export function UsersPage() {
       {
         key: "roles",
         label: t("identity_admin.roles"),
-        width: "w-72",
+        width: COLUMN_WIDTH.nameStacked,
         render: (user) => {
           const labels = (user.role_ids ?? []).map(
             (roleId, index) => roleNames.get(roleId) ?? user.role_codes?.[index] ?? roleId,
@@ -239,7 +240,7 @@ export function UsersPage() {
       {
         key: "last_login",
         label: t("identity_admin.last_login"),
-        width: "w-52",
+        width: COLUMN_WIDTH.timestamp,
         render: (user) =>
           user.last_login_at
             ? new Date(user.last_login_at).toLocaleString(i18n.language)

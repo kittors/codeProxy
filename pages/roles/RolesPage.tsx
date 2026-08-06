@@ -9,14 +9,15 @@ import {
 } from "@code-proxy/api-client";
 import {
   Button,
+  COLUMN_WIDTH,
   Checkbox,
   ConfirmModal,
   DataTable,
   Modal,
   TABLE_ROW_ACTIONS_COLUMN,
   TextInput,
-  type DataTableColumn,
   useToast,
+  type DataTableColumn,
 } from "@code-proxy/ui";
 import { PermissionGate } from "@app/providers/PermissionGate";
 import { useAuth } from "@app/providers/AuthProvider";
@@ -186,7 +187,7 @@ export function RolesPage() {
       {
         key: "scope",
         label: t("identity_admin.scope"),
-        width: "w-32",
+        width: COLUMN_WIDTH.compact,
         render: (role) =>
           role.scope === "platform"
             ? t("identity_admin.scope_platform")
@@ -195,13 +196,13 @@ export function RolesPage() {
       {
         key: "permissions",
         label: t("identity_admin.permissions"),
-        width: "w-32",
+        width: COLUMN_WIDTH.numericWide,
         render: (role) => t("identity_admin.permission_count", { count: role.permissions.length }),
       },
       {
         key: "users",
         label: t("identity_admin.assigned_users"),
-        width: "w-32",
+        width: COLUMN_WIDTH.timestamp,
         render: (role) =>
           t("identity_admin.user_count", { count: assignedUserCount.get(role.id) ?? 0 }),
       },

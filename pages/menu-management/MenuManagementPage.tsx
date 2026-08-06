@@ -18,6 +18,7 @@ import {
 } from "@code-proxy/api-client";
 import {
   Button,
+  COLUMN_WIDTH,
   ConfirmModal,
   DataTable,
   Drawer,
@@ -27,9 +28,9 @@ import {
   TabsList,
   TabsTrigger,
   TextInput,
-  type DataTableColumn,
-  useToast,
   resolveMenuIcon,
+  useToast,
+  type DataTableColumn,
 } from "@code-proxy/ui";
 import { useAuth } from "@app/providers/AuthProvider";
 
@@ -340,7 +341,7 @@ export function MenuManagementPage() {
       {
         key: "type",
         label: t("identity_admin.menu_type"),
-        width: "w-24",
+        width: COLUMN_WIDTH.badge,
         render: (menu) => (
           <span
             className={`inline-flex rounded-md px-2 py-0.5 text-xs font-medium ${typeBadgeClass(menu.type)}`}
@@ -352,7 +353,7 @@ export function MenuManagementPage() {
       {
         key: "permission",
         label: t("identity_admin.permission_code"),
-        width: "w-40",
+        width: COLUMN_WIDTH.badgeStacked,
         render: (menu) => (
           <span className="truncate text-xs text-slate-600 dark:text-slate-300">
             {displayCell(menu.permission_code)}
@@ -362,7 +363,7 @@ export function MenuManagementPage() {
       {
         key: "route",
         label: t("identity_admin.route_address"),
-        width: "w-40",
+        width: COLUMN_WIDTH.badgeStacked,
         render: (menu) => (
           <div className="min-w-0 text-xs">
             <div className="truncate text-slate-700 dark:text-slate-200">
@@ -375,7 +376,7 @@ export function MenuManagementPage() {
       {
         key: "component",
         label: t("identity_admin.page_component"),
-        width: "w-36",
+        width: COLUMN_WIDTH.timestamp,
         render: (menu) => (
           <span className="truncate text-xs text-slate-600 dark:text-slate-300">
             {menu.type === "directory"
@@ -387,7 +388,7 @@ export function MenuManagementPage() {
       {
         key: "status",
         label: t("identity_admin.status"),
-        width: "w-24",
+        width: COLUMN_WIDTH.badge,
         render: (menu) => (
           <span
             className={
