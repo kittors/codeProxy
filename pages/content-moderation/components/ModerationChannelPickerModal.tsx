@@ -13,6 +13,7 @@ import {
 } from "@code-proxy/api-client";
 import {
   Button,
+  COLUMN_WIDTH,
   Checkbox,
   ConfirmModal,
   DataTable,
@@ -351,7 +352,7 @@ export function ModerationChannelPickerModal({
       {
         key: "select",
         label: t("content_moderation.select"),
-        width: "w-16 min-w-16",
+        width: COLUMN_WIDTH.checkbox,
         resizable: false,
         reorderable: false,
         lockOrder: "start",
@@ -389,7 +390,7 @@ export function ModerationChannelPickerModal({
       {
         key: "provider",
         label: t("content_moderation.provider"),
-        width: "w-36 min-w-36",
+        width: COLUMN_WIDTH.numericWide,
         render: (row) => row.provider || "--",
       },
       {
@@ -420,7 +421,7 @@ export function ModerationChannelPickerModal({
       {
         key: "binding",
         label: t("content_moderation.current_profile"),
-        width: "w-[200px] min-w-[200px]",
+        width: COLUMN_WIDTH.name,
         render: (row) => {
           if (!row.profile_id) {
             return (
@@ -447,7 +448,7 @@ export function ModerationChannelPickerModal({
       {
         key: "status",
         label: t("content_moderation.status"),
-        width: "w-28 min-w-28",
+        width: COLUMN_WIDTH.badge,
         render: (row) =>
           row.disabled ? (
             <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-semibold text-amber-700 dark:text-amber-200">

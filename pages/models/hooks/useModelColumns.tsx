@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Check, Edit3, FlaskConical, Power, Trash2 } from "lucide-react";
 import {
+  COLUMN_WIDTH,
   Checkbox,
   OverflowTooltip,
   TABLE_ROW_ACTIONS_COLUMN,
@@ -55,7 +56,7 @@ export function useModelColumns({
             {
               key: "select",
               label: "",
-              width: "w-12",
+              width: COLUMN_WIDTH.checkbox,
               headerClassName: "text-center",
               cellClassName: "text-center",
               headerRender: () => (
@@ -102,33 +103,33 @@ export function useModelColumns({
       {
         key: "owner",
         label: t("models_page.col_owner"),
-        width: "w-32",
+        width: COLUMN_WIDTH.compact,
         render: (row) => row.owned_by || "-",
       },
       {
         key: "capabilities",
         label: t("models_page.col_capabilities"),
-        width: "w-40",
+        width: COLUMN_WIDTH.badgeStacked,
         render: (row) => <ModelCapabilityBadges model={row} />,
       },
       {
         key: "mode",
         label: t("models_page.col_pricing_mode"),
-        width: "w-36",
+        width: COLUMN_WIDTH.numericWide,
         render: (row) =>
           row.pricing.mode === "call" ? t("models_page.mode_call") : t("models_page.mode_token"),
       },
       {
         key: "price",
         label: t("models_page.col_price"),
-        width: "w-52",
+        width: COLUMN_WIDTH.name,
         cellClassName: "font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
         render: (row) => formatPrice(row, t("models_page.not_priced")),
       },
       {
         key: "status",
         label: t("models_page.col_status"),
-        width: "w-28",
+        width: COLUMN_WIDTH.badge,
         headerClassName: "text-center",
         cellClassName: "text-center",
         render: (row) => (

@@ -2236,7 +2236,7 @@ export function DataTable<T>({
                           <span
                             className={`flex min-w-0 items-center gap-1.5 ${resolveHeaderContentJustifyClass(col.headerClassName)}`}
                           >
-                            <span className="min-w-0 truncate">
+                            <span className="min-w-0 truncate" title={col.headerRender ? undefined : col.label}>
                               {col.headerRender ? col.headerRender() : col.label}
                             </span>
                             {canSort ? (

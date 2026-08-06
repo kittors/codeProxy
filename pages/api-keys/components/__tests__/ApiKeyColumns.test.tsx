@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { ApiKeyEntry } from "@code-proxy/api-client/endpoints/api-keys";
 import { createApiKeyColumns } from "../ApiKeyColumns";
-import { GlobalIconButtonTooltip } from "@code-proxy/ui";
+import { COLUMN_WIDTH, GlobalIconButtonTooltip } from "@code-proxy/ui";
 
 const t = ((key: string, options?: Record<string, string>) => {
   const labels: Record<string, string> = {
@@ -114,7 +114,8 @@ describe("ApiKeyColumns", () => {
     const columns = createColumns();
     const keyColumn = columns.find((column) => column.key === "key");
 
-    expect(keyColumn?.width).toBe("w-[320px] min-w-[320px]");
+    // 仍是 320px，只是改用最宽的语义令牌表达，避免测试绑死具体类名
+    expect(keyColumn?.width).toBe(COLUMN_WIDTH.composite);
   });
 
   test("truncates API key text inside an intact rounded badge", () => {
