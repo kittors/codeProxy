@@ -22,6 +22,7 @@ import {
   proxyProtocol,
   readCachedProxyCheckState,
   slugifyProxyID,
+  uniqueProxyID,
   validateProxyDraft,
   type ProxyCheckStateEntry,
   writeCachedProxyCheckState,
@@ -133,9 +134,12 @@ export function ProxiesPage() {
       return;
     }
 
+    const baseID = draft.id.trim() || slugifyProxyID(draft.name, draft.url);
     const normalized: ProxyPoolEntry = {
       ...draft,
-      id: draft.id.trim() || slugifyProxyID(draft.name, draft.url),
+      id: editingID
+        ? editingID
+        : uniqueProxyID(baseID, entries, editingID),
       name: draft.name.trim(),
       url: draft.url.trim(),
       description: draft.description?.trim() ?? "",
@@ -163,6 +167,7 @@ export function ProxiesPage() {
         const nextEntries = [...entries, normalized];
         await proxiesApi.saveAll(nextEntries);
         setEntries(nextEntries);
+        void refreshCheckResults([normalized]);
       }
       notify({ type: "success", message: t("proxies.saved") });
       closeModal();

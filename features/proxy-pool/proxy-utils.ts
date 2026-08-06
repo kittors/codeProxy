@@ -118,13 +118,57 @@ export const writeCachedProxyCheckState = (
   });
 };
 
+const proxyIDFromURL = (url: string): string => {
+  const trimmed = (url || "").trim();
+  try {
+    const parsed = new URL(trimmed);
+    const hostPart = `${parsed.hostname}${parsed.port ? `-${parsed.port}` : ""}`
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+    if (hostPart) return `proxy-${hostPart}`;
+  } catch {
+    // fall through to hash
+  }
+  if (!trimmed) return `proxy-${Date.now()}`;
+  let hash = 0;
+  for (let i = 0; i < trimmed.length; i += 1) {
+    hash = (Math.imul(31, hash) + trimmed.charCodeAt(i)) | 0;
+  }
+  return `proxy-${(hash >>> 0).toString(16)}`;
+};
+
+/** Stable proxy id from ASCII name; non-ASCII names use host/port so "洛杉矶 ip" ≠ "住宅 ip". */
 export const slugifyProxyID = (name: string, fallback: string): string => {
-  const base = (name || fallback)
-    .trim()
+  const rawName = (name || "").trim();
+  // CJK / mixed names strip to colliding fragments like "ip"; always key off the URL.
+  if (/[^\x00-\x7F]/.test(rawName)) {
+    return proxyIDFromURL(fallback);
+  }
+  const fromName = rawName
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
-  return base || `proxy-${Date.now()}`;
+  if (fromName) return fromName;
+  return proxyIDFromURL(fallback);
+};
+
+/** Keep create ids unique within the current tenant list (editing id excluded). */
+export const uniqueProxyID = (
+  candidate: string,
+  existing: ProxyPoolEntry[],
+  editingID?: string | null,
+): string => {
+  const base = candidate.trim() || `proxy-${Date.now()}`;
+  const used = new Set(
+    existing
+      .map((entry) => entry.id.trim())
+      .filter((id) => id && id !== (editingID ?? "").trim()),
+  );
+  if (!used.has(base)) return base;
+  let n = 2;
+  while (used.has(`${base}-${n}`)) n += 1;
+  return `${base}-${n}`;
 };
 
 export const validateProxyDraft = (draft: ProxyPoolEntry): string | null => {
