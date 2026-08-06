@@ -4,6 +4,7 @@ import { Ban, CalendarClock, Eye, Pencil } from "lucide-react";
 import { identityApi, type TenantIdentity } from "@code-proxy/api-client";
 import {
   Button,
+  COLUMN_WIDTH,
   ConfirmModal,
   DataTable,
   DateTimePicker,
@@ -13,10 +14,10 @@ import {
   Select,
   TABLE_ROW_ACTIONS_COLUMN,
   TableRowActions,
-  Textarea,
   TextInput,
-  type DataTableColumn,
+  Textarea,
   useToast,
+  type DataTableColumn,
 } from "@code-proxy/ui";
 import { PermissionGate } from "@app/providers/PermissionGate";
 import { useAuth } from "@app/providers/AuthProvider";
@@ -147,7 +148,7 @@ export function TenantsPage() {
       {
         key: "status",
         label: t("identity_admin.status"),
-        width: "w-32",
+        width: COLUMN_WIDTH.compact,
         render: (item) => (
           <span
             className={[
@@ -166,7 +167,7 @@ export function TenantsPage() {
       {
         key: "expires",
         label: t("identity_admin.expires"),
-        width: "w-52",
+        width: COLUMN_WIDTH.timestamp,
         render: (item) =>
           item.expires_at
             ? new Date(item.expires_at).toLocaleString(i18n.language)
@@ -175,7 +176,7 @@ export function TenantsPage() {
       {
         key: "version",
         label: t("identity_admin.version"),
-        width: "w-24",
+        width: COLUMN_WIDTH.badge,
         render: (item) => item.version,
       },
       {

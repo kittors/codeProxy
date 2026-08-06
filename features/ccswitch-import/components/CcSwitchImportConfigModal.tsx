@@ -5,7 +5,7 @@ import iconClaude from "@code-proxy/assets/icons/claude.svg";
 import iconCodex from "@code-proxy/assets/icons/codex.svg";
 import iconGemini from "@code-proxy/assets/icons/gemini.svg";
 import { modelsApi } from "@code-proxy/api-client";
-import { Button } from "@code-proxy/ui";
+import { Button, COLUMN_WIDTH } from "@code-proxy/ui";
 import {
   DataTable,
   TABLE_ROW_ACTIONS_COLUMN,
@@ -540,7 +540,7 @@ export function CcSwitchImportConfigModal({
           {
             key: "role",
             label: t("ccswitch.config_claude_model_role"),
-            width: "w-44",
+            width: COLUMN_WIDTH.badgeGroup,
             cellContentClassName: "font-medium text-slate-800 dark:text-white/80",
             render: (mapping) =>
               mapping.role ? t(`ccswitch.config_claude_role_${mapping.role}`) : "",
@@ -548,7 +548,7 @@ export function CcSwitchImportConfigModal({
           {
             key: "requestModel",
             label: t("ccswitch.config_request_model_name"),
-            width: "w-72",
+            width: COLUMN_WIDTH.nameStacked,
             sort: { getValue: (mapping) => mapping.requestModel },
             render: (mapping) => {
               const role = mapping.role;
@@ -567,7 +567,7 @@ export function CcSwitchImportConfigModal({
           {
             key: "targetModel",
             label: t("ccswitch.config_actual_channel_model"),
-            width: "w-80",
+            width: COLUMN_WIDTH.composite,
             sort: { getValue: (mapping) => mapping.targetModel },
             render: (mapping) => {
               const role = mapping.role;
@@ -594,7 +594,7 @@ export function CcSwitchImportConfigModal({
           {
             key: "targetModel",
             label: t("ccswitch.config_actual_channel_model"),
-            width: "w-72",
+            width: COLUMN_WIDTH.nameStacked,
             sort: { getValue: (mapping) => mapping.targetModel },
             render: (mapping, index) => (
               <SearchableSelect
@@ -615,7 +615,7 @@ export function CcSwitchImportConfigModal({
           {
             key: "requestModel",
             label: t("ccswitch.config_request_model_name"),
-            width: "w-72",
+            width: COLUMN_WIDTH.nameStacked,
             sort: { getValue: (mapping) => mapping.requestModel },
             render: (mapping, index) => (
               <TextInput
@@ -631,7 +631,7 @@ export function CcSwitchImportConfigModal({
             key: "contextWindow",
             // Header wraps below w-52 in en/ru, which reads as a truncated label.
             label: t("ccswitch.config_codex_context_window"),
-            width: "w-52",
+            width: COLUMN_WIDTH.name,
             render: (mapping, index) => (
               <TextInput
                 type="number"

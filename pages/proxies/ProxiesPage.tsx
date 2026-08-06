@@ -6,7 +6,7 @@ import {
   type ProxyCheckResult,
   type ProxyPoolEntry,
 } from "@code-proxy/api-client/endpoints/proxies";
-import { Button } from "@code-proxy/ui";
+import { Button, COLUMN_WIDTH } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
 import { ConfirmModal } from "@code-proxy/ui";
 import { HoverTooltip } from "@code-proxy/ui";
@@ -262,7 +262,7 @@ export function ProxiesPage() {
       {
         key: "name",
         label: t("proxies.name"),
-        width: "w-44",
+        width: COLUMN_WIDTH.badgeGroup,
         render: (entry) => (
           <div className="min-w-0">
             <p className="truncate font-semibold text-slate-950 dark:text-white">{entry.name}</p>
@@ -275,7 +275,7 @@ export function ProxiesPage() {
       {
         key: "endpoint",
         label: t("proxies.endpoint_label"),
-        width: "w-[180px]",
+        width: COLUMN_WIDTH.badgeGroup,
         render: (entry) => (
           <div className="flex min-w-0 items-center gap-2">
             <span className="rounded-full border border-slate-900/8 bg-slate-50 px-2 py-0.5 text-xs font-semibold text-slate-600 dark:border-white/8 dark:bg-neutral-900 dark:text-slate-300">
@@ -290,7 +290,7 @@ export function ProxiesPage() {
       {
         key: "status",
         label: t("proxies.latency"),
-        width: "w-40",
+        width: COLUMN_WIDTH.badgeStacked,
         render: (entry) => {
           const result = checkState[entry.id];
           const hasCheckResult = typeof result?.ok === "boolean";
@@ -326,7 +326,7 @@ export function ProxiesPage() {
       {
         key: "description",
         label: t("proxies.remark_label"),
-        width: "w-[180px]",
+        width: COLUMN_WIDTH.badgeGroup,
         render: (entry) => (
           <p className="truncate text-xs text-slate-600 dark:text-white/60">
             {entry.description || "--"}

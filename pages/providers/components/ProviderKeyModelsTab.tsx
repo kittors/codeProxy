@@ -1,17 +1,13 @@
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { RefreshCw } from "lucide-react";
-import { Button } from "@code-proxy/ui";
+import { Button, COLUMN_WIDTH } from "@code-proxy/ui";
 import { Checkbox } from "@code-proxy/ui";
 import { DataTable, type DataTableColumn } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
 import { SearchableSelect } from "@code-proxy/ui";
 import { type ProviderKeyDraft } from "../providers-helpers";
-import {
-  createEmptyModelEntry,
-  ModelInputList,
-  type ModelEntryDraft,
-} from "../ModelInputList";
+import { createEmptyModelEntry, ModelInputList, type ModelEntryDraft } from "../ModelInputList";
 import { ExcludedModelsEditor } from "./ExcludedModelsEditor";
 import { OpenAIModelDiscoveryPanel } from "./OpenAIModelDiscoveryPanel";
 
@@ -192,7 +188,7 @@ export function ProviderKeyModelsTab({
       {
         key: "enabled",
         label: t("providers.model_enabled"),
-        width: "w-36",
+        width: COLUMN_WIDTH.numericWide,
         minWidthPx: 144,
         headerClassName: "text-center",
         cellClassName: "text-center",

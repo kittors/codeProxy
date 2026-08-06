@@ -18,7 +18,7 @@ import {
   type PeriodSpendingDraft,
 } from "@features/period-spending";
 import { useApiKeyPermissionOptions } from "@features/api-key-restrictions";
-import { Button } from "@code-proxy/ui";
+import { Button, COLUMN_WIDTH } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
 import { ConfirmModal } from "@code-proxy/ui";
 import { EmptyState } from "@code-proxy/ui";
@@ -298,7 +298,7 @@ export function ApiKeyPermissionsPage() {
       {
         key: "name",
         label: t("api_key_permissions_page.col_name"),
-        width: "w-[180px] min-w-[180px]",
+        width: COLUMN_WIDTH.badgeGroup,
         cellClassName: "font-medium text-slate-900 dark:text-white",
         render: (profile) => profile.name,
       },
@@ -347,7 +347,7 @@ export function ApiKeyPermissionsPage() {
       {
         key: "bound",
         label: t("api_key_permissions_page.col_bound_keys"),
-        width: "w-[120px] min-w-[120px]",
+        width: COLUMN_WIDTH.timestamp,
         render: (profile) =>
           t("api_key_permissions_page.bound_count", {
             count: boundProfileCount(profile, accounts),

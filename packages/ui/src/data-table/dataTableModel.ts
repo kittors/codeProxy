@@ -4,7 +4,9 @@ export const DEFAULT_ROW_HEIGHT = 44;
 export const DEFAULT_OVERSCAN = 12;
 export const DEFAULT_SCROLL_THRESHOLD = 100;
 export const DEFAULT_BOTTOM_DEBOUNCE_MS = 120;
-export const COLUMN_WIDTH_STORAGE_PREFIX = "codeProxy.dataTable.columnWidths.v1";
+// v2：列宽默认值整体按语义令牌重排（见 columnWidths.ts）。v1 里保存的手动拖拽
+// 结果是针对旧默认值的，继续沿用会盖掉新默认值，因此换 key 让旧记录自然失效。
+export const COLUMN_WIDTH_STORAGE_PREFIX = "codeProxy.dataTable.columnWidths.v2";
 export const COLUMN_RESIZE_DEBUG_STORAGE_KEY = "codeProxy.dataTable.debugResize";
 export const DEFAULT_MIN_COLUMN_WIDTH = 72;
 export const DEFAULT_MAX_COLUMN_WIDTH = 640;

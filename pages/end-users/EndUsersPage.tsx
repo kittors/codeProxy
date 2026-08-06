@@ -24,6 +24,7 @@ import {
 } from "@code-proxy/api-client";
 import {
   Button,
+  COLUMN_WIDTH,
   Card,
   ConfirmModal,
   DataTable,
@@ -34,8 +35,8 @@ import {
   TABLE_ROW_ACTIONS_COLUMN,
   TableRowActions,
   TextInput,
-  type DataTableColumn,
   useToast,
+  type DataTableColumn,
 } from "@code-proxy/ui";
 import { PermissionGate } from "@app/providers/PermissionGate";
 import { useAuth } from "@app/providers/AuthProvider";
@@ -354,7 +355,6 @@ export function EndUsersPage() {
         width: "w-56 min-w-[14rem]",
         minWidthPx: 160,
         maxWidthPx: 480,
-        headerClassName: "text-left",
         cellClassName: "text-left",
         render: (row) => (
           <div className="min-w-0">
@@ -373,7 +373,7 @@ export function EndUsersPage() {
       {
         key: "status",
         label: t("end_users.status"),
-        width: "w-28 min-w-[7rem]",
+        width: COLUMN_WIDTH.badge,
         headerClassName: "text-center",
         cellClassName: "text-center",
         render: (row) => {
@@ -390,7 +390,7 @@ export function EndUsersPage() {
       {
         key: "permission",
         label: t("end_users.account_permission_profile"),
-        width: "w-40 min-w-[10rem]",
+        width: COLUMN_WIDTH.name,
         headerClassName: "text-center",
         cellClassName: "text-center text-slate-700 dark:text-white/70",
         render: (row) => {
@@ -418,7 +418,7 @@ export function EndUsersPage() {
       {
         key: "dailySpending",
         label: t("quota.daily_spending_column"),
-        width: "w-[130px] min-w-[130px]",
+        width: COLUMN_WIDTH.compact,
         cellClassName:
           "text-center whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
         render: (row) => formatQuotaUsdAmount(row["daily-spending-used"]),
@@ -426,7 +426,7 @@ export function EndUsersPage() {
       {
         key: "lifetimeSpending",
         label: t("quota.lifetime_spending_column"),
-        width: "w-[130px] min-w-[130px]",
+        width: COLUMN_WIDTH.compact,
         cellClassName:
           "text-center whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
         render: (row) => formatQuotaUsdAmount(row["lifetime-spending-used"]),
@@ -434,7 +434,7 @@ export function EndUsersPage() {
       {
         key: "totalResets",
         label: t("quota.total_resets"),
-        width: "w-[120px] min-w-[120px]",
+        width: COLUMN_WIDTH.numericWide,
         headerClassName: "text-center",
         cellClassName: "text-center",
         render: (row) => {
@@ -456,7 +456,7 @@ export function EndUsersPage() {
       {
         key: "lastLogin",
         label: t("end_users.last_login"),
-        width: "w-[160px] min-w-[160px]",
+        width: COLUMN_WIDTH.timestamp,
         cellClassName: "text-center text-xs text-slate-500 dark:text-white/50",
         render: (row) => (row.last_login_at ? new Date(row.last_login_at).toLocaleString() : "-"),
       },

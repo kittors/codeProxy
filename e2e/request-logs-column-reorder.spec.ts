@@ -3,7 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 const setAuthed = async (page: Page) => {
   await page.addInitScript(() => {
     localStorage.removeItem("codeProxy.dataTable.columnOrder.v1.request-logs");
-    localStorage.removeItem("codeProxy.dataTable.columnWidths.v1.request-logs");
+    localStorage.removeItem("codeProxy.dataTable.columnWidths.v2.request-logs");
     localStorage.setItem(
       "code-proxy-admin-auth",
       JSON.stringify({
@@ -253,7 +253,7 @@ const readResponseMetricsColumnState = async (page: Page) =>
     });
     const storedWidths = JSON.parse(
       localStorage.getItem(
-        "codeProxy.dataTable.columnWidths.v1.request-logs",
+        "codeProxy.dataTable.columnWidths.v2.request-logs",
       ) ?? "{}",
     ) as Record<string, unknown>;
 

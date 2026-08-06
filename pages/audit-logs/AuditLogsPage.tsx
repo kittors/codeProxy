@@ -8,6 +8,7 @@ import {
 } from "@code-proxy/api-client";
 import {
   Button,
+  COLUMN_WIDTH,
   ConfirmModal,
   DataTable,
   Modal,
@@ -193,13 +194,13 @@ export function AuditLogsPage() {
       {
         key: "time",
         label: t("identity_admin.time"),
-        width: "w-52",
+        width: COLUMN_WIDTH.timestamp,
         render: (item) => new Date(item.created_at).toLocaleString(i18n.language),
       },
       {
         key: "actor",
         label: t("identity_admin.actor"),
-        width: "w-72",
+        width: COLUMN_WIDTH.nameStacked,
         overflowTooltip: true,
         render: (item) => formatActor(item),
       },
@@ -212,7 +213,7 @@ export function AuditLogsPage() {
       {
         key: "result",
         label: t("identity_admin.result"),
-        width: "w-28",
+        width: COLUMN_WIDTH.badge,
         headerClassName: "text-center",
         cellClassName: "text-center",
         render: (item) =>

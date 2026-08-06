@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } 
 import { ArrowUp, ChevronLeft, ChevronRight, CircleAlert, Plus, Trash2, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { imageGenerationApi } from "@code-proxy/api-client";
-import { Button } from "@code-proxy/ui";
+import { Button, COLUMN_WIDTH } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
 import { ImagePreviewOverlay } from "@code-proxy/ui";
 import { Modal } from "@code-proxy/ui";
@@ -19,11 +19,7 @@ import {
   supportsImageEditing,
 } from "@features/image-model-picker";
 import { imageStageClassName } from "./stageStyles";
-import {
-  VISIBLE_ENDPOINT_DOCS,
-  type EndpointDoc,
-  type SpecRow,
-} from "./apiDocs";
+import { VISIBLE_ENDPOINT_DOCS, type EndpointDoc, type SpecRow } from "./apiDocs";
 
 /**
  * Fallback model id, used only until the server's catalog arrives and as the tab
@@ -282,21 +278,21 @@ function SpecTable({ tableId, title, rows }: { tableId: string; title: string; r
       {
         key: "name",
         label: t("image_generation.table_param"),
-        width: "w-40",
+        width: COLUMN_WIDTH.badgeStacked,
         cellClassName: "font-mono text-xs break-all leading-5 text-slate-900 dark:text-white",
         render: (row) => row.name,
       },
       {
         key: "type",
         label: t("image_generation.table_type"),
-        width: "w-28",
+        width: COLUMN_WIDTH.badge,
         cellClassName: "font-mono text-xs text-slate-600 dark:text-white/55",
         render: (row) => row.type,
       },
       {
         key: "required",
         label: t("image_generation.table_required"),
-        width: "w-20",
+        width: COLUMN_WIDTH.badge,
         cellClassName: "text-xs text-slate-600 dark:text-white/55",
         render: (row) => (row.required ? t("common.yes") : t("common.no")),
       },
