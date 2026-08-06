@@ -47,6 +47,7 @@ import { EndUserResetHistoryModal } from "./components/EndUserResetHistoryModal"
 import { EndUserEditModal } from "./components/EndUserEditModal";
 import {
   emptyForm,
+  hasResettableQuota,
   limitToText,
   requestLimitFromText,
   spendingLimitFromText,
@@ -467,12 +468,7 @@ export function EndUsersPage() {
         headerClassName: stickyActionsHeaderClass,
         cellClassName: stickyActionsCellClass,
         render: (row) => {
-          const hasResettablePeriod = Object.values(
-            normalizePeriodSpendingLimits(
-              row["period-spending-limits"],
-              row["daily-spending-limit"],
-            ),
-          ).some((limit) => limit > 0);
+          const hasResettablePeriod = hasResettableQuota(row);
           const resetLabel = hasResettablePeriod
             ? t("end_users.reset_period_spending")
             : t("end_users.reset_period_spending_disabled");
