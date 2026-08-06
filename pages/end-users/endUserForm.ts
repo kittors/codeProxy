@@ -1,6 +1,18 @@
 import type { EndUser } from "@code-proxy/api-client";
+import { normalizePeriodSpendingLimits } from "@code-proxy/api-client";
 import { emptyPeriodSpendingDraft, remainingQuotaUsd } from "@features/period-spending";
 import type { PeriodSpendingDraft } from "@features/period-spending";
+
+/**
+ * Whether the account has anything a reset can act on. The cumulative allowance
+ * counts: granting it again is the only way to make a spent-out account usable,
+ * yet it lives outside the rolling period limits, so gating on those alone left
+ * lifetime-only accounts with the action permanently disabled.
+ */
+export const hasResettableQuota = (user: EndUser): boolean =>
+  Object.values(
+    normalizePeriodSpendingLimits(user["period-spending-limits"], user["daily-spending-limit"]),
+  ).some((limit) => limit > 0) || (user["spending-limit"] ?? 0) > 0;
 
 export type EndUserForm = {
   username: string;

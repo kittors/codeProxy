@@ -537,6 +537,20 @@ describe("EndUsersPage lifetime allowance", () => {
     });
   });
 
+  test("an account with only a lifetime allowance can reach the reset action", async () => {
+    // The dialog gained a lifetime option, but the menu entry that opens it was
+    // still gated on the rolling period limits, so the one account type that
+    // needs granting most could never open it.
+    renderPage();
+    await screen.findByText("Carol");
+    await openRowMoreActions("Carol");
+
+    // Enabled label is "Reset account quota"; the disabled state renders the
+    // "No resettable period quota" label instead.
+    const action = screen.getByRole("menuitem", { name: "Reset account quota" });
+    expect(action.getAttribute("aria-disabled")).not.toBe("true");
+  });
+
   test("the quota column surfaces a lifetime-only cap instead of reading unlimited", async () => {
     renderPage();
     await screen.findByText("Carol");
