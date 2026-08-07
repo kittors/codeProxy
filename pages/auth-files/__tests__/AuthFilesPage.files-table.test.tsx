@@ -269,6 +269,7 @@ describe("AuthFilesPage files table", () => {
             meta?: string;
             resetAtMs?: number;
             windowSeconds?: number;
+            observedAtMs?: number;
           }) => ({
             quota_key: item.key ?? item.label ?? "quota",
             quota_label: item.label,
@@ -280,6 +281,9 @@ describe("AuthFilesPage files table", () => {
                 ? new Date(item.resetAtMs).toISOString()
                 : undefined,
             window_seconds: item.windowSeconds,
+            // The backend stamps every window it returns; an unstamped window
+            // means "age unknown" and is deliberately rendered as untrustworthy.
+            observed_at: new Date(item.observedAtMs ?? Date.now()).toISOString(),
           }),
         ),
         planType: (result as { planType?: string } | null)?.planType ?? null,
