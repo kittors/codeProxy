@@ -445,6 +445,12 @@ export interface AiAccountQuotaItemDto {
   value?: string;
   /** Optional secondary meta text. */
   meta?: string;
+  /**
+   * When this window was last confirmed by the upstream. Upstreams report only a
+   * subset of windows on many probes, so a window carried forward by the backend
+   * merge keeps an older timestamp than its siblings. Absent on pre-migration rows.
+   */
+  observed_at?: string | null;
 }
 
 /** Backend AccountStatusView usage summary (authoritative). */
@@ -505,6 +511,11 @@ export interface AiAccountLatestStatusDto {
   reset_credit_count?: number | null;
   reset_credit_expirations?: string[];
   upstream_checked_at?: string | null;
+  /**
+   * When the quota payload itself was last confirmed. Lags upstream_checked_at
+   * while probes fail — the attempt moves, the data does not.
+   */
+  quota_observed_at?: string | null;
   usage_updated_at?: string | null;
   expires_at?: string | null;
   version?: number | string | null;

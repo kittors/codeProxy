@@ -471,7 +471,10 @@ describe("useAuthFilesStatusState batch refresh", () => {
     expect(patched[0]?.shared_subscription_source).toBe("signed_claims");
   });
 
-  test("cached provider metrics survive partial quota/status payloads on mount", async () => {
+  // Plan metadata is genuinely sticky (an omitted plan_type means "unchanged"),
+  // but quota values are not: the backend merges partial upstream payloads by
+  // quota_key, so empty quotas here mean the windows are gone, not withheld.
+  test("cached plan metadata survives an empty quota payload but quota values do not", async () => {
     const mixedFiles: AuthFileItem[] = [
       files[0]!,
       {
@@ -528,8 +531,7 @@ describe("useAuthFilesStatusState batch refresh", () => {
           auth_subject_id: "sub-a",
           plan_type: null,
           reset_credit_count: null,
-          // Empty quotas model a partial payload that omitted provider metrics.
-          // An explicit percent: null intentionally clears stale cached values.
+          // No windows reported: the cached values must not be resurrected.
           quotas: [],
           usage: { request_total: 200 },
         },
@@ -560,16 +562,10 @@ describe("useAuthFilesStatusState batch refresh", () => {
     expect(result.current.connectivityState.get("claude.json")?.error).toBe(true);
     await waitFor(() => expect(mocks.getStatus).toHaveBeenCalled());
     await waitFor(() => {
-      expect(result.current.quotaByFileName["a.json"]?.items[0]).toMatchObject({
-        label: "m_quota.code_5h",
-        percent: 42,
-        value: "42%",
-        resetAtMs: 1234,
-        windowSeconds: 18_000,
-      });
+      expect(result.current.quotaByFileName["a.json"]?.items).toEqual([]);
       expect(result.current.quotaByFileName["a.json"]?.planType).toBe("pro");
       expect(result.current.quotaByFileName["a.json"]?.resetCreditCount).toBe(3);
-      expect(result.current.quotaByFileName["claude.json"]?.items[0]?.percent).toBe(72);
+      expect(result.current.quotaByFileName["claude.json"]?.items).toEqual([]);
     });
   });
 

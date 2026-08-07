@@ -13,7 +13,8 @@ import type {
 import { normalizeUsageSourceId, type KeyStatBucket } from "../providers/providerUsage";
 import { resolveCodexPlanType } from "../quota/resolvers";
 import { normalizePlanType } from "../quota/parsers";
-import type { QuotaItem, QuotaState, QuotaStatus } from "../quota/types";
+import { sanitizeQuotaByFileNameForCache } from "./quotaCache";
+import type { QuotaItem, QuotaState } from "../quota/types";
 import type { StatusBarData, StatusBlockDetail, StatusBlockState } from "../usage";
 import {
   getActiveCacheTenantId,
@@ -57,6 +58,23 @@ export const AUTH_FILES_DATA_CACHE_KEY_V2 = "authFilesPage.dataCache.v2";
 /** Cached status/usage is only a warm-paint hint; refetch after one minute. */
 /** Warm paint for membership badges / quota / cycle across route remounts. */
 export const AUTH_FILES_DATA_CACHE_TTL_MS = 30 * 60_000;
+/**
+ * How long a quota value may go unconfirmed before the card stops presenting it
+ * as current. Comfortably above the 60s snapshot poll, so ordinary refresh gaps
+ * never flag; anything past it means refreshes are happening but bringing back
+ * no new data, which is precisely what the user needs told.
+ */
+export const QUOTA_STALE_AFTER_MS = 15 * 60_000;
+
+/** True when a quota value is old enough that showing it plainly would mislead. */
+export const isQuotaObservationStale = (
+  observedAtMs: number | undefined,
+  nowMs: number,
+): boolean =>
+  typeof observedAtMs === "number" &&
+  Number.isFinite(observedAtMs) &&
+  nowMs - observedAtMs > QUOTA_STALE_AFTER_MS;
+
 export const AUTH_FILES_QUOTA_PREVIEW_KEY = "authFilesPage.quotaPreview.v1";
 export const AUTH_FILES_QUOTA_AUTO_REFRESH_KEY = "authFilesPage.quotaAutoRefreshMs.v1";
 export const AUTH_FILES_FILES_VIEW_MODE_KEY = "authFilesPage.filesViewMode.v1";
@@ -586,116 +604,6 @@ export const sanitizeAuthFilesForCache = (files: AuthFileItem[]): AuthFileItem[]
     id_token: sanitizeDecodedIdToken(file.id_token),
   }));
 
-const QUOTA_CACHE_STATUSES = new Set<QuotaStatus>(["idle", "loading", "success", "error"]);
-
-const sanitizeQuotaItemsForCache = (items: unknown): QuotaItem[] => {
-  if (!Array.isArray(items)) return [];
-  return items
-    .map((item): QuotaItem | null => {
-      if (!item || typeof item !== "object" || Array.isArray(item)) return null;
-      const record = item as Record<string, unknown>;
-      const key = typeof record.key === "string" && record.key ? record.key : undefined;
-      const label = typeof record.label === "string" ? record.label : "";
-      if (!label) return null;
-      const percent =
-        record.percent === null ||
-        (typeof record.percent === "number" && Number.isFinite(record.percent))
-          ? record.percent
-          : null;
-      const resetAtMs =
-        typeof record.resetAtMs === "number" && Number.isFinite(record.resetAtMs)
-          ? record.resetAtMs
-          : undefined;
-      const value = typeof record.value === "string" ? record.value : undefined;
-      const windowSeconds =
-        typeof record.windowSeconds === "number" && Number.isFinite(record.windowSeconds)
-          ? record.windowSeconds
-          : undefined;
-      const meta = typeof record.meta === "string" ? record.meta : undefined;
-      const type = typeof record.type === "string" ? record.type : undefined;
-      return {
-        ...(key ? { key } : {}),
-        label,
-        percent,
-        value,
-        resetAtMs,
-        windowSeconds,
-        meta,
-        type,
-      };
-    })
-    .filter((item): item is QuotaItem => Boolean(item));
-};
-
-const sanitizeResetCreditCountForCache = (value: unknown): number | undefined => {
-  const count = typeof value === "number" ? value : Number(value);
-  if (!Number.isFinite(count)) return undefined;
-  return Math.max(0, Math.floor(count));
-};
-
-const sanitizeResetCreditExpirationsForCache = (value: unknown): string[] | undefined => {
-  if (!Array.isArray(value)) return undefined;
-  const expirations = value
-    .filter((item): item is string => typeof item === "string" && item.trim().length > 0)
-    .map((item) => item.trim());
-  return expirations.length > 0 ? expirations : undefined;
-};
-
-const sanitizeQuotaByFileNameForCache = (
-  quotaByFileName: unknown,
-  fileNames?: Set<string>,
-): Record<string, QuotaState> | undefined => {
-  if (!quotaByFileName || typeof quotaByFileName !== "object" || Array.isArray(quotaByFileName)) {
-    return undefined;
-  }
-
-  const output: Record<string, QuotaState> = {};
-  Object.entries(quotaByFileName as Record<string, unknown>).forEach(([fileName, rawState]) => {
-    if (!fileName || (fileNames && !fileNames.has(fileName))) return;
-    if (!rawState || typeof rawState !== "object" || Array.isArray(rawState)) return;
-    const state = rawState as Record<string, unknown>;
-    const items = sanitizeQuotaItemsForCache(state.items);
-    const rawStatus = typeof state.status === "string" ? state.status : "success";
-    const status = QUOTA_CACHE_STATUSES.has(rawStatus as QuotaStatus) ? rawStatus : "success";
-    const updatedAt =
-      typeof state.updatedAt === "number" && Number.isFinite(state.updatedAt)
-        ? state.updatedAt
-        : undefined;
-    const planType = normalizePlanType(state.planType ?? state.plan_type);
-    const resetCreditCount = sanitizeResetCreditCountForCache(state.resetCreditCount);
-    const resetCreditExpirations = sanitizeResetCreditExpirationsForCache(
-      state.resetCreditExpirations,
-    );
-    const error = typeof state.error === "string" ? state.error : undefined;
-    const fetchedAt =
-      typeof state.fetchedAt === "number" && Number.isFinite(state.fetchedAt)
-        ? state.fetchedAt
-        : undefined;
-    const source = typeof state.source === "string" ? state.source : undefined;
-    if (
-      items.length === 0 &&
-      !planType &&
-      resetCreditCount === undefined &&
-      resetCreditExpirations === undefined &&
-      !error
-    ) {
-      return;
-    }
-    output[fileName] = {
-      status: status === "loading" ? "success" : (status as QuotaStatus),
-      items,
-      planType: planType ?? undefined,
-      resetCreditCount,
-      resetCreditExpirations,
-      updatedAt,
-      fetchedAt,
-      source,
-      error: status === "error" ? error : undefined,
-    };
-  });
-
-  return Object.keys(output).length > 0 ? output : undefined;
-};
 
 const sanitizeConnectivityByFileNameForCache = (
   connectivityByFileName: unknown,

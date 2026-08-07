@@ -121,6 +121,7 @@ export const mapQuotaItemDto = (item: AiAccountQuotaItemDto): QuotaItem => {
   return {
     key: item.quota_key,
     label: item.quota_label ?? item.quota_key,
+    observedAtMs: parseTimestampMs(item.observed_at ?? undefined),
     // Clamp at the boundary: group averages consume percent directly.
     percent:
       typeof item.percent === "number" && Number.isFinite(item.percent)
@@ -149,23 +150,11 @@ export const mapAccountStatusToQuotaState = (
     account.health_status === "error" ||
     account.refresh_state === "error";
 
-  if (isError && items.length === 0) {
-    return {
-      status: "error",
-      items: [],
-      planType: account.plan_type ?? undefined,
-      resetCreditCount:
-        typeof account.reset_credit_count === "number"
-          ? account.reset_credit_count
-          : undefined,
-      resetCreditExpirations: account.reset_credit_expirations,
-      error: errorMessage ?? "status_error",
-      updatedAt,
-    };
-  }
-
+  // A failed probe stays an error even when the last known quota is still
+  // available to show. Reporting "success" because stale items exist is what let
+  // a card whose upstream had been rejecting us for days look perfectly healthy.
   return {
-    status: "success",
+    status: isError ? "error" : "success",
     items,
     planType: account.plan_type ?? undefined,
     resetCreditCount:
@@ -173,8 +162,9 @@ export const mapAccountStatusToQuotaState = (
         ? account.reset_credit_count
         : undefined,
     resetCreditExpirations: account.reset_credit_expirations,
-    error: errorMessage ?? undefined,
+    error: isError ? (errorMessage ?? "status_error") : undefined,
     updatedAt,
+    quotaObservedAtMs: parseTimestampMs(account.quota_observed_at ?? undefined),
   };
 };
 

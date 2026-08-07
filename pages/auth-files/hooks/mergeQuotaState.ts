@@ -27,6 +27,7 @@ export const mergeQuotaItem = (previous: QuotaItem, incoming: QuotaItem): QuotaI
   // countdown. Assigned explicitly so a payload missing the key still clears it.
   percent: incoming.percent ?? null,
   resetAtMs: incoming.resetAtMs,
+  observedAtMs: incoming.observedAtMs,
   value: incoming.value ?? previous.value,
   windowSeconds: incoming.windowSeconds ?? previous.windowSeconds,
   meta: incoming.meta ?? previous.meta,
@@ -37,22 +38,21 @@ export const mergeQuotaState = (
   incoming: QuotaState,
 ): QuotaState => {
   if (!previous) return incoming;
-  // Newest payload owns the item set: windows the upstream stopped reporting
-  // drop out instead of lingering forever (and being re-persisted to cache).
-  // Empty payloads (errors / unsupported probes) keep the last known windows.
+  // The server payload is the whole truth about which windows exist. The backend
+  // now merges partial upstream payloads by quota_key and stamps each window with
+  // its own observed_at, so a window missing here is genuinely gone rather than
+  // merely absent from one probe. The client must not re-add windows of its own:
+  // that is what kept days-old values on screen, visually indistinguishable from
+  // live data, whenever a payload came back empty.
   const remainingPrevious = [...previous.items];
-  const mergedItems =
-    incoming.items.length === 0
-      ? previous.items
-      : incoming.items.map((item) => {
-          const incomingKeys = quotaItemMergeKeys(item);
-          const previousIndex = remainingPrevious.findIndex((candidate) =>
-            quotaItemMergeKeys(candidate).some((key) => incomingKeys.includes(key)),
-          );
-          const [previousItem] =
-            previousIndex < 0 ? [] : remainingPrevious.splice(previousIndex, 1);
-          return previousItem ? mergeQuotaItem(previousItem, item) : item;
-        });
+  const mergedItems = incoming.items.map((item) => {
+    const incomingKeys = quotaItemMergeKeys(item);
+    const previousIndex = remainingPrevious.findIndex((candidate) =>
+      quotaItemMergeKeys(candidate).some((key) => incomingKeys.includes(key)),
+    );
+    const [previousItem] = previousIndex < 0 ? [] : remainingPrevious.splice(previousIndex, 1);
+    return previousItem ? mergeQuotaItem(previousItem, item) : item;
+  });
   const resetCreditCountChanged =
     incoming.resetCreditCount !== undefined &&
     incoming.resetCreditCount !== previous.resetCreditCount;
@@ -66,6 +66,10 @@ export const mergeQuotaState = (
       incoming.resetCreditExpirations ??
       (resetCreditCountChanged ? undefined : previous.resetCreditExpirations),
     updatedAt: incoming.updatedAt ?? previous.updatedAt,
+    // Observation time tracks the data, not the request: never fall back to the
+    // previous value, or a card whose quota stopped being confirmed would keep
+    // reporting the age of whatever it last managed to observe.
+    quotaObservedAtMs: incoming.quotaObservedAtMs,
     error:
       incoming.error ?? (incoming.status === "error" ? previous.error : undefined),
   };
