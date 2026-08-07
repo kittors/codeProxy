@@ -38,12 +38,26 @@ export const renderQuotaBarNode = (
     // A value the upstream stopped confirming keeps its countdown ticking off a
     // frozen reset time, which reads as live data. Desaturate it and state its
     // age so an unrefreshed number can never pass for a current one.
+    //
+    // "How old is it" has three answers, and only the first is safe to render
+    // plainly. An unknown age is not evidence of freshness: accounts that have
+    // been failing since before quota observation existed have values but no
+    // timestamp, and their snapshot history is long past its retention window —
+    // exactly the accounts most in need of the marker.
+    const hasValue = item?.percent != null || Boolean(item?.value);
+    const ageUnknown = hasValue && item?.observedAtMs === undefined;
     const stale = isQuotaObservationStale(item?.observedAtMs, nowMs);
+    const degraded = stale || ageUnknown;
     const ageText = stale ? formatQuotaAgeCompact(item?.observedAtMs) : null;
-    const staleText = ageText ? t("m_quota.stale_observed", { age: ageText }) : null;
+    const staleText = ageText
+      ? t("m_quota.stale_observed", { age: ageText })
+      : ageUnknown
+        ? t("m_quota.stale_never_observed")
+        : null;
     const tooltipParts = [translatedLabel, percentText];
     if (detailText) tooltipParts.push(detailText);
     if (ageText) tooltipParts.push(t("m_quota.stale_tooltip", { age: ageText }));
+    else if (ageUnknown) tooltipParts.push(t("m_quota.stale_never_observed"));
     const bar = (
       <div className={compact ? "space-y-1" : "space-y-1.5"}>
         <div className="flex items-center justify-between gap-1.5">
@@ -64,7 +78,7 @@ export const renderQuotaBarNode = (
             className={[
               "shrink-0 font-semibold tabular-nums",
               compact ? "text-2xs" : "text-xs",
-              stale ? "text-slate-400 dark:text-white/40" : tone.percentClass,
+              degraded ? "text-slate-400 dark:text-white/40" : tone.percentClass,
             ].join(" ")}
           >
             {percentText}
@@ -80,7 +94,7 @@ export const renderQuotaBarNode = (
             className={[
               "h-full rounded-full",
               tone.fillClass,
-              stale ? "opacity-40 saturate-50" : "",
+              degraded ? "opacity-40 saturate-50" : "",
             ]
               .filter(Boolean)
               .join(" ")}
