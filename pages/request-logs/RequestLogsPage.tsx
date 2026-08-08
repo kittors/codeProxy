@@ -511,7 +511,8 @@ export function RequestLogsPage() {
       <h1 className="sr-only">{t("request_logs.title")}</h1>
 
       {/* 单层卡片：标题 + 筛选 + 统计 + 表格 + 分页 */}
-      <div className="flex flex-1 flex-col rounded-2xl border border-black/[0.06] bg-white shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] dark:border-white/[0.06] dark:bg-neutral-950/70 dark:shadow-[0_1px_2px_rgb(0_0_0_/_0.22)]">
+      {/* min-h-0：flex item 默认 min-height:auto，会被表格内容撑开，把「内部滚动」变成整页变长 */}
+      <div className="flex min-h-0 flex-1 flex-col rounded-2xl border border-black/[0.06] bg-white shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] dark:border-white/[0.06] dark:bg-neutral-950/70 dark:shadow-[0_1px_2px_rgb(0_0_0_/_0.22)]">
         {/* 标题栏 */}
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-5 pb-3">
           <div className="flex flex-wrap items-center gap-3">
@@ -604,8 +605,14 @@ export function RequestLogsPage() {
           hasActiveFilters={hasActiveFilters}
         />
 
-        {/* 表格区域 — 自适应视口高度，内部滚动 */}
-        <div className="relative min-h-[360px] h-[calc(100dvh-300px)] overflow-hidden px-5">
+        {/*
+          表格区域 — 吃掉卡片里剩下的高度，内部滚动。
+          用 flex-1 而不是 h-[calc(100dvh-300px)]：那个 300 是标题栏 + 筛选区 + 分页条的
+          手工累加，筛选区换行、字号或密度一变就对不上，表格要么矮一截、下面空一块滚不动，
+          要么高出去把分页顶掉。min-h-[360px] 同时兼两件事：小屏保底，以及覆盖 flex item
+          默认的 min-height:auto（否则表格会被内容撑开，整页变长而不是内部滚动）。
+        */}
+        <div className="relative min-h-[360px] flex-1 overflow-hidden px-5">
           <DataTable
             tableId="request-logs"
             rows={rows}
