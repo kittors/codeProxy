@@ -1307,7 +1307,6 @@ export function ProvidersPage() {
             <ProviderKeyListCard
               items={geminiKeys}
               loading={isActiveTabListLoading("gemini")}
-              onAdd={() => openKeyEditor("gemini", null)}
               onEdit={(idx) => openKeyEditor("gemini", idx)}
               onDelete={(idx) =>
                 setConfirm({ type: "deleteKey", keyType: "gemini", index: idx })
@@ -1328,7 +1327,6 @@ export function ProvidersPage() {
             <ProviderKeyListCard
               items={claudeKeys}
               loading={isActiveTabListLoading("claude")}
-              onAdd={() => openKeyEditor("claude", null)}
               onEdit={(idx) => openKeyEditor("claude", idx)}
               onDelete={(idx) =>
                 setConfirm({ type: "deleteKey", keyType: "claude", index: idx })
@@ -1349,7 +1347,6 @@ export function ProvidersPage() {
             <ProviderKeyListCard
               items={codexKeys}
               loading={isActiveTabListLoading("codex")}
-              onAdd={() => openKeyEditor("codex", null)}
               onEdit={(idx) => openKeyEditor("codex", idx)}
               onDelete={(idx) =>
                 setConfirm({ type: "deleteKey", keyType: "codex", index: idx })
@@ -1373,7 +1370,6 @@ export function ProvidersPage() {
             <ProviderKeyListCard
               items={openCodeGoKeys}
               loading={isActiveTabListLoading("opencode-go")}
-              onAdd={() => openKeyEditor("opencode-go", null)}
               onEdit={(idx) => openKeyEditor("opencode-go", idx)}
               onDelete={(idx) =>
                 setConfirm({
@@ -1440,7 +1436,6 @@ export function ProvidersPage() {
             <ProviderKeyListCard
               items={clineKeys}
               loading={isActiveTabListLoading("cline")}
-              onAdd={() => openKeyEditor("cline", null)}
               onEdit={(idx) => openKeyEditor("cline", idx)}
               onDelete={(idx) =>
                 setConfirm({ type: "deleteKey", keyType: "cline", index: idx })
@@ -1499,7 +1494,6 @@ export function ProvidersPage() {
             <ProviderKeyListCard
               items={ollamaCloudKeys}
               loading={isActiveTabListLoading("ollama-cloud")}
-              onAdd={() => openKeyEditor("ollama-cloud", null)}
               onEdit={(idx) => openKeyEditor("ollama-cloud", idx)}
               onDelete={(idx) =>
                 setConfirm({
@@ -1567,7 +1561,6 @@ export function ProvidersPage() {
             <ProviderKeyListCard
               items={vertexKeys}
               loading={isActiveTabListLoading("vertex")}
-              onAdd={() => openKeyEditor("vertex", null)}
               onEdit={(idx) => openKeyEditor("vertex", idx)}
               onDelete={(idx) =>
                 setConfirm({ type: "deleteKey", keyType: "vertex", index: idx })
@@ -1585,7 +1578,6 @@ export function ProvidersPage() {
             <ProviderKeyListCard
               items={bedrockKeys}
               loading={isActiveTabListLoading("bedrock")}
-              onAdd={() => openKeyEditor("bedrock", null)}
               onEdit={(idx) => openKeyEditor("bedrock", idx)}
               onDelete={(idx) =>
                 setConfirm({

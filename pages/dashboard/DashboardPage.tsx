@@ -39,6 +39,7 @@ import { useSystemStats } from "./useSystemStats";
 import { AnimatedNumber } from "@code-proxy/ui";
 import { Button } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
+import { surface } from "@code-proxy/ui";
 import { EmptyState } from "@code-proxy/ui";
 import { HoverTooltip } from "@code-proxy/ui";
 import { Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
@@ -129,8 +130,7 @@ const throughputNumberFormatter = new Intl.NumberFormat(undefined, {
 const formatThroughputValue = (value: number) =>
   throughputNumberFormatter.format(Number.isFinite(value) ? value : 0);
 const formatRate = (rate: number) => `${rate.toFixed(2)}%`;
-const PANEL_SURFACE =
-  "rounded-2xl bg-white shadow-[0_10px_26px_rgba(15,23,42,0.05)] dark:bg-neutral-950/85 dark:shadow-[0_10px_26px_rgba(0,0,0,0.28)]";
+const PANEL_SURFACE = surface({ tone: "panel", radius: "2xl" });
 
 const formatThroughputTooltip = (params: any) => {
   const items = Array.isArray(params) ? params : [params];

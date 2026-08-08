@@ -30,7 +30,7 @@ import {
   PlainPre,
 } from "../log-content/rendering";
 import { scheduleIdle, type CancelFn } from "../log-content/scheduler";
-import { Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
+import { Tabs, TabsList, TabsTrigger, surface } from "@code-proxy/ui";
 import { ImagePreviewOverlay } from "@code-proxy/ui";
 import type {
   AsyncParsedState,
@@ -444,7 +444,7 @@ function RequestDetailSection({
   return (
     <section
       data-testid={testId}
-      className="overflow-hidden rounded-lg border border-slate-900/8 bg-white dark:border-white/8 dark:bg-neutral-950"
+      className={[surface({ tone: "plain", radius: "lg" }), "overflow-hidden"].join(" ")}
     >
       <button
         type="button"
@@ -645,7 +645,7 @@ function StructuredRequestCard({
               {parameters.map((item) => (
                 <div
                   key={item.key}
-                  className="rounded-2xl border border-slate-900/8 bg-white px-3 py-3 dark:border-white/8 dark:bg-neutral-950"
+                  className={[surface({ tone: "plain", radius: "2xl" }), "px-3 py-3"].join(" ")}
                 >
                   <p className="font-mono text-xs text-slate-500 dark:text-white/40">
                     {item.key}
@@ -1177,7 +1177,7 @@ export function LogContentModal({
           {imageGenerationOutput.images.map((image, index) => (
             <div
               key={`${image.src.slice(0, 48)}-${index}`}
-              className="rounded-2xl border border-slate-900/8 bg-slate-50 p-3 dark:border-white/8 dark:bg-neutral-900"
+              className={[surface({ tone: "inset", radius: "2xl" }), "p-3"].join(" ")}
             >
               <div className="relative min-h-[160px] overflow-hidden rounded-xl bg-slate-100 dark:bg-black">
                 <img
@@ -1220,7 +1220,7 @@ export function LogContentModal({
 
     const view = outputParsed.view;
     const imagePreviewCard = outputImagePreviewSrc ? (
-      <div className="mb-4 rounded-2xl border border-slate-900/8 bg-slate-50 p-3 dark:border-white/8 dark:bg-neutral-900">
+      <div className={[surface({ tone: "inset", radius: "2xl" }), "mb-4 p-3"].join(" ")}>
         <div className="relative min-h-[160px] overflow-hidden rounded-xl bg-slate-100 dark:bg-black">
           <img
             src={outputImagePreviewSrc}

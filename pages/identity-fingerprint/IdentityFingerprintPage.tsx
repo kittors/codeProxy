@@ -16,7 +16,7 @@ import {
   type IdentityFingerprintConfig,
   type XAIIdentityFingerprint,
 } from "@code-proxy/api-client/endpoints/identity-fingerprint";
-import { Button } from "@code-proxy/ui";
+import { Button, surface } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
 import { Select } from "@code-proxy/ui";
@@ -1672,7 +1672,7 @@ function RuntimeStatePanel({
           {learned.map((record) => (
             <div
               key={record.account_key}
-              className="rounded-xl border border-slate-900/8 bg-white p-3 dark:border-white/8 dark:bg-neutral-950"
+              className={[surface({ tone: "plain", radius: "xl" }), "p-3"].join(" ")}
             >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <RecordHeader

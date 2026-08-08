@@ -1,10 +1,9 @@
 import type { ReactNode } from "react";
-import { Loader2, Plus, Zap } from "lucide-react";
+import { Loader2, Zap } from "lucide-react";
 import type {
   ProviderModel,
   ProviderSimpleConfig,
 } from "@code-proxy/api-client";
-import { Button } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
 import { ProviderCard, ProviderCardSkeleton } from "./ProviderCard";
 import { EmptyState } from "@code-proxy/ui";
@@ -26,7 +25,6 @@ import { useOptionalAuth } from "@app/providers/AuthProvider";
 export function ProviderKeyListCard({
   items,
   loading = false,
-  onAdd,
   onEdit,
   onDelete,
   onToggleEnabled,
@@ -49,7 +47,6 @@ export function ProviderKeyListCard({
 }: {
   items: ProviderSimpleConfig[];
   loading?: boolean;
-  onAdd: () => void;
   onEdit: (index: number) => void;
   onDelete: (index: number) => void;
   onToggleEnabled?: (index: number, enabled: boolean) => void;
@@ -90,17 +87,12 @@ export function ProviderKeyListCard({
   const showSkeleton = loading && items.length === 0;
 
   return (
+    // No add button here: the page toolbar already exposes the same
+    // openKeyEditor(tab, null) action, and two of them on one screen just made
+    // the header noisier.
     <Card
       className="flex h-full min-h-0 flex-col"
       bodyClassName="min-h-0 flex flex-1 flex-col"
-      actions={
-        canWrite ? (
-          <Button variant="primary" size="sm" onClick={onAdd}>
-            <Plus size={14} />
-            {t("providers.add_new")}
-          </Button>
-        ) : undefined
-      }
     >
       {showSkeleton ? (
         <div

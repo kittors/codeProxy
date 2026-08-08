@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } 
 import { ArrowUp, ChevronLeft, ChevronRight, CircleAlert, Plus, Trash2, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { imageGenerationApi } from "@code-proxy/api-client";
-import { Button, COLUMN_WIDTH } from "@code-proxy/ui";
+import { Button, COLUMN_WIDTH, surface } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
 import { ImagePreviewOverlay } from "@code-proxy/ui";
 import { Modal } from "@code-proxy/ui";
@@ -196,7 +196,7 @@ export function ImageGenerationPage() {
                       </TabsContent>
                     ))}
                   </Tabs>
-                  <div className="rounded-2xl border border-slate-900/8 bg-slate-50 px-4 py-3 text-xs leading-6 text-slate-600 dark:border-white/8 dark:bg-neutral-900 dark:text-white/55">
+                  <div className={[surface({ tone: "inset", radius: "2xl" }), "px-4 py-3 text-xs leading-6 text-slate-600 dark:text-white/55"].join(" ")}>
                     {t("image_generation.active_endpoint_hint", {
                       method: activeDoc.method,
                       path: activeDoc.path,
@@ -232,7 +232,7 @@ function EndpointCallDoc({ doc }: { doc: EndpointDoc }) {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-3xl border border-slate-900/8 bg-slate-50 p-4 dark:border-white/8 dark:bg-neutral-900">
+      <div className={[surface({ tone: "inset", radius: "3xl" }), "p-4"].join(" ")}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-sm font-semibold text-slate-900 dark:text-white">
@@ -242,7 +242,7 @@ function EndpointCallDoc({ doc }: { doc: EndpointDoc }) {
               {t(doc.descriptionKey)}
             </p>
           </div>
-          <div className="flex max-w-full items-center gap-2 rounded-full border border-slate-900/8 bg-white px-3 py-1.5 font-mono text-xs dark:border-white/8 dark:bg-neutral-950">
+          <div className={[surface({ tone: "plain", radius: "full" }), "flex max-w-full items-center gap-2 px-3 py-1.5 font-mono text-xs"].join(" ")}>
             <span className="rounded-full bg-slate-900 px-2 py-0.5 font-semibold text-white dark:bg-white dark:text-neutral-950">
               {doc.method}
             </span>
@@ -1039,7 +1039,7 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
           </div>
 
           {activeImage?.revisedPrompt ? (
-            <div className="shrink-0 rounded-2xl border border-slate-900/8 bg-slate-50 px-4 py-3 text-slate-700 dark:border-white/8 dark:bg-neutral-900 dark:text-slate-200">
+            <div className={[surface({ tone: "inset", radius: "2xl" }), "shrink-0 px-4 py-3 text-slate-700 dark:text-slate-200"].join(" ")}>
               <p className="text-xs font-medium text-slate-500 dark:text-white/40">
                 {t("image_generation.revised_prompt_label")}
               </p>
@@ -1060,7 +1060,7 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
                   <div
                     key={item.id}
                     data-testid="image-generation-upload-chip"
-                    className="group flex h-10 max-w-[220px] shrink-0 items-center gap-2 rounded-xl border border-slate-900/8 bg-slate-50 px-2 py-1.5 dark:border-white/8 dark:bg-neutral-900"
+                    className={[surface({ tone: "inset", radius: "xl" }), "group flex h-10 max-w-[220px] shrink-0 items-center gap-2 px-2 py-1.5"].join(" ")}
                   >
                     <button
                       type="button"
