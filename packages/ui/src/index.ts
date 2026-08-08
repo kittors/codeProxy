@@ -118,12 +118,12 @@ export {
   controlTextBySize,
   controlPaddingBySize,
   controlSurface,
+  controlSurfaceTrigger,
 } from "./utils/controlStyles";
 export {
   cn,
   floatingPanelSurface,
   getSelectTriggerBase,
   selectTriggerBase,
-  selectTriggerOpen,
-  selectTriggerDisabled,
+  selectTriggerState,
 } from "./utils/selectStyles";

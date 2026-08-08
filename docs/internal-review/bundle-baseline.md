@@ -1,6 +1,6 @@
 # codeProxy Bundle Baseline
 
-更新时间：2026-07-20 11:41:00 +0800
+更新时间：2026-08-08 14:30:00 +0800
 
 ## 当前构建命令
 
@@ -18,6 +18,7 @@ bun run build
 | `vendor-animation`   |  126.21 kB |  41.93 kB | 动画依赖独立 vendor chunk                                                   |
 | `vendor-charts`      |    0.07 kB |   0.08 kB | Chart.js 入口当前几乎未进入业务路径                                         |
 | `index`              |  396.29 kB | 121.04 kB | 多账号切换（AuthProvider vault + AppShell 账号菜单）进入 shell 入口；后续可再拆 account menu |
+| `index.css`          |  430.02 kB |  86.34 kB | 入口样式表；含 114 条自托管字体 @font-face 分片声明（Inter / Noto Sans SC / JetBrains Mono），字体文件本身按 unicode-range 懒加载不计入此行 |
 | `ConfigPage`         |  119.60 kB |  33.35 kB | 页面 chunk 低于预算                                                         |
 | `AuthFilesPage`      |  216.81 kB |  58.90 kB | 身份多档案与出站策略交互加入后仍低于页面 gzip 预算                          |
 | `ProvidersPage`      |  121.98 kB |  30.85 kB | 已低于 `< 80 kB gzip` 页面预算                                              |

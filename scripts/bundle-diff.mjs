@@ -36,13 +36,25 @@ const readBaseline = () => {
   return rows;
 };
 
+const CSS_SUFFIX = ".css";
+
+/*
+ * 入口脚本和入口样式表同名（index-<hash>.js / index-<hash>.css），推导出的 stem 会撞在
+ * 一起，然后 gzip 更大的那个把另一个顶掉——监控对象是脚本还是样式表，取决于当下谁更大，
+ * 而不是基线写了什么。自托管字体让 index.css 反超 index.js 之后这一点才暴露出来。
+ * 所以样式表单独挂 `<stem>.css` 这个 key，两者各自对账。
+ */
 const findCurrentChunks = (baselineKeys) => {
   const chunks = new Map();
   for (const name of readdirSync(distAssetsDir)) {
     const path = join(distAssetsDir, name);
     if (!statSync(path).isFile()) continue;
-    const stem =
-      baselineKeys.find(
+    const isCss = name.endsWith(CSS_SUFFIX);
+    const comparableKeys = baselineKeys
+      .filter((key) => key.endsWith(CSS_SUFFIX) === isCss)
+      .map((key) => (isCss ? key.slice(0, -CSS_SUFFIX.length) : key));
+    const stemBase =
+      comparableKeys.find(
         (key) => name === key || name.startsWith(`${key}-`) || name.startsWith(`${key}.`),
       ) ??
       (() => {
@@ -50,6 +62,7 @@ const findCurrentChunks = (baselineKeys) => {
         const separatorIndex = withoutExt.lastIndexOf("-");
         return separatorIndex === -1 ? withoutExt : withoutExt.slice(0, separatorIndex);
       })();
+    const stem = isCss ? `${stemBase}${CSS_SUFFIX}` : stemBase;
     const data = readFileSync(path);
     const sizeKb = data.byteLength / 1024;
     const gzipKb = gzipSync(data).byteLength / 1024;
@@ -76,7 +89,10 @@ const rows = tracked.map((key) => {
   const base = baseline.get(key);
   const now = current.get(key);
   const deltaGzip = now.gzipKb - base.gzipKb;
-  const overPageBudget = key !== "index" && !key.startsWith("vendor-") && now.gzipKb > budgetGzipKb;
+  // 页面 gzip 预算只约束按页加载的 chunk；入口与 vendor 不受它管，样式表同理。
+  const stem = key.endsWith(CSS_SUFFIX) ? key.slice(0, -CSS_SUFFIX.length) : key;
+  const overPageBudget =
+    stem !== "index" && !stem.startsWith("vendor-") && now.gzipKb > budgetGzipKb;
   const overTolerance = deltaGzip > toleranceKb;
   return {
     key,
