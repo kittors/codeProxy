@@ -10,9 +10,7 @@ import {
 } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import {
-  BarChart3,
   CircleOff,
-  ClipboardPaste,
   Columns3,
   Download,
   Ellipsis,
@@ -20,14 +18,12 @@ import {
   Gauge,
   ListChecks,
   Loader2,
-  Plus,
   Power,
   RefreshCw,
   Search,
   Settings2,
   SlidersHorizontal,
   Tags,
-  Upload,
 } from "lucide-react";
 import type { AuthFileItem } from "@code-proxy/api-client";
 import { VendorIcon } from "@code-proxy/assets";
@@ -81,13 +77,23 @@ import {
   type QuotaState,
 } from "@features/quota-preview/quota-helpers";
 import type { QuotaProvider } from "@features/quota-preview/quota-fetch";
+import { AuthFilesToolbarActions } from "./AuthFilesToolbarActions";
 
 const MAX_FILENAME_PART_LENGTH = 72;
 const FILTER_LABEL_CLASS =
   "truncate text-xs font-semibold uppercase tracking-[0.02em] text-slate-600 dark:text-white/65";
 const FILTER_FIELD_CLASS = "min-w-0 space-y-2";
-const FILTER_GRID_CLASS =
-  "grid min-w-0 grid-cols-1 items-end gap-x-5 gap-y-3 sm:grid-cols-2 xl:grid-cols-[repeat(4,minmax(0,1fr))_minmax(320px,1.8fr)]";
+// Column count has to track the number of fields actually rendered. A fixed
+// five-column track left an empty trailing cell whenever the tag filter was
+// absent, so the filter row stopped short while the action row below still ran
+// to the right edge — the two never lined up. Search keeps the last track in
+// both shapes so the row always ends flush.
+const FILTER_GRID_BASE =
+  "grid min-w-0 grid-cols-1 items-end gap-x-5 gap-y-3 sm:grid-cols-2";
+const FILTER_GRID_WITH_TAGS =
+  "xl:grid-cols-[repeat(4,minmax(0,1fr))_minmax(18rem,1.5fr)]";
+const FILTER_GRID_WITHOUT_TAGS =
+  "xl:grid-cols-[repeat(3,minmax(0,1fr))_minmax(18rem,1.5fr)]";
 // Tailwind must see full class strings — keep the map static.
 const CARD_GRID_COLUMN_CLASS: Record<AuthFilesCardColumns, string> = {
   2: "xl:grid-cols-[repeat(2,minmax(0,1fr))]",
@@ -950,6 +956,9 @@ export function AuthFilesFilesTab({
     search.trim() !== "",
     canSetModelOwnerGroup && selectedModelOwner.trim() !== "",
   ].filter(Boolean).length;
+  // Drives the filter grid track count as well as the field itself, so the two
+  // can never disagree about how many columns the row has.
+  const showTagFilter = customTagOptions.length > 0 || normalizedTagFilter !== "";
   const draftModelOwnerGroup =
     !draftModelOwnerEnabled || draftModelOwner === ""
       ? null
@@ -1363,7 +1372,12 @@ export function AuthFilesFilesTab({
             ].join(" ")}
           >
             <div className="flex flex-col gap-4">
-              <div className={FILTER_GRID_CLASS}>
+              <div
+                className={[
+                  FILTER_GRID_BASE,
+                  showTagFilter ? FILTER_GRID_WITH_TAGS : FILTER_GRID_WITHOUT_TAGS,
+                ].join(" ")}
+              >
                 <div className="w-full">
                   <div className={FILTER_FIELD_CLASS}>
                     <p className={FILTER_LABEL_CLASS}>
@@ -1383,7 +1397,7 @@ export function AuthFilesFilesTab({
                   </div>
                 </div>
 
-                {customTagOptions.length > 0 || normalizedTagFilter ? (
+                {showTagFilter ? (
                   <div className="w-full">
                     <div className={FILTER_FIELD_CLASS}>
                       <p className={FILTER_LABEL_CLASS}>
@@ -1482,6 +1496,9 @@ export function AuthFilesFilesTab({
                 </div>
               </div>
 
+              {/* Action row. The batch bar lives here rather than in a row of its
+                  own: selecting files used to append a third row and push the
+                  grid down, so the toolbar changed height as you worked. */}
               <div className="flex min-h-9 flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
                 <div className="flex min-w-0 flex-wrap items-center gap-2">
                   <div
@@ -1494,128 +1511,47 @@ export function AuthFilesFilesTab({
                     {renderFilesViewModeTabs}
                   </div>
                   {modelOwnerToolbarButton}
-                  {selectedCount === 0 ? selectionActionsMenu : null}
+                  {selectionToolbar}
                 </div>
 
-                <div className="flex shrink-0 flex-wrap items-center gap-2">
-                  <HoverTooltip content={t("auth_files.group_overview_button")}>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={openGroupOverview}
-                      disabled={groupOverviewLoading}
-                      aria-label={t("auth_files.group_overview_button")}
-                      title={t("auth_files.group_overview_button")}
-                    >
-                      {groupOverviewLoading ? (
-                        <Loader2 size={15} className="animate-spin" />
-                      ) : (
-                        <BarChart3 size={15} />
-                      )}
-                    </Button>
-                  </HoverTooltip>
-                  <HoverTooltip content={t("auth_files.refresh")}>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => void refreshFilesAndQuota()}
-                      disabled={loading || usageLoading || refreshingAll}
-                      aria-label={t("auth_files.refresh")}
-                      title={t("auth_files.refresh")}
-                    >
-                      <RefreshCw
-                        size={15}
-                        className={
-                          loading || usageLoading || refreshingAll || statusUsageLoading
-                            ? "animate-spin"
-                            : ""
-                        }
-                      />
-                    </Button>
-                  </HoverTooltip>
-                  <HoverTooltip content={t("auth_files.upload")}>
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={uploading}
-                      aria-label={t("auth_files.upload")}
-                      title={t("auth_files.upload")}
-                    >
-                      {uploading ? (
-                        <Loader2 size={15} className="animate-spin" />
-                      ) : (
-                        <Upload size={15} />
-                      )}
-                    </Button>
-                  </HoverTooltip>
-                  <HoverTooltip content={t("auth_files.paste_json")}>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => {
-                        setJsonImportError("");
-                        setJsonImportOpen(true);
-                      }}
-                      disabled={uploading}
-                      aria-label={t("auth_files.paste_json")}
-                      title={t("auth_files.paste_json")}
-                    >
-                      {uploading ? (
-                        <Loader2 size={15} className="animate-spin" />
-                      ) : (
-                        <ClipboardPaste size={15} />
-                      )}
-                    </Button>
-                  </HoverTooltip>
-                  <HoverTooltip content={t("auth_files_page.add_oauth")}>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => {
-                        const normalized = normalizeProviderKey(filter);
-                        const oauthTab =
-                          normalized === "codex" ||
-                          normalized === "anthropic" ||
-                          normalized === "antigravity" ||
-                          normalized === "gemini-cli" ||
-                          normalized === "kimi" ||
-                          normalized === "qwen"
-                            ? (normalized as OAuthDialogTab)
-                            : "codex";
-                        setOauthDialogDefaultTab(oauthTab);
-                        setOauthDialogOpen(true);
-                      }}
-                      aria-label={t("auth_files_page.add_oauth")}
-                      title={t("auth_files_page.add_oauth")}
-                    >
-                      <Plus size={15} />
-                    </Button>
-                  </HoverTooltip>
-                  {configActionsMenu}
-                  {filesViewMode === "cards" ? (
-                    <div
-                      className="hidden xl:block"
-                      data-testid="auth-files-card-columns"
-                    >
-                      <Select
-                        value={String(cardColumns)}
-                        onChange={handleCardColumnsChange}
-                        options={cardColumnOptions}
-                        aria-label={t("auth_files.card_columns")}
-                        variant="chip"
-                        size="sm"
-                        className="min-w-[6.25rem]"
-                      />
-                    </div>
-                  ) : null}
-                </div>
+                <AuthFilesToolbarActions
+                  t={t}
+                  onGroupOverview={openGroupOverview}
+                  groupOverviewLoading={groupOverviewLoading}
+                  onRefresh={() => void refreshFilesAndQuota()}
+                  refreshDisabled={loading || usageLoading || refreshingAll}
+                  refreshSpinning={
+                    loading || usageLoading || refreshingAll || statusUsageLoading
+                  }
+                  onUpload={() => fileInputRef.current?.click()}
+                  onPasteJson={() => {
+                    setJsonImportError("");
+                    setJsonImportOpen(true);
+                  }}
+                  onAddOAuth={() => {
+                    const normalized = normalizeProviderKey(filter);
+                    const oauthTab =
+                      normalized === "codex" ||
+                      normalized === "anthropic" ||
+                      normalized === "antigravity" ||
+                      normalized === "gemini-cli" ||
+                      normalized === "kimi" ||
+                      normalized === "qwen"
+                        ? (normalized as OAuthDialogTab)
+                        : "codex";
+                    setOauthDialogDefaultTab(oauthTab);
+                    setOauthDialogOpen(true);
+                  }}
+                  uploading={uploading}
+                  configActionsMenu={configActionsMenu}
+                  showCardColumns={filesViewMode === "cards"}
+                  cardColumns={cardColumns}
+                  cardColumnOptions={cardColumnOptions}
+                  onCardColumnsChange={handleCardColumnsChange}
+                />
               </div>
             </div>
           </div>
-          {selectedCount > 0 ? (
-            <div className="min-w-0 overflow-x-auto">{selectionToolbar}</div>
-          ) : null}
         </div>
       </div>
 
