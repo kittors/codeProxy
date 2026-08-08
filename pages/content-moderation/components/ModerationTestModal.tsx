@@ -120,6 +120,43 @@ export function ModerationTestModal({ profile, onClose }: ModerationTestModalPro
               </span>
             </div>
 
+            {decision.safety ? (
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <span
+                  className={[
+                    "rounded-full px-2.5 py-1 text-xs font-semibold",
+                    decision.safety === "Unsafe"
+                      ? "bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-100"
+                      : decision.safety === "Controversial"
+                        ? "bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-100"
+                        : "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-100",
+                  ].join(" ")}
+                >
+                  {t(`content_moderation.safety_${decision.safety.toLowerCase()}`)}
+                </span>
+                {(decision.categories ?? []).map((category) => {
+                  const matched = (decision.matched_scanners ?? []).includes(category);
+                  return (
+                    <span
+                      key={category}
+                      className={[
+                        "rounded-full px-2.5 py-1 text-xs",
+                        matched
+                          ? "bg-slate-900 text-white dark:bg-white dark:text-neutral-950"
+                          : "bg-white/80 text-slate-600 dark:bg-black/20 dark:text-white/60",
+                      ].join(" ")}
+                      title={
+                        matched
+                          ? t("content_moderation.scanner_matched")
+                          : t("content_moderation.scanner_not_enabled")
+                      }
+                    >
+                      {t(`content_moderation.scanner.${category}`, { defaultValue: category })}
+                    </span>
+                  );
+                })}
+              </div>
+            ) : null}
             {decision.matched_keyword ? (
               <p className="mt-3 text-sm text-slate-700 dark:text-white/75">
                 {t("content_moderation.matched_keyword", {

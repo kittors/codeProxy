@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { Info } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type {
+  ContentModerationBackend,
   ContentModerationKeywordMode,
   ContentModerationProfileView,
+  ContentModerationScanner,
   CreateContentModerationProfileInput,
   PatchContentModerationProfileInput,
 } from "@code-proxy/api-client";
@@ -11,57 +12,32 @@ import {
   Button,
   Form,
   FormField,
-  HoverTooltip,
   Modal,
   Select,
   Textarea,
+  surface,
   TextInput,
-  ToggleSwitch, surface } from "@code-proxy/ui";
+  ToggleSwitch,
+} from "@code-proxy/ui";
+import {
+  createThresholdDraft,
+  DEFAULT_THRESHOLDS,
+  OpenAIThresholdFields,
+  parseThresholds,
+} from "./editor/OpenAIThresholdFields";
+import { Qwen3GuardFields, type Qwen3GuardDraft } from "./editor/Qwen3GuardFields";
 
-const THRESHOLD_CATEGORIES = [
-  { key: "harassment", i18nKey: "harassment" },
-  { key: "harassment/threatening", i18nKey: "harassment_threatening" },
-  { key: "hate", i18nKey: "hate" },
-  { key: "hate/threatening", i18nKey: "hate_threatening" },
-  { key: "illicit", i18nKey: "illicit" },
-  { key: "illicit/violent", i18nKey: "illicit_violent" },
-  { key: "self-harm", i18nKey: "self_harm" },
-  { key: "self-harm/intent", i18nKey: "self_harm_intent" },
-  { key: "self-harm/instructions", i18nKey: "self_harm_instructions" },
-  { key: "sexual", i18nKey: "sexual" },
-  { key: "sexual/minors", i18nKey: "sexual_minors" },
-  { key: "violence", i18nKey: "violence" },
-  { key: "violence/graphic", i18nKey: "violence_graphic" },
-] as const;
+const OPENAI_DEFAULT_BASE_URL = "https://api.openai.com";
+const OPENAI_DEFAULT_MODEL = "omni-moderation-latest";
+const GUARD_DEFAULT_ELEVATED: ContentModerationScanner[] = [
+  "pii",
+  "suicide_and_self_harm",
+  "jailbreak",
+];
 
-type ThresholdCategory = (typeof THRESHOLD_CATEGORIES)[number]["key"];
-
-const DEFAULT_THRESHOLDS: Record<ThresholdCategory, number> = {
-  harassment: 0.98,
-  "harassment/threatening": 0.9,
-  hate: 0.65,
-  "hate/threatening": 0.65,
-  illicit: 0.95,
-  "illicit/violent": 0.95,
-  "self-harm": 0.65,
-  "self-harm/intent": 0.85,
-  "self-harm/instructions": 0.65,
-  sexual: 0.65,
-  "sexual/minors": 0.65,
-  violence: 0.95,
-  "violence/graphic": 0.95,
-};
-
-const createThresholdDraft = (thresholds?: Record<string, number>): Record<string, string> => {
-  const result: Record<string, string> = {};
-  for (const { key } of THRESHOLD_CATEGORIES) {
-    result[key] = String(thresholds?.[key] ?? DEFAULT_THRESHOLDS[key]);
-  }
-  return result;
-};
-
-export interface ModerationProfileDraft {
+export interface ModerationProfileDraft extends Qwen3GuardDraft {
   name: string;
+  backend: ContentModerationBackend;
   baseUrl: string;
   model: string;
   apiKey: string;
@@ -76,14 +52,20 @@ export interface ModerationProfileDraft {
 
 const createDraft = (profile: ContentModerationProfileView | null): ModerationProfileDraft => ({
   name: profile?.name ?? "",
-  baseUrl: profile?.base_url ?? "https://api.openai.com",
-  model: profile?.model ?? "omni-moderation-latest",
+  backend: profile?.backend ?? "openai_moderations",
+  baseUrl: profile?.base_url ?? OPENAI_DEFAULT_BASE_URL,
+  model: profile?.model ?? OPENAI_DEFAULT_MODEL,
   apiKey: "",
   clearApiKey: false,
   timeoutMs: String(profile?.timeout_ms ?? 3000),
   keywordMode: profile?.keyword_mode ?? "api_only",
   blockedKeywordsText: (profile?.blocked_keywords ?? []).join("\n"),
   thresholds: createThresholdDraft(profile?.thresholds),
+  scanners: profile?.scanners ?? [],
+  controversialAction: profile?.controversial_action ?? "elevated_only",
+  elevatedCategories: profile?.elevated_categories ?? GUARD_DEFAULT_ELEVATED,
+  inputLimit: String(profile?.input_limit ?? 4000),
+  maxChunks: String(profile?.max_chunks ?? 4),
   blockHttpStatus: String(profile?.block_http_status ?? 403),
   blockMessage:
     profile?.block_message ?? "Your request was blocked by the content moderation policy.",
@@ -100,19 +82,6 @@ const parseKeywords = (value: string) => {
     keywords.push(keyword);
   }
   return keywords;
-};
-
-const parseThresholds = (values: Record<string, string>): Record<string, number> | null => {
-  const result: Record<string, number> = {};
-  for (const { key } of THRESHOLD_CATEGORIES) {
-    const rawValue = values[key];
-    if (rawValue == null || rawValue.trim() === "") return null;
-
-    const threshold = Number(rawValue);
-    if (!Number.isFinite(threshold) || threshold < 0 || threshold > 1) return null;
-    result[key] = threshold;
-  }
-  return result;
 };
 
 const isAbsoluteHttpUrl = (value: string) => {
@@ -152,6 +121,10 @@ export function ProfileEditorModal({
   }, [open, profile]);
 
   const apiModeEnabled = draft.keywordMode !== "keyword_only";
+  const isGuard = draft.backend === "qwen3guard";
+  // Self-hosted guard endpoints (vLLM, SGLang, Ollama) commonly run without
+  // auth, so the key stays optional there while OpenAI still demands one.
+  const apiKeyRequired = apiModeEnabled && !isGuard;
   const configuredKeyLabel = useMemo(() => {
     if (!profile?.api_key_configured) return t("content_moderation.api_key_not_configured");
     return t("content_moderation.api_key_configured", {
@@ -159,16 +132,42 @@ export function ProfileEditorModal({
     });
   }, [profile, t]);
 
+  const switchBackend = (backend: ContentModerationBackend) => {
+    setDraft((current) => {
+      if (current.backend === backend) return current;
+      // Endpoint defaults are swapped only while the operator is still on the
+      // other backend's untouched defaults, so switching never eats typed input.
+      const onOpenAIDefaults =
+        current.baseUrl.trim() === OPENAI_DEFAULT_BASE_URL &&
+        current.model.trim() === OPENAI_DEFAULT_MODEL;
+      if (backend === "qwen3guard" && onOpenAIDefaults) {
+        return { ...current, backend, baseUrl: "", model: "" };
+      }
+      if (backend === "openai_moderations" && !current.baseUrl.trim() && !current.model.trim()) {
+        return {
+          ...current,
+          backend,
+          baseUrl: OPENAI_DEFAULT_BASE_URL,
+          model: OPENAI_DEFAULT_MODEL,
+        };
+      }
+      return { ...current, backend };
+    });
+  };
+
   const submit = async () => {
     const name = draft.name.trim();
     const baseUrl = draft.baseUrl.trim();
     const model = draft.model.trim();
     const apiKey = draft.apiKey.trim();
     const timeoutMs = Number(draft.timeoutMs);
+    const inputLimit = Number(draft.inputLimit);
+    const maxChunks = Number(draft.maxChunks);
     const blockHttpStatus = Number(draft.blockHttpStatus);
     const blockMessage = draft.blockMessage.trim();
     const blockedKeywords = parseKeywords(draft.blockedKeywordsText);
-    const fixedThresholds = apiModeEnabled ? parseThresholds(draft.thresholds) : null;
+    const thresholdMode = apiModeEnabled && !isGuard;
+    const fixedThresholds = thresholdMode ? parseThresholds(draft.thresholds) : null;
     if (!name) {
       setError(t("content_moderation.validation_name"));
       return;
@@ -193,11 +192,19 @@ export function ProfileEditorModal({
       setError(t("content_moderation.validation_model"));
       return;
     }
-    if (apiModeEnabled && !fixedThresholds) {
+    if (thresholdMode && !fixedThresholds) {
       setError(t("content_moderation.validation_thresholds"));
       return;
     }
-    if (apiModeEnabled && !apiKey && (!profile?.api_key_configured || draft.clearApiKey)) {
+    if (isGuard && (!Number.isInteger(inputLimit) || inputLimit < 128 || inputLimit > 100000)) {
+      setError(t("content_moderation.validation_input_limit"));
+      return;
+    }
+    if (isGuard && (!Number.isInteger(maxChunks) || maxChunks < 1 || maxChunks > 32)) {
+      setError(t("content_moderation.validation_max_chunks"));
+      return;
+    }
+    if (apiKeyRequired && !apiKey && (!profile?.api_key_configured || draft.clearApiKey)) {
       setError(t("content_moderation.validation_api_key"));
       return;
     }
@@ -212,14 +219,20 @@ export function ProfileEditorModal({
 
     const shared = {
       name,
+      backend: draft.backend,
       base_url: baseUrl,
       model,
       timeout_ms: timeoutMs,
       keyword_mode: draft.keywordMode,
       blocked_keywords: blockedKeywords,
-      thresholds: apiModeEnabled
+      thresholds: fixedThresholds
         ? { ...profile?.thresholds, ...fixedThresholds }
         : (profile?.thresholds ?? DEFAULT_THRESHOLDS),
+      scanners: draft.scanners,
+      controversial_action: draft.controversialAction,
+      elevated_categories: draft.elevatedCategories,
+      input_limit: inputLimit,
+      max_chunks: maxChunks,
       block_http_status: blockHttpStatus,
       block_message: blockMessage,
     };
@@ -285,15 +298,37 @@ export function ProfileEditorModal({
         }}
       >
         <section className={[surface({ tone: "raised", radius: "xl" }), "p-4"].join(" ")}>
-          <FormField label={t("content_moderation.profile_name")} required reserveMeta={false}>
-            <TextInput
-              value={draft.name}
-              onChange={(event) => {
-                const name = event.currentTarget.value;
-                setDraft((current) => ({ ...current, name }));
-              }}
-            />
-          </FormField>
+          <div className="grid gap-4 md:grid-cols-2">
+            <FormField label={t("content_moderation.profile_name")} required reserveMeta={false}>
+              <TextInput
+                value={draft.name}
+                onChange={(event) => {
+                  const name = event.currentTarget.value;
+                  setDraft((current) => ({ ...current, name }));
+                }}
+              />
+            </FormField>
+            <FormField
+              label={t("content_moderation.backend")}
+              description={t("content_moderation.backend_hint")}
+              reserveMeta={false}
+            >
+              <Select
+                value={draft.backend}
+                onChange={(value) => {
+                  if (value !== "openai_moderations" && value !== "qwen3guard") return;
+                  switchBackend(value);
+                }}
+                options={[
+                  {
+                    value: "openai_moderations",
+                    label: t("content_moderation.backend_openai_moderations"),
+                  },
+                  { value: "qwen3guard", label: t("content_moderation.backend_qwen3guard") },
+                ]}
+              />
+            </FormField>
+          </div>
         </section>
 
         <section className={[surface({ tone: "raised", radius: "xl" }), "p-4"].join(" ")}>
@@ -362,12 +397,14 @@ export function ProfileEditorModal({
           <div className="grid gap-4 md:grid-cols-2">
             <FormField
               label={t("content_moderation.base_url")}
+              description={isGuard ? t("content_moderation.base_url_guard_hint") : undefined}
               required={apiModeEnabled}
               reserveMeta={false}
             >
               <TextInput
                 value={draft.baseUrl}
                 disabled={!apiModeEnabled}
+                placeholder={isGuard ? "http://127.0.0.1:8000" : OPENAI_DEFAULT_BASE_URL}
                 onChange={(event) => {
                   const baseUrl = event.currentTarget.value;
                   setDraft((current) => ({ ...current, baseUrl }));
@@ -382,6 +419,7 @@ export function ProfileEditorModal({
               <TextInput
                 value={draft.model}
                 disabled={!apiModeEnabled}
+                placeholder={isGuard ? "Qwen/Qwen3Guard-Gen-0.6B" : OPENAI_DEFAULT_MODEL}
                 onChange={(event) => {
                   const model = event.currentTarget.value;
                   setDraft((current) => ({ ...current, model }));
@@ -393,8 +431,8 @@ export function ProfileEditorModal({
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             <FormField
               label={t("content_moderation.api_key")}
-              description={configuredKeyLabel}
-              required={apiModeEnabled && (!profile?.api_key_configured || draft.clearApiKey)}
+              description={isGuard ? t("content_moderation.api_key_guard_hint") : configuredKeyLabel}
+              required={apiKeyRequired && (!profile?.api_key_configured || draft.clearApiKey)}
               reserveMeta={false}
             >
               <TextInput
@@ -425,66 +463,19 @@ export function ProfileEditorModal({
             ) : null}
           </div>
 
-          <div className="mt-5 border-t border-slate-900/8 pt-4 dark:border-white/8">
-            <div className="mb-4">
-              <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-                {t("content_moderation.thresholds")}
-              </h3>
-              <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-white/45">
-                {t("content_moderation.thresholds_hint")}
-              </p>
-            </div>
-            <div className="grid gap-x-4 gap-y-3 md:grid-cols-2">
-              {THRESHOLD_CATEGORIES.map(({ key, i18nKey }) => {
-                const categoryName = t(`content_moderation.threshold_category.${i18nKey}`);
-                const categoryHelp = t(`content_moderation.threshold_category_help.${i18nKey}`);
-                return (
-                  <FormField
-                    key={key}
-                    label={
-                      <span className="inline-flex items-center gap-1.5">
-                        <span>{categoryName}</span>
-                        <HoverTooltip content={categoryHelp} placement="top">
-                          <span
-                            role="button"
-                            tabIndex={0}
-                            aria-label={categoryHelp}
-                            onClick={(event) => {
-                              event.preventDefault();
-                              event.stopPropagation();
-                            }}
-                            className="inline-flex h-5 w-5 items-center justify-center rounded-full text-slate-400 transition hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:text-white/40 dark:hover:text-white/75 dark:focus-visible:ring-white/15"
-                          >
-                            <Info size={14} aria-hidden="true" />
-                          </span>
-                        </HoverTooltip>
-                      </span>
-                    }
-                    required={apiModeEnabled}
-                    reserveMeta={false}
-                  >
-                    <TextInput
-                      type="number"
-                      min="0"
-                      max="1"
-                      step="0.01"
-                      inputMode="decimal"
-                      aria-label={categoryName}
-                      value={draft.thresholds[key] ?? ""}
-                      disabled={!apiModeEnabled}
-                      onChange={(event) => {
-                        const value = event.currentTarget.value;
-                        setDraft((current) => ({
-                          ...current,
-                          thresholds: { ...current.thresholds, [key]: value },
-                        }));
-                      }}
-                    />
-                  </FormField>
-                );
-              })}
-            </div>
-          </div>
+          {isGuard ? (
+            <Qwen3GuardFields
+              draft={draft}
+              disabled={!apiModeEnabled}
+              onChange={(patch) => setDraft((current) => ({ ...current, ...patch }))}
+            />
+          ) : (
+            <OpenAIThresholdFields
+              thresholds={draft.thresholds}
+              disabled={!apiModeEnabled}
+              onChange={(thresholds) => setDraft((current) => ({ ...current, thresholds }))}
+            />
+          )}
         </section>
 
         <section className={[surface({ tone: "raised", radius: "xl" }), "p-4"].join(" ")}>

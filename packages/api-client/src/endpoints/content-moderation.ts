@@ -4,18 +4,47 @@ export type ContentModerationMode = "off" | "pre_block";
 export type ContentModerationKeywordMode = "api_only" | "keyword_only" | "keyword_and_api";
 export type ContentModerationChannelType = "auth_file" | "provider_key" | "provider";
 export type ContentModerationTagMode = "any" | "all";
-export type ContentModerationDecisionAction = "allow" | "keyword_block" | "api_block" | "api_error";
+export type ContentModerationDecisionAction =
+  | "allow"
+  | "keyword_block"
+  | "api_block"
+  | "guard_block"
+  | "api_error";
+export type ContentModerationBackend = "openai_moderations" | "qwen3guard";
+export type ContentModerationControversialAction = "allow" | "block" | "elevated_only";
+export type ContentModerationSafety = "Safe" | "Controversial" | "Unsafe";
+
+/** Qwen3Guard risk categories, in the model card's order. */
+export const CONTENT_MODERATION_SCANNERS = [
+  "violent",
+  "non_violent_illegal_acts",
+  "sexual_content_or_sexual_acts",
+  "pii",
+  "suicide_and_self_harm",
+  "unethical_acts",
+  "politically_sensitive_topics",
+  "copyright_violation",
+  "jailbreak",
+] as const;
+
+export type ContentModerationScanner = (typeof CONTENT_MODERATION_SCANNERS)[number];
 
 export interface ContentModerationProfileView {
   id: string;
   name: string;
   mode: ContentModerationMode;
+  backend: ContentModerationBackend;
   base_url: string;
   model: string;
   timeout_ms: number;
   keyword_mode: ContentModerationKeywordMode;
   blocked_keywords: string[];
   thresholds: Record<string, number>;
+  scanners: ContentModerationScanner[];
+  controversial_action: ContentModerationControversialAction;
+  elevated_categories: ContentModerationScanner[];
+  input_limit: number;
+  max_chunks: number;
   block_http_status: number;
   block_message: string;
   version: number;
@@ -29,6 +58,7 @@ export interface ContentModerationProfileView {
 export interface CreateContentModerationProfileInput {
   name: string;
   mode: ContentModerationMode;
+  backend: ContentModerationBackend;
   base_url: string;
   model: string;
   api_key?: string;
@@ -36,6 +66,11 @@ export interface CreateContentModerationProfileInput {
   keyword_mode: ContentModerationKeywordMode;
   blocked_keywords: string[];
   thresholds: Record<string, number>;
+  scanners: ContentModerationScanner[];
+  controversial_action: ContentModerationControversialAction;
+  elevated_categories: ContentModerationScanner[];
+  input_limit: number;
+  max_chunks: number;
   block_http_status: number;
   block_message: string;
 }
@@ -44,6 +79,7 @@ export interface PatchContentModerationProfileInput {
   version: number;
   name?: string;
   mode?: ContentModerationMode;
+  backend?: ContentModerationBackend;
   base_url?: string;
   model?: string;
   api_key?: string;
@@ -52,6 +88,11 @@ export interface PatchContentModerationProfileInput {
   keyword_mode?: ContentModerationKeywordMode;
   blocked_keywords?: string[];
   thresholds?: Record<string, number>;
+  scanners?: ContentModerationScanner[];
+  controversial_action?: ContentModerationControversialAction;
+  elevated_categories?: ContentModerationScanner[];
+  input_limit?: number;
+  max_chunks?: number;
   block_http_status?: number;
   block_message?: string;
 }
@@ -116,6 +157,10 @@ export interface ContentModerationDecision {
   highest_score?: number;
   category_scores: Record<string, number>;
   thresholds: Record<string, number>;
+  /** Guard backends classify into labels rather than scores. */
+  safety?: ContentModerationSafety;
+  categories?: string[];
+  matched_scanners?: string[];
   latency_ms: number;
   moderation_error?: string;
 }
