@@ -305,7 +305,7 @@ export function CcSwitchImportSettingsPage() {
   const importBaseUrl = auth?.state.apiBase || detectApiBaseFromLocation();
 
   return (
-    <div className="space-y-6 md:flex md:h-[calc(100dvh-112px)] md:min-h-0 md:flex-col">
+    <div className="space-y-6 md:flex md:min-h-0 md:flex-1 md:flex-col">
       <div className="flex flex-wrap items-start justify-between gap-3 md:shrink-0">
         <div className="space-y-1">
           <h2 className="text-lg font-semibold tracking-normal text-slate-950 dark:text-white">

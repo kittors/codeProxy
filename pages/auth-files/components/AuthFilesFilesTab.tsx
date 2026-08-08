@@ -1327,7 +1327,7 @@ export function AuthFilesFilesTab({
   return (
     <Card
       padding="none"
-      className="md:flex md:h-[calc(100dvh-113px)] md:min-h-0 md:flex-col md:overflow-hidden"
+      className="md:flex md:min-h-0 md:flex-1 md:flex-col md:overflow-hidden"
       bodyClassName="md:flex md:min-h-0 md:flex-1 md:flex-col"
     >
       <input

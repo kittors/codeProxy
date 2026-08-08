@@ -248,9 +248,7 @@ describe("ProvidersPage import/export", () => {
     const codexTab = await screen.findByRole("tab", { name: /Codex/ });
     await user.click(codexTab);
     expect(await screen.findByText("Codex Main")).toBeInTheDocument();
-    await waitFor(() =>
-      expect(mocks.getCodexConfigs).toHaveBeenCalledTimes(afterMount + 1),
-    );
+    await waitFor(() => expect(mocks.getCodexConfigs).toHaveBeenCalledTimes(afterMount + 1));
 
     // Re-clicking the active tab must not re-fetch.
     await user.click(codexTab);
@@ -301,9 +299,10 @@ describe("ProvidersPage import/export", () => {
     await user.click(await screen.findByRole("tab", { name: /Codex/ }));
     expect(await screen.findByText("Codex Main")).toBeInTheDocument();
 
+    // 高度由外层 flex 分配，不再写死视口减去某个手工累加的数
     expect(screen.getByTestId("providers-page-shell")).toHaveClass(
-      "h-[calc(100dvh-97px)]",
-      "sm:h-[calc(100dvh-113px)]",
+      "flex-1",
+      "min-h-0",
       "overflow-hidden",
     );
     expect(screen.getByTestId("providers-tab-scroll")).toHaveClass("overflow-y-auto");
