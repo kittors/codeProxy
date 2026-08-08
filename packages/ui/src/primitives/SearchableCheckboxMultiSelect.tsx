@@ -24,7 +24,7 @@ import {
   selectOptionSelected,
   selectSearchInput,
   selectSearchRow,
-  selectTriggerDisabled,
+  selectTriggerState,
 } from "../utils/selectStyles";
 import type { ControlSize } from "../utils/controlStyles";
 import { ScrollArea } from "./ScrollArea";
@@ -463,6 +463,7 @@ export function SearchableCheckboxMultiSelect({
           aria-haspopup="listbox"
           aria-label={ariaLabel}
           disabled={disabled}
+          data-state={selectTriggerState(open)}
           onClick={() => {
             if (!open) {
               if (manualApply) setDraftExplicitValue(sanitizedExplicitValue);
@@ -471,11 +472,7 @@ export function SearchableCheckboxMultiSelect({
             }
             setOpen((current) => !current);
           }}
-          className={cn(
-            getSelectTriggerBase(size),
-            "w-full justify-between text-left",
-            disabled && selectTriggerDisabled,
-          )}
+          className={cn(getSelectTriggerBase(size), "w-full justify-between text-left")}
         >
           <span
             className={cn(

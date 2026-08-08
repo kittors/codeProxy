@@ -23,8 +23,7 @@ import {
   selectOptionIdle,
   selectOptionSelected,
   selectSearchInput,
-  selectTriggerDisabled,
-  selectTriggerOpen,
+  selectTriggerState,
 } from "../utils/selectStyles";
 import type { ControlSize } from "../utils/controlStyles";
 
@@ -184,7 +183,7 @@ export function MultiSelect({
       {open ? (
         <motion.div
           ref={dropdownRef}
-              data-side={dropdownPlacement}
+          data-side={dropdownPlacement}
           style={dropdownStyle}
           className={cn(searchableSelectPanel, "flex flex-col")}
           {...getSelectDropdownMotion(dropdownPlacement)}
@@ -272,6 +271,7 @@ export function MultiSelect({
         ref={triggerRef}
         type="button"
         disabled={disabled}
+        data-state={selectTriggerState(open)}
         onClick={() => {
           // Pre-compute position before opening so the portal renders at the correct spot
           if (!open) updatePosition();
@@ -280,8 +280,6 @@ export function MultiSelect({
         className={cn(
           getSelectTriggerBase(size),
           "h-auto min-h-9 w-full justify-between py-1 text-left",
-          open && selectTriggerOpen,
-          disabled && selectTriggerDisabled,
         )}
       >
         <div className="flex min-w-0 flex-1 flex-wrap gap-1">

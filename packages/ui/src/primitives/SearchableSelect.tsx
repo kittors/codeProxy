@@ -23,7 +23,7 @@ import {
   selectOptionSelected,
   selectSearchInput,
   selectSearchRow,
-  selectTriggerOpen,
+  selectTriggerState,
 } from "../utils/selectStyles";
 import type { ControlSize } from "../utils/controlStyles";
 
@@ -287,13 +287,9 @@ export function SearchableSelect({
               : undefined
         }
         disabled={disabled}
+        data-state={selectTriggerState(open)}
         onClick={() => setOpen((prev) => !prev)}
-        className={cn(
-          getSelectTriggerBase(size),
-          open && selectTriggerOpen,
-          "disabled:cursor-not-allowed disabled:opacity-60",
-          className,
-        )}
+        className={cn(getSelectTriggerBase(size), className)}
       >
         <span className="min-w-0 flex-1 truncate text-left">{selectedLabel ?? placeholder}</span>
         <ChevronDown
