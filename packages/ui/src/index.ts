@@ -60,6 +60,8 @@ export type { TooltipPlacement } from "./overlays/Tooltip";
 
 export { Button, buttonClassName } from "./primitives/Button";
 export { Card } from "./primitives/Card";
+export { Surface, surface } from "./primitives/Surface";
+export type { SurfaceOptions, SurfaceRadius, SurfaceTone } from "./primitives/Surface";
 export { Checkbox } from "./primitives/Checkbox";
 export { DateTimePicker } from "./primitives/DateTimePicker";
 export { DropdownMenu } from "./primitives/DropdownMenu";

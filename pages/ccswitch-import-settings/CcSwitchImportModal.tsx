@@ -1,5 +1,5 @@
 import type { TFunction } from "i18next";
-import { Button } from "@code-proxy/ui";
+import { Button, surface } from "@code-proxy/ui";
 import { Checkbox } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
 import { Modal } from "@code-proxy/ui";
@@ -198,7 +198,7 @@ export function CcSwitchImportModal({
             <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(220px,0.9fr)] sm:items-center">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-900/8 bg-slate-50 dark:border-white/8 dark:bg-neutral-900">
+                  <span className={[surface({ tone: "inset", radius: "xl" }), "flex h-9 w-9 shrink-0 items-center justify-center"].join(" ")}>
                     <img src={iconByType.claude} alt="" className="h-5 w-5" />
                   </span>
                   <div className="min-w-0">
@@ -226,7 +226,7 @@ export function CcSwitchImportModal({
             </div>
           ) : (
             <div className="flex min-h-[54px] items-center gap-3">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-900/8 bg-slate-50 dark:border-white/8 dark:bg-neutral-900">
+              <span className={[surface({ tone: "inset", radius: "xl" }), "flex h-11 w-11 shrink-0 items-center justify-center"].join(" ")}>
                 <img src={iconByType[clientType]} alt="" className="h-6 w-6" />
               </span>
               <div className="min-w-0 flex-1">

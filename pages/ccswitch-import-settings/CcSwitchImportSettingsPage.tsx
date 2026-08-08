@@ -12,7 +12,7 @@ import {
 import { normalizeProviderKey } from "@code-proxy/domain";
 import { useOptionalAuth } from "@app/providers/AuthProvider";
 import { ccSwitchImportConfigsApi } from "@code-proxy/api-client/endpoints/ccswitch-import-configs";
-import { Button, COLUMN_WIDTH } from "@code-proxy/ui";
+import { Button, COLUMN_WIDTH, surface } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
 import { ConfirmModal } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
@@ -195,7 +195,7 @@ export function CcSwitchImportSettingsPage() {
           const client = getCcSwitchClientConfig(row.clientType);
           return (
             <div className="flex min-w-0 items-center gap-3">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-900/8 bg-slate-50 dark:border-white/8 dark:bg-neutral-900">
+              <span className={[surface({ tone: "inset", radius: "xl" }), "flex h-9 w-9 shrink-0 items-center justify-center"].join(" ")}>
                 <img src={iconByType[row.clientType]} alt="" className="h-5 w-5" />
               </span>
               <div className="min-w-0">
@@ -233,7 +233,7 @@ export function CcSwitchImportSettingsPage() {
         width: COLUMN_WIDTH.name,
         overflowTooltip: true,
         render: (row) => (
-          <span className="inline-flex max-w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-slate-900/8 bg-white px-2 py-1 font-mono text-xs text-slate-600 dark:border-white/8 dark:bg-neutral-950 dark:text-white/65">
+          <span className={[surface({ tone: "plain", radius: "md" }), "inline-flex max-w-full overflow-hidden text-ellipsis whitespace-nowrap px-2 py-1 font-mono text-xs text-slate-600 dark:text-white/65"].join(" ")}>
             {row.defaultModel}
           </span>
         ),
@@ -250,7 +250,7 @@ export function CcSwitchImportSettingsPage() {
               {row.allowedChannelGroups.map((group) => (
                 <span
                   key={group}
-                  className="rounded-full border border-slate-900/8 bg-slate-50 px-2 py-1 text-xs font-medium text-slate-600 dark:border-white/8 dark:bg-neutral-900 dark:text-white/60"
+                  className={[surface({ tone: "inset", radius: "full" }), "px-2 py-1 text-xs font-medium text-slate-600 dark:text-white/60"].join(" ")}
                 >
                   {group}
                 </span>

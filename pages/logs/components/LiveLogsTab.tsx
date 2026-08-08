@@ -1,7 +1,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import type { ParsedLogLine } from "../logsHelpers";
 import { getLevelStyles, getStatusStyles } from "../logsHelpers";
-import { Button } from "@code-proxy/ui";
+import { Button, surface } from "@code-proxy/ui";
 import { EmptyState } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
 import { ToggleSwitch } from "@code-proxy/ui";
@@ -174,7 +174,7 @@ export function LiveLogsTab({
         </div>
       </div>
 
-      <div className="mt-4 overflow-hidden rounded-2xl border border-slate-900/8 bg-white/70 shadow-sm md:flex md:min-h-0 md:flex-1 md:flex-col dark:border-white/8 dark:bg-neutral-950/60">
+      <div className={[surface({ tone: "raised", radius: "2xl" }), "mt-4 overflow-hidden md:flex md:min-h-0 md:flex-1 md:flex-col"].join(" ")}>
         <div className="flex min-h-11 items-center justify-between gap-3 border-b border-slate-900/8 px-4 py-3 text-xs text-slate-600 dark:border-white/8 dark:text-white/65">
           <div className="min-w-0">
             <span className="block whitespace-pre-wrap break-words tabular-nums">

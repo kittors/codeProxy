@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import type { AuthFileItem } from "@code-proxy/api-client";
 import { VendorIcon } from "@code-proxy/assets";
-import { Button, DropdownMenu, buttonClassName } from "@code-proxy/ui";
+import { Button, DropdownMenu, buttonClassName, surface } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
 import { EmptyState } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
@@ -2513,7 +2513,7 @@ export function AuthFilesFilesTab({
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-900/8 bg-white/70 p-4 shadow-sm dark:border-white/8 dark:bg-neutral-950/60">
+          <div className={[surface({ tone: "raised", radius: "2xl" }), "p-4"].join(" ")}>
             <div className="mb-3 flex items-center justify-between gap-3">
               <p className="text-sm font-semibold text-slate-900 dark:text-white">
                 {t("auth_files.detail_tab_models")}

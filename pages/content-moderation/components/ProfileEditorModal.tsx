@@ -16,8 +16,7 @@ import {
   Select,
   Textarea,
   TextInput,
-  ToggleSwitch,
-} from "@code-proxy/ui";
+  ToggleSwitch, surface } from "@code-proxy/ui";
 
 const THRESHOLD_CATEGORIES = [
   { key: "harassment", i18nKey: "harassment" },
@@ -285,7 +284,7 @@ export function ProfileEditorModal({
           void submit();
         }}
       >
-        <section className="rounded-xl border border-slate-900/8 bg-white/70 p-4 shadow-sm dark:border-white/8 dark:bg-neutral-950/60">
+        <section className={[surface({ tone: "raised", radius: "xl" }), "p-4"].join(" ")}>
           <FormField label={t("content_moderation.profile_name")} required reserveMeta={false}>
             <TextInput
               value={draft.name}
@@ -297,7 +296,7 @@ export function ProfileEditorModal({
           </FormField>
         </section>
 
-        <section className="rounded-xl border border-slate-900/8 bg-white/70 p-4 shadow-sm dark:border-white/8 dark:bg-neutral-950/60">
+        <section className={[surface({ tone: "raised", radius: "xl" }), "p-4"].join(" ")}>
           <div className="grid gap-4 md:grid-cols-2">
             <FormField label={t("content_moderation.keyword_mode")} reserveMeta={false}>
               <Select
@@ -359,7 +358,7 @@ export function ProfileEditorModal({
           </p>
         </section>
 
-        <section className="rounded-xl border border-slate-900/8 bg-white/70 p-4 shadow-sm dark:border-white/8 dark:bg-neutral-950/60">
+        <section className={[surface({ tone: "raised", radius: "xl" }), "p-4"].join(" ")}>
           <div className="grid gap-4 md:grid-cols-2">
             <FormField
               label={t("content_moderation.base_url")}
@@ -488,7 +487,7 @@ export function ProfileEditorModal({
           </div>
         </section>
 
-        <section className="rounded-xl border border-slate-900/8 bg-white/70 p-4 shadow-sm dark:border-white/8 dark:bg-neutral-950/60">
+        <section className={[surface({ tone: "raised", radius: "xl" }), "p-4"].join(" ")}>
           <div className="grid gap-4 md:grid-cols-[180px_minmax(0,1fr)]">
             <FormField
               label={t("content_moderation.block_http_status")}
