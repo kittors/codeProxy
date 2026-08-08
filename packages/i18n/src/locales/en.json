@@ -4954,6 +4954,7 @@
     "what_happened": "What happened",
     "result_success": "Success",
     "result_failed": "Failed",
+    "result_denied": "Denied",
     "request_id": "Request ID",
     "call_chain": "Call chain",
     "project_method": "Project method",
