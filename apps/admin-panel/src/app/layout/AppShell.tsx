@@ -1228,7 +1228,7 @@ function ShellMain({ children }: PropsWithChildren) {
     <main
       id="main-content"
       tabIndex={-1}
-      className="flex min-h-full flex-col p-4 focus-visible:outline-none sm:p-6"
+      className="flex h-full flex-col p-4 focus-visible:outline-none sm:p-6"
     >
       {children}
     </main>
