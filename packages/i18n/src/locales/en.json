@@ -589,6 +589,7 @@
     "status_filter_http-auth": "401 / 403",
     "status_filter_http-5xx": "5xx",
     "status_filter_other-error": "Other errors",
+    "status_filter_enabled": "Enabled",
     "status_filter_disabled": "Disabled",
     "batch_deleted_selected": "Deleted {{count}} auth files",
     "batch_delete_partial": "Bulk delete finished: {{success}} succeeded, {{failed}} failed",

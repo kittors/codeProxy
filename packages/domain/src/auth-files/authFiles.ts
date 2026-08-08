@@ -92,22 +92,20 @@ export type QuotaPreviewMode = "5h" | "week";
 export type QuotaAutoRefreshMs = 0 | 60000 | 300000;
 export type FilesViewMode = "table" | "cards";
 export type AuthFilesModelOwnerGroupMap = Record<string, string>;
-export type AuthFileStatusFilter =
-  | "all"
-  | "http-429"
-  | "http-auth"
-  | "http-5xx"
-  | "other-error"
-  | "disabled";
-
-export const AUTH_FILE_STATUS_FILTERS: AuthFileStatusFilter[] = [
+/**
+ * 下拉选项顺序即本数组顺序；类型由数组派生，避免选项与联合类型两处各自漂移。
+ * "enabled" / "disabled" 是调度开关的互补两面，其余桶是错误信号，可与两者并存。
+ */
+export const AUTH_FILE_STATUS_FILTERS = [
   "all",
   "http-429",
   "http-auth",
   "http-5xx",
   "other-error",
+  "enabled",
   "disabled",
-];
+] as const;
+export type AuthFileStatusFilter = (typeof AUTH_FILE_STATUS_FILTERS)[number];
 
 export type AuthFilesUiState = {
   tab?: "files" | "excluded" | "alias";
@@ -1035,7 +1033,8 @@ const hasRestrictionErrorSignal = (restriction: AuthFileRestriction): boolean =>
 
 export const resolveAuthFileStatusBuckets = (file: AuthFileItem): Set<AuthFileStatusFilter> => {
   const buckets = new Set<AuthFileStatusFilter>();
-  if (file.disabled === true) buckets.add("disabled");
+  // disabled 缺省表示账号仍参与调度，故「启用」取 disabled 的补集；错误桶只描述上游返回，可并存。
+  buckets.add(file.disabled === true ? "disabled" : "enabled");
   const claudeOAuthHealth = resolveClaudeOAuthHealth(file);
 
   const restrictions = getAuthLevelRestrictions(file);
