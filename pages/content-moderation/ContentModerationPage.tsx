@@ -214,6 +214,23 @@ export function ContentModerationPage() {
         render: (profile) => t(`content_moderation.keyword_mode_${profile.keyword_mode}`),
       },
       {
+        key: "backend",
+        label: t("content_moderation.backend"),
+        width: COLUMN_WIDTH.badgeGroup,
+        render: (profile) => (
+          <span
+            className={[
+              "rounded-full px-2.5 py-1 text-xs font-semibold",
+              profile.backend === "qwen3guard"
+                ? "bg-violet-100 text-violet-800 dark:bg-violet-500/20 dark:text-violet-100"
+                : "bg-slate-100 text-slate-700 dark:bg-white/10 dark:text-white/70",
+            ].join(" ")}
+          >
+            {t(`content_moderation.backend_${profile.backend}`)}
+          </span>
+        ),
+      },
+      {
         key: "endpoint",
         label: t("content_moderation.endpoint_model"),
         width: "w-[240px] min-w-[240px]",

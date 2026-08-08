@@ -112,7 +112,10 @@ export { imageGenerationApi } from "./endpoints/image-generation";
 export type * from "./endpoints/image-generation";
 export { proxiesApi } from "./endpoints/proxies";
 export type * from "./endpoints/proxies";
-export { contentModerationApi } from "./endpoints/content-moderation";
+export {
+  contentModerationApi,
+  CONTENT_MODERATION_SCANNERS,
+} from "./endpoints/content-moderation";
 export type * from "./endpoints/content-moderation";
 export {
   ccSwitchImportConfigsApi,
