@@ -49,6 +49,9 @@ const normalizeQuotaItem = (value: unknown): AiAccountQuotaItemDto | null => {
     window_seconds: toFiniteNumber(value.window_seconds ?? value.windowSeconds),
     value: normalizeString(value.value) ?? undefined,
     meta: normalizeString(value.meta) ?? undefined,
+    // This allow-list is the runtime contract; a field the DTO type declares but
+    // that is not copied here silently reaches the UI as undefined.
+    observed_at: normalizeString(value.observed_at ?? value.observedAt),
   };
 };
 
@@ -184,6 +187,9 @@ export const normalizeAccountStatusView = (
     ),
     upstream_checked_at: normalizeString(
       value.upstream_checked_at ?? value.upstreamCheckedAt,
+    ),
+    quota_observed_at: normalizeString(
+      value.quota_observed_at ?? value.quotaObservedAt,
     ),
     usage_updated_at: normalizeString(value.usage_updated_at ?? value.usageUpdatedAt),
     expires_at: normalizeString(value.expires_at ?? value.expiresAt),
