@@ -2756,6 +2756,7 @@
     "what_happened": "Что сделано",
     "result_success": "Успех",
     "result_failed": "Ошибка",
+    "result_denied": "Отказано",
     "request_id": "ID запроса",
     "call_chain": "Цепочка вызовов",
     "project_method": "Метод проекта",

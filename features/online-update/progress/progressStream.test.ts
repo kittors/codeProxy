@@ -59,13 +59,58 @@ describe("update progress transport", () => {
    * The regression that made online update look broken: applying an update recreates
    * the container serving this stream, so it always drops. The old backoff started
    * at 5s and doubled to 60s, so the modal froze for the whole restart. Reconnects
-   * must be fast enough to be invisible.
+   * must be fast enough to be invisible — while a run is in flight, which is what
+   * the poll below establishes before the reconnects are counted.
    */
-  test("reconnects quickly after the stream drops", async () => {
+  test("reconnects quickly after the stream drops during a run", async () => {
     mocks.events.mockRejectedValue(new Error("container restarting"));
+    mocks.progress.mockResolvedValue(running());
 
     const unsubscribe = subscribeUpdateProgress(() => {});
     await until(() => mocks.events.mock.calls.length >= 3);
+
+    unsubscribe();
+  });
+
+  /**
+   * The other half of that trade. Panels sit open for hours with nothing being
+   * updated, and on a deployment without the updater sidecar every request fails;
+   * reconnecting three times a second for days is pure load, and each failed poll
+   * used to write an audit row.
+   */
+  test("backs off instead of hammering while nothing is in flight", async () => {
+    mocks.events.mockRejectedValue(new Error("no updater"));
+    mocks.progress.mockRejectedValue(new Error("no updater"));
+
+    const unsubscribe = subscribeUpdateProgress(() => {});
+    // One connect attempt lands immediately; the idle backoff starts at 3s, so a
+    // second attempt inside a second would mean the aggressive cadence is still on.
+    await until(() => mocks.events.mock.calls.length >= 1);
+    await new Promise((resolve) => globalThis.setTimeout(resolve, 1000));
+    expect(mocks.events.mock.calls.length).toBeLessThanOrEqual(2);
+    // The idle poll cadence is 30s, so the immediate poll must be the only one.
+    expect(mocks.progress.mock.calls.length).toBe(1);
+
+    unsubscribe();
+  });
+
+  /**
+   * A refusal is not a transient failure: the operator lacks the permission the
+   * update endpoints require, and retrying only fills the audit log.
+   */
+  test("stops entirely once the server refuses the operator", async () => {
+    const forbidden = Object.assign(new Error("permission denied"), { status: 403 });
+    mocks.events.mockRejectedValue(forbidden);
+    mocks.progress.mockRejectedValue(forbidden);
+
+    const unsubscribe = subscribeUpdateProgress(() => {});
+    await until(() => mocks.progress.mock.calls.length >= 1);
+    const callsAfterRefusal = mocks.events.mock.calls.length + mocks.progress.mock.calls.length;
+
+    await new Promise((resolve) => globalThis.setTimeout(resolve, 500));
+    expect(mocks.events.mock.calls.length + mocks.progress.mock.calls.length).toBe(
+      callsAfterRefusal,
+    );
 
     unsubscribe();
   });
