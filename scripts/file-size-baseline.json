@@ -17,7 +17,7 @@
     "pages/api-keys/ApiKeysPage.tsx": 1167,
     "pages/auth-files/AuthFilesPage.tsx": 1210,
     "pages/auth-files/components/AuthFileDetailModal.tsx": 2070,
-    "pages/auth-files/components/AuthFilesFilesTab.tsx": 2644,
+    "pages/auth-files/components/AuthFilesFilesTab.tsx": 2643,
     "pages/auth-files/hooks/useAuthFilesDetailEditors.ts": 1286,
     "pages/auth-files/hooks/useAuthFilesFilesPresentation.tsx": 1003,
     "pages/auth-files/hooks/useAuthFilesStatusState.ts": 1304,
