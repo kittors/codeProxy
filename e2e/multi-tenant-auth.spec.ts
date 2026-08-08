@@ -1447,8 +1447,22 @@ test("a second tab survives the first tab rotating the refresh token @critical",
     )
     .not.toBeNull();
 
-  const snapshot = await first.evaluate(() => localStorage.getItem("code-proxy-admin-auth"));
-  expect(snapshot).toBeTruthy();
-  expect(snapshot).not.toContain("cpr_adm_shared");
+  // The winner's snapshot has to be polled, not read once. `toHaveURL` above is not a
+  // synchronisation point for this tab: it already navigated to #/dashboard, so the
+  // assertion is satisfied the moment navigation settles — well before the refresh
+  // round-trip lands and the rotated token is written back. Reading immediately passes
+  // only because the rotation usually wins that race; under load (slow runner, many
+  // parallel requests) it reads back the seeded value and looks like the rotation never
+  // happened. Polling keeps the invariant identical and just stops guessing at timing.
+  await expect
+    .poll(
+      async () => {
+        const raw = await first.evaluate(() => localStorage.getItem("code-proxy-admin-auth"));
+        if (raw === null) return "session-destroyed";
+        return raw.includes("cpr_adm_shared") ? "still-stale" : "rotated";
+      },
+      { timeout: 20_000 },
+    )
+    .toBe("rotated");
   expect(refreshCalls, "the rotation path was never exercised").toBeGreaterThan(0);
 });
