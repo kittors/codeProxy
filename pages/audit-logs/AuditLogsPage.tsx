@@ -22,8 +22,29 @@ import { PermissionGate } from "@app/providers/PermissionGate";
 const DEFAULT_PAGE_SIZE = 50;
 const PAGE_SIZE_OPTIONS = [20, 50, 100];
 
-function isSuccessResult(result: string): boolean {
-  return result === "success";
+/**
+ * The backend records three outcomes, and rendering two of them identically hid
+ * the distinction that matters most on this page: "the server refused this" and
+ * "the server tried and errored" are different events with different follow-ups.
+ */
+const RESULT_BADGE: Record<string, { labelKey: string; className: string }> = {
+  success: {
+    labelKey: "identity_admin.result_success",
+    className:
+      "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300",
+  },
+  denied: {
+    labelKey: "identity_admin.result_denied",
+    className: "bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
+  },
+  failed: {
+    labelKey: "identity_admin.result_failed",
+    className: "bg-rose-50 text-rose-600 dark:bg-rose-500/15 dark:text-rose-300",
+  },
+};
+
+function resultBadge(result: string) {
+  return RESULT_BADGE[result] ?? RESULT_BADGE.failed;
 }
 
 function formatActor(item: AuditLogIdentity): string {
@@ -216,16 +237,16 @@ export function AuditLogsPage() {
         width: COLUMN_WIDTH.badge,
         headerClassName: "text-center",
         cellClassName: "text-center",
-        render: (item) =>
-          isSuccessResult(item.result) ? (
-            <span className="inline-flex min-w-[52px] justify-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300">
-              {t("identity_admin.result_success")}
+        render: (item) => {
+          const badge = resultBadge(item.result);
+          return (
+            <span
+              className={`inline-flex min-w-[52px] justify-center rounded-full px-2.5 py-1 text-xs font-semibold ${badge.className}`}
+            >
+              {t(badge.labelKey)}
             </span>
-          ) : (
-            <span className="inline-flex min-w-[52px] justify-center rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-600 dark:bg-rose-500/15 dark:text-rose-300">
-              {t("identity_admin.result_failed")}
-            </span>
-          ),
+          );
+        },
       },
       {
         key: "actions",
@@ -345,11 +366,7 @@ export function AuditLogsPage() {
               />
               <DetailField
                 label={t("identity_admin.result")}
-                value={
-                  isSuccessResult(detail.result)
-                    ? t("identity_admin.result_success")
-                    : t("identity_admin.result_failed")
-                }
+                value={t(resultBadge(detail.result).labelKey)}
               />
               <DetailField
                 label={t("identity_admin.request_id")}
