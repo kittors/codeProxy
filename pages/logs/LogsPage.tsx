@@ -293,7 +293,7 @@ export function LogsPage() {
   }, [latestTimestamp]);
 
   return (
-    <div className="space-y-6 md:flex md:h-[calc(100dvh-112px)] md:min-h-0 md:flex-col md:space-y-0 md:gap-4 md:overflow-hidden">
+    <div className="space-y-6 md:flex md:min-h-0 md:flex-1 md:flex-col md:space-y-0 md:gap-4 md:overflow-hidden">
       <Tabs value={tab} onValueChange={(next) => setTab(next as typeof tab)}>
         <TabsList>
           <TabsTrigger value="content">{t("logs_page.log_content")}</TabsTrigger>

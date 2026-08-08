@@ -113,7 +113,7 @@ export function SystemPage() {
   const apiKeyUsageUrl = `${window.location.origin}/manage/apikey-usage`;
 
   return (
-    <div className="min-w-0 space-y-6 overflow-x-hidden">
+    <div className="flex min-w-0 flex-1 flex-col gap-6 overflow-x-hidden">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-100 dark:bg-indigo-900/30">
@@ -175,7 +175,7 @@ export function SystemPage() {
         />
       </div>
 
-      <SystemUpdateCard />
+      <SystemUpdateCard className="flex-1" />
     </div>
   );
 }

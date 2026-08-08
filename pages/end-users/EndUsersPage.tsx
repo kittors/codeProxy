@@ -734,10 +734,10 @@ export function EndUsersPage() {
 
   return (
     <PermissionGate permission="end_users.read" anyOf={["api_keys.read"]}>
-      {/* Match AI accounts / api-keys card height so top/bottom shell padding stay even on large screens. */}
-      <div className="space-y-6">
+      {/* 页面根撑满外壳，卡片再撑满页面根，底部留白才等于其余三边 */}
+      <div className="flex flex-1 flex-col">
         <Card
-          className="md:flex md:h-[calc(100dvh-112px)] md:min-h-0 md:flex-col md:overflow-hidden"
+          className="md:flex md:min-h-0 md:flex-1 md:flex-col md:overflow-hidden"
           bodyClassName="md:flex md:min-h-0 md:flex-1 md:flex-col"
           title={t("end_users.title", { defaultValue: "用户账号" })}
           description={t("end_users.subtitle", {
