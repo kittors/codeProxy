@@ -1890,31 +1890,20 @@ export function AuthFilesFilesTab({
                         .filter(Boolean)
                         .join(" ")}
                     >
+                      {/* Fixed three-row header: identity, plan + cycle metrics,
+                          status badges. Each row wraps within itself, so a narrow
+                          card never pulls a badge up into the row above. */}
                       <div className={denseCards ? "space-y-2" : "space-y-2.5"}>
                         <div className="flex items-center justify-between gap-2">
-                          <div className="flex min-w-0 flex-1 items-center gap-1.5">
-                            <OverflowTooltip
-                              content={displayTitle}
-                              className={[
-                                "min-w-0 flex-1 truncate leading-5 font-semibold tracking-tight text-slate-900 dark:text-white",
-                                denseCards ? "text-xs" : "text-sm",
-                              ].join(" ")}
-                            >
-                              {displayTitle}
-                            </OverflowTooltip>
-                            {showPlanBadge && planType ? (
-                              <span
-                                data-testid="auth-file-plan-badge"
-                                className={[
-                                  "inline-flex h-5 shrink-0 items-center rounded-md px-1.5 text-2xs font-bold leading-none tracking-wide",
-                                  resolvePlanBadgeClass(planType),
-                                ].join(" ")}
-                              >
-                                {formatPlanTypeLabel(planType) ||
-                                  formatPlanBadgeLabel(planType)}
-                              </span>
-                            ) : null}
-                          </div>
+                          <OverflowTooltip
+                            content={displayTitle}
+                            className={[
+                              "min-w-0 flex-1 truncate leading-5 font-semibold tracking-tight text-slate-900 dark:text-white",
+                              denseCards ? "text-xs" : "text-sm",
+                            ].join(" ")}
+                          >
+                            {displayTitle}
+                          </OverflowTooltip>
 
                           <div className="flex h-6 shrink-0 items-center gap-1.5">
                             {runtimeOnly ? null : (
@@ -1992,6 +1981,18 @@ export function AuthFilesFilesTab({
                         </div>
 
                         <div className="min-w-0 flex flex-wrap items-center gap-1">
+                          {showPlanBadge && planType ? (
+                            <span
+                              data-testid="auth-file-plan-badge"
+                              className={[
+                                "inline-flex h-5 shrink-0 items-center rounded-md px-1.5 text-2xs font-bold leading-none tracking-wide",
+                                resolvePlanBadgeClass(planType),
+                              ].join(" ")}
+                            >
+                              {formatPlanTypeLabel(planType) ||
+                                formatPlanBadgeLabel(planType)}
+                            </span>
+                          ) : null}
                           {showTypeBadge ? (
                             denseCards ? (
                               <HoverTooltip content={typeKey} className="shrink-0">
@@ -2100,15 +2101,29 @@ export function AuthFilesFilesTab({
                               </span>
                             </HoverTooltip>
                           ) : null}
-                          {subscriptionBadge}
                           {runtimeOnly ? (
                             <span className="inline-flex shrink-0 items-center rounded-md bg-slate-900 px-2 py-0.5 text-2xs font-semibold text-white dark:bg-white dark:text-neutral-950">
                               {t("auth_files.virtual_auth_file")}
                             </span>
                           ) : null}
                         </div>
-                        {displayTags.length > 0 ? (
-                          <div className="min-w-0 flex flex-wrap gap-1">
+
+                        {/* Row 3: standing rather than usage — subscription, faults
+                            and tags together, so a card with an error does not gain
+                            an extra row the others lack. */}
+                        {subscriptionBadge ||
+                        cardErrorBadges.length > 0 ||
+                        displayTags.length > 0 ? (
+                          <div
+                            className="min-w-0 flex flex-wrap items-center gap-1"
+                            data-testid="auth-file-card-status-badges"
+                          >
+                            {subscriptionBadge}
+                            {cardErrorBadges.map((item) => (
+                              <div key={item.key} className="min-w-0">
+                                {item.node}
+                              </div>
+                            ))}
                             {visibleTags.map((tag) => (
                               <span
                                 key={tag}
@@ -2130,22 +2145,6 @@ export function AuthFilesFilesTab({
                           </div>
                         ) : null}
                       </div>
-
-                      {cardErrorBadges.length > 0 ? (
-                        <div
-                          className={[
-                            "min-w-0 flex flex-wrap items-center gap-1.5",
-                            denseCards ? "mt-2" : "mt-3",
-                          ].join(" ")}
-                          data-testid="auth-file-card-error-badges"
-                        >
-                          {cardErrorBadges.map((item) => (
-                            <div key={item.key} className="min-w-0">
-                              {item.node}
-                            </div>
-                          ))}
-                        </div>
-                      ) : null}
 
                       <div
                         className={[

@@ -1402,7 +1402,8 @@ describe("AuthFilesPage files table", () => {
     const card = title.closest("section");
     expect(card).not.toBeNull();
     expect(within(card as HTMLElement).queryByText("Restricted")).not.toBeInTheDocument();
-    const errorBadges = within(card as HTMLElement).getByTestId("auth-file-card-error-badges");
+    // Subscription, faults and tags now share one status row above the quota area.
+    const errorBadges = within(card as HTMLElement).getByTestId("auth-file-card-status-badges");
     const quota = within(card as HTMLElement).getByTestId("auth-file-card-quota");
     expect(
       Boolean(errorBadges.compareDocumentPosition(quota) & Node.DOCUMENT_POSITION_FOLLOWING),
