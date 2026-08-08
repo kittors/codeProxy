@@ -597,6 +597,7 @@
     "status_filter_http-auth": "401 / 403",
     "status_filter_http-5xx": "5xx",
     "status_filter_other-error": "其他错误",
+    "status_filter_enabled": "已启用",
     "status_filter_disabled": "已禁用",
     "batch_deleted_selected": "已删除 {{count}} 个认证文件",
     "batch_delete_partial": "批量删除完成，成功 {{success}} 个，失败 {{failed}} 个",

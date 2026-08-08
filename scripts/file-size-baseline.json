@@ -10,7 +10,7 @@
     "features/request-log-viewer/requestLogsShared.tsx": 1020,
     "features/routing-config-editor/RoutingConfigEditor.tsx": 2044,
     "features/visual-config-editor/useVisualConfig.ts": 957,
-    "packages/domain/src/auth-files/authFiles.ts": 2199,
+    "packages/domain/src/auth-files/authFiles.ts": 2198,
     "packages/domain/src/ccswitch/ccswitchImport.ts": 845,
     "packages/ui/src/data-table/DataTable.tsx": 2632,
     "pages/api-key-lookup/ApiKeyLookupPage.tsx": 1743,
