@@ -91,7 +91,9 @@ export function ProviderKeyListCard({
     // openKeyEditor(tab, null) action, and two of them on one screen just made
     // the header noisier.
     <Card
-      className="flex h-full min-h-0 flex-col"
+      // 用 flex-1 而不是 h-full：父级高度是 flex 分配出来的，百分比高度在这条链上解析
+      // 不到基准，会回退成内容高度，卡片就缩成一小块、底下空一大片。
+      className="flex min-h-0 flex-1 flex-col"
       bodyClassName="min-h-0 flex flex-1 flex-col"
     >
       {showSkeleton ? (
@@ -117,10 +119,13 @@ export function ProviderKeyListCard({
           ))}
         </div>
       ) : items.length === 0 ? (
-        <EmptyState
-          title={t("providers.no_config")}
-          description={t("providers.no_config_desc")}
-        />
+        // 空态要占住整块卡片区域：不撑满的话卡片只有内容那么高，页面底部会空出一大截
+        <div className="flex min-h-0 flex-1 flex-col justify-center">
+          <EmptyState
+            title={t("providers.no_config")}
+            description={t("providers.no_config_desc")}
+          />
+        </div>
       ) : (
         <div
           data-testid="providers-tab-scroll"

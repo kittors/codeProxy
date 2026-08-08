@@ -137,9 +137,7 @@ export function ProxiesPage() {
     const baseID = draft.id.trim() || slugifyProxyID(draft.name, draft.url);
     const normalized: ProxyPoolEntry = {
       ...draft,
-      id: editingID
-        ? editingID
-        : uniqueProxyID(baseID, entries, editingID),
+      id: editingID ? editingID : uniqueProxyID(baseID, entries, editingID),
       name: draft.name.trim(),
       url: draft.url.trim(),
       description: draft.description?.trim() ?? "",
@@ -384,7 +382,7 @@ export function ProxiesPage() {
   const modalTitle = editingID ? t("proxies.edit_title") : t("proxies.add_title");
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-5 md:h-[calc(100dvh-112px)] md:overflow-hidden">
+    <div className="flex min-h-0 flex-1 flex-col gap-5 md:overflow-hidden">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 className="text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">

@@ -925,7 +925,7 @@ export function ApiKeysPage({
   );
 
   return (
-    <div className={embed ? "flex h-full min-h-0 flex-col" : "space-y-6"}>
+    <div className={embed ? "flex h-full min-h-0 flex-col" : "flex flex-1 flex-col"}>
       {embed ? (
         <div className="flex h-full min-h-0 flex-col">
           <div className="flex shrink-0 items-center justify-end border-b border-slate-100 px-4 py-3 dark:border-white/10">
@@ -935,7 +935,7 @@ export function ApiKeysPage({
         </div>
       ) : (
         <Card
-          className="md:flex md:h-[calc(100dvh-112px)] md:min-h-0 md:flex-col md:overflow-hidden"
+          className="md:flex md:min-h-0 md:flex-1 md:flex-col md:overflow-hidden"
           bodyClassName="md:flex md:min-h-0 md:flex-1 md:flex-col"
           title={
             endUserIdFilter

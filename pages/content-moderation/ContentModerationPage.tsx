@@ -325,9 +325,9 @@ export function ContentModerationPage() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-1 flex-col">
       <Card
-        className="md:flex md:h-[calc(100dvh-112px)] md:min-h-0 md:flex-col md:overflow-hidden"
+        className="md:flex md:min-h-0 md:flex-1 md:flex-col md:overflow-hidden"
         bodyClassName="md:flex md:min-h-0 md:flex-1 md:flex-col"
         title={t("content_moderation.title")}
         description={t("content_moderation.description")}
