@@ -39,6 +39,9 @@ vi.mock("../SystemMonitorSection", () => ({
 vi.mock("@code-proxy/ui", async () => {
   const React = await vi.importActual<typeof import("react")>("react");
   return {
+    // Real implementation: the page derives PANEL_SURFACE from it at module load,
+    // so a stub would silently drop the class names under test elsewhere.
+    surface: (await vi.importActual<typeof import("@code-proxy/ui")>("@code-proxy/ui")).surface,
     AnimatedNumber: ({ value, format }: { value: number; format?: (value: number) => string }) => (
       <span>{format ? format(value) : value}</span>
     ),

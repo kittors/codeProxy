@@ -25,12 +25,18 @@ const profile: ContentModerationProfileView = {
   id: "profile-1",
   name: "Strict prompts",
   mode: "pre_block",
+  backend: "openai_moderations",
   base_url: "https://api.openai.com",
   model: "omni-moderation-latest",
   timeout_ms: 3000,
   keyword_mode: "keyword_only",
   blocked_keywords: ["blocked"],
   thresholds: { violence: 0.95 },
+  scanners: [],
+  controversial_action: "elevated_only",
+  elevated_categories: ["pii", "suicide_and_self_harm", "jailbreak"],
+  input_limit: 4000,
+  max_chunks: 4,
   block_http_status: 403,
   block_message: "Blocked",
   version: 3,
@@ -70,7 +76,7 @@ describe("ProfileEditorModal", () => {
 
     const form = document.querySelector("form[data-slot='form']");
     expect(form).toHaveAttribute("id", "content-moderation-profile-form");
-    expect(document.querySelectorAll("[data-slot='form-field']")).toHaveLength(22);
+    expect(document.querySelectorAll("[data-slot='form-field']")).toHaveLength(23);
     expect(document.querySelector("[data-slot='form-field-info'].invisible")).toBeNull();
 
     expect(screen.queryByRole("combobox", { name: "Mode" })).toBeNull();
@@ -150,6 +156,7 @@ describe("ProfileEditorModal", () => {
         keyword_mode: "api_only",
         blocked_keywords: [],
         thresholds: { ...DEFAULT_THRESHOLDS, harassment: 0.42 },
+        backend: "openai_moderations",
         block_http_status: 403,
         block_message: "Your request was blocked by the content moderation policy.",
       }),
@@ -253,6 +260,128 @@ describe("ProfileEditorModal", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Every category threshold must be a number from 0 to 1",
     );
+    expect(onSave).not.toHaveBeenCalled();
+  });
+});
+
+describe("ProfileEditorModal qwen3guard backend", () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage("en");
+  });
+
+  const selectGuard = async (user: ReturnType<typeof userEvent.setup>) => {
+    await user.click(screen.getByRole("combobox", { name: "Moderation backend" }));
+    await user.click(screen.getByRole("option", { name: "Qwen3Guard" }));
+  };
+
+  test("swaps threshold inputs for the guard category policy", async () => {
+    const user = userEvent.setup();
+    renderEditor();
+
+    expect(screen.getByRole("spinbutton", { name: "Harassment" })).toBeInTheDocument();
+    await selectGuard(user);
+
+    expect(screen.queryByRole("spinbutton", { name: "Harassment" })).toBeNull();
+    expect(screen.getByRole("checkbox", { name: "Jailbreak" })).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "PII" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("combobox", { name: "Controversial verdicts" }),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText(/Characters per scan/)).toHaveValue("4000");
+    expect(screen.getByLabelText(/Maximum chunks/)).toHaveValue("4");
+  });
+
+  test("clears the OpenAI endpoint defaults but keeps operator input", async () => {
+    const user = userEvent.setup();
+    renderEditor();
+
+    await selectGuard(user);
+    expect(screen.getByLabelText(/Moderation base URL/)).toHaveValue("");
+    expect(screen.getByLabelText(/Moderation model/)).toHaveValue("");
+
+    fireEvent.change(screen.getByLabelText(/Moderation base URL/), {
+      target: { value: "http://127.0.0.1:8000" },
+    });
+    await user.click(screen.getByRole("combobox", { name: "Moderation backend" }));
+    await user.click(screen.getByRole("option", { name: "OpenAI Moderations" }));
+
+    expect(screen.getByLabelText(/Moderation base URL/)).toHaveValue("http://127.0.0.1:8000");
+  });
+
+  test("creates a guard profile without an API key", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn<ProfileEditorModalProps["onSave"]>().mockResolvedValue(undefined);
+    renderEditor({ onSave });
+
+    fireEvent.change(screen.getByRole("textbox", { name: "Profile name" }), {
+      target: { value: "Guard" },
+    });
+    await selectGuard(user);
+    fireEvent.change(screen.getByLabelText(/Moderation base URL/), {
+      target: { value: "http://guard.internal:8000" },
+    });
+    fireEvent.change(screen.getByLabelText(/Moderation model/), {
+      target: { value: "Qwen/Qwen3Guard-Gen-0.6B" },
+    });
+    await user.click(screen.getByRole("checkbox", { name: "Jailbreak" }));
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        backend: "qwen3guard",
+        base_url: "http://guard.internal:8000",
+        model: "Qwen/Qwen3Guard-Gen-0.6B",
+        scanners: ["jailbreak"],
+        controversial_action: "elevated_only",
+        elevated_categories: ["pii", "suicide_and_self_harm", "jailbreak"],
+        input_limit: 4000,
+        max_chunks: 4,
+      }),
+    );
+    expect(onSave.mock.calls[0]?.[0]).not.toHaveProperty("api_key");
+  });
+
+  test("disables the high-risk list unless controversial verdicts escalate", async () => {
+    const user = userEvent.setup();
+    renderEditor();
+    await selectGuard(user);
+
+    const highRiskJailbreak = screen.getByRole("checkbox", {
+      name: "High-risk category: Jailbreak",
+    });
+    expect(highRiskJailbreak).not.toBeDisabled();
+
+    await user.click(screen.getByRole("combobox", { name: "Controversial verdicts" }));
+    await user.click(screen.getByRole("option", { name: "Allow" }));
+
+    expect(
+      screen.getByRole("checkbox", { name: "High-risk category: Jailbreak" }),
+    ).toBeDisabled();
+  });
+
+  test.each([
+    ["Characters per scan", "8", "Characters per scan must be an integer from 128 to 100000"],
+    ["Maximum chunks", "99", "Maximum chunks must be an integer from 1 to 32"],
+  ])("rejects an out-of-range %s", async (label, value, message) => {
+    const user = userEvent.setup();
+    const onSave = vi.fn<ProfileEditorModalProps["onSave"]>().mockResolvedValue(undefined);
+    renderEditor({ onSave });
+
+    fireEvent.change(screen.getByRole("textbox", { name: "Profile name" }), {
+      target: { value: "Guard" },
+    });
+    await selectGuard(user);
+    fireEvent.change(screen.getByLabelText(/Moderation base URL/), {
+      target: { value: "http://guard.internal:8000" },
+    });
+    fireEvent.change(screen.getByLabelText(/Moderation model/), {
+      target: { value: "qwen3guard" },
+    });
+    fireEvent.change(screen.getByLabelText(new RegExp(label)), { target: { value } });
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(message);
     expect(onSave).not.toHaveBeenCalled();
   });
 });

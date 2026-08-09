@@ -104,6 +104,61 @@ describe("aiAccountsStatusApi (authoritative contract)", () => {
     expect(snapshot.items[1]?.usage?.cycle_total_tokens).toBeNull();
   });
 
+  // This allow-list is the runtime contract. A field the DTO type declares but
+  // that normalizeQuotaItem/normalizeLatestStatus never copies reaches the UI as
+  // undefined — which is how quota observation timestamps were silently dropped
+  // while every downstream test kept passing on mocked getStatus results.
+  test("carries quota observation timestamps through normalization", async () => {
+    const { aiAccountsStatusApi } = await import("../ai-accounts-status");
+    getMock.mockResolvedValue({
+      items: [
+        {
+          auth_index: "auth-1",
+          quota_observed_at: "2026-08-07T23:47:21.299320202Z",
+          quotas: [
+            {
+              quota_key: "code_week",
+              percent: 13,
+              observed_at: "2026-08-07T23:47:21.299320202Z",
+            },
+          ],
+        },
+      ],
+    });
+
+    const snapshot = await aiAccountsStatusApi.getStatus();
+    expect(snapshot.items[0]?.quota_observed_at).toBe("2026-08-07T23:47:21.299320202Z");
+    expect(snapshot.items[0]?.quotas[0]?.observed_at).toBe("2026-08-07T23:47:21.299320202Z");
+  });
+
+  test("accepts camelCase observation timestamps", async () => {
+    const { aiAccountsStatusApi } = await import("../ai-accounts-status");
+    getMock.mockResolvedValue({
+      items: [
+        {
+          auth_index: "auth-1",
+          quotaObservedAt: "2026-08-07T10:00:00Z",
+          quotas: [{ quota_key: "code_week", percent: 5, observedAt: "2026-08-07T10:00:00Z" }],
+        },
+      ],
+    });
+
+    const snapshot = await aiAccountsStatusApi.getStatus();
+    expect(snapshot.items[0]?.quota_observed_at).toBe("2026-08-07T10:00:00Z");
+    expect(snapshot.items[0]?.quotas[0]?.observed_at).toBe("2026-08-07T10:00:00Z");
+  });
+
+  test("leaves observation timestamps null when the backend omits them", async () => {
+    const { aiAccountsStatusApi } = await import("../ai-accounts-status");
+    getMock.mockResolvedValue({
+      items: [{ auth_index: "auth-1", quotas: [{ quota_key: "code_week", percent: 5 }] }],
+    });
+
+    const snapshot = await aiAccountsStatusApi.getStatus();
+    expect(snapshot.items[0]?.quota_observed_at).toBeNull();
+    expect(snapshot.items[0]?.quotas[0]?.observed_at).toBeNull();
+  });
+
   test("filters status snapshot by auth_index query params", async () => {
     const { aiAccountsStatusApi } = await import("../ai-accounts-status");
     getMock.mockResolvedValue({ items: [] });

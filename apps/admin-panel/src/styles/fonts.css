@@ -1,0 +1,25 @@
+/*
+ * 自托管字体。
+ *
+ * 之前两个 HTML 入口都挂着 Google Fonts 的 Inter 外链，但 --font-sans 里根本没写 Inter，
+ * 于是外链纯属白下载，实际渲染全靠系统字体——同一个面板在 macOS 是苹方、Windows 是雅黑、
+ * Linux 上则看装了什么，字重和字宽都对不上。而且 fonts.googleapis.com 在部分网络下拿不到，
+ * 首屏还要为一个用不上的请求等 DNS。
+ *
+ * 现在三套字体全部随构建产物发布，不再有外部依赖：
+ *   - Inter：西文与数字。
+ *   - Noto Sans SC：中文。fontsource 已按 unicode-range 切成 97 个中文分片，
+ *     浏览器只下载页面真正用到的那几片，不是一次拉几 MB。
+ *   - JetBrains Mono：代码、日志与展示级标题。
+ *
+ * 都是可变字体（wght 轴 100-900），一个文件覆盖全部字重，比起按字重拆文件少很多请求。
+ * font-display: swap 由 fontsource 预置：先用系统字体把内容显示出来，字体到位再换，
+ * 中文分片体积较大时这条尤其重要。
+ *
+ * 这些 @font-face 声明有 100 KB 上下，会随入口样式表一起发布（Vite 会把同一入口的 CSS
+ * 合并，拆不开）。因此入口 CSS 的 gzip 体积会反超入口 JS——bundle 基线脚本据此区分了
+ * `index` 与 `index.css` 两行，否则样式表会把入口脚本从监控里顶掉。
+ */
+@import "@fontsource-variable/inter/wght.css";
+@import "@fontsource-variable/noto-sans-sc/wght.css";
+@import "@fontsource-variable/jetbrains-mono/wght.css";

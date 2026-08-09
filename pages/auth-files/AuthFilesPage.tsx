@@ -847,7 +847,7 @@ export function AuthFilesPage() {
   });
 
   return (
-    <div className="space-y-3">
+    <div className="flex flex-1 flex-col">
       <AuthFilesFilesTab
         fileInputRef={fileInputRef}
         handleUpload={handleUploadAndRefreshQuota}

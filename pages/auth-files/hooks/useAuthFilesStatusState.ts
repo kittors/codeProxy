@@ -22,24 +22,18 @@ import {
   AUTH_FILES_QUOTA_AUTO_REFRESH_KEY,
   getActiveCacheTenantId,
   normalizeAuthIndexValue,
-  parseAdditionalQuotaWindowLabel,
   readAndMigrateQuotaAutoRefreshMs,
   readAuthFilesDataCache,
-  translateParameterizedQuotaLabel,
-  translateXaiQuotaLabel,
   writeAuthFilesDataCache,
   type AuthFileCycleBudgetStats,
 } from "@code-proxy/domain";
 import { useInterval, useLocalStorage, useToast } from "@code-proxy/ui";
-import {
-  filterAntigravityQuotaItems,
-  type QuotaItem,
-  type QuotaState,
-} from "@features/quota-preview/quota-helpers";
+import { type QuotaItem, type QuotaState } from "@features/quota-preview/quota-helpers";
 import {
   type QuotaProvider,
 } from "@features/quota-preview/quota-fetch";
 import { mergeQuotaState } from "./mergeQuotaState";
+import { resolveQuotaCardSlots as resolveQuotaCardSlotsFor } from "./quotaCardSlots";
 import {
   applyAccountStatuses,
   isAccountStatusFresher,
@@ -640,6 +634,9 @@ export function useAuthFilesStatusState({
           resetCreditExpirations: prev[file.name]?.resetCreditExpirations,
           error: prev[file.name]?.error,
           updatedAt: prev[file.name]?.updatedAt,
+          // Items shown while loading are still the previously observed ones, so
+          // their age must survive the transition and keep any stale marker on.
+          quotaObservedAtMs: prev[file.name]?.quotaObservedAtMs,
         };
         quotaInFlightRef.current.add(file.name);
         quotaAutoRefreshingRef.current.add(file.name);
@@ -660,6 +657,9 @@ export function useAuthFilesStatusState({
           resetCreditExpirations: prev[file.name]?.resetCreditExpirations,
           error: message,
           updatedAt: Date.now(),
+          // A failed refresh does not re-observe anything: keep the old timestamp
+          // so the retained values keep reporting their true age.
+          quotaObservedAtMs: prev[file.name]?.quotaObservedAtMs,
         };
         quotaInFlightRef.current.delete(file.name);
         quotaAutoRefreshingRef.current.delete(file.name);
@@ -1185,158 +1185,7 @@ export function useAuthFilesStatusState({
   );
 
   const resolveQuotaCardSlots = useCallback(
-    (provider: QuotaProvider, items: QuotaItem[]) => {
-      const translateQuotaLabel = (text: string) => {
-        if (!text) return text;
-        if (text.startsWith("m_quota.")) return t(text);
-        const additionalQuota = parseAdditionalQuotaWindowLabel(text);
-        if (additionalQuota) {
-          return t(`m_quota.additional_${additionalQuota.window}`, {
-            name: additionalQuota.name,
-          });
-        }
-        if (text.startsWith("claude_quota.")) return translateParameterizedQuotaLabel(t, text);
-        if (text.startsWith("antigravity_quota.")) return t(text);
-        if (text.startsWith("xai_quota.")) return translateXaiQuotaLabel(t, text);
-        return text;
-      };
-
-      if (provider === "claude") {
-        return items.map((item) => ({
-          id: item.key ?? item.label,
-          label: translateQuotaLabel(item.label),
-          item,
-        }));
-      }
-      if (provider === "antigravity") {
-        return filterAntigravityQuotaItems(items).map((item, index) => ({
-          id: item.key ?? item.label ?? `antigravity-${index + 1}`,
-          label: translateQuotaLabel(item.label),
-          item,
-        }));
-      }
-      if (provider === "xai") {
-        return items.map((item, index) => ({
-          id: item.key ?? item.label ?? `xai-${index + 1}`,
-          label: translateQuotaLabel(item.label),
-          item,
-        }));
-      }
-
-      const supportsStableCodingSlots = provider === "codex" || provider === "kimi";
-      if (!supportsStableCodingSlots) {
-        // Rank data-bearing windows first so placeholder rows (e.g. kiro's
-        // subscription entry with percent: null) never crowd out real quotas.
-        const ranked = [
-          ...items.filter((item) => typeof item.percent === "number" || Boolean(item.value)),
-          ...items.filter((item) => typeof item.percent !== "number" && !item.value),
-        ];
-        return ranked.slice(0, 3).map((item) => ({
-          id: item.key ?? item.label,
-          label: translateQuotaLabel(item.label),
-          item,
-        }));
-      }
-
-      const normalize = (value: string) =>
-        value
-          .trim()
-          .toLowerCase()
-          .replaceAll(/[^a-z0-9\u4e00-\u9fff]/g, "");
-
-      const candidates = items
-        .filter((item) => !parseAdditionalQuotaWindowLabel(String(item.label ?? "")))
-        .map((item) => ({
-          item,
-          key: normalize(`${String(item.key ?? "")} ${String(item.label ?? "")}`),
-        }));
-
-      const findExact = (label: string) => items.find((item) => item.label === label) ?? null;
-      const findKey = (...keys: string[]) =>
-        items.find((item) => {
-          const normalizedKey = normalize(String(item.key ?? ""));
-          return keys.some((key) => normalizedKey === normalize(key));
-        }) ?? null;
-      const find = (re: RegExp) =>
-        candidates.find((candidate) => re.test(candidate.key))?.item ?? null;
-
-      const codeFiveHour =
-        findKey("code_5h", "code5h") ??
-        findExact("m_quota.code_5h") ??
-        find(/(mquotacode5h|code5h|5h|5小时|fivehour|5hour)/i);
-      const codeWeek =
-        findKey("code_week", "code_weekly", "codeweekly") ??
-        findExact("m_quota.code_weekly") ??
-        find(/(mquotacodeweekly|codeweekly|weekly|week|周)/i);
-      const reviewFiveHour =
-        findKey("review_5h", "review5h") ??
-        findExact("m_quota.review_5h") ??
-        find(/(mquotareview5h|review5h|review5hour|reviewfivehour|审查5小时|审查：5小时)/i);
-      const reviewWeek =
-        findKey("review_week", "review_weekly", "reviewweekly") ??
-        findExact("m_quota.review_weekly") ??
-        find(/(mquotareviewweekly|reviewweekly|reviewweek|review_week|审查周|审查：周)/i);
-
-      const knownItems = new Set<QuotaItem>();
-      [codeFiveHour, codeWeek, reviewFiveHour, reviewWeek].forEach((item) => {
-        if (item) knownItems.add(item);
-      });
-
-      const codingSlots: { id: string; label: string; item: QuotaItem | null }[] = [];
-      if (codeFiveHour) {
-        codingSlots.push({
-          id: "code_5h",
-          label: translateQuotaLabel("m_quota.code_5h"),
-          item: codeFiveHour,
-        });
-      }
-      if (codeWeek) {
-        codingSlots.push({
-          id: "code_week",
-          label: translateQuotaLabel("m_quota.code_weekly"),
-          item: codeWeek,
-        });
-      }
-      if (provider === "kimi") {
-        // Unmatched kimi payloads fall back to raw items instead of an empty state.
-        if (codingSlots.length > 0) return codingSlots;
-        return items.slice(0, 3).map((item) => ({
-          id: item.key ?? item.label,
-          label: translateQuotaLabel(item.label),
-          item,
-        }));
-      }
-
-      const codexSlots = [...codingSlots];
-      if (reviewFiveHour) {
-        codexSlots.push({
-          id: "review_5h",
-          label: translateQuotaLabel("m_quota.review_5h"),
-          item: reviewFiveHour,
-        });
-      }
-      if (reviewWeek) {
-        codexSlots.push({
-          id: "review_week",
-          label: translateQuotaLabel("m_quota.review_weekly"),
-          item: reviewWeek,
-        });
-      }
-
-      const extraSlots = items
-        .filter((item) => !knownItems.has(item))
-        .map((item, index) => {
-          const idKey = item.key ?? (normalize(String(item.label ?? "")) || `quota${index + 1}`);
-          return {
-            id: idKey,
-            label: translateQuotaLabel(item.label),
-            item,
-          };
-        });
-
-      if (codexSlots.length === 0 && extraSlots.length > 0) return extraSlots;
-      return [...codexSlots, ...extraSlots];
-    },
+    (provider: QuotaProvider, items: QuotaItem[]) => resolveQuotaCardSlotsFor(provider, items, t),
     [t],
   );
 

@@ -3,7 +3,7 @@ import { Check, Copy } from "lucide-react";
 import iconClaude from "@code-proxy/assets/icons/claude.svg";
 import iconCodex from "@code-proxy/assets/icons/codex.svg";
 import iconGemini from "@code-proxy/assets/icons/gemini.svg";
-import { Button } from "@code-proxy/ui";
+import { Button, surface } from "@code-proxy/ui";
 import { Modal } from "@code-proxy/ui";
 import type { CcSwitchImportConfigListItem } from "@code-proxy/domain/ccswitch/ccswitchImportConfigList";
 import type { CcSwitchClientType } from "@code-proxy/domain/ccswitch/ccswitchImport";
@@ -61,7 +61,7 @@ export function CcSwitchImportCardList({
                   onClick={() => onSelect(config)}
                   className="flex min-w-0 items-start gap-4 rounded-l-2xl p-4 text-left transition active:translate-y-px"
                 >
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-900/8 bg-white shadow-xs dark:border-white/8 dark:bg-neutral-950">
+                  <span className={[surface({ tone: "plain", radius: "xl" }), "flex h-10 w-10 shrink-0 items-center justify-center shadow-xs"].join(" ")}>
                     <img src={iconByType[config.clientType]} alt="" className="h-5 w-5" />
                   </span>
                   <div className="min-w-0 flex-1">
@@ -81,7 +81,7 @@ export function CcSwitchImportCardList({
                       </p>
                     ) : null}
                     <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <span className="inline-flex max-w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-slate-900/8 bg-white px-1.5 py-0.5 font-mono text-2xs text-slate-500 dark:border-white/8 dark:bg-neutral-950 dark:text-white/45">
+                      <span className={[surface({ tone: "plain", radius: "md" }), "inline-flex max-w-full overflow-hidden text-ellipsis whitespace-nowrap px-1.5 py-0.5 font-mono text-2xs text-slate-500 dark:text-white/45"].join(" ")}>
                         {config.defaultModel}
                       </span>
                       {config.allowedChannelGroups.length > 0 ? (
@@ -102,7 +102,7 @@ export function CcSwitchImportCardList({
                         : t("ccswitch.copy_import_link")
                     }
                     onClick={() => onCopyLink(config)}
-                    className="rounded-lg border border-slate-900/8 bg-white text-slate-500 hover:text-slate-900 dark:border-white/8 dark:bg-neutral-950 dark:text-white/55 dark:hover:text-white"
+                    className={[surface({ tone: "plain", radius: "lg" }), "text-slate-500 hover:text-slate-900 dark:text-white/55 dark:hover:text-white"].join(" ")}
                   >
                     {isCopied ? <Check size={14} /> : <Copy size={14} />}
                   </Button>

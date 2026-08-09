@@ -379,7 +379,7 @@ export function UsersPage() {
 
   return (
     <section className="flex flex-1 flex-col">
-      <div className="flex flex-1 flex-col rounded-2xl border border-black/[0.06] bg-white shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] dark:border-white/[0.06] dark:bg-neutral-950/70 dark:shadow-[0_1px_2px_rgb(0_0_0_/_0.22)]">
+      <div className="flex min-h-0 flex-1 flex-col rounded-2xl border border-black/[0.06] bg-white shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] dark:border-white/[0.06] dark:bg-neutral-950/70 dark:shadow-[0_1px_2px_rgb(0_0_0_/_0.22)]">
         <div className="flex flex-wrap items-start justify-between gap-3 px-5 pt-5 pb-3">
           <div>
             <h2 className="text-base font-semibold text-slate-950 dark:text-white">
@@ -401,7 +401,7 @@ export function UsersPage() {
           </PermissionGate>
         </div>
 
-        <div className="relative h-[calc(100dvh-250px)] min-h-[360px] overflow-hidden px-5 pb-5">
+        <div className="relative min-h-[360px] flex-1 overflow-hidden px-5 pb-5">
           <DataTable<UserIdentity>
             tableId="identity-users"
             rows={users}

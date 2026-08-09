@@ -1,6 +1,6 @@
 import type { Dispatch, SetStateAction } from "react";
 import type { ErrorLogItem } from "../logsHelpers";
-import { Button } from "@code-proxy/ui";
+import { Button, surface } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
 import { EmptyState } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
@@ -235,7 +235,7 @@ export function ErrorLogsTab({
                   return (
                     <div
                       key={file.name}
-                      className="flex flex-col gap-3 rounded-2xl border border-slate-900/8 bg-white/70 px-4 py-3 shadow-sm sm:flex-row sm:items-start sm:justify-between dark:border-white/8 dark:bg-neutral-950/60"
+                      className={[surface({ tone: "raised", radius: "2xl" }), "flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-start sm:justify-between"].join(" ")}
                     >
                       <div className="min-w-0 flex-1 space-y-2">
                         <div className="min-w-0">

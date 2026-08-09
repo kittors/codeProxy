@@ -13,6 +13,12 @@ export type QuotaItem = {
   windowSeconds?: number;
   meta?: string;
   type?: string;
+  /**
+   * When the upstream last confirmed this window. Windows the upstream omitted
+   * from recent payloads keep an older value than their siblings, so staleness is
+   * per-window rather than per-card. Undefined means unknown (legacy payloads).
+   */
+  observedAtMs?: number;
 };
 
 export type QuotaState = {
@@ -25,6 +31,12 @@ export type QuotaState = {
   updatedAt?: number;
   fetchedAt?: number;
   source?: string;
+  /**
+   * Newest per-window observation for the card. Distinct from updatedAt, which
+   * only tells when the backend row was last touched — including by a failed
+   * probe that refreshed nothing.
+   */
+  quotaObservedAtMs?: number;
 };
 
 // API payload types
