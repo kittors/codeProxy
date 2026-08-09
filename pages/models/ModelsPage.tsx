@@ -816,7 +816,7 @@ export function ModelsPage() {
     ) : null;
 
   return (
-    <section className="flex flex-1 flex-col gap-4 md:h-[calc(100dvh-112px)] md:min-h-0 md:overflow-hidden">
+    <section className="flex flex-1 flex-col gap-4 md:min-h-0 md:overflow-hidden">
       <ModelsStatsCards stats={totalStats} totalCost={totalCost} />
 
       <ModelsPageTabs activeTab={activeTab} onTabChange={setActiveTab} />

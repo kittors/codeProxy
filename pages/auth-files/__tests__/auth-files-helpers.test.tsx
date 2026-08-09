@@ -3,9 +3,11 @@ import { useState, type PropsWithChildren } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { AuthFileItem } from "@code-proxy/api-client";
 import {
+  AUTH_FILE_STATUS_FILTERS,
   AUTH_FILES_DATA_CACHE_KEY,
   AUTH_FILES_DATA_CACHE_TTL_MS,
   AUTH_FILES_UI_STATE_KEY,
+  authFileMatchesStatusFilter,
   buildUsageIndex,
   DEFAULT_CACHE_TENANT_ID,
   pickQuotaPreviewItem,
@@ -1177,7 +1179,8 @@ test("shows auth-level quota recovery records as 429 restriction badges", () => 
     expect(resolveClaudeOAuthHealthBadges(file, Date.parse("2026-06-23T08:00:00.000Z"))).toEqual(
       [],
     );
-    expect(Array.from(resolveAuthFileStatusBuckets(file))).toEqual([]);
+    // 未被禁用的账号始终命中 enabled 桶，除此之外不应出现任何错误桶。
+    expect(Array.from(resolveAuthFileStatusBuckets(file))).toEqual(["enabled"]);
   });
 
   test("classifies Claude OAuth health into auth and 429 status buckets", () => {
@@ -1202,9 +1205,44 @@ test("shows auth-level quota recovery records as 429 restriction badges", () => 
     } satisfies AuthFileItem;
 
     expect(Array.from(resolveAuthFileStatusBuckets(file)).sort()).toEqual([
+      "enabled",
       "http-429",
       "http-auth",
     ]);
+  });
+
+  test("classifies auth files into enabled / disabled status buckets", () => {
+    const enabledFile = {
+      name: "codex-enabled.json",
+      type: "codex",
+      provider: "codex",
+    } satisfies AuthFileItem;
+    const disabledFile = {
+      name: "codex-disabled.json",
+      type: "codex",
+      provider: "codex",
+      disabled: true,
+    } satisfies AuthFileItem;
+    // 启用但上游报错的账号：错误桶不该把它挤出「启用」筛选。
+    const enabledWithErrorFile = {
+      name: "codex-rate-limited.json",
+      type: "codex",
+      provider: "codex",
+      restrictions: [{ scope: "auth", http_status: 429, reason: "quota" }],
+    } satisfies AuthFileItem;
+
+    expect(Array.from(resolveAuthFileStatusBuckets(enabledFile))).toEqual(["enabled"]);
+    expect(Array.from(resolveAuthFileStatusBuckets(disabledFile))).toEqual(["disabled"]);
+    expect(Array.from(resolveAuthFileStatusBuckets(enabledWithErrorFile)).sort()).toEqual([
+      "enabled",
+      "http-429",
+    ]);
+
+    expect(authFileMatchesStatusFilter(enabledFile, "enabled")).toBe(true);
+    expect(authFileMatchesStatusFilter(enabledWithErrorFile, "enabled")).toBe(true);
+    expect(authFileMatchesStatusFilter(disabledFile, "enabled")).toBe(false);
+    expect(authFileMatchesStatusFilter(disabledFile, "disabled")).toBe(true);
+    expect(AUTH_FILE_STATUS_FILTERS).toContain("enabled");
   });
 
   test("prefers current auth-file plan metadata over cached quota plan", () => {
@@ -1382,6 +1420,48 @@ test("shows auth-level quota recovery records as 429 restriction badges", () => 
       expect(result.current.selectableFilteredFiles.map((file) => file.name)).toEqual([
         "alpha.json",
         "beta.json",
+      ]);
+    });
+  });
+
+  test("counts and filters enabled auth files", async () => {
+    const files = [
+      { name: "alpha.json", type: "codex", provider: "codex" },
+      { name: "beta.json", type: "codex", provider: "codex", disabled: true },
+      {
+        name: "gamma.json",
+        type: "codex",
+        provider: "codex",
+        restrictions: [{ scope: "auth", http_status: 429, reason: "quota" }],
+      },
+    ] as AuthFileItem[];
+
+    const { result } = renderHook(
+      () => {
+        const [page, setPage] = useState(1);
+        const [selectedFileNames, setSelectedFileNames] = useState<string[]>([]);
+        return useAuthFilesListState({
+          files,
+          filter: "all",
+          tagFilter: "",
+          statusFilter: "enabled",
+          search: "",
+          page,
+          pageSize: 10,
+          setPage,
+          selectedFileNames,
+          setSelectedFileNames,
+        });
+      },
+      { wrapper },
+    );
+
+    await waitFor(() => {
+      expect(result.current.statusFilterCounts.enabled).toBe(2);
+      expect(result.current.statusFilterCounts.disabled).toBe(1);
+      expect(result.current.filteredFiles.map((file) => file.name)).toEqual([
+        "alpha.json",
+        "gamma.json",
       ]);
     });
   });

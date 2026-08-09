@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./fonts.css";
 @plugin "@tailwindcss/typography";
 @source "../../../../apps/admin-panel/src";
 @source "../../../../pages";
@@ -13,15 +14,22 @@
    * 字号：10 / 12 / 14 / 16 / 18 / 20 / 24 / 30 / 36 / 48 / 60 px
    * 圆角：2 / 4 / 6 / 8 / 12 / 16 / 24 / 32 px，以及 full
    */
-  --font-sans: "SF Pro Text", "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  /*
+   * 字体栈按「西文 → 中文 → 系统兜底」排列：Inter 不含汉字，浏览器逐字回退到
+   * Noto Sans SC，于是中西文各用各的最优字形。系统字体留在最后，只在自托管
+   * 字体加载失败时兜底（见 styles/fonts.css）。
+   */
+  --font-sans: "Inter Variable", "Noto Sans SC Variable", "SF Pro Text", "Segoe UI", "PingFang SC",
+    "Microsoft YaHei", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono Variable", "SFMono-Regular", Consolas, "Liberation Mono", Menlo,
+    monospace;
   /*
    * 展示级字体：落地页大标题、章节序号、eyebrow 标签统一用等宽。
    * CliRelay 是 CLI / 网关类基础设施产品，等宽字形本身就是这类产品的视觉母语；
    * 中文回落到 sans，避免等宽字体缺中文字形时出现豆腐块与参差基线。
    */
-  --font-display: "JetBrains Mono", "SFMono-Regular", Menlo, "PingFang SC", "Microsoft YaHei",
-    monospace;
+  --font-display: "JetBrains Mono Variable", "SFMono-Regular", Menlo, "Noto Sans SC Variable",
+    "PingFang SC", "Microsoft YaHei", monospace;
 
   --text-2xs: 0.625rem;
   --text-2xs--line-height: 0.875rem;
@@ -58,6 +66,36 @@
 }
 
 @layer base {
+  /*
+   * 全局视觉密度。间距、字号、圆角这套 token 全部建立在 rem 上，所以调根字号就等于
+   * 等比缩放整个面板，不必逐个组件改尺寸。
+   *
+   * 刻意不用 zoom / transform: scale——面板里的下拉、日期选择器、Tooltip 都是 portal 到
+   * body 再用 getBoundingClientRect 定位的，缩放上下文会让读到的坐标和写回去的坐标不在
+   * 同一个尺度上，浮层会整体偏移。改根字号没有这个问题。
+   *
+   * 用 % 而不是 px：用户在浏览器里调过默认字号时，这个比例仍然作用在他们自己的基准上。
+   */
+  :root {
+    --ui-scale: 0.9;
+  }
+
+  html {
+    font-size: calc(100% * var(--ui-scale));
+  }
+
+  /*
+   * 图标尺寸是以 px 写在 svg 的 width/height 属性上的（lucide 的 size prop），不吃根字号；
+   * 界面整体收紧后它们会相对显大，读起来比文字更抢眼。用同一个比例补回来。
+   *
+   * 用 zoom 而不是 transform: scale——zoom 会一并缩掉布局盒，图标周围的间距关系保持原样；
+   * scale 只改绘制，会在原尺寸的位置留下空洞。前面对整个页面排除 zoom 是因为浮层定位要读
+   * getBoundingClientRect，而图标是叶子节点，不参与任何定位计算，这里没有那个风险。
+   */
+  :where(svg.lucide) {
+    zoom: var(--ui-scale);
+  }
+
   body {
     font-family: var(--font-sans);
     font-size: var(--text-sm);

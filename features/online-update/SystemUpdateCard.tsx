@@ -10,7 +10,7 @@ import { useOnlineUpdateContext } from "./OnlineUpdateProvider";
  * lets the single modal render the result. Previously this card duplicated the
  * whole check/apply/subscribe flow and rendered a second modal.
  */
-export function SystemUpdateCard() {
+export function SystemUpdateCard({ className }: { className?: string }) {
   const { t } = useTranslation();
   const context = useOnlineUpdateContext();
 
@@ -29,6 +29,7 @@ export function SystemUpdateCard() {
 
   return (
     <Card
+      className={className}
       title={t("auto_update.system_title")}
       description={t("auto_update.system_description")}
       actions={

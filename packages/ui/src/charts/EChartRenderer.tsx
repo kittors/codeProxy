@@ -1,7 +1,18 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ECBasicOption } from "echarts/types/dist/shared";
 import ReactECharts from "echarts-for-react";
 import { useTheme } from "../theme/ThemeProvider";
+
+/**
+ * 图表是 canvas 画出来的，读不到 CSS 的字体栈，echarts 默认退回系统 sans-serif——
+ * 于是同一屏里图表文字和界面文字是两套字形。这里把 `--font-sans` 取出来喂给顶层
+ * textStyle，凡是没单独指定 fontFamily 的图表组件都会继承它。
+ */
+const readSansFontFamily = (): string | undefined => {
+  if (typeof document === "undefined") return undefined;
+  const value = getComputedStyle(document.documentElement).getPropertyValue("--font-sans").trim();
+  return value || undefined;
+};
 
 export type EChartEvents = Record<string, (params: unknown, chart: unknown) => void>;
 
@@ -42,6 +53,33 @@ export function EChartRenderer({
   const initialAnimationGuardUntilRef = useRef(0);
   const didResizeOnceRef = useRef(false);
   const [hasMeasuredSize, setHasMeasuredSize] = useState(false);
+  const [fontRevision, setFontRevision] = useState(0);
+
+  /*
+   * webfont 到位之前 canvas 已经用回退字体把文字画完了，而且 echarts 不会自己重画。
+   * 等 document.fonts.ready 之后把版本号 +1，下面的 useMemo 会产出一个新的 option 引用，
+   * 逼 echarts 重新排一次文字——否则首次访问会一直停在系统字体上，直到下次交互重绘。
+   */
+  useEffect(() => {
+    const fonts = document.fonts;
+    if (!fonts || fonts.status === "loaded") return;
+    let cancelled = false;
+    fonts.ready.then(() => {
+      if (!cancelled) setFontRevision((current) => current + 1);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const styledOption = useMemo(() => {
+    const fontFamily = readSansFontFamily();
+    if (!fontFamily) return option;
+    // 调用方自己写的 textStyle 优先，这里只补默认字体。
+    const ownTextStyle = (option as { textStyle?: Record<string, unknown> }).textStyle;
+    return { ...option, textStyle: { fontFamily, ...ownTextStyle } } as ECBasicOption;
+    // fontRevision 只用来在字体就绪后触发重算，不参与 option 内容。
+  }, [option, fontRevision]);
 
   const now = () => Date.now();
 
@@ -223,7 +261,7 @@ export function EChartRenderer({
       {hasMeasuredSize ? (
         <ReactECharts
           ref={chartRef}
-          option={option}
+          option={styledOption}
           theme={mode === "dark" ? "dark" : undefined}
           style={{ height: "100%", width: "100%" }}
           showLoading={loading}

@@ -472,7 +472,7 @@ export function ChannelGroupsPage() {
   );
 
   return (
-    <div className="space-y-4 overflow-x-hidden md:flex md:h-[calc(100dvh-112px)] md:min-h-0 md:flex-col">
+    <div className="space-y-4 overflow-x-hidden md:flex md:min-h-0 md:flex-1 md:flex-col">
       <Card
         className="md:flex md:min-h-0 md:flex-1 md:flex-col md:overflow-hidden"
         bodyClassName="md:flex md:min-h-0 md:flex-1 md:flex-col"

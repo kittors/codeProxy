@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { RefreshCw } from "lucide-react";
-import { Button } from "@code-proxy/ui";
+import { Button, surface } from "@code-proxy/ui";
 import { Modal } from "@code-proxy/ui";
 import { Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { EChart } from "@code-proxy/ui";
@@ -93,7 +93,7 @@ export function GroupOverviewModal({
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-2xl border border-slate-900/8 bg-white/70 px-4 py-3 shadow-sm dark:border-white/8 dark:bg-neutral-950/60">
+          <div className={[surface({ tone: "raised", radius: "2xl" }), "px-4 py-3"].join(" ")}>
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-white/45">
               {activeGroupTitle}
             </p>
@@ -104,7 +104,7 @@ export function GroupOverviewModal({
               {t("auth_files.group_overview_file_count")}
             </p>
           </div>
-          <div className="rounded-2xl border border-slate-900/8 bg-white/70 px-4 py-3 shadow-sm dark:border-white/8 dark:bg-neutral-950/60">
+          <div className={[surface({ tone: "raised", radius: "2xl" }), "px-4 py-3"].join(" ")}>
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-white/45">
               {t("auth_files.group_overview_total_calls_label")}
             </p>
@@ -115,7 +115,7 @@ export function GroupOverviewModal({
               {t("auth_files.group_overview_total_calls_help")}
             </p>
           </div>
-          <div className="rounded-2xl border border-slate-900/8 bg-white/70 px-4 py-3 shadow-sm dark:border-white/8 dark:bg-neutral-950/60">
+          <div className={[surface({ tone: "raised", radius: "2xl" }), "px-4 py-3"].join(" ")}>
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-white/45">
               {t("auth_files.group_overview_avg_week_label")}
             </p>
@@ -126,7 +126,7 @@ export function GroupOverviewModal({
               {t("auth_files.group_overview_avg_week_help")}
             </p>
           </div>
-          <div className="rounded-2xl border border-slate-900/8 bg-white/70 px-4 py-3 shadow-sm dark:border-white/8 dark:bg-neutral-950/60">
+          <div className={[surface({ tone: "raised", radius: "2xl" }), "px-4 py-3"].join(" ")}>
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-white/45">
               {t("auth_files.group_overview_sample_count", {
                 count: activeGroupOverview.quotaSampleCount,

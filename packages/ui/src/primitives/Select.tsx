@@ -21,8 +21,7 @@ import {
   selectOptionSelected,
   selectPanel,
   selectTriggerChip,
-  selectTriggerDisabled,
-  selectTriggerOpen,
+  selectTriggerState,
 } from "../utils/selectStyles";
 import type { ControlSize } from "../utils/controlStyles";
 
@@ -180,12 +179,11 @@ export function Select({
         aria-invalid={ariaInvalid}
         aria-describedby={ariaDescribedBy}
         disabled={disabled}
+        data-state={selectTriggerState(open)}
         onClick={() => setOpen((prev) => !prev)}
         className={cn(
           variant === "chip" ? selectTriggerChip : getSelectTriggerBase(size),
           variant !== "chip" && fullWidth ? "w-full" : null,
-          open && selectTriggerOpen,
-          disabled && selectTriggerDisabled,
           className,
         )}
       >
