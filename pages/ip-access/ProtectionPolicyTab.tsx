@@ -1,0 +1,311 @@
+import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { Save } from "lucide-react";
+import {
+  ipAccessApi,
+  type AutoBanMode,
+  type IpAccessStatus,
+  type ProtectionPolicy,
+  type ThrottleScopeView,
+} from "@code-proxy/api-client";
+import {
+  Button,
+  PageLoader,
+  Select,
+  TextInput,
+  ToggleSwitch,
+  useToast,
+} from "@code-proxy/ui";
+import { PermissionGate } from "@app/providers/PermissionGate";
+
+interface ProtectionPolicyTabProps {
+  status: IpAccessStatus | null;
+  onPolicySaved: () => void;
+}
+
+export function ProtectionPolicyTab({ status, onPolicySaved }: ProtectionPolicyTabProps) {
+  const { t } = useTranslation();
+  const { notify } = useToast();
+  const [policy, setPolicy] = useState<ProtectionPolicy | null>(null);
+  const [throttle, setThrottle] = useState<ThrottleScopeView[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await ipAccessApi.policy();
+      setPolicy(response.policy);
+      setThrottle(response.throttle ?? []);
+    } catch (error) {
+      notify({
+        type: "error",
+        message: error instanceof Error ? error.message : t("ip_access.load_failed"),
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [notify, t]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const save = async () => {
+    if (!policy) return;
+    setSaving(true);
+    try {
+      const response = await ipAccessApi.updatePolicy(policy);
+      setPolicy(response.policy);
+      setThrottle(response.throttle ?? []);
+      onPolicySaved();
+      notify({ type: "success", message: t("ip_access.policy_saved") });
+    } catch (error) {
+      notify({
+        type: "error",
+        message: error instanceof Error ? error.message : t("ip_access.save_failed"),
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading || !policy) return <PageLoader />;
+
+  const lockdownBlocked = !status?.trusted || status?.self_allowed === false;
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto pb-2">
+      <Section
+        title={t("ip_access.section_lockdown")}
+        description={t("ip_access.section_lockdown_desc")}
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-slate-700 dark:text-white/80">
+              {t("ip_access.lockdown_label")}
+            </p>
+            <p className="mt-0.5 text-xs text-slate-500">
+              {lockdownBlocked && !policy.lockdown
+                ? t("ip_access.lockdown_blocked_hint", {
+                    cidr: status?.suggested_self_rule ?? "",
+                  })
+                : t("ip_access.lockdown_hint")}
+            </p>
+          </div>
+          <PermissionGate permission="platform.ip_access.write">
+            <ToggleSwitch
+              checked={policy.lockdown}
+              disabled={saving || (lockdownBlocked && !policy.lockdown)}
+              onCheckedChange={(next) => setPolicy({ ...policy, lockdown: next })}
+              ariaLabel={t("ip_access.lockdown_label")}
+            />
+          </PermissionGate>
+        </div>
+      </Section>
+
+      <Section
+        title={t("ip_access.section_auto_ban")}
+        description={t("ip_access.section_auto_ban_desc")}
+      >
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label={t("ip_access.auto_ban_mode")} hint={t(`ip_access.auto_ban_mode_hint_${policy.auto_ban.mode}`)}>
+            <Select
+              value={policy.auto_ban.mode}
+              onChange={(value) =>
+                setPolicy({
+                  ...policy,
+                  auto_ban: { ...policy.auto_ban, mode: value as AutoBanMode },
+                })
+              }
+              options={(["off", "observe", "enforce"] as AutoBanMode[]).map((mode) => ({
+                value: mode,
+                label: t(`ip_access.auto_ban_mode_${mode}`),
+              }))}
+              fullWidth
+            />
+          </Field>
+          <NumberField
+            label={t("ip_access.auto_ban_threshold")}
+            hint={t("ip_access.auto_ban_threshold_hint")}
+            value={policy.auto_ban.failure_threshold}
+            onChange={(value) =>
+              setPolicy({ ...policy, auto_ban: { ...policy.auto_ban, failure_threshold: value } })
+            }
+          />
+          <NumberField
+            label={t("ip_access.auto_ban_window")}
+            hint={t("ip_access.auto_ban_window_hint")}
+            value={policy.auto_ban.window_seconds}
+            onChange={(value) =>
+              setPolicy({ ...policy, auto_ban: { ...policy.auto_ban, window_seconds: value } })
+            }
+          />
+          <NumberField
+            label={t("ip_access.auto_ban_minutes")}
+            hint={t("ip_access.auto_ban_minutes_hint")}
+            value={policy.auto_ban.ban_minutes}
+            onChange={(value) =>
+              setPolicy({ ...policy, auto_ban: { ...policy.auto_ban, ban_minutes: value } })
+            }
+          />
+        </div>
+      </Section>
+
+      <Section
+        title={t("ip_access.section_throttle")}
+        description={t("ip_access.section_throttle_desc")}
+      >
+        <div className="grid gap-4 sm:grid-cols-2">
+          <NumberField
+            label={t("ip_access.throttle_account_limit")}
+            hint={t("ip_access.throttle_account_limit_hint")}
+            value={policy.throttle.account_failure_limit}
+            onChange={(value) =>
+              setPolicy({
+                ...policy,
+                throttle: { ...policy.throttle, account_failure_limit: value },
+              })
+            }
+          />
+          <NumberField
+            label={t("ip_access.throttle_window")}
+            hint={t("ip_access.throttle_window_hint")}
+            value={policy.throttle.login_failure_window_seconds}
+            onChange={(value) =>
+              setPolicy({
+                ...policy,
+                throttle: { ...policy.throttle, login_failure_window_seconds: value },
+              })
+            }
+          />
+          <NumberField
+            label={t("ip_access.throttle_mgmt_limit")}
+            hint={t("ip_access.throttle_mgmt_limit_hint")}
+            value={policy.throttle.management_key_failure_limit}
+            onChange={(value) =>
+              setPolicy({
+                ...policy,
+                throttle: { ...policy.throttle, management_key_failure_limit: value },
+              })
+            }
+          />
+          <NumberField
+            label={t("ip_access.throttle_reset_hours")}
+            hint={t("ip_access.throttle_reset_hours_hint")}
+            value={policy.throttle.failure_reset_hours}
+            onChange={(value) =>
+              setPolicy({ ...policy, throttle: { ...policy.throttle, failure_reset_hours: value } })
+            }
+          />
+        </div>
+      </Section>
+
+      <Section
+        title={t("ip_access.section_effective")}
+        description={t("ip_access.section_effective_desc")}
+      >
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[560px] text-left text-sm">
+            <thead className="text-xs text-slate-500">
+              <tr>
+                <th className="py-1.5 pr-3 font-medium">{t("ip_access.effective_scope")}</th>
+                <th className="py-1.5 pr-3 font-medium">{t("ip_access.effective_key")}</th>
+                <th className="py-1.5 pr-3 font-medium">{t("ip_access.effective_short")}</th>
+                <th className="py-1.5 pr-3 font-medium">{t("ip_access.effective_long")}</th>
+                <th className="py-1.5 font-medium">{t("ip_access.effective_reset")}</th>
+              </tr>
+            </thead>
+            <tbody className="text-slate-700 dark:text-white/80">
+              {throttle.map((row) => (
+                <tr key={row.scope} className="border-t border-slate-100 dark:border-white/8">
+                  <td className="py-1.5 pr-3">{t(`ip_access.scope_${row.scope}`)}</td>
+                  <td className="py-1.5 pr-3 text-slate-500">
+                    {t(`ip_access.dimension_${row.key_dimension}`)}
+                  </td>
+                  <td className="py-1.5 pr-3 tabular-nums">
+                    {row.short_limit > 0 ? `${row.short_limit} / ${row.short_window}` : "—"}
+                  </td>
+                  <td className="py-1.5 pr-3 tabular-nums">
+                    {row.long_limit > 0 ? `${row.long_limit} / ${row.long_window}` : "—"}
+                  </td>
+                  <td className="py-1.5 tabular-nums">{row.reset_after}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Section>
+
+      <PermissionGate permission="platform.ip_access.write">
+        <div className="flex justify-end">
+          <Button variant="primary" onClick={() => void save()} disabled={saving}>
+            <Save size={15} />
+            {t("common.save")}
+          </Button>
+        </div>
+      </PermissionGate>
+    </div>
+  );
+}
+
+function Section({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-2xl border border-black/[0.06] px-4 py-4 dark:border-white/[0.06]">
+      <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{title}</h3>
+      <p className="mt-0.5 mb-3 text-xs text-slate-500">{description}</p>
+      {children}
+    </div>
+  );
+}
+
+function Field({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <label className="block text-sm font-medium text-slate-700 dark:text-white/80">
+        {label}
+      </label>
+      {children}
+      {hint ? <p className="text-xs text-slate-500">{hint}</p> : null}
+    </div>
+  );
+}
+
+function NumberField({
+  label,
+  hint,
+  value,
+  onChange,
+}: {
+  label: string;
+  hint?: string;
+  value: number;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <Field label={label} hint={hint}>
+      <TextInput
+        type="number"
+        min={0}
+        value={String(value)}
+        onChange={(event) => onChange(Number(event.target.value) || 0)}
+      />
+    </Field>
+  );
+}
