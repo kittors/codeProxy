@@ -184,7 +184,7 @@ export function ThreatOverviewTab({
         </div>
       </div>
 
-      <div className="relative min-h-[420px] px-5 pb-4">
+      <div className="relative min-h-0 flex-1 overflow-hidden px-5">
         <DataTable<AuthSourceSummary>
           tableId="ip-access-threat-overview"
           rows={items}
@@ -192,6 +192,8 @@ export function ThreatOverviewTab({
           rowKey={(item) => item.ip_prefix}
           loading={loading}
           virtualize={false}
+          height="h-full"
+          minHeight="min-h-full"
           minWidth="min-w-[900px]"
           emptyText={t("ip_access.no_threats")}
           showAllLoadedMessage={false}

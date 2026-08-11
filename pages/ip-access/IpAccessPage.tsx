@@ -63,10 +63,10 @@ export function IpAccessPage() {
   }, [loadStatus]);
 
   return (
-    <section className="flex flex-col gap-3">
+    <section className="flex min-h-0 flex-1 flex-col gap-3">
       <TrustBanner status={status} />
 
-      <div className="flex flex-col rounded-2xl border border-black/[0.06] bg-white shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] dark:border-white/[0.06] dark:bg-neutral-950/70 dark:shadow-[0_1px_2px_rgb(0_0_0_/_0.22)]">
+      <div className="flex min-h-0 flex-1 flex-col rounded-2xl border border-black/[0.06] bg-white shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] dark:border-white/[0.06] dark:bg-neutral-950/70 dark:shadow-[0_1px_2px_rgb(0_0_0_/_0.22)]">
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-5 pb-3">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <h2 className="flex items-center gap-2 text-base font-semibold text-slate-950 dark:text-white">
@@ -127,7 +127,7 @@ export function IpAccessPage() {
             </TabsList>
           </div>
 
-          <TabsContent value="overview">
+          <TabsContent value="overview" className="flex min-h-0 flex-1 flex-col">
             <ThreatOverviewTab
               refreshToken={refreshToken}
               onBan={(cidr) => openRuleForm(cidr, "deny")}
@@ -136,7 +136,7 @@ export function IpAccessPage() {
             />
           </TabsContent>
 
-          <TabsContent value="rules">
+          <TabsContent value="rules" className="flex min-h-0 flex-1 flex-col">
             <AccessRulesTab
               pendingRule={pendingRule}
               onPendingRuleHandled={() => setPendingRule(null)}
@@ -146,11 +146,11 @@ export function IpAccessPage() {
             />
           </TabsContent>
 
-          <TabsContent value="policy">
+          <TabsContent value="policy" className="flex min-h-0 flex-1 flex-col">
             <ProtectionPolicyTab status={status} onPolicySaved={afterRulesChanged} />
           </TabsContent>
 
-          <TabsContent value="attempts">
+          <TabsContent value="attempts" className="flex min-h-0 flex-1 flex-col">
             <AttemptsTab ipFilter={inspectIp} refreshToken={refreshToken} />
           </TabsContent>
         </Tabs>
