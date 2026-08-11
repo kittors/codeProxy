@@ -63,6 +63,8 @@ function policyFixture(overrides: Partial<ProtectionPolicy> = {}): ProtectionPol
       unauthenticated_request_limit: 0,
       failure_reset_hours: 0,
     },
+    alert: { notify_observe: false, cooldown_minutes: 30 },
+    attempt_retention_days: 30,
     ...overrides,
   };
 }

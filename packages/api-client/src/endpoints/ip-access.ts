@@ -84,10 +84,20 @@ export interface ThrottleOverride {
   failure_reset_hours: number;
 }
 
+export interface AlertPolicy {
+  webhook_url?: string;
+  notify_observe: boolean;
+  cooldown_minutes: number;
+}
+
 export interface ProtectionPolicy {
   lockdown: boolean;
   auto_ban: AutoBanPolicy;
   throttle: ThrottleOverride;
+  /** Outbound notification for ban decisions. */
+  alert: AlertPolicy;
+  /** How long authentication attempts are kept. */
+  attempt_retention_days: number;
   /**
    * Reverse proxies whose forwarding headers may be believed. Stored in the
    * database so it can be fixed from the panel without editing config.yaml and
@@ -233,6 +243,41 @@ export const ipAccessApi = {
         window: params?.window || undefined,
         page: params?.page ?? 1,
         size: params?.size ?? 50,
+      },
+    }),
+  /** Apply one change to many rules; returns per-id outcomes. */
+  bulkUpdateRules: (body: {
+    ids: string[];
+    enabled?: boolean;
+    delete?: boolean;
+    note?: string;
+    expires_at?: string;
+  }) =>
+    apiClient.patch<{ applied: string[]; failed: Record<string, string> }>(
+      "/ip-access/rules",
+      body,
+    ),
+  /**
+   * Downloads the CSV export.
+   *
+   * Goes through the client rather than a bare anchor href: the management API
+   * requires a bearer token, which an <a download> cannot send, so a plain link
+   * would silently download a 401 body as a .csv file.
+   */
+  exportAttempts: (params?: {
+    ip?: string;
+    username?: string;
+    outcome?: string;
+    surface?: string;
+    window?: AuthAttemptWindow;
+  }) =>
+    apiClient.downloadToFile("/auth-attempts/export", "auth-attempts.csv", {
+      params: {
+        ip: params?.ip || undefined,
+        username: params?.username || undefined,
+        outcome: params?.outcome || undefined,
+        surface: params?.surface || undefined,
+        window: params?.window || undefined,
       },
     }),
   summary: (params?: { window?: AuthAttemptWindow; limit?: number }) =>

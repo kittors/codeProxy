@@ -211,6 +211,21 @@ export function AuditLogsPage() {
         render: (item) => formatWhatHappened(item),
       },
       {
+        key: "ip",
+        label: t("identity_admin.source_ip"),
+        width: COLUMN_WIDTH.compact,
+        overflowTooltip: true,
+        // "Who changed this" is only half an answer without "from where".
+        render: (item) =>
+          item.ip_address ? (
+            <span className="font-mono text-xs text-slate-600 dark:text-white/70">
+              {item.ip_address}
+            </span>
+          ) : (
+            <span className="text-slate-400">—</span>
+          ),
+      },
+      {
         key: "result",
         label: t("identity_admin.result"),
         width: COLUMN_WIDTH.badge,

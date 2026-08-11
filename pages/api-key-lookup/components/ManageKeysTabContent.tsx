@@ -2,6 +2,7 @@ import { Plus, RefreshCw } from "lucide-react";
 import type { EndUserAPIKey } from "@code-proxy/api-client";
 import { Button, Card } from "@code-proxy/ui";
 import { OwnedApiKeysTable } from "@features/period-spending";
+import { PortalRecentSignIns } from "./PortalRecentSignIns";
 
 export function ManageKeysTabContent({
   t,
@@ -62,6 +63,7 @@ export function ManageKeysTabContent({
           }}
         />
       </div>
+      <PortalRecentSignIns />
     </Card>
   );
 }

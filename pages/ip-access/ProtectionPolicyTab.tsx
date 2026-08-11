@@ -10,6 +10,7 @@ import {
 } from "@code-proxy/api-client";
 import {
   Button,
+  ConfirmModal,
   PageLoader,
   Select,
   TextInput,
@@ -31,6 +32,7 @@ export function ProtectionPolicyTab({ status, onPolicySaved }: ProtectionPolicyT
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [proxyDraft, setProxyDraft] = useState("");
+  const [lockdownConfirm, setLockdownConfirm] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -199,7 +201,15 @@ export function ProtectionPolicyTab({ status, onPolicySaved }: ProtectionPolicyT
             <ToggleSwitch
               checked={policy.lockdown}
               disabled={saving || (lockdownBlocked && !policy.lockdown)}
-              onCheckedChange={(next) => setPolicy({ ...policy, lockdown: next })}
+              onCheckedChange={(next) => {
+                // Turning it off is always safe; turning it on can lock the
+                // operator out, so that direction asks first.
+                if (next) {
+                  setLockdownConfirm(true);
+                  return;
+                }
+                setPolicy({ ...policy, lockdown: false });
+              }}
               ariaLabel={t("ip_access.lockdown_label")}
             />
           </PermissionGate>
@@ -304,6 +314,60 @@ export function ProtectionPolicyTab({ status, onPolicySaved }: ProtectionPolicyT
       </Section>
 
       <Section
+        title={t("ip_access.section_alert")}
+        description={t("ip_access.section_alert_desc")}
+      >
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label={t("ip_access.alert_webhook")} hint={t("ip_access.alert_webhook_hint")}>
+            <TextInput
+              value={policy.alert?.webhook_url ?? ""}
+              onChange={(event) =>
+                setPolicy({
+                  ...policy,
+                  alert: { ...policy.alert, webhook_url: event.target.value },
+                })
+              }
+              placeholder="https://hooks.example.com/…"
+            />
+          </Field>
+          <NumberField
+            label={t("ip_access.alert_cooldown")}
+            hint={t("ip_access.alert_cooldown_hint")}
+            value={policy.alert?.cooldown_minutes ?? 30}
+            onChange={(value) =>
+              setPolicy({ ...policy, alert: { ...policy.alert, cooldown_minutes: value } })
+            }
+          />
+          <div className="flex items-start justify-between gap-4 sm:col-span-2">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-slate-700 dark:text-white/80">
+                {t("ip_access.alert_notify_observe")}
+              </p>
+              <p className="mt-0.5 text-xs text-slate-500">
+                {t("ip_access.alert_notify_observe_hint")}
+              </p>
+            </div>
+            <PermissionGate permission="platform.ip_access.write">
+              <ToggleSwitch
+                checked={policy.alert?.notify_observe ?? false}
+                disabled={saving}
+                onCheckedChange={(next) =>
+                  setPolicy({ ...policy, alert: { ...policy.alert, notify_observe: next } })
+                }
+                ariaLabel={t("ip_access.alert_notify_observe")}
+              />
+            </PermissionGate>
+          </div>
+          <NumberField
+            label={t("ip_access.retention_days")}
+            hint={t("ip_access.retention_days_hint")}
+            value={policy.attempt_retention_days ?? 30}
+            onChange={(value) => setPolicy({ ...policy, attempt_retention_days: value })}
+          />
+        </div>
+      </Section>
+
+      <Section
         title={t("ip_access.section_effective")}
         description={t("ip_access.section_effective_desc")}
       >
@@ -338,6 +402,22 @@ export function ProtectionPolicyTab({ status, onPolicySaved }: ProtectionPolicyT
           </table>
         </div>
       </Section>
+
+      <ConfirmModal
+        open={lockdownConfirm}
+        title={t("ip_access.lockdown_confirm_title")}
+        description={t("ip_access.lockdown_confirm_body", {
+          cidr: status?.suggested_self_rule ?? "",
+        })}
+        confirmText={t("ip_access.lockdown_confirm_ok")}
+        cancelText={t("common.cancel")}
+        variant="danger"
+        onClose={() => setLockdownConfirm(false)}
+        onConfirm={() => {
+          setPolicy({ ...policy, lockdown: true });
+          setLockdownConfirm(false);
+        }}
+      />
 
       <PermissionGate permission="platform.ip_access.write">
         <div className="flex justify-end">

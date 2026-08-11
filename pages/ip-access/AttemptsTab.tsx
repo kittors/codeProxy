@@ -5,6 +5,7 @@ import {
   type AuthAttempt,
   type AuthAttemptWindow,
 } from "@code-proxy/api-client";
+import { Download } from "lucide-react";
 import {
   COLUMN_WIDTH,
   DataTable,
@@ -18,6 +19,7 @@ import {
 const PAGE_SIZE_OPTIONS = [20, 50, 100];
 const WINDOW_OPTIONS: AuthAttemptWindow[] = ["1h", "6h", "24h", "7d"];
 const OUTCOMES = ["", "failure", "throttled", "blocked", "success", "auto_banned", "would_ban"];
+const SURFACES = ["", "admin_login", "portal_login", "management_key", "refresh", "request"];
 
 const OUTCOME_TONE: Record<string, string> = {
   failure: "bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300",
@@ -44,7 +46,10 @@ export function AttemptsTab({
   const [pageSize, setPageSize] = useState(50);
   const [ip, setIp] = useState(ipFilter);
   const [outcome, setOutcome] = useState("");
+  const [username, setUsername] = useState("");
+  const [surface, setSurface] = useState("");
   const [window_, setWindow] = useState<AuthAttemptWindow>("24h");
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     setIp(ipFilter);
@@ -56,6 +61,8 @@ export function AttemptsTab({
       try {
         const response = await ipAccessApi.attempts({
           ip: ip || undefined,
+          username: username || undefined,
+          surface: surface || undefined,
           outcome: outcome || undefined,
           window: window_,
           page: nextPage,
@@ -74,16 +81,38 @@ export function AttemptsTab({
         setLoading(false);
       }
     },
-    [ip, notify, outcome, t, window_],
+    [ip, notify, outcome, surface, t, username, window_],
   );
 
   useEffect(() => {
     void load(1, pageSize);
     // Filter changes always reset to page 1; page navigation calls load directly.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ip, outcome, window_, refreshToken]);
+  }, [ip, outcome, surface, username, window_, refreshToken]);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  // The export mirrors the active filters: exporting something other than what
+  // is on screen is the kind of surprise that makes an export untrustworthy.
+  const exportAttempts = useCallback(async () => {
+    setExporting(true);
+    try {
+      await ipAccessApi.exportAttempts({
+        ip: ip || undefined,
+        username: username || undefined,
+        surface: surface || undefined,
+        outcome: outcome || undefined,
+        window: window_,
+      });
+    } catch (error) {
+      notify({
+        type: "error",
+        message: error instanceof Error ? error.message : t("ip_access.export_failed"),
+      });
+    } finally {
+      setExporting(false);
+    }
+  }, [ip, notify, outcome, surface, t, username, window_]);
 
   const columns = useMemo<DataTableColumn<AuthAttempt>[]>(
     () => [
@@ -180,6 +209,27 @@ export function AttemptsTab({
               aria-label={t("ip_access.col_outcome")}
             />
           </div>
+          <div className="w-full min-[480px]:w-auto sm:w-[180px]">
+            <TextInput
+              value={username}
+              onChange={(event) => setUsername(event.target.value)}
+              placeholder={t("ip_access.filter_username_placeholder")}
+              size="sm"
+            />
+          </div>
+          <div className="w-full min-[480px]:w-auto sm:w-[160px]">
+            <Select
+              value={surface}
+              onChange={setSurface}
+              options={SURFACES.map((value) => ({
+                value,
+                label: value ? t(`ip_access.surface_${value}`) : t("ip_access.surface_all"),
+              }))}
+              size="sm"
+              fullWidth
+              aria-label={t("ip_access.col_surface")}
+            />
+          </div>
           <div className="w-full min-[480px]:w-auto sm:w-[140px]">
             <Select
               value={window_}
@@ -193,6 +243,17 @@ export function AttemptsTab({
               aria-label={t("ip_access.filter_window")}
             />
           </div>
+          <button
+            type="button"
+            onClick={() => void exportAttempts()}
+            disabled={exporting}
+            aria-busy={exporting}
+            aria-label={t("ip_access.export_csv")}
+            title={t("ip_access.export_csv")}
+            className="ml-auto inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-slate-900 text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70 dark:bg-white dark:text-neutral-950 dark:hover:bg-slate-200"
+          >
+            <Download size={15} aria-hidden="true" />
+          </button>
         </div>
       </div>
 
