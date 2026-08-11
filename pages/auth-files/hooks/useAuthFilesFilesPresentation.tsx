@@ -397,23 +397,6 @@ export function useAuthFilesFilesPresentation({
     [nowMs, t],
   );
 
-  // Age of an observation, coarsest unit only ("6天" / "3小时"): the exact age of
-  // a value we already know is stale adds noise, the order of magnitude is what
-  // tells the user whether to trust it.
-  const formatQuotaAgeCompact = useCallback(
-    (observedAtMs?: number) => {
-      if (typeof observedAtMs !== "number" || !Number.isFinite(observedAtMs)) return null;
-      const diffMs = Math.max(0, nowMs - observedAtMs);
-      const minutes = Math.floor(diffMs / 60_000);
-      const hours = Math.floor(minutes / 60);
-      const days = Math.floor(hours / 24);
-      if (days >= 1) return t("m_quota.duration_day_compact", { count: days });
-      if (hours >= 1) return t("m_quota.duration_hour_compact", { count: hours });
-      return t("m_quota.duration_minute_compact", { count: Math.max(1, minutes) });
-    },
-    [nowMs, t],
-  );
-
   // Chips keep only the two largest units ("2d19h") so the countdown never
   // squeezes the percent out of a half-width chip.
   const formatQuotaResetTextChip = useCallback(
@@ -542,13 +525,10 @@ export function useAuthFilesFilesPresentation({
   const renderQuotaBar = useCallback(
     (label: string, item: QuotaItem | null, compact = false): ReactNode =>
       renderQuotaBarNode(label, item, compact, {
-        t,
-        nowMs,
         translateQuotaText,
         formatQuotaItemDetailText,
-        formatQuotaAgeCompact,
       }),
-    [formatQuotaAgeCompact, formatQuotaItemDetailText, nowMs, t, translateQuotaText],
+    [formatQuotaItemDetailText, translateQuotaText],
   );
 
   const fileColumns = useMemo<DataTableColumn<AuthFileItem>[]>(() => {
