@@ -64,6 +64,12 @@ export interface IpAccessStatus {
   trusted_proxies?: string[];
   /** Where that list came from: panel-managed, config.yaml, or nothing. */
   trusted_proxies_source?: "database" | "config" | "none";
+  /** The direct TCP peer, before any forwarding header is considered. */
+  peer?: string;
+  /** The forwarding chain as received, left to right. */
+  forwarded_chain?: string[];
+  /** True when the request carried no forwarding header at all. */
+  direct_peer?: boolean;
 }
 
 export type AutoBanMode = "off" | "observe" | "enforce";

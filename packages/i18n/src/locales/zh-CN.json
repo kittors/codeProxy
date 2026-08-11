@@ -5452,6 +5452,8 @@
     "lockdown_confirm_ok": "确认开启",
     "portal_recent_logins": "最近登录记录",
     "portal_recent_logins_hint": "近 30 天你账号的登录记录。发现不是本人的记录请立即修改密码。",
-    "portal_no_logins": "近 30 天没有登录记录"
+    "portal_no_logins": "近 30 天没有登录记录",
+    "chain_title": "当前请求的转发链（右侧为直连本服务的一跳）",
+    "chain_hint": "每一跳都要声明为可信代理，解析才能走到最左侧的真实客户端。当前解析结果：{{client}}。若结果落在回环地址，说明还有一跳没声明。"
   }
 }
