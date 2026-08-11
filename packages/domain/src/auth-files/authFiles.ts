@@ -58,23 +58,6 @@ export const AUTH_FILES_DATA_CACHE_KEY_V2 = "authFilesPage.dataCache.v2";
 /** Cached status/usage is only a warm-paint hint; refetch after one minute. */
 /** Warm paint for membership badges / quota / cycle across route remounts. */
 export const AUTH_FILES_DATA_CACHE_TTL_MS = 30 * 60_000;
-/**
- * How long a quota value may go unconfirmed before the card stops presenting it
- * as current. Comfortably above the 60s snapshot poll, so ordinary refresh gaps
- * never flag; anything past it means refreshes are happening but bringing back
- * no new data, which is precisely what the user needs told.
- */
-export const QUOTA_STALE_AFTER_MS = 15 * 60_000;
-
-/** True when a quota value is old enough that showing it plainly would mislead. */
-export const isQuotaObservationStale = (
-  observedAtMs: number | undefined,
-  nowMs: number,
-): boolean =>
-  typeof observedAtMs === "number" &&
-  Number.isFinite(observedAtMs) &&
-  nowMs - observedAtMs > QUOTA_STALE_AFTER_MS;
-
 export const AUTH_FILES_QUOTA_PREVIEW_KEY = "authFilesPage.quotaPreview.v1";
 export const AUTH_FILES_QUOTA_AUTO_REFRESH_KEY = "authFilesPage.quotaAutoRefreshMs.v1";
 export const AUTH_FILES_FILES_VIEW_MODE_KEY = "authFilesPage.filesViewMode.v1";
