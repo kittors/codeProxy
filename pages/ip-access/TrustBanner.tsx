@@ -1,6 +1,5 @@
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Check, Copy, ShieldAlert, TriangleAlert } from "lucide-react";
+import { ShieldAlert, TriangleAlert } from "lucide-react";
 import type { IpAccessStatus } from "@code-proxy/api-client";
 
 /**
@@ -8,29 +7,14 @@ import type { IpAccessStatus } from "@code-proxy/api-client";
  *
  * The state it reports is genuinely important — with trusted-proxies unset every
  * rule is stored, listed and enforces nothing — but importance is not a licence
- * to occupy a quarter of the viewport on every visit. The fix is a single
- * copyable config line, so that is what the banner shows; the reasoning lives in
- * the tooltip and the docs.
+ * to occupy a quarter of the viewport on every visit. The remedy is now a button
+ * on the Protection tab rather than a config snippet to go paste, so the banner
+ * only has to point at it.
  */
 export function TrustBanner({ status }: { status: IpAccessStatus | null }) {
   const { t } = useTranslation();
-  const [copied, setCopied] = useState(false);
 
   if (!status) return null;
-
-  const suggestion = status.suggested_trusted_proxies?.[0] ?? "";
-  const configLine = suggestion ? `trusted-proxies: ["${suggestion}"]` : "";
-
-  const copySuggestion = async () => {
-    if (!configLine) return;
-    try {
-      await navigator.clipboard.writeText(configLine);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Clipboard access can be denied; the line stays selectable on screen.
-    }
-  };
 
   if (!status.storage_available) {
     return (
@@ -47,21 +31,7 @@ export function TrustBanner({ status }: { status: IpAccessStatus | null }) {
         <span className="text-xs opacity-80">
           {t("ip_access.banner_untrusted_hint", { ip: status.client_ip || "-" })}
         </span>
-        {configLine ? (
-          <>
-            <code className="rounded-lg bg-black/5 px-2 py-0.5 font-mono text-xs dark:bg-white/10">
-              {configLine}
-            </code>
-            <button
-              type="button"
-              onClick={copySuggestion}
-              className="inline-flex items-center gap-1 rounded-lg px-1.5 py-0.5 text-xs font-medium transition hover:bg-black/5 dark:hover:bg-white/10"
-            >
-              {copied ? <Check size={12} aria-hidden="true" /> : <Copy size={12} aria-hidden="true" />}
-              {copied ? t("ip_access.copied") : t("ip_access.copy_config")}
-            </button>
-          </>
-        ) : null}
+        <span className="text-xs opacity-80">{t("ip_access.banner_fix_hint")}</span>
       </Banner>
     );
   }

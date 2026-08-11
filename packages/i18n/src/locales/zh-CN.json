@@ -5405,6 +5405,14 @@
     "protected_loopback": "本机回环",
     "protected_local_address": "服务器地址",
     "protected_trusted_proxy": "反向代理",
-    "protected_outbound_proxy": "出站代理"
+    "protected_outbound_proxy": "出站代理",
+    "section_trusted_proxies": "可信反向代理",
+    "section_trusted_proxies_desc": "只有来自这些地址的转发头才会被采信，用于还原真实客户端 IP。配置保存在数据库，改完立即生效、无需重启。",
+    "proxies_empty": "尚未配置，服务端只能看到直连地址——IP 名单与按 IP 限流都无法区分真实来源。",
+    "proxies_from_config": "当前沿用配置文件中的值：{{list}}。在此添加后将以这里为准。",
+    "proxy_add": "添加",
+    "proxy_remove": "移除 {{cidr}}",
+    "proxy_add_detected": "添加检测到的 {{cidr}}",
+    "banner_fix_hint": "到「防护策略」页一键添加即可生效"
   }
 }
