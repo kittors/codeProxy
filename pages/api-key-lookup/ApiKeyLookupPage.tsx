@@ -37,6 +37,7 @@ import {
 import { LookupHeader } from "./components/LookupHeader";
 import { PortalLoginForm } from "./components/PortalLoginForm";
 import { PortalKeyPeriodQuotaResetModal } from "./components/PortalKeyPeriodQuotaResetModal";
+import { PortalRecentSignIns } from "./components/PortalRecentSignIns";
 import { LookupEmptyState } from "./components/LookupEmptyState";
 import { LookupResultsToolbar, type ApiKeyLookupTab } from "./components/LookupResultsToolbar";
 import { ManageKeysTabContent } from "./components/ManageKeysTabContent";
@@ -1386,6 +1387,11 @@ export function ApiKeyLookupPage() {
                       setDeleteKeyTarget(key);
                     }}
                   />
+                  {/* Account security sits with key management: both answer
+                      "is my account still mine". */}
+                  <div className="mt-4">
+                    <PortalRecentSignIns />
+                  </div>
                 </Reveal>
               ) : null}
 

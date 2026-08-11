@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, ShieldCheck, Trash2 } from "lucide-react";
 import {
   ipAccessApi,
   type IpAccessEffect,
   type IpAccessRule,
+  type IpAccessSource,
   type ProtectedEntry,
 } from "@code-proxy/api-client";
 import {
   Button,
+  Checkbox,
   COLUMN_WIDTH,
   ConfirmModal,
   DataTable,
@@ -21,6 +23,7 @@ import {
   type DataTableColumn,
 } from "@code-proxy/ui";
 import { PermissionGate } from "@app/providers/PermissionGate";
+import { RuleEditModal } from "./RuleEditModal";
 import { RuleFormModal } from "./RuleFormModal";
 
 const PAGE_SIZE_OPTIONS = [20, 50, 100];
@@ -49,7 +52,10 @@ export function AccessRulesTab({
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [effect, setEffect] = useState<IpAccessEffect | "">("");
+  const [source, setSource] = useState<IpAccessSource | "">("");
   const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<string[]>([]);
+  const [editTarget, setEditTarget] = useState<IpAccessRule | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<IpAccessRule | null>(null);
   const [busy, setBusy] = useState(false);
@@ -60,6 +66,7 @@ export function AccessRulesTab({
       try {
         const response = await ipAccessApi.rules({
           effect: effect || undefined,
+          source: source || undefined,
           search: search || undefined,
           page: nextPage,
           size,
@@ -77,14 +84,15 @@ export function AccessRulesTab({
         setLoading(false);
       }
     },
-    [effect, notify, search, t],
+    [effect, notify, search, source, t],
   );
 
   useEffect(() => {
     void load(1, pageSize);
     // Filters reset to the first page; pageSize changes go through the handler.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [effect, search, refreshToken]);
+    setSelected([]);
+  }, [effect, source, search, refreshToken]);
 
   useEffect(() => {
     if (pendingRule) setFormOpen(true);
@@ -130,8 +138,93 @@ export function AccessRulesTab({
     }
   }, [deleteTarget, load, notify, onRulesChanged, page, pageSize, t]);
 
+  const bulkApply = useCallback(
+    async (body: { enabled?: boolean; delete?: boolean }) => {
+      if (selected.length === 0) return;
+      setBusy(true);
+      try {
+        const result = await ipAccessApi.bulkUpdateRules({ ids: selected, ...body });
+        const failedCount = Object.keys(result.failed ?? {}).length;
+        // Partial success is reported rather than swallowed: a rule another
+        // operator just deleted must not look like the whole batch worked.
+        notify({
+          type: failedCount > 0 ? "warning" : "success",
+          message:
+            failedCount > 0
+              ? t("ip_access.bulk_partial", { applied: result.applied.length, failed: failedCount })
+              : t("ip_access.bulk_done", { count: result.applied.length }),
+        });
+        setSelected([]);
+        onRulesChanged();
+        await load(page, pageSize);
+      } catch (error) {
+        notify({
+          type: "error",
+          message: error instanceof Error ? error.message : t("ip_access.save_failed"),
+        });
+      } finally {
+        setBusy(false);
+      }
+    },
+    [load, notify, onRulesChanged, page, pageSize, selected, t],
+  );
+
+  // Releasing a ban usually means "this one was wrong", and the next thing an
+  // operator wants is for it not to happen again — so the two steps are one action.
+  const unbanAndAllow = useCallback(
+    async (rule: IpAccessRule) => {
+      setBusy(true);
+      try {
+        await ipAccessApi.deleteRule(rule.id);
+        await ipAccessApi.createRule({
+          cidr: rule.cidr,
+          effect: "allow",
+          note: t("ip_access.unban_note"),
+        });
+        notify({ type: "success", message: t("ip_access.unban_done", { cidr: rule.cidr }) });
+        onRulesChanged();
+        await load(page, pageSize);
+      } catch (error) {
+        notify({
+          type: "error",
+          message: error instanceof Error ? error.message : t("ip_access.save_failed"),
+        });
+      } finally {
+        setBusy(false);
+      }
+    },
+    [load, notify, onRulesChanged, page, pageSize, t],
+  );
+
+  const allSelected = items.length > 0 && selected.length === items.length;
+
   const columns = useMemo<DataTableColumn<IpAccessRule>[]>(
     () => [
+      {
+        key: "select",
+        label: "",
+        width: COLUMN_WIDTH.checkbox,
+        resizable: false,
+        headerRender: () => (
+          <Checkbox
+            checked={allSelected}
+            indeterminate={selected.length > 0 && !allSelected}
+            onCheckedChange={(next) => setSelected(next ? items.map((row) => row.id) : [])}
+            aria-label={t("ip_access.select_all")}
+          />
+        ),
+        render: (item) => (
+          <Checkbox
+            checked={selected.includes(item.id)}
+            onCheckedChange={(next) =>
+              setSelected((prev) =>
+                next ? [...prev, item.id] : prev.filter((id) => id !== item.id),
+              )
+            }
+            aria-label={t("ip_access.select_rule", { cidr: item.cidr })}
+          />
+        ),
+      },
       {
         key: "cidr",
         label: t("ip_access.col_cidr"),
@@ -220,20 +313,42 @@ export function AccessRulesTab({
         lockOrder: "end" as const,
         render: (item) => (
           <PermissionGate permission="platform.ip_access.write">
-            <Button
-              size="xs"
-              variant="ghost"
-              disabled={busy}
-              tooltip={t("ip_access.delete_rule")}
-              onClick={() => setDeleteTarget(item)}
-            >
-              <Trash2 size={15} />
-            </Button>
+            <div className="flex items-center gap-1.5">
+              <Button
+                size="xs"
+                variant="ghost"
+                disabled={busy}
+                tooltip={t("ip_access.edit_rule")}
+                onClick={() => setEditTarget(item)}
+              >
+                <Pencil size={15} />
+              </Button>
+              {item.effect === "deny" ? (
+                <Button
+                  size="xs"
+                  variant="ghost"
+                  disabled={busy}
+                  tooltip={t("ip_access.unban_and_allow")}
+                  onClick={() => void unbanAndAllow(item)}
+                >
+                  <ShieldCheck size={15} />
+                </Button>
+              ) : null}
+              <Button
+                size="xs"
+                variant="ghost"
+                disabled={busy}
+                tooltip={t("ip_access.delete_rule")}
+                onClick={() => setDeleteTarget(item)}
+              >
+                <Trash2 size={15} />
+              </Button>
+            </div>
           </PermissionGate>
         ),
       },
     ],
-    [busy, i18n.language, t, toggleEnabled],
+    [allSelected, busy, i18n.language, items, selected, t, toggleEnabled, unbanAndAllow],
   );
 
   return (
@@ -262,6 +377,38 @@ export function AccessRulesTab({
               aria-label={t("ip_access.col_effect")}
             />
           </div>
+          <div className="w-full min-[480px]:w-auto sm:w-[140px]">
+            <Select
+              value={source}
+              onChange={(value) => setSource(value as IpAccessSource | "")}
+              options={[
+                { value: "", label: t("ip_access.source_all") },
+                { value: "manual", label: t("ip_access.source_manual") },
+                { value: "auto", label: t("ip_access.source_auto") },
+              ]}
+              size="sm"
+              fullWidth
+              aria-label={t("ip_access.col_rule_source")}
+            />
+          </div>
+          {selected.length > 0 ? (
+            <PermissionGate permission="platform.ip_access.write">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-500 dark:text-white/50">
+                  {t("ip_access.selected_count", { count: selected.length })}
+                </span>
+                <Button size="sm" variant="secondary" disabled={busy} onClick={() => void bulkApply({ enabled: false })}>
+                  {t("ip_access.bulk_disable")}
+                </Button>
+                <Button size="sm" variant="secondary" disabled={busy} onClick={() => void bulkApply({ enabled: true })}>
+                  {t("ip_access.bulk_enable")}
+                </Button>
+                <Button size="sm" variant="danger" disabled={busy} onClick={() => void bulkApply({ delete: true })}>
+                  {t("ip_access.bulk_delete")}
+                </Button>
+              </div>
+            </PermissionGate>
+          ) : null}
           <PermissionGate permission="platform.ip_access.write">
             <button
               type="button"
@@ -346,6 +493,16 @@ export function AccessRulesTab({
           onPendingRuleHandled();
           onRulesChanged();
           void load(1, pageSize);
+        }}
+      />
+
+      <RuleEditModal
+        rule={editTarget}
+        onClose={() => setEditTarget(null)}
+        onSaved={() => {
+          setEditTarget(null);
+          onRulesChanged();
+          void load(page, pageSize);
         }}
       />
 

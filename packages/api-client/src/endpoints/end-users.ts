@@ -206,6 +206,22 @@ export const endUsersApi = {
     apiClient.delete(`/end-users/${userId}/api-keys/${keyId}`),
 };
 
+/** One sign-in as shown to the end user: recognisable, not a recon feed. */
+export interface PortalAttempt {
+  occurred_at: string;
+  /** Partially masked; enough to recognise a location, not to enumerate one. */
+  ip: string;
+  outcome: string;
+  user_agent: string;
+}
+
+export interface PortalAttemptsResponse {
+  items: PortalAttempt[];
+  total: number;
+  page: number;
+  size: number;
+}
+
 export const portalApi = {
   client: portalClient,
   loadSession: () => portalClient.loadFromStorage(),
@@ -250,6 +266,14 @@ export const portalApi = {
     portalClient.clearSession();
   },
   me: () => portalClient.get<{ user: EndUser }>("/v0/portal/auth/me"),
+  /**
+   * The caller's own sign-in history. The server derives the account from the
+   * session, so this can only ever return the current user's records.
+   */
+  attempts: (params?: { page?: number; size?: number }) =>
+    portalClient.get<PortalAttemptsResponse>(
+      `/v0/portal/auth/attempts?page=${params?.page ?? 1}&size=${params?.size ?? 20}`,
+    ),
   changePassword: (current_password: string, new_password: string) =>
     portalClient.put<void>("/v0/portal/auth/password", { current_password, new_password }),
   listKeys: () => portalClient.get<{ items: EndUserAPIKey[] }>("/v0/portal/api-keys"),
