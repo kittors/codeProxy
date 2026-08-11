@@ -38,7 +38,7 @@ export function PortalRecentSignIns() {
   if (loading) return null;
 
   return (
-    <div className="rounded-2xl border border-black/[0.06] bg-white p-5 dark:border-white/[0.06] dark:bg-neutral-950/70">
+    <div className="mt-4 rounded-2xl border border-black/[0.06] bg-white p-5 dark:border-white/[0.06] dark:bg-neutral-950/70">
       <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white">
         <ShieldCheck size={16} aria-hidden="true" />
         {t("ip_access.portal_recent_logins")}
