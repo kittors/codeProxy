@@ -133,6 +133,22 @@ export function ProtectionPolicyTab({ status, onPolicySaved }: ProtectionPolicyT
             ))
           )}
         </div>
+        {status?.forwarded_chain && status.forwarded_chain.length > 0 ? (
+          // Without this an operator is guessing which hops to declare, and a
+          // chain declared one hop short resolves to loopback and silently
+          // exempts everyone.
+          <div className="mt-3 rounded-xl bg-slate-50 px-3 py-2 dark:bg-white/5">
+            <p className="text-xs font-medium text-slate-700 dark:text-white/80">
+              {t("ip_access.chain_title")}
+            </p>
+            <p className="mt-1 font-mono text-xs text-slate-600 dark:text-white/70">
+              {[...status.forwarded_chain, status.peer].filter(Boolean).join("  ←  ")}
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              {t("ip_access.chain_hint", { client: status.client_ip || "-" })}
+            </p>
+          </div>
+        ) : null}
         <PermissionGate permission="platform.ip_access.write">
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <div className="w-full min-[480px]:w-[220px]">

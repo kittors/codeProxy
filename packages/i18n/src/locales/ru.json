@@ -3329,6 +3329,8 @@
     "lockdown_confirm_ok": "Enable",
     "portal_recent_logins": "Recent sign-ins",
     "portal_recent_logins_hint": "Sign-ins to your account over the last 30 days. If you see one that was not you, change your password immediately.",
-    "portal_no_logins": "No sign-ins in the last 30 days"
+    "portal_no_logins": "No sign-ins in the last 30 days",
+    "chain_title": "Forwarding chain for this request (rightmost is the hop talking to this service)",
+    "chain_hint": "Every hop must be declared before resolution reaches the real client on the left. Currently resolving to: {{client}}. A loopback result means one hop is still undeclared."
   }
 }
