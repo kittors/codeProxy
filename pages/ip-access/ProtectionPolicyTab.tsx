@@ -70,12 +70,18 @@ export function ProtectionPolicyTab({ status, onPolicySaved }: ProtectionPolicyT
     }
   };
 
-  if (loading || !policy) return <PageLoader />;
+  if (loading || !policy) {
+    return (
+      <div className="border-t border-slate-100 px-5 py-10 dark:border-white/8">
+        <PageLoader />
+      </div>
+    );
+  }
 
   const lockdownBlocked = !status?.trusted || status?.self_allowed === false;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto pb-2">
+    <div className="flex flex-col gap-4 border-t border-slate-100 px-5 py-4 dark:border-white/8">
       <Section
         title={t("ip_access.section_lockdown")}
         description={t("ip_access.section_lockdown_desc")}

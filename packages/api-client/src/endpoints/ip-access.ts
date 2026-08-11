@@ -27,6 +27,17 @@ export interface IpAccessRulesResponse {
   size: number;
 }
 
+export type ProtectedReason =
+  | "loopback"
+  | "local_address"
+  | "trusted_proxy"
+  | "outbound_proxy";
+
+export interface ProtectedEntry {
+  cidr: string;
+  reason: ProtectedReason;
+}
+
 /**
  * Whether the list is actually in force. Behind a reverse proxy with no
  * trusted-proxies configured every client reports the proxy's address, so rules
@@ -47,6 +58,8 @@ export interface IpAccessStatus {
   self_allowed?: boolean;
   suggested_self_rule?: string;
   dropped_events?: number;
+  /** Addresses no rule may ever deny (host, reverse proxy, egress proxies). */
+  protected?: ProtectedEntry[];
 }
 
 export type AutoBanMode = "off" | "observe" | "enforce";
