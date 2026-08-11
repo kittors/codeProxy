@@ -1,11 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Ban, ListFilter, ShieldCheck } from "lucide-react";
-import {
-  ipAccessApi,
-  type AuthAttemptWindow,
-  type AuthSourceSummary,
-} from "@code-proxy/api-client";
+import { ipAccessApi, type AuthAttemptWindow, type AuthSourceSummary } from "@code-proxy/api-client";
 import {
   Button,
   COLUMN_WIDTH,
@@ -65,23 +61,19 @@ export function ThreatOverviewTab({
       {
         key: "source",
         label: t("ip_access.col_source"),
-        width: COLUMN_WIDTH.nameStacked,
+        width: COLUMN_WIDTH.name,
         overflowTooltip: true,
         render: (item) => (
-          <div className="min-w-0">
-            <div className="truncate font-mono text-sm text-slate-900 dark:text-white">
-              {item.sample_ip || item.ip_prefix}
-            </div>
-            <div className="truncate text-xs text-slate-500">
-              {item.trusted ? item.ip_prefix : t("ip_access.source_untrusted")}
-            </div>
-          </div>
+          <span className="font-mono text-sm text-slate-900 dark:text-white">
+            {item.sample_ip || item.ip_prefix}
+            {item.trusted ? "" : ` (${t("ip_access.untrusted_short")})`}
+          </span>
         ),
       },
       {
         key: "failures",
         label: t("ip_access.col_failures"),
-        width: COLUMN_WIDTH.numeric,
+        width: COLUMN_WIDTH.numericWide,
         render: (item) => (
           <span className="tabular-nums font-medium text-rose-600 dark:text-rose-300">
             {item.failures}
@@ -91,15 +83,15 @@ export function ThreatOverviewTab({
       {
         key: "attempts",
         label: t("ip_access.col_attempts"),
-        width: COLUMN_WIDTH.numeric,
+        width: COLUMN_WIDTH.numericWide,
         render: (item) => <span className="tabular-nums">{item.attempts}</span>,
       },
       {
         key: "successes",
         label: t("ip_access.col_successes"),
-        width: COLUMN_WIDTH.numeric,
-        // A source with many failures and then a success is the strongest signal
-        // on this page, so it is called out rather than folded into "attempts".
+        width: COLUMN_WIDTH.numericWide,
+        // Failures followed by a success is the strongest signal on this page, so
+        // it gets its own column instead of being folded into the attempt count.
         render: (item) =>
           item.successes > 0 ? (
             <span className="tabular-nums font-medium text-amber-600 dark:text-amber-300">
@@ -112,7 +104,7 @@ export function ThreatOverviewTab({
       {
         key: "usernames",
         label: t("ip_access.col_usernames"),
-        width: COLUMN_WIDTH.numeric,
+        width: COLUMN_WIDTH.numericWide,
         render: (item) => <span className="tabular-nums">{item.distinct_usernames}</span>,
       },
       {
@@ -124,7 +116,7 @@ export function ThreatOverviewTab({
       {
         key: "state",
         label: t("ip_access.col_state"),
-        width: COLUMN_WIDTH.badge,
+        width: COLUMN_WIDTH.compact,
         render: (item) => <SourceState summary={item} />,
       },
       {
@@ -133,10 +125,10 @@ export function ThreatOverviewTab({
         ...TABLE_ROW_ACTIONS_COLUMN,
         lockOrder: "end" as const,
         render: (item) => (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             <Button
-              variant="ghost"
               size="xs"
+              variant="ghost"
               tooltip={t("ip_access.inspect")}
               onClick={() => onInspect(item.ip_prefix)}
             >
@@ -144,8 +136,8 @@ export function ThreatOverviewTab({
             </Button>
             <PermissionGate permission="platform.ip_access.write">
               <Button
-                variant="ghost"
                 size="xs"
+                variant="ghost"
                 tooltip={t("ip_access.ban_source")}
                 disabled={!item.trusted}
                 onClick={() => onBan(item.ip_prefix)}
@@ -153,8 +145,8 @@ export function ThreatOverviewTab({
                 <Ban size={15} />
               </Button>
               <Button
-                variant="ghost"
                 size="xs"
+                variant="ghost"
                 tooltip={t("ip_access.allow_source")}
                 disabled={!item.trusted}
                 onClick={() => onAllow(item.ip_prefix)}
@@ -170,21 +162,29 @@ export function ThreatOverviewTab({
   );
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-slate-500">{t("ip_access.overview_description")}</p>
-        <Select
-          value={window_}
-          onChange={(value) => setWindow(value as AuthAttemptWindow)}
-          options={WINDOW_OPTIONS.map((option) => ({
-            value: option,
-            label: t(`ip_access.window_${option}`),
-          }))}
-          size="sm"
-          className="w-32"
-        />
+    <>
+      <div className="border-t border-slate-100 px-5 py-3 dark:border-white/8">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="w-full min-[480px]:w-auto sm:w-[140px]">
+            <Select
+              value={window_}
+              onChange={(value) => setWindow(value as AuthAttemptWindow)}
+              options={WINDOW_OPTIONS.map((option) => ({
+                value: option,
+                label: t(`ip_access.window_${option}`),
+              }))}
+              size="sm"
+              fullWidth
+              aria-label={t("ip_access.filter_window")}
+            />
+          </div>
+          <span className="text-xs text-slate-500 dark:text-white/50">
+            {t("ip_access.overview_description")}
+          </span>
+        </div>
       </div>
-      <div className="relative min-h-[360px] flex-1 overflow-hidden">
+
+      <div className="relative min-h-[420px] px-5 pb-4">
         <DataTable<AuthSourceSummary>
           tableId="ip-access-threat-overview"
           rows={items}
@@ -192,14 +192,12 @@ export function ThreatOverviewTab({
           rowKey={(item) => item.ip_prefix}
           loading={loading}
           virtualize={false}
-          height="h-full"
-          minHeight="min-h-full"
           minWidth="min-w-[900px]"
           emptyText={t("ip_access.no_threats")}
           showAllLoadedMessage={false}
         />
       </div>
-    </div>
+    </>
   );
 }
 

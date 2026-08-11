@@ -28,7 +28,13 @@ const OUTCOME_TONE: Record<string, string> = {
   success: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
 };
 
-export function AttemptsTab({ ipFilter }: { ipFilter: string }) {
+export function AttemptsTab({
+  ipFilter,
+  refreshToken,
+}: {
+  ipFilter: string;
+  refreshToken: number;
+}) {
   const { t, i18n } = useTranslation();
   const { notify } = useToast();
   const [items, setItems] = useState<AuthAttempt[]>([]);
@@ -75,7 +81,7 @@ export function AttemptsTab({ ipFilter }: { ipFilter: string }) {
     void load(1, pageSize);
     // Filter changes always reset to page 1; page navigation calls load directly.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ip, outcome, window_]);
+  }, [ip, outcome, window_, refreshToken]);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -102,7 +108,7 @@ export function AttemptsTab({ ipFilter }: { ipFilter: string }) {
       {
         key: "outcome",
         label: t("ip_access.col_outcome"),
-        width: COLUMN_WIDTH.badge,
+        width: COLUMN_WIDTH.compact,
         render: (item) => (
           <span
             className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
@@ -149,38 +155,48 @@ export function AttemptsTab({ ipFilter }: { ipFilter: string }) {
   );
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <TextInput
-          value={ip}
-          onChange={(event) => setIp(event.target.value)}
-          placeholder={t("ip_access.filter_ip_placeholder")}
-          size="sm"
-          className="w-56 font-mono"
-        />
-        <Select
-          value={outcome}
-          onChange={setOutcome}
-          options={OUTCOMES.map((value) => ({
-            value,
-            label: value ? t(`ip_access.outcome_${value}`) : t("ip_access.outcome_all"),
-          }))}
-          size="sm"
-          className="w-40"
-        />
-        <Select
-          value={window_}
-          onChange={(value) => setWindow(value as AuthAttemptWindow)}
-          options={WINDOW_OPTIONS.map((value) => ({
-            value,
-            label: t(`ip_access.window_${value}`),
-          }))}
-          size="sm"
-          className="w-32"
-        />
+    <>
+      <div className="border-t border-slate-100 px-5 py-3 dark:border-white/8">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="w-full min-[480px]:w-auto sm:w-[220px]">
+            <TextInput
+              value={ip}
+              onChange={(event) => setIp(event.target.value)}
+              placeholder={t("ip_access.filter_ip_placeholder")}
+              size="sm"
+              className="font-mono"
+            />
+          </div>
+          <div className="w-full min-[480px]:w-auto sm:w-[160px]">
+            <Select
+              value={outcome}
+              onChange={setOutcome}
+              options={OUTCOMES.map((value) => ({
+                value,
+                label: value ? t(`ip_access.outcome_${value}`) : t("ip_access.outcome_all"),
+              }))}
+              size="sm"
+              fullWidth
+              aria-label={t("ip_access.col_outcome")}
+            />
+          </div>
+          <div className="w-full min-[480px]:w-auto sm:w-[140px]">
+            <Select
+              value={window_}
+              onChange={(value) => setWindow(value as AuthAttemptWindow)}
+              options={WINDOW_OPTIONS.map((value) => ({
+                value,
+                label: t(`ip_access.window_${value}`),
+              }))}
+              size="sm"
+              fullWidth
+              aria-label={t("ip_access.filter_window")}
+            />
+          </div>
+        </div>
       </div>
 
-      <div className="relative min-h-[360px] flex-1 overflow-hidden">
+      <div className="relative min-h-[420px] px-5">
         <DataTable<AuthAttempt>
           tableId="ip-access-attempts"
           rows={items}
@@ -188,8 +204,6 @@ export function AttemptsTab({ ipFilter }: { ipFilter: string }) {
           rowKey={(item) => String(item.id)}
           loading={loading}
           virtualize={false}
-          height="h-full"
-          minHeight="min-h-full"
           minWidth="min-w-[1100px]"
           emptyText={t("ip_access.no_attempts")}
           showAllLoadedMessage={false}
@@ -204,7 +218,7 @@ export function AttemptsTab({ ipFilter }: { ipFilter: string }) {
         onPageChange={(next) => void load(Math.max(1, Math.min(next, totalPages)), pageSize)}
         onPageSizeChange={(size) => void load(1, size)}
         pageSizeOptions={PAGE_SIZE_OPTIONS}
-        className="border-t border-slate-100 pt-3 dark:border-white/8"
+        className="border-t border-slate-100 px-3 py-3 sm:px-5 dark:border-white/8"
         labels={{
           firstPage: t("request_logs.first_page"),
           previousPage: t("request_logs.prev_page"),
@@ -215,6 +229,6 @@ export function AttemptsTab({ ipFilter }: { ipFilter: string }) {
             t("request_logs.page_info", { start, end, total: count }),
         }}
       />
-    </div>
+    </>
   );
 }

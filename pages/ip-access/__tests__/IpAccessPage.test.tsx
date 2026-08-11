@@ -81,7 +81,7 @@ describe("TrustBanner", () => {
         })}
       />,
     );
-    expect(screen.getByText("ip_access.banner_untrusted_title")).toBeInTheDocument();
+    expect(screen.getByText("ip_access.banner_untrusted")).toBeInTheDocument();
     expect(screen.getByText('trusted-proxies: ["172.17.0.1/32"]')).toBeInTheDocument();
   });
 
@@ -92,7 +92,7 @@ describe("TrustBanner", () => {
 
   test("flags dropped telemetry so partial statistics are not read as complete", () => {
     render(<TrustBanner status={statusFixture({ dropped_events: 42 })} />);
-    expect(screen.getByText("ip_access.banner_dropped_title")).toBeInTheDocument();
+    expect(screen.getByText(/ip_access.banner_dropped/)).toBeInTheDocument();
   });
 });
 

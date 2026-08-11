@@ -5,6 +5,7 @@ import {
   ipAccessApi,
   type IpAccessEffect,
   type IpAccessRule,
+  type ProtectedEntry,
 } from "@code-proxy/api-client";
 import {
   Button,
@@ -29,12 +30,16 @@ interface AccessRulesTabProps {
   pendingRule: { cidr: string; effect: IpAccessEffect } | null;
   onPendingRuleHandled: () => void;
   onRulesChanged: () => void;
+  refreshToken: number;
+  protectedEntries: ProtectedEntry[];
 }
 
 export function AccessRulesTab({
   pendingRule,
   onPendingRuleHandled,
   onRulesChanged,
+  refreshToken,
+  protectedEntries,
 }: AccessRulesTabProps) {
   const { t, i18n } = useTranslation();
   const { notify } = useToast();
@@ -79,7 +84,7 @@ export function AccessRulesTab({
     void load(1, pageSize);
     // Filters reset to the first page; pageSize changes go through the handler.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [effect, search]);
+  }, [effect, search, refreshToken]);
 
   useEffect(() => {
     if (pendingRule) setFormOpen(true);
@@ -139,7 +144,7 @@ export function AccessRulesTab({
       {
         key: "effect",
         label: t("ip_access.col_effect"),
-        width: COLUMN_WIDTH.badge,
+        width: COLUMN_WIDTH.compact,
         render: (item) => (
           <span
             className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
@@ -155,7 +160,7 @@ export function AccessRulesTab({
       {
         key: "source",
         label: t("ip_access.col_rule_source"),
-        width: COLUMN_WIDTH.badge,
+        width: COLUMN_WIDTH.compact,
         render: (item) => (
           <span className="text-sm text-slate-600 dark:text-white/70">
             {t(`ip_access.source_${item.source}`)}
@@ -176,7 +181,7 @@ export function AccessRulesTab({
       {
         key: "hits",
         label: t("ip_access.col_hits"),
-        width: COLUMN_WIDTH.numeric,
+        width: COLUMN_WIDTH.numericWide,
         render: (item) => <span className="tabular-nums">{item.hit_count}</span>,
       },
       {
@@ -232,37 +237,46 @@ export function AccessRulesTab({
   );
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <>
+      <div className="border-t border-slate-100 px-5 py-3 dark:border-white/8">
         <div className="flex flex-wrap items-center gap-2">
-          <TextInput
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder={t("ip_access.search_placeholder")}
-            size="sm"
-            className="w-56"
-          />
-          <Select
-            value={effect}
-            onChange={(value) => setEffect(value as IpAccessEffect | "")}
-            options={[
-              { value: "", label: t("ip_access.effect_all") },
-              { value: "deny", label: t("ip_access.effect_deny") },
-              { value: "allow", label: t("ip_access.effect_allow") },
-            ]}
-            size="sm"
-            className="w-32"
-          />
+          <div className="w-full min-[480px]:w-auto sm:w-[220px]">
+            <TextInput
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder={t("ip_access.search_placeholder")}
+              size="sm"
+            />
+          </div>
+          <div className="w-full min-[480px]:w-auto sm:w-[140px]">
+            <Select
+              value={effect}
+              onChange={(value) => setEffect(value as IpAccessEffect | "")}
+              options={[
+                { value: "", label: t("ip_access.effect_all") },
+                { value: "deny", label: t("ip_access.effect_deny") },
+                { value: "allow", label: t("ip_access.effect_allow") },
+              ]}
+              size="sm"
+              fullWidth
+              aria-label={t("ip_access.col_effect")}
+            />
+          </div>
+          <PermissionGate permission="platform.ip_access.write">
+            <button
+              type="button"
+              onClick={() => setFormOpen(true)}
+              aria-label={t("ip_access.add_rule")}
+              title={t("ip_access.add_rule")}
+              className="ml-auto inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-slate-900 text-white transition hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:bg-white dark:text-neutral-950 dark:hover:bg-slate-200"
+            >
+              <Plus size={15} aria-hidden="true" />
+            </button>
+          </PermissionGate>
         </div>
-        <PermissionGate permission="platform.ip_access.write">
-          <Button size="sm" variant="primary" onClick={() => setFormOpen(true)}>
-            <Plus size={15} />
-            {t("ip_access.add_rule")}
-          </Button>
-        </PermissionGate>
       </div>
 
-      <div className="relative min-h-[360px] flex-1 overflow-hidden">
+      <div className="relative min-h-[420px] px-5">
         <DataTable<IpAccessRule>
           tableId="ip-access-rules"
           rows={items}
@@ -270,13 +284,33 @@ export function AccessRulesTab({
           rowKey={(item) => item.id}
           loading={loading}
           virtualize={false}
-          height="h-full"
-          minHeight="min-h-full"
           minWidth="min-w-[1040px]"
           emptyText={t("ip_access.no_rules")}
           showAllLoadedMessage={false}
         />
       </div>
+
+      {protectedEntries.length > 0 ? (
+        <div className="border-t border-slate-100 px-5 py-3 dark:border-white/8">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+            <span className="text-xs font-medium text-slate-700 dark:text-white/80">
+              {t("ip_access.protected_title")}
+            </span>
+            {protectedEntries.map((entry) => (
+              <span
+                key={entry.cidr}
+                title={t(`ip_access.protected_${entry.reason}`)}
+                className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 font-mono text-xs text-slate-600 dark:bg-white/10 dark:text-white/70"
+              >
+                {entry.cidr}
+              </span>
+            ))}
+            <span className="text-xs text-slate-500 dark:text-white/50">
+              {t("ip_access.protected_hint")}
+            </span>
+          </div>
+        </div>
+      ) : null}
 
       <PaginationBar
         currentPage={page}
@@ -286,7 +320,7 @@ export function AccessRulesTab({
         onPageChange={(next) => void load(Math.max(1, Math.min(next, totalPages)), pageSize)}
         onPageSizeChange={(size) => void load(1, size)}
         pageSizeOptions={PAGE_SIZE_OPTIONS}
-        className="border-t border-slate-100 pt-3 dark:border-white/8"
+        className="border-t border-slate-100 px-3 py-3 sm:px-5 dark:border-white/8"
         labels={{
           firstPage: t("request_logs.first_page"),
           previousPage: t("request_logs.prev_page"),
@@ -324,6 +358,6 @@ export function AccessRulesTab({
         onClose={() => setDeleteTarget(null)}
         onConfirm={() => void confirmDelete()}
       />
-    </div>
+    </>
   );
 }
