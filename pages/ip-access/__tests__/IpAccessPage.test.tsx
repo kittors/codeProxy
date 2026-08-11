@@ -82,7 +82,9 @@ describe("TrustBanner", () => {
       />,
     );
     expect(screen.getByText("ip_access.banner_untrusted")).toBeInTheDocument();
-    expect(screen.getByText('trusted-proxies: ["172.17.0.1/32"]')).toBeInTheDocument();
+    // The remedy is a button on the Protection tab now, so the banner points there
+    // instead of printing a config snippet to paste.
+    expect(screen.getByText("ip_access.banner_fix_hint")).toBeInTheDocument();
   });
 
   test("stays silent when enforcement is healthy", () => {

@@ -60,6 +60,10 @@ export interface IpAccessStatus {
   dropped_events?: number;
   /** Addresses no rule may ever deny (host, reverse proxy, egress proxies). */
   protected?: ProtectedEntry[];
+  /** Reverse proxies whose forwarding headers are believed. */
+  trusted_proxies?: string[];
+  /** Where that list came from: panel-managed, config.yaml, or nothing. */
+  trusted_proxies_source?: "database" | "config" | "none";
 }
 
 export type AutoBanMode = "off" | "observe" | "enforce";
@@ -84,6 +88,12 @@ export interface ProtectionPolicy {
   lockdown: boolean;
   auto_ban: AutoBanPolicy;
   throttle: ThrottleOverride;
+  /**
+   * Reverse proxies whose forwarding headers may be believed. Stored in the
+   * database so it can be fixed from the panel without editing config.yaml and
+   * restarting; leaving it empty falls back to the configured value.
+   */
+  trusted_proxies?: string[];
 }
 
 /** Effective limits as the running limiter sees them, not as configured. */

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Save } from "lucide-react";
+import { Save, Wand2, X } from "lucide-react";
 import {
   ipAccessApi,
   type AutoBanMode,
@@ -30,6 +30,7 @@ export function ProtectionPolicyTab({ status, onPolicySaved }: ProtectionPolicyT
   const [throttle, setThrottle] = useState<ThrottleScopeView[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [proxyDraft, setProxyDraft] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -80,8 +81,103 @@ export function ProtectionPolicyTab({ status, onPolicySaved }: ProtectionPolicyT
 
   const lockdownBlocked = !status?.trusted || status?.self_allowed === false;
 
+  const proxies = policy.trusted_proxies ?? [];
+
+  const addProxy = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed || proxies.includes(trimmed)) return;
+    setPolicy({ ...policy, trusted_proxies: [...proxies, trimmed] });
+  };
+
   return (
-    <div className="flex flex-col gap-4 border-t border-slate-100 px-5 py-4 dark:border-white/8">
+    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto border-t border-slate-100 px-5 py-4 dark:border-white/8">
+      {/* First, because nothing below it takes effect until this is right. */}
+      <Section
+        title={t("ip_access.section_trusted_proxies")}
+        description={t("ip_access.section_trusted_proxies_desc")}
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          {proxies.length === 0 ? (
+            <span className="text-xs text-slate-500 dark:text-white/50">
+              {status?.trusted_proxies_source === "config"
+                ? t("ip_access.proxies_from_config", {
+                    list: (status.trusted_proxies ?? []).join(", "),
+                  })
+                : t("ip_access.proxies_empty")}
+            </span>
+          ) : (
+            proxies.map((proxy) => (
+              <span
+                key={proxy}
+                className="inline-flex items-center gap-1 rounded-full bg-slate-100 py-0.5 pr-1 pl-2 font-mono text-xs text-slate-700 dark:bg-white/10 dark:text-white/80"
+              >
+                {proxy}
+                <PermissionGate permission="platform.ip_access.write">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPolicy({
+                        ...policy,
+                        trusted_proxies: proxies.filter((item) => item !== proxy),
+                      })
+                    }
+                    aria-label={t("ip_access.proxy_remove", { cidr: proxy })}
+                    className="inline-flex h-4 w-4 items-center justify-center rounded-full transition hover:bg-black/10 dark:hover:bg-white/15"
+                  >
+                    <X size={11} aria-hidden="true" />
+                  </button>
+                </PermissionGate>
+              </span>
+            ))
+          )}
+        </div>
+        <PermissionGate permission="platform.ip_access.write">
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <div className="w-full min-[480px]:w-[220px]">
+              <TextInput
+                value={proxyDraft}
+                onChange={(event) => setProxyDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    addProxy(proxyDraft);
+                    setProxyDraft("");
+                  }
+                }}
+                placeholder="104.194.69.137 / 10.0.0.0/24"
+                size="sm"
+                className="font-mono"
+              />
+            </div>
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={!proxyDraft.trim()}
+              onClick={() => {
+                addProxy(proxyDraft);
+                setProxyDraft("");
+              }}
+            >
+              {t("ip_access.proxy_add")}
+            </Button>
+            {status && !status.trusted && status.suggested_trusted_proxies?.[0] ? (
+              // The one action that turns this feature on, offered where the
+              // problem is visible instead of as a config snippet to go paste.
+              <Button
+                size="sm"
+                variant="primary"
+                onClick={() => addProxy(status.suggested_trusted_proxies?.[0] ?? "")}
+              >
+                <Wand2 size={14} />
+                {t("ip_access.proxy_add_detected", {
+                  cidr: status.suggested_trusted_proxies[0],
+                })}
+              </Button>
+            ) : null}
+          </div>
+        </PermissionGate>
+      </Section>
+
       <Section
         title={t("ip_access.section_lockdown")}
         description={t("ip_access.section_lockdown_desc")}

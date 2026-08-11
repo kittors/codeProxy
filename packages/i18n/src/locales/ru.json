@@ -3285,6 +3285,14 @@
     "protected_loopback": "Loopback",
     "protected_local_address": "Host address",
     "protected_trusted_proxy": "Reverse proxy",
-    "protected_outbound_proxy": "Egress proxy"
+    "protected_outbound_proxy": "Egress proxy",
+    "section_trusted_proxies": "Trusted reverse proxies",
+    "section_trusted_proxies_desc": "Only forwarding headers from these addresses are believed when recovering the real client IP. Stored in the database, so edits apply immediately without a restart.",
+    "proxies_empty": "None configured, so the server only sees the address it is talking to — neither the IP list nor per-IP throttling can tell clients apart.",
+    "proxies_from_config": "Currently using the value from config.yaml: {{list}}. Adding one here takes precedence.",
+    "proxy_add": "Add",
+    "proxy_remove": "Remove {{cidr}}",
+    "proxy_add_detected": "Add detected {{cidr}}",
+    "banner_fix_hint": "Add it on the Protection tab to take effect"
   }
 }

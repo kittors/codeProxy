@@ -276,7 +276,7 @@ export function AccessRulesTab({
         </div>
       </div>
 
-      <div className="relative min-h-[420px] px-5">
+      <div className="relative min-h-0 flex-1 overflow-hidden px-5">
         <DataTable<IpAccessRule>
           tableId="ip-access-rules"
           rows={items}
@@ -284,6 +284,8 @@ export function AccessRulesTab({
           rowKey={(item) => item.id}
           loading={loading}
           virtualize={false}
+          height="h-full"
+          minHeight="min-h-full"
           minWidth="min-w-[1040px]"
           emptyText={t("ip_access.no_rules")}
           showAllLoadedMessage={false}
