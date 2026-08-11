@@ -46,6 +46,7 @@ import {
   type AuthFileCycleBudgetStats,
 } from "@code-proxy/domain";
 import { resolveQuotaProvider, type QuotaProvider } from "@features/quota-preview/quota-fetch";
+import { quotaMetaHasMoney, resolveDisplayableQuotaMeta } from "@features/quota-preview/quota-meta";
 import { useStickyDisplayPlans } from "./useStickyDisplayPlans";
 import { QuotaMetricChips } from "../components/QuotaMetricChips";
 import { renderQuotaBarNode } from "./quotaBar";
@@ -461,12 +462,10 @@ export function useAuthFilesFilesPresentation({
         reset && item?.label.startsWith("xai_quota.")
           ? t("xai_quota.reset_at", { time: reset })
           : reset;
-      const rawMeta = item?.meta?.trim() ? translateQuotaText(item.meta) : null;
-      // Drop raw ISO period ranges (e.g. "2026-07-16T06:45:51+00:00 - …").
-      const meta = rawMeta && !/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(rawMeta) ? rawMeta : null;
+      const meta = resolveDisplayableQuotaMeta(item?.meta ? translateQuotaText(item.meta) : null);
       if (resetLabel && meta) {
         // Keep money remaining ("$40 / $50") next to reset; skip other period labels.
-        return meta.includes("$") ? `${meta} · ${resetLabel}` : resetLabel;
+        return quotaMetaHasMoney(meta) ? `${meta} · ${resetLabel}` : resetLabel;
       }
       return resetLabel ?? meta ?? null;
     },
@@ -477,13 +476,12 @@ export function useAuthFilesFilesPresentation({
   // resolved on its own instead of the merged "meta · reset" detail string.
   const resolveQuotaItemMetaText = useCallback(
     (item: QuotaItem | null | undefined) => {
-      const rawMeta = item?.meta?.trim() ? translateQuotaText(item.meta) : null;
-      // Drop raw ISO period ranges (e.g. "2026-07-16T06:45:51+00:00 - …").
-      if (!rawMeta || /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(rawMeta)) return null;
+      const meta = resolveDisplayableQuotaMeta(item?.meta ? translateQuotaText(item.meta) : null);
+      if (!meta) return null;
       const hasReset = typeof item?.resetAtMs === "number" && Number.isFinite(item.resetAtMs);
       // Non-money meta only restates the period the countdown already shows.
-      if (hasReset && !rawMeta.includes("$")) return null;
-      return rawMeta;
+      if (hasReset && !quotaMetaHasMoney(meta)) return null;
+      return meta;
     },
     [translateQuotaText],
   );
