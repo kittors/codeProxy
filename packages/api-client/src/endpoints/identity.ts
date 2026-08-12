@@ -177,6 +177,8 @@ export interface AuditLogIdentity {
   resource_id: string;
   result: string;
   request_id: string;
+  /** Source address of the actor. Empty for events raised outside a request. */
+  ip_address?: string;
   changes?: AuditLogChanges;
   created_at: string;
 }

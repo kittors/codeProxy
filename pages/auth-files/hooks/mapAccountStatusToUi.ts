@@ -121,7 +121,6 @@ export const mapQuotaItemDto = (item: AiAccountQuotaItemDto): QuotaItem => {
   return {
     key: item.quota_key,
     label: item.quota_label ?? item.quota_key,
-    observedAtMs: parseTimestampMs(item.observed_at ?? undefined),
     // Clamp at the boundary: group averages consume percent directly.
     percent:
       typeof item.percent === "number" && Number.isFinite(item.percent)
@@ -164,7 +163,6 @@ export const mapAccountStatusToQuotaState = (
     resetCreditExpirations: account.reset_credit_expirations,
     error: isError ? (errorMessage ?? "status_error") : undefined,
     updatedAt,
-    quotaObservedAtMs: parseTimestampMs(account.quota_observed_at ?? undefined),
   };
 };
 

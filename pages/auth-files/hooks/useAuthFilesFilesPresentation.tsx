@@ -46,6 +46,7 @@ import {
   type AuthFileCycleBudgetStats,
 } from "@code-proxy/domain";
 import { resolveQuotaProvider, type QuotaProvider } from "@features/quota-preview/quota-fetch";
+import { quotaMetaHasMoney, resolveDisplayableQuotaMeta } from "@features/quota-preview/quota-meta";
 import { useStickyDisplayPlans } from "./useStickyDisplayPlans";
 import { QuotaMetricChips } from "../components/QuotaMetricChips";
 import { renderQuotaBarNode } from "./quotaBar";
@@ -397,23 +398,6 @@ export function useAuthFilesFilesPresentation({
     [nowMs, t],
   );
 
-  // Age of an observation, coarsest unit only ("6天" / "3小时"): the exact age of
-  // a value we already know is stale adds noise, the order of magnitude is what
-  // tells the user whether to trust it.
-  const formatQuotaAgeCompact = useCallback(
-    (observedAtMs?: number) => {
-      if (typeof observedAtMs !== "number" || !Number.isFinite(observedAtMs)) return null;
-      const diffMs = Math.max(0, nowMs - observedAtMs);
-      const minutes = Math.floor(diffMs / 60_000);
-      const hours = Math.floor(minutes / 60);
-      const days = Math.floor(hours / 24);
-      if (days >= 1) return t("m_quota.duration_day_compact", { count: days });
-      if (hours >= 1) return t("m_quota.duration_hour_compact", { count: hours });
-      return t("m_quota.duration_minute_compact", { count: Math.max(1, minutes) });
-    },
-    [nowMs, t],
-  );
-
   // Chips keep only the two largest units ("2d19h") so the countdown never
   // squeezes the percent out of a half-width chip.
   const formatQuotaResetTextChip = useCallback(
@@ -478,12 +462,10 @@ export function useAuthFilesFilesPresentation({
         reset && item?.label.startsWith("xai_quota.")
           ? t("xai_quota.reset_at", { time: reset })
           : reset;
-      const rawMeta = item?.meta?.trim() ? translateQuotaText(item.meta) : null;
-      // Drop raw ISO period ranges (e.g. "2026-07-16T06:45:51+00:00 - …").
-      const meta = rawMeta && !/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(rawMeta) ? rawMeta : null;
+      const meta = resolveDisplayableQuotaMeta(item?.meta ? translateQuotaText(item.meta) : null);
       if (resetLabel && meta) {
         // Keep money remaining ("$40 / $50") next to reset; skip other period labels.
-        return meta.includes("$") ? `${meta} · ${resetLabel}` : resetLabel;
+        return quotaMetaHasMoney(meta) ? `${meta} · ${resetLabel}` : resetLabel;
       }
       return resetLabel ?? meta ?? null;
     },
@@ -494,13 +476,12 @@ export function useAuthFilesFilesPresentation({
   // resolved on its own instead of the merged "meta · reset" detail string.
   const resolveQuotaItemMetaText = useCallback(
     (item: QuotaItem | null | undefined) => {
-      const rawMeta = item?.meta?.trim() ? translateQuotaText(item.meta) : null;
-      // Drop raw ISO period ranges (e.g. "2026-07-16T06:45:51+00:00 - …").
-      if (!rawMeta || /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(rawMeta)) return null;
+      const meta = resolveDisplayableQuotaMeta(item?.meta ? translateQuotaText(item.meta) : null);
+      if (!meta) return null;
       const hasReset = typeof item?.resetAtMs === "number" && Number.isFinite(item.resetAtMs);
       // Non-money meta only restates the period the countdown already shows.
-      if (hasReset && !rawMeta.includes("$")) return null;
-      return rawMeta;
+      if (hasReset && !quotaMetaHasMoney(meta)) return null;
+      return meta;
     },
     [translateQuotaText],
   );
@@ -542,13 +523,10 @@ export function useAuthFilesFilesPresentation({
   const renderQuotaBar = useCallback(
     (label: string, item: QuotaItem | null, compact = false): ReactNode =>
       renderQuotaBarNode(label, item, compact, {
-        t,
-        nowMs,
         translateQuotaText,
         formatQuotaItemDetailText,
-        formatQuotaAgeCompact,
       }),
-    [formatQuotaAgeCompact, formatQuotaItemDetailText, nowMs, t, translateQuotaText],
+    [formatQuotaItemDetailText, translateQuotaText],
   );
 
   const fileColumns = useMemo<DataTableColumn<AuthFileItem>[]>(() => {
