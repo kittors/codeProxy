@@ -27,7 +27,6 @@ export const mergeQuotaItem = (previous: QuotaItem, incoming: QuotaItem): QuotaI
   // countdown. Assigned explicitly so a payload missing the key still clears it.
   percent: incoming.percent ?? null,
   resetAtMs: incoming.resetAtMs,
-  observedAtMs: incoming.observedAtMs,
   value: incoming.value ?? previous.value,
   windowSeconds: incoming.windowSeconds ?? previous.windowSeconds,
   meta: incoming.meta ?? previous.meta,
@@ -66,10 +65,6 @@ export const mergeQuotaState = (
       incoming.resetCreditExpirations ??
       (resetCreditCountChanged ? undefined : previous.resetCreditExpirations),
     updatedAt: incoming.updatedAt ?? previous.updatedAt,
-    // Observation time tracks the data, not the request: never fall back to the
-    // previous value, or a card whose quota stopped being confirmed would keep
-    // reporting the age of whatever it last managed to observe.
-    quotaObservedAtMs: incoming.quotaObservedAtMs,
     error:
       incoming.error ?? (incoming.status === "error" ? previous.error : undefined),
   };

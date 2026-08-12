@@ -106,6 +106,8 @@ export { aiAccountsStatusApi } from "./endpoints/ai-accounts-status";
 export type * from "./endpoints/ai-accounts-status";
 export { identityFingerprintApi } from "./endpoints/identity-fingerprint";
 export type * from "./endpoints/identity-fingerprint";
+export { ipAccessApi } from "./endpoints/ip-access";
+export type * from "./endpoints/ip-access";
 export { updateApi } from "./endpoints/update";
 export type * from "./endpoints/update";
 export { imageGenerationApi } from "./endpoints/image-generation";

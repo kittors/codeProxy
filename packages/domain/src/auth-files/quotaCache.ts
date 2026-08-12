@@ -28,12 +28,6 @@ export const sanitizeQuotaItemsForCache = (items: unknown): QuotaItem[] => {
           : undefined;
       const meta = typeof record.meta === "string" ? record.meta : undefined;
       const type = typeof record.type === "string" ? record.type : undefined;
-      // Age must survive the round-trip: a cached window rehydrated without its
-      // observation time would repaint on cold start as if it were just fetched.
-      const observedAtMs =
-        typeof record.observedAtMs === "number" && Number.isFinite(record.observedAtMs)
-          ? record.observedAtMs
-          : undefined;
       return {
         ...(key ? { key } : {}),
         label,
@@ -43,7 +37,6 @@ export const sanitizeQuotaItemsForCache = (items: unknown): QuotaItem[] => {
         windowSeconds,
         meta,
         type,
-        observedAtMs,
       };
     })
     .filter((item): item is QuotaItem => Boolean(item));
@@ -103,10 +96,6 @@ export const sanitizeQuotaByFileNameForCache = (
     ) {
       return;
     }
-    const quotaObservedAtMs =
-      typeof state.quotaObservedAtMs === "number" && Number.isFinite(state.quotaObservedAtMs)
-        ? state.quotaObservedAtMs
-        : undefined;
     output[fileName] = {
       status: status === "loading" ? "success" : (status as QuotaStatus),
       items,
@@ -117,7 +106,6 @@ export const sanitizeQuotaByFileNameForCache = (
       fetchedAt,
       source,
       error: status === "error" ? error : undefined,
-      quotaObservedAtMs,
     };
   });
 

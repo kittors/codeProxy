@@ -1,17 +1,12 @@
 import type { ReactNode } from "react";
-import type { TFunction } from "i18next";
 import { Clock } from "lucide-react";
-import { isQuotaObservationStale } from "@code-proxy/domain";
 import { HoverTooltip } from "@code-proxy/ui";
 import type { QuotaItem } from "@features/quota-preview/quota-helpers";
 import { resolveQuotaVisualTone } from "../components/QuotaMetricChips";
 
 export type QuotaBarDeps = {
-  t: TFunction;
-  nowMs: number;
   translateQuotaText: (text: string) => string;
   formatQuotaItemDetailText: (item: QuotaItem | null | undefined) => string | null;
-  formatQuotaAgeCompact: (observedAtMs?: number) => string | null;
 };
 
 /**
@@ -19,6 +14,12 @@ export type QuotaBarDeps = {
  *
  * Extracted from useAuthFilesFilesPresentation to keep that hook within the
  * file-size ratchet; the deps it needs are passed in rather than captured.
+ *
+ * Observation age is deliberately not surfaced here. Entering the page always
+ * fires a force probe for the visible cards, so an age marker mostly reported
+ * the seconds between first paint and that probe landing — noise, not a fault.
+ * A probe that genuinely fails is reported by the account's own error state
+ * (refresh_state / error_summary on the card), which is where it belongs.
  */
 export const renderQuotaBarNode = (
   label: string,
@@ -26,7 +27,7 @@ export const renderQuotaBarNode = (
   compact: boolean,
   deps: QuotaBarDeps,
 ): ReactNode => {
-  const { t, nowMs, translateQuotaText, formatQuotaItemDetailText, formatQuotaAgeCompact } = deps;
+  const { translateQuotaText, formatQuotaItemDetailText } = deps;
     const tone = resolveQuotaVisualTone(item?.percent);
     const normalized = tone.normalized;
     const translatedLabel = translateQuotaText(label);
@@ -35,29 +36,8 @@ export const renderQuotaBarNode = (
       (normalized === null ? "--" : `${Math.round(normalized)}%`);
     // Keep a fixed-height meta row so bars stay evenly spaced; hide "--" when empty.
     const detailText = formatQuotaItemDetailText(item);
-    // A value the upstream stopped confirming keeps its countdown ticking off a
-    // frozen reset time, which reads as live data. Desaturate it and state its
-    // age so an unrefreshed number can never pass for a current one.
-    //
-    // "How old is it" has three answers, and only the first is safe to render
-    // plainly. An unknown age is not evidence of freshness: accounts that have
-    // been failing since before quota observation existed have values but no
-    // timestamp, and their snapshot history is long past its retention window —
-    // exactly the accounts most in need of the marker.
-    const hasValue = item?.percent != null || Boolean(item?.value);
-    const ageUnknown = hasValue && item?.observedAtMs === undefined;
-    const stale = isQuotaObservationStale(item?.observedAtMs, nowMs);
-    const degraded = stale || ageUnknown;
-    const ageText = stale ? formatQuotaAgeCompact(item?.observedAtMs) : null;
-    const staleText = ageText
-      ? t("m_quota.stale_observed", { age: ageText })
-      : ageUnknown
-        ? t("m_quota.stale_never_observed")
-        : null;
     const tooltipParts = [translatedLabel, percentText];
     if (detailText) tooltipParts.push(detailText);
-    if (ageText) tooltipParts.push(t("m_quota.stale_tooltip", { age: ageText }));
-    else if (ageUnknown) tooltipParts.push(t("m_quota.stale_never_observed"));
     const bar = (
       <div className={compact ? "space-y-1" : "space-y-1.5"}>
         <div className="flex items-center justify-between gap-1.5">
@@ -78,7 +58,7 @@ export const renderQuotaBarNode = (
             className={[
               "shrink-0 font-semibold tabular-nums",
               compact ? "text-2xs" : "text-xs",
-              degraded ? "text-slate-400 dark:text-white/40" : tone.percentClass,
+              tone.percentClass,
             ].join(" ")}
           >
             {percentText}
@@ -91,24 +71,15 @@ export const renderQuotaBarNode = (
           ].join(" ")}
         >
           <div
-            className={[
-              "h-full rounded-full",
-              tone.fillClass,
-              degraded ? "opacity-40 saturate-50" : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
+            className={["h-full rounded-full", tone.fillClass].join(" ")}
             style={{ width: `${normalized ?? 0}%` }}
             aria-hidden="true"
           />
         </div>
         {compact ? null : (
-          <div className="flex min-h-[14px] items-center justify-between gap-2 text-2xs">
-            <span className="min-w-0 truncate text-amber-600 dark:text-amber-300/80">
-              {staleText ?? "\u00A0"}
-            </span>
+          <div className="flex min-h-[14px] items-center justify-end gap-2 text-2xs">
             <span className="shrink-0 truncate tabular-nums text-slate-400 dark:text-white/40">
-              {detailText ?? "\u00A0"}
+              {detailText ?? " "}
             </span>
           </div>
         )}

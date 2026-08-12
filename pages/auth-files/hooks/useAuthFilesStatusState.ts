@@ -634,9 +634,6 @@ export function useAuthFilesStatusState({
           resetCreditExpirations: prev[file.name]?.resetCreditExpirations,
           error: prev[file.name]?.error,
           updatedAt: prev[file.name]?.updatedAt,
-          // Items shown while loading are still the previously observed ones, so
-          // their age must survive the transition and keep any stale marker on.
-          quotaObservedAtMs: prev[file.name]?.quotaObservedAtMs,
         };
         quotaInFlightRef.current.add(file.name);
         quotaAutoRefreshingRef.current.add(file.name);
@@ -657,9 +654,6 @@ export function useAuthFilesStatusState({
           resetCreditExpirations: prev[file.name]?.resetCreditExpirations,
           error: message,
           updatedAt: Date.now(),
-          // A failed refresh does not re-observe anything: keep the old timestamp
-          // so the retained values keep reporting their true age.
-          quotaObservedAtMs: prev[file.name]?.quotaObservedAtMs,
         };
         quotaInFlightRef.current.delete(file.name);
         quotaAutoRefreshingRef.current.delete(file.name);
