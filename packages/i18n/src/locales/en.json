@@ -185,7 +185,8 @@
     "system_info": "Management Center Info",
     "monitor": "Monitor Center",
     "menuManagement": "Menu Management",
-    "content_moderation": "Content Moderation"
+    "content_moderation": "Content Moderation",
+    "videoGeneration": "Video Models"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -2089,7 +2090,8 @@
     "stale_route_description": "This frontend may not include the requested page. Hard refresh to load the latest version and try again.",
     "stale_route_shortcut": "Hard refresh: Cmd+Shift+R on macOS; Ctrl+Shift+R on Windows/Linux.",
     "stale_route_reload": "Reload page",
-    "nav_ip_access": "IP Access Control"
+    "nav_ip_access": "IP Access Control",
+    "nav_video_generation": "Video Models"
   },
   "proxies": {
     "title": "Proxy Management",
@@ -5441,5 +5443,51 @@
     "portal_no_logins": "No sign-ins in the last 30 days",
     "chain_title": "Forwarding chain for this request (rightmost is the hop talking to this service)",
     "chain_hint": "Every hop must be declared before resolution reaches the real client on the left. Currently resolving to: {{client}}. A loopback result means one hop is still undeclared."
+  },
+  "video_generation": {
+    "title": "Video Models",
+    "description": "See how to call Grok Imagine text-to-video and image-to-video, and verify the pipeline from the test panel.",
+    "call_title": "How to call",
+    "call_description": "Use an API key from the API Keys page. Generation is asynchronous: submit, then poll the returned request_id.",
+    "text_to_video_title": "Text to video",
+    "text_to_video_desc": "Prompt only. The model renders a first frame and animates it — good for creating from scratch.",
+    "image_to_video_title": "Image to video",
+    "image_to_video_desc": "Supply a source image as the first frame and describe the motion with a prompt.",
+    "request_params_title": "Request parameters",
+    "response_schema_title": "Response schema",
+    "table_param": "Field",
+    "table_type": "Type",
+    "table_required": "Required",
+    "table_description": "Description",
+    "table_default": "default",
+    "status_endpoint_hint": "Poll GET {{path}}. Read video.url once status is done; failed / expired are terminal.",
+    "param_model_desc": "Video model id, for example grok-imagine-video-1.5.",
+    "param_prompt_desc": "Describes the scene and camera motion to generate.",
+    "param_image_prompt_desc": "Describes how the source image should move, e.g. camera push or element motion.",
+    "param_image_desc": "Source image as {\"url\": \"...\"}. A plain URL string or data URI is also accepted and normalized server-side.",
+    "param_duration_desc": "Clip length in seconds; the ceiling depends on the model.",
+    "param_aspect_ratio_desc": "Aspect ratio, such as 16:9, 9:16 or 1:1.",
+    "param_resolution_desc": "Resolution: 480p, 720p or 1080p.",
+    "response_request_id_desc": "Job id returned on submission, used for polling.",
+    "response_status_desc": "Job status: pending, done, failed or expired.",
+    "response_video_url_desc": "URL of the finished clip.",
+    "response_video_duration_desc": "Length of the generated clip in seconds.",
+    "test_button": "Test generation",
+    "test_title": "Test video generation",
+    "test_submit": "Generate",
+    "test_running": "Generating",
+    "test_running_hint": "Video generation usually takes 1-3 minutes; keep this page open",
+    "test_failed_generic": "Video generation failed",
+    "test_model_required": "Select a video model first",
+    "test_prompt_required": "Enter a prompt",
+    "test_image_required": "Image-to-video needs a source image URL",
+    "field_model": "Model",
+    "field_prompt": "Prompt",
+    "field_prompt_placeholder": "e.g. ocean waves at sunset, camera slowly pulling back",
+    "field_image_url": "Source image URL (image-to-video)",
+    "field_duration": "Duration (seconds, max {{max}})",
+    "field_aspect_ratio": "Aspect ratio",
+    "field_resolution": "Resolution",
+    "result_open_original": "Open the original clip in a new tab"
   }
 }

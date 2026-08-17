@@ -187,7 +187,8 @@
     "system_info": "中心信息",
     "monitor": "监控中心",
     "menuManagement": "菜单管理",
-    "content_moderation": "内容审核"
+    "content_moderation": "内容审核",
+    "videoGeneration": "视频模型"
   },
   "dashboard": {
     "title": "仪表盘",
@@ -2106,7 +2107,8 @@
     "stale_route_description": "当前前端可能没有这个页面。请硬刷新后重试，以加载最新版本。",
     "stale_route_shortcut": "硬刷新：macOS 按 Cmd+Shift+R；Windows/Linux 按 Ctrl+Shift+R。",
     "stale_route_reload": "重新加载页面",
-    "nav_ip_access": "IP 访问控制"
+    "nav_ip_access": "IP 访问控制",
+    "nav_video_generation": "视频模型"
   },
   "proxies": {
     "title": "代理管理",
@@ -5455,5 +5457,51 @@
     "portal_no_logins": "近 30 天没有登录记录",
     "chain_title": "当前请求的转发链（右侧为直连本服务的一跳）",
     "chain_hint": "每一跳都要声明为可信代理，解析才能走到最左侧的真实客户端。当前解析结果：{{client}}。若结果落在回环地址，说明还有一跳没声明。"
+  },
+  "video_generation": {
+    "title": "视频模型",
+    "description": "查看 Grok Imagine 的文生视频 / 图生视频调用方式，并通过测试面板验证生成链路。",
+    "call_title": "调用方式",
+    "call_description": "使用 API Keys 页面配置的 API Key 调用视频接口；生成是异步的，提交后拿 request_id 轮询结果。",
+    "text_to_video_title": "文生视频",
+    "text_to_video_desc": "只给提示词，模型先生成首帧再动起来，适合从零创作。",
+    "image_to_video_title": "图生视频",
+    "image_to_video_desc": "提供一张源图作为首帧，用提示词描述镜头与动作。",
+    "request_params_title": "请求参数",
+    "response_schema_title": "返回结构",
+    "table_param": "字段",
+    "table_type": "类型",
+    "table_required": "必填",
+    "table_description": "说明",
+    "table_default": "默认",
+    "status_endpoint_hint": "轮询接口：GET {{path}}；status 为 done 时取 video.url，failed / expired 表示终止。",
+    "param_model_desc": "视频模型 ID，例如 grok-imagine-video-1.5。",
+    "param_prompt_desc": "描述要生成的画面与镜头运动。",
+    "param_image_prompt_desc": "描述源图要如何动起来，例如镜头推拉、元素运动。",
+    "param_image_desc": "源图，传 {\"url\": \"...\"} 对象；也接受直接传 URL 字符串或 data URI，服务端会归一化。",
+    "param_duration_desc": "视频时长（秒），上限取决于模型。",
+    "param_aspect_ratio_desc": "画面比例，如 16:9、9:16、1:1。",
+    "param_resolution_desc": "分辨率：480p、720p、1080p。",
+    "response_request_id_desc": "提交成功后返回的任务 ID，用于轮询。",
+    "response_status_desc": "任务状态：pending、done、failed、expired。",
+    "response_video_url_desc": "生成完成后的视频地址。",
+    "response_video_duration_desc": "实际生成的视频时长（秒）。",
+    "test_button": "测试生成",
+    "test_title": "测试视频生成",
+    "test_submit": "开始生成",
+    "test_running": "生成中",
+    "test_running_hint": "视频生成通常需要 1-3 分钟，请保持页面打开",
+    "test_failed_generic": "视频生成失败",
+    "test_model_required": "请先选择视频模型",
+    "test_prompt_required": "请填写提示词",
+    "test_image_required": "图生视频需要提供源图地址",
+    "field_model": "模型",
+    "field_prompt": "提示词",
+    "field_prompt_placeholder": "例如：日落时分的海浪，镜头缓慢拉远",
+    "field_image_url": "源图地址（图生视频）",
+    "field_duration": "时长（秒，最多 {{max}}）",
+    "field_aspect_ratio": "画面比例",
+    "field_resolution": "分辨率",
+    "result_open_original": "在新标签页打开原始视频"
   }
 }

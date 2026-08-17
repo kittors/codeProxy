@@ -1,8 +1,12 @@
 import { useCallback, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Check, Copy } from "lucide-react";
-import { copyTextToClipboard } from "@code-proxy/ui";
-import { highlightSnippet, TOKEN_CLASS, type SnippetLanguage } from "./highlightSnippet";
+import {
+  copyTextToClipboard,
+  highlightSnippet,
+  TOKEN_CLASS,
+  type SnippetLanguage,
+} from "@code-proxy/ui";
 import { LANDING_EASE, useLandingFade } from "./landingMotion";
 import { LandingSectionHead } from "./LandingSectionHead";
 import type { LandingCopy } from "./landingCopy";

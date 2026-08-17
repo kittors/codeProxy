@@ -3,6 +3,7 @@ import { ArrowUp, ChevronLeft, ChevronRight, CircleAlert, Plus, Trash2, X } from
 import { useTranslation } from "react-i18next";
 import { imageGenerationApi } from "@code-proxy/api-client";
 import { Button, COLUMN_WIDTH, surface } from "@code-proxy/ui";
+import { CodeBlock } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
 import { ImagePreviewOverlay } from "@code-proxy/ui";
 import { Modal } from "@code-proxy/ui";
@@ -259,14 +260,11 @@ function EndpointCallDoc({ doc }: { doc: EndpointDoc }) {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl bg-slate-950 shadow-[0_14px_42px_rgb(15_23_42_/_0.16)] dark:bg-black/45">
-        <div className="border-b border-white/10 px-4 py-2 text-xs font-medium text-slate-300">
-          curl
-        </div>
-        <pre className="overflow-x-auto px-4 py-3 text-sm leading-6 text-slate-100">
-          <code>{doc.curl}</code>
-        </pre>
-      </div>
+      <CodeBlock
+        code={doc.curl}
+        label="curl"
+        className="shadow-[0_14px_42px_rgb(15_23_42_/_0.16)]"
+      />
     </div>
   );
 }
