@@ -94,6 +94,13 @@ export function VideoGenerationPageContent() {
     [model, models],
   );
   const maxDuration = selectedModel?.max_duration_seconds || 15;
+  // A model the tenant has no credential for cannot be generated with. Saying so
+  // here — instead of letting the request fail with "auth_not_found" — is the
+  // difference between an actionable message and a dead end. `available` is
+  // undefined on an older server, which must not disable a working page.
+  const modelAvailable = selectedModel?.available !== false;
+  const anyModelAvailable = models.some((entry) => entry.available !== false);
+  const canGenerate = models.length > 0 && modelAvailable;
 
   const pollTask = useCallback(
     (taskId: string) => {
@@ -162,11 +169,14 @@ export function VideoGenerationPageContent() {
 
   const modelOptions = useMemo(
     () =>
-      models.map((entry) => ({
-        value: entry.id,
-        label: entry.display_name ? `${entry.display_name} · ${entry.id}` : entry.id,
-      })),
-    [models],
+      models.map((entry) => {
+        const base = entry.display_name ? `${entry.display_name} · ${entry.id}` : entry.id;
+        return {
+          value: entry.id,
+          label: entry.available === false ? `${base} (${t("video_generation.unavailable_suffix")})` : base,
+        };
+      }),
+    [models, t],
   );
 
   return (
@@ -190,7 +200,7 @@ export function VideoGenerationPageContent() {
               {t("video_generation.call_description")}
             </p>
           </div>
-          <Button onClick={() => setTestOpen(true)} disabled={models.length === 0}>
+          <Button onClick={() => setTestOpen(true)} disabled={models.length === 0 || !anyModelAvailable}>
             {t("video_generation.test_button")}
           </Button>
         </div>
@@ -199,6 +209,13 @@ export function VideoGenerationPageContent() {
           <p className="mt-4 flex items-center gap-2 text-sm text-rose-600 dark:text-rose-300">
             <CircleAlert className="h-4 w-4 shrink-0" />
             {modelsError}
+          </p>
+        ) : null}
+
+        {!modelsError && models.length > 0 && !anyModelAvailable ? (
+          <p className="mt-4 flex items-start gap-2 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">
+            <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" />
+            {t("video_generation.no_channel_hint")}
           </p>
         ) : null}
 
@@ -329,13 +346,18 @@ export function VideoGenerationPageContent() {
           </div>
 
           <div className="flex items-center gap-3">
-            <Button onClick={handleRunTest} disabled={test.running}>
+            <Button onClick={handleRunTest} disabled={test.running || !canGenerate}>
               {test.running ? t("video_generation.test_running") : t("video_generation.test_submit")}
             </Button>
             {test.running ? (
               <span className="text-xs text-slate-500 dark:text-white/45">
                 {t("video_generation.test_running_hint")}
                 {test.phase ? ` · ${test.phase}` : ""}
+              </span>
+            ) : null}
+            {!test.running && !canGenerate ? (
+              <span className="text-xs text-amber-700 dark:text-amber-300">
+                {t("video_generation.no_channel_hint")}
               </span>
             ) : null}
           </div>

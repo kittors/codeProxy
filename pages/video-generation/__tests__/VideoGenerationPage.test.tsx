@@ -95,6 +95,29 @@ describe("VideoGenerationPage", () => {
     expect((await screen.findAllByText("请填写提示词")).length).toBeGreaterThan(0);
   });
 
+  // Screenshot regression: with no xAI credential the page still offered a live
+  // button, and the request died deep in the router with "auth_not_found".
+  test("disables generation when the tenant has no credential for the model", async () => {
+    getModelsMock().mockResolvedValue({
+      models: [{ ...videoModel, available: false, channels: [] }],
+      channels: [],
+    });
+    renderPage();
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "测试生成" })).toBeDisabled(),
+    );
+    expect(screen.getByText(/没有可用的 xAI 账号/)).toBeInTheDocument();
+  });
+
+  test("keeps generation enabled when the server omits availability", async () => {
+    // An older server does not send the field; absence must not disable the page.
+    getModelsMock().mockResolvedValue({ models: [videoModel] });
+    renderPage();
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "测试生成" })).toBeEnabled());
+  });
+
   test("plays the clip once the task finishes", async () => {
     const user = userEvent.setup();
     getTaskMock().mockResolvedValue({
