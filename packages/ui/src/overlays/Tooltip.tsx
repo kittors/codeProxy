@@ -172,8 +172,18 @@ function resolveTooltipPosition({
   };
 }
 
+// scrollWidth/clientWidth are rounded to integers, so text that fits with a
+// sub-pixel remainder (a 188.4px label in a 188px box) reports a 1px overflow
+// while rendering in full, with no ellipsis. Without this tolerance the tooltip
+// pops up repeating the text already on screen — which reads as the UI showing
+// an "alias" that is identical to the name next to it.
+const OVERFLOW_TOLERANCE_PX = 1;
+
 function isElementOverflowing(element: HTMLElement) {
-  return element.scrollWidth > element.clientWidth || element.scrollHeight > element.clientHeight;
+  return (
+    element.scrollWidth - element.clientWidth > OVERFLOW_TOLERANCE_PX ||
+    element.scrollHeight - element.clientHeight > OVERFLOW_TOLERANCE_PX
+  );
 }
 
 function hasOverflowingContent(element: HTMLElement) {

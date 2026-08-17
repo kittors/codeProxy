@@ -16,7 +16,7 @@ import { SearchableCheckboxMultiSelect, Tabs, TabsList, TabsTrigger } from "@cod
 import type { SearchableCheckboxMultiSelectOption } from "@code-proxy/ui";
 import { HoverTooltip, OverflowTooltip } from "@code-proxy/ui";
 import { PaginationBar } from "@code-proxy/ui";
-import { ModelTag } from "@features/model-tags";
+import { RequestLogModelCell } from "./RequestLogModelCell";
 
 export type TimeRange = 1 | 7 | 14 | 30;
 export type StatusFilterValue = "success" | "failed";
@@ -940,38 +940,7 @@ export function buildRequestLogsColumns(
       width: "w-44",
       headerClassName: CENTERED_REQUEST_LOG_HEADER_CLASS,
       cellClassName: "text-center",
-      render: (row) =>
-        row.model ? (
-          <span className="inline-flex max-w-full items-center justify-center gap-1 align-middle">
-            <OverflowTooltip content={row.displayModel || row.model} className="min-w-0">
-              <ModelTag id={row.displayModel || row.model} size="sm" className="align-middle" />
-            </OverflowTooltip>
-            {row.upstreamModel && row.upstreamModel !== row.model ? (
-              <HoverTooltip
-                content={`${t("request_logs.real_model_id")}\n${row.upstreamModel}`}
-                placement="top"
-              >
-                <span
-                  className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500"
-                  aria-label={t("request_logs.real_model_id")}
-                />
-              </HoverTooltip>
-            ) : null}
-            {row.visionFallbackModel && row.visionFallbackModel !== row.model ? (
-              <HoverTooltip
-                content={`${t("request_logs.vision_fallback_model_id")}\n${row.visionFallbackModel}`}
-                placement="top"
-              >
-                <span
-                  className="h-1.5 w-1.5 shrink-0 rounded-full bg-sky-500"
-                  aria-label={t("request_logs.vision_fallback_model_id")}
-                />
-              </HoverTooltip>
-            ) : null}
-          </span>
-        ) : (
-          <span className="text-xs text-slate-400 dark:text-white/30">--</span>
-        ),
+      render: (row) => <RequestLogModelCell row={row} />,
     },
   );
   return identityColumn === "none"

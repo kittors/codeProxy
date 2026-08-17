@@ -396,6 +396,34 @@ describe("RequestLogsPage", () => {
     expect(await screen.findByRole("tooltip")).toHaveTextContent("Real model ID real-model");
   });
 
+  test("hides the real-model marker when the upstream name is only the alias prefix", async () => {
+    await i18n.changeLanguage("en");
+
+    mocks.getUsageLogs.mockResolvedValue(
+      responseWithRows([
+        buildUsageLogItem({
+          id: 1,
+          // How an Ollama Cloud account alias reaches the log: same model, two names.
+          model: "ollama/deepseek-v4-flash:0731",
+          upstream_model: "deepseek-v4-flash:0731",
+          vision_fallback_model: "",
+        }),
+      ]),
+    );
+
+    render(
+      <ThemeProvider>
+        <ToastProvider>
+          <RequestLogsPage />
+        </ToastProvider>
+      </ThemeProvider>,
+    );
+
+    const table = await screen.findByRole("table", { name: "Request Logs Table" });
+    expect(within(table).getByText("ollama/deepseek-v4-flash:0731")).toBeInTheDocument();
+    expect(within(table).queryByLabelText("Real model ID")).not.toBeInTheDocument();
+  });
+
   test("renders empty state with normalized empty filter arrays", async () => {
     await i18n.changeLanguage("en");
 
