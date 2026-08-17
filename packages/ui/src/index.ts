@@ -111,6 +111,9 @@ export { useLocalStorage } from "./hooks/useLocalStorage";
 export { useResizeLayoutAnimation } from "./hooks/useResizeLayoutAnimation";
 
 export { copyTextToClipboard } from "./utils/clipboard";
+export { CodeBlock } from "./code/CodeBlock";
+export { highlightSnippet, TOKEN_CLASS } from "./code/highlightSnippet";
+export type { CodeToken, SnippetLanguage, TokenKind } from "./code/highlightSnippet";
 export { SecretRevealModal } from "./overlays/SecretRevealModal";
 export {
   type ControlSize,

@@ -19,6 +19,7 @@ import { systemRoute } from "./system/route";
 import { proxiesRoute } from "./proxies/route";
 import { identityFingerprintRoute } from "./identity-fingerprint/route";
 import { imageGenerationRoute } from "./image-generation/route";
+import { videoGenerationRoute } from "./video-generation/route";
 import { ccswitchImportSettingsRoute } from "./ccswitch-import-settings/route";
 import { apiKeyLookupRoute } from "./api-key-lookup/route";
 import { apiKeyUsageRoute } from "./api-key-usage/route";
@@ -74,6 +75,7 @@ export const pageRoutes: PageRoute[] = [
   proxiesRoute,
   identityFingerprintRoute,
   imageGenerationRoute,
+  videoGenerationRoute,
   ccswitchImportSettingsRoute,
   apiKeyLookupRoute,
   apiKeyUsageRoute,

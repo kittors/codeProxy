@@ -23,7 +23,7 @@
     "pages/auth-files/hooks/useAuthFilesStatusState.ts": 1298,
     "pages/end-users/EndUsersPage.tsx": 1126,
     "pages/identity-fingerprint/IdentityFingerprintPage.tsx": 1880,
-    "pages/image-generation/components/ImageGenerationPageContent.tsx": 1193,
+    "pages/image-generation/components/ImageGenerationPageContent.tsx": 1191,
     "pages/models/ModelsPage.tsx": 1251,
     "pages/providers/components/ProvidersPageContent.tsx": 1845
   }
