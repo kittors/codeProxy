@@ -12,10 +12,20 @@ export interface VideoGenerationModel {
   supports_image_to_video: boolean;
   max_duration_seconds?: number;
   price_per_call?: number;
+  /** Credentials of the current tenant that can serve this model. */
+  channels?: string[];
+  /**
+   * False when the tenant has no credential for the model's provider. The page
+   * disables generation in that case: submitting would fail deep in the router
+   * with "auth_not_found: no auth available", which says nothing actionable.
+   */
+  available?: boolean;
 }
 
 export interface VideoGenerationModelsResponse {
   models: VideoGenerationModel[];
+  /** Every usable channel across providers, flattened. */
+  channels?: string[];
 }
 
 export interface VideoGenerationTestRequest {

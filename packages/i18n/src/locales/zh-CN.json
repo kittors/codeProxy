@@ -5502,6 +5502,8 @@
     "field_duration": "时长（秒，最多 {{max}}）",
     "field_aspect_ratio": "画面比例",
     "field_resolution": "分辨率",
-    "result_open_original": "在新标签页打开原始视频"
+    "result_open_original": "在新标签页打开原始视频",
+    "no_channel_hint": "当前租户下没有可用的 xAI 账号，无法生成视频。请先在「AI 账号」里添加并启用一个 Grok 账号。",
+    "unavailable_suffix": "无可用账号"
   }
 }

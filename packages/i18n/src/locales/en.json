@@ -5488,6 +5488,8 @@
     "field_duration": "Duration (seconds, max {{max}})",
     "field_aspect_ratio": "Aspect ratio",
     "field_resolution": "Resolution",
-    "result_open_original": "Open the original clip in a new tab"
+    "result_open_original": "Open the original clip in a new tab",
+    "no_channel_hint": "This tenant has no usable xAI account, so video generation is unavailable. Add and enable a Grok account under AI Accounts first.",
+    "unavailable_suffix": "no account"
   }
 }
