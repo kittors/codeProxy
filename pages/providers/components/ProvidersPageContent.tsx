@@ -31,8 +31,6 @@ import { ProviderKeyModal } from "./ProviderKeyModal";
 import { useOpenAIProviderEditor } from "../hooks/useOpenAIProviderEditor";
 import { ProviderKeyListCard } from "../ProviderKeyListCard";
 import {
-  OpenCodeGoUsageRefreshButton,
-  OpenCodeGoUsageCardSection,
   createOpenCodeGoUsageStore,
   mergeOpenCodeGoUsage,
   type OpenCodeGoUsageCacheEntry,
@@ -57,10 +55,22 @@ import {
 } from "../provider-import-export";
 import {
   fetchModelAccessCatalog,
-  getEffectiveProviderModels,
-  type DiscoveredProviderModel,
   type ModelAccessProvider,
 } from "../provider-model-access";
+import {
+  EMPTY_MODEL_ACCESS_CATALOGS,
+  EMPTY_MODEL_ACCESS_CATALOG_LOADED,
+  getProviderUsageCacheKey,
+  hasProviderUsageQuery,
+  isModelAccessProvider,
+  migrateProviderUsageCache,
+  PROVIDER_LIST_CACHE_SLOTS,
+  type ModelAccessCatalogLoadedState,
+  type ModelAccessCatalogState,
+  type OpenCodeGoUsageState,
+  type ProviderUsageProvider,
+} from "../provider-usage-config";
+import { ProviderUsageTabContent } from "./ProviderUsageTabContent";
 import { ProvidersToolbar } from "./ProvidersToolbar";
 import { ProviderTabsWithCounts } from "./ProviderTabsWithCounts";
 import type { ProviderTabId } from "./ProviderTabsWithCounts";
@@ -76,6 +86,7 @@ const PROVIDER_TAB_VALUES: ProviderTab[] = [
   "opencode-go",
   "cline",
   "ollama-cloud",
+  "commandcode",
   "vertex",
   "bedrock",
   "openai",
@@ -119,96 +130,6 @@ const getProviderSelectionKey = (
         .trim()
         .toLowerCase()}:${index}`;
 
-const hasOpenCodeGoUsageQuery = (item: ProviderSimpleConfig) =>
-  Boolean(item.workspaceId?.trim() && item.authCookie?.trim());
-
-type ProviderUsageProvider = "opencode-go" | "cline" | "ollama-cloud";
-
-const PROVIDER_USAGE_WINDOWS: Record<ProviderUsageProvider, readonly string[]> =
-  {
-    "opencode-go": ["rolling", "weekly", "monthly"],
-    cline: ["five_hour", "weekly", "monthly"],
-    "ollama-cloud": ["rolling", "weekly"],
-  };
-
-const getProviderUsageCacheKey = (
-  provider: ProviderUsageProvider,
-  item: ProviderSimpleConfig,
-  index: number,
-) =>
-  [
-    provider,
-    provider === "opencode-go"
-      ? item.workspaceId?.trim() || "no-workspace"
-      : "dashboard",
-    item.name?.trim() || item.apiKey?.trim() || `item-${index}`,
-    index,
-  ].join(":");
-
-const migrateProviderUsageCache = (
-  cached: OpenCodeGoUsageState,
-): OpenCodeGoUsageState => {
-  const next = { ...cached };
-  Object.entries(cached).forEach(([key, entry]) => {
-    if (
-      key.startsWith("opencode-go:") ||
-      key.startsWith("cline:") ||
-      key.startsWith("ollama-cloud:")
-    ) {
-      return;
-    }
-    next[`opencode-go:${key}`] ??= entry;
-  });
-  return next;
-};
-
-const hasProviderUsageQuery = (
-  provider: ProviderUsageProvider,
-  item: ProviderSimpleConfig,
-) =>
-  provider === "opencode-go"
-    ? hasOpenCodeGoUsageQuery(item)
-    : Boolean(item.authCookie?.trim());
-
-type OpenCodeGoUsageState = Record<string, OpenCodeGoUsageCacheEntry>;
-type ModelAccessCatalogState = Record<
-  ModelAccessProvider,
-  DiscoveredProviderModel[]
->;
-type ModelAccessCatalogLoadedState = Record<ModelAccessProvider, boolean>;
-
-const EMPTY_MODEL_ACCESS_CATALOGS: ModelAccessCatalogState = {
-  "opencode-go": [],
-  cline: [],
-  "ollama-cloud": [],
-};
-
-const EMPTY_MODEL_ACCESS_CATALOG_LOADED: ModelAccessCatalogLoadedState = {
-  "opencode-go": false,
-  cline: false,
-  "ollama-cloud": false,
-};
-
-const isModelAccessProvider = (
-  tabId: ProviderTab,
-): tabId is ModelAccessProvider =>
-  tabId === "opencode-go" || tabId === "cline" || tabId === "ollama-cloud";
-
-/** Provider list slots that seed from tenant-scoped localStorage. */
-const PROVIDER_LIST_CACHE_SLOTS: Record<
-  Exclude<ProviderTab, "ampcode">,
-  string
-> = {
-  gemini: "gemini",
-  claude: "claude",
-  codex: "codex",
-  "opencode-go": "opencode-go",
-  cline: "cline",
-  "ollama-cloud": "ollama-cloud",
-  vertex: "vertex",
-  bedrock: "bedrock",
-  openai: "openai",
-};
 
 /**
  * Seed list state from the active tenant bucket only.
@@ -312,7 +233,9 @@ export function ProvidersPage() {
               })
             : provider === "cline"
               ? await providersApi.queryClineUsage(payload)
-              : await providersApi.queryOllamaCloudUsage(payload);
+              : provider === "ollama-cloud"
+                ? await providersApi.queryOllamaCloudUsage(payload)
+                : await providersApi.queryCommandCodeUsage(payload);
         const entry: OpenCodeGoUsageCacheEntry = {
           sourceId: result.workspace_id ?? provider,
           workspaceId: result.workspace_id,
@@ -349,13 +272,6 @@ export function ProvidersPage() {
     [openCodeGoUsageStore, t],
   );
 
-  const refreshOpenCodeGoUsage = useCallback(
-    async (item: ProviderSimpleConfig, index: number) => {
-      await refreshProviderUsage("opencode-go", item, index);
-    },
-    [refreshProviderUsage],
-  );
-
   const [geminiKeys, setGeminiKeys] = useState<ProviderSimpleConfig[]>(() =>
     readCachedProviderList<ProviderSimpleConfig>("gemini"),
   );
@@ -374,6 +290,9 @@ export function ProvidersPage() {
   const [ollamaCloudKeys, setOllamaCloudKeys] = useState<
     ProviderSimpleConfig[]
   >(() => readCachedProviderList<ProviderSimpleConfig>("ollama-cloud"));
+  const [commandCodeKeys, setCommandCodeKeys] = useState<
+    ProviderSimpleConfig[]
+  >(() => readCachedProviderList<ProviderSimpleConfig>("commandcode"));
   const [vertexKeys, setVertexKeys] = useState<ProviderSimpleConfig[]>(() =>
     readCachedProviderList<ProviderSimpleConfig>("vertex"),
   );
@@ -390,7 +309,12 @@ export function ProvidersPage() {
 
   useEffect(() => {
     if (!canTestProviders) return;
-    if (tab !== "opencode-go" && tab !== "cline" && tab !== "ollama-cloud")
+    if (
+      tab !== "opencode-go" &&
+      tab !== "cline" &&
+      tab !== "ollama-cloud" &&
+      tab !== "commandcode"
+    )
       return;
     if (loading) return;
     if (autoRefreshProviderUsageInFlightRef.current) return;
@@ -401,7 +325,9 @@ export function ProvidersPage() {
         ? openCodeGoKeys
         : provider === "cline"
           ? clineKeys
-          : ollamaCloudKeys;
+          : provider === "ollama-cloud"
+            ? ollamaCloudKeys
+            : commandCodeKeys;
     if (items.length === 0) return;
 
     const staleKeys = items
@@ -477,6 +403,7 @@ export function ProvidersPage() {
           | "opencode-go"
           | "cline"
           | "ollama-cloud"
+          | "commandcode"
           | "vertex"
           | "bedrock";
         index: number;
@@ -508,9 +435,18 @@ export function ProvidersPage() {
         ...ollamaCloudKeys.map((item, idx) =>
           getProviderUsageCacheKey("ollama-cloud", item, idx),
         ),
+        ...commandCodeKeys.map((item, idx) =>
+          getProviderUsageCacheKey("commandcode", item, idx),
+        ),
       ]),
     );
-  }, [clineKeys, ollamaCloudKeys, openCodeGoKeys, openCodeGoUsageStore]);
+  }, [
+    clineKeys,
+    commandCodeKeys,
+    ollamaCloudKeys,
+    openCodeGoKeys,
+    openCodeGoUsageStore,
+  ]);
 
   const loadProviderTab = useCallback(async (tabId: ProviderTab) => {
     switch (tabId) {
@@ -560,6 +496,15 @@ export function ProvidersPage() {
         const freshOl = await providersApi.getOllamaCloudConfigs();
         setOllamaCloudKeys(freshOl);
         setCachedData("ollama-cloud", freshOl);
+        break;
+      }
+      case "commandcode": {
+        const cachedCc =
+          getCachedData<ProviderSimpleConfig[]>("commandcode");
+        if (cachedCc) setCommandCodeKeys(cachedCc);
+        const freshCc = await providersApi.getCommandCodeConfigs();
+        setCommandCodeKeys(freshCc);
+        setCachedData("commandcode", freshCc);
         break;
       }
       case "vertex": {
@@ -771,6 +716,7 @@ export function ProvidersPage() {
     openCodeGoKeys,
     clineKeys,
     ollamaCloudKeys,
+    commandCodeKeys,
     vertexKeys,
     bedrockKeys,
     setGeminiKeys,
@@ -779,6 +725,7 @@ export function ProvidersPage() {
     setOpenCodeGoKeys,
     setClineKeys,
     setOllamaCloudKeys,
+    setCommandCodeKeys,
     setVertexKeys,
     setBedrockKeys,
     refreshAll,
@@ -836,6 +783,7 @@ export function ProvidersPage() {
         provider === "opencode-go" ||
         provider === "cline" ||
         provider === "ollama-cloud" ||
+        provider === "commandcode" ||
         provider === "vertex" ||
         provider === "bedrock"
       ) {
@@ -960,6 +908,8 @@ export function ProvidersPage() {
           return clineKeys;
         case "ollama-cloud":
           return ollamaCloudKeys;
+        case "commandcode":
+          return commandCodeKeys;
         case "vertex":
           return vertexKeys;
         case "bedrock":
@@ -973,6 +923,7 @@ export function ProvidersPage() {
       claudeKeys,
       clineKeys,
       codexKeys,
+      commandCodeKeys,
       geminiKeys,
       ollamaCloudKeys,
       openCodeGoKeys,
@@ -1025,6 +976,7 @@ export function ProvidersPage() {
       "opencode-go": openCodeGoKeys.length,
       cline: clineKeys.length,
       "ollama-cloud": ollamaCloudKeys.length,
+      commandcode: commandCodeKeys.length,
       vertex: vertexKeys.length,
       bedrock: bedrockKeys.length,
       openai: openaiProviders.length,
@@ -1035,6 +987,7 @@ export function ProvidersPage() {
     claudeKeys,
     clineKeys,
     codexKeys,
+    commandCodeKeys,
     openCodeGoKeys,
     ollamaCloudKeys,
     vertexKeys,
@@ -1070,6 +1023,11 @@ export function ProvidersPage() {
           return;
         case "ollama-cloud":
           await providersApi.saveOllamaCloudConfigs(
+            items as ProviderSimpleConfig[],
+          );
+          return;
+        case "commandcode":
+          await providersApi.saveCommandCodeConfigs(
             items as ProviderSimpleConfig[],
           );
           return;
@@ -1283,6 +1241,11 @@ export function ProvidersPage() {
               label: "Ollama Cloud",
               count: tabCounts["ollama-cloud"],
             },
+            {
+              id: "commandcode",
+              label: "Command Code",
+              count: tabCounts.commandcode,
+            },
             { id: "vertex", label: "Vertex", count: tabCounts.vertex },
             { id: "bedrock", label: "Bedrock", count: tabCounts.bedrock },
             {
@@ -1363,199 +1326,38 @@ export function ProvidersPage() {
             />
           </TabsContent>
 
-          <TabsContent
-            value="opencode-go"
-            className="min-h-0 flex flex-1 flex-col"
-          >
-            <ProviderKeyListCard
-              items={openCodeGoKeys}
-              loading={isActiveTabListLoading("opencode-go")}
-              onEdit={(idx) => openKeyEditor("opencode-go", idx)}
-              onDelete={(idx) =>
-                setConfirm({
-                  type: "deleteKey",
-                  keyType: "opencode-go",
-                  index: idx,
-                })
-              }
-              onToggleEnabled={(idx, enabled) =>
-                void toggleKeyEnabled("opencode-go", idx, enabled)
-              }
-              isItemEnabled={(item) => item.disabled !== true}
+          {(
+            [
+              { provider: "opencode-go", items: openCodeGoKeys, showBaseUrl: false },
+              { provider: "cline", items: clineKeys },
+              { provider: "ollama-cloud", items: ollamaCloudKeys },
+              { provider: "commandcode", items: commandCodeKeys },
+            ] as const
+          ).map(({ provider, items, ...rest }) => (
+            <ProviderUsageTabContent
+              key={provider}
+              provider={provider}
+              items={items}
+              loading={isActiveTabListLoading(provider)}
+              catalog={modelAccessCatalogs[provider]}
+              usageStore={openCodeGoUsageStore}
               getStats={getSimpleStats}
               getStatusBar={getSimpleStatusBar}
-              getDisplayModels={(item) =>
-                getEffectiveProviderModels(
-                  "opencode-go",
-                  item,
-                  modelAccessCatalogs["opencode-go"],
-                )
-              }
-              showBaseUrl={false}
-              naturalHeight
-              showConnectionRows={false}
-              showModelMetric={false}
-              showExcludedModels={false}
-              renderExtra={(item, idx) => {
-                const queryReady = hasProviderUsageQuery("opencode-go", item);
-                const cacheKey = getProviderUsageCacheKey(
-                  "opencode-go",
-                  item,
-                  idx,
-                );
-                return (
-                  <OpenCodeGoUsageCardSection
-                    cacheKey={cacheKey}
-                    queryReady={queryReady}
-                    usageStore={openCodeGoUsageStore}
-                    windowTypes={PROVIDER_USAGE_WINDOWS["opencode-go"]}
-                  />
-                );
-              }}
-              renderMetricsExtra={(item, idx) => {
-                if (!hasProviderUsageQuery("opencode-go", item)) return null;
-                const cacheKey = getProviderUsageCacheKey(
-                  "opencode-go",
-                  item,
-                  idx,
-                );
-                return (
-                  <OpenCodeGoUsageRefreshButton
-                    cacheKey={cacheKey}
-                    usageStore={openCodeGoUsageStore}
-                    onRefresh={() => void refreshOpenCodeGoUsage(item, idx)}
-                  />
-                );
-              }}
-              selectedKeys={selectedExportKeySet}
-              onToggleSelected={toggleExportSelection}
-            />
-          </TabsContent>
-
-          <TabsContent value="cline" className="min-h-0 flex flex-1 flex-col">
-            <ProviderKeyListCard
-              items={clineKeys}
-              loading={isActiveTabListLoading("cline")}
-              onEdit={(idx) => openKeyEditor("cline", idx)}
+              onEdit={(idx) => openKeyEditor(provider, idx)}
               onDelete={(idx) =>
-                setConfirm({ type: "deleteKey", keyType: "cline", index: idx })
+                setConfirm({ type: "deleteKey", keyType: provider, index: idx })
               }
               onToggleEnabled={(idx, enabled) =>
-                void toggleKeyEnabled("cline", idx, enabled)
+                void toggleKeyEnabled(provider, idx, enabled)
               }
-              isItemEnabled={(item) => item.disabled !== true}
-              getStats={getSimpleStats}
-              getStatusBar={getSimpleStatusBar}
-              getDisplayModels={(item) =>
-                getEffectiveProviderModels(
-                  "cline",
-                  item,
-                  modelAccessCatalogs.cline,
-                )
+              onRefreshUsage={(item, idx) =>
+                void refreshProviderUsage(provider, item, idx)
               }
-              naturalHeight
-              showConnectionRows={false}
-              showModelMetric={false}
-              showExcludedModels={false}
-              renderExtra={(item, idx) => {
-                const queryReady = hasProviderUsageQuery("cline", item);
-                const cacheKey = getProviderUsageCacheKey("cline", item, idx);
-                return (
-                  <OpenCodeGoUsageCardSection
-                    cacheKey={cacheKey}
-                    queryReady={queryReady}
-                    usageStore={openCodeGoUsageStore}
-                    windowTypes={PROVIDER_USAGE_WINDOWS.cline}
-                  />
-                );
-              }}
-              renderMetricsExtra={(item, idx) => {
-                if (!hasProviderUsageQuery("cline", item)) return null;
-                const cacheKey = getProviderUsageCacheKey("cline", item, idx);
-                return (
-                  <OpenCodeGoUsageRefreshButton
-                    cacheKey={cacheKey}
-                    usageStore={openCodeGoUsageStore}
-                    onRefresh={() =>
-                      void refreshProviderUsage("cline", item, idx)
-                    }
-                  />
-                );
-              }}
               selectedKeys={selectedExportKeySet}
               onToggleSelected={toggleExportSelection}
+              {...rest}
             />
-          </TabsContent>
-
-          <TabsContent
-            value="ollama-cloud"
-            className="min-h-0 flex flex-1 flex-col"
-          >
-            <ProviderKeyListCard
-              items={ollamaCloudKeys}
-              loading={isActiveTabListLoading("ollama-cloud")}
-              onEdit={(idx) => openKeyEditor("ollama-cloud", idx)}
-              onDelete={(idx) =>
-                setConfirm({
-                  type: "deleteKey",
-                  keyType: "ollama-cloud",
-                  index: idx,
-                })
-              }
-              onToggleEnabled={(idx, enabled) =>
-                void toggleKeyEnabled("ollama-cloud", idx, enabled)
-              }
-              isItemEnabled={(item) => item.disabled !== true}
-              getStats={getSimpleStats}
-              getStatusBar={getSimpleStatusBar}
-              getDisplayModels={(item) =>
-                getEffectiveProviderModels(
-                  "ollama-cloud",
-                  item,
-                  modelAccessCatalogs["ollama-cloud"],
-                )
-              }
-              naturalHeight
-              showConnectionRows={false}
-              showModelMetric={false}
-              showExcludedModels={false}
-              renderExtra={(item, idx) => {
-                const queryReady = hasProviderUsageQuery("ollama-cloud", item);
-                const cacheKey = getProviderUsageCacheKey(
-                  "ollama-cloud",
-                  item,
-                  idx,
-                );
-                return (
-                  <OpenCodeGoUsageCardSection
-                    cacheKey={cacheKey}
-                    queryReady={queryReady}
-                    usageStore={openCodeGoUsageStore}
-                    windowTypes={PROVIDER_USAGE_WINDOWS["ollama-cloud"]}
-                  />
-                );
-              }}
-              renderMetricsExtra={(item, idx) => {
-                if (!hasProviderUsageQuery("ollama-cloud", item)) return null;
-                const cacheKey = getProviderUsageCacheKey(
-                  "ollama-cloud",
-                  item,
-                  idx,
-                );
-                return (
-                  <OpenCodeGoUsageRefreshButton
-                    cacheKey={cacheKey}
-                    usageStore={openCodeGoUsageStore}
-                    onRefresh={() =>
-                      void refreshProviderUsage("ollama-cloud", item, idx)
-                    }
-                  />
-                );
-              }}
-              selectedKeys={selectedExportKeySet}
-              onToggleSelected={toggleExportSelection}
-            />
-          </TabsContent>
+          ))}
 
           <TabsContent value="vertex" className="min-h-0 flex flex-1 flex-col">
             <ProviderKeyListCard

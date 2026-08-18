@@ -36,6 +36,7 @@ export type ProviderKeyType =
   | "opencode-go"
   | "cline"
   | "ollama-cloud"
+  | "commandcode"
   | "vertex"
   | "bedrock";
 
@@ -46,6 +47,7 @@ interface UseProviderKeyEditorArgs {
   openCodeGoKeys: ProviderSimpleConfig[];
   clineKeys: ProviderSimpleConfig[];
   ollamaCloudKeys: ProviderSimpleConfig[];
+  commandCodeKeys: ProviderSimpleConfig[];
   vertexKeys: ProviderSimpleConfig[];
   bedrockKeys: BedrockProviderConfig[];
   setGeminiKeys: Dispatch<SetStateAction<ProviderSimpleConfig[]>>;
@@ -54,6 +56,7 @@ interface UseProviderKeyEditorArgs {
   setOpenCodeGoKeys: Dispatch<SetStateAction<ProviderSimpleConfig[]>>;
   setClineKeys: Dispatch<SetStateAction<ProviderSimpleConfig[]>>;
   setOllamaCloudKeys: Dispatch<SetStateAction<ProviderSimpleConfig[]>>;
+  setCommandCodeKeys: Dispatch<SetStateAction<ProviderSimpleConfig[]>>;
   setVertexKeys: Dispatch<SetStateAction<ProviderSimpleConfig[]>>;
   setBedrockKeys: Dispatch<SetStateAction<BedrockProviderConfig[]>>;
   refreshAll: () => Promise<void>;
@@ -68,6 +71,7 @@ export function useProviderKeyEditor({
   openCodeGoKeys,
   clineKeys,
   ollamaCloudKeys,
+  commandCodeKeys,
   vertexKeys,
   bedrockKeys,
   setGeminiKeys,
@@ -76,6 +80,7 @@ export function useProviderKeyEditor({
   setOpenCodeGoKeys,
   setClineKeys,
   setOllamaCloudKeys,
+  setCommandCodeKeys,
   setVertexKeys,
   setBedrockKeys,
   refreshAll,
@@ -106,14 +111,17 @@ export function useProviderKeyEditor({
                 ? clineKeys
                 : type === "ollama-cloud"
                   ? ollamaCloudKeys
-                  : type === "vertex"
-                    ? vertexKeys
-                    : bedrockKeys,
+                  : type === "commandcode"
+                    ? commandCodeKeys
+                    : type === "vertex"
+                      ? vertexKeys
+                      : bedrockKeys,
     [
       bedrockKeys,
       claudeKeys,
       clineKeys,
       codexKeys,
+      commandCodeKeys,
       geminiKeys,
       ollamaCloudKeys,
       openCodeGoKeys,
@@ -138,7 +146,12 @@ export function useProviderKeyEditor({
           ? { ...draft, baseUrl: "https://api.cline.bot/api/v1" }
           : type === "ollama-cloud" && !draft.baseUrl.trim()
             ? { ...draft, baseUrl: "https://ollama.com" }
-            : draft,
+            : type === "commandcode" && !draft.baseUrl.trim()
+              ? {
+                  ...draft,
+                  baseUrl: "https://api.commandcode.ai/provider/v1",
+                }
+              : draft,
       );
       setKeyDraftError(null);
       setEditKeyOpen(true);
@@ -159,8 +172,10 @@ export function useProviderKeyEditor({
     const isOpenCodeGo = editKeyType === "opencode-go";
     const isCline = editKeyType === "cline";
     const isOllamaCloud = editKeyType === "ollama-cloud";
+    const isCommandCode = editKeyType === "commandcode";
     const canKeepExistingApiKey =
-      editKeyIndex !== null && (isOpenCodeGo || isCline || isOllamaCloud);
+      editKeyIndex !== null &&
+      (isOpenCodeGo || isCline || isOllamaCloud || isCommandCode);
     if (editKeyType === "bedrock") {
       if (keyDraft.authMode === "api-key" && !apiKey) {
         setKeyDraftError(t("providers.api_key_error"));
@@ -188,7 +203,9 @@ export function useProviderKeyEditor({
         ? "cline"
         : isOllamaCloud
           ? "ollama-cloud"
-          : null;
+          : isCommandCode
+            ? "commandcode"
+            : null;
     const disableAllModelAccess = Boolean(
       modelAccessProvider && hasDisableAllModelsRule(rawExcludedModels),
     );
@@ -350,6 +367,14 @@ export function useProviderKeyEditor({
           await providersApi.patchOllamaCloudConfig(index, value);
         }
         setOllamaCloudKeys(next);
+      } else if (type === "commandcode") {
+        const next = apply(commandCodeKeys);
+        if (index === null) {
+          await providersApi.saveCommandCodeConfigs(next);
+        } else {
+          await providersApi.patchCommandCodeConfig(index, value);
+        }
+        setCommandCodeKeys(next);
       } else if (type === "vertex") {
         const next = apply(vertexKeys);
         await providersApi.saveVertexConfigs(next);
@@ -434,6 +459,11 @@ export function useProviderKeyEditor({
           setOllamaCloudKeys((prev) =>
             prev.filter((_, itemIndex) => itemIndex !== index),
           );
+        } else if (type === "commandcode") {
+          await providersApi.deleteCommandCodeConfig(entry.apiKey);
+          setCommandCodeKeys((prev) =>
+            prev.filter((_, itemIndex) => itemIndex !== index),
+          );
         } else if (type === "vertex") {
           await providersApi.deleteVertexConfig(entry.apiKey);
           setVertexKeys((prev) =>
@@ -479,6 +509,7 @@ export function useProviderKeyEditor({
         | "opencode-go"
         | "cline"
         | "ollama-cloud"
+        | "commandcode"
         | "bedrock",
       index: number,
       enabled: boolean,
@@ -496,7 +527,9 @@ export function useProviderKeyEditor({
                   ? clineKeys
                   : type === "ollama-cloud"
                     ? ollamaCloudKeys
-                    : bedrockKeys;
+                    : type === "commandcode"
+                      ? commandCodeKeys
+                      : bedrockKeys;
       const current = list[index];
       if (!current) return;
       const prev = list;
@@ -547,6 +580,12 @@ export function useProviderKeyEditor({
             apiKey: "",
             disabled: !enabled,
           });
+        } else if (type === "commandcode") {
+          setCommandCodeKeys(nextList);
+          await providersApi.patchCommandCodeConfig(index, {
+            apiKey: "",
+            disabled: !enabled,
+          });
         } else {
           setBedrockKeys(nextList as BedrockProviderConfig[]);
           await providersApi.saveBedrockConfigs(
@@ -567,6 +606,7 @@ export function useProviderKeyEditor({
         else if (type === "opencode-go") setOpenCodeGoKeys(prev);
         else if (type === "cline") setClineKeys(prev);
         else if (type === "ollama-cloud") setOllamaCloudKeys(prev);
+        else if (type === "commandcode") setCommandCodeKeys(prev);
         else setBedrockKeys(prev as BedrockProviderConfig[]);
         notify({
           type: "error",

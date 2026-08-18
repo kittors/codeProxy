@@ -131,6 +131,7 @@ const PROVIDER_CHANNELS = [
   { key: "cline", load: () => providersApi.getClineConfigs() },
   { key: "opencode-go", load: () => providersApi.getOpenCodeGoConfigs() },
   { key: "ollama-cloud", load: () => providersApi.getOllamaCloudConfigs() },
+  { key: "commandcode", load: () => providersApi.getCommandCodeConfigs() },
   { key: "vertex", load: () => providersApi.getVertexConfigs() },
 ] as const;
 
@@ -138,6 +139,7 @@ const MODEL_ACCESS_PROVIDER_KEYS = new Set([
   "cline",
   "opencode-go",
   "ollama-cloud",
+  "commandcode",
 ]);
 
 const emptyAvailability = (

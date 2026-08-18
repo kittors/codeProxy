@@ -5,7 +5,7 @@
     "apps/admin-panel/src/app/layout/AppShell.tsx": 1402,
     "features/ccswitch-import/components/CcSwitchImportConfigModal.tsx": 968,
     "features/log-content-viewer/components/LogContentModal.tsx": 1534,
-    "features/model-availability/modelAvailability.ts": 1275,
+    "features/model-availability/modelAvailability.ts": 1277,
     "features/oauth-login/components/OAuthLoginDialog.tsx": 912,
     "features/request-log-viewer/requestLogsShared.tsx": 989,
     "features/routing-config-editor/RoutingConfigEditor.tsx": 2044,
@@ -25,6 +25,6 @@
     "pages/identity-fingerprint/IdentityFingerprintPage.tsx": 1880,
     "pages/image-generation/components/ImageGenerationPageContent.tsx": 1191,
     "pages/models/ModelsPage.tsx": 1251,
-    "pages/providers/components/ProvidersPageContent.tsx": 1845
+    "pages/providers/components/ProvidersPageContent.tsx": 1647
   }
 }

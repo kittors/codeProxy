@@ -83,6 +83,7 @@ interface ProviderKeyModalProps {
     | "opencode-go"
     | "cline"
     | "ollama-cloud"
+    | "commandcode"
     | "vertex"
     | "bedrock";
   keyDraft: ProviderKeyDraft;
@@ -143,7 +144,9 @@ export function ProviderKeyModal({
   const isOpenCodeGo = editKeyType === "opencode-go";
   const isCline = editKeyType === "cline";
   const isOllamaCloud = editKeyType === "ollama-cloud";
-  const isModelAccessProvider = isOpenCodeGo || isCline || isOllamaCloud;
+  const isCommandCode = editKeyType === "commandcode";
+  const isModelAccessProvider =
+    isOpenCodeGo || isCline || isOllamaCloud || isCommandCode;
   const supportsLiveDiscovery =
     editKeyType === "claude" || editKeyType === "codex";
   const modelAccessProvider: ModelAccessProvider | null = isCline
@@ -152,7 +155,9 @@ export function ProviderKeyModal({
       ? "ollama-cloud"
       : isOpenCodeGo
         ? "opencode-go"
-        : null;
+        : isCommandCode
+          ? "commandcode"
+          : null;
   const showModelsTab = true;
 
   const [modelConfigs, setModelConfigs] = useState<
