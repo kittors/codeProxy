@@ -132,6 +132,7 @@ export function useApiKeyPermissionOptions() {
         openCodeGoKeys,
         clineKeys,
         ollamaCloudKeys,
+        commandCodeKeys,
         vertexKeys,
         openaiProviders,
         authFiles,
@@ -142,6 +143,7 @@ export function useApiKeyPermissionOptions() {
         providersApi.getOpenCodeGoConfigs().catch(() => []),
         providersApi.getClineConfigs().catch(() => []),
         providersApi.getOllamaCloudConfigs().catch(() => []),
+        providersApi.getCommandCodeConfigs().catch(() => []),
         providersApi.getVertexConfigs().catch(() => []),
         providersApi.getOpenAIProviders().catch(() => []),
         authFilesApi.list().catch(() => ({ files: [] })),
@@ -173,6 +175,7 @@ export function useApiKeyPermissionOptions() {
       openCodeGoKeys.forEach((item) => push(item.name || "", "API", "opencode-go"));
       clineKeys.forEach((item) => push(item.name || "", "API", "cline"));
       ollamaCloudKeys.forEach((item) => push(item.name || "", "API", "ollama-cloud"));
+      commandCodeKeys.forEach((item) => push(item.name || "", "API", "commandcode"));
       vertexKeys.forEach((item) => push(item.name || "", "API", "vertex"));
       openaiProviders.forEach((item) => push(item.name || "", "API", "openai"));
       (authFiles.files || []).forEach((file) => {

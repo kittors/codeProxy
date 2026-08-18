@@ -262,6 +262,42 @@ export const serializeOllamaCloudKey = (
   return payload;
 };
 
+// Command Code carries no auth-cookie: its plan usage authenticates with the
+// same API key used for inference, so there is nothing for the operator to paste
+// from a browser and nothing here that expires.
+export const serializeCommandCodeKey = (
+  config: ProviderSimpleConfig,
+  options: SerializeProviderKeyOptions = {},
+) => {
+  const payload: Record<string, unknown> = {};
+  const id = normalizeString(config.id);
+  if (id) payload.id = id;
+  if (options.includeApiKey !== false) payload["api-key"] = config.apiKey;
+  if (config.disabled !== undefined) payload.disabled = config.disabled;
+  const name = normalizeString(config.name);
+  if (name) payload.name = name;
+  const prefix = normalizeString(config.prefix);
+  if (prefix) payload.prefix = prefix;
+  const baseUrl = normalizeString(config.baseUrl);
+  if (baseUrl) payload["base-url"] = baseUrl;
+  const proxyUrl = normalizeString(config.proxyUrl);
+  if (proxyUrl) payload["proxy-url"] = proxyUrl;
+  const proxyId = normalizeString(config.proxyId);
+  if (proxyId) payload["proxy-id"] = proxyId;
+  const headers = serializeHeaders(config.headers);
+  if (headers) payload.headers = headers;
+  const models = serializeModels(config.models);
+  if (models) payload.models = models;
+  const excludedModels = modelAccessExcludedModels(config.excludedModels);
+  if (excludedModels !== undefined) {
+    payload["excluded-models"] = excludedModels;
+  }
+  const visionFallbackModel = normalizeString(config.visionFallbackModel);
+  if (visionFallbackModel)
+    payload["vision-fallback-model"] = visionFallbackModel;
+  return payload;
+};
+
 export const serializeGeminiKey = (config: ProviderSimpleConfig) => {
   const payload: Record<string, unknown> = { "api-key": config.apiKey };
   const id = normalizeString(config.id);

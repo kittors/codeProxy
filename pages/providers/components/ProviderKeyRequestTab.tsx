@@ -34,6 +34,7 @@ const OPENCODE_GO_CHAT_URL = "https://opencode.ai/zen/go/v1/chat/completions";
 const OPENCODE_GO_MESSAGES_URL = "https://opencode.ai/zen/go/v1/messages";
 const CLINE_BASE_URL = "https://api.cline.bot/api/v1";
 const OLLAMA_CLOUD_BASE_URL = "https://ollama.com";
+const COMMANDCODE_BASE_URL = "https://api.commandcode.ai/provider/v1";
 interface ProviderKeyRequestTabProps {
   keyDraft: ProviderKeyDraft;
   setKeyDraft: Dispatch<SetStateAction<ProviderKeyDraft>>;
@@ -68,6 +69,14 @@ export function ProviderKeyRequestTab({
     const baseUrl = keyDraft.baseUrl.trim().replace(/\/+$/g, "") || OLLAMA_CLOUD_BASE_URL;
     return `${baseUrl}/api/chat`;
   }, [keyDraft.baseUrl]);
+  const isCommandCode = editKeyType === "commandcode";
+  const commandCodeChatUrl = useMemo(() => {
+    const baseUrl =
+      keyDraft.baseUrl.trim().replace(/\/+$/g, "") || COMMANDCODE_BASE_URL;
+    return `${baseUrl}/chat/completions`;
+  }, [keyDraft.baseUrl]);
+  // Command Code reports usage from the API key itself, so it belongs to the
+  // usage-capable channels without belonging to the cookie-backed ones.
   const hasDashboardUsage = isOpenCodeGo || isCline || isOllamaCloud;
   const dashboardUsageTitle = isOpenCodeGo
     ? t("providers.opencode_go_usage_title")
@@ -133,6 +142,30 @@ export function ProviderKeyRequestTab({
         </SectionCard>
       ) : null}
 
+      {isCommandCode ? (
+        <>
+          <SectionCard className="bg-slate-50/80 dark:bg-neutral-900/50">
+            <p className="text-sm font-semibold text-slate-900 dark:text-white">
+              {t("providers.commandcode_endpoint_title")}
+            </p>
+            <p className="mt-3 break-all font-mono text-xs text-slate-600 dark:text-white/65">
+              {commandCodeChatUrl}
+            </p>
+            <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
+              {t("providers.commandcode_endpoint_hint")}
+            </p>
+          </SectionCard>
+          <SectionCard>
+            <p className="text-sm font-semibold text-slate-900 dark:text-white">
+              {t("providers.commandcode_usage_title")}
+            </p>
+            <p className="mt-1 text-xs text-slate-500 dark:text-white/55">
+              {t("providers.commandcode_usage_hint")}
+            </p>
+          </SectionCard>
+        </>
+      ) : null}
+
       {hasDashboardUsage ? (
         <SectionCard>
           <p className="text-sm font-semibold text-slate-900 dark:text-white">
@@ -188,7 +221,7 @@ export function ProviderKeyRequestTab({
         </SectionCard>
       ) : null}
 
-      {isOpenCodeGo || isCline || editKeyType === "ollama-cloud" ? (
+      {isOpenCodeGo || isCline || isOllamaCloud || isCommandCode ? (
         <SectionCard>
           <p className="text-sm font-semibold text-slate-900 dark:text-white">
             {t("providers.opencode_go_vision_fallback_title")}

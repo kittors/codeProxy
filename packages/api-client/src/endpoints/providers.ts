@@ -17,6 +17,7 @@ import {
   serializeGeminiKey,
   serializeBedrockKey,
   serializeClineKey,
+  serializeCommandCodeKey,
   serializeOllamaCloudKey,
   serializeOpenCodeGoKey,
   serializeOpenAIProvider,
@@ -42,6 +43,10 @@ const normalizeClineBaseUrl = (value: unknown): string | undefined =>
 
 const normalizeOllamaCloudBaseUrl = (value: unknown): string =>
   normalizeString(value)?.replace(/\/+$/g, "") || "https://ollama.com";
+
+const normalizeCommandCodeBaseUrl = (value: unknown): string =>
+  normalizeString(value)?.replace(/\/+$/g, "") ||
+  "https://api.commandcode.ai/provider/v1";
 
 const normalizeModelAccessExcludedModels = (
   value: unknown,
@@ -370,6 +375,77 @@ export const providersApi = {
       params: { "api-key": apiKey },
     }),
 
+  async getCommandCodeConfigs(): Promise<ProviderSimpleConfig[]> {
+    const data = await apiClient.get("/commandcode-api-key");
+    const list = extractArrayPayload(data, "commandcode-api-key");
+    return list
+      .map((item) => {
+        if (!isRecord(item)) return null;
+        if (isOauthBackedProviderRow(item)) return null;
+        const id = normalizeString(item.id) ?? undefined;
+        const apiKey = normalizeString(item["api-key"] ?? item.apiKey) ?? "";
+        if (!apiKey) return null;
+        const name = normalizeString(item.name) ?? undefined;
+        const prefix = normalizeString(item.prefix) ?? undefined;
+        const baseUrl = normalizeCommandCodeBaseUrl(
+          item["base-url"] ?? item.baseUrl,
+        );
+        const proxyUrl =
+          normalizeString(item["proxy-url"] ?? item.proxyUrl) ?? undefined;
+        const proxyId =
+          normalizeString(item["proxy-id"] ?? item.proxyId) ?? undefined;
+        const headers = normalizeHeaders(item.headers);
+        const models = normalizeModels(item.models);
+        const excludedModels = normalizeModelAccessExcludedModels(
+          item["excluded-models"] ?? item.excludedModels,
+        );
+        const visionFallbackModel =
+          normalizeString(
+            item["vision-fallback-model"] ?? item.visionFallbackModel,
+          ) ?? undefined;
+        return {
+          ...(id ? { id } : {}),
+          apiKey,
+          ...(item.disabled === true ? { disabled: true } : {}),
+          ...(name ? { name } : {}),
+          ...(prefix ? { prefix } : {}),
+          baseUrl,
+          ...(proxyUrl ? { proxyUrl } : {}),
+          ...(proxyId ? { proxyId } : {}),
+          ...(headers ? { headers } : {}),
+          ...(models ? { models } : {}),
+          ...(excludedModels ? { excludedModels } : {}),
+          ...(visionFallbackModel ? { visionFallbackModel } : {}),
+        };
+      })
+      .filter(Boolean) as ProviderSimpleConfig[];
+  },
+
+  saveCommandCodeConfigs: (configs: ProviderSimpleConfig[]) =>
+    apiClient.put(
+      "/commandcode-api-key",
+      configs.map((item) => serializeCommandCodeKey(item)),
+    ),
+
+  patchCommandCodeConfig: (index: number, config: ProviderSimpleConfig) =>
+    apiClient.patch("/commandcode-api-key", {
+      index,
+      value: serializeCommandCodeKey(config, {
+        includeApiKey: Boolean(config.apiKey.trim()),
+      }),
+    }),
+
+  patchCommandCodeExcludedModels: (index: number, excludedModels: string[]) =>
+    apiClient.patch("/commandcode-api-key", {
+      index,
+      value: { "excluded-models": excludedModels },
+    }),
+
+  deleteCommandCodeConfig: (apiKey: string) =>
+    apiClient.delete("/commandcode-api-key", undefined, {
+      params: { "api-key": apiKey },
+    }),
+
   queryOpenCodeGoUsage: (payload: {
     "workspace-id"?: string;
     "auth-cookie"?: string;
@@ -403,6 +479,20 @@ export const providersApi = {
   }) =>
     apiClient.post<OpenCodeGoUsageResponse>(
       "/ollama-cloud-api-key/usage",
+      payload,
+    ),
+
+  // No auth-cookie: Command Code reports plan windows from the same API key that
+  // serves inference, so usage never needs a browser session.
+  queryCommandCodeUsage: (payload: {
+    "proxy-id"?: string;
+    "proxy-url"?: string;
+    name?: string;
+    "api-key"?: string;
+    index?: number;
+  }) =>
+    apiClient.post<OpenCodeGoUsageResponse>(
+      "/commandcode-api-key/usage",
       payload,
     ),
 
