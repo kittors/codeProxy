@@ -2373,7 +2373,11 @@
     "opencode_go_usage_compact_five_hour": "5 часов",
     "opencode_go_usage_compact_session": "Скользящее",
     "opencode_go_usage_remaining_unknown": "Left --",
-    "opencode_go_usage_remaining_percent": "Left {{percent}}%"
+    "opencode_go_usage_remaining_percent": "Left {{percent}}%",
+    "credential_sort_label": "Сортировка учётных данных",
+    "credential_sort_config": "Порядок из конфигурации",
+    "credential_sort_remaining_asc": "Сначала с наименьшим остатком",
+    "credential_sort_remaining_desc": "Сначала с наибольшим остатком"
   },
   "log_content": {
     "detail_label_request": "Request",
