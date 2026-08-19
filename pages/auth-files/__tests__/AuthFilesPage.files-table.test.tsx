@@ -3784,9 +3784,9 @@ describe("AuthFilesPage files table", () => {
     expect(await screen.findByText("antigravity.json")).toBeInTheDocument();
     const cards = screen.getByTestId("auth-files-cards");
 
-    expect(within(cards).getByText("Gemini 3 Pro")).toBeInTheDocument();
-    expect(within(cards).getByText("Gemini 3 Flash")).toBeInTheDocument();
-    expect(within(cards).getByText("Gemini 3.1 Flash Image")).toBeInTheDocument();
+    expect(within(cards).getByText("Gemini Pro")).toBeInTheDocument();
+    expect(within(cards).getByText("Gemini Flash")).toBeInTheDocument();
+    expect(within(cards).getByText("Gemini Image")).toBeInTheDocument();
     expect(within(cards).getByText("Claude")).toBeInTheDocument();
     expect(within(cards).getByText("82%")).toBeInTheDocument();
     expect(within(cards).getByText("77%")).toBeInTheDocument();
@@ -3873,7 +3873,7 @@ describe("AuthFilesPage files table", () => {
     expect(await screen.findByText("antigravity.json")).toBeInTheDocument();
     const cards = screen.getByTestId("auth-files-cards");
 
-    expect(within(cards).getByText("Gemini 3 Pro")).toBeInTheDocument();
+    expect(within(cards).getByText("Gemini Pro")).toBeInTheDocument();
     expect(
       within(cards).queryByText("Gemini 3.1 Pro (High) [gemini-3.1-pro-high]"),
     ).not.toBeInTheDocument();
@@ -3940,7 +3940,7 @@ describe("AuthFilesPage files table", () => {
     expect(await screen.findByText("antigravity.json")).toBeInTheDocument();
     const cards = screen.getByTestId("auth-files-cards");
 
-    expect(within(cards).getByText("Gemini 3 Pro")).toBeInTheDocument();
+    expect(within(cards).getByText("Gemini Pro")).toBeInTheDocument();
     expect(within(cards).getByText("91%")).toBeInTheDocument();
     expect(
       within(cards).queryByText("Gemini 3.1 Pro (High) [gemini-3.1-pro-high]"),
@@ -4009,7 +4009,7 @@ describe("AuthFilesPage files table", () => {
     expect(row).not.toBeNull();
 
     const cell = within(row as HTMLElement);
-    expect(cell.getByText("Gemini 3 Pro")).toBeInTheDocument();
+    expect(cell.getByText("Gemini Pro")).toBeInTheDocument();
     expect(
       cell.queryByText("Gemini 3.1 Pro (Low) [gemini-3.1-pro-low]"),
     ).not.toBeInTheDocument();
@@ -4082,7 +4082,7 @@ describe("AuthFilesPage files table", () => {
     expect(row).not.toBeNull();
 
     // Both metrics are readable in the row itself, so no overlay is needed.
-    const geminiChip = within(row as HTMLElement).getByText("Gemini 3 Pro");
+    const geminiChip = within(row as HTMLElement).getByText("Gemini Pro");
     expect(within(row as HTMLElement).getByText("Claude")).toBeInTheDocument();
 
     fireEvent.mouseEnter(geminiChip);
@@ -4156,7 +4156,7 @@ describe("AuthFilesPage files table", () => {
     const row = screen.getByText("antigravity.json").closest("tr");
     expect(row).not.toBeNull();
     expect(within(row as HTMLElement).queryByText("chat_20706")).not.toBeInTheDocument();
-    expect(within(row as HTMLElement).getByText("Gemini 3 Pro")).toBeInTheDocument();
+    expect(within(row as HTMLElement).getByText("Gemini Pro")).toBeInTheDocument();
     expect(
       within(row as HTMLElement).queryByText("Gemini 3.1 Pro (High) [gemini-3.1-pro-high]"),
     ).not.toBeInTheDocument();

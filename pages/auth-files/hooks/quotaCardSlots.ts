@@ -16,6 +16,22 @@ export type QuotaCardSlot = {
   item: QuotaItem | null;
 };
 
+const WEEK_SECONDS = 7 * 24 * 60 * 60;
+
+/**
+ * Keep the windows narrower than a week.
+ *
+ * Items with no declared window come from the flat model view, which only ever
+ * reports the 5h window — dropping them would empty the card for accounts whose
+ * grouped summary is unavailable.
+ */
+export const selectAntigravityShortWindowItems = (items: QuotaItem[]): QuotaItem[] => {
+  const short = items.filter(
+    (item) => typeof item.windowSeconds !== "number" || item.windowSeconds < WEEK_SECONDS,
+  );
+  return short.length > 0 ? short : items;
+};
+
 /**
  * Map a provider's quota windows onto the fixed slots a card renders.
  *
@@ -50,11 +66,17 @@ export const resolveQuotaCardSlots = (
       }));
     }
     if (provider === "antigravity") {
-      return filterAntigravityQuotaItems(items).map((item, index) => ({
-        id: item.key ?? item.label ?? `antigravity-${index + 1}`,
-        label: translateQuotaLabel(item.label),
-        item,
-      }));
+      // The card shows the short window only. The upstream reports both a 5h and
+      // a weekly bucket per family, and stacking all of them here doubles the row
+      // count for a card that has room for a handful; the weekly figures are on
+      // the detail panel.
+      return selectAntigravityShortWindowItems(filterAntigravityQuotaItems(items)).map(
+        (item, index) => ({
+          id: item.key ?? item.label ?? `antigravity-${index + 1}`,
+          label: translateQuotaLabel(item.label),
+          item,
+        }),
+      );
     }
     if (provider === "xai") {
       return items.map((item, index) => ({

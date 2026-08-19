@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   buildAntigravityItems,
+  buildAntigravitySummaryItems,
   buildCodexItems,
   buildKimiItems,
   filterAntigravityQuotaItems,
@@ -300,51 +301,68 @@ describe("buildAntigravityItems", () => {
     const items = buildAntigravityItems(payload!);
     const labels = items.map((item) => item.label);
 
+    // Families are classified by the shape of the model id, so gpt-oss — which
+    // belongs to none of them — is reported under its own name instead of being
+    // dropped for missing from a list.
     expect(items.map((item) => item.key)).toEqual([
-      "provider:gemini3-pro",
-      "provider:gemini3-flash",
-      "provider:gemini-image",
-      "provider:claude",
+      "antigravity:gemini_pro",
+      "antigravity:gemini_flash",
+      "antigravity:gemini_image",
+      "antigravity:claude",
+      "antigravity:model_gpt_oss_120b_medium",
     ]);
     expect(labels).toEqual([
-      "antigravity_quota.gemini3_pro",
-      "antigravity_quota.gemini3_flash",
-      "antigravity_quota.gemini_image",
-      "antigravity_quota.claude",
+      "Gemini Pro",
+      "Gemini Flash",
+      "Gemini Image",
+      "Claude",
+      "GPT-OSS 120B (Medium)",
     ]);
-    expect(labels).not.toContain("Gemini 3.1 Pro (High) [gemini-3.1-pro-high]");
-    expect(labels).not.toContain("GPT-OSS 120B (Medium) [gpt-oss-120b-medium]");
+    // Internal entries are still filtered, by prefix rather than by id.
     expect(labels).not.toContain("chat_20706");
     expect(labels).not.toContain("chat_23310");
     expect(labels).not.toContain("tab_flash_lite_preview");
     expect(labels).not.toContain("tab_jump_flash_lite_preview");
-    expect(labels).not.toContain("Gemini 3.1 Flash Lite [gemini-2.5-flash-thinking]");
-    expect(labels).not.toContain("Gemini 2.5 Pro [gemini-2.5-pro]");
+
+    // Worst remaining within a family: gemini-3.1-pro-low at 50 beats
+    // gemini-3.1-pro-high at 75 and gemini-2.5-pro at 100.
     expect(items[0]).toEqual(
       expect.objectContaining({
         percent: 50,
         resetAtMs: Date.parse("2026-05-09T15:50:29Z"),
+        windowSeconds: 5 * 60 * 60,
       }),
     );
-    expect(items[1]).toEqual(
-      expect.objectContaining({
-        percent: 70,
-      }),
-    );
-    expect(items[2]).toEqual(
-      expect.objectContaining({
-        percent: 60,
-      }),
-    );
-    expect(items[3]).toEqual(
-      expect.objectContaining({
-        percent: 90,
-      }),
-    );
+    expect(items[1]).toEqual(expect.objectContaining({ percent: 70 }));
+    expect(items[2]).toEqual(expect.objectContaining({ percent: 60 }));
+    expect(items[3]).toEqual(expect.objectContaining({ percent: 90 }));
+    expect(items[4]).toEqual(expect.objectContaining({ percent: 80 }));
     expect(items[0].meta).toBeUndefined();
   });
 
-  test("keeps cached sub2api-style Antigravity summaries when cache only has labels", () => {
+  test("groups a model family the upstream ships later without a code change", () => {
+    const payload = parseAntigravityPayload(
+      JSON.stringify({
+        models: {
+          "gemini-4-pro-ultra": { displayName: "Gemini 4 Pro", quotaInfo: { remainingFraction: 0.3 } },
+          "gemini-4-flash-nano": { quotaInfo: { remainingFraction: 0.4 } },
+          "claude-opus-9": { quotaInfo: { remainingFraction: 0.55 } },
+        },
+      }),
+    );
+    const items = buildAntigravityItems(payload!);
+    expect(items.map((item) => item.key)).toEqual([
+      "antigravity:gemini_pro",
+      "antigravity:gemini_flash",
+      "antigravity:claude",
+    ]);
+    expect(items.map((item) => item.percent)).toEqual([30, 40, 55]);
+  });
+
+  // Rows cached under the previous grouping still have to render while they age
+  // out, so the old keys and labels are recognised on read and mapped onto the
+  // current families.
+  test("re-reads cached rows written under the previous Antigravity grouping", () => {
     expect(
       filterAntigravityQuotaItems([
         { label: "antigravity_quota.gemini3_pro", percent: 82 },
@@ -353,31 +371,91 @@ describe("buildAntigravityItems", () => {
         { label: "antigravity_quota.claude", percent: 73 },
       ]),
     ).toEqual([
+      { key: "antigravity:gemini_pro", label: "Gemini Pro", percent: 82, windowSeconds: 5 * 60 * 60 },
       {
-        key: "provider:gemini3-pro",
-        label: "antigravity_quota.gemini3_pro",
-        percent: 82,
-        resetAtMs: undefined,
-      },
-      {
-        key: "provider:gemini3-flash",
-        label: "antigravity_quota.gemini3_flash",
+        key: "antigravity:gemini_flash",
+        label: "Gemini Flash",
         percent: 77,
-        resetAtMs: undefined,
+        windowSeconds: 5 * 60 * 60,
       },
       {
-        key: "provider:gemini-image",
-        label: "antigravity_quota.gemini_image",
+        key: "antigravity:gemini_image",
+        label: "Gemini Image",
         percent: 65,
-        resetAtMs: undefined,
+        windowSeconds: 5 * 60 * 60,
+      },
+      { key: "antigravity:claude", label: "Claude", percent: 73, windowSeconds: 5 * 60 * 60 },
+    ]);
+  });
+
+  test("passes grouped summary rows through untouched", () => {
+    const summaryItems = [
+      {
+        key: "antigravity:gemini_5h",
+        label: "Gemini Models · 5h",
+        percent: 72,
+        windowSeconds: 5 * 60 * 60,
       },
       {
-        key: "provider:claude",
-        label: "antigravity_quota.claude",
-        percent: 73,
-        resetAtMs: undefined,
+        key: "antigravity:gemini_weekly",
+        label: "Gemini Models · weekly",
+        percent: 51,
+        windowSeconds: 7 * 24 * 60 * 60,
+      },
+    ];
+    expect(filterAntigravityQuotaItems(summaryItems)).toEqual(summaryItems);
+  });
+});
+
+describe("buildAntigravitySummaryItems", () => {
+  test("reads the upstream's own buckets and window widths", () => {
+    const items = buildAntigravitySummaryItems({
+      groups: [
+        {
+          displayName: "Gemini Models",
+          buckets: [
+            {
+              bucketId: "gemini-5h",
+              window: "5h",
+              remainingFraction: 0.72,
+              resetTime: "2026-08-19T07:00:00Z",
+            },
+            { bucketId: "gemini-weekly", window: "weekly", remainingFraction: 0.51 },
+          ],
+        },
+        {
+          displayName: "Claude and GPT models",
+          buckets: [{ bucketId: "3p-5h", window: "5h", remainingFraction: 1 }],
+        },
+      ],
+    });
+
+    expect(items).toEqual([
+      {
+        key: "antigravity:gemini_5h",
+        label: "Gemini Models · 5h",
+        percent: 72,
+        resetAtMs: Date.parse("2026-08-19T07:00:00Z"),
+        windowSeconds: 5 * 60 * 60,
+      },
+      {
+        key: "antigravity:gemini_weekly",
+        label: "Gemini Models · weekly",
+        percent: 51,
+        windowSeconds: 7 * 24 * 60 * 60,
+      },
+      {
+        key: "antigravity:3p_5h",
+        label: "Claude and GPT models · 5h",
+        percent: 100,
+        windowSeconds: 5 * 60 * 60,
       },
     ]);
+  });
+
+  test("returns nothing when the payload carries no groups", () => {
+    expect(buildAntigravitySummaryItems({ models: { "gemini-3-pro": {} } })).toEqual([]);
+    expect(buildAntigravitySummaryItems(null)).toEqual([]);
   });
 });
 
