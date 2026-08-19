@@ -1,5 +1,5 @@
 import type { ProviderModel } from "@code-proxy/api-client";
-import { HoverTooltip } from "@code-proxy/ui";
+import { HoverTooltip, OverflowTooltip } from "@code-proxy/ui";
 
 interface ProviderModelChipsProps {
   models: ProviderModel[];
@@ -31,7 +31,9 @@ export function ProviderModelChips({
       {visible.map((model) => {
         const modelLabel = formatModelLabel(model, "→");
         return (
-          <HoverTooltip
+          // Overflow-only: the chip is often truncated by the 3-column grid, but when
+          // it fits, a tooltip would just repeat the mapping already on screen.
+          <OverflowTooltip
             key={model.name}
             content={formatModelLabel(model, "=>")}
             placement="top"
@@ -40,7 +42,7 @@ export function ProviderModelChips({
             <span className="inline-flex w-full min-w-0 cursor-default rounded-full bg-slate-900 px-2 py-0.5 text-xs text-white dark:bg-white dark:text-neutral-950">
               <span className="min-w-0 truncate">{modelLabel}</span>
             </span>
-          </HoverTooltip>
+          </OverflowTooltip>
         );
       })}
       {remaining > 0 ? (

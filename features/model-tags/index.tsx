@@ -365,7 +365,10 @@ export function ModelTag({
 
   return (
     <span
-      title={title ?? id}
+      // No implicit title: it repeated the visible model id as a second, native
+      // tooltip stacked on top of the managed one. Callers that truncate the tag
+      // wrap it in OverflowTooltip, which only opens when the text is cut off.
+      title={title}
       className={cn(
         "inline-flex max-w-full items-center border font-mono font-semibold leading-none",
         sizeClasses.wrapper,

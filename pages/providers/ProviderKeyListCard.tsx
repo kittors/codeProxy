@@ -22,6 +22,29 @@ import { ProviderModelChips } from "./components/ProviderModelChips";
 import { useTranslation } from "react-i18next";
 import { useOptionalAuth } from "@app/providers/AuthProvider";
 
+/**
+ * Validate a caller-supplied order before rendering with it.
+ *
+ * A malformed order must degrade to configured order rather than dropping or
+ * duplicating credentials: this list is how an operator edits and deletes them,
+ * and a card that silently disappears is worse than one shown out of order.
+ */
+function resolveRenderOrder(
+  count: number,
+  displayOrder: readonly number[] | undefined,
+): number[] {
+  const natural = Array.from({ length: count }, (_, index) => index);
+  if (!displayOrder || displayOrder.length !== count) return natural;
+  const seen = new Set<number>();
+  for (const index of displayOrder) {
+    if (!Number.isInteger(index) || index < 0 || index >= count || seen.has(index)) {
+      return natural;
+    }
+    seen.add(index);
+  }
+  return [...displayOrder];
+}
+
 export function ProviderKeyListCard({
   items,
   loading = false,
@@ -44,6 +67,7 @@ export function ProviderKeyListCard({
   showModelMetric = true,
   showExcludedModels = true,
   renderMetricsExtra,
+  displayOrder,
 }: {
   items: ProviderSimpleConfig[];
   loading?: boolean;
@@ -76,6 +100,15 @@ export function ProviderKeyListCard({
   showConnectionRows?: boolean;
   showModelMetric?: boolean;
   showExcludedModels?: boolean;
+  /**
+   * Positions into `items`, in the order the cards should appear.
+   *
+   * Reordering `items` itself is not an option: the index handed to onEdit,
+   * onDelete and renderExtra identifies the credential in the saved config and
+   * keys its usage cache, so a shuffled array would edit one credential while
+   * showing another's usage. Omit to render in configured order.
+   */
+  displayOrder?: readonly number[];
 }) {
   const { t } = useTranslation();
   const auth = useOptionalAuth();
@@ -142,7 +175,9 @@ export function ProviderKeyListCard({
                 }
           }
         >
-          {items.map((item, idx) => {
+          {resolveRenderOrder(items.length, displayOrder).map((idx) => {
+            const item = items[idx];
+            if (!item) return null;
             const selectionKey = `${item.apiKey.trim().toLowerCase()}:${idx}`;
             const selected = selectedKeys?.has(selectionKey) ?? false;
             const disabled = !(isItemEnabled

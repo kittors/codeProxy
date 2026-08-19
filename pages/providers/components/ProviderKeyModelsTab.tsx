@@ -93,7 +93,9 @@ export function ProviderKeyModelsTab({
 }: ProviderKeyModelsTabProps) {
   const { t } = useTranslation();
   const isOllamaCloud = editKeyType === "ollama-cloud";
-  const isModelAccessProvider = isOpenCodeGo || isCline || isOllamaCloud;
+  const isCommandCode = editKeyType === "commandcode";
+  const isModelAccessProvider =
+    isOpenCodeGo || isCline || isOllamaCloud || isCommandCode;
   const supportsLiveDiscovery =
     (editKeyType === "claude" || editKeyType === "codex") &&
     typeof discoverModels === "function" &&
@@ -103,12 +105,16 @@ export function ProviderKeyModelsTab({
     ? t("providers.cline_models_title")
     : isOllamaCloud
       ? t("providers.ollama_cloud_models_title")
-      : t("providers.opencode_go_models_title");
+      : isCommandCode
+        ? t("providers.commandcode_models_title")
+        : t("providers.opencode_go_models_title");
   const modelAccessHint = isCline
     ? t("providers.cline_models_hint")
     : isOllamaCloud
       ? t("providers.ollama_cloud_models_hint")
-      : t("providers.opencode_go_models_hint");
+      : isCommandCode
+        ? t("providers.commandcode_models_hint")
+        : t("providers.opencode_go_models_hint");
   const modelEntryByName = useMemo(() => {
     const out = new Map<string, ModelEntryDraft>();
     for (const entry of keyDraft.modelEntries) {

@@ -14,6 +14,7 @@ import {
   normalizeString,
   serializeBedrockKey,
   serializeClineKey,
+  serializeCommandCodeKey,
   serializeGeminiKey,
   serializeOllamaCloudKey,
   serializeOpenAIProvider,
@@ -29,6 +30,7 @@ export type ProviderImportKind =
   | "opencode-go"
   | "cline"
   | "ollama-cloud"
+  | "commandcode"
   | "vertex"
   | "bedrock"
   | "openai";
@@ -40,6 +42,7 @@ type ProviderItemsByKind = {
   "opencode-go": ProviderSimpleConfig[];
   cline: ProviderSimpleConfig[];
   "ollama-cloud": ProviderSimpleConfig[];
+  commandcode: ProviderSimpleConfig[];
   vertex: ProviderSimpleConfig[];
   bedrock: BedrockProviderConfig[];
   openai: OpenAIProvider[];
@@ -167,7 +170,10 @@ const normalizeSimpleItem = (
   if (!apiKey) return { item: null, duplicateCount: 0 };
   const headers = sortRecord(normalizeHeaders(value.headers));
   const hasDynamicModelAccess =
-    kind === "opencode-go" || kind === "cline" || kind === "ollama-cloud";
+    kind === "opencode-go" ||
+    kind === "cline" ||
+    kind === "ollama-cloud" ||
+    kind === "commandcode";
   const { models, duplicateCount } = hasDynamicModelAccess
     ? { models: undefined, duplicateCount: 0 }
     : normalizeModelList(value.models);
@@ -176,7 +182,11 @@ const normalizeSimpleItem = (
     : sortExcludedModels(value["excluded-models"] ?? value.excludedModels);
   const baseUrl =
     normalizeString(value["base-url"] ?? value.baseUrl) ??
-    (kind === "ollama-cloud" ? "https://ollama.com" : undefined);
+    (kind === "ollama-cloud"
+      ? "https://ollama.com"
+      : kind === "commandcode"
+        ? "https://api.commandcode.ai/provider/v1"
+        : undefined);
 
   return {
     item: {
@@ -194,7 +204,7 @@ const normalizeSimpleItem = (
       ...(headers ? { headers } : {}),
       ...(models ? { models } : {}),
       ...(excludedModels ? { excludedModels } : {}),
-      ...((kind === "opencode-go" || kind === "cline" || kind === "ollama-cloud") &&
+      ...(hasDynamicModelAccess &&
       normalizeString(value["vision-fallback-model"] ?? value.visionFallbackModel)
         ? {
             visionFallbackModel: normalizeString(
@@ -382,6 +392,8 @@ const serializeItem = (kind: ProviderImportKind, item: CanonicalProviderItem) =>
       return serializeProviderKey(item as ProviderSimpleConfig);
     case "ollama-cloud":
       return serializeOllamaCloudKey(item as ProviderSimpleConfig);
+    case "commandcode":
+      return serializeCommandCodeKey(item as ProviderSimpleConfig);
     case "opencode-go":
       return serializeOpenCodeGoKey(item as ProviderSimpleConfig);
     case "bedrock":

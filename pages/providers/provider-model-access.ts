@@ -10,7 +10,11 @@ import {
   normalizeDiscoveredModels,
 } from "./providers-helpers";
 
-export type ModelAccessProvider = "opencode-go" | "cline" | "ollama-cloud";
+export type ModelAccessProvider =
+  | "opencode-go"
+  | "cline"
+  | "ollama-cloud"
+  | "commandcode";
 
 export type DiscoveredProviderModel = { id: string; owned_by?: string };
 

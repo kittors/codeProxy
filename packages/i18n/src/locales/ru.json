@@ -879,7 +879,11 @@
     "fork": "Сохранить оригинал",
     "fork_label": "Сохранить оригинал",
     "fork_hint": "Если включено, доступны и исходное имя модели, и псевдоним. Если выключено, наружу виден только псевдоним.",
-    "cycle_tokens_count": "Токены за цикл {{value}}"
+    "cycle_tokens_count": "Токены за цикл {{value}}",
+    "sort_label": "Сортировка аккаунтов",
+    "sort_by_name": "По имени",
+    "sort_quota_asc": "Сначала с наименьшим остатком",
+    "sort_quota_desc": "Сначала с наибольшим остатком"
   },
   "antigravity_quota": {
     "title": "Квота Antigravity",
@@ -891,11 +895,7 @@
     "missing_auth_index": "В файле авторизации отсутствует auth_index",
     "empty_models": "Данные по квоте отсутствуют",
     "refresh_button": "Обновить квоту",
-    "fetch_all": "Получить все",
-    "gemini3_pro": "Gemini 3 Pro",
-    "gemini3_flash": "Gemini 3 Flash",
-    "gemini_image": "Gemini 3.1 Flash Image",
-    "claude": "Claude"
+    "fetch_all": "Получить все"
   },
   "claude_quota": {
     "title": "Квота Claude",
@@ -2377,7 +2377,11 @@
     "opencode_go_usage_compact_five_hour": "5 часов",
     "opencode_go_usage_compact_session": "Скользящее",
     "opencode_go_usage_remaining_unknown": "Left --",
-    "opencode_go_usage_remaining_percent": "Left {{percent}}%"
+    "opencode_go_usage_remaining_percent": "Left {{percent}}%",
+    "credential_sort_label": "Сортировка учётных данных",
+    "credential_sort_config": "Порядок из конфигурации",
+    "credential_sort_remaining_asc": "Сначала с наименьшим остатком",
+    "credential_sort_remaining_desc": "Сначала с наибольшим остатком"
   },
   "log_content": {
     "detail_label_request": "Request",

@@ -1,5 +1,5 @@
 import { type ReactNode } from "react";
-import { Cloud } from "lucide-react";
+import { Cloud, SquareTerminal } from "lucide-react";
 import iconGemini from "@code-proxy/assets/icons/gemini.svg";
 import iconClaude from "@code-proxy/assets/icons/claude.svg";
 import iconCodex from "@code-proxy/assets/icons/codex.svg";
@@ -19,6 +19,7 @@ export type ProviderTabId =
   | "opencode-go"
   | "cline"
   | "ollama-cloud"
+  | "commandcode"
   | "vertex"
   | "bedrock"
   | "openai"
@@ -52,6 +53,9 @@ const TAB_META: Record<ProviderTabId, { icon: ReactNode }> = {
   },
   cline: { icon: <img src={iconCline} alt="" className="size-4" /> },
   "ollama-cloud": { icon: <img src={iconOllama} alt="" className="size-4" /> },
+  // Command Code ships no brand mark in this repo; a terminal glyph matches its
+  // CLI identity, the same way Bedrock falls back to a cloud glyph.
+  commandcode: { icon: <SquareTerminal size={16} /> },
   vertex: { icon: <img src={iconVertex} alt="" className="size-4" /> },
   bedrock: { icon: <Cloud size={16} /> },
   openai: {

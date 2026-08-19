@@ -185,7 +185,8 @@
     "system_info": "Management Center Info",
     "monitor": "Monitor Center",
     "menuManagement": "Menu Management",
-    "content_moderation": "Content Moderation"
+    "content_moderation": "Content Moderation",
+    "videoGeneration": "Video Models"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -484,6 +485,10 @@
     "search_empty_desc": "Try a different keyword or clear the search box"
   },
   "auth_files": {
+    "sort_label": "Sort accounts",
+    "sort_by_name": "By name",
+    "sort_quota_asc": "Least quota left first",
+    "sort_quota_desc": "Most quota left first",
     "title": "AI Accounts",
     "title_section": "AI Accounts",
     "description": "Manage OAuth logins and auth credentials for AI platforms, including usage, quotas, and identity fingerprints.",
@@ -1019,11 +1024,7 @@
     "missing_auth_index": "Auth file missing auth_index",
     "empty_models": "No quota data available",
     "refresh_button": "Refresh Quota",
-    "fetch_all": "Fetch All",
-    "gemini3_pro": "Gemini 3 Pro",
-    "gemini3_flash": "Gemini 3 Flash",
-    "gemini_image": "Gemini 3.1 Flash Image",
-    "claude": "Claude"
+    "fetch_all": "Fetch All"
   },
   "claude_quota": {
     "title": "Claude Quota",
@@ -2089,7 +2090,8 @@
     "stale_route_description": "This frontend may not include the requested page. Hard refresh to load the latest version and try again.",
     "stale_route_shortcut": "Hard refresh: Cmd+Shift+R on macOS; Ctrl+Shift+R on Windows/Linux.",
     "stale_route_reload": "Reload page",
-    "nav_ip_access": "IP Access Control"
+    "nav_ip_access": "IP Access Control",
+    "nav_video_generation": "Video Models"
   },
   "proxies": {
     "title": "Proxy Management",
@@ -3811,6 +3813,8 @@
     "cline_connection_hint": "Base URL is the OpenAI-compatible root; requests are sent to /chat/completions below it.",
     "cline_endpoint_title": "ClinePass endpoint",
     "ollama_cloud_endpoint_title": "Ollama Cloud endpoint",
+    "commandcode_endpoint_title": "Command Code endpoint",
+    "commandcode_endpoint_hint": "Base URL is the OpenAI-compatible root; requests are sent to /chat/completions below it. The Go plan has no API access and is refused here \u2014 GOAT and above work.",
     "cline_endpoint_hint": "Use the API root as Base URL; the relay appends /chat/completions when sending requests.",
     "opencode_go_fixed_endpoint_title": "Fixed OpenCode Go endpoints",
     "opencode_go_fixed_endpoint_hint": "Chat, Anthropic Messages, and model discovery use official OpenCode Go endpoints. You only need to provide your OpenCode key.",
@@ -3819,6 +3823,8 @@
     "opencode_go_usage_config_hint": "After saving, refresh usage from the provider card.",
     "cline_usage_title": "ClinePass usage",
     "ollama_cloud_usage_title": "Ollama Cloud usage",
+    "commandcode_usage_title": "Command Code usage",
+    "commandcode_usage_hint": "Plan windows are read with this API key, so no dashboard cookie is needed.",
     "dashboard_usage_config_hint": "Paste the dashboard Cookie header, then save and refresh usage from the provider card.",
     "dashboard_auth_cookie_placeholder": "Full Cookie header from the dashboard request",
     "opencode_go_workspace_id": "Workspace ID / dashboard URL",
@@ -3889,6 +3895,8 @@
     "cline_models_hint": "Models are loaded from the relay's ClinePass definitions. Checked models are allowed; unchecked models are written to the blocked list.",
     "ollama_cloud_models_title": "Ollama Cloud model access",
     "ollama_cloud_models_hint": "Models are loaded from the relay's Ollama Cloud definitions. Checked models are allowed; unchecked models are written to the blocked list.",
+    "commandcode_models_title": "Command Code model access",
+    "commandcode_models_hint": "Models are loaded from Command Code's public catalog. Checked models are allowed; unchecked models are written to the blocked list.",
     "cline_real_model_id": "ClinePass real model ID",
     "real_model_id": "Real model ID",
     "cline_public_model_name": "Public model name",
@@ -3944,7 +3952,11 @@
     "anthropic_processing_label": "Anthropic Processing",
     "anthropic_processing_hint": "When enabled, applies Anthropic-specific processing (cloaking, cache control, tool prefix). Disable for third-party Claude-compatible APIs (e.g. Kimi) to improve performance.",
     "claude_models_discovery_hint": "Fetches Anthropic-compatible GET /v1/models using this key (x-api-key + Bearer). Empty Base URL defaults to https://api.anthropic.com.",
-    "codex_models_discovery_hint": "Fetches OpenAI-compatible GET /v1/models using this key. Empty Base URL defaults to https://api.openai.com. For ChatGPT OAuth accounts, use Auth Files → Models → Refresh instead."
+    "codex_models_discovery_hint": "Fetches OpenAI-compatible GET /v1/models using this key. Empty Base URL defaults to https://api.openai.com. For ChatGPT OAuth accounts, use Auth Files → Models → Refresh instead.",
+    "credential_sort_label": "Sort credentials",
+    "credential_sort_config": "Configured order",
+    "credential_sort_remaining_asc": "Least quota left first",
+    "credential_sort_remaining_desc": "Most quota left first"
   },
   "logs_page": {
     "error_log_files": "Error Log Files",
@@ -5441,5 +5453,53 @@
     "portal_no_logins": "No sign-ins in the last 30 days",
     "chain_title": "Forwarding chain for this request (rightmost is the hop talking to this service)",
     "chain_hint": "Every hop must be declared before resolution reaches the real client on the left. Currently resolving to: {{client}}. A loopback result means one hop is still undeclared."
+  },
+  "video_generation": {
+    "title": "Video Models",
+    "description": "See how to call Grok Imagine text-to-video and image-to-video, and verify the pipeline from the test panel.",
+    "call_title": "How to call",
+    "call_description": "Use an API key from the API Keys page. Generation is asynchronous: submit, then poll the returned request_id.",
+    "text_to_video_title": "Text to video",
+    "text_to_video_desc": "Prompt only. The model renders a first frame and animates it — good for creating from scratch.",
+    "image_to_video_title": "Image to video",
+    "image_to_video_desc": "Supply a source image as the first frame and describe the motion with a prompt.",
+    "request_params_title": "Request parameters",
+    "response_schema_title": "Response schema",
+    "table_param": "Field",
+    "table_type": "Type",
+    "table_required": "Required",
+    "table_description": "Description",
+    "table_default": "default",
+    "status_endpoint_hint": "Poll GET {{path}}. Read video.url once status is done; failed / expired are terminal.",
+    "param_model_desc": "Video model id, for example grok-imagine-video-1.5.",
+    "param_prompt_desc": "Describes the scene and camera motion to generate.",
+    "param_image_prompt_desc": "Describes how the source image should move, e.g. camera push or element motion.",
+    "param_image_desc": "Source image as {\"url\": \"...\"}. A plain URL string or data URI is also accepted and normalized server-side.",
+    "param_duration_desc": "Clip length in seconds; the ceiling depends on the model.",
+    "param_aspect_ratio_desc": "Aspect ratio, such as 16:9, 9:16 or 1:1.",
+    "param_resolution_desc": "Resolution: 480p, 720p or 1080p.",
+    "response_request_id_desc": "Job id returned on submission, used for polling.",
+    "response_status_desc": "Job status: pending, done, failed or expired.",
+    "response_video_url_desc": "URL of the finished clip.",
+    "response_video_duration_desc": "Length of the generated clip in seconds.",
+    "test_button": "Test generation",
+    "test_title": "Test video generation",
+    "test_submit": "Generate",
+    "test_running": "Generating",
+    "test_running_hint": "Video generation usually takes 1-3 minutes; keep this page open",
+    "test_failed_generic": "Video generation failed",
+    "test_model_required": "Select a video model first",
+    "test_prompt_required": "Enter a prompt",
+    "test_image_required": "Image-to-video needs a source image URL",
+    "field_model": "Model",
+    "field_prompt": "Prompt",
+    "field_prompt_placeholder": "e.g. ocean waves at sunset, camera slowly pulling back",
+    "field_image_url": "Source image URL (image-to-video)",
+    "field_duration": "Duration (seconds, max {{max}})",
+    "field_aspect_ratio": "Aspect ratio",
+    "field_resolution": "Resolution",
+    "result_open_original": "Open the original clip in a new tab",
+    "no_channel_hint": "This tenant has no usable xAI account, so video generation is unavailable. Add and enable a Grok account under AI Accounts first.",
+    "unavailable_suffix": "no account"
   }
 }

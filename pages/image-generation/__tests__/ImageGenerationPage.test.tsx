@@ -77,7 +77,11 @@ describe("ImageGenerationPage", () => {
     expect(screen.getByRole("tab", { name: "图生图" })).toBeInTheDocument();
     expect(within(callCard as HTMLElement).getByText("POST")).toBeInTheDocument();
     expect(within(callCard as HTMLElement).getByText("/v1/images/generations")).toBeInTheDocument();
-    const textCurl = screen.getByText(/curl http:\/\/127\.0\.0\.1:8317\/v1\/images\/generations/);
+    // The snippet is syntax-highlighted, so its text is split across token spans:
+    // assert on the block's textContent rather than on a single text node.
+    const textCurl = document.querySelector("[data-code-block]") as HTMLElement;
+    expect(textCurl).not.toBeNull();
+    expect(textCurl.textContent).toContain("curl http://127.0.0.1:8317/v1/images/generations");
     expect(
       textCurl.compareDocumentPosition(screen.getByText("请求参数")) &
         Node.DOCUMENT_POSITION_FOLLOWING,
@@ -98,8 +102,9 @@ describe("ImageGenerationPage", () => {
     expect(screen.getByText("size")).toBeInTheDocument();
     expect(screen.getByText("quality")).toBeInTheDocument();
     expect(screen.getByText("n")).toBeInTheDocument();
-    expect(screen.getByText(/"size": "1024x1024"/)).toBeInTheDocument();
-    expect(screen.getByText(/"quality": "high"/)).toBeInTheDocument();
+    // Same reason as above: the highlighted snippet has no single node holding these.
+    expect(textCurl.textContent).toContain('"size": "1024x1024"');
+    expect(textCurl.textContent).toContain('"quality": "high"');
     expect(screen.queryByText("BaseURL")).not.toBeInTheDocument();
     expect(screen.getByText(/Authorization: Bearer YOUR_API_KEY/)).toBeInTheDocument();
     expect(within(callCard as HTMLElement).getByRole("button", { name: "测试生成" })).toBeEnabled();

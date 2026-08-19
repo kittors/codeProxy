@@ -2,11 +2,18 @@ import type { AuthFileItem } from "@code-proxy/api-client";
 
 export { type AntigravityModelsPayload } from "@features/quota-preview/quota-antigravity";
 export {
+  ANTIGRAVITY_QUOTA_KEY_PREFIX,
   buildAntigravityGroups,
   buildAntigravityItems,
+  buildAntigravitySummaryItems,
+  categorizeAntigravityModel,
   filterAntigravityQuotaItems,
+  parseAntigravityForwardingRules,
   parseAntigravityPayload,
+  parseAntigravityWindowSeconds,
   shouldSkipAntigravityModelId,
+  summarizeAntigravityQuotaItems,
+  type AntigravityQuotaCategory,
 } from "@features/quota-preview/quota-antigravity";
 export { type CodexUsagePayload } from "@features/quota-preview/quota-codex";
 export {
@@ -53,18 +60,57 @@ export {
 } from "@features/quota-preview/quota-normalizers";
 export type { QuotaItem, QuotaState, QuotaStatus } from "@features/quota-preview/quota-types";
 
+/**
+ * The shared project the upstream accepts for accounts that have none of their
+ * own. It is a last resort, not a default: asking for quota under a project that
+ * is not yours reports that project's remaining fraction, which is how an
+ * exhausted account comes back reading 100%.
+ */
 export const DEFAULT_ANTIGRAVITY_PROJECT_ID = "bamboo-precept-lgxtn";
 
-export const ANTIGRAVITY_QUOTA_URLS = [
-  "https://daily-cloudcode-pa.googleapis.com/v1internal:fetchAvailableModels",
-  "https://daily-cloudcode-pa.sandbox.googleapis.com/v1internal:fetchAvailableModels",
-  "https://cloudcode-pa.googleapis.com/v1internal:fetchAvailableModels",
+/**
+ * Ordered sandbox-first: the sandbox host stays reachable while the production
+ * host is shedding load with 429s.
+ */
+const ANTIGRAVITY_HOSTS = [
+  "https://daily-cloudcode-pa.sandbox.googleapis.com",
+  "https://daily-cloudcode-pa.googleapis.com",
+  "https://cloudcode-pa.googleapis.com",
 ];
+
+/**
+ * The grouped view. The upstream reports one bucket per model family per window
+ * (weekly and 5h) and names them itself, so nothing here has to guess which
+ * models share a quota.
+ */
+export const ANTIGRAVITY_QUOTA_SUMMARY_URLS = ANTIGRAVITY_HOSTS.map(
+  (host) => `${host}/v1internal:retrieveUserQuotaSummary`,
+);
+
+/** The flat view. Only carries the 5h window and leaves grouping to the caller. */
+export const ANTIGRAVITY_QUOTA_URLS = ANTIGRAVITY_HOSTS.map(
+  (host) => `${host}/v1internal:fetchAvailableModels`,
+);
+
+export const ANTIGRAVITY_LOAD_CODE_ASSIST_URLS = ANTIGRAVITY_HOSTS.map(
+  (host) => `${host}/v1internal:loadCodeAssist`,
+);
+
+/**
+ * The client version the upstream gates its answer on. An outdated version is
+ * served a reduced model set and a coarser quota view, so this must track the
+ * real Antigravity client rather than whatever version happened to be current
+ * when the header was first written.
+ *
+ * The literal `1.X.X` is not an unfilled placeholder — that is the string the
+ * Antigravity client itself sends.
+ */
+export const ANTIGRAVITY_CLIENT_VERSION = "4.3.0";
 
 export const ANTIGRAVITY_REQUEST_HEADERS = {
   Authorization: "Bearer $TOKEN$",
   "Content-Type": "application/json",
-  "User-Agent": "antigravity/1.11.5 windows/amd64",
+  "User-Agent": `vscode/1.X.X (Antigravity/${ANTIGRAVITY_CLIENT_VERSION})`,
 };
 
 export const GEMINI_CLI_QUOTA_URL =

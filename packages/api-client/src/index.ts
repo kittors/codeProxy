@@ -112,6 +112,8 @@ export { updateApi } from "./endpoints/update";
 export type * from "./endpoints/update";
 export { imageGenerationApi } from "./endpoints/image-generation";
 export type * from "./endpoints/image-generation";
+export { videoGenerationApi } from "./endpoints/video-generation";
+export type * from "./endpoints/video-generation";
 export { proxiesApi } from "./endpoints/proxies";
 export type * from "./endpoints/proxies";
 export {
