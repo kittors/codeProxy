@@ -1,6 +1,8 @@
 import { apiCallApi, authFilesApi, getApiCallErrorMessage } from "@code-proxy/api-client";
 import type { ApiCallResult, AuthFileItem } from "@code-proxy/api-client";
 import {
+  ANTIGRAVITY_LOAD_CODE_ASSIST_URLS,
+  ANTIGRAVITY_QUOTA_SUMMARY_URLS,
   ANTIGRAVITY_QUOTA_URLS,
   ANTIGRAVITY_REQUEST_HEADERS,
   CLAUDE_REQUEST_HEADERS,
@@ -21,6 +23,7 @@ import {
   XAI_BILLING_WEEKLY_URL,
   XAI_REQUEST_HEADERS,
   buildAntigravityItems,
+  buildAntigravitySummaryItems,
   buildClaudeItems,
   buildCodexItems,
   buildGeminiCliBuckets,
@@ -130,11 +133,11 @@ export const consumeCodexResetCredit = async (file: AuthFileItem): Promise<void>
   }
 };
 
-const resolveAntigravityProjectId = async (file: AuthFileItem): Promise<string> => {
+const resolveStoredAntigravityProjectId = async (file: AuthFileItem): Promise<string | null> => {
   try {
     const text = await authFilesApi.downloadText(file.name);
     const trimmed = text.trim();
-    if (!trimmed) return DEFAULT_ANTIGRAVITY_PROJECT_ID;
+    if (!trimmed) return null;
     const parsed = JSON.parse(trimmed) as Record<string, unknown>;
     const top = normalizeStringValue(parsed.project_id ?? parsed.projectId);
     if (top) return top;
@@ -149,9 +152,85 @@ const resolveAntigravityProjectId = async (file: AuthFileItem): Promise<string> 
     const webId = web ? normalizeStringValue(web.project_id ?? web.projectId) : null;
     if (webId) return webId;
   } catch {
-    return DEFAULT_ANTIGRAVITY_PROJECT_ID;
+    return null;
   }
-  return DEFAULT_ANTIGRAVITY_PROJECT_ID;
+  return null;
+};
+
+/**
+ * Ask the upstream which project this account actually owns.
+ *
+ * Quota is reported per project, so querying under a project the account does
+ * not own reports that project's remaining fraction — an exhausted account can
+ * come back reading 100%. The shared fallback id is only reached when the
+ * account genuinely has no project of its own.
+ */
+const fetchAntigravityProjectId = async (authIndex: string): Promise<string | null> => {
+  const body = JSON.stringify({
+    metadata: { ideType: "ANTIGRAVITY", platform: "PLATFORM_UNSPECIFIED", pluginType: "GEMINI" },
+  });
+  for (const url of ANTIGRAVITY_LOAD_CODE_ASSIST_URLS) {
+    try {
+      const result = await apiCallApi.request({
+        authIndex,
+        method: "POST",
+        url,
+        header: { ...ANTIGRAVITY_REQUEST_HEADERS },
+        data: body,
+      });
+      if (result.statusCode < 200 || result.statusCode >= 300) continue;
+      const parsed = parseAntigravityPayload(result.body ?? result.bodyText);
+      if (!parsed) continue;
+      const project = parsed.cloudaicompanionProject;
+      const id = isRecord(project)
+        ? normalizeStringValue(project.id)
+        : normalizeStringValue(project);
+      if (id) return id;
+    } catch {
+      continue;
+    }
+  }
+  return null;
+};
+
+const resolveAntigravityProjectId = async (
+  file: AuthFileItem,
+  authIndex: string,
+): Promise<string> => {
+  const stored = await resolveStoredAntigravityProjectId(file);
+  if (stored) return stored;
+  const fetched = await fetchAntigravityProjectId(authIndex);
+  return fetched ?? DEFAULT_ANTIGRAVITY_PROJECT_ID;
+};
+
+/**
+ * POST the project-scoped body and, on 403, retry once without the project
+ * field. A project the account cannot read is rejected outright, and the
+ * projectless form is what the upstream falls back to internally.
+ */
+const requestAntigravityQuota = async (
+  authIndex: string,
+  urls: string[],
+  projectId: string,
+): Promise<{ result: ApiCallResult | null; payload: Record<string, unknown> | null }> => {
+  let last: ApiCallResult | null = null;
+  for (const url of urls) {
+    for (const body of [JSON.stringify({ project: projectId }), "{}"]) {
+      const result = await apiCallApi.request({
+        authIndex,
+        method: "POST",
+        url,
+        header: { ...ANTIGRAVITY_REQUEST_HEADERS },
+        data: body,
+      });
+      last = result;
+      if (result.statusCode >= 200 && result.statusCode < 300) {
+        return { result, payload: parseAntigravityPayload(result.body ?? result.bodyText) };
+      }
+      if (result.statusCode !== 403) break;
+    }
+  }
+  return { result: last, payload: null };
 };
 
 const isClaudeOAuthLikeFile = (file: AuthFileItem): boolean => {
@@ -186,28 +265,28 @@ export const fetchQuota = async (
   const authIndex = resolveAuthIndex(file);
 
   if (type === "antigravity") {
-    const projectId = await resolveAntigravityProjectId(file);
-    const requestBody = JSON.stringify({ project: projectId });
-    let last: ApiCallResult | null = null;
-    for (const url of ANTIGRAVITY_QUOTA_URLS) {
-      const result = await apiCallApi.request({
-        authIndex,
-        method: "POST",
-        url,
-        header: { ...ANTIGRAVITY_REQUEST_HEADERS },
-        data: requestBody,
-      });
-      last = result;
-      if (result.statusCode >= 200 && result.statusCode < 300) {
-        const parsed = parseAntigravityPayload(result.body ?? result.bodyText);
-        const models = parsed?.models;
-        if (!models || !isRecord(models)) throw new Error("no_model_quota");
-        return {
-          items: buildAntigravityItems(parsed),
-        };
-      }
+    const projectId = await resolveAntigravityProjectId(file, authIndex);
+
+    // The grouped summary is the authoritative view — it carries both the weekly
+    // and the 5h window and groups them the way the upstream does. The flat
+    // model list is the fallback: 5h only, grouped by us.
+    const summary = await requestAntigravityQuota(
+      authIndex,
+      ANTIGRAVITY_QUOTA_SUMMARY_URLS,
+      projectId,
+    );
+    if (summary.payload) {
+      const items = buildAntigravitySummaryItems(summary.payload);
+      if (items.length > 0) return { items };
     }
-    if (last) throw new Error(getApiCallErrorMessage(last));
+
+    const models = await requestAntigravityQuota(authIndex, ANTIGRAVITY_QUOTA_URLS, projectId);
+    if (models.payload) {
+      if (!isRecord(models.payload.models)) throw new Error("no_model_quota");
+      return { items: buildAntigravityItems(models.payload) };
+    }
+    if (models.result) throw new Error(getApiCallErrorMessage(models.result));
+    if (summary.result) throw new Error(getApiCallErrorMessage(summary.result));
     throw new Error("request_failed");
   }
 

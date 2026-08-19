@@ -164,7 +164,7 @@ describe("fetchQuota for antigravity", () => {
     mocks.downloadText.mockResolvedValueOnce(
       JSON.stringify({ project_id: "bamboo-precept-lgxtn" }),
     );
-    mocks.request.mockResolvedValueOnce({
+    const antigravityModelsResponse = {
       statusCode: 200,
       header: {},
       bodyText: "",
@@ -227,7 +227,15 @@ describe("fetchQuota for antigravity", () => {
           },
         ],
       }),
-    });
+    };
+
+    // The grouped summary is asked for first; this account's upstream does not
+    // serve it, so the flat model list is what the card ends up rendering.
+    mocks.request.mockImplementation(async ({ url }: { url: string }) =>
+      url.includes("retrieveUserQuotaSummary")
+        ? { statusCode: 404, header: {}, bodyText: "", body: "" }
+        : antigravityModelsResponse,
+    );
 
     const result = await fetchQuota("antigravity", {
       name: "antigravity.json",
@@ -236,43 +244,169 @@ describe("fetchQuota for antigravity", () => {
     } as any);
 
     expect(mocks.downloadText).toHaveBeenCalledWith("antigravity.json");
+    // Sandbox is tried first, and the client version must be one the upstream
+    // still serves the full model set to.
     expect(mocks.request).toHaveBeenCalledWith(
       expect.objectContaining({
         authIndex: "ag-1",
         method: "POST",
-        url: "https://daily-cloudcode-pa.googleapis.com/v1internal:fetchAvailableModels",
+        url: "https://daily-cloudcode-pa.sandbox.googleapis.com/v1internal:fetchAvailableModels",
         data: JSON.stringify({ project: "bamboo-precept-lgxtn" }),
         header: expect.objectContaining({
           Authorization: "Bearer $TOKEN$",
-          "User-Agent": "antigravity/1.11.5 windows/amd64",
+          "User-Agent": "vscode/1.X.X (Antigravity/4.3.0)",
         }),
       }),
     );
     expect(result.items.map((item) => item.key)).toEqual([
-      "provider:gemini3-pro",
-      "provider:gemini3-flash",
-      "provider:claude",
+      "antigravity:gemini_pro",
+      "antigravity:gemini_flash",
+      "antigravity:claude",
+      "antigravity:model_gpt_oss_120b_medium",
     ]);
     expect(result.items[0]).toEqual(
       expect.objectContaining({
-        label: "antigravity_quota.gemini3_pro",
+        label: "Gemini Pro",
         percent: 80,
         resetAtMs: Date.parse("2026-05-09T15:50:29Z"),
       }),
     );
-    expect(result.items[1]).toEqual(
-      expect.objectContaining({
-        label: "antigravity_quota.gemini3_flash",
-        percent: 70,
-      }),
-    );
-    expect(result.items[2]).toEqual(
-      expect.objectContaining({
-        label: "antigravity_quota.claude",
-        percent: 60,
-      }),
+    expect(result.items[1]).toEqual(expect.objectContaining({ label: "Gemini Flash", percent: 70 }));
+    expect(result.items[2]).toEqual(expect.objectContaining({ label: "Claude", percent: 60 }));
+    expect(result.items[3]).toEqual(
+      expect.objectContaining({ label: "GPT-OSS 120B (Medium)", percent: 50 }),
     );
     expect(result.items[0].meta).toBeUndefined();
+  });
+
+  test("prefers the grouped summary and never falls back when it answers", async () => {
+    mocks.downloadText.mockResolvedValueOnce(JSON.stringify({ project_id: "real-project" }));
+    mocks.request.mockImplementation(async ({ url }: { url: string }) => {
+      if (!url.includes("retrieveUserQuotaSummary")) {
+        throw new Error(`unexpected fallback request to ${url}`);
+      }
+      return {
+        statusCode: 200,
+        header: {},
+        bodyText: "",
+        body: JSON.stringify({
+          groups: [
+            {
+              displayName: "Gemini Models",
+              buckets: [
+                { bucketId: "gemini-5h", window: "5h", remainingFraction: 0.72 },
+                { bucketId: "gemini-weekly", window: "weekly", remainingFraction: 0.51 },
+              ],
+            },
+          ],
+        }),
+      };
+    });
+
+    const result = await fetchQuota("antigravity", {
+      name: "antigravity.json",
+      provider: "antigravity",
+      auth_index: "ag-1",
+    } as any);
+
+    expect(result.items.map((item) => item.key)).toEqual([
+      "antigravity:gemini_5h",
+      "antigravity:gemini_weekly",
+    ]);
+    expect(result.items.map((item) => item.windowSeconds)).toEqual([
+      5 * 60 * 60,
+      7 * 24 * 60 * 60,
+    ]);
+  });
+
+  // A project the account cannot read is rejected outright. Retrying without it
+  // is what the upstream client does, and it is the difference between a card
+  // that reads "forbidden" and one that shows the account's real quota.
+  test("retries without the project field after a 403", async () => {
+    mocks.downloadText.mockResolvedValueOnce(JSON.stringify({ project_id: "foreign-project" }));
+    const seen: Array<{ url: string; data: string }> = [];
+    mocks.request.mockImplementation(async ({ url, data }: { url: string; data: string }) => {
+      seen.push({ url, data });
+      if (url.includes("retrieveUserQuotaSummary")) {
+        if (data.includes("foreign-project")) {
+          return { statusCode: 403, header: {}, bodyText: "", body: "" };
+        }
+        return {
+          statusCode: 200,
+          header: {},
+          bodyText: "",
+          body: JSON.stringify({
+            groups: [
+              {
+                displayName: "Gemini Models",
+                buckets: [{ bucketId: "gemini-5h", window: "5h", remainingFraction: 0.4 }],
+              },
+            ],
+          }),
+        };
+      }
+      return { statusCode: 404, header: {}, bodyText: "", body: "" };
+    });
+
+    const result = await fetchQuota("antigravity", {
+      name: "antigravity.json",
+      provider: "antigravity",
+      auth_index: "ag-1",
+    } as any);
+
+    expect(seen[0].data).toBe(JSON.stringify({ project: "foreign-project" }));
+    expect(seen[1].data).toBe("{}");
+    expect(seen[1].url).toBe(seen[0].url);
+    expect(result.items[0]).toEqual(expect.objectContaining({ percent: 40 }));
+  });
+
+  // Without a stored project the account's own one has to be looked up; guessing
+  // reports some other project's remaining fraction.
+  test("looks the project up via loadCodeAssist when the auth file has none", async () => {
+    mocks.downloadText.mockResolvedValueOnce(JSON.stringify({ client_id: "x" }));
+    const seen: string[] = [];
+    mocks.request.mockImplementation(async ({ url }: { url: string }) => {
+      seen.push(url);
+      if (url.includes("loadCodeAssist")) {
+        return {
+          statusCode: 200,
+          header: {},
+          bodyText: "",
+          body: JSON.stringify({ cloudaicompanionProject: "discovered-project" }),
+        };
+      }
+      if (url.includes("retrieveUserQuotaSummary")) {
+        return {
+          statusCode: 200,
+          header: {},
+          bodyText: "",
+          body: JSON.stringify({
+            groups: [
+              {
+                displayName: "Gemini Models",
+                buckets: [{ bucketId: "gemini-5h", window: "5h", remainingFraction: 0.2 }],
+              },
+            ],
+          }),
+        };
+      }
+      return { statusCode: 404, header: {}, bodyText: "", body: "" };
+    });
+
+    const result = await fetchQuota("antigravity", {
+      name: "antigravity.json",
+      provider: "antigravity",
+      auth_index: "ag-1",
+    } as any);
+
+    expect(seen[0]).toContain("loadCodeAssist");
+    expect(mocks.request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: expect.stringContaining("retrieveUserQuotaSummary"),
+        data: JSON.stringify({ project: "discovered-project" }),
+      }),
+    );
+    expect(result.items[0]).toEqual(expect.objectContaining({ percent: 20 }));
   });
 });
 
