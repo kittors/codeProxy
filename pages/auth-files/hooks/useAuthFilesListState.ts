@@ -12,6 +12,7 @@ import {
   type AuthFileStatusFilter,
 } from "@code-proxy/domain";
 import { isRuntimeOnlyAuthFile } from "@code-proxy/domain";
+import { useAuthFilesQuotaSort } from "./useAuthFilesQuotaSort";
 
 interface UseAuthFilesListStateOptions {
   files: AuthFileItem[];
@@ -38,6 +39,10 @@ export function useAuthFilesListState({
   selectedFileNames,
   setSelectedFileNames,
 }: UseAuthFilesListStateOptions) {
+  // Quota order has to be decided here, before the slice into pages, so the
+  // preference and its data are read here rather than threaded down from the
+  // page component.
+  const { mode: sortMode, ranks: quotaRanks } = useAuthFilesQuotaSort(files);
   const providerOptions = useMemo(() => {
     const set = new Set<string>();
     files.forEach((file) => set.add(resolveFileType(file)));
@@ -107,12 +112,31 @@ export function useAuthFilesListState({
       authFileMatchesStatusFilter(file, statusFilter),
     );
     const searchFilteredNames = new Set(searchFilteredFiles.map((file) => file.name));
-    return statusScoped
-      .filter((file) => searchFilteredNames.has(file.name))
-      .sort((a, b) =>
-        authFilesSortCollator.compare(resolveAuthFileSortKey(a), resolveAuthFileSortKey(b)),
-      );
-  }, [searchFilteredFiles, statusFilter, tagScopedFiles]);
+    const byName = (a: AuthFileItem, b: AuthFileItem) =>
+      authFilesSortCollator.compare(resolveAuthFileSortKey(a), resolveAuthFileSortKey(b));
+    const scoped = statusScoped.filter((file) => searchFilteredNames.has(file.name));
+
+    if (sortMode === "name") return scoped.sort(byName);
+
+    // Quota order is applied here, ahead of the slice into pages: sorting after
+    // pagination would only rearrange whichever accounts happened to land on the
+    // current page, which is not an order at all.
+    //
+    // Accounts with no reading fall to the end in both directions and keep name
+    // order among themselves. Unknown is not empty and not full, and floating it
+    // to the top of either direction would bury exactly what the operator opened
+    // this view to find.
+    const direction = sortMode === "quota_asc" ? 1 : -1;
+    return scoped.sort((a, b) => {
+      const left = quotaRanks?.[a.name] ?? null;
+      const right = quotaRanks?.[b.name] ?? null;
+      if (left === null && right === null) return byName(a, b);
+      if (left === null) return 1;
+      if (right === null) return -1;
+      if (left === right) return byName(a, b);
+      return (left - right) * direction;
+    });
+  }, [searchFilteredFiles, statusFilter, tagScopedFiles, quotaRanks, sortMode]);
 
   const totalPages = Math.max(1, Math.ceil(filteredFiles.length / pageSize));
   const safePage = Math.min(totalPages, Math.max(1, page));

@@ -1016,7 +1016,11 @@
     "no_tags": "暂无标签",
     "hide_tag": "隐藏 {{tag}}",
     "restore_tag": "恢复 {{tag}}",
-    "remove_custom_tag": "移除 {{tag}}"
+    "remove_custom_tag": "移除 {{tag}}",
+    "sort_label": "账号排序",
+    "sort_by_name": "按名称",
+    "sort_quota_asc": "剩余额度少的在前",
+    "sort_quota_desc": "剩余额度多的在前"
   },
   "antigravity_quota": {
     "title": "Antigravity 额度",
