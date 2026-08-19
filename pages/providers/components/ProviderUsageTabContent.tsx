@@ -17,6 +17,9 @@ import {
   OpenCodeGoUsageRefreshButton,
   type OpenCodeGoUsageStore,
 } from "./OpenCodeGoUsageCardSection";
+import { useCredentialUsageOrder } from "../hooks/useCredentialUsageOrder";
+import { CredentialUsageSortMenu } from "./CredentialUsageSortMenu";
+import { useCredentialSortMode } from "../hooks/useCredentialSortMode";
 
 type ListCardProps = ComponentProps<typeof ProviderKeyListCard>;
 
@@ -61,9 +64,20 @@ export function ProviderUsageTabContent({
   selectedKeys,
   onToggleSelected,
 }: ProviderUsageTabContentProps) {
+  const [sortMode, setSortMode] = useCredentialSortMode();
+  const displayOrder = useCredentialUsageOrder(provider, items, usageStore, sortMode);
+
   return (
     <TabsContent value={provider} className="min-h-0 flex flex-1 flex-col">
+      <div className="mb-2 flex items-center justify-end">
+        <CredentialUsageSortMenu
+          mode={sortMode}
+          onChange={setSortMode}
+          disabled={items.length < 2}
+        />
+      </div>
       <ProviderKeyListCard
+        displayOrder={displayOrder}
         items={items}
         loading={loading}
         onEdit={onEdit}
