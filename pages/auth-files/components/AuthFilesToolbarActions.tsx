@@ -9,6 +9,7 @@ import {
   Upload,
 } from "lucide-react";
 import { Button, HoverTooltip, Select } from "@code-proxy/ui";
+import { AuthFilesQuotaSortMenu } from "./AuthFilesQuotaSortMenu";
 
 export type AuthFilesToolbarActionsProps = {
   t: TFunction;
@@ -128,6 +129,7 @@ export function AuthFilesToolbarActions({
         </Button>
       </HoverTooltip>
       {configActionsMenu}
+      <AuthFilesQuotaSortMenu />
       {showCardColumns ? (
         <div
           className="hidden xl:block"

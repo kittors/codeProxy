@@ -485,6 +485,10 @@
     "search_empty_desc": "Try a different keyword or clear the search box"
   },
   "auth_files": {
+    "sort_label": "Sort accounts",
+    "sort_by_name": "By name",
+    "sort_quota_asc": "Least quota left first",
+    "sort_quota_desc": "Most quota left first",
     "title": "AI Accounts",
     "title_section": "AI Accounts",
     "description": "Manage OAuth logins and auth credentials for AI platforms, including usage, quotas, and identity fingerprints.",
