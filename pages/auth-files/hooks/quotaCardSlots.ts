@@ -24,45 +24,31 @@ const WEEK_SECONDS = 7 * 24 * 60 * 60;
 const FIVE_HOUR_SECONDS = 5 * 60 * 60;
 
 /**
- * Strip the trailing noun the upstream appends to every group name.
+ * Strip the trailing noun the upstream appends to its group names.
  *
- * It sends "Gemini Models" and "Claude and GPT models"; the card renders these
- * beside a window and a percentage, where the word "models" is the one part
- * that carries no information. This trims a generic suffix, not a list of known
- * groups — a group the upstream adds tomorrow is shortened the same way.
+ * It sends "Gemini Models" and "Claude and GPT models"; on a row that already
+ * shows a window and a percentage, the word "models" is the one part carrying
+ * no information. A generic suffix, not a list of known groups.
  */
 const shortenAntigravityGroupName = (name: string): string => {
   const trimmed = name.trim();
-  const shortened = trimmed.replace(/\s+models?$/i, "").trim();
-  return shortened || trimmed;
+  return trimmed.replace(/\s+models?$/i, "").trim() || trimmed;
 };
 
 /**
- * Order the rows the way the upstream client presents them: grouped by model
- * family, weekly above the 5-hour window inside each group.
+ * Order rows the way the upstream client does: grouped, weekly above 5-hour.
  *
- * Groups keep the order the upstream returned them in rather than being sorted
- * here, so the card matches what the account holder sees in the real client.
- *
- * Each row is tagged with whether its group actually spans more than one
- * window. A group with a single window needs no window suffix — the fallback
- * model view reports only 5h, and appending "· 5-hour" to every row there is
- * noise on a card whose whole job is to show numbers.
+ * Only the grouped-summary view has two windows per group. The fallback view
+ * reports one row per model family, and tagging those with a window suffix
+ * would be noise, so the flag says whether the group has anything to
+ * disambiguate against.
  */
 const orderAntigravityWindows = (
   items: QuotaItem[],
-): Array<{
-  item: QuotaItem;
-  showWindow: boolean;
-}> => {
+): Array<{ item: QuotaItem; showWindow: boolean }> => {
   const groups = new Map<string, QuotaItem[]>();
   items.forEach((item) => {
-    // Shared buckets all carry the same label key, so they group by their own
-    // key instead — they are distinct quotas that merely render alike.
-    const groupKey =
-      item.label === SHARED_GROUP_LABEL
-        ? String(item.key ?? "")
-        : String(item.label ?? item.key ?? "");
+    const groupKey = String(item.label ?? item.key ?? "");
     const bucket = groups.get(groupKey);
     if (bucket) bucket.push(item);
     else groups.set(groupKey, [item]);
@@ -71,49 +57,18 @@ const orderAntigravityWindows = (
   const windowRank = (item: QuotaItem) => {
     if (item.windowSeconds === WEEK_SECONDS) return 0;
     if (item.windowSeconds === FIVE_HOUR_SECONDS) return 1;
-    // An unrecognised window keeps its place after the two known ones rather
-    // than being dropped: the upstream may add a window before we name it.
     return 2;
   };
 
   return [...groups.values()].flatMap((bucket) => {
-    const distinctWindows = new Set(bucket.map((item) => item.windowSeconds ?? -1));
-    const showWindow = distinctWindows.size > 1;
+    const showWindow = new Set(bucket.map((item) => item.windowSeconds ?? -1)).size > 1;
     return [...bucket]
       .sort((a, b) => windowRank(a) - windowRank(b))
       .map((item) => ({ item, showWindow }));
   });
 };
 
-const SHARED_GROUP_LABEL = "antigravity_quota.shared_group";
-
-/**
- * Members of a shared bucket, as the backend sends them: a comma-separated list
- * of model ids. The fallback view groups models by the quota they draw on, so
- * this list is the answer to "what does this bar cover".
- */
-const readSharedGroupMembers = (item: QuotaItem): string[] =>
-  String(item.meta ?? "")
-    .split(",")
-    .map((entry) => entry.trim())
-    .filter(Boolean);
-
-/**
- * Compose the row label as "<group> · <window>", or just "<group>" when the
- * group has nothing to disambiguate against.
- *
- * The group name comes from the upstream and the window from `windowSeconds`,
- * so the label is localised without translating anything the upstream owns.
- * The backend used to send "Gemini Models · Weekly Limit Remaining" as one
- * string, which was too long for the row and could not be localised at all.
- */
 const buildAntigravityRowLabel = (item: QuotaItem, showWindow: boolean, t: TFunction): string => {
-  // A bucket from the fallback view has no name of its own — it is defined by
-  // the models that share it, so the row says how many that is. Naming it after
-  // a model family would be the guess this grouping exists to avoid.
-  if (item.label === SHARED_GROUP_LABEL) {
-    return t(SHARED_GROUP_LABEL, { count: readSharedGroupMembers(item).length });
-  }
   const group = shortenAntigravityGroupName(String(item.label ?? ""));
   if (!showWindow) return group;
   const windowLabel =
@@ -122,8 +77,7 @@ const buildAntigravityRowLabel = (item: QuotaItem, showWindow: boolean, t: TFunc
       : item.windowSeconds === FIVE_HOUR_SECONDS
         ? t("antigravity_quota.window_5h")
         : null;
-  if (!windowLabel) return group;
-  return group ? `${group} · ${windowLabel}` : windowLabel;
+  return windowLabel ? `${group} · ${windowLabel}` : group;
 };
 
 /**
@@ -160,29 +114,23 @@ export const resolveQuotaCardSlots = (
     }));
   }
   if (provider === "antigravity") {
-    // Show both windows per group, the way the upstream client does: a group
-    // shares one weekly and one 5-hour limit, and hiding either leaves the
-    // account holder guessing which one is about to run out.
     return orderAntigravityWindows(filterAntigravityQuotaItems(items)).map(
       ({ item, showWindow }, index) => {
-        // meta holds the upstream's description of the group. Moving it onto the
-        // slot keeps it out of the row's detail line, which is reserved for the
-        // reset countdown, and hands it to the hint icon instead.
+        // meta names the model this row was measured from (fallback view) or
+        // describes the group (summary view). Either way it explains the row
+        // rather than qualifying the number, so it belongs behind the icon and
+        // must not reach the countdown slot.
         const { meta, ...itemWithoutMeta } = item;
-        // A shared bucket's meta is the member list; spell it out under a
-        // heading rather than dropping a bare comma-separated string on the
-        // reader. Named groups keep the upstream's own description.
-        const members = readSharedGroupMembers(item);
-        const description =
-          item.label === SHARED_GROUP_LABEL
-            ? members.length > 0
-              ? `${t("antigravity_quota.shared_group_members")}\n${members.join("\n")}`
-              : ""
-            : (meta ?? "");
-        const hint = [description, t("antigravity_quota.group_hint")]
-          .map((part) => (typeof part === "string" ? part.trim() : ""))
-          .filter(Boolean)
-          .join("\n\n");
+        const description = typeof meta === "string" ? meta.trim() : "";
+        // A model id never contains a space; the grouped summary's description
+        // is a sentence. So the shape tells them apart: one names the model the
+        // row was measured from, the other is already an explanation.
+        const explanation = !description
+          ? ""
+          : description.includes(" ")
+            ? description
+            : t("antigravity_quota.measured_from", { model: description });
+        const hint = [explanation, t("antigravity_quota.group_hint")].filter(Boolean).join("\n\n");
         return {
           id: item.key ?? item.label ?? `antigravity-${index + 1}`,
           label: buildAntigravityRowLabel(item, showWindow, t),
@@ -192,6 +140,7 @@ export const resolveQuotaCardSlots = (
       },
     );
   }
+
   if (provider === "xai") {
     return items.map((item, index) => ({
       id: item.key ?? item.label ?? `xai-${index + 1}`,

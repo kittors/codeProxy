@@ -1028,8 +1028,7 @@
     "window_weekly": "Weekly",
     "window_5h": "5-hour",
     "group_hint": "Models in this group share one weekly limit and one 5-hour limit. Quota is consumed in proportion to token cost, so shorter tasks and cheaper models make it last longer.",
-    "shared_group": "Shared by {{count}} models",
-    "shared_group_members": "Models sharing this quota:"
+    "measured_from": "Measured from {{model}}"
   },
   "claude_quota": {
     "title": "Claude Quota",
