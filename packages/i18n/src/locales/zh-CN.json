@@ -1036,8 +1036,7 @@
     "window_weekly": "周",
     "window_5h": "5 小时",
     "group_hint": "本组共享一个周限额和一个 5 小时限额。额度按 token 成本比例扣减，因此任务越短、模型越经济，额度越耐用。",
-    "shared_group": "{{count}} 个模型共享",
-    "shared_group_members": "共享此额度的模型："
+    "measured_from": "本行额度取自 {{model}}"
   },
   "claude_quota": {
     "title": "Claude 额度",

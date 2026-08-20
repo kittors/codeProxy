@@ -70,7 +70,12 @@ describe("antigravity quota card slots", () => {
     const slots = resolveQuotaCardSlots(
       "antigravity",
       [
-        { key: "antigravity:gemini_pro", label: "Gemini Pro", percent: 40, windowSeconds: FIVE_HOUR },
+        {
+          key: "antigravity:gemini_pro",
+          label: "Gemini Pro",
+          percent: 40,
+          windowSeconds: FIVE_HOUR,
+        },
         { key: "antigravity:claude", label: "Claude", percent: 60, windowSeconds: FIVE_HOUR },
       ],
       t,
@@ -98,50 +103,41 @@ describe("antigravity quota card slots", () => {
   });
 });
 
-
 // The fallback view (fetchAvailableModels) groups models by the quota they
 // actually share, which the backend sends as a member list. The row has no
 // family name to fall back on — and inventing one is exactly what this
 // grouping exists to avoid — so it says how many models draw on the bucket.
-describe("antigravity shared buckets (fallback view)", () => {
-  const sharedItems: QuotaItem[] = [
+describe("antigravity fallback view", () => {
+  // The fallback view sends one row per family, already measured from a single
+  // representative model. The card shows the family name as-is; meta names the
+  // model behind the number and belongs behind the icon.
+  const familyItems: QuotaItem[] = [
     {
-      key: "antigravity:group_gemini_2_5_flash",
-      label: "antigravity_quota.shared_group",
-      percent: 100,
-      meta: "gemini-2.5-flash,gemini-2.5-pro",
+      key: "antigravity:gemini_pro",
+      label: "Gemini Pro",
+      percent: 80,
+      windowSeconds: FIVE_HOUR,
+      meta: "gemini-3.1-pro-high",
     },
     {
-      key: "antigravity:group_claude_sonnet_4_6",
-      label: "antigravity_quota.shared_group",
-      percent: 100,
-      meta: "claude-sonnet-4-6,gemini-3.1-pro-high,gpt-oss-120b-medium",
+      key: "antigravity:claude",
+      label: "Claude",
+      percent: 90,
+      windowSeconds: FIVE_HOUR,
+      meta: "claude-sonnet-4-6",
     },
   ];
 
-  test("names each row by how many models share the bucket", () => {
-    const slots = resolveQuotaCardSlots("antigravity", sharedItems, t);
-    expect(slots.map((slot) => slot.label)).toEqual([
-      "antigravity_quota.shared_group",
-      "antigravity_quota.shared_group",
-    ]);
-    // Distinct buckets must stay distinct rows even though they render alike.
-    expect(slots.map((slot) => slot.id)).toEqual([
-      "antigravity:group_gemini_2_5_flash",
-      "antigravity:group_claude_sonnet_4_6",
-    ]);
+  test("keeps the family name and adds no window suffix", () => {
+    const slots = resolveQuotaCardSlots("antigravity", familyItems, t);
+    expect(slots.map((slot) => slot.label)).toEqual(["Gemini Pro", "Claude"]);
   });
 
-  // The member list answers "what does this bar cover" and belongs behind the
-  // icon; a bare comma-separated string in the row would be unreadable.
-  test("lists the sharing models in the hint, one per line", () => {
-    const slots = resolveQuotaCardSlots("antigravity", sharedItems, t);
-    expect(slots[1].hint).toContain("claude-sonnet-4-6");
-    expect(slots[1].hint).toContain("gpt-oss-120b-medium");
-    expect(slots[1].hint).toContain("antigravity_quota.shared_group_members");
-    expect(slots[1].hint).toContain("antigravity_quota.group_hint");
-    // The raw list must not survive on the item, where it would reach the
-    // detail line reserved for the reset countdown.
-    expect(slots[1].item?.meta).toBeUndefined();
+  test("explains which model the row was measured from, off the item", () => {
+    const slots = resolveQuotaCardSlots("antigravity", familyItems, t);
+    expect(slots[0].hint).toContain("antigravity_quota.measured_from");
+    expect(slots[0].hint).toContain("antigravity_quota.group_hint");
+    // meta must not survive on the item, where it would reach the countdown.
+    expect(slots[0].item?.meta).toBeUndefined();
   });
 });
