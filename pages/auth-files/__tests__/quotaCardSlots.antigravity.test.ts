@@ -97,3 +97,51 @@ describe("antigravity quota card slots", () => {
     expect(thirdParty.hint).toBe("antigravity_quota.group_hint");
   });
 });
+
+
+// The fallback view (fetchAvailableModels) groups models by the quota they
+// actually share, which the backend sends as a member list. The row has no
+// family name to fall back on — and inventing one is exactly what this
+// grouping exists to avoid — so it says how many models draw on the bucket.
+describe("antigravity shared buckets (fallback view)", () => {
+  const sharedItems: QuotaItem[] = [
+    {
+      key: "antigravity:group_gemini_2_5_flash",
+      label: "antigravity_quota.shared_group",
+      percent: 100,
+      meta: "gemini-2.5-flash,gemini-2.5-pro",
+    },
+    {
+      key: "antigravity:group_claude_sonnet_4_6",
+      label: "antigravity_quota.shared_group",
+      percent: 100,
+      meta: "claude-sonnet-4-6,gemini-3.1-pro-high,gpt-oss-120b-medium",
+    },
+  ];
+
+  test("names each row by how many models share the bucket", () => {
+    const slots = resolveQuotaCardSlots("antigravity", sharedItems, t);
+    expect(slots.map((slot) => slot.label)).toEqual([
+      "antigravity_quota.shared_group",
+      "antigravity_quota.shared_group",
+    ]);
+    // Distinct buckets must stay distinct rows even though they render alike.
+    expect(slots.map((slot) => slot.id)).toEqual([
+      "antigravity:group_gemini_2_5_flash",
+      "antigravity:group_claude_sonnet_4_6",
+    ]);
+  });
+
+  // The member list answers "what does this bar cover" and belongs behind the
+  // icon; a bare comma-separated string in the row would be unreadable.
+  test("lists the sharing models in the hint, one per line", () => {
+    const slots = resolveQuotaCardSlots("antigravity", sharedItems, t);
+    expect(slots[1].hint).toContain("claude-sonnet-4-6");
+    expect(slots[1].hint).toContain("gpt-oss-120b-medium");
+    expect(slots[1].hint).toContain("antigravity_quota.shared_group_members");
+    expect(slots[1].hint).toContain("antigravity_quota.group_hint");
+    // The raw list must not survive on the item, where it would reach the
+    // detail line reserved for the reset countdown.
+    expect(slots[1].item?.meta).toBeUndefined();
+  });
+});
