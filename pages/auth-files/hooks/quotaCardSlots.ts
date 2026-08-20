@@ -57,7 +57,12 @@ const orderAntigravityWindows = (
 }> => {
   const groups = new Map<string, QuotaItem[]>();
   items.forEach((item) => {
-    const groupKey = String(item.label ?? item.key ?? "");
+    // Shared buckets all carry the same label key, so they group by their own
+    // key instead — they are distinct quotas that merely render alike.
+    const groupKey =
+      item.label === SHARED_GROUP_LABEL
+        ? String(item.key ?? "")
+        : String(item.label ?? item.key ?? "");
     const bucket = groups.get(groupKey);
     if (bucket) bucket.push(item);
     else groups.set(groupKey, [item]);
@@ -80,6 +85,19 @@ const orderAntigravityWindows = (
   });
 };
 
+const SHARED_GROUP_LABEL = "antigravity_quota.shared_group";
+
+/**
+ * Members of a shared bucket, as the backend sends them: a comma-separated list
+ * of model ids. The fallback view groups models by the quota they draw on, so
+ * this list is the answer to "what does this bar cover".
+ */
+const readSharedGroupMembers = (item: QuotaItem): string[] =>
+  String(item.meta ?? "")
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+
 /**
  * Compose the row label as "<group> · <window>", or just "<group>" when the
  * group has nothing to disambiguate against.
@@ -90,6 +108,12 @@ const orderAntigravityWindows = (
  * string, which was too long for the row and could not be localised at all.
  */
 const buildAntigravityRowLabel = (item: QuotaItem, showWindow: boolean, t: TFunction): string => {
+  // A bucket from the fallback view has no name of its own — it is defined by
+  // the models that share it, so the row says how many that is. Naming it after
+  // a model family would be the guess this grouping exists to avoid.
+  if (item.label === SHARED_GROUP_LABEL) {
+    return t(SHARED_GROUP_LABEL, { count: readSharedGroupMembers(item).length });
+  }
   const group = shortenAntigravityGroupName(String(item.label ?? ""));
   if (!showWindow) return group;
   const windowLabel =
@@ -145,7 +169,17 @@ export const resolveQuotaCardSlots = (
         // slot keeps it out of the row's detail line, which is reserved for the
         // reset countdown, and hands it to the hint icon instead.
         const { meta, ...itemWithoutMeta } = item;
-        const hint = [meta, t("antigravity_quota.group_hint")]
+        // A shared bucket's meta is the member list; spell it out under a
+        // heading rather than dropping a bare comma-separated string on the
+        // reader. Named groups keep the upstream's own description.
+        const members = readSharedGroupMembers(item);
+        const description =
+          item.label === SHARED_GROUP_LABEL
+            ? members.length > 0
+              ? `${t("antigravity_quota.shared_group_members")}\n${members.join("\n")}`
+              : ""
+            : (meta ?? "");
+        const hint = [description, t("antigravity_quota.group_hint")]
           .map((part) => (typeof part === "string" ? part.trim() : ""))
           .filter(Boolean)
           .join("\n\n");
