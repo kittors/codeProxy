@@ -77,6 +77,7 @@ import {
   type QuotaState,
 } from "@features/quota-preview/quota-helpers";
 import type { QuotaProvider } from "@features/quota-preview/quota-fetch";
+import type { QuotaCardSlot } from "../hooks/quotaCardSlots";
 import { AuthFilesToolbarActions } from "./AuthFilesToolbarActions";
 
 const MAX_FILENAME_PART_LENGTH = 72;
@@ -673,10 +674,7 @@ interface AuthFilesFilesTabProps {
   cycleBudgetByAuthIndex: Record<string, AuthFileCycleBudgetStats>;
   statusUsageLoading: boolean;
   resolveQuotaProvider: (file: AuthFileItem) => QuotaProvider | null;
-  resolveQuotaCardSlots: (
-    provider: QuotaProvider,
-    items: QuotaItem[],
-  ) => { id: string; label: string; item: QuotaItem | null }[];
+  resolveQuotaCardSlots: (provider: QuotaProvider, items: QuotaItem[]) => QuotaCardSlot[];
   refreshQuota: (file: AuthFileItem, provider: QuotaProvider) => Promise<void>;
   requestResetCredit: (file: AuthFileItem) => void;
   resettingCreditFileName: string | null;
@@ -703,6 +701,7 @@ interface AuthFilesFilesTabProps {
     label: string,
     item: QuotaItem | null,
     compact?: boolean,
+    hint?: string,
   ) => ReactNode;
   renderQuotaErrorBadge: (errorText: string) => ReactNode;
   openTagsEditor: (file: AuthFileItem) => void;
@@ -2097,7 +2096,7 @@ export function AuthFilesFilesTab({
                         {slots.length > 0 ? (
                           <div className={denseCards ? "space-y-2" : "space-y-3"}>
                             {slots.map((slot) =>
-                              renderQuotaBar(slot.label, slot.item, denseCards),
+                              renderQuotaBar(slot.label, slot.item, denseCards, slot.hint),
                             )}
                           </div>
                         ) : (

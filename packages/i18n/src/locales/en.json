@@ -1024,7 +1024,10 @@
     "missing_auth_index": "Auth file missing auth_index",
     "empty_models": "No quota data available",
     "refresh_button": "Refresh Quota",
-    "fetch_all": "Fetch All"
+    "fetch_all": "Fetch All",
+    "window_weekly": "Weekly",
+    "window_5h": "5-hour",
+    "group_hint": "Models in this group share one weekly limit and one 5-hour limit. Quota is consumed in proportion to token cost, so shorter tasks and cheaper models make it last longer."
   },
   "claude_quota": {
     "title": "Claude Quota",
