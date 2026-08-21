@@ -1727,7 +1727,7 @@ export function AuthFilesFilesTab({
                     successRate === null
                       ? "text-slate-500 dark:text-white/45"
                       : successRate >= 90
-                        ? "text-emerald-700 dark:text-emerald-200"
+                        ? "text-slate-700 dark:text-white/70"
                         : successRate >= 50
                           ? "text-amber-700 dark:text-amber-200"
                           : "text-rose-700 dark:text-rose-200";

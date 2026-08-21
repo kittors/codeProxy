@@ -27,15 +27,19 @@ export const resolveQuotaVisualTone = (percent: number | null | undefined): Quot
     };
   }
 
+  // A healthy quota is the common case, so it gets no colour beyond the ring:
+  // tinting the chip surface, its label and its percent all at once made every
+  // card on the page read as one flat green field, and a green that is always
+  // on cannot signal anything. Amber and rose below keep their full treatment —
+  // they are the states worth spotting from across the grid.
   if (normalized >= 60) {
     return {
       normalized,
       fillClass: "bg-emerald-500",
-      percentClass: "text-emerald-700 dark:text-emerald-200",
+      percentClass: "text-slate-700 dark:text-white/80",
       fillHex: "#10b981",
-      chipClass:
-        "border-emerald-200/70 bg-emerald-50/70 dark:border-emerald-500/20 dark:bg-emerald-500/[0.08]",
-      chipLabelClass: "text-emerald-900/70 dark:text-emerald-100/70",
+      chipClass: "border-slate-900/8 bg-slate-50 dark:border-white/10 dark:bg-white/[0.06]",
+      chipLabelClass: "text-slate-600 dark:text-white/70",
     };
   }
 
