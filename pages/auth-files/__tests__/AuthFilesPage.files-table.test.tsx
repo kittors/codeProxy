@@ -5045,7 +5045,7 @@ describe("AuthFilesPage files table", () => {
     expect(await screen.findByText("Code: 5h")).toBeInTheDocument();
     expect(screen.getByText("Code: Weekly")).toBeInTheDocument();
     expect(screen.queryByText("Review: Weekly")).not.toBeInTheDocument();
-    expect(screen.getByText("0%")).toHaveClass("text-rose-700");
+    expect(screen.getByText("0%")).toHaveClass("text-rose-900");
   });
 
   test("cards view shows codex team subscription quota instead of empty stable placeholders", async () => {
@@ -5169,7 +5169,7 @@ describe("AuthFilesPage files table", () => {
     expect(metrics[3]).toHaveAttribute("data-layout", "wide");
 
     const previewZero = within(row as HTMLElement).getByText("0%");
-    expect(previewZero).toHaveClass("text-rose-700");
+    expect(previewZero).toHaveClass("text-rose-900");
 
     // Every chip carries its own countdown inline, so hovering opens nothing.
     for (const metric of metrics) {
