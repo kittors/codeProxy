@@ -35,7 +35,12 @@ export const resolveQuotaVisualTone = (percent: number | null | undefined): Quot
   if (normalized >= 60) {
     return {
       normalized,
-      fillClass: "bg-emerald-500",
+      // The card view spends this on renderQuotaBarNode's fill, which is the
+      // row's own background rather than a slim track — at 100% it covers the
+      // whole line, so an emerald fill turned every healthy row into a green
+      // band. fillHex below stays green: it drives the 14px ring, where the
+      // colour costs nothing.
+      fillClass: "bg-slate-400 dark:bg-white/30",
       percentClass: "text-slate-700 dark:text-white/80",
       fillHex: "#10b981",
       chipClass: "border-slate-900/8 bg-slate-50 dark:border-white/10 dark:bg-white/[0.06]",
