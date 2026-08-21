@@ -69,8 +69,6 @@ const KNOWN_QUOTA_TEXT_KEYS = new Set([
 ]);
 
 const SUBSCRIPTION_TONE_CLASSES = {
-  // Neutral on purpose: an active subscription is the resting state of every
-  // card, so colouring it competes with the badges that report a problem.
   active:
     "border-slate-900/8 bg-slate-50 text-slate-700 dark:border-white/10 dark:bg-white/[0.08] dark:text-white/70",
   warning:
