@@ -2,7 +2,7 @@ import { cleanup, render, screen, waitFor, within } from "@testing-library/react
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import type { ProviderSimpleConfig } from "@code-proxy/api-client";
+import type { OpenAIProvider, ProviderSimpleConfig } from "@code-proxy/api-client";
 import {
   DEFAULT_CACHE_TENANT_ID,
   setActiveCacheTenantId,
@@ -536,5 +536,56 @@ describe("ProvidersPage openai tab", () => {
       expect(mocks.patchOpenAIProviderDisabled).toHaveBeenCalledWith(0, true);
     });
     expect(mocks.saveOpenAIProviders).not.toHaveBeenCalled();
+  });
+
+  test("keeps a newly saved OpenAI card visible while refresh still returns the old list", async () => {
+    const user = userEvent.setup();
+    const existing: OpenAIProvider = {
+      name: "OpenAI Main",
+      baseUrl: "https://example.com/v1",
+      apiKeyEntries: [{ apiKey: "sk-openai-provider-1234567890" }],
+      models: [{ name: "gpt-4.1" }],
+    };
+    mocks.getOpenAIProviders.mockImplementation(async () => [existing]);
+
+    render(
+      <MemoryRouter initialEntries={["/access/ai-providers/openai/new"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/access/ai-providers/*" element={<ProvidersPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    const dialog = await screen.findByRole("dialog", {
+      name: /Add OpenAI-compatible provider/i,
+    });
+    await user.type(within(dialog).getByPlaceholderText("Name"), "New OpenAI Channel");
+    await user.type(
+      within(dialog).getByPlaceholderText("e.g. https://api.openai.com"),
+      "https://new.example.com/v1",
+    );
+
+    mocks.getOpenAIProviders.mockImplementation(
+      () => new Promise<OpenAIProvider[]>(() => {}),
+    );
+    await user.click(within(dialog).getByRole("button", { name: /Save/ }));
+
+    await waitFor(() => {
+      expect(mocks.saveOpenAIProviders).toHaveBeenCalledWith([
+        expect.objectContaining({ name: "OpenAI Main" }),
+        expect.objectContaining({
+          name: "New OpenAI Channel",
+          baseUrl: "https://new.example.com/v1",
+        }),
+      ]);
+    });
+    expect(await screen.findByText("New OpenAI Channel")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
   });
 });

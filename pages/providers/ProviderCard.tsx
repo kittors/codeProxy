@@ -1,6 +1,12 @@
 import { useState, type ReactNode } from "react";
-import { DropdownMenu } from "@code-proxy/ui";
-import { EllipsisVertical, Power, Settings2, Trash2 } from "lucide-react";
+import {
+  Card,
+  DropdownMenu,
+  OverflowTooltip,
+  ToggleSwitch,
+  buttonClassName,
+} from "@code-proxy/ui";
+import { Ellipsis, Power, Settings2, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 export interface ProviderCardProps {
@@ -49,121 +55,142 @@ export function ProviderCard({
   const { t } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
   const hasActionMenu = Boolean(onEdit || onDelete || onToggleEnabled);
-  const hasHeaderExtra = Boolean(headerExtra);
+  const showSelectionControl = Boolean(onToggleSelected) && selected;
 
   return (
-    <div
+    <Card
+      padding="default"
+      bodyClassName="mt-0 flex min-h-0 flex-1 flex-col"
       className={[
-        "group relative flex min-w-0 flex-col rounded-xl border px-4 py-3 shadow-sm transition-all duration-200 ease-out",
-        naturalHeight
-          ? "h-fit self-start min-h-0"
-          : "min-h-[220px] max-h-[260px]",
+        "group group/card flex h-full w-full max-w-[34rem] flex-col rounded-3xl border-slate-900/8 shadow-[0_8px_24px_rgb(15_23_42_/_0.04)] transition-colors duration-200 ease-out hover:border-slate-300 hover:bg-white md:max-w-none dark:border-white/[0.08] dark:shadow-[0_8px_24px_rgb(0_0_0_/_0.28)] dark:hover:border-neutral-700 dark:hover:bg-neutral-950/70",
+        naturalHeight ? "h-fit self-start min-h-0" : "min-h-[220px]",
         selected
-          ? "border-indigo-400 bg-indigo-50/50 ring-1 ring-indigo-200 dark:border-indigo-500/50 dark:bg-indigo-950/20 dark:ring-indigo-500/20"
-          : "border-slate-900/8 bg-white/70 hover:border-slate-300 hover:bg-white hover:shadow-md dark:border-white/8 dark:bg-neutral-950/60 dark:hover:border-neutral-700 dark:hover:bg-neutral-950/80 dark:hover:shadow-lg dark:hover:shadow-black/20",
-        dimmed ? "opacity-50" : "",
+          ? "border-slate-900 ring-1 ring-slate-300 dark:border-white dark:ring-white/20"
+          : "",
+        dimmed ? "opacity-85" : "",
         className,
       ]
         .filter(Boolean)
         .join(" ")}
     >
-      {/* Header */}
-      <div className="flex min-w-0 items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center">
-          {onToggleSelected ? (
-            <div
-              className={[
-                "flex shrink-0 items-center justify-center overflow-hidden transition-[width,opacity,margin] duration-200 ease-out",
-                selected
-                  ? "mr-2 w-7 opacity-100"
-                  : "mr-0 w-0 opacity-0 group-hover:mr-2 group-hover:w-7 group-hover:opacity-100 max-md:mr-2 max-md:w-7 max-md:opacity-100",
-              ].join(" ")}
-            >
-              <input
-                type="checkbox"
-                aria-label={t("providers.select_provider", { name: title })}
-                checked={selected}
-                onChange={(e) => onToggleSelected(e.currentTarget.checked)}
-                className="h-4 w-4 rounded border-slate-300 text-slate-900 accent-slate-900 focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:border-neutral-700 dark:bg-neutral-950 dark:text-white dark:accent-white dark:focus-visible:ring-white/15"
-              />
-            </div>
-          ) : null}
-          <p
-            className="min-w-0 max-w-[180px] truncate text-sm font-semibold text-slate-900 dark:text-white"
+      <div className="space-y-2.5">
+        <div className="flex items-center justify-between gap-2">
+          <OverflowTooltip
+            content={title}
             title={title}
+            className="min-w-0 flex-1 truncate text-sm leading-5 font-semibold tracking-tight text-slate-900 dark:text-white"
           >
             {title}
-          </p>
-          {hasHeaderExtra ? (
-            <div className="ml-2 flex shrink-0 items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-              {headerExtra}
-            </div>
-          ) : null}
-        </div>
-        {hasActionMenu ? (
-          <DropdownMenu.Root open={menuOpen} onOpenChange={setMenuOpen}>
-            <DropdownMenu.Trigger asChild>
-              <button
-                type="button"
+          </OverflowTooltip>
+
+          <div className="flex h-6 shrink-0 items-center gap-1.5">
+            {onToggleSelected ? (
+              <div
                 className={[
-                  "inline-flex h-5 w-5 flex-none items-center justify-center rounded-full border-0 bg-transparent p-0 text-slate-500 shadow-none outline-none ring-0 transition-[color,opacity] duration-150 ease-out hover:bg-transparent hover:text-slate-950 focus-visible:ring-2 focus-visible:ring-slate-400/35 active:bg-transparent dark:text-white/55 dark:hover:bg-transparent dark:hover:text-white dark:focus-visible:ring-white/15",
-                  menuOpen
-                    ? "pointer-events-auto opacity-100"
-                    : "pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 max-md:pointer-events-auto max-md:opacity-100",
+                  "flex h-6 w-6 items-center justify-center transition-opacity",
+                  showSelectionControl
+                    ? "opacity-100 pointer-events-auto"
+                    : "opacity-100 pointer-events-auto md:opacity-0 md:pointer-events-none md:group-hover/card:opacity-100 md:group-focus-within/card:opacity-100 md:group-hover/card:pointer-events-auto md:group-focus-within/card:pointer-events-auto",
                 ].join(" ")}
-                aria-label={t("providers.more_actions")}
-                title={t("providers.more_actions")}
-                data-tooltip-placement="left"
               >
-                <EllipsisVertical size={13} />
-              </button>
-            </DropdownMenu.Trigger>
-            <DropdownMenu.Portal>
-              <DropdownMenu.Content align="end" sideOffset={8}>
-                {onToggleEnabled ? (
-                  <DropdownMenu.Item onSelect={() => onToggleEnabled(!enabled)}>
-                    <Power size={15} />
-                    <span>
-                      {enabled ? t("providers.disable") : t("providers.enable")}
-                    </span>
-                  </DropdownMenu.Item>
-                ) : null}
-                {onEdit ? (
-                  <DropdownMenu.Item onSelect={() => onEdit()}>
-                    <Settings2 size={15} />
-                    <span>{t("providers.edit")}</span>
-                  </DropdownMenu.Item>
-                ) : null}
-                {onDelete ? (
-                  <DropdownMenu.Item
-                    className="text-rose-600 focus:text-rose-700 dark:text-rose-300"
-                    onSelect={() => onDelete()}
-                  >
-                    <Trash2 size={15} />
-                    <span>{t("providers.delete")}</span>
-                  </DropdownMenu.Item>
-                ) : null}
-              </DropdownMenu.Content>
-            </DropdownMenu.Portal>
-          </DropdownMenu.Root>
+                <input
+                  type="checkbox"
+                  aria-label={t("providers.select_provider", { name: title })}
+                  checked={selected}
+                  onChange={(e) => onToggleSelected(e.currentTarget.checked)}
+                  className="h-4 w-4 rounded border-slate-300 text-slate-900 accent-slate-900 focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:border-neutral-700 dark:bg-neutral-950 dark:text-white dark:accent-white dark:focus-visible:ring-white/15"
+                />
+              </div>
+            ) : null}
+            {onToggleEnabled ? (
+              <div
+                className={[
+                  "flex h-6 items-center justify-center transition-opacity",
+                  "opacity-100 pointer-events-auto md:opacity-0 md:pointer-events-none md:group-hover/card:opacity-100 md:group-focus-within/card:opacity-100 md:group-hover/card:pointer-events-auto md:group-focus-within/card:pointer-events-auto",
+                ].join(" ")}
+              >
+                <ToggleSwitch
+                  ariaLabel={
+                    enabled ? t("providers.disable") : t("providers.enable")
+                  }
+                  checked={enabled}
+                  onCheckedChange={onToggleEnabled}
+                />
+              </div>
+            ) : null}
+          </div>
+        </div>
+
+        {headerExtra ? (
+          <div className="min-w-0 flex flex-wrap items-center gap-1">
+            {headerExtra}
+          </div>
         ) : null}
       </div>
 
-      {/* Content */}
       {children ? (
         <div
           className={[
-            "mt-2 min-w-0 flex-1",
+            "min-h-0 min-w-0 flex-1 touch-pan-y px-0.5 mt-3 py-1",
             naturalHeight ? "" : "overflow-y-auto",
           ].join(" ")}
         >
           {children}
         </div>
       ) : null}
-      {footer ? (
-        <div className={naturalHeight ? "pt-3" : "mt-auto pt-3"}>{footer}</div>
+
+      {footer || hasActionMenu ? (
+        <div className="mt-auto flex items-center justify-between gap-2 border-t border-slate-100 pt-3 dark:border-white/[0.06]">
+          <div className="min-w-0 flex-1">{footer}</div>
+          {hasActionMenu ? (
+            <DropdownMenu.Root open={menuOpen} onOpenChange={setMenuOpen}>
+              <DropdownMenu.Trigger asChild>
+                <button
+                  type="button"
+                  className={buttonClassName({
+                    variant: "ghost",
+                    size: "sm",
+                    iconOnly: true,
+                  })}
+                  aria-label={t("providers.more_actions")}
+                  title={t("providers.more_actions")}
+                  data-tooltip-placement="top"
+                >
+                  <Ellipsis size={16} />
+                </button>
+              </DropdownMenu.Trigger>
+              <DropdownMenu.Portal>
+                <DropdownMenu.Content align="end" sideOffset={8} className="min-w-44">
+                  {onToggleEnabled ? (
+                    <DropdownMenu.Item onSelect={() => onToggleEnabled(!enabled)}>
+                      <Power size={15} />
+                      <span>
+                        {enabled ? t("providers.disable") : t("providers.enable")}
+                      </span>
+                    </DropdownMenu.Item>
+                  ) : null}
+                  {onEdit ? (
+                    <DropdownMenu.Item onSelect={() => onEdit()}>
+                      <Settings2 size={15} />
+                      <span>{t("providers.edit")}</span>
+                    </DropdownMenu.Item>
+                  ) : null}
+                  {onDelete ? (
+                    <DropdownMenu.Item
+                      className="text-rose-600 focus:text-rose-700 dark:text-rose-300"
+                      onSelect={() => onDelete()}
+                    >
+                      <Trash2 size={15} />
+                      <span>{t("providers.delete")}</span>
+                    </DropdownMenu.Item>
+                  ) : null}
+                </DropdownMenu.Content>
+              </DropdownMenu.Portal>
+            </DropdownMenu.Root>
+          ) : null}
+        </div>
       ) : null}
-    </div>
+    </Card>
   );
 }
 
@@ -173,34 +200,37 @@ export function ProviderCardSkeleton({
   naturalHeight?: boolean;
 }) {
   return (
-    <div
-      className={[
-        "flex flex-col rounded-xl border border-slate-900/8 bg-white/70 px-4 py-3 shadow-sm dark:border-white/8 dark:bg-neutral-950/60",
-        naturalHeight
-          ? "h-fit min-h-[220px] w-full max-w-[22rem] flex-none self-start"
-          : "h-[220px]",
-      ].join(" ")}
-      aria-hidden="true"
-    >
-      <div className="flex items-center justify-between gap-3">
-        <div className="h-4 w-32 animate-pulse rounded-full bg-slate-200 dark:bg-white/10" />
-        <div className="h-5 w-5 animate-pulse rounded-full bg-slate-200 dark:bg-white/10" />
-      </div>
-      <div className="mt-4 space-y-2">
-        <div className="h-3 w-11/12 animate-pulse rounded-full bg-slate-200 dark:bg-white/10" />
-        <div className="h-3 w-3/4 animate-pulse rounded-full bg-slate-200 dark:bg-white/10" />
-      </div>
-      <div className="mt-4 flex flex-wrap gap-1.5">
-        {Array.from({ length: 4 }, (_, index) => (
-          <div
-            key={index}
-            className="h-5 w-20 animate-pulse rounded-full bg-slate-200 dark:bg-white/10"
-          />
-        ))}
-      </div>
-      <div className="mt-auto pt-3">
-        <div className="h-2 w-full animate-pulse rounded-full bg-slate-200 dark:bg-white/10" />
-      </div>
+    <div aria-hidden="true">
+      <Card
+        padding="default"
+        bodyClassName="mt-0 flex min-h-0 flex-1 flex-col"
+        className={[
+          "flex h-full w-full max-w-[34rem] flex-col rounded-3xl border-slate-900/8 shadow-[0_8px_24px_rgb(15_23_42_/_0.04)] md:max-w-none dark:border-white/[0.08] dark:shadow-[0_8px_24px_rgb(0_0_0_/_0.28)]",
+          naturalHeight
+            ? "h-fit min-h-[220px] w-full max-w-[22rem] flex-none self-start"
+            : "min-h-[220px]",
+        ].join(" ")}
+      >
+        <div className="flex items-center justify-between gap-3">
+          <div className="h-4 w-32 animate-pulse rounded-full bg-slate-200 dark:bg-white/10" />
+          <div className="h-6 w-12 animate-pulse rounded-full bg-slate-200 dark:bg-white/10" />
+        </div>
+        <div className="mt-4 space-y-2">
+          <div className="h-3 w-11/12 animate-pulse rounded-full bg-slate-200 dark:bg-white/10" />
+          <div className="h-3 w-3/4 animate-pulse rounded-full bg-slate-200 dark:bg-white/10" />
+        </div>
+        <div className="mt-4 flex flex-wrap gap-1.5">
+          {Array.from({ length: 4 }, (_, index) => (
+            <div
+              key={index}
+              className="h-5 w-20 animate-pulse rounded-full bg-slate-200 dark:bg-white/10"
+            />
+          ))}
+        </div>
+        <div className="mt-auto border-t border-slate-100 pt-3 dark:border-white/[0.06]">
+          <div className="h-2 w-full animate-pulse rounded-full bg-slate-200 dark:bg-white/10" />
+        </div>
+      </Card>
     </div>
   );
 }

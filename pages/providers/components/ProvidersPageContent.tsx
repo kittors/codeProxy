@@ -449,83 +449,66 @@ export function ProvidersPage() {
   ]);
 
   const loadProviderTab = useCallback(async (tabId: ProviderTab) => {
+    // Cold paint already seeds from tenant cache in useState. Overlaying that
+    // cache again on every refresh races the optimistic list written by Save:
+    // a 7-day-old snapshot can wipe a just-added card until GET returns, and
+    // if GET is empty/slow the card never comes back.
     switch (tabId) {
       case "gemini": {
-        const cachedG = getCachedData<ProviderSimpleConfig[]>("gemini");
-        if (cachedG) setGeminiKeys(cachedG);
         const freshG = await providersApi.getGeminiKeys();
         setGeminiKeys(freshG);
         setCachedData("gemini", freshG);
         break;
       }
       case "claude": {
-        const cachedC = getCachedData<ProviderSimpleConfig[]>("claude");
-        if (cachedC) setClaudeKeys(cachedC);
         const freshC = await providersApi.getClaudeConfigs();
         setClaudeKeys(freshC);
         setCachedData("claude", freshC);
         break;
       }
       case "codex": {
-        const cachedX = getCachedData<ProviderSimpleConfig[]>("codex");
-        if (cachedX) setCodexKeys(cachedX);
         const freshX = await providersApi.getCodexConfigs();
         setCodexKeys(freshX);
         setCachedData("codex", freshX);
         break;
       }
       case "opencode-go": {
-        const cachedO = getCachedData<ProviderSimpleConfig[]>("opencode-go");
-        if (cachedO) setOpenCodeGoKeys(cachedO);
         const freshO = await providersApi.getOpenCodeGoConfigs();
         setOpenCodeGoKeys(freshO);
         setCachedData("opencode-go", freshO);
         break;
       }
       case "cline": {
-        const cachedCl = getCachedData<ProviderSimpleConfig[]>("cline");
-        if (cachedCl) setClineKeys(cachedCl);
         const freshCl = await providersApi.getClineConfigs();
         setClineKeys(freshCl);
         setCachedData("cline", freshCl);
         break;
       }
       case "ollama-cloud": {
-        const cachedOl = getCachedData<ProviderSimpleConfig[]>("ollama-cloud");
-        if (cachedOl) setOllamaCloudKeys(cachedOl);
         const freshOl = await providersApi.getOllamaCloudConfigs();
         setOllamaCloudKeys(freshOl);
         setCachedData("ollama-cloud", freshOl);
         break;
       }
       case "commandcode": {
-        const cachedCc =
-          getCachedData<ProviderSimpleConfig[]>("commandcode");
-        if (cachedCc) setCommandCodeKeys(cachedCc);
         const freshCc = await providersApi.getCommandCodeConfigs();
         setCommandCodeKeys(freshCc);
         setCachedData("commandcode", freshCc);
         break;
       }
       case "vertex": {
-        const cachedV = getCachedData<ProviderSimpleConfig[]>("vertex");
-        if (cachedV) setVertexKeys(cachedV);
         const freshV = await providersApi.getVertexConfigs();
         setVertexKeys(freshV);
         setCachedData("vertex", freshV);
         break;
       }
       case "bedrock": {
-        const cachedB = getCachedData<BedrockProviderConfig[]>("bedrock");
-        if (cachedB) setBedrockKeys(cachedB);
         const freshB = await providersApi.getBedrockConfigs();
         setBedrockKeys(freshB);
         setCachedData("bedrock", freshB);
         break;
       }
       case "openai": {
-        const cachedA = getCachedData<OpenAIProvider[]>("openai");
-        if (cachedA) setOpenaiProviders(cachedA);
         const freshA = await providersApi.getOpenAIProviders();
         setOpenaiProviders(freshA);
         setCachedData("openai", freshA);
