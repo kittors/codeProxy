@@ -49,7 +49,7 @@ import { resolveQuotaProvider, type QuotaProvider } from "@features/quota-previe
 import { quotaMetaHasMoney, resolveDisplayableQuotaMeta } from "@features/quota-preview/quota-meta";
 import { useStickyDisplayPlans } from "./useStickyDisplayPlans";
 import { QuotaMetricChips } from "../components/QuotaMetricChips";
-import { renderQuotaBarNode } from "./quotaBar";
+import { useQuotaBarRenderer } from "./quotaBar";
 import {
   filterAntigravityQuotaItems,
   type QuotaItem,
@@ -520,14 +520,7 @@ export function useAuthFilesFilesPresentation({
     [resolveQuotaErrorBadgeLabel, t, translateQuotaText],
   );
 
-  const renderQuotaBar = useCallback(
-    (label: string, item: QuotaItem | null, compact = false): ReactNode =>
-      renderQuotaBarNode(label, item, compact, {
-        translateQuotaText,
-        formatQuotaItemDetailText,
-      }),
-    [formatQuotaItemDetailText, translateQuotaText],
-  );
+  const renderQuotaBar = useQuotaBarRenderer(translateQuotaText, formatQuotaItemDetailText);
 
   const fileColumns = useMemo<DataTableColumn<AuthFileItem>[]>(() => {
     return [

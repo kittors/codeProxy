@@ -22,22 +22,25 @@ describe("resolveAuthFileQuotaRank", () => {
 
   // Antigravity reports a weekly bucket too, but the card renders only the 5h
   // one. Ranking by a number the operator cannot see reads as a broken sort.
-  test("ignores windows the antigravity card does not show", () => {
+  test("ranks antigravity by the tightest window the card shows", () => {
     const items: QuotaItem[] = [
       {
         key: "antigravity:gemini_5h",
-        label: "Gemini Models · 5h",
+        label: "Gemini Models",
         percent: 72,
         windowSeconds: 5 * 60 * 60,
       },
       {
         key: "antigravity:gemini_weekly",
-        label: "Gemini Models · weekly",
+        label: "Gemini Models",
         percent: 3,
         windowSeconds: 7 * 24 * 60 * 60,
       },
     ];
-    expect(resolveAuthFileQuotaRank(file("antigravity"), items)).toBe(72);
+    // The card renders both windows per group, so the weekly bucket at 3% is
+    // visible and must decide the rank — ranking by the roomier 5h window would
+    // put a nearly-exhausted account ahead of a healthy one.
+    expect(resolveAuthFileQuotaRank(file("antigravity"), items)).toBe(3);
   });
 
   test("is unknown when no visible window carries a number", () => {
