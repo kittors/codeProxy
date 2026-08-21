@@ -70,7 +70,7 @@ const KNOWN_QUOTA_TEXT_KEYS = new Set([
 
 const SUBSCRIPTION_TONE_CLASSES = {
   active:
-    "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/20 dark:bg-emerald-500/15 dark:text-emerald-200",
+    "border-slate-900/8 bg-slate-50 text-slate-700 dark:border-white/10 dark:bg-white/[0.08] dark:text-white/70",
   warning:
     "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/15 dark:text-amber-200",
   urgent:
