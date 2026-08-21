@@ -46,15 +46,16 @@ export const renderQuotaBarNode = (
   const bar = (
     <div
       className={[
-        "relative flex w-full items-center overflow-hidden rounded-md",
-        "border border-slate-200/70 bg-slate-50/60 dark:border-white/5 dark:bg-white/[0.04]",
+        "relative flex w-full items-center overflow-hidden rounded-md border",
+        tone.barTrackClass,
         compact ? "h-[22px] px-1.5" : "h-6 px-2",
       ].join(" ")}
     >
+      {/* No opacity wrapper: the tone ships a tint already light enough to read
+          text over, and dimming it further was what made the fill edge — the
+          thing that actually encodes the percentage — impossible to locate. */}
       <div
-        className={["absolute inset-y-0 left-0 opacity-20 dark:opacity-25", tone.fillClass].join(
-          " ",
-        )}
+        className={["absolute inset-y-0 left-0", tone.fillClass].join(" ")}
         style={{ width: `${normalized ?? 0}%` }}
         aria-hidden="true"
       />
@@ -64,12 +65,20 @@ export const renderQuotaBarNode = (
           compact ? "text-2xs" : "text-xs",
         ].join(" ")}
       >
-        <span className="inline-flex min-w-0 flex-1 items-center gap-1 font-medium text-slate-600 dark:text-white/70">
+        <span
+          className={[
+            "inline-flex min-w-0 flex-1 items-center gap-1 font-medium",
+            tone.barLabelClass,
+          ].join(" ")}
+        >
           <span className="min-w-0 truncate">{translatedLabel}</span>
           {hint ? (
             <HoverTooltip content={hint} placement="top" className="shrink-0">
               <span
-                className="inline-flex shrink-0 cursor-help text-slate-400 transition-colors hover:text-slate-600 dark:text-white/40 dark:hover:text-white/70"
+                className={[
+                  "inline-flex shrink-0 cursor-help transition-opacity hover:opacity-100",
+                  tone.barMetaClass,
+                ].join(" ")}
                 data-testid="quota-bar-hint"
                 aria-label={hint}
               >
@@ -79,7 +88,12 @@ export const renderQuotaBarNode = (
           ) : null}
         </span>
         {detailText ? (
-          <span className="inline-flex max-w-[46%] shrink-0 items-center gap-0.5 truncate tabular-nums text-slate-400 dark:text-white/40">
+          <span
+            className={[
+              "inline-flex max-w-[46%] shrink-0 items-center gap-0.5 truncate tabular-nums",
+              tone.barMetaClass,
+            ].join(" ")}
+          >
             <Clock size={compact ? 9 : 10} className="shrink-0" aria-hidden />
             {detailText}
           </span>

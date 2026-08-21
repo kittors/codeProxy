@@ -4,6 +4,11 @@ import { clampPercent, type QuotaItem } from "@features/quota-preview/quota-help
 
 export type QuotaVisualTone = {
   normalized: number | null;
+  /**
+   * Bar fill: a light tint plus a 2px rule down its right edge. The rule is
+   * what marks the percentage, which frees the tint to stay light enough to
+   * read text over.
+   */
   fillClass: string;
   percentClass: string;
   fillHex: string;
@@ -11,6 +16,12 @@ export type QuotaVisualTone = {
   chipClass: string;
   /** Muted label color that stays legible on the chip surface. */
   chipLabelClass: string;
+  /** Bar track: border, plus the background showing left of the fill. */
+  barTrackClass: string;
+  /** Bar label, which sits over the fill and has to read against it. */
+  barLabelClass: string;
+  /** Bar countdown: quieter than the label, still legible over the fill. */
+  barMetaClass: string;
 };
 
 export const resolveQuotaVisualTone = (percent: number | null | undefined): QuotaVisualTone => {
@@ -19,54 +30,68 @@ export const resolveQuotaVisualTone = (percent: number | null | undefined): Quot
   if (normalized === null) {
     return {
       normalized,
-      fillClass: "bg-slate-300/50 dark:bg-white/10",
+      fillClass:
+        "border-r-2 border-slate-300 bg-slate-100 dark:border-white/20 dark:bg-white/[0.07]",
       percentClass: "text-slate-900 dark:text-white",
       fillHex: "#cbd5e1",
       chipClass: "border-slate-900/8 bg-slate-50 dark:border-white/10 dark:bg-white/[0.06]",
       chipLabelClass: "text-slate-600 dark:text-white/70",
+      barTrackClass: "border-slate-200 bg-white dark:border-white/10 dark:bg-white/[0.03]",
+      barLabelClass: "text-slate-700 dark:text-white/80",
+      barMetaClass: "text-slate-500 dark:text-white/50",
     };
   }
 
-  // A healthy quota is the common case, so it gets no colour beyond the ring:
-  // tinting the chip surface, its label and its percent all at once made every
-  // card on the page read as one flat green field, and a green that is always
-  // on cannot signal anything. Amber and rose below keep their full treatment —
-  // they are the states worth spotting from across the grid.
+  // The bar's fill is the row's own background, so at 100% it covers the entire
+  // line — and repeated down a grid of cards, a saturated fill becomes a wall of
+  // colour that is tiring to look at and, being always on, signals nothing.
+  //
+  // So the tint stays light and a 2px rule at the fill's right edge carries the
+  // percentage instead. The edge marks the value more precisely than a block
+  // boundary does, and the label keeps its contrast because it is no longer
+  // sitting on a saturated ground.
   if (normalized >= 60) {
     return {
       normalized,
-      // The card view spends this on renderQuotaBarNode's fill, which is the
-      // row's own background rather than a slim track — at 100% it covers the
-      // whole line, so an emerald fill turned every healthy row into a green
-      // band. fillHex below stays green: it drives the 14px ring, where the
-      // colour costs nothing.
-      fillClass: "bg-slate-400 dark:bg-white/30",
-      percentClass: "text-slate-700 dark:text-white/80",
+      fillClass:
+        "border-r-2 border-emerald-400 bg-emerald-100 dark:border-emerald-400/70 dark:bg-emerald-500/20",
+      percentClass: "text-emerald-900 dark:text-emerald-100",
       fillHex: "#10b981",
-      chipClass: "border-slate-900/8 bg-slate-50 dark:border-white/10 dark:bg-white/[0.06]",
-      chipLabelClass: "text-slate-600 dark:text-white/70",
+      chipClass:
+        "border-emerald-200/70 bg-emerald-50/70 dark:border-emerald-500/20 dark:bg-emerald-500/[0.08]",
+      chipLabelClass: "text-emerald-900 dark:text-emerald-100/80",
+      barTrackClass: "border-emerald-200 bg-white dark:border-emerald-500/20 dark:bg-white/[0.03]",
+      barLabelClass: "text-emerald-900 dark:text-emerald-50",
+      barMetaClass: "text-emerald-700 dark:text-emerald-200/70",
     };
   }
 
   if (normalized >= 20) {
     return {
       normalized,
-      fillClass: "bg-amber-500",
-      percentClass: "text-amber-700 dark:text-amber-200",
+      fillClass:
+        "border-r-2 border-amber-400 bg-amber-100 dark:border-amber-400/70 dark:bg-amber-500/20",
+      percentClass: "text-amber-900 dark:text-amber-100",
       fillHex: "#f59e0b",
       chipClass:
         "border-amber-200/70 bg-amber-50/70 dark:border-amber-500/20 dark:bg-amber-500/[0.08]",
-      chipLabelClass: "text-amber-900/70 dark:text-amber-100/70",
+      chipLabelClass: "text-amber-900 dark:text-amber-100/80",
+      barTrackClass: "border-amber-200 bg-white dark:border-amber-500/20 dark:bg-white/[0.03]",
+      barLabelClass: "text-amber-900 dark:text-amber-50",
+      barMetaClass: "text-amber-700 dark:text-amber-200/70",
     };
   }
 
   return {
     normalized,
-    fillClass: "bg-rose-500",
-    percentClass: "text-rose-700 dark:text-rose-200",
+    fillClass: "border-r-2 border-rose-400 bg-rose-100 dark:border-rose-400/70 dark:bg-rose-500/20",
+    percentClass: "text-rose-900 dark:text-rose-100",
     fillHex: "#f43f5e",
     chipClass: "border-rose-200/70 bg-rose-50/70 dark:border-rose-500/20 dark:bg-rose-500/[0.08]",
-    chipLabelClass: "text-rose-900/70 dark:text-rose-100/70",
+    chipLabelClass: "text-rose-900 dark:text-rose-100/80",
+    barTrackClass: "border-rose-200 bg-white dark:border-rose-500/20 dark:bg-white/[0.03]",
+    barLabelClass: "text-rose-900 dark:text-rose-50",
+    barMetaClass: "text-rose-700 dark:text-rose-200/70",
   };
 };
 
