@@ -14,18 +14,22 @@ const openProviders = async (page: Page) => {
       }),
     );
     localStorage.setItem("cli-proxy-language", JSON.stringify("zh-CN"));
+    localStorage.setItem("providers-page:tab", "openai");
   });
   await page.route("**/v0/management/**", async (route) => {
     const path = new URL(route.request().url()).pathname;
     const json = (body: unknown) =>
       route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
-    if (path.endsWith("/config")) {
+    if (path.endsWith("/openai-compatibility")) {
       return json({
-        config: {
-          "opencode-go": [
-            { name: "opencode go", api_key: "sk-test", disabled: false, models: ["glm-5.2"] },
-          ],
-        },
+        "openai-compatibility": [
+          {
+            name: "OpenAI Compatible",
+            "base-url": "https://example.com/v1",
+            models: [{ name: "gpt-4.1" }],
+            "api-key-entries": [{ "api-key": "sk-test" }],
+          },
+        ],
       });
     }
     if (path.endsWith("/update/check")) return json({ has_update: false });
@@ -38,8 +42,7 @@ test("provider list card renders a border, not a clipped ring", async ({ page })
   await page.setViewportSize({ width: 1600, height: 900 });
   await openProviders(page);
 
-  // Card always sets aria-busy; the notifications region does not.
-  const card = page.locator("section[aria-busy]").first();
+  const card = page.locator("section.group\\/card").first();
   await expect(card).toBeVisible();
 
   const style = await card.evaluate((el) => {

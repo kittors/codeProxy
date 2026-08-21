@@ -25,6 +25,6 @@
     "pages/identity-fingerprint/IdentityFingerprintPage.tsx": 1880,
     "pages/image-generation/components/ImageGenerationPageContent.tsx": 1191,
     "pages/models/ModelsPage.tsx": 1251,
-    "pages/providers/components/ProvidersPageContent.tsx": 1647
+    "pages/providers/components/ProvidersPageContent.tsx": 1630
   }
 }

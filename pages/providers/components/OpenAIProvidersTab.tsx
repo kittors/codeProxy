@@ -82,11 +82,7 @@ export function OpenAIProvidersTab({
           role="status"
           aria-label={t("common.loading")}
           data-testid="providers-list-skeleton"
-          className="min-h-0 flex-1 overflow-hidden pr-1 grid gap-3 items-start content-start justify-start"
-          style={{
-            gridTemplateColumns:
-              "repeat(auto-fill, minmax(min(100%, 18rem), 22rem))",
-          }}
+          className="min-h-0 flex-1 overflow-hidden grid grid-cols-1 items-stretch justify-items-center gap-5 sm:px-1 md:grid-cols-2 md:justify-items-stretch xl:grid-cols-[repeat(3,minmax(0,1fr))]"
         >
           {Array.from({ length: 6 }, (_, index) => (
             <ProviderCardSkeleton key={index} />
@@ -100,11 +96,7 @@ export function OpenAIProvidersTab({
       ) : (
         <div
           data-testid="providers-tab-scroll"
-          className="min-h-0 flex-1 overflow-y-auto pr-1 grid gap-3 items-start content-start justify-start"
-          style={{
-            gridTemplateColumns:
-              "repeat(auto-fill, minmax(min(100%, 18rem), 22rem))",
-          }}
+          className="min-h-0 flex-1 overflow-y-auto grid grid-cols-1 items-stretch justify-items-center gap-5 sm:px-1 md:grid-cols-2 md:justify-items-stretch xl:grid-cols-[repeat(3,minmax(0,1fr))]"
         >
           {providers.map((provider, idx) => {
             const selectionKey = `${provider.name.trim().toLowerCase()}:${idx}`;
