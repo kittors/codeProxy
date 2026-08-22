@@ -28,11 +28,11 @@ import {
 import type { AuthFileItem } from "@code-proxy/api-client";
 import { VendorIcon } from "@code-proxy/assets";
 import { Button, DropdownMenu, buttonClassName, surface } from "@code-proxy/ui";
-import { Card } from "@code-proxy/ui";
+import { Card, EntityCard, entityCardGridClass } from "@code-proxy/ui";
 import { EmptyState } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
 import { Modal } from "@code-proxy/ui";
-import { HoverTooltip, OverflowTooltip } from "@code-proxy/ui";
+import { HoverTooltip } from "@code-proxy/ui";
 import { PaginationBar } from "@code-proxy/ui";
 import { ScrollArea } from "@code-proxy/ui";
 import { Select } from "@code-proxy/ui";
@@ -95,14 +95,6 @@ const FILTER_GRID_WITH_TAGS =
   "xl:grid-cols-[repeat(4,minmax(0,1fr))_minmax(18rem,1.5fr)]";
 const FILTER_GRID_WITHOUT_TAGS =
   "xl:grid-cols-[repeat(3,minmax(0,1fr))_minmax(18rem,1.5fr)]";
-// Tailwind must see full class strings — keep the map static.
-const CARD_GRID_COLUMN_CLASS: Record<AuthFilesCardColumns, string> = {
-  2: "xl:grid-cols-[repeat(2,minmax(0,1fr))]",
-  3: "xl:grid-cols-[repeat(3,minmax(0,1fr))]",
-  4: "xl:grid-cols-[repeat(4,minmax(0,1fr))]",
-  5: "xl:grid-cols-[repeat(5,minmax(0,1fr))]",
-  6: "xl:grid-cols-[repeat(6,minmax(0,1fr))]",
-};
 const CARD_COLUMN_ANIMATION_MS = 240;
 const CARD_COLUMN_ANIMATION_EASING = "cubic-bezier(0.22, 1, 0.36, 1)";
 
@@ -1634,12 +1626,12 @@ export function AuthFilesFilesTab({
                 className="items-stretch md:h-full"
                 viewportClassName="max-md:h-auto max-md:touch-pan-y max-md:overflow-visible max-md:overscroll-auto"
                 contentClassName={[
-                  "grid grid-cols-1 items-stretch justify-items-center gap-5 px-4 py-4 sm:px-5 sm:py-5 md:grid-cols-2 md:justify-items-stretch md:pr-8",
-                  denseCards ? "xl:gap-3" : "",
-                  CARD_GRID_COLUMN_CLASS[cardColumns],
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
+                  entityCardGridClass({
+                    columns: cardColumns,
+                    dense: denseCards,
+                  }),
+                  "px-4 py-4 sm:px-5 sm:py-5 md:pr-8",
+                ].join(" ")}
                 data-card-columns={cardColumns}
                 scrollbarTrackInset={0}
               >
@@ -1774,7 +1766,6 @@ export function AuthFilesFilesTab({
                     resetCreditCount > 0
                       ? t("auth_files.reset_credit_consume")
                       : t("auth_files.reset_credit_no_credits");
-                  const showSelectionControl = fileSelected;
                   const actionSize = denseCards ? "xs" : "sm";
                   const actionIconSize = denseCards ? 14 : 16;
                   // Chips render only with known data, so no unknown fallbacks here.
@@ -1809,63 +1800,23 @@ export function AuthFilesFilesTab({
                     : 0;
 
                   return (
-                    <Card
+                    <EntityCard
                       key={`${file.name}:${cardColumns}`}
-                      padding={denseCards ? "compact" : "default"}
-                      bodyClassName="mt-0 flex min-h-0 flex-1 flex-col"
-                      className={[
-                        "group/card flex h-full w-full max-w-[34rem] flex-col border-slate-900/8 shadow-[0_8px_24px_rgb(15_23_42_/_0.04)] transition-colors duration-200 ease-out hover:border-slate-300 hover:bg-white md:max-w-none dark:border-white/[0.08] dark:shadow-[0_8px_24px_rgb(0_0_0_/_0.28)] dark:hover:border-neutral-700 dark:hover:bg-neutral-950/70",
-                        denseCards ? "rounded-2xl" : "rounded-3xl",
-                        fileSelected
-                          ? "border-slate-900 ring-1 ring-slate-300 dark:border-white dark:ring-white/20"
-                          : "",
-                        runtimeOnly ? "opacity-90" : "",
-                        fileDisabled ? "opacity-85" : "",
-                      ]
-                        .filter(Boolean)
-                        .join(" ")}
-                    >
-                      {/* Fixed three-row header: identity, plan + cycle metrics,
-                          status badges. Each row wraps within itself, so a narrow
-                          card never pulls a badge up into the row above. */}
-                      <div className={denseCards ? "space-y-2" : "space-y-2.5"}>
-                        <div className="flex items-center justify-between gap-2">
-                          <OverflowTooltip
-                            content={displayTitle}
-                            className={[
-                              "min-w-0 flex-1 truncate leading-5 font-semibold tracking-tight text-slate-900 dark:text-white",
-                              denseCards ? "text-xs" : "text-sm",
-                            ].join(" ")}
-                          >
-                            {displayTitle}
-                          </OverflowTooltip>
-
-                          <div className="flex h-6 shrink-0 items-center gap-1.5">
-                            {runtimeOnly ? null : (
-                              <div
-                                className={[
-                                  "flex h-6 w-6 items-center justify-center transition-opacity",
-                                  showSelectionControl
-                                    ? "opacity-100 pointer-events-auto"
-                                    : "opacity-100 pointer-events-auto md:opacity-0 md:pointer-events-none md:group-hover/card:opacity-100 md:group-focus-within/card:opacity-100 md:group-hover/card:pointer-events-auto md:group-focus-within/card:pointer-events-auto",
-                                ].join(" ")}
-                              >
-                                <input
-                                  type="checkbox"
-                                  aria-label={t("auth_files.select_file", {
-                                    name: displayTitle || file.name,
-                                  })}
-                                  checked={fileSelected}
-                                  onChange={(e) =>
-                                    toggleFileSelection(
-                                      file.name,
-                                      e.currentTarget.checked,
-                                    )
-                                  }
-                                  className="h-4 w-4 rounded border-slate-300 text-slate-900 accent-slate-900 focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:border-neutral-700 dark:bg-neutral-950 dark:text-white dark:accent-white dark:focus-visible:ring-white/15"
-                                />
-                              </div>
-                            )}
+                      title={displayTitle}
+                      dense={denseCards}
+                      selected={fileSelected}
+                      muted={runtimeOnly}
+                      dimmed={fileDisabled}
+                      onToggleSelected={
+                        runtimeOnly
+                          ? undefined
+                          : (next) => toggleFileSelection(file.name, next)
+                      }
+                      selectionLabel={t("auth_files.select_file", {
+                        name: displayTitle || file.name,
+                      })}
+                      headerControls={
+                        <>
                             {runtimeOnly ? (
                               <span className="text-xs leading-none text-slate-400 dark:text-white/40">
                                 --
@@ -1912,9 +1863,10 @@ export function AuthFilesFilesTab({
                                 />
                               </div>
                             )}
-                          </div>
-                        </div>
-
+                        </>
+                      }
+                      header={
+                        <>
                         <div className="min-w-0 flex flex-wrap items-center gap-1">
                           {showPlanBadge && planType ? (
                             <span
@@ -2079,58 +2031,18 @@ export function AuthFilesFilesTab({
                             ) : null}
                           </div>
                         ) : null}
-                      </div>
-
-                      <div
-                        className={[
-                          "min-h-0 min-w-0 flex-1 touch-pan-y px-0.5",
-                          denseCards ? "mt-2 py-0.5" : "mt-3 py-1",
-                          slots.length === 0
-                            ? "flex flex-col"
-                            : denseCards
-                              ? "space-y-2"
-                              : "space-y-3",
-                        ].join(" ")}
-                        data-testid="auth-file-card-quota"
-                      >
-                        {slots.length > 0 ? (
-                          <div className={denseCards ? "space-y-2" : "space-y-3"}>
-                            {slots.map((slot) =>
-                              renderQuotaBar(slot.label, slot.item, denseCards, slot.hint),
-                            )}
-                          </div>
-                        ) : (
-                          <div
-                            className={[
-                              "flex flex-1 flex-col items-center justify-center gap-2 text-center",
-                              denseCards ? "py-3" : "py-6",
-                            ].join(" ")}
-                            data-testid="auth-file-card-quota-empty"
-                          >
-                            <div
-                              className={[
-                                "flex items-center justify-center rounded-full bg-slate-100/90 text-slate-400 dark:bg-white/[0.06] dark:text-white/40",
-                                denseCards ? "h-7 w-7" : "h-9 w-9",
-                              ].join(" ")}
-                              aria-hidden="true"
-                            >
-                              <Gauge size={denseCards ? 14 : 16} strokeWidth={1.5} />
-                            </div>
-                            <p className="text-xs font-medium text-slate-500 dark:text-white/50">
-                              {quotaRefreshing
-                                ? t("common.loading_ellipsis")
-                                : t("auth_files.quota_unavailable")}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-
-                      <div
-                        className={[
-                          "mt-auto flex items-center justify-between gap-2 border-t border-slate-100 dark:border-white/[0.06]",
-                          denseCards ? "pt-2" : "pt-3",
-                        ].join(" ")}
-                      >
+                        </>
+                      }
+                      bodyTestId="auth-file-card-quota"
+                      bodyClassName={
+                        slots.length === 0
+                          ? "flex flex-col"
+                          : denseCards
+                            ? "space-y-2"
+                            : "space-y-3"
+                      }
+                      footer={
+                        <>
                         <div className="inline-flex items-center gap-0.5">
                           {provider ? (
                             <HoverTooltip content={t("common.refresh")}>
@@ -2243,8 +2155,40 @@ export function AuthFilesFilesTab({
                             </DropdownMenu.Portal>
                           </DropdownMenu.Root>
                         </div>
-                      </div>
-                    </Card>
+                        </>
+                      }
+                    >
+                        {slots.length > 0 ? (
+                          <div className={denseCards ? "space-y-2" : "space-y-3"}>
+                            {slots.map((slot) =>
+                              renderQuotaBar(slot.label, slot.item, denseCards, slot.hint),
+                            )}
+                          </div>
+                        ) : (
+                          <div
+                            className={[
+                              "flex flex-1 flex-col items-center justify-center gap-2 text-center",
+                              denseCards ? "py-3" : "py-6",
+                            ].join(" ")}
+                            data-testid="auth-file-card-quota-empty"
+                          >
+                            <div
+                              className={[
+                                "flex items-center justify-center rounded-full bg-slate-100/90 text-slate-400 dark:bg-white/[0.06] dark:text-white/40",
+                                denseCards ? "h-7 w-7" : "h-9 w-9",
+                              ].join(" ")}
+                              aria-hidden="true"
+                            >
+                              <Gauge size={denseCards ? 14 : 16} strokeWidth={1.5} />
+                            </div>
+                            <p className="text-xs font-medium text-slate-500 dark:text-white/50">
+                              {quotaRefreshing
+                                ? t("common.loading_ellipsis")
+                                : t("auth_files.quota_unavailable")}
+                            </p>
+                          </div>
+                        )}
+                    </EntityCard>
                   );
                 })}
               </ScrollArea>

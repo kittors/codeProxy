@@ -14,16 +14,19 @@ import type {
 import { providersApi } from "@code-proxy/api-client";
 import { invalidateConfiguredModelAvailability } from "@features/model-availability";
 import { keyValueEntriesToRecord } from "../KeyValueInputList";
+import { setCachedData } from "../provider-cache";
 import {
   buildProviderKeyDraft,
   commitModelEntries,
   excludedModelsFromText,
   hasDisableAllModelsRule,
+  maskApiKey,
   stripDisableAllModelsRule,
   withDisableAllModelsRule,
   withoutDisableAllModelsRule,
   type ProviderKeyDraft,
 } from "../providers-helpers";
+import { findDuplicateProviderIndex } from "../provider-duplicate-key";
 import {
   isModelAllowedForProvider,
   type ModelAccessProvider,
@@ -193,6 +196,14 @@ export function useProviderKeyEditor({
       return null;
     }
 
+    // Vertex compat rows are dropped upstream without a base URL (see
+    // SanitizeVertexCompatKeys, "BaseURL is required"). Without this check the
+    // save reported success and the channel never appeared.
+    if (editKeyType === "vertex" && !keyDraft.baseUrl.trim()) {
+      setKeyDraftError(t("providers.base_url_error"));
+      return null;
+    }
+
     const headers = keyValueEntriesToRecord(keyDraft.headersEntries);
     const rawExcludedModels = keyDraft.excludedModelsText.trim()
       ? excludedModelsFromText(keyDraft.excludedModelsText)
@@ -311,9 +322,27 @@ export function useProviderKeyEditor({
         : {}),
     };
 
+    // Channels that deduplicate upstream drop the colliding row and still answer
+    // 200, so without this the save said "saved" and no card appeared.
+    const duplicateIndex = findDuplicateProviderIndex(
+      editKeyType,
+      getListByType(editKeyType),
+      result,
+      editKeyIndex,
+    );
+    if (duplicateIndex !== -1) {
+      const existing = getListByType(editKeyType)[duplicateIndex];
+      setKeyDraftError(
+        t("providers.duplicate_api_key_error", {
+          name: existing?.name?.trim() || maskApiKey(result.apiKey),
+        }),
+      );
+      return null;
+    }
+
     setKeyDraftError(null);
     return result;
-  }, [editKeyType, keyDraft, t]);
+  }, [editKeyIndex, editKeyType, getListByType, keyDraft, t]);
 
   const saveKeyDraft = useCallback(async () => {
     const value = commitKeyDraft();
@@ -335,14 +364,17 @@ export function useProviderKeyEditor({
         const next = apply(geminiKeys);
         await providersApi.saveGeminiKeys(next);
         setGeminiKeys(next);
+        setCachedData("gemini", next);
       } else if (type === "claude") {
         const next = apply(claudeKeys);
         await providersApi.saveClaudeConfigs(next);
         setClaudeKeys(next);
+        setCachedData("claude", next);
       } else if (type === "codex") {
         const next = apply(codexKeys);
         await providersApi.saveCodexConfigs(next);
         setCodexKeys(next);
+        setCachedData("codex", next);
       } else if (type === "opencode-go") {
         const next = apply(openCodeGoKeys);
         if (index === null) {
@@ -351,6 +383,7 @@ export function useProviderKeyEditor({
           await providersApi.patchOpenCodeGoConfig(index, value);
         }
         setOpenCodeGoKeys(next);
+        setCachedData("opencode-go", next);
       } else if (type === "cline") {
         const next = apply(clineKeys);
         if (index === null) {
@@ -359,6 +392,7 @@ export function useProviderKeyEditor({
           await providersApi.patchClineConfig(index, value);
         }
         setClineKeys(next);
+        setCachedData("cline", next);
       } else if (type === "ollama-cloud") {
         const next = apply(ollamaCloudKeys);
         if (index === null) {
@@ -367,6 +401,7 @@ export function useProviderKeyEditor({
           await providersApi.patchOllamaCloudConfig(index, value);
         }
         setOllamaCloudKeys(next);
+        setCachedData("ollama-cloud", next);
       } else if (type === "commandcode") {
         const next = apply(commandCodeKeys);
         if (index === null) {
@@ -375,14 +410,17 @@ export function useProviderKeyEditor({
           await providersApi.patchCommandCodeConfig(index, value);
         }
         setCommandCodeKeys(next);
+        setCachedData("commandcode", next);
       } else if (type === "vertex") {
         const next = apply(vertexKeys);
         await providersApi.saveVertexConfigs(next);
         setVertexKeys(next);
+        setCachedData("vertex", next);
       } else {
         const next = apply(bedrockKeys) as BedrockProviderConfig[];
         await providersApi.saveBedrockConfigs(next);
         setBedrockKeys(next);
+        setCachedData("bedrock", next);
       }
       invalidateConfiguredModelAvailability();
       notify({ type: "success", message: t("providers.saved") });
@@ -401,6 +439,7 @@ export function useProviderKeyEditor({
     clineKeys,
     closeKeyEditor,
     codexKeys,
+    commandCodeKeys,
     commitKeyDraft,
     editKeyIndex,
     editKeyType,
@@ -413,6 +452,7 @@ export function useProviderKeyEditor({
     setCodexKeys,
     setBedrockKeys,
     setClineKeys,
+    setCommandCodeKeys,
     setGeminiKeys,
     setOllamaCloudKeys,
     setOpenCodeGoKeys,
@@ -431,49 +471,67 @@ export function useProviderKeyEditor({
       try {
         if (type === "gemini") {
           await providersApi.deleteGeminiKey(entry.apiKey);
-          setGeminiKeys((prev) =>
-            prev.filter((_, itemIndex) => itemIndex !== index),
-          );
+          setGeminiKeys((prev) => {
+            const next = prev.filter((_, itemIndex) => itemIndex !== index);
+            setCachedData("gemini", next);
+            return next;
+          });
         } else if (type === "claude") {
           await providersApi.deleteClaudeConfig(entry.apiKey);
-          setClaudeKeys((prev) =>
-            prev.filter((_, itemIndex) => itemIndex !== index),
-          );
+          setClaudeKeys((prev) => {
+            const next = prev.filter((_, itemIndex) => itemIndex !== index);
+            setCachedData("claude", next);
+            return next;
+          });
         } else if (type === "codex") {
           await providersApi.deleteCodexConfig(entry.apiKey);
-          setCodexKeys((prev) =>
-            prev.filter((_, itemIndex) => itemIndex !== index),
-          );
+          setCodexKeys((prev) => {
+            const next = prev.filter((_, itemIndex) => itemIndex !== index);
+            setCachedData("codex", next);
+            return next;
+          });
         } else if (type === "opencode-go") {
           await providersApi.deleteOpenCodeGoConfig(entry.apiKey);
-          setOpenCodeGoKeys((prev) =>
-            prev.filter((_, itemIndex) => itemIndex !== index),
-          );
+          setOpenCodeGoKeys((prev) => {
+            const next = prev.filter((_, itemIndex) => itemIndex !== index);
+            setCachedData("opencode-go", next);
+            return next;
+          });
         } else if (type === "cline") {
           await providersApi.deleteClineConfig(entry.apiKey);
-          setClineKeys((prev) =>
-            prev.filter((_, itemIndex) => itemIndex !== index),
-          );
+          setClineKeys((prev) => {
+            const next = prev.filter((_, itemIndex) => itemIndex !== index);
+            setCachedData("cline", next);
+            return next;
+          });
         } else if (type === "ollama-cloud") {
           await providersApi.deleteOllamaCloudConfig(entry.apiKey);
-          setOllamaCloudKeys((prev) =>
-            prev.filter((_, itemIndex) => itemIndex !== index),
-          );
+          setOllamaCloudKeys((prev) => {
+            const next = prev.filter((_, itemIndex) => itemIndex !== index);
+            setCachedData("ollama-cloud", next);
+            return next;
+          });
         } else if (type === "commandcode") {
           await providersApi.deleteCommandCodeConfig(entry.apiKey);
-          setCommandCodeKeys((prev) =>
-            prev.filter((_, itemIndex) => itemIndex !== index),
-          );
+          setCommandCodeKeys((prev) => {
+            const next = prev.filter((_, itemIndex) => itemIndex !== index);
+            setCachedData("commandcode", next);
+            return next;
+          });
         } else if (type === "vertex") {
           await providersApi.deleteVertexConfig(entry.apiKey);
-          setVertexKeys((prev) =>
-            prev.filter((_, itemIndex) => itemIndex !== index),
-          );
+          setVertexKeys((prev) => {
+            const next = prev.filter((_, itemIndex) => itemIndex !== index);
+            setCachedData("vertex", next);
+            return next;
+          });
         } else {
           await providersApi.deleteBedrockConfig(index);
-          setBedrockKeys((prev) =>
-            prev.filter((_, itemIndex) => itemIndex !== index),
-          );
+          setBedrockKeys((prev) => {
+            const next = prev.filter((_, itemIndex) => itemIndex !== index);
+            setCachedData("bedrock", next);
+            return next;
+          });
         }
         invalidateConfiguredModelAvailability();
         notify({ type: "success", message: t("providers.deleted") });
@@ -492,6 +550,7 @@ export function useProviderKeyEditor({
       setClaudeKeys,
       setClineKeys,
       setCodexKeys,
+      setCommandCodeKeys,
       setGeminiKeys,
       setOllamaCloudKeys,
       setOpenCodeGoKeys,
@@ -555,39 +614,47 @@ export function useProviderKeyEditor({
       try {
         if (type === "gemini") {
           setGeminiKeys(nextList);
+          setCachedData("gemini", nextList);
           await providersApi.saveGeminiKeys(nextList);
         } else if (type === "claude") {
           setClaudeKeys(nextList);
+          setCachedData("claude", nextList);
           await providersApi.saveClaudeConfigs(nextList);
         } else if (type === "codex") {
           setCodexKeys(nextList);
+          setCachedData("codex", nextList);
           await providersApi.saveCodexConfigs(nextList);
         } else if (type === "opencode-go") {
           setOpenCodeGoKeys(nextList);
+          setCachedData("opencode-go", nextList);
           await providersApi.patchOpenCodeGoConfig(index, {
             apiKey: "",
             disabled: !enabled,
           });
         } else if (type === "cline") {
           setClineKeys(nextList);
+          setCachedData("cline", nextList);
           await providersApi.patchClineConfig(index, {
             apiKey: "",
             disabled: !enabled,
           });
         } else if (type === "ollama-cloud") {
           setOllamaCloudKeys(nextList);
+          setCachedData("ollama-cloud", nextList);
           await providersApi.patchOllamaCloudConfig(index, {
             apiKey: "",
             disabled: !enabled,
           });
         } else if (type === "commandcode") {
           setCommandCodeKeys(nextList);
+          setCachedData("commandcode", nextList);
           await providersApi.patchCommandCodeConfig(index, {
             apiKey: "",
             disabled: !enabled,
           });
         } else {
           setBedrockKeys(nextList as BedrockProviderConfig[]);
+          setCachedData("bedrock", nextList);
           await providersApi.saveBedrockConfigs(
             nextList as BedrockProviderConfig[],
           );
@@ -619,6 +686,7 @@ export function useProviderKeyEditor({
       claudeKeys,
       bedrockKeys,
       clineKeys,
+      commandCodeKeys,
       codexKeys,
       geminiKeys,
       notify,
@@ -629,6 +697,7 @@ export function useProviderKeyEditor({
       setCodexKeys,
       setBedrockKeys,
       setClineKeys,
+      setCommandCodeKeys,
       setGeminiKeys,
       setOllamaCloudKeys,
       setOpenCodeGoKeys,

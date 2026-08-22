@@ -6,6 +6,7 @@ import { useToast } from "@code-proxy/ui";
 import { invalidateConfiguredModelAvailability } from "@features/model-availability";
 import { keyValueEntriesToRecord } from "../KeyValueInputList";
 import { createEmptyModelEntry } from "../ModelInputList";
+import { setCachedData } from "../provider-cache";
 import {
   buildModelsEndpoint,
   buildOpenAIDraft,
@@ -129,8 +130,8 @@ export function useOpenAIProviderEditor({
           : openaiProviders.map((provider, providerIndex) =>
               providerIndex === index ? value : provider,
             );
-
       setOpenaiProviders(next);
+      setCachedData("openai", next);
       await providersApi.saveOpenAIProviders(next);
       invalidateConfiguredModelAvailability();
       notify({ type: "success", message: t("providers.saved") });
@@ -161,7 +162,11 @@ export function useOpenAIProviderEditor({
       try {
         await providersApi.deleteOpenAIProvider(entry.name);
         invalidateConfiguredModelAvailability();
-        setOpenaiProviders((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
+        setOpenaiProviders((prev) => {
+          const next = prev.filter((_, itemIndex) => itemIndex !== index);
+          setCachedData("openai", next);
+          return next;
+        });
         notify({ type: "success", message: t("providers.deleted") });
       } catch (err: unknown) {
         notify({
@@ -193,6 +198,7 @@ export function useOpenAIProviderEditor({
       });
 
       setOpenaiProviders(next);
+      setCachedData("openai", next);
       try {
         await providersApi.saveOpenAIProviders(next);
         invalidateConfiguredModelAvailability();
@@ -291,6 +297,7 @@ export function useOpenAIProviderEditor({
         const latest = await providersApi.getOpenAIProviders();
         invalidateConfiguredModelAvailability();
         setOpenaiProviders(latest);
+        setCachedData("openai", latest);
         notify({
           type: "success",
           message: enabled ? t("providers.toggle_enabled") : t("providers.toggle_disabled"),

@@ -1,8 +1,7 @@
 import { useCallback, type ReactNode } from "react";
-import { Clock, Info } from "lucide-react";
 import { HoverTooltip } from "@code-proxy/ui";
 import type { QuotaItem } from "@features/quota-preview/quota-helpers";
-import { resolveQuotaVisualTone } from "../components/QuotaMetricChips";
+import { QuotaBar, resolveQuotaVisualTone } from "@features/quota-preview/QuotaBar";
 
 export type QuotaBarDeps = {
   translateQuotaText: (text: string) => string;
@@ -39,70 +38,15 @@ export const renderQuotaBarNode = (
   const detailText = formatQuotaItemDetailText(item);
   const tooltipParts = [translatedLabel, percentText];
   if (detailText) tooltipParts.push(detailText);
-  // One line per quota: the fill is the row's background rather than a separate
-  // track underneath it, so a card fits twice as many windows at the same
-  // height. Label, countdown and percentage share the line, which is what makes
-  // the numbers scannable down a column instead of hunting between two rows.
   const bar = (
-    <div
-      className={[
-        "relative flex w-full items-center overflow-hidden rounded-md border",
-        tone.barTrackClass,
-        compact ? "h-[22px] px-1.5" : "h-6 px-2",
-      ].join(" ")}
-    >
-      {/* No opacity wrapper: the tone ships a tint already light enough to read
-          text over, and dimming it further was what made the fill edge — the
-          thing that actually encodes the percentage — impossible to locate. */}
-      <div
-        className={["absolute inset-y-0 left-0", tone.fillClass].join(" ")}
-        style={{ width: `${normalized ?? 0}%` }}
-        aria-hidden="true"
-      />
-      <div
-        className={[
-          "relative z-10 flex w-full items-center gap-1.5 leading-none",
-          compact ? "text-2xs" : "text-xs",
-        ].join(" ")}
-      >
-        <span
-          className={[
-            "inline-flex min-w-0 flex-1 items-center gap-1 font-medium",
-            tone.barLabelClass,
-          ].join(" ")}
-        >
-          <span className="min-w-0 truncate">{translatedLabel}</span>
-          {hint ? (
-            <HoverTooltip content={hint} placement="top" className="shrink-0">
-              <span
-                className={[
-                  "inline-flex shrink-0 cursor-help transition-opacity hover:opacity-100",
-                  tone.barMetaClass,
-                ].join(" ")}
-                data-testid="quota-bar-hint"
-                aria-label={hint}
-              >
-                <Info size={compact ? 10 : 11} aria-hidden />
-              </span>
-            </HoverTooltip>
-          ) : null}
-        </span>
-        {detailText ? (
-          <span
-            className={[
-              "inline-flex max-w-[46%] shrink-0 items-center gap-0.5 truncate tabular-nums",
-              tone.barMetaClass,
-            ].join(" ")}
-          >
-            <Clock size={compact ? 9 : 10} className="shrink-0" aria-hidden />
-            {detailText}
-          </span>
-        ) : null}
-        <span className={["shrink-0 font-semibold tabular-nums", tone.percentClass].join(" ")}>
-          {percentText}
-        </span>
-      </div>
-    </div>
+    <QuotaBar
+      label={translatedLabel}
+      percent={item?.percent}
+      percentText={percentText}
+      detailText={detailText}
+      hint={hint}
+      compact={compact}
+    />
   );
 
   // ponytail: compact drops reset line; full detail stays in tooltip.

@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { RefreshCcw } from "lucide-react";
+import { Gauge, RefreshCcw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { OpenCodeGoUsageItem } from "@code-proxy/api-client";
+import { QuotaBar } from "@features/quota-preview/QuotaBar";
 
 export interface OpenCodeGoUsageCacheEntry {
   sourceId?: string;
@@ -163,36 +164,6 @@ const formatPercent = (value: number): string =>
     ? String(value)
     : value.toFixed(1).replace(/\.0$/, "");
 
-const resolveRemainingTone = (
-  remaining: number | null,
-): { fillClass: string; percentClass: string } => {
-  if (remaining === null) {
-    return {
-      fillClass: "bg-slate-300/50 dark:bg-white/10",
-      percentClass: "text-slate-600 dark:text-white/65",
-    };
-  }
-
-  if (remaining >= 60) {
-    return {
-      fillClass: "bg-emerald-500",
-      percentClass: "text-emerald-700 dark:text-emerald-200",
-    };
-  }
-
-  if (remaining >= 20) {
-    return {
-      fillClass: "bg-amber-500",
-      percentClass: "text-amber-700 dark:text-amber-200",
-    };
-  }
-
-  return {
-    fillClass: "bg-rose-500",
-    percentClass: "text-rose-700 dark:text-rose-200",
-  };
-};
-
 const DEFAULT_TYPE_LABELS = ["rolling", "weekly", "monthly"] as const;
 
 const TYPE_COMPACT_LABEL_KEYS: Record<string, string> = {
@@ -264,60 +235,64 @@ export function OpenCodeGoUsageCardSection({
 
   const hasUsage = Boolean(usageEntry && usageEntry.usage.length > 0);
 
+  const errorText = usageEntry?.error
+    ? usageEntry.error.length > 60
+      ? t("providers.channel_usage_query_failed")
+      : usageEntry.error
+    : null;
+
+  // One state at a time. A failed probe used to render the "not queried" gauge
+  // and a red error line together, which read as two unrelated problems.
+  // One line, not a stacked icon block: this is a status note on a card that is
+  // otherwise two or three lines tall, and a centred 8x8 medallion above a
+  // caption made the note the largest thing on it.
+  const renderPlaceholder = (message: string, tone: "muted" | "error") => (
+    <div
+      className={[
+        "flex h-6 w-full items-center gap-1.5 rounded-md border px-2 text-xs font-medium",
+        tone === "error"
+          ? "border-rose-200 bg-rose-50/60 text-rose-600 dark:border-rose-500/20 dark:bg-rose-500/[0.08] dark:text-rose-300"
+          : "border-slate-200 bg-slate-50/60 text-slate-500 dark:border-white/10 dark:bg-white/[0.03] dark:text-white/50",
+      ].join(" ")}
+      data-testid="opencode-go-usage-footprint"
+    >
+      <Gauge size={12} strokeWidth={1.5} className="shrink-0" aria-hidden="true" />
+      <span className="min-w-0 truncate">{message}</span>
+    </div>
+  );
+
+  // Same bar as an AI account card: fill is the row's own background, label,
+  // countdown and percentage share one line. Both pages import it from
+  // @features/quota-preview so neither can drift.
   if (!queryReady) {
     return (
-      <div
-        className="mt-3 min-h-[3.375rem]"
-        data-testid="opencode-go-usage-footprint"
-        aria-hidden="true"
-      >
-        <div className="invisible mx-auto w-full max-w-[20rem] space-y-1.5">
-          {windowTypes.map((type) => (
-            <div
-              key={type}
-              className="grid min-w-0 grid-cols-1 gap-1 sm:grid-cols-[2.5rem_minmax(0,1fr)_5.25rem] sm:items-center sm:gap-2"
-            >
-              <span className="truncate text-xs font-semibold">
-                {getCompactUsageLabel(type, usageByType, t)}
-              </span>
-              <div className="h-1.5 rounded-full bg-slate-200/70 dark:bg-white/8" />
-              <span className="text-right text-xs tabular-nums">
-                {remainingUnknownText}
-              </span>
-            </div>
-          ))}
-        </div>
+      <div className="mt-3">
+        {renderPlaceholder(
+          t("providers.opencode_go_usage_not_configured"),
+          "muted",
+        )}
       </div>
     );
   }
 
   return (
-    <div className="mt-3 min-h-[3.375rem]">
+    <div className="mt-3">
       {isLoading && !hasUsage ? (
-        <div className="space-y-2">
+        <div className="w-full space-y-1.5 motion-safe:animate-pulse">
           {windowTypes.map((type) => (
-            <div
+            <QuotaBar
               key={type}
-              className="grid min-w-0 grid-cols-1 gap-1 sm:grid-cols-[2.5rem_minmax(0,1fr)_5.25rem] sm:items-center sm:gap-2"
-            >
-              <span className="truncate text-xs font-semibold text-slate-400 dark:text-white/45">
-                {getCompactUsageLabel(type, usageByType, t)}
-              </span>
-              <div className="relative h-1.5 overflow-hidden rounded-full bg-slate-200/70 dark:bg-white/8">
-                <div className="absolute inset-y-0 -left-full w-1/2 animate-pulse rounded-full bg-slate-300/50 dark:bg-white/20" />
-              </div>
-              <span className="text-right text-xs tabular-nums text-slate-400 dark:text-white/45">
-                {remainingUnknownText}
-              </span>
-            </div>
+              label={getCompactUsageLabel(type, usageByType, t)}
+              percent={null}
+              percentText={remainingUnknownText}
+            />
           ))}
         </div>
       ) : hasUsage ? (
-        <div className="mx-auto w-full max-w-[20rem] space-y-1.5">
+        <div className="w-full space-y-1.5">
           {windowTypes.map((type) => {
             const item = getUsageItemForType(type, usageByType);
             const remaining = resolveRemainingPercent(item?.percentage);
-            const tone = resolveRemainingTone(remaining);
             const remainingText =
               remaining === null
                 ? remainingUnknownText
@@ -326,46 +301,25 @@ export function OpenCodeGoUsageCardSection({
                   });
 
             return (
-              <div
+              <QuotaBar
                 key={type}
-                className="grid min-w-0 grid-cols-1 gap-1 sm:grid-cols-[2.5rem_minmax(0,1fr)_5.25rem] sm:items-center sm:gap-2"
-              >
-                <span className="truncate text-xs font-semibold text-slate-600 dark:text-white/65">
-                  {getCompactUsageLabel(type, usageByType, t)}
-                </span>
-                <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200/80 dark:bg-white/10">
-                  <div
-                    className={["h-full rounded-full", tone.fillClass].join(
-                      " ",
-                    )}
-                    style={{ width: `${remaining ?? 0}%` }}
-                    aria-hidden="true"
-                  />
-                </div>
-                <span
-                  className={[
-                    "truncate text-right text-xs font-semibold tabular-nums",
-                    tone.percentClass,
-                  ].join(" ")}
-                >
-                  {remainingText}
-                </span>
-              </div>
+                label={getCompactUsageLabel(type, usageByType, t)}
+                percent={remaining}
+                percentText={remainingText}
+                detailText={item?.resets_in?.trim() || null}
+              />
             );
           })}
+          {errorText ? (
+            <p className="text-2xs font-medium text-rose-600 dark:text-rose-300">
+              {errorText}
+            </p>
+          ) : null}
         </div>
+      ) : errorText ? (
+        renderPlaceholder(errorText, "error")
       ) : !isLoading ? (
-        <p className="text-xs text-slate-400 dark:text-white/45">
-          {t("providers.opencode_go_usage_not_queried")}
-        </p>
-      ) : null}
-
-      {usageEntry?.error ? (
-        <p className="mt-1 text-xs font-semibold text-rose-700 dark:text-rose-200">
-          {usageEntry.error?.length > 60
-            ? t("providers.opencode_go_usage_query_failed")
-            : usageEntry.error}
-        </p>
+        renderPlaceholder(t("providers.channel_usage_not_queried"), "muted")
       ) : null}
     </div>
   );
@@ -380,9 +334,12 @@ export function OpenCodeGoUsageRefreshButton({
   usageStore: OpenCodeGoUsageStore;
   onRefresh: () => void;
 }) {
+  const { t } = useTranslation();
   const snapshot = useOpenCodeGoUsageSnapshot(usageStore, cacheKey);
   const loading = snapshot.loading;
-  const hasError = Boolean(snapshot.usageEntry?.error);
+  // Always visible, like the power and menu buttons beside it. Revealing it on
+  // hover shifted the whole control cluster as the pointer arrived.
+  const refreshLabel = t("providers.channel_usage_refresh");
 
   return (
     <button
@@ -393,15 +350,13 @@ export function OpenCodeGoUsageRefreshButton({
       }}
       disabled={loading}
       className={[
-        "inline-flex h-6 w-6 items-center justify-center rounded-lg transition-all duration-150",
-        "text-slate-400 hover:bg-slate-200/60 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/25",
-        "dark:text-white/40 dark:hover:bg-white/10 dark:hover:text-white/60 dark:focus-visible:ring-white/20",
-        loading || hasError
-          ? "opacity-100"
-          : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
+        // Matches the power and menu buttons it now sits beside in the header.
+        "inline-flex h-6 w-6 items-center justify-center rounded-md bg-slate-100 transition-all duration-150",
+        "text-slate-500 hover:bg-slate-200 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/25",
+        "dark:bg-white/10 dark:text-white/55 dark:hover:bg-white/15 dark:hover:text-white/80 dark:focus-visible:ring-white/20",
       ].join(" ")}
-      aria-label="Refresh usage"
-      title="Refresh usage"
+      aria-label={refreshLabel}
+      title={refreshLabel}
     >
       <RefreshCcw size={13} className={loading ? "animate-spin" : ""} />
     </button>

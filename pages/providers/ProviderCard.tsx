@@ -1,6 +1,11 @@
 import { useState, type ReactNode } from "react";
-import { DropdownMenu } from "@code-proxy/ui";
-import { EllipsisVertical, Power, Settings2, Trash2 } from "lucide-react";
+import {
+  Card,
+  DropdownMenu,
+  EntityCard,
+  HoverTooltip,
+} from "@code-proxy/ui";
+import { Ellipsis, Power, Settings2, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 export interface ProviderCardProps {
@@ -12,8 +17,8 @@ export interface ProviderCardProps {
   enabled?: boolean;
   /** Whether the card should appear dimmed (disabled state) */
   dimmed?: boolean;
-  /** Whether to use natural height (no max-h, no internal scroll). For cards that need full content visible. */
-  naturalHeight?: boolean;
+  /** Denser paddings and radius, for grids of four columns or more. */
+  dense?: boolean;
   /** Callback when selection checkbox changes */
   onToggleSelected?: (checked: boolean) => void;
   /** Callback when enabled toggle changes */
@@ -22,26 +27,39 @@ export interface ProviderCardProps {
   onEdit?: () => void;
   /** Callback when delete button is clicked */
   onDelete?: () => void;
-  /** Extra elements rendered in the header row, after title */
+  /** Badges shown beside the title (channel id, latency probe). */
   headerExtra?: ReactNode;
-  /** Footer content fixed at card bottom (e.g. status bar) */
+  /** Per-card actions in the header's control cluster (e.g. refresh usage). */
+  headerActions?: ReactNode;
+  /** Rows under the title: connection details, badges, model chips. */
+  header?: ReactNode;
+  /** Left side of the footer row, e.g. the success-rate bar. */
   footer?: ReactNode;
   /** Card body content */
   children?: ReactNode;
   className?: string;
 }
 
+/**
+ * Provider channel card.
+ *
+ * The surface, header layout, selection checkbox and footer rule all come from
+ * EntityCard, the card the AI accounts page uses; this component only supplies
+ * what is specific to a provider — the enable toggle and the edit/delete menu.
+ */
 export function ProviderCard({
   title,
   selected = false,
   enabled = true,
   dimmed = false,
-  naturalHeight = false,
+  dense = false,
   onToggleSelected,
   onToggleEnabled,
   onEdit,
   onDelete,
   headerExtra,
+  headerActions,
+  header,
   footer,
   children,
   className,
@@ -49,158 +67,139 @@ export function ProviderCard({
   const { t } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
   const hasActionMenu = Boolean(onEdit || onDelete || onToggleEnabled);
-  const hasHeaderExtra = Boolean(headerExtra);
 
   return (
-    <div
-      className={[
-        "group relative flex min-w-0 flex-col rounded-xl border px-4 py-3 shadow-sm transition-all duration-200 ease-out",
-        naturalHeight
-          ? "h-fit self-start min-h-0"
-          : "min-h-[220px] max-h-[260px]",
-        selected
-          ? "border-indigo-400 bg-indigo-50/50 ring-1 ring-indigo-200 dark:border-indigo-500/50 dark:bg-indigo-950/20 dark:ring-indigo-500/20"
-          : "border-slate-900/8 bg-white/70 hover:border-slate-300 hover:bg-white hover:shadow-md dark:border-white/8 dark:bg-neutral-950/60 dark:hover:border-neutral-700 dark:hover:bg-neutral-950/80 dark:hover:shadow-lg dark:hover:shadow-black/20",
-        dimmed ? "opacity-50" : "",
-        className,
-      ]
-        .filter(Boolean)
-        .join(" ")}
-    >
-      {/* Header */}
-      <div className="flex min-w-0 items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center">
-          {onToggleSelected ? (
-            <div
-              className={[
-                "flex shrink-0 items-center justify-center overflow-hidden transition-[width,opacity,margin] duration-200 ease-out",
-                selected
-                  ? "mr-2 w-7 opacity-100"
-                  : "mr-0 w-0 opacity-0 group-hover:mr-2 group-hover:w-7 group-hover:opacity-100 max-md:mr-2 max-md:w-7 max-md:opacity-100",
-              ].join(" ")}
+    <EntityCard
+      title={title}
+      dense={dense}
+      selected={selected}
+      dimmed={dimmed}
+      className={className}
+      onToggleSelected={onToggleSelected}
+      selectionLabel={t("providers.select_provider", { name: title })}
+      titleAdornment={headerExtra}
+      header={header}
+      headerControls={
+        <>
+          {headerActions}
+          {onToggleEnabled ? (
+            // Power button rather than a hover-only switch, as on the account
+            // card: whether a channel is on has to be visible without moving
+            // the pointer onto it.
+            <HoverTooltip
+              content={enabled ? t("providers.disable") : t("providers.enable")}
             >
-              <input
-                type="checkbox"
-                aria-label={t("providers.select_provider", { name: title })}
-                checked={selected}
-                onChange={(e) => onToggleSelected(e.currentTarget.checked)}
-                className="h-4 w-4 rounded border-slate-300 text-slate-900 accent-slate-900 focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:border-neutral-700 dark:bg-neutral-950 dark:text-white dark:accent-white dark:focus-visible:ring-white/15"
-              />
-            </div>
-          ) : null}
-          <p
-            className="min-w-0 max-w-[180px] truncate text-sm font-semibold text-slate-900 dark:text-white"
-            title={title}
-          >
-            {title}
-          </p>
-          {hasHeaderExtra ? (
-            <div className="ml-2 flex shrink-0 items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-              {headerExtra}
-            </div>
-          ) : null}
-        </div>
-        {hasActionMenu ? (
-          <DropdownMenu.Root open={menuOpen} onOpenChange={setMenuOpen}>
-            <DropdownMenu.Trigger asChild>
               <button
                 type="button"
                 className={[
-                  "inline-flex h-5 w-5 flex-none items-center justify-center rounded-full border-0 bg-transparent p-0 text-slate-500 shadow-none outline-none ring-0 transition-[color,opacity] duration-150 ease-out hover:bg-transparent hover:text-slate-950 focus-visible:ring-2 focus-visible:ring-slate-400/35 active:bg-transparent dark:text-white/55 dark:hover:bg-transparent dark:hover:text-white dark:focus-visible:ring-white/15",
-                  menuOpen
-                    ? "pointer-events-auto opacity-100"
-                    : "pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 max-md:pointer-events-auto max-md:opacity-100",
+                  "inline-flex h-6 w-6 items-center justify-center rounded-md transition-colors",
+                  enabled
+                    ? "bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-300"
+                    : "bg-slate-100 text-slate-400 hover:bg-slate-200 dark:bg-white/10 dark:text-white/45",
                 ].join(" ")}
-                aria-label={t("providers.more_actions")}
-                title={t("providers.more_actions")}
-                data-tooltip-placement="left"
+                aria-label={
+                  enabled ? t("providers.disable") : t("providers.enable")
+                }
+                aria-pressed={enabled}
+                onClick={() => onToggleEnabled(!enabled)}
               >
-                <EllipsisVertical size={13} />
+                <Power size={13} />
               </button>
-            </DropdownMenu.Trigger>
-            <DropdownMenu.Portal>
-              <DropdownMenu.Content align="end" sideOffset={8}>
-                {onToggleEnabled ? (
-                  <DropdownMenu.Item onSelect={() => onToggleEnabled(!enabled)}>
-                    <Power size={15} />
-                    <span>
-                      {enabled ? t("providers.disable") : t("providers.enable")}
-                    </span>
-                  </DropdownMenu.Item>
-                ) : null}
-                {onEdit ? (
-                  <DropdownMenu.Item onSelect={() => onEdit()}>
-                    <Settings2 size={15} />
-                    <span>{t("providers.edit")}</span>
-                  </DropdownMenu.Item>
-                ) : null}
-                {onDelete ? (
-                  <DropdownMenu.Item
-                    className="text-rose-600 focus:text-rose-700 dark:text-rose-300"
-                    onSelect={() => onDelete()}
+            </HoverTooltip>
+          ) : null}
+          {hasActionMenu ? (
+              <DropdownMenu.Root open={menuOpen} onOpenChange={setMenuOpen}>
+                <DropdownMenu.Trigger asChild>
+                  <button
+                    type="button"
+                    className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-slate-100 text-slate-500 transition-colors hover:bg-slate-200 hover:text-slate-700 dark:bg-white/10 dark:text-white/55 dark:hover:bg-white/15 dark:hover:text-white/80"
+                    aria-label={t("providers.more_actions")}
+                    title={t("providers.more_actions")}
+                    data-tooltip-placement="top"
                   >
-                    <Trash2 size={15} />
-                    <span>{t("providers.delete")}</span>
-                  </DropdownMenu.Item>
-                ) : null}
-              </DropdownMenu.Content>
-            </DropdownMenu.Portal>
-          </DropdownMenu.Root>
-        ) : null}
-      </div>
-
-      {/* Content */}
-      {children ? (
-        <div
-          className={[
-            "mt-2 min-w-0 flex-1",
-            naturalHeight ? "" : "overflow-y-auto",
-          ].join(" ")}
-        >
-          {children}
-        </div>
-      ) : null}
-      {footer ? (
-        <div className={naturalHeight ? "pt-3" : "mt-auto pt-3"}>{footer}</div>
-      ) : null}
-    </div>
+                    <Ellipsis size={14} />
+                  </button>
+                </DropdownMenu.Trigger>
+                <DropdownMenu.Portal>
+                  <DropdownMenu.Content
+                    align="end"
+                    sideOffset={8}
+                    className="min-w-44"
+                  >
+                    {onToggleEnabled ? (
+                      <DropdownMenu.Item
+                        onSelect={() => onToggleEnabled(!enabled)}
+                      >
+                        <Power size={15} />
+                        <span>
+                          {enabled
+                            ? t("providers.disable")
+                            : t("providers.enable")}
+                        </span>
+                      </DropdownMenu.Item>
+                    ) : null}
+                    {onEdit ? (
+                      <DropdownMenu.Item onSelect={() => onEdit()}>
+                        <Settings2 size={15} />
+                        <span>{t("providers.edit")}</span>
+                      </DropdownMenu.Item>
+                    ) : null}
+                    {onDelete ? (
+                      <DropdownMenu.Item
+                        className="text-rose-600 focus:text-rose-700 dark:text-rose-300"
+                        onSelect={() => onDelete()}
+                      >
+                        <Trash2 size={15} />
+                        <span>{t("providers.delete")}</span>
+                      </DropdownMenu.Item>
+                    ) : null}
+                  </DropdownMenu.Content>
+                </DropdownMenu.Portal>
+              </DropdownMenu.Root>
+          ) : null}
+        </>
+      }
+      footer={footer}
+    >
+      {children}
+    </EntityCard>
   );
 }
 
-export function ProviderCardSkeleton({
-  naturalHeight = false,
-}: {
-  naturalHeight?: boolean;
-}) {
+export function ProviderCardSkeleton({ dense = false }: { dense?: boolean }) {
   return (
     <div
-      className={[
-        "flex flex-col rounded-xl border border-slate-900/8 bg-white/70 px-4 py-3 shadow-sm dark:border-white/8 dark:bg-neutral-950/60",
-        naturalHeight
-          ? "h-fit min-h-[220px] w-full max-w-[22rem] flex-none self-start"
-          : "h-[220px]",
-      ].join(" ")}
       aria-hidden="true"
+      className="flex h-full w-full max-w-[34rem] md:max-w-none"
     >
-      <div className="flex items-center justify-between gap-3">
-        <div className="h-4 w-32 animate-pulse rounded-full bg-slate-200 dark:bg-white/10" />
-        <div className="h-5 w-5 animate-pulse rounded-full bg-slate-200 dark:bg-white/10" />
-      </div>
-      <div className="mt-4 space-y-2">
-        <div className="h-3 w-11/12 animate-pulse rounded-full bg-slate-200 dark:bg-white/10" />
-        <div className="h-3 w-3/4 animate-pulse rounded-full bg-slate-200 dark:bg-white/10" />
-      </div>
-      <div className="mt-4 flex flex-wrap gap-1.5">
-        {Array.from({ length: 4 }, (_, index) => (
-          <div
-            key={index}
-            className="h-5 w-20 animate-pulse rounded-full bg-slate-200 dark:bg-white/10"
-          />
-        ))}
-      </div>
-      <div className="mt-auto pt-3">
-        <div className="h-2 w-full animate-pulse rounded-full bg-slate-200 dark:bg-white/10" />
-      </div>
+      <Card
+        padding={dense ? "compact" : "default"}
+        bodyClassName="mt-0 flex min-h-0 flex-1 flex-col"
+        className={[
+          "flex h-full w-full flex-col border-slate-900/8 shadow-[0_8px_24px_rgb(15_23_42_/_0.04)] dark:border-white/[0.08] dark:shadow-[0_8px_24px_rgb(0_0_0_/_0.28)]",
+          dense ? "rounded-2xl" : "rounded-3xl",
+        ].join(" ")}
+      >
+        <div className="flex items-center justify-between gap-3">
+          <div className="h-4 w-32 animate-pulse rounded-full bg-slate-200 dark:bg-white/10" />
+          <div className="h-6 w-12 animate-pulse rounded-full bg-slate-200 dark:bg-white/10" />
+        </div>
+        <div className="mt-4 space-y-2">
+          <div className="h-3 w-11/12 animate-pulse rounded-full bg-slate-200 dark:bg-white/10" />
+          <div className="h-3 w-3/4 animate-pulse rounded-full bg-slate-200 dark:bg-white/10" />
+        </div>
+        <div className="mt-4 flex flex-wrap gap-1.5">
+          {Array.from({ length: 4 }, (_, index) => (
+            <div
+              key={index}
+              className="h-5 w-20 animate-pulse rounded-full bg-slate-200 dark:bg-white/10"
+            />
+          ))}
+        </div>
+        <div className="mt-auto border-t border-slate-100 pt-3 dark:border-white/[0.06]">
+          <div className="h-2 w-full animate-pulse rounded-full bg-slate-200 dark:bg-white/10" />
+        </div>
+      </Card>
     </div>
   );
 }
