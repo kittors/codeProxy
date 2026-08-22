@@ -79,7 +79,6 @@ export function ProviderCard({
       selectionLabel={t("providers.select_provider", { name: title })}
       titleAdornment={headerExtra}
       header={header}
-      fill={false}
       headerControls={
         <>
           {headerActions}
