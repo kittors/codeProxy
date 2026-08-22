@@ -5,7 +5,8 @@ import { Button } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
 import { EmptyState } from "@code-proxy/ui";
 import { ProviderCard, ProviderCardSkeleton } from "../ProviderCard";
-import { ProviderStatusBar } from "@features/provider-latency";
+import { CARD_GRID_CLASS } from "../ProviderKeyListCard";
+import { ProviderSuccessRateBar } from "./ProviderSuccessRateBar";
 import { ProviderMetricChip } from "./ProviderMetricChip";
 import { ProviderModelChips } from "./ProviderModelChips";
 import { OpenAIKeyEntrySummary } from "./OpenAIKeyEntrySummary";
@@ -82,29 +83,25 @@ export function OpenAIProvidersTab({
           role="status"
           aria-label={t("common.loading")}
           data-testid="providers-list-skeleton"
-          className="min-h-0 flex-1 overflow-hidden pr-1 grid gap-3 items-start content-start justify-start"
-          style={{
-            gridTemplateColumns:
-              "repeat(auto-fill, minmax(min(100%, 18rem), 22rem))",
-          }}
+          className={`${CARD_GRID_CLASS} overflow-hidden`}
         >
           {Array.from({ length: 6 }, (_, index) => (
-            <ProviderCardSkeleton key={index} />
+            <ProviderCardSkeleton key={index} dense />
           ))}
         </div>
       ) : providers.length === 0 ? (
-        <EmptyState
-          title={t("providers.no_openai_providers")}
-          description={t("providers.no_openai_desc")}
-        />
+        // Fill the list area like the other tabs do: an empty state sized to its
+        // own content leaves the bottom of the page blank.
+        <div className="flex min-h-0 flex-1 flex-col justify-center">
+          <EmptyState
+            title={t("providers.no_openai_providers")}
+            description={t("providers.no_openai_desc")}
+          />
+        </div>
       ) : (
         <div
           data-testid="providers-tab-scroll"
-          className="min-h-0 flex-1 overflow-y-auto pr-1 grid gap-3 items-start content-start justify-start"
-          style={{
-            gridTemplateColumns:
-              "repeat(auto-fill, minmax(min(100%, 18rem), 22rem))",
-          }}
+          className={`${CARD_GRID_CLASS} overflow-y-auto`}
         >
           {providers.map((provider, idx) => {
             const selectionKey = `${provider.name.trim().toLowerCase()}:${idx}`;
@@ -112,6 +109,10 @@ export function OpenAIProvidersTab({
             const headerEntries = Object.entries(provider.headers || {});
             const stats = getProviderStats(provider);
             const statusData = getProviderStatusBar(provider);
+            // Same as the key list: a provider with no traffic showed a row
+            // of grey blocks and a "--" instead of nothing.
+            const hasStatusData =
+              statusData.totalSuccess + statusData.totalFailure > 0;
 
             return (
               <ProviderCard
@@ -120,6 +121,7 @@ export function OpenAIProvidersTab({
                 selected={selected}
                 enabled={provider.disabled !== true}
                 dimmed={provider.disabled === true}
+                dense
                 onToggleSelected={
                   onToggleSelected
                     ? (checked) => onToggleSelected(selectionKey, checked)
@@ -178,24 +180,32 @@ export function OpenAIProvidersTab({
                   />
                 ) : null}
 
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  <ProviderMetricChip
-                    tone="blue"
-                    label={t("providers.models_label")}
-                    value={provider.models?.length ?? 0}
-                  />
-                  <ProviderMetricChip
-                    tone={stats.success > 0 ? "emerald" : "slate"}
-                    label={t("providers.success_stats", {
-                      count: stats.success,
-                    })}
-                  />
-                  <ProviderMetricChip
-                    tone={stats.failure > 0 ? "rose" : "slate"}
-                    label={t("providers.failed_stats", {
-                      count: stats.failure,
-                    })}
-                  />
+                {/* Zero-valued badges are dropped, as on the key list: a fresh
+                    provider showed three chips all reading 0. */}
+                <div className="mt-2 flex flex-wrap gap-1.5 empty:mt-0">
+                  {provider.models?.length ? (
+                    <ProviderMetricChip
+                      tone="blue"
+                      label={t("providers.models_label")}
+                      value={provider.models.length}
+                    />
+                  ) : null}
+                  {stats.success > 0 ? (
+                    <ProviderMetricChip
+                      tone="emerald"
+                      label={t("providers.success_stats", {
+                        count: stats.success,
+                      })}
+                    />
+                  ) : null}
+                  {stats.failure > 0 ? (
+                    <ProviderMetricChip
+                      tone="rose"
+                      label={t("providers.failed_stats", {
+                        count: stats.failure,
+                      })}
+                    />
+                  ) : null}
                   {provider.testModel ? (
                     <span className="inline-flex items-center rounded-full bg-slate-600/10 px-2 py-0.5 text-xs font-medium text-slate-700 dark:bg-white/10 dark:text-white/65">
                       testModel: {provider.testModel}
@@ -205,14 +215,11 @@ export function OpenAIProvidersTab({
 
                 {provider.models?.length ? (
                   <div className="mt-2">
-                    <ProviderModelChips
-                      models={provider.models}
-                      maxVisible={6}
-                    />
+                    <ProviderModelChips models={provider.models} />
                   </div>
                 ) : null}
 
-                <ProviderStatusBar data={statusData} />
+                {hasStatusData ? <ProviderSuccessRateBar data={statusData} /> : null}
               </ProviderCard>
             );
           })}

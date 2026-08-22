@@ -9,7 +9,7 @@ interface ProviderModelChipsProps {
 
 export function ProviderModelChips({
   models,
-  maxVisible = 6,
+  maxVisible = 4,
   emptyLabel,
 }: ProviderModelChipsProps) {
   if (!models.length) {
@@ -26,20 +26,27 @@ export function ProviderModelChips({
     return model.alias && model.alias !== name ? `${name} ${arrow} ${model.alias}` : name;
   };
 
+  // Same flat, squared, 2xs badge as the metric chips and the AI account card.
+  //
+  // Chips are sized by their text, not by an equal-width track. On a 3-column
+  // grid every chip was as wide as a third of the card, so "gpt-5.2" sat in a
+  // box with more empty space than label and the "+3" count was stretched to
+  // match. One row: names shrink and truncate to share it, the count never
+  // does, and the full list stays in the tooltip.
   return (
-    <div className="grid max-h-[3.25rem] grid-cols-3 gap-1 overflow-hidden">
+    <div className="flex max-h-5 items-center gap-1 overflow-hidden">
       {visible.map((model) => {
         const modelLabel = formatModelLabel(model, "→");
         return (
-          // Overflow-only: the chip is often truncated by the 3-column grid, but when
-          // it fits, a tooltip would just repeat the mapping already on screen.
+          // Overflow-only: a chip that fits needs no tooltip, since it would
+          // just repeat the mapping already on screen.
           <OverflowTooltip
             key={model.name}
             content={formatModelLabel(model, "=>")}
             placement="top"
             className="min-w-0"
           >
-            <span className="inline-flex w-full min-w-0 cursor-default rounded-full bg-slate-900 px-2 py-0.5 text-xs text-white dark:bg-white dark:text-neutral-950">
+            <span className="inline-flex h-5 min-w-0 max-w-full cursor-default items-center rounded-md bg-slate-100 px-1.5 text-2xs font-semibold leading-none text-slate-700 dark:bg-white/10 dark:text-white/70">
               <span className="min-w-0 truncate">{modelLabel}</span>
             </span>
           </OverflowTooltip>
@@ -52,9 +59,9 @@ export function ProviderModelChips({
             .map((model) => formatModelLabel(model, "=>"))
             .join("\n")}
           placement="top"
-          className="min-w-0"
+          className="shrink-0"
         >
-          <span className="inline-flex min-w-0 cursor-default justify-center rounded-full bg-slate-200 px-2 py-0.5 text-xs font-semibold tabular-nums text-slate-500 dark:bg-neutral-800 dark:text-white/55">
+          <span className="inline-flex h-5 shrink-0 cursor-default items-center rounded-md bg-slate-100 px-1.5 text-2xs font-semibold leading-none tabular-nums text-slate-500 dark:bg-white/10 dark:text-white/55">
             +{remaining}
           </span>
         </HoverTooltip>
