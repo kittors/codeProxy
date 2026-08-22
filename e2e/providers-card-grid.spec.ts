@@ -14,7 +14,13 @@ const codexKeys = [
     name: "codex one",
     "base-url": "https://chatgpt.com/backend-api/codex",
   },
-  { "api-key": "sk-codex-beta-1234567890abcdef", name: "codex two" },
+  // Deliberately taller than the first: it adds a badge row and a chip row, so
+  // the two cards must not come out the same height.
+  {
+    "api-key": "sk-codex-beta-1234567890abcdef",
+    name: "codex two",
+    models: [{ name: "gpt-5.2" }, { name: "gpt-5.3-codex" }],
+  },
 ];
 
 const opencodeGoKeys = [
@@ -107,6 +113,7 @@ const readGridMetrics = (page: Page) =>
       containerHeight: Math.round(el.clientHeight),
       display: style.display,
       alignContent: style.alignContent,
+      alignItems: style.alignItems,
       columnCount: style.gridTemplateColumns.split(" ").filter(Boolean).length,
       cards: Array.from(el.children).map((child) => {
         const rect = child.getBoundingClientRect();
@@ -151,15 +158,48 @@ for (const tabCase of [
         `card ${index} must be content height, not the full scroll box`,
       ).toBeLessThan(metrics.containerHeight / 2);
       expect(card.height, `card ${index} must still be a card`).toBeGreaterThan(
-        100,
+        60,
       );
     }
-
-    // Cards in one row end level: that is what h-full plus items-stretch buys.
-    const heights = new Set(metrics.cards.map((card) => card.height));
-    expect(heights.size, "cards in a row should share one height").toBe(1);
   });
 }
+
+/**
+ * Provider cards carry wildly different amounts of content — one may hold just a
+ * key and a base URL, another badges, chips and three quota bars. Levelling a
+ * row padded the short ones out to the tallest, which is where the dead space
+ * under most cards came from.
+ */
+test("AI Providers: cards end where their content ends, not level with the row", async ({
+  page,
+}) => {
+  await setAuthed(page, "codex");
+  await mockManagementApi(page);
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  await page.goto("/#/access/ai-providers");
+
+  const list = page.getByTestId("providers-tab-scroll");
+  await expect(list).toBeVisible();
+  await expect.poll(() => list.locator("> *").count()).toBe(codexKeys.length);
+
+  const metrics = await readGridMetrics(page);
+  expect(metrics.alignItems, "the grid must not stretch its items").toMatch(
+    /start$/,
+  );
+  const [shorter, taller] = metrics.cards;
+  expect(
+    taller.height,
+    "the card with badges and chips must be the taller one",
+  ).toBeGreaterThan(shorter.height);
+
+  // And no card carries slack: its scroll height is its rendered height.
+  const overflow = await list.evaluate((el) =>
+    [...el.children].map((c) => c.scrollHeight - c.clientHeight),
+  );
+  for (const [index, slack] of overflow.entries()) {
+    expect(slack, `card ${index} should have no hidden overflow`).toBeLessThanOrEqual(1);
+  }
+});
 
 test("AI Providers: one column on mobile keeps cards inside the viewport", async ({
   page,

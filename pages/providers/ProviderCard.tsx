@@ -1,11 +1,12 @@
 import { useState, type ReactNode } from "react";
 import {
   Card,
+  CardSelectionCheckbox,
   DropdownMenu,
   HoverTooltip,
   OverflowTooltip,
 } from "@code-proxy/ui";
-import { Check, Ellipsis, Power, Settings2, Trash2 } from "lucide-react";
+import { Ellipsis, Power, Settings2, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 export interface ProviderCardProps {
@@ -29,6 +30,10 @@ export interface ProviderCardProps {
   onDelete?: () => void;
   /** Extra elements rendered in the header row, after title */
   headerExtra?: ReactNode;
+  /** Per-card actions rendered in the header's control cluster, before the
+   *  power button. Keeps single actions out of the badge row, where one
+   *  button alone held a whole line open with an empty left half. */
+  headerActions?: ReactNode;
   /** Footer content fixed at card bottom (e.g. status bar) */
   footer?: ReactNode;
   /** Card body content */
@@ -47,6 +52,7 @@ export function ProviderCard({
   onEdit,
   onDelete,
   headerExtra,
+  headerActions,
   footer,
   children,
   className,
@@ -61,11 +67,11 @@ export function ProviderCard({
       padding="default"
       bodyClassName="mt-0 flex min-h-0 flex-1 flex-col"
       className={[
-        // h-full fills the grid row, which content-start on the list keeps at
-        // content height; it is what makes cards in one row end level. Do not
-        // pair it with a max-w override from the caller — md:max-w-none here
-        // wins over any narrower max-width and the card goes full bleed.
-        "group group/card flex h-full w-full max-w-[34rem] flex-col rounded-3xl border-slate-900/8 shadow-[0_8px_24px_rgb(15_23_42_/_0.04)] transition-colors duration-200 ease-out hover:border-slate-300 hover:bg-white md:max-w-none dark:border-white/[0.08] dark:shadow-[0_8px_24px_rgb(0_0_0_/_0.28)] dark:hover:border-neutral-700 dark:hover:bg-neutral-950/70",
+        // No h-full: with items-start on the grid the card is as tall as its
+        // content. Do not pair the width rules with a max-w override from the
+        // caller — md:max-w-none here wins over any narrower max-width and the
+        // card goes full bleed.
+        "group group/card flex w-full max-w-[34rem] flex-col rounded-3xl border-slate-900/8 shadow-[0_8px_24px_rgb(15_23_42_/_0.04)] transition-colors duration-200 ease-out hover:border-slate-300 hover:bg-white md:max-w-none dark:border-white/[0.08] dark:shadow-[0_8px_24px_rgb(0_0_0_/_0.28)] dark:hover:border-neutral-700 dark:hover:bg-neutral-950/70",
         // No floor height: items-stretch already levels a row, so a minimum
         // only added dead space under the shortest card in every row.
         "min-h-0",
@@ -96,28 +102,14 @@ export function ProviderCard({
         ) : null}
 
         <div className="ml-auto flex shrink-0 items-center gap-1.5">
+          {headerActions}
           {onToggleSelected ? (
-            // Same 24px squared control as the power button beside it. A raw
-            // checkbox next to a rounded tinted button read as two unrelated
-            // widgets sharing a corner.
-            <button
-              type="button"
-              role="checkbox"
-              aria-checked={selected}
-              aria-label={t("providers.select_provider", { name: title })}
-              onClick={() => onToggleSelected(!selected)}
-              className={[
-                "inline-flex h-6 w-6 items-center justify-center rounded-md transition-all",
-                selected
-                  ? "bg-slate-900 text-white dark:bg-white dark:text-neutral-950"
-                  : "bg-slate-100 text-transparent hover:bg-slate-200 hover:text-slate-400 dark:bg-white/10 dark:hover:bg-white/15 dark:hover:text-white/40",
-                showSelectionControl
-                  ? "opacity-100 pointer-events-auto"
-                  : "opacity-100 pointer-events-auto md:opacity-0 md:pointer-events-none md:group-hover/card:opacity-100 md:group-focus-within/card:opacity-100 md:group-hover/card:pointer-events-auto md:group-focus-within/card:pointer-events-auto",
-              ].join(" ")}
-            >
-              <Check size={13} />
-            </button>
+            <CardSelectionCheckbox
+              checked={selected}
+              onCheckedChange={onToggleSelected}
+              label={t("providers.select_provider", { name: title })}
+              alwaysVisible={showSelectionControl}
+            />
           ) : null}
           {onToggleEnabled ? (
             // Always-on power button, as on the AI account card. The toggle it
