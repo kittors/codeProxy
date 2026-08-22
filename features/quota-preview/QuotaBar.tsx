@@ -98,14 +98,33 @@ export const resolveQuotaVisualTone = (
   };
 };
 
+/**
+ * Colour band, when the caller's thresholds differ from a quota's.
+ *
+ * A quota is healthy above 60% remaining; a success rate is not healthy until
+ * about 90%, and is alarming below 50%. `auto` derives the band from `percent`,
+ * which is right for quotas.
+ */
+export type QuotaBarTone = "auto" | "positive" | "caution" | "critical";
+
+const TONE_SAMPLE: Record<Exclude<QuotaBarTone, "auto">, number> = {
+  positive: 100,
+  caution: 40,
+  critical: 10,
+};
+
 export interface QuotaBarProps {
   label: string;
   /** Remaining percent, 0-100. `null` renders the neutral "unknown" tone. */
   percent: number | null | undefined;
+  /** Colour band. Defaults to deriving it from `percent`. */
+  tone?: QuotaBarTone;
   /** Percent text, when the source has its own formatting (e.g. "3.2%"). */
   percentText?: string;
-  /** Countdown or reset hint, shown beside a clock icon. */
+  /** Countdown or reset hint, shown beside `detailIcon`. */
   detailText?: string | null;
+  /** Icon before `detailText`. Defaults to a clock, which suits a countdown. */
+  detailIcon?: ReactNode;
   /** Explains what the window means; rendered as a hoverable info icon. */
   hint?: string;
   compact?: boolean;
@@ -126,14 +145,19 @@ export interface QuotaBarProps {
 export function QuotaBar({
   label,
   percent,
+  tone: toneBand = "auto",
   percentText,
   detailText,
+  detailIcon,
   hint,
   compact = false,
   testId,
 }: QuotaBarProps): ReactNode {
-  const tone = resolveQuotaVisualTone(percent);
-  const normalized = tone.normalized;
+  // Fill width always tracks `percent`; only the colour band can be overridden.
+  const tone = resolveQuotaVisualTone(
+    toneBand === "auto" ? percent : TONE_SAMPLE[toneBand],
+  );
+  const normalized = resolveQuotaVisualTone(percent).normalized;
   const shownPercent =
     percentText ?? (normalized === null ? "--" : `${Math.round(normalized)}%`);
 
@@ -189,7 +213,9 @@ export function QuotaBar({
               tone.barMetaClass,
             ].join(" ")}
           >
-            <Clock size={compact ? 9 : 10} className="shrink-0" aria-hidden />
+            {detailIcon ?? (
+              <Clock size={compact ? 9 : 10} className="shrink-0" aria-hidden />
+            )}
             {detailText}
           </span>
         ) : null}

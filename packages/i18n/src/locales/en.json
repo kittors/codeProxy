@@ -3842,6 +3842,7 @@
     "opencode_go_usage_querying": "Checking...",
     "channel_usage_query_failed": "Usage query failed",
     "channel_usage_refresh": "Refresh usage",
+    "request_total": "{{count}} requests",
     "opencode_go_usage_rolling": "Rolling usage",
     "opencode_go_usage_weekly": "Weekly usage",
     "opencode_go_usage_monthly": "Monthly usage",

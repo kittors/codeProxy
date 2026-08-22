@@ -6,7 +6,7 @@ import type {
 import { Card, entityCardGridClass } from "@code-proxy/ui";
 import { ProviderCard, ProviderCardSkeleton } from "./ProviderCard";
 import { EmptyState } from "@code-proxy/ui";
-import { ProviderStatusBar } from "@features/provider-latency";
+import { ProviderSuccessRateBar } from "./components/ProviderSuccessRateBar";
 import type { KeyStatBucket, StatusBarData } from "@code-proxy/domain";
 import {
   hasDisableAllModelsRule,
@@ -245,7 +245,7 @@ export function ProviderKeyListCard({
                     : undefined
                 }
                 footer={
-                  hasStatusData ? <ProviderStatusBar data={statusData} /> : undefined
+                  hasStatusData ? <ProviderSuccessRateBar data={statusData} /> : undefined
                 }
                 header={
                   <>
