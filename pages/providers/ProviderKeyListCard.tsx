@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { Loader2, Zap } from "lucide-react";
 import type {
   ProviderModel,
   ProviderSimpleConfig,
@@ -14,10 +13,11 @@ import {
   maskApiKey,
   stripDisableAllModelsRule,
 } from "./providers-helpers";
-import { formatLatency } from "@features/provider-latency";
 import { ProviderConnectionRows } from "./components/ProviderConnectionRows";
 import { ProviderMetricChip } from "./components/ProviderMetricChip";
 import { ProviderModelChips } from "./components/ProviderModelChips";
+import { ProviderIdCopyButton } from "./components/ProviderIdCopyButton";
+import { ProviderLatencyButton } from "./components/ProviderLatencyButton";
 
 import { useTranslation } from "react-i18next";
 import { useOptionalAuth } from "@app/providers/AuthProvider";
@@ -187,6 +187,31 @@ export function ProviderKeyListCard({
               : item.models || [];
             const stats = getStats(item);
             const statusData = getStatusBar(item);
+            const latencyEntry =
+              canUseAPITools && checkLatency
+                ? (getLatencyEntry?.(item.apiKey) ?? {
+                    latencyMs: null,
+                    loading: false,
+                    error: false,
+                  })
+                : null;
+            // Built up front so the header only renders a badge row when there
+            // is a badge to put in it.
+            const headerBadges =
+              item.id || latencyEntry ? (
+                <>
+                  {item.id ? <ProviderIdCopyButton id={item.id} /> : null}
+                  {latencyEntry && checkLatency ? (
+                    <ProviderLatencyButton
+                      entry={latencyEntry}
+                      baseUrl={item.baseUrl || ""}
+                      onCheck={() =>
+                        checkLatency(item.apiKey, item.baseUrl || "")
+                      }
+                    />
+                  ) : null}
+                </>
+              ) : undefined;
 
             return (
               <ProviderCard
@@ -209,66 +234,9 @@ export function ProviderKeyListCard({
                 }
                 onEdit={canWrite ? () => onEdit(idx) : undefined}
                 onDelete={canWrite ? () => onDelete(idx) : undefined}
-                headerExtra={
-                  canUseAPITools && checkLatency
-                    ? (() => {
-                        const latencyKey = item.apiKey;
-                        const entry = getLatencyEntry?.(latencyKey) ?? {
-                          latencyMs: null,
-                          loading: false,
-                          error: false,
-                        };
-                        const providerBaseUrl = item.baseUrl || "";
-                        const latencyMs = entry.latencyMs;
-                        const latencyColor =
-                          latencyMs === null
-                            ? "text-slate-400 dark:text-white/40"
-                            : latencyMs < 200
-                              ? "text-emerald-600 dark:text-emerald-400"
-                              : latencyMs < 500
-                                ? "text-amber-600 dark:text-amber-400"
-                                : "text-rose-600 dark:text-rose-400";
-                        return (
-                          <button
-                            type="button"
-                            className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs tabular-nums font-medium transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/25 dark:hover:bg-white/10 dark:focus-visible:ring-white/20 ${entry.loading ? "text-slate-500" : entry.error ? "text-rose-500" : latencyColor}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (providerBaseUrl)
-                                checkLatency(latencyKey, providerBaseUrl);
-                            }}
-                            aria-label={
-                              providerBaseUrl
-                                ? `Check latency: ${providerBaseUrl}`
-                                : "No base URL configured"
-                            }
-                            title={
-                              providerBaseUrl
-                                ? `Check latency: ${providerBaseUrl}`
-                                : "No base URL configured"
-                            }
-                          >
-                            {entry.loading ? (
-                              <Loader2 size={10} className="animate-spin" />
-                            ) : entry.error ? (
-                              <span>×</span>
-                            ) : latencyMs !== null ? (
-                              <span>{formatLatency(latencyMs)}</span>
-                            ) : (
-                              <Zap size={10} />
-                            )}
-                          </button>
-                        );
-                      })()
-                    : undefined
-                }
+                headerExtra={headerBadges}
                 footer={<ProviderStatusBar data={statusData} />}
               >
-                {item.id ? (
-                  <p className="mt-1 truncate font-mono text-xs text-slate-500 dark:text-white/50" title={item.id}>
-                    ID: {item.id}
-                  </p>
-                ) : null}
                 {showConnectionRows ? (
                   <ProviderConnectionRows
                     apiKey={item.apiKey}

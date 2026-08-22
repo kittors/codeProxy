@@ -2,8 +2,8 @@ import { useState, type ReactNode } from "react";
 import {
   Card,
   DropdownMenu,
+  HoverTooltip,
   OverflowTooltip,
-  ToggleSwitch,
   buttonClassName,
 } from "@code-proxy/ui";
 import { Ellipsis, Power, Settings2, Trash2 } from "lucide-react";
@@ -114,20 +114,29 @@ export function ProviderCard({
             </div>
           ) : null}
           {onToggleEnabled ? (
-            <div
-              className={[
-                "flex h-6 items-center justify-center transition-opacity",
-                "opacity-100 pointer-events-auto md:opacity-0 md:pointer-events-none md:group-hover/card:opacity-100 md:group-focus-within/card:opacity-100 md:group-hover/card:pointer-events-auto md:group-focus-within/card:pointer-events-auto",
-              ].join(" ")}
+            // Always-on power button, as on the AI account card. The toggle it
+            // replaces only appeared on hover, so whether a channel was enabled
+            // was invisible until you moved the mouse over it.
+            <HoverTooltip
+              content={enabled ? t("providers.disable") : t("providers.enable")}
             >
-              <ToggleSwitch
-                ariaLabel={
+              <button
+                type="button"
+                className={[
+                  "inline-flex h-6 w-6 items-center justify-center rounded-md transition-colors",
+                  enabled
+                    ? "bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-300"
+                    : "bg-slate-100 text-slate-400 hover:bg-slate-200 dark:bg-white/10 dark:text-white/45",
+                ].join(" ")}
+                aria-label={
                   enabled ? t("providers.disable") : t("providers.enable")
                 }
-                checked={enabled}
-                onCheckedChange={onToggleEnabled}
-              />
-            </div>
+                aria-pressed={enabled}
+                onClick={() => onToggleEnabled(!enabled)}
+              >
+                <Power size={13} />
+              </button>
+            </HoverTooltip>
           ) : null}
         </div>
       </div>
