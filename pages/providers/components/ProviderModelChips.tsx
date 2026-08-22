@@ -26,8 +26,11 @@ export function ProviderModelChips({
     return model.alias && model.alias !== name ? `${name} ${arrow} ${model.alias}` : name;
   };
 
+  // Same flat, squared, 2xs badge as the metric chips and the AI account card.
+  // The old inverted pill (black on white) was the loudest thing on the card
+  // and made a row of model names read as a warning.
   return (
-    <div className="grid max-h-[3.25rem] grid-cols-3 gap-1 overflow-hidden">
+    <div className="grid max-h-[2.75rem] grid-cols-3 gap-1 overflow-hidden">
       {visible.map((model) => {
         const modelLabel = formatModelLabel(model, "→");
         return (
@@ -39,7 +42,7 @@ export function ProviderModelChips({
             placement="top"
             className="min-w-0"
           >
-            <span className="inline-flex w-full min-w-0 cursor-default rounded-full bg-slate-900 px-2 py-0.5 text-xs text-white dark:bg-white dark:text-neutral-950">
+            <span className="inline-flex h-5 w-full min-w-0 cursor-default items-center rounded-md bg-slate-100 px-1.5 text-2xs font-semibold leading-none text-slate-700 dark:bg-white/10 dark:text-white/70">
               <span className="min-w-0 truncate">{modelLabel}</span>
             </span>
           </OverflowTooltip>
@@ -54,7 +57,7 @@ export function ProviderModelChips({
           placement="top"
           className="min-w-0"
         >
-          <span className="inline-flex min-w-0 cursor-default justify-center rounded-full bg-slate-200 px-2 py-0.5 text-xs font-semibold tabular-nums text-slate-500 dark:bg-neutral-800 dark:text-white/55">
+          <span className="inline-flex h-5 min-w-0 cursor-default items-center justify-center rounded-md bg-slate-100 px-1.5 text-2xs font-semibold leading-none tabular-nums text-slate-500 dark:bg-white/10 dark:text-white/55">
             +{remaining}
           </span>
         </HoverTooltip>
