@@ -29,15 +29,15 @@ import { useOptionalAuth } from "@app/providers/AuthProvider";
  * a resolved height: the default `align-content: stretch` would hand its single
  * row all of that height and drag every card to the bottom of the scroll box.
  *
- * `align: start` rather than the accounts page's stretch. An account card
- * always carries three or four quota bars and so is naturally the height of its
- * neighbours; a provider card may hold nothing but a key and a base URL, or a
- * key plus badges, chips and three quota bars. Levelling a row padded the short
- * cards out to the tallest one.
+ * Cards are levelled within a row, as on the accounts page. Letting each end at
+ * its own content does not remove empty space, it only moves it: the row is
+ * still as tall as its tallest card, so a short card leaves a gap between its
+ * bottom edge and the next row. Levelling keeps that space inside the card,
+ * where it reads as padding rather than as a hole in the grid.
  */
 export const CARD_GRID_CLASS = [
   "min-h-0 flex-1 content-start pr-1",
-  entityCardGridClass({ columns: 3, dense: true, align: "start" }),
+  entityCardGridClass({ columns: 3, dense: true }),
 ].join(" ");
 
 /**
@@ -308,7 +308,7 @@ export function ProviderKeyListCard({
                     {headerEntries.map(([k, v]) => (
                       <span
                         key={k}
-                        className="inline-flex max-w-full min-w-0 items-center gap-1 rounded-full border border-slate-900/8 bg-white px-2 py-0.5 text-xs text-slate-700 dark:border-white/8 dark:bg-neutral-950/60 dark:text-white/75"
+                        className="inline-flex h-5 max-w-full min-w-0 items-center gap-1 rounded-md bg-slate-100 px-1.5 text-2xs font-semibold leading-none text-slate-700 dark:bg-white/10 dark:text-white/70"
                         title={`${k}: ${String(v)}`}
                       >
                         <span className="shrink-0 font-semibold">{k}:</span>
@@ -327,7 +327,7 @@ export function ProviderKeyListCard({
                     {excludedModels.map((model) => (
                       <span
                         key={model}
-                        className="inline-flex max-w-full min-w-0 rounded-full bg-rose-600/10 px-2 py-0.5 text-xs text-rose-700 dark:bg-rose-500/15 dark:text-rose-200"
+                        className="inline-flex h-5 max-w-full min-w-0 items-center rounded-md bg-rose-50 px-1.5 text-2xs font-semibold leading-none text-rose-700 dark:bg-rose-500/15 dark:text-rose-200"
                         title={model}
                       >
                         <span className="min-w-0 truncate">{model}</span>

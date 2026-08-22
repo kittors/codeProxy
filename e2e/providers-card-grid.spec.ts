@@ -166,11 +166,13 @@ for (const tabCase of [
 
 /**
  * Provider cards carry wildly different amounts of content — one may hold just a
- * key and a base URL, another badges, chips and three quota bars. Levelling a
- * row padded the short ones out to the tallest, which is where the dead space
- * under most cards came from.
+ * key and a base URL, another badges, chips and three quota bars. Letting each
+ * end at its own content does not remove empty space, it moves it: the row is
+ * still as tall as its tallest card, so a short card leaves a gap between its
+ * bottom edge and the next row. Levelling keeps that space inside the card,
+ * where it reads as padding, and the rows stay flush.
  */
-test("AI Providers: cards end where their content ends, not level with the row", async ({
+test("AI Providers: every card in a row ends on the same line", async ({
   page,
 }) => {
   await setAuthed(page, "codex");
@@ -182,15 +184,26 @@ test("AI Providers: cards end where their content ends, not level with the row",
   await expect(list).toBeVisible();
   await expect.poll(() => list.locator("> *").count()).toBe(codexKeys.length);
 
-  const metrics = await readGridMetrics(page);
-  expect(metrics.alignItems, "the grid must not stretch its items").toMatch(
-    /start$/,
-  );
-  const [shorter, taller] = metrics.cards;
-  expect(
-    taller.height,
-    "the card with badges and chips must be the taller one",
-  ).toBeGreaterThan(shorter.height);
+  const rows = await list.evaluate((el) => {
+    const byTop = new Map<number, number[]>();
+    for (const child of el.children) {
+      const rect = child.getBoundingClientRect();
+      const top = Math.round(rect.top);
+      byTop.set(top, [...(byTop.get(top) ?? []), Math.round(rect.bottom)]);
+    }
+    return [...byTop.entries()].map(([top, bottoms]) => ({
+      top,
+      raggedBy: Math.max(...bottoms) - Math.min(...bottoms),
+    }));
+  });
+
+  expect(rows.length, "the fixture should produce at least one row").toBeGreaterThan(0);
+  for (const row of rows) {
+    expect(
+      row.raggedBy,
+      `cards in the row at y=${row.top} must end level`,
+    ).toBeLessThanOrEqual(1);
+  }
 
   // And no card carries slack: its scroll height is its rendered height.
   const overflow = await list.evaluate((el) =>
