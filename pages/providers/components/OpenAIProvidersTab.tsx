@@ -86,7 +86,7 @@ export function OpenAIProvidersTab({
           className={`${CARD_GRID_CLASS} overflow-hidden`}
         >
           {Array.from({ length: 6 }, (_, index) => (
-            <ProviderCardSkeleton key={index} />
+            <ProviderCardSkeleton key={index} dense />
           ))}
         </div>
       ) : providers.length === 0 ? (
@@ -121,6 +121,7 @@ export function OpenAIProvidersTab({
                 selected={selected}
                 enabled={provider.disabled !== true}
                 dimmed={provider.disabled === true}
+                dense
                 onToggleSelected={
                   onToggleSelected
                     ? (checked) => onToggleSelected(selectionKey, checked)

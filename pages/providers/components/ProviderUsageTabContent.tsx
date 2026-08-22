@@ -90,7 +90,6 @@ export function ProviderUsageTabContent({
           getEffectiveProviderModels(provider, item, catalog)
         }
         {...(showBaseUrl ? {} : { showBaseUrl: false })}
-        naturalHeight
         showConnectionRows={false}
         showModelMetric={false}
         showExcludedModels={false}
