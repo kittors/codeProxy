@@ -20,11 +20,13 @@ import {
   commitModelEntries,
   excludedModelsFromText,
   hasDisableAllModelsRule,
+  maskApiKey,
   stripDisableAllModelsRule,
   withDisableAllModelsRule,
   withoutDisableAllModelsRule,
   type ProviderKeyDraft,
 } from "../providers-helpers";
+import { findDuplicateProviderIndex } from "../provider-duplicate-key";
 import {
   isModelAllowedForProvider,
   type ModelAccessProvider,
@@ -194,6 +196,14 @@ export function useProviderKeyEditor({
       return null;
     }
 
+    // Vertex compat rows are dropped upstream without a base URL (see
+    // SanitizeVertexCompatKeys, "BaseURL is required"). Without this check the
+    // save reported success and the channel never appeared.
+    if (editKeyType === "vertex" && !keyDraft.baseUrl.trim()) {
+      setKeyDraftError(t("providers.base_url_error"));
+      return null;
+    }
+
     const headers = keyValueEntriesToRecord(keyDraft.headersEntries);
     const rawExcludedModels = keyDraft.excludedModelsText.trim()
       ? excludedModelsFromText(keyDraft.excludedModelsText)
@@ -312,9 +322,27 @@ export function useProviderKeyEditor({
         : {}),
     };
 
+    // Channels that deduplicate upstream drop the colliding row and still answer
+    // 200, so without this the save said "saved" and no card appeared.
+    const duplicateIndex = findDuplicateProviderIndex(
+      editKeyType,
+      getListByType(editKeyType),
+      result,
+      editKeyIndex,
+    );
+    if (duplicateIndex !== -1) {
+      const existing = getListByType(editKeyType)[duplicateIndex];
+      setKeyDraftError(
+        t("providers.duplicate_api_key_error", {
+          name: existing?.name?.trim() || maskApiKey(result.apiKey),
+        }),
+      );
+      return null;
+    }
+
     setKeyDraftError(null);
     return result;
-  }, [editKeyType, keyDraft, t]);
+  }, [editKeyIndex, editKeyType, getListByType, keyDraft, t]);
 
   const saveKeyDraft = useCallback(async () => {
     const value = commitKeyDraft();

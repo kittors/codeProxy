@@ -23,6 +23,23 @@ import { useTranslation } from "react-i18next";
 import { useOptionalAuth } from "@app/providers/AuthProvider";
 
 /**
+ * Responsive card grid, mirroring the AI accounts page.
+ *
+ * `content-start` is load-bearing: this grid is a flex child with a resolved
+ * height, so the default `align-content: stretch` hands the single row all of
+ * that height and every card is dragged down to the bottom of the scroll box.
+ * With `start`, the row is as tall as its tallest card and `items-stretch` (plus
+ * the card's own `h-full`) keeps siblings in a row the same height.
+ *
+ * Below `md` cards centre inside one column and cap at `max-w-[34rem]`; from
+ * `md` up they stretch to fill their column.
+ */
+export const CARD_GRID_CLASS = [
+  "grid min-h-0 flex-1 content-start items-stretch justify-items-center gap-5 pr-1",
+  "grid-cols-1 md:grid-cols-2 md:justify-items-stretch xl:grid-cols-[repeat(3,minmax(0,1fr))]",
+].join(" ");
+
+/**
  * Validate a caller-supplied order before rendering with it.
  *
  * A malformed order must degrade to configured order rather than dropping or
@@ -134,12 +151,7 @@ export function ProviderKeyListCard({
           role="status"
           aria-label={t("common.loading")}
           data-testid="providers-list-skeleton"
-          className={[
-            "min-h-0 flex-1 overflow-hidden gap-5 items-stretch justify-items-center",
-            naturalHeight
-              ? "flex flex-wrap"
-              : "grid grid-cols-1 md:grid-cols-2 md:justify-items-stretch xl:grid-cols-[repeat(3,minmax(0,1fr))]",
-          ].join(" ")}
+          className={`${CARD_GRID_CLASS} overflow-hidden`}
         >
           {Array.from({ length: 6 }, (_, index) => (
             <ProviderCardSkeleton key={index} naturalHeight={naturalHeight} />
@@ -156,12 +168,7 @@ export function ProviderKeyListCard({
       ) : (
         <div
           data-testid="providers-tab-scroll"
-          className={[
-            "min-h-0 flex-1 overflow-y-auto gap-5 items-stretch justify-items-center",
-            naturalHeight
-              ? "flex flex-wrap"
-              : "grid grid-cols-1 md:grid-cols-2 md:justify-items-stretch xl:grid-cols-[repeat(3,minmax(0,1fr))]",
-          ].join(" ")}
+          className={`${CARD_GRID_CLASS} overflow-y-auto`}
         >
           {resolveRenderOrder(items.length, displayOrder).map((idx) => {
             const item = items[idx];
@@ -189,12 +196,7 @@ export function ProviderKeyListCard({
                 enabled={!disabled}
                 dimmed={disabled}
                 naturalHeight={naturalHeight}
-                className={[
-                  "motion-safe:animate-[fadeInUp_0.22s_ease-out]",
-                  naturalHeight ? "w-full max-w-[22rem] flex-none" : undefined,
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
+                className="motion-safe:animate-[fadeInUp_0.22s_ease-out]"
                 onToggleSelected={
                   onToggleSelected
                     ? (checked) => onToggleSelected(selectionKey, checked)

@@ -5,6 +5,7 @@ import { Button } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
 import { EmptyState } from "@code-proxy/ui";
 import { ProviderCard, ProviderCardSkeleton } from "../ProviderCard";
+import { CARD_GRID_CLASS } from "../ProviderKeyListCard";
 import { ProviderStatusBar } from "@features/provider-latency";
 import { ProviderMetricChip } from "./ProviderMetricChip";
 import { ProviderModelChips } from "./ProviderModelChips";
@@ -82,21 +83,25 @@ export function OpenAIProvidersTab({
           role="status"
           aria-label={t("common.loading")}
           data-testid="providers-list-skeleton"
-          className="min-h-0 flex-1 overflow-hidden grid grid-cols-1 items-stretch justify-items-center gap-5 sm:px-1 md:grid-cols-2 md:justify-items-stretch xl:grid-cols-[repeat(3,minmax(0,1fr))]"
+          className={`${CARD_GRID_CLASS} overflow-hidden`}
         >
           {Array.from({ length: 6 }, (_, index) => (
             <ProviderCardSkeleton key={index} />
           ))}
         </div>
       ) : providers.length === 0 ? (
-        <EmptyState
-          title={t("providers.no_openai_providers")}
-          description={t("providers.no_openai_desc")}
-        />
+        // Fill the list area like the other tabs do: an empty state sized to its
+        // own content leaves the bottom of the page blank.
+        <div className="flex min-h-0 flex-1 flex-col justify-center">
+          <EmptyState
+            title={t("providers.no_openai_providers")}
+            description={t("providers.no_openai_desc")}
+          />
+        </div>
       ) : (
         <div
           data-testid="providers-tab-scroll"
-          className="min-h-0 flex-1 overflow-y-auto grid grid-cols-1 items-stretch justify-items-center gap-5 sm:px-1 md:grid-cols-2 md:justify-items-stretch xl:grid-cols-[repeat(3,minmax(0,1fr))]"
+          className={`${CARD_GRID_CLASS} overflow-y-auto`}
         >
           {providers.map((provider, idx) => {
             const selectionKey = `${provider.name.trim().toLowerCase()}:${idx}`;

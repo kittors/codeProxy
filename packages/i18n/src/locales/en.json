@@ -3787,6 +3787,7 @@
     "base_url_error": "Base URL cannot be empty",
     "priority_error": "Priority must be a number",
     "key_entry_error": "At least one API key entry is required",
+    "duplicate_api_key_error": "This API key is already used by channel \"{{name}}\"; adding it again has no effect",
     "enable_toggle_desc_on": "Current: enabled",
     "enable_toggle_desc_off": "Current: disabled (writes * rule)",
     "disable_hint": "Disabling writes * into excluded models. You can still edit the list manually below.",
