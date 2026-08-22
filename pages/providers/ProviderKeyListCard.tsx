@@ -187,6 +187,11 @@ export function ProviderKeyListCard({
               : item.models || [];
             const stats = getStats(item);
             const statusData = getStatusBar(item);
+            // A channel with no traffic drew twenty grey blocks and a "--":
+            // the loudest row on the card, saying nothing. Drop the footer
+            // entirely until there is a rate to report.
+            const hasStatusData =
+              statusData.totalSuccess + statusData.totalFailure > 0;
             const latencyEntry =
               canUseAPITools && checkLatency
                 ? (getLatencyEntry?.(item.apiKey) ?? {
@@ -235,7 +240,9 @@ export function ProviderKeyListCard({
                 onEdit={canWrite ? () => onEdit(idx) : undefined}
                 onDelete={canWrite ? () => onDelete(idx) : undefined}
                 headerExtra={headerBadges}
-                footer={<ProviderStatusBar data={statusData} />}
+                footer={
+                  hasStatusData ? <ProviderStatusBar data={statusData} /> : undefined
+                }
               >
                 {showConnectionRows ? (
                   <ProviderConnectionRows
@@ -247,8 +254,11 @@ export function ProviderKeyListCard({
                   />
                 ) : null}
 
-                <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                  {showModelMetric ? (
+                {/* Zero-valued badges are dropped rather than greyed: a fresh
+                    channel showed "Models 0 / Success 0 / Failed 0", three chips
+                    that only said the card has nothing to report yet. */}
+                <div className="mt-2 flex flex-wrap items-center gap-1.5 empty:mt-0">
+                  {showModelMetric && models.length ? (
                     <ProviderMetricChip
                       tone="blue"
                       label={t("providers.models_label")}
@@ -270,18 +280,22 @@ export function ProviderKeyListCard({
                       title={`${headerEntries.length} header(s)`}
                     />
                   ) : null}
-                  <ProviderMetricChip
-                    tone={stats.success > 0 ? "emerald" : "slate"}
-                    label={t("providers.success_stats", {
-                      count: stats.success,
-                    })}
-                  />
-                  <ProviderMetricChip
-                    tone={stats.failure > 0 ? "rose" : "slate"}
-                    label={t("providers.failed_stats", {
-                      count: stats.failure,
-                    })}
-                  />
+                  {stats.success > 0 ? (
+                    <ProviderMetricChip
+                      tone="emerald"
+                      label={t("providers.success_stats", {
+                        count: stats.success,
+                      })}
+                    />
+                  ) : null}
+                  {stats.failure > 0 ? (
+                    <ProviderMetricChip
+                      tone="rose"
+                      label={t("providers.failed_stats", {
+                        count: stats.failure,
+                      })}
+                    />
+                  ) : null}
                   {canTest && renderMetricsExtra ? (
                     <div className="ml-auto">
                       {renderMetricsExtra(item, idx, stats)}
@@ -305,7 +319,7 @@ export function ProviderKeyListCard({
                 ) : null}
 
                 <div className="mt-1.5">
-                  <ProviderModelChips models={models} maxVisible={6} />
+                  <ProviderModelChips models={models} />
                 </div>
 
                 {showExcludedModels && excludedModels.length ? (

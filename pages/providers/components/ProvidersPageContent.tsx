@@ -264,7 +264,7 @@ export function ProvidersPage() {
           error:
             err instanceof Error
               ? err.message
-              : t("providers.opencode_go_usage_query_failed"),
+              : t("providers.channel_usage_query_failed"),
         }));
         openCodeGoUsageStore.setLoading(cacheKey, false);
       }

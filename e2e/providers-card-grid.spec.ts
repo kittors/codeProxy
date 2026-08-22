@@ -188,3 +188,43 @@ test("AI Providers: one column on mobile keeps cards inside the viewport", async
     )
     .toBe(false);
 });
+
+/**
+ * An unused channel used to end in a row of ~20 grey blocks and a "--" success
+ * rate, sitting under a divider — the loudest band on the card, reporting
+ * nothing. Zero-valued metric badges said the same thing a second time.
+ */
+test("AI Providers: a channel with no traffic shows no status bar, rate or zero badges", async ({
+  page,
+}) => {
+  await setAuthed(page, "codex");
+  await mockManagementApi(page);
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  await page.goto("/#/access/ai-providers");
+
+  const list = page.getByTestId("providers-tab-scroll");
+  await expect(list).toBeVisible();
+  await expect.poll(() => list.locator("> *").count()).toBe(codexKeys.length);
+
+  // No usage stats are mocked, so neither codex channel has traffic.
+  await expect(list.getByRole("status")).toHaveCount(0);
+  await expect(list).not.toContainText("--");
+  await expect(list).not.toContainText("Success 0");
+  await expect(list).not.toContainText("Failed 0");
+  await expect(list).not.toContainText("Models 0");
+
+  // A rule is a top border with no bottom border. Boxes (the card itself, a
+  // quota bar) have all four, so they are not caught by this.
+  const dividerCount = await list.evaluate(
+    (el) =>
+      [...el.querySelectorAll("*")].filter((node) => {
+        const style = getComputedStyle(node);
+        return (
+          parseFloat(style.borderTopWidth) > 0 &&
+          style.borderTopStyle !== "none" &&
+          parseFloat(style.borderBottomWidth) === 0
+        );
+      }).length,
+  );
+  expect(dividerCount, "cards should carry no internal rules").toBe(0);
+});

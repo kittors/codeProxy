@@ -9,7 +9,7 @@ interface ProviderModelChipsProps {
 
 export function ProviderModelChips({
   models,
-  maxVisible = 6,
+  maxVisible = 3,
   emptyLabel,
 }: ProviderModelChipsProps) {
   if (!models.length) {
@@ -29,8 +29,13 @@ export function ProviderModelChips({
   // Same flat, squared, 2xs badge as the metric chips and the AI account card.
   // The old inverted pill (black on white) was the loudest thing on the card
   // and made a row of model names read as a warning.
+  //
+  // Capped at one row: a second row of chips only appeared on the channels with
+  // the most models, and because a grid row levels every card in it, those cards
+  // pushed their whole row taller for a list nobody reads chip by chip. The
+  // overflow count carries the rest, with the full list in its tooltip.
   return (
-    <div className="grid max-h-[2.75rem] grid-cols-3 gap-1 overflow-hidden">
+    <div className="grid max-h-5 grid-cols-3 gap-1 overflow-hidden">
       {visible.map((model) => {
         const modelLabel = formatModelLabel(model, "→");
         return (
