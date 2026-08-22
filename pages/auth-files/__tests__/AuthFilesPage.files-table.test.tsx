@@ -5657,18 +5657,23 @@ describe("AuthFilesPage files table", () => {
 
     expect(await screen.findByTestId("auth-files-cards")).toBeInTheDocument();
 
-    const checkbox = screen.getByLabelText("Select qwen.json") as HTMLInputElement;
+    // The control is a role=checkbox button, shared with the AI providers card,
+    // so its state lives on aria-checked rather than input.checked.
+    const checkbox = screen.getByRole("checkbox", { name: "Select qwen.json" });
     expect(checkbox).toBeInTheDocument();
-    expect(checkbox.parentElement).not.toHaveClass("opacity-0");
-    expect(checkbox.parentElement).not.toHaveClass("pointer-events-none");
-    expect(checkbox.checked).toBe(false);
+    expect(checkbox).not.toHaveClass("opacity-0");
+    expect(checkbox).not.toHaveClass("pointer-events-none");
+    expect(checkbox).toHaveAttribute("aria-checked", "false");
 
     fireEvent.click(checkbox);
-    expect(checkbox.checked).toBe(true);
+    expect(
+      screen.getByRole("checkbox", { name: "Select qwen.json" }),
+    ).toHaveAttribute("aria-checked", "true");
 
-    fireEvent.click(checkbox);
+    fireEvent.click(screen.getByRole("checkbox", { name: "Select qwen.json" }));
 
-    expect(screen.getByLabelText("Select qwen.json")).toBeInTheDocument();
-    expect((screen.getByLabelText("Select qwen.json") as HTMLInputElement).checked).toBe(false);
+    expect(
+      screen.getByRole("checkbox", { name: "Select qwen.json" }),
+    ).toHaveAttribute("aria-checked", "false");
   });
 });

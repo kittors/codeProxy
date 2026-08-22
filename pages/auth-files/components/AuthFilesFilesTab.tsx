@@ -28,7 +28,7 @@ import {
 import type { AuthFileItem } from "@code-proxy/api-client";
 import { VendorIcon } from "@code-proxy/assets";
 import { Button, DropdownMenu, buttonClassName, surface } from "@code-proxy/ui";
-import { Card } from "@code-proxy/ui";
+import { Card, CardSelectionCheckbox } from "@code-proxy/ui";
 import { EmptyState } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
 import { Modal } from "@code-proxy/ui";
@@ -1842,29 +1842,16 @@ export function AuthFilesFilesTab({
 
                           <div className="flex h-6 shrink-0 items-center gap-1.5">
                             {runtimeOnly ? null : (
-                              <div
-                                className={[
-                                  "flex h-6 w-6 items-center justify-center transition-opacity",
-                                  showSelectionControl
-                                    ? "opacity-100 pointer-events-auto"
-                                    : "opacity-100 pointer-events-auto md:opacity-0 md:pointer-events-none md:group-hover/card:opacity-100 md:group-focus-within/card:opacity-100 md:group-hover/card:pointer-events-auto md:group-focus-within/card:pointer-events-auto",
-                                ].join(" ")}
-                              >
-                                <input
-                                  type="checkbox"
-                                  aria-label={t("auth_files.select_file", {
-                                    name: displayTitle || file.name,
-                                  })}
-                                  checked={fileSelected}
-                                  onChange={(e) =>
-                                    toggleFileSelection(
-                                      file.name,
-                                      e.currentTarget.checked,
-                                    )
-                                  }
-                                  className="h-4 w-4 rounded border-slate-300 text-slate-900 accent-slate-900 focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:border-neutral-700 dark:bg-neutral-950 dark:text-white dark:accent-white dark:focus-visible:ring-white/15"
-                                />
-                              </div>
+                              <CardSelectionCheckbox
+                                checked={fileSelected}
+                                onCheckedChange={(next) =>
+                                  toggleFileSelection(file.name, next)
+                                }
+                                label={t("auth_files.select_file", {
+                                  name: displayTitle || file.name,
+                                })}
+                                alwaysVisible={showSelectionControl}
+                              />
                             )}
                             {runtimeOnly ? (
                               <span className="text-xs leading-none text-slate-400 dark:text-white/40">

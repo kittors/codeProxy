@@ -243,32 +243,21 @@ export function OpenCodeGoUsageCardSection({
 
   // One state at a time. A failed probe used to render the "not queried" gauge
   // and a red error line together, which read as two unrelated problems.
+  // One line, not a stacked icon block: this is a status note on a card that is
+  // otherwise two or three lines tall, and a centred 8x8 medallion above a
+  // caption made the note the largest thing on it.
   const renderPlaceholder = (message: string, tone: "muted" | "error") => (
     <div
-      className="flex flex-col items-center justify-center gap-1.5 py-4 text-center"
+      className={[
+        "flex h-6 w-full items-center gap-1.5 rounded-md border px-2 text-xs font-medium",
+        tone === "error"
+          ? "border-rose-200 bg-rose-50/60 text-rose-600 dark:border-rose-500/20 dark:bg-rose-500/[0.08] dark:text-rose-300"
+          : "border-slate-200 bg-slate-50/60 text-slate-500 dark:border-white/10 dark:bg-white/[0.03] dark:text-white/50",
+      ].join(" ")}
       data-testid="opencode-go-usage-footprint"
     >
-      <div
-        className={[
-          "flex h-8 w-8 items-center justify-center rounded-full",
-          tone === "error"
-            ? "bg-rose-50 text-rose-400 dark:bg-rose-500/10 dark:text-rose-300/70"
-            : "bg-slate-100/90 text-slate-400 dark:bg-white/[0.06] dark:text-white/40",
-        ].join(" ")}
-        aria-hidden="true"
-      >
-        <Gauge size={15} strokeWidth={1.5} />
-      </div>
-      <p
-        className={[
-          "text-xs font-medium",
-          tone === "error"
-            ? "text-rose-600 dark:text-rose-300"
-            : "text-slate-500 dark:text-white/50",
-        ].join(" ")}
-      >
-        {message}
-      </p>
+      <Gauge size={12} strokeWidth={1.5} className="shrink-0" aria-hidden="true" />
+      <span className="min-w-0 truncate">{message}</span>
     </div>
   );
 
@@ -345,9 +334,12 @@ export function OpenCodeGoUsageRefreshButton({
   usageStore: OpenCodeGoUsageStore;
   onRefresh: () => void;
 }) {
+  const { t } = useTranslation();
   const snapshot = useOpenCodeGoUsageSnapshot(usageStore, cacheKey);
   const loading = snapshot.loading;
-  const hasError = Boolean(snapshot.usageEntry?.error);
+  // Always visible, like the power and menu buttons beside it. Revealing it on
+  // hover shifted the whole control cluster as the pointer arrived.
+  const refreshLabel = t("providers.channel_usage_refresh");
 
   return (
     <button
@@ -358,15 +350,13 @@ export function OpenCodeGoUsageRefreshButton({
       }}
       disabled={loading}
       className={[
-        "inline-flex h-6 w-6 items-center justify-center rounded-lg transition-all duration-150",
-        "text-slate-400 hover:bg-slate-200/60 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/25",
-        "dark:text-white/40 dark:hover:bg-white/10 dark:hover:text-white/60 dark:focus-visible:ring-white/20",
-        loading || hasError
-          ? "opacity-100"
-          : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
+        // Matches the power and menu buttons it now sits beside in the header.
+        "inline-flex h-6 w-6 items-center justify-center rounded-md bg-slate-100 transition-all duration-150",
+        "text-slate-500 hover:bg-slate-200 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/25",
+        "dark:bg-white/10 dark:text-white/55 dark:hover:bg-white/15 dark:hover:text-white/80 dark:focus-visible:ring-white/20",
       ].join(" ")}
-      aria-label="Refresh usage"
-      title="Refresh usage"
+      aria-label={refreshLabel}
+      title={refreshLabel}
     >
       <RefreshCcw size={13} className={loading ? "animate-spin" : ""} />
     </button>

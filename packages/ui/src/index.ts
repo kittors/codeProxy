@@ -63,6 +63,7 @@ export { Card } from "./primitives/Card";
 export { Surface, surface } from "./primitives/Surface";
 export type { SurfaceOptions, SurfaceRadius, SurfaceTone } from "./primitives/Surface";
 export { Checkbox } from "./primitives/Checkbox";
+export { CardSelectionCheckbox } from "./primitives/CardSelectionCheckbox";
 export { DateTimePicker } from "./primitives/DateTimePicker";
 export { DropdownMenu } from "./primitives/DropdownMenu";
 export type { DropdownMenuRootProps } from "./primitives/DropdownMenu";

@@ -23,19 +23,24 @@ import { useTranslation } from "react-i18next";
 import { useOptionalAuth } from "@app/providers/AuthProvider";
 
 /**
- * Responsive card grid, mirroring the AI accounts page.
+ * Responsive card grid.
  *
  * `content-start` is load-bearing: this grid is a flex child with a resolved
  * height, so the default `align-content: stretch` hands the single row all of
  * that height and every card is dragged down to the bottom of the scroll box.
- * With `start`, the row is as tall as its tallest card and `items-stretch` (plus
- * the card's own `h-full`) keeps siblings in a row the same height.
+ *
+ * `items-start`, not `items-stretch`: unlike an AI account card — which always
+ * carries three or four quota bars and so is naturally the same height as its
+ * neighbours — a provider card may hold nothing but a key and a base URL, or a
+ * key plus badges, chips and three quota bars. Levelling a row meant padding
+ * the short cards out to the tallest one, which is where the dead space in
+ * every row came from. Cards now end where their content ends.
  *
  * Below `md` cards centre inside one column and cap at `max-w-[34rem]`; from
  * `md` up they stretch to fill their column.
  */
 export const CARD_GRID_CLASS = [
-  "grid min-h-0 flex-1 content-start items-stretch justify-items-center gap-5 pr-1",
+  "grid min-h-0 flex-1 content-start items-start justify-items-center gap-5 pr-1",
   "grid-cols-1 md:grid-cols-2 md:justify-items-stretch xl:grid-cols-[repeat(3,minmax(0,1fr))]",
 ].join(" ");
 
@@ -240,6 +245,11 @@ export function ProviderKeyListCard({
                 onEdit={canWrite ? () => onEdit(idx) : undefined}
                 onDelete={canWrite ? () => onDelete(idx) : undefined}
                 headerExtra={headerBadges}
+                headerActions={
+                  canTest && renderMetricsExtra
+                    ? renderMetricsExtra(item, idx, stats)
+                    : undefined
+                }
                 footer={
                   hasStatusData ? <ProviderStatusBar data={statusData} /> : undefined
                 }
@@ -295,11 +305,6 @@ export function ProviderKeyListCard({
                         count: stats.failure,
                       })}
                     />
-                  ) : null}
-                  {canTest && renderMetricsExtra ? (
-                    <div className="ml-auto">
-                      {renderMetricsExtra(item, idx, stats)}
-                    </div>
                   ) : null}
                 </div>
 
