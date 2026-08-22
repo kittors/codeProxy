@@ -109,6 +109,10 @@ export function OpenAIProvidersTab({
             const headerEntries = Object.entries(provider.headers || {});
             const stats = getProviderStats(provider);
             const statusData = getProviderStatusBar(provider);
+            // Same as the key list: a provider with no traffic showed a row
+            // of grey blocks and a "--" instead of nothing.
+            const hasStatusData =
+              statusData.totalSuccess + statusData.totalFailure > 0;
 
             return (
               <ProviderCard
@@ -175,24 +179,32 @@ export function OpenAIProvidersTab({
                   />
                 ) : null}
 
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  <ProviderMetricChip
-                    tone="blue"
-                    label={t("providers.models_label")}
-                    value={provider.models?.length ?? 0}
-                  />
-                  <ProviderMetricChip
-                    tone={stats.success > 0 ? "emerald" : "slate"}
-                    label={t("providers.success_stats", {
-                      count: stats.success,
-                    })}
-                  />
-                  <ProviderMetricChip
-                    tone={stats.failure > 0 ? "rose" : "slate"}
-                    label={t("providers.failed_stats", {
-                      count: stats.failure,
-                    })}
-                  />
+                {/* Zero-valued badges are dropped, as on the key list: a fresh
+                    provider showed three chips all reading 0. */}
+                <div className="mt-2 flex flex-wrap gap-1.5 empty:mt-0">
+                  {provider.models?.length ? (
+                    <ProviderMetricChip
+                      tone="blue"
+                      label={t("providers.models_label")}
+                      value={provider.models.length}
+                    />
+                  ) : null}
+                  {stats.success > 0 ? (
+                    <ProviderMetricChip
+                      tone="emerald"
+                      label={t("providers.success_stats", {
+                        count: stats.success,
+                      })}
+                    />
+                  ) : null}
+                  {stats.failure > 0 ? (
+                    <ProviderMetricChip
+                      tone="rose"
+                      label={t("providers.failed_stats", {
+                        count: stats.failure,
+                      })}
+                    />
+                  ) : null}
                   {provider.testModel ? (
                     <span className="inline-flex items-center rounded-full bg-slate-600/10 px-2 py-0.5 text-xs font-medium text-slate-700 dark:bg-white/10 dark:text-white/65">
                       testModel: {provider.testModel}
@@ -202,14 +214,11 @@ export function OpenAIProvidersTab({
 
                 {provider.models?.length ? (
                   <div className="mt-2">
-                    <ProviderModelChips
-                      models={provider.models}
-                      maxVisible={6}
-                    />
+                    <ProviderModelChips models={provider.models} />
                   </div>
                 ) : null}
 
-                <ProviderStatusBar data={statusData} />
+                {hasStatusData ? <ProviderStatusBar data={statusData} /> : null}
               </ProviderCard>
             );
           })}

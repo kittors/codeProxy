@@ -235,34 +235,59 @@ export function OpenCodeGoUsageCardSection({
 
   const hasUsage = Boolean(usageEntry && usageEntry.usage.length > 0);
 
+  const errorText = usageEntry?.error
+    ? usageEntry.error.length > 60
+      ? t("providers.channel_usage_query_failed")
+      : usageEntry.error
+    : null;
+
+  // One state at a time. A failed probe used to render the "not queried" gauge
+  // and a red error line together, which read as two unrelated problems.
+  const renderPlaceholder = (message: string, tone: "muted" | "error") => (
+    <div
+      className="flex flex-col items-center justify-center gap-1.5 py-4 text-center"
+      data-testid="opencode-go-usage-footprint"
+    >
+      <div
+        className={[
+          "flex h-8 w-8 items-center justify-center rounded-full",
+          tone === "error"
+            ? "bg-rose-50 text-rose-400 dark:bg-rose-500/10 dark:text-rose-300/70"
+            : "bg-slate-100/90 text-slate-400 dark:bg-white/[0.06] dark:text-white/40",
+        ].join(" ")}
+        aria-hidden="true"
+      >
+        <Gauge size={15} strokeWidth={1.5} />
+      </div>
+      <p
+        className={[
+          "text-xs font-medium",
+          tone === "error"
+            ? "text-rose-600 dark:text-rose-300"
+            : "text-slate-500 dark:text-white/50",
+        ].join(" ")}
+      >
+        {message}
+      </p>
+    </div>
+  );
+
   // Same bar as an AI account card: fill is the row's own background, label,
   // countdown and percentage share one line. Both pages import it from
   // @features/quota-preview so neither can drift.
-  // Same empty state as an AI account card with no quota: a quiet gauge and one
-  // line, centred in the space the bars would occupy. An invisible placeholder
-  // used to sit here, which read as a rendering fault rather than "this
-  // credential has no dashboard login configured".
   if (!queryReady) {
     return (
-      <div
-        className="mt-3 flex min-h-[5.25rem] flex-col items-center justify-center gap-2 text-center"
-        data-testid="opencode-go-usage-footprint"
-      >
-        <div
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100/90 text-slate-400 dark:bg-white/[0.06] dark:text-white/40"
-          aria-hidden="true"
-        >
-          <Gauge size={16} strokeWidth={1.5} />
-        </div>
-        <p className="text-xs font-medium text-slate-500 dark:text-white/50">
-          {t("providers.opencode_go_usage_not_configured")}
-        </p>
+      <div className="mt-3">
+        {renderPlaceholder(
+          t("providers.opencode_go_usage_not_configured"),
+          "muted",
+        )}
       </div>
     );
   }
 
   return (
-    <div className="mt-3 min-h-[5.25rem]">
+    <div className="mt-3">
       {isLoading && !hasUsage ? (
         <div className="w-full space-y-1.5 motion-safe:animate-pulse">
           {windowTypes.map((type) => (
@@ -296,27 +321,16 @@ export function OpenCodeGoUsageCardSection({
               />
             );
           })}
+          {errorText ? (
+            <p className="text-2xs font-medium text-rose-600 dark:text-rose-300">
+              {errorText}
+            </p>
+          ) : null}
         </div>
+      ) : errorText ? (
+        renderPlaceholder(errorText, "error")
       ) : !isLoading ? (
-        <div className="flex min-h-[5.25rem] flex-col items-center justify-center gap-2 text-center">
-          <div
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100/90 text-slate-400 dark:bg-white/[0.06] dark:text-white/40"
-            aria-hidden="true"
-          >
-            <Gauge size={16} strokeWidth={1.5} />
-          </div>
-          <p className="text-xs font-medium text-slate-500 dark:text-white/50">
-            {t("providers.opencode_go_usage_not_queried")}
-          </p>
-        </div>
-      ) : null}
-
-      {usageEntry?.error ? (
-        <p className="mt-1 text-xs font-semibold text-rose-700 dark:text-rose-200">
-          {usageEntry.error?.length > 60
-            ? t("providers.opencode_go_usage_query_failed")
-            : usageEntry.error}
-        </p>
+        renderPlaceholder(t("providers.channel_usage_not_queried"), "muted")
       ) : null}
     </div>
   );

@@ -4,9 +4,8 @@ import {
   DropdownMenu,
   HoverTooltip,
   OverflowTooltip,
-  buttonClassName,
 } from "@code-proxy/ui";
-import { Ellipsis, Power, Settings2, Trash2 } from "lucide-react";
+import { Check, Ellipsis, Power, Settings2, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 export interface ProviderCardProps {
@@ -67,7 +66,9 @@ export function ProviderCard({
         // pair it with a max-w override from the caller — md:max-w-none here
         // wins over any narrower max-width and the card goes full bleed.
         "group group/card flex h-full w-full max-w-[34rem] flex-col rounded-3xl border-slate-900/8 shadow-[0_8px_24px_rgb(15_23_42_/_0.04)] transition-colors duration-200 ease-out hover:border-slate-300 hover:bg-white md:max-w-none dark:border-white/[0.08] dark:shadow-[0_8px_24px_rgb(0_0_0_/_0.28)] dark:hover:border-neutral-700 dark:hover:bg-neutral-950/70",
-        naturalHeight ? "min-h-0" : "min-h-[220px]",
+        // No floor height: items-stretch already levels a row, so a minimum
+        // only added dead space under the shortest card in every row.
+        "min-h-0",
         selected
           ? "border-slate-900 ring-1 ring-slate-300 dark:border-white dark:ring-white/20"
           : "",
@@ -96,22 +97,27 @@ export function ProviderCard({
 
         <div className="ml-auto flex shrink-0 items-center gap-1.5">
           {onToggleSelected ? (
-            <div
+            // Same 24px squared control as the power button beside it. A raw
+            // checkbox next to a rounded tinted button read as two unrelated
+            // widgets sharing a corner.
+            <button
+              type="button"
+              role="checkbox"
+              aria-checked={selected}
+              aria-label={t("providers.select_provider", { name: title })}
+              onClick={() => onToggleSelected(!selected)}
               className={[
-                "flex h-6 w-6 items-center justify-center transition-opacity",
+                "inline-flex h-6 w-6 items-center justify-center rounded-md transition-all",
+                selected
+                  ? "bg-slate-900 text-white dark:bg-white dark:text-neutral-950"
+                  : "bg-slate-100 text-transparent hover:bg-slate-200 hover:text-slate-400 dark:bg-white/10 dark:hover:bg-white/15 dark:hover:text-white/40",
                 showSelectionControl
                   ? "opacity-100 pointer-events-auto"
                   : "opacity-100 pointer-events-auto md:opacity-0 md:pointer-events-none md:group-hover/card:opacity-100 md:group-focus-within/card:opacity-100 md:group-hover/card:pointer-events-auto md:group-focus-within/card:pointer-events-auto",
               ].join(" ")}
             >
-              <input
-                type="checkbox"
-                aria-label={t("providers.select_provider", { name: title })}
-                checked={selected}
-                onChange={(e) => onToggleSelected(e.currentTarget.checked)}
-                className="h-4 w-4 rounded border-slate-300 text-slate-900 accent-slate-900 focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:border-neutral-700 dark:bg-neutral-950 dark:text-white dark:accent-white dark:focus-visible:ring-white/15"
-              />
-            </div>
+              <Check size={13} />
+            </button>
           ) : null}
           {onToggleEnabled ? (
             // Always-on power button, as on the AI account card. The toggle it
@@ -138,38 +144,21 @@ export function ProviderCard({
               </button>
             </HoverTooltip>
           ) : null}
-        </div>
-      </div>
-
-      {children ? (
-        <div
-          className={[
-            "min-h-0 min-w-0 flex-1 touch-pan-y px-0.5 mt-3 py-1",
-            naturalHeight ? "" : "overflow-y-auto",
-          ].join(" ")}
-        >
-          {children}
-        </div>
-      ) : null}
-
-      {footer || hasActionMenu ? (
-        <div className="mt-auto flex items-center justify-between gap-2 border-t border-slate-100 pt-3 dark:border-white/[0.06]">
-          <div className="min-w-0 flex-1">{footer}</div>
           {hasActionMenu ? (
+            // In the header with the other per-card controls. Down in the footer
+            // it was often the only thing there, so it held open a whole row —
+            // and mt-auto pinned that row to the bottom of a stretched card,
+            // leaving a band of nothing above it.
             <DropdownMenu.Root open={menuOpen} onOpenChange={setMenuOpen}>
               <DropdownMenu.Trigger asChild>
                 <button
                   type="button"
-                  className={buttonClassName({
-                    variant: "ghost",
-                    size: "sm",
-                    iconOnly: true,
-                  })}
+                  className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-slate-100 text-slate-500 transition-colors hover:bg-slate-200 hover:text-slate-700 dark:bg-white/10 dark:text-white/55 dark:hover:bg-white/15 dark:hover:text-white/80"
                   aria-label={t("providers.more_actions")}
                   title={t("providers.more_actions")}
                   data-tooltip-placement="top"
                 >
-                  <Ellipsis size={16} />
+                  <Ellipsis size={14} />
                 </button>
               </DropdownMenu.Trigger>
               <DropdownMenu.Portal>
@@ -202,7 +191,22 @@ export function ProviderCard({
             </DropdownMenu.Root>
           ) : null}
         </div>
+      </div>
+
+      {children ? (
+        <div
+          className={[
+            "min-h-0 min-w-0 flex-1 touch-pan-y px-0.5 mt-3 py-1",
+            naturalHeight ? "" : "overflow-y-auto",
+          ].join(" ")}
+        >
+          {children}
+        </div>
       ) : null}
+
+      {/* No rule above the footer: with the quota bars and badges already boxed,
+          a divider was a third horizontal line in a card that needed two. */}
+      {footer ? <div className="mt-auto pt-2">{footer}</div> : null}
     </Card>
   );
 }

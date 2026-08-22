@@ -1009,8 +1009,11 @@ describe("ProvidersPage Cline tab", () => {
     expect(await screen.findByText("Cline Tooltip")).toBeInTheDocument();
     await waitFor(() => expect(mocks.getModelDefinitions).toHaveBeenCalledWith("cline"));
 
-    await user.hover(screen.getByText("+3"));
+    // Chips are capped at one row (2 chips + the count), so 8 models leave 6
+    // behind the badge — all of which the tooltip must still list.
+    await user.hover(screen.getByText("+6"));
     const tooltip = await screen.findByRole("tooltip");
+    expect(tooltip).toHaveTextContent("cline-pass/qwen3.7-max");
     expect(tooltip).toHaveTextContent("cline-pass/deepseek-v4");
     expect(tooltip).toHaveTextContent("cline-pass/kimi-k2.6");
     expect(tooltip).toHaveTextContent("cline-pass/gpt-5.2");
