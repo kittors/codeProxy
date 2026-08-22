@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { RefreshCcw } from "lucide-react";
+import { Gauge, RefreshCcw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { OpenCodeGoUsageItem } from "@code-proxy/api-client";
+import { QuotaBar } from "@features/quota-preview/QuotaBar";
 
 export interface OpenCodeGoUsageCacheEntry {
   sourceId?: string;
@@ -163,36 +164,6 @@ const formatPercent = (value: number): string =>
     ? String(value)
     : value.toFixed(1).replace(/\.0$/, "");
 
-const resolveRemainingTone = (
-  remaining: number | null,
-): { fillClass: string; percentClass: string } => {
-  if (remaining === null) {
-    return {
-      fillClass: "bg-slate-300/50 dark:bg-white/10",
-      percentClass: "text-slate-600 dark:text-white/65",
-    };
-  }
-
-  if (remaining >= 60) {
-    return {
-      fillClass: "bg-emerald-500",
-      percentClass: "text-emerald-700 dark:text-emerald-200",
-    };
-  }
-
-  if (remaining >= 20) {
-    return {
-      fillClass: "bg-amber-500",
-      percentClass: "text-amber-700 dark:text-amber-200",
-    };
-  }
-
-  return {
-    fillClass: "bg-rose-500",
-    percentClass: "text-rose-700 dark:text-rose-200",
-  };
-};
-
 const DEFAULT_TYPE_LABELS = ["rolling", "weekly", "monthly"] as const;
 
 const TYPE_COMPACT_LABEL_KEYS: Record<string, string> = {
@@ -264,60 +235,50 @@ export function OpenCodeGoUsageCardSection({
 
   const hasUsage = Boolean(usageEntry && usageEntry.usage.length > 0);
 
+  // Same bar as an AI account card: fill is the row's own background, label,
+  // countdown and percentage share one line. Both pages import it from
+  // @features/quota-preview so neither can drift.
+  // Same empty state as an AI account card with no quota: a quiet gauge and one
+  // line, centred in the space the bars would occupy. An invisible placeholder
+  // used to sit here, which read as a rendering fault rather than "this
+  // credential has no dashboard login configured".
   if (!queryReady) {
     return (
       <div
-        className="mt-3 min-h-[3.375rem]"
+        className="mt-3 flex min-h-[5.25rem] flex-col items-center justify-center gap-2 text-center"
         data-testid="opencode-go-usage-footprint"
-        aria-hidden="true"
       >
-        <div className="invisible mx-auto w-full max-w-[20rem] space-y-1.5">
-          {windowTypes.map((type) => (
-            <div
-              key={type}
-              className="grid min-w-0 grid-cols-1 gap-1 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center sm:gap-2"
-            >
-              <span className="truncate text-xs font-semibold">
-                {getCompactUsageLabel(type, usageByType, t)}
-              </span>
-              <div className="h-1.5 rounded-full bg-slate-200/70 dark:bg-white/8" />
-              <span className="text-right text-xs tabular-nums">
-                {remainingUnknownText}
-              </span>
-            </div>
-          ))}
+        <div
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100/90 text-slate-400 dark:bg-white/[0.06] dark:text-white/40"
+          aria-hidden="true"
+        >
+          <Gauge size={16} strokeWidth={1.5} />
         </div>
+        <p className="text-xs font-medium text-slate-500 dark:text-white/50">
+          {t("providers.opencode_go_usage_not_configured")}
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="mt-3 min-h-[3.375rem]">
+    <div className="mt-3 min-h-[5.25rem]">
       {isLoading && !hasUsage ? (
-        <div className="space-y-2">
+        <div className="w-full space-y-1.5 motion-safe:animate-pulse">
           {windowTypes.map((type) => (
-            <div
+            <QuotaBar
               key={type}
-              className="grid min-w-0 grid-cols-1 gap-1 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center sm:gap-2"
-            >
-              <span className="truncate text-xs font-semibold text-slate-400 dark:text-white/45">
-                {getCompactUsageLabel(type, usageByType, t)}
-              </span>
-              <div className="relative h-1.5 overflow-hidden rounded-full bg-slate-200/70 dark:bg-white/8">
-                <div className="absolute inset-y-0 -left-full w-1/2 animate-pulse rounded-full bg-slate-300/50 dark:bg-white/20" />
-              </div>
-              <span className="text-right text-xs tabular-nums text-slate-400 dark:text-white/45">
-                {remainingUnknownText}
-              </span>
-            </div>
+              label={getCompactUsageLabel(type, usageByType, t)}
+              percent={null}
+              percentText={remainingUnknownText}
+            />
           ))}
         </div>
       ) : hasUsage ? (
-        <div className="mx-auto w-full max-w-[20rem] space-y-1.5">
+        <div className="w-full space-y-1.5">
           {windowTypes.map((type) => {
             const item = getUsageItemForType(type, usageByType);
             const remaining = resolveRemainingPercent(item?.percentage);
-            const tone = resolveRemainingTone(remaining);
             const remainingText =
               remaining === null
                 ? remainingUnknownText
@@ -326,38 +287,28 @@ export function OpenCodeGoUsageCardSection({
                   });
 
             return (
-              <div
+              <QuotaBar
                 key={type}
-                className="grid min-w-0 grid-cols-1 gap-1 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center sm:gap-2"
-              >
-                <span className="truncate text-xs font-semibold text-slate-600 dark:text-white/65">
-                  {getCompactUsageLabel(type, usageByType, t)}
-                </span>
-                <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200/80 dark:bg-white/10">
-                  <div
-                    className={["h-full rounded-full", tone.fillClass].join(
-                      " ",
-                    )}
-                    style={{ width: `${remaining ?? 0}%` }}
-                    aria-hidden="true"
-                  />
-                </div>
-                <span
-                  className={[
-                    "truncate text-right text-xs font-semibold tabular-nums",
-                    tone.percentClass,
-                  ].join(" ")}
-                >
-                  {remainingText}
-                </span>
-              </div>
+                label={getCompactUsageLabel(type, usageByType, t)}
+                percent={remaining}
+                percentText={remainingText}
+                detailText={item?.resets_in?.trim() || null}
+              />
             );
           })}
         </div>
       ) : !isLoading ? (
-        <p className="text-xs text-slate-400 dark:text-white/45">
-          {t("providers.opencode_go_usage_not_queried")}
-        </p>
+        <div className="flex min-h-[5.25rem] flex-col items-center justify-center gap-2 text-center">
+          <div
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100/90 text-slate-400 dark:bg-white/[0.06] dark:text-white/40"
+            aria-hidden="true"
+          >
+            <Gauge size={16} strokeWidth={1.5} />
+          </div>
+          <p className="text-xs font-medium text-slate-500 dark:text-white/50">
+            {t("providers.opencode_go_usage_not_queried")}
+          </p>
+        </div>
       ) : null}
 
       {usageEntry?.error ? (
