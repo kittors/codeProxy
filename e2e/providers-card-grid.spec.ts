@@ -83,7 +83,18 @@ const mockManagementApi = async (page: Page) => {
     if (managementPath === "/config") return fulfillJson({});
     if (managementPath === "/proxy-pool") return fulfillJson({ items: [] });
     if (managementPath.startsWith("/usage/entity-stats"))
-      return fulfillJson({ source: [], auth_index: [] });
+      // Only the first OpenCode Go credential has traffic; the codex ones have
+      // none, which is what the empty-state case below relies on.
+      return fulfillJson({
+        source: [
+          {
+            entity_name: "sk-opencode-go-alpha-1234567890abcdef",
+            requests: 5864,
+            failed: 98,
+          },
+        ],
+        auth_index: [],
+      });
     if (managementPath === "/codex-api-key" && request.method() === "GET")
       return fulfillJson({ "codex-api-key": codexKeys });
     if (managementPath === "/opencode-go-api-key" && request.method() === "GET")
@@ -260,7 +271,7 @@ test("AI Providers: a channel with no traffic shows no status bar, rate or zero 
   await expect.poll(() => list.locator("> *").count()).toBe(codexKeys.length);
 
   // No usage stats are mocked, so neither codex channel has traffic.
-  await expect(list.getByRole("status")).toHaveCount(0);
+  await expect(list.getByTestId("provider-success-rate")).toHaveCount(0);
   await expect(list).not.toContainText("--");
   await expect(list).not.toContainText("Success 0");
   await expect(list).not.toContainText("Failed 0");
@@ -280,4 +291,39 @@ test("AI Providers: a channel with no traffic shows no status bar, rate or zero 
       }).length,
   );
   expect(dividerCount, "cards should carry no internal rules").toBe(0);
+});
+
+/**
+ * With traffic, the rate is a labelled bar like the quota windows above it. It
+ * used to be a strip of ~21 blocks in a footer sized to its content — about 95px
+ * wide, so each block was 4px and only the percentage was readable.
+ */
+test("AI Providers: a channel with traffic shows a full-width success-rate bar", async ({
+  page,
+}) => {
+  await setAuthed(page, "opencode-go");
+  await mockManagementApi(page);
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  await page.goto("/#/access/ai-providers");
+
+  const list = page.getByTestId("providers-tab-scroll");
+  await expect(list).toBeVisible();
+
+  const bar = list.getByTestId("provider-success-rate").first();
+  await expect(bar).toBeVisible();
+
+  const metrics = await bar.evaluate((el) => {
+    const card = el.closest(".group");
+    return {
+      width: Math.round(el.getBoundingClientRect().width),
+      cardWidth: Math.round((card as HTMLElement).getBoundingClientRect().width),
+      text: (el.textContent || "").replace(/\s+/g, " ").trim(),
+    };
+  });
+
+  expect(
+    metrics.width,
+    "the bar should span the card, not shrink to its content",
+  ).toBeGreaterThan(metrics.cardWidth * 0.7);
+  expect(metrics.text, "the bar labels itself and reports the rate").toMatch(/%$/);
 });

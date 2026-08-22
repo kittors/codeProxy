@@ -6,7 +6,7 @@ import { Card } from "@code-proxy/ui";
 import { EmptyState } from "@code-proxy/ui";
 import { ProviderCard, ProviderCardSkeleton } from "../ProviderCard";
 import { CARD_GRID_CLASS } from "../ProviderKeyListCard";
-import { ProviderStatusBar } from "@features/provider-latency";
+import { ProviderSuccessRateBar } from "./ProviderSuccessRateBar";
 import { ProviderMetricChip } from "./ProviderMetricChip";
 import { ProviderModelChips } from "./ProviderModelChips";
 import { OpenAIKeyEntrySummary } from "./OpenAIKeyEntrySummary";
@@ -219,7 +219,7 @@ export function OpenAIProvidersTab({
                   </div>
                 ) : null}
 
-                {hasStatusData ? <ProviderStatusBar data={statusData} /> : null}
+                {hasStatusData ? <ProviderSuccessRateBar data={statusData} /> : null}
               </ProviderCard>
             );
           })}

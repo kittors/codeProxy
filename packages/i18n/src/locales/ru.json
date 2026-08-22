@@ -2375,6 +2375,7 @@
   "providers": {
     "channel_usage_query_failed": "Usage query failed",
     "channel_usage_refresh": "Refresh usage",
+    "request_total": "{{count}} requests",
     "channel_usage_not_queried": "Usage not queried",
     "opencode_go_usage_compact_rolling": "Скользящее",
     "opencode_go_usage_compact_weekly": "Неделя",

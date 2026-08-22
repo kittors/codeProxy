@@ -2842,6 +2842,7 @@
     "opencode_go_usage_querying": "查询中...",
     "channel_usage_query_failed": "查询用量失败",
     "channel_usage_refresh": "刷新用量",
+    "request_total": "{{count}} 次请求",
     "opencode_go_usage_rolling": "滚动用量",
     "opencode_go_usage_weekly": "每周用量",
     "opencode_go_usage_monthly": "每月用量",
