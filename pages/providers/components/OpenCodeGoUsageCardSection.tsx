@@ -275,7 +275,7 @@ export function OpenCodeGoUsageCardSection({
           {windowTypes.map((type) => (
             <div
               key={type}
-              className="grid min-w-0 grid-cols-1 gap-1 sm:grid-cols-[2.5rem_minmax(0,1fr)_5.25rem] sm:items-center sm:gap-2"
+              className="grid min-w-0 grid-cols-1 gap-1 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center sm:gap-2"
             >
               <span className="truncate text-xs font-semibold">
                 {getCompactUsageLabel(type, usageByType, t)}
@@ -298,7 +298,7 @@ export function OpenCodeGoUsageCardSection({
           {windowTypes.map((type) => (
             <div
               key={type}
-              className="grid min-w-0 grid-cols-1 gap-1 sm:grid-cols-[2.5rem_minmax(0,1fr)_5.25rem] sm:items-center sm:gap-2"
+              className="grid min-w-0 grid-cols-1 gap-1 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center sm:gap-2"
             >
               <span className="truncate text-xs font-semibold text-slate-400 dark:text-white/45">
                 {getCompactUsageLabel(type, usageByType, t)}
@@ -328,7 +328,7 @@ export function OpenCodeGoUsageCardSection({
             return (
               <div
                 key={type}
-                className="grid min-w-0 grid-cols-1 gap-1 sm:grid-cols-[2.5rem_minmax(0,1fr)_5.25rem] sm:items-center sm:gap-2"
+                className="grid min-w-0 grid-cols-1 gap-1 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center sm:gap-2"
               >
                 <span className="truncate text-xs font-semibold text-slate-600 dark:text-white/65">
                   {getCompactUsageLabel(type, usageByType, t)}

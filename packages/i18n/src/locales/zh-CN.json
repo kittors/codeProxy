@@ -2787,6 +2787,7 @@
     "base_url_error": "基础地址不能为空",
     "priority_error": "优先级必须为数字",
     "key_entry_error": "至少需要一个 API 密钥条目",
+    "duplicate_api_key_error": "该 API 密钥已被渠道「{{name}}」使用，重复添加不会生效",
     "enable_toggle_desc_on": "当前：已启用",
     "enable_toggle_desc_off": "当前：已禁用（写入 * 规则）",
     "disable_hint": "禁用会将 * 写入排除模型；也可在下方手动编辑。",
