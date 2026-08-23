@@ -892,6 +892,8 @@
     "trend_predicted_5h_window_quota": "预测 5 小时窗口额度",
     "trend_predicted_week_window_quota": "预测周窗口额度",
     "trend_weekly_quota_used": "周额度已消耗",
+    "trend_predicted_quota_attributable_hint": "按本代理消耗的 {{percent}} 折算",
+    "trend_external_quota_used": "非代理消耗",
     "trend_cycle_start": "周期开始",
     "trend_window_title": "额度与请求趋势",
     "trend_window_5h": "5 小时",
