@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Clock } from "lucide-react";
+import { Skeleton } from "@code-proxy/ui";
 import { type QuotaItem } from "@features/quota-preview/quota-helpers";
 // Tone and bar live in the quota-preview feature so the AI accounts and AI
 // providers cards render the same quota visual; re-exported here for the
@@ -159,6 +160,42 @@ export function QuotaMetricChips({
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/**
+ * Chip placeholders for a row whose first quota probe is still running.
+ *
+ * The table cell used to print "--" while probing, which is the same thing it
+ * prints for an account that reports no quota at all — the reader could not
+ * tell "nothing to show" from "not here yet". Placeholders in the chips' own
+ * grid say which one it is, and hold the cell's height so the row does not
+ * jump when the numbers arrive.
+ */
+export function QuotaMetricChipsSkeleton({ chips = 2 }: { chips?: number }) {
+  const safeChips = Math.max(1, Math.min(6, Math.round(chips)));
+  // The neutral tone's own chip surface, so a placeholder chip is the same box
+  // as the "percentage unknown" chip it becomes.
+  const { chipClass } = resolveQuotaVisualTone(null);
+  return (
+    <div
+      className="grid w-full min-w-0 grid-cols-2 gap-1.5 py-0.5"
+      data-testid="auth-file-quota-grid-skeleton"
+      aria-busy="true"
+    >
+      {Array.from({ length: safeChips }, (_, index) => (
+        <div
+          key={index}
+          className={["flex min-w-0 items-center gap-1.5 rounded-md border px-2 py-1", chipClass].join(
+            " ",
+          )}
+        >
+          <Skeleton className="h-3.5 w-3.5 shrink-0" rounded="full" />
+          <Skeleton className="h-2.5 min-w-0 flex-1" rounded="full" />
+          <Skeleton className="h-2.5 w-6 shrink-0" rounded="full" />
+        </div>
+      ))}
     </div>
   );
 }

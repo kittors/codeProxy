@@ -3723,8 +3723,14 @@ describe("AuthFilesPage files table", () => {
     const card = title.closest("section");
     expect(card).not.toBeNull();
 
-    expect(within(card as HTMLElement).getByText("5h0s")).toBeInTheDocument();
-    expect(within(card as HTMLElement).getByText("6d0s")).toBeInTheDocument();
+    // Bars print the two largest units so the countdown cannot squeeze the
+    // percentage off the line; the full value stays on the hover title.
+    const fiveHour = within(card as HTMLElement).getByText("5h");
+    const weekly = within(card as HTMLElement).getByText("6d");
+    expect(fiveHour).toBeInTheDocument();
+    expect(weekly).toBeInTheDocument();
+    expect(fiveHour.closest("[data-testid='quota-bar-detail']")).toHaveAttribute("title", "5h0s");
+    expect(weekly.closest("[data-testid='quota-bar-detail']")).toHaveAttribute("title", "6d0s");
     expect(within(card as HTMLElement).queryByText(modifiedText)).not.toBeInTheDocument();
   });
 
