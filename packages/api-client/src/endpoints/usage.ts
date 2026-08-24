@@ -76,7 +76,17 @@ export interface AuthFileTrendResponse {
   cycle_request_total: number;
   cycle_cost_total: number;
   cycle_total_tokens?: number | null;
+  /** Pool-wide share of the cycle's quota consumed, across every surface. */
   weekly_quota_used_percent: number | null;
+  /**
+   * Share consumed by traffic the proxy forwards — the only divisor that lines
+   * up with cycle_cost_total. Equal to weekly_quota_used_percent for providers
+   * that bill one pool per surface; smaller for xAI, whose weekly pool is shared
+   * with Grok Chat. Null when the backend found no attributable window.
+   */
+  projection_quota_used_percent?: number | null;
+  /** True when the two percentages above can legitimately differ (xAI). */
+  projection_quota_attributable?: boolean;
   cycle_known?: boolean;
   cycle_start: string;
   daily_usage: AuthFileTrendUsagePoint[];

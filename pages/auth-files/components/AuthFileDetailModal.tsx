@@ -67,11 +67,17 @@ import {
   parseBucketKeyMs,
   resolveNearestBucketKey,
 } from "./trendBuckets";
+import {
+  buildTrendQuotaSummary,
+  formatCurrency,
+  formatPercent,
+  toQuotaUsedPercent,
+  FIVE_HOUR_WINDOW_SECONDS,
+  WEEK_WINDOW_SECONDS,
+} from "../hooks/trendQuotaSummary";
 
 type DetailTab = "usage" | "identity" | "fields" | "models";
 type DetailTrendWindow = "5h" | "week";
-type TrendQuotaSeries = AuthFileTrendResponse["quota_series"][number];
-type TrendUsagePoint = AuthFileTrendResponse["hourly_usage"][number];
 type IdentityFingerprintFieldSection = "effective" | "learned" | "observed";
 
 interface IdentityFingerprintFieldRow {
@@ -82,8 +88,6 @@ interface IdentityFingerprintFieldRow {
   source: IdentityFingerprintFieldSource;
 }
 
-const FIVE_HOUR_WINDOW_SECONDS = 18000;
-const WEEK_WINDOW_SECONDS = 604800;
 const TREND_CHART_ANIMATION_MS = 680;
 const TREND_CHART_ANIMATION_GUARD_MS = TREND_CHART_ANIMATION_MS + 120;
 const SUMMARY_CARD_CLASS_NAME =
@@ -114,60 +118,6 @@ const useIdentityDesktopLayout = () => {
   }, []);
 
   return matches;
-};
-
-const formatCurrency = (value: number) => `$${(Number.isFinite(value) ? value : 0).toFixed(4)}`;
-
-const clampPercent = (value: number) => Math.min(100, Math.max(0, value));
-
-const toQuotaUsedPercent = (remainingPercent: number | null | undefined) => {
-  if (typeof remainingPercent !== "number" || !Number.isFinite(remainingPercent)) return null;
-  return clampPercent(100 - clampPercent(remainingPercent));
-};
-
-const formatPercent = (value: number | null | undefined) => {
-  if (typeof value !== "number" || !Number.isFinite(value)) return "--";
-  return `${new Intl.NumberFormat(undefined, {
-    maximumFractionDigits: Number.isInteger(value) ? 0 : 1,
-  }).format(clampPercent(value))}%`;
-};
-
-const sumUsageCost = (points: TrendUsagePoint[]) =>
-  points.reduce((total, point) => {
-    const cost = typeof point.cost === "number" && Number.isFinite(point.cost) ? point.cost : 0;
-    return total + Math.max(0, cost);
-  }, 0);
-
-const latestQuotaUsedPercent = (
-  seriesList: TrendQuotaSeries[],
-  quotaKey: string,
-  matchesWindow: (windowSeconds: number) => boolean,
-) => {
-  let latestTimestamp = -Infinity;
-  let latestUsedPercent: number | null = null;
-
-  seriesList.forEach((series) => {
-    if (!matchesWindow(series.window_seconds) || series.quota_key !== quotaKey) return;
-
-    series.points.forEach((point) => {
-      const usedPercent = toQuotaUsedPercent(point.percent);
-      if (usedPercent === null) return;
-      const timestamp = Date.parse(point.timestamp);
-      if (!Number.isFinite(timestamp) || timestamp < latestTimestamp) return;
-      latestTimestamp = timestamp;
-      latestUsedPercent = usedPercent;
-    });
-  });
-
-  return latestUsedPercent;
-};
-
-const estimateQuotaBudget = (cost: number, usedPercent: number | null | undefined) => {
-  if (!Number.isFinite(cost) || cost <= 0) return 0;
-  if (typeof usedPercent !== "number" || !Number.isFinite(usedPercent)) return 0;
-  const normalizedUsedPercent = clampPercent(usedPercent);
-  if (normalizedUsedPercent <= 0) return 0;
-  return cost / (normalizedUsedPercent / 100);
 };
 
 interface AuthFileDetailModalProps {
@@ -1224,29 +1174,20 @@ export function AuthFileDetailModal({
     const cycleStart = detailTrend.cycle_start
       ? new Date(detailTrend.cycle_start).toLocaleString()
       : "--";
-    const fiveHourQuotaUsedPercent = fiveHourQuotaKey
-      ? latestQuotaUsedPercent(
-          detailTrend.quota_series,
-          fiveHourQuotaKey,
-          (windowSeconds) => windowSeconds === FIVE_HOUR_WINDOW_SECONDS,
-        )
-      : null;
-    const weeklyQuotaUsedPercent =
-      detailTrend.weekly_quota_used_percent ??
-      (showPredictedWeeklyQuota
-        ? latestQuotaUsedPercent(
-            detailTrend.quota_series,
-            weeklyQuotaKey,
-            (windowSeconds) => windowSeconds >= WEEK_WINDOW_SECONDS,
-          )
-        : null);
-    // Prefer the backend weekly used percent; fall back to the latest weekly_limit snapshot for xAI.
-    const weeklyQuotaUsed = formatPercent(weeklyQuotaUsedPercent);
-    const estimatedFiveHourQuota = estimateQuotaBudget(
-      sumUsageCost(detailTrend.hourly_usage),
-      fiveHourQuotaUsedPercent,
-    );
-    const estimatedWeeklyQuota = estimateQuotaBudget(displayCycleCostTotal, weeklyQuotaUsedPercent);
+    const {
+      weeklyQuotaUsedPercent,
+      projectionQuotaUsedPercent,
+      projectionIsAttributable,
+      externalQuotaUsedPercent,
+      estimatedFiveHourQuota,
+      estimatedWeeklyQuota,
+    } = buildTrendQuotaSummary({
+      trend: detailTrend,
+      fiveHourQuotaKey,
+      weeklyQuotaKey,
+      showPredictedWeeklyQuota,
+      cycleCostTotal: displayCycleCostTotal,
+    });
     // ponytail: hide zero noise; null/"--" is already non-zero display path
     const showLast7DaysRequests = !isCodexDetail && detailTrend.request_total > 0;
     const showCycleRequests = displayCycleRequestTotal > 0;
@@ -1257,6 +1198,10 @@ export function AuthFileDetailModal({
       typeof weeklyQuotaUsedPercent === "number" &&
       Number.isFinite(weeklyQuotaUsedPercent) &&
       weeklyQuotaUsedPercent > 0;
+    // Only worth a card when the account actually spent outside the proxy;
+    // a permanent "0%" would be noise on every well-behaved credential.
+    const showExternalQuotaUsed =
+      typeof externalQuotaUsedPercent === "number" && externalQuotaUsedPercent > 0;
     const showCycleStart = Boolean(detailTrend.cycle_start);
 
     return (
@@ -1301,17 +1246,34 @@ export function AuthFileDetailModal({
             </div>
           ) : null}
           {showWeeklyQuota ? (
-            <div className={SUMMARY_CARD_CLASS_NAME}>
+            <div className={SUMMARY_CARD_CLASS_NAME} data-testid="trend-predicted-weekly-quota">
               <p className={SUMMARY_LABEL_CLASS_NAME}>
                 {t("auth_files.trend_predicted_week_window_quota")}
               </p>
               <p className={SUMMARY_VALUE_CLASS_NAME}>{formatCurrency(estimatedWeeklyQuota)}</p>
+              {projectionIsAttributable ? (
+                <p className="mt-1 text-2xs leading-tight text-slate-500 dark:text-white/50">
+                  {t("auth_files.trend_predicted_quota_attributable_hint", {
+                    percent: formatPercent(projectionQuotaUsedPercent),
+                  })}
+                </p>
+              ) : null}
             </div>
           ) : null}
           {showWeeklyUsed ? (
             <div className={SUMMARY_CARD_CLASS_NAME}>
               <p className={SUMMARY_LABEL_CLASS_NAME}>{t("auth_files.trend_weekly_quota_used")}</p>
-              <p className={SUMMARY_VALUE_CLASS_NAME}>{weeklyQuotaUsed}</p>
+              <p className={SUMMARY_VALUE_CLASS_NAME}>{formatPercent(weeklyQuotaUsedPercent)}</p>
+            </div>
+          ) : null}
+          {showExternalQuotaUsed ? (
+            <div className={SUMMARY_CARD_CLASS_NAME} data-testid="trend-external-quota-used">
+              <p className={SUMMARY_LABEL_CLASS_NAME}>
+                {t("auth_files.trend_external_quota_used")}
+              </p>
+              <p className={SUMMARY_VALUE_CLASS_NAME}>
+                {formatPercent(externalQuotaUsedPercent)}
+              </p>
             </div>
           ) : null}
           {showCycleStart ? (
