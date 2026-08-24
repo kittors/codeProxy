@@ -11,8 +11,8 @@ import {
 import { Trans, useTranslation } from "react-i18next";
 import {
   CircleOff,
-  Columns3,
   Download,
+  Columns3,
   Ellipsis,
   Eye,
   Gauge,
@@ -81,6 +81,7 @@ import type { QuotaCardSlot } from "../hooks/quotaCardSlots";
 import { shouldShowQuotaPlaceholder } from "../hooks/quotaProbeState";
 import { AuthFileCardQuota } from "./AuthFileCardQuota";
 import { AuthFilesLoadingSkeleton } from "./AuthFilesLoadingSkeleton";
+import { AuthFilesSelectionToolbar } from "./AuthFilesSelectionToolbar";
 import { AuthFilesToolbarActions } from "./AuthFilesToolbarActions";
 
 const MAX_FILENAME_PART_LENGTH = 72;
@@ -654,7 +655,7 @@ interface AuthFilesFilesTabProps {
   selectedFileNames: string[];
   deletingAll: boolean;
   batchStatusUpdating: boolean;
-  handleDisableSelection: (names: string[]) => Promise<void>;
+  handleSetSelectionDisabled: (names: string[], disabled: boolean) => Promise<void>;
   pageItems: AuthFileItem[];
   fileColumns: DataTableColumn<AuthFileItem>[];
   filesViewMode: FilesViewMode;
@@ -758,7 +759,7 @@ export function AuthFilesFilesTab({
   selectedFileNames,
   deletingAll,
   batchStatusUpdating,
-  handleDisableSelection,
+  handleSetSelectionDisabled,
   pageItems,
   fileColumns,
   filesViewMode,
@@ -1202,59 +1203,20 @@ export function AuthFilesFilesTab({
     </HoverTooltip>
   );
 
-  const selectionToolbar =
-    selectedCount > 0 ? (
-      <div className="inline-flex h-9 max-w-full min-w-0 items-center gap-1.5 overflow-x-auto rounded-full bg-slate-50/90 px-1.5 text-xs transition-colors duration-200 ease-out dark:bg-white/[0.04]">
-        {selectionActionsMenu}
-        <span className="min-w-0 truncate px-1 font-medium text-slate-600 dark:text-white/65">
-          {t("auth_files.batch_selected", { count: selectedCount })}
-        </span>
-        <Button
-          variant="ghost"
-          size="xs"
-          className="px-2"
-          onClick={() => setSelectedFileNames([])}
-        >
-          {t("auth_files.batch_clear")}
-        </Button>
-        <Button
-          variant="secondary"
-          size="xs"
-          className="px-2"
-          onClick={() => void handleDisableSelection([...selectedFileNames])}
-          disabled={deletingAll || batchStatusUpdating || selectedCount === 0}
-        >
-          <CircleOff size={13} className="shrink-0" />
-          <span>{t("auth_files.batch_disable")}</span>
-        </Button>
-        <Button
-          variant="danger"
-          size="xs"
-          className="px-2"
-          onClick={() =>
-            setConfirm({
-              type: "deleteSelection",
-              names: [...selectedFileNames],
-            })
-          }
-          disabled={deletingAll || batchStatusUpdating}
-        >
-          {t("auth_files.batch_delete_action", { count: selectedCount })}
-        </Button>
-        <Button
-          variant="secondary"
-          size="xs"
-          className="px-2"
-          onClick={() => void handleDownloadSelection([...selectedFileNames])}
-          disabled={deletingAll || batchStatusUpdating || selectedCount === 0}
-        >
-          <Download size={13} className="shrink-0" />
-          <span>{t("auth_files.batch_download_action", { count: selectedCount })}</span>
-        </Button>
-      </div>
-    ) : (
-      selectionActionsMenu
-    );
+  const selectionToolbar = (
+    <AuthFilesSelectionToolbar
+      selectedFileNames={selectedFileNames}
+      setSelectedFileNames={setSelectedFileNames}
+      selectionActionsMenu={selectionActionsMenu}
+      deletingAll={deletingAll}
+      batchStatusUpdating={batchStatusUpdating}
+      onSetSelectionDisabled={(names, disabled) =>
+        void handleSetSelectionDisabled(names, disabled)
+      }
+      onDeleteSelection={(names) => setConfirm({ type: "deleteSelection", names })}
+      onDownloadSelection={(names) => void handleDownloadSelection(names)}
+    />
+  );
   const modelOwnerToolbarButton = canSetModelOwnerGroup ? (
     <HoverTooltip content={t("auth_files.model_owner_group")} placement="top">
       <Button

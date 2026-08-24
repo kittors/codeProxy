@@ -8,6 +8,7 @@ import { TextInput } from "@code-proxy/ui";
 import { SearchableSelect } from "@code-proxy/ui";
 import { type ProviderKeyDraft } from "../providers-helpers";
 import { createEmptyModelEntry, ModelInputList, type ModelEntryDraft } from "../ModelInputList";
+import { isModelAccessProvider as usesModelAccessList } from "../provider-model-access";
 import { ExcludedModelsEditor } from "./ExcludedModelsEditor";
 import { OpenAIModelDiscoveryPanel } from "./OpenAIModelDiscoveryPanel";
 
@@ -20,7 +21,6 @@ const SectionCard = ({ children }: { children: React.ReactNode }) => (
 );
 
 interface ProviderKeyModelsTabProps {
-  isOpenCodeGo: boolean;
   isCline: boolean;
   openCodeModels: { id: string; owned_by?: string }[];
   openCodeModelsLoading: boolean;
@@ -57,7 +57,6 @@ interface ProviderKeyModelsTabProps {
 }
 
 export function ProviderKeyModelsTab({
-  isOpenCodeGo,
   isCline,
   openCodeModels,
   openCodeModelsLoading,
@@ -94,8 +93,9 @@ export function ProviderKeyModelsTab({
   const { t } = useTranslation();
   const isOllamaCloud = editKeyType === "ollama-cloud";
   const isCommandCode = editKeyType === "commandcode";
-  const isModelAccessProvider =
-    isOpenCodeGo || isCline || isOllamaCloud || isCommandCode;
+  // Shared with the editor hook so the "explicit disabled flag" provider set
+  // cannot drift between the two.
+  const isModelAccessProvider = usesModelAccessList(editKeyType);
   const supportsLiveDiscovery =
     (editKeyType === "claude" || editKeyType === "codex") &&
     typeof discoverModels === "function" &&
