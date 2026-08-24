@@ -1578,7 +1578,7 @@ describe("AuthFilesPage files table", () => {
       );
       expect(quota).toHaveTextContent("Weekly limit");
       expect(quota).toHaveTextContent("75%");
-      expect(quota).toHaveTextContent("Grok 4 usage");
+      expect(quota).toHaveTextContent("Grok 4 remaining");
       expect(quota).toHaveTextContent("60%");
       expect(quota).toHaveTextContent("Pay as you go");
       expect(quota).toHaveTextContent("$40.00 / $50.00");

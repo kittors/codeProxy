@@ -1081,7 +1081,7 @@
     "title": "Grok Quota",
     "weekly_limit": "Weekly limit",
     "product_usage": "Product usage",
-    "product_usage_named": "{{product}} usage",
+    "product_usage_named": "{{product}} remaining",
     "used_percent": "Used {{percent}}",
     "remaining_percent": "Left {{percent}}",
     "reset_at": "Resets {{time}}",

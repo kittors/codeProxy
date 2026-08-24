@@ -928,7 +928,7 @@
     "title": "Квота Grok",
     "weekly_limit": "Недельный лимит",
     "product_usage": "Использование продукта",
-    "product_usage_named": "Использование {{product}}",
+    "product_usage_named": "Остаток {{product}}",
     "used_percent": "Использовано {{percent}}",
     "remaining_percent": "Осталось {{percent}}",
     "reset_at": "Сброс {{time}}",
