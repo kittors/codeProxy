@@ -24,6 +24,29 @@ const WEEK_SECONDS = 7 * 24 * 60 * 60;
 const FIVE_HOUR_SECONDS = 5 * 60 * 60;
 
 /**
+ * How many rows a provider usually fills, for sizing loading placeholders.
+ *
+ * Purely a visual estimate: the real row count comes from whatever the probe
+ * returns, and being off by one only means the placeholder block is slightly
+ * taller or shorter than the data that replaces it. Nothing routes on this, so
+ * an unlisted provider simply takes the default rather than being a defect.
+ */
+const EXPECTED_QUOTA_SLOTS: Partial<Record<QuotaProvider, number>> = {
+  // code + review, each with a 5-hour and a weekly window.
+  codex: 4,
+  // Weekly limit, per-model usage, pay-as-you-go and monthly credits.
+  xai: 4,
+  // One weekly and one 5-hour window per model group.
+  antigravity: 4,
+  kimi: 2,
+};
+
+const DEFAULT_EXPECTED_QUOTA_SLOTS = 3;
+
+export const expectedQuotaSlotCount = (provider: QuotaProvider | null | undefined): number =>
+  (provider ? EXPECTED_QUOTA_SLOTS[provider] : undefined) ?? DEFAULT_EXPECTED_QUOTA_SLOTS;
+
+/**
  * Strip the trailing noun the upstream appends to its group names.
  *
  * It sends "Gemini Models" and "Claude and GPT models"; on a row that already

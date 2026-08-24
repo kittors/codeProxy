@@ -78,6 +78,9 @@ import {
 } from "@features/quota-preview/quota-helpers";
 import type { QuotaProvider } from "@features/quota-preview/quota-fetch";
 import type { QuotaCardSlot } from "../hooks/quotaCardSlots";
+import { shouldShowQuotaPlaceholder } from "../hooks/quotaProbeState";
+import { AuthFileCardQuota } from "./AuthFileCardQuota";
+import { AuthFilesLoadingSkeleton } from "./AuthFilesLoadingSkeleton";
 import { AuthFilesToolbarActions } from "./AuthFilesToolbarActions";
 
 const MAX_FILENAME_PART_LENGTH = 72;
@@ -1550,20 +1553,19 @@ export function AuthFilesFilesTab({
         <>
           <div
             className="md:min-h-0 md:flex-1 md:overflow-hidden"
+            // Kept from when this only ever drew table rows: the id names the
+            // list placeholder, whichever view it is drawn for.
             data-testid="auth-files-table-skeleton"
+            // The placeholders themselves are hidden from assistive tech, so
+            // the region has to be what says the list is still loading.
+            aria-busy="true"
           >
-            <ScrollArea
-              className="h-full"
-              contentClassName="space-y-2 px-4 py-4 pr-8 sm:py-5 sm:pl-5 sm:pr-8"
-              scrollbarTrackInset={0}
-            >
-              {Array.from({ length: 7 }).map((_, idx) => (
-                <div
-                  key={`s-${idx}`}
-                  className="h-[84px] rounded-xl bg-slate-50/80 transition-colors duration-200 ease-out motion-safe:animate-pulse dark:bg-white/[0.03]"
-                />
-              ))}
-            </ScrollArea>
+            <AuthFilesLoadingSkeleton
+              viewMode={filesViewMode}
+              cardColumns={cardColumns}
+              dense={denseCards}
+              cards={Math.min(pageSize, cardColumns * 2)}
+            />
           </div>
           {paginationBar}
         </>
@@ -1733,6 +1735,15 @@ export function AuthFilesFilesTab({
 
                   const quotaRefreshing = provider
                     ? quotaByFileName[file.name]?.status === "loading"
+                    : false;
+                  // The page's own probe is silent by design, so the card has to
+                  // decide for itself whether an empty quota area is a result or
+                  // a wait.
+                  const quotaProbing = provider
+                    ? shouldShowQuotaPlaceholder(
+                        state,
+                        refreshingAll || statusUsageLoading,
+                      )
                     : false;
                   const resetCreditCount =
                     provider === "codex" &&
@@ -2035,7 +2046,10 @@ export function AuthFilesFilesTab({
                       }
                       bodyTestId="auth-file-card-quota"
                       bodyClassName={
-                        slots.length === 0
+                        // Placeholders take the same spacing as the rows they
+                        // stand in for; only the empty state needs the column
+                        // layout it centres itself in.
+                        slots.length === 0 && !quotaProbing
                           ? "flex flex-col"
                           : denseCards
                             ? "space-y-2"
@@ -2158,36 +2172,14 @@ export function AuthFilesFilesTab({
                         </>
                       }
                     >
-                        {slots.length > 0 ? (
-                          <div className={denseCards ? "space-y-2" : "space-y-3"}>
-                            {slots.map((slot) =>
-                              renderQuotaBar(slot.label, slot.item, denseCards, slot.hint),
-                            )}
-                          </div>
-                        ) : (
-                          <div
-                            className={[
-                              "flex flex-1 flex-col items-center justify-center gap-2 text-center",
-                              denseCards ? "py-3" : "py-6",
-                            ].join(" ")}
-                            data-testid="auth-file-card-quota-empty"
-                          >
-                            <div
-                              className={[
-                                "flex items-center justify-center rounded-full bg-slate-100/90 text-slate-400 dark:bg-white/[0.06] dark:text-white/40",
-                                denseCards ? "h-7 w-7" : "h-9 w-9",
-                              ].join(" ")}
-                              aria-hidden="true"
-                            >
-                              <Gauge size={denseCards ? 14 : 16} strokeWidth={1.5} />
-                            </div>
-                            <p className="text-xs font-medium text-slate-500 dark:text-white/50">
-                              {quotaRefreshing
-                                ? t("common.loading_ellipsis")
-                                : t("auth_files.quota_unavailable")}
-                            </p>
-                          </div>
-                        )}
+                      <AuthFileCardQuota
+                        slots={slots}
+                        provider={provider}
+                        probing={quotaProbing}
+                        dense={denseCards}
+                        renderQuotaBar={renderQuotaBar}
+                        emptyLabel={t("auth_files.quota_unavailable")}
+                      />
                     </EntityCard>
                   );
                 })}
