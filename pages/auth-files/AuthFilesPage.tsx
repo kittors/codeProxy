@@ -363,7 +363,7 @@ export function AuthFilesPage() {
     handleDownloadSelection,
     handleUpload,
     handleDeleteSelection,
-    handleDisableSelection,
+    handleSetSelectionDisabled,
     setFileEnabled,
     saveAuthFileTags,
   } = useAuthFilesFileActions({
@@ -901,7 +901,7 @@ export function AuthFilesPage() {
         selectedFileNames={selectedFileNames}
         deletingAll={deletingAll}
         batchStatusUpdating={batchStatusUpdating}
-        handleDisableSelection={handleDisableSelection}
+        handleSetSelectionDisabled={handleSetSelectionDisabled}
         pageItems={pageItems}
         fileColumns={fileColumns}
         filesViewMode={filesViewMode}

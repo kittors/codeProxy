@@ -5,6 +5,7 @@ import { TextInput } from "@code-proxy/ui";
 import { Select } from "@code-proxy/ui";
 import { ToggleSwitch } from "@code-proxy/ui";
 import type { ProviderKeyDraft } from "../providers-helpers";
+import { isModelAccessProvider } from "../provider-model-access";
 
 const SectionCard = ({ children }: { children: React.ReactNode }) => (
   <div className="rounded-xl border border-slate-900/8 bg-white/70 p-4 shadow-sm dark:border-white/8 dark:bg-neutral-950/60">
@@ -36,6 +37,10 @@ export function ProviderKeyBasicTab({
   const { t } = useTranslation();
   const isBedrock = editKeyType === "bedrock";
   const isBedrockSigV4 = isBedrock && keyDraft.authMode === "sigv4";
+  // Providers with an explicit `disabled` field are switched off outright; the
+  // rest are switched off by writing a "*" exclude rule, and the copy has to say
+  // which one is happening.
+  const usesDisabledFlag = isModelAccessProvider(editKeyType);
 
   return (
     <div className="space-y-4">
@@ -77,13 +82,17 @@ export function ProviderKeyBasicTab({
           description={
             editKeyEnabled
               ? t("providers.enable_toggle_desc_on")
-              : t("providers.enable_toggle_desc_off")
+              : t(
+                  usesDisabledFlag
+                    ? "providers.enable_toggle_desc_off_flag"
+                    : "providers.enable_toggle_desc_off",
+                )
           }
           checked={editKeyEnabled}
           onCheckedChange={editKeyEnabledToggle}
         />
         <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
-          {t("providers.disable_hint")}
+          {t(usesDisabledFlag ? "providers.disable_hint_flag" : "providers.disable_hint")}
         </p>
       </SectionCard>
 
