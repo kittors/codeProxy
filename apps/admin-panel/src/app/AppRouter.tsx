@@ -136,7 +136,7 @@ function StaleRoutePage() {
 
 /** Must render Routes itself so embed <Route>s are direct children of <Routes>. */
 function AuthenticatedRoutes() {
-  const { state } = useAuth();
+  const { state, can } = useAuth();
   const routes = pageRoutes;
   const publicRoutes = routes.filter((r) => !r.auth);
   const authStandaloneRoutes = routes.filter((r) => r.auth && r.layout === "standalone");
@@ -149,8 +149,15 @@ function AuthenticatedRoutes() {
     [state.principal?.menus],
   );
 
+  // Online update is gated on the same permission its endpoints require
+  // (system.status.read, per the backend's route permission table). Subscribing
+  // every authenticated operator meant tenant admins polled an endpoint the server
+  // refuses, forever: on a live instance that was ~28k refusals in the audit log in
+  // 18 hours, from a feature those operators cannot use.
   return (
-    <OnlineUpdateProvider enabled={state.isAuthenticated && !state.isRestoring}>
+    <OnlineUpdateProvider
+      enabled={state.isAuthenticated && !state.isRestoring && can("system.status.read")}
+    >
       <ChunkLoadErrorBoundary>
         <Suspense fallback={<RouteFallback />}>
           <Routes>

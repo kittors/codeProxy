@@ -87,7 +87,7 @@ describe("useAuthFilesFileActions batch mutations", () => {
     const { result, setFiles } = setup({ loadAll });
 
     await act(async () => {
-      await result.current.handleDisableSelection(["a.json", "b.json"]);
+      await result.current.handleSetSelectionDisabled(["a.json", "b.json"], true);
     });
 
     expect(mocks.setStatus.mock.calls).toEqual([
@@ -105,6 +105,37 @@ describe("useAuthFilesFileActions batch mutations", () => {
     ).toEqual([
       { name: "a.json", disabled: true },
       { name: "b.json", disabled: true },
+    ]);
+    expect(mocks.notify).toHaveBeenCalledWith({
+      type: "success",
+      message: "auth_files.batch_status_success",
+    });
+  });
+
+  it("re-enables every selected auth file", async () => {
+    const loadAll = vi.fn(async (): Promise<AuthFileItem[]> => [
+      { name: "a.json", disabled: false },
+      { name: "b.json", disabled: false },
+    ]);
+    const { result, setFiles } = setup({ loadAll });
+
+    await act(async () => {
+      await result.current.handleSetSelectionDisabled(["a.json", "b.json"], false);
+    });
+
+    expect(mocks.setStatus.mock.calls).toEqual([
+      ["a.json", false],
+      ["b.json", false],
+    ]);
+    const updateFiles = setFiles.mock.calls.at(-1)?.[0];
+    expect(
+      (updateFiles as (files: AuthFileItem[]) => AuthFileItem[])([
+        { name: "a.json", disabled: true },
+        { name: "b.json", disabled: true },
+      ]),
+    ).toEqual([
+      { name: "a.json", disabled: false },
+      { name: "b.json", disabled: false },
     ]);
     expect(mocks.notify).toHaveBeenCalledWith({
       type: "success",

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Clock, Info } from "lucide-react";
-import { HoverTooltip } from "@code-proxy/ui";
+import { HoverTooltip, Skeleton } from "@code-proxy/ui";
 import { clampPercent } from "./quota-helpers";
 
 export type QuotaVisualTone = {
@@ -123,6 +123,12 @@ export interface QuotaBarProps {
   percentText?: string;
   /** Countdown or reset hint, shown beside `detailIcon`. */
   detailText?: string | null;
+  /**
+   * Full text behind an abbreviated `detailText`, surfaced on hover. The bar
+   * shows a shortened countdown so it cannot crowd the percentage out; the
+   * precise value stays reachable rather than being dropped.
+   */
+  detailTitle?: string | null;
   /** Icon before `detailText`. Defaults to a clock, which suits a countdown. */
   detailIcon?: ReactNode;
   /** Explains what the window means; rendered as a hoverable info icon. */
@@ -148,6 +154,7 @@ export function QuotaBar({
   tone: toneBand = "auto",
   percentText,
   detailText,
+  detailTitle,
   detailIcon,
   hint,
   compact = false,
@@ -208,15 +215,22 @@ export function QuotaBar({
         </span>
         {detailText ? (
           <span
+            data-testid="quota-bar-detail"
+            title={detailTitle ?? undefined}
             className={[
-              "inline-flex max-w-[46%] shrink-0 items-center gap-0.5 truncate tabular-nums",
+              // `truncate` on this element does nothing: the countdown is an
+              // anonymous text run inside a flex container, so text-overflow
+              // never applies to it and the string was hard-clipped right up
+              // against the percentage — reading as if the number sat on top of
+              // it. The text needs its own block box to ellipsize in.
+              "inline-flex min-w-0 max-w-[46%] items-center gap-0.5 tabular-nums",
               tone.barMetaClass,
             ].join(" ")}
           >
             {detailIcon ?? (
               <Clock size={compact ? 9 : 10} className="shrink-0" aria-hidden />
             )}
-            {detailText}
+            <span className="min-w-0 truncate">{detailText}</span>
           </span>
         ) : null}
         <span
@@ -225,6 +239,80 @@ export function QuotaBar({
           {shownPercent}
         </span>
       </div>
+    </div>
+  );
+}
+
+// Label widths cycle instead of repeating one length: a column of identical
+// grey bars reads as a rendering fault, a varied one reads as text not there
+// yet. Percent placeholders stay the same width because real percentages do.
+const QUOTA_BAR_SKELETON_LABEL_WIDTHS = ["w-24", "w-20", "w-28", "w-16"];
+
+/**
+ * A quota bar that has no numbers yet.
+ *
+ * Same border, height and padding as {@link QuotaBar}, so the rows that appear
+ * when the probe lands take exactly the space the placeholders held — the card
+ * does not resize under the reader. Used while a first probe is in flight; a
+ * refresh that already has values updates them in place instead, since
+ * replacing readable numbers with grey bars loses information.
+ */
+export function QuotaBarSkeleton({
+  compact = false,
+  labelWidthClass = QUOTA_BAR_SKELETON_LABEL_WIDTHS[0],
+}: {
+  compact?: boolean;
+  labelWidthClass?: string;
+}): ReactNode {
+  // The neutral tone's own track, so an empty placeholder is the same box as a
+  // bar whose percentage is unknown.
+  const { barTrackClass } = resolveQuotaVisualTone(null);
+  return (
+    <div
+      aria-hidden="true"
+      className={[
+        "flex w-full items-center justify-between gap-2 rounded-md border",
+        barTrackClass,
+        compact ? "h-[22px] px-1.5" : "h-6 px-2",
+      ].join(" ")}
+    >
+      <Skeleton className={`h-2.5 ${labelWidthClass}`} rounded="full" />
+      <Skeleton className="h-2.5 w-7" rounded="full" />
+    </div>
+  );
+}
+
+/**
+ * A stack of quota-bar placeholders, laid out like the real rows.
+ *
+ * `rows` should be what the account is expected to report, so the placeholder
+ * block is close to the height the data will need.
+ */
+export function QuotaBarSkeletonList({
+  rows,
+  compact = false,
+  testId,
+}: {
+  rows: number;
+  compact?: boolean;
+  testId?: string;
+}): ReactNode {
+  const safeRows = Math.max(1, Math.min(8, Math.round(rows)));
+  return (
+    <div
+      data-testid={testId}
+      aria-hidden="true"
+      className={compact ? "space-y-2" : "space-y-3"}
+    >
+      {Array.from({ length: safeRows }, (_, index) => (
+        <QuotaBarSkeleton
+          key={index}
+          compact={compact}
+          labelWidthClass={
+            QUOTA_BAR_SKELETON_LABEL_WIDTHS[index % QUOTA_BAR_SKELETON_LABEL_WIDTHS.length]
+          }
+        />
+      ))}
     </div>
   );
 }

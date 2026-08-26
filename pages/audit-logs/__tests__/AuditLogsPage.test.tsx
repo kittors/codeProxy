@@ -137,6 +137,42 @@ describe("AuditLogsPage", () => {
     ).not.toBeInTheDocument();
   });
 
+  /**
+   * "Refused" and "errored" used to render as the same red badge, which is the
+   * distinction an audit reader most needs: one is somebody being denied access,
+   * the other is the server failing.
+   */
+  test("distinguishes a refused result from a failed one", async () => {
+    auditLogs.mockResolvedValue({
+      items: [
+        {
+          id: 21,
+          tenant_id: "t-1",
+          tenant_name: "Acme",
+          tenant_slug: "acme",
+          actor_kind: "user_session",
+          actor_user_id: "u-1",
+          actor_username: "alice",
+          actor_display_name: "Alice",
+          action: "management.get",
+          resource_type: "update",
+          resource_id: "progress",
+          result: "denied",
+          request_id: "req-3",
+          created_at: "2026-08-08T09:51:15Z",
+        },
+      ],
+      total: 1,
+      page: 1,
+      size: 50,
+    });
+
+    render(<AuditLogsPage />);
+
+    expect(await screen.findByText("identity_admin.result_denied")).toBeInTheDocument();
+    expect(screen.queryByText("identity_admin.result_failed")).not.toBeInTheDocument();
+  });
+
   test("opens detail with call chain and project method", async () => {
     const user = userEvent.setup();
     render(<AuditLogsPage />);

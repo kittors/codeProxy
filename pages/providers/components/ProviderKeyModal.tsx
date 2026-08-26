@@ -732,7 +732,6 @@ export function ProviderKeyModal({
           {showModelsTab ? (
             <TabsContent value="models">
               <ProviderKeyModelsTab
-                isOpenCodeGo={isOpenCodeGo}
                 isCline={isCline}
                 openCodeModels={openCodeModels}
                 openCodeModelsLoading={openCodeModelsLoading}

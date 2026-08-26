@@ -16,6 +16,23 @@ export type ModelAccessProvider =
   | "ollama-cloud"
   | "commandcode";
 
+const MODEL_ACCESS_PROVIDERS: readonly string[] = [
+  "opencode-go",
+  "cline",
+  "ollama-cloud",
+  "commandcode",
+];
+
+/**
+ * These providers keep their on/off state in an explicit `disabled` config
+ * field; every other provider expresses "off" as an exclude-everything model
+ * rule. Reading one representation while writing the other leaves the card
+ * showing a stale state, so the check lives here and nowhere else.
+ */
+export const isModelAccessProvider = (
+  provider: string,
+): provider is ModelAccessProvider => MODEL_ACCESS_PROVIDERS.includes(provider);
+
 export type DiscoveredProviderModel = { id: string; owned_by?: string };
 
 export const OPENCODE_GO_MODELS_URL = "https://opencode.ai/zen/go/v1/models";
