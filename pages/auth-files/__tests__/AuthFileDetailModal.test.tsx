@@ -571,6 +571,101 @@ describe("AuthFileDetailModal", () => {
     // $7.352 / 6% ≈ $122.5333 full weekly window budget.
     expectSummaryCard("Predicted weekly window quota", "$122.5333");
     expect(screen.queryByText("Predicted 5-hour window quota")).not.toBeInTheDocument();
+    // Without an attributable figure the pool-wide percent is all there is, so
+    // the derivation hint and the external-consumption card stay hidden.
+    expect(screen.queryByText("Consumed outside the proxy")).not.toBeInTheDocument();
+  });
+
+  // Live SuperGrok account: 19% of the shared weekly pool spent, 16% of it by
+  // Grok Build (this proxy) and 3% by Grok Chat on the web. The projection
+  // divides Grok Build cost, so dividing by 19% reported $676.25 for a pool
+  // actually worth ~$803 — and the number sank further the more the account was
+  // used outside the proxy.
+  test("divides xAI weekly projection by attributable usage, not the shared pool", () => {
+    renderDetailModal({
+      detailFile: {
+        name: "xai-user.json",
+        label: "xAI Grok",
+        type: "xai",
+        provider: "xai",
+        size: 256,
+      },
+      modelsFileType: "xai",
+      quotaState: {
+        status: "success",
+        planType: "supergrok",
+        items: [],
+        updatedAt: Date.now(),
+      },
+      detailTrend: {
+        auth_index: "xai-auth",
+        days: 7,
+        hours: 5,
+        request_total: 1848,
+        cycle_request_total: 1213,
+        cycle_cost_total: 128.4874,
+        weekly_quota_used_percent: 19,
+        projection_quota_used_percent: 16,
+        projection_quota_attributable: true,
+        cycle_known: true,
+        cycle_start: "2026-08-20T06:45:51Z",
+        daily_usage: [],
+        hourly_usage: [],
+        quota_series: [],
+      },
+    });
+
+    // Total consumption still reads 19% — that is what the account spent.
+    expectSummaryCard("Weekly quota used", "19%");
+    // $128.4874 / 16% = $803.0462, not the $676.2496 that 19% produced.
+    expectSummaryCard("Predicted weekly window quota", "$803.0462");
+    expect(screen.queryByText("$676.2496")).not.toBeInTheDocument();
+
+    // The two percentages differ on purpose, so the panel says which one the
+    // projection used and how much of the pool went elsewhere.
+    const projectionCard = screen.getByTestId("trend-predicted-weekly-quota");
+    expect(within(projectionCard).getByText("Derived from the 16% this proxy consumed"))
+      .toBeInTheDocument();
+    expectSummaryCard("Consumed outside the proxy", "3%");
+  });
+
+  // No attributable window (upstream sent no product breakdown) must not zero
+  // the projection out — the pool-wide figure is still better than nothing.
+  test("falls back to pool-wide percent when xAI reports no attributable window", () => {
+    renderDetailModal({
+      detailFile: {
+        name: "xai-user.json",
+        label: "xAI Grok",
+        type: "xai",
+        provider: "xai",
+        size: 256,
+      },
+      modelsFileType: "xai",
+      quotaState: { status: "success", planType: "supergrok", items: [], updatedAt: Date.now() },
+      detailTrend: {
+        auth_index: "xai-auth",
+        days: 7,
+        hours: 5,
+        request_total: 180,
+        cycle_request_total: 180,
+        cycle_cost_total: 7.352,
+        weekly_quota_used_percent: 6,
+        projection_quota_used_percent: null,
+        projection_quota_attributable: true,
+        cycle_known: true,
+        cycle_start: "2026-07-12T05:05:02Z",
+        daily_usage: [],
+        hourly_usage: [],
+        quota_series: [],
+      },
+    });
+
+    expectSummaryCard("Predicted weekly window quota", "$122.5333");
+    // Nothing to attribute means nothing to explain or to call external.
+    expect(
+      screen.queryByText("Derived from the 6% this proxy consumed"),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Consumed outside the proxy")).not.toBeInTheDocument();
   });
 
   test("enables usage trend with 5h and weekly predictions for Claude files", () => {

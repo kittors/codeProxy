@@ -2,6 +2,7 @@ import {
   updateApi,
   type UpdateProgressResponse,
 } from "@code-proxy/api-client/endpoints/update";
+import { isRunningProgress } from "../model/updateModel";
 
 /**
  * Transport for update progress.
@@ -23,16 +24,53 @@ import {
  *      if the stream never comes back (a buffering proxy, for instance).
  *   3. Resume from the last event id so the reconnect delivers what was missed
  *      instead of dropping the client into a hole.
+ *
+ * All of that is right *during* an update and wrong the rest of the time, which is
+ * almost always. Panels are left open for hours with nothing being updated, and on
+ * a deployment without the updater sidecar every request fails: measured on a live
+ * instance, one idle tab issued ~33 requests a minute forever — a 5s-timeout 502 on
+ * every poll, plus a stream that answered 204 and was immediately reconnected. Each
+ * failed poll also wrote an audit row, which is how the governance page ended up
+ * holding 33k rows of update polling.
+ *
+ * So the cadence follows what is actually happening: fast while a run is in flight
+ * (the case the aggressive reconnect exists for), slow and backing off when idle.
  */
 
-/** Reconnect delays. Deliberately aggressive: the server being gone is expected. */
+/**
+ * Reconnect delays while a run is in flight. Deliberately aggressive: the server
+ * being gone is the expected path through an update.
+ */
 const RECONNECT_BASE_MS = 300;
 const RECONNECT_FACTOR = 1.6;
 const RECONNECT_MAX_MS = 3000;
 const RECONNECT_JITTER = 0.25;
 
-/** Poll cadence while the stream is unavailable. */
+/**
+ * Reconnect delays when no run is in flight. A stream that is not delivering while
+ * nothing is happening is not an incident, and reconnecting at three per second
+ * only costs the server.
+ */
+const IDLE_RECONNECT_BASE_MS = 3000;
+const IDLE_RECONNECT_MAX_MS = 30_000;
+
+/** Poll cadence while a run is in flight and the stream is not delivering. */
 const POLL_INTERVAL_MS = 2000;
+
+/**
+ * Poll cadence when nothing is in flight, backing off while it keeps failing. The
+ * ceiling still catches an update started elsewhere within half a minute or so of
+ * a healthy endpoint answering.
+ */
+const IDLE_POLL_INTERVAL_MS = 30_000;
+const IDLE_POLL_MAX_MS = 300_000;
+
+/**
+ * How long an explicit refresh keeps the fast cadence. It covers the window
+ * between "apply accepted" and the first progress event, during which there is
+ * nothing in `latest` to prove a run is in flight.
+ */
+const ACTIVE_HINT_MS = 5 * 60_000;
 
 /**
  * How long the transport may be out of contact before it stops claiming an update
@@ -78,8 +116,30 @@ let latest: UpdateProgressResponse | null = null;
 let lastEventId: number | null = null;
 let link: UpdateLinkState = "reconnecting";
 let lastContactAt: number | null = null;
+let activeHintUntil = 0;
+let pollFailures = 0;
+/**
+ * Set when the server refuses the operator outright. Retrying cannot change a
+ * permission decision, and it was those retries — one refusal every two seconds
+ * from every open tab — that buried the audit log.
+ */
+let refused = false;
 
 const now = () => Date.now();
+
+/**
+ * Whether an update is believed to be in flight. Everything that trades server
+ * load for latency keys off this.
+ */
+const isActive = () => isRunningProgress(latest) || now() < activeHintUntil;
+
+/** Reads a status off an unknown rejection without depending on the error class. */
+const statusOf = (error: unknown): number =>
+  typeof (error as { status?: unknown } | null)?.status === "number"
+    ? (error as { status: number }).status
+    : 0;
+
+const isRefusal = (error: unknown) => statusOf(error) === 403;
 
 const snapshot = (): UpdateProgressSnapshot => {
   const staleForMs = lastContactAt === null ? null : now() - lastContactAt;
@@ -119,11 +179,24 @@ const accept = (progress: UpdateProgressResponse, source: UpdateLinkState) => {
 };
 
 const reconnectDelay = (attempt: number) => {
-  const base = Math.min(RECONNECT_MAX_MS, RECONNECT_BASE_MS * RECONNECT_FACTOR ** Math.max(0, attempt));
+  const [start, ceiling] = isActive()
+    ? [RECONNECT_BASE_MS, RECONNECT_MAX_MS]
+    : [IDLE_RECONNECT_BASE_MS, IDLE_RECONNECT_MAX_MS];
+  const base = Math.min(ceiling, start * RECONNECT_FACTOR ** Math.max(0, attempt));
   // Jitter keeps several open tabs from retrying in lockstep against a container
   // that is still coming up.
   const jitter = base * RECONNECT_JITTER * (Math.random() * 2 - 1);
   return Math.max(0, Math.round(base + jitter));
+};
+
+/**
+ * Delay before the next poll. While a run is in flight this is the old fixed
+ * cadence; otherwise it starts slow and doubles for as long as the endpoint keeps
+ * failing, which is the shape of a deployment with no updater sidecar.
+ */
+const pollDelay = () => {
+  if (isActive()) return POLL_INTERVAL_MS;
+  return Math.min(IDLE_POLL_MAX_MS, IDLE_POLL_INTERVAL_MS * 2 ** Math.min(pollFailures, 8));
 };
 
 const sleep = (ms: number, signal: AbortSignal) =>
@@ -148,9 +221,16 @@ const sleep = (ms: number, signal: AbortSignal) =>
 const pollOnce = async (signal: AbortSignal) => {
   try {
     const progress = await updateApi.progress({ signal });
+    pollFailures = 0;
     if (!signal.aborted) accept(progress, link === "live" ? "live" : "polling");
-  } catch {
-    if (!signal.aborted && link !== "live") {
+  } catch (error: unknown) {
+    if (signal.aborted) return;
+    if (isRefusal(error)) {
+      stopTransport();
+      return;
+    }
+    pollFailures += 1;
+    if (link !== "live") {
       link = "reconnecting";
       emit();
     }
@@ -162,9 +242,9 @@ const startPolling = (signal: AbortSignal) => {
     if (signal.aborted) return;
     // Polling only covers the gap; while the stream is healthy it would be noise.
     if (link !== "live") await pollOnce(signal);
-    if (!signal.aborted) pollTimer = globalThis.setTimeout(tick, POLL_INTERVAL_MS);
+    if (!signal.aborted && !refused) pollTimer = globalThis.setTimeout(tick, pollDelay());
   };
-  pollTimer = globalThis.setTimeout(tick, POLL_INTERVAL_MS);
+  pollTimer = globalThis.setTimeout(tick, pollDelay());
 };
 
 const stopPolling = () => {
@@ -174,8 +254,21 @@ const stopPolling = () => {
   }
 };
 
+/**
+ * Stops the transport without dropping subscribers, so a refused operator keeps
+ * whatever state was already rendered instead of watching it reset.
+ */
+const stopTransport = () => {
+  refused = true;
+  generation += 1;
+  stopPolling();
+  controller?.abort();
+  controller = null;
+  running = null;
+};
+
 const ensureStream = () => {
-  if (running || listeners.size === 0) return;
+  if (running || listeners.size === 0 || refused) return;
 
   const abort = new AbortController();
   const myGeneration = generation;
@@ -205,8 +298,13 @@ const ensureStream = () => {
             params: lastEventId === null ? undefined : { last_event_id: String(lastEventId) },
           },
         );
-      } catch {
-        // Expected whenever the application container is recreated.
+      } catch (error: unknown) {
+        // Expected whenever the application container is recreated — unless the
+        // server refused the operator, which no amount of reconnecting fixes.
+        if (isRefusal(error)) {
+          stopTransport();
+          break;
+        }
       }
       if (signal.aborted || listeners.size === 0 || generation !== myGeneration) break;
 
@@ -235,6 +333,11 @@ const teardown = () => {
   lastEventId = null;
   lastContactAt = null;
   link = "reconnecting";
+  activeHintUntil = 0;
+  pollFailures = 0;
+  // Cleared with the rest of the state: the next subscriber may be a different
+  // session, and a sign-in with the permission must not inherit the refusal.
+  refused = false;
 };
 
 /** Subscribes to update progress. Returns an unsubscribe function. */
@@ -250,9 +353,20 @@ export const subscribeUpdateProgress = (listener: Listener) => {
   };
 };
 
-/** Forces an immediate refresh, used right after triggering an update. */
+/**
+ * Forces an immediate refresh, used right after triggering an update. It also
+ * arms the fast cadence: the run has been accepted but nothing has reported it
+ * yet, so `latest` cannot prove anything is in flight.
+ */
 export const refreshUpdateProgress = () => {
-  if (controller) void pollOnce(controller.signal);
+  activeHintUntil = now() + ACTIVE_HINT_MS;
+  if (controller) {
+    void pollOnce(controller.signal);
+    // The pending timer was scheduled at the idle cadence; reschedule so the next
+    // poll lands two seconds from now rather than up to five minutes away.
+    stopPolling();
+    startPolling(controller.signal);
+  }
 };
 
 /** Test seam: resets module state between cases. */

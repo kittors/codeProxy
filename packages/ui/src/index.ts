@@ -63,7 +63,11 @@ export { Card } from "./primitives/Card";
 export { Surface, surface } from "./primitives/Surface";
 export type { SurfaceOptions, SurfaceRadius, SurfaceTone } from "./primitives/Surface";
 export { Checkbox } from "./primitives/Checkbox";
-export { EntityCard, entityCardGridClass } from "./primitives/EntityCard";
+export {
+  EntityCard,
+  EntityCardSkeleton,
+  entityCardGridClass,
+} from "./primitives/EntityCard";
 export type { EntityCardProps } from "./primitives/EntityCard";
 export { DateTimePicker } from "./primitives/DateTimePicker";
 export { DropdownMenu } from "./primitives/DropdownMenu";

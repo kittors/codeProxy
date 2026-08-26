@@ -364,8 +364,12 @@ export function useAuthFilesFileActions({
     [detailFile, loadAll, notify, setDetailFile, setDetailOpen, setFiles, setSelectedFileNames, t],
   );
 
-  const handleDisableSelection = useCallback(
-    async (names: string[]) => {
+  /**
+   * Batch status switch. Both directions go through here: a selection that can
+   * only be disabled leaves accounts stranded with no way back from the toolbar.
+   */
+  const handleSetSelectionDisabled = useCallback(
+    async (names: string[], disabled: boolean) => {
       const targets = Array.from(new Set(names.map((name) => name.trim()).filter(Boolean)));
       if (targets.length === 0) return;
 
@@ -375,38 +379,37 @@ export function useAuthFilesFileActions({
         ...Object.fromEntries(targets.map((name) => [name, true])),
       }));
       try {
-        const disabledNames = new Set<string>();
+        const switchedNames = new Set<string>();
         const requestFailures = new Set<string>();
 
         for (const name of targets) {
           try {
-            const result = await authFilesApi.setStatus(name, true);
-            if (result.disabled) disabledNames.add(name);
+            const result = await authFilesApi.setStatus(name, disabled);
+            if (result.disabled === disabled) switchedNames.add(name);
             else requestFailures.add(name);
           } catch {
             requestFailures.add(name);
           }
         }
 
+        // A failed request may still have landed server-side; trust the refreshed list.
         const refreshedFiles = await loadAll();
         const filesByName = new Map(refreshedFiles.map((file) => [file.name, file]));
         requestFailures.forEach((name) => {
-          if (filesByName.get(name)?.disabled === true) disabledNames.add(name);
+          if (Boolean(filesByName.get(name)?.disabled) === disabled) switchedNames.add(name);
         });
 
-        if (disabledNames.size > 0) {
+        if (switchedNames.size > 0) {
           invalidateConfiguredModelAvailability();
           setFiles((prev) =>
-            prev.map((file) =>
-              disabledNames.has(file.name) ? { ...file, disabled: true } : file,
-            ),
+            prev.map((file) => (switchedNames.has(file.name) ? { ...file, disabled } : file)),
           );
           setDetailFile((prev) =>
-            prev && disabledNames.has(prev.name) ? { ...prev, disabled: true } : prev,
+            prev && switchedNames.has(prev.name) ? { ...prev, disabled } : prev,
           );
         }
 
-        const success = disabledNames.size;
+        const success = switchedNames.size;
         const failed = targets.length - success;
         notify({
           type: failed === 0 ? "success" : "error",
@@ -426,6 +429,7 @@ export function useAuthFilesFileActions({
     },
     [loadAll, notify, setDetailFile, setFiles, t],
   );
+
 
   const setFileEnabled = useCallback(
     async (file: AuthFileItem, enabled: boolean) => {
@@ -526,7 +530,7 @@ export function useAuthFilesFileActions({
     handleDownloadSelection,
     handleUpload,
     handleDeleteSelection,
-    handleDisableSelection,
+    handleSetSelectionDisabled,
     setFileEnabled,
     saveAuthFileTags,
   };

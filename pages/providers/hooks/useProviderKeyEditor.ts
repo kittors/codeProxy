@@ -28,6 +28,7 @@ import {
 } from "../providers-helpers";
 import { findDuplicateProviderIndex } from "../provider-duplicate-key";
 import {
+  isModelAccessProvider,
   isModelAllowedForProvider,
   type ModelAccessProvider,
 } from "../provider-model-access";
@@ -175,10 +176,8 @@ export function useProviderKeyEditor({
     const isOpenCodeGo = editKeyType === "opencode-go";
     const isCline = editKeyType === "cline";
     const isOllamaCloud = editKeyType === "ollama-cloud";
-    const isCommandCode = editKeyType === "commandcode";
     const canKeepExistingApiKey =
-      editKeyIndex !== null &&
-      (isOpenCodeGo || isCline || isOllamaCloud || isCommandCode);
+      editKeyIndex !== null && isModelAccessProvider(editKeyType);
     if (editKeyType === "bedrock") {
       if (keyDraft.authMode === "api-key" && !apiKey) {
         setKeyDraftError(t("providers.api_key_error"));
@@ -208,15 +207,11 @@ export function useProviderKeyEditor({
     const rawExcludedModels = keyDraft.excludedModelsText.trim()
       ? excludedModelsFromText(keyDraft.excludedModelsText)
       : undefined;
-    const modelAccessProvider: ModelAccessProvider | null = isOpenCodeGo
-      ? "opencode-go"
-      : isCline
-        ? "cline"
-        : isOllamaCloud
-          ? "ollama-cloud"
-          : isCommandCode
-            ? "commandcode"
-            : null;
+    const modelAccessProvider: ModelAccessProvider | null = isModelAccessProvider(
+      editKeyType,
+    )
+      ? editKeyType
+      : null;
     const disableAllModelAccess = Boolean(
       modelAccessProvider && hasDisableAllModelsRule(rawExcludedModels),
     );
@@ -593,8 +588,10 @@ export function useProviderKeyEditor({
       if (!current) return;
       const prev = list;
 
-      const usesExplicitDisabled =
-        type === "opencode-go" || type === "cline" || type === "ollama-cloud";
+      // commandcode belongs here too: its config carries a `disabled` field and
+      // its card reads that field, so writing an exclude-all rule instead left
+      // the toggle looking dead.
+      const usesExplicitDisabled = isModelAccessProvider(type);
 
       const nextExcluded = usesExplicitDisabled
         ? current.excludedModels
@@ -724,11 +721,7 @@ export function useProviderKeyEditor({
                   : "Bedrock";
 
   const editKeyEnabled = useMemo(() => {
-    if (
-      editKeyType === "opencode-go" ||
-      editKeyType === "cline" ||
-      editKeyType === "ollama-cloud"
-    ) {
+    if (isModelAccessProvider(editKeyType)) {
       return !keyDraft.disabled;
     }
     const list = excludedModelsFromText(keyDraft.excludedModelsText);
@@ -737,11 +730,7 @@ export function useProviderKeyEditor({
 
   const editKeyEnabledToggle = useCallback(
     (enabled: boolean) => {
-      if (
-        editKeyType === "opencode-go" ||
-        editKeyType === "cline" ||
-        editKeyType === "ollama-cloud"
-      ) {
+      if (isModelAccessProvider(editKeyType)) {
         setKeyDraft((prev) => ({ ...prev, disabled: !enabled }));
         return;
       }

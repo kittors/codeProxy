@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 import { Card } from "./Card";
+import { surface } from "./Surface";
+import { Skeleton } from "../feedback/Skeleton";
 import { OverflowTooltip } from "../overlays/Tooltip";
 
 export interface EntityCardProps {
@@ -171,6 +173,105 @@ export function EntityCard({
         </div>
       ) : null}
     </Card>
+  );
+}
+
+/**
+ * An EntityCard before its data arrives.
+ *
+ * Built from the same Card surface, paddings and row rhythm as EntityCard, so a
+ * grid of these has the shape of the grid that replaces it: the cards do not
+ * jump size or count when the response lands. Only for a cold paint — once a
+ * card holds values, a refresh should update them in place rather than blanking
+ * the card back to grey.
+ *
+ * `children` fills the body region; pass the placeholder that matches whatever
+ * the page renders there (quota bars, a chart, lines of text). Left empty, the
+ * body is three lines of text placeholder.
+ */
+export function EntityCardSkeleton({
+  dense = false,
+  fill = true,
+  headerRows = 2,
+  footer = true,
+  children,
+  className,
+  testId,
+}: {
+  dense?: boolean;
+  fill?: boolean;
+  /** Badge rows under the title, matching the card's own header stack. */
+  headerRows?: number;
+  footer?: boolean;
+  children?: ReactNode;
+  className?: string;
+  testId?: string;
+}) {
+  const safeHeaderRows = Math.max(0, Math.min(3, Math.round(headerRows)));
+  return (
+    // A plain surface rather than `Card`: the placeholder has to carry its own
+    // test id and be hidden from assistive tech, and Card forwards neither.
+    <section
+      data-testid={testId}
+      aria-hidden="true"
+      className={[
+        "relative flex w-full min-w-0 max-w-[34rem] flex-col border-slate-900/8 shadow-[0_8px_24px_rgb(15_23_42_/_0.04)] md:max-w-none dark:border-white/[0.08] dark:shadow-[0_8px_24px_rgb(0_0_0_/_0.28)]",
+        surface({ tone: "card", radius: "3xl" }),
+        dense ? "rounded-2xl p-3.5" : "rounded-3xl p-5",
+        fill ? "h-full" : "",
+        className,
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      <div className={dense ? "space-y-2" : "space-y-2.5"}>
+        <div className="flex h-6 items-center gap-2">
+          <Skeleton className={dense ? "h-3 w-2/5" : "h-3.5 w-1/2"} rounded="full" />
+          <div className="ml-auto flex shrink-0 items-center gap-1.5">
+            <Skeleton className="h-5 w-5" rounded="md" />
+          </div>
+        </div>
+        {Array.from({ length: safeHeaderRows }, (_, row) => (
+          <div key={row} className="flex flex-wrap items-center gap-1">
+            {(row === 0 ? ["w-16", "w-10", "w-12"] : ["w-20", "w-14"]).map((width) => (
+              <Skeleton key={width} className={`h-5 ${width}`} rounded="md" />
+            ))}
+          </div>
+        ))}
+      </div>
+
+      <div
+        className={[
+          "min-h-0 min-w-0 flex-1 px-0.5",
+          dense ? "mt-2 py-0.5" : "mt-3 py-1",
+        ].join(" ")}
+      >
+        {children ?? (
+          <div className={dense ? "space-y-2" : "space-y-3"}>
+            {["w-full", "w-11/12", "w-9/12"].map((width) => (
+              <Skeleton key={width} className={`h-3.5 ${width}`} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {footer ? (
+        <div
+          className={[
+            "mt-auto flex items-center gap-1.5 border-t border-slate-100 dark:border-white/[0.06]",
+            dense ? "pt-2" : "pt-3",
+          ].join(" ")}
+        >
+          {[0, 1, 2].map((index) => (
+            <Skeleton
+              key={index}
+              className={dense ? "h-6 w-6" : "h-7 w-7"}
+              rounded="md"
+            />
+          ))}
+        </div>
+      ) : null}
+    </section>
   );
 }
 

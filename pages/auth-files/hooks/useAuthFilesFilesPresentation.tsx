@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import type { AuthFileItem } from "@code-proxy/api-client";
 import { formatLatency } from "@features/provider-latency";
-import { ProviderStatusBar } from "@features/provider-latency";
+import { AuthFileSuccessRateCell } from "../components/AuthFileSuccessRateCell";
 import { Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { COLUMN_WIDTH, HoverTooltip } from "@code-proxy/ui";
 import { ToggleSwitch } from "@code-proxy/ui";
@@ -48,13 +48,9 @@ import {
 import { resolveQuotaProvider, type QuotaProvider } from "@features/quota-preview/quota-fetch";
 import { quotaMetaHasMoney, resolveDisplayableQuotaMeta } from "@features/quota-preview/quota-meta";
 import { useStickyDisplayPlans } from "./useStickyDisplayPlans";
-import { QuotaMetricChips } from "../components/QuotaMetricChips";
+import { AuthFileQuotaCell } from "../components/AuthFileQuotaCell";
 import { useQuotaBarRenderer } from "./quotaBar";
-import {
-  filterAntigravityQuotaItems,
-  type QuotaItem,
-  type QuotaState,
-} from "@features/quota-preview/quota-helpers";
+import type { QuotaItem, QuotaState } from "@features/quota-preview/quota-helpers";
 
 const KNOWN_QUOTA_TEXT_KEYS = new Set([
   "missing_auth_index",
@@ -455,9 +451,8 @@ export function useAuthFilesFilesPresentation({
     );
   }, [filesViewMode, setFilesViewMode, t]);
 
-  const formatQuotaItemDetailText = useCallback(
-    (item: QuotaItem | null | undefined) => {
-      const reset = formatQuotaResetTextCompact(item?.resetAtMs);
+  const composeQuotaItemDetailText = useCallback(
+    (item: QuotaItem | null | undefined, reset: string | null) => {
       const resetLabel =
         reset && item?.label.startsWith("xai_quota.")
           ? t("xai_quota.reset_at", { time: reset })
@@ -469,7 +464,29 @@ export function useAuthFilesFilesPresentation({
       }
       return resetLabel ?? meta ?? null;
     },
-    [formatQuotaResetTextCompact, t, translateQuotaText],
+    [t, translateQuotaText],
+  );
+
+  /** Full countdown, down to the second. For tooltips and hover titles. */
+  const formatQuotaItemDetailText = useCallback(
+    (item: QuotaItem | null | undefined) =>
+      composeQuotaItemDetailText(item, formatQuotaResetTextCompact(item?.resetAtMs)),
+    [composeQuotaItemDetailText, formatQuotaResetTextCompact],
+  );
+
+  /**
+   * Two largest units only ("7天22小时"), for the bar itself.
+   *
+   * A bar prints label, countdown and percentage on one line, and a card four
+   * columns wide has no room for "7天22小时35分57秒" as well: the countdown ran
+   * under the percentage and was clipped mid-word. Seconds on a window that
+   * resets days from now were never worth that space; the full value is still
+   * one hover away.
+   */
+  const formatQuotaItemDetailTextShort = useCallback(
+    (item: QuotaItem | null | undefined) =>
+      composeQuotaItemDetailText(item, formatQuotaResetTextChip(item?.resetAtMs)),
+    [composeQuotaItemDetailText, formatQuotaResetTextChip],
   );
 
   // Chips render meta and countdown in separate slots, so the meta half is
@@ -520,7 +537,11 @@ export function useAuthFilesFilesPresentation({
     [resolveQuotaErrorBadgeLabel, t, translateQuotaText],
   );
 
-  const renderQuotaBar = useQuotaBarRenderer(translateQuotaText, formatQuotaItemDetailText);
+  const renderQuotaBar = useQuotaBarRenderer(
+    translateQuotaText,
+    formatQuotaItemDetailText,
+    formatQuotaItemDetailTextShort,
+  );
 
   const fileColumns = useMemo<DataTableColumn<AuthFileItem>[]>(() => {
     return [
@@ -755,21 +776,13 @@ export function useAuthFilesFilesPresentation({
         key: "rate",
         label: t("common.success_rate"),
         width: COLUMN_WIDTH.metric,
-        render: (file) => {
-          const statusData = resolveAuthFileStatusBar(file, usageIndex);
-          const hasUsage = statusData.totalSuccess + statusData.totalFailure > 0;
-          if (!statusUsageReady && !hasUsage) {
-            return statusUsageLoading ? (
-              <span className="inline-flex items-center gap-1 text-xs text-slate-500 dark:text-white/45">
-                <Loader2 size={12} className="animate-spin" />
-                {t("common.loading")}
-              </span>
-            ) : (
-              <span className="text-xs text-slate-400 dark:text-white/40">--</span>
-            );
-          }
-          return <ProviderStatusBar data={statusData} compact />;
-        },
+        render: (file) => (
+          <AuthFileSuccessRateCell
+            data={resolveAuthFileStatusBar(file, usageIndex)}
+            ready={statusUsageReady}
+            loading={statusUsageLoading}
+          />
+        ),
       },
       {
         key: "quota",
@@ -779,42 +792,22 @@ export function useAuthFilesFilesPresentation({
         maxWidthPx: 640,
         overflowTooltip: false,
         headerClassName: "text-center",
-        render: (file) => {
-          const provider = resolveQuotaProvider(file);
-          if (!provider) {
-            return <span className="text-xs text-slate-400 dark:text-white/40">--</span>;
-          }
-
-          const state = quotaByFileName[file.name] ?? { status: "idle", items: [] };
-          const rawItems = Array.isArray(state.items) ? (state.items as QuotaItem[]) : [];
-          const items =
-            provider === "antigravity" ? filterAntigravityQuotaItems(rawItems) : rawItems;
-          const slots = resolveQuotaCardSlots(provider, items);
-          const hasError = state.status === "error" || Boolean(state.error);
-
-          if (hasError && slots.length === 0) {
-            return renderQuotaErrorBadge(state.error ?? t("common.error"));
-          }
-
-          if (slots.length === 0) {
-            return <span className="text-xs text-slate-400 dark:text-white/40">--</span>;
-          }
-
-          return (
-            <QuotaMetricChips
-              slots={slots}
-              errorBadge={
-                hasError ? renderQuotaErrorBadge(state.error ?? t("common.error")) : undefined
-              }
-              resolveMetaText={resolveQuotaItemMetaText}
-              resolveResetText={(item) => formatQuotaResetTextChip(item?.resetAtMs)}
-              resolvePercentText={(item, tone) =>
-                (item?.value ? translateQuotaText(item.value) : undefined) ??
-                (tone.normalized === null ? "--" : `${Math.round(tone.normalized)}%`)
-              }
-            />
-          );
-        },
+        render: (file) => (
+          <AuthFileQuotaCell
+            provider={resolveQuotaProvider(file)}
+            state={quotaByFileName[file.name] ?? { status: "idle", items: [] }}
+            pageProbing={statusUsageLoading}
+            resolveSlots={resolveQuotaCardSlots}
+            renderErrorBadge={renderQuotaErrorBadge}
+            resolveMetaText={resolveQuotaItemMetaText}
+            resolveResetText={(item) => formatQuotaResetTextChip(item?.resetAtMs)}
+            resolvePercentText={(item, tone) =>
+              (item?.value ? translateQuotaText(item.value) : undefined) ??
+              (tone.normalized === null ? "--" : `${Math.round(tone.normalized)}%`)
+            }
+            errorText={t("common.error")}
+          />
+        ),
       },
       {
         key: "enabled",
