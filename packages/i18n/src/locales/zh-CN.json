@@ -4851,6 +4851,7 @@
     "what_happened": "操作内容",
     "result_success": "成功",
     "result_failed": "失败",
+    "result_denied": "已拒绝",
     "request_id": "请求 ID",
     "call_chain": "调用链路",
     "project_method": "项目方法",
