@@ -99,6 +99,15 @@ const identityResponse = () => ({
       "client-metadata": "",
       "custom-headers": {},
     },
+    kimi: {
+      enabled: true,
+      "user-agent": "KimiCLI/test",
+      "x-msh-platform": "kimi_cli",
+      "x-msh-version": "1.10.6",
+      "x-msh-device-name": "",
+      "x-msh-device-model": "",
+      "custom-headers": {},
+    },
   },
   defaults: {
     codex: {
@@ -128,6 +137,15 @@ const identityResponse = () => ({
       "user-agent": "google-api-nodejs-client/9.15.1",
       "x-goog-api-client": "gl-node/22.17.0",
       "client-metadata": "ideType=IDE_UNSPECIFIED,platform=PLATFORM_UNSPECIFIED,pluginType=GEMINI",
+      "custom-headers": {},
+    },
+    kimi: {
+      enabled: true,
+      "user-agent": "KimiCLI/1.10.6",
+      "x-msh-platform": "kimi_cli",
+      "x-msh-version": "1.10.6",
+      "x-msh-device-name": "",
+      "x-msh-device-model": "",
       "custom-headers": {},
     },
   },
@@ -376,12 +394,43 @@ describe("IdentityFingerprintPage provider tabs", () => {
     expect(screen.queryByText(/reserved/i)).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("tab", { name: "Kimi" }));
+    // Kimi reads the fingerprint config now, not the legacy kimi-header-defaults
+    // block in config.yaml, so the panel shows the same preset the runtime resolves.
     expect(
-      await screen.findByRole("heading", { name: /Kimi Header Defaults/i }),
+      await screen.findByRole("heading", { name: /Kimi identity fingerprint/i }),
     ).toBeInTheDocument();
     expect(screen.getByDisplayValue("KimiCLI/test")).toBeInTheDocument();
     expect(screen.getByDisplayValue("kimi_cli")).toBeInTheDocument();
     expect(screen.queryByText(/reserved/i)).not.toBeInTheDocument();
+  });
+
+  // Kimi used to write config.yaml's kimi-header-defaults from this tab, which left
+  // the panel editing one source while the runtime resolved another once the
+  // fingerprint existed. It now posts the fingerprint config like every other
+  // provider, and must carry the other providers along so saving one does not
+  // reset the rest.
+  test("saves the Kimi tab through the identity fingerprint API", async () => {
+    renderPage();
+
+    await userEvent.click(await screen.findByRole("tab", { name: "Kimi" }));
+    await screen.findByRole("heading", { name: /Kimi identity fingerprint/i });
+
+    const userAgent = screen.getByDisplayValue("KimiCLI/test");
+    fireEvent.change(userAgent, { target: { value: "KimiCLI/1.12.0" } });
+    await userEvent.click(screen.getByRole("button", { name: /Save Kimi/i }));
+
+    await waitFor(() => expect(mocks.identityUpdate).toHaveBeenCalled());
+    const payload = mocks.identityUpdate.mock.calls.at(-1)?.[0] as {
+      kimi?: Record<string, unknown>;
+      codex?: unknown;
+      claude?: unknown;
+    };
+    expect(payload.kimi?.["user-agent"]).toBe("KimiCLI/1.12.0");
+    expect(payload.kimi?.["x-msh-platform"]).toBe("kimi_cli");
+    expect(payload.codex).toBeTruthy();
+    expect(payload.claude).toBeTruthy();
+    // The legacy YAML block is no longer this tab's business.
+    expect(mocks.saveConfigYaml).not.toHaveBeenCalled();
   });
 
   test("saves Gemini headers back to every configured Gemini API key entry", async () => {

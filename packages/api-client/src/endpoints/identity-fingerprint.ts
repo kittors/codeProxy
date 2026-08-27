@@ -44,14 +44,32 @@ export interface XAIIdentityFingerprint {
   "custom-headers"?: Record<string, string>;
 }
 
+/**
+ * Kimi identity headers.
+ *
+ * Device name and model have no builtin default: they describe the client's
+ * machine, and the only value the proxy could invent is its own host, which is
+ * identical across every account on it. Empty means "keep the host fallback".
+ */
+export interface KimiIdentityFingerprint {
+  enabled?: boolean;
+  "user-agent"?: string;
+  "x-msh-platform"?: string;
+  "x-msh-version"?: string;
+  "x-msh-device-name"?: string;
+  "x-msh-device-model"?: string;
+  "custom-headers"?: Record<string, string>;
+}
+
 export interface IdentityFingerprintConfig {
   codex?: CodexIdentityFingerprint;
   claude?: ClaudeIdentityFingerprint;
   gemini?: GeminiIdentityFingerprint;
   xai?: XAIIdentityFingerprint;
+  kimi?: KimiIdentityFingerprint;
 }
 
-export type IdentityFingerprintProvider = "claude" | "codex" | "gemini" | "xai";
+export type IdentityFingerprintProvider = "claude" | "codex" | "gemini" | "xai" | "kimi";
 export type IdentityFingerprintFieldSource =
   "learned" | "preset" | "builtin_default";
 
