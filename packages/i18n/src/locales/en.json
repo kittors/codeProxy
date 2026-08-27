@@ -3646,7 +3646,6 @@
     "test_response": "Response",
     "test_duration": "Took {{duration}}",
     "test_no_channels": "No channel sources are available for this model.",
-    "test_no_api_key": "No usable API key found. Create an enabled key first; ideally allow the selected channel in allowed-channels.",
     "test_empty_response": "(empty response)",
     "test_failed": "Model test failed",
     "cancel": "Cancel",

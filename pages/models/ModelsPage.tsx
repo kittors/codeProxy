@@ -98,7 +98,7 @@ export function ModelsPage() {
   const [bulkDeleteTargetIds, setBulkDeleteTargetIds] = useState<string[] | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [togglingModelId, setTogglingModelId] = useState<string | null>(null);
-  const modelTest = useModelTestRunner(auth?.state.apiBase);
+  const modelTest = useModelTestRunner();
   const [selectedModelIds, setSelectedModelIds] = useState<Set<string>>(() => new Set());
   const cachedOpenRouter = readOpenRouterSyncCache(cacheTenantKey);
   const [openRouterSyncState, setOpenRouterSyncState] = useState<OpenRouterModelSyncState>(

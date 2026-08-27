@@ -27,6 +27,10 @@ vi.mock("@code-proxy/api-client", () => ({
   apiKeyEntriesApi: {
     list: () => mocks.apiKeyEntriesList(),
   },
+  modelsApi: {
+    // Mirrors the real endpoint: one management-authority POST, no API key.
+    testModel: (input: Record<string, unknown>) => mocks.apiPost("/models/test", input),
+  },
   detectApiBaseFromLocation: () => "http://localhost:8317",
   normalizeApiBase: (base: string) => String(base || "http://localhost:8317").replace(/\/+$/, ""),
   authFilesApi: {
@@ -426,20 +430,27 @@ describe("ModelsPage", () => {
     );
     expect(within(dialog).getByText(/Qwen Cloud/i)).toBeInTheDocument();
 
+    // The probe runs server-side with management authority. It used to pick one of
+    // the tenant's API keys in the browser and call /v1 with it, which answered
+    // whether that business identity may use the model rather than whether the
+    // model is reachable — a key bound to a scope-restricted end user reported a
+    // healthy model as unavailable.
+    mocks.apiPost.mockResolvedValueOnce({
+      ok: true,
+      content: "Sunny in Los Angeles.",
+      duration_ms: 42,
+    });
+
     await userEvent.click(within(dialog).getByRole("button", { name: /run test/i }));
 
     await waitFor(() => {
-      expect(mocks.apiKeyEntriesList).toHaveBeenCalled();
-      expect(mocks.fetch).toHaveBeenCalledWith(
-        "http://localhost:8317/v1/chat/completions",
-        expect.objectContaining({
-          method: "POST",
-          headers: expect.objectContaining({
-            Authorization: "Bearer sk-test-unrestricted",
-          }),
-        }),
+      expect(mocks.apiPost).toHaveBeenCalledWith(
+        "/models/test",
+        expect.objectContaining({ model: "qwen3.5-plus" }),
       );
     });
+    expect(mocks.fetch).not.toHaveBeenCalled();
+    expect(mocks.apiKeyEntriesList).not.toHaveBeenCalled();
     expect(await within(dialog).findByText("Sunny in Los Angeles.")).toBeInTheDocument();
   });
 
