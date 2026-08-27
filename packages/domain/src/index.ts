@@ -6,6 +6,7 @@ export * from "./ccswitch/ccswitchImportSettings";
 export * from "./auth-files/authFiles";
 export * from "./auth-files/types";
 export * from "./auth-files/zip";
+export * from "./models/discovery";
 export * from "./models/modelIdentity";
 export * from "./quota";
 export * from "./usage";

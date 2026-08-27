@@ -272,7 +272,39 @@ const normalizeAuthGroupModelOwnerMappings = (
   return items.sort((a, b) => a.auth_group.localeCompare(b.auth_group));
 };
 
+export interface ModelTestResult {
+  ok: boolean;
+  content?: string;
+  error?: string;
+  duration_ms?: number;
+}
+
 export const modelsApi = {
+  /**
+   * Probe a model with management authority.
+   *
+   * Deliberately not a browser-side call to /v1 with a business API key: that
+   * answers whether one end user may use the model, not whether the model can be
+   * reached, and an end user scoped to a single channel group made healthy
+   * accounts look broken.
+   */
+  testModel: async (input: {
+    model: string;
+    prompt: string;
+    channel?: string;
+  }): Promise<ModelTestResult> => {
+    const payload = await apiClient.post<ModelTestResult>("/models/test", {
+      model: input.model,
+      prompt: input.prompt,
+      ...(input.channel ? { channel: input.channel } : {}),
+    });
+    return {
+      ok: Boolean(payload?.ok),
+      content: typeof payload?.content === "string" ? payload.content : undefined,
+      error: typeof payload?.error === "string" ? payload.error : undefined,
+      duration_ms: typeof payload?.duration_ms === "number" ? payload.duration_ms : undefined,
+    };
+  },
   buildClaudeModelsEndpoint,
 
   async listAvailableModels(

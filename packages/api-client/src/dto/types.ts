@@ -115,7 +115,7 @@ export interface AuthFileCodexImageGenerationBridge {
 }
 
 export type AuthFileIdentityFingerprintProvider =
-  "claude" | "codex" | "gemini" | "xai";
+  "claude" | "codex" | "gemini" | "xai" | "kimi";
 export type AuthFileIdentityFingerprintSource =
   "learned" | "preset" | "builtin_default";
 
