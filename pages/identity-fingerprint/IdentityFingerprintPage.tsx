@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Sparkles, Trash2 } from "lucide-react";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
@@ -14,6 +14,7 @@ import {
   type IdentityFingerprintProvider,
   type IdentityFingerprintProviderStatus,
   type IdentityFingerprintConfig,
+  type KimiIdentityFingerprint,
   type XAIIdentityFingerprint,
 } from "@code-proxy/api-client/endpoints/identity-fingerprint";
 import { Button, surface } from "@code-proxy/ui";
@@ -24,6 +25,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { ToggleSwitch } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
 import { CodexRecommendationsModal } from "./CodexRecommendationsModal";
+import {
+  Field,
+  KeyValueList,
+  PreviewRow,
+  ProviderActions,
+  ProviderNotice,
+  RecordHeader,
+  SimplePanel,
+  SourceBadge,
+  SourcePill,
+} from "./components/FingerprintPanels";
 
 type ProviderTab = "codex" | "claude" | "gemini" | "xai" | "kimi";
 type RuntimeProvider = IdentityFingerprintProvider;
@@ -44,6 +56,7 @@ const EMPTY_RUNTIME_RECORDS: ProviderRuntimeMap<IdentityFingerprintLearnedRecord
   codex: [],
   gemini: [],
   xai: [],
+  kimi: [],
 };
 
 const EMPTY_EFFECTIVE_RECORDS: ProviderRuntimeMap<IdentityFingerprintEffectiveRecord> = {
@@ -51,6 +64,7 @@ const EMPTY_EFFECTIVE_RECORDS: ProviderRuntimeMap<IdentityFingerprintEffectiveRe
   codex: [],
   gemini: [],
   xai: [],
+  kimi: [],
 };
 
 const EMPTY_PROVIDER_STATUS: ProviderStatusMap = {
@@ -58,6 +72,7 @@ const EMPTY_PROVIDER_STATUS: ProviderStatusMap = {
   codex: { enabled: false, learned_count: 0 },
   gemini: { enabled: false, learned_count: 0 },
   xai: { enabled: false, learned_count: 0 },
+  kimi: { enabled: false, learned_count: 0 },
 };
 
 const SESSION_MODE_OPTIONS = [
@@ -110,6 +125,54 @@ const EMPTY_XAI: Required<XAIIdentityFingerprint> = {
   "custom-headers": {},
 };
 
+const EMPTY_KIMI: Required<KimiIdentityFingerprint> = {
+  enabled: false,
+  "user-agent": "",
+  "x-msh-platform": "",
+  "x-msh-version": "",
+  "x-msh-device-name": "",
+  "x-msh-device-model": "",
+  "custom-headers": {},
+};
+
+// Device name and model intentionally advertise a different placeholder: they have
+// no builtin default, so leaving them empty keeps the runtime's host-derived value
+// rather than falling back to a shipped one.
+const KIMI_FIELDS: Array<{
+  key: "user-agent" | "x-msh-platform" | "x-msh-version" | "x-msh-device-name" | "x-msh-device-model";
+  labelKey: string;
+  hintKey?: string;
+  placeholderKey: string;
+}> = [
+  {
+    key: "user-agent",
+    labelKey: "identity_fingerprint.user_agent",
+    hintKey: "identity_fingerprint.kimi_user_agent_hint",
+    placeholderKey: "identity_fingerprint.auto_learn_placeholder",
+  },
+  {
+    key: "x-msh-platform",
+    labelKey: "identity_fingerprint.kimi_platform",
+    placeholderKey: "identity_fingerprint.auto_learn_placeholder",
+  },
+  {
+    key: "x-msh-version",
+    labelKey: "identity_fingerprint.kimi_version",
+    placeholderKey: "identity_fingerprint.auto_learn_placeholder",
+  },
+  {
+    key: "x-msh-device-name",
+    labelKey: "identity_fingerprint.kimi_device_name",
+    hintKey: "identity_fingerprint.kimi_device_hint",
+    placeholderKey: "identity_fingerprint.kimi_device_placeholder",
+  },
+  {
+    key: "x-msh-device-model",
+    labelKey: "identity_fingerprint.kimi_device_model",
+    placeholderKey: "identity_fingerprint.kimi_device_placeholder",
+  },
+];
+
 const PROVIDER_FIELD_ORDER: Record<RuntimeProvider, string[]> = {
   claude: [
     "user-agent",
@@ -123,6 +186,14 @@ const PROVIDER_FIELD_ORDER: Record<RuntimeProvider, string[]> = {
   codex: ["user-agent", "version", "originator", "websocket-beta", "x-codex-beta-features"],
   gemini: ["user-agent", "x-goog-api-client", "client-metadata"],
   xai: ["user-agent", "x-grok-client-identifier", "x-grok-client-version"],
+  kimi: [
+    "user-agent",
+    "x-msh-platform",
+    "x-msh-version",
+    "x-msh-device-name",
+    "x-msh-device-model",
+    "x-msh-device-id",
+  ],
 };
 
 const FIELD_LABEL_KEYS: Record<string, string> = {
@@ -142,18 +213,11 @@ const FIELD_LABEL_KEYS: Record<string, string> = {
   "x-grok-client-identifier": "identity_fingerprint.xai_client_identifier",
   "x-grok-client-version": "identity_fingerprint.xai_client_version",
   "x-grok-conv-id": "identity_fingerprint.xai_grok_conversation_id",
-};
-
-type KimiHeaderDefaults = {
-  "user-agent": string;
-  platform: string;
-  version: string;
-};
-
-const DEFAULT_KIMI_HEADERS: KimiHeaderDefaults = {
-  "user-agent": "KimiCLI/1.10.6",
-  platform: "kimi_cli",
-  version: "1.10.6",
+  "x-msh-platform": "identity_fingerprint.kimi_platform",
+  "x-msh-version": "identity_fingerprint.kimi_version",
+  "x-msh-device-name": "identity_fingerprint.kimi_device_name",
+  "x-msh-device-model": "identity_fingerprint.kimi_device_model",
+  "x-msh-device-id": "identity_fingerprint.kimi_device_id",
 };
 
 const DEFAULT_GEMINI_HEADERS: Record<string, string> = {
@@ -199,6 +263,14 @@ function mergeXAI(base: XAIIdentityFingerprint | undefined): Required<XAIIdentit
   };
 }
 
+function mergeKimi(base: KimiIdentityFingerprint | undefined): Required<KimiIdentityFingerprint> {
+  return {
+    ...EMPTY_KIMI,
+    ...base,
+    "custom-headers": base?.["custom-headers"] ?? {},
+  };
+}
+
 function mergeRuntimeRecords<T>(
   input: Partial<Record<RuntimeProvider, T[]>> | undefined,
   empty: ProviderRuntimeMap<T>,
@@ -208,6 +280,7 @@ function mergeRuntimeRecords<T>(
     codex: input?.codex ?? empty.codex,
     gemini: input?.gemini ?? empty.gemini,
     xai: input?.xai ?? empty.xai,
+    kimi: input?.kimi ?? empty.kimi,
   };
 }
 
@@ -219,6 +292,7 @@ function mergeProviderStatus(
     codex: input?.codex ?? EMPTY_PROVIDER_STATUS.codex,
     gemini: input?.gemini ?? EMPTY_PROVIDER_STATUS.gemini,
     xai: input?.xai ?? EMPTY_PROVIDER_STATUS.xai,
+    kimi: input?.kimi ?? EMPTY_PROVIDER_STATUS.kimi,
   };
 }
 
@@ -267,11 +341,6 @@ function hasOwn(obj: Record<string, unknown>, key: string): boolean {
   return Object.prototype.hasOwnProperty.call(obj, key);
 }
 
-function readString(obj: Record<string, unknown> | null, key: string, fallback = ""): string {
-  const value = obj?.[key];
-  return typeof value === "string" ? value : fallback;
-}
-
 function toHeaderMap(raw: unknown): Record<string, string> {
   const record = asRecord(raw);
   if (!record) return {};
@@ -301,15 +370,6 @@ function parseHeadersJson(raw: string): Record<string, string> {
 function parseConfigYaml(raw: string): Record<string, unknown> {
   const parsed = parseYaml(raw) as unknown;
   return asRecord(parsed) ?? {};
-}
-
-function normalizeKimiHeaders(raw: unknown): KimiHeaderDefaults {
-  const record = asRecord(raw);
-  return {
-    "user-agent": readString(record, "user-agent", DEFAULT_KIMI_HEADERS["user-agent"]),
-    platform: readString(record, "platform", DEFAULT_KIMI_HEADERS.platform),
-    version: readString(record, "version", DEFAULT_KIMI_HEADERS.version),
-  };
 }
 
 function firstGeminiHeaders(raw: unknown): { headers: Record<string, string>; count: number } {
@@ -401,6 +461,8 @@ function providerLabel(provider: RuntimeProvider) {
       return "Gemini";
     case "xai":
       return "xAI";
+    case "kimi":
+      return "Kimi";
   }
 }
 
@@ -427,7 +489,9 @@ export function IdentityFingerprintPage() {
   const [xaiFingerprint, setXAIFingerprint] = useState<Required<XAIIdentityFingerprint>>(EMPTY_XAI);
   const [xaiDefaults, setXAIDefaults] = useState<Required<XAIIdentityFingerprint>>(EMPTY_XAI);
   const [configYaml, setConfigYaml] = useState("");
-  const [kimi, setKimi] = useState<KimiHeaderDefaults>(DEFAULT_KIMI_HEADERS);
+  const [kimiFingerprint, setKimiFingerprint] = useState<Required<KimiIdentityFingerprint>>(EMPTY_KIMI);
+  const [kimiDefaults, setKimiDefaults] = useState<Required<KimiIdentityFingerprint>>(EMPTY_KIMI);
+  const [kimiCustomHeadersText, setKimiCustomHeadersText] = useState("{}");
   const [geminiHeadersText, setGeminiHeadersText] = useState(
     JSON.stringify(DEFAULT_GEMINI_HEADERS, null, 2),
   );
@@ -462,6 +526,8 @@ export function IdentityFingerprintPage() {
       const nextGeminiDefaults = mergeGemini(payload.defaults?.gemini);
       const nextXAI = mergeXAI(payload["identity-fingerprint"]?.xai);
       const nextXAIDefaults = mergeXAI(payload.defaults?.xai);
+      const nextKimi = mergeKimi(payload["identity-fingerprint"]?.kimi);
+      const nextKimiDefaults = mergeKimi(payload.defaults?.kimi);
       const parsedConfig = parseConfigYaml(yamlText);
       const gemini = firstGeminiHeaders(parsedConfig["gemini-api-key"]);
       setCodex(nextCodex);
@@ -472,14 +538,16 @@ export function IdentityFingerprintPage() {
       setGeminiDefaults(nextGeminiDefaults);
       setXAIFingerprint(nextXAI);
       setXAIDefaults(nextXAIDefaults);
+      setKimiFingerprint(nextKimi);
+      setKimiDefaults(nextKimiDefaults);
       setConfigYaml(yamlText);
-      setKimi(normalizeKimiHeaders(parsedConfig["kimi-header-defaults"]));
       setGeminiHeadersText(JSON.stringify(gemini.headers, null, 2));
       setGeminiKeyCount(gemini.count);
       setCustomHeadersText(JSON.stringify(nextCodex["custom-headers"], null, 2));
       setClaudeCustomHeadersText(JSON.stringify(nextClaude["custom-headers"], null, 2));
       setGeminiCustomHeadersText(JSON.stringify(nextGeminiFingerprint["custom-headers"], null, 2));
       setXAICustomHeadersText(JSON.stringify(nextXAI["custom-headers"], null, 2));
+      setKimiCustomHeadersText(JSON.stringify(nextKimi["custom-headers"], null, 2));
       setLearnedRecords(mergeRuntimeRecords(payload.learned, EMPTY_RUNTIME_RECORDS));
       setEffectiveRecords(mergeRuntimeRecords(payload.effective, EMPTY_EFFECTIVE_RECORDS));
       setProviderStatus(mergeProviderStatus(payload.status));
@@ -535,6 +603,10 @@ export function IdentityFingerprintPage() {
     setGeminiCustomHeadersText(JSON.stringify(geminiDefaults["custom-headers"], null, 2));
   }, [geminiDefaults]);
 
+  const updateKimiFingerprint = useCallback((patch: Partial<KimiIdentityFingerprint>) => {
+    setKimiFingerprint((current) => ({ ...current, ...patch }));
+  }, []);
+
   const restoreXAIDefaults = useCallback(() => {
     setXAIFingerprint(xaiDefaults);
     setXAICustomHeadersText(JSON.stringify(xaiDefaults["custom-headers"], null, 2));
@@ -545,8 +617,9 @@ export function IdentityFingerprintPage() {
   }, []);
 
   const restoreKimiDefaults = useCallback(() => {
-    setKimi(DEFAULT_KIMI_HEADERS);
-  }, []);
+    setKimiFingerprint(kimiDefaults);
+    setKimiCustomHeadersText(JSON.stringify(kimiDefaults["custom-headers"], null, 2));
+  }, [kimiDefaults]);
 
   const applyCodexRecommendation = useCallback(
     async (recommendation: CodexFingerprintRecommendation) => {
@@ -602,6 +675,7 @@ export function IdentityFingerprintPage() {
         claude,
         gemini: geminiFingerprint,
         xai: xaiFingerprint,
+        kimi: kimiFingerprint,
       };
       await identityFingerprintApi.update(payload);
       notify({ type: "success", message: t("identity_fingerprint.saved") });
@@ -613,7 +687,7 @@ export function IdentityFingerprintPage() {
     } finally {
       setSaving(false);
     }
-  }, [claude, codex, customHeadersText, geminiFingerprint, loadPage, notify, t, xaiFingerprint]);
+  }, [claude, codex, customHeadersText, geminiFingerprint, kimiFingerprint, loadPage, notify, t, xaiFingerprint]);
 
   const saveClaude = useCallback(async () => {
     setSaving(true);
@@ -628,6 +702,7 @@ export function IdentityFingerprintPage() {
         },
         gemini: geminiFingerprint,
         xai: xaiFingerprint,
+        kimi: kimiFingerprint,
       };
       await identityFingerprintApi.update(payload);
       notify({ type: "success", message: t("identity_fingerprint.saved") });
@@ -644,6 +719,7 @@ export function IdentityFingerprintPage() {
     claudeCustomHeadersText,
     codex,
     geminiFingerprint,
+    kimiFingerprint,
     loadPage,
     notify,
     t,
@@ -663,6 +739,7 @@ export function IdentityFingerprintPage() {
           "custom-headers": customHeaders,
         },
         xai: xaiFingerprint,
+        kimi: kimiFingerprint,
       };
       await identityFingerprintApi.update(payload);
       notify({ type: "success", message: t("identity_fingerprint.saved") });
@@ -679,6 +756,7 @@ export function IdentityFingerprintPage() {
     codex,
     geminiCustomHeadersText,
     geminiFingerprint,
+    kimiFingerprint,
     loadPage,
     notify,
     t,
@@ -698,6 +776,7 @@ export function IdentityFingerprintPage() {
           ...xaiFingerprint,
           "custom-headers": customHeaders,
         },
+        kimi: kimiFingerprint,
       };
       await identityFingerprintApi.update(payload);
       notify({ type: "success", message: t("identity_fingerprint.saved") });
@@ -709,7 +788,7 @@ export function IdentityFingerprintPage() {
     } finally {
       setSaving(false);
     }
-  }, [claude, codex, geminiFingerprint, loadPage, notify, t, xaiCustomHeadersText, xaiFingerprint]);
+  }, [claude, codex, geminiFingerprint, kimiFingerprint, loadPage, notify, t, xaiCustomHeadersText, xaiFingerprint]);
 
   const saveGemini = useCallback(async () => {
     setSaving(true);
@@ -732,10 +811,18 @@ export function IdentityFingerprintPage() {
     setSaving(true);
     setError("");
     try {
-      await saveConfigYaml((root) => {
-        root["kimi-header-defaults"] = { ...kimi };
-        return root;
-      });
+      const customHeaders = parseCustomHeaders(kimiCustomHeadersText);
+      const payload: IdentityFingerprintConfig = {
+        codex,
+        claude,
+        gemini: geminiFingerprint,
+        xai: xaiFingerprint,
+        kimi: {
+          ...kimiFingerprint,
+          "custom-headers": customHeaders,
+        },
+      };
+      await identityFingerprintApi.update(payload);
       notify({ type: "success", message: t("identity_fingerprint.saved") });
       await loadPage();
     } catch (err: unknown) {
@@ -745,7 +832,7 @@ export function IdentityFingerprintPage() {
     } finally {
       setSaving(false);
     }
-  }, [kimi, loadPage, notify, saveConfigYaml, t]);
+  }, [claude, codex, geminiFingerprint, kimiCustomHeadersText, kimiFingerprint, loadPage, notify, t, xaiFingerprint]);
 
   const clearLearnedRecord = useCallback(
     async (provider: RuntimeProvider, accountKey: string) => {
@@ -808,11 +895,11 @@ export function IdentityFingerprintPage() {
 
   const kimiPreviewItems = useMemo(
     () => [
-      [t("identity_fingerprint.preview_client"), kimi["user-agent"]],
-      [t("identity_fingerprint.kimi_platform"), kimi.platform],
-      [t("identity_fingerprint.preview_version"), kimi.version],
+      [t("identity_fingerprint.preview_client"), kimiFingerprint["user-agent"]],
+      [t("identity_fingerprint.kimi_platform"), kimiFingerprint["x-msh-platform"]],
+      [t("identity_fingerprint.preview_version"), kimiFingerprint["x-msh-version"]],
     ],
-    [kimi, t],
+    [kimiFingerprint, t],
   );
 
   const geminiPreviewItems = useMemo(
@@ -1509,65 +1596,94 @@ export function IdentityFingerprintPage() {
           </TabsContent>
 
           <TabsContent value="kimi" className="mt-5">
-            <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-              <SimplePanel
-                title={t("identity_fingerprint.kimi_title")}
-                description={t("identity_fingerprint.kimi_desc")}
-              >
-                <div className="grid gap-3 md:grid-cols-2">
-                  <Field
-                    label={t("identity_fingerprint.user_agent")}
-                    hint={t("identity_fingerprint.kimi_user_agent_hint")}
-                  >
-                    <TextInput
-                      value={kimi["user-agent"]}
-                      onChange={(event) =>
-                        setKimi((current) => ({ ...current, "user-agent": event.target.value }))
-                      }
-                      disabled={saving}
-                    />
-                  </Field>
-                  <Field label={t("identity_fingerprint.kimi_platform")}>
-                    <TextInput
-                      value={kimi.platform}
-                      onChange={(event) =>
-                        setKimi((current) => ({ ...current, platform: event.target.value }))
-                      }
-                      disabled={saving}
-                    />
-                  </Field>
-                  <Field label={t("identity_fingerprint.version")}>
-                    <TextInput
-                      value={kimi.version}
-                      onChange={(event) =>
-                        setKimi((current) => ({ ...current, version: event.target.value }))
-                      }
-                      disabled={saving}
-                    />
-                  </Field>
+            <div className="space-y-4">
+              <section className="rounded-2xl border border-slate-900/8 bg-slate-50/70 p-4 dark:border-white/8 dark:bg-neutral-900/45">
+                <div className="flex flex-col gap-4 2xl:flex-row 2xl:items-start 2xl:justify-between">
+                  <ToggleSwitch
+                    checked={Boolean(kimiFingerprint.enabled)}
+                    onCheckedChange={(enabled) => updateKimiFingerprint({ enabled })}
+                    label={t("identity_fingerprint.kimi_enabled")}
+                    description={t("identity_fingerprint.kimi_enabled_desc")}
+                    disabled={saving}
+                  />
+                  <div className="flex w-full flex-wrap gap-2 2xl:w-auto 2xl:justify-end">
+                    <Button
+                      variant="secondary"
+                      onClick={restoreKimiDefaults}
+                      disabled={loading || saving}
+                    >
+                      {t("identity_fingerprint.restore_defaults")}
+                    </Button>
+                    <Button onClick={() => void saveKimi()} disabled={loading || saving}>
+                      {saving
+                        ? t("identity_fingerprint.saving")
+                        : t("identity_fingerprint.save_kimi")}
+                    </Button>
+                  </div>
                 </div>
-                <ProviderActions
-                  restoreLabel={t("identity_fingerprint.restore_defaults")}
-                  saveLabel={
-                    saving ? t("identity_fingerprint.saving") : t("identity_fingerprint.save_kimi")
-                  }
-                  onRestore={restoreKimiDefaults}
-                  onSave={() => void saveKimi()}
-                  disabled={loading || saving}
-                />
-              </SimplePanel>
+              </section>
 
-              <SimplePanel
-                title={t("identity_fingerprint.preview_title")}
-                description={t("identity_fingerprint.kimi_preview_desc")}
-              >
-                <div className="space-y-2">
-                  {kimiPreviewItems.map(([label, value]) => (
-                    <PreviewRow key={label} label={label} value={value} />
-                  ))}
+              <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+                <div className="space-y-4">
+                  <SimplePanel
+                    title={t("identity_fingerprint.kimi_title")}
+                    description={t("identity_fingerprint.kimi_desc")}
+                  >
+                    <div className="grid gap-3 md:grid-cols-2">
+                      {KIMI_FIELDS.map((field) => (
+                        <Field
+                          key={field.key}
+                          label={t(field.labelKey)}
+                          hint={field.hintKey ? t(field.hintKey) : undefined}
+                        >
+                          <TextInput
+                            value={kimiFingerprint[field.key]}
+                            onChange={(event) =>
+                              updateKimiFingerprint({ [field.key]: event.target.value })
+                            }
+                            disabled={saving}
+                            placeholder={t(field.placeholderKey)}
+                          />
+                        </Field>
+                      ))}
+                    </div>
+                    <Field label={t("identity_fingerprint.custom_headers")}>
+                      <textarea
+                        value={kimiCustomHeadersText}
+                        onChange={(event) => setKimiCustomHeadersText(event.target.value)}
+                        disabled={saving}
+                        spellCheck={false}
+                        className="min-h-24 w-full rounded-2xl border border-slate-900/8 bg-white px-3 py-2 font-mono text-sm text-slate-900 shadow-sm outline-none dark:border-white/8 dark:bg-neutral-900 dark:text-slate-100"
+                      />
+                      <p className="mt-2 text-xs text-slate-500 dark:text-white/50">
+                        {t("identity_fingerprint.kimi_custom_headers_hint")}
+                      </p>
+                    </Field>
+                  </SimplePanel>
                 </div>
-                <ProviderNotice>{t("identity_fingerprint.kimi_notice")}</ProviderNotice>
-              </SimplePanel>
+
+                <div className="space-y-4">
+                  <SimplePanel
+                    title={t("identity_fingerprint.preview_title")}
+                    description={t("identity_fingerprint.kimi_preview_desc")}
+                  >
+                    <div className="space-y-2">
+                      {kimiPreviewItems.map(([label, value]) => (
+                        <PreviewRow key={label} label={label} value={value} />
+                      ))}
+                    </div>
+                    <ProviderNotice>{t("identity_fingerprint.kimi_notice")}</ProviderNotice>
+                  </SimplePanel>
+                  <RuntimeStatePanel
+                    provider="kimi"
+                    status={providerStatus.kimi}
+                    learned={learnedRecords.kimi}
+                    effective={effectiveRecords.kimi}
+                    disabled={saving}
+                    onClear={clearLearnedRecord}
+                  />
+                </div>
+              </div>
             </div>
           </TabsContent>
         </Tabs>
@@ -1713,167 +1829,3 @@ function RuntimeStatePanel({
   );
 }
 
-function RecordHeader({
-  accountKey,
-  authSubjectId,
-  product,
-  variant,
-  version,
-}: {
-  accountKey?: string;
-  authSubjectId?: string;
-  product?: string;
-  variant?: string;
-  version?: string;
-}) {
-  const { t } = useTranslation();
-  const productLine = [product, variant, version].filter(Boolean).join(" / ");
-  return (
-    <div className="min-w-0">
-      <div className="break-all text-xs font-semibold text-slate-900 dark:text-white">
-        {accountKey || t("identity_fingerprint.default_account")}
-      </div>
-      {authSubjectId ? (
-        <div className="mt-1 break-all text-xs text-slate-500 dark:text-white/50">
-          {authSubjectId}
-        </div>
-      ) : null}
-      {productLine ? (
-        <div className="mt-1 break-all text-xs text-slate-500 dark:text-white/50">
-          {productLine}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function KeyValueList({ title, entries }: { title: string; entries: Array<[string, string]> }) {
-  if (entries.length === 0) return null;
-  return (
-    <details className="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-xs dark:bg-neutral-900">
-      <summary className="cursor-pointer font-semibold text-slate-600 dark:text-white/60">
-        {title}
-      </summary>
-      <div className="mt-2 space-y-2">
-        {entries.map(([key, value]) => (
-          <div key={key}>
-            <div className="font-semibold text-slate-500 dark:text-white/45">{key}</div>
-            <div className="break-all text-slate-900 dark:text-white">{value || "-"}</div>
-          </div>
-        ))}
-      </div>
-    </details>
-  );
-}
-
-function SourceBadge({ source }: { source: string }) {
-  const { t } = useTranslation();
-  if (source === "custom" || source === "preset") {
-    return <SourcePill tone="custom">{t("identity_fingerprint.source_custom")}</SourcePill>;
-  }
-  if (source === "learned") {
-    return <SourcePill tone="learned">{t("identity_fingerprint.source_learned")}</SourcePill>;
-  }
-  if (source === "default" || source === "builtin_default") {
-    return <SourcePill tone="default">{t("identity_fingerprint.source_default")}</SourcePill>;
-  }
-  return <SourcePill tone="default">{t("identity_fingerprint.source_default")}</SourcePill>;
-}
-
-function SourcePill({
-  tone,
-  children,
-}: {
-  tone: "custom" | "learned" | "default";
-  children: ReactNode;
-}) {
-  const className =
-    tone === "custom"
-      ? "bg-rose-50 text-rose-700 dark:bg-rose-400/10 dark:text-rose-200"
-      : tone === "learned"
-        ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-200"
-        : "bg-slate-100 text-slate-600 dark:bg-neutral-800 dark:text-white/60";
-  return (
-    <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${className}`}>
-      {children}
-    </span>
-  );
-}
-
-function ProviderActions({
-  restoreLabel,
-  saveLabel,
-  onRestore,
-  onSave,
-  disabled,
-}: {
-  restoreLabel: string;
-  saveLabel: string;
-  onRestore: () => void;
-  onSave: () => void;
-  disabled?: boolean;
-}) {
-  return (
-    <div className="flex flex-wrap justify-end gap-2 pt-2">
-      <Button variant="secondary" onClick={onRestore} disabled={disabled}>
-        {restoreLabel}
-      </Button>
-      <Button onClick={onSave} disabled={disabled}>
-        {saveLabel}
-      </Button>
-    </div>
-  );
-}
-
-function ProviderNotice({ children }: { children: ReactNode }) {
-  return (
-    <div className="mt-4 rounded-xl bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
-      {children}
-    </div>
-  );
-}
-
-function SimplePanel({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description?: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className="rounded-2xl border border-slate-900/8 bg-white p-4 dark:border-white/8 dark:bg-neutral-950/60">
-      <div className="mb-4">
-        <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{title}</h3>
-        {description ? (
-          <p className="mt-1 text-xs leading-5 text-slate-600 dark:text-white/60">{description}</p>
-        ) : null}
-      </div>
-      <div className="space-y-3">{children}</div>
-    </section>
-  );
-}
-
-function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
-  return (
-    <label className="block space-y-2">
-      <span className="text-xs font-semibold text-slate-700 dark:text-white/75">{label}</span>
-      {children}
-      {hint ? (
-        <span className="block text-xs text-slate-500 dark:text-white/45">{hint}</span>
-      ) : null}
-    </label>
-  );
-}
-
-function PreviewRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl bg-slate-50 px-3 py-2 dark:bg-neutral-900/70">
-      <div className="text-xs text-slate-500 dark:text-white/45">{label}</div>
-      <div className="mt-1 break-all text-sm font-medium text-slate-900 dark:text-white">
-        {value || "-"}
-      </div>
-    </div>
-  );
-}

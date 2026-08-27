@@ -1980,7 +1980,22 @@
     "saved": "Identity fingerprint saved",
     "load_failed": "Failed to load identity fingerprint",
     "save_failed": "Failed to save identity fingerprint",
-    "invalid_json": "Invalid JSON"
+    "invalid_json": "Invalid JSON",
+    "kimi_title": "Отпечаток личности Kimi",
+    "kimi_desc": "Исходящая личность Kimi. Пустые поля берут значение, выученное из реальных запросов kimi-cli этого аккаунта.",
+    "kimi_user_agent_hint": "Заголовок User-Agent, отправляемый в Kimi.",
+    "kimi_enabled": "Включить отпечаток личности Kimi",
+    "kimi_enabled_desc": "Запоминать реальную личность kimi-cli этого аккаунта и воспроизводить её при исходящих запросах.",
+    "kimi_version": "Версия клиента Kimi",
+    "kimi_device_name": "Имя устройства",
+    "kimi_device_model": "Модель устройства",
+    "kimi_device_id": "ID устройства",
+    "kimi_device_hint": "Пустое значение сохраняет значение хоста. ID устройства только выучивается, задать его нельзя.",
+    "kimi_device_placeholder": "Пусто = значение хоста",
+    "kimi_custom_headers_hint": "JSON-объект. Управляемые заголовки Kimi (X-Msh-*) переопределить нельзя.",
+    "kimi_preview_desc": "Текущая исходящая личность Kimi.",
+    "kimi_notice": "Приоритет: выученное > пресет здесь > встроенный шаблон. Устаревший блок kimi-header-defaults остаётся запасным пресетом.",
+    "save_kimi": "Сохранить Kimi"
   },
   "channel_groups_page": {
     "title": "Channel Groups Management",
