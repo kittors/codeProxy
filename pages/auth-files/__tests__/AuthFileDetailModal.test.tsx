@@ -65,6 +65,7 @@ const basePrefixProxyEditor: DetailModalProps["prefixProxyEditor"] = {
   proxyId: "primary",
   subscriptionStartedAt: "2026-04-01T08:30",
   subscriptionPeriod: "monthly",
+  concurrencyLimit: "5",
 };
 
 const baseCodexOAuthAdmissionEditor: DetailModalProps["codexOAuthAdmissionEditor"] = {
@@ -1301,6 +1302,31 @@ describe("AuthFileDetailModal", () => {
     });
 
     expect(screen.queryByTestId("xai-endpoint-panel")).not.toBeInTheDocument();
+  });
+
+  test("renders and edits account concurrency limit in fields tab", () => {
+    const setPrefixProxyEditor = vi.fn();
+    renderDetailModal({
+      detailTab: "fields",
+      detailFile: {
+        name: "codex.json",
+        label: "Codex Primary",
+        type: "codex",
+        size: 256,
+      },
+      prefixProxyEditor: {
+        ...basePrefixProxyEditor,
+        concurrencyLimit: "8",
+      },
+      setPrefixProxyEditor,
+    });
+
+    const input = screen.getByLabelText("Account Concurrency Limit");
+    expect(input).toBeInTheDocument();
+    expect(input).toHaveValue(8);
+
+    fireEvent.change(input, { target: { value: "12" } });
+    expect(setPrefixProxyEditor).toHaveBeenCalled();
   });
 
   test("shows the channel alias editor for Kimi auth files without account_type metadata", () => {

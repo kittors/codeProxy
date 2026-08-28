@@ -49,6 +49,7 @@ const createPrefixProxyEditorState = (): PrefixProxyEditorState => ({
   proxyId: "",
   subscriptionStartedAt: "",
   subscriptionPeriod: "monthly",
+  concurrencyLimit: "",
 });
 
 const createChannelEditorState = (): ChannelEditorState => ({
@@ -758,6 +759,7 @@ export function useAuthFilesDetailEditors(
         proxyId: "",
         subscriptionStartedAt: "",
         subscriptionPeriod: "monthly",
+        concurrencyLimit: "",
       });
 
       try {
@@ -795,6 +797,12 @@ export function useAuthFilesDetailEditors(
         const subscriptionPeriod = normalizeAuthFileSubscriptionPeriod(
           json.subscription_period ?? json.subscriptionPeriod,
         );
+        const rawConcurrency =
+          json.concurrency_limit ?? json.concurrency ?? json["concurrency-limit"];
+        const concurrencyLimit =
+          rawConcurrency !== undefined && rawConcurrency !== null && rawConcurrency !== ""
+            ? String(rawConcurrency).trim()
+            : "";
 
         setPrefixProxyEditor((prev) => ({
           ...prev,
@@ -805,6 +813,7 @@ export function useAuthFilesDetailEditors(
           proxyId,
           subscriptionStartedAt,
           subscriptionPeriod,
+          concurrencyLimit,
           error: null,
         }));
       } catch (err: unknown) {
@@ -1108,14 +1117,26 @@ export function useAuthFilesDetailEditors(
     const originalSubscriptionPeriod = normalizeAuthFileSubscriptionPeriod(
       prefixProxyEditor.json.subscription_period ?? prefixProxyEditor.json.subscriptionPeriod,
     );
+    const rawOriginalConcurrency =
+      prefixProxyEditor.json.concurrency_limit ??
+      prefixProxyEditor.json.concurrency ??
+      prefixProxyEditor.json["concurrency-limit"];
+    const originalConcurrencyLimit =
+      rawOriginalConcurrency !== undefined &&
+      rawOriginalConcurrency !== null &&
+      rawOriginalConcurrency !== ""
+        ? String(rawOriginalConcurrency).trim()
+        : "";
     return (
       originalPrefix !== prefixProxyEditor.prefix ||
       originalProxyUrl !== prefixProxyEditor.proxyUrl ||
       originalProxyId !== prefixProxyEditor.proxyId ||
       originalSubscriptionStartedAt !== prefixProxyEditor.subscriptionStartedAt ||
-      originalSubscriptionPeriod !== prefixProxyEditor.subscriptionPeriod
+      originalSubscriptionPeriod !== prefixProxyEditor.subscriptionPeriod ||
+      originalConcurrencyLimit !== prefixProxyEditor.concurrencyLimit.trim()
     );
   }, [
+    prefixProxyEditor.concurrencyLimit,
     prefixProxyEditor.json,
     prefixProxyEditor.prefix,
     prefixProxyEditor.proxyId,
@@ -1140,6 +1161,20 @@ export function useAuthFilesDetailEditors(
     if (proxyId) next.proxy_id = proxyId;
     else delete next.proxy_id;
 
+    const concurrencyLimitStr = prefixProxyEditor.concurrencyLimit.trim();
+    delete next.concurrency;
+    delete next["concurrency-limit"];
+    if (concurrencyLimitStr) {
+      const parsed = parseInt(concurrencyLimitStr, 10);
+      if (!Number.isNaN(parsed) && parsed > 0) {
+        next.concurrency_limit = parsed;
+      } else {
+        delete next.concurrency_limit;
+      }
+    } else {
+      delete next.concurrency_limit;
+    }
+
     removeSubscriptionFields(next);
     const subscriptionStartedAt = prefixProxyEditor.subscriptionStartedAt.trim();
     if (subscriptionStartedAt) {
@@ -1152,6 +1187,7 @@ export function useAuthFilesDetailEditors(
 
     return JSON.stringify(next, null, 2);
   }, [
+    prefixProxyEditor.concurrencyLimit,
     prefixProxyEditor.json,
     prefixProxyEditor.prefix,
     prefixProxyEditor.proxyId,
