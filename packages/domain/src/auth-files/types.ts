@@ -122,6 +122,7 @@ export interface AuthFileItem extends AuthFileTagDisplayFields {
   subscriptionExpired?: boolean;
   claude_oauth_health?: ClaudeOAuthHealth;
   identity_fingerprint_summary?: AuthFileIdentityFingerprintSummary;
+  concurrency_limit?: number;
   id_token?: unknown;
   attributes?: unknown;
   metadata?: unknown;
