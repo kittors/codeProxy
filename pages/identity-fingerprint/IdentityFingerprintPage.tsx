@@ -5,6 +5,7 @@ import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import { configFileApi } from "@code-proxy/api-client/endpoints/config-file";
 import {
   identityFingerprintApi,
+  type AntigravityIdentityFingerprint,
   type ClaudeIdentityFingerprint,
   type CodexFingerprintRecommendation,
   type CodexIdentityFingerprint,
@@ -37,7 +38,7 @@ import {
   SourcePill,
 } from "./components/FingerprintPanels";
 
-type ProviderTab = "codex" | "claude" | "gemini" | "xai" | "kimi";
+type ProviderTab = "codex" | "claude" | "gemini" | "xai" | "kimi" | "antigravity";
 type RuntimeProvider = IdentityFingerprintProvider;
 
 type ProviderRuntimeMap<T> = Record<RuntimeProvider, T[]>;
@@ -49,6 +50,7 @@ const PROVIDERS: Array<{ id: ProviderTab; label: string }> = [
   { id: "gemini", label: "Gemini" },
   { id: "xai", label: "xAI" },
   { id: "kimi", label: "Kimi" },
+  { id: "antigravity", label: "Antigravity" },
 ];
 
 const EMPTY_RUNTIME_RECORDS: ProviderRuntimeMap<IdentityFingerprintLearnedRecord> = {
@@ -57,6 +59,7 @@ const EMPTY_RUNTIME_RECORDS: ProviderRuntimeMap<IdentityFingerprintLearnedRecord
   gemini: [],
   xai: [],
   kimi: [],
+  antigravity: [],
 };
 
 const EMPTY_EFFECTIVE_RECORDS: ProviderRuntimeMap<IdentityFingerprintEffectiveRecord> = {
@@ -65,6 +68,7 @@ const EMPTY_EFFECTIVE_RECORDS: ProviderRuntimeMap<IdentityFingerprintEffectiveRe
   gemini: [],
   xai: [],
   kimi: [],
+  antigravity: [],
 };
 
 const EMPTY_PROVIDER_STATUS: ProviderStatusMap = {
@@ -73,6 +77,7 @@ const EMPTY_PROVIDER_STATUS: ProviderStatusMap = {
   gemini: { enabled: false, learned_count: 0 },
   xai: { enabled: false, learned_count: 0 },
   kimi: { enabled: false, learned_count: 0 },
+  antigravity: { enabled: false, learned_count: 0 },
 };
 
 const SESSION_MODE_OPTIONS = [
@@ -135,6 +140,13 @@ const EMPTY_KIMI: Required<KimiIdentityFingerprint> = {
   "custom-headers": {},
 };
 
+const EMPTY_ANTIGRAVITY: Required<AntigravityIdentityFingerprint> = {
+  enabled: false,
+  "user-agent": "",
+  version: "",
+  "custom-headers": {},
+};
+
 // Device name and model intentionally advertise a different placeholder: they have
 // no builtin default, so leaving them empty keeps the runtime's host-derived value
 // rather than falling back to a shipped one.
@@ -194,6 +206,7 @@ const PROVIDER_FIELD_ORDER: Record<RuntimeProvider, string[]> = {
     "x-msh-device-model",
     "x-msh-device-id",
   ],
+  antigravity: ["user-agent", "version"],
 };
 
 const FIELD_LABEL_KEYS: Record<string, string> = {
@@ -271,6 +284,16 @@ function mergeKimi(base: KimiIdentityFingerprint | undefined): Required<KimiIden
   };
 }
 
+function mergeAntigravity(
+  base: AntigravityIdentityFingerprint | undefined,
+): Required<AntigravityIdentityFingerprint> {
+  return {
+    ...EMPTY_ANTIGRAVITY,
+    ...base,
+    "custom-headers": base?.["custom-headers"] ?? {},
+  };
+}
+
 function mergeRuntimeRecords<T>(
   input: Partial<Record<RuntimeProvider, T[]>> | undefined,
   empty: ProviderRuntimeMap<T>,
@@ -281,6 +304,7 @@ function mergeRuntimeRecords<T>(
     gemini: input?.gemini ?? empty.gemini,
     xai: input?.xai ?? empty.xai,
     kimi: input?.kimi ?? empty.kimi,
+    antigravity: input?.antigravity ?? empty.antigravity,
   };
 }
 
@@ -293,6 +317,7 @@ function mergeProviderStatus(
     gemini: input?.gemini ?? EMPTY_PROVIDER_STATUS.gemini,
     xai: input?.xai ?? EMPTY_PROVIDER_STATUS.xai,
     kimi: input?.kimi ?? EMPTY_PROVIDER_STATUS.kimi,
+    antigravity: input?.antigravity ?? EMPTY_PROVIDER_STATUS.antigravity,
   };
 }
 
@@ -492,6 +517,11 @@ export function IdentityFingerprintPage() {
   const [kimiFingerprint, setKimiFingerprint] = useState<Required<KimiIdentityFingerprint>>(EMPTY_KIMI);
   const [kimiDefaults, setKimiDefaults] = useState<Required<KimiIdentityFingerprint>>(EMPTY_KIMI);
   const [kimiCustomHeadersText, setKimiCustomHeadersText] = useState("{}");
+  const [antigravityFingerprint, setAntigravityFingerprint] =
+    useState<Required<AntigravityIdentityFingerprint>>(EMPTY_ANTIGRAVITY);
+  const [antigravityDefaults, setAntigravityDefaults] =
+    useState<Required<AntigravityIdentityFingerprint>>(EMPTY_ANTIGRAVITY);
+  const [antigravityCustomHeadersText, setAntigravityCustomHeadersText] = useState("{}");
   const [geminiHeadersText, setGeminiHeadersText] = useState(
     JSON.stringify(DEFAULT_GEMINI_HEADERS, null, 2),
   );
@@ -528,6 +558,8 @@ export function IdentityFingerprintPage() {
       const nextXAIDefaults = mergeXAI(payload.defaults?.xai);
       const nextKimi = mergeKimi(payload["identity-fingerprint"]?.kimi);
       const nextKimiDefaults = mergeKimi(payload.defaults?.kimi);
+      const nextAntigravity = mergeAntigravity(payload["identity-fingerprint"]?.antigravity);
+      const nextAntigravityDefaults = mergeAntigravity(payload.defaults?.antigravity);
       const parsedConfig = parseConfigYaml(yamlText);
       const gemini = firstGeminiHeaders(parsedConfig["gemini-api-key"]);
       setCodex(nextCodex);
@@ -540,6 +572,8 @@ export function IdentityFingerprintPage() {
       setXAIDefaults(nextXAIDefaults);
       setKimiFingerprint(nextKimi);
       setKimiDefaults(nextKimiDefaults);
+      setAntigravityFingerprint(nextAntigravity);
+      setAntigravityDefaults(nextAntigravityDefaults);
       setConfigYaml(yamlText);
       setGeminiHeadersText(JSON.stringify(gemini.headers, null, 2));
       setGeminiKeyCount(gemini.count);
@@ -548,6 +582,7 @@ export function IdentityFingerprintPage() {
       setGeminiCustomHeadersText(JSON.stringify(nextGeminiFingerprint["custom-headers"], null, 2));
       setXAICustomHeadersText(JSON.stringify(nextXAI["custom-headers"], null, 2));
       setKimiCustomHeadersText(JSON.stringify(nextKimi["custom-headers"], null, 2));
+      setAntigravityCustomHeadersText(JSON.stringify(nextAntigravity["custom-headers"], null, 2));
       setLearnedRecords(mergeRuntimeRecords(payload.learned, EMPTY_RUNTIME_RECORDS));
       setEffectiveRecords(mergeRuntimeRecords(payload.effective, EMPTY_EFFECTIVE_RECORDS));
       setProviderStatus(mergeProviderStatus(payload.status));
@@ -607,6 +642,13 @@ export function IdentityFingerprintPage() {
     setKimiFingerprint((current) => ({ ...current, ...patch }));
   }, []);
 
+  const updateAntigravityFingerprint = useCallback(
+    (patch: Partial<AntigravityIdentityFingerprint>) => {
+      setAntigravityFingerprint((current) => ({ ...current, ...patch }));
+    },
+    [],
+  );
+
   const restoreXAIDefaults = useCallback(() => {
     setXAIFingerprint(xaiDefaults);
     setXAICustomHeadersText(JSON.stringify(xaiDefaults["custom-headers"], null, 2));
@@ -620,6 +662,11 @@ export function IdentityFingerprintPage() {
     setKimiFingerprint(kimiDefaults);
     setKimiCustomHeadersText(JSON.stringify(kimiDefaults["custom-headers"], null, 2));
   }, [kimiDefaults]);
+
+  const restoreAntigravityDefaults = useCallback(() => {
+    setAntigravityFingerprint(antigravityDefaults);
+    setAntigravityCustomHeadersText(JSON.stringify(antigravityDefaults["custom-headers"], null, 2));
+  }, [antigravityDefaults]);
 
   const applyCodexRecommendation = useCallback(
     async (recommendation: CodexFingerprintRecommendation) => {
@@ -667,6 +714,7 @@ export function IdentityFingerprintPage() {
     setError("");
     try {
       const customHeaders = parseCustomHeaders(customHeadersText);
+      const antigravityCustomHeaders = parseCustomHeaders(antigravityCustomHeadersText);
       const payload: IdentityFingerprintConfig = {
         codex: {
           ...codex,
@@ -676,6 +724,10 @@ export function IdentityFingerprintPage() {
         gemini: geminiFingerprint,
         xai: xaiFingerprint,
         kimi: kimiFingerprint,
+        antigravity: {
+          ...antigravityFingerprint,
+          "custom-headers": antigravityCustomHeaders,
+        },
       };
       await identityFingerprintApi.update(payload);
       notify({ type: "success", message: t("identity_fingerprint.saved") });
@@ -694,6 +746,7 @@ export function IdentityFingerprintPage() {
     setError("");
     try {
       const customHeaders = parseCustomHeaders(claudeCustomHeadersText);
+      const antigravityCustomHeaders = parseCustomHeaders(antigravityCustomHeadersText);
       const payload: IdentityFingerprintConfig = {
         codex,
         claude: {
@@ -703,6 +756,10 @@ export function IdentityFingerprintPage() {
         gemini: geminiFingerprint,
         xai: xaiFingerprint,
         kimi: kimiFingerprint,
+        antigravity: {
+          ...antigravityFingerprint,
+          "custom-headers": antigravityCustomHeaders,
+        },
       };
       await identityFingerprintApi.update(payload);
       notify({ type: "success", message: t("identity_fingerprint.saved") });
@@ -731,6 +788,7 @@ export function IdentityFingerprintPage() {
     setError("");
     try {
       const customHeaders = parseCustomHeaders(geminiCustomHeadersText);
+      const antigravityCustomHeaders = parseCustomHeaders(antigravityCustomHeadersText);
       const payload: IdentityFingerprintConfig = {
         codex,
         claude,
@@ -740,6 +798,10 @@ export function IdentityFingerprintPage() {
         },
         xai: xaiFingerprint,
         kimi: kimiFingerprint,
+        antigravity: {
+          ...antigravityFingerprint,
+          "custom-headers": antigravityCustomHeaders,
+        },
       };
       await identityFingerprintApi.update(payload);
       notify({ type: "success", message: t("identity_fingerprint.saved") });
@@ -768,6 +830,7 @@ export function IdentityFingerprintPage() {
     setError("");
     try {
       const customHeaders = parseCustomHeaders(xaiCustomHeadersText);
+      const antigravityCustomHeaders = parseCustomHeaders(antigravityCustomHeadersText);
       const payload: IdentityFingerprintConfig = {
         codex,
         claude,
@@ -777,6 +840,10 @@ export function IdentityFingerprintPage() {
           "custom-headers": customHeaders,
         },
         kimi: kimiFingerprint,
+        antigravity: {
+          ...antigravityFingerprint,
+          "custom-headers": antigravityCustomHeaders,
+        },
       };
       await identityFingerprintApi.update(payload);
       notify({ type: "success", message: t("identity_fingerprint.saved") });
@@ -812,6 +879,7 @@ export function IdentityFingerprintPage() {
     setError("");
     try {
       const customHeaders = parseCustomHeaders(kimiCustomHeadersText);
+      const antigravityCustomHeaders = parseCustomHeaders(antigravityCustomHeadersText);
       const payload: IdentityFingerprintConfig = {
         codex,
         claude,
@@ -820,6 +888,10 @@ export function IdentityFingerprintPage() {
         kimi: {
           ...kimiFingerprint,
           "custom-headers": customHeaders,
+        },
+        antigravity: {
+          ...antigravityFingerprint,
+          "custom-headers": antigravityCustomHeaders,
         },
       };
       await identityFingerprintApi.update(payload);
@@ -833,6 +905,45 @@ export function IdentityFingerprintPage() {
       setSaving(false);
     }
   }, [claude, codex, geminiFingerprint, kimiCustomHeadersText, kimiFingerprint, loadPage, notify, t, xaiFingerprint]);
+
+  const saveAntigravity = useCallback(async () => {
+    setSaving(true);
+    setError("");
+    try {
+      const antigravityCustomHeaders = parseCustomHeaders(antigravityCustomHeadersText);
+      const payload: IdentityFingerprintConfig = {
+        codex,
+        claude,
+        gemini: geminiFingerprint,
+        xai: xaiFingerprint,
+        kimi: kimiFingerprint,
+        antigravity: {
+          ...antigravityFingerprint,
+          "custom-headers": antigravityCustomHeaders,
+        },
+      };
+      await identityFingerprintApi.update(payload);
+      notify({ type: "success", message: t("identity_fingerprint.saved") });
+      await loadPage();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : t("identity_fingerprint.save_failed");
+      setError(message);
+      notify({ type: "error", message });
+    } finally {
+      setSaving(false);
+    }
+  }, [
+    antigravityCustomHeadersText,
+    antigravityFingerprint,
+    claude,
+    codex,
+    geminiFingerprint,
+    kimiFingerprint,
+    loadPage,
+    notify,
+    t,
+    xaiFingerprint,
+  ]);
 
   const clearLearnedRecord = useCallback(
     async (provider: RuntimeProvider, accountKey: string) => {
@@ -918,6 +1029,14 @@ export function IdentityFingerprintPage() {
       [t("identity_fingerprint.xai_client_version"), xaiFingerprint["x-grok-client-version"]],
     ],
     [t, xaiFingerprint],
+  );
+
+  const antigravityPreviewItems = useMemo(
+    () => [
+      [t("identity_fingerprint.preview_client"), antigravityFingerprint["user-agent"]],
+      [t("identity_fingerprint.preview_version"), antigravityFingerprint.version],
+    ],
+    [antigravityFingerprint, t],
   );
 
   return (
@@ -1679,6 +1798,110 @@ export function IdentityFingerprintPage() {
                     status={providerStatus.kimi}
                     learned={learnedRecords.kimi}
                     effective={effectiveRecords.kimi}
+                    disabled={saving}
+                    onClear={clearLearnedRecord}
+                  />
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+          <TabsContent value="antigravity" className="mt-5">
+            <div className="space-y-4">
+              <section className="rounded-2xl border border-slate-900/8 bg-slate-50/70 p-4 dark:border-white/8 dark:bg-neutral-900/45">
+                <div className="flex flex-col gap-4 2xl:flex-row 2xl:items-start 2xl:justify-between">
+                  <ToggleSwitch
+                    checked={Boolean(antigravityFingerprint.enabled)}
+                    onCheckedChange={(enabled) => updateAntigravityFingerprint({ enabled })}
+                    label={t("identity_fingerprint.antigravity_enabled")}
+                    description={t("identity_fingerprint.antigravity_enabled_desc")}
+                    disabled={saving}
+                  />
+                  <div className="flex w-full flex-wrap gap-2 2xl:w-auto 2xl:justify-end">
+                    <Button
+                      variant="secondary"
+                      onClick={restoreAntigravityDefaults}
+                      disabled={loading || saving}
+                    >
+                      {t("identity_fingerprint.restore_defaults")}
+                    </Button>
+                    <Button
+                      onClick={() => void saveAntigravity()}
+                      disabled={loading || saving}
+                    >
+                      {saving
+                        ? t("identity_fingerprint.saving")
+                        : t("identity_fingerprint.save_antigravity")}
+                    </Button>
+                  </div>
+                </div>
+              </section>
+
+              <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+                <div className="space-y-4">
+                  <SimplePanel
+                    title={t("identity_fingerprint.antigravity_title")}
+                    description={t("identity_fingerprint.antigravity_desc")}
+                  >
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <Field
+                        label={t("identity_fingerprint.user_agent")}
+                        hint={t("identity_fingerprint.antigravity_user_agent_hint")}
+                      >
+                        <TextInput
+                          value={antigravityFingerprint["user-agent"]}
+                          onChange={(event) =>
+                            updateAntigravityFingerprint({ "user-agent": event.target.value })
+                          }
+                          disabled={saving}
+                          placeholder={t("identity_fingerprint.auto_learn_placeholder")}
+                        />
+                      </Field>
+                      <Field
+                        label={t("identity_fingerprint.version")}
+                        hint={t("identity_fingerprint.antigravity_version_hint")}
+                      >
+                        <TextInput
+                          value={antigravityFingerprint.version}
+                          onChange={(event) =>
+                            updateAntigravityFingerprint({ version: event.target.value })
+                          }
+                          disabled={saving}
+                          placeholder={t("identity_fingerprint.auto_learn_placeholder")}
+                        />
+                      </Field>
+                    </div>
+                    <Field label={t("identity_fingerprint.custom_headers")}>
+                      <textarea
+                        value={antigravityCustomHeadersText}
+                        onChange={(event) => setAntigravityCustomHeadersText(event.target.value)}
+                        disabled={saving}
+                        spellCheck={false}
+                        className="min-h-24 w-full rounded-2xl border border-slate-900/8 bg-white px-3 py-2 font-mono text-sm text-slate-900 shadow-sm outline-none dark:border-white/8 dark:bg-neutral-900 dark:text-slate-100"
+                      />
+                      <p className="mt-2 text-xs text-slate-500 dark:text-white/50">
+                        {t("identity_fingerprint.antigravity_custom_headers_hint")}
+                      </p>
+                    </Field>
+                  </SimplePanel>
+                </div>
+
+                <div className="space-y-4">
+                  <SimplePanel
+                    title={t("identity_fingerprint.preview_title")}
+                    description={t("identity_fingerprint.antigravity_preview_desc")}
+                  >
+                    <div className="space-y-2">
+                      {antigravityPreviewItems.map(([label, value]) => (
+                        <PreviewRow key={label} label={label} value={value} />
+                      ))}
+                    </div>
+                    <ProviderNotice>{t("identity_fingerprint.antigravity_notice")}</ProviderNotice>
+                  </SimplePanel>
+                  <RuntimeStatePanel
+                    provider="antigravity"
+                    status={providerStatus.antigravity}
+                    learned={learnedRecords.antigravity}
+                    effective={effectiveRecords.antigravity}
                     disabled={saving}
                     onClear={clearLearnedRecord}
                   />
