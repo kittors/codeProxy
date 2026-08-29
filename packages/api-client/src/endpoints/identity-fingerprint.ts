@@ -67,9 +67,23 @@ export interface IdentityFingerprintConfig {
   gemini?: GeminiIdentityFingerprint;
   xai?: XAIIdentityFingerprint;
   kimi?: KimiIdentityFingerprint;
+  antigravity?: AntigravityIdentityFingerprint;
 }
 
-export type IdentityFingerprintProvider = "claude" | "codex" | "gemini" | "xai" | "kimi";
+export interface AntigravityIdentityFingerprint {
+  enabled?: boolean;
+  "user-agent"?: string;
+  version?: string;
+  "custom-headers"?: Record<string, string>;
+}
+
+export type IdentityFingerprintProvider =
+  | "claude"
+  | "codex"
+  | "gemini"
+  | "xai"
+  | "kimi"
+  | "antigravity";
 export type IdentityFingerprintFieldSource =
   "learned" | "preset" | "builtin_default";
 
