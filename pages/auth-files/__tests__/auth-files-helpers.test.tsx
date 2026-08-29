@@ -1546,4 +1546,52 @@ test("shows auth-level quota recovery records as 429 restriction badges", () => 
     });
     expect(loadAll).toHaveBeenCalledTimes(1);
   });
+
+  test("edits and serializes concurrency_limit in prefixProxyEditor", async () => {
+    let uploadedText = "";
+    mocks.downloadText.mockImplementation(async () =>
+      JSON.stringify({
+        type: "codex",
+        concurrency_limit: 3,
+      }),
+    );
+    mocks.upload.mockImplementation(async (file: File) => {
+      uploadedText = await file.text();
+      return {};
+    });
+
+    const loadAll = vi.fn(async (): Promise<AuthFileItem[]> => []);
+    const { result } = renderHook(() => useAuthFilesDetailEditors(loadAll), { wrapper });
+
+    await act(async () => {
+      result.current.setDetailFile({ name: "codex.json" } as AuthFileItem);
+      result.current.setDetailOpen(true);
+      result.current.setDetailTab("fields");
+    });
+
+    await waitFor(() => {
+      expect(result.current.prefixProxyEditor.concurrencyLimit).toBe("3");
+    });
+    expect(result.current.prefixProxyDirty).toBe(false);
+
+    await act(async () => {
+      result.current.setPrefixProxyEditor((prev) => ({
+        ...prev,
+        concurrencyLimit: "7",
+      }));
+    });
+
+    expect(result.current.prefixProxyDirty).toBe(true);
+    expect(result.current.prefixProxyUpdatedText).toContain('"concurrency_limit": 7');
+
+    await act(async () => {
+      await result.current.savePrefixProxy();
+    });
+
+    expect(mocks.upload).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(uploadedText)).toEqual({
+      type: "codex",
+      concurrency_limit: 7,
+    });
+  });
 });

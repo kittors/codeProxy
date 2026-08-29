@@ -1925,6 +1925,29 @@ export function AuthFileDetailModal({
                             {t("auth_files.leave_empty_proxy")}
                           </p>
                         </div>
+                        <div className="grid gap-2">
+                          <p className="text-xs font-semibold text-slate-700 dark:text-white/75">
+                            {t("auth_files.concurrency_limit_label")}
+                          </p>
+                          <TextInput
+                            type="number"
+                            min="0"
+                            step="1"
+                            value={prefixProxyEditor.concurrencyLimit}
+                            onChange={(e) => {
+                              const value = e.currentTarget.value;
+                              setPrefixProxyEditor((prev) => ({
+                                ...prev,
+                                concurrencyLimit: value,
+                              }));
+                            }}
+                            placeholder={t("auth_files.concurrency_limit_placeholder")}
+                            aria-label={t("auth_files.concurrency_limit_label")}
+                          />
+                          <p className="text-xs text-slate-500 dark:text-white/55">
+                            {t("auth_files.concurrency_limit_hint")}
+                          </p>
+                        </div>
                       </div>
                     ) : (
                       <div className={canRenameChannel ? "min-w-0" : "min-w-0 lg:col-span-2"}>

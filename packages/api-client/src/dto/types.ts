@@ -198,6 +198,8 @@ export interface AuthFileItem extends TagDisplayFields {
   codex_cli_only_allowed_clients?: string[];
   /** xAI OAuth: true = official API quota, false = Grok Build/CLI subscription. */
   using_api?: boolean;
+  /** Max concurrent requests allowed for this account (0 or unset = unlimited). */
+  concurrency_limit?: number;
   [key: string]: unknown;
 }
 
