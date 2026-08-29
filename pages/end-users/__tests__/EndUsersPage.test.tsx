@@ -151,8 +151,11 @@ describe("EndUsersPage account semantics", () => {
     expect(screen.getByRole("columnheader", { name: "Today" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Lifetime" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Total resets" })).toBeInTheDocument();
-    expect(screen.queryByRole("columnheader", { name: "Daily limit" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("columnheader", { name: "RPM" })).not.toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Daily limit" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Total quota" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Concurrency" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "RPM" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "TPM" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "View reset history" })).toHaveTextContent("2");
     expect(screen.getAllByRole("button", { name: "View usage" })).toHaveLength(users.length);
     expect(screen.queryByRole("button", { name: "end_users.view_usage" })).not.toBeInTheDocument();
@@ -557,6 +560,7 @@ describe("EndUsersPage lifetime allowance", () => {
 
     const row = screen.getByText("Carol").closest("tr")!;
     expect(within(row).getByText(/\$88 left/)).toBeTruthy();
-    expect(within(row).queryByText("Unlimited")).toBeNull();
+    const quotaCell = row.querySelector('[data-vt-column-key="quota"]')!;
+    expect(within(quotaCell as HTMLElement).queryByText("Unlimited")).toBeNull();
   });
 });

@@ -28,6 +28,10 @@ import { ToggleSwitch } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
 import { DataTable, TABLE_ROW_ACTIONS_COLUMN, type DataTableColumn } from "@code-proxy/ui";
 
+const stickyActionsHeaderClass =
+  "text-center md:sticky md:z-40 md:bg-slate-100 md:dark:bg-neutral-800";
+const stickyActionsCellClass = "md:sticky md:z-30 md:bg-white md:dark:bg-neutral-950";
+
 type ProfileDraft = {
   id: string;
   name: string;
@@ -357,6 +361,9 @@ export function ApiKeyPermissionsPage() {
         key: "actions",
         label: t("api_key_permissions_page.col_actions"),
         ...TABLE_ROW_ACTIONS_COLUMN,
+        lockOrder: "end",
+        headerClassName: stickyActionsHeaderClass,
+        cellClassName: stickyActionsCellClass,
         render: (profile) => (
           <div className="flex items-center gap-1.5">
             <button

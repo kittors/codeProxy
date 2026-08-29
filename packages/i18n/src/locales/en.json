@@ -3291,6 +3291,7 @@
     "reset_history_actor_unknown": "Unknown",
     "account_permission_profile": "Account Permission Profile",
     "account_permission_profile_placeholder": "Select an account permission profile",
+    "concurrency_limit_col": "Concurrency",
     "quota_on_account_hint": "Limits and model/channel permissions belong to the account and are shared by all of its keys.",
     "last_login": "Last login",
     "create": "Create user",
