@@ -87,7 +87,6 @@ function modelOptions(models: readonly string[]): SearchableSelectOption[] {
   }));
 }
 
-
 export function CcSwitchImportConfigModal({
   open,
   mode,
@@ -554,8 +553,7 @@ export function CcSwitchImportConfigModal({
               const role = mapping.role;
               const label = role ? t(`ccswitch.config_claude_role_${role}`) : "";
               return (
-                <TextInput
-                  value={mapping.requestModel}
+                <TextInput size="sm" value={mapping.requestModel}
                   onChange={(event) => {
                     if (role) updateClaudeRequestModel(role, event.currentTarget.value);
                   }}
@@ -573,8 +571,7 @@ export function CcSwitchImportConfigModal({
               const role = mapping.role;
               const label = role ? t(`ccswitch.config_claude_role_${role}`) : "";
               return (
-                <SearchableSelect
-                  value={mapping.targetModel}
+                <SearchableSelect size="sm" value={mapping.targetModel}
                   onChange={(next) => {
                     if (role) updateClaudeRoleModel(role, next);
                   }}
@@ -597,8 +594,7 @@ export function CcSwitchImportConfigModal({
             width: COLUMN_WIDTH.nameStacked,
             sort: { getValue: (mapping) => mapping.targetModel },
             render: (mapping, index) => (
-              <SearchableSelect
-                value={mapping.targetModel}
+              <SearchableSelect size="sm" value={mapping.targetModel}
                 onChange={(next) => updateGenericTargetModel(index, next)}
                 options={currentModelOptions}
                 allowCreate
@@ -618,8 +614,7 @@ export function CcSwitchImportConfigModal({
             width: COLUMN_WIDTH.nameStacked,
             sort: { getValue: (mapping) => mapping.requestModel },
             render: (mapping, index) => (
-              <TextInput
-                value={mapping.requestModel}
+              <TextInput size="sm" value={mapping.requestModel}
                 onChange={(event) => updateGenericRequestModel(index, event.currentTarget.value)}
                 aria-label={t("ccswitch.config_request_model_for_mapping", {
                   index: index + 1,
@@ -634,6 +629,7 @@ export function CcSwitchImportConfigModal({
             width: COLUMN_WIDTH.name,
             render: (mapping, index) => (
               <TextInput
+                size="sm"
                 type="number"
                 min={1}
                 inputMode="numeric"
