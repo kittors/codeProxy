@@ -74,7 +74,7 @@ const iconByType: Record<CcSwitchClientType, string> = {
 const labelClassName = "text-sm font-medium text-slate-700 dark:text-white/80";
 const fieldClassName = "flex flex-col gap-1.5";
 const sectionClassName =
-  "rounded-2xl bg-white p-4 ring-1 ring-slate-900/8 dark:bg-white/[0.03] dark:ring-white/8";
+  "rounded-2xl bg-slate-50/70 p-4 ring-1 ring-slate-900/8 dark:bg-white/[0.03] dark:ring-white/8";
 
 const MODEL_MAPPING_LOADING_ROWS = ["short", "medium", "long"];
 const CONFIG_MODAL_CLIENTS = CC_SWITCH_CLIENTS.filter((client) => client.type !== "gemini");
@@ -846,7 +846,7 @@ export function CcSwitchImportConfigModal({
           </label>
         </section>
 
-        <section className="overflow-hidden rounded-2xl bg-white ring-1 ring-slate-900/8 dark:bg-white/[0.03] dark:ring-white/8">
+        <section className="overflow-hidden rounded-2xl bg-slate-50/70 ring-1 ring-slate-900/8 dark:bg-white/[0.03] dark:ring-white/8">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-900/8 px-4 py-3 dark:border-white/8">
             <div>
               <div className="text-sm font-semibold text-slate-950 dark:text-white">
