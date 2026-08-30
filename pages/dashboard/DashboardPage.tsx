@@ -4,13 +4,10 @@ import {
   useMemo,
   useRef,
   useState,
-  type ReactElement,
-  type ReactNode,
 } from "react";
-import { Trans, useTranslation } from "react-i18next";
+import { useTranslation } from "react-i18next";
 import {
   Activity,
-  CircleAlert,
   Database,
   DollarSign,
   RefreshCw,
@@ -18,36 +15,27 @@ import {
   Sparkles,
   TriangleAlert,
 } from "lucide-react";
-import type { ECBasicOption } from "echarts/types/dist/shared";
 import {
   usageApi,
   type DashboardSummary,
-  type DashboardTenantThroughputItem,
-  type DashboardThroughputPoint,
-  type DashboardTrendPoint,
 } from "@code-proxy/api-client/endpoints/usage";
-import {
-  formatCompactNumber,
-  formatCompactUsd,
-  formatFixedNumber,
-  formatUsd,
-  getCompactNumberParts,
-  type CompactNumberOptions,
-} from "@code-proxy/domain";
 import { useAuth } from "@app/providers/AuthProvider";
 import { SystemMonitorSection } from "./SystemMonitorSection";
 import { useSystemStats } from "./useSystemStats";
 import { AnimatedNumber } from "@code-proxy/ui";
 import { Button } from "@code-proxy/ui";
-import { Card } from "@code-proxy/ui";
-import { surface } from "@code-proxy/ui";
 import { EmptyState } from "@code-proxy/ui";
-import { HoverTooltip } from "@code-proxy/ui";
 import { Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
-import { EChart } from "@code-proxy/ui";
-import { ChartLegend } from "@code-proxy/ui";
 import { useInterval } from "@code-proxy/ui";
+import { DashboardKpiCard } from "./DashboardKpiCard";
+import {
+  DashboardMetricValue,
+  renderDashboardHint,
+  formatRate,
+  createSparklineOption,
+} from "./DashboardMetrics";
+import { ThroughputTrendChart } from "./ThroughputTrendChart";
 
 type DashboardRange = 1 | 7 | 30;
 
@@ -56,430 +44,6 @@ const RANGE_KEYS: Record<DashboardRange, string> = {
   7: "dashboard.last_7_days",
   30: "dashboard.last_30_days",
 };
-
-const DASHBOARD_COMPACT_OPTIONS = {
-  threshold: 10_000,
-  maximumFractionDigits: 1,
-  standardMaximumFractionDigits: 0,
-} satisfies CompactNumberOptions;
-const DASHBOARD_COST_COMPACT_OPTIONS = {
-  threshold: 10_000,
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-  standardMinimumFractionDigits: 4,
-  standardMaximumFractionDigits: 4,
-} satisfies CompactNumberOptions;
-
-const formatDashboardNumber = (value: number) =>
-  formatCompactNumber(value, DASHBOARD_COMPACT_OPTIONS);
-const formatDashboardTooltipNumber = (value: number) =>
-  formatFixedNumber(value, { fractionDigits: 2 });
-const formatDashboardCost = (value: number) =>
-  formatCompactUsd(value, DASHBOARD_COST_COMPACT_OPTIONS);
-const formatDashboardTooltipCost = (value: number) => formatUsd(value, { fractionDigits: 4 });
-
-function DashboardMetricValue({
-  value,
-  variant = "number",
-  animated = false,
-  className,
-}: {
-  value: number;
-  variant?: "number" | "currency";
-  animated?: boolean;
-  className?: string;
-}) {
-  const compactOptions =
-    variant === "currency" ? DASHBOARD_COST_COMPACT_OPTIONS : DASHBOARD_COMPACT_OPTIONS;
-  const format = variant === "currency" ? formatDashboardCost : formatDashboardNumber;
-  const tooltip =
-    variant === "currency"
-      ? formatDashboardTooltipCost(value)
-      : formatDashboardTooltipNumber(value);
-  const compact = getCompactNumberParts(value, compactOptions).compact;
-  const content = animated ? (
-    <AnimatedNumber value={value} format={format} className={className} />
-  ) : (
-    <span className={["inline-block tabular-nums", className].filter(Boolean).join(" ")}>
-      {format(value)}
-    </span>
-  );
-
-  return (
-    <HoverTooltip
-      content={tooltip}
-      disabled={!compact}
-      placement="top"
-      className={compact ? "cursor-help" : undefined}
-    >
-      {content}
-    </HoverTooltip>
-  );
-}
-
-const renderDashboardHint = (
-  i18nKey: string,
-  first: ReactElement,
-  second: ReactElement,
-): ReactNode => {
-  return <Trans i18nKey={i18nKey} components={[first, second]} />;
-};
-
-const throughputNumberFormatter = new Intl.NumberFormat(undefined, {
-  maximumFractionDigits: 2,
-});
-const formatThroughputValue = (value: number) =>
-  throughputNumberFormatter.format(Number.isFinite(value) ? value : 0);
-const formatRate = (rate: number) => `${rate.toFixed(2)}%`;
-const PANEL_SURFACE = surface({ tone: "panel", radius: "2xl" });
-
-const formatThroughputTooltip = (params: any) => {
-  const items = Array.isArray(params) ? params : [params];
-  const title = items[0]?.axisValueLabel ?? "";
-  const lines = items.map(
-    (item) =>
-      `${item?.marker ?? ""}${item?.seriesName ?? ""} ${formatThroughputValue(Number(item?.data ?? 0))}`,
-  );
-  return [title, ...lines].join("<br/>");
-};
-
-function createSparklineOption(points: DashboardTrendPoint[], color: string): ECBasicOption {
-  const labels = points.map((point) => point.label);
-  const values = points.map((point) => point.value);
-
-  return {
-    animationDuration: 320,
-    animationDurationUpdate: 240,
-    grid: { left: 0, right: 0, top: 6, bottom: 0 },
-    tooltip: {
-      trigger: "axis",
-      borderWidth: 0,
-      backgroundColor: "rgba(15, 23, 42, 0.9)",
-      textStyle: { color: "#fff", fontSize: 12 },
-      formatter: (params: any) => {
-        const first = Array.isArray(params) ? params[0] : params;
-        return `${first?.axisValueLabel ?? ""}<br/>${formatDashboardTooltipNumber(Number(first?.data ?? 0))}`;
-      },
-    },
-    xAxis: {
-      type: "category",
-      data: labels,
-      show: false,
-      boundaryGap: false,
-    },
-    yAxis: {
-      type: "value",
-      show: false,
-      min: (value: { min: number }) => Math.min(0, value.min),
-    },
-    series: [
-      {
-        id: "sparkline",
-        name: "trend",
-        type: "line",
-        data: values,
-        smooth: true,
-        symbol: "none",
-        lineStyle: { color, width: 2.5 },
-        areaStyle: {
-          color: {
-            type: "linear",
-            x: 0,
-            y: 0,
-            x2: 0,
-            y2: 1,
-            colorStops: [
-              { offset: 0, color: `${color}33` },
-              { offset: 1, color: `${color}00` },
-            ],
-          },
-        },
-      },
-    ],
-  };
-}
-
-function createThroughputOption(
-  points: DashboardThroughputPoint[],
-  showRPM: boolean,
-  showTPM: boolean,
-): ECBasicOption {
-  const labels = points.map((point) => point.label);
-  const rpmValues = points.map((point) => point.rpm);
-  const tpmValues = points.map((point) => point.tpm);
-
-  return {
-    animationDuration: 360,
-    animationDurationUpdate: 80,
-    tooltip: {
-      trigger: "axis",
-      borderWidth: 0,
-      backgroundColor: "rgba(15, 23, 42, 0.92)",
-      textStyle: { color: "#fff" },
-      formatter: formatThroughputTooltip,
-    },
-    grid: { left: 12, right: 12, top: 12, bottom: 22, containLabel: true },
-    xAxis: {
-      type: "category",
-      data: labels,
-      boundaryGap: false,
-      axisTick: { show: false },
-      axisLine: { lineStyle: { color: "rgba(148,163,184,0.45)" } },
-      axisLabel: { color: "#64748b", fontSize: 10, hideOverlap: true },
-    },
-    yAxis: [
-      {
-        type: "value",
-        splitNumber: 4,
-        axisLabel: {
-          color: "#64748b",
-          fontSize: 10,
-          formatter: (value: number) => formatThroughputValue(value),
-        },
-        splitLine: { lineStyle: { color: "rgba(148,163,184,0.16)" } },
-      },
-      {
-        type: "value",
-        splitNumber: 4,
-        axisLabel: {
-          color: "#64748b",
-          fontSize: 10,
-          formatter: (value: number) => formatThroughputValue(value),
-        },
-        splitLine: { show: false },
-      },
-    ],
-    series: [
-      {
-        id: "rpm",
-        name: "RPM",
-        type: "line",
-        yAxisIndex: 0,
-        data: showRPM ? rpmValues : [],
-        smooth: true,
-        showSymbol: false,
-        lineStyle: { width: 3, color: "#2563eb" },
-        itemStyle: { color: "#2563eb" },
-        areaStyle: {
-          color: {
-            type: "linear",
-            x: 0,
-            y: 0,
-            x2: 0,
-            y2: 1,
-            colorStops: [
-              { offset: 0, color: "rgba(37,99,235,0.18)" },
-              { offset: 1, color: "rgba(37,99,235,0.02)" },
-            ],
-          },
-        },
-      },
-      {
-        id: "tpm",
-        name: "TPM",
-        type: "line",
-        yAxisIndex: 1,
-        data: showTPM ? tpmValues : [],
-        smooth: true,
-        showSymbol: false,
-        lineStyle: { width: 3, color: "#7c3aed" },
-        itemStyle: { color: "#7c3aed" },
-        areaStyle: {
-          color: {
-            type: "linear",
-            x: 0,
-            y: 0,
-            x2: 0,
-            y2: 1,
-            colorStops: [
-              { offset: 0, color: "rgba(124,58,237,0.14)" },
-              { offset: 1, color: "rgba(124,58,237,0.02)" },
-            ],
-          },
-        },
-      },
-    ],
-  };
-}
-
-function DashboardKpiCard({
-  title,
-  value,
-  hint,
-  icon: Icon,
-  option,
-  accent,
-}: {
-  title: string;
-  value: ReactNode;
-  hint: ReactNode;
-  icon: typeof Activity;
-  option: ECBasicOption;
-  accent: {
-    iconWrap: string;
-    iconColor: string;
-  };
-}) {
-  return (
-    <Card
-      className={`${PANEL_SURFACE} h-full`}
-      bodyClassName="mt-0 flex h-full flex-col"
-      padding="compact"
-    >
-      <div className="flex items-start justify-between gap-2">
-        <div
-          className={`inline-flex h-9 w-9 items-center justify-center rounded-2xl ${accent.iconWrap}`}
-        >
-          <Icon size={16} className={accent.iconColor} />
-        </div>
-      </div>
-      <div className="mt-3">
-        <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{title}</p>
-        <div className="mt-2 text-3xl font-semibold leading-none tracking-tight text-slate-950 dark:text-white">
-          {value}
-        </div>
-        <p className="mt-2 text-xs text-slate-500 dark:text-white/45">{hint}</p>
-      </div>
-      <div className="mt-auto pt-3">
-        <EChart option={option} className="h-10" overflowVisible />
-      </div>
-    </Card>
-  );
-}
-
-function ThroughputTrendChart({
-  title,
-  points,
-  rpm,
-  tpm,
-  connected,
-  showRPM,
-  showTPM,
-  onToggle,
-  allTenantsScope = false,
-  tenants = [],
-  selectedTenant = "all",
-  onSelectTenant,
-}: {
-  title: string;
-  points: DashboardThroughputPoint[];
-  rpm: number;
-  tpm: number;
-  connected: boolean;
-  showRPM: boolean;
-  showTPM: boolean;
-  onToggle: (key: string) => void;
-  /** Platform super-admin: series aggregates every tenant. */
-  allTenantsScope?: boolean;
-  tenants?: DashboardTenantThroughputItem[];
-  selectedTenant?: string;
-  onSelectTenant?: (tenantId: string) => void;
-}) {
-  const { t } = useTranslation();
-  const option = useMemo(
-    () => createThroughputOption(points, showRPM, showTPM),
-    [points, showRPM, showTPM],
-  );
-  const active = rpm > 0 || tpm > 0;
-  const titleNode = allTenantsScope ? (
-    <span className="inline-flex items-center gap-1.5">
-      <span>{title}</span>
-      <HoverTooltip content={t("dashboard.throughput_all_tenants_hint")} placement="top">
-        <button
-          type="button"
-          className="inline-flex h-5 w-5 items-center justify-center rounded-full text-amber-500 transition-colors hover:bg-amber-50 hover:text-amber-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/30 dark:text-amber-400 dark:hover:bg-amber-500/10 dark:hover:text-amber-300"
-          aria-label={t("dashboard.throughput_all_tenants_hint")}
-        >
-          <CircleAlert size={14} strokeWidth={2.25} />
-        </button>
-      </HoverTooltip>
-    </span>
-  ) : (
-    title
-  );
-
-  const hasMultipleTenants = allTenantsScope && tenants && tenants.length > 0;
-
-  return (
-    <Card
-      className={PANEL_SURFACE}
-      title={titleNode}
-      actions={
-        <div className="flex items-center gap-2">
-          {hasMultipleTenants && onSelectTenant ? (
-            <select
-              value={selectedTenant}
-              onChange={(e) => onSelectTenant(e.target.value)}
-              className="h-7 rounded-lg border border-slate-200 bg-white px-2 text-xs font-medium text-slate-700 shadow-2xs outline-none transition-colors hover:border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-white/10 dark:bg-neutral-800 dark:text-slate-200 dark:hover:border-white/20"
-              aria-label={t("dashboard.throughput_tenant_select")}
-            >
-              <option value="all">{t("dashboard.throughput_tenant_all")}</option>
-              {tenants.map((item) => (
-                <option key={item.tenant_id} value={item.tenant_id}>
-                  {item.tenant_name || item.tenant_id} (RPM: {formatThroughputValue(item.current_rpm)})
-                </option>
-              ))}
-            </select>
-          ) : null}
-          <div
-            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
-              connected
-                ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300"
-                : "bg-slate-100 text-slate-400 dark:bg-neutral-800 dark:text-white/45"
-            }`}
-          >
-            <span
-              className={`h-2 w-2 rounded-full ${
-                active ? "animate-pulse bg-emerald-500" : "bg-slate-300 dark:bg-neutral-600"
-              }`}
-            />
-            {connected ? t("system_monitor.live") : t("system_monitor.polling")}
-          </div>
-        </div>
-      }
-      padding="compact"
-    >
-      <div className="mb-3 grid gap-3 sm:grid-cols-2">
-        <div className="rounded-2xl bg-slate-50 px-3 py-2 dark:bg-neutral-900/70 dark:ring-1 dark:ring-white/8">
-          <div className="text-2xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-            RPM
-          </div>
-          <div className="mt-1 text-xl font-semibold tabular-nums text-indigo-600 dark:text-indigo-400">
-            <DashboardMetricValue value={rpm} />
-          </div>
-        </div>
-        <div className="rounded-2xl bg-slate-50 px-3 py-2 dark:bg-neutral-900/70 dark:ring-1 dark:ring-white/8">
-          <div className="text-2xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-            TPM
-          </div>
-          <div className="mt-1 text-xl font-semibold tabular-nums text-violet-600 dark:text-violet-400">
-            <DashboardMetricValue value={tpm} />
-          </div>
-        </div>
-      </div>
-      <EChart option={option} className="h-56" />
-      <ChartLegend
-        className="justify-start pt-3"
-        items={[
-          {
-            key: "rpm",
-            label: "RPM",
-            colorClass: "bg-blue-500",
-            enabled: showRPM,
-            onToggle,
-          },
-          {
-            key: "tpm",
-            label: "TPM",
-            colorClass: "bg-violet-500",
-            enabled: showTPM,
-            onToggle,
-          },
-        ]}
-      />
-    </Card>
-  );
-}
 
 export function DashboardPage() {
   const { t } = useTranslation();
@@ -500,8 +64,6 @@ export function DashboardPage() {
   const [range, setRange] = useState<DashboardRange>(7);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [throughputLegend, setThroughputLegend] = useState({ rpm: true, tpm: true });
-  const [selectedThroughputTenant, setSelectedThroughputTenant] = useState("all");
 
   const refresh = useCallback(
     async (days: DashboardRange, silent = false) => {
@@ -568,19 +130,6 @@ export function DashboardPage() {
   const throughputAllTenants =
     meta.throughput_scope === "all_tenants" || Boolean(principal?.platform_admin);
   const tenantBreakdown = trends?.tenants ?? [];
-  const activeThroughputSeries = useMemo(() => {
-    if (selectedThroughputTenant !== "all") {
-      const found = tenantBreakdown.find((item) => item.tenant_id === selectedThroughputTenant);
-      if (found) {
-        return found.throughput_series;
-      }
-    }
-    return throughputSeries;
-  }, [selectedThroughputTenant, tenantBreakdown, throughputSeries]);
-
-  const activeLatestThroughput = activeThroughputSeries[activeThroughputSeries.length - 1];
-  const activeRpm = activeLatestThroughput?.rpm ?? tenantRpm;
-  const activeTpm = activeLatestThroughput?.tpm ?? tenantTpm;
 
   const totalRequestOption = useMemo(
     () => createSparklineOption(trends?.request_volume ?? [], "#2563eb"),
@@ -649,15 +198,20 @@ export function DashboardPage() {
           description={error}
           icon={<TriangleAlert size={18} />}
           action={
-            <Button variant="secondary" onClick={() => void refresh(range)}>
-              <RefreshCw size={14} />
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => void refresh(range)}
+              disabled={loading}
+            >
+              <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
               {t("dashboard.retry")}
             </Button>
           }
         />
       ) : null}
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <DashboardKpiCard
           title={t("dashboard.total_requests")}
           value={<DashboardMetricValue value={kpi?.total_requests ?? 0} animated />}
@@ -752,20 +306,13 @@ export function DashboardPage() {
 
       <ThroughputTrendChart
         title={t("dashboard.throughput_title")}
-        points={activeThroughputSeries}
-        rpm={activeRpm}
-        tpm={activeTpm}
+        points={throughputSeries}
+        rpm={tenantRpm}
+        tpm={tenantTpm}
         // Series from dashboard-summary polling; latest point is rolling 60s RPM/TPM.
         connected={false}
-        showRPM={throughputLegend.rpm}
-        showTPM={throughputLegend.tpm}
         allTenantsScope={throughputAllTenants}
         tenants={tenantBreakdown}
-        selectedTenant={selectedThroughputTenant}
-        onSelectTenant={setSelectedThroughputTenant}
-        onToggle={(key) =>
-          setThroughputLegend((prev) => ({ ...prev, [key]: !prev[key as "rpm" | "tpm"] }))
-        }
       />
     </div>
   );

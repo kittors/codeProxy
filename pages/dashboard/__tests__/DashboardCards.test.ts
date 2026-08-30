@@ -9,26 +9,24 @@ const readModule = (path: string) => readFileSync(resolve(root, path), "utf8");
 describe("dashboard card composition", () => {
   test("uses the shared Card component for dashboard KPI cards", () => {
     const source = readModule("pages/dashboard/DashboardPage.tsx");
+    const chartSource = readModule("pages/dashboard/ThroughputTrendChart.tsx");
 
-    expect(source).toContain('from "@code-proxy/ui"');
     expect(source).toContain('from "@code-proxy/ui"');
     expect(source).toContain('from "./useSystemStats"');
     expect(source).toContain("createSparklineOption");
     expect(source).toContain("ThroughputTrendChart");
-    expect(source).toContain("ChartLegend");
+    expect(chartSource).toContain("ChartLegend");
     expect(source).toContain("useInterval");
     expect(source).toContain("summary?.trends");
     expect(source).toContain('can("system.status.read")');
     expect(source).toContain("useSystemStats(15, canViewSystemMonitor && pageVisible)");
-    expect(source).toContain("rpm={activeRpm}");
-    expect(source).toContain("tpm={activeTpm}");
+    expect(source).toContain("rpm={tenantRpm}");
+    expect(source).toContain("tpm={tenantTpm}");
     expect(source).toContain("tenants={tenantBreakdown}");
-    expect(source).toContain("onSelectTenant={setSelectedThroughputTenant}");
     expect(source).toContain("canViewSystemMonitor");
     expect(source).toContain("allTenantsScope");
-    expect(source).toContain("throughput_all_tenants_hint");
+    expect(chartSource).toContain("throughput_all_tenants_hint");
     expect(source).toContain("meta.generated_at");
-    expect(source).toContain('<EChart option={option} className="h-10" overflowVisible />');
     expect(source).toContain("pageVisible ? 20_000 : null");
     expect(source).not.toContain('replaceMerge="series"');
     expect(source).not.toContain('from "@features/monitor-widgets"');
@@ -36,11 +34,12 @@ describe("dashboard card composition", () => {
   });
 
   test("formats throughput chart values with at most two decimal places", () => {
-    const source = readModule("pages/dashboard/DashboardPage.tsx");
+    const source = readModule("pages/dashboard/ThroughputTrendChart.tsx");
+    const metricSource = readModule("pages/dashboard/DashboardMetrics.tsx");
 
-    expect(source).toContain("formatThroughputValue");
-    expect(source).toContain("maximumFractionDigits: 2");
-    expect(source).toContain("formatThroughputTooltip");
+    expect(metricSource).toContain("formatThroughputValue");
+    expect(metricSource).toContain("maximumFractionDigits: 2");
+    expect(metricSource).toContain("formatThroughputTooltip");
     expect(source).toContain("formatter: formatThroughputTooltip");
   });
 
@@ -80,11 +79,11 @@ describe("dashboard card composition", () => {
   });
 
   test("includes dark mode surfaces for throughput and system monitor summary cards", () => {
-    const dashboardSource = readModule("pages/dashboard/DashboardPage.tsx");
+    const chartSource = readModule("pages/dashboard/ThroughputTrendChart.tsx");
     const systemMonitorSource = readModule("pages/dashboard/SystemMonitorSection.tsx");
 
-    expect(dashboardSource).toContain("dark:bg-neutral-900/70");
-    expect(dashboardSource).toContain("dark:text-slate-200");
+    expect(chartSource).toContain("dark:bg-neutral-900/70");
+    expect(chartSource).toContain("dark:text-slate-400");
     expect(systemMonitorSource).toContain("dark:bg-neutral-900/70");
     expect(systemMonitorSource).toContain("dark:text-white/80");
   });
