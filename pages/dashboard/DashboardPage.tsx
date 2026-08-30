@@ -22,6 +22,7 @@ import type { ECBasicOption } from "echarts/types/dist/shared";
 import {
   usageApi,
   type DashboardSummary,
+  type DashboardTenantThroughputItem,
   type DashboardThroughputPoint,
   type DashboardTrendPoint,
 } from "@code-proxy/api-client/endpoints/usage";
@@ -356,6 +357,9 @@ function ThroughputTrendChart({
   showTPM,
   onToggle,
   allTenantsScope = false,
+  tenants = [],
+  selectedTenant = "all",
+  onSelectTenant,
 }: {
   title: string;
   points: DashboardThroughputPoint[];
@@ -367,6 +371,9 @@ function ThroughputTrendChart({
   onToggle: (key: string) => void;
   /** Platform super-admin: series aggregates every tenant. */
   allTenantsScope?: boolean;
+  tenants?: DashboardTenantThroughputItem[];
+  selectedTenant?: string;
+  onSelectTenant?: (tenantId: string) => void;
 }) {
   const { t } = useTranslation();
   const option = useMemo(
@@ -391,24 +398,43 @@ function ThroughputTrendChart({
     title
   );
 
+  const hasMultipleTenants = allTenantsScope && tenants && tenants.length > 0;
+
   return (
     <Card
       className={PANEL_SURFACE}
       title={titleNode}
       actions={
-        <div
-          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
-            connected
-              ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300"
-              : "bg-slate-100 text-slate-400 dark:bg-neutral-800 dark:text-white/45"
-          }`}
-        >
-          <span
-            className={`h-2 w-2 rounded-full ${
-              active ? "animate-pulse bg-emerald-500" : "bg-slate-300 dark:bg-neutral-600"
+        <div className="flex items-center gap-2">
+          {hasMultipleTenants && onSelectTenant ? (
+            <select
+              value={selectedTenant}
+              onChange={(e) => onSelectTenant(e.target.value)}
+              className="h-7 rounded-lg border border-slate-200 bg-white px-2 text-xs font-medium text-slate-700 shadow-2xs outline-none transition-colors hover:border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-white/10 dark:bg-neutral-800 dark:text-slate-200 dark:hover:border-white/20"
+              aria-label={t("dashboard.throughput_tenant_select")}
+            >
+              <option value="all">{t("dashboard.throughput_tenant_all")}</option>
+              {tenants.map((item) => (
+                <option key={item.tenant_id} value={item.tenant_id}>
+                  {item.tenant_name || item.tenant_id} (RPM: {formatThroughputValue(item.current_rpm)})
+                </option>
+              ))}
+            </select>
+          ) : null}
+          <div
+            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
+              connected
+                ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300"
+                : "bg-slate-100 text-slate-400 dark:bg-neutral-800 dark:text-white/45"
             }`}
-          />
-          {connected ? t("system_monitor.live") : t("system_monitor.polling")}
+          >
+            <span
+              className={`h-2 w-2 rounded-full ${
+                active ? "animate-pulse bg-emerald-500" : "bg-slate-300 dark:bg-neutral-600"
+              }`}
+            />
+            {connected ? t("system_monitor.live") : t("system_monitor.polling")}
+          </div>
         </div>
       }
       padding="compact"
@@ -475,6 +501,7 @@ export function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [throughputLegend, setThroughputLegend] = useState({ rpm: true, tpm: true });
+  const [selectedThroughputTenant, setSelectedThroughputTenant] = useState("all");
 
   const refresh = useCallback(
     async (days: DashboardRange, silent = false) => {
@@ -540,6 +567,20 @@ export function DashboardPage() {
   const tenantTpm = latestThroughput?.tpm ?? 0;
   const throughputAllTenants =
     meta.throughput_scope === "all_tenants" || Boolean(principal?.platform_admin);
+  const tenantBreakdown = trends?.tenants ?? [];
+  const activeThroughputSeries = useMemo(() => {
+    if (selectedThroughputTenant !== "all") {
+      const found = tenantBreakdown.find((item) => item.tenant_id === selectedThroughputTenant);
+      if (found) {
+        return found.throughput_series;
+      }
+    }
+    return throughputSeries;
+  }, [selectedThroughputTenant, tenantBreakdown, throughputSeries]);
+
+  const activeLatestThroughput = activeThroughputSeries[activeThroughputSeries.length - 1];
+  const activeRpm = activeLatestThroughput?.rpm ?? tenantRpm;
+  const activeTpm = activeLatestThroughput?.tpm ?? tenantTpm;
 
   const totalRequestOption = useMemo(
     () => createSparklineOption(trends?.request_volume ?? [], "#2563eb"),
@@ -711,14 +752,17 @@ export function DashboardPage() {
 
       <ThroughputTrendChart
         title={t("dashboard.throughput_title")}
-        points={throughputSeries}
-        rpm={tenantRpm}
-        tpm={tenantTpm}
+        points={activeThroughputSeries}
+        rpm={activeRpm}
+        tpm={activeTpm}
         // Series from dashboard-summary polling; latest point is rolling 60s RPM/TPM.
         connected={false}
         showRPM={throughputLegend.rpm}
         showTPM={throughputLegend.tpm}
         allTenantsScope={throughputAllTenants}
+        tenants={tenantBreakdown}
+        selectedTenant={selectedThroughputTenant}
+        onSelectTenant={setSelectedThroughputTenant}
         onToggle={(key) =>
           setThroughputLegend((prev) => ({ ...prev, [key]: !prev[key as "rpm" | "tpm"] }))
         }
