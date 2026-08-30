@@ -154,6 +154,8 @@ function toLogRow(item: PublicLogItem): RequestLogsRow {
     visionFallbackModel: item.vision_fallback_model || "",
     failed: item.failed,
     streaming: item.streaming === true,
+    latencyMs: item.latency_ms,
+    firstTokenMs: item.first_token_ms ?? 0,
     latencyText: formatRequestLogLatencyMs(item.latency_ms),
     firstTokenText: formatOptionalRequestLogLatencyMs(item.first_token_ms ?? 0),
     inputTokens: item.input_tokens,

@@ -5,6 +5,8 @@ import {
   buildRequestLogsColumns,
   buildRequestLogKeyOptions,
   ChannelIdentityLabel,
+  computeOutputTokensPerSecond,
+  formatTokensPerSecond,
   isSystemRequestLogKey,
   sortRequestLogKeyOptionsByCount,
   SYSTEM_REQUEST_LOG_FILTER_VALUE,
@@ -212,5 +214,123 @@ describe("requestLogsShared", () => {
       identityColumn: "none",
     }).map((column) => column.key);
     expect(keys).not.toContain("apiKeyName");
+  });
+
+  describe("computeOutputTokensPerSecond", () => {
+    test("calculates normal streaming TPS from stream generation delta", () => {
+      const row = toRequestLogsRow({
+        id: 101,
+        timestamp: "2026-04-23T10:00:00Z",
+        api_key: "sk-live",
+        api_key_name: "Live",
+        model: "gemini-3.7-flash",
+        source: "google",
+        channel_name: "Google",
+        auth_index: "auth-1",
+        failed: false,
+        streaming: true,
+        latency_ms: 3000,
+        first_token_ms: 1000,
+        input_tokens: 100,
+        output_tokens: 200,
+        reasoning_tokens: 0,
+        cached_tokens: 0,
+        total_tokens: 300,
+        cost: 0,
+        has_content: false,
+      });
+
+      // stream generation delta = 3000 - 1000 = 2000ms (2.0s)
+      // outputTokens = 200 => 200 / 2 = 100 t/s
+      const tps = computeOutputTokensPerSecond(row);
+      expect(tps).toBe(100);
+      expect(formatTokensPerSecond(tps)).toBe("100 t/s");
+    });
+
+    test("handles burst streaming without explosive TPS spikes", () => {
+      // User's exact scenario: 3.10s total, 3.08s first token (20ms delta), 165 output tokens
+      const row = toRequestLogsRow({
+        id: 102,
+        timestamp: "2026-04-23T10:00:00Z",
+        api_key: "sk-live",
+        api_key_name: "Live",
+        model: "gemini-3.7-flash-high",
+        source: "google",
+        channel_name: "Google",
+        auth_index: "auth-1",
+        failed: false,
+        streaming: true,
+        latency_ms: 3100,
+        first_token_ms: 3080,
+        input_tokens: 156466,
+        output_tokens: 165,
+        reasoning_tokens: 0,
+        cached_tokens: 150441,
+        total_tokens: 156631,
+        cost: 0.01,
+        has_content: false,
+      });
+
+      // streamGenerationMs = 20ms (< 200ms and firstToken / total >= 0.9)
+      // Should fall back to total duration (3.10s): 165 / 3.10 = 53.2258... t/s instead of 8250 t/s
+      const tps = computeOutputTokensPerSecond(row);
+      expect(tps).toBeCloseTo(165 / 3.1, 2);
+      expect(formatTokensPerSecond(tps)).toBe("53.2 t/s");
+    });
+
+    test("calculates non-streaming TPS using total duration", () => {
+      const row = toRequestLogsRow({
+        id: 103,
+        timestamp: "2026-04-23T10:00:00Z",
+        api_key: "sk-live",
+        api_key_name: "Live",
+        model: "gpt-4o",
+        source: "openai",
+        channel_name: "OpenAI",
+        auth_index: "auth-1",
+        failed: false,
+        streaming: false,
+        latency_ms: 2000,
+        first_token_ms: 0,
+        input_tokens: 50,
+        output_tokens: 80,
+        reasoning_tokens: 0,
+        cached_tokens: 0,
+        total_tokens: 130,
+        cost: 0,
+        has_content: false,
+      });
+
+      // 80 tokens / 2.0s = 40 t/s
+      const tps = computeOutputTokensPerSecond(row);
+      expect(tps).toBe(40);
+      expect(formatTokensPerSecond(tps)).toBe("40.0 t/s");
+    });
+
+    test("returns null for zero or invalid output tokens or durations", () => {
+      const zeroRow = toRequestLogsRow({
+        id: 104,
+        timestamp: "2026-04-23T10:00:00Z",
+        api_key: "sk-live",
+        api_key_name: "Live",
+        model: "gpt-4o",
+        source: "openai",
+        channel_name: "OpenAI",
+        auth_index: "auth-1",
+        failed: false,
+        streaming: true,
+        latency_ms: 1000,
+        first_token_ms: 200,
+        input_tokens: 50,
+        output_tokens: 0,
+        reasoning_tokens: 0,
+        cached_tokens: 0,
+        total_tokens: 50,
+        cost: 0,
+        has_content: false,
+      });
+      expect(computeOutputTokensPerSecond(zeroRow)).toBeNull();
+      expect(formatTokensPerSecond(null)).toBe("--");
+    });
   });
 });
