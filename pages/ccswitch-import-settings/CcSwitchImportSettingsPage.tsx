@@ -105,6 +105,7 @@ export function CcSwitchImportSettingsPage() {
   const auth = useOptionalAuth();
   const { notify } = useToast();
   const [configs, setConfigs] = useState<CcSwitchImportConfigListItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"create" | "edit">("create");
   const [draft, setDraft] = useState<CcSwitchImportConfigListItem>(() => createDraft());
@@ -164,6 +165,7 @@ export function CcSwitchImportSettingsPage() {
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
 
     ccSwitchImportConfigsApi
       .list()
@@ -178,6 +180,11 @@ export function CcSwitchImportSettingsPage() {
           message: error instanceof Error ? error.message : t("common.load_failed"),
         });
         setConfigs([]);
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
       });
 
     return () => {
@@ -341,6 +348,7 @@ export function CcSwitchImportSettingsPage() {
           rows={configs}
           columns={columns}
           rowKey={(row) => row.id}
+          loading={loading}
           virtualize={false}
           minWidth="min-w-[1100px]"
           height="h-[420px] md:h-auto md:flex-1"

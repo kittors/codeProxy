@@ -97,9 +97,13 @@ function createThroughputOption(
     animationDurationUpdate: 80,
     tooltip: {
       trigger: "axis",
+      renderMode: "html",
+      appendToBody: true,
+      confine: true,
       borderWidth: 0,
       backgroundColor: "rgba(15, 23, 42, 0.92)",
       textStyle: { color: "#fff" },
+      extraCssText: "z-index: 10000;",
       formatter: formatThroughputTooltip,
     },
     grid: { left: 12, right: 12, top: 12, bottom: 22, containLabel: true },

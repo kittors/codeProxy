@@ -110,9 +110,13 @@ export function createSparklineOption(points: DashboardTrendPoint[], color: stri
     grid: { left: 0, right: 0, top: 6, bottom: 0 },
     tooltip: {
       trigger: "axis",
+      renderMode: "html",
+      appendToBody: true,
+      confine: true,
       borderWidth: 0,
       backgroundColor: "rgba(15, 23, 42, 0.9)",
       textStyle: { color: "#fff", fontSize: 12 },
+      extraCssText: "z-index: 10000;",
       formatter: (params: any) => {
         const first = Array.isArray(params) ? params[0] : params;
         return `${first?.axisValueLabel ?? ""}<br/>${formatDashboardTooltipNumber(Number(first?.data ?? 0))}`;
