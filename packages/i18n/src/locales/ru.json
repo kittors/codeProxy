@@ -305,6 +305,8 @@
     "total_cost_hint": "Основано на настроенной стоимости моделей",
     "throughput_title": "Тренд пропускной способности",
     "throughput_all_tenants_hint": "Отображает пропускную способность запросов по всем арендаторам",
+    "throughput_tenant_all": "Все арендаторы (агрегировано)",
+    "throughput_tenant_select": "Выбор арендатора",
     "overview_hint": "Данные обновлены {{time}}",
     "updated_fallback": "Только что"
   },

@@ -229,6 +229,8 @@
     "total_cost_hint": "Based on configured model pricing",
     "throughput_title": "Throughput Trend",
     "throughput_all_tenants_hint": "Shows request throughput across all tenants",
+    "throughput_tenant_all": "All Tenants (Aggregated)",
+    "throughput_tenant_select": "Select Tenant",
     "overview_title": "Resource Overview",
     "overview_hint": "Data updated {{time}}",
     "summary_api_keys": "API Keys",

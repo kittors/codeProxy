@@ -502,6 +502,7 @@ export interface DashboardSummary {
     total_cost?: DashboardTrendPoint[];
     failed_requests?: DashboardTrendPoint[];
     throughput_series?: DashboardThroughputPoint[];
+    tenants?: DashboardTenantThroughputItem[];
   };
   meta?: {
     generated_at?: string;
@@ -530,6 +531,14 @@ export interface DashboardThroughputPoint {
   label: string;
   rpm: number;
   tpm: number;
+}
+
+export interface DashboardTenantThroughputItem {
+  tenant_id: string;
+  tenant_name?: string;
+  throughput_series: DashboardThroughputPoint[];
+  current_rpm: number;
+  current_tpm: number;
 }
 
 export interface UsageChannelFilterOption {

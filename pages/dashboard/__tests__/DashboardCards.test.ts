@@ -20,8 +20,10 @@ describe("dashboard card composition", () => {
     expect(source).toContain("summary?.trends");
     expect(source).toContain('can("system.status.read")');
     expect(source).toContain("useSystemStats(15, canViewSystemMonitor && pageVisible)");
-    expect(source).toContain("rpm={tenantRpm}");
-    expect(source).toContain("tpm={tenantTpm}");
+    expect(source).toContain("rpm={activeRpm}");
+    expect(source).toContain("tpm={activeTpm}");
+    expect(source).toContain("tenants={tenantBreakdown}");
+    expect(source).toContain("onSelectTenant={setSelectedThroughputTenant}");
     expect(source).toContain("canViewSystemMonitor");
     expect(source).toContain("allTenantsScope");
     expect(source).toContain("throughput_all_tenants_hint");
