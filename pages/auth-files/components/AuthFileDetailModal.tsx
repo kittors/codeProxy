@@ -242,7 +242,7 @@ export function AuthFileDetailModal({
   const visibleModelsError = usesMappedModelOwner ? null : modelsError;
   const providerKey = normalizeProviderKey(modelsFileType);
   const detailProviderKey = detailFile ? normalizeProviderKey(resolveFileType(detailFile)) : "";
-  const supportsUsageTrend = ["kimi", "codex", "xai", "claude", "anthropic"].includes(
+  const supportsUsageTrend = ["kimi", "codex", "xai", "claude", "anthropic", "antigravity"].includes(
     detailProviderKey,
   );
   const hasIdentityFingerprint = Boolean(detailFile?.identity_fingerprint_summary);
@@ -1106,14 +1106,12 @@ export function AuthFileDetailModal({
   };
 
   const renderUsageTrend = () => {
-    const isCodexDetail = detailProviderKey === "codex";
-    const isClaudeDetail = detailProviderKey === "claude" || detailProviderKey === "anthropic";
-    // Codex/claude expose a 5h window; xAI only weekly. All three show predicted weekly quota.
-    const fiveHourQuotaKey = isCodexDetail ? "code_5h" : isClaudeDetail ? "five_hour" : null;
-    const weeklyQuotaKey =
-      isCodexDetail ? "code_week" : isClaudeDetail ? "seven_day" : "weekly_limit";
-    const showPredictedWeeklyQuota =
-      isCodexDetail || isClaudeDetail || detailProviderKey === "xai";
+    const isCodex = detailProviderKey === "codex";
+    const isClaude = detailProviderKey === "claude" || detailProviderKey === "anthropic";
+    const isAnti = detailProviderKey === "antigravity";
+    const fiveHourQuotaKey = isCodex ? "code_5h" : isClaude ? "five_hour" : isAnti ? "antigravity:gemini_5h" : null;
+    const weeklyQuotaKey = isCodex ? "code_week" : isClaude ? "seven_day" : isAnti ? "antigravity:gemini_weekly" : "weekly_limit";
+    const showPredictedWeeklyQuota = isCodex || isClaude || isAnti || detailProviderKey === "xai";
     const summaryGridClassName =
       "grid gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-[repeat(auto-fit,minmax(9rem,1fr))]";
     const summarySkeletonCount = showPredictedWeeklyQuota ? 7 : 6;
@@ -1189,7 +1187,7 @@ export function AuthFileDetailModal({
       cycleCostTotal: displayCycleCostTotal,
     });
     // ponytail: hide zero noise; null/"--" is already non-zero display path
-    const showLast7DaysRequests = !isCodexDetail && detailTrend.request_total > 0;
+    const showLast7DaysRequests = !isCodex && detailTrend.request_total > 0;
     const showCycleRequests = displayCycleRequestTotal > 0;
     const showCycleCost = displayCycleCostTotal > 0;
     const showFiveHourQuota = fiveHourQuotaKey !== null && estimatedFiveHourQuota > 0;

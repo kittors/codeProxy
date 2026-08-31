@@ -17,6 +17,19 @@ import type { SearchableCheckboxMultiSelectOption } from "@code-proxy/ui";
 import { HoverTooltip, OverflowTooltip } from "@code-proxy/ui";
 import { PaginationBar } from "@code-proxy/ui";
 import { RequestLogModelCell } from "./RequestLogModelCell";
+import {
+  computeOutputTokensPerSecond,
+  formatTokensPerSecond,
+  hasRequestLogMetricText,
+  resolveLatencyToneClasses,
+} from "./requestLogMetrics";
+
+export {
+  computeOutputTokensPerSecond,
+  formatTokensPerSecond,
+  hasRequestLogMetricText,
+  resolveLatencyToneClasses,
+};
 
 export type TimeRange = 1 | 7 | 14 | 30;
 export type StatusFilterValue = "success" | "failed";
@@ -51,6 +64,8 @@ export type RequestLogsRow = {
   visionFallbackModel: string;
   failed: boolean;
   streaming: boolean;
+  latencyMs?: number;
+  firstTokenMs?: number;
   latencyText: string;
   firstTokenText: string;
   inputTokens: number;
@@ -149,59 +164,6 @@ export function ChannelIdentityLabel({
     </span>
   );
 }
-
-const parseLatencyTextToSeconds = (text: string): number | null => {
-  const trimmed = String(text || "").trim();
-  if (!trimmed || trimmed === "--") return null;
-  if (trimmed === "<1ms") return 0.0005;
-
-  const match = trimmed.match(/^(-?\d+(?:\.\d+)?)(ms|s)$/);
-  if (!match) return null;
-  const value = Number(match[1]);
-  if (!Number.isFinite(value) || value < 0) return null;
-  return match[2] === "ms" ? value / 1000 : value;
-};
-
-const computeOutputTokensPerSecond = (row: RequestLogsRow): number | null => {
-  if (!Number.isFinite(row.outputTokens) || row.outputTokens <= 0) return null;
-
-  const totalSeconds = parseLatencyTextToSeconds(row.latencyText);
-  if (totalSeconds === null || totalSeconds <= 0) return null;
-
-  const firstSeconds = row.streaming ? (parseLatencyTextToSeconds(row.firstTokenText) ?? 0) : 0;
-  const generationSeconds = Math.max(0, totalSeconds - firstSeconds);
-  if (generationSeconds <= 0) return null;
-
-  const tps = row.outputTokens / generationSeconds;
-  return Number.isFinite(tps) && tps > 0 ? tps : null;
-};
-
-const formatTokensPerSecond = (value: number | null): string => {
-  if (!Number.isFinite(value ?? Number.NaN) || !value || value <= 0) return "--";
-  if (value >= 100) return `${Math.round(value)} t/s`;
-  if (value >= 10) return `${value.toFixed(1)} t/s`;
-  return `${value.toFixed(2)} t/s`;
-};
-
-const hasRequestLogMetricText = (value: string): boolean => {
-  const trimmed = String(value || "").trim();
-  return trimmed !== "" && trimmed !== "--";
-};
-
-const resolveLatencyToneClasses = (latencyText: string): string => {
-  const seconds = parseLatencyTextToSeconds(latencyText);
-  if (seconds === null) {
-    return "border-slate-900/8 bg-slate-50 text-slate-500 dark:border-white/8 dark:bg-neutral-950/45 dark:text-white/55";
-  }
-
-  if (seconds < 10) {
-    return "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-200";
-  }
-  if (seconds < 30) {
-    return "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200";
-  }
-  return "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-200";
-};
 
 function RequestLogMetricChip({
   ariaLabel,
@@ -552,6 +514,8 @@ export const toRequestLogsRow = (item: UsageLogItem): RequestLogsRow => {
     visionFallbackModel: item.vision_fallback_model || "",
     failed: item.failed,
     streaming: item.streaming === true,
+    latencyMs: item.latency_ms,
+    firstTokenMs: item.first_token_ms,
     latencyText: formatRequestLogLatencyMs(item.latency_ms),
     firstTokenText: formatOptionalRequestLogLatencyMs(item.first_token_ms),
     inputTokens: item.input_tokens,
