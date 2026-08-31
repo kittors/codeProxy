@@ -1,5 +1,6 @@
 import type {
   AuthFileItem,
+  AuthFileIdentityFingerprintProvider,
   AuthFileIdentityFingerprintSummary,
   AuthFileIdentityFingerprintSource,
   AuthFileRestriction,
@@ -274,19 +275,14 @@ const sanitizeIdentityFingerprintSummaryForCache = (
 ): AuthFileIdentityFingerprintSummary | undefined => {
   if (!isPlainRecord(value)) return undefined;
   const provider = readOptionalString(value.provider);
-  if (
-    provider !== "claude" &&
-    provider !== "codex" &&
-    provider !== "gemini" &&
-    provider !== "xai"
-  ) {
+  if (!provider || !["claude", "codex", "gemini", "xai", "kimi", "antigravity"].includes(provider)) {
     return undefined;
   }
   const primarySource =
     sanitizeIdentityFingerprintSourceForCache(value.primary_source) ?? "builtin_default";
   const sourceCounts = sanitizeIdentityFingerprintSourceCountsForCache(value.source_counts) ?? {};
   const summary: AuthFileIdentityFingerprintSummary = {
-    provider,
+    provider: provider as AuthFileIdentityFingerprintProvider,
     enabled: Boolean(value.enabled),
     primary_source: primarySource,
     learned: Boolean(value.learned),

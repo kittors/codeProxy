@@ -241,15 +241,12 @@ const localizeLookupError = (
   if (normalized.includes("missing management key")) {
     return t("apikey_lookup.error_missing_management_key");
   }
-
-  if (normalized.includes("request failed")) return message;
   return message;
 };
 
 const readLegacyLookupKeyFromUrl = (): string => {
   try {
-    const url = new URL(window.location.href);
-    return (url.searchParams.get("api_key") || url.searchParams.get("key") || "").trim();
+    return (new URL(window.location.href).searchParams.get("api_key") || "").trim();
   } catch {
     return "";
   }
@@ -257,6 +254,7 @@ const readLegacyLookupKeyFromUrl = (): string => {
 
 function toLogRow(item: PublicLogItem): RequestLogsRow {
   const channelAuthType = normalizeChannelAuthType(item.auth_type);
+  const firstTokenMs = item.first_token_ms ?? 0;
   return {
     id: String(item.id),
     timestamp: item.timestamp,
@@ -276,8 +274,10 @@ function toLogRow(item: PublicLogItem): RequestLogsRow {
     visionFallbackModel: item.vision_fallback_model || "",
     failed: item.failed,
     streaming: item.streaming === true,
+    latencyMs: item.latency_ms,
+    firstTokenMs,
     latencyText: formatRequestLogLatencyMs(item.latency_ms),
-    firstTokenText: formatOptionalRequestLogLatencyMs(item.first_token_ms ?? 0),
+    firstTokenText: formatOptionalRequestLogLatencyMs(firstTokenMs),
     inputTokens: item.input_tokens,
     cachedTokens: item.cached_tokens,
     outputTokens: item.output_tokens,

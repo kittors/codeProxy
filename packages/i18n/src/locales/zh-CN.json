@@ -232,6 +232,8 @@
     "total_cost_hint": "基于已设置的模型单价",
     "throughput_title": "请求吞吐趋势",
     "throughput_all_tenants_hint": "可查看所有租户用户的请求吞吐趋势",
+    "throughput_tenant_all": "全部租户 (汇总)",
+    "throughput_tenant_select": "选择租户",
     "overview_title": "资源总览",
     "overview_hint": "数据更新时间 {{time}}",
     "summary_api_keys": "API Keys",
