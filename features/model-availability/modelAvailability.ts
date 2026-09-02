@@ -16,6 +16,10 @@ import {
   getConfiguredAvailabilityCacheVersion,
   invalidateConfiguredModelAvailability,
 } from "./configuredAvailabilityCache";
+import {
+  addAvailabilityModel,
+  mergeAvailabilityItemList,
+} from "./modelAvailabilityMerge";
 
 export type ModelAvailabilityItem = {
   id: string;
@@ -446,17 +450,6 @@ export const normalizeModelPathAvailability = (
 const normalizeModelConfigRows = (payload: unknown): ModelAvailabilityItem[] =>
   normalizeModelConfigMetadataRows(payload);
 
-const addModel = (
-  map: Map<string, ModelAvailabilityItem>,
-  item: ModelAvailabilityItem | null | undefined,
-) => {
-  const id = String(item?.id ?? "").trim();
-  if (!id) return;
-  const key = id.toLowerCase();
-  if (map.has(key)) return;
-  map.set(key, { ...item, id });
-};
-
 const buildLibraryModelIndex = (
   models: ModelAvailabilityItem[],
 ): Map<string, ModelAvailabilityItem> =>
@@ -514,7 +507,7 @@ const addExplicitProviderModels = (
     const id = providerModelId(model);
     if (!id || isExcluded(id, excludedModels)) continue;
     for (const candidate of withOptionalPrefix(id, prefix)) {
-      addModel(map, {
+      addAvailabilityModel(map, {
         id: candidate,
         owned_by: provider,
         source: "provider",
@@ -534,7 +527,7 @@ const addStaticProviderModels = (
     const id = String(model.id ?? "").trim();
     if (!id || isExcluded(id, excludedModels)) continue;
     for (const candidate of withOptionalPrefix(id, prefix)) {
-      addModel(map, {
+      addAvailabilityModel(map, {
         id: candidate,
         owned_by: model.owned_by || provider,
         description: model.display_name,
@@ -692,7 +685,7 @@ const loadAuthFileModelItems = async (
       if (owner) {
         scoped = true;
         for (const model of modelsByOwner.get(owner) ?? []) {
-          addModel(map, {
+          addAvailabilityModel(map, {
             ...model,
             source: model.source || "auth-file-owner",
           });
@@ -706,7 +699,7 @@ const loadAuthFileModelItems = async (
         );
         scoped = true;
         for (const model of liveModels) {
-          addModel(
+          addAvailabilityModel(
             map,
             withLibraryModelMetadata(
               {
@@ -924,10 +917,11 @@ export const normalizeConfiguredModelAvailability = (
         : Array.isArray(payload)
           ? payload
           : [];
-  const items = rawItems
-    .map((item) => normalizeAvailabilityItem(item))
-    .filter((item): item is NonNullable<typeof item> => item !== null)
-    .sort((a, b) => a!.id.localeCompare(b!.id));
+  const items = mergeAvailabilityItemList(
+    rawItems
+      .map((item) => normalizeAvailabilityItem(item))
+      .filter((item): item is NonNullable<typeof item> => item !== null),
+  ).sort((a, b) => a.id.localeCompare(b.id));
 
   const rawMetadata = Array.isArray(record.active_metadata)
     ? record.active_metadata
@@ -1187,9 +1181,9 @@ const loadConfiguredModelAvailabilityFallback = async (
   const libraryIndex = buildLibraryModelIndex(libraryModels);
 
   const map = new Map<string, ModelAvailabilityItem>();
-  for (const item of authFileAvailability.items) addModel(map, item);
+  for (const item of authFileAvailability.items) addAvailabilityModel(map, item);
   for (const item of providerItems)
-    addModel(map, withLibraryModelMetadata(item, libraryIndex));
+    addAvailabilityModel(map, withLibraryModelMetadata(item, libraryIndex));
 
   if (!authFileAvailability.scoped && providerItems.length === 0) {
     return emptyAvailability(usesMappedOwners);
