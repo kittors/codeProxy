@@ -100,6 +100,30 @@ describe("model availability normalization", () => {
       },
     ]);
   });
+
+  test("merges duplicate alias rows from multiple providers instead of keeping one", () => {
+    const availability = normalizeConfiguredModelAvailability({
+      scoped: true,
+      data: [
+        {
+          id: "kimi",
+          owned_by: "kimi",
+          sources: [{ label: "Kimi Official", provider: "kimi" }],
+        },
+        {
+          id: "kimi",
+          owned_by: "opencode-go",
+          sources: [{ label: "OpenCode Go", provider: "opencode-go" }],
+        },
+      ],
+    });
+
+    expect(availability.items).toHaveLength(1);
+    expect(availability.items[0]?.sources?.map((source) => source.label)).toEqual([
+      "Kimi Official",
+      "OpenCode Go",
+    ]);
+  });
 });
 
 describe("mergeConfiguredModelAvailability path enrichment", () => {
