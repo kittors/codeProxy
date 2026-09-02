@@ -66,8 +66,7 @@ export function ResourceEfficiencyPanel({
       values.requestLogStorage.cleanupIntervalMinutes === "60" &&
       values.requestLogStorage.maxRows === "100000" &&
       values.requestLogStorage.maxMetadataSizeMb === "256" &&
-      values.requestLogStorage.maxTotalSizeMb === "128" &&
-      !values.requestLogStorage.vacuumOnCleanup,
+      values.requestLogStorage.maxTotalSizeMb === "128",
     [values],
   );
 
@@ -92,7 +91,6 @@ export function ResourceEfficiencyPanel({
         maxRows: "100000",
         maxMetadataSizeMb: "256",
         maxTotalSizeMb: "128",
-        vacuumOnCleanup: false,
       },
     });
   };
@@ -304,17 +302,6 @@ ${t("resource_config.stats_preserved")}`}
               onCheckedChange={(cleanupEnabled) =>
                 onChange({
                   requestLogStorage: { ...values.requestLogStorage, cleanupEnabled },
-                })
-              }
-              disabled={disabled}
-            />
-            <ToggleSwitch
-              label={t("resource_config.vacuum_title")}
-              description={t("resource_config.vacuum_desc")}
-              checked={values.requestLogStorage.vacuumOnCleanup}
-              onCheckedChange={(vacuumOnCleanup) =>
-                onChange({
-                  requestLogStorage: { ...values.requestLogStorage, vacuumOnCleanup },
                 })
               }
               disabled={disabled}

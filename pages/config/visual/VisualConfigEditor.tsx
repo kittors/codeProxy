@@ -112,18 +112,6 @@ export function VisualConfigEditor({
                 disabled={disabled}
               />
             </Field>
-
-            <div className="rounded-xl border border-indigo-200 bg-indigo-50/50 px-4 py-3 dark:border-indigo-800 dark:bg-indigo-950/30">
-              <p className="text-sm text-indigo-800 dark:text-indigo-300">
-                {t("visual_config.api_migrated")}
-                <a
-                  href="/access/end-users"
-                  className="ml-1 font-semibold underline underline-offset-2 hover:text-indigo-600 dark:hover:text-indigo-200"
-                >
-                  {t("visual_config.go_to_api_keys")}
-                </a>
-              </p>
-            </div>
           </div>
         </Card>
 
