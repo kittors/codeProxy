@@ -19,7 +19,7 @@ const target = {
   release_name: "CliRelay v0.5.0",
   release_tag: "v0.5.0",
   release_notes:
-    "English\n\n- SSE progress comes from updater\n- SQLite is manual-only",
+    "English\n\n- SSE progress comes from updater\n- PostgreSQL is the runtime database",
   release_url: "https://github.com/kittors/CliRelay/releases/tag/v0.5.0",
   release_published_at: "2026-07-10T07:30:00Z",
   update_available: true,

@@ -6,7 +6,7 @@
 
 **Architecture:** CliRelay persists normalized quota snapshot points keyed by `auth_index`, provider, quota key, window, and timestamp. codeProxy fetches per-file trend data and renders request totals, daily usage, and quota curves in the auth-file detail modal before the raw JSON tab.
 
-**Tech Stack:** Go + SQLite + Gin management API; React 19 + Vite + Vitest + ECharts.
+**Tech Stack:** Go + PostgreSQL + Gin management API; React 19 + Vite + Vitest + ECharts.
 
 ---
 
