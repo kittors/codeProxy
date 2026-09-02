@@ -12,8 +12,13 @@ import { TextInput } from "@code-proxy/ui";
 import { ThemeToggleButton } from "@code-proxy/ui";
 import type { SearchableCheckboxMultiSelectOption } from "@code-proxy/ui";
 import type { TimeRange } from "@features/monitor-widgets/monitor-constants";
+import { LogContentModal } from "@features/log-content-viewer";
 import { ModelTag } from "@features/model-tags";
-import { fetchPublicLogs, fetchPublicUsageSummary } from "../api-key-lookup/api";
+import {
+  fetchPublicLogContent,
+  fetchPublicLogs,
+  fetchPublicUsageSummary,
+} from "../api-key-lookup/api";
 import {
   LookupResultsToolbar,
   type ApiKeyLookupTab,
@@ -207,6 +212,11 @@ export function ApiKeyUsagePage() {
   const [selectedModels, setSelectedModels] = useState<MultiSelectFilterState<string>>(null);
   const [selectedStatuses, setSelectedStatuses] =
     useState<MultiSelectFilterState<StatusFilterValue>>(null);
+  const [contentModal, setContentModal] = useState<{
+    id: number;
+    model: string;
+    tab: "input" | "output";
+  } | null>(null);
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const fetchIdRef = useRef(0);
@@ -218,13 +228,28 @@ export function ApiKeyUsagePage() {
   const summaryAbortControllerRef = useRef<AbortController | null>(null);
   const summaryFetchIdRef = useRef(0);
 
+  const handleContentClick = useCallback(
+    (id: number, tab: "input" | "output", model: string) => setContentModal({ id, tab, model }),
+    [],
+  );
+  const fetchLogContentPart = useCallback(
+    (id: number, part: "input" | "output", options?: { signal?: AbortSignal }) =>
+      fetchPublicLogContent({
+        id,
+        apiKey: queriedKey,
+        part,
+        signal: options?.signal,
+      }),
+    [queriedKey],
+  );
+
   const logColumns = useMemo(
     () =>
-      buildRequestLogsColumns((key) => t(key), undefined, undefined, {
+      buildRequestLogsColumns((key) => t(key), handleContentClick, undefined, {
         identityColumn: "none",
         hideChannel: true,
       }),
-    [t],
+    [handleContentClick, t],
   );
 
   const modelOptions = useMemo<SearchableCheckboxMultiSelectOption[]>(() => {
@@ -295,6 +320,7 @@ export function ApiKeyUsagePage() {
     });
     setSelectedModels(null);
     setSelectedStatuses(null);
+    setContentModal(null);
     setApiKeyName("");
     setQuotaLimits(null);
     setQuotaScopes([]);
@@ -638,6 +664,15 @@ export function ApiKeyUsagePage() {
             </div>
           )}
         </main>
+
+        <LogContentModal
+          open={contentModal !== null}
+          logId={contentModal?.id ?? null}
+          displayModel={contentModal?.model}
+          initialTab={contentModal?.tab}
+          onClose={() => setContentModal(null)}
+          fetchPartFn={fetchLogContentPart}
+        />
 
         <Modal
           open={keyModalOpen}
