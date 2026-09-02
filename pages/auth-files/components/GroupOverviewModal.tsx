@@ -4,7 +4,8 @@ import { Button, surface } from "@code-proxy/ui";
 import { Modal } from "@code-proxy/ui";
 import { Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { EChart } from "@code-proxy/ui";
-import type { AuthFilesGroupOverview, AuthFilesGroupOverviewRow } from "@code-proxy/domain";
+import type { AuthFilesGroupOverviewRow } from "@code-proxy/domain";
+import type { GroupOverviewSummary } from "../hooks/groupOverviewWeekly";
 
 interface GroupOverviewModalProps {
   open: boolean;
@@ -19,7 +20,7 @@ interface GroupOverviewModalProps {
   refreshGroupTrend: (targetGroup?: string) => Promise<void>;
   activeGroupTitle: string;
   activeGroupRows: AuthFilesGroupOverviewRow[];
-  activeGroupOverview: AuthFilesGroupOverview;
+  activeGroupOverview: GroupOverviewSummary;
   formatAveragePercent: (value: number | null) => string;
   groupOverviewChartOption: Record<string, unknown>;
 }
@@ -117,13 +118,32 @@ export function GroupOverviewModal({
           </div>
           <div className={[surface({ tone: "raised", radius: "2xl" }), "px-4 py-3"].join(" ")}>
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-white/45">
-              {t("auth_files.group_overview_avg_week_label")}
+              {(activeGroupOverview.weeklyFamilies?.length ?? 0) > 1
+                ? t("auth_files.group_overview_weekly_limits_label")
+                : t("auth_files.group_overview_avg_week_label")}
             </p>
-            <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">
-              {formatAveragePercent(activeGroupOverview.averageWeekly)}
-            </p>
+            {(activeGroupOverview.weeklyFamilies?.length ?? 0) > 1 ? (
+              <div className="mt-2 space-y-1.5">
+                {activeGroupOverview.weeklyFamilies.map((family) => (
+                  <div key={family.id} className="flex items-baseline justify-between gap-3">
+                    <span className="min-w-0 truncate text-xs text-slate-500 dark:text-white/55">
+                      {family.label}
+                    </span>
+                    <span className="shrink-0 text-lg font-semibold text-slate-900 dark:text-white">
+                      {formatAveragePercent(family.remainingPercent)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">
+                {formatAveragePercent(activeGroupOverview.weeklyFamilies[0]?.remainingPercent ?? activeGroupOverview.averageWeekly)}
+              </p>
+            )}
             <p className="mt-1 text-xs text-slate-500 dark:text-white/45">
-              {t("auth_files.group_overview_avg_week_help")}
+              {(activeGroupOverview.weeklyFamilies?.length ?? 0) > 1
+                ? t("auth_files.group_overview_weekly_limits_help")
+                : t("auth_files.group_overview_avg_week_help")}
             </p>
           </div>
           <div className={[surface({ tone: "raised", radius: "2xl" }), "px-4 py-3"].join(" ")}>

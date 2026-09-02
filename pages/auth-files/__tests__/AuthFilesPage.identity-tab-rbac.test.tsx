@@ -31,6 +31,8 @@ const mocks = vi.hoisted(() => ({
     days: 7,
     group: "all",
     points: [],
+    quota_points: [],
+    quota_series: [],
   })),
   getModelConfigs: vi.fn(async () => []),
   getModelOwnerPresets: vi.fn(async () => []),
@@ -188,7 +190,13 @@ describe("AuthFilesPage identity tab RBAC", () => {
       quota_series: [],
     }));
     mocks.getAuthFileGroupTrend.mockReset();
-    mocks.getAuthFileGroupTrend.mockResolvedValue({ days: 7, group: "all", points: [] });
+    mocks.getAuthFileGroupTrend.mockResolvedValue({
+      days: 7,
+      group: "all",
+      points: [],
+      quota_points: [],
+      quota_series: [],
+    });
     mocks.getModelConfigs.mockReset();
     mocks.getModelConfigs.mockResolvedValue([]);
     mocks.getModelOwnerPresets.mockReset();

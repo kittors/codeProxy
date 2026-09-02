@@ -7,13 +7,20 @@ import {
   normalizeProviderKey,
   resolveAuthFileDisplayName,
   resolveFileType,
-  type AuthFilesGroupOverview,
   type AuthFilesGroupOverviewRow,
-  type AuthFilesGroupTrendPoint,
   type UsageIndex,
 } from "@code-proxy/domain";
 import type { QuotaItem, QuotaState } from "@features/quota-preview/quota-helpers";
 import type { QuotaProvider } from "@features/quota-preview/quota-fetch";
+import {
+  collectWeeklyFamilies,
+  formatWeeklySeriesLabel,
+  normalizeGroupTrendSeries,
+  WEEKLY_SERIES_COLORS,
+  type GroupOverviewSummary,
+  type GroupTrendPoint,
+} from "./groupOverviewWeekly";
+import type { QuotaCardSlot } from "./quotaCardSlots";
 
 interface UseAuthFilesGroupOverviewArgs {
   filter: string;
@@ -56,7 +63,10 @@ export function useAuthFilesGroupOverview({
   const [groupOverviewTab, setGroupOverviewTab] = useState("all");
   const [groupOverviewLoading, setGroupOverviewLoading] = useState(false);
   const [groupTrendLoading, setGroupTrendLoading] = useState(false);
-  const [groupTrendPoints, setGroupTrendPoints] = useState<AuthFilesGroupTrendPoint[]>([]);
+  const [groupTrendPoints, setGroupTrendPoints] = useState<GroupTrendPoint[]>([]);
+  const [groupTrendSeries, setGroupTrendSeries] = useState<{ id: string; label: string; color: string }[]>(
+    [],
+  );
   const groupTrendRequestRef = useRef(0);
 
   const formatAveragePercent = useCallback((value: number | null) => {
@@ -89,10 +99,10 @@ export function useAuthFilesGroupOverview({
   const groupOverviewTabs = useMemo(() => ["all", ...providerOptions], [providerOptions]);
 
   const computeGroupOverview = useCallback(
-    (targetFiles: AuthFileItem[]): AuthFilesGroupOverview => {
+    (targetFiles: AuthFileItem[]): GroupOverviewSummary => {
       let totalCalls = 0;
       const fiveHourValues: number[] = [];
-      const weeklyValues: number[] = [];
+      const weeklySlotsByFile: QuotaCardSlot[][] = [];
 
       targetFiles.forEach((file) => {
         const stats = resolveAuthFileStats(file, usageIndex);
@@ -106,13 +116,15 @@ export function useAuthFilesGroupOverview({
         if (items.length === 0) return;
 
         const slots = resolveQuotaCardSlots(provider, items);
+        weeklySlotsByFile.push(slots);
         const fiveHour = resolveSlotWindowPercent(slots, "5h");
-        const weekly = resolveSlotWindowPercent(slots, "week");
-
         if (fiveHour !== null) fiveHourValues.push(fiveHour);
-        if (weekly !== null) weeklyValues.push(weekly);
       });
 
+      const weeklyFamilies = collectWeeklyFamilies(weeklySlotsByFile);
+      const weeklyValues = weeklyFamilies
+        .map((family) => family.remainingPercent)
+        .filter((value): value is number => typeof value === "number");
       const average = (values: number[]) =>
         values.length === 0
           ? null
@@ -121,8 +133,9 @@ export function useAuthFilesGroupOverview({
       return {
         totalCalls,
         averageFiveHour: average(fiveHourValues),
-        averageWeekly: average(weeklyValues),
-        quotaSampleCount: Math.max(fiveHourValues.length, weeklyValues.length),
+        averageWeekly: weeklyFamilies.length === 1 ? weeklyFamilies[0]?.remainingPercent ?? null : average(weeklyValues),
+        weeklyFamilies,
+        quotaSampleCount: Math.max(fiveHourValues.length, ...weeklyFamilies.map((family) => family.sampleCount), 0),
       };
     },
     [
@@ -135,8 +148,8 @@ export function useAuthFilesGroupOverview({
     ],
   );
 
-  const groupOverviewByTab = useMemo<Record<string, AuthFilesGroupOverview>>(() => {
-    const map: Record<string, AuthFilesGroupOverview> = {
+  const groupOverviewByTab = useMemo<Record<string, GroupOverviewSummary>>(() => {
+    const map: Record<string, GroupOverviewSummary> = {
       all: computeGroupOverview(filteredFiles),
     };
     providerOptions.forEach((key) => {
@@ -188,7 +201,7 @@ export function useAuthFilesGroupOverview({
     usageIndex,
   ]);
 
-  const activeGroupOverview = useMemo<AuthFilesGroupOverview>(() => {
+  const activeGroupOverview = useMemo<GroupOverviewSummary>(() => {
     return (
       groupOverviewByTab[groupOverviewTab] ?? groupOverviewByTab.all ?? computeGroupOverview([])
     );
@@ -208,13 +221,34 @@ export function useAuthFilesGroupOverview({
   const groupOverviewChartOption = useMemo<Record<string, unknown>>(() => {
     const labels = groupTrendPoints.map((point) => point.label);
     const calls = groupTrendPoints.map((point) => point.calls);
-    const weekly = groupTrendPoints.map((point) => point.weeklyPercent);
+    const formatPercent = (value: unknown) => {
+      if (typeof value !== "number" || !Number.isFinite(value)) return "-";
+      return `${Math.round(Math.max(0, Math.min(100, value)))}%`;
+    };
+    const weeklySeries = groupTrendSeries.map((series) => ({
+      name: series.label,
+      type: "line",
+      yAxisIndex: 1,
+      smooth: true,
+      symbol: "circle",
+      symbolSize: 7,
+      lineStyle: { width: 3, color: series.color },
+      itemStyle: { color: series.color },
+      connectNulls: false,
+      data: groupTrendPoints.map((point) => point.weeklyPercents[series.id] ?? null),
+    }));
 
     return {
       backgroundColor: "transparent",
       animationDuration: 420,
       animationDurationUpdate: 280,
-      grid: { left: 48, right: 44, top: 36, bottom: 44, containLabel: false },
+      grid: {
+        left: 48,
+        right: 44,
+        top: groupTrendSeries.length > 2 ? 52 : 36,
+        bottom: 44,
+        containLabel: false,
+      },
       tooltip: {
         trigger: "axis",
         axisPointer: { type: "line" },
@@ -225,10 +259,20 @@ export function useAuthFilesGroupOverview({
         backgroundColor: "rgba(15, 23, 42, 0.92)",
         textStyle: { color: "#fff" },
         extraCssText: "z-index: 10000;",
+        formatter: (params: Array<{ seriesName?: string; value?: unknown; axisValueLabel?: string; marker?: string }>) => {
+          const title = params[0]?.axisValueLabel ?? "";
+          const rows = params.map((item) => {
+            const isPercent = item.seriesName !== t("auth_files.group_overview_total_calls_label");
+            const display = isPercent ? formatPercent(item.value) : String(item.value ?? 0);
+            return `${item.marker ?? ""} ${item.seriesName ?? ""}&nbsp;&nbsp;<b>${display}</b>`;
+          });
+          return [title, ...rows].join("<br/>");
+        },
       },
       legend: {
         top: 0,
         left: 0,
+        type: "scroll",
         textStyle: { color: "#64748b", fontSize: 12 },
       },
       xAxis: {
@@ -269,21 +313,10 @@ export function useAuthFilesGroupOverview({
           itemStyle: { color: "rgba(59,130,246,0.88)", borderRadius: [4, 4, 0, 0] },
           data: calls,
         },
-        {
-          name: t("auth_files.group_overview_avg_week_label"),
-          type: "line",
-          yAxisIndex: 1,
-          smooth: true,
-          symbol: "circle",
-          symbolSize: 7,
-          lineStyle: { width: 3, color: "#10b981" },
-          itemStyle: { color: "#10b981" },
-          connectNulls: false,
-          data: weekly,
-        },
+        ...weeklySeries,
       ],
     };
-  }, [groupTrendPoints, t]);
+  }, [groupTrendPoints, groupTrendSeries, t]);
 
   const refreshGroupOverview = useCallback(
     async (targetGroup = groupOverviewTab) => {
@@ -319,27 +352,43 @@ export function useAuthFilesGroupOverview({
       try {
         const axis = buildLast7DayAxis();
         const callsByDay = new Map(axis.map((item) => [item.date, 0]));
-        const weeklyByDay = new Map(axis.map((item) => [item.date, null as number | null]));
         const resp = await usageApi.getAuthFileGroupTrend(targetGroup, 7);
         (resp.points || []).forEach((point) => {
           if (callsByDay.has(point.date)) callsByDay.set(point.date, point.requests ?? 0);
         });
-        (resp.quota_points || []).forEach((point) => {
-          if (!weeklyByDay.has(point.date)) return;
-          const percent = point.percent;
-          weeklyByDay.set(
-            point.date,
-            typeof percent === "number" && Number.isFinite(percent) ? percent : null,
-          );
-        });
-        const points: AuthFilesGroupTrendPoint[] = axis.map((item) => ({
-          date: item.date,
-          label: item.label,
-          calls: callsByDay.get(item.date) ?? 0,
-          weeklyPercent: weeklyByDay.get(item.date) ?? null,
+        const rawSeries = normalizeGroupTrendSeries(resp.quota_series, resp.quota_points);
+        const seriesMeta = rawSeries.map((item, index) => ({
+          id: item.quota_key || `weekly_${index}`,
+          label: formatWeeklySeriesLabel(item.quota_key ?? "", item.quota_label ?? "", t),
+          color: WEEKLY_SERIES_COLORS[index % WEEKLY_SERIES_COLORS.length] ?? WEEKLY_SERIES_COLORS[0],
         }));
+        const percentsBySeries = new Map<string, Map<string, number | null>>();
+        rawSeries.forEach((item, index) => {
+          const id = seriesMeta[index]?.id ?? `weekly_${index}`;
+          const byDay = new Map(axis.map((day) => [day.date, null as number | null]));
+          (item.points || []).forEach((point) => {
+            if (!byDay.has(point.date)) return;
+            const percent = point.percent;
+            byDay.set(point.date, typeof percent === "number" && Number.isFinite(percent) ? percent : null);
+          });
+          percentsBySeries.set(id, byDay);
+        });
+        const points: GroupTrendPoint[] = axis.map((item) => {
+          const weeklyPercents: Record<string, number | null> = {};
+          seriesMeta.forEach((series) => {
+            weeklyPercents[series.id] = percentsBySeries.get(series.id)?.get(item.date) ?? null;
+          });
+          return {
+            date: item.date,
+            label: item.label,
+            calls: callsByDay.get(item.date) ?? 0,
+            weeklyPercent: seriesMeta[0] ? (weeklyPercents[seriesMeta[0].id] ?? null) : null,
+            weeklyPercents,
+          };
+        });
 
         if (groupTrendRequestRef.current === requestId) {
+          setGroupTrendSeries(seriesMeta);
           setGroupTrendPoints(points);
         }
       } finally {
@@ -348,7 +397,7 @@ export function useAuthFilesGroupOverview({
         }
       }
     },
-    [groupOverviewTab],
+    [groupOverviewTab, t],
   );
 
   const openGroupOverview = useCallback(() => {
