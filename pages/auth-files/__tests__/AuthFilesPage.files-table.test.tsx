@@ -62,6 +62,8 @@ const mocks = vi.hoisted(() => ({
     days: 7,
     group: "all",
     points: [{ date: new Date().toISOString().slice(0, 10), requests: 9 }],
+    quota_points: [],
+    quota_series: [],
   })),
   recordAuthFileQuotaSnapshot: vi.fn(async () => ({})),
   fetchQuota: vi.fn((_provider?: unknown, _file?: { name?: string }) => new Promise(() => {})),
@@ -250,6 +252,8 @@ describe("AuthFilesPage files table", () => {
       days: 7,
       group: "all",
       points: [{ date: new Date().toISOString().slice(0, 10), requests: 9 }],
+      quota_points: [],
+      quota_series: [],
     }));
     mocks.recordAuthFileQuotaSnapshot.mockReset();
     mocks.recordAuthFileQuotaSnapshot.mockImplementation(async () => ({}));

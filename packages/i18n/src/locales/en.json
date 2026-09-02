@@ -993,6 +993,8 @@
     "group_overview_avg_5h_label": "Avg 5h",
     "group_overview_avg_week_label": "Avg weekly",
     "group_overview_avg_week_help": "Based on current weekly quota snapshot",
+    "group_overview_weekly_limits_label": "Weekly limits",
+    "group_overview_weekly_limits_help": "Each weekly window is averaged on its own",
     "group_overview_quota_ready": "Quota samples available",
     "group_overview_channels_title": "Channel Trend",
     "group_overview_channels_desc": "View call counts and 5h/weekly quota averages for each channel in the selected group.",

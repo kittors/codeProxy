@@ -997,6 +997,8 @@
     "group_overview_avg_5h_label": "平均 5h",
     "group_overview_avg_week_label": "平均周限",
     "group_overview_avg_week_help": "基于当前周限快照",
+    "group_overview_weekly_limits_label": "周限",
+    "group_overview_weekly_limits_help": "每种周限单独平均，互不混合",
     "group_overview_quota_ready": "已获取配额样本",
     "group_overview_channels_title": "渠道趋势",
     "group_overview_channels_desc": "按当前渠道分组查看各渠道的调用次数与 5h/周限均值趋势。",

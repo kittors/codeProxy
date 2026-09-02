@@ -41,11 +41,19 @@ export interface AuthFileQuotaTrendPoint {
   samples: number;
 }
 
+export interface AuthFileQuotaTrendSeries {
+  quota_key: string;
+  quota_label: string;
+  window_seconds: number;
+  points: AuthFileQuotaTrendPoint[];
+}
+
 export interface AuthFileGroupTrendResponse {
   days: number;
   group: string;
   points: AuthFileGroupTrendPoint[];
   quota_points: AuthFileQuotaTrendPoint[];
+  quota_series: AuthFileQuotaTrendSeries[];
 }
 
 export interface AuthFileTrendUsagePoint {
@@ -296,6 +304,7 @@ export const usageApi = {
       group: resp?.group ?? group,
       points: Array.isArray(resp?.points) ? resp.points : [],
       quota_points: Array.isArray(resp?.quota_points) ? resp.quota_points : [],
+      quota_series: Array.isArray(resp?.quota_series) ? resp.quota_series : [],
     };
   },
 
