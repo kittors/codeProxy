@@ -15,12 +15,7 @@ import { normalizeUsageSourceId, type KeyStatBucket } from "../providers/provide
 import { resolveCodexPlanType } from "../quota/resolvers";
 import { normalizePlanType } from "../quota/parsers";
 import { isAntigravityFile } from "../quota/validators";
-import {
-  sanitizeConnectivityByFileNameForCache,
-  sanitizeCycleByAuthIndexForCache,
-  sanitizeDisplayPlanByFileNameForCache,
-  sanitizeQuotaByFileNameForCache,
-} from "./quotaCache";
+import { sanitizeQuotaByFileNameForCache } from "./quotaCache";
 import type { QuotaItem, QuotaState } from "../quota/types";
 import type { StatusBarData, StatusBlockDetail, StatusBlockState } from "../usage";
 import {
