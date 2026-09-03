@@ -24,7 +24,9 @@ import {
   Settings2,
   SlidersHorizontal,
   Tags,
+  Zap,
 } from "lucide-react";
+import { authFilesApi } from "@code-proxy/api-client";
 import type { AuthFileItem } from "@code-proxy/api-client";
 import { VendorIcon } from "@code-proxy/assets";
 import { Button, DropdownMenu, buttonClassName, surface } from "@code-proxy/ui";
@@ -77,6 +79,7 @@ import {
   type QuotaItem,
   type QuotaState,
 } from "@features/quota-preview/quota-helpers";
+import { goeyToast } from "goey-toast";
 import type { QuotaProvider } from "@features/quota-preview/quota-fetch";
 import type { QuotaCardSlot } from "../hooks/quotaCardSlots";
 import { shouldShowQuotaPlaceholder } from "../hooks/quotaProbeState";
@@ -2030,6 +2033,18 @@ export function AuthFilesFilesTab({
                                   )}
                                   <span>{t("auth_files.clear_status")}</span>
                                 </DropdownMenu.Item>
+                                {provider === "antigravity" || provider === "codex" ? (
+                                  <DropdownMenu.Item
+                                    onSelect={() => {
+                                      authFilesApi.runWarmup(file.id || file.name)
+                                        .then(() => goeyToast.success(t("antigravity_quota.warmup_success")))
+                                        .catch((e: unknown) => goeyToast.error(t("antigravity_quota.warmup_failed", { message: String(e) })));
+                                    }}
+                                  >
+                                    <Zap size={15} />
+                                    <span>{t("antigravity_quota.warmup")}</span>
+                                  </DropdownMenu.Item>
+                                ) : null}
                                 <DropdownMenu.Item
                                   onSelect={() => void downloadAuthFile(file)}
                                 >
