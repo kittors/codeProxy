@@ -1053,7 +1053,11 @@
     "window_weekly": "Weekly",
     "window_5h": "5-hour",
     "group_hint": "Models in this group share one weekly limit and one 5-hour limit. Quota is consumed in proportion to token cost, so shorter tasks and cheaper models make it last longer.",
-    "measured_from": "Measured from {{model}}"
+    "measured_from": "Measured from {{model}}",
+    "warmup": "Quota Warmup",
+    "warmup_tooltip": "Trigger minimal token request to activate 5-hour countdown in advance",
+    "warmup_success": "Quota warmup succeeded",
+    "warmup_failed": "Warmup failed: {{message}}"
   },
   "claude_quota": {
     "title": "Claude Quota",
