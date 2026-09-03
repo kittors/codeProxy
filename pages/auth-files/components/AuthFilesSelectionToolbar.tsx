@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { CircleOff, Download, Power } from "lucide-react";
+import { CircleOff, Download, Power, Zap } from "lucide-react";
 import { Button } from "@code-proxy/ui";
 
 interface AuthFilesSelectionToolbarProps {
@@ -12,6 +12,8 @@ interface AuthFilesSelectionToolbarProps {
   onSetSelectionDisabled: (names: string[], disabled: boolean) => void;
   onDeleteSelection: (names: string[]) => void;
   onDownloadSelection: (names: string[]) => void;
+  onBatchWarmup?: (names: string[]) => void;
+  batchWarmupBusy?: boolean;
 }
 
 /**
@@ -28,6 +30,8 @@ export function AuthFilesSelectionToolbar({
   onSetSelectionDisabled,
   onDeleteSelection,
   onDownloadSelection,
+  onBatchWarmup,
+  batchWarmupBusy,
 }: AuthFilesSelectionToolbarProps) {
   const { t } = useTranslation();
   const selectedCount = selectedFileNames.length;
@@ -84,6 +88,18 @@ export function AuthFilesSelectionToolbar({
         <Download size={13} className="shrink-0" />
         <span>{t("auth_files.batch_download_action", { count: selectedCount })}</span>
       </Button>
+      {onBatchWarmup ? (
+        <Button
+          variant="secondary"
+          size="xs"
+          className="px-2 text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300"
+          onClick={() => onBatchWarmup(names())}
+          disabled={busy || batchWarmupBusy}
+        >
+          <Zap size={13} className="shrink-0" />
+          <span>{t("antigravity_quota.warmup_batch_button", { count: selectedCount })}</span>
+        </Button>
+      ) : null}
     </div>
   );
 }

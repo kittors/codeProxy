@@ -7,6 +7,7 @@ import {
   Plus,
   RefreshCw,
   Upload,
+  Zap,
 } from "lucide-react";
 import { Button, HoverTooltip, MaskToggleButton, Select } from "@code-proxy/ui";
 import { AuthFilesQuotaSortMenu } from "./AuthFilesQuotaSortMenu";
@@ -23,6 +24,7 @@ export type AuthFilesToolbarActionsProps = {
   onUpload: () => void;
   onPasteJson: () => void;
   onAddOAuth: () => void;
+  onOpenWarmupPolicy?: () => void;
   uploading: boolean;
   configActionsMenu: ReactNode;
   showCardColumns: boolean;
@@ -49,6 +51,7 @@ export function AuthFilesToolbarActions({
   onUpload,
   onPasteJson,
   onAddOAuth,
+  onOpenWarmupPolicy,
   uploading,
   configActionsMenu,
   showCardColumns,
@@ -133,6 +136,19 @@ export function AuthFilesToolbarActions({
           <Plus size={15} />
         </Button>
       </HoverTooltip>
+      {onOpenWarmupPolicy ? (
+        <HoverTooltip content={t("antigravity_quota.warmup_policy_title")}>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={onOpenWarmupPolicy}
+            aria-label={t("antigravity_quota.warmup_policy_title")}
+            title={t("antigravity_quota.warmup_policy_title")}
+          >
+            <Zap size={15} className="text-amber-500" />
+          </Button>
+        </HoverTooltip>
+      ) : null}
       {configActionsMenu}
       <AuthFilesQuotaSortMenu />
       {showCardColumns ? (

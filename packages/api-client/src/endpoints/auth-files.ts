@@ -151,6 +151,14 @@ export const authFilesApi = {
     return data?.result ?? { success: false, status_code: 500 };
   },
 
+  runWarmupBatch: async (authIds: string[], poolId?: string): Promise<{ dispatched: number }> => {
+    const data = await apiClient.post<{ dispatched?: number }>("/auth-files/warmup/batch", {
+      auth_ids: authIds,
+      pool_id: poolId,
+    });
+    return { dispatched: Number(data?.dispatched ?? 0) };
+  },
+
   getWarmupPolicies: async (): Promise<{ policies: unknown[]; metrics: unknown }> => {
     const data = await apiClient.get<{ policies?: unknown[]; metrics?: unknown }>("/auth-files/warmup/policies");
     return {
