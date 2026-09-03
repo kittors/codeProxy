@@ -92,7 +92,9 @@
     "sort_descending": "Descending",
     "no_data": "No data",
     "disabled": "Disabled",
-    "enabled": "Enabled"
+    "enabled": "Enabled",
+    "mask_sensitive_data": "Mask sensitive data",
+    "unmask_sensitive_data": "Show sensitive data"
   },
   "title": {
     "main": "CliRelay Admin Dashboard",

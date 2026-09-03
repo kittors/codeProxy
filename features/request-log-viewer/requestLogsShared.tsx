@@ -1,7 +1,6 @@
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { UsageLogItem } from "@code-proxy/api-client/endpoints/usage";
-import { VendorIcon } from "@code-proxy/assets";
 import {
   formatFixedNumber,
   formatUsageMetricCost,
@@ -9,6 +8,7 @@ import {
   formatUsageMetricTooltipCost,
   formatUsageMetricTooltipNumber,
   isUsageMetricCompact,
+  maskSensitiveIdentity,
   type UsageMetricVariant,
 } from "@code-proxy/domain";
 import { parseUsageTimestampMs } from "@features/monitor-widgets/monitor-utils";
@@ -18,11 +18,19 @@ import { HoverTooltip, OverflowTooltip } from "@code-proxy/ui";
 import { PaginationBar } from "@code-proxy/ui";
 import { RequestLogModelCell } from "./RequestLogModelCell";
 import {
+  ChannelIdentityLabel,
+  normalizeChannelAuthType,
+  type ChannelIdentityLabelProps,
+} from "./ChannelIdentityLabel";
+import {
   computeOutputTokensPerSecond,
   formatTokensPerSecond,
   hasRequestLogMetricText,
   resolveLatencyToneClasses,
 } from "./requestLogMetrics";
+
+export { ChannelIdentityLabel, normalizeChannelAuthType };
+export type { ChannelIdentityLabelProps };
 
 export {
   computeOutputTokensPerSecond,
@@ -75,95 +83,6 @@ export type RequestLogsRow = {
   cost: number;
   hasContent: boolean;
 };
-
-export function normalizeChannelAuthType(authType?: string | null): "oauth" | "api" | "" {
-  const raw = String(authType ?? "")
-    .trim()
-    .toLowerCase();
-  if (raw === "oauth") return "oauth";
-  if (raw === "api" || raw === "api_key" || raw === "apikey") return "api";
-  return "";
-}
-
-function channelAuthTypeBadgeClass(authType: "oauth" | "api" | ""): string {
-  if (authType === "api") {
-    return "bg-sky-50 text-sky-700 dark:bg-sky-500/15 dark:text-sky-200";
-  }
-  if (authType === "oauth") {
-    return "bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-200";
-  }
-  return "bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-white/65";
-}
-
-/**
- * Shared channel identity chip: vendor icon + truncated name + auth-type badge.
- * Used by request-log filter options and the table channel column so both stay
- * visually aligned across narrow/wide column widths.
- */
-export function ChannelIdentityLabel({
-  name,
-  provider,
-  authType,
-  apiLabel,
-  oauthLabel,
-  iconSize = 14,
-  className,
-  nameClassName,
-}: {
-  name: string;
-  provider?: string | null;
-  authType?: string | null;
-  apiLabel: string;
-  oauthLabel: string;
-  iconSize?: number;
-  className?: string;
-  nameClassName?: string;
-}) {
-  const trimmedName = String(name || "").trim();
-  const displayName = trimmedName || "--";
-  const vendor = String(provider ?? "").trim();
-  const normalizedAuth = normalizeChannelAuthType(authType);
-  const badgeLabel =
-    normalizedAuth === "api" ? apiLabel : normalizedAuth === "oauth" ? oauthLabel : "";
-  // Callers can fully override name typography via nameClassName; do not stack
-  // conflicting text-* utilities (plain class join is not Tailwind-merge).
-  const resolvedNameClassName =
-    nameClassName ??
-    [
-      "text-xs font-medium",
-      trimmedName ? "text-slate-700 dark:text-slate-200" : "text-slate-400 dark:text-white/30",
-    ].join(" ");
-
-  return (
-    <span
-      className={["inline-flex min-w-0 max-w-full items-center gap-1.5", className]
-        .filter(Boolean)
-        .join(" ")}
-    >
-      {vendor ? (
-        <span className="inline-flex shrink-0 items-center" aria-hidden="true">
-          <VendorIcon modelId={vendor} size={iconSize} />
-        </span>
-      ) : null}
-      <span
-        className={["min-w-0 truncate", resolvedNameClassName].join(" ")}
-        title={trimmedName ? displayName : undefined}
-      >
-        {displayName}
-      </span>
-      {badgeLabel ? (
-        <span
-          className={[
-            "inline-flex shrink-0 items-center rounded-full px-1.5 py-0.5 text-2xs font-semibold leading-none",
-            channelAuthTypeBadgeClass(normalizedAuth),
-          ].join(" ")}
-        >
-          {badgeLabel}
-        </span>
-      ) : null}
-    </span>
-  );
-}
 
 function RequestLogMetricChip({
   ariaLabel,
@@ -614,12 +533,17 @@ export function buildRequestLogsColumns(
   t: (key: string) => string,
   onContentClick?: (logId: number, tab: "input" | "output", model: string) => void,
   onErrorClick?: (logId: number, model: string) => void,
-  options: { identityColumn?: "user" | "key" | "none"; hideChannel?: boolean } = {},
+  options: {
+    identityColumn?: "user" | "key" | "none";
+    hideChannel?: boolean;
+    masked?: boolean;
+  } = {},
 ): RequestLogsTableColumn<RequestLogsRow>[] {
   const apiLabel = t("request_logs.auth_type_api");
   const oauthLabel = t("request_logs.auth_type_oauth");
   const identityColumn = options.identityColumn ?? "user";
   const hideChannel = options.hideChannel === true;
+  const masked = options.masked === true;
   const columns: RequestLogsTableColumn<RequestLogsRow>[] = [
     {
       key: "id",
@@ -666,7 +590,8 @@ export function buildRequestLogsColumns(
             : row.channelAuthType === "oauth"
               ? oauthLabel
               : "";
-        const tooltipParts = [row.channelName || "--", authLabel, row.channelProvider].filter(
+        const channelName = masked ? maskSensitiveIdentity(row.channelName) : row.channelName;
+        const tooltipParts = [channelName || "--", authLabel, row.channelProvider].filter(
           Boolean,
         );
         return (
@@ -675,7 +600,7 @@ export function buildRequestLogsColumns(
             className="mx-auto block min-w-0 max-w-full"
           >
             <ChannelIdentityLabel
-              name={row.channelName}
+              name={channelName}
               provider={row.channelProvider}
               authType={row.channelAuthType}
               apiLabel={apiLabel}
@@ -856,11 +781,13 @@ export function buildRequestLogsColumns(
       cellClassName: "text-center",
       render: (row) => {
         const keyFallback = row.maskedApiKey || (row.apiKeyId ? row.apiKeyId.slice(0, 8) : "");
-        const keyName =
+        const rawKeyName =
           row.apiKeyOwnName ||
           (!row.endUserDisplayName ? row.apiKeyName : "") ||
           keyFallback ||
           "--";
+        const keyName =
+          masked && rawKeyName !== "--" ? maskSensitiveIdentity(rawKeyName) : rawKeyName;
         if (identityColumn === "key") {
           const displayName = row.isSystemCall ? t("request_logs.system_call") : keyName;
           return (
@@ -873,9 +800,13 @@ export function buildRequestLogsColumns(
             </HoverTooltip>
           );
         }
-        const userName = row.isSystemCall
+        const rawUserName = row.isSystemCall
           ? t("request_logs.system_call")
           : row.endUserDisplayName || row.apiKeyName || "--";
+        const userName =
+          masked && !row.isSystemCall && rawUserName !== "--"
+            ? maskSensitiveIdentity(rawUserName)
+            : rawUserName;
         const showKeyName = Boolean(keyName && keyName !== userName);
         return (
           <HoverTooltip
