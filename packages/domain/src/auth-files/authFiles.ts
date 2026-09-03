@@ -2100,6 +2100,7 @@ export type PrefixProxyEditorState = {
   subscriptionPeriod: AuthFileSubscriptionPeriod;
   concurrencyLimit: string;
   codexConvergenceMode: string;
+  codexServiceTier: string;
 };
 
 export type AuthFilesGroupOverview = {

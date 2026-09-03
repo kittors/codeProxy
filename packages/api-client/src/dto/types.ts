@@ -202,6 +202,8 @@ export interface AuthFileItem extends TagDisplayFields {
   concurrency_limit?: number;
   /** Codex identity fingerprint convergence mode override: "off", "device", "session", "full", or unset. */
   codex_convergence_mode?: "off" | "device" | "session" | "full" | "";
+  /** Codex service_tier policy override: "default", "pass", "priority", "flex", "drop", or unset. */
+  codex_service_tier?: "default" | "pass" | "priority" | "flex" | "drop" | "";
   [key: string]: unknown;
 }
 
