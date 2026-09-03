@@ -1594,4 +1594,52 @@ test("shows auth-level quota recovery records as 429 restriction badges", () => 
       concurrency_limit: 7,
     });
   });
+
+  test("edits and serializes codex_convergence_mode in prefixProxyEditor", async () => {
+    let uploadedText = "";
+    mocks.downloadText.mockImplementation(async () =>
+      JSON.stringify({
+        type: "codex",
+        codex_convergence_mode: "device",
+      }),
+    );
+    mocks.upload.mockImplementation(async (file: File) => {
+      uploadedText = await file.text();
+      return {};
+    });
+
+    const loadAll = vi.fn(async (): Promise<AuthFileItem[]> => []);
+    const { result } = renderHook(() => useAuthFilesDetailEditors(loadAll), { wrapper });
+
+    await act(async () => {
+      result.current.setDetailFile({ name: "codex.json" } as AuthFileItem);
+      result.current.setDetailOpen(true);
+      result.current.setDetailTab("fields");
+    });
+
+    await waitFor(() => {
+      expect(result.current.prefixProxyEditor.codexConvergenceMode).toBe("device");
+    });
+    expect(result.current.prefixProxyDirty).toBe(false);
+
+    await act(async () => {
+      result.current.setPrefixProxyEditor((prev) => ({
+        ...prev,
+        codexConvergenceMode: "session",
+      }));
+    });
+
+    expect(result.current.prefixProxyDirty).toBe(true);
+    expect(result.current.prefixProxyUpdatedText).toContain('"codex_convergence_mode": "session"');
+
+    await act(async () => {
+      await result.current.savePrefixProxy();
+    });
+
+    expect(mocks.upload).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(uploadedText)).toEqual({
+      type: "codex",
+      codex_convergence_mode: "session",
+    });
+  });
 });

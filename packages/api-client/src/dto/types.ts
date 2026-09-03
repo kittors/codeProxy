@@ -200,6 +200,8 @@ export interface AuthFileItem extends TagDisplayFields {
   using_api?: boolean;
   /** Max concurrent requests allowed for this account (0 or unset = unlimited). */
   concurrency_limit?: number;
+  /** Codex identity fingerprint convergence mode override: "off", "device", "session", "full", or unset. */
+  codex_convergence_mode?: "off" | "device" | "session" | "full" | "";
   [key: string]: unknown;
 }
 
