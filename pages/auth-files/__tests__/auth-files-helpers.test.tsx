@@ -1020,6 +1020,46 @@ test("shows auth-level quota recovery records as 429 restriction badges", () => 
     ]);
   });
 
+  test("Antigravity suppresses auth-level 429 badge when account is not completely unavailable", () => {
+    const partiallyExhaustedFile = {
+      name: "antigravity.json",
+      type: "antigravity",
+      unavailable: false,
+      restrictions: [
+        {
+          scope: "auth",
+          http_status: 429,
+          quota_exceeded: true,
+          reason: "quota",
+          status_message: "Resource has been exhausted",
+        },
+      ],
+    } as AuthFileItem;
+
+    // Should NOT show top-level 429 badge
+    expect(resolveAuthFileRestrictionBadges(partiallyExhaustedFile, Date.now())).toEqual([]);
+    expect(Array.from(resolveAuthFileStatusBuckets(partiallyExhaustedFile))).not.toContain("http-429");
+
+    const fullyUnavailableFile = {
+      name: "antigravity.json",
+      type: "antigravity",
+      unavailable: true,
+      restrictions: [
+        {
+          scope: "auth",
+          http_status: 429,
+          quota_exceeded: true,
+          reason: "quota",
+          status_message: "Resource has been exhausted",
+        },
+      ],
+    } as AuthFileItem;
+
+    // When fully unavailable, SHOULD show 429
+    expect(resolveAuthFileRestrictionBadges(fullyUnavailableFile, Date.now()).length).toBe(1);
+    expect(Array.from(resolveAuthFileStatusBuckets(fullyUnavailableFile))).toContain("http-429");
+  });
+
   test("does not derive restriction badges from normal auth status", () => {
     expect(
       resolveAuthFileRestrictionBadges({
