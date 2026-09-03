@@ -16,7 +16,6 @@ import {
   Ellipsis,
   Eye,
   Gauge,
-  ListChecks,
   Loader2,
   Power,
   RefreshCw,
@@ -24,9 +23,7 @@ import {
   Settings2,
   SlidersHorizontal,
   Tags,
-  Zap,
 } from "lucide-react";
-import { authFilesApi } from "@code-proxy/api-client";
 import type { AuthFileItem } from "@code-proxy/api-client";
 import { VendorIcon } from "@code-proxy/assets";
 import { Button, DropdownMenu, buttonClassName, surface } from "@code-proxy/ui";
@@ -79,12 +76,13 @@ import {
   type QuotaItem,
   type QuotaState,
 } from "@features/quota-preview/quota-helpers";
-import { goeyToast } from "goey-toast";
 import type { QuotaProvider } from "@features/quota-preview/quota-fetch";
 import type { QuotaCardSlot } from "../hooks/quotaCardSlots";
 import { shouldShowQuotaPlaceholder } from "../hooks/quotaProbeState";
 import { AuthFileCardQuota } from "./AuthFileCardQuota";
+import { AuthFileWarmupButton } from "./AuthFileWarmupButton";
 import { AuthFilesLoadingSkeleton } from "./AuthFilesLoadingSkeleton";
+import { AuthFilesSelectionActionsMenu } from "./AuthFilesSelectionActionsMenu";
 import { AuthFilesSelectionToolbar } from "./AuthFilesSelectionToolbar";
 import { AuthFilesToolbarActions } from "./AuthFilesToolbarActions";
 import {
@@ -559,6 +557,9 @@ interface AuthFilesFilesTabProps {
   deletingAll: boolean;
   batchStatusUpdating: boolean;
   handleSetSelectionDisabled: (names: string[], disabled: boolean) => Promise<void>;
+  onBatchWarmup?: (names: string[]) => void;
+  batchWarmupBusy?: boolean;
+  onOpenWarmupPolicy?: () => void;
   pageItems: AuthFileItem[];
   fileColumns: DataTableColumn<AuthFileItem>[];
   filesViewMode: FilesViewMode;
@@ -665,6 +666,9 @@ export function AuthFilesFilesTab({
   deletingAll,
   batchStatusUpdating,
   handleSetSelectionDisabled,
+  onBatchWarmup,
+  batchWarmupBusy,
+  onOpenWarmupPolicy,
   pageItems,
   fileColumns,
   filesViewMode,
@@ -1045,51 +1049,18 @@ export function AuthFilesFilesTab({
     await handleUpload(uploadFiles);
   }, [files, handleUpload, jsonImportText, t]);
 
-  const selectionActionsMenu = showSelectionActions ? (
-    <DropdownMenu.Root>
-      <DropdownMenu.Trigger asChild>
-        <button
-          type="button"
-          className={buttonClassName({
-            variant: "secondary",
-            size: "sm",
-            iconOnly: true,
-          })}
-          aria-label={t("auth_files.selection_actions")}
-          title={t("auth_files.selection_actions")}
-          data-tooltip-placement="top"
-        >
-          <ListChecks size={15} />
-        </button>
-      </DropdownMenu.Trigger>
-      <DropdownMenu.Portal>
-        <DropdownMenu.Content align="end" sideOffset={8} className="min-w-44">
-          <DropdownMenu.Item
-            disabled={selectablePageNames.length === 0}
-            onSelect={() => selectCurrentPage(!allPageSelected)}
-          >
-            <ListChecks size={15} />
-            <span>
-              {allPageSelected
-                ? t("auth_files.batch_deselect_page")
-                : t("auth_files.batch_select_page")}
-            </span>
-          </DropdownMenu.Item>
-          <DropdownMenu.Item
-            disabled={selectableFilteredFiles.length === 0}
-            onSelect={() => selectFilteredFiles(!allFilteredSelected)}
-          >
-            <ListChecks size={15} />
-            <span>
-              {allFilteredSelected
-                ? t("auth_files.batch_deselect_filtered")
-                : t("auth_files.batch_select_filtered")}
-            </span>
-          </DropdownMenu.Item>
-        </DropdownMenu.Content>
-      </DropdownMenu.Portal>
-    </DropdownMenu.Root>
-  ) : null;
+  const selectionActionsMenu = (
+    <AuthFilesSelectionActionsMenu
+      show={showSelectionActions}
+      t={t}
+      selectablePageNamesLength={selectablePageNames.length}
+      allPageSelected={allPageSelected}
+      selectCurrentPage={selectCurrentPage}
+      selectableFilteredFilesLength={selectableFilteredFiles.length}
+      allFilteredSelected={allFilteredSelected}
+      selectFilteredFiles={selectFilteredFiles}
+    />
+  );
 
   const configActionsMenu = (
     <HoverTooltip content={t("auth_files_page.config_menu")}>
@@ -1122,6 +1093,8 @@ export function AuthFilesFilesTab({
       }
       onDeleteSelection={(names) => setConfirm({ type: "deleteSelection", names })}
       onDownloadSelection={(names) => void handleDownloadSelection(names)}
+      onBatchWarmup={onBatchWarmup}
+      batchWarmupBusy={batchWarmupBusy}
     />
   );
   const modelOwnerToolbarButton = canSetModelOwnerGroup ? (
@@ -1408,6 +1381,7 @@ export function AuthFilesFilesTab({
                     setOauthDialogOpen(true);
                   }}
                   uploading={uploading}
+                  onOpenWarmupPolicy={onOpenWarmupPolicy}
                   configActionsMenu={configActionsMenu}
                   showCardColumns={filesViewMode === "cards"}
                   cardColumns={cardColumns}
@@ -1977,6 +1951,14 @@ export function AuthFilesFilesTab({
                             </HoverTooltip>
                           ) : null}
 
+                          {provider === "antigravity" || provider === "codex" ? (
+                            <AuthFileWarmupButton
+                              file={file}
+                              actionSize={actionSize}
+                              actionIconSize={actionIconSize}
+                            />
+                          ) : null}
+
                           <HoverTooltip content={t("auth_files.detail")}>
                             <Button
                               variant="ghost"
@@ -2033,18 +2015,6 @@ export function AuthFilesFilesTab({
                                   )}
                                   <span>{t("auth_files.clear_status")}</span>
                                 </DropdownMenu.Item>
-                                {provider === "antigravity" || provider === "codex" ? (
-                                  <DropdownMenu.Item
-                                    onSelect={() => {
-                                      authFilesApi.runWarmup(file.id || file.name)
-                                        .then(() => goeyToast.success(t("antigravity_quota.warmup_success")))
-                                        .catch((e: unknown) => goeyToast.error(t("antigravity_quota.warmup_failed", { message: String(e) })));
-                                    }}
-                                  >
-                                    <Zap size={15} />
-                                    <span>{t("antigravity_quota.warmup")}</span>
-                                  </DropdownMenu.Item>
-                                ) : null}
                                 <DropdownMenu.Item
                                   onSelect={() => void downloadAuthFile(file)}
                                 >
