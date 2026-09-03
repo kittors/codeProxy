@@ -94,7 +94,9 @@
     "sort_descending": "降序",
     "no_data": "暂无数据",
     "disabled": "已停用",
-    "enabled": "已启用"
+    "enabled": "已启用",
+    "mask_sensitive_data": "开启数据脱敏",
+    "unmask_sensitive_data": "关闭数据脱敏"
   },
   "title": {
     "main": "CliRelay 管理后台",

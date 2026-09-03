@@ -11,6 +11,7 @@ import {
   TabsList,
   TabsTrigger,
   useLocalStorage,
+  useSensitiveDataMasking,
   useToast,
 } from "@code-proxy/ui";
 import { quotaApi, type AuthFileItem } from "@code-proxy/api-client";
@@ -19,6 +20,10 @@ import {
   type ProxyPoolEntry,
 } from "@code-proxy/api-client/endpoints/proxies";
 import { OAuthLoginDialog } from "@features/oauth-login";
+import {
+  buildAuthFilesSignature,
+  findChangedAuthFile,
+} from "./helpers/authFilesSignatures";
 import { AuthFileDetailModal } from "./components/AuthFileDetailModal";
 import { AuthFilesExcludedTab } from "./components/AuthFilesExcludedTab";
 import { AuthFilesAliasTab } from "./components/AuthFilesAliasTab";
@@ -78,44 +83,6 @@ const wait = (ms: number) =>
   new Promise<void>((resolve) => {
     window.setTimeout(resolve, ms);
   });
-
-const buildAuthFileSignature = (file: AuthFileItem): string =>
-  [
-    file.name,
-    file.type,
-    file.provider,
-    file.label,
-    file.email,
-    file.account_type,
-    file.size,
-    file.modified,
-    file.modtime,
-    file.authIndex,
-    file.auth_index,
-  ]
-    .map((value) => String(value ?? ""))
-    .join("|");
-
-const buildAuthFilesSignature = (items: AuthFileItem[]): string =>
-  items.map(buildAuthFileSignature).sort().join("\n");
-
-const findChangedAuthFile = (
-  previousFiles: AuthFileItem[],
-  nextFiles: AuthFileItem[],
-): AuthFileItem | null => {
-  const previousSignatures = new Map(
-    previousFiles.map((file) => [
-      String(file.name ?? ""),
-      buildAuthFileSignature(file),
-    ]),
-  );
-  return (
-    nextFiles.find((file) => {
-      const name = String(file.name ?? "");
-      return previousSignatures.get(name) !== buildAuthFileSignature(file);
-    }) ?? null
-  );
-};
 
 export function AuthFilesPage() {
   const { t } = useTranslation();
@@ -218,6 +185,7 @@ export function AuthFilesPage() {
     AUTH_FILES_FILES_VIEW_MODE_KEY,
     "cards",
   );
+  const [masked, setMasked] = useSensitiveDataMasking();
   // Only the card grid needs a page size divisible by the column count; the
   // table view keeps whatever the user picked from the standard options.
   const pageSize =
@@ -844,6 +812,7 @@ export function AuthFilesPage() {
     statusUpdating,
     setFileEnabled,
     usageIndex,
+    masked,
   });
 
   return (
@@ -905,6 +874,8 @@ export function AuthFilesPage() {
         pageItems={pageItems}
         fileColumns={fileColumns}
         filesViewMode={filesViewMode}
+        masked={masked}
+        onToggleMask={() => setMasked((prev) => !prev)}
         cardColumns={cardColumns}
         setCardColumns={setCardColumns}
         pageSize={pageSize}

@@ -58,6 +58,7 @@ import {
   formatCompactNumber,
   formatPlanBadgeLabel,
   isRuntimeOnlyAuthFile,
+  maskSensitiveIdentity,
   normalizeAuthFilesCardColumns,
   normalizeAuthIndexValue,
   normalizeProviderKey,
@@ -83,8 +84,17 @@ import { AuthFileCardQuota } from "./AuthFileCardQuota";
 import { AuthFilesLoadingSkeleton } from "./AuthFilesLoadingSkeleton";
 import { AuthFilesSelectionToolbar } from "./AuthFilesSelectionToolbar";
 import { AuthFilesToolbarActions } from "./AuthFilesToolbarActions";
+import {
+  formatResetCreditExpiry,
+  isPlainObject,
+  normalizeDedupKeyPart,
+  parseCodexFilenameIdentity,
+  readNestedStringField,
+  readStringField,
+  sanitizeCodexFilenamePart,
+  sanitizeFilenamePart,
+} from "../helpers/authFilesTabUtils";
 
-const MAX_FILENAME_PART_LENGTH = 72;
 const FILTER_LABEL_CLASS =
   "truncate text-xs font-semibold uppercase tracking-[0.02em] text-slate-600 dark:text-white/65";
 const FILTER_FIELD_CLASS = "min-w-0 space-y-2";
@@ -101,116 +111,6 @@ const FILTER_GRID_WITHOUT_TAGS =
   "xl:grid-cols-[repeat(3,minmax(0,1fr))_minmax(18rem,1.5fr)]";
 const CARD_COLUMN_ANIMATION_MS = 240;
 const CARD_COLUMN_ANIMATION_EASING = "cubic-bezier(0.22, 1, 0.36, 1)";
-
-const isPlainObject = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
-
-const sanitizeFilenamePart = (value: unknown): string => {
-  const text = String(value ?? "")
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9._-]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  return text.slice(0, MAX_FILENAME_PART_LENGTH).replace(/^-+|-+$/g, "");
-};
-
-const sanitizeCodexFilenamePart = (value: unknown): string =>
-  Array.from(
-    String(value ?? "")
-      .trim()
-      .toLowerCase(),
-  )
-    .map((char) => {
-      const code = char.charCodeAt(0);
-      return code < 32 || char === "/" || char === "\\" ? "-" : char;
-    })
-    .join("")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, MAX_FILENAME_PART_LENGTH)
-    .replace(/^-+|-+$/g, "");
-
-const formatResetCreditExpiry = (value: string): string => {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat(undefined, {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
-};
-
-const readStringField = (
-  record: Record<string, unknown>,
-  keys: string[],
-): string => {
-  for (const key of keys) {
-    const value = record[key];
-    if (typeof value === "string" && value.trim()) {
-      return value.trim();
-    }
-  }
-  return "";
-};
-
-const readNestedStringField = (
-  records: readonly (Record<string, unknown> | undefined)[],
-  keys: string[],
-): string => {
-  for (const record of records) {
-    if (!record) continue;
-    const value = readStringField(record, keys);
-    if (value) return value;
-  }
-  return "";
-};
-
-const normalizeDedupKeyPart = (value: unknown): string =>
-  String(value ?? "")
-    .trim()
-    .toLowerCase();
-
-const codexFilenamePlanSuffixes = new Set([
-  "plus",
-  "pro",
-  "free",
-  "team",
-  "premium",
-  "business",
-  "enterprise",
-]);
-
-const parseCodexFilenameIdentity = (
-  fileName: string,
-): { accountId?: string; email?: string } => {
-  const normalized = String(fileName ?? "")
-    .trim()
-    .toLowerCase();
-  const base = normalized.replace(/\.json$/u, "");
-  if (!base.startsWith("codex-")) return {};
-  const rest = base.slice("codex-".length);
-  if (!rest) return {};
-  const parts = rest.split("-").filter(Boolean);
-  if (parts.length === 0) return {};
-
-  const emailIndex = parts.findIndex((part) => part.includes("@"));
-  if (emailIndex >= 0) {
-    const email = parts[emailIndex] ?? "";
-    const accountId = parts.slice(0, emailIndex).join("-");
-    return {
-      ...(accountId ? { accountId } : {}),
-      ...(email ? { email } : {}),
-    };
-  }
-
-  const lastPart = parts.at(-1) ?? "";
-  if (codexFilenamePlanSuffixes.has(lastPart) && parts.length > 1) {
-    return { email: parts.slice(0, -1).join("-") };
-  }
-
-  return { accountId: rest };
-};
 
 const collectAuthIdentityKeys = (record: Record<string, unknown>): string[] => {
   const credentials = isPlainObject(record.credentials)
@@ -659,6 +559,8 @@ interface AuthFilesFilesTabProps {
   pageItems: AuthFileItem[];
   fileColumns: DataTableColumn<AuthFileItem>[];
   filesViewMode: FilesViewMode;
+  masked?: boolean;
+  onToggleMask?: () => void;
   cardColumns: AuthFilesCardColumns;
   setCardColumns: (value: AuthFilesCardColumns) => void;
   pageSize: number;
@@ -763,6 +665,8 @@ export function AuthFilesFilesTab({
   pageItems,
   fileColumns,
   filesViewMode,
+  masked = false,
+  onToggleMask = () => {},
   cardColumns,
   setCardColumns,
   pageSize,
@@ -1472,6 +1376,8 @@ export function AuthFilesFilesTab({
 
                 <AuthFilesToolbarActions
                   t={t}
+                  masked={masked}
+                  onToggleMask={onToggleMask}
                   onGroupOverview={openGroupOverview}
                   groupOverviewLoading={groupOverviewLoading}
                   onRefresh={() => void refreshFilesAndQuota()}
@@ -1606,8 +1512,11 @@ export function AuthFilesFilesTab({
                   const typeKey = resolveFileType(file);
                   const badgeClass =
                     TYPE_BADGE_CLASSES[typeKey] ?? TYPE_BADGE_CLASSES.unknown;
-                  const displayTitle =
+                  const rawTitle =
                     resolveAuthFileDisplayName(file) || String(file.name || "");
+                  const displayTitle = masked
+                    ? maskSensitiveIdentity(rawTitle)
+                    : rawTitle;
                   const provider = resolveQuotaProvider(file);
                   const state = quotaByFileName[file.name] ?? {
                     status: "idle",
