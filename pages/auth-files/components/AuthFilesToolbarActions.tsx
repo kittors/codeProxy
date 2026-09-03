@@ -8,11 +8,13 @@ import {
   RefreshCw,
   Upload,
 } from "lucide-react";
-import { Button, HoverTooltip, Select } from "@code-proxy/ui";
+import { Button, HoverTooltip, MaskToggleButton, Select } from "@code-proxy/ui";
 import { AuthFilesQuotaSortMenu } from "./AuthFilesQuotaSortMenu";
 
 export type AuthFilesToolbarActionsProps = {
   t: TFunction;
+  masked: boolean;
+  onToggleMask: () => void;
   onGroupOverview: () => void;
   groupOverviewLoading: boolean;
   onRefresh: () => void;
@@ -37,6 +39,8 @@ export type AuthFilesToolbarActionsProps = {
  */
 export function AuthFilesToolbarActions({
   t,
+  masked,
+  onToggleMask,
   onGroupOverview,
   groupOverviewLoading,
   onRefresh,
@@ -54,6 +58,7 @@ export function AuthFilesToolbarActions({
 }: AuthFilesToolbarActionsProps) {
   return (
     <div className="flex shrink-0 flex-wrap items-center gap-1 rounded-full bg-slate-50/90 px-1.5 py-1 dark:bg-white/[0.04]">
+      <MaskToggleButton masked={masked} onToggle={onToggleMask} />
       <HoverTooltip content={t("auth_files.group_overview_button")}>
         <Button
           variant="secondary"

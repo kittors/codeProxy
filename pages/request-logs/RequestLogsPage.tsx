@@ -14,12 +14,7 @@ import {
   formatUsageMetricTooltipNumber,
   isUsageMetricCompact,
 } from "@code-proxy/domain";
-import { Button } from "@code-proxy/ui";
-import { Checkbox } from "@code-proxy/ui";
-import { HoverTooltip } from "@code-proxy/ui";
-import { Modal } from "@code-proxy/ui";
-import { useToast } from "@code-proxy/ui";
-import { DataTable } from "@code-proxy/ui";
+import { Button, Checkbox, DataTable, HoverTooltip, MaskToggleButton, Modal, useSensitiveDataMasking, useToast } from "@code-proxy/ui";
 import { ErrorDetailModal, LogContentModal } from "@features/log-content-viewer";
 import { ModelTag } from "@features/model-tags";
 import { RequestLogsFilters } from "./RequestLogsFilters";
@@ -88,6 +83,7 @@ function RequestLogsRecordsCount({ count }: { count: number }) {
 export function RequestLogsPage() {
   const { t, i18n } = useTranslation();
   const { notify } = useToast();
+  const [masked, setMasked] = useSensitiveDataMasking();
 
   // Content modal state
   const [contentModalOpen, setContentModalOpen] = useState(false);
@@ -132,8 +128,8 @@ export function RequestLogsPage() {
 
   // Build columns with content click handler
   const logColumns = useMemo(
-    () => buildRequestLogsColumns(t, handleContentClick, handleErrorClick),
-    [t, handleContentClick, handleErrorClick],
+    () => buildRequestLogsColumns(t, handleContentClick, handleErrorClick, { masked }),
+    [t, handleContentClick, handleErrorClick, masked],
   );
 
   // Data state (page-based, no accumulation)
@@ -555,6 +551,11 @@ export function RequestLogsPage() {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <RequestLogsTimeRangeSelector value={timeRange} onChange={setTimeRange} />
+            <MaskToggleButton
+              masked={masked}
+              onToggle={() => setMasked((prev) => !prev)}
+              className="h-9 w-9 rounded-2xl"
+            />
             <button
               type="button"
               onClick={handleOpenClearDialog}
