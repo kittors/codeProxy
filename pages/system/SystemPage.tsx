@@ -175,7 +175,7 @@ export function SystemPage() {
         />
       </div>
 
-      <SystemUpdateCard className="flex-1" />
+      <SystemUpdateCard className="shrink-0" />
     </div>
   );
 }

@@ -1020,6 +1020,46 @@ test("shows auth-level quota recovery records as 429 restriction badges", () => 
     ]);
   });
 
+  test("Antigravity suppresses auth-level 429 badge when account is not completely unavailable", () => {
+    const partiallyExhaustedFile = {
+      name: "antigravity.json",
+      type: "antigravity",
+      unavailable: false,
+      restrictions: [
+        {
+          scope: "auth",
+          http_status: 429,
+          quota_exceeded: true,
+          reason: "quota",
+          status_message: "Resource has been exhausted",
+        },
+      ],
+    } as AuthFileItem;
+
+    // Should NOT show top-level 429 badge
+    expect(resolveAuthFileRestrictionBadges(partiallyExhaustedFile, Date.now())).toEqual([]);
+    expect(Array.from(resolveAuthFileStatusBuckets(partiallyExhaustedFile))).not.toContain("http-429");
+
+    const fullyUnavailableFile = {
+      name: "antigravity.json",
+      type: "antigravity",
+      unavailable: true,
+      restrictions: [
+        {
+          scope: "auth",
+          http_status: 429,
+          quota_exceeded: true,
+          reason: "quota",
+          status_message: "Resource has been exhausted",
+        },
+      ],
+    } as AuthFileItem;
+
+    // When fully unavailable, SHOULD show 429
+    expect(resolveAuthFileRestrictionBadges(fullyUnavailableFile, Date.now()).length).toBe(1);
+    expect(Array.from(resolveAuthFileStatusBuckets(fullyUnavailableFile))).toContain("http-429");
+  });
+
   test("does not derive restriction badges from normal auth status", () => {
     expect(
       resolveAuthFileRestrictionBadges({
@@ -1592,6 +1632,102 @@ test("shows auth-level quota recovery records as 429 restriction badges", () => 
     expect(JSON.parse(uploadedText)).toEqual({
       type: "codex",
       concurrency_limit: 7,
+    });
+  });
+
+  test("edits and serializes codex_convergence_mode in prefixProxyEditor", async () => {
+    let uploadedText = "";
+    mocks.downloadText.mockImplementation(async () =>
+      JSON.stringify({
+        type: "codex",
+        codex_convergence_mode: "device",
+      }),
+    );
+    mocks.upload.mockImplementation(async (file: File) => {
+      uploadedText = await file.text();
+      return {};
+    });
+
+    const loadAll = vi.fn(async (): Promise<AuthFileItem[]> => []);
+    const { result } = renderHook(() => useAuthFilesDetailEditors(loadAll), { wrapper });
+
+    await act(async () => {
+      result.current.setDetailFile({ name: "codex.json" } as AuthFileItem);
+      result.current.setDetailOpen(true);
+      result.current.setDetailTab("fields");
+    });
+
+    await waitFor(() => {
+      expect(result.current.prefixProxyEditor.codexConvergenceMode).toBe("device");
+    });
+    expect(result.current.prefixProxyDirty).toBe(false);
+
+    await act(async () => {
+      result.current.setPrefixProxyEditor((prev) => ({
+        ...prev,
+        codexConvergenceMode: "session",
+      }));
+    });
+
+    expect(result.current.prefixProxyDirty).toBe(true);
+    expect(result.current.prefixProxyUpdatedText).toContain('"codex_convergence_mode": "session"');
+
+    await act(async () => {
+      await result.current.savePrefixProxy();
+    });
+
+    expect(mocks.upload).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(uploadedText)).toEqual({
+      type: "codex",
+      codex_convergence_mode: "session",
+    });
+  });
+
+  test("edits and serializes codex_service_tier in prefixProxyEditor", async () => {
+    let uploadedText = "";
+    mocks.downloadText.mockImplementation(async () =>
+      JSON.stringify({
+        type: "codex",
+        codex_service_tier: "default",
+      }),
+    );
+    mocks.upload.mockImplementation(async (file: File) => {
+      uploadedText = await file.text();
+      return {};
+    });
+
+    const loadAll = vi.fn(async (): Promise<AuthFileItem[]> => []);
+    const { result } = renderHook(() => useAuthFilesDetailEditors(loadAll), { wrapper });
+
+    await act(async () => {
+      result.current.setDetailFile({ name: "codex.json" } as AuthFileItem);
+      result.current.setDetailOpen(true);
+      result.current.setDetailTab("fields");
+    });
+
+    await waitFor(() => {
+      expect(result.current.prefixProxyEditor.codexServiceTier).toBe("default");
+    });
+    expect(result.current.prefixProxyDirty).toBe(false);
+
+    await act(async () => {
+      result.current.setPrefixProxyEditor((prev) => ({
+        ...prev,
+        codexServiceTier: "priority",
+      }));
+    });
+
+    expect(result.current.prefixProxyDirty).toBe(true);
+    expect(result.current.prefixProxyUpdatedText).toContain('"codex_service_tier": "priority"');
+
+    await act(async () => {
+      await result.current.savePrefixProxy();
+    });
+
+    expect(mocks.upload).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(uploadedText)).toEqual({
+      type: "codex",
+      codex_service_tier: "priority",
     });
   });
 });

@@ -7,7 +7,12 @@ import { expect, test, type Page } from "@playwright/test";
  * 是那一条内边距。撑不满时多出来的高度会全部堆在底部，视觉上就是「下面那条明显更宽」。
  *
  * 这里用空数据跑：内容最少、最容易撑不满，是最严格的一档。
+ *
+ * `/runtime/system` 是内容本来就短的信息页，最后一张卡按内容高度收束，不再把空卡片拉满视口。
+ * 底部多出来的是页面背景而不是卡片内腔，所以不纳入「画出来的内容必须撑满」这条约束。
  */
+
+const HUG_CONTENT_ROUTES = new Set(["/runtime/system"]);
 
 const ROUTES = [
   "/dashboard",
@@ -227,8 +232,9 @@ test.describe("页面底部留白", () => {
         .poll(
           async () => {
             last = await measure(page);
-            // 内容超过一屏时由外层滚动，底部不存在多余留白
-            return last.overflow > 1 ? 0 : last.gap;
+            // 内容超过一屏时由外层滚动，底部不存在多余留白。
+            // 短内容页按内容收束，不把最后一张卡拉满来制造假的「撑满」。
+            return last.overflow > 1 || HUG_CONTENT_ROUTES.has(route) ? 0 : last.gap;
           },
           { timeout: 15_000 },
         )

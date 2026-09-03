@@ -666,7 +666,6 @@ test("Config: unified visual editor confirms the low-resource profile cleanup", 
     "  content-retention-days: 30",
     "  cleanup-interval-minutes: 1440",
     "  max-total-size-mb: 1024",
-    "  vacuum-on-cleanup: true",
   ].join("\n");
   const savedYaml: string[] = [];
   const cleanupPayloads: unknown[] = [];

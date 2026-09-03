@@ -115,12 +115,18 @@ export { LanguageSelector } from "./theme/LanguageSelector";
 export { useInterval } from "./hooks/useInterval";
 export { useLocalStorage } from "./hooks/useLocalStorage";
 export { useResizeLayoutAnimation } from "./hooks/useResizeLayoutAnimation";
+export {
+  useSensitiveDataMasking,
+  SENSITIVE_DATA_MASKING_STORAGE_KEY,
+} from "./hooks/useSensitiveDataMasking";
 
 export { copyTextToClipboard } from "./utils/clipboard";
 export { CodeBlock } from "./code/CodeBlock";
 export { highlightSnippet, TOKEN_CLASS } from "./code/highlightSnippet";
 export type { CodeToken, SnippetLanguage, TokenKind } from "./code/highlightSnippet";
 export { SecretRevealModal } from "./overlays/SecretRevealModal";
+export { MaskToggleButton } from "./feedback/MaskToggleButton";
+export type { MaskToggleButtonProps } from "./feedback/MaskToggleButton";
 export {
   type ControlSize,
   controlHeightBySize,

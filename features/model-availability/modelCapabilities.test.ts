@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
+  modelConfigLookupIds,
   modelHasTextCapability,
   resolveModelCapabilities,
 } from "./modelCapabilities";
@@ -87,5 +88,51 @@ describe("resolveModelCapabilities", () => {
         outputModalities: ["text", "image"],
       }),
     ).toEqual(["text", "image"]);
+  });
+});
+
+describe("modelConfigLookupIds", () => {
+  test("returns exact id for simple model", () => {
+    expect(modelConfigLookupIds("gpt-4o")).toEqual(["gpt-4o", "4o", "gpt"]);
+  });
+
+  test("strips provider prefix", () => {
+    const ids = modelConfigLookupIds("ollama/deepseek-v4-flash");
+    expect(ids).toContain("ollama/deepseek-v4-flash");
+    expect(ids).toContain("deepseek-v4-flash");
+  });
+
+  test("strips variant suffix after colon", () => {
+    const ids = modelConfigLookupIds("deepseek-v4-flash:free");
+    expect(ids).toContain("deepseek-v4-flash:free");
+    expect(ids).toContain("deepseek-v4-flash");
+  });
+
+  test("strips last dash-segment for thinking suffix", () => {
+    const ids = modelConfigLookupIds("claude-opus-4-6-thinking");
+    expect(ids).toContain("claude-opus-4-6");
+  });
+
+  test("strips last dash-segment for agent suffix", () => {
+    const ids = modelConfigLookupIds("some-model-agent");
+    expect(ids).toContain("some-model");
+  });
+
+  test("strips last dash-segment for tier suffixes", () => {
+    for (const suffix of ["high", "low", "medium", "tiered"]) {
+      const ids = modelConfigLookupIds(`gemini-2.5-flash-${suffix}`);
+      expect(ids).toContain("gemini-2.5-flash");
+    }
+  });
+
+  test("strips last dash-segment from providerless id for provider-prefixed models", () => {
+    const ids = modelConfigLookupIds("ollama/gemini-2.5-flash-thinking");
+    expect(ids).toContain("gemini-2.5-flash");
+  });
+
+  test("extra-low strips to extra then to base via last-dash", () => {
+    const ids = modelConfigLookupIds("some-model-extra-low");
+    // last dash strip produces "some-model-extra"
+    expect(ids).toContain("some-model-extra");
   });
 });

@@ -28,37 +28,6 @@ function deepClone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
-function extractApiKeyValue(raw: unknown): string | null {
-  if (typeof raw === "string") {
-    const trimmed = raw.trim();
-    return trimmed ? trimmed : null;
-  }
-
-  const record = asRecord(raw);
-  if (!record) return null;
-
-  const candidates = [record["api-key"], record.apiKey, record.key, record.Key];
-  for (const candidate of candidates) {
-    if (typeof candidate === "string") {
-      const trimmed = candidate.trim();
-      if (trimmed) return trimmed;
-    }
-  }
-
-  return null;
-}
-
-function parseApiKeysText(raw: unknown): string {
-  if (!Array.isArray(raw)) return "";
-
-  const keys: string[] = [];
-  for (const item of raw) {
-    const key = extractApiKeyValue(item);
-    if (key) keys.push(key);
-  }
-  return keys.join("\n");
-}
-
 function parseStringListText(raw: unknown): string {
   if (!Array.isArray(raw)) return "";
 
@@ -540,7 +509,6 @@ export function useVisualConfig() {
                 : "",
 
           authDir: typeof parsed["auth-dir"] === "string" ? parsed["auth-dir"] : "",
-          apiKeysText: parseApiKeysText(parsed["api-keys"]),
           corsAllowOriginsText: parseStringListText(parsed["cors-allow-origins"]),
 
           debug: Boolean(parsed.debug),
@@ -555,13 +523,10 @@ export function useVisualConfig() {
             retentionDays: String(requestLogStorage?.["retention-days"] ?? "7"),
             contentRetentionDays: String(requestLogStorage?.["content-retention-days"] ?? "3"),
             cleanupEnabled: requestLogStorage?.["cleanup-enabled"] !== false,
-            cleanupIntervalMinutes: String(
-              requestLogStorage?.["cleanup-interval-minutes"] ?? "60",
-            ),
+            cleanupIntervalMinutes: String(requestLogStorage?.["cleanup-interval-minutes"] ?? "60"),
             maxRows: String(requestLogStorage?.["max-rows"] ?? "100000"),
             maxMetadataSizeMb: String(requestLogStorage?.["max-metadata-size-mb"] ?? "256"),
             maxTotalSizeMb: String(requestLogStorage?.["max-total-size-mb"] ?? "128"),
-            vacuumOnCleanup: Boolean(requestLogStorage?.["vacuum-on-cleanup"]),
           },
           systemStatsCacheSeconds: String(parsed["system-stats-cache-seconds"] ?? "60"),
           systemStatsWebSocketMaxAgeSeconds: String(
@@ -665,18 +630,6 @@ export function useVisualConfig() {
           }
         }
 
-        if (hasOwn(parsed, "api-keys") || values.apiKeysText.trim()) {
-          const apiKeys = values.apiKeysText
-            .split(/[\n,]+/)
-            .map((key) => key.trim())
-            .filter(Boolean);
-          if (apiKeys.length > 0) {
-            parsed["api-keys"] = apiKeys;
-          } else if (hasOwn(parsed, "api-keys")) {
-            delete parsed["api-keys"];
-          }
-        }
-
         setBoolean(parsed, "debug", values.debug);
         setBoolean(parsed, "commercial-mode", values.commercialMode);
         setBoolean(parsed, "logging-to-file", values.loggingToFile);
@@ -701,8 +654,7 @@ export function useVisualConfig() {
           requestLogStorageValues.cleanupIntervalMinutes.trim() !== "60" ||
           requestLogStorageValues.maxRows.trim() !== "100000" ||
           requestLogStorageValues.maxMetadataSizeMb.trim() !== "256" ||
-          requestLogStorageValues.maxTotalSizeMb.trim() !== "128" ||
-          requestLogStorageValues.vacuumOnCleanup
+          requestLogStorageValues.maxTotalSizeMb.trim() !== "128"
         ) {
           const storage = ensureRecord(parsed, "request-log-storage");
           setBoolean(storage, "store-content", requestLogStorageValues.storeContent);
@@ -725,7 +677,7 @@ export function useVisualConfig() {
             requestLogStorageValues.maxMetadataSizeMb,
           );
           setIntFromString(storage, "max-total-size-mb", requestLogStorageValues.maxTotalSizeMb);
-          storage["vacuum-on-cleanup"] = requestLogStorageValues.vacuumOnCleanup;
+          if (hasOwn(storage, "vacuum-on-cleanup")) delete storage["vacuum-on-cleanup"];
           deleteIfEmpty(parsed, "request-log-storage");
         }
 

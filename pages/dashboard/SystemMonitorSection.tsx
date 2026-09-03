@@ -314,9 +314,7 @@ function MiniKpi({
         {label}
       </div>
       <p className={`mt-1.5 text-lg font-bold tabular-nums ${color}`}>{value}</p>
-      {sublabel && (
-        <p className="mt-0.5 text-2xs text-slate-400 dark:text-white/35">{sublabel}</p>
-      )}
+      {sublabel && <p className="mt-0.5 text-2xs text-slate-400 dark:text-white/35">{sublabel}</p>}
     </Card>
   );
 }
@@ -503,13 +501,11 @@ export function SystemMonitorSection({
       ? channelLatency.reduce((acc, item) => acc + item.avg_ms * item.count, 0) / latencyWeight
       : 0;
   const rawDBEngine = stats.db_engine?.trim();
-  const dbEngine = (rawDBEngine || "sqlite").toLowerCase();
+  const dbEngine = (rawDBEngine || "postgres").toLowerCase();
   const dbSublabel =
-    dbEngine === "postgres"
+    dbEngine === "postgres" || dbEngine === "postgresql"
       ? t("system_monitor.postgresql")
-      : dbEngine === "sqlite"
-        ? t("system_monitor.sqlite_wal_shm")
-        : rawDBEngine;
+      : rawDBEngine;
 
   return (
     <Card

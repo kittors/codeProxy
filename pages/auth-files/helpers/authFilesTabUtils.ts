@@ -26,6 +26,18 @@ export const sanitizeCodexFilenamePart = (value: unknown): string =>
     .slice(0, MAX_FILENAME_PART_LENGTH)
     .replace(/^-+|-+$/g, "");
 
+export const formatResetCreditExpiry = (value: string): string => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat(undefined, {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+};
+
 export const readStringField = (record: Record<string, unknown>, keys: string[]): string => {
   for (const key of keys) {
     const value = record[key];

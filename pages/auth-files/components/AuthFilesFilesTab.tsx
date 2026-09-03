@@ -16,7 +16,6 @@ import {
   Ellipsis,
   Eye,
   Gauge,
-  ListChecks,
   Loader2,
   Power,
   RefreshCw,
@@ -58,6 +57,7 @@ import {
   formatCompactNumber,
   formatPlanBadgeLabel,
   isRuntimeOnlyAuthFile,
+  maskSensitiveIdentity,
   normalizeAuthFilesCardColumns,
   normalizeAuthIndexValue,
   normalizeProviderKey,
@@ -80,11 +80,22 @@ import type { QuotaProvider } from "@features/quota-preview/quota-fetch";
 import type { QuotaCardSlot } from "../hooks/quotaCardSlots";
 import { shouldShowQuotaPlaceholder } from "../hooks/quotaProbeState";
 import { AuthFileCardQuota } from "./AuthFileCardQuota";
+import { AuthFileWarmupButton } from "./AuthFileWarmupButton";
 import { AuthFilesLoadingSkeleton } from "./AuthFilesLoadingSkeleton";
+import { AuthFilesSelectionActionsMenu } from "./AuthFilesSelectionActionsMenu";
 import { AuthFilesSelectionToolbar } from "./AuthFilesSelectionToolbar";
 import { AuthFilesToolbarActions } from "./AuthFilesToolbarActions";
+import {
+  formatResetCreditExpiry,
+  isPlainObject,
+  normalizeDedupKeyPart,
+  parseCodexFilenameIdentity,
+  readNestedStringField,
+  readStringField,
+  sanitizeCodexFilenamePart,
+  sanitizeFilenamePart,
+} from "../helpers/authFilesTabUtils";
 
-const MAX_FILENAME_PART_LENGTH = 72;
 const FILTER_LABEL_CLASS =
   "truncate text-xs font-semibold uppercase tracking-[0.02em] text-slate-600 dark:text-white/65";
 const FILTER_FIELD_CLASS = "min-w-0 space-y-2";
@@ -101,116 +112,6 @@ const FILTER_GRID_WITHOUT_TAGS =
   "xl:grid-cols-[repeat(3,minmax(0,1fr))_minmax(18rem,1.5fr)]";
 const CARD_COLUMN_ANIMATION_MS = 240;
 const CARD_COLUMN_ANIMATION_EASING = "cubic-bezier(0.22, 1, 0.36, 1)";
-
-const isPlainObject = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
-
-const sanitizeFilenamePart = (value: unknown): string => {
-  const text = String(value ?? "")
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9._-]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  return text.slice(0, MAX_FILENAME_PART_LENGTH).replace(/^-+|-+$/g, "");
-};
-
-const sanitizeCodexFilenamePart = (value: unknown): string =>
-  Array.from(
-    String(value ?? "")
-      .trim()
-      .toLowerCase(),
-  )
-    .map((char) => {
-      const code = char.charCodeAt(0);
-      return code < 32 || char === "/" || char === "\\" ? "-" : char;
-    })
-    .join("")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, MAX_FILENAME_PART_LENGTH)
-    .replace(/^-+|-+$/g, "");
-
-const formatResetCreditExpiry = (value: string): string => {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat(undefined, {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
-};
-
-const readStringField = (
-  record: Record<string, unknown>,
-  keys: string[],
-): string => {
-  for (const key of keys) {
-    const value = record[key];
-    if (typeof value === "string" && value.trim()) {
-      return value.trim();
-    }
-  }
-  return "";
-};
-
-const readNestedStringField = (
-  records: readonly (Record<string, unknown> | undefined)[],
-  keys: string[],
-): string => {
-  for (const record of records) {
-    if (!record) continue;
-    const value = readStringField(record, keys);
-    if (value) return value;
-  }
-  return "";
-};
-
-const normalizeDedupKeyPart = (value: unknown): string =>
-  String(value ?? "")
-    .trim()
-    .toLowerCase();
-
-const codexFilenamePlanSuffixes = new Set([
-  "plus",
-  "pro",
-  "free",
-  "team",
-  "premium",
-  "business",
-  "enterprise",
-]);
-
-const parseCodexFilenameIdentity = (
-  fileName: string,
-): { accountId?: string; email?: string } => {
-  const normalized = String(fileName ?? "")
-    .trim()
-    .toLowerCase();
-  const base = normalized.replace(/\.json$/u, "");
-  if (!base.startsWith("codex-")) return {};
-  const rest = base.slice("codex-".length);
-  if (!rest) return {};
-  const parts = rest.split("-").filter(Boolean);
-  if (parts.length === 0) return {};
-
-  const emailIndex = parts.findIndex((part) => part.includes("@"));
-  if (emailIndex >= 0) {
-    const email = parts[emailIndex] ?? "";
-    const accountId = parts.slice(0, emailIndex).join("-");
-    return {
-      ...(accountId ? { accountId } : {}),
-      ...(email ? { email } : {}),
-    };
-  }
-
-  const lastPart = parts.at(-1) ?? "";
-  if (codexFilenamePlanSuffixes.has(lastPart) && parts.length > 1) {
-    return { email: parts.slice(0, -1).join("-") };
-  }
-
-  return { accountId: rest };
-};
 
 const collectAuthIdentityKeys = (record: Record<string, unknown>): string[] => {
   const credentials = isPlainObject(record.credentials)
@@ -656,9 +557,14 @@ interface AuthFilesFilesTabProps {
   deletingAll: boolean;
   batchStatusUpdating: boolean;
   handleSetSelectionDisabled: (names: string[], disabled: boolean) => Promise<void>;
+  onBatchWarmup?: (names: string[]) => void;
+  batchWarmupBusy?: boolean;
+  onOpenWarmupPolicy?: () => void;
   pageItems: AuthFileItem[];
   fileColumns: DataTableColumn<AuthFileItem>[];
   filesViewMode: FilesViewMode;
+  masked?: boolean;
+  onToggleMask?: () => void;
   cardColumns: AuthFilesCardColumns;
   setCardColumns: (value: AuthFilesCardColumns) => void;
   pageSize: number;
@@ -760,9 +666,14 @@ export function AuthFilesFilesTab({
   deletingAll,
   batchStatusUpdating,
   handleSetSelectionDisabled,
+  onBatchWarmup,
+  batchWarmupBusy,
+  onOpenWarmupPolicy,
   pageItems,
   fileColumns,
   filesViewMode,
+  masked = false,
+  onToggleMask = () => {},
   cardColumns,
   setCardColumns,
   pageSize,
@@ -1138,51 +1049,18 @@ export function AuthFilesFilesTab({
     await handleUpload(uploadFiles);
   }, [files, handleUpload, jsonImportText, t]);
 
-  const selectionActionsMenu = showSelectionActions ? (
-    <DropdownMenu.Root>
-      <DropdownMenu.Trigger asChild>
-        <button
-          type="button"
-          className={buttonClassName({
-            variant: "secondary",
-            size: "sm",
-            iconOnly: true,
-          })}
-          aria-label={t("auth_files.selection_actions")}
-          title={t("auth_files.selection_actions")}
-          data-tooltip-placement="top"
-        >
-          <ListChecks size={15} />
-        </button>
-      </DropdownMenu.Trigger>
-      <DropdownMenu.Portal>
-        <DropdownMenu.Content align="end" sideOffset={8} className="min-w-44">
-          <DropdownMenu.Item
-            disabled={selectablePageNames.length === 0}
-            onSelect={() => selectCurrentPage(!allPageSelected)}
-          >
-            <ListChecks size={15} />
-            <span>
-              {allPageSelected
-                ? t("auth_files.batch_deselect_page")
-                : t("auth_files.batch_select_page")}
-            </span>
-          </DropdownMenu.Item>
-          <DropdownMenu.Item
-            disabled={selectableFilteredFiles.length === 0}
-            onSelect={() => selectFilteredFiles(!allFilteredSelected)}
-          >
-            <ListChecks size={15} />
-            <span>
-              {allFilteredSelected
-                ? t("auth_files.batch_deselect_filtered")
-                : t("auth_files.batch_select_filtered")}
-            </span>
-          </DropdownMenu.Item>
-        </DropdownMenu.Content>
-      </DropdownMenu.Portal>
-    </DropdownMenu.Root>
-  ) : null;
+  const selectionActionsMenu = (
+    <AuthFilesSelectionActionsMenu
+      show={showSelectionActions}
+      t={t}
+      selectablePageNamesLength={selectablePageNames.length}
+      allPageSelected={allPageSelected}
+      selectCurrentPage={selectCurrentPage}
+      selectableFilteredFilesLength={selectableFilteredFiles.length}
+      allFilteredSelected={allFilteredSelected}
+      selectFilteredFiles={selectFilteredFiles}
+    />
+  );
 
   const configActionsMenu = (
     <HoverTooltip content={t("auth_files_page.config_menu")}>
@@ -1215,6 +1093,8 @@ export function AuthFilesFilesTab({
       }
       onDeleteSelection={(names) => setConfirm({ type: "deleteSelection", names })}
       onDownloadSelection={(names) => void handleDownloadSelection(names)}
+      onBatchWarmup={onBatchWarmup}
+      batchWarmupBusy={batchWarmupBusy}
     />
   );
   const modelOwnerToolbarButton = canSetModelOwnerGroup ? (
@@ -1472,6 +1352,8 @@ export function AuthFilesFilesTab({
 
                 <AuthFilesToolbarActions
                   t={t}
+                  masked={masked}
+                  onToggleMask={onToggleMask}
                   onGroupOverview={openGroupOverview}
                   groupOverviewLoading={groupOverviewLoading}
                   onRefresh={() => void refreshFilesAndQuota()}
@@ -1499,6 +1381,7 @@ export function AuthFilesFilesTab({
                     setOauthDialogOpen(true);
                   }}
                   uploading={uploading}
+                  onOpenWarmupPolicy={onOpenWarmupPolicy}
                   configActionsMenu={configActionsMenu}
                   showCardColumns={filesViewMode === "cards"}
                   cardColumns={cardColumns}
@@ -1606,8 +1489,11 @@ export function AuthFilesFilesTab({
                   const typeKey = resolveFileType(file);
                   const badgeClass =
                     TYPE_BADGE_CLASSES[typeKey] ?? TYPE_BADGE_CLASSES.unknown;
-                  const displayTitle =
+                  const rawTitle =
                     resolveAuthFileDisplayName(file) || String(file.name || "");
+                  const displayTitle = masked
+                    ? maskSensitiveIdentity(rawTitle)
+                    : rawTitle;
                   const provider = resolveQuotaProvider(file);
                   const state = quotaByFileName[file.name] ?? {
                     status: "idle",
@@ -2063,6 +1949,14 @@ export function AuthFilesFilesTab({
                                 )}
                               </Button>
                             </HoverTooltip>
+                          ) : null}
+
+                          {provider === "antigravity" || provider === "codex" ? (
+                            <AuthFileWarmupButton
+                              file={file}
+                              actionSize={actionSize}
+                              actionIconSize={actionIconSize}
+                            />
                           ) : null}
 
                           <HoverTooltip content={t("auth_files.detail")}>

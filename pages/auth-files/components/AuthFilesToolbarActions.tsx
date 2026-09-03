@@ -7,12 +7,15 @@ import {
   Plus,
   RefreshCw,
   Upload,
+  Zap,
 } from "lucide-react";
-import { Button, HoverTooltip, Select } from "@code-proxy/ui";
+import { Button, HoverTooltip, MaskToggleButton, Select } from "@code-proxy/ui";
 import { AuthFilesQuotaSortMenu } from "./AuthFilesQuotaSortMenu";
 
 export type AuthFilesToolbarActionsProps = {
   t: TFunction;
+  masked: boolean;
+  onToggleMask: () => void;
   onGroupOverview: () => void;
   groupOverviewLoading: boolean;
   onRefresh: () => void;
@@ -21,6 +24,7 @@ export type AuthFilesToolbarActionsProps = {
   onUpload: () => void;
   onPasteJson: () => void;
   onAddOAuth: () => void;
+  onOpenWarmupPolicy?: () => void;
   uploading: boolean;
   configActionsMenu: ReactNode;
   showCardColumns: boolean;
@@ -37,6 +41,8 @@ export type AuthFilesToolbarActionsProps = {
  */
 export function AuthFilesToolbarActions({
   t,
+  masked,
+  onToggleMask,
   onGroupOverview,
   groupOverviewLoading,
   onRefresh,
@@ -45,6 +51,7 @@ export function AuthFilesToolbarActions({
   onUpload,
   onPasteJson,
   onAddOAuth,
+  onOpenWarmupPolicy,
   uploading,
   configActionsMenu,
   showCardColumns,
@@ -54,6 +61,7 @@ export function AuthFilesToolbarActions({
 }: AuthFilesToolbarActionsProps) {
   return (
     <div className="flex shrink-0 flex-wrap items-center gap-1 rounded-full bg-slate-50/90 px-1.5 py-1 dark:bg-white/[0.04]">
+      <MaskToggleButton masked={masked} onToggle={onToggleMask} />
       <HoverTooltip content={t("auth_files.group_overview_button")}>
         <Button
           variant="secondary"
@@ -128,6 +136,19 @@ export function AuthFilesToolbarActions({
           <Plus size={15} />
         </Button>
       </HoverTooltip>
+      {onOpenWarmupPolicy ? (
+        <HoverTooltip content={t("antigravity_quota.warmup_policy_title")}>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={onOpenWarmupPolicy}
+            aria-label={t("antigravity_quota.warmup_policy_title")}
+            title={t("antigravity_quota.warmup_policy_title")}
+          >
+            <Zap size={15} className="text-amber-500" />
+          </Button>
+        </HoverTooltip>
+      ) : null}
       {configActionsMenu}
       <AuthFilesQuotaSortMenu />
       {showCardColumns ? (

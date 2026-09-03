@@ -20,7 +20,7 @@ bun run build
 | `index`              |  396.29 kB | 121.04 kB | 多账号切换（AuthProvider vault + AppShell 账号菜单）进入 shell 入口；后续可再拆 account menu |
 | `index.css`          |  430.02 kB |  86.34 kB | 入口样式表；含 114 条自托管字体 @font-face 分片声明（Inter / Noto Sans SC / JetBrains Mono），字体文件本身按 unicode-range 懒加载不计入此行 |
 | `ConfigPage`         |  119.60 kB |  33.35 kB | 页面 chunk 低于预算                                                         |
-| `AuthFilesPage`      |  234.90 kB |  64.36 kB | 与 dev 现状对齐（原记 58.90 kB 已落后约 5.5 kB）；仍低于 `< 80 kB gzip` 页面预算，余量约 15 kB |
+| `AuthFilesPage`      |  250.95 kB |  69.45 kB | 新增预热策略配置弹窗与批量调度操作；低于 `< 80 kB gzip` 页面预算 |
 | `ProvidersPage`      |  121.98 kB |  30.85 kB | 已低于 `< 80 kB gzip` 页面预算                                              |
 | `MonitorPage`        |   24.33 kB |   6.80 kB | 已拆为 toolbar / state hook / dashboard sections                            |
 | `LogsPage`           |   22.15 kB |   6.51 kB | 已拆为 live logs / error logs / helpers                                     |
@@ -37,7 +37,7 @@ bun run build
 
 | 页面/模块         |                  当前体积 | 预算状态       | 最近治理结果                                                                                                    |
 | ----------------- | ------------------------: | -------------- | --------------------------------------------------------------------------------------------------------------- |
-| `AuthFilesPage`   | 234.90 kB / 64.36 kB gzip | 通过           | 基线与 dev 现状对齐；仍低于页面 gzip 预算，余量约 15 kB，chunk 治理继续关注 |
+| `AuthFilesPage`   | 250.95 kB / 69.45 kB gzip | 通过           | 新增预热策略配置弹窗与批量调度操作；低于 `< 80 kB gzip` 页面预算 |
 | `ConfigPage`      | 119.60 kB / 33.35 kB gzip | 通过           | 已拆出 runtime panel / visual payload editors，并复用 feature 侧 visual config hook |
 | `ProvidersPage`   | 121.98 kB / 30.85 kB gzip | 通过且低于预算 | OpenAI tab、usage summary、provider editor hooks 已完成拆分 |
 | `MonitorPage`     |  24.33 kB /  6.80 kB gzip | 通过且低于预算 | 拆出 `MonitorToolbarSection`、`MonitorDashboardSections`、`useMonitorDashboardState` |

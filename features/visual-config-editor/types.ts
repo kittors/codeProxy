@@ -42,7 +42,6 @@ export interface RequestLogStorageVisualConfig {
   maxRows: string;
   maxMetadataSizeMb: string;
   maxTotalSizeMb: string;
-  vacuumOnCleanup: boolean;
 }
 
 export interface StreamingConfig {
@@ -98,7 +97,6 @@ export type VisualConfigValues = {
   rmPanelRepo: string;
 
   authDir: string;
-  apiKeysText: string;
   corsAllowOriginsText: string;
 
   debug: boolean;
@@ -159,7 +157,6 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   rmDisableControlPanel: false,
   rmPanelRepo: "",
   authDir: "",
-  apiKeysText: "",
   corsAllowOriginsText: "",
   debug: false,
   commercialMode: false,
@@ -177,7 +174,6 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
     maxRows: "100000",
     maxMetadataSizeMb: "256",
     maxTotalSizeMb: "128",
-    vacuumOnCleanup: false,
   },
   systemStatsCacheSeconds: "60",
   systemStatsWebSocketMaxAgeSeconds: "300",

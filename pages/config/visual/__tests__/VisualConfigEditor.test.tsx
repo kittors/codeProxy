@@ -31,7 +31,7 @@ describe("VisualConfigEditor auto update config", () => {
   test("moves persistent descriptions into info tooltips", async () => {
     renderEditor();
 
-    const description = "Host/port, auth directory & API Keys.";
+    const description = "Host/port and auth directory.";
     expect(screen.queryByText(description)).not.toBeInTheDocument();
 
     await userEvent.hover(screen.getByRole("button", { name: description }));
@@ -282,7 +282,6 @@ describe("VisualConfigEditor auto update config", () => {
           maxRows: "100000",
           maxMetadataSizeMb: "256",
           maxTotalSizeMb: "128",
-          vacuumOnCleanup: false,
         }),
       }),
     );
@@ -303,7 +302,6 @@ describe("VisualConfigEditor auto update config", () => {
           "  content-retention-days: 14",
           "  cleanup-interval-minutes: 720",
           "  max-total-size-mb: 512",
-          "  vacuum-on-cleanup: false",
         ].join("\n"),
       );
     });
@@ -323,7 +321,6 @@ describe("VisualConfigEditor auto update config", () => {
           maxRows: "100000",
           maxMetadataSizeMb: "256",
           maxTotalSizeMb: "512",
-          vacuumOnCleanup: false,
         },
       });
     });
@@ -346,7 +343,7 @@ describe("VisualConfigEditor auto update config", () => {
       expect(yaml).toContain("system-stats-cache-seconds: 60");
       expect(yaml).toContain("system-stats-websocket-max-age-seconds: 300");
       expect(yaml).toContain("max-total-size-mb: 256");
-      expect(yaml).toContain("vacuum-on-cleanup: false");
+      expect(yaml).not.toContain("vacuum-on-cleanup");
       expect(yaml).not.toContain("request-log: true");
     });
   });

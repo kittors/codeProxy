@@ -13,6 +13,7 @@ import {
   useToast,
 } from "@code-proxy/ui";
 import {
+  addAvailabilityModel,
   emptyModelPricing,
   formatModelPriceAmount,
   hasModelPricing,
@@ -299,9 +300,8 @@ function mergePlazaModels(
   useMappedOwnerModels: boolean,
   configuredScoped: boolean,
 ): PlazaModel[] {
-  const configuredById = new Map(
-    configuredItems.map((item) => [item.id.toLowerCase(), item]),
-  );
+  const configuredById = new Map<string, ModelAvailabilityItem>();
+  for (const item of configuredItems) addAvailabilityModel(configuredById, item);
   // When configured-availability is scoped (tenant channel-group allow-list),
   // it is the source of truth. Path-only IDs used to re-introduce models that
   // AllowedModels already removed (e.g. xAI live discovery via path-availability).
