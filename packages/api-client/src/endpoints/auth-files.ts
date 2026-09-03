@@ -45,6 +45,7 @@ export const authFilesApi = {
     codex_image_generation_bridge?: boolean;
     using_api?: boolean;
     concurrency_limit?: number;
+    codex_convergence_mode?: string;
   }) => apiClient.patch("/auth-files/fields", payload),
 
   getOauthExcludedModels: async (): Promise<Record<string, string[]>> => {
