@@ -46,6 +46,7 @@ export const authFilesApi = {
     using_api?: boolean;
     concurrency_limit?: number;
     codex_convergence_mode?: string;
+    codex_service_tier?: string;
   }) => apiClient.patch("/auth-files/fields", payload),
 
   getOauthExcludedModels: async (): Promise<Record<string, string[]>> => {

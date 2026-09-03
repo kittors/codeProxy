@@ -51,6 +51,7 @@ const createPrefixProxyEditorState = (): PrefixProxyEditorState => ({
   subscriptionPeriod: "monthly",
   concurrencyLimit: "",
   codexConvergenceMode: "",
+  codexServiceTier: "",
 });
 
 const createChannelEditorState = (): ChannelEditorState => ({
@@ -762,6 +763,7 @@ export function useAuthFilesDetailEditors(
         subscriptionPeriod: "monthly",
         concurrencyLimit: "",
         codexConvergenceMode: "",
+        codexServiceTier: "",
       });
 
       try {
@@ -811,6 +813,12 @@ export function useAuthFilesDetailEditors(
           rawConvergenceMode !== undefined && rawConvergenceMode !== null
             ? String(rawConvergenceMode).trim().toLowerCase()
             : "";
+        const rawServiceTier =
+          json.codex_service_tier ?? json.service_tier ?? json["codex-service-tier"];
+        const codexServiceTier =
+          rawServiceTier !== undefined && rawServiceTier !== null
+            ? String(rawServiceTier).trim().toLowerCase()
+            : "";
 
         setPrefixProxyEditor((prev) => ({
           ...prev,
@@ -823,6 +831,7 @@ export function useAuthFilesDetailEditors(
           subscriptionPeriod,
           concurrencyLimit,
           codexConvergenceMode,
+          codexServiceTier,
           error: null,
         }));
       } catch (err: unknown) {
@@ -1150,10 +1159,19 @@ export function useAuthFilesDetailEditors(
           "",
       )
         .trim()
-        .toLowerCase() !== prefixProxyEditor.codexConvergenceMode.trim().toLowerCase()
+        .toLowerCase() !== prefixProxyEditor.codexConvergenceMode.trim().toLowerCase() ||
+      String(
+        prefixProxyEditor.json.codex_service_tier ??
+          prefixProxyEditor.json.service_tier ??
+          prefixProxyEditor.json["codex-service-tier"] ??
+          "",
+      )
+        .trim()
+        .toLowerCase() !== prefixProxyEditor.codexServiceTier.trim().toLowerCase()
     );
   }, [
     prefixProxyEditor.codexConvergenceMode,
+    prefixProxyEditor.codexServiceTier,
     prefixProxyEditor.concurrencyLimit,
     prefixProxyEditor.json,
     prefixProxyEditor.prefix,
@@ -1202,6 +1220,15 @@ export function useAuthFilesDetailEditors(
       delete next.codex_convergence_mode;
     }
 
+    const codexServiceTier = prefixProxyEditor.codexServiceTier.trim().toLowerCase();
+    delete next.service_tier;
+    delete next["codex-service-tier"];
+    if (codexServiceTier && ["pass", "priority", "flex", "drop"].includes(codexServiceTier)) {
+      next.codex_service_tier = codexServiceTier;
+    } else {
+      delete next.codex_service_tier;
+    }
+
     removeSubscriptionFields(next);
     const subscriptionStartedAt = prefixProxyEditor.subscriptionStartedAt.trim();
     if (subscriptionStartedAt) {
@@ -1215,6 +1242,7 @@ export function useAuthFilesDetailEditors(
     return JSON.stringify(next, null, 2);
   }, [
     prefixProxyEditor.codexConvergenceMode,
+    prefixProxyEditor.codexServiceTier,
     prefixProxyEditor.concurrencyLimit,
     prefixProxyEditor.json,
     prefixProxyEditor.prefix,

@@ -67,6 +67,7 @@ const basePrefixProxyEditor: DetailModalProps["prefixProxyEditor"] = {
   subscriptionPeriod: "monthly",
   concurrencyLimit: "5",
   codexConvergenceMode: "device",
+  codexServiceTier: "priority",
 };
 
 const baseCodexOAuthAdmissionEditor: DetailModalProps["codexOAuthAdmissionEditor"] = {
