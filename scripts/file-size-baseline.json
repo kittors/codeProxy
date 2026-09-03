@@ -15,7 +15,7 @@
     "packages/ui/src/data-table/DataTable.tsx": 2632,
     "pages/api-key-lookup/ApiKeyLookupPage.tsx": 1743,
     "pages/api-keys/ApiKeysPage.tsx": 1167,
-    "pages/auth-files/AuthFilesPage.tsx": 1178,
+    "pages/auth-files/AuthFilesPage.tsx": 1181,
     "pages/auth-files/components/AuthFileDetailModal.tsx": 2139,
     "pages/auth-files/components/AuthFilesFilesTab.tsx": 2385,
     "pages/auth-files/hooks/useAuthFilesDetailEditors.ts": 1374,
