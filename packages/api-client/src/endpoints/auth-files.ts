@@ -45,6 +45,8 @@ export const authFilesApi = {
     codex_image_generation_bridge?: boolean;
     using_api?: boolean;
     concurrency_limit?: number;
+    codex_convergence_mode?: string;
+    codex_service_tier?: string;
   }) => apiClient.patch("/auth-files/fields", payload),
 
   getOauthExcludedModels: async (): Promise<Record<string, string[]>> => {
@@ -131,5 +133,41 @@ export const authFilesApi = {
     return Array.isArray(models)
       ? (models as { id: string; display_name?: string; type?: string; owned_by?: string }[])
       : [];
+  },
+
+  getWarmupTargets: async (authId: string): Promise<{ pool_id: string; pool_label: string; target_model: string; window: number }[]> => {
+    const data = await apiClient.get<{ targets?: { pool_id: string; pool_label: string; target_model: string; window: number }[] }>(
+      "/auth-files/warmup/targets",
+      { params: { auth_id: authId } },
+    );
+    return Array.isArray(data?.targets) ? data.targets : [];
+  },
+
+  runWarmup: async (authId: string, poolId?: string): Promise<{ success: boolean; status_code: number; error_message?: string }> => {
+    const data = await apiClient.post<{ result?: { success: boolean; status_code: number; error_message?: string } }>(
+      "/auth-files/warmup/run",
+      { auth_id: authId, pool_id: poolId },
+    );
+    return data?.result ?? { success: false, status_code: 500 };
+  },
+
+  runWarmupBatch: async (authIds: string[], poolId?: string): Promise<{ dispatched: number }> => {
+    const data = await apiClient.post<{ dispatched?: number }>("/auth-files/warmup/batch", {
+      auth_ids: authIds,
+      pool_id: poolId,
+    });
+    return { dispatched: Number(data?.dispatched ?? 0) };
+  },
+
+  getWarmupPolicies: async (): Promise<{ policies: unknown[]; metrics: unknown }> => {
+    const data = await apiClient.get<{ policies?: unknown[]; metrics?: unknown }>("/auth-files/warmup/policies");
+    return {
+      policies: Array.isArray(data?.policies) ? data.policies : [],
+      metrics: data?.metrics ?? {},
+    };
+  },
+
+  saveWarmupPolicy: async (policy: Record<string, unknown>): Promise<void> => {
+    await apiClient.post("/auth-files/warmup/policies", policy);
   },
 };

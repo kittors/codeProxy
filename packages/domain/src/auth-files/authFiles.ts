@@ -14,6 +14,7 @@ import type {
 import { normalizeUsageSourceId, type KeyStatBucket } from "../providers/providerUsage";
 import { resolveCodexPlanType } from "../quota/resolvers";
 import { normalizePlanType } from "../quota/parsers";
+import { isAntigravityFile } from "../quota/validators";
 import { sanitizeQuotaByFileNameForCache } from "./quotaCache";
 import type { QuotaItem, QuotaState } from "../quota/types";
 import type { StatusBarData, StatusBlockDetail, StatusBlockState } from "../usage";
@@ -749,21 +750,10 @@ export const writeAuthFilesDataCache = (cache: AuthFilesDataCache) => {
         savedAtMs: next.savedAtMs,
         files: next.files,
         usageData: next.usageData ?? freshPrevious?.usageData,
-        quotaByFileName: sanitizeQuotaByFileNameForCache(
-          next.quotaByFileName ?? freshPrevious?.quotaByFileName,
-          fileNames,
-        ),
-        cycleByAuthIndex: sanitizeCycleByAuthIndexForCache(
-          next.cycleByAuthIndex ?? freshPrevious?.cycleByAuthIndex,
-        ),
-        connectivityByFileName: sanitizeConnectivityByFileNameForCache(
-          next.connectivityByFileName ?? freshPrevious?.connectivityByFileName,
-          fileNames,
-        ),
-        displayPlanByFileName: sanitizeDisplayPlanByFileNameForCache(
-          next.displayPlanByFileName ?? freshPrevious?.displayPlanByFileName,
-          fileNames,
-        ),
+        quotaByFileName: sanitizeQuotaByFileNameForCache(next.quotaByFileName ?? freshPrevious?.quotaByFileName, fileNames),
+        cycleByAuthIndex: sanitizeCycleByAuthIndexForCache(next.cycleByAuthIndex ?? freshPrevious?.cycleByAuthIndex),
+        connectivityByFileName: sanitizeConnectivityByFileNameForCache(next.connectivityByFileName ?? freshPrevious?.connectivityByFileName, fileNames),
+        displayPlanByFileName: sanitizeDisplayPlanByFileNameForCache(next.displayPlanByFileName ?? freshPrevious?.displayPlanByFileName, fileNames),
       };
     },
   });
@@ -863,9 +853,10 @@ const isLegacyAuthRestrictionActive = (file: AuthFileItem): boolean => {
 };
 
 const getAuthLevelRestrictions = (file: AuthFileItem): AuthFileRestriction[] =>
-  (Array.isArray(file.restrictions) ? file.restrictions : []).filter(
-    (restriction) => normalizeTagValue(restriction.scope) !== "model",
-  );
+  (Array.isArray(file.restrictions) ? file.restrictions : []).filter((r) => {
+    if (normalizeTagValue(r.scope) === "model") return false;
+    return !(isAntigravityFile(file) && Number(r.http_status) === 429 && file.unavailable !== true);
+  });
 
 const readRestrictionHttpStatus = (restriction: AuthFileRestriction): number | null => {
   const status = Number(restriction.http_status);
@@ -1158,12 +1149,11 @@ export const resolveAuthFileRestrictionBadges = (
   weeklyResetAtMs?: number | null,
 ): AuthFileRestrictionBadge[] => {
   const rawRestrictions = Array.isArray(file.restrictions) ? file.restrictions : [];
-  const displayableRawRestrictions = rawRestrictions.filter((restriction) => {
-    const scope = normalizeTagValue(restriction.scope);
-    if (scope === "model") return false;
-    const status = Number(restriction.http_status);
+  const displayableRawRestrictions = rawRestrictions.filter((r) => {
+    if (normalizeTagValue(r.scope) === "model") return false;
+    const status = Number(r.http_status);
     if (status >= 500) return false;
-    return true;
+    return !(isAntigravityFile(file) && status === 429 && file.unavailable !== true);
   });
   const restrictions =
     rawRestrictions.length > 0
@@ -2099,6 +2089,8 @@ export type PrefixProxyEditorState = {
   subscriptionStartedAt: string;
   subscriptionPeriod: AuthFileSubscriptionPeriod;
   concurrencyLimit: string;
+  codexConvergenceMode: string;
+  codexServiceTier: string;
 };
 
 export type AuthFilesGroupOverview = {

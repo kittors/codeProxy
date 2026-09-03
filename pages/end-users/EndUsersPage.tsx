@@ -21,11 +21,13 @@ import {
   Card,
   ConfirmModal,
   DataTable,
+  MaskToggleButton,
   Modal,
   PaginationBar,
   SecretRevealModal,
   Select,
   TextInput,
+  useSensitiveDataMasking,
   useToast,
   type DataTableColumn,
 } from "@code-proxy/ui";
@@ -36,6 +38,7 @@ import { ErrorDetailModal, LogContentModal } from "@features/log-content-viewer"
 import { ApiKeyUsageModal } from "../api-keys/components/ApiKeyUsageModal";
 import { useApiKeyUsageView } from "../api-keys/hooks/useApiKeyUsageView";
 import { EndUserResetHistoryModal } from "./components/EndUserResetHistoryModal";
+import { EndUserCreatedSecretsModal } from "./components/EndUserCreatedSecretsModal";
 import { EndUserEditModal } from "./components/EndUserEditModal";
 import { getEndUserColumns } from "./components/EndUserColumns";
 import {
@@ -62,6 +65,7 @@ export function EndUsersPage() {
   const { notify } = useToast();
   const { t } = useTranslation();
   const { can } = useAuth();
+  const [masked, setMasked] = useSensitiveDataMasking();
   const [users, setUsers] = useState<EndUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
@@ -347,6 +351,7 @@ export function EndUsersPage() {
         setResetUser,
         setDeleteUser,
         setKeysUser,
+        masked,
       }),
     [
       busy,
@@ -354,6 +359,7 @@ export function EndUsersPage() {
       canWrite,
       handleViewResetHistory,
       handleViewUserUsage,
+      masked,
       permissionProfiles,
       profileNameById,
       setFrozen,
@@ -527,11 +533,14 @@ export function EndUsersPage() {
               "门户用户账号（与后台管理员隔离）。每日限额/总配额/权限在账号上统一配置，该用户下全部 API Key 共用同一额度池。",
           })}
           actions={
-            canWrite ? (
-              <Button variant="primary" size="sm" onClick={() => setCreateOpen(true)}>
-                {t("end_users.create", { defaultValue: "创建用户" })}
-              </Button>
-            ) : null
+            <div className="flex items-center gap-2">
+              <MaskToggleButton masked={masked} onToggle={() => setMasked((prev) => !prev)} />
+              {canWrite ? (
+                <Button variant="primary" size="sm" onClick={() => setCreateOpen(true)}>
+                  {t("end_users.create", { defaultValue: "创建用户" })}
+                </Button>
+              ) : null}
+            </div>
           }
           loading={loading}
         >
@@ -687,33 +696,10 @@ export function EndUsersPage() {
         </form>
       </Modal>
 
-      <Modal
-        open={Boolean(createdSecrets)}
+      <EndUserCreatedSecretsModal
+        createdSecrets={createdSecrets}
         onClose={() => setCreatedSecrets(null)}
-        title={t("end_users.copy_secrets", { defaultValue: "请立即复制凭证" })}
-      >
-        {createdSecrets ? (
-          <div className="space-y-3 text-sm">
-            <p className="font-medium text-amber-600">{t("end_users.secrets_one_time_hint")}</p>
-            <div>
-              用户名：<code>{createdSecrets.user.username}</code>
-            </div>
-            {createdSecrets.generated_password ? (
-              <div>
-                密码：
-                <code className="select-all break-all">{createdSecrets.generated_password}</code>
-              </div>
-            ) : null}
-            {createdSecrets.default_api_key?.key ? (
-              <div>
-                {t("end_users.initial_api_key", { defaultValue: "初始 API Key" })}：
-                <code className="select-all break-all">{createdSecrets.default_api_key.key}</code>
-              </div>
-            ) : null}
-            <Button onClick={() => setCreatedSecrets(null)}>{t("end_users.secrets_copied_close")}</Button>
-          </div>
-        ) : null}
-      </Modal>
+      />
 
       <EndUserEditModal
         t={t}

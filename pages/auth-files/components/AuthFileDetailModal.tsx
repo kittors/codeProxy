@@ -1946,6 +1946,92 @@ export function AuthFileDetailModal({
                             {t("auth_files.concurrency_limit_hint")}
                           </p>
                         </div>
+
+                        {normalizeProviderKey(resolveFileType(detailFile)) === "codex" ? (
+                          <>
+                            <div className="grid gap-2">
+                              <p className="text-xs font-semibold text-slate-700 dark:text-white/75">
+                                {t("auth_files.codex_convergence_mode_label")}
+                              </p>
+                              <Select
+                                value={prefixProxyEditor.codexConvergenceMode}
+                                onChange={(value) =>
+                                  setPrefixProxyEditor((prev) => ({
+                                    ...prev,
+                                    codexConvergenceMode: value,
+                                  }))
+                                }
+                                options={[
+                                  {
+                                    value: "",
+                                    label: t("auth_files.codex_convergence_mode_inherited"),
+                                  },
+                                  {
+                                    value: "device",
+                                    label: t("auth_files.codex_convergence_mode_device"),
+                                  },
+                                  {
+                                    value: "off",
+                                    label: t("auth_files.codex_convergence_mode_off"),
+                                  },
+                                  {
+                                    value: "session",
+                                    label: t("auth_files.codex_convergence_mode_session"),
+                                  },
+                                  {
+                                    value: "full",
+                                    label: t("auth_files.codex_convergence_mode_full"),
+                                  },
+                                ]}
+                                aria-label={t("auth_files.codex_convergence_mode_label")}
+                              />
+                              <p className="text-xs text-slate-500 dark:text-white/55">
+                                {t("auth_files.codex_convergence_mode_hint")}
+                              </p>
+                            </div>
+
+                            <div className="grid gap-2">
+                              <p className="text-xs font-semibold text-slate-700 dark:text-white/75">
+                                {t("auth_files.codex_service_tier_label")}
+                              </p>
+                              <Select
+                                value={prefixProxyEditor.codexServiceTier}
+                                onChange={(value) =>
+                                  setPrefixProxyEditor((prev) => ({
+                                    ...prev,
+                                    codexServiceTier: value,
+                                  }))
+                                }
+                                options={[
+                                  {
+                                    value: "",
+                                    label: t("auth_files.codex_service_tier_default"),
+                                  },
+                                  {
+                                    value: "pass",
+                                    label: t("auth_files.codex_service_tier_pass"),
+                                  },
+                                  {
+                                    value: "priority",
+                                    label: t("auth_files.codex_service_tier_priority"),
+                                  },
+                                  {
+                                    value: "flex",
+                                    label: t("auth_files.codex_service_tier_flex"),
+                                  },
+                                  {
+                                    value: "drop",
+                                    label: t("auth_files.codex_service_tier_drop"),
+                                  },
+                                ]}
+                                aria-label={t("auth_files.codex_service_tier_label")}
+                              />
+                              <p className="text-xs text-slate-500 dark:text-white/55">
+                                {t("auth_files.codex_service_tier_hint")}
+                              </p>
+                            </div>
+                          </>
+                        ) : null}
                       </div>
                     ) : (
                       <div className={canRenameChannel ? "min-w-0" : "min-w-0 lg:col-span-2"}>

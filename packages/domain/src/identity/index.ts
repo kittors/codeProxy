@@ -11,3 +11,10 @@ export {
   type IdentityValidationResult,
   type IdentityValidationCode,
 } from "./validators";
+export {
+  maskChineseName,
+  maskEmail,
+  maskIdentifier,
+  maskSensitiveIdentity,
+} from "./masking";
+

@@ -47,4 +47,13 @@ describe("SystemMonitorSection", () => {
     expect(screen.getByText("PostgreSQL")).toBeInTheDocument();
     expect(screen.queryByText("SQLite + WAL + SHM")).toBeNull();
   });
+
+  test("defaults missing db engine to PostgreSQL", () => {
+    render(
+      <SystemMonitorSection stats={{ ...stats, db_engine: undefined }} connected apiKeyCount={1} />,
+    );
+
+    expect(screen.getByText("PostgreSQL")).toBeInTheDocument();
+    expect(screen.queryByText(/sqlite/i)).toBeNull();
+  });
 });

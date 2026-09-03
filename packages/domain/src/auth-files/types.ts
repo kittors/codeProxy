@@ -129,6 +129,8 @@ export interface AuthFileItem extends AuthFileTagDisplayFields {
   claude_oauth_health?: ClaudeOAuthHealth;
   identity_fingerprint_summary?: AuthFileIdentityFingerprintSummary;
   concurrency_limit?: number;
+  codex_convergence_mode?: "off" | "device" | "session" | "full" | "";
+  codex_service_tier?: "default" | "pass" | "priority" | "flex" | "drop" | "";
   id_token?: unknown;
   attributes?: unknown;
   metadata?: unknown;

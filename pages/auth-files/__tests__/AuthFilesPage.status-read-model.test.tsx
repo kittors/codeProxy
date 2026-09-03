@@ -72,7 +72,13 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
       getEntityStats: mocks.getEntityStats,
       getAuthFileTrend: mocks.getAuthFileTrend,
       recordAuthFileQuotaSnapshot: mocks.recordAuthFileQuotaSnapshot,
-      getAuthFileGroupTrend: vi.fn(async () => ({ days: 7, group: "all", points: [] })),
+      getAuthFileGroupTrend: vi.fn(async () => ({
+        days: 7,
+        group: "all",
+        points: [],
+        quota_points: [],
+        quota_series: [],
+      })),
       getUsageLogs: vi.fn(async () => ({ items: [], total: 0, page: 1, size: 200 })),
     },
     quotaApi: {

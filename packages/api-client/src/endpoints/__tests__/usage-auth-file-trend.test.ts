@@ -119,4 +119,36 @@ describe("usage auth file trend api", () => {
       ],
     });
   });
+
+  test("keeps every weekly quota_series from the group trend endpoint", async () => {
+    const { usageApi } = await import("@code-proxy/api-client/endpoints/usage");
+    getMock.mockResolvedValue({
+      days: 7,
+      group: "antigravity",
+      points: [{ date: "2026-09-01", requests: 4 }],
+      quota_points: [{ date: "2026-09-01", percent: 57, samples: 2 }],
+      quota_series: [
+        {
+          quota_key: "antigravity:gemini_weekly",
+          quota_label: "Gemini Models",
+          window_seconds: 604800,
+          points: [{ date: "2026-09-01", percent: 57, samples: 2 }],
+        },
+        {
+          quota_key: "antigravity:3p_weekly",
+          quota_label: "Claude and GPT models",
+          window_seconds: 604800,
+          points: [{ date: "2026-09-01", percent: 90, samples: 2 }],
+        },
+      ],
+    });
+
+    const result = await usageApi.getAuthFileGroupTrend("antigravity", 7);
+    expect(getMock).toHaveBeenCalledWith("/usage/auth-file-group-trend?group=antigravity&days=7");
+    expect(result.quota_series.map((item) => item.quota_key)).toEqual([
+      "antigravity:gemini_weekly",
+      "antigravity:3p_weekly",
+    ]);
+    expect(result.quota_series[1]?.points[0]?.percent).toBe(90);
+  });
 });
