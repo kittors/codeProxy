@@ -273,7 +273,7 @@ const mergeSavedXAIEndpointFields = (
 };
 
 const supportsAuthFileTrend = (file: AuthFileItem): boolean =>
-  ["kimi", "codex", "xai", "claude", "anthropic"].includes(
+  ["kimi", "codex", "xai", "claude", "anthropic", "antigravity"].includes(
     normalizeProviderKey(resolveFileType(file)),
   );
 

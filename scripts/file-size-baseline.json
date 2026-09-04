@@ -7,7 +7,7 @@
     "features/log-content-viewer/components/LogContentModal.tsx": 1534,
     "features/model-availability/modelAvailability.ts": 1271,
     "features/oauth-login/components/OAuthLoginDialog.tsx": 912,
-    "features/request-log-viewer/requestLogsShared.tsx": 884,
+    "features/request-log-viewer/requestLogsShared.tsx": 828,
     "features/routing-config-editor/RoutingConfigEditor.tsx": 2044,
     "features/visual-config-editor/useVisualConfig.ts": 909,
     "packages/domain/src/auth-files/authFiles.ts": 2170,
