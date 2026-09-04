@@ -2,14 +2,7 @@ import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { UsageLogItem } from "@code-proxy/api-client/endpoints/usage";
 import {
-  formatFixedNumber,
-  formatUsageMetricCost,
-  formatUsageMetricNumber,
-  formatUsageMetricTooltipCost,
-  formatUsageMetricTooltipNumber,
-  isUsageMetricCompact,
   maskSensitiveIdentity,
-  type UsageMetricVariant,
 } from "@code-proxy/domain";
 import { parseUsageTimestampMs } from "@features/monitor-widgets/monitor-utils";
 import { SearchableCheckboxMultiSelect, Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
@@ -84,85 +77,13 @@ export type RequestLogsRow = {
   hasContent: boolean;
 };
 
-function RequestLogMetricChip({
-  ariaLabel,
-  value,
-  className,
-}: {
-  ariaLabel: string;
-  value: string;
-  className: string;
-}) {
-  return (
-    <span
-      className={[
-        "inline-flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 text-xs whitespace-nowrap",
-        className,
-      ].join(" ")}
-      aria-label={ariaLabel}
-    >
-      <span className="font-mono font-semibold tabular-nums">{value}</span>
-    </span>
-  );
-}
+import {
+  RequestLogMetricChip,
+  RequestLogModeChip,
+  RequestLogUsageMetricValue,
+} from "./RequestLogMetricChips";
 
-function RequestLogModeChip({ label, streaming }: { label: string; streaming: boolean }) {
-  return (
-    <span
-      className={
-        streaming
-          ? "inline-flex shrink-0 items-center justify-center rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-xs font-semibold text-sky-600 dark:border-sky-500/25 dark:bg-sky-500/15 dark:text-sky-300"
-          : "inline-flex shrink-0 items-center justify-center rounded-full border border-slate-900/8 bg-slate-50 px-2 py-0.5 text-xs font-semibold text-slate-500 dark:border-white/10 dark:bg-neutral-900 dark:text-white/55"
-      }
-    >
-      {label}
-    </span>
-  );
-}
-
-export function RequestLogUsageMetricValue({
-  value,
-  variant = "number",
-  compact = false,
-  className,
-}: {
-  value: number;
-  variant?: UsageMetricVariant;
-  /**
-   * When true, renders the value in compact form (e.g. "23.8K", "$12.35K")
-   * with a hover tooltip carrying the full precision value. Defaults to false
-   * so the request-logs table always shows the complete numeric value.
-   */
-  compact?: boolean;
-  className?: string;
-}) {
-  const useCompact = compact && isUsageMetricCompact(value, variant);
-  const display =
-    variant === "currency"
-      ? useCompact
-        ? formatUsageMetricCost(value)
-        : formatUsageMetricTooltipCost(value)
-      : useCompact
-        ? formatUsageMetricNumber(value)
-        : formatFixedNumber(value, { fractionDigits: 0 });
-  const tooltip =
-    variant === "currency"
-      ? formatUsageMetricTooltipCost(value)
-      : formatUsageMetricTooltipNumber(value);
-
-  return (
-    <HoverTooltip
-      content={tooltip}
-      disabled={!useCompact}
-      placement="top"
-      className={useCompact ? "cursor-help" : undefined}
-    >
-      <span className={["block min-w-0 truncate", className].filter(Boolean).join(" ")}>
-        {display}
-      </span>
-    </HoverTooltip>
-  );
-}
+export { RequestLogUsageMetricValue };
 
 export interface RequestLogsTableColumn<T> {
   key: string;
@@ -445,10 +366,19 @@ export const toRequestLogsRow = (item: UsageLogItem): RequestLogsRow => {
     hasContent: item.has_content ?? false,
   };
 };
+const KNOWN_SYSTEM_INTERNAL_KEYS = new Set([
+  "antigravity",
+  "codex",
+  "system",
+  "__system__",
+  "warmup",
+]);
+
 export const isSystemRequestLogKey = (apiKey: string, apiKeyName?: string): boolean => {
   if (String(apiKeyName || "").trim()) return false;
   const trimmed = String(apiKey || "").trim();
   if (!trimmed) return true;
+  if (KNOWN_SYSTEM_INTERNAL_KEYS.has(trimmed.toLowerCase())) return true;
   return /^(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD)\s+\//i.test(trimmed) || trimmed.startsWith("/");
 };
 
@@ -789,7 +719,16 @@ export function buildRequestLogsColumns(
         const keyName =
           masked && rawKeyName !== "--" ? maskSensitiveIdentity(rawKeyName) : rawKeyName;
         if (identityColumn === "key") {
-          const displayName = row.isSystemCall ? t("request_logs.system_call") : keyName;
+          if (row.isSystemCall) {
+            return (
+              <HoverTooltip content={t("request_logs.system_call")} className="block min-w-0">
+                <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 dark:bg-neutral-800 dark:text-neutral-300">
+                  {t("request_logs.system_call")}
+                </span>
+              </HoverTooltip>
+            );
+          }
+          const displayName = keyName;
           return (
             <HoverTooltip content={displayName} className="block min-w-0">
               <span
@@ -800,13 +739,18 @@ export function buildRequestLogsColumns(
             </HoverTooltip>
           );
         }
-        const rawUserName = row.isSystemCall
-          ? t("request_logs.system_call")
-          : row.endUserDisplayName || row.apiKeyName || "--";
+        if (row.isSystemCall) {
+          return (
+            <HoverTooltip content={t("request_logs.system_call")} className="block min-w-0">
+              <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 dark:bg-neutral-800 dark:text-neutral-300">
+                {t("request_logs.system_call")}
+              </span>
+            </HoverTooltip>
+          );
+        }
+        const rawUserName = row.endUserDisplayName || row.apiKeyName || "--";
         const userName =
-          masked && !row.isSystemCall && rawUserName !== "--"
-            ? maskSensitiveIdentity(rawUserName)
-            : rawUserName;
+          masked && rawUserName !== "--" ? maskSensitiveIdentity(rawUserName) : rawUserName;
         const showKeyName = Boolean(keyName && keyName !== userName);
         return (
           <HoverTooltip

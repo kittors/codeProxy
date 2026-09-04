@@ -148,6 +148,40 @@ describe("buildTrendQuotaSummary", () => {
     expect(summary.projectionQuotaUsedPercent).toBe(25);
     expect(summary.estimatedWeeklyQuota).toBeCloseTo(40, 4);
   });
+
+  test("uses attributable product series fallback when backend fields are missing", () => {
+    const summary = buildTrendQuotaSummary({
+      trend: baseTrend({
+        cycle_cost_total: 128.4874,
+        weekly_quota_used_percent: 19,
+        projection_quota_used_percent: null,
+        quota_series: [
+          {
+            quota_key: "weekly_limit",
+            quota_label: "xai_quota.weekly_limit",
+            window_seconds: 604800,
+            points: [{ timestamp: "2026-08-24T00:00:00Z", percent: 81 }],
+          },
+          {
+            quota_key: "product:GrokBuild",
+            quota_label: "xai_quota.grok_build",
+            window_seconds: 604800,
+            points: [{ timestamp: "2026-08-24T00:00:00Z", percent: 84 }],
+          },
+        ],
+      }),
+      fiveHourQuotaKey: null,
+      weeklyQuotaKey: "weekly_limit",
+      showPredictedWeeklyQuota: true,
+      cycleCostTotal: 128.4874,
+    });
+
+    expect(summary.weeklyQuotaUsedPercent).toBe(19);
+    expect(summary.projectionQuotaUsedPercent).toBe(16);
+    expect(summary.projectionIsAttributable).toBe(true);
+    expect(summary.externalQuotaUsedPercent).toBe(3);
+    expect(summary.estimatedWeeklyQuota).toBeCloseTo(803.0462, 4);
+  });
 });
 
 describe("estimateQuotaBudget", () => {

@@ -25,29 +25,9 @@ import {
   writeTenantBucket,
 } from "../tenant-cache";
 
-export type AuthFileModelItem = {
-  id: string;
-  display_name?: string;
-  type?: string;
-  owned_by?: string;
-};
-
-export type AuthFileModelOwnerGroup = {
-  value: string;
-  label: string;
-  description: string;
-  models: AuthFileModelItem[];
-};
-
-export type OAuthDialogTab =
-  | "codex"
-  | "anthropic"
-  | "antigravity"
-  | "gemini-cli"
-  | "kimi"
-  | "qwen"
-  | "iflow"
-  | "vertex";
+export type AuthFileModelItem = { id: string; display_name?: string; type?: string; owned_by?: string };
+export type AuthFileModelOwnerGroup = { value: string; label: string; description: string; models: AuthFileModelItem[] };
+export type OAuthDialogTab = "codex" | "anthropic" | "antigravity" | "gemini-cli" | "kimi" | "qwen" | "iflow" | "vertex";
 
 export const AUTH_FILES_PAGE_SIZE = 9;
 export const MAX_AUTH_FILE_SIZE = 50 * 1024;
@@ -1486,6 +1466,7 @@ export const PLAN_BADGE_CLASSES: Record<string, string> = {
 /** Codex-only: weekly budget (USD) thresholds for Pro multiplier badges. */
 export const CODEX_PRO_20X_WEEKLY_BUDGET_USD = 1000;
 export const CODEX_PRO_5X_WEEKLY_BUDGET_USD = 200;
+export const XAI_SUPERGROK_HEAVY_WEEKLY_BUDGET_USD = 400;
 
 export type AuthFileCycleBudgetStats = {
   cycleCostTotal?: number | null;
@@ -1542,12 +1523,26 @@ export const resolveAuthFileDisplayPlanType = (
 ): string | null => {
   const base = resolveAuthFilePlanType(file, quotaState);
   if (!base) return null;
-  if (normalizeProviderKey(resolveFileType(file)) !== "codex") return base;
-  const budget = estimateQuotaBudgetUsd(
-    cycleStats?.cycleCostTotal,
-    cycleStats?.weeklyQuotaUsedPercent,
-  );
-  return resolveCodexProMultiplierTier(base, budget, previousDisplayPlan);
+  const provider = normalizeProviderKey(resolveFileType(file));
+  if (provider === "codex") {
+    const budget = estimateQuotaBudgetUsd(
+      cycleStats?.cycleCostTotal,
+      cycleStats?.weeklyQuotaUsedPercent,
+    );
+    return resolveCodexProMultiplierTier(base, budget, previousDisplayPlan);
+  }
+  if (provider === "xai" || provider === "grok") {
+    const norm = normalizeTagValue(base);
+    if (norm === "supergrok-heavy" || norm === "supergrok_heavy" || norm === "supergrokheavy") return "supergrok-heavy";
+    const budget = estimateQuotaBudgetUsd(cycleStats?.cycleCostTotal, cycleStats?.weeklyQuotaUsedPercent);
+    if (typeof budget === "number" && Number.isFinite(budget) && budget > 0) {
+      return budget > XAI_SUPERGROK_HEAVY_WEEKLY_BUDGET_USD ? "supergrok-heavy" : base;
+    }
+    const prev = normalizeTagValue(previousDisplayPlan);
+    if (prev === "supergrok-heavy" || prev === "supergrok_heavy" || prev === "supergrokheavy") return "supergrok-heavy";
+    return base;
+  }
+  return base;
 };
 
 export const resolvePlanBadgeClass = (planType: string | null | undefined): string => {

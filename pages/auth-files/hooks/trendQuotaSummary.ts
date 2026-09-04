@@ -123,12 +123,46 @@ export const buildTrendQuotaSummary = ({
         )
       : null);
 
+  // Prefer the backend projection used percent; when absent, for xAI attempt to find
+  // attributable product series (e.g. product:GrokBuild) before falling back to weeklyQuotaUsedPercent.
+  let fallbackProjectionUsedPercent = weeklyQuotaUsedPercent;
+  if (
+    trend.projection_quota_used_percent == null &&
+    (weeklyQuotaKey === "weekly_limit" || weeklyQuotaKey.startsWith("product:"))
+  ) {
+    const grokBuildSeries = trend.quota_series.filter(
+      (s) => s.window_seconds >= WEEK_WINDOW_SECONDS && s.quota_key.startsWith("product:"),
+    );
+    if (grokBuildSeries.length > 0) {
+      let sumUsed = 0;
+      let hasValid = false;
+      for (const s of grokBuildSeries) {
+        const used = latestQuotaUsedPercent(
+          [s],
+          s.quota_key,
+          (windowSeconds) => windowSeconds >= WEEK_WINDOW_SECONDS,
+        );
+        if (typeof used === "number" && Number.isFinite(used)) {
+          sumUsed += used;
+          hasValid = true;
+        }
+      }
+      if (hasValid) {
+        fallbackProjectionUsedPercent = Math.min(100, Math.max(0, sumUsed));
+      }
+    }
+  }
+
   const projectionQuotaUsedPercent =
-    trend.projection_quota_used_percent ?? weeklyQuotaUsedPercent;
+    trend.projection_quota_used_percent ?? fallbackProjectionUsedPercent;
   const projectionIsAttributable =
-    trend.projection_quota_attributable === true &&
-    typeof trend.projection_quota_used_percent === "number" &&
-    Number.isFinite(trend.projection_quota_used_percent);
+    (trend.projection_quota_attributable === true &&
+      typeof trend.projection_quota_used_percent === "number" &&
+      Number.isFinite(trend.projection_quota_used_percent)) ||
+    (trend.projection_quota_used_percent == null &&
+      fallbackProjectionUsedPercent !== null &&
+      weeklyQuotaUsedPercent !== null &&
+      fallbackProjectionUsedPercent !== weeklyQuotaUsedPercent);
 
   const externalQuotaUsedPercent =
     projectionIsAttributable &&
