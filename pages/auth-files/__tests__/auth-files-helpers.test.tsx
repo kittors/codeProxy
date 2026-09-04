@@ -778,9 +778,24 @@ describe("Auth Files helper coverage", () => {
       resolveAuthFileDisplayPlanType(
         { name: "xai.json", type: "xai", plan_type: "supergrok" } as AuthFileItem,
         null,
-        { cycleCostTotal: 9999, weeklyQuotaUsedPercent: 10 },
+        { cycleCostTotal: 30, weeklyQuotaUsedPercent: 10 },
       ),
     ).toBe("supergrok");
+    expect(
+      resolveAuthFileDisplayPlanType(
+        { name: "xai.json", type: "xai", plan_type: "supergrok" } as AuthFileItem,
+        null,
+        { cycleCostTotal: 50, weeklyQuotaUsedPercent: 10 },
+      ),
+    ).toBe("supergrok-heavy");
+    expect(
+      resolveAuthFileDisplayPlanType(
+        { name: "xai.json", type: "xai", plan_type: "supergrok" } as AuthFileItem,
+        null,
+        null,
+        "supergrok-heavy",
+      ),
+    ).toBe("supergrok-heavy");
   });
 
   test("always shows quota-derived plan badges even when display tags omit them", () => {

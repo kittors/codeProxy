@@ -1,6 +1,6 @@
 {
   "comment": "Hand-rolled card surfaces awaiting migration to surface() from @code-proxy/ui. Counts may only shrink — see scripts/check-surface-usage.mjs.",
-  "total": 124,
+  "total": 123,
   "files": {
     "apps/admin-panel/src/app/layout/AppShell.tsx": 1,
     "features/log-content-viewer/components/ErrorDetailModal.tsx": 1,
@@ -8,7 +8,6 @@
     "features/log-content-viewer/log-content/rendering.tsx": 1,
     "features/monitor-widgets/MonitorPagePieces.tsx": 1,
     "features/online-update/ui/UpdateModal.tsx": 2,
-    "features/request-log-viewer/requestLogsShared.tsx": 1,
     "features/routing-config-editor/RoutingConfigEditor.tsx": 6,
     "packages/ui/src/data-table/rowReorder.ts": 1,
     "packages/ui/src/overlays/SecretRevealModal.tsx": 1,
