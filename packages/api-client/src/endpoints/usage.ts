@@ -339,6 +339,12 @@ export const usageApi = {
         Number.isFinite(resp.weekly_quota_used_percent)
           ? resp.weekly_quota_used_percent
           : null,
+      projection_quota_used_percent:
+        typeof resp?.projection_quota_used_percent === "number" &&
+        Number.isFinite(resp.projection_quota_used_percent)
+          ? resp.projection_quota_used_percent
+          : null,
+      projection_quota_attributable: resp?.projection_quota_attributable === true,
       cycle_known: resp?.cycle_known === true,
       cycle_start: resp?.cycle_start ?? "",
       daily_usage: Array.isArray(resp?.daily_usage) ? resp.daily_usage : [],
