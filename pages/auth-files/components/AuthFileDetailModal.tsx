@@ -28,6 +28,7 @@ import { Modal } from "@code-proxy/ui";
 import { Select } from "@code-proxy/ui";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { ToggleSwitch } from "@code-proxy/ui";
+import { formatTrendChartTooltip } from "./trendTooltipFormatter";
 import { EChart } from "@code-proxy/ui";
 import { ProxyPoolSelect } from "@features/proxy-pool";
 import { useProxyPoolChecks } from "@features/proxy-pool";
@@ -426,7 +427,11 @@ export function AuthFileDetailModal({
       animationDurationUpdate: 0,
       animationEasing: "cubicOut" as const,
       grid: { left: 46, right: 108, top: 74, bottom: 38 },
-      tooltip: { trigger: "axis", confine: true },
+      tooltip: {
+        trigger: "axis",
+        confine: true,
+        formatter: (params: unknown) => formatTrendChartTooltip(params, formatCurrency),
+      },
       legend: {
         top: 8,
         left: 8,
@@ -508,9 +513,6 @@ export function AuthFileDetailModal({
           lineStyle: { width: 2.2, color: "#db2777" },
           itemStyle: { color: "#db2777" },
           areaStyle: { color: "rgba(219, 39, 119, 0.08)" },
-          tooltip: {
-            valueFormatter: (value: number) => formatCurrency(Number(value)),
-          },
           data: sortedKeys.map((key) => costByKey.get(key) ?? 0),
         },
         ...quotaBySeries.map(({ series, values }, index) => ({
@@ -527,10 +529,6 @@ export function AuthFileDetailModal({
           smooth: true,
           lineStyle: { width: 2, color: palette[(index + 2) % palette.length] },
           itemStyle: { color: palette[(index + 2) % palette.length] },
-          tooltip: {
-            valueFormatter: (value: number) =>
-              typeof value === "number" && Number.isFinite(value) ? `${value.toFixed(1)}%` : "--",
-          },
           data: sortedKeys.map((key) => values.get(key) ?? null),
         })),
       ],
