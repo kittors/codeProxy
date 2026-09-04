@@ -162,7 +162,7 @@ export function ProtectionPolicyTab({ status, onPolicySaved }: ProtectionPolicyT
                     setProxyDraft("");
                   }
                 }}
-                placeholder="104.194.69.137 / 10.0.0.0/24"
+                placeholder="203.0.113.10 / 10.0.0.0/24"
                 size="sm"
                 className="font-mono"
               />

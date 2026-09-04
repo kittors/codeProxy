@@ -31,7 +31,7 @@ jobs:
     timeout-minutes: 15
     env:
       PANEL_RELEASE: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
-      PUBLIC_PANEL_BASE: ${{ vars.RELAY_PUBLIC_PANEL_BASE || 'https://relay.07230805.xyz' }}
+      PUBLIC_PANEL_BASE: ${{ secrets.RELAY_PUBLIC_PANEL_BASE || vars.RELAY_PUBLIC_PANEL_BASE }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
