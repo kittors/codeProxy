@@ -51,6 +51,7 @@ import {
   resolveCodexChatgptAccountId,
   resolveCodexResetCreditExpirations,
   resolveCodexResetCreditCount,
+  resolveCodexResetCreditCandidates,
   resolveXaiPlanType,
   resolveGeminiCliProjectId,
   resolveXaiUserId,
@@ -120,13 +121,47 @@ export const resolveQuotaProvider = (file: AuthFileItem): QuotaProvider | null =
 export const isQuotaSupportedAuthFile = (file: AuthFileItem): boolean =>
   resolveQuotaProvider(file) !== null;
 
-export const consumeCodexResetCredit = async (file: AuthFileItem): Promise<void> => {
+export const consumeCodexResetCredit = async (
+  file: AuthFileItem,
+  options?: { creditId?: string },
+): Promise<void> => {
+  const authIndex = resolveAuthIndex(file);
+  const header = buildCodexRequestHeaders(file);
+
+  let targetCreditId = options?.creditId;
+  if (!targetCreditId) {
+    // FIFO: query candidate credits to pick the earliest expiring credit if available
+    try {
+      const details = await apiCallApi.request({
+        authIndex,
+        method: "GET",
+        url: CODEX_RESET_CREDITS_URL,
+        header,
+      });
+      if (details.statusCode >= 200 && details.statusCode < 300) {
+        const candidates = resolveCodexResetCreditCandidates(details.body ?? details.bodyText);
+        if (candidates.length > 0 && candidates[0]?.id) {
+          targetCreditId = candidates[0].id;
+        }
+      }
+    } catch {
+      // Fall back to untargeted reset if candidates query fails
+    }
+  }
+
+  const payload: Record<string, string> = {
+    redeem_request_id: createRedeemRequestId(),
+  };
+  if (targetCreditId) {
+    payload.credit_id = targetCreditId;
+  }
+
   const result = await apiCallApi.request({
-    authIndex: resolveAuthIndex(file),
+    authIndex,
     method: "POST",
     url: CODEX_RESET_CREDITS_CONSUME_URL,
-    header: buildCodexRequestHeaders(file),
-    data: JSON.stringify({ redeem_request_id: createRedeemRequestId() }),
+    header,
+    data: JSON.stringify(payload),
   });
   if (result.statusCode < 200 || result.statusCode >= 300) {
     throw new Error(getApiCallErrorMessage(result));
