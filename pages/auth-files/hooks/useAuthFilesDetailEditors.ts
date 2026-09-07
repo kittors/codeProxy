@@ -418,8 +418,9 @@ export function useAuthFilesDetailEditors(
 
   const refreshDetailTrend = useCallback(
     async (fileArg?: AuthFileItem | null, options?: RefreshDetailTrendOptions) => {
-      const file = fileArg ?? detailFile;
-      if (!file || !supportsAuthFileTrend(file)) {
+      const file = fileArg ?? detailFileRef.current;
+      if (!file || detailFileRef.current?.name !== file.name) return;
+      if (!supportsAuthFileTrend(file)) {
         setDetailTrend(null);
         setDetailTrendError(null);
         setDetailTrendLoading(false);
@@ -434,6 +435,8 @@ export function useAuthFilesDetailEditors(
         return;
       }
 
+      const isCurrentDetail = () => detailFileRef.current?.name === file.name &&
+        normalizeAuthIndexValue(detailFileRef.current.auth_index ?? detailFileRef.current.authIndex) === authIndex;
       const existing = detailTrendInFlightRef.current.get(authIndex);
       if (existing) {
         try {
@@ -454,33 +457,25 @@ export function useAuthFilesDetailEditors(
           days: 7,
           hours: 5,
         });
-        const currentAuthIndex = normalizeAuthIndexValue(
-          detailFileRef.current?.auth_index ?? detailFileRef.current?.authIndex,
-        );
-        if (currentAuthIndex !== authIndex) return;
-        if (shouldShowLoading) {
-          setDetailTrendLoading(false);
-        }
-        setDetailTrend(trend);
+        if (isCurrentDetail()) setDetailTrend(trend);
       })();
       detailTrendInFlightRef.current.set(authIndex, request);
 
       try {
         await request;
       } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : t("auth_files.trend_load_failed");
-        setDetailTrend(null);
-        setDetailTrendError(message);
+        if (isCurrentDetail()) {
+          setDetailTrend(null);
+          setDetailTrendError(err instanceof Error ? err.message : t("auth_files.trend_load_failed"));
+        }
       } finally {
         if (detailTrendInFlightRef.current.get(authIndex) === request) {
           detailTrendInFlightRef.current.delete(authIndex);
         }
-        if (shouldShowLoading && !detailTrend) {
-          setDetailTrendLoading(false);
-        }
+        if (isCurrentDetail() && shouldShowLoading) setDetailTrendLoading(false);
       }
     },
-    [detailFile, detailTrend, t],
+    [detailTrend, t],
   );
 
   const applyIdentityFingerprintDetail = useCallback(
@@ -693,6 +688,8 @@ export function useAuthFilesDetailEditors(
       setDetailOpen(true);
       setDetailTab(hasTrend ? "usage" : hasIdentity ? "identity" : "fields");
       setDetailTrendWindow("5h");
+      // Publish the selection before cached responses can settle ahead of React's render.
+      detailFileRef.current = file;
       setDetailFile(file);
       setDetailLoading(true);
       setDetailText("");

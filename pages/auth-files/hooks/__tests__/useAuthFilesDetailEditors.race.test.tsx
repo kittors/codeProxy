@@ -165,4 +165,48 @@ describe("useAuthFilesDetailEditors race condition and confirmation", () => {
     expect(result.current.detailTrend?.auth_index).toBe("auth-b");
     expect(result.current.detailTrend?.request_total).toBe(10);
   });
+  it("ignores an old trend failure after another account succeeds", async () => {
+    let rejectOld: (reason: Error) => void = () => {};
+    mocks.getAuthFileTrend.mockImplementation((authIndex: string) => authIndex === "auth-a"
+      ? new Promise<unknown>((_resolve, reject) => { rejectOld = reject; })
+      : Promise.resolve({ auth_index: authIndex, request_total: 10 }));
+    const { result } = renderHook(() =>
+      useAuthFilesDetailEditors(async (): Promise<AuthFileItem[]> => [], undefined, false),
+    );
+    await act(async () => { void result.current.openDetail(makeCodexFile("a.json", "auth-a")); });
+    await act(async () => { void result.current.openDetail(makeCodexFile("b.json", "auth-b")); });
+    expect(result.current.detailTrend?.auth_index).toBe("auth-b");
+    const callsBeforeFailure = mocks.getAuthFileTrend.mock.calls.length;
+    await act(async () => { rejectOld(new Error("old account failure")); });
+    expect(mocks.getAuthFileTrend).toHaveBeenCalledTimes(callsBeforeFailure);
+    expect(result.current.detailTrend?.auth_index).toBe("auth-b");
+    expect(result.current.detailTrendError).toBeNull();
+  });
+
+  it("does not start an obsolete quota-completion trend refresh", async () => {
+    mocks.getAuthFileTrend.mockImplementation(async (authIndex: string) => ({ auth_index: authIndex }));
+    const { result } = renderHook(() =>
+      useAuthFilesDetailEditors(async (): Promise<AuthFileItem[]> => [], undefined, false),
+    );
+    const fileA = makeCodexFile("a.json", "auth-a");
+    await act(async () => { void result.current.openDetail(fileA); });
+    await act(async () => { void result.current.openDetail(makeCodexFile("b.json", "auth-b")); });
+    const before = mocks.getAuthFileTrend.mock.calls.length;
+    await act(async () => { await result.current.refreshDetailTrend(fileA, { silent: true }); });
+    expect(mocks.getAuthFileTrend).toHaveBeenCalledTimes(before);
+    expect(result.current.detailTrend?.auth_index).toBe("auth-b");
+  });
+
+  it("keeps immediately available data when opening a new detail", async () => {
+    mocks.getAuthFileTrend.mockImplementation(async (authIndex: string) => ({ auth_index: authIndex }));
+    mocks.downloadText.mockResolvedValue('{"label":"current"}');
+    const { result } = renderHook(() =>
+      useAuthFilesDetailEditors(async (): Promise<AuthFileItem[]> => [], undefined, false),
+    );
+    await act(async () => { await result.current.openDetail(makeCodexFile("a.json", "auth-a")); });
+    expect(result.current.detailText).toBe('{"label":"current"}');
+    expect(result.current.detailLoading).toBe(false);
+    expect(result.current.detailTrend?.auth_index).toBe("auth-a");
+  });
+
 });

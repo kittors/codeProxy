@@ -571,13 +571,11 @@ export function AuthFilesPage() {
       if (provider === "codex" || provider === "kimi" || provider === "claude") {
         void refreshQuota(file, provider)
           .catch(() => undefined)
-          .finally(() => {
-            if (detailFile?.name === file.name) void refreshDetailTrend(file, { silent: true });
-          });
+          .finally(() => void refreshDetailTrend(file, { silent: true }));
       }
       return openPromise;
     },
-    [detailFile?.name, openDetail, refreshDetailTrend, refreshQuota],
+    [openDetail, refreshDetailTrend, refreshQuota],
   );
 
   const requestResetCredit = useCallback(

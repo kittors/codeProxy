@@ -50,7 +50,11 @@ export function parseRoutingChannelGroups(raw: unknown): RoutingChannelGroupEntr
   return raw.map((item, index) => {
     const record = asRecord(item) ?? {};
     const match = asRecord(record.match);
-    const priorityRecord = asRecord(record["channel-priorities"]);
+    const scheduling = asRecord(record.scheduling);
+    // The new weight map is authoritative, including explicit zero exclusions.
+    // Raw YAML need not carry the legacy mirror emitted by the management API.
+    const priorityRecord =
+      asRecord(scheduling?.["channel-weights"]) ?? asRecord(record["channel-priorities"]);
     const channels = Array.isArray(match?.channels)
       ? match.channels.map((value) => String(value ?? "").trim()).filter(Boolean)
       : [];
@@ -85,7 +89,7 @@ export function parseRoutingChannelGroups(raw: unknown): RoutingChannelGroupEntr
       name: typeof record.name === "string" ? record.name : "",
       description: typeof record.description === "string" ? record.description : "",
       strategy,
-      scheduling: parseScheduling(asRecord(record.scheduling), strategy),
+      scheduling: parseScheduling(scheduling, strategy),
       excludeFromDefault:
         record["exclude-from-default"] === true &&
         String(record.name ?? "")

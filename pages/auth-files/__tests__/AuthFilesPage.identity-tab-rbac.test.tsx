@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { ToastProvider, ThemeProvider } from "@code-proxy/ui";
@@ -7,6 +7,7 @@ import { AuthFilesPage } from "@pages/auth-files/AuthFilesPage";
 import i18n from "@code-proxy/i18n";
 
 const mocks = vi.hoisted(() => ({
+  startStatusRefresh: vi.fn(async () => ({ job_id: "job-1", accepted: 0, deduplicated: 0 })),
   can: vi.fn((permission: string) => permission === "auth_files.read"),
   list: vi.fn(async (): Promise<{ files: AuthFileItem[] }> => ({ files: [] })),
   downloadText: vi.fn(async () => "{}"),
@@ -77,11 +78,7 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
     },
     aiAccountsStatusApi: {
       getStatus: vi.fn(async () => ({ items: [] })),
-      startStatusRefresh: vi.fn(async () => ({
-        job_id: "job-1",
-        accepted: 0,
-        deduplicated: 0,
-      })),
+      startStatusRefresh: mocks.startStatusRefresh,
       getStatusRefreshJob: vi.fn(async () => ({
         job_id: "job-1",
         state: "completed",
@@ -150,6 +147,7 @@ describe("AuthFilesPage identity tab RBAC", () => {
     window.sessionStorage.clear();
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("table"));
     window.localStorage.setItem("authFilesPage.quotaAutoRefreshMs.v1", JSON.stringify(0));
+    mocks.startStatusRefresh.mockResolvedValue({ job_id: "job-1", accepted: 0, deduplicated: 0 });
     mocks.can.mockReset();
     mocks.can.mockImplementation((permission: string) => permission === "auth_files.read");
     mocks.list.mockReset();
@@ -242,6 +240,27 @@ describe("AuthFilesPage identity tab RBAC", () => {
       );
     });
     expect(await screen.findByTestId("auth-file-identity-fingerprint")).toBeInTheDocument();
+  });
+
+  test("refreshes the opened detail trend after its quota probe completes", async () => {
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider><ToastProvider><AuthFilesPage /></ToastProvider></ThemeProvider>
+      </MemoryRouter>,
+    );
+    await screen.findByText("Codex OAuth");
+    await waitFor(() => expect(mocks.startStatusRefresh).toHaveBeenCalled());
+    let finishProbe: (value: { job_id: string; accepted: number; deduplicated: number }) => void = () => {};
+    const probe = new Promise<{ job_id: string; accepted: number; deduplicated: number }>((resolve) => {
+      finishProbe = resolve;
+    });
+    mocks.startStatusRefresh.mockReturnValue(probe);
+    const callsBeforeOpen = mocks.startStatusRefresh.mock.calls.length;
+    fireEvent.click(screen.getByRole("button", { name: "Details" }));
+    await waitFor(() => expect(mocks.startStatusRefresh.mock.calls.length).toBeGreaterThan(callsBeforeOpen));
+    await waitFor(() => expect(mocks.getAuthFileTrend).toHaveBeenCalledTimes(1));
+    await act(async () => finishProbe({ job_id: "job-1", accepted: 0, deduplicated: 0 }));
+    await waitFor(() => expect(mocks.getAuthFileTrend).toHaveBeenCalledTimes(2));
   });
 
   test("hides Identity tab when auth_files.read is missing", async () => {
