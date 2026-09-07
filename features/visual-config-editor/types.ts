@@ -50,7 +50,28 @@ export interface StreamingConfig {
   nonstreamKeepaliveInterval: string;
 }
 
+/**
+ * Legacy single-enum strategy. It conflated "how do we spread load" with "do we
+ * pin a conversation", which is why session stickiness could not be combined
+ * with a balancing mode. Kept for reading configs written before `scheduling`.
+ */
 export type RoutingStrategy = "round-robin" | "fill-first" | "session-sticky";
+
+/** How a group picks among its candidates. Orthogonal to stickiness. */
+export type RoutingDistribution = "weighted" | "least-load" | "fill-first";
+
+export type RoutingSticky = {
+  enabled: boolean;
+  /** Requests one conversation may pin to a single account. Blank = backend default. */
+  maxRequests: string;
+  /** Release the binding once the account passes this load ratio (0-1). Blank = never. */
+  releaseAtLoad: string;
+};
+
+export type RoutingScheduling = {
+  distribution: RoutingDistribution;
+  sticky: RoutingSticky;
+};
 
 export type RoutingFallback = "none" | "default";
 
@@ -59,6 +80,7 @@ export type RoutingChannelGroupMatchMode = "channels" | "tags";
 export type RoutingChannelGroupMemberEntry = {
   id: string;
   name: string;
+  /** Relative share. Blank means the default weight of 1; "0" excludes the channel. */
   priority: string;
 };
 
@@ -66,7 +88,9 @@ export type RoutingChannelGroupEntry = {
   id: string;
   name: string;
   description: string;
+  /** Legacy mirror kept in sync on save so older backends keep working. */
   strategy: RoutingStrategy;
+  scheduling: RoutingScheduling;
   excludeFromDefault?: boolean;
   matchMode?: RoutingChannelGroupMatchMode;
   channels: RoutingChannelGroupMemberEntry[];

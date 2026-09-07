@@ -187,6 +187,34 @@ export const resolveCodexResetCreditExpirations = (payload: unknown): string[] =
     });
   return [...new Set(sorted)];
 };
+export type CodexResetCreditCandidate = {
+  id?: string;
+  expiresAt?: string;
+};
+
+export const resolveCodexResetCreditCandidates = (payload: unknown): CodexResetCreditCandidate[] => {
+  const rawList = readCodexResetCreditList(payload);
+  const items: CodexResetCreditCandidate[] = [];
+  for (const credit of rawList) {
+    if (!isRecord(credit)) continue;
+    const id = normalizeStringValue(credit.id ?? credit.credit_id ?? credit.creditId) ?? undefined;
+    const expiresAt = normalizeStringValue(credit.expires_at ?? credit.expiresAt) ?? undefined;
+    const resetType = normalizeStringValue(credit.reset_type ?? credit.resetType);
+    if (resetType && resetType.toLowerCase() !== "codex_rate_limits") continue;
+    const status = normalizeStringValue(credit.status);
+    if (status && status.toLowerCase() !== "available") continue;
+    items.push({ id, expiresAt });
+  }
+  return items.sort((left, right) => {
+    const leftMs = left.expiresAt ? Date.parse(left.expiresAt) : Number.POSITIVE_INFINITY;
+    const rightMs = right.expiresAt ? Date.parse(right.expiresAt) : Number.POSITIVE_INFINITY;
+    const leftSort = Number.isNaN(leftMs) ? Number.POSITIVE_INFINITY : leftMs;
+    const rightSort = Number.isNaN(rightMs) ? Number.POSITIVE_INFINITY : rightMs;
+    if (leftSort === rightSort) return 0;
+    return leftSort < rightSort ? -1 : 1;
+  });
+};
+
 
 const resolveCodexResetAtMs = (window?: CodexUsageWindow | null): number | undefined => {
   if (!window) return undefined;

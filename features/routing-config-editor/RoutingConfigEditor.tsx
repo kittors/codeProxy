@@ -6,12 +6,21 @@ import type {
   RoutingChannelGroupEntry,
   RoutingChannelGroupMatchMode,
   RoutingChannelGroupMemberEntry,
+  RoutingDistribution,
   RoutingPathRouteEntry,
+  RoutingScheduling,
   RoutingStrategy,
   VisualConfigValues,
 } from "@features/visual-config-editor";
-import { makeClientId } from "@features/visual-config-editor";
-import { Button, COLUMN_WIDTH } from "@code-proxy/ui";
+import {
+  DEFAULT_STICKY_MAX_REQUESTS,
+  defaultScheduling,
+  makeClientId,
+  normalizeDistribution,
+  schedulingFromStrategy,
+  strategyFromScheduling,
+} from "@features/visual-config-editor";
+import { Button, COLUMN_WIDTH, surface } from "@code-proxy/ui";
 import { Checkbox } from "@code-proxy/ui";
 import { ConfirmModal } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
@@ -24,6 +33,28 @@ import { useToast } from "@code-proxy/ui";
 import { HoverTooltip, OverflowTooltip } from "@code-proxy/ui";
 import { DataTable, TABLE_ROW_ACTIONS_COLUMN, TABLE_ROW_ACTIONS_STICKY_END_COLUMN, type DataTableColumn } from "@code-proxy/ui";
 import { VendorIcon } from "@code-proxy/assets";
+import { Field, InfoTooltip, TooltipHeader, renderChannelTags } from "./fields";
+import type { RoutingModelLoadResult, RoutingModelOption } from "./types";
+import {
+  channelMatchesTags,
+  cloneMembers,
+  distributionLabel,
+  isDisabledChannel,
+  normalizeChannelName,
+  normalizeRoutePathInput,
+  normalizeRoutingModelOption,
+  normalizeRoutingStrategy,
+  normalizeTagName,
+  parsePriority,
+  readChannelDisplayTags,
+  routePathInputIsRoot,
+  routePathUsesReservedPrefix,
+  schedulingLabel,
+  summarizeList,
+  summarizePriorityMode,
+  syncDraftChannels,
+  syncDraftTags,
+} from "./routingHelpers";
 import {
   emptyModelPricing,
   formatModelPrice,
@@ -33,27 +64,12 @@ import {
 const SYSTEM_DEFAULT_GROUP_NAME = "default";
 const SYSTEM_DEFAULT_GROUP_ID = "system-default-root";
 
-function normalizeRoutingStrategy(value: unknown): RoutingStrategy {
-  return value === "fill-first" || value === "session-sticky" ? value : "round-robin";
-}
 
-function routingStrategyLabel(
-  t: ReturnType<typeof useTranslation>["t"],
-  strategy: RoutingStrategy,
-) {
-  if (strategy === "session-sticky") {
-    return t("channel_groups_page.routing_strategy_session_sticky");
-  }
-  if (strategy === "fill-first") {
-    return t("channel_groups_page.routing_strategy_fill_first");
-  }
-  return t("channel_groups_page.routing_strategy_round_robin");
-}
 
 type GroupDraft = {
   name: string;
   description: string;
-  strategy: RoutingStrategy;
+  scheduling: RoutingScheduling;
   excludeFromDefault: boolean;
   matchMode: RoutingChannelGroupMatchMode;
   channels: RoutingChannelGroupMemberEntry[];
@@ -62,14 +78,7 @@ type GroupDraft = {
   routes: RoutingPathRouteEntry[];
 };
 
-export type RoutingModelOption = {
-  id: string;
-  owned_by?: string;
-  description?: string;
-  pricing?: ModelPricing;
-};
-
-type RoutingModelLoadResult = string | RoutingModelOption;
+export type { RoutingModelOption } from "./types";
 
 const RESERVED_ROUTE_PREFIXES = new Set([
   "manage",
@@ -85,7 +94,7 @@ const RESERVED_ROUTE_PREFIXES = new Set([
 const createEmptyGroupDraft = (): GroupDraft => ({
   name: "",
   description: "",
-  strategy: "round-robin",
+  scheduling: defaultScheduling(),
   excludeFromDefault: false,
   matchMode: "channels",
   channels: [],
@@ -102,250 +111,10 @@ const EMPTY_ROUTE_DRAFT = (): RoutingPathRouteEntry => ({
   fallback: "none",
 });
 
-function Field({
-  label,
-  hint,
-  tooltip,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  tooltip?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-2">
-        <div className="text-sm font-semibold text-slate-900 dark:text-white">{label}</div>
-        {tooltip ? <InfoTooltip content={tooltip} /> : null}
-      </div>
-      {hint ? <div className="text-xs text-slate-500 dark:text-white/55">{hint}</div> : null}
-      {children}
-    </div>
-  );
-}
 
-function InfoTooltip({ content }: { content: string }) {
-  return (
-    <HoverTooltip content={content} placement="bottom">
-      <span
-        className="inline-flex h-6 w-6 items-center justify-center text-slate-400 dark:text-white/45"
-        aria-label={content}
-        tabIndex={0}
-      >
-        <CircleAlert size={16} aria-hidden="true" />
-      </span>
-    </HoverTooltip>
-  );
-}
 
-function TooltipHeader({ label, tooltip }: { label: string; tooltip: string }) {
-  return (
-    <span className="flex min-w-0 items-center gap-1.5">
-      <span className="truncate">{label}</span>
-      <InfoTooltip content={tooltip} />
-    </span>
-  );
-}
 
-function cloneMembers(members: RoutingChannelGroupMemberEntry[]): RoutingChannelGroupMemberEntry[] {
-  return members.map((member) => ({
-    id: member.id || makeClientId(),
-    name: member.name,
-    priority: member.priority,
-  }));
-}
 
-function syncDraftChannels(
-  currentChannels: RoutingChannelGroupMemberEntry[],
-  selectedChannels: string[],
-): RoutingChannelGroupMemberEntry[] {
-  const existing = new Map(
-    currentChannels
-      .map((channel) => [channel.name.trim().toLowerCase(), channel] as const)
-      .filter(([name]) => name),
-  );
-
-  return selectedChannels
-    .map((channelName) => channelName.trim())
-    .filter((channelName, index, list) => channelName && list.indexOf(channelName) === index)
-    .map((channelName) => {
-      const matched = existing.get(channelName.toLowerCase());
-      return matched
-        ? { ...matched, name: channelName }
-        : { id: makeClientId(), name: channelName, priority: "" };
-    });
-}
-
-function parsePriority(value: string): number | null {
-  const trimmed = value.trim();
-  if (!/^\d+$/.test(trimmed)) return null;
-  const parsed = Number(trimmed);
-  return Number.isSafeInteger(parsed) ? parsed : null;
-}
-
-function normalizeRoutePathInput(value: string): string {
-  let trimmed = value.trim();
-  if (!trimmed) return "";
-
-  try {
-    const parsed = new URL(trimmed);
-    if (parsed.protocol && parsed.host) {
-      trimmed = decodeURIComponent(parsed.pathname || "");
-    }
-  } catch {
-    // Keep non-URL inputs as-is.
-  }
-
-  const queryIndex = trimmed.search(/[?#]/);
-  if (queryIndex >= 0) {
-    trimmed = trimmed.slice(0, queryIndex);
-  }
-
-  trimmed = trimmed.replace(/^\/+|\/+$/g, "");
-  if (!trimmed) return "";
-
-  const segments = trimmed.split("/");
-  for (const segment of segments) {
-    if (!segment) return "";
-    if (Array.from(segment).some((char) => !/[\p{L}\p{N}_-]/u.test(char))) {
-      return "";
-    }
-  }
-
-  return `/${trimmed}`;
-}
-
-function routePathInputIsRoot(value: string): boolean {
-  let trimmed = value.trim();
-  if (!trimmed) return false;
-
-  try {
-    const parsed = new URL(trimmed);
-    if (parsed.protocol && parsed.host) {
-      trimmed = decodeURIComponent(parsed.pathname || "");
-    }
-  } catch {
-    // Keep non-URL inputs as-is.
-  }
-
-  const queryIndex = trimmed.search(/[?#]/);
-  if (queryIndex >= 0) {
-    trimmed = trimmed.slice(0, queryIndex);
-  }
-  return trimmed.replace(/^\/+|\/+$/g, "") === "";
-}
-
-function routePathUsesReservedPrefix(path: string): boolean {
-  const firstSegment = path.replace(/^\/+/, "").split("/")[0]?.toLowerCase() ?? "";
-  return RESERVED_ROUTE_PREFIXES.has(firstSegment);
-}
-
-function summarizeList(values: string[], moreLabel: string): string {
-  if (values.length === 0) return "";
-  if (values.length === 1) return values[0];
-  return `${values[0]}${moreLabel.replace("{{count}}", String(values.length - 1))}`;
-}
-
-function summarizePriorityMode(
-  members: RoutingChannelGroupMemberEntry[],
-  roundRobinLabel: string,
-  priorityShortLabel: string,
-): string {
-  const prioritized = members
-    .map((member) => ({
-      name: member.name.trim(),
-      priority: parsePriority(member.priority),
-    }))
-    .filter((member) => member.name && member.priority !== null);
-
-  if (prioritized.length === 0) return roundRobinLabel;
-
-  const distinct = new Set(prioritized.map((member) => member.priority));
-  if (distinct.size <= 1) return roundRobinLabel;
-
-  const top = prioritized.reduce((best, current) => {
-    if (!best || (current.priority ?? 0) > (best.priority ?? 0)) return current;
-    return best;
-  }, prioritized[0]);
-  if (!top.priority) return roundRobinLabel;
-  return `${top.name} · ${priorityShortLabel.replace("{{value}}", String(top.priority))}`;
-}
-
-function normalizeChannelName(value: string): string {
-  return value.trim().toLowerCase();
-}
-
-function normalizeTagName(value: string): string {
-  return value.trim().replace(/\s+/g, "-").toLowerCase();
-}
-
-function normalizeRoutingModelOption(model: RoutingModelLoadResult): RoutingModelOption | null {
-  if (typeof model === "string") {
-    const id = model.trim();
-    return id ? { id } : null;
-  }
-  const id = String(model.id ?? "").trim();
-  if (!id) return null;
-  return {
-    id,
-    owned_by: model.owned_by,
-    description: model.description,
-    pricing: model.pricing,
-  };
-}
-
-function readChannelDisplayTags(detail?: ChannelGroupChannelDetail | null): string[] {
-  if (!detail?.display_tags || !Array.isArray(detail.display_tags)) return [];
-  return detail.display_tags
-    .map((tag) => (typeof tag === "string" ? tag.trim() : ""))
-    .filter((tag, index, list) => Boolean(tag) && list.indexOf(tag) === index);
-}
-
-function syncDraftTags(selectedTags: string[]): string[] {
-  const seen = new Set<string>();
-  const tags: string[] = [];
-  selectedTags.forEach((tag) => {
-    const normalized = normalizeTagName(tag);
-    if (!normalized || seen.has(normalized)) return;
-    seen.add(normalized);
-    tags.push(normalized);
-  });
-  return tags;
-}
-
-function channelMatchesTags(
-  channelName: string,
-  tags: string[],
-  detailsByName: Record<string, ChannelGroupChannelDetail>,
-): boolean {
-  if (tags.length === 0) return false;
-  const detail = detailsByName[normalizeChannelName(channelName)];
-  const displayTags = readChannelDisplayTags(detail).map(normalizeTagName);
-  if (displayTags.length === 0) return false;
-  const selected = new Set(tags.map(normalizeTagName).filter(Boolean));
-  return displayTags.some((tag) => selected.has(tag));
-}
-
-function isDisabledChannel(detail?: ChannelGroupChannelDetail | null): boolean {
-  return detail?.disabled === true;
-}
-
-function renderChannelTags(tags: string[]) {
-  if (tags.length === 0) return null;
-  return (
-    <span aria-hidden="true" className="flex shrink-0 flex-wrap gap-1">
-      {tags.map((tag) => (
-        <span
-          key={tag}
-          className="inline-flex items-center rounded-full bg-sky-50 px-2 py-0.5 text-2xs font-semibold text-sky-700 dark:bg-sky-500/15 dark:text-sky-200"
-        >
-          {tag}
-        </span>
-      ))}
-    </span>
-  );
-}
 
 export function RoutingConfigEditor({
   title,
@@ -414,6 +183,7 @@ export function RoutingConfigEditor({
         name: SYSTEM_DEFAULT_GROUP_NAME,
         description: "",
         strategy: "round-robin",
+        scheduling: defaultScheduling(),
         excludeFromDefault: false,
         matchMode: "channels",
         channels: [],
@@ -484,23 +254,39 @@ export function RoutingConfigEditor({
   );
 
   const resolveGroupChannels = useCallback(
-    (group: Pick<RoutingChannelGroupEntry, "channels" | "matchMode" | "tags">) => {
-      if (group.matchMode !== "tags") return group.channels;
-      const priorityByChannel = new Map(
+    (group: Pick<RoutingChannelGroupEntry, "name" | "channels" | "matchMode" | "tags">) => {
+      const weightByChannel = new Map(
         group.channels.map((channel) => [normalizeChannelName(channel.name), channel]),
       );
+      const withConfiguredWeight = (channel: string, fallbackId: string) => {
+        const configured = weightByChannel.get(normalizeChannelName(channel));
+        return {
+          id: configured?.id ?? fallbackId,
+          name: channel,
+          priority: configured?.priority ?? "",
+        };
+      };
+
+      // The root group's membership is derived by the backend (every channel
+      // without a prefix that is not isolated), so its rows come from the
+      // resolved group listing rather than from a stored match list. Without
+      // this the root group would render an empty member table and there would
+      // be nowhere to set per-channel weights for it.
+      if (group.name.trim().toLowerCase() === SYSTEM_DEFAULT_GROUP_NAME) {
+        const members = availableChannelDetailsByGroup[SYSTEM_DEFAULT_GROUP_NAME] ?? {};
+        return Object.values(members)
+          .map((detail) => String(detail.name ?? "").trim())
+          .filter(Boolean)
+          .sort((a, b) => a.localeCompare(b))
+          .map((channel) => withConfiguredWeight(channel, `default-member-${normalizeChannelName(channel)}`));
+      }
+
+      if (group.matchMode !== "tags") return group.channels;
       return availableChannels
         .filter((channel) => channelMatchesTags(channel, group.tags ?? [], availableChannelDetails))
-        .map((channel) => {
-          const configured = priorityByChannel.get(normalizeChannelName(channel));
-          return {
-            id: configured?.id ?? `tag-match-${normalizeChannelName(channel)}`,
-            name: channel,
-            priority: configured?.priority ?? "",
-          };
-        });
+        .map((channel) => withConfiguredWeight(channel, `tag-match-${normalizeChannelName(channel)}`));
     },
-    [availableChannelDetails, availableChannels],
+    [availableChannelDetails, availableChannelDetailsByGroup, availableChannels],
   );
 
   const getStaleChannels = useCallback(
@@ -681,7 +467,7 @@ export function RoutingConfigEditor({
       setGroupDraft({
         name: group.name,
         description: group.description,
-        strategy: normalizeRoutingStrategy(group.strategy),
+        scheduling: group.scheduling ?? schedulingFromStrategy(group.strategy),
         excludeFromDefault: isSystemDefault ? false : group.excludeFromDefault === true,
         matchMode: isSystemDefault ? "channels" : (group.matchMode ?? "channels"),
         channels: cloneMembers(group.channels),
@@ -746,8 +532,12 @@ export function RoutingConfigEditor({
     (target: RoutingChannelGroupMemberEntry, priority: string) => {
       setGroupDraft((current) => ({
         ...current,
+        // Members are derived (not stored) for tag-matched groups and for the
+        // root group, whose membership the backend resolves. Their rows carry
+        // synthetic ids, so the weight has to be upserted by channel name.
         channels:
-          current.matchMode === "tags"
+          current.matchMode === "tags" ||
+          current.name.trim().toLowerCase() === SYSTEM_DEFAULT_GROUP_NAME
             ? (() => {
                 const targetName = target.name.trim();
                 const normalizedTarget = normalizeChannelName(targetName);
@@ -861,10 +651,15 @@ export function RoutingConfigEditor({
         id: existingDefault?.id ?? makeClientId(),
         name: SYSTEM_DEFAULT_GROUP_NAME,
         description: existingDefault?.description ?? "",
-        strategy: normalizeRoutingStrategy(groupDraft.strategy),
+        strategy: strategyFromScheduling(groupDraft.scheduling),
+        scheduling: groupDraft.scheduling,
         excludeFromDefault: false,
         matchMode: "channels",
-        channels: existingDefault ? cloneMembers(existingDefault.channels) : [],
+        // Membership of the root group is implicit (every channel without a
+        // prefix), so the draft's channel rows exist only to carry weights.
+        // Serialization keeps them out of `match.channels` to avoid freezing
+        // today's channel list into an explicit match.
+        channels: cloneMembers(groupDraft.channels),
         tags: [],
         allowedModels,
       };
@@ -890,7 +685,8 @@ export function RoutingConfigEditor({
         id: groupEditorId ?? makeClientId(),
         name: groupName,
         description: groupDraft.description.trim(),
-        strategy: normalizeRoutingStrategy(groupDraft.strategy),
+        strategy: strategyFromScheduling(groupDraft.scheduling),
+        scheduling: groupDraft.scheduling,
         excludeFromDefault:
           groupDraft.excludeFromDefault && groupName.toLowerCase() !== SYSTEM_DEFAULT_GROUP_NAME,
         matchMode: groupDraft.matchMode,
@@ -1165,14 +961,18 @@ export function RoutingConfigEditor({
         width: "w-[190px] min-w-[190px]",
         cellClassName: "min-w-0 whitespace-nowrap text-slate-700 dark:text-white/75",
         render: (group) => {
-          const summary =
-            group.system || group.strategy === "fill-first" || group.strategy === "session-sticky"
-              ? routingStrategyLabel(t, group.strategy)
-              : summarizePriorityMode(
-                  resolveGroupChannels(group),
-                  t("channel_groups_page.round_robin_mode"),
-                  t("channel_groups_page.priority_short"),
-                );
+          // The distribution and the weights are independent facts, so both are
+          // shown. The old column hid weights entirely for sticky/fill-first
+          // groups, which is exactly where a mis-set weight did the most damage.
+          const scheduling = group.scheduling ?? schedulingFromStrategy(group.strategy);
+          const weights = summarizePriorityMode(
+            resolveGroupChannels(group),
+            "",
+            t("channel_groups_page.priority_short"),
+          );
+          const summary = weights
+            ? `${schedulingLabel(t, scheduling)} · ${weights}`
+            : schedulingLabel(t, scheduling);
           return (
             <OverflowTooltip content={summary} className="block min-w-0">
               <span className="block truncate">{summary}</span>
@@ -1310,7 +1110,7 @@ export function RoutingConfigEditor({
       },
       {
         key: "priority",
-        label: t("channel_groups_page.channel_priority_label"),
+        label: t("channel_groups_page.channel_weight_label"),
         width: COLUMN_WIDTH.badgeGroup,
         cellClassName: "whitespace-nowrap",
         render: (channel) => (
@@ -1758,40 +1558,122 @@ export function RoutingConfigEditor({
                     scrollbarVisibility="always"
                   >
                     <Field
-                      label={t("channel_groups_page.routing_strategy_label")}
-                      tooltip={t("channel_groups_page.routing_strategy_tooltip")}
+                      label={t("channel_groups_page.distribution_label")}
+                      tooltip={t("channel_groups_page.distribution_tooltip")}
+                      hint={t("channel_groups_page.distribution_hint")}
                     >
                       <Select
-                        aria-label={t("channel_groups_page.routing_strategy_label")}
-                        value={groupDraft.strategy}
+                        aria-label={t("channel_groups_page.distribution_label")}
+                        value={groupDraft.scheduling.distribution}
                         disabled={disabled}
                         className="w-full"
                         options={[
                           {
-                            value: "round-robin",
-                            label: t("channel_groups_page.routing_strategy_round_robin"),
+                            value: "weighted",
+                            label: t("channel_groups_page.distribution_weighted"),
+                          },
+                          {
+                            value: "least-load",
+                            label: t("channel_groups_page.distribution_least_load"),
                           },
                           {
                             value: "fill-first",
-                            label: t("channel_groups_page.routing_strategy_fill_first"),
-                          },
-                          {
-                            value: "session-sticky",
-                            label: t("channel_groups_page.routing_strategy_session_sticky"),
+                            label: t("channel_groups_page.distribution_fill_first"),
                           },
                         ]}
                         onChange={(value) => {
                           setGroupDraft((current) => ({
                             ...current,
-                            strategy: normalizeRoutingStrategy(value),
+                            scheduling: {
+                              ...current.scheduling,
+                              distribution: normalizeDistribution(value),
+                            },
                           }));
                         }}
                       />
                     </Field>
 
+                    <label className={[surface({ tone: "inset", radius: "lg" }), "flex items-start gap-3 px-3 py-3 text-sm"].join(" ")}>
+                      <Checkbox
+                        checked={groupDraft.scheduling.sticky.enabled}
+                        onCheckedChange={(checked) =>
+                          setGroupDraft((current) => ({
+                            ...current,
+                            scheduling: {
+                              ...current.scheduling,
+                              sticky: { ...current.scheduling.sticky, enabled: checked },
+                            },
+                          }))
+                        }
+                        disabled={disabled}
+                        aria-label={t("channel_groups_page.sticky_enabled_label")}
+                        className="mt-0.5"
+                      />
+                      <span className="min-w-0">
+                        <span className="flex items-center gap-1.5 font-semibold text-slate-900 dark:text-white">
+                          <span>{t("channel_groups_page.sticky_enabled_label")}</span>
+                          <InfoTooltip content={t("channel_groups_page.sticky_enabled_tooltip")} />
+                        </span>
+                        <span className="mt-1 block text-xs leading-5 text-slate-500 dark:text-white/55">
+                          {t("channel_groups_page.sticky_enabled_hint")}
+                        </span>
+                      </span>
+                    </label>
+
+                    {groupDraft.scheduling.sticky.enabled ? (
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <Field
+                          label={t("channel_groups_page.sticky_max_requests_label")}
+                          hint={t("channel_groups_page.sticky_max_requests_hint")}
+                        >
+                          <TextInput
+                            value={groupDraft.scheduling.sticky.maxRequests}
+                            onChange={(event) => {
+                              const value = event.currentTarget.value;
+                              if (!/^\d*$/.test(value)) return;
+                              setGroupDraft((current) => ({
+                                ...current,
+                                scheduling: {
+                                  ...current.scheduling,
+                                  sticky: { ...current.scheduling.sticky, maxRequests: value },
+                                },
+                              }));
+                            }}
+                            placeholder={String(DEFAULT_STICKY_MAX_REQUESTS)}
+                            inputMode="numeric"
+                            aria-label={t("channel_groups_page.sticky_max_requests_label")}
+                            disabled={disabled}
+                          />
+                        </Field>
+                        <Field
+                          label={t("channel_groups_page.sticky_release_label")}
+                          hint={t("channel_groups_page.sticky_release_hint")}
+                        >
+                          <TextInput
+                            value={groupDraft.scheduling.sticky.releaseAtLoad}
+                            onChange={(event) => {
+                              const value = event.currentTarget.value;
+                              if (!/^\d*\.?\d*$/.test(value)) return;
+                              setGroupDraft((current) => ({
+                                ...current,
+                                scheduling: {
+                                  ...current.scheduling,
+                                  sticky: { ...current.scheduling.sticky, releaseAtLoad: value },
+                                },
+                              }));
+                            }}
+                            placeholder="0.8"
+                            inputMode="decimal"
+                            aria-label={t("channel_groups_page.sticky_release_label")}
+                            disabled={disabled}
+                          />
+                        </Field>
+                      </div>
+                    ) : null}
+
                     {!editingSystemDefaultGroup ? (
                       <>
-                        <label className="flex items-start gap-3 rounded-lg border border-slate-900/8 bg-slate-50 px-3 py-3 text-sm dark:border-white/8 dark:bg-neutral-900/60">
+                        <label className={[surface({ tone: "inset", radius: "lg" }), "flex items-start gap-3 px-3 py-3 text-sm"].join(" ")}>
                           <Checkbox
                             checked={groupDraft.excludeFromDefault}
                             onCheckedChange={(checked) =>
@@ -1941,35 +1823,41 @@ export function RoutingConfigEditor({
                           )}
                         </div>
 
-                        <DataTable<RoutingChannelGroupMemberEntry>
-                          tableId="routing-channel-group-members"
-                          rows={resolvedDraftChannels}
-                          columns={groupMemberColumns}
-                          rowKey={(channel) => channel.id}
-                          virtualize={false}
-                          rowHeight={52}
-                          height="h-auto"
-                          minHeight="min-h-0"
-                          minWidth="min-w-[640px]"
-                          caption={
-                            groupDraft.matchMode === "tags"
-                              ? t("channel_groups_page.matched_channel_label")
-                              : t("channel_groups_page.select_channel_label")
-                          }
-                          emptyText={
-                            groupDraft.matchMode === "tags"
-                              ? t("channel_groups_page.empty_matched_channels")
-                              : t("channel_groups_page.empty_group_channels")
-                          }
-                          rowClassName={(channel) =>
-                            draftStaleChannelIds.has(channel.id)
-                              ? "bg-rose-50/70 dark:bg-rose-500/10"
-                              : ""
-                          }
-                          naturalFlow
-                        />
                       </>
                     ) : null}
+
+                    {/* Shown for every group, including the root path: this is
+                        the only place per-channel weights can be set, and the
+                        root group used to hide it entirely. */}
+                    <DataTable<RoutingChannelGroupMemberEntry>
+                      tableId="routing-channel-group-members"
+                      rows={resolvedDraftChannels}
+                      columns={groupMemberColumns}
+                      rowKey={(channel) => channel.id}
+                      virtualize={false}
+                      rowHeight={52}
+                      height="h-auto"
+                      minHeight="min-h-0"
+                      minWidth="min-w-[640px]"
+                      caption={
+                        editingSystemDefaultGroup
+                          ? t("channel_groups_page.default_members_label")
+                          : groupDraft.matchMode === "tags"
+                            ? t("channel_groups_page.matched_channel_label")
+                            : t("channel_groups_page.select_channel_label")
+                      }
+                      emptyText={
+                        groupDraft.matchMode === "tags"
+                          ? t("channel_groups_page.empty_matched_channels")
+                          : t("channel_groups_page.empty_group_channels")
+                      }
+                      rowClassName={(channel) =>
+                        draftStaleChannelIds.has(channel.id)
+                          ? "bg-rose-50/70 dark:bg-rose-500/10"
+                          : ""
+                      }
+                      naturalFlow
+                    />
                   </ScrollArea>
                 </TabsContent>
 

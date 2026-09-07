@@ -22,6 +22,8 @@ export {
   resolveCodexResetCreditExpirations,
   resolveCodexResetCreditCount,
   resolveCodexChatgptAccountId,
+  resolveCodexResetCreditCandidates,
+  type CodexResetCreditCandidate,
 } from "@features/quota-preview/quota-codex";
 export { type ClaudeUsagePayload } from "@features/quota-preview/quota-claude";
 export { buildClaudeItems, parseClaudeUsagePayload } from "@features/quota-preview/quota-claude";
@@ -128,7 +130,13 @@ export const CODEX_RESET_CREDITS_CONSUME_URL =
 export const CODEX_REQUEST_HEADERS = {
   Authorization: "Bearer $TOKEN$",
   "Content-Type": "application/json",
-  "User-Agent": "codex_cli_rs/0.76.0 (Debian 13.0.0; x86_64) WindowsTerminal",
+  "User-Agent": "codex_cli_rs/0.149.1 (Mac OS 26.3.1; arm64) iTerm.app/3.6.9",
+  Originator: "Codex Desktop",
+  "OpenAI-Beta": "codex-1",
+  Accept: "application/json",
+  "Sec-Fetch-Site": "none",
+  "Sec-Fetch-Mode": "no-cors",
+  "Sec-Fetch-Dest": "empty",
 };
 
 export const CLAUDE_USAGE_URL = "https://api.anthropic.com/api/oauth/usage";

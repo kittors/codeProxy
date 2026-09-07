@@ -76,10 +76,7 @@ type AuthFilesConfirmAction =
   | { type: "deleteSelection"; names: string[] }
   | { type: "resetCredit"; file: AuthFileItem };
 
-const wait = (ms: number) =>
-  new Promise<void>((resolve) => {
-    window.setTimeout(resolve, ms);
-  });
+const wait = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms));
 
 export function AuthFilesPage() {
   const { t } = useTranslation();
@@ -95,8 +92,7 @@ export function AuthFilesPage() {
     : true;
   const [searchParams] = useSearchParams();
 
-  const [configModalTab, setConfigModalTab] =
-    useState<AuthFilesConfigModalTab | null>(null);
+  const [configModalTab, setConfigModalTab] = useState<AuthFilesConfigModalTab | null>(null);
   const [configSaving, setConfigSaving] = useState(false);
   const {
     isPending,

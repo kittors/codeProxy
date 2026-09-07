@@ -2002,7 +2002,7 @@
   "channel_groups_page": {
     "title": "Channel Groups Management",
     "routing_strategy_label": "In-group scheduling",
-    "routing_strategy_hint": "Applies only among candidate channels inside the same group. Equal priority rotates; higher priority wins first.",
+    "routing_strategy_hint": "Relative share: empty means 1, and 0 takes the channel out of scheduling.",
     "routing_strategy_tooltip": "round-robin rotates candidates; fill-first keeps using the first available candidate; session-sticky keeps a stable client session on one channel when possible.",
     "routing_strategy_round_robin": "Round robin",
     "routing_strategy_fill_first": "Prefer first available",
@@ -2118,7 +2118,23 @@
     "strip_prefix_off": "Strip prefix: off",
     "saved": "Channel group configuration saved",
     "save_failed": "Failed to save channel group configuration",
-    "load_failed": "Failed to load channel group configuration"
+    "load_failed": "Failed to load channel group configuration",
+    "distribution_label": "Distribution",
+    "distribution_tooltip": "Decides which channel a new conversation lands on. Session stickiness is a constraint layered on top of it, not a replacement for it.",
+    "distribution_hint": "Under weighted distribution an empty weight means 1, and 0 excludes the channel.",
+    "distribution_weighted": "Weighted share",
+    "distribution_least_load": "Least loaded first",
+    "distribution_fill_first": "Fill one before the next",
+    "sticky_enabled_label": "Enable session stickiness",
+    "sticky_enabled_tooltip": "Keeps one conversation on the same channel so the upstream prefix cache keeps hitting. New conversations are still placed by the distribution above.",
+    "sticky_enabled_hint": "Without a bound, a long conversation holds the same account until it gets rate limited.",
+    "sticky_max_requests_label": "Requests per session",
+    "sticky_max_requests_hint": "Re-pick after a conversation has used one channel this many times. Empty uses the default.",
+    "sticky_release_label": "Release above load",
+    "sticky_release_hint": "Move off the bound channel once its load reaches this ratio (0-1), instead of waiting for a rate limit. Empty never releases early.",
+    "sticky_badge": "Sticky",
+    "default_members_label": "Default pool members",
+    "channel_weight_label": "Weight"
   },
   "ui": {
     "loading": "Loading…",

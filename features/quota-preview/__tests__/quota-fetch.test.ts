@@ -122,6 +122,14 @@ describe("fetchQuota for codex", () => {
 
 describe("consumeCodexResetCredit", () => {
   test("posts a redeem request id to the ChatGPT reset-credit consume endpoint", async () => {
+    // Details query returns empty credits
+    mocks.request.mockResolvedValueOnce({
+      statusCode: 200,
+      header: {},
+      bodyText: "",
+      body: { credits: [] },
+    });
+    // Consume returns success
     mocks.request.mockResolvedValueOnce({
       statusCode: 200,
       header: {},
@@ -137,8 +145,8 @@ describe("consumeCodexResetCredit", () => {
       id_token: buildSyntheticCodexIdToken("acct-111"),
     } as any);
 
-    expect(mocks.request).toHaveBeenCalledTimes(1);
-    const payload = mocks.request.mock.calls[0]?.[0];
+    expect(mocks.request).toHaveBeenCalledTimes(2);
+    const payload = mocks.request.mock.calls[1]?.[0];
     expect(payload).toEqual(
       expect.objectContaining({
         authIndex: "auth-codex-alpha",
@@ -157,6 +165,42 @@ describe("consumeCodexResetCredit", () => {
       ),
     });
   });
+  test("consumes specific credit_id in FIFO order when credits are available", async () => {
+    mocks.request.mockResolvedValueOnce({
+      statusCode: 200,
+      header: {},
+      bodyText: "",
+      body: {
+        credits: [
+          { id: "credit-later", expires_at: "2026-08-10T00:00:00Z" },
+          { id: "credit-earlier", expires_at: "2026-08-01T00:00:00Z" },
+        ],
+      },
+    });
+    mocks.request.mockResolvedValueOnce({
+      statusCode: 200,
+      header: {},
+      bodyText: "",
+      body: { code: "success", windows_reset: 1 },
+    });
+
+    await consumeCodexResetCredit({
+      name: "codex-alpha@example.test-plus.json",
+      type: "codex",
+      provider: "codex",
+      auth_index: "auth-codex-alpha",
+    } as any);
+
+    expect(mocks.request).toHaveBeenCalledTimes(2);
+    const consumePayload = mocks.request.mock.calls[1]?.[0];
+    expect(JSON.parse(consumePayload.data)).toEqual({
+      redeem_request_id: expect.stringMatching(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+      ),
+      credit_id: "credit-earlier",
+    });
+  });
+
 });
 
 describe("fetchQuota for antigravity", () => {
