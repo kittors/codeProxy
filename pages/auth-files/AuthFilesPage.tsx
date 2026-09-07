@@ -76,10 +76,7 @@ type AuthFilesConfirmAction =
   | { type: "deleteSelection"; names: string[] }
   | { type: "resetCredit"; file: AuthFileItem };
 
-const wait = (ms: number) =>
-  new Promise<void>((resolve) => {
-    window.setTimeout(resolve, ms);
-  });
+const wait = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms));
 
 export function AuthFilesPage() {
   const { t } = useTranslation();
@@ -95,8 +92,7 @@ export function AuthFilesPage() {
     : true;
   const [searchParams] = useSearchParams();
 
-  const [configModalTab, setConfigModalTab] =
-    useState<AuthFilesConfigModalTab | null>(null);
+  const [configModalTab, setConfigModalTab] = useState<AuthFilesConfigModalTab | null>(null);
   const [configSaving, setConfigSaving] = useState(false);
   const {
     isPending,
@@ -575,11 +571,13 @@ export function AuthFilesPage() {
       if (provider === "codex" || provider === "kimi" || provider === "claude") {
         void refreshQuota(file, provider)
           .catch(() => undefined)
-          .finally(() => void refreshDetailTrend(file, { silent: true }));
+          .finally(() => {
+            if (detailFile?.name === file.name) void refreshDetailTrend(file, { silent: true });
+          });
       }
       return openPromise;
     },
-    [openDetail, refreshDetailTrend, refreshQuota],
+    [detailFile?.name, openDetail, refreshDetailTrend, refreshQuota],
   );
 
   const requestResetCredit = useCallback(
