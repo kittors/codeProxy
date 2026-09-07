@@ -1,11 +1,27 @@
 import { apiClient } from "../client/client";
 
+/** Legacy enum; superseded by RoutingConfigScheduling but still written on save. */
 export type RoutingStrategy = "round-robin" | "fill-first" | "session-sticky";
+
+export type RoutingDistribution = "weighted" | "least-load" | "fill-first";
+
+export interface RoutingConfigSticky {
+  enabled?: boolean;
+  "max-requests"?: number;
+  "release-at-load"?: number;
+}
+
+export interface RoutingConfigScheduling {
+  distribution?: RoutingDistribution;
+  sticky?: RoutingConfigSticky;
+  "channel-weights"?: Record<string, number>;
+}
 
 export interface RoutingConfigGroupItem {
   name?: string;
   description?: string;
   strategy?: RoutingStrategy;
+  scheduling?: RoutingConfigScheduling;
   "exclude-from-default"?: boolean;
   match?: {
     channels?: string[];

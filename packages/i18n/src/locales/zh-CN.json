@@ -3461,7 +3461,7 @@
   "channel_groups_page": {
     "title": "渠道分组管理",
     "routing_strategy_label": "分组内调度策略",
-    "routing_strategy_hint": "仅在同一分组候选渠道之间生效；优先级按权重调度，留空按 1，0 表示不参与。",
+    "routing_strategy_hint": "相对权重：留空按 1，填 0 表示该渠道不参与调度。",
     "routing_strategy_tooltip": "round-robin 会轮换候选渠道；fill-first 会优先持续使用第一个可用渠道；session-sticky 会按会话信号尽量固定到同一渠道。",
     "routing_strategy_round_robin": "轮询分配",
     "routing_strategy_fill_first": "优先首个可用渠道",
@@ -3596,7 +3596,23 @@
     "strip_prefix_off": "移除前缀：关闭",
     "saved": "渠道分组配置已保存",
     "save_failed": "保存渠道分组配置失败",
-    "load_failed": "加载渠道分组配置失败"
+    "load_failed": "加载渠道分组配置失败",
+    "distribution_label": "分配方式",
+    "distribution_tooltip": "决定新会话落到哪个渠道。会话粘性是叠加在它之上的约束，不会取代它。",
+    "distribution_hint": "按权重分配时，权重留空按 1，填 0 表示该渠道不参与。",
+    "distribution_weighted": "按权重分配",
+    "distribution_least_load": "最少负载优先",
+    "distribution_fill_first": "填满一个再换下一个",
+    "sticky_enabled_label": "启用会话粘性",
+    "sticky_enabled_tooltip": "同一会话尽量固定在同一个渠道上，以命中上游的前缀缓存。新会话仍按上面的分配方式来分。",
+    "sticky_enabled_hint": "不设上限时，一个长会话会一直占用同一个账号，直到它被限流。",
+    "sticky_max_requests_label": "单会话请求上限",
+    "sticky_max_requests_hint": "同一会话在一个渠道上累计这么多次请求后，重新分配。留空使用默认值。",
+    "sticky_release_label": "负载超过时释放",
+    "sticky_release_hint": "绑定渠道的负载达到该比例（0-1）时提前换号，不用等到限流。留空表示不提前释放。",
+    "sticky_badge": "会话粘性",
+    "default_members_label": "默认调度池成员",
+    "channel_weight_label": "权重"
   },
   "end_users": {
     "title": "门户账号",

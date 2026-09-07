@@ -4,7 +4,11 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import i18n from "@code-proxy/i18n";
 import type { ChannelGroupChannelDetail } from "@code-proxy/api-client/endpoints/channel-groups";
-import { DEFAULT_VISUAL_VALUES, type VisualConfigValues } from "@features/visual-config-editor";
+import {
+  DEFAULT_VISUAL_VALUES,
+  schedulingFromStrategy,
+  type VisualConfigValues,
+} from "@features/visual-config-editor";
 import { RoutingConfigEditor, type RoutingModelOption } from "@features/routing-config-editor";
 import { ThemeProvider } from "@code-proxy/ui";
 import { ToastProvider } from "@code-proxy/ui";
@@ -86,6 +90,15 @@ function Harness({
       <div data-testid="route-count">{values.routingPathRoutes.length}</div>
       <div data-testid="group-name">{values.routingChannelGroups[0]?.name ?? ""}</div>
       <div data-testid="group-strategy">{values.routingChannelGroups[0]?.strategy ?? ""}</div>
+      <div data-testid="group-distribution">
+        {values.routingChannelGroups[0]?.scheduling?.distribution ?? ""}
+      </div>
+      <div data-testid="group-sticky">
+        {values.routingChannelGroups[0]?.scheduling?.sticky.enabled ? "on" : "off"}
+      </div>
+      <div data-testid="group-sticky-max">
+        {values.routingChannelGroups[0]?.scheduling?.sticky.maxRequests ?? ""}
+      </div>
       <div data-testid="channel-name">
         {values.routingChannelGroups[0]?.channels[0]?.name ?? ""}
       </div>
@@ -138,8 +151,8 @@ describe("RoutingConfigEditor", () => {
     render(<Harness />);
 
     await user.click(screen.getByRole("button", { name: "新增分组" }));
-    await user.click(screen.getByRole("combobox", { name: "分组内调度策略" }));
-    await user.click(screen.getByRole("option", { name: "优先首个可用渠道" }));
+    await user.click(screen.getByRole("combobox", { name: "分配方式" }));
+    await user.click(screen.getByRole("option", { name: "填满一个再换下一个" }));
     await user.type(screen.getByPlaceholderText("pro"), "team-fill-first");
     await user.type(screen.getByPlaceholderText("/pro"), "/team-fill-first");
     await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
@@ -157,8 +170,7 @@ describe("RoutingConfigEditor", () => {
     render(<Harness />);
 
     await user.click(screen.getByRole("button", { name: "新增分组" }));
-    await user.click(screen.getByRole("combobox", { name: "分组内调度策略" }));
-    await user.click(screen.getByRole("option", { name: "会话粘性" }));
+    await user.click(screen.getByRole("checkbox", { name: "启用会话粘性" }));
     await user.type(screen.getByPlaceholderText("pro"), "team-session");
     await user.type(screen.getByPlaceholderText("/pro"), "/team-session");
     await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
@@ -182,6 +194,7 @@ describe("RoutingConfigEditor", () => {
               name: "kimicode",
               description: "",
               strategy: "fill-first",
+              scheduling: schedulingFromStrategy("fill-first"),
               channels: [
                 { id: "channel-main", name: "Main Codex", priority: "" },
                 { id: "channel-backup", name: "Backup Claude", priority: "" },
@@ -194,7 +207,7 @@ describe("RoutingConfigEditor", () => {
     );
 
     const row = screen.getByRole("row", { name: /kimicode/i });
-    expect(row).toHaveTextContent("优先首个可用渠道");
+    expect(row).toHaveTextContent("填满一个再换下一个");
   });
 
   test("shows session-sticky as the table scheduling mode for that group", async () => {
@@ -210,6 +223,7 @@ describe("RoutingConfigEditor", () => {
               name: "session-pool",
               description: "",
               strategy: "session-sticky",
+              scheduling: schedulingFromStrategy("session-sticky"),
               channels: [
                 { id: "channel-main", name: "Main Codex", priority: "" },
                 { id: "channel-backup", name: "Backup Claude", priority: "" },
@@ -238,6 +252,7 @@ describe("RoutingConfigEditor", () => {
               name: "sticky-actions",
               description: "",
               strategy: "round-robin",
+              scheduling: schedulingFromStrategy("round-robin"),
               channels: [{ id: "channel-main", name: "Main Codex", priority: "" }],
               allowedModels: [],
             },
@@ -301,6 +316,7 @@ describe("RoutingConfigEditor", () => {
               name: "deepseekv4flash+chatgpt",
               description: "",
               strategy: "round-robin",
+              scheduling: schedulingFromStrategy("round-robin"),
               allowedModels: [],
               channels: [{ id: "channel-main-codex", name: "Main Codex", priority: "" }],
             },
@@ -385,7 +401,7 @@ describe("RoutingConfigEditor", () => {
     const tabViewport = screen.getByTestId("group-editor-tab-viewport");
     expect(tabViewport).toHaveClass("flex-1");
     expect(tabViewport).not.toHaveClass("overflow-hidden");
-    expect(screen.getByText("分组内调度策略")).toBeInTheDocument();
+    expect(screen.getByText("分配方式")).toBeInTheDocument();
 
     const basicScrollArea = screen.getByTestId("group-editor-basic-scroll-area");
     const basicScrollViewport = basicScrollArea.querySelector("[data-scroll-area-viewport]");
@@ -539,7 +555,7 @@ describe("RoutingConfigEditor", () => {
     const row = screen.getByRole("row", { name: /系统默认/ });
     expect(row).toHaveTextContent("/");
     expect(row).toHaveTextContent("默认调度池");
-    expect(row).toHaveTextContent("轮询分配");
+    expect(row).toHaveTextContent("按权重分配");
     expect(screen.queryByText("系统内置，只读")).not.toBeInTheDocument();
     expect(screen.queryByText("models")).not.toBeInTheDocument();
     expect(screen.queryByText("chat")).not.toBeInTheDocument();
@@ -570,8 +586,7 @@ describe("RoutingConfigEditor", () => {
       "aria-selected",
       "true",
     );
-    await user.click(screen.getByRole("combobox", { name: "分组内调度策略" }));
-    await user.click(screen.getByRole("option", { name: "会话粘性" }));
+    await user.click(screen.getByRole("checkbox", { name: "启用会话粘性" }));
     await user.click(screen.getByRole("button", { name: "保存" }));
 
     expect(screen.getByTestId("group-name")).toHaveTextContent("default");
@@ -595,8 +610,7 @@ describe("RoutingConfigEditor", () => {
 
     const row = screen.getByRole("row", { name: /系统默认/ });
     await user.click(within(row).getByRole("button", { name: "编辑分组" }));
-    await user.click(screen.getByRole("combobox", { name: "分组内调度策略" }));
-    await user.click(screen.getByRole("option", { name: "会话粘性" }));
+    await user.click(screen.getByRole("checkbox", { name: "启用会话粘性" }));
     await user.click(screen.getByTestId("group-editor-save-button"));
 
     const saveButton = screen.getByTestId("group-editor-save-button");
@@ -631,8 +645,7 @@ describe("RoutingConfigEditor", () => {
 
     const row = screen.getByRole("row", { name: /系统默认/ });
     await user.click(within(row).getByRole("button", { name: "编辑分组" }));
-    await user.click(screen.getByRole("combobox", { name: "分组内调度策略" }));
-    await user.click(screen.getByRole("option", { name: "会话粘性" }));
+    await user.click(screen.getByRole("checkbox", { name: "启用会话粘性" }));
     await user.click(screen.getByTestId("group-editor-save-button"));
 
     await waitFor(() => {
@@ -738,6 +751,7 @@ describe("RoutingConfigEditor", () => {
               name: "team-a",
               description: "Team A group",
               strategy: "round-robin",
+              scheduling: schedulingFromStrategy("round-robin"),
               allowedModels: [],
               channels: [{ id: "channel-main-codex", name: "Main Codex", priority: "" }],
             },
@@ -788,6 +802,7 @@ describe("RoutingConfigEditor", () => {
               name: "legacy",
               description: "历史分组",
               strategy: "round-robin",
+              scheduling: schedulingFromStrategy("round-robin"),
               allowedModels: [],
               channels: [
                 { id: "channel-stale", name: "Legacy Claude", priority: "90" },
@@ -856,6 +871,7 @@ describe("RoutingConfigEditor", () => {
               name: "chatgpt-mix",
               description: "pro 和 plus 账号池的混合池",
               strategy: "round-robin",
+              scheduling: schedulingFromStrategy("round-robin"),
               allowedModels: [],
               channels: [
                 { id: "channel-deleted", name: "GptPlus6", priority: "20" },
@@ -932,6 +948,7 @@ describe("RoutingConfigEditor", () => {
               name: "active-pool",
               description: "",
               strategy: "round-robin",
+              scheduling: schedulingFromStrategy("round-robin"),
               allowedModels: [],
               channels: [{ id: "channel-active", name: "Shared Codex", priority: "" }],
             },
@@ -940,6 +957,7 @@ describe("RoutingConfigEditor", () => {
               name: "disabled-pool",
               description: "",
               strategy: "round-robin",
+              scheduling: schedulingFromStrategy("round-robin"),
               allowedModels: [],
               channels: [{ id: "channel-disabled", name: "Shared Codex", priority: "" }],
             },
@@ -954,5 +972,101 @@ describe("RoutingConfigEditor", () => {
     const dialog = screen.getByRole("dialog", { name: "编辑分组" });
     const activeChannelRow = within(dialog).getByRole("row", { name: /Shared Codex/ });
     expect(within(activeChannelRow).queryByText("已禁用")).not.toBeInTheDocument();
+  });
+});
+
+describe("RoutingConfigEditor scheduling", () => {
+  const defaultPoolDetails = {
+    default: {
+      "main codex": { name: "Main Codex" },
+      "backup claude": { name: "Backup Claude" },
+    },
+  } as Record<string, Record<string, ChannelGroupChannelDetail>>;
+
+  // The whole point of the new model: an operator can keep conversations pinned
+  // *and* still choose how new ones are spread. The old enum made these two
+  // settings mutually exclusive.
+  test("combines session stickiness with a distribution instead of replacing it", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+
+    render(<Harness />);
+
+    await user.click(screen.getByRole("button", { name: "新增分组" }));
+    await user.click(screen.getByRole("combobox", { name: "分配方式" }));
+    await user.click(screen.getByRole("option", { name: "最少负载优先" }));
+    await user.click(screen.getByRole("checkbox", { name: "启用会话粘性" }));
+    await user.type(screen.getByPlaceholderText("pro"), "team-mixed");
+    await user.type(screen.getByPlaceholderText("/pro"), "/team-mixed");
+    await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
+    await user.click(screen.getByRole("option", { name: "Main Codex" }));
+    await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
+    await user.click(screen.getByRole("button", { name: "添加" }));
+
+    expect(screen.getByTestId("group-distribution")).toHaveTextContent("least-load");
+    expect(screen.getByTestId("group-sticky")).toHaveTextContent("on");
+    // The legacy mirror stays coherent for a backend that predates the block.
+    expect(screen.getByTestId("group-strategy")).toHaveTextContent("session-sticky");
+  });
+
+  test("persists the sticky request bound so one session cannot hold an account forever", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+
+    render(<Harness />);
+
+    await user.click(screen.getByRole("button", { name: "新增分组" }));
+    await user.click(screen.getByRole("checkbox", { name: "启用会话粘性" }));
+    await user.type(screen.getByRole("textbox", { name: "单会话请求上限" }), "50");
+    await user.type(screen.getByPlaceholderText("pro"), "team-bounded");
+    await user.type(screen.getByPlaceholderText("/pro"), "/team-bounded");
+    await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
+    await user.click(screen.getByRole("option", { name: "Main Codex" }));
+    await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
+    await user.click(screen.getByRole("button", { name: "添加" }));
+
+    expect(screen.getByTestId("group-sticky-max")).toHaveTextContent("50");
+  });
+
+  // The root path used to expose a single strategy dropdown and nothing else,
+  // so there was no way to weight the accounts it schedules across.
+  test("exposes the root path members so their weights can be configured", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+
+    render(<Harness availableChannelDetailsByGroup={defaultPoolDetails} />);
+
+    const row = screen.getByRole("row", { name: /系统默认/ });
+    await user.click(within(row).getByRole("button", { name: "编辑分组" }));
+
+    const memberTable = screen.getByRole("table", { name: /默认调度池成员/ });
+    expect(within(memberTable).getByText("Main Codex")).toBeInTheDocument();
+    expect(within(memberTable).getByText("Backup Claude")).toBeInTheDocument();
+
+    const weightInputs = within(memberTable).getAllByPlaceholderText("1");
+    await user.type(weightInputs[0], "3");
+    await user.click(screen.getByRole("button", { name: "保存" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("group-name")).toHaveTextContent("default");
+    });
+    expect(screen.getByTestId("channel-priority")).toHaveTextContent("3");
+  });
+
+  test("offers the root path the same distribution choices as any other group", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+
+    render(<Harness availableChannelDetailsByGroup={defaultPoolDetails} />);
+
+    const row = screen.getByRole("row", { name: /系统默认/ });
+    await user.click(within(row).getByRole("button", { name: "编辑分组" }));
+    await user.click(screen.getByRole("combobox", { name: "分配方式" }));
+    await user.click(screen.getByRole("option", { name: "最少负载优先" }));
+    await user.click(screen.getByRole("button", { name: "保存" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("group-distribution")).toHaveTextContent("least-load");
+    });
   });
 });

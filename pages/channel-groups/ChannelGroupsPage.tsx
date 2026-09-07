@@ -16,6 +16,9 @@ import { normalizeProviderKey, normalizeTagValue } from "@code-proxy/domain";
 import {
   DEFAULT_VISUAL_VALUES,
   makeClientId,
+  parseScheduling,
+  serializeScheduling,
+  strategyFromScheduling,
   type RoutingStrategy,
   type VisualConfigValues,
 } from "@features/visual-config-editor";
@@ -102,7 +105,8 @@ function hydrateRoutingValues(payload: RoutingConfigItem | undefined): VisualCon
   next.routingIncludeDefaultGroup = payload?.["include-default-group"] !== false;
   next.routingChannelGroups = Array.isArray(payload?.["channel-groups"])
     ? payload["channel-groups"].map((group, index) => {
-        const priorityMap = group?.["channel-priorities"] ?? {};
+        const priorityMap =
+          group?.scheduling?.["channel-weights"] ?? group?.["channel-priorities"] ?? {};
         const channelNames = Array.isArray(group?.match?.channels) ? group.match.channels : [];
         const tags = normalizeRoutingTags(group?.match?.tags);
         const mergedNames = Array.from(
@@ -113,11 +117,16 @@ function hydrateRoutingValues(payload: RoutingConfigItem | undefined): VisualCon
             ].filter(Boolean),
           ),
         );
+        const strategy = normalizeRoutingStrategy(group?.strategy);
         return {
           id: `routing-group-${index}-${makeClientId()}`,
           name: String(group?.name ?? ""),
           description: String(group?.description ?? ""),
-          strategy: normalizeRoutingStrategy(group?.strategy),
+          strategy,
+          scheduling: parseScheduling(
+            group?.scheduling as Record<string, unknown> | undefined,
+            strategy,
+          ),
           excludeFromDefault:
             group?.["exclude-from-default"] === true &&
             String(group?.name ?? "")
@@ -168,8 +177,12 @@ function serializeRoutingValues(values: VisualConfigValues): RoutingConfigItem {
     if (group.description.trim()) {
       item.description = group.description.trim();
     }
-    item.strategy = normalizeRoutingStrategy(group.strategy);
-    if (group.excludeFromDefault && name.toLowerCase() !== "default") {
+    const isDefaultGroup = name.toLowerCase() === "default";
+    // `scheduling` is authoritative; `strategy` is written alongside it so a
+    // backend that predates the block still reads a coherent value.
+    item.strategy = strategyFromScheduling(group.scheduling);
+    item.scheduling = serializeScheduling(group.scheduling) as RoutingConfigGroupItem["scheduling"];
+    if (group.excludeFromDefault && !isDefaultGroup) {
       item["exclude-from-default"] = true;
     }
     if (group.matchMode === "tags") {
@@ -177,7 +190,7 @@ function serializeRoutingValues(values: VisualConfigValues): RoutingConfigItem {
       if (tags.length > 0) {
         item.match = { tags };
       }
-    } else {
+    } else if (!isDefaultGroup) {
       const channels = group.channels.map((channel) => channel.name.trim()).filter(Boolean);
 
       if (channels.length > 0) {
@@ -194,6 +207,7 @@ function serializeRoutingValues(values: VisualConfigValues): RoutingConfigItem {
     }, {});
     if (Object.keys(channelPriorities).length > 0) {
       item["channel-priorities"] = channelPriorities;
+      item.scheduling = { ...item.scheduling, "channel-weights": channelPriorities };
     }
     const allowedModels = Array.from(
       new Set(group.allowedModels.map((model) => model.trim()).filter(Boolean)),
