@@ -986,8 +986,7 @@ describe("ChannelGroupsPage", () => {
 
     const row = await screen.findByRole("row", { name: /系统默认/ });
     await user.click(within(row).getByRole("button", { name: "编辑分组" }));
-    await user.click(screen.getByRole("combobox", { name: "分组内调度策略" }));
-    await user.click(await screen.findByRole("option", { name: "会话粘性" }));
+    await user.click(screen.getByRole("checkbox", { name: "启用会话粘性" }));
     await user.click(screen.getByRole("button", { name: "保存" }));
 
     await waitFor(() => expect(mockedApiPut).toHaveBeenCalled());
@@ -997,7 +996,13 @@ describe("ChannelGroupsPage", () => {
         "channel-groups": [
           expect.objectContaining({
             name: "default",
+            // Legacy mirror kept for older backends...
             strategy: "session-sticky",
+            // ...alongside the authoritative block.
+            scheduling: expect.objectContaining({
+              distribution: "weighted",
+              sticky: expect.objectContaining({ enabled: true }),
+            }),
           }),
         ],
       }),
@@ -1015,8 +1020,7 @@ describe("ChannelGroupsPage", () => {
 
     const row = await screen.findByRole("row", { name: /系统默认/ });
     await user.click(within(row).getByRole("button", { name: "编辑分组" }));
-    await user.click(screen.getByRole("combobox", { name: "分组内调度策略" }));
-    await user.click(await screen.findByRole("option", { name: "会话粘性" }));
+    await user.click(screen.getByRole("checkbox", { name: "启用会话粘性" }));
     await user.click(screen.getByTestId("group-editor-save-button"));
 
     const saveButton = screen.getByTestId("group-editor-save-button");
