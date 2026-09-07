@@ -253,15 +253,10 @@ export function AuthFileDetailModal({
       setViewedIdentityProfileKey("");
       return;
     }
-    setViewedIdentityProfileKey((current) => {
-      if (current && profiles.some((profile) => profile.summary.profile_key === current)) {
-        return current;
-      }
-      return (
-        identityFingerprintDetail?.selected_profile_key ?? profiles[0]?.summary.profile_key ?? ""
-      );
-    });
-  }, [identityFingerprintDetail]);
+    setViewedIdentityProfileKey(
+      identityFingerprintDetail?.selected_profile_key ?? profiles[0]?.summary.profile_key ?? "",
+    );
+  }, [identityFingerprintDetail?.summary.account_key, identityFingerprintDetail?.summary.provider]);
   const openedDetailFileRef = useRef<string | null>(null);
   const detailOpenCounterRef = useRef(0);
   const [detailOpenKey, setDetailOpenKey] = useState("");
@@ -347,10 +342,12 @@ export function AuthFileDetailModal({
     if (!fileName) {
       openedDetailFileRef.current = null;
       setDetailOpenKey("");
+      setViewedIdentityProfileKey("");
       return;
     }
     if (openedDetailFileRef.current === fileName) return;
     openedDetailFileRef.current = fileName;
+    setViewedIdentityProfileKey("");
     detailOpenCounterRef.current += 1;
     setDetailOpenKey(`${fileName}:${detailOpenCounterRef.current}`);
   }, [detailFile?.name, open]);

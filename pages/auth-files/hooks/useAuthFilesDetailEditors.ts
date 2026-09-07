@@ -301,6 +301,8 @@ export function useAuthFilesDetailEditors(
 
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailFile, setDetailFile] = useState<AuthFileItem | null>(null);
+  const detailFileRef = useRef<AuthFileItem | null>(null);
+  detailFileRef.current = detailFile;
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailText, setDetailText] = useState("");
   const [detailTab, setDetailTab] = useState<DetailTab>("fields");
@@ -394,7 +396,9 @@ export function useAuthFilesDetailEditors(
         if (sharedDiscovery && source === "upstream" && list.length > 0) {
           providerDiscoveryCacheRef.current.set(discoveryProvider, list);
         }
-        setModelsList(list);
+        if (!detailFileRef.current || detailFileRef.current.name === file.name) {
+          setModelsList(list);
+        }
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : "";
         if (/404|not found/i.test(message)) {
@@ -445,12 +449,15 @@ export function useAuthFilesDetailEditors(
         setDetailTrendLoading(true);
       }
       setDetailTrendError(null);
-
       const request = (async () => {
         const trend = await usageApi.getAuthFileTrend(authIndex, {
           days: 7,
           hours: 5,
         });
+        const currentAuthIndex = normalizeAuthIndexValue(
+          detailFileRef.current?.auth_index ?? detailFileRef.current?.authIndex,
+        );
+        if (currentAuthIndex !== authIndex) return;
         if (shouldShowLoading) {
           setDetailTrendLoading(false);
         }
@@ -559,13 +566,6 @@ export function useAuthFilesDetailEditors(
     ],
   );
 
-  const confirmIdentityFingerprintSharedImpact = useCallback(
-    (detail: IdentityFingerprintAccountDetail): boolean => {
-      if (detail.subject_scope !== "shared") return true;
-      return window.confirm(t("auth_files.identity_shared_policy_confirm"));
-    },
-    [t],
-  );
 
   const identityFingerprintMutationError = useCallback(
     (err: unknown, fallbackKey: string): string => {
@@ -589,7 +589,7 @@ export function useAuthFilesDetailEditors(
         !profileKey
       )
         return;
-      if (!confirmIdentityFingerprintSharedImpact(detail)) return;
+
       setIdentityFingerprintSaving(true);
       setIdentityFingerprintError(null);
       try {
@@ -601,10 +601,7 @@ export function useAuthFilesDetailEditors(
           revision: detail.policy?.revision ?? 0,
         });
         applyIdentityFingerprintDetail(next);
-        notify({
-          type: "success",
-          message: t("auth_files.identity_profile_saved"),
-        });
+        notify({ type: "success", message: t("auth_files.identity_profile_saved") });
       } catch (err: unknown) {
         const message = identityFingerprintMutationError(
           err,
@@ -616,21 +613,13 @@ export function useAuthFilesDetailEditors(
         setIdentityFingerprintSaving(false);
       }
     },
-    [
-      applyIdentityFingerprintDetail,
-      confirmIdentityFingerprintSharedImpact,
-      identityFingerprintDetail,
-      identityFingerprintMutationError,
-      notify,
-      t,
-    ],
+    [applyIdentityFingerprintDetail, identityFingerprintDetail, identityFingerprintMutationError, notify, t],
   );
-
   const useIdentityFingerprintCLIPreferred = useCallback(async () => {
     const detail = identityFingerprintDetail;
     const accountKey = detail?.summary.account_key;
     if (!detail || detail.summary.provider !== "codex" || !accountKey) return;
-    if (!confirmIdentityFingerprintSharedImpact(detail)) return;
+
     setIdentityFingerprintSaving(true);
     setIdentityFingerprintError(null);
     try {
@@ -655,14 +644,7 @@ export function useAuthFilesDetailEditors(
     } finally {
       setIdentityFingerprintSaving(false);
     }
-  }, [
-    applyIdentityFingerprintDetail,
-    confirmIdentityFingerprintSharedImpact,
-    identityFingerprintDetail,
-    identityFingerprintMutationError,
-    notify,
-    t,
-  ]);
+  }, [applyIdentityFingerprintDetail, identityFingerprintDetail, identityFingerprintMutationError, notify, t]);
 
   const deleteIdentityFingerprintProfile = useCallback(
     async (profileKey: string) => {
@@ -675,7 +657,7 @@ export function useAuthFilesDetailEditors(
         !profileKey
       )
         return;
-      if (!confirmIdentityFingerprintSharedImpact(detail)) return;
+
       setIdentityFingerprintSaving(true);
       setIdentityFingerprintError(null);
       try {
@@ -700,14 +682,7 @@ export function useAuthFilesDetailEditors(
         setIdentityFingerprintSaving(false);
       }
     },
-    [
-      applyIdentityFingerprintDetail,
-      confirmIdentityFingerprintSharedImpact,
-      identityFingerprintDetail,
-      identityFingerprintMutationError,
-      notify,
-      t,
-    ],
+    [applyIdentityFingerprintDetail, identityFingerprintDetail, identityFingerprintMutationError, notify, t],
   );
 
   const openDetail = useCallback(
@@ -734,14 +709,20 @@ export function useAuthFilesDetailEditors(
       }
       try {
         const text = await authFilesApi.downloadText(file.name);
-        setDetailText(text);
+        if (detailFileRef.current?.name === file.name) {
+          setDetailText(text);
+        }
       } catch (err: unknown) {
-        notify({
-          type: "error",
-          message: err instanceof Error ? err.message : t("auth_files.read_failed"),
-        });
+        if (detailFileRef.current?.name === file.name) {
+          notify({
+            type: "error",
+            message: err instanceof Error ? err.message : t("auth_files.read_failed"),
+          });
+        }
       } finally {
-        setDetailLoading(false);
+        if (detailFileRef.current?.name === file.name) {
+          setDetailLoading(false);
+        }
       }
     },
     [identityFingerprintEnabled, loadIdentityFingerprintForDetail, notify, refreshDetailTrend, t],
