@@ -23,8 +23,5 @@ export const formatQuotaValidationError = (error: unknown, t: TFunction): string
   if (parsed.code === "period_day_legacy_conflict") {
     return t("quota.validation.period_day_legacy_conflict");
   }
-  if (parsed.code === "five_hour_quota_projection_warming") {
-    return t("quota.validation.five_hour_projection_warming");
-  }
   return parsed.message || t("common.operation_failed");
 };

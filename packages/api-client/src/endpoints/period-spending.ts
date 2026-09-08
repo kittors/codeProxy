@@ -55,8 +55,7 @@ export interface CappedKey {
 
 export type QuotaValidationErrorCode =
   | "key_period_limit_exceeds_account"
-  | "period_day_legacy_conflict"
-  | "five_hour_quota_projection_warming";
+  | "period_day_legacy_conflict";
 
 export interface QuotaValidationErrorDetails {
   period?: PeriodSpendingPeriod;
