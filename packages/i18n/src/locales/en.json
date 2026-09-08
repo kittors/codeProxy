@@ -4790,8 +4790,7 @@
     },
     "validation": {
       "key_exceeds_account": "Key {{period}} quota {{keyLimit}} exceeds the account {{period}} quota {{accountLimit}}",
-      "period_day_legacy_conflict": "Daily quota conflicts with the legacy daily spending limit.",
-      "five_hour_projection_warming": "The 5-hour quota is temporarily unavailable while usage projection warms up."
+      "period_day_legacy_conflict": "Daily quota conflicts with the legacy daily spending limit."
     },
     "lifetime_usage_hint": "{{used}} used this cycle · {{remaining}} left; grant again from Reset quota"
   },
