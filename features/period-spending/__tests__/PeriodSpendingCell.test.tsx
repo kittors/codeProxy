@@ -58,6 +58,58 @@ describe("PeriodSpendingCell", () => {
     expect(screen.getByText("Unlimited")).toBeInTheDocument();
   });
 
+  test("surfaces the 5h reset instant, and only where the backend anchors one", () => {
+    const tooltipT = (key: string, options?: Record<string, unknown>) => {
+      const labels: Record<string, string> = {
+        "quota.period.5h": "5 hours",
+        "quota.period.day": "Day",
+        "quota.used_of_limit": `${String(options?.period ?? "")} usage`,
+        "quota.window_resets_at": `resets ${String(options?.time ?? "")}`,
+      };
+      return labels[key] ?? key;
+    };
+    const resetsAt = new Date("2026-07-22T17:00:00Z");
+    render(
+      <PeriodSpendingCell
+        t={tooltipT}
+        items={[
+          {
+            period: "5h",
+            limit: 100,
+            used: 39,
+            remaining: 61,
+            window_start: "2026-07-22T12:00:00Z",
+            resets_at: resetsAt.toISOString(),
+          },
+          { period: "day", limit: 300, used: 39, remaining: 261 },
+        ]}
+      />,
+    );
+
+    expect(screen.getByTitle(`5 hours usage · resets ${resetsAt.toLocaleString()}`)).toBeTruthy();
+    // 日历周期没有服务端锚定的窗口，不能凭空造一个恢复时刻。
+    expect(screen.getByTitle("Day usage")).toBeTruthy();
+  });
+
+  test("ignores an unparsable reset instant instead of rendering Invalid Date", () => {
+    const tooltipT = (key: string, options?: Record<string, unknown>) => {
+      const labels: Record<string, string> = {
+        "quota.period.5h": "5 hours",
+        "quota.used_of_limit": `${String(options?.period ?? "")} usage`,
+        "quota.window_resets_at": `resets ${String(options?.time ?? "")}`,
+      };
+      return labels[key] ?? key;
+    };
+    render(
+      <PeriodSpendingCell
+        t={tooltipT}
+        items={[{ period: "5h", limit: 100, used: 39, remaining: 61, resets_at: "not-a-date" }]}
+      />,
+    );
+
+    expect(screen.getByTitle("5 hours usage")).toBeTruthy();
+  });
+
   test("renders template limits without fake used values", () => {
     const { container } = render(
       <PeriodSpendingLimitsCell t={t} limits={{ "5h": 100, day: 300, week: 0, month: 4000 }} />,
