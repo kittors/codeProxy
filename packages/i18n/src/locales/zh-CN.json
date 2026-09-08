@@ -4785,6 +4785,7 @@
     "account_limit_value": "账号上限 {{value}}",
     "account_unlimited": "账号不限制",
     "used_of_limit": "{{period}}：已用 {{used}}，上限 {{limit}}",
+    "window_resets_at": "{{time}} 重置",
     "lifetime_label": "累计",
     "remaining_value": "剩 {{remaining}}",
     "lifetime_remaining_detail": "累计：已用 {{used}}，上限 {{limit}}，剩余 {{remaining}}",

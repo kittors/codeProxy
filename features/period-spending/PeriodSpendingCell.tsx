@@ -55,6 +55,20 @@ const orderedItems = (items: PeriodSpendingItem[] | undefined): PeriodSpendingIt
   });
 };
 
+/**
+ * 只有 5h 是服务端锚定的窗口，到点整窗清零，因此它能给出确切的恢复时刻。
+ * 缺少 resets_at（未开窗，或日历周期）时不编造倒计时。
+ */
+const resetHint = (
+  t: (key: string, options?: Record<string, unknown>) => string,
+  item: PeriodSpendingItem,
+): string | null => {
+  if (!item.resets_at) return null;
+  const resetsAt = new Date(item.resets_at);
+  if (Number.isNaN(resetsAt.getTime())) return null;
+  return t("quota.window_resets_at", { time: resetsAt.toLocaleString() });
+};
+
 const chipTone = (ratio: number) => {
   if (ratio >= 1) {
     return "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200";
@@ -96,15 +110,17 @@ export function PeriodSpendingCell({
         const ratio = item.limit > 0 ? item.used / item.limit : 0;
         const danger = ratio >= 1;
         const warning = ratio >= 0.9 && !danger;
+        const usage = t("quota.used_of_limit", {
+          period: periodLabel(t, item.period),
+          used: formatQuotaUsd(item.used),
+          limit: formatQuotaUsd(item.limit),
+        });
+        const reset = resetHint(t, item);
         return (
           <span
             key={item.period}
             className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs font-medium tabular-nums ${chipTone(ratio)}`}
-            title={t("quota.used_of_limit", {
-              period: periodLabel(t, item.period),
-              used: formatQuotaUsd(item.used),
-              limit: formatQuotaUsd(item.limit),
-            })}
+            title={reset ? `${usage} · ${reset}` : usage}
           >
             {danger ? <AlertCircle size={13} aria-hidden="true" /> : null}
             {warning ? <AlertTriangle size={13} aria-hidden="true" /> : null}
@@ -123,7 +139,7 @@ export function PeriodSpendingCell({
 }
 
 /**
- * Rolling periods are shown as used/limit because they refill on their own; the
+ * Windowed periods are shown as used/limit because they refill on their own; the
  * lifetime cap only ever counts down, so what operators need from it is how much
  * is left before the account stops.
  */
