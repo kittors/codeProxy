@@ -2211,7 +2211,7 @@
     "param_image_desc": "Image file to edit, uploaded with multipart/form-data.",
     "param_images_desc": "Image files to edit. Repeat the multipart/form-data `image` field, up to 5 images.",
     "param_size_desc": "Optional size. Use a preset or a positive integer widthxheight value, for example 4096x2304. The longest edge must be 8192 or less, and total pixels must not exceed 8192x8192.",
-    "param_quality_desc": "Optional quality: low, medium, or high.",
+    "param_quality_desc": "Optional quality: low, medium, high, xhigh, max, or auto.",
     "param_n_desc": "Number of images to generate. Recommended range: 1-4.",
     "param_response_format_desc": "Use b64_json so request logs can preview the generated image directly.",
     "response_created_desc": "Server-side creation timestamp.",

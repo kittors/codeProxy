@@ -1880,7 +1880,7 @@
     "param_image_desc": "Файл изображения для редактирования, загружается через multipart/form-data.",
     "param_images_desc": "Файлы изображения для редактирования. Повторяйте поле `image` в multipart/form-data, максимум 5 файлов.",
     "param_size_desc": "Опциональный размер: пресет или положительные целые числа widthxheight, например 4096x2304. Длинная сторона не больше 8192, всего пикселей не больше 8192x8192.",
-    "param_quality_desc": "Опциональное качество: low, medium или high.",
+    "param_quality_desc": "Опциональное качество: low, medium, high, xhigh, max или auto.",
     "param_n_desc": "Количество изображений. Рекомендуемый диапазон: 1-4.",
     "param_response_format_desc": "Используйте b64_json, чтобы request logs могли показать preview.",
     "response_created_desc": "Timestamp создания на сервере.",
