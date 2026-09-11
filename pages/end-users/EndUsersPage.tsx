@@ -35,9 +35,11 @@ import { PermissionGate } from "@app/providers/PermissionGate";
 import { useAuth } from "@app/providers/AuthProvider";
 import { useApiKeyPermissionOptions } from "@features/api-key-restrictions";
 import { ErrorDetailModal, LogContentModal } from "@features/log-content-viewer";
+import { resolvePasswordApiError, validatePasswordField } from "@features/password-policy";
 import { ApiKeyUsageModal } from "../api-keys/components/ApiKeyUsageModal";
 import { useApiKeyUsageView } from "../api-keys/hooks/useApiKeyUsageView";
 import { EndUserResetHistoryModal } from "./components/EndUserResetHistoryModal";
+import { EndUserCreateModal } from "./components/EndUserCreateModal";
 import { EndUserCreatedSecretsModal } from "./components/EndUserCreatedSecretsModal";
 import { EndUserEditModal } from "./components/EndUserEditModal";
 import { getEndUserColumns } from "./components/EndUserColumns";
@@ -76,6 +78,7 @@ export function EndUsersPage() {
   const [resetUser, setResetUser] = useState<EndUser | null>(null);
   const [resetSpendingUser, setResetSpendingUser] = useState<EndUser | null>(null);
   const [generatedReset, setGeneratedReset] = useState("");
+  const [createPasswordError, setCreatePasswordError] = useState("");
   const [deleteUser, setDeleteUser] = useState<EndUser | null>(null);
   const [keysUser, setKeysUser] = useState<EndUser | null>(null);
   const [resetHistoryUser, setResetHistoryUser] = useState<EndUser | null>(null);
@@ -369,6 +372,15 @@ export function EndUsersPage() {
 
   const onCreate = async (e: FormEvent) => {
     e.preventDefault();
+    // Blank means "let the server generate one". A password the operator typed
+    // has to satisfy the same policy the server enforces, otherwise the only
+    // feedback is the server's English rejection in a toast.
+    const localPasswordError = form.password ? validatePasswordField(form.password, t) : "";
+    if (localPasswordError) {
+      setCreatePasswordError(localPasswordError);
+      return;
+    }
+    setCreatePasswordError("");
     setBusy(true);
     try {
       const result = await endUsersApi.create({
@@ -385,6 +397,11 @@ export function EndUsersPage() {
       }
       await load();
     } catch (err) {
+      const policy = resolvePasswordApiError(err, t);
+      if (policy) {
+        setCreatePasswordError(policy);
+        return;
+      }
       notify({ type: "error", message: err instanceof Error ? err.message : "failed" });
     } finally {
       setBusy(false);
@@ -637,64 +654,17 @@ export function EndUsersPage() {
         </Card>
       </div>
 
-      <Modal
+      <EndUserCreateModal
+        t={t}
         open={createOpen}
+        form={form}
+        setForm={setForm}
+        busy={busy}
+        createPasswordError={createPasswordError}
+        setCreatePasswordError={setCreatePasswordError}
+        onSubmit={onCreate}
         onClose={() => setCreateOpen(false)}
-        title={t("end_users.create", { defaultValue: "创建用户" })}
-        maxWidth="max-w-xl"
-        footer={
-          <>
-            <Button onClick={() => setCreateOpen(false)}>{t("common.cancel")}</Button>
-            <Button
-              type="submit"
-              form="create-end-user-form"
-              variant="primary"
-              disabled={busy || !form.displayName.trim()}
-            >
-              {t("end_users.create", { defaultValue: "创建" })}
-            </Button>
-          </>
-        }
-      >
-        <form id="create-end-user-form" className="space-y-3" onSubmit={onCreate}>
-          <label className="block space-y-1.5">
-            <span className="text-sm font-medium">
-              {t("end_users.display_name", { defaultValue: "昵称" })}
-            </span>
-            <TextInput
-              value={form.displayName}
-              onChange={(e) => setForm((f) => ({ ...f, displayName: e.target.value }))}
-              required
-            />
-          </label>
-          <label className="block space-y-1.5">
-            <span className="text-sm font-medium">
-              {t("end_users.username", { defaultValue: "用户名（可选）" })}
-            </span>
-            <TextInput
-              value={form.username}
-              onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))}
-              placeholder={t("end_users.username_placeholder")}
-            />
-          </label>
-          <label className="block space-y-1.5">
-            <span className="text-sm font-medium">
-              {t("end_users.password", { defaultValue: "密码（可选）" })}
-            </span>
-            <TextInput
-              type="password"
-              value={form.password}
-              onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-              placeholder={t("end_users.password_placeholder")}
-            />
-          </label>
-          <p className="text-xs text-amber-600">
-            {t("end_users.password_hint", {
-              defaultValue: "不填密码将随机生成；生成后只展示一次，哈希后无法再查看。",
-            })}
-          </p>
-        </form>
-      </Modal>
+      />
 
       <EndUserCreatedSecretsModal
         createdSecrets={createdSecrets}

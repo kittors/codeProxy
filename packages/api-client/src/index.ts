@@ -16,6 +16,7 @@ export {
   ApiError,
   ApiClientError,
   extractApiErrorCode,
+  extractApiErrorDetails,
   extractApiErrorMessage,
   isApiClientError,
 } from "./client/errors";

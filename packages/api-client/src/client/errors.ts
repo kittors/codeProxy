@@ -51,6 +51,18 @@ export const extractApiErrorCode = (payload: unknown): string => {
   return payload.error.code.trim();
 };
 
+/**
+ * The structured `details` an error carries alongside its code — for example a
+ * cooldown's `retry_after_seconds`, which is the difference between telling a
+ * locked-out user "try again later" and telling them how much later.
+ */
+export const extractApiErrorDetails = (payload: unknown): Record<string, unknown> => {
+  if (!isRecord(payload)) return {};
+  if (isRecord(payload.details)) return payload.details;
+  if (isRecord(payload.error) && isRecord(payload.error.details)) return payload.error.details;
+  return {};
+};
+
 export class ApiError extends Error {
   readonly name: string = "ApiError";
 

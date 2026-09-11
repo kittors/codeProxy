@@ -12,6 +12,9 @@ import {
   useToast,
 } from "@code-proxy/ui";
 import { useAuth } from "@app/providers/AuthProvider";
+import { resolvePasswordApiError, validatePasswordField } from "@features/password-policy";
+
+const NEW_PASSWORD_ERROR_ID = "change-password-new-error";
 
 export function ChangePasswordPage() {
   const navigate = useNavigate();
@@ -25,13 +28,23 @@ export function ChangePasswordPage() {
   const [confirm, setConfirm] = useState("");
   const [showPasswords, setShowPasswords] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
+    // The policy is checked here, not just minLength={12} on the input: the
+    // uppercase/lowercase/special rules were previously enforced only by the
+    // server, whose rejection this page could render only as an English toast.
+    const localError = validatePasswordField(newPassword, t);
+    if (localError) {
+      setPasswordError(localError);
+      return;
+    }
     if (newPassword !== confirm) {
       notify({ type: "error", message: t("identity_admin.passwords_do_not_match") });
       return;
     }
+    setPasswordError("");
     setLoading(true);
     try {
       await identityApi.changePassword({
@@ -42,6 +55,14 @@ export function ChangePasswordPage() {
       notify({ type: "success", message: t("identity_admin.password_changed") });
       navigate("/dashboard", { replace: true });
     } catch (error) {
+      // Still translated if the server rejects something the local check let
+      // through: client-side validation is a convenience, not the authority.
+      const policy = resolvePasswordApiError(error, t);
+      if (policy) {
+        setPasswordError(policy);
+        setLoading(false);
+        return;
+      }
       notify({
         type: "error",
         message:
@@ -95,11 +116,28 @@ export function ChangePasswordPage() {
                 <TextInput
                   type={showPasswords ? "text" : "password"}
                   value={newPassword}
-                  onChange={(event) => setNewPassword(event.target.value)}
+                  onChange={(event) => {
+                    setNewPassword(event.target.value);
+                    // Clear as they type: keeping a stale rule violation on
+                    // screen while the field already satisfies it reads as the
+                    // form being stuck.
+                    if (passwordError) setPasswordError("");
+                  }}
                   autoComplete="new-password"
                   required
                   minLength={12}
+                  invalid={Boolean(passwordError)}
+                  aria-describedby={passwordError ? NEW_PASSWORD_ERROR_ID : undefined}
                 />
+                {passwordError ? (
+                  <p
+                    id={NEW_PASSWORD_ERROR_ID}
+                    role="alert"
+                    className="text-xs text-rose-600 dark:text-rose-400"
+                  >
+                    {passwordError}
+                  </p>
+                ) : null}
               </label>
 
               <label className="block space-y-2">

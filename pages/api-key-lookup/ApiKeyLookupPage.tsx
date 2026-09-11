@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   extractApiErrorCode,
+  extractApiErrorDetails,
   isApiClientError,
   portalApi,
   normalizePeriodSpendingLimits,
@@ -35,6 +36,7 @@ import {
   type PublicModelItem,
 } from "./api";
 import { LookupHeader } from "./components/LookupHeader";
+import { PortalChangePasswordModal } from "./components/PortalChangePasswordModal";
 import { PortalLoginForm } from "./components/PortalLoginForm";
 import { PortalKeyPeriodQuotaResetModal } from "./components/PortalKeyPeriodQuotaResetModal";
 import { LookupEmptyState } from "./components/LookupEmptyState";
@@ -946,12 +948,49 @@ export function ApiKeyLookupPage() {
           status: isApiClientError(err) ? err.status : 0,
           isTimeout: isApiClientError(err) ? err.isTimeout : false,
           fallbackMessage: err instanceof Error ? err.message : "",
+          details: isApiClientError(err) ? extractApiErrorDetails(err.payload) : {},
         }),
       );
     } finally {
       setLoginBusy(false);
     }
   }, [activateOwnedKey, loginPassword, loginUsername, t]);
+
+  // Owns the session state the dialog has to update on success, so it stays on
+  // the page rather than moving into the presentational modal.
+  const submitPortalPasswordChange = useCallback(() => {
+    const describe = (err: unknown) =>
+      resolveLoginErrorMessage({
+        t,
+        code: isApiClientError(err) ? extractApiErrorCode(err.payload) : "",
+        status: isApiClientError(err) ? err.status : 0,
+        isTimeout: isApiClientError(err) ? err.isTimeout : false,
+        fallbackMessage: err instanceof Error ? err.message : "",
+        details: isApiClientError(err) ? extractApiErrorDetails(err.payload) : {},
+      });
+
+    setPwdError(null);
+    setPortalKeysBusy(true);
+    void portalApi
+      .changePassword(pwdForm.current, pwdForm.next)
+      .then(async () => {
+        setPortalUser((u) => (u ? { ...u, must_change_password: false } : u));
+        try {
+          const items = (await portalApi.listKeys()).items ?? [];
+          setPortalKeys(items);
+          const firstUsable = items.find((key) => !key.disabled);
+          if (firstUsable) await activateOwnedKey(firstUsable.id);
+          setPwdForm({ current: "", next: "" });
+          setPwdError(null);
+          setChangePasswordOpen(false);
+        } catch (err) {
+          setPortalKeys([]);
+          setPwdError(describe(err));
+        }
+      })
+      .catch((err) => setPwdError(describe(err)))
+      .finally(() => setPortalKeysBusy(false));
+  }, [activateOwnedKey, pwdForm.current, pwdForm.next, t]);
 
   const handleLogout = useCallback(() => {
     void portalApi.logout();
@@ -1476,112 +1515,17 @@ export function ApiKeyLookupPage() {
           />
         </Modal>
 
-        <Modal
+        <PortalChangePasswordModal
+          t={t}
           open={changePasswordOpen}
-          title={t("apikey_lookup.change_password", { defaultValue: "修改密码" })}
-          maxWidth="max-w-md"
-          onClose={() => {
-            // Force password change: only allow close after success clears the flag.
-            if (portalUser?.must_change_password) return;
-            setChangePasswordOpen(false);
-          }}
-          footer={
-            <>
-              {!portalUser?.must_change_password ? (
-                <Button
-                  variant="secondary"
-                  onClick={() => setChangePasswordOpen(false)}
-                  disabled={portalKeysBusy}
-                >
-                  {t("common.cancel", { defaultValue: "取消" })}
-                </Button>
-              ) : null}
-              <Button
-                variant="primary"
-                disabled={!pwdForm.current || pwdForm.next.length < 8 || portalKeysBusy}
-                onClick={() => {
-                  setPwdError(null);
-                  setPortalKeysBusy(true);
-                  void portalApi
-                    .changePassword(pwdForm.current, pwdForm.next)
-                    .then(async () => {
-                      setPortalUser((u) => (u ? { ...u, must_change_password: false } : u));
-                      try {
-                        const items = (await portalApi.listKeys()).items ?? [];
-                        setPortalKeys(items);
-                        const firstUsable = items.find((key) => !key.disabled);
-                        if (firstUsable) await activateOwnedKey(firstUsable.id);
-                        setPwdForm({ current: "", next: "" });
-                        setPwdError(null);
-                        setChangePasswordOpen(false);
-                      } catch (err) {
-                        setPortalKeys([]);
-                        setPwdError(
-                          resolveLoginErrorMessage({
-                            t,
-                            code: isApiClientError(err) ? extractApiErrorCode(err.payload) : "",
-                            status: isApiClientError(err) ? err.status : 0,
-                            isTimeout: isApiClientError(err) ? err.isTimeout : false,
-                            fallbackMessage: err instanceof Error ? err.message : "",
-                          }),
-                        );
-                      }
-                    })
-                    .catch((err) =>
-                      setPwdError(
-                        resolveLoginErrorMessage({
-                          t,
-                          code: isApiClientError(err) ? extractApiErrorCode(err.payload) : "",
-                          status: isApiClientError(err) ? err.status : 0,
-                          isTimeout: isApiClientError(err) ? err.isTimeout : false,
-                          fallbackMessage: err instanceof Error ? err.message : "",
-                        }),
-                      ),
-                    )
-                    .finally(() => setPortalKeysBusy(false));
-                }}
-              >
-                {t("common.save", { defaultValue: "保存" })}
-              </Button>
-            </>
-          }
-        >
-          <form
-            className="space-y-4"
-            onSubmit={(e) => {
-              e.preventDefault();
-            }}
-          >
-            <label className="block space-y-1.5">
-              <span className="text-sm font-medium text-slate-700 dark:text-white/75">
-                {t("apikey_lookup.current_password", { defaultValue: "当前密码" })}
-              </span>
-              <TextInput
-                type="password"
-                value={pwdForm.current}
-                onChange={(e) => setPwdForm((f) => ({ ...f, current: e.target.value }))}
-                autoComplete="current-password"
-              />
-            </label>
-            <label className="block space-y-1.5">
-              <span className="text-sm font-medium text-slate-700 dark:text-white/75">
-                {t("apikey_lookup.new_password", { defaultValue: "新密码" })}
-              </span>
-              <TextInput
-                type="password"
-                value={pwdForm.next}
-                onChange={(e) => setPwdForm((f) => ({ ...f, next: e.target.value }))}
-                autoComplete="new-password"
-                placeholder={t("apikey_lookup.new_password_hint", {
-                  defaultValue: "至少 8 位",
-                })}
-              />
-            </label>
-            {pwdError ? (
-              <p className="text-sm text-rose-600 dark:text-rose-300">{pwdError}</p>
-            ) : null}
-          </form>
-        </Modal>
+          form={pwdForm}
+          setForm={setPwdForm}
+          error={pwdError}
+          busy={portalKeysBusy}
+          forced={Boolean(portalUser?.must_change_password)}
+          onSubmit={submitPortalPasswordChange}
+          onClose={() => setChangePasswordOpen(false)}
+        />
 
         <Modal
           open={Boolean(deleteKeyTarget)}

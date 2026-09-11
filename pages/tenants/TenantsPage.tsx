@@ -21,6 +21,7 @@ import {
 } from "@code-proxy/ui";
 import { PermissionGate } from "@app/providers/PermissionGate";
 import { useAuth } from "@app/providers/AuthProvider";
+import { resolvePasswordApiError, validatePasswordField } from "@features/password-policy";
 import {
   isTenantNameTooLong,
   TENANT_NAME_MAX_LENGTH,
@@ -96,7 +97,15 @@ export function TenantsPage() {
   useEffect(() => void load(), [load]);
 
   const run = useCallback(
-    async (action: () => Promise<unknown>, success: string) => {
+    async (
+      action: () => Promise<unknown>,
+      success: string,
+      // Lets a caller translate a failure it recognises. Without it every
+      // rejection fell through to error.message, which is the server's English
+      // text — the reason a bad tenant admin password surfaced as an English
+      // toast even though the panel had the translations for it.
+      resolveError?: (error: unknown) => string | null,
+    ) => {
       setBusy(true);
       try {
         await action();
@@ -104,9 +113,12 @@ export function TenantsPage() {
         notify({ type: "success", message: success });
         return true;
       } catch (error) {
+        const resolved = resolveError?.(error) ?? null;
         notify({
           type: "error",
-          message: error instanceof Error ? error.message : t("identity_admin.operation_failed"),
+          message:
+            resolved ??
+            (error instanceof Error ? error.message : t("identity_admin.operation_failed")),
         });
         return false;
       } finally {
@@ -265,8 +277,12 @@ export function TenantsPage() {
 
     if (!createForm.admin_password) {
       errors.admin_password = requiredMsg;
-    } else if (createForm.admin_password.length < 12) {
-      errors.admin_password = t("identity_admin.password_requirement");
+    } else {
+      // The full policy, not just the length. Checking only the length let a
+      // 12-character all-lowercase password through to the server, whose
+      // rejection could then only be rendered as a raw English toast.
+      const passwordError = validatePasswordField(createForm.admin_password, t);
+      if (passwordError) errors.admin_password = passwordError;
     }
 
     if (!createForm.expires_at.trim()) {
@@ -305,6 +321,13 @@ export function TenantsPage() {
           expires_at: expiresAtIso,
         }),
       t("identity_admin.tenant_created"),
+      (error) => {
+        const policy = resolvePasswordApiError(error, t);
+        // A server-side password rejection belongs under the field, exactly
+        // where the local check would have put it.
+        if (policy) setCreateErrors((prev) => ({ ...prev, admin_password: policy }));
+        return policy;
+      },
     );
     if (success) {
       setCreateOpen(false);
