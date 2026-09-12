@@ -27,9 +27,13 @@ vi.mock("@code-proxy/api-client", () => ({
   apiKeyEntriesApi: {
     list: () => mocks.apiKeyEntriesList(),
   },
-  modelsApi: {
-    // Mirrors the real endpoint: one management-authority POST, no API key.
-    testModel: (input: Record<string, unknown>) => mocks.apiPost("/models/test", input),
+  modelsApi: {},
+  modelTestApi: {
+    // Mirrors the real endpoints: the modal asks which probe shapes the model
+    // supports, then runs one with management authority and no API key.
+    getOptions: (model: string) => mocks.apiGet("/models/test/options", { params: { model } }),
+    run: (input: Record<string, unknown>) => mocks.apiPost("/models/test", input),
+    getTask: (taskId: string) => mocks.apiGet(`/models/test/${taskId}`),
   },
   detectApiBaseFromLocation: () => "http://localhost:8317",
   normalizeApiBase: (base: string) => String(base || "http://localhost:8317").replace(/\/+$/, ""),
@@ -441,7 +445,7 @@ describe("ModelsPage", () => {
       duration_ms: 42,
     });
 
-    await userEvent.click(within(dialog).getByRole("button", { name: /run test/i }));
+    await userEvent.click(within(dialog).getByRole("button", { name: /^run /i }));
 
     await waitFor(() => {
       expect(mocks.apiPost).toHaveBeenCalledWith(

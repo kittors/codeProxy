@@ -28,6 +28,7 @@ import { Modal } from "@code-proxy/ui";
 import { Select } from "@code-proxy/ui";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { ToggleSwitch } from "@code-proxy/ui";
+import { CodexImageGenerationBridgePanel } from "./CodexImageGenerationBridgePanel";
 import { formatTrendChartTooltip } from "./trendTooltipFormatter";
 import { EChart } from "@code-proxy/ui";
 import { ProxyPoolSelect } from "@features/proxy-pool";
@@ -1618,53 +1619,10 @@ export function AuthFileDetailModal({
                       </div>
                     ) : null}
 
-                    {codexImageGenerationBridgeEditor.supported ? (
-                      <div
-                        className="min-w-0 space-y-4 rounded-lg bg-slate-50/80 px-4 py-4 lg:col-span-2 dark:bg-white/[0.04]"
-                        data-testid="codex-image-generation-bridge-panel"
-                      >
-                        <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                              {t("auth_files.codex_image_generation_bridge_title")}
-                            </p>
-                            <p className="mt-1 text-xs text-slate-500 dark:text-white/55">
-                              {t("auth_files.codex_image_generation_bridge_desc")}
-                            </p>
-                          </div>
-                          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 dark:bg-white/10 dark:text-white/65">
-                            {codexImageGenerationBridgeEditor.enabled
-                              ? t("auth_files.enabled")
-                              : t("auth_files.disabled")}
-                          </span>
-                        </div>
-
-                        <div
-                          className="rounded-lg bg-white px-3 py-3 ring-1 ring-slate-200 dark:bg-neutral-950/40 dark:ring-white/10"
-                          data-testid="codex-image-generation-bridge-toggle"
-                        >
-                          <ToggleSwitch
-                            checked={codexImageGenerationBridgeEditor.enabled}
-                            onCheckedChange={(checked) =>
-                              setCodexImageGenerationBridgeEditor((prev) => ({
-                                ...prev,
-                                enabled: checked,
-                                error: null,
-                              }))
-                            }
-                            disabled={codexImageGenerationBridgeEditor.saving}
-                            label={t("auth_files.codex_image_generation_bridge_toggle")}
-                            description={t("auth_files.codex_image_generation_bridge_toggle_hint")}
-                          />
-                        </div>
-
-                        {codexImageGenerationBridgeEditor.error ? (
-                          <p className="text-sm text-rose-600 dark:text-rose-300">
-                            {codexImageGenerationBridgeEditor.error}
-                          </p>
-                        ) : null}
-                      </div>
-                    ) : null}
+                    <CodexImageGenerationBridgePanel
+                      editor={codexImageGenerationBridgeEditor}
+                      setEditor={setCodexImageGenerationBridgeEditor}
+                    />
 
                     {codexOAuthAdmissionEditor.supported ? (
                       <div
