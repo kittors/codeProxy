@@ -91,6 +91,11 @@ const baseCodexImageGenerationBridgeEditor: DetailModalProps["codexImageGenerati
     fileName: "codex.json",
     supported: true,
     enabled: false,
+    model: "",
+    availableModels: [
+      { id: "gpt-image-2" },
+      { id: "gpt-image-2.5-flare", display_name: "GPT Image 2.5 Flare" },
+    ],
     saving: false,
     error: null,
   };
@@ -1249,6 +1254,8 @@ describe("AuthFileDetailModal", () => {
         fileName: "codex-api-key.json",
         supported: false,
         enabled: false,
+        model: "",
+        availableModels: [],
         saving: false,
         error: null,
       },

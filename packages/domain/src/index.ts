@@ -4,6 +4,7 @@ export * from "./ccswitch/ccswitchImportCompatibility";
 export * from "./ccswitch/ccswitchImportLinks";
 export * from "./ccswitch/ccswitchImportSettings";
 export * from "./auth-files/authFiles";
+export * from "./auth-files/codexImageGeneration";
 export * from "./auth-files/types";
 export * from "./auth-files/zip";
 export * from "./models/discovery";

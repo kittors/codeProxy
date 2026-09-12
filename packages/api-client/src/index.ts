@@ -91,6 +91,8 @@ export {
 export type * from "./endpoints/api-key-permission-profiles";
 export { modelsApi } from "./endpoints/models";
 export type * from "./endpoints/models";
+export { modelTestApi } from "./endpoints/model-test";
+export type * from "./endpoints/model-test";
 export { versionApi } from "./endpoints/version";
 export { quotaApi } from "./endpoints/quota";
 export type * from "./endpoints/period-spending";
