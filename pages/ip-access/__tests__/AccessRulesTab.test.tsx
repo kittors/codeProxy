@@ -151,11 +151,11 @@ describe("AccessRulesTab", () => {
   test("protected addresses are listed so a refused ban is explainable", async () => {
     renderTab({
       protectedEntries: [
-        { cidr: "104.194.69.137/32", reason: "trusted_proxy" },
+        { cidr: "203.0.113.10/32", reason: "trusted_proxy" },
         { cidr: "10.0.0.5/32", reason: "local_address" },
       ],
     });
-    expect(await screen.findByText("104.194.69.137/32")).toBeInTheDocument();
+    expect(await screen.findByText("203.0.113.10/32")).toBeInTheDocument();
     expect(screen.getByText("10.0.0.5/32")).toBeInTheDocument();
   });
 });

@@ -58,7 +58,7 @@ export interface LandingCopy {
 /** 部署域名即 API 根地址；SSR / 测试环境下退回到线上默认值，保证文案永远可读。 */
 export function resolveApiBaseUrl(): string {
   if (typeof window === "undefined" || !window.location?.origin) {
-    return "https://relay.07230805.xyz/v1";
+    return "https://relay.example.com/v1";
   }
   return `${window.location.origin}/v1`;
 }
