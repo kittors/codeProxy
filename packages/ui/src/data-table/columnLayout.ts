@@ -1,6 +1,10 @@
 import type { DataTableColumn } from "./DataTable.types";
 import type { ColumnResizeState, ColumnWidthMap, StickyColumnPlacement } from "./dataTableModel";
-import { clampColumnWidth, resolveColumnMinWidth, resolveColumnOrderLock } from "./tableStorage";
+import {
+  clampColumnWidth,
+  resolveColumnDefaultWidth,
+  resolveColumnOrderLock,
+} from "./tableStorage";
 
 export function hasStickyColumnClass<T>(column: DataTableColumn<T>) {
   return `${column.headerClassName ?? ""} ${column.cellClassName ?? ""}`
@@ -33,7 +37,7 @@ export function resolveHeaderContentJustifyClass(headerClassName?: string) {
 
 export function resolveColumnLayoutWidth<T>(column: DataTableColumn<T>, widths: ColumnWidthMap) {
   const resizedWidth = widths[column.key];
-  return resizedWidth ? clampColumnWidth(column, resizedWidth) : resolveColumnMinWidth(column);
+  return resizedWidth ? clampColumnWidth(column, resizedWidth) : resolveColumnDefaultWidth(column);
 }
 
 export function resolveStickyRailWidth<T>(
