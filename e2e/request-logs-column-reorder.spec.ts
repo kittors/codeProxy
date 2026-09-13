@@ -421,14 +421,24 @@ test("Request Logs: response metrics column resize clamps at its minimum width",
       };
     });
 
+  // 列的 `minWidthPx: 240` 是设计基准（根字号 16px）下的像素，而面板整体按根字号
+  // 缩放，所以拖到底的宽度是它在当前根字号下的等效值。写死 240 会把下限顶到列的
+  // 实际渲染宽度（`w-64` 在 0.9 缩放下只有 230px）之上，指针一按下列就先跳宽一截。
+  const expectedMinWidth = await page.evaluate(() => {
+    const rootFontSizePx = Number.parseFloat(
+      getComputedStyle(document.documentElement).fontSize,
+    );
+    return Math.round((240 * rootFontSizePx) / 16);
+  });
+
   await page.mouse.move(dragStart.x, dragStart.y);
   await page.mouse.down();
   await page.mouse.move(dragStart.x - 520, dragStart.y, { steps: 10 });
   await page.waitForTimeout(80);
 
   const during = await readResponseMetricsColumnState(page);
-  expect(during.width).toBeGreaterThanOrEqual(239);
-  expect(during.width).toBeLessThanOrEqual(241);
+  expect(during.width).toBeGreaterThanOrEqual(expectedMinWidth - 1);
+  expect(during.width).toBeLessThanOrEqual(expectedMinWidth + 1);
   expect(during.text).not.toMatch(/First Token Latency|首 Token 耗时/);
   expect(during.text).toMatch(/90ms/);
   expect(during.text).toMatch(/Streaming|流式/);
@@ -442,7 +452,50 @@ test("Request Logs: response metrics column resize clamps at its minimum width",
   await page.mouse.up();
 
   const after = await readResponseMetricsColumnState(page);
-  expect(after.storedLatencyWidth).toBe(240);
+  expect(after.storedLatencyWidth).toBe(expectedMinWidth);
+});
+
+test("Request Logs: grabbing the resizer does not resize the column on its own", async ({
+  page,
+}) => {
+  await setAuthed(page);
+  await mockRequestLogsApis(page);
+
+  await page.goto("/manage/#/monitor/request-logs");
+  await page
+    .locator('th[data-vt-column-key="latency"]')
+    .waitFor({ state: "visible" });
+
+  const readWidth = () =>
+    page
+      .locator('th[data-vt-column-key="latency"]')
+      .evaluate((element) => element.getBoundingClientRect().width);
+
+  const beforeGrab = await readWidth();
+
+  const handle = await page
+    .locator('th[data-vt-column-key="latency"] [data-vt-column-resizer]')
+    .evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      const headerRect = element.closest("th")?.getBoundingClientRect();
+      return {
+        x: headerRect
+          ? Math.min(rect.left + rect.width / 2, headerRect.right - 2)
+          : rect.left,
+        y: rect.top + rect.height / 2,
+      };
+    });
+
+  await page.mouse.move(handle.x, handle.y);
+  await page.mouse.down();
+  await page.waitForTimeout(80);
+  const afterGrab = await readWidth();
+  await page.mouse.up();
+
+  // 按下手柄只是开始拖拽，指针还没移动，列宽不该动。拖拽下限一旦按 16px 硬算，
+  // 它会超过列在缩放后的实际渲染宽度，指针刚落下列就先弹宽一截。
+  expect(afterGrab).toBeGreaterThanOrEqual(beforeGrab - 1);
+  expect(afterGrab).toBeLessThanOrEqual(beforeGrab + 1);
 });
 
 test("Request Logs: column reorder follows the pointer and auto-scrolls horizontally", async ({

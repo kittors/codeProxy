@@ -41,9 +41,9 @@ export interface DataTableColumn<T> {
   reorderable?: boolean;
   /** Pin this column to the start or end of the table, preventing it from being reordered. */
   lockOrder?: "start" | "end";
-  /** Minimum drag-resize width in px. */
+  /** Minimum drag-resize width, in design px (16px root font size); scaled to the live root font size. */
   minWidthPx?: number;
-  /** Maximum drag-resize width in px. */
+  /** Maximum drag-resize width, in design px (16px root font size); scaled to the live root font size. */
   maxWidthPx?: number;
   /** Extra header class (e.g. "text-right") */
   headerClassName?: string;
