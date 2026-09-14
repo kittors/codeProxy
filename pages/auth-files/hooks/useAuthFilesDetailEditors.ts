@@ -32,6 +32,11 @@ import {
   type PrefixProxyEditorState,
   type XAIEndpointEditorState,
 } from "@code-proxy/domain";
+import {
+  buildCodexImageGenerationBridgeEditorState,
+  createCodexImageGenerationBridgeEditorState,
+  mergeSavedCodexImageGenerationBridgeFields,
+} from "./codexImageGenerationBridgeEditor";
 
 type DetailTab = "usage" | "identity" | "fields" | "models";
 type DetailTrendWindow = "5h" | "week";
@@ -71,15 +76,6 @@ const createCodexOAuthAdmissionEditorState = (): CodexOAuthAdmissionEditorState 
   saving: false,
   error: null,
 });
-
-const createCodexImageGenerationBridgeEditorState =
-  (): CodexImageGenerationBridgeEditorState => ({
-    fileName: "",
-    supported: false,
-    enabled: false,
-    saving: false,
-    error: null,
-  });
 
 const createXAIEndpointEditorState = (): XAIEndpointEditorState => ({
   fileName: "",
@@ -135,22 +131,6 @@ const buildCodexOAuthAdmissionEditorState = (
       label: preset.label,
       description: preset.description,
     })),
-    saving: false,
-    error: null,
-  };
-};
-
-const buildCodexImageGenerationBridgeEditorState = (
-  file: AuthFileItem,
-): CodexImageGenerationBridgeEditorState => {
-  const bridge = file.codex_image_generation_bridge;
-  if (!bridge) {
-    return { ...createCodexImageGenerationBridgeEditorState(), fileName: file.name };
-  }
-  return {
-    fileName: file.name,
-    supported: true,
-    enabled: Boolean(bridge.enabled),
     saving: false,
     error: null,
   };
@@ -244,20 +224,6 @@ const mergeSavedCodexOAuthAdmissionFields = (
     },
     codex_cli_only: editor.enabled,
     codex_cli_only_allowed_clients: allowedClients,
-  };
-};
-
-const mergeSavedCodexImageGenerationBridgeFields = (
-  file: AuthFileItem,
-  editor: CodexImageGenerationBridgeEditorState,
-): AuthFileItem => {
-  if (file.name !== editor.fileName || !file.codex_image_generation_bridge) return file;
-  return {
-    ...file,
-    codex_image_generation_bridge: {
-      ...file.codex_image_generation_bridge,
-      enabled: editor.enabled,
-    },
   };
 };
 
@@ -944,10 +910,14 @@ export function useAuthFilesDetailEditors(
     if (codexImageGenerationBridgeEditor.fileName !== detailFile.name) return false;
     const baseline = buildCodexImageGenerationBridgeEditorState(detailFile);
     if (!baseline.supported) return false;
-    return baseline.enabled !== codexImageGenerationBridgeEditor.enabled;
+    return (
+      baseline.enabled !== codexImageGenerationBridgeEditor.enabled ||
+      baseline.model !== codexImageGenerationBridgeEditor.model
+    );
   }, [
     codexImageGenerationBridgeEditor.enabled,
     codexImageGenerationBridgeEditor.fileName,
+    codexImageGenerationBridgeEditor.model,
     codexImageGenerationBridgeEditor.supported,
     detailFile,
   ]);
@@ -965,6 +935,7 @@ export function useAuthFilesDetailEditors(
       await authFilesApi.patchFields({
         name: fileName,
         codex_image_generation_bridge: codexImageGenerationBridgeEditor.enabled,
+        codex_image_generation_model: codexImageGenerationBridgeEditor.model,
       });
       const applyPatch = (file: AuthFileItem): AuthFileItem =>
         mergeSavedCodexImageGenerationBridgeFields(file, codexImageGenerationBridgeEditor);

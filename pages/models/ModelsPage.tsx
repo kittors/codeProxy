@@ -1236,15 +1236,7 @@ export function ModelsPage() {
         onConfirm={() => void handleBulkDelete()}
       />
 
-      <ModelTestModal
-        model={modelTest.target}
-        running={modelTest.running}
-        resultText={modelTest.resultText}
-        errorText={modelTest.errorText}
-        durationMs={modelTest.durationMs}
-        onClose={modelTest.close}
-        onRun={(input) => void modelTest.run(input)}
-      />
+      <ModelTestModal {...modelTest.modalProps} />
     </section>
   );
 }

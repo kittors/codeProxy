@@ -7,9 +7,10 @@ export type PeriodSpendingPeriod = (typeof PERIOD_SPENDING_PERIODS)[number];
 
 /**
  * The cumulative allowance is resettable like a period, but it is not one of the
- * rolling periods: it has no window, and its limit lives in `spending-limit`
- * rather than the period limits. Keeping it out of PERIOD_SPENDING_PERIODS keeps
- * the four-field limit editors and per-period cells untouched.
+ * windowed periods: it has no window at all, and its limit lives in
+ * `spending-limit` rather than the period limits. Keeping it out of
+ * PERIOD_SPENDING_PERIODS keeps the four-field limit editors and per-period
+ * cells untouched.
  */
 export const LIFETIME_QUOTA_PERIOD = "lifetime" as const;
 
@@ -34,6 +35,15 @@ export interface PeriodSpendingItem {
   limit: number;
   used: number;
   remaining: number;
+  /**
+   * Only the 5h window is anchored server-side: it opens on the first billed
+   * spend and clears five hours later, so the backend sends its real boundaries.
+   * Calendar periods (day/week/month) carry neither field — their boundaries are
+   * derivable, and inventing one here would show a countdown that isn't real.
+   * Both are RFC 3339 strings, absent while no window is open.
+   */
+  window_start?: string;
+  resets_at?: string;
 }
 
 export interface CappedKey {
@@ -45,8 +55,7 @@ export interface CappedKey {
 
 export type QuotaValidationErrorCode =
   | "key_period_limit_exceeds_account"
-  | "period_day_legacy_conflict"
-  | "five_hour_quota_projection_warming";
+  | "period_day_legacy_conflict";
 
 export interface QuotaValidationErrorDetails {
   period?: PeriodSpendingPeriod;

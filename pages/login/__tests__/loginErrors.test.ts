@@ -14,9 +14,16 @@ const messages: Record<string, string> = {
   "login.error_not_found": "地址无效",
   "login.error_network": "网络失败",
   "login.error_invalid": "登录失败",
+  "login.error_rate_limited_seconds": "请 {{seconds}} 秒后重试",
+  "login.error_rate_limited_minutes": "请 {{minutes}} 分钟后重试",
+  "identity_admin.password_missing_upper": "密码须包含至少一个大写字母。",
+  "identity_admin.password_requirement": "至少 12 个字符。",
 };
 
-const t = ((key: string) => messages[key] ?? key) as TFunction;
+const t = ((key: string, options?: Record<string, unknown>) => {
+  const template = messages[key] ?? key;
+  return template.replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(options?.[name] ?? ""));
+}) as TFunction;
 
 describe("resolveLoginErrorMessage", () => {
   test("maps invalid_credentials code", () => {
@@ -70,5 +77,47 @@ describe("resolveLoginErrorMessage", () => {
 
   test("defaults to generic login failure", () => {
     expect(resolveLoginErrorMessage({ t, status: 418 })).toBe("登录失败");
+  });
+});
+
+describe("cooldown duration", () => {
+  // Reporting only "too many attempts" made a five-minute account cooldown
+  // indistinguishable from a one-minute or a one-hour one, so users retried
+  // straight onto the next rung of the lockout ladder instead of waiting.
+  test("renders the remaining wait in seconds", () => {
+    expect(
+      resolveLoginErrorMessage({
+        t,
+        code: "login_cooldown",
+        status: 429,
+        details: { retry_after_seconds: 45 },
+      }),
+    ).toBe("请 45 秒后重试");
+  });
+
+  test("renders the remaining wait in minutes", () => {
+    expect(
+      resolveLoginErrorMessage({
+        t,
+        code: "login_cooldown",
+        status: 429,
+        details: { retry_after_seconds: 300 },
+      }),
+    ).toBe("请 5 分钟后重试");
+  });
+
+  test("falls back to the generic copy when the server sends no duration", () => {
+    expect(resolveLoginErrorMessage({ t, code: "login_cooldown", status: 429 })).toBe("尝试过多");
+  });
+});
+
+describe("password policy codes", () => {
+  // The portal's change-password dialog shares this resolver, so a rule
+  // rejection has to translate here too instead of falling through to the
+  // generic 400 handling and surfacing as raw English.
+  test("translates a password rule rejection", () => {
+    expect(
+      resolveLoginErrorMessage({ t, code: "password_missing_upper", status: 400 }),
+    ).toBe("密码须包含至少一个大写字母。");
   });
 });

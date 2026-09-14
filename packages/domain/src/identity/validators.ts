@@ -11,13 +11,39 @@ export type IdentityValidationCode =
   | "display_name_required"
   | "display_name_too_long"
   | "password_too_short"
+  | "password_too_long"
   | "password_missing_upper"
   | "password_missing_lower"
   | "password_missing_special";
 
+/**
+ * The subset of codes the server can also return as an API error code, kept in
+ * lockstep with identity.PasswordPolicyCode in CliRelay.
+ *
+ * Client-side validation is a convenience, not the authority: whenever the two
+ * drift, the server still rejects and the panel has to render that rejection.
+ * Recognising these codes is what lets it show a translated message instead of
+ * the raw English sentence the server logs.
+ */
+export const PASSWORD_POLICY_CODES = [
+  "password_too_short",
+  "password_too_long",
+  "password_missing_upper",
+  "password_missing_lower",
+  "password_missing_special",
+] as const;
+
+export type PasswordPolicyCode = (typeof PASSWORD_POLICY_CODES)[number];
+
+export function isPasswordPolicyCode(code: string): code is PasswordPolicyCode {
+  return (PASSWORD_POLICY_CODES as readonly string[]).includes(code);
+}
+
 export const IDENTITY_USERNAME_MAX_BYTES = 128;
 export const IDENTITY_DISPLAY_NAME_MAX_BYTES = 128;
 export const IDENTITY_PASSWORD_MIN_LENGTH = 12;
+/** bcrypt truncates past 72 bytes, so the server refuses anything longer. */
+export const IDENTITY_PASSWORD_MAX_BYTES = 72;
 
 const textEncoder = new TextEncoder();
 
@@ -78,6 +104,11 @@ export function validateDisplayName(raw: string): IdentityValidationResult {
 export function validatePassword(password: string): IdentityValidationResult {
   if (password.length < IDENTITY_PASSWORD_MIN_LENGTH) {
     return { ok: false, code: "password_too_short" };
+  }
+  // Measured in bytes, not characters: the server's limit is bcrypt's, so a
+  // password of CJK characters hits it at a third of the character count.
+  if (utf8ByteLength(password) > IDENTITY_PASSWORD_MAX_BYTES) {
+    return { ok: false, code: "password_too_long" };
   }
   let hasUpper = false;
   let hasLower = false;

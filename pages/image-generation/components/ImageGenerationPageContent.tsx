@@ -21,6 +21,19 @@ import {
 } from "@features/image-model-picker";
 import { imageStageClassName } from "./stageStyles";
 import { VISIBLE_ENDPOINT_DOCS, type EndpointDoc, type SpecRow } from "./apiDocs";
+import {
+  COUNT_OPTIONS,
+  DEFAULT_QUALITY,
+  DEFAULT_SIZE_OPTION,
+  DEFAULT_SIZE_OPTIONS,
+  IMAGE_GENERATION_MAX_SIZE_EDGE,
+  IMAGE_GENERATION_MAX_SIZE_PIXELS,
+  IMAGE_GENERATION_SIZE_PATTERN,
+  MAX_UPLOAD_IMAGES,
+  QUALITY_OPTIONS,
+  SIZE_OPTIONS,
+  type QualityOption,
+} from "./generationOptions";
 
 /**
  * Fallback model id, used only until the server's catalog arrives and as the tab
@@ -48,22 +61,6 @@ const IMAGE_GENERATION_PHASE_STATUS_INDEX: Record<string, number> = {
   image_download: 3,
   completed: 3,
 };
-const DEFAULT_SIZE_OPTION = "1024x1024";
-const SIZE_OPTIONS = [
-  DEFAULT_SIZE_OPTION,
-  "1792x1024",
-  "1024x1792",
-  "2560x1440",
-  "2160x3840",
-] as const;
-const DEFAULT_SIZE_OPTIONS = new Set<string>(SIZE_OPTIONS);
-const QUALITY_OPTIONS = ["low", "medium", "high"] as const;
-const COUNT_OPTIONS = [1, 2, 3, 4] as const;
-const MAX_UPLOAD_IMAGES = 5;
-const IMAGE_GENERATION_SIZE_PATTERN = /^[1-9]\d*x[1-9]\d*$/;
-const IMAGE_GENERATION_MAX_SIZE_EDGE = 8192;
-const IMAGE_GENERATION_MAX_SIZE_PIXELS =
-  IMAGE_GENERATION_MAX_SIZE_EDGE * IMAGE_GENERATION_MAX_SIZE_EDGE;
 
 type ImageMode = "generations" | "edits";
 type GeneratedImage = { src: string; revisedPrompt?: string };
@@ -378,7 +375,7 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
   const [sizePresets, setSizePresets] = useState<string[]>(() =>
     mergeImageGenerationSizePresets([]),
   );
-  const [quality, setQuality] = useState<(typeof QUALITY_OPTIONS)[number]>("medium");
+  const [quality, setQuality] = useState<QualityOption>(DEFAULT_QUALITY);
   const [count, setCount] = useState<(typeof COUNT_OPTIONS)[number]>(1);
   const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -864,7 +861,7 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
               fullWidth={false}
               aria-label={t("image_generation.quality_label")}
               value={quality}
-              onChange={(value) => setQuality(value as (typeof QUALITY_OPTIONS)[number])}
+              onChange={(value) => setQuality(value as QualityOption)}
               options={QUALITY_OPTIONS.map((value) => ({
                 value,
                 label: value,

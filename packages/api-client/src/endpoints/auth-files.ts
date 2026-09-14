@@ -43,6 +43,8 @@ export const authFilesApi = {
     codex_cli_only?: boolean;
     codex_cli_only_allowed_clients?: string[];
     codex_image_generation_bridge?: boolean;
+    /** Empty string clears the pin and returns the account to the build default. */
+    codex_image_generation_model?: string;
     using_api?: boolean;
     concurrency_limit?: number;
     codex_convergence_mode?: string;

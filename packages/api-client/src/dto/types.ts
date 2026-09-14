@@ -110,8 +110,24 @@ export interface AuthFileCodexOAuthAdmission {
   available_allowed_clients?: AuthFileCodexAllowedClientPresetInfo[];
 }
 
+/** A Codex image model this account can pin the injected tool to. */
+export interface AuthFileCodexImageModel {
+  id: string;
+  display_name?: string;
+  description?: string;
+  supports_edit?: boolean;
+}
+
 export interface AuthFileCodexImageGenerationBridge {
   enabled?: boolean;
+  /** Pinned image model; empty means the build default. */
+  model?: string;
+  /**
+   * Selectable models, reported by the server rather than held in the panel:
+   * Codex serves several gpt-image releases and more are added over time, so a
+   * list maintained here would go stale the first time one shipped.
+   */
+  available_models?: AuthFileCodexImageModel[];
 }
 
 export type AuthFileIdentityFingerprintProvider =

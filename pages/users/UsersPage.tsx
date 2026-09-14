@@ -20,6 +20,7 @@ import {
 } from "@code-proxy/ui";
 import { PermissionGate } from "@app/providers/PermissionGate";
 import { useAuth } from "@app/providers/AuthProvider";
+import { resolvePasswordApiError } from "@features/password-policy";
 import {
   emptyCreateUserForm,
   IDENTITY_DISPLAY_NAME_MAX_BYTES,
@@ -108,7 +109,13 @@ export function UsersPage() {
   );
 
   const run = useCallback(
-    async (action: () => Promise<unknown>, success: string) => {
+    async (
+      action: () => Promise<unknown>,
+      success: string,
+      // Without this every rejection falls through to error.message, which is
+      // the server's English text even when the panel has a translation for it.
+      resolveError?: (error: unknown) => string | null,
+    ) => {
       setBusy(true);
       try {
         await action();
@@ -116,9 +123,12 @@ export function UsersPage() {
         notify({ type: "success", message: success });
         return true;
       } catch (error) {
+        const resolved = resolveError?.(error) ?? null;
         notify({
           type: "error",
-          message: error instanceof Error ? error.message : t("identity_admin.operation_failed"),
+          message:
+            resolved ??
+            (error instanceof Error ? error.message : t("identity_admin.operation_failed")),
         });
         return false;
       } finally {
@@ -341,6 +351,12 @@ export function UsersPage() {
         setRevealedPassword(created.initial_password);
       }
     } catch (error) {
+      const policy = resolvePasswordApiError(error, t);
+      if (policy) {
+        setCreateErrors((prev) => ({ ...prev, password: policy }));
+        setBusy(false);
+        return;
+      }
       notify({
         type: "error",
         message: error instanceof Error ? error.message : t("identity_admin.operation_failed"),
@@ -359,6 +375,11 @@ export function UsersPage() {
     const success = await run(
       () => identityApi.resetPassword(resetUser.id, resetPassword),
       t("identity_admin.password_reset"),
+      (error) => {
+        const policy = resolvePasswordApiError(error, t);
+        if (policy) setResetError(policy);
+        return policy;
+      },
     );
     if (success) {
       setResetUser(null);

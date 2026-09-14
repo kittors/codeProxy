@@ -7,8 +7,11 @@ import {
   limitsToPeriodSpendingDraft,
   remainingQuotaUsd,
 } from "@features/period-spending";
+import { validatePasswordField } from "@features/password-policy";
 import type { EndUserForm } from "../endUserForm";
 import { limitToText } from "../endUserForm";
+
+const EDIT_PASSWORD_ERROR_ID = "end-user-edit-password-error";
 
 /**
  * Account edit dialog. Split out of EndUsersPage so the page keeps shrinking
@@ -39,6 +42,9 @@ export function EndUserEditModal({
   onSubmit: (event: FormEvent) => void;
   onClose: () => void;
 }) {
+  // Blank means "keep the current password"; anything typed has to satisfy the
+  // same policy the server enforces, or its rejection comes back in English.
+  const passwordError = form.password ? validatePasswordField(form.password, t) : "";
   const editUser = user;
   const editForm = form;
   const setEditForm = onFormChange;
@@ -58,7 +64,12 @@ export function EndUserEditModal({
             type="submit"
             form="edit-end-user-form"
             variant="primary"
-            disabled={busy || !editForm.displayName.trim() || !editForm.username.trim()}
+            disabled={
+              busy ||
+              !editForm.displayName.trim() ||
+              !editForm.username.trim() ||
+              Boolean(passwordError)
+            }
           >
             {t("common.save", { defaultValue: "保存" })}
           </Button>
@@ -96,7 +107,18 @@ export function EndUserEditModal({
             onChange={(e) => setEditForm((f) => ({ ...f, password: e.target.value }))}
             placeholder={t("end_users.password_keep", { defaultValue: "留空则不改密码" })}
             autoComplete="new-password"
+            invalid={Boolean(passwordError)}
+            aria-describedby={passwordError ? EDIT_PASSWORD_ERROR_ID : undefined}
           />
+          {passwordError ? (
+            <p
+              id={EDIT_PASSWORD_ERROR_ID}
+              role="alert"
+              className="text-xs text-rose-600 dark:text-rose-400"
+            >
+              {passwordError}
+            </p>
+          ) : null}
         </label>
         <label className="block space-y-1.5">
           <span className="text-sm font-medium">

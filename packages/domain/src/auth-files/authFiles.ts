@@ -2134,14 +2134,6 @@ export type CodexOAuthAdmissionEditorState = {
   error: string | null;
 };
 
-export type CodexImageGenerationBridgeEditorState = {
-  fileName: string;
-  supported: boolean;
-  enabled: boolean;
-  saving: boolean;
-  error: string | null;
-};
-
 /** xAI OAuth endpoint mode: false = Grok Build/CLI, true = official API. */
 export type XAIEndpointEditorState = {
   fileName: string;

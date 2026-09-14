@@ -39,17 +39,68 @@ export {
   calculateScrollbarThumbs,
 } from "./scrollMetrics";
 
+/**
+ * Tailwind 的尺寸刻度都是 rem，而面板靠根字号做整体缩放（admin-panel 的
+ * `--ui-scale`，外加用户自己在浏览器里调过的默认字号），所以 `w-40` 渲染出来
+ * 未必是 160px——0.9 缩放下就是 144px。
+ *
+ * 这里的换算结果会被拿去给固定列的轨道和边缘阴影做绝对定位。按 16px 硬算时轨道
+ * 会比真实列宽多出一截、压到相邻列上：表头是 sticky，盖在轨道之上；数据行是
+ * static，会被轨道盖住——同一列的表头和单元格于是在不同位置被截断，阴影也落在
+ * 离固定列边缘还有一截的地方。所以刻度必须按实际根字号换算。
+ */
+const TAILWIND_BASE_ROOT_FONT_SIZE_PX = 16;
+
+let cachedRootFontSizePx: number | null = null;
+let rootFontSizeReleaseFrame: number | null = null;
+
+/**
+ * 读一次缓存一帧：同一帧里每列、每个单元格都会解析宽度，次次 getComputedStyle
+ * 会强制样式重算；跨帧释放则让根字号的变化（切换 `--ui-scale`、用户改浏览器默认
+ * 字号、页面缩放）在下一帧自然生效，不需要额外的订阅。
+ */
+function resolveRootFontSizePx() {
+  if (typeof window === "undefined" || typeof document === "undefined") {
+    return TAILWIND_BASE_ROOT_FONT_SIZE_PX;
+  }
+  if (cachedRootFontSizePx !== null) return cachedRootFontSizePx;
+
+  const measured = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize);
+  cachedRootFontSizePx =
+    Number.isFinite(measured) && measured > 0 ? measured : TAILWIND_BASE_ROOT_FONT_SIZE_PX;
+
+  if (rootFontSizeReleaseFrame === null && typeof window.requestAnimationFrame === "function") {
+    rootFontSizeReleaseFrame = window.requestAnimationFrame(() => {
+      cachedRootFontSizePx = null;
+      rootFontSizeReleaseFrame = null;
+    });
+  }
+  return cachedRootFontSizePx;
+}
+
+/**
+ * 把「设计稿基准（根字号 16px）下的像素」换算成当前根字号下的实际像素。
+ * `minWidthPx` / `maxWidthPx` 这类直接写死的 px 也走这里，否则它们和 Tailwind
+ * class 推出来的宽度会处在两个尺度上，同一张表的固定列轨道会按列而异地错位。
+ */
+export function scaleDesignPx(designPx: number) {
+  return Math.round((designPx * resolveRootFontSizePx()) / TAILWIND_BASE_ROOT_FONT_SIZE_PX);
+}
+
 function parseTailwindSizePx(token: string) {
   const arbitrary = token.match(/^\[(\d+(?:\.\d+)?)(px|rem)\]$/);
   if (arbitrary) {
     const value = Number(arbitrary[1]);
     if (!Number.isFinite(value)) return null;
-    return arbitrary[2] === "rem" ? Math.round(value * 16) : Math.round(value);
+    // 任意值里的 px 编译成字面像素，本来就不吃根字号；只有 rem 需要换算。
+    return arbitrary[2] === "rem"
+      ? scaleDesignPx(value * TAILWIND_BASE_ROOT_FONT_SIZE_PX)
+      : Math.round(value);
   }
   if (token === "px") return 1;
   const numeric = Number(token);
   if (!Number.isFinite(numeric)) return null;
-  return Math.round(numeric * TAILWIND_SPACING_UNIT_PX);
+  return scaleDesignPx(numeric * TAILWIND_SPACING_UNIT_PX);
 }
 
 function resolveWidthClassPx(width: string | undefined, prefix: string) {
@@ -64,16 +115,26 @@ function resolveWidthClassPx(width: string | undefined, prefix: string) {
 }
 
 export function resolveColumnMinWidth<T>(column: DataTableColumn<T>) {
-  return (
-    column.minWidthPx ?? resolveWidthClassPx(column.width, "min-w") ?? DEFAULT_MIN_COLUMN_WIDTH
-  );
+  if (column.minWidthPx !== undefined) return scaleDesignPx(column.minWidthPx);
+  return resolveWidthClassPx(column.width, "min-w") ?? scaleDesignPx(DEFAULT_MIN_COLUMN_WIDTH);
+}
+
+/**
+ * 列没被拖过时的渲染宽度，也就是 `w-*` class 落到 DOM 上的那个值。
+ *
+ * 固定列的轨道量的是「这一列实际占多宽」，不是「最窄能到多宽」。两者在
+ * `w-40 min-w-40` 这种写法下恰好相等，但 `w-[360px] min-w-[280px]` 一写开就差
+ * 80px，轨道会短一截，固定列右边缘外露出下层内容。
+ */
+export function resolveColumnDefaultWidth<T>(column: DataTableColumn<T>) {
+  return resolveWidthClassPx(column.width, "w") ?? resolveColumnMinWidth(column);
 }
 
 export function resolveColumnMaxWidth<T>(
   column: DataTableColumn<T>,
   minWidth = resolveColumnMinWidth(column),
 ) {
-  return Math.max(minWidth, column.maxWidthPx ?? DEFAULT_MAX_COLUMN_WIDTH);
+  return Math.max(minWidth, scaleDesignPx(column.maxWidthPx ?? DEFAULT_MAX_COLUMN_WIDTH));
 }
 
 export function clampColumnWidth<T>(column: DataTableColumn<T>, width: number) {
