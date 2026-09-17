@@ -5,6 +5,7 @@ import Markdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { copyTextToClipboard } from "@code-proxy/ui";
 
 function shouldShowLineNumbers(text: string): boolean {
   let newlines = 0;
@@ -22,7 +23,7 @@ function CodeBlock({ language, children }: { language: string; children: string 
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(children).then(() => {
+    void copyTextToClipboard(children).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });

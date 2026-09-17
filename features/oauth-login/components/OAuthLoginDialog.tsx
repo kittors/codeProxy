@@ -15,7 +15,7 @@ import type {
   OAuthProvider,
 } from "@code-proxy/api-client";
 import type { ProxyPoolEntry } from "@code-proxy/api-client";
-import { Button, surface } from "@code-proxy/ui";
+import { Button, copyTextToClipboard, surface } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
 import { Modal } from "@code-proxy/ui";
@@ -385,7 +385,7 @@ export function OAuthLoginDialog({
       const link = String(url ?? "").trim();
       if (!link) return;
       try {
-        await navigator.clipboard.writeText(link);
+        await copyTextToClipboard(link);
         notify({ type: "success", message: t("oauth.link_copied") });
       } catch {
         notify({ type: "error", message: t("oauth.copy_failed") });

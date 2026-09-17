@@ -12,7 +12,7 @@ import {
   Server,
 } from "lucide-react";
 import { useAuth } from "@app/providers/AuthProvider";
-import { Card } from "@code-proxy/ui";
+import { Card, copyTextToClipboard } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
 import { SystemUpdateCard } from "@features/online-update";
 
@@ -40,7 +40,7 @@ function InfoCard({
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
-    void navigator.clipboard.writeText(value);
+    void copyTextToClipboard(value);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
     notify({ type: "success", message: t("system_page.copied"), duration: 1200 });

@@ -5,7 +5,7 @@ import iconClaude from "@code-proxy/assets/icons/claude.svg";
 import iconCodex from "@code-proxy/assets/icons/codex.svg";
 import iconGemini from "@code-proxy/assets/icons/gemini.svg";
 import { modelsApi } from "@code-proxy/api-client";
-import { Button, COLUMN_WIDTH } from "@code-proxy/ui";
+import { Button, COLUMN_WIDTH, copyTextToClipboard } from "@code-proxy/ui";
 import {
   DataTable,
   TABLE_ROW_ACTIONS_COLUMN,
@@ -334,7 +334,7 @@ export function CcSwitchImportConfigModal({
   const copyBaseUrl = async () => {
     if (!fullBaseUrl) return;
     try {
-      await navigator.clipboard.writeText(fullBaseUrl);
+      await copyTextToClipboard(fullBaseUrl);
       setCopiedBaseUrl(true);
       if (copiedResetRef.current) window.clearTimeout(copiedResetRef.current);
       copiedResetRef.current = window.setTimeout(() => setCopiedBaseUrl(false), 1600);

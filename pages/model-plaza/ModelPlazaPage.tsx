@@ -5,6 +5,7 @@ import { VendorIcon } from "@code-proxy/assets";
 import {
   Button,
   Card,
+  copyTextToClipboard,
   EmptyState,
   Tabs,
   TabsList,
@@ -144,7 +145,7 @@ function ModelPlazaCard({
     .join(" · ");
 
   const handleCopy = () => {
-    void navigator.clipboard.writeText(model.id);
+    void copyTextToClipboard(model.id);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1500);
     onCopied();

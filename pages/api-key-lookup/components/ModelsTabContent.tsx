@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Check, Copy, Layers, RefreshCw, Search, Store } from "lucide-react";
 import { VendorIcon } from "@code-proxy/assets";
-import { Card, EmptyState, Tabs, TabsList, TabsTrigger, TextInput, useToast } from "@code-proxy/ui";
+import { Card, copyTextToClipboard, EmptyState, Tabs, TabsList, TabsTrigger, TextInput, useToast } from "@code-proxy/ui";
 import { formatModelPriceAmount, hasModelPricing } from "@features/model-availability";
 import {
   buildModelVendorStats,
@@ -60,7 +60,7 @@ function ModelPlazaCard({ model, onCopied }: { model: PublicModelItem; onCopied:
   const vendorGlyph = model.id.trim().charAt(0).toUpperCase() || "M";
 
   const handleCopy = () => {
-    void navigator.clipboard.writeText(model.id);
+    void copyTextToClipboard(model.id);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1500);
     onCopied();

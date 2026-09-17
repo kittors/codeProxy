@@ -18,7 +18,7 @@ import type {
   OpenAIProvider,
   ProviderSimpleConfig,
 } from "@code-proxy/api-client";
-import { Button } from "@code-proxy/ui";
+import { Button, copyTextToClipboard } from "@code-proxy/ui";
 import { ConfirmModal } from "@code-proxy/ui";
 import { Modal } from "@code-proxy/ui";
 import { Tabs, TabsContent } from "@code-proxy/ui";
@@ -862,7 +862,7 @@ export function ProvidersPage() {
   const copyText = useCallback(
     async (value: string) => {
       try {
-        await navigator.clipboard.writeText(value);
+        await copyTextToClipboard(value);
         notify({ type: "success", message: t("providers.copied") });
       } catch {
         notify({ type: "error", message: t("providers.copy_failed") });

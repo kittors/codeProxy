@@ -15,7 +15,7 @@ import type {
   IFlowCookieAuthResponse,
   OAuthProvider,
 } from "@code-proxy/api-client";
-import { Card, surface } from "@code-proxy/ui";
+import { Card, copyTextToClipboard, surface } from "@code-proxy/ui";
 import { Button } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
 import { Select } from "@code-proxy/ui";
@@ -284,7 +284,7 @@ export function OAuthPage() {
       const link = String(url ?? "").trim();
       if (!link) return;
       try {
-        await navigator.clipboard.writeText(link);
+        await copyTextToClipboard(link);
         notify({ type: "success", message: t("oauth.link_copied") });
       } catch {
         notify({ type: "error", message: t("oauth.copy_failed") });

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Check } from "lucide-react";
 import { VendorIcon } from "@code-proxy/assets";
-import { cn } from "@code-proxy/ui";
+import { cn, copyTextToClipboard } from "@code-proxy/ui";
 
 export type ModelVendorKey =
   | "amp"
@@ -400,7 +400,7 @@ export function CopyableModelTag({
   const tone = getModelVendorColor(id);
 
   const handleClick = () => {
-    void navigator.clipboard.writeText(id);
+    void copyTextToClipboard(id);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1500);
     onCopied?.(id);

@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import { AlertTriangle, X, Loader2, Copy, Check } from "lucide-react";
 import { usageApi } from "@code-proxy/api-client";
 import { extractErrorFromLogContent } from "../error-detail/extractErrorFromLogContent";
+import { copyTextToClipboard } from "@code-proxy/ui";
 
 interface ErrorDetailModalProps {
   open: boolean;
@@ -92,7 +93,7 @@ export function ErrorDetailModal({ open, logId, model, onClose }: ErrorDetailMod
   }, [open, onClose]);
 
   const handleCopy = useCallback(() => {
-    void navigator.clipboard.writeText(errorContent);
+    void copyTextToClipboard(errorContent);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }, [errorContent]);
