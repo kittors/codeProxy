@@ -576,6 +576,10 @@ export interface UsageLogItem {
   model: string;
   thinking_level?: string | null;
   upstream_model?: string;
+  /** Model the upstream declared in its own response; absent when it declared none. */
+  upstream_response_model?: string;
+  /** Server-side verdict on upstream_response_model vs. the model we sent. */
+  upstream_model_mismatch?: boolean;
   vision_fallback_model?: string;
   source: string;
   channel_name: string;

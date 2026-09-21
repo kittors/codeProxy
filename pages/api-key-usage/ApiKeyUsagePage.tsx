@@ -151,6 +151,8 @@ function toLogRow(item: PublicLogItem): RequestLogsRow {
     maskedApiKey: item.api_key_masked || maskRequestLogApiKey(item.api_key || ""),
     model: item.model,
     upstreamModel: item.upstream_model || "",
+    upstreamResponseModel: item.upstream_response_model || "",
+    upstreamModelMismatch: item.upstream_model_mismatch === true,
     visionFallbackModel: item.vision_fallback_model || "",
     failed: item.failed,
     streaming: item.streaming === true,
