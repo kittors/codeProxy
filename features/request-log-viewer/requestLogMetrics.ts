@@ -1,4 +1,4 @@
-import type { RequestLogsRow } from "./requestLogsShared";
+import type { RequestLogsRow } from "./requestLogsRow";
 
 const parseLatencyTextToSeconds = (text: string): number | null => {
   const trimmed = String(text || "").trim();
