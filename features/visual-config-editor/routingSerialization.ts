@@ -98,15 +98,16 @@ export function parseRoutingChannelGroups(raw: unknown): RoutingChannelGroupEntr
       matchMode: tags.length > 0 ? "tags" : "channels",
       channels: members,
       tags,
-      allowedModels: Array.isArray(record["allowed-models"])
-        ? Array.from(
-            new Set(
-              record["allowed-models"].map((model) => String(model ?? "").trim()).filter(Boolean),
-            ),
-          )
-        : [],
+      allowedModels: parseModelList(record["allowed-models"]),
+      excludedModels: parseModelList(record["excluded-models"]),
     };
   });
+}
+
+/** Normalizes an allow/exclude model list from either the wire or a draft. */
+export function parseModelList(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  return Array.from(new Set(raw.map((model) => String(model ?? "").trim()).filter(Boolean)));
 }
 
 export function parseRoutingPathRoutes(raw: unknown): RoutingPathRouteEntry[] {
@@ -174,11 +175,15 @@ export function serializeRoutingChannelGroupsForYaml(
         const scheduling = asRecord(item.scheduling) ?? {};
         item.scheduling = { ...scheduling, "channel-weights": channelWeights };
       }
-      const allowedModels = Array.from(
-        new Set(group.allowedModels.map((model) => model.trim()).filter(Boolean)),
-      );
+      // Only one of the two lists is ever written: an allow list freezes the
+      // group to today's models, exclusions let new upstream models through.
+      const allowedModels = parseModelList(group.allowedModels);
+      const excludedModels = parseModelList(group.excludedModels ?? []);
       if (allowedModels.length > 0) {
         item["allowed-models"] = allowedModels;
+      }
+      if (excludedModels.length > 0) {
+        item["excluded-models"] = excludedModels;
       }
 
       return item;
