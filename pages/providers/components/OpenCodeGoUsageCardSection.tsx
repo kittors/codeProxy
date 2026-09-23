@@ -239,13 +239,21 @@ export function OpenCodeGoUsageCardSection({
       ? t("providers.channel_usage_query_failed")
       : usageEntry.error
     : null;
+  // A long reason is replaced by the generic line above to keep the card one
+  // line tall, but it is the part that says why (e.g. a Cloudflare page rather
+  // than a missing plan), so it stays one hover away.
+  const errorDetail = usageEntry?.error ?? "";
 
   // One state at a time. A failed probe used to render the "not queried" gauge
   // and a red error line together, which read as two unrelated problems.
   // One line, not a stacked icon block: this is a status note on a card that is
   // otherwise two or three lines tall, and a centred 8x8 medallion above a
   // caption made the note the largest thing on it.
-  const renderPlaceholder = (message: string, tone: "muted" | "error") => (
+  const renderPlaceholder = (
+    message: string,
+    tone: "muted" | "error",
+    detail: string = message,
+  ) => (
     <div
       className={[
         "flex h-6 w-full items-center gap-1.5 rounded-md border px-2 text-xs font-medium",
@@ -256,7 +264,9 @@ export function OpenCodeGoUsageCardSection({
       data-testid="opencode-go-usage-footprint"
     >
       <Gauge size={12} strokeWidth={1.5} className="shrink-0" aria-hidden="true" />
-      <span className="min-w-0 truncate">{message}</span>
+      <span className="min-w-0 truncate" title={detail}>
+        {message}
+      </span>
     </div>
   );
 
@@ -310,13 +320,16 @@ export function OpenCodeGoUsageCardSection({
             );
           })}
           {errorText ? (
-            <p className="text-2xs font-medium text-rose-600 dark:text-rose-300">
+            <p
+              className="text-2xs font-medium text-rose-600 dark:text-rose-300"
+              title={errorDetail}
+            >
               {errorText}
             </p>
           ) : null}
         </div>
       ) : errorText ? (
-        renderPlaceholder(errorText, "error")
+        renderPlaceholder(errorText, "error", errorDetail)
       ) : !isLoading ? (
         renderPlaceholder(t("providers.channel_usage_not_queried"), "muted")
       ) : null}
