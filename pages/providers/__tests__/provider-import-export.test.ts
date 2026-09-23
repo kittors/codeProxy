@@ -41,7 +41,9 @@ describe("provider import/export helpers", () => {
     });
   });
 
-  test("preserves OpenCode Go dashboard usage fields without per-key model fields", () => {
+  // OpenCode Go usage now authenticates with the API key, so an export must not
+  // carry a dashboard session and an older export file must not bring one back.
+  test("drops legacy OpenCode Go dashboard fields on export and import", () => {
     const text = createProviderExportText("opencode-go", [
       {
         apiKey: " go-key ",
@@ -49,8 +51,6 @@ describe("provider import/export helpers", () => {
         models: [{ name: "deepseek-v4-pro" }],
         excludedModels: [" deepseek-v4-pro ", "*"],
         visionFallbackModel: " qwen3.5-plus ",
-        workspaceId: " wrk_123 ",
-        authCookie: " auth-token ",
       },
     ] satisfies ProviderSimpleConfig[]);
 
@@ -61,10 +61,8 @@ describe("provider import/export helpers", () => {
         {
           "api-key": "go-key",
           "excluded-models": ["*"],
-          "auth-cookie": "auth-token",
           name: "OpenCode Go",
           "vision-fallback-model": "qwen3.5-plus",
-          "workspace-id": "wrk_123",
         },
       ],
     });
@@ -94,8 +92,6 @@ describe("provider import/export helpers", () => {
         name: "OpenCode Go",
         excludedModels: ["*"],
         visionFallbackModel: "qwen3.5-plus",
-        workspaceId: "wrk_123",
-        authCookie: "auth-token",
       },
     ]);
   });

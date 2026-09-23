@@ -27,14 +27,10 @@ const opencodeGoKeys = [
   {
     "api-key": "sk-opencode-go-alpha-1234567890abcdef",
     name: "opencode go",
-    "workspace-id": "wrk_alpha",
-    "auth-cookie": "auth=alpha",
   },
   {
     "api-key": "sk-opencode-go-beta-abcdef1234567890",
     name: "opencode go two",
-    "workspace-id": "wrk_beta",
-    "auth-cookie": "auth=beta",
   },
 ];
 
@@ -103,7 +99,6 @@ const mockManagementApi = async (page: Page) => {
       return fulfillJson({ "openai-compatibility": openaiProviders });
     if (managementPath === "/opencode-go-api-key/usage")
       return fulfillJson({
-        workspace_id: "wrk",
         usage: [
           { type: "rolling", label: "Rolling", percentage: 3 },
           { type: "weekly", label: "Weekly", percentage: 62 },

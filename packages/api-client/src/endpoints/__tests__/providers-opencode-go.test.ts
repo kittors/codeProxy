@@ -63,8 +63,6 @@ describe("providersApi OpenCode Go", () => {
         models: [{ name: "upstream-model", alias: "go-alias" }],
         excludedModels: ["*"],
         visionFallbackModel: "qwen3.5-plus",
-        workspaceId: "wrk_123",
-        authCookie: "auth-token",
       },
     ]);
   });
@@ -107,14 +105,15 @@ describe("providersApi OpenCode Go", () => {
         apiKey: "sk-go",
         prefix: "go",
         baseUrl: "https://should-not-save.example",
+        // A row imported from an older export can still carry the console
+        // cookie the usage check used to need; it must never be sent back.
+        authCookie: "auth=stale-console-session",
         proxyId: "hk",
         proxyUrl: "http://127.0.0.1:7890",
         headers: { "X-Test": "yes" },
         models: [{ name: "upstream-model", alias: "go-alias" }],
         excludedModels: ["*"],
         visionFallbackModel: "qwen3.5-plus",
-        workspaceId: "wrk_123",
-        authCookie: "auth-token",
       },
     ]);
 
@@ -129,8 +128,6 @@ describe("providersApi OpenCode Go", () => {
         models: [{ name: "upstream-model", alias: "go-alias" }],
         "excluded-models": ["*"],
         "vision-fallback-model": "qwen3.5-plus",
-        "workspace-id": "wrk_123",
-        "auth-cookie": "auth-token",
       },
     ]);
 
@@ -141,11 +138,10 @@ describe("providersApi OpenCode Go", () => {
     });
   });
 
-  test("queries OpenCode Go usage with dashboard credentials", async () => {
+  test("queries OpenCode Go usage with the API key", async () => {
     const { providersApi } =
       await import("@code-proxy/api-client/endpoints/providers");
     postMock.mockResolvedValue({
-      workspace_id: "wrk_123",
       usage: [
         {
           type: "rolling",
@@ -158,12 +154,10 @@ describe("providersApi OpenCode Go", () => {
 
     await expect(
       providersApi.queryOpenCodeGoUsage({
-        "workspace-id": "wrk_123",
-        "auth-cookie": "auth-token",
+        "api-key": "sk-go",
         "proxy-id": "hk",
       }),
     ).resolves.toEqual({
-      workspace_id: "wrk_123",
       usage: [
         {
           type: "rolling",
@@ -175,8 +169,7 @@ describe("providersApi OpenCode Go", () => {
     });
 
     expect(postMock).toHaveBeenCalledWith("/opencode-go-api-key/usage", {
-      "workspace-id": "wrk_123",
-      "auth-cookie": "auth-token",
+      "api-key": "sk-go",
       "proxy-id": "hk",
     });
   });
@@ -190,11 +183,10 @@ describe("providersApi OpenCode Go", () => {
       apiKey: "sk-go",
       disabled: true,
       baseUrl: "https://should-not-save.example",
+      authCookie: "auth=stale-console-session",
       models: [],
       excludedModels: [],
       visionFallbackModel: "qwen3.5-plus",
-      workspaceId: "wrk_123",
-      authCookie: "auth-token",
     });
 
     expect(patchMock).toHaveBeenCalledWith("/opencode-go-api-key", {
@@ -206,8 +198,6 @@ describe("providersApi OpenCode Go", () => {
         models: [],
         "excluded-models": [],
         "vision-fallback-model": "qwen3.5-plus",
-        "workspace-id": "wrk_123",
-        "auth-cookie": "auth-token",
       },
     });
 

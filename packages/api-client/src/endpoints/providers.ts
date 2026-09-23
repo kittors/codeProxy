@@ -178,11 +178,6 @@ export const providersApi = {
           normalizeString(
             item["vision-fallback-model"] ?? item.visionFallbackModel,
           ) ?? undefined;
-        const workspaceId =
-          normalizeString(item["workspace-id"] ?? item.workspaceId) ??
-          undefined;
-        const authCookie =
-          normalizeString(item["auth-cookie"] ?? item.authCookie) ?? undefined;
         return {
           ...(id ? { id } : {}),
           apiKey,
@@ -195,8 +190,6 @@ export const providersApi = {
           ...(models ? { models } : {}),
           ...(excludedModels ? { excludedModels } : {}),
           ...(visionFallbackModel ? { visionFallbackModel } : {}),
-          ...(workspaceId ? { workspaceId } : {}),
-          ...(authCookie ? { authCookie } : {}),
         };
       })
       .filter(Boolean) as ProviderSimpleConfig[];
@@ -446,9 +439,9 @@ export const providersApi = {
       params: { "api-key": apiKey },
     }),
 
+  // No auth-cookie: OpenCode Go reports rolling windows from the same API key
+  // that serves inference, so usage never needs a browser session.
   queryOpenCodeGoUsage: (payload: {
-    "workspace-id"?: string;
-    "auth-cookie"?: string;
     "proxy-id"?: string;
     "proxy-url"?: string;
     name?: string;

@@ -277,12 +277,6 @@ export function useProviderKeyEditor({
         : excludedModels?.length
           ? { excludedModels }
           : {}),
-      ...(isOpenCodeGo && keyDraft.workspaceId.trim()
-        ? { workspaceId: keyDraft.workspaceId.trim() }
-        : {}),
-      ...(isOpenCodeGo && keyDraft.authCookie.trim()
-        ? { authCookie: keyDraft.authCookie.trim() }
-        : {}),
       ...((isCline || isOllamaCloud) && keyDraft.authCookie.trim()
         ? { authCookie: keyDraft.authCookie.trim() }
         : {}),

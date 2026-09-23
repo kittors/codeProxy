@@ -465,6 +465,67 @@ describe("CcSwitchImportSettingsPage", () => {
     expect(listAvailableModels).not.toHaveBeenCalled();
   });
 
+  // The group refuses what it excludes, so an excluded model offered here became
+  // a mapping whose requests were rejected with a 403.
+  test("leaves models the channel group excludes out of the mapping candidates", async () => {
+    listChannelGroups.mockResolvedValue([
+      {
+        name: "chatgpt-pro",
+        description: "ChatGPT Pro route",
+        channels: ["A_GptPro"],
+        "path-routes": ["/openai/pro"],
+        // Matched like the backend does: through the route prefix and the wildcard.
+        "excluded-models": ["gpt-image-*", "openai/gpt-5-codex"],
+      },
+    ]);
+    listAvailableModels.mockResolvedValue([
+      { id: "gpt-5" },
+      { id: "gpt-5-codex" },
+      { id: "gpt-5.5" },
+      { id: "gpt-image-2" },
+    ]);
+    renderPage();
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: /new config/i }));
+    const dialog = await screen.findByRole("dialog", { name: /new cc switch config/i });
+    await user.click(within(dialog).getByRole("combobox", { name: /select channel group/i }));
+    await user.click(await screen.findByRole("option", { name: /chatgpt-pro.*\/openai\/pro/i }));
+
+    expect(await within(dialog).findByDisplayValue("gpt-5.5")).toBeInTheDocument();
+    expect(within(dialog).getByDisplayValue("gpt-5")).toBeInTheDocument();
+    expect(within(dialog).queryByDisplayValue("gpt-image-2")).not.toBeInTheDocument();
+    expect(within(dialog).queryByDisplayValue("gpt-5-codex")).not.toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole("combobox", { name: "Actual channel model 1" }));
+    expect(await screen.findByRole("option", { name: "gpt-5.5" })).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "gpt-image-2" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "gpt-5-codex" })).not.toBeInTheDocument();
+  });
+
+  test("applies a channel group's exclusions to its allow list too", async () => {
+    listChannelGroups.mockResolvedValue([
+      {
+        name: "pro",
+        description: "Pro route",
+        "path-routes": ["/pro"],
+        "allowed-models": ["deepseek-v4-flash", "kimi-k2"],
+        "excluded-models": ["DeepSeek-*"],
+      },
+    ]);
+    renderPage();
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: /new config/i }));
+    const dialog = await screen.findByRole("dialog", { name: /new cc switch config/i });
+    await user.click(within(dialog).getByRole("combobox", { name: /select channel group/i }));
+    await user.click(await screen.findByRole("option", { name: /pro.*\/pro/i }));
+
+    expect(await within(dialog).findByDisplayValue("kimi-k2")).toBeInTheDocument();
+    expect(within(dialog).queryByDisplayValue("deepseek-v4-flash")).not.toBeInTheDocument();
+    expect(listAvailableModels).not.toHaveBeenCalled();
+  });
+
   test("filters fallback channel group models by configured model availability", async () => {
     listChannelGroups.mockResolvedValue([
       {

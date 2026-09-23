@@ -95,7 +95,10 @@ export type RoutingChannelGroupEntry = {
   matchMode?: RoutingChannelGroupMatchMode;
   channels: RoutingChannelGroupMemberEntry[];
   tags?: string[];
+  /** Frozen allow list: models added upstream later are rejected. */
   allowedModels: string[];
+  /** "All but these", so models added upstream later stay usable. */
+  excludedModels?: string[];
   system?: boolean;
 };
 

@@ -5,6 +5,7 @@ import {
   type ChannelGroupChannelDetail,
 } from "@code-proxy/api-client/endpoints/channel-groups";
 import {
+  readRoutingConfigSupport,
   routingConfigApi,
   type RoutingConfigGroupItem,
   type RoutingConfigItem,
@@ -16,6 +17,7 @@ import { normalizeProviderKey, normalizeTagValue } from "@code-proxy/domain";
 import {
   DEFAULT_VISUAL_VALUES,
   makeClientId,
+  parseModelList,
   parseScheduling,
   serializeScheduling,
   strategyFromScheduling,
@@ -134,15 +136,8 @@ function hydrateRoutingValues(payload: RoutingConfigItem | undefined): VisualCon
               .toLowerCase() !== "default",
           matchMode: tags.length > 0 ? "tags" : "channels",
           tags,
-          allowedModels: Array.isArray(group?.["allowed-models"])
-            ? Array.from(
-                new Set(
-                  group["allowed-models"]
-                    .map((model) => String(model ?? "").trim())
-                    .filter(Boolean),
-                ),
-              )
-            : [],
+          allowedModels: parseModelList(group?.["allowed-models"]),
+          excludedModels: parseModelList(group?.["excluded-models"]),
           channels: mergedNames.map((name, channelIndex) => ({
             id: `routing-group-${index}-channel-${channelIndex}-${makeClientId()}`,
             name,
@@ -209,11 +204,16 @@ function serializeRoutingValues(values: VisualConfigValues): RoutingConfigItem {
       item["channel-priorities"] = channelPriorities;
       item.scheduling = { ...item.scheduling, "channel-weights": channelPriorities };
     }
-    const allowedModels = Array.from(
-      new Set(group.allowedModels.map((model) => model.trim()).filter(Boolean)),
-    );
+    // Both lists are written as the editor left them: an allow list freezes the
+    // group to today's models, exclusions let new upstream models through, and
+    // a group may carry both (the allow list minus the exclusions).
+    const allowedModels = parseModelList(group.allowedModels);
+    const excludedModels = parseModelList(group.excludedModels);
     if (allowedModels.length > 0) {
       item["allowed-models"] = allowedModels;
+    }
+    if (excludedModels.length > 0) {
+      item["excluded-models"] = excludedModels;
     }
     acc.push(item);
     return acc;
@@ -256,6 +256,10 @@ export function ChannelGroupsPage() {
   const [availableChannelDetailsByGroup, setAvailableChannelDetailsByGroup] =
     useState<ChannelDetailsByGroup>({});
   const [authGroupOwnerMap, setAuthGroupOwnerMap] = useState<Record<string, string>>({});
+  // The panel can be newer than the backend (CliRelay pulls the latest release),
+  // and an older backend drops `excluded-models` on save. Until the backend says
+  // otherwise, the editor only writes fixed allow lists.
+  const [modelExclusionsSupported, setModelExclusionsSupported] = useState(false);
 
   const loadAvailableChannels = useCallback(async (options?: { signal?: AbortSignal }) => {
     const items = await channelGroupsApi.list(
@@ -406,6 +410,7 @@ export function ChannelGroupsPage() {
       if (signal?.aborted) return;
       const nextValues = hydrateRoutingValues(routing);
       setVisualValues(nextValues);
+      setModelExclusionsSupported(readRoutingConfigSupport(routing).channelGroupExcludedModels);
       setAvailableChannels(channels.names);
       setAvailableChannelDetails(channels.detailsByName);
       setAvailableChannelDetailsByGroup(channels.detailsByGroup);
@@ -445,6 +450,7 @@ export function ChannelGroupsPage() {
         ]);
         const hydrated = hydrateRoutingValues(latest);
         setVisualValues(hydrated);
+        setModelExclusionsSupported(readRoutingConfigSupport(latest).channelGroupExcludedModels);
         setAvailableChannels(channels.names);
         setAvailableChannelDetails(channels.detailsByName);
         setAvailableChannelDetailsByGroup(channels.detailsByGroup);
@@ -510,6 +516,7 @@ export function ChannelGroupsPage() {
             title={t("channel_groups_page.title")}
             values={visualValues}
             disabled={loading || saving}
+            modelExclusionsSupported={modelExclusionsSupported}
             availableChannels={availableChannels}
             availableChannelDetails={availableChannelDetails}
             availableChannelDetailsByGroup={availableChannelDetailsByGroup}

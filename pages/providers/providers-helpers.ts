@@ -171,7 +171,6 @@ export type ProviderKeyDraft = {
   proxyId: string;
   excludedModelsText: string;
   visionFallbackModel: string;
-  workspaceId: string;
   authCookie: string;
   headersEntries: KeyValueEntry[];
   modelEntries: ModelEntryDraft[];
@@ -258,7 +257,6 @@ export const buildProviderKeyDraft = (
     proxyId: input?.proxyId ?? "",
     excludedModelsText: excludedModelsToText(input?.excludedModels),
     visionFallbackModel: input?.visionFallbackModel ?? "",
-    workspaceId: input?.workspaceId ?? "",
     authCookie: input?.authCookie ?? "",
     headersEntries: recordToKeyValueEntries(input?.headers),
     modelEntries: buildModelEntries(input?.models),
