@@ -6,7 +6,6 @@ import { QuotaBar } from "@features/quota-preview/QuotaBar";
 
 export interface OpenCodeGoUsageCacheEntry {
   sourceId?: string;
-  workspaceId?: string;
   usage: OpenCodeGoUsageItem[];
   updatedAt: number;
   error?: string;

@@ -7,35 +7,27 @@ const opencodeGoKeys = [
     "api-key": "sk-opencode-go-alpha-1234567890abcdef",
     name: "OC usage nearly full",
     prefix: "oc-alpha",
-    "workspace-id": "wrk_alpha",
-    "auth-cookie": "auth=alpha",
   },
   {
     "api-key": "sk-opencode-go-beta-abcdef1234567890",
     name: "OC weekly half",
     prefix: "oc-beta",
-    "workspace-id": "wrk_beta",
-    "auth-cookie": "auth=beta",
   },
   {
     "api-key":
       "sk-opencode-go-gamma-verylongkey-1234567890abcdef1234567890abcdef",
     name: "opencode-go-very-long-provider-name-that-should-truncate-cleanly",
     prefix: "oc-gamma-long-prefix-value",
-    "workspace-id": "wrk_gamma",
-    "auth-cookie": "auth=gamma",
   },
   {
     "api-key": "sk-opencode-go-no-dashboard-1234567890abcdef",
-    name: "No dashboard credentials",
+    name: "No usage yet",
     prefix: "oc-no-usage",
   },
   {
     "api-key": "sk-opencode-go-low-remaining-1234567890abcdef",
     name: "Low remaining",
     prefix: "oc-low",
-    "workspace-id": "wrk_low",
-    "auth-cookie": "auth=low",
   },
   {
     "api-key": "sk-opencode-go-unused-1234567890abcdef",
@@ -160,7 +152,7 @@ const mockManagementApi = async (page: Page) => {
       managementPath === "/opencode-go-api-key/usage" &&
       request.method() === "POST"
     ) {
-      return fulfillJson({ workspace_id: "wrk_test", usage: opencodeGoUsage });
+      return fulfillJson({ usage: opencodeGoUsage });
     }
     if (
       managementPath === "/cline-api-key/usage" &&

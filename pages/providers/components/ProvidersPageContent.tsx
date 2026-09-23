@@ -227,18 +227,14 @@ export function ProvidersPage() {
         };
         const result =
           provider === "opencode-go"
-            ? await providersApi.queryOpenCodeGoUsage({
-                ...payload,
-                "workspace-id": item.workspaceId?.trim(),
-              })
+            ? await providersApi.queryOpenCodeGoUsage(payload)
             : provider === "cline"
               ? await providersApi.queryClineUsage(payload)
               : provider === "ollama-cloud"
                 ? await providersApi.queryOllamaCloudUsage(payload)
                 : await providersApi.queryCommandCodeUsage(payload);
         const entry: OpenCodeGoUsageCacheEntry = {
-          sourceId: result.workspace_id ?? provider,
-          workspaceId: result.workspace_id,
+          sourceId: provider,
           usage: result.usage,
           updatedAt: Date.now(),
         };
@@ -250,7 +246,6 @@ export function ProvidersPage() {
           return {
             ...entry,
             usage: merged,
-            workspaceId: entry.workspaceId ?? existing?.workspaceId,
             sourceId: entry.sourceId ?? existing?.sourceId,
           };
         });
@@ -258,7 +253,6 @@ export function ProvidersPage() {
       } catch (err: unknown) {
         openCodeGoUsageStore.updateEntry(cacheKey, (existing) => ({
           sourceId: existing?.sourceId,
-          workspaceId: existing?.workspaceId,
           usage: existing?.usage ?? [],
           updatedAt: Date.now(),
           error:

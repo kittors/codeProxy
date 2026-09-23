@@ -33,16 +33,17 @@ export const PROVIDER_USAGE_WINDOWS: Record<
 };
 
 const USAGE_CACHE_SCOPE: Record<ProviderUsageProvider, string> = {
-  "opencode-go": "workspace",
+  // Keyed by credential rather than by browser session: OpenCode Go and
+  // Command Code both report usage from the API key itself, so there is no
+  // dashboard session to scope to.
+  "opencode-go": "apikey",
   cline: "dashboard",
   "ollama-cloud": "dashboard",
-  // Keyed by credential rather than by browser session: Command Code reports
-  // usage from the API key itself, so there is no dashboard session to scope to.
   commandcode: "apikey",
 };
 
 export const hasOpenCodeGoUsageQuery = (item: ProviderSimpleConfig) =>
-  Boolean(item.workspaceId?.trim() && item.authCookie?.trim());
+  Boolean(item.apiKey?.trim());
 
 export const getProviderUsageCacheKey = (
   provider: ProviderUsageProvider,
@@ -51,27 +52,39 @@ export const getProviderUsageCacheKey = (
 ) =>
   [
     provider,
-    provider === "opencode-go"
-      ? item.workspaceId?.trim() || "no-workspace"
-      : USAGE_CACHE_SCOPE[provider],
+    USAGE_CACHE_SCOPE[provider],
     item.name?.trim() || item.apiKey?.trim() || `item-${index}`,
     index,
   ].join(":");
 
+/**
+ * OpenCode Go usage used to be scoped by workspace id, which is the segment
+ * that now reads "apikey". Rewriting it keeps a cached reading on screen
+ * instead of blanking the card until the operator refreshes by hand.
+ */
+const rescopeOpenCodeGoUsageKey = (key: string): string => {
+  if (!key.startsWith("opencode-go:")) return key;
+  const parts = key.split(":");
+  if (parts.length < 4 || parts[1] === USAGE_CACHE_SCOPE["opencode-go"]) {
+    return key;
+  }
+  parts[1] = USAGE_CACHE_SCOPE["opencode-go"];
+  return parts.join(":");
+};
+
 export const migrateProviderUsageCache = (
   cached: OpenCodeGoUsageState,
 ): OpenCodeGoUsageState => {
-  const next = { ...cached };
+  const next: OpenCodeGoUsageState = {};
   Object.entries(cached).forEach(([key, entry]) => {
-    if (
+    const prefixed =
       key.startsWith("opencode-go:") ||
       key.startsWith("cline:") ||
       key.startsWith("ollama-cloud:") ||
       key.startsWith("commandcode:")
-    ) {
-      return;
-    }
-    next[`opencode-go:${key}`] ??= entry;
+        ? key
+        : `opencode-go:${key}`;
+    next[rescopeOpenCodeGoUsageKey(prefixed)] ??= entry;
   });
   return next;
 };
@@ -80,8 +93,9 @@ export const hasProviderUsageQuery = (
   provider: ProviderUsageProvider,
   item: ProviderSimpleConfig,
 ) => {
+  // Neither OpenCode Go nor Command Code needs a dashboard cookie; the
+  // inference key also reads their usage endpoints.
   if (provider === "opencode-go") return hasOpenCodeGoUsageQuery(item);
-  // Command Code needs no dashboard cookie; the inference key also reads credits.
   if (provider === "commandcode") return Boolean(item.apiKey?.trim());
   return Boolean(item.authCookie?.trim());
 };
