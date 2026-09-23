@@ -212,10 +212,7 @@ const normalizeSimpleItem = (
             )!,
           }
         : {}),
-      ...(kind === "opencode-go" && normalizeString(value["workspace-id"] ?? value.workspaceId)
-        ? { workspaceId: normalizeString(value["workspace-id"] ?? value.workspaceId)! }
-        : {}),
-      ...((kind === "opencode-go" || kind === "cline" || kind === "ollama-cloud") &&
+      ...((kind === "cline" || kind === "ollama-cloud") &&
       normalizeString(value["auth-cookie"] ?? value.authCookie)
         ? { authCookie: normalizeString(value["auth-cookie"] ?? value.authCookie)! }
         : {}),

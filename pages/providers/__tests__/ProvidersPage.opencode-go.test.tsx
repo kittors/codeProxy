@@ -14,7 +14,6 @@ type MockApiCallResult = {
 };
 
 type MockOpenCodeGoUsageResponse = {
-  workspace_id?: string;
   usage: {
     type: string;
     label: string;
@@ -38,7 +37,6 @@ const mocks = vi.hoisted(() => ({
   getOllamaCloudConfigs: vi.fn(async (): Promise<unknown[]> => []),
   getOpenAIProviders: vi.fn(async (): Promise<unknown[]> => []),
   queryOpenCodeGoUsage: vi.fn(async (): Promise<MockOpenCodeGoUsageResponse> => ({
-    workspace_id: "workspace-1",
     usage: [{ type: "rolling", label: "Rolling", percentage: 25, resets_in: "30m" }],
   })),
   queryClineUsage: vi.fn(async (): Promise<MockOpenCodeGoUsageResponse> => ({
@@ -163,7 +161,6 @@ describe("ProvidersPage OpenCode Go tab", () => {
     mocks.getOllamaCloudConfigs.mockImplementation(async () => []);
     mocks.getOpenAIProviders.mockImplementation(async () => []);
     mocks.queryOpenCodeGoUsage.mockImplementation(async () => ({
-      workspace_id: "workspace-1",
       usage: [{ type: "rolling", label: "Rolling", percentage: 25, resets_in: "30m" }],
     }));
     mocks.saveOpenCodeGoConfigs.mockImplementation(async () => ({}));
@@ -210,13 +207,14 @@ describe("ProvidersPage OpenCode Go tab", () => {
           {
             name: "OpenCode Go Cached",
             apiKey: "sk-opencode-go",
-            workspaceId: "workspace-1",
-            authCookie: "session=abc",
           },
         ],
         timestamp: Date.now(),
       }),
     );
+    // Deliberately the pre-migration shape: no provider prefix, and scoped by
+    // workspace id rather than by API key. An operator upgrading the panel
+    // should still see the last reading instead of an empty card.
     localStorage.setItem(
       "providers-page:cache:opencode-go-usage",
       JSON.stringify({
@@ -238,14 +236,10 @@ describe("ProvidersPage OpenCode Go tab", () => {
       {
         name: "OpenCode Go Cached",
         apiKey: "sk-opencode-go",
-        workspaceId: "workspace-1",
-        authCookie: "session=abc",
       },
       {
         name: "OpenCode Go Fresh",
         apiKey: "sk-opencode-go-fresh",
-        workspaceId: "workspace-2",
-        authCookie: "session=def",
       },
     ]);
 
@@ -279,8 +273,6 @@ describe("ProvidersPage OpenCode Go tab", () => {
       {
         name: "OpenCode Go",
         apiKey: "sk-opencode-go",
-        workspaceId: "workspace-1",
-        authCookie: "session=abc",
       },
     ]);
     mocks.getEntityStats.mockImplementation(async () => ({
@@ -313,7 +305,6 @@ describe("ProvidersPage OpenCode Go tab", () => {
     expect(screen.getAllByText(/Left --/i).length).toBeGreaterThan(0);
 
     resolveUsage?.({
-      workspace_id: "workspace-1",
       usage: [{ type: "rolling", label: "Rolling", percentage: 25, resets_in: "30m" }],
     });
     expect(await screen.findByText(/Left 75%/i)).toBeInTheDocument();
@@ -328,15 +319,12 @@ describe("ProvidersPage OpenCode Go tab", () => {
       {
         name: "OpenCode Go",
         apiKey: "sk-opencode-go",
-        workspaceId: "workspace-1",
-        authCookie: "session=abc",
       },
     ]);
     mocks.queryOpenCodeGoUsage.mockImplementation(async () => {
       callCount += 1;
       if (callCount === 1) {
         return {
-          workspace_id: "workspace-1",
           usage: [
             {
               type: "rolling",
@@ -389,7 +377,6 @@ describe("ProvidersPage OpenCode Go tab", () => {
     expect(screen.queryByText(/Left --/i)).not.toBeInTheDocument();
 
     resolveRefresh?.({
-      workspace_id: "workspace-1",
       usage: [{ type: "rolling", label: "Rolling", percentage: 40, resets_in: "20m" }],
     });
     expect(await screen.findByText(/Left 60%/i)).toBeInTheDocument();

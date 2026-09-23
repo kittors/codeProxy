@@ -347,7 +347,7 @@ export interface ProviderSimpleConfig {
   models?: ProviderModel[];
   excludedModels?: string[];
   visionFallbackModel?: string;
-  workspaceId?: string;
+  /** Dashboard session for Cline and Ollama Cloud usage checks. */
   authCookie?: string;
   skipAnthropicProcessing?: boolean;
 }
@@ -360,7 +360,6 @@ export interface OpenCodeGoUsageItem {
 }
 
 export interface OpenCodeGoUsageResponse {
-  workspace_id?: string;
   usage: OpenCodeGoUsageItem[];
 }
 

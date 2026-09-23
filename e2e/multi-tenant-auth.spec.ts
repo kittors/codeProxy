@@ -1133,8 +1133,6 @@ test("provider read permission hides tenant write/test controls and system-only 
           {
             "api-key": "sk-read-only",
             name: "Read only provider",
-            "workspace-id": "workspace-reader",
-            "auth-cookie": "auth=reader",
           },
         ],
       },
