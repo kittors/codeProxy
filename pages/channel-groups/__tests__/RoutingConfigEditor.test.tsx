@@ -109,6 +109,9 @@ function Harness({
       <div data-testid="allowed-models">
         {values.routingChannelGroups[0]?.allowedModels?.join(",") ?? ""}
       </div>
+      <div data-testid="excluded-models">
+        {values.routingChannelGroups[0]?.excludedModels?.join(",") ?? ""}
+      </div>
     </ThemeProvider>
   );
 }
@@ -335,6 +338,108 @@ describe("RoutingConfigEditor", () => {
       ["Main Codex"],
       "deepseekv4flash+chatgpt",
     );
+  });
+
+  // The reported bug: a group saved as an allow list keeps rejecting every model
+  // the upstream ships afterwards, because the list froze the catalog of the day
+  // someone unchecked a box.
+  test("migrates a saved allow list to exclusions and flags the models it misses", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+    const loadModelsForChannels = vi.fn(async () => ["grok-4.6", "grok-4.7", "grok-4.7-build-fast"]);
+
+    render(
+      <Harness
+        initialValues={{
+          ...DEFAULT_VISUAL_VALUES,
+          routingChannelGroups: [
+            {
+              id: "group-xai",
+              name: "xai-pool",
+              description: "",
+              strategy: "round-robin",
+              scheduling: schedulingFromStrategy("round-robin"),
+              // Saved before grok-4.7 existed.
+              allowedModels: ["grok-4.6"],
+              channels: [{ id: "channel-main-codex", name: "Main Codex", priority: "" }],
+            },
+          ],
+          routingPathRoutes: [
+            {
+              id: "route-xai-pool",
+              path: "/xai-pool",
+              group: "xai-pool",
+              stripPrefix: true,
+              fallback: "none",
+            },
+          ],
+        }}
+        loadModelsForChannels={loadModelsForChannels}
+      />,
+    );
+
+    const row = screen.getByRole("row", { name: /xai-pool/ });
+    await user.click(within(row).getByRole("button", { name: "编辑分组" }));
+    await user.click(screen.getByRole("tab", { name: "模型列表" }));
+
+    // Opens in automatic mode with the two newer models still unchecked, and
+    // says so instead of leaving the gap invisible.
+    expect(await screen.findByRole("switch", { name: "自动允许新模型" })).toBeChecked();
+    expect(screen.getByLabelText("grok-4.7")).not.toBeChecked();
+    expect(screen.getByText(/有 2 个模型未勾选/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "包含全部模型" }));
+    await user.click(screen.getByRole("button", { name: "保存" }));
+
+    // Neither list is written, so the group now follows whatever its channels serve.
+    expect(screen.getByTestId("allowed-models")).toHaveTextContent("");
+    expect(screen.getByTestId("excluded-models")).toHaveTextContent("");
+  });
+
+  test("turning off auto-allow saves the checked models as a fixed allow list", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+    const loadModelsForChannels = vi.fn(async () => ["grok-4.6", "grok-4.7"]);
+
+    render(
+      <Harness
+        initialValues={{
+          ...DEFAULT_VISUAL_VALUES,
+          routingChannelGroups: [
+            {
+              id: "group-xai",
+              name: "xai-pool",
+              description: "",
+              strategy: "round-robin",
+              scheduling: schedulingFromStrategy("round-robin"),
+              allowedModels: [],
+              channels: [{ id: "channel-main-codex", name: "Main Codex", priority: "" }],
+            },
+          ],
+          routingPathRoutes: [
+            {
+              id: "route-xai-pool",
+              path: "/xai-pool",
+              group: "xai-pool",
+              stripPrefix: true,
+              fallback: "none",
+            },
+          ],
+        }}
+        loadModelsForChannels={loadModelsForChannels}
+      />,
+    );
+
+    const row = screen.getByRole("row", { name: /xai-pool/ });
+    await user.click(within(row).getByRole("button", { name: "编辑分组" }));
+    await user.click(screen.getByRole("tab", { name: "模型列表" }));
+
+    expect(await screen.findByLabelText("grok-4.6")).toBeChecked();
+    await user.click(screen.getByRole("switch", { name: "自动允许新模型" }));
+    await user.click(screen.getByRole("button", { name: "保存" }));
+
+    expect(screen.getByTestId("allowed-models")).toHaveTextContent("grok-4.6,grok-4.7");
+    expect(screen.getByTestId("excluded-models")).toHaveTextContent("");
   });
 
   test("renders channel-scoped models as a checkbox table with descriptions and prices", async () => {
@@ -698,7 +803,11 @@ describe("RoutingConfigEditor", () => {
     await user.click(screen.getByRole("button", { name: "保存" }));
 
     expect(loadModelsForChannels).toHaveBeenCalledWith([], "default");
-    expect(screen.getByTestId("allowed-models")).toHaveTextContent("gpt-root-allowed");
+    // Unchecking one model must be saved as an exclusion, not as a snapshot of
+    // today's allow list — an allow list would reject every model the upstream
+    // adds later.
+    expect(screen.getByTestId("allowed-models")).toHaveTextContent("");
+    expect(screen.getByTestId("excluded-models")).toHaveTextContent("gpt-root-hidden");
   });
 
   test("rejects the system root path for custom groups", async () => {

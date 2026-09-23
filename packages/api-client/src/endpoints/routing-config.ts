@@ -28,7 +28,10 @@ export interface RoutingConfigGroupItem {
     tags?: string[];
   };
   "channel-priorities"?: Record<string, number>;
+  /** Frozen allow list: models added upstream later are rejected. */
   "allowed-models"?: string[];
+  /** "All but these", so models added upstream later stay usable. */
+  "excluded-models"?: string[];
 }
 
 export interface RoutingConfigPathRouteItem {

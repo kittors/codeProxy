@@ -32,7 +32,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
 import { HoverTooltip, OverflowTooltip } from "@code-proxy/ui";
 import { DataTable, TABLE_ROW_ACTIONS_COLUMN, TABLE_ROW_ACTIONS_STICKY_END_COLUMN, type DataTableColumn } from "@code-proxy/ui";
-import { VendorIcon } from "@code-proxy/assets";
 import { Field, InfoTooltip, TooltipHeader, renderChannelTags } from "./fields";
 import type { RoutingModelLoadResult, RoutingModelOption } from "./types";
 import {
@@ -55,16 +54,24 @@ import {
   syncDraftChannels,
   syncDraftTags,
 } from "./routingHelpers";
+import { ModelSelectionPanel } from "./ModelSelectionPanel";
 import {
-  emptyModelPricing,
-  formatModelPrice,
-  type ModelPricing,
-} from "@features/model-availability";
+  clearAllModels,
+  createModelSelectionDraft,
+  migrateAllowListToExclusions,
+  modelSelectionFromEntry,
+  pruneModelSelection,
+  selectAllModels,
+  selectedModelIds,
+  serializeModelSelection,
+  setAutoAllowNewModels,
+  toggleModelSelection,
+  unselectedModelCount,
+  type ModelSelectionDraft,
+} from "./modelSelectionDraft";
 
 const SYSTEM_DEFAULT_GROUP_NAME = "default";
 const SYSTEM_DEFAULT_GROUP_ID = "system-default-root";
-
-
 
 type GroupDraft = {
   name: string;
@@ -74,7 +81,7 @@ type GroupDraft = {
   matchMode: RoutingChannelGroupMatchMode;
   channels: RoutingChannelGroupMemberEntry[];
   tags: string[];
-  allowedModels: string[];
+  models: ModelSelectionDraft;
   routes: RoutingPathRouteEntry[];
 };
 
@@ -99,7 +106,7 @@ const createEmptyGroupDraft = (): GroupDraft => ({
   matchMode: "channels",
   channels: [],
   tags: [],
-  allowedModels: [],
+  models: createModelSelectionDraft(),
   routes: [{ ...EMPTY_ROUTE_DRAFT() }],
 });
 
@@ -152,7 +159,6 @@ export function RoutingConfigEditor({
   const [modelOptions, setModelOptions] = useState<RoutingModelOption[]>([]);
   const [modelsLoading, setModelsLoading] = useState(false);
   const [modelsError, setModelsError] = useState("");
-  const [modelsSelectionTouched, setModelsSelectionTouched] = useState(false);
 
   const update = useCallback((patch: Partial<VisualConfigValues>) => onChange(patch), [onChange]);
 
@@ -333,24 +339,17 @@ export function RoutingConfigEditor({
     groupEditorId === SYSTEM_DEFAULT_GROUP_ID ||
     (groupEditorId !== null && groupDraft.name.trim().toLowerCase() === SYSTEM_DEFAULT_GROUP_NAME);
 
-  const selectedModelSet = useMemo(() => {
-    const effectiveSelectAll = !modelsSelectionTouched && groupDraft.allowedModels.length === 0;
-    if (effectiveSelectAll) {
-      return new Set(modelOptions.map((model) => model.id));
-    }
-    return new Set(groupDraft.allowedModels.map((model) => model.trim()).filter(Boolean));
-  }, [groupDraft.allowedModels, modelOptions, modelsSelectionTouched]);
-
   const modelOptionIds = useMemo(() => modelOptions.map((model) => model.id), [modelOptions]);
-  const selectedVisibleModelCount = useMemo(
-    () => modelOptionIds.filter((model) => selectedModelSet.has(model)).length,
-    [modelOptionIds, selectedModelSet],
+  const selectedModelSet = useMemo(
+    () => selectedModelIds(groupDraft.models, modelOptionIds),
+    [groupDraft.models, modelOptionIds],
   );
-  const allVisibleModelsSelected =
-    modelOptionIds.length > 0 && selectedVisibleModelCount === modelOptionIds.length;
-  const someVisibleModelsSelected =
-    selectedVisibleModelCount > 0 && selectedVisibleModelCount < modelOptionIds.length;
-
+  // A group carried over from the allow-list era can still be missing models the
+  // upstream added since; surface the count so it is fixable in one click.
+  const unselectedModels = useMemo(
+    () => unselectedModelCount(groupDraft.models, modelOptionIds),
+    [groupDraft.models, modelOptionIds],
+  );
   const primaryRoute = groupDraft.routes[0] ?? EMPTY_ROUTE_DRAFT();
   const normalizedPrimaryRoutePath = useMemo(
     () => normalizeRoutePathInput(primaryRoute.path),
@@ -445,7 +444,6 @@ export function RoutingConfigEditor({
     setGroupEditorTab("basic");
     setModelOptions([]);
     setModelsError("");
-    setModelsSelectionTouched(false);
     setGroupEditorOpen(true);
   }, [onRefreshAvailableChannels]);
 
@@ -472,7 +470,7 @@ export function RoutingConfigEditor({
         matchMode: isSystemDefault ? "channels" : (group.matchMode ?? "channels"),
         channels: cloneMembers(group.channels),
         tags: isSystemDefault ? [] : syncDraftTags(group.tags ?? []),
-        allowedModels: group.allowedModels ?? [],
+        models: modelSelectionFromEntry(group),
         routes: isSystemDefault
           ? []
           : existingRoutes.length > 0
@@ -482,7 +480,6 @@ export function RoutingConfigEditor({
       setGroupEditorTab("basic");
       setModelOptions([]);
       setModelsError("");
-      setModelsSelectionTouched((group.allowedModels ?? []).length > 0);
       if (!isSystemDefault && options?.notifyStale !== false) {
         notifyStaleChannels(group.name.trim(), staleChannelsByGroup.get(group.id) ?? []);
       }
@@ -504,7 +501,6 @@ export function RoutingConfigEditor({
     setGroupSaving(false);
     setModelOptions([]);
     setModelsError("");
-    setModelsSelectionTouched(false);
   }, []);
 
   const closeGroupEditor = useCallback(() => {
@@ -576,52 +572,34 @@ export function RoutingConfigEditor({
 
   const toggleDraftModel = useCallback(
     (modelId: string, checked: boolean) => {
-      const normalized = modelId.trim();
-      if (!normalized) return;
-      setModelsSelectionTouched(true);
-      setGroupDraft((current) => {
-        const currentModels = current.allowedModels.map((model) => model.trim()).filter(Boolean);
-        // Implicit select-all state: empty + untouched = "all models allowed"
-        if (!modelsSelectionTouched && currentModels.length === 0) {
-          if (!checked) {
-            // User unchecks one model from implicit select-all → exclude that one
-            const initial = new Set(modelOptionIds);
-            initial.delete(normalized);
-            return { ...current, allowedModels: Array.from(initial) };
-          }
-          // checked === true: user explicitly adds one model from empty
-          return {
-            ...current,
-            allowedModels: [normalized],
-          };
-        }
-        if (checked) {
-          return {
-            ...current,
-            allowedModels: Array.from(new Set([...currentModels, normalized])),
-          };
-        }
-        return {
-          ...current,
-          allowedModels: currentModels.filter((model) => model !== normalized),
-        };
-      });
+      setGroupDraft((current) => ({
+        ...current,
+        models: toggleModelSelection(current.models, modelOptionIds, modelId, checked),
+      }));
     },
-    [modelOptionIds, modelsSelectionTouched],
+    [modelOptionIds],
   );
 
   const selectAllDraftModels = useCallback(() => {
-    setModelsSelectionTouched(true);
     setGroupDraft((current) => ({
       ...current,
-      allowedModels: Array.from(new Set(modelOptionIds)),
+      models: selectAllModels(current.models, modelOptionIds),
     }));
   }, [modelOptionIds]);
 
   const clearDraftModels = useCallback(() => {
-    setModelsSelectionTouched(true);
-    setGroupDraft((current) => ({ ...current, allowedModels: [] }));
+    setGroupDraft((current) => ({ ...current, models: clearAllModels(current.models) }));
   }, []);
+
+  const toggleAutoAllowNewModels = useCallback(
+    (next: boolean) => {
+      setGroupDraft((current) => ({
+        ...current,
+        models: setAutoAllowNewModels(current.models, modelOptionIds, next),
+      }));
+    },
+    [modelOptionIds],
+  );
 
   const updatePrimaryRoute = useCallback((patch: Partial<RoutingPathRouteEntry>) => {
     setGroupDraft((current) => {
@@ -639,11 +617,9 @@ export function RoutingConfigEditor({
   const saveGroupDraft = useCallback(async () => {
     if (groupDraftError || groupSaving) return;
 
+    const { allowedModels, excludedModels } = serializeModelSelection(groupDraft.models);
     let patch: Partial<VisualConfigValues>;
     if (editingSystemDefaultGroup) {
-      const allowedModels = Array.from(
-        new Set(groupDraft.allowedModels.map((model) => model.trim()).filter(Boolean)),
-      );
       const existingDefault = values.routingChannelGroups.find(
         (group) => group.name.trim().toLowerCase() === SYSTEM_DEFAULT_GROUP_NAME,
       );
@@ -662,6 +638,7 @@ export function RoutingConfigEditor({
         channels: cloneMembers(groupDraft.channels),
         tags: [],
         allowedModels,
+        excludedModels,
       };
       const defaultRoutes = values.routingPathRoutes.filter(
         (route) => route.group.trim().toLowerCase() === SYSTEM_DEFAULT_GROUP_NAME,
@@ -691,9 +668,8 @@ export function RoutingConfigEditor({
           groupDraft.excludeFromDefault && groupName.toLowerCase() !== SYSTEM_DEFAULT_GROUP_NAME,
         matchMode: groupDraft.matchMode,
         tags: groupDraft.matchMode === "tags" ? syncDraftTags(groupDraft.tags) : [],
-        allowedModels: Array.from(
-          new Set(groupDraft.allowedModels.map((model) => model.trim()).filter(Boolean)),
-        ),
+        allowedModels,
+        excludedModels,
         channels: (groupDraft.matchMode === "tags" ? resolvedDraftChannels : groupDraft.channels)
           .map((channel) => ({
             id: channel.id || makeClientId(),
@@ -1165,95 +1141,6 @@ export function RoutingConfigEditor({
     ],
   );
 
-  const modelColumns = useMemo<DataTableColumn<RoutingModelOption>[]>(
-    () => [
-      {
-        key: "select",
-        label: "",
-        width: COLUMN_WIDTH.checkbox,
-        headerClassName: "text-center",
-        cellClassName: "text-center",
-        headerRender: () => (
-          <Checkbox
-            checked={allVisibleModelsSelected}
-            indeterminate={someVisibleModelsSelected}
-            disabled={disabled || modelOptions.length === 0}
-            onCheckedChange={(checked) => {
-              if (checked) selectAllDraftModels();
-              else clearDraftModels();
-            }}
-            aria-label={t("channel_groups_page.allowed_models_label")}
-          />
-        ),
-        render: (model) => (
-          <Checkbox
-            checked={selectedModelSet.has(model.id)}
-            onCheckedChange={(checked) => toggleDraftModel(model.id, checked)}
-            disabled={disabled}
-            aria-label={model.id}
-          />
-        ),
-      },
-      {
-        key: "model",
-        label: t("models_page.col_model"),
-        width: "w-[28rem]",
-        minWidthPx: 220,
-        maxWidthPx: 640,
-        cellClassName: "min-w-0",
-        render: (model) => (
-          <div className="flex min-w-0 items-center gap-2">
-            <VendorIcon modelId={model.id} size={16} />
-            <div className="min-w-0">
-              <OverflowTooltip content={model.id} className="block min-w-0">
-                <span className="block min-w-0 truncate font-medium">{model.id}</span>
-              </OverflowTooltip>
-              {model.description ? (
-                <OverflowTooltip content={model.description} className="block min-w-0">
-                  <span className="block min-w-0 truncate text-xs text-slate-500 dark:text-white/45">
-                    {model.description}
-                  </span>
-                </OverflowTooltip>
-              ) : null}
-            </div>
-          </div>
-        ),
-      },
-      {
-        key: "owner",
-        label: t("models_page.col_owner"),
-        width: COLUMN_WIDTH.numericWide,
-        minWidthPx: 120,
-        maxWidthPx: 360,
-        cellClassName: "min-w-0 whitespace-nowrap text-slate-600 dark:text-white/60",
-        render: (model) => model.owned_by || "-",
-        overflowTooltip: (model) => model.owned_by || "-",
-      },
-      {
-        key: "price",
-        label: t("models_page.col_price"),
-        width: "w-56",
-        minWidthPx: 180,
-        maxWidthPx: 420,
-        cellClassName:
-          "whitespace-nowrap font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
-        render: (model) =>
-          formatModelPrice(model.pricing ?? emptyModelPricing(), t("models_page.not_priced")),
-      },
-    ],
-    [
-      allVisibleModelsSelected,
-      clearDraftModels,
-      disabled,
-      modelOptions.length,
-      selectAllDraftModels,
-      selectedModelSet,
-      someVisibleModelsSelected,
-      t,
-      toggleDraftModel,
-    ],
-  );
-
   useEffect(() => {
     if (!groupEditorOpen || groupEditorTab !== "models") return;
     if (
@@ -1292,16 +1179,14 @@ export function RoutingConfigEditor({
         }
         const normalized = Array.from(optionMap.values()).sort((a, b) => a.id.localeCompare(b.id));
         setModelOptions(normalized);
-        const allowed = new Set(normalized.map((model) => model.id));
+        const optionIds = normalized.map((model) => model.id);
         setGroupDraft((current) => {
-          if (!modelsSelectionTouched && current.allowedModels.length === 0) {
-            return current;
-          }
-          const nextAllowedModels = current.allowedModels.filter((model) => allowed.has(model));
-          const currentStr = JSON.stringify(current.allowedModels);
-          const nextStr = JSON.stringify(nextAllowedModels);
-          if (currentStr === nextStr) return current;
-          return { ...current, allowedModels: nextAllowedModels };
+          // The full model list is only known here, so this is where a saved
+          // allow list can finally be rewritten as the exclusions that let new
+          // upstream models through.
+          const migrated = migrateAllowListToExclusions(current.models, optionIds);
+          const models = pruneModelSelection(migrated, optionIds);
+          return models === current.models ? current : { ...current, models };
         });
       })
       .catch((err: unknown) => {
@@ -1323,7 +1208,6 @@ export function RoutingConfigEditor({
     editingSystemDefaultGroup,
     loadModelsForChannels,
     groupEditorId,
-    modelsSelectionTouched,
     resolvedDraftChannelKey,
     t,
     values.routingChannelGroups,
@@ -1763,8 +1647,10 @@ export function RoutingConfigEditor({
                               setGroupDraft((current) => ({
                                 ...current,
                                 matchMode: value === "tags" ? "tags" : "channels",
+                                // Switching how members are matched rebuilds the
+                                // channel set, so the model picks no longer apply.
+                                models: createModelSelectionDraft(),
                               }));
-                              setModelsSelectionTouched(false);
                             }}
                           />
                         </Field>
@@ -1862,49 +1748,22 @@ export function RoutingConfigEditor({
                 </TabsContent>
 
                 <TabsContent value="models" className="flex h-full min-h-0 flex-col gap-3">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="space-y-1">
-                      <div className="text-sm font-semibold text-slate-900 dark:text-white">
-                        {t("channel_groups_page.allowed_models_label")}
-                      </div>
-                      <div className="text-xs text-slate-500 dark:text-white/55">
-                        {t("channel_groups_page.allowed_models_hint")}
-                      </div>
-                    </div>
-                  </div>
-
-                  {!editingSystemDefaultGroup && resolvedDraftChannelValues.length === 0 ? (
-                    <div className="rounded-2xl border border-slate-900/8 bg-slate-50 px-4 py-6 text-sm text-slate-500 dark:border-white/8 dark:bg-neutral-900/60 dark:text-white/55">
-                      {t("channel_groups_page.models_need_channels")}
-                    </div>
-                  ) : modelsError ? (
-                    <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-400/25 dark:bg-rose-500/10 dark:text-rose-200">
-                      {modelsError}
-                    </div>
-                  ) : (
-                    <div data-testid="group-editor-model-list" className="min-h-0 flex-1 -mx-5">
-                      <div
-                        data-testid="group-editor-model-list-content"
-                        className="h-full min-h-0 px-5"
-                      >
-                        <DataTable<RoutingModelOption>
-                          tableId="routing-model-options-v2"
-                          rows={modelOptions}
-                          columns={modelColumns}
-                          rowKey={(model) => model.id}
-                          loading={modelsLoading}
-                          virtualize={false}
-                          rowHeight={58}
-                          height="h-full"
-                          minHeight="min-h-[360px]"
-                          minWidth="min-w-[760px]"
-                          caption={t("channel_groups_page.allowed_models_label")}
-                          emptyText={t("channel_groups_page.no_channel_models")}
-                          showAllLoadedMessage={false}
-                        />
-                      </div>
-                    </div>
-                  )}
+                  <ModelSelectionPanel
+                    selection={groupDraft.models}
+                    modelOptions={modelOptions}
+                    selectedModelIds={selectedModelSet}
+                    unselectedModelCount={unselectedModels}
+                    modelsLoading={modelsLoading}
+                    modelsError={modelsError}
+                    needsChannels={
+                      !editingSystemDefaultGroup && resolvedDraftChannelValues.length === 0
+                    }
+                    disabled={disabled}
+                    onToggleModel={toggleDraftModel}
+                    onSelectAll={selectAllDraftModels}
+                    onClearAll={clearDraftModels}
+                    onToggleAutoAllowNewModels={toggleAutoAllowNewModels}
+                  />
                 </TabsContent>
               </div>
             </div>
