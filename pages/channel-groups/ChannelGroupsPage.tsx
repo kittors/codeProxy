@@ -16,6 +16,7 @@ import { normalizeProviderKey, normalizeTagValue } from "@code-proxy/domain";
 import {
   DEFAULT_VISUAL_VALUES,
   makeClientId,
+  parseModelList,
   parseScheduling,
   serializeScheduling,
   strategyFromScheduling,
@@ -134,15 +135,8 @@ function hydrateRoutingValues(payload: RoutingConfigItem | undefined): VisualCon
               .toLowerCase() !== "default",
           matchMode: tags.length > 0 ? "tags" : "channels",
           tags,
-          allowedModels: Array.isArray(group?.["allowed-models"])
-            ? Array.from(
-                new Set(
-                  group["allowed-models"]
-                    .map((model) => String(model ?? "").trim())
-                    .filter(Boolean),
-                ),
-              )
-            : [],
+          allowedModels: parseModelList(group?.["allowed-models"]),
+          excludedModels: parseModelList(group?.["excluded-models"]),
           channels: mergedNames.map((name, channelIndex) => ({
             id: `routing-group-${index}-channel-${channelIndex}-${makeClientId()}`,
             name,
@@ -209,11 +203,15 @@ function serializeRoutingValues(values: VisualConfigValues): RoutingConfigItem {
       item["channel-priorities"] = channelPriorities;
       item.scheduling = { ...item.scheduling, "channel-weights": channelPriorities };
     }
-    const allowedModels = Array.from(
-      new Set(group.allowedModels.map((model) => model.trim()).filter(Boolean)),
-    );
+    // Only one of the two lists is ever written: an allow list freezes the group
+    // to today's models, exclusions let new upstream models through.
+    const allowedModels = parseModelList(group.allowedModels);
+    const excludedModels = parseModelList(group.excludedModels);
     if (allowedModels.length > 0) {
       item["allowed-models"] = allowedModels;
+    }
+    if (excludedModels.length > 0) {
+      item["excluded-models"] = excludedModels;
     }
     acc.push(item);
     return acc;

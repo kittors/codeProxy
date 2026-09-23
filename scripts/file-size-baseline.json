@@ -7,7 +7,7 @@
     "features/log-content-viewer/components/LogContentModal.tsx": 1534,
     "features/model-availability/modelAvailability.ts": 1271,
     "features/oauth-login/components/OAuthLoginDialog.tsx": 912,
-    "features/routing-config-editor/RoutingConfigEditor.tsx": 1932,
+    "features/routing-config-editor/RoutingConfigEditor.tsx": 1791,
     "packages/domain/src/auth-files/authFiles.ts": 2157,
     "packages/domain/src/ccswitch/ccswitchImport.ts": 845,
     "packages/ui/src/data-table/DataTable.tsx": 2632,

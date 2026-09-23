@@ -61,4 +61,16 @@ describe("routing scheduling weight round-trip", () => {
     expect(result?.match).toEqual({ channels: ["A", "B"] });
     expect(result?.["channel-priorities"]).toEqual({ B: 4 });
   });
+
+  it("round-trips the exclusion list that keeps new upstream models allowed", () => {
+    const result = roundTrip({ "excluded-models": ["grok-imagine-video-1.5", " ", "grok-4.5"] });
+    expect(result?.["excluded-models"]).toEqual(["grok-imagine-video-1.5", "grok-4.5"]);
+    expect(result).not.toHaveProperty("allowed-models");
+  });
+
+  it("round-trips a frozen allow list without inventing exclusions", () => {
+    const result = roundTrip({ "allowed-models": ["grok-4.5"] });
+    expect(result?.["allowed-models"]).toEqual(["grok-4.5"]);
+    expect(result).not.toHaveProperty("excluded-models");
+  });
 });

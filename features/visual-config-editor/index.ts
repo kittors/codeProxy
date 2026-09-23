@@ -16,3 +16,4 @@ export {
   serializeScheduling,
   strategyFromScheduling,
 } from "./routingScheduling";
+export { parseModelList } from "./routingSerialization";
