@@ -1,52 +1,104 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { X } from "lucide-react";
 import { Button, COLUMN_WIDTH, surface } from "@code-proxy/ui";
 import { Checkbox } from "@code-proxy/ui";
 import { ToggleSwitch } from "@code-proxy/ui";
-import { HoverTooltip, OverflowTooltip } from "@code-proxy/ui";
+import { OverflowTooltip } from "@code-proxy/ui";
 import { DataTable, type DataTableColumn } from "@code-proxy/ui";
 import { VendorIcon } from "@code-proxy/assets";
 import { emptyModelPricing, formatModelPrice } from "@features/model-availability";
 import type { RoutingModelOption } from "./types";
-import type { ModelSelectionDraft } from "./modelSelectionDraft";
+import {
+  clearAllModels,
+  lockedModelRules,
+  modelRulesOutsideList,
+  removeModelRule,
+  selectAllModels,
+  selectedModelIds,
+  setAutoAllowNewModels,
+  toggleModelSelection,
+  type ModelListName,
+  type ModelSelectionDraft,
+} from "./modelSelectionDraft";
 
 export type ModelSelectionPanelProps = {
   selection: ModelSelectionDraft;
   modelOptions: RoutingModelOption[];
-  selectedModelIds: Set<string>;
-  /** Models the group's channels serve but the selection leaves out. */
-  unselectedModelCount: number;
   modelsLoading: boolean;
   modelsError: string;
   /** The group matches no channel yet, so there is nothing to list. */
   needsChannels: boolean;
   disabled?: boolean;
-  onToggleModel: (modelId: string, checked: boolean) => void;
-  onSelectAll: () => void;
-  onClearAll: () => void;
-  onToggleAutoAllowNewModels: (next: boolean) => void;
+  /** Applies one of the pure updates from modelSelectionDraft.ts to the group's draft. */
+  onChange: (update: (current: ModelSelectionDraft) => ModelSelectionDraft) => void;
 };
+
+const NOTICE_CLASS =
+  "rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-5 text-amber-800 dark:border-amber-400/25 dark:bg-amber-500/10 dark:text-amber-200";
+
+type RuleChip = { list: ModelListName; entry: string; tagKey: string };
 
 export function ModelSelectionPanel({
   selection,
   modelOptions,
-  selectedModelIds,
-  unselectedModelCount,
   modelsLoading,
   modelsError,
   needsChannels,
   disabled,
-  onToggleModel,
-  onSelectAll,
-  onClearAll,
-  onToggleAutoAllowNewModels,
+  onChange,
 }: ModelSelectionPanelProps) {
   const { t } = useTranslation();
+  const [confirmingAutoAllow, setConfirmingAutoAllow] = useState(false);
 
   const modelOptionIds = useMemo(() => modelOptions.map((model) => model.id), [modelOptions]);
-  const selectedVisibleCount = modelOptionIds.filter((model) => selectedModelIds.has(model)).length;
-  const allSelected = modelOptionIds.length > 0 && selectedVisibleCount === modelOptionIds.length;
-  const someSelected = selectedVisibleCount > 0 && selectedVisibleCount < modelOptionIds.length;
+  const selected = useMemo(
+    () => selectedModelIds(selection, modelOptionIds),
+    [modelOptionIds, selection],
+  );
+  const locked = useMemo(
+    () => lockedModelRules(selection, modelOptionIds),
+    [modelOptionIds, selection],
+  );
+  // What an entry "is not in the list" means is only known once a list loaded.
+  const listReady = !needsChannels && !modelsLoading && !modelsError;
+  const ruleChips = useMemo<RuleChip[]>(() => {
+    const outside = modelRulesOutsideList(selection, modelOptionIds);
+    return [
+      ...outside.unlistedExclusions.map((entry) => ({
+        list: "excluded" as const,
+        entry,
+        tagKey: "channel_groups_page.models_rule_excluded_unlisted",
+      })),
+      ...outside.wildcardExclusions.map((entry) => ({
+        list: "excluded" as const,
+        entry,
+        tagKey: "channel_groups_page.models_rule_excluded_wildcard",
+      })),
+      ...outside.unlistedAllowed.map((entry) => ({
+        list: "allowed" as const,
+        entry,
+        tagKey: "channel_groups_page.models_rule_allowed_unlisted",
+      })),
+    ];
+  }, [modelOptionIds, selection]);
+
+  const rowsDisabled = Boolean(disabled) || modelsLoading;
+  const selectable = modelOptionIds.filter((id) => !locked.has(id));
+  const selectedCount = selectable.filter((id) => selected.has(id)).length;
+  const allSelected = selectable.length > 0 && selectedCount === selectable.length;
+  const someSelected = selectedCount > 0 && !allSelected;
+  // Flipping the switch rewrites the stored lists from the model list, so it
+  // needs a loaded, non-empty one: an empty or failed list reads as "nothing
+  // checked" and would store the group as blocking everything.
+  const canSwitch =
+    selection.exclusionsSupported && listReady && modelOptionIds.length > 0 && !disabled;
+  const confirming = confirmingAutoAllow && canSwitch && !selection.autoAllowNewModels;
+  const modeHintKey = !selection.exclusionsSupported
+    ? "channel_groups_page.auto_allow_new_models_unsupported"
+    : selection.autoAllowNewModels
+      ? "channel_groups_page.auto_allow_new_models_on_hint"
+      : "channel_groups_page.auto_allow_new_models_off_hint";
 
   const columns = useMemo<DataTableColumn<RoutingModelOption>[]>(
     () => [
@@ -60,22 +112,33 @@ export function ModelSelectionPanel({
           <Checkbox
             checked={allSelected}
             indeterminate={someSelected}
-            disabled={disabled || modelOptions.length === 0}
-            onCheckedChange={(checked) => {
-              if (checked) onSelectAll();
-              else onClearAll();
-            }}
+            disabled={rowsDisabled || selectable.length === 0}
+            onCheckedChange={(checked) =>
+              onChange((current) =>
+                checked
+                  ? selectAllModels(current, modelOptionIds)
+                  : clearAllModels(current, modelOptionIds),
+              )
+            }
             aria-label={t("channel_groups_page.allowed_models_label")}
           />
         ),
-        render: (model) => (
-          <Checkbox
-            checked={selectedModelIds.has(model.id)}
-            onCheckedChange={(checked) => onToggleModel(model.id, checked)}
-            disabled={disabled}
-            aria-label={model.id}
-          />
-        ),
+        render: (model) => {
+          const rule = locked.get(model.id);
+          return (
+            <Checkbox
+              checked={selected.has(model.id)}
+              onCheckedChange={(checked) =>
+                onChange((current) =>
+                  toggleModelSelection(current, modelOptionIds, model.id, checked),
+                )
+              }
+              disabled={rowsDisabled || Boolean(rule)}
+              title={rule ? t("channel_groups_page.model_locked_by_rule", { rule }) : undefined}
+              aria-label={model.id}
+            />
+          );
+        },
       },
       {
         key: "model",
@@ -126,12 +189,12 @@ export function ModelSelectionPanel({
     ],
     [
       allSelected,
-      disabled,
-      modelOptions.length,
-      onClearAll,
-      onSelectAll,
-      onToggleModel,
-      selectedModelIds,
+      locked,
+      modelOptionIds,
+      onChange,
+      rowsDisabled,
+      selectable.length,
+      selected,
       someSelected,
       t,
     ],
@@ -140,41 +203,96 @@ export function ModelSelectionPanel({
   return (
     <>
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1">
+        <div className="min-w-0 flex-1 space-y-1">
           <div className="text-sm font-semibold text-slate-900 dark:text-white">
             {t("channel_groups_page.allowed_models_label")}
           </div>
           <div className="text-xs text-slate-500 dark:text-white/55">
             {t("channel_groups_page.allowed_models_hint")}
           </div>
+          <div
+            data-testid="model-gate-mode-hint"
+            className={
+              selection.exclusionsSupported
+                ? "text-xs text-slate-600 dark:text-white/65"
+                : "text-xs text-amber-700 dark:text-amber-200"
+            }
+          >
+            {t(modeHintKey)}
+          </div>
         </div>
-        <HoverTooltip
-          content={t(
-            selection.autoAllowNewModels
-              ? "channel_groups_page.auto_allow_new_models_on_hint"
-              : "channel_groups_page.auto_allow_new_models_off_hint",
-          )}
-        >
+        {/* A backend that drops excluded-models cannot store the switch's "on"
+            state, so it is not offered there at all. */}
+        {selection.exclusionsSupported ? (
           <ToggleSwitch
             checked={selection.autoAllowNewModels}
-            onCheckedChange={onToggleAutoAllowNewModels}
-            disabled={disabled}
+            onCheckedChange={(next) => {
+              if (next) {
+                setConfirmingAutoAllow(true);
+                return;
+              }
+              onChange((current) => setAutoAllowNewModels(current, modelOptionIds, false));
+            }}
+            disabled={!canSwitch}
             label={t("channel_groups_page.auto_allow_new_models_label")}
           />
-        </HoverTooltip>
+        ) : null}
       </div>
 
-      {/* A group saved as an allow list before this switch existed can still be
-          missing models the upstream has added since. Say so, and offer the
-          one-click fix that turns the group into a pure follow-upstream group. */}
-      {selection.autoAllowNewModels && unselectedModelCount > 0 ? (
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800 dark:border-amber-400/25 dark:bg-amber-500/10 dark:text-amber-200">
-          <span>
-            {t("channel_groups_page.auto_allow_new_models_gap", { total: unselectedModelCount })}
-          </span>
-          <Button variant="ghost" size="sm" onClick={onSelectAll} disabled={disabled}>
-            {t("channel_groups_page.auto_allow_new_models_include_all")}
-          </Button>
+      {/* Turning the switch on is the one step here that widens the group
+          beyond what the list shows, so it is spelled out and confirmed. */}
+      {confirming ? (
+        <div role="alert" data-testid="auto-allow-confirm" className={NOTICE_CLASS}>
+          <p>
+            {t("channel_groups_page.auto_allow_new_models_confirm", {
+              total: modelOptionIds.length - selected.size,
+            })}
+          </p>
+          <div className="mt-2 flex flex-wrap justify-end gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setConfirmingAutoAllow(false)}>
+              {t("common.cancel")}
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => {
+                onChange((current) => setAutoAllowNewModels(current, modelOptionIds, true));
+                setConfirmingAutoAllow(false);
+              }}
+            >
+              {t("channel_groups_page.auto_allow_new_models_confirm_action")}
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Entries the list has no row for are kept on save; they are listed here
+          so they are neither silently kept nor silently lost. */}
+      {listReady && ruleChips.length > 0 ? (
+        <div data-testid="model-rules-outside-list" className={NOTICE_CLASS}>
+          <p>{t("channel_groups_page.models_outside_list_hint")}</p>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {ruleChips.map(({ list, entry, tagKey }) => (
+              <span
+                key={`${list}:${entry}`}
+                className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-white/80 py-0.5 pl-2.5 pr-1 dark:bg-neutral-950/50"
+              >
+                <span className="truncate font-mono">{entry}</span>
+                <span className="shrink-0 rounded-full bg-amber-100 px-1.5 text-2xs font-semibold dark:bg-amber-500/15">
+                  {t(tagKey)}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onChange((current) => removeModelRule(current, list, entry))}
+                  disabled={disabled}
+                  aria-label={t("channel_groups_page.models_rule_remove", { rule: entry })}
+                  className="shrink-0 rounded-full p-0.5 transition-colors hover:bg-amber-100 disabled:opacity-40 dark:hover:bg-amber-500/20"
+                >
+                  <X size={12} />
+                </button>
+              </span>
+            ))}
+          </div>
         </div>
       ) : null}
 

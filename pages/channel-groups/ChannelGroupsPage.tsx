@@ -5,6 +5,7 @@ import {
   type ChannelGroupChannelDetail,
 } from "@code-proxy/api-client/endpoints/channel-groups";
 import {
+  readRoutingConfigSupport,
   routingConfigApi,
   type RoutingConfigGroupItem,
   type RoutingConfigItem,
@@ -203,8 +204,9 @@ function serializeRoutingValues(values: VisualConfigValues): RoutingConfigItem {
       item["channel-priorities"] = channelPriorities;
       item.scheduling = { ...item.scheduling, "channel-weights": channelPriorities };
     }
-    // Only one of the two lists is ever written: an allow list freezes the group
-    // to today's models, exclusions let new upstream models through.
+    // Both lists are written as the editor left them: an allow list freezes the
+    // group to today's models, exclusions let new upstream models through, and
+    // a group may carry both (the allow list minus the exclusions).
     const allowedModels = parseModelList(group.allowedModels);
     const excludedModels = parseModelList(group.excludedModels);
     if (allowedModels.length > 0) {
@@ -254,6 +256,10 @@ export function ChannelGroupsPage() {
   const [availableChannelDetailsByGroup, setAvailableChannelDetailsByGroup] =
     useState<ChannelDetailsByGroup>({});
   const [authGroupOwnerMap, setAuthGroupOwnerMap] = useState<Record<string, string>>({});
+  // The panel can be newer than the backend (CliRelay pulls the latest release),
+  // and an older backend drops `excluded-models` on save. Until the backend says
+  // otherwise, the editor only writes fixed allow lists.
+  const [modelExclusionsSupported, setModelExclusionsSupported] = useState(false);
 
   const loadAvailableChannels = useCallback(async (options?: { signal?: AbortSignal }) => {
     const items = await channelGroupsApi.list(
@@ -404,6 +410,7 @@ export function ChannelGroupsPage() {
       if (signal?.aborted) return;
       const nextValues = hydrateRoutingValues(routing);
       setVisualValues(nextValues);
+      setModelExclusionsSupported(readRoutingConfigSupport(routing).channelGroupExcludedModels);
       setAvailableChannels(channels.names);
       setAvailableChannelDetails(channels.detailsByName);
       setAvailableChannelDetailsByGroup(channels.detailsByGroup);
@@ -443,6 +450,7 @@ export function ChannelGroupsPage() {
         ]);
         const hydrated = hydrateRoutingValues(latest);
         setVisualValues(hydrated);
+        setModelExclusionsSupported(readRoutingConfigSupport(latest).channelGroupExcludedModels);
         setAvailableChannels(channels.names);
         setAvailableChannelDetails(channels.detailsByName);
         setAvailableChannelDetailsByGroup(channels.detailsByGroup);
@@ -508,6 +516,7 @@ export function ChannelGroupsPage() {
             title={t("channel_groups_page.title")}
             values={visualValues}
             disabled={loading || saving}
+            modelExclusionsSupported={modelExclusionsSupported}
             availableChannels={availableChannels}
             availableChannelDetails={availableChannelDetails}
             availableChannelDetailsByGroup={availableChannelDetailsByGroup}

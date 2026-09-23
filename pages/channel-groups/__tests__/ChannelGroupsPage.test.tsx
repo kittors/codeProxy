@@ -145,7 +145,9 @@ vi.mock("@code-proxy/api-client", () => ({
   },
 }));
 
-vi.mock("@code-proxy/api-client/endpoints/routing-config", () => ({
+vi.mock("@code-proxy/api-client/endpoints/routing-config", async (importOriginal) => ({
+  // Keep the real capability reader: the page must interpret the response itself.
+  ...(await importOriginal<typeof import("@code-proxy/api-client/endpoints/routing-config")>()),
   routingConfigApi: {
     get: (options?: { signal?: AbortSignal }) => apiMocks.get("/routing-config", options),
     update: (payload: unknown) => apiMocks.put("/routing-config", payload),
@@ -1207,5 +1209,89 @@ describe("ChannelGroupsPage", () => {
         ],
       }),
     );
+  });
+
+  describe("channel-group exclusions capability", () => {
+    const MODELS = [
+      { id: "claude-3-7-sonnet-latest", owned_by: "anthropic" },
+      { id: "claude-opus-4-5", owned_by: "anthropic" },
+    ];
+
+    // Serves routing-config (plus `extra`) with one group over "Team A Claude",
+    // whose Models tab lists the two MODELS.
+    const serveRoutingConfig = (extra: Record<string, unknown>) => {
+      const fallback = mockedApiGet.getMockImplementation();
+      mockedApiGet.mockImplementation((...args: Parameters<typeof apiClient.get>) => {
+        const [path] = args;
+        if (path === "/routing-config") {
+          return Promise.resolve({
+            strategy: "round-robin",
+            "include-default-group": true,
+            "channel-groups": [
+              {
+                name: "claude-pool",
+                strategy: "round-robin",
+                match: { channels: ["Team A Claude"] },
+              },
+            ],
+            "path-routes": [{ path: "/claude-pool", group: "claude-pool" }],
+            ...extra,
+          });
+        }
+        if (path.startsWith("/models/configured-availability?allowed_channel_groups=claude-pool")) {
+          return Promise.resolve({ scoped: true, data: MODELS });
+        }
+        if (path.startsWith("/models?")) {
+          return Promise.resolve({ data: MODELS.map(({ id }) => ({ id })) });
+        }
+        return fallback!(...args);
+      });
+    };
+
+    const openGroupModels = async (user: ReturnType<typeof userEvent.setup>) => {
+      const row = await screen.findByRole("row", { name: /claude-pool/ });
+      await user.click(within(row).getByRole("button", { name: "编辑分组" }));
+      await user.click(screen.getByRole("tab", { name: "模型列表" }));
+      expect(await screen.findByLabelText("claude-opus-4-5")).toBeChecked();
+    };
+
+    const uncheckOneModelAndSave = async (user: ReturnType<typeof userEvent.setup>) => {
+      await user.click(screen.getByLabelText("claude-opus-4-5"));
+      await user.click(screen.getByRole("button", { name: "保存" }));
+      await waitFor(() => expect(mockedApiPut).toHaveBeenCalled());
+      const payload = mockedApiPut.mock.calls[0]?.[1] as Record<string, unknown>;
+      const groups = payload["channel-groups"] as Array<Record<string, unknown>>;
+      return { payload, group: groups.find((group) => group.name === "claude-pool") };
+    };
+
+    test("offers auto-allow and writes exclusions when routing-config advertises them", async () => {
+      serveRoutingConfig({ capabilities: { "channel-group-excluded-models": true } });
+      const user = userEvent.setup();
+      renderPage();
+
+      await openGroupModels(user);
+      expect(screen.getByRole("switch", { name: "自动允许新模型" })).toBeChecked();
+      const { payload, group } = await uncheckOneModelAndSave(user);
+
+      expect(group).toMatchObject({ "excluded-models": ["claude-opus-4-5"] });
+      expect(group).not.toHaveProperty("allowed-models");
+      // The capability is read-only; it is never echoed back on save.
+      expect(payload).not.toHaveProperty("capabilities");
+    });
+
+    // An older backend drops excluded-models silently: saving "all but one" as
+    // exclusions there would store a group that serves every model.
+    test("saves a fixed allow list for a backend that does not advertise exclusions", async () => {
+      serveRoutingConfig({});
+      const user = userEvent.setup();
+      renderPage();
+
+      await openGroupModels(user);
+      expect(screen.queryByRole("switch", { name: "自动允许新模型" })).not.toBeInTheDocument();
+      const { group } = await uncheckOneModelAndSave(user);
+
+      expect(group).toMatchObject({ "allowed-models": ["claude-3-7-sonnet-latest"] });
+      expect(group).not.toHaveProperty("excluded-models");
+    });
   });
 });

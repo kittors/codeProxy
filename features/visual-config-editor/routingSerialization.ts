@@ -175,8 +175,9 @@ export function serializeRoutingChannelGroupsForYaml(
         const scheduling = asRecord(item.scheduling) ?? {};
         item.scheduling = { ...scheduling, "channel-weights": channelWeights };
       }
-      // Only one of the two lists is ever written: an allow list freezes the
-      // group to today's models, exclusions let new upstream models through.
+      // Both lists round-trip as stored: an allow list freezes the group to
+      // today's models, exclusions let new upstream models through, and a group
+      // may carry both (the allow list minus the exclusions).
       const allowedModels = parseModelList(group.allowedModels);
       const excludedModels = parseModelList(group.excludedModels ?? []);
       if (allowedModels.length > 0) {

@@ -7,6 +7,7 @@ export * from "./auth-files/authFiles";
 export * from "./auth-files/codexImageGeneration";
 export * from "./auth-files/types";
 export * from "./auth-files/zip";
+export * from "./models/channelGroupModelGate";
 export * from "./models/discovery";
 export * from "./models/modelIdentity";
 export * from "./quota";

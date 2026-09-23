@@ -18,6 +18,8 @@ export interface ChannelGroupItem {
   tags?: string[];
   channels?: string[];
   "allowed-models"?: string[];
+  /** Wins over the allow list, and matches loosely (see channelGroupModelGate in domain). */
+  "excluded-models"?: string[];
   "path-routes"?: string[];
   channelDetails?: ChannelGroupChannelDetail[];
 }
@@ -81,6 +83,7 @@ export const channelGroupsApi = {
           tags: normalizeStringList(item.tags),
           channels: normalizeStringList(item.channels),
           "allowed-models": normalizeStringList(item["allowed-models"]),
+          "excluded-models": normalizeStringList(item["excluded-models"]),
           "path-routes": normalizeStringList(item["path-routes"]),
           channelDetails: Array.isArray(item["channel-details"])
             ? item["channel-details"]
