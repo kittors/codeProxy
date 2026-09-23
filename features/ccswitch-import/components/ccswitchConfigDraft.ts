@@ -7,6 +7,10 @@ import {
 } from "@code-proxy/domain/ccswitch/ccswitchImport";
 import { DEFAULT_CC_SWITCH_IMPORT_SETTINGS } from "@code-proxy/domain/ccswitch/ccswitchImportSettings";
 import {
+  filterModelsServedByChannelGroup,
+  type ChannelGroupModelGate,
+} from "@code-proxy/domain/models/channelGroupModelGate";
+import {
   ensureCcSwitchRoutePath,
   type CcSwitchImportCodexModelCatalog,
   type CcSwitchImportConfigListItem,
@@ -89,6 +93,19 @@ export function dedupeModels(models: readonly string[]): string[] {
     result.push(normalized);
   });
   return result.sort((a, b) => a.localeCompare(b));
+}
+
+/**
+ * The models out of `models` that a channel group actually serves, deduplicated.
+ * A group refuses what it excludes — loosely, across route prefixes and "*"
+ * wildcards, the same way the backend does — so offering one of those as a
+ * mapping target saves a config whose requests are rejected with a 403.
+ */
+export function modelsServedByChannelGroup(
+  models: Iterable<string>,
+  group: ChannelGroupModelGate | undefined,
+): string[] {
+  return filterModelsServedByChannelGroup(dedupeModels(Array.from(models)), group ?? {});
 }
 
 export const normalizeModelOwnerKey = (value: unknown): string =>

@@ -73,4 +73,15 @@ describe("routing scheduling weight round-trip", () => {
     expect(result?.["allowed-models"]).toEqual(["grok-4.5"]);
     expect(result).not.toHaveProperty("excluded-models");
   });
+
+  // The backend serves "the allow list minus the exclusions" for such a group,
+  // so writing back only one half would change what it serves.
+  it("round-trips a group that carries both lists", () => {
+    const result = roundTrip({
+      "allowed-models": ["grok-4.5", "grok-4.6"],
+      "excluded-models": ["grok-4.6", "grok-imagine-*"],
+    });
+    expect(result?.["allowed-models"]).toEqual(["grok-4.5", "grok-4.6"]);
+    expect(result?.["excluded-models"]).toEqual(["grok-4.6", "grok-imagine-*"]);
+  });
 });

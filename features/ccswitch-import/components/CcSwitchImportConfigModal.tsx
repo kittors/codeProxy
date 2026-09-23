@@ -44,6 +44,7 @@ import {
   getDuplicateGenericRequestModels,
   isSpecificModelConfigOwnerKey,
   modelMetadataMatchesOwnerKeys,
+  modelsServedByChannelGroup,
   normalizeModelOwnerKey,
   prepareDraftForSave,
   reconcileModelMappings,
@@ -60,6 +61,7 @@ export interface CcSwitchChannelGroupOption {
   description?: string;
   routePath?: string;
   allowedModels?: string[];
+  excludedModels?: string[];
   channels?: string[];
   modelOwnerKeys?: string[];
   authoritativeModelOwnerKeys?: string[];
@@ -144,6 +146,7 @@ export function CcSwitchImportConfigModal({
   const selectedGroup = draft.allowedChannelGroups[0] ?? "";
   const selectedGroupOption = channelGroupOptions.find((option) => option.value === selectedGroup);
   const selectedGroupAllowedModelsKey = (selectedGroupOption?.allowedModels ?? []).join("\n");
+  const selectedGroupExcludedModelsKey = (selectedGroupOption?.excludedModels ?? []).join("\n");
   const selectedGroupChannelsKey = (selectedGroupOption?.channels ?? []).join("\n");
   const selectedGroupAuthoritativeOwnerKey = (
     selectedGroupOption?.authoritativeModelOwnerKeys ?? []
@@ -160,7 +163,7 @@ export function CcSwitchImportConfigModal({
     let cancelled = false;
     const groupAllowedModels = dedupeModels(selectedGroupOption?.allowedModels ?? []);
     if (groupAllowedModels.length > 0) {
-      setAvailableModels(groupAllowedModels);
+      setAvailableModels(modelsServedByChannelGroup(groupAllowedModels, selectedGroupOption));
       setModelsLoading(false);
       return;
     }
@@ -234,7 +237,7 @@ export function CcSwitchImportConfigModal({
           }
         }
         for (const model of visibleModels) addModelId(model.id);
-        setAvailableModels(dedupeModels(Array.from(optionMap.values())));
+        setAvailableModels(modelsServedByChannelGroup(optionMap.values(), selectedGroupOption));
       })
       .catch(() => {
         if (!cancelled) setAvailableModels([]);
@@ -250,6 +253,7 @@ export function CcSwitchImportConfigModal({
     open,
     selectedGroup,
     selectedGroupAllowedModelsKey,
+    selectedGroupExcludedModelsKey,
     selectedGroupChannelsKey,
     selectedGroupAuthoritativeOwnerKey,
     selectedGroupOwnerKey,
@@ -477,10 +481,7 @@ export function CcSwitchImportConfigModal({
   };
 
   const setCodexDefaultModel = (defaultModel: string) => {
-    setDraft((current) => ({
-      ...current,
-      defaultModel: defaultModel.trim(),
-    }));
+    setDraft((current) => ({ ...current, defaultModel: defaultModel.trim() }));
   };
 
   const updateGenericContextWindow = (index: number, contextWindow: string) => {
@@ -515,10 +516,7 @@ export function CcSwitchImportConfigModal({
       const modelMappings = current.modelMappings.map((mapping) =>
         mapping.role === role ? { ...mapping, requestModel } : mapping,
       );
-      return {
-        ...current,
-        modelMappings,
-      };
+      return { ...current, modelMappings };
     });
   };
 

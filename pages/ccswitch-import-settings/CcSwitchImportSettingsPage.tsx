@@ -138,6 +138,7 @@ export function CcSwitchImportSettingsPage() {
                   : undefined,
               routePath: Array.isArray(item["path-routes"]) ? item["path-routes"][0] : "",
               allowedModels: Array.isArray(item["allowed-models"]) ? item["allowed-models"] : [],
+              excludedModels: Array.isArray(item["excluded-models"]) ? item["excluded-models"] : [],
               channels: Array.isArray(item.channels) ? item.channels : [],
               modelOwnerKeys: getChannelGroupModelOwnerKeys(item.channelDetails, item.channels),
               authoritativeModelOwnerKeys: getChannelGroupMappedModelOwnerKeys(

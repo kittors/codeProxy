@@ -30,8 +30,23 @@ export interface RoutingConfigGroupItem {
   "channel-priorities"?: Record<string, number>;
   /** Frozen allow list: models added upstream later are rejected. */
   "allowed-models"?: string[];
-  /** "All but these", so models added upstream later stay usable. */
+  /**
+   * "All but these", so models added upstream later stay usable. Only write it
+   * when the backend advertises `channel-group-excluded-models`: an older one
+   * drops it silently, leaving whatever allow list remains.
+   */
   "excluded-models"?: string[];
+}
+
+/** What the backend can enforce. Read-only: GET returns it, PUT ignores it. */
+export interface RoutingConfigCapabilities {
+  "channel-group-excluded-models"?: boolean;
+}
+
+/** Capabilities normalized for the panel; anything not advertised reads as unsupported. */
+export interface RoutingConfigSupport {
+  /** The backend stores and enforces `excluded-models` on channel groups. */
+  channelGroupExcludedModels: boolean;
 }
 
 export interface RoutingConfigPathRouteItem {
@@ -46,6 +61,25 @@ export interface RoutingConfigItem {
   "include-default-group"?: boolean;
   "channel-groups"?: RoutingConfigGroupItem[];
   "path-routes"?: RoutingConfigPathRouteItem[];
+  /** Response only. Absent on backends that predate it, which is itself the answer. */
+  capabilities?: RoutingConfigCapabilities;
+}
+
+const asRecord = (value: unknown): Record<string, unknown> | undefined =>
+  value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined;
+
+/**
+ * Reads the capabilities of a GET /routing-config response. The panel ships on
+ * its own schedule (CliRelay pulls the latest release), so it can run against a
+ * backend older than itself; only an explicit `true` unlocks a feature.
+ */
+export function readRoutingConfigSupport(payload: unknown): RoutingConfigSupport {
+  const capabilities = asRecord(asRecord(payload)?.capabilities);
+  return {
+    channelGroupExcludedModels: capabilities?.["channel-group-excluded-models"] === true,
+  };
 }
 
 export const routingConfigApi = {

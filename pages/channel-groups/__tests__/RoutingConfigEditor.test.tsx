@@ -43,6 +43,7 @@ function deferred<T>() {
 function Harness({
   initialValues,
   loadModelsForChannels,
+  modelExclusionsSupported,
   availableChannels = ["Team A Claude", "Main Codex", "Backup Claude"],
   availableChannelDetails,
   availableChannelDetailsByGroup,
@@ -53,6 +54,8 @@ function Harness({
     channels: string[],
     groupName?: string,
   ) => Promise<Array<string | RoutingModelOption>>;
+  /** Off by default, like a backend that predates the capability. */
+  modelExclusionsSupported?: boolean;
   availableChannels?: string[];
   availableChannelDetails?: Record<string, ChannelGroupChannelDetail>;
   availableChannelDetailsByGroup?: Record<string, Record<string, ChannelGroupChannelDetail>>;
@@ -73,6 +76,7 @@ function Harness({
       <ToastProvider>
         <RoutingConfigEditor
           values={values}
+          modelExclusionsSupported={modelExclusionsSupported}
           availableChannels={availableChannels}
           availableChannelDetails={availableChannelDetails}
           availableChannelDetailsByGroup={availableChannelDetailsByGroup}
@@ -340,106 +344,371 @@ describe("RoutingConfigEditor", () => {
     );
   });
 
-  // The reported bug: a group saved as an allow list keeps rejecting every model
-  // the upstream ships afterwards, because the list froze the catalog of the day
-  // someone unchecked a box.
-  test("migrates a saved allow list to exclusions and flags the models it misses", async () => {
+  // The group behind the grok-4.7 report, with whatever model gate a test needs.
+  const xaiPool = (
+    models: { allowedModels?: string[]; excludedModels?: string[] } = {},
+  ): VisualConfigValues => ({
+    ...DEFAULT_VISUAL_VALUES,
+    routingChannelGroups: [
+      {
+        id: "group-xai",
+        name: "xai-pool",
+        description: "",
+        strategy: "round-robin",
+        scheduling: schedulingFromStrategy("round-robin"),
+        allowedModels: models.allowedModels ?? [],
+        excludedModels: models.excludedModels,
+        channels: [{ id: "channel-main-codex", name: "Main Codex", priority: "" }],
+      },
+    ],
+    routingPathRoutes: [
+      {
+        id: "route-xai-pool",
+        path: "/xai-pool",
+        group: "xai-pool",
+        stripPrefix: true,
+        fallback: "none",
+      },
+    ],
+  });
+
+  const editXaiPool = async (user: ReturnType<typeof userEvent.setup>) => {
+    const row = screen.getByRole("row", { name: /xai-pool/ });
+    await user.click(within(row).getByRole("button", { name: "编辑分组" }));
+  };
+
+  const openXaiPoolModels = async (user: ReturnType<typeof userEvent.setup>) => {
+    await editXaiPool(user);
+    await user.click(screen.getByRole("tab", { name: "模型列表" }));
+  };
+
+  const savedLists = () => ({
+    allowed: screen.getByTestId("allowed-models").textContent,
+    excluded: screen.getByTestId("excluded-models").textContent,
+  });
+
+  // Replaces "migrates a saved allow list to exclusions and flags the models it
+  // misses". Converting on load meant that opening the Models tab and saving,
+  // with nothing touched, opened the group to every model the list did not show
+  // and to every model the upstream added later.
+  test("keeps a saved allow list as a fixed list once the model list loads", async () => {
     await i18n.changeLanguage("zh-CN");
     const user = userEvent.setup();
-    const loadModelsForChannels = vi.fn(async () => ["grok-4.6", "grok-4.7", "grok-4.7-build-fast"]);
+    const loadModelsForChannels = vi.fn(
+      async (): Promise<string[]> => ["grok-4.6", "grok-4.7", "grok-4.7-build-fast"],
+    );
 
     render(
       <Harness
-        initialValues={{
-          ...DEFAULT_VISUAL_VALUES,
-          routingChannelGroups: [
-            {
-              id: "group-xai",
-              name: "xai-pool",
-              description: "",
-              strategy: "round-robin",
-              scheduling: schedulingFromStrategy("round-robin"),
-              // Saved before grok-4.7 existed.
-              allowedModels: ["grok-4.6"],
-              channels: [{ id: "channel-main-codex", name: "Main Codex", priority: "" }],
-            },
-          ],
-          routingPathRoutes: [
-            {
-              id: "route-xai-pool",
-              path: "/xai-pool",
-              group: "xai-pool",
-              stripPrefix: true,
-              fallback: "none",
-            },
-          ],
-        }}
+        initialValues={xaiPool({ allowedModels: ["grok-4.6"] })}
         loadModelsForChannels={loadModelsForChannels}
+        modelExclusionsSupported
       />,
     );
+    await openXaiPoolModels(user);
 
-    const row = screen.getByRole("row", { name: /xai-pool/ });
-    await user.click(within(row).getByRole("button", { name: "编辑分组" }));
-    await user.click(screen.getByRole("tab", { name: "模型列表" }));
-
-    // Opens in automatic mode with the two newer models still unchecked, and
-    // says so instead of leaving the gap invisible.
-    expect(await screen.findByRole("switch", { name: "自动允许新模型" })).toBeChecked();
-    expect(screen.getByLabelText("grok-4.7")).not.toBeChecked();
-    expect(screen.getByText(/有 2 个模型未勾选/)).toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "包含全部模型" }));
+    expect(await screen.findByLabelText("grok-4.7")).not.toBeChecked();
+    expect(screen.getByLabelText("grok-4.6")).toBeChecked();
+    expect(screen.getByRole("switch", { name: "自动允许新模型" })).not.toBeChecked();
     await user.click(screen.getByRole("button", { name: "保存" }));
 
-    // Neither list is written, so the group now follows whatever its channels serve.
-    expect(screen.getByTestId("allowed-models")).toHaveTextContent("");
-    expect(screen.getByTestId("excluded-models")).toHaveTextContent("");
+    expect(savedLists()).toEqual({ allowed: "grok-4.6", excluded: "" });
+  });
+
+  test("asks before auto-allow turns an allow list into exclusions, and says what that opens", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+    const loadModelsForChannels = vi.fn(
+      async (): Promise<string[]> => ["grok-4.6", "grok-4.7", "grok-4.7-build-fast"],
+    );
+
+    render(
+      <Harness
+        initialValues={xaiPool({ allowedModels: ["grok-4.6"] })}
+        loadModelsForChannels={loadModelsForChannels}
+        modelExclusionsSupported
+      />,
+    );
+    await openXaiPoolModels(user);
+    const toggle = screen.getByRole("switch", { name: "自动允许新模型" });
+    await waitFor(() => expect(toggle).toBeEnabled());
+
+    await user.click(toggle);
+    // Nothing changes until the operator has read what the switch opens up.
+    expect(toggle).not.toBeChecked();
+    const notice = screen.getByTestId("auto-allow-confirm");
+    expect(notice).toHaveTextContent("列表里没显示的");
+    expect(notice).toHaveTextContent("上游以后新增的");
+    expect(notice).toHaveTextContent("当前未勾选的 2 个模型会写入排除名单");
+    await user.click(within(notice).getByRole("button", { name: "取消" }));
+    expect(screen.queryByTestId("auto-allow-confirm")).not.toBeInTheDocument();
+    expect(toggle).not.toBeChecked();
+
+    await user.click(toggle);
+    await user.click(screen.getByRole("button", { name: "确认开启" }));
+    expect(toggle).toBeChecked();
+    await user.click(screen.getByRole("button", { name: "保存" }));
+
+    expect(savedLists()).toEqual({ allowed: "", excluded: "grok-4.7,grok-4.7-build-fast" });
   });
 
   test("turning off auto-allow saves the checked models as a fixed allow list", async () => {
     await i18n.changeLanguage("zh-CN");
     const user = userEvent.setup();
-    const loadModelsForChannels = vi.fn(async () => ["grok-4.6", "grok-4.7"]);
+    const loadModelsForChannels = vi.fn(async (): Promise<string[]> => ["grok-4.6", "grok-4.7"]);
 
     render(
       <Harness
-        initialValues={{
-          ...DEFAULT_VISUAL_VALUES,
-          routingChannelGroups: [
-            {
-              id: "group-xai",
-              name: "xai-pool",
-              description: "",
-              strategy: "round-robin",
-              scheduling: schedulingFromStrategy("round-robin"),
-              allowedModels: [],
-              channels: [{ id: "channel-main-codex", name: "Main Codex", priority: "" }],
-            },
-          ],
-          routingPathRoutes: [
-            {
-              id: "route-xai-pool",
-              path: "/xai-pool",
-              group: "xai-pool",
-              stripPrefix: true,
-              fallback: "none",
-            },
-          ],
-        }}
+        initialValues={xaiPool()}
         loadModelsForChannels={loadModelsForChannels}
+        modelExclusionsSupported
       />,
     );
-
-    const row = screen.getByRole("row", { name: /xai-pool/ });
-    await user.click(within(row).getByRole("button", { name: "编辑分组" }));
-    await user.click(screen.getByRole("tab", { name: "模型列表" }));
+    await openXaiPoolModels(user);
 
     expect(await screen.findByLabelText("grok-4.6")).toBeChecked();
     await user.click(screen.getByRole("switch", { name: "自动允许新模型" }));
+    expect(screen.getByTestId("model-gate-mode-hint")).toHaveTextContent(
+      "上游以后新增的模型会被拒绝",
+    );
     await user.click(screen.getByRole("button", { name: "保存" }));
 
-    expect(screen.getByTestId("allowed-models")).toHaveTextContent("grok-4.6,grok-4.7");
-    expect(screen.getByTestId("excluded-models")).toHaveTextContent("");
+    expect(savedLists()).toEqual({ allowed: "grok-4.6,grok-4.7", excluded: "" });
+  });
+
+  // The list is a filtered view: a model whose account is disabled or cooling
+  // down drops out of it. Its exclusion used to be pruned on load, which could
+  // leave the group serving that model, or everything, once it came back.
+  test("shows and keeps exclusions for models the list does not offer", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+    const loadModelsForChannels = vi.fn(
+      async (): Promise<string[]> => ["grok-4.5", "grok-4.6", "grok-4.7"],
+    );
+
+    render(
+      <Harness
+        initialValues={xaiPool({ excludedModels: ["grok-4.5", "grok-imagine-video-1.5"] })}
+        loadModelsForChannels={loadModelsForChannels}
+        modelExclusionsSupported
+      />,
+    );
+    await openXaiPoolModels(user);
+
+    expect(await screen.findByLabelText("grok-4.6")).toBeChecked();
+    const outside = screen.getByTestId("model-rules-outside-list");
+    expect(within(outside).getByText("grok-imagine-video-1.5")).toBeInTheDocument();
+    expect(within(outside).getByText("已排除 · 当前未提供")).toBeInTheDocument();
+
+    await user.click(screen.getByLabelText("grok-4.6"));
+    await user.click(screen.getByRole("button", { name: "保存" }));
+
+    expect(savedLists()).toEqual({
+      allowed: "",
+      excluded: "grok-4.5,grok-imagine-video-1.5,grok-4.6",
+    });
+  });
+
+  test("drops an entry the list does not offer only when the operator removes it", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+    const loadModelsForChannels = vi.fn(async (): Promise<string[]> => ["grok-4.5", "grok-4.6"]);
+
+    render(
+      <Harness
+        initialValues={xaiPool({ excludedModels: ["grok-4.5", "grok-imagine-video-1.5"] })}
+        loadModelsForChannels={loadModelsForChannels}
+        modelExclusionsSupported
+      />,
+    );
+    await openXaiPoolModels(user);
+
+    await user.click(await screen.findByRole("button", { name: "移除 grok-imagine-video-1.5" }));
+    expect(screen.queryByTestId("model-rules-outside-list")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "保存" }));
+
+    expect(savedLists()).toEqual({ allowed: "", excluded: "grok-4.5" });
+  });
+
+  // Loading used to keep only the exclusions and rewrite the rest, so saving a
+  // group that had both lists, from any tab, dropped its allow list.
+  test("keeps both lists of a group that has them", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+    const loadModelsForChannels = vi.fn(async (): Promise<string[]> => ["grok-4.6", "grok-4.7"]);
+
+    render(
+      <Harness
+        initialValues={xaiPool({
+          allowedModels: ["grok-4.6", "grok-4.7"],
+          excludedModels: ["grok-4.7"],
+        })}
+        loadModelsForChannels={loadModelsForChannels}
+        modelExclusionsSupported
+      />,
+    );
+
+    await editXaiPool(user);
+    await user.click(screen.getByRole("button", { name: "保存" }));
+    expect(savedLists()).toEqual({ allowed: "grok-4.6,grok-4.7", excluded: "grok-4.7" });
+
+    await openXaiPoolModels(user);
+    expect(await screen.findByLabelText("grok-4.6")).toBeChecked();
+    expect(screen.getByLabelText("grok-4.7")).not.toBeChecked();
+    expect(screen.getByRole("switch", { name: "自动允许新模型" })).not.toBeChecked();
+    await user.click(screen.getByRole("button", { name: "保存" }));
+    expect(savedLists()).toEqual({ allowed: "grok-4.6,grok-4.7", excluded: "grok-4.7" });
+  });
+
+  // Select reports re-picking the current value as a change, and the handler used
+  // to reset the model gate on every change, silently lifting the group's limits.
+  test("keeps the model limits when the match strategy is re-picked or switched", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+
+    render(<Harness initialValues={xaiPool({ allowedModels: ["grok-4.6"] })} />);
+
+    await editXaiPool(user);
+    await user.click(screen.getByRole("combobox", { name: "匹配策略" }));
+    await user.click(screen.getByRole("option", { name: "手动选择渠道" }));
+    await user.click(screen.getByRole("button", { name: "保存" }));
+    expect(savedLists()).toEqual({ allowed: "grok-4.6", excluded: "" });
+
+    await editXaiPool(user);
+    await user.click(screen.getByRole("combobox", { name: "匹配策略" }));
+    await user.click(screen.getByRole("option", { name: "标签匹配" }));
+    await user.click(screen.getByRole("combobox", { name: "匹配策略" }));
+    await user.click(screen.getByRole("option", { name: "手动选择渠道" }));
+    await user.click(screen.getByRole("button", { name: "保存" }));
+    expect(savedLists()).toEqual({ allowed: "grok-4.6", excluded: "" });
+  });
+
+  // The switch rewrites the stored lists from the model list; with no list every
+  // model reads as unchecked.
+  test("keeps the auto-allow switch disabled until the model list has loaded", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+    const models = deferred<string[]>();
+    const loadModelsForChannels = vi.fn((): Promise<string[]> => models.promise);
+
+    render(
+      <Harness
+        initialValues={xaiPool({ allowedModels: ["grok-4.6"] })}
+        loadModelsForChannels={loadModelsForChannels}
+        modelExclusionsSupported
+      />,
+    );
+    await openXaiPoolModels(user);
+
+    const toggle = screen.getByRole("switch", { name: "自动允许新模型" });
+    expect(toggle).toBeDisabled();
+    models.resolve(["grok-4.6", "grok-4.7"]);
+    await waitFor(() => expect(toggle).toBeEnabled());
+  });
+
+  test("keeps the auto-allow switch disabled when the model list fails to load", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+    const loadModelsForChannels = vi.fn(
+      async (): Promise<string[]> => Promise.reject(new Error("upstream timed out")),
+    );
+
+    render(
+      <Harness
+        initialValues={xaiPool({ allowedModels: ["grok-4.6"] })}
+        loadModelsForChannels={loadModelsForChannels}
+        modelExclusionsSupported
+      />,
+    );
+    await openXaiPoolModels(user);
+
+    expect(await screen.findByText("upstream timed out")).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: "自动允许新模型" })).toBeDisabled();
+  });
+
+  test("keeps the auto-allow switch disabled when the channels offer no models", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+    const loadModelsForChannels = vi.fn(async (): Promise<string[]> => []);
+
+    render(
+      <Harness
+        initialValues={xaiPool({ allowedModels: ["grok-4.6"] })}
+        loadModelsForChannels={loadModelsForChannels}
+        modelExclusionsSupported
+      />,
+    );
+    await openXaiPoolModels(user);
+
+    expect(await screen.findByText("当前渠道暂无可用模型。")).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: "自动允许新模型" })).toBeDisabled();
+  });
+
+  // A backend without the capability drops excluded-models on save, so writing
+  // exclusions to it would leave the group serving every model.
+  test("hides auto-allow and saves a fixed list when the backend cannot store exclusions", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+    const loadModelsForChannels = vi.fn(async (): Promise<string[]> => ["grok-4.6", "grok-4.7"]);
+
+    render(<Harness initialValues={xaiPool()} loadModelsForChannels={loadModelsForChannels} />);
+    await openXaiPoolModels(user);
+
+    expect(await screen.findByLabelText("grok-4.7")).toBeChecked();
+    expect(screen.queryByRole("switch", { name: "自动允许新模型" })).not.toBeInTheDocument();
+    expect(screen.getByTestId("model-gate-mode-hint")).toHaveTextContent(
+      "当前后端版本不支持排除名单",
+    );
+    await user.click(screen.getByLabelText("grok-4.7"));
+    await user.click(screen.getByRole("button", { name: "保存" }));
+
+    expect(savedLists()).toEqual({ allowed: "grok-4.6", excluded: "" });
+  });
+
+  test("refuses to save a group with no models when the backend cannot store exclusions", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+    const loadModelsForChannels = vi.fn(async (): Promise<string[]> => ["grok-4.6", "grok-4.7"]);
+
+    render(
+      <Harness
+        initialValues={xaiPool({ allowedModels: ["grok-4.6"] })}
+        loadModelsForChannels={loadModelsForChannels}
+      />,
+    );
+    await openXaiPoolModels(user);
+
+    await user.click(await screen.findByLabelText("grok-4.6"));
+    expect(screen.getByTestId("group-editor-save-button")).toBeDisabled();
+    expect(screen.getByText(/当前后端版本不支持保存「一个模型都不允许」/)).toBeInTheDocument();
+    expect(savedLists()).toEqual({ allowed: "grok-4.6", excluded: "" });
+  });
+
+  test("locks rows a wildcard exclusion covers until the rule itself is removed", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+    const loadModelsForChannels = vi.fn(
+      async (): Promise<string[]> => ["grok-4.6", "grok-imagine-video-1.5"],
+    );
+
+    render(
+      <Harness
+        initialValues={xaiPool({ excludedModels: ["grok-imagine-*"] })}
+        loadModelsForChannels={loadModelsForChannels}
+        modelExclusionsSupported
+      />,
+    );
+    await openXaiPoolModels(user);
+
+    const covered = await screen.findByLabelText("grok-imagine-video-1.5");
+    expect(covered).not.toBeChecked();
+    expect(covered).toBeDisabled();
+    expect(covered).toHaveAttribute("title", expect.stringContaining("grok-imagine-*"));
+
+    await user.click(screen.getByRole("button", { name: "移除 grok-imagine-*" }));
+    expect(screen.getByLabelText("grok-imagine-video-1.5")).toBeChecked();
+    await user.click(screen.getByRole("button", { name: "保存" }));
+    expect(savedLists()).toEqual({ allowed: "", excluded: "" });
   });
 
   test("renders channel-scoped models as a checkbox table with descriptions and prices", async () => {
@@ -792,7 +1061,7 @@ describe("RoutingConfigEditor", () => {
         : [],
     );
 
-    render(<Harness loadModelsForChannels={loadModelsForChannels} />);
+    render(<Harness loadModelsForChannels={loadModelsForChannels} modelExclusionsSupported />);
 
     const row = screen.getByRole("row", { name: /系统默认/ });
     await user.click(within(row).getByRole("button", { name: "编辑分组" }));

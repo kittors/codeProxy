@@ -56,17 +56,10 @@ import {
 } from "./routingHelpers";
 import { ModelSelectionPanel } from "./ModelSelectionPanel";
 import {
-  clearAllModels,
   createModelSelectionDraft,
-  migrateAllowListToExclusions,
   modelSelectionFromEntry,
-  pruneModelSelection,
-  selectAllModels,
-  selectedModelIds,
+  modelSelectionSaveError,
   serializeModelSelection,
-  setAutoAllowNewModels,
-  toggleModelSelection,
-  unselectedModelCount,
   type ModelSelectionDraft,
 } from "./modelSelectionDraft";
 
@@ -98,7 +91,7 @@ const RESERVED_ROUTE_PREFIXES = new Set([
   "codex",
 ]);
 
-const createEmptyGroupDraft = (): GroupDraft => ({
+const createEmptyGroupDraft = (exclusionsSupported = false): GroupDraft => ({
   name: "",
   description: "",
   scheduling: defaultScheduling(),
@@ -106,7 +99,7 @@ const createEmptyGroupDraft = (): GroupDraft => ({
   matchMode: "channels",
   channels: [],
   tags: [],
-  models: createModelSelectionDraft(),
+  models: createModelSelectionDraft(exclusionsSupported),
   routes: [{ ...EMPTY_ROUTE_DRAFT() }],
 });
 
@@ -118,15 +111,11 @@ const EMPTY_ROUTE_DRAFT = (): RoutingPathRouteEntry => ({
   fallback: "none",
 });
 
-
-
-
-
-
 export function RoutingConfigEditor({
   title,
   values,
   disabled,
+  modelExclusionsSupported = false,
   availableChannels,
   availableChannelDetails = {},
   availableChannelDetailsByGroup = {},
@@ -137,6 +126,8 @@ export function RoutingConfigEditor({
   title?: string;
   values: VisualConfigValues;
   disabled?: boolean;
+  /** The backend stores channel-group `excluded-models` (routing-config capabilities). */
+  modelExclusionsSupported?: boolean;
   availableChannels: string[];
   availableChannelDetails?: Record<string, ChannelGroupChannelDetail>;
   availableChannelDetailsByGroup?: Record<string, Record<string, ChannelGroupChannelDetail>>;
@@ -339,17 +330,6 @@ export function RoutingConfigEditor({
     groupEditorId === SYSTEM_DEFAULT_GROUP_ID ||
     (groupEditorId !== null && groupDraft.name.trim().toLowerCase() === SYSTEM_DEFAULT_GROUP_NAME);
 
-  const modelOptionIds = useMemo(() => modelOptions.map((model) => model.id), [modelOptions]);
-  const selectedModelSet = useMemo(
-    () => selectedModelIds(groupDraft.models, modelOptionIds),
-    [groupDraft.models, modelOptionIds],
-  );
-  // A group carried over from the allow-list era can still be missing models the
-  // upstream added since; surface the count so it is fixable in one click.
-  const unselectedModels = useMemo(
-    () => unselectedModelCount(groupDraft.models, modelOptionIds),
-    [groupDraft.models, modelOptionIds],
-  );
   const primaryRoute = groupDraft.routes[0] ?? EMPTY_ROUTE_DRAFT();
   const normalizedPrimaryRoutePath = useMemo(
     () => normalizeRoutePathInput(primaryRoute.path),
@@ -387,6 +367,8 @@ export function RoutingConfigEditor({
   );
 
   const groupDraftError = useMemo(() => {
+    const modelGateError = modelSelectionSaveError(groupDraft.models);
+    if (modelGateError) return t(modelGateError);
     if (editingSystemDefaultGroup) return "";
     if (!groupDraft.name.trim()) return t("channel_groups_page.group_name_required");
     if (!primaryRoute.path.trim()) return t("channel_groups_page.route_path_required");
@@ -427,6 +409,7 @@ export function RoutingConfigEditor({
     editingSystemDefaultGroup,
     groupDraft.channels.length,
     groupDraft.matchMode,
+    groupDraft.models,
     groupDraft.name,
     groupEditorId,
     normalizedPrimaryRoutePath,
@@ -440,12 +423,12 @@ export function RoutingConfigEditor({
   const openCreateGroup = useCallback(() => {
     void Promise.resolve(onRefreshAvailableChannels?.()).catch(() => undefined);
     setGroupEditorId(null);
-    setGroupDraft(createEmptyGroupDraft());
+    setGroupDraft(createEmptyGroupDraft(modelExclusionsSupported));
     setGroupEditorTab("basic");
     setModelOptions([]);
     setModelsError("");
     setGroupEditorOpen(true);
-  }, [onRefreshAvailableChannels]);
+  }, [modelExclusionsSupported, onRefreshAvailableChannels]);
 
   const openEditGroup = useCallback(
     (group: RoutingChannelGroupEntry, options?: { notifyStale?: boolean }) => {
@@ -470,7 +453,7 @@ export function RoutingConfigEditor({
         matchMode: isSystemDefault ? "channels" : (group.matchMode ?? "channels"),
         channels: cloneMembers(group.channels),
         tags: isSystemDefault ? [] : syncDraftTags(group.tags ?? []),
-        models: modelSelectionFromEntry(group),
+        models: modelSelectionFromEntry(group, modelExclusionsSupported),
         routes: isSystemDefault
           ? []
           : existingRoutes.length > 0
@@ -486,6 +469,7 @@ export function RoutingConfigEditor({
       setGroupEditorOpen(true);
     },
     [
+      modelExclusionsSupported,
       notifyStaleChannels,
       onRefreshAvailableChannels,
       staleChannelsByGroup,
@@ -570,35 +554,14 @@ export function RoutingConfigEditor({
     }));
   }, []);
 
-  const toggleDraftModel = useCallback(
-    (modelId: string, checked: boolean) => {
-      setGroupDraft((current) => ({
-        ...current,
-        models: toggleModelSelection(current.models, modelOptionIds, modelId, checked),
-      }));
+  const updateDraftModels = useCallback(
+    (update: (models: ModelSelectionDraft) => ModelSelectionDraft) => {
+      setGroupDraft((current) => {
+        const models = update(current.models);
+        return models === current.models ? current : { ...current, models };
+      });
     },
-    [modelOptionIds],
-  );
-
-  const selectAllDraftModels = useCallback(() => {
-    setGroupDraft((current) => ({
-      ...current,
-      models: selectAllModels(current.models, modelOptionIds),
-    }));
-  }, [modelOptionIds]);
-
-  const clearDraftModels = useCallback(() => {
-    setGroupDraft((current) => ({ ...current, models: clearAllModels(current.models) }));
-  }, []);
-
-  const toggleAutoAllowNewModels = useCallback(
-    (next: boolean) => {
-      setGroupDraft((current) => ({
-        ...current,
-        models: setAutoAllowNewModels(current.models, modelOptionIds, next),
-      }));
-    },
-    [modelOptionIds],
+    [],
   );
 
   const updatePrimaryRoute = useCallback((patch: Partial<RoutingPathRouteEntry>) => {
@@ -1177,17 +1140,9 @@ export function RoutingConfigEditor({
           const key = option.id.toLowerCase();
           if (!optionMap.has(key)) optionMap.set(key, option);
         }
-        const normalized = Array.from(optionMap.values()).sort((a, b) => a.id.localeCompare(b.id));
-        setModelOptions(normalized);
-        const optionIds = normalized.map((model) => model.id);
-        setGroupDraft((current) => {
-          // The full model list is only known here, so this is where a saved
-          // allow list can finally be rewritten as the exclusions that let new
-          // upstream models through.
-          const migrated = migrateAllowListToExclusions(current.models, optionIds);
-          const models = pruneModelSelection(migrated, optionIds);
-          return models === current.models ? current : { ...current, models };
-        });
+        // Loading the list only changes what can be shown; the stored lists stay
+        // as they are until the operator edits them (see modelSelectionDraft.ts).
+        setModelOptions(Array.from(optionMap.values()).sort((a, b) => a.id.localeCompare(b.id)));
       })
       .catch((err: unknown) => {
         if (cancelled) return;
@@ -1644,13 +1599,15 @@ export function RoutingConfigEditor({
                               },
                             ]}
                             onChange={(value) => {
-                              setGroupDraft((current) => ({
-                                ...current,
-                                matchMode: value === "tags" ? "tags" : "channels",
-                                // Switching how members are matched rebuilds the
-                                // channel set, so the model picks no longer apply.
-                                models: createModelSelectionDraft(),
-                              }));
+                              const matchMode = value === "tags" ? "tags" : "channels";
+                              // Select reports re-picking the current value too. Only the
+                              // member set changes; resetting the model gate here used to
+                              // open the group to every model.
+                              setGroupDraft((current) =>
+                                current.matchMode === matchMode
+                                  ? current
+                                  : { ...current, matchMode },
+                              );
                             }}
                           />
                         </Field>
@@ -1751,18 +1708,13 @@ export function RoutingConfigEditor({
                   <ModelSelectionPanel
                     selection={groupDraft.models}
                     modelOptions={modelOptions}
-                    selectedModelIds={selectedModelSet}
-                    unselectedModelCount={unselectedModels}
                     modelsLoading={modelsLoading}
                     modelsError={modelsError}
                     needsChannels={
                       !editingSystemDefaultGroup && resolvedDraftChannelValues.length === 0
                     }
                     disabled={disabled}
-                    onToggleModel={toggleDraftModel}
-                    onSelectAll={selectAllDraftModels}
-                    onClearAll={clearDraftModels}
-                    onToggleAutoAllowNewModels={toggleAutoAllowNewModels}
+                    onChange={updateDraftModels}
                   />
                 </TabsContent>
               </div>
