@@ -105,6 +105,9 @@ describe("providersApi OpenCode Go", () => {
         apiKey: "sk-go",
         prefix: "go",
         baseUrl: "https://should-not-save.example",
+        // A row imported from an older export can still carry the console
+        // cookie the usage check used to need; it must never be sent back.
+        authCookie: "auth=stale-console-session",
         proxyId: "hk",
         proxyUrl: "http://127.0.0.1:7890",
         headers: { "X-Test": "yes" },
@@ -180,6 +183,7 @@ describe("providersApi OpenCode Go", () => {
       apiKey: "sk-go",
       disabled: true,
       baseUrl: "https://should-not-save.example",
+      authCookie: "auth=stale-console-session",
       models: [],
       excludedModels: [],
       visionFallbackModel: "qwen3.5-plus",
