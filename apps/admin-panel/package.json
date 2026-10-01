@@ -19,7 +19,7 @@
     "@radix-ui/react-dropdown-menu": "^2.1.16",
     "@tailwindcss/typography": "^0.5.19",
     "@tanstack/react-virtual": "^3.13.18",
-    "axios": "^1.18.1",
+    "axios": "^1.20.0",
     "chart.js": "^4.5.1",
     "echarts": "^6.1.0",
     "echarts-for-react": "^3.0.6",
