@@ -44,6 +44,11 @@ interface MultiSelectProps {
   disabled?: boolean;
   className?: string;
   size?: ControlSize;
+  /** Optional control id and accessible state, used by FormField. */
+  id?: string;
+  "aria-label"?: string;
+  "aria-invalid"?: boolean | "true" | "false";
+  "aria-describedby"?: string;
 }
 
 export function MultiSelect({
@@ -57,6 +62,10 @@ export function MultiSelect({
   disabled = false,
   className = "",
   size = "default",
+  id,
+  "aria-label": ariaLabel,
+  "aria-invalid": ariaInvalid,
+  "aria-describedby": ariaDescribedBy,
 }: MultiSelectProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -148,6 +157,7 @@ export function MultiSelect({
   }, [options, search]);
 
   const selectedSet = useMemo(() => new Set(value), [value]);
+  const isInvalid = ariaInvalid === true || ariaInvalid === "true";
 
   const toggle = useCallback(
     (optValue: string) => {
@@ -269,7 +279,11 @@ export function MultiSelect({
       {/* Trigger */}
       <button
         ref={triggerRef}
+        id={id}
         type="button"
+        aria-label={ariaLabel}
+        aria-invalid={isInvalid ? true : ariaInvalid}
+        aria-describedby={ariaDescribedBy}
         disabled={disabled}
         data-state={selectTriggerState(open)}
         onClick={() => {
@@ -280,6 +294,9 @@ export function MultiSelect({
         className={cn(
           getSelectTriggerBase(size),
           "h-auto min-h-9 w-full justify-between py-1 text-left",
+          isInvalid
+            ? "ring-1 ring-rose-500/55 focus-visible:ring-rose-500/70 dark:ring-rose-400/55 dark:focus-visible:ring-rose-400/70"
+            : null,
         )}
       >
         <div className="flex min-w-0 flex-1 flex-wrap gap-1">
