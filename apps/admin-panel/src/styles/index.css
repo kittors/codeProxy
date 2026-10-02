@@ -77,7 +77,8 @@
    * 用 % 而不是 px：用户在浏览器里调过默认字号时，这个比例仍然作用在他们自己的基准上。
    */
   :root {
-    --ui-scale: 0.9;
+    --ui-scale: 0.92;
+    --ui-motion-emphasis: cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   html {
@@ -161,6 +162,47 @@ html.theme-transition-lock *::after {
   height: 0;
 }
 
+/* Shared scroll affordance: a soft edge cue instead of another hard divider. */
+.scroll-fade-y {
+  position: relative;
+  isolation: isolate;
+}
+
+.scroll-fade-y::before,
+.scroll-fade-y::after {
+  position: absolute;
+  z-index: 2;
+  left: 0;
+  right: 0;
+  height: 18px;
+  content: "";
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 180ms var(--ui-motion-emphasis);
+}
+
+.scroll-fade-y::before {
+  top: 0;
+  background: linear-gradient(to bottom, var(--bg-primary), transparent);
+}
+
+.scroll-fade-y::after {
+  bottom: 0;
+  background: linear-gradient(to top, var(--bg-primary), transparent);
+}
+
+.scroll-fade-y[data-scroll-top="true"]::before,
+.scroll-fade-y[data-scroll-bottom="true"]::after {
+  opacity: 0.92;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-fade-y::before,
+  .scroll-fade-y::after {
+    transition: none;
+  }
+}
+
 .rp {
   position: fixed;
   inset: 0 0 auto;
@@ -180,8 +222,8 @@ html.theme-transition-lock *::after {
 
 .rp::before {
   transform-origin: left;
-  background: linear-gradient(90deg, #2563eb, #3b82f6 58%, #22c55e);
-  box-shadow: 0 0 14px rgba(59, 130, 246, 0.45);
+  background: linear-gradient(90deg, #18181b, #71717a 58%, #d4d4d8);
+  box-shadow: 0 0 14px rgba(24, 24, 27, 0.2);
   animation: rp-load 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
@@ -440,23 +482,23 @@ html.theme-transition-lock *::after {
 
 /* ── PageLoader full-screen variant ── */
 :root {
-  --pl-bg: #f4f4f5;
-  --pl-ring-outer: rgba(99, 102, 241, 0.6);
-  --pl-ring-inner: rgba(20, 184, 166, 0.75);
-  --pl-text: #64748b;
-  --pl-glow-1: rgba(59, 130, 246, 0.12);
-  --pl-glow-2: rgba(20, 184, 166, 0.1);
-  --pl-glow-3: rgba(168, 85, 247, 0.08);
+  --pl-bg: #f8f8f8;
+  --pl-ring-outer: rgba(24, 24, 27, 0.55);
+  --pl-ring-inner: rgba(113, 113, 122, 0.65);
+  --pl-text: #71717a;
+  --pl-glow-1: rgba(24, 24, 27, 0.04);
+  --pl-glow-2: rgba(113, 113, 122, 0.035);
+  --pl-glow-3: rgba(161, 161, 170, 0.03);
 }
 
 .dark {
-  --pl-bg: #09090b;
-  --pl-ring-outer: rgba(129, 140, 248, 0.7);
-  --pl-ring-inner: rgba(94, 234, 212, 0.8);
-  --pl-text: rgba(255, 255, 255, 0.5);
-  --pl-glow-1: rgba(99, 102, 241, 0.18);
-  --pl-glow-2: rgba(45, 212, 191, 0.12);
-  --pl-glow-3: rgba(168, 85, 247, 0.1);
+  --pl-bg: #191919;
+  --pl-ring-outer: rgba(250, 250, 250, 0.72);
+  --pl-ring-inner: rgba(161, 161, 170, 0.76);
+  --pl-text: rgba(250, 250, 250, 0.58);
+  --pl-glow-1: rgba(250, 250, 250, 0.05);
+  --pl-glow-2: rgba(161, 161, 170, 0.035);
+  --pl-glow-3: rgba(82, 82, 91, 0.035);
 }
 
 .pl-glow {
