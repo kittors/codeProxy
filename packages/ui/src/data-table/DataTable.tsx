@@ -2305,7 +2305,7 @@ export function DataTable<T>({
                           title={t("common.resize_column", {
                             column: col.label,
                           })}
-                          className="group/resize absolute -right-2 top-0 z-30 h-full w-4 cursor-col-resize touch-none bg-transparent outline-none"
+                          className="group/resize absolute -right-2 top-0 z-30 h-full w-4 cursor-col-resize touch-none bg-transparent outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-slate-400/35 dark:focus-visible:ring-white/15"
                           style={{ cursor: "col-resize" }}
                           onPointerDown={(event) => handleColumnResizePointerDown(col, event)}
                         >
@@ -2398,10 +2398,12 @@ export function DataTable<T>({
                         tabIndex={rowInteractive ? 0 : undefined}
                         aria-selected={rowSelected}
                         className={`group/row relative z-0 text-sm transition-[opacity,background-color] ${
-                          rowInteractive ? "cursor-pointer outline-none" : ""
+                          rowInteractive
+                            ? "cursor-pointer outline-none focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-slate-900/15 dark:focus-visible:ring-white/20"
+                            : ""
                         } ${naturalFlow ? "hover:bg-slate-50 dark:hover:bg-white/[0.04]" : ""} ${
                           isActiveRowReorder
-                            ? "z-20 bg-blue-50/70 opacity-35 dark:bg-blue-500/10"
+                            ? "z-20 bg-slate-100/75 opacity-35 dark:bg-white/[0.08]"
                             : ""
                         } ${extraCls}`}
                         style={virtualize ? { height: rowHeight } : undefined}
@@ -2534,7 +2536,7 @@ export function DataTable<T>({
             <div className="flex items-center justify-center py-4">
               <div className="inline-flex items-center gap-2 text-sm text-slate-500 dark:text-white/55">
                 <span
-                  className="h-4 w-4 rounded-full border-2 border-slate-300 border-t-indigo-600 motion-reduce:animate-none motion-safe:animate-spin dark:border-white/20 dark:border-t-white/80"
+                  className="h-4 w-4 rounded-full border-2 border-slate-300 border-t-slate-700 motion-reduce:animate-none motion-safe:animate-spin dark:border-white/20 dark:border-t-white/80"
                   aria-hidden="true"
                 />
                 {t("common.loading_more")}
@@ -2596,7 +2598,7 @@ export function DataTable<T>({
             <div
               ref={verticalThumbRef}
               role="presentation"
-              className="pointer-events-auto absolute right-0 w-1.5 cursor-pointer rounded-full bg-[#C7C7C7] transition-[width] duration-150 ease-out hover:w-2 active:w-2 group-hover/scrollbar:w-2"
+              className="pointer-events-auto absolute right-0 w-1.5 cursor-pointer rounded-full bg-slate-300 transition-[width] duration-150 ease-out hover:w-2 active:w-2 group-hover/scrollbar:w-2 dark:bg-white/25"
               style={{ top: vThumb.top, height: vThumb.height }}
               onPointerDown={(e) => handleThumbPointerDown("y", e)}
               onPointerMove={handleThumbPointerMove}
@@ -2615,7 +2617,7 @@ export function DataTable<T>({
           <div
             ref={horizontalThumbRef}
             role="presentation"
-            className="pointer-events-auto absolute bottom-0 h-1.5 cursor-pointer rounded-full bg-[#C7C7C7] transition-[height] duration-150 ease-out hover:h-2 active:h-2 group-hover/scrollbar:h-2"
+            className="pointer-events-auto absolute bottom-0 h-1.5 cursor-pointer rounded-full bg-slate-300 transition-[height] duration-150 ease-out hover:h-2 active:h-2 group-hover/scrollbar:h-2 dark:bg-white/25"
             style={{ left: hThumb.left, width: hThumb.width }}
             onPointerDown={(e) => handleThumbPointerDown("x", e)}
             onPointerMove={handleThumbPointerMove}
