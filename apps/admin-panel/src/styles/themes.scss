@@ -5,33 +5,33 @@
 // 浅色主题（默认）
 :root {
   --bg-primary: #ffffff;
-  --bg-secondary: #f3f4f6;
-  --bg-tertiary: #e5e7eb;
+  --bg-secondary: #f6f6f7;
+  --bg-tertiary: #ececef;
   --bg-hover: var(--bg-tertiary);
   --bg-quinary: #f9fafb;
   --bg-error-light: rgba(239, 68, 68, 0.1);
 
-  --text-primary: #1f2937;
-  --text-secondary: #6b7280;
-  --text-tertiary: #9ca3af;
-  --text-quaternary: #d1d5db;
+  --text-primary: #18181b;
+  --text-secondary: #71717a;
+  --text-tertiary: #a1a1aa;
+  --text-quaternary: #d4d4d8;
   --text-muted: var(--text-tertiary);
 
-  --border-color: #e5e7eb;
+  --border-color: rgba(24, 24, 27, 0.09);
   --border-secondary: var(--border-color);
-  --border-primary: #d1d5db;
-  --border-hover: #d1d5db;
+  --border-primary: rgba(24, 24, 27, 0.16);
+  --border-hover: rgba(24, 24, 27, 0.22);
 
-  --primary-color: #3b82f6;
-  --primary-hover: #2563eb;
-  --primary-active: #1d4ed8;
+  --primary-color: #18181b;
+  --primary-hover: #27272a;
+  --primary-active: #09090b;
   --primary-contrast: #ffffff;
 
   --success-color: #10b981;
   --warning-color: #f59e0b;
   --error-color: #ef4444;
   --danger-color: var(--error-color);
-  --info-color: var(--primary-color);
+  --info-color: #64748b;
 
   --warning-bg: rgba(245, 158, 11, 0.12);
   --warning-border: rgba(245, 158, 11, 0.35);
@@ -45,11 +45,11 @@
   --failure-badge-text: #991b1b;
   --failure-badge-border: #fca5a5;
 
-  --count-badge-bg: rgba(59, 130, 246, 0.14);
-  --count-badge-text: var(--primary-active);
+  --count-badge-bg: rgba(24, 24, 27, 0.08);
+  --count-badge-text: var(--text-primary);
 
-  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+  --shadow: 0 1px 2px rgb(24 24 27 / 0.04), 0 8px 24px rgb(24 24 27 / 0.035);
+  --shadow-lg: 0 16px 40px rgb(24 24 27 / 0.09);
 
   --radius-md: 8px;
   --accent-tertiary: var(--bg-tertiary);
@@ -75,16 +75,16 @@
   --border-primary: #404040;
   --border-hover: #4a4a4a;
 
-  --primary-color: #3b82f6;
-  --primary-hover: #60a5fa;
-  --primary-active: #93c5fd;
-  --primary-contrast: #ffffff;
+  --primary-color: #fafafa;
+  --primary-hover: #e4e4e7;
+  --primary-active: #d4d4d8;
+  --primary-contrast: #18181b;
 
   --success-color: #10b981;
   --warning-color: #f59e0b;
   --error-color: #ef4444;
   --danger-color: var(--error-color);
-  --info-color: var(--primary-color);
+  --info-color: #a1a1aa;
 
   --warning-bg: rgba(245, 158, 11, 0.22);
   --warning-border: rgba(245, 158, 11, 0.45);
@@ -98,11 +98,11 @@
   --failure-badge-text: #fca5a5;
   --failure-badge-border: #dc2626;
 
-  --count-badge-bg: rgba(59, 130, 246, 0.25);
-  --count-badge-text: var(--primary-active);
+  --count-badge-bg: rgba(255, 255, 255, 0.09);
+  --count-badge-text: #fafafa;
 
-  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.3);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.3);
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.28), 0 10px 28px rgb(0 0 0 / 0.18);
+  --shadow-lg: 0 18px 44px rgb(0 0 0 / 0.34);
 
   --radius-md: 8px;
   --accent-tertiary: var(--bg-tertiary);
