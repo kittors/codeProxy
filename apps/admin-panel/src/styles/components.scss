@@ -11,7 +11,12 @@
   padding: 10px 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: all $transition-fast;
+  transition:
+    background-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
   background-color: var(--bg-secondary);
   color: var(--text-primary);
 
@@ -71,6 +76,10 @@
     opacity: 0.6;
     cursor: not-allowed;
   }
+
+  &:active:not(:disabled) {
+    transform: translateY(1px);
+  }
 }
 
 :global([data-theme="dark"]) {
@@ -99,7 +108,7 @@ textarea {
   &:focus {
     outline: none;
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba($primary-color, 0.18);
+    box-shadow: 0 0 0 3px rgba(24, 24, 27, 0.1);
   }
 }
 
@@ -126,6 +135,13 @@ textarea {
   border-radius: $radius-lg;
   box-shadow: var(--shadow);
   padding: $spacing-lg;
+  transition:
+    border-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1);
+
+  &:hover {
+    border-color: var(--border-hover);
+  }
 }
 
 .card-header {
