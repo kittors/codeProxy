@@ -33,7 +33,7 @@ export function MaskToggleButton({
         title={label}
         className={[
           masked
-            ? "bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:text-white dark:hover:bg-indigo-600"
+            ? "bg-[#18181B] text-white hover:bg-[#27272A] dark:bg-[#FAFAFA] dark:text-[#18181B] dark:hover:bg-[#E4E4E7]"
             : "",
           className,
         ]
