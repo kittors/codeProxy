@@ -43,7 +43,7 @@ export const PageLoader: FC<PageLoaderProps> = ({
       <span
         role="status"
         aria-label={text ?? "Loading"}
-        className="inline-block h-5 w-5 shrink-0 rounded-full border-2 border-indigo-500/25 border-t-indigo-600 motion-reduce:animate-none motion-safe:animate-spin dark:border-indigo-400/25 dark:border-t-indigo-400"
+        className="inline-block h-5 w-5 shrink-0 rounded-full border-2 border-black/10 border-t-neutral-800 motion-reduce:animate-none motion-safe:animate-spin dark:border-white/15 dark:border-t-white/75"
       />
     );
   }
