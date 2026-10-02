@@ -50,7 +50,10 @@ export interface SearchableCheckboxMultiSelectProps {
   selectedCountLabel: (count: number) => string;
   noResultsLabel: string;
   disabled?: boolean;
+  id?: string;
   "aria-label"?: string;
+  "aria-invalid"?: boolean | "true" | "false";
+  "aria-describedby"?: string;
   className?: string;
   size?: ControlSize;
   clearLabel?: string;
@@ -93,7 +96,10 @@ export function SearchableCheckboxMultiSelect({
   selectedCountLabel,
   noResultsLabel,
   disabled = false,
+  id,
   "aria-label": ariaLabel,
+  "aria-invalid": ariaInvalid,
+  "aria-describedby": ariaDescribedBy,
   className,
   size = "default",
   clearLabel,
@@ -432,6 +438,7 @@ export function SearchableCheckboxMultiSelect({
   ]);
 
   const showSelectionBadge = activeExplicitValue.length > 0 && !showAllSelectionSummary;
+  const isInvalid = ariaInvalid === true || ariaInvalid === "true";
 
   const handleClear = useCallback(
     (event: React.MouseEvent) => {
@@ -457,11 +464,14 @@ export function SearchableCheckboxMultiSelect({
       <div className={cn("group/multi-select relative", className)}>
         <button
           ref={triggerRef}
+          id={id}
           type="button"
           role="combobox"
           aria-expanded={open}
           aria-haspopup="listbox"
           aria-label={ariaLabel}
+          aria-invalid={isInvalid ? true : ariaInvalid}
+          aria-describedby={ariaDescribedBy}
           disabled={disabled}
           data-state={selectTriggerState(open)}
           onClick={() => {
@@ -472,7 +482,13 @@ export function SearchableCheckboxMultiSelect({
             }
             setOpen((current) => !current);
           }}
-          className={cn(getSelectTriggerBase(size), "w-full justify-between text-left")}
+          className={cn(
+            getSelectTriggerBase(size),
+            "w-full justify-between text-left",
+            isInvalid
+              ? "ring-1 ring-rose-500/55 focus-visible:ring-rose-500/70 dark:ring-rose-400/55 dark:focus-visible:ring-rose-400/70"
+              : null,
+          )}
         >
           <span
             className={cn(
@@ -485,7 +501,7 @@ export function SearchableCheckboxMultiSelect({
           </span>
           <span className="flex shrink-0 items-center gap-2">
             {showSelectionBadge ? (
-              <span className="rounded-md bg-sky-50 px-1.5 py-0.5 text-xs font-semibold text-sky-700 dark:bg-sky-900/30 dark:text-sky-300">
+              <span className="rounded-md bg-slate-200 px-1.5 py-0.5 text-xs font-semibold text-slate-700 dark:bg-white/10 dark:text-white/75">
                 {selectedCountLabel(activeExplicitValue.length)}
               </span>
             ) : null}
@@ -576,7 +592,7 @@ export function SearchableCheckboxMultiSelect({
                         type="button"
                         onClick={() => updateSelection([], true)}
                         disabled={options.length === 0 || showAllSelectionSummary}
-                        className="rounded-md px-2 py-1 text-xs font-medium text-indigo-600 transition hover:bg-indigo-50 disabled:cursor-default disabled:text-slate-300 dark:text-indigo-300 dark:hover:bg-indigo-500/10 dark:disabled:text-white/20"
+                        className="rounded-md px-2 py-1 text-xs font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/10 disabled:cursor-default disabled:text-slate-300 dark:text-white/65 dark:hover:bg-white/10 dark:hover:text-white dark:focus-visible:ring-white/15 dark:disabled:text-white/20"
                       >
                         {allSelectionLabel || placeholder}
                       </button>
@@ -589,7 +605,7 @@ export function SearchableCheckboxMultiSelect({
                           (!deselectAllLabel &&
                             (allOptionsSelectedExplicitly || implicitAllSelected))
                         }
-                        className="rounded-md px-2 py-1 text-xs font-medium text-indigo-600 transition hover:bg-indigo-50 disabled:cursor-not-allowed disabled:text-slate-300 dark:text-indigo-300 dark:hover:bg-indigo-500/10 dark:disabled:text-white/20"
+                        className="rounded-md px-2 py-1 text-xs font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/10 disabled:cursor-not-allowed disabled:text-slate-300 dark:text-white/65 dark:hover:bg-white/10 dark:hover:text-white dark:focus-visible:ring-white/15 dark:disabled:text-white/20"
                       >
                         {showAllSelectionSummary && deselectAllLabel
                           ? deselectAllLabel
@@ -601,7 +617,7 @@ export function SearchableCheckboxMultiSelect({
                         type="button"
                         onClick={toggleFiltered}
                         disabled={visibleValues.length === 0}
-                        className="rounded-md px-2 py-1 text-xs font-medium text-indigo-600 transition hover:bg-indigo-50 disabled:cursor-not-allowed disabled:text-slate-300 dark:text-indigo-300 dark:hover:bg-indigo-500/10 dark:disabled:text-white/20"
+                        className="rounded-md px-2 py-1 text-xs font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/10 disabled:cursor-not-allowed disabled:text-slate-300 dark:text-white/65 dark:hover:bg-white/10 dark:hover:text-white dark:focus-visible:ring-white/15 dark:disabled:text-white/20"
                       >
                         {allVisibleSelected ? deselectFilteredLabel : selectFilteredLabel}
                       </button>
