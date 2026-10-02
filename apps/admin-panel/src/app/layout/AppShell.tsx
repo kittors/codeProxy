@@ -986,7 +986,7 @@ function ShellSidebar({
                     <span className="grid h-14 w-12 shrink-0 place-items-center">
                       <span
                         data-sidebar-account-avatar="true"
-                        className="relative grid h-9 w-9 place-items-center rounded-full bg-blue-600 text-xs font-semibold text-white"
+                        className="relative grid h-9 w-9 place-items-center rounded-full bg-zinc-900 text-xs font-semibold text-white shadow-sm ring-1 ring-zinc-900/10 dark:bg-zinc-100 dark:text-zinc-900 dark:ring-white/10"
                       >
                         {accountInitials}
                         <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500 dark:border-neutral-950" />
@@ -1019,7 +1019,7 @@ function ShellSidebar({
                     className="w-[var(--radix-dropdown-menu-trigger-width)] p-2"
                   >
                     <div className="flex items-center gap-3 px-2 py-2">
-                      <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-blue-600 text-xs font-semibold text-white">
+                      <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-zinc-900 text-xs font-semibold text-white shadow-sm ring-1 ring-zinc-900/10 dark:bg-zinc-100 dark:text-zinc-900 dark:ring-white/10">
                         {accountInitials}
                       </div>
                       <div className="min-w-0 flex-1 leading-tight">
@@ -1067,7 +1067,7 @@ function ShellSidebar({
                   }
                 >
                   <div className="flex items-center gap-3 px-2 py-2">
-                    <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-blue-600 text-xs font-semibold text-white">
+                    <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-zinc-900 text-xs font-semibold text-white shadow-sm ring-1 ring-zinc-900/10 dark:bg-zinc-100 dark:text-zinc-900 dark:ring-white/10">
                       AD
                     </div>
                     <div className="min-w-0 flex-1 leading-tight">
