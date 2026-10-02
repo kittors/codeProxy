@@ -67,7 +67,7 @@ export function Card({
       {loading ? (
         <div className="absolute inset-0 z-10 flex items-center justify-center rounded-3xl bg-white/70 backdrop-blur-sm motion-safe:transition-colors motion-safe:duration-200 motion-safe:ease-out dark:bg-neutral-950/55">
           <div className="inline-flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 text-sm font-medium text-slate-700 border border-slate-900/8 motion-safe:transition-colors motion-safe:duration-200 motion-safe:ease-out dark:bg-neutral-900/85 dark:text-white dark:border-white/10">
-            <span className="h-4 w-4 animate-spin rounded-full border-2 border-indigo-500/30 border-t-indigo-600 dark:border-indigo-400/25 dark:border-t-indigo-400" />
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-900/15 border-t-slate-900 dark:border-white/20 dark:border-t-white" />
             {t("common.loading_ellipsis")}
           </div>
         </div>
