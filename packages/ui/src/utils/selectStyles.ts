@@ -100,9 +100,11 @@ export const selectEmptyState = "px-2.5 py-3 text-center text-xs text-ink-3";
  * 位移 / 缩放用 EASE_POP 走 200ms；退出 110ms、位移减半，显得干脆。originY 让放大从贴着触发器的
  * 那条边开始，而不是从面板中心。时长与曲线与 FloatingPanel.css 里 Radix 菜单的关键帧是同一组。
  *
- * 以前进场刻意不从透明开始（#604），怕「打开后立刻断言 toBeVisible」的单测看到透明度 0；代价是
- * 真实界面里面板第一帧就满不透明地「蹦」出来，只有 4% 的缩放在动。2026-10-05 核对过：透明度从 0
- * 起步时全量单测照样全部通过，不必再迁就。透明期间面板照样能点：pointer 事件不看透明度。
+ * 以前进场刻意不从透明开始（#604）：jest-dom 的 toBeVisible 把透明度 0 判成不可见，打开后立刻
+ * 断言的单测会赌输「第一个动画帧还没跑」——CI 上真的输过（生图页的分辨率下拉）。代价是真实界面里
+ * 面板第一帧就满不透明地「蹦」出来，只有 4% 的缩放在动。现在进场从透明开始，那类断言改用
+ * waitFor 等淡入开始；getByRole / findByRole 不看透明度，不受影响。透明期间面板照样能点：
+ * pointer 事件也不看透明度。
  */
 export const getSelectDropdownMotion = (placement: "bottom" | "top" = "bottom") => {
   const offset = placement === "top" ? 4 : -4;

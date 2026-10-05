@@ -172,8 +172,10 @@ describe("ImageGenerationPage", () => {
     expect(dialog.querySelector(".image-generation-dots-layer")).not.toBeInTheDocument();
 
     await user.click(within(dialog).getByRole("combobox", { name: "分辨率" }));
-    expect(await screen.findByRole("option", { name: "2560x1440" })).toBeVisible();
-    expect(await screen.findByRole("option", { name: "2160x3840" })).toBeVisible();
+    // 下拉面板从透明淡入：toBeVisible 会把透明度 0 判成不可见，要等淡入开始，
+    // 不能赌「打开那一刻」动画帧已经跑过（CI 上就没跑到）。
+    await waitFor(() => expect(screen.getByRole("option", { name: "2560x1440" })).toBeVisible());
+    expect(screen.getByRole("option", { name: "2160x3840" })).toBeVisible();
     await user.click(await screen.findByRole("option", { name: "2160x3840" }));
     await user.click(within(dialog).getByRole("combobox", { name: "质量" }));
     await user.click(await screen.findByRole("option", { name: "high" }));
