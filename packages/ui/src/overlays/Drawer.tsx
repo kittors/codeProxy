@@ -1,9 +1,8 @@
 import { createPortal } from "react-dom";
-import { useEffect, useId, useRef, useState, type PropsWithChildren, type ReactNode } from "react";
+import { useEffect, useId, type PropsWithChildren, type ReactNode } from "react";
 import { X } from "lucide-react";
 import { useTranslation } from "react-i18next";
-
-const ANIMATION_MS = 200;
+import { drawerPanelMotion, overlayBackdropMotion, useOverlayPresence } from "./overlayMotion";
 
 export function Drawer({
   open,
@@ -24,35 +23,9 @@ export function Drawer({
   onClose: () => void;
 }>) {
   const { t } = useTranslation();
-  const [mounted, setMounted] = useState(open);
-  const [visible, setVisible] = useState(open);
-  const timeoutRef = useRef<number | null>(null);
+  // 与弹窗共用进出场：隔两帧再置为可见，进场滑入才有起点（以前只隔一帧，常常直接跳出来）。
+  const { mounted, visible } = useOverlayPresence(open);
   const titleId = useId();
-
-  useEffect(() => {
-    if (open) {
-      if (timeoutRef.current) {
-        window.clearTimeout(timeoutRef.current);
-        timeoutRef.current = null;
-      }
-      setMounted(true);
-      const raf = window.requestAnimationFrame(() => setVisible(true));
-      return () => window.cancelAnimationFrame(raf);
-    }
-
-    setVisible(false);
-    if (timeoutRef.current) window.clearTimeout(timeoutRef.current);
-    timeoutRef.current = window.setTimeout(() => {
-      setMounted(false);
-      timeoutRef.current = null;
-    }, ANIMATION_MS);
-    return () => {
-      if (timeoutRef.current) {
-        window.clearTimeout(timeoutRef.current);
-        timeoutRef.current = null;
-      }
-    };
-  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -65,6 +38,9 @@ export function Drawer({
 
   if (!mounted) return null;
 
+  const backdropMotion = overlayBackdropMotion(visible);
+  const panelMotion = drawerPanelMotion(visible);
+
   return createPortal(
     // 桌面端抽屉离屏幕边缘留 8px，四角圆起来，读起来是浮在页面上的一张面板而不是一块切出来的墙；
     // 手机上贴边铺满，省下边距。
@@ -76,22 +52,21 @@ export function Drawer({
           onClose();
         }}
         aria-label={t("common.close")}
+        style={backdropMotion.style}
         className={[
           // 与 Modal 用同一套遮罩语言：只压暗、不模糊。
           "absolute inset-0 cursor-default bg-black/25 dark:bg-black/55",
-          "transition-opacity duration-250 ease-soft motion-reduce:transition-none",
-          visible ? "opacity-100" : "opacity-0",
+          backdropMotion.className,
         ].join(" ")}
       />
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        style={panelMotion.style}
         className={[
           `relative z-10 flex h-full ${widthClassName} flex-col overflow-hidden bg-elevated text-ink shadow-dialog sm:max-w-[calc(100vw-1rem)] sm:rounded-3xl`,
-          "transition-transform duration-250 ease-soft motion-reduce:transition-none",
-          // 收起时多推出 1rem，把面板和屏幕边缘之间的间距也一起带走，不会留一条阴影。
-          visible ? "translate-x-0" : "translate-x-[calc(100%+1rem)]",
+          panelMotion.className,
         ].join(" ")}
       >
         {/* 抽屉内容通常很长，头尾保留一条细分隔线，滚动时内容不会和标题、按钮粘在一起。 */}

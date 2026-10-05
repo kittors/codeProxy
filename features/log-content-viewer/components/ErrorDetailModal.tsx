@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { createPortal } from "react-dom";
 import { AlertTriangle, X, Loader2, Copy, Check } from "lucide-react";
 import { usageApi } from "@code-proxy/api-client";
+import { overlayBackdropMotion, overlayPanelMotion, useOverlayPresence } from "@code-proxy/ui";
 import { extractErrorFromLogContent } from "../error-detail/extractErrorFromLogContent";
 
 interface ErrorDetailModalProps {
@@ -14,22 +15,14 @@ interface ErrorDetailModalProps {
 
 export function ErrorDetailModal({ open, logId, model, onClose }: ErrorDetailModalProps) {
   const { t } = useTranslation();
-  const [visible, setVisible] = useState(false);
+  // 与通用弹窗同一套进出场：以前只隔一帧置为可见（进场常常直接跳出来），关闭时又立刻卸载、没有退场。
+  const { mounted, visible } = useOverlayPresence(open);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [errorContent, setErrorContent] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [reconstructed, setReconstructed] = useState(false);
   const [copied, setCopied] = useState(false);
-
-  // Animation
-  useEffect(() => {
-    if (open) {
-      requestAnimationFrame(() => setVisible(true));
-    } else {
-      setVisible(false);
-    }
-  }, [open]);
 
   // Fetch output first; when empty, fall back to request details so historical
   // failed logs (store-content off) can still surface status / diagnostic info.
@@ -97,9 +90,11 @@ export function ErrorDetailModal({ open, logId, model, onClose }: ErrorDetailMod
     setTimeout(() => setCopied(false), 2000);
   }, [errorContent]);
 
-  if (!open) return null;
+  if (!mounted) return null;
 
   const hasErrorContent = errorContent.trim().length > 0;
+  const backdropMotion = overlayBackdropMotion(visible);
+  const panelMotion = overlayPanelMotion(visible, !open);
 
   /** Try to format JSON nicely */
   let formattedContent = errorContent;
@@ -119,10 +114,10 @@ export function ErrorDetailModal({ open, logId, model, onClose }: ErrorDetailMod
         type="button"
         onClick={onClose}
         aria-label={t("common.close")}
+        style={backdropMotion.style}
         className={[
           "absolute inset-0 cursor-default bg-black/25 dark:bg-black/55",
-          "transition-opacity duration-200",
-          visible ? "opacity-100" : "opacity-0",
+          backdropMotion.className,
         ].join(" ")}
       />
 
@@ -130,11 +125,11 @@ export function ErrorDetailModal({ open, logId, model, onClose }: ErrorDetailMod
       <div
         role="dialog"
         aria-modal="true"
+        style={panelMotion.style}
         className={[
           // 与通用弹窗同一种面板：错误只体现在图标和错误摘要上，不再给整张面板描红边、铺红色标题栏。
-          "relative z-10 flex w-full max-w-xl flex-col overflow-hidden rounded-3xl bg-elevated text-ink shadow-dialog",
-          "max-h-[70vh] transition-all duration-[250ms] ease-soft",
-          visible ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-2 scale-[0.97]",
+          "relative z-10 flex max-h-[70vh] w-full max-w-xl flex-col overflow-hidden rounded-3xl bg-elevated text-ink shadow-dialog",
+          panelMotion.className,
         ].join(" ")}
       >
         {/* Header */}

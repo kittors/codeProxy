@@ -213,8 +213,13 @@
   --color-blue-900: #19356d;
   --color-blue-950: #102244;
 
-  /* 动效：减速曲线用于绝大多数过渡，回弹只留给开关、分段滑块、弹窗进入这类有物理感的控件 */
+  /*
+   * 动效（与 packages/ui/src/utils/motion.ts 同一组数值）：
+   * soft 用于绝大多数过渡；pop 是弹出物（下拉、菜单、弹窗、抽屉）进场的指数减速曲线，
+   * 一下到位再轻轻落稳、不越过终点；spring 的轻回弹只留给开关、勾选这类有物理感的小控件。
+   */
   --ease-soft: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-pop: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-spring: cubic-bezier(0.3, 1.25, 0.5, 1);
 }
 
@@ -742,14 +747,6 @@ html.theme-transition-lock *::after {
 @keyframes landing-flow {
   to {
     stroke-dashoffset: -12;
-  }
-}
-
-/* 侧边栏分区面板换分区时，页面列表轻轻上浮淡入（SidebarPanel） */
-@keyframes sidebar-swap {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
   }
 }
 

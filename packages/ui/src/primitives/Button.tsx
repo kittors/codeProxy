@@ -38,7 +38,7 @@ type ButtonSize = "xs" | "sm" | "md";
  * 不再按颜色变体各配一圈光晕。
  */
 const BUTTON_BASE_CLASS =
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full border border-transparent font-medium transition-[background-color,border-color,color,box-shadow,transform] duration-150 ease-soft active:scale-[0.97] disabled:pointer-events-none disabled:opacity-45";
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full border border-transparent font-medium transition-[background-color,border-color,color,box-shadow,scale] duration-150 ease-soft active:scale-[0.97] disabled:pointer-events-none disabled:opacity-45";
 
 const BUTTON_SIZE_CLASSES: Record<ButtonSize, { iconOnly: string; text: string }> = {
   xs: {

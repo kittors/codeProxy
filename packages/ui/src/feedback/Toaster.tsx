@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useSyncExternalStore, type ComponentType }
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { CircleAlert, CircleCheck, Info, TriangleAlert, type LucideProps } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { EASE_OUT, EASE_SPRING } from "../utils/motion";
+import { EASE_IN, EASE_OUT, EASE_POP } from "../utils/motion";
 import {
   dismissToast,
   getToasts,
@@ -130,9 +130,11 @@ function ToastItem({
       exit={
         reduceMotion
           ? { opacity: 0, transition: { duration: 0.15 } }
-          : { opacity: 0, y: -8, scale: 0.98, transition: { duration: 0.2, ease: EASE_OUT } }
+          : { opacity: 0, y: -8, scale: 0.98, transition: { duration: 0.16, ease: EASE_IN } }
       }
-      transition={{ duration: 0.42, ease: EASE_SPRING }}
+      // 与下拉、弹窗同一套节奏：透明度 200ms 先到位，位移 / 缩放（以及挤开其它提示的布局动画）
+      // 用 EASE_POP 走 320ms 落稳，不回弹；退场 160ms ease-in。
+      transition={{ duration: 0.32, ease: EASE_POP, opacity: { duration: 0.2, ease: EASE_OUT } }}
       className={[
         "pointer-events-auto flex min-w-0 max-w-[min(calc(100vw-2rem),42rem)] bg-ink text-canvas shadow-[0_12px_30px_-8px_rgb(0_0_0/0.35)]",
         hasDescription

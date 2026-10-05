@@ -50,11 +50,17 @@ function resolveIconButtonTooltip(target: EventTarget | null): GlobalTooltipStat
   if (!(button instanceof HTMLButtonElement || button instanceof HTMLAnchorElement)) return null;
   if (button.closest("[data-tooltip-managed='true']")) return null;
 
+  // 有可见文字的按钮不弹提示——文字本身已经说明了用途。显式写了 data-tooltip 的例外：
+  // 侧边栏收起后行内文字只是淡出、仍留在 DOM 里（保住可访问名称），这时仍要靠提示露出名字。
+  const explicitTooltip = button.getAttribute("data-tooltip");
   const hasVisibleText = (button.textContent ?? "").trim().length > 0;
-  if (hasVisibleText) return null;
+  if (hasVisibleText && !explicitTooltip) return null;
+  // 里面什么都没有的空按钮（弹窗、抽屉的整屏遮罩）不是图标按钮：aria-label 只是给读屏的，
+  // 悬停时在屏幕底部弹一个「关闭」反而莫名其妙。
+  if (!explicitTooltip && button.childElementCount === 0) return null;
 
   const content =
-    button.getAttribute("data-tooltip") ||
+    explicitTooltip ||
     button.getAttribute("aria-label") ||
     button.getAttribute("title") ||
     "";

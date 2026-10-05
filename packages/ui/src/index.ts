@@ -59,6 +59,14 @@ export { Drawer } from "./overlays/Drawer";
 export { ImagePreviewOverlay } from "./overlays/ImagePreviewOverlay";
 export { Modal } from "./overlays/Modal";
 export {
+  drawerPanelMotion,
+  overlayBackdropMotion,
+  overlayBackdropVariants,
+  overlayPanelMotion,
+  overlayPanelVariants,
+  useOverlayPresence,
+} from "./overlays/overlayMotion";
+export {
   TooltipBubble,
   HoverTooltip,
   OverflowTooltip,
@@ -155,3 +163,14 @@ export {
   selectTriggerBase,
   selectTriggerState,
 } from "./utils/selectStyles";
+export {
+  EASE_IN,
+  EASE_OUT,
+  EASE_POP,
+  OVERLAY_ENTER_MS,
+  OVERLAY_EXIT_MS,
+  OVERLAY_PANEL_EXIT_MS,
+  OVERLAY_TRANSFORM_ENTER_MS,
+  popoverEnterTransition,
+  popoverExitTransition,
+} from "./utils/motion";

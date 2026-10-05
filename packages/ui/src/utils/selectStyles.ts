@@ -1,4 +1,5 @@
 import "./FloatingPanel.css";
+import { popoverEnterTransition, popoverExitTransition } from "./motion";
 import {
   controlHeightBySize,
   controlMultilineSurfaceTrigger,
@@ -95,25 +96,25 @@ export const selectTextAction =
 export const selectEmptyState = "px-2.5 py-3 text-center text-xs text-ink-3";
 
 /**
- * 浮层进入：从触发器那条边轻微放大、滑出；退出更快、位移更小，让关闭显得干脆。
- * 曲线与 FloatingPanel.css 里 Radix 菜单的关键帧保持一致。
+ * 浮层进出：从触发器那条边长出来——透明度 120ms 淡入，同时从 0.96 放大、朝触发器反方向滑出 4px，
+ * 位移 / 缩放用 EASE_POP 走 200ms；退出 110ms、位移减半，显得干脆。originY 让放大从贴着触发器的
+ * 那条边开始，而不是从面板中心。时长与曲线与 FloatingPanel.css 里 Radix 菜单的关键帧是同一组。
  *
- * 进入时刻意不从透明开始（#604 的修复）：选项一打开就要可见、可点，测试里打开后立刻
- * 断言 toBeVisible / 点击选项也依赖这一点。淡入只留给退出。
- * originY 让放大从贴着触发器的那条边开始，而不是从面板中心。
+ * 以前进场刻意不从透明开始（#604）：jest-dom 的 toBeVisible 把透明度 0 判成不可见，打开后立刻
+ * 断言的单测会赌输「第一个动画帧还没跑」——CI 上真的输过（生图页的分辨率下拉）。代价是真实界面里
+ * 面板第一帧就满不透明地「蹦」出来，只有 4% 的缩放在动。现在进场从透明开始，那类断言改用
+ * waitFor 等淡入开始；getByRole / findByRole 不看透明度，不受影响。透明期间面板照样能点：
+ * pointer 事件也不看透明度。
  */
 export const getSelectDropdownMotion = (placement: "bottom" | "top" = "bottom") => {
   const offset = placement === "top" ? 4 : -4;
   const originY = placement === "top" ? 1 : 0;
 
   return {
-    initial: { opacity: 1, scale: 0.96, y: offset, originY },
+    initial: { opacity: 0, scale: 0.96, y: offset, originY },
     animate: { opacity: 1, scale: 1, y: 0, originY },
-    exit: { opacity: 0, scale: 0.98, y: offset / 2, originY, transition: { duration: 0.12 } },
+    exit: { opacity: 0, scale: 0.98, y: offset / 2, originY, transition: popoverExitTransition },
   } as const;
 };
 
-export const selectDropdownTransition = {
-  duration: 0.18,
-  ease: [0.2, 0.8, 0.2, 1],
-} as const;
+export const selectDropdownTransition = popoverEnterTransition;

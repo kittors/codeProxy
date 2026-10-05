@@ -24,7 +24,10 @@ describe("LogContentModal", () => {
     );
 
     expect(renderingSource).toContain("AnimatePresence");
-    expect(renderingSource).toContain('exit="hidden"');
+    // 进出场走通用弹窗的同一套 framer 变体：进场起点（hidden）与退场终点（exit）分开。
+    expect(renderingSource).toContain('exit="exit"');
+    expect(renderingSource).toContain("variants={overlayPanelVariants}");
+    expect(renderingSource).toContain("variants={overlayBackdropVariants}");
     expect(renderingSource).toContain("w-[min(calc(100vw-2rem),1040px)]");
     expect(renderingSource).toContain("h-[min(82dvh,760px)]");
     expect(modalSource).toContain("LOADING_EXIT_MS");

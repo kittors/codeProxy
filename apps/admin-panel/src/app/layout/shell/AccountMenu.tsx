@@ -1,8 +1,9 @@
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { LogOut, Moon, Settings, ShieldCheck, Sun } from "lucide-react";
+import { ChevronsUpDown, LogOut, Moon, Settings, ShieldCheck, Sun } from "lucide-react";
 import { DropdownMenu, useTheme } from "@code-proxy/ui";
 import { useOptionalAuth } from "@app/providers/AuthProvider";
+import { sidebarFadeClass, SidebarRowLabel } from "./sidebarRow";
 import { useAccountIdentity } from "./useShellNav";
 
 /** 账号头像：暖灰实心圆 + 名字缩写，右下角的小绿点表示当前在线会话。 */
@@ -22,13 +23,22 @@ export function AccountAvatar({ initials, size = "md" }: { initials: string; siz
 }
 
 /**
- * 图标栏底部的账号入口：点开是向右弹出的菜单，里面是账号信息、修改密码、配置面板
- * （需要 system.config.read）、深浅色切换和退出登录。
+ * 侧边栏底部的账号入口：整行是头像 + 名字 + 所在租户，点开是账号菜单——账号信息、修改密码、
+ * 配置面板（需要 system.config.read）、深浅色切换和退出登录。
+ *
+ * 侧边栏收起后这一行跟着收窄到只剩头像（头像位置不动），菜单改为向右弹出；展开时从这一行
+ * 上方弹出，不挡住侧边栏右侧的内容。
  *
  * 退出时先跳登录页再清会话：反过来的话，页面会在清空凭据的瞬间带着旧路由重渲染一次，
  * 各页面的请求会先打出一轮 401。
  */
-export function AccountMenu({ onLogout }: { onLogout: () => void }) {
+export function AccountMenu({
+  onLogout,
+  collapsed = false,
+}: {
+  onLogout: () => void;
+  collapsed?: boolean;
+}) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const auth = useOptionalAuth();
@@ -50,18 +60,30 @@ export function AccountMenu({ onLogout }: { onLogout: () => void }) {
         <button
           type="button"
           aria-label={account.name}
+          data-tooltip={collapsed ? account.name : undefined}
           data-tooltip-placement="right"
-          className="grid h-10 w-10 place-items-center rounded-full transition-transform duration-150 ease-soft outline-none active:scale-[0.94]"
+          className="flex h-11 w-full min-w-0 items-center rounded-xl text-left outline-none transition-[background-color,scale] duration-150 ease-soft hover:bg-hover active:scale-[0.98] data-[state=open]:bg-hover"
         >
-          <AccountAvatar initials={account.initials} />
+          <span className="grid size-9 shrink-0 place-items-center">
+            <AccountAvatar initials={account.initials} />
+          </span>
+          <SidebarRowLabel collapsed={collapsed}>
+            <span className="block truncate text-sm font-medium text-ink">{account.name}</span>
+            <span className="mt-0.5 block truncate text-xs text-ink-3">{account.tenant}</span>
+          </SidebarRowLabel>
+          <ChevronsUpDown
+            size={14}
+            aria-hidden="true"
+            className={`mr-2.5 shrink-0 text-ink-3 ${sidebarFadeClass(collapsed)}`}
+          />
         </button>
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
         <DropdownMenu.Content
           data-sidebar-account-menu="true"
-          side="right"
-          align="end"
-          sideOffset={10}
+          side={collapsed ? "right" : "top"}
+          align={collapsed ? "end" : "start"}
+          sideOffset={collapsed ? 10 : 6}
           collisionPadding={8}
           className="w-64"
         >

@@ -14,7 +14,7 @@ import {
 
 /**
  * 当前用户能看到的导航：按权限（can）与菜单状态（enabled / visible / hide_menu，沿父链逐级判断）
- * 过滤后的分区列表。图标栏、分区面板、收起后的浮层、手机抽屉都从这里取，保证几处一致。
+ * 过滤后的分区列表。桌面侧边栏（展开 / 收起后的浮层）与手机抽屉都从这里取，保证几处一致。
  */
 export function useShellNav(): { sections: NavSection[]; items: SidebarNavItem[] } {
   const auth = useOptionalAuth();

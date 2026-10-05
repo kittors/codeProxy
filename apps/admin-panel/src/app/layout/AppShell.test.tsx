@@ -233,9 +233,10 @@ function renderShell(initialPath = "/dashboard", onLogout?: () => void) {
   );
 }
 
-/** 分区面板（图标栏右侧那一列）的导航，按分区名定位。 */
-const panelNav = (name: RegExp) => screen.getByRole("navigation", { name });
-const railButton = (name: RegExp) => screen.getByRole("button", { name });
+/** 多页分区展开后的页面列表，按分区名定位。 */
+const sectionList = (name: RegExp) => screen.getByRole("group", { name });
+/** 多页分区的标题行（展开态点它展开 / 收起，收起态点它弹出浮层）。 */
+const sectionButton = (name: RegExp) => screen.getByRole("button", { name });
 
 function defaultPrincipal(overrides: Partial<AuthPrincipal> = {}): AuthPrincipal {
   return {
@@ -245,6 +246,10 @@ function defaultPrincipal(overrides: Partial<AuthPrincipal> = {}): AuthPrincipal
     ...overrides,
   };
 }
+
+beforeEach(() => {
+  localStorage.removeItem("cli-proxy-sidebar-open-groups");
+});
 
 const OBSERVABILITY = /Operations|Observability|运行监控|运行观测/i;
 const ACCESS = /Access(?: & Credentials)?|接入(?:管理|与凭证)/i;
@@ -307,11 +312,16 @@ describe("AppShell route progress", () => {
     expect(document.querySelector(".rp")).not.toBeInTheDocument();
   });
 
-  test("navigates to a section's first page from the icon rail, with the progress bar", async () => {
+  test("opens a folded section and navigates to one of its pages, with the progress bar", async () => {
     vi.useFakeTimers();
     renderShell();
 
-    fireEvent.click(railButton(ACCESS));
+    // 点分区标题只展开列表，不跳页。
+    fireEvent.click(sectionButton(ACCESS));
+    expect(sectionButton(ACCESS)).toHaveAttribute("aria-expanded", "true");
+    expect(preloadPageRoute).not.toHaveBeenCalled();
+
+    fireEvent.click(within(sectionList(ACCESS)).getByRole("link", { name: /AI Providers|AI 供应商/i }));
     expect(preloadPageRoute).toHaveBeenCalledWith("/access/ai-providers");
     expect(document.querySelector(".rp")).toBeInTheDocument();
 
@@ -336,7 +346,7 @@ describe("AppShell route progress", () => {
     act(() => {
       vi.advanceTimersByTime(300);
     });
-    fireEvent.click(railButton(MODELS));
+    fireEvent.click(document.querySelector<HTMLAnchorElement>('a[href="/runtime/system"]')!);
 
     await act(async () => {
       vi.advanceTimersByTime(679);
@@ -353,7 +363,7 @@ describe("AppShell route progress", () => {
     act(() => {
       vi.advanceTimersByTime(360);
     });
-    expect(screen.getByTestId("location")).toHaveTextContent("/models/catalog");
+    expect(screen.getByTestId("location")).toHaveTextContent("/runtime/system");
   });
 
   test("lets modified clicks keep the browser's native link behavior", () => {
@@ -387,24 +397,6 @@ describe("AppShell route progress", () => {
     expect(screen.getByTestId("location")).toHaveTextContent("/runtime/request-logs");
     expect(document.querySelector(".rp")).not.toBeInTheDocument();
   });
-
-  test("returns to the page last visited in a section when switching back from the rail", async () => {
-    vi.useFakeTimers();
-    renderShell("/runtime/request-logs");
-
-    fireEvent.click(railButton(ACCESS));
-    await act(async () => {
-      vi.advanceTimersByTime(1040);
-      await Promise.resolve();
-    });
-    act(() => {
-      vi.advanceTimersByTime(360);
-    });
-    expect(screen.getByTestId("location")).toHaveTextContent("/access/ai-providers");
-
-    fireEvent.click(railButton(OBSERVABILITY));
-    expect(preloadPageRoute).toHaveBeenLastCalledWith("/runtime/request-logs");
-  });
 });
 
 describe("AppShell navigation layout", () => {
@@ -419,38 +411,79 @@ describe("AppShell navigation layout", () => {
     vi.useRealTimers();
   });
 
-  test("shows the active section's pages in the panel with a neutral active state", () => {
+  test("unfolds the active section and marks the current page with a neutral card", () => {
     renderShell("/runtime/request-logs");
 
-    const runtimeRail = railButton(OBSERVABILITY);
-    expect(runtimeRail).toHaveAttribute("data-active", "true");
-    expect(railButton(ACCESS)).not.toHaveAttribute("data-active");
+    const runtimeHeader = sectionButton(OBSERVABILITY);
+    expect(runtimeHeader).toHaveAttribute("data-active", "true");
+    expect(runtimeHeader).toHaveAttribute("aria-expanded", "true");
+    expect(sectionButton(ACCESS)).not.toHaveAttribute("data-active");
+    expect(sectionButton(ACCESS)).toHaveAttribute("aria-expanded", "false");
+    expect(sectionList(ACCESS)).toHaveAttribute("inert");
 
-    const panel = panelNav(OBSERVABILITY);
-    const requestLogs = within(panel).getByRole("link", { name: /Request Logs|请求日志/i });
+    const list = sectionList(OBSERVABILITY);
+    expect(list).not.toHaveAttribute("inert");
+    const requestLogs = within(list).getByRole("link", { name: /Request Logs|请求日志/i });
     expect(requestLogs).toHaveAttribute("aria-current", "page");
-    expect(requestLogs).toHaveClass("bg-selected", "text-sm", "h-9");
+    expect(requestLogs).toHaveClass("bg-surface", "text-sm", "h-8");
     expect(requestLogs.className).not.toContain("from-blue-600");
-    expect(within(panel).getByRole("link", { name: /Monitor|监控中心/i })).not.toHaveAttribute(
+    // 列表展开时选中外观在页面上，分区标题不再重复一份。
+    expect(runtimeHeader).not.toHaveClass("bg-surface");
+    expect(within(list).getByRole("link", { name: /Monitor|监控中心/i })).not.toHaveAttribute(
       "aria-current",
     );
-    // 其它分区的页面不在面板里。
-    expect(within(panel).queryByRole("link", { name: /AI Providers|AI 供应商/i })).toBeNull();
+    // 其它分区的页面不在这个分区的列表里。
+    expect(within(list).queryByRole("link", { name: /AI Providers|AI 供应商/i })).toBeNull();
+  });
+
+  test("folds sections on click, remembers the choice, and keeps the active section findable", () => {
+    const view = renderShell("/runtime/request-logs");
+
+    fireEvent.click(sectionButton(ACCESS));
+    expect(sectionButton(ACCESS)).toHaveAttribute("aria-expanded", "true");
+    expect(sectionList(ACCESS)).not.toHaveAttribute("inert");
+
+    // 收起当前分区：选中外观转到分区标题上，用户仍看得出自己在哪。
+    const runtimeHeader = sectionButton(OBSERVABILITY);
+    fireEvent.click(runtimeHeader);
+    expect(runtimeHeader).toHaveAttribute("aria-expanded", "false");
+    expect(sectionList(OBSERVABILITY)).toHaveAttribute("inert");
+    expect(runtimeHeader).toHaveClass("bg-surface");
+
+    expect(JSON.parse(localStorage.getItem("cli-proxy-sidebar-open-groups") ?? "[]")).toEqual([
+      "group.access",
+    ]);
+    view.unmount();
+
+    // 重新打开：手动展开的分区保持展开，当前页所在的分区重新自动展开。
+    renderShell("/runtime/request-logs");
+    expect(sectionButton(ACCESS)).toHaveAttribute("aria-expanded", "true");
+    expect(sectionButton(OBSERVABILITY)).toHaveAttribute("aria-expanded", "true");
+    expect(sectionButton(MODELS)).toHaveAttribute("aria-expanded", "false");
   });
 
   test("places content moderation under access and uses the shield-alert icon", () => {
     renderShell("/access/content-moderation");
 
-    expect(railButton(ACCESS)).toHaveAttribute("data-active", "true");
-    const moderation = within(panelNav(ACCESS)).getByRole("link", {
+    expect(sectionButton(ACCESS)).toHaveAttribute("data-active", "true");
+    const moderation = within(sectionList(ACCESS)).getByRole("link", {
       name: /Content Moderation|内容审核|Модерация контента/i,
     });
     expect(moderation).toHaveAttribute("href", "/access/content-moderation");
     expect(moderation).toHaveAttribute("aria-current", "page");
-    expect(moderation.querySelector("svg")).toHaveClass("lucide-shield-alert");
     expect(
       screen.getByRole("heading", { name: /Content Moderation|内容审核|Модерация контента/i }),
     ).toBeInTheDocument();
+
+    // 展开的列表里子项只有文字；菜单配的图标出现在收起后的分区浮层里。
+    expect(moderation.querySelector("svg")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /Collapse Sidebar|收起侧边栏/i }));
+    fireEvent.pointerEnter(sectionButton(ACCESS).parentElement!);
+    const flyoutItem = within(screen.getByRole("menu", { name: ACCESS })).getByRole("menuitem", {
+      name: /Content Moderation|内容审核|Модерация контента/i,
+    });
+    expect(flyoutItem.querySelector("svg")).toHaveClass("lucide-shield-alert");
+    localStorage.removeItem("cli-proxy-sidebar-collapsed");
   });
 
   test("keeps the legacy moderation path title as a stale-shell safety fallback", () => {
@@ -462,18 +495,24 @@ describe("AppShell navigation layout", () => {
     ).toBeInTheDocument();
   });
 
-  test("renders system info as a top-level rail link after all sections", () => {
+  test("renders system info as a top-level row after all sections", () => {
     renderShell("/dashboard");
 
-    const rail = screen.getByRole("navigation", { name: /Sections|分区/i });
-    const railEntries = Array.from(
-      rail.querySelectorAll<HTMLElement>("a[aria-label], [data-sidebar-section]"),
-    );
-    const last = railEntries.at(-1);
+    const nav = screen.getByRole("navigation", { name: /Sections|分区/i });
+    // 顶层条目：单页分区是链接本身，多页分区是包着标题与列表的一层。
+    const entries = Array.from(nav.children) as HTMLElement[];
+    const last = entries.at(-1);
     expect(last).toHaveAttribute("href", "/runtime/system");
-    expect(last).toHaveAttribute("aria-label", expect.stringMatching(/System Info|系统信息/i));
-    expect(railEntries[0]).toHaveAttribute("href", "/dashboard");
-    expect(railEntries[0]).toHaveAttribute("aria-current", "page");
+    expect(last).toHaveTextContent(/System Info|系统信息/i);
+    expect(entries[0]).toHaveAttribute("href", "/dashboard");
+    expect(entries[0]).toHaveAttribute("aria-current", "page");
+    expect(entries[0]).toHaveClass("bg-surface");
+    expect(entries.slice(1, -1).map((entry) => entry.querySelector("[data-sidebar-section]")?.getAttribute("data-sidebar-section"))).toEqual([
+      "group.runtime",
+      "group.access",
+      "group.models",
+      "group.system",
+    ]);
   });
 
   test("hides entries without permission and disabled menus", () => {
@@ -485,9 +524,9 @@ describe("AppShell navigation layout", () => {
     });
     renderShell("/runtime/request-logs");
 
-    const panel = panelNav(OBSERVABILITY);
-    expect(within(panel).queryByRole("link", { name: /Monitor|监控中心/i })).toBeNull();
-    expect(within(panel).getByRole("link", { name: /Request Logs|请求日志/i })).toBeInTheDocument();
+    const list = sectionList(OBSERVABILITY);
+    expect(within(list).queryByRole("link", { name: /Monitor|监控中心/i })).toBeNull();
+    expect(within(list).getByRole("link", { name: /Request Logs|请求日志/i })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: MODELS })).toBeNull();
   });
 
@@ -524,15 +563,25 @@ describe("AppShell collapsed rail", () => {
 
     const aside = document.querySelector("aside");
     expect(aside).toHaveAttribute("data-collapsed", "true");
-    expect(document.querySelector("[data-sidebar-panel='true']")).toHaveAttribute("inert");
     expect(localStorage.getItem("cli-proxy-sidebar-collapsed")).toBe("1");
 
     const expand = screen.getByRole("button", { name: /Expand Sidebar|展开侧边栏/i });
     expect(expand).toBe(toggle);
     expect(expand.querySelector("svg")?.getAttribute("class")).toBe(iconClass);
-    expect(screen.getByRole("link", { name: /Dashboard|仪表盘/i })).toBeInTheDocument();
-    expect(railButton(MODELS)).toHaveAttribute("aria-haspopup", "menu");
-    expect(screen.getByRole("button", { name: "Admin" })).toBeInTheDocument();
+    // 只剩图标：文字仍在（可访问名称不变），悬停改由提示气泡露出名字；展开的分区把列表折起来。
+    const dashboard = screen.getByRole("link", { name: /Dashboard|仪表盘/i });
+    expect(dashboard).toHaveAttribute("data-tooltip", expect.stringMatching(/Dashboard|仪表盘/i));
+    expect(sectionList(/System Settings|系统设置/i)).toHaveAttribute("inert");
+    expect(sectionButton(MODELS)).toHaveAttribute("aria-haspopup", "menu");
+    // 当前页所在的分区只剩图标，选中外观落在图标上。
+    expect(sectionButton(/System Settings|系统设置/i)).toHaveClass("bg-surface");
+    const account = screen.getByRole("button", { name: "Admin" });
+    expect(account).toHaveAttribute("data-tooltip", "Admin");
+
+    fireEvent.click(expand);
+    expect(dashboard).not.toHaveAttribute("data-tooltip");
+    expect(account).not.toHaveAttribute("data-tooltip");
+    expect(sectionList(/System Settings|系统设置/i)).not.toHaveAttribute("inert");
   });
 
   test("toggles with ⌘B / Ctrl+B, except while typing in a field", () => {
@@ -556,7 +605,7 @@ describe("AppShell collapsed rail", () => {
     localStorage.setItem("cli-proxy-sidebar-collapsed", "1");
     renderShell("/system/config");
 
-    const models = railButton(MODELS);
+    const models = sectionButton(MODELS);
     fireEvent.pointerEnter(models.parentElement!);
     const flyout = screen.getByRole("menu", { name: MODELS });
     expect(flyout).toHaveAttribute("data-sidebar-flyout", "group.models");
@@ -650,16 +699,21 @@ describe("AppShell mobile sidebar", () => {
     expect(aside?.parentElement).toBe(document.body);
     expect(backdrop.parentElement).toBe(document.body);
     expect(aside).toHaveAttribute("data-mobile-open", "false");
-    expect(aside).toHaveClass("-translate-x-full", "will-change-transform", "motion-safe:duration-[320ms]");
+    expect(aside).toHaveClass("-translate-x-full", "will-change-transform", "motion-safe:duration-200");
 
     fireEvent.click(screen.getByRole("button", { name: /Expand Sidebar|展开侧边栏/i }));
 
+    // 打开走 320ms 指数减速，关闭走 200ms ease-in（与弹窗、抽屉同一套节奏）。
     expect(aside).toHaveAttribute("data-mobile-open", "true");
-    expect(aside).toHaveClass("translate-x-0");
+    expect(aside).toHaveClass("translate-x-0", "motion-safe:duration-[320ms]", "motion-safe:ease-pop");
     expect(backdrop).toHaveClass("opacity-100", "motion-safe:duration-[320ms]");
-    // 抽屉里一次列出所有分区的页面。
-    expect(within(aside as HTMLElement).getByRole("link", { name: /Request Logs|请求日志/i })).toBeInTheDocument();
-    expect(within(aside as HTMLElement).getByRole("link", { name: /AI Providers|AI 供应商/i })).toBeInTheDocument();
+    // 抽屉和桌面侧边栏是同一套分区导航：分区可以展开，点开就能看到下面的页面。
+    const drawer = within(aside as HTMLElement);
+    fireEvent.click(drawer.getByRole("button", { name: ACCESS }));
+    expect(drawer.getByRole("button", { name: ACCESS })).toHaveAttribute("aria-expanded", "true");
+    expect(
+      within(drawer.getByRole("group", { name: ACCESS })).getByRole("link", { name: /AI Providers|AI 供应商/i }),
+    ).toBeInTheDocument();
 
     fireEvent.click(backdrop);
 
@@ -670,7 +724,7 @@ describe("AppShell mobile sidebar", () => {
   });
 
   test("closes the drawer as soon as a page is picked", () => {
-    renderShell();
+    renderShell("/runtime/monitor");
     fireEvent.click(screen.getByRole("button", { name: /Expand Sidebar|展开侧边栏/i }));
     const aside = document.querySelector("aside") as HTMLElement;
     fireEvent.click(within(aside).getByRole("link", { name: /Request Logs|请求日志/i }));
