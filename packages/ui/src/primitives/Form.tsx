@@ -139,7 +139,7 @@ function FormField({
             data-slot="form-field-count"
             id={countId}
             className={cn(
-              "shrink-0 text-xs leading-5 tabular-nums text-slate-400 dark:text-white/40",
+              "shrink-0 text-xs leading-5 tabular-nums text-ink-3",
               length > maxLength! ? "text-rose-600 dark:text-rose-400" : null,
             )}
           >
@@ -182,7 +182,9 @@ function FormField({
         data-orientation={orientation}
         data-invalid={invalid || undefined}
         className={cn(
-          isHorizontal ? "flex items-start gap-x-3" : "flex flex-col gap-1.5",
+          // 竖排时标签和输入框之间留 0.625rem：输入框聚焦会向外画 4px 光晕，间距太小时
+          // 标签看上去贴在框上。
+          isHorizontal ? "flex items-start gap-x-3" : "flex flex-col gap-2.5",
           className,
         )}
         {...props}
@@ -222,7 +224,7 @@ function FormLabel({ children, className, required = false, ...props }: FormLabe
     <label
       data-slot="form-label"
       htmlFor={id}
-      className={cn("text-sm font-medium text-slate-700 dark:text-slate-200", className)}
+      className={cn("text-sm font-medium text-ink-2", className)}
       {...props}
     >
       {children}
@@ -283,7 +285,7 @@ function FormDescription({ children, className, id, ...props }: FormDescriptionP
     <p
       data-slot="form-description"
       id={id}
-      className={cn("text-xs leading-5 text-slate-500 dark:text-white/45", className)}
+      className={cn("text-xs leading-5 text-ink-3", className)}
       {...props}
     >
       {children}

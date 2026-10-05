@@ -9,14 +9,18 @@ export function normalizeChannelAuthType(authType?: string | null): "oauth" | "a
   return "";
 }
 
+/**
+ * 渠道认证方式的小标签。OAuth / API 只是类型说明、不是状态，两者都用中性灰，
+ * 靠文字区分；OAuth 用描边、API 用实底，扫一眼也能分开。
+ */
 export function channelAuthTypeBadgeClass(authType: "oauth" | "api" | ""): string {
   if (authType === "api") {
-    return "bg-sky-50 text-sky-700 dark:bg-sky-500/15 dark:text-sky-200";
+    return "bg-selected text-ink-2";
   }
   if (authType === "oauth") {
-    return "bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-200";
+    return "text-ink-2 ring-1 ring-inset ring-line-strong";
   }
-  return "bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-white/65";
+  return "bg-hover text-ink-3";
 }
 
 export interface ChannelIdentityLabelProps {

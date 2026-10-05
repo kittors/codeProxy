@@ -18,6 +18,7 @@ import {
   TextInput,
   useToast,
   type DataTableColumn,
+  surface,
 } from "@code-proxy/ui";
 import { PermissionGate } from "@app/providers/PermissionGate";
 import { useAuth } from "@app/providers/AuthProvider";
@@ -253,8 +254,7 @@ export function RolesPage() {
               <PermissionGate permission="tenant.roles.delete">
                 <Button
                   size="xs"
-                  variant="ghost"
-                  className="text-rose-600 hover:text-rose-700 dark:text-rose-300 dark:hover:text-rose-200"
+                  variant="ghost-danger"
                   onClick={() => setDeleteRole(role)}
                   tooltip={t("identity_admin.delete")}
                 >
@@ -306,7 +306,7 @@ export function RolesPage() {
 
   return (
     <section className="flex flex-1 flex-col">
-      <div className="flex min-h-0 flex-1 flex-col rounded-2xl border border-black/[0.06] bg-white shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] dark:border-white/[0.06] dark:bg-neutral-950/70 dark:shadow-[0_1px_2px_rgb(0_0_0_/_0.22)]">
+      <div className={`flex min-h-0 flex-1 flex-col ${surface({ radius: "3xl" })}`}>
         <div className="flex flex-wrap items-start justify-between gap-3 px-5 pt-5 pb-3">
           <div>
             <h2 className="text-base font-semibold text-slate-950 dark:text-white">

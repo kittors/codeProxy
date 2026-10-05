@@ -811,7 +811,7 @@ function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: (
         title={t("image_generation.test_title")}
         onClose={onClose}
         maxWidth="max-w-[640px]"
-        panelClassName="w-full border-slate-900/8 bg-white shadow-2xl dark:border-white/8 dark:bg-neutral-950"
+        panelClassName="w-full"
         bodyHeightClassName="max-h-[calc(100vh-10rem)]"
         bodyClassName="!overflow-y-auto !px-4 !py-4 sm:!px-5"
       >

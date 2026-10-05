@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   normalizeUsername,
+  passwordRuleStatus,
   utf8ByteLength,
   validateDisplayName,
   validatePassword,
@@ -41,5 +42,33 @@ describe("identity validators", () => {
     expect(validatePassword("ALLUPPERCASE!1").ok).toBe(false);
     expect(validatePassword("NoSpecialChar1").ok).toBe(false);
     expect(validatePassword("Correct-Horse-1!").ok).toBe(true);
+  });
+
+  test("passwordRuleStatus reports every rule, not just the first failure", () => {
+    expect(passwordRuleStatus("")).toEqual({
+      minLength: false,
+      maxBytes: true,
+      upper: false,
+      lower: false,
+      special: false,
+    });
+    expect(passwordRuleStatus("abc!")).toEqual({
+      minLength: false,
+      maxBytes: true,
+      upper: false,
+      lower: true,
+      special: true,
+    });
+    // CJK characters count as one character each for the minimum but three bytes
+    // each against bcrypt's 72-byte ceiling.
+    expect(passwordRuleStatus("密".repeat(25)).maxBytes).toBe(false);
+  });
+
+  test("the checklist and validatePassword agree on what passes", () => {
+    for (const candidate of ["too-short", "alllowercase!", "NoSpecialChar1", "Correct-Horse-1!", "密".repeat(25) + "Aa!"]) {
+      const rules = passwordRuleStatus(candidate);
+      const allPass = Object.values(rules).every(Boolean);
+      expect(validatePassword(candidate).ok).toBe(allPass);
+    }
   });
 });

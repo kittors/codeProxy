@@ -177,7 +177,7 @@ export function PublicLogsSection({
             <div className="absolute inset-0 z-10 flex items-center justify-center rounded-b-2xl bg-white/70 backdrop-blur-sm dark:bg-neutral-950/55">
               <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-900/8 bg-white/85 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm dark:border-white/8 dark:bg-neutral-950/70 dark:text-white/75">
                 <span
-                  className="h-4 w-4 rounded-full border-2 border-slate-300 border-t-indigo-600 motion-reduce:animate-none motion-safe:animate-spin dark:border-white/20 dark:border-t-white/80"
+                  className="h-4 w-4 rounded-full border-2 border-slate-300 border-t-ink motion-reduce:animate-none motion-safe:animate-spin dark:border-white/20 dark:border-t-white/80"
                   aria-hidden="true"
                 />
                 <span role="status">{t("common.loading_ellipsis")}</span>

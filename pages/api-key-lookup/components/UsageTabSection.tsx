@@ -29,13 +29,13 @@ type HeatmapPoint = {
   cost: number;
 };
 
-// 热力图跟随品牌主色（靛蓝），与门户其它强调元素统一
+// 热力图用中性灰阶：越忙越深（深色模式越亮），与门户、控制台统一的墨色主色一致
 const HEATMAP_LEVEL_CLASSES = [
   "bg-slate-100 dark:bg-white/10",
-  "bg-indigo-100 dark:bg-indigo-950",
-  "bg-indigo-300 dark:bg-indigo-800",
-  "bg-indigo-500 dark:bg-indigo-600",
-  "bg-indigo-600 dark:bg-indigo-400",
+  "bg-slate-300 dark:bg-neutral-700",
+  "bg-slate-500 dark:bg-neutral-500",
+  "bg-slate-700 dark:bg-neutral-300",
+  "bg-slate-950 dark:bg-neutral-100",
 ] as const;
 
 const formatInteger = (value: number) => Math.round(value).toLocaleString();
@@ -90,7 +90,7 @@ function HeatmapTooltip({
           <span className="text-right">${(point?.cost ?? 0).toFixed(4)}</span>
         </span>
       ) : (
-        <span className="block text-slate-500 dark:text-white/60">
+        <span className="block text-canvas/60">
           {t("apikey_lookup.no_usage_on_day")}
         </span>
       )}
@@ -514,7 +514,8 @@ export function UsageTabSection({
                           {
                             key: DAILY_LEGEND_KEYS.input,
                             label: t("apikey_lookup.input_token"),
-                            colorClass: "bg-violet-400",
+                            // 与 daily-trend 一致：输入浅灰、输出中灰、请求数主色。
+                            colorClass: "bg-[#e6e6e6] dark:bg-[#3a3a3a]",
                             enabled: dailyLegendSelected[DAILY_LEGEND_KEYS.input] ?? true,
                             onToggle: toggleDailyLegend,
                           },
@@ -525,7 +526,7 @@ export function UsageTabSection({
                           {
                             key: DAILY_LEGEND_KEYS.output,
                             label: t("apikey_lookup.output_token"),
-                            colorClass: "bg-emerald-400",
+                            colorClass: "bg-[#a3a3a3] dark:bg-[#767676]",
                             enabled: dailyLegendSelected[DAILY_LEGEND_KEYS.output] ?? true,
                             onToggle: toggleDailyLegend,
                           },
@@ -536,7 +537,7 @@ export function UsageTabSection({
                           {
                             key: DAILY_LEGEND_KEYS.requests,
                             label: t("apikey_lookup.requests"),
-                            colorClass: "bg-blue-500",
+                            colorClass: "bg-ink",
                             enabled: dailyLegendSelected[DAILY_LEGEND_KEYS.requests] ?? true,
                             onToggle: toggleDailyLegend,
                           },

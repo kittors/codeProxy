@@ -28,6 +28,7 @@ import { EmptyState } from "@code-proxy/ui";
 import { Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
 import { useInterval } from "@code-proxy/ui";
+import { Card, chartPalette, useTheme } from "@code-proxy/ui";
 import { DashboardKpiCard } from "./DashboardKpiCard";
 import {
   DashboardMetricValue,
@@ -131,39 +132,47 @@ export function DashboardPage() {
     meta.throughput_scope === "all_tenants" || Boolean(principal?.platform_admin);
   const tenantBreakdown = trends?.tenants ?? [];
 
+  // 迷你趋势线统一用中性主色（深色模式反转），只有失败请求用错误色——绿、紫、青这些
+  // 颜色在这里不表达状态，只会把一排指标变成调色板。
+  const {
+    state: { mode },
+  } = useTheme();
+  const isDark = mode === "dark";
+  const palette = chartPalette(isDark);
   const totalRequestOption = useMemo(
-    () => createSparklineOption(trends?.request_volume ?? [], "#2563eb"),
-    [trends?.request_volume],
+    () => createSparklineOption(trends?.request_volume ?? [], palette.primary, isDark),
+    [isDark, palette.primary, trends?.request_volume],
   );
   const successRateOption = useMemo(
-    () => createSparklineOption(trends?.success_rate ?? [], "#10b981"),
-    [trends?.success_rate],
+    () => createSparklineOption(trends?.success_rate ?? [], palette.primary, isDark),
+    [isDark, palette.primary, trends?.success_rate],
   );
   const totalTokenOption = useMemo(
-    () => createSparklineOption(trends?.total_tokens ?? [], "#7c3aed"),
-    [trends?.total_tokens],
+    () => createSparklineOption(trends?.total_tokens ?? [], palette.primary, isDark),
+    [isDark, palette.primary, trends?.total_tokens],
   );
   const totalCostOption = useMemo(
-    () => createSparklineOption(trends?.total_cost ?? [], "#0891b2"),
-    [trends?.total_cost],
+    () => createSparklineOption(trends?.total_cost ?? [], palette.primary, isDark),
+    [isDark, palette.primary, trends?.total_cost],
   );
   const failedRequestOption = useMemo(
-    () => createSparklineOption(trends?.failed_requests ?? [], "#ef4444"),
-    [trends?.failed_requests],
+    () => createSparklineOption(trends?.failed_requests ?? [], palette.err, isDark),
+    [isDark, palette.err, trends?.failed_requests],
   );
-  const cacheRateOption = useMemo(() => createSparklineOption([], "#f59e0b"), []);
+  const cacheRateOption = useMemo(
+    () => createSparklineOption([], palette.primary, isDark),
+    [isDark, palette.primary],
+  );
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-semibold tracking-tight text-slate-950 text-balance dark:text-white">
+          <h2 className="text-2xl font-semibold tracking-tight text-balance text-ink">
             {t("dashboard.heading")}
           </h2>
-          <p className="mt-1 text-sm text-slate-500 dark:text-white/55">
-            {t("dashboard.hero_subtitle")}
-          </p>
-          <p className="mt-2 text-xs text-slate-400 dark:text-white/40">
+          <p className="mt-1 text-sm text-ink-2">{t("dashboard.hero_subtitle")}</p>
+          <p className="mt-1 text-xs text-ink-3">
             {t("dashboard.overview_hint", { time: generatedAt })}
           </p>
         </div>
@@ -211,7 +220,12 @@ export function DashboardPage() {
         />
       ) : null}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {/*
+        六格指标共用一张卡片，格子之间用细线分隔。每格自带右、下两条边，外层用 -mr-px -mb-px
+        把最右一列、最下一行的边推到卡片外（卡片 overflow-hidden 裁掉），任何列数下都只剩内部分隔线。
+      */}
+      <Card padding="none" className="overflow-hidden">
+        <div className="-mr-px -mb-px grid sm:grid-cols-2 lg:grid-cols-3">
         <DashboardKpiCard
           title={t("dashboard.total_requests")}
           value={<DashboardMetricValue value={kpi?.total_requests ?? 0} animated />}
@@ -222,10 +236,6 @@ export function DashboardPage() {
           }
           icon={Activity}
           option={totalRequestOption}
-          accent={{
-            iconWrap: "bg-blue-50 dark:bg-blue-500/12",
-            iconColor: "text-blue-600 dark:text-blue-400",
-          }}
         />
         <DashboardKpiCard
           title={t("dashboard.success_rate")}
@@ -237,10 +247,6 @@ export function DashboardPage() {
           )}
           icon={Sigma}
           option={successRateOption}
-          accent={{
-            iconWrap: "bg-emerald-50 dark:bg-emerald-500/12",
-            iconColor: "text-emerald-600 dark:text-emerald-400",
-          }}
         />
         <DashboardKpiCard
           title={t("dashboard.total_tokens")}
@@ -252,10 +258,6 @@ export function DashboardPage() {
           )}
           icon={Sparkles}
           option={totalTokenOption}
-          accent={{
-            iconWrap: "bg-violet-50 dark:bg-violet-500/12",
-            iconColor: "text-violet-600 dark:text-violet-400",
-          }}
         />
         <DashboardKpiCard
           title={t("dashboard.total_cost")}
@@ -263,10 +265,6 @@ export function DashboardPage() {
           hint={t("dashboard.total_cost_hint")}
           icon={DollarSign}
           option={totalCostOption}
-          accent={{
-            iconWrap: "bg-cyan-50 dark:bg-cyan-500/12",
-            iconColor: "text-cyan-600 dark:text-cyan-400",
-          }}
         />
         <DashboardKpiCard
           title={t("dashboard.failed_requests")}
@@ -274,10 +272,6 @@ export function DashboardPage() {
           hint={t("dashboard.failed_hint")}
           icon={TriangleAlert}
           option={failedRequestOption}
-          accent={{
-            iconWrap: "bg-rose-50 dark:bg-rose-500/12",
-            iconColor: "text-rose-600 dark:text-rose-400",
-          }}
         />
         <DashboardKpiCard
           title={t("dashboard.cache_rate")}
@@ -289,12 +283,9 @@ export function DashboardPage() {
           )}
           icon={Database}
           option={cacheRateOption}
-          accent={{
-            iconWrap: "bg-amber-50 dark:bg-amber-500/12",
-            iconColor: "text-amber-600 dark:text-amber-400",
-          }}
         />
-      </div>
+        </div>
+      </Card>
 
       {canViewSystemMonitor ? (
         <SystemMonitorSection

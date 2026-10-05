@@ -242,7 +242,7 @@ export function VideoGenerationPageContent() {
               </p>
             </div>
             <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 font-mono text-xs text-slate-600 dark:bg-neutral-950 dark:text-white/70">
-              <span className="font-semibold text-indigo-600 dark:text-indigo-400">
+              <span className="font-semibold text-ink">
                 {doc.method}
               </span>
               {doc.path}
@@ -290,7 +290,7 @@ export function VideoGenerationPageContent() {
               value={prompt}
               onChange={(event) => setPrompt(event.target.value)}
               rows={3}
-              className="w-full rounded-xl border border-slate-900/10 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-indigo-400 dark:border-white/10 dark:bg-neutral-950 dark:text-white"
+              className="w-full rounded-xl border border-slate-900/10 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-ink-3 dark:border-white/10 dark:bg-neutral-950 dark:text-white"
               placeholder={t("video_generation.field_prompt_placeholder")}
             />
           </label>
@@ -303,7 +303,7 @@ export function VideoGenerationPageContent() {
               <input
                 value={imageUrl}
                 onChange={(event) => setImageUrl(event.target.value)}
-                className="w-full rounded-xl border border-slate-900/10 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-indigo-400 dark:border-white/10 dark:bg-neutral-950 dark:text-white"
+                className="w-full rounded-xl border border-slate-900/10 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-ink-3 dark:border-white/10 dark:bg-neutral-950 dark:text-white"
                 placeholder="https://example.com/still.png"
               />
             </label>
@@ -320,7 +320,7 @@ export function VideoGenerationPageContent() {
                 max={maxDuration}
                 value={duration}
                 onChange={(event) => setDuration(Number(event.target.value) || DEFAULT_DURATION)}
-                className="w-full rounded-xl border border-slate-900/10 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-indigo-400 dark:border-white/10 dark:bg-neutral-950 dark:text-white"
+                className="w-full rounded-xl border border-slate-900/10 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-ink-3 dark:border-white/10 dark:bg-neutral-950 dark:text-white"
               />
             </label>
             <label className="block space-y-1">
@@ -381,7 +381,7 @@ export function VideoGenerationPageContent() {
                 href={test.result.video.url}
                 target="_blank"
                 rel="noreferrer"
-                className="text-xs text-indigo-600 underline dark:text-indigo-400"
+                className="text-xs text-ink underline"
               >
                 {t("video_generation.result_open_original")}
               </a>

@@ -43,7 +43,7 @@ export const PageLoader: FC<PageLoaderProps> = ({
       <span
         role="status"
         aria-label={text ?? "Loading"}
-        className="inline-block h-5 w-5 shrink-0 rounded-full border-2 border-indigo-500/25 border-t-indigo-600 motion-reduce:animate-none motion-safe:animate-spin dark:border-indigo-400/25 dark:border-t-indigo-400"
+        className="inline-block h-5 w-5 shrink-0 rounded-full border-2 border-ink/15 border-t-ink motion-reduce:animate-none motion-safe:animate-spin"
       />
     );
   }
@@ -64,50 +64,39 @@ export const PageLoader: FC<PageLoaderProps> = ({
             background: "var(--pl-bg)",
           }}
         >
-          {/* Atmospheric glow blobs */}
-          <div className="pointer-events-none absolute inset-0 overflow-hidden">
-            <div className="pl-glow pl-glow-1" />
-            <div className="pl-glow pl-glow-2" />
-            <div className="pl-glow pl-glow-3" />
-          </div>
-
-          {/* Brand content */}
+          {/* 品牌内容：一个细环 + 品牌名。不铺光斑、不做呼吸缩放，加载态只需要说明「还在进行」 */}
           <motion.div
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.36, ease: [0.2, 0.8, 0.2, 1] }}
             className="relative z-10 flex flex-col items-center"
           >
-            {/* 品牌标记呼吸 + 外圈旋转进度环 */}
-            <div className="relative mb-6 flex h-16 w-16 items-center justify-center">
-              <motion.span
+            <div className="relative mb-5 flex h-12 w-12 items-center justify-center">
+              <span
                 aria-hidden="true"
-                className="absolute inset-0 rounded-full border-[3px] border-transparent"
-                style={{ borderTopColor: "var(--pl-ring-outer)" }}
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1.4, repeat: Infinity, ease: "linear" }}
+                className="absolute inset-0 rounded-full border-2"
+                style={{ borderColor: "var(--pl-ring-track)" }}
               />
               <motion.span
                 aria-hidden="true"
-                className="flex items-center justify-center"
-                animate={{ scale: [1, 1.08, 1], opacity: [0.75, 1, 0.75] }}
-                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-              >
-                <LogoMark size={22} />
-              </motion.span>
+                className="absolute inset-0 rounded-full border-2 border-transparent"
+                style={{ borderTopColor: "var(--pl-ring)" }}
+                animate={{ rotate: 360 }}
+                transition={{ duration: 0.9, repeat: Infinity, ease: "linear" }}
+              />
+              <span aria-hidden="true" className="flex items-center justify-center">
+                <LogoMark size={20} />
+              </span>
             </div>
 
-            {/* Brand text with breathing pulse */}
-            <motion.span
+            <span
               role="status"
               aria-label={label}
-              className="font-display text-sm font-medium tracking-[0.2em]"
+              className="text-sm font-medium"
               style={{ color: "var(--pl-text)" }}
-              animate={{ opacity: [0.45, 1, 0.45] }}
-              transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
             >
               {label}
-            </motion.span>
+            </span>
           </motion.div>
         </motion.div>
       )}

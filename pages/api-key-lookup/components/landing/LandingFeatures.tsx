@@ -35,7 +35,7 @@ function FeatureCard({
         size={22}
         strokeWidth={1.7}
         aria-hidden
-        className="text-indigo-600 transition-transform duration-200 group-hover:scale-110 dark:text-indigo-400"
+        className="text-ink transition-transform duration-200 group-hover:scale-110"
       />
       <h3 className="mt-6 font-display text-lg font-bold tracking-tight text-slate-900 dark:text-white">
         {copy.title}
@@ -68,7 +68,7 @@ export function LandingFeatures({ copy }: { copy: LandingCopy }) {
             size={22}
             strokeWidth={1.7}
             aria-hidden
-            className="text-indigo-600 dark:text-indigo-400"
+            className="text-ink"
           />
           <h3 className="mt-6 font-display text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
             {features.gateway.title}

@@ -70,7 +70,7 @@ export function AuthFilesSelectionToolbar({
         <span>{t("auth_files.batch_disable")}</span>
       </Button>
       <Button
-        variant="danger"
+        variant="secondary-danger"
         size="xs"
         className="px-2"
         onClick={() => onDeleteSelection(names())}

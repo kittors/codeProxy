@@ -16,7 +16,7 @@ import type { ModelItem } from "../types";
 
 const stickyActionsHeaderClass =
   "text-center md:sticky md:z-40 md:bg-slate-100 md:dark:bg-neutral-800";
-const stickyActionsCellClass = "md:sticky md:z-30 md:bg-white md:dark:bg-neutral-950";
+const stickyActionsCellClass = "md:sticky md:z-30 md:bg-surface";
 
 interface UseModelColumnsOptions {
   canDeleteModels: boolean;
@@ -191,7 +191,7 @@ export function useModelColumns({
                   label: editLabel,
                   icon: <Edit3 size={15} />,
                   className:
-                    "text-slate-500 hover:bg-slate-100 hover:text-indigo-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-indigo-400",
+                    "text-slate-500 hover:bg-slate-100 hover:text-ink dark:text-white/50 dark:hover:bg-neutral-800",
                   onClick: () => onEditModel(row.id),
                 },
                 {

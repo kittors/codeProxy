@@ -246,8 +246,9 @@ export function ImagePreviewOverlay({
     element.releasePointerCapture(event.pointerId);
   };
 
+  // 看图时背后是压暗的遮罩，工具条统一用深色实心胶囊 + 白色图标，深浅色模式一致。
   const controlButtonClass =
-    "inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-700 transition hover:bg-white/70 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-35 dark:text-white/78 dark:hover:bg-white/12 dark:hover:text-white";
+    "inline-flex h-9 w-9 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/12 hover:text-white disabled:cursor-not-allowed disabled:opacity-35";
 
   return createPortal(
     <div
@@ -255,7 +256,7 @@ export function ImagePreviewOverlay({
       aria-modal="true"
       aria-label={title}
       data-variant="image-only"
-      className="fixed inset-0 z-[220] bg-slate-900/40 backdrop-blur-sm dark:bg-black/50"
+      className="fixed inset-0 z-[220] bg-black/60 backdrop-blur-sm dark:bg-black/70"
     >
       <button
         type="button"
@@ -327,7 +328,7 @@ export function ImagePreviewOverlay({
       </div>
 
       <div className="pointer-events-none absolute right-0 bottom-5 left-0 z-20 flex justify-center px-4">
-        <div className="pointer-events-auto flex items-center gap-1 rounded-full border border-white/25 bg-white/68 p-1.5 shadow-[0_16px_48px_rgba(15,23,42,0.22)] backdrop-blur-xl dark:border-white/12 dark:bg-neutral-950/55">
+        <div className="pointer-events-auto flex items-center gap-1 rounded-full bg-black/80 p-1.5 shadow-[0_16px_40px_-8px_rgb(0_0_0/0.45)] ring-1 ring-white/10">
           <button
             type="button"
             className={controlButtonClass}

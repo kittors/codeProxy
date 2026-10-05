@@ -15,6 +15,8 @@ const moderationProfileProps = vi.hoisted(
 
 vi.mock("@code-proxy/ui", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@code-proxy/ui")>()),
+  // 趋势图按主题取色；这里不挂 ThemeProvider，给一个固定的浅色主题。
+  useTheme: () => ({ state: { mode: "light" } }),
   EChart: ({
     option,
     className,
@@ -484,11 +486,11 @@ describe("AuthFileDetailModal", () => {
       },
     });
 
-    // $333.9 / 13% ≈ $2568 budget → PRO 20X solid chip, not soft "Pro".
+    // $333.9 / 13% ≈ $2568 budget → PRO 20X top-tier solid chip, not the soft tag look.
     const badge = screen.getByTestId("auth-file-plan-badge");
     expect(badge).toHaveTextContent("PRO 20X");
-    expect(badge.className).toContain("from-yellow-300");
-    expect(badge.className).not.toContain("bg-amber-50");
+    expect(badge).toHaveClass("bg-ink", "text-canvas");
+    expect(badge).not.toHaveClass("bg-hover");
   });
 
   test("shows SuperGrok plan badge and falls back cycle totals for xAI when cycle is unknown", () => {
@@ -531,7 +533,8 @@ describe("AuthFileDetailModal", () => {
     });
 
     expect(screen.getByText("SUPERGROK")).toBeInTheDocument();
-    expect(screen.getByTestId("auth-file-plan-badge")).toHaveClass("from-neutral-900");
+    // SuperGrok is a middle tier: solid mid-grey chip.
+    expect(screen.getByTestId("auth-file-plan-badge")).toHaveClass("bg-ink-2");
     expectSummaryCard("Last 7 days requests", "116");
     // When cycle_known is false, fall back to request_total instead of showing 0.
     expectSummaryCard("Current weekly cycle", "116");

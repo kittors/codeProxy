@@ -16,6 +16,7 @@ import {
   getSelectDropdownMotion,
   getSelectTriggerBase,
   searchableSelectPanel,
+  selectCheckboxBox,
   selectChevron,
   selectDropdownTransition,
   selectEmptyState,
@@ -190,7 +191,7 @@ export function MultiSelect({
           transition={selectDropdownTransition}
         >
           {searchable && (
-            <div className="flex-shrink-0 border-b border-black/[0.06] px-3 py-2 dark:border-white/10">
+            <div className="flex-shrink-0 border-b border-line px-3.5 py-2.5">
               <input
                 ref={searchRef}
                 type="text"
@@ -201,7 +202,7 @@ export function MultiSelect({
               />
             </div>
           )}
-          <div className="min-h-0 flex-1 overflow-y-auto p-1">
+          <div className="min-h-0 flex-1 overflow-y-auto p-1.5">
             {/* Select All option */}
             <button
               type="button"
@@ -211,21 +212,13 @@ export function MultiSelect({
                 value.length === 0 ? selectOptionSelected : selectOptionIdle,
               )}
             >
-              <div
-                className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border transition ${
-                  value.length === 0
-                    ? "border-[#18181B] bg-[#18181B] dark:border-white dark:bg-white"
-                    : "border-[#96969B] dark:border-[#9F9FA8]"
-                }`}
-              >
-                {value.length === 0 && (
-                  <Check size={12} className="text-white dark:text-[#18181B]" />
-                )}
+              <div className={selectCheckboxBox(value.length === 0)}>
+                {value.length === 0 && <Check size={12} />}
               </div>
               <span className="font-medium">{selectAllLabel || t("common.all_models")}</span>
             </button>
 
-            <div className="mx-3 my-1 h-px bg-black/[0.06] dark:bg-white/10" />
+            <div className="mx-2.5 my-1 h-px bg-line" />
 
             {filteredOptions.length === 0 ? (
               <div className={selectEmptyState}>No results</div>
@@ -242,14 +235,8 @@ export function MultiSelect({
                       checked ? selectOptionSelected : selectOptionIdle,
                     )}
                   >
-                    <div
-                      className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border transition ${
-                        checked
-                          ? "border-[#18181B] bg-[#18181B] dark:border-white dark:bg-white"
-                          : "border-[#96969B] dark:border-[#9F9FA8]"
-                      }`}
-                    >
-                      {checked && <Check size={12} className="text-white dark:text-[#18181B]" />}
+                    <div className={selectCheckboxBox(checked)}>
+                      {checked && <Check size={12} />}
                     </div>
                     {opt.icon && <span className="flex-shrink-0">{opt.icon}</span>}
                     <span className="truncate font-mono text-xs">{opt.label}</span>
@@ -278,13 +265,13 @@ export function MultiSelect({
           setOpen(!open);
         }}
         className={cn(
-          getSelectTriggerBase(size),
+          getSelectTriggerBase(size, "multiline"),
           "h-auto min-h-9 w-full justify-between py-1 text-left",
         )}
       >
         <div className="flex min-w-0 flex-1 flex-wrap gap-1">
           {value.length === 0 ? (
-            <span className="inline-flex items-center gap-1 text-[#18181B] dark:text-white">
+            <span className="inline-flex items-center gap-1 text-ink">
               {emptyLabel}
             </span>
           ) : (
@@ -293,7 +280,7 @@ export function MultiSelect({
               return (
                 <span
                   key={v}
-                  className="inline-flex max-w-[180px] items-center gap-1 rounded-full bg-white px-1.5 py-0.5 text-xs text-[#18181B] dark:bg-[#46464C] dark:text-white"
+                  className="inline-flex max-w-[180px] items-center gap-1 rounded-full bg-selected px-2 py-0.5 text-xs text-ink"
                 >
                   {opt?.icon && <span className="flex-shrink-0">{opt.icon}</span>}
                   <span className="truncate">{labelMap.get(v) || v}</span>
@@ -301,7 +288,7 @@ export function MultiSelect({
                     <button
                       type="button"
                       onClick={(e) => removeTag(v, e)}
-                      className="ml-0.5 flex-shrink-0 rounded-full p-0.5 hover:bg-[#EBEBEC] dark:hover:bg-[#27272A]"
+                      className="-mr-0.5 ml-0.5 flex-shrink-0 rounded-full p-0.5 text-ink-3 hover:bg-hover hover:text-ink"
                     >
                       <X size={10} />
                     </button>
@@ -310,7 +297,7 @@ export function MultiSelect({
               );
             })
           )}
-          {value.length > 5 && <span className="text-xs text-slate-400">+{value.length - 5}</span>}
+          {value.length > 5 && <span className="text-xs text-ink-3">+{value.length - 5}</span>}
         </div>
         <ChevronDown
           size={16}

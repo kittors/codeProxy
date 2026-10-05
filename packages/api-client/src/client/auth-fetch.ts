@@ -73,7 +73,10 @@ export async function sendWithAuth(input: SendWithAuthInput): Promise<SendWithAu
   for (;;) {
     const response = await fetch(url, { ...init, headers: buildHeaders(), signal });
     if (gate.getGeneration() !== generation) throw createSessionChangedError(url);
-    if (response.status !== 401 || retried || !gate.hasRefreshToken()) {
+    // An anonymous request (the login call) carries no session, so its 401 means
+    // "wrong username or password" — refreshing a leftover grant and replaying
+    // the credentials would be meaningless.
+    if (response.status !== 401 || retried || auth === "anonymous" || !gate.hasRefreshToken()) {
       return { response, generation };
     }
 

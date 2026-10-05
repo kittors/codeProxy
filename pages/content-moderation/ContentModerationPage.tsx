@@ -222,7 +222,7 @@ export function ContentModerationPage() {
             className={[
               "rounded-full px-2.5 py-1 text-xs font-semibold",
               profile.backend === "qwen3guard"
-                ? "bg-violet-100 text-violet-800 dark:bg-violet-500/20 dark:text-violet-100"
+                ? "bg-selected text-ink"
                 : "bg-slate-100 text-slate-700 dark:bg-white/10 dark:text-white/70",
             ].join(" ")}
           >

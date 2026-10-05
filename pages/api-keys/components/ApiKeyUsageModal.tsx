@@ -1,6 +1,12 @@
 import { useTranslation } from "react-i18next";
 import { RefreshCw } from "lucide-react";
-import { DataTable, Modal, SearchableSelect, type SearchableSelectOption } from "@code-proxy/ui";
+import {
+  Button,
+  DataTable,
+  Modal,
+  SearchableSelect,
+  type SearchableSelectOption,
+} from "@code-proxy/ui";
 import {
   RequestLogsPaginationBar,
   RequestLogsTimeRangeSelector,
@@ -96,14 +102,13 @@ export function ApiKeyUsageModal({
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-1 pb-3 dark:border-white/8">
           <div className="flex flex-wrap items-center gap-2">
             <RequestLogsTimeRangeSelector value={usageTimeRange} onChange={setUsageTimeRange} />
-            <button
-              type="button"
+            <Button
+              variant="secondary"
               onClick={() => void fetchUsageLogs(1, usagePageSize)}
               disabled={usageLoading}
               aria-busy={usageLoading}
               aria-label={t("request_logs.refresh")}
               title={t("request_logs.refresh")}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-slate-900 text-white transition hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/35 disabled:cursor-not-allowed disabled:opacity-70 dark:bg-white dark:text-neutral-950 dark:hover:bg-slate-200 dark:focus-visible:ring-white/15"
             >
               <RefreshCw
                 size={14}
@@ -111,7 +116,7 @@ export function ApiKeyUsageModal({
                   usageLoading ? "motion-reduce:animate-none motion-safe:animate-spin" : ""
                 }
               />
-            </button>
+            </Button>
           </div>
           <span className="text-xs text-slate-400 dark:text-white/40">{usageLastUpdatedText}</span>
         </div>
@@ -265,7 +270,7 @@ export function ApiKeyUsageModal({
           {usageLoading ? (
             <div className="absolute inset-0 z-10 flex items-center justify-center rounded-b-2xl bg-white/70 backdrop-blur-sm dark:bg-neutral-950/55">
               <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-900/8 bg-white/85 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm dark:border-white/8 dark:bg-neutral-950/70 dark:text-white/75">
-                <span className="h-4 w-4 rounded-full border-2 border-slate-300 border-t-indigo-600 motion-reduce:animate-none motion-safe:animate-spin dark:border-white/20 dark:border-t-white/80" />
+                <span className="h-4 w-4 rounded-full border-2 border-slate-300 border-t-ink motion-reduce:animate-none motion-safe:animate-spin dark:border-white/20 dark:border-t-white/80" />
                 <span role="status">{t("common.loading_ellipsis")}</span>
               </div>
             </div>

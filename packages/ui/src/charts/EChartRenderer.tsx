@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { ECBasicOption } from "echarts/types/dist/shared";
 import ReactECharts from "echarts-for-react";
 import { useTheme } from "../theme/ThemeProvider";
+import { chartPalette } from "./chartTheme";
 
 /**
  * 图表是 canvas 画出来的，读不到 CSS 的字体栈，echarts 默认退回系统 sans-serif——
@@ -15,6 +16,18 @@ const readSansFontFamily = (): string | undefined => {
 };
 
 export type EChartEvents = Record<string, (params: unknown, chart: unknown) => void>;
+
+/** 加载遮罩：中性转圈 + 与内容区同色的半透明底，颜色取自 chartTheme。 */
+const loadingOptionFor = (isDark: boolean, text: string) => {
+  const palette = chartPalette(isDark);
+  return {
+    text,
+    color: palette.primary,
+    textColor: palette.ink2,
+    maskColor: isDark ? "rgba(33, 33, 33, 0.6)" : "rgba(255, 255, 255, 0.64)",
+    zlevel: 1,
+  };
+};
 
 export type EChartProps = {
   option: ECBasicOption;
@@ -74,10 +87,15 @@ export function EChartRenderer({
 
   const styledOption = useMemo(() => {
     const fontFamily = readSansFontFamily();
-    if (!fontFamily) return option;
-    // 调用方自己写的 textStyle 优先，这里只补默认字体。
-    const ownTextStyle = (option as { textStyle?: Record<string, unknown> }).textStyle;
-    return { ...option, textStyle: { fontFamily, ...ownTextStyle } } as ECBasicOption;
+    const own = option as { textStyle?: Record<string, unknown>; backgroundColor?: unknown };
+    return {
+      ...option,
+      // echarts 内置的 dark 主题自带一块深蓝底（#100C2A），没写背景的图表在深色模式下会变成
+      // 卡片上的一块黑框。图表都画在卡片上，默认透明；调用方写了背景才用调用方的。
+      backgroundColor: own.backgroundColor ?? "transparent",
+      // 调用方自己写的 textStyle 优先，这里只补默认字体。
+      ...(fontFamily ? { textStyle: { fontFamily, ...own.textStyle } } : {}),
+    } as ECBasicOption;
     // fontRevision 只用来在字体就绪后触发重算，不参与 option 内容。
   }, [option, fontRevision]);
 
@@ -232,13 +250,7 @@ export function EChartRenderer({
     if (!instance) return;
     try {
       if (loading) {
-        instance.showLoading?.({
-          text: loadingText,
-          color: "#2563eb",
-          textColor: mode === "dark" ? "#e2e8f0" : "#475569",
-          maskColor: mode === "dark" ? "rgba(15, 23, 42, 0.48)" : "rgba(248, 250, 252, 0.64)",
-          zlevel: 1,
-        });
+        instance.showLoading?.(loadingOptionFor(mode === "dark", loadingText));
       } else {
         instance.hideLoading?.();
       }
@@ -265,13 +277,7 @@ export function EChartRenderer({
           theme={mode === "dark" ? "dark" : undefined}
           style={{ height: "100%", width: "100%" }}
           showLoading={loading}
-          loadingOption={{
-            text: loadingText,
-            color: "#2563eb",
-            textColor: mode === "dark" ? "#e2e8f0" : "#475569",
-            maskColor: mode === "dark" ? "rgba(15, 23, 42, 0.48)" : "rgba(248, 250, 252, 0.64)",
-            zlevel: 1,
-          }}
+          loadingOption={loadingOptionFor(mode === "dark", loadingText)}
           notMerge={notMerge}
           replaceMerge={replaceMerge}
           autoResize={false}

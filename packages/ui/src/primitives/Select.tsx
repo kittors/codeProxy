@@ -17,6 +17,7 @@ import {
   selectChevron,
   selectDropdownTransition,
   selectOptionBase,
+  selectOptionCheck,
   selectOptionIdle,
   selectOptionSelected,
   selectPanel,
@@ -232,11 +233,7 @@ export function Select({
                   >
                     <span className="min-w-0 flex-1">{opt.label}</span>
                     {selected ? (
-                      <Check
-                        size={14}
-                        className="shrink-0 text-[#96969B] dark:text-[#9F9FA8]"
-                        aria-hidden="true"
-                      />
+                      <Check size={15} className={selectOptionCheck} aria-hidden="true" />
                     ) : null}
                   </button>
                 );

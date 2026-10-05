@@ -48,20 +48,17 @@ export function ConfirmModal({
         </>
       }
     >
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-3.5">
+        {/* 圆形图标底：危险操作用一层很淡的红，普通确认保持中性，不再用蓝色装饰。 */}
         <div
           className={[
-            "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
-            isDanger
-              ? "bg-rose-50 text-rose-600 ring-1 ring-rose-200 dark:bg-rose-500/10 dark:text-rose-400 dark:ring-rose-500/20"
-              : "bg-blue-50 text-blue-600 ring-1 ring-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:ring-blue-500/20",
+            "flex h-11 w-11 shrink-0 items-center justify-center rounded-full",
+            isDanger ? "bg-rose-500/10 text-rose-500" : "bg-hover text-ink-2",
           ].join(" ")}
         >
-          {isDanger ? <Trash2 size={18} /> : <AlertCircle size={18} />}
+          {isDanger ? <Trash2 size={20} /> : <AlertCircle size={20} />}
         </div>
-        <p className="min-w-0 pt-1.5 text-sm leading-relaxed text-slate-600 dark:text-white/65">
-          {description}
-        </p>
+        <p className="min-w-0 pt-2.5 text-sm leading-relaxed text-ink-2">{description}</p>
       </div>
     </Modal>
   );

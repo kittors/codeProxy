@@ -180,7 +180,7 @@ export function LookupHeader({
                   <DropdownMenu.Separator />
                   <DropdownMenu.Item
                     onSelect={onLogout}
-                    className="text-rose-600 focus:text-rose-700 dark:text-rose-300"
+                    tone="danger"
                   >
                     <LogOut size={15} />
                     {t("common.logout")}

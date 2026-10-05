@@ -97,15 +97,16 @@ export function ResourceEfficiencyPanel({
 
   return (
     <div className="space-y-6">
-      <section className="overflow-hidden rounded-2xl border border-emerald-200 bg-emerald-50/70 dark:border-emerald-500/20 dark:bg-emerald-500/10">
+      {/* 推荐配置面板：中性浅灰底；只有「已启用推荐配置」这个状态用绿色小标签表达。 */}
+      <section className="overflow-hidden rounded-2xl border border-line bg-subtle">
         <div className="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
           <div className="flex min-w-0 items-start gap-4">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white dark:bg-emerald-400 dark:text-emerald-950">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-surface text-ink-2 shadow-xs dark:shadow-none">
               <Leaf size={20} aria-hidden="true" />
             </div>
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <h3 className="text-base font-semibold text-emerald-950 dark:text-emerald-100">
+                <h3 className="text-base font-semibold text-ink">
                   <HintLabel
                     label={t("resource_config.title")}
                     hint={`${t("resource_config.description")}
@@ -113,7 +114,13 @@ export function ResourceEfficiencyPanel({
 ${t("resource_config.stats_preserved")}`}
                   />
                 </h3>
-                <span className="rounded-full bg-emerald-200/80 px-2.5 py-1 text-2xs font-semibold text-emerald-900 dark:bg-emerald-300/15 dark:text-emerald-200">
+                <span
+                  className={
+                    recommendedActive
+                      ? "rounded-full bg-emerald-500/10 px-2.5 py-1 text-2xs font-medium text-emerald-700 dark:text-emerald-300"
+                      : "rounded-full bg-selected px-2.5 py-1 text-2xs font-medium text-ink-2"
+                  }
+                >
                   {recommendedActive
                     ? t("resource_config.profile_active")
                     : t("resource_config.profile_custom")}

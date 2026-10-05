@@ -1,7 +1,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
 import { FileJson, Plus, RefreshCw } from "lucide-react";
-import { Button } from "@code-proxy/ui";
+import { Button, surface } from "@code-proxy/ui";
 import { EmptyState } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
 
@@ -117,7 +117,7 @@ export function AuthFilesExcludedTab({
                   return (
                     <div
                       key={provider}
-                      className="rounded-2xl border border-black/[0.06] bg-white p-4 shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] transition-colors duration-200 ease-out dark:border-white/[0.06] dark:bg-neutral-950/70 dark:shadow-[0_1px_2px_rgb(0_0_0_/_0.22)]"
+                      className={`p-4 transition-colors duration-200 ease-out ${surface({ radius: "2xl" })}`}
                     >
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div className="min-w-0">
@@ -130,7 +130,7 @@ export function AuthFilesExcludedTab({
                         </div>
                         <div className="flex items-center gap-2">
                           <Button
-                            variant="danger"
+                            variant="secondary-danger"
                             size="sm"
                             onClick={() => deleteExcludedProvider(provider)}
                             disabled={isPending || excludedUnsupported}

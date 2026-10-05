@@ -1,3 +1,4 @@
+import { chartPalette, chartTooltipStyle } from "@code-proxy/ui";
 import { formatNumber } from "../monitor-utils";
 import type { DailySeriesPoint } from "./types";
 
@@ -82,7 +83,7 @@ export const createDailyTrendOption = (input: {
         type: "bar",
         yAxisIndex: 0,
         barMaxWidth,
-        itemStyle: { borderRadius: 0, color: "rgba(196,181,253,0.88)" },
+        itemStyle: { borderRadius: 0, color: chartPalette(input.isDark).bar },
         emphasis: { focus: "series" },
         data: inputY,
       }
@@ -94,7 +95,7 @@ export const createDailyTrendOption = (input: {
         type: "bar",
         yAxisIndex: 0,
         barMaxWidth,
-        itemStyle: { borderRadius: [4, 4, 0, 0], color: "rgba(110,231,183,0.88)" },
+        itemStyle: { borderRadius: [4, 4, 0, 0], color: chartPalette(input.isDark).series[2] },
         emphasis: { focus: "series" },
         data: outputY,
       }
@@ -124,8 +125,8 @@ export const createDailyTrendOption = (input: {
       smooth: true,
       symbol: "circle",
       symbolSize: 7,
-      lineStyle: { width: 3, color: "#3b82f6" },
-      itemStyle: { color: "#3b82f6" },
+      lineStyle: { width: 2.5, color: chartPalette(input.isDark).primary },
+      itemStyle: { color: chartPalette(input.isDark).primary },
       data: requestY,
       z: 10,
     });
@@ -161,17 +162,20 @@ export const createDailyTrendOption = (input: {
 
   return {
     backgroundColor: "transparent",
-    color: ["rgba(196,181,253,0.88)", "rgba(110,231,183,0.88)", "#3b82f6"],
+    // 输入、输出两组柱子用浅、中两档灰，请求数折线用主色：一张图里只有一条线是「重点」。
+    color: [
+      chartPalette(input.isDark).bar,
+      chartPalette(input.isDark).series[2],
+      chartPalette(input.isDark).primary,
+    ],
     tooltip: {
+      ...chartTooltipStyle(input.isDark),
       trigger: "axis",
-      axisPointer: { type: "shadow" },
+      axisPointer: { ...chartTooltipStyle(input.isDark).axisPointer, type: "shadow" },
       renderMode: "html",
       appendToBody: true,
       confine: true,
-      borderWidth: 0,
-      backgroundColor: "rgba(15, 23, 42, 0.92)",
-      textStyle: { color: "#fff" },
-      extraCssText: "z-index: 10000;",
+      extraCssText: `${chartTooltipStyle(input.isDark).extraCssText} z-index: 10000;`,
     },
     legend: {
       show: false,
@@ -188,7 +192,7 @@ export const createDailyTrendOption = (input: {
         : { margin: 14, hideOverlap: true },
       axisLine: {
         lineStyle: {
-          color: input.isDark ? "rgba(255,255,255,0.16)" : "rgba(148, 163, 184, 0.55)",
+          color: chartPalette(input.isDark).axis,
         },
       },
     },
@@ -214,7 +218,7 @@ export const createDailyTrendOption = (input: {
         splitNumber: 4,
         splitLine: {
           lineStyle: {
-            color: input.isDark ? "rgba(255,255,255,0.08)" : "rgba(148, 163, 184, 0.25)",
+            color: chartPalette(input.isDark).grid,
           },
         },
       },

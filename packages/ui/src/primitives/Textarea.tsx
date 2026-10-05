@@ -1,5 +1,5 @@
 import { forwardRef, type TextareaHTMLAttributes } from "react";
-import { controlSurface } from "../utils/controlStyles";
+import { controlMultilineSurface } from "../utils/controlStyles";
 import { cn } from "../utils/selectStyles";
 
 export interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {}
@@ -12,9 +12,9 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
     <textarea
       ref={ref}
       className={cn(
-        "min-h-28 w-full resize-y px-3.5 py-3 text-sm outline-none transition",
-        "focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0",
-        controlSurface,
+        "min-h-28 w-full resize-y px-3.5 py-3 text-sm outline-none",
+        "focus:outline-none focus-visible:outline-none",
+        controlMultilineSurface,
         className,
       )}
       {...props}

@@ -33,7 +33,7 @@ function FieldsetLegend({ children, className, description, ...props }: Fieldset
     <>
       <legend
         data-slot="fieldset-legend"
-        className={cn("text-base font-medium text-slate-950 dark:text-white", className)}
+        className={cn("text-base font-semibold tracking-tight text-ink", className)}
         {...props}
       >
         {children}
@@ -67,7 +67,7 @@ function FieldsetDescription({ children, className, ...props }: FieldsetDescript
   return (
     <p
       data-slot="description"
-      className={cn("text-sm leading-6 text-slate-500 dark:text-white/55", className)}
+      className={cn("text-sm leading-6 text-ink-3", className)}
       {...props}
     >
       {children}

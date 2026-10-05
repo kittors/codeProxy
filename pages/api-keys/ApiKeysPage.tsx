@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Plus, KeyRound, RefreshCw, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, KeyRound, RefreshCw, Trash2 } from "lucide-react";
 import {
   apiKeyEntriesApi,
   apiKeysApi,
@@ -29,7 +29,7 @@ import { createApiKeyColumns } from "./components/ApiKeyColumns";
 import { DeleteApiKeyModal } from "./components/DeleteApiKeyModal";
 import { copyTextToClipboard } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
-import { Button } from "@code-proxy/ui";
+import { Button, buttonClassName } from "@code-proxy/ui";
 import { EmptyState } from "@code-proxy/ui";
 import { Modal } from "@code-proxy/ui";
 import { ConfirmModal } from "@code-proxy/ui";
@@ -829,10 +829,8 @@ export function ApiKeysPage({
   const toolbar = (
     <div className="flex flex-wrap justify-end gap-2">
       {endUserIdFilter && !embed ? (
-        <Link
-          to="/access/end-users"
-          className="inline-flex h-8 items-center rounded-xl border border-slate-900/8 bg-white px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white/80 dark:hover:bg-neutral-800"
-        >
+        <Link to="/access/end-users" className={buttonClassName({ variant: "secondary", size: "sm" })}>
+          <ArrowLeft size={14} aria-hidden="true" />
           {t("end_users.back_to_users", { defaultValue: "返回用户账号" })}
         </Link>
       ) : null}
@@ -842,7 +840,7 @@ export function ApiKeysPage({
       </Button>
       {selectedEntries.length > 0 && !endUserIdFilter ? (
         <Button
-          variant="danger"
+          variant="secondary-danger"
           size="sm"
           onClick={() => setBatchDeleteOpen(true)}
           disabled={saving}

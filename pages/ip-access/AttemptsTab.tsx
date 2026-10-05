@@ -7,6 +7,7 @@ import {
 } from "@code-proxy/api-client";
 import { Download } from "lucide-react";
 import {
+  Button,
   COLUMN_WIDTH,
   DataTable,
   PaginationBar,
@@ -26,7 +27,7 @@ const OUTCOME_TONE: Record<string, string> = {
   throttled: "bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
   blocked: "bg-slate-800 text-white dark:bg-white/20",
   auto_banned: "bg-slate-800 text-white dark:bg-white/20",
-  would_ban: "bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300",
+  would_ban: "bg-hover text-ink",
   success: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
 };
 
@@ -243,17 +244,17 @@ export function AttemptsTab({
               aria-label={t("ip_access.filter_window")}
             />
           </div>
-          <button
-            type="button"
+          <Button
+            variant="secondary"
+            className="ml-auto"
             onClick={() => void exportAttempts()}
             disabled={exporting}
             aria-busy={exporting}
             aria-label={t("ip_access.export_csv")}
             title={t("ip_access.export_csv")}
-            className="ml-auto inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-slate-900 text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70 dark:bg-white dark:text-neutral-950 dark:hover:bg-slate-200"
           >
             <Download size={15} aria-hidden="true" />
-          </button>
+          </Button>
         </div>
       </div>
 

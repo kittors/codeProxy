@@ -2041,7 +2041,7 @@ export function DataTable<T>({
         <div
           data-vt-sticky-start-rail
           aria-hidden="true"
-          className="pointer-events-none absolute z-0 hidden bg-white md:block dark:bg-neutral-950"
+          className="pointer-events-none absolute z-0 hidden bg-surface md:block"
           style={{
             left: 0,
             top: stickyRailTop,
@@ -2054,7 +2054,7 @@ export function DataTable<T>({
         <div
           data-vt-sticky-end-rail
           aria-hidden="true"
-          className="pointer-events-none absolute z-0 hidden bg-white md:block dark:bg-neutral-950"
+          className="pointer-events-none absolute z-0 hidden bg-surface md:block"
           style={{
             left: stickyEndRailLeft,
             top: stickyRailTop,
@@ -2132,7 +2132,7 @@ export function DataTable<T>({
               ref={headerRef}
               className={naturalFlow ? "bg-slate-100 dark:bg-neutral-800" : ""}
             >
-              <tr className="text-left text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-white/55">
+              <tr className="text-left text-xs font-medium text-slate-500 dark:text-white/55">
                 {orderedColumns.map((col, colIndex) => {
                   const isRowReorderColumn = col.key === ROW_REORDER_COLUMN_KEY;
                   const canResize =
@@ -2453,7 +2453,7 @@ export function DataTable<T>({
                           const hoverChromeClass = naturalFlow
                             ? ""
                             : stickyPlacement
-                              ? "group-hover/row:bg-slate-50 dark:group-hover/row:bg-neutral-900"
+                              ? "group-hover/row:bg-surface-hover"
                               : "group-hover/row:bg-slate-50 dark:group-hover/row:bg-white/[0.04]";
                           return (
                             <td
@@ -2534,7 +2534,7 @@ export function DataTable<T>({
             <div className="flex items-center justify-center py-4">
               <div className="inline-flex items-center gap-2 text-sm text-slate-500 dark:text-white/55">
                 <span
-                  className="h-4 w-4 rounded-full border-2 border-slate-300 border-t-indigo-600 motion-reduce:animate-none motion-safe:animate-spin dark:border-white/20 dark:border-t-white/80"
+                  className="h-4 w-4 rounded-full border-2 border-ink/15 border-t-ink motion-reduce:animate-none motion-safe:animate-spin"
                   aria-hidden="true"
                 />
                 {t("common.loading_more")}
@@ -2596,7 +2596,7 @@ export function DataTable<T>({
             <div
               ref={verticalThumbRef}
               role="presentation"
-              className="pointer-events-auto absolute right-0 w-1.5 cursor-pointer rounded-full bg-[#C7C7C7] transition-[width] duration-150 ease-out hover:w-2 active:w-2 group-hover/scrollbar:w-2"
+              className="pointer-events-auto absolute right-0 w-1.5 cursor-pointer rounded-full bg-[#C7C7C7] transition-[width] duration-150 ease-out hover:w-2 active:w-2 group-hover/scrollbar:w-2 dark:bg-white/25"
               style={{ top: vThumb.top, height: vThumb.height }}
               onPointerDown={(e) => handleThumbPointerDown("y", e)}
               onPointerMove={handleThumbPointerMove}
@@ -2615,7 +2615,7 @@ export function DataTable<T>({
           <div
             ref={horizontalThumbRef}
             role="presentation"
-            className="pointer-events-auto absolute bottom-0 h-1.5 cursor-pointer rounded-full bg-[#C7C7C7] transition-[height] duration-150 ease-out hover:h-2 active:h-2 group-hover/scrollbar:h-2"
+            className="pointer-events-auto absolute bottom-0 h-1.5 cursor-pointer rounded-full bg-[#C7C7C7] transition-[height] duration-150 ease-out hover:h-2 active:h-2 group-hover/scrollbar:h-2 dark:bg-white/25"
             style={{ left: hThumb.left, width: hThumb.width }}
             onPointerDown={(e) => handleThumbPointerDown("x", e)}
             onPointerMove={handleThumbPointerMove}

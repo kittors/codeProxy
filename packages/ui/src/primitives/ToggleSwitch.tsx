@@ -12,6 +12,14 @@ export interface ToggleSwitchProps {
   "aria-invalid"?: boolean | "true" | "false";
 }
 
+/**
+ * 开关：40×24（按设计稿尺寸，随根字号缩放），开启时轨道填强调色。
+ *
+ * 滑块用回弹曲线移动；按住时滑块横向拉长一截、松手再弹回，模仿原生开关的按压手感。
+ * 开启态拉长时要同步少移一点（translate-x-3 而不是 4），右边缘才不会冲出轨道。
+ * 深色模式下强调色是浅色，开启态的滑块反过来用深色，保证对比。
+ * 键盘焦点用全局 :focus-visible 描边，不再单独配光晕。
+ */
 export function ToggleSwitch({
   checked,
   onCheckedChange,
@@ -39,20 +47,18 @@ export function ToggleSwitch({
       disabled={disabled}
       onClick={() => onCheckedChange(!checked)}
       className={[
-        "relative inline-flex h-7 w-12 shrink-0 items-center rounded-full border transition",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:focus-visible:ring-white/15",
-        disabled ? "opacity-60" : null,
-        checked
-          ? "border-slate-900 bg-slate-900 dark:border-white dark:bg-white"
-          : "border-slate-900/8 bg-slate-100 dark:border-white/8 dark:bg-neutral-900",
-      ]
-        .filter(Boolean)
-        .join(" ")}
+        "group relative inline-flex h-6 w-10 shrink-0 rounded-full transition-colors duration-250 ease-soft",
+        "disabled:cursor-not-allowed disabled:opacity-40",
+        checked ? "bg-accent" : "bg-line-strong dark:bg-white/15",
+      ].join(" ")}
     >
       <span
+        aria-hidden="true"
         className={[
-          "inline-block h-5 w-5 rounded-full bg-white shadow-sm transition",
-          checked ? "translate-x-6 dark:bg-neutral-950" : "translate-x-1 dark:bg-white",
+          "absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white",
+          "shadow-[0_2px_5px_rgb(0_0_0/0.16),0_0_0_0.5px_rgb(0_0_0/0.04)]",
+          "transition-[transform,width] duration-[380ms] ease-spring group-active:w-6",
+          checked ? "translate-x-4 group-active:translate-x-3 dark:bg-accent-fg" : "translate-x-0",
         ].join(" ")}
       />
     </button>
@@ -72,16 +78,11 @@ export function ToggleSwitch({
     >
       <div className="min-w-0">
         {label ? (
-          <label
-            htmlFor={resolvedId}
-            className="block text-sm font-semibold text-slate-900 dark:text-white"
-          >
+          <label htmlFor={resolvedId} className="block text-sm font-medium text-ink">
             {label}
           </label>
         ) : null}
-        {description ? (
-          <p className="mt-1 text-sm text-slate-600 dark:text-white/65">{description}</p>
-        ) : null}
+        {description ? <p className="mt-0.5 text-sm text-ink-2">{description}</p> : null}
       </div>
       {button}
     </div>

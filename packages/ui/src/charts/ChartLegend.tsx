@@ -27,10 +27,9 @@ export function ChartLegend({
           aria-pressed={item.enabled}
           onClick={() => item.onToggle(item.key)}
           className={[
-            "inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium transition cursor-pointer hover:bg-slate-100 dark:hover:bg-neutral-800/80",
-            item.enabled
-              ? "text-slate-700 dark:text-white/80"
-              : "text-slate-400 opacity-50 line-through dark:text-white/35",
+            "inline-flex cursor-pointer items-center gap-2 rounded-full px-3 py-1 text-xs font-medium transition-colors hover:bg-hover",
+            // 关闭的序列整体压淡（色点一起），并划线，表示「已从图上隐藏」。
+            item.enabled ? "text-ink-2" : "text-ink-3 line-through opacity-50",
           ].join(" ")}
         >
           <span

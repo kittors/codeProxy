@@ -618,7 +618,7 @@ function StructuredRequestCard({
       <div className="grid gap-0 divide-y divide-slate-200/90 dark:divide-neutral-800">
         {model ? (
           <div className="px-5 py-4 sm:px-6">
-            <p className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500 dark:text-white/40">
+            <p className="text-xs font-medium text-slate-500 dark:text-white/40">
               {modelLabel}
             </p>
             <p className="mt-2 break-words text-sm font-semibold text-slate-900 dark:text-white">
@@ -628,7 +628,7 @@ function StructuredRequestCard({
         ) : null}
         {prompt ? (
           <div className="px-5 py-4 sm:px-6">
-            <p className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500 dark:text-white/40">
+            <p className="text-xs font-medium text-slate-500 dark:text-white/40">
               {promptLabel}
             </p>
             <pre className="mt-2 whitespace-pre-wrap break-words font-sans text-sm leading-7 text-slate-900 dark:text-white">
@@ -638,7 +638,7 @@ function StructuredRequestCard({
         ) : null}
         {parameters.length > 0 ? (
           <div className="px-5 py-4 sm:px-6">
-            <p className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500 dark:text-white/40">
+            <p className="text-xs font-medium text-slate-500 dark:text-white/40">
               {parametersLabel}
             </p>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">

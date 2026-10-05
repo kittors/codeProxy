@@ -286,13 +286,24 @@ test("Request Logs: filter dropdown uses the shared floating surface", async ({
 
   const filterPanel = page.locator(".code-proxy-floating-surface").last();
   await expect(filterPanel).toBeVisible();
-  await expect(filterPanel).toHaveCSS("border-radius", "12px");
-  await expect(filterPanel).toHaveCSS("border-top-width", "1px");
+  // 浮层统一是 rounded-2xl（1rem，随根字号缩放），轮廓靠 shadow-pop 里那层 0.5px 描边阴影，
+  // 不再画 border。
+  const surface = await filterPanel.evaluate((el) => {
+    const style = getComputedStyle(el);
+    const rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize);
+    return {
+      radius: parseFloat(style.borderTopLeftRadius),
+      expectedRadius: rootFontSize,
+      borderWidth: style.borderTopWidth,
+    };
+  });
+  expect(surface.radius).toBeCloseTo(surface.expectedRadius, 1);
+  expect(surface.borderWidth).toBe("0px");
   await expect
     .poll(async () =>
       filterPanel.evaluate((el) => getComputedStyle(el).boxShadow),
     )
-    .not.toBe("none");
+    .toMatch(/0px 0px 0px 0\.5px/);
 });
 
 test("Request Logs: centers every header except ID over its column content", async ({

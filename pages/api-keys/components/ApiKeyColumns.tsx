@@ -30,6 +30,7 @@ import {
   OverflowTooltip,
   TABLE_ROW_ACTIONS_COLUMN,
   TableRowActions,
+  TooltipChip,
 } from "@code-proxy/ui";
 import type { DataTableColumn } from "@code-proxy/ui";
 
@@ -59,24 +60,24 @@ type PermissionSummaryTone = "cyan" | "indigo" | "violet";
 const permissionSummaryToneClasses: Record<PermissionSummaryTone, string> = {
   cyan: "border-cyan-100 bg-cyan-50/65 text-cyan-700 dark:border-cyan-500/20 dark:bg-cyan-500/10 dark:text-cyan-200",
   indigo:
-    "border-indigo-100 bg-indigo-50/65 text-indigo-700 dark:border-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-200",
+    "border-line-strong bg-subtle text-ink",
   violet:
-    "border-violet-100 bg-violet-50/65 text-violet-700 dark:border-violet-500/20 dark:bg-violet-500/10 dark:text-violet-200",
+    "border-line-strong bg-subtle text-ink",
 };
 
 const permissionCountToneClasses: Record<PermissionSummaryTone, string> = {
   cyan: "bg-cyan-100 text-cyan-700 dark:bg-cyan-500/20 dark:text-cyan-200",
-  indigo: "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-200",
-  violet: "bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-200",
+  indigo: "bg-selected text-ink",
+  violet: "bg-selected text-ink",
 };
 
 const stickySelectHeaderClass = "md:sticky md:z-40 md:bg-slate-100 md:dark:bg-neutral-800";
-const stickySelectCellClass = "md:sticky md:z-30 md:bg-white md:dark:bg-neutral-950";
+const stickySelectCellClass = "md:sticky md:z-30 md:bg-surface";
 const stickyNameHeaderClass = "md:sticky md:z-40 md:bg-slate-100 md:dark:bg-neutral-800";
-const stickyNameCellClass = "font-medium md:sticky md:z-30 md:bg-white md:dark:bg-neutral-950";
+const stickyNameCellClass = "font-medium md:sticky md:z-30 md:bg-surface";
 const stickyActionsHeaderClass =
   "text-center md:sticky md:z-40 md:bg-slate-100 md:dark:bg-neutral-800";
-const stickyActionsCellClass = "md:sticky md:z-30 md:bg-white md:dark:bg-neutral-950";
+const stickyActionsCellClass = "md:sticky md:z-30 md:bg-surface";
 
 function ApiKeyBadge({ value }: { value: string }) {
   return (
@@ -411,13 +412,10 @@ export const createApiKeyColumns = ({
             tooltipContent={
               <div className="flex max-w-xs flex-wrap gap-1.5">
                 {row["allowed-models"].map((model) => (
-                  <span
-                    key={model}
-                    className="inline-flex items-center gap-1 rounded-md border border-slate-900/8 bg-slate-50 px-2 py-0.5 font-mono text-xs text-slate-700 dark:border-neutral-700/40 dark:bg-neutral-800/60 dark:text-white/80"
-                  >
+                  <TooltipChip key={model} mono>
                     <VendorIcon modelId={model} size={12} />
                     {model}
-                  </span>
+                  </TooltipChip>
                 ))}
               </div>
             }
@@ -442,12 +440,9 @@ export const createApiKeyColumns = ({
             tooltipContent={
               <div className="flex max-w-xs flex-wrap gap-1.5">
                 {row["allowed-channel-groups"].map((group) => (
-                  <span
-                    key={group}
-                    className="inline-flex items-center rounded-md border border-slate-900/8 bg-slate-50 px-2 py-0.5 font-mono text-xs text-slate-700 dark:border-neutral-700/40 dark:bg-neutral-800/60 dark:text-white/80"
-                  >
+                  <TooltipChip key={group} mono>
                     {group}
-                  </span>
+                  </TooltipChip>
                 ))}
               </div>
             }
@@ -472,12 +467,9 @@ export const createApiKeyColumns = ({
             tooltipContent={
               <div className="flex max-w-xs flex-wrap gap-1.5">
                 {row["allowed-channels"].map((channel) => (
-                  <span
-                    key={channel}
-                    className="inline-flex items-center rounded-md border border-slate-900/8 bg-slate-50 px-2 py-0.5 font-mono text-xs text-slate-700 dark:border-neutral-700/40 dark:bg-neutral-800/60 dark:text-white/80"
-                  >
+                  <TooltipChip key={channel} mono>
                     {channel}
-                  </span>
+                  </TooltipChip>
                 ))}
               </div>
             }
@@ -539,7 +531,7 @@ export const createApiKeyColumns = ({
                 icon: <BarChart3 size={15} />,
                 visible: !accountScoped,
                 className:
-                  "text-slate-500 hover:bg-slate-100 hover:text-indigo-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-indigo-400",
+                  "text-slate-500 hover:bg-slate-100 hover:text-ink dark:text-white/50 dark:hover:bg-neutral-800",
                 onClick: () => onViewUsage(row),
               },
               {
@@ -547,7 +539,7 @@ export const createApiKeyColumns = ({
                 label: copyKeyLabel,
                 icon: <Copy size={15} />,
                 className:
-                  "text-slate-500 hover:bg-slate-100 hover:text-indigo-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-indigo-400",
+                  "text-slate-500 hover:bg-slate-100 hover:text-ink dark:text-white/50 dark:hover:bg-neutral-800",
                 onClick: () => onCopy(row.key),
               },
               {

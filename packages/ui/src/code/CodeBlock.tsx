@@ -29,7 +29,8 @@ export function CodeBlock({
   return (
     <div
       className={[
-        "overflow-hidden rounded-2xl border border-slate-900/10 bg-neutral-950 dark:border-white/10",
+        // 代码块在浅色和深色模式里都是深底：语法高亮只调了一套深色配色。
+        "overflow-hidden rounded-2xl border border-black/10 bg-[#171717] dark:border-white/10",
         className,
       ]
         .filter(Boolean)
@@ -37,7 +38,7 @@ export function CodeBlock({
     >
       {label || action ? (
         <div className="flex items-center justify-between gap-3 border-b border-white/8 px-4 py-2">
-          <span className="font-mono text-2xs uppercase tracking-[0.18em] text-slate-400">
+          <span className="font-mono text-2xs uppercase tracking-wider text-white/45">
             {label}
           </span>
           {action}

@@ -451,10 +451,11 @@ describe("ModelPlazaPage", () => {
     expect(sticky.className).not.toMatch(/backdrop-blur/);
     expect(sticky.className).not.toMatch(/bg-\[var\(--pl-bg\)\]/);
     expect(sticky.className).not.toMatch(/bg-white/);
-    // TabsList keeps its default gray pill track
+    // TabsList keeps its default gray pill track — an opaque token, because the sticky
+    // bar has no backdrop of its own and a translucent track would show rows scrolling under it.
     const tabList = screen.getByRole("tablist", { name: /filter by vendor/i });
     expect(tabList.className).not.toMatch(/!bg-transparent/);
-    expect(tabList.className).toMatch(/bg-\[#EBEBEC\]/);
+    expect(tabList.className).toMatch(/(?:^|\s)bg-track(?:\s|$)/);
     // overflow-x-hidden on an ancestor computes overflow-y as auto and breaks sticky
     expect(container.firstElementChild?.className ?? "").not.toMatch(/overflow-x-hidden/);
   });

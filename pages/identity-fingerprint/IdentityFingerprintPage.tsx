@@ -1965,7 +1965,7 @@ function RuntimeStatePanel({
 
       {effective.length > 0 ? (
         <div className="space-y-3">
-          <h4 className="text-xs font-semibold uppercase text-slate-500 dark:text-white/45">
+          <h4 className="text-xs font-medium text-slate-500 dark:text-white/45">
             {t("identity_fingerprint.effective_title")}
           </h4>
           {effective.map((record, index) => (
@@ -2005,7 +2005,7 @@ function RuntimeStatePanel({
 
       {learned.length > 0 ? (
         <div className="space-y-3">
-          <h4 className="text-xs font-semibold uppercase text-slate-500 dark:text-white/45">
+          <h4 className="text-xs font-medium text-slate-500 dark:text-white/45">
             {t("identity_fingerprint.learned_records_title")}
           </h4>
           {learned.map((record) => (

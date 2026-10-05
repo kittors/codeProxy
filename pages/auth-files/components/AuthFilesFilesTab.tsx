@@ -97,7 +97,7 @@ import {
 } from "../helpers/authFilesTabUtils";
 
 const FILTER_LABEL_CLASS =
-  "truncate text-xs font-semibold uppercase tracking-[0.02em] text-slate-600 dark:text-white/65";
+  "truncate text-xs font-medium text-slate-600 dark:text-white/65";
 const FILTER_FIELD_CLASS = "min-w-0 space-y-2";
 // Column count has to track the number of fields actually rendered. A fixed
 // five-column track left an empty trailing cell whenever the tag filter was
@@ -2067,13 +2067,13 @@ export function AuthFilesFilesTab({
           data-testid="auth-files-upload-progress"
           aria-live="polite"
         >
-          <div className="overflow-hidden rounded-3xl border border-slate-900/8 bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.95),_rgba(241,245,249,0.95))] p-4 shadow-[0_20px_50px_rgb(15_23_42_/_0.08)] dark:border-white/10 dark:bg-[radial-gradient(circle_at_top_left,_rgba(39,39,42,0.98),_rgba(9,9,11,0.98))] dark:shadow-[0_24px_60px_rgb(0_0_0_/_0.28)]">
+          <div className="overflow-hidden rounded-3xl bg-subtle p-4">
             <div className="flex items-start gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-lg shadow-slate-900/15 dark:bg-white dark:text-neutral-950 dark:shadow-black/25">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-accent text-accent-fg">
                 <Loader2 size={18} className="animate-spin" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-white/35">
+                <p className="text-xs font-medium text-slate-400 dark:text-white/35">
                   {uploadProgress.phase === "refreshing"
                     ? t("auth_files.upload_progress_refreshing_short")
                     : t("auth_files.upload")}
@@ -2119,7 +2119,7 @@ export function AuthFilesFilesTab({
             ].map((label) => (
               <div
                 key={label}
-                className="rounded-2xl border border-slate-900/8 bg-slate-50/90 px-3 py-2 text-xs font-semibold text-slate-600 dark:border-white/10 dark:bg-white/[0.04] dark:text-white/65"
+                className="rounded-2xl border border-line px-3 py-2 text-xs font-semibold text-ink-2"
               >
                 {label}
               </div>
@@ -2127,8 +2127,8 @@ export function AuthFilesFilesTab({
           </div>
 
           {uploadProgress.activeFileNames.length > 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-900/8 bg-white/80 px-3 py-3 dark:border-white/10 dark:bg-white/[0.02]">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400 dark:text-white/35">
+            <div className="bg-subtle rounded-2xl px-3 py-3">
+              <p className="text-xs font-medium text-slate-400 dark:text-white/35">
                 {t("auth_files.upload")}
               </p>
               <div className="mt-2 flex flex-wrap gap-2">
@@ -2294,7 +2294,7 @@ export function AuthFilesFilesTab({
 
             <div className="flex min-w-0 items-center rounded-2xl border border-slate-900/8 bg-slate-50/70 px-4 py-3 dark:border-white/8 dark:bg-white/[0.04]">
               <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase text-slate-400 dark:text-white/35">
+                <p className="text-xs font-medium text-slate-400 dark:text-white/35">
                   {t("auth_files.type_filter")}
                 </p>
                 <p className="mt-1 truncate font-mono text-sm font-semibold text-slate-900 dark:text-white">

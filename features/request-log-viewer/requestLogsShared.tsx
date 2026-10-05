@@ -455,7 +455,9 @@ export function buildRequestLogsColumns(
             {t("request_logs.status_failed")}
           </button>
         ) : (
-          <span className="inline-flex min-w-[52px] justify-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300">
+          // 成功是常态：一个绿色小圆点加中性文字；失败才是醒目的红色胶囊（可点开看错误）。
+          <span className="inline-flex min-w-[52px] items-center justify-center gap-1.5 px-2.5 py-1 text-xs font-medium text-ink-2">
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" aria-hidden="true" />
             {t("request_logs.status_success")}
           </span>
         ),
@@ -498,7 +500,7 @@ export function buildRequestLogsColumns(
                 <RequestLogMetricChip
                   ariaLabel={`${t("request_logs.col_first_token")}: ${row.firstTokenText}`}
                   value={row.firstTokenText}
-                  className="border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/20 dark:bg-sky-500/10 dark:text-sky-200"
+                  className="border-line bg-subtle text-ink-2"
                 />
               ) : null}
               <RequestLogModeChip
@@ -526,12 +528,12 @@ export function buildRequestLogsColumns(
           <button
             type="button"
             onClick={() => onContentClick(Number(row.id), "input", row.displayModel || row.model)}
-            className="inline-block ml-auto cursor-pointer rounded px-1.5 py-0.5 transition hover:bg-sky-50 dark:hover:bg-sky-950/30"
+            className="ml-auto inline-block cursor-pointer rounded-md px-1.5 py-0.5 transition-colors hover:bg-hover"
             title={t("request_logs.view_input")}
           >
             <RequestLogUsageMetricValue
               value={row.inputTokens}
-              className="text-sky-600 dark:text-sky-400 underline decoration-sky-300/50 dark:decoration-sky-500/40 underline-offset-2"
+              className="text-ink underline decoration-ink-4 underline-offset-2"
             />
           </button>
         ) : (
@@ -549,8 +551,8 @@ export function buildRequestLogsColumns(
           value={row.cachedTokens}
           className={
             row.cachedTokens > 0
-              ? "font-semibold text-amber-600 dark:text-amber-400"
-              : "text-slate-400 dark:text-white/30"
+              ? "font-medium text-ink"
+              : "text-ink-4"
           }
         />
       ),
@@ -567,12 +569,12 @@ export function buildRequestLogsColumns(
           <button
             type="button"
             onClick={() => onContentClick(Number(row.id), "output", row.displayModel || row.model)}
-            className="inline-block ml-auto cursor-pointer rounded px-1.5 py-0.5 transition hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+            className="ml-auto inline-block cursor-pointer rounded-md px-1.5 py-0.5 transition-colors hover:bg-hover"
             title={t("request_logs.view_output")}
           >
             <RequestLogUsageMetricValue
               value={row.outputTokens}
-              className="text-emerald-600 dark:text-emerald-400 underline decoration-emerald-300/50 dark:decoration-emerald-500/40 underline-offset-2"
+              className="text-ink underline decoration-ink-4 underline-offset-2"
             />
           </button>
         ) : (
@@ -593,7 +595,7 @@ export function buildRequestLogsColumns(
       width: "w-24",
       headerClassName: CENTERED_REQUEST_LOG_HEADER_CLASS,
       cellClassName:
-        "text-center font-mono text-xs tabular-nums text-emerald-700 dark:text-emerald-400",
+        "text-center font-mono text-xs tabular-nums text-ink",
       render: (row) => <RequestLogUsageMetricValue value={row.cost} variant="currency" />,
     },
     {
@@ -626,7 +628,7 @@ export function buildRequestLogsColumns(
           return (
             <HoverTooltip content={displayName} className="block min-w-0">
               <span
-                className={`block min-w-0 truncate text-xs font-medium ${displayName !== "--" ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400 dark:text-white/30"}`}
+                className={`block min-w-0 truncate text-xs font-medium ${displayName !== "--" ? "text-ink" : "text-ink-4"}`}
               >
                 {displayName}
               </span>
@@ -653,7 +655,7 @@ export function buildRequestLogsColumns(
           >
             <span className="block min-w-0">
               <span
-                className={`block truncate text-xs font-medium ${userName !== "--" ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400 dark:text-white/30"}`}
+                className={`block truncate text-xs font-medium ${userName !== "--" ? "text-ink" : "text-ink-4"}`}
               >
                 {userName}
               </span>

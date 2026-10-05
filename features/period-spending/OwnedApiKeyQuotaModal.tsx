@@ -84,7 +84,7 @@ export function OwnedApiKeyQuotaModal({
           />
         </label>
 
-        <section className="rounded-2xl border border-indigo-200/80 bg-indigo-50/45 p-4 dark:border-indigo-500/20 dark:bg-indigo-500/5">
+        <section className="rounded-2xl border border-line-strong bg-subtle p-4">
           <div className="mb-3">
             <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
               {t("api_keys_page.key_quota_title")}

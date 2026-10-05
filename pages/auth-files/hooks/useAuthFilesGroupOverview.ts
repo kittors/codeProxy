@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { usageApi } from "@code-proxy/api-client";
+import { chartAxisStyle, chartPalette, chartTooltipStyle, useTheme } from "@code-proxy/ui";
 import type { AuthFileItem } from "@code-proxy/api-client";
 import {
   buildLast7DayAxis,
@@ -59,6 +60,7 @@ export function useAuthFilesGroupOverview({
   resolveProviderLabel,
 }: UseAuthFilesGroupOverviewArgs) {
   const { t } = useTranslation();
+  const isDark = useTheme().state.mode === "dark";
   const [groupOverviewOpen, setGroupOverviewOpen] = useState(false);
   const [groupOverviewTab, setGroupOverviewTab] = useState("all");
   const [groupOverviewLoading, setGroupOverviewLoading] = useState(false);
@@ -238,6 +240,8 @@ export function useAuthFilesGroupOverview({
       data: groupTrendPoints.map((point) => point.weeklyPercents[series.id] ?? null),
     }));
 
+    const palette = chartPalette(isDark);
+    const axis = chartAxisStyle(isDark);
     return {
       backgroundColor: "transparent",
       animationDuration: 420,
@@ -250,15 +254,13 @@ export function useAuthFilesGroupOverview({
         containLabel: false,
       },
       tooltip: {
+        ...chartTooltipStyle(isDark),
         trigger: "axis",
-        axisPointer: { type: "line" },
         renderMode: "html",
         appendToBody: true,
         confine: true,
-        borderWidth: 0,
-        backgroundColor: "rgba(15, 23, 42, 0.92)",
-        textStyle: { color: "#fff" },
-        extraCssText: "z-index: 10000;",
+        // 弹窗里的图表，提示框挂到 body 上，层级要压过弹窗。
+        extraCssText: `${chartTooltipStyle(isDark).extraCssText} z-index: 10000;`,
         formatter: (params: Array<{ seriesName?: string; value?: unknown; axisValueLabel?: string; marker?: string }>) => {
           const title = params[0]?.axisValueLabel ?? "";
           const rows = params.map((item) => {
@@ -273,32 +275,27 @@ export function useAuthFilesGroupOverview({
         top: 0,
         left: 0,
         type: "scroll",
-        textStyle: { color: "#64748b", fontSize: 12 },
+        textStyle: { color: palette.ink2, fontSize: 12 },
       },
       xAxis: {
         type: "category",
         data: labels,
-        axisTick: { show: false },
-        axisLabel: {
-          interval: 0,
-          color: "#64748b",
-          fontSize: 12,
-        },
-        axisLine: { lineStyle: { color: "rgba(148,163,184,0.45)" } },
+        axisTick: axis.axisTick,
+        axisLabel: { ...axis.axisLabel, interval: 0 },
+        axisLine: axis.axisLine,
       },
       yAxis: [
         {
           type: "value",
-          axisLabel: { color: "#64748b", fontSize: 12, margin: 10 },
-          splitLine: { lineStyle: { color: "rgba(148,163,184,0.18)" } },
+          axisLabel: { ...axis.axisLabel, margin: 10 },
+          splitLine: axis.splitLine,
         },
         {
           type: "value",
           min: 0,
           max: 100,
           axisLabel: {
-            color: "#64748b",
-            fontSize: 12,
+            ...axis.axisLabel,
             margin: 10,
             formatter: (value: number) => `${Math.round(value)}%`,
           },
@@ -310,13 +307,14 @@ export function useAuthFilesGroupOverview({
           name: t("auth_files.group_overview_total_calls_label"),
           type: "bar",
           barMaxWidth: 26,
-          itemStyle: { color: "rgba(59,130,246,0.88)", borderRadius: [4, 4, 0, 0] },
+          itemStyle: { color: palette.bar, borderRadius: [4, 4, 0, 0] },
+          emphasis: { itemStyle: { color: palette.barHover } },
           data: calls,
         },
         ...weeklySeries,
       ],
     };
-  }, [groupTrendPoints, groupTrendSeries, t]);
+  }, [groupTrendPoints, groupTrendSeries, isDark, t]);
 
   const refreshGroupOverview = useCallback(
     async (targetGroup = groupOverviewTab) => {

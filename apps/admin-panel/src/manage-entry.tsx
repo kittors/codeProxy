@@ -5,7 +5,6 @@ import { AppRouter } from "@/app/AppRouter";
 import { dismissAppLoader } from "@/app/bootstrap/dismissAppLoader";
 import { installChunkLoadRecoveryHandlers } from "@pages/chunkLoadRecovery";
 import "@/styles/index.css";
-import "goey-toast/styles.css";
 import "@code-proxy/i18n";
 
 // Catch unhandled dynamic-import failures after deploy (stale hashed chunks).

@@ -29,8 +29,8 @@ import { Select } from "@code-proxy/ui";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { ToggleSwitch } from "@code-proxy/ui";
 import { CodexImageGenerationBridgePanel } from "./CodexImageGenerationBridgePanel";
-import { formatTrendChartTooltip } from "./trendTooltipFormatter";
-import { EChart } from "@code-proxy/ui";
+import { buildDetailTrendChartOption } from "./detailTrendChartOption";
+import { EChart, useTheme } from "@code-proxy/ui";
 import { ProxyPoolSelect } from "@features/proxy-pool";
 import { useProxyPoolChecks } from "@features/proxy-pool";
 import { ModerationProfileSelect } from "@features/content-moderation";
@@ -232,6 +232,7 @@ export function AuthFileDetailModal({
   saveXAIEndpoint,
 }: AuthFileDetailModalProps) {
   const { t, i18n } = useTranslation();
+  const { state: { mode: themeMode } } = useTheme();
   const moderationPerms = useModerationPermissions();
   const isIdentityDesktopLayout = useIdentityDesktopLayout();
   const [viewedIdentityProfileKey, setViewedIdentityProfileKey] = useState("");
@@ -407,8 +408,6 @@ export function AuthFileDetailModal({
     });
 
     const sortedKeys = Array.from(xKeys).sort();
-    const formatAxisLabel = (key: string) =>
-      detailTrendWindow === "5h" ? key.slice(5) : key.slice(5);
     const compactQuotaLegendLabel = (label: string) => {
       const translated = translateQuotaLabel(label).trim();
       if (translated.length <= 14) return translated;
@@ -417,126 +416,28 @@ export function AuthFileDetailModal({
       if (suffix) return suffix.length > 14 ? `${suffix.slice(0, 14)}...` : suffix;
       return `${translated.slice(0, 14)}...`;
     };
-    const palette = ["#2563eb", "#db2777", "#16a34a", "#9333ea", "#0f766e", "#dc2626"];
 
-    return {
-      animation: shouldAnimateTrend,
-      animationDuration: shouldAnimateTrend ? TREND_CHART_ANIMATION_MS : 0,
-      animationDurationUpdate: 0,
-      animationEasing: "cubicOut" as const,
-      grid: { left: 46, right: 108, top: 74, bottom: 38 },
-      tooltip: {
-        trigger: "axis",
-        confine: true,
-        formatter: (params: unknown) => formatTrendChartTooltip(params, formatCurrency),
-      },
-      legend: {
-        top: 8,
-        left: 8,
-        right: 8,
-        type: "scroll",
-        itemGap: 14,
-        pageButtonPosition: "end",
-        pageIconColor: "#64748b",
-        pageIconInactiveColor: "#cbd5e1",
-        pageTextStyle: { color: "#64748b" },
-        textStyle: {
-          color: "#64748b",
-          width: 154,
-          overflow: "truncate",
-        },
-      },
-      xAxis: {
-        type: "category",
-        data: sortedKeys.map(formatAxisLabel),
-        axisLabel: { color: "#64748b", hideOverlap: true },
-        axisLine: { lineStyle: { color: "#cbd5e1" } },
-      },
-      yAxis: [
-        {
-          type: "value",
-          min: 0,
-          axisLabel: { color: "#64748b", hideOverlap: true },
-          splitLine: { lineStyle: { color: "#e2e8f0" } },
-        },
-        {
-          type: "value",
-          min: 0,
-          max: 100,
-          offset: 46,
-          axisLabel: {
-            color: "#64748b",
-            formatter: "{value}%",
-            hideOverlap: true,
-          },
-          splitLine: { show: false },
-        },
-        {
-          type: "value",
-          min: 0,
-          axisLabel: {
-            color: "#64748b",
-            hideOverlap: true,
-            formatter: (value: number) => {
-              if (!Number.isFinite(value)) return "$0";
-              if (Math.abs(value) < 1) return `$${value.toFixed(3)}`;
-              return `$${value.toFixed(1)}`;
-            },
-          },
-          splitLine: { show: false },
-        },
-      ],
-      series: [
-        {
-          name: t("auth_files.trend_requests"),
-          type: "bar",
-          yAxisIndex: 0,
-          animation: shouldAnimateTrend,
-          animationDuration: shouldAnimateTrend ? TREND_CHART_ANIMATION_MS : 0,
-          animationDurationUpdate: 0,
-          barMaxWidth: 24,
-          itemStyle: { color: "#2563eb", borderRadius: [4, 4, 0, 0] },
-          data: sortedKeys.map((key) => requestByKey.get(key) ?? 0),
-        },
-        {
-          name: t("auth_files.trend_cost"),
-          type: "line",
-          yAxisIndex: 2,
-          animation: shouldAnimateTrend,
-          animationDuration: shouldAnimateTrend ? TREND_CHART_ANIMATION_MS : 0,
-          animationDurationUpdate: 0,
-          connectNulls: true,
-          showSymbol: false,
-          smooth: true,
-          lineStyle: { width: 2.2, color: "#db2777" },
-          itemStyle: { color: "#db2777" },
-          areaStyle: { color: "rgba(219, 39, 119, 0.08)" },
-          data: sortedKeys.map((key) => costByKey.get(key) ?? 0),
-        },
-        ...quotaBySeries.map(({ series, values }, index) => ({
-          name: `${compactQuotaLegendLabel(series.quota_label)} ${t(
-            "auth_files.trend_quota_used_suffix",
-          )}`,
-          type: "line",
-          yAxisIndex: 1,
-          animation: shouldAnimateTrend,
-          animationDuration: shouldAnimateTrend ? TREND_CHART_ANIMATION_MS : 0,
-          animationDurationUpdate: 0,
-          connectNulls: true,
-          showSymbol: false,
-          smooth: true,
-          lineStyle: { width: 2, color: palette[(index + 2) % palette.length] },
-          itemStyle: { color: palette[(index + 2) % palette.length] },
-          data: sortedKeys.map((key) => values.get(key) ?? null),
-        })),
-      ],
-    };
+    return buildDetailTrendChartOption({
+      isDark: themeMode === "dark",
+      categories: sortedKeys.map((key) => key.slice(5)),
+      requests: sortedKeys.map((key) => requestByKey.get(key) ?? 0),
+      cost: sortedKeys.map((key) => costByKey.get(key) ?? 0),
+      quotaSeries: quotaBySeries.map(({ series, values }) => ({
+        name: `${compactQuotaLegendLabel(series.quota_label)} ${t("auth_files.trend_quota_used_suffix")}`,
+        values: sortedKeys.map((key) => values.get(key) ?? null),
+      })),
+      labels: { requests: t("auth_files.trend_requests"), cost: t("auth_files.trend_cost") },
+      animate: shouldAnimateTrend,
+      animationMs: TREND_CHART_ANIMATION_MS,
+      formatCurrency,
+    });
   }, [
     activeQuotaSeries,
     detailTrend,
     detailTrendWindow,
     shouldAnimateTrend,
     t,
+    themeMode,
     translateQuotaLabel,
   ]);
 
@@ -609,7 +510,7 @@ export function AuthFileDetailModal({
 
   const renderHealthValue = (label: string, value: string) => (
     <div className="min-w-0">
-      <p className="text-xs font-semibold uppercase tracking-[0.02em] text-slate-500 dark:text-white/45">
+      <p className="text-xs font-medium text-slate-500 dark:text-white/45">
         {label}
       </p>
       <p className="mt-1 min-w-0 break-words font-mono text-xs text-slate-900 dark:text-white/85">
@@ -670,7 +571,7 @@ export function AuthFileDetailModal({
 
   const renderIdentitySummaryItem = (label: string, value: string) => (
     <div className="min-w-0">
-      <dt className="text-xs font-semibold uppercase tracking-[0.02em] text-slate-500 dark:text-white/45">
+      <dt className="text-xs font-medium text-slate-500 dark:text-white/45">
         {label}
       </dt>
       <dd className="mt-1 min-w-0 break-words text-sm font-semibold text-slate-950 dark:text-white">
@@ -950,7 +851,7 @@ export function AuthFileDetailModal({
                       : t("auth_files.identity_set_outbound")}
                   </Button>
                   <Button
-                    variant="danger"
+                    variant="secondary-danger"
                     size="sm"
                     disabled={identityFingerprintSaving || !summary.profile_key}
                     onClick={() => void deleteViewedProfile()}
@@ -1577,7 +1478,7 @@ export function AuthFileDetailModal({
                         </div>
 
                         <div className="space-y-2">
-                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-white/55">
+                          <p className="text-xs font-medium text-slate-500 dark:text-white/55">
                             {t("auth_files.xai_endpoint_mode")}
                           </p>
                           <Select

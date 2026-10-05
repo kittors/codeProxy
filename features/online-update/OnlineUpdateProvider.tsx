@@ -7,7 +7,7 @@ import {
   type PropsWithChildren,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { buttonClassName, useToast } from "@code-proxy/ui";
+import { useToast } from "@code-proxy/ui";
 import { UpdateModal } from "./ui/UpdateModal";
 import { useOnlineUpdate, type OnlineUpdateState } from "./useOnlineUpdate";
 import {
@@ -73,16 +73,6 @@ export function OnlineUpdateProvider({
             message: t("auto_update.toast_message", { version: updateDisplayVersion(info) }),
             duration: 10000,
             action: { label: t("common.confirm"), onClick: openModal },
-            classNames: {
-              actionWrapper:
-                "clirelay-update-toast-action-wrapper flex justify-end overflow-visible",
-              actionButton: buttonClassName({
-                size: "xs",
-                variant: "default",
-                className:
-                  "clirelay-update-toast-action !inline-flex !w-auto !min-w-0 !self-end !rounded-full !px-2.5 !text-xs",
-              }),
-            },
           });
         })
         .catch(() => {

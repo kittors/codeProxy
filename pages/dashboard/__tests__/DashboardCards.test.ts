@@ -82,9 +82,12 @@ describe("dashboard card composition", () => {
     const chartSource = readModule("pages/dashboard/ThroughputTrendChart.tsx");
     const systemMonitorSource = readModule("pages/dashboard/SystemMonitorSection.tsx");
 
-    expect(chartSource).toContain("dark:bg-neutral-900/70");
-    expect(chartSource).toContain("dark:text-slate-400");
-    expect(systemMonitorSource).toContain("dark:bg-neutral-900/70");
+    // Summary tiles use the theme-aware tokens (bg-subtle / text-ink-*), which switch
+    // with .dark on their own — no light-only fills left behind.
+    expect(chartSource).toContain("bg-subtle");
+    expect(chartSource).toContain("text-ink-3");
+    expect(chartSource).not.toMatch(/bg-slate-50(?![\w/-])/);
+    expect(systemMonitorSource).toContain("bg-subtle");
     expect(systemMonitorSource).toContain("dark:text-white/80");
   });
 });

@@ -594,7 +594,7 @@ export function OAuthLoginDialog({
         >
           {provider === "xai" ? (
             <div className={[surface({ tone: "raised", radius: "2xl" }), "mb-3 grid gap-2 p-4"].join(" ")}>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-white/55">
+              <p className="text-xs font-medium text-slate-500 dark:text-white/55">
                 {t("oauth.xai_endpoint_mode")}
               </p>
               <Select
@@ -639,7 +639,7 @@ export function OAuthLoginDialog({
           <div className="grid min-w-0 gap-3">
             <div className={[surface({ tone: "raised", radius: "2xl" }), "grid min-w-0 gap-2 p-4"].join(" ")}>
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-white/55">
+                <p className="text-xs font-medium text-slate-500 dark:text-white/55">
                   {t("oauth.auth_link")}
                 </p>
                 <div className="flex items-center gap-2">
@@ -668,7 +668,7 @@ export function OAuthLoginDialog({
 
             <div className={[surface({ tone: "raised", radius: "2xl" }), "flex items-center justify-between px-4 py-3 text-sm"].join(" ")}>
               <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-white/55">
+                <p className="text-xs font-medium text-slate-500 dark:text-white/55">
                   {t("oauth.status")}
                 </p>
                 <p className="mt-1 truncate text-sm font-semibold text-slate-900 dark:text-white">
@@ -693,7 +693,7 @@ export function OAuthLoginDialog({
 
             <div className={[surface({ tone: "raised", radius: "2xl" }), "grid gap-2 p-4"].join(" ")}>
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-white/55">
+                <p className="text-xs font-medium text-slate-500 dark:text-white/55">
                   {t(manualCode ? "oauth.callback_code" : "oauth.callback")}
                 </p>
                 <Button
@@ -871,7 +871,7 @@ export function OAuthLoginDialog({
                   placeholder={t("oauth.location_placeholder")}
                 />
                 <div className={[surface({ tone: "raised", radius: "2xl" }), "p-4 text-sm"].join(" ")}>
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-white/55">
+                  <p className="text-xs font-medium text-slate-500 dark:text-white/55">
                     {t("oauth.recent_import")}
                   </p>
                   <p className="mt-2 font-mono text-xs text-slate-900 dark:text-white">

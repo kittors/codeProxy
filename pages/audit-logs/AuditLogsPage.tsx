@@ -16,6 +16,7 @@ import {
   TABLE_ROW_ACTIONS_COLUMN,
   useToast,
   type DataTableColumn,
+  surface,
 } from "@code-proxy/ui";
 import { PermissionGate } from "@app/providers/PermissionGate";
 
@@ -282,8 +283,7 @@ export function AuditLogsPage() {
             <PermissionGate permission="tenant.audit.delete">
               <Button
                 size="xs"
-                variant="ghost"
-                className="text-rose-600 hover:text-rose-700 dark:text-rose-300 dark:hover:text-rose-200"
+                variant="ghost-danger"
                 disabled={busy}
                 tooltip={t("identity_admin.delete")}
                 onClick={() => setDeleteTarget(item)}
@@ -303,7 +303,7 @@ export function AuditLogsPage() {
 
   return (
     <section className="flex flex-1 flex-col">
-      <div className="flex min-h-0 flex-1 flex-col rounded-2xl border border-black/[0.06] bg-white shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] dark:border-white/[0.06] dark:bg-neutral-950/70 dark:shadow-[0_1px_2px_rgb(0_0_0_/_0.22)]">
+      <div className={`flex min-h-0 flex-1 flex-col ${surface({ radius: "3xl" })}`}>
         <div className="flex flex-wrap items-start justify-between gap-3 px-5 pt-5 pb-3">
           <div className="min-w-0">
             <h2 className="text-base font-semibold text-slate-950 dark:text-white">
@@ -312,16 +312,16 @@ export function AuditLogsPage() {
             <p className="text-sm text-slate-500">{t("identity_admin.audit_logs_description")}</p>
           </div>
           <PermissionGate permission="tenant.audit.delete">
-            <button
-              type="button"
+            <Button
+              variant="secondary-danger"
+              size="md"
               onClick={() => setClearAllOpen(true)}
               disabled={busy || loading || totalCount === 0}
               aria-label={t("identity_admin.clear_audit_logs")}
-              title={t("identity_admin.clear_audit_logs")}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-rose-50 text-rose-600 transition hover:bg-rose-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-300/50 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-rose-500/15 dark:text-rose-300 dark:hover:bg-rose-500/25"
+              tooltip={t("identity_admin.clear_audit_logs")}
             >
               <Trash2 size={14} aria-hidden="true" />
-            </button>
+            </Button>
           </PermissionGate>
         </div>
         <div className="relative min-h-[360px] flex-1 overflow-hidden px-5">

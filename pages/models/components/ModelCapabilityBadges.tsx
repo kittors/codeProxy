@@ -18,7 +18,7 @@ const BADGE_CLASS: Record<ModelCapabilityKey, string> = {
   text: "bg-slate-100 text-slate-600 dark:bg-white/[0.08] dark:text-white/60",
   vision: "bg-sky-50 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300",
   image: "bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
-  video: "bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300",
+  video: "bg-hover text-ink",
   audio: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
 };
 

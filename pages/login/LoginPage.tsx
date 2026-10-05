@@ -1,7 +1,8 @@
-import { useCallback, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useMemo, useRef, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
-import { Eye, EyeOff, KeyRound, UserRound } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { ArrowBigUpDash, ArrowRight, ChevronDown, Eye, EyeOff, KeyRound, UserRound } from "lucide-react";
 import {
   detectApiBaseFromLocation,
   extractApiErrorCode,
@@ -10,26 +11,35 @@ import {
 import { useAuth } from "@app/providers/AuthProvider";
 import {
   Button,
+  Checkbox,
   PageBackground,
-  Reveal,
   TextInput,
   ThemeToggleButton,
+  useCapsLock,
+  useShake,
+  useStaggerVariants,
   useToast,
 } from "@code-proxy/ui";
-import {
-  BRAND_NAME_PREFIX,
-  BRAND_NAME_SUFFIX,
-  ClaudeLogo,
-  GeminiLogo,
-  LogoMark,
-  OpenAILogo,
-  VertexLogo,
-} from "@code-proxy/assets";
+import { BRAND_NAME_PREFIX, BRAND_NAME_SUFFIX, LogoMark } from "@code-proxy/assets";
+import { LoginNetwork } from "./LoginNetwork";
+import { RotatingModelName } from "./RotatingModelName";
 import { resolveLoginErrorMessage } from "./loginErrors";
 
 interface RedirectState {
   from?: { pathname?: string };
 }
+
+/** 字段标签：输入框聚焦时跟着变深，靠外层 label 上的 `group`。 */
+const FIELD_LABEL =
+  "block pl-1 text-xs font-medium text-ink-3 transition-colors duration-200 group-focus-within:text-ink";
+const FIELD_ICON = "text-ink-4 transition-colors duration-200 group-focus-within:text-ink";
+/** 行内提示（大写锁定）的展开收起。 */
+const HINT_MOTION = {
+  initial: { opacity: 0, height: 0 },
+  animate: { opacity: 1, height: "auto" },
+  exit: { opacity: 0, height: 0 },
+  transition: { duration: 0.2, ease: [0.2, 0.8, 0.2, 1] },
+} as const;
 
 export function LoginPage() {
   const { t } = useTranslation();
@@ -54,6 +64,13 @@ export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [loading, setLoading] = useState(false);
+  const usernameRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const capsLock = useCapsLock();
+  const { controls: shakeControls, shake } = useShake();
+  const page = useStaggerVariants({ stagger: 0.07 });
+  const form = useStaggerVariants({ stagger: 0.045, delay: 0.12 });
   const redirect = useMemo(
     () => (location.state as RedirectState | null)?.from?.pathname ?? "/dashboard",
     [location.state],
@@ -73,12 +90,17 @@ export function LoginPage() {
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
       const trimmedUsername = username.trim();
+      // 必填项没填：提示之外把焦点送回那个输入框，卡片晃一下把视线拉回来。
       if (!trimmedUsername) {
         notify({ type: "error", message: t("login.error_username_required") });
+        usernameRef.current?.focus();
+        shake();
         return;
       }
       if (!password) {
         notify({ type: "error", message: t("login.error_password_required") });
+        passwordRef.current?.focus();
+        shake();
         return;
       }
       setLoading(true);
@@ -107,11 +129,12 @@ export function LoginPage() {
             fallbackMessage: error instanceof Error ? error.message : "",
           }),
         });
+        shake();
       } finally {
         setLoading(false);
       }
     },
-    [apiBase, login, navigate, notify, password, redirect, rememberPassword, t, username],
+    [apiBase, login, navigate, notify, password, redirect, rememberPassword, shake, t, username],
   );
 
   if (isRestoring) return null;
@@ -124,128 +147,177 @@ export function LoginPage() {
   return (
     <PageBackground variant="login">
       <div className="absolute right-6 top-6 z-20">
-        <ThemeToggleButton className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-900/8 bg-white/70 text-slate-700 shadow-sm backdrop-blur transition hover:bg-white dark:border-white/8 dark:bg-neutral-950/60 dark:text-slate-200" />
+        <ThemeToggleButton className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-line-strong bg-surface text-ink-2 shadow-xs transition-colors hover:bg-hover hover:text-ink dark:shadow-none" />
       </div>
-      <div className="relative mx-auto flex min-h-screen w-full max-w-6xl items-center px-6 py-12">
-        <Reveal className="w-full">
-          <div className="grid w-full items-center gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14">
-            <aside className="space-y-10">
-              <div className="flex items-center gap-3">
-                <div className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-white/70 ring-1 ring-slate-200 backdrop-blur dark:bg-neutral-950/60 dark:ring-neutral-800">
-                  <LogoMark size={22} />
-                </div>
-                {/* 标记已经单独放在左侧的圆角框里，这里只取词标文本，避免同屏出现两个 logo。 */}
-                <div className="text-lg font-normal tracking-tight text-slate-900 dark:text-white">
-                  {BRAND_NAME_PREFIX}
-                  <span className="font-semibold">{BRAND_NAME_SUFFIX}</span>
-                </div>
+      {/* 卡片四周的中继网络：卡片就是网关，线路从两侧接进来。宽屏才出现。 */}
+      <LoginNetwork cardRef={cardRef} />
+      <motion.div
+        className="relative flex min-h-[100dvh] flex-col items-center justify-center px-6 py-16"
+        variants={page.container}
+        initial="hidden"
+        animate="show"
+      >
+        <motion.div variants={page.item} className="mb-9 flex flex-col items-center text-center">
+          <div className="flex items-center gap-2.5">
+            <LogoMark size={32} />
+            <span className="text-xl font-normal tracking-tight text-ink">
+              {BRAND_NAME_PREFIX}
+              <span className="font-semibold">{BRAND_NAME_SUFFIX}</span>
+            </span>
+          </div>
+          <h1 className="mt-7 text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
+            {t("login.hero_prefix")} <RotatingModelName />
+          </h1>
+          <p className="mt-3 max-w-md text-sm leading-6 text-ink-3">{t("login.hero_description")}</p>
+        </motion.div>
+        <motion.div ref={cardRef} variants={page.item} className="w-full max-w-[420px]">
+            <motion.section
+              animate={shakeControls}
+              className="rounded-3xl border border-line bg-surface p-7 shadow-lift sm:p-8"
+            >
+              <div className="mb-7">
+                <h2 className="text-2xl font-semibold tracking-tight text-ink">{t("login.sign_in")}</h2>
               </div>
-              <div className="space-y-6">
-                <h1 className="font-display text-5xl font-bold leading-[1.05] tracking-tight text-slate-900 sm:text-6xl dark:text-white">
-                  {t("login.hero_title_line1")}
-                  <br />
-                  {t("login.hero_title_line2")}
-                </h1>
-                <p className="max-w-xl text-sm leading-7 text-slate-600 dark:text-white/70">
-                  {t("login.hero_description")}
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-3 text-sm text-slate-700 dark:text-white/80">
-                {[OpenAILogo, GeminiLogo, ClaudeLogo, VertexLogo].map((Logo, index) => (
-                  <span
-                    key={index}
-                    className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-900/8 bg-white/60 dark:border-white/10 dark:bg-white/5"
-                  >
-                    <Logo size={22} />
-                  </span>
-                ))}
-              </div>
-            </aside>
-            <section className="rounded-3xl border border-white/70 bg-white/90 p-7 shadow-xl shadow-slate-300/25 backdrop-blur-xl sm:p-9 dark:border-white/10 dark:bg-neutral-950/85 dark:shadow-black/25">
-              <div className="mb-8">
-                <h2 className="text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">
-                  {t("login.sign_in")}
-                </h2>
-              </div>
-              <form className="space-y-5" onSubmit={handleSubmit}>
-                {accessFailureMessage ? (
-                  <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
-                    {accessFailureMessage}
-                  </div>
-                ) : null}
-                <label className="block space-y-2">
-                  <span className="text-xs font-medium text-slate-600 dark:text-white/60">
-                    {t("login.username_label", "Username")}
-                  </span>
+              <motion.form
+                className="space-y-5"
+                onSubmit={handleSubmit}
+                variants={form.container}
+                initial="hidden"
+                animate="show"
+              >
+                {/* 会话类提示可能在表单已经入场之后才出现（比如别的标签页登出），不能挂在依次入场的
+                    variants 上：晚挂载的子元素会停在 hidden，只留下一块看不见的空白。 */}
+                <AnimatePresence initial={false}>
+                  {accessFailureMessage ? (
+                    <motion.div {...HINT_MOTION} className="overflow-hidden">
+                      <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
+                        {accessFailureMessage}
+                      </div>
+                    </motion.div>
+                  ) : null}
+                </AnimatePresence>
+                <motion.label variants={form.item} className="group block space-y-2.5">
+                  <span className={FIELD_LABEL}>{t("login.username_label", "Username")}</span>
                   <TextInput
+                    ref={usernameRef}
                     value={username}
                     onChange={(event) => setUsername(event.target.value)}
                     autoComplete="username"
                     autoFocus
                     className="rounded-full px-5"
-                    startAdornment={<UserRound size={17} />}
+                    startAdornment={<UserRound size={17} className={FIELD_ICON} />}
                   />
-                </label>
-                <label className="block space-y-2">
-                  <span className="text-xs font-medium text-slate-600 dark:text-white/60">
-                    {t("login.password_label", "Password")}
-                  </span>
-                  <TextInput
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    type={showPassword ? "text" : "password"}
-                    autoComplete="current-password"
-                    className="rounded-full px-5"
-                    startAdornment={<KeyRound size={17} />}
-                    endAdornment={
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword((value) => !value)}
-                        className="rounded-full p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-white/10"
-                        aria-label={showPassword ? t("login.hide_key") : t("login.show_key")}
+                </motion.label>
+                <motion.div variants={form.item}>
+                  <label className="group block space-y-2.5">
+                    <span className={FIELD_LABEL}>{t("login.password_label", "Password")}</span>
+                    <TextInput
+                      ref={passwordRef}
+                      value={password}
+                      onChange={(event) => setPassword(event.target.value)}
+                      onKeyDown={capsLock.onKeyDown}
+                      onKeyUp={capsLock.onKeyUp}
+                      onBlur={capsLock.onBlur}
+                      type={showPassword ? "text" : "password"}
+                      autoComplete="current-password"
+                      className="rounded-full px-5"
+                      startAdornment={<KeyRound size={17} className={FIELD_ICON} />}
+                      endAdornment={
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword((value) => !value)}
+                          className="relative flex h-8 w-8 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-hover hover:text-ink"
+                          aria-label={showPassword ? t("login.hide_key") : t("login.show_key")}
+                        >
+                          <AnimatePresence mode="wait" initial={false}>
+                            <motion.span
+                              key={showPassword ? "hide" : "show"}
+                              initial={{ opacity: 0, scale: 0.7, rotate: -20 }}
+                              animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                              exit={{ opacity: 0, scale: 0.7, rotate: 20 }}
+                              transition={{ duration: 0.14 }}
+                              className="flex"
+                            >
+                              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                            </motion.span>
+                          </AnimatePresence>
+                        </button>
+                      }
+                    />
+                  </label>
+                  {/* 提示放在 label 外面：放进去会改变输入框的可访问名称。 */}
+                  <AnimatePresence initial={false}>
+                    {capsLock.capsLock ? (
+                      <motion.p
+                        {...HINT_MOTION}
+                        role="status"
+                        className="overflow-hidden"
                       >
-                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                      </button>
-                    }
-                  />
-                </label>
-                <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600 dark:text-white/70">
-                  <input
-                    type="checkbox"
-                    checked={rememberPassword}
-                    onChange={(event) => setRememberPassword(event.target.checked)}
-                    className="h-4 w-4 rounded border-slate-300"
-                  />
+                        <span className="flex items-center gap-1.5 pt-2 pl-1 text-xs font-medium text-warn">
+                          <ArrowBigUpDash size={14} aria-hidden="true" />
+                          {t("login.caps_lock_on")}
+                        </span>
+                      </motion.p>
+                    ) : null}
+                  </AnimatePresence>
+                </motion.div>
+                <motion.label
+                  variants={form.item}
+                  className="flex cursor-pointer items-center gap-2 text-sm text-ink-2"
+                >
+                  <Checkbox checked={rememberPassword} onCheckedChange={setRememberPassword} />
                   {t("login.remember_password_label")}
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setShowAdvanced((value) => !value)}
-                  className="text-xs font-medium text-slate-500 hover:text-slate-900 dark:hover:text-white"
-                >
-                  {t("login.advanced_connection", "Advanced connection settings")}
-                </button>
-                {showAdvanced ? (
-                  <TextInput
-                    value={apiBase}
-                    onChange={(event) => setApiBase(event.target.value)}
-                    type="url"
-                    className="rounded-full px-5"
-                  />
-                ) : null}
-                <Button
-                  type="submit"
-                  variant="primary"
-                  loading={loading}
-                  className="h-12 w-full"
-                >
-                  {loading ? t("login.signing_in") : t("login.submit_button")}
-                </Button>
-              </form>
-            </section>
-          </div>
-        </Reveal>
-      </div>
+                </motion.label>
+                <motion.div variants={form.item}>
+                  <button
+                    type="button"
+                    onClick={() => setShowAdvanced((value) => !value)}
+                    aria-expanded={showAdvanced}
+                    className="inline-flex items-center gap-1 text-xs font-medium text-ink-3 transition-colors hover:text-ink"
+                  >
+                    {t("login.advanced_connection", "Advanced connection settings")}
+                    <ChevronDown
+                      size={14}
+                      aria-hidden="true"
+                      className={`transition-transform duration-200 ease-soft ${showAdvanced ? "rotate-180" : ""}`}
+                    />
+                  </button>
+                  <AnimatePresence initial={false}>
+                    {showAdvanced ? (
+                      <motion.div {...HINT_MOTION} className="overflow-hidden">
+                        <div className="pt-3">
+                          <TextInput
+                            value={apiBase}
+                            onChange={(event) => setApiBase(event.target.value)}
+                            type="url"
+                            aria-label={t("login.endpoint_label")}
+                            className="rounded-full px-5"
+                          />
+                        </div>
+                      </motion.div>
+                    ) : null}
+                  </AnimatePresence>
+                </motion.div>
+                <motion.div variants={form.item}>
+                  <Button type="submit" variant="primary" loading={loading} className="group h-12 w-full">
+                    {loading ? (
+                      t("login.signing_in")
+                    ) : (
+                      <>
+                        {t("login.submit_button")}
+                        <ArrowRight
+                          size={16}
+                          aria-hidden="true"
+                          className="transition-transform duration-200 ease-soft group-hover:translate-x-0.5"
+                        />
+                      </>
+                    )}
+                  </Button>
+                </motion.div>
+              </motion.form>
+            </motion.section>
+        </motion.div>
+      </motion.div>
     </PageBackground>
   );
 }

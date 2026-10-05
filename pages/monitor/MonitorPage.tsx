@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usageApi } from "@code-proxy/api-client";
-import { useTheme } from "@code-proxy/ui";
+import { CHART_CATEGORICAL, chartPalette, useTheme } from "@code-proxy/ui";
 import {
   CHART_COLOR_CLASSES,
   HOURLY_MODEL_COLORS,
@@ -317,51 +317,47 @@ export function MonitorPage() {
     };
   }, [chartData, topModelKeys]);
 
+  // 图例圆点的类名必须和图上的颜色同序同值：模型用分类色（CHART_COLOR_CLASSES 与
+  // HOURLY_MODEL_COLORS 同源），「其它」用灰，合计线用主色（bg-ink 随深浅色反转）。
   const hourlyModelPalette = useMemo(() => {
-    const palette = [
-      "bg-emerald-400",
-      "bg-violet-400",
-      "bg-amber-400",
-      "bg-pink-300",
-      "bg-teal-400",
-    ];
     const colorByKey: Record<string, string> = {};
     const classByKey: Record<string, string> = {};
 
     hourlySeries.modelKeys.forEach((key, index) => {
       if (key === HOURLY_MODEL_OTHER_KEY) {
-        colorByKey[key] = "rgba(148,163,184,0.58)";
-        classByKey[key] = "bg-slate-400";
+        colorByKey[key] = "#a3a3a3";
+        classByKey[key] = "bg-[#a3a3a3]";
         return;
       }
-      colorByKey[key] = HOURLY_MODEL_COLORS[index % HOURLY_MODEL_COLORS.length];
-      classByKey[key] = palette[index % palette.length] ?? "bg-slate-400";
+      const slot = index % (HOURLY_MODEL_COLORS.length - 1);
+      colorByKey[key] = HOURLY_MODEL_COLORS[slot];
+      classByKey[key] = CHART_COLOR_CLASSES[slot] ?? "bg-[#a3a3a3]";
     });
 
-    colorByKey[HOURLY_MODEL_TOTAL_KEY] = "#3b82f6";
-    classByKey[HOURLY_MODEL_TOTAL_KEY] = "bg-blue-500";
+    colorByKey[HOURLY_MODEL_TOTAL_KEY] = chartPalette(isDark).primary;
+    classByKey[HOURLY_MODEL_TOTAL_KEY] = "bg-ink";
 
     return { colorByKey, classByKey };
-  }, [hourlySeries.modelKeys]);
+  }, [hourlySeries.modelKeys, isDark]);
 
   const hourlyTokenPalette = useMemo(() => {
     return {
       colorByKey: {
-        [HOURLY_TOKEN_KEYS.input]: "rgba(110,231,183,0.88)",
-        [HOURLY_TOKEN_KEYS.output]: "rgba(196,181,253,0.88)",
-        [HOURLY_TOKEN_KEYS.reasoning]: "rgba(252,211,77,0.88)",
-        [HOURLY_TOKEN_KEYS.cached]: "rgba(94,234,212,0.88)",
-        [HOURLY_TOKEN_KEYS.total]: "#3b82f6",
+        [HOURLY_TOKEN_KEYS.input]: `${CHART_CATEGORICAL[0]}e0`,
+        [HOURLY_TOKEN_KEYS.output]: `${CHART_CATEGORICAL[1]}e0`,
+        [HOURLY_TOKEN_KEYS.reasoning]: `${CHART_CATEGORICAL[2]}e0`,
+        [HOURLY_TOKEN_KEYS.cached]: `${CHART_CATEGORICAL[4]}e0`,
+        [HOURLY_TOKEN_KEYS.total]: chartPalette(isDark).primary,
       } as Record<string, string>,
       classByKey: {
-        [HOURLY_TOKEN_KEYS.input]: "bg-emerald-400",
-        [HOURLY_TOKEN_KEYS.output]: "bg-violet-400",
-        [HOURLY_TOKEN_KEYS.reasoning]: "bg-amber-400",
-        [HOURLY_TOKEN_KEYS.cached]: "bg-teal-400",
-        [HOURLY_TOKEN_KEYS.total]: "bg-blue-500",
+        [HOURLY_TOKEN_KEYS.input]: CHART_COLOR_CLASSES[0],
+        [HOURLY_TOKEN_KEYS.output]: CHART_COLOR_CLASSES[1],
+        [HOURLY_TOKEN_KEYS.reasoning]: CHART_COLOR_CLASSES[2],
+        [HOURLY_TOKEN_KEYS.cached]: CHART_COLOR_CLASSES[4],
+        [HOURLY_TOKEN_KEYS.total]: "bg-ink",
       } as Record<string, string>,
     };
-  }, []);
+  }, [isDark]);
 
   useEffect(() => {
     setHourlyModelSelected((prev) => {
@@ -439,7 +435,7 @@ export function MonitorPage() {
     );
     return apikeyDistributionData.map((item, index) => {
       const colorClass =
-        index < CHART_COLOR_CLASSES.length ? CHART_COLOR_CLASSES[index] : "bg-slate-400";
+        index < CHART_COLOR_CLASSES.length ? CHART_COLOR_CLASSES[index] : "bg-[#a3a3a3]";
       const value = Number(item.value ?? 0);
       const percent = total > 0 ? (value / total) * 100 : 0;
       return {
@@ -476,7 +472,7 @@ export function MonitorPage() {
 
     return modelDistributionData.map((item, index) => {
       const colorClass =
-        index < CHART_COLOR_CLASSES.length ? CHART_COLOR_CLASSES[index] : "bg-slate-400";
+        index < CHART_COLOR_CLASSES.length ? CHART_COLOR_CLASSES[index] : "bg-[#a3a3a3]";
       const value = Number(item.value ?? 0);
       const percent = total > 0 ? (value / total) * 100 : 0;
 

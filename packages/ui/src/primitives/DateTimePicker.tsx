@@ -11,11 +11,12 @@ import { createPortal } from "react-dom";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { TextInput } from "../primitives/Input";
+import { controlSurface } from "../utils/controlStyles";
 import {
   cn,
+  floatingPanelSurface,
   getSelectDropdownMotion,
   selectDropdownTransition,
-  selectPanel,
 } from "../utils/selectStyles";
 
 export interface DateTimePickerLabels {
@@ -298,13 +299,13 @@ export function DateTimePicker({
         onChange={(event) => onChange(normalizeManualValue(event.currentTarget.value))}
         aria-label={ariaLabel}
         placeholder={placeholder}
-        className="font-medium tabular-nums text-[#18181B] dark:text-white"
+        className="font-medium tabular-nums"
         endAdornment={
           <button
             type="button"
             aria-label={labels.open}
             onClick={() => setOpen((prev) => !prev)}
-            className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[#71717A] transition-colors hover:bg-[#EBEBEC] hover:text-[#18181B] dark:text-[#A1A1AA] dark:hover:bg-[#46464C] dark:hover:text-white"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-hover hover:text-ink"
           >
             <CalendarDays size={15} aria-hidden="true" />
           </button>
@@ -320,7 +321,7 @@ export function DateTimePicker({
               aria-label={labels.picker}
               data-placement={placement}
               data-side={placement}
-              className={cn(selectPanel, "p-3 text-[#18181B] dark:text-white")}
+              className={cn("fixed z-[9999] overflow-hidden p-3", floatingPanelSurface)}
               style={panelStyle}
               {...getSelectDropdownMotion(placement)}
               transition={selectDropdownTransition}
@@ -330,7 +331,7 @@ export function DateTimePicker({
                   type="button"
                   aria-label={labels.previousMonth}
                   onClick={() => moveMonth(-1)}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[#71717A] transition-colors hover:bg-[#EBEBEC] hover:text-[#18181B] dark:text-[#A1A1AA] dark:hover:bg-[#46464C] dark:hover:text-white"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-hover hover:text-ink"
                 >
                   <ChevronLeft size={16} aria-hidden="true" />
                 </button>
@@ -339,13 +340,13 @@ export function DateTimePicker({
                   type="button"
                   aria-label={labels.nextMonth}
                   onClick={() => moveMonth(1)}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[#71717A] transition-colors hover:bg-[#EBEBEC] hover:text-[#18181B] dark:text-[#A1A1AA] dark:hover:bg-[#46464C] dark:hover:text-white"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-hover hover:text-ink"
                 >
                   <ChevronRight size={16} aria-hidden="true" />
                 </button>
               </div>
 
-              <div className="mt-3 grid grid-cols-7 gap-1 text-center text-2xs font-semibold uppercase text-[#96969B] dark:text-[#9F9FA8]">
+              <div className="mt-3 grid grid-cols-7 gap-1 text-center text-2xs font-medium uppercase text-ink-3">
                 {weekdayLabels.map((day) => (
                   <span key={day}>{day}</span>
                 ))}
@@ -368,12 +369,10 @@ export function DateTimePicker({
                       aria-label={dayLabel}
                       onClick={() => commitDate(date)}
                       className={cn(
-                        "h-8 rounded-xl text-xs font-semibold tabular-nums transition-colors",
-                        selected
-                          ? "bg-[#18181B] text-white dark:bg-white dark:text-[#18181B]"
-                          : "text-[#18181B] hover:bg-[#EBEBEC] dark:text-white dark:hover:bg-[#46464C]",
+                        "mx-auto h-8 w-8 rounded-full text-xs font-medium tabular-nums transition-colors",
+                        selected ? "bg-accent text-accent-fg" : "text-ink hover:bg-hover",
                         !inMonth && !selected ? "opacity-35" : null,
-                        today && !selected ? "ring-1 ring-[#18181B]/20 dark:ring-white/25" : null,
+                        today && !selected ? "ring-1 ring-ink/20" : null,
                       )}
                     >
                       {date.getDate()}
@@ -382,9 +381,9 @@ export function DateTimePicker({
                 })}
               </div>
 
-              <div className="mt-3 grid grid-cols-2 gap-2 border-t border-black/[0.06] pt-3 dark:border-white/10">
+              <div className="mt-3 grid grid-cols-2 gap-2 border-t border-line pt-3">
                 <label className="space-y-1">
-                  <span className="text-2xs font-semibold uppercase text-[#96969B] dark:text-[#9F9FA8]">
+                  <span className="text-2xs font-medium uppercase text-ink-3">
                     {labels.hour}
                   </span>
                   <input
@@ -394,11 +393,11 @@ export function DateTimePicker({
                     value={parsedValue ? pad2(parsedValue.getHours()) : ""}
                     onChange={(event) => updateTime("hour", event.currentTarget.value)}
                     aria-label={labels.hour}
-                    className="h-9 w-full rounded-xl border border-slate-900/8 bg-white px-3 text-sm font-semibold tabular-nums text-[#18181B] shadow-none outline-none transition-colors focus-visible:border-slate-400 focus-visible:ring-0 dark:border-neutral-700 dark:bg-neutral-950 dark:text-white dark:focus-visible:border-neutral-500"
+                    className={cn("h-9 w-full px-3 text-sm font-medium tabular-nums", controlSurface)}
                   />
                 </label>
                 <label className="space-y-1">
-                  <span className="text-2xs font-semibold uppercase text-[#96969B] dark:text-[#9F9FA8]">
+                  <span className="text-2xs font-medium uppercase text-ink-3">
                     {labels.minute}
                   </span>
                   <input
@@ -408,7 +407,7 @@ export function DateTimePicker({
                     value={parsedValue ? pad2(parsedValue.getMinutes()) : ""}
                     onChange={(event) => updateTime("minute", event.currentTarget.value)}
                     aria-label={labels.minute}
-                    className="h-9 w-full rounded-xl border border-slate-900/8 bg-white px-3 text-sm font-semibold tabular-nums text-[#18181B] shadow-none outline-none transition-colors focus-visible:border-slate-400 focus-visible:ring-0 dark:border-neutral-700 dark:bg-neutral-950 dark:text-white dark:focus-visible:border-neutral-500"
+                    className={cn("h-9 w-full px-3 text-sm font-medium tabular-nums", controlSurface)}
                   />
                 </label>
               </div>
@@ -417,14 +416,14 @@ export function DateTimePicker({
                 <button
                   type="button"
                   onClick={() => onChange("")}
-                  className="rounded-full px-3 py-1.5 text-xs font-semibold text-[#71717A] transition-colors hover:bg-[#EBEBEC] hover:text-[#18181B] dark:text-[#A1A1AA] dark:hover:bg-[#46464C] dark:hover:text-white"
+                  className="rounded-full px-3 py-1.5 text-xs font-medium text-ink-2 transition-colors hover:bg-hover hover:text-ink"
                 >
                   {labels.clear}
                 </button>
                 <button
                   type="button"
                   onClick={setToday}
-                  className="rounded-full bg-[#EBEBEC] px-3 py-1.5 text-xs font-semibold text-[#18181B] transition-colors hover:bg-[#E4E4E7] dark:bg-[#46464C] dark:text-white dark:hover:bg-[#52525B]"
+                  className="rounded-full border border-line-strong bg-surface px-3 py-1.5 text-xs font-medium text-ink transition-colors hover:bg-hover"
                 >
                   {labels.today}
                 </button>

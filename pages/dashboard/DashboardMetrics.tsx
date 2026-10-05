@@ -10,7 +10,7 @@ import {
   getCompactNumberParts,
   type CompactNumberOptions,
 } from "@code-proxy/domain";
-import { HoverTooltip } from "@code-proxy/ui";
+import { HoverTooltip, chartTooltipStyle } from "@code-proxy/ui";
 import { AnimatedNumber } from "@code-proxy/ui";
 
 export const DASHBOARD_COMPACT_OPTIONS = {
@@ -100,23 +100,26 @@ export const formatThroughputTooltip = (params: any) => {
   return [title, ...lines].join("<br/>");
 };
 
-export function createSparklineOption(points: DashboardTrendPoint[], color: string): ECBasicOption {
+export function createSparklineOption(
+  points: DashboardTrendPoint[],
+  color: string,
+  isDark = false,
+): ECBasicOption {
   const labels = points.map((point) => point.label);
   const values = points.map((point) => point.value);
+  const tooltipStyle = chartTooltipStyle(isDark);
 
   return {
     animationDuration: 320,
     animationDurationUpdate: 240,
     grid: { left: 0, right: 0, top: 6, bottom: 0 },
     tooltip: {
+      ...tooltipStyle,
       trigger: "axis",
       renderMode: "html",
       appendToBody: true,
       confine: true,
-      borderWidth: 0,
-      backgroundColor: "rgba(15, 23, 42, 0.9)",
-      textStyle: { color: "#fff", fontSize: 12 },
-      extraCssText: "z-index: 10000;",
+      extraCssText: `${tooltipStyle.extraCssText} z-index: 10000;`,
       formatter: (params: any) => {
         const first = Array.isArray(params) ? params[0] : params;
         return `${first?.axisValueLabel ?? ""}<br/>${formatDashboardTooltipNumber(Number(first?.data ?? 0))}`;
@@ -141,7 +144,7 @@ export function createSparklineOption(points: DashboardTrendPoint[], color: stri
         data: values,
         smooth: true,
         symbol: "none",
-        lineStyle: { color, width: 2.5 },
+        lineStyle: { color, width: 2 },
         areaStyle: {
           color: {
             type: "linear",
@@ -150,7 +153,7 @@ export function createSparklineOption(points: DashboardTrendPoint[], color: stri
             x2: 0,
             y2: 1,
             colorStops: [
-              { offset: 0, color: `${color}33` },
+              { offset: 0, color: `${color}14` },
               { offset: 1, color: `${color}00` },
             ],
           },

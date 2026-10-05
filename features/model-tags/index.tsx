@@ -77,14 +77,14 @@ export const MODEL_VENDOR_COLORS: Record<ModelVendorKey, ModelVendorTone> = {
     border: "border-blue-200/60 dark:border-blue-800/30",
   },
   qwen: {
-    bg: "bg-violet-50 dark:bg-violet-950/20",
-    text: "text-violet-700 dark:text-violet-300",
-    border: "border-violet-200/60 dark:border-violet-800/30",
+    bg: "bg-hover",
+    text: "text-ink",
+    border: "border-line-strong",
   },
   llama: {
-    bg: "bg-indigo-50 dark:bg-indigo-950/20",
-    text: "text-indigo-700 dark:text-indigo-300",
-    border: "border-indigo-200/60 dark:border-indigo-800/30",
+    bg: "bg-hover",
+    text: "text-ink",
+    border: "border-line-strong",
   },
   mistral: {
     bg: "bg-amber-50 dark:bg-amber-950/20",
@@ -122,14 +122,14 @@ export const MODEL_VENDOR_COLORS: Record<ModelVendorKey, ModelVendorTone> = {
     border: "border-amber-200/60 dark:border-amber-800/30",
   },
   mimo: {
-    bg: "bg-purple-50 dark:bg-purple-950/20",
-    text: "text-purple-700 dark:text-purple-300",
-    border: "border-purple-200/60 dark:border-purple-800/30",
+    bg: "bg-hover",
+    text: "text-ink",
+    border: "border-line-strong",
   },
   vertex: {
-    bg: "bg-fuchsia-50 dark:bg-fuchsia-950/20",
-    text: "text-fuchsia-700 dark:text-fuchsia-300",
-    border: "border-fuchsia-200/60 dark:border-fuchsia-800/30",
+    bg: "bg-hover",
+    text: "text-ink",
+    border: "border-line-strong",
   },
   iflow: {
     bg: "bg-teal-50 dark:bg-teal-950/20",
@@ -448,7 +448,7 @@ export function ModelVendorStatBadge({
   const className = cn(
     "inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-2xs font-semibold",
     tone.bg,
-    active ? "ring-2 ring-indigo-500/35 ring-offset-1 ring-offset-white dark:ring-indigo-300/40 dark:ring-offset-neutral-950" : "",
+    active ? "ring-2 ring-line-strong ring-offset-1 ring-offset-white dark:ring-offset-neutral-950" : "",
     onClick ? "cursor-pointer transition hover:shadow-sm" : "",
     tone.text,
     tone.border,

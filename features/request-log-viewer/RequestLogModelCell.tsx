@@ -31,12 +31,11 @@ function ModelComparisonRow({
 }) {
   return (
     <span className="flex items-baseline gap-2 whitespace-nowrap">
-      <span className="shrink-0 text-slate-500 dark:text-white/50">{label}</span>
+      <span className="shrink-0 text-canvas/60">{label}</span>
       <span
         className={
-          emphasized
-            ? "font-semibold text-rose-600 dark:text-rose-300"
-            : "text-slate-900 dark:text-white"
+          // 气泡在浅色模式是深底、深色模式反转成浅底，红字的深浅也要跟着反过来。
+          emphasized ? "font-semibold text-rose-300 dark:text-rose-600" : "text-canvas"
         }
       >
         {value || "--"}
@@ -64,7 +63,7 @@ function UpstreamModelMismatchBadge({ row }: { row: RequestLogsRow }) {
       placement="top"
       content={
         <span className="flex flex-col gap-1 text-left text-xs">
-          <span className="font-semibold text-rose-600 dark:text-rose-300">{title}</span>
+          <span className="font-semibold text-rose-300 dark:text-rose-600">{title}</span>
           <ModelComparisonRow label={t("request_logs.sent_upstream_model")} value={sentModel} />
           <ModelComparisonRow
             label={t("request_logs.upstream_response_model")}

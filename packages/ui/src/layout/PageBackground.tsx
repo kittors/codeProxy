@@ -1,8 +1,16 @@
 import { type PropsWithChildren } from "react";
 
 /**
- * `landing` 刻意不铺任何色斑与光晕：公开落地页靠排版、留白和单一强调色建立层次，
- * 弥散渐变会把版面拉回「模板感」，与 hero 里精确的几何元素也互相打架。
+ * 页面底色。控制台和门户页面不铺色斑、光晕或旋转渐变——层次交给排版、留白和卡片的细描边，
+ * 弥散渐变会把版面拉回「模板感」，也会让中性配色里的状态色失去对比。唯一的例外是 `login`：
+ * 首屏只有一张表单，需要一点氛围，所以那里有一层极淡、静止的品牌绿晕染（不做动画）。
+ *
+ * - `app`：控制台与门户页面，用内容区的底色（浅色纯白 / 深色 #212121）；
+ *   控制台外壳自己再画图标栏和分区面板的灰底。
+ * - `login`：登录、改密码这类首屏表单页。整个产品只有这里铺一层淡淡的品牌氛围：带一点绿意的
+ *   浅灰底、角落里两团很淡的品牌绿晕染，再叠一层四周渐隐的点阵（与门户落地页首屏同一种语言）。
+ *   白色卡片浮在上面才有层次；控制台内部仍然保持纯色，不受影响。
+ * - `landing`：公开落地页，整页可滚动，深色下用更深的底色拉开对比。
  */
 type BackgroundVariant = "login" | "app" | "landing";
 
@@ -15,31 +23,27 @@ export function PageBackground({
   return (
     <div
       className={[
-        "relative min-h-[100dvh] bg-zinc-50 font-sans text-slate-900 antialiased dark:text-slate-50",
-        // 落地页要能整页滚动，不能被 overflow-hidden 截断；同时用更深的底色拉开对比。
-        variant === "landing" ? "dark:bg-[#08080A]" : "overflow-hidden dark:bg-neutral-950",
+        "relative min-h-[100dvh] font-sans text-ink antialiased",
+        // 落地页要能整页滚动，不能被 overflow-hidden 截断。
+        variant === "landing"
+          ? "bg-zinc-50 dark:bg-[#08080A]"
+          : variant === "login"
+            ? "overflow-hidden bg-[#f3f6f4] dark:bg-[#141715]"
+            : "overflow-hidden bg-canvas",
       ].join(" ")}
     >
-      <div className="pointer-events-none absolute inset-0">
-        {variant === "landing" ? null : (
-          <>
-            <div className="absolute -left-40 -top-44 h-[34rem] w-[34rem] rounded-full bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.14),transparent_70%)] blur-3xl dark:bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.22),transparent_70%)]" />
-            <div className="absolute -right-40 -top-28 h-[30rem] w-[30rem] rounded-full bg-[radial-gradient(circle_at_center,rgba(20,184,166,0.12),transparent_70%)] blur-3xl dark:bg-[radial-gradient(circle_at_center,rgba(45,212,191,0.16),transparent_70%)]" />
-            <div className="absolute -bottom-44 left-1/4 h-[34rem] w-[34rem] rounded-full bg-[radial-gradient(circle_at_center,rgba(168,85,247,0.10),transparent_70%)] blur-3xl dark:bg-[radial-gradient(circle_at_center,rgba(168,85,247,0.14),transparent_70%)]" />
-          </>
-        )}
-
-        {variant === "login" ? (
-          <>
-            <div className="absolute -inset-[45%] opacity-60 blur-3xl motion-reduce:hidden motion-safe:animate-[spin_60s_linear_infinite] dark:opacity-40">
-              <div className="h-full w-full bg-[conic-gradient(from_90deg_at_50%_50%,rgba(59,130,246,0.22)_0deg,rgba(45,212,191,0.18)_120deg,rgba(168,85,247,0.18)_240deg,rgba(59,130,246,0.22)_360deg)] dark:bg-[conic-gradient(from_90deg_at_50%_50%,rgba(99,102,241,0.22)_0deg,rgba(45,212,191,0.14)_120deg,rgba(168,85,247,0.14)_240deg,rgba(99,102,241,0.22)_360deg)]" />
-            </div>
-
-            <div className="absolute left-1/2 top-1/2 h-[26rem] w-[26rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.55),transparent_65%)] blur-2xl motion-reduce:hidden motion-safe:animate-[pulse_8s_ease-in-out_infinite] dark:bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.10),transparent_65%)]" />
-          </>
-        ) : null}
-      </div>
-
+      {variant === "login" ? (
+        <>
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 bg-[radial-gradient(55%_50%_at_88%_6%,rgb(16_163_127/0.13),transparent_72%),radial-gradient(45%_45%_at_6%_96%,rgb(16_163_127/0.08),transparent_70%)] dark:bg-[radial-gradient(55%_50%_at_88%_6%,rgb(16_163_127/0.14),transparent_72%),radial-gradient(45%_45%_at_6%_96%,rgb(16_163_127/0.07),transparent_70%)]"
+          />
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle,rgb(0_0_0/0.065)_1px,transparent_1px)] bg-[size:22px_22px] [mask-image:radial-gradient(70%_65%_at_50%_45%,#000_15%,transparent_78%)] dark:bg-[radial-gradient(circle,rgb(255_255_255/0.06)_1px,transparent_1px)]"
+          />
+        </>
+      ) : null}
       <div className="relative">{children}</div>
     </div>
   );

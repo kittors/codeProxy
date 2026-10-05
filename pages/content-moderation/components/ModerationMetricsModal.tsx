@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type ComponentType } from "react";
 import { useTranslation } from "react-i18next";
 import { Activity, AlertTriangle, CheckCircle2, Clock3, ScanSearch, ShieldX } from "lucide-react";
 import { contentModerationApi, type ContentModerationMetrics } from "@code-proxy/api-client";
-import { AnimatedNumber, Modal } from "@code-proxy/ui";
+import { AnimatedNumber, Modal, surface } from "@code-proxy/ui";
 
 export interface ModerationMetricsModalProps {
   open: boolean;
@@ -160,9 +160,9 @@ export function ModerationMetricsModal({ open, onClose }: ModerationMetricsModal
             return (
               <article
                 key={tile.key}
-                className="flex h-full min-w-0 flex-col rounded-2xl border border-black/[0.06] bg-white p-5 shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] dark:border-white/[0.06] dark:bg-neutral-950/70 dark:shadow-[0_1px_2px_rgb(0_0_0_/_0.22)]"
+                className={`flex h-full min-w-0 flex-col p-5 ${surface({ tone: "raised", radius: "2xl" })}`}
               >
-                <p className="flex min-w-0 items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-white/55">
+                <p className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-white/55">
                   <Icon size={14} className="shrink-0 text-slate-900 dark:text-white" />
                   <span className="min-w-0 truncate">{tile.title}</span>
                 </p>

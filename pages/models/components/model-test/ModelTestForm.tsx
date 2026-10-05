@@ -91,8 +91,8 @@ export function ModelTestForm({
                   className={[
                     "rounded-full px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50",
                     active
-                      ? "bg-indigo-600 text-white shadow-sm"
-                      : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-white/[0.08] dark:text-white/70 dark:hover:bg-white/[0.14]",
+                      ? "bg-accent text-accent-fg"
+                      : "bg-hover text-ink-2 hover:bg-selected hover:text-ink",
                   ].join(" ")}
                 >
                   {t(MODE_LABEL_KEY[mode.mode])}
@@ -114,7 +114,7 @@ export function ModelTestForm({
           {t("models_page.test_channel")}
         </label>
         {noChannels ? (
-          <p className="rounded-lg border border-dashed border-slate-900/8 px-3 py-2 text-sm text-slate-500 dark:border-white/8 dark:text-white/45">
+          <p className="bg-subtle rounded-lg px-3 py-2 text-sm text-slate-500 dark:text-white/45">
             {t("models_page.test_no_channels")}
           </p>
         ) : (
@@ -156,7 +156,7 @@ export function ModelTestForm({
                 type="button"
                 disabled={disabled}
                 onClick={() => fileInput.current?.click()}
-                className="flex h-16 w-16 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-slate-900/15 text-slate-500 transition-colors hover:border-indigo-400 hover:text-indigo-600 disabled:opacity-50 dark:border-white/15 dark:text-white/45"
+                className="bg-subtle flex h-16 w-16 flex-col items-center justify-center gap-1 rounded-lg border-slate-900/15 text-slate-500 transition-colors hover:border-ink-4 hover:text-ink disabled:opacity-50 dark:border-white/15 dark:text-white/45"
               >
                 <ImagePlus size={16} aria-hidden />
                 <span className="text-2xs">{t("models_page.test_add_image")}</span>

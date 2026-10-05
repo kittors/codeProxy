@@ -70,13 +70,15 @@ function statusColor(pct: number) {
       labelKey: "system_monitor.status_warn",
       labelBg: "bg-amber-500/10 text-amber-500",
     };
+  // 正常是常态：用中性墨色，只有逼近上限时才换成琥珀、红色。
   return {
-    text: "text-emerald-500",
-    bg: "bg-emerald-500",
-    ring: "stroke-emerald-500",
-    bar: "bg-emerald-500",
+    text: "text-ink",
+    // 状态小圆点在正常时退成浅灰：满屏的黑点读起来像「这里都有事」。
+    bg: "bg-ink-4",
+    ring: "stroke-ink",
+    bar: "bg-ink",
     labelKey: "system_monitor.status_normal",
-    labelBg: "bg-emerald-500/10 text-emerald-500",
+    labelBg: "bg-hover text-ink-2",
   };
 }
 
@@ -91,15 +93,16 @@ function computeHealthScore(s: SystemStats): number {
 }
 
 function healthLabel(score: number) {
-  if (score >= 90) return { key: "system_monitor.health_healthy", color: "text-emerald-500" };
-  if (score >= 70) return { key: "system_monitor.health_good", color: "text-blue-500" };
+  // 健康、良好都是常态，同用墨色，靠下方文字区分；告警和风险才上色。
+  if (score >= 90) return { key: "system_monitor.health_healthy", color: "text-ink" };
+  if (score >= 70) return { key: "system_monitor.health_good", color: "text-ink" };
   if (score >= 50) return { key: "system_monitor.health_warning", color: "text-amber-500" };
   return { key: "system_monitor.health_risk", color: "text-red-500" };
 }
 
 function healthRingColor(score: number) {
-  if (score >= 90) return "stroke-emerald-500";
-  if (score >= 70) return "stroke-blue-500";
+  if (score >= 90) return "stroke-ink";
+  if (score >= 70) return "stroke-ink";
   if (score >= 50) return "stroke-amber-500";
   return "stroke-red-500";
 }
@@ -155,7 +158,7 @@ function HealthHeroCard({ score }: { score: number }) {
   return (
     <Card
       padding="compact"
-      className={`${PANEL_SURFACE} h-full min-h-[246px] bg-gradient-to-br from-blue-50/70 via-white to-slate-50 dark:from-blue-950/20 dark:via-neutral-950/80 dark:to-neutral-900/60`}
+      className={`${PANEL_SURFACE} h-full min-h-[246px]`}
       bodyClassName="mt-0 flex h-full items-center justify-center"
     >
       <HealthGauge score={score} />
@@ -174,7 +177,7 @@ function DiskUsageRingCard({ stats }: { stats: SystemStats }) {
   return (
     <Card
       padding="compact"
-      className={`${PANEL_SURFACE} h-full min-h-[246px] overflow-hidden bg-gradient-to-br from-emerald-50/70 via-white to-slate-50 dark:from-emerald-950/20 dark:via-neutral-950/80 dark:to-neutral-900/60`}
+      className={`${PANEL_SURFACE} h-full min-h-[246px] overflow-hidden`}
       bodyClassName="mt-0 flex h-full flex-col justify-between"
     >
       <div className="flex items-center justify-between gap-3">
@@ -222,15 +225,15 @@ function DiskUsageRingCard({ stats }: { stats: SystemStats }) {
       </div>
 
       <div className="grid grid-cols-2 gap-2">
-        <div className="rounded-2xl bg-white/70 px-3 py-2 shadow-sm ring-1 ring-slate-200/70 dark:bg-neutral-900/70 dark:ring-white/10">
+        <div className="rounded-2xl bg-subtle px-3 py-2">
           <p className="text-2xs text-slate-400 dark:text-white/45">
             {t("system_monitor.disk_free")}
           </p>
-          <p className="mt-1 text-sm font-bold tabular-nums text-emerald-500">
+          <p className="mt-1 text-sm font-bold tabular-nums text-ink">
             {formatBytes(stats.disk_free)}
           </p>
         </div>
-        <div className="rounded-2xl bg-white/70 px-3 py-2 shadow-sm ring-1 ring-slate-200/70 dark:bg-neutral-900/70 dark:ring-white/10">
+        <div className="rounded-2xl bg-subtle px-3 py-2">
           <p className="text-2xs text-slate-400 dark:text-white/45">
             {t("system_monitor.total_size", { size: formatBytes(stats.disk_total) })}
           </p>
@@ -309,7 +312,7 @@ function MiniKpi({
 }) {
   return (
     <Card padding="compact" bodyClassName="mt-0" className={`${PANEL_SURFACE} h-full`}>
-      <div className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-widest text-slate-400 dark:text-white/40">
+      <div className="flex items-center gap-1.5 text-2xs font-medium text-slate-400 dark:text-white/40">
         <Icon size={12} />
         {label}
       </div>
@@ -327,14 +330,14 @@ function NetworkCard({ stats }: { stats: SystemStats }) {
   const { t } = useTranslation();
   return (
     <Card padding="compact" bodyClassName="mt-0" className={`${PANEL_SURFACE} h-full`}>
-      <div className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-widest text-slate-400 dark:text-white/40 mb-2.5">
+      <div className="flex items-center gap-1.5 text-2xs font-medium text-slate-400 dark:text-white/40 mb-2.5">
         <Wifi size={12} />
         {t("system_monitor.network_traffic")}
       </div>
       <div className="grid grid-cols-1 min-[400px]:grid-cols-2 gap-3">
         <div>
-          <div className="flex items-center gap-1 text-emerald-500">
-            <ArrowUpRight size={14} />
+          <div className="flex items-center gap-1 text-ink">
+            <ArrowUpRight size={14} className="text-ink-3" />
             <span className="text-sm font-bold tabular-nums">
               {formatRate(stats.net_send_rate)}
             </span>
@@ -344,8 +347,8 @@ function NetworkCard({ stats }: { stats: SystemStats }) {
           </p>
         </div>
         <div>
-          <div className="flex items-center gap-1 text-blue-500">
-            <ArrowDownRight size={14} />
+          <div className="flex items-center gap-1 text-ink">
+            <ArrowDownRight size={14} className="text-ink-3" />
             <span className="text-sm font-bold tabular-nums">
               {formatRate(stats.net_recv_rate)}
             </span>
@@ -386,13 +389,13 @@ function AverageLatencyCard({
       bodyClassName="mt-0"
       className={`${PANEL_SURFACE} h-full overflow-hidden`}
     >
-      <div className="mb-2.5 flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-widest text-slate-400 dark:text-white/40">
+      <div className="mb-2.5 flex items-center gap-1.5 text-2xs font-medium text-slate-400 dark:text-white/40">
         <Network size={12} />
         {t("system_monitor.channel_avg_latency")}
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="rounded-xl bg-slate-50 px-3 py-2.5 dark:bg-neutral-900/70 dark:ring-1 dark:ring-white/8">
-          <div className="text-2xs font-semibold uppercase tracking-wider text-slate-400 dark:text-white/45">
+          <div className="text-2xs font-medium text-slate-400 dark:text-white/45">
             {t("system_monitor.latency")}
           </div>
           <div className="mt-1 text-xl font-bold tabular-nums text-slate-900 dark:text-white">
@@ -400,7 +403,7 @@ function AverageLatencyCard({
           </div>
         </div>
         <div className="rounded-xl bg-slate-50 px-3 py-2.5 dark:bg-neutral-900/70 dark:ring-1 dark:ring-white/8">
-          <div className="text-2xs font-semibold uppercase tracking-wider text-slate-400 dark:text-white/45">
+          <div className="text-2xs font-medium text-slate-400 dark:text-white/45">
             {t("system_monitor.key_count")}
           </div>
           <div className="mt-1 text-xl font-bold tabular-nums text-slate-900 dark:text-white">
@@ -538,7 +541,7 @@ export function SystemMonitorSection({
               label={t("system_monitor.goroutines")}
               value={String(stats.go_routines)}
               icon={Zap}
-              color="text-violet-500"
+              color="text-ink"
               sublabel={t("system_monitor.heap", { size: formatBytes(stats.go_heap_bytes) })}
             />
             <MiniKpi

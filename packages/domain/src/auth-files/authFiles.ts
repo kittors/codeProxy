@@ -1404,63 +1404,59 @@ export const matchesModelPattern = (modelId: string, pattern: string): boolean =
   }
 };
 
-export const TYPE_BADGE_CLASSES: Record<string, string> = {
-  qwen: "bg-emerald-50 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-200",
-  kimi: "bg-amber-50 text-amber-800 dark:bg-amber-500/15 dark:text-amber-200",
-  gemini: "bg-blue-50 text-blue-800 dark:bg-blue-500/15 dark:text-blue-200",
-  "gemini-cli": "bg-indigo-50 text-indigo-800 dark:bg-indigo-500/15 dark:text-indigo-200",
-  aistudio: "bg-slate-50 text-slate-800 dark:bg-white/10 dark:text-slate-200",
-  claude: "bg-rose-50 text-rose-800 dark:bg-rose-500/15 dark:text-rose-200",
-  codex: "bg-orange-50 text-orange-800 dark:bg-orange-500/15 dark:text-orange-200",
-  antigravity: "bg-teal-50 text-teal-800 dark:bg-teal-500/15 dark:text-teal-200",
-  iflow: "bg-violet-50 text-violet-800 dark:bg-violet-500/15 dark:text-violet-200",
-  vertex: "bg-cyan-50 text-cyan-800 dark:bg-cyan-500/15 dark:text-cyan-200",
-  empty: "bg-slate-50 text-slate-600 dark:bg-white/10 dark:text-white/70",
-  unknown: "bg-slate-50 text-slate-600 dark:bg-white/10 dark:text-white/70",
-};
+/**
+ * Provider tags. Every provider shares one quiet grey pill: the provider is named on
+ * the tag (or shown by its vendor icon in dense cards), so a rainbow of tints added
+ * colour without adding information — and colour is reserved for account state.
+ * The keys still matter: they are the known provider list resolveFileType matches on.
+ */
+const PROVIDER_TAG_CLASS = "bg-hover text-ink-2";
 
-/** Membership plan pills: solid/gradient chips, never the soft sky/amber tag look. */
+export const TYPE_BADGE_CLASSES: Record<string, string> = Object.fromEntries(
+  // prettier-ignore
+  ["qwen", "kimi", "gemini", "gemini-cli", "aistudio", "claude", "codex", "antigravity", "iflow",
+    "vertex", "empty", "unknown"].map((type) => [type, PROVIDER_TAG_CLASS]),
+);
+
+/**
+ * Membership plan pills. They must stay distinguishable from the soft info tags
+ * (`bg-hover` pills) at a glance, and they do so through weight rather than hue:
+ * top tiers are a solid ink chip, middle tiers a solid mid-grey chip, entry paid
+ * tiers an outlined chip, and free/unknown the quiet grey. The tier name is spelled
+ * out on the chip ("PRO 20X"), so the gradients that used to encode it were noise.
+ */
+const PLAN_TOP = "bg-ink text-canvas";
+const PLAN_MID = "bg-ink-2 text-canvas";
+const PLAN_ENTRY = "text-ink ring-1 ring-inset ring-ink-3";
+const PLAN_QUIET = "bg-selected text-ink-2";
+
 export const PLAN_BADGE_CLASSES: Record<string, string> = {
-  // Codex Plus: silver / platinum
-  plus: "bg-gradient-to-r from-slate-100 via-zinc-200 to-slate-300 text-slate-800 ring-1 ring-inset ring-slate-300/70 shadow-sm shadow-slate-400/20 dark:from-zinc-300 dark:via-slate-400 dark:to-zinc-500 dark:text-slate-950 dark:ring-white/20",
-  // Codex Pro family: gold scale (base / 5X / 20X)
-  pro: "bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-500 text-amber-950 shadow-sm shadow-amber-500/30 dark:from-amber-300 dark:via-yellow-400 dark:to-amber-500 dark:text-amber-950",
-  pro_5x:
-    "bg-gradient-to-r from-amber-400 via-yellow-500 to-orange-400 text-amber-950 shadow-sm shadow-amber-500/35 dark:from-amber-400 dark:via-yellow-400 dark:to-orange-400 dark:text-amber-950",
-  "pro-5x":
-    "bg-gradient-to-r from-amber-400 via-yellow-500 to-orange-400 text-amber-950 shadow-sm shadow-amber-500/35 dark:from-amber-400 dark:via-yellow-400 dark:to-orange-400 dark:text-amber-950",
-  pro_20x:
-    "bg-gradient-to-r from-yellow-300 via-amber-500 to-orange-600 text-amber-950 shadow-sm shadow-orange-500/40 dark:from-yellow-300 dark:via-amber-400 dark:to-orange-500 dark:text-amber-950",
-  "pro-20x":
-    "bg-gradient-to-r from-yellow-300 via-amber-500 to-orange-600 text-amber-950 shadow-sm shadow-orange-500/40 dark:from-yellow-300 dark:via-amber-400 dark:to-orange-500 dark:text-amber-950",
-  chatgptpro:
-    "bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-500 text-amber-950 shadow-sm shadow-amber-500/30 dark:from-amber-300 dark:via-yellow-400 dark:to-amber-500 dark:text-amber-950",
-  free: "bg-slate-100 text-slate-600 ring-1 ring-inset ring-slate-200/80 dark:bg-white/10 dark:text-white/65 dark:ring-white/10",
-  team: "bg-gradient-to-r from-violet-500 to-indigo-600 text-white shadow-sm shadow-violet-500/25 dark:from-violet-400 dark:to-indigo-500",
-  // Claude Code family: warm clay / copper
-  max: "bg-gradient-to-r from-orange-400 via-amber-500 to-orange-600 text-white shadow-sm shadow-orange-500/30 dark:from-orange-400 dark:via-amber-500 dark:to-orange-500",
-  max_5x:
-    "bg-gradient-to-r from-orange-500 via-amber-500 to-rose-500 text-white shadow-sm shadow-orange-500/35 dark:from-orange-400 dark:via-amber-400 dark:to-rose-400",
-  "max-5x":
-    "bg-gradient-to-r from-orange-500 via-amber-500 to-rose-500 text-white shadow-sm shadow-orange-500/35 dark:from-orange-400 dark:via-amber-400 dark:to-rose-400",
-  max_20x:
-    "bg-gradient-to-r from-amber-500 via-orange-600 to-rose-600 text-white shadow-sm shadow-rose-500/35 dark:from-amber-400 dark:via-orange-500 dark:to-rose-500",
-  "max-20x":
-    "bg-gradient-to-r from-amber-500 via-orange-600 to-rose-600 text-white shadow-sm shadow-rose-500/35 dark:from-amber-400 dark:via-orange-500 dark:to-rose-500",
-  premium: "bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white shadow-sm shadow-fuchsia-500/25 dark:from-fuchsia-400 dark:to-purple-500",
-  business: "bg-gradient-to-r from-slate-700 to-slate-900 text-white shadow-sm shadow-slate-900/20 dark:from-slate-500 dark:to-slate-700",
-  enterprise: "bg-gradient-to-r from-zinc-800 via-slate-900 to-black text-amber-100 shadow-sm shadow-black/20 dark:from-zinc-600 dark:via-slate-700 dark:to-zinc-900",
-  // Grok: dark emerald
-  supergrok:
-    "bg-gradient-to-r from-neutral-900 to-emerald-700 text-emerald-50 shadow-sm shadow-emerald-900/30 dark:from-neutral-800 dark:to-emerald-600",
-  "supergrok-heavy":
-    "bg-gradient-to-r from-black via-emerald-900 to-teal-700 text-emerald-50 shadow-sm shadow-emerald-950/40 dark:from-black dark:via-emerald-800 dark:to-teal-600",
-  supergrok_heavy:
-    "bg-gradient-to-r from-black via-emerald-900 to-teal-700 text-emerald-50 shadow-sm shadow-emerald-950/40 dark:from-black dark:via-emerald-800 dark:to-teal-600",
-  supergrokheavy:
-    "bg-gradient-to-r from-black via-emerald-900 to-teal-700 text-emerald-50 shadow-sm shadow-emerald-950/40 dark:from-black dark:via-emerald-800 dark:to-teal-600",
-  unknown:
-    "bg-gradient-to-r from-slate-400 to-slate-500 text-white shadow-sm shadow-slate-500/20 dark:from-slate-500 dark:to-slate-600",
+  // Codex: plus < pro < pro 5x / 20x
+  plus: PLAN_ENTRY,
+  pro: PLAN_MID,
+  chatgptpro: PLAN_MID,
+  pro_5x: PLAN_TOP,
+  "pro-5x": PLAN_TOP,
+  pro_20x: PLAN_TOP,
+  "pro-20x": PLAN_TOP,
+  // Claude Code: max < max 5x / 20x
+  max: PLAN_MID,
+  max_5x: PLAN_TOP,
+  "max-5x": PLAN_TOP,
+  max_20x: PLAN_TOP,
+  "max-20x": PLAN_TOP,
+  // Organisation plans
+  team: PLAN_MID,
+  business: PLAN_MID,
+  premium: PLAN_MID,
+  enterprise: PLAN_TOP,
+  // Grok
+  supergrok: PLAN_MID,
+  "supergrok-heavy": PLAN_TOP,
+  supergrok_heavy: PLAN_TOP,
+  supergrokheavy: PLAN_TOP,
+  free: PLAN_QUIET,
+  unknown: PLAN_QUIET,
 };
 
 /** Codex-only: weekly budget (USD) thresholds for Pro multiplier badges. */
