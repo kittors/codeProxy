@@ -202,7 +202,11 @@ export function SidebarGroup({
           listVisible ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
         ].join(" ")}
       >
-        <div className="min-h-0 overflow-hidden">
+        {/*
+          折叠动画要靠 overflow-hidden 把收起的行裁掉，但裁剪框若和行一样宽，选中项白卡片的描边
+          与投影会被切掉一边（右侧看着像缺了竖线）。左右各外扩 1 格再用内边距收回，阴影就有地方画。
+        */}
+        <div className="-mx-1 min-h-0 overflow-hidden px-1">
           {/* 竖向引导线对准分区图标的中线，子项文字与分区标题文字左对齐。 */}
           <div className="ml-4.5 space-y-0.5 border-l border-line py-1 pl-1.5">
             {section.items.map((item) => (

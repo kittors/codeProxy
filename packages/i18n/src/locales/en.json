@@ -4178,6 +4178,7 @@
     "top5": "Top 5 · Last 7d",
     "total_traffic": "Total Traffic",
     "disk_free": "Disk Free",
+    "disk_used": "Used",
     "log_storage": "Log Storage",
     "log_dir": "Log dir",
     "no_data": "No data",

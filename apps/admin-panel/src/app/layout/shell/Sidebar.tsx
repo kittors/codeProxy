@@ -81,10 +81,12 @@ export function Sidebar({
           <span className="block font-display text-2xs text-ink-3">{BRAND_NAME}</span>
         </span>
       </div>
+      {/* 展开时上下渐隐；收起时关掉——渐隐用的 mask 会把伸出侧边栏的分区浮层一起裁掉。 */}
       <ScrollArea
         className="min-h-0 flex-1 [&_[data-scroll-area-scrollbar='y']]:right-0.5"
         scrollbarVisibility="track-hover"
         scrollbarTrackInset={8}
+        edgeFade={!collapsed}
       >
         <SidebarNav sections={sections} activeTo={activeTo} collapsed={collapsed} nav={nav} />
       </ScrollArea>

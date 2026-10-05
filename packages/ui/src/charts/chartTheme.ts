@@ -8,7 +8,10 @@
  * 配色原则（与界面一致）：
  * - 网格、坐标轴、刻度文字都是中性灰，越不重要越浅；
  * - 「当前值 / 主序列」用强调色（浅色墨黑、深色浅灰白），其余序列用灰阶区分；
- * - 绿、橙、红、蓝只表达成功、警告、失败、信息，不拿来区分普通序列。
+ * - 绿、橙、红、蓝表达成功、警告、失败、信息；
+ * - 仪表盘上的指标各有一个身份色（metric），与系统监控同一组色系：蓝是请求与算力，绿是成功，
+ *   紫是 Token 与内存，琥珀是费用与日志。全黑灰的迷你趋势线读起来像没加载完，身份色让六格
+ *   指标、吞吐图和监控卡片一眼对得上；失败仍然用 err。
  */
 
 export interface ChartPalette {
@@ -33,6 +36,16 @@ export interface ChartPalette {
   warn: string;
   err: string;
   info: string;
+  /** 仪表盘指标的身份色（见文件头）。 */
+  metric: {
+    requests: string;
+    success: string;
+    tokens: string;
+    cost: string;
+    cache: string;
+    rpm: string;
+    tpm: string;
+  };
 }
 
 const LIGHT: ChartPalette = {
@@ -49,6 +62,15 @@ const LIGHT: ChartPalette = {
   warn: "#e08e1f",
   err: "#e5484d",
   info: "#2a6ee8",
+  metric: {
+    requests: "#3b82f6",
+    success: "#10a37f",
+    tokens: "#8b5cf6",
+    cost: "#f59e0b",
+    cache: "#14b8a6",
+    rpm: "#3b82f6",
+    tpm: "#8b5cf6",
+  },
 };
 
 const DARK: ChartPalette = {
@@ -65,6 +87,15 @@ const DARK: ChartPalette = {
   warn: "#f0ad4e",
   err: "#ff6b6b",
   info: "#77a6ff",
+  metric: {
+    requests: "#60a5fa",
+    success: "#3ecf9a",
+    tokens: "#a78bfa",
+    cost: "#fbbf24",
+    cache: "#2dd4bf",
+    rpm: "#60a5fa",
+    tpm: "#a78bfa",
+  },
 };
 
 export const chartPalette = (isDark: boolean): ChartPalette => (isDark ? DARK : LIGHT);

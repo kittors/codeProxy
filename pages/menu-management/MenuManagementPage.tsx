@@ -472,7 +472,8 @@ export function MenuManagementPage() {
             </Button>
           ) : null}
         </div>
-        <div className="relative min-h-[420px] flex-1 overflow-hidden px-5 pb-5">
+        {/* 表格吃掉卡片剩余高度、内部滚动；不设最小高度保底——卡片高度被窗口钉死，保底只会在矮窗口下把表格挤出卡片（见请求日志页）。 */}
+        <div className="relative min-h-0 flex-1 overflow-hidden px-5 pb-5">
           <DataTable<(typeof rows)[number]>
             tableId="identity-menus"
             rows={rows}

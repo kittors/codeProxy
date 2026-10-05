@@ -610,10 +610,12 @@ export function RequestLogsPage() {
           表格区域 — 吃掉卡片里剩下的高度，内部滚动。
           用 flex-1 而不是 h-[calc(100dvh-300px)]：那个 300 是标题栏 + 筛选区 + 分页条的
           手工累加，筛选区换行、字号或密度一变就对不上，表格要么矮一截、下面空一块滚不动，
-          要么高出去把分页顶掉。min-h-[360px] 同时兼两件事：小屏保底，以及覆盖 flex item
-          默认的 min-height:auto（否则表格会被内容撑开，整页变长而不是内部滚动）。
+          要么高出去把分页顶掉。
+          min-h-0 覆盖 flex item 默认的 min-height:auto（否则表格会被内容撑开，整页变长而不是
+          内部滚动）。这里不能写 min-h-[360px] 之类的保底：卡片本身是 min-h-0、高度被窗口钉死，
+          窗口一矮，保底高度只会把表格和分页条挤出卡片边框之外，而不是让页面滚动。
         */}
-        <div className="relative min-h-[360px] flex-1 overflow-hidden px-5">
+        <div className="relative min-h-0 flex-1 overflow-hidden px-5">
           <DataTable
             tableId="request-logs"
             rows={rows}

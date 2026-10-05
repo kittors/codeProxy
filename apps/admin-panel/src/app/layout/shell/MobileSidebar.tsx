@@ -70,7 +70,7 @@ export function MobileSidebar({
             <span className="block font-display text-2xs text-ink-3">{BRAND_NAME}</span>
           </span>
         </div>
-        <ScrollArea className="min-h-0 flex-1" scrollbarVisibility="track-hover">
+        <ScrollArea className="min-h-0 flex-1" scrollbarVisibility="track-hover" edgeFade>
           <SidebarNav
             sections={sections}
             activeTo={activeTo}

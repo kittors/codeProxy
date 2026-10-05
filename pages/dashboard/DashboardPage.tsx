@@ -140,28 +140,28 @@ export function DashboardPage() {
   const isDark = mode === "dark";
   const palette = chartPalette(isDark);
   const totalRequestOption = useMemo(
-    () => createSparklineOption(trends?.request_volume ?? [], palette.primary, isDark),
-    [isDark, palette.primary, trends?.request_volume],
+    () => createSparklineOption(trends?.request_volume ?? [], palette.metric.requests, isDark),
+    [isDark, palette.metric.requests, trends?.request_volume],
   );
   const successRateOption = useMemo(
-    () => createSparklineOption(trends?.success_rate ?? [], palette.primary, isDark),
-    [isDark, palette.primary, trends?.success_rate],
+    () => createSparklineOption(trends?.success_rate ?? [], palette.metric.success, isDark),
+    [isDark, palette.metric.success, trends?.success_rate],
   );
   const totalTokenOption = useMemo(
-    () => createSparklineOption(trends?.total_tokens ?? [], palette.primary, isDark),
-    [isDark, palette.primary, trends?.total_tokens],
+    () => createSparklineOption(trends?.total_tokens ?? [], palette.metric.tokens, isDark),
+    [isDark, palette.metric.tokens, trends?.total_tokens],
   );
   const totalCostOption = useMemo(
-    () => createSparklineOption(trends?.total_cost ?? [], palette.primary, isDark),
-    [isDark, palette.primary, trends?.total_cost],
+    () => createSparklineOption(trends?.total_cost ?? [], palette.metric.cost, isDark),
+    [isDark, palette.metric.cost, trends?.total_cost],
   );
   const failedRequestOption = useMemo(
     () => createSparklineOption(trends?.failed_requests ?? [], palette.err, isDark),
     [isDark, palette.err, trends?.failed_requests],
   );
   const cacheRateOption = useMemo(
-    () => createSparklineOption([], palette.primary, isDark),
-    [isDark, palette.primary],
+    () => createSparklineOption([], palette.metric.cache, isDark),
+    [isDark, palette.metric.cache],
   );
 
   return (
@@ -235,6 +235,7 @@ export function DashboardPage() {
               : t("dashboard.total_hint_days", { count: range })
           }
           icon={Activity}
+          iconClassName="text-blue-500 dark:text-blue-400"
           option={totalRequestOption}
         />
         <DashboardKpiCard
@@ -246,6 +247,7 @@ export function DashboardPage() {
             <DashboardMetricValue key="failed" value={kpi?.failed_requests ?? 0} />,
           )}
           icon={Sigma}
+          iconClassName="text-emerald-500 dark:text-emerald-400"
           option={successRateOption}
         />
         <DashboardKpiCard
@@ -257,6 +259,7 @@ export function DashboardPage() {
             <DashboardMetricValue key="output" value={kpi?.output_tokens ?? 0} />,
           )}
           icon={Sparkles}
+          iconClassName="text-violet-500 dark:text-violet-400"
           option={totalTokenOption}
         />
         <DashboardKpiCard
@@ -264,6 +267,7 @@ export function DashboardPage() {
           value={<DashboardMetricValue value={kpi?.total_cost ?? 0} variant="currency" animated />}
           hint={t("dashboard.total_cost_hint")}
           icon={DollarSign}
+          iconClassName="text-amber-500 dark:text-amber-400"
           option={totalCostOption}
         />
         <DashboardKpiCard
@@ -271,6 +275,7 @@ export function DashboardPage() {
           value={<DashboardMetricValue value={kpi?.failed_requests ?? 0} animated />}
           hint={t("dashboard.failed_hint")}
           icon={TriangleAlert}
+          iconClassName="text-rose-500 dark:text-rose-400"
           option={failedRequestOption}
         />
         <DashboardKpiCard
@@ -282,6 +287,7 @@ export function DashboardPage() {
             <DashboardMetricValue key="input" value={kpi?.input_tokens ?? 0} />,
           )}
           icon={Database}
+          iconClassName="text-teal-500 dark:text-teal-400"
           option={cacheRateOption}
         />
         </div>

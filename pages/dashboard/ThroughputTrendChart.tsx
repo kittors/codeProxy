@@ -174,18 +174,20 @@ export function ThroughputTrendChart({
   const seriesConfigs = useMemo<ThroughputSeriesConfig[]>(() => {
     if (!hasTenants) {
       return [
+        // 不分租户时 RPM、TPM 用指标身份色（蓝 / 紫），与上方指标卡一致；按租户拆开时汇总线
+        // 仍用墨色，免得和分类色板里的蓝色租户线撞色。
         {
           id: "aggregated-rpm",
           name: "RPM",
           points,
-          color: palette.primary,
+          color: palette.metric.rpm,
           metric: "rpm",
         },
         {
           id: "aggregated-tpm",
           name: "TPM",
           points,
-          color: palette.series[2],
+          color: palette.metric.tpm,
           metric: "tpm",
         },
       ];
@@ -215,7 +217,7 @@ export function ThroughputTrendChart({
     });
 
     return configs;
-  }, [hasTenants, points, tenants, t, metric, palette.primary, palette.series]);
+  }, [hasTenants, points, tenants, t, metric, palette.primary, palette.metric.rpm, palette.metric.tpm]);
 
   // Keep visibleIds synchronized if configs change
   useEffect(() => {

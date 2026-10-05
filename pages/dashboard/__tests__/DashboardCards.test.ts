@@ -62,11 +62,14 @@ describe("dashboard card composition", () => {
 
   test("uses a centered health hero and circular disk usage card in system monitor", () => {
     const source = readModule("pages/dashboard/SystemMonitorSection.tsx");
+    const visuals = readModule("pages/dashboard/systemMonitorVisuals.tsx");
 
     expect(source).toContain("HealthHeroCard");
     expect(source).toContain("DiskUsageRingCard");
-    expect(source).toContain('bodyClassName="mt-0 flex h-full items-center justify-center"');
-    expect(source).toContain("strokeDasharray={circumference}");
+    // 两个环都走同一个渐变环组件：描边从 0 转到当前值，告警时换色。
+    expect(source.match(/<GradientRing/g)?.length).toBe(2);
+    expect(visuals).toContain("strokeDasharray={circumference}");
+    expect(visuals).toContain("transition-[stroke-dashoffset]");
     expect(source).toContain("grid gap-3 xl:grid-cols-[260px_minmax(0,1fr)_280px]");
     expect(source).not.toContain('label={t("system_monitor.disk_free")}');
   });
