@@ -1,12 +1,17 @@
 import type { MouseEvent } from "react";
 import { Link } from "react-router-dom";
 import { ACTIVE_ICON_STROKE, type SidebarNavItem } from "./navModel";
+import { SIDEBAR_ACTIVE_CARD } from "./sidebarRow";
 
 /**
- * 分区面板、收起后的浮层、手机抽屉共用的一行页面链接。
+ * 分区下的一行页面链接，两种外观：
  *
- * 选中态：浅灰实底 + 加粗 + 图标线宽加到 2；悬停只铺一层更浅的叠层；按下轻微收缩。
- * 外链（menu.type === "link"）在新标签页打开，不走站内导航与进度条。
+ * - `tree`：侧边栏里展开的分区子项。只有文字，左侧靠分区的竖向引导线表明层级——分区标题
+ *   已经有图标，子项再各带一个图标会让两层图标挤在一起、分不清主次。
+ * - `menu`：侧边栏收起后悬停弹出的分区浮层。带图标，浅灰实底表示当前页。
+ *
+ * 悬停只铺一层浅灰叠层；按下轻微收缩。外链（menu.type === "link"）在新标签页打开，
+ * 不走站内导航与进度条。
  */
 export function SidebarItemLink({
   item,
@@ -17,6 +22,7 @@ export function SidebarItemLink({
   onSelect,
   role,
   tabIndex,
+  variant = "menu",
 }: {
   item: SidebarNavItem;
   label: string;
@@ -27,23 +33,30 @@ export function SidebarItemLink({
   onSelect?: () => void;
   role?: "menuitem";
   tabIndex?: number;
+  variant?: "tree" | "menu";
 }) {
   const Icon = item.icon;
-  const className = [
-    "flex h-9 w-full min-w-0 items-center gap-3 rounded-xl px-2.5 text-sm whitespace-nowrap",
-    "transition-[background-color,color,transform] duration-150 ease-soft active:scale-[0.985]",
-    active
-      ? "bg-selected font-semibold text-ink"
-      : "font-normal text-ink hover:bg-hover",
-  ].join(" ");
-  const icon = (
-    <Icon
-      size={18}
-      strokeWidth={active ? ACTIVE_ICON_STROKE : undefined}
-      className={["shrink-0", active ? "text-ink" : "text-ink-2"].join(" ")}
-      aria-hidden="true"
-    />
-  );
+  const className =
+    variant === "tree"
+      ? [
+          "flex h-8 w-full min-w-0 items-center rounded-lg px-2.5 text-sm whitespace-nowrap",
+          "transition-[background-color,color,box-shadow,scale] duration-150 ease-soft active:scale-[0.98]",
+          active ? `${SIDEBAR_ACTIVE_CARD} font-medium` : "text-ink-2 hover:bg-hover hover:text-ink",
+        ].join(" ")
+      : [
+          "flex h-9 w-full min-w-0 items-center gap-3 rounded-xl px-2.5 text-sm whitespace-nowrap",
+          "transition-[background-color,color,scale] duration-150 ease-soft active:scale-[0.985]",
+          active ? "bg-selected font-semibold text-ink" : "font-normal text-ink hover:bg-hover",
+        ].join(" ");
+  const icon =
+    variant === "tree" ? null : (
+      <Icon
+        size={18}
+        strokeWidth={active ? ACTIVE_ICON_STROKE : undefined}
+        className={["shrink-0", active ? "text-ink" : "text-ink-2"].join(" ")}
+        aria-hidden="true"
+      />
+    );
 
   if (item.external) {
     return (

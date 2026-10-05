@@ -6,9 +6,9 @@ import type { MenuIdentity, TenantIdentity } from "@code-proxy/api-client";
 /**
  * 侧边栏的数据模型：把服务端下发的菜单树（principal.menus）整理成「分区 → 页面」两级。
  *
- * 外壳的视觉是图标栏（一级分区）+ 分区面板（分区下的页面），所以这里统一产出 `NavSection`：
- * - 目录（directory）是一个分区，子菜单是它的页面；
- * - 顶层的叶子菜单（仪表盘、系统信息这类）自成一个只有一页的分区，点图标栏直接进页面。
+ * 侧边栏的顶层一行就是一个分区，所以这里统一产出 `NavSection`：
+ * - 目录（directory）是一个多页分区：标题行可以展开出它的页面（收起侧边栏后改为悬停浮层）；
+ * - 顶层的叶子菜单（仪表盘、系统信息这类）自成一个只有一页的分区，整行直接就是那一页的链接。
  * 排序沿用 sort_order：顶层叶子和目录按同一把尺子交错排列，系统信息（70）可以排在所有目录之后。
  */
 
@@ -35,7 +35,7 @@ export type SidebarNavEntry =
   | { kind: "item"; item: SidebarNavItem }
   | { kind: "group"; group: SidebarNavGroup };
 
-/** 图标栏上的一个分区。`single` 为真时它只有一页，图标本身就是那一页的链接。 */
+/** 侧边栏顶层的一个分区。`single` 为真时它只有一页，整行就是那一页的链接。 */
 export interface NavSection {
   id: string;
   i18nKey: string;
@@ -144,7 +144,7 @@ export function mergeSidebarEntries(
   return entries;
 }
 
-/** 把交错排好序的条目转成图标栏分区：目录是多页分区，顶层叶子是单页分区。 */
+/** 把交错排好序的条目转成侧边栏分区：目录是多页分区，顶层叶子是单页分区。 */
 export const entriesToSections = (entries: readonly SidebarNavEntry[]): NavSection[] =>
   entries.map((entry) =>
     entry.kind === "group"

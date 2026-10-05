@@ -52,7 +52,7 @@ export function LookupHeader({
       aria-hidden={collapsed || undefined}
       className={[
         "fixed inset-x-0 top-0 z-30",
-        "motion-safe:transition-[transform,opacity,padding] motion-safe:duration-300 motion-safe:ease-[cubic-bezier(0.22,1,0.36,1)]",
+        "motion-safe:transition-[translate,opacity,padding] motion-safe:duration-300 motion-safe:ease-[cubic-bezier(0.22,1,0.36,1)]",
         // 落地页与登录后的门户共用「浮岛」顶栏：从视口边缘脱开，滚动后再收紧一点，
         // 比贴边硬条有呼吸感，也让登录前后的视觉是连续的。
         scrolled ? "px-3 pt-2" : "px-4 pt-4",

@@ -1,23 +1,8 @@
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import {
-  useEffect,
-  useId,
-  useRef,
-  useState,
-  type PropsWithChildren,
-  type ReactNode,
-} from "react";
+import { useEffect, useId, useRef, type PropsWithChildren, type ReactNode } from "react";
 import { X } from "lucide-react";
-import {
-  cssEase,
-  EASE_IN,
-  EASE_OUT,
-  EASE_SPRING,
-  OVERLAY_ENTER_MS,
-  OVERLAY_EXIT_MS,
-  OVERLAY_TRANSFORM_ENTER_MS,
-} from "../utils/motion";
+import { overlayBackdropMotion, overlayPanelMotion, useOverlayPresence } from "./overlayMotion";
 
 /** 关闭按钮：无底色圆形，悬停才出现浅灰叠层。 */
 const CLOSE_BUTTON_CLASS =
@@ -54,9 +39,7 @@ export function Modal({
   onClose: () => void;
 }>) {
   const { t } = useTranslation();
-  const [mounted, setMounted] = useState(open);
-  const [visible, setVisible] = useState(open);
-  const timeoutRef = useRef<number | null>(null);
+  const { mounted, visible } = useOverlayPresence(open);
   const titleId = useId();
   // Snapshot title/description/footer/children while open so parents can clear
   // props immediately without collapsing the panel mid-exit animation.
@@ -79,41 +62,6 @@ export function Modal({
   const snapshot = contentRef.current;
 
   useEffect(() => {
-    if (open) {
-      if (timeoutRef.current) {
-        window.clearTimeout(timeoutRef.current);
-        timeoutRef.current = null;
-      }
-      setMounted(true);
-      // Double rAF ensures the browser paints the "hidden" frame before animating in.
-      let raf2 = 0;
-      const raf1 = window.requestAnimationFrame(() => {
-        raf2 = window.requestAnimationFrame(() => setVisible(true));
-      });
-      return () => {
-        window.cancelAnimationFrame(raf1);
-        if (raf2) window.cancelAnimationFrame(raf2);
-      };
-    }
-
-    setVisible(false);
-    if (timeoutRef.current) {
-      window.clearTimeout(timeoutRef.current);
-    }
-    timeoutRef.current = window.setTimeout(() => {
-      setMounted(false);
-      timeoutRef.current = null;
-    }, OVERLAY_EXIT_MS);
-
-    return () => {
-      if (timeoutRef.current) {
-        window.clearTimeout(timeoutRef.current);
-        timeoutRef.current = null;
-      }
-    };
-  }, [open]);
-
-  useEffect(() => {
     if (!open) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -128,18 +76,9 @@ export function Modal({
 
   const bodyHeightCls = bodyHeightClassName ?? "max-h-[70vh]";
   const bodyOverflowCls = bodyOverflowClassName ?? "overflow-y-auto";
-  const transitionStyle = {
-    transitionDuration: `${visible ? OVERLAY_ENTER_MS : OVERLAY_EXIT_MS}ms`,
-    transitionTimingFunction: cssEase(visible ? EASE_OUT : EASE_IN),
-  } as const;
-  // 面板的 transition-property 顺序是 [opacity, transform]：进场时淡入走减速曲线，
-  // 位移/缩放走更长的轻回弹，像被轻轻放到桌面上；退场两者一起快速收走。
-  const panelTransitionStyle = visible
-    ? {
-        transitionDuration: `${OVERLAY_ENTER_MS}ms, ${OVERLAY_TRANSFORM_ENTER_MS}ms`,
-        transitionTimingFunction: `${cssEase(EASE_OUT)}, ${cssEase(EASE_SPRING)}`,
-      }
-    : transitionStyle;
+  // 遮罩与面板分层：进场一起出现，面板多走一段落稳；退场面板先走，遮罩随后褪去。
+  const backdropMotion = overlayBackdropMotion(visible);
+  const panelMotion = overlayPanelMotion(visible, !open);
 
   return createPortal(
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
@@ -151,12 +90,11 @@ export function Modal({
         }}
         aria-hidden="true"
         tabIndex={-1}
-        style={transitionStyle}
+        style={backdropMotion.style}
         className={[
           // 只压暗、不模糊：模糊会把背后的页面整片糊掉，打开一个小确认框也像换了个场景。
           "absolute inset-0 cursor-default bg-black/25 dark:bg-black/55",
-          "transition-opacity motion-reduce:transition-none",
-          visible ? "opacity-100" : "opacity-0",
+          backdropMotion.className,
         ].join(" ")}
       />
 
@@ -165,13 +103,10 @@ export function Modal({
         aria-modal="true"
         aria-label={hideHeader ? snapshot.title : undefined}
         aria-labelledby={hideHeader ? undefined : titleId}
-        style={panelTransitionStyle}
+        style={panelMotion.style}
         className={[
           `relative z-10 w-full ${maxWidth} overflow-hidden rounded-3xl bg-elevated text-ink shadow-dialog`,
-          // 放大幅度压到 0.97：再大就会让面板高度看着像「塌下去又弹起来」。
-          // 回弹曲线只越过一点点，配合 0.97 起点，落位是「稳住」而不是「弹跳」。
-          "transition-[opacity,transform] will-change-transform motion-reduce:transition-none motion-reduce:transform-none",
-          visible ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-2 scale-[0.97]",
+          panelMotion.className,
           panelClassName,
         ].join(" ")}
       >

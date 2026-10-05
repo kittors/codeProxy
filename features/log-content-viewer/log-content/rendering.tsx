@@ -16,7 +16,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { surface } from "@code-proxy/ui";
+import { overlayBackdropVariants, overlayPanelVariants, surface } from "@code-proxy/ui";
 
 const LARGE_TEXT_CHAR_THRESHOLD = 50_000;
 const LARGE_TEXT_LINE_THRESHOLD = 400;
@@ -498,28 +498,21 @@ export function ContentModal({
           className="fixed inset-0 z-[200] flex items-center justify-center p-4"
           initial="hidden"
           animate="show"
-          exit="hidden"
+          exit="exit"
         >
           <motion.button
             type="button"
             onClick={onClose}
             aria-label={t("common.close")}
             className="absolute inset-0 cursor-default bg-black/25 dark:bg-black/55"
-            variants={{
-              hidden: { opacity: 0 },
-              show: { opacity: 1 },
-            }}
-            transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+            variants={overlayBackdropVariants}
           />
           <motion.div
             role="dialog"
             aria-modal="true"
             className="relative z-10 flex h-[min(82dvh,760px)] w-[min(calc(100vw-2rem),1040px)] max-w-none flex-col overflow-hidden rounded-3xl bg-elevated text-ink shadow-dialog"
-            variants={{
-              hidden: { opacity: 0, y: 8, scale: 0.97 },
-              show: { opacity: 1, y: 0, scale: 1 },
-            }}
-            transition={{ type: "spring", stiffness: 420, damping: 34, mass: 0.8 }}
+            // 与通用弹窗同一套进出场节奏（packages/ui 的 overlayMotion）。
+            variants={overlayPanelVariants}
           >
             <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-900/8 px-5 py-4 dark:border-white/8">
               <div className="min-w-0">

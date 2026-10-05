@@ -26,13 +26,13 @@ const setAuthed = async (page: Page) => {
   });
 };
 
-test("Local preview: accepts any non-empty management key without a backend", async ({
-  page,
-}) => {
-  await page.goto("/manage/?preview=1#/login");
-  await page.locator('input[type="password"]').fill("anything");
-  await page.getByRole("button", { name: /Login|登录/i }).click();
-  await expect(page.locator("aside")).toBeVisible();
+// 预览模式只跳过「恢复会话」时的后端校验：登录早已改成用户名 + 密码、必须走后端，
+// 这条用例原来填个密码就断言 aside 可见，是靠旧登录页里恰好有一个 <aside> 才通过的。
+test("Local preview: a stored key opens the console without a backend", async ({ page }) => {
+  await setAuthed(page);
+  await page.goto("/manage/?preview=1#/dashboard");
+  await expect(page.locator("aside[data-collapsed]")).toBeVisible();
+  await expect(page.getByRole("navigation", { name: /^(Sections|分区)$/ })).toBeVisible();
 });
 
 test("Config: page should not horizontally scroll; editor should allow horizontal scroll", async ({
@@ -137,7 +137,7 @@ test("Config visual editor keeps descriptions in info tooltips", async ({ page }
   await expect(page.getByRole("tooltip")).toContainText(description);
 });
 
-test("Sidebar: icon rail, section panel, collapsed flyouts and account menu", async ({
+test("Sidebar: single sidebar with folding sections, collapsed flyouts and account menu", async ({
   page,
 }) => {
   await setAuthed(page);
@@ -167,11 +167,12 @@ test("Sidebar: icon rail, section panel, collapsed flyouts and account menu", as
   await expect(rail.getByRole("link", { name: /Dashboard|仪表盘/i })).toBeVisible();
   await expect(systemSection).toHaveAttribute("data-active", "true");
 
-  // 面板列出当前分区的页面，当前页是浅灰实底而不是彩色渐变。
-  const panel = page.getByRole("navigation", { name: /^(System Settings|系统设置)$/ });
-  const configLink = panel.getByRole("link", { name: /^Config|配置面板$/i });
+  // 当前页所在的分区自动展开，当前页是灰底上的白色小卡片而不是彩色渐变。
+  await expect(systemSection).toHaveAttribute("aria-expanded", "true");
+  const systemList = page.getByRole("group", { name: /^(System Settings|系统设置)$/ });
+  const configLink = systemList.getByRole("link", { name: /^Config|配置面板$/i });
   await expect(configLink).toHaveAttribute("aria-current", "page");
-  await expect(configLink).toHaveClass(/bg-selected/);
+  await expect(configLink).toHaveClass(/bg-surface/);
   await expect(configLink).not.toHaveClass(/from-blue-600/);
   expect(await configLink.evaluate((el) => getComputedStyle(el).whiteSpace)).toBe("nowrap");
   await expect(page.getByRole("banner")).toContainText(/System Settings|系统设置/);
@@ -185,15 +186,27 @@ test("Sidebar: icon rail, section panel, collapsed flyouts and account menu", as
   await expect.poll(async () => Number(await logo.evaluate((el) => getComputedStyle(el).opacity))).toBeLessThan(0.05);
   await expect(toggle).toHaveAccessibleName(/Collapse Sidebar|收起侧边栏/i);
 
-  // 点开分区：展开态下点图标栏的分区直接切到该分区的页面。
-  await rail.getByRole("button", { name: MODELS_SECTION }).click();
-  await expect(page.getByRole("navigation", { name: MODELS_SECTION })).toBeVisible();
+  // 只有一条侧边栏：内容区紧挨着它，中间没有第二列面板。
+  const asideBox = await aside.boundingBox();
+  const mainSurface = page.locator("#main-content").locator("xpath=../..");
+  const mainBox = await mainSurface.boundingBox();
+  expect((mainBox?.x ?? 0) - ((asideBox?.x ?? 0) + (asideBox?.width ?? 0))).toBeLessThan(12);
 
-  // 收起：只剩图标栏，内容区左侧接过圆角，选择会被记住。
+  // 点分区标题展开它的页面列表（不跳页），再点一次收起。
+  const modelsSection = rail.getByRole("button", { name: MODELS_SECTION });
+  const modelsList = page.getByRole("group", { name: MODELS_SECTION });
+  await modelsSection.click();
+  await expect(modelsSection).toHaveAttribute("aria-expanded", "true");
+  await expect(modelsList.getByRole("link").first()).toBeVisible();
+  await expect(page).toHaveURL(/#\/system\/config$/);
+  await modelsSection.click();
+  await expect(modelsSection).toHaveAttribute("aria-expanded", "false");
+  await expect.poll(() => modelsList.evaluate((el) => el.getBoundingClientRect().height)).toBeLessThan(1);
+
+  // 收起：只剩图标栏，内容区仍是圆角卡片，选择会被记住。
   await toggle.click();
   await expect(aside).toHaveAttribute("data-collapsed", "true");
   await expect.poll(() => aside.evaluate((el) => el.getBoundingClientRect().width)).toBeLessThan(76);
-  const mainSurface = page.locator("#main-content").locator("xpath=../..");
   await expect.poll(() => mainSurface.evaluate((el) => parseFloat(getComputedStyle(el).borderTopLeftRadius))).toBeGreaterThan(8);
   expect(await page.evaluate(() => localStorage.getItem("cli-proxy-sidebar-collapsed"))).toBe("1");
 
@@ -217,8 +230,8 @@ test("Sidebar: icon rail, section panel, collapsed flyouts and account menu", as
   await expect(aside).toHaveAttribute("data-collapsed", "false");
   await expect.poll(() => aside.evaluate((el) => el.getBoundingClientRect().width)).toBeGreaterThan(220);
 
-  // 账号菜单：从图标栏底部向右弹出，和语言菜单用同一套浮层表面。
-  const accountTrigger = rail.getByRole("button", { name: "Admin" });
+  // 账号菜单：从侧边栏底部的账号行上方弹出，和语言菜单用同一套浮层表面。
+  const accountTrigger = aside.getByRole("button", { name: "Admin" });
   const accountTriggerBox = await accountTrigger.boundingBox();
   await accountTrigger.click();
   const accountMenu = page.locator("[data-sidebar-account-menu='true']");
@@ -228,7 +241,8 @@ test("Sidebar: icon rail, section panel, collapsed flyouts and account menu", as
   await expect(page.getByRole("menuitem", { name: /Logout|退出登录/i })).toBeVisible();
   await page.waitForTimeout(220);
   const accountMenuBox = await accountMenu.boundingBox();
-  expect(accountMenuBox?.x ?? 0).toBeGreaterThan((accountTriggerBox?.x ?? 0) + (accountTriggerBox?.width ?? 0));
+  expect((accountMenuBox?.y ?? 0) + (accountMenuBox?.height ?? 0)).toBeLessThanOrEqual(accountTriggerBox?.y ?? 0);
+  expect(Math.abs((accountMenuBox?.x ?? 0) - (accountTriggerBox?.x ?? 0))).toBeLessThan(4);
   const surfaceStyle = (el: Element) => {
     const style = getComputedStyle(el);
     return { borderRadius: style.borderRadius, boxShadow: style.boxShadow, background: style.backgroundColor };

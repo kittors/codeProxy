@@ -1,20 +1,12 @@
-import {
-  type PropsWithChildren,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { type PropsWithChildren, useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { PageBackground } from "@code-proxy/ui";
 import { useOptionalAuth } from "@app/providers/AuthProvider";
 import { MobileSidebar } from "./shell/MobileSidebar";
-import { getPageTitleKey, resolveActiveTo, type NavSection } from "./shell/navModel";
+import { getPageTitleKey, resolveActiveTo } from "./shell/navModel";
 import { ShellTopBar } from "./shell/ShellTopBar";
-import { SidebarPanel } from "./shell/SidebarPanel";
-import { SidebarRail } from "./shell/SidebarRail";
+import { Sidebar } from "./shell/Sidebar";
 import { useRouteNavigation } from "./shell/useRouteNavigation";
 import { useShellNav } from "./shell/useShellNav";
 
@@ -57,11 +49,13 @@ function useIsMobile() {
 }
 
 /**
- * 控制台外壳：图标栏（一级分区）| 分区面板（分区下的页面）| 内容区。
+ * 控制台外壳：一条侧边栏（分区导航）| 内容区。
  *
- * - 桌面端可以收起分区面板，只留图标栏；收起状态记在 localStorage。收起后内容区左侧两角
- *   变成大圆角，嵌在图标栏的灰底上，多页分区改为悬停弹出浮层。
- * - 手机端（< 768px）没有图标栏，导航收进抽屉，路由变化时自动收起，打开时锁住页面滚动。
+ * - 内容区是嵌在灰底上的圆角白卡片，侧边栏直接画在灰底上，两者之间不需要分隔线。
+ * - 桌面端可以把侧边栏收成图标栏（⌘B / Ctrl+B 或点 Logo），收起状态记在 localStorage；
+ *   收起后多页分区改为悬停弹出浮层。
+ * - 手机端（< 768px）没有侧边栏，导航收进抽屉，路由变化时自动收起，打开时锁住页面滚动；
+ *   内容区铺满屏幕，不再留边距和圆角。
  * - 导航统一走 useRouteNavigation：先预加载目标页再切路由，期间窗口顶端有进度条。
  */
 export function AppShell({ children, onLogout }: PropsWithChildren<{ onLogout?: () => void }>) {
@@ -113,33 +107,6 @@ export function AppShell({ children, onLogout }: PropsWithChildren<{ onLogout?: 
     [activeTo, sections],
   );
 
-  // 每个分区记住上次停留的页面：从图标栏切回来时回到那一页，而不是总落在第一页。
-  const lastVisitedRef = useRef(new Map<string, string>());
-  useEffect(() => {
-    const settledTo = resolveActiveTo(location.pathname, items);
-    const section = sections.find((entry) => entry.items.some((item) => item.to === settledTo));
-    if (section && settledTo) lastVisitedRef.current.set(section.id, settledTo);
-  }, [items, location.pathname, sections]);
-
-  // 当前路由不在导航里（修改密码等）时，面板继续显示上一次的分区，而不是突然变空。
-  const [panelSectionId, setPanelSectionId] = useState<string | null>(null);
-  useEffect(() => {
-    if (activeSection) setPanelSectionId(activeSection.id);
-  }, [activeSection]);
-  const panelSection =
-    activeSection ?? sections.find((section) => section.id === panelSectionId) ?? sections[0] ?? null;
-
-  const openSection = useCallback(
-    (section: NavSection) => {
-      const remembered = lastVisitedRef.current.get(section.id);
-      const target =
-        section.items.find((item) => item.to === remembered && !item.external) ??
-        section.items.find((item) => !item.external);
-      if (target) nav.startNavigation(target.to);
-    },
-    [nav],
-  );
-
   const toggleDesktop = useCallback(() => setDesktopCollapsed((prev) => !prev), []);
   const toggleMobile = useCallback(() => setMobileNavOpen((prev) => !prev), []);
 
@@ -164,7 +131,7 @@ export function AppShell({ children, onLogout }: PropsWithChildren<{ onLogout?: 
   }, [isMobile, toggleDesktop]);
 
   const titleKey = getPageTitleKey(location.pathname, auth?.state.principal?.menus);
-  const activeItem = panelSection?.items.find((item) => item.to === activeTo) ?? null;
+  const activeItem = activeSection?.items.find((item) => item.to === activeTo) ?? null;
   const pageLabel = activeItem
     ? t(activeItem.i18nKey, { defaultValue: activeItem.i18nKey })
     : t(titleKey);
@@ -195,25 +162,19 @@ export function AppShell({ children, onLogout }: PropsWithChildren<{ onLogout?: 
       ) : null}
       <div className="flex h-[100dvh] overflow-hidden bg-rail">
         {isMobile ? null : (
-          <aside data-collapsed={collapsed ? "true" : "false"} className="flex h-full shrink-0">
-            <SidebarRail
-              sections={sections}
-              activeSectionId={activeSection?.id ?? null}
-              activeTo={activeTo}
-              collapsed={collapsed}
-              nav={nav}
-              onToggleSidebar={toggleDesktop}
-              onOpenSection={openSection}
-              onLogout={logout}
-            />
-            <SidebarPanel section={panelSection} activeTo={activeTo} collapsed={collapsed} nav={nav} />
-          </aside>
+          <Sidebar
+            sections={sections}
+            activeTo={activeTo}
+            collapsed={collapsed}
+            nav={nav}
+            onToggleSidebar={toggleDesktop}
+            onLogout={logout}
+          />
         )}
         <div
           className={[
             "flex min-w-0 flex-1 flex-col overflow-hidden bg-canvas",
-            "transition-[border-radius] duration-[360ms] ease-soft motion-reduce:transition-none",
-            collapsed ? "rounded-l-2xl" : "",
+            isMobile ? "" : "my-2 mr-2 rounded-2xl shadow-card ring-1 ring-line",
           ].join(" ")}
         >
           <ShellTopBar
