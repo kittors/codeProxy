@@ -185,7 +185,7 @@ export function OpenAIModelDiscoveryPanel({
                         type="checkbox"
                         checked={checked}
                         onChange={() => handleCheckboxChange(model.id)}
-                        className="h-3.5 w-3.5 shrink-0 rounded border-slate-300 text-indigo-600 focus-visible:ring-2 focus-visible:ring-indigo-400/35 dark:border-neutral-600 dark:bg-neutral-900 dark:text-indigo-400 dark:focus-visible:ring-indigo-400/20"
+                        className="h-3.5 w-3.5 shrink-0 rounded border-slate-300 text-ink focus-visible:ring-2 focus-visible:ring-ink/[0.06] dark:border-neutral-600 dark:bg-neutral-900"
                       />
                       <span className="truncate">{model.id}</span>
                     </label>

@@ -164,7 +164,9 @@
     "password_label": "密码",
     "advanced_connection": "高级连接设置",
     "switch_account_failed": "无法恢复该账号，请重新登录。",
-    "or_sign_in": "或使用密码登录"
+    "or_sign_in": "或使用密码登录",
+    "caps_lock_on": "大写锁定已开启",
+    "hero_prefix": "一个入口，接入"
   },
   "header": {
     "check_connection": "检查连接",
@@ -5125,7 +5127,14 @@
     "tenant_administrator_role": "租户管理员",
     "super_administrator": "超级管理员",
     "more_actions": "更多操作",
-    "source_ip": "来源 IP"
+    "source_ip": "来源 IP",
+    "password_rule_min_length": "至少 {{count}} 个字符",
+    "password_rule_upper": "大写字母",
+    "password_rule_lower": "小写字母",
+    "password_rule_special": "特殊字符",
+    "passwords_match": "两次输入一致",
+    "change_password_hint": "请设置一个没在别处用过的密码。",
+    "change_password_forced_hint": "继续使用前，请先设置新密码。"
   },
   "apikey_usage": {
     "title": "API 密钥用量查询",

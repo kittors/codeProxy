@@ -92,12 +92,13 @@ export function highlightSnippet(code: string, language: SnippetLanguage): CodeT
 /** IDE 深色配色。代码块在两种主题下都用深底，作为版面里稳定的「终端」意象。 */
 export const TOKEN_CLASS: Record<TokenKind, string> = {
   plain: "text-slate-300",
-  keyword: "text-violet-400",
+  // 不用紫色：整套界面已经去掉紫色系，关键字改用柔和的玫红（接近 GitHub 深色主题）。
+  keyword: "text-rose-300",
   string: "text-emerald-400",
   number: "text-amber-300",
   comment: "text-slate-500",
   property: "text-sky-300",
-  flag: "text-rose-300",
+  flag: "text-orange-300",
   func: "text-blue-300",
   punct: "text-slate-500",
 };

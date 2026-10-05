@@ -141,7 +141,7 @@ export const createOwnedApiKeyColumns = ({
     ...TABLE_ROW_ACTIONS_COLUMN,
     lockOrder: "end",
     headerClassName: "text-center md:sticky md:z-40 md:bg-slate-100 md:dark:bg-neutral-800",
-    cellClassName: "md:sticky md:z-30 md:bg-white md:dark:bg-neutral-950",
+    cellClassName: "md:sticky md:z-30 md:bg-surface",
     render: (row) => {
       const busy = busyAll || busyKeyId === row.id;
       const hasResettablePeriod = hasPeriodSpendingLimits(

@@ -102,7 +102,7 @@ function PriceChip({
           : "border-slate-900/8 bg-white dark:border-neutral-700/70 dark:bg-neutral-950/50",
       ].join(" ")}
     >
-      <div className="text-2xs font-medium uppercase tracking-wide text-slate-400 dark:text-white/35">
+      <div className="text-2xs font-medium text-slate-400 dark:text-white/35">
         {label}
       </div>
       <div
@@ -194,7 +194,7 @@ function ModelPlazaCard({
       <Card
         padding="compact"
         bodyClassName="mt-0 flex h-full min-h-[196px] flex-col"
-        className="group h-full transition hover:border-indigo-200/70 hover:shadow-[2px_2px_10px_rgb(0_0_0_/_0.06)] dark:hover:border-indigo-500/25 dark:hover:shadow-[2px_2px_10px_rgb(0_0_0_/_0.28)]"
+        className="group h-full transition hover:border-ink-4 hover:shadow-[2px_2px_10px_rgb(0_0_0_/_0.06)] dark:hover:shadow-[2px_2px_10px_rgb(0_0_0_/_0.28)]"
       >
         <div className="flex items-start gap-3">
           <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-900/8 bg-slate-50 dark:border-neutral-700/70 dark:bg-neutral-900/70">
@@ -274,7 +274,7 @@ function ModelPlazaCard({
 
         <div className="mt-auto pt-2">
           <div className="mb-1.5 flex items-center justify-between gap-2">
-            <span className="text-2xs font-semibold uppercase tracking-wide text-slate-400 dark:text-white/35">
+            <span className="text-2xs font-medium text-slate-400 dark:text-white/35">
               {t("model_plaza.pricing")}
             </span>
             {!priced ? (
@@ -428,8 +428,8 @@ export function ModelPlazaPage() {
     <div className="flex min-w-0 flex-col">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-100 dark:bg-indigo-900/30">
-            <Store size={16} className="text-indigo-600 dark:text-indigo-400" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-selected">
+            <Store size={16} className="text-ink" />
           </div>
           <div>
             <h2 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
@@ -439,7 +439,7 @@ export function ModelPlazaPage() {
               {t("model_plaza.subtitle")}
             </p>
           </div>
-          <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-bold tabular-nums text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300">
+          <span className="rounded-full bg-hover px-2 py-0.5 text-xs font-bold tabular-nums text-ink">
             {filteredModels.length}
           </span>
           {filter || selectedVendor !== "all" ? (

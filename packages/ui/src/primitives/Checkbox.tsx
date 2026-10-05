@@ -5,6 +5,7 @@ import {
   useRef,
   type InputHTMLAttributes,
 } from "react";
+import "./Checkbox.css";
 
 export interface CheckboxProps extends Omit<
   InputHTMLAttributes<HTMLInputElement>,
@@ -15,8 +16,8 @@ export interface CheckboxProps extends Omit<
   onCheckedChange?: (checked: boolean) => void;
 }
 
-const checkboxClassName =
-  "h-4 w-4 rounded border-slate-300 text-slate-950 accent-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-700 dark:accent-white dark:focus-visible:ring-white/20";
+/** 外观在 Checkbox.css 里（自绘方框 + mask 对勾）；尺寸留在工具类上，调用方可以覆盖。 */
+const checkboxClassName = "cp-checkbox h-4 w-4 shrink-0";
 
 export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(function Checkbox(
   { checked, className, indeterminate = false, onCheckedChange, ...props },

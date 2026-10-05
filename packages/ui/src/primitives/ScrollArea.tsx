@@ -233,7 +233,7 @@ export function ScrollArea({
         >
           <div
             role="presentation"
-            className="pointer-events-auto absolute right-0 w-1.5 cursor-pointer rounded-full bg-[#C7C7C7] transition-[width] duration-150 ease-out hover:w-2 active:w-2 group-hover/scrollbar:w-2"
+            className="pointer-events-auto absolute right-0 w-1.5 cursor-pointer rounded-full bg-[#C7C7C7] transition-[width] duration-150 ease-out hover:w-2 active:w-2 group-hover/scrollbar:w-2 dark:bg-white/25"
             style={{ top: thumb.top + Math.max(0, scrollbarTrackInset), height: thumb.height }}
             onPointerDown={handleThumbPointerDown}
             onPointerMove={handleThumbPointerMove}

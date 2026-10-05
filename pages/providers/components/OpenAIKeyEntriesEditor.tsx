@@ -95,7 +95,7 @@ export function OpenAIKeyEntriesEditor({
                 </span>
               </div>
               <Button
-                variant="danger"
+                variant="ghost-danger"
                 size="sm"
                 onClick={() =>
                   setOpenaiDraft((prev) => ({

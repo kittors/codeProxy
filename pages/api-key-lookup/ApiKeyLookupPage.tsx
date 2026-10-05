@@ -1258,9 +1258,7 @@ export function ApiKeyLookupPage() {
       <div
         className={[
           "relative min-h-dvh pt-14",
-          showLanding
-            ? ""
-            : "bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-neutral-950 dark:via-neutral-900 dark:to-neutral-950",
+          showLanding ? "" : "bg-canvas",
         ].join(" ")}
       >
         <LookupHeader
@@ -1440,7 +1438,7 @@ export function ApiKeyLookupPage() {
               {(activeTab === "models" || activeTab === "quickImport") &&
               !queriedKey &&
               portalUser ? (
-                <div className="rounded-2xl border border-dashed border-slate-900/8 px-6 py-12 text-center text-sm text-slate-500 dark:border-white/8 dark:text-white/55">
+                <div className="bg-subtle rounded-2xl px-6 py-12 text-center text-sm text-slate-500 dark:text-white/55">
                   {t("apikey_lookup.operational_key_required", {
                     defaultValue:
                       "请先创建一把可用 Key；模型列表和快速导入需要凭证，用量与日志仍按账号聚合。",

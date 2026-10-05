@@ -88,7 +88,10 @@ describe("FormField", () => {
       </FormField>,
     );
     const input = screen.getByRole("textbox");
-    expect(input.className).toMatch(/ring-rose/);
+    // 红色描边由 aria-invalid 属性驱动（controlSurface 里的 aria-[invalid=true] 变体），
+    // 这里同时守住「属性挂上了」和「样式规则在」两层。
+    expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(input.className).toMatch(/aria-\[invalid=true\]:border-err/);
   });
 
   test("wires FormField label and description to ToggleSwitch", () => {

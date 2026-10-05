@@ -107,7 +107,7 @@ export function LandingWorkflow({ copy }: { copy: LandingCopy }) {
                 {...fade({ delay: 0.06 * index, distance: 12 })}
                 className="border-t border-slate-900/8 py-7 first:border-t-0 first:pt-0 dark:border-white/8"
               >
-                <span className="font-display text-2xs uppercase tracking-[0.28em] text-indigo-600 dark:text-indigo-400">
+                <span className="font-display text-2xs uppercase tracking-[0.28em] text-ink-3">
                   {`STEP ${index + 1}`}
                 </span>
                 <h3 className="mt-3 font-display text-lg font-bold tracking-tight text-slate-900 dark:text-white">
@@ -143,7 +143,7 @@ export function LandingWorkflow({ copy }: { copy: LandingCopy }) {
                       layoutId="landing-snippet-tab"
                       transition={{ duration: 0.28, ease: LANDING_EASE }}
                       aria-hidden
-                      className="absolute inset-0 -z-10 rounded-full bg-indigo-500"
+                      className="absolute inset-0 -z-10 rounded-full bg-accent"
                     />
                   ) : null}
                   {snippet.label}

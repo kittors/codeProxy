@@ -79,7 +79,7 @@ export function MonitorKpiSection({
 
       {!hasData && !isLoading ? (
         <Reveal>
-          <section className="rounded-2xl border border-dashed border-slate-900/8 bg-white p-10 text-center shadow-sm dark:border-white/8 dark:bg-neutral-950/60">
+          <section className="bg-subtle rounded-2xl p-10 text-center">
             <div className="mx-auto flex max-w-md flex-col items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900/5 text-slate-700 dark:bg-white/10 dark:text-white/70">
                 <ChartSpline size={20} />
@@ -244,7 +244,8 @@ export function MonitorDistributionSections({
                       {
                         key: "daily_input",
                         label: t("monitor.input_token"),
-                        colorClass: "bg-violet-400",
+                        // 与 daily-trend 的柱色一致：输入浅灰、输出中灰、请求数主色。
+                        colorClass: "bg-[#e6e6e6] dark:bg-[#3a3a3a]",
                         enabled: dailyLegendSelected["daily_input"] ?? true,
                         onToggle: toggleDailyLegend,
                       },
@@ -255,7 +256,7 @@ export function MonitorDistributionSections({
                       {
                         key: "daily_output",
                         label: t("monitor.output_token_legend"),
-                        colorClass: "bg-emerald-400",
+                        colorClass: "bg-[#a3a3a3] dark:bg-[#767676]",
                         enabled: dailyLegendSelected["daily_output"] ?? true,
                         onToggle: toggleDailyLegend,
                       },
@@ -266,7 +267,7 @@ export function MonitorDistributionSections({
                       {
                         key: "daily_requests",
                         label: t("monitor.requests"),
-                        colorClass: "bg-blue-500",
+                        colorClass: "bg-ink",
                         enabled: dailyLegendSelected["daily_requests"] ?? true,
                         onToggle: toggleDailyLegend,
                       },

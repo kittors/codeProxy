@@ -5,6 +5,8 @@ export { Skeleton, SkeletonLines } from "./feedback/Skeleton";
 export type { PageLoaderVariant } from "./feedback/PageLoader";
 export { Reveal } from "./feedback/Reveal";
 export { ToastProvider, useToast } from "./feedback/ToastProvider";
+export { toast } from "./feedback/toastStore";
+export type { ToastAction, ToastOptions } from "./feedback/toastStore";
 
 export { DataTable } from "./data-table/DataTable";
 export {
@@ -30,6 +32,13 @@ export {
 } from "./data-table/TableCellOverflowTooltip";
 
 export { ChartLegend } from "./charts/ChartLegend";
+export {
+  CHART_CATEGORICAL,
+  chartAxisStyle,
+  chartPalette,
+  chartTooltipStyle,
+} from "./charts/chartTheme";
+export type { ChartPalette } from "./charts/chartTheme";
 export type { ChartLegendItem } from "./charts/ChartLegend";
 export { EChart } from "./charts/EChart";
 export type { EChartEvents } from "./charts/EChart";
@@ -54,6 +63,7 @@ export {
   HoverTooltip,
   OverflowTooltip,
   GlobalIconButtonTooltip,
+  TooltipChip,
   TooltipTriggerContext,
 } from "./overlays/Tooltip";
 export type { TooltipPlacement } from "./overlays/Tooltip";
@@ -112,9 +122,12 @@ export type { ToggleSwitchProps } from "./primitives/ToggleSwitch";
 export { ThemeProvider, useTheme, ThemeToggleButton } from "./theme/ThemeProvider";
 export { LanguageSelector } from "./theme/LanguageSelector";
 
+export { useCapsLock } from "./hooks/useCapsLock";
 export { useInterval } from "./hooks/useInterval";
 export { useLocalStorage } from "./hooks/useLocalStorage";
 export { useResizeLayoutAnimation } from "./hooks/useResizeLayoutAnimation";
+export { useShake } from "./hooks/useShake";
+export { useStaggerVariants } from "./hooks/useStaggerVariants";
 export {
   useSensitiveDataMasking,
   SENSITIVE_DATA_MASKING_STORAGE_KEY,

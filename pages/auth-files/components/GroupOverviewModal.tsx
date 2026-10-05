@@ -72,7 +72,7 @@ export function GroupOverviewModal({
             </TabsList>
           </Tabs>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex h-9 items-center rounded-2xl border border-slate-900/8 bg-slate-50 px-3 text-sm font-medium text-slate-700 dark:border-white/8 dark:bg-neutral-900/60 dark:text-white/75">
+            <span className="inline-flex h-9 items-center rounded-full bg-hover px-3.5 text-sm font-medium text-ink-2">
               {t("auth_files.group_overview_fixed_7_days")}
             </span>
             <Button
@@ -95,7 +95,7 @@ export function GroupOverviewModal({
 
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <div className={[surface({ tone: "raised", radius: "2xl" }), "px-4 py-3"].join(" ")}>
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-white/45">
+            <p className="text-xs font-medium text-slate-500 dark:text-white/45">
               {activeGroupTitle}
             </p>
             <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">
@@ -106,7 +106,7 @@ export function GroupOverviewModal({
             </p>
           </div>
           <div className={[surface({ tone: "raised", radius: "2xl" }), "px-4 py-3"].join(" ")}>
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-white/45">
+            <p className="text-xs font-medium text-slate-500 dark:text-white/45">
               {t("auth_files.group_overview_total_calls_label")}
             </p>
             <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">
@@ -117,7 +117,7 @@ export function GroupOverviewModal({
             </p>
           </div>
           <div className={[surface({ tone: "raised", radius: "2xl" }), "px-4 py-3"].join(" ")}>
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-white/45">
+            <p className="text-xs font-medium text-slate-500 dark:text-white/45">
               {(activeGroupOverview.weeklyFamilies?.length ?? 0) > 1
                 ? t("auth_files.group_overview_weekly_limits_label")
                 : t("auth_files.group_overview_avg_week_label")}
@@ -147,7 +147,7 @@ export function GroupOverviewModal({
             </p>
           </div>
           <div className={[surface({ tone: "raised", radius: "2xl" }), "px-4 py-3"].join(" ")}>
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-white/45">
+            <p className="text-xs font-medium text-slate-500 dark:text-white/45">
               {t("auth_files.group_overview_sample_count", {
                 count: activeGroupOverview.quotaSampleCount,
               })}

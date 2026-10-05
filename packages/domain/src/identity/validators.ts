@@ -97,31 +97,54 @@ export function validateDisplayName(raw: string): IdentityValidationResult {
 }
 
 /**
+ * Each rule of the password policy on its own.
+ *
+ * `validatePassword` stops at the first failure, which is right for an error
+ * message but not for a checklist that ticks rules off as the user types. Both
+ * read the same rules from here so the checklist can never promise a password
+ * that submit would then reject.
+ */
+export interface PasswordRuleStatus {
+  minLength: boolean;
+  maxBytes: boolean;
+  upper: boolean;
+  lower: boolean;
+  special: boolean;
+}
+
+/**
  * Aligns with CliRelay HashPassword after 077:
  * len >= 12, at least one upper, one lower, one non-alphanumeric.
  * Special = any byte that is not [A-Za-z0-9] (same as Go switch default).
  */
-export function validatePassword(password: string): IdentityValidationResult {
-  if (password.length < IDENTITY_PASSWORD_MIN_LENGTH) {
-    return { ok: false, code: "password_too_short" };
-  }
-  // Measured in bytes, not characters: the server's limit is bcrypt's, so a
-  // password of CJK characters hits it at a third of the character count.
-  if (utf8ByteLength(password) > IDENTITY_PASSWORD_MAX_BYTES) {
-    return { ok: false, code: "password_too_long" };
-  }
-  let hasUpper = false;
-  let hasLower = false;
-  let hasSpecial = false;
+export function passwordRuleStatus(password: string): PasswordRuleStatus {
+  let upper = false;
+  let lower = false;
+  let special = false;
   for (const ch of password) {
-    if (ch >= "A" && ch <= "Z") hasUpper = true;
-    else if (ch >= "a" && ch <= "z") hasLower = true;
+    if (ch >= "A" && ch <= "Z") upper = true;
+    else if (ch >= "a" && ch <= "z") lower = true;
     else if (ch >= "0" && ch <= "9") {
       /* digit ok */
-    } else hasSpecial = true;
+    } else special = true;
   }
-  if (!hasUpper) return { ok: false, code: "password_missing_upper" };
-  if (!hasLower) return { ok: false, code: "password_missing_lower" };
-  if (!hasSpecial) return { ok: false, code: "password_missing_special" };
+  return {
+    minLength: password.length >= IDENTITY_PASSWORD_MIN_LENGTH,
+    // Measured in bytes, not characters: the server's limit is bcrypt's, so a
+    // password of CJK characters hits it at a third of the character count.
+    maxBytes: utf8ByteLength(password) <= IDENTITY_PASSWORD_MAX_BYTES,
+    upper,
+    lower,
+    special,
+  };
+}
+
+export function validatePassword(password: string): IdentityValidationResult {
+  const rules = passwordRuleStatus(password);
+  if (!rules.minLength) return { ok: false, code: "password_too_short" };
+  if (!rules.maxBytes) return { ok: false, code: "password_too_long" };
+  if (!rules.upper) return { ok: false, code: "password_missing_upper" };
+  if (!rules.lower) return { ok: false, code: "password_missing_lower" };
+  if (!rules.special) return { ok: false, code: "password_missing_special" };
   return { ok: true };
 }

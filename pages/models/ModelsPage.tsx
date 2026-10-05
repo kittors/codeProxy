@@ -804,7 +804,7 @@ export function ModelsPage() {
           {t("models_page.selected_models_count", { count: selectedModelCount })}
         </span>
         <Button
-          variant="danger"
+          variant="secondary-danger"
           size="sm"
           onClick={() => setBulkDeleteTargetIds(selectedModels.map((model) => model.id))}
           disabled={deleting}
@@ -880,11 +880,11 @@ export function ModelsPage() {
                 className="-mx-1 min-h-0 flex-1 space-y-2 overflow-x-hidden overflow-y-auto px-1 py-1"
               >
                 {libraryOwners.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-slate-900/8 px-3 py-6 text-center text-sm text-slate-500 dark:border-white/8 dark:text-white/45">
+                  <div className="bg-subtle rounded-xl px-3 py-6 text-center text-sm text-slate-500 dark:text-white/45">
                     {t("models_page.no_owner_presets")}
                   </div>
                 ) : filteredLibraryOwners.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-slate-900/8 px-3 py-6 text-center text-sm text-slate-500 dark:border-white/8 dark:text-white/45">
+                  <div className="bg-subtle rounded-xl px-3 py-6 text-center text-sm text-slate-500 dark:text-white/45">
                     {t("models_page.no_owner_search_results")}
                   </div>
                 ) : (
@@ -965,7 +965,7 @@ export function ModelsPage() {
                     }
                   />
                   <Button
-                    variant="secondary"
+                    variant="primary"
                     size="sm"
                     onClick={() => openAddModel(ownerFilter)}
                     aria-label={t("models_page.add_model")}
@@ -974,7 +974,7 @@ export function ModelsPage() {
                     <Plus size={14} />
                   </Button>
                   <Button
-                    variant="primary"
+                    variant="secondary"
                     size="sm"
                     onClick={() => void loadModels({ force: true })}
                     disabled={loading || refreshing}
@@ -1137,7 +1137,7 @@ export function ModelsPage() {
                 startAdornment={<Search size={14} className="text-slate-400 dark:text-white/35" />}
               />
               <Button
-                variant="secondary"
+                variant="primary"
                 size="sm"
                 onClick={() => openAddModel()}
                 aria-label={t("models_page.add_model")}
@@ -1146,7 +1146,7 @@ export function ModelsPage() {
                 <Plus size={14} />
               </Button>
               <Button
-                variant="primary"
+                variant="secondary"
                 size="sm"
                 onClick={() => void loadModels({ force: true })}
                 disabled={loading || refreshing}

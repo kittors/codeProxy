@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { goeyToast } from "goey-toast";
 import { authFilesApi } from "@code-proxy/api-client";
+import { toast } from "@code-proxy/ui";
 
 export function useAuthFilesWarmup() {
   const { t } = useTranslation();
@@ -14,11 +14,11 @@ export function useAuthFilesWarmup() {
       setBatchWarmupBusy(true);
       try {
         const res = await authFilesApi.runWarmupBatch(names);
-        goeyToast.success(
+        toast.success(
           t("antigravity_quota.warmup_batch_success", { count: res.dispatched || names.length }),
         );
       } catch (err: unknown) {
-        goeyToast.error(
+        toast.error(
           t("antigravity_quota.warmup_batch_failed", {
             message: err instanceof Error ? err.message : String(err),
           }),

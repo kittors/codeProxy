@@ -30,7 +30,7 @@ import { DataTable, TABLE_ROW_ACTIONS_COLUMN, type DataTableColumn } from "@code
 
 const stickyActionsHeaderClass =
   "text-center md:sticky md:z-40 md:bg-slate-100 md:dark:bg-neutral-800";
-const stickyActionsCellClass = "md:sticky md:z-30 md:bg-white md:dark:bg-neutral-950";
+const stickyActionsCellClass = "md:sticky md:z-30 md:bg-surface";
 
 type ProfileDraft = {
   id: string;
@@ -476,7 +476,7 @@ export function ApiKeyPermissionsPage() {
             />
           </div>
 
-          <section className="rounded-2xl border border-indigo-200/80 bg-indigo-50/45 p-4 dark:border-indigo-500/20 dark:bg-indigo-500/5">
+          <section className="rounded-2xl border border-line-strong bg-subtle p-4">
             <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
               {t("api_key_permissions_page.quota_section")}
             </h3>
@@ -664,7 +664,7 @@ export function ApiKeyPermissionsPage() {
               }
               placeholder={t("api_keys_page.system_prompt_hint")}
               rows={3}
-              className="w-full resize-y rounded-xl border border-slate-900/8 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:focus:border-indigo-500"
+              className="w-full resize-y rounded-xl border border-slate-900/8 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-ink-3 focus:ring-2 focus:ring-ink/[0.06] dark:border-neutral-700 dark:bg-neutral-900 dark:text-white"
             />
           </div>
         </div>

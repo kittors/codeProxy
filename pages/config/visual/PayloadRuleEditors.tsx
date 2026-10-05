@@ -199,7 +199,7 @@ export function PayloadRulesEditor({
       }
     >
       {rules.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-slate-900/8 bg-white/60 p-4 text-center text-sm text-slate-600 dark:border-white/8 dark:bg-neutral-950/40 dark:text-white/65">
+        <div className="bg-subtle rounded-2xl p-4 text-center text-sm text-slate-600 dark:text-white/65">
           {t("visual_config.no_rules")}
         </div>
       ) : (
@@ -263,7 +263,7 @@ export function PayloadRulesEditor({
                         ariaLabel="Protocol"
                       />
                       <Button
-                        variant="danger"
+                        variant="ghost-danger"
                         size="sm"
                         onClick={() => removeModel(ruleIndex, modelIndex)}
                         disabled={disabled || (rule.models || []).length <= 1}
@@ -293,7 +293,7 @@ export function PayloadRulesEditor({
                 </div>
 
                 {(rule.params || []).length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-slate-900/8 bg-white/60 p-3 text-center text-xs text-slate-600 dark:border-white/8 dark:bg-neutral-950/40 dark:text-white/65">
+                  <div className="bg-subtle rounded-2xl p-3 text-center text-xs text-slate-600 dark:text-white/65">
                     {t("visual_config.no_params")}
                   </div>
                 ) : (
@@ -324,7 +324,7 @@ export function PayloadRulesEditor({
                             ariaLabel="Value type"
                           />
                           <Button
-                            variant="danger"
+                            variant="ghost-danger"
                             size="sm"
                             onClick={() => removeParam(ruleIndex, paramIndex)}
                             disabled={disabled}
@@ -448,7 +448,7 @@ export function PayloadFilterRulesEditor({
       }
     >
       {rules.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-slate-900/8 bg-white/60 p-4 text-center text-sm text-slate-600 dark:border-white/8 dark:bg-neutral-950/40 dark:text-white/65">
+        <div className="bg-subtle rounded-2xl p-4 text-center text-sm text-slate-600 dark:text-white/65">
           {t("visual_config.no_rules")}
         </div>
       ) : (
@@ -512,7 +512,7 @@ export function PayloadFilterRulesEditor({
                         ariaLabel="Protocol"
                       />
                       <Button
-                        variant="danger"
+                        variant="ghost-danger"
                         size="sm"
                         onClick={() => removeModel(ruleIndex, modelIndex)}
                         disabled={disabled || (rule.models || []).length <= 1}
@@ -542,7 +542,7 @@ export function PayloadFilterRulesEditor({
                 </div>
 
                 {(rule.params || []).length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-slate-900/8 bg-white/60 p-3 text-center text-xs text-slate-600 dark:border-white/8 dark:bg-neutral-950/40 dark:text-white/65">
+                  <div className="bg-subtle rounded-2xl p-3 text-center text-xs text-slate-600 dark:text-white/65">
                     {t("visual_config.no_paths")}
                   </div>
                 ) : (
@@ -561,7 +561,7 @@ export function PayloadFilterRulesEditor({
                           disabled={disabled}
                         />
                         <Button
-                          variant="danger"
+                          variant="ghost-danger"
                           size="sm"
                           onClick={() => removeParam(ruleIndex, paramIndex)}
                           disabled={disabled}

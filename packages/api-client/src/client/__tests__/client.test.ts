@@ -433,6 +433,30 @@ describe("ApiClient credential gating", () => {
     expect(headers.get("Authorization")).toBeNull();
   });
 
+  test("a rejected login neither refreshes nor ends a session", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        jsonResponse({ error: { code: "invalid_credentials", message: "invalid credentials" } }, 401),
+      );
+    globalThis.fetch = fetchMock;
+    const client = new ApiClient();
+    // A grant left over from an expired session must not be spent on a login retry.
+    client.setConfig({ apiBase: API_BASE, managementKey: "", refreshToken: "stale-r" });
+    const unauthorized = countUnauthorized();
+
+    try {
+      await expect(
+        client.post("/../auth/login", { username: "u", password: "wrong" }, { auth: "anonymous" }),
+      ).rejects.toMatchObject({ status: 401 });
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(unauthorized.count).toBe(0);
+      expect(client.getAuthState()).not.toBe("suspended");
+    } finally {
+      unauthorized.dispose();
+    }
+  });
+
   test("streamSSE and downloadToFile are gated too", async () => {
     const fetchMock = vi.fn();
     globalThis.fetch = fetchMock;

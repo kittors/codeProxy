@@ -102,11 +102,14 @@ test("selection toolbar can disable and re-enable the selected accounts", async 
   await page.setViewportSize({ width: 1440, height: 900 });
   const { files, patched } = await openPage(page);
 
-  // Selection checkboxes only fade in on card hover until something is selected.
+  // Selection checkboxes only fade in on card hover until the card itself is selected,
+  // so hover each card before ticking it — relying on wherever the pointer happens to
+  // rest after the previous click made this test depend on the grid geometry.
   const cards = page.getByTestId("auth-files-cards").locator("section");
   const checkboxes = page.getByTestId("auth-files-cards").getByRole("checkbox");
   await cards.first().hover();
   await checkboxes.first().check();
+  await cards.nth(1).hover();
   await checkboxes.nth(1).check();
   await expect(page.getByText("已选 2 项")).toBeVisible();
 

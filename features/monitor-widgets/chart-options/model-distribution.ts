@@ -1,3 +1,4 @@
+import { chartPalette, chartTooltipStyle } from "@code-proxy/ui";
 import { CHART_COLORS } from "../monitor-constants";
 import { formatCompact } from "../monitor-format";
 import type { ModelDistributionDatum } from "./types";
@@ -37,16 +38,14 @@ export const createModelDistributionOption = (input: {
 }): Record<string, unknown> => {
   return {
     backgroundColor: "transparent",
-    color: [...CHART_COLORS, "#94a3b8"],
+    color: [...CHART_COLORS, chartPalette(input.isDark).series[2]],
     tooltip: {
       trigger: "item",
       renderMode: "html",
       appendToBody: false,
       confine: true,
-      borderWidth: 0,
-      backgroundColor: "rgba(15, 23, 42, 0.92)",
-      textStyle: { color: "#fff" },
-      extraCssText: "z-index: 10000;",
+      ...chartTooltipStyle(input.isDark),
+      extraCssText: `${chartTooltipStyle(input.isDark).extraCssText} z-index: 10000;`,
       formatter: (params: { name: string; value: number; percent: number }) => {
         const valueLabel = formatCompact(params.value ?? 0);
         return `${params.name}<br/>${valueLabel}（${(params.percent ?? 0).toFixed(1)}%）`;
@@ -64,7 +63,8 @@ export const createModelDistributionOption = (input: {
         itemStyle: {
           borderRadius: 4,
           borderWidth: 2,
-          borderColor: input.isDark ? "rgba(10,10,10,0.75)" : "rgba(255,255,255,0.92)",
+          // 扇区之间的分隔线取卡片底色，深浅色都像是「切开」而不是描了一圈边。
+          borderColor: input.isDark ? "#2a2a2a" : "#ffffff",
         },
         emphasis: { scale: true, scaleSize: 6 },
         data: input.data,

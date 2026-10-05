@@ -20,7 +20,8 @@ describe("AppRouter", () => {
     // The management-key sidebar fixtures live beside AuthProvider rather than
     // inside it; the assertions below still guard the same menu entries.
     const authProvider = readAppModule("app/providers/legacyServiceMenus.ts");
-    const appShell = readAppModule("app/layout/AppShell.tsx");
+    // 页面标题的路径映射随外壳拆分搬到了 shell/navModel.ts。
+    const appShell = readAppModule("app/layout/shell/navModel.ts");
 
     expect(source).toContain("pageRoutes");
     expect(modelsRoute).toMatch(/path:\s*"\/models\/catalog"/);

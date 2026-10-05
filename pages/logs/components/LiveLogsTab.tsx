@@ -111,7 +111,7 @@ export function LiveLogsTab({
             {t("logs_page.download")}
           </Button>
           <Button
-            variant="danger"
+            variant="secondary-danger"
             size="sm"
             onClick={() => setConfirmClearOpen(true)}
             disabled={loading || refreshing}

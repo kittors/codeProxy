@@ -10,9 +10,12 @@ export const KNOWN_QUOTA_TEXT_KEYS = new Set([
   "parse_kiro_failed",
 ]);
 
+/**
+ * 订阅剩余天数：还早的订阅是常态，用中性灰；临近到期才变琥珀、红色——满屏绿色的
+ * 「还剩 N 天」读不出任何需要处理的信息。
+ */
 export const SUBSCRIPTION_TONE_CLASSES = {
-  active:
-    "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/20 dark:bg-emerald-500/15 dark:text-emerald-200",
+  active: "border-line bg-subtle text-ink-2",
   warning:
     "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/15 dark:text-amber-200",
   urgent:
@@ -39,4 +42,5 @@ export const CLAUDE_OAUTH_HEALTH_TONE_CLASSES = {
 
 export const STICKY_ACTIONS_HEADER_CLASS =
   "text-center md:sticky md:z-40 md:bg-slate-100 md:dark:bg-neutral-800";
-export const STICKY_ACTIONS_CELL_CLASS = "md:sticky md:z-30 md:bg-white md:dark:bg-neutral-950";
+// 冻结的操作列要不透明且和所在卡片同色（深色下卡片是 surface，不是页面底色）。
+export const STICKY_ACTIONS_CELL_CLASS = "md:sticky md:z-30 md:bg-surface";

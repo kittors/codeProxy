@@ -1,5 +1,5 @@
 import { ChartSpline, Filter, RefreshCw, Search } from "lucide-react";
-import { TextInput } from "@code-proxy/ui";
+import { TextInput, surface } from "@code-proxy/ui";
 import { TimeRangeSelector } from "@features/monitor-widgets";
 import type { TimeRange } from "@features/monitor-widgets/monitor-constants";
 
@@ -25,7 +25,7 @@ export function MonitorToolbarSection({
   error: string | null;
 }) {
   return (
-    <section className="rounded-2xl border border-black/[0.06] bg-white p-5 shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] dark:border-white/[0.06] dark:bg-neutral-950/70 dark:shadow-[0_1px_2px_rgb(0_0_0_/_0.22)]">
+    <section className={`p-5 ${surface({ radius: "3xl" })}`}>
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-900 dark:text-white">
@@ -44,7 +44,7 @@ export function MonitorToolbarSection({
                 applyFilter();
               }
             }}
-            startAdornment={<Search size={14} className="text-[#71717A] dark:text-[#A1A1AA]" />}
+            startAdornment={<Search size={14} className="text-ink-3" />}
             className="w-44"
             placeholder={t("monitor.filter_placeholder")}
           />

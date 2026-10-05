@@ -39,23 +39,23 @@ const ROLE_STYLES: Record<
   system: {
     labelKey: "log_content.role_system",
     icon: <Settings size={15} />,
-    border: "border-violet-500/25 dark:border-violet-400/20",
-    headerBg: "bg-violet-50 dark:bg-violet-500/10",
-    headerText: "text-violet-700 dark:text-violet-300",
+    border: "border-line-strong",
+    headerBg: "bg-hover",
+    headerText: "text-ink",
   },
   developer: {
     labelKey: "log_content.role_developer",
     icon: <Settings size={15} />,
-    border: "border-violet-500/25 dark:border-violet-400/20",
-    headerBg: "bg-violet-50 dark:bg-violet-500/10",
-    headerText: "text-violet-700 dark:text-violet-300",
+    border: "border-line-strong",
+    headerBg: "bg-hover",
+    headerText: "text-ink",
   },
   instructions: {
     labelKey: "log_content.role_instructions",
     icon: <ClipboardList size={15} />,
-    border: "border-indigo-500/25 dark:border-indigo-400/20",
-    headerBg: "bg-indigo-50 dark:bg-indigo-500/10",
-    headerText: "text-indigo-700 dark:text-indigo-300",
+    border: "border-line-strong",
+    headerBg: "bg-hover",
+    headerText: "text-ink",
   },
   user: {
     labelKey: "log_content.role_user",
@@ -95,9 +95,9 @@ const ROLE_STYLES: Record<
   thinking: {
     labelKey: "log_content.role_thinking",
     icon: <Brain size={15} />,
-    border: "border-purple-500/25 dark:border-purple-400/20",
-    headerBg: "bg-purple-50 dark:bg-purple-500/10",
-    headerText: "text-purple-700 dark:text-purple-300",
+    border: "border-line-strong",
+    headerBg: "bg-hover",
+    headerText: "text-ink",
   },
   tool_use: {
     labelKey: "log_content.role_tool_use",
@@ -504,7 +504,7 @@ export function ContentModal({
             type="button"
             onClick={onClose}
             aria-label={t("common.close")}
-            className="absolute inset-0 cursor-default bg-slate-900/40 backdrop-blur-sm dark:bg-black/50"
+            className="absolute inset-0 cursor-default bg-black/25 dark:bg-black/55"
             variants={{
               hidden: { opacity: 0 },
               show: { opacity: 1 },
@@ -514,10 +514,10 @@ export function ContentModal({
           <motion.div
             role="dialog"
             aria-modal="true"
-            className={[surface({ tone: "plain", radius: "2xl" }), "relative z-10 flex h-[min(82dvh,760px)] w-[min(calc(100vw-2rem),1040px)] max-w-none flex-col overflow-hidden shadow-xl"].join(" ")}
+            className="relative z-10 flex h-[min(82dvh,760px)] w-[min(calc(100vw-2rem),1040px)] max-w-none flex-col overflow-hidden rounded-3xl bg-elevated text-ink shadow-dialog"
             variants={{
-              hidden: { opacity: 0, y: 18, scale: 0.96, filter: "blur(2px)" },
-              show: { opacity: 1, y: 0, scale: 1, filter: "blur(0px)" },
+              hidden: { opacity: 0, y: 8, scale: 0.97 },
+              show: { opacity: 1, y: 0, scale: 1 },
             }}
             transition={{ type: "spring", stiffness: 420, damping: 34, mass: 0.8 }}
           >

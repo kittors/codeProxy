@@ -10,6 +10,8 @@ const readAllowedClients = (value: unknown): string[] => {
   );
 };
 
+const MODELS_SECTION = /^(Models & Routing|模型与调度)$/;
+
 const setAuthed = async (page: Page) => {
   await page.addInitScript(() => {
     localStorage.setItem(
@@ -135,11 +137,11 @@ test("Config visual editor keeps descriptions in info tooltips", async ({ page }
   await expect(page.getByRole("tooltip")).toContainText(description);
 });
 
-test("Sidebar: collapse/expand should keep nav items nowrap and slide out of view", async ({
+test("Sidebar: icon rail, section panel, collapsed flyouts and account menu", async ({
   page,
 }) => {
   await setAuthed(page);
-  await page.setViewportSize({ width: 1280, height: 520 });
+  await page.setViewportSize({ width: 1280, height: 640 });
 
   await page.route("**/v0/management/config", async (route) => {
     await route.fulfill({
@@ -159,342 +161,86 @@ test("Sidebar: collapse/expand should keep nav items nowrap and slide out of vie
 
   await page.goto("/#/system/config");
 
-  const dashboardLink = page.getByRole("link", { name: /Dashboard|仪表盘/i });
-  await expect(dashboardLink).toBeVisible();
-
-  const systemGroup = page.getByRole("button", { name: /System|系统管理/i });
-  await expect(systemGroup).toHaveAttribute("aria-expanded", "true");
-
-  const requestLogsLink = page.getByRole("link", {
-    name: /Request Logs|请求日志/i,
-  });
-  await expect(requestLogsLink).toBeVisible();
-  await expect(requestLogsLink).toHaveCSS("font-size", "14px");
-
-  const runtimeGroup = page.getByRole("button", { name: /Operations|运行监控/i });
-  const iconLabelGaps = await Promise.all(
-    [dashboardLink, runtimeGroup, requestLogsLink].map((row) =>
-      row.evaluate((element) => {
-        const icon = element.querySelector("svg");
-        const label = element.children.item(1);
-        if (!icon || !(label instanceof HTMLElement)) {
-          throw new Error("Missing sidebar icon or label");
-        }
-        return label.getBoundingClientRect().left - icon.getBoundingClientRect().right;
-      }),
-    ),
-  );
-  for (const gap of iconLabelGaps) {
-    expect(gap).toBeGreaterThanOrEqual(11);
-    expect(gap).toBeLessThanOrEqual(13);
-  }
-
-  const configLink = page.getByRole("link", { name: /^Config|配置面板$/i });
-  await expect(configLink).toHaveAttribute("aria-current", "page");
-  await expect(configLink).toHaveClass(/bg-slate-100/);
-  await expect(configLink).not.toHaveClass(/from-blue-600/);
-
-  const modelsGroup = page.getByRole("button", {
-    name: /Models & Routing|模型与路由/i,
-  });
-  await expect(modelsGroup).toHaveAttribute("aria-expanded", "false");
-  await modelsGroup.click();
-  await expect(
-    page.getByRole("link", { name: /^Models|模型管理$/i }),
-  ).toBeVisible();
-  const modelsIconBeforeCollapse = await modelsGroup
-    .locator("svg")
-    .first()
-    .boundingBox();
-
-  const linkWhiteSpace = await dashboardLink.evaluate(
-    (el) => getComputedStyle(el).whiteSpace,
-  );
-  expect(linkWhiteSpace).toBe("nowrap");
-
   const aside = page.locator("aside");
-  const sidebarScrollbar = aside.locator("[data-scroll-area-scrollbar='y']");
-  await expect(sidebarScrollbar).toHaveCount(1);
-  await page.mouse.move(760, 120);
-  await expect
-    .poll(async () =>
-      Number(
-        await sidebarScrollbar.evaluate((el) => getComputedStyle(el).opacity),
-      ),
-    )
-    .toBeLessThan(0.05);
+  const rail = page.getByRole("navigation", { name: /^(Sections|分区)$/ });
+  const systemSection = rail.getByRole("button", { name: /^(System Settings|系统设置)$/ });
+  await expect(rail.getByRole("link", { name: /Dashboard|仪表盘/i })).toBeVisible();
+  await expect(systemSection).toHaveAttribute("data-active", "true");
 
-  await dashboardLink.hover();
-  await expect
-    .poll(async () =>
-      Number(
-        await sidebarScrollbar.evaluate((el) => getComputedStyle(el).opacity),
-      ),
-    )
-    .toBeGreaterThan(0.95);
+  // 面板列出当前分区的页面，当前页是浅灰实底而不是彩色渐变。
+  const panel = page.getByRole("navigation", { name: /^(System Settings|系统设置)$/ });
+  const configLink = panel.getByRole("link", { name: /^Config|配置面板$/i });
+  await expect(configLink).toHaveAttribute("aria-current", "page");
+  await expect(configLink).toHaveClass(/bg-selected/);
+  await expect(configLink).not.toHaveClass(/from-blue-600/);
+  expect(await configLink.evaluate((el) => getComputedStyle(el).whiteSpace)).toBe("nowrap");
+  await expect(page.getByRole("banner")).toContainText(/System Settings|系统设置/);
 
-  await page.mouse.move(760, 120);
-  await expect
-    .poll(async () =>
-      Number(
-        await sidebarScrollbar.evaluate((el) => getComputedStyle(el).opacity),
-      ),
-    )
-    .toBeLessThan(0.05);
+  // Logo 与收起按钮叠在同一位置：平时显示 Logo，悬停换成侧栏图标。
+  const toggle = aside.locator("[data-sidebar-toggle='true']");
+  const logo = toggle.locator("[data-sidebar-logo='true']");
+  await page.mouse.move(760, 300);
+  await expect.poll(async () => Number(await logo.evaluate((el) => getComputedStyle(el).opacity))).toBeGreaterThan(0.95);
+  await toggle.hover();
+  await expect.poll(async () => Number(await logo.evaluate((el) => getComputedStyle(el).opacity))).toBeLessThan(0.05);
+  await expect(toggle).toHaveAccessibleName(/Collapse Sidebar|收起侧边栏/i);
 
-  const collapseButton = page.getByRole("button", {
-    name: /Collapse Sidebar|收起侧边栏/i,
-  });
-  await expect
-    .poll(async () =>
-      Number(await collapseButton.evaluate((el) => getComputedStyle(el).opacity)),
-    )
-    .toBeGreaterThan(0.95);
-  await aside.hover();
-  const toggleIconClass = await collapseButton
-    .locator("svg")
-    .getAttribute("class");
-  await collapseButton.click();
+  // 点开分区：展开态下点图标栏的分区直接切到该分区的页面。
+  await rail.getByRole("button", { name: MODELS_SECTION }).click();
+  await expect(page.getByRole("navigation", { name: MODELS_SECTION })).toBeVisible();
 
-  const expandButton = page.getByRole("button", {
-    name: /Expand Sidebar|展开侧边栏/i,
-  });
-  const sidebarLogo = aside.locator("[data-sidebar-logo='true']");
-  const sidebarToggle = aside.locator("[data-sidebar-toggle='true']");
-  await expect(sidebarLogo).toHaveCSS("box-shadow", "none");
-  await page.mouse.move(760, 120);
-  await expect
-    .poll(async () =>
-      Number(
-        await sidebarLogo.evaluate(
-          (el) => getComputedStyle(el.parentElement!).opacity,
-        ),
-      ),
-    )
-    .toBeGreaterThan(0.95);
-  await expect
-    .poll(async () =>
-      Number(
-        await sidebarToggle.evaluate((el) => getComputedStyle(el).opacity),
-      ),
-    )
-    .toBeLessThan(0.05);
-  await aside.hover();
-  await expect(expandButton).toBeVisible();
-  await expect
-    .poll(async () =>
-      Number(
-        await sidebarLogo.evaluate(
-          (el) => getComputedStyle(el.parentElement!).opacity,
-        ),
-      ),
-    )
-    .toBeLessThan(0.05);
-  await expect
-    .poll(async () =>
-      Number(
-        await sidebarToggle.evaluate((el) => getComputedStyle(el).opacity),
-      ),
-    )
-    .toBeGreaterThan(0.95);
-  expect(await sidebarToggle.boundingBox()).toEqual(
-    await sidebarLogo.boundingBox(),
-  );
-  await expect(sidebarToggle).toHaveCSS("border-top-width", "0px");
-  const toggleBox = await sidebarToggle.boundingBox();
-  const accountButtonBox = await aside
-    .locator("[data-sidebar-account-avatar='true']")
-    .boundingBox();
-  const collapsedDashboardBox = await page
-    .getByRole("link", { name: /Dashboard|仪表盘/i })
-    .locator("svg")
-    .boundingBox();
-  const toggleCenter = (toggleBox?.x ?? 0) + (toggleBox?.width ?? 0) / 2;
-  expect((accountButtonBox?.x ?? 0) + (accountButtonBox?.width ?? 0) / 2).toBe(
-    toggleCenter,
-  );
-  expect(
-    (collapsedDashboardBox?.x ?? 0) + (collapsedDashboardBox?.width ?? 0) / 2,
-  ).toBe(toggleCenter);
-  await expect(expandButton.locator("svg")).toHaveAttribute(
-    "class",
-    toggleIconClass ?? "",
-  );
+  // 收起：只剩图标栏，内容区左侧接过圆角，选择会被记住。
+  await toggle.click();
+  await expect(aside).toHaveAttribute("data-collapsed", "true");
+  await expect.poll(() => aside.evaluate((el) => el.getBoundingClientRect().width)).toBeLessThan(76);
+  const mainSurface = page.locator("#main-content").locator("xpath=../..");
+  await expect.poll(() => mainSurface.evaluate((el) => parseFloat(getComputedStyle(el).borderTopLeftRadius))).toBeGreaterThan(8);
+  expect(await page.evaluate(() => localStorage.getItem("cli-proxy-sidebar-collapsed"))).toBe("1");
 
-  await expect
-    .poll(async () => {
-      return await aside.evaluate((el) => el.getBoundingClientRect().width);
-    })
-    .toBeGreaterThan(60);
-  await expect
-    .poll(async () => {
-      return await aside.evaluate((el) => el.getBoundingClientRect().width);
-    })
-    .toBeLessThan(76);
-
-  const collapsedModelsGroup = page.getByRole("button", {
-    name: /Models & Routing|模型与路由/i,
-  });
-  const railPositionBefore = await collapsedModelsGroup.boundingBox();
-  await collapsedModelsGroup.hover();
-  await expect(
-    page.getByRole("menuitem", { name: /^Models$|^模型管理$/i }),
-  ).toBeVisible();
-  const modelsFlyout = aside.locator("[data-sidebar-flyout='models']");
-  await expect(modelsFlyout).toHaveAttribute("data-open", "true");
-  await expect
-    .poll(async () =>
-      Number(await modelsFlyout.evaluate((el) => getComputedStyle(el).opacity)),
-    )
-    .toBeGreaterThan(0.95);
-  const railPositionAfter = await collapsedModelsGroup.boundingBox();
-  const modelsIconAfterCollapse = await collapsedModelsGroup
-    .locator("svg")
-    .first()
-    .boundingBox();
-  expect(railPositionAfter?.x).toBe(railPositionBefore?.x);
-  expect(railPositionAfter?.y).toBe(railPositionBefore?.y);
-  expect(modelsIconAfterCollapse?.x).toBe(modelsIconBeforeCollapse?.x);
-  expect(modelsIconAfterCollapse?.width).toBe(modelsIconBeforeCollapse?.width);
-  expect(modelsIconAfterCollapse?.height).toBe(
-    modelsIconBeforeCollapse?.height,
-  );
-  await expect(page.getByRole("button", { name: "Admin" })).toBeVisible();
-
-  const collapsedSystemGroup = page.getByRole("button", {
-    name: /System|系统管理/i,
-  });
-  const systemFlyout = aside.locator("[data-sidebar-flyout='system']");
-  await collapsedSystemGroup.hover();
-  await expect(systemFlyout).toHaveAttribute("data-open", "true");
-  const flyoutConfigLink = page.getByRole("menuitem", {
-    name: /^Config|配置面板$/i,
-  });
-  await flyoutConfigLink.click();
-  await expect(systemFlyout).toHaveAttribute("data-open", "false");
-  await expect
-    .poll(async () =>
-      Number(await systemFlyout.evaluate((el) => getComputedStyle(el).opacity)),
-    )
-    .toBeLessThan(0.05);
-  await page.waitForTimeout(220);
-  await expect(systemFlyout).toHaveAttribute("data-open", "false");
-
-  await page.mouse.move(760, 120);
-  await collapsedSystemGroup.focus();
-  await expect(systemFlyout).toHaveAttribute("data-open", "true");
+  // 收起态悬停分区弹出浮层；点了页面后浮层收起；键盘聚焦打开、Esc 关闭并回到图标。
+  const systemFlyout = page.getByRole("menu", { name: /^(System Settings|系统设置)$/ });
+  await systemSection.hover();
+  await expect(systemFlyout).toBeVisible();
+  await expect(systemSection).toHaveAttribute("aria-expanded", "true");
+  await systemFlyout.getByRole("menuitem", { name: /^Config|配置面板$/i }).click();
+  await expect(systemFlyout).toHaveCount(0);
+  await page.mouse.move(760, 300);
+  await systemSection.focus();
+  await expect(systemFlyout).toBeVisible();
   await page.keyboard.press("Escape");
-  await expect(systemFlyout).toHaveAttribute("data-open", "false");
-  await expect(collapsedSystemGroup).toBeFocused();
+  await expect(systemFlyout).toHaveCount(0);
+  await expect(systemSection).toBeFocused();
 
-  await page.mouse.move(760, 120);
-  await collapsedSystemGroup.hover();
-  await expect(systemFlyout).toHaveAttribute("data-open", "true");
-  await page.mouse.move(760, 120);
-  await expect(systemFlyout).toHaveAttribute("data-open", "false");
+  // ⌘B / Ctrl+B 展开回来。
+  await page.mouse.move(760, 300);
+  await page.locator("body").press("ControlOrMeta+b");
+  await expect(aside).toHaveAttribute("data-collapsed", "false");
+  await expect.poll(() => aside.evaluate((el) => el.getBoundingClientRect().width)).toBeGreaterThan(220);
 
-  const asideBox = await aside.boundingBox();
-  const expandButtonBox = await expandButton.boundingBox();
-  expect(expandButtonBox?.x).toBeGreaterThanOrEqual(asideBox?.x ?? 0);
-  expect(
-    (expandButtonBox?.x ?? 0) + (expandButtonBox?.width ?? 0),
-  ).toBeLessThanOrEqual((asideBox?.x ?? 0) + (asideBox?.width ?? 0));
-
-  const collapsedDashboard = page.getByRole("link", {
-    name: /Dashboard|仪表盘/i,
-  });
-  const dashboardBox = await collapsedDashboard.boundingBox();
-  expect(dashboardBox?.x).toBeGreaterThan(asideBox?.x ?? 0);
-  expect(dashboardBox?.width).toBeLessThan(
-    asideBox?.width ?? Number.POSITIVE_INFINITY,
-  );
-
-  const collapsedGroupBoxes = await Promise.all(
-    [
-      /Operations|运行监控/i,
-      /Access|接入管理/i,
-      /Models & Routing|模型与路由/i,
-      /Governance|租户治理/i,
-      /System|系统管理/i,
-    ].map(async (name) => page.getByRole("button", { name }).boundingBox()),
-  );
-  for (let index = 1; index < collapsedGroupBoxes.length; index += 1) {
-    expect(
-      (collapsedGroupBoxes[index]?.y ?? 0) -
-        (collapsedGroupBoxes[index - 1]?.y ?? 0),
-    ).toBeLessThan(60);
-  }
-
-  await aside.hover();
-  await expandButton.click();
-  await aside.hover();
-  await expect(
-    page.getByRole("button", { name: /Collapse Sidebar|收起侧边栏/i }),
-  ).toBeVisible();
-  await expect
-    .poll(async () => {
-      return await aside.evaluate((el) => el.getBoundingClientRect().width);
-    })
-    .toBeGreaterThan(220);
-
-  const accountTrigger = page.getByRole("button", { name: "Admin" });
-  await expect(accountTrigger.locator("svg")).toHaveCount(0);
-  await accountTrigger.hover();
-  await expect
-    .poll(async () =>
-      accountTrigger.evaluate((el) => getComputedStyle(el).boxShadow),
-    )
-    .not.toBe("none");
-  await expect(
-    page.getByRole("button", { name: /Logout|退出登录/i }),
-  ).toHaveCount(0);
+  // 账号菜单：从图标栏底部向右弹出，和语言菜单用同一套浮层表面。
+  const accountTrigger = rail.getByRole("button", { name: "Admin" });
   const accountTriggerBox = await accountTrigger.boundingBox();
   await accountTrigger.click();
   const accountMenu = page.locator("[data-sidebar-account-menu='true']");
   await expect(accountMenu).toBeVisible();
   await expect(accountMenu).toHaveClass(/code-proxy-floating-surface/);
-  await expect(accountMenu).toHaveCSS("border-radius", "12px");
-  await expect(
-    page.getByRole("menuitem", { name: /Account & Security|账号与安全|AI Accounts|AI 账号/i }),
-  ).toHaveCount(0);
-  await expect(
-    page.getByRole("menuitem", { name: /^Config|配置面板$/i }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("menuitem", { name: /Logout|退出登录/i }),
-  ).toBeVisible();
+  await expect(page.getByRole("menuitem", { name: /^Config|配置面板$/i })).toBeVisible();
+  await expect(page.getByRole("menuitem", { name: /Logout|退出登录/i })).toBeVisible();
   await page.waitForTimeout(220);
   const accountMenuBox = await accountMenu.boundingBox();
-  const accountSurfaceStyle = await accountMenu.evaluate((el) => {
+  expect(accountMenuBox?.x ?? 0).toBeGreaterThan((accountTriggerBox?.x ?? 0) + (accountTriggerBox?.width ?? 0));
+  const surfaceStyle = (el: Element) => {
     const style = getComputedStyle(el);
-    return {
-      borderColor: style.borderTopColor,
-      borderRadius: style.borderRadius,
-      borderWidth: style.borderTopWidth,
-      boxShadow: style.boxShadow,
-    };
-  });
-  expect(Math.abs((accountMenuBox?.width ?? 0) - (accountTriggerBox?.width ?? 0))).toBeLessThan(1);
-  expect((accountMenuBox?.y ?? 0) + (accountMenuBox?.height ?? 0)).toBeLessThan(
-    accountTriggerBox?.y ?? 0,
-  );
+    return { borderRadius: style.borderRadius, boxShadow: style.boxShadow, background: style.backgroundColor };
+  };
+  const accountSurfaceStyle = await accountMenu.evaluate(surfaceStyle);
   await page.keyboard.press("Escape");
   await expect(accountMenu).toBeHidden();
 
-  const languageTrigger = page.locator("header button[aria-haspopup='listbox']");
-  await languageTrigger.click();
+  await page.locator("header button[aria-haspopup='listbox']").click();
   const languageMenu = page.locator("[role='listbox'].code-proxy-floating-surface");
   await expect(languageMenu).toBeVisible();
-  const languageSurfaceStyle = await languageMenu.evaluate((el) => {
-    const style = getComputedStyle(el);
-    return {
-      borderColor: style.borderTopColor,
-      borderRadius: style.borderRadius,
-      borderWidth: style.borderTopWidth,
-      boxShadow: style.boxShadow,
-    };
-  });
-  expect(languageSurfaceStyle).toEqual(accountSurfaceStyle);
+  expect(await languageMenu.evaluate(surfaceStyle)).toEqual(accountSurfaceStyle);
   await page.keyboard.press("Escape");
   await expect(languageMenu).toBeHidden();
 });

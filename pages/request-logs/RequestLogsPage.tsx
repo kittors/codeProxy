@@ -508,12 +508,12 @@ export function RequestLogsPage() {
 
       {/* 单层卡片：标题 + 筛选 + 统计 + 表格 + 分页 */}
       {/* min-h-0：flex item 默认 min-height:auto，会被表格内容撑开，把「内部滚动」变成整页变长 */}
-      <div className="flex min-h-0 flex-1 flex-col rounded-2xl border border-black/[0.06] bg-white shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] dark:border-white/[0.06] dark:bg-neutral-950/70 dark:shadow-[0_1px_2px_rgb(0_0_0_/_0.22)]">
+      <div className="flex min-h-0 flex-1 flex-col rounded-3xl border border-line bg-surface shadow-card">
         {/* 标题栏 */}
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-5 pb-3">
           <div className="flex flex-wrap items-center gap-3">
-            <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900 dark:text-white">
-              <ScrollText size={18} className="text-slate-900 dark:text-white" aria-hidden="true" />
+            <h2 className="flex items-center gap-2 text-base font-semibold tracking-tight text-ink">
+              <ScrollText size={18} className="text-ink-2" aria-hidden="true" />
               {t("request_logs.heading")}
             </h2>
             <div className="hidden min-[640px]:flex items-center gap-2 text-xs text-slate-500 dark:text-white/50">
@@ -536,14 +536,14 @@ export function RequestLogsPage() {
               <span className="text-slate-300 dark:text-white/15">|</span>
               <span>
                 {t("request_logs.col_cost")}{" "}
-                <span className="font-mono tabular-nums text-emerald-700 dark:text-emerald-400">
+                <span className="font-mono tabular-nums text-ink">
                   <RequestLogUsageMetricValue value={stats.total_cost} variant="currency" compact />
                 </span>
               </span>
               <span className="text-slate-300 dark:text-white/15">|</span>
               <span>
                 {t("request_logs.cache_rate")}{" "}
-                <span className="font-mono tabular-nums text-amber-600 dark:text-amber-400">
+                <span className="font-mono tabular-nums text-ink">
                   {formatUsageMetricRate(stats.cache_rate)}
                 </span>
               </span>
@@ -554,7 +554,7 @@ export function RequestLogsPage() {
             <MaskToggleButton
               masked={masked}
               onToggle={() => setMasked((prev) => !prev)}
-              className="h-9 w-9 rounded-2xl"
+              className="h-9 w-9"
             />
             <button
               type="button"
@@ -562,7 +562,7 @@ export function RequestLogsPage() {
               disabled={loading || clearingLogs}
               aria-label={t("request_logs.clear_database_logs")}
               title={t("request_logs.clear_database_logs")}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-rose-50 text-rose-600 transition hover:bg-rose-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-300/50 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-rose-500/15 dark:text-rose-300 dark:hover:bg-rose-500/25"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-rose-600 transition-colors hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:opacity-50 dark:text-rose-400"
             >
               <Trash2 size={14} aria-hidden="true" />
             </button>
@@ -573,7 +573,7 @@ export function RequestLogsPage() {
               aria-busy={loading}
               aria-label={t("request_logs.refresh")}
               title={t("request_logs.refresh")}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-slate-900 text-white transition hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/35 disabled:cursor-not-allowed disabled:opacity-70 dark:bg-white dark:text-neutral-950 dark:hover:bg-slate-200 dark:focus-visible:ring-white/15"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-line-strong bg-surface text-ink shadow-xs transition-colors hover:bg-hover disabled:cursor-not-allowed disabled:opacity-70 dark:shadow-none"
             >
               <RefreshCw
                 size={14}
@@ -636,7 +636,7 @@ export function RequestLogsPage() {
             <div className="absolute inset-0 z-10 flex items-center justify-center rounded-b-2xl bg-white/70 backdrop-blur-sm dark:bg-neutral-950/55">
               <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-900/8 bg-white/85 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm dark:border-white/8 dark:bg-neutral-950/70 dark:text-white/75">
                 <span
-                  className="h-4 w-4 rounded-full border-2 border-slate-300 border-t-indigo-600 motion-reduce:animate-none motion-safe:animate-spin dark:border-white/20 dark:border-t-white/80"
+                  className="h-4 w-4 rounded-full border-2 border-ink/15 border-t-ink motion-reduce:animate-none motion-safe:animate-spin"
                   aria-hidden="true"
                 />
                 <span role="status">{t("common.loading_ellipsis")}</span>

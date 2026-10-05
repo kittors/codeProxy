@@ -239,7 +239,9 @@
     "hide_key": "Скрыть пароль",
     "sign_in": "Вход",
     "switch_account_failed": "Could not restore that account. Sign in again.",
-    "or_sign_in": "or sign in with password"
+    "or_sign_in": "or sign in with password",
+    "caps_lock_on": "Включён Caps Lock",
+    "hero_prefix": "Один шлюз для"
   },
   "header": {
     "check_connection": "Проверить подключение",
@@ -2818,7 +2820,14 @@
     "clear_audit_logs_confirm": "Очистить все записи аудита в текущей области видимости? Это действие нельзя отменить.",
     "clear_audit_logs_confirm_button": "Очистить все",
     "audit_logs_cleared": "Очищено записей аудита: {{count}}.",
-    "source_ip": "Source IP"
+    "source_ip": "Source IP",
+    "password_rule_min_length": "Не менее {{count}} символов",
+    "password_rule_upper": "Заглавная буква",
+    "password_rule_lower": "Строчная буква",
+    "password_rule_special": "Спецсимвол",
+    "passwords_match": "Пароли совпадают",
+    "change_password_hint": "Выберите пароль, который вы больше нигде не используете.",
+    "change_password_forced_hint": "Перед продолжением задайте новый пароль."
   },
   "apikey_lookup": {
     "available_models": "Model Plaza",

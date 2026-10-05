@@ -403,22 +403,22 @@ export function AccessRulesTab({
                 <Button size="sm" variant="secondary" disabled={busy} onClick={() => void bulkApply({ enabled: true })}>
                   {t("ip_access.bulk_enable")}
                 </Button>
-                <Button size="sm" variant="danger" disabled={busy} onClick={() => void bulkApply({ delete: true })}>
+                <Button size="sm" variant="secondary-danger" disabled={busy} onClick={() => void bulkApply({ delete: true })}>
                   {t("ip_access.bulk_delete")}
                 </Button>
               </div>
             </PermissionGate>
           ) : null}
           <PermissionGate permission="platform.ip_access.write">
-            <button
-              type="button"
+            <Button
+              variant="primary"
+              className="ml-auto"
               onClick={() => setFormOpen(true)}
               aria-label={t("ip_access.add_rule")}
               title={t("ip_access.add_rule")}
-              className="ml-auto inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-slate-900 text-white transition hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:bg-white dark:text-neutral-950 dark:hover:bg-slate-200"
             >
               <Plus size={15} aria-hidden="true" />
-            </button>
+            </Button>
           </PermissionGate>
         </div>
       </div>

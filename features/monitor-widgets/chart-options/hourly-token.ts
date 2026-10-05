@@ -1,3 +1,4 @@
+import { chartPalette, chartTooltipStyle } from "@code-proxy/ui";
 import { formatNumber } from "../monitor-utils";
 import type { HourlySeries } from "./types";
 
@@ -32,7 +33,7 @@ export const createHourlyTokenOption = (input: {
       emphasis: { focus: "series" },
       barMaxWidth,
       itemStyle: {
-        color: input.paletteColorByKey[key] ?? "rgba(148,163,184,0.58)",
+        color: input.paletteColorByKey[key] ?? chartPalette(input.isDark).series[3],
         borderRadius: 0,
       },
       data,
@@ -42,7 +43,7 @@ export const createHourlyTokenOption = (input: {
   const totals = points.map((point) =>
     point.stacks.reduce((acc, item) => acc + (Number.isFinite(item.value) ? item.value : 0), 0),
   );
-  const totalLineColor = "#3b82f6";
+  const totalLineColor = chartPalette(input.isDark).primary;
   const selectedSums = points.map((point) =>
     point.stacks.reduce((acc, item) => {
       if (!selectedKeys.includes(item.key as (typeof input.hourlySeries.tokenKeys)[number])) {
@@ -64,15 +65,13 @@ export const createHourlyTokenOption = (input: {
     backgroundColor: "transparent",
     color: input.hourlySeries.tokenKeys.map((key) => input.paletteColorByKey[key]),
     tooltip: {
+      ...chartTooltipStyle(input.isDark),
       trigger: "axis",
-      axisPointer: { type: "shadow" },
+      axisPointer: { ...chartTooltipStyle(input.isDark).axisPointer, type: "shadow" },
       renderMode: "html",
       appendToBody: true,
       confine: true,
-      borderWidth: 0,
-      backgroundColor: "rgba(15, 23, 42, 0.92)",
-      textStyle: { color: "#fff" },
-      extraCssText: "z-index: 10000;",
+      extraCssText: `${chartTooltipStyle(input.isDark).extraCssText} z-index: 10000;`,
     },
     legend: {
       show: false,
@@ -89,7 +88,7 @@ export const createHourlyTokenOption = (input: {
         : { margin: 14, hideOverlap: true },
       axisLine: {
         lineStyle: {
-          color: input.isDark ? "rgba(255,255,255,0.16)" : "rgba(148, 163, 184, 0.55)",
+          color: chartPalette(input.isDark).axis,
         },
       },
     },
@@ -114,7 +113,7 @@ export const createHourlyTokenOption = (input: {
           },
       splitLine: {
         lineStyle: {
-          color: input.isDark ? "rgba(255,255,255,0.08)" : "rgba(148, 163, 184, 0.25)",
+          color: chartPalette(input.isDark).grid,
         },
       },
     },
@@ -128,7 +127,7 @@ export const createHourlyTokenOption = (input: {
               smooth: true,
               symbol: "circle",
               symbolSize: 6,
-              lineStyle: { width: 3, color: totalLineColor },
+              lineStyle: { width: 2.5, color: totalLineColor },
               itemStyle: { color: totalLineColor },
               emphasis: { focus: "series" },
               data: totals,

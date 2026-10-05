@@ -87,7 +87,7 @@ export default defineConfig({
           if (match("react", "react-dom", "scheduler", "react-router", "react-router-dom")) {
             return "vendor-react";
           }
-          if (match("i18next", "react-i18next", "goey-toast")) return "vendor-i18n";
+          if (match("i18next", "react-i18next")) return "vendor-i18n";
           if (match("echarts", "echarts-for-react", "zrender")) return "vendor-echarts";
           if (match("framer-motion")) return "vendor-animation";
           if (match("react-markdown", "react-syntax-highlighter", "remark-gfm")) {

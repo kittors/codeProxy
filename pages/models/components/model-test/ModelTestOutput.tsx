@@ -104,7 +104,7 @@ function ImageCard({ image, onPreview }: { image: ModelTestImage; onPreview: () 
           <a
             href={source}
             download={`model-test.${image.format || "png"}`}
-            className="shrink-0 text-slate-500 transition-colors hover:text-indigo-600 dark:text-white/45"
+            className="shrink-0 text-slate-500 transition-colors hover:text-ink dark:text-white/45"
             aria-label={t("models_page.test_download_image")}
           >
             <Download size={12} aria-hidden />
@@ -169,7 +169,7 @@ function VideoOutput({ payload }: { payload: ModelTestPayload }) {
         <a
           href={url}
           download
-          className="transition-colors hover:text-indigo-600"
+          className="transition-colors hover:text-ink"
           aria-label={t("models_page.test_download_video")}
         >
           <Download size={12} aria-hidden />

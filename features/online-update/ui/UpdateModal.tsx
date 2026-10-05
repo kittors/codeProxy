@@ -31,7 +31,7 @@ const RELEASE_NOTES_PROSE = `prose prose-sm dark:prose-invert max-w-none break-w
   prose-code:rounded-md prose-code:bg-slate-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:text-sm prose-code:font-mono prose-code:text-slate-700 prose-code:before:content-none prose-code:after:content-none
   dark:prose-code:bg-neutral-800 dark:prose-code:text-slate-300
   prose-pre:rounded-lg prose-pre:bg-slate-900 prose-pre:text-xs dark:prose-pre:bg-neutral-900
-  prose-a:break-all prose-a:text-indigo-600 dark:prose-a:text-indigo-300`;
+  prose-a:break-all prose-a:text-ink`;
 
 /**
  * One row of the version summary.
@@ -75,7 +75,7 @@ function VersionRow({
               href={commitUrl}
               target="_blank"
               rel="noreferrer"
-              className="shrink-0 text-indigo-600 hover:underline dark:text-indigo-300"
+              className="shrink-0 text-ink hover:underline"
             >
               {short}
             </a>
@@ -132,7 +132,7 @@ function ReleaseNotes({ candidate }: { candidate: UpdateCheckResponse }) {
             href={candidate.release_url}
             target="_blank"
             rel="noreferrer"
-            className="text-xs font-medium text-indigo-600 hover:underline dark:text-indigo-300"
+            className="text-xs font-medium text-ink hover:underline"
           >
             {t("auto_update.release_notes_open")}
           </a>

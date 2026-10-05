@@ -1,7 +1,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
 import { Plus, RefreshCw, ShieldCheck, X } from "lucide-react";
-import { Button, Checkbox, EmptyState, TextInput } from "@code-proxy/ui";
+import { Button, Checkbox, EmptyState, TextInput, surface } from "@code-proxy/ui";
 import type { AliasRow } from "@code-proxy/domain";
 
 interface AuthFilesAliasTabProps {
@@ -111,7 +111,7 @@ export function AuthFilesAliasTab({
                   return (
                     <div
                       key={channel}
-                      className="rounded-2xl border border-black/[0.06] bg-white p-4 shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] transition-colors duration-200 ease-out dark:border-white/[0.06] dark:bg-neutral-950/70 dark:shadow-[0_1px_2px_rgb(0_0_0_/_0.22)]"
+                      className={`p-4 transition-colors duration-200 ease-out ${surface({ radius: "2xl" })}`}
                     >
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div className="min-w-0">
@@ -133,7 +133,7 @@ export function AuthFilesAliasTab({
                             {t("auth_files.import_models")}
                           </Button>
                           <Button
-                            variant="danger"
+                            variant="secondary-danger"
                             size="sm"
                             onClick={() => deleteAliasChannel(channel)}
                             disabled={isPending || aliasUnsupported}
@@ -201,7 +201,7 @@ export function AuthFilesAliasTab({
                                 </span>
                               </label>
                               <Button
-                                variant="danger"
+                                variant="ghost-danger"
                                 size="sm"
                                 onClick={() => {
                                   setAliasEditing((prev) => ({

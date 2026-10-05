@@ -70,6 +70,19 @@ vi.mock("@code-proxy/ui", () => ({
     </div>
   ),
   ThemeToggleButton: () => <button type="button">theme</button>,
+  Checkbox: ({
+    checked,
+    onCheckedChange,
+  }: {
+    checked: boolean;
+    onCheckedChange?: (checked: boolean) => void;
+  }) => (
+    <input
+      type="checkbox"
+      checked={checked}
+      onChange={(event) => onCheckedChange?.(event.target.checked)}
+    />
+  ),
   Button: ({
     children,
     loading,
@@ -80,6 +93,10 @@ vi.mock("@code-proxy/ui", () => ({
     </button>
   ),
   useToast: () => toastMocks,
+  // 动效与键盘状态钩子：这里只测提交流程，给出不带副作用的替身。
+  useCapsLock: () => ({ capsLock: false, onKeyDown: () => {}, onKeyUp: () => {}, onBlur: () => {} }),
+  useShake: () => ({ controls: undefined, shake: () => {} }),
+  useStaggerVariants: () => ({ container: {}, item: {} }),
 }));
 
 // 品牌名常量走真实导出，避免 mock 漂移后测试仍然「通过」却断言了错误的品牌。

@@ -13,6 +13,7 @@ import {
   TabsTrigger,
   useResizeLayoutAnimation,
   type TabsTone,
+  surface,
 } from "@code-proxy/ui";
 
 /**
@@ -23,8 +24,7 @@ import {
 export type MonitorSurfaceTone = "default" | "portal";
 
 const SURFACE_CLASS: Record<MonitorSurfaceTone, string> = {
-  default:
-    "rounded-2xl border border-black/[0.06] bg-white shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] dark:border-white/[0.06] dark:bg-neutral-950/70 dark:shadow-[0_1px_2px_rgb(0_0_0_/_0.22)]",
+  default: surface({ radius: "3xl" }),
   portal:
     "rounded-3xl bg-white ring-1 ring-slate-900/8 dark:bg-white/[0.03] dark:ring-white/8",
 };
@@ -58,14 +58,14 @@ export const KpiCard = ({
           tone === "portal"
             ? // 字距收窄 + 更小字号，长标签（TOTAL REQUESTS 等）才不会被截断成省略号
               "flex min-w-0 items-center gap-1.5 font-display text-2xs font-medium uppercase tracking-[0.1em] text-slate-400 dark:text-white/40"
-            : "flex min-w-0 items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-white/55"
+            : "flex min-w-0 items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-white/55"
         }
       >
         <Icon
           size={14}
           className={
             tone === "portal"
-              ? "shrink-0 text-indigo-600 dark:text-indigo-400"
+              ? "shrink-0 text-ink"
               : "shrink-0 text-slate-900 dark:text-white"
           }
         />
@@ -181,7 +181,7 @@ export const MonitorCard = ({
               className="inline-flex items-center gap-2 rounded-2xl border border-slate-900/8 bg-white/85 px-4 py-2 text-sm font-medium text-slate-700 shadow-sm dark:border-white/8 dark:bg-neutral-950/70 dark:text-white/80"
             >
               <span
-                className="h-4 w-4 rounded-full border-2 border-slate-300/80 border-t-indigo-600 motion-reduce:animate-none motion-safe:animate-spin dark:border-white/20 dark:border-t-white/85"
+                className="h-4 w-4 rounded-full border-2 border-ink/15 border-t-ink motion-reduce:animate-none motion-safe:animate-spin"
                 aria-hidden="true"
               />
               <span className="tabular-nums">{t("common.loading")}</span>

@@ -33,15 +33,14 @@ export const resolveQuotaVisualTone = (
   if (normalized === null) {
     return {
       normalized,
-      fillClass:
-        "border-r-2 border-slate-300 bg-slate-100 dark:border-white/20 dark:bg-white/[0.07]",
-      percentClass: "text-slate-900 dark:text-white",
-      fillHex: "#cbd5e1",
-      chipClass: "border-slate-900/8 bg-slate-50 dark:border-white/10 dark:bg-white/[0.06]",
-      chipLabelClass: "text-slate-600 dark:text-white/70",
-      barTrackClass: "border-slate-200 bg-white dark:border-white/10 dark:bg-white/[0.03]",
-      barLabelClass: "text-slate-700 dark:text-white/80",
-      barMetaClass: "text-slate-500 dark:text-white/50",
+      fillClass: "border-r-2 border-ink-4 bg-hover",
+      percentClass: "text-ink",
+      fillHex: "#c4c4c4",
+      chipClass: "border-line bg-subtle",
+      chipLabelClass: "text-ink-2",
+      barTrackClass: "border-line bg-surface",
+      barLabelClass: "text-ink-2",
+      barMetaClass: "text-ink-3",
     };
   }
 
@@ -53,19 +52,21 @@ export const resolveQuotaVisualTone = (
   // percentage instead. The edge marks the value more precisely than a block
   // boundary does, and the label keeps its contrast because it is no longer
   // sitting on a saturated ground.
+  //
+  // Healthy is the normal state, so it is drawn in neutral grey: green on every
+  // card said nothing. Colour only appears once a window needs attention —
+  // amber when it is running low, red when it is nearly gone.
   if (normalized >= 60) {
     return {
       normalized,
-      fillClass:
-        "border-r-2 border-emerald-400 bg-emerald-100 dark:border-emerald-400/70 dark:bg-emerald-500/20",
-      percentClass: "text-emerald-900 dark:text-emerald-100",
-      fillHex: "#10b981",
-      chipClass:
-        "border-emerald-200/70 bg-emerald-50/70 dark:border-emerald-500/20 dark:bg-emerald-500/[0.08]",
-      chipLabelClass: "text-emerald-900 dark:text-emerald-100/80",
-      barTrackClass: "border-emerald-200 bg-white dark:border-emerald-500/20 dark:bg-white/[0.03]",
-      barLabelClass: "text-emerald-900 dark:text-emerald-50",
-      barMetaClass: "text-emerald-700 dark:text-emerald-200/70",
+      fillClass: "border-r-2 border-ink-3 bg-selected",
+      percentClass: "text-ink",
+      fillHex: "#5d5d5d",
+      chipClass: "border-line bg-subtle",
+      chipLabelClass: "text-ink-2",
+      barTrackClass: "border-line bg-surface",
+      barLabelClass: "text-ink",
+      barMetaClass: "text-ink-3",
     };
   }
 
@@ -79,7 +80,7 @@ export const resolveQuotaVisualTone = (
       chipClass:
         "border-amber-200/70 bg-amber-50/70 dark:border-amber-500/20 dark:bg-amber-500/[0.08]",
       chipLabelClass: "text-amber-900 dark:text-amber-100/80",
-      barTrackClass: "border-amber-200 bg-white dark:border-amber-500/20 dark:bg-white/[0.03]",
+      barTrackClass: "border-amber-200 bg-surface dark:border-amber-500/25",
       barLabelClass: "text-amber-900 dark:text-amber-50",
       barMetaClass: "text-amber-700 dark:text-amber-200/70",
     };
@@ -92,7 +93,7 @@ export const resolveQuotaVisualTone = (
     fillHex: "#f43f5e",
     chipClass: "border-rose-200/70 bg-rose-50/70 dark:border-rose-500/20 dark:bg-rose-500/[0.08]",
     chipLabelClass: "text-rose-900 dark:text-rose-100/80",
-    barTrackClass: "border-rose-200 bg-white dark:border-rose-500/20 dark:bg-white/[0.03]",
+    barTrackClass: "border-rose-200 bg-surface dark:border-rose-500/25",
     barLabelClass: "text-rose-900 dark:text-rose-50",
     barMetaClass: "text-rose-700 dark:text-rose-200/70",
   };

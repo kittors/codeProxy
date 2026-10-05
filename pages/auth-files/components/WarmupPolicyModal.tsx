@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Modal, Button, TextInput as Input, ToggleSwitch as Switch } from "@code-proxy/ui";
-import { goeyToast } from "goey-toast";
+import { Modal, Button, TextInput as Input, ToggleSwitch as Switch, toast } from "@code-proxy/ui";
 import { authFilesApi } from "@code-proxy/api-client";
 import { Clock } from "lucide-react";
 
@@ -103,10 +102,10 @@ export function WarmupPolicyModal({ open, onClose, allFileNames }: WarmupPolicyM
       }
 
       await authFilesApi.saveWarmupPolicy(policyPayload);
-      goeyToast.success(t("antigravity_quota.warmup_policy_saved"));
+      toast.success(t("antigravity_quota.warmup_policy_saved"));
       onClose();
     } catch (e: unknown) {
-      goeyToast.error(t("antigravity_quota.warmup_policy_save_failed", { message: String(e) }));
+      toast.error(t("antigravity_quota.warmup_policy_save_failed", { message: String(e) }));
     } finally {
       setSaving(false);
     }
@@ -152,7 +151,7 @@ export function WarmupPolicyModal({ open, onClose, allFileNames }: WarmupPolicyM
 
         {/* Providers */}
         <div className="space-y-2">
-          <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider dark:text-white/60">
+          <label className="text-xs font-medium text-slate-500 dark:text-white/60">
             {t("antigravity_quota.warmup_target_providers")}
           </label>
           <div className="flex gap-4">
@@ -268,7 +267,7 @@ export function WarmupPolicyModal({ open, onClose, allFileNames }: WarmupPolicyM
         {allFileNames.length > 0 && (
           <div className="space-y-1.5 pt-1">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider dark:text-white/60">
+              <label className="text-xs font-medium text-slate-500 dark:text-white/60">
                 单独排除账号 (不参与自动预热)
               </label>
               <span className="text-xs text-slate-400">

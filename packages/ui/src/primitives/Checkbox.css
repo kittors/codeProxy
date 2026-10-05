@@ -1,0 +1,71 @@
+/*
+ * 自绘复选框。
+ *
+ * 原生复选框在各平台长得不一样（macOS 是蓝色圆角、Windows 是方角细框），和面板的
+ * 中性配色、胶囊控件放在一起很跳。这里 appearance: none 后自己画：未选中只有一圈
+ * ink-3 描边（与白底保持 3:1 的非文字对比度），选中/半选铺强调色，对勾或横线用
+ * mask 绘制、颜色取 accent-fg，深浅色自动反转。
+ *
+ * 仍然是原生 <input type="checkbox">：键盘、表单提交、indeterminate、测试里的
+ * getByRole("checkbox") 都不受影响。焦点描边走全局 :focus-visible。
+ *
+ * 这个文件随组件模块加载，在入口样式之前、也不在 Tailwind 的 @layer 里——未分层的
+ * 规则会压过所有工具类。所以这里只画外观，尺寸、外边距这类调用方可能要调的属性
+ * 交给组件上的工具类（h-4 w-4 shrink-0），调用方传 className 仍然能覆盖。
+ */
+.cp-checkbox {
+  appearance: none;
+  display: inline-grid;
+  place-content: center;
+  border: 1px solid var(--cp-ink-3);
+  border-radius: 0.25rem;
+  background-color: transparent;
+  cursor: pointer;
+  transition:
+    background-color 100ms ease,
+    border-color 100ms ease;
+}
+
+.cp-checkbox::before {
+  content: "";
+  width: 0.75rem;
+  height: 0.75rem;
+  background-color: var(--cp-accent-fg);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.4l3 3 6-6.4'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.4l3 3 6-6.4'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+  transform: scale(0);
+  transition: transform 160ms cubic-bezier(0.3, 1.25, 0.5, 1);
+}
+
+.cp-checkbox:hover:not(:disabled):not(:checked):not(:indeterminate) {
+  border-color: var(--cp-ink-2);
+}
+
+.cp-checkbox:checked,
+.cp-checkbox:indeterminate {
+  border-color: var(--cp-accent);
+  background-color: var(--cp-accent);
+}
+
+.cp-checkbox:checked::before {
+  transform: scale(1);
+}
+
+.cp-checkbox:indeterminate::before {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round'%3E%3Cpath d='M4 8h8'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round'%3E%3Cpath d='M4 8h8'/%3E%3C/svg%3E");
+  transform: scale(1);
+}
+
+.cp-checkbox:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cp-checkbox::before {
+    transition: none;
+  }
+}

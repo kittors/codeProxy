@@ -69,11 +69,12 @@ export const hasRequestLogMetricText = (value: string): boolean => {
 export const resolveLatencyToneClasses = (latencyText: string): string => {
   const seconds = parseLatencyTextToSeconds(latencyText);
   if (seconds === null) {
-    return "border-slate-900/8 bg-slate-50 text-slate-500 dark:border-white/8 dark:bg-neutral-950/45 dark:text-white/55";
+    return "border-line bg-subtle text-ink-3";
   }
 
+  // 10 秒内是常态：中性灰；慢了才变琥珀、红色。
   if (seconds < 10) {
-    return "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-200";
+    return "border-line bg-subtle text-ink-2";
   }
   if (seconds < 30) {
     return "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200";

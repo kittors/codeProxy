@@ -120,7 +120,7 @@ export function ErrorDetailModal({ open, logId, model, onClose }: ErrorDetailMod
         onClick={onClose}
         aria-label={t("common.close")}
         className={[
-          "absolute inset-0 cursor-default bg-slate-900/40 backdrop-blur-sm dark:bg-black/50",
+          "absolute inset-0 cursor-default bg-black/25 dark:bg-black/55",
           "transition-opacity duration-200",
           visible ? "opacity-100" : "opacity-0",
         ].join(" ")}
@@ -131,23 +131,24 @@ export function ErrorDetailModal({ open, logId, model, onClose }: ErrorDetailMod
         role="dialog"
         aria-modal="true"
         className={[
-          "relative z-10 flex w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-red-200 bg-white shadow-xl dark:border-red-900/40 dark:bg-neutral-950",
-          "max-h-[70vh] transition-all duration-200",
-          visible ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-2 scale-95",
+          // 与通用弹窗同一种面板：错误只体现在图标和错误摘要上，不再给整张面板描红边、铺红色标题栏。
+          "relative z-10 flex w-full max-w-xl flex-col overflow-hidden rounded-3xl bg-elevated text-ink shadow-dialog",
+          "max-h-[70vh] transition-all duration-[250ms] ease-soft",
+          visible ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-2 scale-[0.97]",
         ].join(" ")}
       >
         {/* Header */}
-        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-red-100 bg-red-50/50 px-5 py-4 dark:border-red-900/30 dark:bg-red-950/20">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-100 dark:bg-red-900/30">
-              <AlertTriangle size={16} className="text-red-600 dark:text-red-400" />
+        <div className="flex shrink-0 items-start justify-between gap-3 px-6 pt-6 pb-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400">
+              <AlertTriangle size={16} aria-hidden="true" />
             </div>
             <div className="min-w-0">
-              <h2 className="truncate text-base font-semibold tracking-tight text-red-900 dark:text-red-200">
+              <h2 className="truncate text-base font-semibold tracking-tight text-ink">
                 {t("error_detail.request_failed")}
                 {model ? ` · ${model}` : ""}
               </h2>
-              <p className="mt-0.5 text-xs text-red-600/70 dark:text-red-400/60">
+              <p className="mt-0.5 text-xs text-ink-3">
                 {hasErrorContent
                   ? reconstructed
                     ? t("error_detail.reconstructed_from_details")
@@ -159,7 +160,7 @@ export function ErrorDetailModal({ open, logId, model, onClose }: ErrorDetailMod
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-0 bg-transparent p-0 text-red-600 shadow-none transition-colors hover:bg-slate-100 hover:text-red-700 dark:text-red-300 dark:hover:bg-white/10 dark:hover:text-red-200"
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-0 bg-transparent p-0 text-ink-3 shadow-none transition-colors hover:bg-hover hover:text-ink"
             aria-label={t("common.close")}
           >
             <X size={14} />
@@ -167,7 +168,7 @@ export function ErrorDetailModal({ open, logId, model, onClose }: ErrorDetailMod
         </div>
 
         {/* Content */}
-        <div className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-5 py-4">
+        <div className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-6 pt-2 pb-6">
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 size={22} className="animate-spin text-slate-400" />
@@ -186,7 +187,7 @@ export function ErrorDetailModal({ open, logId, model, onClose }: ErrorDetailMod
             <div className="space-y-3">
               {/* Error summary */}
               {errorMessage && (
-                <div className="min-w-0 overflow-hidden rounded-xl border border-red-200 bg-red-50 px-4 py-3 dark:border-red-900/30 dark:bg-red-950/20">
+                <div className="min-w-0 overflow-hidden rounded-2xl bg-rose-500/[0.07] px-4 py-3">
                   <p
                     className="text-sm font-medium text-red-700 dark:text-red-300"
                     style={{ overflowWrap: "anywhere", wordBreak: "break-all" }}
@@ -199,20 +200,20 @@ export function ErrorDetailModal({ open, logId, model, onClose }: ErrorDetailMod
               {/* Full response */}
               <div className="relative">
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-2xs font-semibold uppercase tracking-widest text-slate-400 dark:text-white/35">
+                  <span className="text-2xs font-medium text-slate-400 dark:text-white/35">
                     {t("error_detail.full_response")}
                   </span>
                   <button
                     type="button"
                     onClick={handleCopy}
-                    className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-slate-500 transition hover:bg-slate-100 dark:text-white/40 dark:hover:bg-neutral-800"
+                    className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium text-ink-3 transition-colors hover:bg-hover hover:text-ink"
                   >
                     {copied ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
                     {copied ? t("common.copied") : t("log_content.copy")}
                   </button>
                 </div>
                 <pre
-                  className="max-h-[40vh] overflow-auto rounded-xl border border-slate-900/8 bg-slate-50 p-4 text-xs leading-relaxed text-slate-800 dark:border-white/8 dark:bg-neutral-900 dark:text-slate-200"
+                  className="max-h-[40vh] overflow-auto rounded-2xl bg-subtle p-4 text-xs leading-relaxed text-ink-2"
                   style={{
                     whiteSpace: "pre-wrap",
                     wordBreak: "break-all",

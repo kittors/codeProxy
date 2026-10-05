@@ -146,7 +146,7 @@ export function ProviderCard({
                     ) : null}
                     {onDelete ? (
                       <DropdownMenu.Item
-                        className="text-rose-600 focus:text-rose-700 dark:text-rose-300"
+                        tone="danger"
                         onSelect={() => onDelete()}
                       >
                         <Trash2 size={15} />

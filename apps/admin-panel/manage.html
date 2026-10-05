@@ -8,11 +8,12 @@
       name="description"
       content="CliRelay 是 OpenAI 兼容的统一模型网关：一个 API Key 调度 Claude、Gemini、GPT、Grok 等模型，内置用量统计、请求日志、配额限额与账号池。"
     />
+    <link rel="icon" type="image/svg+xml" href="/manage/favicon.svg" />
     <link rel="icon" type="image/png" sizes="32x32" href="/manage/favicon-32.png" />
     <link rel="icon" type="image/png" sizes="192x192" href="/manage/favicon-192.png" />
     <link rel="apple-touch-icon" href="/manage/apple-touch-icon.png" />
-    <meta name="theme-color" content="#4F46E5" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#09090B" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#212121" media="(prefers-color-scheme: dark)" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="CliRelay" />
     <meta property="og:title" content="CliRelay · 一个入口，接入全部模型能力" />
@@ -52,22 +53,16 @@
     </script>
     <style>
       :root {
-        --pl-bg: #f4f4f5;
-        --pl-ring-outer: rgba(99, 102, 241, 0.6);
-        --pl-ring-inner: rgba(20, 184, 166, 0.75);
-        --pl-text: #64748b;
-        --pl-glow-1: rgba(59, 130, 246, 0.12);
-        --pl-glow-2: rgba(20, 184, 166, 0.1);
-        --pl-glow-3: rgba(168, 85, 247, 0.08);
+        --pl-bg: #ffffff;
+        --pl-ring-track: rgba(13, 13, 13, 0.1);
+        --pl-ring: #0d0d0d;
+        --pl-text: #8f8f8f;
       }
       .dark {
-        --pl-bg: #09090b;
-        --pl-ring-outer: rgba(129, 140, 248, 0.7);
-        --pl-ring-inner: rgba(94, 234, 212, 0.8);
-        --pl-text: rgba(255, 255, 255, 0.5);
-        --pl-glow-1: rgba(99, 102, 241, 0.18);
-        --pl-glow-2: rgba(45, 212, 191, 0.12);
-        --pl-glow-3: rgba(168, 85, 247, 0.1);
+        --pl-bg: #212121;
+        --pl-ring-track: rgba(255, 255, 255, 0.12);
+        --pl-ring: #ececec;
+        --pl-text: #8a8a8a;
       }
       body {
         margin: 0;
@@ -85,90 +80,40 @@
         background-color: var(--pl-bg);
         opacity: 1;
         transition: opacity 0.4s ease, visibility 0.4s ease;
-        font-family: "SF Pro Text", "Segoe UI", "PingFang SC", system-ui, sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", system-ui, sans-serif;
       }
       #app-loader.fade-out {
         opacity: 0;
         visibility: hidden;
         pointer-events: none;
       }
-      .pl-glow {
-        position: absolute;
-        border-radius: 50%;
-        filter: blur(80px);
-        pointer-events: none;
-        animation: pl-glow-pulse 4s ease-in-out infinite alternate;
-      }
-      .pl-glow-1 {
-        width: 28rem;
-        height: 28rem;
-        top: -8rem;
-        left: -6rem;
-        background: var(--pl-glow-1);
-      }
-      .pl-glow-2 {
-        width: 24rem;
-        height: 24rem;
-        top: -4rem;
-        right: -6rem;
-        background: var(--pl-glow-2);
-        animation-delay: 1.3s;
-      }
-      .pl-glow-3 {
-        width: 28rem;
-        height: 28rem;
-        bottom: -8rem;
-        left: 25%;
-        background: var(--pl-glow-3);
-        animation-delay: 2.6s;
-      }
       .pl-loader-content {
         display: flex;
         flex-direction: column;
         align-items: center;
-        animation: pl-content-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+        animation: pl-content-in 0.36s cubic-bezier(0.2, 0.8, 0.2, 1) both;
       }
-      .pl-ring-outer {
-        width: 48px;
-        height: 48px;
+      .pl-ring {
+        width: 40px;
+        height: 40px;
+        box-sizing: border-box;
         border-radius: 50%;
-        border: 3px solid transparent;
-        border-top-color: var(--pl-ring-outer);
-        animation: pl-spin 1.6s linear infinite;
-        margin-bottom: 20px;
-      }
-      .pl-ring-inner {
-        position: absolute;
-        inset: 4px;
-        border-radius: 50%;
-        border: 2px solid transparent;
-        border-top-color: var(--pl-ring-inner);
-        animation: pl-spin-reverse 0.9s linear infinite;
+        border: 2px solid var(--pl-ring-track);
+        border-top-color: var(--pl-ring);
+        animation: pl-spin 0.9s linear infinite;
+        margin-bottom: 18px;
       }
       .pl-text {
         font-size: 13px;
         font-weight: 500;
-        letter-spacing: 0.15em;
         color: var(--pl-text);
-        animation: pl-text-breathe 2.4s ease-in-out infinite;
         user-select: none;
       }
       @keyframes pl-spin {
         to { transform: rotate(360deg); }
       }
-      @keyframes pl-spin-reverse {
-        to { transform: rotate(-360deg); }
-      }
-      @keyframes pl-glow-pulse {
-        0%   { opacity: 0.5; transform: scale(0.95); }
-        100% { opacity: 1;   transform: scale(1.05); }
-      }
-      @keyframes pl-text-breathe {
-        0%, 100% { opacity: 0.45; }
-        50%       { opacity: 1;    }
-      }
       @keyframes pl-content-in {
-        from { opacity: 0; transform: translateY(10px); }
+        from { opacity: 0; transform: translateY(6px); }
         to   { opacity: 1; transform: translateY(0);    }
       }
     </style>
@@ -176,13 +121,8 @@
 
   <body>
     <div id="app-loader" aria-label="Loading">
-      <div class="pl-glow pl-glow-1"></div>
-      <div class="pl-glow pl-glow-2"></div>
-      <div class="pl-glow pl-glow-3"></div>
       <div class="pl-loader-content">
-        <div class="pl-ring-outer">
-          <div class="pl-ring-inner"></div>
-        </div>
+        <div class="pl-ring"></div>
         <span class="pl-text">CliRelay</span>
       </div>
     </div>

@@ -124,7 +124,7 @@ export function PeriodQuotaResetModal({
             <label
               key={period}
               htmlFor={checkboxId}
-              className="flex cursor-pointer items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3 transition-colors hover:border-indigo-300 hover:bg-indigo-50/60 dark:border-white/10 dark:bg-white/5 dark:hover:border-indigo-500/35 dark:hover:bg-indigo-500/10"
+              className="flex cursor-pointer items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3 transition-colors hover:border-ink-4 hover:bg-subtle dark:border-white/10 dark:bg-white/5"
             >
               <span className="flex min-w-0 items-center gap-3">
                 <Checkbox
@@ -147,7 +147,7 @@ export function PeriodQuotaResetModal({
                   {t(`quota.period.${period}`)}
                 </span>
               </span>
-              <span className="shrink-0 text-sm font-semibold tabular-nums text-indigo-700 dark:text-indigo-300">
+              <span className="shrink-0 text-sm font-semibold tabular-nums text-ink">
                 {formatQuotaUsd(limit)}
               </span>
             </label>

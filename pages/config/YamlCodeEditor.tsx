@@ -49,7 +49,7 @@ const classifyValue = (value: string): string => {
   if (trimmed.startsWith("#")) return "text-slate-400 dark:text-white/45";
   if (trimmed.startsWith('"') || trimmed.startsWith("'"))
     return "text-emerald-700 dark:text-emerald-300";
-  if (/^(true|false|null|~)\b/i.test(trimmed)) return "text-violet-700 dark:text-violet-300";
+  if (/^(true|false|null|~)\b/i.test(trimmed)) return "text-ink";
   if (/^[+-]?\d+(\.\d+)?\b/.test(trimmed)) return "text-amber-700 dark:text-amber-300";
   if (/^\[.*\]$/.test(trimmed) || /^\{.*\}$/.test(trimmed))
     return "text-slate-700 dark:text-white/80";
@@ -106,7 +106,7 @@ const tokenizeYamlLine = (line: string, lineGlobalStart: number): Token[] => {
   } else {
     const meta = trimmedBody.trim();
     if (meta === "---" || meta === "..." || meta.startsWith("!")) {
-      push(rest, "text-fuchsia-700 dark:text-fuchsia-300 font-semibold");
+      push(rest, "text-ink font-semibold");
     } else {
       push(rest, classifyValue(rest));
     }

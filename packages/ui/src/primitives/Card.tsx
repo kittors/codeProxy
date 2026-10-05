@@ -50,10 +50,10 @@ export function Card({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1">
             {title ? (
-              <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{title}</h3>
+              <h3 className="text-base font-semibold tracking-tight text-ink">{title}</h3>
             ) : null}
             {description ? (
-              <p className="text-xs text-slate-600 dark:text-white/65">{description}</p>
+              <p className="text-sm text-ink-3">{description}</p>
             ) : null}
           </div>
           {actions ? <div className="shrink-0">{actions}</div> : null}
@@ -65,9 +65,9 @@ export function Card({
         {children}
       </div>
       {loading ? (
-        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-3xl bg-white/70 backdrop-blur-sm motion-safe:transition-colors motion-safe:duration-200 motion-safe:ease-out dark:bg-neutral-950/55">
-          <div className="inline-flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 text-sm font-medium text-slate-700 border border-slate-900/8 motion-safe:transition-colors motion-safe:duration-200 motion-safe:ease-out dark:bg-neutral-900/85 dark:text-white dark:border-white/10">
-            <span className="h-4 w-4 animate-spin rounded-full border-2 border-indigo-500/30 border-t-indigo-600 dark:border-indigo-400/25 dark:border-t-indigo-400" />
+        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-3xl bg-surface/70 backdrop-blur-[2px] motion-safe:transition-colors motion-safe:duration-200 motion-safe:ease-out">
+          <div className="inline-flex items-center gap-2 rounded-full bg-elevated px-4 py-2 text-sm font-medium text-ink-2 shadow-pop">
+            <span className="h-4 w-4 rounded-full border-2 border-ink/15 border-t-ink motion-safe:animate-spin" />
             {t("common.loading_ellipsis")}
           </div>
         </div>

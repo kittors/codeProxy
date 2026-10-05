@@ -731,13 +731,21 @@ describe("Auth Files helper coverage", () => {
     expect(formatPlanBadgeLabel("plus")).toBe("PLUS");
     expect(formatPlanBadgeLabel("team")).toBe("TEAM");
     expect(formatPlanBadgeLabel("supergrok-heavy")).toBe("SUPERGROK HEAVY");
-    expect(resolvePlanBadgeClass("pro")).toContain("from-amber-300");
-    expect(resolvePlanBadgeClass("plus")).toContain("from-slate-100");
-    expect(resolvePlanBadgeClass("team")).toContain("from-violet-500");
-    expect(resolvePlanBadgeClass("pro_20x")).toContain("from-yellow-300");
-    // Soft info tags use sky-50; membership chips must not.
-    expect(resolvePlanBadgeClass("pro")).not.toContain("bg-sky-50");
-    expect(resolvePlanBadgeClass("plus")).not.toContain("bg-sky-50");
+    // Tiers read through weight, not hue: top tiers solid ink, middle tiers solid
+    // mid-grey, entry paid tiers outlined, free/unknown quiet grey.
+    const hasClass = (classes: string, name: string) => classes.split(/\s+/).includes(name);
+    expect(hasClass(resolvePlanBadgeClass("pro_20x"), "bg-ink")).toBe(true);
+    expect(hasClass(resolvePlanBadgeClass("max_5x"), "bg-ink")).toBe(true);
+    expect(hasClass(resolvePlanBadgeClass("pro"), "bg-ink-2")).toBe(true);
+    expect(hasClass(resolvePlanBadgeClass("team"), "bg-ink-2")).toBe(true);
+    expect(hasClass(resolvePlanBadgeClass("plus"), "ring-ink-3")).toBe(true);
+    expect(hasClass(resolvePlanBadgeClass("free"), "bg-selected")).toBe(true);
+    for (const plan of ["pro", "plus", "team", "pro_20x", "max", "supergrok-heavy"]) {
+      // Soft info tags are bg-hover pills; membership chips must never look like them,
+      // and the old gradient chips are gone for good.
+      expect(hasClass(resolvePlanBadgeClass(plan), "bg-hover")).toBe(false);
+      expect(resolvePlanBadgeClass(plan)).not.toMatch(/gradient|from-|via-|to-/);
+    }
   });
 
   test("codex pro multiplier tiers use estimated weekly budget thresholds", () => {

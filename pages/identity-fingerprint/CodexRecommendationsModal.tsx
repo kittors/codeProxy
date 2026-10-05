@@ -277,7 +277,7 @@ function RecommendationDetail({
   const { t } = useTranslation();
   if (!item) {
     return (
-      <div className="rounded-xl border border-dashed border-slate-900/8 p-4 text-sm text-slate-500 dark:border-white/8 dark:text-white/50">
+      <div className="bg-subtle rounded-xl p-4 text-sm text-slate-500 dark:text-white/50">
         {t("identity_fingerprint.recommend_detail_empty")}
       </div>
     );
@@ -362,7 +362,7 @@ function RecommendationDetail({
 function DetailSection({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="mt-4">
-      <h4 className="mb-2 text-xs font-semibold uppercase text-slate-500 dark:text-white/45">
+      <h4 className="mb-2 text-xs font-medium text-slate-500 dark:text-white/45">
         {title}
       </h4>
       {children}

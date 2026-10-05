@@ -9,7 +9,19 @@ import {
   type ReactNode,
 } from "react";
 import { X } from "lucide-react";
-import { cssEase, EASE_IN, EASE_OUT, OVERLAY_ENTER_MS, OVERLAY_EXIT_MS } from "../utils/motion";
+import {
+  cssEase,
+  EASE_IN,
+  EASE_OUT,
+  EASE_SPRING,
+  OVERLAY_ENTER_MS,
+  OVERLAY_EXIT_MS,
+  OVERLAY_TRANSFORM_ENTER_MS,
+} from "../utils/motion";
+
+/** 关闭按钮：无底色圆形，悬停才出现浅灰叠层。 */
+const CLOSE_BUTTON_CLASS =
+  "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-0 bg-transparent p-0 text-ink-3 shadow-none transition-colors hover:bg-hover hover:text-ink disabled:cursor-not-allowed disabled:opacity-60";
 
 export function Modal({
   open,
@@ -120,6 +132,14 @@ export function Modal({
     transitionDuration: `${visible ? OVERLAY_ENTER_MS : OVERLAY_EXIT_MS}ms`,
     transitionTimingFunction: cssEase(visible ? EASE_OUT : EASE_IN),
   } as const;
+  // 面板的 transition-property 顺序是 [opacity, transform]：进场时淡入走减速曲线，
+  // 位移/缩放走更长的轻回弹，像被轻轻放到桌面上；退场两者一起快速收走。
+  const panelTransitionStyle = visible
+    ? {
+        transitionDuration: `${OVERLAY_ENTER_MS}ms, ${OVERLAY_TRANSFORM_ENTER_MS}ms`,
+        transitionTimingFunction: `${cssEase(EASE_OUT)}, ${cssEase(EASE_SPRING)}`,
+      }
+    : transitionStyle;
 
   return createPortal(
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
@@ -133,9 +153,10 @@ export function Modal({
         tabIndex={-1}
         style={transitionStyle}
         className={[
-          "absolute inset-0 cursor-default bg-slate-950/45 dark:bg-black/60",
-          "transition-[opacity,backdrop-filter] motion-reduce:transition-none",
-          visible ? "opacity-100 backdrop-blur-md" : "opacity-0 backdrop-blur-none",
+          // 只压暗、不模糊：模糊会把背后的页面整片糊掉，打开一个小确认框也像换了个场景。
+          "absolute inset-0 cursor-default bg-black/25 dark:bg-black/55",
+          "transition-opacity motion-reduce:transition-none",
+          visible ? "opacity-100" : "opacity-0",
         ].join(" ")}
       />
 
@@ -144,10 +165,11 @@ export function Modal({
         aria-modal="true"
         aria-label={hideHeader ? snapshot.title : undefined}
         aria-labelledby={hideHeader ? undefined : titleId}
-        style={transitionStyle}
+        style={panelTransitionStyle}
         className={[
-          `relative z-10 w-full ${maxWidth} overflow-hidden rounded-3xl bg-white ring-1 ring-slate-900/10 shadow-[0_32px_80px_-24px_rgba(15,23,42,0.45)] dark:bg-[#0E0E12] dark:ring-white/10 dark:shadow-[0_32px_80px_-24px_rgba(0,0,0,0.8)]`,
+          `relative z-10 w-full ${maxWidth} overflow-hidden rounded-3xl bg-elevated text-ink shadow-dialog`,
           // 放大幅度压到 0.97：再大就会让面板高度看着像「塌下去又弹起来」。
+          // 回弹曲线只越过一点点，配合 0.97 起点，落位是「稳住」而不是「弹跳」。
           "transition-[opacity,transform] will-change-transform motion-reduce:transition-none motion-reduce:transform-none",
           visible ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-2 scale-[0.97]",
           panelClassName,
@@ -158,18 +180,16 @@ export function Modal({
             type="button"
             onClick={onClose}
             disabled={!open}
-            className="group absolute top-4 right-4 z-20 inline-flex h-9 w-9 items-center justify-center rounded-full border-0 bg-transparent p-0 text-slate-400 shadow-none transition-colors hover:bg-slate-900/5 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60 dark:text-white/45 dark:hover:bg-white/10 dark:hover:text-white"
+            className={`absolute top-4 right-4 z-20 ${CLOSE_BUTTON_CLASS}`}
             aria-label={t("common.close")}
           >
-            <X
-              size={16}
-              className="transition-transform duration-200 motion-safe:group-hover:rotate-90"
-            />
+            <X size={18} />
           </button>
         ) : (
-          <div className="flex items-start justify-between gap-3 border-b border-slate-900/8 px-6 py-4 dark:border-white/8">
-            <div className="min-w-0">
-              <h2 className="flex min-w-0 items-center gap-2 text-base font-semibold tracking-tight text-slate-900 dark:text-white">
+          // 头部、尾部不画分隔线：留白已经把三段分开，线只会让弹窗显得像表格。
+          <div className="flex items-start justify-between gap-3 pt-5 pr-4 pb-1 pl-6">
+            <div className="min-w-0 pt-1">
+              <h2 className="flex min-w-0 items-center gap-2 text-xl font-semibold tracking-tight text-ink">
                 <span id={titleId} className="min-w-0 truncate">
                   {snapshot.title}
                 </span>
@@ -180,7 +200,7 @@ export function Modal({
                 ) : null}
               </h2>
               {snapshot.description ? (
-                <p className="mt-1 text-sm text-slate-600 dark:text-white/65">
+                <p className="mt-1 text-sm text-ink-2">
                   {snapshot.description}
                 </p>
               ) : null}
@@ -189,26 +209,30 @@ export function Modal({
               type="button"
               onClick={onClose}
               disabled={!open}
-              className="group inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-0 bg-transparent p-0 text-slate-400 shadow-none transition-colors hover:bg-slate-900/5 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60 dark:text-white/45 dark:hover:bg-white/10 dark:hover:text-white"
+              className={CLOSE_BUTTON_CLASS}
               aria-label={t("common.close")}
             >
-              <X
-                size={16}
-                className="transition-transform duration-200 motion-safe:group-hover:rotate-90"
-              />
+              <X size={18} />
             </button>
           </div>
         )}
 
         <div
           data-testid={bodyTestId}
-          className={`${bodyHeightCls} ${bodyOverflowCls} overscroll-contain px-6 py-5 ${bodyClassName ?? ""}`}
+          className={[
+            bodyHeightCls,
+            bodyOverflowCls,
+            "overscroll-contain px-6",
+            hideHeader ? "pt-6" : "pt-4",
+            snapshot.footer ? "pb-2" : "pb-6",
+            bodyClassName ?? "",
+          ].join(" ")}
         >
           {snapshot.children}
         </div>
 
         {snapshot.footer ? (
-          <div className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-900/8 px-6 py-4 dark:border-white/8">
+          <div className="flex flex-wrap items-center justify-end gap-2.5 px-6 pt-4 pb-6">
             {snapshot.footer}
           </div>
         ) : null}

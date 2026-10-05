@@ -94,7 +94,7 @@ export function KeyValueInputList({
               </div>
               <div className="md:col-span-1 flex items-center justify-end">
                 <Button
-                  variant="danger"
+                  variant="ghost-danger"
                   size="sm"
                   onClick={() => onChange(entries.filter((_, i) => i !== idx))}
                   disabled={disabled}

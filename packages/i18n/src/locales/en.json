@@ -162,7 +162,9 @@
     "show_key": "Show password",
     "hide_key": "Hide password",
     "switch_account_failed": "Could not restore that account. Sign in again.",
-    "or_sign_in": "or sign in with password"
+    "or_sign_in": "or sign in with password",
+    "caps_lock_on": "Caps Lock is on",
+    "hero_prefix": "One gateway for"
   },
   "header": {
     "check_connection": "Check Connection",
@@ -5111,7 +5113,14 @@
     "clear_audit_logs_confirm": "Clear all audit logs in your current visible scope? This cannot be undone.",
     "clear_audit_logs_confirm_button": "Clear all",
     "audit_logs_cleared": "Cleared {{count}} audit logs.",
-    "source_ip": "Source IP"
+    "source_ip": "Source IP",
+    "password_rule_min_length": "At least {{count}} characters",
+    "password_rule_upper": "Uppercase letter",
+    "password_rule_lower": "Lowercase letter",
+    "password_rule_special": "Special character",
+    "passwords_match": "Passwords match",
+    "change_password_hint": "Pick a password you don't use anywhere else.",
+    "change_password_forced_hint": "Set a new password before you continue."
   },
   "apikey_usage": {
     "title": "API key usage",

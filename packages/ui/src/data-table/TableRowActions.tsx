@@ -27,7 +27,7 @@ export const TABLE_ROW_ACTIONS_STICKY_END_COLUMN = {
   ...TABLE_ROW_ACTIONS_COLUMN,
   lockOrder: "end",
   headerClassName: "text-center md:sticky md:z-40 md:bg-slate-100 md:dark:bg-neutral-800",
-  cellClassName: "whitespace-nowrap md:sticky md:z-30 md:bg-white md:dark:bg-neutral-950",
+  cellClassName: "whitespace-nowrap md:sticky md:z-30 md:bg-surface",
 } as const;
 
 const alignClassNames = {
@@ -35,9 +35,6 @@ const alignClassNames = {
   center: "justify-center",
   end: "justify-end",
 } as const;
-
-const destructiveButtonClassName =
-  "text-rose-600 hover:bg-rose-50 hover:text-rose-700 dark:text-rose-400 dark:hover:bg-rose-500/10 dark:hover:text-rose-300";
 
 export function TableRowActions({
   actions,
@@ -70,14 +67,11 @@ export function TableRowActions({
         <Button
           key={action.key}
           size="xs"
-          variant="ghost"
+          variant={action.destructive ? "ghost-danger" : "ghost"}
           disabled={action.disabled}
           title={action.label}
           aria-label={action.label}
-          className={cn(
-            action.destructive ? destructiveButtonClassName : undefined,
-            action.className,
-          )}
+          className={action.className}
           onClick={action.onClick}
         >
           {action.icon}
@@ -97,11 +91,7 @@ export function TableRowActions({
                 <DropdownMenu.Item
                   key={action.key}
                   disabled={action.disabled}
-                  className={cn(
-                    action.destructive
-                      ? "text-rose-600 focus:bg-rose-50 data-[highlighted]:bg-rose-50 dark:text-rose-300 dark:focus:bg-rose-500/10 dark:data-[highlighted]:bg-rose-500/10"
-                      : undefined,
-                  )}
+                  tone={action.destructive ? "danger" : "default"}
                   onSelect={action.onClick}
                 >
                   <span aria-hidden="true" className="inline-flex shrink-0 [&>svg]:h-4 [&>svg]:w-4">

@@ -17,8 +17,8 @@ import type { ControlSize } from "../utils/controlStyles";
 type TabsValue = string;
 
 /**
- * `neutral` 是管理后台一直在用的中性胶囊；`brand` 用品牌主色填充选中项，
- * 供门户等需要跟落地页视觉统一的场景使用。默认保持 neutral，避免影响既有页面。
+ * `neutral` 是管理后台一直在用的中性分段控件：浅灰槽 + 白色滑块；`brand` 用强调色
+ * （浅色墨黑、深色反转）填充选中项，给门户这类需要更强选中态的场景。默认 neutral。
  */
 export type TabsTone = "neutral" | "brand";
 
@@ -49,7 +49,7 @@ const tabsTriggerPaddingBySize: Record<ControlSize, string> = {
 
 const tabsTriggerTextBySize: Record<ControlSize, string> = {
   sm: "text-xs",
-  default: "text-xs",
+  default: "text-sm",
   lg: "text-sm",
 };
 
@@ -124,7 +124,7 @@ export function TabsList({
         // (default align-items:stretch would stretch the pill bar full width)
         // overscroll-x-contain: keep edge bounce on the tab strip only; without it,
         // horizontal overscroll chains to the viewport and rubber-bands PageBackground.
-        "scrollbar-hidden relative inline-flex w-fit max-w-full shrink-0 self-start gap-0.5 overflow-x-auto overscroll-x-contain whitespace-nowrap rounded-full bg-[#EBEBEC] p-0.5 dark:bg-[#27272A]",
+        "scrollbar-hidden relative inline-flex w-fit max-w-full shrink-0 self-start gap-0.5 overflow-x-auto overscroll-x-contain whitespace-nowrap rounded-full bg-track p-0.5",
         tabsListHeightBySize[size],
         className,
       ].join(" ")}
@@ -135,12 +135,13 @@ export function TabsList({
           className={[
             "pointer-events-none absolute bottom-0.5 left-0 top-0.5 z-0 rounded-full",
             tone === "brand"
-              ? "bg-indigo-600 dark:bg-indigo-500"
-              : "bg-white shadow-sm shadow-black/4 dark:bg-[#46464C] dark:shadow-none",
+              ? "bg-accent"
+              : "bg-surface shadow-[0_0_0_0.5px_rgb(0_0_0/0.06),0_1px_3px_rgb(0_0_0/0.1)] dark:bg-white/10 dark:shadow-none",
           ].join(" ")}
           initial={false}
           animate={{ x: indicator.x, width: indicator.width }}
-          transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+          // 滑块用带一点回弹的曲线：落位时轻微越过再回正，切换读起来有「吸附」感。
+          transition={{ duration: 0.25, ease: [0.3, 1.25, 0.5, 1] }}
         />
       ) : null}
       {children}
@@ -173,15 +174,17 @@ export function TabsTrigger({
       onClick={onClick}
       {...buttonProps}
       className={[
-        "relative z-10 inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/10 dark:focus-visible:ring-white/20",
+        // 选中与未选中同为 font-medium，只换颜色：切换字重会改变文字宽度，右侧的标签会跟着挪动。
+        // 焦点描边内缩：标签条是 overflow-x-auto，外扩的描边会被裁掉上下两条边。
+        "relative z-10 inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full font-medium transition-colors duration-150 focus-visible:-outline-offset-2",
         tabsTriggerHeightBySize[size],
         tabsTriggerPaddingBySize[size],
         tabsTriggerTextBySize[size],
         active
           ? tone === "brand"
-            ? "font-semibold text-white"
-            : "font-semibold text-[#18181B] dark:text-white"
-          : "font-medium text-[#96969B] hover:text-[#18181B] dark:text-[#9F9FA8] dark:hover:text-white",
+            ? "text-accent-fg"
+            : "text-ink"
+          : "text-ink-2 hover:text-ink",
         buttonProps.className,
       ].join(" ")}
     >

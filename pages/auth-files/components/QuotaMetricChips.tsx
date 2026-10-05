@@ -33,7 +33,7 @@ export function QuotaProgressRing({ percent }: { percent: number | null }) {
           background: `conic-gradient(${tone.fillHex} ${deg}deg, rgba(255, 255, 255, 0.14) 0deg)`,
         }}
       />
-      <span className="absolute inset-[2px] rounded-full bg-white dark:bg-neutral-950" />
+      <span className="absolute inset-[2px] rounded-full bg-surface" />
     </span>
   );
 }

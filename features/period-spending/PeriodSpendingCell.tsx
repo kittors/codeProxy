@@ -200,7 +200,7 @@ export function PeriodSpendingLimitsCell({
       {visible.map((period) => (
         <span
           key={period}
-          className="inline-flex items-center gap-1 rounded-full border border-indigo-200 bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700 dark:border-indigo-500/25 dark:bg-indigo-500/10 dark:text-indigo-200"
+          className="inline-flex items-center gap-1 rounded-full border border-line-strong bg-hover px-2 py-1 text-xs font-medium text-ink"
         >
           <span className="font-semibold">{periodLabel(t, period)}</span>
           <span className="tabular-nums">{formatQuotaUsd(limits?.[period] ?? 0)}</span>

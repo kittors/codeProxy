@@ -23,10 +23,6 @@ const VARIANT_STYLES: Record<InputVariant, string> = {
   ghost: "bg-transparent text-inherit placeholder:text-inherit placeholder:opacity-60",
 };
 
-/** 无效态：同样只用 1px 描边，与 focus 态保持一致的克制程度。 */
-const INVALID_SOLID =
-  "ring-1 ring-rose-500/55 focus:ring-rose-500/70 focus-visible:ring-rose-500/70 dark:ring-rose-400/55 dark:focus:ring-rose-400/70 dark:focus-visible:ring-rose-400/70";
-
 export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(function TextInput(
   {
     className,
@@ -52,8 +48,9 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(function T
     controlHeightBySize[size],
     controlTextBySize[size],
     variant === "solid" ? controlPaddingBySize[size] : null,
+    // 无效态的红色描边由 controlSurface 里的 aria-[invalid=true] 变体负责，下面会把
+    // invalid 属性同步成 aria-invalid，这里不再条件拼接类名。
     VARIANT_STYLES[variant],
-    variant === "solid" && isInvalid ? INVALID_SOLID : null,
     startAdornment ? "pl-9" : null,
     endAdornment ? "pr-10" : null,
     className,

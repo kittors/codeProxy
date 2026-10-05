@@ -42,7 +42,7 @@ export interface CcSwitchImportConfigOption {
 }
 
 const labelClassName =
-  "text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-white/45";
+  "text-xs font-medium text-slate-500 dark:text-white/45";
 const controlClassName =
   "h-10 rounded-xl border border-slate-900/8 bg-white px-3 text-sm text-slate-900 shadow-none hover:border-slate-300 hover:bg-white focus-visible:ring-2 focus-visible:ring-slate-900/10 dark:border-white/8 dark:bg-neutral-900 dark:text-white dark:hover:border-neutral-700 dark:focus-visible:ring-white/15";
 const fieldClassName = "flex flex-col gap-1.5";

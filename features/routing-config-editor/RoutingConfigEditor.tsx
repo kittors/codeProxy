@@ -30,7 +30,7 @@ import { ScrollArea } from "@code-proxy/ui";
 import { Select } from "@code-proxy/ui";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
-import { HoverTooltip, OverflowTooltip } from "@code-proxy/ui";
+import { HoverTooltip, OverflowTooltip, TooltipChip } from "@code-proxy/ui";
 import { DataTable, TABLE_ROW_ACTIONS_COLUMN, TABLE_ROW_ACTIONS_STICKY_END_COLUMN, type DataTableColumn } from "@code-proxy/ui";
 import { Field, InfoTooltip, TooltipHeader, renderChannelTags } from "./fields";
 import type { RoutingModelLoadResult, RoutingModelOption } from "./types";
@@ -872,17 +872,14 @@ export function RoutingConfigEditor({
               content={
                 <div className="flex max-w-xs flex-wrap gap-1.5">
                   {channels.map((channel) => (
-                    <span
-                      key={channel.id}
-                      className="inline-flex items-center rounded-md border border-slate-900/8 bg-slate-50 px-2 py-0.5 text-xs text-slate-700 dark:border-neutral-700/40 dark:bg-neutral-800/60 dark:text-white/80"
-                    >
+                    <TooltipChip key={channel.id}>
                       {channel.name}
                       {channel.priority.trim()
                         ? ` · ${t("channel_groups_page.priority_short", {
                             value: channel.priority.trim(),
                           })}`
                         : ""}
-                    </span>
+                    </TooltipChip>
                   ))}
                 </div>
               }
@@ -943,12 +940,9 @@ export function RoutingConfigEditor({
               content={
                 <div className="flex max-w-xs flex-wrap gap-1.5">
                   {routePaths.map((path) => (
-                    <span
-                      key={path}
-                      className="inline-flex items-center rounded-md border border-slate-900/8 bg-slate-50 px-2 py-0.5 font-mono text-xs text-slate-700 dark:border-neutral-700/40 dark:bg-neutral-800/60 dark:text-white/80"
-                    >
+                    <TooltipChip key={path} mono>
                       {path}
-                    </span>
+                    </TooltipChip>
                   ))}
                 </div>
               }
@@ -1173,7 +1167,7 @@ export function RoutingConfigEditor({
       <div className="space-y-3 md:flex md:min-h-0 md:flex-1 md:flex-col">
         <div className="flex flex-wrap items-center justify-between gap-3 md:shrink-0">
           {title ? (
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{title}</h3>
+            <h3 className="text-base font-semibold tracking-tight text-ink">{title}</h3>
           ) : (
             <span aria-hidden="true" />
           )}
