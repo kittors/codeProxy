@@ -9,6 +9,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type PropsWithChildren,
 } from "react";
+import "./ScrollArea.css";
 
 type ScrollbarVisibility = "hover" | "track-hover" | "always";
 
@@ -38,6 +39,7 @@ export function ScrollArea({
   contentClassName,
   scrollbarVisibility = "hover",
   scrollbarTrackInset = 8,
+  edgeFade = false,
   onPointerLeave,
   ...divProps
 }: PropsWithChildren<
@@ -47,6 +49,11 @@ export function ScrollArea({
     contentClassName?: string;
     scrollbarVisibility?: ScrollbarVisibility;
     scrollbarTrackInset?: number;
+    /**
+     * 上下边缘渐隐：上方还有内容时顶部淡出、下方还有内容时底部淡出，传数字即渐隐高度（px）。
+     * 只在内容确实溢出时生效；会裁掉视觉上伸出视口的子孙（含 fixed 浮层），需要时由调用方关掉。
+     */
+    edgeFade?: boolean | number;
   } & HTMLAttributes<HTMLDivElement>
 >) {
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -190,6 +197,17 @@ export function ScrollArea({
     }
   }, [scrollbarVisibility]);
 
+  const fadeSize = edgeFade === true ? 24 : typeof edgeFade === "number" ? edgeFade : 0;
+  const hasOverflow = metrics.scrollHeight > metrics.clientHeight + 1;
+  const edgeFadeActive = fadeSize > 0 && hasOverflow;
+  const edgeFadeStyle = edgeFadeActive
+    ? ({
+        "--scroll-fade-top": metrics.scrollTop > 1 ? `${fadeSize}px` : "0px",
+        "--scroll-fade-bottom":
+          metrics.scrollTop + metrics.clientHeight < metrics.scrollHeight - 1 ? `${fadeSize}px` : "0px",
+      } as CSSProperties)
+    : undefined;
+
   const visibilityClasses =
     scrollbarVisibility === "always"
       ? "opacity-100"
@@ -212,9 +230,11 @@ export function ScrollArea({
         data-scroll-area-viewport
         data-scrollbar-visibility={scrollbarVisibility}
         onScroll={handleScroll}
-        style={viewportStyle}
+        data-edge-fade={edgeFadeActive ? "true" : undefined}
+        style={edgeFadeStyle ? { ...viewportStyle, ...edgeFadeStyle } : viewportStyle}
         className={cn(
           "h-full min-h-0 table-scrollbar overflow-auto overscroll-contain",
+          edgeFadeActive && "code-proxy-scroll-edge-fade",
           viewportClassName,
         )}
       >

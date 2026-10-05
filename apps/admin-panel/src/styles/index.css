@@ -750,6 +750,13 @@ html.theme-transition-lock *::after {
   }
 }
 
+/* 额度条、资源条首次出现时从 0 长到实际宽度（只写 from，终点就是行内的 width） */
+@keyframes quota-bar-grow {
+  from {
+    width: 0;
+  }
+}
+
 /* 骨架屏微光：只改透明度，避免 background-position 动画在长列表里造成重绘压力 */
 @keyframes skeleton-sweep {
   0%,

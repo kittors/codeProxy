@@ -4406,6 +4406,7 @@
     "top5": "Top 5 · 最近 7 天",
     "total_traffic": "总流量",
     "disk_free": "磁盘可用",
+    "disk_used": "已用",
     "log_storage": "日志存储",
     "log_dir": "日志目录",
     "no_data": "暂无数据",

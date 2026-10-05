@@ -5,23 +5,19 @@ import { clampPercent } from "./quota-helpers";
 
 export type QuotaVisualTone = {
   normalized: number | null;
-  /**
-   * Bar fill: a light tint plus a 2px rule down its right edge. The rule is
-   * what marks the percentage, which frees the tint to stay light enough to
-   * read text over.
-   */
-  fillClass: string;
+  /** Bar fill: a left-to-right gradient within the tone's hue. */
+  barFillClass: string;
+  /** Bar track: a faint wash of the same hue, so the remainder is not a grey slab. */
+  barTrackClass: string;
   percentClass: string;
   fillHex: string;
   /** Chip surface (border + background) mirroring the percent tone. */
   chipClass: string;
   /** Muted label color that stays legible on the chip surface. */
   chipLabelClass: string;
-  /** Bar track: border, plus the background showing left of the fill. */
-  barTrackClass: string;
-  /** Bar label, which sits over the fill and has to read against it. */
+  /** Bar label, on the plain card surface above the bar. */
   barLabelClass: string;
-  /** Bar countdown: quieter than the label, still legible over the fill. */
+  /** Bar countdown: quieter than the label. */
   barMetaClass: string;
 };
 
@@ -33,39 +29,37 @@ export const resolveQuotaVisualTone = (
   if (normalized === null) {
     return {
       normalized,
-      fillClass: "border-r-2 border-ink-4 bg-hover",
-      percentClass: "text-ink",
+      barFillClass: "bg-ink-4",
+      barTrackClass: "bg-track",
+      percentClass: "text-ink-3",
       fillHex: "#c4c4c4",
       chipClass: "border-line bg-subtle",
       chipLabelClass: "text-ink-2",
-      barTrackClass: "border-line bg-surface",
       barLabelClass: "text-ink-2",
       barMetaClass: "text-ink-3",
     };
   }
 
-  // The bar's fill is the row's own background, so at 100% it covers the entire
-  // line — and repeated down a grid of cards, a saturated fill becomes a wall of
-  // colour that is tiring to look at and, being always on, signals nothing.
+  // The bar is a slim rule under its label, not the row's background: a fill
+  // that covers the whole line turned every healthy card into a wall of tint,
+  // which is why the old bar fell back to grey. A 4px rule can carry real colour
+  // without that cost — green when the window is healthy, amber when it is
+  // running low, red when it is nearly gone — and the label keeps the plain card
+  // surface to sit on. The track takes a faint wash of the same hue so the
+  // remainder reads as "unused", not as a grey slab.
   //
-  // So the tint stays light and a 2px rule at the fill's right edge carries the
-  // percentage instead. The edge marks the value more precisely than a block
-  // boundary does, and the label keeps its contrast because it is no longer
-  // sitting on a saturated ground.
-  //
-  // Healthy is the normal state, so it is drawn in neutral grey: green on every
-  // card said nothing. Colour only appears once a window needs attention —
-  // amber when it is running low, red when it is nearly gone.
+  // The percentage stays ink while healthy (four green numbers per card said
+  // nothing) and only takes the hue once a window needs attention.
   if (normalized >= 60) {
     return {
       normalized,
-      fillClass: "border-r-2 border-ink-3 bg-selected",
+      barFillClass: "bg-gradient-to-r from-emerald-400 to-emerald-500 dark:from-emerald-500 dark:to-emerald-400",
+      barTrackClass: "bg-emerald-500/12 dark:bg-emerald-400/15",
       percentClass: "text-ink",
-      fillHex: "#5d5d5d",
+      fillHex: "#10b981",
       chipClass: "border-line bg-subtle",
       chipLabelClass: "text-ink-2",
-      barTrackClass: "border-line bg-surface",
-      barLabelClass: "text-ink",
+      barLabelClass: "text-ink-2",
       barMetaClass: "text-ink-3",
     };
   }
@@ -73,29 +67,28 @@ export const resolveQuotaVisualTone = (
   if (normalized >= 20) {
     return {
       normalized,
-      fillClass:
-        "border-r-2 border-amber-400 bg-amber-100 dark:border-amber-400/70 dark:bg-amber-500/20",
-      percentClass: "text-amber-900 dark:text-amber-100",
+      barFillClass: "bg-gradient-to-r from-amber-300 to-amber-500 dark:from-amber-500 dark:to-amber-300",
+      barTrackClass: "bg-amber-500/15 dark:bg-amber-400/15",
+      percentClass: "text-amber-700 dark:text-amber-300",
       fillHex: "#f59e0b",
       chipClass:
         "border-amber-200/70 bg-amber-50/70 dark:border-amber-500/20 dark:bg-amber-500/[0.08]",
       chipLabelClass: "text-amber-900 dark:text-amber-100/80",
-      barTrackClass: "border-amber-200 bg-surface dark:border-amber-500/25",
-      barLabelClass: "text-amber-900 dark:text-amber-50",
-      barMetaClass: "text-amber-700 dark:text-amber-200/70",
+      barLabelClass: "text-ink-2",
+      barMetaClass: "text-ink-3",
     };
   }
 
   return {
     normalized,
-    fillClass: "border-r-2 border-rose-400 bg-rose-100 dark:border-rose-400/70 dark:bg-rose-500/20",
-    percentClass: "text-rose-900 dark:text-rose-100",
+    barFillClass: "bg-gradient-to-r from-rose-400 to-rose-500 dark:from-rose-500 dark:to-rose-400",
+    barTrackClass: "bg-rose-500/12 dark:bg-rose-400/15",
+    percentClass: "text-rose-600 dark:text-rose-400",
     fillHex: "#f43f5e",
     chipClass: "border-rose-200/70 bg-rose-50/70 dark:border-rose-500/20 dark:bg-rose-500/[0.08]",
     chipLabelClass: "text-rose-900 dark:text-rose-100/80",
-    barTrackClass: "border-rose-200 bg-surface dark:border-rose-500/25",
-    barLabelClass: "text-rose-900 dark:text-rose-50",
-    barMetaClass: "text-rose-700 dark:text-rose-200/70",
+    barLabelClass: "text-ink-2",
+    barMetaClass: "text-ink-3",
   };
 };
 
@@ -139,12 +132,17 @@ export interface QuotaBarProps {
 }
 
 /**
- * One quota window as a labelled bar.
+ * One quota window: label, countdown and percentage on one line, a slim
+ * coloured bar beneath.
  *
- * The fill is the row's own background rather than a separate track underneath
- * it, so a card fits twice as many windows at the same height. Label, countdown
- * and percentage share the line, which is what makes the numbers scannable down
- * a column instead of hunting between two rows.
+ * Label, countdown and percentage share the line, which is what makes the
+ * numbers scannable down a column instead of hunting between two rows; the bar
+ * under them is short enough (4px, 3px compact) that a card still fits as many
+ * windows as the old one-row pill did.
+ *
+ * The fill grows in from zero the first time it appears and glides to the new
+ * width when a refresh moves the number, so a change is seen rather than
+ * silently swapped. Both motions stand down under prefers-reduced-motion.
  *
  * Shared by the AI accounts and AI providers cards so the two pages read as one
  * component set; neither page should grow its own bar.
@@ -172,23 +170,13 @@ export function QuotaBar({
   return (
     <div
       data-testid={testId}
-      className={[
-        "relative flex w-full items-center overflow-hidden rounded-md border",
-        tone.barTrackClass,
-        compact ? "h-[22px] px-1.5" : "h-6 px-2",
-      ].join(" ")}
+      className={["flex w-full min-w-0 flex-col", compact ? "gap-1" : "gap-1.5"].join(" ")}
     >
-      {/* No opacity wrapper: the tone ships a tint already light enough to read
-          text over, and dimming it further was what made the fill edge — the
-          thing that actually encodes the percentage — impossible to locate. */}
-      <div
-        className={["absolute inset-y-0 left-0", tone.fillClass].join(" ")}
-        style={{ width: `${normalized ?? 0}%` }}
-        aria-hidden="true"
-      />
       <div
         className={[
-          "relative z-10 flex w-full items-center gap-1.5 leading-none",
+          // leading-tight 而不是 leading-none：标签会 truncate（overflow:hidden），行高等于字号时
+          // g、p 这类下伸笔画会被切掉。
+          "flex w-full min-w-0 items-center gap-1.5 leading-tight",
           compact ? "text-2xs" : "text-xs",
         ].join(" ")}
       >
@@ -240,6 +228,28 @@ export function QuotaBar({
           {shownPercent}
         </span>
       </div>
+      <div
+        aria-hidden="true"
+        className={[
+          "relative w-full overflow-hidden rounded-full",
+          tone.barTrackClass,
+          compact ? "h-[3px]" : "h-1",
+        ].join(" ")}
+      >
+        {normalized ? (
+          <div
+            data-testid="quota-bar-fill"
+            className={[
+              "absolute inset-y-0 left-0 rounded-full",
+              tone.barFillClass,
+              "transition-[width] duration-700 ease-pop",
+              "motion-safe:animate-[quota-bar-grow_900ms_cubic-bezier(0.16,1,0.3,1)]",
+              "motion-reduce:transition-none",
+            ].join(" ")}
+            style={{ width: `${normalized}%` }}
+          />
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -252,11 +262,11 @@ const QUOTA_BAR_SKELETON_LABEL_WIDTHS = ["w-24", "w-20", "w-28", "w-16"];
 /**
  * A quota bar that has no numbers yet.
  *
- * Same border, height and padding as {@link QuotaBar}, so the rows that appear
- * when the probe lands take exactly the space the placeholders held — the card
- * does not resize under the reader. Used while a first probe is in flight; a
- * refresh that already has values updates them in place instead, since
- * replacing readable numbers with grey bars loses information.
+ * Same line height, gap and bar thickness as {@link QuotaBar}, so the rows that
+ * appear when the probe lands take exactly the space the placeholders held —
+ * the card does not resize under the reader. Used while a first probe is in
+ * flight; a refresh that already has values updates them in place instead,
+ * since replacing readable numbers with grey bars loses information.
  */
 export function QuotaBarSkeleton({
   compact = false,
@@ -265,20 +275,31 @@ export function QuotaBarSkeleton({
   compact?: boolean;
   labelWidthClass?: string;
 }): ReactNode {
-  // The neutral tone's own track, so an empty placeholder is the same box as a
-  // bar whose percentage is unknown.
+  // The neutral tone's own track, so an empty placeholder is the same bar as one
+  // whose percentage is unknown.
   const { barTrackClass } = resolveQuotaVisualTone(null);
   return (
     <div
       aria-hidden="true"
-      className={[
-        "flex w-full items-center justify-between gap-2 rounded-md border",
-        barTrackClass,
-        compact ? "h-[22px] px-1.5" : "h-6 px-2",
-      ].join(" ")}
+      className={["flex w-full flex-col", compact ? "gap-1" : "gap-1.5"].join(" ")}
     >
-      <Skeleton className={`h-2.5 ${labelWidthClass}`} rounded="full" />
-      <Skeleton className="h-2.5 w-7" rounded="full" />
+      <div
+        className={[
+          // 与真实标签行同一个行高（1.25em），占位到数据之间卡片高度不变。
+          "flex h-[1.25em] w-full items-center justify-between gap-2",
+          compact ? "text-2xs" : "text-xs",
+        ].join(" ")}
+      >
+        <Skeleton className={`h-2.5 ${labelWidthClass}`} rounded="full" />
+        <Skeleton className="h-2.5 w-7" rounded="full" />
+      </div>
+      <div
+        className={[
+          "w-full rounded-full",
+          barTrackClass,
+          compact ? "h-[3px]" : "h-1",
+        ].join(" ")}
+      />
     </div>
   );
 }
