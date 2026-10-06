@@ -430,6 +430,26 @@ export interface IFlowCookieAuthResponse {
   type?: string;
 }
 
+/** The server segment of POST /oauth-import/{kind}. */
+export type CredentialImportKind =
+  | "anthropic-session"
+  | "codex-refresh-token"
+  | "antigravity-refresh-token"
+  | "xai-sso";
+
+export interface CredentialImportResponse {
+  status: "ok" | "error";
+  /** Stable machine code on failure; the panel keys its message on it. */
+  code?: string;
+  error?: string;
+  saved_path?: string;
+  provider?: string;
+  email?: string;
+  organization?: string;
+  plan?: string;
+  label?: string;
+}
+
 export interface LogsQuery {
   after?: number;
   limit?: number;

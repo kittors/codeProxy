@@ -13,9 +13,11 @@ import {
   type AccountProvider,
   type AccountProviderId,
 } from "../model/catalog";
+import { findCredentialImportSpec } from "../model/credentialImport";
 import { isServerOnLoopback } from "../model/startedLogin";
 import { DeviceFlowPanel } from "./DeviceFlowPanel";
 import { AuthFileImport } from "./imports/AuthFileImport";
+import { CredentialImport } from "./imports/CredentialImport";
 import { IFlowCookieImport } from "./imports/IFlowCookieImport";
 import { VertexImport } from "./imports/VertexImport";
 import type { LoginOptionValues } from "./LoginOptions";
@@ -231,6 +233,23 @@ export function AddAccountDialog({
       proxyEntries: proxyPoolEntries,
       proxyCheckState,
     };
+    const importSpec = findCredentialImportSpec(providerId, method);
+    if (importSpec) {
+      return (
+        <CredentialImport
+          provider={provider}
+          spec={importSpec}
+          options={options}
+          onOptionsChange={updateOptions}
+          proxyEntries={proxyPoolEntries}
+          proxyCheckState={proxyCheckState}
+          // The batch keeps its own results in-panel; refresh the list beneath
+          // it rather than swapping to the single-account success screen.
+          onRefreshList={() => void onAuthorized?.()}
+          onClose={onClose}
+        />
+      );
+    }
     if (method === "cookie") {
       return <IFlowCookieImport {...shared} onImported={(added) => void finish(provider, added)} />;
     }

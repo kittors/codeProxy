@@ -4184,7 +4184,10 @@
       "oauth": "浏览器登录",
       "cookie": "Cookie 导入",
       "service-account": "服务账号",
-      "auth-file": "认证文件"
+      "auth-file": "认证文件",
+      "session": "SessionKey 导入",
+      "refresh-token": "Refresh Token 导入",
+      "sso-cookie": "SSO Cookie 导入"
     },
     "steps": {
       "open_title": "打开 {{provider}} 登录页",
@@ -4330,6 +4333,77 @@
       "files_uploading": "正在导入…",
       "files_hint": "支持 CLIProxyAPI 等工具导出的认证文件，单个不超过 50 KB。",
       "files_imported": "已导入 {{count}} 个认证文件"
+    },
+    "credential": {
+      "results_summary": "已导入 {{ok}} / {{total}} 个。",
+      "retry_failed": "重试 {{count}} 个失败",
+      "import_more": "再导入一批",
+      "found": "发现 {{count}} 个凭证",
+      "found_suspect": "（{{count}} 个可能有误）",
+      "hint_multi": "每行一个，或直接粘贴 Cookie 串 / auth.json，会自动提取并去重。",
+      "submit": "导入 {{count}} 个账号",
+      "submit_empty": "导入",
+      "anthropic_session": {
+        "risk": "SessionKey 等于 claude.ai 账号的完整访问权限，拿到的人即可使用该账号，请妥善保管，泄露后请在 claude.ai 退出全部会话。",
+        "steps": [
+          "在浏览器登录 claude.ai。",
+          "打开开发者工具 → Application → Cookies，选中 claude.ai。",
+          "复制 sessionKey 的值（或整段 Cookie），粘贴到下面。"
+        ],
+        "where": "不确定在哪？<link>打开 claude.ai<icon/></link>",
+        "where_url": "https://claude.ai",
+        "placeholder": "sk-ant-sid01-…\n或：sessionKey=sk-ant-sid01-…; lastActiveOrg=…",
+        "label": "Claude SessionKey"
+      },
+      "codex_refresh": {
+        "risk": "OpenAI 的 Refresh Token 是一次性的：导入后会被轮换，原来持有它的客户端（例如本地 Codex CLI）会被登出，下次需重新登录。",
+        "steps": [
+          "在 Codex CLI 执行 codex login 完成登录。",
+          "打开 ~/.codex/auth.json。",
+          "把整个文件或其中的 refresh_token 粘贴到下面。"
+        ],
+        "where": "令牌位于本地的 Codex CLI 凭证文件里。<link>Codex CLI<icon/></link>",
+        "where_url": "https://github.com/openai/codex",
+        "placeholder": "粘贴 auth.json，或直接粘贴 refresh_token…",
+        "label": "OpenAI Refresh Token"
+      },
+      "antigravity_refresh": {
+        "risk": "Refresh Token 等于对该 Google 账号的持续访问权限，请妥善保管，泄露后请在 Google 账号中撤销第三方访问。",
+        "steps": [
+          "完成一次 Antigravity 登录。",
+          "打开其保存的凭证文件。",
+          "把整个文件或其中的 refresh_token 粘贴到下面。"
+        ],
+        "where": "令牌来自 Antigravity 登录后保存的 Google 凭证。<link>Antigravity<icon/></link>",
+        "where_url": "https://antigravity.google",
+        "placeholder": "粘贴凭证文件，或直接粘贴 refresh_token（1//…）…",
+        "label": "Antigravity Refresh Token"
+      },
+      "xai_sso": {
+        "risk": "SSO Cookie 会在你的 Grok 账号上授权一台新设备，请妥善保管，泄露后请在 Grok 账号中退出登录。",
+        "steps": [
+          "在浏览器登录 grok.com。",
+          "打开开发者工具 → Application → Cookies，选中 grok.com（或 x.ai）。",
+          "复制 sso（以及 sso-rw）Cookie，粘贴到下面。"
+        ],
+        "where": "不确定在哪？<link>打开 grok.com<icon/></link>",
+        "where_url": "https://grok.com",
+        "placeholder": "sso=…; sso-rw=…\n或直接粘贴 sso 的值",
+        "label": "Grok SSO Cookie"
+      },
+      "errors": {
+        "unsupported": "当前后端版本还不支持凭证导入，请升级后端。",
+        "credential_required": "请填写凭证。",
+        "credential_unrecognized": "这段内容不像该导入方式接受的凭证，请检查是否粘错了字段。",
+        "credential_invalid": "上游拒绝了该凭证（可能已过期、被吊销或无效）。",
+        "no_organization": "该账号没有可用的组织，无法登录。",
+        "authorization_denied": "上游拒绝为该账号授权。",
+        "upstream_blocked": "上游拦截了本次请求（通常是风控质询），和凭证本身无关，可换一个出口代理后重试。",
+        "upstream_timeout": "连接上游超时，请重试。",
+        "save_failed": "账号保存失败，请重试。",
+        "network": "网络异常，请检查连接后重试。",
+        "failed": "导入失败，请重试。"
+      }
     }
   },
   "models_page": {

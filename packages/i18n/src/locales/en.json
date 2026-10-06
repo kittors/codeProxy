@@ -3665,7 +3665,10 @@
       "oauth": "Browser sign-in",
       "cookie": "Cookie import",
       "service-account": "Service account",
-      "auth-file": "Auth files"
+      "auth-file": "Auth files",
+      "session": "SessionKey import",
+      "refresh-token": "Refresh token import",
+      "sso-cookie": "SSO cookie import"
     },
     "steps": {
       "open_title": "Open the {{provider}} sign-in page",
@@ -3812,6 +3815,77 @@
       "files_hint": "Auth files exported by CLIProxyAPI and similar tools, up to 50 KB each.",
       "files_imported_one": "Imported {{count}} auth file",
       "files_imported_other": "Imported {{count}} auth files"
+    },
+    "credential": {
+      "results_summary": "Imported {{ok}} of {{total}}.",
+      "retry_failed": "Retry {{count}} failed",
+      "import_more": "Import more",
+      "found": "{{count}} credentials found",
+      "found_suspect": "({{count}} may be wrong)",
+      "hint_multi": "One per line, or paste a cookie string / auth.json — we extract and de-duplicate.",
+      "submit": "Import {{count}}",
+      "submit_empty": "Import",
+      "anthropic_session": {
+        "risk": "A session key is full access to the claude.ai account — anyone who has it can use the account. Keep it secret; if it leaks, sign out everywhere on claude.ai.",
+        "steps": [
+          "Sign in to claude.ai in your browser.",
+          "Open developer tools → Application → Cookies and select claude.ai.",
+          "Copy the sessionKey value (or the whole cookie) and paste it below."
+        ],
+        "where": "Not sure where? <link>Open claude.ai<icon/></link>",
+        "where_url": "https://claude.ai",
+        "placeholder": "sk-ant-sid01-…\nor: sessionKey=sk-ant-sid01-…; lastActiveOrg=…",
+        "label": "Claude session key"
+      },
+      "codex_refresh": {
+        "risk": "OpenAI refresh tokens are single-use: importing one rotates it and signs the original holder (e.g. your local Codex CLI) out — it will re-login next time.",
+        "steps": [
+          "Run codex login in the Codex CLI.",
+          "Open ~/.codex/auth.json.",
+          "Paste the whole file, or just the refresh_token, below."
+        ],
+        "where": "The token lives in the local Codex CLI credential file. <link>Codex CLI<icon/></link>",
+        "where_url": "https://github.com/openai/codex",
+        "placeholder": "Paste auth.json, or the refresh_token directly…",
+        "label": "OpenAI refresh token"
+      },
+      "antigravity_refresh": {
+        "risk": "A refresh token is ongoing access to the Google account behind Antigravity. Keep it secret; if it leaks, revoke third-party access in your Google account.",
+        "steps": [
+          "Complete the Antigravity sign-in once.",
+          "Open its saved credential file.",
+          "Paste the whole file, or just the refresh_token, below."
+        ],
+        "where": "The token comes from the Google credential Antigravity saves after login. <link>Antigravity<icon/></link>",
+        "where_url": "https://antigravity.google",
+        "placeholder": "Paste the credential file, or the refresh_token (1//…)…",
+        "label": "Antigravity refresh token"
+      },
+      "xai_sso": {
+        "risk": "An SSO cookie authorizes a new device on your Grok account. Keep it secret; if it leaks, sign out on your Grok account.",
+        "steps": [
+          "Sign in to grok.com in your browser.",
+          "Open developer tools → Application → Cookies and select grok.com (or x.ai).",
+          "Copy the sso (and sso-rw) cookie and paste it below."
+        ],
+        "where": "Not sure where? <link>Open grok.com<icon/></link>",
+        "where_url": "https://grok.com",
+        "placeholder": "sso=…; sso-rw=…\nor paste the sso value directly",
+        "label": "Grok SSO cookie"
+      },
+      "errors": {
+        "unsupported": "This backend is too old to import credentials. Update the backend.",
+        "credential_required": "Enter a credential.",
+        "credential_unrecognized": "This doesn't look like a credential this import accepts — check you pasted the right field.",
+        "credential_invalid": "The upstream rejected this credential (expired, revoked or invalid).",
+        "no_organization": "This account has no organization to sign in to.",
+        "authorization_denied": "The upstream declined to authorize this account.",
+        "upstream_blocked": "The upstream blocked the request (usually a bot challenge). It's about egress, not the credential — try another proxy.",
+        "upstream_timeout": "Timed out reaching the upstream. Try again.",
+        "save_failed": "Could not save the account. Try again.",
+        "network": "Network error. Check your connection and try again.",
+        "failed": "Import failed. Try again."
+      }
     }
   },
   "models_page": {

@@ -3453,7 +3453,10 @@
       "oauth": "Через браузер",
       "cookie": "Импорт cookie",
       "service-account": "Сервисный аккаунт",
-      "auth-file": "Файлы авторизации"
+      "auth-file": "Файлы авторизации",
+      "session": "Импорт SessionKey",
+      "refresh-token": "Импорт refresh-токена",
+      "sso-cookie": "Импорт SSO-cookie"
     },
     "steps": {
       "open_title": "Откройте страницу входа {{provider}}",
@@ -3602,6 +3605,77 @@
       "files_imported_few": "Импортировано {{count}} файла авторизации",
       "files_imported_many": "Импортировано {{count}} файлов авторизации",
       "files_imported_other": "Импортировано {{count}} файла авторизации"
+    },
+    "credential": {
+      "results_summary": "Импортировано {{ok}} из {{total}}.",
+      "retry_failed": "Повторить неудачные: {{count}}",
+      "import_more": "Импортировать ещё",
+      "found": "Найдено учётных данных: {{count}}",
+      "found_suspect": "({{count}} могут быть неверны)",
+      "hint_multi": "По одному в строке или вставьте строку cookie / auth.json — извлечём и уберём дубликаты.",
+      "submit": "Импортировать: {{count}}",
+      "submit_empty": "Импортировать",
+      "anthropic_session": {
+        "risk": "Session key — это полный доступ к аккаунту claude.ai: кто им владеет, тот и пользуется аккаунтом. Храните в секрете; при утечке завершите все сеансы на claude.ai.",
+        "steps": [
+          "Войдите на claude.ai в браузере.",
+          "Откройте инструменты разработчика → Application → Cookies и выберите claude.ai.",
+          "Скопируйте значение sessionKey (или cookie целиком) и вставьте ниже."
+        ],
+        "where": "Не знаете, где взять? <link>Открыть claude.ai<icon/></link>",
+        "where_url": "https://claude.ai",
+        "placeholder": "sk-ant-sid01-…\nили: sessionKey=sk-ant-sid01-…; lastActiveOrg=…",
+        "label": "Session key Claude"
+      },
+      "codex_refresh": {
+        "risk": "Refresh-токены OpenAI одноразовые: при импорте токен обновляется, а прежний владелец (например, локальный Codex CLI) выходит из системы и войдёт заново.",
+        "steps": [
+          "Выполните codex login в Codex CLI.",
+          "Откройте ~/.codex/auth.json.",
+          "Вставьте файл целиком или только refresh_token ниже."
+        ],
+        "where": "Токен хранится в файле учётных данных локального Codex CLI. <link>Codex CLI<icon/></link>",
+        "where_url": "https://github.com/openai/codex",
+        "placeholder": "Вставьте auth.json или сам refresh_token…",
+        "label": "Refresh-токен OpenAI"
+      },
+      "antigravity_refresh": {
+        "risk": "Refresh-токен — это постоянный доступ к аккаунту Google, используемому Antigravity. Храните в секрете; при утечке отзовите сторонний доступ в аккаунте Google.",
+        "steps": [
+          "Выполните вход в Antigravity один раз.",
+          "Откройте сохранённый файл учётных данных.",
+          "Вставьте файл целиком или только refresh_token ниже."
+        ],
+        "where": "Токен берётся из учётных данных Google, которые Antigravity сохраняет после входа. <link>Antigravity<icon/></link>",
+        "where_url": "https://antigravity.google",
+        "placeholder": "Вставьте файл учётных данных или refresh_token (1//…)…",
+        "label": "Refresh-токен Antigravity"
+      },
+      "xai_sso": {
+        "risk": "SSO-cookie авторизует новое устройство в вашем аккаунте Grok. Храните в секрете; при утечке выйдите из аккаунта Grok.",
+        "steps": [
+          "Войдите на grok.com в браузере.",
+          "Откройте инструменты разработчика → Application → Cookies и выберите grok.com (или x.ai).",
+          "Скопируйте cookie sso (и sso-rw) и вставьте ниже."
+        ],
+        "where": "Не знаете, где взять? <link>Открыть grok.com<icon/></link>",
+        "where_url": "https://grok.com",
+        "placeholder": "sso=…; sso-rw=…\nили вставьте значение sso напрямую",
+        "label": "SSO-cookie Grok"
+      },
+      "errors": {
+        "unsupported": "Этот бэкенд слишком старый для импорта учётных данных. Обновите бэкенд.",
+        "credential_required": "Введите учётные данные.",
+        "credential_unrecognized": "Это не похоже на учётные данные, которые принимает этот импорт — проверьте, то ли поле вы вставили.",
+        "credential_invalid": "Вышестоящий сервис отклонил эти учётные данные (истекли, отозваны или недействительны).",
+        "no_organization": "У этого аккаунта нет организации для входа.",
+        "authorization_denied": "Вышестоящий сервис отказал в авторизации этого аккаунта.",
+        "upstream_blocked": "Вышестоящий сервис заблокировал запрос (обычно антибот-проверка). Дело в канале выхода, а не в учётных данных — попробуйте другой прокси.",
+        "upstream_timeout": "Истекло время ожидания вышестоящего сервиса. Попробуйте ещё раз.",
+        "save_failed": "Не удалось сохранить аккаунт. Попробуйте ещё раз.",
+        "network": "Сетевая ошибка. Проверьте соединение и попробуйте снова.",
+        "failed": "Импорт не удался. Попробуйте ещё раз."
+      }
     }
   }
 }

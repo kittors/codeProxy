@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   submitCallback: vi.fn(),
   iflowCookieAuth: vi.fn(),
   importCredential: vi.fn(),
+  oauthImportCredential: vi.fn(),
 }));
 
 vi.mock("@code-proxy/api-client", async (importOriginal) => {
@@ -22,6 +23,7 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
       getAuthStatus: mocks.getAuthStatus,
       submitCallback: mocks.submitCallback,
       iflowCookieAuth: mocks.iflowCookieAuth,
+      importCredential: mocks.oauthImportCredential,
     },
     vertexApi: { ...mod.vertexApi, importCredential: mocks.importCredential },
   };
@@ -49,6 +51,7 @@ beforeEach(() => {
   mocks.submitCallback.mockResolvedValue({ status: "ok" });
   mocks.iflowCookieAuth.mockResolvedValue({ status: "ok", email: "cookie@example.com" });
   mocks.importCredential.mockResolvedValue({ status: "ok" });
+  mocks.oauthImportCredential.mockResolvedValue({ status: "ok", email: "session@example.com" });
   pendingWindow = { opener: {}, closed: false, location: { href: "" }, close: vi.fn() };
   vi.spyOn(window, "open").mockImplementation(() => pendingWindow as unknown as Window);
 });
@@ -376,6 +379,30 @@ describe("AddAccountDialog", () => {
     expect(mocks.iflowCookieAuth).toHaveBeenCalledWith("foo=bar; BXAuth=token-1", { proxyId: "" });
     expect(await dialog.findByRole("heading", { name: "iFlow account added" })).toBeInTheDocument();
     expect(dialog.getByText("cookie@example.com")).toBeInTheDocument();
+  });
+
+  test("Claude SessionKey import extracts the key and reports the account", async () => {
+    const user = userEvent.setup();
+    const { dialog, onAuthorized } = renderDialog({ providerHint: "claude" });
+
+    await user.click(dialog.getByRole("radio", { name: "SessionKey import" }));
+    const field = await dialog.findByRole("textbox", { name: "Claude session key" });
+    await user.click(field);
+    await user.paste("sessionKey=sk-ant-sid01-abc; lastActiveOrg=o1");
+
+    await user.click(dialog.getByRole("button", { name: /^Import \d+$/ }));
+
+    await waitFor(() =>
+      expect(mocks.oauthImportCredential).toHaveBeenCalledWith("anthropic-session", {
+        credential: "sk-ant-sid01-abc",
+        proxyId: "",
+        usingApi: false,
+      }),
+    );
+    expect(await dialog.findByText("session@example.com")).toBeInTheDocument();
+    // The batch refreshes the list beneath its own results rather than swapping
+    // to the single-account success screen.
+    await waitFor(() => expect(onAuthorized).toHaveBeenCalled());
   });
 
   test("Vertex checks the key file before importing it", async () => {
