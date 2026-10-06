@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 import { useOptionalAuth } from "@app/providers/AuthProvider";
@@ -13,11 +13,7 @@ import {
   proxiesApi,
   type ProxyPoolEntry,
 } from "@code-proxy/api-client/endpoints/proxies";
-import { OAuthLoginDialog } from "@features/oauth-login";
-import {
-  buildAuthFilesSignature,
-  findChangedAuthFile,
-} from "./helpers/authFilesSignatures";
+import { LazyAddAccountDialog } from "@features/oauth-login";
 import { AuthFileDetailModal } from "./components/AuthFileDetailModal";
 import { AuthFileTagsModal } from "./components/AuthFileTagsModal";
 import { AuthFilesExcludedTab } from "./components/AuthFilesExcludedTab";
@@ -63,20 +59,16 @@ import {
   type AuthFileStatusFilter,
   type AuthFilesCardColumns,
   type FilesViewMode,
-  type OAuthDialogTab,
 } from "@code-proxy/domain";
 import { AuthFilesConfigModal } from "./components/AuthFilesConfigModal";
 import { WarmupPolicyModal } from "./components/WarmupPolicyModal";
 import { useAuthFilesWarmup } from "./hooks/useAuthFilesWarmup";
+import { useAddAccountDialogSync } from "./hooks/useAddAccountDialogSync";
 
-const OAUTH_AUTH_FILES_REFRESH_TIMEOUT_MS = 12_000;
-const OAUTH_AUTH_FILES_REFRESH_INTERVAL_MS = 600;
 export type AuthFilesConfigModalTab = "excluded" | "alias";
 type AuthFilesConfirmAction =
   | { type: "deleteSelection"; names: string[] }
   | { type: "resetCredit"; file: AuthFileItem };
-
-const wait = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms));
 
 export function AuthFilesPage() {
   const { t } = useTranslation();
@@ -157,8 +149,8 @@ export function AuthFilesPage() {
   >(null);
 
   const [oauthDialogOpen, setOauthDialogOpen] = useState(false);
-  const [oauthDialogDefaultTab, setOauthDialogDefaultTab] =
-    useState<OAuthDialogTab>("codex");
+  // File type the list was filtered to when the dialog opened; it preselects that provider.
+  const [addAccountHint, setAddAccountHint] = useState("");
 
   const [filter, setFilter] = useState("all");
   const [tagFilter, setTagFilter] = useState("");
@@ -204,8 +196,6 @@ export function AuthFilesPage() {
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const filesRef = useRef<AuthFileItem[]>(files);
-  const oauthBaselineFilesRef = useRef<AuthFileItem[]>([]);
-  const oauthBaselineSignatureRef = useRef("");
   const previousConfigModalTabRef = useRef<AuthFilesConfigModalTab | null>(
     null,
   );
@@ -227,40 +217,6 @@ export function AuthFilesPage() {
       isMountedRef.current = false;
     };
   }, []);
-
-  const setOAuthDialogOpenWithBaseline = useCallback((open: boolean) => {
-    if (open) {
-      oauthBaselineFilesRef.current = filesRef.current;
-      oauthBaselineSignatureRef.current = buildAuthFilesSignature(
-        filesRef.current,
-      );
-    }
-    setOauthDialogOpen(open);
-  }, []);
-
-  const waitForAuthFilesChanged = useCallback(async (): Promise<{
-    files: AuthFileItem[];
-    changed: boolean;
-  }> => {
-    const previousSignature =
-      oauthBaselineSignatureRef.current ||
-      buildAuthFilesSignature(filesRef.current);
-    const deadline = Date.now() + OAUTH_AUTH_FILES_REFRESH_TIMEOUT_MS;
-
-    while (true) {
-      if (buildAuthFilesSignature(filesRef.current) !== previousSignature) {
-        return { files: filesRef.current, changed: true };
-      }
-      const nextFiles = await loadAll();
-      if (buildAuthFilesSignature(nextFiles) !== previousSignature) {
-        return { files: nextFiles, changed: true };
-      }
-      if (Date.now() >= deadline) {
-        return { files: nextFiles, changed: false };
-      }
-      await wait(OAUTH_AUTH_FILES_REFRESH_INTERVAL_MS);
-    }
-  }, [loadAll]);
 
   const {
     detailOpen,
@@ -538,22 +494,26 @@ export function AuthFilesPage() {
     [refreshQuotaForFiles],
   );
 
-  const refreshAfterOAuthAuthorized = useCallback(async () => {
-    const result = await waitForAuthFilesChanged();
-    const changedFile = findChangedAuthFile(
-      oauthBaselineFilesRef.current,
-      result.files,
-    );
-    if (!changedFile) return;
-
-    const provider = normalizeProviderKey(resolveFileType(changedFile));
-    if (!provider || provider === "all" || provider === "unknown") return;
+  const showProviderFiles = useCallback((provider: string) => {
     setFilter(provider);
     setTagFilter("");
     setStatusFilter("all");
     setSearch("");
     setPage(1);
-  }, [waitForAuthFilesChanged]);
+  }, []);
+
+  const {
+    setDialogOpenWithBaseline: setOAuthDialogOpenWithBaseline,
+    refreshAfterAuthorized: refreshAfterOAuthAuthorized,
+    importAuthFiles: importAuthFilesFromDialog,
+  } = useAddAccountDialogSync({
+    filesRef,
+    loadAll,
+    setDialogOpen: setOauthDialogOpen,
+    showProviderFiles,
+    handleUpload,
+    refreshQuotaForUploadedFiles,
+  });
 
   const handleUploadAndRefreshQuota = useCallback(
     async (input: FileList | File[] | null) => {
@@ -853,7 +813,7 @@ export function AuthFilesPage() {
         refreshingAll={refreshingAll || refreshingCurrentPage}
         uploading={uploading}
         uploadProgress={uploadProgress}
-        setOauthDialogDefaultTab={setOauthDialogDefaultTab}
+        setAddAccountHint={setAddAccountHint}
         setOauthDialogOpen={setOAuthDialogOpenWithBaseline}
         openConfigModal={() =>
           setConfigModalTab(oauthExcludedEnabled ? "excluded" : "alias")
@@ -1045,13 +1005,17 @@ export function AuthFilesPage() {
         onSave={saveAuthFileTags}
       />
 
-      <OAuthLoginDialog
-        open={oauthDialogOpen}
-        defaultTab={oauthDialogDefaultTab}
-        proxyPoolEntries={proxyPoolEntries}
-        onClose={() => setOauthDialogOpen(false)}
-        onAuthorized={refreshAfterOAuthAuthorized}
-      />
+      <Suspense fallback={null}>
+        <LazyAddAccountDialog
+          open={oauthDialogOpen}
+          providerHint={addAccountHint}
+          proxyPoolEntries={proxyPoolEntries}
+          apiBase={auth?.state.apiBase}
+          onClose={() => setOauthDialogOpen(false)}
+          onAuthorized={refreshAfterOAuthAuthorized}
+          onImportAuthFiles={importAuthFilesFromDialog}
+        />
+      </Suspense>
 
       <GroupOverviewModal
         open={groupOverviewOpen}

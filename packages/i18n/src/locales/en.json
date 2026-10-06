@@ -3590,9 +3590,7 @@
     "config_menu": "Account config",
     "provider_filter": "File group",
     "provider_filter_search": "Search file groups…",
-    "add_oauth": "Add OAuth Login",
-    "add_oauth_title": "Add OAuth Login",
-    "add_oauth_desc": "Authorize providers in the browser to generate OAuth auth files, or import iFlow/Vertex credentials.",
+    "add_oauth": "Add AI account",
     "count_info": "Count info",
     "filename_hint": "Filename / provider / type",
     "per_page": "Per page",
@@ -3610,6 +3608,211 @@
     "cannot_edit": "Cannot Edit",
     "cannot_edit_desc": "Server did not return models or channel unsupported.",
     "models_hint": "Auth file might not support querying models, or server did not return data."
+  },
+  "add_account": {
+    "title": "Add AI account",
+    "description": "Sign in with a subscription account or import a credential you already have. It appears in the list when done.",
+    "list_label": "Account type",
+    "groups": {
+      "browser": "Browser sign-in",
+      "device": "Device code",
+      "import": "Import credentials"
+    },
+    "providers": {
+      "codex": {
+        "name": "Codex",
+        "tagline": "ChatGPT Plus / Pro / Team subscription"
+      },
+      "anthropic": {
+        "name": "Claude",
+        "tagline": "Claude Pro / Max subscription"
+      },
+      "gemini_cli": {
+        "name": "Gemini CLI",
+        "tagline": "Google account · Gemini Code Assist"
+      },
+      "antigravity": {
+        "name": "Antigravity",
+        "tagline": "Google account · Antigravity quota"
+      },
+      "xai": {
+        "name": "Grok",
+        "tagline": "SuperGrok / X Premium subscription"
+      },
+      "iflow": {
+        "name": "iFlow",
+        "tagline": "iFlow account"
+      },
+      "qwen": {
+        "name": "Qwen",
+        "tagline": "Qwen account · Qwen Code"
+      },
+      "kimi": {
+        "name": "Kimi",
+        "tagline": "Kimi account · Kimi Code"
+      },
+      "vertex": {
+        "name": "Vertex AI",
+        "tagline": "Google Cloud service account key (JSON)"
+      },
+      "auth_file": {
+        "name": "Auth files",
+        "tagline": "Existing JSON auth files, several at once"
+      }
+    },
+    "methods": {
+      "label": "Sign-in method",
+      "oauth": "Browser sign-in",
+      "cookie": "Cookie import",
+      "service-account": "Service account",
+      "auth-file": "Auth files"
+    },
+    "steps": {
+      "open_title": "Open the {{provider}} sign-in page",
+      "opened_title": "{{provider}} sign-in page opened in a new tab",
+      "open_desc": "It opens in a new tab. Sign in, then click Allow / Authorize.",
+      "open_desc_local": "It opens in a new tab. Sign in and click Allow / Authorize.",
+      "open_button": "Sign in with {{provider}}",
+      "reopen": "Open the sign-in page again",
+      "copy_link": "Copy link",
+      "copied": "Copied",
+      "popup_blocked": "Your browser blocked the new tab. Click “Open the sign-in page again”, or copy the link into your browser.",
+      "authorize_title": "After authorizing, the browser lands on a page that won't load",
+      "authorize_desc": "That's expected. The result is in that page's address — copy the whole address bar.",
+      "authorize_title_code": "After authorizing, the page shows an authorization code",
+      "authorize_desc_code": "Click “Copy Code” on that page to copy the whole code.",
+      "authorize_title_local": "Authorize in the new tab",
+      "authorize_desc_local": "The server runs on this computer, so the browser comes back here by itself. Nothing to copy.",
+      "finish_title_local": "Finishes by itself",
+      "finish_desc_local": "This continues on its own once you authorize.",
+      "finish_waiting_local": "Waiting for authorization…",
+      "manual_paste": "Didn't finish by itself? Paste the callback address",
+      "paste_title": "Paste the address here",
+      "paste_title_code": "Paste the code here",
+      "paste_desc": "It's checked and submitted as soon as you paste.",
+      "paste_locked": "You can paste here once the sign-in page is open."
+    },
+    "mock": {
+      "label": "What the browser shows after authorizing",
+      "unreachable_title": "This site can't be reached",
+      "unreachable_desc": "localhost refused to connect.",
+      "code_title": "Authentication Code",
+      "copy": "Copy Code",
+      "copy_address": "Copy this whole line from the address bar",
+      "copy_code": "Click this button to copy the code"
+    },
+    "paste": {
+      "label_redirect": "Callback address",
+      "label_code": "Authorization code",
+      "placeholder_redirect": "Paste the whole address bar, e.g. {{example}}",
+      "placeholder_code": "Paste the code shown on the page",
+      "paste_button": "Paste",
+      "shortcut": "⌘V / Ctrl+V to paste",
+      "submit": "Submit",
+      "check_code": "Has a code",
+      "check_state": "From this sign-in",
+      "check_state_other": "From another sign-in",
+      "check_location": "Callback address matches",
+      "check_location_other": "Different callback address",
+      "issue_not_callback": "That's the sign-in page's address, not the callback. Finish authorizing, then copy the address bar after the page changes.",
+      "issue_missing_code": "There's no code in that address. Copy the whole address bar.",
+      "issue_state_mismatch": "That callback is from an earlier sign-in. Authorize again from the page opened this time.",
+      "issue_not_a_code": "That doesn't look like a code. Paste only the code, or the whole address bar.",
+      "issue_denied": "Authorization was cancelled on the provider's page. Click “Start over” to try again.",
+      "issue_provider_error": "The provider returned an error: {{error}}",
+      "clipboard_denied": "The browser won't let the page read the clipboard. Press ⌘V / Ctrl+V to paste.",
+      "picked_up": "Found this sign-in's callback on the clipboard. Submitting.",
+      "nudge": "Copied it? Click Paste, or press ⌘V / Ctrl+V."
+    },
+    "device": {
+      "start_title": "Get a sign-in code",
+      "start_desc": "Requests a sign-in code from {{provider}} and opens the confirmation page in a new tab.",
+      "start_button": "Start {{provider}} sign-in",
+      "confirm_title": "Confirm on the {{provider}} page",
+      "confirm_desc": "Check that the code on the page matches this one, then approve.",
+      "confirm_desc_no_code": "Sign in on the page that opened and approve.",
+      "code_label": "Sign-in code",
+      "copy_code": "Copy code",
+      "open_page": "Open the confirmation page",
+      "finish_title": "Finishes by itself",
+      "finish_desc": "Once you approve, this completes on its own. Nothing to paste.",
+      "finish_waiting": "Waiting for you to approve on the page…",
+      "popup_blocked": "Your browser blocked the new tab. Click “Open the confirmation page”."
+    },
+    "options": {
+      "title": "Sign-in options",
+      "chip_proxy": "Network: {{value}}",
+      "chip_project": "Project: {{value}}",
+      "chip_endpoint_build": "Endpoint: subscription",
+      "chip_endpoint_api": "Endpoint: API credit",
+      "proxy_label": "Account network",
+      "proxy_hint": "This account's requests go through the selected proxy, and some providers sign in through it too. Leave empty to use the server's own network.",
+      "proxy_none": "Server's own network",
+      "project_label": "Google Cloud project ID",
+      "project_placeholder": "Leave empty to pick automatically",
+      "project_hint": "Optional. Left empty, an available project is chosen for you.",
+      "project_auto": "automatic",
+      "endpoint_label": "Grok request endpoint",
+      "endpoint_build": "Grok Build / CLI (subscription quota)",
+      "endpoint_api": "xAI API (API quota)",
+      "endpoint_build_hint": "Uses the Grok Build / CLI endpoint and consumes subscription quota. Right for most subscriptions.",
+      "endpoint_api_hint": "Uses api.x.ai and consumes xAI API quota."
+    },
+    "status": {
+      "waiting": "Waiting for authorization",
+      "waiting_local": "Waiting for authorization",
+      "waiting_device": "Waiting for approval",
+      "finishing": "Finishing sign-in…",
+      "expires_in": "expires in {{time}}",
+      "regenerate": "New link",
+      "regenerate_device": "New code",
+      "restart": "Start over"
+    },
+    "problems": {
+      "expired": "This sign-in expired (links last 10 minutes). Start over.",
+      "superseded": "Another sign-in for the same provider finished, so this one was discarded.",
+      "provider_mismatch": "That callback belongs to a sign-in for another provider.",
+      "invalid_callback": "The callback is incomplete. Copy the whole address bar.",
+      "network": "Can't reach the server. Check your connection and try again.",
+      "failed": "Sign-in didn't complete: {{message}}",
+      "failed_generic": "Sign-in didn't complete. Try again.",
+      "start_failed": "Couldn't start the sign-in: {{message}}",
+      "start_failed_generic": "Couldn't start the sign-in. Try again."
+    },
+    "success": {
+      "title": "{{provider}} account added",
+      "title_files": "Auth files imported",
+      "resolving": "Refreshing the list…",
+      "ready": "The account is ready to use.",
+      "add_another": "Add another",
+      "done": "Done"
+    },
+    "import": {
+      "failed_generic": "Import failed. Try again.",
+      "iflow_step_1": "Sign in to iflow.cn in your browser.",
+      "iflow_step_2": "Open developer tools → Application → Cookies and select iflow.cn.",
+      "iflow_step_3": "Copy the whole cookie (it must include BXAuth) and paste it below.",
+      "iflow_label": "iFlow cookie",
+      "iflow_placeholder": "BXAuth=…; …",
+      "iflow_ok": "Contains the BXAuth session token",
+      "iflow_missing_bxauth": "No BXAuth found — usually not signed in, or only part of the cookie was copied.",
+      "iflow_submit": "Import cookie",
+      "iflow_expires": "Valid until {{time}}",
+      "vertex_drop": "Drop a service account JSON key, or click to choose",
+      "vertex_hint": "Create a JSON key in Google Cloud console → IAM → Service accounts → Keys.",
+      "vertex_invalid": "That's not a service account key (missing {{field}}). Choose an IAM service account JSON key.",
+      "vertex_clear": "Choose another file",
+      "vertex_location": "Region (optional)",
+      "vertex_location_hint": "Leave empty to use the default region.",
+      "vertex_project": "Project {{project}}",
+      "vertex_location_value": "Region {{location}}",
+      "vertex_submit": "Import",
+      "files_drop": "Drop one or more JSON auth files, or click to choose",
+      "files_uploading": "Importing…",
+      "files_hint": "Auth files exported by CLIProxyAPI and similar tools, up to 50 KB each.",
+      "files_imported_one": "Imported {{count}} auth file",
+      "files_imported_other": "Imported {{count}} auth files"
+    }
   },
   "models_page": {
     "title": "Model Configuration Management",
@@ -4218,104 +4421,6 @@
     "health_good": "Good",
     "health_warning": "Warning",
     "health_risk": "Risk"
-  },
-  "oauth": {
-    "not_imported": "Not Imported",
-    "iflow_cookie": "iFlow Cookie",
-    "vertex_desc": "Upload Vertex credentials file to generate auth file.",
-    "cookie_placeholder": "Paste Cookie (sent to Management API)",
-    "callback_placeholder": "Paste the full callback URL from browser",
-    "callback": "Callback URL",
-    "callback_browser_address_hint": "After authorizing in the browser, the browser address bar contains the callback URL. Copy the full URL and submit it below.",
-    "project_placeholder": "Project ID(Optional)",
-    "vertex_title": "Vertex Credential Import",
-    "iflow_title": "iFlow Cookie Auth",
-    "provider_fallback": "OAuth",
-    "authorization_proxy": "Authorization Proxy",
-    "authorization_proxy_hint": "Optional. Leave empty to use the deployed server's local network egress.",
-    "proxy_default_local": "Server local network",
-    "xai_endpoint_mode": "Grok request endpoint",
-    "xai_endpoint_build": "Grok Build / CLI (subscription quota)",
-    "xai_endpoint_api": "xAI API (API quota)",
-    "xai_endpoint_build_hint": "Uses the Grok Build/CLI endpoint and subscription quota. This is the OAuth default.",
-    "xai_endpoint_api_hint": "Uses api.x.ai and consumes xAI API quota.",
-    "status": "Status",
-    "status_polling": "Polling...",
-    "status_success": "Success",
-    "status_failed": "Failed",
-    "status_waiting": "Waiting",
-    "authorization_success": "{{provider}} authorization succeeded",
-    "authorization_failed": "{{provider}} authorization failed: {{error}}",
-    "start_auth_failed_short": "Failed to start authorization",
-    "start_auth_failed": "{{provider}} failed to start authorization: {{error}}",
-    "link_copied": "Authorization link copied",
-    "copy_failed": "Copy failed",
-    "enter_callback_url": "Please enter the callback URL",
-    "enter_callback_code": "Please enter the xAI code",
-    "start_authorization_first": "Start authorization first",
-    "callback_submit_success": "Callback submitted successfully",
-    "callback_submit_failed": "Failed to submit callback",
-    "iflow_hint_default": "Use the iFlow Cookie for a one-time auth import.",
-    "iflow_hint_success": "Import successful: {{path}}",
-    "iflow_hint_failed": "Import failed: {{error}}",
-    "enter_cookie": "Please enter the Cookie",
-    "import_success": "Import successful",
-    "import_failed": "Import failed",
-    "vertex_import_success": "Vertex credential imported successfully",
-    "vertex_import_failed": "Vertex credential import failed",
-    "start_authorization": "Start authorization",
-    "auth_link": "Authorization link",
-    "copy_link": "Copy",
-    "open_link": "Open",
-    "status_label": "Status: ",
-    "remote_callback": "Remote callback submission",
-    "callback_code": "xAI code",
-    "callback_code_placeholder": "Paste the code shown by xAI / Grok",
-    "callback_code_hint": "After approving xAI, copy the code shown on the page and submit it here.",
-    "callback_code_browser_hint": "After approving xAI, the page shows a one-time code. Copy that code and submit it below.",
-    "callback_submitting": "Submitting...",
-    "submit_callback": "Submit callback",
-    "callback_submitted": "Submitted",
-    "importing": "Importing...",
-    "import": "Import",
-    "select_file": "Select file",
-    "location_placeholder": "location (optional)",
-    "recent_import": "Recent import",
-    "file_label": "File",
-    "project_id_label": "project_id",
-    "email_label": "email",
-    "location_label": "location",
-    "auth_file_label": "auth_file",
-    "providers": {
-      "codex": {
-        "title": "Codex OAuth",
-        "hint": "Start the authorization flow and let the server save the auth file automatically."
-      },
-      "anthropic": {
-        "title": "Anthropic OAuth",
-        "hint": "Use this for Claude / Anthropic OAuth login."
-      },
-      "antigravity": {
-        "title": "Antigravity OAuth",
-        "hint": "Use this for Antigravity quota and capability OAuth login."
-      },
-      "xai": {
-        "title": "xAI / Grok OAuth",
-        "hint": "Use this for native Grok OAuth login through xAI."
-      },
-      "gemini_cli": {
-        "title": "Gemini CLI OAuth",
-        "hint": "Supports an optional Project ID; the server auto-selects one when empty."
-      },
-      "kimi": {
-        "title": "Kimi OAuth",
-        "hint": "If supported by the server, the auth file is saved automatically."
-      },
-      "qwen": {
-        "title": "Qwen OAuth",
-        "hint": "If supported by the server, the auth file is saved automatically."
-      }
-    }
   },
   "log_content": {
     "copy": "Copy",

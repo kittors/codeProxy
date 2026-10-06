@@ -472,7 +472,7 @@ describe("AuthFilesPage files table", () => {
     expect(screen.getByTestId("auth-files-cards")).toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "Status" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Add OAuth Login" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add AI account" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Selection actions" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Select current page" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Delete All" })).not.toBeInTheDocument();
@@ -1910,17 +1910,18 @@ describe("AuthFilesPage files table", () => {
       </MemoryRouter>,
     );
 
+    vi.spyOn(window, "open").mockImplementation(() => null);
     expect(await screen.findByText("qwen.json")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Add OAuth Login" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add AI account" }));
 
-    const dialog = await screen.findByRole("dialog", { name: "Add OAuth Login" });
-    fireEvent.change(
-      within(dialog).getByPlaceholderText("Paste the full callback URL from browser"),
-      {
-        target: { value: "http://localhost:1455/auth/callback?code=ok" },
-      },
-    );
-    fireEvent.click(within(dialog).getByRole("button", { name: "Submit callback" }));
+    const dialog = within(await screen.findByRole("dialog", { name: "Add AI account" }));
+    fireEvent.click(dialog.getByRole("button", { name: "Sign in with Codex" }));
+    // The test page is on localhost, so the paste box sits behind the manual fallback.
+    fireEvent.click(await dialog.findByRole("button", { name: /Didn't finish by itself/ }));
+    mocks.getAuthStatus.mockResolvedValue({ status: "ok" });
+    fireEvent.paste(await dialog.findByRole("textbox", { name: "Callback address" }), {
+      clipboardData: { getData: () => "http://localhost:1455/auth/callback?code=ok&state=state-1" },
+    });
 
     expect(await screen.findByText("codex-authorized.json")).toBeInTheDocument();
     // New visible scope: snapshot + quiet probe (not the legacy per-file fetchQuota fan-out).

@@ -92,16 +92,6 @@ vi.mock("@code-proxy/api-client/endpoints/proxies", () => ({
   },
 }));
 
-const deferred = <T,>() => {
-  let resolve!: (value: T) => void;
-  let reject!: (reason?: unknown) => void;
-  const promise = new Promise<T>((res, rej) => {
-    resolve = res;
-    reject = rej;
-  });
-  return { promise, resolve, reject };
-};
-
 beforeEach(() => {
   window.localStorage.clear();
   window.sessionStorage.clear();
@@ -135,408 +125,74 @@ beforeEach(() => {
   toastMocks.warning.mockReset();
 });
 
-describe("AuthFilesPage OAuth login dialog", () => {
-  test("opens OAuth dialog with provider/iFlow/Vertex tabs", async () => {
+const renderPage = () =>
+  render(
+    <MemoryRouter initialEntries={["/auth-files"]}>
+      <ThemeProvider>
+        <ToastProvider>
+          <Routes>
+            <Route path="/auth-files" element={<AuthFilesPage />} />
+          </Routes>
+        </ToastProvider>
+      </ThemeProvider>
+    </MemoryRouter>,
+  );
+
+const fakeWindow = () => {
+  const pending = { opener: {}, closed: false, location: { href: "" }, close: vi.fn() };
+  vi.spyOn(window, "open").mockImplementation(() => pending as unknown as Window);
+  return pending;
+};
+
+describe("AuthFilesPage add-account dialog", () => {
+  test("opens from the toolbar with every way to add an account", async () => {
     const user = userEvent.setup();
-    render(
-      <MemoryRouter initialEntries={["/auth-files"]}>
-        <ThemeProvider>
-          <ToastProvider>
-            <Routes>
-              <Route path="/auth-files" element={<AuthFilesPage />} />
-            </Routes>
-          </ToastProvider>
-        </ThemeProvider>
-      </MemoryRouter>,
-    );
+    renderPage();
 
-    const openBtn = await screen.findByRole("button", {
-      name: "Add OAuth Login",
-    });
-    await user.click(openBtn);
+    await user.click(await screen.findByRole("button", { name: "Add AI account" }));
 
-    const dialog = await screen.findByRole("dialog");
-    const scoped = within(dialog);
-
-    expect(scoped.getByText("Add OAuth Login")).toBeInTheDocument();
-    expect(
-      scoped.getByRole("tab", { name: "Codex OAuth" }),
-    ).toBeInTheDocument();
-    expect(
-      scoped.getByRole("tab", { name: "Anthropic OAuth" }),
-    ).toBeInTheDocument();
-    expect(
-      scoped.getByRole("tab", { name: "iFlow Cookie Auth" }),
-    ).toBeInTheDocument();
-    expect(
-      scoped.getByRole("tab", { name: "Vertex Credential Import" }),
-    ).toBeInTheDocument();
-  });
-
-  test("places the authorization proxy selector below the OAuth provider tabs", async () => {
-    const user = userEvent.setup();
-    render(
-      <MemoryRouter initialEntries={["/auth-files"]}>
-        <ThemeProvider>
-          <ToastProvider>
-            <Routes>
-              <Route path="/auth-files" element={<AuthFilesPage />} />
-            </Routes>
-          </ToastProvider>
-        </ThemeProvider>
-      </MemoryRouter>,
-    );
-
-    await user.click(
-      await screen.findByRole("button", { name: "Add OAuth Login" }),
-    );
-
-    const dialog = await screen.findByRole("dialog");
-    const scoped = within(dialog);
-    const tabs = scoped.getByRole("tablist");
-    const proxySelect = await scoped.findByRole("combobox", {
-      name: "Authorization Proxy",
-    });
-
-    expect(
-      tabs.compareDocumentPosition(proxySelect) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).not.toBe(0);
-  });
-
-  test("selects a proxy with IP, latency, and remark before starting OAuth authorization", async () => {
-    const user = userEvent.setup();
-    mocks.proxiesList.mockResolvedValue([
-      {
-        id: "hk",
-        name: "HK Proxy",
-        url: "socks5://user:pass@127.0.0.1:1080",
-        enabled: true,
-        description: "Codex egress",
-      },
+    const dialog = within(await screen.findByRole("dialog", { name: "Add AI account" }));
+    expect(dialog.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
+      "Codex",
+      "Claude",
+      "Gemini CLI",
+      "Antigravity",
+      "Grok",
+      "iFlow",
+      "Qwen",
+      "Kimi",
+      "Vertex AI",
+      "Auth files",
     ]);
-
-    render(
-      <MemoryRouter initialEntries={["/auth-files"]}>
-        <ThemeProvider>
-          <ToastProvider>
-            <Routes>
-              <Route path="/auth-files" element={<AuthFilesPage />} />
-            </Routes>
-          </ToastProvider>
-        </ThemeProvider>
-      </MemoryRouter>,
-    );
-
-    await user.click(
-      await screen.findByRole("button", { name: "Add OAuth Login" }),
-    );
-
-    const dialog = await screen.findByRole("dialog");
-    const scoped = within(dialog);
-    const proxySelect = await scoped.findByRole("combobox", {
-      name: "Authorization Proxy",
-    });
-
-    expect(proxySelect).toHaveTextContent("Server local network");
-    await waitFor(() =>
-      expect(mocks.proxiesCheck).toHaveBeenCalledWith({ id: "hk" }),
-    );
-    await user.click(proxySelect);
-    expect(await screen.findByText("127.0.0.1:1080")).toBeInTheDocument();
-    expect(screen.getByText(/88 ms/)).toBeInTheDocument();
-    expect(screen.getByText("Codex egress")).toBeInTheDocument();
-
-    await user.click(
-      await screen.findByRole("option", {
-        name: /HK Proxy.*127\.0\.0\.1:1080/i,
-      }),
-    );
-    await user.click(
-      scoped.getByRole("button", { name: "Start authorization" }),
-    );
-
-    await waitFor(() => {
-      expect(mocks.startAuth).toHaveBeenCalledWith("codex", { proxyId: "hk" });
-    });
   });
 
-  test("shows translated callback guidance instead of raw oauth keys after starting authorization", async () => {
+  test("preselects the provider the list is filtered to", async () => {
     const user = userEvent.setup();
-    mocks.startAuth.mockResolvedValueOnce({
-      url: "https://example.com/oauth",
-      state: "oauth-state",
+    window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
+    writeAuthFilesUiState({ tab: "files", filter: "claude", search: "", page: 1 });
+    mocks.list.mockResolvedValue({
+      files: [
+        {
+          name: "claude-a.json",
+          type: "claude",
+          size: 1024,
+          modified: Date.now(),
+          disabled: false,
+        },
+      ],
     });
+    renderPage();
 
-    render(
-      <MemoryRouter initialEntries={["/auth-files"]}>
-        <ThemeProvider>
-          <ToastProvider>
-            <Routes>
-              <Route path="/auth-files" element={<AuthFilesPage />} />
-            </Routes>
-          </ToastProvider>
-        </ThemeProvider>
-      </MemoryRouter>,
-    );
+    expect(await screen.findByText("claude-a.json")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Add AI account" }));
 
-    await user.click(
-      await screen.findByRole("button", { name: "Add OAuth Login" }),
-    );
-
-    const dialog = await screen.findByRole("dialog");
-    const scoped = within(dialog);
-    await user.click(
-      scoped.getByRole("button", { name: "Start authorization" }),
-    );
-
-    expect(await scoped.findByText("Status")).toBeInTheDocument();
-    expect(scoped.getByText("Callback URL")).toBeInTheDocument();
-    expect(
-      scoped.getByText(
-        "After authorizing in the browser, the browser address bar contains the callback URL. Copy the full URL and submit it below.",
-      ),
-    ).toBeInTheDocument();
-    expect(scoped.queryByText("oauth.status")).not.toBeInTheDocument();
-    expect(scoped.queryByText("oauth.callback")).not.toBeInTheDocument();
+    const dialog = within(await screen.findByRole("dialog"));
+    expect(dialog.getByRole("tab", { name: "Claude" })).toHaveAttribute("aria-selected", "true");
   });
 
-  test("submits the xAI code with the pending OAuth state", async () => {
+  test("names the new account, switches the list to it and closes on Done", async () => {
     const user = userEvent.setup();
-    mocks.startAuth.mockResolvedValueOnce({
-      url: "https://accounts.x.ai/oauth2/consent",
-      state: "xai-state",
-    });
-
-    render(
-      <MemoryRouter initialEntries={["/auth-files"]}>
-        <ThemeProvider>
-          <ToastProvider>
-            <Routes>
-              <Route path="/auth-files" element={<AuthFilesPage />} />
-            </Routes>
-          </ToastProvider>
-        </ThemeProvider>
-      </MemoryRouter>,
-    );
-
-    await user.click(
-      await screen.findByRole("button", { name: "Add OAuth Login" }),
-    );
-
-    const dialog = await screen.findByRole("dialog");
-    const scoped = within(dialog);
-    await user.click(scoped.getByRole("tab", { name: "xAI / Grok OAuth" }));
-    const endpointSelect = scoped.getByRole("combobox", {
-      name: "Grok request endpoint",
-    });
-    expect(endpointSelect).toHaveTextContent(
-      "Grok Build / CLI (subscription quota)",
-    );
-    expect(
-      scoped.getAllByPlaceholderText("Paste the code shown by xAI / Grok"),
-    ).toHaveLength(1);
-
-    await user.click(
-      scoped.getByRole("button", { name: "Start authorization" }),
-    );
-    await waitFor(() =>
-      expect(mocks.startAuth).toHaveBeenCalledWith("xai", {
-        usingApi: false,
-      }),
-    );
-    expect(endpointSelect).toBeDisabled();
-
-    await user.type(
-      scoped.getByPlaceholderText("Paste the code shown by xAI / Grok"),
-      "manual-code",
-    );
-    await user.click(scoped.getByRole("button", { name: "Submit callback" }));
-
-    await waitFor(() => {
-      expect(mocks.submitCallback).toHaveBeenCalledWith(
-        "xai",
-        { code: "manual-code", state: "xai-state" },
-        {},
-      );
-    });
-  });
-
-  test("starts xAI OAuth with the API endpoint when selected", async () => {
-    const user = userEvent.setup();
-    mocks.startAuth.mockResolvedValueOnce({
-      url: "https://accounts.x.ai/oauth2/consent",
-      state: "xai-state",
-    });
-
-    render(
-      <MemoryRouter initialEntries={["/auth-files"]}>
-        <ThemeProvider>
-          <ToastProvider>
-            <Routes>
-              <Route path="/auth-files" element={<AuthFilesPage />} />
-            </Routes>
-          </ToastProvider>
-        </ThemeProvider>
-      </MemoryRouter>,
-    );
-
-    await user.click(
-      await screen.findByRole("button", { name: "Add OAuth Login" }),
-    );
-    const scoped = within(await screen.findByRole("dialog"));
-    await user.click(scoped.getByRole("tab", { name: "xAI / Grok OAuth" }));
-
-    await user.click(
-      scoped.getByRole("combobox", { name: "Grok request endpoint" }),
-    );
-    await user.click(
-      await screen.findByRole("option", { name: "xAI API (API quota)" }),
-    );
-    expect(
-      scoped.getByText("Uses api.x.ai and consumes xAI API quota."),
-    ).toBeInTheDocument();
-
-    await user.click(
-      scoped.getByRole("button", { name: "Start authorization" }),
-    );
-
-    await waitFor(() =>
-      expect(mocks.startAuth).toHaveBeenCalledWith("xai", { usingApi: true }),
-    );
-  });
-
-  test("clears OAuth dialog state when reopened", async () => {
-    const user = userEvent.setup();
-    mocks.startAuth.mockResolvedValueOnce({
-      url: "https://example.com/oauth",
-      state: "oauth-state",
-    });
-
-    render(
-      <MemoryRouter initialEntries={["/auth-files"]}>
-        <ThemeProvider>
-          <ToastProvider>
-            <Routes>
-              <Route path="/auth-files" element={<AuthFilesPage />} />
-            </Routes>
-          </ToastProvider>
-        </ThemeProvider>
-      </MemoryRouter>,
-    );
-
-    await user.click(
-      await screen.findByRole("button", { name: "Add OAuth Login" }),
-    );
-
-    const dialog = await screen.findByRole("dialog");
-    const scoped = within(dialog);
-    await user.click(
-      scoped.getByRole("button", { name: "Start authorization" }),
-    );
-    expect(await scoped.findByText("https://example.com/oauth")).toBeInTheDocument();
-
-    const callbackInput = scoped.getByPlaceholderText(
-      "Paste the full callback URL from browser",
-    );
-    await user.type(
-      callbackInput,
-      "http://localhost:1455/auth/callback?code=test-code&state=oauth-state",
-    );
-    expect(callbackInput).toHaveValue(
-      "http://localhost:1455/auth/callback?code=test-code&state=oauth-state",
-    );
-
-    await user.click(scoped.getAllByRole("button", { name: "Close" })[0]!);
-    await waitFor(() =>
-      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
-    );
-
-    await user.click(screen.getByRole("button", { name: "Add OAuth Login" }));
-    const reopened = within(await screen.findByRole("dialog"));
-
-    expect(reopened.queryByText("https://example.com/oauth")).not.toBeInTheDocument();
-    expect(
-      reopened.getByPlaceholderText("Paste the full callback URL from browser"),
-    ).toHaveValue("");
-  });
-
-  test("shows one OAuth success toast when an old poll resolves after restart", async () => {
-    const user = userEvent.setup();
-    const firstPoll = deferred<{ status: "ok" }>();
-    const secondPoll = deferred<{ status: "ok" }>();
-    mocks.list
-      .mockResolvedValueOnce({ files: [] })
-      .mockResolvedValue({
-        files: [
-          {
-            name: "xai-new.json",
-            type: "xai",
-            size: 2048,
-            modified: Date.now(),
-            disabled: false,
-          },
-        ],
-      });
-    mocks.startAuth.mockResolvedValueOnce({
-      url: "https://accounts.x.ai/oauth2/consent",
-      state: "xai-state",
-    });
-    mocks.getAuthStatus
-      .mockImplementationOnce(() => firstPoll.promise)
-      .mockImplementationOnce(() => secondPoll.promise);
-
-    render(
-      <MemoryRouter initialEntries={["/auth-files"]}>
-        <ThemeProvider>
-          <ToastProvider>
-            <Routes>
-              <Route path="/auth-files" element={<AuthFilesPage />} />
-            </Routes>
-          </ToastProvider>
-        </ThemeProvider>
-      </MemoryRouter>,
-    );
-
-    await user.click(
-      await screen.findByRole("button", { name: "Add OAuth Login" }),
-    );
-
-    const dialog = await screen.findByRole("dialog");
-    const scoped = within(dialog);
-    await user.click(scoped.getByRole("tab", { name: "xAI / Grok OAuth" }));
-    await user.click(
-      scoped.getByRole("button", { name: "Start authorization" }),
-    );
-    await waitFor(() => expect(mocks.getAuthStatus).toHaveBeenCalledTimes(1));
-
-    await user.type(
-      scoped.getByPlaceholderText("Paste the code shown by xAI / Grok"),
-      "manual-code",
-    );
-    await user.click(scoped.getByRole("button", { name: "Submit callback" }));
-    await waitFor(() => expect(mocks.getAuthStatus).toHaveBeenCalledTimes(2));
-
-    secondPoll.resolve({ status: "ok" });
-    await waitFor(() =>
-      expect(
-        toastMocks.success.mock.calls.filter(
-          ([title]) => title === "xAI / Grok OAuth authorization succeeded",
-        ),
-      ).toHaveLength(1),
-    );
-
-    firstPoll.resolve({ status: "ok" });
-    await new Promise((resolve) => window.setTimeout(resolve, 0));
-    expect(
-      toastMocks.success.mock.calls.filter(
-        ([title]) => title === "xAI / Grok OAuth authorization succeeded",
-      ),
-    ).toHaveLength(1);
-  });
-
-  test("switches to the newly authorized xAI file group", async () => {
-    const user = userEvent.setup();
+    fakeWindow();
     const now = Date.now();
     const initialFile: AuthFileItem = {
       name: "qwen.json",
@@ -556,127 +212,73 @@ describe("AuthFilesPage OAuth login dialog", () => {
       modified: now + 1,
       disabled: false,
     };
-    const firstPoll = deferred<{ status: "waiting" }>();
-    const secondPoll = deferred<{ status: "ok" }>();
-
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     writeAuthFilesUiState({ tab: "files", filter: "qwen", search: "qwen", page: 1 });
     mocks.list
       .mockResolvedValueOnce({ files: [initialFile] })
       .mockResolvedValue({ files: [initialFile, xaiFile] });
     mocks.startAuth.mockResolvedValueOnce({
-      url: "https://accounts.x.ai/oauth2/consent",
+      url: "https://auth.x.ai/oauth2/authorize?redirect_uri=http%3A%2F%2F127.0.0.1%3A56121%2Fcallback&state=xai-state",
       state: "xai-state",
     });
-    mocks.getAuthStatus
-      .mockImplementationOnce(() => firstPoll.promise)
-      .mockImplementationOnce(() => secondPoll.promise);
-
-    render(
-      <MemoryRouter initialEntries={["/auth-files"]}>
-        <ThemeProvider>
-          <ToastProvider>
-            <Routes>
-              <Route path="/auth-files" element={<AuthFilesPage />} />
-            </Routes>
-          </ToastProvider>
-        </ThemeProvider>
-      </MemoryRouter>,
-    );
+    mocks.getAuthStatus.mockResolvedValue({ status: "wait" });
+    renderPage();
 
     expect(await screen.findByText("qwen.json")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Add OAuth Login" }));
+    await user.click(screen.getByRole("button", { name: "Add AI account" }));
+    const dialog = within(await screen.findByRole("dialog"));
+    await user.click(dialog.getByRole("tab", { name: "Grok" }));
+    await user.click(await dialog.findByRole("button", { name: "Sign in with Grok" }));
+    expect(mocks.startAuth).toHaveBeenCalledWith(
+      "xai",
+      expect.objectContaining({ usingApi: false }),
+    );
 
-    const dialog = await screen.findByRole("dialog");
-    const scoped = within(dialog);
-    await user.click(scoped.getByRole("tab", { name: "xAI / Grok OAuth" }));
-    await user.click(scoped.getByRole("button", { name: "Start authorization" }));
-    await waitFor(() => expect(mocks.getAuthStatus).toHaveBeenCalledTimes(1));
+    // The test page runs on localhost, so the redirect would come back by itself;
+    // the manual paste stays one click away.
+    await user.click(await dialog.findByRole("button", { name: /Didn't finish by itself/ }));
+    mocks.getAuthStatus.mockResolvedValue({ status: "ok" });
+    await user.type(
+      await dialog.findByRole("textbox", { name: "Callback address" }),
+      "grok-code{Enter}",
+    );
+    await waitFor(() =>
+      expect(mocks.submitCallback).toHaveBeenCalledWith(
+        "xai",
+        { code: "grok-code", state: "xai-state" },
+        { proxyId: undefined },
+      ),
+    );
 
-    await user.type(scoped.getByPlaceholderText("Paste the code shown by xAI / Grok"), "code");
-    await user.click(scoped.getByRole("button", { name: "Submit callback" }));
-    await waitFor(() => expect(mocks.getAuthStatus).toHaveBeenCalledTimes(2));
+    expect(await dialog.findByRole("heading", { name: "Grok account added" })).toBeInTheDocument();
+    expect(await dialog.findByText("user@example.com")).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "File group" })).toHaveTextContent(/xai/);
 
-    secondPoll.resolve({ status: "ok" });
+    await user.click(dialog.getByRole("button", { name: "Done" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(screen.queryByText("qwen.json")).not.toBeInTheDocument();
+  }, 15000);
+
+  test("reopening starts from a clean slate", async () => {
+    const user = userEvent.setup();
+    fakeWindow();
+    mocks.startAuth.mockResolvedValueOnce({
+      url: "https://auth.openai.com/oauth/authorize?redirect_uri=http%3A%2F%2Flocalhost%3A1455%2Fauth%2Fcallback&state=s1",
+      state: "s1",
+    });
+    renderPage();
+
+    await user.click(await screen.findByRole("button", { name: "Add AI account" }));
+    let dialog = within(await screen.findByRole("dialog"));
+    await user.click(dialog.getByRole("button", { name: "Sign in with Codex" }));
+    expect(await dialog.findByText("Codex sign-in page opened in a new tab")).toBeInTheDocument();
+
+    await user.click(dialog.getByRole("button", { name: "Close" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
 
-    expect(screen.getByRole("combobox", { name: "File group" })).toHaveTextContent(/xai1/);
-    expect(await screen.findByText("user@example.com")).toBeInTheDocument();
-    expect(screen.queryByText("qwen.json")).not.toBeInTheDocument();
-
-    firstPoll.resolve({ status: "waiting" });
+    await user.click(screen.getByRole("button", { name: "Add AI account" }));
+    dialog = within(await screen.findByRole("dialog"));
+    expect(dialog.getByRole("button", { name: "Sign in with Codex" })).toBeInTheDocument();
+    expect(dialog.queryByText("Codex sign-in page opened in a new tab")).not.toBeInTheDocument();
   });
-
-  test("keeps the dialog open until OAuth completes and the new auth file is listed", async () => {
-    const user = userEvent.setup();
-    window.localStorage.setItem(
-      "authFilesPage.filesViewMode.v1",
-      JSON.stringify("cards"),
-    );
-    mocks.startAuth.mockResolvedValueOnce({
-      url: "https://example.com/oauth",
-      state: "oauth-state",
-    });
-    mocks.getAuthStatus.mockResolvedValue({ status: "wait" });
-    mocks.list
-      .mockResolvedValueOnce({ files: [] })
-      .mockResolvedValueOnce({ files: [] })
-      .mockResolvedValueOnce({
-        files: [
-          {
-            name: "codex-new.json",
-            type: "codex",
-            size: 2048,
-            modified: Date.now(),
-            disabled: false,
-          },
-        ],
-      });
-
-    render(
-      <MemoryRouter initialEntries={["/auth-files"]}>
-        <ThemeProvider>
-          <ToastProvider>
-            <Routes>
-              <Route path="/auth-files" element={<AuthFilesPage />} />
-            </Routes>
-          </ToastProvider>
-        </ThemeProvider>
-      </MemoryRouter>,
-    );
-
-    await user.click(
-      await screen.findByRole("button", { name: "Add OAuth Login" }),
-    );
-
-    const dialog = await screen.findByRole("dialog");
-    const scoped = within(dialog);
-    await user.click(
-      scoped.getByRole("button", { name: "Start authorization" }),
-    );
-    await waitFor(() => expect(mocks.startAuth).toHaveBeenCalledTimes(1));
-
-    await user.type(
-      scoped.getByPlaceholderText("Paste the full callback URL from browser"),
-      "http://localhost:1455/auth/callback?code=test-code&state=test-state",
-    );
-    await user.click(scoped.getByRole("button", { name: "Submit callback" }));
-
-    await waitFor(() => expect(mocks.submitCallback).toHaveBeenCalledTimes(1));
-    await new Promise((resolve) => window.setTimeout(resolve, 250));
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
-    expect(screen.queryByText("codex-new.json")).not.toBeInTheDocument();
-
-    mocks.getAuthStatus.mockResolvedValueOnce({ status: "ok" });
-    await waitFor(() => expect(mocks.list).toHaveBeenCalledTimes(3), {
-      timeout: 5000,
-    });
-
-    await waitFor(() =>
-      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
-    );
-    expect(await screen.findByTestId("auth-files-cards")).toHaveTextContent(
-      "codex-new.json",
-    );
-  }, 12000);
 });

@@ -75,6 +75,7 @@ export { providersApi } from "./endpoints/providers";
 export { configFileApi } from "./endpoints/config-file";
 export { logsApi } from "./endpoints/logs";
 export { oauthApi } from "./endpoints/oauth";
+export type { OAuthCallbackSubmission, OAuthProxyOptions } from "./endpoints/oauth";
 export { authFilesApi } from "./endpoints/auth-files";
 export { apiCallApi, getApiCallErrorMessage } from "./endpoints/api-call";
 export { ampcodeApi } from "./endpoints/ampcode";
