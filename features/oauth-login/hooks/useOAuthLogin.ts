@@ -117,12 +117,15 @@ export function useOAuthLogin({ provider, onSucceeded }: UseOAuthLoginOptions) {
   }, [activeLogin, activeRun, pollOnce]);
 
   // The server stops accepting the callback at expiresAt; say so instead of
-  // letting the operator paste into a dead login.
+  // letting the operator paste into a dead login. A callback it already took
+  // keeps finishing past that point, so only a login still waiting expires.
   useEffect(() => {
     if (!activeLogin) return;
     const run = activeRun;
     const timer = window.setTimeout(
-      () => fail(run, { kind: "expired" }, activeLogin),
+      () => {
+        if (phaseRef.current.name === "waiting") fail(run, { kind: "expired" }, activeLogin);
+      },
       Math.max(0, activeLogin.expiresAt - Date.now()),
     );
     return () => window.clearTimeout(timer);

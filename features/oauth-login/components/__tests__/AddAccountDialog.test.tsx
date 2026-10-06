@@ -293,6 +293,32 @@ describe("AddAccountDialog", () => {
     await waitFor(() => expect(mocks.startAuth).toHaveBeenCalledTimes(2));
   });
 
+  test("a login whose callback was accepted is not cut off by the expiry", async () => {
+    const user = userEvent.setup();
+    // The window closes moments after the login starts (computed at start time).
+    mocks.startAuth.mockImplementation(async () => ({
+      ...codexStart,
+      expires_at: new Date(Date.now() + 1500).toISOString(),
+    }));
+    const { dialog } = renderDialog();
+
+    await user.click(dialog.getByRole("button", { name: "Sign in with Codex" }));
+    pasteInto(
+      await dialog.findByRole("textbox", { name: "Callback address" }),
+      "http://localhost:1455/auth/callback?code=ac_1&state=s1",
+    );
+    await waitFor(() => expect(mocks.submitCallback).toHaveBeenCalled());
+    // Past the window: the server is still exchanging the code, so the login
+    // must keep polling and finish rather than be declared expired.
+    await act(() => new Promise((resolve) => window.setTimeout(resolve, 2000)));
+    mocks.getAuthStatus.mockResolvedValue({ status: "ok" });
+    act(() => {
+      window.dispatchEvent(new Event("focus"));
+    });
+
+    expect(await dialog.findByRole("heading", { name: "Codex account added" })).toBeInTheDocument();
+  });
+
   test("a failed start explains itself and closes the blank tab", async () => {
     const user = userEvent.setup();
     mocks.startAuth.mockRejectedValue(
