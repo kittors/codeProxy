@@ -4109,9 +4109,7 @@
     "config_menu": "账号配置",
     "provider_filter": "文件分组",
     "provider_filter_search": "搜索文件分组…",
-    "add_oauth": "增加 OAuth 登录",
-    "add_oauth_title": "增加 OAuth 登录",
-    "add_oauth_desc": "通过浏览器授权生成 OAuth 认证文件，或导入 iFlow/Vertex 凭证。",
+    "add_oauth": "添加 AI 账号",
     "count_info": "计数信息",
     "filename_hint": "文件名 / 提供商 / 类型",
     "per_page": "每页",
@@ -4129,6 +4127,210 @@
     "cannot_edit": "无法编辑",
     "cannot_edit_desc": "服务器未返回模型或渠道不支持。",
     "models_hint": "认证文件可能不支持查询模型，或服务器未返回数据。"
+  },
+  "add_account": {
+    "title": "添加 AI 账号",
+    "description": "登录订阅账号，或导入已有凭证。完成后账号会出现在列表里。",
+    "list_label": "账号类型",
+    "groups": {
+      "browser": "浏览器登录",
+      "device": "设备码登录",
+      "import": "导入凭证"
+    },
+    "providers": {
+      "codex": {
+        "name": "Codex",
+        "tagline": "ChatGPT Plus / Pro / Team 订阅账号"
+      },
+      "anthropic": {
+        "name": "Claude",
+        "tagline": "Claude Pro / Max 订阅账号"
+      },
+      "gemini_cli": {
+        "name": "Gemini CLI",
+        "tagline": "Google 账号 · Gemini Code Assist"
+      },
+      "antigravity": {
+        "name": "Antigravity",
+        "tagline": "Google 账号 · Antigravity 额度"
+      },
+      "xai": {
+        "name": "Grok",
+        "tagline": "SuperGrok / X Premium 订阅账号"
+      },
+      "iflow": {
+        "name": "iFlow",
+        "tagline": "iFlow 账号"
+      },
+      "qwen": {
+        "name": "Qwen",
+        "tagline": "通义账号 · Qwen Code"
+      },
+      "kimi": {
+        "name": "Kimi",
+        "tagline": "Kimi 账号 · Kimi Code"
+      },
+      "vertex": {
+        "name": "Vertex AI",
+        "tagline": "Google Cloud 服务账号密钥（JSON）"
+      },
+      "auth_file": {
+        "name": "认证文件",
+        "tagline": "已有的 JSON 认证文件，可一次导入多个"
+      }
+    },
+    "methods": {
+      "label": "登录方式",
+      "oauth": "浏览器登录",
+      "cookie": "Cookie 导入",
+      "service-account": "服务账号",
+      "auth-file": "认证文件"
+    },
+    "steps": {
+      "open_title": "打开 {{provider}} 登录页",
+      "opened_title": "已在新标签页打开 {{provider}} 登录页",
+      "open_desc": "会在新标签页打开。登录后点「同意 / 授权」。",
+      "open_desc_local": "会在新标签页打开。登录后点「同意 / 授权」即可。",
+      "open_button": "前往 {{provider}} 登录",
+      "reopen": "重新打开登录页",
+      "copy_link": "复制链接",
+      "copied": "已复制",
+      "popup_blocked": "浏览器拦截了新标签页。点「重新打开登录页」，或复制链接到浏览器打开。",
+      "authorize_title": "授权后会跳到一个打不开的页面",
+      "authorize_desc": "这是正常的。授权结果就在这个页面的地址里——复制地址栏里的完整地址。",
+      "authorize_title_code": "授权后页面会显示一串授权码",
+      "authorize_desc_code": "点页面上的「Copy Code」复制整段授权码。",
+      "authorize_title_local": "在新标签页完成授权",
+      "authorize_desc_local": "服务器就在这台电脑上，授权后会自动回到这里，不需要复制任何内容。",
+      "finish_title_local": "自动完成",
+      "finish_desc_local": "授权后这里会自动继续。",
+      "finish_waiting_local": "等待授权完成…",
+      "manual_paste": "没有自动完成？手动粘贴回调地址",
+      "paste_title": "把复制的地址粘贴到这里",
+      "paste_title_code": "把授权码粘贴到这里",
+      "paste_desc": "粘贴后会自动检查并提交。",
+      "paste_locked": "打开登录页后就可以在这里粘贴。"
+    },
+    "mock": {
+      "label": "授权后浏览器显示的样子",
+      "unreachable_title": "无法访问此网站",
+      "unreachable_desc": "localhost 拒绝了连接请求。",
+      "code_title": "Authentication Code",
+      "copy": "Copy Code",
+      "copy_address": "复制地址栏里的这一整行",
+      "copy_code": "点这个按钮复制授权码"
+    },
+    "paste": {
+      "label_redirect": "回调地址",
+      "label_code": "授权码",
+      "placeholder_redirect": "粘贴地址栏里的完整地址，例如 {{example}}",
+      "placeholder_code": "粘贴页面上的授权码",
+      "paste_button": "粘贴",
+      "shortcut": "⌘V / Ctrl+V 粘贴",
+      "submit": "提交",
+      "check_code": "包含授权码",
+      "check_state": "属于本次登录",
+      "check_state_other": "不是本次登录",
+      "check_location": "回调地址一致",
+      "check_location_other": "回调地址不一致",
+      "issue_not_callback": "这是登录页的地址，不是回调地址。先完成授权，等页面跳转后再复制地址栏。",
+      "issue_missing_code": "地址里没有授权码（code），请复制地址栏里的完整地址。",
+      "issue_state_mismatch": "这是之前某次登录的回调。请用这次打开的登录页重新授权。",
+      "issue_not_a_code": "这不像授权码。请只粘贴授权码，或粘贴地址栏里的完整地址。",
+      "issue_denied": "你在授权页取消了授权。点「重新开始」再试一次。",
+      "issue_provider_error": "授权页返回了错误：{{error}}",
+      "clipboard_denied": "浏览器不允许读取剪贴板，请按 ⌘V / Ctrl+V 粘贴。",
+      "picked_up": "已从剪贴板取到这次登录的回调地址，正在提交。",
+      "nudge": "复制好了吗？点「粘贴」，或按 ⌘V / Ctrl+V。"
+    },
+    "device": {
+      "start_title": "获取登录码",
+      "start_desc": "向 {{provider}} 申请一个登录码，并在新标签页打开确认页面。",
+      "start_button": "开始 {{provider}} 登录",
+      "confirm_title": "在 {{provider}} 页面确认登录",
+      "confirm_desc": "确认页面上的代码和下面一致，然后同意授权。",
+      "confirm_desc_no_code": "在打开的页面里登录并同意授权。",
+      "code_label": "登录码",
+      "copy_code": "复制登录码",
+      "open_page": "打开确认页面",
+      "finish_title": "自动完成",
+      "finish_desc": "确认后这里会自动完成，不需要粘贴任何内容。",
+      "finish_waiting": "等待你在页面上确认…",
+      "popup_blocked": "浏览器拦截了新标签页，点「打开确认页面」。"
+    },
+    "options": {
+      "title": "登录选项",
+      "chip_proxy": "网络：{{value}}",
+      "chip_project": "项目：{{value}}",
+      "chip_endpoint_build": "端点：订阅额度",
+      "chip_endpoint_api": "端点：API 额度",
+      "proxy_label": "账号网络",
+      "proxy_hint": "这个账号之后的请求都走所选代理，部分平台登录时也经过它；留空则使用服务器本机网络。",
+      "proxy_none": "服务器本机网络",
+      "project_label": "Google Cloud 项目 ID",
+      "project_placeholder": "留空自动选择",
+      "project_hint": "可选。留空时会自动选择一个可用的项目。",
+      "project_auto": "自动",
+      "endpoint_label": "Grok 调用端点",
+      "endpoint_build": "Grok Build / CLI（订阅额度）",
+      "endpoint_api": "xAI API（API 额度）",
+      "endpoint_build_hint": "使用 Grok Build / CLI 端点，消耗订阅额度。大多数订阅账号选这个。",
+      "endpoint_api_hint": "使用 api.x.ai，消耗 xAI API 额度。"
+    },
+    "status": {
+      "waiting": "等待授权",
+      "waiting_local": "等待授权完成",
+      "waiting_device": "等待确认",
+      "finishing": "正在完成登录…",
+      "expires_in": "{{time}} 后过期",
+      "regenerate": "重新生成链接",
+      "regenerate_device": "重新获取登录码",
+      "restart": "重新开始"
+    },
+    "problems": {
+      "expired": "这次登录已过期（10 分钟内有效），请重新开始。",
+      "superseded": "同一平台的另一次登录已经完成，这一次已作废。",
+      "provider_mismatch": "这个回调属于另一个平台的登录。",
+      "invalid_callback": "回调内容不完整，请复制地址栏里的完整地址。",
+      "network": "连不上服务器，请检查网络后重试。",
+      "failed": "登录没有完成：{{message}}",
+      "failed_generic": "登录没有完成，请重试。",
+      "start_failed": "无法开始登录：{{message}}",
+      "start_failed_generic": "无法开始登录，请重试。"
+    },
+    "success": {
+      "title": "已添加 {{provider}} 账号",
+      "title_files": "认证文件已导入",
+      "resolving": "正在刷新列表…",
+      "ready": "账号已经可以使用。",
+      "add_another": "继续添加",
+      "done": "完成"
+    },
+    "import": {
+      "failed_generic": "导入失败，请重试。",
+      "iflow_step_1": "在浏览器登录 iflow.cn。",
+      "iflow_step_2": "打开开发者工具 → Application（应用）→ Cookies，选中 iflow.cn。",
+      "iflow_step_3": "复制完整的 Cookie（需包含 BXAuth），粘贴到下面。",
+      "iflow_label": "iFlow Cookie",
+      "iflow_placeholder": "BXAuth=…; …",
+      "iflow_ok": "包含 BXAuth 登录令牌",
+      "iflow_missing_bxauth": "没有找到 BXAuth，通常是没登录或复制不完整。",
+      "iflow_submit": "导入 Cookie",
+      "iflow_expires": "有效期至 {{time}}",
+      "vertex_drop": "拖入服务账号 JSON 密钥，或点击选择",
+      "vertex_hint": "在 Google Cloud 控制台 → IAM → 服务账号 → 密钥中创建 JSON 密钥。",
+      "vertex_invalid": "这不是服务账号密钥（缺少 {{field}}）。请选择 IAM 服务账号的 JSON 密钥。",
+      "vertex_clear": "重新选择文件",
+      "vertex_location": "区域（可选）",
+      "vertex_location_hint": "留空使用默认区域。",
+      "vertex_project": "项目 {{project}}",
+      "vertex_location_value": "区域 {{location}}",
+      "vertex_submit": "导入",
+      "files_drop": "拖入一个或多个 JSON 认证文件，或点击选择",
+      "files_uploading": "正在导入…",
+      "files_hint": "支持 CLIProxyAPI 等工具导出的认证文件，单个不超过 50 KB。",
+      "files_imported": "已导入 {{count}} 个认证文件"
+    }
   },
   "models_page": {
     "title": "模型配置管理",
@@ -4446,104 +4648,6 @@
     "health_good": "良好",
     "health_warning": "警告",
     "health_risk": "危险"
-  },
-  "oauth": {
-    "not_imported": "未导入",
-    "iflow_cookie": "iFlow Cookie",
-    "vertex_desc": "上传 Vertex 凭证文件以生成认证文件。",
-    "cookie_placeholder": "粘贴 Cookie（发送到管理 API）",
-    "callback_placeholder": "粘贴浏览器中的完整回调 URL",
-    "callback": "回调 URL",
-    "callback_browser_address_hint": "在浏览器中完成授权登录后，浏览器地址栏中的地址就是回调 URL。请复制完整地址并在下方提交。",
-    "project_placeholder": "项目 ID（可选）",
-    "vertex_title": "Vertex 凭证导入",
-    "iflow_title": "iFlow Cookie 认证",
-    "provider_fallback": "OAuth",
-    "authorization_proxy": "授权代理",
-    "authorization_proxy_hint": "可选。留空则使用部署服务器的本机网络出口。",
-    "proxy_default_local": "服务器本机网络",
-    "xai_endpoint_mode": "Grok 调用端点",
-    "xai_endpoint_build": "Grok Build / CLI（订阅额度）",
-    "xai_endpoint_api": "xAI API（API 额度）",
-    "xai_endpoint_build_hint": "使用 Grok Build/CLI 端点并消耗订阅额度；OAuth 默认使用此模式。",
-    "xai_endpoint_api_hint": "使用 api.x.ai，并消耗 xAI API 额度。",
-    "status": "状态",
-    "status_polling": "轮询中",
-    "status_success": "已成功",
-    "status_failed": "失败",
-    "status_waiting": "等待中",
-    "authorization_success": "{{provider}} 授权成功",
-    "authorization_failed": "{{provider}} 授权失败：{{error}}",
-    "start_auth_failed_short": "启动授权失败",
-    "start_auth_failed": "{{provider}} 启���授权失败：{{error}}",
-    "link_copied": "授权链接已复制",
-    "copy_failed": "复制失败",
-    "enter_callback_url": "请输入回调 URL",
-    "enter_callback_code": "请输入 xAI 授权码",
-    "start_authorization_first": "请先开始授权",
-    "callback_submit_success": "回调已提交",
-    "callback_submit_failed": "提交回调失败",
-    "iflow_hint_default": "使用 iFlow Cookie 执行一次性认证导入。",
-    "iflow_hint_success": "导入成功：{{path}}",
-    "iflow_hint_failed": "导入失败：{{error}}",
-    "enter_cookie": "请输入 Cookie",
-    "import_success": "导入成功",
-    "import_failed": "导入失败",
-    "vertex_import_success": "Vertex 凭证导入成功",
-    "vertex_import_failed": "Vertex 凭证导入失败",
-    "start_authorization": "开始授权",
-    "auth_link": "授权链接",
-    "copy_link": "复制",
-    "open_link": "打开",
-    "status_label": "状态：",
-    "remote_callback": "远程回调提交",
-    "callback_code": "xAI 授权码",
-    "callback_code_placeholder": "粘贴 xAI / Grok 页面显示的代码",
-    "callback_code_hint": "在 xAI 页面确认授权后，复制页面显示的一次性代码并在这里提交。",
-    "callback_code_browser_hint": "在 xAI 页面确认授权后，页面会显示一次性代码。复制该代码并在下方提交。",
-    "callback_submitting": "提交中...",
-    "submit_callback": "提交回调",
-    "callback_submitted": "已提交",
-    "importing": "导入中...",
-    "import": "导入",
-    "select_file": "选择文件",
-    "location_placeholder": "location（可选）",
-    "recent_import": "最近导入",
-    "file_label": "文件",
-    "project_id_label": "project_id",
-    "email_label": "email",
-    "location_label": "location",
-    "auth_file_label": "auth_file",
-    "providers": {
-      "codex": {
-        "title": "Codex OAuth",
-        "hint": "启动授权流程后，服务端会自动保存认证文件。"
-      },
-      "anthropic": {
-        "title": "Anthropic OAuth",
-        "hint": "用于 Claude / Anthropic OAuth 登录。"
-      },
-      "antigravity": {
-        "title": "Antigravity OAuth",
-        "hint": "用于 Antigravity 配额 / 能力 OAuth 登录。"
-      },
-      "xai": {
-        "title": "xAI / Grok OAuth",
-        "hint": "用于通过 xAI 原生 OAuth 登录 Grok。"
-      },
-      "gemini_cli": {
-        "title": "Gemini CLI OAuth",
-        "hint": "支持可选 Project ID；留空时由服务端自动选择。"
-      },
-      "kimi": {
-        "title": "Kimi OAuth",
-        "hint": "如果服务端支持，会自动保存认证文件。"
-      },
-      "qwen": {
-        "title": "Qwen OAuth",
-        "hint": "如果服务端支持，会自动保存认证文件。"
-      }
-    }
   },
   "log_content": {
     "copy": "复制",

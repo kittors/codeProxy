@@ -55,7 +55,6 @@ import {
   type DataTableColumnStyle,
   type RowReorderState,
   type ScrollMetrics,
-  type StickyColumnPlacement,
 } from "./dataTableModel";
 import {
   areColumnWidthMapsEqual,
@@ -91,6 +90,14 @@ import {
   hasHorizontalOverflow,
   hasVerticalOverflow,
 } from "./scrollMetrics";
+import {
+  resolveStickyOverlayHeights,
+  StickyBoundaries,
+  StickyRails,
+  syncStickyOverlayHeights,
+  useObservedHeight,
+  useStickyColumnLayout,
+} from "./StickyOverlays";
 import { compareSortValues, isEmptySortValue, moveRow } from "./sortUtils";
 import {
   clampColumnWidth,
@@ -189,6 +196,10 @@ export function DataTable<T>({
   const resizePreviewLineRef = useRef<HTMLDivElement | null>(null);
   const resizePreviewTooltipRef = useRef<HTMLDivElement | null>(null);
   const stickyRailWidthsRef = useRef({ start: 0, end: 0 });
+  const renderedStickyWidthsRef = useRef<ColumnWidthMap>({});
+  // Inputs the fixed-column overlays need while scrolling, kept out of state.
+  const stickyOverlayInputsRef = useRef({ tableHeight: 0, bottomInset: 0 });
+  const tableHeight = useObservedHeight(tableRef);
   const [headerHeight, setHeaderHeight] = useState(0);
   const [scrollTop, setScrollTop] = useState(0);
   const [viewportHeight, setViewportHeight] = useState(480);
@@ -650,6 +661,12 @@ export function DataTable<T>({
       if (endBoundary) {
         endBoundary.style.opacity = String(getStickyEdgeShadowOpacity(metrics, "end"));
       }
+      syncStickyOverlayHeights(root, {
+        ...stickyOverlayInputsRef.current,
+        clientHeight: metrics.clientHeight,
+        headerHeight: headerHeightRef.current,
+        scrollTop: metrics.scrollTop,
+      });
     },
     [naturalFlow],
   );
@@ -1057,8 +1074,9 @@ export function DataTable<T>({
       if (naturalFlow) return;
 
       const columns = orderedColumnsRef.current;
-      const startWidth = resolveStickyRailWidth(columns, widths, "start");
-      const endWidth = resolveStickyRailWidth(columns, widths, "end");
+      const rendered = renderedStickyWidthsRef.current;
+      const startWidth = resolveStickyRailWidth(columns, widths, "start", rendered);
+      const endWidth = resolveStickyRailWidth(columns, widths, "end", rendered);
       stickyRailWidthsRef.current = { start: startWidth, end: endWidth };
 
       const root = rootRef.current;
@@ -1090,7 +1108,7 @@ export function DataTable<T>({
       }
       syncStickyEdgeShadows(scrollMetricsRef.current);
 
-      const placements = resolveStickyColumnPlacements(columns, widths);
+      const placements = resolveStickyColumnPlacements(columns, widths, rendered);
       root.querySelectorAll<HTMLElement>("[data-vt-column-key]").forEach((element) => {
         const key = element.dataset.vtColumnKey;
         const placement = key ? placements[key] : undefined;
@@ -1927,30 +1945,29 @@ export function DataTable<T>({
     // sticky rail insets and bottom chrome stay zeroed.
     return isEmpty ? { vThumb: thumbs.vThumb, hThumb: null } : thumbs;
   }, [headerHeight, isEmpty, scrollMetrics]);
-  const stickyStartRailWidth = useMemo(
-    () => (isEmpty ? 0 : resolveStickyRailWidth(orderedColumns, columnWidths, "start")),
-    [columnWidths, isEmpty, orderedColumns],
-  );
-  const stickyEndRailWidth = useMemo(
-    () => (isEmpty ? 0 : resolveStickyRailWidth(orderedColumns, columnWidths, "end")),
-    [columnWidths, isEmpty, orderedColumns],
-  );
-  stickyRailWidthsRef.current = {
-    start: stickyStartRailWidth,
-    end: stickyEndRailWidth,
-  };
-  const stickyColumnPlacements = useMemo(
-    (): Record<string, StickyColumnPlacement> =>
-      isEmpty ? {} : resolveStickyColumnPlacements(orderedColumns, columnWidths),
-    [columnWidths, isEmpty, orderedColumns],
-  );
+  const stickyLayout = useStickyColumnLayout({
+    headerCellsRef,
+    columns: orderedColumns,
+    widths: columnWidths,
+    isEmpty,
+    measure: !naturalFlow,
+  });
+  const { startWidth: stickyStartRailWidth, endWidth: stickyEndRailWidth } = stickyLayout;
+  const stickyColumnPlacements = stickyLayout.placements;
+  renderedStickyWidthsRef.current = stickyLayout.rendered;
+  stickyRailWidthsRef.current = { start: stickyStartRailWidth, end: stickyEndRailWidth };
   const stickyRailBottomInset = hThumb ? 14 : 0;
   const stickyRailTop = headerHeight;
-  const stickyRailHeight = Math.max(
-    0,
-    scrollMetrics.clientHeight - headerHeight - stickyRailBottomInset,
-  );
-  const stickyBoundaryHeight = Math.max(0, scrollMetrics.clientHeight - stickyRailBottomInset);
+  stickyOverlayInputsRef.current = { tableHeight, bottomInset: stickyRailBottomInset };
+  // Rendered as if scrolled to the top, so an overlay is never skipped while it
+  // should show; syncStickyEdgeShadows applies the live scroll position.
+  const stickyOverlayHeights = resolveStickyOverlayHeights({
+    clientHeight: scrollMetrics.clientHeight,
+    headerHeight,
+    bottomInset: stickyRailBottomInset,
+    tableHeight,
+    scrollTop: 0,
+  });
   const stickyStartShadowOpacity = getStickyEdgeShadowOpacity(scrollMetrics, "start");
   const stickyEndShadowOpacity = getStickyEdgeShadowOpacity(scrollMetrics, "end");
   const stickyStartBoundaryLeft = Math.max(0, stickyStartRailWidth);
@@ -1959,6 +1976,10 @@ export function DataTable<T>({
     scrollMetrics.clientWidth - stickyEndRailWidth - STICKY_EDGE_SHADOW_WIDTH,
   );
   const stickyEndRailLeft = Math.max(0, scrollMetrics.clientWidth - stickyEndRailWidth);
+  // Render writes top-of-scroll heights; re-apply the live scroll position before paint.
+  useLayoutEffect(() => {
+    syncStickyEdgeShadows(scrollMetricsRef.current);
+  }, [stickyOverlayHeights.boundary, stickyOverlayHeights.rail, syncStickyEdgeShadows]);
 
   // Empty tables should not inherit the wide minWidth / fixed column widths
   // that data rows need; otherwise the empty body scrolls horizontally for
@@ -2037,30 +2058,13 @@ export function DataTable<T>({
           : `${height} ${minHeight} group relative isolate grid min-w-0 overflow-hidden rounded-xl ${vThumb ? "grid-cols-[minmax(0,1fr)_0.75rem]" : "grid-cols-1"}`
       }
     >
-      {!naturalFlow && stickyStartRailWidth > 0 && stickyRailHeight > 0 ? (
-        <div
-          data-vt-sticky-start-rail
-          aria-hidden="true"
-          className="pointer-events-none absolute z-0 hidden bg-surface md:block"
-          style={{
-            left: 0,
-            top: stickyRailTop,
-            width: stickyStartRailWidth,
-            height: stickyRailHeight,
-          }}
-        />
-      ) : null}
-      {!naturalFlow && stickyEndRailWidth > 0 && stickyRailHeight > 0 ? (
-        <div
-          data-vt-sticky-end-rail
-          aria-hidden="true"
-          className="pointer-events-none absolute z-0 hidden bg-surface md:block"
-          style={{
-            left: stickyEndRailLeft,
-            top: stickyRailTop,
-            width: stickyEndRailWidth,
-            height: stickyRailHeight,
-          }}
+      {!naturalFlow ? (
+        <StickyRails
+          startWidth={stickyStartRailWidth}
+          endWidth={stickyEndRailWidth}
+          endLeft={stickyEndRailLeft}
+          top={stickyRailTop}
+          height={stickyOverlayHeights.rail}
         />
       ) : null}
       {/* Viewport-fixed header plate: only as wide as the table viewport, not content.
@@ -2551,30 +2555,15 @@ export function DataTable<T>({
         </div>
       </div>
 
-      {!naturalFlow && stickyStartRailWidth > 0 && stickyBoundaryHeight > 0 ? (
-        <div
-          data-vt-sticky-start-boundary
-          aria-hidden="true"
-          className="pointer-events-none absolute top-0 z-[75] hidden bg-gradient-to-r from-slate-950/[0.07] to-transparent transition-opacity duration-150 md:block dark:from-black/35"
-          style={{
-            left: stickyStartBoundaryLeft,
-            width: STICKY_EDGE_SHADOW_WIDTH,
-            height: stickyBoundaryHeight,
-            opacity: stickyStartShadowOpacity,
-          }}
-        />
-      ) : null}
-      {!naturalFlow && stickyEndRailWidth > 0 && stickyBoundaryHeight > 0 ? (
-        <div
-          data-vt-sticky-end-boundary
-          aria-hidden="true"
-          className="pointer-events-none absolute top-0 z-[75] hidden bg-gradient-to-l from-slate-950/[0.07] to-transparent transition-opacity duration-150 md:block dark:from-black/35"
-          style={{
-            left: stickyEndBoundaryLeft,
-            width: STICKY_EDGE_SHADOW_WIDTH,
-            height: stickyBoundaryHeight,
-            opacity: stickyEndShadowOpacity,
-          }}
+      {!naturalFlow ? (
+        <StickyBoundaries
+          startWidth={stickyStartRailWidth}
+          endWidth={stickyEndRailWidth}
+          startLeft={stickyStartBoundaryLeft}
+          endLeft={stickyEndBoundaryLeft}
+          height={stickyOverlayHeights.boundary}
+          startOpacity={stickyStartShadowOpacity}
+          endOpacity={stickyEndShadowOpacity}
         />
       ) : null}
 

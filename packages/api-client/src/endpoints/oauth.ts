@@ -1,6 +1,7 @@
 import { apiClient } from "../client/client";
 import type {
   IFlowCookieAuthResponse,
+  OAuthAuthStatusResponse,
   OAuthCallbackResponse,
   OAuthProvider,
   OAuthStartResponse,
@@ -12,6 +13,7 @@ const WEBUI_SUPPORTED: OAuthProvider[] = [
   "antigravity",
   "xai",
   "gemini-cli",
+  "iflow",
 ];
 const CALLBACK_PROVIDER_MAP: Partial<Record<OAuthProvider, string>> = {
   "gemini-cli": "gemini",
@@ -21,6 +23,12 @@ export interface OAuthProxyOptions {
   projectId?: string;
   proxyId?: string;
   usingApi?: boolean;
+  /**
+   * Claude only: "code" redirects to Anthropic's code page instead of a
+   * localhost forwarder, so a remote panel never sends the browser to a page it
+   * cannot open. Older servers ignore it and the issued URL says which one ran.
+   */
+  callbackMode?: "code";
 }
 
 export type OAuthCallbackSubmission =
@@ -49,6 +57,9 @@ export const oauthApi = {
     if (provider === "xai") {
       params.using_api = options?.usingApi === true;
     }
+    if (provider === "anthropic" && options?.callbackMode === "code") {
+      params.callback_mode = "code";
+    }
     if (proxyId) {
       params.proxy_id = proxyId;
     }
@@ -57,7 +68,7 @@ export const oauthApi = {
     });
   },
   getAuthStatus: (state: string) =>
-    apiClient.get<{ status: "ok" | "wait" | "error"; error?: string }>(
+    apiClient.get<OAuthAuthStatusResponse>(
       "/get-auth-status",
       {
         params: { state },

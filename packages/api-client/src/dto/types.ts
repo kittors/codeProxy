@@ -381,11 +381,34 @@ export type OAuthProvider =
   | "xai"
   | "gemini-cli"
   | "kimi"
-  | "qwen";
+  | "qwen"
+  | "iflow";
+
+/**
+ * How a started login completes. `redirect`: the browser lands on a localhost
+ * callback whose address is pasted back on remote deployments. `code`: the
+ * provider's page shows a code to paste. `device`: approve a user code, nothing
+ * to paste. Servers older than CliRelay#1127 omit it, so callers infer it.
+ */
+export type OAuthLoginFlow = "redirect" | "code" | "device";
 
 export interface OAuthStartResponse {
   url: string;
   state?: string;
+  flow?: OAuthLoginFlow;
+  /** RFC 3339 time the login stops accepting a callback. */
+  expires_at?: string;
+  /** Device flow only. */
+  user_code?: string;
+  verification_uri?: string;
+  expires_in?: number;
+}
+
+export interface OAuthAuthStatusResponse {
+  status: "ok" | "wait" | "error";
+  error?: string;
+  /** Machine-readable reason, e.g. `oauth_login_expired` (CliRelay#1127+). */
+  code?: string;
 }
 
 export interface OAuthCallbackResponse {

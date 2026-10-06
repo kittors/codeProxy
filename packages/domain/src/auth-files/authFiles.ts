@@ -27,7 +27,6 @@ import {
 
 export type AuthFileModelItem = { id: string; display_name?: string; type?: string; owned_by?: string };
 export type AuthFileModelOwnerGroup = { value: string; label: string; description: string; models: AuthFileModelItem[] };
-export type OAuthDialogTab = "codex" | "anthropic" | "antigravity" | "gemini-cli" | "kimi" | "qwen" | "iflow" | "vertex";
 
 export const AUTH_FILES_PAGE_SIZE = 9;
 export const MAX_AUTH_FILE_SIZE = 50 * 1024;

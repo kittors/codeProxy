@@ -44,7 +44,6 @@ import type {
   AuthFileStatusFilter,
   AuthFilesCardColumns,
   FilesViewMode,
-  OAuthDialogTab,
   QuotaAutoRefreshMs,
   UsageIndex,
 } from "@code-proxy/domain";
@@ -539,7 +538,8 @@ interface AuthFilesFilesTabProps {
   refreshingAll: boolean;
   uploading: boolean;
   uploadProgress: AuthFilesUploadProgress;
-  setOauthDialogDefaultTab: (tab: OAuthDialogTab) => void;
+  /** Preselects the provider for the add-account dialog from the current filter. */
+  setAddAccountHint: (hint: string) => void;
   setOauthDialogOpen: (open: boolean) => void;
   openConfigModal: () => void;
   selectableFilteredFiles: AuthFileItem[];
@@ -650,7 +650,7 @@ export function AuthFilesFilesTab({
   refreshingAll,
   uploading,
   uploadProgress,
-  setOauthDialogDefaultTab,
+  setAddAccountHint,
   setOauthDialogOpen,
   openConfigModal,
   selectableFilteredFiles,
@@ -1367,17 +1367,7 @@ export function AuthFilesFilesTab({
                     setJsonImportOpen(true);
                   }}
                   onAddOAuth={() => {
-                    const normalized = normalizeProviderKey(filter);
-                    const oauthTab =
-                      normalized === "codex" ||
-                      normalized === "anthropic" ||
-                      normalized === "antigravity" ||
-                      normalized === "gemini-cli" ||
-                      normalized === "kimi" ||
-                      normalized === "qwen"
-                        ? (normalized as OAuthDialogTab)
-                        : "codex";
-                    setOauthDialogDefaultTab(oauthTab);
+                    setAddAccountHint(normalizeProviderKey(filter));
                     setOauthDialogOpen(true);
                   }}
                   uploading={uploading}
