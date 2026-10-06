@@ -76,6 +76,8 @@
     "rollup": "^4.62.2",
     "esbuild": "^0.28.1",
     "picomatch": "^4.0.5",
-    "browserslist": "^4.28.7"
+    "browserslist": "^4.28.7",
+    "source-map-js": "^1.2.2",
+    "tinypool": "^2.2.0"
   }
 }

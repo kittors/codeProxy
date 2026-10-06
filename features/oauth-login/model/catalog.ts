@@ -17,8 +17,17 @@ export type AccountGroup = "browser" | "device" | "import";
 /**
  * How an account gets in. `oauth` is the browser or device login the server
  * drives; the others hand over a credential the operator already has.
+ * `session` / `refresh-token` / `sso-cookie` are the credential imports that
+ * exchange a held credential for the same tokens a browser login would mint.
  */
-export type AccountMethod = "oauth" | "cookie" | "service-account" | "auth-file";
+export type AccountMethod =
+  | "oauth"
+  | "cookie"
+  | "service-account"
+  | "auth-file"
+  | "session"
+  | "refresh-token"
+  | "sso-cookie";
 
 export interface AccountProvider {
   id: AccountProviderId;
@@ -48,7 +57,7 @@ export const ACCOUNT_PROVIDERS: readonly AccountProvider[] = [
     group: "browser",
     icon: "codex",
     copyKey: "codex",
-    methods: ["oauth"],
+    methods: ["oauth", "refresh-token"],
     oauth: "codex",
     callbackHint: "http://localhost:1455/auth/callback",
   },
@@ -57,7 +66,7 @@ export const ACCOUNT_PROVIDERS: readonly AccountProvider[] = [
     group: "browser",
     icon: "claude",
     copyKey: "anthropic",
-    methods: ["oauth"],
+    methods: ["oauth", "session"],
     oauth: "anthropic",
     callbackHint: "http://localhost:54545/callback",
   },
@@ -76,7 +85,7 @@ export const ACCOUNT_PROVIDERS: readonly AccountProvider[] = [
     group: "browser",
     icon: "antigravity",
     copyKey: "antigravity",
-    methods: ["oauth"],
+    methods: ["oauth", "refresh-token"],
     oauth: "antigravity",
     callbackHint: "http://localhost:51121/oauth-callback",
   },
@@ -85,7 +94,7 @@ export const ACCOUNT_PROVIDERS: readonly AccountProvider[] = [
     group: "browser",
     icon: "grok",
     copyKey: "xai",
-    methods: ["oauth"],
+    methods: ["oauth", "sso-cookie"],
     oauth: "xai",
     callbackHint: "http://127.0.0.1:56121/callback",
     endpointMode: true,
