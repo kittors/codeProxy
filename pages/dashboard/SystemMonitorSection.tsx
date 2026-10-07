@@ -29,7 +29,7 @@ import {
   usageLevel,
   type MonitorHue,
   type UsageLevel,
-} from "./systemMonitorVisuals";
+} from "@features/monitor-widgets/monitorVisuals";
 
 const PANEL_SURFACE = surface({ tone: "panel", radius: "2xl" });
 

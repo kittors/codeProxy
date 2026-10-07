@@ -757,6 +757,29 @@ html.theme-transition-lock *::after {
   }
 }
 
+/* 监控中心的迷你趋势线首次出现时从左到右展开（裁剪而不是缩放，线宽不会被拉变形） */
+@keyframes monitor-sparkline-reveal {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+/* 实时状态点外圈的呼吸光晕 */
+@keyframes monitor-live-ping {
+  0% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  80%,
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+
 /* 骨架屏微光：只改透明度，避免 background-position 动画在长列表里造成重绘压力 */
 @keyframes skeleton-sweep {
   0%,

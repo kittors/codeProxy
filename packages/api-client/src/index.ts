@@ -71,6 +71,16 @@ export { configApi } from "./endpoints/config";
 export type * from "./endpoints/config";
 export { usageApi } from "./endpoints/usage";
 export type * from "./endpoints/usage";
+export {
+  MONITOR_RANGE_KEYS,
+  buildMonitorQueryString,
+  emptyMonitorTotals,
+  normalizeMonitorOverview,
+  normalizeMonitorRealtime,
+  normalizeMonitorTotals,
+  usageMonitorApi,
+} from "./endpoints/usage-monitor";
+export type * from "./endpoints/usage-monitor";
 export { providersApi } from "./endpoints/providers";
 export { configFileApi } from "./endpoints/config-file";
 export { logsApi } from "./endpoints/logs";
