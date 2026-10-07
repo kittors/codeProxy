@@ -26,6 +26,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { ToggleSwitch } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
 import { CodexRecommendationsModal } from "./CodexRecommendationsModal";
+import { codexFromRecommendation } from "./codexRecommendation";
 import {
   Field,
   KeyValueList,
@@ -319,42 +320,6 @@ function mergeProviderStatus(
     kimi: input?.kimi ?? EMPTY_PROVIDER_STATUS.kimi,
     antigravity: input?.antigravity ?? EMPTY_PROVIDER_STATUS.antigravity,
   };
-}
-
-function withoutManagedCodexBetaFeatures(headers: Record<string, string> | undefined) {
-  return Object.fromEntries(
-    Object.entries(headers ?? {}).filter(([key]) => key.toLowerCase() !== "x-codex-beta-features"),
-  );
-}
-
-function readManagedCodexBetaFeatures(headers: Record<string, string> | undefined) {
-  return Object.entries(headers ?? {}).find(
-    ([key]) => key.toLowerCase() === "x-codex-beta-features",
-  )?.[1];
-}
-
-function codexFromRecommendation(
-  current: Required<CodexIdentityFingerprint>,
-  recommendation: CodexFingerprintRecommendation,
-): Required<CodexIdentityFingerprint> {
-  const recommended = recommendation.recommended;
-  const betaFeatures =
-    recommended["x-codex-beta-features"] ||
-    readManagedCodexBetaFeatures(recommended["custom-headers"]);
-  const nextCustomHeaders = withoutManagedCodexBetaFeatures(recommended["custom-headers"]);
-  const next: Required<CodexIdentityFingerprint> = {
-    ...current,
-    enabled: true,
-    "session-mode": recommended["session-mode"] ?? "per-request",
-    "session-id": "",
-    "custom-headers": nextCustomHeaders,
-  };
-  if (recommended["user-agent"]) next["user-agent"] = recommended["user-agent"];
-  if (recommended.version) next.version = recommended.version;
-  if (recommended.originator) next.originator = recommended.originator;
-  if (recommended["websocket-beta"]) next["websocket-beta"] = recommended["websocket-beta"];
-  if (betaFeatures) next["x-codex-beta-features"] = betaFeatures;
-  return next;
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {

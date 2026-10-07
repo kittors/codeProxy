@@ -1,4 +1,5 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -131,5 +132,46 @@ describe("ErrorDetailModal", () => {
     expect(screen.getByText("context canceled")).toBeInTheDocument();
     expect(screen.getByText("完整响应")).toBeInTheDocument();
     expect(mocks.getLogContentPart).not.toHaveBeenCalled();
+  });
+
+  test("is a labelled dialog with a copy button for the full response and closes on Escape", async () => {
+    await i18n.changeLanguage("zh-CN");
+    mocks.getLogContent.mockResolvedValue({
+      id: 54001,
+      model: "gpt-5",
+      input_content: "",
+      output_content: '{"error":{"message":"rate limited"}}',
+    });
+    const onClose = vi.fn();
+
+    render(
+      <ThemeProvider>
+        <ErrorDetailModal open logId={54001} model="gpt-5" onClose={onClose} />
+      </ThemeProvider>,
+    );
+
+    // 通用 Modal：标题即对话框名称，Esc 走统一的叠层栈。
+    const dialog = await screen.findByRole("dialog", { name: "请求失败 · gpt-5" });
+    expect(await within(dialog).findByText("rate limited")).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "复制完整响应" })).toBeInTheDocument();
+
+    await userEvent.keyboard("{Escape}");
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  test("shows a load failure as an alert instead of an empty state", async () => {
+    await i18n.changeLanguage("zh-CN");
+    mocks.getLogContent.mockRejectedValue(new Error("403 forbidden"));
+
+    render(
+      <ThemeProvider>
+        <ErrorDetailModal open logId={54002} onClose={() => {}} />
+      </ThemeProvider>,
+    );
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("加载失败");
+    expect(alert).toHaveTextContent("403 forbidden");
+    expect(screen.queryByText("该历史请求未记录上游错误响应")).not.toBeInTheDocument();
   });
 });

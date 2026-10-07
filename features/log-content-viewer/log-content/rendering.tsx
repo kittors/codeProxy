@@ -1,22 +1,20 @@
-import { createPortal } from "react-dom";
-import { Suspense, lazy, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Suspense, lazy, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { AnimatePresence, motion } from "framer-motion";
 import {
   Bot,
   Brain,
   ChevronDown,
   ClipboardList,
   MessageSquare,
+  ScrollText,
   Settings,
   Upload,
   User,
   Wrench,
-  X,
   Zap,
 } from "lucide-react";
-import { overlayBackdropVariants, overlayPanelVariants, surface } from "@code-proxy/ui";
+import { Modal, surface } from "@code-proxy/ui";
 
 const LARGE_TEXT_CHAR_THRESHOLD = 50_000;
 const LARGE_TEXT_LINE_THRESHOLD = 400;
@@ -111,9 +109,9 @@ const ROLE_STYLES: Record<
 const DEFAULT_STYLE = {
   labelKey: "log_content.role_message",
   icon: <MessageSquare size={15} />,
-  border: "border-slate-300/50 dark:border-neutral-700",
-  headerBg: "bg-slate-50 dark:bg-neutral-800/60",
-  headerText: "text-slate-700 dark:text-slate-300",
+  border: "border-line-strong",
+  headerBg: "bg-subtle",
+  headerText: "text-ink-2",
 };
 
 function cleanContent(raw: string): string {
@@ -125,16 +123,13 @@ const PROSE_CLASSES = `prose prose-sm dark:prose-invert max-w-none break-words l
   prose-h1:text-lg prose-h2:text-base prose-h3:text-sm
   prose-p:my-2 prose-p:leading-relaxed
   prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5
-  prose-code:rounded-md prose-code:bg-slate-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:text-sm prose-code:font-mono prose-code:text-slate-700 prose-code:before:content-none prose-code:after:content-none
-  dark:prose-code:bg-neutral-800 dark:prose-code:text-slate-300
+  prose-code:rounded-md prose-code:bg-selected prose-code:px-1.5 prose-code:py-0.5 prose-code:text-sm prose-code:font-mono prose-code:text-ink-2 prose-code:before:content-none prose-code:after:content-none
   prose-pre:rounded-lg prose-pre:bg-slate-900 prose-pre:text-xs dark:prose-pre:bg-neutral-900
   prose-strong:font-semibold
-  prose-blockquote:border-l-2 prose-blockquote:border-slate-300 dark:prose-blockquote:border-neutral-600
+  prose-blockquote:border-l-2 prose-blockquote:border-line-strong
   prose-table:border-collapse prose-table:text-sm prose-table:w-full
-  prose-th:border prose-th:border-slate-300 prose-th:bg-slate-100 prose-th:px-3 prose-th:py-2 prose-th:text-left prose-th:font-semibold
-  dark:prose-th:border-neutral-700 dark:prose-th:bg-neutral-800
-  prose-td:border prose-td:border-slate-300 prose-td:px-3 prose-td:py-2
-  dark:prose-td:border-neutral-700`;
+  prose-th:border prose-th:border-line prose-th:bg-subtle prose-th:px-3 prose-th:py-2 prose-th:text-left prose-th:font-semibold
+  prose-td:border prose-td:border-line prose-td:px-3 prose-td:py-2`;
 
 function MarkdownBlock({ text }: { text: string }) {
   return (
@@ -146,11 +141,11 @@ function MarkdownBlock({ text }: { text: string }) {
 
 function TagBadge({ name, content }: { name: string; content: string }) {
   return (
-    <div className="flex items-baseline gap-2 rounded-lg bg-slate-50 px-3 py-2 dark:bg-neutral-800/50">
-      <code className="shrink-0 rounded bg-slate-200/70 px-1.5 py-0.5 font-mono text-xs text-slate-500 dark:bg-neutral-700 dark:text-slate-400">
+    <div className="flex items-baseline gap-2 rounded-lg bg-subtle px-3 py-2">
+      <code className="shrink-0 rounded bg-selected px-1.5 py-0.5 font-mono text-xs text-ink-3">
         {name}
       </code>
-      <span className="text-sm text-slate-700 dark:text-slate-200">{content}</span>
+      <span className="text-sm text-ink-2">{content}</span>
     </div>
   );
 }
@@ -166,13 +161,13 @@ function TagSection({
 }) {
   const [expanded, setExpanded] = useState(defaultExpanded);
   return (
-    <div className="overflow-hidden rounded-lg border border-slate-900/8 dark:border-neutral-700/60">
+    <div className="overflow-hidden rounded-lg border border-line">
       <button
         type="button"
         onClick={() => setExpanded((prev) => !prev)}
-        className="flex w-full items-center gap-2 bg-slate-50 px-3.5 py-2 text-left text-xs font-medium text-slate-500 transition-colors hover:bg-slate-100 dark:bg-neutral-800/50 dark:text-slate-400 dark:hover:bg-neutral-800/80"
+        className="flex w-full items-center gap-2 bg-subtle px-3.5 py-2 text-left text-xs font-medium text-ink-3 transition-colors hover:bg-hover"
       >
-        <code className="shrink-0 rounded bg-slate-200/70 px-1.5 py-0.5 font-mono text-xs text-slate-600 dark:bg-neutral-700 dark:text-slate-300">
+        <code className="shrink-0 rounded bg-selected px-1.5 py-0.5 font-mono text-xs text-ink-2">
           {name}
         </code>
         <span className="flex-1" />
@@ -182,7 +177,7 @@ function TagSection({
         />
       </button>
       {expanded && (
-        <div className="border-t border-inherit px-3.5 py-3 text-sm text-slate-800 dark:text-slate-200">
+        <div className="border-t border-inherit px-3.5 py-3 text-sm text-ink">
           <MarkdownContent content={content} />
         </div>
       )}
@@ -323,7 +318,7 @@ export function MessageBlock({
         />
       </button>
       {expanded && (
-        <div className="border-t border-inherit px-4 py-3 text-sm text-slate-800 dark:text-slate-200">
+        <div className="border-t border-inherit px-4 py-3 text-sm text-ink">
           <MarkdownContent content={content} />
         </div>
       )}
@@ -341,7 +336,7 @@ export function PlainPre({ text }: { text: string }) {
   }
 
   return (
-    <pre className={[surface({ tone: "inset", radius: "xl" }), "whitespace-pre-wrap break-words p-4 text-xs leading-relaxed font-mono dark:text-slate-200"].join(" ")}>
+    <pre className={[surface({ tone: "inset", radius: "xl" }), "whitespace-pre-wrap break-words p-4 text-xs leading-relaxed font-mono text-ink"].join(" ")}>
       {text}
     </pre>
   );
@@ -379,7 +374,7 @@ function VirtualPlainPre({ rows }: { rows: string[] }) {
   return (
     <div
       ref={parentRef}
-      className={[surface({ tone: "inset", radius: "xl" }), "h-[min(58vh,620px)] overflow-y-auto overscroll-contain text-xs leading-relaxed font-mono [contain:layout_paint] dark:text-slate-200"].join(" ")}
+      className={[surface({ tone: "inset", radius: "xl" }), "h-[min(58vh,620px)] overflow-y-auto overscroll-contain text-xs leading-relaxed font-mono [contain:layout_paint] text-ink"].join(" ")}
     >
       <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
         {virtualRows.map((virtualRow) => (
@@ -464,6 +459,12 @@ function VirtualMessageList({ messages }: { messages: { role: string; content: s
   );
 }
 
+/**
+ * 请求内容查看器的外壳：通用 Modal（叠层、焦点、进退场与全站一致，不再自己监听 Esc）。
+ *
+ * 请求内容动辄是长 JSON 或几十轮消息，宽度用编辑器档（2xl，与原来的 1040px 相当）；
+ * 面板高度固定，切换页签、加载前后不跳动，内容区在里面自己滚动。页签条放在正文顶部。
+ */
 export function ContentModal({
   open,
   model,
@@ -475,74 +476,26 @@ export function ContentModal({
   open: boolean;
   model: string;
   onClose: () => void;
-  children: React.ReactNode;
-  tabs?: React.ReactNode;
+  children: ReactNode;
+  tabs?: ReactNode;
   description?: string;
 }) {
   const { t } = useTranslation();
-
-  useEffect(() => {
-    if (!open) return;
-    const h = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", h);
-    return () => window.removeEventListener("keydown", h);
-  }, [onClose, open]);
-
-  return createPortal(
-    <AnimatePresence>
-      {open ? (
-        <motion.div
-          key="log-content-modal"
-          className="fixed inset-0 z-[200] flex items-center justify-center p-4"
-          initial="hidden"
-          animate="show"
-          exit="exit"
-        >
-          <motion.button
-            type="button"
-            onClick={onClose}
-            aria-label={t("common.close")}
-            className="absolute inset-0 cursor-default bg-black/25 dark:bg-black/55"
-            variants={overlayBackdropVariants}
-          />
-          <motion.div
-            role="dialog"
-            aria-modal="true"
-            className="relative z-10 flex h-[min(82dvh,760px)] w-[min(calc(100vw-2rem),1040px)] max-w-none flex-col overflow-hidden rounded-3xl bg-elevated text-ink shadow-dialog"
-            // 与通用弹窗同一套进出场节奏（packages/ui 的 overlayMotion）。
-            variants={overlayPanelVariants}
-          >
-            <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-900/8 px-5 py-4 dark:border-white/8">
-              <div className="min-w-0">
-                <h2 className="truncate text-base font-semibold tracking-tight text-slate-900 dark:text-white">
-                  {t("log_content.message_content")}
-                  {model ? ` · ${model}` : ""}
-                </h2>
-                <p className="mt-1 text-sm text-slate-500 dark:text-white/50">
-                  {description || t("log_content.title")}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={onClose}
-                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-0 bg-transparent p-0 text-slate-500 shadow-none transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
-                aria-label={t("common.close")}
-              >
-                <X size={16} />
-              </button>
-            </div>
-            {tabs ? (
-              <div className="shrink-0 border-b border-slate-100 bg-white px-5 py-2 dark:border-white/8 dark:bg-neutral-950">
-                {tabs}
-              </div>
-            ) : null}
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-5 py-4">{children}</div>
-          </motion.div>
-        </motion.div>
-      ) : null}
-    </AnimatePresence>,
-    document.body,
+  return (
+    <Modal
+      open={open}
+      title={model ? `${t("log_content.message_content")} · ${model}` : t("log_content.message_content")}
+      description={description || t("log_content.title")}
+      icon={<ScrollText />}
+      size="2xl"
+      panelClassName="h-[min(82dvh,760px)]"
+      bodyHeightClassName="flex-1"
+      bodyOverflowClassName="overflow-hidden"
+      bodyClassName="flex flex-col gap-4"
+      onClose={onClose}
+    >
+      {tabs ? <div className="shrink-0">{tabs}</div> : null}
+      <div className="flex min-h-0 flex-1 flex-col">{children}</div>
+    </Modal>
   );
 }

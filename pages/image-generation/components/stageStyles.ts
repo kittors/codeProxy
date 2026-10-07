@@ -22,13 +22,15 @@ export function imageStageClassName({
     ? "h-auto"
     : hasUploads
       ? "h-[clamp(220px,34vh,320px)] sm:h-[clamp(240px,36vh,360px)]"
-      : "h-[clamp(240px,42vh,400px)] sm:h-[clamp(280px,44vh,440px)]";
+      : "h-[clamp(240px,42vh,400px)] sm:h-[clamp(260px,38vh,440px)]";
 
+  // 只用语义令牌：失败和面板里的危险提示条同一种样子（玫红淡底 + 中性正文），
+  // 画布和其它凹陷区域一样用 subtle 底。
   const tone = failed
-    ? "border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-100"
+    ? "border-rose-500/20 bg-rose-500/[0.08] text-ink-2"
     : hasImage
-      ? "border-slate-900/8 bg-slate-100 dark:border-white/8 dark:bg-black"
-      : "border-slate-900/8 bg-slate-50 text-slate-500 dark:border-white/8 dark:bg-neutral-900 dark:text-white/55";
+      ? "border-line bg-subtle"
+      : "border-line bg-subtle text-ink-3";
 
   return ["relative overflow-hidden rounded-2xl border transition-all duration-200", size, tone].join(" ");
 }

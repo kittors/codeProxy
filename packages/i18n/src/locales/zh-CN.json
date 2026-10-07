@@ -2344,7 +2344,6 @@
     "test_hint": "测试调用会自动轮询当前可用渠道。",
     "generate_button": "生成图片",
     "generating_button": "生成中...",
-    "send_button": "发送",
     "preview_alt": "{{model}} 预览",
     "idle_hint": "输入提示词后开始生成图片",
     "idle_hint_edits": "上传图片并输入提示词后开始生成图片",
@@ -2365,7 +2364,10 @@
     "provider": "渠道",
     "model": "模型",
     "model_placeholder": "选择模型",
-    "tab_label": "图片生成"
+    "tab_label": "图片生成",
+    "test_modal_desc": "选好模型和参数、写下提示词，试生成一张图片；上传参考图则按图生图处理。",
+    "test_shortcut": "⌘ / Ctrl + Enter 生成图片",
+    "reference_image_hint": "可选。上传后按图生图处理，最多 {{max}} 张。"
   },
   "identity_fingerprint": {
     "title": "身份指纹",
@@ -2476,7 +2478,6 @@
     "recommend_apply": "应用",
     "recommend_apply_selected": "应用并保存",
     "recommend_confirm_title": "应用这条推荐指纹？",
-    "recommend_confirm_desc": "将把 {{originator}} {{version}} 的推荐值保存为当前生效的 Codex 指纹。",
     "recommend_apply_confirm": "应用并保存",
     "recommend_table_caption": "近期 Codex 终端指纹候选",
     "recommend_empty": "近期请求里还没有可生成的 Codex 指纹",
@@ -2527,7 +2528,14 @@
     "kimi_device_id": "设备 ID",
     "kimi_device_hint": "留空则沿用运行主机的值；设备 ID 只从真实客户端学习，不支持预设。",
     "kimi_device_placeholder": "留空 = 沿用主机值",
-    "kimi_custom_headers_hint": "JSON 对象。Kimi 受管头（X-Msh-*）不可通过自定义头覆盖。"
+    "kimi_custom_headers_hint": "JSON 对象。Kimi 受管头（X-Msh-*）不可通过自定义头覆盖。",
+    "recommend_modal_loading": "正在检查近 {{days}} 天的请求…",
+    "recommend_confirm_lead": "保存后立即作为当前生效的 Codex 指纹。",
+    "recommend_confirm_enables": "Codex 身份指纹会同时被启用。",
+    "recommend_confirm_overwrites": "会覆盖当前的 {{fields}}。",
+    "recommend_confirm_overwrites_more": "会覆盖当前的 {{fields}} 等 {{count}} 项。",
+    "recommend_confirm_no_diff": "所有值都与当前一致，只会重新保存一次。",
+    "recommend_confirm_custom_headers": "自定义请求头会换成这条推荐里的值，原来的不会保留。"
   },
   "ui": {
     "loading": "加载中…",
@@ -3169,7 +3177,6 @@
     "refreshing": "刷新中…",
     "not_refreshed": "尚未刷新",
     "clear_database_logs": "清空数据库日志",
-    "clear_database_logs_keep_records_hint": "推荐默认项：清理正文和请求详情，但保留请求记录、Token/费用统计，以及请求日志列表本身。",
     "clear_database_logs_confirm_button": "清理所选数据",
     "clear_database_logs_success_content": "已清理请求日志正文内容，并保留请求记录",
     "clear_database_logs_success_records": "已从数据库清理 {{count}} 条请求日志记录",
@@ -3208,7 +3215,13 @@
     "no_data_desc": "调整时间范围或筛选条件后再试",
     "calls_count": "{{formattedCount}} 次调用",
     "calls_sorted_hint": "按当前日志范围内的调用次数排序",
-    "unrestricted": "不限"
+    "unrestricted": "不限",
+    "clear_database_logs_title": "清空数据库日志？",
+    "clear_database_logs_lead": "勾选要清理的数据，清理后无法恢复。",
+    "clear_scope_title": "当前租户的全部请求日志",
+    "clear_scope_hint": "不受当前筛选条件和时间范围影响",
+    "clear_consequence_records": "请求记录会一起删除：列表、记录条数、Token、成功率和费用统计都会清空。",
+    "clear_consequence_content": "勾选的正文和详情会立即删除，之后打开这些请求看不到对应内容；请求记录与统计保留。"
   },
   "ccswitch": {
     "import_to_ccswitch": "导入到 CC Switch",
@@ -4904,7 +4917,8 @@
     "role_function_return": "函数返回",
     "role_thinking": "思考",
     "role_tool_use": "工具调用",
-    "role_message": "消息"
+    "role_message": "消息",
+    "details_only_desc": "未开启请求正文存储，只能查看这次请求的地址、请求头和状态。"
   },
   "error_detail": {
     "upstream_error": "上游 API 错误响应",
@@ -4913,7 +4927,8 @@
     "full_response": "完整响应",
     "no_content": "该历史日志未记录上游错误响应，也无法从请求详情还原失败原因。新的失败日志会保存错误详情。",
     "load_failed": "加载失败",
-    "request_failed": "请求失败"
+    "request_failed": "请求失败",
+    "copy_response": "复制完整响应"
   },
   "system_page": {
     "title": "系统信息",
@@ -5433,26 +5448,26 @@
     "new_user_desc": "对方用这里的用户名和密码登录管理端，能看到什么由分配的角色决定。",
     "user_section_account": "账号",
     "user_section_account_desc": "用户名用于登录；显示名称会出现在列表和审计记录里。",
-    "user_section_password_desc": "首次登录时，他需要先改成自己的密码。",
+    "user_section_password_desc": "首次登录时，对方需要先改成自己的密码。",
     "password_mode_auto_desc": "由服务器生成强密码，创建后只显示这一次，请复制给对方。",
     "password_mode_manual_desc": "由你设定一个密码，再转告对方。",
-    "user_section_roles_desc": "角色决定他能看到的页面和能做的操作，之后也可以在列表里调整。",
+    "user_section_roles_desc": "角色决定对方能看到的页面和能做的操作，之后也可以在列表里调整。",
     "user_roles_hint": "只列出你能委托的角色（你自己拥有它的全部权限）。",
     "user_roles_none_assignable": "暂时没有你可以委托的角色。",
     "reset_password_desc": "为 {{name}}（{{username}}）设置一个新密码。",
-    "reset_password_effects": "保存后他的所有登录会立即失效；用新密码登录时，需要先改成自己的密码。",
+    "reset_password_effects": "保存后这个账号的所有登录会立即失效；用新密码登录时，需要先改成自己的密码。",
     "save_roles": "保存角色",
     "roles_locked_self": "不能修改你自己的角色。",
     "roles_locked_super_admin": "超级管理员的角色受保护，不能修改。",
     "roles_locked_tenant_admin": "租户管理员的角色受保护，不能在这里修改。",
-    "initial_password_handover": "把用户名和初始密码交给对方；他首次登录时需要改成自己的密码。",
-    "disable_user_lead": "停用后他无法再登录管理端。",
-    "disable_user_consequence_sessions": "他当前的登录会立即失效。",
+    "initial_password_handover": "把用户名和初始密码交给对方，首次登录时需要改成自己的密码。",
+    "disable_user_lead": "停用后这个账号无法再登录管理端。",
+    "disable_user_consequence_sessions": "当前的所有登录会立即失效。",
     "disable_user_consequence_restore": "账号和角色都会保留，随时可以在列表里重新启用。",
     "disable_user_confirm_button": "停用用户",
     "delete_user_title": "删除用户「{{name}}」？",
     "delete_lead": "删除后无法恢复。",
-    "delete_user_consequence_account": "账号会被永久删除，他无法再登录。",
+    "delete_user_consequence_account": "账号会被永久删除，之后无法再用它登录。",
     "delete_user_consequence_disable_instead": "只想暂时禁止登录的话，改用「停用」可以保留账号。",
     "delete_user": "删除用户",
     "new_role_desc": "先建好角色，再在列表里给它配置权限、分配用户。",
@@ -6073,7 +6088,11 @@
     "lockdown_consequence_others": "不在白名单内的地址会立即被拒绝，包括其他管理员。",
     "lockdown_consequence_self": "你当前的地址（{{cidr}}）已在白名单内，不会被挡住。",
     "lockdown_consequence_self_unknown": "你当前的地址已在白名单内，不会被挡住。",
-    "lockdown_consequence_colleagues": "请先确认其他管理员的地址也已加入白名单。"
+    "lockdown_consequence_colleagues": "请先确认其他管理员的地址也已加入白名单。",
+    "bulk_delete_title": "删除选中的 {{count}} 条规则？",
+    "bulk_delete_consequence_deny": "{{count}} 条拒绝规则：这些地址的请求不会再被拒绝。",
+    "bulk_delete_consequence_allow": "{{count}} 条放行规则：这些地址不再豁免限流，也可能被自动封禁。",
+    "bulk_delete_more": "另外 {{count}} 条"
   },
   "video_generation": {
     "title": "视频模型",
@@ -6109,19 +6128,20 @@
     "test_running": "生成中",
     "test_running_hint": "视频生成通常需要 1-3 分钟，请保持页面打开",
     "test_failed_generic": "视频生成失败",
-    "test_model_required": "请先选择视频模型",
-    "test_prompt_required": "请填写提示词",
-    "test_image_required": "图生视频需要提供源图地址",
     "field_model": "模型",
     "field_prompt": "提示词",
     "field_prompt_placeholder": "例如：日落时分的海浪，镜头缓慢拉远",
-    "field_image_url": "源图地址（图生视频）",
+    "field_image_url": "源图地址",
     "field_duration": "时长（秒，最多 {{max}}）",
     "field_aspect_ratio": "画面比例",
     "field_resolution": "分辨率",
     "result_open_original": "在新标签页打开原始视频",
     "no_channel_hint": "当前租户下没有可用的 xAI 账号，无法生成视频。请先在「AI 账号」里添加并启用一个 Grok 账号。",
-    "unavailable_suffix": "无可用账号"
+    "unavailable_suffix": "无可用账号",
+    "test_modal_desc": "选好模型和参数，写一段提示词试生成一段视频。生成是异步的，通常需要 1–3 分钟。",
+    "test_shortcut": "⌘ / Ctrl + Enter 开始生成",
+    "field_mode": "生成方式",
+    "field_image_url_hint": "作为视频首帧的图片：网址或 data URI。"
   },
   "config_ui": {
     "nav_label": "配置分区",

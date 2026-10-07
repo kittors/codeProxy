@@ -53,7 +53,7 @@ export function RequestLogsFilters({
   const { t } = useTranslation();
 
   return (
-    <div className="border-t border-slate-100 px-5 py-3 dark:border-white/8">
+    <div className="border-t border-line px-5 py-3">
       <div className="flex flex-wrap items-center gap-2">
         <div className="w-full min-[480px]:w-auto sm:w-[180px]">
           <SearchableCheckboxMultiSelect
@@ -104,8 +104,7 @@ export function RequestLogsFilters({
             onClick={onResetFilters}
             className={cn(
               "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium",
-              "text-slate-500 hover:text-slate-700 hover:bg-slate-100",
-              "dark:text-white/50 dark:hover:text-white/80 dark:hover:bg-white/10",
+              "text-ink-3 hover:bg-hover hover:text-ink",
               "transition-colors",
             )}
           >

@@ -1,9 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { createPortal } from "react-dom";
-import { AlertTriangle, X, Loader2, Copy, Check } from "lucide-react";
+import { AlertTriangle, FileQuestion } from "lucide-react";
 import { usageApi } from "@code-proxy/api-client";
-import { overlayBackdropMotion, overlayPanelMotion, useOverlayPresence } from "@code-proxy/ui";
+import { Button, Callout, CopyButton, EmptyState, Modal, Skeleton, SkeletonLines } from "@code-proxy/ui";
 import { extractErrorFromLogContent } from "../error-detail/extractErrorFromLogContent";
 
 interface ErrorDetailModalProps {
@@ -13,16 +12,19 @@ interface ErrorDetailModalProps {
   onClose: () => void;
 }
 
+/**
+ * 失败请求的错误详情：先给一句错误摘要（红色提示条），再给完整响应原文（可复制）。
+ *
+ * 外壳用通用 Modal：叠层（嵌在别的弹窗里时 Esc 只关这一层）、焦点进出、进退场都与全站一致，
+ * 不再自己监听 Esc。标题下方的一句说明交代「这份错误是从哪来的」：上游原文，还是从请求详情还原。
+ */
 export function ErrorDetailModal({ open, logId, model, onClose }: ErrorDetailModalProps) {
   const { t } = useTranslation();
-  // 与通用弹窗同一套进出场：以前只隔一帧置为可见（进场常常直接跳出来），关闭时又立刻卸载、没有退场。
-  const { mounted, visible } = useOverlayPresence(open);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [errorContent, setErrorContent] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [reconstructed, setReconstructed] = useState(false);
-  const [copied, setCopied] = useState(false);
 
   // Fetch output first; when empty, fall back to request details so historical
   // failed logs (store-content off) can still surface status / diagnostic info.
@@ -74,155 +76,77 @@ export function ErrorDetailModal({ open, logId, model, onClose }: ErrorDetailMod
     };
   }, [logId, open, t]);
 
-  // Escape key
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
-
-  const handleCopy = useCallback(() => {
-    void navigator.clipboard.writeText(errorContent);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }, [errorContent]);
-
-  if (!mounted) return null;
-
   const hasErrorContent = errorContent.trim().length > 0;
-  const backdropMotion = overlayBackdropMotion(visible);
-  const panelMotion = overlayPanelMotion(visible, !open);
-
   /** Try to format JSON nicely */
-  let formattedContent = errorContent;
-  if (hasErrorContent) {
+  const formattedContent = useMemo(() => {
+    if (!hasErrorContent) return errorContent;
     try {
-      const parsed = JSON.parse(errorContent);
-      formattedContent = JSON.stringify(parsed, null, 2);
+      return JSON.stringify(JSON.parse(errorContent), null, 2);
     } catch {
-      // keep raw text
+      return errorContent;
     }
-  }
+  }, [errorContent, hasErrorContent]);
 
-  return createPortal(
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <button
-        type="button"
-        onClick={onClose}
-        aria-label={t("common.close")}
-        style={backdropMotion.style}
-        className={[
-          "absolute inset-0 cursor-default bg-black/25 dark:bg-black/55",
-          backdropMotion.className,
-        ].join(" ")}
-      />
+  const title = model
+    ? `${t("error_detail.request_failed")} · ${model}`
+    : t("error_detail.request_failed");
+  // 加载中不下结论：以前这时就显示「未记录上游错误响应」，数据一到又改口。
+  // 加载失败时原因写在正文的红色提示里，这里不再重复。
+  const description = loading
+    ? t("common.loading_ellipsis")
+    : error
+      ? undefined
+      : hasErrorContent
+        ? reconstructed
+          ? t("error_detail.reconstructed_from_details")
+          : t("error_detail.upstream_error")
+        : t("error_detail.historical_missing");
 
-      {/* Dialog */}
-      <div
-        role="dialog"
-        aria-modal="true"
-        style={panelMotion.style}
-        className={[
-          // 与通用弹窗同一种面板：错误只体现在图标和错误摘要上，不再给整张面板描红边、铺红色标题栏。
-          "relative z-10 flex max-h-[70vh] w-full max-w-xl flex-col overflow-hidden rounded-3xl bg-elevated text-ink shadow-dialog",
-          panelMotion.className,
-        ].join(" ")}
-      >
-        {/* Header */}
-        <div className="flex shrink-0 items-start justify-between gap-3 px-6 pt-6 pb-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400">
-              <AlertTriangle size={16} aria-hidden="true" />
-            </div>
-            <div className="min-w-0">
-              <h2 className="truncate text-base font-semibold tracking-tight text-ink">
-                {t("error_detail.request_failed")}
-                {model ? ` · ${model}` : ""}
-              </h2>
-              <p className="mt-0.5 text-xs text-ink-3">
-                {hasErrorContent
-                  ? reconstructed
-                    ? t("error_detail.reconstructed_from_details")
-                    : t("error_detail.upstream_error")
-                  : t("error_detail.historical_missing")}
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-0 bg-transparent p-0 text-ink-3 shadow-none transition-colors hover:bg-hover hover:text-ink"
-            aria-label={t("common.close")}
-          >
-            <X size={14} />
-          </button>
+  return (
+    <Modal
+      open={open}
+      title={title}
+      description={description}
+      icon={<AlertTriangle />}
+      tone="danger"
+      size="lg"
+      onClose={onClose}
+      footer={
+        <Button variant="secondary" onClick={onClose}>
+          {t("common.close")}
+        </Button>
+      }
+    >
+      {loading ? (
+        <div className="space-y-4" aria-busy="true">
+          <Skeleton rounded="lg" className="h-12" />
+          <SkeletonLines rows={5} />
         </div>
+      ) : error ? (
+        <Callout tone="danger" role="alert" title={t("error_detail.load_failed")}>
+          {error === t("error_detail.load_failed") ? null : error}
+        </Callout>
+      ) : !hasErrorContent ? (
+        <EmptyState icon={<FileQuestion size={20} aria-hidden />} description={t("error_detail.no_content")} />
+      ) : (
+        <div className="space-y-4">
+          {errorMessage ? (
+            <Callout tone="danger">
+              <span className="font-medium text-ink [overflow-wrap:anywhere]">{errorMessage}</span>
+            </Callout>
+          ) : null}
 
-        {/* Content */}
-        <div className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-6 pt-2 pb-6">
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 size={22} className="animate-spin text-slate-400" />
-              <span className="ml-2 text-sm text-slate-500">{t("common.loading_ellipsis")}</span>
+          <section>
+            <div className="mb-1.5 flex items-center justify-between gap-3">
+              <h3 className="text-xs font-medium text-ink-3">{t("error_detail.full_response")}</h3>
+              <CopyButton value={errorContent} label={t("error_detail.copy_response")} />
             </div>
-          ) : error ? (
-            <div className="flex flex-col items-center justify-center py-12">
-              <p className="text-sm text-red-500">{error}</p>
-            </div>
-          ) : !hasErrorContent ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center text-slate-500 dark:text-white/45">
-              <AlertTriangle size={32} className="mb-2 opacity-40" />
-              <p className="max-w-sm text-sm leading-6">{t("error_detail.no_content")}</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {/* Error summary */}
-              {errorMessage && (
-                <div className="min-w-0 overflow-hidden rounded-2xl bg-rose-500/[0.07] px-4 py-3">
-                  <p
-                    className="text-sm font-medium text-red-700 dark:text-red-300"
-                    style={{ overflowWrap: "anywhere", wordBreak: "break-all" }}
-                  >
-                    {errorMessage}
-                  </p>
-                </div>
-              )}
-
-              {/* Full response */}
-              <div className="relative">
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-2xs font-medium text-slate-400 dark:text-white/35">
-                    {t("error_detail.full_response")}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleCopy}
-                    className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium text-ink-3 transition-colors hover:bg-hover hover:text-ink"
-                  >
-                    {copied ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
-                    {copied ? t("common.copied") : t("log_content.copy")}
-                  </button>
-                </div>
-                <pre
-                  className="max-h-[40vh] overflow-auto rounded-2xl bg-subtle p-4 text-xs leading-relaxed text-ink-2"
-                  style={{
-                    whiteSpace: "pre-wrap",
-                    wordBreak: "break-all",
-                    overflowWrap: "anywhere",
-                  }}
-                >
-                  {formattedContent}
-                </pre>
-              </div>
-            </div>
-          )}
+            <pre className="max-h-[40vh] overflow-auto rounded-2xl bg-subtle p-4 font-mono text-xs leading-relaxed whitespace-pre-wrap text-ink-2 [overflow-wrap:anywhere]">
+              {formattedContent}
+            </pre>
+          </section>
         </div>
-      </div>
-    </div>,
-    document.body,
+      )}
+    </Modal>
   );
 }

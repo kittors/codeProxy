@@ -2328,7 +2328,6 @@
     "test_hint": "Test calls automatically rotate through currently available channels.",
     "generate_button": "Generate Image",
     "generating_button": "Generating...",
-    "send_button": "Send",
     "preview_alt": "{{model}} preview",
     "idle_hint": "Enter a prompt to start generating an image",
     "idle_hint_edits": "Upload images and enter a prompt to start generating",
@@ -2349,7 +2348,10 @@
     "provider": "Channel",
     "model": "Model",
     "model_placeholder": "Select a model",
-    "tab_label": "Image generation"
+    "tab_label": "Image generation",
+    "test_modal_desc": "Pick a model and settings, describe the image and try a generation. Add reference images to edit them instead.",
+    "test_shortcut": "⌘ / Ctrl + Enter to generate",
+    "reference_image_hint": "Optional. Uploading switches to image editing; up to {{max}}."
   },
   "identity_fingerprint": {
     "title": "Identity Fingerprint",
@@ -2451,7 +2453,6 @@
     "recommend_modal_desc": "Checked {{inspected}} requests from the last {{days}} days and matched {{matched}} real Codex fingerprints.",
     "recommend_load_failed": "Failed to load fingerprint recommendations",
     "recommend_last_seen": "Last seen",
-    "recommend_count": "{{count}} times",
     "recommend_diff": "Diff",
     "recommend_diff_count": "{{count}} changed",
     "recommend_same": "Same",
@@ -2460,7 +2461,6 @@
     "recommend_apply": "Apply",
     "recommend_apply_selected": "Apply and save",
     "recommend_confirm_title": "Apply this recommended fingerprint?",
-    "recommend_confirm_desc": "This will save the recommended values from {{originator}} {{version}} as the active Codex fingerprint.",
     "recommend_apply_confirm": "Apply and save",
     "recommend_table_caption": "Recent Codex terminal fingerprint candidates",
     "recommend_empty": "No Codex fingerprints can be generated from recent requests yet",
@@ -2511,7 +2511,17 @@
     "kimi_device_id": "Device ID",
     "kimi_device_hint": "Empty keeps the running host's value. The device ID is only ever learned from a real client, never preset.",
     "kimi_device_placeholder": "Empty = keep host value",
-    "kimi_custom_headers_hint": "JSON object. Kimi's managed headers (X-Msh-*) cannot be overridden here."
+    "kimi_custom_headers_hint": "JSON object. Kimi's managed headers (X-Msh-*) cannot be overridden here.",
+    "recommend_modal_loading": "Checking requests from the last {{days}} days…",
+    "recommend_confirm_lead": "It is saved and becomes the active Codex fingerprint right away.",
+    "recommend_confirm_enables": "The Codex identity fingerprint is turned on as well.",
+    "recommend_confirm_overwrites": "Overwrites the current {{fields}}.",
+    "recommend_confirm_overwrites_more_one": "Overwrites the current {{fields}} and more ({{count}} value in total).",
+    "recommend_confirm_overwrites_more_other": "Overwrites the current {{fields}} and more ({{count}} values in total).",
+    "recommend_confirm_no_diff": "Every value already matches; this only saves it again.",
+    "recommend_confirm_custom_headers": "Custom headers are replaced with the ones in this recommendation; the current ones are not kept.",
+    "recommend_count_one": "{{count}} time",
+    "recommend_count_other": "{{count}} times"
   },
   "ui": {
     "loading": "Loading…",
@@ -2847,7 +2857,6 @@
     "refreshing": "Refreshing…",
     "not_refreshed": "Not yet refreshed",
     "clear_database_logs": "Clear Database Logs",
-    "clear_database_logs_keep_records_hint": "Recommended default: clear stored bodies and request details while keeping request records, Token totals, cost stats, and the request log table itself.",
     "clear_database_logs_confirm_button": "Clear Selected Data",
     "clear_database_logs_success_content": "Cleared stored request-log content while keeping request records",
     "clear_database_logs_success_records": "Cleared {{count}} request log records from the database",
@@ -2887,7 +2896,13 @@
     "no_data_desc": "Try another range or clear filters.",
     "calls_count": "{{formattedCount}} calls",
     "calls_sorted_hint": "Sorted by calls in the current log range",
-    "unrestricted": "Any"
+    "unrestricted": "Any",
+    "clear_database_logs_title": "Clear database logs?",
+    "clear_database_logs_lead": "Choose what to clear. This can't be undone.",
+    "clear_scope_title": "All request logs in the current tenant",
+    "clear_scope_hint": "Not limited by the current filters or time range",
+    "clear_consequence_records": "Request records are deleted too: the list, record count, token totals, success rate and cost stats are all cleared.",
+    "clear_consequence_content": "The checked bodies and details are deleted right away and won't show when you open these requests; request records and stats stay."
   },
   "ccswitch": {
     "import_to_ccswitch": "Import to CC Switch",
@@ -4679,7 +4694,8 @@
     "role_function_return": "Function return",
     "role_thinking": "Thinking",
     "role_tool_use": "Tool use",
-    "role_message": "Message"
+    "role_message": "Message",
+    "details_only_desc": "Request body storage is off, so only the URL, headers and status of this request are available."
   },
   "error_detail": {
     "upstream_error": "Error response from upstream API",
@@ -4688,7 +4704,8 @@
     "full_response": "Full Response",
     "no_content": "This historical log did not record any upstream error response, and the failure could not be reconstructed from request details. New failed logs will store the actual error details.",
     "load_failed": "Load failed",
-    "request_failed": "Request failed"
+    "request_failed": "Request failed",
+    "copy_response": "Copy full response"
   },
   "system_page": {
     "title": "System Info",
@@ -6071,7 +6088,15 @@
     "lockdown_consequence_others": "Addresses not on the allow list are refused immediately — other administrators included.",
     "lockdown_consequence_self": "Your current address ({{cidr}}) is on the allow list, so you won't be locked out.",
     "lockdown_consequence_self_unknown": "Your current address is on the allow list, so you won't be locked out.",
-    "lockdown_consequence_colleagues": "Make sure your colleagues' addresses are on the list first."
+    "lockdown_consequence_colleagues": "Make sure your colleagues' addresses are on the list first.",
+    "bulk_delete_title_one": "Delete the selected rule?",
+    "bulk_delete_title_other": "Delete {{count}} selected rules?",
+    "bulk_delete_consequence_deny_one": "1 deny rule: requests from that address are no longer refused.",
+    "bulk_delete_consequence_deny_other": "{{count}} deny rules: requests from those addresses are no longer refused.",
+    "bulk_delete_consequence_allow_one": "1 allow rule: that address is no longer exempt from rate limiting and can be auto-banned.",
+    "bulk_delete_consequence_allow_other": "{{count}} allow rules: those addresses are no longer exempt from rate limiting and can be auto-banned.",
+    "bulk_delete_more_one": "and 1 more",
+    "bulk_delete_more_other": "and {{count}} more"
   },
   "video_generation": {
     "title": "Video Models",
@@ -6107,19 +6132,20 @@
     "test_running": "Generating",
     "test_running_hint": "Video generation usually takes 1-3 minutes; keep this page open",
     "test_failed_generic": "Video generation failed",
-    "test_model_required": "Select a video model first",
-    "test_prompt_required": "Enter a prompt",
-    "test_image_required": "Image-to-video needs a source image URL",
     "field_model": "Model",
     "field_prompt": "Prompt",
     "field_prompt_placeholder": "e.g. ocean waves at sunset, camera slowly pulling back",
-    "field_image_url": "Source image URL (image-to-video)",
+    "field_image_url": "Source image URL",
     "field_duration": "Duration (seconds, max {{max}})",
     "field_aspect_ratio": "Aspect ratio",
     "field_resolution": "Resolution",
     "result_open_original": "Open the original clip in a new tab",
     "no_channel_hint": "This tenant has no usable xAI account, so video generation is unavailable. Add and enable a Grok account under AI Accounts first.",
-    "unavailable_suffix": "no account"
+    "unavailable_suffix": "no account",
+    "test_modal_desc": "Pick a model and settings, then write a prompt to try a clip. Generation is asynchronous and usually takes 1–3 minutes.",
+    "test_shortcut": "⌘ / Ctrl + Enter to generate",
+    "field_mode": "Mode",
+    "field_image_url_hint": "The image used as the first frame: a URL or a data URI."
   },
   "config_ui": {
     "nav_label": "Config sections",
