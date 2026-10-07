@@ -24,6 +24,8 @@ export interface ChartPalette {
   ink3: string;
   /** 分割线。 */
   grid: string;
+  /** 图表所在卡片的底色：圆点描边、扇区间隙这类要「挖空」的地方用它，与 `--cp-surface` 一致。 */
+  surface: string;
   /** 坐标轴线。 */
   axis: string;
   /** 主序列 / 当前值。 */
@@ -43,6 +45,8 @@ export interface ChartPalette {
     success: string;
     tokens: string;
     cost: string;
+    /** 累计费用（叠在琥珀费用柱上的累计线）：同属费用色系但更深一档，和柱子拉开。 */
+    costTotal: string;
     cache: string;
     rpm: string;
     tpm: string;
@@ -55,6 +59,7 @@ const LIGHT: ChartPalette = {
   ink2: "#5d5d5d",
   ink3: "#8f8f8f",
   grid: "#f1f1f1",
+  surface: "#ffffff",
   axis: "#e2e2e2",
   primary: "#6366f1",
   series: ["#6366f1", "#06b6d4", "#f59e0b", "#ec4899"],
@@ -69,6 +74,7 @@ const LIGHT: ChartPalette = {
     success: "#10a37f",
     tokens: "#8b5cf6",
     cost: "#f59e0b",
+    costTotal: "#ea580c",
     cache: "#14b8a6",
     rpm: "#3b82f6",
     tpm: "#8b5cf6",
@@ -81,6 +87,7 @@ const DARK: ChartPalette = {
   ink2: "#b4b4b4",
   ink3: "#8a8a8a",
   grid: "rgba(255, 255, 255, 0.06)",
+  surface: "#2a2a2a",
   axis: "rgba(255, 255, 255, 0.12)",
   primary: "#818cf8",
   series: ["#818cf8", "#22d3ee", "#fbbf24", "#f472b6"],
@@ -95,6 +102,7 @@ const DARK: ChartPalette = {
     success: "#3ecf9a",
     tokens: "#a78bfa",
     cost: "#fbbf24",
+    costTotal: "#f97316",
     cache: "#2dd4bf",
     rpm: "#60a5fa",
     tpm: "#a78bfa",
@@ -107,6 +115,10 @@ export const chartPalette = (isDark: boolean): ChartPalette => (isDark ? DARK : 
 /**
  * 多序列（按租户拆开的吞吐线、按额度窗口拆开的占用线……）靠颜色区分时用的分类色板：
  * 一组明快、相邻两色色相差得开的颜色，红色放在后面（避免第一眼就像「出错」）。
+ *
+ * 注意：第 1 个靛蓝接近「请求蓝」、第 3 个就是「费用琥珀」。同一张图里既有身份色（metric）
+ * 又有分类序列时，不要直接从头轮换这一组——先去掉与本图身份色相撞的颜色再取（账号详情的额度线、
+ * 仪表盘的租户线都是这样做的）。
  */
 export const CHART_CATEGORICAL = [
   "#6366f1",

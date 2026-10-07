@@ -85,7 +85,7 @@ export const createModelDistributionOption = (input: {
           borderRadius: 4,
           borderWidth: 2,
           // 扇区之间的分隔线取卡片底色，深浅色都像是「切开」而不是描了一圈边。
-          borderColor: input.isDark ? "#2a2a2a" : "#ffffff",
+          borderColor: chartPalette(input.isDark).surface,
         },
         emphasis: { scale: true, scaleSize: 6 },
         data: input.data,

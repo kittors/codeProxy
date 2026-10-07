@@ -42,7 +42,7 @@ export function buildDetailTrendChartOption({
   const quotaColors = quotaSeries.map((_, index) => quotaSeriesColor(index, isDark));
   const seriesColors = [requestsColor, costColor, ...quotaColors];
   // 悬停时线上的圆点套一圈卡片底色，压在柱子或别的线上也看得清。
-  const pointRing = isDark ? "#2a2a2a" : "#ffffff";
+  const pointRing = palette.surface;
   const seriesAnimation = {
     animation: animate,
     animationDuration: animate ? animationMs : 0,

@@ -43,7 +43,7 @@ export function buildGroupOverviewChartOption({
   const weeklyColors = series.map((_, index) => quotaSeriesColor(index, isDark));
   const seriesColors = [callsColor, ...weeklyColors];
   // 折线上的圆点套一圈卡片底色，压在柱子上也看得清。
-  const pointRing = isDark ? "#2a2a2a" : "#ffffff";
+  const pointRing = palette.surface;
 
   return {
     backgroundColor: "transparent",

@@ -1,6 +1,6 @@
 import type { ECBasicOption } from "echarts/types/dist/shared";
 import type { MonitorOverview, MonitorSeriesPoint } from "@code-proxy/api-client";
-import { chartGradient, hueHex } from "@code-proxy/ui";
+import { chartGradient, chartPalette } from "@code-proxy/ui";
 import {
   formatMonitorAxis,
   formatMonitorAxisDuration,
@@ -67,7 +67,7 @@ export function trendSeriesColor(key: TrendSeriesKey, isDark: boolean): string {
     case "cumulative_cost":
       // 累计费用和每段费用同属「钱」：用与费用琥珀相邻的橙色虚线，一眼看出是同一类数，
       // 又和琥珀柱分得开（以前跟着主色，主色改成靛蓝后会被读成「耗时」）。
-      return hueHex("orange", isDark);
+      return chartPalette(isDark).metric.costTotal;
     default:
       return palette.primary;
   }

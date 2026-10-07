@@ -2,7 +2,7 @@ import { render } from "@testing-library/react";
 import { Timer, Waypoints } from "lucide-react";
 import { describe, expect, test } from "vitest";
 import { normalizeMonitorOverview, normalizeMonitorRealtime } from "@code-proxy/api-client";
-import { chartGradient, chartPalette, hueHex } from "@code-proxy/ui";
+import { chartGradient, chartPalette } from "@code-proxy/ui";
 import { createLatencyOption } from "../charts/latencyOption";
 import { createRealtimeOption } from "../charts/realtimeOption";
 import { createTrafficTrendOption, trendSeriesColor } from "../charts/trafficTrendOption";
@@ -48,7 +48,7 @@ describe("monitor center chart colours", () => {
   test("cumulative cost is a cost-family orange, not the indigo that means latency", () => {
     for (const isDark of [false, true]) {
       const palette = chartPalette(isDark);
-      expect(trendSeriesColor("cumulative_cost", isDark)).toBe(hueHex("orange", isDark));
+      expect(trendSeriesColor("cumulative_cost", isDark)).toBe(palette.metric.costTotal);
       expect(trendSeriesColor("cumulative_cost", isDark)).not.toBe(palette.metric.latency);
       expect(trendSeriesColor("cumulative_cost", isDark)).not.toBe(palette.metric.cost);
     }

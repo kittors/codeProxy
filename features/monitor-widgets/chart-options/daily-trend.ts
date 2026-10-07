@@ -123,7 +123,7 @@ export const createDailyTrendOption = (input: {
 
   const palette = chartPalette(input.isDark);
   const colors = dailyTrendColors(input.isDark);
-  const surfaceRing = input.isDark ? "#2a2a2a" : "#ffffff";
+  const surfaceRing = palette.surface;
   const series: Array<Record<string, unknown>> = [];
   const inputSeries = showInput
     ? {
