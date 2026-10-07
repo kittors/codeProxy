@@ -41,17 +41,18 @@ export function formatMonitorCost(value: number): string {
   return formatUsd(num, { fractionDigits: 2 });
 }
 
-/** 耗时：850ms · 12.3s · 2m 05s。 */
+/**
+ * 耗时：850ms · 12.3s · 2m 05s。每一档都先按要显示的精度取整再判断落在哪档，
+ * 否则 999.6ms 会写成「1000ms」、119.6s 会写成「1m 60s」。
+ */
 export function formatMonitorDuration(ms: number): string {
   const value = Math.max(0, finite(ms));
-  if (value < 1_000) return `${Math.round(value)}ms`;
-  if (value < 60_000) {
-    const seconds = value / 1_000;
-    return `${seconds < 10 ? seconds.toFixed(2) : seconds.toFixed(1)}s`;
-  }
-  const minutes = Math.floor(value / 60_000);
-  const seconds = Math.round((value % 60_000) / 1_000);
-  return `${minutes}m ${String(seconds).padStart(2, "0")}s`;
+  if (Math.round(value) < 1_000) return `${Math.round(value)}ms`;
+  const seconds = value / 1_000;
+  if (Math.round(seconds * 100) < 1_000) return `${seconds.toFixed(2)}s`;
+  if (Math.round(seconds * 10) < 600) return `${seconds.toFixed(1)}s`;
+  const total = Math.round(seconds);
+  return `${Math.floor(total / 60)}m ${String(total % 60).padStart(2, "0")}s`;
 }
 
 export function formatMonitorPercent(value: number, digits = 2): string {

@@ -44,6 +44,14 @@ describe("monitor formatting", () => {
     expect(formatMonitorDuration(9_830)).toBe("9.83s");
     expect(formatMonitorDuration(31_100)).toBe("31.1s");
     expect(formatMonitorDuration(125_000)).toBe("2m 05s");
+    expect(formatMonitorDuration(71_059)).toBe("1m 11s");
+  });
+
+  test("rounds before choosing a unit, so no value reads 1000ms or 1m 60s", () => {
+    expect(formatMonitorDuration(999.6)).toBe("1.00s");
+    expect(formatMonitorDuration(9_996)).toBe("10.0s");
+    expect(formatMonitorDuration(59_960)).toBe("1m 00s");
+    expect(formatMonitorDuration(119_600)).toBe("2m 00s");
   });
 
   test("keeps small costs and rates readable", () => {
