@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ShieldCheck, Trash2, UserRoundCog } from "lucide-react";
 import {
@@ -10,12 +10,8 @@ import {
 import {
   Button,
   COLUMN_WIDTH,
-  Checkbox,
-  ConfirmModal,
   DataTable,
-  Modal,
   TABLE_ROW_ACTIONS_COLUMN,
-  TextInput,
   useToast,
   type DataTableColumn,
   surface,
@@ -23,8 +19,13 @@ import {
 import { PermissionGate } from "@app/providers/PermissionGate";
 import { useAuth } from "@app/providers/AuthProvider";
 import { buildPermissionTree, PermissionTree } from "./PermissionTree";
-
-const emptyForm = { name: "", description: "" };
+import {
+  AssignRoleUsersModal,
+  CreateRoleModal,
+  DeleteRoleConfirm,
+  RolePermissionsModal,
+  type RoleForm,
+} from "./RoleDialogs";
 const hasProtectedRoleAssignments = (user: UserIdentity) =>
   user.role_codes?.some((code) => code === "platform_super_admin" || code === "tenant_admin");
 
@@ -40,7 +41,6 @@ export function RolesPage() {
   const [users, setUsers] = useState<UserIdentity[]>([]);
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
-  const [form, setForm] = useState(emptyForm);
   const [permissionRole, setPermissionRole] = useState<RoleIdentity | null>(null);
   const [selectedPermissions, setSelectedPermissions] = useState<Set<string>>(new Set());
   const [userRole, setUserRole] = useState<RoleIdentity | null>(null);
@@ -269,16 +269,12 @@ export function RolesPage() {
     [assignedUserCount, canAssignUsers, canUpdateRoles, roleName, t, users],
   );
 
-  const createRole = async (event: FormEvent) => {
-    event.preventDefault();
+  const createRole = async (form: RoleForm) => {
     const success = await run(
       () => identityApi.createRole({ ...form, permissions: [] }),
       t("identity_admin.role_created"),
     );
-    if (success) {
-      setCreateOpen(false);
-      setForm(emptyForm);
-    }
+    if (success) setCreateOpen(false);
   };
 
   const savePermissions = async () => {
@@ -340,68 +336,31 @@ export function RolesPage() {
         </div>
       </div>
 
-      <Modal
+      <CreateRoleModal
         open={createOpen}
-        title={t("identity_admin.new_role")}
-        description={t("identity_admin.roles_description")}
+        busy={busy}
+        onSubmit={(form) => void createRole(form)}
         onClose={() => setCreateOpen(false)}
-        maxWidth="max-w-xl"
-        footer={
-          <>
-            <Button onClick={() => setCreateOpen(false)}>{t("common.cancel")}</Button>
-            <Button type="submit" form="create-role-form" variant="primary" disabled={busy}>
-              {t("identity_admin.create_role")}
-            </Button>
-          </>
-        }
-      >
-        <form id="create-role-form" onSubmit={createRole} className="space-y-4">
-          <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-              {t("identity_admin.role_name")}
-            </span>
-            <TextInput
-              value={form.name}
-              onChange={(event) => setForm({ ...form, name: event.target.value })}
-              required
-            />
-          </label>
-          <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-              {t("identity_admin.description")}
-            </span>
-            <textarea
-              value={form.description}
-              onChange={(event) => setForm({ ...form, description: event.target.value })}
-              className="min-h-28 w-full rounded-2xl border border-black/[0.04] bg-white px-3.5 py-3 text-sm text-slate-700 outline-none shadow-[2px_2px_6px_rgb(0_0_0_/_0.055)] focus:ring-2 focus:ring-slate-300/50 dark:border-transparent dark:bg-[#27272A] dark:text-slate-200"
-            />
-          </label>
-        </form>
-      </Modal>
+      />
 
-      <Modal
-        open={Boolean(permissionRole)}
+      <RolePermissionsModal
+        role={permissionRole}
         title={
           permissionRole
             ? t("identity_admin.role_permissions_title", { name: roleName(permissionRole) })
             : ""
         }
-        description={t("identity_admin.role_permissions_description")}
-        onClose={() => setPermissionRole(null)}
-        maxWidth="max-w-4xl"
-        bodyHeightClassName="max-h-[66vh]"
-        footer={
-          permissionRole?.system_protected || !canUpdateRoles ? (
-            <Button onClick={() => setPermissionRole(null)}>{t("common.close")}</Button>
-          ) : (
-            <>
-              <Button onClick={() => setPermissionRole(null)}>{t("common.cancel")}</Button>
-              <Button variant="primary" disabled={busy} onClick={() => void savePermissions()}>
-                {t("identity_admin.save")}
-              </Button>
-            </>
-          )
+        readOnlyReason={
+          permissionRole?.system_protected
+            ? t("identity_admin.permissions_read_only_protected")
+            : !canUpdateRoles
+              ? t("identity_admin.permissions_read_only_no_access")
+              : null
         }
+        selectedCount={selectedPermissions.size}
+        busy={busy}
+        onSave={() => void savePermissions()}
+        onClose={() => setPermissionRole(null)}
       >
         <PermissionTree
           nodes={permissionTreeNodes}
@@ -411,75 +370,26 @@ export function RolesPage() {
           expandLabel={t("identity_admin.tree_expand")}
           collapseLabel={t("identity_admin.tree_collapse")}
         />
-      </Modal>
+      </RolePermissionsModal>
 
-      <Modal
-        open={Boolean(userRole)}
-        title={
-          userRole ? t("identity_admin.assign_role_users_title", { name: roleName(userRole) }) : ""
-        }
-        description={t("identity_admin.assign_role_users_description")}
+      <AssignRoleUsersModal
+        role={userRole}
+        title={userRole ? t("identity_admin.assign_role_users_title", { name: roleName(userRole) }) : ""}
+        users={users}
+        loading={loading}
+        selected={selectedUsers}
+        isLocked={(user) => Boolean(hasProtectedRoleAssignments(user))}
+        userName={userName}
+        busy={busy}
+        onChange={setSelectedUsers}
+        onSave={() => void saveUsers()}
         onClose={() => setUserRole(null)}
-        maxWidth="max-w-2xl"
-        bodyHeightClassName="max-h-[60vh]"
-        footer={
-          <>
-            <Button onClick={() => setUserRole(null)}>{t("common.cancel")}</Button>
-            <Button
-              variant="primary"
-              disabled={busy || Boolean(userRole?.system_protected)}
-              onClick={() => void saveUsers()}
-            >
-              {t("identity_admin.save")}
-            </Button>
-          </>
-        }
-      >
-        <div className="space-y-2">
-          {users.map((user) => {
-            const checked = selectedUsers.has(user.id);
-            const disabled = hasProtectedRoleAssignments(user);
-            return (
-              <label
-                key={user.id}
-                className="flex cursor-pointer items-center gap-3 rounded-xl bg-slate-50 px-4 py-3 transition-colors hover:bg-slate-100 dark:bg-white/5 dark:hover:bg-white/8"
-              >
-                <Checkbox
-                  checked={checked}
-                  disabled={disabled}
-                  onCheckedChange={(nextChecked) => {
-                    const next = new Set(selectedUsers);
-                    if (nextChecked) next.add(user.id);
-                    else next.delete(user.id);
-                    setSelectedUsers(next);
-                  }}
-                />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium text-slate-800 dark:text-slate-200">
-                    {userName(user)}
-                  </span>
-                  <span className="block truncate text-xs text-slate-400">{user.username}</span>
-                </span>
-                <span className="text-xs text-slate-400">
-                  {user.status === "active"
-                    ? t("identity_admin.status_active")
-                    : user.status === "locked"
-                      ? t("identity_admin.status_locked")
-                      : t("identity_admin.status_disabled")}
-                </span>
-              </label>
-            );
-          })}
-        </div>
-      </Modal>
+      />
 
-      <ConfirmModal
-        open={Boolean(deleteRole)}
-        title={t("identity_admin.delete")}
-        description={
-          deleteRole ? t("identity_admin.delete_role_confirm", { name: deleteRole.name }) : ""
-        }
-        confirmText={t("identity_admin.delete")}
+      <DeleteRoleConfirm
+        role={deleteRole}
+        name={deleteRole ? roleName(deleteRole) : ""}
+        assignedCount={deleteRole && canReadUsers ? (assignedUserCount.get(deleteRole.id) ?? 0) : null}
         busy={busy}
         onClose={() => setDeleteRole(null)}
         onConfirm={() => {

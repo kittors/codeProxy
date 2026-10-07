@@ -57,7 +57,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { TextInput, resolveMenuIcon } from "@code-proxy/ui";
+import { TextInput, floatingPanelSurface, resolveMenuIcon } from "@code-proxy/ui";
 
 
 type IconOption = { name: string; icon: LucideIcon };
@@ -120,10 +120,18 @@ export function MenuIconPicker({
   value,
   onChange,
   disabled = false,
+  id,
+  ariaLabel,
+  "aria-describedby": ariaDescribedBy,
 }: {
   value: string;
   onChange: (value: string) => void;
   disabled?: boolean;
+  /** 由 FormField 注入：让字段标签、说明能关联到输入框。 */
+  id?: string;
+  /** 输入框的可访问名称；不传时 TextInput 会拿占位文字顶替，读屏只会念「请选择」。 */
+  ariaLabel?: string;
+  "aria-describedby"?: string;
 }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -184,21 +192,26 @@ export function MenuIconPicker({
       <div ref={triggerRef} className="flex min-w-0 items-center gap-2">
         <div className="relative min-w-0 flex-1">
           <TextInput
+            id={id}
+            aria-label={ariaLabel}
+            aria-describedby={ariaDescribedBy}
             value={value}
             disabled={disabled}
+            spellCheck={false}
+            className="font-mono"
             placeholder={t("identity_admin.please_select")}
             onChange={(event) => onChange(event.target.value)}
             onFocus={() => {
               if (!disabled) setOpen(true);
             }}
             startAdornment={
-              value ? <SelectedIcon size={16} className="text-slate-500" aria-hidden="true" /> : null
+              value ? <SelectedIcon size={16} className="text-ink-3" aria-hidden="true" /> : null
             }
             endAdornment={
               value && !disabled ? (
                 <button
                   type="button"
-                  className="inline-flex h-6 w-6 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-white/10"
+                  className="inline-flex h-6 w-6 items-center justify-center rounded-md text-ink-3 transition-colors hover:bg-hover hover:text-ink"
                   aria-label={t("common.clear", { defaultValue: "Clear" })}
                   onClick={() => onChange("")}
                 >
@@ -211,7 +224,7 @@ export function MenuIconPicker({
         <button
           type="button"
           disabled={disabled}
-          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-900/8 bg-white text-slate-500 transition-colors hover:border-slate-300 hover:text-slate-800 disabled:opacity-50 dark:border-neutral-700 dark:bg-neutral-950 dark:hover:border-neutral-600 dark:hover:text-white"
+          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-line bg-field text-ink-3 transition-colors hover:border-line-strong hover:text-ink disabled:opacity-50"
           aria-label={t("identity_admin.menu_icon_picker")}
           onClick={() => {
             if (!disabled) setOpen((current) => !current);
@@ -225,22 +238,23 @@ export function MenuIconPicker({
         ? createPortal(
             <div
               ref={panelRef}
-              className="fixed z-[9999] overflow-hidden rounded-xl border border-slate-900/8 bg-white shadow-[0_16px_40px_rgba(15,23,42,0.14)] dark:border-white/8 dark:bg-neutral-950 dark:shadow-[0_16px_40px_rgba(0,0,0,0.38)]"
+              className={`fixed z-[9999] overflow-hidden ${floatingPanelSurface}`}
               style={{ top: pos.top, left: pos.left, width: pos.width }}
             >
-              <div className="flex items-center gap-2 border-b border-slate-900/8 px-3 py-2 dark:border-white/8">
-                <Search size={14} className="shrink-0 text-slate-400" aria-hidden="true" />
+              <div className="flex items-center gap-2 border-b border-line px-3 py-2">
+                <Search size={14} className="shrink-0 text-ink-3" aria-hidden="true" />
                 <input
                   autoFocus
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   placeholder={t("identity_admin.menu_icon_search")}
-                  className="h-7 w-full bg-transparent text-sm text-slate-800 outline-none placeholder:text-slate-400 dark:text-white dark:placeholder:text-slate-500"
+                  aria-label={t("identity_admin.menu_icon_search")}
+                  className="h-7 w-full bg-transparent text-sm text-ink outline-none placeholder:text-ink-4"
                 />
               </div>
               <div className="grid max-h-64 grid-cols-6 gap-1 overflow-y-auto p-2">
                 {icons.length === 0 ? (
-                  <div className="col-span-6 px-2 py-6 text-center text-xs text-slate-400">
+                  <div className="col-span-6 px-2 py-6 text-center text-xs text-ink-3">
                     {t("common.no_results", { defaultValue: "无匹配结果" })}
                   </div>
                 ) : (
@@ -252,10 +266,12 @@ export function MenuIconPicker({
                         key={item.name}
                         type="button"
                         title={item.name}
+                        aria-label={item.name}
+                        aria-pressed={active}
                         className={
                           active
-                            ? "inline-flex h-10 items-center justify-center rounded-lg bg-blue-600 text-white"
-                            : "inline-flex h-10 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/10"
+                            ? "inline-flex h-10 items-center justify-center rounded-lg bg-accent text-accent-fg"
+                            : "inline-flex h-10 items-center justify-center rounded-lg text-ink-2 transition-colors hover:bg-hover hover:text-ink"
                         }
                         onClick={() => {
                           onChange(item.name);

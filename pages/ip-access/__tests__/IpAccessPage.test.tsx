@@ -1,4 +1,5 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { IpAccessStatus, ProtectionPolicy } from "@code-proxy/api-client";
 import { ProtectionPolicyTab } from "../ProtectionPolicyTab";
@@ -18,17 +19,19 @@ vi.mock("@app/providers/PermissionGate", () => ({
   PermissionGate: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
+// t 与 notify 都要是稳定引用：页面的加载回调依赖它们，每次渲染换新函数会让加载 effect 反复重跑。
+const { translate } = vi.hoisted(() => ({
+  translate: (key: string, params?: Record<string, string | number>) =>
+    params ? `${key}:${JSON.stringify(params)}` : key,
+}));
 vi.mock("react-i18next", () => ({
-  useTranslation: () => ({
-    t: (key: string, params?: Record<string, string | number>) =>
-      params ? `${key}:${JSON.stringify(params)}` : key,
-    i18n: { language: "en" },
-  }),
+  useTranslation: () => ({ t: translate, i18n: { language: "en" } }),
 }));
 
+const notify = vi.fn();
 vi.mock("@code-proxy/ui", async () => {
   const actual = await vi.importActual<typeof import("@code-proxy/ui")>("@code-proxy/ui");
-  return { ...actual, useToast: () => ({ notify: vi.fn() }) };
+  return { ...actual, useToast: () => ({ notify }) };
 });
 
 function statusFixture(overrides: Partial<IpAccessStatus> = {}): IpAccessStatus {
@@ -125,6 +128,31 @@ describe("ProtectionPolicyTab", () => {
     );
     const toggle = await screen.findByLabelText("ip_access.lockdown_label");
     await waitFor(() => expect(toggle).not.toBeDisabled());
+  });
+
+  test("confirms allow-list-only mode as a reversible warning with its consequences", async () => {
+    render(
+      <ProtectionPolicyTab
+        status={statusFixture({ self_allowed: true, suggested_self_rule: "203.0.113.9/32" })}
+        onPolicySaved={vi.fn()}
+      />,
+    );
+    const toggle = await screen.findByLabelText("ip_access.lockdown_label");
+    await waitFor(() => expect(toggle).not.toBeDisabled());
+    await userEvent.click(toggle);
+
+    const dialog = await screen.findByRole("dialog", { name: "ip_access.lockdown_confirm_title" });
+    expect(within(dialog).getByText("ip_access.lockdown_consequence_others")).toBeInTheDocument();
+    expect(
+      within(dialog).getByText('ip_access.lockdown_consequence_self:{"cidr":"203.0.113.9/32"}'),
+    ).toBeInTheDocument();
+    await userEvent.click(within(dialog).getByRole("button", { name: "ip_access.lockdown_confirm_ok" }));
+    await waitFor(() =>
+      expect(screen.getByLabelText("ip_access.lockdown_label")).toHaveAttribute(
+        "aria-checked",
+        "true",
+      ),
+    );
   });
 
   test("blocks lockdown while the client address is untrusted", async () => {

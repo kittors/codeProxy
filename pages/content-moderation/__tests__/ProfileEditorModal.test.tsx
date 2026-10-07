@@ -71,18 +71,26 @@ describe("ProfileEditorModal", () => {
   });
 
   test("renders localized structured threshold fields with category help", async () => {
-    const user = userEvent.setup();
     renderEditor();
 
     const form = document.querySelector("form[data-slot='form']");
     expect(form).toHaveAttribute("id", "content-moderation-profile-form");
-    expect(document.querySelectorAll("[data-slot='form-field']")).toHaveLength(23);
+    // 名称、关键词、地址、模型、Key、超时、状态码、阻断提示；阈值是紧凑的行，不再各占一个 FormField。
+    expect(document.querySelectorAll("[data-slot='form-field']")).toHaveLength(8);
     expect(document.querySelector("[data-slot='form-field-info'].invisible")).toBeNull();
+    // 无标题的灰底卡片换成了带标题的分区。
+    expect(screen.getByRole("heading", { name: "Moderation service" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Block response" })).toBeInTheDocument();
 
     expect(screen.queryByRole("combobox", { name: "Mode" })).toBeNull();
-    expect(screen.getByRole("combobox", { name: "Check strategy" })).toHaveClass("w-full");
+    expect(screen.getByRole("radiogroup", { name: "Check strategy" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: /^Moderation API only/ })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
 
-    const keywords = screen.getByLabelText("Blocked keywords");
+    // 默认「仅审核 API」时关键词可选，标签后带「Optional」。
+    const keywords = screen.getByLabelText(/^Blocked keywords/);
     const keywordsHint = screen.getByText(
       "Matches are case-insensitive substrings. Empty lines and duplicates are removed.",
     );
@@ -98,13 +106,14 @@ describe("ProfileEditorModal", () => {
       ),
     ).toBeInTheDocument();
 
-    const harassmentHelp = screen.getByRole("button", {
-      name: /Content that demeans, intimidates, or abuses a person or group/,
-    });
-    await user.hover(harassmentHelp);
-    expect(await screen.findByRole("tooltip")).toHaveTextContent(
-      "A lower threshold flags lower-confidence matches, making moderation stricter.",
+    // 分类说明常驻显示并挂在输入框上，不用再把鼠标移到 ⓘ 上。
+    expect(
+      screen.getByText("Content that demeans, intimidates, or abuses a person or group."),
+    ).toBeVisible();
+    expect(screen.getByRole("spinbutton", { name: "Harassment" })).toHaveAccessibleDescription(
+      "Content that demeans, intimidates, or abuses a person or group.",
     );
+    expect(screen.queryByRole("tooltip")).toBeNull();
   });
 
   test("provides zh-CN category labels", async () => {
@@ -165,26 +174,27 @@ describe("ProfileEditorModal", () => {
     expect(onSave.mock.calls[0]?.[0]).not.toHaveProperty("clear_api_key");
   });
 
-  test.each([
-    ["Moderation base URL", "Moderation base URL is required"],
-    ["Moderation model", "Moderation model is required"],
-    ["Moderation API key", "Moderation API key is required for this check strategy"],
-  ])("requires %s in API mode", async (fieldLabel, message) => {
-    const user = userEvent.setup();
-    const onSave = vi.fn<ProfileEditorModalProps["onSave"]>().mockResolvedValue(undefined);
-    renderEditor({ onSave });
+  test.each([["Moderation base URL"], ["Moderation model"], ["Moderation API key"]])(
+    "requires %s in API mode",
+    async (fieldLabel) => {
+      const user = userEvent.setup();
+      const onSave = vi.fn<ProfileEditorModalProps["onSave"]>().mockResolvedValue(undefined);
+      renderEditor({ onSave });
 
-    fireEvent.change(screen.getByRole("textbox", { name: "Profile name" }), {
-      target: { value: "Required fields" },
-    });
-    fireEvent.change(screen.getByLabelText(new RegExp(fieldLabel)), {
-      target: { value: " " },
-    });
-    await user.click(screen.getByRole("button", { name: "Save" }));
+      fireEvent.change(screen.getByRole("textbox", { name: "Profile name" }), {
+        target: { value: "Required fields" },
+      });
+      const field = screen.getByLabelText(new RegExp(fieldLabel));
+      fireEvent.change(field, { target: { value: " " } });
+      await user.click(screen.getByRole("button", { name: "Save" }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(message);
-    expect(onSave).not.toHaveBeenCalled();
-  });
+      // 错误就地显示在对应字段下（并挂在 aria-describedby 上），底部给出还剩几处要改。
+      await waitFor(() => expect(field).toHaveAttribute("aria-invalid", "true"));
+      expect(field).toHaveAccessibleDescription(/Required/);
+      expect(screen.getByText(/fields? needs? attention/)).toBeInTheDocument();
+      expect(onSave).not.toHaveBeenCalled();
+    },
+  );
 
   test("creates keyword-only profiles without moderation API credentials", async () => {
     const user = userEvent.setup();
@@ -194,8 +204,7 @@ describe("ProfileEditorModal", () => {
     fireEvent.change(screen.getByRole("textbox", { name: "Profile name" }), {
       target: { value: "Keywords only" },
     });
-    await user.click(screen.getByRole("combobox", { name: "Check strategy" }));
-    await user.click(screen.getByRole("option", { name: "Keywords only" }));
+    await user.click(screen.getByRole("radio", { name: /^Keywords only/ }));
     fireEvent.change(screen.getByLabelText(/Blocked keywords/), {
       target: { value: " blocked \nBLOCKED\nsecond" },
     });
@@ -252,14 +261,12 @@ describe("ProfileEditorModal", () => {
     fireEvent.change(screen.getByRole("textbox", { name: "Profile name" }), {
       target: { value: "Invalid thresholds" },
     });
-    fireEvent.change(screen.getByRole("spinbutton", { name: "Harassment" }), {
-      target: { value: "1.1" },
-    });
+    const harassment = screen.getByRole("spinbutton", { name: "Harassment" });
+    fireEvent.change(harassment, { target: { value: "1.1" } });
     await user.click(screen.getByRole("button", { name: "Save" }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Every category threshold must be a number from 0 to 1",
-    );
+    await waitFor(() => expect(harassment).toHaveAttribute("aria-invalid", "true"));
+    expect(harassment).toHaveAccessibleDescription(/Enter a number from 0 to 1/);
     expect(onSave).not.toHaveBeenCalled();
   });
 });
@@ -270,8 +277,7 @@ describe("ProfileEditorModal qwen3guard backend", () => {
   });
 
   const selectGuard = async (user: ReturnType<typeof userEvent.setup>) => {
-    await user.click(screen.getByRole("combobox", { name: "Moderation backend" }));
-    await user.click(screen.getByRole("option", { name: "Qwen3Guard" }));
+    await user.click(screen.getByRole("radio", { name: /^Qwen3Guard/ }));
   };
 
   test("swaps threshold inputs for the guard category policy", async () => {
@@ -284,9 +290,11 @@ describe("ProfileEditorModal qwen3guard backend", () => {
     expect(screen.queryByRole("spinbutton", { name: "Harassment" })).toBeNull();
     expect(screen.getByRole("checkbox", { name: "Jailbreak" })).toBeInTheDocument();
     expect(screen.getByRole("checkbox", { name: "PII" })).toBeInTheDocument();
-    expect(
-      screen.getByRole("combobox", { name: "Controversial verdicts" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("radiogroup", { name: "Controversial verdicts" })).toBeInTheDocument();
+    // 风险类别的说明常驻显示。
+    expect(screen.getByRole("checkbox", { name: "Jailbreak" })).toHaveAccessibleDescription(
+      "Prompt injection, or attempts to make the model bypass its own safety rules.",
+    );
     expect(screen.getByLabelText(/Characters per scan/)).toHaveValue("4000");
     expect(screen.getByLabelText(/Maximum chunks/)).toHaveValue("4");
   });
@@ -302,8 +310,7 @@ describe("ProfileEditorModal qwen3guard backend", () => {
     fireEvent.change(screen.getByLabelText(/Moderation base URL/), {
       target: { value: "http://127.0.0.1:8000" },
     });
-    await user.click(screen.getByRole("combobox", { name: "Moderation backend" }));
-    await user.click(screen.getByRole("option", { name: "OpenAI Moderations" }));
+    await user.click(screen.getByRole("radio", { name: /^OpenAI Moderations/ }));
 
     expect(screen.getByLabelText(/Moderation base URL/)).toHaveValue("http://127.0.0.1:8000");
   });
@@ -352,8 +359,7 @@ describe("ProfileEditorModal qwen3guard backend", () => {
     });
     expect(highRiskJailbreak).not.toBeDisabled();
 
-    await user.click(screen.getByRole("combobox", { name: "Controversial verdicts" }));
-    await user.click(screen.getByRole("option", { name: "Allow" }));
+    await user.click(screen.getByRole("radio", { name: /^Allow/ }));
 
     expect(
       screen.getByRole("checkbox", { name: "High-risk category: Jailbreak" }),
@@ -361,8 +367,8 @@ describe("ProfileEditorModal qwen3guard backend", () => {
   });
 
   test.each([
-    ["Characters per scan", "8", "Characters per scan must be an integer from 128 to 100000"],
-    ["Maximum chunks", "99", "Maximum chunks must be an integer from 1 to 32"],
+    ["Characters per scan", "8", "Enter a whole number from 128 to 100000"],
+    ["Maximum chunks", "99", "Enter a whole number from 1 to 32"],
   ])("rejects an out-of-range %s", async (label, value, message) => {
     const user = userEvent.setup();
     const onSave = vi.fn<ProfileEditorModalProps["onSave"]>().mockResolvedValue(undefined);

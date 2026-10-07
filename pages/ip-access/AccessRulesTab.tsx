@@ -508,9 +508,38 @@ export function AccessRulesTab({
 
       <ConfirmModal
         open={deleteTarget !== null}
-        title={t("ip_access.delete_rule")}
-        description={t("ip_access.delete_rule_confirm", { cidr: deleteTarget?.cidr ?? "" })}
-        confirmText={t("common.delete")}
+        title={t("ip_access.delete_rule_title", { cidr: deleteTarget?.cidr ?? "" })}
+        description={t("ip_access.delete_rule_lead")}
+        subject={
+          deleteTarget ? (
+            <span className="flex min-w-0 items-center justify-between gap-3">
+              <span className="truncate font-mono">{deleteTarget.cidr}</span>
+              <span className="flex shrink-0 items-center gap-2 text-xs text-ink-3">
+                <span
+                  className={`rounded-full px-2 py-0.5 font-medium ${
+                    deleteTarget.effect === "deny"
+                      ? "bg-rose-500/10 text-rose-700 dark:text-rose-300"
+                      : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                  }`}
+                >
+                  {t(`ip_access.effect_${deleteTarget.effect}`)}
+                </span>
+                {t(`ip_access.source_${deleteTarget.source}`)}
+              </span>
+            </span>
+          ) : null
+        }
+        consequences={
+          deleteTarget
+            ? [
+                t("ip_access.delete_rule_consequence_default"),
+                deleteTarget.effect === "deny"
+                  ? t("ip_access.delete_rule_consequence_deny")
+                  : t("ip_access.delete_rule_consequence_allow"),
+              ]
+            : []
+        }
+        confirmText={t("ip_access.delete_rule")}
         cancelText={t("common.cancel")}
         variant="danger"
         busy={busy}

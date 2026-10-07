@@ -6,8 +6,8 @@ import {
   validateDisplayName,
   validatePassword,
   validateUsername,
-  type IdentityValidationCode,
 } from "@code-proxy/domain";
+import { rules, type Rule } from "@code-proxy/ui";
 
 export {
   IDENTITY_DISPLAY_NAME_MAX_BYTES,
@@ -26,10 +26,6 @@ export type CreateUserForm = {
   roleIds: string[];
 };
 
-export type CreateUserFormErrors = Partial<
-  Record<"username" | "displayName" | "password", string>
->;
-
 export const emptyCreateUserForm = (): CreateUserForm => ({
   username: "",
   displayName: "",
@@ -38,42 +34,31 @@ export const emptyCreateUserForm = (): CreateUserForm => ({
   roleIds: [],
 });
 
-export function validationCodeToMessage(
-  code: IdentityValidationCode,
-  t: (key: string) => string,
-): string {
-  const key = `identity_admin.${code}`;
-  const msg = t(key);
-  return msg === key ? t("identity_admin.field_required") : msg;
-}
+/*
+ * 身份字段规则：判断沿用 @code-proxy/domain 里与 CliRelay 对齐的校验器，
+ * 失败码与 `validation.*` 里的文案键同名（username_invalid_charset、password_too_short……），
+ * 所以这里不需要再维护一张「失败码 → 文案」的映射表。空值交给 rules.required() 报「必填」。
+ */
+export const usernameRules: readonly Rule<string>[] = [
+  rules.required(),
+  rules.custom<string>((value) => {
+    const result = validateUsername(value);
+    return result.ok || result.code;
+  }),
+];
 
-export function validateCreateUserForm(
-  form: CreateUserForm,
-  t: (key: string) => string,
-): CreateUserFormErrors {
-  const errors: CreateUserFormErrors = {};
-  const usernameResult = validateUsername(form.username);
-  if (!usernameResult.ok) {
-    errors.username = validationCodeToMessage(usernameResult.code, t);
-  }
-  const displayResult = validateDisplayName(form.displayName);
-  if (!displayResult.ok) {
-    errors.displayName = validationCodeToMessage(displayResult.code, t);
-  }
-  if (form.passwordMode === "manual") {
-    const passwordResult = validatePassword(form.password);
-    if (!passwordResult.ok) {
-      errors.password = validationCodeToMessage(passwordResult.code, t);
-    }
-  }
-  return errors;
-}
+export const displayNameRules: readonly Rule<string>[] = [
+  rules.required(),
+  rules.custom<string>((value) => {
+    const result = validateDisplayName(value);
+    return result.ok || result.code;
+  }),
+];
 
-export function validateResetPassword(
-  password: string,
-  t: (key: string) => string,
-): string {
-  const result = validatePassword(password);
-  if (result.ok) return "";
-  return validationCodeToMessage(result.code, t);
-}
+export const passwordRules: readonly Rule<string>[] = [
+  rules.required(),
+  rules.custom<string>((value) => {
+    const result = validatePassword(value);
+    return result.ok || result.code;
+  }),
+];

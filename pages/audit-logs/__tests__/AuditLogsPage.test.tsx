@@ -211,15 +211,83 @@ describe("AuditLogsPage", () => {
     await user.click(
       screen.getByRole("button", { name: "identity_admin.clear_audit_logs" }),
     );
-    await user.click(
-      screen.getByRole("button", {
-        name: "identity_admin.clear_audit_logs_confirm_button",
-      }),
+    const dialog = await screen.findByRole("dialog", {
+      name: "identity_admin.clear_audit_logs_title",
+    });
+    // 清空审计记录不可恢复：要先输入确认词，确认按钮才可用。
+    const confirm = within(dialog).getByRole("button", {
+      name: "identity_admin.clear_audit_logs_confirm_button",
+    });
+    expect(confirm).toBeDisabled();
+    expect(
+      within(dialog).getByText('identity_admin.audit_log_count:{"count":2}'),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByText("identity_admin.clear_audit_logs_consequence_tenant"),
+    ).toBeInTheDocument();
+    await user.type(
+      within(dialog).getByRole("textbox"),
+      "identity_admin.clear_audit_logs_phrase",
     );
+    await user.click(confirm);
 
     await waitFor(() => {
       expect(clearAuditLogs).toHaveBeenCalledTimes(1);
     });
     expect(auditLogs).toHaveBeenLastCalledWith({ page: 1, size: 50 });
+  });
+
+  test("names the record being deleted instead of a bare delete prompt", async () => {
+    const user = userEvent.setup();
+    deleteAuditLog.mockResolvedValue(undefined);
+    render(<AuditLogsPage />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText("Acme / Alice").length).toBeGreaterThan(0);
+    });
+    await user.click(screen.getAllByRole("button", { name: "identity_admin.delete" })[0]!);
+
+    const dialog = await screen.findByRole("dialog", {
+      name: "identity_admin.delete_audit_log_title",
+    });
+    expect(within(dialog).getByText("user · u-2")).toBeInTheDocument();
+    expect(within(dialog).getByText(/Acme \/ Alice ·/)).toBeInTheDocument();
+    await user.click(
+      within(dialog).getByRole("button", { name: "identity_admin.delete_audit_log_button" }),
+    );
+    await waitFor(() => expect(deleteAuditLog).toHaveBeenCalledWith(11));
+  });
+
+  test("shows skeletons while the full record loads and can be closed meanwhile", async () => {
+    const user = userEvent.setup();
+    let resolveDetail: (value: unknown) => void = () => undefined;
+    auditLog.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveDetail = resolve;
+        }),
+    );
+    render(<AuditLogsPage />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText("Acme / Alice").length).toBeGreaterThan(0);
+    });
+    await user.click(screen.getAllByRole("button", { name: "identity_admin.view" })[0]!);
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).queryByText("identity_admin.loading")).not.toBeInTheDocument();
+    expect(within(dialog).queryByText("identity_admin.no_call_chain")).not.toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    // 关掉之后才回来的完整记录不能把弹窗重新打开。
+    resolveDetail({
+      id: 11,
+      action: "user.create",
+      resource_type: "user",
+      result: "success",
+      created_at: "2026-07-13T10:00:00Z",
+    });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });

@@ -1,46 +1,24 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Ban, CalendarClock, Eye, Pencil } from "lucide-react";
 import { identityApi, type TenantIdentity } from "@code-proxy/api-client";
 import {
   Button,
   COLUMN_WIDTH,
-  ConfirmModal,
   DataTable,
-  DateTimePicker,
-  Form,
-  FormField,
-  Modal,
-  Select,
   TABLE_ROW_ACTIONS_COLUMN,
   TableRowActions,
-  TextInput,
-  Textarea,
   useToast,
   type DataTableColumn,
   surface,
 } from "@code-proxy/ui";
 import { PermissionGate } from "@app/providers/PermissionGate";
 import { useAuth } from "@app/providers/AuthProvider";
-import { resolvePasswordApiError, validatePasswordField } from "@features/password-policy";
-import {
-  isTenantNameTooLong,
-  TENANT_NAME_MAX_LENGTH,
-  toIsoDateTime,
-  toLocalDateTimeInput,
-} from "./tenantForm";
-
-const emptyCreateForm = {
-  name: "",
-  expires_at: "",
-  admin_username: "",
-  admin_display_name: "",
-  admin_password: "",
-  description: "",
-};
-
-type CreateFormKey = keyof typeof emptyCreateForm;
-type CreateFormErrors = Partial<Record<CreateFormKey, string>>;
+import { resolvePasswordApiError } from "@features/password-policy";
+import { CreateTenantModal, type CreateTenantForm } from "./CreateTenantModal";
+import { EditTenantModal, type EditTenantValues } from "./EditTenantModal";
+import { DisableTenantConfirm, RenewTenantModal, TenantDetailsModal } from "./TenantDialogs";
+import { toIsoDateTime } from "./tenantForm";
 
 export function TenantsPage() {
   const { notify } = useToast();
@@ -49,20 +27,9 @@ export function TenantsPage() {
   const [items, setItems] = useState<TenantIdentity[]>([]);
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
-  const [createForm, setCreateForm] = useState(emptyCreateForm);
-  const [createErrors, setCreateErrors] = useState<CreateFormErrors>({});
   const [detailsTenant, setDetailsTenant] = useState<TenantIdentity | null>(null);
   const [editTenant, setEditTenant] = useState<TenantIdentity | null>(null);
-  const [editForm, setEditForm] = useState({
-    name: "",
-    description: "",
-    status: "active",
-    access_token_ttl_seconds: 43200,
-    refresh_token_ttl_seconds: 2592000,
-  });
   const [renewTenant, setRenewTenant] = useState<TenantIdentity | null>(null);
-  const [renewAt, setRenewAt] = useState("");
-  const [renewError, setRenewError] = useState("");
   const [disableTenant, setDisableTenant] = useState<TenantIdentity | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -215,26 +182,14 @@ export function TenantsPage() {
                   label: t("identity_admin.edit"),
                   icon: <Pencil size={14} />,
                   visible: canUpdateTenant,
-                  onClick: () => {
-                    setEditTenant(item);
-                    setEditForm({
-                      name: item.name,
-                      description: item.description ?? "",
-                      status: item.status,
-                      access_token_ttl_seconds: item.access_token_ttl_seconds ?? 43200,
-                      refresh_token_ttl_seconds: item.refresh_token_ttl_seconds ?? 2592000,
-                    });
-                  },
+                  onClick: () => setEditTenant(item),
                 },
                 {
                   key: "renew",
                   label: t("identity_admin.renew"),
                   icon: <CalendarClock size={14} />,
                   visible: canUpdateTenant,
-                  onClick: () => {
-                    setRenewTenant(item);
-                    setRenewAt(toLocalDateTimeInput(item.expires_at));
-                  },
+                  onClick: () => setRenewTenant(item),
                 },
                 {
                   key: "disable",
@@ -253,112 +208,35 @@ export function TenantsPage() {
     [can, i18n.language, statusLabel, t, tenantName],
   );
 
-  const updateCreateField = useCallback(
-    <K extends CreateFormKey>(key: K, value: (typeof emptyCreateForm)[K]) => {
-      setCreateForm((prev) => ({ ...prev, [key]: value }));
-      setCreateErrors((prev) => {
-        if (!prev[key]) return prev;
-        const next = { ...prev };
-        delete next[key];
-        return next;
-      });
-    },
-    [],
-  );
-
-  const validateCreateForm = useCallback((): CreateFormErrors => {
-    const errors: CreateFormErrors = {};
-    const requiredMsg = t("identity_admin.field_required");
-    const nameTooLongMsg = t("identity_admin.name_too_long", { max: TENANT_NAME_MAX_LENGTH });
-
-    if (!createForm.name.trim()) errors.name = requiredMsg;
-    else if (isTenantNameTooLong(createForm.name)) errors.name = nameTooLongMsg;
-    if (!createForm.admin_username.trim()) errors.admin_username = requiredMsg;
-    if (!createForm.admin_display_name.trim()) errors.admin_display_name = requiredMsg;
-
-    if (!createForm.admin_password) {
-      errors.admin_password = requiredMsg;
-    } else {
-      // The full policy, not just the length. Checking only the length let a
-      // 12-character all-lowercase password through to the server, whose
-      // rejection could then only be rendered as a raw English toast.
-      const passwordError = validatePasswordField(createForm.admin_password, t);
-      if (passwordError) errors.admin_password = passwordError;
-    }
-
-    if (!createForm.expires_at.trim()) {
-      errors.expires_at = t("identity_admin.expires_at_required");
-    } else if (!toIsoDateTime(createForm.expires_at)) {
-      errors.expires_at = t("identity_admin.expires_at_invalid");
-    }
-
-    return errors;
-  }, [createForm, t]);
-
-  const createTenant = async (event: FormEvent) => {
-    event.preventDefault();
-    const errors = validateCreateForm();
-    setCreateErrors(errors);
-    if (Object.keys(errors).length > 0) {
-      // Surface expiry issues as localized toast as well (DateTimePicker is easy to miss).
-      if (errors.expires_at) {
-        notify({ type: "error", message: errors.expires_at });
-      }
-      return;
-    }
-
-    const expiresAtIso = toIsoDateTime(createForm.expires_at);
-    if (!expiresAtIso) {
-      const message = t("identity_admin.expires_at_invalid");
-      setCreateErrors({ expires_at: message });
-      notify({ type: "error", message });
-      return;
-    }
-
+  /** 创建成功返回 null；服务端拒绝管理员密码时返回该错误，由弹窗显示在密码框下。 */
+  const createTenant = async (form: CreateTenantForm): Promise<string | null> => {
+    const expiresAtIso = toIsoDateTime(form.expires_at);
+    if (!expiresAtIso) return null; // 弹窗已按同一规则拦下，这里只为类型收窄。
+    let policyError: string | null = null;
     const success = await run(
       () =>
         identityApi.createTenant({
-          ...createForm,
+          ...form,
           expires_at: expiresAtIso,
         }),
       t("identity_admin.tenant_created"),
       (error) => {
-        const policy = resolvePasswordApiError(error, t);
         // A server-side password rejection belongs under the field, exactly
         // where the local check would have put it.
-        if (policy) setCreateErrors((prev) => ({ ...prev, admin_password: policy }));
-        return policy;
+        policyError = resolvePasswordApiError(error, t);
+        return policyError;
       },
     );
-    if (success) {
-      setCreateOpen(false);
-      setCreateForm(emptyCreateForm);
-      setCreateErrors({});
-    }
+    if (success) setCreateOpen(false);
+    return policyError;
   };
 
-  const saveTenant = async (event: FormEvent) => {
-    event.preventDefault();
+  const saveTenant = async (values: EditTenantValues) => {
     if (!editTenant) return;
-    if (!editForm.name.trim()) {
-      notify({ type: "error", message: t("identity_admin.field_required") });
-      return;
-    }
-    if (isTenantNameTooLong(editForm.name)) {
-      notify({
-        type: "error",
-        message: t("identity_admin.name_too_long", { max: TENANT_NAME_MAX_LENGTH }),
-      });
-      return;
-    }
     const success = await run(
       () =>
         identityApi.updateTenant(editTenant.id, {
-          name: editForm.name,
-          description: editForm.description,
-          status: editForm.status,
-          access_token_ttl_seconds: editForm.access_token_ttl_seconds,
-          refresh_token_ttl_seconds: editForm.refresh_token_ttl_seconds,
+          ...values,
           version: editTenant.version,
         }),
       t("identity_admin.tenant_details_updated"),
@@ -366,24 +244,8 @@ export function TenantsPage() {
     if (success) setEditTenant(null);
   };
 
-  const renew = async (event: FormEvent) => {
-    event.preventDefault();
+  const renew = async (expiresAtIso: string) => {
     if (!renewTenant) return;
-
-    if (!renewAt.trim()) {
-      const message = t("identity_admin.expires_at_required");
-      setRenewError(message);
-      notify({ type: "error", message });
-      return;
-    }
-    const expiresAtIso = toIsoDateTime(renewAt);
-    if (!expiresAtIso) {
-      const message = t("identity_admin.expires_at_invalid");
-      setRenewError(message);
-      notify({ type: "error", message });
-      return;
-    }
-
     const success = await run(
       () =>
         identityApi.updateTenant(renewTenant.id, {
@@ -392,20 +254,7 @@ export function TenantsPage() {
         }),
       t("identity_admin.tenant_expiry_updated"),
     );
-    if (success) {
-      setRenewTenant(null);
-      setRenewError("");
-    }
-  };
-
-  const closeCreateModal = () => {
-    setCreateOpen(false);
-    setCreateErrors({});
-  };
-
-  const closeRenewModal = () => {
-    setRenewTenant(null);
-    setRenewError("");
+    if (success) setRenewTenant(null);
   };
 
   return (
@@ -444,242 +293,47 @@ export function TenantsPage() {
         </div>
       </div>
 
-      <Modal
+      <CreateTenantModal
         open={createOpen}
-        title={t("identity_admin.new_tenant")}
-        description={t("identity_admin.tenants_description")}
-        onClose={closeCreateModal}
-        footer={
-          <>
-            <Button onClick={closeCreateModal}>{t("common.cancel")}</Button>
-            <Button type="submit" form="create-tenant-form" variant="primary" disabled={busy}>
-              {t("identity_admin.create_tenant")}
-            </Button>
-          </>
-        }
-      >
-        <Form id="create-tenant-form" onSubmit={createTenant} noValidate>
-          <div className="grid gap-4 md:grid-cols-2">
-            <FormField label={t("identity_admin.name")} required error={createErrors.name}>
-              <TextInput
-                aria-label={t("identity_admin.name")}
-                value={createForm.name}
-                maxLength={TENANT_NAME_MAX_LENGTH}
-                onChange={(event) => updateCreateField("name", event.target.value)}
-              />
-            </FormField>
-            <FormField
-              label={t("identity_admin.expires_at")}
-              required
-              error={createErrors.expires_at}
-            >
-              <DateTimePicker
-                value={createForm.expires_at}
-                onChange={(value) => updateCreateField("expires_at", value)}
-                aria-label={t("identity_admin.expires_at")}
-                locale={i18n.language}
-                labels={dateTimePickerLabels}
-              />
-            </FormField>
-            <FormField
-              label={t("identity_admin.admin_username")}
-              required
-              error={createErrors.admin_username}
-            >
-              <TextInput
-                aria-label={t("identity_admin.admin_username")}
-                value={createForm.admin_username}
-                onChange={(event) => updateCreateField("admin_username", event.target.value)}
-              />
-            </FormField>
-            <FormField
-              label={t("identity_admin.admin_display_name")}
-              required
-              error={createErrors.admin_display_name}
-            >
-              <TextInput
-                aria-label={t("identity_admin.admin_display_name")}
-                value={createForm.admin_display_name}
-                onChange={(event) => updateCreateField("admin_display_name", event.target.value)}
-              />
-            </FormField>
-            <FormField
-              label={t("identity_admin.admin_password")}
-              required
-              error={createErrors.admin_password}
-              description={t("identity_admin.password_requirement")}
-            >
-              <TextInput
-                aria-label={t("identity_admin.admin_password")}
-                type="password"
-                value={createForm.admin_password}
-                onChange={(event) => updateCreateField("admin_password", event.target.value)}
-                autoComplete="new-password"
-              />
-            </FormField>
-            <FormField
-              label={t("identity_admin.description")}
-              error={createErrors.description}
-              className="md:col-span-2"
-            >
-              <TextInput
-                aria-label={t("identity_admin.description")}
-                value={createForm.description}
-                onChange={(event) => updateCreateField("description", event.target.value)}
-              />
-            </FormField>
-          </div>
-        </Form>
-      </Modal>
+        busy={busy}
+        locale={i18n.language}
+        dateTimePickerLabels={dateTimePickerLabels}
+        onSubmit={createTenant}
+        // Surface expiry issues as a localized toast as well: the DateTimePicker
+        // takes no aria-invalid, so focus cannot be sent to it.
+        onExpiryInvalid={(message) => notify({ type: "error", message })}
+        onClose={() => setCreateOpen(false)}
+      />
 
-      <Modal
-        open={Boolean(detailsTenant)}
-        title={detailsTenant ? tenantName(detailsTenant) : ""}
+      <TenantDetailsModal
+        tenant={detailsTenant}
+        name={detailsTenant ? tenantName(detailsTenant) : ""}
+        statusLabel={statusLabel}
+        locale={i18n.language}
         onClose={() => setDetailsTenant(null)}
-        maxWidth="max-w-xl"
-      >
-        {detailsTenant ? (
-          <dl className="grid gap-4 sm:grid-cols-2">
-            {[
-              [t("identity_admin.slug"), detailsTenant.slug],
-              [t("identity_admin.status"), statusLabel(detailsTenant.effective_status)],
-              [
-                t("identity_admin.expires"),
-                detailsTenant.expires_at
-                  ? new Date(detailsTenant.expires_at).toLocaleString(i18n.language)
-                  : t("identity_admin.never"),
-              ],
-              [t("identity_admin.version"), String(detailsTenant.version)],
-              [
-                t("identity_admin.description"),
-                detailsTenant.description || t("identity_admin.none"),
-              ],
-            ].map(([label, value]) => (
-              <div key={label} className="rounded-xl bg-slate-50 px-4 py-3 dark:bg-white/5">
-                <dt className="text-xs font-medium text-slate-400">{label}</dt>
-                <dd className="mt-1 text-sm text-slate-800 dark:text-slate-200">{value}</dd>
-              </div>
-            ))}
-          </dl>
-        ) : null}
-      </Modal>
+      />
 
-      <Modal
-        open={Boolean(editTenant)}
-        title={t("identity_admin.edit_tenant")}
+      <EditTenantModal
+        tenant={editTenant}
+        busy={busy}
+        locale={i18n.language}
+        onSubmit={(values) => void saveTenant(values)}
         onClose={() => setEditTenant(null)}
-        maxWidth="max-w-xl"
-        footer={
-          <>
-            <Button onClick={() => setEditTenant(null)}>{t("common.cancel")}</Button>
-            <Button type="submit" form="edit-tenant-form" variant="primary" disabled={busy}>
-              {t("identity_admin.save")}
-            </Button>
-          </>
-        }
-      >
-        <Form id="edit-tenant-form" onSubmit={saveTenant}>
-          <FormField label={t("identity_admin.name")} required orientation="horizontal">
-            <TextInput
-              value={editForm.name}
-              maxLength={TENANT_NAME_MAX_LENGTH}
-              onChange={(event) => setEditForm({ ...editForm, name: event.target.value })}
-              required
-            />
-          </FormField>
-          <FormField label={t("identity_admin.status")} orientation="horizontal">
-            <Select
-              value={editForm.status}
-              onChange={(status) => setEditForm({ ...editForm, status })}
-              options={[
-                { value: "active", label: t("identity_admin.status_active") },
-                { value: "suspended", label: t("identity_admin.status_suspended") },
-                { value: "disabled", label: t("identity_admin.status_disabled") },
-              ]}
-            />
-          </FormField>
-          <FormField label={t("identity_admin.description")} orientation="horizontal">
-            <Textarea
-              value={editForm.description}
-              onChange={(event) => setEditForm({ ...editForm, description: event.target.value })}
-            />
-          </FormField>
-          <FormField
-            label={t("identity_admin.access_token_ttl", { defaultValue: "Access Token TTL (秒)" })}
-            orientation="horizontal"
-          >
-            <TextInput
-              type="number"
-              min={60}
-              value={String(editForm.access_token_ttl_seconds)}
-              onChange={(event) =>
-                setEditForm({
-                  ...editForm,
-                  access_token_ttl_seconds: Number(event.target.value) || 43200,
-                })
-              }
-            />
-          </FormField>
-          <FormField
-            label={t("identity_admin.refresh_token_ttl", {
-              defaultValue: "Refresh Token TTL (秒)",
-            })}
-            orientation="horizontal"
-          >
-            <TextInput
-              type="number"
-              min={300}
-              value={String(editForm.refresh_token_ttl_seconds)}
-              onChange={(event) =>
-                setEditForm({
-                  ...editForm,
-                  refresh_token_ttl_seconds: Number(event.target.value) || 2592000,
-                })
-              }
-            />
-          </FormField>
-        </Form>
-      </Modal>
+      />
 
-      <Modal
-        open={Boolean(renewTenant)}
-        title={t("identity_admin.renew_tenant")}
-        onClose={closeRenewModal}
-        maxWidth="max-w-md"
-        footer={
-          <>
-            <Button onClick={closeRenewModal}>{t("common.cancel")}</Button>
-            <Button type="submit" form="renew-tenant-form" variant="primary" disabled={busy}>
-              {t("identity_admin.renew")}
-            </Button>
-          </>
-        }
-      >
-        <Form id="renew-tenant-form" onSubmit={renew} noValidate>
-          <FormField label={t("identity_admin.expires_at")} required error={renewError}>
-            <DateTimePicker
-              value={renewAt}
-              onChange={(value) => {
-                setRenewAt(value);
-                if (renewError) setRenewError("");
-              }}
-              aria-label={t("identity_admin.expires_at")}
-              locale={i18n.language}
-              labels={dateTimePickerLabels}
-            />
-          </FormField>
-        </Form>
-      </Modal>
+      <RenewTenantModal
+        tenant={renewTenant}
+        name={renewTenant ? tenantName(renewTenant) : ""}
+        busy={busy}
+        locale={i18n.language}
+        dateTimePickerLabels={dateTimePickerLabels}
+        onSubmit={(iso) => void renew(iso)}
+        onClose={() => setRenewTenant(null)}
+      />
 
-      <ConfirmModal
-        open={Boolean(disableTenant)}
-        title={t("identity_admin.disable")}
-        description={
-          disableTenant
-            ? t("identity_admin.disable_tenant_confirm", { name: tenantName(disableTenant) })
-            : ""
-        }
-        confirmText={t("identity_admin.disable")}
+      <DisableTenantConfirm
+        tenant={disableTenant}
+        name={disableTenant ? tenantName(disableTenant) : ""}
         busy={busy}
         onClose={() => setDisableTenant(null)}
         onConfirm={() => {

@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import i18n from "@code-proxy/i18n";
@@ -200,6 +200,21 @@ describe("ContentModerationPage", () => {
       }),
     );
     expect(await screen.findByRole("switch", { name: /Strict prompts/ })).not.toBeChecked();
+  });
+
+  test("explains before deleting that bound channels will make the server refuse", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole("button", { name: "Delete Profile" }));
+    const dialog = await screen.findByRole("dialog", {
+      name: "Delete moderation profile “Strict prompts”?",
+    });
+    expect(within(dialog).getByText("Strict prompts")).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(/4 channels are still bound to it, so the server will refuse/),
+    ).toBeInTheDocument();
+    expect(mocks.deleteProfile).not.toHaveBeenCalled();
   });
 
   test("blocks enabling API moderation when no API key is configured", async () => {

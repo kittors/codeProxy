@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { ArrowLeftRight, ArrowRight } from "lucide-react";
 import {
   contentModerationApi,
   extractApiErrorCode,
@@ -37,7 +38,7 @@ function SelectShell({
   const { t } = useTranslation();
   return (
     <div className={["space-y-2", className].filter(Boolean).join(" ")}>
-      <p className="text-sm font-semibold text-slate-900 dark:text-white">{label}</p>
+      <p className="text-sm font-medium text-ink">{label}</p>
       <Select
         value=""
         onChange={() => undefined}
@@ -46,7 +47,7 @@ function SelectShell({
         placeholder={t("content_moderation.profile_select_placeholder")}
         disabled
       />
-      <p className="text-xs text-slate-500 dark:text-white/55">{hint}</p>
+      <p className="text-xs leading-5 text-ink-3">{hint}</p>
     </div>
   );
 }
@@ -165,6 +166,11 @@ function BoundModerationProfileSelect({
     [channelId, channelType, notify, onBindingChanged, t],
   );
 
+  const profileName = (id: string) =>
+    id
+      ? (profiles.find((profile) => profile.id === id)?.name ?? id)
+      : t("content_moderation.profile_none");
+
   const handleChange = (nextProfileId: string) => {
     if (nextProfileId === profileId) return;
     if (profileId && nextProfileId) {
@@ -176,7 +182,7 @@ function BoundModerationProfileSelect({
 
   return (
     <div className={["space-y-2", className].filter(Boolean).join(" ")}>
-      <p className="text-sm font-semibold text-slate-900 dark:text-white">{resolvedLabel}</p>
+      <p className="text-sm font-medium text-ink">{resolvedLabel}</p>
       <Select
         value={profileId}
         onChange={handleChange}
@@ -185,14 +191,34 @@ function BoundModerationProfileSelect({
         placeholder={t("content_moderation.profile_select_placeholder")}
         disabled={!canWrite || loading || saving}
       />
-      <p className="text-xs text-slate-500 dark:text-white/55">
+      <p className="text-xs leading-5 text-ink-3">
         {hint ?? t("content_moderation.profile_select_hint")}
       </p>
 
+      {/* 这是「替换」不是删除：旧绑定换成新配置、随时能改回来，所以用琥珀色 + 双向箭头，
+          并把「旧配置 → 新配置」摆在卡片里。本地还没读到旧绑定（服务端报冲突）时显示「另一个配置」。 */}
       <ConfirmModal
         open={pendingProfileId !== null}
         title={t("content_moderation.rebind_title")}
         description={t("content_moderation.rebind_description")}
+        variant="warning"
+        icon={<ArrowLeftRight />}
+        subject={
+          pendingProfileId !== null ? (
+            <span className="flex min-w-0 items-center gap-2.5">
+              <span className="min-w-0 truncate text-ink-3">
+                {profileId ? profileName(profileId) : t("content_moderation.rebind_existing_unknown")}
+              </span>
+              <ArrowRight size={14} className="shrink-0 text-ink-3" aria-hidden="true" />
+              <span className="min-w-0 truncate font-medium">{profileName(pendingProfileId)}</span>
+            </span>
+          ) : null
+        }
+        consequences={
+          pendingProfileId !== null
+            ? [t("content_moderation.rebind_consequence", { name: profileName(pendingProfileId) })]
+            : []
+        }
         confirmText={t("content_moderation.rebind_confirm")}
         busy={saving}
         onClose={() => setPendingProfileId(null)}

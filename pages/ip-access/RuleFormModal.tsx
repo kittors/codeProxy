@@ -1,11 +1,24 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Ban, ListChecks, ShieldCheck } from "lucide-react";
 import {
   ipAccessApi,
   type CreateIpAccessRuleBody,
   type IpAccessEffect,
 } from "@code-proxy/api-client";
-import { Button, Modal, Select, TextInput, useToast } from "@code-proxy/ui";
+import {
+  Button,
+  Callout,
+  ChoiceCards,
+  FormField,
+  Modal,
+  SegmentedControl,
+  TextInput,
+  rules,
+  useFormValidation,
+  useToast,
+} from "@code-proxy/ui";
+import { describeCidr } from "./cidrPreview";
 
 const DURATION_OPTIONS = [
   { value: "", labelKey: "ip_access.duration_permanent" },
@@ -15,6 +28,8 @@ const DURATION_OPTIONS = [
   { value: "10080", labelKey: "ip_access.duration_7d" },
 ] as const;
 
+type DurationValue = (typeof DURATION_OPTIONS)[number]["value"];
+
 interface RuleFormModalProps {
   open: boolean;
   preset: { cidr: string; effect: IpAccessEffect } | null;
@@ -22,14 +37,25 @@ interface RuleFormModalProps {
   onCreated: () => void;
 }
 
+/**
+ * 新增 IP 规则。
+ *
+ * 地址就地校验（IP 或 CIDR），并实时说明会存成什么：「单个 IPv4 地址，保存为 …/32」「IPv4 网段，共 256 个地址」；
+ * 拒绝 / 放行用卡片把各自的效果写清楚；有效期是几个快捷选项，下面直接显示到期时间。
+ * 保存失败（例如命中受保护地址）显示在弹窗里，而不是一闪而过的 toast。
+ */
 export function RuleFormModal({ open, preset, onClose, onCreated }: RuleFormModalProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { notify } = useToast();
+  const formRef = useRef<HTMLFormElement | null>(null);
   const [cidr, setCidr] = useState("");
   const [effect, setEffect] = useState<IpAccessEffect>("deny");
   const [note, setNote] = useState("");
-  const [durationMinutes, setDurationMinutes] = useState("");
+  const [durationMinutes, setDurationMinutes] = useState<DurationValue>("");
   const [saving, setSaving] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const validation = useFormValidation({ cidr }, { cidr: [rules.required(), rules.cidr()] });
+  const { reset } = validation;
 
   useEffect(() => {
     if (!open) return;
@@ -37,19 +63,40 @@ export function RuleFormModal({ open, preset, onClose, onCreated }: RuleFormModa
     setEffect(preset?.effect ?? "deny");
     setNote("");
     setDurationMinutes("");
-  }, [open, preset]);
+    setSubmitError(null);
+    reset();
+  }, [open, preset, reset]);
+
+  const preview = validation.issues.cidr ? null : describeCidr(cidr);
+  const numberFormat = new Intl.NumberFormat(i18n.language);
+  const cidrDescription = preview
+    ? preview.single
+      ? t(`ip_access.cidr_preview_single_v${preview.family}`, { cidr: preview.normalized })
+      : preview.family === 4
+        ? t("ip_access.cidr_preview_range_v4", {
+            count: preview.addresses ?? 0,
+            formatted: numberFormat.format(preview.addresses ?? 0),
+          })
+        : t("ip_access.cidr_preview_range_v6", { prefix: preview.prefix })
+    : t("ip_access.form_cidr_hint");
+
+  const expiryPreview = durationMinutes
+    ? t("ip_access.expires_preview", {
+        time: new Date(Date.now() + Number(durationMinutes) * 60_000).toLocaleString(i18n.language),
+      })
+    : t("ip_access.expires_preview_never");
 
   const submit = async () => {
-    const trimmed = cidr.trim();
-    if (!trimmed) {
-      notify({ type: "error", message: t("ip_access.cidr_required") });
+    if (!validation.validate()) {
+      validation.focusFirstInvalid(formRef.current);
       return;
     }
-    const body: CreateIpAccessRuleBody = { cidr: trimmed, effect, note: note.trim() };
+    const body: CreateIpAccessRuleBody = { cidr: cidr.trim(), effect, note: note.trim() };
     if (durationMinutes) {
       body.expires_at = new Date(Date.now() + Number(durationMinutes) * 60_000).toISOString();
     }
     setSaving(true);
+    setSubmitError(null);
     try {
       const response = await ipAccessApi.createRule(body);
       if (response.warning) {
@@ -59,10 +106,7 @@ export function RuleFormModal({ open, preset, onClose, onCreated }: RuleFormModa
       }
       onCreated();
     } catch (error) {
-      notify({
-        type: "error",
-        message: error instanceof Error ? error.message : t("ip_access.save_failed"),
-      });
+      setSubmitError(error instanceof Error ? error.message : t("ip_access.save_failed"));
     } finally {
       setSaving(false);
     }
@@ -72,7 +116,9 @@ export function RuleFormModal({ open, preset, onClose, onCreated }: RuleFormModa
     <Modal
       open={open}
       title={t("ip_access.add_rule")}
-      maxWidth="max-w-lg"
+      description={t("ip_access.rule_form_desc")}
+      icon={<ListChecks />}
+      size="md"
       onClose={() => {
         if (!saving) onClose();
       }}
@@ -81,74 +127,95 @@ export function RuleFormModal({ open, preset, onClose, onCreated }: RuleFormModa
           <Button variant="secondary" onClick={onClose} disabled={saving}>
             {t("common.cancel")}
           </Button>
-          <Button variant="primary" onClick={() => void submit()} disabled={saving}>
-            {t("common.save")}
+          <Button type="submit" form="ip-rule-form" variant="primary" loading={saving}>
+            {t("ip_access.add_rule")}
           </Button>
         </>
       }
     >
-      <div className="space-y-4 text-sm">
-        <Field label={t("ip_access.form_cidr")} hint={t("ip_access.form_cidr_hint")}>
+      <form
+        ref={formRef}
+        id="ip-rule-form"
+        className="space-y-4"
+        noValidate
+        onSubmit={(event) => {
+          event.preventDefault();
+          void submit();
+        }}
+      >
+        <FormField
+          label={t("ip_access.form_cidr")}
+          required
+          description={cidrDescription}
+          error={validation.error("cidr")}
+        >
           <TextInput
             value={cidr}
-            onChange={(event) => setCidr(event.target.value)}
+            aria-label={t("ip_access.form_cidr")}
             placeholder="203.0.113.10 / 203.0.113.0/24"
             className="font-mono"
+            spellCheck={false}
+            autoComplete="off"
+            {...validation.bind("cidr")}
+            onChange={(event) => {
+              setCidr(event.target.value);
+              setSubmitError(null);
+            }}
           />
-        </Field>
+        </FormField>
 
-        <Field label={t("ip_access.form_effect")} hint={t(`ip_access.form_effect_hint_${effect}`)}>
-          <Select
+        <FormField label={t("ip_access.form_effect")} reserveMeta={false}>
+          <ChoiceCards<IpAccessEffect>
+            ariaLabel={t("ip_access.form_effect")}
             value={effect}
-            onChange={(value) => setEffect(value as IpAccessEffect)}
+            onChange={setEffect}
             options={[
-              { value: "deny", label: t("ip_access.effect_deny") },
-              { value: "allow", label: t("ip_access.effect_allow") },
+              {
+                value: "deny",
+                label: t("ip_access.effect_deny"),
+                description: t("ip_access.form_effect_hint_deny"),
+                icon: <Ban />,
+              },
+              {
+                value: "allow",
+                label: t("ip_access.effect_allow"),
+                description: t("ip_access.form_effect_hint_allow"),
+                icon: <ShieldCheck />,
+              },
             ]}
-            fullWidth
           />
-        </Field>
+        </FormField>
 
-        <Field label={t("ip_access.form_duration")} hint={t("ip_access.form_duration_hint")}>
-          <Select
+        <FormField
+          label={t("ip_access.form_duration")}
+          description={`${expiryPreview} · ${t("ip_access.form_duration_hint")}`}
+        >
+          <SegmentedControl<DurationValue>
+            ariaLabel={t("ip_access.form_duration")}
             value={durationMinutes}
             onChange={setDurationMinutes}
             options={DURATION_OPTIONS.map((option) => ({
               value: option.value,
               label: t(option.labelKey),
             }))}
-            fullWidth
           />
-        </Field>
+        </FormField>
 
-        <Field label={t("ip_access.form_note")}>
+        <FormField label={t("ip_access.form_note")} optional reserveMeta={false}>
           <TextInput
             value={note}
+            aria-label={t("ip_access.form_note")}
             onChange={(event) => setNote(event.target.value)}
             placeholder={t("ip_access.form_note_placeholder")}
           />
-        </Field>
-      </div>
-    </Modal>
-  );
-}
+        </FormField>
 
-function Field({
-  label,
-  hint,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <label className="block text-sm font-medium text-slate-700 dark:text-white/80">
-        {label}
-      </label>
-      {children}
-      {hint ? <p className="text-xs text-slate-500">{hint}</p> : null}
-    </div>
+        {submitError ? (
+          <Callout tone="danger" role="alert">
+            {submitError}
+          </Callout>
+        ) : null}
+      </form>
+    </Modal>
   );
 }

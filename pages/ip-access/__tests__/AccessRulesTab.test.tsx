@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { IpAccessRule } from "@code-proxy/api-client";
@@ -146,6 +146,23 @@ describe("AccessRulesTab", () => {
     await waitFor(() =>
       expect(bulkUpdateRules).toHaveBeenCalledWith({ ids: ["r1", "r2"], enabled: true }),
     );
+  });
+
+  test("names the rule being deleted and what changes for that address", async () => {
+    deleteRule.mockResolvedValue(undefined);
+    renderTab();
+
+    await userEvent.click(await screen.findByRole("button", { name: "ip_access.delete_rule" }));
+    const dialog = await screen.findByRole("dialog", {
+      name: 'ip_access.delete_rule_title:{"cidr":"203.0.113.66/32"}',
+    });
+    expect(within(dialog).getByText("203.0.113.66/32")).toBeInTheDocument();
+    expect(within(dialog).getByText("ip_access.delete_rule_consequence_default")).toBeInTheDocument();
+    // 删掉的是拒绝规则：说明该地址之后不再被它拒绝。
+    expect(within(dialog).getByText("ip_access.delete_rule_consequence_deny")).toBeInTheDocument();
+
+    await userEvent.click(within(dialog).getByRole("button", { name: "ip_access.delete_rule" }));
+    await waitFor(() => expect(deleteRule).toHaveBeenCalledWith("r1"));
   });
 
   test("protected addresses are listed so a refused ban is explainable", async () => {

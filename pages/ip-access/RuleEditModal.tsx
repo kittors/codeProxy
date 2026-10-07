@@ -1,7 +1,18 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { ListChecks, Lock } from "lucide-react";
 import { ipAccessApi, type IpAccessRule } from "@code-proxy/api-client";
-import { Button, Modal, Select, TextInput, useToast } from "@code-proxy/ui";
+import {
+  Button,
+  Callout,
+  DetailList,
+  FormField,
+  Modal,
+  Select,
+  TextInput,
+  surface,
+  useToast,
+} from "@code-proxy/ui";
 
 /** Extending an existing ban is the common case, so the options are relative. */
 const EXTEND_OPTIONS = [
@@ -13,12 +24,19 @@ const EXTEND_OPTIONS = [
   { value: "10080", labelKey: "ip_access.duration_7d" },
 ] as const;
 
+const EFFECT_BADGE: Record<IpAccessRule["effect"], string> = {
+  deny: "bg-rose-500/10 text-rose-700 dark:text-rose-300",
+  allow: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+};
+
 /**
  * Edits the fields a rule can meaningfully change: its note and its expiry.
  *
  * The CIDR and effect are deliberately not editable — changing either produces a
  * different rule, and doing it in place would silently rewrite what an audit
  * trail already recorded. Delete and re-create instead.
+ *
+ * 只读部分用 DetailList 展示（地址、效果、来源、命中次数），可改的有效期下面实时显示保存后的到期时间。
  */
 export function RuleEditModal({
   rule,
@@ -29,21 +47,24 @@ export function RuleEditModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { notify } = useToast();
   const [note, setNote] = useState("");
   const [expiry, setExpiry] = useState("");
   const [saving, setSaving] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!rule) return;
     setNote(rule.note ?? "");
     setExpiry("");
+    setSubmitError(null);
   }, [rule]);
 
   const submit = async () => {
     if (!rule) return;
     setSaving(true);
+    setSubmitError(null);
     try {
       const body: { note?: string; expires_at?: string } = { note: note.trim() };
       if (expiry === "never") {
@@ -55,20 +76,32 @@ export function RuleEditModal({
       notify({ type: "success", message: t("ip_access.rule_updated") });
       onSaved();
     } catch (error) {
-      notify({
-        type: "error",
-        message: error instanceof Error ? error.message : t("ip_access.save_failed"),
-      });
+      setSubmitError(error instanceof Error ? error.message : t("ip_access.save_failed"));
     } finally {
       setSaving(false);
     }
   };
 
+  const formatTime = (value: string) => new Date(value).toLocaleString(i18n.language);
+  const currentExpiry = rule?.expires_at
+    ? t("ip_access.expiry_current", { time: formatTime(rule.expires_at) })
+    : t("ip_access.expiry_current_never");
+  const expiryDescription =
+    expiry === ""
+      ? currentExpiry
+      : expiry === "never"
+        ? t("ip_access.expires_preview_never")
+        : t("ip_access.expires_preview", {
+            time: formatTime(new Date(Date.now() + Number(expiry) * 60_000).toISOString()),
+          });
+
   return (
     <Modal
       open={rule !== null}
       title={t("ip_access.edit_rule")}
-      maxWidth="max-w-lg"
+      description={t("ip_access.edit_rule_desc")}
+      icon={<ListChecks />}
+      size="md"
       onClose={() => {
         if (!saving) onClose();
       }}
@@ -77,54 +110,85 @@ export function RuleEditModal({
           <Button variant="secondary" onClick={onClose} disabled={saving}>
             {t("common.cancel")}
           </Button>
-          <Button variant="primary" onClick={() => void submit()} disabled={saving}>
-            {t("common.save")}
+          <Button type="submit" form="ip-rule-edit-form" variant="primary" loading={saving}>
+            {t("ip_access.save_rule")}
           </Button>
         </>
       }
     >
-      <div className="space-y-4 text-sm">
-        <div className="space-y-1.5">
-          <span className="block text-sm font-medium text-slate-700 dark:text-white/80">
-            {t("ip_access.col_cidr")}
-          </span>
-          <p className="font-mono text-sm text-slate-900 dark:text-white">{rule?.cidr}</p>
-          <p className="text-xs text-slate-500">{t("ip_access.edit_cidr_locked")}</p>
-        </div>
+      <form
+        id="ip-rule-edit-form"
+        className="space-y-5"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void submit();
+        }}
+      >
+        {rule ? (
+          <div className={`space-y-3 px-4 py-3.5 ${surface({ tone: "inset" })}`}>
+            <DetailList
+              items={[
+                {
+                  label: t("ip_access.col_cidr"),
+                  value: rule.cidr,
+                  mono: true,
+                  copyValue: rule.cidr,
+                },
+                {
+                  label: t("ip_access.col_effect"),
+                  value: (
+                    <span
+                      className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${EFFECT_BADGE[rule.effect]}`}
+                    >
+                      {t(`ip_access.effect_${rule.effect}`)}
+                    </span>
+                  ),
+                },
+                { label: t("ip_access.col_rule_source"), value: t(`ip_access.source_${rule.source}`) },
+                {
+                  label: t("ip_access.col_hits"),
+                  value: new Intl.NumberFormat(i18n.language).format(rule.hit_count),
+                },
+              ]}
+            />
+            <p className="flex items-start gap-1.5 text-xs leading-5 text-ink-3">
+              <Lock size={12} className="mt-1 shrink-0" aria-hidden="true" />
+              <span>{t("ip_access.edit_cidr_locked")}</span>
+            </p>
+          </div>
+        ) : null}
 
-        <div className="space-y-1.5">
-          <label className="block text-sm font-medium text-slate-700 dark:text-white/80">
-            {t("ip_access.form_duration")}
-          </label>
+        <FormField label={t("ip_access.form_duration")} description={expiryDescription}>
           <Select
             value={expiry}
             onChange={setExpiry}
+            aria-label={t("ip_access.form_duration")}
             options={EXTEND_OPTIONS.map((option) => ({
               value: option.value,
               label: t(option.labelKey),
             }))}
             fullWidth
           />
-          <p className="text-xs text-slate-500">
-            {rule?.expires_at
-              ? t("ip_access.expiry_current", {
-                  time: new Date(rule.expires_at).toLocaleString(),
-                })
-              : t("ip_access.expiry_current_never")}
-          </p>
-        </div>
+        </FormField>
 
-        <div className="space-y-1.5">
-          <label className="block text-sm font-medium text-slate-700 dark:text-white/80">
-            {t("ip_access.form_note")}
-          </label>
+        <FormField label={t("ip_access.form_note")} optional reserveMeta={false}>
           <TextInput
             value={note}
-            onChange={(event) => setNote(event.target.value)}
+            aria-label={t("ip_access.form_note")}
+            onChange={(event) => {
+              setNote(event.target.value);
+              setSubmitError(null);
+            }}
             placeholder={t("ip_access.form_note_placeholder")}
           />
-        </div>
-      </div>
+        </FormField>
+
+        {submitError ? (
+          <Callout tone="danger" role="alert">
+            {submitError}
+          </Callout>
+        ) : null}
+      </form>
     </Modal>
   );
 }
