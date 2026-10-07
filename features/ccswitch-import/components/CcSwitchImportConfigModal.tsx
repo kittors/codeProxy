@@ -5,7 +5,7 @@ import iconClaude from "@code-proxy/assets/icons/claude.svg";
 import iconCodex from "@code-proxy/assets/icons/codex.svg";
 import iconGemini from "@code-proxy/assets/icons/gemini.svg";
 import { modelsApi } from "@code-proxy/api-client";
-import { Button, COLUMN_WIDTH } from "@code-proxy/ui";
+import { Button, COLUMN_WIDTH, surface } from "@code-proxy/ui";
 import {
   DataTable,
   TABLE_ROW_ACTIONS_COLUMN,
@@ -75,7 +75,8 @@ const iconByType: Record<CcSwitchClientType, string> = {
 
 const labelClassName = "text-sm font-medium text-ink";
 const fieldClassName = "flex flex-col gap-1.5";
-const sectionClassName = "rounded-2xl border border-line bg-surface p-4";
+// 分区用凹陷的浅灰底（inset）：输入框是白底，放在白色卡片上会糊成一片（#970 修过一次）。
+const sectionClassName = `${surface({ tone: "inset" })} p-4`;
 
 const MODEL_MAPPING_LOADING_ROWS = ["short", "medium", "long"];
 const CONFIG_MODAL_CLIENTS = CC_SWITCH_CLIENTS.filter((client) => client.type !== "gemini");
@@ -843,7 +844,7 @@ export function CcSwitchImportConfigModal({
           </label>
         </section>
 
-        <section className="overflow-hidden rounded-2xl border border-line bg-surface">
+        <section className={`overflow-hidden ${surface({ tone: "inset" })}`}>
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3">
             <div>
               <div className="text-sm font-semibold text-ink">
