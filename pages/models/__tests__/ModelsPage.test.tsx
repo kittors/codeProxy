@@ -924,8 +924,12 @@ describe("ModelsPage", () => {
     await userEvent.type(within(dialog).getByLabelText(/model id/i), "gpt-image-2-hd");
     await userEvent.clear(within(dialog).getByLabelText(/description/i));
     await userEvent.type(within(dialog).getByLabelText(/description/i), "Updated image model");
-    await userEvent.click(within(dialog).getByRole("combobox", { name: /pricing mode/i }));
-    await userEvent.click(await screen.findByRole("option", { name: /per call/i }));
+    // 计费方式是分段控件（单选），不再是下拉框。
+    await userEvent.click(
+      within(within(dialog).getByRole("radiogroup", { name: /pricing mode/i })).getByRole("radio", {
+        name: /per call/i,
+      }),
+    );
     await userEvent.clear(within(dialog).getByLabelText(/price per call/i));
     await userEvent.type(within(dialog).getByLabelText(/price per call/i), "0.08");
     await userEvent.click(within(dialog).getByRole("switch", { name: /enabled/i }));
@@ -1069,9 +1073,10 @@ describe("ModelsPage", () => {
 
     expect(within(dialog).getByRole("combobox", { name: /owner/i })).toHaveTextContent("OpenAI");
     expect(within(dialog).getByLabelText(/description/i)).toHaveValue("Reusable Claude model");
-    expect(within(dialog).getByLabelText(/input token/i)).toHaveValue(3);
-    expect(within(dialog).getByLabelText(/output token/i)).toHaveValue(15);
-    expect(within(dialog).getByLabelText(/cache token/i)).toHaveValue(0.3);
+    // 价格框改成带小数键盘的文本框（滚轮不会误改数值），值是字符串。
+    expect(within(dialog).getByLabelText(/input token/i)).toHaveValue("3");
+    expect(within(dialog).getByLabelText(/output token/i)).toHaveValue("15");
+    expect(within(dialog).getByLabelText(/cache token/i)).toHaveValue("0.3");
   });
 
   test("keeps a model added from the model library after refreshing that tab", async () => {
