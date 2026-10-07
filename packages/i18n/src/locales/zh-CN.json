@@ -96,7 +96,14 @@
     "disabled": "已停用",
     "enabled": "已启用",
     "mask_sensitive_data": "开启数据脱敏",
-    "unmask_sensitive_data": "关闭数据脱敏"
+    "unmask_sensitive_data": "关闭数据脱敏",
+    "show": "显示",
+    "hide": "隐藏",
+    "modified": "已修改",
+    "revert": "撤销",
+    "copy_named": "复制{{name}}",
+    "confirm_phrase_label": "请输入「{{phrase}}」以确认",
+    "secret_once_warning": "请立即复制，关闭后将无法再次查看。"
   },
   "title": {
     "main": "CliRelay 管理后台",
@@ -5837,5 +5844,304 @@
     "result_open_original": "在新标签页打开原始视频",
     "no_channel_hint": "当前租户下没有可用的 xAI 账号，无法生成视频。请先在「AI 账号」里添加并启用一个 Grok 账号。",
     "unavailable_suffix": "无可用账号"
+  },
+  "config_ui": {
+    "nav_label": "配置分区",
+    "search_label": "搜索设置",
+    "search_placeholder": "搜索设置，如：代理、日志、端口",
+    "search_clear": "清空搜索",
+    "search_empty_title": "没有找到与「{{query}}」相关的设置",
+    "search_empty_desc": "换个关键词试试，或切到「源码编辑」直接搜索 config.yaml 原文。",
+    "section_modified": "有未保存的修改",
+    "modified_count": "改了 {{count}} 项",
+    "unsaved_count": "{{count}} 项未保存",
+    "save_warning_lead": "这次保存会立即作用到正在运行的服务，请确认以下影响：",
+    "on": "开",
+    "off": "关",
+    "empty_value": "空",
+    "units": {
+      "seconds": "秒",
+      "minutes": "分钟",
+      "days": "天",
+      "mb": "MB"
+    },
+    "badges": {
+      "restart": "需重启",
+      "security": "安全相关",
+      "cost": "开销较大"
+    },
+    "groups": {
+      "basics": "基础",
+      "behavior": "运行",
+      "data": "日志与数据",
+      "advanced": "高级"
+    },
+    "profile": {
+      "desc": "适合 2 核 2G 的主机：关闭高开销的日志、给保留和存储设上限。路由、额度、费用与延迟统计都不受影响。",
+      "preview": "查看会修改的 {{count}} 项"
+    },
+    "sections": {
+      "server": {
+        "title": "服务监听",
+        "desc": "服务在哪个地址和端口接收请求，账号凭证存放在哪里。"
+      },
+      "remote": {
+        "title": "远程管理",
+        "desc": "谁可以访问管理接口，以及这个面板从哪里更新。"
+      },
+      "cors": {
+        "title": "跨域访问",
+        "desc": "允许哪些网页或浏览器扩展从别的域名调用 API。"
+      },
+      "runtime": {
+        "title": "运行模式与更新",
+        "desc": "高并发精简模式与自动更新的来源。"
+      },
+      "network": {
+        "title": "网络与重试",
+        "desc": "访问上游 AI 服务时怎么连接、失败后怎么重试。"
+      },
+      "access": {
+        "title": "访问规则",
+        "desc": "模型前缀与 WebSocket 接口的访问要求。"
+      },
+      "streaming": {
+        "title": "流式传输",
+        "desc": "长连接保活，以及还没开始输出时的安全重试。"
+      },
+      "quota": {
+        "title": "额度用尽时",
+        "desc": "账号额度用完后自动换一种方式继续请求。"
+      },
+      "logging": {
+        "title": "日志",
+        "desc": "记录哪些日志、写到哪里。开得越多，CPU 和磁盘开销越大。"
+      },
+      "retention": {
+        "title": "保留与清理",
+        "desc": "请求明细和完整正文保留多久、最多占多少空间。"
+      },
+      "monitoring": {
+        "title": "系统监控",
+        "desc": "面板「系统监控」页的缓存与实时连接。"
+      },
+      "payload": {
+        "title": "请求体改写",
+        "desc": "按模型给发往上游的请求体追加、覆盖或移除参数。"
+      },
+      "kimi": {
+        "title": "Kimi 请求头",
+        "desc": "调用 Kimi 时附带的客户端标识，会显示在 Kimi 控制台的来源里。留空使用 Kimi CLI 默认值。"
+      },
+      "codex": {
+        "title": "Codex 客户端准入",
+        "desc": "开启了「只允许官方 Codex 客户端」的账号，还接受哪些客户端。确认后立即生效。"
+      }
+    },
+    "fields": {
+      "host": {
+        "label": "监听地址",
+        "desc": "留空监听所有网卡（IPv4 与 IPv6）；填 127.0.0.1 只允许本机访问。"
+      },
+      "port": {
+        "label": "监听端口",
+        "desc": "API 和这个面板共用的端口，默认 8317。"
+      },
+      "auth_dir": {
+        "label": "凭证目录",
+        "desc": "AI 账号凭证文件的存放位置，可用 ~ 表示主目录。Docker 部署以 AUTH_PATH 环境变量为准。"
+      },
+      "tls_enable": {
+        "label": "由服务直接提供 HTTPS",
+        "desc": "已经在 nginx 等反向代理上配好 HTTPS 的，保持关闭。"
+      },
+      "tls_cert": {
+        "label": "证书文件",
+        "desc": "PEM 格式的证书路径，开启 HTTPS 时使用。"
+      },
+      "tls_key": {
+        "label": "私钥文件",
+        "desc": "与证书配对的私钥路径。"
+      },
+      "allow_remote": {
+        "label": "允许远程管理",
+        "desc": "关闭时只有本机能调用管理接口（仍然需要管理密钥）。开放前请确认密钥足够强。"
+      },
+      "secret_key": {
+        "label": "管理密钥",
+        "desc": "远程调用管理接口时使用，请妥善保管；填写明文时，服务启动后会自动转为哈希。"
+      },
+      "disable_panel": {
+        "label": "停用内置管理面板",
+        "desc": "不再下载和提供这个面板页面，管理接口照常可用。"
+      },
+      "panel_repo": {
+        "label": "面板更新来源",
+        "desc": "管理面板文件所在的 GitHub 仓库，填仓库地址或 owner/repo。"
+      },
+      "cors_origins": {
+        "desc": "每行一个 Origin。只有浏览器从别的域名调用 API 时才需要，同域访问默认允许。",
+        "warning": "Chrome 扩展默认不放行。生产环境建议写精确的 chrome-extension://<扩展 ID>；开发时 ID 会变，可以写 chrome-extension://*（放行任意已安装扩展，需自行承担风险）。"
+      },
+      "commercial": {
+        "label": "高并发精简模式",
+        "desc": "关闭高开销的请求中间件，降低每个请求的内存占用；开启期间没有完整的请求诊断。"
+      },
+      "update_channel": {
+        "options": {
+          "main": {
+            "label": "稳定版（main）",
+            "desc": "推荐。只接收正式发布的版本。"
+          },
+          "dev": {
+            "label": "开发版（dev）",
+            "desc": "抢先体验新功能，可能不稳定。"
+          }
+        }
+      },
+      "proxy_url": {
+        "label": "全局出站代理",
+        "desc": "上游请求默认经过它（账号单独绑定的代理优先），令牌刷新与 OAuth 登录也走它。支持 http、https、socks5，留空表示直连。"
+      },
+      "prefer_ipv4": {
+        "label": "只用 IPv4 连接上游",
+        "desc": "所有出站连接只走 IPv4。适合 IPv6 走隧道、质量较差的网络。"
+      },
+      "request_retry": {
+        "label": "失败重试次数",
+        "desc": "上游返回 403、408、500、502、503、504 时最多重试几次，默认 3。"
+      },
+      "max_retry_interval": {
+        "label": "冷却等待上限",
+        "desc": "账号正在冷却时，最多等待多久再重试，默认 30 秒。"
+      },
+      "force_prefix": {
+        "label": "强制模型前缀",
+        "desc": "开启后，不带前缀的模型请求只会使用没有设置前缀的账号（前缀与模型同名时除外）。"
+      },
+      "ws_auth": {
+        "label": "WebSocket 接口需要鉴权",
+        "desc": "开启后，连接 /v1/ws 必须携带有效的 API Key。"
+      },
+      "keepalive": {
+        "label": "流式保活间隔",
+        "desc": "流式响应每隔多久发一次保活，避免代理或客户端因空闲断开。默认 15 秒，小于 0 表示关闭。"
+      },
+      "bootstrap_retries": {
+        "label": "首包前重试次数",
+        "desc": "还没向客户端输出任何内容时，上游出错可以安全重试的次数，默认 1。"
+      },
+      "nonstream_keepalive": {
+        "label": "非流式保活间隔",
+        "desc": "大于 0 时，非流式请求等待期间定时发送空行，避免长请求被网关超时断开。0 表示关闭。"
+      },
+      "switch_project": {
+        "label": "自动切换项目",
+        "desc": "额度用尽时，换到同一账号下的其它项目继续请求。"
+      },
+      "switch_preview": {
+        "label": "自动切换预览模型",
+        "desc": "额度用尽时，改用对应的预览版模型继续请求。"
+      },
+      "request_log": {
+        "label": "请求日志",
+        "desc": "把每个请求的完整报文写进服务器日志文件，用于排查问题。生产环境建议保持关闭。"
+      },
+      "store_content": {
+        "label": "保存请求与响应正文",
+        "desc": "保存完整的输入和模型输出，用于日志回放。关闭后仍保留请求元数据、Token、费用、延迟和精简的错误信息。"
+      },
+      "log_to_file": {
+        "label": "日志写入文件",
+        "desc": "应用日志写入滚动文件而不是标准输出，可以在面板里下载错误日志。"
+      },
+      "debug": {
+        "label": "调试模式",
+        "desc": "输出详细的调试日志，排查完问题请关闭。"
+      },
+      "usage_stats": {
+        "label": "内存用量统计",
+        "desc": "只控制内存里的聚合统计；请求元数据与额度历史照常保存。"
+      },
+      "log_size": {
+        "label": "文件日志总上限",
+        "desc": "超出后删除最旧的日志文件。建议 128，0 表示不限制。"
+      },
+      "error_files": {
+        "label": "错误日志文件数",
+        "desc": "保留最近多少个精简错误日志文件，建议 10。"
+      },
+      "detail_retention": {
+        "label": "请求明细保留",
+        "desc": "请求明细只用于排障，默认 7 天；统计数据单独保存，不受清理影响。"
+      },
+      "body_retention": {
+        "label": "完整正文保留",
+        "desc": "只影响保存下来的完整正文，默认 3 天，0 表示永久保留；不会超过请求明细的保留天数。"
+      },
+      "cleanup_enabled": {
+        "label": "定时清理请求明细",
+        "desc": "按保留天数、行数和体积上限分批删除旧明细，不会删除统计。"
+      },
+      "cleanup_interval": {
+        "label": "清理周期",
+        "desc": "后台清理多久运行一次，默认 60 分钟，1440 即每天一次。"
+      },
+      "max_rows": {
+        "label": "明细最多保留行数",
+        "desc": "超出后从最旧的开始删除，不影响统计。"
+      },
+      "metadata_cap": {
+        "label": "明细表体积上限",
+        "desc": "请求明细表（含索引）的大小上限，尽力而为。"
+      },
+      "body_cap": {
+        "label": "正文存储上限",
+        "desc": "保存的完整正文总大小上限，超出后提前删除最旧的正文。0 表示不限制。"
+      },
+      "stats_cache": {
+        "label": "监控数据缓存",
+        "desc": "数据库大小、日志目录扫描、渠道延迟这类开销大的数据缓存多久；CPU、内存等实时数据不受影响。最少 10 秒。"
+      },
+      "ws_max_age": {
+        "label": "监控连接轮换周期",
+        "desc": "系统监控页的实时连接每隔多久重建一次，便于 nginx 平滑重载；不影响模型流式请求。最少 60 秒。"
+      },
+      "kimi_user_agent": {
+        "label": "User-Agent",
+        "desc": "默认 KimiCLI/1.10.6。"
+      },
+      "kimi_platform": {
+        "label": "X-Msh-Platform",
+        "desc": "默认 kimi_cli。"
+      },
+      "kimi_version": {
+        "label": "X-Msh-Version",
+        "desc": "默认 1.10.6。"
+      }
+    },
+    "errors": {
+      "required": "不能为空",
+      "integer": "请输入整数",
+      "non_negative": "请输入不小于 0 的整数",
+      "min": "不能小于 {{min}}",
+      "range": "请输入 {{min}}–{{max}} 之间的整数",
+      "summary": "有 {{count}} 项设置需要修改，已在对应位置标出。"
+    },
+    "payload": {
+      "default": {
+        "title": "补全缺省参数",
+        "desc": "客户端没传这个参数时才补上，已经传了的保持不变。"
+      },
+      "override": {
+        "title": "强制覆盖参数",
+        "desc": "不管客户端传了什么，都改成这里的值。"
+      },
+      "filter": {
+        "title": "移除参数",
+        "desc": "从请求体里删掉这些参数路径。"
+      },
+      "hint": "模型名支持通配符（如 gemini-*）；参数路径用点号分隔，如 generationConfig.thinkingConfig.thinkingBudget。"
+    }
   }
 }

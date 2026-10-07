@@ -117,6 +117,19 @@ export function MultiSelect({
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
+  // Esc 收起下拉，并吃掉这次按键：外层弹窗看到 defaultPrevented 就不会跟着关闭。
+  useEffect(() => {
+    if (!open) return;
+    const handler = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      setOpen(false);
+      setSearch("");
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [open]);
+
   // Focus search on open + update position (useLayoutEffect to avoid flicker)
   useLayoutEffect(() => {
     if (open) {

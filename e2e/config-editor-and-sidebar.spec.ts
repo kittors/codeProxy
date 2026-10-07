@@ -111,7 +111,9 @@ test("Config: page should not horizontally scroll; editor should allow horizonta
   expect(syncedScroll.gutter).toBe(syncedScroll.editor);
 });
 
-test("Config visual editor keeps descriptions in info tooltips", async ({ page }) => {
+test("Config visual editor shows descriptions inline and jumps between sections", async ({
+  page,
+}) => {
   await setAuthed(page);
 
   await page.route("**/v0/management/config.yaml", async (route) => {
@@ -131,10 +133,19 @@ test("Config visual editor keeps descriptions in info tooltips", async ({ page }
 
   await page.goto("/#/system/config");
 
-  const description = "Host/port, auth directory & API Keys.";
-  await expect(page.getByText(description, { exact: true })).toHaveCount(0);
-  await page.getByRole("button", { name: description }).hover();
-  await expect(page.getByRole("tooltip")).toContainText(description);
+  // 说明常驻显示（不再只藏在 ⓘ 提示里），YAML 键附在说明后面。
+  const description = page.getByText(/Leave empty to listen on every interface|留空监听所有网卡/);
+  await expect(description).toBeVisible();
+  await expect(page.getByRole("tooltip")).toHaveCount(0);
+
+  // 点目录跳到对应分区，目录高亮跟着走。
+  const nav = page.getByRole("navigation", { name: /Config sections|配置分区/ });
+  await nav.getByRole("button", { name: /Streaming|流式传输/ }).click();
+  await expect(page.getByRole("heading", { name: /^(Streaming|流式传输)$/ })).toBeInViewport();
+  await expect(nav.getByRole("button", { name: /Streaming|流式传输/ })).toHaveAttribute(
+    "aria-current",
+    "true",
+  );
 });
 
 test("Sidebar: single sidebar with folding sections, collapsed flyouts and account menu", async ({

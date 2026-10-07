@@ -3,7 +3,7 @@ import { Check, ChevronDown, Copy, ExternalLink, Loader2 } from "lucide-react";
 import { useRef, useState, type ComponentProps } from "react";
 import { useTranslation } from "react-i18next";
 import type { ProxyPoolEntry } from "@code-proxy/api-client";
-import { Button } from "@code-proxy/ui";
+import { Button, Step, Steps, type StepState } from "@code-proxy/ui";
 import type { ProxyPoolSelect } from "@features/proxy-pool";
 import { useOAuthLogin } from "../hooks/useOAuthLogin";
 import type { AccountProvider } from "../model/catalog";
@@ -12,7 +12,6 @@ import { navigatePendingWindow, openInNewTab, openPendingWindow } from "../model
 import type { StartedLogin } from "../model/startedLogin";
 import { BrowserMock, displayCallbackAddress } from "./BrowserMock";
 import { CallbackPasteBox } from "./CallbackPasteBox";
-import { FlowStep, FlowSteps, type StepState } from "./FlowSteps";
 import { LoginOptions, type LoginOptionValues } from "./LoginOptions";
 import { LoginStatusBar } from "./LoginStatusBar";
 
@@ -125,8 +124,8 @@ export function OAuthFlowPanel({
   return (
     <>
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6">
-        <FlowSteps>
-          <FlowStep
+        <Steps>
+          <Step
             index={1}
             state={stepOne}
             title={
@@ -177,17 +176,17 @@ export function OAuthFlowPanel({
                 />
               </div>
             )}
-          </FlowStep>
+          </Step>
 
           {autoReturn ? (
             <>
-              <FlowStep
+              <Step
                 index={2}
                 state={stepTwo}
                 title={t("add_account.steps.authorize_title_local")}
                 description={t("add_account.steps.authorize_desc_local")}
               />
-              <FlowStep
+              <Step
                 index={3}
                 state={stepThree}
                 last
@@ -237,11 +236,11 @@ export function OAuthFlowPanel({
                     </AnimatePresence>
                   </div>
                 ) : null}
-              </FlowStep>
+              </Step>
             </>
           ) : (
             <>
-              <FlowStep
+              <Step
                 index={2}
                 state={stepTwo}
                 title={t(
@@ -264,8 +263,8 @@ export function OAuthFlowPanel({
                   }
                   animate={stepTwo === "active"}
                 />
-              </FlowStep>
-              <FlowStep
+              </Step>
+              <Step
                 index={3}
                 state={stepThree}
                 last
@@ -292,10 +291,10 @@ export function OAuthFlowPanel({
                     {t("add_account.steps.paste_locked")}
                   </div>
                 )}
-              </FlowStep>
+              </Step>
             </>
           )}
-        </FlowSteps>
+        </Steps>
       </div>
       <LoginStatusBar
         phase={phase}

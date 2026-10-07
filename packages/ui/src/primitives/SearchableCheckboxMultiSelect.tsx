@@ -299,6 +299,8 @@ export function SearchableCheckboxMultiSelect({
     if (!open) return;
     const handleKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
+        // 吃掉这次 Esc：外层弹窗看到 defaultPrevented 就不会跟着关闭（只收起下拉）。
+        event.preventDefault();
         closeDropdown(manualApply);
       }
     };

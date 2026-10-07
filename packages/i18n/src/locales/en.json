@@ -94,7 +94,14 @@
     "disabled": "Disabled",
     "enabled": "Enabled",
     "mask_sensitive_data": "Mask sensitive data",
-    "unmask_sensitive_data": "Show sensitive data"
+    "unmask_sensitive_data": "Show sensitive data",
+    "show": "Show",
+    "hide": "Hide",
+    "modified": "Modified",
+    "revert": "Revert",
+    "copy_named": "Copy {{name}}",
+    "confirm_phrase_label": "Type “{{phrase}}” to confirm",
+    "secret_once_warning": "Copy it now — it won't be shown again after you close this."
   },
   "title": {
     "main": "CliRelay Admin Dashboard",
@@ -5824,5 +5831,308 @@
     "result_open_original": "Open the original clip in a new tab",
     "no_channel_hint": "This tenant has no usable xAI account, so video generation is unavailable. Add and enable a Grok account under AI Accounts first.",
     "unavailable_suffix": "no account"
+  },
+  "config_ui": {
+    "nav_label": "Config sections",
+    "search_label": "Search settings",
+    "search_placeholder": "Search settings, e.g. proxy, logs, port",
+    "search_clear": "Clear search",
+    "search_empty_title": "No settings match “{{query}}”",
+    "search_empty_desc": "Try another word, or switch to the source editor to search the raw config.yaml.",
+    "section_modified": "has unsaved changes",
+    "modified_count_one": "{{count}} change",
+    "modified_count_other": "{{count}} changes",
+    "unsaved_count_one": "{{count}} unsaved change",
+    "unsaved_count_other": "{{count}} unsaved changes",
+    "save_warning_lead": "Saving applies these changes to the running service right away:",
+    "on": "On",
+    "off": "Off",
+    "empty_value": "empty",
+    "units": {
+      "seconds": "sec",
+      "minutes": "min",
+      "days": "days",
+      "mb": "MB"
+    },
+    "badges": {
+      "restart": "Restart",
+      "security": "Security",
+      "cost": "Costly"
+    },
+    "groups": {
+      "basics": "Basics",
+      "behavior": "Behavior",
+      "data": "Logs & data",
+      "advanced": "Advanced"
+    },
+    "profile": {
+      "desc": "For a 2 vCPU / 2 GB host: turns off expensive logging and caps retention and storage. Routing, quotas, cost and latency stats are unaffected.",
+      "preview_one": "See the {{count}} setting it changes",
+      "preview_other": "See the {{count}} settings it changes"
+    },
+    "sections": {
+      "server": {
+        "title": "Server",
+        "desc": "Where the service listens and where account credentials are stored."
+      },
+      "remote": {
+        "title": "Remote management",
+        "desc": "Who may reach the management API, and where this panel updates from."
+      },
+      "cors": {
+        "title": "Cross-origin access",
+        "desc": "Which web pages or browser extensions may call the API from another origin."
+      },
+      "runtime": {
+        "title": "Mode & updates",
+        "desc": "High-concurrency mode and where automatic updates come from."
+      },
+      "network": {
+        "title": "Network & retries",
+        "desc": "How upstream AI services are reached and how failures are retried."
+      },
+      "access": {
+        "title": "Access rules",
+        "desc": "Model prefixes and access to the WebSocket API."
+      },
+      "streaming": {
+        "title": "Streaming",
+        "desc": "Keep-alives for long connections and safe retries before output starts."
+      },
+      "quota": {
+        "title": "When quota runs out",
+        "desc": "What to try automatically once an account's quota is used up."
+      },
+      "logging": {
+        "title": "Logging",
+        "desc": "What gets logged and where. The more you turn on, the more CPU and disk it costs."
+      },
+      "retention": {
+        "title": "Retention & cleanup",
+        "desc": "How long request details and bodies are kept, and how much space they may use."
+      },
+      "monitoring": {
+        "title": "System monitor",
+        "desc": "Caching and live connections for the System monitor page."
+      },
+      "payload": {
+        "title": "Request body rules",
+        "desc": "Add, override or remove parameters in upstream request bodies, per model."
+      },
+      "kimi": {
+        "title": "Kimi headers",
+        "desc": "Client identity sent to Kimi; shows up as the source in the Kimi console. Leave empty for the Kimi CLI defaults."
+      },
+      "codex": {
+        "title": "Codex client admission",
+        "desc": "Which other clients are accepted by accounts that only allow the official Codex client. Applies immediately."
+      }
+    },
+    "fields": {
+      "host": {
+        "label": "Listen address",
+        "desc": "Leave empty to listen on every interface (IPv4 and IPv6); use 127.0.0.1 to allow this machine only."
+      },
+      "port": {
+        "label": "Port",
+        "desc": "Shared by the API and this panel. Default 8317."
+      },
+      "auth_dir": {
+        "label": "Credentials directory",
+        "desc": "Where AI account credential files are stored; ~ means the home directory. In Docker the AUTH_PATH variable wins."
+      },
+      "tls_enable": {
+        "label": "Serve HTTPS directly",
+        "desc": "Leave off when a reverse proxy such as nginx already handles HTTPS."
+      },
+      "tls_cert": {
+        "label": "Certificate file",
+        "desc": "Path to the PEM certificate used when HTTPS is on."
+      },
+      "tls_key": {
+        "label": "Private key file",
+        "desc": "Path to the private key that matches the certificate."
+      },
+      "allow_remote": {
+        "label": "Allow remote management",
+        "desc": "When off, only this machine can call the management API (a key is still required). Make sure the key is strong before opening it."
+      },
+      "secret_key": {
+        "label": "Management key",
+        "desc": "Used to call the management API remotely — keep it safe. Plain text is hashed when the service starts."
+      },
+      "disable_panel": {
+        "label": "Disable the built-in panel",
+        "desc": "Stops downloading and serving this panel; the management API keeps working."
+      },
+      "panel_repo": {
+        "label": "Panel source repository",
+        "desc": "GitHub repository the panel files come from — a repository URL or owner/repo."
+      },
+      "cors_origins": {
+        "desc": "One origin per line. Only needed when a browser calls the API from another origin; same-origin access is always allowed.",
+        "warning": "Chrome extensions are not allowed by default. In production list the exact chrome-extension://<extension-id>; while developing, when the ID changes, chrome-extension://* allows any installed extension at your own risk."
+      },
+      "commercial": {
+        "label": "High-concurrency mode",
+        "desc": "Turns off high-overhead request middleware to cut per-request memory; full request diagnostics are unavailable while it's on."
+      },
+      "update_channel": {
+        "options": {
+          "main": {
+            "label": "Stable (main)",
+            "desc": "Recommended. Only released versions."
+          },
+          "dev": {
+            "label": "Development (dev)",
+            "desc": "Get new features early; may be unstable."
+          }
+        }
+      },
+      "proxy_url": {
+        "label": "Global outbound proxy",
+        "desc": "Upstream requests go through it by default (a proxy bound to an account wins); token refresh and OAuth sign-in use it too. http, https and socks5; leave empty to connect directly."
+      },
+      "prefer_ipv4": {
+        "label": "Use IPv4 only for upstream",
+        "desc": "Every outbound connection uses IPv4. Useful when IPv6 runs through a poor tunnel."
+      },
+      "request_retry": {
+        "label": "Retry attempts",
+        "desc": "How many times to retry when upstream returns 403, 408, 500, 502, 503 or 504. Default 3."
+      },
+      "max_retry_interval": {
+        "label": "Cooldown wait limit",
+        "desc": "Longest wait for a cooling-down account before retrying. Default 30 seconds."
+      },
+      "force_prefix": {
+        "label": "Require model prefixes",
+        "desc": "When on, model requests without a prefix only use accounts that have no prefix (unless the prefix equals the model name)."
+      },
+      "ws_auth": {
+        "label": "Require auth for WebSocket",
+        "desc": "When on, connections to /v1/ws must carry a valid API key."
+      },
+      "keepalive": {
+        "label": "Streaming keep-alive",
+        "desc": "How often streaming responses send a keep-alive so proxies and clients don't drop idle connections. Default 15; below 0 turns it off."
+      },
+      "bootstrap_retries": {
+        "label": "Retries before first byte",
+        "desc": "How many times an upstream error may be retried safely before anything was sent to the client. Default 1."
+      },
+      "nonstream_keepalive": {
+        "label": "Non-streaming keep-alive",
+        "desc": "Above 0, sends blank lines while a non-streaming request waits so gateways don't time it out. 0 turns it off."
+      },
+      "switch_project": {
+        "label": "Switch project automatically",
+        "desc": "When quota runs out, continue with another project on the same account."
+      },
+      "switch_preview": {
+        "label": "Switch to preview model",
+        "desc": "When quota runs out, continue with the matching preview model."
+      },
+      "request_log": {
+        "label": "Request logs",
+        "desc": "Writes every request's full payload to server log files for troubleshooting. Keep it off in production."
+      },
+      "store_content": {
+        "label": "Store request and response bodies",
+        "desc": "Keeps full inputs and model outputs for log replay. With it off, request metadata, tokens, cost, latency and trimmed errors are still kept."
+      },
+      "log_to_file": {
+        "label": "Log to file",
+        "desc": "Write application logs to rotating files instead of stdout, so error logs can be downloaded from the panel."
+      },
+      "debug": {
+        "label": "Debug mode",
+        "desc": "Verbose debug logging — turn it off once you're done troubleshooting."
+      },
+      "usage_stats": {
+        "label": "In-memory usage stats",
+        "desc": "Only controls in-memory aggregation; request metadata and quota history are still stored."
+      },
+      "log_size": {
+        "label": "File log size cap",
+        "desc": "The oldest log files are deleted beyond this. 128 recommended; 0 means unlimited."
+      },
+      "error_files": {
+        "label": "Error log files kept",
+        "desc": "How many recent trimmed error files to keep. 10 recommended."
+      },
+      "detail_retention": {
+        "label": "Keep request details",
+        "desc": "Request details are for troubleshooting only; default 7 days. Statistics are stored separately and survive cleanup."
+      },
+      "body_retention": {
+        "label": "Keep full bodies",
+        "desc": "Only affects stored full bodies. Default 3 days; 0 keeps them forever. Never longer than request details are kept."
+      },
+      "cleanup_enabled": {
+        "label": "Clean up request details",
+        "desc": "Deletes old details in batches by age, row count and size cap. Statistics are never deleted."
+      },
+      "cleanup_interval": {
+        "label": "Cleanup interval",
+        "desc": "How often background cleanup runs. Default 60 minutes; 1440 is once a day."
+      },
+      "max_rows": {
+        "label": "Max detail rows",
+        "desc": "Beyond this the oldest rows are deleted first. Statistics are unaffected."
+      },
+      "metadata_cap": {
+        "label": "Detail table size cap",
+        "desc": "Best-effort size limit for the request detail table, indexes included."
+      },
+      "body_cap": {
+        "label": "Body storage cap",
+        "desc": "Total size limit for stored bodies; the oldest are deleted early beyond it. 0 means unlimited."
+      },
+      "stats_cache": {
+        "label": "Monitor data cache",
+        "desc": "How long expensive data (database size, log directory scan, channel latency) is cached. CPU and memory stay live. Minimum 10 seconds."
+      },
+      "ws_max_age": {
+        "label": "Monitor connection rotation",
+        "desc": "How often the System monitor live connection is re-established so nginx can reload smoothly. Model streams are unaffected. Minimum 60 seconds."
+      },
+      "kimi_user_agent": {
+        "label": "User-Agent",
+        "desc": "Default KimiCLI/1.10.6."
+      },
+      "kimi_platform": {
+        "label": "X-Msh-Platform",
+        "desc": "Default kimi_cli."
+      },
+      "kimi_version": {
+        "label": "X-Msh-Version",
+        "desc": "Default 1.10.6."
+      }
+    },
+    "errors": {
+      "required": "Required",
+      "integer": "Enter a whole number",
+      "non_negative": "Enter a whole number of 0 or more",
+      "min": "Must be at least {{min}}",
+      "range": "Enter a whole number from {{min}} to {{max}}",
+      "summary_one": "{{count}} setting needs fixing — it's marked in place.",
+      "summary_other": "{{count}} settings need fixing — they're marked in place."
+    },
+    "payload": {
+      "default": {
+        "title": "Fill in missing parameters",
+        "desc": "Only set when the client didn't send the parameter; values it sent are kept."
+      },
+      "override": {
+        "title": "Force parameters",
+        "desc": "Always set to these values, whatever the client sent."
+      },
+      "filter": {
+        "title": "Remove parameters",
+        "desc": "Delete these parameter paths from the request body."
+      },
+      "hint": "Model names accept wildcards (e.g. gemini-*); parameter paths are dot-separated, e.g. generationConfig.thinkingConfig.thinkingBudget."
+    }
   }
 }

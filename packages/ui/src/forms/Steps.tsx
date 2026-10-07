@@ -7,12 +7,12 @@ export type StepState = "upcoming" | "active" | "done";
 const EASE = [0.2, 0.8, 0.2, 1] as const;
 
 /**
- * The whole path stays on screen — upcoming steps are only dimmed — so an
- * operator sees from the start that a paste is coming, instead of discovering
- * it after the browser lands on a page that will not load.
+ * 步骤条：整条路径一直留在屏幕上（还没到的步骤只是变淡），用户一开始就知道后面还要做什么——
+ * 「添加 AI 账号」里，用户从第一步就看得到「待会儿要粘贴地址」，而不是等浏览器跳到一个
+ * 打不开的页面才发现。导入、迁移这类多步操作都用它。
  */
-export function FlowSteps({ children }: { children: ReactNode }) {
-  return <ol className="grid">{children}</ol>;
+export function Steps({ children, className }: { children: ReactNode; className?: string }) {
+  return <ol className={["grid", className].filter(Boolean).join(" ")}>{children}</ol>;
 }
 
 function StepMarker({ index, state }: { index: number; state: StepState }) {
@@ -65,7 +65,7 @@ function StepMarker({ index, state }: { index: number; state: StepState }) {
   );
 }
 
-export function FlowStep({
+export function Step({
   index,
   state,
   title,

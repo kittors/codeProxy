@@ -1,40 +1,46 @@
 import { createPortal } from "react-dom";
-import { useEffect, useId, type PropsWithChildren, type ReactNode } from "react";
+import { useId, useRef, type PropsWithChildren, type ReactNode } from "react";
 import { X } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { DialogIcon, type DialogTone } from "./DialogIcon";
 import { drawerPanelMotion, overlayBackdropMotion, useOverlayPresence } from "./overlayMotion";
+import { useDialogBehavior, type DialogInitialFocus } from "./useDialogBehavior";
 
 export function Drawer({
   open,
   title,
   description,
+  icon,
+  tone = "neutral",
   footer,
   widthClassName = "w-[min(720px,100vw)]",
   bodyClassName,
+  initialFocus = "panel",
   onClose,
   children,
 }: PropsWithChildren<{
   open: boolean;
   title: string;
   description?: ReactNode;
+  /** 标题左侧的图标块，与 Modal 同一种样式。 */
+  icon?: ReactNode;
+  tone?: DialogTone;
   footer?: ReactNode;
   widthClassName?: string;
   bodyClassName?: string;
+  /** 抽屉多用来查看详情，默认只把焦点放在面板上，不去点亮第一个输入框。 */
+  initialFocus?: DialogInitialFocus;
   onClose: () => void;
 }>) {
   const { t } = useTranslation();
   // 与弹窗共用进出场：隔两帧再置为可见，进场滑入才有起点（以前只隔一帧，常常直接跳出来）。
   const { mounted, visible } = useOverlayPresence(open);
   const titleId = useId();
+  const descriptionId = useId();
+  const panelRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onClose, open]);
+  // 与 Modal 同一套叠层：抽屉里再打开的确认框按 Esc 只关确认框；Tab 不会跑到背后的页面。
+  useDialogBehavior({ open, visible, panelRef, onEscape: onClose, initialFocus });
 
   if (!mounted) return null;
 
@@ -47,6 +53,7 @@ export function Drawer({
     <div className="fixed inset-0 z-[200] flex justify-end sm:p-2">
       <button
         type="button"
+        data-overlay-backdrop=""
         onClick={() => {
           if (!open) return;
           onClose();
@@ -60,22 +67,32 @@ export function Drawer({
         ].join(" ")}
       />
       <div
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        aria-describedby={description ? descriptionId : undefined}
+        tabIndex={-1}
         style={panelMotion.style}
         className={[
-          `relative z-10 flex h-full ${widthClassName} flex-col overflow-hidden bg-elevated text-ink shadow-dialog sm:max-w-[calc(100vw-1rem)] sm:rounded-3xl`,
+          `relative z-10 flex h-full ${widthClassName} flex-col overflow-hidden bg-elevated text-ink shadow-dialog outline-none sm:max-w-[calc(100vw-1rem)] sm:rounded-3xl`,
           panelMotion.className,
         ].join(" ")}
       >
         {/* 抽屉内容通常很长，头尾保留一条细分隔线，滚动时内容不会和标题、按钮粘在一起。 */}
         <div className="flex items-start justify-between gap-3 border-b border-line py-4 pr-4 pl-6">
-          <div className="min-w-0 pt-1">
-            <h2 id={titleId} className="truncate text-lg font-semibold tracking-tight text-ink">
-              {title}
-            </h2>
-            {description ? <p className="mt-1 text-sm text-ink-2">{description}</p> : null}
+          <div className="flex min-w-0 items-start gap-3.5">
+            {icon ? <DialogIcon tone={tone}>{icon}</DialogIcon> : null}
+            <div className={["min-w-0", icon ? "pt-px" : "pt-1"].join(" ")}>
+              <h2 id={titleId} className="truncate text-lg font-semibold tracking-tight text-ink">
+                {title}
+              </h2>
+              {description ? (
+                <div id={descriptionId} className="mt-0.5 text-sm text-ink-2">
+                  {description}
+                </div>
+              ) : null}
+            </div>
           </div>
           <button
             type="button"

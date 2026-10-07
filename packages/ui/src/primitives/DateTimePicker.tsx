@@ -194,7 +194,10 @@ export function DateTimePicker({
       setOpen(false);
     };
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key !== "Escape") return;
+      // 吃掉这次 Esc：外层弹窗看到 defaultPrevented 就不会跟着关闭（只收起面板）。
+      event.preventDefault();
+      setOpen(false);
     };
     document.addEventListener("pointerdown", handlePointerDown);
     document.addEventListener("keydown", handleKeyDown);

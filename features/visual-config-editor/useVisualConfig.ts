@@ -698,6 +698,8 @@ export function useVisualConfig() {
 
   return {
     visualValues,
+    /** 最近一次从 YAML 载入的值：配置页用它逐项标出「改过的设置」。 */
+    baselineValues,
     visualDirty,
     loadVisualValuesFromYaml,
     applyVisualChangesToYaml,

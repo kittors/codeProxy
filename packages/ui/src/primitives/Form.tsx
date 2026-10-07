@@ -13,6 +13,7 @@ import {
   type ReactElement,
   type ReactNode,
 } from "react";
+import { useTranslation } from "react-i18next";
 import { cn } from "../utils/selectStyles";
 
 /* ------------------------------------------------------------------ */
@@ -63,6 +64,8 @@ export type FormFieldProps = PropsWithChildren<
     error?: ReactNode;
     /** Show a required marker next to the label. */
     required?: boolean;
+    /** Show a muted "optional" hint next to the label (instead of baking it into the label text). */
+    optional?: boolean;
     /** Layout: vertical stacks label above control; horizontal puts label beside control. */
     orientation?: FormFieldOrientation;
     /** Optional explicit control id; defaults to a generated id. */
@@ -89,6 +92,7 @@ function FormField({
   description,
   error,
   required = false,
+  optional = false,
   orientation = "vertical",
   htmlFor,
   reserveMeta = true,
@@ -119,20 +123,10 @@ function FormField({
   );
 
   const infoRow =
-    description || showCount || reserveMeta ? (
-      <div
-        data-slot="form-field-info"
-        className={cn(
-          "flex min-h-5 items-start justify-between gap-3",
-          !description && !showCount && reserveMeta ? "invisible" : null,
-        )}
-      >
+    description || showCount ? (
+      <div data-slot="form-field-info" className="flex min-h-5 items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          {description ? (
-            <FormDescription id={descriptionId}>{description}</FormDescription>
-          ) : reserveMeta ? (
-            <span className="block text-xs leading-5">&nbsp;</span>
-          ) : null}
+          {description ? <FormDescription id={descriptionId}>{description}</FormDescription> : null}
         </div>
         {showCount ? (
           <span
@@ -149,26 +143,25 @@ function FormField({
       </div>
     ) : null;
 
-  const errorRow =
-    error || reserveMeta ? (
-      <div
-        data-slot="form-field-error-slot"
-        className={cn("min-h-5", !error && reserveMeta ? "invisible" : null)}
-      >
-        {error ? (
-          <FormError id={errorId}>{error}</FormError>
-        ) : reserveMeta ? (
-          <span className="block text-xs leading-5">&nbsp;</span>
-        ) : null}
+  // 只预留一行：没有说明时，这一行留给随时可能出现的错误，出现时不会把下面的字段往下推；
+  // 以前说明和错误各预留一行，每个字段下面都空着两行，弹窗里的表单显得很松。
+  const errorRow = error ? (
+    <div data-slot="form-field-error-slot" className="min-h-5">
+      <FormError id={errorId}>{error}</FormError>
+    </div>
+  ) : reserveMeta && !infoRow ? (
+    <div data-slot="form-field-error-slot" className="invisible min-h-5" aria-hidden="true">
+      <span className="block text-xs leading-5">&nbsp;</span>
+    </div>
+  ) : null;
+
+  const meta =
+    infoRow || errorRow ? (
+      <div data-slot="form-field-meta" className="space-y-0.5">
+        {infoRow}
+        {errorRow}
       </div>
     ) : null;
-
-  const meta = (
-    <div data-slot="form-field-meta" className="space-y-0.5">
-      {infoRow}
-      {errorRow}
-    </div>
-  );
 
   const labelClasses = cn(
     isHorizontal ? cn(resolvedLabelWidth, "shrink-0 text-left leading-9") : null,
@@ -190,7 +183,11 @@ function FormField({
         {...props}
       >
         {label != null && label !== false ? (
-          <FormLabel required={required} className={labelClasses || undefined}>
+          <FormLabel
+            required={required}
+            optional={optional}
+            className={labelClasses || undefined}
+          >
             {label}
           </FormLabel>
         ) : null}
@@ -216,21 +213,35 @@ function FormField({
 
 export type FormLabelProps = LabelHTMLAttributes<HTMLLabelElement> & {
   required?: boolean;
+  optional?: boolean;
 };
 
-function FormLabel({ children, className, required = false, ...props }: FormLabelProps) {
+function FormLabel({
+  children,
+  className,
+  required = false,
+  optional = false,
+  ...props
+}: FormLabelProps) {
   const { id } = useFormFieldContext("FormLabel");
+  const { t } = useTranslation();
   return (
     <label
       data-slot="form-label"
       htmlFor={id}
-      className={cn("text-sm font-medium text-ink-2", className)}
+      // 标签用正文色、说明用浅灰：两层信息一眼分得开（以前标签和说明都是灰的）。
+      className={cn("text-sm font-medium text-ink", className)}
       {...props}
     >
       {children}
       {required ? (
         <span className="ml-0.5 text-rose-500" aria-hidden="true">
           *
+        </span>
+      ) : null}
+      {optional && !required ? (
+        <span className="ml-1.5 text-xs font-normal text-ink-3">
+          {t("common.optional", { defaultValue: "可选" })}
         </span>
       ) : null}
     </label>
