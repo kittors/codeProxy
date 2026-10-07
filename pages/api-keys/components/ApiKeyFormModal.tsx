@@ -1,9 +1,19 @@
-import { Button } from "@code-proxy/ui";
-import { Modal } from "@code-proxy/ui";
+import { useEffect, useRef } from "react";
+import { KeyRound } from "lucide-react";
+import {
+  Button,
+  Modal,
+  rules,
+  useFormValidation,
+  type SelectOption,
+} from "@code-proxy/ui";
 import { ApiKeyFormFields } from "./ApiKeyFormFields";
 import type { ApiKeyFormValues } from "../types";
-import type { SelectOption } from "@code-proxy/ui";
 
+/**
+ * 管理员新建 / 编辑 API Key。名称与 Key 值必填，在字段下就地报错（以前只弹一条 toast）；
+ * 回车即提交。账号名下的 Key 不走这里（见 OwnedApiKeyQuotaModal）。
+ */
 export function ApiKeyFormModal({
   t,
   open,
@@ -11,12 +21,11 @@ export function ApiKeyFormModal({
   saving,
   form,
   setForm,
+  originalKey,
   permissionProfileOptions,
   onClose,
   onSubmit,
   regenerateKey,
-  serverGeneratesKey = false,
-  hidePermissionProfile = false,
 }: {
   t: (key: string, options?: Record<string, unknown>) => string;
   open: boolean;
@@ -24,54 +33,70 @@ export function ApiKeyFormModal({
   saving: boolean;
   form: ApiKeyFormValues;
   setForm: React.Dispatch<React.SetStateAction<ApiKeyFormValues>>;
+  originalKey?: string;
   permissionProfileOptions: SelectOption[];
   onClose: () => void;
   onSubmit: () => Promise<void>;
   regenerateKey: () => void;
-  serverGeneratesKey?: boolean;
-  hidePermissionProfile?: boolean;
 }) {
+  // 新建与编辑两个实例会同时挂在页面上，表单 id 要区分开。
+  const formId = editMode ? "api-key-edit-form" : "api-key-create-form";
+  const formRef = useRef<HTMLFormElement | null>(null);
+  const validation = useFormValidation(form, {
+    name: [rules.required()],
+    key: [rules.required()],
+  });
+  const { reset } = validation;
+
+  useEffect(() => {
+    if (open) reset();
+  }, [open, reset]);
+
   return (
     <Modal
       open={open}
       onClose={onClose}
       title={editMode ? t("api_keys_page.edit") : t("api_keys_page.create")}
-      description={
-        editMode
-          ? serverGeneratesKey
-            ? t("end_users.edit_key_name_desc", {
-                defaultValue: "仅修改密钥名称；如需更换密钥值，请使用独立的轮换操作。",
-              })
-            : t("api_keys_page.edit_desc")
-          : t("api_keys_page.create_desc")
-      }
+      description={editMode ? t("api_keys_page.edit_desc") : t("api_keys_page.create_desc")}
+      icon={<KeyRound />}
+      size="md"
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="secondary" onClick={onClose} disabled={saving}>
             {t("api_keys_page.cancel")}
           </Button>
-          <Button variant="primary" onClick={() => void onSubmit()} disabled={saving}>
-            {editMode
-              ? saving
-                ? t("api_keys_page.saving")
-                : t("api_keys_page.save_btn")
-              : saving
-                ? t("api_keys_page.creating")
-                : t("api_keys_page.create_btn")}
+          <Button type="submit" form={formId} variant="primary" loading={saving}>
+            {editMode ? t("api_keys_page.save_btn") : t("api_keys_page.create_btn")}
           </Button>
         </>
       }
     >
-      <ApiKeyFormFields
-        t={t}
-        form={form}
-        setForm={setForm}
-        editMode={editMode}
-        permissionProfileOptions={permissionProfileOptions}
-        regenerateKey={regenerateKey}
-        serverGeneratesKey={serverGeneratesKey}
-        hidePermissionProfile={hidePermissionProfile}
-      />
+      <form
+        ref={formRef}
+        id={formId}
+        className="space-y-5"
+        noValidate
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (!validation.validate()) {
+            validation.focusFirstInvalid(formRef.current);
+            return;
+          }
+          void onSubmit();
+        }}
+      >
+        <ApiKeyFormFields
+          t={t}
+          form={form}
+          setForm={setForm}
+          editMode={editMode}
+          originalKey={originalKey}
+          permissionProfileOptions={permissionProfileOptions}
+          regenerateKey={regenerateKey}
+          errors={{ name: validation.error("name"), key: validation.error("key") }}
+          onFieldBlur={validation.touch}
+        />
+      </form>
     </Modal>
   );
 }

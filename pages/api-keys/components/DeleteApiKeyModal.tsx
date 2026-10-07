@@ -1,8 +1,7 @@
 import type { TFunction } from "i18next";
 import type { ApiKeyEntry } from "@code-proxy/api-client/endpoints/api-keys";
-import { maskApiKey } from "../apiKeyPageUtils";
-import { Button } from "@code-proxy/ui";
-import { Modal } from "@code-proxy/ui";
+import { CheckboxField, ConfirmModal } from "@code-proxy/ui";
+import { ApiKeySubject } from "./ApiKeySubject";
 
 type DeleteApiKeyModalProps = {
   t: TFunction;
@@ -12,10 +11,20 @@ type DeleteApiKeyModalProps = {
   saving: boolean;
   deleteLogsOnDelete: boolean;
   onDeleteLogsChange: (value: boolean) => void;
+  /**
+   * 是否提供「同时清理历史请求记录」。用户账号名下的 Key 走账号接口删除，
+   * 那条接口不处理日志，勾了也不会生效，所以不显示这个选项。
+   */
+  allowDeleteLogs?: boolean;
   onClose: () => void;
   onConfirm: () => Promise<void>;
 };
 
+/**
+ * 删除单把 / 批量删除 API Key：对象卡片写清删的是哪把（名称 + 掩码），后果逐条列出；
+ * 「同时清理历史请求记录」是会多删东西的附加选项，用红色描边的勾选项。删除进行中取消也禁用，
+ * 避免请求发出去之后弹窗先关掉、结果却不知道成没成。
+ */
 export function DeleteApiKeyModal({
   t,
   entry,
@@ -24,57 +33,48 @@ export function DeleteApiKeyModal({
   saving,
   deleteLogsOnDelete,
   onDeleteLogsChange,
+  allowDeleteLogs = true,
   onClose,
   onConfirm,
 }: DeleteApiKeyModalProps) {
   const isBatchDelete = selectedCount > 0;
 
   return (
-    <Modal
+    <ConfirmModal
       open={open}
       onClose={onClose}
       title={
         isBatchDelete
           ? t("api_keys_page.confirm_batch_delete", { count: selectedCount })
-          : t("api_keys_page.confirm_delete")
+          : t("api_keys_page.delete_key_title")
       }
-      description={
-        isBatchDelete ? t("api_keys_page.batch_delete_warning") : t("api_keys_page.delete_warning")
+      description={t("api_keys_page.delete_lead")}
+      subject={
+        isBatchDelete ? (
+          t("api_keys_page.batch_delete_selected_count", { count: selectedCount })
+        ) : entry ? (
+          <ApiKeySubject entry={entry} />
+        ) : null
       }
-      footer={
-        <>
-          <Button variant="secondary" onClick={onClose}>
-            {t("api_keys_page.cancel")}
-          </Button>
-          <Button variant="danger" onClick={() => void onConfirm()} disabled={saving}>
-            {saving ? t("api_keys_page.deleting") : t("api_keys_page.confirm_delete_btn")}
-          </Button>
-        </>
-      }
+      consequences={[
+        isBatchDelete
+          ? t("api_keys_page.batch_delete_consequence_clients")
+          : t("api_keys_page.delete_consequence_clients"),
+      ]}
+      confirmText={t("api_keys_page.confirm_delete_btn")}
+      busy={saving}
+      onConfirm={() => void onConfirm()}
     >
-      {isBatchDelete ? (
-        <div className="rounded-xl bg-red-50 p-3 text-sm font-medium text-red-800 dark:bg-red-900/20 dark:text-red-300">
-          {t("api_keys_page.batch_delete_selected_count", { count: selectedCount })}
-        </div>
-      ) : entry ? (
-        <div className="space-y-3">
-          <div className="rounded-xl bg-red-50 p-3 dark:bg-red-900/20">
-            <div className="text-sm font-medium text-red-800 dark:text-red-300">
-              {entry.name || t("api_keys_page.unnamed")}
-            </div>
-            <code className="text-xs text-red-600 dark:text-red-400">{maskApiKey(entry.key)}</code>
-          </div>
-          <label className="flex items-start gap-3 rounded-xl border border-slate-900/8 bg-slate-50/70 px-3 py-3 text-sm text-slate-700 dark:border-white/8 dark:bg-neutral-900/60 dark:text-white/75">
-            <input
-              type="checkbox"
-              checked={deleteLogsOnDelete}
-              onChange={(event) => onDeleteLogsChange(event.currentTarget.checked)}
-              className="mt-0.5 h-4 w-4 rounded border-slate-300 text-rose-600 focus-visible:ring-2 focus-visible:ring-rose-400/30 dark:border-neutral-700 dark:bg-neutral-950"
-            />
-            <span>{t("api_keys_page.delete_logs_option")}</span>
-          </label>
-        </div>
+      {!isBatchDelete && entry && allowDeleteLogs ? (
+        <CheckboxField
+          tone="danger"
+          checked={deleteLogsOnDelete}
+          onCheckedChange={onDeleteLogsChange}
+          disabled={saving}
+          label={t("api_keys_page.delete_logs_option")}
+          description={t("api_keys_page.delete_logs_option_hint")}
+        />
       ) : null}
-    </Modal>
+    </ConfirmModal>
   );
 }

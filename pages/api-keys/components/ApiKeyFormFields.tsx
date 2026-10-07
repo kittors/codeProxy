@@ -1,99 +1,108 @@
 import { RefreshCw } from "lucide-react";
-import { Button } from "@code-proxy/ui";
-import { TextInput } from "@code-proxy/ui";
-import { Select, type SelectOption } from "@code-proxy/ui";
+import { Button, Callout, FormField, Select, TextInput, type SelectOption } from "@code-proxy/ui";
 import type { ApiKeyFormValues } from "../types";
 
+export type ApiKeyFormField = "name" | "key";
+
+/**
+ * 管理员维护的 API Key 表单字段：名称、Key 值、权限配置。
+ *
+ * 编辑时 Key 值可以直接改（例如恢复一把下游已在用的旧 Key），但改了之后旧值立刻失效——
+ * 只要输入框里的值和原值不同，就在下面挂一条琥珀提示，把后果说在保存之前。
+ */
 export function ApiKeyFormFields({
   t,
   form,
   setForm,
   editMode,
+  originalKey,
   permissionProfileOptions,
   regenerateKey,
-  serverGeneratesKey = false,
-  hidePermissionProfile = false,
+  errors,
+  onFieldBlur,
 }: {
   t: (key: string, options?: Record<string, unknown>) => string;
   form: ApiKeyFormValues;
   setForm: React.Dispatch<React.SetStateAction<ApiKeyFormValues>>;
   editMode: boolean;
+  /** 编辑前的 Key 值，用来判断这次保存会不会让旧 Key 失效。 */
+  originalKey?: string;
   permissionProfileOptions: SelectOption[];
   regenerateKey: () => void;
-  /** When true (user-scoped create), key is generated server-side after submit. */
-  serverGeneratesKey?: boolean;
-  /** Owned keys inherit account quota; do not attach a per-key profile. */
-  hidePermissionProfile?: boolean;
+  errors: Partial<Record<ApiKeyFormField, string>>;
+  onFieldBlur: (field: ApiKeyFormField) => void;
 }) {
+  const keyChanged =
+    editMode && originalKey !== undefined && form.key.trim() !== originalKey.trim();
+  const regenerateLabel = editMode
+    ? t("api_keys_page.form_refresh_key")
+    : t("api_keys_page.form_regenerate");
+
   return (
-    <div className="space-y-4">
-      <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-          {t("api_keys_page.form_name_label")} <span className="text-rose-500">*</span>
-        </label>
+    <>
+      <FormField
+        label={t("api_keys_page.form_name_label")}
+        required
+        description={t("api_keys_page.form_name_hint")}
+        error={errors.name}
+      >
         <TextInput
-          type="text"
           value={form.name}
           onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+          onBlur={() => onFieldBlur("name")}
           placeholder={t("api_keys_page.form_name_placeholder")}
+          aria-label={t("api_keys_page.form_name_label")}
         />
-      </div>
+      </FormField>
 
-      {serverGeneratesKey ? (
-        <p className="rounded-xl border border-slate-900/8 bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:border-white/8 dark:bg-neutral-900/50 dark:text-white/60">
-          {editMode
-            ? t("end_users.key_rotate_only", {
-                defaultValue: "密钥值不能直接编辑。需要更换凭证时，请使用独立的“轮换密钥”操作。",
-              })
-            : t("end_users.key_server_generated", {
-                defaultValue:
-                  "创建后由服务端生成唯一 API Key，并仅展示一次（将尝试复制到剪贴板）。",
-              })}
-        </p>
-      ) : (
-        <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-            {t("api_keys_page.form_key_label")}
-          </label>
-          <div className="flex gap-2">
-            <TextInput
-              type="text"
-              value={form.key}
-              onChange={(e) => setForm((prev) => ({ ...prev, key: e.target.value }))}
-              placeholder={t("api_keys_page.form_key_placeholder")}
-              className="flex-1 font-mono"
-            />
-            <Button variant="secondary" size="sm" onClick={regenerateKey}>
+      <FormField
+        label={t("api_keys_page.form_key_label")}
+        required
+        description={
+          editMode ? t("api_keys_page.form_key_edit_hint") : t("api_keys_page.form_key_hint")
+        }
+        error={errors.key}
+      >
+        <TextInput
+          value={form.key}
+          onChange={(e) => setForm((prev) => ({ ...prev, key: e.target.value }))}
+          onBlur={() => onFieldBlur("key")}
+          placeholder={t("api_keys_page.form_key_placeholder")}
+          aria-label={t("api_keys_page.form_key_label")}
+          className="font-mono"
+          spellCheck={false}
+          autoComplete="off"
+          endAdornment={
+            <Button
+              variant="ghost"
+              size="xs"
+              onClick={regenerateKey}
+              aria-label={regenerateLabel}
+              tooltip={regenerateLabel}
+            >
               <RefreshCw size={14} />
-              {editMode ? t("api_keys_page.form_refresh_key") : t("api_keys_page.form_regenerate")}
             </Button>
-          </div>
-        </div>
-      )}
+          }
+        />
+      </FormField>
 
-      {hidePermissionProfile ? (
-        <p className="rounded-xl border border-amber-200/80 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-100">
-          {t("end_users.key_quota_on_account", {
-            defaultValue: "限额与权限在用户账号上配置，本密钥与账号下其它密钥共用同一额度池。",
-          })}
-        </p>
-      ) : (
-        <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-            {t("api_keys_page.form_permission_profile")}
-          </label>
-          <Select
-            value={form.permissionProfileId}
-            onChange={(value) => setForm((prev) => ({ ...prev, permissionProfileId: value }))}
-            options={permissionProfileOptions}
-            aria-label={t("api_keys_page.form_permission_profile")}
-            placeholder={t("api_keys_page.form_permission_profile_placeholder")}
-          />
-          <p className="mt-1 text-xs text-slate-400 dark:text-white/40">
-            {t("api_keys_page.form_permission_profile_desc")}
-          </p>
-        </div>
-      )}
-    </div>
+      {keyChanged ? (
+        <Callout tone="warning">{t("api_keys_page.key_change_warning")}</Callout>
+      ) : null}
+
+      <FormField
+        label={t("api_keys_page.form_permission_profile")}
+        description={t("api_keys_page.form_permission_profile_desc")}
+        reserveMeta={false}
+      >
+        <Select
+          value={form.permissionProfileId}
+          onChange={(value) => setForm((prev) => ({ ...prev, permissionProfileId: value }))}
+          options={permissionProfileOptions}
+          aria-label={t("api_keys_page.form_permission_profile")}
+          placeholder={t("api_keys_page.form_permission_profile_placeholder")}
+        />
+      </FormField>
+    </>
   );
 }

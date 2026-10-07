@@ -1,32 +1,16 @@
-import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { EndUserDailySpendingResetEvent } from "@code-proxy/api-client";
-import { COLUMN_WIDTH, DataTable, Modal, type DataTableColumn } from "@code-proxy/ui";
-import { formatApiKeySpendingAmount } from "../../api-keys/apiKeyPageUtils";
-
-function formatResetAt(value: string | undefined): string {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString();
-}
-
-function actorLabel(
-  event: EndUserDailySpendingResetEvent,
-  t: (key: string) => string,
-): string {
-  const name = event.actor_username?.trim();
-  if (name) return name;
-  if (event.actor_kind === "service_credential") {
-    return t("end_users.reset_history_actor_service");
-  }
-  return t("end_users.reset_history_actor_unknown");
-}
+import { SpendingResetHistoryModal, formatQuotaUsdAmount } from "@features/period-spending";
 
 function isAmount(value: number | undefined): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
 
+/**
+ * 账号的手动重置记录。表格与排序来自共享的 SpendingResetHistoryModal；账号版在表格上方
+ * 多两张数字卡：当日实际消耗（后端算出的真实花费）与当前有效今日用量（扣掉重置后的值），
+ * 对账时一眼看出「重置清掉了多少」。后端没返回实际消耗时，描述会改口说明只剩有效用量。
+ */
 export function EndUserResetHistoryModal({
   open,
   onClose,
@@ -46,128 +30,42 @@ export function EndUserResetHistoryModal({
 }) {
   const { t } = useTranslation();
   const hasRawTodayCost = isAmount(rawTodayCost);
-  const sortedEvents = useMemo(
-    () =>
-      [...events].sort((a, b) => {
-        const timeDiff = Date.parse(b.reset_at) - Date.parse(a.reset_at);
-        return Number.isFinite(timeDiff) && timeDiff !== 0
-          ? timeDiff
-          : b.id - a.id;
-      }),
-    [events],
-  );
-
-  const columns: DataTableColumn<EndUserDailySpendingResetEvent>[] = [
-    {
-      key: "id",
-      label: t("end_users.reset_history_col_id"),
-      width: COLUMN_WIDTH.compact,
-      cellClassName:
-        "whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
-      render: (row) => row.id,
-    },
-    {
-      key: "reset_at",
-      label: t("end_users.reset_history_col_time"),
-      width: "w-[190px] min-w-[170px]",
-      cellClassName:
-        "whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
-      render: (row) => formatResetAt(row.reset_at),
-    },
-    {
-      key: "day_key",
-      label: t("end_users.reset_history_col_day"),
-      width: COLUMN_WIDTH.numericWide,
-      cellClassName:
-        "whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
-      render: (row) => row.day_key || "—",
-    },
-    {
-      key: "effective_used_before",
-      label: t("end_users.reset_history_col_cleared"),
-      width: COLUMN_WIDTH.name,
-      cellClassName:
-        "whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
-      render: (row) =>
-        formatApiKeySpendingAmount(row.effective_used_before ?? 0),
-    },
-    {
-      key: "raw_today_cost",
-      label: t("end_users.reset_history_col_raw_today"),
-      width: COLUMN_WIDTH.name,
-      cellClassName:
-        "whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
-      render: (row) =>
-        isAmount(row.raw_today_cost)
-          ? formatApiKeySpendingAmount(row.raw_today_cost)
-          : "—",
-    },
-    {
-      key: "cost_baseline",
-      label: t("end_users.reset_history_col_baseline"),
-      width: "w-[160px] min-w-[140px]",
-      cellClassName:
-        "whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
-      render: (row) =>
-        isAmount(row.cost_baseline)
-          ? formatApiKeySpendingAmount(row.cost_baseline)
-          : "—",
-    },
-    {
-      key: "actor",
-      label: t("end_users.reset_history_col_actor"),
-      width: COLUMN_WIDTH.numericWide,
-      cellClassName: "text-slate-700 dark:text-white/70",
-      render: (row) => actorLabel(row, t),
-    },
-  ];
+  const unavailable = t("end_users.reset_history_amount_unavailable");
 
   return (
-    <Modal
+    <SpendingResetHistoryModal
       open={open}
       onClose={onClose}
+      namespace="end_users"
       title={t("end_users.reset_history_title", { name: userName })}
       description={t(
         hasRawTodayCost
           ? "end_users.reset_history_desc"
           : "end_users.reset_history_desc_effective_only",
       )}
-      maxWidth="max-w-5xl"
-      bodyHeightClassName="max-h-[70vh]"
-    >
-      <div className="mb-4 grid gap-2 sm:grid-cols-2">
-        <div className="rounded-xl border border-orange-200/70 bg-orange-50/70 px-4 py-3 dark:border-orange-500/20 dark:bg-orange-500/10">
-          <div className="text-xs font-medium text-orange-700 dark:text-orange-300">
-            {t("end_users.reset_history_raw_today_summary")}
+      loading={loading}
+      events={events}
+      showEventId
+      summary={
+        <div className="grid gap-2 sm:grid-cols-2">
+          <div className="rounded-2xl bg-amber-500/[0.08] px-4 py-3">
+            <div className="text-xs font-medium text-amber-700 dark:text-amber-300">
+              {t("end_users.reset_history_raw_today_summary")}
+            </div>
+            <div className="mt-1 text-lg font-semibold tabular-nums text-ink">
+              {hasRawTodayCost ? formatQuotaUsdAmount(rawTodayCost) : unavailable}
+            </div>
           </div>
-          <div className="mt-1 text-lg font-semibold tabular-nums text-slate-900 dark:text-white">
-            {hasRawTodayCost
-              ? formatApiKeySpendingAmount(rawTodayCost)
-              : t("end_users.reset_history_amount_unavailable")}
-          </div>
-        </div>
-        <div className="rounded-xl border border-slate-900/8 bg-slate-50 px-4 py-3 dark:border-white/8 dark:bg-neutral-900">
-          <div className="text-xs font-medium text-slate-500 dark:text-white/50">
-            {t("end_users.reset_history_effective_used_summary")}
-          </div>
-          <div className="mt-1 text-lg font-semibold tabular-nums text-slate-900 dark:text-white">
-            {isAmount(dailySpendingUsed)
-              ? formatApiKeySpendingAmount(dailySpendingUsed)
-              : t("end_users.reset_history_amount_unavailable")}
+          <div className="rounded-2xl bg-subtle px-4 py-3">
+            <div className="text-xs font-medium text-ink-3">
+              {t("end_users.reset_history_effective_used_summary")}
+            </div>
+            <div className="mt-1 text-lg font-semibold tabular-nums text-ink">
+              {isAmount(dailySpendingUsed) ? formatQuotaUsdAmount(dailySpendingUsed) : unavailable}
+            </div>
           </div>
         </div>
-      </div>
-
-      <DataTable
-        columns={columns}
-        rows={sortedEvents}
-        loading={loading}
-        emptyText={t("end_users.reset_history_empty")}
-        rowKey={(row) => String(row.id)}
-        height="h-[360px]"
-        minHeight="min-h-[200px]"
-        minWidth="min-w-[1080px]"
-      />
-    </Modal>
+      }
+    />
   );
 }

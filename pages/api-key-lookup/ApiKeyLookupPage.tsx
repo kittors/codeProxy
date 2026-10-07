@@ -13,11 +13,9 @@ import {
 import { resolveLoginErrorMessage } from "../login/loginErrors";
 import { useTheme } from "@code-proxy/ui";
 import { Reveal } from "@code-proxy/ui";
-import { Button } from "@code-proxy/ui";
 import { Modal } from "@code-proxy/ui";
 import { PageBackground } from "@code-proxy/ui";
 import { SecretRevealModal } from "@code-proxy/ui";
-import { TextInput } from "@code-proxy/ui";
 import type { SearchableCheckboxMultiSelectOption } from "@code-proxy/ui";
 import type { TimeRange } from "@features/monitor-widgets/monitor-constants";
 import { ModelTag } from "@features/model-tags";
@@ -38,6 +36,7 @@ import {
 import { toLogRow } from "./toLogRow";
 import { LookupHeader } from "./components/LookupHeader";
 import { PortalChangePasswordModal } from "./components/PortalChangePasswordModal";
+import { PortalDeleteKeyModal } from "./components/PortalDeleteKeyModal";
 import { PortalLoginForm } from "./components/PortalLoginForm";
 import { PortalKeyPeriodQuotaResetModal } from "./components/PortalKeyPeriodQuotaResetModal";
 import { LookupEmptyState } from "./components/LookupEmptyState";
@@ -1380,10 +1379,7 @@ export function ApiKeyLookupPage() {
                       });
                     }}
                     onResetPeriodSpending={setResetSpendingTarget}
-                    onDelete={(key) => {
-                      if (portalKeys.length <= 1) return;
-                      setDeleteKeyTarget(key);
-                    }}
+                    onDelete={setDeleteKeyTarget}
                   />
                 </Reveal>
               ) : null}
@@ -1455,7 +1451,7 @@ export function ApiKeyLookupPage() {
           open={loginModalOpen}
           title={t("apikey_lookup.login_title", { defaultValue: "账号登录" })}
           hideHeader
-          maxWidth="max-w-md"
+          size="sm"
           bodyClassName="!px-7 !py-9 sm:!px-9"
           bodyHeightClassName="max-h-none"
           bodyOverflowClassName="overflow-visible"
@@ -1487,62 +1483,30 @@ export function ApiKeyLookupPage() {
           onClose={() => setChangePasswordOpen(false)}
         />
 
-        <Modal
-          open={Boolean(deleteKeyTarget)}
-          title={t("apikey_lookup.confirm_delete_title")}
-          description={t("apikey_lookup.confirm_delete_desc")}
-          maxWidth="max-w-md"
-          onClose={() => {
-            if (portalKeysBusy) return;
-            setDeleteKeyTarget(null);
+        <PortalDeleteKeyModal
+          t={t}
+          target={deleteKeyTarget}
+          busy={portalKeysBusy}
+          isLastKey={portalKeys.length <= 1}
+          describeError={(err) => localizeLookupError(t, err, "apikey_lookup.delete_key_failed")}
+          onClose={() => setDeleteKeyTarget(null)}
+          onConfirm={async (key) => {
+            setPortalKeysBusy(true);
+            try {
+              await portalApi.deleteKey(key.id);
+              setDeleteKeyTarget(null);
+              const items = (await portalApi.listKeys()).items ?? [];
+              setPortalKeys(items);
+              if (operationalKeyId === key.id) {
+                const next = items.find((item) => !item.disabled);
+                if (next) await activateOwnedKey(next.id);
+                else handleApiKeyInputChange("");
+              }
+            } finally {
+              setPortalKeysBusy(false);
+            }
           }}
-          footer={
-            <>
-              <Button
-                variant="secondary"
-                disabled={portalKeysBusy}
-                onClick={() => setDeleteKeyTarget(null)}
-              >
-                {t("common.cancel", { defaultValue: "取消" })}
-              </Button>
-              <Button
-                variant="danger"
-                disabled={portalKeysBusy || !deleteKeyTarget}
-                onClick={() => {
-                  const key = deleteKeyTarget;
-                  if (!key || portalKeys.length <= 1) return;
-                  setPortalKeysBusy(true);
-                  void portalApi
-                    .deleteKey(key.id)
-                    .then(async () => {
-                      setDeleteKeyTarget(null);
-                      const items = (await portalApi.listKeys()).items ?? [];
-                      setPortalKeys(items);
-                      if (operationalKeyId === key.id) {
-                        const next = items.find((item) => !item.disabled);
-                        if (next) await activateOwnedKey(next.id);
-                        else handleApiKeyInputChange("");
-                      }
-                    })
-                    .finally(() => setPortalKeysBusy(false));
-                }}
-              >
-                {portalKeysBusy ? t("apikey_lookup.deleting") : t("apikey_lookup.confirm_delete")}
-              </Button>
-            </>
-          }
-        >
-          {deleteKeyTarget ? (
-            <div className="rounded-xl bg-red-50 p-3 dark:bg-red-900/20">
-              <div className="text-sm font-medium text-red-800 dark:text-red-300">
-                {deleteKeyTarget.name || deleteKeyTarget.id.slice(0, 8)}
-              </div>
-              <code className="text-xs text-red-600 dark:text-red-400">
-                {deleteKeyTarget.key_masked}
-              </code>
-            </div>
-          ) : null}
-        </Modal>
+        />
 
         <OwnedApiKeyQuotaModal
           t={t}
@@ -1558,15 +1522,10 @@ export function ApiKeyLookupPage() {
             setCreateKeyOpen(false);
             setPortalKeyQuotaError("");
           }}
+          // 名称必填与重名由表单就地校验（existingNames），走到这里时已经通过。
+          existingNames={portalKeys.map((key) => key.name || "")}
           onSubmit={() => {
             const name = portalKeyForm.name.trim();
-            if (!name) return;
-            if (
-              portalKeys.some((key) => (key.name || "").trim().toLowerCase() === name.toLowerCase())
-            ) {
-              setPortalKeyQuotaError(t("apikey_lookup.key_name_duplicate"));
-              return;
-            }
             const limits = periodSpendingDraftToLimits(portalKeyForm.periods);
             setPortalKeysBusy(true);
             setPortalKeyQuotaError("");
@@ -1628,13 +1587,14 @@ export function ApiKeyLookupPage() {
         <PortalKeyPeriodQuotaResetModal
           target={resetSpendingTarget} busy={portalKeysBusy}
           onClose={() => setResetSpendingTarget(null)}
-          onReset={refreshPortalKeys} onError={setError} onBusyChange={setPortalKeysBusy}
+          onReset={refreshPortalKeys} onBusyChange={setPortalKeysBusy}
         />
 
         <SecretRevealModal
           open={Boolean(secretOnce)}
           title={t("apikey_lookup.copy_secret", { defaultValue: "请立即复制" })}
           secret={secretOnce ?? ""}
+          secretLabel={t("apikey_lookup.api_key_label")}
           warning={t("apikey_lookup.secret_once_warning", {
             defaultValue: "离开后无法再查看明文 Key，请立即复制保存。",
           })}
