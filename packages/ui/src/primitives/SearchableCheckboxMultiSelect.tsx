@@ -630,6 +630,7 @@ export function SearchableCheckboxMultiSelect({
                 contentClassName="p-1.5"
                 scrollbarVisibility="always"
                 scrollbarTrackInset={4}
+                edgeFade={24}
               >
                 {filteredOptions.length === 0 ? (
                   <div className={selectEmptyState}>{noResultsLabel}</div>
