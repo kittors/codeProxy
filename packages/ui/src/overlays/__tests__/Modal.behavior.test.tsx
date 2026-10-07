@@ -5,6 +5,7 @@ import { describe, expect, test, vi } from "vitest";
 import { Select } from "../../primitives/Select";
 import { TextInput } from "../../primitives/Input";
 import { ConfirmModal } from "../ConfirmModal";
+import { Drawer } from "../Drawer";
 import { Modal } from "../Modal";
 
 const backdrop = () => document.querySelector<HTMLButtonElement>("[data-overlay-backdrop]")!;
@@ -240,5 +241,43 @@ describe("ConfirmModal", () => {
       await new Promise((resolve) => setTimeout(resolve, 50));
     });
     expect(screen.getByRole("button", { name: "Remove" })).not.toHaveFocus();
+  });
+});
+
+describe("Drawer dismissal", () => {
+  test("after typing, the backdrop nudges instead of closing; Escape and the close button still work", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    render(
+      <Drawer open title="Menu" onClose={onClose}>
+        <TextInput aria-label="Code" />
+      </Drawer>,
+    );
+    fireEvent.click(backdrop());
+    expect(onClose).toHaveBeenCalledTimes(1);
+
+    await user.type(screen.getByRole("textbox", { name: "Code" }), "system.config");
+    fireEvent.click(backdrop());
+    expect(onClose).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(screen.getByRole("dialog")).toHaveClass("overlay-nudge"));
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(onClose).toHaveBeenCalledTimes(2);
+    await user.click(screen.getByRole("button", { name: /close|关闭/i }));
+    expect(onClose).toHaveBeenCalledTimes(3);
+  });
+
+  test("an explicitly dirty drawer also ignores Escape", () => {
+    const onClose = vi.fn();
+    const onBlockedClose = vi.fn();
+    render(
+      <Drawer open title="Menu" dirty onBlockedClose={onBlockedClose} onClose={onClose}>
+        body
+      </Drawer>,
+    );
+    fireEvent.keyDown(window, { key: "Escape" });
+    fireEvent.click(backdrop());
+    expect(onClose).not.toHaveBeenCalled();
+    expect(onBlockedClose).toHaveBeenCalledTimes(2);
   });
 });

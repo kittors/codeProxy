@@ -53,6 +53,13 @@ export interface SearchableCheckboxMultiSelectProps {
   noResultsLabel: string;
   disabled?: boolean;
   "aria-label"?: string;
+  /**
+   * 由 FormField 注入：`<label htmlFor>` 指到触发器；出错时描边变红、读屏读到错误，
+   * 提交校验也能把焦点送过来（`focusFirstInvalid` 找的就是 aria-invalid）。
+   */
+  id?: string;
+  "aria-invalid"?: boolean | "true" | "false";
+  "aria-describedby"?: string;
   className?: string;
   size?: ControlSize;
   clearLabel?: string;
@@ -96,6 +103,9 @@ export function SearchableCheckboxMultiSelect({
   noResultsLabel,
   disabled = false,
   "aria-label": ariaLabel,
+  id,
+  "aria-invalid": ariaInvalid,
+  "aria-describedby": ariaDescribedBy,
   className,
   size = "default",
   clearLabel,
@@ -461,11 +471,14 @@ export function SearchableCheckboxMultiSelect({
       <div className={cn("group/multi-select relative", className)}>
         <button
           ref={triggerRef}
+          id={id}
           type="button"
           role="combobox"
           aria-expanded={open}
           aria-haspopup="listbox"
           aria-label={ariaLabel}
+          aria-invalid={ariaInvalid}
+          aria-describedby={ariaDescribedBy}
           disabled={disabled}
           data-state={selectTriggerState(open)}
           onClick={() => {

@@ -133,7 +133,6 @@ export function PermissionProfileFormModal({
           description={t("api_key_permissions_page.access_section_desc")}
           icon={<Route />}
         >
-          {/* RestrictionMultiSelect 不接收 id，标签只做视觉分组；可访问名称来自触发按钮的文字。 */}
           <FormField label={t("api_keys_page.form_allowed_channel_groups")} reserveMeta={false}>
             <RestrictionMultiSelect
               options={availableChannelGroups}

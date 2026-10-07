@@ -34,6 +34,13 @@ interface DateTimePickerProps {
   value: string;
   onChange: (value: string) => void;
   "aria-label": string;
+  /**
+   * 由 FormField 注入：`<label htmlFor>` 指到输入框；出错时描边变红、读屏读到错误，
+   * 提交校验也能把焦点送过来（`focusFirstInvalid` 找的就是 aria-invalid）。
+   */
+  id?: string;
+  "aria-invalid"?: boolean | "true" | "false";
+  "aria-describedby"?: string;
   labels: DateTimePickerLabels;
   locale?: string;
   placeholder?: string;
@@ -107,6 +114,9 @@ export function DateTimePicker({
   value,
   onChange,
   "aria-label": ariaLabel,
+  id,
+  "aria-invalid": ariaInvalid,
+  "aria-describedby": ariaDescribedBy,
   labels,
   locale,
   placeholder = "YYYY-MM-DD HH:mm",
@@ -300,7 +310,10 @@ export function DateTimePicker({
         onFocus={() => setOpen(true)}
         onClick={() => setOpen(true)}
         onChange={(event) => onChange(normalizeManualValue(event.currentTarget.value))}
+        id={id}
         aria-label={ariaLabel}
+        aria-invalid={ariaInvalid}
+        aria-describedby={ariaDescribedBy}
         placeholder={placeholder}
         className="font-medium tabular-nums"
         endAdornment={

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Pencil, Plus, ShieldCheck, Trash2 } from "lucide-react";
 import {
@@ -13,6 +13,7 @@ import {
   Checkbox,
   COLUMN_WIDTH,
   ConfirmModal,
+  confirmDialog,
   DataTable,
   PaginationBar,
   Select,
@@ -58,6 +59,11 @@ export function AccessRulesTab({
   const [editTarget, setEditTarget] = useState<IpAccessRule | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<IpAccessRule | null>(null);
+  // 翻页不会清空勾选：批量删除确认时要列出的规则可能不在当前页，按 id 记住见过的每一条。
+  const seenRules = useRef(new Map<string, IpAccessRule>());
+  useEffect(() => {
+    for (const item of items) seenRules.current.set(item.id, item);
+  }, [items]);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(
@@ -168,6 +174,43 @@ export function AccessRulesTab({
     },
     [load, notify, onRulesChanged, page, pageSize, selected, t],
   );
+
+  // 批量删除和单条删除一样先确认：列出要删的地址，并按拒绝 / 放行分别说清删掉后会发生什么。
+  const requestBulkDelete = useCallback(async () => {
+    if (selected.length === 0) return;
+    const targets = selected
+      .map((id) => seenRules.current.get(id))
+      .filter((rule): rule is IpAccessRule => rule !== undefined);
+    const denyCount = targets.filter((rule) => rule.effect === "deny").length;
+    const allowCount = targets.length - denyCount;
+    const shown = targets.slice(0, 4);
+    const hidden = selected.length - shown.length;
+    const consequences = [
+      denyCount > 0 ? t("ip_access.bulk_delete_consequence_deny", { count: denyCount }) : null,
+      allowCount > 0 ? t("ip_access.bulk_delete_consequence_allow", { count: allowCount }) : null,
+    ].filter((line): line is string => line !== null);
+    const confirmed = await confirmDialog({
+      title: t("ip_access.bulk_delete_title", { count: selected.length }),
+      description: t("ip_access.delete_rule_lead"),
+      subject: (
+        <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          {shown.map((rule) => (
+            <span key={rule.id} className="font-mono">
+              {rule.cidr}
+            </span>
+          ))}
+          {hidden > 0 ? (
+            <span className="text-ink-3">
+              {t("ip_access.bulk_delete_more", { count: hidden })}
+            </span>
+          ) : null}
+        </span>
+      ),
+      consequences,
+      confirmText: t("ip_access.bulk_delete"),
+    });
+    if (confirmed) await bulkApply({ delete: true });
+  }, [bulkApply, selected, t]);
 
   // Releasing a ban usually means "this one was wrong", and the next thing an
   // operator wants is for it not to happen again — so the two steps are one action.
@@ -403,7 +446,7 @@ export function AccessRulesTab({
                 <Button size="sm" variant="secondary" disabled={busy} onClick={() => void bulkApply({ enabled: true })}>
                   {t("ip_access.bulk_enable")}
                 </Button>
-                <Button size="sm" variant="secondary-danger" disabled={busy} onClick={() => void bulkApply({ delete: true })}>
+                <Button size="sm" variant="secondary-danger" disabled={busy} onClick={() => void requestBulkDelete()}>
                   {t("ip_access.bulk_delete")}
                 </Button>
               </div>

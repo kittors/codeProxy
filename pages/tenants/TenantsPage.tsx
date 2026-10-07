@@ -299,9 +299,6 @@ export function TenantsPage() {
         locale={i18n.language}
         dateTimePickerLabels={dateTimePickerLabels}
         onSubmit={createTenant}
-        // Surface expiry issues as a localized toast as well: the DateTimePicker
-        // takes no aria-invalid, so focus cannot be sent to it.
-        onExpiryInvalid={(message) => notify({ type: "error", message })}
         onClose={() => setCreateOpen(false)}
       />
 

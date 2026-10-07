@@ -240,7 +240,9 @@ describe("ApiKeyPermissionsPage", () => {
       within(dialog).getByRole("textbox", { name: "系统提示词" }),
       "专业系统提示词",
     );
-    await userEvent.click(within(dialog).getByRole("button", { name: /全部渠道分组/i }));
+    const channelGroups = within(dialog).getByRole("combobox", { name: /允许的渠道分组/ });
+    expect(channelGroups).toHaveTextContent("全部渠道分组");
+    await userEvent.click(channelGroups);
     await userEvent.click(await screen.findByRole("button", { name: /pro/i }));
     await userEvent.click(within(dialog).getByRole("button", { name: "保存配置" }));
 
@@ -326,7 +328,7 @@ describe("ApiKeyPermissionsPage", () => {
     await userEvent.click(screen.getByRole("button", { name: "新增配置" }));
     const dialog = await screen.findByRole("dialog", { name: "新增权限配置" });
     await userEvent.click(within(dialog).getByRole("switch", { name: "精确渠道覆盖（高级）" }));
-    await userEvent.click(within(dialog).getByRole("button", { name: /^全部渠道$/i }));
+    await userEvent.click(within(dialog).getByRole("combobox", { name: /^允许的渠道（/ }));
 
     expect(await screen.findByRole("button", { name: /OpenCode Go 主渠道/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /ClinePass 主渠道/i })).toBeInTheDocument();

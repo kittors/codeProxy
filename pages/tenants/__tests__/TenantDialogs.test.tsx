@@ -42,7 +42,6 @@ describe("tenant dialogs", () => {
   test("new tenant separates tenant details from its first administrator", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn(async (_form: CreateTenantForm): Promise<string | null> => null);
-    const onExpiryInvalid = vi.fn();
     render(
       <CreateTenantModal
         open
@@ -50,7 +49,6 @@ describe("tenant dialogs", () => {
         locale="en"
         dateTimePickerLabels={pickerLabels}
         onSubmit={onSubmit}
-        onExpiryInvalid={onExpiryInvalid}
         onClose={() => undefined}
       />,
     );
@@ -65,8 +63,13 @@ describe("tenant dialogs", () => {
     await user.click(within(dialog).getByRole("button", { name: "Create tenant" }));
 
     expect(onSubmit).not.toHaveBeenCalled();
-    // 日期选择器接不住焦点，到期时间的问题额外用提示条说一次。
-    expect(onExpiryInvalid).toHaveBeenCalledWith("Required");
+    // 焦点落在第一处错误（名称）；日期选择器和其他输入框一样标红并带上错误说明。
+    await waitFor(() =>
+      expect(within(dialog).getByLabelText("Name", { exact: true })).toHaveFocus(),
+    );
+    const expiry = within(dialog).getByRole("textbox", { name: "Expires at" });
+    expect(expiry).toHaveAttribute("aria-invalid", "true");
+    expect(expiry).toHaveAccessibleDescription(/Required/);
     const username = within(dialog).getByLabelText("Admin username", { exact: true });
     await waitFor(() => expect(username).toHaveAttribute("aria-invalid", "true"));
     expect(username).toHaveAccessibleDescription(/Use only letters, digits and \. _ - @/);

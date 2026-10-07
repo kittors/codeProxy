@@ -48,7 +48,6 @@ export function CreateTenantModal({
   locale,
   dateTimePickerLabels,
   onSubmit,
-  onExpiryInvalid,
   onClose,
 }: {
   open: boolean;
@@ -57,8 +56,6 @@ export function CreateTenantModal({
   dateTimePickerLabels: DateTimePickerLabels;
   /** 返回服务端给出的管理员密码策略错误（没有则 null）。 */
   onSubmit: (form: CreateTenantForm) => Promise<string | null>;
-  /** 到期时间不合法时额外提示（日期选择器不接受 aria-invalid，焦点送不过去）。 */
-  onExpiryInvalid: (message: string) => void;
   onClose: () => void;
 }) {
   const { t } = useTranslation();
@@ -87,12 +84,6 @@ export function CreateTenantModal({
 
   const submit = async () => {
     if (!validation.validate()) {
-      const expiryError = validation.issues.expires_at;
-      if (expiryError) {
-        onExpiryInvalid(
-          t(`validation.${expiryError.key}`, { defaultValue: t("validation.format") }),
-        );
-      }
       validation.focusFirstInvalid(formRef.current);
       return;
     }

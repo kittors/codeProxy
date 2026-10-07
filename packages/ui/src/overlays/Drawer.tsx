@@ -1,10 +1,14 @@
 import { createPortal } from "react-dom";
-import { useId, useRef, type PropsWithChildren, type ReactNode } from "react";
+import { useCallback, useId, useRef, useState, type PropsWithChildren, type ReactNode } from "react";
 import { X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { DialogIcon, type DialogTone } from "./DialogIcon";
 import { drawerPanelMotion, overlayBackdropMotion, useOverlayPresence } from "./overlayMotion";
-import { useDialogBehavior, type DialogInitialFocus } from "./useDialogBehavior";
+import {
+  useDialogBehavior,
+  useInteractionGuard,
+  type DialogInitialFocus,
+} from "./useDialogBehavior";
 
 export function Drawer({
   open,
@@ -16,6 +20,8 @@ export function Drawer({
   widthClassName = "w-[min(720px,100vw)]",
   bodyClassName,
   initialFocus = "panel",
+  dirty,
+  onBlockedClose,
   onClose,
   children,
 }: PropsWithChildren<{
@@ -30,6 +36,9 @@ export function Drawer({
   bodyClassName?: string;
   /** 抽屉多用来查看详情，默认只把焦点放在面板上，不去点亮第一个输入框。 */
   initialFocus?: DialogInitialFocus;
+  /** 与 Modal 相同：不传时输入过文字后点遮罩只轻晃；传 true 时 Esc 也拦下；传 false 时直接关闭。 */
+  dirty?: boolean;
+  onBlockedClose?: () => void;
   onClose: () => void;
 }>) {
   const { t } = useTranslation();
@@ -38,9 +47,26 @@ export function Drawer({
   const titleId = useId();
   const descriptionId = useId();
   const panelRef = useRef<HTMLDivElement | null>(null);
+  const [nudging, setNudging] = useState(false);
+  const { interacted, onInput } = useInteractionGuard(open);
+
+  // 抽屉里多是长表单：填了一半手滑点到遮罩，不该把内容全丢掉。与 Modal 同一套规则。
+  const nudge = useCallback(() => {
+    setNudging(false);
+    window.requestAnimationFrame(() => setNudging(true));
+    onBlockedClose?.();
+  }, [onBlockedClose]);
+  const guardBackdrop = dirty ?? interacted;
+  const handleEscape = useCallback(() => {
+    if (dirty === true) {
+      nudge();
+      return;
+    }
+    onClose();
+  }, [dirty, nudge, onClose]);
 
   // 与 Modal 同一套叠层：抽屉里再打开的确认框按 Esc 只关确认框；Tab 不会跑到背后的页面。
-  useDialogBehavior({ open, visible, panelRef, onEscape: onClose, initialFocus });
+  useDialogBehavior({ open, visible, panelRef, onEscape: handleEscape, initialFocus });
 
   if (!mounted) return null;
 
@@ -56,9 +82,16 @@ export function Drawer({
         data-overlay-backdrop=""
         onClick={() => {
           if (!open) return;
+          if (guardBackdrop) {
+            nudge();
+            return;
+          }
           onClose();
         }}
-        aria-label={t("common.close")}
+        // 遮罩不是一个「关闭」按钮：填过内容后点它只会轻晃。与 Modal 一样对读屏和 Tab 隐藏，
+        // 关闭交给头部的关闭按钮和 Esc。
+        aria-hidden="true"
+        tabIndex={-1}
         style={backdropMotion.style}
         className={[
           // 与 Modal 用同一套遮罩语言：只压暗、不模糊。
@@ -73,10 +106,15 @@ export function Drawer({
         aria-labelledby={titleId}
         aria-describedby={description ? descriptionId : undefined}
         tabIndex={-1}
+        onInput={onInput}
+        onAnimationEnd={(event) => {
+          if (event.animationName === "overlay-nudge") setNudging(false);
+        }}
         style={panelMotion.style}
         className={[
           `relative z-10 flex h-full ${widthClassName} flex-col overflow-hidden bg-elevated text-ink shadow-dialog outline-none sm:max-w-[calc(100vw-1rem)] sm:rounded-3xl`,
           panelMotion.className,
+          nudging ? "overlay-nudge" : "",
         ].join(" ")}
       >
         {/* 抽屉内容通常很长，头尾保留一条细分隔线，滚动时内容不会和标题、按钮粘在一起。 */}

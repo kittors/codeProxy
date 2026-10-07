@@ -64,6 +64,13 @@ export interface SearchableSelectProps {
   placeholder?: string;
   searchPlaceholder?: string;
   "aria-label"?: string;
+  /**
+   * 由 FormField 注入：`<label htmlFor>` 指到触发器；出错时描边变红、读屏读到错误，
+   * 提交校验也能把焦点送过来（`focusFirstInvalid` 找的就是 aria-invalid）。
+   */
+  id?: string;
+  "aria-invalid"?: boolean | "true" | "false";
+  "aria-describedby"?: string;
   name?: string;
   className?: string;
   disabled?: boolean;
@@ -119,6 +126,9 @@ export function SearchableSelect({
   placeholder = "",
   searchPlaceholder = "",
   "aria-label": ariaLabel,
+  id,
+  "aria-invalid": ariaInvalid,
+  "aria-describedby": ariaDescribedBy,
   name,
   className,
   disabled = false,
@@ -284,11 +294,14 @@ export function SearchableSelect({
 
       <button
         ref={triggerRef}
+        id={id}
         type="button"
         role="combobox"
         aria-expanded={open}
         aria-haspopup="listbox"
         aria-label={ariaLabel}
+        aria-invalid={ariaInvalid}
+        aria-describedby={ariaDescribedBy}
         title={
           typeof selectedOption?.label === "string"
             ? selectedOption.label
