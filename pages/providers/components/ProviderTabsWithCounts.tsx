@@ -79,7 +79,7 @@ const COUNT_BADGE_BASE =
 const COUNT_BADGE_ACTIVE =
   "bg-[var(--brand-fill)] text-[var(--brand-on)] ring-black/10 dark:ring-white/15";
 const COUNT_BADGE_IDLE =
-  "bg-[color-mix(in_oklab,var(--brand)_14%,var(--color-surface))] text-[var(--brand-fill)] ring-[color-mix(in_oklab,var(--brand)_24%,transparent)] dark:bg-[color-mix(in_oklab,var(--brand)_26%,var(--color-surface))] dark:text-[var(--brand)]";
+  "bg-[color-mix(in_oklab,var(--brand)_14%,var(--color-surface))] text-[var(--brand-text)] ring-[color-mix(in_oklab,var(--brand)_24%,transparent)] dark:bg-[color-mix(in_oklab,var(--brand)_26%,var(--color-surface))]";
 
 type ProviderTabsWithCountsProps = {
   tabs: ProviderTabMeta[];

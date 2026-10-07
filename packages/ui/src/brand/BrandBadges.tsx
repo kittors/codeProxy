@@ -9,13 +9,16 @@ export type PlanBadgeTier = "free" | "entry" | "pro" | "max" | "ultra";
 
 /**
  * 当前主题下的品牌变量，深浅色由 `dark:` 选出对应的一组；没有登记品牌色的厂商回落到墨色（中性）：
- * - `--brand` / `--brand-2`：品牌主色与第二色（深色界面里是亮一档的版本），用于描边、淡底、深色下的文字；
- * - `--brand-fill` / `--brand-fill-2`：实色与渐变底，白字对比度 ≥ 4.5:1；浅色界面的品牌文字也用它；
+ * - `--brand` / `--brand-2`：品牌主色与第二色（深色界面里是亮一档的版本），用于描边、淡底的色源；
+ * - `--brand-text`：淡底上的品牌色文字，深浅两套都在最深一档淡底上 ≥ 4.5:1。淡底上的字一律用它，
+ *   不要拿 `--brand` / `--brand-fill` 当字色——它们在淡底上多数只有 3–4:1（见 vendorBrands 的说明）；
+ * - `--brand-fill` / `--brand-fill-2`：实色与渐变底，白字对比度 ≥ 4.5:1；
  * - `--brand-on`：实色底上的文字色。
  */
 const BRAND_VARS = [
   "[--brand:var(--brand-l,var(--color-ink))] dark:[--brand:var(--brand-d,var(--color-ink))]",
   "[--brand-2:var(--brand-2-l,var(--color-ink-3))] dark:[--brand-2:var(--brand-2-d,var(--color-ink-3))]",
+  "[--brand-text:var(--brand-text-l,var(--color-ink))] dark:[--brand-text:var(--brand-text-d,var(--color-ink))]",
   "[--brand-fill:var(--brand-fill-l,var(--color-ink))] dark:[--brand-fill:var(--brand-fill-d,var(--color-ink))]",
   "[--brand-fill-2:var(--brand-fill-2-l,var(--color-ink-2))] dark:[--brand-fill-2:var(--brand-fill-2-d,var(--color-ink-2))]",
   "[--brand-on:var(--brand-on-l,var(--color-canvas))] dark:[--brand-on:var(--brand-on-d,var(--color-canvas))]",
@@ -35,9 +38,9 @@ const brandStyle = (vendor: string | null | undefined, style?: CSSProperties): C
  * - ultra：辅色—主色—辅色的双向渐变 + 皇冠 + 光晕 + 流光。
  */
 const TIER_CLASS: Record<PlanBadgeTier, string> = {
-  free: "text-[color-mix(in_oklab,var(--brand-fill)_72%,var(--color-ink-2))] ring-1 ring-inset ring-[color-mix(in_oklab,var(--brand)_32%,transparent)] dark:text-[color-mix(in_oklab,var(--brand)_75%,var(--color-ink-2))]",
+  free: "text-[color-mix(in_oklab,var(--brand-text)_70%,var(--color-ink-2))] ring-1 ring-inset ring-[color-mix(in_oklab,var(--brand)_32%,transparent)]",
   entry:
-    "bg-[color-mix(in_oklab,var(--brand)_13%,transparent)] text-[var(--brand-fill)] ring-1 ring-inset ring-[color-mix(in_oklab,var(--brand)_24%,transparent)] dark:bg-[color-mix(in_oklab,var(--brand)_18%,transparent)] dark:text-[var(--brand)]",
+    "bg-[color-mix(in_oklab,var(--brand)_13%,transparent)] text-[var(--brand-text)] ring-1 ring-inset ring-[color-mix(in_oklab,var(--brand)_24%,transparent)] dark:bg-[color-mix(in_oklab,var(--brand)_18%,transparent)]",
   pro: "bg-[var(--brand-fill)] text-[var(--brand-on)] shadow-[inset_0_1px_0_rgb(255_255_255/0.2)]",
   max: "bg-[linear-gradient(120deg,var(--brand-fill),var(--brand-fill-2))] text-[var(--brand-on)] shadow-[inset_0_1px_0_rgb(255_255_255/0.22),0_2px_8px_-3px_color-mix(in_oklab,var(--brand)_70%,transparent)]",
   ultra:
@@ -110,7 +113,7 @@ export function ProviderTag({
       className={cn(
         BRAND_VARS,
         "inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-px text-2xs font-medium whitespace-nowrap",
-        "bg-[color-mix(in_oklab,var(--brand)_11%,transparent)] text-[var(--brand-fill)] dark:bg-[color-mix(in_oklab,var(--brand)_18%,transparent)] dark:text-[var(--brand)]",
+        "bg-[color-mix(in_oklab,var(--brand)_11%,transparent)] text-[var(--brand-text)] dark:bg-[color-mix(in_oklab,var(--brand)_18%,transparent)]",
         className,
       )}
     >

@@ -199,8 +199,8 @@ const MODEL_VENDOR_KEYS = new Set<string>([
  * 于是就是中性的浅灰底、黑字。
  */
 const BRAND_TINT_CLASS = [
-  "border-[color-mix(in_oklab,var(--brand)_22%,transparent)] bg-[color-mix(in_oklab,var(--brand)_10%,transparent)] text-[var(--brand-fill)]",
-  "dark:border-[color-mix(in_oklab,var(--brand)_30%,transparent)] dark:bg-[color-mix(in_oklab,var(--brand)_18%,transparent)] dark:text-[var(--brand)]",
+  "border-[color-mix(in_oklab,var(--brand)_22%,transparent)] bg-[color-mix(in_oklab,var(--brand)_10%,transparent)] text-[var(--brand-text)]",
+  "dark:border-[color-mix(in_oklab,var(--brand)_30%,transparent)] dark:bg-[color-mix(in_oklab,var(--brand)_18%,transparent)]",
 ].join(" ");
 
 export type ModelVendorBrand = { className: string; style: CSSProperties };
