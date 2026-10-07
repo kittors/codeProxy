@@ -25,7 +25,8 @@ export function Skeleton({
     <span
       aria-hidden
       className={[
-        "block bg-slate-200/70 dark:bg-white/[0.07]",
+        // 半透明叠层：放在白卡片、灰侧栏、深色弹层上都是「比底色深一档」。
+        "block bg-selected",
         "motion-safe:animate-[skeleton-sweep_1.6s_ease-in-out_infinite]",
         roundedClass,
         className,

@@ -7,6 +7,8 @@ type SaveBarStatus = "saved" | "dirty" | "saving" | "loading" | "error" | "offli
 
 interface FloatingSaveBarProps {
   status: SaveBarStatus;
+  /** 可视化编辑里改了几项；有数字时状态写成「3 项未保存」，比笼统的「未保存」更有底。 */
+  changeCount?: number;
   onSave: () => void;
   onReload: () => void;
   saveDisabled?: boolean;
@@ -26,13 +28,13 @@ const STATUS_TONE: Record<SaveBarStatus, { icon?: ReactNode; tone: string; dot?:
     tone: "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-400/20 dark:bg-sky-500/15 dark:text-sky-200",
   },
   loading: {
-    tone: "border-slate-900/8 bg-slate-50 text-slate-600 dark:border-neutral-700 dark:bg-neutral-800/60 dark:text-slate-300",
+    tone: "border-line bg-subtle text-ink-2",
   },
   error: {
     tone: "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-400/20 dark:bg-rose-500/15 dark:text-rose-300",
   },
   offline: {
-    tone: "border-slate-900/8 bg-slate-100 text-slate-500 dark:border-neutral-700 dark:bg-neutral-800/60 dark:text-slate-400",
+    tone: "border-line bg-subtle text-ink-3",
   },
 };
 
@@ -47,6 +49,7 @@ const STATUS_LABEL_KEYS: Record<SaveBarStatus, string> = {
 
 export function FloatingSaveBar({
   status,
+  changeCount,
   onSave,
   onReload,
   saveDisabled,
@@ -97,7 +100,10 @@ export function FloatingSaveBar({
   if (!rendered) return null;
 
   const displayTone = justSaved ? STATUS_TONE.saved : toneConfig;
-  const displayLabel = t(justSaved ? STATUS_LABEL_KEYS.saved : STATUS_LABEL_KEYS[status]);
+  const displayLabel =
+    !justSaved && status === "dirty" && changeCount && changeCount > 0
+      ? t("config_ui.unsaved_count", { count: changeCount })
+      : t(justSaved ? STATUS_LABEL_KEYS.saved : STATUS_LABEL_KEYS[status]);
 
   return (
     <div
@@ -106,16 +112,15 @@ export function FloatingSaveBar({
     >
       <div
         className={[
-          "pointer-events-auto flex items-center gap-3 rounded-2xl border px-4 py-2.5 shadow-lg shadow-black/5",
-          "bg-white/85 backdrop-blur-xl backdrop-saturate-150",
-          "dark:bg-neutral-950/80 dark:backdrop-blur-xl dark:backdrop-saturate-150",
-          "border-slate-900/8 dark:border-neutral-700/60",
-          "transition-all duration-[400ms]",
+          // 实色浮层，和下拉、提示条同一种表面：半透明毛玻璃压在配置表单上会透出底下的字。
+          "pointer-events-auto flex items-center gap-3 rounded-2xl bg-elevated px-4 py-2.5 shadow-pop",
+          "transition-all duration-[360ms]",
           visible ? "translate-y-0 opacity-100 scale-100" : "translate-y-8 opacity-0 scale-[0.96]",
         ].join(" ")}
         style={{
+          // 与全局 --ease-spring / ease-in 同一组曲线（packages/ui/src/utils/motion.ts）。
           transitionTimingFunction: visible
-            ? "cubic-bezier(0.34, 1.56, 0.64, 1)"
+            ? "cubic-bezier(0.3, 1.25, 0.5, 1)"
             : "cubic-bezier(0.4, 0, 1, 1)",
         }}
       >
@@ -136,7 +141,7 @@ export function FloatingSaveBar({
           )}
         </div>
 
-        <div className="h-5 w-px bg-slate-200/80 dark:bg-neutral-700/60" />
+        <div className="h-5 w-px bg-line" />
 
         <div className="flex items-center gap-1.5">
           <Button

@@ -67,7 +67,7 @@ export function LandingHero({
           <div>
             <motion.p
               {...enter(0)}
-              className="font-display text-xs uppercase tracking-[0.1em] text-indigo-600 dark:text-indigo-400"
+              className="font-display text-xs uppercase tracking-[0.1em] text-ink-3"
             >
               {copy.hero.badge}
             </motion.p>
@@ -77,7 +77,7 @@ export function LandingHero({
               className="mt-7 font-display text-4xl font-bold leading-[1.1] tracking-tight text-slate-950 dark:text-white sm:text-5xl lg:text-6xl"
             >
               <span className="block">{copy.hero.titleLine1}</span>
-              <span className="mt-2 block text-indigo-600 dark:text-indigo-400">
+              <span className="mt-2 block text-ink-3">
                 {copy.hero.titleLine2}
               </span>
             </motion.h1>
@@ -111,7 +111,7 @@ export function LandingHero({
               <button
                 type="button"
                 onClick={onBrowseModels}
-                className="group inline-flex h-12 items-center gap-1.5 px-2 text-sm font-semibold text-slate-700 transition-colors duration-150 hover:text-indigo-600 dark:text-white/70 dark:hover:text-indigo-400"
+                className="group inline-flex h-12 items-center gap-1.5 px-2 text-sm font-semibold text-slate-700 transition-colors duration-150 hover:text-ink dark:text-white/70"
               >
                 {copy.hero.secondaryCta}
                 <ArrowRight
@@ -142,7 +142,7 @@ export function LandingHero({
                 <button
                   type="button"
                   onClick={onBrowseModels}
-                  className="font-display text-xs text-indigo-600 transition-opacity duration-150 hover:opacity-70 dark:text-indigo-400"
+                  className="font-display text-xs text-ink-2 transition-colors duration-150 hover:text-ink"
                 >
                   {copy.hero.railMore}
                 </button>

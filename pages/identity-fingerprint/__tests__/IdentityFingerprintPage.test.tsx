@@ -622,6 +622,8 @@ describe("IdentityFingerprintPage provider tabs", () => {
     expect(within(dialog).getAllByText(/codex-tui\/0\.125\.0/).length).toBeGreaterThan(0);
     expect(within(dialog).getByText(/sess\.\.\.abcd/)).toBeInTheDocument();
     expect(within(dialog).queryByText(/^Actions$/i)).not.toBeInTheDocument();
+    // 原来的自定义请求头会被删掉：差异里要看得到这一项，不能只靠一句笼统的「会替换」。
+    expect(within(dialog).getByText("X-Old-Fingerprint")).toBeInTheDocument();
 
     await userEvent.click(within(dialog).getByRole("button", { name: /Apply and save/i }));
     expect(
@@ -632,6 +634,17 @@ describe("IdentityFingerprintPage provider tabs", () => {
       name: /Apply this recommended fingerprint/i,
     });
     expect(within(confirmDialog).getByText(/codex-tui 0\.125\.0/i)).toBeInTheDocument();
+    // 后果要点名：会顺带启用指纹、覆盖哪些字段、原来的自定义请求头（X-Old-Fingerprint）不会保留。
+    expect(
+      within(confirmDialog).getByText("The Codex identity fingerprint is turned on as well."),
+    ).toBeInTheDocument();
+    // User-Agent、Version、Originator、X-Codex-Beta-Features，加上被删掉的 X-Old-Fingerprint。
+    expect(
+      within(confirmDialog).getByText(
+        /Overwrites the current User-Agent, Version, Originator.*\(5 values in total\)/,
+      ),
+    ).toBeInTheDocument();
+    expect(within(confirmDialog).getByText(/Custom headers are replaced/)).toBeInTheDocument();
     await userEvent.click(within(confirmDialog).getByRole("button", { name: /Apply and save/i }));
 
     await waitFor(() => {
@@ -660,6 +673,27 @@ describe("IdentityFingerprintPage provider tabs", () => {
         }),
       }),
     );
+  });
+
+  test("the preview shows that applying resets a fixed session", async () => {
+    const response = identityResponse();
+    response["identity-fingerprint"].codex = {
+      ...response["identity-fingerprint"].codex,
+      "session-mode": "fixed",
+      "session-id": "sess-fixed-1",
+    } as typeof response["identity-fingerprint"]["codex"];
+    mocks.identityGet.mockResolvedValue(response);
+    renderPage();
+
+    await screen.findByDisplayValue("codex_cli_rs/test");
+    await userEvent.click(screen.getByRole("button", { name: /Generate from recent requests/i }));
+    const dialog = await screen.findByRole("dialog", {
+      name: /Codex Fingerprint Recommendations/i,
+    });
+    // 应用会把会话改回「每次请求随机」并清空固定的 Session ID——以前预览里看不到这两项。
+    expect(await within(dialog).findByText("sess-fixed-1")).toBeInTheDocument();
+    expect(within(dialog).getByText("Fixed value (advanced)")).toBeInTheDocument();
+    expect(within(dialog).getByText("Random per request (recommended)")).toBeInTheDocument();
   });
 
   test("selects a Codex recommendation row without applying until confirmation", async () => {

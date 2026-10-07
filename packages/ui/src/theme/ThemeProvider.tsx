@@ -15,6 +15,7 @@ import { Check, Monitor, Moon, Sun } from "lucide-react";
 import {
   cn,
   selectOptionBase,
+  selectOptionCheck,
   selectOptionIdle,
   selectOptionSelected,
   selectPanel,
@@ -305,7 +306,7 @@ export function ThemeToggleButton({ className, label }: { className?: string; la
                   >
                     <Icon size={16} className="shrink-0" aria-hidden="true" />
                     <span className="min-w-0 flex-1 truncate">{t(labelKey)}</span>
-                    {selected ? <Check size={14} className="shrink-0" aria-hidden="true" /> : null}
+                    {selected ? <Check size={15} className={selectOptionCheck} aria-hidden="true" /> : null}
                   </button>
                 );
               })}

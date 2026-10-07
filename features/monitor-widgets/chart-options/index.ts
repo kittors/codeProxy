@@ -1,14 +1,8 @@
-export type {
-  DailySeriesPoint,
-  HourlySeries,
-  HourlyStackPoint,
-  ModelDistributionDatum,
-} from "./types";
-export { createDailyTrendOption } from "./daily-trend";
-export { createHourlyModelOption } from "./hourly-model";
-export { createHourlyTokenOption } from "./hourly-token";
+export type { DailySeriesPoint, ModelDistributionDatum } from "./types";
+export { createDailyTrendOption, dailyTrendColors } from "./daily-trend";
 export {
   buildModelDistributionData,
   createModelDistributionOption,
+  modelDistributionColors,
   MODEL_DISTRIBUTION_VISIBLE_LIMIT,
 } from "./model-distribution";

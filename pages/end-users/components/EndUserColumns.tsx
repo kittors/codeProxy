@@ -15,7 +15,7 @@ import type { Dispatch, SetStateAction } from "react";
 
 const stickyActionsHeaderClass =
   "text-center md:sticky md:z-40 md:bg-slate-100 md:dark:bg-neutral-800";
-const stickyActionsCellClass = "md:sticky md:z-30 md:bg-white md:dark:bg-neutral-950";
+const stickyActionsCellClass = "md:sticky md:z-30 md:bg-surface";
 
 export interface UseEndUserColumnsParams {
   t: (key: string, options?: Record<string, unknown>) => string;

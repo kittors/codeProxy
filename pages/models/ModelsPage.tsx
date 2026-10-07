@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Edit3, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
+import { Plus, RefreshCw, Search, Trash2 } from "lucide-react";
 import { Button } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
 import { ConfirmModal } from "@code-proxy/ui";
@@ -17,6 +17,7 @@ import { ModelTestModal } from "./components/ModelTestModal";
 import { ModelsPageTabs } from "./components/ModelsPageTabs";
 import { ModelsStatsCards } from "./components/ModelsStatsCards";
 import { OwnerFormModal } from "./components/OwnerFormModal";
+import { OwnerSidebarItem } from "./components/OwnerSidebarItem";
 import { useModelColumns } from "./hooks/useModelColumns";
 import { useModelTestRunner } from "./hooks/useModelTestRunner";
 import {
@@ -804,7 +805,7 @@ export function ModelsPage() {
           {t("models_page.selected_models_count", { count: selectedModelCount })}
         </span>
         <Button
-          variant="danger"
+          variant="secondary-danger"
           size="sm"
           onClick={() => setBulkDeleteTargetIds(selectedModels.map((model) => model.id))}
           disabled={deleting}
@@ -880,68 +881,25 @@ export function ModelsPage() {
                 className="-mx-1 min-h-0 flex-1 space-y-2 overflow-x-hidden overflow-y-auto px-1 py-1"
               >
                 {libraryOwners.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-slate-900/8 px-3 py-6 text-center text-sm text-slate-500 dark:border-white/8 dark:text-white/45">
+                  <div className="bg-subtle rounded-xl px-3 py-6 text-center text-sm text-slate-500 dark:text-white/45">
                     {t("models_page.no_owner_presets")}
                   </div>
                 ) : filteredLibraryOwners.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-slate-900/8 px-3 py-6 text-center text-sm text-slate-500 dark:border-white/8 dark:text-white/45">
+                  <div className="bg-subtle rounded-xl px-3 py-6 text-center text-sm text-slate-500 dark:text-white/45">
                     {t("models_page.no_owner_search_results")}
                   </div>
                 ) : (
-                  filteredLibraryOwners.map((owner) => {
-                    const count = ownerModelCounts.get(owner.value) ?? owner.modelCount ?? 0;
-                    const selected = ownerFilter === owner.value;
-                    return (
-                      <div
-                        key={owner.value}
-                        className={[
-                          "group/owner relative flex items-center gap-2 overflow-hidden rounded-xl px-2 py-1.5 transition-colors duration-200 ease-out",
-                          selected
-                            ? "bg-slate-100 ring-1 ring-slate-200 dark:bg-white/[0.08] dark:ring-white/10"
-                            : "hover:bg-slate-50 dark:hover:bg-white/[0.04]",
-                        ].join(" ")}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => setOwnerFilter(owner.value)}
-                          className="min-w-0 flex-1 text-left"
-                          title={owner.description || owner.value}
-                        >
-                          <span className="block truncate text-sm font-medium text-slate-900 dark:text-white">
-                            {owner.label || owner.value}
-                          </span>
-                          <span className="block truncate text-xs text-slate-500 dark:text-white/45">
-                            {owner.value}
-                          </span>
-                        </button>
-                        <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500 transition-transform duration-200 ease-out group-focus-within/owner:-translate-x-16 group-hover/owner:-translate-x-16 motion-reduce:transition-none dark:bg-white/[0.08] dark:text-white/45">
-                          {t("models_page.owner_model_count", { count })}
-                        </span>
-                        <div className="pointer-events-none absolute right-2 top-1/2 flex -translate-y-1/2 translate-x-3 items-center gap-1 opacity-0 transition-all duration-200 ease-out group-focus-within/owner:pointer-events-auto group-focus-within/owner:translate-x-0 group-focus-within/owner:opacity-100 group-hover/owner:pointer-events-auto group-hover/owner:translate-x-0 group-hover/owner:opacity-100 motion-reduce:transition-none">
-                          <Button
-                            size="xs"
-                            variant="ghost"
-                            className="transition-all duration-200 ease-out"
-                            onClick={() => setOwnerForm(toOwnerFormState(owner))}
-                            aria-label={t("models_page.edit_owner_aria", { owner: owner.label })}
-                            title={t("models_page.edit_owner_aria", { owner: owner.label })}
-                          >
-                            <Edit3 size={13} />
-                          </Button>
-                          <Button
-                            size="xs"
-                            variant="ghost"
-                            className="transition-all duration-200 ease-out"
-                            onClick={() => setDeleteOwnerTarget(owner)}
-                            aria-label={t("models_page.delete_owner_aria", { owner: owner.label })}
-                            title={t("models_page.delete_owner_aria", { owner: owner.label })}
-                          >
-                            <Trash2 size={13} />
-                          </Button>
-                        </div>
-                      </div>
-                    );
-                  })
+                  filteredLibraryOwners.map((owner) => (
+                    <OwnerSidebarItem
+                      key={owner.value}
+                      owner={owner}
+                      count={ownerModelCounts.get(owner.value) ?? owner.modelCount ?? 0}
+                      selected={ownerFilter === owner.value}
+                      onSelect={() => setOwnerFilter(owner.value)}
+                      onEdit={() => setOwnerForm(toOwnerFormState(owner))}
+                      onDelete={() => setDeleteOwnerTarget(owner)}
+                    />
+                  ))
                 )}
               </div>
             </Card>
@@ -965,7 +923,7 @@ export function ModelsPage() {
                     }
                   />
                   <Button
-                    variant="secondary"
+                    variant="primary"
                     size="sm"
                     onClick={() => openAddModel(ownerFilter)}
                     aria-label={t("models_page.add_model")}
@@ -974,7 +932,7 @@ export function ModelsPage() {
                     <Plus size={14} />
                   </Button>
                   <Button
-                    variant="primary"
+                    variant="secondary"
                     size="sm"
                     onClick={() => void loadModels({ force: true })}
                     disabled={loading || refreshing}
@@ -1137,7 +1095,7 @@ export function ModelsPage() {
                 startAdornment={<Search size={14} className="text-slate-400 dark:text-white/35" />}
               />
               <Button
-                variant="secondary"
+                variant="primary"
                 size="sm"
                 onClick={() => openAddModel()}
                 aria-label={t("models_page.add_model")}
@@ -1146,7 +1104,7 @@ export function ModelsPage() {
                 <Plus size={14} />
               </Button>
               <Button
-                variant="primary"
+                variant="secondary"
                 size="sm"
                 onClick={() => void loadModels({ force: true })}
                 disabled={loading || refreshing}

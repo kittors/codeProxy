@@ -1,15 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CircleAlert, Loader2, Pencil, Plus, Trash2, TriangleAlert, X } from "lucide-react";
+import { Loader2, Pencil, Plus, Route, Trash2, TriangleAlert, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { ChannelGroupChannelDetail } from "@code-proxy/api-client/endpoints/channel-groups";
 import type {
   RoutingChannelGroupEntry,
   RoutingChannelGroupMatchMode,
   RoutingChannelGroupMemberEntry,
-  RoutingDistribution,
   RoutingPathRouteEntry,
   RoutingScheduling,
-  RoutingStrategy,
   VisualConfigValues,
 } from "@features/visual-config-editor";
 import {
@@ -20,7 +18,7 @@ import {
   schedulingFromStrategy,
   strategyFromScheduling,
 } from "@features/visual-config-editor";
-import { Button, COLUMN_WIDTH, surface } from "@code-proxy/ui";
+import { Button, Callout, COLUMN_WIDTH, surface } from "@code-proxy/ui";
 import { Checkbox } from "@code-proxy/ui";
 import { ConfirmModal } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
@@ -30,21 +28,18 @@ import { ScrollArea } from "@code-proxy/ui";
 import { Select } from "@code-proxy/ui";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
-import { HoverTooltip, OverflowTooltip } from "@code-proxy/ui";
+import { HoverTooltip, OverflowTooltip, TooltipChip } from "@code-proxy/ui";
 import { DataTable, TABLE_ROW_ACTIONS_COLUMN, TABLE_ROW_ACTIONS_STICKY_END_COLUMN, type DataTableColumn } from "@code-proxy/ui";
 import { Field, InfoTooltip, TooltipHeader, renderChannelTags } from "./fields";
 import type { RoutingModelLoadResult, RoutingModelOption } from "./types";
 import {
   channelMatchesTags,
   cloneMembers,
-  distributionLabel,
   isDisabledChannel,
   normalizeChannelName,
   normalizeRoutePathInput,
   normalizeRoutingModelOption,
-  normalizeRoutingStrategy,
   normalizeTagName,
-  parsePriority,
   readChannelDisplayTags,
   routePathInputIsRoot,
   routePathUsesReservedPrefix,
@@ -55,6 +50,7 @@ import {
   syncDraftTags,
 } from "./routingHelpers";
 import { ModelSelectionPanel } from "./ModelSelectionPanel";
+import { RoutingIssueModal } from "./RoutingIssueModal";
 import {
   createModelSelectionDraft,
   modelSelectionFromEntry,
@@ -79,17 +75,6 @@ type GroupDraft = {
 };
 
 export type { RoutingModelOption } from "./types";
-
-const RESERVED_ROUTE_PREFIXES = new Set([
-  "manage",
-  "management.html",
-  "v0",
-  "v1",
-  "v1beta",
-  "api",
-  "anthropic",
-  "codex",
-]);
 
 const createEmptyGroupDraft = (exclusionsSupported = false): GroupDraft => ({
   name: "",
@@ -752,7 +737,7 @@ export function RoutingConfigEditor({
         key: "description",
         label: t("channel_groups_page.description_label"),
         width: "w-[220px] min-w-[220px]",
-        cellClassName: "min-w-0 whitespace-nowrap text-slate-500 dark:text-white/55",
+        cellClassName: "min-w-0 whitespace-nowrap text-ink-3",
         render: (group) => {
           const description = group.system
             ? t("channel_groups_page.system_default_route_description")
@@ -773,7 +758,7 @@ export function RoutingConfigEditor({
         render: (group) => {
           if (group.system) {
             return (
-              <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600 dark:bg-neutral-800 dark:text-white/60">
+              <span className="inline-flex items-center rounded-md bg-subtle px-2 py-0.5 text-xs font-semibold text-ink-2 dark:bg-neutral-800">
                 {t("channel_groups_page.default_pool_label")}
               </span>
             );
@@ -828,7 +813,7 @@ export function RoutingConfigEditor({
         render: (group) => {
           if (group.system) {
             return (
-              <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 dark:bg-neutral-800 dark:text-white/60">
+              <span className="inline-flex items-center rounded-full bg-subtle px-2.5 py-1 text-xs font-semibold text-ink-2 dark:bg-neutral-800">
                 {t("channel_groups_page.system_default_route")}
               </span>
             );
@@ -838,7 +823,7 @@ export function RoutingConfigEditor({
               {t("channel_groups_page.default_scope_isolated")}
             </span>
           ) : (
-            <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 dark:bg-neutral-800 dark:text-white/60">
+            <span className="inline-flex items-center rounded-full bg-subtle px-2.5 py-1 text-xs font-semibold text-ink-2 dark:bg-neutral-800">
               {t("channel_groups_page.default_scope_included")}
             </span>
           );
@@ -848,11 +833,11 @@ export function RoutingConfigEditor({
         key: "channels",
         label: t("channel_groups_page.table_channels"),
         width: COLUMN_WIDTH.nameStacked,
-        cellClassName: "min-w-0 whitespace-nowrap text-slate-700 dark:text-white/75",
+        cellClassName: "min-w-0 whitespace-nowrap text-ink-2",
         render: (group) => {
           if (group.system) {
             return (
-              <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 dark:bg-neutral-800 dark:text-white/60">
+              <span className="inline-flex items-center rounded-full bg-subtle px-2.5 py-1 text-xs font-semibold text-ink-2 dark:bg-neutral-800">
                 {t("channel_groups_page.default_pool_label")}
               </span>
             );
@@ -861,7 +846,7 @@ export function RoutingConfigEditor({
           const names = channels.map((channel) => channel.name.trim()).filter(Boolean);
           if (names.length === 0) {
             return (
-              <span className="text-slate-400 dark:text-white/35">
+              <span className="text-ink-3">
                 {t("channel_groups_page.none")}
               </span>
             );
@@ -872,17 +857,14 @@ export function RoutingConfigEditor({
               content={
                 <div className="flex max-w-xs flex-wrap gap-1.5">
                   {channels.map((channel) => (
-                    <span
-                      key={channel.id}
-                      className="inline-flex items-center rounded-md border border-slate-900/8 bg-slate-50 px-2 py-0.5 text-xs text-slate-700 dark:border-neutral-700/40 dark:bg-neutral-800/60 dark:text-white/80"
-                    >
+                    <TooltipChip key={channel.id}>
                       {channel.name}
                       {channel.priority.trim()
                         ? ` · ${t("channel_groups_page.priority_short", {
                             value: channel.priority.trim(),
                           })}`
                         : ""}
-                    </span>
+                    </TooltipChip>
                   ))}
                 </div>
               }
@@ -898,7 +880,7 @@ export function RoutingConfigEditor({
         key: "priorityMode",
         label: t("channel_groups_page.table_priority_mode"),
         width: "w-[190px] min-w-[190px]",
-        cellClassName: "min-w-0 whitespace-nowrap text-slate-700 dark:text-white/75",
+        cellClassName: "min-w-0 whitespace-nowrap text-ink-2",
         render: (group) => {
           // The distribution and the weights are independent facts, so both are
           // shown. The old column hid weights entirely for sticky/fill-first
@@ -923,16 +905,16 @@ export function RoutingConfigEditor({
         key: "routes",
         label: t("channel_groups_page.table_routes"),
         width: "w-[220px] min-w-[220px]",
-        cellClassName: "min-w-0 whitespace-nowrap text-slate-700 dark:text-white/75",
+        cellClassName: "min-w-0 whitespace-nowrap text-ink-2",
         render: (group) => {
           if (group.system) {
-            return <span className="font-mono text-slate-900 dark:text-white">/</span>;
+            return <span className="font-mono text-ink">/</span>;
           }
           const routes = routesByGroup.get(group.name.trim().toLowerCase()) ?? [];
           const routePaths = routes.map((route) => route.path.trim()).filter(Boolean);
           if (routePaths.length === 0) {
             return (
-              <span className="text-slate-400 dark:text-white/35">
+              <span className="text-ink-3">
                 {t("channel_groups_page.none")}
               </span>
             );
@@ -943,12 +925,9 @@ export function RoutingConfigEditor({
               content={
                 <div className="flex max-w-xs flex-wrap gap-1.5">
                   {routePaths.map((path) => (
-                    <span
-                      key={path}
-                      className="inline-flex items-center rounded-md border border-slate-900/8 bg-slate-50 px-2 py-0.5 font-mono text-xs text-slate-700 dark:border-neutral-700/40 dark:bg-neutral-800/60 dark:text-white/80"
-                    >
+                    <TooltipChip key={path} mono>
                       {path}
-                    </span>
+                    </TooltipChip>
                   ))}
                 </div>
               }
@@ -970,7 +949,7 @@ export function RoutingConfigEditor({
               type="button"
               onClick={() => openEditGroup(group)}
               disabled={disabled}
-              className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-amber-600 disabled:opacity-40 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-amber-400"
+              className="rounded-lg p-1.5 text-ink-3 transition-colors hover:bg-hover hover:text-amber-600 disabled:opacity-40 dark:hover:text-amber-400"
               title={t("channel_groups_page.edit_group")}
               aria-label={t("channel_groups_page.edit_group")}
             >
@@ -981,7 +960,7 @@ export function RoutingConfigEditor({
                 type="button"
                 onClick={() => setDeleteGroupTarget(group)}
                 disabled={disabled}
-                className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-40 dark:text-white/50 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+                className="rounded-lg p-1.5 text-ink-3 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-40 dark:hover:bg-red-900/20 dark:hover:text-red-400"
                 title={t("visual_config.delete_group")}
                 aria-label={t("visual_config.delete_group")}
               >
@@ -1014,8 +993,8 @@ export function RoutingConfigEditor({
                     isStale
                       ? "text-rose-700 dark:text-rose-200"
                       : isDisabled
-                        ? "text-slate-500 dark:text-white/45"
-                        : "text-slate-900 dark:text-white"
+                        ? "text-ink-3"
+                        : "text-ink"
                   }`}
                 >
                   <span className="truncate">{channel.name}</span>
@@ -1025,7 +1004,7 @@ export function RoutingConfigEditor({
                     </span>
                   ) : null}
                   {!isStale && isDisabled ? (
-                    <span className="inline-flex shrink-0 items-center rounded-full bg-slate-100 px-2 py-0.5 text-2xs font-semibold text-slate-600 dark:bg-white/10 dark:text-white/55">
+                    <span className="inline-flex shrink-0 items-center rounded-full bg-subtle px-2 py-0.5 text-2xs font-semibold text-ink-2 dark:bg-white/10">
                       {t("channel_groups_page.disabled_badge")}
                     </span>
                   ) : null}
@@ -1173,7 +1152,7 @@ export function RoutingConfigEditor({
       <div className="space-y-3 md:flex md:min-h-0 md:flex-1 md:flex-col">
         <div className="flex flex-wrap items-center justify-between gap-3 md:shrink-0">
           {title ? (
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{title}</h3>
+            <h3 className="text-base font-semibold tracking-tight text-ink">{title}</h3>
           ) : (
             <span aria-hidden="true" />
           )}
@@ -1198,7 +1177,7 @@ export function RoutingConfigEditor({
           allowWheelPropagationAtBoundary
           rowClassName={(group) =>
             group.system
-              ? "bg-slate-50/55 dark:bg-neutral-900/45"
+              ? "bg-subtle"
               : (staleChannelsByGroup.get(group.id)?.length ?? 0) > 0
                 ? "bg-rose-50/35 dark:bg-rose-500/5"
                 : ""
@@ -1206,89 +1185,18 @@ export function RoutingConfigEditor({
         />
       </div>
 
-      <Modal
+      <RoutingIssueModal
         open={issueGroup !== null}
-        title={t("channel_groups_page.issue_modal_title")}
-        description={t("channel_groups_page.issue_modal_desc", {
-          group: issueGroup?.name.trim() || t("channel_groups_page.unnamed_group"),
-        })}
+        groupName={issueGroup?.name.trim() || t("channel_groups_page.unnamed_group")}
+        staleChannels={issueGroup ? issueStaleChannels : []}
+        disabled={disabled}
         onClose={() => setIssueGroup(null)}
-        maxWidth="max-w-xl"
-        bodyClassName="space-y-4"
-        footer={
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <Button variant="secondary" onClick={() => setIssueGroup(null)}>
-              {t("common.close")}
-            </Button>
-            {issueGroup && issueStaleChannels.length > 0 ? (
-              <Button
-                variant="primary"
-                onClick={() => {
-                  const group = issueGroup;
-                  setIssueGroup(null);
-                  openEditGroup(group, { notifyStale: false });
-                }}
-                disabled={disabled}
-              >
-                {t("channel_groups_page.view_and_cleanup")}
-              </Button>
-            ) : null}
-          </div>
-        }
-      >
-        {issueGroup && issueStaleChannels.length > 0 ? (
-          <div className="space-y-4">
-            <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-400/25 dark:bg-rose-500/10 dark:text-rose-100">
-              <div className="flex items-start gap-3">
-                <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-rose-600 dark:bg-rose-500/15 dark:text-rose-100">
-                  <TriangleAlert size={17} />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="font-semibold">{t("channel_groups_page.stale_alert_title")}</p>
-                  <p className="mt-1 text-xs leading-5 text-rose-700/90 dark:text-rose-100/80">
-                    {t("channel_groups_page.stale_alert_message", {
-                      count: issueStaleChannels.length,
-                    })}
-                  </p>
-                  <div className="mt-3 inline-flex items-center rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-rose-700 shadow-sm dark:bg-neutral-950/45 dark:text-rose-100">
-                    {t("channel_groups_page.deleted_channels_count", {
-                      count: issueStaleChannels.length,
-                    })}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="overflow-hidden rounded-2xl border border-slate-900/8 dark:border-white/8">
-              <div className="grid grid-cols-[minmax(0,1fr)_88px] bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-500 dark:bg-neutral-900 dark:text-white/55">
-                <span>{t("channel_groups_page.table_channels")}</span>
-                <span>{t("channel_groups_page.table_status")}</span>
-              </div>
-              <div className="divide-y divide-slate-100 dark:divide-neutral-800">
-                {issueStaleChannels.map((channel) => (
-                  <div
-                    key={channel.id}
-                    className="grid grid-cols-[minmax(0,1fr)_88px] items-center gap-3 px-3 py-2.5 text-sm"
-                  >
-                    <OverflowTooltip content={channel.name} className="block min-w-0">
-                      <span className="block truncate font-medium text-slate-900 dark:text-white">
-                        {channel.name}
-                      </span>
-                    </OverflowTooltip>
-                    <span className="inline-flex justify-center rounded-full bg-rose-50 px-2 py-0.5 text-xs font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-100">
-                      {t("channel_groups_page.deleted_badge")}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-slate-900/8 bg-slate-50 px-4 py-6 text-sm text-slate-500 dark:border-white/8 dark:bg-neutral-900/60 dark:text-white/55">
-            {t("channel_groups_page.issue_modal_empty")}
-          </div>
-        )}
-      </Modal>
+        onCleanup={() => {
+          const group = issueGroup;
+          setIssueGroup(null);
+          if (group) openEditGroup(group, { notifyStale: false });
+        }}
+      />
 
       <Modal
         open={groupEditorOpen}
@@ -1300,19 +1208,22 @@ export function RoutingConfigEditor({
               : t("channel_groups_page.add_group")
         }
         description={t("channel_groups_page.group_modal_desc")}
+        icon={<Route />}
         onClose={closeGroupEditor}
         maxWidth="max-w-4xl"
         bodyTestId="group-editor-modal-body"
         bodyHeightClassName="h-[560px] max-h-[calc(100vh-8rem)]"
         bodyOverflowClassName="overflow-hidden"
         bodyClassName="flex flex-col"
+        footerStart={
+          groupDraftError ? (
+            <span role="alert" className="text-sm font-medium text-rose-600 dark:text-rose-400">
+              {groupDraftError}
+            </span>
+          ) : null
+        }
         footer={
-          <div className="flex flex-wrap items-center gap-2">
-            {groupDraftError ? (
-              <span className="text-sm font-medium text-rose-600 dark:text-rose-300">
-                {groupDraftError}
-              </span>
-            ) : null}
+          <>
             <Button
               variant="secondary"
               onClick={closeGroupEditor}
@@ -1338,40 +1249,27 @@ export function RoutingConfigEditor({
                 t("common.add")
               )}
             </Button>
-          </div>
+          </>
         }
       >
         <div className="flex min-h-0 flex-1 flex-col gap-5">
           {draftStaleChannels.length > 0 ? (
-            <div
-              role="alert"
-              className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-400/25 dark:bg-rose-500/10 dark:text-rose-200"
-            >
-              <div className="flex items-start gap-3">
-                <TriangleAlert size={18} className="mt-0.5 shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <p className="font-semibold">{t("channel_groups_page.stale_alert_title")}</p>
-                  <p className="mt-1 text-xs leading-5 text-rose-700/90 dark:text-rose-100/85">
-                    {t("channel_groups_page.stale_alert_message", {
-                      count: draftStaleChannels.length,
-                    })}
-                  </p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {draftStaleChannels.map((channel) => (
-                      <span
-                        key={channel.id}
-                        className="inline-flex items-center gap-1.5 rounded-full border border-rose-200 bg-white/80 px-2.5 py-1 text-xs font-medium text-rose-700 dark:border-rose-400/30 dark:bg-neutral-950/50 dark:text-rose-100"
-                      >
-                        <span>{channel.name}</span>
-                        <span className="rounded-full bg-rose-100 px-1.5 py-0.5 text-2xs font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-200">
-                          {t("channel_groups_page.deleted_badge")}
-                        </span>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
+            <Callout tone="danger" role="alert" title={t("channel_groups_page.stale_alert_title")}>
+              {t("channel_groups_page.stale_alert_message", { count: draftStaleChannels.length })}
+              <span className="mt-2 flex flex-wrap gap-1.5">
+                {draftStaleChannels.map((channel) => (
+                  <span
+                    key={channel.id}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-surface px-2.5 py-1 text-xs font-medium text-ink"
+                  >
+                    {channel.name}
+                    <span className="rounded-full bg-rose-500/10 px-1.5 py-px text-2xs font-medium text-rose-700 dark:text-rose-300">
+                      {t("channel_groups_page.deleted_badge")}
+                    </span>
+                  </span>
+                ))}
+              </span>
+            </Callout>
           ) : null}
 
           <Tabs
@@ -1396,6 +1294,54 @@ export function RoutingConfigEditor({
                     contentClassName="space-y-5 pr-5"
                     scrollbarVisibility="always"
                   >
+                    {/* 先命名、再配置：名称、描述、访问路径放在最前面（与弹窗说明的顺序一致）；
+                        系统默认路径没有这几项。 */}
+                    {!editingSystemDefaultGroup ? (
+                      <>
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <Field label={t("channel_groups_page.group_name_label")}>
+                            <TextInput
+                              value={groupDraft.name}
+                              onChange={(event) => {
+                                const value = event.currentTarget.value;
+                                setGroupDraft((current) => ({ ...current, name: value }));
+                              }}
+                              placeholder="pro"
+                              disabled={disabled}
+                            />
+                          </Field>
+                          <Field label={t("channel_groups_page.description_label")}>
+                            <TextInput
+                              value={groupDraft.description}
+                              onChange={(event) => {
+                                const value = event.currentTarget.value;
+                                setGroupDraft((current) => ({ ...current, description: value }));
+                              }}
+                              placeholder={t("channel_groups_page.description_placeholder")}
+                              disabled={disabled}
+                            />
+                          </Field>
+                        </div>
+
+                        <div className="grid gap-4 md:grid-cols-1">
+                          <Field
+                            label={t("channel_groups_page.route_path_label")}
+                            hint={t("channel_groups_page.route_path_hint")}
+                          >
+                            <TextInput
+                              value={primaryRoute.path}
+                              onChange={(event) =>
+                                updatePrimaryRoute({ path: event.currentTarget.value })
+                              }
+                              placeholder="/pro"
+                              disabled={disabled}
+                            />
+                          </Field>
+                        </div>
+
+                      </>
+                    ) : null}
+
                     <Field
                       label={t("channel_groups_page.distribution_label")}
                       tooltip={t("channel_groups_page.distribution_tooltip")}
@@ -1449,11 +1395,11 @@ export function RoutingConfigEditor({
                         className="mt-0.5"
                       />
                       <span className="min-w-0">
-                        <span className="flex items-center gap-1.5 font-semibold text-slate-900 dark:text-white">
+                        <span className="flex items-center gap-1.5 font-semibold text-ink">
                           <span>{t("channel_groups_page.sticky_enabled_label")}</span>
                           <InfoTooltip content={t("channel_groups_page.sticky_enabled_tooltip")} />
                         </span>
-                        <span className="mt-1 block text-xs leading-5 text-slate-500 dark:text-white/55">
+                        <span className="mt-1 block text-xs leading-5 text-ink-3">
                           {t("channel_groups_page.sticky_enabled_hint")}
                         </span>
                       </span>
@@ -1526,58 +1472,17 @@ export function RoutingConfigEditor({
                             className="mt-0.5"
                           />
                           <span className="min-w-0">
-                            <span className="flex items-center gap-1.5 font-semibold text-slate-900 dark:text-white">
+                            <span className="flex items-center gap-1.5 font-semibold text-ink">
                               <span>{t("channel_groups_page.exclude_from_default_label")}</span>
                               <InfoTooltip
                                 content={t("channel_groups_page.exclude_from_default_tooltip")}
                               />
                             </span>
-                            <span className="mt-1 block text-xs leading-5 text-slate-500 dark:text-white/55">
+                            <span className="mt-1 block text-xs leading-5 text-ink-3">
                               {t("channel_groups_page.exclude_from_default_hint")}
                             </span>
                           </span>
                         </label>
-
-                        <div className="grid gap-4 md:grid-cols-2">
-                          <Field label={t("channel_groups_page.group_name_label")}>
-                            <TextInput
-                              value={groupDraft.name}
-                              onChange={(event) => {
-                                const value = event.currentTarget.value;
-                                setGroupDraft((current) => ({ ...current, name: value }));
-                              }}
-                              placeholder="pro"
-                              disabled={disabled}
-                            />
-                          </Field>
-                          <Field label={t("channel_groups_page.description_label")}>
-                            <TextInput
-                              value={groupDraft.description}
-                              onChange={(event) => {
-                                const value = event.currentTarget.value;
-                                setGroupDraft((current) => ({ ...current, description: value }));
-                              }}
-                              placeholder={t("channel_groups_page.description_placeholder")}
-                              disabled={disabled}
-                            />
-                          </Field>
-                        </div>
-
-                        <div className="grid gap-4 md:grid-cols-1">
-                          <Field
-                            label={t("channel_groups_page.route_path_label")}
-                            hint={t("channel_groups_page.route_path_hint")}
-                          >
-                            <TextInput
-                              value={primaryRoute.path}
-                              onChange={(event) =>
-                                updatePrimaryRoute({ path: event.currentTarget.value })
-                              }
-                              placeholder="/pro"
-                              disabled={disabled}
-                            />
-                          </Field>
-                        </div>
 
                         <Field
                           label={t("channel_groups_page.match_strategy_label")}

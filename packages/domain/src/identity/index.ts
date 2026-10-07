@@ -5,6 +5,7 @@ export {
   validateUsername,
   validateDisplayName,
   validatePassword,
+  passwordRuleStatus,
   isPasswordPolicyCode,
   PASSWORD_POLICY_CODES,
   IDENTITY_USERNAME_MAX_BYTES,
@@ -14,6 +15,7 @@ export {
   type IdentityValidationResult,
   type IdentityValidationCode,
   type PasswordPolicyCode,
+  type PasswordRuleStatus,
 } from "./validators";
 export {
   maskChineseName,

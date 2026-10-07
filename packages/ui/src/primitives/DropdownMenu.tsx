@@ -40,19 +40,36 @@ const CONTENT_CLASS_BY_SIZE: Record<ControlSize, string> = {
 };
 
 const ITEM_CLASS_BY_SIZE: Record<ControlSize, string> = {
-  sm: "gap-1.5 rounded-md px-2 py-1.5 text-xs",
-  default: "gap-2 rounded-lg px-3 py-2 text-sm",
-  lg: "gap-2.5 rounded-lg px-3.5 py-2.5 text-sm",
+  sm: "gap-2 rounded-md px-2 py-1.5 text-xs",
+  default: "gap-2.5 rounded-lg px-2.5 py-2 text-sm",
+  lg: "gap-2.5 rounded-lg px-3 py-2.5 text-sm",
 };
 
 /**
- * 浮层进出动画的挂载点。
+ * 菜单项：常规字重、墨色文字，图标退一档到 ink-2；键盘高亮和鼠标悬停共用同一层浅灰。
+ * 危险操作由调用方追加文字颜色（如 text-rose-600）覆盖。
  *
- * 实现放在全局样式里（`.ui-popover-motion`）：Radix 用 data-state / data-side 暴露开合
- * 状态与展开方向，用 CSS 属性选择器驱动比在类名里堆变体更直观，也不依赖
- * tailwindcss-animate 这类本仓库没有引入的插件。
+ * 进出动画不在这里写：floatingPanelSurface 带的 `code-proxy-floating-surface` 会按
+ * Radix 暴露的 data-state / data-side 播放（utils/FloatingPanel.css），
+ * 下拉、菜单、侧栏浮层共用同一套曲线。
  */
-const DROPDOWN_MOTION_CLASS = "ui-popover-motion";
+const MENU_ITEM_BASE =
+  "flex w-full cursor-default select-none items-center outline-none transition-colors duration-100 data-[disabled]:pointer-events-none data-[disabled]:opacity-45 [&_svg]:shrink-0";
+
+/**
+ * 危险操作（删除、退出登录）用 `tone="danger"`：文字与图标一起变红，高亮底换成淡红。
+ * 两种色调互斥地拼进类名，而不是让调用方再追加一个 text-rose-* 去覆盖——
+ * 同属性工具类谁覆盖谁取决于 Tailwind 的输出顺序，靠不住。
+ */
+const MENU_ITEM_TONE = {
+  default: "text-ink focus:bg-hover data-[highlighted]:bg-hover [&>svg]:text-ink-2",
+  danger:
+    "text-rose-600 focus:bg-rose-500/10 data-[highlighted]:bg-rose-500/10 dark:text-rose-400",
+} as const;
+
+type MenuItemTone = keyof typeof MENU_ITEM_TONE;
+
+const MENU_ITEM_CLASS = `${MENU_ITEM_BASE} ${MENU_ITEM_TONE.default}`;
 
 const Content = forwardRef<
   ComponentRef<typeof DropdownMenuPrimitive.Content>,
@@ -65,7 +82,6 @@ const Content = forwardRef<
       sideOffset={sideOffset}
       className={cn(
         "z-[9999] overflow-hidden outline-none",
-        DROPDOWN_MOTION_CLASS,
         floatingPanelSurface,
         CONTENT_CLASS_BY_SIZE[size],
         className,
@@ -77,17 +93,13 @@ const Content = forwardRef<
 
 const Item = forwardRef<
   ComponentRef<typeof DropdownMenuPrimitive.Item>,
-  ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Item>
->(function DropdownMenuItem({ className, ...props }, ref) {
+  ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Item> & { tone?: MenuItemTone }
+>(function DropdownMenuItem({ className, tone = "default", ...props }, ref) {
   const size = useContext(DropdownMenuSizeContext);
   return (
     <DropdownMenuPrimitive.Item
       ref={ref}
-      className={cn(
-        "flex w-full cursor-default select-none items-center font-medium text-slate-700 outline-none transition-colors duration-150 focus:bg-slate-100 data-[highlighted]:bg-slate-100 data-[disabled]:pointer-events-none data-[disabled]:opacity-45 dark:text-white/75 dark:focus:bg-white/10 dark:data-[highlighted]:bg-white/10",
-        ITEM_CLASS_BY_SIZE[size],
-        className,
-      )}
+      className={cn(MENU_ITEM_BASE, MENU_ITEM_TONE[tone], ITEM_CLASS_BY_SIZE[size], className)}
       {...props}
     />
   );
@@ -100,7 +112,7 @@ const Separator = forwardRef<
   return (
     <DropdownMenuPrimitive.Separator
       ref={ref}
-      className={cn("my-1 h-px bg-slate-200 dark:bg-white/10", className)}
+      className={cn("mx-1 my-1.5 h-px bg-line", className)}
       {...props}
     />
   );
@@ -115,7 +127,7 @@ const SubTrigger = forwardRef<
     <DropdownMenuPrimitive.SubTrigger
       ref={ref}
       className={cn(
-        "flex w-full cursor-default select-none items-center font-medium text-slate-700 outline-none transition-colors duration-150 focus:bg-slate-100 data-[highlighted]:bg-slate-100 data-[state=open]:bg-slate-100 data-[disabled]:pointer-events-none data-[disabled]:opacity-45 dark:text-white/75 dark:focus:bg-white/10 dark:data-[highlighted]:bg-white/10 dark:data-[state=open]:bg-white/10",
+        cn(MENU_ITEM_CLASS, "data-[state=open]:bg-hover"),
         ITEM_CLASS_BY_SIZE[size],
         className,
       )}
@@ -135,7 +147,6 @@ const SubContent = forwardRef<
       sideOffset={sideOffset}
       className={cn(
         "z-[9999] overflow-hidden outline-none",
-        DROPDOWN_MOTION_CLASS,
         floatingPanelSurface,
         CONTENT_CLASS_BY_SIZE[size],
         className,
@@ -154,7 +165,7 @@ const RadioItem = forwardRef<
     <DropdownMenuPrimitive.RadioItem
       ref={ref}
       className={cn(
-        "relative flex w-full cursor-default select-none items-center font-medium text-slate-700 outline-none transition-colors duration-150 focus:bg-slate-100 data-[highlighted]:bg-slate-100 data-[disabled]:pointer-events-none data-[disabled]:opacity-45 dark:text-white/75 dark:focus:bg-white/10 dark:data-[highlighted]:bg-white/10",
+        cn(MENU_ITEM_CLASS, "relative"),
         ITEM_CLASS_BY_SIZE[size],
         className,
       )}

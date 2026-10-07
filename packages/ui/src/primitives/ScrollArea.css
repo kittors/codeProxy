@@ -1,0 +1,78 @@
+/*
+ * 滚动区上下渐隐（ScrollArea 的 edgeFade）：只在该方向还有内容可滚时出现，到顶 / 到底就收起。
+ *
+ * 两个渐隐长度注册成 <length>，渐变停点才能平滑过渡；不支持 @property 的浏览器直接切换，
+ * 不影响使用。只在内容确实溢出时才挂这个类：mask 会把子孙的绘制一起裁到盒子以内，
+ * fixed 定位、视觉上伸出盒子的浮层（侧边栏收起后的分区浮层）也会被裁掉。
+ */
+@property --scroll-fade-top {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --scroll-fade-bottom {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+.code-proxy-scroll-edge-fade {
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 var(--scroll-fade-top),
+    #000 calc(100% - var(--scroll-fade-bottom)),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 var(--scroll-fade-top),
+    #000 calc(100% - var(--scroll-fade-bottom)),
+    transparent 100%
+  );
+  transition:
+    --scroll-fade-top 180ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    --scroll-fade-bottom 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* 横向版本（分区胶囊条、横向页签）：左右两端还有内容时淡出。 */
+@property --scroll-fade-left {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --scroll-fade-right {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+.code-proxy-scroll-edge-fade-x {
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 var(--scroll-fade-left),
+    #000 calc(100% - var(--scroll-fade-right)),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 var(--scroll-fade-left),
+    #000 calc(100% - var(--scroll-fade-right)),
+    transparent 100%
+  );
+  transition:
+    --scroll-fade-left 180ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    --scroll-fade-right 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .code-proxy-scroll-edge-fade,
+  .code-proxy-scroll-edge-fade-x {
+    transition: none;
+  }
+}

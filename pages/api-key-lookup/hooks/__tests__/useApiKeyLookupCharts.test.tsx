@@ -94,6 +94,29 @@ describe("useApiKeyLookupCharts API key distribution", () => {
     expect(result.current.apiKeyDistributionData).toEqual([{ name: "Zero", value: 9 }]);
   });
 
+  test("legend dots use exactly the colours of the donut slices", () => {
+    const distribution = Array.from({ length: 11 }, (_, index) => ({
+      api_key_id: `key-${index + 1}`,
+      name: `Key ${index + 1}`,
+      requests: (11 - index) * 10,
+      tokens: 0,
+    }));
+    const { result } = renderHook(() =>
+      useApiKeyLookupCharts({
+        chartData: chartData(distribution),
+        compact: false,
+        isDark: false,
+        t,
+      }),
+    );
+
+    const sliceColors = result.current.apiKeyDistributionOption.color as string[];
+    expect(result.current.apiKeyDistributionLegend.map((item) => item.color)).toEqual(sliceColors);
+    // 前十个各占一个分类色，折叠出来的 Other 是中性色，不和第一片撞色。
+    expect(new Set(sliceColors.slice(0, 10)).size).toBe(10);
+    expect(sliceColors[10]).not.toBe(sliceColors[0]);
+  });
+
   test("treats a legacy response without api_key_distribution as empty", () => {
     const { result } = renderHook(() =>
       useApiKeyLookupCharts({ chartData: chartData(), compact: false, isDark: false, t }),

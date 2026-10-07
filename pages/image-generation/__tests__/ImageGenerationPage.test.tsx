@@ -117,7 +117,7 @@ describe("ImageGenerationPage", () => {
     expect(screen.queryByText("Gemini 账号")).not.toBeInTheDocument();
   });
 
-  test("opens the redesigned modal with image edit entry and uses options plus a round send button", async () => {
+  test("opens the test modal with labelled options, a reference-image field and a footer generate button", async () => {
     const user = userEvent.setup();
     const deferred = createDeferred<{
       task_id: string;
@@ -141,7 +141,7 @@ describe("ImageGenerationPage", () => {
     await user.click(screen.getByRole("button", { name: "测试生成" }));
 
     const dialog = await screen.findByRole("dialog", { name: "测试生成" });
-    expect(dialog.className).toContain("max-w-[640px]");
+    expect(dialog.className).toContain("max-w-3xl");
     expect(dialog.className).not.toContain("w-[78vw]");
     expect(dialog.className).not.toContain("min-w-[720px]");
     expect(within(dialog).getByTestId("image-generation-stage")).toBeInTheDocument();
@@ -155,25 +155,30 @@ describe("ImageGenerationPage", () => {
     expect(within(dialog).getByRole("combobox", { name: "分辨率" })).toBeInTheDocument();
     expect(within(dialog).getByRole("combobox", { name: "质量" })).toBeInTheDocument();
     expect(within(dialog).getByRole("combobox", { name: "生成数量" })).toBeInTheDocument();
+    // 每个下拉都有看得见的标签，不再只靠 aria-label。
+    for (const label of ["模型", "分辨率", "质量", "生成数量", "提示词"]) {
+      expect(within(dialog).getByText(label, { selector: "label" })).toBeVisible();
+    }
     expect(within(dialog).getByLabelText("上传图片")).toBeInTheDocument();
-    expect(within(dialog).getByRole("button", { name: "发送" })).toBeVisible();
+    expect(within(dialog).getByRole("button", { name: "上传参考图" })).toBeVisible();
     expect(within(dialog).getByTestId("image-generation-upload-trigger")).toBeInTheDocument();
-    expect(within(dialog).getByTestId("image-generation-send-button")).toHaveClass(
-      "right-2",
-      "bottom-2",
-      "h-7",
-      "w-7",
-    );
-    expect(within(dialog).getByRole("textbox", { name: "提示词" })).toHaveClass("pb-10");
+    // 主操作在底部，是表单的提交按钮（回车、⌘/Ctrl + Enter 都走它）。
+    const sendButton = within(dialog).getByRole("button", { name: "生成图片" });
+    expect(sendButton).toBeVisible();
+    expect(sendButton).toHaveAttribute("type", "submit");
+    expect(within(dialog).getByTestId("image-generation-send-button")).toBe(sendButton);
+    expect(within(dialog).getByText("文生图 · ⌘ / Ctrl + Enter 生成图片")).toBeInTheDocument();
     expect(within(dialog).getByTestId("image-generation-stage")).toHaveClass(
-      "bg-slate-50",
+      "bg-subtle",
       "h-[clamp(240px,42vh,400px)]",
     );
     expect(dialog.querySelector(".image-generation-dots-layer")).not.toBeInTheDocument();
 
     await user.click(within(dialog).getByRole("combobox", { name: "分辨率" }));
-    expect(await screen.findByRole("option", { name: "2560x1440" })).toBeVisible();
-    expect(await screen.findByRole("option", { name: "2160x3840" })).toBeVisible();
+    // 下拉面板从透明淡入：toBeVisible 会把透明度 0 判成不可见，要等淡入开始，
+    // 不能赌「打开那一刻」动画帧已经跑过（CI 上就没跑到）。
+    await waitFor(() => expect(screen.getByRole("option", { name: "2560x1440" })).toBeVisible());
+    expect(screen.getByRole("option", { name: "2160x3840" })).toBeVisible();
     await user.click(await screen.findByRole("option", { name: "2160x3840" }));
     await user.click(within(dialog).getByRole("combobox", { name: "质量" }));
     await user.click(await screen.findByRole("option", { name: "high" }));
@@ -183,7 +188,7 @@ describe("ImageGenerationPage", () => {
     await user.type(within(dialog).getByPlaceholderText(/输入提示词/i), "画一只狐狸");
     vi.useFakeTimers();
     await act(async () => {
-      fireEvent.click(within(dialog).getByRole("button", { name: "发送" }));
+      fireEvent.click(within(dialog).getByRole("button", { name: "生成图片" }));
     });
 
     expect(imageGenerationStartTaskMock()).toHaveBeenCalledWith({
@@ -197,7 +202,7 @@ describe("ImageGenerationPage", () => {
 
     expect(within(dialog).getByText("正在打草稿")).toBeInTheDocument();
     expect(within(dialog).getByText("00:00")).toBeInTheDocument();
-    expect(within(dialog).getByTestId("image-generation-stage")).toHaveClass("bg-slate-50");
+    expect(within(dialog).getByTestId("image-generation-stage")).toHaveClass("bg-subtle");
     expect(dialog.querySelectorAll(".image-generation-dots-layer")).toHaveLength(1);
     expect(dialog.querySelectorAll(".image-generation-flow-layer")).toHaveLength(1);
 
@@ -331,7 +336,7 @@ describe("ImageGenerationPage", () => {
     expect(sizeSelect).toHaveTextContent("4096x2304");
 
     await user.type(within(dialog).getByRole("textbox", { name: "提示词" }), "画一个超宽海报");
-    await user.click(within(dialog).getByRole("button", { name: "发送" }));
+    await user.click(within(dialog).getByRole("button", { name: "生成图片" }));
 
     await waitFor(() => {
       expect(imageGenerationStartTaskMock()).toHaveBeenCalledWith({
@@ -435,13 +440,15 @@ describe("ImageGenerationPage", () => {
     await user.upload(uploadInput, imageFile);
     expect(await within(dialog).findByTestId("image-generation-upload-strip")).toBeInTheDocument();
     expect(within(dialog).getByText("ref.png")).toBeInTheDocument();
-    expect(within(dialog).getByRole("textbox", { name: "提示词" })).toHaveClass("pt-12");
+    // 传了参考图就是图生图：画布的引导语和底部的模式提示都跟着变。
+    expect(within(dialog).getByText("上传图片并输入提示词后开始生成图片")).toBeInTheDocument();
+    expect(within(dialog).getByText("图生图 · ⌘ / Ctrl + Enter 生成图片")).toBeInTheDocument();
 
     await user.type(
       within(dialog).getByRole("textbox", { name: "提示词" }),
       "把这张图改成蓝色图标",
     );
-    await user.click(within(dialog).getByRole("button", { name: "发送" }));
+    await user.click(within(dialog).getByRole("button", { name: "生成图片" }));
 
     expect(imageGenerationStartTaskMock()).toHaveBeenCalledWith({
       mode: "edits",
@@ -481,7 +488,7 @@ describe("ImageGenerationPage", () => {
     await userEvent.type(within(dialog).getByPlaceholderText(/输入提示词/i), "画一只狐狸");
     vi.useFakeTimers();
     await act(async () => {
-      fireEvent.click(within(dialog).getByRole("button", { name: "发送" }));
+      fireEvent.click(within(dialog).getByRole("button", { name: "生成图片" }));
     });
     await act(async () => {
       await vi.advanceTimersByTimeAsync(2000);
@@ -510,8 +517,50 @@ describe("ImageGenerationPage", () => {
     // scroll. Asserting the tone on the stage keeps the intent without pinning the
     // exact palette.
     const stage = dialog.querySelector('[data-state="error"]');
-    expect(stage?.className).toContain("bg-rose-50");
+    expect(stage?.className).toContain("bg-rose-500/");
     expect(stage?.className).toContain("h-auto");
+  });
+
+  test("flags an empty prompt in place and generates with the keyboard shortcut", async () => {
+    const user = userEvent.setup();
+    imageGenerationStartTaskMock().mockResolvedValue({
+      task_id: "task-shortcut",
+      status: "queued",
+      phase: "queued",
+    });
+    imageGenerationGetTaskMock().mockResolvedValue({
+      task_id: "task-shortcut",
+      status: "succeeded",
+      phase: "completed",
+      result: { created: 1, data: [{ b64_json: "aGVsbG8=" }] },
+    });
+
+    renderPage();
+
+    await screen.findByRole("tab", { name: "图片生成" });
+    await user.click(screen.getByRole("button", { name: "测试生成" }));
+    const dialog = await screen.findByRole("dialog", { name: "测试生成" });
+    const promptInput = within(dialog).getByRole("textbox", { name: "提示词" });
+
+    await user.click(within(dialog).getByRole("button", { name: "生成图片" }));
+    expect(imageGenerationStartTaskMock()).not.toHaveBeenCalled();
+    expect(within(dialog).getByText("这一项必填")).toBeInTheDocument();
+    expect(promptInput).toHaveAttribute("aria-invalid", "true");
+    await waitFor(() => expect(promptInput).toHaveFocus());
+
+    await user.type(promptInput, "一只橘猫");
+    await user.keyboard("{Control>}{Enter}{/Control}");
+
+    await waitFor(() => {
+      expect(imageGenerationStartTaskMock()).toHaveBeenCalledWith({
+        mode: "generations",
+        model: "gpt-image-2",
+        prompt: "一只橘猫",
+        quality: "medium",
+        size: "1024x1024",
+        n: 1,
+      });
+    });
   });
 
   test("greys related actions and shows the empty hint when no channel is configured", async () => {

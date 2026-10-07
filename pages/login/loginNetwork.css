@@ -1,0 +1,130 @@
+/*
+ * 登录页中继网络的动画（LoginNetwork.tsx）。
+ *
+ * 全部是同一个 6.4s 周期，靠 animation-delay 错开：数据包在周期的 0%–40% 从调用方
+ * 沿线路走完全程；40% 抵达时模型节点轻轻放大一下、外圈亮一下。
+ * 周期和各段占比改动时三处要一起改，否则涟漪和抵达会跟数据包对不上。
+ *
+ * 用 CSS 而不是 JS 驱动：常驻循环交给合成器，页面放着不动也不占主线程。
+ */
+
+.ln-packet {
+  fill: none;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  /* 路径用 pathLength="100" 归一化：一段 4 个单位的短线，间隔大于全长，保证同时只露出一段。 */
+  stroke-dasharray: 4 196;
+  stroke-dashoffset: 4;
+  opacity: 0;
+  animation: ln-packet 6.4s linear infinite;
+}
+
+@keyframes ln-packet {
+  0% {
+    stroke-dashoffset: 4;
+    opacity: 0;
+  }
+  3% {
+    opacity: 1;
+  }
+  37% {
+    opacity: 1;
+  }
+  40%,
+  100% {
+    stroke-dashoffset: -100;
+    opacity: 0;
+  }
+}
+
+/* 网关涟漪：数据包从网关底下穿过时出现，向外扩散后消失。 */
+.ln-ripple {
+  opacity: 0;
+  animation: ln-ripple 6.4s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+}
+
+@keyframes ln-ripple {
+  0%,
+  16% {
+    opacity: 0;
+    scale: 1;
+  }
+  18% {
+    opacity: 0.5;
+    scale: 1;
+  }
+  34%,
+  100% {
+    opacity: 0;
+    scale: 1.3;
+  }
+}
+
+/* 模型节点：数据包抵达时放大 6% 再回落。用独立的 scale 属性，不覆盖定位用的 translate。 */
+.ln-arrive {
+  animation: ln-arrive 6.4s cubic-bezier(0.3, 1.25, 0.5, 1) infinite;
+}
+
+@keyframes ln-arrive {
+  0%,
+  38% {
+    scale: 1;
+  }
+  43% {
+    scale: 1.06;
+  }
+  56%,
+  100% {
+    scale: 1;
+  }
+}
+
+/* 抵达 / 出发时节点外圈的一下微光。 */
+.ln-glow {
+  opacity: 0;
+  animation: ln-arrive-glow 6.4s ease-out infinite;
+}
+
+@keyframes ln-arrive-glow {
+  0%,
+  38% {
+    opacity: 0;
+  }
+  42% {
+    opacity: 1;
+  }
+  64%,
+  100% {
+    opacity: 0;
+  }
+}
+
+/* 调用方每 3.2s 发出一次（两条线路共用一个节点），发出瞬间亮一下。 */
+.ln-depart {
+  opacity: 0;
+  animation: ln-depart 3.2s ease-out infinite;
+}
+
+@keyframes ln-depart {
+  0% {
+    opacity: 1;
+  }
+  24%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ln-packet,
+  .ln-ripple,
+  .ln-glow,
+  .ln-depart {
+    animation: none;
+    opacity: 0;
+  }
+
+  .ln-arrive {
+    animation: none;
+  }
+}

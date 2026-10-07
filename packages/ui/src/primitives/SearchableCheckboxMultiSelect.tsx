@@ -16,6 +16,7 @@ import {
   getSelectDropdownMotion,
   getSelectTriggerBase,
   searchableSelectPanel,
+  selectCheckboxBox,
   selectChevron,
   selectDropdownTransition,
   selectEmptyState,
@@ -24,6 +25,7 @@ import {
   selectOptionSelected,
   selectSearchInput,
   selectSearchRow,
+  selectTextAction,
   selectTriggerState,
 } from "../utils/selectStyles";
 import type { ControlSize } from "../utils/controlStyles";
@@ -51,6 +53,13 @@ export interface SearchableCheckboxMultiSelectProps {
   noResultsLabel: string;
   disabled?: boolean;
   "aria-label"?: string;
+  /**
+   * 由 FormField 注入：`<label htmlFor>` 指到触发器；出错时描边变红、读屏读到错误，
+   * 提交校验也能把焦点送过来（`focusFirstInvalid` 找的就是 aria-invalid）。
+   */
+  id?: string;
+  "aria-invalid"?: boolean | "true" | "false";
+  "aria-describedby"?: string;
   className?: string;
   size?: ControlSize;
   clearLabel?: string;
@@ -94,6 +103,9 @@ export function SearchableCheckboxMultiSelect({
   noResultsLabel,
   disabled = false,
   "aria-label": ariaLabel,
+  id,
+  "aria-invalid": ariaInvalid,
+  "aria-describedby": ariaDescribedBy,
   className,
   size = "default",
   clearLabel,
@@ -297,6 +309,8 @@ export function SearchableCheckboxMultiSelect({
     if (!open) return;
     const handleKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
+        // 吃掉这次 Esc：外层弹窗看到 defaultPrevented 就不会跟着关闭（只收起下拉）。
+        event.preventDefault();
         closeDropdown(manualApply);
       }
     };
@@ -457,11 +471,14 @@ export function SearchableCheckboxMultiSelect({
       <div className={cn("group/multi-select relative", className)}>
         <button
           ref={triggerRef}
+          id={id}
           type="button"
           role="combobox"
           aria-expanded={open}
           aria-haspopup="listbox"
           aria-label={ariaLabel}
+          aria-invalid={ariaInvalid}
+          aria-describedby={ariaDescribedBy}
           disabled={disabled}
           data-state={selectTriggerState(open)}
           onClick={() => {
@@ -478,14 +495,14 @@ export function SearchableCheckboxMultiSelect({
             className={cn(
               "min-w-0 flex-1 truncate text-left",
               (activeExplicitValue.length === 0 || showAllSelectionSummary) &&
-                "text-slate-400 dark:text-white/35",
+                "text-ink-3",
             )}
           >
             {selectedSummary}
           </span>
           <span className="flex shrink-0 items-center gap-2">
             {showSelectionBadge ? (
-              <span className="rounded-md bg-sky-50 px-1.5 py-0.5 text-xs font-semibold text-sky-700 dark:bg-sky-900/30 dark:text-sky-300">
+              <span className="rounded-full bg-selected px-2 py-0.5 text-xs font-medium text-ink">
                 {selectedCountLabel(activeExplicitValue.length)}
               </span>
             ) : null}
@@ -508,12 +525,11 @@ export function SearchableCheckboxMultiSelect({
             aria-label={clearLabel}
             onClick={handleClear}
             className={cn(
-              "absolute right-3 top-1/2 z-10 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded",
-              "text-slate-400 opacity-0 pointer-events-none transition-colors",
+              "absolute right-3 top-1/2 z-10 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full",
+              "text-ink-3 opacity-0 pointer-events-none transition-colors",
               "group-hover/multi-select:pointer-events-auto group-hover/multi-select:opacity-100",
               "group-focus-within/multi-select:pointer-events-auto group-focus-within/multi-select:opacity-100",
-              "hover:bg-slate-100 hover:text-slate-600",
-              "dark:hover:bg-white/10 dark:hover:text-slate-300",
+              "hover:bg-hover hover:text-ink-2",
             )}
           >
             <X size={12} />
@@ -533,11 +549,7 @@ export function SearchableCheckboxMultiSelect({
               transition={selectDropdownTransition}
             >
               <div className={cn(selectSearchRow, "shrink-0")}>
-                <Search
-                  size={14}
-                  className="shrink-0 text-[#96969B] dark:text-[#9F9FA8]"
-                  aria-hidden="true"
-                />
+                <Search size={14} className="shrink-0 text-ink-3" aria-hidden="true" />
                 <input
                   ref={searchRef}
                   type="text"
@@ -550,14 +562,14 @@ export function SearchableCheckboxMultiSelect({
                 />
               </div>
               {selectAllLabel || neutralAllSelection || showFilteredToggle || selectionHint ? (
-                <div className="flex items-center justify-between gap-2 border-b border-slate-100 px-3 py-2 dark:border-white/8">
+                <div className="flex items-center justify-between gap-2 border-b border-line py-2 pl-3.5 pr-2">
                   <span className="min-w-0">
                     <span
                       className={cn(
                         "block text-xs font-medium",
                         showAllSelectionSummary
                           ? "text-emerald-600 dark:text-emerald-300"
-                          : "text-slate-500 dark:text-white/50",
+                          : "text-ink-2",
                       )}
                     >
                       {showAllSelectionSummary
@@ -565,18 +577,18 @@ export function SearchableCheckboxMultiSelect({
                         : selectedCountLabel(effectiveValue.length)}
                     </span>
                     {selectionHint ? (
-                      <span className="mt-0.5 block truncate text-2xs text-slate-400 dark:text-white/35">
+                      <span className="mt-0.5 block truncate text-2xs text-ink-3">
                         {selectionHint}
                       </span>
                     ) : null}
                   </span>
-                  <div className="flex shrink-0 items-center gap-2">
+                  <div className="flex shrink-0 items-center gap-1">
                     {neutralAllSelection ? (
                       <button
                         type="button"
                         onClick={() => updateSelection([], true)}
                         disabled={options.length === 0 || showAllSelectionSummary}
-                        className="rounded-md px-2 py-1 text-xs font-medium text-indigo-600 transition hover:bg-indigo-50 disabled:cursor-default disabled:text-slate-300 dark:text-indigo-300 dark:hover:bg-indigo-500/10 dark:disabled:text-white/20"
+                        className={cn(selectTextAction, "disabled:cursor-default")}
                       >
                         {allSelectionLabel || placeholder}
                       </button>
@@ -589,7 +601,7 @@ export function SearchableCheckboxMultiSelect({
                           (!deselectAllLabel &&
                             (allOptionsSelectedExplicitly || implicitAllSelected))
                         }
-                        className="rounded-md px-2 py-1 text-xs font-medium text-indigo-600 transition hover:bg-indigo-50 disabled:cursor-not-allowed disabled:text-slate-300 dark:text-indigo-300 dark:hover:bg-indigo-500/10 dark:disabled:text-white/20"
+                        className={selectTextAction}
                       >
                         {showAllSelectionSummary && deselectAllLabel
                           ? deselectAllLabel
@@ -601,7 +613,7 @@ export function SearchableCheckboxMultiSelect({
                         type="button"
                         onClick={toggleFiltered}
                         disabled={visibleValues.length === 0}
-                        className="rounded-md px-2 py-1 text-xs font-medium text-indigo-600 transition hover:bg-indigo-50 disabled:cursor-not-allowed disabled:text-slate-300 dark:text-indigo-300 dark:hover:bg-indigo-500/10 dark:disabled:text-white/20"
+                        className={selectTextAction}
                       >
                         {allVisibleSelected ? deselectFilteredLabel : selectFilteredLabel}
                       </button>
@@ -615,9 +627,10 @@ export function SearchableCheckboxMultiSelect({
                 className="min-h-0 flex-1 [&_[data-scroll-area-scrollbar='y']]:right-1"
                 viewportClassName="!h-auto"
                 viewportStyle={{ maxHeight: listMaxHeight }}
-                contentClassName="p-1"
+                contentClassName="p-1.5"
                 scrollbarVisibility="always"
                 scrollbarTrackInset={4}
+                edgeFade={24}
               >
                 {filteredOptions.length === 0 ? (
                   <div className={selectEmptyState}>{noResultsLabel}</div>
@@ -636,15 +649,7 @@ export function SearchableCheckboxMultiSelect({
                           checked ? selectOptionSelected : selectOptionIdle,
                         )}
                       >
-                        <span
-                          className={cn(
-                            "flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors",
-                            checked
-                              ? "border-[#18181B] bg-[#18181B] text-white dark:border-white dark:bg-white dark:text-[#18181B]"
-                              : "border-[#96969B] bg-white dark:border-[#9F9FA8] dark:bg-[#27272A]",
-                          )}
-                          aria-hidden="true"
-                        >
+                        <span className={selectCheckboxBox(checked)} aria-hidden="true">
                           {checked ? <Check size={12} /> : null}
                         </span>
                         <span
@@ -670,11 +675,11 @@ export function SearchableCheckboxMultiSelect({
                 )}
               </ScrollArea>
               {manualApply ? (
-                <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-3 py-2 dark:border-white/8">
+                <div className="flex items-center justify-end gap-2 border-t border-line px-3 py-2.5">
                   <button
                     type="button"
                     onClick={() => closeDropdown(true)}
-                    className="rounded-md px-3 py-1.5 text-xs font-medium text-slate-500 transition hover:bg-slate-100 dark:text-white/60 dark:hover:bg-white/5"
+                    className={cn(selectTextAction, "px-3 py-1.5")}
                   >
                     {cancelLabel}
                   </button>
@@ -682,7 +687,7 @@ export function SearchableCheckboxMultiSelect({
                     type="button"
                     onClick={applyDraftSelection}
                     disabled={!hasPendingChanges}
-                    className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 dark:bg-white dark:text-neutral-950 dark:hover:bg-slate-200 dark:disabled:bg-neutral-800 dark:disabled:text-white/30"
+                    className="rounded-full bg-accent px-3.5 py-1.5 text-xs font-medium text-accent-fg transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:bg-selected disabled:text-ink-3"
                   >
                     {applyLabel}
                   </button>

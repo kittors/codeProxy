@@ -24,23 +24,30 @@ function Harness({
   const [value, setValue] = useState<string[]>(initialValue);
 
   return (
-    <RestrictionMultiSelect
-      options={options}
-      value={value}
-      onChange={(selected) => {
-        setValue(selected);
-        onSelectionChange?.(selected);
-      }}
-      placeholder="Select models..."
-      unrestrictedLabel="All models"
-      selectedCountLabel={(count) => `${count} models selected`}
-      searchPlaceholder="Search models..."
-      selectFilteredLabel="Select shown"
-      clearRestrictionLabel="Allow all"
-      noResultsLabel="No results"
-    />
+    <>
+      <label htmlFor="restriction-models">Models</label>
+      <RestrictionMultiSelect
+        id="restriction-models"
+        options={options}
+        value={value}
+        onChange={(selected) => {
+          setValue(selected);
+          onSelectionChange?.(selected);
+        }}
+        placeholder="Select models..."
+        unrestrictedLabel="All models"
+        selectedCountLabel={(count) => `${count} models selected`}
+        searchPlaceholder="Search models..."
+        selectFilteredLabel="Select shown"
+        clearRestrictionLabel="Allow all"
+        noResultsLabel="No results"
+      />
+    </>
   );
 }
+
+// 触发器是 combobox：名称来自字段标签，当前选择是它显示的内容。
+const trigger = () => screen.getByRole("combobox", { name: "Models" });
 
 describe("RestrictionMultiSelect", () => {
   afterEach(async () => {
@@ -52,8 +59,8 @@ describe("RestrictionMultiSelect", () => {
 
     render(<Harness />);
 
-    expect(screen.getByRole("button", { name: /all models/i })).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: /all models/i }));
+    expect(trigger()).toHaveTextContent(/all models/i);
+    await userEvent.click(trigger());
 
     expect(screen.queryByText("Select All")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Select shown" })).toBeInTheDocument();
@@ -66,13 +73,13 @@ describe("RestrictionMultiSelect", () => {
 
     render(<Harness onSelectionChange={onSelectionChange} />);
 
-    await userEvent.click(screen.getByRole("button", { name: /all models/i }));
+    await userEvent.click(trigger());
     await userEvent.click(screen.getByRole("button", { name: /codex/i }));
     expect(onSelectionChange).toHaveBeenLastCalledWith(["codex"]);
 
     await userEvent.click(screen.getByRole("button", { name: /claude/i }));
     expect(onSelectionChange).toHaveBeenLastCalledWith([]);
-    expect(screen.getByRole("button", { name: /all models/i })).toBeInTheDocument();
+    expect(trigger()).toHaveTextContent(/all models/i);
   });
 
   test("can narrow by search and select only the visible results", async () => {
@@ -81,12 +88,12 @@ describe("RestrictionMultiSelect", () => {
 
     render(<Harness onSelectionChange={onSelectionChange} />);
 
-    await userEvent.click(screen.getByRole("button", { name: /all models/i }));
+    await userEvent.click(trigger());
     await userEvent.type(screen.getByPlaceholderText("Search models..."), "clau");
     await userEvent.click(screen.getByRole("button", { name: "Select shown" }));
 
     expect(onSelectionChange).toHaveBeenLastCalledWith(["claude"]);
-    expect(screen.getByRole("button", { name: /1 models selected/i })).toBeInTheDocument();
+    expect(trigger()).toHaveTextContent(/1 models selected/i);
   });
 
   test("can select and deselect the only available option", async () => {
@@ -95,18 +102,18 @@ describe("RestrictionMultiSelect", () => {
 
     render(<Harness options={SINGLE_OPTION} onSelectionChange={onSelectionChange} />);
 
-    await userEvent.click(screen.getByRole("button", { name: /all models/i }));
+    await userEvent.click(trigger());
     const option = screen.getByRole("button", { name: "minimax-m3" });
     expect(option.querySelector("svg")).not.toBeInTheDocument();
 
     await userEvent.click(option);
     expect(onSelectionChange).toHaveBeenLastCalledWith(["minimax-m3"]);
-    expect(screen.getByRole("button", { name: /1 models selected/i })).toBeInTheDocument();
+    expect(trigger()).toHaveTextContent(/1 models selected/i);
     expect(option.querySelector("svg")).toBeInTheDocument();
 
     await userEvent.click(option);
     expect(onSelectionChange).toHaveBeenLastCalledWith([]);
-    expect(screen.getByRole("button", { name: /all models/i })).toBeInTheDocument();
+    expect(trigger()).toHaveTextContent(/all models/i);
     expect(option.querySelector("svg")).not.toBeInTheDocument();
   });
 
@@ -116,14 +123,14 @@ describe("RestrictionMultiSelect", () => {
 
     render(<Harness options={SINGLE_OPTION} onSelectionChange={onSelectionChange} />);
 
-    await userEvent.click(screen.getByRole("button", { name: /all models/i }));
+    await userEvent.click(trigger());
     await userEvent.type(screen.getByPlaceholderText("Search models..."), "mini");
     await userEvent.click(screen.getByRole("button", { name: "Select shown" }));
     expect(onSelectionChange).toHaveBeenLastCalledWith(["minimax-m3"]);
 
     await userEvent.click(screen.getByRole("button", { name: "Allow all" }));
     expect(onSelectionChange).toHaveBeenLastCalledWith([]);
-    expect(screen.getByRole("button", { name: /all models/i })).toBeInTheDocument();
+    expect(trigger()).toHaveTextContent(/all models/i);
   });
 
   test("keeps full multi-option filtered selection unrestricted", async () => {
@@ -132,7 +139,7 @@ describe("RestrictionMultiSelect", () => {
 
     render(<Harness onSelectionChange={onSelectionChange} />);
 
-    await userEvent.click(screen.getByRole("button", { name: /all models/i }));
+    await userEvent.click(trigger());
     await userEvent.type(screen.getByPlaceholderText("Search models..."), "c");
     await userEvent.click(screen.getByRole("button", { name: "Select shown" }));
 
@@ -146,8 +153,8 @@ describe("RestrictionMultiSelect", () => {
 
     render(<Harness initialValue={["stale", "codex", "codex"]} />);
 
-    expect(screen.getByRole("button", { name: /1 models selected/i })).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: /1 models selected/i }));
+    expect(trigger()).toHaveTextContent(/1 models selected/i);
+    await userEvent.click(trigger());
     expect(screen.getByRole("button", { name: "Codex" }).querySelector("svg")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Claude" }).querySelector("svg")).toBeNull();
   });
@@ -158,7 +165,7 @@ describe("RestrictionMultiSelect", () => {
 
     render(<Harness options={[]} initialValue={["stale"]} onSelectionChange={onSelectionChange} />);
 
-    await userEvent.click(screen.getByRole("button", { name: "Select models..." }));
+    await userEvent.click(trigger());
     expect(screen.getByText("All models")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Select shown" })).toBeDisabled();
     expect(screen.getByText("No results")).toBeInTheDocument();

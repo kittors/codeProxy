@@ -365,7 +365,11 @@ export class ApiClient {
 
       if (!response.ok) {
         const error = await this.buildApiError(response);
-        this.suspendIfFatal(error, generation);
+        // Only a request that rode on the session can end it. A rejected login is
+        // a 401 too, and suspending on it broadcast "unauthorized", which the login
+        // page rendered as "your session is no longer available" next to the real
+        // "incorrect username or password" message.
+        if ((options?.auth ?? "required") !== "anonymous") this.suspendIfFatal(error, generation);
         throw error;
       }
 

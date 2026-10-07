@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import i18n from "@code-proxy/i18n";
@@ -120,6 +120,21 @@ describe("ApiKeyUsagePage", () => {
     expect(window.localStorage.getItem("apiKeyUsage.lastApiKey.v1")).toBeNull();
     expect(await screen.findByTestId("apikey-usage-empty")).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/输入 API 密钥|Enter API Key/i)).toBeInTheDocument();
+  });
+
+  test("flags an empty key in place, and the dialog can be dismissed and reopened", async () => {
+    renderPage();
+
+    const dialog = screen.getByRole("dialog", { name: "输入 API 密钥" });
+    await userEvent.click(screen.getByTestId("apikey-usage-submit"));
+    expect(mocks.fetchPublicLogs).not.toHaveBeenCalled();
+    expect(within(dialog).getByText("这一项必填")).toBeInTheDocument();
+
+    // 没有已查询的 Key 时也能关掉：顶栏和空状态都有入口再打开。
+    await userEvent.click(within(dialog).getByRole("button", { name: "关闭" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    await userEvent.click(screen.getByTestId("apikey-usage-open-modal"));
+    expect(await screen.findByRole("dialog", { name: "输入 API 密钥" })).toBeInTheDocument();
   });
 
   test("restores the last API key from localStorage", async () => {

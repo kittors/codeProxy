@@ -62,11 +62,14 @@ describe("dashboard card composition", () => {
 
   test("uses a centered health hero and circular disk usage card in system monitor", () => {
     const source = readModule("pages/dashboard/SystemMonitorSection.tsx");
+    const visuals = readModule("features/monitor-widgets/monitorVisuals.tsx");
 
     expect(source).toContain("HealthHeroCard");
     expect(source).toContain("DiskUsageRingCard");
-    expect(source).toContain('bodyClassName="mt-0 flex h-full items-center justify-center"');
-    expect(source).toContain("strokeDasharray={circumference}");
+    // 两个环都走同一个渐变环组件：描边从 0 转到当前值，告警时换色。
+    expect(source.match(/<GradientRing/g)?.length).toBe(2);
+    expect(visuals).toContain("strokeDasharray={circumference}");
+    expect(visuals).toContain("transition-[stroke-dashoffset]");
     expect(source).toContain("grid gap-3 xl:grid-cols-[260px_minmax(0,1fr)_280px]");
     expect(source).not.toContain('label={t("system_monitor.disk_free")}');
   });
@@ -82,9 +85,15 @@ describe("dashboard card composition", () => {
     const chartSource = readModule("pages/dashboard/ThroughputTrendChart.tsx");
     const systemMonitorSource = readModule("pages/dashboard/SystemMonitorSection.tsx");
 
-    expect(chartSource).toContain("dark:bg-neutral-900/70");
-    expect(chartSource).toContain("dark:text-slate-400");
-    expect(systemMonitorSource).toContain("dark:bg-neutral-900/70");
+    // RPM / TPM 读数格是白底卡片（surface 令牌随 .dark 切换）+ 与曲线同色的身份色图标块，
+    // 不再是灰底方块；文字仍用 text-ink-* 令牌，没有只顾浅色的填充色。
+    expect(chartSource).toContain('surface({ tone: "raised"');
+    expect(chartSource).toContain('<DialogIcon tone="blue"');
+    expect(chartSource).toContain('<DialogIcon tone="violet"');
+    expect(chartSource).not.toContain("bg-subtle");
+    expect(chartSource).toContain("text-ink-3");
+    expect(chartSource).not.toMatch(/bg-slate-50(?![\w/-])/);
+    expect(systemMonitorSource).toContain("bg-subtle");
     expect(systemMonitorSource).toContain("dark:text-white/80");
   });
 });

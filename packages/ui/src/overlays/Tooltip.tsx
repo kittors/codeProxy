@@ -45,15 +45,22 @@ function parseTooltipPlacement(value: string | null): TooltipPlacement | undefin
 
 function resolveIconButtonTooltip(target: EventTarget | null): GlobalTooltipState | null {
   if (!(target instanceof Element)) return null;
-  const button = target.closest("button");
-  if (!(button instanceof HTMLButtonElement)) return null;
+  // 按钮默认参与；链接只在显式写了 data-tooltip 时参与（侧边栏图标栏里的单页分区是链接）。
+  const button = target.closest("button, a[data-tooltip]");
+  if (!(button instanceof HTMLButtonElement || button instanceof HTMLAnchorElement)) return null;
   if (button.closest("[data-tooltip-managed='true']")) return null;
 
+  // 有可见文字的按钮不弹提示——文字本身已经说明了用途。显式写了 data-tooltip 的例外：
+  // 侧边栏收起后行内文字只是淡出、仍留在 DOM 里（保住可访问名称），这时仍要靠提示露出名字。
+  const explicitTooltip = button.getAttribute("data-tooltip");
   const hasVisibleText = (button.textContent ?? "").trim().length > 0;
-  if (hasVisibleText) return null;
+  if (hasVisibleText && !explicitTooltip) return null;
+  // 里面什么都没有的空按钮（弹窗、抽屉的整屏遮罩）不是图标按钮：aria-label 只是给读屏的，
+  // 悬停时在屏幕底部弹一个「关闭」反而莫名其妙。
+  if (!explicitTooltip && button.childElementCount === 0) return null;
 
   const content =
-    button.getAttribute("data-tooltip") ||
+    explicitTooltip ||
     button.getAttribute("aria-label") ||
     button.getAttribute("title") ||
     "";
@@ -280,18 +287,39 @@ export function TooltipBubble({
       className={[
         interactive ? "pointer-events-auto select-text" : "pointer-events-none",
         // 只淡入显得硬；补 2px 上浮与轻微放大后，提示读起来是「浮出来」而不是「闪出来」。
-        "w-max max-w-[calc(100vw-2rem)] rounded-xl bg-white/95 px-2.5 py-1.5 text-xs ring-1 ring-slate-900/10 shadow-[0_8px_24px_-8px_rgba(15,23,42,0.35)] backdrop-blur sm:max-w-md dark:bg-neutral-900/95 dark:text-white dark:ring-white/10",
-        "transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none",
+        // 深色实心气泡（深色模式反转成浅色）：和页面上的白卡片拉开最大反差，一眼就知道是临时提示。
+        "w-max max-w-[calc(100vw-2rem)] rounded-xl bg-ink px-3 py-1.5 text-sm leading-snug text-canvas shadow-[0_8px_20px_-6px_rgb(0_0_0/0.28)] sm:max-w-md",
+        "transition-[opacity,transform] duration-150 ease-soft motion-reduce:transition-none",
       ].join(" ")}
       style={style}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
-      <span className="block whitespace-pre-line break-words [overflow-wrap:anywhere] text-slate-900 dark:text-white">
+      <span className="block whitespace-pre-line break-words [overflow-wrap:anywhere]">
         {content}
       </span>
     </span>,
     document.body,
+  );
+}
+
+/**
+ * 提示气泡里成组展示的小标签（模型名、渠道名、路由路径）。
+ *
+ * 气泡是墨色实心、深色模式下反转成浅色，所以标签的底、边、字都取 canvas 的透明度——跟着气泡
+ * 一起反转，任何主题下都是「气泡上浅浅一层」。不要在气泡内容里写 text-slate-* / dark:text-white
+ * 这类固定颜色：深色模式下气泡是浅色的，白字会直接看不见。
+ */
+export function TooltipChip({ children, mono = false }: { children: ReactNode; mono?: boolean }) {
+  return (
+    <span
+      className={[
+        "inline-flex items-center gap-1 rounded-md border border-canvas/15 bg-canvas/10 px-2 py-0.5 text-xs text-canvas",
+        mono ? "font-mono" : "",
+      ].join(" ")}
+    >
+      {children}
+    </span>
   );
 }
 

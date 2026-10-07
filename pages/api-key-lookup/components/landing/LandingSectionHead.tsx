@@ -34,7 +34,7 @@ export function LandingSectionHead({
           centered ? "justify-center" : "",
         ].join(" ")}
       >
-        <span className="text-indigo-600 dark:text-indigo-400">{index}</span>
+        <span className="text-ink">{index}</span>
         <span className="h-px w-8 bg-slate-900/15 dark:bg-white/15" aria-hidden />
         <span className="tracking-[0.1em] text-slate-400 dark:text-white/35">{eyebrow}</span>
       </div>

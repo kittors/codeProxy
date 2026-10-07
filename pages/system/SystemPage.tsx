@@ -12,7 +12,7 @@ import {
   Server,
 } from "lucide-react";
 import { useAuth } from "@app/providers/AuthProvider";
-import { Card } from "@code-proxy/ui";
+import { Card, iconHueClass } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
 import { SystemUpdateCard } from "@features/online-update";
 
@@ -73,7 +73,7 @@ function InfoCard({
 
       <div className="flex items-center gap-2 mb-1.5">
         <Icon size={13} className="hidden text-slate-400 dark:text-white/35 sm:block" />
-        <span className="text-2xs font-semibold uppercase tracking-widest text-slate-400 dark:text-white/35">
+        <span className="text-2xs font-medium text-slate-400 dark:text-white/35">
           {label}
         </span>
       </div>
@@ -83,7 +83,7 @@ function InfoCard({
             href={value}
             target="_blank"
             rel="noopener noreferrer"
-            className={`min-w-0 truncate text-sm font-medium text-indigo-600 underline decoration-indigo-300/40 underline-offset-2 hover:text-indigo-500 dark:text-indigo-400 dark:decoration-indigo-500/30 ${mono ? "font-mono text-xs" : ""}`}
+            className={`min-w-0 truncate text-sm font-medium text-ink underline decoration-ink-4 underline-offset-2 hover:decoration-ink-2 ${mono ? "font-mono text-xs" : ""}`}
           >
             {value}
           </a>
@@ -95,7 +95,7 @@ function InfoCard({
           </span>
         )}
         {link ? (
-          <ExternalLink size={11} className="hidden shrink-0 text-indigo-400/50 sm:inline" />
+          <ExternalLink size={11} className="hidden shrink-0 text-ink-4 sm:inline" />
         ) : null}
       </div>
     </Card>
@@ -116,8 +116,8 @@ export function SystemPage() {
     <div className="flex min-w-0 flex-1 flex-col gap-6 overflow-x-hidden">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-100 dark:bg-indigo-900/30">
-            <Server size={16} className="text-indigo-600 dark:text-indigo-400" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-selected">
+            <Server size={16} className={iconHueClass(Server)} />
           </div>
           <div>
             <h2 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">

@@ -17,6 +17,7 @@ import {
   selectChevron,
   selectDropdownTransition,
   selectOptionBase,
+  selectOptionCheck,
   selectOptionIdle,
   selectOptionSelected,
   selectPanel,
@@ -24,6 +25,7 @@ import {
   selectTriggerState,
 } from "../utils/selectStyles";
 import type { ControlSize } from "../utils/controlStyles";
+import { useScrollFade } from "../hooks/useScrollFade";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -87,6 +89,7 @@ export function Select({
   size = "default",
 }: SelectProps) {
   const [open, setOpen] = useState(false);
+  const listFade = useScrollFade<HTMLDivElement>({ enabled: open, size: 24 });
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
 
@@ -143,7 +146,10 @@ export function Select({
   useEffect(() => {
     if (!open) return;
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key !== "Escape") return;
+      // 吃掉这次 Esc：外层弹窗看到 defaultPrevented 就不会跟着关闭（只收起下拉）。
+      e.preventDefault();
+      setOpen(false);
     };
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
@@ -204,7 +210,7 @@ export function Select({
               role="listbox"
               data-side={pos.placement}
               aria-label={ariaLabel}
-              className={selectPanel}
+              className={cn(selectPanel, "!p-0")}
               {...getSelectDropdownMotion(pos.placement)}
               transition={selectDropdownTransition}
               style={{
@@ -212,10 +218,15 @@ export function Select({
                 left: pos.left,
                 minWidth: pos.width,
                 maxWidth: "min(500px, 90vw)",
-                maxHeight: 280,
-                overflowY: "auto",
               }}
             >
+              {/* 面板本身保留圆角与投影，滚动交给里面这一层：选项多到要滚时上下渐隐，不会被面板边缘一刀切断。 */}
+              <div
+                ref={listFade.ref}
+                onScroll={listFade.onScroll}
+                style={{ ...listFade.style, maxHeight: 280 }}
+                className={cn("overflow-y-auto overscroll-contain p-1.5", listFade.className)}
+              >
               {options.map((opt) => {
                 const selected = opt.value === value;
                 return (
@@ -232,15 +243,12 @@ export function Select({
                   >
                     <span className="min-w-0 flex-1">{opt.label}</span>
                     {selected ? (
-                      <Check
-                        size={14}
-                        className="shrink-0 text-[#96969B] dark:text-[#9F9FA8]"
-                        aria-hidden="true"
-                      />
+                      <Check size={15} className={selectOptionCheck} aria-hidden="true" />
                     ) : null}
                   </button>
                 );
               })}
+              </div>
             </motion.div>
           ) : null}
         </AnimatePresence>,

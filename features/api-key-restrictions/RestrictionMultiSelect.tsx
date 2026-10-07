@@ -9,7 +9,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { Check, ChevronDown } from "lucide-react";
-import { floatingPanelSurface, type MultiSelectOption } from "@code-proxy/ui";
+import { floatingPanelSurface, type MultiSelectOption, ScrollFade } from "@code-proxy/ui";
 
 interface RestrictionMultiSelectProps {
   options: MultiSelectOption[];
@@ -24,6 +24,10 @@ interface RestrictionMultiSelectProps {
   noResultsLabel: string;
   disabled?: boolean;
   className?: string;
+  /** 由 FormField 注入：标签点得到触发器，读屏能把标签和说明读出来。 */
+  id?: string;
+  "aria-invalid"?: boolean | "true" | "false";
+  "aria-describedby"?: string;
 }
 
 function normalizeSelection(options: MultiSelectOption[], selected: string[]): string[] {
@@ -52,6 +56,9 @@ export function RestrictionMultiSelect({
   noResultsLabel,
   disabled = false,
   className = "",
+  id,
+  "aria-invalid": ariaInvalid,
+  "aria-describedby": ariaDescribedBy,
 }: RestrictionMultiSelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -183,7 +190,7 @@ export function RestrictionMultiSelect({
 
     return (
       <div className="flex min-w-0 items-center gap-2">
-        <span className="inline-flex rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300">
+        <span className="inline-flex rounded-full bg-hover px-2 py-0.5 text-xs font-medium text-ink">
           {selectedCountLabel(selectedValues.length)}
         </span>
         <span className="min-w-0 truncate text-xs text-slate-500 dark:text-white/50">
@@ -233,7 +240,7 @@ export function RestrictionMultiSelect({
                 type="button"
                 onClick={selectFiltered}
                 disabled={filteredOptions.length === 0}
-                className="rounded-md px-2 py-1 text-xs font-medium text-indigo-600 transition hover:bg-indigo-50 disabled:cursor-not-allowed disabled:text-slate-300 dark:text-indigo-300 dark:hover:bg-indigo-500/10 dark:disabled:text-white/20"
+                className="rounded-md px-2 py-1 text-xs font-medium text-ink transition hover:bg-hover disabled:cursor-not-allowed disabled:text-slate-300 dark:disabled:text-white/20"
               >
                 {selectFilteredLabel}
               </button>
@@ -246,7 +253,7 @@ export function RestrictionMultiSelect({
               </button>
             </div>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto p-1">
+          <ScrollFade className="min-h-0 flex-1 overflow-y-auto p-1">
             {filteredOptions.length === 0 ? (
               <div className="px-3 py-4 text-center text-xs text-slate-400 dark:text-white/30">
                 {noResultsLabel}
@@ -261,18 +268,18 @@ export function RestrictionMultiSelect({
                     onClick={() => toggle(option.value)}
                     className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
                       checked
-                        ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-300"
+                        ? "bg-hover text-ink"
                         : "text-slate-700 hover:bg-slate-50 dark:text-white/70 dark:hover:bg-white/5"
                     }`}
                   >
                     <div
                       className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border transition ${
                         checked
-                          ? "border-indigo-500 bg-indigo-500 dark:border-indigo-400 dark:bg-indigo-400"
-                          : "border-slate-300 dark:border-neutral-600"
+                          ? "border-accent bg-accent"
+                          : "border-ink-3"
                       }`}
                     >
-                      {checked && <Check size={12} className="text-white dark:text-black" />}
+                      {checked && <Check size={12} className="text-accent-fg" />}
                     </div>
                     {option.icon && <span className="flex-shrink-0">{option.icon}</span>}
                     <span className="truncate font-mono text-xs">{option.label}</span>
@@ -280,7 +287,7 @@ export function RestrictionMultiSelect({
                 );
               })
             )}
-          </div>
+          </ScrollFade>
         </div>,
         document.body,
       )
@@ -290,7 +297,15 @@ export function RestrictionMultiSelect({
     <div className={`relative ${className}`}>
       <button
         ref={triggerRef}
+        id={id}
         type="button"
+        // 与 Select 一样是「只能选、不能打字」的 combobox：名称来自字段标签，当前选择作为它的值
+        // 被读出来；若还是普通 button，接上标签后读屏就只剩标签、听不到选了什么。
+        role="combobox"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-invalid={ariaInvalid}
+        aria-describedby={ariaDescribedBy}
         disabled={disabled}
         onClick={() => {
           if (!open) updatePosition();
@@ -300,7 +315,7 @@ export function RestrictionMultiSelect({
           disabled
             ? "cursor-not-allowed border-slate-900/8 bg-slate-100 text-slate-500 dark:border-neutral-700 dark:bg-neutral-800 dark:text-white/40"
             : open
-              ? "border-indigo-400 bg-white ring-2 ring-indigo-400/20 dark:border-indigo-500 dark:bg-neutral-900"
+              ? "border-line-strong bg-white ring-2 ring-line-strong dark:bg-neutral-900"
               : "border-slate-900/8 bg-white hover:border-slate-300 dark:border-neutral-700 dark:bg-neutral-900 dark:hover:border-neutral-600"
         }`}
       >

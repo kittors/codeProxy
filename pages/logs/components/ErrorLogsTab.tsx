@@ -1,6 +1,6 @@
 import type { Dispatch, SetStateAction } from "react";
 import type { ErrorLogItem } from "../logsHelpers";
-import { Button, surface } from "@code-proxy/ui";
+import { Button, surface, ScrollFade } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
 import { EmptyState } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
@@ -213,7 +213,7 @@ export function ErrorLogsTab({
             {t("logs_page.error_log_list_desc")}
           </p>
 
-          <div className="mt-4 md:min-h-0 md:flex-1 md:overflow-y-auto">
+          <ScrollFade className="mt-4 md:min-h-0 md:flex-1 md:overflow-y-auto">
             {errorLogsLoading ? (
               <div className="text-sm text-slate-600 dark:text-white/65">
                 {t("logs_page.loading")}
@@ -300,7 +300,7 @@ export function ErrorLogsTab({
                 })}
               </div>
             )}
-          </div>
+          </ScrollFade>
         </div>
       </div>
     </Card>

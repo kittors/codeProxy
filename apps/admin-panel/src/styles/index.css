@@ -13,14 +13,17 @@
    * 全局排版与圆角规范。页面只使用这些 Tailwind token，图表等非 DOM 渲染同样遵循对应像素值。
    * 字号：10 / 12 / 14 / 16 / 18 / 20 / 24 / 30 / 36 / 48 / 60 px
    * 圆角：2 / 4 / 6 / 8 / 12 / 16 / 24 / 32 px，以及 full
+   * 圆角的用法分三档：胶囊（按钮、输入框、分段控件、状态标签）、24px（弹窗）、
+   * 16px（卡片、菜单、浮动面板），列表选中块与表单内部用 8–12px。
    */
   /*
-   * 字体栈按「西文 → 中文 → 系统兜底」排列：Inter 不含汉字，浏览器逐字回退到
-   * Noto Sans SC，于是中西文各用各的最优字形。系统字体留在最后，只在自托管
-   * 字体加载失败时兜底（见 styles/fonts.css）。
+   * 字体栈：macOS / iOS 上优先用系统字体（SF Pro + 苹方），这是设计稿的基准观感；
+   * 其它平台没有这两款字体，-apple-system 不生效，直接落到自托管的 Inter + Noto Sans SC，
+   * 跨平台仍然一致，不会退回 Segoe UI / 微软雅黑那种字重字宽对不上的组合（见 styles/fonts.css）。
+   * 浏览器只在真正渲染到某个字符时才下载对应字体，所以 macOS 上不会白下载 Inter/Noto。
    */
-  --font-sans: "Inter Variable", "Noto Sans SC Variable", "SF Pro Text", "Segoe UI", "PingFang SC",
-    "Microsoft YaHei", system-ui, sans-serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Inter Variable", "PingFang SC",
+    "Noto Sans SC Variable", "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
   --font-mono: "JetBrains Mono Variable", "SFMono-Regular", Consolas, "Liberation Mono", Menlo,
     monospace;
   /*
@@ -63,6 +66,264 @@
   --radius-3xl: 1.5rem;
   --radius-4xl: 2rem;
   --radius-full: 9999px;
+
+  /*
+   * 中性色板。页面里 slate-* 用于浅色语境的文字、浅底和描边（2400+ 处），
+   * neutral-* 主要用于深色语境的卡片与浮层背景（dark:bg-neutral-950 等）。
+   * 两套都重定义为不带色相的中性灰：灰仍然是灰，只是去掉了原来 slate 的蓝调，
+   * 现有类名不用改就能落到新的配色上。neutral 整体偏亮一档，是因为它在深色模式里
+   * 承担的是「表面」而不是「文字」：950 正好是深色内容区背景。
+   */
+  --color-slate-50: #f9f9f9;
+  --color-slate-100: #f3f3f3;
+  --color-slate-200: #ebebeb;
+  --color-slate-300: #d6d6d6;
+  --color-slate-400: #a3a3a3;
+  --color-slate-500: #767676;
+  --color-slate-600: #5d5d5d;
+  --color-slate-700: #404040;
+  --color-slate-800: #2b2b2b;
+  --color-slate-900: #171717;
+  --color-slate-950: #0d0d0d;
+
+  --color-gray-50: #f9f9f9;
+  --color-gray-100: #f3f3f3;
+  --color-gray-200: #ebebeb;
+  --color-gray-300: #d6d6d6;
+  --color-gray-400: #a3a3a3;
+  --color-gray-500: #767676;
+  --color-gray-600: #5d5d5d;
+  --color-gray-700: #404040;
+  --color-gray-800: #2b2b2b;
+  --color-gray-900: #171717;
+  --color-gray-950: #0d0d0d;
+
+  --color-zinc-50: #f9f9f9;
+  --color-zinc-100: #f3f3f3;
+  --color-zinc-200: #ebebeb;
+  --color-zinc-300: #d6d6d6;
+  --color-zinc-400: #a3a3a3;
+  --color-zinc-500: #767676;
+  --color-zinc-600: #5d5d5d;
+  --color-zinc-700: #404040;
+  --color-zinc-800: #2b2b2b;
+  --color-zinc-900: #171717;
+  --color-zinc-950: #0d0d0d;
+
+  --color-neutral-50: #f7f7f7;
+  --color-neutral-100: #ececec;
+  --color-neutral-200: #d4d4d4;
+  --color-neutral-300: #b4b4b4;
+  --color-neutral-400: #8f8f8f;
+  --color-neutral-500: #737373;
+  --color-neutral-600: #525252;
+  --color-neutral-700: #404040;
+  --color-neutral-800: #333333;
+  --color-neutral-900: #2a2a2a;
+  --color-neutral-950: #212121;
+
+  /*
+   * 状态色板：成功 / 错误 / 警告 / 信息各一套色阶，500 是基准色。
+   * 同一语义的几个色名（emerald 与 green、rose 与 red、sky 与 blue）收敛到同一套，
+   * 之前它们在不同页面被混用来表达同一件事，颜色却各不相同。
+   * 紫色系（indigo / violet / purple / fuchsia）刻意不在这里重定义——它们是界面里
+   * 「AI 味」的主要来源，页面适配时逐处换成语义令牌，而不是让 indigo-600 实际显示成黑色。
+   */
+  --color-emerald-50: #ecf8f4;
+  --color-emerald-100: #d2f0e6;
+  --color-emerald-200: #a6e1cd;
+  --color-emerald-300: #6dcbad;
+  --color-emerald-400: #33b68d;
+  --color-emerald-500: #10a37f;
+  --color-emerald-600: #0b8a6a;
+  --color-emerald-700: #0a6f56;
+  --color-emerald-800: #0a5946;
+  --color-emerald-900: #09493a;
+  --color-emerald-950: #042a21;
+
+  --color-green-50: #ecf8f4;
+  --color-green-100: #d2f0e6;
+  --color-green-200: #a6e1cd;
+  --color-green-300: #6dcbad;
+  --color-green-400: #33b68d;
+  --color-green-500: #10a37f;
+  --color-green-600: #0b8a6a;
+  --color-green-700: #0a6f56;
+  --color-green-800: #0a5946;
+  --color-green-900: #09493a;
+  --color-green-950: #042a21;
+
+  --color-rose-50: #fdf2f2;
+  --color-rose-100: #fbe3e4;
+  --color-rose-200: #f6c6c8;
+  --color-rose-300: #ef9da0;
+  --color-rose-400: #e96f74;
+  --color-rose-500: #e5484d;
+  --color-rose-600: #cf3338;
+  --color-rose-700: #ac282d;
+  --color-rose-800: #8a2327;
+  --color-rose-900: #721f22;
+  --color-rose-950: #400d0f;
+
+  --color-red-50: #fdf2f2;
+  --color-red-100: #fbe3e4;
+  --color-red-200: #f6c6c8;
+  --color-red-300: #ef9da0;
+  --color-red-400: #e96f74;
+  --color-red-500: #e5484d;
+  --color-red-600: #cf3338;
+  --color-red-700: #ac282d;
+  --color-red-800: #8a2327;
+  --color-red-900: #721f22;
+  --color-red-950: #400d0f;
+
+  --color-amber-50: #fdf7ec;
+  --color-amber-100: #faedd2;
+  --color-amber-200: #f4d8a2;
+  --color-amber-300: #edbe68;
+  --color-amber-400: #e6a53c;
+  --color-amber-500: #e08e1f;
+  --color-amber-600: #c47515;
+  --color-amber-700: #a05c13;
+  --color-amber-800: #824915;
+  --color-amber-900: #6b3d15;
+  --color-amber-950: #3d2008;
+
+  --color-sky-50: #f0f5fe;
+  --color-sky-100: #dee9fc;
+  --color-sky-200: #bfd4f8;
+  --color-sky-300: #92b6f2;
+  --color-sky-400: #5f93ec;
+  --color-sky-500: #2a6ee8;
+  --color-sky-600: #1f5bd2;
+  --color-sky-700: #1b49ab;
+  --color-sky-800: #1a3e88;
+  --color-sky-900: #19356d;
+  --color-sky-950: #102244;
+
+  --color-blue-50: #f0f5fe;
+  --color-blue-100: #dee9fc;
+  --color-blue-200: #bfd4f8;
+  --color-blue-300: #92b6f2;
+  --color-blue-400: #5f93ec;
+  --color-blue-500: #2a6ee8;
+  --color-blue-600: #1f5bd2;
+  --color-blue-700: #1b49ab;
+  --color-blue-800: #1a3e88;
+  --color-blue-900: #19356d;
+  --color-blue-950: #102244;
+
+  /*
+   * 动效（与 packages/ui/src/utils/motion.ts 同一组数值）：
+   * soft 用于绝大多数过渡；pop 是弹出物（下拉、菜单、弹窗、抽屉）进场的指数减速曲线，
+   * 一下到位再轻轻落稳、不越过终点；spring 的轻回弹只留给开关、勾选这类有物理感的小控件。
+   */
+  --ease-soft: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-pop: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.3, 1.25, 0.5, 1);
+}
+
+/*
+ * 语义令牌。组件、外壳和页面适配统一用这些名字，深浅色只在下面两段变量里切换。
+ * 用 `@theme inline` 是为了让工具类直接引用运行时变量，切换 .dark 时无需重新生成样式。
+ *
+ * hover / selected 是半透明叠层而不是实色：同一个菜单项、按钮可能落在白卡片、灰侧栏、
+ * 深色弹层上，实色在深色弹层（#2f2f2f）上会比底色还暗或几乎看不出来，叠层在任何底上
+ * 都是「比底色深/亮一档」。需要盖住下层内容的地方（表格冻结列）不要用它们，另取实色。
+ * surface-hover 是 hover 叠在 surface 上的「实色结果」，专给必须不透明的地方用（表格冻结列）。
+ * track 是分段控件、进度条这类「槽」的实色底：分段控件会被做成吸顶条（模型广场的厂商标签），
+ * 半透明的槽会透出下面滚过的内容。
+ * field 是输入框和下拉触发器的底：浅色纯白靠描边成形，深色用轻微提亮，放在画布、
+ * 卡片、弹窗里都比所在容器亮一点，读起来是「可以填的格子」。
+ */
+@theme inline {
+  --color-rail: var(--cp-rail);
+  --color-panel: var(--cp-panel);
+  --color-canvas: var(--cp-canvas);
+  --color-surface: var(--cp-surface);
+  --color-surface-hover: var(--cp-surface-hover);
+  --color-track: var(--cp-track);
+  --color-elevated: var(--cp-elevated);
+  --color-subtle: var(--cp-subtle);
+  --color-field: var(--cp-field);
+  --color-hover: var(--cp-hover);
+  --color-selected: var(--cp-selected);
+  --color-ink: var(--cp-ink);
+  --color-ink-2: var(--cp-ink-2);
+  --color-ink-3: var(--cp-ink-3);
+  --color-ink-4: var(--cp-ink-4);
+  --color-line: var(--cp-line);
+  --color-line-strong: var(--cp-line-strong);
+  --color-accent: var(--cp-accent);
+  --color-accent-hover: var(--cp-accent-hover);
+  --color-accent-fg: var(--cp-accent-fg);
+  --color-ok: var(--color-emerald-500);
+  --color-warn: var(--color-amber-500);
+  --color-err: var(--color-rose-500);
+  --color-info: var(--color-sky-500);
+
+  --shadow-card: var(--cp-shadow-card);
+  --shadow-lift: var(--cp-shadow-lift);
+  --shadow-pop: var(--cp-shadow-pop);
+  --shadow-dialog: var(--cp-shadow-dialog);
+}
+
+:root {
+  --cp-rail: #f2f2f2;
+  --cp-panel: #f9f9f9;
+  --cp-canvas: #ffffff;
+  --cp-surface: #ffffff;
+  --cp-surface-hover: #f9f9f9;
+  --cp-track: #f3f3f3;
+  --cp-elevated: #ffffff;
+  --cp-subtle: #f9f9f9;
+  --cp-field: #ffffff;
+  --cp-hover: rgb(0 0 0 / 0.045);
+  --cp-selected: rgb(0 0 0 / 0.075);
+  --cp-ink: #0d0d0d;
+  --cp-ink-2: #5d5d5d;
+  --cp-ink-3: #8f8f8f;
+  --cp-ink-4: #c4c4c4;
+  --cp-line: #ececec;
+  --cp-line-strong: #e2e2e2;
+  --cp-accent: #0d0d0d;
+  --cp-accent-hover: #2f2f2f;
+  --cp-accent-fg: #ffffff;
+  /* 卡片只留柔和投影；细边由真实 border 画（ring/0.5px 阴影会被滚动容器裁掉，见 Surface.tsx） */
+  --cp-shadow-card: 0 1px 3px rgb(0 0 0 / 0.03), 0 8px 24px -10px rgb(0 0 0 / 0.07);
+  --cp-shadow-lift: 0 4px 10px rgb(0 0 0 / 0.04), 0 18px 40px -14px rgb(0 0 0 / 0.14);
+  --cp-shadow-pop: 0 0 0 0.5px rgb(0 0 0 / 0.08), 0 12px 32px -6px rgb(0 0 0 / 0.16),
+    0 2px 6px rgb(0 0 0 / 0.04);
+  --cp-shadow-dialog: 0 0 0 0.5px rgb(0 0 0 / 0.06), 0 28px 70px -14px rgb(0 0 0 / 0.28);
+}
+
+.dark {
+  --cp-rail: #0e0e0e;
+  --cp-panel: #171717;
+  --cp-canvas: #212121;
+  --cp-surface: #2a2a2a;
+  --cp-surface-hover: #313131;
+  --cp-track: #303030;
+  --cp-elevated: #2f2f2f;
+  --cp-subtle: #262626;
+  --cp-field: rgb(255 255 255 / 0.04);
+  --cp-hover: rgb(255 255 255 / 0.06);
+  --cp-selected: rgb(255 255 255 / 0.1);
+  --cp-ink: #ececec;
+  --cp-ink-2: #b4b4b4;
+  --cp-ink-3: #8a8a8a;
+  --cp-ink-4: #555555;
+  --cp-line: rgb(255 255 255 / 0.08);
+  --cp-line-strong: rgb(255 255 255 / 0.12);
+  --cp-accent: #ececec;
+  --cp-accent-hover: #ffffff;
+  --cp-accent-fg: #0d0d0d;
+  /* 深色下卡片靠底色差和描边区分，不要投影；写透明阴影而不是 none——none 不能出现在
+     阴影列表里，和 ring 等工具类拼在一起会让整条 box-shadow 失效 */
+  --cp-shadow-card: 0 0 #0000;
+  --cp-shadow-lift: 0 18px 40px -14px rgb(0 0 0 / 0.6);
+  --cp-shadow-pop: 0 0 0 0.5px rgb(255 255 255 / 0.1), 0 16px 40px -8px rgb(0 0 0 / 0.6);
+  --cp-shadow-dialog: 0 0 0 0.5px rgb(255 255 255 / 0.1), 0 28px 70px -14px rgb(0 0 0 / 0.7);
 }
 
 @layer base {
@@ -96,10 +357,23 @@
     zoom: var(--ui-scale);
   }
 
+  /*
+   * 图标统一线宽 1.75：lucide 默认 2 在这套中性配色里偏粗、偏抢眼。
+   * 只改「仍是默认值 2」的图标——显式传过 strokeWidth 的地方（例如刻意加粗的对勾）保持原样，
+   * 因为 presentation attribute 会被任何作者样式覆盖，不加这个属性选择器就会误伤它们。
+   */
+  svg.lucide[stroke-width="2"] {
+    stroke-width: 1.75;
+  }
+
   body {
     font-family: var(--font-sans);
     font-size: var(--text-sm);
     line-height: var(--text-sm--line-height);
+    color: var(--cp-ink);
+    background-color: var(--cp-rail);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   code,
@@ -107,6 +381,19 @@
   samp,
   pre {
     font-family: var(--font-mono);
+  }
+
+  ::selection {
+    background-color: rgb(42 110 232 / 0.2);
+  }
+
+  /*
+   * 焦点环：只在键盘导航时出现（:focus-visible），颜色用信息蓝的半透明，
+   * 在黑白界面里足够醒目又不会和主按钮的黑色混在一起。组件可以按需覆盖。
+   */
+  :focus-visible {
+    outline: 2px solid rgb(42 110 232 / 0.65);
+    outline-offset: 2px;
   }
 }
 
@@ -161,33 +448,27 @@ html.theme-transition-lock *::after {
   height: 0;
 }
 
+/*
+ * 路由进度条：一条 2px 的中性细条，不再用渐变和发光。
+ * 时序保持不变（最短停留与淡出由外壳控制），只换外观。
+ */
 .rp {
   position: fixed;
   inset: 0 0 auto;
   z-index: 50;
-  height: 0.25rem;
+  height: 2px;
   overflow: hidden;
   pointer-events: none;
   opacity: 1;
 }
 
-.rp::before,
-.rp::after {
+.rp::before {
   content: "";
   position: absolute;
   inset: 0;
-}
-
-.rp::before {
   transform-origin: left;
-  background: linear-gradient(90deg, #2563eb, #3b82f6 58%, #22c55e);
-  box-shadow: 0 0 14px rgba(59, 130, 246, 0.45);
+  background: var(--cp-ink);
   animation: rp-load 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-}
-
-.rp::after {
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.75), transparent);
-  animation: rp-shine 0.9s linear infinite;
 }
 
 .rp-done {
@@ -220,29 +501,15 @@ html.theme-transition-lock *::after {
   }
 }
 
-@keyframes rp-shine {
-  from {
-    transform: translateX(-100%);
-  }
-  to {
-    transform: translateX(100%);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .rp,
-  .rp::before,
-  .rp::after {
+  .rp::before {
     animation: none;
     transition: none;
   }
 
   .rp::before {
     transform: scaleX(1);
-  }
-
-  .rp::after {
-    display: none;
   }
 }
 
@@ -257,51 +524,46 @@ html.theme-transition-lock *::after {
   height: 0;
 }
 
+/* 列拖动落位后的短暂高亮：中性底色 + 两侧细线，说明「这一列刚被移到这里」 */
 @keyframes dataTableColumnSettle {
   0% {
-    background-color: rgba(37, 99, 235, 0.18);
+    background-color: rgb(13 13 13 / 0.07);
     box-shadow:
-      inset 2px 0 0 rgba(37, 99, 235, 0.5),
-      inset -2px 0 0 rgba(14, 165, 233, 0.32),
-      0 12px 26px -24px rgba(15, 23, 42, 0.55);
+      inset 2px 0 0 rgb(13 13 13 / 0.35),
+      inset -2px 0 0 rgb(13 13 13 / 0.18);
   }
   48% {
-    background-color: rgba(37, 99, 235, 0.11);
+    background-color: rgb(13 13 13 / 0.04);
     box-shadow:
-      inset 2px 0 0 rgba(37, 99, 235, 0.38),
-      inset -2px 0 0 rgba(14, 165, 233, 0.24),
-      0 10px 24px -24px rgba(15, 23, 42, 0.36);
+      inset 2px 0 0 rgb(13 13 13 / 0.25),
+      inset -2px 0 0 rgb(13 13 13 / 0.12);
   }
   100% {
-    background-color: rgba(37, 99, 235, 0);
+    background-color: rgb(13 13 13 / 0);
     box-shadow:
-      inset 0 0 0 rgba(37, 99, 235, 0),
-      inset 0 0 0 rgba(14, 165, 233, 0),
-      0 0 0 rgba(15, 23, 42, 0);
+      inset 0 0 0 rgb(13 13 13 / 0),
+      inset 0 0 0 rgb(13 13 13 / 0);
   }
 }
 
 @keyframes dataTableColumnSettleDark {
   0% {
-    background-color: rgba(59, 130, 246, 0.18);
+    background-color: rgb(255 255 255 / 0.08);
     box-shadow:
-      inset 2px 0 0 rgba(96, 165, 250, 0.48),
-      inset -2px 0 0 rgba(34, 211, 238, 0.28),
-      0 12px 26px -24px rgba(0, 0, 0, 0.7);
+      inset 2px 0 0 rgb(255 255 255 / 0.4),
+      inset -2px 0 0 rgb(255 255 255 / 0.2);
   }
   48% {
-    background-color: rgba(59, 130, 246, 0.1);
+    background-color: rgb(255 255 255 / 0.05);
     box-shadow:
-      inset 2px 0 0 rgba(96, 165, 250, 0.32),
-      inset -2px 0 0 rgba(34, 211, 238, 0.2),
-      0 10px 24px -24px rgba(0, 0, 0, 0.48);
+      inset 2px 0 0 rgb(255 255 255 / 0.28),
+      inset -2px 0 0 rgb(255 255 255 / 0.14);
   }
   100% {
-    background-color: rgba(59, 130, 246, 0);
+    background-color: rgb(255 255 255 / 0);
     box-shadow:
-      inset 0 0 0 rgba(96, 165, 250, 0),
-      inset 0 0 0 rgba(34, 211, 238, 0),
-      0 0 0 rgba(0, 0, 0, 0);
+      inset 0 0 0 rgb(255 255 255 / 0),
+      inset 0 0 0 rgb(255 255 255 / 0);
   }
 }
 
@@ -316,47 +578,56 @@ html.theme-transition-lock *::after {
 @media (prefers-reduced-motion: reduce) {
   [data-vt-column-settled-cell="true"] {
     animation: none;
-    background-color: rgba(37, 99, 235, 0.12);
+    background-color: rgb(13 13 13 / 0.05);
     box-shadow:
-      inset 2px 0 0 rgba(37, 99, 235, 0.38),
-      inset -2px 0 0 rgba(14, 165, 233, 0.24);
+      inset 2px 0 0 rgb(13 13 13 / 0.25),
+      inset -2px 0 0 rgb(13 13 13 / 0.12);
   }
 
   .dark [data-vt-column-settled-cell="true"] {
-    background-color: rgba(59, 130, 246, 0.12);
+    background-color: rgb(255 255 255 / 0.06);
     box-shadow:
-      inset 2px 0 0 rgba(96, 165, 250, 0.34),
-      inset -2px 0 0 rgba(34, 211, 238, 0.22);
+      inset 2px 0 0 rgb(255 255 255 / 0.28),
+      inset -2px 0 0 rgb(255 255 255 / 0.14);
   }
 }
 
-/* Dark mode scrollbar */
-.dark {
-  scrollbar-color: rgba(255 255 255 / 0.2) transparent;
+/* 滚动条：浅色与深色都用细的圆角滑块，轨道透明 */
+:root {
+  scrollbar-color: rgb(0 0 0 / 0.18) transparent;
 }
 
-.dark ::-webkit-scrollbar {
+.dark {
+  scrollbar-color: rgb(255 255 255 / 0.2) transparent;
+}
+
+::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
-.dark ::-webkit-scrollbar-track {
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
   background: transparent;
 }
 
-.dark ::-webkit-scrollbar-thumb {
-  background-color: rgba(255 255 255 / 0.2);
+::-webkit-scrollbar-thumb {
+  background-color: rgb(0 0 0 / 0.18);
   border-radius: var(--radius-full);
   border: 2px solid transparent;
   background-clip: content-box;
 }
 
-.dark ::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(255 255 255 / 0.35);
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(0 0 0 / 0.3);
 }
 
-.dark ::-webkit-scrollbar-corner {
-  background: transparent;
+.dark ::-webkit-scrollbar-thumb {
+  background-color: rgb(255 255 255 / 0.2);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(255 255 255 / 0.35);
 }
 
 /* Loading 淡入动画 */
@@ -371,6 +642,7 @@ html.theme-transition-lock *::after {
   }
 }
 
+/* 生图任务进行中的占位动画：点阵缓慢漂移 + 一层很淡的流光，表达「正在生成」 */
 @keyframes imageGenerationDotsDrift {
   0% {
     transform: translate3d(0, 0, 0);
@@ -408,7 +680,7 @@ html.theme-transition-lock *::after {
   position: absolute;
   inset: -20px;
   pointer-events: none;
-  background-image: radial-gradient(circle, rgba(148, 163, 184, 0.2) 1.2px, transparent 1.45px);
+  background-image: radial-gradient(circle, rgb(0 0 0 / 0.14) 1.2px, transparent 1.45px);
   background-repeat: repeat;
   background-size: 16px 16px;
   transform-origin: center;
@@ -421,87 +693,39 @@ html.theme-transition-lock *::after {
   inset: -24%;
   pointer-events: none;
   background:
-    radial-gradient(circle at 28% 28%, rgba(255, 255, 255, 0.55), transparent 28%),
-    radial-gradient(circle at 72% 62%, rgba(191, 219, 254, 0.3), transparent 24%);
+    radial-gradient(circle at 28% 28%, rgb(255 255 255 / 0.55), transparent 28%),
+    radial-gradient(circle at 72% 62%, rgb(0 0 0 / 0.04), transparent 24%);
   filter: blur(22px);
   will-change: transform, opacity;
   animation: imageGenerationFlowSweep 8.2s ease-in-out infinite;
 }
 
 .dark .image-generation-dots-layer {
-  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.14) 1.2px, transparent 1.45px);
+  background-image: radial-gradient(circle, rgb(255 255 255 / 0.14) 1.2px, transparent 1.45px);
 }
 
 .dark .image-generation-flow-layer {
   background:
-    radial-gradient(circle at 28% 28%, rgba(255, 255, 255, 0.18), transparent 28%),
-    radial-gradient(circle at 72% 62%, rgba(148, 163, 184, 0.16), transparent 24%);
+    radial-gradient(circle at 28% 28%, rgb(255 255 255 / 0.12), transparent 28%),
+    radial-gradient(circle at 72% 62%, rgb(255 255 255 / 0.06), transparent 24%);
 }
 
-/* ── PageLoader full-screen variant ── */
+/*
+ * 全屏加载（PageLoader 的 initial / restoring）：中性底色 + 一个细环，不再铺模糊光斑。
+ * index.html / manage.html 里内联了同一套变量，保证 React 接管前后没有色差。
+ */
 :root {
-  --pl-bg: #f4f4f5;
-  --pl-ring-outer: rgba(99, 102, 241, 0.6);
-  --pl-ring-inner: rgba(20, 184, 166, 0.75);
-  --pl-text: #64748b;
-  --pl-glow-1: rgba(59, 130, 246, 0.12);
-  --pl-glow-2: rgba(20, 184, 166, 0.1);
-  --pl-glow-3: rgba(168, 85, 247, 0.08);
+  --pl-bg: #ffffff;
+  --pl-ring-track: rgb(13 13 13 / 0.1);
+  --pl-ring: #0d0d0d;
+  --pl-text: #8f8f8f;
 }
 
 .dark {
-  --pl-bg: #09090b;
-  --pl-ring-outer: rgba(129, 140, 248, 0.7);
-  --pl-ring-inner: rgba(94, 234, 212, 0.8);
-  --pl-text: rgba(255, 255, 255, 0.5);
-  --pl-glow-1: rgba(99, 102, 241, 0.18);
-  --pl-glow-2: rgba(45, 212, 191, 0.12);
-  --pl-glow-3: rgba(168, 85, 247, 0.1);
-}
-
-.pl-glow {
-  position: absolute;
-  border-radius: var(--radius-full);
-  filter: blur(80px);
-  pointer-events: none;
-  animation: pl-glow-pulse 4s ease-in-out infinite alternate;
-}
-
-.pl-glow-1 {
-  width: 28rem;
-  height: 28rem;
-  top: -8rem;
-  left: -6rem;
-  background: var(--pl-glow-1);
-}
-
-.pl-glow-2 {
-  width: 24rem;
-  height: 24rem;
-  top: -4rem;
-  right: -6rem;
-  background: var(--pl-glow-2);
-  animation-delay: 1.3s;
-}
-
-.pl-glow-3 {
-  width: 28rem;
-  height: 28rem;
-  bottom: -8rem;
-  left: 25%;
-  background: var(--pl-glow-3);
-  animation-delay: 2.6s;
-}
-
-@keyframes pl-glow-pulse {
-  0% {
-    opacity: 0.5;
-    transform: scale(0.95);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1.05);
-  }
+  --pl-bg: #212121;
+  --pl-ring-track: rgb(255 255 255 / 0.12);
+  --pl-ring: #ececec;
+  --pl-text: #8a8a8a;
 }
 
 /*
@@ -526,41 +750,33 @@ html.theme-transition-lock *::after {
   }
 }
 
-/*
- * Radix 浮层（下拉菜单、子菜单）的开合动画。
- * 朝着触发元素的反方向滑入 4px，读起来像「从按钮长出来」；关闭更快收回。
- */
-@keyframes ui-popover-in {
+/* 额度条、资源条首次出现时从 0 长到实际宽度（只写 from，终点就是行内的 width） */
+@keyframes quota-bar-grow {
   from {
-    opacity: 0;
-    transform: scale(0.96) translateY(var(--ui-popover-offset, -4px));
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
+    width: 0;
   }
 }
 
-@keyframes ui-popover-out {
+/* 监控中心的迷你趋势线首次出现时从左到右展开（裁剪而不是缩放，线宽不会被拉变形） */
+@keyframes monitor-sparkline-reveal {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
   to {
-    opacity: 0;
-    transform: scale(0.97);
+    clip-path: inset(0 0 0 0);
   }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .ui-popover-motion[data-state="open"] {
-    animation: ui-popover-in 150ms cubic-bezier(0.16, 1, 0.3, 1);
+/* 实时状态点外圈的呼吸光晕 */
+@keyframes monitor-live-ping {
+  0% {
+    transform: scale(1);
+    opacity: 0.55;
   }
-  .ui-popover-motion[data-state="closed"] {
-    animation: ui-popover-out 100ms cubic-bezier(0.4, 0, 1, 1) forwards;
-  }
-  .ui-popover-motion[data-side="top"] {
-    --ui-popover-offset: 4px;
-  }
-  .ui-popover-motion[data-side="left"],
-  .ui-popover-motion[data-side="right"] {
-    --ui-popover-offset: 0px;
+  80%,
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
   }
 }
 
@@ -572,5 +788,36 @@ html.theme-transition-lock *::after {
   }
   50% {
     opacity: 0.45;
+  }
+}
+
+/*
+ * 弹窗「拒绝关闭」的轻晃：填写过内容后点遮罩不会关闭弹窗，面板横向轻晃两下，
+ * 告诉用户「这里还有没保存的内容，用按钮关闭」。只动 translate（独立属性，不和进场用的
+ * scale / translate 过渡互相覆盖——动画结束后回到 translate-y-0 的静止值）。
+ */
+@keyframes overlay-nudge {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  20% {
+    translate: -6px 0;
+  }
+  45% {
+    translate: 5px 0;
+  }
+  70% {
+    translate: -2px 0;
+  }
+}
+
+.overlay-nudge {
+  animation: overlay-nudge 360ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay-nudge {
+    animation: none;
   }
 }

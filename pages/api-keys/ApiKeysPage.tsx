@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Plus, KeyRound, RefreshCw, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, KeyRound, RefreshCw, RotateCw, Trash2 } from "lucide-react";
 import {
   apiKeyEntriesApi,
   apiKeysApi,
@@ -29,15 +29,15 @@ import { createApiKeyColumns } from "./components/ApiKeyColumns";
 import { DeleteApiKeyModal } from "./components/DeleteApiKeyModal";
 import { copyTextToClipboard } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
-import { Button } from "@code-proxy/ui";
+import { Button, buttonClassName } from "@code-proxy/ui";
 import { EmptyState } from "@code-proxy/ui";
-import { Modal } from "@code-proxy/ui";
-import { ConfirmModal } from "@code-proxy/ui";
+import { ConfirmModal, SecretRevealModal } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
 import { DataTable } from "@code-proxy/ui";
 import { ApiKeyFormModal } from "./components/ApiKeyFormModal";
 import { ApiKeyPeriodQuotaResetModal } from "./components/ApiKeyPeriodQuotaResetModal";
-import { ApiKeyUsageModal } from "./components/ApiKeyUsageModal";
+import { ApiKeyUsageDialogs } from "./components/ApiKeyUsageDialogs";
+import { ApiKeySubject } from "./components/ApiKeySubject";
 import { ApiKeyResetHistoryModal } from "./components/ApiKeyResetHistoryModal";
 import { useApiKeyPermissionOptions } from "@features/api-key-restrictions";
 import { useApiKeyUsageView } from "./hooks/useApiKeyUsageView";
@@ -49,8 +49,6 @@ import {
 } from "@code-proxy/domain/ccswitch/ccswitchImportLinks";
 import type { CcSwitchImportConfigListItem } from "@code-proxy/domain/ccswitch/ccswitchImportConfigList";
 import { ccSwitchConfigMatchesApiKeyPermissions } from "@code-proxy/domain/ccswitch/ccswitchImportCompatibility";
-import { LogContentModal } from "@features/log-content-viewer";
-import { ErrorDetailModal } from "@features/log-content-viewer";
 import type { ApiKeyFormValues } from "./types";
 import {
   OwnedApiKeyQuotaModal,
@@ -104,46 +102,8 @@ export function ApiKeysPage({
   const [permissionProfiles, setPermissionProfiles] = useState<ApiKeyPermissionProfile[]>([]);
   const [form, setForm] = useState<ApiKeyFormValues>(() => makeEmptyApiKeyForm());
   const { channelGroupItems, refreshPermissionOptions } = useApiKeyPermissionOptions();
-  const {
-    usageViewKey,
-    usageViewName,
-    usageLoading,
-    usageTotalCount,
-    usageSummary,
-    usageCurrentPage,
-    usagePageSize,
-    setUsagePageSize,
-    usageLastUpdatedText,
-    usageTimeRange,
-    setUsageTimeRange,
-    usageKeyQuery,
-    setUsageKeyQuery,
-    usageChannelQuery,
-    setUsageChannelQuery,
-    usageModelQuery,
-    setUsageModelQuery,
-    usageStatusFilter,
-    setUsageStatusFilter,
-    usageContentModalOpen,
-    setUsageContentModalOpen,
-    usageContentModalLogId,
-    usageContentModalModel,
-    usageContentModalTab,
-    usageErrorModalOpen,
-    setUsageErrorModalOpen,
-    usageErrorModalLogId,
-    usageErrorModalModel,
-    usageLogColumns,
-    usageRows,
-    usageTotalPages,
-    usageKeyOptions,
-    usageChannelOptions,
-    usageModelOptions,
-    usageStatusOptions,
-    fetchUsageLogs,
-    handleViewUsage,
-    closeUsageModal,
-  } = useApiKeyUsageView();
+  const usageView = useApiKeyUsageView();
+  const { usageViewKey, handleViewUsage } = usageView;
 
   /* ─── load ─── */
 
@@ -392,11 +352,8 @@ export function ApiKeysPage({
     setShowCreate(true);
   };
 
+  // 名称 / Key 值必填由表单弹窗就地校验，走到这里时已经通过。
   const handleCreate = async () => {
-    if (!form.name.trim()) {
-      notify({ type: "error", message: t("api_keys_page.name_required") });
-      return;
-    }
     setSaving(true);
     try {
       if (endUserIdFilter) {
@@ -413,10 +370,6 @@ export function ApiKeysPage({
         }
         notify({ type: "success", message: t("api_keys_page.created_success") });
       } else {
-        if (!form.key.trim()) {
-          notify({ type: "error", message: t("api_keys_page.key_empty") });
-          return;
-        }
         const newEntry: ApiKeyEntry = {
           key: form.key.trim(),
           name: form.name.trim(),
@@ -479,16 +432,8 @@ export function ApiKeysPage({
     if (editIndex === null) return;
     const currentEntry = entries[editIndex];
     if (!currentEntry) return;
-    if (!form.name.trim()) {
-      notify({ type: "error", message: t("api_keys_page.name_required") });
-      return;
-    }
     const originalKey = currentEntry.key;
     const newKey = form.key.trim();
-    if (!endUserIdFilter && !newKey) {
-      notify({ type: "error", message: t("api_keys_page.key_empty") });
-      return;
-    }
     setSaving(true);
     try {
       if (endUserIdFilter) {
@@ -829,10 +774,8 @@ export function ApiKeysPage({
   const toolbar = (
     <div className="flex flex-wrap justify-end gap-2">
       {endUserIdFilter && !embed ? (
-        <Link
-          to="/access/end-users"
-          className="inline-flex h-8 items-center rounded-xl border border-slate-900/8 bg-white px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white/80 dark:hover:bg-neutral-800"
-        >
+        <Link to="/access/end-users" className={buttonClassName({ variant: "secondary", size: "sm" })}>
+          <ArrowLeft size={14} aria-hidden="true" />
           {t("end_users.back_to_users", { defaultValue: "返回用户账号" })}
         </Link>
       ) : null}
@@ -842,7 +785,7 @@ export function ApiKeysPage({
       </Button>
       {selectedEntries.length > 0 && !endUserIdFilter ? (
         <Button
-          variant="danger"
+          variant="secondary-danger"
           size="sm"
           onClick={() => setBatchDeleteOpen(true)}
           disabled={saving}
@@ -928,7 +871,7 @@ export function ApiKeysPage({
     <div className={embed ? "flex h-full min-h-0 flex-col" : "flex flex-1 flex-col"}>
       {embed ? (
         <div className="flex h-full min-h-0 flex-col">
-          <div className="flex shrink-0 items-center justify-end border-b border-slate-100 px-4 py-3 dark:border-white/10">
+          <div className="flex shrink-0 items-center justify-end border-b border-line px-4 py-3">
             {toolbar}
           </div>
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 py-3">{tableBody}</div>
@@ -1022,6 +965,7 @@ export function ApiKeysPage({
             saving={saving}
             form={form}
             setForm={setForm}
+            originalKey={editIndex === null ? undefined : entries[editIndex]?.key}
             permissionProfileOptions={permissionProfileOptions}
             onClose={() => setEditIndex(null)}
             onSubmit={handleEdit}
@@ -1037,25 +981,23 @@ export function ApiKeysPage({
         description={t("end_users.rotate_key_desc", {
           defaultValue: "轮换后旧密钥会立即失效。新密钥只展示一次，请立即复制并更新调用方。",
         })}
+        // 轮换换的是凭证、Key 本身还在，属于「可恢复但影响大」：琥珀色 + 轮换图标，不用删除的红色垃圾桶。
+        variant="warning"
+        icon={<RotateCw />}
+        subject={rotateIndex === null ? null : <ApiKeySubject entry={entries[rotateIndex]} />}
         confirmText={t("end_users.rotate_key", { defaultValue: "轮换密钥" })}
         busy={saving}
         onConfirm={() => void handleRotate()}
       />
 
-      <Modal
+      <SecretRevealModal
         open={Boolean(createdSecretOnce)}
         onClose={() => setCreatedSecretOnce(null)}
         title={t("end_users.copy_secret", { defaultValue: "请立即复制 API Key" })}
-      >
-        <p className="mb-2 text-sm text-amber-600 dark:text-amber-300">
-          {t("end_users.copy_secret_hint", {
-            defaultValue: "离开后无法再查看明文 Key。已尝试复制到剪贴板。",
-          })}
-        </p>
-        <code className="block select-all break-all rounded bg-slate-100 p-3 text-sm dark:bg-neutral-900">
-          {createdSecretOnce}
-        </code>
-      </Modal>
+        secret={createdSecretOnce ?? ""}
+        secretLabel={t("api_keys_page.form_key_label")}
+        warning={t("end_users.copy_secret_hint")}
+      />
 
       <DeleteApiKeyModal
         t={t}
@@ -1064,6 +1006,7 @@ export function ApiKeysPage({
         saving={saving}
         deleteLogsOnDelete={deleteLogsOnDelete}
         onDeleteLogsChange={setDeleteLogsOnDelete}
+        allowDeleteLogs={!endUserIdFilter}
         onClose={() => {
           setDeleteIndex(null);
           setDeleteLogsOnDelete(true);
@@ -1116,51 +1059,7 @@ export function ApiKeysPage({
         onReset={loadEntries}
       />
 
-      <ApiKeyUsageModal
-        open={usageViewKey !== null}
-        onClose={closeUsageModal}
-        usageViewName={usageViewName}
-        maskedKey={usageViewKey ? maskApiKey(usageViewKey) : ""}
-        usageTotalCount={usageTotalCount}
-        usageSummary={usageSummary}
-        usageTimeRange={usageTimeRange}
-        setUsageTimeRange={setUsageTimeRange}
-        fetchUsageLogs={fetchUsageLogs}
-        usagePageSize={usagePageSize}
-        usageLoading={usageLoading}
-        usageLastUpdatedText={usageLastUpdatedText}
-        usageKeyQuery={usageKeyQuery}
-        setUsageKeyQuery={setUsageKeyQuery}
-        usageKeyOptions={usageKeyOptions}
-        usageChannelQuery={usageChannelQuery}
-        setUsageChannelQuery={setUsageChannelQuery}
-        usageChannelOptions={usageChannelOptions}
-        usageModelQuery={usageModelQuery}
-        setUsageModelQuery={setUsageModelQuery}
-        usageModelOptions={usageModelOptions}
-        usageStatusFilter={usageStatusFilter}
-        setUsageStatusFilter={setUsageStatusFilter}
-        usageStatusOptions={usageStatusOptions}
-        usageLogColumns={usageLogColumns}
-        usageRows={usageRows}
-        usageCurrentPage={usageCurrentPage}
-        usageTotalPages={usageTotalPages}
-        setUsagePageSize={setUsagePageSize}
-      />
-
-      <LogContentModal
-        open={usageContentModalOpen}
-        logId={usageContentModalLogId}
-        displayModel={usageContentModalModel}
-        initialTab={usageContentModalTab}
-        onClose={() => setUsageContentModalOpen(false)}
-      />
-      <ErrorDetailModal
-        open={usageErrorModalOpen}
-        logId={usageErrorModalLogId}
-        model={usageErrorModalModel}
-        onClose={() => setUsageErrorModalOpen(false)}
-      />
+      <ApiKeyUsageDialogs view={usageView} maskedKey={usageViewKey ? maskApiKey(usageViewKey) : ""} />
     </div>
   );
 }

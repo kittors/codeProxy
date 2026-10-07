@@ -12,6 +12,7 @@ import {
   ZoomOut,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useDialogBehavior } from "./useDialogBehavior";
 
 const MIN_SCALE = 1;
 const MAX_SCALE = 4;
@@ -124,16 +125,12 @@ export function ImagePreviewOverlay({
     return () => window.removeEventListener("resize", updateViewport);
   }, [open]);
 
-  useEffect(() => {
-    if (!open) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onClose, open]);
+  // 预览常常是从弹窗里打开的（日志内容、生图测试）：登记进同一个叠层，Esc 只关预览，
+  // 下面的弹窗不跟着关；Tab 留在预览里，关闭后焦点回到被点开的那张图。
+  // 没有图时组件什么也不渲染，也就不能占着叠层的最上层（否则下面弹窗的 Esc 会失灵）。
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const shown = open && Boolean(resolvedImageSrc);
+  useDialogBehavior({ open: shown, visible: shown, panelRef, onEscape: onClose, initialFocus: "panel" });
 
   const geometry = useMemo(() => {
     const naturalWidth = naturalSize.width || 1;
@@ -246,16 +243,19 @@ export function ImagePreviewOverlay({
     element.releasePointerCapture(event.pointerId);
   };
 
+  // 看图时背后是压暗的遮罩，工具条统一用深色实心胶囊 + 白色图标，深浅色模式一致。
   const controlButtonClass =
-    "inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-700 transition hover:bg-white/70 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-35 dark:text-white/78 dark:hover:bg-white/12 dark:hover:text-white";
+    "inline-flex h-9 w-9 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/12 hover:text-white disabled:cursor-not-allowed disabled:opacity-35";
 
   return createPortal(
     <div
+      ref={panelRef}
       role="dialog"
       aria-modal="true"
       aria-label={title}
+      tabIndex={-1}
       data-variant="image-only"
-      className="fixed inset-0 z-[220] bg-slate-900/40 backdrop-blur-sm dark:bg-black/50"
+      className="fixed inset-0 z-[220] bg-black/60 outline-none backdrop-blur-sm dark:bg-black/70"
     >
       <button
         type="button"
@@ -327,7 +327,7 @@ export function ImagePreviewOverlay({
       </div>
 
       <div className="pointer-events-none absolute right-0 bottom-5 left-0 z-20 flex justify-center px-4">
-        <div className="pointer-events-auto flex items-center gap-1 rounded-full border border-white/25 bg-white/68 p-1.5 shadow-[0_16px_48px_rgba(15,23,42,0.22)] backdrop-blur-xl dark:border-white/12 dark:bg-neutral-950/55">
+        <div className="pointer-events-auto flex items-center gap-1 rounded-full bg-black/80 p-1.5 shadow-[0_16px_40px_-8px_rgb(0_0_0/0.45)] ring-1 ring-white/10">
           <button
             type="button"
             className={controlButtonClass}

@@ -109,15 +109,14 @@ describe("下拉触发器表面", () => {
     const user = userEvent.setup();
     const { unmount } = renderTrigger("MultiSelect", false);
 
-    // MultiSelect 的触发器没有 combobox role，按可访问名之外的唯一 button 定位。
-    const trigger = screen.getAllByRole("button")[0];
+    const trigger = screen.getByRole("combobox");
     expect(trigger).toHaveAttribute("data-state", "closed");
     await user.click(trigger);
     expect(trigger).toHaveAttribute("data-state", "open");
     unmount();
 
     renderTrigger("MultiSelect", true);
-    const disabledTrigger = screen.getAllByRole("button")[0];
+    const disabledTrigger = screen.getByRole("combobox");
     expect(disabledTrigger).toBeDisabled();
     expect(disabledTrigger.className).toMatch(/\bdisabled:bg-slate-100\/80\b/);
   });

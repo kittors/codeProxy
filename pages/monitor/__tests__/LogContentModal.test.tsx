@@ -1,4 +1,4 @@
-import { act, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
@@ -23,9 +23,12 @@ describe("LogContentModal", () => {
       "features/log-content-viewer/components/LogContentModal.tsx",
     );
 
-    expect(renderingSource).toContain("AnimatePresence");
-    expect(renderingSource).toContain('exit="hidden"');
-    expect(renderingSource).toContain("w-[min(calc(100vw-2rem),1040px)]");
+    // 外壳是通用 Modal：进退场、叠层（Esc 只关最上层）与焦点都交给它，不再自绘 portal、自己监听 Esc。
+    expect(renderingSource).toContain("<Modal");
+    expect(renderingSource).not.toContain("createPortal");
+    expect(renderingSource).not.toContain('"Escape"');
+    // 宽度用编辑器档（与原来的 1040px 相当），面板高度固定，切换页签时不跳动。
+    expect(renderingSource).toContain('size="2xl"');
     expect(renderingSource).toContain("h-[min(82dvh,760px)]");
     expect(modalSource).toContain("LOADING_EXIT_MS");
     expect(modalSource).toContain("CONTENT_ENTER_MS");
@@ -33,11 +36,46 @@ describe("LogContentModal", () => {
     expect(modalSource).toContain('filter: "blur(3px)"');
     expect(modalSource).not.toContain("y: 10");
     expect(modalSource).toContain("relative min-h-0 flex-1");
+    // 内容区：外层负责定位与进退场，里面是带上下渐隐的滚动容器。
     expect(modalSource).toContain(
-      "absolute inset-0 overflow-y-auto overscroll-contain",
+      '<ScrollFade className="h-full overflow-y-auto overscroll-contain">',
     );
     expect(modalSource).toContain("min-h-0 flex-1 items-center justify-center");
     expect(modalSource).toContain("exit={{ opacity: 0");
+  });
+
+  test("is a labelled modal dialog that closes on Escape through the shared overlay stack", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const onClose = vi.fn();
+    const fetchPartFn = vi.fn(async (_id: number, part: "input" | "output") => ({
+      id: 1,
+      model: "gpt-test",
+      part,
+      content: "",
+    }));
+
+    render(
+      <ThemeProvider>
+        <LogContentModal
+          open
+          logId={1}
+          displayModel="gpt-test"
+          onClose={onClose}
+          fetchPartFn={fetchPartFn}
+        />
+      </ThemeProvider>,
+    );
+
+    const dialog = screen.getByRole("dialog", { name: "请求详情 · gpt-test" });
+    expect(dialog).toHaveAttribute("aria-modal", "true");
+    // 视图切换带文字，不再只有两个图标。
+    expect(within(dialog).getByRole("tab", { name: "原始数据" })).toBeInTheDocument();
+    expect(within(dialog).getByRole("tab", { name: "渲染视图" })).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.keyDown(window, { key: "Escape" });
+    });
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   test("shows request details directly without a tabs toolbar when body storage is disabled", async () => {

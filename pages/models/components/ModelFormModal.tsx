@@ -1,16 +1,30 @@
+import { Boxes, CircleDollarSign, Info } from "lucide-react";
+import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Button,
-  Modal,
   floatingPanelSurface,
+  FormField,
+  FormSection,
+  Modal,
+  rules,
   SearchableSelect,
-  Select,
+  SegmentedControl,
+  SettingGroup,
+  SettingRow,
+  Textarea,
   TextInput,
   ToggleSwitch,
+  useFormValidation,
   type SearchableSelectOption,
 } from "@code-proxy/ui";
 import { formatPrice, normalizeOwnerValue } from "../modelsUtils";
 import type { ModelFormState, ModelItem, ModelPageTab, ModelPricingMode } from "../types";
+
+const FORM_ID = "model-config-form";
+
+/** 价格：非负数，最多 6 位小数（与列表里的价格格式一致）。 */
+const PRICE = rules.pattern(/^\d+(\.\d{1,6})?$/, "price");
 
 interface ModelFormModalProps {
   form: ModelFormState | null;
@@ -26,6 +40,10 @@ interface ModelFormModalProps {
   onSuggestionsOpenChange: (open: boolean) => void;
 }
 
+/**
+ * 新增 / 编辑模型：先说「这是什么模型」（ID、归属、描述、是否启用），再说「怎么计费」。
+ * 计费方式只有两种，用分段控件直接摊开，切换后只显示对应的价格输入；价格就地校验。
+ */
 export function ModelFormModal({
   form,
   activeTab,
@@ -40,235 +58,264 @@ export function ModelFormModal({
   onSuggestionsOpenChange,
 }: ModelFormModalProps) {
   const { t } = useTranslation();
+  const formRef = useRef<HTMLFormElement | null>(null);
+  const values = form ?? {
+    id: "",
+    pricePerCall: "",
+    inputPrice: "",
+    outputPrice: "",
+    cachedPrice: "",
+  };
+  const perCall = form?.mode === "call";
+  const validation = useFormValidation(values as ModelFormState, {
+    id: [rules.required(), rules.maxLength(200)],
+    pricePerCall: perCall ? [PRICE] : [],
+    inputPrice: perCall ? [] : [PRICE],
+    outputPrice: perCall ? [] : [PRICE],
+    cachedPrice: perCall ? [] : [PRICE],
+  });
+  const { reset } = validation;
+  const open = form !== null;
+  useEffect(() => {
+    if (open) reset();
+  }, [open, reset]);
+
+  const submit = () => {
+    if (!validation.validate()) {
+      validation.focusFirstInvalid(formRef.current);
+      return;
+    }
+    onSave();
+  };
+
+  const reusable = Boolean(form && !form.originalId && activeTab === "library");
+  const priceField = (
+    key: "pricePerCall" | "inputPrice" | "outputPrice" | "cachedPrice",
+    id: string,
+    labelKey: string,
+    placeholder: string,
+  ) => (
+    <FormField label={t(labelKey)} htmlFor={id} error={validation.error(key)}>
+      <TextInput
+        inputMode="decimal"
+        value={form?.[key] ?? ""}
+        onChange={(event) => onUpdateForm({ [key]: event.target.value } as Partial<ModelFormState>)}
+        {...validation.bind(key)}
+        placeholder={placeholder}
+        startAdornment={<span className="text-xs text-ink-3">$</span>}
+        className="tabular-nums"
+      />
+    </FormField>
+  );
 
   return (
     <Modal
-      open={form !== null}
+      open={open}
       onClose={onClose}
       title={form?.originalId ? t("models_page.edit_model") : t("models_page.add_model")}
       description={t("models_page.config_desc")}
+      icon={<Boxes />}
+      size="lg"
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
             {t("models_page.cancel")}
           </Button>
-          <Button variant="primary" onClick={onSave} disabled={saving}>
-            {saving ? t("models_page.saving") : t("models_page.save")}
+          <Button type="submit" form={FORM_ID} variant="primary" loading={saving}>
+            {t("models_page.save")}
           </Button>
         </>
       }
     >
       {form ? (
-        <div className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <label
+        <form
+          ref={formRef}
+          id={FORM_ID}
+          noValidate
+          className="space-y-6"
+          onSubmit={(event) => {
+            event.preventDefault();
+            submit();
+          }}
+        >
+          <FormSection
+            title={t("models_page.section_basics")}
+            description={t("models_page.section_basics_desc")}
+            icon={<Info />}
+          >
+            <div className="grid gap-x-4 sm:grid-cols-2">
+              <FormField
+                label={t("models_page.model_id")}
                 htmlFor="model-config-id"
-                className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80"
+                required
+                error={validation.error("id")}
+                description={reusable ? t("models_page.model_id_reuse_hint") : undefined}
               >
-                {t("models_page.model_id")}
-              </label>
-              <div className="relative">
-                <TextInput
-                  id="model-config-id"
-                  role={!form.originalId && activeTab === "library" ? "combobox" : undefined}
-                  aria-label={t("models_page.model_id")}
-                  aria-autocomplete={
-                    !form.originalId && activeTab === "library" ? "list" : undefined
+                {/* 外层 div 自带 id：FormField 只给没有 id 的子元素补 id，输入框保留自己的 id 给 label 用；
+                    说明与错误的 id 由 htmlFor 推出，手动挂到输入框上。 */}
+                <div className="relative" id="model-config-id-field">
+                  <TextInput
+                    id="model-config-id"
+                    aria-describedby={
+                      validation.error("id")
+                        ? "model-config-id-error"
+                        : reusable
+                          ? "model-config-id-description"
+                          : undefined
+                    }
+                    role={reusable ? "combobox" : undefined}
+                    aria-label={t("models_page.model_id")}
+                    aria-autocomplete={reusable ? "list" : undefined}
+                    aria-controls={
+                      showReusableModelCandidates ? "model-config-id-reuse-options" : undefined
+                    }
+                    aria-expanded={reusable ? showReusableModelCandidates : undefined}
+                    aria-invalid={validation.error("id") ? true : undefined}
+                    value={form.id}
+                    onChange={(event) => {
+                      const nextId = event.target.value;
+                      onUpdateForm({ id: nextId });
+                      onSuggestionsOpenChange(Boolean(nextId.trim()));
+                    }}
+                    onFocus={() => onSuggestionsOpenChange(Boolean(form.id.trim()))}
+                    onBlur={() => {
+                      validation.touch("id");
+                      window.setTimeout(() => onSuggestionsOpenChange(false), 120);
+                    }}
+                    placeholder={
+                      reusable ? t("models_page.model_id_reuse_placeholder") : "gpt-4.1"
+                    }
+                    autoComplete="off"
+                    spellCheck={false}
+                    className="font-mono"
+                  />
+                  {showReusableModelCandidates ? (
+                    <div
+                      id="model-config-id-reuse-options"
+                      role="listbox"
+                      data-state="open"
+                      data-side="bottom"
+                      className={`absolute left-0 right-0 top-full z-30 mt-2 max-h-64 overflow-y-auto p-1 ${floatingPanelSurface}`}
+                    >
+                      {reusableModelCandidates.map((model) => (
+                        <button
+                          key={model.id}
+                          type="button"
+                          role="option"
+                          aria-selected={form.id === model.id}
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={() => onApplyReusableModel(model)}
+                          className="flex w-full min-w-0 items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-hover"
+                        >
+                          <span className="min-w-0">
+                            <span className="block truncate font-medium text-ink">{model.id}</span>
+                            <span className="block truncate text-xs text-ink-3">
+                              {model.description || model.owned_by}
+                            </span>
+                          </span>
+                          <span className="shrink-0 text-xs font-medium text-ink-3">
+                            {formatPrice(model, t("models_page.not_priced"))}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              </FormField>
+              <FormField label={t("models_page.owner")} description={t("models_page.owner_hint")}>
+                <SearchableSelect
+                  value={form.ownedBy}
+                  onChange={(ownedBy) => onUpdateForm({ ownedBy })}
+                  onCreate={(ownedBy) => onUpdateForm({ ownedBy: normalizeOwnerValue(ownedBy) })}
+                  options={ownerOptions}
+                  placeholder={t("models_page.owner_placeholder")}
+                  searchPlaceholder={t("models_page.owner_search_placeholder")}
+                  aria-label={t("models_page.owner")}
+                  allowCreate
+                  normalizeCreateValue={normalizeOwnerValue}
+                  createLabel={(ownedBy) =>
+                    t("models_page.owner_create_option", { owner: normalizeOwnerValue(ownedBy) })
                   }
-                  aria-controls={
-                    showReusableModelCandidates ? "model-config-id-reuse-options" : undefined
-                  }
-                  aria-expanded={
-                    !form.originalId && activeTab === "library"
-                      ? showReusableModelCandidates
-                      : undefined
-                  }
-                  value={form.id}
-                  onChange={(event) => {
-                    const nextId = event.target.value;
-                    onUpdateForm({ id: nextId });
-                    onSuggestionsOpenChange(Boolean(nextId.trim()));
-                  }}
-                  onFocus={() => onSuggestionsOpenChange(Boolean(form.id.trim()))}
-                  onBlur={() => {
-                    window.setTimeout(() => onSuggestionsOpenChange(false), 120);
-                  }}
-                  placeholder={
-                    !form.originalId && activeTab === "library"
-                      ? t("models_page.model_id_reuse_placeholder")
-                      : "gpt-4.1"
-                  }
-                  autoComplete="off"
                 />
-                {showReusableModelCandidates ? (
-                  <div
-                    id="model-config-id-reuse-options"
-                    role="listbox"
-                    data-state="open"
-                    data-side="bottom"
-                    className={`absolute left-0 right-0 top-full z-30 mt-2 max-h-64 overflow-y-auto p-1 ${floatingPanelSurface}`}
-                  >
-                    {reusableModelCandidates.map((model) => (
-                      <button
-                        key={model.id}
-                        type="button"
-                        role="option"
-                        aria-selected={form.id === model.id}
-                        onMouseDown={(event) => event.preventDefault()}
-                        onClick={() => onApplyReusableModel(model)}
-                        className="flex w-full min-w-0 items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-[#F4F4F5] dark:hover:bg-white/[0.06]"
-                      >
-                        <span className="min-w-0">
-                          <span className="block truncate font-medium text-[#18181B] dark:text-white">
-                            {model.id}
-                          </span>
-                          <span className="block truncate text-xs text-[#71717A] dark:text-[#A1A1AA]">
-                            {model.description || model.owned_by}
-                          </span>
-                        </span>
-                        <span className="shrink-0 text-xs font-medium text-[#71717A] dark:text-[#A1A1AA]">
-                          {formatPrice(model, t("models_page.not_priced"))}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
+              </FormField>
             </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-                {t("models_page.owner")}
-              </label>
-              <SearchableSelect
-                value={form.ownedBy}
-                onChange={(ownedBy) => onUpdateForm({ ownedBy })}
-                onCreate={(ownedBy) => onUpdateForm({ ownedBy: normalizeOwnerValue(ownedBy) })}
-                options={ownerOptions}
-                placeholder={t("models_page.owner_placeholder")}
-                searchPlaceholder={t("models_page.owner_search_placeholder")}
-                aria-label={t("models_page.owner")}
-                allowCreate
-                normalizeCreateValue={normalizeOwnerValue}
-                createLabel={(ownedBy) =>
-                  t("models_page.owner_create_option", { owner: normalizeOwnerValue(ownedBy) })
+
+            <FormField
+              label={t("models_page.description_label")}
+              htmlFor="model-config-description"
+              optional
+              reserveMeta={false}
+            >
+              <Textarea
+                value={form.description}
+                onChange={(event) => onUpdateForm({ description: event.target.value })}
+                rows={3}
+                className="min-h-20"
+                placeholder={t("models_page.description_placeholder")}
+              />
+            </FormField>
+
+            <SettingGroup>
+              <SettingRow
+                label={t("models_page.enabled")}
+                description={t("models_page.enabled_hint")}
+                controlWidth="auto"
+                control={
+                  <ToggleSwitch
+                    checked={form.enabled}
+                    onCheckedChange={(enabled) => onUpdateForm({ enabled })}
+                    ariaLabel={t("models_page.enabled")}
+                  />
                 }
               />
-            </div>
-          </div>
+            </SettingGroup>
+          </FormSection>
 
-          <div>
-            <label
-              htmlFor="model-config-description"
-              className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80"
-            >
-              {t("models_page.description_label")}
-            </label>
-            <textarea
-              id="model-config-description"
-              value={form.description}
-              onChange={(event) => onUpdateForm({ description: event.target.value })}
-              rows={3}
-              className="min-h-20 w-full resize-y rounded-xl border border-slate-900/8 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-200/70 dark:border-white/8 dark:bg-neutral-950 dark:text-white dark:focus:border-neutral-700 dark:focus:ring-white/10"
-              placeholder={t("models_page.description_placeholder")}
-            />
-          </div>
-
-          <ToggleSwitch
-            checked={form.enabled}
-            onCheckedChange={(enabled) => onUpdateForm({ enabled })}
-            label={t("models_page.enabled")}
-          />
-
-          <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
-              {t("models_page.pricing_mode")}
-            </label>
-            <Select
-              value={form.mode}
-              onChange={(mode) => onUpdateForm({ mode: mode as ModelPricingMode })}
-              aria-label={t("models_page.pricing_mode")}
-              options={[
-                { value: "token", label: t("models_page.mode_token") },
-                { value: "call", label: t("models_page.mode_call") },
-              ]}
-            />
-          </div>
-
-          {form.mode === "call" ? (
-            <div>
-              <label
-                htmlFor="model-config-price-per-call"
-                className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80"
-              >
-                {t("models_page.price_per_call")}
-              </label>
-              <TextInput
-                id="model-config-price-per-call"
-                type="number"
-                value={form.pricePerCall}
-                onChange={(event) => onUpdateForm({ pricePerCall: event.target.value })}
-                placeholder="0.04"
-                step="0.01"
-                min={0}
+          <FormSection
+            title={t("models_page.section_pricing")}
+            description={t("models_page.section_pricing_desc")}
+            icon={<CircleDollarSign />}
+            actions={
+              <SegmentedControl
+                size="sm"
+                ariaLabel={t("models_page.pricing_mode")}
+                value={form.mode}
+                onChange={(mode) => onUpdateForm({ mode: mode as ModelPricingMode })}
+                options={[
+                  { value: "token", label: t("models_page.mode_token") },
+                  { value: "call", label: t("models_page.mode_call") },
+                ]}
               />
-            </div>
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div>
-                <label
-                  htmlFor="model-config-input-price"
-                  className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80"
-                >
-                  {t("models_page.input_token_price")}
-                </label>
-                <TextInput
-                  id="model-config-input-price"
-                  type="number"
-                  value={form.inputPrice}
-                  onChange={(event) => onUpdateForm({ inputPrice: event.target.value })}
-                  placeholder={t("models_page.input_price_placeholder")}
-                  step="0.01"
-                  min={0}
-                />
+            }
+          >
+            {form.mode === "call" ? (
+              <div className="max-w-xs">
+                {priceField("pricePerCall", "model-config-price-per-call", "models_page.price_per_call", "0.04")}
               </div>
-              <div>
-                <label
-                  htmlFor="model-config-output-price"
-                  className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80"
-                >
-                  {t("models_page.output_token_price")}
-                </label>
-                <TextInput
-                  id="model-config-output-price"
-                  type="number"
-                  value={form.outputPrice}
-                  onChange={(event) => onUpdateForm({ outputPrice: event.target.value })}
-                  placeholder={t("models_page.output_price_placeholder")}
-                  step="0.01"
-                  min={0}
-                />
+            ) : (
+              <div className="grid gap-x-4 sm:grid-cols-3">
+                {priceField(
+                  "inputPrice",
+                  "model-config-input-price",
+                  "models_page.input_token_price",
+                  t("models_page.input_price_placeholder"),
+                )}
+                {priceField(
+                  "outputPrice",
+                  "model-config-output-price",
+                  "models_page.output_token_price",
+                  t("models_page.output_price_placeholder"),
+                )}
+                {priceField(
+                  "cachedPrice",
+                  "model-config-cache-price",
+                  "models_page.cache_token_price",
+                  t("models_page.input_price_hint"),
+                )}
               </div>
-              <div>
-                <label
-                  htmlFor="model-config-cache-price"
-                  className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80"
-                >
-                  {t("models_page.cache_token_price")}
-                </label>
-                <TextInput
-                  id="model-config-cache-price"
-                  type="number"
-                  value={form.cachedPrice}
-                  onChange={(event) => onUpdateForm({ cachedPrice: event.target.value })}
-                  placeholder={t("models_page.input_price_hint")}
-                  step="0.01"
-                  min={0}
-                />
-              </div>
-            </div>
-          )}
-        </div>
+            )}
+          </FormSection>
+        </form>
       ) : null}
     </Modal>
   );

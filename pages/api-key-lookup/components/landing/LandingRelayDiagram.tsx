@@ -82,7 +82,7 @@ export function LandingRelayDiagram({ appLabel }: { appLabel: string }) {
         整列居中会把标记推离连线汇聚点（也就是之前连线看着没对齐的原因）。
       */}
       <div className="relative flex h-full shrink-0 items-center">
-        <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white ring-1 ring-indigo-500/25 dark:bg-white/[0.06] dark:ring-indigo-400/25">
+        <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-surface ring-1 ring-line-strong">
           <LogoMark size={20} />
         </span>
         <span className="absolute left-1/2 top-[calc(50%+2.25rem)] w-max -translate-x-1/2 font-display text-2xs uppercase tracking-[0.06em] text-slate-400 dark:text-white/40">

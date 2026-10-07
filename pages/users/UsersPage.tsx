@@ -1,37 +1,29 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { KeyRound, Shield, Trash2 } from "lucide-react";
 import { identityApi, type RoleIdentity, type UserIdentity } from "@code-proxy/api-client";
 import {
   Button,
   COLUMN_WIDTH,
-  ConfirmModal,
   DataTable,
-  Form,
-  FormField,
-  Modal,
-  MultiSelect,
   SecretRevealModal,
   TABLE_ROW_ACTIONS_COLUMN,
-  TextInput,
   ToggleSwitch,
   useToast,
   type DataTableColumn,
+  surface,
 } from "@code-proxy/ui";
 import { PermissionGate } from "@app/providers/PermissionGate";
 import { useAuth } from "@app/providers/AuthProvider";
 import { resolvePasswordApiError } from "@features/password-policy";
+import { CreateUserModal } from "./CreateUserModal";
 import {
-  emptyCreateUserForm,
-  IDENTITY_DISPLAY_NAME_MAX_BYTES,
-  IDENTITY_USERNAME_MAX_BYTES,
-  normalizeUsername,
-  utf8ByteLength,
-  validateCreateUserForm,
-  validateResetPassword,
-  type CreateUserForm,
-  type CreateUserFormErrors,
-} from "./userForm";
+  DeleteUserConfirm,
+  DisableUserConfirm,
+  ResetPasswordModal,
+  SetRolesModal,
+} from "./UserDialogs";
+import { normalizeUsername, type CreateUserForm } from "./userForm";
 
 const isTenantAdmin = (user: UserIdentity) => user.role_codes?.includes("tenant_admin");
 
@@ -46,16 +38,12 @@ export function UsersPage() {
   const [roles, setRoles] = useState<RoleIdentity[]>([]);
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
-  const [form, setForm] = useState<CreateUserForm>(emptyCreateUserForm);
-  const [createErrors, setCreateErrors] = useState<CreateUserFormErrors>({});
   const [resetUser, setResetUser] = useState<UserIdentity | null>(null);
-  const [resetPassword, setResetPassword] = useState("");
-  const [resetError, setResetError] = useState("");
   const [rolesUser, setRolesUser] = useState<UserIdentity | null>(null);
-  const [rolesDraft, setRolesDraft] = useState<string[]>([]);
   const [deleteUser, setDeleteUser] = useState<UserIdentity | null>(null);
   const [disableUser, setDisableUser] = useState<UserIdentity | null>(null);
-  const [revealedPassword, setRevealedPassword] = useState("");
+  // 刚创建的账号：用户名和服务端生成的初始密码一起展示，方便整组复制给对方。
+  const [revealed, setRevealed] = useState<{ username: string; password: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const canReadRoles = can("tenant.roles.read");
   const canAssignRoles = can("tenant.users.assign_roles");
@@ -159,11 +147,14 @@ export function UsersPage() {
     (user: UserIdentity) => isProtected(user) || isTenantAdmin(user),
     [isProtected],
   );
-
-  const closeCreate = () => {
-    setCreateOpen(false);
-    setForm(emptyCreateUserForm());
-    setCreateErrors({});
+  /** 角色为什么改不了（与 cannotAssignRoles 同一组条件），弹窗里直接告诉用户。 */
+  const rolesLockedReason = (user: UserIdentity | null) => {
+    if (!user || !cannotAssignRoles(user)) return null;
+    if (user.id === principal?.user.id) return t("identity_admin.roles_locked_self");
+    if (user.role_codes?.includes("platform_super_admin")) {
+      return t("identity_admin.roles_locked_super_admin");
+    }
+    return t("identity_admin.roles_locked_tenant_admin");
   };
 
   const columns = useMemo<DataTableColumn<UserIdentity>[]>(
@@ -276,7 +267,6 @@ export function UsersPage() {
                   onClick={() => {
                     if (cannotAssignRoles(user)) return;
                     setRolesUser(user);
-                    setRolesDraft([...(user.role_ids ?? [])]);
                   }}
                 >
                   <Shield size={15} />
@@ -288,11 +278,7 @@ export function UsersPage() {
                   variant="ghost"
                   disabled={protectedUser || busy}
                   tooltip={t("identity_admin.reset_password")}
-                  onClick={() => {
-                    setResetUser(user);
-                    setResetPassword("");
-                    setResetError("");
-                  }}
+                  onClick={() => setResetUser(user)}
                 >
                   <KeyRound size={15} />
                 </Button>
@@ -300,8 +286,7 @@ export function UsersPage() {
               <PermissionGate permission="tenant.users.delete">
                 <Button
                   size="xs"
-                  variant="ghost"
-                  className="text-rose-600 hover:text-rose-700 dark:text-rose-300 dark:hover:text-rose-200"
+                  variant="ghost-danger"
                   disabled={deleteDisabled || busy}
                   tooltip={t("identity_admin.delete")}
                   onClick={() => {
@@ -330,69 +315,56 @@ export function UsersPage() {
     ],
   );
 
-  const createUser = async (event: FormEvent) => {
-    event.preventDefault();
-    const errors = validateCreateUserForm(form, t);
-    setCreateErrors(errors);
-    if (Object.keys(errors).length) return;
-
+  /** 创建成功返回 null；服务端拒绝了手动设置的密码时返回该错误，由弹窗显示在密码框下。 */
+  const createUser = async (form: CreateUserForm): Promise<string | null> => {
     setBusy(true);
     try {
+      const username = normalizeUsername(form.username);
       const created = await identityApi.createUser({
-        username: normalizeUsername(form.username),
+        username,
         display_name: form.displayName.trim(),
         password: form.passwordMode === "manual" ? form.password : "",
         role_ids: canAssignRoles ? form.roleIds : [],
       });
       await load();
       notify({ type: "success", message: t("identity_admin.user_created") });
-      closeCreate();
+      setCreateOpen(false);
       if (created.initial_password) {
-        setRevealedPassword(created.initial_password);
+        setRevealed({ username: created.username || username, password: created.initial_password });
       }
+      return null;
     } catch (error) {
       const policy = resolvePasswordApiError(error, t);
-      if (policy) {
-        setCreateErrors((prev) => ({ ...prev, password: policy }));
-        setBusy(false);
-        return;
-      }
+      if (policy) return policy;
       notify({
         type: "error",
         message: error instanceof Error ? error.message : t("identity_admin.operation_failed"),
       });
+      return null;
     } finally {
       setBusy(false);
     }
   };
 
-  const submitResetPassword = async (event: FormEvent) => {
-    event.preventDefault();
-    if (!resetUser) return;
-    const err = validateResetPassword(resetPassword, t);
-    setResetError(err);
-    if (err) return;
+  const submitResetPassword = async (password: string): Promise<string | null> => {
+    if (!resetUser) return null;
+    let policyError: string | null = null;
     const success = await run(
-      () => identityApi.resetPassword(resetUser.id, resetPassword),
+      () => identityApi.resetPassword(resetUser.id, password),
       t("identity_admin.password_reset"),
       (error) => {
-        const policy = resolvePasswordApiError(error, t);
-        if (policy) setResetError(policy);
-        return policy;
+        policyError = resolvePasswordApiError(error, t);
+        return policyError;
       },
     );
-    if (success) {
-      setResetUser(null);
-      setResetPassword("");
-      setResetError("");
-    }
+    if (success) setResetUser(null);
+    return policyError;
   };
 
-  const submitRoles = async (event: FormEvent) => {
-    event.preventDefault();
+  const submitRoles = async (roleIds: string[]) => {
     if (!rolesUser || cannotAssignRoles(rolesUser)) return;
     const success = await run(
-      () => identityApi.assignUserRoles(rolesUser.id, rolesDraft),
+      () => identityApi.assignUserRoles(rolesUser.id, roleIds),
       t("identity_admin.roles_saved"),
     );
     if (success) setRolesUser(null);
@@ -400,7 +372,7 @@ export function UsersPage() {
 
   return (
     <section className="flex flex-1 flex-col">
-      <div className="flex min-h-0 flex-1 flex-col rounded-2xl border border-black/[0.06] bg-white shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] dark:border-white/[0.06] dark:bg-neutral-950/70 dark:shadow-[0_1px_2px_rgb(0_0_0_/_0.22)]">
+      <div className={`flex min-h-0 flex-1 flex-col ${surface({ radius: "3xl" })}`}>
         <div className="flex flex-wrap items-start justify-between gap-3 px-5 pt-5 pb-3">
           <div>
             <h2 className="text-base font-semibold text-slate-950 dark:text-white">
@@ -411,18 +383,15 @@ export function UsersPage() {
           <PermissionGate permission="tenant.users.create">
             <Button
               variant="primary"
-              onClick={() => {
-                setForm(emptyCreateUserForm());
-                setCreateErrors({});
-                setCreateOpen(true);
-              }}
+              onClick={() => setCreateOpen(true)}
             >
               {t("identity_admin.new_user")}
             </Button>
           </PermissionGate>
         </div>
 
-        <div className="relative min-h-[360px] flex-1 overflow-hidden px-5 pb-5">
+        {/* 表格吃掉卡片剩余高度、内部滚动；不设最小高度保底——卡片高度被窗口钉死，保底只会在矮窗口下把表格挤出卡片（见请求日志页）。 */}
+        <div className="relative min-h-0 flex-1 overflow-hidden px-5 pb-5">
           <DataTable<UserIdentity>
             tableId="identity-users"
             rows={users}
@@ -440,221 +409,50 @@ export function UsersPage() {
         </div>
       </div>
 
-      <Modal
+      <CreateUserModal
         open={createOpen}
-        title={t("identity_admin.new_user")}
-        description={t("identity_admin.users_description")}
-        onClose={closeCreate}
-        maxWidth="max-w-xl"
-        footer={
-          <>
-            <Button onClick={closeCreate}>{t("common.cancel")}</Button>
-            <Button type="submit" form="create-user-form" variant="primary" disabled={busy}>
-              {t("identity_admin.create_user")}
-            </Button>
-          </>
-        }
-      >
-        <Form id="create-user-form" onSubmit={createUser} noValidate>
-          <FormField
-            label={t("identity_admin.username")}
-            required
-            description={t("identity_admin.username_hint")}
-            error={createErrors.username}
-            maxLength={IDENTITY_USERNAME_MAX_BYTES}
-            valueLength={utf8ByteLength(form.username)}
-          >
-            <TextInput
-              value={form.username}
-              autoComplete="off"
-              onChange={(event) => {
-                setForm({ ...form, username: event.target.value });
-                if (createErrors.username) setCreateErrors({ ...createErrors, username: undefined });
-              }}
-              onBlur={() => setForm((prev) => ({ ...prev, username: normalizeUsername(prev.username) }))}
-            />
-          </FormField>
-          <FormField
-            label={t("identity_admin.display_name")}
-            required
-            description={t("identity_admin.display_name_hint")}
-            error={createErrors.displayName}
-            maxLength={IDENTITY_DISPLAY_NAME_MAX_BYTES}
-            valueLength={utf8ByteLength(form.displayName)}
-          >
-            <TextInput
-              value={form.displayName}
-              autoComplete="off"
-              onChange={(event) => {
-                setForm({ ...form, displayName: event.target.value });
-                if (createErrors.displayName) {
-                  setCreateErrors({ ...createErrors, displayName: undefined });
-                }
-              }}
-            />
-          </FormField>
-          <FormField
-            label={t("identity_admin.initial_password_mode")}
-            description={
-              form.passwordMode === "auto"
-                ? t("identity_admin.password_auto_hint")
-                : t("identity_admin.password_requirement")
-            }
-            reserveMeta
-          >
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant={form.passwordMode === "auto" ? "primary" : "secondary"}
-                onClick={() => {
-                  setForm({ ...form, passwordMode: "auto", password: "" });
-                  setCreateErrors({ ...createErrors, password: undefined });
-                }}
-              >
-                {t("identity_admin.password_mode_auto")}
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant={form.passwordMode === "manual" ? "primary" : "secondary"}
-                onClick={() => setForm({ ...form, passwordMode: "manual" })}
-              >
-                {t("identity_admin.password_mode_manual")}
-              </Button>
-            </div>
-          </FormField>
-          {form.passwordMode === "manual" ? (
-            <FormField
-              label={t("identity_admin.initial_password")}
-              required
-              description={t("identity_admin.password_requirement")}
-              error={createErrors.password}
-            >
-              <TextInput
-                type="password"
-                value={form.password}
-                autoComplete="new-password"
-                onChange={(event) => {
-                  setForm({ ...form, password: event.target.value });
-                  if (createErrors.password) {
-                    setCreateErrors({ ...createErrors, password: undefined });
-                  }
-                }}
-              />
-            </FormField>
-          ) : null}
-          {canAssignRoles && canReadRoles ? (
-            <FormField label={t("identity_admin.roles")} description={t("identity_admin.no_role")}>
-              <MultiSelect
-                options={roleOptions}
-                value={form.roleIds}
-                onChange={(roleIds) => setForm({ ...form, roleIds })}
-              />
-            </FormField>
-          ) : null}
-        </Form>
-      </Modal>
-
-      <Modal
-        open={Boolean(resetUser)}
-        title={t("identity_admin.reset_password")}
-        onClose={() => {
-          setResetUser(null);
-          setResetPassword("");
-          setResetError("");
-        }}
-        maxWidth="max-w-md"
-        footer={
-          <>
-            <Button
-              onClick={() => {
-                setResetUser(null);
-                setResetPassword("");
-                setResetError("");
-              }}
-            >
-              {t("common.cancel")}
-            </Button>
-            <Button type="submit" form="reset-user-password-form" variant="primary" disabled={busy}>
-              {t("identity_admin.save")}
-            </Button>
-          </>
-        }
-      >
-        <Form id="reset-user-password-form" onSubmit={submitResetPassword} noValidate>
-          <FormField
-            label={t("identity_admin.new_password")}
-            required
-            description={t("identity_admin.password_requirement")}
-            error={resetError}
-          >
-            <TextInput
-              type="password"
-              value={resetPassword}
-              autoComplete="new-password"
-              onChange={(event) => {
-                setResetPassword(event.target.value);
-                if (resetError) setResetError("");
-              }}
-            />
-          </FormField>
-        </Form>
-      </Modal>
-
-      <Modal
-        open={Boolean(rolesUser)}
-        title={t("identity_admin.set_roles_title")}
-        description={
-          rolesUser
-            ? t("identity_admin.set_roles_description", { username: rolesUser.username })
-            : undefined
-        }
-        onClose={() => setRolesUser(null)}
-        maxWidth="max-w-md"
-        footer={
-          <>
-            <Button onClick={() => setRolesUser(null)}>{t("common.cancel")}</Button>
-            <Button
-              type="submit"
-              form="set-user-roles-form"
-              variant="primary"
-              disabled={busy || Boolean(rolesUser && cannotAssignRoles(rolesUser))}
-            >
-              {t("identity_admin.save")}
-            </Button>
-          </>
-        }
-      >
-        <Form id="set-user-roles-form" onSubmit={submitRoles}>
-          <FormField label={t("identity_admin.roles")}>
-            <MultiSelect
-              options={roleOptions}
-              value={rolesDraft}
-              disabled={Boolean(rolesUser && cannotAssignRoles(rolesUser))}
-              onChange={setRolesDraft}
-            />
-          </FormField>
-        </Form>
-      </Modal>
-
-      <SecretRevealModal
-        open={Boolean(revealedPassword)}
-        title={t("identity_admin.initial_password_title")}
-        description={t("identity_admin.initial_password_description")}
-        secret={revealedPassword}
-        onClose={() => setRevealedPassword("")}
+        busy={busy}
+        showRoles={canAssignRoles && canReadRoles}
+        roleOptions={roleOptions}
+        onSubmit={createUser}
+        onClose={() => setCreateOpen(false)}
       />
 
-      <ConfirmModal
-        open={Boolean(disableUser)}
-        title={t("identity_admin.disable_user")}
-        description={
-          disableUser
-            ? t("identity_admin.disable_user_confirm", { username: disableUser.username })
-            : ""
+      <ResetPasswordModal
+        user={resetUser}
+        name={resetUser ? userName(resetUser) : ""}
+        busy={busy}
+        onSubmit={submitResetPassword}
+        onClose={() => setResetUser(null)}
+      />
+
+      <SetRolesModal
+        user={rolesUser}
+        busy={busy}
+        roleOptions={roleOptions}
+        lockedReason={rolesLockedReason(rolesUser)}
+        onSubmit={(roleIds) => void submitRoles(roleIds)}
+        onClose={() => setRolesUser(null)}
+      />
+
+      <SecretRevealModal
+        open={revealed !== null}
+        title={t("identity_admin.initial_password_title")}
+        description={t("identity_admin.initial_password_handover")}
+        items={
+          revealed
+            ? [
+                { label: t("identity_admin.username"), value: revealed.username },
+                { label: t("identity_admin.initial_password"), value: revealed.password },
+              ]
+            : []
         }
-        confirmText={t("identity_admin.disable")}
+        onClose={() => setRevealed(null)}
+      />
+
+      <DisableUserConfirm
+        user={disableUser}
+        name={disableUser ? userName(disableUser) : ""}
         busy={busy}
         onClose={() => setDisableUser(null)}
         onConfirm={() => {
@@ -672,15 +470,9 @@ export function UsersPage() {
         }}
       />
 
-      <ConfirmModal
-        open={Boolean(deleteUser)}
-        title={t("identity_admin.delete")}
-        description={
-          deleteUser
-            ? t("identity_admin.delete_user_confirm", { username: deleteUser.username })
-            : ""
-        }
-        confirmText={t("identity_admin.delete")}
+      <DeleteUserConfirm
+        user={deleteUser}
+        name={deleteUser ? userName(deleteUser) : ""}
         busy={busy}
         onClose={() => setDeleteUser(null)}
         onConfirm={() => {

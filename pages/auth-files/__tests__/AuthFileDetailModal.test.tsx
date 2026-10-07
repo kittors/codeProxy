@@ -15,6 +15,8 @@ const moderationProfileProps = vi.hoisted(
 
 vi.mock("@code-proxy/ui", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@code-proxy/ui")>()),
+  // 趋势图按主题取色；这里不挂 ThemeProvider，给一个固定的浅色主题。
+  useTheme: () => ({ state: { mode: "light" } }),
   EChart: ({
     option,
     className,
@@ -358,6 +360,30 @@ describe("AuthFileDetailModal", () => {
     expect(chartOptions.at(-1)?.series?.every((item: any) => item.animation === true)).toBe(true);
   });
 
+  test("colours the usage tab by metric instead of grey blocks", () => {
+    renderDetailModal();
+
+    const chart = screen.getByTestId("auth-file-trend-chart");
+    // 图表放在白底卡片里，不再是把整张图压灰的灰底面板。
+    expect(chart.parentElement?.className).toContain("bg-surface");
+    expect(chart.parentElement?.className).not.toContain("bg-subtle");
+
+    // 请求数是请求蓝的渐变柱，费用是琥珀线（与仪表盘、监控中心同一组身份色）。
+    const series = JSON.parse(chart.dataset.series ?? "[]");
+    expect(series[0].itemStyle.color.colorStops[0].color).toBe("rgba(59, 130, 246, 1)");
+    expect(series[1].lineStyle.color).toBe("#f59e0b");
+
+    // 统计格：白底卡片 + 身份色图标块，数值保持墨色。
+    const costCard = screen.getByText("Current cycle cost").closest("div");
+    if (!(costCard instanceof HTMLElement)) throw new Error("Missing cost card");
+    expect(costCard.className).toContain("bg-surface");
+    expect(costCard.className).not.toContain("bg-subtle");
+    expect(costCard.querySelector("[aria-hidden='true']")?.className).toContain("text-amber-600");
+    expect(within(costCard).getByText("$1.2345")).toHaveClass("text-ink");
+    const tokensCard = screen.getByText("Current cycle tokens").closest("div");
+    expect(tokensCard?.querySelector("[aria-hidden='true']")?.className).toContain("text-violet-600");
+  });
+
   test("hides zero and empty summary cards when Codex trend data is incomplete", () => {
     renderDetailModal({
       detailTrend: {
@@ -484,11 +510,12 @@ describe("AuthFileDetailModal", () => {
       },
     });
 
-    // $333.9 / 13% ≈ $2568 budget → PRO 20X solid chip, not soft "Pro".
+    // $333.9 / 13% ≈ $2568 budget → PRO 20X：旗舰档，Codex 品牌色，与卡片、列表同一个徽章。
     const badge = screen.getByTestId("auth-file-plan-badge");
     expect(badge).toHaveTextContent("PRO 20X");
-    expect(badge.className).toContain("from-yellow-300");
-    expect(badge.className).not.toContain("bg-amber-50");
+    expect(badge).toHaveAttribute("data-plan-tier", "ultra");
+    expect(badge.style.getPropertyValue("--brand-l")).not.toBe("");
+    expect(badge).not.toHaveClass("bg-ink");
   });
 
   test("shows SuperGrok plan badge and falls back cycle totals for xAI when cycle is unknown", () => {
@@ -531,7 +558,8 @@ describe("AuthFileDetailModal", () => {
     });
 
     expect(screen.getByText("SUPERGROK")).toBeInTheDocument();
-    expect(screen.getByTestId("auth-file-plan-badge")).toHaveClass("from-neutral-900");
+    // SuperGrok is a middle tier: the solid "pro" brand chip.
+    expect(screen.getByTestId("auth-file-plan-badge")).toHaveAttribute("data-plan-tier", "pro");
     expectSummaryCard("Last 7 days requests", "116");
     // When cycle_known is false, fall back to request_total instead of showing 0.
     expectSummaryCard("Current weekly cycle", "116");
@@ -1146,9 +1174,10 @@ describe("AuthFileDetailModal", () => {
     expect(grid.className).not.toContain("divide-y");
     expect(within(grid).getByPlaceholderText("e.g. team-a")).toHaveValue("team-a");
     expect(within(grid).getByLabelText("proxy_id (proxy pool)")).toBeInTheDocument();
-    expect(within(grid).getByPlaceholderText("e.g. http://127.0.0.1:7890")).toHaveValue(
-      "http://127.0.0.1:7890",
-    );
+    // 已有的代理地址拆成结构化的协议 / 主机 / 端口回填。
+    expect(within(grid).getByRole("radio", { name: "HTTP" })).toHaveAttribute("aria-checked", "true");
+    expect(within(grid).getByLabelText("Host")).toHaveValue("127.0.0.1");
+    expect(within(grid).getByLabelText("Port")).toHaveValue("7890");
     expect(within(grid).getByLabelText(/Subscription start/)).toBeInTheDocument();
     expect(screen.queryByTestId("auth-file-fields-preview")).not.toBeInTheDocument();
     expect(screen.queryByText(/"prefix"/)).not.toBeInTheDocument();

@@ -11,7 +11,7 @@ export type LandingButtonTone = "primary" | "outline" | "invert";
  */
 const TONE_CLASS: Record<LandingButtonTone, string> = {
   primary:
-    "bg-indigo-600 text-white hover:bg-indigo-500 focus-visible:ring-indigo-500/40 dark:bg-indigo-500 dark:hover:bg-indigo-400",
+    "bg-accent text-accent-fg hover:bg-accent-hover",
   outline:
     "border border-slate-900/12 bg-white/70 text-slate-700 hover:border-slate-900/25 hover:bg-white focus-visible:ring-slate-900/15 dark:border-white/12 dark:bg-white/[0.04] dark:text-white/80 dark:hover:border-white/25 dark:hover:bg-white/10",
   invert:

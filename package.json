@@ -34,7 +34,6 @@
     "echarts": "^6.1.0",
     "echarts-for-react": "^3.0.6",
     "framer-motion": "^12.34.3",
-    "goey-toast": "^0.2.2",
     "i18next": "^25.7.1",
     "lucide-react": "0.563.0",
     "react": "19.2.4",
@@ -61,7 +60,6 @@
     "jsdom": "^28.1.0",
     "oxfmt": "0.31.0",
     "oxlint": "1.46.0",
-    "sass": "^1.94.2",
     "tailwindcss": "4.1.18",
     "typescript": "5.9.3",
     "vite": "7.3.6",
@@ -78,6 +76,8 @@
     "rollup": "^4.62.2",
     "esbuild": "^0.28.1",
     "picomatch": "^4.0.5",
-    "browserslist": "^4.28.7"
+    "browserslist": "^4.28.7",
+    "source-map-js": "^1.2.2",
+    "tinypool": "^2.2.0"
   }
 }

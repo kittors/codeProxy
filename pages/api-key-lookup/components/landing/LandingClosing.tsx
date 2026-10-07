@@ -20,13 +20,10 @@ export function LandingClosing({
     <>
       {/*
         整块反色收尾：浅色主题通篇是白与浅灰，末尾压一块深色能明确「读完了，该行动了」，
-        同时给浅色页面一个必要的重量。深色主题下靠一层靛蓝渐变与画布区分。
+        同时给浅色页面一个必要的重量。深色主题下用一层极淡的白色叠层与画布区分——
+        不再铺彩色光晕，只留细点阵的质感。
       */}
-      <section className="relative overflow-hidden bg-slate-950 py-28 dark:bg-indigo-950/25 lg:py-40">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_90%_at_50%_0%,rgba(79,70,229,0.45),transparent_70%)]"
-        />
+      <section className="relative overflow-hidden bg-slate-950 py-28 dark:bg-white/[0.03] lg:py-40">
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle,rgba(255,255,255,0.07)_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(70%_70%_at_50%_50%,#000,transparent)]"

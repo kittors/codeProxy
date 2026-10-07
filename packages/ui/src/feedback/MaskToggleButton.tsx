@@ -25,20 +25,14 @@ export function MaskToggleButton({
     <HoverTooltip content={label}>
       <Button
         type="button"
-        variant={variant ?? (masked ? "default" : "secondary")}
+        // 遮罩开启时用强调色实心按钮表达「按下」状态，与调用方传入的变体无关。
+        variant={masked ? "primary" : (variant ?? "secondary")}
         size={size}
         onClick={onToggle}
         aria-label={label}
         aria-pressed={masked}
         title={label}
-        className={[
-          masked
-            ? "bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:text-white dark:hover:bg-indigo-600"
-            : "",
-          className,
-        ]
-          .filter(Boolean)
-          .join(" ")}
+        className={className}
       >
         {masked ? <EyeOff size={15} /> : <Eye size={15} />}
       </Button>

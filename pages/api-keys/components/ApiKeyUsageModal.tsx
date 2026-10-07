@@ -1,6 +1,12 @@
 import { useTranslation } from "react-i18next";
-import { RefreshCw } from "lucide-react";
-import { DataTable, Modal, SearchableSelect, type SearchableSelectOption } from "@code-proxy/ui";
+import { Loader2, RefreshCw, ScrollText } from "lucide-react";
+import {
+  Button,
+  DataTable,
+  Modal,
+  SearchableSelect,
+  type SearchableSelectOption,
+} from "@code-proxy/ui";
 import {
   RequestLogsPaginationBar,
   RequestLogsTimeRangeSelector,
@@ -75,6 +81,9 @@ export function ApiKeyUsageModal({
   setUsagePageSize: (size: number) => void;
 }) {
   const { t } = useTranslation();
+  const metricLabel = "text-2xs text-ink-3";
+  const metricValue = "mt-0.5 font-mono text-base font-semibold tabular-nums text-ink";
+  const summaryCard = "rounded-2xl bg-subtle px-4 py-3";
 
   return (
     <Modal
@@ -89,21 +98,71 @@ export function ApiKeyUsageModal({
             })
           : ""
       }
+      icon={<ScrollText />}
+      // 日志表格最少 1320px 宽（时间、Key、模型、渠道、Token、耗时、费用、状态……），
+      // 标准档位最宽 1152px 会把后几列挤到横向滚动里，所以保留接近整屏的宽度。
       maxWidth="max-w-[min(96vw,1600px)]"
       bodyHeightClassName="h-[80vh]"
+      // 只有筛选与分页，没有要保存的内容：点遮罩直接关闭。
+      dirty={false}
     >
       <div className="flex h-full flex-col">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-1 pb-3 dark:border-white/8">
-          <div className="flex flex-wrap items-center gap-2">
-            <RequestLogsTimeRangeSelector value={usageTimeRange} onChange={setUsageTimeRange} />
-            <button
-              type="button"
+        {/* 筛选条：时间范围和四个筛选并排，右侧是更新时间与刷新。 */}
+        <div className="flex flex-wrap items-center gap-2 border-b border-line pb-3">
+          <RequestLogsTimeRangeSelector value={usageTimeRange} onChange={setUsageTimeRange} />
+          <div className="grid w-full gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
+            <SearchableSelect
+              value={usageKeyQuery}
+              onChange={setUsageKeyQuery}
+              options={usageKeyOptions}
+              placeholder={t("request_logs.all_keys_placeholder")}
+              searchPlaceholder={t("request_logs.search_keys")}
+              aria-label={t("request_logs.filter_key")}
+              className="w-full sm:w-[220px]"
+              size="sm"
+              dropdownMinWidth={300}
+            />
+            <SearchableSelect
+              value={usageChannelQuery}
+              onChange={setUsageChannelQuery}
+              options={usageChannelOptions}
+              placeholder={t("request_logs.all_channels_placeholder")}
+              searchPlaceholder={t("request_logs.search_channels")}
+              aria-label={t("request_logs.filter_channel")}
+              className="w-full sm:w-auto"
+              size="sm"
+            />
+            <SearchableSelect
+              value={usageModelQuery}
+              onChange={setUsageModelQuery}
+              options={usageModelOptions}
+              placeholder={t("request_logs.all_models_placeholder")}
+              searchPlaceholder={t("request_logs.search_models")}
+              aria-label={t("request_logs.filter_model")}
+              className="w-full sm:w-auto"
+              size="sm"
+            />
+            <SearchableSelect
+              value={usageStatusFilter}
+              onChange={(value) => setUsageStatusFilter(value as StatusFilter)}
+              options={usageStatusOptions}
+              placeholder={t("request_logs.all_status")}
+              searchPlaceholder={t("request_logs.all_status")}
+              aria-label={t("request_logs.filter_status")}
+              className="w-full sm:w-auto"
+              size="sm"
+            />
+          </div>
+          <div className="ml-auto flex items-center gap-2">
+            <span className="text-xs text-ink-3">{usageLastUpdatedText}</span>
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={() => void fetchUsageLogs(1, usagePageSize)}
               disabled={usageLoading}
               aria-busy={usageLoading}
               aria-label={t("request_logs.refresh")}
               title={t("request_logs.refresh")}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-slate-900 text-white transition hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/35 disabled:cursor-not-allowed disabled:opacity-70 dark:bg-white dark:text-neutral-950 dark:hover:bg-slate-200 dark:focus-visible:ring-white/15"
             >
               <RefreshCw
                 size={14}
@@ -111,139 +170,58 @@ export function ApiKeyUsageModal({
                   usageLoading ? "motion-reduce:animate-none motion-safe:animate-spin" : ""
                 }
               />
-            </button>
+            </Button>
           </div>
-          <span className="text-xs text-slate-400 dark:text-white/40">{usageLastUpdatedText}</span>
-        </div>
-
-        <div className="grid gap-2 border-b border-slate-100 py-3 dark:border-white/8 sm:flex sm:flex-wrap sm:items-center">
-          <SearchableSelect
-            value={usageKeyQuery}
-            onChange={setUsageKeyQuery}
-            options={usageKeyOptions}
-            placeholder={t("request_logs.all_keys_placeholder")}
-            searchPlaceholder={t("request_logs.search_keys")}
-            aria-label={t("request_logs.filter_key")}
-            className="w-full sm:w-[220px]"
-            size="sm"
-            dropdownMinWidth={300}
-          />
-          <SearchableSelect
-            value={usageChannelQuery}
-            onChange={setUsageChannelQuery}
-            options={usageChannelOptions}
-            placeholder={t("request_logs.all_channels_placeholder")}
-            searchPlaceholder={t("request_logs.search_channels")}
-            aria-label={t("request_logs.filter_channel")}
-            className="w-full sm:w-auto"
-            size="sm"
-          />
-          <SearchableSelect
-            value={usageModelQuery}
-            onChange={setUsageModelQuery}
-            options={usageModelOptions}
-            placeholder={t("request_logs.all_models_placeholder")}
-            searchPlaceholder={t("request_logs.search_models")}
-            aria-label={t("request_logs.filter_model")}
-            className="w-full sm:w-auto"
-            size="sm"
-          />
-          <SearchableSelect
-            value={usageStatusFilter}
-            onChange={(value) => setUsageStatusFilter(value as StatusFilter)}
-            options={usageStatusOptions}
-            placeholder={t("request_logs.all_status")}
-            searchPlaceholder={t("request_logs.all_status")}
-            aria-label={t("request_logs.filter_status")}
-            className="w-full sm:w-auto"
-            size="sm"
-          />
         </div>
 
         <div
           data-testid="api-key-usage-summary"
-          className="grid gap-2 border-b border-slate-100 py-3 dark:border-white/8 md:grid-cols-[minmax(0,2fr)_repeat(2,minmax(0,1fr))]"
+          className="grid gap-2 border-b border-line py-3 md:grid-cols-[minmax(0,2fr)_repeat(2,minmax(0,1fr))]"
         >
-          <section
-            aria-label={t("api_keys_page.usage_summary_tokens")}
-            className="rounded-2xl border border-slate-900/8 bg-slate-50/80 px-4 py-3 dark:border-white/8 dark:bg-white/[0.035]"
-          >
-            <div className="text-xs font-medium text-slate-500 dark:text-white/50">
+          <section aria-label={t("api_keys_page.usage_summary_tokens")} className={summaryCard}>
+            <div className="text-xs font-medium text-ink-2">
               {t("api_keys_page.usage_summary_tokens")}
             </div>
             <div className="mt-2 grid grid-cols-3 gap-3">
-              <div className="min-w-0">
-                <div className="text-2xs text-slate-400 dark:text-white/35">
-                  {t("api_keys_page.col_input")}
+              {(
+                [
+                  ["col_input", usageSummary.inputTokens, "usage_summary_current_page"],
+                  ["col_output", usageSummary.outputTokens, "usage_summary_current_page"],
+                  ["col_total_token", usageSummary.totalTokens, "usage_summary_filtered"],
+                ] as const
+              ).map(([labelKey, value, scopeKey]) => (
+                <div key={labelKey} className="min-w-0">
+                  <div className={metricLabel}>{t(`api_keys_page.${labelKey}`)}</div>
+                  <RequestLogUsageMetricValue value={value} compact className={metricValue} />
+                  <div className={`mt-0.5 ${metricLabel}`}>{t(`api_keys_page.${scopeKey}`)}</div>
                 </div>
-                <RequestLogUsageMetricValue
-                  value={usageSummary.inputTokens}
-                  compact
-                  className="mt-0.5 font-mono text-base font-semibold tabular-nums text-slate-900 dark:text-white"
-                />
-                <div className="mt-0.5 text-2xs text-slate-400 dark:text-white/35">
-                  {t("api_keys_page.usage_summary_current_page")}
-                </div>
-              </div>
-              <div className="min-w-0">
-                <div className="text-2xs text-slate-400 dark:text-white/35">
-                  {t("api_keys_page.col_output")}
-                </div>
-                <RequestLogUsageMetricValue
-                  value={usageSummary.outputTokens}
-                  compact
-                  className="mt-0.5 font-mono text-base font-semibold tabular-nums text-slate-900 dark:text-white"
-                />
-                <div className="mt-0.5 text-2xs text-slate-400 dark:text-white/35">
-                  {t("api_keys_page.usage_summary_current_page")}
-                </div>
-              </div>
-              <div className="min-w-0">
-                <div className="text-2xs text-slate-400 dark:text-white/35">
-                  {t("api_keys_page.col_total_token")}
-                </div>
-                <RequestLogUsageMetricValue
-                  value={usageSummary.totalTokens}
-                  compact
-                  className="mt-0.5 font-mono text-base font-semibold tabular-nums text-slate-900 dark:text-white"
-                />
-                <div className="mt-0.5 text-2xs text-slate-400 dark:text-white/35">
-                  {t("api_keys_page.usage_summary_filtered")}
-                </div>
-              </div>
+              ))}
             </div>
           </section>
 
-          <section
-            aria-label={t("api_keys_page.usage_summary_requests")}
-            className="rounded-2xl border border-slate-900/8 bg-slate-50/80 px-4 py-3 dark:border-white/8 dark:bg-white/[0.035]"
-          >
-            <div className="text-xs font-medium text-slate-500 dark:text-white/50">
+          <section aria-label={t("api_keys_page.usage_summary_requests")} className={summaryCard}>
+            <div className="text-xs font-medium text-ink-2">
               {t("api_keys_page.usage_summary_requests")}
             </div>
             <RequestLogUsageMetricValue
               value={usageSummary.requestCount}
               compact
-              className="mt-2 font-mono text-xl font-semibold tabular-nums text-slate-900 dark:text-white"
+              className="mt-2 font-mono text-xl font-semibold tabular-nums text-ink"
             />
-            <div className="mt-0.5 text-2xs text-slate-400 dark:text-white/35">
-              {t("api_keys_page.usage_summary_filtered")}
-            </div>
+            <div className={`mt-0.5 ${metricLabel}`}>{t("api_keys_page.usage_summary_filtered")}</div>
           </section>
 
           <section
             aria-label={t("api_keys_page.usage_summary_success_rate")}
-            className="rounded-2xl border border-slate-900/8 bg-slate-50/80 px-4 py-3 dark:border-white/8 dark:bg-white/[0.035]"
+            className={summaryCard}
           >
-            <div className="text-xs font-medium text-slate-500 dark:text-white/50">
+            <div className="text-xs font-medium text-ink-2">
               {t("api_keys_page.usage_summary_success_rate")}
             </div>
             <div className="mt-2 font-mono text-xl font-semibold tabular-nums text-emerald-700 dark:text-emerald-300">
               {usageSummary.successRate.toFixed(1)}%
             </div>
-            <div className="mt-0.5 text-2xs text-slate-400 dark:text-white/35">
-              {t("api_keys_page.usage_summary_filtered")}
-            </div>
+            <div className={`mt-0.5 ${metricLabel}`}>{t("api_keys_page.usage_summary_filtered")}</div>
           </section>
         </div>
 
@@ -262,10 +240,15 @@ export function ApiKeyUsageModal({
             emptyText={t("api_keys_page.no_usage_records")}
             showAllLoadedMessage={false}
           />
-          {usageLoading ? (
-            <div className="absolute inset-0 z-10 flex items-center justify-center rounded-b-2xl bg-white/70 backdrop-blur-sm dark:bg-neutral-950/55">
-              <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-900/8 bg-white/85 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm dark:border-white/8 dark:bg-neutral-950/70 dark:text-white/75">
-                <span className="h-4 w-4 rounded-full border-2 border-slate-300 border-t-indigo-600 motion-reduce:animate-none motion-safe:animate-spin dark:border-white/20 dark:border-t-white/80" />
+          {/* 没有数据时表格自己画骨架行；已有数据再刷新时，盖一层淡色遮罩说明正在更新。 */}
+          {usageLoading && usageRows.length > 0 ? (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-elevated/60">
+              <div className="inline-flex items-center gap-2 rounded-full bg-elevated px-3 py-1.5 text-sm font-medium text-ink-2 shadow-pop">
+                <Loader2
+                  size={14}
+                  className="motion-reduce:animate-none motion-safe:animate-spin"
+                  aria-hidden="true"
+                />
                 <span role="status">{t("common.loading_ellipsis")}</span>
               </div>
             </div>

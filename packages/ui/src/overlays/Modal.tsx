@@ -1,7 +1,7 @@
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import {
-  useEffect,
+  useCallback,
   useId,
   useRef,
   useState,
@@ -9,21 +9,55 @@ import {
   type ReactNode,
 } from "react";
 import { X } from "lucide-react";
-import { cssEase, EASE_IN, EASE_OUT, OVERLAY_ENTER_MS, OVERLAY_EXIT_MS } from "../utils/motion";
+import { useScrollFade } from "../hooks/useScrollFade";
+import { DialogIcon, type DialogTone } from "./DialogIcon";
+import { overlayBackdropMotion, overlayPanelMotion, useOverlayPresence } from "./overlayMotion";
+import {
+  useDialogBehavior,
+  useInteractionGuard,
+  type DialogInitialFocus,
+} from "./useDialogBehavior";
+
+/** 关闭按钮：无底色圆形，悬停才出现浅灰叠层。 */
+const CLOSE_BUTTON_CLASS =
+  "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-0 bg-transparent p-0 text-ink-3 shadow-none transition-colors hover:bg-hover hover:text-ink disabled:cursor-not-allowed disabled:opacity-60";
+
+export type ModalSize = "sm" | "md" | "lg" | "xl" | "2xl";
+
+/**
+ * 宽度档位按内容类型选：sm 确认框与单个输入；md 常规表单（一到两列）；lg 带分区的长表单、
+ * 详情；xl 双栏（左导航 + 右内容）与表格类；2xl 编辑器类。
+ */
+const SIZE_CLASS: Record<ModalSize, string> = {
+  sm: "max-w-md",
+  md: "max-w-xl",
+  lg: "max-w-3xl",
+  xl: "max-w-5xl",
+  "2xl": "max-w-6xl",
+};
 
 export function Modal({
   open,
   title,
   titleAccessory,
   description,
+  icon,
+  tone = "auto",
+  size,
   footer,
-  maxWidth = "max-w-3xl",
+  footerStart,
+  maxWidth,
   panelClassName,
   bodyHeightClassName,
   bodyOverflowClassName,
   bodyClassName,
   bodyTestId,
   hideHeader = false,
+  closable = true,
+  onBlockedClose,
+  dirty,
+  initialFocus = "auto",
+  onSubmitShortcut,
   onClose,
   children,
 }: PropsWithChildren<{
@@ -31,7 +65,15 @@ export function Modal({
   title: string;
   titleAccessory?: ReactNode;
   description?: ReactNode;
+  /** 标题左侧的图标块：说明这个弹窗在处理什么（用户、密钥、规则……）。 */
+  icon?: ReactNode;
+  /** 图标块色调；红色只给删除这类不可恢复的操作。 */
+  tone?: DialogTone;
+  /** 宽度档位；显式传 maxWidth 时以 maxWidth 为准（兼容旧调用）。 */
+  size?: ModalSize;
   footer?: ReactNode;
+  /** 尾部左侧的辅助信息（例如「已选 3 项」「保存后立即生效」），按钮仍在右侧。 */
+  footerStart?: ReactNode;
   maxWidth?: string;
   panelClassName?: string;
   bodyHeightClassName?: string;
@@ -39,20 +81,40 @@ export function Modal({
   bodyClassName?: string;
   bodyTestId?: string;
   hideHeader?: boolean;
+  /**
+   * 不允许用户关闭（强制改密、正在升级这类必须走完的流程）：不显示关闭按钮，
+   * Esc 和点遮罩只会让面板轻晃。由调用方在流程结束后自己把 open 置为 false。
+   */
+  closable?: boolean;
+  /** 关闭被拦下时（不可关闭、或有未保存修改时按了 Esc / 点了遮罩）通知调用方，例如亮出原因。 */
+  onBlockedClose?: () => void;
+  /**
+   * 有未保存的修改。不传时自动判断：在弹窗里输入过文字后，点遮罩不再关闭（面板轻晃提示）。
+   * 传 true 时 Esc 也会被拦下；传 false 时永远直接关闭。关闭按钮和取消按钮任何时候都有效。
+   */
+  dirty?: boolean;
+  /** 打开时的焦点：auto 聚焦第一个可填写的控件；panel 只聚焦弹窗本身；none 不动焦点。 */
+  initialFocus?: DialogInitialFocus;
+  /** ⌘ / Ctrl + Enter 触发的主操作。 */
+  onSubmitShortcut?: () => void;
   onClose: () => void;
 }>) {
   const { t } = useTranslation();
-  const [mounted, setMounted] = useState(open);
-  const [visible, setVisible] = useState(open);
-  const timeoutRef = useRef<number | null>(null);
+  const { mounted, visible } = useOverlayPresence(open);
   const titleId = useId();
+  const descriptionId = useId();
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const [nudging, setNudging] = useState(false);
+  const { interacted, onInput } = useInteractionGuard(open);
   // Snapshot title/description/footer/children while open so parents can clear
   // props immediately without collapsing the panel mid-exit animation.
   const contentRef = useRef({
     title,
     titleAccessory,
     description,
+    icon,
     footer,
+    footerStart,
     children,
   });
   if (open) {
@@ -60,156 +122,189 @@ export function Modal({
       title,
       titleAccessory,
       description,
+      icon,
       footer,
+      footerStart,
       children,
     };
   }
   const snapshot = contentRef.current;
 
-  useEffect(() => {
-    if (open) {
-      if (timeoutRef.current) {
-        window.clearTimeout(timeoutRef.current);
-        timeoutRef.current = null;
-      }
-      setMounted(true);
-      // Double rAF ensures the browser paints the "hidden" frame before animating in.
-      let raf2 = 0;
-      const raf1 = window.requestAnimationFrame(() => {
-        raf2 = window.requestAnimationFrame(() => setVisible(true));
-      });
-      return () => {
-        window.cancelAnimationFrame(raf1);
-        if (raf2) window.cancelAnimationFrame(raf2);
-      };
+  const nudge = useCallback(() => {
+    setNudging(false);
+    // 下一帧再加回类名，连续点击也能重新播放。
+    window.requestAnimationFrame(() => setNudging(true));
+    onBlockedClose?.();
+  }, [onBlockedClose]);
+
+  const guardBackdrop = !closable || (dirty ?? interacted);
+  const handleEscape = useCallback(() => {
+    if (!closable || dirty === true) {
+      nudge();
+      return;
     }
+    onClose();
+  }, [closable, dirty, nudge, onClose]);
 
-    setVisible(false);
-    if (timeoutRef.current) {
-      window.clearTimeout(timeoutRef.current);
-    }
-    timeoutRef.current = window.setTimeout(() => {
-      setMounted(false);
-      timeoutRef.current = null;
-    }, OVERLAY_EXIT_MS);
+  useDialogBehavior({
+    open,
+    visible,
+    panelRef,
+    onEscape: handleEscape,
+    onSubmitShortcut,
+    initialFocus,
+  });
 
-    return () => {
-      if (timeoutRef.current) {
-        window.clearTimeout(timeoutRef.current);
-        timeoutRef.current = null;
-      }
-    };
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onClose, open]);
+  // 内容溢出时上下渐隐，代替以前滚动后浮出的头尾分隔线：没有硬边，也看得出「还能往下滚」。
+  const fade = useScrollFade<HTMLDivElement>({ enabled: mounted });
 
   if (!mounted) return null;
 
   const bodyHeightCls = bodyHeightClassName ?? "max-h-[70vh]";
   const bodyOverflowCls = bodyOverflowClassName ?? "overflow-y-auto";
-  const transitionStyle = {
-    transitionDuration: `${visible ? OVERLAY_ENTER_MS : OVERLAY_EXIT_MS}ms`,
-    transitionTimingFunction: cssEase(visible ? EASE_OUT : EASE_IN),
-  } as const;
+  const widthCls = maxWidth ?? SIZE_CLASS[size ?? "lg"];
+  // 遮罩与面板分层：进场一起出现，面板多走一段落稳；退场面板先走，遮罩随后褪去。
+  const backdropMotion = overlayBackdropMotion(visible);
+  const panelMotion = overlayPanelMotion(visible, !open);
+  const hasDescription = Boolean(snapshot.description) && !hideHeader;
 
   return createPortal(
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+    // 手机上是底部弹出的面板（贴底、上圆角，拇指够得着按钮）；sm 以上居中。
+    <div className="fixed inset-0 z-[200] flex items-end justify-center sm:items-center sm:p-4">
       <button
         type="button"
+        data-overlay-backdrop=""
         onClick={() => {
           if (!open) return;
+          if (guardBackdrop) {
+            nudge();
+            return;
+          }
           onClose();
         }}
         aria-hidden="true"
         tabIndex={-1}
-        style={transitionStyle}
+        style={backdropMotion.style}
         className={[
-          "absolute inset-0 cursor-default bg-slate-950/45 dark:bg-black/60",
-          "transition-[opacity,backdrop-filter] motion-reduce:transition-none",
-          visible ? "opacity-100 backdrop-blur-md" : "opacity-0 backdrop-blur-none",
+          // 只压暗、不模糊：模糊会把背后的页面整片糊掉，打开一个小确认框也像换了个场景。
+          "absolute inset-0 cursor-default bg-black/25 dark:bg-black/55",
+          backdropMotion.className,
         ].join(" ")}
       />
 
       <div
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-label={hideHeader ? snapshot.title : undefined}
         aria-labelledby={hideHeader ? undefined : titleId}
-        style={transitionStyle}
+        aria-describedby={hasDescription ? descriptionId : undefined}
+        tabIndex={-1}
+        onInput={onInput}
+        onAnimationEnd={(event) => {
+          if (event.animationName === "overlay-nudge") setNudging(false);
+        }}
+        style={panelMotion.style}
         className={[
-          `relative z-10 w-full ${maxWidth} overflow-hidden rounded-3xl bg-white ring-1 ring-slate-900/10 shadow-[0_32px_80px_-24px_rgba(15,23,42,0.45)] dark:bg-[#0E0E12] dark:ring-white/10 dark:shadow-[0_32px_80px_-24px_rgba(0,0,0,0.8)]`,
-          // 放大幅度压到 0.97：再大就会让面板高度看着像「塌下去又弹起来」。
-          "transition-[opacity,transform] will-change-transform motion-reduce:transition-none motion-reduce:transform-none",
-          visible ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-2 scale-[0.97]",
+          `relative z-10 flex max-h-[calc(100dvh-0.5rem)] w-full ${widthCls} flex-col overflow-hidden rounded-t-3xl bg-elevated text-ink shadow-dialog outline-none sm:max-h-[calc(100dvh-2rem)] sm:rounded-3xl`,
+          panelMotion.className,
+          nudging ? "overlay-nudge" : "",
           panelClassName,
         ].join(" ")}
       >
         {hideHeader ? (
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={!open}
-            className="group absolute top-4 right-4 z-20 inline-flex h-9 w-9 items-center justify-center rounded-full border-0 bg-transparent p-0 text-slate-400 shadow-none transition-colors hover:bg-slate-900/5 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60 dark:text-white/45 dark:hover:bg-white/10 dark:hover:text-white"
-            aria-label={t("common.close")}
-          >
-            <X
-              size={16}
-              className="transition-transform duration-200 motion-safe:group-hover:rotate-90"
-            />
-          </button>
-        ) : (
-          <div className="flex items-start justify-between gap-3 border-b border-slate-900/8 px-6 py-4 dark:border-white/8">
-            <div className="min-w-0">
-              <h2 className="flex min-w-0 items-center gap-2 text-base font-semibold tracking-tight text-slate-900 dark:text-white">
-                <span id={titleId} className="min-w-0 truncate">
-                  {snapshot.title}
-                </span>
-                {snapshot.titleAccessory ? (
-                  <span className="shrink-0" aria-hidden="true">
-                    {snapshot.titleAccessory}
-                  </span>
-                ) : null}
-              </h2>
-              {snapshot.description ? (
-                <p className="mt-1 text-sm text-slate-600 dark:text-white/65">
-                  {snapshot.description}
-                </p>
-              ) : null}
-            </div>
+          closable ? (
             <button
               type="button"
               onClick={onClose}
               disabled={!open}
-              className="group inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-0 bg-transparent p-0 text-slate-400 shadow-none transition-colors hover:bg-slate-900/5 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60 dark:text-white/45 dark:hover:bg-white/10 dark:hover:text-white"
+              className={`absolute top-4 right-4 z-20 ${CLOSE_BUTTON_CLASS}`}
               aria-label={t("common.close")}
             >
-              <X
-                size={16}
-                className="transition-transform duration-200 motion-safe:group-hover:rotate-90"
-              />
+              <X size={18} />
             </button>
+          ) : null
+        ) : (
+          // 头部、尾部不画分隔线：留白把三段分开，内容滚动时由正文区的上下渐隐过渡。
+          <div className="flex shrink-0 items-start justify-between gap-3 pt-5 pr-4 pb-1 pl-6">
+            <div className="flex min-w-0 flex-1 items-start gap-3.5">
+              {snapshot.icon ? <DialogIcon tone={tone}>{snapshot.icon}</DialogIcon> : null}
+              <div className={["min-w-0", snapshot.icon ? "pt-px" : "pt-1"].join(" ")}>
+                <h2
+                  className={[
+                    "flex min-w-0 items-center gap-2 font-semibold tracking-tight text-ink",
+                    snapshot.icon ? "text-lg" : "text-xl",
+                  ].join(" ")}
+                >
+                  <span id={titleId} className="min-w-0 truncate">
+                    {snapshot.title}
+                  </span>
+                  {snapshot.titleAccessory ? (
+                    <span className="shrink-0" aria-hidden="true">
+                      {snapshot.titleAccessory}
+                    </span>
+                  ) : null}
+                </h2>
+                {snapshot.description ? (
+                  <div id={descriptionId} className="mt-0.5 text-sm leading-relaxed text-ink-2">
+                    {snapshot.description}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+            {closable ? (
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={!open}
+                className={CLOSE_BUTTON_CLASS}
+                aria-label={t("common.close")}
+              >
+                <X size={18} />
+              </button>
+            ) : null}
           </div>
         )}
 
         <div
+          ref={fade.ref}
+          onScroll={fade.onScroll}
+          style={fade.style}
           data-testid={bodyTestId}
-          className={`${bodyHeightCls} ${bodyOverflowCls} overscroll-contain px-6 py-5 ${bodyClassName ?? ""}`}
+          className={[
+            "min-h-0",
+            bodyHeightCls,
+            bodyOverflowCls,
+            "overscroll-contain px-6",
+            hideHeader ? "pt-6" : "pt-4",
+            snapshot.footer ? "pb-2" : "pb-6",
+            fade.className,
+            bodyClassName ?? "",
+          ].join(" ")}
         >
           {snapshot.children}
         </div>
 
         {snapshot.footer ? (
-          <div className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-900/8 px-6 py-4 dark:border-white/8">
-            {snapshot.footer}
+          <div
+            className={[
+              "flex shrink-0 flex-wrap items-center gap-x-4 gap-y-3 px-6 pt-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:pb-6",
+              snapshot.footerStart ? "justify-between" : "justify-end",
+            ].join(" ")}
+          >
+            {snapshot.footerStart ? (
+              <div className="min-w-0 flex-1 text-xs text-ink-3">{snapshot.footerStart}</div>
+            ) : null}
+            {/* 手机上按钮平分一整行，拇指好按；桌面恢复按内容宽度靠右。没有左侧辅助信息时
+                占满整行，调用方自己写的「左删除、右保存」两端布局也能撑开。 */}
+            <div
+              className={[
+                "flex flex-wrap items-center justify-end gap-2.5 max-sm:w-full max-sm:[&>button]:flex-1",
+                snapshot.footerStart ? "ml-auto" : "w-full",
+              ].join(" ")}
+            >
+              {snapshot.footer}
+            </div>
           </div>
         ) : null}
       </div>

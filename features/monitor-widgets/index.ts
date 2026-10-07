@@ -1,9 +1,8 @@
 export {
-  HourWindowSelector,
   KpiCard,
   MonitorCard,
   TimeRangeSelector,
   type MonitorSurfaceTone,
 } from "./MonitorPagePieces";
-export type { HourWindow, TimeRange } from "./monitor-constants";
-export { CHART_COLOR_CLASSES, CHART_COLORS, HOURLY_MODEL_COLORS } from "./monitor-constants";
+export type { TimeRange } from "./monitor-constants";
+export { CHART_COLORS } from "./monitor-constants";

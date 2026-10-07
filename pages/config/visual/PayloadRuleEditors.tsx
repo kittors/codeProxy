@@ -13,10 +13,49 @@ import {
   VISUAL_CONFIG_PAYLOAD_VALUE_TYPE_OPTIONS,
   VISUAL_CONFIG_PROTOCOL_OPTIONS,
 } from "@features/visual-config-editor";
-import { Button } from "@code-proxy/ui";
-import { TextInput } from "@code-proxy/ui";
-import { Select } from "@code-proxy/ui";
-import { HintCard as Card } from "./VisualHint";
+import type { ReactNode } from "react";
+import { Button, Select, Textarea, TextInput } from "@code-proxy/ui";
+
+/**
+ * 一类规则（默认 / 覆盖 / 过滤）：标题与说明常驻，右上角「添加规则」。
+ * 放在配置页「请求体改写」分区里，三类规则上下排列，不再各套一张带 ⓘ 提示的卡片。
+ */
+function RuleBlock({
+  title,
+  description,
+  meta,
+  action,
+  children,
+}: {
+  title: string;
+  description?: string;
+  /** 对应的 YAML 键，和设置行一样以等宽小字附在说明后面。 */
+  meta?: string;
+  action: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <div className="rounded-2xl border border-line bg-surface">
+      <div className="flex flex-wrap items-start justify-between gap-3 px-5 pt-4 pb-3">
+        <div className="min-w-0 flex-1">
+          <h3 className="text-sm font-semibold text-ink">{title}</h3>
+          {description || meta ? (
+            <p className="mt-0.5 text-xs leading-5 text-ink-3">
+              {description}
+              {meta ? (
+                <code className="ml-1.5 rounded-md bg-subtle px-1.5 py-px font-mono text-2xs">
+                  {meta}
+                </code>
+              ) : null}
+            </p>
+          ) : null}
+        </div>
+        <div className="shrink-0">{action}</div>
+      </div>
+      <div className="px-5 pb-5">{children}</div>
+    </div>
+  );
+}
 
 function SelectInput({
   value,
@@ -58,7 +97,7 @@ function TextArea({
   rows?: number;
 }) {
   return (
-    <textarea
+    <Textarea
       value={value}
       onChange={(e) => onChange(e.currentTarget.value)}
       disabled={disabled}
@@ -66,13 +105,7 @@ function TextArea({
       aria-label={ariaLabel}
       rows={rows}
       spellCheck={false}
-      className={[
-        "w-full resize-y rounded-xl border border-slate-900/8 bg-white px-3 py-2.5 font-mono text-xs text-slate-900 outline-none transition",
-        "focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:border-white/8 dark:bg-neutral-900 dark:text-slate-100 dark:focus-visible:ring-white/15",
-        disabled ? "opacity-60" : null,
-      ]
-        .filter(Boolean)
-        .join(" ")}
+      className="min-h-0 font-mono text-xs"
     />
   );
 }
@@ -100,12 +133,14 @@ function updateRuleParams(
 export function PayloadRulesEditor({
   title,
   description,
+  meta,
   rules,
   disabled,
   onChange,
 }: {
   title: string;
   description?: string;
+  meta?: string;
   rules: PayloadRule[];
   disabled?: boolean;
   onChange: (rules: PayloadRule[]) => void;
@@ -188,10 +223,11 @@ export function PayloadRulesEditor({
   };
 
   return (
-    <Card
+    <RuleBlock
       title={title}
       description={description}
-      actions={
+      meta={meta}
+      action={
         <Button size="sm" onClick={addRule} disabled={disabled}>
           <Plus size={14} />
           {t("visual_config.add_rule")}
@@ -199,7 +235,7 @@ export function PayloadRulesEditor({
       }
     >
       {rules.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-slate-900/8 bg-white/60 p-4 text-center text-sm text-slate-600 dark:border-white/8 dark:bg-neutral-950/40 dark:text-white/65">
+        <div className="rounded-2xl border border-dashed border-line px-4 py-6 text-center text-sm text-ink-3">
           {t("visual_config.no_rules")}
         </div>
       ) : (
@@ -207,14 +243,14 @@ export function PayloadRulesEditor({
           {rules.map((rule, ruleIndex) => (
             <div
               key={rule.id}
-              className="space-y-3 rounded-2xl border border-slate-900/8 bg-white/60 p-4 dark:border-white/8 dark:bg-neutral-950/40"
+              className="space-y-4 rounded-2xl border border-line bg-subtle p-4"
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="text-sm font-semibold text-slate-900 dark:text-white">
+                <div className="text-sm font-semibold text-ink">
                   {t("visual_config.rule_n", { n: ruleIndex + 1 })}
                 </div>
                 <Button
-                  variant="ghost"
+                  variant="ghost-danger"
                   size="sm"
                   onClick={() => removeRule(ruleIndex)}
                   disabled={disabled}
@@ -226,7 +262,7 @@ export function PayloadRulesEditor({
 
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="text-xs font-semibold text-slate-600 dark:text-white/65">
+                  <div className="text-xs font-medium text-ink-2">
                     {t("visual_config.match_models")}
                   </div>
                   <Button
@@ -263,7 +299,7 @@ export function PayloadRulesEditor({
                         ariaLabel="Protocol"
                       />
                       <Button
-                        variant="danger"
+                        variant="ghost-danger"
                         size="sm"
                         onClick={() => removeModel(ruleIndex, modelIndex)}
                         disabled={disabled || (rule.models || []).length <= 1}
@@ -278,7 +314,7 @@ export function PayloadRulesEditor({
 
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="text-xs font-semibold text-slate-600 dark:text-white/65">
+                  <div className="text-xs font-medium text-ink-2">
                     {t("visual_config.override_params")}
                   </div>
                   <Button
@@ -293,7 +329,7 @@ export function PayloadRulesEditor({
                 </div>
 
                 {(rule.params || []).length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-slate-900/8 bg-white/60 p-3 text-center text-xs text-slate-600 dark:border-white/8 dark:bg-neutral-950/40 dark:text-white/65">
+                  <div className="rounded-xl border border-dashed border-line p-3 text-center text-xs text-ink-3">
                     {t("visual_config.no_params")}
                   </div>
                 ) : (
@@ -301,7 +337,7 @@ export function PayloadRulesEditor({
                     {(rule.params || []).map((param, paramIndex) => (
                       <div
                         key={param.id}
-                        className="space-y-2 rounded-2xl border border-slate-900/8 bg-white/60 p-3 dark:border-white/8 dark:bg-neutral-950/40"
+                        className="space-y-2 rounded-xl border border-line bg-surface p-3"
                       >
                         <div className="grid gap-2 lg:grid-cols-[1fr_180px_auto]">
                           <TextInput
@@ -324,7 +360,7 @@ export function PayloadRulesEditor({
                             ariaLabel="Value type"
                           />
                           <Button
-                            variant="danger"
+                            variant="ghost-danger"
                             size="sm"
                             onClick={() => removeParam(ruleIndex, paramIndex)}
                             disabled={disabled}
@@ -362,7 +398,7 @@ export function PayloadRulesEditor({
           ))}
         </div>
       )}
-    </Card>
+    </RuleBlock>
   );
 }
 
@@ -437,10 +473,11 @@ export function PayloadFilterRulesEditor({
   };
 
   return (
-    <Card
-      title={t("visual_config.payload_filter")}
-      description={t("visual_config.payload_filter_desc")}
-      actions={
+    <RuleBlock
+      title={t("config_ui.payload.filter.title")}
+      description={t("config_ui.payload.filter.desc")}
+      meta="payload.filter"
+      action={
         <Button size="sm" onClick={addRule} disabled={disabled}>
           <Plus size={14} />
           {t("visual_config.add_rule")}
@@ -448,7 +485,7 @@ export function PayloadFilterRulesEditor({
       }
     >
       {rules.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-slate-900/8 bg-white/60 p-4 text-center text-sm text-slate-600 dark:border-white/8 dark:bg-neutral-950/40 dark:text-white/65">
+        <div className="rounded-2xl border border-dashed border-line px-4 py-6 text-center text-sm text-ink-3">
           {t("visual_config.no_rules")}
         </div>
       ) : (
@@ -456,14 +493,14 @@ export function PayloadFilterRulesEditor({
           {rules.map((rule, ruleIndex) => (
             <div
               key={rule.id}
-              className="space-y-3 rounded-2xl border border-slate-900/8 bg-white/60 p-4 dark:border-white/8 dark:bg-neutral-950/40"
+              className="space-y-4 rounded-2xl border border-line bg-subtle p-4"
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="text-sm font-semibold text-slate-900 dark:text-white">
+                <div className="text-sm font-semibold text-ink">
                   {t("visual_config.rule_n", { n: ruleIndex + 1 })}
                 </div>
                 <Button
-                  variant="ghost"
+                  variant="ghost-danger"
                   size="sm"
                   onClick={() => removeRule(ruleIndex)}
                   disabled={disabled}
@@ -475,7 +512,7 @@ export function PayloadFilterRulesEditor({
 
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="text-xs font-semibold text-slate-600 dark:text-white/65">
+                  <div className="text-xs font-medium text-ink-2">
                     {t("visual_config.match_models")}
                   </div>
                   <Button
@@ -512,7 +549,7 @@ export function PayloadFilterRulesEditor({
                         ariaLabel="Protocol"
                       />
                       <Button
-                        variant="danger"
+                        variant="ghost-danger"
                         size="sm"
                         onClick={() => removeModel(ruleIndex, modelIndex)}
                         disabled={disabled || (rule.models || []).length <= 1}
@@ -527,7 +564,7 @@ export function PayloadFilterRulesEditor({
 
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="text-xs font-semibold text-slate-600 dark:text-white/65">
+                  <div className="text-xs font-medium text-ink-2">
                     {t("visual_config.remove_param_paths")}
                   </div>
                   <Button
@@ -542,7 +579,7 @@ export function PayloadFilterRulesEditor({
                 </div>
 
                 {(rule.params || []).length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-slate-900/8 bg-white/60 p-3 text-center text-xs text-slate-600 dark:border-white/8 dark:bg-neutral-950/40 dark:text-white/65">
+                  <div className="rounded-xl border border-dashed border-line p-3 text-center text-xs text-ink-3">
                     {t("visual_config.no_paths")}
                   </div>
                 ) : (
@@ -561,7 +598,7 @@ export function PayloadFilterRulesEditor({
                           disabled={disabled}
                         />
                         <Button
-                          variant="danger"
+                          variant="ghost-danger"
                           size="sm"
                           onClick={() => removeParam(ruleIndex, paramIndex)}
                           disabled={disabled}
@@ -578,6 +615,6 @@ export function PayloadFilterRulesEditor({
           ))}
         </div>
       )}
-    </Card>
+    </RuleBlock>
   );
 }

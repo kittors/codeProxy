@@ -5,13 +5,13 @@ import { TextInput } from "@code-proxy/ui";
 import { ToggleSwitch } from "@code-proxy/ui";
 import { KeyValueInputList } from "../KeyValueInputList";
 import type { ProxyPoolEntry } from "@code-proxy/api-client/endpoints/proxies";
-import { ProxyPoolSelect } from "@features/proxy-pool";
+import { ProxyPoolSelect, ProxyUrlInput } from "@features/proxy-pool";
 import type { OpenAIDraft } from "../providers-helpers";
 import { ModerationProfileSelect } from "@features/content-moderation";
 import { useModerationPermissions } from "@app/providers/useModerationPermissions";
 
 const SectionCard = ({ children }: { children: React.ReactNode }) => (
-  <div className="rounded-xl border border-slate-900/8 bg-white/70 p-4 shadow-sm dark:border-white/8 dark:bg-neutral-950/60">
+  <div className="rounded-xl border border-line bg-surface p-4 shadow-sm">
     {children}
   </div>
 );
@@ -37,7 +37,7 @@ export function OpenAIKeyEntriesEditor({
   return (
     <section className="space-y-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-semibold text-slate-900 dark:text-white">
+        <p className="text-sm font-semibold text-ink">
           {t("providers.api_key_entries")}
         </p>
         <Button
@@ -70,11 +70,11 @@ export function OpenAIKeyEntriesEditor({
           <SectionCard key={entry.id}>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex flex-wrap items-center gap-3">
-                <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                <p className="text-sm font-semibold text-ink">
                   {t("providers.key_number", { num: idx + 1 })}
                 </p>
                 {entry.channelId ? (
-                  <span className="max-w-full truncate font-mono text-xs text-slate-500 dark:text-white/50" title={entry.channelId}>
+                  <span className="max-w-full truncate font-mono text-xs text-ink-3" title={entry.channelId}>
                     {entry.channelId}
                   </span>
                 ) : null}
@@ -90,12 +90,12 @@ export function OpenAIKeyEntriesEditor({
                     }));
                   }}
                 />
-                <span className="text-xs font-semibold text-slate-500 dark:text-white/55">
+                <span className="text-xs font-semibold text-ink-3">
                   {!entry.disabled ? t("providers.enabled") : t("providers.disabled")}
                 </span>
               </div>
               <Button
-                variant="danger"
+                variant="ghost-danger"
                 size="sm"
                 onClick={() =>
                   setOpenaiDraft((prev) => ({
@@ -110,7 +110,7 @@ export function OpenAIKeyEntriesEditor({
               </Button>
             </div>
 
-            <div className="mt-3 rounded-lg bg-slate-50/80 p-3 dark:bg-white/[0.04]">
+            <div className="mt-3 rounded-lg bg-subtle p-3">
               <ModerationProfileSelect
         canRead={moderationPerms.canRead}
         canWrite={moderationPerms.canWrite}
@@ -124,7 +124,7 @@ export function OpenAIKeyEntriesEditor({
 
             <div className="mt-3 grid gap-3 md:grid-cols-3">
               <div className="space-y-2">
-                <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                <p className="text-sm font-semibold text-ink">
                   {t("providers.api_key")}
                 </p>
                 <TextInput
@@ -140,7 +140,7 @@ export function OpenAIKeyEntriesEditor({
                   }}
                   placeholder={t("providers.api_key_placeholder")}
                 />
-                <div className="flex items-center justify-between text-xs text-slate-500 dark:text-white/55">
+                <div className="flex items-center justify-between text-xs text-ink-3">
                   <span>{t("providers.show_masked_key", { key: maskApiKey(entry.apiKey) })}</span>
                   <Button
                     variant="ghost"
@@ -170,24 +170,20 @@ export function OpenAIKeyEntriesEditor({
                   ariaLabel={`${t("providers.proxy_pool_label")} ${idx + 1}`}
                 />
               </div>
-              <div className="space-y-2">
-                <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                  {t("providers.proxy_url_optional")}
-                </p>
-                <TextInput
-                  value={entry.proxyUrl}
-                  onChange={(e) => {
-                    const value = e.currentTarget.value;
-                    setOpenaiDraft((prev) => ({
-                      ...prev,
-                      apiKeyEntries: prev.apiKeyEntries.map((it, i) =>
-                        i === idx ? { ...it, proxyUrl: value } : it,
-                      ),
-                    }));
-                  }}
-                  placeholder={t("providers.proxy_url_placeholder")}
-                />
-              </div>
+              <ProxyUrlInput
+                collapsible
+                label={t("providers.proxy_url")}
+                description={t("providers.proxy_url_fallback_hint")}
+                value={entry.proxyUrl}
+                onChange={(value) => {
+                  setOpenaiDraft((prev) => ({
+                    ...prev,
+                    apiKeyEntries: prev.apiKeyEntries.map((it, i) =>
+                      i === idx ? { ...it, proxyUrl: value } : it,
+                    ),
+                  }));
+                }}
+              />
             </div>
 
             <div className="mt-3">

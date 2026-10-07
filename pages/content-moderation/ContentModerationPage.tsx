@@ -19,6 +19,7 @@ import {
 import {
   Button,
   COLUMN_WIDTH,
+  Callout,
   Card,
   ConfirmModal,
   DataTable,
@@ -222,7 +223,7 @@ export function ContentModerationPage() {
             className={[
               "rounded-full px-2.5 py-1 text-xs font-semibold",
               profile.backend === "qwen3guard"
-                ? "bg-violet-100 text-violet-800 dark:bg-violet-500/20 dark:text-violet-100"
+                ? "bg-selected text-ink"
                 : "bg-slate-100 text-slate-700 dark:bg-white/10 dark:text-white/70",
             ].join(" ")}
           >
@@ -419,16 +420,34 @@ export function ContentModerationPage() {
 
       <ConfirmModal
         open={deleteTarget !== null}
-        title={t("content_moderation.delete_profile")}
-        description={t("content_moderation.delete_description", {
-          name: deleteTarget?.name ?? "",
-          count: deleteTarget ? bindingCount(deleteTarget) : 0,
-        })}
+        title={t("content_moderation.delete_profile_title", { name: deleteTarget?.name ?? "" })}
+        description={t("content_moderation.delete_lead")}
+        subject={
+          deleteTarget ? (
+            <span className="flex min-w-0 items-center justify-between gap-3">
+              <span className="truncate font-medium">{deleteTarget.name}</span>
+              <span className="shrink-0 text-xs text-ink-3">
+                {t(`content_moderation.backend_${deleteTarget.backend}`)} ·{" "}
+                {t(`content_moderation.keyword_mode_${deleteTarget.keyword_mode}`)}
+              </span>
+            </span>
+          ) : null
+        }
+        consequences={[t("content_moderation.delete_consequence_settings")]}
         confirmText={t("content_moderation.delete_confirm")}
         busy={deleting}
         onClose={() => setDeleteTarget(null)}
         onConfirm={() => void deleteProfile()}
-      />
+      >
+        {/* 服务端拒绝删除仍有渠道绑定的配置：提前说清楚，并指向能解绑的地方。 */}
+        {deleteTarget && bindingCount(deleteTarget) > 0 ? (
+          <Callout tone="warning">
+            {t("content_moderation.delete_blocked_bindings", {
+              count: bindingCount(deleteTarget),
+            })}
+          </Callout>
+        ) : null}
+      </ConfirmModal>
     </div>
   );
 }

@@ -8,7 +8,7 @@ import type { ProviderKeyDraft } from "../providers-helpers";
 import { isModelAccessProvider } from "../provider-model-access";
 
 const SectionCard = ({ children }: { children: React.ReactNode }) => (
-  <div className="rounded-xl border border-slate-900/8 bg-white/70 p-4 shadow-sm dark:border-white/8 dark:bg-neutral-950/60">
+  <div className="rounded-xl border border-line bg-surface p-4 shadow-sm">
     {children}
   </div>
 );
@@ -48,17 +48,17 @@ export function ProviderKeyBasicTab({
 
       {keyDraft.id ? (
         <SectionCard>
-          <p className="text-xs font-semibold text-slate-500 dark:text-white/55">
+          <p className="text-xs font-semibold text-ink-3">
             {t("content_moderation.channel_id")}
           </p>
-          <p className="mt-1 break-all font-mono text-xs text-slate-700 dark:text-white/75">
+          <p className="mt-1 break-all font-mono text-xs text-ink-2">
             {keyDraft.id}
           </p>
         </SectionCard>
       ) : null}
 
       <SectionCard>
-        <p className="text-sm font-semibold text-slate-900 dark:text-white">
+        <p className="text-sm font-semibold text-ink">
           {t("providers.channel_name_label")}
         </p>
         <div className="mt-2">
@@ -71,7 +71,7 @@ export function ProviderKeyBasicTab({
             placeholder={t("providers.channel_placeholder")}
           />
         </div>
-        <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
+        <p className="mt-2 text-xs text-ink-3">
           {t("providers.channel_name_hint")}
         </p>
       </SectionCard>
@@ -91,14 +91,14 @@ export function ProviderKeyBasicTab({
           checked={editKeyEnabled}
           onCheckedChange={editKeyEnabledToggle}
         />
-        <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
+        <p className="mt-2 text-xs text-ink-3">
           {t(usesDisabledFlag ? "providers.disable_hint_flag" : "providers.disable_hint")}
         </p>
       </SectionCard>
 
       {isBedrock ? (
         <SectionCard>
-          <p className="text-sm font-semibold text-slate-900 dark:text-white">
+          <p className="text-sm font-semibold text-ink">
             {t("providers.bedrock_auth_mode")}
           </p>
           <div className="mt-2">
@@ -117,7 +117,7 @@ export function ProviderKeyBasicTab({
               aria-label={t("providers.bedrock_auth_mode")}
             />
           </div>
-          <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
+          <p className="mt-2 text-xs text-ink-3">
             {t("providers.bedrock_auth_mode_hint")}
           </p>
         </SectionCard>
@@ -126,10 +126,10 @@ export function ProviderKeyBasicTab({
       {!isBedrockSigV4 ? (
         <SectionCard>
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-sm font-semibold text-slate-900 dark:text-white">
+            <p className="text-sm font-semibold text-ink">
               {isBedrock ? t("providers.bedrock_auth_api_key") : t("providers.api_key")}
             </p>
-            <span className="text-xs text-slate-500 dark:text-white/55">
+            <span className="text-xs text-ink-3">
               {t("providers.show_masked_key", { key: maskApiKey(keyDraft.apiKey) })}
             </span>
           </div>
@@ -146,7 +146,7 @@ export function ProviderKeyBasicTab({
                   type="button"
                   onClick={() => void copyText(keyDraft.apiKey.trim())}
                   disabled={!keyDraft.apiKey.trim()}
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-slate-900/8 bg-white/80 text-slate-700 shadow-sm transition hover:bg-white disabled:opacity-50 dark:border-white/8 dark:bg-neutral-950/70 dark:text-slate-200 dark:hover:bg-neutral-950"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-line bg-surface text-ink-2 shadow-sm transition hover:bg-white disabled:opacity-50 dark:hover:bg-neutral-950"
                   aria-label={t("providers.copy_api_key")}
                   title={t("providers.copy")}
                 >
@@ -155,7 +155,7 @@ export function ProviderKeyBasicTab({
               }
             />
           </div>
-          <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
+          <p className="mt-2 text-xs text-ink-3">
             {isBedrock ? t("providers.bedrock_api_key_hint") : t("providers.api_key_hint")}
           </p>
         </SectionCard>
@@ -163,12 +163,12 @@ export function ProviderKeyBasicTab({
 
       {isBedrockSigV4 ? (
         <SectionCard>
-          <p className="text-sm font-semibold text-slate-900 dark:text-white">
+          <p className="text-sm font-semibold text-ink">
             {t("providers.bedrock_sigv4_credentials")}
           </p>
           <div className="mt-3 grid gap-3 md:grid-cols-2">
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-slate-700 dark:text-white/75">
+              <p className="text-xs font-semibold text-ink-2">
                 {t("providers.bedrock_access_key_id")}
               </p>
               <TextInput
@@ -181,7 +181,7 @@ export function ProviderKeyBasicTab({
               />
             </div>
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-slate-700 dark:text-white/75">
+              <p className="text-xs font-semibold text-ink-2">
                 {t("providers.bedrock_secret_access_key")}
               </p>
               <TextInput
@@ -195,7 +195,7 @@ export function ProviderKeyBasicTab({
               />
             </div>
             <div className="space-y-2 md:col-span-2">
-              <p className="text-xs font-semibold text-slate-700 dark:text-white/75">
+              <p className="text-xs font-semibold text-ink-2">
                 {t("providers.bedrock_session_token")}
               </p>
               <TextInput
@@ -208,14 +208,14 @@ export function ProviderKeyBasicTab({
               />
             </div>
           </div>
-          <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
+          <p className="mt-2 text-xs text-ink-3">
             {t("providers.bedrock_sigv4_hint")}
           </p>
         </SectionCard>
       ) : null}
 
       <SectionCard>
-        <p className="text-sm font-semibold text-slate-900 dark:text-white">
+        <p className="text-sm font-semibold text-ink">
           {t("providers.prefix_label")}
         </p>
         <div className="mt-2">
@@ -228,7 +228,7 @@ export function ProviderKeyBasicTab({
             placeholder={t("providers.prefix_placeholder")}
           />
         </div>
-        <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
+        <p className="mt-2 text-xs text-ink-3">
           {t("providers.prefix_hint")}
         </p>
       </SectionCard>

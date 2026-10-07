@@ -244,8 +244,12 @@ describe("ProxiesPage", () => {
     await userEvent.click(await screen.findByRole("button", { name: /add proxy/i }));
     const dialog = await screen.findByRole("dialog", { name: /add proxy/i });
 
-    await userEvent.type(within(dialog).getByLabelText(/name/i), "US Proxy");
-    await userEvent.type(within(dialog).getByLabelText(/proxy url/i), "http://127.0.0.1:7890");
+    await userEvent.type(within(dialog).getByLabelText(/^name/i), "US Proxy");
+    // 把整串地址粘进「主机」框，会自动拆成协议 / 主机 / 端口。
+    await userEvent.click(within(dialog).getByLabelText("Host"));
+    await userEvent.paste("http://127.0.0.1:7890");
+    expect(within(dialog).getByRole("radio", { name: "HTTP" })).toHaveAttribute("aria-checked", "true");
+    expect(within(dialog).getByLabelText("Port")).toHaveValue("7890");
     await userEvent.type(within(dialog).getByLabelText(/remark/i), "OpenAI egress");
     await userEvent.click(within(dialog).getByRole("button", { name: /^save$/i }));
 
@@ -283,11 +287,9 @@ describe("ProxiesPage", () => {
 
     await userEvent.click(await screen.findByRole("button", { name: /add proxy/i }));
     const dialog = await screen.findByRole("dialog", { name: /add proxy/i });
-    await userEvent.type(within(dialog).getByLabelText(/name/i), "洛杉矶 ip");
-    await userEvent.type(
-      within(dialog).getByLabelText(/proxy url/i),
-      "socks5://user:pass@1.2.3.4:1080",
-    );
+    await userEvent.type(within(dialog).getByLabelText(/^name/i), "洛杉矶 ip");
+    await userEvent.click(within(dialog).getByLabelText("Host"));
+    await userEvent.paste("socks5://user:pass@1.2.3.4:1080");
     await userEvent.click(within(dialog).getByRole("button", { name: /^save$/i }));
 
     await waitFor(() => {
@@ -351,14 +353,24 @@ describe("ProxiesPage", () => {
     await userEvent.click(await screen.findByRole("button", { name: /edit hk proxy/i }));
     const dialog = await screen.findByRole("dialog", { name: /edit proxy/i });
 
-    const nameInput = within(dialog).getByLabelText(/name/i);
-    const urlInput = within(dialog).getByLabelText(/proxy url/i);
+    const nameInput = within(dialog).getByLabelText(/^name/i);
     const remarkInput = within(dialog).getByLabelText(/remark/i);
+
+    // 编辑时把原地址拆成各项回填。
+    expect(within(dialog).getByRole("radio", { name: "SOCKS5" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    expect(within(dialog).getByLabelText("Host")).toHaveValue("127.0.0.1");
+    expect(within(dialog).getByLabelText(/^username/i)).toHaveValue("user");
 
     await userEvent.clear(nameInput);
     await userEvent.type(nameInput, "Updated HK Proxy");
-    await userEvent.clear(urlInput);
-    await userEvent.type(urlInput, "http://127.0.0.1:7891");
+    await userEvent.click(within(dialog).getByRole("button", { name: /paste full address/i }));
+    await userEvent.type(
+      within(dialog).getByRole("textbox", { name: /paste proxy address/i }),
+      "http://127.0.0.1:7891{Enter}",
+    );
     await userEvent.clear(remarkInput);
     await userEvent.type(remarkInput, "Rotated egress");
     await userEvent.click(within(dialog).getByRole("button", { name: /^save$/i }));
@@ -374,6 +386,51 @@ describe("ProxiesPage", () => {
     expect(mocks.apiPut).not.toHaveBeenCalled();
     expect(await screen.findByText("Updated HK Proxy")).toBeInTheDocument();
     expect(screen.queryByText("HK Proxy")).not.toBeInTheDocument();
+  });
+
+  test("validates the structured address before saving", async () => {
+    renderPage();
+
+    await userEvent.click(await screen.findByRole("button", { name: /add proxy/i }));
+    const dialog = await screen.findByRole("dialog", { name: /add proxy/i });
+
+    // 什么都没填就保存：名称与主机就地报错，焦点落到第一处，不发请求。
+    await userEvent.click(within(dialog).getByRole("button", { name: /^save$/i }));
+    expect(await within(dialog).findAllByText("Required")).toHaveLength(2);
+    // 焦点在错误渲染出来的下一帧才移动。
+    await waitFor(() => expect(within(dialog).getByLabelText(/^name/i)).toHaveFocus());
+    expect(mocks.apiPut).not.toHaveBeenCalled();
+
+    await userEvent.type(within(dialog).getByLabelText(/^name/i), "Tokyo");
+    await userEvent.type(within(dialog).getByLabelText("Host"), "198.51.100.9");
+    await userEvent.type(within(dialog).getByLabelText(/^password/i), "p@ss:word/1");
+    await userEvent.click(within(dialog).getByRole("button", { name: /^save$/i }));
+    // SOCKS5 必须有端口；有密码就得有用户名。
+    expect(within(dialog).getByText("SOCKS5 proxies need a port")).toBeInTheDocument();
+    expect(within(dialog).getByText("A password needs a username too")).toBeInTheDocument();
+    expect(mocks.apiPut).not.toHaveBeenCalled();
+
+    await userEvent.type(within(dialog).getByLabelText("Port"), "1080");
+    await userEvent.type(within(dialog).getByLabelText(/^username/i), "me@corp");
+    await userEvent.click(within(dialog).getByRole("button", { name: /^save$/i }));
+
+    await waitFor(() => expect(mocks.apiPut).toHaveBeenCalled());
+    const putBody = mocks.apiPut.mock.calls.at(-1)?.[1] as { items: Array<{ url: string }> };
+    // 账号密码里的 @ : / 自动编码，后端 url.Parse 会原样解码回来。
+    expect(putBody.items.at(-1)?.url).toBe("socks5://me%40corp:p%40ss%3Aword%2F1@198.51.100.9:1080");
+  });
+
+  test("an address with an unsupported protocol is not split into the fields", async () => {
+    renderPage();
+    await userEvent.click(await screen.findByRole("button", { name: /add proxy/i }));
+    const dialog = await screen.findByRole("dialog", { name: /add proxy/i });
+    await userEvent.click(within(dialog).getByRole("button", { name: /paste full address/i }));
+    await userEvent.type(
+      within(dialog).getByRole("textbox", { name: /paste proxy address/i }),
+      "ftp://203.0.113.7:21{Enter}",
+    );
+    expect(within(dialog).getByRole("alert")).toHaveTextContent(/only http, https and socks5/i);
+    expect(within(dialog).getByLabelText("Host")).toHaveValue("");
   });
 
   test("checks a proxy and renders the last check result", async () => {

@@ -1,8 +1,7 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Zap, Loader2 } from "lucide-react";
-import { Button, HoverTooltip } from "@code-proxy/ui";
-import { goeyToast } from "goey-toast";
+import { Button, HoverTooltip, toast } from "@code-proxy/ui";
 import { authFilesApi } from "@code-proxy/api-client";
 import type { AuthFileItem } from "@code-proxy/domain";
 
@@ -27,9 +26,9 @@ export function AuthFileWarmupButton({ file, actionSize, actionIconSize }: AuthF
           const key = String(file.id || file.name);
           authFilesApi
             .runWarmup(key)
-            .then(() => goeyToast.success(t("antigravity_quota.warmup_success")))
+            .then(() => toast.success(t("antigravity_quota.warmup_success")))
             .catch((e: unknown) =>
-              goeyToast.error(
+              toast.error(
                 t("antigravity_quota.warmup_failed", { message: String(e) }),
               ),
             )

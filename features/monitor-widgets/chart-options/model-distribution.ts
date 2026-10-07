@@ -1,3 +1,4 @@
+import { chartPalette, chartTooltipStyle, withAlpha } from "@code-proxy/ui";
 import { CHART_COLORS } from "../monitor-constants";
 import { formatCompact } from "../monitor-format";
 import type { ModelDistributionDatum } from "./types";
@@ -31,22 +32,41 @@ export const buildModelDistributionData = (input: {
   return data;
 };
 
+/**
+ * 每个扇区的颜色，环图与图例共用这一份，保证色点和扇区对得上：
+ * 按 CHART_COLORS（分类色板）的顺序依次取；buildModelDistributionData 折叠出来的「其他」放在最后，
+ * 用中性的浅灰——它是若干个小项的合计，不是某一个模型 / 密钥，不该占一个分类色，也避免第 11 片
+ * 和第 1 片撞色。
+ */
+export const modelDistributionColors = (
+  data: readonly ModelDistributionDatum[],
+  isDark: boolean,
+  otherLabel?: string,
+): string[] => {
+  const other = withAlpha(chartPalette(isDark).ink3, 0.45);
+  return data.map((item, index) =>
+    otherLabel !== undefined && index === data.length - 1 && item.name === otherLabel
+      ? other
+      : (CHART_COLORS[index % CHART_COLORS.length] ?? CHART_COLORS[0]),
+  );
+};
+
 export const createModelDistributionOption = (input: {
   isDark: boolean;
   data: ModelDistributionDatum[];
+  /** 「其他」扇区的名字（与 buildModelDistributionData 的 otherLabel 相同），用于给它中性色。 */
+  otherLabel?: string;
 }): Record<string, unknown> => {
   return {
     backgroundColor: "transparent",
-    color: [...CHART_COLORS, "#94a3b8"],
+    color: modelDistributionColors(input.data, input.isDark, input.otherLabel),
     tooltip: {
       trigger: "item",
       renderMode: "html",
       appendToBody: false,
       confine: true,
-      borderWidth: 0,
-      backgroundColor: "rgba(15, 23, 42, 0.92)",
-      textStyle: { color: "#fff" },
-      extraCssText: "z-index: 10000;",
+      ...chartTooltipStyle(input.isDark),
+      extraCssText: `${chartTooltipStyle(input.isDark).extraCssText} z-index: 10000;`,
       formatter: (params: { name: string; value: number; percent: number }) => {
         const valueLabel = formatCompact(params.value ?? 0);
         return `${params.name}<br/>${valueLabel}（${(params.percent ?? 0).toFixed(1)}%）`;
@@ -64,7 +84,8 @@ export const createModelDistributionOption = (input: {
         itemStyle: {
           borderRadius: 4,
           borderWidth: 2,
-          borderColor: input.isDark ? "rgba(10,10,10,0.75)" : "rgba(255,255,255,0.92)",
+          // 扇区之间的分隔线取卡片底色，深浅色都像是「切开」而不是描了一圈边。
+          borderColor: chartPalette(input.isDark).surface,
         },
         emphasis: { scale: true, scaleSize: 6 },
         data: input.data,

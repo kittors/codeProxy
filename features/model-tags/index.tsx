@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { Check } from "lucide-react";
 import { VendorIcon } from "@code-proxy/assets";
-import { cn } from "@code-proxy/ui";
+import { brandVars, cn } from "@code-proxy/ui";
 
 export type ModelVendorKey =
   | "amp"
@@ -28,134 +28,10 @@ export type ModelVendorKey =
   | "vertex"
   | "other";
 
-export type ModelVendorTone = {
-  bg: string;
-  text: string;
-  border: string;
-};
-
 type ModelVendorDefinition = {
   key: ModelVendorKey;
   label: string;
   matches: (modelId: string) => boolean;
-};
-
-export const MODEL_VENDOR_COLORS: Record<ModelVendorKey, ModelVendorTone> = {
-  claude: {
-    bg: "bg-orange-50 dark:bg-orange-950/20",
-    text: "text-orange-700 dark:text-orange-300",
-    border: "border-orange-200/60 dark:border-orange-800/30",
-  },
-  cline: {
-    bg: "bg-teal-50 dark:bg-teal-950/20",
-    text: "text-teal-700 dark:text-teal-300",
-    border: "border-teal-200/60 dark:border-teal-800/30",
-  },
-  gpt: {
-    bg: "bg-emerald-50 dark:bg-emerald-950/20",
-    text: "text-emerald-700 dark:text-emerald-300",
-    border: "border-emerald-200/60 dark:border-emerald-800/30",
-  },
-  codex: {
-    bg: "bg-emerald-50 dark:bg-emerald-950/20",
-    text: "text-emerald-700 dark:text-emerald-300",
-    border: "border-emerald-200/60 dark:border-emerald-800/30",
-  },
-  openai: {
-    bg: "bg-emerald-50 dark:bg-emerald-950/20",
-    text: "text-emerald-700 dark:text-emerald-300",
-    border: "border-emerald-200/60 dark:border-emerald-800/30",
-  },
-  deepseek: {
-    bg: "bg-cyan-50 dark:bg-cyan-950/20",
-    text: "text-cyan-700 dark:text-cyan-300",
-    border: "border-cyan-200/60 dark:border-cyan-800/30",
-  },
-  gemini: {
-    bg: "bg-blue-50 dark:bg-blue-950/20",
-    text: "text-blue-700 dark:text-blue-300",
-    border: "border-blue-200/60 dark:border-blue-800/30",
-  },
-  qwen: {
-    bg: "bg-violet-50 dark:bg-violet-950/20",
-    text: "text-violet-700 dark:text-violet-300",
-    border: "border-violet-200/60 dark:border-violet-800/30",
-  },
-  llama: {
-    bg: "bg-indigo-50 dark:bg-indigo-950/20",
-    text: "text-indigo-700 dark:text-indigo-300",
-    border: "border-indigo-200/60 dark:border-indigo-800/30",
-  },
-  mistral: {
-    bg: "bg-amber-50 dark:bg-amber-950/20",
-    text: "text-amber-700 dark:text-amber-300",
-    border: "border-amber-200/60 dark:border-amber-800/30",
-  },
-  minimax: {
-    bg: "bg-sky-50 dark:bg-sky-950/20",
-    text: "text-sky-700 dark:text-sky-300",
-    border: "border-sky-200/60 dark:border-sky-800/30",
-  },
-  glm: {
-    bg: "bg-blue-50 dark:bg-blue-950/20",
-    text: "text-blue-700 dark:text-blue-300",
-    border: "border-blue-200/60 dark:border-blue-800/30",
-  },
-  grok: {
-    bg: "bg-slate-50 dark:bg-slate-900/30",
-    text: "text-slate-700 dark:text-slate-300",
-    border: "border-slate-900/8 dark:border-slate-700/30",
-  },
-  hunyuan: {
-    bg: "bg-blue-50 dark:bg-blue-950/20",
-    text: "text-blue-700 dark:text-blue-300",
-    border: "border-blue-200/60 dark:border-blue-800/30",
-  },
-  kimi: {
-    bg: "bg-slate-50 dark:bg-slate-900/30",
-    text: "text-slate-700 dark:text-slate-300",
-    border: "border-slate-900/8 dark:border-slate-700/30",
-  },
-  kiro: {
-    bg: "bg-amber-50 dark:bg-amber-950/20",
-    text: "text-amber-700 dark:text-amber-300",
-    border: "border-amber-200/60 dark:border-amber-800/30",
-  },
-  mimo: {
-    bg: "bg-purple-50 dark:bg-purple-950/20",
-    text: "text-purple-700 dark:text-purple-300",
-    border: "border-purple-200/60 dark:border-purple-800/30",
-  },
-  vertex: {
-    bg: "bg-fuchsia-50 dark:bg-fuchsia-950/20",
-    text: "text-fuchsia-700 dark:text-fuchsia-300",
-    border: "border-fuchsia-200/60 dark:border-fuchsia-800/30",
-  },
-  iflow: {
-    bg: "bg-teal-50 dark:bg-teal-950/20",
-    text: "text-teal-700 dark:text-teal-300",
-    border: "border-teal-200/60 dark:border-teal-800/30",
-  },
-  amp: {
-    bg: "bg-rose-50 dark:bg-rose-950/20",
-    text: "text-rose-700 dark:text-rose-300",
-    border: "border-rose-200/60 dark:border-rose-800/30",
-  },
-  antigravity: {
-    bg: "bg-lime-50 dark:bg-lime-950/20",
-    text: "text-lime-700 dark:text-lime-300",
-    border: "border-lime-200/60 dark:border-lime-800/30",
-  },
-  opencode: {
-    bg: "bg-zinc-50 dark:bg-zinc-900/40",
-    text: "text-zinc-700 dark:text-zinc-300",
-    border: "border-zinc-200/60 dark:border-zinc-700/40",
-  },
-  other: {
-    bg: "bg-slate-50 dark:bg-neutral-900/40",
-    text: "text-slate-600 dark:text-slate-300",
-    border: "border-slate-900/8 dark:border-neutral-700/40",
-  },
 };
 
 const MODEL_VENDOR_DEFINITIONS: ModelVendorDefinition[] = [
@@ -312,12 +188,36 @@ export function getModelVendorLabel(modelId: string, otherLabel = "Other"): stri
   return MODEL_VENDOR_DEFINITIONS.find((item) => item.key === key)?.label ?? key;
 }
 
-export function getModelVendorColor(modelIdOrVendorKey: string): ModelVendorTone {
-  const key =
-    modelIdOrVendorKey in MODEL_VENDOR_COLORS
-      ? (modelIdOrVendorKey as ModelVendorKey)
-      : getModelVendorKey(modelIdOrVendorKey);
-  return MODEL_VENDOR_COLORS[key] ?? MODEL_VENDOR_COLORS.other;
+const MODEL_VENDOR_KEYS = new Set<string>([
+  ...MODEL_VENDOR_DEFINITIONS.map((definition) => definition.key),
+  "other",
+]);
+
+/**
+ * 模型 / 厂商标签的品牌淡底：一成左右的品牌底、品牌色的字、再淡一档的品牌描边，和 ProviderTag
+ * 同一套配方，模型标签与供应商标签放在一起时颜色对得上。认不出的厂商 brandVars 回落到墨色，
+ * 于是就是中性的浅灰底、黑字。
+ */
+const BRAND_TINT_CLASS = [
+  "border-[color-mix(in_oklab,var(--brand)_22%,transparent)] bg-[color-mix(in_oklab,var(--brand)_10%,transparent)] text-[var(--brand-text)]",
+  "dark:border-[color-mix(in_oklab,var(--brand)_30%,transparent)] dark:bg-[color-mix(in_oklab,var(--brand)_18%,transparent)]",
+].join(" ");
+
+export type ModelVendorBrand = { className: string; style: CSSProperties };
+
+/**
+ * 模型或厂商 key 的品牌外观（类名 + 品牌 CSS 变量，两者要一起挂到同一个元素上）。
+ *
+ * 先用 getModelVendorKey 认厂商：它认得的写法比品牌表全（"chatgpt-4o"、"tencent/hunyuan-large"、
+ * "cline-pass/…" 都算），再从 vendorBrand() 取颜色；它认不出的，拿原始 ID 再按品牌前缀表试一次，
+ * 仍认不出就回落中性。颜色只从品牌表来，这里不再手写色板。
+ */
+export function modelVendorBrand(modelIdOrVendorKey: string): ModelVendorBrand {
+  const key = MODEL_VENDOR_KEYS.has(modelIdOrVendorKey)
+    ? (modelIdOrVendorKey as ModelVendorKey)
+    : getModelVendorKey(modelIdOrVendorKey);
+  const vars = brandVars(key === "other" ? modelIdOrVendorKey : key);
+  return { className: cn(vars.className, BRAND_TINT_CLASS), style: vars.style };
 }
 
 export function buildModelVendorStats(models: string[], otherLabel = "Other") {
@@ -340,12 +240,83 @@ export function buildModelVendorStats(models: string[], otherLabel = "Other") {
   return Array.from(stats.values()).sort((left, right) => right.count - left.count);
 }
 
+/**
+ * logo 也按认出的厂商取：VendorIcon 只认前缀，"chatgpt-4o"、"tencent/hunyuan-large"、
+ * "google/…" 这类写法它找不到 logo，先归到厂商再取，图标和颜色就始终是同一家。
+ */
+function vendorIconId(modelIdOrOwner: string): string {
+  const key = getModelVendorKey(modelIdOrOwner);
+  return key === "other" ? modelIdOrOwner : key;
+}
+
 function ModelTagContent({ id, iconSize }: { id: string; iconSize: number }) {
   return (
     <>
-      <VendorIcon modelId={id} size={iconSize} />
+      <VendorIcon modelId={vendorIconId(id)} size={iconSize} />
       <span className="min-w-0 truncate">{id}</span>
     </>
+  );
+}
+
+/**
+ * 厂商图标块（模型卡片左上角、归属列表）：品牌淡底 + 品牌描边 + logo。没有 logo 的露出首字母
+ * （peer-empty：logo 那一格渲染为空时才显示），认不出品牌的回落中性浅灰。
+ */
+export function ModelVendorTile({
+  modelId,
+  compact = false,
+}: {
+  /** 模型 ID 或归属方（openai、anthropic、google……）。 */
+  modelId: string;
+  /** 列表里用的小号块。 */
+  compact?: boolean;
+}) {
+  const brand = modelVendorBrand(modelId);
+  return (
+    <div
+      style={brand.style}
+      className={cn(
+        brand.className,
+        "relative flex shrink-0 items-center justify-center border",
+        compact ? "h-8 w-8 rounded-lg" : "h-11 w-11 rounded-xl",
+      )}
+    >
+      <span className="peer flex items-center justify-center empty:hidden">
+        <VendorIcon modelId={vendorIconId(modelId)} size={compact ? 16 : 22} />
+      </span>
+      <span className="hidden text-sm font-bold opacity-60 peer-empty:inline" aria-hidden="true">
+        {modelId.trim().charAt(0).toUpperCase() || "M"}
+      </span>
+    </div>
+  );
+}
+
+/**
+ * 归属标签（owned_by：openai、anthropic、google……）：按归属方自己的品牌上淡底，认不出的
+ * 归属方保持中性——颜色只回答「这是谁家的」，不替未知归属方编一个颜色。
+ */
+export function ModelOwnerTag({
+  owner,
+  withLogo = false,
+  className,
+}: {
+  owner: string;
+  withLogo?: boolean;
+  className?: string;
+}) {
+  const brand = modelVendorBrand(owner);
+  return (
+    <span
+      style={brand.style}
+      className={cn(
+        brand.className,
+        "inline-flex max-w-full min-w-0 items-center gap-1 rounded-md px-1.5 py-px text-2xs font-medium",
+        className,
+      )}
+    >
+      {withLogo ? <VendorIcon modelId={vendorIconId(owner)} size={11} /> : null}
+      <span className="min-w-0 truncate">{owner}</span>
+    </span>
   );
 }
 
@@ -360,7 +331,7 @@ export function ModelTag({
   className?: string;
   title?: string;
 }) {
-  const tone = getModelVendorColor(id);
+  const brand = modelVendorBrand(id);
   const sizeClasses = MODEL_TAG_SIZE_CLASSES[size];
 
   return (
@@ -369,12 +340,11 @@ export function ModelTag({
       // tooltip stacked on top of the managed one. Callers that truncate the tag
       // wrap it in OverflowTooltip, which only opens when the text is cut off.
       title={title}
+      style={brand.style}
       className={cn(
         "inline-flex max-w-full items-center border font-mono font-semibold leading-none",
         sizeClasses.wrapper,
-        tone.bg,
-        tone.text,
-        tone.border,
+        brand.className,
         className,
       )}
     >
@@ -397,7 +367,7 @@ export function CopyableModelTag({
   className?: string;
 }) {
   const [copied, setCopied] = useState(false);
-  const tone = getModelVendorColor(id);
+  const brand = modelVendorBrand(id);
 
   const handleClick = () => {
     void navigator.clipboard.writeText(id);
@@ -411,11 +381,10 @@ export function CopyableModelTag({
       type="button"
       onClick={handleClick}
       title={title}
+      style={brand.style}
       className={cn(
         "inline-flex max-w-full items-center gap-1.5 rounded-lg border px-2.5 py-1.5 font-mono text-xs font-semibold leading-none transition hover:shadow-sm active:scale-95",
-        tone.bg,
-        tone.text,
-        tone.border,
+        brand.className,
         className,
       )}
     >
@@ -444,14 +413,15 @@ export function ModelVendorStatBadge({
   active?: boolean;
   onClick?: () => void;
 }) {
-  const tone = getModelVendorColor(vendorKey);
+  const brand = modelVendorBrand(vendorKey);
   const className = cn(
     "inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-2xs font-semibold",
-    tone.bg,
-    active ? "ring-2 ring-indigo-500/35 ring-offset-1 ring-offset-white dark:ring-indigo-300/40 dark:ring-offset-neutral-950" : "",
+    brand.className,
+    // 选中圈也用品牌色，和淡底同一家族，不再是一圈灰。
+    active
+      ? "ring-2 ring-[color-mix(in_oklab,var(--brand)_45%,transparent)] ring-offset-1 ring-offset-white dark:ring-offset-neutral-950"
+      : "",
     onClick ? "cursor-pointer transition hover:shadow-sm" : "",
-    tone.text,
-    tone.border,
   );
   const content = (
     <>
@@ -468,6 +438,7 @@ export function ModelVendorStatBadge({
         aria-label={`${label} ${count}`}
         aria-pressed={active}
         onClick={onClick}
+        style={brand.style}
         className={className}
       >
         {content}
@@ -476,6 +447,8 @@ export function ModelVendorStatBadge({
   }
 
   return (
-    <span className={className}>{content}</span>
+    <span style={brand.style} className={className}>
+      {content}
+    </span>
   );
 }

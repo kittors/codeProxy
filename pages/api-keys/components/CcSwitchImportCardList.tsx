@@ -1,10 +1,9 @@
 import { useTranslation } from "react-i18next";
-import { Check, Copy } from "lucide-react";
+import { Check, Copy, Import } from "lucide-react";
 import iconClaude from "@code-proxy/assets/icons/claude.svg";
 import iconCodex from "@code-proxy/assets/icons/codex.svg";
 import iconGemini from "@code-proxy/assets/icons/gemini.svg";
-import { Button, surface } from "@code-proxy/ui";
-import { Modal } from "@code-proxy/ui";
+import { Button, DialogIcon, EmptyState, Modal, surface } from "@code-proxy/ui";
 import type { CcSwitchImportConfigListItem } from "@code-proxy/domain/ccswitch/ccswitchImportConfigList";
 import type { CcSwitchClientType } from "@code-proxy/domain/ccswitch/ccswitchImport";
 
@@ -23,6 +22,13 @@ export interface CcSwitchImportCardListProps {
   onClose: () => void;
 }
 
+/**
+ * 选择要导入 CC Switch 的预设。
+ *
+ * 每个预设是一张可点的卡片：左侧客户端图标块，中间名称、备注、默认模型与渠道分组，
+ * 点卡片即导入；右侧单独的复制按钮复制导入链接（发给别人或在另一台机器上打开）。
+ * 卡片和「添加 AI 账号」里的提供商选择用同一种外观。
+ */
 export function CcSwitchImportCardList({
   open,
   configs,
@@ -38,80 +44,78 @@ export function CcSwitchImportCardList({
       open={open}
       title={t("ccswitch.import_to_ccswitch")}
       description={t("ccswitch.import_card_list_desc")}
-      maxWidth="max-w-xl"
+      icon={<Import />}
+      size="md"
       onClose={onClose}
-      bodyClassName="bg-slate-50/45 dark:bg-neutral-950/45"
     >
-      <div className="space-y-3">
-        {configs.length === 0 ? (
-          <p className="py-8 text-center text-sm text-slate-500 dark:text-white/55">
-            {t("ccswitch.import_no_compatible_configs")}
-          </p>
-        ) : (
-          configs.map((config) => {
+      {configs.length === 0 ? (
+        <EmptyState title={t("ccswitch.import_no_compatible_configs")} icon={<Import size={20} />} />
+      ) : (
+        <ul className="space-y-2.5">
+          {configs.map((config) => {
             const isCopied = copiedConfigId === config.id;
+            const copyLabel = isCopied
+              ? t("ccswitch.copy_import_link_copied")
+              : t("ccswitch.copy_import_link");
 
             return (
-              <div
+              <li
                 key={config.id}
-                className="grid w-full grid-cols-[minmax(0,1fr)_auto] rounded-2xl border border-black/[0.06] bg-white shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] transition hover:border-slate-900/8 hover:shadow-sm dark:border-white/[0.06] dark:bg-neutral-900 dark:hover:border-neutral-700"
+                className={`${surface({ tone: "raised", radius: "2xl" })} grid grid-cols-[minmax(0,1fr)_auto] transition-colors hover:bg-surface-hover`}
               >
                 <button
                   type="button"
                   onClick={() => onSelect(config)}
-                  className="flex min-w-0 items-start gap-4 rounded-l-2xl p-4 text-left transition active:translate-y-px"
+                  className="flex min-w-0 items-start gap-3.5 rounded-l-2xl p-4 text-left transition active:translate-y-px"
                 >
-                  <span className={[surface({ tone: "plain", radius: "xl" }), "flex h-10 w-10 shrink-0 items-center justify-center shadow-xs"].join(" ")}>
+                  <DialogIcon>
                     <img src={iconByType[config.clientType]} alt="" className="h-5 w-5" />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="truncate text-sm font-semibold text-slate-900 dark:text-white">
+                  </DialogIcon>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center gap-2">
+                      <span className="truncate text-sm font-semibold text-ink">
                         {config.providerName}
                       </span>
                       {config.clientType === "claude" && config.apiKeyField ? (
-                        <span className="shrink-0 rounded-md border border-slate-900/8 bg-slate-50 px-1.5 py-0.5 font-mono text-2xs text-slate-500 dark:border-white/8 dark:bg-neutral-950 dark:text-white/45">
+                        <span className="shrink-0 rounded-md bg-subtle px-1.5 py-0.5 font-mono text-2xs text-ink-3">
                           {config.apiKeyField}
                         </span>
                       ) : null}
-                    </div>
+                    </span>
                     {config.note ? (
-                      <p className="mt-0.5 truncate text-xs text-slate-500 dark:text-white/55">
-                        {config.note}
-                      </p>
+                      <span className="mt-0.5 block truncate text-xs text-ink-3">{config.note}</span>
                     ) : null}
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <span className={[surface({ tone: "plain", radius: "md" }), "inline-flex max-w-full overflow-hidden text-ellipsis whitespace-nowrap px-1.5 py-0.5 font-mono text-2xs text-slate-500 dark:text-white/45"].join(" ")}>
+                    <span className="mt-2 flex flex-wrap items-center gap-2">
+                      <span className="inline-flex max-w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-md bg-subtle px-1.5 py-0.5 font-mono text-2xs text-ink-2">
                         {config.defaultModel}
                       </span>
                       {config.allowedChannelGroups.length > 0 ? (
-                        <span className="truncate text-2xs text-slate-400 dark:text-white/35">
+                        <span className="truncate text-2xs text-ink-3">
                           {config.allowedChannelGroups.join(", ")}
                         </span>
                       ) : null}
-                    </div>
-                  </div>
+                    </span>
+                  </span>
                 </button>
-                <div className="flex items-start gap-1 p-3 pl-0">
+                <div className="flex items-start p-3 pl-0">
                   <Button
                     variant="ghost"
                     size="xs"
-                    title={
-                      isCopied
-                        ? t("ccswitch.copy_import_link_copied")
-                        : t("ccswitch.copy_import_link")
-                    }
+                    title={copyLabel}
                     onClick={() => onCopyLink(config)}
-                    className={[surface({ tone: "plain", radius: "lg" }), "text-slate-500 hover:text-slate-900 dark:text-white/55 dark:hover:text-white"].join(" ")}
                   >
-                    {isCopied ? <Check size={14} /> : <Copy size={14} />}
+                    {isCopied ? (
+                      <Check size={14} className="text-emerald-600 dark:text-emerald-300" />
+                    ) : (
+                      <Copy size={14} />
+                    )}
                   </Button>
                 </div>
-              </div>
+              </li>
             );
-          })
-        )}
-      </div>
+          })}
+        </ul>
+      )}
     </Modal>
   );
 }

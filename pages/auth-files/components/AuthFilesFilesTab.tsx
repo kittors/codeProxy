@@ -26,11 +26,10 @@ import {
 } from "lucide-react";
 import type { AuthFileItem } from "@code-proxy/api-client";
 import { VendorIcon } from "@code-proxy/assets";
-import { Button, DropdownMenu, buttonClassName, surface } from "@code-proxy/ui";
+import { Button, DropdownMenu, ProviderTag, buttonClassName, iconHueClass } from "@code-proxy/ui";
 import { Card, EntityCard, entityCardGridClass } from "@code-proxy/ui";
 import { EmptyState } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
-import { Modal } from "@code-proxy/ui";
 import { HoverTooltip } from "@code-proxy/ui";
 import { PaginationBar } from "@code-proxy/ui";
 import { ScrollArea } from "@code-proxy/ui";
@@ -44,7 +43,6 @@ import type {
   AuthFileStatusFilter,
   AuthFilesCardColumns,
   FilesViewMode,
-  OAuthDialogTab,
   QuotaAutoRefreshMs,
   UsageIndex,
 } from "@code-proxy/domain";
@@ -53,9 +51,7 @@ import {
   AUTH_FILES_CARD_COLUMN_OPTIONS,
   AUTH_FILES_PAGE_SIZE_OPTIONS,
   AUTH_FILE_STATUS_FILTERS,
-  TYPE_BADGE_CLASSES,
   formatCompactNumber,
-  formatPlanBadgeLabel,
   isRuntimeOnlyAuthFile,
   maskSensitiveIdentity,
   normalizeAuthFilesCardColumns,
@@ -66,7 +62,6 @@ import {
   resolveAuthFilePlanType,
   resolveAuthFileSupplementalTags,
   resolveFileType,
-  resolvePlanBadgeClass,
   shouldShowAuthFileDisplayTag,
   shouldShowAuthFilePlanBadge,
   type AuthFileCycleBudgetStats,
@@ -80,7 +75,9 @@ import type { QuotaProvider } from "@features/quota-preview/quota-fetch";
 import type { QuotaCardSlot } from "../hooks/quotaCardSlots";
 import { shouldShowQuotaPlaceholder } from "../hooks/quotaProbeState";
 import { AuthFileCardQuota } from "./AuthFileCardQuota";
+import { AuthFilePlanBadge } from "./AuthFilePlanBadge";
 import { AuthFileWarmupButton } from "./AuthFileWarmupButton";
+import { ModelOwnerGroupDialog, PasteJsonDialog, UploadProgressDialog } from "./AuthFilesFileDialogs";
 import { AuthFilesLoadingSkeleton } from "./AuthFilesLoadingSkeleton";
 import { AuthFilesSelectionActionsMenu } from "./AuthFilesSelectionActionsMenu";
 import { AuthFilesSelectionToolbar } from "./AuthFilesSelectionToolbar";
@@ -97,7 +94,7 @@ import {
 } from "../helpers/authFilesTabUtils";
 
 const FILTER_LABEL_CLASS =
-  "truncate text-xs font-semibold uppercase tracking-[0.02em] text-slate-600 dark:text-white/65";
+  "truncate text-xs font-medium text-slate-600 dark:text-white/65";
 const FILTER_FIELD_CLASS = "min-w-0 space-y-2";
 // Column count has to track the number of fields actually rendered. A fixed
 // five-column track left an empty trailing cell whenever the tag filter was
@@ -539,7 +536,8 @@ interface AuthFilesFilesTabProps {
   refreshingAll: boolean;
   uploading: boolean;
   uploadProgress: AuthFilesUploadProgress;
-  setOauthDialogDefaultTab: (tab: OAuthDialogTab) => void;
+  /** Preselects the provider for the add-account dialog from the current filter. */
+  setAddAccountHint: (hint: string) => void;
   setOauthDialogOpen: (open: boolean) => void;
   openConfigModal: () => void;
   selectableFilteredFiles: AuthFileItem[];
@@ -590,7 +588,6 @@ interface AuthFilesFilesTabProps {
     index: UsageIndex,
   ) => { success: number; failure: number };
   toggleFileSelection: (name: string, checked: boolean) => void;
-  formatPlanTypeLabel: (planType: string) => string;
   resolveStickyDisplayPlanType: (
     file: AuthFileItem,
     quotaState?: QuotaState | null,
@@ -650,7 +647,7 @@ export function AuthFilesFilesTab({
   refreshingAll,
   uploading,
   uploadProgress,
-  setOauthDialogDefaultTab,
+  setAddAccountHint,
   setOauthDialogOpen,
   openConfigModal,
   selectableFilteredFiles,
@@ -696,7 +693,6 @@ export function AuthFilesFilesTab({
   usageIndex,
   resolveAuthFileStats,
   toggleFileSelection,
-  formatPlanTypeLabel,
   resolveStickyDisplayPlanType,
   renderRestrictionBadges,
   renderClaudeOAuthHealthBadges,
@@ -919,10 +915,11 @@ export function AuthFilesFilesTab({
             ? filterCounts.total
             : (filterCounts.counts[normalizedKey] ?? 0);
         const label = key === "all" ? t("auth_files.all") : key;
+        // 计数用供应商的品牌淡底，和卡片上的供应商标签对得上；「全部」没有品牌，回落中性。
         const countPill = (
-          <span className="inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-slate-100 px-1 text-2xs font-semibold tabular-nums text-slate-700 dark:bg-white/10 dark:text-white/70">
+          <ProviderTag vendor={key === "all" ? null : normalizedKey} className="h-4 min-w-4 justify-center tabular-nums">
             {count}
-          </span>
+          </ProviderTag>
         );
         return {
           value: key,
@@ -1367,17 +1364,7 @@ export function AuthFilesFilesTab({
                     setJsonImportOpen(true);
                   }}
                   onAddOAuth={() => {
-                    const normalized = normalizeProviderKey(filter);
-                    const oauthTab =
-                      normalized === "codex" ||
-                      normalized === "anthropic" ||
-                      normalized === "antigravity" ||
-                      normalized === "gemini-cli" ||
-                      normalized === "kimi" ||
-                      normalized === "qwen"
-                        ? (normalized as OAuthDialogTab)
-                        : "codex";
-                    setOauthDialogDefaultTab(oauthTab);
+                    setAddAccountHint(normalizeProviderKey(filter));
                     setOauthDialogOpen(true);
                   }}
                   uploading={uploading}
@@ -1487,8 +1474,6 @@ export function AuthFilesFilesTab({
                   const fileDisabled = Boolean(file.disabled);
                   const fileSelected = selectedFileNameSet.has(file.name);
                   const typeKey = resolveFileType(file);
-                  const badgeClass =
-                    TYPE_BADGE_CLASSES[typeKey] ?? TYPE_BADGE_CLASSES.unknown;
                   const rawTitle =
                     resolveAuthFileDisplayName(file) || String(file.name || "");
                   const displayTitle = masked
@@ -1728,41 +1713,20 @@ export function AuthFilesFilesTab({
                         <>
                         <div className="min-w-0 flex flex-wrap items-center gap-1">
                           {showPlanBadge && planType ? (
-                            <span
-                              data-testid="auth-file-plan-badge"
-                              className={[
-                                "inline-flex h-5 shrink-0 items-center rounded-md px-1.5 text-2xs font-bold leading-none tracking-wide",
-                                resolvePlanBadgeClass(planType),
-                              ].join(" ")}
-                            >
-                              {formatPlanTypeLabel(planType) ||
-                                formatPlanBadgeLabel(planType)}
-                            </span>
+                            <AuthFilePlanBadge provider={typeKey} planType={planType} className="h-5" />
                           ) : null}
                           {showTypeBadge ? (
                             denseCards ? (
+                              // 密排卡片只放 logo，底色仍是品牌淡底，和宽卡片上的供应商标签同色。
                               <HoverTooltip content={typeKey} className="shrink-0">
-                                <span
-                                  className={[
-                                    "inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md",
-                                    badgeClass,
-                                  ].join(" ")}
-                                >
-                                  <VendorIcon
-                                    modelId={normalizeProviderKey(typeKey) || typeKey}
-                                    size={12}
-                                  />
-                                </span>
+                                <ProviderTag vendor={typeKey} className="h-5">
+                                  <VendorIcon modelId={typeKey} size={12} />
+                                </ProviderTag>
                               </HoverTooltip>
                             ) : (
-                              <span
-                                className={[
-                                  "inline-flex shrink-0 items-center rounded-md px-2 py-0.5 text-2xs font-semibold",
-                                  badgeClass,
-                                ].join(" ")}
-                              >
+                              <ProviderTag vendor={typeKey} withLogo className="h-5">
                                 {typeKey}
-                              </span>
+                              </ProviderTag>
                             )
                           ) : null}
                           {provider === "codex" ? (
@@ -1784,9 +1748,7 @@ export function AuthFilesFilesTab({
                               >
                                 <RefreshCw
                                   size={10}
-                                  className={
-                                    quotaRefreshing ? "animate-spin" : ""
-                                  }
+                                  className={`${iconHueClass(RefreshCw)} ${quotaRefreshing ? "animate-spin" : ""}`}
                                 />
                                 <span className="tabular-nums">
                                   {denseCards
@@ -2052,318 +2014,55 @@ export function AuthFilesFilesTab({
         </p>
       )}
 
-      <Modal
+      <UploadProgressDialog
         open={uploadProgressModalOpen}
-        title={t("auth_files.upload")}
+        title={uploadStatusTitle}
         description={uploadStatusDescription}
-        maxWidth="max-w-lg"
-        bodyHeightClassName="max-h-none"
-        bodyOverflowClassName="overflow-visible"
-        bodyClassName="px-5 pt-3 pb-5"
-        onClose={() => setUploadProgressDismissed(true)}
-      >
-        <div
-          className="space-y-4"
-          data-testid="auth-files-upload-progress"
-          aria-live="polite"
-        >
-          <div className="overflow-hidden rounded-3xl border border-slate-900/8 bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.95),_rgba(241,245,249,0.95))] p-4 shadow-[0_20px_50px_rgb(15_23_42_/_0.08)] dark:border-white/10 dark:bg-[radial-gradient(circle_at_top_left,_rgba(39,39,42,0.98),_rgba(9,9,11,0.98))] dark:shadow-[0_24px_60px_rgb(0_0_0_/_0.28)]">
-            <div className="flex items-start gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-lg shadow-slate-900/15 dark:bg-white dark:text-neutral-950 dark:shadow-black/25">
-                <Loader2 size={18} className="animate-spin" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-white/35">
-                  {uploadProgress.phase === "refreshing"
-                    ? t("auth_files.upload_progress_refreshing_short")
-                    : t("auth_files.upload")}
-                </p>
-                <p
-                  className="mt-1 text-base font-semibold text-slate-900 dark:text-white"
-                  data-testid="auth-files-upload-progress-title"
-                >
-                  {uploadStatusTitle}
-                </p>
-                <p
-                  className="mt-1 text-sm leading-6 text-slate-500 dark:text-white/60"
-                  data-testid="auth-files-upload-progress-detail"
-                >
-                  {uploadStatusDescription}
-                </p>
-              </div>
-              <div className="shrink-0 text-right">
-                <p className="text-2xl font-semibold tracking-tight tabular-nums text-slate-900 dark:text-white">
-                  {uploadProgress.completed}
-                  <span className="ml-1 text-base font-medium text-slate-400 dark:text-white/35">
-                    / {uploadProgress.total}
-                  </span>
-                </p>
-                <p className="text-xs font-medium tabular-nums text-slate-500 dark:text-white/55">
-                  {uploadPercent}%
-                </p>
-              </div>
-            </div>
-          </div>
+        progress={uploadProgress}
+        percent={uploadPercent}
+        onDismiss={() => setUploadProgressDismissed(true)}
+      />
 
-          <div className="grid grid-cols-3 gap-2 text-left">
-            {[
-              t("auth_files.upload_progress_success", {
-                count: uploadProgress.success,
-              }),
-              t("auth_files.upload_progress_failed", {
-                count: uploadProgress.failed,
-              }),
-              t("auth_files.upload_progress_skipped", {
-                count: uploadProgress.skipped,
-              }),
-            ].map((label) => (
-              <div
-                key={label}
-                className="rounded-2xl border border-slate-900/8 bg-slate-50/90 px-3 py-2 text-xs font-semibold text-slate-600 dark:border-white/10 dark:bg-white/[0.04] dark:text-white/65"
-              >
-                {label}
-              </div>
-            ))}
-          </div>
-
-          {uploadProgress.activeFileNames.length > 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-900/8 bg-white/80 px-3 py-3 dark:border-white/10 dark:bg-white/[0.02]">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400 dark:text-white/35">
-                {t("auth_files.upload")}
-              </p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {uploadProgress.activeFileNames.map((name) => (
-                  <span
-                    key={name}
-                    className="inline-flex max-w-full items-center rounded-full bg-slate-900 px-2.5 py-1 text-xs font-medium text-white dark:bg-white dark:text-neutral-950"
-                  >
-                    <span className="truncate">{name}</span>
-                  </span>
-                ))}
-              </div>
-            </div>
-          ) : null}
-        </div>
-      </Modal>
-
-      <Modal
+      <PasteJsonDialog
         open={jsonImportOpen}
-        title={t("auth_files.paste_json_title")}
-        description={t("auth_files.paste_json_description")}
-        maxWidth="max-w-3xl"
-        bodyHeightClassName="max-h-[72vh]"
+        text={jsonImportText}
+        onTextChange={(value) => {
+          setJsonImportText(value);
+          if (jsonImportError) setJsonImportError("");
+        }}
+        error={jsonImportError}
+        uploading={uploading}
+        uploadLabel={uploadCompactLabel}
+        uploadTitle={uploadStatusTitle}
+        uploadDescription={uploadStatusDescription}
+        onSubmit={() => void submitJsonImport()}
         onClose={closeJsonImport}
-        footer={
-          <>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={closeJsonImport}
-              disabled={uploading}
-            >
-              {t("auth_files.cancel")}
-            </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => void submitJsonImport()}
-              disabled={uploading || jsonImportText.trim().length === 0}
-            >
-              {uploading
-                ? uploadCompactLabel
-                : t("auth_files.paste_json_upload")}
-            </Button>
-          </>
-        }
-      >
-        <div className="space-y-2">
-          <label
-            htmlFor="auth-files-json-import"
-            className="text-xs font-semibold text-slate-600 dark:text-white/65"
-          >
-            {t("auth_files.paste_json_label")}
-          </label>
-          <textarea
-            id="auth-files-json-import"
-            value={jsonImportText}
-            onChange={(event) => {
-              setJsonImportText(event.currentTarget.value);
-              if (jsonImportError) setJsonImportError("");
-            }}
-            spellCheck={false}
-            className="min-h-[320px] w-full resize-y rounded-2xl border border-black/[0.06] bg-white px-3.5 py-3 font-mono text-xs leading-5 text-slate-900 shadow-[2px_2px_8px_rgb(0_0_0_/_0.055)] outline-none transition-colors placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-black/10 dark:border-transparent dark:bg-[#27272A] dark:text-white dark:shadow-[0_8px_24px_rgb(0_0_0_/_0.24)] dark:placeholder:text-white/35 dark:focus-visible:ring-white/15"
-            placeholder={t("auth_files.paste_json_placeholder")}
-            aria-invalid={jsonImportError ? "true" : "false"}
-          />
-          {jsonImportError ? (
-            <p className="text-xs font-medium text-rose-600 dark:text-rose-300">
-              {jsonImportError}
-            </p>
-          ) : (
-            <div className="space-y-2">
-              <p className="text-xs text-slate-500 dark:text-white/45">
-                {t("auth_files.paste_json_hint")}
-              </p>
-              {uploading ? (
-                <div
-                  className="rounded-2xl border border-black/[0.06] bg-slate-50/80 px-3 py-2 text-xs text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-white/65"
-                  data-testid="auth-files-json-upload-progress"
-                >
-                  <div className="flex items-center gap-2 font-medium text-slate-800 dark:text-white">
-                    <Loader2 size={13} className="animate-spin" />
-                    <span>{uploadStatusTitle}</span>
-                  </div>
-                  <p className="mt-1 text-xs text-slate-500 dark:text-white/50">
-                    {uploadStatusDescription}
-                  </p>
-                </div>
-              ) : null}
-            </div>
-          )}
-        </div>
-      </Modal>
+      />
 
-      <Modal
+      <ModelOwnerGroupDialog
         open={modelOwnerDialogOpen}
-        title={t("auth_files.model_owner_group")}
-        description={canSetModelOwnerGroup ? normalizedFilter : undefined}
-        maxWidth="max-w-3xl"
-        bodyHeightClassName="max-h-[68vh]"
+        filter={normalizedFilter}
+        enabled={draftModelOwnerEnabled}
+        onEnabledChange={setDraftModelOwnerEnabled}
+        owner={draftModelOwner}
+        onOwnerChange={setDraftModelOwner}
+        options={modelOwnerOptions}
+        models={draftModelOwnerGroup ? draftModelOwnerGroup.models : null}
+        loading={modelOwnerGroupsLoading}
+        saving={modelOwnerDialogSaving}
         onClose={() => setModelOwnerDialogOpen(false)}
-        footer={
-          <>
-            <Button
-              variant="secondary"
-              onClick={() => setModelOwnerDialogOpen(false)}
-            >
-              {t("common.cancel")}
-            </Button>
-            <Button
-              variant="primary"
-              onClick={async () => {
-                setModelOwnerDialogSaving(true);
-                try {
-                  await setSelectedModelOwner(
-                    draftModelOwnerEnabled ? draftModelOwner : "",
-                  );
-                  setModelOwnerDialogOpen(false);
-                } catch {
-                  // Save failures are surfaced via toast by the parent hook.
-                } finally {
-                  setModelOwnerDialogSaving(false);
-                }
-              }}
-              disabled={
-                modelOwnerDialogSaving ||
-                (draftModelOwnerEnabled && !draftModelOwner)
-              }
-            >
-              {t("common.save")}
-            </Button>
-          </>
-        }
-      >
-        <div className="space-y-4">
-          <div className="rounded-2xl border border-slate-900/8 bg-slate-50/70 p-4 dark:border-white/8 dark:bg-white/[0.04]">
-            <ToggleSwitch
-              checked={draftModelOwnerEnabled}
-              onCheckedChange={setDraftModelOwnerEnabled}
-              label={t("auth_files.model_owner_group_enabled")}
-              description={t("auth_files.model_owner_group_enabled_desc")}
-              disabled={modelOwnerDialogSaving}
-            />
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-[minmax(0,18rem)_minmax(0,1fr)]">
-            <div className="min-w-0 space-y-1.5">
-              <label className="block text-sm font-medium text-slate-700 dark:text-white/80">
-                {t("auth_files.model_owner_group")}
-              </label>
-              <SearchableSelect
-                value={draftModelOwner}
-                onChange={setDraftModelOwner}
-                options={modelOwnerOptions}
-                placeholder={t("auth_files.auth_file_models_option")}
-                searchPlaceholder={t(
-                  "auth_files.model_owner_group_search_placeholder",
-                )}
-                aria-label={t("auth_files.model_owner_group")}
-                disabled={!draftModelOwnerEnabled || modelOwnerDialogSaving}
-              />
-            </div>
-
-            <div className="flex min-w-0 items-center rounded-2xl border border-slate-900/8 bg-slate-50/70 px-4 py-3 dark:border-white/8 dark:bg-white/[0.04]">
-              <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase text-slate-400 dark:text-white/35">
-                  {t("auth_files.type_filter")}
-                </p>
-                <p className="mt-1 truncate font-mono text-sm font-semibold text-slate-900 dark:text-white">
-                  {normalizedFilter}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className={[surface({ tone: "raised", radius: "2xl" }), "p-4"].join(" ")}>
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                {t("auth_files.detail_tab_models")}
-              </p>
-              {draftModelOwnerGroup ? (
-                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600 dark:bg-white/10 dark:text-white/65">
-                  {t("auth_files.count_items", {
-                    count: draftModelOwnerGroup.models.length,
-                  })}
-                </span>
-              ) : null}
-            </div>
-
-            {modelOwnerGroupsLoading ? (
-              <div className="text-sm text-slate-600 dark:text-white/65">
-                {t("common.loading_ellipsis")}
-              </div>
-            ) : draftModelOwnerGroup ? (
-              draftModelOwnerGroup.models.length === 0 ? (
-                <EmptyState
-                  title={t("common.no_model_data")}
-                  description={t("auth_files.no_owner_group_models")}
-                />
-              ) : (
-                <div className="max-h-[340px] space-y-2 overflow-y-auto pr-1">
-                  {draftModelOwnerGroup.models.map((model) => {
-                    const modelMeta = [
-                      model.display_name
-                        ? `display_name: ${model.display_name}`
-                        : "",
-                      model.owned_by ? `owned_by: ${model.owned_by}` : "",
-                    ].filter(Boolean);
-                    return (
-                      <div
-                        key={model.id}
-                        className="rounded-xl border border-slate-900/8 bg-slate-50/70 px-3 py-2 dark:border-white/8 dark:bg-white/[0.03]"
-                      >
-                        <p className="truncate font-mono text-xs font-semibold text-slate-900 dark:text-white">
-                          {model.id}
-                        </p>
-                        {modelMeta.length > 0 ? (
-                          <p className="mt-1 truncate text-xs text-slate-600 dark:text-white/55">
-                            {modelMeta.join(" · ")}
-                          </p>
-                        ) : null}
-                      </div>
-                    );
-                  })}
-                </div>
-              )
-            ) : (
-              <EmptyState
-                title={t("common.no_model_data")}
-                description={t("auth_files.auth_file_models_option")}
-              />
-            )}
-          </div>
-        </div>
-      </Modal>
+        onSave={async () => {
+          setModelOwnerDialogSaving(true);
+          try {
+            await setSelectedModelOwner(draftModelOwnerEnabled ? draftModelOwner : "");
+            setModelOwnerDialogOpen(false);
+          } catch {
+            // Save failures are surfaced via toast by the parent hook.
+          } finally {
+            setModelOwnerDialogSaving(false);
+          }
+        }}
+      />
     </Card>
   );
 }

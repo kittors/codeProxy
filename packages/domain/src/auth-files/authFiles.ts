@@ -27,7 +27,6 @@ import {
 
 export type AuthFileModelItem = { id: string; display_name?: string; type?: string; owned_by?: string };
 export type AuthFileModelOwnerGroup = { value: string; label: string; description: string; models: AuthFileModelItem[] };
-export type OAuthDialogTab = "codex" | "anthropic" | "antigravity" | "gemini-cli" | "kimi" | "qwen" | "iflow" | "vertex";
 
 export const AUTH_FILES_PAGE_SIZE = 9;
 export const MAX_AUTH_FILE_SIZE = 50 * 1024;
@@ -1404,65 +1403,6 @@ export const matchesModelPattern = (modelId: string, pattern: string): boolean =
   }
 };
 
-export const TYPE_BADGE_CLASSES: Record<string, string> = {
-  qwen: "bg-emerald-50 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-200",
-  kimi: "bg-amber-50 text-amber-800 dark:bg-amber-500/15 dark:text-amber-200",
-  gemini: "bg-blue-50 text-blue-800 dark:bg-blue-500/15 dark:text-blue-200",
-  "gemini-cli": "bg-indigo-50 text-indigo-800 dark:bg-indigo-500/15 dark:text-indigo-200",
-  aistudio: "bg-slate-50 text-slate-800 dark:bg-white/10 dark:text-slate-200",
-  claude: "bg-rose-50 text-rose-800 dark:bg-rose-500/15 dark:text-rose-200",
-  codex: "bg-orange-50 text-orange-800 dark:bg-orange-500/15 dark:text-orange-200",
-  antigravity: "bg-teal-50 text-teal-800 dark:bg-teal-500/15 dark:text-teal-200",
-  iflow: "bg-violet-50 text-violet-800 dark:bg-violet-500/15 dark:text-violet-200",
-  vertex: "bg-cyan-50 text-cyan-800 dark:bg-cyan-500/15 dark:text-cyan-200",
-  empty: "bg-slate-50 text-slate-600 dark:bg-white/10 dark:text-white/70",
-  unknown: "bg-slate-50 text-slate-600 dark:bg-white/10 dark:text-white/70",
-};
-
-/** Membership plan pills: solid/gradient chips, never the soft sky/amber tag look. */
-export const PLAN_BADGE_CLASSES: Record<string, string> = {
-  // Codex Plus: silver / platinum
-  plus: "bg-gradient-to-r from-slate-100 via-zinc-200 to-slate-300 text-slate-800 ring-1 ring-inset ring-slate-300/70 shadow-sm shadow-slate-400/20 dark:from-zinc-300 dark:via-slate-400 dark:to-zinc-500 dark:text-slate-950 dark:ring-white/20",
-  // Codex Pro family: gold scale (base / 5X / 20X)
-  pro: "bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-500 text-amber-950 shadow-sm shadow-amber-500/30 dark:from-amber-300 dark:via-yellow-400 dark:to-amber-500 dark:text-amber-950",
-  pro_5x:
-    "bg-gradient-to-r from-amber-400 via-yellow-500 to-orange-400 text-amber-950 shadow-sm shadow-amber-500/35 dark:from-amber-400 dark:via-yellow-400 dark:to-orange-400 dark:text-amber-950",
-  "pro-5x":
-    "bg-gradient-to-r from-amber-400 via-yellow-500 to-orange-400 text-amber-950 shadow-sm shadow-amber-500/35 dark:from-amber-400 dark:via-yellow-400 dark:to-orange-400 dark:text-amber-950",
-  pro_20x:
-    "bg-gradient-to-r from-yellow-300 via-amber-500 to-orange-600 text-amber-950 shadow-sm shadow-orange-500/40 dark:from-yellow-300 dark:via-amber-400 dark:to-orange-500 dark:text-amber-950",
-  "pro-20x":
-    "bg-gradient-to-r from-yellow-300 via-amber-500 to-orange-600 text-amber-950 shadow-sm shadow-orange-500/40 dark:from-yellow-300 dark:via-amber-400 dark:to-orange-500 dark:text-amber-950",
-  chatgptpro:
-    "bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-500 text-amber-950 shadow-sm shadow-amber-500/30 dark:from-amber-300 dark:via-yellow-400 dark:to-amber-500 dark:text-amber-950",
-  free: "bg-slate-100 text-slate-600 ring-1 ring-inset ring-slate-200/80 dark:bg-white/10 dark:text-white/65 dark:ring-white/10",
-  team: "bg-gradient-to-r from-violet-500 to-indigo-600 text-white shadow-sm shadow-violet-500/25 dark:from-violet-400 dark:to-indigo-500",
-  // Claude Code family: warm clay / copper
-  max: "bg-gradient-to-r from-orange-400 via-amber-500 to-orange-600 text-white shadow-sm shadow-orange-500/30 dark:from-orange-400 dark:via-amber-500 dark:to-orange-500",
-  max_5x:
-    "bg-gradient-to-r from-orange-500 via-amber-500 to-rose-500 text-white shadow-sm shadow-orange-500/35 dark:from-orange-400 dark:via-amber-400 dark:to-rose-400",
-  "max-5x":
-    "bg-gradient-to-r from-orange-500 via-amber-500 to-rose-500 text-white shadow-sm shadow-orange-500/35 dark:from-orange-400 dark:via-amber-400 dark:to-rose-400",
-  max_20x:
-    "bg-gradient-to-r from-amber-500 via-orange-600 to-rose-600 text-white shadow-sm shadow-rose-500/35 dark:from-amber-400 dark:via-orange-500 dark:to-rose-500",
-  "max-20x":
-    "bg-gradient-to-r from-amber-500 via-orange-600 to-rose-600 text-white shadow-sm shadow-rose-500/35 dark:from-amber-400 dark:via-orange-500 dark:to-rose-500",
-  premium: "bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white shadow-sm shadow-fuchsia-500/25 dark:from-fuchsia-400 dark:to-purple-500",
-  business: "bg-gradient-to-r from-slate-700 to-slate-900 text-white shadow-sm shadow-slate-900/20 dark:from-slate-500 dark:to-slate-700",
-  enterprise: "bg-gradient-to-r from-zinc-800 via-slate-900 to-black text-amber-100 shadow-sm shadow-black/20 dark:from-zinc-600 dark:via-slate-700 dark:to-zinc-900",
-  // Grok: dark emerald
-  supergrok:
-    "bg-gradient-to-r from-neutral-900 to-emerald-700 text-emerald-50 shadow-sm shadow-emerald-900/30 dark:from-neutral-800 dark:to-emerald-600",
-  "supergrok-heavy":
-    "bg-gradient-to-r from-black via-emerald-900 to-teal-700 text-emerald-50 shadow-sm shadow-emerald-950/40 dark:from-black dark:via-emerald-800 dark:to-teal-600",
-  supergrok_heavy:
-    "bg-gradient-to-r from-black via-emerald-900 to-teal-700 text-emerald-50 shadow-sm shadow-emerald-950/40 dark:from-black dark:via-emerald-800 dark:to-teal-600",
-  supergrokheavy:
-    "bg-gradient-to-r from-black via-emerald-900 to-teal-700 text-emerald-50 shadow-sm shadow-emerald-950/40 dark:from-black dark:via-emerald-800 dark:to-teal-600",
-  unknown:
-    "bg-gradient-to-r from-slate-400 to-slate-500 text-white shadow-sm shadow-slate-500/20 dark:from-slate-500 dark:to-slate-600",
-};
-
 /** Codex-only: weekly budget (USD) thresholds for Pro multiplier badges. */
 export const CODEX_PRO_20X_WEEKLY_BUDGET_USD = 1000;
 export const CODEX_PRO_5X_WEEKLY_BUDGET_USD = 200;
@@ -1545,11 +1485,51 @@ export const resolveAuthFileDisplayPlanType = (
   return base;
 };
 
-export const resolvePlanBadgeClass = (planType: string | null | undefined): string => {
+/**
+ * 会员等级，五档，由低到高。徽章按档位决定「有多隆重」，颜色由厂商品牌色决定：
+ * - free：免费（描边）；
+ * - entry：入门付费（Plus 这类，品牌色淡底）；
+ * - pro：专业 / 团队（Pro、Max、Team、SuperGrok……，品牌实色）；
+ * - max：高阶倍数（Pro 5x、Max 5x，品牌渐变）；
+ * - ultra：旗舰（Pro 20x、Max 20x、SuperGrok Heavy、Ultra、Enterprise，双色渐变 + 皇冠）。
+ * 认不出的付费名称按入门档处理：宁可低调，也不把未知套餐渲染成旗舰。
+ */
+export type PlanTier = "free" | "entry" | "pro" | "max" | "ultra";
+
+const PLAN_TIER_BY_KEY: Record<string, PlanTier> = {
+  free: "free",
+  plus: "entry",
+  standard: "entry",
+  basic: "entry",
+  lite: "entry",
+  starter: "entry",
+  go: "entry",
+  pro: "pro",
+  chatgptpro: "pro",
+  max: "pro",
+  team: "pro",
+  business: "pro",
+  premium: "pro",
+  supergrok: "pro",
+  pro_5x: "max",
+  "pro-5x": "max",
+  max_5x: "max",
+  "max-5x": "max",
+  pro_20x: "ultra",
+  "pro-20x": "ultra",
+  max_20x: "ultra",
+  "max-20x": "ultra",
+  "supergrok-heavy": "ultra",
+  supergrok_heavy: "ultra",
+  supergrokheavy: "ultra",
+  ultra: "ultra",
+  enterprise: "ultra",
+};
+
+export const planTierOf = (planType: string | null | undefined): PlanTier => {
   const normalized = normalizeTagValue(planType);
-  if (!normalized) return PLAN_BADGE_CLASSES.unknown;
-  if (normalized === "chatgptpro") return PLAN_BADGE_CLASSES.pro;
-  return PLAN_BADGE_CLASSES[normalized] ?? PLAN_BADGE_CLASSES.unknown;
+  if (!normalized || normalized === "unknown") return "free";
+  return PLAN_TIER_BY_KEY[normalized] ?? "entry";
 };
 
 /** Short membership chip copy (PRO / PLUS / PRO 20X), distinct from soft info tags. */
@@ -1579,9 +1559,14 @@ export const formatPlanBadgeLabel = (planType: string | null | undefined): strin
   return normalized.replace(/[-_]+/g, " ").toUpperCase();
 };
 
-const KNOWN_AUTH_FILE_PROVIDER_KEYS = Object.keys(TYPE_BADGE_CLASSES)
-  .filter((key) => key !== "empty" && key !== "unknown")
-  .sort((left, right) => right.length - left.length);
+/**
+ * resolveFileType 认得的供应商类型（以前借用灰色供应商标签类表的键，标签改成品牌色后单独列出）。
+ * 长的先匹配，"gemini-cli-xxx" 不会被 "gemini" 截走。
+ */
+// prettier-ignore
+const KNOWN_AUTH_FILE_PROVIDER_KEYS = [
+  "qwen", "kimi", "gemini", "gemini-cli", "aistudio", "claude", "codex", "antigravity", "iflow", "vertex",
+].sort((left, right) => right.length - left.length);
 
 const trimAuthFileExtension = (name: string): string =>
   String(name ?? "")

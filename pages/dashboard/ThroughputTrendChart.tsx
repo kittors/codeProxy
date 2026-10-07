@@ -5,31 +5,46 @@ import {
   useState,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { CircleAlert } from "lucide-react";
+import { Activity, CircleAlert, Sparkles } from "lucide-react";
 import type { ECBasicOption } from "echarts/types/dist/shared";
 import type {
   DashboardTenantThroughputItem,
   DashboardThroughputPoint,
 } from "@code-proxy/api-client/endpoints/usage";
-import { Card, EChart, ChartLegend, type ChartLegendItem, HoverTooltip, surface } from "@code-proxy/ui";
+import {
+  Card,
+  ChartLegend,
+  type ChartLegendItem,
+  DialogIcon,
+  EChart,
+  HoverTooltip,
+  type Hue,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  chartAxisStyle,
+  chartGradient,
+  chartPalette,
+  chartTooltipStyle,
+  hueHex,
+  surface,
+  useTheme,
+} from "@code-proxy/ui";
 import { DashboardMetricValue, formatThroughputValue, formatThroughputTooltip } from "./DashboardMetrics";
 
 const PANEL_SURFACE = surface({ tone: "panel", radius: "2xl" });
+const STAT_SURFACE = surface({ tone: "raised", radius: "2xl" });
 
-const TENANT_PALETTE = [
-  "#2563eb", // blue
-  "#7c3aed", // violet
-  "#059669", // emerald
-  "#d97706", // amber
-  "#dc2626", // red
-  "#0891b2", // cyan
-  "#db2777", // pink
-  "#4f46e5", // indigo
-  "#ea580c", // orange
-  "#16a34a", // green
-  "#9333ea", // purple
-  "#0284c7", // sky
-];
+/**
+ * 按租户拆开时每个租户一条线的颜色：CHART_CATEGORICAL 去掉靛蓝、紫与红——汇总线用的是当前指标的
+ * 身份色（RPM 蓝 / TPM 紫），靛蓝、紫会和它混在一起；红只给失败。按序号取、不随数值排名变化，
+ * 深色模式取同一色相亮一档（hueHex）。相邻两色在红绿色弱模拟下都分得开。
+ */
+const TENANT_HUES: readonly Hue[] = ["emerald", "amber", "pink", "cyan", "orange", "teal", "lime"];
+
+export const throughputTenantColor = (index: number, isDark: boolean): string =>
+  hueHex(TENANT_HUES[index % TENANT_HUES.length] ?? "emerald", isDark);
+
 
 export interface ThroughputSeriesConfig {
   id: string;
@@ -43,7 +58,10 @@ export interface ThroughputSeriesConfig {
 function createThroughputOption(
   configs: ThroughputSeriesConfig[],
   visibleIds: Set<string>,
+  isDark: boolean,
 ): ECBasicOption {
+  const axis = chartAxisStyle(isDark);
+  const tooltipStyle = chartTooltipStyle(isDark);
   // Collect all unique labels in order
   const labels: string[] = [];
   const labelSet = new Set<string>();
@@ -61,6 +79,9 @@ function createThroughputOption(
     const pointMap = new Map(cfg.points.map((p) => [p.label, cfg.metric === "rpm" ? p.rpm : p.tpm]));
     const data = isVisible ? labels.map((l) => pointMap.get(l) ?? 0) : [];
     const isRpm = cfg.metric === "rpm";
+    // 租户线只画线：四五片面积叠在一起会糊成一团；汇总线（以及不分租户时的 RPM / TPM）才带面积。
+    // RPM、TPM 两片面积常常重叠，深色底上叠出来发灰，所以深色模式再淡一档。
+    const isTenant = cfg.id.startsWith("tenant-");
 
     return {
       id: cfg.id,
@@ -71,24 +92,13 @@ function createThroughputOption(
       smooth: true,
       showSymbol: false,
       lineStyle: {
-        width: 2.5,
+        width: isTenant ? 1.75 : 2.2,
         color: cfg.color,
         type: cfg.lineType ?? "solid",
       },
       itemStyle: { color: cfg.color },
-      areaStyle: {
-        color: {
-          type: "linear",
-          x: 0,
-          y: 0,
-          x2: 0,
-          y2: 1,
-          colorStops: [
-            { offset: 0, color: `${cfg.color}25` },
-            { offset: 1, color: `${cfg.color}00` },
-          ],
-        },
-      },
+      emphasis: { lineStyle: { width: isTenant ? 2.4 : 2.8 } },
+      areaStyle: isTenant ? undefined : { color: chartGradient(cfg.color, isDark ? 0.14 : 0.2, 0) },
     };
   });
 
@@ -96,14 +106,12 @@ function createThroughputOption(
     animationDuration: 360,
     animationDurationUpdate: 80,
     tooltip: {
+      ...tooltipStyle,
       trigger: "axis",
       renderMode: "html",
       appendToBody: true,
       confine: true,
-      borderWidth: 0,
-      backgroundColor: "rgba(15, 23, 42, 0.92)",
-      textStyle: { color: "#fff" },
-      extraCssText: "z-index: 10000;",
+      extraCssText: `${tooltipStyle.extraCssText} z-index: 10000;`,
       formatter: formatThroughputTooltip,
     },
     grid: { left: 12, right: 12, top: 12, bottom: 22, containLabel: true },
@@ -111,27 +119,25 @@ function createThroughputOption(
       type: "category",
       data: labels,
       boundaryGap: false,
-      axisTick: { show: false },
-      axisLine: { lineStyle: { color: "rgba(148,163,184,0.45)" } },
-      axisLabel: { color: "#64748b", fontSize: 10, hideOverlap: true },
+      axisTick: axis.axisTick,
+      axisLine: axis.axisLine,
+      axisLabel: { ...axis.axisLabel, hideOverlap: true },
     },
     yAxis: [
       {
         type: "value",
         splitNumber: 4,
         axisLabel: {
-          color: "#64748b",
-          fontSize: 10,
+          ...axis.axisLabel,
           formatter: (value: number) => formatThroughputValue(value),
         },
-        splitLine: { lineStyle: { color: "rgba(148,163,184,0.16)" } },
+        splitLine: axis.splitLine,
       },
       {
         type: "value",
         splitNumber: 4,
         axisLabel: {
-          color: "#64748b",
-          fontSize: 10,
+          ...axis.axisLabel,
           formatter: (value: number) => formatThroughputValue(value),
         },
         splitLine: { show: false },
@@ -160,6 +166,11 @@ export function ThroughputTrendChart({
   tenants?: DashboardTenantThroughputItem[];
 }) {
   const { t } = useTranslation();
+  const {
+    state: { mode },
+  } = useTheme();
+  const isDark = mode === "dark";
+  const palette = chartPalette(isDark);
   const [metric, setMetric] = useState<"rpm" | "tpm">("rpm");
   const [visibleIds, setVisibleIds] = useState<Set<string>>(() => new Set(["aggregated"]));
 
@@ -169,37 +180,38 @@ export function ThroughputTrendChart({
   const seriesConfigs = useMemo<ThroughputSeriesConfig[]>(() => {
     if (!hasTenants) {
       return [
+        // RPM、TPM 用指标身份色（蓝 / 紫），与上方指标卡和下面的读数格一致。
         {
           id: "aggregated-rpm",
           name: "RPM",
           points,
-          color: "#2563eb",
+          color: palette.metric.rpm,
           metric: "rpm",
         },
         {
           id: "aggregated-tpm",
           name: "TPM",
           points,
-          color: "#7c3aed",
+          color: palette.metric.tpm,
           metric: "tpm",
         },
       ];
     }
 
-    // In allTenantsScope with breakdown:
+    // 按租户拆开时：汇总线沿用当前指标的身份色，租户线从 TENANT_HUES 依次取。
     const configs: ThroughputSeriesConfig[] = [
       {
         id: "aggregated",
         name: t("dashboard.throughput_tenant_all"),
         points,
-        color: metric === "rpm" ? "#2563eb" : "#7c3aed",
+        color: metric === "rpm" ? palette.metric.rpm : palette.metric.tpm,
         metric,
         lineType: "solid",
       },
     ];
 
     tenants.forEach((tenant, idx) => {
-      const color = TENANT_PALETTE[(idx + 1) % TENANT_PALETTE.length] || "#059669";
+      const color = throughputTenantColor(idx, isDark);
       configs.push({
         id: `tenant-${tenant.tenant_id}`,
         name: tenant.tenant_name || tenant.tenant_id,
@@ -210,7 +222,7 @@ export function ThroughputTrendChart({
     });
 
     return configs;
-  }, [hasTenants, points, tenants, t, metric]);
+  }, [hasTenants, points, tenants, t, metric, isDark, palette.metric.rpm, palette.metric.tpm]);
 
   // Keep visibleIds synchronized if configs change
   useEffect(() => {
@@ -242,8 +254,8 @@ export function ThroughputTrendChart({
   }, []);
 
   const option = useMemo(
-    () => createThroughputOption(seriesConfigs, visibleIds),
-    [seriesConfigs, visibleIds],
+    () => createThroughputOption(seriesConfigs, visibleIds, isDark),
+    [isDark, seriesConfigs, visibleIds],
   );
 
   const active = rpm > 0 || tpm > 0;
@@ -253,10 +265,10 @@ export function ThroughputTrendChart({
       <HoverTooltip content={t("dashboard.throughput_all_tenants_hint")} placement="top">
         <button
           type="button"
-          className="inline-flex h-5 w-5 items-center justify-center rounded-full text-amber-500 transition-colors hover:bg-amber-50 hover:text-amber-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/30 dark:text-amber-400 dark:hover:bg-amber-500/10 dark:hover:text-amber-300"
+          className="inline-flex h-5 w-5 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-hover hover:text-ink"
           aria-label={t("dashboard.throughput_all_tenants_hint")}
         >
-          <CircleAlert size={14} strokeWidth={2.25} />
+          <CircleAlert size={14} />
         </button>
       </HoverTooltip>
     </span>
@@ -281,30 +293,16 @@ export function ThroughputTrendChart({
       actions={
         <div className="flex items-center gap-2">
           {hasTenants ? (
-            <div className="inline-flex rounded-lg bg-slate-100 p-0.5 text-xs font-semibold dark:bg-neutral-800">
-              <button
-                type="button"
-                onClick={() => setMetric("rpm")}
-                className={`rounded-md px-2.5 py-1 transition ${
-                  metric === "rpm"
-                    ? "bg-white text-blue-600 shadow-2xs dark:bg-neutral-900 dark:text-blue-400"
-                    : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
-                }`}
-              >
-                RPM
-              </button>
-              <button
-                type="button"
-                onClick={() => setMetric("tpm")}
-                className={`rounded-md px-2.5 py-1 transition ${
-                  metric === "tpm"
-                    ? "bg-white text-violet-600 shadow-2xs dark:bg-neutral-900 dark:text-violet-400"
-                    : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
-                }`}
-              >
-                TPM
-              </button>
-            </div>
+            <Tabs
+              value={metric}
+              onValueChange={(next) => setMetric(next === "tpm" ? "tpm" : "rpm")}
+              size="sm"
+            >
+              <TabsList aria-label={title}>
+                <TabsTrigger value="rpm">RPM</TabsTrigger>
+                <TabsTrigger value="tpm">TPM</TabsTrigger>
+              </TabsList>
+            </Tabs>
           ) : null}
           <div
             className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
@@ -324,21 +322,28 @@ export function ThroughputTrendChart({
       }
       padding="compact"
     >
+      {/* 当前读数：白底卡片 + 与曲线同色的图标块（RPM 蓝、TPM 紫），数值保持墨色。 */}
       <div className="mb-3 grid gap-3 sm:grid-cols-2">
-        <div className="rounded-2xl bg-slate-50 px-3 py-2 dark:bg-neutral-900/70 dark:ring-1 dark:ring-white/8">
-          <div className="text-2xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-            RPM
-          </div>
-          <div className="mt-1 text-xl font-semibold tabular-nums text-indigo-600 dark:text-indigo-400">
-            <DashboardMetricValue value={rpm} />
+        <div className={`${STAT_SURFACE} flex items-center gap-3 px-3 py-2.5`}>
+          <DialogIcon tone="blue" size="sm">
+            <Activity />
+          </DialogIcon>
+          <div className="min-w-0">
+            <div className="text-2xs font-medium text-ink-3">RPM</div>
+            <div className="mt-0.5 text-xl font-semibold tabular-nums text-ink">
+              <DashboardMetricValue value={rpm} />
+            </div>
           </div>
         </div>
-        <div className="rounded-2xl bg-slate-50 px-3 py-2 dark:bg-neutral-900/70 dark:ring-1 dark:ring-white/8">
-          <div className="text-2xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-            TPM
-          </div>
-          <div className="mt-1 text-xl font-semibold tabular-nums text-violet-600 dark:text-violet-400">
-            <DashboardMetricValue value={tpm} />
+        <div className={`${STAT_SURFACE} flex items-center gap-3 px-3 py-2.5`}>
+          <DialogIcon tone="violet" size="sm">
+            <Sparkles />
+          </DialogIcon>
+          <div className="min-w-0">
+            <div className="text-2xs font-medium text-ink-3">TPM</div>
+            <div className="mt-0.5 text-xl font-semibold tabular-nums text-ink">
+              <DashboardMetricValue value={tpm} />
+            </div>
           </div>
         </div>
       </div>

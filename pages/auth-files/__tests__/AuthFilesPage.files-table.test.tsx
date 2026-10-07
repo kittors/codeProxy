@@ -472,7 +472,7 @@ describe("AuthFilesPage files table", () => {
     expect(screen.getByTestId("auth-files-cards")).toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "Status" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Add OAuth Login" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add AI account" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Selection actions" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Select current page" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Delete All" })).not.toBeInTheDocument();
@@ -1910,17 +1910,18 @@ describe("AuthFilesPage files table", () => {
       </MemoryRouter>,
     );
 
+    vi.spyOn(window, "open").mockImplementation(() => null);
     expect(await screen.findByText("qwen.json")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Add OAuth Login" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add AI account" }));
 
-    const dialog = await screen.findByRole("dialog", { name: "Add OAuth Login" });
-    fireEvent.change(
-      within(dialog).getByPlaceholderText("Paste the full callback URL from browser"),
-      {
-        target: { value: "http://localhost:1455/auth/callback?code=ok" },
-      },
-    );
-    fireEvent.click(within(dialog).getByRole("button", { name: "Submit callback" }));
+    const dialog = within(await screen.findByRole("dialog", { name: "Add AI account" }));
+    fireEvent.click(dialog.getByRole("button", { name: "Sign in with Codex" }));
+    // The test page is on localhost, so the paste box sits behind the manual fallback.
+    fireEvent.click(await dialog.findByRole("button", { name: /Didn't finish by itself/ }));
+    mocks.getAuthStatus.mockResolvedValue({ status: "ok" });
+    fireEvent.paste(await dialog.findByRole("textbox", { name: "Callback address" }), {
+      clipboardData: { getData: () => "http://localhost:1455/auth/callback?code=ok&state=state-1" },
+    });
 
     expect(await screen.findByText("codex-authorized.json")).toBeInTheDocument();
     // New visible scope: snapshot + quiet probe (not the legacy per-file fetchQuota fan-out).
@@ -2011,10 +2012,69 @@ describe("AuthFilesPage files table", () => {
     expect(within(card as HTMLElement).getByText("vip-team")).toBeInTheDocument();
     expect(within(card as HTMLElement).getAllByText(/^codex$/i)).toHaveLength(1);
     // Membership chip is PRO (not soft sky "pro" tag); only one membership badge.
-    expect(within(card as HTMLElement).getByTestId("auth-file-plan-badge")).toHaveTextContent(
-      "PRO",
-    );
+    const planBadge = within(card as HTMLElement).getByTestId("auth-file-plan-badge");
+    expect(planBadge).toHaveTextContent("PRO");
+    // 卡片上的徽章走品牌色 × 等级：Codex 的 PRO 是专业档、Codex 品牌色，供应商标签同色。
+    expect(planBadge).toHaveAttribute("data-plan-tier", "pro");
+    const codexBrand = planBadge.style.getPropertyValue("--brand-l");
+    expect(codexBrand).not.toBe("");
+    const providerTag = within(card as HTMLElement).getByText(/^codex$/i);
+    expect(providerTag.style.getPropertyValue("--brand-l")).toBe(codexBrand);
     expect(within(card as HTMLElement).queryByText("pro")).not.toBeInTheDocument();
+  });
+
+  test("table view ranks membership badges by tier in each vendor's brand colour", async () => {
+    useTableFilesView();
+    const account = (name: string, label: string, type: string, planType: string) => ({
+      name,
+      label,
+      account_type: "oauth",
+      type,
+      plan_type: planType,
+      size: 1024,
+      modified: Date.now(),
+      disabled: false,
+    });
+    mocks.list.mockImplementation(async () => ({
+      files: [
+        account("codex-top.json", "Codex Top", "codex", "pro_20x"),
+        account("codex-entry.json", "Codex Entry", "codex", "plus"),
+        account("codex-free.json", "Codex Free", "codex", "free"),
+        account("claude-max.json", "Claude Max", "claude", "max_5x"),
+      ],
+    }));
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    const badgeOf = async (label: string) => {
+      const row = (await screen.findByText(label)).closest("tr") as HTMLElement;
+      return within(row).getByTestId("auth-file-plan-badge");
+    };
+    const codexTop = await badgeOf("Codex Top");
+    const codexEntry = await badgeOf("Codex Entry");
+    const codexFree = await badgeOf("Codex Free");
+    const claudeMax = await badgeOf("Claude Max");
+    expect(codexTop).toHaveTextContent("PRO 20X");
+    expect(codexTop).toHaveAttribute("data-plan-tier", "ultra");
+    expect(claudeMax).toHaveTextContent("MAX 5X");
+    expect(claudeMax).toHaveAttribute("data-plan-tier", "max");
+    expect(codexEntry).toHaveAttribute("data-plan-tier", "entry");
+    expect(codexFree).toHaveAttribute("data-plan-tier", "free");
+    // 同一家的不同档同一个品牌色（靠隆重程度分高低），不同厂商品牌色不同。
+    const brandOf = (badge: HTMLElement) => badge.style.getPropertyValue("--brand-l");
+    expect(brandOf(codexTop)).not.toBe("");
+    expect(brandOf(codexEntry)).toBe(brandOf(codexTop));
+    expect(brandOf(claudeMax)).not.toBe(brandOf(codexTop));
   });
 
   test("table view shows cycle calls without shared-scope or lifetime noise", async () => {
@@ -5055,7 +5115,7 @@ describe("AuthFilesPage files table", () => {
     expect(await screen.findByText("Code: 5h")).toBeInTheDocument();
     expect(screen.getByText("Code: Weekly")).toBeInTheDocument();
     expect(screen.queryByText("Review: Weekly")).not.toBeInTheDocument();
-    expect(screen.getByText("0%")).toHaveClass("text-rose-900");
+    expect(screen.getByText("0%")).toHaveClass("text-rose-600");
   });
 
   test("cards view shows codex team subscription quota instead of empty stable placeholders", async () => {
@@ -5179,7 +5239,7 @@ describe("AuthFilesPage files table", () => {
     expect(metrics[3]).toHaveAttribute("data-layout", "wide");
 
     const previewZero = within(row as HTMLElement).getByText("0%");
-    expect(previewZero).toHaveClass("text-rose-900");
+    expect(previewZero).toHaveClass("text-rose-600");
 
     // Every chip carries its own countdown inline, so hovering opens nothing.
     for (const metric of metrics) {

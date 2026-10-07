@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { usageApi } from "@code-proxy/api-client";
+import { useTheme } from "@code-proxy/ui";
 import type { AuthFileItem } from "@code-proxy/api-client";
 import {
   buildLast7DayAxis,
@@ -12,11 +13,11 @@ import {
 } from "@code-proxy/domain";
 import type { QuotaItem, QuotaState } from "@features/quota-preview/quota-helpers";
 import type { QuotaProvider } from "@features/quota-preview/quota-fetch";
+import { buildGroupOverviewChartOption } from "./groupOverviewChartOption";
 import {
   collectWeeklyFamilies,
   formatWeeklySeriesLabel,
   normalizeGroupTrendSeries,
-  WEEKLY_SERIES_COLORS,
   type GroupOverviewSummary,
   type GroupTrendPoint,
 } from "./groupOverviewWeekly";
@@ -59,14 +60,14 @@ export function useAuthFilesGroupOverview({
   resolveProviderLabel,
 }: UseAuthFilesGroupOverviewArgs) {
   const { t } = useTranslation();
+  const isDark = useTheme().state.mode === "dark";
   const [groupOverviewOpen, setGroupOverviewOpen] = useState(false);
   const [groupOverviewTab, setGroupOverviewTab] = useState("all");
   const [groupOverviewLoading, setGroupOverviewLoading] = useState(false);
   const [groupTrendLoading, setGroupTrendLoading] = useState(false);
   const [groupTrendPoints, setGroupTrendPoints] = useState<GroupTrendPoint[]>([]);
-  const [groupTrendSeries, setGroupTrendSeries] = useState<{ id: string; label: string; color: string }[]>(
-    [],
-  );
+  // 周限线的颜色按序号在图表配置里取（深浅色不同），这里只存身份与名称。
+  const [groupTrendSeries, setGroupTrendSeries] = useState<{ id: string; label: string }[]>([]);
   const groupTrendRequestRef = useRef(0);
 
   const formatAveragePercent = useCallback((value: number | null) => {
@@ -218,105 +219,16 @@ export function useAuthFilesGroupOverview({
     });
   }, [groupOverviewTab, resolveProviderLabel, t]);
 
-  const groupOverviewChartOption = useMemo<Record<string, unknown>>(() => {
-    const labels = groupTrendPoints.map((point) => point.label);
-    const calls = groupTrendPoints.map((point) => point.calls);
-    const formatPercent = (value: unknown) => {
-      if (typeof value !== "number" || !Number.isFinite(value)) return "-";
-      return `${Math.round(Math.max(0, Math.min(100, value)))}%`;
-    };
-    const weeklySeries = groupTrendSeries.map((series) => ({
-      name: series.label,
-      type: "line",
-      yAxisIndex: 1,
-      smooth: true,
-      symbol: "circle",
-      symbolSize: 7,
-      lineStyle: { width: 3, color: series.color },
-      itemStyle: { color: series.color },
-      connectNulls: false,
-      data: groupTrendPoints.map((point) => point.weeklyPercents[series.id] ?? null),
-    }));
-
-    return {
-      backgroundColor: "transparent",
-      animationDuration: 420,
-      animationDurationUpdate: 280,
-      grid: {
-        left: 48,
-        right: 44,
-        top: groupTrendSeries.length > 2 ? 52 : 36,
-        bottom: 44,
-        containLabel: false,
-      },
-      tooltip: {
-        trigger: "axis",
-        axisPointer: { type: "line" },
-        renderMode: "html",
-        appendToBody: true,
-        confine: true,
-        borderWidth: 0,
-        backgroundColor: "rgba(15, 23, 42, 0.92)",
-        textStyle: { color: "#fff" },
-        extraCssText: "z-index: 10000;",
-        formatter: (params: Array<{ seriesName?: string; value?: unknown; axisValueLabel?: string; marker?: string }>) => {
-          const title = params[0]?.axisValueLabel ?? "";
-          const rows = params.map((item) => {
-            const isPercent = item.seriesName !== t("auth_files.group_overview_total_calls_label");
-            const display = isPercent ? formatPercent(item.value) : String(item.value ?? 0);
-            return `${item.marker ?? ""} ${item.seriesName ?? ""}&nbsp;&nbsp;<b>${display}</b>`;
-          });
-          return [title, ...rows].join("<br/>");
-        },
-      },
-      legend: {
-        top: 0,
-        left: 0,
-        type: "scroll",
-        textStyle: { color: "#64748b", fontSize: 12 },
-      },
-      xAxis: {
-        type: "category",
-        data: labels,
-        axisTick: { show: false },
-        axisLabel: {
-          interval: 0,
-          color: "#64748b",
-          fontSize: 12,
-        },
-        axisLine: { lineStyle: { color: "rgba(148,163,184,0.45)" } },
-      },
-      yAxis: [
-        {
-          type: "value",
-          axisLabel: { color: "#64748b", fontSize: 12, margin: 10 },
-          splitLine: { lineStyle: { color: "rgba(148,163,184,0.18)" } },
-        },
-        {
-          type: "value",
-          min: 0,
-          max: 100,
-          axisLabel: {
-            color: "#64748b",
-            fontSize: 12,
-            margin: 10,
-            formatter: (value: number) => `${Math.round(value)}%`,
-          },
-          splitLine: { show: false },
-        },
-      ],
-      series: [
-        {
-          name: t("auth_files.group_overview_total_calls_label"),
-          type: "bar",
-          barMaxWidth: 26,
-          itemStyle: { color: "rgba(59,130,246,0.88)", borderRadius: [4, 4, 0, 0] },
-          data: calls,
-        },
-        ...weeklySeries,
-      ],
-    };
-  }, [groupTrendPoints, groupTrendSeries, t]);
+  const groupOverviewChartOption = useMemo<Record<string, unknown>>(
+    () =>
+      buildGroupOverviewChartOption({
+        points: groupTrendPoints,
+        series: groupTrendSeries,
+        isDark,
+        callsLabel: t("auth_files.group_overview_total_calls_label"),
+      }),
+    [groupTrendPoints, groupTrendSeries, isDark, t],
+  );
 
   const refreshGroupOverview = useCallback(
     async (targetGroup = groupOverviewTab) => {
@@ -360,7 +272,6 @@ export function useAuthFilesGroupOverview({
         const seriesMeta = rawSeries.map((item, index) => ({
           id: item.quota_key || `weekly_${index}`,
           label: formatWeeklySeriesLabel(item.quota_key ?? "", item.quota_label ?? "", t),
-          color: WEEKLY_SERIES_COLORS[index % WEEKLY_SERIES_COLORS.length] ?? WEEKLY_SERIES_COLORS[0],
         }));
         const percentsBySeries = new Map<string, Map<string, number | null>>();
         rawSeries.forEach((item, index) => {

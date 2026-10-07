@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Pencil, Plus, ShieldCheck, Trash2 } from "lucide-react";
 import {
@@ -13,6 +13,7 @@ import {
   Checkbox,
   COLUMN_WIDTH,
   ConfirmModal,
+  confirmDialog,
   DataTable,
   PaginationBar,
   Select,
@@ -58,6 +59,11 @@ export function AccessRulesTab({
   const [editTarget, setEditTarget] = useState<IpAccessRule | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<IpAccessRule | null>(null);
+  // 翻页不会清空勾选：批量删除确认时要列出的规则可能不在当前页，按 id 记住见过的每一条。
+  const seenRules = useRef(new Map<string, IpAccessRule>());
+  useEffect(() => {
+    for (const item of items) seenRules.current.set(item.id, item);
+  }, [items]);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(
@@ -168,6 +174,43 @@ export function AccessRulesTab({
     },
     [load, notify, onRulesChanged, page, pageSize, selected, t],
   );
+
+  // 批量删除和单条删除一样先确认：列出要删的地址，并按拒绝 / 放行分别说清删掉后会发生什么。
+  const requestBulkDelete = useCallback(async () => {
+    if (selected.length === 0) return;
+    const targets = selected
+      .map((id) => seenRules.current.get(id))
+      .filter((rule): rule is IpAccessRule => rule !== undefined);
+    const denyCount = targets.filter((rule) => rule.effect === "deny").length;
+    const allowCount = targets.length - denyCount;
+    const shown = targets.slice(0, 4);
+    const hidden = selected.length - shown.length;
+    const consequences = [
+      denyCount > 0 ? t("ip_access.bulk_delete_consequence_deny", { count: denyCount }) : null,
+      allowCount > 0 ? t("ip_access.bulk_delete_consequence_allow", { count: allowCount }) : null,
+    ].filter((line): line is string => line !== null);
+    const confirmed = await confirmDialog({
+      title: t("ip_access.bulk_delete_title", { count: selected.length }),
+      description: t("ip_access.delete_rule_lead"),
+      subject: (
+        <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          {shown.map((rule) => (
+            <span key={rule.id} className="font-mono">
+              {rule.cidr}
+            </span>
+          ))}
+          {hidden > 0 ? (
+            <span className="text-ink-3">
+              {t("ip_access.bulk_delete_more", { count: hidden })}
+            </span>
+          ) : null}
+        </span>
+      ),
+      consequences,
+      confirmText: t("ip_access.bulk_delete"),
+    });
+    if (confirmed) await bulkApply({ delete: true });
+  }, [bulkApply, selected, t]);
 
   // Releasing a ban usually means "this one was wrong", and the next thing an
   // operator wants is for it not to happen again — so the two steps are one action.
@@ -403,22 +446,22 @@ export function AccessRulesTab({
                 <Button size="sm" variant="secondary" disabled={busy} onClick={() => void bulkApply({ enabled: true })}>
                   {t("ip_access.bulk_enable")}
                 </Button>
-                <Button size="sm" variant="danger" disabled={busy} onClick={() => void bulkApply({ delete: true })}>
+                <Button size="sm" variant="secondary-danger" disabled={busy} onClick={() => void requestBulkDelete()}>
                   {t("ip_access.bulk_delete")}
                 </Button>
               </div>
             </PermissionGate>
           ) : null}
           <PermissionGate permission="platform.ip_access.write">
-            <button
-              type="button"
+            <Button
+              variant="primary"
+              className="ml-auto"
               onClick={() => setFormOpen(true)}
               aria-label={t("ip_access.add_rule")}
               title={t("ip_access.add_rule")}
-              className="ml-auto inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-slate-900 text-white transition hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:bg-white dark:text-neutral-950 dark:hover:bg-slate-200"
             >
               <Plus size={15} aria-hidden="true" />
-            </button>
+            </Button>
           </PermissionGate>
         </div>
       </div>
@@ -508,9 +551,38 @@ export function AccessRulesTab({
 
       <ConfirmModal
         open={deleteTarget !== null}
-        title={t("ip_access.delete_rule")}
-        description={t("ip_access.delete_rule_confirm", { cidr: deleteTarget?.cidr ?? "" })}
-        confirmText={t("common.delete")}
+        title={t("ip_access.delete_rule_title", { cidr: deleteTarget?.cidr ?? "" })}
+        description={t("ip_access.delete_rule_lead")}
+        subject={
+          deleteTarget ? (
+            <span className="flex min-w-0 items-center justify-between gap-3">
+              <span className="truncate font-mono">{deleteTarget.cidr}</span>
+              <span className="flex shrink-0 items-center gap-2 text-xs text-ink-3">
+                <span
+                  className={`rounded-full px-2 py-0.5 font-medium ${
+                    deleteTarget.effect === "deny"
+                      ? "bg-rose-500/10 text-rose-700 dark:text-rose-300"
+                      : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                  }`}
+                >
+                  {t(`ip_access.effect_${deleteTarget.effect}`)}
+                </span>
+                {t(`ip_access.source_${deleteTarget.source}`)}
+              </span>
+            </span>
+          ) : null
+        }
+        consequences={
+          deleteTarget
+            ? [
+                t("ip_access.delete_rule_consequence_default"),
+                deleteTarget.effect === "deny"
+                  ? t("ip_access.delete_rule_consequence_deny")
+                  : t("ip_access.delete_rule_consequence_allow"),
+              ]
+            : []
+        }
+        confirmText={t("ip_access.delete_rule")}
         cancelText={t("common.cancel")}
         variant="danger"
         busy={busy}

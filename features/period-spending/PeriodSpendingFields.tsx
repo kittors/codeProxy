@@ -1,6 +1,6 @@
 import type { PeriodSpendingLimits, PeriodSpendingPeriod } from "@code-proxy/api-client";
 import { PERIOD_SPENDING_PERIODS } from "@code-proxy/api-client";
-import { TextInput } from "@code-proxy/ui";
+import { FormField, TextInput } from "@code-proxy/ui";
 import { formatQuotaUsd } from "./PeriodSpendingCell";
 
 export type PeriodSpendingDraft = Record<PeriodSpendingPeriod, string>;
@@ -55,6 +55,7 @@ export function PeriodSpendingFields({
   disabled = false,
   errors = {},
   idPrefix = "period-spending",
+  onFieldBlur,
 }: {
   t: (key: string, options?: Record<string, unknown>) => string;
   value: PeriodSpendingDraft;
@@ -63,37 +64,41 @@ export function PeriodSpendingFields({
   disabled?: boolean;
   errors?: Partial<Record<PeriodSpendingPeriod, string>>;
   idPrefix?: string;
+  /** 失焦回调，接 useFormValidation 的 touch：失焦后才显示该周期的错误。 */
+  onFieldBlur?: (period: PeriodSpendingPeriod) => void;
 }) {
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
+    <div className="grid gap-x-4 gap-y-4 sm:grid-cols-2">
       {PERIOD_SPENDING_PERIODS.map((period) => {
         const accountLimit = accountLimits?.[period] ?? 0;
-        const error = errors[period];
-        const inputId = `${idPrefix}-${period}`;
+        const label = t(`quota.field.${period}`);
         return (
-          <label key={period} htmlFor={inputId} className="block space-y-1.5">
-            <span className="flex items-center justify-between gap-2 text-sm font-medium text-slate-700 dark:text-white/80">
-              <span>{t(`quota.field.${period}`)}</span>
-              {accountLimits ? (
-                <span className="text-xs font-normal text-slate-400 dark:text-white/40">
-                  {accountLimit > 0
-                    ? t("quota.account_limit_value", { value: formatQuotaUsd(accountLimit) })
-                    : t("quota.account_unlimited")}
-                </span>
-              ) : null}
-            </span>
+          <FormField
+            key={period}
+            label={label}
+            htmlFor={`${idPrefix}-${period}`}
+            // 填 Key 子额度时把账号上限常驻在输入框下面，不用回头翻账号设置才知道能填多少。
+            description={
+              accountLimits
+                ? accountLimit > 0
+                  ? t("quota.account_limit_value", { value: formatQuotaUsd(accountLimit) })
+                  : t("quota.account_unlimited")
+                : undefined
+            }
+            error={errors[period]}
+            reserveMeta={false}
+          >
             <TextInput
-              id={inputId}
               type="number"
               min={0}
               step={1}
               inputMode="numeric"
               value={value[period]}
               disabled={disabled}
-              aria-label={t(`quota.field.${period}`)}
-              aria-invalid={Boolean(error)}
-              aria-describedby={error ? `${inputId}-error` : undefined}
+              // 输入框带占位文字时 TextInput 会拿占位当可访问名称，这里显式给回字段名。
+              aria-label={label}
               placeholder={t("quota.input_unlimited")}
+              onBlur={() => onFieldBlur?.(period)}
               onChange={(event) => {
                 const raw = event.target.value;
                 if (raw === "" || /^\d*(?:\.\d*)?$/.test(raw)) {
@@ -101,15 +106,7 @@ export function PeriodSpendingFields({
                 }
               }}
             />
-            {error ? (
-              <span
-                id={`${inputId}-error`}
-                className="block text-xs text-rose-600 dark:text-rose-300"
-              >
-                {error}
-              </span>
-            ) : null}
-          </label>
+          </FormField>
         );
       })}
     </div>

@@ -88,11 +88,11 @@ export function PaginationBar({
     [safeCurrentPage, safeTotalPages],
   );
 
+  // 页码是圆形胶囊：当前页用强调色实心，其余只在悬停时出现浅灰叠层。
   const btnBase =
-    "inline-flex h-8 min-w-8 items-center justify-center rounded-lg px-2 text-xs font-medium transition-colors disabled:pointer-events-none disabled:opacity-35";
-  const btnNormal =
-    "text-slate-600 hover:bg-slate-100 dark:text-white/60 dark:hover:bg-white/10";
-  const btnActive = "bg-slate-900 text-white shadow-sm dark:bg-white dark:text-neutral-950";
+    "inline-flex h-8 min-w-8 items-center justify-center rounded-full px-2 text-xs font-medium tabular-nums transition-colors disabled:pointer-events-none disabled:opacity-35";
+  const btnNormal = "text-ink-2 hover:bg-hover hover:text-ink";
+  const btnActive = "bg-accent text-accent-fg";
   const disabledPrev = safeCurrentPage <= 1;
   const disabledNext = safeCurrentPage >= safeTotalPages;
 
@@ -104,7 +104,7 @@ export function PaginationBar({
         className,
       )}
     >
-      <span className="justify-self-start text-xs text-slate-500 dark:text-white/50 tabular-nums whitespace-nowrap">
+      <span className="justify-self-start text-xs text-ink-3 tabular-nums whitespace-nowrap">
         {labels.pageInfo({
           start,
           end,
@@ -144,7 +144,7 @@ export function PaginationBar({
               page === "..." ? (
                 <span
                   key={`dots-${index}`}
-                  className="px-1 text-xs text-slate-400 dark:text-white/30"
+                  className="px-1 text-xs text-ink-4"
                 >
                   …
                 </span>
@@ -188,7 +188,7 @@ export function PaginationBar({
 
       {showPageSize && onPageSizeChange && labels.rowsPerPage ? (
         <div className="flex items-center justify-self-end gap-1.5">
-          <span className="text-xs text-slate-500 dark:text-white/50 whitespace-nowrap">
+          <span className="text-xs text-ink-3 whitespace-nowrap">
             {labels.rowsPerPage}
           </span>
           <Select

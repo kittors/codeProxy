@@ -7,7 +7,8 @@ import {
   type SetStateAction,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { Check } from "lucide-react";
+import { AlertCircle, Check } from "lucide-react";
+import { VendorIcon } from "@code-proxy/assets";
 import {
   apiCallApi,
   getApiCallErrorMessage,
@@ -661,16 +662,21 @@ export function ProviderKeyModal({
                 : t("providers.generic_config_desc")
       }
       onClose={closeKeyEditor}
+      // 图标用这家供应商的 logo，一眼知道在配哪家。
+      icon={<VendorIcon modelId={editKeyType} size={20} />}
       maxWidth="max-w-4xl"
       bodyHeightClassName="max-h-[74vh]"
       bodyClassName="!px-0 !py-0"
+      footerStart={
+        keyDraftError ? (
+          <span role="alert" className="inline-flex items-center gap-1.5 text-sm font-medium text-rose-600 dark:text-rose-400">
+            <AlertCircle size={15} aria-hidden="true" />
+            {keyDraftError}
+          </span>
+        ) : null
+      }
       footer={
-        <div className="flex flex-wrap items-center gap-2">
-          {keyDraftError ? (
-            <span className="text-sm font-semibold text-rose-700 dark:text-rose-200">
-              {keyDraftError}
-            </span>
-          ) : null}
+        <>
           <Button variant="secondary" onClick={closeKeyEditor}>
             {t("providers.cancel")}
           </Button>
@@ -678,14 +684,14 @@ export function ProviderKeyModal({
             <Check size={14} />
             {t("providers.save")}
           </Button>
-        </div>
+        </>
       }
     >
       <Tabs
         value={modalTab}
         onValueChange={(next) => setModalTab(next as ProviderKeyModalTab)}
       >
-        <div className="sticky top-0 z-20 border-b border-slate-900/8 bg-white/95 px-5 py-3 backdrop-blur dark:border-white/8 dark:bg-neutral-950/95">
+        <div className="sticky top-0 z-20 border-b border-line bg-elevated/95 px-5 py-3 backdrop-blur">
           <TabsList>
             <TabsTrigger value="basic">
               {t("providers.modal_tab_basic")}

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronRight, FileKey2, Folder, PanelTop } from "lucide-react";
-import { Button, Checkbox } from "@code-proxy/ui";
+import { Button, Checkbox, iconHueClass } from "@code-proxy/ui";
 import type { MenuIdentity, PermissionIdentity } from "@code-proxy/api-client";
 
 export interface PermissionTreeNode {
@@ -160,7 +160,7 @@ export function PermissionTree({
         aria-expanded={hasChildren ? isExpanded : undefined}
       >
         <div
-          className="flex min-h-11 items-center gap-2 border-b border-black/[0.045] px-3 py-2 last:border-b-0 hover:bg-slate-50/80 dark:border-white/[0.055] dark:hover:bg-white/[0.035]"
+          className="flex min-h-11 items-center gap-2 border-b border-line px-3 py-2 transition-colors last:border-b-0 hover:bg-hover"
           style={{ paddingLeft: 12 + depth * 24 }}
         >
           {hasChildren ? (
@@ -199,12 +199,12 @@ export function PermissionTree({
               onChange(next);
             }}
           />
-          <Icon size={15} className="shrink-0 text-slate-400" aria-hidden="true" />
+          <Icon size={15} className={`shrink-0 ${iconHueClass(Icon)}`} aria-hidden="true" />
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm font-medium text-slate-800 dark:text-slate-200">
+            <span className="block truncate text-sm font-medium text-ink">
               {node.label}
             </span>
-            <span className="block truncate text-xs text-slate-400">{node.description}</span>
+            <span className="block truncate font-mono text-xs text-ink-3">{node.description}</span>
           </span>
         </div>
         {hasChildren && isExpanded ? (
@@ -217,7 +217,7 @@ export function PermissionTree({
   return (
     <ul
       role="tree"
-      className="overflow-hidden rounded-2xl bg-slate-50/70 ring-1 ring-black/[0.045] dark:bg-white/[0.025] dark:ring-white/[0.055]"
+      className="overflow-hidden rounded-2xl border border-line bg-surface"
     >
       {nodes.map((node) => renderNode(node, 0))}
     </ul>

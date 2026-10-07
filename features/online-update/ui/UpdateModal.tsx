@@ -1,11 +1,11 @@
 import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowRight, RefreshCw } from "lucide-react";
+import { ArrowRight, ArrowUpCircle, CheckCircle2, RefreshCw, TriangleAlert } from "lucide-react";
 import type {
   UpdateCheckResponse,
   UpdateProgressResponse,
 } from "@code-proxy/api-client/endpoints/update";
-import { Button, Modal } from "@code-proxy/ui";
+import { Button, Callout, Modal } from "@code-proxy/ui";
 import type { UpdateLinkState } from "../progress/progressStream";
 import { UpdateProgressPanel } from "./UpdateProgressPanel";
 import { selectLocalizedReleaseNotes } from "../model/releaseNotes";
@@ -31,7 +31,7 @@ const RELEASE_NOTES_PROSE = `prose prose-sm dark:prose-invert max-w-none break-w
   prose-code:rounded-md prose-code:bg-slate-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:text-sm prose-code:font-mono prose-code:text-slate-700 prose-code:before:content-none prose-code:after:content-none
   dark:prose-code:bg-neutral-800 dark:prose-code:text-slate-300
   prose-pre:rounded-lg prose-pre:bg-slate-900 prose-pre:text-xs dark:prose-pre:bg-neutral-900
-  prose-a:break-all prose-a:text-indigo-600 dark:prose-a:text-indigo-300`;
+  prose-a:break-all prose-a:text-ink`;
 
 /**
  * One row of the version summary.
@@ -60,13 +60,13 @@ function VersionRow({
 
   return (
     <div className="flex min-w-0 items-baseline justify-between gap-3 py-2">
-      <dt className="shrink-0 text-xs text-slate-500 dark:text-white/45">{label}</dt>
+      <dt className="shrink-0 text-xs text-ink-3">{label}</dt>
       <dd className="flex min-w-0 items-baseline gap-1.5 font-mono text-xs">
-        <span className="truncate text-slate-500 dark:text-white/45">{from}</span>
+        <span className="truncate text-ink-3">{from}</span>
         {unchanged ? null : (
           <>
-            <ArrowRight size={11} className="shrink-0 text-slate-400 dark:text-white/30" />
-            <span className="truncate font-medium text-slate-900 dark:text-white">{to}</span>
+            <ArrowRight size={11} className="shrink-0 text-ink-3" />
+            <span className="truncate font-medium text-ink">{to}</span>
           </>
         )}
         {!unchanged && short ? (
@@ -75,16 +75,16 @@ function VersionRow({
               href={commitUrl}
               target="_blank"
               rel="noreferrer"
-              className="shrink-0 text-indigo-600 hover:underline dark:text-indigo-300"
+              className="shrink-0 text-ink hover:underline"
             >
               {short}
             </a>
           ) : (
-            <span className="shrink-0 text-slate-400 dark:text-white/35">{short}</span>
+            <span className="shrink-0 text-ink-3">{short}</span>
           )
         ) : null}
         {unchanged ? (
-          <span className="shrink-0 text-slate-400 dark:text-white/35">
+          <span className="shrink-0 text-ink-3">
             {t("auto_update.unchanged")}
           </span>
         ) : null}
@@ -116,12 +116,12 @@ function ReleaseNotes({ candidate }: { candidate: UpdateCheckResponse }) {
   return (
     <section className="min-w-0">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="text-xs font-semibold text-slate-900 dark:text-white">
+        <h3 className="text-xs font-semibold text-ink">
           {t("auto_update.release_notes")}
           {label || publishedAt ? (
             <span
               data-testid="update-release-meta"
-              className="ml-2 font-normal text-slate-400 dark:text-white/40"
+              className="ml-2 font-normal text-ink-3"
             >
               {[label, publishedAt].filter(Boolean).join(" · ")}
             </span>
@@ -132,7 +132,7 @@ function ReleaseNotes({ candidate }: { candidate: UpdateCheckResponse }) {
             href={candidate.release_url}
             target="_blank"
             rel="noreferrer"
-            className="text-xs font-medium text-indigo-600 hover:underline dark:text-indigo-300"
+            className="text-xs font-medium text-ink hover:underline"
           >
             {t("auto_update.release_notes_open")}
           </a>
@@ -246,9 +246,13 @@ export function UpdateModal({
       open={open}
       title={title}
       description={description}
+      icon={completed ? <CheckCircle2 /> : failed ? <TriangleAlert /> : <ArrowUpCircle />}
+      tone={completed ? "success" : failed ? "danger" : "neutral"}
       maxWidth="max-w-lg"
       bodyTestId="update-details-modal-body"
-      // Closing mid-update would hide a running operation the user cannot cancel.
+      // Closing mid-update would hide a running operation the user cannot cancel:
+      // no close button, Esc / backdrop only nudge while it runs.
+      closable={!updating}
       onClose={() => {
         if (!updating) onClose();
       }}
@@ -278,21 +282,21 @@ export function UpdateModal({
     >
       <div className="min-w-0 space-y-4">
         {checking ? (
-          <p className="flex items-center gap-2 text-sm text-slate-600 dark:text-white/60">
+          <p className="flex items-center gap-2 text-sm text-ink-2">
             <RefreshCw size={14} className="animate-spin" />
             {t("common.loading")}
           </p>
         ) : null}
 
         {error ? (
-          <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-800 dark:bg-rose-500/10 dark:text-rose-200">
+          <Callout tone="danger" role="alert">
             {error}
-          </p>
+          </Callout>
         ) : null}
 
         {display ? (
           <>
-            <dl className="min-w-0 divide-y divide-slate-100 rounded-xl border border-slate-900/8 px-3 dark:divide-neutral-800 dark:border-white/8">
+            <dl className="min-w-0 divide-y divide-line rounded-2xl border border-line px-3">
               <VersionRow
                 label={t("auto_update.service_version")}
                 from={versionLabel(
@@ -326,12 +330,12 @@ export function UpdateModal({
                 unchanged={uiUnchanged}
               />
               <div className="flex min-w-0 items-baseline justify-between gap-3 py-2">
-                <dt className="shrink-0 text-xs text-slate-500 dark:text-white/45">
+                <dt className="shrink-0 text-xs text-ink-3">
                   {t("auto_update.image")}
                 </dt>
                 <dd
                   data-testid="update-image-value"
-                  className="truncate font-mono text-xs text-slate-600 dark:text-white/60"
+                  className="truncate font-mono text-xs text-ink-2"
                 >
                   {[display.docker_image, display.docker_tag].filter(Boolean).join(":") || "--"}
                 </dd>
@@ -349,21 +353,19 @@ export function UpdateModal({
             ) : null}
 
             {!showProgress && message ? (
-              <p className="whitespace-pre-line break-words rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">
-                {message}
-              </p>
+              <Callout tone="warning">
+                <span className="whitespace-pre-line break-words">{message}</span>
+              </Callout>
             ) : null}
 
             {!showProgress && !display.updater_available ? (
-              <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">
-                {t(updaterUnavailableKey(display))}
-              </p>
+              <Callout tone="warning">{t(updaterUnavailableKey(display))}</Callout>
             ) : null}
 
             {!showProgress && (!display.enabled || upToDate) ? (
-              <p className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-200">
+              <Callout tone="success">
                 {!display.enabled ? t("auto_update.disabled") : t("auto_update.no_update")}
-              </p>
+              </Callout>
             ) : null}
 
             {!completed ? <ReleaseNotes candidate={display} /> : null}

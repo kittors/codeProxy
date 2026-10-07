@@ -15,6 +15,7 @@ import {
 } from "react";
 import { Loader2 } from "lucide-react";
 import { TooltipBubble, TooltipTriggerContext, type TooltipPlacement } from "../overlays/Tooltip";
+import { HUE_BUTTON_ICON, hueForIcon, type Hue } from "../theme/hues";
 
 type ButtonVariant =
   | "default"
@@ -24,11 +25,21 @@ type ButtonVariant =
   | "error"
   | "success"
   | "warning"
-  | "ghost";
+  | "ghost"
+  | "ghost-danger"
+  | "secondary-danger";
 type ButtonSize = "xs" | "sm" | "md";
 
+/**
+ * 所有按钮都是胶囊形，带一条 1px 描边位（默认透明），这样有描边的「默认」按钮和实心按钮
+ * 放在一起时高度、内容位置完全一致。
+ *
+ * 只保留按下时的轻微缩小作为触感反馈，去掉了悬停上浮——一排按钮跟着鼠标上下跳，会让
+ * 工具栏显得浮躁。键盘焦点统一走全局 :focus-visible 的蓝色描边（styles/index.css），
+ * 不再按颜色变体各配一圈光晕。
+ */
 const BUTTON_BASE_CLASS =
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full border-0 font-semibold shadow-none transition-all duration-150 ease-out motion-safe:hover:-translate-y-px active:translate-y-0 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-45";
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full border border-transparent font-medium transition-[background-color,border-color,color,box-shadow,scale] duration-150 ease-soft active:scale-[0.97] disabled:pointer-events-none disabled:opacity-45";
 
 const BUTTON_SIZE_CLASSES: Record<ButtonSize, { iconOnly: string; text: string }> = {
   xs: {
@@ -74,19 +85,34 @@ function isIconOnlyButtonChildren(children: ReactNode): boolean {
   );
 }
 
+/**
+ * - default：白底 + 细描边，和输入框同一套轮廓，是页面上最常见的次要操作。
+ * - primary：墨色实心（深色模式反转成浅色实心），一屏通常只放一个。
+ * - error / success / warning：只给确实带后果的操作用，颜色来自重新校准过的状态色阶。
+ * - ghost：无底色，悬停才出现浅灰叠层，用在工具栏图标和行内操作。
+ * - ghost-danger：同 ghost，但文字与悬停底是红色，给行内的删除这类操作；
+ *   不要用 ghost + 追加 text-rose-* 的写法，同属性类的覆盖顺序靠不住。
+ * - secondary-danger：default 的描边轮廓 + 红字，给工具栏、批量选择栏里「发起」删除 / 清空
+ *   的按钮。实心红（danger / error）只留给确认弹窗里最后那一下，否则页面顶部一颗红色
+ *   实心胶囊会比主操作还抢眼。
+ * 悬停底色用半透明的 bg-hover 叠层，落在白卡片、灰侧栏、深色弹层上都能看出来。
+ */
 const BUTTON_VARIANT_CLASSES: Record<Exclude<ButtonVariant, "secondary" | "danger">, string> = {
   default:
-    "bg-[#EBEBEC] text-[#18181B] hover:bg-[#E4E4E7] active:bg-[#D4D4D8] focus-visible:ring-black/10 dark:bg-[#27272A] dark:text-white dark:hover:bg-[#303036] dark:active:bg-[#3F3F46] dark:focus-visible:ring-white/15",
-  primary:
-    "bg-indigo-600 text-white hover:bg-indigo-500 active:bg-indigo-700 focus-visible:ring-indigo-500/35 dark:bg-indigo-500 dark:text-white dark:hover:bg-indigo-400 dark:active:bg-indigo-600 dark:focus-visible:ring-indigo-400/30",
+    "border-line-strong bg-surface text-ink shadow-xs hover:bg-hover active:bg-selected dark:shadow-none",
+  primary: "bg-accent text-accent-fg hover:bg-accent-hover",
   error:
-    "bg-rose-600 text-white hover:bg-rose-500 active:bg-rose-700 focus-visible:ring-rose-400/35 dark:bg-rose-500 dark:hover:bg-rose-400 dark:active:bg-rose-600 dark:focus-visible:ring-rose-300/20",
+    "bg-rose-500 text-white hover:bg-rose-600 active:bg-rose-700 dark:hover:bg-rose-400 dark:active:bg-rose-600",
   success:
-    "bg-emerald-600 text-white hover:bg-emerald-500 active:bg-emerald-700 focus-visible:ring-emerald-400/35 dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:active:bg-emerald-600 dark:focus-visible:ring-emerald-300/20",
+    "bg-emerald-600 text-white hover:bg-emerald-500 active:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:active:bg-emerald-600",
   warning:
-    "bg-amber-400 text-amber-950 hover:bg-amber-300 active:bg-amber-500 focus-visible:ring-amber-400/35 dark:bg-amber-400 dark:text-amber-950 dark:hover:bg-amber-300 dark:active:bg-amber-500 dark:focus-visible:ring-amber-300/25",
+    "bg-amber-400 text-amber-950 hover:bg-amber-300 active:bg-amber-500",
   ghost:
-    "bg-transparent text-[#3F3F46] hover:bg-[#EBEBEC] hover:text-[#18181B] active:bg-[#E4E4E7] focus-visible:ring-black/10 dark:text-[#D4D4D8] dark:hover:bg-[#27272A] dark:hover:text-white dark:active:bg-[#303036] dark:focus-visible:ring-white/15",
+    "bg-transparent text-ink-2 hover:bg-hover hover:text-ink active:bg-selected",
+  "ghost-danger":
+    "bg-transparent text-rose-600 hover:bg-rose-500/10 hover:text-rose-700 active:bg-rose-500/15 dark:text-rose-400 dark:hover:text-rose-300",
+  "secondary-danger":
+    "border-line-strong bg-surface text-rose-600 shadow-xs hover:bg-rose-500/5 active:bg-rose-500/10 dark:text-rose-400 dark:shadow-none dark:hover:bg-rose-500/10",
 };
 
 export function buttonClassName({
@@ -94,19 +120,38 @@ export function buttonClassName({
   iconOnly = false,
   size = "md",
   variant = "default",
+  iconHue = null,
 }: {
   className?: string;
   iconOnly?: boolean;
   size?: ButtonSize;
   variant?: ButtonVariant;
+  /** 按钮里图标的色相（只对中性的 default / ghost 生效，实色按钮的图标跟随按钮文字色）。 */
+  iconHue?: Hue | null;
 }) {
   const resolvedVariant =
     variant === "secondary" ? "default" : variant === "danger" ? "error" : variant;
   const sizeClass = iconOnly ? BUTTON_SIZE_CLASSES[size].iconOnly : BUTTON_SIZE_CLASSES[size].text;
+  const iconClass =
+    iconHue && (resolvedVariant === "default" || resolvedVariant === "ghost")
+      ? HUE_BUTTON_ICON[iconHue]
+      : null;
 
-  return [BUTTON_BASE_CLASS, sizeClass, BUTTON_VARIANT_CLASSES[resolvedVariant], className]
+  return [BUTTON_BASE_CLASS, sizeClass, BUTTON_VARIANT_CLASSES[resolvedVariant], iconClass, className]
     .filter(Boolean)
     .join(" ");
+}
+
+/**
+ * 按钮里第一个 lucide 图标的色相：工具栏、行内操作的图标按本身的含义上色（刷新蓝绿、查看天蓝、
+ * 删除玫红……），不再一排灰色；关闭、箭头、「更多」这类纯操作提示保持中性（见 theme/hues）。
+ */
+function buttonIconHue(children: ReactNode): Hue | null {
+  for (const child of flattenButtonChildren(children)) {
+    const hue = hueForIcon(child);
+    if (hue) return hue;
+  }
+  return null;
 }
 
 export function Button({
@@ -195,7 +240,7 @@ export function Button({
         title={shouldSuppressNativeTitle ? undefined : title}
         disabled={props.disabled || loading}
         aria-busy={loading ? true : props["aria-busy"]}
-        className={buttonClassName({ className, iconOnly, size, variant })}
+        className={buttonClassName({ className, iconOnly, size, variant, iconHue: buttonIconHue(children) })}
       >
         {loading ? (
           <Loader2 size={size === "xs" ? 13 : 15} className="shrink-0 animate-spin" aria-hidden />

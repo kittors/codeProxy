@@ -59,7 +59,7 @@ function ImportOptionButton({
     >
       <span
         className={[
-          "inline-flex shrink-0 items-center justify-center rounded-lg border bg-white dark:bg-neutral-950",
+          "inline-flex shrink-0 items-center justify-center rounded-lg border bg-surface",
           compact
             ? "h-5 w-5 border-transparent"
             : "h-10 w-10 border-slate-900/8 shadow-xs dark:border-white/8",

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Save, Wand2, X } from "lucide-react";
+import { Save, ShieldAlert, Wand2, X } from "lucide-react";
 import {
   ipAccessApi,
   type AutoBanMode,
@@ -16,6 +16,7 @@ import {
   TextInput,
   ToggleSwitch,
   useToast,
+  ScrollFade,
 } from "@code-proxy/ui";
 import { PermissionGate } from "@app/providers/PermissionGate";
 
@@ -92,7 +93,7 @@ export function ProtectionPolicyTab({ status, onPolicySaved }: ProtectionPolicyT
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto border-t border-slate-100 px-5 py-4 dark:border-white/8">
+    <ScrollFade className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto border-t border-slate-100 px-5 py-4 dark:border-white/8">
       {/* First, because nothing below it takes effect until this is right. */}
       <Section
         title={t("ip_access.section_trusted_proxies")}
@@ -419,15 +420,23 @@ export function ProtectionPolicyTab({ status, onPolicySaved }: ProtectionPolicyT
         </div>
       </Section>
 
+      {/* 开启仅白名单可以随时关掉，不是删除：琥珀色 + 盾牌图标，后果逐条列出。
+          确认只是打开开关，点页面底部的「保存」才真正生效，这一点也写进说明。 */}
       <ConfirmModal
         open={lockdownConfirm}
         title={t("ip_access.lockdown_confirm_title")}
-        description={t("ip_access.lockdown_confirm_body", {
-          cidr: status?.suggested_self_rule ?? "",
-        })}
+        description={t("ip_access.lockdown_confirm_lead")}
+        icon={<ShieldAlert />}
+        consequences={[
+          t("ip_access.lockdown_consequence_others"),
+          status?.suggested_self_rule
+            ? t("ip_access.lockdown_consequence_self", { cidr: status.suggested_self_rule })
+            : t("ip_access.lockdown_consequence_self_unknown"),
+          t("ip_access.lockdown_consequence_colleagues"),
+        ]}
         confirmText={t("ip_access.lockdown_confirm_ok")}
         cancelText={t("common.cancel")}
-        variant="danger"
+        variant="warning"
         onClose={() => setLockdownConfirm(false)}
         onConfirm={() => {
           setPolicy({ ...policy, lockdown: true });
@@ -443,7 +452,7 @@ export function ProtectionPolicyTab({ status, onPolicySaved }: ProtectionPolicyT
           </Button>
         </div>
       </PermissionGate>
-    </div>
+    </ScrollFade>
   );
 }
 

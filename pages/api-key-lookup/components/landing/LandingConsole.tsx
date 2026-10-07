@@ -30,7 +30,7 @@ export function LandingConsole({ copy }: { copy: LandingCopy }) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.3, ease: LANDING_EASE }}
           // 强调色外框 + 深色面板：把预览板当成一个被「装裱」起来的产品实物。
-          className="rounded-t-4xl bg-gradient-to-b from-indigo-600 to-indigo-600/0 p-1.5 pb-0 shadow-[0_-8px_80px_-30px_rgba(79,70,229,0.55)] dark:from-indigo-500 dark:to-indigo-500/0 dark:shadow-none"
+          className="rounded-t-4xl border border-b-0 border-line-strong bg-subtle p-1.5 pb-0"
         >
           {/* 底部不封口，面板向下溢出被视口裁掉，暗示「还有更多」。 */}
           <div className="overflow-hidden rounded-t-3xl bg-white dark:bg-[#0C0C10]">
@@ -70,7 +70,8 @@ export function LandingConsole({ copy }: { copy: LandingCopy }) {
                         delay: 0.5 + index * 0.045,
                         ease: LANDING_EASE,
                       }}
-                      className="flex-1 rounded-t-sm bg-gradient-to-t from-indigo-600/25 to-indigo-600 dark:from-indigo-500/20 dark:to-indigo-400"
+                      // 请求量柱子用全站图表的「请求蓝」渐变，最新一根更饱和——和面板里的真实图表一个样子。
+                      className={`flex-1 rounded-t-sm bg-gradient-to-t ${index === BARS.length - 1 ? "from-blue-500 to-indigo-400" : "from-blue-500/35 to-blue-400/15 dark:from-blue-400/40 dark:to-blue-400/15"}`}
                     />
                   ))}
                 </div>

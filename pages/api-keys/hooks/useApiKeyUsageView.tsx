@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { usageApi } from "@code-proxy/api-client";
 import type { ApiKeyEntry } from "@code-proxy/api-client/endpoints/api-keys";
@@ -341,11 +341,18 @@ export function useApiKeyUsageView() {
     });
   }, [t, usageLastUpdatedAt, usageLoading]);
 
+  // Re-query from page 1 when a query input listed below changes, and only
+  // then. fetchUsageLogs is read through an Effect Event instead of being a
+  // dependency: its identity also follows `t`, which only feeds the error
+  // toast, so a language switch used to refetch and jump back to page 1.
+  const reloadUsageLogs = useEffectEvent(() => {
+    void fetchUsageLogs(1, usagePageSize);
+  });
+
   useEffect(() => {
     if (usageViewKeys.length === 0) return;
-    void fetchUsageLogs(1, usagePageSize);
+    reloadUsageLogs();
   }, [
-    fetchUsageLogs,
     usageChannelQuery,
     usageKeyQuery,
     usageModelQuery,

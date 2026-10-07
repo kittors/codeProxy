@@ -40,36 +40,60 @@ export function resolveColumnLayoutWidth<T>(column: DataTableColumn<T>, widths: 
   return resizedWidth ? clampColumnWidth(column, resizedWidth) : resolveColumnDefaultWidth(column);
 }
 
+/** Sticky columns pinned to one edge, outermost first. */
+function stickyEdgeColumns<T>(columns: DataTableColumn<T>[], edge: "start" | "end") {
+  const edgeColumns = edge === "start" ? columns : [...columns].reverse();
+  const pinned: DataTableColumn<T>[] = [];
+  for (const column of edgeColumns) {
+    if (resolveColumnOrderLock(column) !== edge || !hasStickyColumnClass(column)) break;
+    pinned.push(column);
+  }
+  return pinned;
+}
+
+export function resolveStickyColumnKeys<T>(columns: DataTableColumn<T>[]) {
+  return [...stickyEdgeColumns(columns, "start"), ...stickyEdgeColumns(columns, "end")].map(
+    (column) => column.key,
+  );
+}
+
+/**
+ * Width a sticky column occupies on screen. `rendered` holds widths measured
+ * from the header cells; they win over the nominal width because a fixed-layout
+ * table wider than its columns stretches every column, sticky ones included.
+ */
+function resolveStickyWidth<T>(
+  column: DataTableColumn<T>,
+  widths: ColumnWidthMap,
+  rendered?: ColumnWidthMap,
+) {
+  return rendered?.[column.key] ?? resolveColumnLayoutWidth(column, widths);
+}
+
 export function resolveStickyRailWidth<T>(
   columns: DataTableColumn<T>[],
   widths: ColumnWidthMap,
   edge: "start" | "end",
+  rendered?: ColumnWidthMap,
 ) {
-  const edgeColumns = edge === "start" ? columns : [...columns].reverse();
-  let width = 0;
-  for (const column of edgeColumns) {
-    if (resolveColumnOrderLock(column) !== edge || !hasStickyColumnClass(column)) break;
-    width += resolveColumnLayoutWidth(column, widths);
-  }
-  return width;
+  return stickyEdgeColumns(columns, edge).reduce(
+    (width, column) => width + resolveStickyWidth(column, widths, rendered),
+    0,
+  );
 }
 
 export function resolveStickyColumnPlacements<T>(
   columns: DataTableColumn<T>[],
   widths: ColumnWidthMap,
+  rendered?: ColumnWidthMap,
 ) {
   const placements: Record<string, StickyColumnPlacement> = {};
-  let startOffset = 0;
-  for (const column of columns) {
-    if (resolveColumnOrderLock(column) !== "start" || !hasStickyColumnClass(column)) break;
-    placements[column.key] = { edge: "start", offset: startOffset };
-    startOffset += resolveColumnLayoutWidth(column, widths);
-  }
-  let endOffset = 0;
-  for (const column of [...columns].reverse()) {
-    if (resolveColumnOrderLock(column) !== "end" || !hasStickyColumnClass(column)) break;
-    placements[column.key] = { edge: "end", offset: endOffset };
-    endOffset += resolveColumnLayoutWidth(column, widths);
+  for (const edge of ["start", "end"] as const) {
+    let offset = 0;
+    for (const column of stickyEdgeColumns(columns, edge)) {
+      placements[column.key] = { edge, offset };
+      offset += resolveStickyWidth(column, widths, rendered);
+    }
   }
   return placements;
 }

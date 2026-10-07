@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { EyeOff, Replace } from "lucide-react";
 import { Button, Modal, Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import type { AuthFilesConfigModalTab } from "../AuthFilesPage";
 import type { TFunction } from "i18next";
@@ -47,7 +48,8 @@ export function AuthFilesConfigModal({
           ? t("auth_files.model_alias_desc")
           : t("auth_files_page.excluded_desc")
       }
-      maxWidth="max-w-5xl"
+      icon={configModalTab === "alias" ? <Replace /> : <EyeOff />}
+      size="xl"
       bodyHeightClassName="h-[76vh] max-h-[76vh]"
       bodyOverflowClassName="overflow-hidden"
       bodyClassName="flex min-h-0 flex-col"
@@ -65,9 +67,10 @@ export function AuthFilesConfigModal({
             variant="primary"
             size="sm"
             onClick={() => void saveConfigModal()}
-            disabled={configSaving || excludedLoading || aliasLoading || isPending}
+            disabled={excludedLoading || aliasLoading || isPending}
+            loading={configSaving}
           >
-            {configSaving ? t("common.saving") : t("auth_files.save")}
+            {t("auth_files.save")}
           </Button>
         </>
       }

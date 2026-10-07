@@ -12,6 +12,7 @@ import { HoverTooltip } from "../overlays/Tooltip";
 import {
   cn,
   selectOptionBase,
+  selectOptionCheck,
   selectOptionIdle,
   selectOptionSelected,
   selectPanel,
@@ -162,7 +163,7 @@ export function LanguageSelector({ className }: { className?: string }) {
                       {FLAG_ICONS[lng]}
                     </span>
                     <span className="flex-1 truncate">{t(LANGUAGE_LABEL_KEYS[lng])}</span>
-                    {selected ? <Check size={14} className="shrink-0" aria-hidden="true" /> : null}
+                    {selected ? <Check size={15} className={selectOptionCheck} aria-hidden="true" /> : null}
                   </button>
                 );
               })}

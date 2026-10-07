@@ -1,15 +1,17 @@
 import type { ReactNode } from "react";
 import { Inbox } from "lucide-react";
+import { dialogToneClass } from "../overlays/DialogIcon";
 
 /**
  * Quiet empty / no-data surface used by DataTable and page-level cards.
  *
- * Matches the admin shell: soft slate hierarchy, no dashed card chrome,
- * no floating icon tile. Reads as inline feedback inside an existing panel.
+ * Reads as inline feedback inside an existing panel: no dashed card chrome. The icon
+ * sits in a round tile coloured by the shared icon → hue registry (theme/hues), the same
+ * colour that icon has everywhere else; text stays in the neutral ink hierarchy.
  *
  * - `icon` omitted → default Inbox glyph
  * - `icon={null}` → no icon
- * - `icon={<MyIcon />}` → custom glyph at the same muted weight
+ * - `icon={<MyIcon />}` → custom glyph, coloured the same way
  */
 export function EmptyState({
   title = "",
@@ -26,7 +28,7 @@ export function EmptyState({
   const showIcon = icon !== null;
   const resolvedIcon =
     icon === undefined ? (
-      <Inbox size={22} strokeWidth={1.5} aria-hidden />
+      <Inbox size={20} aria-hidden />
     ) : (
       icon
     );
@@ -38,15 +40,18 @@ export function EmptyState({
     >
       {showIcon && resolvedIcon ? (
         <div
-          className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-slate-100/90 text-slate-400 dark:bg-white/[0.06] dark:text-white/40 [&>svg]:h-5 [&>svg]:w-5 [&>svg]:stroke-[1.5]"
+          className={[
+            "mb-3 flex h-11 w-11 items-center justify-center rounded-full border [&>svg]:h-5 [&>svg]:w-5",
+            dialogToneClass("auto", resolvedIcon),
+          ].join(" ")}
           data-empty-icon
         >
           {resolvedIcon}
         </div>
       ) : null}
-      <p className="text-sm font-medium text-slate-600 dark:text-white/70">{title}</p>
+      <p className="text-sm font-medium text-ink-2">{title}</p>
       {description ? (
-        <p className="mx-auto mt-1.5 max-w-[18rem] text-xs leading-relaxed text-slate-400 dark:text-white/40">
+        <p className="mx-auto mt-1 max-w-[18rem] text-xs leading-relaxed text-ink-3">
           {description}
         </p>
       ) : null}

@@ -1,12 +1,23 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, ChevronUp, Code2, Eye, Search } from "lucide-react";
+import {
+  AlertTriangle,
+  ChevronDown,
+  ChevronUp,
+  Code2,
+  Eye,
+  Loader2,
+  RotateCcw,
+  Search,
+} from "lucide-react";
 import { parse as parseYaml } from "yaml";
 import { configApi, configFileApi } from "@code-proxy/api-client";
 import { FloatingSaveBar } from "./FloatingSaveBar";
 import { CodexOAuthAdmissionPanel } from "./CodexOAuthAdmissionPanel";
 import { VisualConfigEditor } from "./visual/VisualConfigEditor";
+import { collectInvalidFields, collectModified } from "./visual/configSchema";
+import { configFieldDomId } from "./visual/ConfigFieldRow";
 import { useVisualConfig } from "@features/visual-config-editor";
-import { Card } from "@code-proxy/ui";
+import { Callout, Card } from "@code-proxy/ui";
 import { ConfirmModal } from "@code-proxy/ui";
 import { EmptyState } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
@@ -116,13 +127,6 @@ function collectSaveWarningKeys(previous: ConfigRiskSnapshot, next: ConfigRiskSn
   return warnings;
 }
 
-function isValidResourceNumber(value: string, minimum: number): boolean {
-  const trimmed = value.trim();
-  if (!/^\d+$/.test(trimmed)) return false;
-  const parsed = Number(trimmed);
-  return Number.isSafeInteger(parsed) && parsed >= minimum;
-}
-
 function useStickyTab(): [ConfigTab, (next: ConfigTab) => void] {
   const [tab, setTab] = useState<ConfigTab>(() => {
     try {
@@ -153,6 +157,7 @@ export function ConfigPage() {
 
   const {
     visualValues,
+    baselineValues,
     visualDirty,
     loadVisualValuesFromYaml,
     applyVisualChangesToYaml,
@@ -273,21 +278,20 @@ export function ConfigPage() {
   );
 
   const requestSave = useCallback(() => {
-    if (
-      tab === "visual" &&
-      (!isValidResourceNumber(visualValues.logsMaxTotalSizeMb || "0", 0) ||
-        !isValidResourceNumber(visualValues.errorLogsMaxFiles, 0) ||
-        !isValidResourceNumber(visualValues.systemStatsCacheSeconds, 10) ||
-        !isValidResourceNumber(visualValues.systemStatsWebSocketMaxAgeSeconds, 60) ||
-        !isValidResourceNumber(visualValues.requestLogStorage.retentionDays, 1) ||
-        !isValidResourceNumber(visualValues.requestLogStorage.contentRetentionDays, 0) ||
-        !isValidResourceNumber(visualValues.requestLogStorage.cleanupIntervalMinutes, 1) ||
-        !isValidResourceNumber(visualValues.requestLogStorage.maxRows, 0) ||
-        !isValidResourceNumber(visualValues.requestLogStorage.maxMetadataSizeMb, 0) ||
-        !isValidResourceNumber(visualValues.requestLogStorage.maxTotalSizeMb, 0))
-    ) {
-      notify({ type: "error", message: t("resource_config.invalid_number") });
-      return;
+    if (tab === "visual") {
+      // 逐项校验（规则在 configSchema 里）：错误已经就地标在对应设置下面，这里只负责拦下保存、
+      // 把第一项滚到眼前并聚焦，不再用一条笼统的 toast 让人自己去找。
+      const invalid = collectInvalidFields(visualValues);
+      if (invalid.length > 0) {
+        notify({
+          type: "error",
+          message: t("config_ui.errors.summary", { count: invalid.length }),
+        });
+        const row = document.getElementById(configFieldDomId(invalid[0]!.id));
+        row?.scrollIntoView({ block: "center", behavior: "smooth" });
+        row?.querySelector<HTMLInputElement>("input, textarea")?.focus({ preventScroll: true });
+        return;
+      }
     }
     const nextYaml = tab === "visual" ? applyVisualChangesToYaml(yamlText) : yamlText;
     const warnings = collectSaveWarningKeys(
@@ -463,7 +467,24 @@ export function ConfigPage() {
     void loadYaml();
   }, [isDirty, loadYaml]);
 
+  const visualChangeCount = useMemo(() => {
+    const { fields, payload } = collectModified(visualValues, baselineValues);
+    return fields.length + payload.length;
+  }, [baselineValues, visualValues]);
+
   const visualLayoutEnabled = tab === "visual";
+  const modeSwitch = (
+    <TabsList>
+      <TabsTrigger value="visual">
+        <Eye size={14} />
+        {t("config_page.visual_editor")}
+      </TabsTrigger>
+      <TabsTrigger value="source">
+        <Code2 size={14} />
+        {t("config_page.source_editor")}
+      </TabsTrigger>
+    </TabsList>
+  );
   const saveDisabled = disableControls || loading || saving || !isDirty;
   const reloadDisabled = loading || saving;
   const showFloatingBar = true;
@@ -478,46 +499,37 @@ export function ConfigPage() {
     >
       <div className={visualLayoutEnabled ? "flex min-h-0 flex-1 flex-col gap-4" : undefined}>
         <Tabs value={tab} onValueChange={(next) => handleTabChange(next as ConfigTab)}>
-          <div className="flex">
-            <TabsList>
-              <TabsTrigger value="visual">
-                <Eye size={14} />
-                {t("config_page.visual_editor")}
-              </TabsTrigger>
-              <TabsTrigger value="source">
-                <Code2 size={14} />
-                {t("config_page.source_editor")}
-              </TabsTrigger>
-            </TabsList>
-          </div>
+          {/* 可视化模式下这个切换放进编辑器工具栏的最右侧（和分组页签、搜索同一行），
+              不再单独占一行；源码模式没有工具栏，仍放在内容上方。 */}
+          {visualLayoutEnabled ? null : <div className="flex">{modeSwitch}</div>}
 
-          <div className={visualLayoutEnabled ? "mt-4 min-h-0 flex-1" : "mt-4"}>
+          <div className={visualLayoutEnabled ? "min-h-0 flex-1" : "mt-4"}>
             <TabsContent value="visual" className="h-full">
-              <div className="flex min-h-0 h-full flex-col gap-4">
-                <Card
-                  title={t("config_page.visual_title")}
-                  description={t("config_page.visual_desc")}
-                  loading={loading}
-                  className="flex min-h-0 flex-1 flex-col"
-                  bodyClassName="min-h-0 flex-1 overflow-y-auto"
-                >
-                  {error ? (
-                    <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900 dark:border-rose-400/25 dark:bg-rose-500/15 dark:text-white">
-                      {error}
-                    </div>
-                  ) : null}
-
-                  <div className={error ? "mt-4" : ""}>
-                    <VisualConfigEditor
-                      values={visualValues}
-                      disabled={disableControls || loading || saving}
-                      onChange={setVisualValues}
-                    />
-                    <div className="mt-6">
-                      <CodexOAuthAdmissionPanel />
-                    </div>
+              <div className="relative flex h-full min-h-0 flex-col gap-4" aria-busy={loading}>
+                {error ? (
+                  <Callout tone="danger" role="alert">
+                    {error}
+                  </Callout>
+                ) : null}
+                <div className="min-h-0 flex-1">
+                  <VisualConfigEditor
+                    values={visualValues}
+                    baseline={baselineValues}
+                    disabled={disableControls || loading || saving}
+                    onChange={setVisualValues}
+                    codexAdmission={<CodexOAuthAdmissionPanel />}
+                    toolbarEnd={modeSwitch}
+                  />
+                </div>
+                {loading ? (
+                  // 首次加载前表单里是默认值，盖一层淡色遮罩，别让人以为那就是服务器上的配置。
+                  <div className="absolute inset-0 z-10 grid place-items-center rounded-2xl bg-canvas/70 backdrop-blur-[2px]">
+                    <span className="inline-flex items-center gap-2 rounded-full bg-elevated px-4 py-2 text-sm font-medium text-ink-2 shadow-pop">
+                      <Loader2 size={15} className="animate-spin" aria-hidden="true" />
+                      {t("common.loading_ellipsis")}
+                    </span>
                   </div>
-                </Card>
+                ) : null}
               </div>
             </TabsContent>
 
@@ -529,9 +541,9 @@ export function ConfigPage() {
                   loading={loading}
                 >
                   {error ? (
-                    <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900 dark:border-rose-400/25 dark:bg-rose-500/15 dark:text-white">
+                    <Callout tone="danger" role="alert" className="mb-4">
                       {error}
-                    </div>
+                    </Callout>
                   ) : null}
 
                   {!loading && !yamlText ? (
@@ -565,13 +577,13 @@ export function ConfigPage() {
                                 content={t("config_page.search_hint")}
                                 placement="bottom"
                               >
-                                <span className="inline-flex h-6 w-6 items-center justify-center text-slate-400 dark:text-white/45">
+                                <span className="inline-flex h-6 w-6 items-center justify-center text-ink-3">
                                   <Search size={16} aria-hidden="true" />
                                 </span>
                               </HoverTooltip>
                             }
                           />
-                          <p className="text-xs text-slate-500 dark:text-white/55">
+                          <p className="text-xs text-ink-3">
                             Enter: next · Shift+Enter: prev · Results:
                             <span className="ml-1 font-mono tabular-nums">
                               {!lastSearchedQuery.trim()
@@ -593,7 +605,7 @@ export function ConfigPage() {
                               onClick={() => executeSearch("prev")}
                               disabled={!searchStats.total}
                               aria-label={t("config_page.prev_match")}
-                              className="inline-flex h-8 w-8 items-center justify-center text-slate-400 transition hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/35 disabled:cursor-not-allowed disabled:opacity-50 dark:text-white/45 dark:hover:text-white/80 dark:focus-visible:ring-white/15"
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-hover hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
                             >
                               <ChevronUp size={18} aria-hidden="true" />
                             </button>
@@ -608,7 +620,7 @@ export function ConfigPage() {
                               onClick={() => executeSearch("next")}
                               disabled={!searchStats.total}
                               aria-label={t("config_page.next_match")}
-                              className="inline-flex h-8 w-8 items-center justify-center text-slate-400 transition hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/35 disabled:cursor-not-allowed disabled:opacity-50 dark:text-white/45 dark:hover:text-white/80 dark:focus-visible:ring-white/15"
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-hover hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
                             >
                               <ChevronDown size={18} aria-hidden="true" />
                             </button>
@@ -642,6 +654,7 @@ export function ConfigPage() {
       {showFloatingBar && (
         <FloatingSaveBar
           status={saveBarStatus}
+          changeCount={tab === "visual" ? visualChangeCount : undefined}
           onSave={requestSave}
           onReload={requestReload}
           saveDisabled={saveDisabled}
@@ -652,11 +665,9 @@ export function ConfigPage() {
       <ConfirmModal
         open={confirmSaveOpen}
         title={t("config_page.save_warning_title")}
-        description={t("config_page.save_warning_desc", {
-          warnings: pendingSaveWarnings
-            .map((key) => t(`config_page.save_warning_${key}`))
-            .join(t("config_page.save_warning_separator")),
-        })}
+        description={t("config_ui.save_warning_lead")}
+        icon={<AlertTriangle />}
+        consequences={pendingSaveWarnings.map((key) => t(`config_page.save_warning_${key}`))}
         confirmText={saving ? t("config_page.saving") : t("config_page.save_warning_confirm")}
         cancelText={t("ui.cancel_default")}
         variant={
@@ -669,7 +680,7 @@ export function ConfigPage() {
             ].includes(key),
           )
             ? "danger"
-            : "primary"
+            : "warning"
         }
         busy={saving}
         onClose={() => {
@@ -688,6 +699,7 @@ export function ConfigPage() {
         open={confirmReloadOpen}
         title={t("config_page.discard_title")}
         description={t("config_page.discard_desc")}
+        icon={<RotateCcw />}
         confirmText={t("config_page.confirm_reload")}
         cancelText={t("ui.cancel_default")}
         variant="danger"

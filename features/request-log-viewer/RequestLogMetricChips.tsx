@@ -34,10 +34,11 @@ export function RequestLogMetricChip({
 export function RequestLogModeChip({ label, streaming }: { label: string; streaming: boolean }) {
   return (
     <span
+      // 流式 / 非流式只是请求方式，不是状态：都用中性灰，流式稍重一档以便扫读。
       className={
         streaming
-          ? "inline-flex shrink-0 items-center justify-center rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-xs font-semibold text-sky-600 dark:border-sky-500/25 dark:bg-sky-500/15 dark:text-sky-300"
-          : "inline-flex shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-semibold text-slate-500 dark:border-white/10 dark:bg-neutral-900 dark:text-white/55"
+          ? "inline-flex shrink-0 items-center justify-center rounded-full border border-line bg-subtle px-2 py-0.5 text-xs font-medium text-ink-2"
+          : "inline-flex shrink-0 items-center justify-center rounded-full border border-transparent px-2 py-0.5 text-xs font-medium text-ink-3"
       }
     >
       {label}

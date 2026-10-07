@@ -21,20 +21,24 @@ const RADIUS: Record<SurfaceRadius, string> = {
  * happened to every card on pages that scroll. A border is painted inside the
  * box and survives clipping.
  */
-const EDGE = "border border-slate-900/8 dark:border-white/8";
+const EDGE = "border border-line";
 
+/**
+ * Fills come from the semantic tokens in styles/index.css, so light/dark is a
+ * variable swap rather than a pair of classes per tone. `shadow-card` is only the
+ * soft drop part of the card shadow — the hairline edge stays a border (see above).
+ */
 const TONE: Record<SurfaceTone, string> = {
   /** Top-level card sitting directly on the page background. */
-  card: "bg-white dark:bg-white/[0.03]",
+  card: "bg-surface shadow-card",
   /** Nested block that should read as lifted off its parent card. */
-  raised: "bg-white/70 shadow-sm dark:bg-neutral-950/60",
+  raised: "bg-surface shadow-xs dark:bg-white/[0.04] dark:shadow-none",
   /** Nested block that should read as recessed — code blocks, previews, wells. */
-  inset: "bg-slate-50 dark:bg-neutral-900",
+  inset: "bg-subtle",
   /** Opaque surface with no elevation, e.g. popovers over dense content. */
-  plain: "bg-white dark:bg-neutral-950",
-  /** Dashboard-style panel: opaque with a soft drop shadow. */
-  panel:
-    "bg-white shadow-[0_10px_26px_rgba(15,23,42,0.05)] dark:bg-neutral-950/85 dark:shadow-[0_10px_26px_rgba(0,0,0,0.28)]",
+  plain: "bg-surface",
+  /** Dashboard-style panel: same quiet card, kept as a name for existing call sites. */
+  panel: "bg-surface shadow-card",
 };
 
 export type SurfaceOptions = {

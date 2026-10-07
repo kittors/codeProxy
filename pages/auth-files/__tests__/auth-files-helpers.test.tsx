@@ -29,7 +29,7 @@ import {
   resolveCodexProMultiplierTier,
   resolveFileType,
   resolveAuthFileStats,
-  resolvePlanBadgeClass,
+  planTierOf,
   sanitizeAuthFilesForCache,
   setActiveCacheTenantId,
   setCacheTenantResolver,
@@ -724,20 +724,22 @@ describe("Auth Files helper coverage", () => {
     ).toBe(true);
   });
 
-  test("membership plan badges use distinct solid styles and short labels", () => {
+  test("membership plan badges use short labels and rank plans into tiers", () => {
     expect(formatPlanBadgeLabel("pro")).toBe("PRO");
     expect(formatPlanBadgeLabel("pro_5x")).toBe("PRO 5X");
     expect(formatPlanBadgeLabel("pro_20x")).toBe("PRO 20X");
     expect(formatPlanBadgeLabel("plus")).toBe("PLUS");
     expect(formatPlanBadgeLabel("team")).toBe("TEAM");
     expect(formatPlanBadgeLabel("supergrok-heavy")).toBe("SUPERGROK HEAVY");
-    expect(resolvePlanBadgeClass("pro")).toContain("from-amber-300");
-    expect(resolvePlanBadgeClass("plus")).toContain("from-slate-100");
-    expect(resolvePlanBadgeClass("team")).toContain("from-violet-500");
-    expect(resolvePlanBadgeClass("pro_20x")).toContain("from-yellow-300");
-    // Soft info tags use sky-50; membership chips must not.
-    expect(resolvePlanBadgeClass("pro")).not.toContain("bg-sky-50");
-    expect(resolvePlanBadgeClass("plus")).not.toContain("bg-sky-50");
+    // 徽章的颜色来自厂商品牌色，隆重程度来自等级：同一家的套餐必须分得出高低。
+    expect(planTierOf("free")).toBe("free");
+    expect(planTierOf("plus")).toBe("entry");
+    expect(planTierOf("pro")).toBe("pro");
+    expect(planTierOf("team")).toBe("pro");
+    expect(planTierOf("pro_5x")).toBe("max");
+    expect(planTierOf("max_5x")).toBe("max");
+    expect(planTierOf("pro_20x")).toBe("ultra");
+    expect(planTierOf("supergrok-heavy")).toBe("ultra");
   });
 
   test("codex pro multiplier tiers use estimated weekly budget thresholds", () => {

@@ -1,7 +1,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
 import { Plus, RefreshCw, ShieldCheck, X } from "lucide-react";
-import { Button, Checkbox, EmptyState, TextInput } from "@code-proxy/ui";
+import { Button, Checkbox, EmptyState, ProviderTag, TextInput, surface } from "@code-proxy/ui";
 import type { AliasRow } from "@code-proxy/domain";
 
 interface AuthFilesAliasTabProps {
@@ -40,10 +40,10 @@ export function AuthFilesAliasTab({
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         {showHeading ? (
           <div>
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+            <h2 className="text-lg font-bold text-ink">
               {t("auth_files_page.alias_title")}
             </h2>
-            <p className="mt-1 text-sm text-slate-500 dark:text-neutral-400">
+            <p className="mt-1 text-sm text-ink-3">
               {t("auth_files.model_alias_desc")}
             </p>
           </div>
@@ -64,7 +64,7 @@ export function AuthFilesAliasTab({
       </div>
 
       {aliasLoading ? (
-        <div className="flex h-32 items-center justify-center text-sm text-slate-500">
+        <div className="flex h-32 items-center justify-center text-sm text-ink-3">
           {t("common.loading_ellipsis")}
         </div>
       ) : (
@@ -111,14 +111,15 @@ export function AuthFilesAliasTab({
                   return (
                     <div
                       key={channel}
-                      className="rounded-2xl border border-black/[0.06] bg-white p-4 shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] transition-colors duration-200 ease-out dark:border-white/[0.06] dark:bg-neutral-950/70 dark:shadow-[0_1px_2px_rgb(0_0_0_/_0.22)]"
+                      className={`p-4 transition-colors duration-200 ease-out ${surface({ radius: "2xl" })}`}
                     >
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="font-mono text-xs text-slate-900 dark:text-white">
+                          {/* 渠道即供应商类型，用品牌色标签，和账号卡片上的供应商标签同色。 */}
+                          <ProviderTag vendor={channel} withLogo>
                             {channel}
-                          </p>
-                          <p className="mt-1 text-xs text-slate-500 dark:text-white/55">
+                          </ProviderTag>
+                          <p className="mt-1 text-xs text-ink-3">
                             {t("auth_files.valid_mappings", { count: mappingCount })}
                           </p>
                         </div>
@@ -133,7 +134,7 @@ export function AuthFilesAliasTab({
                             {t("auth_files.import_models")}
                           </Button>
                           <Button
-                            variant="danger"
+                            variant="secondary-danger"
                             size="sm"
                             onClick={() => deleteAliasChannel(channel)}
                             disabled={isPending || aliasUnsupported}
@@ -181,7 +182,7 @@ export function AuthFilesAliasTab({
                             </div>
                             <div className="flex shrink-0 items-center justify-between gap-2 sm:justify-end">
                               <label
-                                className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-xl px-1 text-sm text-slate-600 transition-colors hover:text-slate-900 dark:text-white/70 dark:hover:text-white"
+                                className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-xl px-1 text-sm text-ink-2 transition-colors hover:text-slate-900 dark:hover:text-white"
                                 title={t("auth_files.fork_hint")}
                               >
                                 <Checkbox
@@ -201,7 +202,7 @@ export function AuthFilesAliasTab({
                                 </span>
                               </label>
                               <Button
-                                variant="danger"
+                                variant="ghost-danger"
                                 size="sm"
                                 onClick={() => {
                                   setAliasEditing((prev) => ({

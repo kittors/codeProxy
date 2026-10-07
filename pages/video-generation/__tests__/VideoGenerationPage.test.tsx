@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, test, vi } from "vitest";
@@ -90,9 +90,44 @@ describe("VideoGenerationPage", () => {
     await user.click(screen.getByRole("button", { name: "开始生成" }));
 
     expect(startTaskMock()).not.toHaveBeenCalled();
-    // The toast renders both a visible node and a live-region copy for screen
-    // readers, so match on presence rather than uniqueness.
-    expect((await screen.findAllByText("请填写提示词")).length).toBeGreaterThan(0);
+    // 错误就地显示在提示词下面，焦点也送回提示词——以前只弹一条 toast，看完还得自己找是哪一项。
+    const promptInput = screen.getByRole("textbox", { name: "提示词" });
+    expect(await screen.findByText("这一项必填")).toBeInTheDocument();
+    expect(promptInput).toHaveAttribute("aria-invalid", "true");
+    await waitFor(() => expect(promptInput).toHaveFocus());
+  });
+
+  test("asks for a valid source image in image-to-video mode and submits with the shortcut", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole("button", { name: "测试生成" }));
+    const dialog = await screen.findByRole("dialog", { name: "测试视频生成" });
+    // 文生视频不发送源图，所以不显示这一项。
+    expect(within(dialog).queryByRole("textbox", { name: "源图地址" })).not.toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole("radio", { name: "图生视频" }));
+    // 弹窗里切换方式，页面上的文档页签跟着切过去。
+    expect(screen.getByRole("tab", { name: "图生视频" })).toHaveAttribute("aria-selected", "true");
+
+    const imageInput = within(dialog).getByRole("textbox", { name: "源图地址" });
+    await user.type(within(dialog).getByRole("textbox", { name: "提示词" }), "镜头推近");
+    await user.type(imageInput, "still.png");
+    await user.click(within(dialog).getByRole("button", { name: "开始生成" }));
+
+    expect(startTaskMock()).not.toHaveBeenCalled();
+    expect(within(dialog).getByText(/请输入完整的网址/)).toBeInTheDocument();
+
+    await user.clear(imageInput);
+    await user.type(imageInput, "https://example.com/still.png");
+    await user.keyboard("{Meta>}{Enter}{/Meta}");
+
+    await waitFor(() => expect(startTaskMock()).toHaveBeenCalledTimes(1));
+    expect(startTaskMock().mock.calls[0][0]).toMatchObject({
+      prompt: "镜头推近",
+      image: "https://example.com/still.png",
+      duration: 6,
+    });
   });
 
   // Screenshot regression: with no xAI credential the page still offered a live

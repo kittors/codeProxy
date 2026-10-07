@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import {
   RotateCcw,
@@ -19,12 +19,9 @@ import {
 import {
   Button,
   Card,
-  ConfirmModal,
   DataTable,
   MaskToggleButton,
-  Modal,
   PaginationBar,
-  SecretRevealModal,
   Select,
   TextInput,
   useSensitiveDataMasking,
@@ -34,17 +31,23 @@ import {
 import { PermissionGate } from "@app/providers/PermissionGate";
 import { useAuth } from "@app/providers/AuthProvider";
 import { useApiKeyPermissionOptions } from "@features/api-key-restrictions";
-import { ErrorDetailModal, LogContentModal } from "@features/log-content-viewer";
-import { resolvePasswordApiError, validatePasswordField } from "@features/password-policy";
-import { ApiKeyUsageModal } from "../api-keys/components/ApiKeyUsageModal";
+import { resolvePasswordApiError } from "@features/password-policy";
+import { ApiKeyUsageDialogs } from "../api-keys/components/ApiKeyUsageDialogs";
 import { useApiKeyUsageView } from "../api-keys/hooks/useApiKeyUsageView";
 import { EndUserResetHistoryModal } from "./components/EndUserResetHistoryModal";
 import { EndUserCreateModal } from "./components/EndUserCreateModal";
 import { EndUserCreatedSecretsModal } from "./components/EndUserCreatedSecretsModal";
 import { EndUserEditModal } from "./components/EndUserEditModal";
+import {
+  EndUserDeleteModal,
+  EndUserNewPasswordModal,
+  EndUserResetPasswordModal,
+} from "./components/EndUserConfirmModals";
+import { EndUserKeysModal } from "./components/EndUserKeysModal";
 import { getEndUserColumns } from "./components/EndUserColumns";
 import {
   emptyForm,
+  endUserLabel,
   requestLimitFromText,
   spendingLimitFromText,
 } from "./endUserForm";
@@ -58,10 +61,6 @@ import {
 type EndUserStatusFilter = "all" | "active" | "frozen";
 const DEFAULT_END_USER_PAGE_SIZE = 20;
 const END_USER_PAGE_SIZE_OPTIONS = [20, 50, 100];
-
-const ApiKeysPage = lazy(() =>
-  import("../api-keys/ApiKeysPage").then((m) => ({ default: m.ApiKeysPage })),
-);
 
 export function EndUsersPage() {
   const { notify } = useToast();
@@ -96,46 +95,8 @@ export function EndUsersPage() {
   const [pageSize, setPageSize] = useState(DEFAULT_END_USER_PAGE_SIZE);
   const canWrite = can("end_users.write");
   const { refreshPermissionOptions } = useApiKeyPermissionOptions();
-  const {
-    usageViewKey,
-    usageViewName,
-    usageLoading,
-    usageTotalCount,
-    usageSummary,
-    usageCurrentPage,
-    usagePageSize,
-    setUsagePageSize,
-    usageLastUpdatedText,
-    usageTimeRange,
-    setUsageTimeRange,
-    usageKeyQuery,
-    setUsageKeyQuery,
-    usageChannelQuery,
-    setUsageChannelQuery,
-    usageModelQuery,
-    setUsageModelQuery,
-    usageStatusFilter,
-    setUsageStatusFilter,
-    usageContentModalOpen,
-    setUsageContentModalOpen,
-    usageContentModalLogId,
-    usageContentModalModel,
-    usageContentModalTab,
-    usageErrorModalOpen,
-    setUsageErrorModalOpen,
-    usageErrorModalLogId,
-    usageErrorModalModel,
-    usageLogColumns,
-    usageRows,
-    usageTotalPages,
-    usageKeyOptions,
-    usageChannelOptions,
-    usageModelOptions,
-    usageStatusOptions,
-    fetchUsageLogs,
-    openUsageView,
-    closeUsageModal,
-  } = useApiKeyUsageView();
+  const usageView = useApiKeyUsageView();
+  const { openUsageView } = usageView;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -372,14 +333,7 @@ export function EndUsersPage() {
 
   const onCreate = async (e: FormEvent) => {
     e.preventDefault();
-    // Blank means "let the server generate one". A password the operator typed
-    // has to satisfy the same policy the server enforces, otherwise the only
-    // feedback is the server's English rejection in a toast.
-    const localPasswordError = form.password ? validatePasswordField(form.password, t) : "";
-    if (localPasswordError) {
-      setCreatePasswordError(localPasswordError);
-      return;
-    }
+    // 密码策略（留空 = 由服务端生成）已在创建弹窗里就地校验；这里只处理服务端的拒绝。
     setCreatePasswordError("");
     setBusy(true);
     try {
@@ -688,36 +642,17 @@ export function EndUsersPage() {
         }}
       />
 
-      <SecretRevealModal
-        open={Boolean(generatedReset)}
-        onClose={() => setGeneratedReset("")}
-        title={t("end_users.new_password_title", { defaultValue: "新密码（请立即复制）" })}
-        secret={generatedReset}
-        warning={t("end_users.new_password_warning", {
-          defaultValue: "请立即复制新密码，关闭后将无法再次查看。",
-        })}
-      />
-
-      <ConfirmModal
-        open={Boolean(resetUser)}
-        onClose={() => setResetUser(null)}
-        title={t("end_users.reset_password_title")}
-        description={`将为 ${resetUser?.username ?? ""} 生成新随机密码，旧会话失效。`}
-        confirmText="重置"
+      <EndUserNewPasswordModal password={generatedReset} onClose={() => setGeneratedReset("")} />
+      <EndUserResetPasswordModal
+        user={resetUser}
         busy={busy}
+        onClose={() => setResetUser(null)}
         onConfirm={() => void onReset()}
       />
       <PeriodQuotaResetModal
         open={Boolean(resetSpendingUser)}
         scope="account"
-        subjectName={
-          resetSpendingUser
-            ? resetSpendingUser.display_name &&
-              resetSpendingUser.display_name !== resetSpendingUser.username
-              ? `${resetSpendingUser.display_name} / ${resetSpendingUser.username}`
-              : resetSpendingUser.username
-            : ""
-        }
+        subjectName={resetSpendingUser ? endUserLabel(resetSpendingUser) : ""}
         configuredLimits={
           resetSpendingUser
             ? normalizePeriodSpendingLimits(
@@ -732,59 +667,19 @@ export function EndUsersPage() {
         onClose={() => setResetSpendingUser(null)}
         onConfirm={(periods) => resetSpendingUser && void resetPeriodSpending(resetSpendingUser, periods)}
       />
-      <ConfirmModal
-        open={Boolean(deleteUser)}
-        onClose={() => setDeleteUser(null)}
-        title={t("end_users.delete_title", { defaultValue: "删除用户账号" })}
-        description={`删除 ${deleteUser?.username ?? ""}？其 API Key 将被禁用并解除归属，且无法再用于调用。`}
-        confirmText="删除"
+      <EndUserDeleteModal
+        user={deleteUser}
         busy={busy}
+        onClose={() => setDeleteUser(null)}
         onConfirm={() => void onDelete()}
       />
-
-      <Modal
-        open={Boolean(keysUser)}
+      <EndUserKeysModal
+        user={keysUser}
         onClose={() => {
           setKeysUser(null);
           void load();
         }}
-        title={
-          keysUser
-            ? t("end_users.manage_keys_title_for", {
-                defaultValue: "管理密钥 · {{name}}",
-                name: keysUser.display_name || keysUser.username,
-              })
-            : t("end_users.manage_keys_title", { defaultValue: "用户 API 密钥" })
-        }
-        description={t("end_users.manage_keys_desc", {
-          defaultValue:
-            "管理该账号下各把 API Key 的名称、启停、轮换与 Key 子额度；账号额度与权限请在账号编辑中配置。",
-        })}
-        maxWidth="max-w-[96vw]"
-        panelClassName="h-[min(90dvh,920px)]"
-        bodyHeightClassName="h-[calc(min(90dvh,920px)-7.5rem)]"
-        bodyOverflowClassName="overflow-hidden"
-        bodyClassName="!p-0"
-      >
-        {keysUser ? (
-          <Suspense
-            fallback={
-              <div className="flex h-full items-center justify-center text-sm text-slate-500">
-                Loading…
-              </div>
-            }
-          >
-            <ApiKeysPage
-              endUserId={keysUser.id}
-              accountPeriodSpendingLimits={normalizePeriodSpendingLimits(
-                keysUser["period-spending-limits"],
-                keysUser["daily-spending-limit"],
-              )}
-              embed
-            />
-          </Suspense>
-        ) : null}
-      </Modal>
+      />
 
       <EndUserResetHistoryModal
         open={resetHistoryUser !== null}
@@ -794,69 +689,20 @@ export function EndUsersPage() {
           setResetHistoryRawTodayCost(undefined);
           setResetHistoryDailySpendingUsed(undefined);
         }}
-        userName={
-          resetHistoryUser
-            ? resetHistoryUser.display_name.trim() &&
-              resetHistoryUser.display_name.trim() !== resetHistoryUser.username.trim()
-              ? `${resetHistoryUser.display_name.trim()} / ${resetHistoryUser.username.trim()}`
-              : resetHistoryUser.display_name.trim() || resetHistoryUser.username.trim()
-            : ""
-        }
+        userName={resetHistoryUser ? endUserLabel(resetHistoryUser) : ""}
         loading={resetHistoryLoading}
         events={resetHistoryEvents}
         rawTodayCost={resetHistoryRawTodayCost}
         dailySpendingUsed={resetHistoryDailySpendingUsed}
       />
 
-      <ApiKeyUsageModal
-        open={usageViewKey !== null}
-        onClose={closeUsageModal}
-        usageViewName={usageViewName}
+      <ApiKeyUsageDialogs
+        view={usageView}
         maskedKey={
-          usageViewKey
-            ? t("end_users.usage_keys_summary", {
-                defaultValue: "账号下全部密钥",
-              })
+          usageView.usageViewKey
+            ? t("end_users.usage_keys_summary", { defaultValue: "账号下全部密钥" })
             : ""
         }
-        usageTotalCount={usageTotalCount}
-        usageSummary={usageSummary}
-        usageTimeRange={usageTimeRange}
-        setUsageTimeRange={setUsageTimeRange}
-        fetchUsageLogs={fetchUsageLogs}
-        usagePageSize={usagePageSize}
-        usageLoading={usageLoading}
-        usageLastUpdatedText={usageLastUpdatedText}
-        usageKeyQuery={usageKeyQuery}
-        setUsageKeyQuery={setUsageKeyQuery}
-        usageKeyOptions={usageKeyOptions}
-        usageChannelQuery={usageChannelQuery}
-        setUsageChannelQuery={setUsageChannelQuery}
-        usageChannelOptions={usageChannelOptions}
-        usageModelQuery={usageModelQuery}
-        setUsageModelQuery={setUsageModelQuery}
-        usageModelOptions={usageModelOptions}
-        usageStatusFilter={usageStatusFilter}
-        setUsageStatusFilter={setUsageStatusFilter}
-        usageStatusOptions={usageStatusOptions}
-        usageLogColumns={usageLogColumns}
-        usageRows={usageRows}
-        usageCurrentPage={usageCurrentPage}
-        usageTotalPages={usageTotalPages}
-        setUsagePageSize={setUsagePageSize}
-      />
-      <LogContentModal
-        open={usageContentModalOpen}
-        logId={usageContentModalLogId}
-        displayModel={usageContentModalModel}
-        initialTab={usageContentModalTab}
-        onClose={() => setUsageContentModalOpen(false)}
-      />
-      <ErrorDetailModal
-        open={usageErrorModalOpen}
-        logId={usageErrorModalLogId}
-        model={usageErrorModalModel}
-        onClose={() => setUsageErrorModalOpen(false)}
       />
     </PermissionGate>
   );

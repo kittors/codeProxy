@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import i18n from "@code-proxy/i18n";
@@ -119,6 +119,37 @@ describe("LogsPage", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("/v1/responses")).toBeInTheDocument();
     expect(screen.getByText("deepseekv4flash-chatgpt · /cs_3e13ca9880fc/v1")).toBeInTheDocument();
+  });
+
+  test("keeps the clear confirmation open while clearing and shows a failure in place", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+    mocks.fetchLogs.mockResolvedValue({ lines: [], "latest-timestamp": null });
+    let rejectClear: (error: Error) => void = () => undefined;
+    mocks.clearLogs.mockImplementationOnce(
+      () =>
+        new Promise((_, reject) => {
+          rejectClear = reject;
+        }),
+    );
+
+    renderLogsPage();
+    await waitFor(() => expect(mocks.fetchLogs).toHaveBeenCalled());
+    await user.click(await screen.findByRole("button", { name: "清除" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "清除服务器日志？" });
+    expect(within(dialog).getByText(/错误日志文件不受影响/)).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "清除服务器日志" }));
+
+    // 请求还没回来：确认框仍在，确认按钮处于忙碌态。
+    await waitFor(() => expect(mocks.clearLogs).toHaveBeenCalledTimes(1));
+    expect(screen.getByRole("dialog", { name: "清除服务器日志？" })).toBeInTheDocument();
+
+    rejectClear(new Error("logging to file disabled"));
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent(
+      "logging to file disabled",
+    );
+    expect(screen.getByRole("dialog", { name: "清除服务器日志？" })).toBeInTheDocument();
   });
 
   test("renders long request paths without a full-pill badge", async () => {

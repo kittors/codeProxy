@@ -20,9 +20,11 @@ const toastMocks = vi.hoisted(() => ({
   error: vi.fn(),
 }));
 
-vi.mock("goey-toast", () => ({
-  GoeyToaster: () => null,
-  goeyToast: {
+// 提示条走 @code-proxy/ui 自己的 toast 仓库（ToastProvider.notify 也调用它）；
+// 只替换 toast 本身，订阅接口保留原实现，Toaster 照常挂载。
+vi.mock("@code-proxy/ui/feedback/toastStore", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@code-proxy/ui/feedback/toastStore")>()),
+  toast: {
     info: toastMocks.info,
     success: toastMocks.success,
     warning: toastMocks.warning,

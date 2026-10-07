@@ -117,7 +117,7 @@ export function AmpcodePanel({
               </div>
               <div className="md:col-span-2 flex items-center justify-end">
                 <Button
-                  variant="danger"
+                  variant="ghost-danger"
                   size="sm"
                   onClick={() => setAmpMappings((prev) => prev.filter((_, i) => i !== idx))}
                   disabled={ampMappings.length <= 1}

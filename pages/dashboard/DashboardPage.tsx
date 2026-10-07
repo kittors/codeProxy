@@ -28,6 +28,7 @@ import { EmptyState } from "@code-proxy/ui";
 import { Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
 import { useInterval } from "@code-proxy/ui";
+import { Card, chartPalette, useTheme } from "@code-proxy/ui";
 import { DashboardKpiCard } from "./DashboardKpiCard";
 import {
   DashboardMetricValue,
@@ -131,39 +132,47 @@ export function DashboardPage() {
     meta.throughput_scope === "all_tenants" || Boolean(principal?.platform_admin);
   const tenantBreakdown = trends?.tenants ?? [];
 
+  // 每格迷你趋势线用该指标的身份色（chartTheme.metric：请求蓝、成功绿、Token 紫、费用琥珀、
+  // 缓存青），标题前的图标块同色；失败请求用错误红。与监控中心、账号详情是同一组颜色。
+  const {
+    state: { mode },
+  } = useTheme();
+  const isDark = mode === "dark";
+  const palette = chartPalette(isDark);
   const totalRequestOption = useMemo(
-    () => createSparklineOption(trends?.request_volume ?? [], "#2563eb"),
-    [trends?.request_volume],
+    () => createSparklineOption(trends?.request_volume ?? [], palette.metric.requests, isDark),
+    [isDark, palette.metric.requests, trends?.request_volume],
   );
   const successRateOption = useMemo(
-    () => createSparklineOption(trends?.success_rate ?? [], "#10b981"),
-    [trends?.success_rate],
+    () => createSparklineOption(trends?.success_rate ?? [], palette.metric.success, isDark),
+    [isDark, palette.metric.success, trends?.success_rate],
   );
   const totalTokenOption = useMemo(
-    () => createSparklineOption(trends?.total_tokens ?? [], "#7c3aed"),
-    [trends?.total_tokens],
+    () => createSparklineOption(trends?.total_tokens ?? [], palette.metric.tokens, isDark),
+    [isDark, palette.metric.tokens, trends?.total_tokens],
   );
   const totalCostOption = useMemo(
-    () => createSparklineOption(trends?.total_cost ?? [], "#0891b2"),
-    [trends?.total_cost],
+    () => createSparklineOption(trends?.total_cost ?? [], palette.metric.cost, isDark),
+    [isDark, palette.metric.cost, trends?.total_cost],
   );
   const failedRequestOption = useMemo(
-    () => createSparklineOption(trends?.failed_requests ?? [], "#ef4444"),
-    [trends?.failed_requests],
+    () => createSparklineOption(trends?.failed_requests ?? [], palette.err, isDark),
+    [isDark, palette.err, trends?.failed_requests],
   );
-  const cacheRateOption = useMemo(() => createSparklineOption([], "#f59e0b"), []);
+  const cacheRateOption = useMemo(
+    () => createSparklineOption([], palette.metric.cache, isDark),
+    [isDark, palette.metric.cache],
+  );
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-semibold tracking-tight text-slate-950 text-balance dark:text-white">
+          <h2 className="text-2xl font-semibold tracking-tight text-balance text-ink">
             {t("dashboard.heading")}
           </h2>
-          <p className="mt-1 text-sm text-slate-500 dark:text-white/55">
-            {t("dashboard.hero_subtitle")}
-          </p>
-          <p className="mt-2 text-xs text-slate-400 dark:text-white/40">
+          <p className="mt-1 text-sm text-ink-2">{t("dashboard.hero_subtitle")}</p>
+          <p className="mt-1 text-xs text-ink-3">
             {t("dashboard.overview_hint", { time: generatedAt })}
           </p>
         </div>
@@ -211,7 +220,12 @@ export function DashboardPage() {
         />
       ) : null}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {/*
+        六格指标共用一张卡片，格子之间用细线分隔。每格自带右、下两条边，外层用 -mr-px -mb-px
+        把最右一列、最下一行的边推到卡片外（卡片 overflow-hidden 裁掉），任何列数下都只剩内部分隔线。
+      */}
+      <Card padding="none" className="overflow-hidden">
+        <div className="-mr-px -mb-px grid sm:grid-cols-2 lg:grid-cols-3">
         <DashboardKpiCard
           title={t("dashboard.total_requests")}
           value={<DashboardMetricValue value={kpi?.total_requests ?? 0} animated />}
@@ -221,11 +235,8 @@ export function DashboardPage() {
               : t("dashboard.total_hint_days", { count: range })
           }
           icon={Activity}
+          hue="blue"
           option={totalRequestOption}
-          accent={{
-            iconWrap: "bg-blue-50 dark:bg-blue-500/12",
-            iconColor: "text-blue-600 dark:text-blue-400",
-          }}
         />
         <DashboardKpiCard
           title={t("dashboard.success_rate")}
@@ -236,11 +247,8 @@ export function DashboardPage() {
             <DashboardMetricValue key="failed" value={kpi?.failed_requests ?? 0} />,
           )}
           icon={Sigma}
+          hue="emerald"
           option={successRateOption}
-          accent={{
-            iconWrap: "bg-emerald-50 dark:bg-emerald-500/12",
-            iconColor: "text-emerald-600 dark:text-emerald-400",
-          }}
         />
         <DashboardKpiCard
           title={t("dashboard.total_tokens")}
@@ -251,33 +259,24 @@ export function DashboardPage() {
             <DashboardMetricValue key="output" value={kpi?.output_tokens ?? 0} />,
           )}
           icon={Sparkles}
+          hue="violet"
           option={totalTokenOption}
-          accent={{
-            iconWrap: "bg-violet-50 dark:bg-violet-500/12",
-            iconColor: "text-violet-600 dark:text-violet-400",
-          }}
         />
         <DashboardKpiCard
           title={t("dashboard.total_cost")}
           value={<DashboardMetricValue value={kpi?.total_cost ?? 0} variant="currency" animated />}
           hint={t("dashboard.total_cost_hint")}
           icon={DollarSign}
+          hue="amber"
           option={totalCostOption}
-          accent={{
-            iconWrap: "bg-cyan-50 dark:bg-cyan-500/12",
-            iconColor: "text-cyan-600 dark:text-cyan-400",
-          }}
         />
         <DashboardKpiCard
           title={t("dashboard.failed_requests")}
           value={<DashboardMetricValue value={kpi?.failed_requests ?? 0} animated />}
           hint={t("dashboard.failed_hint")}
           icon={TriangleAlert}
+          hue="rose"
           option={failedRequestOption}
-          accent={{
-            iconWrap: "bg-rose-50 dark:bg-rose-500/12",
-            iconColor: "text-rose-600 dark:text-rose-400",
-          }}
         />
         <DashboardKpiCard
           title={t("dashboard.cache_rate")}
@@ -288,13 +287,11 @@ export function DashboardPage() {
             <DashboardMetricValue key="input" value={kpi?.input_tokens ?? 0} />,
           )}
           icon={Database}
+          hue="teal"
           option={cacheRateOption}
-          accent={{
-            iconWrap: "bg-amber-50 dark:bg-amber-500/12",
-            iconColor: "text-amber-600 dark:text-amber-400",
-          }}
         />
-      </div>
+        </div>
+      </Card>
 
       {canViewSystemMonitor ? (
         <SystemMonitorSection

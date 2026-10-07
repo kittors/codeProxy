@@ -23,9 +23,12 @@ import {
   selectOptionSelected,
   selectSearchInput,
   selectSearchRow,
+  selectTriggerGhost,
   selectTriggerState,
 } from "../utils/selectStyles";
 import type { ControlSize } from "../utils/controlStyles";
+import { useTranslation } from "react-i18next";
+import { useScrollFade } from "../hooks/useScrollFade";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -63,11 +66,23 @@ export interface SearchableSelectProps {
   placeholder?: string;
   searchPlaceholder?: string;
   "aria-label"?: string;
+  /**
+   * 由 FormField 注入：`<label htmlFor>` 指到触发器；出错时描边变红、读屏读到错误，
+   * 提交校验也能把焦点送过来（`focusFirstInvalid` 找的就是 aria-invalid）。
+   */
+  id?: string;
+  "aria-invalid"?: boolean | "true" | "false";
+  "aria-describedby"?: string;
   name?: string;
   className?: string;
   disabled?: boolean;
   size?: ControlSize;
   dropdownMinWidth?: number;
+  /**
+   * `ghost`：无边框、无底色的胶囊，只在悬停 / 展开时铺浅灰叠层，放在顶栏这类不想显得
+   * 「这里有个表单控件」的位置（如切换租户）。默认是带细描边的标准触发器。
+   */
+  variant?: "default" | "ghost";
 }
 
 /* ------------------------------------------------------------------ */
@@ -95,7 +110,7 @@ function OptionContent({
       {trailing ? <span className="inline-flex shrink-0 items-center">{trailing}</span> : null}
       <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center">
         {selected ? (
-          <Check size={14} className="text-[#96969B] dark:text-[#9F9FA8]" aria-hidden="true" />
+          <Check size={15} className="text-ink" aria-hidden="true" />
         ) : null}
       </span>
     </>
@@ -113,13 +128,19 @@ export function SearchableSelect({
   placeholder = "",
   searchPlaceholder = "",
   "aria-label": ariaLabel,
+  id,
+  "aria-invalid": ariaInvalid,
+  "aria-describedby": ariaDescribedBy,
   name,
   className,
   disabled = false,
   size = "default",
   dropdownMinWidth = 0,
+  variant = "default",
 }: SearchableSelectProps) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  const listFade = useScrollFade<HTMLDivElement>({ enabled: open, size: 24 });
   const [query, setQuery] = useState("");
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
@@ -200,7 +221,10 @@ export function SearchableSelect({
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key !== "Escape") return;
+      // 吃掉这次 Esc：外层弹窗看到 defaultPrevented 就不会跟着关闭（只收起下拉）。
+      e.preventDefault();
+      setOpen(false);
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
@@ -274,11 +298,14 @@ export function SearchableSelect({
 
       <button
         ref={triggerRef}
+        id={id}
         type="button"
         role="combobox"
         aria-expanded={open}
         aria-haspopup="listbox"
         aria-label={ariaLabel}
+        aria-invalid={ariaInvalid}
+        aria-describedby={ariaDescribedBy}
         title={
           typeof selectedOption?.label === "string"
             ? selectedOption.label
@@ -289,7 +316,10 @@ export function SearchableSelect({
         disabled={disabled}
         data-state={selectTriggerState(open)}
         onClick={() => setOpen((prev) => !prev)}
-        className={cn(getSelectTriggerBase(size), className)}
+        className={cn(
+          variant === "ghost" ? selectTriggerGhost : getSelectTriggerBase(size),
+          className,
+        )}
       >
         <span className="min-w-0 flex-1 truncate text-left">{selectedLabel ?? placeholder}</span>
         <ChevronDown
@@ -320,11 +350,7 @@ export function SearchableSelect({
             >
               {/* Search input */}
               <div className={selectSearchRow}>
-                <Search
-                  size={14}
-                  className="shrink-0 text-[#96969B] dark:text-[#9F9FA8]"
-                  aria-hidden="true"
-                />
+                <Search size={14} className="shrink-0 text-ink-3" aria-hidden="true" />
                 <input
                   ref={inputRef}
                   type="text"
@@ -337,10 +363,15 @@ export function SearchableSelect({
                 />
               </div>
 
-              {/* Options list */}
-              <div className="flex-1 overflow-y-auto p-1">
+              {/* Options list：选项多到要滚时上下渐隐。 */}
+              <div
+                ref={listFade.ref}
+                onScroll={listFade.onScroll}
+                style={listFade.style}
+                className={cn("flex-1 overflow-y-auto overscroll-contain p-1.5", listFade.className)}
+              >
                 {filtered.length === 0 && !canCreate ? (
-                  <div className={selectEmptyState}>No results</div>
+                  <div className={selectEmptyState}>{t("ui.no_match")}</div>
                 ) : (
                   <>
                     {filtered.map((opt) => {
@@ -378,7 +409,7 @@ export function SearchableSelect({
                                 opt.action?.onClick();
                               }}
                               className={cn(
-                                "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[#96969B] transition-colors hover:bg-red-50 hover:text-red-500 dark:text-[#9F9FA8] dark:hover:bg-red-500/15 dark:hover:text-red-300",
+                                "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-ink-3 transition-colors hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-500/15 dark:hover:text-rose-300",
                                 opt.action.className,
                               )}
                             >
@@ -411,16 +442,9 @@ export function SearchableSelect({
                         role="option"
                         aria-selected={false}
                         onClick={handleCreate}
-                        className={cn(
-                          selectOptionBase,
-                          "font-medium text-[#18181B] dark:text-white",
-                        )}
+                        className={cn(selectOptionBase, "font-medium text-ink")}
                       >
-                        <Plus
-                          size={14}
-                          className="shrink-0 text-[#71717A] dark:text-[#A1A1AA]"
-                          aria-hidden="true"
-                        />
+                        <Plus size={14} className="shrink-0 text-ink-2" aria-hidden="true" />
                         <span className="min-w-0 flex-1">
                           {createLabel ? createLabel(createValue) : createValue}
                         </span>

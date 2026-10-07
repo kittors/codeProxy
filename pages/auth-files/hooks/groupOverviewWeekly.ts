@@ -27,10 +27,6 @@ export type GroupTrendPoint = {
   weeklyPercents: Record<string, number | null>;
 };
 
-// Distinct from the call bars (blue) and from each other so two Antigravity
-// weeklies can sit on the same axis without blending into one "average".
-export const WEEKLY_SERIES_COLORS = ["#0f766e", "#d97706", "#2563eb", "#7c3aed", "#db2777", "#0891b2"];
-
 export const isWeeklyWindow = (windowSeconds: number | null | undefined): boolean =>
   typeof windowSeconds === "number" && Number.isFinite(windowSeconds) && windowSeconds >= WEEKLY_WINDOW_SECONDS;
 

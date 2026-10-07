@@ -23,7 +23,9 @@ describe("PeriodQuotaResetModal", () => {
     );
 
     const dialog = screen.getByRole("dialog", { name: "Reset account quota" });
-    expect(within(dialog).getByText(/account Alice/i)).toBeInTheDocument();
+    // 被重置的对象单独放在卡片里（名称 + 类型），说明文字只讲后果。
+    expect(within(dialog).getByText("Alice")).toBeInTheDocument();
+    expect(within(dialog).getByText("Account")).toBeInTheDocument();
     expect(within(dialog).getByText(/current Day usage/i)).toBeInTheDocument();
     await userEvent.click(within(dialog).getByRole("button", { name: "Reset quota" }));
 
@@ -54,6 +56,48 @@ describe("PeriodQuotaResetModal", () => {
     await userEvent.click(confirm);
 
     expect(onConfirm).toHaveBeenCalledWith(["day", "week"]);
+  });
+
+  test("shows how much each period has used so the reset's effect is visible", () => {
+    render(
+      <PeriodQuotaResetModal
+        open
+        scope="key"
+        subjectName="Primary"
+        configuredLimits={{ "5h": 50, day: 100, week: 0, month: 0 }}
+        periodSpendingItems={[
+          { period: "5h", limit: 50, used: 12.5, remaining: 37.5 },
+          { period: "day", limit: 100, used: 40, remaining: 60 },
+        ]}
+        onClose={vi.fn()}
+        onConfirm={vi.fn()}
+      />,
+    );
+
+    const dialog = screen.getByRole("dialog", { name: "Reset Key quota" });
+    expect(within(dialog).getByText("Primary")).toBeInTheDocument();
+    const day = within(dialog).getByRole("checkbox", { name: "Reset Day quota" });
+    expect(day).toHaveAccessibleDescription("$40 used of $100");
+    expect(
+      within(dialog).getByRole("checkbox", { name: "Reset 5 hours quota" }),
+    ).toHaveAccessibleDescription("$12.5 used of $50");
+  });
+
+  test("keeps a failed reset's reason inside the dialog", () => {
+    render(
+      <PeriodQuotaResetModal
+        open
+        scope="key"
+        subjectName="Primary"
+        configuredLimits={{ "5h": 0, day: 100, week: 0, month: 0 }}
+        error="quota service unavailable"
+        onClose={vi.fn()}
+        onConfirm={vi.fn()}
+      />,
+    );
+
+    const dialog = screen.getByRole("dialog", { name: "Reset Key quota" });
+    expect(within(dialog).getByRole("alert")).toHaveTextContent("quota service unavailable");
   });
 
   test("renders no reset flow when no period quota is configured", () => {

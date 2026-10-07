@@ -413,12 +413,14 @@ describe("ProvidersPage import/export", () => {
     await user.upload(input, file);
 
     const dialog = await screen.findByRole("dialog", { name: /Import preview/i });
-    expect(within(dialog).getByText(/Added: 1/i)).toBeInTheDocument();
-    expect(within(dialog).getByText(/Updated: 1/i)).toBeInTheDocument();
-    expect(within(dialog).getByText(/Removed: 1/i)).toBeInTheDocument();
-    expect(within(dialog).getByText(/Duplicates cleaned: 1/i)).toBeInTheDocument();
+    expect(within(dialog).getByRole("group", { name: /Added: 1/i })).toBeInTheDocument();
+    expect(within(dialog).getByRole("group", { name: /Updated: 1/i })).toBeInTheDocument();
+    expect(within(dialog).getByRole("group", { name: /Removed: 1/i })).toBeInTheDocument();
+    expect(within(dialog).getByRole("group", { name: /Duplicates cleaned: 1/i })).toBeInTheDocument();
+    // 会删掉现有配置时有明确提示，确认按钮写明「导入并删除 N 项」。
+    expect(within(dialog).getByText(/removes 1 existing configuration/i)).toBeInTheDocument();
 
-    await user.click(within(dialog).getByRole("button", { name: /Confirm import/i }));
+    await user.click(within(dialog).getByRole("button", { name: /Import and remove 1/i }));
 
     await waitFor(() => {
       expect(mocks.saveCodexConfigs).toHaveBeenCalledWith([

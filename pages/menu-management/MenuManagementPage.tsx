@@ -1,13 +1,4 @@
-import {
-  lazy,
-  Suspense,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type FormEvent,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronRight, Pencil, Plus, Trash2 } from "lucide-react";
 import {
@@ -19,77 +10,25 @@ import {
 import {
   Button,
   COLUMN_WIDTH,
-  ConfirmModal,
   DataTable,
-  Drawer,
-  SearchableSelect,
   TABLE_ROW_ACTIONS_COLUMN,
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TextInput,
   resolveMenuIcon,
   useToast,
   type DataTableColumn,
+  surface,
 } from "@code-proxy/ui";
 import { useAuth } from "@app/providers/AuthProvider";
-
-
-const MenuIconPicker = lazy(() =>
-  import("./MenuIconPicker").then((module) => ({ default: module.MenuIconPicker })),
-);
+import { MenuDeleteConfirm } from "./MenuDeleteConfirm";
+import { MenuFormDrawer } from "./MenuFormDrawer";
+import { emptyMenuForm, parentPathPrefix, toMenuWriteBody } from "./menuForm";
 
 type DrawerMode = "create" | "edit";
-
-const emptyForm = (): MenuWriteBody => ({
-  code: "",
-  parent_code: "",
-  type: "menu",
-  path: "",
-  component: "",
-  link_url: "",
-  label_key: "",
-  title: "",
-  icon: "",
-  permission_code: "",
-  sort_order: 10,
-  visible: true,
-  enabled: true,
-  badge_type: "",
-  badge_content: "",
-  hide_menu: false,
-});
 
 /** Display helper: never collapse real empty metadata to a blank cell without meaning. */
 const displayCell = (value: string | null | undefined, fallback = "—") => {
   const text = (value ?? "").trim();
   return text || fallback;
 };
-
-const parentPathPrefix = (menus: MenuIdentity[], parentCode: string) => {
-  if (!parentCode) return "";
-  const parent = menus.find((item) => item.code === parentCode);
-  return (parent?.path ?? "").replace(/\/$/, "");
-};
-
-const toWriteBody = (menu: MenuIdentity): MenuWriteBody => ({
-  parent_code: menu.parent_code ?? "",
-  type: menu.type,
-  path: menu.path ?? "",
-  component: menu.component ?? "",
-  link_url: menu.link_url ?? "",
-  label_key: menu.label_key,
-  title: menu.title ?? "",
-  icon: menu.icon ?? "",
-  permission_code: menu.permission_code ?? "",
-  sort_order: menu.sort_order,
-  visible: menu.visible,
-  enabled: menu.enabled,
-  badge_type: menu.badge_type ?? "",
-  badge_content: menu.badge_content ?? "",
-  hide_menu: menu.hide_menu ?? false,
-  version: menu.version,
-});
 
 const typeBadgeClass = (type: MenuType) => {
   switch (type) {
@@ -121,7 +60,7 @@ export function MenuManagementPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerMode, setDrawerMode] = useState<DrawerMode>("create");
   const [editing, setEditing] = useState<MenuIdentity | null>(null);
-  const [form, setForm] = useState<MenuWriteBody>(emptyForm);
+  const [form, setForm] = useState<MenuWriteBody>(emptyMenuForm);
   const [deleteTarget, setDeleteTarget] = useState<MenuIdentity | null>(null);
 
   const load = useCallback(async () => {
@@ -199,7 +138,7 @@ export function MenuManagementPage() {
     setEditing(null);
     const prefix = parentPathPrefix(menus, parentCode);
     setForm({
-      ...emptyForm(),
+      ...emptyMenuForm(),
       parent_code: parentCode,
       // Nested create under a directory defaults to secondary route under parent path.
       path: prefix ? `${prefix}/` : "",
@@ -212,12 +151,11 @@ export function MenuManagementPage() {
   const openEdit = (menu: MenuIdentity) => {
     setDrawerMode("edit");
     setEditing(menu);
-    setForm(toWriteBody(menu));
+    setForm(toMenuWriteBody(menu));
     setDrawerOpen(true);
   };
 
-  const saveDrawer = async (event: FormEvent) => {
-    event.preventDefault();
+  const saveDrawer = async () => {
     if (!canUpdate) return;
     setBusy(true);
     try {
@@ -443,18 +381,9 @@ export function MenuManagementPage() {
     [canUpdate, expanded, t],
   );
 
-  const showPath =
-    form.type === "directory" ||
-    form.type === "menu" ||
-    form.type === "embed" ||
-    form.type === "link";
-  const showComponent = form.type === "directory" || form.type === "menu";
-  const showLink = form.type === "embed" || form.type === "link";
-  const showPermission = form.type !== "directory";
-
   return (
     <section className="flex flex-1 flex-col">
-      <div className="flex min-h-0 flex-1 flex-col rounded-2xl border border-black/[0.06] bg-white shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] dark:border-white/[0.06] dark:bg-neutral-950/70 dark:shadow-[0_1px_2px_rgb(0_0_0_/_0.22)]">
+      <div className={`flex min-h-0 flex-1 flex-col ${surface({ radius: "3xl" })}`}>
         <div className="flex items-start justify-between gap-3 px-5 pt-5 pb-3">
           <div>
             <h2 className="text-base font-semibold text-slate-950 dark:text-white">
@@ -471,7 +400,8 @@ export function MenuManagementPage() {
             </Button>
           ) : null}
         </div>
-        <div className="relative min-h-[420px] flex-1 overflow-hidden px-5 pb-5">
+        {/* 表格吃掉卡片剩余高度、内部滚动；不设最小高度保底——卡片高度被窗口钉死，保底只会在矮窗口下把表格挤出卡片（见请求日志页）。 */}
+        <div className="relative min-h-0 flex-1 overflow-hidden px-5 pb-5">
           <DataTable<(typeof rows)[number]>
             tableId="identity-menus"
             rows={rows}
@@ -490,292 +420,31 @@ export function MenuManagementPage() {
         </div>
       </div>
 
-      <Drawer
+      <MenuFormDrawer
         open={drawerOpen}
-        title={
-          drawerMode === "create" ? t("identity_admin.menu_create") : t("identity_admin.menu_edit")
-        }
+        mode={drawerMode}
+        editing={editing}
+        form={form}
+        setForm={setForm}
+        menus={menus}
+        parentOptions={parentOptions}
+        busy={busy}
+        onSubmit={() => void saveDrawer()}
         onClose={() => setDrawerOpen(false)}
-        footer={
-          <>
-            <Button onClick={() => setDrawerOpen(false)}>{t("common.cancel")}</Button>
-            <Button type="submit" form="menu-form" variant="primary" disabled={busy}>
-              {t("identity_admin.save")}
-            </Button>
-          </>
-        }
-      >
-        <form id="menu-form" onSubmit={saveDrawer} className="space-y-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="w-16 shrink-0 text-sm font-medium text-slate-700 dark:text-slate-200">
-              {t("identity_admin.menu_type")}
-            </span>
-            <Tabs
-              value={form.type}
-              onValueChange={(next) => {
-                if (drawerMode === "edit" && editing?.system_protected) return;
-                const type = next as MenuType;
-                setForm((current) => {
-                  const nextForm = { ...current, type };
-                  if (type === "directory") {
-                    nextForm.component = current.component || "Layout";
-                    nextForm.link_url = "";
-                    nextForm.permission_code = "";
-                  }
-                  return nextForm;
-                });
-              }}
-              size="sm"
-            >
-              <TabsList>
-                <TabsTrigger value="directory">{t("identity_admin.menu_directory")}</TabsTrigger>
-                <TabsTrigger value="menu">{t("identity_admin.menu_page")}</TabsTrigger>
-                <TabsTrigger value="button">{t("identity_admin.menu_button")}</TabsTrigger>
-                <TabsTrigger value="embed">{t("identity_admin.menu_embed")}</TabsTrigger>
-                <TabsTrigger value="link">{t("identity_admin.menu_link")}</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
+      />
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {drawerMode === "create" ? (
-              <label className="space-y-1.5">
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-                  {t("identity_admin.menu_code")}
-                </span>
-                <TextInput
-                  value={form.code ?? ""}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, code: event.target.value }))
-                  }
-                  required
-                  placeholder="custom.feature"
-                />
-              </label>
-            ) : (
-              <label className="space-y-1.5">
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-                  {t("identity_admin.menu_code")}
-                </span>
-                <TextInput value={editing?.code ?? ""} disabled />
-              </label>
-            )}
-            <label className="space-y-1.5">
-              <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-                {t("identity_admin.menu_parent")}
-              </span>
-              <SearchableSelect
-                value={form.parent_code}
-                onChange={(value) => setForm((current) => ({ ...current, parent_code: value }))}
-                options={parentOptions}
-                placeholder={t("identity_admin.menu_parent_none")}
-                searchPlaceholder={t("identity_admin.menu_parent_search")}
-                className="w-full"
-              />
-            </label>
-            <label className="space-y-1.5">
-              <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-                {t("identity_admin.menu_label_key")}
-              </span>
-              <TextInput
-                value={form.label_key}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, label_key: event.target.value }))
-                }
-                required
-              />
-            </label>
-            <label className="space-y-1.5">
-              <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-                {t("identity_admin.menu_title")}
-              </span>
-              <TextInput
-                value={form.title}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, title: event.target.value }))
-                }
-              />
-            </label>
-            <label className="space-y-1.5">
-              <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-                {t("identity_admin.menu_icon")}
-              </span>
-              <Suspense
-                fallback={
-                  <TextInput
-                    value={form.icon}
-                    onChange={(event) =>
-                      setForm((current) => ({ ...current, icon: event.target.value }))
-                    }
-                    placeholder="layout-dashboard"
-                  />
-                }
-              >
-                <MenuIconPicker
-                  value={form.icon}
-                  onChange={(icon) => setForm((current) => ({ ...current, icon }))}
-                />
-              </Suspense>
-            </label>
-            {showPath ? (
-              <label className="space-y-1.5">
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-                  {t("identity_admin.route_address")}
-                </span>
-                <TextInput
-                  value={form.path}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, path: event.target.value }))
-                  }
-                  required
-                  placeholder={
-                    form.type === "directory"
-                      ? "/runtime"
-                      : parentPathPrefix(menus, form.parent_code || "")
-                        ? `${parentPathPrefix(menus, form.parent_code || "")}/feature`
-                        : "/group/feature"
-                  }
-                />
-              </label>
-            ) : null}
-            {showComponent ? (
-              <label className="space-y-1.5">
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-                  {t("identity_admin.page_component")}
-                </span>
-                <TextInput
-                  value={form.component}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, component: event.target.value }))
-                  }
-                  placeholder={form.type === "directory" ? "Layout" : "feature-page"}
-                />
-              </label>
-            ) : null}
-            {showLink ? (
-              <label className="space-y-1.5 sm:col-span-2">
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-                  {t("identity_admin.link_url")}
-                </span>
-                <TextInput
-                  value={form.link_url}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, link_url: event.target.value }))
-                  }
-                  required
-                  placeholder="https://"
-                />
-              </label>
-            ) : null}
-            {showPermission ? (
-              <label className="space-y-1.5">
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-                  {t("identity_admin.permission_code")}
-                </span>
-                <TextInput
-                  value={form.permission_code}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, permission_code: event.target.value }))
-                  }
-                  placeholder="feature.read"
-                />
-              </label>
-            ) : null}
-            <label className="space-y-1.5">
-              <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-                {t("identity_admin.sort_order")}
-              </span>
-              <TextInput
-                type="number"
-                min={0}
-                max={10000}
-                value={String(form.sort_order)}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    sort_order: Number.parseInt(event.target.value || "0", 10) || 0,
-                  }))
-                }
-                required
-              />
-            </label>
-            <label className="space-y-1.5">
-              <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-                {t("identity_admin.badge_content")}
-              </span>
-              <TextInput
-                value={form.badge_content}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, badge_content: event.target.value }))
-                }
-              />
-            </label>
-            <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
-              <span className="w-16 shrink-0 text-sm font-medium text-slate-700 dark:text-slate-200">
-                {t("identity_admin.status")}
-              </span>
-              <Tabs
-                value={form.enabled ? "enabled" : "disabled"}
-                onValueChange={(next) =>
-                  setForm((current) => ({ ...current, enabled: next === "enabled" }))
-                }
-                size="sm"
-              >
-                <TabsList>
-                  <TabsTrigger value="enabled">
-                    {t("identity_admin.menu_status_enabled")}
-                  </TabsTrigger>
-                  <TabsTrigger value="disabled">
-                    {t("identity_admin.menu_status_disabled")}
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-x-6 gap-y-2 border-t border-slate-900/8 pt-4 dark:border-white/8">
-            <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
-              <input
-                type="checkbox"
-                className="h-4 w-4 rounded border-slate-300"
-                checked={form.hide_menu}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, hide_menu: event.target.checked }))
-                }
-              />
-              {t("identity_admin.hide_menu")}
-            </label>
-            <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
-              <input
-                type="checkbox"
-                className="h-4 w-4 rounded border-slate-300"
-                checked={!form.visible}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, visible: !event.target.checked }))
-                }
-              />
-              {t("identity_admin.menu_not_visible")}
-            </label>
-          </div>
-        </form>
-      </Drawer>
-
-      <ConfirmModal
-        open={Boolean(deleteTarget)}
-        title={t("identity_admin.delete")}
-        description={
+      <MenuDeleteConfirm
+        menu={deleteTarget}
+        name={
           deleteTarget
-            ? t("identity_admin.delete_menu_confirm", {
-                name: t(deleteTarget.label_key, {
-                  defaultValue: deleteTarget.title || deleteTarget.code,
-                }),
-              })
+            ? t(deleteTarget.label_key, { defaultValue: deleteTarget.title || deleteTarget.code })
             : ""
         }
-        confirmText={t("identity_admin.delete")}
+        typeLabel={deleteTarget ? typeLabel(deleteTarget.type) : ""}
+        childCount={deleteTarget ? (childrenByParent.get(deleteTarget.code)?.length ?? 0) : 0}
+        busy={busy}
         onConfirm={() => void confirmDelete()}
         onClose={() => setDeleteTarget(null)}
-        busy={busy}
       />
     </section>
   );

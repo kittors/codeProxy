@@ -1,116 +1,27 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
-import { ArrowUp, ChevronLeft, ChevronRight, CircleAlert, Plus, Trash2, X } from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { imageGenerationApi } from "@code-proxy/api-client";
-import { Button, COLUMN_WIDTH, surface } from "@code-proxy/ui";
-import { CodeBlock } from "@code-proxy/ui";
-import { Card } from "@code-proxy/ui";
-import { ImagePreviewOverlay } from "@code-proxy/ui";
-import { Modal } from "@code-proxy/ui";
-import { SearchableSelect, type SearchableSelectOption } from "@code-proxy/ui";
-import { Select } from "@code-proxy/ui";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@code-proxy/ui";
-import { DataTable, type DataTableColumn } from "@code-proxy/ui";
-import { useToast } from "@code-proxy/ui";
+import {
+  Button,
+  Callout,
+  Card,
+  CodeBlock,
+  COLUMN_WIDTH,
+  DataTable,
+  surface,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+  type DataTableColumn,
+} from "@code-proxy/ui";
 import { useImageGenerationChannels } from "../hooks/useImageGenerationChannels";
-import {
-  ImageModelPicker,
-  resolveInitialModel,
-  resolveInitialProvider,
-  supportsImageEditing,
-} from "@features/image-model-picker";
-import { imageStageClassName } from "./stageStyles";
 import { VISIBLE_ENDPOINT_DOCS, type EndpointDoc, type SpecRow } from "./apiDocs";
-import {
-  COUNT_OPTIONS,
-  DEFAULT_QUALITY,
-  DEFAULT_SIZE_OPTION,
-  DEFAULT_SIZE_OPTIONS,
-  IMAGE_GENERATION_MAX_SIZE_EDGE,
-  IMAGE_GENERATION_MAX_SIZE_PIXELS,
-  IMAGE_GENERATION_SIZE_PATTERN,
-  MAX_UPLOAD_IMAGES,
-  QUALITY_OPTIONS,
-  SIZE_OPTIONS,
-  type QualityOption,
-} from "./generationOptions";
+import { ImageGenerationTestModal } from "./ImageGenerationTestModal";
 
-/**
- * Fallback model id, used only until the server's catalog arrives and as the tab
- * key. The selected model itself comes from the catalog: hardcoding it here is what
- * kept every non-codex image model unreachable from this page.
- */
+/** 唯一的「图片生成」页签的键；测试弹窗实际用哪个模型，取自服务端的模型目录。 */
 const FALLBACK_IMAGE_MODEL = "gpt-image-2";
-const GENERATION_STATUS_KEYS = [
-  "image_generation.generation_status_drafting",
-  "image_generation.generation_status_creating",
-  "image_generation.generation_status_refining",
-  "image_generation.generation_status_starting",
-] as const;
-const GENERATION_STATUS_INTERVAL_MS = 1800;
-const IMAGE_GENERATION_TASK_POLL_INTERVAL_MS = 1200;
-const IMAGE_GENERATION_PHASE_STATUS_INDEX: Record<string, number> = {
-  queued: 0,
-  bootstrap: 0,
-  chat_requirements: 0,
-  conversation_init: 0,
-  conversation_prepare: 0,
-  conversation_request: 1,
-  conversation_stream: 1,
-  conversation_poll: 2,
-  image_download: 3,
-  completed: 3,
-};
 
 type ImageMode = "generations" | "edits";
-type GeneratedImage = { src: string; revisedPrompt?: string };
-type UploadedImage = { id: string; file: File; previewUrl: string };
-
-function normalizeImageGenerationSizePreset(value: string): string {
-  const normalized = value.trim().toLowerCase().replace(/[×*]/g, "x").replace(/\s+/g, "");
-  return IMAGE_GENERATION_SIZE_PATTERN.test(normalized) ? normalized : "";
-}
-
-function parseImageGenerationSizePreset(value: string): { width: number; height: number } | null {
-  const normalized = normalizeImageGenerationSizePreset(value);
-  if (!normalized) return null;
-  const [widthText, heightText] = normalized.split("x");
-  const width = Number.parseInt(widthText, 10);
-  const height = Number.parseInt(heightText, 10);
-  if (!Number.isSafeInteger(width) || !Number.isSafeInteger(height) || width <= 0 || height <= 0) {
-    return null;
-  }
-  return { width, height };
-}
-
-function isImageGenerationSizePresetWithinLimit(value: string): boolean {
-  const size = parseImageGenerationSizePreset(value);
-  if (!size) return false;
-  return (
-    size.width <= IMAGE_GENERATION_MAX_SIZE_EDGE &&
-    size.height <= IMAGE_GENERATION_MAX_SIZE_EDGE &&
-    size.width * size.height <= IMAGE_GENERATION_MAX_SIZE_PIXELS
-  );
-}
-
-function mergeImageGenerationSizePresets(values: string[]): string[] {
-  const merged: string[] = [];
-  const seen = new Set<string>();
-  for (const value of [...SIZE_OPTIONS, ...values]) {
-    const normalized = normalizeImageGenerationSizePreset(value);
-    if (
-      !normalized ||
-      !isImageGenerationSizePresetWithinLimit(normalized) ||
-      seen.has(normalized)
-    ) {
-      continue;
-    }
-    seen.add(normalized);
-    merged.push(normalized);
-  }
-  return merged;
-}
-
 
 export function ImageGenerationPage() {
   const { t } = useTranslation();
@@ -138,7 +49,7 @@ export function ImageGenerationPage() {
   return (
     <div className="min-w-0 space-y-6 overflow-x-hidden">
       <section className="space-y-4">
-        <h2 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white">
+        <h2 className="text-xl font-semibold tracking-tight text-ink">
           {t("image_generation.title")}
         </h2>
 
@@ -149,11 +60,11 @@ export function ImageGenerationPage() {
 
           <TabsContent value={FALLBACK_IMAGE_MODEL} className="mt-4 space-y-4">
             {disabled ? (
-              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-100">
+              <Callout tone="warning">
                 {channelsFailed
                   ? t("image_generation.channels_error")
                   : t("image_generation.channels_empty")}
-              </div>
+              </Callout>
             ) : null}
 
             <div
@@ -194,7 +105,7 @@ export function ImageGenerationPage() {
                       </TabsContent>
                     ))}
                   </Tabs>
-                  <div className={[surface({ tone: "inset", radius: "2xl" }), "px-4 py-3 text-xs leading-6 text-slate-600 dark:text-white/55"].join(" ")}>
+                  <div className={[surface({ tone: "inset", radius: "2xl" }), "px-4 py-3 text-xs leading-6 text-ink-2"].join(" ")}>
                     {t("image_generation.active_endpoint_hint", {
                       method: activeDoc.method,
                       path: activeDoc.path,
@@ -233,25 +144,25 @@ function EndpointCallDoc({ doc }: { doc: EndpointDoc }) {
       <div className={[surface({ tone: "inset", radius: "3xl" }), "p-4"].join(" ")}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-slate-900 dark:text-white">
+            <p className="text-sm font-semibold text-ink">
               {t(doc.titleKey)}
             </p>
-            <p className="mt-1 text-xs leading-5 text-slate-600 dark:text-white/55">
+            <p className="mt-1 text-xs leading-5 text-ink-2">
               {t(doc.descriptionKey)}
             </p>
           </div>
           <div className={[surface({ tone: "plain", radius: "full" }), "flex max-w-full items-center gap-2 px-3 py-1.5 font-mono text-xs"].join(" ")}>
-            <span className="rounded-full bg-slate-900 px-2 py-0.5 font-semibold text-white dark:bg-white dark:text-neutral-950">
+            <span className="rounded-full bg-accent px-2 py-0.5 font-semibold text-accent-fg">
               {doc.method}
             </span>
-            <span className="truncate text-slate-700 dark:text-white/75">{doc.path}</span>
+            <span className="truncate text-ink-2">{doc.path}</span>
           </div>
         </div>
-        <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-600 dark:text-white/55">
-          <span className="rounded-full bg-white px-2.5 py-1 dark:bg-neutral-950">
+        <div className="mt-3 flex flex-wrap gap-2 text-xs text-ink-2">
+          <span className="rounded-full bg-surface px-2.5 py-1">
             Authorization: Bearer YOUR_API_KEY
           </span>
-          <span className="rounded-full bg-white px-2.5 py-1 dark:bg-neutral-950">
+          <span className="rounded-full bg-surface px-2.5 py-1">
             {doc.contentType}
           </span>
         </div>
@@ -274,27 +185,27 @@ function SpecTable({ tableId, title, rows }: { tableId: string; title: string; r
         key: "name",
         label: t("image_generation.table_param"),
         width: COLUMN_WIDTH.badgeStacked,
-        cellClassName: "font-mono text-xs break-all leading-5 text-slate-900 dark:text-white",
+        cellClassName: "font-mono text-xs break-all leading-5 text-ink",
         render: (row) => row.name,
       },
       {
         key: "type",
         label: t("image_generation.table_type"),
         width: COLUMN_WIDTH.badge,
-        cellClassName: "font-mono text-xs text-slate-600 dark:text-white/55",
+        cellClassName: "font-mono text-xs text-ink-2",
         render: (row) => row.type,
       },
       {
         key: "required",
         label: t("image_generation.table_required"),
         width: COLUMN_WIDTH.badge,
-        cellClassName: "text-xs text-slate-600 dark:text-white/55",
+        cellClassName: "text-xs text-ink-2",
         render: (row) => (row.required ? t("common.yes") : t("common.no")),
       },
       {
         key: "description",
         label: t("image_generation.table_description"),
-        cellClassName: "text-xs leading-5 text-slate-600 dark:text-white/60",
+        cellClassName: "text-xs leading-5 text-ink-2",
         render: (row) => t(row.descriptionKey),
       },
     ],
@@ -304,9 +215,9 @@ function SpecTable({ tableId, title, rows }: { tableId: string; title: string; r
   return (
     <div
       data-testid="image-generation-spec-card"
-      className="overflow-hidden rounded-2xl bg-white p-4 dark:bg-neutral-950/80"
+      className="overflow-hidden rounded-2xl bg-surface p-4"
     >
-      <h4 className="text-sm font-semibold text-slate-900 dark:text-white">{title}</h4>
+      <h4 className="text-sm font-semibold text-ink">{title}</h4>
       <div className="mt-4">
         <DataTable<SpecRow>
           tableId={tableId}
@@ -323,865 +234,5 @@ function SpecTable({ tableId, title, rows }: { tableId: string; title: string; r
         />
       </div>
     </div>
-  );
-}
-
-function createUploadPreviewUrl(file: File): string {
-  if (typeof URL.createObjectURL === "function") {
-    return URL.createObjectURL(file);
-  }
-  return `data:${file.type || "image/png"};base64,`;
-}
-
-function revokeUploadPreviewUrl(url: string) {
-  if (url && url.startsWith("blob:") && typeof URL.revokeObjectURL === "function") {
-    URL.revokeObjectURL(url);
-  }
-}
-
-function formatGenerationElapsed(ms: number | null): string | null {
-  if (ms === null) return null;
-  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-}
-
-function wait(ms: number): Promise<void> {
-  return new Promise((resolve) => {
-    window.setTimeout(resolve, ms);
-  });
-}
-
-function extractImageGenerationTaskError(error: unknown): string | null {
-  if (!error || typeof error !== "object") return null;
-  const body =
-    "body" in error && error.body && typeof error.body === "object"
-      ? (error.body as Record<string, unknown>)
-      : null;
-  const nested =
-    body?.error && typeof body.error === "object" && !Array.isArray(body.error)
-      ? (body.error as Record<string, unknown>)
-      : null;
-  const message = nested?.message;
-  return typeof message === "string" && message.trim() ? message.trim() : null;
-}
-
-function ImageGenerationTestModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { t } = useTranslation();
-  const { notify } = useToast();
-  const [prompt, setPrompt] = useState("");
-  const [size, setSize] = useState<string>(DEFAULT_SIZE_OPTION);
-  const [sizePresets, setSizePresets] = useState<string[]>(() =>
-    mergeImageGenerationSizePresets([]),
-  );
-  const [quality, setQuality] = useState<QualityOption>(DEFAULT_QUALITY);
-  const [count, setCount] = useState<(typeof COUNT_OPTIONS)[number]>(1);
-  const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([]);
-  const [submitting, setSubmitting] = useState(false);
-  const [images, setImages] = useState<GeneratedImage[]>([]);
-  const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [statusIndex, setStatusIndex] = useState(0);
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const [uploadPreviewOpen, setUploadPreviewOpen] = useState(false);
-  const [uploadPreviewIndex, setUploadPreviewIndex] = useState(0);
-  const [generationElapsedMs, setGenerationElapsedMs] = useState<number | null>(null);
-  const { loading: catalogLoading, catalog } = useImageGenerationChannels();
-  const [selectedProvider, setSelectedProvider] = useState("");
-  const [selectedModel, setSelectedModel] = useState("");
-
-  // The catalog arrives asynchronously, so the selection is seeded once it does and
-  // then left alone; re-deriving it on every render would fight the user's choice.
-  useEffect(() => {
-    if (catalog.models.length === 0) return;
-    setSelectedProvider((current) => resolveInitialProvider(catalog, current || null));
-  }, [catalog]);
-
-  useEffect(() => {
-    if (catalog.models.length === 0) return;
-    setSelectedModel((current) => resolveInitialModel(catalog, selectedProvider, current || null));
-  }, [catalog, selectedProvider]);
-
-  const activeModel = selectedModel || FALLBACK_IMAGE_MODEL;
-  const editingSupported = catalog.models.length === 0 || supportsImageEditing(catalog, activeModel);
-
-  const handleProviderChange = useCallback(
-    (provider: string) => {
-      setSelectedProvider(provider);
-      // The current model usually belongs to the previous provider, so it is
-      // reselected rather than left pointing at something this provider cannot serve.
-      setSelectedModel(resolveInitialModel(catalog, provider, null));
-    },
-    [catalog],
-  );
-
-  const uploadedImagesRef = useRef<UploadedImage[]>([]);
-  const resultSwipeRef = useRef<{ x: number; y: number } | null>(null);
-  const generationStartedAtRef = useRef<number | null>(null);
-  const generationSessionRef = useRef(0);
-
-  useEffect(() => {
-    if (!open) return;
-    generationSessionRef.current += 1;
-    setPrompt("");
-    setSize(DEFAULT_SIZE_OPTION);
-    setQuality("medium");
-    setCount(1);
-    setUploadedImages((current) => {
-      current.forEach((item) => revokeUploadPreviewUrl(item.previewUrl));
-      return [];
-    });
-    setSubmitting(false);
-    setImages([]);
-    setActiveImageIndex(0);
-    setErrorMessage("");
-    setStatusIndex(0);
-    setPreviewOpen(false);
-    setUploadPreviewOpen(false);
-    setUploadPreviewIndex(0);
-    setGenerationElapsedMs(null);
-    generationStartedAtRef.current = null;
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-    let cancelled = false;
-
-    const loadSizePresets = async () => {
-      try {
-        const response = await imageGenerationApi.getSizePresets();
-        if (cancelled) return;
-        setSizePresets(mergeImageGenerationSizePresets(response.sizes ?? []));
-      } catch {
-        if (!cancelled) {
-          setSizePresets(mergeImageGenerationSizePresets([]));
-        }
-      }
-    };
-
-    void loadSizePresets();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [open]);
-
-  useEffect(() => {
-    uploadedImagesRef.current = uploadedImages;
-  }, [uploadedImages]);
-
-  useEffect(() => {
-    return () => {
-      uploadedImagesRef.current.forEach((item) => revokeUploadPreviewUrl(item.previewUrl));
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!submitting) return;
-
-    setStatusIndex(0);
-    const id = window.setInterval(() => {
-      setStatusIndex((current) => {
-        if (current >= GENERATION_STATUS_KEYS.length - 1) {
-          window.clearInterval(id);
-          return current;
-        }
-        return current + 1;
-      });
-    }, GENERATION_STATUS_INTERVAL_MS);
-
-    return () => window.clearInterval(id);
-  }, [submitting]);
-
-  useEffect(() => {
-    if (!submitting || generationStartedAtRef.current === null) return;
-
-    const updateElapsed = () => {
-      if (generationStartedAtRef.current === null) return;
-      setGenerationElapsedMs(Date.now() - generationStartedAtRef.current);
-    };
-
-    updateElapsed();
-    const id = window.setInterval(updateElapsed, 1000);
-    return () => window.clearInterval(id);
-  }, [submitting]);
-
-  const activeImage = images[activeImageIndex] ?? null;
-  const requestMode: ImageMode =
-    editingSupported && uploadedImages.length > 0 ? "edits" : "generations";
-  const canSend = Boolean(prompt.trim()) && !submitting;
-  const hasMultipleResults = images.length > 1;
-  const canShowPrevImage = activeImageIndex > 0;
-  const canShowNextImage = activeImageIndex < images.length - 1;
-
-  const showImageAt = (index: number) => {
-    setActiveImageIndex(Math.min(Math.max(index, 0), Math.max(images.length - 1, 0)));
-  };
-
-  const handleResultPointerDown = (event: PointerEvent<HTMLDivElement>) => {
-    resultSwipeRef.current = { x: event.clientX, y: event.clientY };
-  };
-
-  const handleResultPointerUp = (event: PointerEvent<HTMLDivElement>) => {
-    const start = resultSwipeRef.current;
-    resultSwipeRef.current = null;
-    if (!start || !hasMultipleResults) return;
-    const deltaX = event.clientX - start.x;
-    const deltaY = event.clientY - start.y;
-    if (Math.abs(deltaX) < 48 || Math.abs(deltaX) < Math.abs(deltaY) * 1.2) {
-      return;
-    }
-    showImageAt(activeImageIndex + (deltaX < 0 ? 1 : -1));
-  };
-
-  const handleUploadImages = (files: FileList | File[] | null) => {
-    const nextSelectedFiles = files ? Array.from(files) : [];
-    if (nextSelectedFiles.length === 0) return;
-    setUploadedImages((current) => {
-      const remainingSlots = Math.max(0, MAX_UPLOAD_IMAGES - current.length);
-      if (remainingSlots === 0) return current;
-      const nextFiles = nextSelectedFiles.slice(0, remainingSlots);
-      return [
-        ...current,
-        ...nextFiles.map((file, index) => ({
-          id: `${file.name}-${file.size}-${file.lastModified}-${Date.now()}-${index}`,
-          file,
-          previewUrl: createUploadPreviewUrl(file),
-        })),
-      ];
-    });
-  };
-
-  const removeUploadedImage = (id: string) => {
-    setUploadedImages((current) => {
-      const target = current.find((item) => item.id === id);
-      if (target) revokeUploadPreviewUrl(target.previewUrl);
-      const next = current.filter((item) => item.id !== id);
-      if (uploadPreviewIndex >= next.length) {
-        setUploadPreviewIndex(Math.max(0, next.length - 1));
-      }
-      return next;
-    });
-  };
-
-  const handleCreateSizePreset = useCallback(
-    async (value: string) => {
-      const nextSize = normalizeImageGenerationSizePreset(value);
-      if (!nextSize) {
-        notify({
-          type: "warning",
-          message: t("image_generation.size_preset_invalid"),
-        });
-        return;
-      }
-      if (!isImageGenerationSizePresetWithinLimit(nextSize)) {
-        notify({
-          type: "warning",
-          message: t("image_generation.size_preset_too_large"),
-        });
-        return;
-      }
-
-      const previousPresets = sizePresets;
-      const nextPresets = mergeImageGenerationSizePresets([...sizePresets, nextSize]);
-      setSizePresets(nextPresets);
-      setSize(nextSize);
-
-      try {
-        const response = await imageGenerationApi.updateSizePresets(nextPresets);
-        setSizePresets(mergeImageGenerationSizePresets(response.sizes ?? nextPresets));
-        notify({
-          type: "success",
-          message: t("image_generation.size_preset_saved", { size: nextSize }),
-        });
-      } catch (error) {
-        setSizePresets(previousPresets);
-        setSize((current) => (current === nextSize ? DEFAULT_SIZE_OPTION : current));
-        notify({
-          type: "error",
-          message:
-            error instanceof Error ? error.message : t("image_generation.size_preset_save_failed"),
-        });
-      }
-    },
-    [notify, sizePresets, t],
-  );
-
-  const handleDeleteSizePreset = useCallback(
-    async (value: string) => {
-      const targetSize = normalizeImageGenerationSizePreset(value);
-      if (!targetSize || DEFAULT_SIZE_OPTIONS.has(targetSize)) return;
-
-      const previousPresets = sizePresets;
-      const previousSize = size;
-      const nextPresets = sizePresets.filter((item) => item !== targetSize);
-      const sizeAfterDelete = previousSize === targetSize ? DEFAULT_SIZE_OPTION : previousSize;
-      setSizePresets(nextPresets);
-      setSize(sizeAfterDelete);
-
-      const restorePreset = () => {
-        setSizePresets(previousPresets);
-        setSize(previousSize);
-        void imageGenerationApi
-          .updateSizePresets(previousPresets)
-          .then((response) => {
-            setSizePresets(mergeImageGenerationSizePresets(response.sizes ?? previousPresets));
-            setSize(previousSize);
-          })
-          .catch((error) => {
-            setSizePresets(nextPresets);
-            setSize(sizeAfterDelete);
-            notify({
-              type: "error",
-              message:
-                error instanceof Error
-                  ? error.message
-                  : t("image_generation.size_preset_save_failed"),
-            });
-          });
-      };
-
-      try {
-        const response = await imageGenerationApi.updateSizePresets(nextPresets);
-        setSizePresets(mergeImageGenerationSizePresets(response.sizes ?? nextPresets));
-        notify({
-          type: "success",
-          message: t("image_generation.size_preset_deleted", { size: targetSize }),
-          duration: 4000,
-          action: {
-            label: t("image_generation.size_preset_undo"),
-            onClick: restorePreset,
-            successLabel: t("image_generation.size_preset_restored", { size: targetSize }),
-          },
-        });
-      } catch (error) {
-        setSizePresets(previousPresets);
-        setSize(previousSize);
-        notify({
-          type: "error",
-          message:
-            error instanceof Error
-              ? error.message
-              : t("image_generation.size_preset_delete_failed"),
-        });
-      }
-    },
-    [notify, size, sizePresets, t],
-  );
-
-  const sizePresetOptions = useMemo<SearchableSelectOption[]>(
-    () =>
-      sizePresets.map((value) => {
-        const custom = !DEFAULT_SIZE_OPTIONS.has(value);
-        return {
-          value,
-          label: value,
-          triggerLabel: value,
-          searchText: value,
-          action: custom
-            ? {
-                label: t("image_generation.size_delete_label", { size: value }),
-                icon: <Trash2 size={13} aria-hidden="true" />,
-                onClick: () => {
-                  void handleDeleteSizePreset(value);
-                },
-              }
-            : undefined,
-        };
-      }),
-    [handleDeleteSizePreset, sizePresets, t],
-  );
-
-  const handleGenerate = async () => {
-    const trimmedPrompt = prompt.trim();
-    if (!trimmedPrompt || submitting) return;
-
-    const sessionId = generationSessionRef.current + 1;
-    generationSessionRef.current = sessionId;
-    generationStartedAtRef.current = Date.now();
-    setGenerationElapsedMs(0);
-    setSubmitting(true);
-    setImages([]);
-    setActiveImageIndex(0);
-    setErrorMessage("");
-    setPreviewOpen(false);
-
-    try {
-      const startTask =
-        requestMode === "edits"
-          ? await imageGenerationApi.startTestTask({
-              mode: "edits",
-              model: activeModel,
-              prompt: trimmedPrompt,
-              size,
-              quality,
-              n: count,
-              images: uploadedImages.map((item) => item.file),
-            })
-          : await imageGenerationApi.startTestTask({
-              mode: "generations",
-              model: activeModel,
-              prompt: trimmedPrompt,
-              size,
-              quality,
-              n: count,
-            });
-      if (generationSessionRef.current !== sessionId) return;
-      if (!startTask.task_id) {
-        throw new Error(t("image_generation.test_failed_generic"));
-      }
-
-      let task = await imageGenerationApi.getTestTask(startTask.task_id);
-      while (generationSessionRef.current === sessionId) {
-        const phaseIndex =
-          task.phase && task.phase in IMAGE_GENERATION_PHASE_STATUS_INDEX
-            ? IMAGE_GENERATION_PHASE_STATUS_INDEX[task.phase]
-            : null;
-        if (phaseIndex !== null) {
-          setStatusIndex((current) => Math.max(current, phaseIndex));
-        }
-
-        if (task.status === "succeeded") {
-          if (!task.result) {
-            throw new Error(t("image_generation.test_empty_result"));
-          }
-          const response = task.result;
-
-          const nextImages = (response.data ?? [])
-            .map<GeneratedImage | null>((item) => {
-              const b64Json = item.b64_json?.trim() ?? "";
-              if (!b64Json) return null;
-              return {
-                src: `data:image/png;base64,${b64Json}`,
-                revisedPrompt: item.revised_prompt?.trim() || undefined,
-              };
-            })
-            .filter((item): item is GeneratedImage => item !== null);
-
-          if (nextImages.length === 0) {
-            throw new Error(t("image_generation.test_empty_result"));
-          }
-
-          setImages(nextImages);
-          setActiveImageIndex(0);
-          return;
-        }
-
-        if (task.status === "failed") {
-          throw new Error(
-            extractImageGenerationTaskError(task.error) ??
-              t("image_generation.test_failed_generic"),
-          );
-        }
-
-        await wait(IMAGE_GENERATION_TASK_POLL_INTERVAL_MS);
-        if (generationSessionRef.current !== sessionId) return;
-        task = await imageGenerationApi.getTestTask(startTask.task_id);
-      }
-    } catch (error) {
-      if (generationSessionRef.current !== sessionId) return;
-      setErrorMessage(
-        error instanceof Error ? error.message : t("image_generation.test_failed_generic"),
-      );
-    } finally {
-      if (generationSessionRef.current === sessionId) {
-        if (generationStartedAtRef.current !== null) {
-          setGenerationElapsedMs(Date.now() - generationStartedAtRef.current);
-        }
-        setSubmitting(false);
-      }
-    }
-  };
-
-  const stageClassName = imageStageClassName({
-    errorMessage,
-    hasImage: Boolean(activeImage),
-    hasUploads: editingSupported && uploadedImages.length > 0,
-  });
-  const statusText = t(GENERATION_STATUS_KEYS[statusIndex]);
-  const showGeneratingState = submitting && !activeImage && !errorMessage;
-  const showIdleCanvas = !submitting && !activeImage && !errorMessage;
-  const generationElapsedLabel = formatGenerationElapsed(generationElapsedMs);
-
-  return (
-    <>
-      <Modal
-        open={open}
-        title={t("image_generation.test_title")}
-        onClose={onClose}
-        maxWidth="max-w-[640px]"
-        panelClassName="w-full border-slate-900/8 bg-white shadow-2xl dark:border-white/8 dark:bg-neutral-950"
-        bodyHeightClassName="max-h-[calc(100vh-10rem)]"
-        bodyClassName="!overflow-y-auto !px-4 !py-4 sm:!px-5"
-      >
-        <form
-          className="flex min-h-0 flex-col gap-3"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void handleGenerate();
-          }}
-        >
-          <div className="flex flex-wrap items-center gap-2">
-            <ImageModelPicker
-              catalog={catalog}
-              provider={selectedProvider}
-              model={activeModel}
-              disabled={submitting || catalogLoading}
-              variant="compact"
-              onProviderChange={handleProviderChange}
-              onModelChange={setSelectedModel}
-            />
-            <SearchableSelect
-              aria-label={t("image_generation.size_label")}
-              value={size}
-              onChange={setSize}
-              options={sizePresetOptions}
-              allowCreate
-              normalizeCreateValue={normalizeImageGenerationSizePreset}
-              createLabel={(value) => {
-                const normalized = normalizeImageGenerationSizePreset(value) || value.trim();
-                return (
-                  <span className="flex min-w-0 items-center justify-between gap-3">
-                    <span className="truncate">
-                      {t("image_generation.size_create_option", { size: normalized })}
-                    </span>
-                    <span className="shrink-0 text-xs font-semibold text-slate-500 dark:text-white/45">
-                      {t("image_generation.size_create_confirm")}
-                    </span>
-                  </span>
-                );
-              }}
-              onCreate={handleCreateSizePreset}
-              searchPlaceholder={t("image_generation.size_search_placeholder")}
-              className="min-w-[132px]"
-              size="sm"
-            />
-            <Select
-              fullWidth={false}
-              aria-label={t("image_generation.quality_label")}
-              value={quality}
-              onChange={(value) => setQuality(value as QualityOption)}
-              options={QUALITY_OPTIONS.map((value) => ({
-                value,
-                label: value,
-              }))}
-              className="min-w-[108px]"
-              size="sm"
-            />
-            <Select
-              fullWidth={false}
-              aria-label={t("image_generation.count_label")}
-              value={String(count)}
-              onChange={(value) => setCount(Number(value) as (typeof COUNT_OPTIONS)[number])}
-              options={COUNT_OPTIONS.map((value) => ({
-                value: String(value),
-                label: t("image_generation.count_option", { count: value }),
-              }))}
-              className="min-w-[96px]"
-              size="sm"
-            />
-          </div>
-
-          <div
-            data-testid="image-generation-stage"
-            data-state={
-              submitting ? "generating" : activeImage ? "ready" : errorMessage ? "error" : "idle"
-            }
-            className={stageClassName}
-            aria-live="polite"
-          >
-            {generationElapsedLabel ? (
-              <div
-                className={[
-                  "absolute top-3 z-20 rounded-full border border-white/45 bg-white/80 px-2.5 py-1 text-xs font-semibold tabular-nums text-slate-700 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-neutral-950/65 dark:text-white/82",
-                  activeImage ? "left-3" : "right-3",
-                ].join(" ")}
-              >
-                {generationElapsedLabel}
-              </div>
-            ) : null}
-            {showGeneratingState ? (
-              <>
-                <div className="image-generation-dots-layer" />
-                <div className="image-generation-flow-layer" />
-              </>
-            ) : null}
-            {activeImage ? (
-              <>
-                <div
-                  className="relative z-10 h-full w-full overflow-hidden"
-                  onPointerDown={handleResultPointerDown}
-                  onPointerUp={handleResultPointerUp}
-                >
-                  <div
-                    data-testid="image-generation-carousel-track"
-                    className="flex h-full w-full transition-transform duration-500 ease-out motion-reduce:transition-none"
-                    style={{
-                      transform: `translateX(${activeImageIndex === 0 ? 0 : -activeImageIndex * 100}%)`,
-                    }}
-                  >
-                    {images.map((image, index) => (
-                      <div
-                        key={`generated-image-${index}`}
-                        className="h-full w-full shrink-0"
-                        aria-hidden={index !== activeImageIndex}
-                      >
-                        <div
-                          data-testid={
-                            index === activeImageIndex
-                              ? "image-generation-result-scroll"
-                              : undefined
-                          }
-                          className="h-full w-full overflow-auto"
-                        >
-                          <div className="min-h-full w-full p-3 sm:p-4">
-                            <img
-                              src={image.src}
-                              alt={t("image_generation.preview_alt", {
-                                model: activeModel,
-                              })}
-                              className="block h-auto w-full cursor-zoom-in select-none"
-                              draggable={false}
-                              onClick={() => setPreviewOpen(true)}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                {hasMultipleResults ? (
-                  <>
-                    <div
-                      data-testid="image-generation-counter"
-                      className="absolute top-3 right-3 z-20 rounded-full border border-white/45 bg-white/75 px-2.5 py-1 text-xs font-semibold tabular-nums text-slate-700 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-neutral-950/60 dark:text-white/80"
-                    >
-                      {activeImageIndex + 1}/{images.length}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => showImageAt(activeImageIndex - 1)}
-                      disabled={!canShowPrevImage}
-                      aria-label={t("image_generation.prev_image")}
-                      className="absolute top-1/2 left-3 z-20 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/40 bg-white/75 text-slate-700 shadow-sm backdrop-blur-md transition hover:bg-white disabled:pointer-events-none disabled:opacity-35 dark:border-white/10 dark:bg-neutral-950/60 dark:text-white/80 dark:hover:bg-neutral-900/85"
-                    >
-                      <ChevronLeft size={16} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => showImageAt(activeImageIndex + 1)}
-                      disabled={!canShowNextImage}
-                      aria-label={t("image_generation.next_image")}
-                      className="absolute top-1/2 right-3 z-20 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/40 bg-white/75 text-slate-700 shadow-sm backdrop-blur-md transition hover:bg-white disabled:pointer-events-none disabled:opacity-35 dark:border-white/10 dark:bg-neutral-950/60 dark:text-white/80 dark:hover:bg-neutral-900/85"
-                    >
-                      <ChevronRight size={16} />
-                    </button>
-                  </>
-                ) : null}
-                <button
-                  type="button"
-                  onClick={() => setPreviewOpen(true)}
-                  className="absolute right-3 bottom-3 z-20 rounded-full bg-black/60 px-3 py-1 text-xs font-medium text-white/90 shadow-sm backdrop-blur transition-colors hover:bg-black/75 hover:text-white"
-                >
-                  {t("image_generation.open_preview")}
-                </button>
-              </>
-            ) : (
-              <div
-                data-testid="image-generation-preview"
-                className={[
-                  "relative flex w-full overflow-hidden",
-                  errorMessage && !activeImage
-                    ? "px-4 py-3.5"
-                    : "h-full px-6 py-6 sm:px-8 sm:py-8",
-                  "bg-transparent",
-                ].join(" ")}
-              >
-                <div className="relative z-10 flex h-full w-full items-start">
-                  {showGeneratingState ? (
-                    <div className="max-w-md">
-                      <p className="text-3xl font-semibold tracking-tight text-slate-700 dark:text-white/92 sm:text-4xl">
-                        {statusText}
-                      </p>
-                      <p className="mt-2 text-sm text-slate-500 dark:text-white/45">
-                        {t("image_generation.generating_subtitle")}
-                      </p>
-                    </div>
-                  ) : null}
-
-                  {showIdleCanvas ? (
-                    <div className="max-w-md">
-                      <p className="text-lg font-medium text-slate-600 dark:text-white/72">
-                        {t(
-                          requestMode === "edits"
-                            ? "image_generation.idle_hint_edits"
-                            : "image_generation.idle_hint",
-                        )}
-                      </p>
-                    </div>
-                  ) : null}
-
-                  {errorMessage ? (
-                    <div className="flex min-w-0 items-start gap-2.5">
-                      <CircleAlert size={16} className="mt-0.5 shrink-0" />
-                      <p className="min-w-0 break-words text-sm leading-6">{errorMessage}</p>
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {activeImage?.revisedPrompt ? (
-            <div className={[surface({ tone: "inset", radius: "2xl" }), "shrink-0 px-4 py-3 text-slate-700 dark:text-slate-200"].join(" ")}>
-              <p className="text-xs font-medium text-slate-500 dark:text-white/40">
-                {t("image_generation.revised_prompt_label")}
-              </p>
-              <p className="mt-1 line-clamp-2 text-sm">{activeImage.revisedPrompt}</p>
-            </div>
-          ) : null}
-
-          <div
-            data-testid="image-generation-composer"
-            className="relative shrink-0 overflow-hidden rounded-2xl border border-slate-900/8 bg-white px-2.5 pt-2.5 pb-11 shadow-sm dark:border-white/8 dark:bg-neutral-950"
-          >
-            {editingSupported && uploadedImages.length > 0 ? (
-              <div
-                data-testid="image-generation-upload-strip"
-                className="absolute top-2.5 right-2.5 left-2.5 z-10 flex gap-2 overflow-x-auto overflow-y-hidden pb-1 [scrollbar-width:thin]"
-              >
-                {uploadedImages.map((item, index) => (
-                  <div
-                    key={item.id}
-                    data-testid="image-generation-upload-chip"
-                    className={[surface({ tone: "inset", radius: "xl" }), "group flex h-10 max-w-[220px] shrink-0 items-center gap-2 px-2 py-1.5"].join(" ")}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setUploadPreviewIndex(index);
-                        setUploadPreviewOpen(true);
-                      }}
-                      className="inline-flex min-w-0 flex-1 items-center gap-2 rounded-lg text-left text-xs font-medium text-slate-700 transition-colors hover:text-slate-900 dark:text-white/75 dark:hover:text-white"
-                      aria-label={t("image_generation.preview_upload_label", {
-                        name: item.file.name,
-                      })}
-                    >
-                      <span className="h-8 w-8 shrink-0 overflow-hidden rounded-lg border border-slate-900/8 bg-white dark:border-neutral-700 dark:bg-neutral-950">
-                        <img
-                          src={item.previewUrl}
-                          alt={item.file.name}
-                          className="h-full w-full object-cover"
-                        />
-                      </span>
-                      <span className="truncate">{item.file.name}</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => removeUploadedImage(item.id)}
-                      className="inline-flex h-6 w-6 shrink-0 items-center justify-center self-center rounded-full text-slate-400 opacity-100 transition hover:bg-red-50 hover:text-red-500 sm:opacity-0 sm:group-hover:opacity-100 dark:text-white/35 dark:hover:bg-red-500/15 dark:hover:text-red-300"
-                      aria-label={t("image_generation.remove_upload_label", {
-                        name: item.file.name,
-                      })}
-                    >
-                      <X size={13} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-            <label htmlFor="image-generation-prompt" className="sr-only">
-              {t("image_generation.prompt_label")}
-            </label>
-            {editingSupported ? (
-              <input
-                id="image-generation-reference"
-                aria-label={t("image_generation.upload_images_label")}
-                type="file"
-                accept="image/*"
-                multiple
-                disabled={uploadedImages.length >= MAX_UPLOAD_IMAGES}
-                className="sr-only"
-                onChange={(event) => {
-                  const selectedFiles = Array.from(event.currentTarget.files ?? []);
-                  handleUploadImages(selectedFiles);
-                  event.currentTarget.value = "";
-                }}
-              />
-            ) : null}
-            <textarea
-              id="image-generation-prompt"
-              value={prompt}
-              onChange={(event) => setPrompt(event.target.value)}
-              placeholder={t("image_generation.prompt_placeholder")}
-              rows={4}
-              className={[
-                "min-h-[112px] w-full resize-none border-0 bg-transparent px-1 pr-8 pb-10 text-sm leading-6 text-slate-900 outline-none placeholder:text-slate-400 dark:text-white dark:placeholder:text-white/30",
-                editingSupported && uploadedImages.length > 0 ? "pt-12" : "pt-0",
-              ].join(" ")}
-            />
-            {editingSupported ? (
-              <label
-                htmlFor="image-generation-reference"
-                data-testid="image-generation-upload-trigger"
-                className={[
-                  "absolute bottom-2 left-2 inline-flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-full text-slate-500 transition-colors",
-                  uploadedImages.length >= MAX_UPLOAD_IMAGES
-                    ? "cursor-not-allowed opacity-40"
-                    : "hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-white/10 dark:hover:text-white",
-                ].join(" ")}
-                title={t("image_generation.upload_images_label")}
-              >
-                <Plus size={14} />
-              </label>
-            ) : null}
-            <button
-              type="submit"
-              disabled={!canSend}
-              aria-busy={submitting}
-              aria-label={t("image_generation.send_button")}
-              data-testid="image-generation-send-button"
-              className="absolute right-2 bottom-2 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-950 text-white shadow-sm transition active:translate-y-px disabled:pointer-events-none disabled:opacity-40 dark:bg-white dark:text-neutral-950"
-            >
-              <ArrowUp size={14} />
-            </button>
-          </div>
-        </form>
-      </Modal>
-
-      <ImagePreviewOverlay
-        open={previewOpen && Boolean(activeImage)}
-        imageSrc={activeImage?.src ?? null}
-        imageAlt={t("image_generation.preview_alt", { model: activeModel })}
-        title={t("image_generation.image_preview_title")}
-        downloadName={`${activeModel}-${activeImageIndex + 1}.png`}
-        images={images.map((image, index) => ({
-          src: image.src,
-          alt: t("image_generation.preview_alt", { model: activeModel }),
-          downloadName: `${activeModel}-${index + 1}.png`,
-        }))}
-        activeIndex={activeImageIndex}
-        onActiveIndexChange={setActiveImageIndex}
-        onClose={() => setPreviewOpen(false)}
-      />
-      <ImagePreviewOverlay
-        open={editingSupported && uploadPreviewOpen && uploadedImages.length > 0}
-        imageSrc={uploadedImages[uploadPreviewIndex]?.previewUrl ?? null}
-        imageAlt={
-          uploadedImages[uploadPreviewIndex]?.file.name ?? t("image_generation.upload_images_label")
-        }
-        title={t("image_generation.image_preview_title")}
-        downloadName={uploadedImages[uploadPreviewIndex]?.file.name}
-        images={uploadedImages.map((item) => ({
-          src: item.previewUrl,
-          alt: item.file.name,
-          downloadName: item.file.name,
-        }))}
-        activeIndex={uploadPreviewIndex}
-        onActiveIndexChange={setUploadPreviewIndex}
-        onClose={() => setUploadPreviewOpen(false)}
-      />
-    </>
   );
 }

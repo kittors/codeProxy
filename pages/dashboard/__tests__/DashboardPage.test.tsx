@@ -42,6 +42,22 @@ vi.mock("@code-proxy/ui", async () => {
     // Real implementation: the page derives PANEL_SURFACE from it at module load,
     // so a stub would silently drop the class names under test elsewhere.
     surface: (await vi.importActual<typeof import("@code-proxy/ui")>("@code-proxy/ui")).surface,
+    // Chart colours come from the real palette; the theme is pinned to light.
+    chartPalette: (await vi.importActual<typeof import("@code-proxy/ui")>("@code-proxy/ui"))
+      .chartPalette,
+    chartTooltipStyle: (await vi.importActual<typeof import("@code-proxy/ui")>("@code-proxy/ui"))
+      .chartTooltipStyle,
+    chartAxisStyle: (await vi.importActual<typeof import("@code-proxy/ui")>("@code-proxy/ui"))
+      .chartAxisStyle,
+    CHART_CATEGORICAL: (await vi.importActual<typeof import("@code-proxy/ui")>("@code-proxy/ui"))
+      .CHART_CATEGORICAL,
+    chartGradient: (await vi.importActual<typeof import("@code-proxy/ui")>("@code-proxy/ui"))
+      .chartGradient,
+    hueHex: (await vi.importActual<typeof import("@code-proxy/ui")>("@code-proxy/ui")).hueHex,
+    // 指标卡与吞吐读数格的身份色图标块用真实组件，颜色类名才会出现在断言里。
+    DialogIcon: (await vi.importActual<typeof import("@code-proxy/ui")>("@code-proxy/ui"))
+      .DialogIcon,
+    useTheme: () => ({ state: { mode: "light", preference: "light" }, actions: {} }),
     AnimatedNumber: ({ value, format }: { value: number; format?: (value: number) => string }) => (
       <span>{format ? format(value) : value}</span>
     ),

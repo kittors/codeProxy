@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Card } from "./Card";
+import { Checkbox } from "./Checkbox";
 import { surface } from "./Surface";
 import { Skeleton } from "../feedback/Skeleton";
 import { OverflowTooltip } from "../overlays/Tooltip";
@@ -89,12 +90,12 @@ export function EntityCard({
       className={[
         // Both `group` and `group/card`: children written against the plain
         // group variant keep working, and tests locate a card by `.group`.
-        "group group/card flex w-full max-w-[34rem] flex-col border-slate-900/8 shadow-[0_8px_24px_rgb(15_23_42_/_0.04)] transition-colors duration-200 ease-out hover:border-slate-300 hover:bg-white md:max-w-none dark:border-white/[0.08] dark:shadow-[0_8px_24px_rgb(0_0_0_/_0.28)] dark:hover:border-neutral-700 dark:hover:bg-neutral-950/70",
+        // 悬停只把投影加深一档，不上浮：卡片里有开关、勾选框这类小目标，鼠标移上去时
+        // 整张卡跟着挪 2px，正要点的那个控件也会跟着跑。
+        "group group/card flex w-full max-w-[34rem] flex-col transition-[box-shadow,border-color,opacity] duration-250 ease-soft hover:shadow-lift md:max-w-none",
         fill ? "h-full" : "",
         dense ? "rounded-2xl" : "rounded-3xl",
-        selected
-          ? "border-slate-900 ring-1 ring-slate-300 dark:border-white dark:ring-white/20"
-          : "",
+        selected ? "border-ink ring-1 ring-ink/15" : "",
         muted ? "opacity-90" : "",
         dimmed ? "opacity-85" : "",
         className,
@@ -108,9 +109,9 @@ export function EntityCard({
             content={title}
             title={title}
             className={[
-              "min-w-0 truncate leading-5 font-semibold tracking-tight text-slate-900 dark:text-white",
+              "min-w-0 truncate leading-5 font-semibold tracking-tight text-ink",
               titleAdornment ? "" : "flex-1",
-              dense ? "text-xs" : "text-sm",
+              dense ? "text-sm" : "text-base",
             ].join(" ")}
           >
             {title}
@@ -132,14 +133,10 @@ export function EntityCard({
                     : "opacity-100 pointer-events-auto md:opacity-0 md:pointer-events-none md:group-hover/card:opacity-100 md:group-focus-within/card:opacity-100 md:group-hover/card:pointer-events-auto md:group-focus-within/card:pointer-events-auto",
                 ].join(" ")}
               >
-                <input
-                  type="checkbox"
+                <Checkbox
                   aria-label={selectionLabel}
                   checked={selected}
-                  onChange={(event) =>
-                    onToggleSelected(event.currentTarget.checked)
-                  }
-                  className="h-4 w-4 rounded border-slate-300 text-slate-900 accent-slate-900 focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:border-neutral-700 dark:bg-neutral-950 dark:text-white dark:accent-white dark:focus-visible:ring-white/15"
+                  onCheckedChange={onToggleSelected}
                 />
               </div>
             ) : null}
@@ -165,7 +162,7 @@ export function EntityCard({
       {footer ? (
         <div
           className={[
-            "mt-auto flex items-center justify-between gap-2 border-t border-slate-100 dark:border-white/[0.06]",
+            "mt-auto flex items-center justify-between gap-2 border-t border-line",
             dense ? "pt-2" : "pt-3",
           ].join(" ")}
         >
@@ -215,7 +212,7 @@ export function EntityCardSkeleton({
       data-testid={testId}
       aria-hidden="true"
       className={[
-        "relative flex w-full min-w-0 max-w-[34rem] flex-col border-slate-900/8 shadow-[0_8px_24px_rgb(15_23_42_/_0.04)] md:max-w-none dark:border-white/[0.08] dark:shadow-[0_8px_24px_rgb(0_0_0_/_0.28)]",
+        "relative flex w-full min-w-0 max-w-[34rem] flex-col md:max-w-none",
         surface({ tone: "card", radius: "3xl" }),
         dense ? "rounded-2xl p-3.5" : "rounded-3xl p-5",
         fill ? "h-full" : "",
@@ -258,7 +255,7 @@ export function EntityCardSkeleton({
       {footer ? (
         <div
           className={[
-            "mt-auto flex items-center gap-1.5 border-t border-slate-100 dark:border-white/[0.06]",
+            "mt-auto flex items-center gap-1.5 border-t border-line",
             dense ? "pt-2" : "pt-3",
           ].join(" ")}
         >
