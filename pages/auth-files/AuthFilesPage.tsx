@@ -736,7 +736,6 @@ export function AuthFilesPage() {
       ) ?? null)
     : null;
   const {
-    formatPlanTypeLabel,
     resolveStickyDisplayPlanType,
     renderRestrictionBadges,
     renderClaudeOAuthHealthBadges,
@@ -858,7 +857,6 @@ export function AuthFilesPage() {
         usageIndex={usageIndex}
         resolveAuthFileStats={resolveAuthFileStats}
         toggleFileSelection={toggleFileSelection}
-        formatPlanTypeLabel={formatPlanTypeLabel}
         resolveStickyDisplayPlanType={resolveStickyDisplayPlanType}
         renderRestrictionBadges={renderRestrictionBadges}
         renderClaudeOAuthHealthBadges={renderClaudeOAuthHealthBadges}

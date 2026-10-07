@@ -2,11 +2,13 @@ import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Check, Copy, Layers, RefreshCw, Search, Store } from "lucide-react";
 import { VendorIcon } from "@code-proxy/assets";
-import { Card, EmptyState, Tabs, TabsList, TabsTrigger, TextInput, useToast } from "@code-proxy/ui";
+import { Card, EmptyState, Tabs, TabsList, TabsTrigger, TextInput, iconHueClass, useToast } from "@code-proxy/ui";
 import { formatModelPriceAmount, hasModelPricing } from "@features/model-availability";
 import {
   buildModelVendorStats,
   getModelVendorKey,
+  ModelOwnerTag,
+  ModelVendorTile,
   type ModelVendorKey,
 } from "@features/model-tags";
 import { ModelCapabilityBadges } from "../../models/components/ModelCapabilityBadges";
@@ -57,7 +59,6 @@ function ModelPlazaCard({ model, onCopied }: { model: PublicModelItem; onCopied:
   const [copied, setCopied] = useState(false);
   const priced = hasModelPricing(model.pricing);
   const notPriced = t("model_plaza.not_priced");
-  const vendorGlyph = model.id.trim().charAt(0).toUpperCase() || "M";
 
   const handleCopy = () => {
     void navigator.clipboard.writeText(model.id);
@@ -110,14 +111,7 @@ function ModelPlazaCard({ model, onCopied }: { model: PublicModelItem; onCopied:
         className="group h-full min-w-0 overflow-hidden transition hover:border-ink-4 hover:shadow-[2px_2px_10px_rgb(0_0_0_/_0.06)] dark:hover:shadow-[2px_2px_10px_rgb(0_0_0_/_0.28)]"
       >
         <div className="flex items-start gap-3">
-          <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-900/8 bg-slate-50 dark:border-neutral-700/70 dark:bg-neutral-900/70">
-            <span className="pointer-events-none absolute text-sm font-bold text-slate-300 dark:text-white/25">
-              {vendorGlyph}
-            </span>
-            <span className="relative z-10 flex items-center justify-center [&:empty]:hidden">
-              <VendorIcon modelId={model.id} size={22} />
-            </span>
-          </div>
+          <ModelVendorTile modelId={model.id} />
           <div className="min-w-0 flex-1">
             <div className="flex items-start gap-2">
               <div className="min-w-0 flex-1">
@@ -127,9 +121,13 @@ function ModelPlazaCard({ model, onCopied }: { model: PublicModelItem; onCopied:
                 >
                   {model.id}
                 </h3>
-                <p className="mt-0.5 truncate text-2xs text-slate-400 dark:text-white/35">
-                  {model.ownedBy || t("model_plaza.no_owner")}
-                </p>
+                {model.ownedBy ? (
+                  <ModelOwnerTag owner={model.ownedBy} className="mt-1" />
+                ) : (
+                  <p className="mt-0.5 truncate text-2xs text-slate-400 dark:text-white/35">
+                    {t("model_plaza.no_owner")}
+                  </p>
+                )}
               </div>
               <button
                 type="button"
@@ -138,7 +136,7 @@ function ModelPlazaCard({ model, onCopied }: { model: PublicModelItem; onCopied:
                 title={t("model_plaza.copy_id")}
                 aria-label={t("model_plaza.copy_id")}
               >
-                {copied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
+                {copied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} className={iconHueClass(Copy)} />}
               </button>
             </div>
             <div className="mt-1.5">

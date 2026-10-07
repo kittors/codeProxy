@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import type { AuthFileItem } from "@code-proxy/api-client";
 import { VendorIcon } from "@code-proxy/assets";
-import { Button, DropdownMenu, buttonClassName } from "@code-proxy/ui";
+import { Button, DropdownMenu, ProviderTag, buttonClassName, iconHueClass } from "@code-proxy/ui";
 import { Card, EntityCard, entityCardGridClass } from "@code-proxy/ui";
 import { EmptyState } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
@@ -51,9 +51,7 @@ import {
   AUTH_FILES_CARD_COLUMN_OPTIONS,
   AUTH_FILES_PAGE_SIZE_OPTIONS,
   AUTH_FILE_STATUS_FILTERS,
-  TYPE_BADGE_CLASSES,
   formatCompactNumber,
-  formatPlanBadgeLabel,
   isRuntimeOnlyAuthFile,
   maskSensitiveIdentity,
   normalizeAuthFilesCardColumns,
@@ -64,7 +62,6 @@ import {
   resolveAuthFilePlanType,
   resolveAuthFileSupplementalTags,
   resolveFileType,
-  resolvePlanBadgeClass,
   shouldShowAuthFileDisplayTag,
   shouldShowAuthFilePlanBadge,
   type AuthFileCycleBudgetStats,
@@ -78,6 +75,7 @@ import type { QuotaProvider } from "@features/quota-preview/quota-fetch";
 import type { QuotaCardSlot } from "../hooks/quotaCardSlots";
 import { shouldShowQuotaPlaceholder } from "../hooks/quotaProbeState";
 import { AuthFileCardQuota } from "./AuthFileCardQuota";
+import { AuthFilePlanBadge } from "./AuthFilePlanBadge";
 import { AuthFileWarmupButton } from "./AuthFileWarmupButton";
 import { ModelOwnerGroupDialog, PasteJsonDialog, UploadProgressDialog } from "./AuthFilesFileDialogs";
 import { AuthFilesLoadingSkeleton } from "./AuthFilesLoadingSkeleton";
@@ -590,7 +588,6 @@ interface AuthFilesFilesTabProps {
     index: UsageIndex,
   ) => { success: number; failure: number };
   toggleFileSelection: (name: string, checked: boolean) => void;
-  formatPlanTypeLabel: (planType: string) => string;
   resolveStickyDisplayPlanType: (
     file: AuthFileItem,
     quotaState?: QuotaState | null,
@@ -696,7 +693,6 @@ export function AuthFilesFilesTab({
   usageIndex,
   resolveAuthFileStats,
   toggleFileSelection,
-  formatPlanTypeLabel,
   resolveStickyDisplayPlanType,
   renderRestrictionBadges,
   renderClaudeOAuthHealthBadges,
@@ -919,10 +915,11 @@ export function AuthFilesFilesTab({
             ? filterCounts.total
             : (filterCounts.counts[normalizedKey] ?? 0);
         const label = key === "all" ? t("auth_files.all") : key;
+        // 计数用供应商的品牌淡底，和卡片上的供应商标签对得上；「全部」没有品牌，回落中性。
         const countPill = (
-          <span className="inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-slate-100 px-1 text-2xs font-semibold tabular-nums text-slate-700 dark:bg-white/10 dark:text-white/70">
+          <ProviderTag vendor={key === "all" ? null : normalizedKey} className="h-4 min-w-4 justify-center tabular-nums">
             {count}
-          </span>
+          </ProviderTag>
         );
         return {
           value: key,
@@ -1477,8 +1474,6 @@ export function AuthFilesFilesTab({
                   const fileDisabled = Boolean(file.disabled);
                   const fileSelected = selectedFileNameSet.has(file.name);
                   const typeKey = resolveFileType(file);
-                  const badgeClass =
-                    TYPE_BADGE_CLASSES[typeKey] ?? TYPE_BADGE_CLASSES.unknown;
                   const rawTitle =
                     resolveAuthFileDisplayName(file) || String(file.name || "");
                   const displayTitle = masked
@@ -1718,41 +1713,20 @@ export function AuthFilesFilesTab({
                         <>
                         <div className="min-w-0 flex flex-wrap items-center gap-1">
                           {showPlanBadge && planType ? (
-                            <span
-                              data-testid="auth-file-plan-badge"
-                              className={[
-                                "inline-flex h-5 shrink-0 items-center rounded-md px-1.5 text-2xs font-bold leading-none tracking-wide",
-                                resolvePlanBadgeClass(planType),
-                              ].join(" ")}
-                            >
-                              {formatPlanTypeLabel(planType) ||
-                                formatPlanBadgeLabel(planType)}
-                            </span>
+                            <AuthFilePlanBadge provider={typeKey} planType={planType} className="h-5" />
                           ) : null}
                           {showTypeBadge ? (
                             denseCards ? (
+                              // 密排卡片只放 logo，底色仍是品牌淡底，和宽卡片上的供应商标签同色。
                               <HoverTooltip content={typeKey} className="shrink-0">
-                                <span
-                                  className={[
-                                    "inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md",
-                                    badgeClass,
-                                  ].join(" ")}
-                                >
-                                  <VendorIcon
-                                    modelId={normalizeProviderKey(typeKey) || typeKey}
-                                    size={12}
-                                  />
-                                </span>
+                                <ProviderTag vendor={typeKey} className="h-5">
+                                  <VendorIcon modelId={typeKey} size={12} />
+                                </ProviderTag>
                               </HoverTooltip>
                             ) : (
-                              <span
-                                className={[
-                                  "inline-flex shrink-0 items-center rounded-md px-2 py-0.5 text-2xs font-semibold",
-                                  badgeClass,
-                                ].join(" ")}
-                              >
+                              <ProviderTag vendor={typeKey} withLogo className="h-5">
                                 {typeKey}
-                              </span>
+                              </ProviderTag>
                             )
                           ) : null}
                           {provider === "codex" ? (
@@ -1774,9 +1748,7 @@ export function AuthFilesFilesTab({
                               >
                                 <RefreshCw
                                   size={10}
-                                  className={
-                                    quotaRefreshing ? "animate-spin" : ""
-                                  }
+                                  className={`${iconHueClass(RefreshCw)} ${quotaRefreshing ? "animate-spin" : ""}`}
                                 />
                                 <span className="tabular-nums">
                                   {denseCards

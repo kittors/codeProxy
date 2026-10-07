@@ -1,7 +1,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
 import { Plus, RefreshCw, ShieldCheck, X } from "lucide-react";
-import { Button, Checkbox, EmptyState, TextInput, surface } from "@code-proxy/ui";
+import { Button, Checkbox, EmptyState, ProviderTag, TextInput, surface } from "@code-proxy/ui";
 import type { AliasRow } from "@code-proxy/domain";
 
 interface AuthFilesAliasTabProps {
@@ -115,9 +115,10 @@ export function AuthFilesAliasTab({
                     >
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="font-mono text-xs text-ink">
+                          {/* 渠道即供应商类型，用品牌色标签，和账号卡片上的供应商标签同色。 */}
+                          <ProviderTag vendor={channel} withLogo>
                             {channel}
-                          </p>
+                          </ProviderTag>
                           <p className="mt-1 text-xs text-ink-3">
                             {t("auth_files.valid_mappings", { count: mappingCount })}
                           </p>

@@ -1,5 +1,6 @@
 import type { ProviderModel } from "@code-proxy/api-client";
 import { HoverTooltip, OverflowTooltip } from "@code-proxy/ui";
+import { modelVendorBrand } from "@features/model-tags";
 
 interface ProviderModelChipsProps {
   models: ProviderModel[];
@@ -27,6 +28,8 @@ export function ProviderModelChips({
   };
 
   // Same flat, squared, 2xs badge as the metric chips and the AI account card.
+  // 每个模型按自己的厂商品牌色上淡底（claude 珊瑚橙、gpt 绿……），和全站模型标签同色；
+  // 「+N」代表一组不同厂商的模型，保持中性。
   //
   // Chips are sized by their text, not by an equal-width track. On a 3-column
   // grid every chip was as wide as a third of the card, so "gpt-5.2" sat in a
@@ -37,6 +40,7 @@ export function ProviderModelChips({
     <div className="flex max-h-5 items-center gap-1 overflow-hidden">
       {visible.map((model) => {
         const modelLabel = formatModelLabel(model, "→");
+        const brand = modelVendorBrand(model.name ?? "");
         return (
           // Overflow-only: a chip that fits needs no tooltip, since it would
           // just repeat the mapping already on screen.
@@ -46,7 +50,10 @@ export function ProviderModelChips({
             placement="top"
             className="min-w-0"
           >
-            <span className="inline-flex h-5 min-w-0 max-w-full cursor-default items-center rounded-md bg-slate-100 px-1.5 text-2xs font-semibold leading-none text-slate-700 dark:bg-white/10 dark:text-white/70">
+            <span
+              style={brand.style}
+              className={`inline-flex h-5 min-w-0 max-w-full cursor-default items-center rounded-md px-1.5 text-2xs font-semibold leading-none ${brand.className}`}
+            >
               <span className="min-w-0 truncate">{modelLabel}</span>
             </span>
           </OverflowTooltip>

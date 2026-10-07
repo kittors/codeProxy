@@ -1,5 +1,3 @@
-export type ThemeColors = { bg: string; text: string; border?: string };
-export type TypeColorSet = { light: ThemeColors; dark?: ThemeColors };
 export type ResolvedTheme = "light" | "dark";
 
 export type QuotaStatus = "idle" | "loading" | "success" | "error";
