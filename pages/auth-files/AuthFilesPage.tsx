@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 import { useOptionalAuth } from "@app/providers/AuthProvider";
 import {
-  ConfirmModal,
   useLocalStorage,
   useSensitiveDataMasking,
   useToast,
@@ -62,13 +61,14 @@ import {
 } from "@code-proxy/domain";
 import { AuthFilesConfigModal } from "./components/AuthFilesConfigModal";
 import { WarmupPolicyModal } from "./components/WarmupPolicyModal";
+import {
+  AuthFilesConfirmModal,
+  type AuthFilesConfirmAction,
+} from "./components/AuthFilesConfirmModal";
 import { useAuthFilesWarmup } from "./hooks/useAuthFilesWarmup";
 import { useAddAccountDialogSync } from "./hooks/useAddAccountDialogSync";
 
 export type AuthFilesConfigModalTab = "excluded" | "alias";
-type AuthFilesConfirmAction =
-  | { type: "deleteSelection"; names: string[] }
-  | { type: "resetCredit"; file: AuthFileItem };
 
 export function AuthFilesPage() {
   const { t } = useTranslation();
@@ -1035,54 +1035,22 @@ export function AuthFilesPage() {
         groupOverviewChartOption={groupOverviewChartOption}
       />
 
-      <ConfirmModal
-        open={confirm !== null}
-        title={
+      <AuthFilesConfirmModal
+        confirm={confirm}
+        resetCreditCount={
           confirm?.type === "resetCredit"
-            ? t("auth_files.reset_credit_confirm_title")
-            : t("auth_files.batch_delete_title")
+            ? (quotaByFileName[confirm.file.name]?.resetCreditCount ?? 0)
+            : 0
         }
-        description={
-          confirm?.type === "resetCredit"
-            ? t("auth_files.reset_credit_confirm_desc", {
-                name:
-                  resolveAuthFileDisplayName(confirm.file) || confirm.file.name,
-                count:
-                  quotaByFileName[confirm.file.name]?.resetCreditCount ?? 0,
-              })
-            : t("auth_files.batch_delete_confirm", {
-                count:
-                  confirm?.type === "deleteSelection"
-                    ? confirm.names.length
-                    : 0,
-              })
-        }
-        confirmText={
-          confirm?.type === "resetCredit"
-            ? t("auth_files.reset_credit_confirm_button")
-            : t("common.delete")
-        }
-        cancelText={t("common.cancel")}
-        variant={confirm?.type === "resetCredit" ? "primary" : "danger"}
-        busy={
-          confirm?.type === "resetCredit"
-            ? Boolean(resettingCreditFileName)
-            : deletingAll
-        }
+        busy={confirm?.type === "resetCredit" ? Boolean(resettingCreditFileName) : deletingAll}
         onClose={() => {
           if (resettingCreditFileName) return;
           setConfirm(null);
         }}
-        onConfirm={() => {
-          const action = confirm;
-          if (!action) return;
-          if (action.type === "resetCredit") {
-            void handleResetCredit(action.file).finally(() => setConfirm(null));
-            return;
-          }
-          void handleDeleteSelection(action.names).finally(() =>
-            setConfirm(null),
-          );
+        onConfirm={(action) => {
+          const done = () => setConfirm(null);
+          if (action.type === "resetCredit") void handleResetCredit(action.file).finally(done);
+          else void handleDeleteSelection(action.names).finally(done);
         }}
       />
 

@@ -18,16 +18,25 @@ import type {
   IdentityFingerprintFieldSource,
 } from "@code-proxy/api-client";
 import type { ProxyPoolEntry } from "@code-proxy/api-client/endpoints/proxies";
-import { COLUMN_WIDTH, DataTable, type DataTableColumn } from "@code-proxy/ui";
-import { Button } from "@code-proxy/ui";
-import { Checkbox } from "@code-proxy/ui";
-import { DateTimePicker } from "@code-proxy/ui";
-import { EmptyState } from "@code-proxy/ui";
-import { TextInput } from "@code-proxy/ui";
-import { Modal } from "@code-proxy/ui";
-import { Select } from "@code-proxy/ui";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@code-proxy/ui";
-import { ToggleSwitch } from "@code-proxy/ui";
+import { VendorIcon } from "@code-proxy/assets";
+import {
+  Button,
+  Checkbox,
+  COLUMN_WIDTH,
+  confirmDialog,
+  DataTable,
+  DateTimePicker,
+  EmptyState,
+  Modal,
+  Select,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+  TextInput,
+  ToggleSwitch,
+  type DataTableColumn,
+} from "@code-proxy/ui";
 import { CodexImageGenerationBridgePanel } from "./CodexImageGenerationBridgePanel";
 import { buildDetailTrendChartOption } from "./detailTrendChartOption";
 import { EChart, useTheme } from "@code-proxy/ui";
@@ -723,16 +732,12 @@ export function AuthFileDetailModal({
     const deleteViewedProfile = async () => {
       const profileKey = summary.profile_key;
       if (!profileKey) return;
-      if (
-        !window.confirm(
-          t("auth_files.identity_profile_delete_confirm", {
-            profile: clientLabel,
-          }),
-        )
-      ) {
-        return;
-      }
-      await deleteIdentityFingerprintProfile(profileKey);
+      const confirmed = await confirmDialog({
+        title: t("auth_files.identity_profile_delete_title"),
+        description: t("auth_files.identity_profile_delete_confirm", { profile: clientLabel }),
+        confirmText: t("common.delete"),
+      });
+      if (confirmed) await deleteIdentityFingerprintProfile(profileKey);
     };
 
     return (
@@ -1233,7 +1238,10 @@ export function AuthFileDetailModal({
           </span>
         ) : undefined
       }
-      maxWidth="max-w-6xl"
+      // 图标用账号所属厂商的 logo，描述是文件名：一眼知道打开的是哪个账号的哪份凭证。
+      icon={detailFile ? <VendorIcon modelId={String(detailFile.type ?? "")} size={20} /> : undefined}
+      description={detailFile && detailFile.name !== detailTitle ? detailFile.name : undefined}
+      size="2xl"
       bodyHeightClassName="h-[70vh]"
       bodyClassName="flex flex-col !overflow-hidden"
       bodyTestId="auth-file-detail-body"

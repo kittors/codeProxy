@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   createStoreZipBlob: vi.fn(() => new Blob(["zip"], { type: "application/zip" })),
   downloadBlobAsFile: vi.fn(),
   buildAuthFilesBatchZipName: vi.fn(() => "auth-files-2-test.zip"),
+  confirmDialog: vi.fn(async () => true),
 }));
 
 vi.mock("react-i18next", () => ({
@@ -28,6 +29,8 @@ vi.mock("react-i18next", () => ({
 
 vi.mock("@code-proxy/ui", () => ({
   useToast: () => ({ notify: mocks.notify }),
+  // 下载敏感凭证前的确认改成了面板自己的 confirmDialog（不再是 window.confirm）。
+  confirmDialog: mocks.confirmDialog,
 }));
 
 vi.mock("@code-proxy/api-client", () => ({
@@ -72,7 +75,7 @@ describe("useAuthFilesFileActions handleDownloadSelection", () => {
     });
     mocks.createStoreZipBlob.mockReturnValue(new Blob(["zip"], { type: "application/zip" }));
     mocks.buildAuthFilesBatchZipName.mockReturnValue("auth-files-2-test.zip");
-    vi.spyOn(window, "confirm").mockReturnValue(true);
+    mocks.confirmDialog.mockResolvedValue(true);
   });
 
   const setup = () =>
@@ -124,7 +127,7 @@ describe("useAuthFilesFileActions handleDownloadSelection", () => {
   });
 
   it("does nothing when user cancels confirm", async () => {
-    vi.spyOn(window, "confirm").mockReturnValue(false);
+    mocks.confirmDialog.mockResolvedValue(false);
     const { result } = setup();
     await act(async () => {
       await result.current.handleDownloadSelection(["a.json", "b.json"]);

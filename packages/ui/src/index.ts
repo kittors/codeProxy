@@ -57,6 +57,7 @@ export type {
 } from "./navigation/PaginationBar";
 
 export { ConfirmModal } from "./overlays/ConfirmModal";
+export { ConfirmHost, confirmDialog } from "./overlays/confirmDialog";
 export { DialogIcon } from "./overlays/DialogIcon";
 export type { DialogTone } from "./overlays/DialogIcon";
 export type { ModalSize } from "./overlays/Modal";
