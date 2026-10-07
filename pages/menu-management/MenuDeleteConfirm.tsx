@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import type { MenuIdentity } from "@code-proxy/api-client";
-import { Callout, ConfirmModal, resolveMenuIcon } from "@code-proxy/ui";
+import { Callout, ConfirmModal, resolveMenuIcon, iconHueClass } from "@code-proxy/ui";
 
 /**
  * 删除菜单。服务端会拒绝删除还有下级（子菜单或按钮权限项）的菜单，所以知道下级数量时直接在确认框里
@@ -33,7 +33,7 @@ export function MenuDeleteConfirm({
       subject={
         menu ? (
           <span className="flex min-w-0 items-center gap-3">
-            <Icon size={16} className="shrink-0 text-ink-3" aria-hidden="true" />
+            <Icon size={16} className={`shrink-0 ${iconHueClass(Icon)}`} aria-hidden="true" />
             <span className="min-w-0 flex-1">
               <span className="block truncate font-medium">{name}</span>
               <span className="block truncate font-mono text-xs text-ink-3">{menu.code}</span>

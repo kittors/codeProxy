@@ -399,3 +399,13 @@ export function hueForIcon(icon: ReactNode): Hue | null {
   const name = componentName(icon.type);
   return name ? hueForIconName(name) : null;
 }
+
+/**
+ * 直接拿图标组件（不是元素）取无底图标的颜色类：`<Icon className={iconHueClass(Icon)} />`。
+ * 用在页面标题、行内小图标这类不需要底块的地方；认不出名字时用天蓝。
+ */
+export function iconHueClass(icon: unknown): string {
+  const name = componentName(icon);
+  return HUE_GLYPH[name ? hueForIconName(name) : "sky"];
+}
+

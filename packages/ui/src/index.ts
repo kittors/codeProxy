@@ -72,6 +72,7 @@ export {
   HUE_TILE,
   hueForIcon,
   hueForIconName,
+  iconHueClass,
   hueHex,
   isHue,
 } from "./theme/hues";
