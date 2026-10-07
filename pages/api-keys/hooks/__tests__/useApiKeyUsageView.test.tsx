@@ -206,4 +206,31 @@ describe("useApiKeyUsageView", () => {
       }),
     );
   });
+
+  test("keeps the current page without refetching when the language changes", async () => {
+    const { result } = renderHook(() => useApiKeyUsageView(), { wrapper });
+
+    act(() => {
+      result.current.openUsageView(["sk-low"], "Alice");
+    });
+    await waitFor(() => expect(result.current.usageTotalCount).toBe(42));
+    act(() => {
+      result.current.setUsagePageSize(20);
+    });
+    await waitFor(() => expect(mocks.getUsageLogs).toHaveBeenCalledTimes(2));
+    await act(async () => {
+      await result.current.fetchUsageLogs(2, 20);
+    });
+    expect(result.current.usageCurrentPage).toBe(2);
+
+    await act(async () => {
+      await i18n.changeLanguage("zh-CN");
+    });
+
+    // The hook picked up the new `t`...
+    expect(result.current.usageStatusOptions[0]?.label).toBe("全部状态");
+    // ...without treating it as a query change.
+    expect(mocks.getUsageLogs).toHaveBeenCalledTimes(3);
+    expect(result.current.usageCurrentPage).toBe(2);
+  });
 });
