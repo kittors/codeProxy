@@ -341,7 +341,12 @@ export function LogContentModal({
         : part === "output"
           ? t("log_content.no_output")
           : t("log_content.no_details");
-    return <EmptyState icon={<Icon size={20} aria-hidden />} title={title} />;
+    // 和加载态一样在内容区里上下居中：弹窗是固定高度，空态贴在顶上会显得下面空了一大块。
+    return (
+      <div className="flex h-full items-center justify-center">
+        <EmptyState icon={<Icon size={20} aria-hidden />} title={title} />
+      </div>
+    );
   };
 
   const renderRaw = (content: string) =>
