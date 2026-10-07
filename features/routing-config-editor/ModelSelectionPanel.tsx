@@ -156,7 +156,7 @@ export function ModelSelectionPanel({
               </OverflowTooltip>
               {model.description ? (
                 <OverflowTooltip content={model.description} className="block min-w-0">
-                  <span className="block min-w-0 truncate text-xs text-slate-500 dark:text-white/45">
+                  <span className="block min-w-0 truncate text-xs text-ink-3">
                     {model.description}
                   </span>
                 </OverflowTooltip>
@@ -171,7 +171,7 @@ export function ModelSelectionPanel({
         width: COLUMN_WIDTH.numericWide,
         minWidthPx: 120,
         maxWidthPx: 360,
-        cellClassName: "min-w-0 whitespace-nowrap text-slate-600 dark:text-white/60",
+        cellClassName: "min-w-0 whitespace-nowrap text-ink-2",
         render: (model) => model.owned_by || "-",
         overflowTooltip: (model) => model.owned_by || "-",
       },
@@ -182,7 +182,7 @@ export function ModelSelectionPanel({
         minWidthPx: 180,
         maxWidthPx: 420,
         cellClassName:
-          "whitespace-nowrap font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
+          "whitespace-nowrap font-mono text-xs tabular-nums text-ink-2",
         render: (model) =>
           formatModelPrice(model.pricing ?? emptyModelPricing(), t("models_page.not_priced")),
       },
@@ -204,17 +204,17 @@ export function ModelSelectionPanel({
     <>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1 space-y-1">
-          <div className="text-sm font-semibold text-slate-900 dark:text-white">
+          <div className="text-sm font-semibold text-ink">
             {t("channel_groups_page.allowed_models_label")}
           </div>
-          <div className="text-xs text-slate-500 dark:text-white/55">
+          <div className="text-xs text-ink-3">
             {t("channel_groups_page.allowed_models_hint")}
           </div>
           <div
             data-testid="model-gate-mode-hint"
             className={
               selection.exclusionsSupported
-                ? "text-xs text-slate-600 dark:text-white/65"
+                ? "text-xs text-ink-2"
                 : "text-xs text-amber-700 dark:text-amber-200"
             }
           >
@@ -275,7 +275,7 @@ export function ModelSelectionPanel({
             {ruleChips.map(({ list, entry, tagKey }) => (
               <span
                 key={`${list}:${entry}`}
-                className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-white/80 py-0.5 pl-2.5 pr-1 dark:bg-neutral-950/50"
+                className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-surface py-0.5 pl-2.5 pr-1"
               >
                 <span className="truncate font-mono">{entry}</span>
                 <span className="shrink-0 rounded-full bg-amber-100 px-1.5 text-2xs font-semibold dark:bg-amber-500/15">
@@ -300,7 +300,7 @@ export function ModelSelectionPanel({
         <div
           className={[
             surface({ tone: "inset", radius: "2xl" }),
-            "px-4 py-6 text-sm text-slate-500 dark:text-white/55",
+            "px-4 py-6 text-sm text-ink-3",
           ].join(" ")}
         >
           {t("channel_groups_page.models_need_channels")}
