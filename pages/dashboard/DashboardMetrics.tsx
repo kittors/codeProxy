@@ -10,7 +10,7 @@ import {
   getCompactNumberParts,
   type CompactNumberOptions,
 } from "@code-proxy/domain";
-import { HoverTooltip, chartTooltipStyle } from "@code-proxy/ui";
+import { HoverTooltip, chartGradient, chartTooltipStyle } from "@code-proxy/ui";
 import { AnimatedNumber } from "@code-proxy/ui";
 
 export const DASHBOARD_COMPACT_OPTIONS = {
@@ -145,19 +145,8 @@ export function createSparklineOption(
         smooth: true,
         symbol: "none",
         lineStyle: { color, width: 2 },
-        areaStyle: {
-          color: {
-            type: "linear",
-            x: 0,
-            y: 0,
-            x2: 0,
-            y2: 1,
-            colorStops: [
-              { offset: 0, color: `${color}14` },
-              { offset: 1, color: `${color}00` },
-            ],
-          },
-        },
+        // 同色渐隐面积：以前 8% 起步几乎看不见，一排趋势线像没加载完的细线。
+        areaStyle: { color: chartGradient(color, 0.24, 0) },
       },
     ],
   };

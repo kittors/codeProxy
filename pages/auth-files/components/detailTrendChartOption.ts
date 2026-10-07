@@ -1,14 +1,18 @@
-import { CHART_CATEGORICAL, chartAxisStyle, chartPalette, chartTooltipStyle } from "@code-proxy/ui";
+import { chartAxisStyle, chartGradient, chartPalette, chartTooltipStyle } from "@code-proxy/ui";
+import { quotaSeriesColor } from "../helpers/quotaSeriesColors";
 import { formatTrendChartTooltip } from "./trendTooltipFormatter";
 
 /**
  * 账号详情「请求 / 费用 / 额度占用」趋势图的 echarts 配置。
  *
- * 配色走共享图表主题，和仪表盘、监控中心同一套：请求数是灰柱，费用是主色线，额度占用线
- * 用分类色轮换；网格、坐标轴、图例都是中性灰，深色模式随主题切换。
+ * 配色走共享图表主题，颜色都有含义，和仪表盘、监控中心对得上：
+ * - 请求数：请求身份色（蓝）的同色渐变柱，悬停时渐变变实，像亮了一档；
+ * - 费用：费用身份色（琥珀）实线 + 同色渐隐面积（压在柱子上，所以很淡）；
+ * - 额度占用：额度线配色（第一条粉色，见 quotaSeriesColors），与账号详情里额度相关的统计格同色。
+ * 网格、坐标轴、图例文字保持中性灰；深色模式整套换成 chartPalette(true) / hueHex(…, true) 的亮一档。
  *
  * 序列顺序不能动：trendTooltipFormatter 按 seriesIndex 判断格式——0 是请求柱，1 是费用线
- * （显示成金额），之后都是额度百分比。
+ * （显示成金额），之后都是额度百分比；提示框色块也按同一顺序取 seriesColors。
  */
 export function buildDetailTrendChartOption({
   isDark,
@@ -33,12 +37,29 @@ export function buildDetailTrendChartOption({
 }) {
   const palette = chartPalette(isDark);
   const axis = chartAxisStyle(isDark);
+  const requestsColor = palette.metric.requests;
+  const costColor = palette.metric.cost;
+  const quotaColors = quotaSeries.map((_, index) => quotaSeriesColor(index, isDark));
+  const seriesColors = [requestsColor, costColor, ...quotaColors];
+  // 悬停时线上的圆点套一圈卡片底色，压在柱子或别的线上也看得清。
+  const pointRing = isDark ? "#2a2a2a" : "#ffffff";
   const seriesAnimation = {
     animation: animate,
     animationDuration: animate ? animationMs : 0,
     animationDurationUpdate: 0,
   };
   const valueAxisLabel = { ...axis.axisLabel, hideOverlap: true };
+  const lineSeries = (color: string) => ({
+    type: "line",
+    ...seriesAnimation,
+    connectNulls: true,
+    showSymbol: false,
+    symbol: "circle",
+    symbolSize: 8,
+    smooth: true,
+    itemStyle: { color, borderColor: pointRing, borderWidth: 2 },
+    emphasis: { lineStyle: { width: 2.6 } },
+  });
 
   return {
     ...seriesAnimation,
@@ -48,7 +69,7 @@ export function buildDetailTrendChartOption({
       ...chartTooltipStyle(isDark),
       trigger: "axis",
       confine: true,
-      formatter: (params: unknown) => formatTrendChartTooltip(params, formatCurrency),
+      formatter: (params: unknown) => formatTrendChartTooltip(params, formatCurrency, seriesColors),
     },
     legend: {
       top: 8,
@@ -105,35 +126,26 @@ export function buildDetailTrendChartOption({
         yAxisIndex: 0,
         ...seriesAnimation,
         barMaxWidth: 24,
-        itemStyle: { color: palette.bar, borderRadius: [4, 4, 0, 0] },
-        emphasis: { itemStyle: { color: palette.barHover } },
+        itemStyle: { color: chartGradient(requestsColor, 1, 0.55), borderRadius: [4, 4, 0, 0] },
+        emphasis: { itemStyle: { color: chartGradient(requestsColor, 1, 0.85) } },
         data: requests,
       },
       {
+        ...lineSeries(costColor),
         name: labels.cost,
-        type: "line",
         yAxisIndex: 2,
-        ...seriesAnimation,
-        connectNulls: true,
-        showSymbol: false,
-        smooth: true,
-        lineStyle: { width: 2.2, color: palette.primary },
-        itemStyle: { color: palette.primary },
-        areaStyle: { color: isDark ? "rgba(236, 236, 236, 0.06)" : "rgba(13, 13, 13, 0.05)" },
+        lineStyle: { width: 2.2, color: costColor },
+        // 面积盖在请求柱上面，浓了会把蓝柱染成灰绿（深色模式更明显），所以比通用的 0.28 淡。
+        areaStyle: { color: chartGradient(costColor, isDark ? 0.12 : 0.16, 0) },
         data: cost,
       },
       ...quotaSeries.map(({ name, values }, index) => {
-        const color = CHART_CATEGORICAL[index % CHART_CATEGORICAL.length];
+        const color = quotaColors[index];
         return {
+          ...lineSeries(color),
           name,
-          type: "line",
           yAxisIndex: 1,
-          ...seriesAnimation,
-          connectNulls: true,
-          showSymbol: false,
-          smooth: true,
           lineStyle: { width: 2, color },
-          itemStyle: { color },
           data: values,
         };
       }),

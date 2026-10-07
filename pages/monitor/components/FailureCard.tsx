@@ -59,6 +59,7 @@ export function FailureCard({
       title={
         <MonitorCardTitle
           icon={OctagonAlert}
+          hue="rose"
           label={t("monitor_center.failures.title")}
           note={
             current.failed > 0

@@ -57,7 +57,7 @@ export function LatencyCard({
 
   return (
     <Card
-      title={<MonitorCardTitle icon={Timer} label={t("monitor_center.latency.title")} />}
+      title={<MonitorCardTitle icon={Timer} hue="indigo" label={t("monitor_center.latency.title")} />}
       actions={
         legacy ? null : (
           <Tabs value={metric} onValueChange={(next) => setMetric(next as LatencyMetric)} size="sm">
@@ -88,13 +88,16 @@ export function LatencyCard({
         />
       ) : (
         <>
+          {/* 四个分位数都铺一层耗时身份色（靛蓝）的淡底，与下面的直方图同色；P95 加深并描一圈，仍是重点。 */}
           <dl className="grid grid-cols-4 gap-2">
             {PERCENTILES.map((item) => (
               <div
                 key={item.key}
                 className={[
                   "rounded-2xl px-3 py-2.5",
-                  item.key === "p95_ms" ? "bg-indigo-500/10 dark:bg-indigo-400/15" : "bg-subtle",
+                  item.key === "p95_ms"
+                    ? "bg-indigo-500/10 ring-1 ring-inset ring-indigo-500/20 dark:bg-indigo-400/15 dark:ring-indigo-400/25"
+                    : "bg-indigo-500/[0.04] dark:bg-indigo-400/[0.07]",
                 ].join(" ")}
               >
                 <dt className="text-2xs font-semibold tracking-wide text-ink-3">{item.label}</dt>

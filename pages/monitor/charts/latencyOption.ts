@@ -1,7 +1,8 @@
 import type { ECBasicOption } from "echarts/types/dist/shared";
 import type { MonitorLatencyStats } from "@code-proxy/api-client";
+import { chartGradient } from "@code-proxy/ui";
 import { formatMonitorCompact, formatMonitorPercent } from "../model/monitorFormat";
-import { monitorAxis, monitorPalette, monitorTooltip, tooltipHtml, withAlpha } from "./chartBase";
+import { monitorAxis, monitorPalette, monitorTooltip, tooltipHtml } from "./chartBase";
 
 /**
  * 展示用区间（上界，毫秒）。都是后端细分桶边界的子集，合并时不会把一个细桶劈开。
@@ -123,8 +124,8 @@ export function createLatencyOption(
           return {
             value: band.count,
             itemStyle: {
-              // 分位数落在的区间实色，其余淡一档：一眼看出中位与长尾各在哪里。
-              color: marker ? base : withAlpha(base, 0.32),
+              // 分位数落在的区间用实的同色渐变，其余整体淡一档：一眼看出中位与长尾各在哪里。
+              color: marker ? chartGradient(base, 1, 0.6) : chartGradient(base, 0.42, 0.2),
               borderRadius: [4, 4, 0, 0],
             },
             label: marker

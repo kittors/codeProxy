@@ -38,8 +38,10 @@ import {
   type DataTableColumn,
 } from "@code-proxy/ui";
 import { CodexImageGenerationBridgePanel } from "./CodexImageGenerationBridgePanel";
+import { AuthFilePlanBadge } from "./AuthFilePlanBadge";
 import { buildDetailTrendChartOption } from "./detailTrendChartOption";
-import { EChart, useTheme } from "@code-proxy/ui";
+import { TrendSummaryGrid } from "./TrendSummaryGrid";
+import { EChart, surface, useTheme } from "@code-proxy/ui";
 import { ProxyPoolSelect, ProxyUrlInput, useProxyPoolChecks } from "@features/proxy-pool";
 import { ModerationProfileSelect } from "@features/content-moderation";
 import { useModerationPermissions } from "@app/providers/useModerationPermissions";
@@ -58,7 +60,6 @@ import {
   resolveAuthFileDisplayPlanType,
   resolveAuthFilePlanType,
   resolveFileType,
-  resolvePlanBadgeClass,
   shouldShowAuthFilePlanBadge,
   translateParameterizedQuotaLabel,
   type AuthFileModelItem,
@@ -78,9 +79,7 @@ import {
   resolveNearestBucketKey,
 } from "./trendBuckets";
 import {
-  buildTrendQuotaSummary,
   formatCurrency,
-  formatPercent,
   toQuotaUsedPercent,
   FIVE_HOUR_WINDOW_SECONDS,
   WEEK_WINDOW_SECONDS,
@@ -100,11 +99,6 @@ interface IdentityFingerprintFieldRow {
 
 const TREND_CHART_ANIMATION_MS = 680;
 const TREND_CHART_ANIMATION_GUARD_MS = TREND_CHART_ANIMATION_MS + 120;
-const SUMMARY_CARD_CLASS_NAME =
-  "h-full min-w-0 rounded-lg bg-subtle px-3 py-3";
-const SUMMARY_LABEL_CLASS_NAME = "text-xs font-semibold text-ink-3";
-const SUMMARY_VALUE_CLASS_NAME =
-  "mt-2 min-w-0 whitespace-nowrap text-lg font-semibold leading-tight tracking-tight tabular-nums text-ink";
 const IDENTITY_FINGERPRINT_SOURCE_ORDER: IdentityFingerprintFieldSource[] = [
   "learned",
   "preset",
@@ -1051,139 +1045,16 @@ export function AuthFileDetailModal({
       );
     }
 
-    const formatCount = (value: number) =>
-      Number.isFinite(value) ? Math.round(value).toLocaleString() : "0";
-    // Prefer cycle totals when the backend knows the weekly cycle start; otherwise fall back
-    // so xAI cards do not show a misleading 0 before weekly_limit snapshots exist.
-    const displayCycleRequestTotal =
-      detailTrend.cycle_known === true
-        ? detailTrend.cycle_request_total
-        : detailTrend.cycle_request_total > 0
-          ? detailTrend.cycle_request_total
-          : detailTrend.request_total;
-    const displayCycleCostTotal =
-      detailTrend.cycle_known === true
-        ? detailTrend.cycle_cost_total
-        : detailTrend.cycle_cost_total;
-    const displayCycleTotalTokens =
-      typeof detailTrend.cycle_total_tokens === "number" &&
-      Number.isFinite(detailTrend.cycle_total_tokens)
-        ? Math.max(0, Math.round(detailTrend.cycle_total_tokens))
-        : null;
-    const cycleStart = detailTrend.cycle_start
-      ? new Date(detailTrend.cycle_start).toLocaleString()
-      : "--";
-    const {
-      weeklyQuotaUsedPercent,
-      projectionQuotaUsedPercent,
-      projectionIsAttributable,
-      externalQuotaUsedPercent,
-      estimatedFiveHourQuota,
-      estimatedWeeklyQuota,
-    } = buildTrendQuotaSummary({
-      trend: detailTrend,
-      fiveHourQuotaKey,
-      weeklyQuotaKey,
-      showPredictedWeeklyQuota,
-      cycleCostTotal: displayCycleCostTotal,
-    });
-    // ponytail: hide zero noise; null/"--" is already non-zero display path
-    const showLast7DaysRequests = !isCodex && detailTrend.request_total > 0;
-    const showCycleRequests = displayCycleRequestTotal > 0;
-    const showCycleCost = displayCycleCostTotal > 0;
-    const showFiveHourQuota = fiveHourQuotaKey !== null && estimatedFiveHourQuota > 0;
-    const showWeeklyQuota = showPredictedWeeklyQuota && estimatedWeeklyQuota > 0;
-    const showWeeklyUsed =
-      typeof weeklyQuotaUsedPercent === "number" &&
-      Number.isFinite(weeklyQuotaUsedPercent) &&
-      weeklyQuotaUsedPercent > 0;
-    // Only worth a card when the account actually spent outside the proxy;
-    // a permanent "0%" would be noise on every well-behaved credential.
-    const showExternalQuotaUsed =
-      typeof externalQuotaUsedPercent === "number" && externalQuotaUsedPercent > 0;
-    const showCycleStart = Boolean(detailTrend.cycle_start);
-
     return (
       <div className="space-y-4">
-        <div className={summaryGridClassName}>
-          {showLast7DaysRequests ? (
-            <div className={SUMMARY_CARD_CLASS_NAME}>
-              <p className={SUMMARY_LABEL_CLASS_NAME}>
-                {t("auth_files.trend_last_7_days_requests")}
-              </p>
-              <p className={SUMMARY_VALUE_CLASS_NAME}>{formatCount(detailTrend.request_total)}</p>
-            </div>
-          ) : null}
-          {showCycleRequests ? (
-            <div className={SUMMARY_CARD_CLASS_NAME}>
-              <p className={SUMMARY_LABEL_CLASS_NAME}>{t("auth_files.trend_current_weekly_cycle")}</p>
-              <p className={SUMMARY_VALUE_CLASS_NAME}>{formatCount(displayCycleRequestTotal)}</p>
-            </div>
-          ) : null}
-          {showCycleCost ? (
-            <div className={SUMMARY_CARD_CLASS_NAME}>
-              <p className={SUMMARY_LABEL_CLASS_NAME}>{t("auth_files.trend_current_cycle_cost")}</p>
-              <p className={SUMMARY_VALUE_CLASS_NAME}>{formatCurrency(displayCycleCostTotal)}</p>
-            </div>
-          ) : null}
-          <div className={SUMMARY_CARD_CLASS_NAME}>
-            <p className={SUMMARY_LABEL_CLASS_NAME}>
-              {t("auth_files.trend_current_cycle_tokens")}
-            </p>
-            <p className={SUMMARY_VALUE_CLASS_NAME}>
-              {displayCycleTotalTokens === null
-                ? "--"
-                : displayCycleTotalTokens.toLocaleString(i18n.language)}
-            </p>
-          </div>
-          {showFiveHourQuota ? (
-            <div className={SUMMARY_CARD_CLASS_NAME}>
-              <p className={SUMMARY_LABEL_CLASS_NAME}>
-                {t("auth_files.trend_predicted_5h_window_quota")}
-              </p>
-              <p className={SUMMARY_VALUE_CLASS_NAME}>{formatCurrency(estimatedFiveHourQuota)}</p>
-            </div>
-          ) : null}
-          {showWeeklyQuota ? (
-            <div className={SUMMARY_CARD_CLASS_NAME} data-testid="trend-predicted-weekly-quota">
-              <p className={SUMMARY_LABEL_CLASS_NAME}>
-                {t("auth_files.trend_predicted_week_window_quota")}
-              </p>
-              <p className={SUMMARY_VALUE_CLASS_NAME}>{formatCurrency(estimatedWeeklyQuota)}</p>
-              {projectionIsAttributable ? (
-                <p className="mt-1 text-2xs leading-tight text-ink-3">
-                  {t("auth_files.trend_predicted_quota_attributable_hint", {
-                    percent: formatPercent(projectionQuotaUsedPercent),
-                  })}
-                </p>
-              ) : null}
-            </div>
-          ) : null}
-          {showWeeklyUsed ? (
-            <div className={SUMMARY_CARD_CLASS_NAME}>
-              <p className={SUMMARY_LABEL_CLASS_NAME}>{t("auth_files.trend_weekly_quota_used")}</p>
-              <p className={SUMMARY_VALUE_CLASS_NAME}>{formatPercent(weeklyQuotaUsedPercent)}</p>
-            </div>
-          ) : null}
-          {showExternalQuotaUsed ? (
-            <div className={SUMMARY_CARD_CLASS_NAME} data-testid="trend-external-quota-used">
-              <p className={SUMMARY_LABEL_CLASS_NAME}>
-                {t("auth_files.trend_external_quota_used")}
-              </p>
-              <p className={SUMMARY_VALUE_CLASS_NAME}>
-                {formatPercent(externalQuotaUsedPercent)}
-              </p>
-            </div>
-          ) : null}
-          {showCycleStart ? (
-            <div className={SUMMARY_CARD_CLASS_NAME}>
-              <p className={SUMMARY_LABEL_CLASS_NAME}>{t("auth_files.trend_cycle_start")}</p>
-              <p className="mt-2 whitespace-normal break-words text-sm font-semibold leading-tight text-ink">
-                {cycleStart}
-              </p>
-            </div>
-          ) : null}
-        </div>
+        <TrendSummaryGrid
+          trend={detailTrend}
+          fiveHourQuotaKey={fiveHourQuotaKey}
+          weeklyQuotaKey={weeklyQuotaKey}
+          showPredictedWeeklyQuota={showPredictedWeeklyQuota}
+          hideLast7DaysRequests={isCodex}
+          className={summaryGridClassName}
+        />
 
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -1208,7 +1079,8 @@ export function AuthFileDetailModal({
           </Tabs>
         </div>
 
-        <div className="min-w-0 rounded-lg bg-subtle p-3">
+        {/* 白底卡片而不是灰底：灰底会把整张图压成灰色，彩色的柱和线也显得发闷。 */}
+        <div className={`${surface({ tone: "raised", radius: "xl" })} min-w-0 p-3`}>
           <EChart
             option={trendChartOption}
             className="h-80 min-w-0"
@@ -1226,16 +1098,9 @@ export function AuthFileDetailModal({
       open={open}
       title={detailTitle}
       titleAccessory={
-        showDetailPlanBadge && detailPlanLabel ? (
-          <span
-            data-testid="auth-file-plan-badge"
-            className={[
-              "inline-flex shrink-0 items-center rounded-md px-2 py-0.5 text-2xs font-bold tracking-wide",
-              resolvePlanBadgeClass(detailPlanType),
-            ].join(" ")}
-          >
-            {detailPlanLabel}
-          </span>
+        // 与卡片、列表同一个会员徽章：厂商品牌色 × 会员档位。
+        showDetailPlanBadge && detailPlanType && detailPlanLabel ? (
+          <AuthFilePlanBadge provider={detailProviderKey} planType={detailPlanType} />
         ) : undefined
       }
       // 图标用账号所属厂商的 logo，描述是文件名：一眼知道打开的是哪个账号的哪份凭证。

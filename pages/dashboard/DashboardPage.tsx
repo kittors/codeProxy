@@ -132,8 +132,8 @@ export function DashboardPage() {
     meta.throughput_scope === "all_tenants" || Boolean(principal?.platform_admin);
   const tenantBreakdown = trends?.tenants ?? [];
 
-  // 迷你趋势线统一用中性主色（深色模式反转），只有失败请求用错误色——绿、紫、青这些
-  // 颜色在这里不表达状态，只会把一排指标变成调色板。
+  // 每格迷你趋势线用该指标的身份色（chartTheme.metric：请求蓝、成功绿、Token 紫、费用琥珀、
+  // 缓存青），标题前的图标块同色；失败请求用错误红。与监控中心、账号详情是同一组颜色。
   const {
     state: { mode },
   } = useTheme();
@@ -235,7 +235,7 @@ export function DashboardPage() {
               : t("dashboard.total_hint_days", { count: range })
           }
           icon={Activity}
-          iconClassName="text-blue-500 dark:text-blue-400"
+          hue="blue"
           option={totalRequestOption}
         />
         <DashboardKpiCard
@@ -247,7 +247,7 @@ export function DashboardPage() {
             <DashboardMetricValue key="failed" value={kpi?.failed_requests ?? 0} />,
           )}
           icon={Sigma}
-          iconClassName="text-emerald-500 dark:text-emerald-400"
+          hue="emerald"
           option={successRateOption}
         />
         <DashboardKpiCard
@@ -259,7 +259,7 @@ export function DashboardPage() {
             <DashboardMetricValue key="output" value={kpi?.output_tokens ?? 0} />,
           )}
           icon={Sparkles}
-          iconClassName="text-violet-500 dark:text-violet-400"
+          hue="violet"
           option={totalTokenOption}
         />
         <DashboardKpiCard
@@ -267,7 +267,7 @@ export function DashboardPage() {
           value={<DashboardMetricValue value={kpi?.total_cost ?? 0} variant="currency" animated />}
           hint={t("dashboard.total_cost_hint")}
           icon={DollarSign}
-          iconClassName="text-amber-500 dark:text-amber-400"
+          hue="amber"
           option={totalCostOption}
         />
         <DashboardKpiCard
@@ -275,7 +275,7 @@ export function DashboardPage() {
           value={<DashboardMetricValue value={kpi?.failed_requests ?? 0} animated />}
           hint={t("dashboard.failed_hint")}
           icon={TriangleAlert}
-          iconClassName="text-rose-500 dark:text-rose-400"
+          hue="rose"
           option={failedRequestOption}
         />
         <DashboardKpiCard
@@ -287,7 +287,7 @@ export function DashboardPage() {
             <DashboardMetricValue key="input" value={kpi?.input_tokens ?? 0} />,
           )}
           icon={Database}
-          iconClassName="text-teal-500 dark:text-teal-400"
+          hue="teal"
           option={cacheRateOption}
         />
         </div>

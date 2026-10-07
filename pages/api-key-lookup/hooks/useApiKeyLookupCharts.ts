@@ -2,9 +2,9 @@ import { useCallback, useMemo, useState } from "react";
 import {
   buildModelDistributionData,
   createModelDistributionOption,
+  modelDistributionColors,
 } from "@features/monitor-widgets/chart-options/model-distribution";
 import { createDailyTrendOption } from "@features/monitor-widgets/chart-options/daily-trend";
-import { CHART_COLOR_CLASSES } from "@features/monitor-widgets/monitor-constants";
 import type {
   DailySeriesPoint,
   ModelDistributionDatum,
@@ -22,18 +22,17 @@ function formatLocalDateLabel(dateStr: string): string {
   return `${date.getMonth() + 1}/${date.getDate()}`;
 }
 
-function buildDistributionLegend(data: ModelDistributionDatum[]) {
+/** 图例的色点与环图扇区取同一份颜色（modelDistributionColors），不会再出现两边各配各的色。 */
+function buildDistributionLegend(data: ModelDistributionDatum[], colors: readonly string[]) {
   const total = data.reduce((acc, item) => acc + (Number.isFinite(item.value) ? item.value : 0), 0);
   return data.map((item, index) => {
-    const colorClass =
-      index < CHART_COLOR_CLASSES.length ? CHART_COLOR_CLASSES[index] : "bg-slate-400";
     const value = Number(item.value ?? 0);
     const percent = total > 0 ? (value / total) * 100 : 0;
     return {
       name: item.name,
       valueLabel: Intl.NumberFormat("en-US", { notation: "compact" }).format(value),
       percentLabel: `${percent.toFixed(1)}%`,
-      colorClass,
+      color: colors[index] ?? colors[0] ?? "",
     };
   });
 }
@@ -137,14 +136,19 @@ export function useApiKeyLookupCharts({
     });
   }, [apiKeyMetric, chartData, t]);
 
+  const otherLabel = t("common.other");
   const apiKeyDistributionOption = useMemo(
-    () => createModelDistributionOption({ isDark, data: apiKeyDistributionData }),
-    [apiKeyDistributionData, isDark],
+    () => createModelDistributionOption({ isDark, data: apiKeyDistributionData, otherLabel }),
+    [apiKeyDistributionData, isDark, otherLabel],
   );
 
   const apiKeyDistributionLegend = useMemo(
-    () => buildDistributionLegend(apiKeyDistributionData),
-    [apiKeyDistributionData],
+    () =>
+      buildDistributionLegend(
+        apiKeyDistributionData,
+        modelDistributionColors(apiKeyDistributionData, isDark, otherLabel),
+      ),
+    [apiKeyDistributionData, isDark, otherLabel],
   );
 
   const modelDistributionData: ModelDistributionDatum[] = useMemo(() => {
@@ -156,13 +160,17 @@ export function useApiKeyLookupCharts({
   }, [chartData, modelMetric, t]);
 
   const modelDistributionOption = useMemo(
-    () => createModelDistributionOption({ isDark, data: modelDistributionData }),
-    [isDark, modelDistributionData],
+    () => createModelDistributionOption({ isDark, data: modelDistributionData, otherLabel }),
+    [isDark, modelDistributionData, otherLabel],
   );
 
   const modelDistributionLegend = useMemo(
-    () => buildDistributionLegend(modelDistributionData),
-    [modelDistributionData],
+    () =>
+      buildDistributionLegend(
+        modelDistributionData,
+        modelDistributionColors(modelDistributionData, isDark, otherLabel),
+      ),
+    [isDark, modelDistributionData, otherLabel],
   );
 
   return {
