@@ -358,6 +358,44 @@ const ICON_HUE: Record<string, Hue> = {
   SearchX: "sky",
 };
 
+/**
+ * 不上色的图标：关闭、展开 / 收起箭头、拖拽手柄、「更多」、加载圈这类纯操作提示，
+ * 它们不代表任何「东西」，染上颜色只会让一排按钮花掉。
+ */
+const NEUTRAL_ICONS = new Set([
+  "X",
+  "XIcon",
+  "ChevronDown",
+  "ChevronUp",
+  "ChevronLeft",
+  "ChevronRight",
+  "ChevronsLeft",
+  "ChevronsRight",
+  "ChevronsUpDown",
+  "ChevronsDownUp",
+  "ArrowLeft",
+  "ArrowRight",
+  "ArrowUp",
+  "ArrowDown",
+  "ArrowUpDown",
+  "MoreHorizontal",
+  "MoreVertical",
+  "Ellipsis",
+  "EllipsisVertical",
+  "GripVertical",
+  "GripHorizontal",
+  "Minus",
+  "PanelLeft",
+  "PanelLeftClose",
+  "PanelLeftOpen",
+  "Loader",
+  "Loader2",
+  "LoaderCircle",
+  "Dot",
+]);
+
+export const isNeutralIconName = (name: string) => NEUTRAL_ICONS.has(name);
+
 /** 没登记的图标按名字散列到一个稳定的色相（避开语义上偏「危险 / 警告」的玫红与琥珀）。 */
 const FALLBACK_HUES: readonly Hue[] = [
   "blue",
@@ -397,8 +435,30 @@ const componentName = (type: unknown): string | null => {
 export function hueForIcon(icon: ReactNode): Hue | null {
   if (!isValidElement(icon)) return null;
   const name = componentName(icon.type);
-  return name ? hueForIconName(name) : null;
+  if (!name || isNeutralIconName(name)) return null;
+  return hueForIconName(name);
 }
+
+/**
+ * 按钮里的图标上色（图标按钮、带图标的次要按钮）：只改按钮里 lucide 图标的颜色，文字仍是中性色。
+ * 用后代选择器而不是改按钮的 text 色——按钮的文字色与悬停色各变体自己管，不和它们抢优先级。
+ */
+export const HUE_BUTTON_ICON: Record<Hue, string> = {
+  blue: "[&_svg.lucide]:text-blue-500 dark:[&_svg.lucide]:text-blue-400",
+  sky: "[&_svg.lucide]:text-sky-500 dark:[&_svg.lucide]:text-sky-400",
+  cyan: "[&_svg.lucide]:text-cyan-500 dark:[&_svg.lucide]:text-cyan-400",
+  teal: "[&_svg.lucide]:text-teal-500 dark:[&_svg.lucide]:text-teal-400",
+  emerald: "[&_svg.lucide]:text-emerald-500 dark:[&_svg.lucide]:text-emerald-400",
+  lime: "[&_svg.lucide]:text-lime-600 dark:[&_svg.lucide]:text-lime-400",
+  amber: "[&_svg.lucide]:text-amber-500 dark:[&_svg.lucide]:text-amber-400",
+  orange: "[&_svg.lucide]:text-orange-500 dark:[&_svg.lucide]:text-orange-400",
+  rose: "[&_svg.lucide]:text-rose-500 dark:[&_svg.lucide]:text-rose-400",
+  pink: "[&_svg.lucide]:text-pink-500 dark:[&_svg.lucide]:text-pink-400",
+  fuchsia: "[&_svg.lucide]:text-fuchsia-500 dark:[&_svg.lucide]:text-fuchsia-400",
+  purple: "[&_svg.lucide]:text-purple-500 dark:[&_svg.lucide]:text-purple-400",
+  violet: "[&_svg.lucide]:text-violet-500 dark:[&_svg.lucide]:text-violet-400",
+  indigo: "[&_svg.lucide]:text-indigo-500 dark:[&_svg.lucide]:text-indigo-400",
+};
 
 /**
  * 直接拿图标组件（不是元素）取无底图标的颜色类：`<Icon className={iconHueClass(Icon)} />`。
@@ -406,6 +466,7 @@ export function hueForIcon(icon: ReactNode): Hue | null {
  */
 export function iconHueClass(icon: unknown): string {
   const name = componentName(icon);
+  if (name && isNeutralIconName(name)) return "text-ink-3";
   return HUE_GLYPH[name ? hueForIconName(name) : "sky"];
 }
 

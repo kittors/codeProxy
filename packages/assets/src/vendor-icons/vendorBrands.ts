@@ -30,7 +30,9 @@ const CODEX = brand("#3941ff", "#8b93ff", "#a78bfa", "#c4b5fd");
 const OPENAI = brand("#10a37f", "#3ecf9a", "#34d399", "#6ee7b7");
 const CLAUDE = brand("#d97757", "#e8957a", "#f2b596", "#f6c7ad");
 const GEMINI = brand("#3186ff", "#6aa7ff", "#9b72cb", "#b596e0");
-const ANTIGRAVITY = brand("#e45c49", "#f07d6c", "#ef842a", "#f5a05a");
+// Antigravity 的 logo 是红到橙的渐变：主色取橙，红色只做渐变的另一端——
+// 主色用红的话，「PRO」实色徽章会被看成错误标签。
+const ANTIGRAVITY = brand("#ea7a2c", "#f59a5a", "#e45c49", "#f07d6c");
 const VERTEX = brand("#4285f4", "#7baaf7", "#34a853", "#81c995");
 const KIMI = brand("#027aff", "#4da3ff", "#38bdf8", "#7dd3fc");
 const QWEN = brand("#6336e7", "#9478f5", "#6f69f7", "#a5a1fb");
