@@ -1547,6 +1547,53 @@ export const resolvePlanBadgeClass = (planType: string | null | undefined): stri
   return PLAN_BADGE_CLASSES[normalized] ?? PLAN_BADGE_CLASSES.unknown;
 };
 
+/**
+ * 会员等级，五档，由低到高。徽章按档位决定「有多隆重」，颜色由厂商品牌色决定：
+ * - free：免费（描边）；
+ * - entry：入门付费（Plus 这类，品牌色淡底）；
+ * - pro：专业 / 团队（Pro、Max、Team、SuperGrok……，品牌实色）；
+ * - max：高阶倍数（Pro 5x、Max 5x，品牌渐变）；
+ * - ultra：旗舰（Pro 20x、Max 20x、SuperGrok Heavy、Ultra、Enterprise，双色渐变 + 皇冠）。
+ * 认不出的付费名称按入门档处理：宁可低调，也不把未知套餐渲染成旗舰。
+ */
+export type PlanTier = "free" | "entry" | "pro" | "max" | "ultra";
+
+const PLAN_TIER_BY_KEY: Record<string, PlanTier> = {
+  free: "free",
+  plus: "entry",
+  standard: "entry",
+  basic: "entry",
+  lite: "entry",
+  starter: "entry",
+  go: "entry",
+  pro: "pro",
+  chatgptpro: "pro",
+  max: "pro",
+  team: "pro",
+  business: "pro",
+  premium: "pro",
+  supergrok: "pro",
+  pro_5x: "max",
+  "pro-5x": "max",
+  max_5x: "max",
+  "max-5x": "max",
+  pro_20x: "ultra",
+  "pro-20x": "ultra",
+  max_20x: "ultra",
+  "max-20x": "ultra",
+  "supergrok-heavy": "ultra",
+  supergrok_heavy: "ultra",
+  supergrokheavy: "ultra",
+  ultra: "ultra",
+  enterprise: "ultra",
+};
+
+export const planTierOf = (planType: string | null | undefined): PlanTier => {
+  const normalized = normalizeTagValue(planType);
+  if (!normalized || normalized === "unknown") return "free";
+  return PLAN_TIER_BY_KEY[normalized] ?? "entry";
+};
+
 /** Short membership chip copy (PRO / PLUS / PRO 20X), distinct from soft info tags. */
 export const formatPlanBadgeLabel = (planType: string | null | undefined): string => {
   const normalized = normalizeTagValue(planType);

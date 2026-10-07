@@ -2,7 +2,6 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import {
   useCallback,
-  useEffect,
   useId,
   useRef,
   useState,
@@ -10,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { X } from "lucide-react";
+import { useScrollFade } from "../hooks/useScrollFade";
 import { DialogIcon, type DialogTone } from "./DialogIcon";
 import { overlayBackdropMotion, overlayPanelMotion, useOverlayPresence } from "./overlayMotion";
 import {
@@ -36,39 +36,13 @@ const SIZE_CLASS: Record<ModalSize, string> = {
   "2xl": "max-w-6xl",
 };
 
-/** 内容滚动到的位置：头部下方 / 尾部上方的分隔线只在「有内容被挡住」时出现。 */
-function useScrollEdges(enabled: boolean) {
-  const [edges, setEdges] = useState({ top: false, bottom: false });
-  const nodeRef = useRef<HTMLDivElement | null>(null);
-  const measure = useCallback(() => {
-    const node = nodeRef.current;
-    if (!node) return;
-    const top = node.scrollTop > 1;
-    const bottom = node.scrollTop + node.clientHeight < node.scrollHeight - 1;
-    setEdges((previous) =>
-      previous.top === top && previous.bottom === bottom ? previous : { top, bottom },
-    );
-  }, []);
-  useEffect(() => {
-    const node = nodeRef.current;
-    if (!enabled || !node) return;
-    measure();
-    if (typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(measure);
-    observer.observe(node);
-    for (const child of Array.from(node.children)) observer.observe(child);
-    return () => observer.disconnect();
-  }, [enabled, measure]);
-  return { nodeRef, edges, onScroll: measure };
-}
-
 export function Modal({
   open,
   title,
   titleAccessory,
   description,
   icon,
-  tone = "neutral",
+  tone = "auto",
   size,
   footer,
   footerStart,
@@ -181,7 +155,8 @@ export function Modal({
     initialFocus,
   });
 
-  const { nodeRef: bodyRef, edges, onScroll } = useScrollEdges(mounted);
+  // 内容溢出时上下渐隐，代替以前滚动后浮出的头尾分隔线：没有硬边，也看得出「还能往下滚」。
+  const fade = useScrollFade<HTMLDivElement>({ enabled: mounted });
 
   if (!mounted) return null;
 
@@ -250,13 +225,8 @@ export function Modal({
             </button>
           ) : null
         ) : (
-          // 头部、尾部默认不画分隔线：留白已经把三段分开；只有内容滚动、被头尾挡住时才浮出一条细线。
-          <div
-            className={[
-              "flex shrink-0 items-start justify-between gap-3 border-b pt-5 pr-4 pb-1 pl-6 transition-colors duration-200",
-              edges.top ? "border-line" : "border-transparent",
-            ].join(" ")}
-          >
+          // 头部、尾部不画分隔线：留白把三段分开，内容滚动时由正文区的上下渐隐过渡。
+          <div className="flex shrink-0 items-start justify-between gap-3 pt-5 pr-4 pb-1 pl-6">
             <div className="flex min-w-0 flex-1 items-start gap-3.5">
               {snapshot.icon ? <DialogIcon tone={tone}>{snapshot.icon}</DialogIcon> : null}
               <div className={["min-w-0", snapshot.icon ? "pt-px" : "pt-1"].join(" ")}>
@@ -297,8 +267,9 @@ export function Modal({
         )}
 
         <div
-          ref={bodyRef}
-          onScroll={onScroll}
+          ref={fade.ref}
+          onScroll={fade.onScroll}
+          style={fade.style}
           data-testid={bodyTestId}
           className={[
             "min-h-0",
@@ -307,6 +278,7 @@ export function Modal({
             "overscroll-contain px-6",
             hideHeader ? "pt-6" : "pt-4",
             snapshot.footer ? "pb-2" : "pb-6",
+            fade.className,
             bodyClassName ?? "",
           ].join(" ")}
         >
@@ -316,9 +288,8 @@ export function Modal({
         {snapshot.footer ? (
           <div
             className={[
-              "flex shrink-0 flex-wrap items-center gap-x-4 gap-y-3 border-t px-6 pt-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] transition-colors duration-200 sm:pb-6",
+              "flex shrink-0 flex-wrap items-center gap-x-4 gap-y-3 px-6 pt-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:pb-6",
               snapshot.footerStart ? "justify-between" : "justify-end",
-              edges.bottom ? "border-line" : "border-transparent",
             ].join(" ")}
           >
             {snapshot.footerStart ? (

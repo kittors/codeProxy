@@ -1,5 +1,6 @@
 import { AlertTriangle, CheckCircle2, Info, OctagonAlert } from "lucide-react";
 import type { ReactNode } from "react";
+import { HUE_GLYPH, hueForIcon } from "../theme/hues";
 import { cn } from "../utils/selectStyles";
 
 export type CalloutTone = "neutral" | "info" | "success" | "warning" | "danger";
@@ -49,6 +50,11 @@ export function Callout({
   role?: "alert" | "status";
 }) {
   const styles = TONE_CLASS[tone];
+  const resolvedIcon = icon === false ? null : (icon ?? DEFAULT_ICON[tone]);
+  // 中性提示条的底色保持灰，图标按全站的「图标 → 色相」上色（锁是紫、信息是天蓝……），
+  // 不再是一个灰图标压在灰底上。语义色调的图标颜色不变。
+  const neutralHue = tone === "neutral" ? hueForIcon(resolvedIcon) : null;
+  const iconClass = neutralHue ? HUE_GLYPH[neutralHue] : styles.icon;
   return (
     <div
       role={role}
@@ -56,12 +62,12 @@ export function Callout({
       data-tone={tone}
       className={cn("flex items-start gap-2.5 rounded-2xl px-3.5 py-3 text-sm", styles.box, className)}
     >
-      {icon === false ? null : (
+      {resolvedIcon === null ? null : (
         <span
           aria-hidden="true"
-          className={cn("mt-0.5 shrink-0 [&_svg.lucide]:size-[16px]", styles.icon)}
+          className={cn("mt-0.5 shrink-0 [&_svg.lucide]:size-[16px]", iconClass)}
         >
-          {icon ?? DEFAULT_ICON[tone]}
+          {resolvedIcon}
         </span>
       )}
       <div className="min-w-0 flex-1 leading-relaxed">

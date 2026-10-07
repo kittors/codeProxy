@@ -2,7 +2,18 @@ import { motion, useReducedMotion } from "framer-motion";
 import { Check } from "lucide-react";
 import { useId, useRef, type KeyboardEvent, type ReactNode } from "react";
 import { useOptionalFormField } from "../primitives/Form";
+import { HUE_SOLID, HUE_TILE, hueForIcon } from "../theme/hues";
 import { cn } from "../utils/selectStyles";
+
+/**
+ * 选项图标：按图标的色相上色（同一个图标在全站同一种颜色）。选中时换成同色相的实色渐变块、
+ * 白色图标，比以前的黑块更能看出「选的是哪一类」；厂商 logo 等非 lucide 图标保持中性底。
+ */
+function choiceIconClass(icon: ReactNode, selected: boolean): string {
+  const hue = hueForIcon(icon);
+  if (!hue) return selected ? "border-line bg-surface shadow-xs" : "border-line bg-subtle text-ink-2";
+  return selected ? cn("border-transparent shadow-xs", HUE_SOLID[hue]) : HUE_TILE[hue];
+}
 
 export interface ChoiceCardOption<T extends string = string> {
   value: T;
@@ -112,9 +123,7 @@ export function ChoiceCards<T extends string>({
                 aria-hidden="true"
                 className={cn(
                   "relative grid h-8 w-8 shrink-0 place-items-center rounded-lg border transition-colors [&_svg.lucide]:size-[16px]",
-                  selected
-                    ? "border-transparent bg-accent text-accent-fg"
-                    : "border-line bg-subtle text-ink-2",
+                  choiceIconClass(option.icon, selected),
                 )}
               >
                 {option.icon}

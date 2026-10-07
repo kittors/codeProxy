@@ -1,4 +1,5 @@
 import { useId, type ReactNode } from "react";
+import { DialogIcon, type DialogTone } from "../overlays/DialogIcon";
 import { cn } from "../utils/selectStyles";
 
 /**
@@ -12,6 +13,7 @@ export function FormSection({
   title,
   description,
   icon,
+  tone = "auto",
   actions,
   children,
   className,
@@ -19,8 +21,10 @@ export function FormSection({
 }: {
   title: ReactNode;
   description?: ReactNode;
-  /** 标题前的小图标（16px 线性图标），帮助扫读。 */
+  /** 标题前的小图标块（按图标自动取色相，见 theme/hues），帮助扫读。 */
   icon?: ReactNode;
+  /** 图标块色调，默认按图标自动取色。 */
+  tone?: DialogTone;
   /** 标题行右侧的操作（例如「全部展开」「添加一条」）。 */
   actions?: ReactNode;
   children: ReactNode;
@@ -39,12 +43,9 @@ export function FormSection({
     >
       <header className="mb-4 flex items-start gap-2.5">
         {icon ? (
-          <span
-            aria-hidden="true"
-            className="mt-0.5 shrink-0 text-ink-3 [&_svg.lucide]:size-[16px]"
-          >
+          <DialogIcon size="xs" tone={tone} className="-mt-px">
             {icon}
-          </span>
+          </DialogIcon>
         ) : null}
         <div className="min-w-0 flex-1">
           <h3 id={titleId} className="text-sm font-semibold text-ink">

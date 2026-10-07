@@ -11,7 +11,7 @@ type ConfirmVariant = "danger" | "warning" | "primary";
 const TONE: Record<ConfirmVariant, DialogTone> = {
   danger: "danger",
   warning: "warning",
-  primary: "neutral",
+  primary: "auto",
 };
 
 const DEFAULT_ICON: Record<ConfirmVariant, ReactNode> = {
