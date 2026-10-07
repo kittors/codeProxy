@@ -196,3 +196,7 @@ export { Step, Steps } from "./forms/Steps";
 export type { StepState } from "./forms/Steps";
 export { ResultPanel } from "./forms/ResultPanel";
 export type { ResultTone } from "./forms/ResultPanel";
+export { SegmentedControl } from "./forms/SegmentedControl";
+export type { SegmentedOption } from "./forms/SegmentedControl";
+export { isValidHost, isValidPort, rules, runRules, useFormValidation } from "./forms/validation";
+export type { Rule, ValidationIssue, ValidationSchema } from "./forms/validation";

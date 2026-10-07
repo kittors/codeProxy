@@ -31,8 +31,7 @@ import { ToggleSwitch } from "@code-proxy/ui";
 import { CodexImageGenerationBridgePanel } from "./CodexImageGenerationBridgePanel";
 import { buildDetailTrendChartOption } from "./detailTrendChartOption";
 import { EChart, useTheme } from "@code-proxy/ui";
-import { ProxyPoolSelect } from "@features/proxy-pool";
-import { useProxyPoolChecks } from "@features/proxy-pool";
+import { ProxyPoolSelect, ProxyUrlInput, useProxyPoolChecks } from "@features/proxy-pool";
 import { ModerationProfileSelect } from "@features/content-moderation";
 import { useModerationPermissions } from "@app/providers/useModerationPermissions";
 import {
@@ -1758,25 +1757,15 @@ export function AuthFileDetailModal({
                           />
                         </div>
 
-                        <div className="grid gap-2">
-                          <p className="text-xs font-semibold text-slate-700 dark:text-white/75">
-                            {t("auth_files.proxy_url_label")}
-                          </p>
-                          <TextInput
-                            value={prefixProxyEditor.proxyUrl}
-                            onChange={(e) => {
-                              const value = e.currentTarget.value;
-                              setPrefixProxyEditor((prev) => ({
-                                ...prev,
-                                proxyUrl: value,
-                              }));
-                            }}
-                            placeholder={t("auth_files.proxy_url_placeholder")}
-                          />
-                          <p className="text-xs text-slate-500 dark:text-white/55">
-                            {t("auth_files.leave_empty_proxy")}
-                          </p>
-                        </div>
+                        <ProxyUrlInput
+                          collapsible
+                          label={t("auth_files.proxy_url_title")}
+                          description={t("auth_files.proxy_url_fallback_hint")}
+                          value={prefixProxyEditor.proxyUrl}
+                          onChange={(proxyUrl) =>
+                            setPrefixProxyEditor((prev) => ({ ...prev, proxyUrl }))
+                          }
+                        />
                         <div className="grid gap-2">
                           <p className="text-xs font-semibold text-slate-700 dark:text-white/75">
                             {t("auth_files.concurrency_limit_label")}

@@ -4,7 +4,7 @@ import { TextInput } from "@code-proxy/ui";
 import { SearchableSelect } from "@code-proxy/ui";
 import { ToggleSwitch } from "@code-proxy/ui";
 import type { ProxyPoolEntry } from "@code-proxy/api-client/endpoints/proxies";
-import { ProxyPoolSelect } from "@features/proxy-pool";
+import { ProxyPoolSelect, ProxyUrlInput } from "@features/proxy-pool";
 import { ModerationProfileSelect } from "@features/content-moderation";
 import { useModerationPermissions } from "@app/providers/useModerationPermissions";
 import { KeyValueInputList } from "../KeyValueInputList";
@@ -291,19 +291,13 @@ export function ProviderKeyRequestTab({
               ariaLabel={t("providers.proxy_pool_label")}
             />
           </div>
-          <div className="space-y-2">
-            <p className="text-xs font-semibold text-slate-700 dark:text-white/75">
-              {t("providers.proxy_url")}
-            </p>
-            <TextInput
-              value={keyDraft.proxyUrl}
-              onChange={(e) => {
-                const val = e.currentTarget.value;
-                setKeyDraft((prev) => ({ ...prev, proxyUrl: val }));
-              }}
-              placeholder={t("providers.proxy_url_placeholder")}
-            />
-          </div>
+          <ProxyUrlInput
+            collapsible
+            label={t("providers.proxy_url")}
+            description={t("providers.proxy_url_fallback_hint")}
+            value={keyDraft.proxyUrl}
+            onChange={(proxyUrl) => setKeyDraft((prev) => ({ ...prev, proxyUrl }))}
+          />
         </div>
         <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
           {isOpenCodeGo

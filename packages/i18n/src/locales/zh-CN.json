@@ -106,7 +106,8 @@
     "secret_once_warning": "请立即复制，关闭后将无法再次查看。",
     "secret_value": "密钥",
     "secret_saved_close": "我已保存",
-    "copy_all": "复制全部"
+    "copy_all": "复制全部",
+    "retry": "重试"
   },
   "title": {
     "main": "CliRelay 管理后台",
@@ -1062,7 +1063,19 @@
     "sort_label": "账号排序",
     "sort_by_name": "按名称",
     "sort_quota_asc": "剩余额度少的在前",
-    "sort_quota_desc": "剩余额度多的在前"
+    "sort_quota_desc": "剩余额度多的在前",
+    "import_empty_desc": "这个渠道没有返回任何模型，确认凭证可用后再试。",
+    "import_select_visible": "全选当前结果",
+    "import_clear_selection": "清空已选",
+    "import_no_match": "没有匹配「{{query}}」的模型",
+    "tags_modal_desc": "选择 {{name}} 在列表和卡片里显示哪些标签。",
+    "tags_preview": "显示为",
+    "tags_preview_empty": "不显示任何标签",
+    "no_custom_tags": "还没有自定义标签，输入后按回车添加。",
+    "display_tags_desc": "勾选的标签会显示在列表和卡片上；默认标签来自账号类型与套餐。",
+    "proxy_url_title": "代理地址",
+    "proxy_url_fallback_hint": "没有绑定代理池时使用；绑定了代理池则作为它的回退。留空表示移除。",
+    "custom_tags_section": "我的标签"
   },
   "antigravity_quota": {
     "title": "Antigravity 额度",
@@ -1099,7 +1112,33 @@
     "warmup_batch_success": "已将 {{count}} 个账号推入错峰预热队列",
     "warmup_batch_failed": "批量预热失败：{{message}}",
     "warmup_policy_saved": "预热策略保存成功",
-    "warmup_policy_save_failed": "保存预热策略失败：{{message}}"
+    "warmup_policy_save_failed": "保存预热策略失败：{{message}}",
+    "warmup_load_failed_title": "没能读取当前的预热策略",
+    "warmup_load_failed_desc": "为避免用默认值覆盖服务器上的策略，读取成功前不能保存。（{{message}}）",
+    "warmup_targets_desc": "哪些类型的账号参与自动预热。",
+    "warmup_target_antigravity_desc": "Gemini 与第三方模型额度（5 小时窗口）。",
+    "warmup_target_codex_desc": "Spark 与 5 小时额度窗口。",
+    "warmup_rhythm_title": "节奏",
+    "warmup_rhythm_desc": "多久预热一次、同一批账号在多长时间内错开，避免整齐的请求波形。",
+    "warmup_interval_label": "循环间隔",
+    "warmup_interval_hint": "每个账号每隔多久预热一次，1–72 小时。",
+    "warmup_stagger_label": "错峰打散",
+    "warmup_stagger_hint": "同一轮的账号在这段时间里随机错开，1–120 分钟。",
+    "unit_hours": "小时",
+    "unit_minutes": "分钟",
+    "warmup_daily_window_desc": "只在每天这个时间段里预热，夜间自动静默。",
+    "warmup_schedule_title": "生效时间",
+    "warmup_schedule_desc": "按你电脑的本地时间填写。",
+    "warmup_start_label": "开始时间",
+    "warmup_start_hint": "留空表示保存后立即生效。",
+    "warmup_stop_label": "截止时间",
+    "warmup_stop_hint": "到点后自动停止预热。",
+    "warmup_exclude_title": "排除账号",
+    "warmup_exclude_desc": "勾选的账号不参与自动预热。",
+    "warmup_exclude_count": "已排除 {{excluded}} / {{total}}",
+    "warmup_exclude_search": "搜索账号",
+    "warmup_excluded": "已排除",
+    "warmup_included": "自动预热"
   },
   "claude_quota": {
     "title": "Claude 额度",
@@ -3040,7 +3079,8 @@
     "credential_sort_label": "凭证排序",
     "credential_sort_config": "默认顺序",
     "credential_sort_remaining_asc": "剩余额度少的在前",
-    "credential_sort_remaining_desc": "剩余额度多的在前"
+    "credential_sort_remaining_desc": "剩余额度多的在前",
+    "proxy_url_fallback_hint": "没有绑定代理池时使用；绑定了代理池则作为它的回退。"
   },
   "request_logs": {
     "title": "请求日志",
@@ -6137,7 +6177,8 @@
       "non_negative": "请输入不小于 0 的整数",
       "min": "不能小于 {{min}}",
       "range": "请输入 {{min}}–{{max}} 之间的整数",
-      "summary": "有 {{count}} 项设置需要修改，已在对应位置标出。"
+      "summary": "有 {{count}} 项设置需要修改，已在对应位置标出。",
+      "proxy_url": "代理地址不完整或协议不受支持"
     },
     "payload": {
       "default": {
@@ -6154,5 +6195,43 @@
       },
       "hint": "模型名支持通配符（如 gemini-*）；参数路径用点号分隔，如 generationConfig.thinkingConfig.thinkingBudget。"
     }
+  },
+  "validation": {
+    "required": "这一项必填",
+    "format": "格式不正确",
+    "integer": "请输入整数",
+    "non_negative": "请输入不小于 0 的整数",
+    "min": "不能小于 {{min}}",
+    "max": "不能大于 {{max}}",
+    "range": "请输入 {{min}}–{{max}} 之间的整数",
+    "max_length": "最多 {{max}} 个字符",
+    "email": "邮箱格式不正确",
+    "url": "请输入完整的网址，例如 https://example.com",
+    "url_protocol": "只支持 {{protocols}}",
+    "host": "主机格式不正确：填域名、IPv4 或 IPv6 地址",
+    "port": "端口应为 1–65535 之间的数字",
+    "cidr": "请输入 IP 或 CIDR，例如 203.0.113.0/24",
+    "json": "不是合法的 JSON",
+    "proxy_port_required": "SOCKS5 代理必须填写端口",
+    "proxy_username_required": "填了密码时也要填写用户名",
+    "summary": "还有 {{count}} 项需要修改"
+  },
+  "proxy_input": {
+    "scheme": "代理协议",
+    "host": "主机",
+    "port": "端口",
+    "username": "用户名",
+    "password": "密码",
+    "paste_open": "粘贴完整地址",
+    "paste_cancel": "收起",
+    "paste_label": "粘贴代理地址",
+    "paste_hint": "粘贴或输入整串地址后按回车，会自动拆成下面各项。",
+    "paste_invalid": "没能识别这个地址，只支持 http、https、socks5。",
+    "preview": "将保存为",
+    "empty_means_direct": "留空表示不使用代理。",
+    "unrecognized_title": "当前地址无法识别",
+    "unrecognized_desc": "协议不是 http / https / socks5，或格式不完整。在下方重新填写后会替换它。",
+    "add": "填写代理地址",
+    "remove": "移除"
   }
 }

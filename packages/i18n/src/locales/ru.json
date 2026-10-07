@@ -82,7 +82,8 @@
     "secret_once_warning": "Скопируйте сейчас — после закрытия значение больше не будет показано.",
     "secret_value": "Секрет",
     "secret_saved_close": "Я сохранил",
-    "copy_all": "Копировать всё"
+    "copy_all": "Копировать всё",
+    "retry": "Повторить"
   },
   "ccswitch": {
     "import_to_ccswitch": "Импорт в CC Switch",
@@ -902,7 +903,19 @@
     "sort_label": "Сортировка аккаунтов",
     "sort_by_name": "По имени",
     "sort_quota_asc": "Сначала с наименьшим остатком",
-    "sort_quota_desc": "Сначала с наибольшим остатком"
+    "sort_quota_desc": "Сначала с наибольшим остатком",
+    "import_empty_desc": "Канал не вернул моделей. Проверьте учётные данные и повторите.",
+    "import_select_visible": "Выбрать все результаты",
+    "import_clear_selection": "Снять выбор",
+    "import_no_match": "Нет моделей по запросу «{{query}}»",
+    "tags_modal_desc": "Какие теги {{name}} показывать в списках и карточках.",
+    "tags_preview": "Отображение",
+    "tags_preview_empty": "Теги не показываются",
+    "no_custom_tags": "Пока нет своих тегов — введите и нажмите Enter.",
+    "display_tags_desc": "Отмеченные теги видны в списках и карточках; теги по умолчанию зависят от типа и тарифа.",
+    "proxy_url_title": "Адрес прокси",
+    "proxy_url_fallback_hint": "Используется без привязки к пулу прокси; иначе — как запасной. Пусто — удалить.",
+    "custom_tags_section": "Свои теги"
   },
   "antigravity_quota": {
     "title": "Квота Antigravity",
@@ -918,7 +931,33 @@
     "window_weekly": "Неделя",
     "window_5h": "5 часов",
     "group_hint": "Модели этой группы делят один недельный и один пятичасовой лимит. Квота расходуется пропорционально стоимости токенов, поэтому короткие задачи и более экономичные модели растягивают её дольше.",
-    "measured_from": "Показатель модели {{model}}"
+    "measured_from": "Показатель модели {{model}}",
+    "warmup_load_failed_title": "Не удалось загрузить текущую политику прогрева",
+    "warmup_load_failed_desc": "Сохранение недоступно до загрузки, чтобы не перезаписать политику значениями по умолчанию. ({{message}})",
+    "warmup_targets_desc": "Какие аккаунты участвуют в автопрогреве.",
+    "warmup_target_antigravity_desc": "Квота Gemini и сторонних моделей (окно 5 часов).",
+    "warmup_target_codex_desc": "Spark и окно квоты 5 часов.",
+    "warmup_rhythm_title": "Ритм",
+    "warmup_rhythm_desc": "Как часто прогревать и насколько разносить один раунд во времени.",
+    "warmup_interval_label": "Интервал",
+    "warmup_interval_hint": "Как часто прогревается каждый аккаунт, 1–72 часа.",
+    "warmup_stagger_label": "Окно разброса",
+    "warmup_stagger_hint": "Аккаунты одного раунда случайно разносятся в этом окне, 1–120 минут.",
+    "unit_hours": "ч",
+    "unit_minutes": "мин",
+    "warmup_daily_window_desc": "Прогрев только в это время суток; ночью тихо.",
+    "warmup_schedule_title": "Период действия",
+    "warmup_schedule_desc": "По местному времени вашего компьютера.",
+    "warmup_start_label": "Начало",
+    "warmup_start_hint": "Пусто — начать сразу после сохранения.",
+    "warmup_stop_label": "Окончание",
+    "warmup_stop_hint": "В это время прогрев остановится.",
+    "warmup_exclude_title": "Исключённые аккаунты",
+    "warmup_exclude_desc": "Отмеченные аккаунты не прогреваются.",
+    "warmup_exclude_count": "Исключено {{excluded}} / {{total}}",
+    "warmup_exclude_search": "Поиск аккаунтов",
+    "warmup_excluded": "Исключён",
+    "warmup_included": "Прогревается"
   },
   "claude_quota": {
     "title": "Квота Claude",
@@ -2458,7 +2497,8 @@
     "credential_sort_label": "Сортировка учётных данных",
     "credential_sort_config": "Порядок из конфигурации",
     "credential_sort_remaining_asc": "Сначала с наименьшим остатком",
-    "credential_sort_remaining_desc": "Сначала с наибольшим остатком"
+    "credential_sort_remaining_desc": "Сначала с наибольшим остатком",
+    "proxy_url_fallback_hint": "Используется без привязки к пулу прокси; иначе — как запасной."
   },
   "log_content": {
     "detail_label_request": "Request",
@@ -3990,7 +4030,8 @@
       "summary_one": "{{count}} настройку нужно исправить — она отмечена.",
       "summary_few": "{{count}} настройки нужно исправить — они отмечены.",
       "summary_many": "{{count}} настроек нужно исправить — они отмечены.",
-      "summary_other": "{{count}} настроек нужно исправить — они отмечены."
+      "summary_other": "{{count}} настроек нужно исправить — они отмечены.",
+      "proxy_url": "Адрес прокси неполный или протокол не поддерживается"
     },
     "payload": {
       "default": {
@@ -4007,5 +4048,46 @@
       },
       "hint": "Имена моделей поддерживают шаблоны (например, gemini-*); пути параметров разделяются точкой."
     }
+  },
+  "validation": {
+    "required": "Обязательное поле",
+    "format": "Неверный формат",
+    "integer": "Введите целое число",
+    "non_negative": "Введите целое число не меньше 0",
+    "min": "Не меньше {{min}}",
+    "max": "Не больше {{max}}",
+    "range": "Целое число от {{min}} до {{max}}",
+    "max_length": "Не более {{max}} символов",
+    "email": "Неверный адрес почты",
+    "url": "Введите полный адрес, например https://example.com",
+    "url_protocol": "Поддерживается только {{protocols}}",
+    "host": "Укажите домен, IPv4 или IPv6",
+    "port": "Порт — число от 1 до 65535",
+    "cidr": "Укажите IP или CIDR, например 203.0.113.0/24",
+    "json": "Некорректный JSON",
+    "proxy_port_required": "Для SOCKS5 нужен порт",
+    "proxy_username_required": "С паролем нужно указать и имя пользователя",
+    "summary_one": "{{count}} поле требует внимания",
+    "summary_few": "{{count}} поля требуют внимания",
+    "summary_many": "{{count}} полей требуют внимания",
+    "summary_other": "{{count}} полей требуют внимания"
+  },
+  "proxy_input": {
+    "scheme": "Протокол прокси",
+    "host": "Хост",
+    "port": "Порт",
+    "username": "Имя пользователя",
+    "password": "Пароль",
+    "paste_open": "Вставить адрес",
+    "paste_cancel": "Скрыть",
+    "paste_label": "Вставьте адрес прокси",
+    "paste_hint": "Вставьте или введите адрес целиком и нажмите Enter — он разложится по полям ниже.",
+    "paste_invalid": "Не удалось распознать адрес. Поддерживаются http, https и socks5.",
+    "preview": "Будет сохранён как",
+    "empty_means_direct": "Пусто — прямое подключение.",
+    "unrecognized_title": "Текущий адрес не распознан",
+    "unrecognized_desc": "Протокол не http / https / socks5 или адрес неполный. Заполните поля ниже, чтобы заменить его.",
+    "add": "Указать адрес прокси",
+    "remove": "Удалить"
   }
 }

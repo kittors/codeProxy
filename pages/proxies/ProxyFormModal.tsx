@@ -1,9 +1,19 @@
 import { Network } from "lucide-react";
-import type { Dispatch, SetStateAction } from "react";
+import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
 import type { ProxyPoolEntry } from "@code-proxy/api-client/endpoints/proxies";
-import { Button, FormField, Modal, SettingGroup, SettingRow, TextInput, ToggleSwitch } from "@code-proxy/ui";
-import { proxyEndpoint, proxyProtocol } from "@features/proxy-pool/proxy-utils";
+import {
+  Button,
+  FormField,
+  Modal,
+  rules,
+  SettingGroup,
+  SettingRow,
+  TextInput,
+  ToggleSwitch,
+  useFormValidation,
+} from "@code-proxy/ui";
+import { ProxyUrlInput } from "@features/proxy-pool";
 
 const FORM_ID = "proxy-form";
 
@@ -12,9 +22,9 @@ export type ProxyFormField = "name" | "url";
 /**
  * 添加 / 编辑代理。
  *
- * 地址框下面实时画出「协议 · 主机:端口」，账号密码不回显——用户粘贴完一长串 URL，
- * 一眼就能确认面板认出来的是不是自己想要的那个出口。校验错误就地显示在对应输入框下，
- * 不再只弹一条 toast 让人自己找是哪一项。回车即保存。
+ * 地址用结构化输入（协议、主机、端口、可选账号密码，也能粘贴整串地址自动拆开），
+ * 逐项就地校验；名称失焦后校验。提交时有错就把焦点送到第一处，回车即保存。
+ * `error` 是页面保存逻辑兜底校验的结果（理论上走不到，保留以防绕过）。
  */
 export function ProxyFormModal({
   open,
@@ -31,7 +41,6 @@ export function ProxyFormModal({
   editing: boolean;
   draft: ProxyPoolEntry;
   setDraft: Dispatch<SetStateAction<ProxyPoolEntry>>;
-  /** 校验没通过的字段（由页面的保存逻辑给出）。 */
   error: ProxyFormField | null;
   onClearError: () => void;
   saving: boolean;
@@ -39,9 +48,19 @@ export function ProxyFormModal({
   onClose: () => void;
 }) {
   const { t } = useTranslation();
-  const url = draft.url.trim();
-  const preview =
-    url && !error ? { protocol: proxyProtocol(url), endpoint: proxyEndpoint({ ...draft, maskedUrl: "" }) } : null;
+  const formRef = useRef<HTMLFormElement | null>(null);
+  const [urlValid, setUrlValid] = useState(true);
+  const [submitted, setSubmitted] = useState(false);
+  const validation = useFormValidation(draft, {
+    name: [rules.required(), rules.maxLength(64)],
+  });
+  const { reset } = validation;
+
+  useEffect(() => {
+    if (!open) return;
+    reset();
+    setSubmitted(false);
+  }, [open, reset]);
 
   const update = (patch: Partial<ProxyPoolEntry>) => {
     setDraft((previous) => ({ ...previous, ...patch }));
@@ -49,6 +68,19 @@ export function ProxyFormModal({
       onClearError();
     }
   };
+
+  const submit = () => {
+    setSubmitted(true);
+    const fieldsValid = validation.validate();
+    if (!fieldsValid || !urlValid) {
+      validation.focusFirstInvalid(formRef.current);
+      return;
+    }
+    onSubmit();
+  };
+
+  const nameError =
+    validation.error("name") ?? (error === "name" ? t("proxies.validation_name") : undefined);
 
   return (
     <Modal
@@ -70,52 +102,38 @@ export function ProxyFormModal({
       }
     >
       <form
+        ref={formRef}
         id={FORM_ID}
-        className="space-y-4"
+        className="space-y-5"
         noValidate
         onSubmit={(event) => {
           event.preventDefault();
-          onSubmit();
+          submit();
         }}
       >
         <FormField
           label={t("proxies.name")}
           required
           description={t("proxies.name_hint")}
-          error={error === "name" ? t("proxies.validation_name") : undefined}
+          error={nameError}
         >
           <TextInput
             value={draft.name}
             placeholder={t("proxies.name_placeholder")}
+            {...validation.bind("name")}
             onChange={(event) => update({ name: event.target.value })}
           />
         </FormField>
-        <FormField
+
+        <ProxyUrlInput
           label={t("proxies.url")}
           required
-          description={
-            preview ? (
-              <span className="inline-flex items-center gap-1.5">
-                <span className="rounded-md bg-subtle px-1.5 py-px font-mono text-2xs font-medium text-ink-2">
-                  {preview.protocol}
-                </span>
-                <span className="font-mono">{preview.endpoint}</span>
-              </span>
-            ) : (
-              t("proxies.url_hint")
-            )
-          }
-          error={error === "url" ? t("proxies.validation_url") : undefined}
-        >
-          <TextInput
-            value={draft.url}
-            placeholder="socks5://user:pass@127.0.0.1:1080"
-            spellCheck={false}
-            autoComplete="off"
-            className="font-mono"
-            onChange={(event) => update({ url: event.target.value })}
-          />
-        </FormField>
+          value={draft.url}
+          onChange={(url) => update({ url })}
+          onValidityChange={setUrlValid}
+          showErrors={submitted || error === "url"}
+        />
+
         <FormField label={t("proxies.description_label")} optional reserveMeta={false}>
           <TextInput
             value={draft.description ?? ""}

@@ -5,7 +5,7 @@ import { TextInput } from "@code-proxy/ui";
 import { ToggleSwitch } from "@code-proxy/ui";
 import { KeyValueInputList } from "../KeyValueInputList";
 import type { ProxyPoolEntry } from "@code-proxy/api-client/endpoints/proxies";
-import { ProxyPoolSelect } from "@features/proxy-pool";
+import { ProxyPoolSelect, ProxyUrlInput } from "@features/proxy-pool";
 import type { OpenAIDraft } from "../providers-helpers";
 import { ModerationProfileSelect } from "@features/content-moderation";
 import { useModerationPermissions } from "@app/providers/useModerationPermissions";
@@ -170,24 +170,20 @@ export function OpenAIKeyEntriesEditor({
                   ariaLabel={`${t("providers.proxy_pool_label")} ${idx + 1}`}
                 />
               </div>
-              <div className="space-y-2">
-                <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                  {t("providers.proxy_url_optional")}
-                </p>
-                <TextInput
-                  value={entry.proxyUrl}
-                  onChange={(e) => {
-                    const value = e.currentTarget.value;
-                    setOpenaiDraft((prev) => ({
-                      ...prev,
-                      apiKeyEntries: prev.apiKeyEntries.map((it, i) =>
-                        i === idx ? { ...it, proxyUrl: value } : it,
-                      ),
-                    }));
-                  }}
-                  placeholder={t("providers.proxy_url_placeholder")}
-                />
-              </div>
+              <ProxyUrlInput
+                collapsible
+                label={t("providers.proxy_url")}
+                description={t("providers.proxy_url_fallback_hint")}
+                value={entry.proxyUrl}
+                onChange={(value) => {
+                  setOpenaiDraft((prev) => ({
+                    ...prev,
+                    apiKeyEntries: prev.apiKeyEntries.map((it, i) =>
+                      i === idx ? { ...it, proxyUrl: value } : it,
+                    ),
+                  }));
+                }}
+              />
             </div>
 
             <div className="mt-3">

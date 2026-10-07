@@ -1,6 +1,7 @@
 import { Eye, EyeOff } from "lucide-react";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { ProxyUrlInput } from "@features/proxy-pool";
 import type { VisualConfigValues } from "@features/visual-config-editor";
 import {
   Callout,
@@ -83,6 +84,15 @@ export function ConfigFieldRow({
           rows={5}
           spellCheck={false}
           className="font-mono text-xs leading-5"
+        />
+      );
+      break;
+    case "proxy":
+      control = (
+        <ProxyUrlInput
+          value={String(value)}
+          onChange={(url) => update(url)}
+          disabled={disabled}
         />
       );
       break;

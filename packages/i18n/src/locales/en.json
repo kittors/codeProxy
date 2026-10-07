@@ -104,7 +104,8 @@
     "secret_once_warning": "Copy it now — it won't be shown again after you close this.",
     "secret_value": "Secret",
     "secret_saved_close": "I've saved it",
-    "copy_all": "Copy all"
+    "copy_all": "Copy all",
+    "retry": "Retry"
   },
   "title": {
     "main": "CliRelay Admin Dashboard",
@@ -1054,7 +1055,19 @@
     "no_tags": "No tags",
     "hide_tag": "Hide {{tag}}",
     "restore_tag": "Restore {{tag}}",
-    "remove_custom_tag": "Remove {{tag}}"
+    "remove_custom_tag": "Remove {{tag}}",
+    "import_empty_desc": "This channel returned no models. Check that its credential works, then try again.",
+    "import_select_visible": "Select all results",
+    "import_clear_selection": "Clear selection",
+    "import_no_match": "No models match “{{query}}”",
+    "tags_modal_desc": "Choose which tags {{name}} shows in lists and cards.",
+    "tags_preview": "Shows as",
+    "tags_preview_empty": "No tags shown",
+    "no_custom_tags": "No custom tags yet — type one and press Enter.",
+    "display_tags_desc": "Checked tags appear in lists and cards; default tags come from the account type and plan.",
+    "proxy_url_title": "Proxy address",
+    "proxy_url_fallback_hint": "Used when no proxy-pool entry is bound; otherwise it's the fallback. Leave empty to remove it.",
+    "custom_tags_section": "Custom tags"
   },
   "antigravity_quota": {
     "title": "Antigravity Quota",
@@ -1091,7 +1104,33 @@
     "warmup_batch_success": "Enqueued {{count}} accounts into staggered warmup queue",
     "warmup_batch_failed": "Batch warmup failed: {{message}}",
     "warmup_policy_saved": "Warmup policy saved successfully",
-    "warmup_policy_save_failed": "Failed to save warmup policy: {{message}}"
+    "warmup_policy_save_failed": "Failed to save warmup policy: {{message}}",
+    "warmup_load_failed_title": "Couldn't load the current warmup policy",
+    "warmup_load_failed_desc": "Saving stays disabled until it loads, so the server's policy isn't overwritten with defaults. ({{message}})",
+    "warmup_targets_desc": "Which kinds of accounts take part in automatic warmup.",
+    "warmup_target_antigravity_desc": "Gemini and third-party model quota (5-hour window).",
+    "warmup_target_codex_desc": "Spark and the 5-hour quota window.",
+    "warmup_rhythm_title": "Rhythm",
+    "warmup_rhythm_desc": "How often to warm up, and how widely one round is spread so requests don't arrive in a neat wave.",
+    "warmup_interval_label": "Interval",
+    "warmup_interval_hint": "How often each account is warmed up, 1–72 hours.",
+    "warmup_stagger_label": "Stagger window",
+    "warmup_stagger_hint": "Accounts in one round are spread randomly across this window, 1–120 minutes.",
+    "unit_hours": "hours",
+    "unit_minutes": "min",
+    "warmup_daily_window_desc": "Only warm up during this time each day; quiet at night.",
+    "warmup_schedule_title": "Active period",
+    "warmup_schedule_desc": "In your computer's local time.",
+    "warmup_start_label": "Start",
+    "warmup_start_hint": "Leave empty to start as soon as you save.",
+    "warmup_stop_label": "Stop",
+    "warmup_stop_hint": "Warmup stops automatically at this time.",
+    "warmup_exclude_title": "Excluded accounts",
+    "warmup_exclude_desc": "Checked accounts are skipped by automatic warmup.",
+    "warmup_exclude_count": "{{excluded}} / {{total}} excluded",
+    "warmup_exclude_search": "Search accounts",
+    "warmup_excluded": "Excluded",
+    "warmup_included": "Warmed up"
   },
   "claude_quota": {
     "title": "Claude Quota",
@@ -4402,7 +4441,8 @@
     "credential_sort_label": "Sort credentials",
     "credential_sort_config": "Configured order",
     "credential_sort_remaining_asc": "Least quota left first",
-    "credential_sort_remaining_desc": "Most quota left first"
+    "credential_sort_remaining_desc": "Most quota left first",
+    "proxy_url_fallback_hint": "Used when no proxy-pool entry is bound; otherwise it's the fallback."
   },
   "logs_page": {
     "error_log_files": "Error Log Files",
@@ -6128,7 +6168,8 @@
       "min": "Must be at least {{min}}",
       "range": "Enter a whole number from {{min}} to {{max}}",
       "summary_one": "{{count}} setting needs fixing — it's marked in place.",
-      "summary_other": "{{count}} settings need fixing — they're marked in place."
+      "summary_other": "{{count}} settings need fixing — they're marked in place.",
+      "proxy_url": "The proxy address is incomplete or uses an unsupported protocol"
     },
     "payload": {
       "default": {
@@ -6145,5 +6186,44 @@
       },
       "hint": "Model names accept wildcards (e.g. gemini-*); parameter paths are dot-separated, e.g. generationConfig.thinkingConfig.thinkingBudget."
     }
+  },
+  "validation": {
+    "required": "Required",
+    "format": "Invalid format",
+    "integer": "Enter a whole number",
+    "non_negative": "Enter a whole number of 0 or more",
+    "min": "Must be at least {{min}}",
+    "max": "Must be at most {{max}}",
+    "range": "Enter a whole number from {{min}} to {{max}}",
+    "max_length": "At most {{max}} characters",
+    "email": "Enter a valid email address",
+    "url": "Enter a full address, e.g. https://example.com",
+    "url_protocol": "Only {{protocols}} is supported",
+    "host": "Enter a domain, IPv4 or IPv6 address",
+    "port": "Port must be a number from 1 to 65535",
+    "cidr": "Enter an IP or CIDR, e.g. 203.0.113.0/24",
+    "json": "Not valid JSON",
+    "proxy_port_required": "SOCKS5 proxies need a port",
+    "proxy_username_required": "A password needs a username too",
+    "summary_one": "{{count}} field needs attention",
+    "summary_other": "{{count}} fields need attention"
+  },
+  "proxy_input": {
+    "scheme": "Proxy protocol",
+    "host": "Host",
+    "port": "Port",
+    "username": "Username",
+    "password": "Password",
+    "paste_open": "Paste full address",
+    "paste_cancel": "Hide",
+    "paste_label": "Paste proxy address",
+    "paste_hint": "Paste or type the whole address and press Enter — it's split into the fields below.",
+    "paste_invalid": "Couldn't read that address. Only http, https and socks5 are supported.",
+    "preview": "Saved as",
+    "empty_means_direct": "Leave empty to connect directly.",
+    "unrecognized_title": "The current address can't be read",
+    "unrecognized_desc": "Its protocol isn't http / https / socks5, or it's incomplete. Filling the fields below replaces it.",
+    "add": "Add a proxy address",
+    "remove": "Remove"
   }
 }

@@ -1149,9 +1149,10 @@ describe("AuthFileDetailModal", () => {
     expect(grid.className).not.toContain("divide-y");
     expect(within(grid).getByPlaceholderText("e.g. team-a")).toHaveValue("team-a");
     expect(within(grid).getByLabelText("proxy_id (proxy pool)")).toBeInTheDocument();
-    expect(within(grid).getByPlaceholderText("e.g. http://127.0.0.1:7890")).toHaveValue(
-      "http://127.0.0.1:7890",
-    );
+    // 已有的代理地址拆成结构化的协议 / 主机 / 端口回填。
+    expect(within(grid).getByRole("radio", { name: "HTTP" })).toHaveAttribute("aria-checked", "true");
+    expect(within(grid).getByLabelText("Host")).toHaveValue("127.0.0.1");
+    expect(within(grid).getByLabelText("Port")).toHaveValue("7890");
     expect(within(grid).getByLabelText(/Subscription start/)).toBeInTheDocument();
     expect(screen.queryByTestId("auth-file-fields-preview")).not.toBeInTheDocument();
     expect(screen.queryByText(/"prefix"/)).not.toBeInTheDocument();

@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import type { VisualConfigValues } from "@features/visual-config-editor";
 import type { SettingControlWidth } from "@code-proxy/ui";
+import { parseProxyUrl, validateProxyParts } from "@features/proxy-pool";
 
 /**
  * 配置页的信息架构：分区与每一项设置的唯一来源。
@@ -82,7 +83,7 @@ export const CONFIG_SECTIONS: readonly ConfigSectionDef[] = [
 ];
 
 export type ConfigBadge = "restart" | "security" | "cost";
-export type ConfigFieldKind = "switch" | "text" | "number" | "choice" | "multiline";
+export type ConfigFieldKind = "switch" | "text" | "number" | "choice" | "multiline" | "proxy";
 
 export interface ConfigFieldDef {
   /** 稳定 id：用作 DOM id、搜索命中与 i18n 键 `config_ui.fields.<id>.*`。 */
@@ -310,10 +311,16 @@ export const CONFIG_FIELDS: readonly ConfigFieldDef[] = [
   ),
 
   // 网络与重试
-  text("proxy_url", "network", "proxy-url", (v) => v.proxyUrl, (_, proxyUrl) => ({ proxyUrl }), {
-    placeholder: "socks5://127.0.0.1:1080",
-    width: "lg",
-  }),
+  {
+    id: "proxy_url",
+    section: "network",
+    // 结构化代理输入（协议 / 主机 / 端口 / 账号密码），拼出的仍是同一个 URL 字符串。
+    kind: "proxy",
+    yamlKey: "proxy-url",
+    get: (v) => v.proxyUrl,
+    set: (_, next) => ({ proxyUrl: String(next) }),
+    width: "full",
+  },
   toggle("prefer_ipv4", "network", "prefer-ipv4", (v) => v.preferIPv4, (_, preferIPv4) => ({
     preferIPv4,
   })),
@@ -570,6 +577,13 @@ export type FieldError = { key: string; params?: Record<string, number> };
 
 /** 单项校验：返回错误文案键（`config_ui.errors.*`）与参数；没问题返回 null。 */
 export function validateField(field: ConfigFieldDef, values: VisualConfigValues): FieldError | null {
+  if (field.kind === "proxy") {
+    const raw = String(field.get(values)).trim();
+    if (!raw) return null;
+    const parsed = parseProxyUrl(raw);
+    if (!parsed?.scheme) return { key: "proxy_url" };
+    return Object.keys(validateProxyParts(parsed.parts, false)).length ? { key: "proxy_url" } : null;
+  }
   const rule = field.integer;
   if (!rule) return null;
   const raw = String(field.get(values)).trim();
