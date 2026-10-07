@@ -2325,7 +2325,7 @@
     "heatmap": {
       "title": "活跃时段",
       "note": "最近 {{days}} 天",
-      "peak": "最忙：{{span}}，平均每周 {{average}} 次请求",
+      "peak": "最忙：{{span}}，这一小时平均每周 {{average}} 次请求",
       "tooltip": "累计 {{total}} 次 · 平均每周 {{average}} 次 · 失败 {{failed}}",
       "aria": "最近 {{days}} 天按星期与小时统计的请求热力图",
       "less": "少",

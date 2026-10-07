@@ -2313,7 +2313,7 @@
     "heatmap": {
       "title": "Active hours",
       "note": "Last {{days}} days",
-      "peak": "Busiest: {{span}}, {{average}} requests per week on average",
+      "peak": "Busiest: {{span}}, averaging {{average}} requests in that hour each week",
       "tooltip": "{{total}} total · {{average}} per week · {{failed}} failed",
       "aria": "Requests by weekday and hour over the last {{days}} days",
       "less": "Less",

@@ -95,6 +95,9 @@ export function createSankeyOption(
           fontSize: 12,
           formatter: (params: { name: string }) => truncate(labelOf(params.name), 22),
         },
+        // 同一层相邻的小节点（零星的模型、「其他」）标签会叠在一起：按节点面积保留大的，
+        // 被藏起来的小节点悬停时提示框照样有名字。
+        labelLayout: { hideOverlap: true },
         lineStyle: { color: "gradient", opacity: isDark ? 0.32 : 0.24, curveness: 0.5 },
         levels: compact ? [{ depth: 1, label: { show: false } }] : undefined,
         itemStyle: { borderWidth: 0, borderRadius: 2 },

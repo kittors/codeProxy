@@ -13,6 +13,12 @@ export interface RankingColumn {
 }
 
 /**
+ * 名称列吃掉其余列剩下的宽度，名字按这个宽度截断。表格是自动布局，不加 max-w-0 时这一列的
+ * 最小宽度就是整段名字的宽度——线上渠道名是 OAuth 账号邮箱，半宽卡片里会把表格撑出横向滚动。
+ */
+const NAME_COLUMN = "w-full max-w-0";
+
+/**
  * 三张排行（模型、渠道、门户用户）共用的表格：语义化 table，第一列是可聚焦的按钮（键盘也能
  * 筛选），整行可点，已筛选的行高亮。默认显示前 10 行，可展开到后端给的全部（最多 50）。
  */
@@ -49,13 +55,14 @@ export function MonitorRankingTable({
         <table className={`w-full border-separate border-spacing-0 text-sm ${minWidth}`}>
           <thead>
             <tr>
-              {columns.map((column) => (
+              {columns.map((column, columnIndex) => (
                 <th
                   key={column.key}
                   scope="col"
                   className={[
                     "border-b border-line px-2.5 pb-2 text-xs font-medium whitespace-nowrap text-ink-3",
                     column.align === "right" ? "text-right" : "text-left",
+                    columnIndex === 0 ? NAME_COLUMN : "",
                     column.className,
                   ]
                     .filter(Boolean)
@@ -86,7 +93,7 @@ export function MonitorRankingTable({
                       className={[
                         "border-b border-line px-2.5 py-2.5 align-middle",
                         column.align === "right" ? "text-right tabular-nums" : "text-left",
-                        columnIndex === 0 ? "rounded-l-xl" : "",
+                        columnIndex === 0 ? `rounded-l-xl ${NAME_COLUMN}` : "whitespace-nowrap",
                         columnIndex === columns.length - 1 ? "rounded-r-xl" : "",
                         column.className,
                       ]
