@@ -3003,7 +3003,9 @@
     "config_claude_role_sonnet": "Sonnet default model",
     "config_claude_role_opus": "Opus default model",
     "config_claude_role_fable": "Fable default model",
-    "model_use_custom": "Use \"{{value}}\""
+    "model_use_custom": "Use \"{{value}}\"",
+    "config_delete_lead": "This only removes it from the preset list here.",
+    "config_delete_consequence": "Configs already imported into CC Switch keep working, but this preset can no longer generate import links."
   },
   "api_keys_page": {
     "title": "API Keys Management",
@@ -3519,7 +3521,9 @@
     "delete_lead": "This can't be undone.",
     "delete_consequence_keys": "Its API keys are disabled and unassigned, and can no longer be used.",
     "delete_confirm": "Delete account",
-    "usage_keys_summary": "All keys of this account"
+    "usage_keys_summary": "All keys of this account",
+    "unnamed": "Unnamed user",
+    "no_keys_for_usage": "This user has no API keys yet, so there is no usage to show"
   },
   "apikey_lookup": {
     "available_models": "Model Plaza",

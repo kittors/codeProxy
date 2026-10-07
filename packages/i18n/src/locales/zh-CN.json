@@ -3324,7 +3324,9 @@
     "config_claude_role_sonnet": "Sonnet 默认模型",
     "config_claude_role_opus": "Opus 默认模型",
     "config_claude_role_fable": "Fable 默认模型",
-    "model_use_custom": "使用“{{value}}”"
+    "model_use_custom": "使用“{{value}}”",
+    "config_delete_lead": "只会从这里的预设列表中移除。",
+    "config_delete_consequence": "已经导入到 CC Switch 的配置不受影响，但之后不能再用这个预设生成导入链接。"
   },
   "api_keys_page": {
     "title": "API 密钥管理",
@@ -3840,7 +3842,9 @@
     "delete_lead": "删除后无法恢复。",
     "delete_consequence_keys": "名下的 API Key 会被禁用并解除归属，无法再用于调用。",
     "delete_confirm": "删除账号",
-    "usage_keys_summary": "账号下全部密钥"
+    "usage_keys_summary": "账号下全部密钥",
+    "unnamed": "未命名用户",
+    "no_keys_for_usage": "该用户暂无 API 密钥，无法查看用量"
   },
   "apikey_lookup": {
     "available_models": "模型广场",

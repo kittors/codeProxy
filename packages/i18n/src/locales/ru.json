@@ -191,7 +191,9 @@
     "config_claude_role_sonnet": "Sonnet default model",
     "config_claude_role_opus": "Opus default model",
     "config_claude_role_fable": "Fable default model",
-    "model_use_custom": "Use \"{{value}}\""
+    "model_use_custom": "Use \"{{value}}\"",
+    "config_delete_lead": "Пресет будет удалён только из этого списка.",
+    "config_delete_consequence": "Уже импортированные в CC Switch конфигурации продолжат работать, но ссылки импорта по этому пресету больше не создать."
   },
   "title": {
     "main": "Панель администратора CliRelay",
@@ -1917,7 +1919,9 @@
     "delete_lead": "Это действие нельзя отменить.",
     "delete_consequence_keys": "Его API-ключи будут отключены и отвязаны и больше не смогут использоваться.",
     "delete_confirm": "Удалить аккаунт",
-    "usage_keys_summary": "Все ключи аккаунта"
+    "usage_keys_summary": "Все ключи аккаунта",
+    "unnamed": "Пользователь без имени",
+    "no_keys_for_usage": "У пользователя пока нет API-ключей — показывать нечего"
   },
   "proxies": {
     "title": "Proxy Management",

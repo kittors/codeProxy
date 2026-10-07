@@ -110,6 +110,7 @@ export function CcSwitchImportSettingsPage() {
   const [modalMode, setModalMode] = useState<"create" | "edit">("create");
   const [draft, setDraft] = useState<CcSwitchImportConfigListItem>(() => createDraft());
   const [pendingDelete, setPendingDelete] = useState<CcSwitchImportConfigListItem | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [channelGroupsLoading, setChannelGroupsLoading] = useState(false);
   const [channelGroupOptions, setChannelGroupOptions] = useState<CcSwitchChannelGroupOption[]>([]);
 
@@ -207,10 +208,10 @@ export function CcSwitchImportSettingsPage() {
                 <img src={iconByType[row.clientType]} alt="" className="h-5 w-5" />
               </span>
               <div className="min-w-0">
-                <div className="truncate font-medium text-slate-900 dark:text-white">
+                <div className="truncate font-medium text-ink">
                   {t(client.labelKey)}
                 </div>
-                <div className="font-mono text-xs text-slate-500 dark:text-white/45">
+                <div className="font-mono text-xs text-ink-3">
                   {row.routePath || row.endpointPath || t("ccswitch.import_endpoint_root")}
                 </div>
               </div>
@@ -226,10 +227,10 @@ export function CcSwitchImportSettingsPage() {
           row.note ? `${row.providerName}\n${row.note}` : row.providerName,
         render: (row) => (
           <div className="min-w-0">
-            <div className="truncate font-medium text-slate-900 dark:text-white">
+            <div className="truncate font-medium text-ink">
               {row.providerName}
             </div>
-            <div className="truncate text-xs text-slate-500 dark:text-white/55">
+            <div className="truncate text-xs text-ink-3">
               {row.note || t("ccswitch.config_no_remark")}
             </div>
           </div>
@@ -241,7 +242,7 @@ export function CcSwitchImportSettingsPage() {
         width: COLUMN_WIDTH.name,
         overflowTooltip: true,
         render: (row) => (
-          <span className={[surface({ tone: "plain", radius: "md" }), "inline-flex max-w-full overflow-hidden text-ellipsis whitespace-nowrap px-2 py-1 font-mono text-xs text-slate-600 dark:text-white/65"].join(" ")}>
+          <span className={[surface({ tone: "plain", radius: "md" }), "inline-flex max-w-full overflow-hidden text-ellipsis whitespace-nowrap px-2 py-1 font-mono text-xs text-ink-2"].join(" ")}>
             {row.defaultModel}
           </span>
         ),
@@ -258,14 +259,14 @@ export function CcSwitchImportSettingsPage() {
               {row.allowedChannelGroups.map((group) => (
                 <span
                   key={group}
-                  className={[surface({ tone: "inset", radius: "full" }), "px-2 py-1 text-xs font-medium text-slate-600 dark:text-white/60"].join(" ")}
+                  className={[surface({ tone: "inset", radius: "full" }), "px-2 py-1 text-xs font-medium text-ink-2"].join(" ")}
                 >
                   {group}
                 </span>
               ))}
             </div>
           ) : (
-            <span className="text-xs text-slate-400 dark:text-white/35">
+            <span className="text-xs text-ink-3">
               {t("ccswitch.import_channel_group_none")}
             </span>
           ),
@@ -316,10 +317,10 @@ export function CcSwitchImportSettingsPage() {
     <div className="space-y-6 md:flex md:min-h-0 md:flex-1 md:flex-col">
       <div className="flex flex-wrap items-start justify-between gap-3 md:shrink-0">
         <div className="space-y-1">
-          <h2 className="text-lg font-semibold tracking-normal text-slate-950 dark:text-white">
+          <h2 className="text-lg font-semibold tracking-normal text-ink">
             {t("ccswitch.settings_title")}
           </h2>
-          <p className="max-w-3xl text-sm text-slate-600 dark:text-white/60">
+          <p className="max-w-3xl text-sm text-ink-2">
             {t("ccswitch.settings_description")}
           </p>
         </div>
@@ -394,13 +395,27 @@ export function CcSwitchImportSettingsPage() {
       <ConfirmModal
         open={Boolean(pendingDelete)}
         title={t("ccswitch.config_delete_title")}
-        description={t("ccswitch.config_delete_description", {
-          name: pendingDelete?.providerName ?? "",
-        })}
+        description={t("ccswitch.config_delete_lead")}
+        subject={
+          pendingDelete ? (
+            <span className="flex min-w-0 items-center justify-between gap-3">
+              <span className="truncate font-medium">{pendingDelete.providerName}</span>
+              <span className="shrink-0 rounded-full bg-selected px-2 py-0.5 text-2xs font-medium uppercase text-ink-2">
+                {pendingDelete.clientType}
+              </span>
+            </span>
+          ) : null
+        }
+        consequences={[t("ccswitch.config_delete_consequence")]}
         confirmText={t("ccswitch.config_delete_confirm")}
-        onClose={() => setPendingDelete(null)}
+        // 异步删除期间锁住按钮，避免连点删两次。
+        busy={deleting}
+        onClose={() => {
+          if (!deleting) setPendingDelete(null);
+        }}
         onConfirm={async () => {
           if (!pendingDelete) return;
+          setDeleting(true);
           try {
             await persistConfigs(configs.filter((item) => item.id !== pendingDelete.id));
             setPendingDelete(null);
@@ -410,6 +425,8 @@ export function CcSwitchImportSettingsPage() {
               type: "error",
               message: error instanceof Error ? error.message : t("common.save_failed"),
             });
+          } finally {
+            setDeleting(false);
           }
         }}
       />
