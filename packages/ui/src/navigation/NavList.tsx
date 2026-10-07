@@ -1,5 +1,6 @@
 import { motion, useReducedMotion } from "framer-motion";
-import { useEffect, useId, useRef, type KeyboardEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useRef, type KeyboardEvent, type ReactNode } from "react";
+import { useScrollFade } from "../hooks/useScrollFade";
 import { dialogToneClass, type DialogTone } from "../overlays/DialogIcon";
 import { cn } from "../utils/selectStyles";
 
@@ -75,6 +76,16 @@ export function NavList({
   const prefix = idPrefix ?? `nav-${generatedId}`;
   const buttonsRef = useRef<Record<string, HTMLButtonElement | null>>({});
   const rootRef = useRef<HTMLDivElement | null>(null);
+  // 窄屏横排时列表自己横向滚动：两端还有项时渐隐，而不是在边缘把半个项硬切掉。
+  // 竖排后没有横向溢出，渐隐自动收起。
+  const fade = useScrollFade<HTMLDivElement>({ size: 24, axis: "x" });
+  const setRootRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      rootRef.current = node;
+      fade.ref.current = node;
+    },
+    [fade.ref],
+  );
   const items = groups.flatMap((group) => group.items);
   const isTabs = mode === "tabs";
   const layout = LAYOUT[breakpoint];
@@ -121,12 +132,14 @@ export function NavList({
 
   return (
     <div
-      ref={rootRef}
+      ref={setRootRef}
       role={isTabs ? "tablist" : "navigation"}
       aria-orientation={isTabs ? "vertical" : undefined}
       aria-label={ariaLabel}
       onKeyDown={onKeyDown}
-      className={cn(layout.root, className)}
+      onScroll={fade.onScroll}
+      style={fade.style}
+      className={cn(layout.root, fade.className, className)}
     >
       {groups.map((group) => {
         if (group.items.length === 0) return null;
