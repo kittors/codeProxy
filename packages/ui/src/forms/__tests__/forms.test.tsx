@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { describe, expect, test, vi } from "vitest";
 import { NavList } from "../../navigation/NavList";
+import { FormField } from "../../primitives/Form";
 import { ToggleSwitch } from "../../primitives/ToggleSwitch";
 import { Callout } from "../Callout";
 import { CheckboxField } from "../CheckboxField";
@@ -42,6 +43,23 @@ describe("ChoiceCards", () => {
 
     await user.click(allow);
     expect(allow).toHaveAttribute("aria-checked", "true");
+  });
+
+  test("inside a FormField the visible label names the group and the hint describes it", () => {
+    render(
+      <FormField label="Effect" description="Deny wins over allow">
+        <ChoiceCards
+          value="allow"
+          onChange={() => undefined}
+          options={[
+            { value: "allow", label: "Allow" },
+            { value: "deny", label: "Deny" },
+          ]}
+        />
+      </FormField>,
+    );
+    const group = screen.getByRole("radiogroup", { name: "Effect" });
+    expect(group).toHaveAccessibleDescription("Deny wins over allow");
   });
 });
 

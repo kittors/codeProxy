@@ -22,6 +22,7 @@ import { cn } from "../utils/selectStyles";
 
 type FormFieldContextValue = {
   id: string;
+  labelId: string;
   descriptionId?: string;
   errorId?: string;
   countId?: string;
@@ -29,6 +30,14 @@ type FormFieldContextValue = {
 };
 
 const FormFieldContext = createContext<FormFieldContextValue | null>(null);
+
+/**
+ * 给不是原生表单元素的组合控件用（卡片单选是一组按钮，`<label for>` 指不到它）：
+ * 在 FormField 里时拿到字段标签与说明的 id，自己挂 aria-labelledby / aria-describedby。
+ */
+export function useOptionalFormField(): FormFieldContextValue | null {
+  return useContext(FormFieldContext);
+}
 
 function useFormFieldContext(component: string): FormFieldContextValue {
   const ctx = useContext(FormFieldContext);
@@ -114,7 +123,7 @@ function FormField({
   const length = typeof valueLength === "number" ? valueLength : 0;
 
   const contextValue = useMemo<FormFieldContextValue>(
-    () => ({ id, descriptionId, errorId, countId, invalid }),
+    () => ({ id, labelId: `${id}-label`, descriptionId, errorId, countId, invalid }),
     [countId, descriptionId, errorId, id, invalid],
   );
 
@@ -228,11 +237,12 @@ function FormLabel({
   optional = false,
   ...props
 }: FormLabelProps) {
-  const { id } = useFormFieldContext("FormLabel");
+  const { id, labelId } = useFormFieldContext("FormLabel");
   const { t } = useTranslation();
   return (
     <label
       data-slot="form-label"
+      id={labelId}
       htmlFor={id}
       // 标签用正文色、说明用浅灰：两层信息一眼分得开（以前标签和说明都是灰的）。
       className={cn("text-sm font-medium text-ink", className)}

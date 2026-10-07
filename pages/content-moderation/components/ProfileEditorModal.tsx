@@ -313,25 +313,26 @@ export function ProfileEditorModal({
               onChange={(event) => update({ name: event.currentTarget.value })}
             />
           </FormField>
-          <ChoiceCards<ContentModerationBackend>
-            ariaLabel={t("content_moderation.backend")}
-            value={draft.backend}
-            onChange={switchBackend}
-            options={[
-              {
-                value: "openai_moderations",
-                label: t("content_moderation.backend_openai_moderations"),
-                description: t("content_moderation.backend_openai_moderations_desc"),
-                icon: <Sparkles />,
-              },
-              {
-                value: "qwen3guard",
-                label: t("content_moderation.backend_qwen3guard"),
-                description: t("content_moderation.backend_qwen3guard_desc"),
-                icon: <Bot />,
-              },
-            ]}
-          />
+          <FormField label={t("content_moderation.backend")} reserveMeta={false}>
+            <ChoiceCards<ContentModerationBackend>
+              value={draft.backend}
+              onChange={switchBackend}
+              options={[
+                {
+                  value: "openai_moderations",
+                  label: t("content_moderation.backend_openai_moderations"),
+                  description: t("content_moderation.backend_openai_moderations_desc"),
+                  icon: <Sparkles />,
+                },
+                {
+                  value: "qwen3guard",
+                  label: t("content_moderation.backend_qwen3guard"),
+                  description: t("content_moderation.backend_qwen3guard_desc"),
+                  icon: <Bot />,
+                },
+              ]}
+            />
+          </FormField>
         </FormSection>
 
         <FormSection

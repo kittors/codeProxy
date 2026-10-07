@@ -75,8 +75,10 @@ describe("ProfileEditorModal", () => {
 
     const form = document.querySelector("form[data-slot='form']");
     expect(form).toHaveAttribute("id", "content-moderation-profile-form");
-    // 名称、关键词、地址、模型、Key、超时、状态码、阻断提示；阈值是紧凑的行，不再各占一个 FormField。
-    expect(document.querySelectorAll("[data-slot='form-field']")).toHaveLength(8);
+    // 名称、审核后端、关键词、地址、模型、Key、超时、状态码、阻断提示；阈值是紧凑的行，不再各占一个 FormField。
+    expect(document.querySelectorAll("[data-slot='form-field']")).toHaveLength(9);
+    // 审核后端的卡片由可见标签命名，而不是只有读屏才知道的 aria-label。
+    expect(screen.getByRole("radiogroup", { name: "Moderation backend" })).toBeInTheDocument();
     expect(document.querySelector("[data-slot='form-field-info'].invisible")).toBeNull();
     // 无标题的灰底卡片换成了带标题的分区。
     expect(screen.getByRole("heading", { name: "Moderation service" })).toBeInTheDocument();

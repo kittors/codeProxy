@@ -1,6 +1,7 @@
 import { motion, useReducedMotion } from "framer-motion";
 import { Check } from "lucide-react";
 import { useId, useRef, type KeyboardEvent, type ReactNode } from "react";
+import { useOptionalFormField } from "../primitives/Form";
 import { cn } from "../utils/selectStyles";
 
 export interface ChoiceCardOption<T extends string = string> {
@@ -43,6 +44,11 @@ export function ChoiceCards<T extends string>({
 }) {
   const reduceMotion = useReducedMotion();
   const groupId = useId();
+  // 放在 FormField 里时由字段标签命名，并带上说明与错误（没有显式 ariaLabel 时）。
+  const field = useOptionalFormField();
+  const describedBy = field
+    ? [field.descriptionId, field.errorId].filter(Boolean).join(" ") || undefined
+    : undefined;
   const buttonsRef = useRef<Record<string, HTMLButtonElement | null>>({});
   const enabled = options.filter((option) => !option.disabled);
 
@@ -62,6 +68,8 @@ export function ChoiceCards<T extends string>({
     <div
       role="radiogroup"
       aria-label={ariaLabel}
+      aria-labelledby={ariaLabel ? undefined : field?.labelId}
+      aria-describedby={describedBy}
       aria-disabled={disabled || undefined}
       onKeyDown={onKeyDown}
       className={cn("grid gap-2.5", COLUMNS[columns], className)}

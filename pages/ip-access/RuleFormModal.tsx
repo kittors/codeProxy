@@ -166,7 +166,6 @@ export function RuleFormModal({ open, preset, onClose, onCreated }: RuleFormModa
 
         <FormField label={t("ip_access.form_effect")} reserveMeta={false}>
           <ChoiceCards<IpAccessEffect>
-            ariaLabel={t("ip_access.form_effect")}
             value={effect}
             onChange={setEffect}
             options={[
