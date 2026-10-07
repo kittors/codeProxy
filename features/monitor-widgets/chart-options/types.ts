@@ -6,15 +6,3 @@ export type DailySeriesPoint = {
   inputTokens: number;
   outputTokens: number;
 };
-
-export type HourlyStackPoint = {
-  label: string;
-  stacks: Array<{ key: string; value: number }>;
-};
-
-export type HourlySeries = {
-  modelKeys: string[];
-  modelPoints: HourlyStackPoint[];
-  tokenKeys: string[];
-  tokenPoints: HourlyStackPoint[];
-};

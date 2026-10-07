@@ -10,8 +10,8 @@
  * - 「当前值 / 主序列」用强调色（浅色墨黑、深色浅灰白），其余序列用灰阶区分；
  * - 绿、橙、红、蓝表达成功、警告、失败、信息；
  * - 仪表盘上的指标各有一个身份色（metric），与系统监控同一组色系：蓝是请求与算力，绿是成功，
- *   紫是 Token 与内存，琥珀是费用与日志。全黑灰的迷你趋势线读起来像没加载完，身份色让六格
- *   指标、吞吐图和监控卡片一眼对得上；失败仍然用 err。
+ *   紫是 Token 与内存，琥珀是费用与日志，靛蓝是耗时与首字时间（监控中心）。全黑灰的迷你趋势线
+ *   读起来像没加载完，身份色让六格指标、吞吐图和监控卡片一眼对得上；失败仍然用 err。
  */
 
 export interface ChartPalette {
@@ -45,6 +45,7 @@ export interface ChartPalette {
     cache: string;
     rpm: string;
     tpm: string;
+    latency: string;
   };
 }
 
@@ -70,6 +71,7 @@ const LIGHT: ChartPalette = {
     cache: "#14b8a6",
     rpm: "#3b82f6",
     tpm: "#8b5cf6",
+    latency: "#6366f1",
   },
 };
 
@@ -95,6 +97,7 @@ const DARK: ChartPalette = {
     cache: "#2dd4bf",
     rpm: "#60a5fa",
     tpm: "#a78bfa",
+    latency: "#818cf8",
   },
 };
 

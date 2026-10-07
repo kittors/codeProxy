@@ -62,7 +62,7 @@ describe("dashboard card composition", () => {
 
   test("uses a centered health hero and circular disk usage card in system monitor", () => {
     const source = readModule("pages/dashboard/SystemMonitorSection.tsx");
-    const visuals = readModule("pages/dashboard/systemMonitorVisuals.tsx");
+    const visuals = readModule("features/monitor-widgets/monitorVisuals.tsx");
 
     expect(source).toContain("HealthHeroCard");
     expect(source).toContain("DiskUsageRingCard");

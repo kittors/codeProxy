@@ -1,12 +1,7 @@
 import type { ComponentType, ReactNode } from "react";
 import { useReducedMotion } from "framer-motion";
 import { useTranslation } from "react-i18next";
-import {
-  HOUR_WINDOWS,
-  TIME_RANGES,
-  type HourWindow,
-  type TimeRange,
-} from "@features/monitor-widgets/monitor-constants";
+import { TIME_RANGES, type TimeRange } from "@features/monitor-widgets/monitor-constants";
 import {
   Tabs,
   TabsList,
@@ -107,27 +102,6 @@ export const TimeRangeSelector = ({
             </TabsTrigger>
           );
         })}
-      </TabsList>
-    </Tabs>
-  );
-};
-
-export const HourWindowSelector = ({
-  value,
-  onChange,
-}: {
-  value: HourWindow;
-  onChange: (next: HourWindow) => void;
-}) => {
-  const { t } = useTranslation();
-  return (
-    <Tabs value={String(value)} onValueChange={(next) => onChange(Number(next) as HourWindow)}>
-      <TabsList>
-        {HOUR_WINDOWS.map((range) => (
-          <TabsTrigger key={range} value={String(range)}>
-            {t("monitor.last_nh", { count: range })}
-          </TabsTrigger>
-        ))}
       </TabsList>
     </Tabs>
   );
