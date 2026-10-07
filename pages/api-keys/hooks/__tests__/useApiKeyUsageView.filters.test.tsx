@@ -5,6 +5,9 @@ import { useApiKeyUsageView } from "../useApiKeyUsageView";
 const mocks = vi.hoisted(() => ({
   getUsageLogs: vi.fn(),
   notify: vi.fn(),
+  // react-i18next keeps returning the same `t` until the language changes; a
+  // fresh function per render is not something the hook ever receives.
+  t: (key: string) => key,
 }));
 
 vi.mock("@code-proxy/api-client", async (importOriginal) => {
@@ -21,7 +24,7 @@ vi.mock("@code-proxy/ui", async (importOriginal) => {
 });
 
 vi.mock("react-i18next", () => ({
-  useTranslation: () => ({ t: (key: string) => key, i18n: { language: "en" } }),
+  useTranslation: () => ({ t: mocks.t, i18n: { language: "en" } }),
 }));
 
 const usageResponse = (days: number) => ({
@@ -59,14 +62,14 @@ describe("useApiKeyUsageView filter changes", () => {
     await waitFor(() => {
       expect(mocks.getUsageLogs).toHaveBeenCalled();
     });
-    const callsBefore = mocks.getUsageLogs.mock.calls.length;
+    expect(mocks.getUsageLogs).toHaveBeenCalledTimes(1);
 
     act(() => {
       result.current.setUsageTimeRange(30);
     });
     // The new filter must issue its own request instead of being dropped.
     await waitFor(() => {
-      expect(mocks.getUsageLogs.mock.calls.length).toBeGreaterThan(callsBefore);
+      expect(mocks.getUsageLogs).toHaveBeenCalledTimes(2);
     });
     expect(mocks.getUsageLogs.mock.calls.at(-1)?.[0]?.days).toBe(30);
 
@@ -81,5 +84,11 @@ describe("useApiKeyUsageView filter changes", () => {
     await waitFor(() => {
       expect(result.current.usageTotalCount).toBe(30);
     });
+
+    // One request per query change and none after. A reload effect keyed on
+    // something that changes every render refetches after every commit; React
+    // only reports that as a "Maximum update depth exceeded" console error.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(mocks.getUsageLogs).toHaveBeenCalledTimes(2);
   });
 });
