@@ -1,3 +1,4 @@
+import { createRef } from "react";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, test } from "vitest";
 import { Form, FormField } from "../Form";
@@ -177,6 +178,12 @@ describe("FormField with composite controls", () => {
 });
 
 describe("Form", () => {
+  test("hands its form element to a ref, for focusing the first invalid field", () => {
+    const ref = createRef<HTMLFormElement>();
+    render(<Form ref={ref} aria-label="Profile" />);
+    expect(ref.current).toBe(screen.getByRole("form", { name: "Profile" }));
+  });
+
   test("renders a form shell with default field spacing", () => {
     const { container } = render(
       <Form id="edit-tenant-form" aria-label="edit-tenant">

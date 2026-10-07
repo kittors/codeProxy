@@ -12,6 +12,7 @@ import {
   type PropsWithChildren,
   type ReactElement,
   type ReactNode,
+  type Ref,
 } from "react";
 import { useTranslation } from "react-i18next";
 import { cn } from "../utils/selectStyles";
@@ -51,7 +52,11 @@ function useFormFieldContext(component: string): FormFieldContextValue {
 /*  Form                                                               */
 /* ------------------------------------------------------------------ */
 
-export type FormProps = FormHTMLAttributes<HTMLFormElement>;
+/**
+ * React 19 里 ref 是普通 prop，展开到 `<form>` 上就能拿到节点——提交校验失败时
+ * `focusFirstInvalid(formRef.current)` 要用它，不必再在 Form 外面另包一层原生 form。
+ */
+export type FormProps = FormHTMLAttributes<HTMLFormElement> & { ref?: Ref<HTMLFormElement> };
 
 function FormRoot({ className, ...props }: FormProps) {
   return <form data-slot="form" className={cn("space-y-4", className)} {...props} />;
