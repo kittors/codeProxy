@@ -473,6 +473,18 @@ export function ConfigPage() {
   }, [baselineValues, visualValues]);
 
   const visualLayoutEnabled = tab === "visual";
+  const modeSwitch = (
+    <TabsList>
+      <TabsTrigger value="visual">
+        <Eye size={14} />
+        {t("config_page.visual_editor")}
+      </TabsTrigger>
+      <TabsTrigger value="source">
+        <Code2 size={14} />
+        {t("config_page.source_editor")}
+      </TabsTrigger>
+    </TabsList>
+  );
   const saveDisabled = disableControls || loading || saving || !isDirty;
   const reloadDisabled = loading || saving;
   const showFloatingBar = true;
@@ -487,20 +499,11 @@ export function ConfigPage() {
     >
       <div className={visualLayoutEnabled ? "flex min-h-0 flex-1 flex-col gap-4" : undefined}>
         <Tabs value={tab} onValueChange={(next) => handleTabChange(next as ConfigTab)}>
-          <div className="flex">
-            <TabsList>
-              <TabsTrigger value="visual">
-                <Eye size={14} />
-                {t("config_page.visual_editor")}
-              </TabsTrigger>
-              <TabsTrigger value="source">
-                <Code2 size={14} />
-                {t("config_page.source_editor")}
-              </TabsTrigger>
-            </TabsList>
-          </div>
+          {/* 可视化模式下这个切换放进编辑器工具栏的最右侧（和分组页签、搜索同一行），
+              不再单独占一行；源码模式没有工具栏，仍放在内容上方。 */}
+          {visualLayoutEnabled ? null : <div className="flex">{modeSwitch}</div>}
 
-          <div className={visualLayoutEnabled ? "mt-4 min-h-0 flex-1" : "mt-4"}>
+          <div className={visualLayoutEnabled ? "min-h-0 flex-1" : "mt-4"}>
             <TabsContent value="visual" className="h-full">
               <div className="relative flex h-full min-h-0 flex-col gap-4" aria-busy={loading}>
                 {error ? (
@@ -515,6 +518,7 @@ export function ConfigPage() {
                     disabled={disableControls || loading || saving}
                     onChange={setVisualValues}
                     codexAdmission={<CodexOAuthAdmissionPanel />}
+                    toolbarEnd={modeSwitch}
                   />
                 </div>
                 {loading ? (

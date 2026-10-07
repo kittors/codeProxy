@@ -25,22 +25,31 @@ export interface ScrollFadeEdges {
 export function useScrollFade<T extends HTMLElement = HTMLDivElement>({
   size = 28,
   enabled = true,
-}: { size?: number; enabled?: boolean } = {}) {
+  axis = "y",
+}: {
+  size?: number;
+  enabled?: boolean;
+  /** `x`：横向滚动（胶囊条、横向页签），左右两端渐隐；`top` / `bottom` 对应左 / 右。 */
+  axis?: "x" | "y";
+} = {}) {
   const ref = useRef<T | null>(null);
   const [edges, setEdges] = useState<ScrollFadeEdges>({ overflow: false, top: false, bottom: false });
 
   const measure = useCallback(() => {
     const node = ref.current;
     if (!node) return;
-    const overflow = node.scrollHeight - node.clientHeight > 1;
-    const top = overflow && node.scrollTop > 1;
-    const bottom = overflow && node.scrollTop + node.clientHeight < node.scrollHeight - 1;
+    const scrollSize = axis === "x" ? node.scrollWidth : node.scrollHeight;
+    const clientSize = axis === "x" ? node.clientWidth : node.clientHeight;
+    const offset = axis === "x" ? Math.abs(node.scrollLeft) : node.scrollTop;
+    const overflow = scrollSize - clientSize > 1;
+    const top = overflow && offset > 1;
+    const bottom = overflow && offset + clientSize < scrollSize - 1;
     setEdges((previous) =>
       previous.overflow === overflow && previous.top === top && previous.bottom === bottom
         ? previous
         : { overflow, top, bottom },
     );
-  }, []);
+  }, [axis]);
 
   useEffect(() => {
     const node = ref.current;
@@ -73,17 +82,18 @@ export function useScrollFade<T extends HTMLElement = HTMLDivElement>({
   }, [enabled, measure]);
 
   const active = enabled && edges.overflow;
+  const start = edges.top ? `${size}px` : "0px";
+  const end = edges.bottom ? `${size}px` : "0px";
   const style: CSSProperties | undefined = active
-    ? ({
-        "--scroll-fade-top": edges.top ? `${size}px` : "0px",
-        "--scroll-fade-bottom": edges.bottom ? `${size}px` : "0px",
-      } as CSSProperties)
+    ? ((axis === "x"
+        ? { "--scroll-fade-left": start, "--scroll-fade-right": end }
+        : { "--scroll-fade-top": start, "--scroll-fade-bottom": end }) as unknown as CSSProperties)
     : undefined;
 
   return {
     ref,
     onScroll: measure,
-    className: active ? "code-proxy-scroll-edge-fade" : "",
+    className: active ? (axis === "x" ? "code-proxy-scroll-edge-fade-x" : "code-proxy-scroll-edge-fade") : "",
     style,
     edges,
     /** 内容变化后手动重新测量（例如切换分组后内容整体替换）。 */

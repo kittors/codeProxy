@@ -138,7 +138,8 @@ test("Config visual editor shows descriptions inline and jumps between sections"
   await expect(description).toBeVisible();
   await expect(page.getByRole("tooltip")).toHaveCount(0);
 
-  // 点目录跳到对应分区，目录高亮跟着走。
+  // 分组是内容上方的页签：切到「运行」，再点分区胶囊跳到对应分区，胶囊高亮跟着走。
+  await page.getByRole("tab", { name: /^(Behavior|运行)/ }).click();
   const nav = page.getByRole("navigation", { name: /Config sections|配置分区/ });
   await nav.getByRole("button", { name: /Streaming|流式传输/ }).click();
   await expect(page.getByRole("heading", { name: /^(Streaming|流式传输)$/ })).toBeInViewport();
@@ -496,6 +497,8 @@ test("Config: unified visual editor confirms the low-resource profile cleanup", 
   await page.goto("/#/system/config");
 
   await expect(page.getByRole("tab", { name: /可视化编辑|Visual Editor/i })).toBeVisible();
+  // 监控相关设置在「日志与数据」分组页签里；推荐档位横幅在这一组也显示。
+  await page.getByRole("tab", { name: /^(日志与数据|Logs & data)/ }).click();
   await expect(page.getByText(/监控连接轮换周期|Monitor connection rotation/i)).toBeVisible();
   await expect(page.getByRole("tab", { name: /源码编辑|Source Editor/i })).toBeVisible();
 
@@ -639,6 +642,8 @@ test("Config: tenant Codex OAuth admission stays available in the unified visual
 
   await page.goto("/#/system/config");
 
+  // Codex 客户端准入在「高级」分组页签里。
+  await page.getByRole("tab", { name: /^(高级|Advanced)/ }).click();
   const panel = page.getByTestId("codex-oauth-global-admission-panel");
   await expect(panel).toBeVisible();
 
