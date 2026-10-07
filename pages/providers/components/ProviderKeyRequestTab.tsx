@@ -19,7 +19,7 @@ const SectionCard = ({
 }) => (
   <div
     className={[
-      "rounded-xl border border-slate-900/8 bg-white/70 p-4 shadow-sm dark:border-white/8 dark:bg-neutral-950/60",
+      "rounded-xl border border-line bg-surface p-4 shadow-sm",
       className,
     ]
       .filter(Boolean)
@@ -99,24 +99,24 @@ export function ProviderKeyRequestTab({
 
       {isOpenCodeGo ? (
         <>
-          <SectionCard className="bg-slate-50/80 dark:bg-neutral-900/50">
-            <p className="text-sm font-semibold text-slate-900 dark:text-white">
+          <SectionCard className="bg-subtle">
+            <p className="text-sm font-semibold text-ink">
               {t("providers.opencode_go_fixed_endpoint_title")}
             </p>
-            <div className="mt-3 grid gap-2 text-xs text-slate-600 dark:text-white/65">
+            <div className="mt-3 grid gap-2 text-xs text-ink-2">
               <p className="break-all font-mono">{OPENCODE_GO_CHAT_URL}</p>
               <p className="break-all font-mono">{OPENCODE_GO_MESSAGES_URL}</p>
               <p className="break-all font-mono">{OPENCODE_GO_MODELS_URL}</p>
             </div>
-            <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
+            <p className="mt-2 text-xs text-ink-3">
               {t("providers.opencode_go_fixed_endpoint_hint")}
             </p>
           </SectionCard>
           <SectionCard>
-            <p className="text-sm font-semibold text-slate-900 dark:text-white">
+            <p className="text-sm font-semibold text-ink">
               {t("providers.opencode_go_usage_title")}
             </p>
-            <p className="mt-1 text-xs text-slate-500 dark:text-white/55">
+            <p className="mt-1 text-xs text-ink-3">
               {t("providers.opencode_go_usage_hint")}
             </p>
           </SectionCard>
@@ -124,25 +124,25 @@ export function ProviderKeyRequestTab({
       ) : null}
 
       {isCline ? (
-        <SectionCard className="bg-slate-50/80 dark:bg-neutral-900/50">
-          <p className="text-sm font-semibold text-slate-900 dark:text-white">
+        <SectionCard className="bg-subtle">
+          <p className="text-sm font-semibold text-ink">
             {t("providers.cline_endpoint_title")}
           </p>
-          <p className="mt-3 break-all font-mono text-xs text-slate-600 dark:text-white/65">
+          <p className="mt-3 break-all font-mono text-xs text-ink-2">
             {clineChatUrl}
           </p>
-          <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
+          <p className="mt-2 text-xs text-ink-3">
             {t("providers.cline_endpoint_hint")}
           </p>
         </SectionCard>
       ) : null}
 
       {isOllamaCloud ? (
-        <SectionCard className="bg-slate-50/80 dark:bg-neutral-900/50">
-          <p className="text-sm font-semibold text-slate-900 dark:text-white">
+        <SectionCard className="bg-subtle">
+          <p className="text-sm font-semibold text-ink">
             {t("providers.ollama_cloud_endpoint_title")}
           </p>
-          <p className="mt-3 break-all font-mono text-xs text-slate-600 dark:text-white/65">
+          <p className="mt-3 break-all font-mono text-xs text-ink-2">
             {ollamaCloudChatUrl}
           </p>
         </SectionCard>
@@ -150,22 +150,22 @@ export function ProviderKeyRequestTab({
 
       {isCommandCode ? (
         <>
-          <SectionCard className="bg-slate-50/80 dark:bg-neutral-900/50">
-            <p className="text-sm font-semibold text-slate-900 dark:text-white">
+          <SectionCard className="bg-subtle">
+            <p className="text-sm font-semibold text-ink">
               {t("providers.commandcode_endpoint_title")}
             </p>
-            <p className="mt-3 break-all font-mono text-xs text-slate-600 dark:text-white/65">
+            <p className="mt-3 break-all font-mono text-xs text-ink-2">
               {commandCodeChatUrl}
             </p>
-            <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
+            <p className="mt-2 text-xs text-ink-3">
               {t("providers.commandcode_endpoint_hint")}
             </p>
           </SectionCard>
           <SectionCard>
-            <p className="text-sm font-semibold text-slate-900 dark:text-white">
+            <p className="text-sm font-semibold text-ink">
               {t("providers.commandcode_usage_title")}
             </p>
-            <p className="mt-1 text-xs text-slate-500 dark:text-white/55">
+            <p className="mt-1 text-xs text-ink-3">
               {t("providers.commandcode_usage_hint")}
             </p>
           </SectionCard>
@@ -174,16 +174,16 @@ export function ProviderKeyRequestTab({
 
       {hasDashboardUsage ? (
         <SectionCard>
-          <p className="text-sm font-semibold text-slate-900 dark:text-white">
+          <p className="text-sm font-semibold text-ink">
             {dashboardUsageTitle}
           </p>
-          <p className="mt-1 text-xs text-slate-500 dark:text-white/55">
+          <p className="mt-1 text-xs text-ink-3">
             {dashboardUsageHint}
           </p>
 
           <div className="mt-3 grid gap-3 md:grid-cols-1">
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-slate-700 dark:text-white/75">
+              <p className="text-xs font-semibold text-ink-2">
                 {t("providers.opencode_go_auth_cookie")}
               </p>
               <TextInput
@@ -202,7 +202,7 @@ export function ProviderKeyRequestTab({
 
       {isOpenCodeGo || isCline || isOllamaCloud || isCommandCode ? (
         <SectionCard>
-          <p className="text-sm font-semibold text-slate-900 dark:text-white">
+          <p className="text-sm font-semibold text-ink">
             {t("providers.opencode_go_vision_fallback_title")}
           </p>
           <div className="mt-3">
@@ -216,7 +216,7 @@ export function ProviderKeyRequestTab({
               disabled={openCodeModelsLoading || openCodeVisionFallbackOptions.length <= 1}
             />
           </div>
-          <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
+          <p className="mt-2 text-xs text-ink-3">
             {t("providers.opencode_go_vision_fallback_hint")}
           </p>
         </SectionCard>
@@ -224,7 +224,7 @@ export function ProviderKeyRequestTab({
 
       {isBedrock ? (
         <SectionCard>
-          <p className="text-sm font-semibold text-slate-900 dark:text-white">
+          <p className="text-sm font-semibold text-ink">
             {t("providers.bedrock_region")}
           </p>
           <div className="mt-2">
@@ -247,20 +247,20 @@ export function ProviderKeyRequestTab({
               }
             />
           </div>
-          <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
+          <p className="mt-2 text-xs text-ink-3">
             {t("providers.bedrock_region_hint")}
           </p>
         </SectionCard>
       ) : null}
 
       <SectionCard>
-        <p className="text-sm font-semibold text-slate-900 dark:text-white">
+        <p className="text-sm font-semibold text-ink">
           {t("providers.connection_proxy_label")}
         </p>
         <div className="mt-3 grid gap-3">
           {isOpenCodeGo ? null : (
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-slate-700 dark:text-white/75">
+              <p className="text-xs font-semibold text-ink-2">
                 {t("providers.base_url")}
               </p>
               <TextInput
@@ -299,7 +299,7 @@ export function ProviderKeyRequestTab({
             onChange={(proxyUrl) => setKeyDraft((prev) => ({ ...prev, proxyUrl }))}
           />
         </div>
-        <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
+        <p className="mt-2 text-xs text-ink-3">
           {isOpenCodeGo
             ? t("providers.opencode_go_connection_hint")
             : isCline
@@ -316,7 +316,7 @@ export function ProviderKeyRequestTab({
           keyPlaceholder={t("providers.header_name_placeholder")}
           valuePlaceholder={t("providers.header_value_placeholder")}
         />
-        <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
+        <p className="mt-2 text-xs text-ink-3">
           {t("providers.headers_common_hint")}
         </p>
       </SectionCard>
@@ -325,10 +325,10 @@ export function ProviderKeyRequestTab({
         <SectionCard>
           <div className="flex items-center justify-between gap-3">
             <div className="flex-1">
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">
+              <p className="text-sm font-semibold text-ink">
                 {t("providers.anthropic_processing_label")}
               </p>
-              <p className="mt-1 text-xs text-slate-500 dark:text-white/55">
+              <p className="mt-1 text-xs text-ink-3">
                 {t("providers.anthropic_processing_hint")}
               </p>
             </div>

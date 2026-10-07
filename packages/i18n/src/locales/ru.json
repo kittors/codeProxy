@@ -2551,7 +2551,23 @@
     "credential_sort_config": "Порядок из конфигурации",
     "credential_sort_remaining_asc": "Сначала с наименьшим остатком",
     "credential_sort_remaining_desc": "Сначала с наибольшим остатком",
-    "proxy_url_fallback_hint": "Используется без привязки к пулу прокси; иначе — как запасной."
+    "proxy_url_fallback_hint": "Используется без привязки к пулу прокси; иначе — как запасной.",
+    "delete_openai_title": "Удалить этого OpenAI-совместимого провайдера?",
+    "delete_config_title": "Удалить эту конфигурацию учётных данных?",
+    "delete_lead": "Это действие нельзя отменить.",
+    "delete_consequence_openai": "Удалятся все его API-ключи и сопоставления моделей; запросы через него уйдут в другие каналы или завершатся ошибкой.",
+    "delete_consequence_config": "Она перестанет участвовать в маршрутизации; запросы через неё уйдут в другие каналы или завершатся ошибкой.",
+    "unnamed": "Без имени",
+    "diff_tile_added": "Добавлено",
+    "diff_tile_updated": "Обновлено",
+    "diff_tile_removed": "Удалено",
+    "diff_tile_duplicates": "Дубликаты",
+    "import_removes_title_one": "Импорт удалит {{count}} конфигурацию",
+    "import_removes_title_few": "Импорт удалит {{count}} конфигурации",
+    "import_removes_title_many": "Импорт удалит {{count}} конфигураций",
+    "import_removes_title_other": "Импорт удалит {{count}} конфигураций",
+    "import_removes_desc": "Конфигурации, которых нет в файле, будут удалены — они зачёркнуты ниже.",
+    "confirm_import_with_removals": "Импортировать и удалить {{count}}"
   },
   "log_content": {
     "detail_label_request": "Request",
@@ -3068,7 +3084,22 @@
     "delete_menu_has_children_one": "У него ещё {{count}} вложенный пункт, поэтому сервер откажет в удалении. Сначала удалите или перенесите его.",
     "delete_menu_has_children_few": "У него ещё {{count}} вложенных пункта, поэтому сервер откажет в удалении. Сначала удалите или перенесите их.",
     "delete_menu_has_children_many": "У него ещё {{count}} вложенных пунктов, поэтому сервер откажет в удалении. Сначала удалите или перенесите их.",
-    "delete_menu_has_children_other": "У него ещё {{count}} вложенного пункта, поэтому сервер откажет в удалении. Сначала удалите или перенесите их."
+    "delete_menu_has_children_other": "У него ещё {{count}} вложенного пункта, поэтому сервер откажет в удалении. Сначала удалите или перенесите их.",
+    "delete_audit_log_title": "Удалить эту запись аудита?",
+    "delete_audit_log_consequence": "Это действие больше нельзя будет отследить по журналу аудита.",
+    "delete_audit_log_button": "Удалить запись",
+    "clear_audit_logs_title": "Очистить журнал аудита?",
+    "clear_audit_logs_lead": "Это действие нельзя отменить.",
+    "audit_log_count_one": "{{count}} запись аудита",
+    "audit_log_count_few": "{{count}} записи аудита",
+    "audit_log_count_many": "{{count}} записей аудита",
+    "audit_log_count_other": "{{count}} записи аудита",
+    "audit_scope_all_tenants": "Все арендаторы",
+    "audit_scope_current_tenant": "Текущий арендатор",
+    "clear_audit_logs_consequence_all_tenants": "У вас есть доступ к аудиту платформы, поэтому удалятся записи всех арендаторов, а не только текущего.",
+    "clear_audit_logs_consequence_tenant": "Все записи аудита текущего арендатора удаляются навсегда.",
+    "clear_audit_logs_consequence_trace": "Больше нельзя будет узнать, кто и когда выполнил эти действия.",
+    "clear_audit_logs_phrase": "очистить"
   },
   "apikey_lookup": {
     "available_models": "Model Plaza",
@@ -3648,7 +3679,29 @@
     "portal_recent_logins_hint": "Sign-ins to your account over the last 30 days. If you see one that was not you, change your password immediately.",
     "portal_no_logins": "No sign-ins in the last 30 days",
     "chain_title": "Forwarding chain for this request (rightmost is the hop talking to this service)",
-    "chain_hint": "Every hop must be declared before resolution reaches the real client on the left. Currently resolving to: {{client}}. A loopback result means one hop is still undeclared."
+    "chain_hint": "Every hop must be declared before resolution reaches the real client on the left. Currently resolving to: {{client}}. A loopback result means one hop is still undeclared.",
+    "rule_form_desc": "Правило действует сразу после сохранения. Если адрес попадает и под разрешение, и под запрет, побеждает разрешение.",
+    "cidr_preview_single_v4": "Один IPv4-адрес, сохранится как {{cidr}}",
+    "cidr_preview_single_v6": "Один IPv6-адрес, сохранится как {{cidr}}",
+    "cidr_preview_range_v4_one": "Диапазон IPv4: {{formatted}} адрес",
+    "cidr_preview_range_v4_few": "Диапазон IPv4: {{formatted}} адреса",
+    "cidr_preview_range_v4_many": "Диапазон IPv4: {{formatted}} адресов",
+    "cidr_preview_range_v4_other": "Диапазон IPv4: {{formatted}} адреса",
+    "cidr_preview_range_v6": "Диапазон IPv6 /{{prefix}}",
+    "expires_preview": "Истекает {{time}}",
+    "expires_preview_never": "Без срока действия",
+    "edit_rule_desc": "Можно изменить срок и заметку; адрес и действие не меняются.",
+    "save_rule": "Сохранить правило",
+    "delete_rule_title": "Удалить правило для {{cidr}}?",
+    "delete_rule_lead": "Это нельзя отменить, но правило можно добавить заново.",
+    "delete_rule_consequence_default": "Для адреса сразу начнёт действовать политика по умолчанию.",
+    "delete_rule_consequence_deny": "Его запросы больше не отклоняются этим правилом.",
+    "delete_rule_consequence_allow": "Он больше не освобождён от ограничения частоты и может быть заблокирован автоматически.",
+    "lockdown_confirm_lead": "Доступ к панели останется только у адресов из белого списка. Включится после нажатия «Сохранить» внизу страницы.",
+    "lockdown_consequence_others": "Адреса не из белого списка сразу получат отказ — включая других администраторов.",
+    "lockdown_consequence_self": "Ваш текущий адрес ({{cidr}}) в белом списке, вас не заблокирует.",
+    "lockdown_consequence_self_unknown": "Ваш текущий адрес в белом списке, вас не заблокирует.",
+    "lockdown_consequence_colleagues": "Сначала убедитесь, что адреса коллег тоже в списке."
   },
   "add_account": {
     "title": "Добавить AI-аккаунт",
@@ -4329,5 +4382,11 @@
   },
   "apikey_usage": {
     "key_storage_hint": "Ключ сохраняется в этом браузере, и при следующем открытии запрос выполнится автоматически."
+  },
+  "logs_page": {
+    "clear_server_logs_title": "Очистить журналы сервера?",
+    "clear_server_logs_lead": "Это действие нельзя отменить.",
+    "clear_consequence_files": "Текущий журнал очищается, старые ротированные файлы журналов удаляются.",
+    "clear_consequence_error_logs": "Файлы журналов ошибок не затрагиваются, их по-прежнему можно скачать на вкладке ошибок."
   }
 }

@@ -3092,7 +3092,20 @@
     "credential_sort_config": "默认顺序",
     "credential_sort_remaining_asc": "剩余额度少的在前",
     "credential_sort_remaining_desc": "剩余额度多的在前",
-    "proxy_url_fallback_hint": "没有绑定代理池时使用；绑定了代理池则作为它的回退。"
+    "proxy_url_fallback_hint": "没有绑定代理池时使用；绑定了代理池则作为它的回退。",
+    "delete_openai_title": "删除这个 OpenAI 兼容供应商？",
+    "delete_config_title": "删除这条凭证配置？",
+    "delete_lead": "删除后无法恢复。",
+    "delete_consequence_openai": "它下面的所有 API Key 与模型映射会一起删除，用到它的请求将改走其它渠道或失败。",
+    "delete_consequence_config": "这条凭证不再参与路由，用到它的请求将改走其它渠道或失败。",
+    "unnamed": "未命名",
+    "diff_tile_added": "新增",
+    "diff_tile_updated": "更新",
+    "diff_tile_removed": "删除",
+    "diff_tile_duplicates": "清理重复",
+    "import_removes_title": "导入会删除 {{count}} 个现有配置",
+    "import_removes_desc": "文件里没有的配置会被移除，下面红色划线的就是它们。确认无误再导入。",
+    "confirm_import_with_removals": "导入并删除 {{count}} 项"
   },
   "request_logs": {
     "title": "请求日志",
@@ -4776,7 +4789,11 @@
     "failed_download_request_log": "下载请求日志失败",
     "failed_fetch_error_list": "获取错误日志列表失败",
     "failed_download_error_log": "下载错误日志失败",
-    "bytes": "{{size}} 字节"
+    "bytes": "{{size}} 字节",
+    "clear_server_logs_title": "清除服务器日志？",
+    "clear_server_logs_lead": "清除后无法恢复。",
+    "clear_consequence_files": "当前日志会被清空，历史轮转的日志文件会被删除。",
+    "clear_consequence_error_logs": "错误日志文件不受影响，仍可在「错误日志」里下载。"
   },
   "system_monitor": {
     "health_score": "健康评分",
@@ -5545,7 +5562,19 @@
     "delete_menu_consequence_nav": "菜单会从所有人的导航中移除。",
     "delete_menu_consequence_permissions": "角色已有的权限不受影响；如需收回，请到「角色权限」里调整。",
     "delete_menu": "删除菜单",
-    "delete_menu_has_children": "它下面还有 {{count}} 个下级菜单或按钮，服务器会拒绝删除。请先删除或移走它们。"
+    "delete_menu_has_children": "它下面还有 {{count}} 个下级菜单或按钮，服务器会拒绝删除。请先删除或移走它们。",
+    "delete_audit_log_title": "删除这条审计日志？",
+    "delete_audit_log_consequence": "之后无法再通过审计日志追溯这次操作。",
+    "delete_audit_log_button": "删除记录",
+    "clear_audit_logs_title": "清空审计日志？",
+    "clear_audit_logs_lead": "清空后无法恢复。",
+    "audit_log_count": "{{count}} 条审计记录",
+    "audit_scope_all_tenants": "所有租户",
+    "audit_scope_current_tenant": "当前租户",
+    "clear_audit_logs_consequence_all_tenants": "你有平台审计权限，会删除所有租户的记录，而不只是当前租户。",
+    "clear_audit_logs_consequence_tenant": "当前租户的全部审计记录会被永久删除。",
+    "clear_audit_logs_consequence_trace": "之后无法再追溯这些操作是谁、在什么时候做的。",
+    "clear_audit_logs_phrase": "清空"
   },
   "apikey_usage": {
     "title": "API 密钥用量查询",
@@ -6021,7 +6050,26 @@
     "portal_recent_logins_hint": "近 30 天你账号的登录记录。发现不是本人的记录请立即修改密码。",
     "portal_no_logins": "近 30 天没有登录记录",
     "chain_title": "当前请求的转发链（右侧为直连本服务的一跳）",
-    "chain_hint": "每一跳都要声明为可信代理，解析才能走到最左侧的真实客户端。当前解析结果：{{client}}。若结果落在回环地址，说明还有一跳没声明。"
+    "chain_hint": "每一跳都要声明为可信代理，解析才能走到最左侧的真实客户端。当前解析结果：{{client}}。若结果落在回环地址，说明还有一跳没声明。",
+    "rule_form_desc": "规则保存后立即生效；同一地址同时命中放行和拒绝时，放行优先。",
+    "cidr_preview_single_v4": "单个 IPv4 地址，保存为 {{cidr}}",
+    "cidr_preview_single_v6": "单个 IPv6 地址，保存为 {{cidr}}",
+    "cidr_preview_range_v4": "IPv4 网段，共 {{formatted}} 个地址",
+    "cidr_preview_range_v6": "IPv6 网段 /{{prefix}}",
+    "expires_preview": "将于 {{time}} 到期",
+    "expires_preview_never": "永久有效",
+    "edit_rule_desc": "可以调整有效期和备注；地址和效果不能修改。",
+    "save_rule": "保存规则",
+    "delete_rule_title": "删除 {{cidr}} 的规则？",
+    "delete_rule_lead": "删除后不能恢复，需要时可以重新添加。",
+    "delete_rule_consequence_default": "这个地址会立即恢复为默认策略。",
+    "delete_rule_consequence_deny": "它的请求不会再被这条规则拒绝。",
+    "delete_rule_consequence_allow": "它不再豁免限流，也可能被自动封禁。",
+    "lockdown_confirm_lead": "开启后只有白名单里的地址能访问管理端；点页面底部的「保存」后生效。",
+    "lockdown_consequence_others": "不在白名单内的地址会立即被拒绝，包括其他管理员。",
+    "lockdown_consequence_self": "你当前的地址（{{cidr}}）已在白名单内，不会被挡住。",
+    "lockdown_consequence_self_unknown": "你当前的地址已在白名单内，不会被挡住。",
+    "lockdown_consequence_colleagues": "请先确认其他管理员的地址也已加入白名单。"
   },
   "video_generation": {
     "title": "视频模型",

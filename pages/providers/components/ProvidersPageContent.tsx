@@ -18,9 +18,6 @@ import type {
   OpenAIProvider,
   ProviderSimpleConfig,
 } from "@code-proxy/api-client";
-import { Button } from "@code-proxy/ui";
-import { ConfirmModal } from "@code-proxy/ui";
-import { Modal } from "@code-proxy/ui";
 import { Tabs, TabsContent } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
 import { downloadTextAsFile } from "@code-proxy/domain";
@@ -28,6 +25,7 @@ import { AmpcodePanel } from "./AmpcodePanel";
 import { OpenAIProviderModal } from "./OpenAIProviderModal";
 import { OpenAIProvidersTab } from "./OpenAIProvidersTab";
 import { ProviderKeyModal } from "./ProviderKeyModal";
+import { ProviderDeleteConfirm, ProviderImportPreviewModal } from "./ProviderDialogs";
 import { useOpenAIProviderEditor } from "../hooks/useOpenAIProviderEditor";
 import { ProviderKeyListCard } from "../ProviderKeyListCard";
 import {
@@ -909,6 +907,13 @@ export function ProvidersPage() {
     ],
   );
 
+  // 删除确认里要点名被删的那一条：OpenAI 兼容供应商或某类凭证列表里的第 index 项。
+  const confirmTarget = confirm
+    ? confirm.type === "deleteOpenAI"
+      ? openaiProviders[confirm.index]
+      : getCurrentItems(confirm.keyType)[confirm.index]
+    : undefined;
+
   const currentImportKind = getImportKind();
   const isActiveTabListLoading = useCallback(
     (tabId: ProviderTab) => tab === tabId && loading,
@@ -1467,157 +1472,31 @@ export function ProvidersPage() {
         maskApiKey={maskApiKey}
       />
 
-      <ConfirmModal
+      <ProviderDeleteConfirm
         open={confirm !== null}
-        title={t("providers.confirm_delete")}
-        description={
-          confirm?.type === "deleteOpenAI"
-            ? t("providers.confirm_delete_openai", {
-                name: openaiProviders[confirm.index]?.name ?? "",
-              })
-            : confirm?.type === "deleteKey"
-              ? t("providers.confirm_delete_config")
-              : t("providers.confirm_delete_generic")
+        openai={confirm?.type === "deleteOpenAI"}
+        name={String(confirmTarget?.name ?? "")}
+        detail={
+          confirmTarget && "apiKey" in confirmTarget && confirmTarget.apiKey
+            ? maskApiKey(String(confirmTarget.apiKey))
+            : String((confirmTarget as { baseUrl?: string } | undefined)?.baseUrl ?? "")
         }
-        confirmText={t("providers.delete")}
         onClose={() => setConfirm(null)}
         onConfirm={() => {
           const action = confirm;
           setConfirm(null);
           if (!action) return;
-          if (action.type === "deleteOpenAI") {
-            void deleteOpenAIProvider(action.index);
-            return;
-          }
-          void deleteKey(action.keyType, action.index);
+          if (action.type === "deleteOpenAI") void deleteOpenAIProvider(action.index);
+          else void deleteKey(action.keyType, action.index);
         }}
       />
 
-      <Modal
-        open={importPreview !== null}
-        title={t("providers.import_preview_title")}
-        description={
-          importPreview
-            ? t("providers.import_preview_desc", {
-                filename: importPreview.filename,
-              })
-            : undefined
-        }
-        maxWidth="max-w-2xl"
-        onClose={() => {
-          if (importing) return;
-          setImportPreview(null);
-        }}
-        footer={
-          <>
-            <Button
-              variant="secondary"
-              onClick={() => setImportPreview(null)}
-              disabled={importing}
-            >
-              {t("common.cancel")}
-            </Button>
-            <Button
-              variant="primary"
-              onClick={() => void confirmImport()}
-              disabled={!importPreview?.diff.hasChanges || importing}
-            >
-              {t("providers.confirm_import")}
-            </Button>
-          </>
-        }
-      >
-        {importPreview ? (
-          <div className="space-y-4 text-sm text-slate-700 dark:text-white/75">
-            <div className="grid gap-2 sm:grid-cols-2">
-              <div className="rounded-2xl border border-slate-900/8 bg-slate-50 px-4 py-3 dark:border-white/8 dark:bg-neutral-900">
-                <div>
-                  {t("providers.diff_added", {
-                    count: importPreview.diff.added,
-                  })}
-                </div>
-                <div>
-                  {t("providers.diff_updated", {
-                    count: importPreview.diff.changed,
-                  })}
-                </div>
-              </div>
-              <div className="rounded-2xl border border-slate-900/8 bg-slate-50 px-4 py-3 dark:border-white/8 dark:bg-neutral-900">
-                <div>
-                  {t("providers.diff_removed", {
-                    count: importPreview.diff.removed,
-                  })}
-                </div>
-                <div>
-                  {t("providers.diff_duplicates_cleaned", {
-                    count: importPreview.diff.duplicateEntriesRemoved,
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {!importPreview.diff.hasChanges ? (
-              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
-                {t("providers.import_no_changes")}
-              </div>
-            ) : null}
-
-            {importPreview.diff.addedLabels.length ? (
-              <div>
-                <p className="font-semibold">
-                  {t("providers.diff_added_label")}
-                </p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {importPreview.diff.addedLabels.map((label) => (
-                    <span
-                      key={`added-${label}`}
-                      className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100"
-                    >
-                      {label}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-
-            {importPreview.diff.changedLabels.length ? (
-              <div>
-                <p className="font-semibold">
-                  {t("providers.diff_updated_label")}
-                </p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {importPreview.diff.changedLabels.map((label) => (
-                    <span
-                      key={`changed-${label}`}
-                      className="rounded-full border border-blue-200 bg-blue-50 px-2 py-1 text-xs text-blue-700 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-100"
-                    >
-                      {label}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-
-            {importPreview.diff.removedLabels.length ? (
-              <div>
-                <p className="font-semibold">
-                  {t("providers.diff_removed_label")}
-                </p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {importPreview.diff.removedLabels.map((label) => (
-                    <span
-                      key={`removed-${label}`}
-                      className="rounded-full border border-rose-200 bg-rose-50 px-2 py-1 text-xs text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-100"
-                    >
-                      {label}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-      </Modal>
+      <ProviderImportPreviewModal
+        preview={importPreview}
+        importing={importing}
+        onClose={() => setImportPreview(null)}
+        onConfirm={() => void confirmImport()}
+      />
     </div>
   );
 }

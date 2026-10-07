@@ -85,7 +85,7 @@ export function OpenAIModelDiscoveryPanel({
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-semibold text-slate-900 dark:text-white">
+        <p className="text-sm font-semibold text-ink">
           {t("providers.fetch_models")}
         </p>
         <Button
@@ -102,13 +102,13 @@ export function OpenAIModelDiscoveryPanel({
       {discoveredModels.length ? (
         <div
           ref={discoveredSectionRef}
-          className="rounded-xl border border-slate-900/8 bg-slate-50/50 p-4 dark:border-white/8 dark:bg-neutral-900/40"
+          className="rounded-xl border border-line bg-subtle p-4"
         >
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-xs font-medium text-slate-700 dark:text-white/70">
+            <p className="text-xs font-medium text-ink-2">
               {t("providers.found_models", { count: discoveredModels.length })}
             </p>
-            <p className="text-xs tabular-nums text-slate-500 dark:text-white/50">
+            <p className="text-xs tabular-nums text-ink-3">
               {t("providers.models_selected_count", {
                 count: discoverSelected.size,
               })}
@@ -142,7 +142,7 @@ export function OpenAIModelDiscoveryPanel({
               {t("providers.merge_selected")}
             </Button>
             {discoverQuery.trim() ? (
-              <span className="text-xs text-slate-500 dark:text-white/55">
+              <span className="text-xs text-ink-3">
                 {t("providers.models_filtered_count", {
                   shown: filteredDiscoveredModels.length,
                   total: discoveredModels.length,
@@ -153,7 +153,7 @@ export function OpenAIModelDiscoveryPanel({
 
           <div
             ref={discoveredListRef}
-            className="mt-2.5 max-h-52 overflow-y-auto rounded-xl border border-slate-900/8 bg-white dark:border-white/8 dark:bg-neutral-950/60"
+            className="mt-2.5 max-h-52 overflow-y-auto rounded-xl border border-line bg-surface"
             role="list"
             aria-label={t("providers.found_models", {
               count: discoveredModels.length,
@@ -180,7 +180,7 @@ export function OpenAIModelDiscoveryPanel({
                       transform: `translateY(${item.start}px)`,
                     }}
                   >
-                    <label className="flex cursor-pointer items-center gap-2.5 px-3 py-1 text-xs font-mono text-slate-700 transition-colors hover:bg-slate-50 dark:text-white/80 dark:hover:bg-white/5">
+                    <label className="flex cursor-pointer items-center gap-2.5 px-3 py-1 text-xs font-mono text-ink-2 transition-colors hover:bg-hover">
                       <input
                         type="checkbox"
                         checked={checked}
