@@ -75,8 +75,7 @@ const iconByType: Record<CcSwitchClientType, string> = {
 
 const labelClassName = "text-sm font-medium text-ink";
 const fieldClassName = "flex flex-col gap-1.5";
-// 分区用凹陷的浅灰底（inset）：输入框是白底，放在白色卡片上会糊成一片（#970 修过一次）。
-const sectionClassName = `${surface({ tone: "inset" })} p-4`;
+const sectionClassName = `${surface({ tone: "inset" })} p-4`; // 凹陷浅灰底：白色输入框放在白卡片上会糊成一片（#970）
 
 const MODEL_MAPPING_LOADING_ROWS = ["short", "medium", "long"];
 const CONFIG_MODAL_CLIENTS = CC_SWITCH_CLIENTS.filter((client) => client.type !== "gemini");
