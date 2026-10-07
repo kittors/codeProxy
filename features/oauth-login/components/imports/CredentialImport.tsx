@@ -2,7 +2,7 @@ import { ArrowUpRight, Check, KeyRound, Loader2, RotateCcw, ShieldCheck, Triangl
 import { useMemo, useState, type ComponentProps } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import type { ProxyPoolEntry } from "@code-proxy/api-client";
-import { Button, Textarea } from "@code-proxy/ui";
+import { Button, Textarea, ScrollFade } from "@code-proxy/ui";
 import type { ProxyPoolSelect } from "@features/proxy-pool";
 import type { AccountProvider } from "../../model/catalog";
 import {
@@ -77,7 +77,7 @@ export function CredentialImport({
 
   if (rows.length > 0) {
     return (
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6">
+      <ScrollFade className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6">
         <div className="grid gap-4">
           <p className="text-sm text-ink-2">
             {t("add_account.credential.results_summary", {
@@ -137,12 +137,12 @@ export function CredentialImport({
             </Button>
           </div>
         </div>
-      </div>
+      </ScrollFade>
     );
   }
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6">
+    <ScrollFade className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6">
       <div className="grid gap-4">
         <div className="flex items-start gap-2 rounded-lg border border-amber-300/60 bg-amber-50 px-3 py-2.5 text-xs text-amber-800 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-200">
           <TriangleAlert size={14} className="mt-0.5 shrink-0" aria-hidden="true" />
@@ -216,6 +216,6 @@ export function CredentialImport({
           </Button>
         </div>
       </div>
-    </div>
+    </ScrollFade>
   );
 }

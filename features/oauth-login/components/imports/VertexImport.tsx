@@ -3,7 +3,7 @@ import { FileJson, ShieldCheck, X } from "lucide-react";
 import { useState, type ComponentProps } from "react";
 import { useTranslation } from "react-i18next";
 import { vertexApi, type ProxyPoolEntry } from "@code-proxy/api-client";
-import { Button, TextInput } from "@code-proxy/ui";
+import { Button, TextInput, ScrollFade } from "@code-proxy/ui";
 import type { ProxyPoolSelect } from "@features/proxy-pool";
 import { useLoginProblemText } from "../../hooks/useLoginProblemText";
 import type { AddedAccount } from "../../model/addedAccount";
@@ -113,7 +113,7 @@ export function VertexImport({
   };
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6">
+    <ScrollFade className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6">
       <div className="grid gap-4">
         <AnimatePresence initial={false} mode="wait">
           {summary && file ? (
@@ -199,6 +199,6 @@ export function VertexImport({
           </Button>
         </div>
       </div>
-    </div>
+    </ScrollFade>
   );
 }

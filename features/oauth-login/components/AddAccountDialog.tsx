@@ -2,7 +2,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { ProxyPoolEntry } from "@code-proxy/api-client";
-import { Modal } from "@code-proxy/ui";
+import { Modal, ScrollFade } from "@code-proxy/ui";
 import { useProxyPoolChecks } from "@features/proxy-pool";
 import type { AddedAccount } from "../model/addedAccount";
 import {
@@ -203,7 +203,7 @@ export function AddAccountDialog({
   const renderPanel = () => {
     if (success && successProvider) {
       return (
-        <div className="min-h-0 flex-1 overflow-y-auto">
+        <ScrollFade className="min-h-0 flex-1 overflow-y-auto">
           <SuccessPanel
             title={
               successProvider.id === "auth-file"
@@ -222,7 +222,7 @@ export function AddAccountDialog({
             }}
             onDone={onClose}
           />
-        </div>
+        </ScrollFade>
       );
     }
     const shared = {

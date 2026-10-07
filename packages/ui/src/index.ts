@@ -78,6 +78,7 @@ export {
 } from "./theme/hues";
 export type { Hue } from "./theme/hues";
 export { useScrollFade } from "./hooks/useScrollFade";
+export { ScrollFade } from "./primitives/ScrollFade";
 export type { ScrollFadeEdges } from "./hooks/useScrollFade";
 export { PlanBadge, ProviderTag, brandVars } from "./brand/BrandBadges";
 export type { PlanBadgeTier } from "./brand/BrandBadges";

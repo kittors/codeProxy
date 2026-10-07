@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { AddedAccount } from "../../model/addedAccount";
 import { FileDropZone } from "./FileDropZone";
+import { ScrollFade } from "@code-proxy/ui";
 
 /**
  * Existing auth files (CLIProxyAPI exports and the like), several at once. The
@@ -35,7 +36,7 @@ export function AuthFileImport({
   };
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6">
+    <ScrollFade className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6">
       <FileDropZone
         multiple
         busy={importing}
@@ -45,6 +46,6 @@ export function AuthFileImport({
         hint={t("add_account.import.files_hint")}
         onFiles={(files) => void upload(files)}
       />
-    </div>
+    </ScrollFade>
   );
 }

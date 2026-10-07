@@ -11,6 +11,7 @@ import {
   Tabs,
   TabsList,
   TabsTrigger,
+  ScrollFade,
 } from "@code-proxy/ui";
 import {
   buildInputRenderedView,
@@ -605,7 +606,7 @@ export function LogContentModal({
             ) : (
               <motion.div
                 key={`content-${activeTab}-${viewMode}-${logId ?? "none"}`}
-                className="absolute inset-0 overflow-y-auto overscroll-contain will-change-[opacity,filter]"
+                className="absolute inset-0 will-change-[opacity,filter]"
                 initial={{ opacity: 0, filter: "blur(3px)" }}
                 animate={{ opacity: 1, filter: "blur(0px)" }}
                 exit={{ opacity: 0 }}
@@ -614,11 +615,14 @@ export function LogContentModal({
                   ease: [0.16, 1, 0.3, 1],
                 }}
               >
-                {activeTab === "input"
-                  ? renderInput()
-                  : activeTab === "output"
-                    ? renderOutput()
-                    : renderDetails()}
+                {/* 内容区上下渐隐：长 JSON、长对话滚动时不会在页签条和弹窗底边被硬生生截断。 */}
+                <ScrollFade className="h-full overflow-y-auto overscroll-contain">
+                  {activeTab === "input"
+                    ? renderInput()
+                    : activeTab === "output"
+                      ? renderOutput()
+                      : renderDetails()}
+                </ScrollFade>
               </motion.div>
             )}
           </AnimatePresence>
