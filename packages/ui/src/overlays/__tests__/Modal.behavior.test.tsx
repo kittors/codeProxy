@@ -105,6 +105,21 @@ describe("Modal keyboard and dismissal", () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
+  test("a non-closable dialog hides the close button and reports blocked dismissals", () => {
+    const onClose = vi.fn();
+    const onBlockedClose = vi.fn();
+    render(
+      <Modal open title="Forced" closable={false} onBlockedClose={onBlockedClose} onClose={onClose}>
+        body
+      </Modal>,
+    );
+    expect(screen.queryByRole("button", { name: /close|关闭/i })).toBeNull();
+    fireEvent.keyDown(window, { key: "Escape" });
+    fireEvent.click(backdrop());
+    expect(onClose).not.toHaveBeenCalled();
+    expect(onBlockedClose).toHaveBeenCalledTimes(2);
+  });
+
   test("focuses the first field on open and returns focus to the trigger on close", async () => {
     const user = userEvent.setup();
     function Harness() {

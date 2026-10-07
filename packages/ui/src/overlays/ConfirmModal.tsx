@@ -42,6 +42,7 @@ export function ConfirmModal({
   subject,
   consequences,
   confirmPhrase,
+  confirmDisabled = false,
   children,
   onConfirm,
   onClose,
@@ -57,6 +58,8 @@ export function ConfirmModal({
   subject?: ReactNode;
   consequences?: ReactNode[];
   confirmPhrase?: string;
+  /** 额外的「暂不能确认」条件，例如附加选项一个都没勾。 */
+  confirmDisabled?: boolean;
   children?: ReactNode;
   onConfirm: () => void;
   onClose: () => void;
@@ -70,7 +73,7 @@ export function ConfirmModal({
 
   const resolvedCancelText = cancelText || t("common.cancel");
   const phraseMatches = !confirmPhrase || typed.trim() === confirmPhrase;
-  const canConfirm = !busy && phraseMatches;
+  const canConfirm = !busy && phraseMatches && !confirmDisabled;
   const confirm = () => {
     if (canConfirm) onConfirm();
   };
@@ -97,7 +100,7 @@ export function ConfirmModal({
           <Button
             variant={variant === "danger" ? "danger" : "primary"}
             onClick={confirm}
-            disabled={!phraseMatches}
+            disabled={!phraseMatches || confirmDisabled}
             loading={busy}
           >
             {confirmText}

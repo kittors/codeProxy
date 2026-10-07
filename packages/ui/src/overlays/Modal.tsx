@@ -79,6 +79,8 @@ export function Modal({
   bodyClassName,
   bodyTestId,
   hideHeader = false,
+  closable = true,
+  onBlockedClose,
   dirty,
   initialFocus = "auto",
   onSubmitShortcut,
@@ -105,6 +107,13 @@ export function Modal({
   bodyClassName?: string;
   bodyTestId?: string;
   hideHeader?: boolean;
+  /**
+   * 不允许用户关闭（强制改密、正在升级这类必须走完的流程）：不显示关闭按钮，
+   * Esc 和点遮罩只会让面板轻晃。由调用方在流程结束后自己把 open 置为 false。
+   */
+  closable?: boolean;
+  /** 关闭被拦下时（不可关闭、或有未保存修改时按了 Esc / 点了遮罩）通知调用方，例如亮出原因。 */
+  onBlockedClose?: () => void;
   /**
    * 有未保存的修改。不传时自动判断：在弹窗里输入过文字后，点遮罩不再关闭（面板轻晃提示）。
    * 传 true 时 Esc 也会被拦下；传 false 时永远直接关闭。关闭按钮和取消按钮任何时候都有效。
@@ -151,16 +160,17 @@ export function Modal({
     setNudging(false);
     // 下一帧再加回类名，连续点击也能重新播放。
     window.requestAnimationFrame(() => setNudging(true));
-  }, []);
+    onBlockedClose?.();
+  }, [onBlockedClose]);
 
-  const guardBackdrop = dirty ?? interacted;
+  const guardBackdrop = !closable || (dirty ?? interacted);
   const handleEscape = useCallback(() => {
-    if (dirty === true) {
+    if (!closable || dirty === true) {
       nudge();
       return;
     }
     onClose();
-  }, [dirty, nudge, onClose]);
+  }, [closable, dirty, nudge, onClose]);
 
   useDialogBehavior({
     open,
@@ -228,15 +238,17 @@ export function Modal({
         ].join(" ")}
       >
         {hideHeader ? (
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={!open}
-            className={`absolute top-4 right-4 z-20 ${CLOSE_BUTTON_CLASS}`}
-            aria-label={t("common.close")}
-          >
-            <X size={18} />
-          </button>
+          closable ? (
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={!open}
+              className={`absolute top-4 right-4 z-20 ${CLOSE_BUTTON_CLASS}`}
+              aria-label={t("common.close")}
+            >
+              <X size={18} />
+            </button>
+          ) : null
         ) : (
           // 头部、尾部默认不画分隔线：留白已经把三段分开；只有内容滚动、被头尾挡住时才浮出一条细线。
           <div
@@ -270,15 +282,17 @@ export function Modal({
                 ) : null}
               </div>
             </div>
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={!open}
-              className={CLOSE_BUTTON_CLASS}
-              aria-label={t("common.close")}
-            >
-              <X size={18} />
-            </button>
+            {closable ? (
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={!open}
+                className={CLOSE_BUTTON_CLASS}
+                aria-label={t("common.close")}
+              >
+                <X size={18} />
+              </button>
+            ) : null}
           </div>
         )}
 

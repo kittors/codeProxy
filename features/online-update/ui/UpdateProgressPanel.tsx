@@ -54,7 +54,7 @@ function StageTimeline({ progress }: { progress?: UpdateProgressResponse | null 
           ) : state === "failed" ? (
             <CircleAlert size={12} className="text-rose-600 dark:text-rose-300" />
           ) : state === "skipped" ? (
-            <Minus size={12} className="text-slate-400 dark:text-white/35" />
+            <Minus size={12} className="text-ink-3" />
           ) : state === "active" ? (
             <Loader size={12} className="animate-spin text-sky-600 dark:text-sky-300" />
           ) : (
@@ -67,10 +67,10 @@ function StageTimeline({ progress }: { progress?: UpdateProgressResponse | null 
             <span
               className={
                 state === "active"
-                  ? "font-medium text-slate-900 dark:text-white"
+                  ? "font-medium text-ink"
                   : state === "skipped"
-                    ? "text-slate-400 line-through dark:text-white/35"
-                    : "text-slate-600 dark:text-white/55"
+                    ? "text-ink-3 line-through"
+                    : "text-ink-2"
               }
             >
               {stageLabel(t, stage.id ?? "")}
@@ -102,7 +102,7 @@ function LogConsole({ progress }: { progress?: UpdateProgressResponse | null }) 
   }, [expanded, logs.length]);
 
   return (
-    <div className="mt-4 border-t border-slate-900/8 pt-3 dark:border-white/8">
+    <div className="mt-4 border-t border-line pt-3">
       <Button
         variant="ghost"
         size="xs"
@@ -111,7 +111,7 @@ function LogConsole({ progress }: { progress?: UpdateProgressResponse | null }) 
       >
         <Terminal size={12} />
         {t("auto_update.progress_logs")}
-        <span className="text-slate-400 dark:text-white/40">
+        <span className="text-ink-3">
           {t("auto_update.progress_log_count", { count: logs.length })}
         </span>
         <ChevronDown
@@ -127,7 +127,7 @@ function LogConsole({ progress }: { progress?: UpdateProgressResponse | null }) 
           className="mt-2 max-h-48 overflow-y-auto rounded-lg bg-slate-900 p-3 dark:bg-neutral-950"
         >
           {logs.length === 0 ? (
-            <p className="font-mono text-xs text-slate-400">
+            <p className="font-mono text-xs text-ink-3">
               {t("auto_update.progress_logs_empty")}
             </p>
           ) : (
@@ -195,12 +195,12 @@ export function UpdateProgressPanel({
   return (
     <div data-testid="update-progress-console" className="min-w-0">
       <div className="flex items-baseline justify-between gap-3">
-        <p className="min-w-0 truncate text-sm text-slate-700 dark:text-white/70">
+        <p className="min-w-0 truncate text-sm text-ink-2">
           {progressMessage(t, progress)}
         </p>
         <span
           data-testid="update-progress-percent"
-          className="shrink-0 font-mono text-sm font-semibold tabular-nums text-slate-900 dark:text-white"
+          className="shrink-0 font-mono text-sm font-semibold tabular-nums text-ink"
         >
           {percent === null ? "--" : `${Math.round(percent)}%`}
         </span>
@@ -219,7 +219,7 @@ export function UpdateProgressPanel({
       {bytes && totalBytes ? (
         <p
           data-testid="update-progress-bytes"
-          className="mt-1.5 font-mono text-xs text-slate-500 dark:text-white/45"
+          className="mt-1.5 font-mono text-xs text-ink-3"
         >
           {bytes} / {totalBytes}
         </p>
@@ -228,7 +228,7 @@ export function UpdateProgressPanel({
       {steps ? (
         <p
           data-testid="update-progress-details"
-          className="mt-1.5 text-xs text-slate-500 dark:text-white/45"
+          className="mt-1.5 text-xs text-ink-3"
         >
           {steps}
         </p>

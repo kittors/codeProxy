@@ -91,16 +91,10 @@ export function PortalChangePasswordModal({
       description={t("apikey_lookup.change_password_desc")}
       icon={<LockKeyhole />}
       size="sm"
-      // 强制改密时 Esc / 点遮罩都拦下（面板轻晃），只能改完密码离开。
-      dirty={forced ? true : undefined}
-      onClose={() => {
-        // Force password change: only allow close after success clears the flag.
-        if (forced) {
-          setCloseBlocked(true);
-          return;
-        }
-        onClose();
-      }}
+      // 强制改密时不能关闭：没有关闭按钮，Esc / 点遮罩只会轻晃并亮出原因，只能改完密码离开。
+      closable={!forced}
+      onBlockedClose={forced ? () => setCloseBlocked(true) : undefined}
+      onClose={onClose}
       footer={
         <>
           {!forced ? (

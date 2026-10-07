@@ -79,7 +79,9 @@ describe("portal dialogs", () => {
     expect(within(dialog).getByText(/set a new password first/i)).toBeInTheDocument();
     expect(within(dialog).queryByRole("alert")).toBeNull();
 
-    await userEvent.click(within(dialog).getByRole("button", { name: "Close" }));
+    // 不可关闭：没有关闭按钮；按 Esc 不关，只亮出原因。
+    expect(within(dialog).queryByRole("button", { name: "Close" })).toBeNull();
+    await userEvent.keyboard("{Escape}");
     expect(screen.getByRole("dialog", { name: "Change password" })).toBeInTheDocument();
     expect(within(dialog).getByRole("alert")).toHaveTextContent(/set a new password first/i);
   });
