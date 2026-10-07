@@ -1,9 +1,4 @@
 /** Shared pure helpers for tenant create / renew forms. */
-import {
-  validateDisplayName,
-  validatePassword,
-  validateUsername,
-} from "@code-proxy/domain";
 import { rules, type Rule } from "@code-proxy/ui";
 
 /** Matches CliRelay identity service name limit (Go len(name) <= 128, UTF-8 bytes). */
@@ -43,12 +38,6 @@ export const toIsoDateTime = (value: string): string | null => {
   return date.toISOString();
 };
 
-/** 服务端按 UTF-8 字节数限制（Go 的 len），一个汉字算 3 个字节。 */
-export const maxBytesRule =
-  (max: number): Rule<string> =>
-  (value) =>
-    utf8Length(value) > max ? { key: "max_bytes", params: { max } } : null;
-
 /** 日期时间要能解析；是否必须晚于现在由调用方决定（新建要求，续期允许提前结束）。 */
 export const dateTimeRule: Rule<string> = rules.custom<string>(
   (value) => !value.trim() || toIsoDateTime(value) !== null || "datetime",
@@ -57,33 +46,6 @@ export const futureDateTimeRule: Rule<string> = rules.custom<string>((value) => 
   const iso = toIsoDateTime(value);
   return !iso || new Date(iso).getTime() > Date.now() || "datetime_future";
 });
-
-/*
- * 首个管理员的身份字段：判断沿用 @code-proxy/domain 里与 CliRelay 对齐的校验器，
- * 失败码与 `validation.*` 的文案键同名。用户管理页有同样的三条规则——页面之间不能互相引用，
- * 规则本身只是对 domain 校验器的一行包装。
- */
-export const adminUsernameRules: readonly Rule<string>[] = [
-  rules.required(),
-  rules.custom<string>((value) => {
-    const result = validateUsername(value);
-    return result.ok || result.code;
-  }),
-];
-export const adminDisplayNameRules: readonly Rule<string>[] = [
-  rules.required(),
-  rules.custom<string>((value) => {
-    const result = validateDisplayName(value);
-    return result.ok || result.code;
-  }),
-];
-export const adminPasswordRules: readonly Rule<string>[] = [
-  rules.required(),
-  rules.custom<string>((value) => {
-    const result = validatePassword(value);
-    return result.ok || result.code;
-  }),
-];
 
 const DURATION_UNITS = [
   ["day", 86400],

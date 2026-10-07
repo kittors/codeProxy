@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { LockKeyhole } from "lucide-react";
-import { validatePassword } from "@code-proxy/domain";
 import {
   Button,
   Callout,
@@ -10,6 +9,7 @@ import {
   rules,
   useFormValidation,
 } from "@code-proxy/ui";
+import { passwordRules } from "@features/identity-rules";
 
 const FORM_ID = "portal-change-password-form";
 
@@ -61,13 +61,7 @@ export function PortalChangePasswordModal({
     { current: form.current, next: form.next, confirm },
     {
       current: [rules.required()],
-      next: [
-        rules.required(),
-        rules.custom<string>((value) => {
-          const result = validatePassword(value);
-          return result.ok || result.code;
-        }),
-      ],
+      next: passwordRules,
       // 只在前端核对两次输入一致，接口仍然只收当前密码和新密码。
       confirm: [
         rules.required(),

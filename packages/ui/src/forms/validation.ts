@@ -76,6 +76,17 @@ export const rules = {
     (value) =>
       !isBlank(value) && asText(value).length > max ? { key: "max_length", params: { max } } : null,
 
+  /**
+   * 服务端按 UTF-8 字节数限制长度（Go 的 len，取去掉首尾空白后的值）：一个汉字算 3 个字节，
+   * 只按字符数数会让中文名称在前端放行、到后端才被拒。
+   */
+  maxBytes:
+    (max: number): Rule =>
+    (value) =>
+      !isBlank(value) && new TextEncoder().encode(asText(value)).length > max
+        ? { key: "max_bytes", params: { max } }
+        : null,
+
   pattern:
     (pattern: RegExp, key = "format"): Rule =>
     (value) =>

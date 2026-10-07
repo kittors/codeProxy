@@ -13,7 +13,7 @@ import {
   useFormValidation,
   type MultiSelectOption,
 } from "@code-proxy/ui";
-import { passwordRules } from "./userForm";
+import { passwordRules } from "@features/identity-rules";
 
 /** 确认框里的「被操作的人」：显示名 + 等宽用户名，一眼认出是谁。 */
 function UserSubject({ name, username }: { name: string; username: string }) {

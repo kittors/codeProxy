@@ -1,7 +1,8 @@
 import { useEffect, useRef, type Dispatch, type FormEvent, type SetStateAction } from "react";
 import { UserPlus } from "lucide-react";
 import { Button, Callout, FormField, Modal, TextInput, useFormValidation } from "@code-proxy/ui";
-import { displayNameRules, optionalPasswordRules, type EndUserForm } from "../endUserForm";
+import { displayNameRules, optionalPasswordRules } from "@features/identity-rules";
+import type { EndUserForm } from "../endUserForm";
 
 const FORM_ID = "create-end-user-form";
 

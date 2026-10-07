@@ -20,12 +20,8 @@ import {
   remainingQuotaUsd,
   requestLimitRules,
 } from "@features/period-spending";
-import {
-  displayNameRules,
-  limitToText,
-  optionalPasswordRules,
-  type EndUserForm,
-} from "../endUserForm";
+import { displayNameRules, optionalPasswordRules } from "@features/identity-rules";
+import { limitToText, type EndUserForm } from "../endUserForm";
 
 const FORM_ID = "edit-end-user-form";
 
@@ -92,6 +88,8 @@ export function EndUserEditModal({
   // same policy the server enforces, or its rejection comes back in English.
   const validation = useFormValidation(form, {
     displayName: displayNameRules,
+    // 门户用户名后端只做小写化与重名自动加后缀，没有字符集限制，所以只要求非空，
+    // 不套用管理员账号那套 usernameRules。
     username: [rules.required()],
     password: optionalPasswordRules,
     ...requestLimitRules,

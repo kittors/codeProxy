@@ -19,7 +19,6 @@ import {
   DEFAULT_ACCESS_TOKEN_TTL,
   DEFAULT_REFRESH_TOKEN_TTL,
   describeDuration,
-  maxBytesRule,
   REFRESH_TOKEN_TTL_RANGE,
   TENANT_DESCRIPTION_MAX_BYTES,
   TENANT_NAME_MAX_LENGTH,
@@ -68,8 +67,8 @@ export function EditTenantModal({
   const formRef = useRef<HTMLFormElement | null>(null);
   const [draft, setDraft] = useState(() => toDraft(tenant));
   const validation = useFormValidation(draft, {
-    name: [rules.required(), maxBytesRule(TENANT_NAME_MAX_LENGTH)],
-    description: [maxBytesRule(TENANT_DESCRIPTION_MAX_BYTES)],
+    name: [rules.required(), rules.maxBytes(TENANT_NAME_MAX_LENGTH)],
+    description: [rules.maxBytes(TENANT_DESCRIPTION_MAX_BYTES)],
     accessTtl: [rules.required(), rules.integer(ACCESS_TOKEN_TTL_RANGE)],
     refreshTtl: [rules.required(), rules.integer(REFRESH_TOKEN_TTL_RANGE)],
   });

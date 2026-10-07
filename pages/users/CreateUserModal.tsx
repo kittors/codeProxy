@@ -12,14 +12,12 @@ import {
   useFormValidation,
   type MultiSelectOption,
 } from "@code-proxy/ui";
+import { displayNameRules, passwordRules, usernameRules } from "@features/identity-rules";
 import {
-  displayNameRules,
   emptyCreateUserForm,
   IDENTITY_DISPLAY_NAME_MAX_BYTES,
   IDENTITY_USERNAME_MAX_BYTES,
   normalizeUsername,
-  passwordRules,
-  usernameRules,
   utf8ByteLength,
   type CreateUserForm,
   type PasswordMode,

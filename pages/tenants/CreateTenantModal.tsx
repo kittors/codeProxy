@@ -11,13 +11,10 @@ import {
   rules,
   useFormValidation,
 } from "@code-proxy/ui";
+import { displayNameRules, passwordRules, usernameRules } from "@features/identity-rules";
 import {
-  adminDisplayNameRules,
-  adminPasswordRules,
-  adminUsernameRules,
   dateTimeRule,
   futureDateTimeRule,
-  maxBytesRule,
   TENANT_DESCRIPTION_MAX_BYTES,
   TENANT_NAME_MAX_LENGTH,
 } from "./tenantForm";
@@ -63,12 +60,12 @@ export function CreateTenantModal({
   const [form, setForm] = useState<CreateTenantForm>(emptyCreateTenantForm);
   const [serverPasswordError, setServerPasswordError] = useState<string | null>(null);
   const validation = useFormValidation(form, {
-    name: [rules.required(), maxBytesRule(TENANT_NAME_MAX_LENGTH)],
+    name: [rules.required(), rules.maxBytes(TENANT_NAME_MAX_LENGTH)],
     expires_at: [rules.required(), dateTimeRule, futureDateTimeRule],
-    admin_username: adminUsernameRules,
-    admin_display_name: adminDisplayNameRules,
-    admin_password: adminPasswordRules,
-    description: [maxBytesRule(TENANT_DESCRIPTION_MAX_BYTES)],
+    admin_username: usernameRules,
+    admin_display_name: displayNameRules,
+    admin_password: passwordRules,
+    description: [rules.maxBytes(TENANT_DESCRIPTION_MAX_BYTES)],
   });
   const { reset } = validation;
 

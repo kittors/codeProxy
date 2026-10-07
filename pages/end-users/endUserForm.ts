@@ -1,7 +1,5 @@
 import type { EndUser } from "@code-proxy/api-client";
 import { normalizePeriodSpendingLimits } from "@code-proxy/api-client";
-import { validateDisplayName, validatePassword } from "@code-proxy/domain";
-import { rules, type Rule } from "@code-proxy/ui";
 import { emptyPeriodSpendingDraft, remainingQuotaUsd } from "@features/period-spending";
 import type { PeriodSpendingDraft } from "@features/period-spending";
 
@@ -27,28 +25,6 @@ export const endUserLabel = (user: EndUser): string => {
     ? `${displayName} / ${username}`
     : displayName || username;
 };
-
-/*
- * 门户账号字段规则：判断沿用 @code-proxy/domain 里与 CliRelay 对齐的校验器，失败码与
- * `validation.*` 文案键同名，不用再维护一张「失败码 → 文案」的映射。
- * 门户用户名后端只做小写化与重名自动加后缀，没有字符集限制，所以这里只要求非空。
- */
-export const displayNameRules: readonly Rule<string>[] = [
-  rules.required(),
-  rules.custom<string>((value) => {
-    const result = validateDisplayName(value);
-    return result.ok || result.code;
-  }),
-];
-
-/** 密码留空 = 由服务端生成（创建）/ 不修改（编辑）；填了就必须满足服务端同一套密码策略。 */
-export const optionalPasswordRules: readonly Rule<string>[] = [
-  rules.custom<string>((value) => {
-    if (!value) return true;
-    const result = validatePassword(value);
-    return result.ok || result.code;
-  }),
-];
 
 export type EndUserForm = {
   username: string;

@@ -15,17 +15,12 @@ import {
   Textarea,
   rules,
   useFormValidation,
-  type Rule,
 } from "@code-proxy/ui";
 
 const ROLE_NAME_MAX_BYTES = 128;
 const ROLE_DESCRIPTION_MAX_BYTES = 1000;
+/** 字数提示按服务端的口径数：UTF-8 字节（Go 的 len），一个汉字算 3 个字节。 */
 const utf8Length = (value: string) => new TextEncoder().encode(value.trim()).length;
-/** 服务端按 UTF-8 字节数限制（Go 的 len），一个汉字算 3 个字节。 */
-const maxBytes =
-  (max: number): Rule<string> =>
-  (value) =>
-    utf8Length(value) > max ? { key: "max_bytes", params: { max } } : null;
 
 export type RoleForm = { name: string; description: string };
 const emptyRoleForm = (): RoleForm => ({ name: "", description: "" });
@@ -46,8 +41,8 @@ export function CreateRoleModal({
   const formRef = useRef<HTMLFormElement | null>(null);
   const [form, setForm] = useState<RoleForm>(emptyRoleForm);
   const validation = useFormValidation(form, {
-    name: [rules.required(), maxBytes(ROLE_NAME_MAX_BYTES)],
-    description: [maxBytes(ROLE_DESCRIPTION_MAX_BYTES)],
+    name: [rules.required(), rules.maxBytes(ROLE_NAME_MAX_BYTES)],
+    description: [rules.maxBytes(ROLE_DESCRIPTION_MAX_BYTES)],
   });
   const { reset } = validation;
 
