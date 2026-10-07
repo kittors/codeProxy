@@ -1,6 +1,6 @@
 # codeProxy Bundle Baseline
 
-更新时间：2026-10-07 13:46:00 +0800
+更新时间：2026-10-07 20:45:28 +0800
 
 ## 当前构建命令
 
@@ -19,7 +19,7 @@ bun run build
 | `vendor-charts`      |    0.07 kB |   0.08 kB | Chart.js 入口当前几乎未进入业务路径                                         |
 | `index`              |  396.29 kB | 121.04 kB | 多账号切换（AuthProvider vault + AppShell 账号菜单）进入 shell 入口；后续可再拆 account menu |
 | `index.css`          |  430.02 kB |  86.34 kB | 入口样式表；含 114 条自托管字体 @font-face 分片声明（Inter / Noto Sans SC / JetBrains Mono），字体文件本身按 unicode-range 懒加载不计入此行 |
-| `ConfigPage`         |  119.60 kB |  33.35 kB | 页面 chunk 低于预算                                                         |
+| `ConfigPage`         |  127.99 kB |  38.77 kB | 与当前构建对齐：dev 在 #1034（表单校验与配置页重做）后已是约 37.3 kB，未刷新本行；本次分组页签 + 分区胶囊再约 +1.5 kB；仍低于 `< 80 kB gzip` 页面预算 |
 | `AuthFilesPage`      |  250.95 kB |  69.45 kB | 新增预热策略配置弹窗与批量调度操作；低于 `< 80 kB gzip` 页面预算 |
 | `ProvidersPage`      |  121.98 kB |  30.85 kB | 已低于 `< 80 kB gzip` 页面预算                                              |
 | `MonitorPage`        |   74.70 kB |  23.20 kB | 监控中心重做（健康评分、实时流量、六格指标、四视图趋势、耗时分布、失败分析、三张排行、流向与热力图）；路由级懒加载，低于 `< 80 kB gzip` 页面预算 |
