@@ -1,7 +1,7 @@
 import type { MouseEvent } from "react";
 import { Link } from "react-router-dom";
 import { ACTIVE_ICON_STROKE, type SidebarNavItem } from "./navModel";
-import { SIDEBAR_ACTIVE_CARD } from "./sidebarRow";
+import { SIDEBAR_ACTIVE_CARD, sidebarIconClass } from "./sidebarRow";
 
 /**
  * 分区下的一行页面链接，两种外观：
@@ -53,7 +53,7 @@ export function SidebarItemLink({
       <Icon
         size={18}
         strokeWidth={active ? ACTIVE_ICON_STROKE : undefined}
-        className={["shrink-0", active ? "text-ink" : "text-ink-2"].join(" ")}
+        className={["shrink-0", sidebarIconClass(Icon)].join(" ")}
         aria-hidden="true"
       />
     );

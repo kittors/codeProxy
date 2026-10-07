@@ -5,6 +5,8 @@ import { isValidElement, type ReactNode } from "react";
  *
  * 以前图标块、分区图标、空态、侧边栏图标都是中性灰，整个面板读起来灰蒙蒙的。现在每个图标
  * 有自己的色相：用于「认出这是什么」（用户是蓝、权限是紫、密钥是琥珀……），不表达好坏——
+ * 侧边栏的几个顶层分组（仪表盘靛蓝、运行观测翠绿、接入与凭证紫、模型与调度橙、组织与权限蓝、
+ * 系统设置蓝绿、系统信息天蓝）彼此不撞色，调整注册表时注意保持这一点——
  * 危险 / 警告 / 完成仍然只用 DialogIcon 的 danger / warning / success 语义色调。
  *
  * Tailwind 只认源码里完整出现的类名，所以每个色相的每种用法都写成完整字符串，不能拼接。
@@ -274,7 +276,7 @@ const ICON_HUE: Record<string, Hue> = {
   Wand2: "purple",
   WandSparkles: "purple",
   Brain: "pink",
-  Layers: "indigo",
+  Layers: "orange",
   Boxes: "indigo",
   Box: "indigo",
   Package: "amber",
@@ -293,15 +295,15 @@ const ICON_HUE: Record<string, Hue> = {
   Tags: "lime",
   Hash: "lime",
   // 设置、菜单与布局
-  Settings: "indigo",
-  Settings2: "indigo",
+  Settings: "teal",
+  Settings2: "teal",
   SlidersHorizontal: "indigo",
   SlidersVertical: "indigo",
-  Cog: "indigo",
+  Cog: "teal",
   Wrench: "orange",
   Menu: "sky",
   PanelsTopLeft: "sky",
-  LayoutDashboard: "blue",
+  LayoutDashboard: "indigo",
   LayoutGrid: "blue",
   FolderTree: "amber",
   Folder: "amber",
