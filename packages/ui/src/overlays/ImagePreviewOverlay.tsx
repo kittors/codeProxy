@@ -12,6 +12,7 @@ import {
   ZoomOut,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useDialogBehavior } from "./useDialogBehavior";
 
 const MIN_SCALE = 1;
 const MAX_SCALE = 4;
@@ -124,16 +125,12 @@ export function ImagePreviewOverlay({
     return () => window.removeEventListener("resize", updateViewport);
   }, [open]);
 
-  useEffect(() => {
-    if (!open) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onClose, open]);
+  // 预览常常是从弹窗里打开的（日志内容、生图测试）：登记进同一个叠层，Esc 只关预览，
+  // 下面的弹窗不跟着关；Tab 留在预览里，关闭后焦点回到被点开的那张图。
+  // 没有图时组件什么也不渲染，也就不能占着叠层的最上层（否则下面弹窗的 Esc 会失灵）。
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const shown = open && Boolean(resolvedImageSrc);
+  useDialogBehavior({ open: shown, visible: shown, panelRef, onEscape: onClose, initialFocus: "panel" });
 
   const geometry = useMemo(() => {
     const naturalWidth = naturalSize.width || 1;
@@ -252,11 +249,13 @@ export function ImagePreviewOverlay({
 
   return createPortal(
     <div
+      ref={panelRef}
       role="dialog"
       aria-modal="true"
       aria-label={title}
+      tabIndex={-1}
       data-variant="image-only"
-      className="fixed inset-0 z-[220] bg-black/60 backdrop-blur-sm dark:bg-black/70"
+      className="fixed inset-0 z-[220] bg-black/60 outline-none backdrop-blur-sm dark:bg-black/70"
     >
       <button
         type="button"

@@ -117,7 +117,9 @@ describe("VisualConfigEditor auto update config", () => {
         <VisualConfigEditor values={{ ...DEFAULT_VISUAL_VALUES, port: "80a" }} onChange={vi.fn()} />
       </ThemeProvider>,
     );
-    const port = screen.getByRole("textbox", { name: "Port" });
+    // 网络分区的代理地址输入里也有一个「端口」，限定在服务分区里找监听端口。
+    const server = document.querySelector<HTMLElement>('[data-config-section="server"]')!;
+    const port = within(server).getByRole("textbox", { name: "Port" });
     expect(port).toHaveAttribute("aria-invalid", "true");
     expect(port).toHaveAccessibleDescription(/Enter a whole number/);
   });

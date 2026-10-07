@@ -129,6 +129,9 @@ export function useDialogBehavior({
 
   useEffect(() => {
     if (!open || !visible || initialFocus === "none") return;
+    // 进场动画要隔两帧才算「可见」：这期间如果已经在上面又打开了一层（例如从弹窗里点开大图预览），
+    // 焦点归上层管，下层不能晚到一步把它抢回来。
+    if (!isTopOverlay(idRef.current)) return;
     const panel = panelRef.current;
     if (!panel) return;
     if (panel.contains(document.activeElement)) return;

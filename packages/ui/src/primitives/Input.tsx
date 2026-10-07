@@ -35,8 +35,14 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(function T
   },
   ref,
 ) {
+  // 没有标签可依附时才拿 placeholder 兜底当名称（搜索框这类独立输入框）。有 id（FormField 会
+  // 用 `<label for>` 指过来）或 aria-labelledby 时不能兜底：aria-label 的优先级高于 label，
+  // 读屏会把「例如：香港住宅 IP」这种示例读成字段名，可见的标签反而被盖掉。
   const ariaLabel =
-    props["aria-label"] ?? (typeof props.placeholder === "string" ? props.placeholder : undefined);
+    props["aria-label"] ??
+    (!props.id && !props["aria-labelledby"] && typeof props.placeholder === "string"
+      ? props.placeholder
+      : undefined);
 
   const ariaInvalid = props["aria-invalid"];
   const isInvalid =

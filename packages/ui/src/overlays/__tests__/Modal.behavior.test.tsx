@@ -6,6 +6,7 @@ import { Select } from "../../primitives/Select";
 import { TextInput } from "../../primitives/Input";
 import { ConfirmModal } from "../ConfirmModal";
 import { Drawer } from "../Drawer";
+import { ImagePreviewOverlay } from "../ImagePreviewOverlay";
 import { Modal } from "../Modal";
 
 const backdrop = () => document.querySelector<HTMLButtonElement>("[data-overlay-backdrop]")!;
@@ -279,5 +280,42 @@ describe("Drawer dismissal", () => {
     fireEvent.click(backdrop());
     expect(onClose).not.toHaveBeenCalled();
     expect(onBlockedClose).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("ImagePreviewOverlay inside a dialog", () => {
+  test("Escape closes only the preview, and focus returns to the image that opened it", async () => {
+    const user = userEvent.setup();
+    const onDialogClose = vi.fn();
+    function Harness() {
+      const [preview, setPreview] = useState(false);
+      return (
+        <Modal open title="Log content" onClose={onDialogClose}>
+          <button type="button" onClick={() => setPreview(true)}>
+            Open image
+          </button>
+          <ImagePreviewOverlay
+            open={preview}
+            imageSrc="data:image/png;base64,iVBORw0KGgo="
+            imageAlt="Generated"
+            title="Preview"
+            onClose={() => setPreview(false)}
+          />
+        </Modal>
+      );
+    }
+    render(<Harness />);
+    const trigger = screen.getByRole("button", { name: "Open image" });
+    await user.click(trigger);
+    expect(screen.getByRole("dialog", { name: "Preview" })).toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Preview" })).toBeNull());
+    expect(onDialogClose).not.toHaveBeenCalled();
+    await waitFor(() => expect(trigger).toHaveFocus());
+
+    // 预览关了之后，Esc 又归弹窗管。
+    await user.keyboard("{Escape}");
+    expect(onDialogClose).toHaveBeenCalledTimes(1);
   });
 });
