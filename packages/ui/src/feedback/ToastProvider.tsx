@@ -1,4 +1,5 @@
 import { createContext, type PropsWithChildren, use, useCallback, useMemo } from "react";
+import { ConfirmHost } from "../overlays/confirmDialog";
 import { Toaster } from "./Toaster";
 import { toast, type ToastAction } from "./toastStore";
 
@@ -57,6 +58,8 @@ export function ToastProvider({ children }: PropsWithChildren) {
   return (
     <ToastContext value={value}>
       <Toaster />
+      {/* confirmDialog() 的渲染宿主：和提示条一样全局只挂一个。 */}
+      <ConfirmHost />
       {children}
     </ToastContext>
   );

@@ -1,26 +1,89 @@
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { useEffect, useId, useRef, type PropsWithChildren, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type PropsWithChildren,
+  type ReactNode,
+} from "react";
 import { X } from "lucide-react";
+import { DialogIcon, type DialogTone } from "./DialogIcon";
 import { overlayBackdropMotion, overlayPanelMotion, useOverlayPresence } from "./overlayMotion";
+import {
+  useDialogBehavior,
+  useInteractionGuard,
+  type DialogInitialFocus,
+} from "./useDialogBehavior";
 
 /** 关闭按钮：无底色圆形，悬停才出现浅灰叠层。 */
 const CLOSE_BUTTON_CLASS =
   "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-0 bg-transparent p-0 text-ink-3 shadow-none transition-colors hover:bg-hover hover:text-ink disabled:cursor-not-allowed disabled:opacity-60";
+
+export type ModalSize = "sm" | "md" | "lg" | "xl" | "2xl";
+
+/**
+ * 宽度档位按内容类型选：sm 确认框与单个输入；md 常规表单（一到两列）；lg 带分区的长表单、
+ * 详情；xl 双栏（左导航 + 右内容）与表格类；2xl 编辑器类。
+ */
+const SIZE_CLASS: Record<ModalSize, string> = {
+  sm: "max-w-md",
+  md: "max-w-xl",
+  lg: "max-w-3xl",
+  xl: "max-w-5xl",
+  "2xl": "max-w-6xl",
+};
+
+/** 内容滚动到的位置：头部下方 / 尾部上方的分隔线只在「有内容被挡住」时出现。 */
+function useScrollEdges(enabled: boolean) {
+  const [edges, setEdges] = useState({ top: false, bottom: false });
+  const nodeRef = useRef<HTMLDivElement | null>(null);
+  const measure = useCallback(() => {
+    const node = nodeRef.current;
+    if (!node) return;
+    const top = node.scrollTop > 1;
+    const bottom = node.scrollTop + node.clientHeight < node.scrollHeight - 1;
+    setEdges((previous) =>
+      previous.top === top && previous.bottom === bottom ? previous : { top, bottom },
+    );
+  }, []);
+  useEffect(() => {
+    const node = nodeRef.current;
+    if (!enabled || !node) return;
+    measure();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    for (const child of Array.from(node.children)) observer.observe(child);
+    return () => observer.disconnect();
+  }, [enabled, measure]);
+  return { nodeRef, edges, onScroll: measure };
+}
 
 export function Modal({
   open,
   title,
   titleAccessory,
   description,
+  icon,
+  tone = "neutral",
+  size,
   footer,
-  maxWidth = "max-w-3xl",
+  footerStart,
+  maxWidth,
   panelClassName,
   bodyHeightClassName,
   bodyOverflowClassName,
   bodyClassName,
   bodyTestId,
   hideHeader = false,
+  closable = true,
+  onBlockedClose,
+  dirty,
+  initialFocus = "auto",
+  onSubmitShortcut,
   onClose,
   children,
 }: PropsWithChildren<{
@@ -28,7 +91,15 @@ export function Modal({
   title: string;
   titleAccessory?: ReactNode;
   description?: ReactNode;
+  /** 标题左侧的图标块：说明这个弹窗在处理什么（用户、密钥、规则……）。 */
+  icon?: ReactNode;
+  /** 图标块色调；红色只给删除这类不可恢复的操作。 */
+  tone?: DialogTone;
+  /** 宽度档位；显式传 maxWidth 时以 maxWidth 为准（兼容旧调用）。 */
+  size?: ModalSize;
   footer?: ReactNode;
+  /** 尾部左侧的辅助信息（例如「已选 3 项」「保存后立即生效」），按钮仍在右侧。 */
+  footerStart?: ReactNode;
   maxWidth?: string;
   panelClassName?: string;
   bodyHeightClassName?: string;
@@ -36,18 +107,40 @@ export function Modal({
   bodyClassName?: string;
   bodyTestId?: string;
   hideHeader?: boolean;
+  /**
+   * 不允许用户关闭（强制改密、正在升级这类必须走完的流程）：不显示关闭按钮，
+   * Esc 和点遮罩只会让面板轻晃。由调用方在流程结束后自己把 open 置为 false。
+   */
+  closable?: boolean;
+  /** 关闭被拦下时（不可关闭、或有未保存修改时按了 Esc / 点了遮罩）通知调用方，例如亮出原因。 */
+  onBlockedClose?: () => void;
+  /**
+   * 有未保存的修改。不传时自动判断：在弹窗里输入过文字后，点遮罩不再关闭（面板轻晃提示）。
+   * 传 true 时 Esc 也会被拦下；传 false 时永远直接关闭。关闭按钮和取消按钮任何时候都有效。
+   */
+  dirty?: boolean;
+  /** 打开时的焦点：auto 聚焦第一个可填写的控件；panel 只聚焦弹窗本身；none 不动焦点。 */
+  initialFocus?: DialogInitialFocus;
+  /** ⌘ / Ctrl + Enter 触发的主操作。 */
+  onSubmitShortcut?: () => void;
   onClose: () => void;
 }>) {
   const { t } = useTranslation();
   const { mounted, visible } = useOverlayPresence(open);
   const titleId = useId();
+  const descriptionId = useId();
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const [nudging, setNudging] = useState(false);
+  const { interacted, onInput } = useInteractionGuard(open);
   // Snapshot title/description/footer/children while open so parents can clear
   // props immediately without collapsing the panel mid-exit animation.
   const contentRef = useRef({
     title,
     titleAccessory,
     description,
+    icon,
     footer,
+    footerStart,
     children,
   });
   if (open) {
@@ -55,37 +148,63 @@ export function Modal({
       title,
       titleAccessory,
       description,
+      icon,
       footer,
+      footerStart,
       children,
     };
   }
   const snapshot = contentRef.current;
 
-  useEffect(() => {
-    if (!open) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onClose, open]);
+  const nudge = useCallback(() => {
+    setNudging(false);
+    // 下一帧再加回类名，连续点击也能重新播放。
+    window.requestAnimationFrame(() => setNudging(true));
+    onBlockedClose?.();
+  }, [onBlockedClose]);
+
+  const guardBackdrop = !closable || (dirty ?? interacted);
+  const handleEscape = useCallback(() => {
+    if (!closable || dirty === true) {
+      nudge();
+      return;
+    }
+    onClose();
+  }, [closable, dirty, nudge, onClose]);
+
+  useDialogBehavior({
+    open,
+    visible,
+    panelRef,
+    onEscape: handleEscape,
+    onSubmitShortcut,
+    initialFocus,
+  });
+
+  const { nodeRef: bodyRef, edges, onScroll } = useScrollEdges(mounted);
 
   if (!mounted) return null;
 
   const bodyHeightCls = bodyHeightClassName ?? "max-h-[70vh]";
   const bodyOverflowCls = bodyOverflowClassName ?? "overflow-y-auto";
+  const widthCls = maxWidth ?? SIZE_CLASS[size ?? "lg"];
   // 遮罩与面板分层：进场一起出现，面板多走一段落稳；退场面板先走，遮罩随后褪去。
   const backdropMotion = overlayBackdropMotion(visible);
   const panelMotion = overlayPanelMotion(visible, !open);
+  const hasDescription = Boolean(snapshot.description) && !hideHeader;
 
   return createPortal(
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+    // 手机上是底部弹出的面板（贴底、上圆角，拇指够得着按钮）；sm 以上居中。
+    <div className="fixed inset-0 z-[200] flex items-end justify-center sm:items-center sm:p-4">
       <button
         type="button"
+        data-overlay-backdrop=""
         onClick={() => {
           if (!open) return;
+          if (guardBackdrop) {
+            nudge();
+            return;
+          }
           onClose();
         }}
         aria-hidden="true"
@@ -99,62 +218,90 @@ export function Modal({
       />
 
       <div
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-label={hideHeader ? snapshot.title : undefined}
         aria-labelledby={hideHeader ? undefined : titleId}
+        aria-describedby={hasDescription ? descriptionId : undefined}
+        tabIndex={-1}
+        onInput={onInput}
+        onAnimationEnd={(event) => {
+          if (event.animationName === "overlay-nudge") setNudging(false);
+        }}
         style={panelMotion.style}
         className={[
-          `relative z-10 w-full ${maxWidth} overflow-hidden rounded-3xl bg-elevated text-ink shadow-dialog`,
+          `relative z-10 flex max-h-[calc(100dvh-0.5rem)] w-full ${widthCls} flex-col overflow-hidden rounded-t-3xl bg-elevated text-ink shadow-dialog outline-none sm:max-h-[calc(100dvh-2rem)] sm:rounded-3xl`,
           panelMotion.className,
+          nudging ? "overlay-nudge" : "",
           panelClassName,
         ].join(" ")}
       >
         {hideHeader ? (
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={!open}
-            className={`absolute top-4 right-4 z-20 ${CLOSE_BUTTON_CLASS}`}
-            aria-label={t("common.close")}
-          >
-            <X size={18} />
-          </button>
-        ) : (
-          // 头部、尾部不画分隔线：留白已经把三段分开，线只会让弹窗显得像表格。
-          <div className="flex items-start justify-between gap-3 pt-5 pr-4 pb-1 pl-6">
-            <div className="min-w-0 pt-1">
-              <h2 className="flex min-w-0 items-center gap-2 text-xl font-semibold tracking-tight text-ink">
-                <span id={titleId} className="min-w-0 truncate">
-                  {snapshot.title}
-                </span>
-                {snapshot.titleAccessory ? (
-                  <span className="shrink-0" aria-hidden="true">
-                    {snapshot.titleAccessory}
-                  </span>
-                ) : null}
-              </h2>
-              {snapshot.description ? (
-                <p className="mt-1 text-sm text-ink-2">
-                  {snapshot.description}
-                </p>
-              ) : null}
-            </div>
+          closable ? (
             <button
               type="button"
               onClick={onClose}
               disabled={!open}
-              className={CLOSE_BUTTON_CLASS}
+              className={`absolute top-4 right-4 z-20 ${CLOSE_BUTTON_CLASS}`}
               aria-label={t("common.close")}
             >
               <X size={18} />
             </button>
+          ) : null
+        ) : (
+          // 头部、尾部默认不画分隔线：留白已经把三段分开；只有内容滚动、被头尾挡住时才浮出一条细线。
+          <div
+            className={[
+              "flex shrink-0 items-start justify-between gap-3 border-b pt-5 pr-4 pb-1 pl-6 transition-colors duration-200",
+              edges.top ? "border-line" : "border-transparent",
+            ].join(" ")}
+          >
+            <div className="flex min-w-0 flex-1 items-start gap-3.5">
+              {snapshot.icon ? <DialogIcon tone={tone}>{snapshot.icon}</DialogIcon> : null}
+              <div className={["min-w-0", snapshot.icon ? "pt-px" : "pt-1"].join(" ")}>
+                <h2
+                  className={[
+                    "flex min-w-0 items-center gap-2 font-semibold tracking-tight text-ink",
+                    snapshot.icon ? "text-lg" : "text-xl",
+                  ].join(" ")}
+                >
+                  <span id={titleId} className="min-w-0 truncate">
+                    {snapshot.title}
+                  </span>
+                  {snapshot.titleAccessory ? (
+                    <span className="shrink-0" aria-hidden="true">
+                      {snapshot.titleAccessory}
+                    </span>
+                  ) : null}
+                </h2>
+                {snapshot.description ? (
+                  <div id={descriptionId} className="mt-0.5 text-sm leading-relaxed text-ink-2">
+                    {snapshot.description}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+            {closable ? (
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={!open}
+                className={CLOSE_BUTTON_CLASS}
+                aria-label={t("common.close")}
+              >
+                <X size={18} />
+              </button>
+            ) : null}
           </div>
         )}
 
         <div
+          ref={bodyRef}
+          onScroll={onScroll}
           data-testid={bodyTestId}
           className={[
+            "min-h-0",
             bodyHeightCls,
             bodyOverflowCls,
             "overscroll-contain px-6",
@@ -167,8 +314,26 @@ export function Modal({
         </div>
 
         {snapshot.footer ? (
-          <div className="flex flex-wrap items-center justify-end gap-2.5 px-6 pt-4 pb-6">
-            {snapshot.footer}
+          <div
+            className={[
+              "flex shrink-0 flex-wrap items-center gap-x-4 gap-y-3 border-t px-6 pt-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] transition-colors duration-200 sm:pb-6",
+              snapshot.footerStart ? "justify-between" : "justify-end",
+              edges.bottom ? "border-line" : "border-transparent",
+            ].join(" ")}
+          >
+            {snapshot.footerStart ? (
+              <div className="min-w-0 flex-1 text-xs text-ink-3">{snapshot.footerStart}</div>
+            ) : null}
+            {/* 手机上按钮平分一整行，拇指好按；桌面恢复按内容宽度靠右。没有左侧辅助信息时
+                占满整行，调用方自己写的「左删除、右保存」两端布局也能撑开。 */}
+            <div
+              className={[
+                "flex flex-wrap items-center justify-end gap-2.5 max-sm:w-full max-sm:[&>button]:flex-1",
+                snapshot.footerStart ? "ml-auto" : "w-full",
+              ].join(" ")}
+            >
+              {snapshot.footer}
+            </div>
           </div>
         ) : null}
       </div>

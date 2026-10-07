@@ -45,6 +45,14 @@ interface MultiSelectProps {
   disabled?: boolean;
   className?: string;
   size?: ControlSize;
+  "aria-label"?: string;
+  /**
+   * 由 FormField 注入：`<label htmlFor>` 指到触发器；出错时描边变红、读屏读到错误，
+   * 提交校验也能把焦点送过来（`focusFirstInvalid` 找的就是 aria-invalid）。
+   */
+  id?: string;
+  "aria-invalid"?: boolean | "true" | "false";
+  "aria-describedby"?: string;
 }
 
 export function MultiSelect({
@@ -52,14 +60,19 @@ export function MultiSelect({
   value,
   onChange,
   placeholder: _placeholder = "",
-  emptyLabel = "All",
+  emptyLabel,
   selectAllLabel,
   searchable = true,
   disabled = false,
   className = "",
   size = "default",
+  "aria-label": ariaLabel,
+  id,
+  "aria-invalid": ariaInvalid,
+  "aria-describedby": ariaDescribedBy,
 }: MultiSelectProps) {
   const { t } = useTranslation();
+  const resolvedEmptyLabel = emptyLabel ?? t("ui.select_all_label");
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -115,6 +128,19 @@ export function MultiSelect({
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  // Esc 收起下拉，并吃掉这次按键：外层弹窗看到 defaultPrevented 就不会跟着关闭。
+  useEffect(() => {
+    if (!open) return;
+    const handler = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      setOpen(false);
+      setSearch("");
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
   }, [open]);
 
   // Focus search on open + update position (useLayoutEffect to avoid flicker)
@@ -198,6 +224,7 @@ export function MultiSelect({
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder=""
+                aria-label={t("ui.search_placeholder")}
                 className={selectSearchInput}
               />
             </div>
@@ -221,7 +248,7 @@ export function MultiSelect({
             <div className="mx-2.5 my-1 h-px bg-line" />
 
             {filteredOptions.length === 0 ? (
-              <div className={selectEmptyState}>No results</div>
+              <div className={selectEmptyState}>{t("ui.no_match")}</div>
             ) : (
               filteredOptions.map((opt) => {
                 const checked = selectedSet.has(opt.value);
@@ -256,7 +283,16 @@ export function MultiSelect({
       {/* Trigger */}
       <button
         ref={triggerRef}
+        id={id}
         type="button"
+        // 与 Select 一样是「只能选、不能打字」的 combobox：名称来自字段标签，当前选择作为它的值
+        // 被读出来；若还是普通 button，接上标签后读屏就只剩标签、听不到选了什么。
+        role="combobox"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={ariaLabel}
+        aria-invalid={ariaInvalid}
+        aria-describedby={ariaDescribedBy}
         disabled={disabled}
         data-state={selectTriggerState(open)}
         onClick={() => {
@@ -272,7 +308,7 @@ export function MultiSelect({
         <div className="flex min-w-0 flex-1 flex-wrap gap-1">
           {value.length === 0 ? (
             <span className="inline-flex items-center gap-1 text-ink">
-              {emptyLabel}
+              {resolvedEmptyLabel}
             </span>
           ) : (
             value.slice(0, 5).map((v) => {
@@ -284,14 +320,16 @@ export function MultiSelect({
                 >
                   {opt?.icon && <span className="flex-shrink-0">{opt.icon}</span>}
                   <span className="truncate">{labelMap.get(v) || v}</span>
+                  {/* 触发器本身是按钮，里面不能再套按钮（无效 HTML，读屏也会读乱）。这个小叉只给
+                      鼠标用户快捷移除；键盘与读屏用户展开列表取消勾选即可。 */}
                   {!disabled && (
-                    <button
-                      type="button"
+                    <span
+                      aria-hidden="true"
                       onClick={(e) => removeTag(v, e)}
-                      className="-mr-0.5 ml-0.5 flex-shrink-0 rounded-full p-0.5 text-ink-3 hover:bg-hover hover:text-ink"
+                      className="-mr-0.5 ml-0.5 flex-shrink-0 cursor-pointer rounded-full p-0.5 text-ink-3 hover:bg-hover hover:text-ink"
                     >
                       <X size={10} />
-                    </button>
+                    </span>
                   )}
                 </span>
               );

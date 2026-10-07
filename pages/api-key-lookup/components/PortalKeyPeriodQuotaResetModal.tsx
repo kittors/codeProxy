@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   normalizePeriodSpendingLimits,
@@ -13,29 +14,32 @@ export function PortalKeyPeriodQuotaResetModal({
   onBusyChange,
   onClose,
   onReset,
-  onError,
 }: {
   target: EndUserAPIKey | null;
   busy: boolean;
   onBusyChange: (busy: boolean) => void;
   onClose: () => void;
   onReset: () => Promise<void>;
-  onError: (message: string) => void;
 }) {
   const { t } = useTranslation();
+  // 失败原因留在弹窗里（以前交给页面级错误条，整个看板会被它替换掉）。
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (target) setError("");
+  }, [target]);
 
   const handleConfirm = async (periods: PeriodSpendingPeriod[]) => {
     if (!target || periods.length === 0) return;
     onBusyChange(true);
+    setError("");
     try {
       await portalApi.resetKeyPeriodSpending(target.id, periods);
       onClose();
       await onReset();
     } catch (err: unknown) {
-      onError(
-        err instanceof Error
-          ? err.message
-          : t("api_keys_page.reset_period_spending_failed"),
+      setError(
+        err instanceof Error ? err.message : t("api_keys_page.reset_period_spending_failed"),
       );
     } finally {
       onBusyChange(false);
@@ -57,6 +61,7 @@ export function PortalKeyPeriodQuotaResetModal({
       }
       periodSpendingItems={target?.["period-spending"]}
       busy={busy}
+      error={error}
       onClose={() => {
         if (!busy) onClose();
       }}

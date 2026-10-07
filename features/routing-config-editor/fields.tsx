@@ -15,10 +15,10 @@ export function Field({
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
-        <div className="text-sm font-semibold text-slate-900 dark:text-white">{label}</div>
+        <div className="text-sm font-semibold text-ink">{label}</div>
         {tooltip ? <InfoTooltip content={tooltip} /> : null}
       </div>
-      {hint ? <div className="text-xs text-slate-500 dark:text-white/55">{hint}</div> : null}
+      {hint ? <div className="text-xs text-ink-3">{hint}</div> : null}
       {children}
     </div>
   );
@@ -28,7 +28,7 @@ export function InfoTooltip({ content }: { content: string }) {
   return (
     <HoverTooltip content={content} placement="bottom">
       <span
-        className="inline-flex h-6 w-6 items-center justify-center text-slate-400 dark:text-white/45"
+        className="inline-flex h-6 w-6 items-center justify-center text-ink-3"
         aria-label={content}
         tabIndex={0}
       >

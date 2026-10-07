@@ -41,10 +41,10 @@ export function AuthFilesExcludedTab({
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         {showHeading ? (
           <div>
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+            <h2 className="text-lg font-bold text-ink">
               {t("auth_files_page.excluded_title")}
             </h2>
-            <p className="mt-1 text-sm text-slate-500 dark:text-neutral-400">
+            <p className="mt-1 text-sm text-ink-3">
               {t("auth_files_page.excluded_desc")}
             </p>
           </div>
@@ -65,7 +65,7 @@ export function AuthFilesExcludedTab({
       </div>
 
       {excludedLoading ? (
-        <div className="flex h-32 items-center justify-center text-sm text-slate-500">
+        <div className="flex h-32 items-center justify-center text-sm text-ink-3">
           {t("common.loading_ellipsis")}
         </div>
       ) : (
@@ -83,7 +83,7 @@ export function AuthFilesExcludedTab({
               value={excludedNewProvider}
               onChange={(e) => setExcludedNewProvider(e.currentTarget.value)}
               placeholder={t("auth_files.add_provider_placeholder")}
-              endAdornment={<FileJson size={16} className="text-slate-400" />}
+              endAdornment={<FileJson size={16} className="text-ink-3" />}
               disabled={excludedUnsupported}
             />
             <Button
@@ -121,10 +121,10 @@ export function AuthFilesExcludedTab({
                     >
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="font-mono text-xs text-slate-900 dark:text-white">
+                          <p className="font-mono text-xs text-ink">
                             {provider}
                           </p>
-                          <p className="mt-1 text-xs text-slate-500 dark:text-white/55">
+                          <p className="mt-1 text-xs text-ink-3">
                             {t("auth_files.count_items", { count })}
                           </p>
                         </div>
@@ -148,7 +148,7 @@ export function AuthFilesExcludedTab({
                         placeholder={t("auth_files.one_model_per_line")}
                         aria-label={`${provider} ${t("auth_files_page.excluded_tab")}`}
                         disabled={excludedUnsupported}
-                        className="mt-3 min-h-[120px] w-full resize-y rounded-2xl border border-slate-900/8 bg-white px-3 py-2 font-mono text-xs text-slate-900 outline-none transition-colors duration-200 ease-out placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:border-white/8 dark:bg-neutral-950 dark:text-slate-100 dark:placeholder:text-neutral-500 dark:focus-visible:ring-white/15"
+                        className="mt-3 min-h-[120px] w-full resize-y rounded-2xl border border-line bg-surface px-3 py-2 font-mono text-xs text-ink outline-none transition-colors duration-200 ease-out placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:placeholder:text-neutral-500 dark:focus-visible:ring-white/15"
                       />
                     </div>
                   );

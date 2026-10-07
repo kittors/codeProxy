@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Loader2, Tags, X } from "lucide-react";
+import { Link2 } from "lucide-react";
 import {
   contentModerationApi,
   extractApiErrorCode,
@@ -15,31 +15,24 @@ import {
   Button,
   COLUMN_WIDTH,
   Checkbox,
-  ConfirmModal,
   DataTable,
   Modal,
   PaginationBar,
-  Select,
   Tabs,
   TabsList,
   TabsTrigger,
-  TextInput,
   useToast,
   type DataTableColumn,
 } from "@code-proxy/ui";
+import {
+  RebindChannelsConfirm,
+  TagBindingConfirm,
+  type TagBindingPreview,
+} from "./ChannelPickerConfirms";
+import { ChannelPickerFilters, type PickerTab, type ProviderScope } from "./ChannelPickerFilters";
 
 const PAGE_SIZE = 20;
 const BULK_PAGE_SIZE = 50;
-type PickerTab = "auth" | "provider";
-type ProviderScope = "provider_key" | "provider";
-
-interface TagBindingPreview {
-  tags: string[];
-  tagMode: ContentModerationTagMode;
-  matchedCount: number;
-  rebindCount: number;
-  operations: ContentModerationBindingOperation[];
-}
 
 function channelKey(channel: ContentModerationChannelView): string {
   return `${channel.channel_type}:${channel.channel_id}`;
@@ -380,10 +373,8 @@ export function ModerationChannelPickerModal({
         width: "w-[240px] min-w-[240px]",
         render: (row) => (
           <div className="min-w-0">
-            <p className="truncate font-semibold text-slate-900 dark:text-white">{row.name}</p>
-            <p className="mt-0.5 truncate font-mono text-xs text-slate-500 dark:text-white/50">
-              {row.channel_id}
-            </p>
+            <p className="truncate font-semibold text-ink">{row.name}</p>
+            <p className="mt-0.5 truncate font-mono text-xs text-ink-3">{row.channel_id}</p>
           </div>
         ),
       },
@@ -401,15 +392,12 @@ export function ModerationChannelPickerModal({
           row.tags.length ? (
             <div className="flex flex-wrap gap-1">
               {row.tags.slice(0, 3).map((tag) => (
-                <span
-                  key={tag}
-                  className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600 dark:bg-white/10 dark:text-white/60"
-                >
+                <span key={tag} className="rounded-full bg-subtle px-2 py-0.5 text-xs text-ink-2">
                   {tag}
                 </span>
               ))}
               {row.tags.length > 3 ? (
-                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500 dark:bg-white/10 dark:text-white/50">
+                <span className="rounded-full bg-subtle px-2 py-0.5 text-xs text-ink-3">
                   +{row.tags.length - 3}
                 </span>
               ) : null}
@@ -425,9 +413,7 @@ export function ModerationChannelPickerModal({
         render: (row) => {
           if (!row.profile_id) {
             return (
-              <span className="text-slate-400 dark:text-white/40">
-                {t("content_moderation.profile_none")}
-              </span>
+              <span className="text-ink-4">{t("content_moderation.profile_none")}</span>
             );
           }
           const isCurrentProfile = row.profile_id === profile?.id;
@@ -436,8 +422,8 @@ export function ModerationChannelPickerModal({
               className={[
                 "inline-flex max-w-full rounded-full px-2.5 py-1 text-xs font-semibold",
                 isCurrentProfile
-                  ? "bg-sky-500/10 text-sky-700 dark:text-sky-200"
-                  : "bg-amber-500/10 text-amber-700 dark:text-amber-200",
+                  ? "bg-sky-500/10 text-sky-700 dark:text-sky-300"
+                  : "bg-amber-500/10 text-amber-700 dark:text-amber-300",
               ].join(" ")}
             >
               <span className="truncate">{profileNames.get(row.profile_id) ?? row.profile_id}</span>
@@ -451,11 +437,11 @@ export function ModerationChannelPickerModal({
         width: COLUMN_WIDTH.badge,
         render: (row) =>
           row.disabled ? (
-            <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-semibold text-amber-700 dark:text-amber-200">
+            <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-semibold text-amber-700 dark:text-amber-300">
               {t("content_moderation.channel_disabled")}
             </span>
           ) : (
-            <span className="rounded-full bg-emerald-600/10 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-200">
+            <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
               {t("content_moderation.channel_enabled")}
             </span>
           ),
@@ -464,24 +450,14 @@ export function ModerationChannelPickerModal({
     [loading, profile?.id, profileNames, saving, selected, t, toggleSelected],
   );
 
-  const tagBindingDescription = tagBindingPreview
-    ? [
-        t("content_moderation.tag_bind_confirm_description", {
-          tags: tagBindingPreview.tags.join(", "),
-          mode: t(`content_moderation.tag_mode_${tagBindingPreview.tagMode}`),
-          count: tagBindingPreview.matchedCount,
-          changeCount: tagBindingPreview.operations.length,
-        }),
-        tagBindingPreview.rebindCount > 0
-          ? t("content_moderation.tag_bind_rebind_warning", {
-              count: tagBindingPreview.rebindCount,
-            })
-          : "",
-        t("content_moderation.tag_bind_hint"),
-      ]
-        .filter(Boolean)
-        .join(" ")
-    : "";
+  // 本页里会被替换绑定的渠道：确认框里列出「渠道 · 原配置」，让用户知道改的是谁。
+  const rebindAffected = useMemo(() => {
+    if (!rebindOperations || !profile) return [];
+    const keys = new Set(rebindOperations.map((op) => `${op.channel_type}:${op.channel_id}`));
+    return rows.filter(
+      (row) => keys.has(channelKey(row)) && row.profile_id && row.profile_id !== profile.id,
+    );
+  }, [profile, rebindOperations, rows]);
 
   return (
     <Modal
@@ -491,20 +467,22 @@ export function ModerationChannelPickerModal({
       description={
         profile ? t("content_moderation.channels_description", { name: profile.name }) : undefined
       }
-      maxWidth="max-w-6xl"
+      icon={<Link2 />}
+      // 表格最小宽 980px，xl 档放不下，沿用原来的 6xl 宽度。
+      size="2xl"
       bodyHeightClassName="h-[78vh] max-h-[78vh]"
       bodyOverflowClassName="overflow-hidden"
       bodyClassName="flex min-h-0 flex-col"
+      footerStart={
+        <span>
+          <span className="font-medium text-ink-2">
+            {t("content_moderation.selected_count", { count: selected.size })}
+          </span>
+          <span className="ml-2">{t("content_moderation.page_selection_hint")}</span>
+        </span>
+      }
       footer={
         <>
-          <div className="mr-auto min-w-0">
-            <p className="text-xs font-medium text-slate-700 dark:text-white/70">
-              {t("content_moderation.selected_count", { count: selected.size })}
-            </p>
-            <p className="mt-0.5 text-xs text-slate-400 dark:text-white/40">
-              {t("content_moderation.page_selection_hint")}
-            </p>
-          </div>
           <Button variant="secondary" onClick={onClose} disabled={saving || tagScanning}>
             {t("common.close")}
           </Button>
@@ -543,144 +521,42 @@ export function ModerationChannelPickerModal({
           </TabsList>
         </Tabs>
 
-        <div className="rounded-xl border border-slate-900/8 bg-slate-50/70 p-3 dark:border-white/10 dark:bg-white/[0.035]">
-          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-8">
-            <TextInput
-              size="sm"
-              className="sm:col-span-2 xl:col-span-2"
-              value={query}
-              onChange={(event) => {
-                setQuery(event.currentTarget.value);
-                setPage(1);
-              }}
-              placeholder={t("content_moderation.search_channels")}
-              aria-label={t("content_moderation.search_channels")}
-            />
-            <TextInput
-              size="sm"
-              value={provider}
-              onChange={(event) => {
-                setProvider(event.currentTarget.value);
-                setPage(1);
-              }}
-              placeholder={t("content_moderation.filter_provider")}
-              aria-label={t("content_moderation.filter_provider")}
-            />
-            {tab === "provider" ? (
-              <Select
-                size="sm"
-                value={providerScope}
-                onChange={(value) => {
-                  if (value !== "provider_key" && value !== "provider") return;
-                  setProviderScope(value);
-                  setPage(1);
-                }}
-                options={[
-                  {
-                    value: "provider_key",
-                    label: t("content_moderation.provider_scope_keys"),
-                  },
-                  {
-                    value: "provider",
-                    label: t("content_moderation.provider_scope_defaults"),
-                  },
-                ]}
-                aria-label={t("content_moderation.provider_scope")}
-              />
-            ) : null}
-            <TextInput
-              size="sm"
-              className="sm:col-span-2 xl:col-span-2"
-              value={tagInput}
-              onChange={(event) => setTagInput(event.currentTarget.value)}
-              onBlur={(event) => commitTagInput(event.currentTarget.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === ",") {
-                  event.preventDefault();
-                  commitTagInput(event.currentTarget.value);
-                  return;
-                }
-                if (event.key === "Backspace" && !event.currentTarget.value && tags.length > 0) {
-                  removeTag(tags[tags.length - 1]);
-                }
-              }}
-              placeholder={t("content_moderation.tag_filter_placeholder")}
-              aria-label={t("content_moderation.filter_tags")}
-            />
-            <Select
-              size="sm"
-              value={tagMode}
-              onChange={(value) => {
-                if (value !== "any" && value !== "all") return;
-                setTagMode(value);
-                setPage(1);
-              }}
-              options={[
-                { value: "any", label: t("content_moderation.tag_mode_any") },
-                { value: "all", label: t("content_moderation.tag_mode_all") },
-              ]}
-              aria-label={t("content_moderation.tag_mode")}
-            />
-            <Select
-              size="sm"
-              className={tab === "auth" ? "xl:col-span-2" : undefined}
-              value={boundOnly ? "bound" : "all"}
-              onChange={(value) => {
-                setBoundOnly(value === "bound");
-                setPage(1);
-              }}
-              options={[
-                { value: "all", label: t("content_moderation.filter_all_channels") },
-                { value: "bound", label: t("content_moderation.filter_bound_channels") },
-              ]}
-              aria-label={t("content_moderation.binding_filter")}
-            />
-          </div>
-
-          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-900/8 pt-3 dark:border-white/10">
-            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
-              {tags.length > 0 ? (
-                tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200 dark:bg-white/10 dark:text-white/75 dark:ring-white/10"
-                  >
-                    {tag}
-                    <button
-                      type="button"
-                      onClick={() => removeTag(tag)}
-                      aria-label={t("content_moderation.remove_filter_tag", { tag })}
-                      className="rounded-full text-slate-400 transition-colors hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 dark:text-white/40 dark:hover:text-white dark:focus-visible:ring-white/20"
-                    >
-                      <X size={12} aria-hidden="true" />
-                    </button>
-                  </span>
-                ))
-              ) : (
-                <span className="text-xs text-slate-400 dark:text-white/40">
-                  {t("content_moderation.tag_filter_hint")}
-                </span>
-              )}
-            </div>
-            <span className="max-w-md text-xs text-slate-500 dark:text-white/50">
-              {t("content_moderation.tag_bind_hint")}
-            </span>
-            <Button
-              size="sm"
-              onClick={() => void prepareTagBinding()}
-              disabled={pendingTags.length === 0 || loading || saving || tagScanning}
-            >
-              {tagScanning ? (
-                <Loader2 size={14} className="animate-spin" aria-hidden="true" />
-              ) : (
-                <Tags size={14} aria-hidden="true" />
-              )}
-              {tagScanning
-                ? t("content_moderation.tag_bind_scanning")
-                : t("content_moderation.tag_bind")}
-            </Button>
-          </div>
-        </div>
+        <ChannelPickerFilters
+          tab={tab}
+          providerScope={providerScope}
+          query={query}
+          provider={provider}
+          boundOnly={boundOnly}
+          tags={tags}
+          tagInput={tagInput}
+          tagMode={tagMode}
+          canTagBind={pendingTags.length > 0 && !loading && !saving && !tagScanning}
+          tagScanning={tagScanning}
+          onQueryChange={(value) => {
+            setQuery(value);
+            setPage(1);
+          }}
+          onProviderChange={(value) => {
+            setProvider(value);
+            setPage(1);
+          }}
+          onProviderScopeChange={(value) => {
+            setProviderScope(value);
+            setPage(1);
+          }}
+          onBoundOnlyChange={(value) => {
+            setBoundOnly(value);
+            setPage(1);
+          }}
+          onTagInputChange={setTagInput}
+          onCommitTag={commitTagInput}
+          onRemoveTag={removeTag}
+          onTagModeChange={(value) => {
+            setTagMode(value);
+            setPage(1);
+          }}
+          onTagBind={() => void prepareTagBinding()}
+        />
 
         <div className="min-h-0 flex-1">
           <DataTable<ContentModerationChannelView>
@@ -699,9 +575,7 @@ export function ModerationChannelPickerModal({
             columnResizable={false}
             columnReorderable={false}
             rowAriaSelected={(row) => selected.has(channelKey(row))}
-            rowClassName={(row) =>
-              selected.has(channelKey(row)) ? "bg-sky-50/75 dark:bg-sky-500/[0.08]" : ""
-            }
+            rowClassName={(row) => (selected.has(channelKey(row)) ? "bg-sky-500/[0.06]" : "")}
             onRowClick={(row) => toggleSelected(row)}
           />
         </div>
@@ -723,12 +597,9 @@ export function ModerationChannelPickerModal({
         />
       </div>
 
-      <ConfirmModal
-        open={tagBindingPreview !== null}
-        title={t("content_moderation.tag_bind_title")}
-        description={tagBindingDescription}
-        confirmText={t("content_moderation.tag_bind_confirm")}
-        variant="primary"
+      <TagBindingConfirm
+        preview={tagBindingPreview}
+        profileName={profile?.name ?? ""}
         busy={saving}
         onClose={() => setTagBindingPreview(null)}
         onConfirm={() => {
@@ -743,14 +614,11 @@ export function ModerationChannelPickerModal({
         }}
       />
 
-      <ConfirmModal
-        open={rebindOperations !== null}
-        title={t("content_moderation.rebind_title")}
-        description={t("content_moderation.rebind_selected_description", {
-          count: rebindOperations?.length ?? 0,
-        })}
-        confirmText={t("content_moderation.rebind_confirm")}
-        variant="primary"
+      <RebindChannelsConfirm
+        operationCount={rebindOperations?.length ?? null}
+        affected={rebindAffected}
+        profileName={profile?.name ?? ""}
+        profileNames={profileNames}
         busy={saving}
         onClose={() => setRebindOperations(null)}
         onConfirm={() => {

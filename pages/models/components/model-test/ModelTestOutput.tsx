@@ -87,24 +87,24 @@ function ImageCard({ image, onPreview }: { image: ModelTestImage; onPreview: () 
     .join(" · ");
 
   return (
-    <figure className="overflow-hidden rounded-lg border border-slate-900/10 dark:border-white/10">
+    <figure className="overflow-hidden rounded-lg border border-line">
       <button
         type="button"
         onClick={onPreview}
-        className="block w-full bg-slate-50 dark:bg-white/[0.04]"
+        className="block w-full bg-subtle"
         aria-label={t("models_page.test_preview_image")}
       >
         <img src={source} alt="" className="h-40 w-full object-contain" />
       </button>
       <figcaption className="space-y-1 px-2 py-1.5">
         <div className="flex items-center justify-between gap-2">
-          <span className="truncate text-2xs tabular-nums text-slate-500 dark:text-white/45">
+          <span className="truncate text-2xs tabular-nums text-ink-3">
             {meta}
           </span>
           <a
             href={source}
             download={`model-test.${image.format || "png"}`}
-            className="shrink-0 text-slate-500 transition-colors hover:text-ink dark:text-white/45"
+            className="shrink-0 text-ink-3 transition-colors hover:text-ink"
             aria-label={t("models_page.test_download_image")}
           >
             <Download size={12} aria-hidden />
@@ -112,7 +112,7 @@ function ImageCard({ image, onPreview }: { image: ModelTestImage; onPreview: () 
         </div>
         {image.c2pa?.present ? <ProvenanceLine image={image} /> : null}
         {image.revised_prompt ? (
-          <p className="line-clamp-2 text-2xs text-slate-500 dark:text-white/45">
+          <p className="line-clamp-2 text-2xs text-ink-3">
             {t("models_page.test_revised_prompt")}: {image.revised_prompt}
           </p>
         ) : null}
@@ -133,7 +133,7 @@ function ProvenanceLine({ image }: { image: ModelTestImage }) {
     .join(" ");
   if (!generator) return null;
   return (
-    <p className="flex items-center gap-1 text-2xs text-slate-600 dark:text-white/60">
+    <p className="flex items-center gap-1 text-2xs text-ink-2">
       <ShieldCheck size={11} className="shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />
       <span className="truncate">
         {t("models_page.test_provenance_generator")}: {generator}
@@ -158,9 +158,9 @@ function VideoOutput({ payload }: { payload: ModelTestPayload }) {
         src={url}
         controls
         playsInline
-        className="w-full rounded-lg border border-slate-900/10 bg-black dark:border-white/10"
+        className="w-full rounded-lg border border-line bg-black"
       />
-      <div className="flex items-center justify-between gap-2 text-2xs text-slate-500 dark:text-white/45">
+      <div className="flex items-center justify-between gap-2 text-2xs text-ink-3">
         <span className="tabular-nums">
           {payload.video?.duration
             ? t("models_page.test_clip_length", { seconds: payload.video.duration })

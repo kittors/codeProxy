@@ -5,7 +5,7 @@ import { buildModelsEndpoint } from "../providers-helpers";
 import type { OpenAIDraft } from "../providers-helpers";
 
 const SectionCard = ({ children }: { children: React.ReactNode }) => (
-  <div className="rounded-xl border border-slate-900/8 bg-white/70 p-4 shadow-sm dark:border-white/8 dark:bg-neutral-950/60">
+  <div className="rounded-xl border border-line bg-surface p-4 shadow-sm">
     {children}
   </div>
 );
@@ -25,18 +25,18 @@ export function OpenAIProviderBasicSection({
     <div className="space-y-5">
       <SectionCard>
         {openaiDraft.id ? (
-          <div className="mb-3 rounded-lg bg-slate-50 px-3 py-2 dark:bg-white/[0.04]">
-            <p className="text-xs font-semibold text-slate-500 dark:text-white/55">
+          <div className="mb-3 rounded-lg bg-subtle px-3 py-2">
+            <p className="text-xs font-semibold text-ink-3">
               {t("content_moderation.channel_id")}
             </p>
-            <p className="mt-1 break-all font-mono text-xs text-slate-700 dark:text-white/75">
+            <p className="mt-1 break-all font-mono text-xs text-ink-2">
               {openaiDraft.id}
             </p>
           </div>
         ) : null}
         <div className="grid gap-3 md:grid-cols-2">
           <div className="space-y-2">
-            <p className="text-sm font-semibold text-slate-900 dark:text-white">
+            <p className="text-sm font-semibold text-ink">
               {t("providers.name")}
             </p>
             <TextInput
@@ -49,7 +49,7 @@ export function OpenAIProviderBasicSection({
             />
           </div>
           <div className="space-y-2">
-            <p className="text-sm font-semibold text-slate-900 dark:text-white">
+            <p className="text-sm font-semibold text-ink">
               {t("providers.base_url")}
             </p>
             <TextInput
@@ -60,7 +60,7 @@ export function OpenAIProviderBasicSection({
               }}
               placeholder={t("providers.base_url_placeholder")}
             />
-            <p className="text-xs text-slate-500 dark:text-white/55">
+            <p className="text-xs text-ink-3">
               {t("providers.models_fetch_url")}
               {openaiDraft.baseUrl.trim() ? buildModelsEndpoint(openaiDraft.baseUrl) : "--"}
             </p>
@@ -69,7 +69,7 @@ export function OpenAIProviderBasicSection({
 
         <div className="mt-3 grid gap-3 md:grid-cols-3">
           <div className="space-y-2">
-            <p className="text-sm font-semibold text-slate-900 dark:text-white">
+            <p className="text-sm font-semibold text-ink">
               {t("providers.prefix_optional")}
             </p>
             <TextInput
@@ -82,7 +82,7 @@ export function OpenAIProviderBasicSection({
             />
           </div>
           <div className="space-y-2">
-            <p className="text-sm font-semibold text-slate-900 dark:text-white">
+            <p className="text-sm font-semibold text-ink">
               {t("providers.priority_label")}
             </p>
             <TextInput
@@ -96,7 +96,7 @@ export function OpenAIProviderBasicSection({
             />
           </div>
           <div className="space-y-2">
-            <p className="text-sm font-semibold text-slate-900 dark:text-white">
+            <p className="text-sm font-semibold text-ink">
               {t("providers.test_model_label")}
             </p>
             <TextInput

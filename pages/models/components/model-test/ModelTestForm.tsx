@@ -69,7 +69,7 @@ export function ModelTestForm({
     <div className="space-y-4">
       {modes.length > 1 ? (
         <div>
-          <span className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-white/80">
+          <span className="mb-1.5 block text-sm font-medium text-ink-2">
             {t("models_page.test_mode")}
           </span>
           <div
@@ -100,7 +100,7 @@ export function ModelTestForm({
               );
             })}
           </div>
-          <p className="mt-1.5 text-xs text-slate-500 dark:text-white/45">
+          <p className="mt-1.5 text-xs text-ink-3">
             {t(MODE_HINT_KEY[state.mode])}
           </p>
         </div>
@@ -109,12 +109,12 @@ export function ModelTestForm({
       <div>
         <label
           htmlFor="model-test-channel"
-          className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80"
+          className="mb-1 block text-sm font-medium text-ink-2"
         >
           {t("models_page.test_channel")}
         </label>
         {noChannels ? (
-          <p className="bg-subtle rounded-lg px-3 py-2 text-sm text-slate-500 dark:text-white/45">
+          <p className="bg-subtle rounded-lg px-3 py-2 text-sm text-ink-3">
             {t("models_page.test_no_channels")}
           </p>
         ) : (
@@ -131,14 +131,14 @@ export function ModelTestForm({
 
       {requiresImage ? (
         <div>
-          <span className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80">
+          <span className="mb-1 block text-sm font-medium text-ink-2">
             {t("models_page.test_reference_images")}
           </span>
           <div className="flex flex-wrap items-center gap-2">
             {state.images.map((image, index) => (
               <div
                 key={`${index}-${image.slice(0, 32)}`}
-                className="group relative h-16 w-16 overflow-hidden rounded-lg border border-slate-900/10 dark:border-white/10"
+                className="group relative h-16 w-16 overflow-hidden rounded-lg border border-line"
               >
                 <img src={image} alt="" className="h-full w-full object-cover" />
                 <button
@@ -156,7 +156,7 @@ export function ModelTestForm({
                 type="button"
                 disabled={disabled}
                 onClick={() => fileInput.current?.click()}
-                className="bg-subtle flex h-16 w-16 flex-col items-center justify-center gap-1 rounded-lg border-slate-900/15 text-slate-500 transition-colors hover:border-ink-4 hover:text-ink disabled:opacity-50 dark:border-white/15 dark:text-white/45"
+                className="bg-subtle flex h-16 w-16 flex-col items-center justify-center gap-1 rounded-lg border-slate-900/15 text-ink-3 transition-colors hover:border-ink-4 hover:text-ink disabled:opacity-50 dark:border-white/15"
               >
                 <ImagePlus size={16} aria-hidden />
                 <span className="text-2xs">{t("models_page.test_add_image")}</span>
@@ -174,7 +174,7 @@ export function ModelTestForm({
               event.target.value = "";
             }}
           />
-          <p className="mt-1 text-xs text-slate-500 dark:text-white/45">
+          <p className="mt-1 text-xs text-ink-3">
             {t("models_page.test_reference_images_hint", { count: maxImages })}
           </p>
         </div>
@@ -183,7 +183,7 @@ export function ModelTestForm({
       <div>
         <label
           htmlFor="model-test-prompt"
-          className="mb-1 block text-sm font-medium text-slate-700 dark:text-white/80"
+          className="mb-1 block text-sm font-medium text-ink-2"
         >
           {t("models_page.test_prompt")}
         </label>
@@ -218,7 +218,7 @@ export function ModelTestForm({
           <div>
             <label
               htmlFor="model-test-count"
-              className="mb-1 block text-xs font-medium text-slate-600 dark:text-white/70"
+              className="mb-1 block text-xs font-medium text-ink-2"
             >
               {t("models_page.test_count")}
             </label>
@@ -239,7 +239,7 @@ export function ModelTestForm({
           <div>
             <label
               htmlFor="model-test-duration"
-              className="mb-1 block text-xs font-medium text-slate-600 dark:text-white/70"
+              className="mb-1 block text-xs font-medium text-ink-2"
             >
               {t("models_page.test_duration_seconds")}
             </label>
@@ -257,7 +257,7 @@ export function ModelTestForm({
             />
           </div>
           {options?.max_duration_seconds ? (
-            <p className="self-end pb-2 text-xs text-slate-500 dark:text-white/45">
+            <p className="self-end pb-2 text-xs text-ink-3">
               {t("models_page.test_duration_max", { seconds: options.max_duration_seconds })}
             </p>
           ) : null}
@@ -283,7 +283,7 @@ function LabeledSelect({
   if (options.length === 0) return null;
   return (
     <div>
-      <label htmlFor={id} className="mb-1 block text-xs font-medium text-slate-600 dark:text-white/70">
+      <label htmlFor={id} className="mb-1 block text-xs font-medium text-ink-2">
         {label}
       </label>
       <Select id={id} value={value} onChange={onChange} options={options} aria-label={label} />

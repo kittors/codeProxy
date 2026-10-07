@@ -1,6 +1,7 @@
+import { useId } from "react";
 import { useTranslation } from "react-i18next";
-import { Info } from "lucide-react";
-import { FormField, HoverTooltip, TextInput } from "@code-proxy/ui";
+import { Gauge } from "lucide-react";
+import { FormSection, TextInput, type Rule } from "@code-proxy/ui";
 
 export const THRESHOLD_CATEGORIES = [
   { key: "harassment", i18nKey: "harassment" },
@@ -61,75 +62,102 @@ export const parseThresholds = (
   return result;
 };
 
+/** 每个分类阈值都要是 0–1 之间的数（服务端 types.go 同样拒绝越界值）。 */
+const thresholdRule: Rule<string> = (value) => {
+  const text = (value ?? "").trim();
+  if (!text) return { key: "required" };
+  const threshold = Number(text);
+  return Number.isFinite(threshold) && threshold >= 0 && threshold <= 1
+    ? null
+    : { key: "decimal_range", params: { min: 0, max: 1 } };
+};
+
+export const thresholdValidationSchema = Object.fromEntries(
+  THRESHOLD_CATEGORIES.map(({ key }) => [key, [thresholdRule]]),
+) as Record<string, readonly Rule<string>[]>;
+
 export interface OpenAIThresholdFieldsProps {
   thresholds: Record<string, string>;
   disabled: boolean;
   onChange: (thresholds: Record<string, string>) => void;
+  /** 该分类要显示的错误（未触碰、未提交时为 undefined）。 */
+  errorFor?: (key: string) => string | undefined;
+  onFieldBlur?: (key: string) => void;
 }
 
+/**
+ * OpenAI 分类阈值。
+ *
+ * 13 个分类的说明以前藏在每个名字旁的 ⓘ 悬停提示里，要挨个移上去才知道「illicit」管什么；
+ * 现在常驻显示：两列紧凑排布，左边是名称和一句定义，右边是一个窄输入框，表单不会被撑得太长。
+ * 「阈值越低越严格」对所有分类都一样，只在分区说明里写一次。
+ */
 export function OpenAIThresholdFields({
   thresholds,
   disabled,
   onChange,
+  errorFor,
+  onFieldBlur,
 }: OpenAIThresholdFieldsProps) {
   const { t } = useTranslation();
+  const idPrefix = useId();
 
   return (
-    <div className="mt-5 border-t border-slate-900/8 pt-4 dark:border-white/8">
-      <div className="mb-4">
-        <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-          {t("content_moderation.thresholds")}
-        </h3>
-        <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-white/45">
-          {t("content_moderation.thresholds_hint")}
-        </p>
-      </div>
-      <div className="grid gap-x-4 gap-y-3 md:grid-cols-2">
+    <FormSection
+      title={t("content_moderation.thresholds")}
+      description={t("content_moderation.thresholds_hint")}
+      icon={<Gauge />}
+    >
+      <div className="grid gap-x-8 md:grid-cols-2">
         {THRESHOLD_CATEGORIES.map(({ key, i18nKey }) => {
+          const id = `${idPrefix}-${i18nKey}`;
           const categoryName = t(`content_moderation.threshold_category.${i18nKey}`);
-          const categoryHelp = t(`content_moderation.threshold_category_help.${i18nKey}`);
+          const error = errorFor?.(key);
           return (
-            <FormField
-              key={key}
-              label={
-                <span className="inline-flex items-center gap-1.5">
-                  <span>{categoryName}</span>
-                  <HoverTooltip content={categoryHelp} placement="top">
-                    <span
-                      role="button"
-                      tabIndex={0}
-                      aria-label={categoryHelp}
-                      onClick={(event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                      }}
-                      className="inline-flex h-5 w-5 items-center justify-center rounded-full text-slate-400 transition hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:text-white/40 dark:hover:text-white/75 dark:focus-visible:ring-white/15"
-                    >
-                      <Info size={14} aria-hidden="true" />
-                    </span>
-                  </HoverTooltip>
-                </span>
-              }
-              required={!disabled}
-              reserveMeta={false}
-            >
-              <TextInput
-                type="number"
-                min="0"
-                max="1"
-                step="0.01"
-                inputMode="decimal"
-                aria-label={categoryName}
-                value={thresholds[key] ?? ""}
-                disabled={disabled}
-                onChange={(event) =>
-                  onChange({ ...thresholds, [key]: event.currentTarget.value })
-                }
-              />
-            </FormField>
+            <div key={key} className="border-b border-line py-3 last:border-b-0">
+              <div className="flex items-start gap-3">
+                <div className="min-w-0 flex-1">
+                  <label htmlFor={id} className="text-sm font-medium text-ink">
+                    {categoryName}
+                  </label>
+                  <p id={`${id}-desc`} className="mt-0.5 text-xs leading-5 text-ink-3">
+                    {t(`content_moderation.threshold_category_desc.${i18nKey}`)}
+                  </p>
+                </div>
+                <div className="w-24 shrink-0">
+                  <TextInput
+                    id={id}
+                    type="number"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    inputMode="decimal"
+                    aria-label={categoryName}
+                    aria-describedby={error ? `${id}-desc ${id}-error` : `${id}-desc`}
+                    invalid={Boolean(error)}
+                    className="tabular-nums"
+                    value={thresholds[key] ?? ""}
+                    disabled={disabled}
+                    onBlur={() => onFieldBlur?.(key)}
+                    onChange={(event) =>
+                      onChange({ ...thresholds, [key]: event.currentTarget.value })
+                    }
+                  />
+                </div>
+              </div>
+              {error ? (
+                <p
+                  id={`${id}-error`}
+                  role="alert"
+                  className="mt-1 text-xs leading-5 text-rose-600 dark:text-rose-400"
+                >
+                  {error}
+                </p>
+              ) : null}
+            </div>
           );
         })}
       </div>
-    </div>
+    </FormSection>
   );
 }

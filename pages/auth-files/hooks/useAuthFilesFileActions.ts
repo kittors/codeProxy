@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { authFilesApi } from "@code-proxy/api-client";
 import type { AuthFileItem } from "@code-proxy/api-client";
 import { invalidateConfiguredModelAvailability } from "@features/model-availability";
-import { useToast } from "@code-proxy/ui";
+import { confirmDialog, useToast } from "@code-proxy/ui";
 import {
   buildAuthFilesBatchZipName,
   createStoreZipBlob,
@@ -71,12 +71,16 @@ export function useAuthFilesFileActions({
 
   const downloadAuthFile = useCallback(
     async (file: AuthFileItem) => {
-      const confirmed = window.confirm(
-        t(
+      // 下载的是完整凭证文件（含令牌），用面板自己的确认框说清风险，不再弹浏览器原生 confirm。
+      const confirmed = await confirmDialog({
+        title: t("auth_files.download_sensitive_title"),
+        description: t(
           "auth_files.download_sensitive_confirm",
           "This downloads the full auth file and may include sensitive credentials. Continue?",
         ),
-      );
+        variant: "warning",
+        confirmText: t("auth_files.download_sensitive_button"),
+      });
       if (!confirmed) return;
 
       try {
@@ -96,13 +100,16 @@ export function useAuthFilesFileActions({
       const targets = Array.from(new Set(names.map((name) => name.trim()).filter(Boolean)));
       if (targets.length === 0) return;
 
-      const confirmed = window.confirm(
-        t("auth_files.batch_download_sensitive_confirm", {
+      const confirmed = await confirmDialog({
+        title: t("auth_files.download_sensitive_title"),
+        description: t("auth_files.batch_download_sensitive_confirm", {
           count: targets.length,
           defaultValue:
             "This downloads {{count}} full auth file(s) and may include sensitive credentials. Continue?",
         }),
-      );
+        variant: "warning",
+        confirmText: t("auth_files.download_sensitive_button"),
+      });
       if (!confirmed) return;
 
       // Single selection: keep one-file download UX.

@@ -1,17 +1,31 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { FlaskConical, ShieldCheck, ShieldX, TriangleAlert } from "lucide-react";
 import {
   contentModerationApi,
   type ContentModerationDecision,
   type ContentModerationProfileView,
 } from "@code-proxy/api-client";
-import { Button, Modal, Textarea } from "@code-proxy/ui";
+import { Button, Callout, FormField, Modal, Textarea, surface } from "@code-proxy/ui";
 
 export interface ModerationTestModalProps {
   profile: ContentModerationProfileView | null;
   onClose: () => void;
 }
 
+const SAFETY_BADGE: Record<NonNullable<ContentModerationDecision["safety"]>, string> = {
+  Unsafe: "bg-rose-500/10 text-rose-700 dark:text-rose-300",
+  Controversial: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
+  Safe: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+};
+
+/**
+ * 测试审核配置：输入一段文本，看这份配置会放行还是阻断。
+ *
+ * 结论放在最显眼的位置（红 = 会阻断、绿 = 会放行、琥珀 = 审核 API 出错按 fail-open 放行），
+ * 依据（命中关键词、最高分类、各分类分数）跟在下面；运行按钮在底部，⌘/Ctrl + Enter 也能运行。
+ * 测试输入不保存，弹窗关掉就没了。
+ */
 export function ModerationTestModal({ profile, onClose }: ModerationTestModalProps) {
   const { t } = useTranslation();
   const [input, setInput] = useState("");
@@ -50,6 +64,19 @@ export function ModerationTestModal({ profile, onClose }: ModerationTestModalPro
     }
   };
 
+  const verdictTone = decision?.would_block
+    ? "danger"
+    : decision?.action === "api_error"
+      ? "warning"
+      : "success";
+  const verdictIcon = decision?.would_block ? (
+    <ShieldX />
+  ) : decision?.action === "api_error" ? (
+    <TriangleAlert />
+  ) : (
+    <ShieldCheck />
+  );
+
   return (
     <Modal
       open={profile !== null}
@@ -58,23 +85,30 @@ export function ModerationTestModal({ profile, onClose }: ModerationTestModalPro
       description={
         profile ? t("content_moderation.test_description", { name: profile.name }) : undefined
       }
-      maxWidth="max-w-2xl"
+      icon={<FlaskConical />}
+      size="lg"
+      onSubmitShortcut={() => void run()}
       footer={
         <>
           <Button variant="secondary" onClick={onClose} disabled={running}>
             {t("common.close")}
           </Button>
-          <Button variant="primary" onClick={() => void run()} disabled={!input.trim() || running}>
+          <Button
+            variant="primary"
+            onClick={() => void run()}
+            disabled={!input.trim()}
+            loading={running}
+          >
             {running ? t("content_moderation.testing") : t("content_moderation.run_test")}
           </Button>
         </>
       }
     >
       <div className="space-y-4">
-        <label className="block space-y-2">
-          <span className="text-sm font-semibold text-slate-900 dark:text-white">
-            {t("content_moderation.test_input")}
-          </span>
+        <FormField
+          label={t("content_moderation.test_input")}
+          description={t("content_moderation.no_prompt_storage")}
+        >
           <Textarea
             value={input}
             onChange={(event) => setInput(event.currentTarget.value)}
@@ -82,55 +116,37 @@ export function ModerationTestModal({ profile, onClose }: ModerationTestModalPro
             aria-label={t("content_moderation.test_input")}
             className="min-h-36"
           />
-          <span className="text-xs text-slate-500 dark:text-white/55">
-            {t("content_moderation.no_prompt_storage")}
-          </span>
-        </label>
+        </FormField>
 
         {error ? (
-          <div className="rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:bg-rose-500/10 dark:text-rose-200">
+          <Callout tone="danger" role="alert" title={t("content_moderation.test_failed")}>
             {error}
-          </div>
+          </Callout>
         ) : null}
 
         {decision ? (
-          <section
-            className={[
-              "rounded-xl border p-4",
-              decision.would_block
-                ? "border-rose-200 bg-rose-50/70 dark:border-rose-900/60 dark:bg-rose-500/10"
-                : decision.action === "api_error"
-                  ? "border-amber-200 bg-amber-50/70 dark:border-amber-900/60 dark:bg-amber-500/10"
-                  : "border-emerald-200 bg-emerald-50/70 dark:border-emerald-900/60 dark:bg-emerald-500/10",
-            ].join(" ")}
-          >
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold text-slate-950 dark:text-white">
-                  {decision.would_block
-                    ? t("content_moderation.test_blocked")
-                    : t("content_moderation.test_allowed")}
-                </p>
-                <p className="mt-1 font-mono text-xs text-slate-600 dark:text-white/65">
-                  {decision.action}
-                </p>
-              </div>
-              <span className="rounded-full bg-white/80 px-2.5 py-1 text-xs font-semibold tabular-nums text-slate-700 dark:bg-black/20 dark:text-white/75">
-                {t("content_moderation.latency_value", { value: decision.latency_ms })}
-              </span>
-            </div>
+          <section className="space-y-3" aria-live="polite">
+            <Callout
+              tone={verdictTone}
+              icon={verdictIcon}
+              title={
+                decision.would_block
+                  ? t("content_moderation.test_blocked")
+                  : t("content_moderation.test_allowed")
+              }
+              actions={
+                <span className="rounded-full bg-surface px-2.5 py-1 text-xs font-semibold tabular-nums text-ink-2">
+                  {t("content_moderation.latency_value", { value: decision.latency_ms })}
+                </span>
+              }
+            >
+              <span className="font-mono text-xs text-ink-3">{decision.action}</span>
+            </Callout>
 
             {decision.safety ? (
-              <div className="mt-3 flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <span
-                  className={[
-                    "rounded-full px-2.5 py-1 text-xs font-semibold",
-                    decision.safety === "Unsafe"
-                      ? "bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-100"
-                      : decision.safety === "Controversial"
-                        ? "bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-100"
-                        : "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-100",
-                  ].join(" ")}
+                  className={`rounded-full px-2.5 py-1 text-xs font-semibold ${SAFETY_BADGE[decision.safety]}`}
                 >
                   {t(`content_moderation.safety_${decision.safety.toLowerCase()}`)}
                 </span>
@@ -141,9 +157,7 @@ export function ModerationTestModal({ profile, onClose }: ModerationTestModalPro
                       key={category}
                       className={[
                         "rounded-full px-2.5 py-1 text-xs",
-                        matched
-                          ? "bg-slate-900 text-white dark:bg-white dark:text-neutral-950"
-                          : "bg-white/80 text-slate-600 dark:bg-black/20 dark:text-white/60",
+                        matched ? "bg-accent text-accent-fg" : "bg-subtle text-ink-3",
                       ].join(" ")}
                       title={
                         matched
@@ -157,33 +171,41 @@ export function ModerationTestModal({ profile, onClose }: ModerationTestModalPro
                 })}
               </div>
             ) : null}
-            {decision.matched_keyword ? (
-              <p className="mt-3 text-sm text-slate-700 dark:text-white/75">
-                {t("content_moderation.matched_keyword", {
-                  keyword: decision.matched_keyword,
-                })}
-              </p>
+
+            {decision.matched_keyword || decision.highest_category ? (
+              <div className="space-y-1 text-sm text-ink-2">
+                {decision.matched_keyword ? (
+                  <p>
+                    {t("content_moderation.matched_keyword", {
+                      keyword: decision.matched_keyword,
+                    })}
+                  </p>
+                ) : null}
+                {decision.highest_category ? (
+                  <p>
+                    {t("content_moderation.highest_category", {
+                      category: decision.highest_category,
+                      score: decision.highest_score?.toFixed(4) ?? "0",
+                    })}
+                  </p>
+                ) : null}
+              </div>
             ) : null}
-            {decision.highest_category ? (
-              <p className="mt-3 text-sm text-slate-700 dark:text-white/75">
-                {t("content_moderation.highest_category", {
-                  category: decision.highest_category,
-                  score: decision.highest_score?.toFixed(4) ?? "0",
-                })}
-              </p>
-            ) : null}
+
             {decision.moderation_error ? (
-              <p className="mt-3 text-sm text-amber-800 dark:text-amber-200">
+              <Callout tone="warning">
                 {t("content_moderation.test_api_error", {
                   error: decision.moderation_error,
                 })}
-              </p>
+              </Callout>
             ) : null}
 
             {scoreRows.length ? (
-              <div className="mt-4 max-h-52 overflow-y-auto rounded-lg bg-white/75 dark:bg-black/15">
+              <div
+                className={`max-h-52 overflow-y-auto ${surface({ tone: "plain", radius: "xl" })}`}
+              >
                 <table className="w-full text-left text-xs">
-                  <thead className="sticky top-0 bg-white text-slate-500 dark:bg-neutral-950 dark:text-white/55">
+                  <thead className="sticky top-0 bg-surface text-ink-3">
                     <tr>
                       <th className="px-3 py-2 font-semibold">
                         {t("content_moderation.category")}
@@ -197,22 +219,27 @@ export function ModerationTestModal({ profile, onClose }: ModerationTestModalPro
                     </tr>
                   </thead>
                   <tbody>
-                    {scoreRows.map(([category, score]) => (
-                      <tr
-                        key={category}
-                        className="border-t border-slate-900/8 dark:border-white/10"
-                      >
-                        <td className="px-3 py-2 font-mono text-slate-700 dark:text-white/75">
-                          {category}
-                        </td>
-                        <td className="px-3 py-2 text-right tabular-nums text-slate-700 dark:text-white/75">
-                          {score.toFixed(4)}
-                        </td>
-                        <td className="px-3 py-2 text-right tabular-nums text-slate-500 dark:text-white/55">
-                          {decision.thresholds[category]?.toFixed(4) ?? "--"}
-                        </td>
-                      </tr>
-                    ))}
+                    {scoreRows.map(([category, score]) => {
+                      const threshold = decision.thresholds[category];
+                      // 与服务端判定一致（backend_openai.go：score >= threshold 即命中），超线的分数标红。
+                      const over = threshold !== undefined && score >= threshold;
+                      return (
+                        <tr key={category} className="border-t border-line">
+                          <td className="px-3 py-2 font-mono text-ink-2">{category}</td>
+                          <td
+                            className={[
+                              "px-3 py-2 text-right tabular-nums",
+                              over ? "font-semibold text-rose-600 dark:text-rose-400" : "text-ink-2",
+                            ].join(" ")}
+                          >
+                            {score.toFixed(4)}
+                          </td>
+                          <td className="px-3 py-2 text-right tabular-nums text-ink-3">
+                            {threshold?.toFixed(4) ?? "--"}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

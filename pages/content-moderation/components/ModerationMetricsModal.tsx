@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type ComponentType } from "react";
 import { useTranslation } from "react-i18next";
 import { Activity, AlertTriangle, CheckCircle2, Clock3, ScanSearch, ShieldX } from "lucide-react";
 import { contentModerationApi, type ContentModerationMetrics } from "@code-proxy/api-client";
-import { AnimatedNumber, Modal, surface } from "@code-proxy/ui";
+import { AnimatedNumber, Callout, Modal, Skeleton, surface } from "@code-proxy/ui";
 
 export interface ModerationMetricsModalProps {
   open: boolean;
@@ -125,55 +125,56 @@ export function ModerationMetricsModal({ open, onClose }: ModerationMetricsModal
       open={open}
       title={t("content_moderation.metrics_title")}
       description={t("content_moderation.metrics_description")}
-      maxWidth="max-w-3xl"
+      icon={<Activity />}
+      tone="info"
+      size="lg"
       onClose={onClose}
     >
       <div className="space-y-4" aria-busy={loading}>
-        <div className="flex flex-wrap items-start justify-between gap-3 rounded-2xl border border-slate-900/8 bg-slate-50/80 px-4 py-3 dark:border-white/8 dark:bg-white/[0.04]">
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-slate-900 dark:text-white">
+        {/* 「这些数从哪来、什么时候清零」是读这张表的前提，放在最上面；两个标签说明统计的是哪一段。 */}
+        <Callout
+          tone="info"
+          title={
+            <span className="flex flex-wrap items-center gap-2">
               {t("content_moderation.metrics_card_title")}
-            </p>
-            <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-600 dark:text-white/65">
-              {t("content_moderation.metrics_card_help")}
-            </p>
-          </div>
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
-            <span className="rounded-full bg-slate-900/5 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:bg-white/10 dark:text-white/70">
-              {t("content_moderation.metrics_badge_sync")}
+              <span className="rounded-full bg-selected px-2 py-0.5 text-2xs font-semibold text-ink-2">
+                {t("content_moderation.metrics_badge_sync")}
+              </span>
+              <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-2xs font-semibold text-emerald-700 dark:text-emerald-300">
+                {t("content_moderation.metrics_badge_pre_block")}
+              </span>
             </span>
-            <span className="rounded-full bg-emerald-600/10 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">
-              {t("content_moderation.metrics_badge_pre_block")}
-            </span>
-          </div>
-        </div>
+          }
+        >
+          {t("content_moderation.metrics_card_help")}
+        </Callout>
 
         {error ? (
-          <div className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">
+          <Callout tone="warning" role="alert" title={t("content_moderation.metrics_load_failed")}>
             {error}
-          </div>
+          </Callout>
         ) : null}
 
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {tiles.map((tile) => {
             const Icon = tile.icon;
             return (
               <article
                 key={tile.key}
-                className={`flex h-full min-w-0 flex-col p-5 ${surface({ tone: "raised", radius: "2xl" })}`}
+                className={`flex h-full min-w-0 flex-col p-4 ${surface({ tone: "raised", radius: "2xl" })}`}
               >
-                <p className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-white/55">
-                  <Icon size={14} className="shrink-0 text-slate-900 dark:text-white" />
+                <p className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-ink-3">
+                  <Icon size={14} className="shrink-0 text-ink-2" aria-hidden="true" />
                   <span className="min-w-0 truncate">{tile.title}</span>
                 </p>
-                <p className="mt-3 min-w-0 overflow-hidden text-2xl font-semibold tracking-tight tabular-nums text-slate-900 dark:text-white">
+                <div className="mt-2.5 min-w-0 overflow-hidden text-2xl font-semibold tracking-tight tabular-nums text-ink">
                   {loading && !metrics ? (
-                    "…"
+                    <Skeleton className="my-1 h-6 w-16" />
                   ) : (
                     <AnimatedNumber value={tile.value} format={tile.format} />
                   )}
-                </p>
-                <p className="mt-auto pt-2 text-xs text-slate-600 dark:text-white/65">{tile.help}</p>
+                </div>
+                <p className="mt-auto pt-2 text-xs leading-5 text-ink-3">{tile.help}</p>
               </article>
             );
           })}

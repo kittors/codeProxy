@@ -14,6 +14,18 @@ export const hasResettableQuota = (user: EndUser): boolean =>
     normalizePeriodSpendingLimits(user["period-spending-limits"], user["daily-spending-limit"]),
   ).some((limit) => limit > 0) || (user["spending-limit"] ?? 0) > 0;
 
+/**
+ * 弹窗标题、对象卡片里的账号名：昵称和用户名不同时写成「昵称 / 用户名」，
+ * 只有一个（或两者相同）时只写一个，避免出现「Bob / Bob」。
+ */
+export const endUserLabel = (user: EndUser): string => {
+  const displayName = user.display_name.trim();
+  const username = user.username.trim();
+  return displayName && displayName !== username
+    ? `${displayName} / ${username}`
+    : displayName || username;
+};
+
 export type EndUserForm = {
   username: string;
   displayName: string;

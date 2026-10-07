@@ -1165,13 +1165,60 @@ describe("RequestLogsPage", () => {
 
     await new Promise((resolve) => window.setTimeout(resolve, 220));
 
-    expect(screen.getByRole("dialog", { name: "Clear Database Logs" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Clear database logs?" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Clear Selected Data" })).toBeDisabled();
 
     refresh.resolve(emptyLogsResponse);
 
     await waitFor(() =>
-      expect(screen.queryByRole("dialog", { name: "Clear Database Logs" })).not.toBeInTheDocument(),
+      expect(screen.queryByRole("dialog", { name: "Clear database logs?" })).not.toBeInTheDocument(),
+    );
+  });
+
+  test("explains the cleanup scope, locks content options behind records and needs one option", async () => {
+    await i18n.changeLanguage("en");
+    const user = userEvent.setup();
+    mocks.getUsageLogs.mockResolvedValue(emptyLogsResponse);
+    mocks.clearUsageLogs.mockResolvedValue({ deleted_logs: 3, deleted_contents: 3 });
+
+    render(
+      <ThemeProvider>
+        <ToastProvider>
+          <RequestLogsPage />
+        </ToastProvider>
+      </ThemeProvider>,
+    );
+
+    await user.click(await screen.findByRole("button", { name: "Clear Database Logs" }));
+    const dialog = await screen.findByRole("dialog", { name: "Clear database logs?" });
+    // 清理范围与列表筛选无关：弹窗里要明说，不能让人以为只清当前筛选出来的那些。
+    expect(within(dialog).getByText("All request logs in the current tenant")).toBeInTheDocument();
+    expect(within(dialog).getByText(/Not limited by the current filters/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/request records and stats stay/)).toBeInTheDocument();
+
+    const body = within(dialog).getByRole("checkbox", { name: /Clear request\/response bodies/ });
+    const details = within(dialog).getByRole("checkbox", { name: /Clear request detail payloads/ });
+    const records = within(dialog).getByRole("checkbox", { name: /Clear request records/ });
+    const confirm = within(dialog).getByRole("button", { name: "Clear Selected Data" });
+
+    await user.click(body);
+    await user.click(details);
+    expect(confirm).toBeDisabled();
+
+    await user.click(records);
+    expect(body).toBeChecked();
+    expect(details).toBeChecked();
+    expect(body).toBeDisabled();
+    expect(within(dialog).getByText(/Request records are deleted too/)).toBeInTheDocument();
+    expect(confirm).toBeEnabled();
+
+    await user.click(confirm);
+    await waitFor(() =>
+      expect(mocks.clearUsageLogs).toHaveBeenCalledWith({
+        clear_body_content: true,
+        clear_detail_content: true,
+        clear_request_records: true,
+      }),
     );
   });
 });

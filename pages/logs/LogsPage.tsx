@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { logsApi } from "@code-proxy/api-client";
-import { ConfirmModal } from "@code-proxy/ui";
+import { Callout, ConfirmModal } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { ErrorLogsTab } from "./components/ErrorLogsTab";
@@ -41,6 +41,9 @@ export function LogsPage() {
 
   const [requestLogId, setRequestLogId] = useState("");
   const [confirmClearOpen, setConfirmClearOpen] = useState(false);
+  // 清除期间确认框保持打开并显示进度；失败原因留在框里，而不是关掉框后才弹一条 toast。
+  const [clearing, setClearing] = useState(false);
+  const [clearError, setClearError] = useState<string | null>(null);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   // 用 ref 存储瞬时轮询状态，避免把它们放进 useCallback 依赖导致 effect 循环触发与 loading 闪烁。
@@ -207,6 +210,8 @@ export function LogsPage() {
   }, [fetchLogs]);
 
   const handleClearServerLogs = useCallback(async () => {
+    setClearing(true);
+    setClearError(null);
     try {
       await logsApi.clearLogs();
       setBuffer([]);
@@ -217,11 +222,14 @@ export function LogsPage() {
       setIsAtBottom(true);
       setDisplayCount(INITIAL_DISPLAY_LINES);
       notify({ type: "success", message: t("logs_page.logs_cleared") });
+      setConfirmClearOpen(false);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : t("logs_page.failed_clear");
-      notify({ type: "error", message });
+      setClearError(message);
+    } finally {
+      setClearing(false);
     }
-  }, [notify]);
+  }, [notify, t]);
 
   const loadErrorLogs = useCallback(async () => {
     setErrorLogsStatus("loading");
@@ -357,15 +365,27 @@ export function LogsPage() {
 
       <ConfirmModal
         open={confirmClearOpen}
-        title={t("logs_page.clear_server_logs")}
-        description={t("logs_page.confirm_clear_logs")}
-        confirmText={t("logs_page.confirm_clear_btn")}
-        onClose={() => setConfirmClearOpen(false)}
-        onConfirm={() => {
+        title={t("logs_page.clear_server_logs_title")}
+        description={t("logs_page.clear_server_logs_lead")}
+        consequences={[
+          t("logs_page.clear_consequence_files"),
+          t("logs_page.clear_consequence_error_logs"),
+        ]}
+        confirmText={t("logs_page.clear_server_logs")}
+        busy={clearing}
+        onClose={() => {
+          if (clearing) return;
           setConfirmClearOpen(false);
-          void handleClearServerLogs();
+          setClearError(null);
         }}
-      />
+        onConfirm={() => void handleClearServerLogs()}
+      >
+        {clearError ? (
+          <Callout tone="danger" role="alert" title={t("logs_page.failed_clear")}>
+            {clearError}
+          </Callout>
+        ) : null}
+      </ConfirmModal>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Timer } from "lucide-react";
-import { Button, Modal } from "@code-proxy/ui";
+import { FlaskConical, Timer } from "lucide-react";
+import { Button, Callout, Modal } from "@code-proxy/ui";
 import type { ModelTestMode, ModelTestOptions, ModelTestResult } from "@code-proxy/api-client";
 import { formatLatency } from "@features/provider-latency";
 import {
@@ -222,10 +222,27 @@ export function ModelTestModal({
       </span>
     ) : null;
 
+  // 底部「运行」按钮与 ⌘ / Ctrl + Enter 共用同一个入口。
+  const run = () => {
+    if (!model || !form.channel) return;
+    onRun({
+      channel: form.channel,
+      prompt: form.prompt.trim(),
+      mode: form.mode,
+      images: form.images,
+      size: form.size,
+      quality: form.quality,
+      n: form.n,
+      duration: form.duration,
+    });
+  };
+
   return (
     <Modal
       open={open}
       onClose={onClose}
+      icon={<FlaskConical />}
+      onSubmitShortcut={canRun && !noChannels && !running ? run : undefined}
       title={t("models_page.test_model_title")}
       description={
         displayModel
@@ -238,23 +255,7 @@ export function ModelTestModal({
           <Button variant="secondary" onClick={onClose} disabled={running}>
             {t("models_page.cancel")}
           </Button>
-          <Button
-            variant="primary"
-            onClick={() => {
-              if (!model || !form.channel) return;
-              onRun({
-                channel: form.channel,
-                prompt: form.prompt.trim(),
-                mode: form.mode,
-                images: form.images,
-                size: form.size,
-                quality: form.quality,
-                n: form.n,
-                duration: form.duration,
-              });
-            }}
-            disabled={!canRun || noChannels}
-          >
+          <Button variant="primary" onClick={run} disabled={!canRun || noChannels}>
             {running
               ? phase
                 ? t("models_page.test_running_phase", { phase })
@@ -281,9 +282,7 @@ export function ModelTestModal({
           />
 
           {missingImage ? (
-            <p className="text-xs text-amber-700 dark:text-amber-300">
-              {t("models_page.test_reference_image_required")}
-            </p>
+            <Callout tone="warning">{t("models_page.test_reference_image_required")}</Callout>
           ) : null}
 
           {/* Always reserve the response slot while open so success/error swaps don't collapse height. */}

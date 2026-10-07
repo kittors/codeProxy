@@ -96,7 +96,18 @@
     "disabled": "已停用",
     "enabled": "已启用",
     "mask_sensitive_data": "开启数据脱敏",
-    "unmask_sensitive_data": "关闭数据脱敏"
+    "unmask_sensitive_data": "关闭数据脱敏",
+    "show": "显示",
+    "hide": "隐藏",
+    "modified": "已修改",
+    "revert": "撤销",
+    "copy_named": "复制{{name}}",
+    "confirm_phrase_label": "请输入「{{phrase}}」以确认",
+    "secret_once_warning": "请立即复制，关闭后将无法再次查看。",
+    "secret_value": "密钥",
+    "secret_saved_close": "我已保存",
+    "copy_all": "复制全部",
+    "retry": "重试"
   },
   "title": {
     "main": "CliRelay 管理后台",
@@ -1052,7 +1063,31 @@
     "sort_label": "账号排序",
     "sort_by_name": "按名称",
     "sort_quota_asc": "剩余额度少的在前",
-    "sort_quota_desc": "剩余额度多的在前"
+    "sort_quota_desc": "剩余额度多的在前",
+    "import_empty_desc": "这个渠道没有返回任何模型，确认凭证可用后再试。",
+    "import_select_visible": "全选当前结果",
+    "import_clear_selection": "清空已选",
+    "import_no_match": "没有匹配「{{query}}」的模型",
+    "tags_modal_desc": "选择 {{name}} 在列表和卡片里显示哪些标签。",
+    "tags_preview": "显示为",
+    "tags_preview_empty": "不显示任何标签",
+    "no_custom_tags": "还没有自定义标签，输入后按回车添加。",
+    "display_tags_desc": "勾选的标签会显示在列表和卡片上；默认标签来自账号类型与套餐。",
+    "proxy_url_title": "代理地址",
+    "proxy_url_fallback_hint": "没有绑定代理池时使用；绑定了代理池则作为它的回退。留空表示移除。",
+    "custom_tags_section": "我的标签",
+    "batch_delete_lead": "将删除下面 {{count}} 个 AI 账号，无法恢复。",
+    "batch_delete_more": "等另外 {{count}} 个",
+    "batch_delete_consequence_files": "账号的凭证文件会被删除，需要重新登录或导入才能再用。",
+    "batch_delete_consequence_traffic": "正在使用这些账号的请求会改用其它可用账号。",
+    "download_sensitive_title": "下载完整凭证文件？",
+    "download_sensitive_button": "仍要下载",
+    "identity_profile_delete_title": "删除这个身份档案？",
+    "upload_progress_dialog_title": "正在上传认证文件",
+    "upload_progress_background": "在后台继续",
+    "paste_json_shortcut": "⌘ / Ctrl + Enter 直接上传",
+    "model_owner_group_dialog_desc": "给 {{type}} 类型的账号统一指定模型列表来源。",
+    "model_owner_group_applies_to": "作用于当前筛选的 {{type}} 账号。"
   },
   "antigravity_quota": {
     "title": "Antigravity 额度",
@@ -1089,7 +1124,33 @@
     "warmup_batch_success": "已将 {{count}} 个账号推入错峰预热队列",
     "warmup_batch_failed": "批量预热失败：{{message}}",
     "warmup_policy_saved": "预热策略保存成功",
-    "warmup_policy_save_failed": "保存预热策略失败：{{message}}"
+    "warmup_policy_save_failed": "保存预热策略失败：{{message}}",
+    "warmup_load_failed_title": "没能读取当前的预热策略",
+    "warmup_load_failed_desc": "为避免用默认值覆盖服务器上的策略，读取成功前不能保存。（{{message}}）",
+    "warmup_targets_desc": "哪些类型的账号参与自动预热。",
+    "warmup_target_antigravity_desc": "Gemini 与第三方模型额度（5 小时窗口）。",
+    "warmup_target_codex_desc": "Spark 与 5 小时额度窗口。",
+    "warmup_rhythm_title": "节奏",
+    "warmup_rhythm_desc": "多久预热一次、同一批账号在多长时间内错开，避免整齐的请求波形。",
+    "warmup_interval_label": "循环间隔",
+    "warmup_interval_hint": "每个账号每隔多久预热一次，1–72 小时。",
+    "warmup_stagger_label": "错峰打散",
+    "warmup_stagger_hint": "同一轮的账号在这段时间里随机错开，1–120 分钟。",
+    "unit_hours": "小时",
+    "unit_minutes": "分钟",
+    "warmup_daily_window_desc": "只在每天这个时间段里预热，夜间自动静默。",
+    "warmup_schedule_title": "生效时间",
+    "warmup_schedule_desc": "按你电脑的本地时间填写。",
+    "warmup_start_label": "开始时间",
+    "warmup_start_hint": "留空表示保存后立即生效。",
+    "warmup_stop_label": "截止时间",
+    "warmup_stop_hint": "到点后自动停止预热。",
+    "warmup_exclude_title": "排除账号",
+    "warmup_exclude_desc": "勾选的账号不参与自动预热。",
+    "warmup_exclude_count": "已排除 {{excluded}} / {{total}}",
+    "warmup_exclude_search": "搜索账号",
+    "warmup_excluded": "已排除",
+    "warmup_included": "自动预热"
   },
   "claude_quota": {
     "title": "Claude 额度",
@@ -2460,7 +2521,15 @@
     "select_placeholder": "选择代理",
     "select_missing": "代理不存在：{{id}}",
     "validation_name": "请填写代理名称",
-    "validation_url": "代理 URL 必须以 http://、https:// 或 socks5:// 开头"
+    "validation_url": "代理 URL 必须以 http://、https:// 或 socks5:// 开头",
+    "form_desc": "保存后可以在 AI 供应商和 AI 账号里选它作为出口。",
+    "name_hint": "在下拉框和列表里用这个名字认出它。",
+    "name_placeholder": "例如：香港住宅 IP",
+    "url_hint": "支持 http、https、socks5，账号密码直接写在地址里。",
+    "remark_placeholder": "例如：Codex 专用出口",
+    "enabled_hint": "停用后不会出现在可选列表里，已绑定的配置不受影响。",
+    "delete_lead": "删除后无法恢复。",
+    "delete_consequence_bindings": "AI 供应商和 AI 账号将不能再选择这个代理。"
   },
   "image_generation": {
     "title": "生图模型",
@@ -2525,7 +2594,6 @@
     "test_hint": "测试调用会自动轮询当前可用渠道。",
     "generate_button": "生成图片",
     "generating_button": "生成中...",
-    "send_button": "发送",
     "preview_alt": "{{model}} 预览",
     "idle_hint": "输入提示词后开始生成图片",
     "idle_hint_edits": "上传图片并输入提示词后开始生成图片",
@@ -2546,7 +2614,10 @@
     "provider": "渠道",
     "model": "模型",
     "model_placeholder": "选择模型",
-    "tab_label": "图片生成"
+    "tab_label": "图片生成",
+    "test_modal_desc": "选好模型和参数、写下提示词，试生成一张图片；上传参考图则按图生图处理。",
+    "test_shortcut": "⌘ / Ctrl + Enter 生成图片",
+    "reference_image_hint": "可选。上传后按图生图处理，最多 {{max}} 张。"
   },
   "identity_fingerprint": {
     "title": "身份指纹",
@@ -2657,7 +2728,6 @@
     "recommend_apply": "应用",
     "recommend_apply_selected": "应用并保存",
     "recommend_confirm_title": "应用这条推荐指纹？",
-    "recommend_confirm_desc": "将把 {{originator}} {{version}} 的推荐值保存为当前生效的 Codex 指纹。",
     "recommend_apply_confirm": "应用并保存",
     "recommend_table_caption": "近期 Codex 终端指纹候选",
     "recommend_empty": "近期请求里还没有可生成的 Codex 指纹",
@@ -2708,7 +2778,14 @@
     "kimi_device_id": "设备 ID",
     "kimi_device_hint": "留空则沿用运行主机的值；设备 ID 只从真实客户端学习，不支持预设。",
     "kimi_device_placeholder": "留空 = 沿用主机值",
-    "kimi_custom_headers_hint": "JSON 对象。Kimi 受管头（X-Msh-*）不可通过自定义头覆盖。"
+    "kimi_custom_headers_hint": "JSON 对象。Kimi 受管头（X-Msh-*）不可通过自定义头覆盖。",
+    "recommend_modal_loading": "正在检查近 {{days}} 天的请求…",
+    "recommend_confirm_lead": "保存后立即作为当前生效的 Codex 指纹。",
+    "recommend_confirm_enables": "Codex 身份指纹会同时被启用。",
+    "recommend_confirm_overwrites": "会覆盖当前的 {{fields}}。",
+    "recommend_confirm_overwrites_more": "会覆盖当前的 {{fields}} 等 {{count}} 项。",
+    "recommend_confirm_no_diff": "所有值都与当前一致，只会重新保存一次。",
+    "recommend_confirm_custom_headers": "自定义请求头会换成这条推荐里的值，原来的不会保留。"
   },
   "ui": {
     "loading": "加载中…",
@@ -3272,7 +3349,21 @@
     "credential_sort_label": "凭证排序",
     "credential_sort_config": "默认顺序",
     "credential_sort_remaining_asc": "剩余额度少的在前",
-    "credential_sort_remaining_desc": "剩余额度多的在前"
+    "credential_sort_remaining_desc": "剩余额度多的在前",
+    "proxy_url_fallback_hint": "没有绑定代理池时使用；绑定了代理池则作为它的回退。",
+    "delete_openai_title": "删除这个 OpenAI 兼容供应商？",
+    "delete_config_title": "删除这条凭证配置？",
+    "delete_lead": "删除后无法恢复。",
+    "delete_consequence_openai": "它下面的所有 API Key 与模型映射会一起删除，用到它的请求将改走其它渠道或失败。",
+    "delete_consequence_config": "这条凭证不再参与路由，用到它的请求将改走其它渠道或失败。",
+    "unnamed": "未命名",
+    "diff_tile_added": "新增",
+    "diff_tile_updated": "更新",
+    "diff_tile_removed": "删除",
+    "diff_tile_duplicates": "清理重复",
+    "import_removes_title": "导入会删除 {{count}} 个现有配置",
+    "import_removes_desc": "文件里没有的配置会被移除，下面红色划线的就是它们。确认无误再导入。",
+    "confirm_import_with_removals": "导入并删除 {{count}} 项"
   },
   "request_logs": {
     "title": "请求日志",
@@ -3336,7 +3427,6 @@
     "refreshing": "刷新中…",
     "not_refreshed": "尚未刷新",
     "clear_database_logs": "清空数据库日志",
-    "clear_database_logs_keep_records_hint": "推荐默认项：清理正文和请求详情，但保留请求记录、Token/费用统计，以及请求日志列表本身。",
     "clear_database_logs_confirm_button": "清理所选数据",
     "clear_database_logs_success_content": "已清理请求日志正文内容，并保留请求记录",
     "clear_database_logs_success_records": "已从数据库清理 {{count}} 条请求日志记录",
@@ -3375,7 +3465,13 @@
     "no_data_desc": "调整时间范围或筛选条件后再试",
     "calls_count": "{{formattedCount}} 次调用",
     "calls_sorted_hint": "按当前日志范围内的调用次数排序",
-    "unrestricted": "不限"
+    "unrestricted": "不限",
+    "clear_database_logs_title": "清空数据库日志？",
+    "clear_database_logs_lead": "勾选要清理的数据，清理后无法恢复。",
+    "clear_scope_title": "当前租户的全部请求日志",
+    "clear_scope_hint": "不受当前筛选条件和时间范围影响",
+    "clear_consequence_records": "请求记录会一起删除：列表、记录条数、Token、成功率和费用统计都会清空。",
+    "clear_consequence_content": "勾选的正文和详情会立即删除，之后打开这些请求看不到对应内容；请求记录与统计保留。"
   },
   "ccswitch": {
     "import_to_ccswitch": "导入到 CC Switch",
@@ -3491,20 +3587,19 @@
     "config_claude_role_sonnet": "Sonnet 默认模型",
     "config_claude_role_opus": "Opus 默认模型",
     "config_claude_role_fable": "Fable 默认模型",
-    "model_use_custom": "使用“{{value}}”"
+    "model_use_custom": "使用“{{value}}”",
+    "config_delete_lead": "只会从这里的预设列表中移除。",
+    "config_delete_consequence": "已经导入到 CC Switch 的配置不受影响，但之后不能再用这个预设生成导入链接。"
   },
   "api_keys_page": {
     "title": "API 密钥管理",
     "description": "创建和管理 API 密钥，并为每个密钥绑定可复用的权限配置。",
     "no_keys": "暂无 API 密钥",
     "create": "创建 API 密钥",
-    "create_desc": "填写详情并生成新的 API 密钥（名称必填）",
+    "create_desc": "创建后立即可以用它调用；权限配置决定它能用哪些渠道、模型和额度。",
     "edit": "编辑 API 密钥",
-    "edit_desc": "修改名称、密钥和可复用权限配置",
-    "confirm_delete": "确认删除",
-    "delete_warning": "此操作不可撤销。使用此密钥的所有客户端将失去访问权限。",
+    "edit_desc": "修改名称、Key 值或权限配置，保存后立即生效。",
     "confirm_batch_delete": "确认删除 {{count}} 个 API 密钥",
-    "batch_delete_warning": "此操作不可撤销。使用这些密钥的所有客户端将失去访问权限。",
     "batch_delete_selected_count": "将删除已选中的 {{count}} 个 API 密钥。",
     "rpm": "RPM",
     "tpm": "TPM",
@@ -3527,9 +3622,6 @@
     "system_prompt_hint": "可选。使用此 API 密钥的请求将自动注入此系统提示词。",
     "refresh": "刷新",
     "cancel": "取消",
-    "creating": "创建中...",
-    "saving": "保存中...",
-    "deleting": "删除中...",
     "confirm_delete_btn": "确认删除",
     "delete_logs_option": "同时清理该 API 密钥的历史请求记录",
     "create_btn": "创建",
@@ -3582,8 +3674,6 @@
     "disabled_toast": "已禁用 \"{{name}}\"",
     "enabled_toast": "已启用 \"{{name}}\"",
     "operation_failed": "操作失败",
-    "name_required": "请输入 API 密钥名称",
-    "key_empty": "密钥不能为空",
     "created_success": "创建成功",
     "create_failed": "创建失败",
     "updated_success": "更新成功",
@@ -3599,7 +3689,7 @@
     "loading": "加载中...",
     "no_results": "暂无结果",
     "form_name_label": "名称",
-    "form_name_placeholder": "例如 Team-A（必填）",
+    "form_name_placeholder": "例如 Team-A",
     "form_key_label": "API 密钥",
     "form_key_placeholder": "输入 API 密钥",
     "form_regenerate": "重新生成",
@@ -3657,8 +3747,20 @@
     "lifetime_spending_help": "累计消费，不受每日重置影响。",
     "edit_key_quota": "编辑 Key 配额",
     "key_quota_title": "Key 子配额",
-    "key_quota_account_hint": "Key 配额不能超过已配置的账号上限。",
-    "quota_validation_failed": "请先修正配额输入再保存。"
+    "quota_validation_failed": "请先修正配额输入再保存。",
+    "form_name_hint": "在列表和请求日志里用这个名字认出它。",
+    "form_key_hint": "已自动生成，也可以粘贴一把已有的 Key。",
+    "form_key_edit_hint": "调用方每次请求携带的就是这个值。",
+    "key_change_warning": "保存后原来的 Key 立即失效，正在使用它的客户端需要换成新值。",
+    "owned_key_create_desc": "创建后会生成一把新 Key，明文只显示一次；它和账号下其它 Key 共用账号额度。",
+    "owned_key_edit_desc": "修改名称和子配额，保存后立即生效；Key 值本身不变。",
+    "owned_key_basics_section": "基本信息",
+    "owned_key_name_hint": "在请求日志和用量统计里用这个名字区分来源。",
+    "delete_key_title": "删除 API 密钥",
+    "delete_lead": "删除后无法恢复。",
+    "delete_consequence_clients": "使用这把 Key 的客户端会立即无法调用。",
+    "batch_delete_consequence_clients": "使用这些 Key 的客户端会立即无法调用。",
+    "delete_logs_option_hint": "不勾选时保留请求记录，之后仍可对账。"
   },
   "api_key_permissions_page": {
     "title": "门户账号权限",
@@ -3695,22 +3797,28 @@
     "form_unlimited_hint": "0 = 无限制",
     "form_system_prompt": "系统提示词",
     "save_config": "保存配置",
-    "saving": "保存中...",
-    "name_required": "请填写配置名称",
     "profile_saved": "权限配置已保存",
     "profile_deleted": "权限配置已删除",
     "delete_title": "删除权限配置",
-    "delete_desc": "删除 {{name}}？使用它的用户账号会保留已复制的设置并转为自定义账户配置。",
     "load_failed": "加载权限配置失败",
     "save_failed": "保存权限配置失败",
     "delete_failed": "删除权限配置失败",
     "quota_section": "配额",
     "quota_section_desc": "设置账号四个固定周期的 USD 消费天花板。",
-    "request_limits_section": "请求限额",
-    "request_limits_desc": "次要的请求次数限制。",
-    "realtime_limits_section": "实时限制",
     "saved_with_sync": "权限配置已保存，已同步 {{accounts}} 个账号，并调整 {{keys}} 个 Key 周期额度。",
-    "saved_with_caps": "权限配置已保存，并调整 {{keys}} 个 Key 周期额度。"
+    "saved_with_caps": "权限配置已保存，并调整 {{keys}} 个 Key 周期额度。",
+    "basics_section": "基本信息",
+    "form_name_hint": "编辑用户账号时按这个名字选择模板。",
+    "access_section": "可用范围",
+    "access_section_desc": "限制使用该模板的账号能走哪些渠道分组、渠道和模型；不选即不限制。",
+    "request_realtime_section": "请求与速率限制",
+    "request_realtime_section_desc": "每日 / 总请求次数，以及并发、RPM、TPM；留空或 0 表示不限制。",
+    "advanced_section": "高级",
+    "system_prompt_hint": "使用该模板的账号，其名下所有 Key 的请求都会自动带上这段系统提示词。",
+    "system_prompt_placeholder": "例如：请始终使用简体中文回答。",
+    "delete_lead": "删除后无法恢复。",
+    "delete_consequence_accounts": "正在使用它的用户账号会保留已复制的限额与权限，转为自定义账户配置。",
+    "delete_confirm": "删除配置"
   },
   "channel_groups_page": {
     "title": "渠道分组管理",
@@ -3949,9 +4057,7 @@
     "last_page": "末页",
     "rows_per_page": "每页行数",
     "page_info": "第 {{start}}-{{end}} 条，共 {{total}} 条",
-    "password": "密码（可选）",
     "password_hint": "留空将随机生成密码；明文仅展示一次。",
-    "password_keep": "留空则不改密码",
     "password_reset": "密码已重置，请立即复制",
     "new_password_title": "新密码（请立即复制）",
     "new_password_warning": "请立即复制新密码，关闭后将无法再次查看。",
@@ -3962,8 +4068,6 @@
     "manage_keys_title": "用户 API Key",
     "manage_keys_title_for": "管理 Key · {{name}}",
     "manage_keys_desc": "管理该账号下各把 API Key 的名称、启停、轮换与 Key 子额度；账号额度与权限请在账号编辑中配置。",
-    "edit_key_name_desc": "这里只修改密钥名称；如需替换凭证，请使用独立的轮换操作。",
-    "key_rotate_only": "密钥值不能直接编辑。需要更换凭证时，请使用“轮换密钥”。",
     "rotate_key": "轮换密钥",
     "rotate_key_title": "轮换 API 密钥",
     "rotate_key_desc": "轮换后旧密钥会立即失效。新密钥只展示一次，请立即复制并更新所有调用方。",
@@ -3985,10 +4089,25 @@
     "other_limits_profile_readonly_hint": "请求与实时限制来自 {{profile}}，此处只读；累计消费限额仍由账号独立配置。",
     "other_limits_direct_hint": "未绑定权限模板，可直接编辑请求与实时限制；0 表示不限制。",
     "username_placeholder": "空则按昵称生成",
-    "password_placeholder": "空则随机生成，请立即复制",
     "secrets_one_time_hint": "离开此窗口后无法再查看明文密码 / API Key。",
-    "secrets_copied_close": "已复制，关闭",
-    "reset_password_title": "重置密码"
+    "reset_password_title": "重置密码",
+    "create_desc": "创建后用户即可登录门户，首次登录需要修改密码；生成的密码和初始 API Key 只显示一次。",
+    "display_name_hint": "在用户列表和门户里显示的名字。",
+    "password_label": "密码",
+    "new_password_label": "新密码",
+    "new_password_hint": "留空则不修改；新密码至少 12 个字符，且包含大写字母、小写字母与特殊字符。",
+    "edit_desc": "修改资料、权限模板和额度，保存后立即生效；账号下全部 Key 共用这里的额度。",
+    "profile_section": "资料",
+    "profile_applied_hint": "选择模板后，下方的周期额度和请求限制会被「{{profile}}」的值替换并锁定，保存时以模板为准。",
+    "reset_password_lead": "将为该账号生成一个新的随机密码，旧密码立即失效。",
+    "reset_password_consequence_sessions": "该账号已登录的会话会全部失效，需要用新密码重新登录。",
+    "reset_password_consequence_once": "新密码只显示一次，请及时复制给用户。",
+    "delete_lead": "删除后无法恢复。",
+    "delete_consequence_keys": "名下的 API Key 会被禁用并解除归属，无法再用于调用。",
+    "delete_confirm": "删除账号",
+    "usage_keys_summary": "账号下全部密钥",
+    "unnamed": "未命名用户",
+    "no_keys_for_usage": "该用户暂无 API 密钥，无法查看用量"
   },
   "apikey_lookup": {
     "available_models": "模型广场",
@@ -4072,7 +4191,6 @@
     "current_password": "当前密码",
     "keep_one_key": "至少保留一把 Key",
     "key_name": "Key 名称",
-    "key_name_duplicate": "Key 名称已存在，请换一个。",
     "key_name_placeholder": "例如：Claude Desktop / 生产环境",
     "key_name_required": "请输入 Key 名称",
     "manage_keys": "管理 API Key",
@@ -4084,9 +4202,7 @@
     "rotate_key": "重置",
     "secret_once_warning": "离开后无法再查看明文 Key，请立即复制保存。",
     "confirm_delete_title": "删除 API Key？",
-    "confirm_delete_desc": "删除后不可恢复，使用该 Key 的请求将失败。",
     "confirm_delete": "删除",
-    "deleting": "删除中…",
     "add_account": "添加账号",
     "switch_account": "切换账号",
     "current_account": "当前账号",
@@ -4137,7 +4253,15 @@
     "landing_console_kpi_tokens": "Token",
     "landing_console_kpi_cost": "费用",
     "landing_providers_eyebrow": "已接入",
-    "landing_feature_gateway_diagram": "你的应用"
+    "landing_feature_gateway_diagram": "你的应用",
+    "change_password_desc": "修改后，下次登录请使用新密码。",
+    "change_password_forced_hint": "为了账号安全，首次登录（或管理员重置密码后）需要先设置新密码，完成后才能继续使用。",
+    "confirm_new_password": "确认新密码",
+    "save_password": "保存新密码",
+    "keep_one_key_desc": "账号至少要保留一把 Key，不能删除最后一把；可以先新建一把再删除这把。",
+    "delete_key_lead": "删除后无法恢复。",
+    "delete_key_consequence_requests": "使用这把 Key 的请求会立即失败。",
+    "delete_key_failed": "删除 Key 失败，请稍后重试"
   },
   "config_page": {
     "save_warning_title": "确认高影响配置变更",
@@ -4671,7 +4795,7 @@
     "edit_model_aria": "编辑 {{model}}",
     "delete_model_aria": "删除 {{model}}",
     "delete_model_title": "删除模型配置",
-    "delete_model_desc": "确定要从数据库模型配置列表中删除 {{model}} 吗？该操作会在确认后执行。",
+    "delete_model_desc": "将从模型配置列表中删除 {{model}}，它的描述与价格设置会一起删除；已产生的用量记录不受影响。",
     "delete": "删除",
     "delete_saved": "模型配置已删除",
     "delete_failed": "删除模型配置失败",
@@ -4680,7 +4804,7 @@
     "selected_models_count": "已选 {{count}} 项",
     "delete_selected_models": "删除已选（{{count}}）",
     "delete_selected_models_title": "删除已选模型",
-    "delete_selected_models_desc": "确定要从数据库模型配置列表中删除已选的 {{count}} 个模型吗？该操作会在确认后执行。",
+    "delete_selected_models_desc": "将从模型配置列表中删除已选的 {{count}} 个模型，它们的描述与价格设置会一起删除；已产生的用量记录不受影响。",
     "delete_selected_models_success": "已删除 {{count}} 个模型配置",
     "manage_owner_presets": "维护归属预设",
     "owner_presets_title": "归属预设",
@@ -4857,7 +4981,17 @@
     "cache_token_price": "缓存 Token 价格 ($/M tokens)",
     "table_caption": "模型定价表",
     "input_price_placeholder": "例如 3.00",
-    "output_price_placeholder": "例如 15.00"
+    "output_price_placeholder": "例如 15.00",
+    "section_basics": "模型信息",
+    "section_basics_desc": "客户端用 ID 调用；归属决定它出现在哪个厂商分组里。",
+    "section_pricing": "计费",
+    "section_pricing_desc": "用于用量统计里的费用估算，单位美元。",
+    "model_id_reuse_hint": "输入时会列出模型库里的同名模型，选中即可带出描述与价格。",
+    "owner_hint": "可以选已有归属，也可以直接输入新的。",
+    "enabled_hint": "停用后不再出现在模型列表里，正在进行的请求不受影响。",
+    "owner_value_hint": "写进模型配置的值，小写、不含空格。",
+    "owner_label_hint": "下拉框里显示的名字。",
+    "owner_enabled_hint": "停用后不会出现在归属下拉框里，已使用它的模型不受影响。"
   },
   "providers_page": {
     "openai_title": "OpenAI 兼容提供商",
@@ -4911,8 +5045,6 @@
     "loading": "加载中…",
     "refresh_list": "刷新列表",
     "clear_server_logs": "清除服务器日志",
-    "confirm_clear_logs": "确定要清除服务器日志吗？此操作不可恢复。",
-    "confirm_clear_btn": "清除",
     "logs_cleared": "服务器日志已清除",
     "failed_clear": "清除日志失败",
     "failed_fetch": "获取日志失败",
@@ -4922,7 +5054,11 @@
     "failed_download_request_log": "下载请求日志失败",
     "failed_fetch_error_list": "获取错误日志列表失败",
     "failed_download_error_log": "下载错误日志失败",
-    "bytes": "{{size}} 字节"
+    "bytes": "{{size}} 字节",
+    "clear_server_logs_title": "清除服务器日志？",
+    "clear_server_logs_lead": "清除后无法恢复。",
+    "clear_consequence_files": "当前日志会被清空，历史轮转的日志文件会被删除。",
+    "clear_consequence_error_logs": "错误日志文件不受影响，仍可在「错误日志」里下载。"
   },
   "system_monitor": {
     "health_score": "健康评分",
@@ -5031,7 +5167,8 @@
     "role_function_return": "函数返回",
     "role_thinking": "思考",
     "role_tool_use": "工具调用",
-    "role_message": "消息"
+    "role_message": "消息",
+    "details_only_desc": "未开启请求正文存储，只能查看这次请求的地址、请求头和状态。"
   },
   "error_detail": {
     "upstream_error": "上游 API 错误响应",
@@ -5040,7 +5177,8 @@
     "full_response": "完整响应",
     "no_content": "该历史日志未记录上游错误响应，也无法从请求详情还原失败原因。新的失败日志会保存错误详情。",
     "load_failed": "加载失败",
-    "request_failed": "请求失败"
+    "request_failed": "请求失败",
+    "copy_response": "复制完整响应"
   },
   "system_page": {
     "title": "系统信息",
@@ -5292,13 +5430,17 @@
     "reset": {
       "account_title": "重置账号配额",
       "key_title": "重置 Key 配额",
-      "account_single_description": "确认重置账号 {{name}} 的{{period}}配额？仅清零该账号当前{{period}}用量，请求日志仍会保留。",
-      "key_single_description": "确认重置 Key {{name}} 的{{period}}配额？仅清零本 Key 当前{{period}}用量，账号配额与请求日志不受影响。",
-      "account_multiple_description": "请选择要为账号 {{name}} 重置的周期。仅清零选中的账号周期用量，请求日志仍会保留。",
-      "key_multiple_description": "请选择要为 Key {{name}} 重置的周期。仅清零选中的本 Key 周期用量，账号配额与请求日志不受影响。",
       "period_checkbox": "重置{{period}}配额",
       "confirm": "确认重置配额",
-      "confirm_selected": "重置选中配额"
+      "confirm_selected": "重置选中配额",
+      "account_single_lead": "只清零该账号当前{{period}}的已用额度，请求日志仍会保留。",
+      "key_single_lead": "只清零本 Key 当前{{period}}的已用额度，账号配额与请求日志不受影响。",
+      "account_multiple_lead": "勾选要重置的周期，只清零选中周期的已用额度；请求日志仍会保留。",
+      "key_multiple_lead": "勾选要重置的周期，只清零本 Key 选中周期的已用额度；账号配额与请求日志不受影响。",
+      "option_usage": "已用 {{used}} / 上限 {{limit}}",
+      "option_limit": "上限 {{limit}}",
+      "subject_account": "账号",
+      "subject_key": "Key"
     },
     "status": {
       "warning": "即将达到配额",
@@ -5349,7 +5491,6 @@
     "new_password_prompt": "新密码",
     "password_reset": "密码已重置。",
     "reset_password": "重置密码",
-    "delete_user_confirm": "确定删除用户 {{username}} 吗？",
     "user_deleted": "用户已删除。",
     "delete": "删除",
     "new_role": "新建角色",
@@ -5360,7 +5501,6 @@
     "role_created": "角色已创建。",
     "protected_role": "受保护角色",
     "select_role": "请选择角色",
-    "delete_role_confirm": "确定删除角色 {{name}} 吗？",
     "role_deleted": "角色已删除。",
     "role_permissions_saved": "角色权限已保存。",
     "save": "保存",
@@ -5370,10 +5510,6 @@
     "slug": "租户标识",
     "name": "名称",
     "expires_at": "到期时间",
-    "expires_at_required": "请填写到期时间。",
-    "expires_at_invalid": "到期时间格式无效。",
-    "field_required": "请填写此字段。",
-    "name_too_long": "名称不能超过 {{max}} 个字符。",
     "admin_username": "管理员用户名",
     "admin_display_name": "管理员显示名称",
     "admin_password": "管理员密码",
@@ -5387,7 +5523,6 @@
     "new_expiry_prompt": "新的到期日期和时间",
     "tenant_expiry_updated": "租户到期时间已更新。",
     "renew": "续期",
-    "disable_tenant_confirm": "确定禁用租户 {{name}} 吗？",
     "tenant_disabled": "租户已禁用。",
     "disable": "禁用",
     "edit": "编辑",
@@ -5409,10 +5544,8 @@
     "no_call_chain": "暂无调用链路信息。",
     "no_project_method": "暂无项目方法信息。",
     "audit_log_detail_title": "审计日志详情",
-    "delete_audit_log_confirm": "确定删除这条审计日志吗？",
     "audit_log_deleted": "审计日志已删除。",
     "clear_audit_logs": "清空全部",
-    "clear_audit_logs_confirm": "确定清空当前可见范围内的全部审计日志吗？此操作不可恢复。",
     "clear_audit_logs_confirm_button": "确认清空",
     "audit_logs_cleared": "已清空 {{count}} 条审计日志。",
     "resource": "资源",
@@ -5453,7 +5586,6 @@
     "renew_tenant": "续租租户",
     "change_user_status": "切换用户 {{username}} 的状态",
     "disable_user": "停用用户",
-    "disable_user_confirm": "确定停用用户 {{username}} 吗？停用后现有会话将立即失效。",
     "scope_platform": "平台级",
     "scope_tenant": "租户级",
     "permissions": "权限",
@@ -5513,7 +5645,6 @@
     "badge_content": "徽标内容",
     "hide_menu": "隐藏菜单",
     "please_select": "请选择",
-    "delete_menu_confirm": "确定删除菜单 {{name}} 吗？",
     "permission_actions": {
       "read": "读取",
       "create": "创建",
@@ -5563,7 +5694,143 @@
     "password_rule_special": "特殊字符",
     "passwords_match": "两次输入一致",
     "change_password_hint": "请设置一个没在别处用过的密码。",
-    "change_password_forced_hint": "继续使用前，请先设置新密码。"
+    "change_password_forced_hint": "继续使用前，请先设置新密码。",
+    "new_user_desc": "对方用这里的用户名和密码登录管理端，能看到什么由分配的角色决定。",
+    "user_section_account": "账号",
+    "user_section_account_desc": "用户名用于登录；显示名称会出现在列表和审计记录里。",
+    "user_section_password_desc": "首次登录时，对方需要先改成自己的密码。",
+    "password_mode_auto_desc": "由服务器生成强密码，创建后只显示这一次，请复制给对方。",
+    "password_mode_manual_desc": "由你设定一个密码，再转告对方。",
+    "user_section_roles_desc": "角色决定对方能看到的页面和能做的操作，之后也可以在列表里调整。",
+    "user_roles_hint": "只列出你能委托的角色（你自己拥有它的全部权限）。",
+    "user_roles_none_assignable": "暂时没有你可以委托的角色。",
+    "reset_password_desc": "为 {{name}}（{{username}}）设置一个新密码。",
+    "reset_password_effects": "保存后这个账号的所有登录会立即失效；用新密码登录时，需要先改成自己的密码。",
+    "save_roles": "保存角色",
+    "roles_locked_self": "不能修改你自己的角色。",
+    "roles_locked_super_admin": "超级管理员的角色受保护，不能修改。",
+    "roles_locked_tenant_admin": "租户管理员的角色受保护，不能在这里修改。",
+    "initial_password_handover": "把用户名和初始密码交给对方，首次登录时需要改成自己的密码。",
+    "disable_user_lead": "停用后这个账号无法再登录管理端。",
+    "disable_user_consequence_sessions": "当前的所有登录会立即失效。",
+    "disable_user_consequence_restore": "账号和角色都会保留，随时可以在列表里重新启用。",
+    "disable_user_confirm_button": "停用用户",
+    "delete_user_title": "删除用户「{{name}}」？",
+    "delete_lead": "删除后无法恢复。",
+    "delete_user_consequence_account": "账号会被永久删除，之后无法再用它登录。",
+    "delete_user_consequence_disable_instead": "只想暂时禁止登录的话，改用「停用」可以保留账号。",
+    "delete_user": "删除用户",
+    "new_role_desc": "先建好角色，再在列表里给它配置权限、分配用户。",
+    "role_name_hint": "会显示在用户列表和角色选择里。",
+    "role_description_hint": "写清这个角色给谁用、能做什么，以后分配时一看就懂。",
+    "permissions_selected": "已选 {{count}} 项权限",
+    "save_permissions": "保存权限",
+    "permissions_read_only_protected": "这是系统内置的受保护角色，权限由系统维护，只能查看。",
+    "permissions_read_only_no_access": "你没有修改角色权限的权限，这里只能查看。",
+    "no_matching_users": "没有匹配的用户",
+    "no_matching_users_hint": "换个关键词试试，显示名称和用户名都可以搜。",
+    "role_users_locked": "角色受保护，不能在这里调整",
+    "users_selected": "已选 {{count}} 人",
+    "save_role_users": "保存分配",
+    "search_users": "搜索用户",
+    "search_users_placeholder": "按显示名称或用户名搜索",
+    "delete_role_title": "删除角色「{{name}}」？",
+    "delete_role_consequence_permissions": "角色和它的权限配置会被永久删除。",
+    "delete_role_consequence_assigned": "仍分配给用户的角色无法删除，需要先在「分配用户」里移除他们。",
+    "delete_role_assigned_blocked": "还有 {{count}} 位用户在使用这个角色，服务器会拒绝删除。请先在「分配用户」里移除他们。",
+    "delete_role": "删除角色",
+    "new_tenant_desc": "创建一个独立的租户空间，同时建好它的第一个管理员账号。",
+    "tenant_section_info": "租户信息",
+    "tenant_section_info_desc": "到期后租户内的账号无法登录、API Key 请求会被拒绝；可以随时续期。",
+    "tenant_name_hint": "显示在租户列表和租户切换器里。",
+    "tenant_expires_hint": "到这个时间后租户自动到期。",
+    "tenant_section_admin": "首个管理员",
+    "tenant_section_admin_desc": "创建后自动成为这个租户的租户管理员；首次登录时需要先修改密码。",
+    "edit_tenant_desc": "租户标识 {{slug}} 不能修改，其余信息保存后立即生效。",
+    "save_changes": "保存修改",
+    "tenant_status_section_desc": "暂停和禁用都会让租户立即无法使用，数据都会保留。",
+    "tenant_status_active_desc": "账号可以登录，API Key 照常可用。",
+    "tenant_status_suspended_desc": "临时停用，例如等待续费。",
+    "tenant_status_disabled_desc": "长期停用，用于不再使用的租户。",
+    "tenant_status_revoke_warning": "保存后，这个租户下所有账号会立即退出登录，API Key 请求也会被拒绝。",
+    "tenant_section_sessions": "登录有效期",
+    "tenant_section_sessions_desc": "访问令牌到期后面板会自动续上；超过「登录保持时长」没有使用就需要重新登录。勾选「记住我」的登录至少保持 30 天。",
+    "access_token_ttl": "访问令牌有效期（秒）",
+    "refresh_token_ttl": "登录保持时长（秒）",
+    "access_token_ttl_short": "访问令牌有效期",
+    "refresh_token_ttl_short": "登录保持时长",
+    "ttl_equals": "相当于 {{value}}",
+    "ttl_about": "约 {{value}}",
+    "ttl_range": "可设 {{min}} 到 {{max}}",
+    "system_tenant_hint": "系统租户是平台管理员所在的租户，不能编辑、续期或禁用。",
+    "created_at": "创建时间",
+    "updated_at": "更新时间",
+    "renew_tenant_desc": "「{{name}}」当前在 {{time}} 到期。",
+    "renew_tenant_desc_never": "「{{name}}」当前没有设置到期时间。",
+    "renew_quick": "快速延长",
+    "renew_plus_1_month": "1 个月",
+    "renew_plus_3_months": "3 个月",
+    "renew_plus_1_year": "1 年",
+    "renew_in_past_warning": "这个时间已经过去，保存后租户会立即到期，所有账号都无法再登录。",
+    "disable_tenant_title": "禁用租户「{{name}}」？",
+    "disable_tenant_lead": "数据会保留，之后可以恢复。",
+    "disable_tenant_consequence_sessions": "租户下所有账号立即退出登录，之后也无法登录。",
+    "disable_tenant_consequence_api": "这个租户的 API Key 请求会被拒绝。",
+    "disable_tenant_consequence_restore": "需要恢复时，在「编辑」里把状态改回「正常」即可。",
+    "disable_tenant": "禁用租户",
+    "menu_type_desc": {
+      "directory": "一组页面的分组，地址是下级页面的前缀。",
+      "menu": "侧边栏里的一个页面，对应一个前端组件。",
+      "button": "页面里的操作权限点，不出现在导航中。",
+      "embed": "在面板里用内嵌框架打开一个外部地址。",
+      "link": "点击后在新窗口打开一个外部地址。"
+    },
+    "menu_create_desc": "保存后，有权限的用户会在导航里看到它。",
+    "menu_edit_desc": "{{code}} 的改动保存后会同步到所有用户的导航。",
+    "menu_create_submit": "创建菜单",
+    "menu_section_basic": "基本信息",
+    "menu_section_basic_desc": "它是什么、挂在哪里、叫什么名字。",
+    "menu_type_locked": "这是系统内置菜单，类型不能修改。",
+    "menu_code_hint": "唯一标识，创建后不能修改，例如 custom.feature。",
+    "menu_code_locked": "菜单编码创建后不能修改。",
+    "menu_parent_hint": "只能挂在目录或页面下；留空则放在最顶层。",
+    "menu_label_key_hint": "界面文案的翻译键，例如 shell.nav_users；找不到翻译时显示「标题」。",
+    "menu_title_hint": "没有对应翻译时显示的名称。",
+    "menu_icon_hint": "显示在菜单名前面的图标。",
+    "menu_section_route": "路由与组件",
+    "menu_section_route_desc": "用户点开它时打开哪里。",
+    "menu_path_hint_directory": "下级页面地址的公共前缀，以 / 开头，例如 /runtime。",
+    "menu_path_hint_nested": "以 / 开头，并放在上级目录的 {{prefix}} 之下。",
+    "menu_path_hint": "面板里的访问地址，以 / 开头。",
+    "menu_component_hint": "前端页面的注册名，例如 users；目录固定为 Layout。",
+    "menu_link_hint_embed": "在面板里用内嵌框架打开的地址。",
+    "menu_link_hint_external": "点击菜单后在新窗口打开的地址。",
+    "menu_button_no_route": "按钮是页面里的操作权限点，没有路由和组件。",
+    "menu_section_access": "权限与显示",
+    "menu_section_access_desc": "谁能看到它、排在哪里、是否显示。",
+    "menu_permission_hint": "拥有这个权限的用户才看得到它；必须是系统里已有的权限码，留空则所有人可见。",
+    "menu_sort_hint": "同级菜单里数字越小越靠前，范围 0–10000。",
+    "menu_badge_hint": "显示在菜单名旁的短标签，例如 New。",
+    "menu_enabled_hint": "停用后不出现在导航里，直接打开它的地址也会提示无权访问。",
+    "hide_menu_hint": "不在侧边栏列出，但页面照常可用，可以通过地址直接打开，适合详情页这类入口。",
+    "menu_not_visible_hint": "它和所有下级都从导航中隐藏；内嵌页面的地址也会失效。",
+    "delete_menu_title": "删除菜单「{{name}}」？",
+    "delete_menu_consequence_nav": "菜单会从所有人的导航中移除。",
+    "delete_menu_consequence_permissions": "角色已有的权限不受影响；如需收回，请到「角色权限」里调整。",
+    "delete_menu": "删除菜单",
+    "delete_menu_has_children": "它下面还有 {{count}} 个下级菜单或按钮，服务器会拒绝删除。请先删除或移走它们。",
+    "delete_audit_log_title": "删除这条审计日志？",
+    "delete_audit_log_consequence": "之后无法再通过审计日志追溯这次操作。",
+    "delete_audit_log_button": "删除记录",
+    "clear_audit_logs_title": "清空审计日志？",
+    "clear_audit_logs_lead": "清空后无法恢复。",
+    "audit_log_count": "{{count}} 条审计记录",
+    "audit_scope_all_tenants": "所有租户",
+    "audit_scope_current_tenant": "当前租户",
+    "clear_audit_logs_consequence_all_tenants": "你有平台审计权限，会删除所有租户的记录，而不只是当前租户。",
+    "clear_audit_logs_consequence_tenant": "当前租户的全部审计记录会被永久删除。",
+    "clear_audit_logs_consequence_trace": "之后无法再追溯这些操作是谁、在什么时候做的。",
+    "clear_audit_logs_phrase": "清空"
   },
   "apikey_usage": {
     "title": "API 密钥用量查询",
@@ -5573,7 +5840,8 @@
     "empty_title": "查询 API 密钥用量",
     "empty_desc": "输入密钥后即可查看请求日志，并使用快捷导入。密钥会保存在本机 localStorage。",
     "switch_key": "更换密钥",
-    "logout": "退出查询"
+    "logout": "退出查询",
+    "key_storage_hint": "密钥会保存在这台设备的浏览器里，下次打开自动查询。"
   },
   "content_moderation": {
     "title": "内容审核",
@@ -5635,7 +5903,6 @@
     "profile_deleted": "审核配置已删除",
     "profile_delete_failed": "删除审核配置失败",
     "profiles_load_failed": "加载审核配置失败",
-    "delete_description": "确定删除 {{name}}？仍有 {{count}} 个渠道绑定时，后端会拒绝删除。",
     "delete_confirm": "删除配置",
     "editor_description": "配置按租户隔离。请在此设置检查策略，再从配置表启用请求前阻断。",
     "fail_open_notice": "审核 API 超时、5xx 或响应非法时会放行。仅关键词模式不需要 API Key。",
@@ -5662,21 +5929,6 @@
       "violence": "暴力",
       "violence_graphic": "血腥暴力"
     },
-    "threshold_category_help": {
-      "harassment": "贬低、恐吓、侮辱个人或群体的内容。阈值越低，越低置信度的结果也会触发阻断，审核会更严格。",
-      "harassment_threatening": "包含暴力或严重伤害威胁的骚扰内容。阈值越低，越低置信度的结果也会触发阻断，审核会更严格。",
-      "hate": "基于种族、宗教、性别、性取向、残障或国籍等受保护特征攻击或贬损他人的内容。阈值越低，越低置信度的结果也会触发阻断，审核会更严格。",
-      "hate_threatening": "同时包含针对受保护群体的暴力或严重伤害威胁的仇恨内容。阈值越低，越低置信度的结果也会触发阻断，审核会更严格。",
-      "illicit": "为实施非暴力不当或违法行为提供操作指导或可执行帮助的内容。阈值越低，越低置信度的结果也会触发阻断，审核会更严格。",
-      "illicit_violent": "为涉及暴力或武器的不当或违法行为提供操作指导或可执行帮助的内容。阈值越低，越低置信度的结果也会触发阻断，审核会更严格。",
-      "self_harm": "宣扬、鼓励或描绘自残的内容，包括自杀和进食障碍。阈值越低，越低置信度的结果也会触发阻断，审核会更严格。",
-      "self_harm_intent": "说话者表示或流露出实施自残意图的内容。阈值越低，越低置信度的结果也会触发阻断，审核会更严格。",
-      "self_harm_instructions": "鼓励自残，或提供自残操作步骤、方法的内容。阈值越低，越低置信度的结果也会触发阻断，审核会更严格。",
-      "sexual": "以引起性兴奋为目的、描述性行为或宣传性服务的内容，不包括性健康与性教育内容。阈值越低，越低置信度的结果也会触发阻断，审核会更严格。",
-      "sexual_minors": "涉及任何未满 18 岁人士的色情内容。阈值越低，越低置信度的结果也会触发阻断，审核会更严格。",
-      "violence": "描绘死亡、暴力或身体伤害的内容。阈值越低，越低置信度的结果也会触发阻断，审核会更严格。",
-      "violence_graphic": "以血腥或高度细节方式描绘死亡、暴力或身体伤害的内容。阈值越低，越低置信度的结果也会触发阻断，审核会更严格。"
-    },
     "block_http_status": "阻断 HTTP 状态码",
     "block_message": "阻断提示",
     "api_key_placeholder": "输入 API Key",
@@ -5684,16 +5936,6 @@
     "api_key_configured": "已配置：{{masked}}",
     "api_key_not_configured": "未配置 API Key",
     "clear_api_key": "清除已配置的 API Key",
-    "validation_name": "必须填写配置名称",
-    "validation_timeout": "超时必须是 1 到 30000 的整数",
-    "validation_status": "HTTP 状态码必须是 400 到 599 的整数",
-    "validation_base_url_required": "必须填写审核服务 Base URL",
-    "validation_base_url_invalid": "审核服务 Base URL 必须是完整的 HTTP 或 HTTPS 地址",
-    "validation_model": "必须填写审核模型",
-    "validation_thresholds": "每个分类阈值都必须是 0 到 1 之间的数字",
-    "validation_api_key": "当前检查策略必须配置审核 API Key",
-    "validation_block_message": "必须填写阻断提示",
-    "validation_keywords": "当前检查策略至少需要一个拦截关键词",
     "channels_title": "绑定渠道",
     "channels_description": "为 {{name}} 选择渠道。列表由服务端分页加载。",
     "tab_auth_files": "AI 账号",
@@ -5736,7 +5978,6 @@
     "tag_bind_scanning": "正在查找匹配渠道...",
     "tag_bind_hint": "仅绑定当前匹配项，后续新增同标签渠道不会自动绑定。",
     "tag_bind_title": "绑定匹配渠道？",
-    "tag_bind_confirm_description": "标签：{{tags}}。匹配方式：{{mode}}。共匹配 {{count}} 个渠道，将更新 {{changeCount}} 个绑定。",
     "tag_bind_rebind_warning": "其中 {{count}} 个已绑定到其他配置，继续后将替换原绑定。",
     "tag_bind_confirm": "绑定匹配渠道",
     "tag_bind_saved": "已保存 {{count}} 个渠道绑定",
@@ -5815,8 +6056,6 @@
     "safety_safe": "安全",
     "safety_controversial": "有争议",
     "safety_unsafe": "不安全",
-    "validation_input_limit": "单次扫描字数必须是 128 到 100000 之间的整数",
-    "validation_max_chunks": "最多扫描块数必须是 1 到 32 之间的整数",
     "scanner": {
       "violent": "暴力",
       "non_violent_illegal_acts": "非暴力违法行为",
@@ -5838,6 +6077,51 @@
       "politically_sensitive_topics": "政治敏感话题。",
       "copyright_violation": "侵犯版权的内容。",
       "jailbreak": "提示词注入，或诱导模型绕过自身安全规则。"
+    },
+    "rebind_existing_unknown": "另一个配置",
+    "rebind_consequence": "之后的请求改按「{{name}}」审核，原来的绑定会被替换。",
+    "delete_profile_title": "删除审核配置「{{name}}」？",
+    "delete_lead": "删除后无法恢复。",
+    "delete_consequence_settings": "它的关键词、阈值和 API Key 会一起删除。",
+    "delete_blocked_bindings": "仍有 {{count}} 个渠道绑定了它，服务器会拒绝删除。请先在「管理渠道」里解绑。",
+    "tag_bind_lead": "把匹配这些标签的渠道绑定到「{{name}}」。",
+    "tag_bind_consequence_count": "匹配到 {{count}} 个渠道，其中 {{changeCount}} 个的绑定会更新。",
+    "channel_count": "{{count}} 个渠道",
+    "rebind_from": "{{channel}} · 原为「{{name}}」",
+    "rebind_more": "还有 {{count}} 个",
+    "editor_section_basic": "基本信息",
+    "editor_section_basic_desc": "配置的名字，以及审核请求发往哪种服务。",
+    "backend_openai_moderations_desc": "调用 OpenAI 审核接口，按各分类的分数和阈值判断。",
+    "backend_qwen3guard_desc": "自建的 Qwen3Guard 护栏模型，按风险类别判断。",
+    "editor_section_strategy_desc": "查关键词、调审核服务，还是两者结合。",
+    "keyword_mode_api_only_desc": "只由审核服务判断。",
+    "keyword_mode_keyword_only_desc": "只按拦截关键词匹配，不需要审核服务和 API Key。",
+    "keyword_mode_keyword_and_api_desc": "先匹配关键词，没命中再调用审核服务。",
+    "editor_section_service": "审核服务",
+    "editor_section_service_desc": "审核请求发往的地址、模型与凭据。",
+    "editor_section_service_off": "仅关键词模式不调用审核服务，这一段暂不生效。",
+    "timeout_hint": "1–30000 毫秒；超时按放行处理。",
+    "clear_api_key_hint": "保存时删除已保存的 Key；之后需要时再重新填写。",
+    "editor_section_block": "阻断响应",
+    "editor_section_block_desc": "请求被拦下时返回给客户端的状态码和提示。",
+    "guard_policy_section": "判定与分块",
+    "controversial_action_elevated_only_desc": "有争议的内容只在命中下面的高危类别时阻断。",
+    "controversial_action_allow_desc": "有争议的内容一律放行。",
+    "controversial_action_block_desc": "有争议的内容一律阻断，误拦会变多。",
+    "threshold_category_desc": {
+      "harassment": "贬低、恐吓、侮辱个人或群体的内容。",
+      "harassment_threatening": "包含暴力或严重伤害威胁的骚扰内容。",
+      "hate": "基于种族、宗教、性别、性取向、残障或国籍等受保护特征攻击或贬损他人的内容。",
+      "hate_threatening": "同时包含针对受保护群体的暴力或严重伤害威胁的仇恨内容。",
+      "illicit": "为实施非暴力的不当或违法行为提供操作指导或可执行帮助的内容。",
+      "illicit_violent": "为涉及暴力或武器的不当或违法行为提供操作指导或可执行帮助的内容。",
+      "self_harm": "宣扬、鼓励或描绘自残的内容，包括自杀和进食障碍。",
+      "self_harm_intent": "说话者表示或流露出实施自残意图的内容。",
+      "self_harm_instructions": "鼓励自残，或提供自残操作步骤、方法的内容。",
+      "sexual": "以引起性兴奋为目的、描述性行为或宣传性服务的内容，不含性健康与性教育。",
+      "sexual_minors": "涉及任何未满 18 岁人士的色情内容。",
+      "violence": "描绘死亡、暴力或身体伤害的内容。",
+      "violence_graphic": "以血腥或高度细节方式描绘死亡、暴力或身体伤害的内容。"
     }
   },
   "ip_access": {
@@ -5886,7 +6170,6 @@
     "never_expires": "永久",
     "add_rule": "新增规则",
     "delete_rule": "删除规则",
-    "delete_rule_confirm": "确定删除 {{cidr}} 的规则吗？删除后该地址将立即恢复到默认策略。",
     "rule_created": "规则已创建",
     "rule_deleted": "规则已删除",
     "no_rules": "还没有任何 IP 规则",
@@ -5905,7 +6188,6 @@
     "duration_6h": "6 小时",
     "duration_24h": "24 小时",
     "duration_7d": "7 天",
-    "cidr_required": "请填写地址或网段",
     "section_lockdown": "仅白名单模式",
     "section_lockdown_desc": "开启后，只有白名单内的地址可以访问管理端。",
     "lockdown_label": "仅允许白名单地址访问",
@@ -6032,13 +6314,35 @@
     "retention_days": "尝试记录保留（天）",
     "retention_days_hint": "超过此天数的登录尝试记录会被清理。上限 365 天。",
     "lockdown_confirm_title": "确认开启仅白名单模式？",
-    "lockdown_confirm_body": "开启后，不在白名单内的地址将立即无法访问管理端。你当前的地址（{{cidr}}）已在白名单内，但请确认其他管理员的地址也已加入，否则他们会被挡在门外。",
     "lockdown_confirm_ok": "确认开启",
     "portal_recent_logins": "最近登录记录",
     "portal_recent_logins_hint": "近 30 天你账号的登录记录。发现不是本人的记录请立即修改密码。",
     "portal_no_logins": "近 30 天没有登录记录",
     "chain_title": "当前请求的转发链（右侧为直连本服务的一跳）",
-    "chain_hint": "每一跳都要声明为可信代理，解析才能走到最左侧的真实客户端。当前解析结果：{{client}}。若结果落在回环地址，说明还有一跳没声明。"
+    "chain_hint": "每一跳都要声明为可信代理，解析才能走到最左侧的真实客户端。当前解析结果：{{client}}。若结果落在回环地址，说明还有一跳没声明。",
+    "rule_form_desc": "规则保存后立即生效；同一地址同时命中放行和拒绝时，放行优先。",
+    "cidr_preview_single_v4": "单个 IPv4 地址，保存为 {{cidr}}",
+    "cidr_preview_single_v6": "单个 IPv6 地址，保存为 {{cidr}}",
+    "cidr_preview_range_v4": "IPv4 网段，共 {{formatted}} 个地址",
+    "cidr_preview_range_v6": "IPv6 网段 /{{prefix}}",
+    "expires_preview": "将于 {{time}} 到期",
+    "expires_preview_never": "永久有效",
+    "edit_rule_desc": "可以调整有效期和备注；地址和效果不能修改。",
+    "save_rule": "保存规则",
+    "delete_rule_title": "删除 {{cidr}} 的规则？",
+    "delete_rule_lead": "删除后不能恢复，需要时可以重新添加。",
+    "delete_rule_consequence_default": "这个地址会立即恢复为默认策略。",
+    "delete_rule_consequence_deny": "它的请求不会再被这条规则拒绝。",
+    "delete_rule_consequence_allow": "它不再豁免限流，也可能被自动封禁。",
+    "lockdown_confirm_lead": "开启后只有白名单里的地址能访问管理端；点页面底部的「保存」后生效。",
+    "lockdown_consequence_others": "不在白名单内的地址会立即被拒绝，包括其他管理员。",
+    "lockdown_consequence_self": "你当前的地址（{{cidr}}）已在白名单内，不会被挡住。",
+    "lockdown_consequence_self_unknown": "你当前的地址已在白名单内，不会被挡住。",
+    "lockdown_consequence_colleagues": "请先确认其他管理员的地址也已加入白名单。",
+    "bulk_delete_title": "删除选中的 {{count}} 条规则？",
+    "bulk_delete_consequence_deny": "{{count}} 条拒绝规则：这些地址的请求不会再被拒绝。",
+    "bulk_delete_consequence_allow": "{{count}} 条放行规则：这些地址不再豁免限流，也可能被自动封禁。",
+    "bulk_delete_more": "另外 {{count}} 条"
   },
   "video_generation": {
     "title": "视频模型",
@@ -6074,18 +6378,377 @@
     "test_running": "生成中",
     "test_running_hint": "视频生成通常需要 1-3 分钟，请保持页面打开",
     "test_failed_generic": "视频生成失败",
-    "test_model_required": "请先选择视频模型",
-    "test_prompt_required": "请填写提示词",
-    "test_image_required": "图生视频需要提供源图地址",
     "field_model": "模型",
     "field_prompt": "提示词",
     "field_prompt_placeholder": "例如：日落时分的海浪，镜头缓慢拉远",
-    "field_image_url": "源图地址（图生视频）",
+    "field_image_url": "源图地址",
     "field_duration": "时长（秒，最多 {{max}}）",
     "field_aspect_ratio": "画面比例",
     "field_resolution": "分辨率",
     "result_open_original": "在新标签页打开原始视频",
     "no_channel_hint": "当前租户下没有可用的 xAI 账号，无法生成视频。请先在「AI 账号」里添加并启用一个 Grok 账号。",
-    "unavailable_suffix": "无可用账号"
+    "unavailable_suffix": "无可用账号",
+    "test_modal_desc": "选好模型和参数，写一段提示词试生成一段视频。生成是异步的，通常需要 1–3 分钟。",
+    "test_shortcut": "⌘ / Ctrl + Enter 开始生成",
+    "field_mode": "生成方式",
+    "field_image_url_hint": "作为视频首帧的图片：网址或 data URI。"
+  },
+  "config_ui": {
+    "nav_label": "配置分区",
+    "search_label": "搜索设置",
+    "search_placeholder": "搜索设置，如：代理、日志、端口",
+    "search_clear": "清空搜索",
+    "search_empty_title": "没有找到与「{{query}}」相关的设置",
+    "search_empty_desc": "换个关键词试试，或切到「源码编辑」直接搜索 config.yaml 原文。",
+    "section_modified": "有未保存的修改",
+    "modified_count": "改了 {{count}} 项",
+    "unsaved_count": "{{count}} 项未保存",
+    "save_warning_lead": "这次保存会立即作用到正在运行的服务，请确认以下影响：",
+    "on": "开",
+    "off": "关",
+    "empty_value": "空",
+    "units": {
+      "seconds": "秒",
+      "minutes": "分钟",
+      "days": "天",
+      "mb": "MB"
+    },
+    "badges": {
+      "restart": "需重启",
+      "security": "安全相关",
+      "cost": "开销较大"
+    },
+    "groups": {
+      "basics": "基础",
+      "behavior": "运行",
+      "data": "日志与数据",
+      "advanced": "高级"
+    },
+    "profile": {
+      "desc": "适合 2 核 2G 的主机：关闭高开销的日志、给保留和存储设上限。路由、额度、费用与延迟统计都不受影响。",
+      "preview": "查看会修改的 {{count}} 项"
+    },
+    "sections": {
+      "server": {
+        "title": "服务监听",
+        "desc": "服务在哪个地址和端口接收请求，账号凭证存放在哪里。"
+      },
+      "remote": {
+        "title": "远程管理",
+        "desc": "谁可以访问管理接口，以及这个面板从哪里更新。"
+      },
+      "cors": {
+        "title": "跨域访问",
+        "desc": "允许哪些网页或浏览器扩展从别的域名调用 API。"
+      },
+      "runtime": {
+        "title": "运行模式与更新",
+        "desc": "高并发精简模式与自动更新的来源。"
+      },
+      "network": {
+        "title": "网络与重试",
+        "desc": "访问上游 AI 服务时怎么连接、失败后怎么重试。"
+      },
+      "access": {
+        "title": "访问规则",
+        "desc": "模型前缀与 WebSocket 接口的访问要求。"
+      },
+      "streaming": {
+        "title": "流式传输",
+        "desc": "长连接保活，以及还没开始输出时的安全重试。"
+      },
+      "quota": {
+        "title": "额度用尽时",
+        "desc": "账号额度用完后自动换一种方式继续请求。"
+      },
+      "logging": {
+        "title": "日志",
+        "desc": "记录哪些日志、写到哪里。开得越多，CPU 和磁盘开销越大。"
+      },
+      "retention": {
+        "title": "保留与清理",
+        "desc": "请求明细和完整正文保留多久、最多占多少空间。"
+      },
+      "monitoring": {
+        "title": "系统监控",
+        "desc": "面板「系统监控」页的缓存与实时连接。"
+      },
+      "payload": {
+        "title": "请求体改写",
+        "desc": "按模型给发往上游的请求体追加、覆盖或移除参数。"
+      },
+      "kimi": {
+        "title": "Kimi 请求头",
+        "desc": "调用 Kimi 时附带的客户端标识，会显示在 Kimi 控制台的来源里。留空使用 Kimi CLI 默认值。"
+      },
+      "codex": {
+        "title": "Codex 客户端准入",
+        "desc": "开启了「只允许官方 Codex 客户端」的账号，还接受哪些客户端。确认后立即生效。"
+      }
+    },
+    "fields": {
+      "host": {
+        "label": "监听地址",
+        "desc": "留空监听所有网卡（IPv4 与 IPv6）；填 127.0.0.1 只允许本机访问。"
+      },
+      "port": {
+        "label": "监听端口",
+        "desc": "API 和这个面板共用的端口，默认 8317。"
+      },
+      "auth_dir": {
+        "label": "凭证目录",
+        "desc": "AI 账号凭证文件的存放位置，可用 ~ 表示主目录。Docker 部署以 AUTH_PATH 环境变量为准。"
+      },
+      "tls_enable": {
+        "label": "由服务直接提供 HTTPS",
+        "desc": "已经在 nginx 等反向代理上配好 HTTPS 的，保持关闭。"
+      },
+      "tls_cert": {
+        "label": "证书文件",
+        "desc": "PEM 格式的证书路径，开启 HTTPS 时使用。"
+      },
+      "tls_key": {
+        "label": "私钥文件",
+        "desc": "与证书配对的私钥路径。"
+      },
+      "allow_remote": {
+        "label": "允许远程管理",
+        "desc": "关闭时只有本机能调用管理接口（仍然需要管理密钥）。开放前请确认密钥足够强。"
+      },
+      "secret_key": {
+        "label": "管理密钥",
+        "desc": "远程调用管理接口时使用，请妥善保管；填写明文时，服务启动后会自动转为哈希。"
+      },
+      "disable_panel": {
+        "label": "停用内置管理面板",
+        "desc": "不再下载和提供这个面板页面，管理接口照常可用。"
+      },
+      "panel_repo": {
+        "label": "面板更新来源",
+        "desc": "管理面板文件所在的 GitHub 仓库，填仓库地址或 owner/repo。"
+      },
+      "cors_origins": {
+        "desc": "每行一个 Origin。只有浏览器从别的域名调用 API 时才需要，同域访问默认允许。",
+        "warning": "Chrome 扩展默认不放行。生产环境建议写精确的 chrome-extension://<扩展 ID>；开发时 ID 会变，可以写 chrome-extension://*（放行任意已安装扩展，需自行承担风险）。"
+      },
+      "commercial": {
+        "label": "高并发精简模式",
+        "desc": "关闭高开销的请求中间件，降低每个请求的内存占用；开启期间没有完整的请求诊断。"
+      },
+      "update_channel": {
+        "options": {
+          "main": {
+            "label": "稳定版（main）",
+            "desc": "推荐。只接收正式发布的版本。"
+          },
+          "dev": {
+            "label": "开发版（dev）",
+            "desc": "抢先体验新功能，可能不稳定。"
+          }
+        }
+      },
+      "proxy_url": {
+        "label": "全局出站代理",
+        "desc": "上游请求默认经过它（账号单独绑定的代理优先），令牌刷新与 OAuth 登录也走它。支持 http、https、socks5，留空表示直连。"
+      },
+      "prefer_ipv4": {
+        "label": "只用 IPv4 连接上游",
+        "desc": "所有出站连接只走 IPv4。适合 IPv6 走隧道、质量较差的网络。"
+      },
+      "request_retry": {
+        "label": "失败重试次数",
+        "desc": "上游返回 403、408、500、502、503、504 时最多重试几次，默认 3。"
+      },
+      "max_retry_interval": {
+        "label": "冷却等待上限",
+        "desc": "账号正在冷却时，最多等待多久再重试，默认 30 秒。"
+      },
+      "force_prefix": {
+        "label": "强制模型前缀",
+        "desc": "开启后，不带前缀的模型请求只会使用没有设置前缀的账号（前缀与模型同名时除外）。"
+      },
+      "ws_auth": {
+        "label": "WebSocket 接口需要鉴权",
+        "desc": "开启后，连接 /v1/ws 必须携带有效的 API Key。"
+      },
+      "keepalive": {
+        "label": "流式保活间隔",
+        "desc": "流式响应每隔多久发一次保活，避免代理或客户端因空闲断开。默认 15 秒，小于 0 表示关闭。"
+      },
+      "bootstrap_retries": {
+        "label": "首包前重试次数",
+        "desc": "还没向客户端输出任何内容时，上游出错可以安全重试的次数，默认 1。"
+      },
+      "nonstream_keepalive": {
+        "label": "非流式保活间隔",
+        "desc": "大于 0 时，非流式请求等待期间定时发送空行，避免长请求被网关超时断开。0 表示关闭。"
+      },
+      "switch_project": {
+        "label": "自动切换项目",
+        "desc": "额度用尽时，换到同一账号下的其它项目继续请求。"
+      },
+      "switch_preview": {
+        "label": "自动切换预览模型",
+        "desc": "额度用尽时，改用对应的预览版模型继续请求。"
+      },
+      "request_log": {
+        "label": "请求日志",
+        "desc": "把每个请求的完整报文写进服务器日志文件，用于排查问题。生产环境建议保持关闭。"
+      },
+      "store_content": {
+        "label": "保存请求与响应正文",
+        "desc": "保存完整的输入和模型输出，用于日志回放。关闭后仍保留请求元数据、Token、费用、延迟和精简的错误信息。"
+      },
+      "log_to_file": {
+        "label": "日志写入文件",
+        "desc": "应用日志写入滚动文件而不是标准输出，可以在面板里下载错误日志。"
+      },
+      "debug": {
+        "label": "调试模式",
+        "desc": "输出详细的调试日志，排查完问题请关闭。"
+      },
+      "usage_stats": {
+        "label": "内存用量统计",
+        "desc": "只控制内存里的聚合统计；请求元数据与额度历史照常保存。"
+      },
+      "log_size": {
+        "label": "文件日志总上限",
+        "desc": "超出后删除最旧的日志文件。建议 128，0 表示不限制。"
+      },
+      "error_files": {
+        "label": "错误日志文件数",
+        "desc": "保留最近多少个精简错误日志文件，建议 10。"
+      },
+      "detail_retention": {
+        "label": "请求明细保留",
+        "desc": "请求明细只用于排障，默认 7 天；统计数据单独保存，不受清理影响。"
+      },
+      "body_retention": {
+        "label": "完整正文保留",
+        "desc": "只影响保存下来的完整正文，默认 3 天，0 表示永久保留；不会超过请求明细的保留天数。"
+      },
+      "cleanup_enabled": {
+        "label": "定时清理请求明细",
+        "desc": "按保留天数、行数和体积上限分批删除旧明细，不会删除统计。"
+      },
+      "cleanup_interval": {
+        "label": "清理周期",
+        "desc": "后台清理多久运行一次，默认 60 分钟，1440 即每天一次。"
+      },
+      "max_rows": {
+        "label": "明细最多保留行数",
+        "desc": "超出后从最旧的开始删除，不影响统计。"
+      },
+      "metadata_cap": {
+        "label": "明细表体积上限",
+        "desc": "请求明细表（含索引）的大小上限，尽力而为。"
+      },
+      "body_cap": {
+        "label": "正文存储上限",
+        "desc": "保存的完整正文总大小上限，超出后提前删除最旧的正文。0 表示不限制。"
+      },
+      "stats_cache": {
+        "label": "监控数据缓存",
+        "desc": "数据库大小、日志目录扫描、渠道延迟这类开销大的数据缓存多久；CPU、内存等实时数据不受影响。最少 10 秒。"
+      },
+      "ws_max_age": {
+        "label": "监控连接轮换周期",
+        "desc": "系统监控页的实时连接每隔多久重建一次，便于 nginx 平滑重载；不影响模型流式请求。最少 60 秒。"
+      },
+      "kimi_user_agent": {
+        "label": "User-Agent",
+        "desc": "默认 KimiCLI/1.10.6。"
+      },
+      "kimi_platform": {
+        "label": "X-Msh-Platform",
+        "desc": "默认 kimi_cli。"
+      },
+      "kimi_version": {
+        "label": "X-Msh-Version",
+        "desc": "默认 1.10.6。"
+      }
+    },
+    "errors": {
+      "required": "不能为空",
+      "integer": "请输入整数",
+      "non_negative": "请输入不小于 0 的整数",
+      "min": "不能小于 {{min}}",
+      "range": "请输入 {{min}}–{{max}} 之间的整数",
+      "summary": "有 {{count}} 项设置需要修改，已在对应位置标出。",
+      "proxy_url": "代理地址不完整或协议不受支持"
+    },
+    "payload": {
+      "default": {
+        "title": "补全缺省参数",
+        "desc": "客户端没传这个参数时才补上，已经传了的保持不变。"
+      },
+      "override": {
+        "title": "强制覆盖参数",
+        "desc": "不管客户端传了什么，都改成这里的值。"
+      },
+      "filter": {
+        "title": "移除参数",
+        "desc": "从请求体里删掉这些参数路径。"
+      },
+      "hint": "模型名支持通配符（如 gemini-*）；参数路径用点号分隔，如 generationConfig.thinkingConfig.thinkingBudget。"
+    }
+  },
+  "validation": {
+    "required": "这一项必填",
+    "format": "格式不正确",
+    "integer": "请输入整数",
+    "non_negative": "请输入不小于 0 的整数",
+    "min": "不能小于 {{min}}",
+    "max": "不能大于 {{max}}",
+    "range": "请输入 {{min}}–{{max}} 之间的整数",
+    "max_length": "最多 {{max}} 个字符",
+    "email": "邮箱格式不正确",
+    "url": "请输入完整的网址，例如 https://example.com",
+    "url_protocol": "只支持 {{protocols}}",
+    "host": "主机格式不正确：填域名、IPv4 或 IPv6 地址",
+    "port": "端口应为 1–65535 之间的数字",
+    "cidr": "请输入 IP 或 CIDR，例如 203.0.113.0/24",
+    "json": "不是合法的 JSON",
+    "proxy_port_required": "SOCKS5 代理必须填写端口",
+    "proxy_username_required": "填了密码时也要填写用户名",
+    "summary": "还有 {{count}} 项需要修改",
+    "max_bytes": "最多 {{max}} 个字节（一个汉字算 3 个）",
+    "username_invalid_charset": "只能包含字母、数字及 . _ - @",
+    "username_too_long": "不能超过 128 个字节",
+    "display_name_too_long": "不能超过 128 个字节",
+    "password_too_short": "至少需要 12 个字符",
+    "password_too_long": "不能超过 72 个字节",
+    "password_missing_upper": "至少包含一个大写字母",
+    "password_missing_lower": "至少包含一个小写字母",
+    "password_missing_special": "至少包含一个特殊字符（字母和数字以外的符号）",
+    "datetime": "日期时间格式不正确，例如 2030-01-01 09:00",
+    "datetime_future": "必须晚于现在",
+    "price": "请输入不小于 0 的价格，最多 6 位小数",
+    "path_slash": "必须以 / 开头",
+    "path_under_parent": "必须在上级目录的地址 {{prefix}} 之下",
+    "no_spaces": "不能包含空格",
+    "duplicate_name": "已有同名的项，请换一个名称",
+    "exceeds_account_limit": "不能超过账号上限 {{limit}}",
+    "password_mismatch": "两次输入的密码不一致",
+    "decimal_range": "请输入 {{min}}–{{max}} 之间的数",
+    "api_key_cleared_required": "当前检查策略需要 API Key：请关闭「清除」，或改用「仅关键词」"
+  },
+  "proxy_input": {
+    "scheme": "代理协议",
+    "host": "主机",
+    "port": "端口",
+    "username": "用户名",
+    "password": "密码",
+    "paste_open": "粘贴完整地址",
+    "paste_cancel": "收起",
+    "paste_label": "粘贴代理地址",
+    "paste_hint": "粘贴或输入整串地址后按回车，会自动拆成下面各项。",
+    "paste_invalid": "没能识别这个地址，只支持 http、https、socks5。",
+    "preview": "将保存为",
+    "empty_means_direct": "留空表示不使用代理。",
+    "unrecognized_title": "当前地址无法识别",
+    "unrecognized_desc": "协议不是 http / https / socks5，或格式不完整。在下方重新填写后会替换它。",
+    "add": "填写代理地址",
+    "remove": "移除"
   }
 }

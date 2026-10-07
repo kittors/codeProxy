@@ -94,7 +94,18 @@
     "disabled": "Disabled",
     "enabled": "Enabled",
     "mask_sensitive_data": "Mask sensitive data",
-    "unmask_sensitive_data": "Show sensitive data"
+    "unmask_sensitive_data": "Show sensitive data",
+    "show": "Show",
+    "hide": "Hide",
+    "modified": "Modified",
+    "revert": "Revert",
+    "copy_named": "Copy {{name}}",
+    "confirm_phrase_label": "Type “{{phrase}}” to confirm",
+    "secret_once_warning": "Copy it now — it won't be shown again after you close this.",
+    "secret_value": "Secret",
+    "secret_saved_close": "I've saved it",
+    "copy_all": "Copy all",
+    "retry": "Retry"
   },
   "title": {
     "main": "CliRelay Admin Dashboard",
@@ -1044,7 +1055,32 @@
     "no_tags": "No tags",
     "hide_tag": "Hide {{tag}}",
     "restore_tag": "Restore {{tag}}",
-    "remove_custom_tag": "Remove {{tag}}"
+    "remove_custom_tag": "Remove {{tag}}",
+    "import_empty_desc": "This channel returned no models. Check that its credential works, then try again.",
+    "import_select_visible": "Select all results",
+    "import_clear_selection": "Clear selection",
+    "import_no_match": "No models match “{{query}}”",
+    "tags_modal_desc": "Choose which tags {{name}} shows in lists and cards.",
+    "tags_preview": "Shows as",
+    "tags_preview_empty": "No tags shown",
+    "no_custom_tags": "No custom tags yet — type one and press Enter.",
+    "display_tags_desc": "Checked tags appear in lists and cards; default tags come from the account type and plan.",
+    "proxy_url_title": "Proxy address",
+    "proxy_url_fallback_hint": "Used when no proxy-pool entry is bound; otherwise it's the fallback. Leave empty to remove it.",
+    "custom_tags_section": "Custom tags",
+    "batch_delete_lead_one": "This deletes the AI account below. It can't be undone.",
+    "batch_delete_lead_other": "This deletes the {{count}} AI accounts below. It can't be undone.",
+    "batch_delete_more": "and {{count}} more",
+    "batch_delete_consequence_files": "Their credential files are removed; you'd have to sign in or import again to use them.",
+    "batch_delete_consequence_traffic": "Requests that were using them move to other available accounts.",
+    "download_sensitive_title": "Download the full credential file?",
+    "download_sensitive_button": "Download anyway",
+    "identity_profile_delete_title": "Delete this identity profile?",
+    "upload_progress_dialog_title": "Uploading auth files",
+    "upload_progress_background": "Continue in background",
+    "paste_json_shortcut": "⌘ / Ctrl + Enter to upload",
+    "model_owner_group_dialog_desc": "Choose where {{type}} accounts get their model list from.",
+    "model_owner_group_applies_to": "Applies to the {{type}} accounts in the current filter."
   },
   "antigravity_quota": {
     "title": "Antigravity Quota",
@@ -1081,7 +1117,33 @@
     "warmup_batch_success": "Enqueued {{count}} accounts into staggered warmup queue",
     "warmup_batch_failed": "Batch warmup failed: {{message}}",
     "warmup_policy_saved": "Warmup policy saved successfully",
-    "warmup_policy_save_failed": "Failed to save warmup policy: {{message}}"
+    "warmup_policy_save_failed": "Failed to save warmup policy: {{message}}",
+    "warmup_load_failed_title": "Couldn't load the current warmup policy",
+    "warmup_load_failed_desc": "Saving stays disabled until it loads, so the server's policy isn't overwritten with defaults. ({{message}})",
+    "warmup_targets_desc": "Which kinds of accounts take part in automatic warmup.",
+    "warmup_target_antigravity_desc": "Gemini and third-party model quota (5-hour window).",
+    "warmup_target_codex_desc": "Spark and the 5-hour quota window.",
+    "warmup_rhythm_title": "Rhythm",
+    "warmup_rhythm_desc": "How often to warm up, and how widely one round is spread so requests don't arrive in a neat wave.",
+    "warmup_interval_label": "Interval",
+    "warmup_interval_hint": "How often each account is warmed up, 1–72 hours.",
+    "warmup_stagger_label": "Stagger window",
+    "warmup_stagger_hint": "Accounts in one round are spread randomly across this window, 1–120 minutes.",
+    "unit_hours": "hours",
+    "unit_minutes": "min",
+    "warmup_daily_window_desc": "Only warm up during this time each day; quiet at night.",
+    "warmup_schedule_title": "Active period",
+    "warmup_schedule_desc": "In your computer's local time.",
+    "warmup_start_label": "Start",
+    "warmup_start_hint": "Leave empty to start as soon as you save.",
+    "warmup_stop_label": "Stop",
+    "warmup_stop_hint": "Warmup stops automatically at this time.",
+    "warmup_exclude_title": "Excluded accounts",
+    "warmup_exclude_desc": "Checked accounts are skipped by automatic warmup.",
+    "warmup_exclude_count": "{{excluded}} / {{total}} excluded",
+    "warmup_exclude_search": "Search accounts",
+    "warmup_excluded": "Excluded",
+    "warmup_included": "Warmed up"
   },
   "claude_quota": {
     "title": "Claude Quota",
@@ -2448,7 +2510,15 @@
     "select_placeholder": "Select proxy",
     "select_missing": "Missing proxy: {{id}}",
     "validation_name": "Proxy name is required",
-    "validation_url": "Proxy URL must start with http://, https://, or socks5://"
+    "validation_url": "Proxy URL must start with http://, https://, or socks5://",
+    "form_desc": "Once saved, AI providers and AI accounts can use it as their egress.",
+    "name_hint": "How it shows up in lists and pickers.",
+    "name_placeholder": "e.g. HK residential IP",
+    "url_hint": "http, https or socks5; put credentials in the address.",
+    "remark_placeholder": "e.g. Codex egress",
+    "enabled_hint": "Disabled proxies disappear from pickers; existing bindings are unaffected.",
+    "delete_lead": "This can't be undone.",
+    "delete_consequence_bindings": "AI providers and AI accounts can no longer pick this proxy."
   },
   "image_generation": {
     "title": "Image Models",
@@ -2513,7 +2583,6 @@
     "test_hint": "Test calls automatically rotate through currently available channels.",
     "generate_button": "Generate Image",
     "generating_button": "Generating...",
-    "send_button": "Send",
     "preview_alt": "{{model}} preview",
     "idle_hint": "Enter a prompt to start generating an image",
     "idle_hint_edits": "Upload images and enter a prompt to start generating",
@@ -2534,7 +2603,10 @@
     "provider": "Channel",
     "model": "Model",
     "model_placeholder": "Select a model",
-    "tab_label": "Image generation"
+    "tab_label": "Image generation",
+    "test_modal_desc": "Pick a model and settings, describe the image and try a generation. Add reference images to edit them instead.",
+    "test_shortcut": "⌘ / Ctrl + Enter to generate",
+    "reference_image_hint": "Optional. Uploading switches to image editing; up to {{max}}."
   },
   "identity_fingerprint": {
     "title": "Identity Fingerprint",
@@ -2636,7 +2708,6 @@
     "recommend_modal_desc": "Checked {{inspected}} requests from the last {{days}} days and matched {{matched}} real Codex fingerprints.",
     "recommend_load_failed": "Failed to load fingerprint recommendations",
     "recommend_last_seen": "Last seen",
-    "recommend_count": "{{count}} times",
     "recommend_diff": "Diff",
     "recommend_diff_count": "{{count}} changed",
     "recommend_same": "Same",
@@ -2645,7 +2716,6 @@
     "recommend_apply": "Apply",
     "recommend_apply_selected": "Apply and save",
     "recommend_confirm_title": "Apply this recommended fingerprint?",
-    "recommend_confirm_desc": "This will save the recommended values from {{originator}} {{version}} as the active Codex fingerprint.",
     "recommend_apply_confirm": "Apply and save",
     "recommend_table_caption": "Recent Codex terminal fingerprint candidates",
     "recommend_empty": "No Codex fingerprints can be generated from recent requests yet",
@@ -2696,7 +2766,17 @@
     "kimi_device_id": "Device ID",
     "kimi_device_hint": "Empty keeps the running host's value. The device ID is only ever learned from a real client, never preset.",
     "kimi_device_placeholder": "Empty = keep host value",
-    "kimi_custom_headers_hint": "JSON object. Kimi's managed headers (X-Msh-*) cannot be overridden here."
+    "kimi_custom_headers_hint": "JSON object. Kimi's managed headers (X-Msh-*) cannot be overridden here.",
+    "recommend_modal_loading": "Checking requests from the last {{days}} days…",
+    "recommend_confirm_lead": "It is saved and becomes the active Codex fingerprint right away.",
+    "recommend_confirm_enables": "The Codex identity fingerprint is turned on as well.",
+    "recommend_confirm_overwrites": "Overwrites the current {{fields}}.",
+    "recommend_confirm_overwrites_more_one": "Overwrites the current {{fields}} and more ({{count}} value in total).",
+    "recommend_confirm_overwrites_more_other": "Overwrites the current {{fields}} and more ({{count}} values in total).",
+    "recommend_confirm_no_diff": "Every value already matches; this only saves it again.",
+    "recommend_confirm_custom_headers": "Custom headers are replaced with the ones in this recommendation; the current ones are not kept.",
+    "recommend_count_one": "{{count}} time",
+    "recommend_count_other": "{{count}} times"
   },
   "ui": {
     "loading": "Loading…",
@@ -3032,7 +3112,6 @@
     "refreshing": "Refreshing…",
     "not_refreshed": "Not yet refreshed",
     "clear_database_logs": "Clear Database Logs",
-    "clear_database_logs_keep_records_hint": "Recommended default: clear stored bodies and request details while keeping request records, Token totals, cost stats, and the request log table itself.",
     "clear_database_logs_confirm_button": "Clear Selected Data",
     "clear_database_logs_success_content": "Cleared stored request-log content while keeping request records",
     "clear_database_logs_success_records": "Cleared {{count}} request log records from the database",
@@ -3072,7 +3151,13 @@
     "no_data_desc": "Try another range or clear filters.",
     "calls_count": "{{formattedCount}} calls",
     "calls_sorted_hint": "Sorted by calls in the current log range",
-    "unrestricted": "Any"
+    "unrestricted": "Any",
+    "clear_database_logs_title": "Clear database logs?",
+    "clear_database_logs_lead": "Choose what to clear. This can't be undone.",
+    "clear_scope_title": "All request logs in the current tenant",
+    "clear_scope_hint": "Not limited by the current filters or time range",
+    "clear_consequence_records": "Request records are deleted too: the list, record count, token totals, success rate and cost stats are all cleared.",
+    "clear_consequence_content": "The checked bodies and details are deleted right away and won't show when you open these requests; request records and stats stay."
   },
   "ccswitch": {
     "import_to_ccswitch": "Import to CC Switch",
@@ -3188,20 +3273,19 @@
     "config_claude_role_sonnet": "Sonnet default model",
     "config_claude_role_opus": "Opus default model",
     "config_claude_role_fable": "Fable default model",
-    "model_use_custom": "Use \"{{value}}\""
+    "model_use_custom": "Use \"{{value}}\"",
+    "config_delete_lead": "This only removes it from the preset list here.",
+    "config_delete_consequence": "Configs already imported into CC Switch keep working, but this preset can no longer generate import links."
   },
   "api_keys_page": {
     "title": "API Keys Management",
     "description": "Create and manage API Keys, then bind each key to a reusable permission config.",
     "no_keys": "No API Keys",
     "create": "Create API Key",
-    "create_desc": "Fill in details and generate a new API Key (name required)",
+    "create_desc": "The key works as soon as it's created; its permission config decides which channels, models and quota it gets.",
     "edit": "Edit API Key",
-    "edit_desc": "Modify name, key, and the reusable permission config",
-    "confirm_delete": "Confirm Delete",
-    "delete_warning": "This cannot be undone. All clients using this Key will lose access.",
+    "edit_desc": "Changes to the name, key value or permission config apply as soon as you save.",
     "confirm_batch_delete": "Delete {{count}} API keys?",
-    "batch_delete_warning": "This cannot be undone. All clients using these keys will lose access.",
     "batch_delete_selected_count": "{{count}} selected API keys will be deleted.",
     "rpm": "RPM",
     "tpm": "TPM",
@@ -3224,9 +3308,6 @@
     "system_prompt_hint": "Optional. Requests using this API Key will automatically inject this System Prompt.",
     "refresh": "Refresh",
     "cancel": "Cancel",
-    "creating": "Creating...",
-    "saving": "Saving...",
-    "deleting": "Deleting...",
     "confirm_delete_btn": "Confirm delete",
     "delete_logs_option": "Also clear historical request records for this API key",
     "create_btn": "Create",
@@ -3279,8 +3360,6 @@
     "disabled_toast": "Disabled \"{{name}}\"",
     "enabled_toast": "Enabled \"{{name}}\"",
     "operation_failed": "Operation failed",
-    "name_required": "Please enter an API key name",
-    "key_empty": "Key cannot be empty",
     "created_success": "Created successfully",
     "create_failed": "Failed to create",
     "updated_success": "Updated successfully",
@@ -3296,7 +3375,7 @@
     "loading": "Loading...",
     "no_results": "No results",
     "form_name_label": "Name",
-    "form_name_placeholder": "e.g. Team-A (required)",
+    "form_name_placeholder": "e.g. Team-A",
     "form_key_label": "API key",
     "form_key_placeholder": "Enter API key",
     "form_regenerate": "Regenerate",
@@ -3354,8 +3433,20 @@
     "lifetime_spending_help": "Lifetime spending. Daily resets do not change this amount.",
     "edit_key_quota": "Edit Key quota",
     "key_quota_title": "Key sub-quota",
-    "key_quota_account_hint": "Key limits may not exceed a configured account limit.",
-    "quota_validation_failed": "Please correct the quota values before saving."
+    "quota_validation_failed": "Please correct the quota values before saving.",
+    "form_name_hint": "How it shows up in the list and in request logs.",
+    "form_key_hint": "Generated for you; you can also paste a key you already use.",
+    "form_key_edit_hint": "This is the value clients send with every request.",
+    "key_change_warning": "Once saved, the old key stops working immediately; clients using it must switch to the new value.",
+    "owned_key_create_desc": "A new key is generated and shown only once; it shares the account quota with the account's other keys.",
+    "owned_key_edit_desc": "Changes to the name and sub-quota apply on save; the key value itself stays the same.",
+    "owned_key_basics_section": "Basics",
+    "owned_key_name_hint": "Tells sources apart in request logs and usage stats.",
+    "delete_key_title": "Delete API key",
+    "delete_lead": "This can't be undone.",
+    "delete_consequence_clients": "Clients using this key lose access immediately.",
+    "batch_delete_consequence_clients": "Clients using these keys lose access immediately.",
+    "delete_logs_option_hint": "Leave unchecked to keep the request records for later reconciliation."
   },
   "api_key_permissions_page": {
     "title": "Portal Account Permissions",
@@ -3392,22 +3483,28 @@
     "form_unlimited_hint": "0 = Unlimited",
     "form_system_prompt": "System prompt",
     "save_config": "Save config",
-    "saving": "Saving...",
-    "name_required": "Please enter a config name",
     "profile_saved": "Permission config saved",
     "profile_deleted": "Permission config deleted",
     "delete_title": "Delete permission config",
-    "delete_desc": "Delete {{name}}? User accounts using it will keep their copied settings as custom account configuration.",
     "load_failed": "Failed to load permission configs",
     "save_failed": "Failed to save permission config",
     "delete_failed": "Failed to delete permission config",
     "quota_section": "Period spending",
     "quota_section_desc": "Set account USD ceilings for four fixed periods.",
-    "request_limits_section": "Request limits",
-    "request_limits_desc": "Secondary request-count controls.",
-    "realtime_limits_section": "Real-time limits",
     "saved_with_sync": "Permission config saved. Synced {{accounts}} accounts and adjusted {{keys}} key quota entries.",
-    "saved_with_caps": "Permission config saved. Adjusted {{keys}} key quota entries."
+    "saved_with_caps": "Permission config saved. Adjusted {{keys}} key quota entries.",
+    "basics_section": "Basics",
+    "form_name_hint": "Pick the profile by this name when editing a user account.",
+    "access_section": "Access",
+    "access_section_desc": "Limits which channel groups, channels and models accounts on this profile can use. Leave empty for no limit.",
+    "request_realtime_section": "Request & rate limits",
+    "request_realtime_section_desc": "Daily and total request counts plus concurrency, RPM and TPM. Empty or 0 means unlimited.",
+    "advanced_section": "Advanced",
+    "system_prompt_hint": "Every request from keys of accounts on this profile gets this system prompt injected.",
+    "system_prompt_placeholder": "e.g. Always answer in English.",
+    "delete_lead": "This can't be undone.",
+    "delete_consequence_accounts": "Accounts using it keep the copied limits and permissions as a custom account configuration.",
+    "delete_confirm": "Delete config"
   },
   "channel_groups_page": {
     "title": "Channel Groups Management",
@@ -3646,9 +3743,7 @@
     "last_page": "Last page",
     "rows_per_page": "Rows per page",
     "page_info": "{{start}}-{{end}} of {{total}}",
-    "password": "Password (optional)",
     "password_hint": "Leave blank to generate a random password. It is shown only once.",
-    "password_keep": "Leave blank to keep the current password",
     "password_reset": "Password reset. Copy it now.",
     "new_password_title": "New password (copy now)",
     "new_password_warning": "Copy the new password now. It cannot be viewed again after closing.",
@@ -3659,8 +3754,6 @@
     "manage_keys_title": "User API Keys",
     "manage_keys_title_for": "Manage keys · {{name}}",
     "manage_keys_desc": "Manage each API key's name, status, rotation, and key sub-quota. Configure account quota and permissions on the account.",
-    "edit_key_name_desc": "Edit the key name only. Use the dedicated rotation action to replace the credential.",
-    "key_rotate_only": "The key value cannot be edited directly. Use Rotate key when the credential must be replaced.",
     "rotate_key": "Rotate key",
     "rotate_key_title": "Rotate API key",
     "rotate_key_desc": "The old key becomes invalid immediately. The new key is shown only once, so copy it now and update every client.",
@@ -3682,10 +3775,25 @@
     "other_limits_profile_readonly_hint": "Request and realtime limits come from {{profile}} and are read-only here. The lifetime spending limit remains account-specific.",
     "other_limits_direct_hint": "No permission profile is selected. Edit request and realtime limits directly; 0 means unlimited.",
     "username_placeholder": "Leave empty to generate from nickname",
-    "password_placeholder": "Leave empty to generate randomly; copy it right away",
     "secrets_one_time_hint": "The plaintext password / API key cannot be viewed again after leaving this window.",
-    "secrets_copied_close": "Copied, close",
-    "reset_password_title": "Reset Password"
+    "reset_password_title": "Reset Password",
+    "create_desc": "The user can sign in to the portal right away and must change the password on first sign-in; a generated password and the initial API key are shown only once.",
+    "display_name_hint": "Shown in the user list and on the portal.",
+    "password_label": "Password",
+    "new_password_label": "New password",
+    "new_password_hint": "Leave blank to keep the current one. A new password needs 12+ characters with an uppercase letter, a lowercase letter and a special character.",
+    "edit_desc": "Changes to the profile, permission template and quota apply on save; every key of this account shares this quota.",
+    "profile_section": "Profile",
+    "profile_applied_hint": "Picking a profile replaces the period quotas and request limits below with “{{profile}}”'s values and locks them; saving applies the profile.",
+    "reset_password_lead": "A new random password is generated for this account; the old one stops working immediately.",
+    "reset_password_consequence_sessions": "All of the account's signed-in sessions end; the user must sign in again with the new password.",
+    "reset_password_consequence_once": "The new password is shown only once — copy it for the user right away.",
+    "delete_lead": "This can't be undone.",
+    "delete_consequence_keys": "Its API keys are disabled and unassigned, and can no longer be used.",
+    "delete_confirm": "Delete account",
+    "usage_keys_summary": "All keys of this account",
+    "unnamed": "Unnamed user",
+    "no_keys_for_usage": "This user has no API keys yet, so there is no usage to show"
   },
   "apikey_lookup": {
     "available_models": "Model Plaza",
@@ -3769,7 +3877,6 @@
     "current_password": "Current password",
     "keep_one_key": "Keep at least one key",
     "key_name": "Key name",
-    "key_name_duplicate": "Key name already exists. Choose another.",
     "key_name_placeholder": "e.g. Claude Desktop / Production",
     "key_name_required": "Enter a key name",
     "manage_keys": "Manage API Keys",
@@ -3781,9 +3888,7 @@
     "rotate_key": "Rotate",
     "secret_once_warning": "You won't be able to view the plaintext key again after leaving. Copy and save it now.",
     "confirm_delete_title": "Delete API key?",
-    "confirm_delete_desc": "This cannot be undone. Requests using this key will stop working.",
     "confirm_delete": "Delete",
-    "deleting": "Deleting…",
     "add_account": "Add account",
     "switch_account": "Switch account",
     "current_account": "Current account",
@@ -3834,7 +3939,15 @@
     "landing_console_kpi_tokens": "Tokens",
     "landing_console_kpi_cost": "Cost",
     "landing_providers_eyebrow": "Integrated",
-    "landing_feature_gateway_diagram": "Your app"
+    "landing_feature_gateway_diagram": "Your app",
+    "change_password_desc": "Use the new password the next time you sign in.",
+    "change_password_forced_hint": "For your account's safety, set a new password first (required on first sign-in or after an admin reset). You can continue once it's saved.",
+    "confirm_new_password": "Confirm new password",
+    "save_password": "Save new password",
+    "keep_one_key_desc": "An account must keep at least one key, so the last one can't be deleted. Create another key first, then delete this one.",
+    "delete_key_lead": "This can't be undone.",
+    "delete_key_consequence_requests": "Requests using this key will fail immediately.",
+    "delete_key_failed": "Couldn't delete the key. Try again later."
   },
   "auth_files_page": {
     "files_tab": "Files",
@@ -4158,7 +4271,7 @@
     "edit_model_aria": "Edit {{model}}",
     "delete_model_aria": "Delete {{model}}",
     "delete_model_title": "Delete model configuration",
-    "delete_model_desc": "Delete {{model}} from the database-backed model configuration list? This action only happens after confirmation.",
+    "delete_model_desc": "Removes {{model}} from the model configuration list, along with its description and prices. Usage already recorded is unaffected.",
     "delete": "Delete",
     "delete_saved": "Model configuration deleted",
     "delete_failed": "Failed to delete model configuration",
@@ -4167,8 +4280,8 @@
     "selected_models_count": "{{count}} selected",
     "delete_selected_models": "Delete selected ({{count}})",
     "delete_selected_models_title": "Delete selected models",
-    "delete_selected_models_desc_one": "Delete {{count}} selected model from the database-backed model configuration list? This action only happens after confirmation.",
-    "delete_selected_models_desc_other": "Delete {{count}} selected models from the database-backed model configuration list? This action only happens after confirmation.",
+    "delete_selected_models_desc_one": "Removes the {{count}} selected model from the model configuration list, along with its description and prices. Usage already recorded is unaffected.",
+    "delete_selected_models_desc_other": "Removes the {{count}} selected models from the model configuration list, along with their descriptions and prices. Usage already recorded is unaffected.",
     "delete_selected_models_success_one": "Deleted {{count}} model configuration",
     "delete_selected_models_success_other": "Deleted {{count}} model configurations",
     "manage_owner_presets": "Manage owner presets",
@@ -4347,7 +4460,17 @@
     "cache_token_price": "Cache token price ($/M tokens)",
     "table_caption": "Model pricing table",
     "input_price_placeholder": "e.g. 3.00",
-    "output_price_placeholder": "e.g. 15.00"
+    "output_price_placeholder": "e.g. 15.00",
+    "section_basics": "Model",
+    "section_basics_desc": "Clients call it by ID; the owner decides which vendor group it appears under.",
+    "section_pricing": "Pricing",
+    "section_pricing_desc": "Used to estimate cost in usage statistics, in USD.",
+    "model_id_reuse_hint": "Matching models from the library appear as you type; pick one to copy its description and prices.",
+    "owner_hint": "Pick an existing owner or type a new one.",
+    "enabled_hint": "Disabled models disappear from model lists; requests in flight are unaffected.",
+    "owner_value_hint": "The value stored on models — lowercase, no spaces.",
+    "owner_label_hint": "The name shown in pickers.",
+    "owner_enabled_hint": "Disabled owners disappear from the owner picker; models already using it are unaffected."
   },
   "providers_page": {
     "openai_title": "OpenAI Compatible Providers",
@@ -4639,7 +4762,22 @@
     "credential_sort_label": "Sort credentials",
     "credential_sort_config": "Configured order",
     "credential_sort_remaining_asc": "Least quota left first",
-    "credential_sort_remaining_desc": "Most quota left first"
+    "credential_sort_remaining_desc": "Most quota left first",
+    "proxy_url_fallback_hint": "Used when no proxy-pool entry is bound; otherwise it's the fallback.",
+    "delete_openai_title": "Delete this OpenAI-compatible provider?",
+    "delete_config_title": "Delete this credential configuration?",
+    "delete_lead": "This can't be undone.",
+    "delete_consequence_openai": "All of its API keys and model mappings are removed; requests that used it go to other channels or fail.",
+    "delete_consequence_config": "It stops taking part in routing; requests that used it go to other channels or fail.",
+    "unnamed": "Unnamed",
+    "diff_tile_added": "Added",
+    "diff_tile_updated": "Updated",
+    "diff_tile_removed": "Removed",
+    "diff_tile_duplicates": "Duplicates cleaned",
+    "import_removes_title_one": "This import removes {{count}} existing configuration",
+    "import_removes_title_other": "This import removes {{count}} existing configurations",
+    "import_removes_desc": "Configurations missing from the file are removed — they're struck through in red below. Import only if that's intended.",
+    "confirm_import_with_removals": "Import and remove {{count}}"
   },
   "logs_page": {
     "error_log_files": "Error Log Files",
@@ -4689,8 +4827,6 @@
     "loading": "Loading…",
     "refresh_list": "Refresh List",
     "clear_server_logs": "Clear Server Logs",
-    "confirm_clear_logs": "Are you sure you want to clear server logs? This operation is irreversible.",
-    "confirm_clear_btn": "Clear",
     "logs_cleared": "Server logs cleared",
     "failed_clear": "Failed to clear logs",
     "failed_fetch": "Failed to fetch logs",
@@ -4700,7 +4836,11 @@
     "failed_download_request_log": "Failed to download request log",
     "failed_fetch_error_list": "Failed to fetch error log list",
     "failed_download_error_log": "Failed to download error log",
-    "bytes": "{{size}} bytes"
+    "bytes": "{{size}} bytes",
+    "clear_server_logs_title": "Clear server logs?",
+    "clear_server_logs_lead": "This can't be undone.",
+    "clear_consequence_files": "The current log is emptied and older rotated log files are deleted.",
+    "clear_consequence_error_logs": "Error log files are kept and can still be downloaded under Error Logs."
   },
   "system_monitor": {
     "health_score": "Health Score",
@@ -4809,7 +4949,8 @@
     "role_function_return": "Function return",
     "role_thinking": "Thinking",
     "role_tool_use": "Tool use",
-    "role_message": "Message"
+    "role_message": "Message",
+    "details_only_desc": "Request body storage is off, so only the URL, headers and status of this request are available."
   },
   "error_detail": {
     "upstream_error": "Error response from upstream API",
@@ -4818,7 +4959,8 @@
     "full_response": "Full Response",
     "no_content": "This historical log did not record any upstream error response, and the failure could not be reconstructed from request details. New failed logs will store the actual error details.",
     "load_failed": "Load failed",
-    "request_failed": "Request failed"
+    "request_failed": "Request failed",
+    "copy_response": "Copy full response"
   },
   "system_page": {
     "title": "System Info",
@@ -5281,13 +5423,17 @@
     "reset": {
       "account_title": "Reset account quota",
       "key_title": "Reset Key quota",
-      "account_single_description": "Reset the {{period}} quota for account {{name}}? Only this account's current {{period}} usage will be cleared. Request logs remain unchanged.",
-      "key_single_description": "Reset the {{period}} quota for Key {{name}}? Only this Key's current {{period}} usage will be cleared. The account quota and request logs remain unchanged.",
-      "account_multiple_description": "Select the account quota periods to reset for {{name}}. Only the selected account usage will be cleared; request logs remain unchanged.",
-      "key_multiple_description": "Select the Key quota periods to reset for {{name}}. Only the selected Key usage will be cleared; the account quota and request logs remain unchanged.",
       "period_checkbox": "Reset {{period}} quota",
       "confirm": "Reset quota",
-      "confirm_selected": "Reset selected quotas"
+      "confirm_selected": "Reset selected quotas",
+      "account_single_lead": "Only this account's current {{period}} usage will be cleared. Request logs remain unchanged.",
+      "key_single_lead": "Only this Key's current {{period}} usage will be cleared; the account quota and request logs remain unchanged.",
+      "account_multiple_lead": "Pick the periods to reset. Only the selected usage is cleared; request logs remain unchanged.",
+      "key_multiple_lead": "Pick the periods to reset. Only this Key's selected usage is cleared; the account quota and request logs remain unchanged.",
+      "option_usage": "{{used}} used of {{limit}}",
+      "option_limit": "Limit {{limit}}",
+      "subject_account": "Account",
+      "subject_key": "Key"
     },
     "status": {
       "warning": "Near quota limit",
@@ -5341,7 +5487,6 @@
     "new_password_prompt": "New password",
     "password_reset": "Password reset.",
     "reset_password": "Reset password",
-    "delete_user_confirm": "Delete user {{username}}?",
     "user_deleted": "User deleted.",
     "delete": "Delete",
     "new_role": "New role",
@@ -5352,7 +5497,6 @@
     "role_created": "Role created.",
     "protected_role": "Protected role",
     "select_role": "Select a role",
-    "delete_role_confirm": "Delete role {{name}}?",
     "role_deleted": "Role deleted.",
     "role_permissions_saved": "Role permissions saved.",
     "save": "Save",
@@ -5362,10 +5506,6 @@
     "slug": "Slug",
     "name": "Name",
     "expires_at": "Expires at",
-    "expires_at_required": "Please enter an expiry date and time.",
-    "expires_at_invalid": "The expiry date and time is invalid.",
-    "field_required": "This field is required.",
-    "name_too_long": "Name cannot exceed {{max}} characters.",
     "admin_username": "Admin username",
     "admin_display_name": "Admin display name",
     "admin_password": "Admin password",
@@ -5379,7 +5519,6 @@
     "new_expiry_prompt": "New expiry date/time",
     "tenant_expiry_updated": "Tenant expiry updated.",
     "renew": "Renew",
-    "disable_tenant_confirm": "Disable tenant {{name}}?",
     "tenant_disabled": "Tenant disabled.",
     "disable": "Disable",
     "edit": "Edit",
@@ -5429,7 +5568,6 @@
     "renew_tenant": "Renew tenant",
     "change_user_status": "Change status for user {{username}}",
     "disable_user": "Disable user",
-    "disable_user_confirm": "Disable user {{username}}? Existing sessions will be revoked immediately.",
     "scope_platform": "Platform",
     "scope_tenant": "Tenant",
     "permissions": "Permissions",
@@ -5489,7 +5627,6 @@
     "badge_content": "Badge",
     "hide_menu": "Hide in menu",
     "please_select": "Select",
-    "delete_menu_confirm": "Delete menu {{name}}?",
     "permission_actions": {
       "read": "Read",
       "create": "Create",
@@ -5542,10 +5679,8 @@
     "no_call_chain": "No call chain recorded.",
     "no_project_method": "No project method recorded.",
     "audit_log_detail_title": "Audit log detail",
-    "delete_audit_log_confirm": "Delete this audit log?",
     "audit_log_deleted": "Audit log deleted.",
     "clear_audit_logs": "Clear all",
-    "clear_audit_logs_confirm": "Clear all audit logs in your current visible scope? This cannot be undone.",
     "clear_audit_logs_confirm_button": "Clear all",
     "audit_logs_cleared": "Cleared {{count}} audit logs.",
     "source_ip": "Source IP",
@@ -5555,7 +5690,148 @@
     "password_rule_special": "Special character",
     "passwords_match": "Passwords match",
     "change_password_hint": "Pick a password you don't use anywhere else.",
-    "change_password_forced_hint": "Set a new password before you continue."
+    "change_password_forced_hint": "Set a new password before you continue.",
+    "new_user_desc": "They sign in to the admin panel with this username and password; their roles decide what they can see.",
+    "user_section_account": "Account",
+    "user_section_account_desc": "The username is for signing in; the display name appears in lists and audit records.",
+    "user_section_password_desc": "On first sign-in they'll be asked to change it to a password of their own.",
+    "password_mode_auto_desc": "The server generates a strong password and shows it once after creation — copy it for them.",
+    "password_mode_manual_desc": "You choose a password and pass it on.",
+    "user_section_roles_desc": "Roles decide which pages they see and what they can do. You can change them later from the list.",
+    "user_roles_hint": "Only roles you can delegate are listed — ones whose permissions you hold yourself.",
+    "user_roles_none_assignable": "There are no roles you can delegate yet.",
+    "reset_password_desc": "Set a new password for {{name}} ({{username}}).",
+    "reset_password_effects": "All of their sessions end immediately. When they sign in with the new password, they'll have to change it first.",
+    "save_roles": "Save roles",
+    "roles_locked_self": "You can't change your own roles.",
+    "roles_locked_super_admin": "The super administrator's roles are protected and can't be changed.",
+    "roles_locked_tenant_admin": "A tenant administrator's roles are protected and can't be changed here.",
+    "initial_password_handover": "Hand the username and initial password to the new user. They'll choose their own password on first sign-in.",
+    "disable_user_lead": "They won't be able to sign in to the admin panel.",
+    "disable_user_consequence_sessions": "Their current sessions end immediately.",
+    "disable_user_consequence_restore": "The account and its roles are kept; you can re-enable it from the list at any time.",
+    "disable_user_confirm_button": "Disable user",
+    "delete_user_title": "Delete user “{{name}}”?",
+    "delete_lead": "This can't be undone.",
+    "delete_user_consequence_account": "The account is permanently deleted and can no longer sign in.",
+    "delete_user_consequence_disable_instead": "To block sign-in only for now, disable the account instead — it keeps the account.",
+    "delete_user": "Delete user",
+    "new_role_desc": "Create the role first, then set its permissions and members from the list.",
+    "role_name_hint": "Shown in the user list and in role pickers.",
+    "role_description_hint": "Who it's for and what it allows — makes it easy to assign later.",
+    "permissions_selected_one": "{{count}} permission selected",
+    "permissions_selected_other": "{{count}} permissions selected",
+    "save_permissions": "Save permissions",
+    "permissions_read_only_protected": "This is a protected built-in role. Its permissions are maintained by the system and can only be viewed.",
+    "permissions_read_only_no_access": "You don't have permission to change role permissions, so this is view-only.",
+    "no_matching_users": "No matching users",
+    "no_matching_users_hint": "Try another search — display names and usernames both match.",
+    "role_users_locked": "protected role assignment, can't be changed here",
+    "users_selected_one": "{{count}} user selected",
+    "users_selected_other": "{{count}} users selected",
+    "save_role_users": "Save assignments",
+    "search_users": "Search users",
+    "search_users_placeholder": "Search by display name or username",
+    "delete_role_title": "Delete role “{{name}}”?",
+    "delete_role_consequence_permissions": "The role and its permission set are permanently deleted.",
+    "delete_role_consequence_assigned": "A role that is still assigned to users can't be deleted — remove them under Assign users first.",
+    "delete_role_assigned_blocked_one": "{{count}} user still has this role, so the server will refuse to delete it. Remove them under Assign users first.",
+    "delete_role_assigned_blocked_other": "{{count}} users still have this role, so the server will refuse to delete it. Remove them under Assign users first.",
+    "delete_role": "Delete role",
+    "new_tenant_desc": "Create a separate tenant space together with its first administrator account.",
+    "tenant_section_info": "Tenant",
+    "tenant_section_info_desc": "Once it expires, the tenant's accounts can't sign in and its API keys are refused. You can renew at any time.",
+    "tenant_name_hint": "Shown in the tenant list and the tenant switcher.",
+    "tenant_expires_hint": "The tenant expires automatically at this time.",
+    "tenant_section_admin": "First administrator",
+    "tenant_section_admin_desc": "Becomes this tenant's administrator. They'll be asked to change the password on first sign-in.",
+    "edit_tenant_desc": "The tenant slug {{slug}} can't change; everything else takes effect as soon as you save.",
+    "save_changes": "Save changes",
+    "tenant_status_section_desc": "Suspended and disabled both stop the tenant immediately; its data is kept either way.",
+    "tenant_status_active_desc": "Accounts can sign in and API keys work as usual.",
+    "tenant_status_suspended_desc": "Paused for now, for example while awaiting renewal.",
+    "tenant_status_disabled_desc": "Switched off for good, for tenants no longer in use.",
+    "tenant_status_revoke_warning": "When you save, every account in this tenant is signed out immediately and its API keys are refused.",
+    "tenant_section_sessions": "Session lifetime",
+    "tenant_section_sessions_desc": "When an access token expires the panel renews it automatically; after “Stay signed in” passes without use, users must sign in again. Sign-ins with “Remember me” last at least 30 days.",
+    "access_token_ttl": "Access token lifetime (seconds)",
+    "refresh_token_ttl": "Stay signed in (seconds)",
+    "access_token_ttl_short": "Access token lifetime",
+    "refresh_token_ttl_short": "Stay signed in",
+    "ttl_equals": "= {{value}}",
+    "ttl_about": "≈ {{value}}",
+    "ttl_range": "allowed {{min}} to {{max}}",
+    "system_tenant_hint": "The system tenant is where platform administrators live; it can't be edited, renewed or disabled.",
+    "created_at": "Created",
+    "updated_at": "Updated",
+    "renew_tenant_desc": "“{{name}}” currently expires on {{time}}.",
+    "renew_tenant_desc_never": "“{{name}}” has no expiry set.",
+    "renew_quick": "Extend by",
+    "renew_plus_1_month": "1 month",
+    "renew_plus_3_months": "3 months",
+    "renew_plus_1_year": "1 year",
+    "renew_in_past_warning": "This time has already passed: the tenant expires as soon as you save and none of its accounts can sign in.",
+    "disable_tenant_title": "Disable tenant “{{name}}”?",
+    "disable_tenant_lead": "Its data is kept and you can restore it later.",
+    "disable_tenant_consequence_sessions": "Every account in the tenant is signed out immediately and can't sign in again.",
+    "disable_tenant_consequence_api": "API key requests for this tenant are refused.",
+    "disable_tenant_consequence_restore": "To restore it, open Edit and set the status back to Active.",
+    "disable_tenant": "Disable tenant",
+    "menu_type_desc": {
+      "directory": "Groups pages; its path is the prefix for the pages under it.",
+      "menu": "A page in the sidebar, backed by a front-end component.",
+      "button": "An action permission inside a page; never shown in navigation.",
+      "embed": "Opens an external address inside the panel in an embedded frame.",
+      "link": "Opens an external address in a new window."
+    },
+    "menu_create_desc": "Once saved, users with the permission see it in their navigation.",
+    "menu_edit_desc": "Changes to {{code}} reach everyone's navigation as soon as you save.",
+    "menu_create_submit": "Create menu",
+    "menu_section_basic": "Basics",
+    "menu_section_basic_desc": "What it is, where it hangs and what it's called.",
+    "menu_type_locked": "This is a built-in menu; its type can't be changed.",
+    "menu_code_hint": "Unique identifier, can't change after creation, e.g. custom.feature.",
+    "menu_code_locked": "The menu code can't change after creation.",
+    "menu_parent_hint": "Only directories and pages can be parents; leave empty for the top level.",
+    "menu_label_key_hint": "Translation key for the label, e.g. shell.nav_users; the Title shows when no translation exists.",
+    "menu_title_hint": "Shown when the label key has no translation.",
+    "menu_icon_hint": "Shown in front of the menu name.",
+    "menu_section_route": "Route and component",
+    "menu_section_route_desc": "Where it takes the user.",
+    "menu_path_hint_directory": "Common prefix of the pages under it, starting with /, e.g. /runtime.",
+    "menu_path_hint_nested": "Starts with / and sits under the parent directory's {{prefix}}.",
+    "menu_path_hint": "Address inside the panel, starting with /.",
+    "menu_component_hint": "Registered name of the front-end page, e.g. users; directories use Layout.",
+    "menu_link_hint_embed": "Address opened in an embedded frame inside the panel.",
+    "menu_link_hint_external": "Address opened in a new window when the menu is clicked.",
+    "menu_button_no_route": "A button is an action permission inside a page; it has no route or component.",
+    "menu_section_access": "Access and display",
+    "menu_section_access_desc": "Who sees it, where it sorts and whether it shows.",
+    "menu_permission_hint": "Only users with this permission see it. It must be an existing permission code; leave empty to show it to everyone.",
+    "menu_sort_hint": "Lower numbers come first among siblings (0–10000).",
+    "menu_badge_hint": "Short tag shown next to the menu name, e.g. New.",
+    "menu_enabled_hint": "Disabled menus leave the navigation, and opening their address directly is refused.",
+    "hide_menu_hint": "Left out of the sidebar, but the page still works and opens from its address — handy for detail pages.",
+    "menu_not_visible_hint": "Hides it and everything under it from navigation; an embedded page's address stops working too.",
+    "delete_menu_title": "Delete menu “{{name}}”?",
+    "delete_menu_consequence_nav": "The menu disappears from everyone's navigation.",
+    "delete_menu_consequence_permissions": "Permissions roles already have are unaffected; adjust them under Roles to revoke them.",
+    "delete_menu": "Delete menu",
+    "delete_menu_has_children_one": "It still has {{count}} child menu or button, so the server will refuse to delete it. Delete or move it first.",
+    "delete_menu_has_children_other": "It still has {{count}} child menus or buttons, so the server will refuse to delete it. Delete or move them first.",
+    "delete_audit_log_title": "Delete this audit record?",
+    "delete_audit_log_consequence": "This action can no longer be traced through the audit log.",
+    "delete_audit_log_button": "Delete record",
+    "clear_audit_logs_title": "Clear the audit log?",
+    "clear_audit_logs_lead": "This can't be undone.",
+    "audit_log_count_one": "{{count}} audit record",
+    "audit_log_count_other": "{{count}} audit records",
+    "audit_scope_all_tenants": "All tenants",
+    "audit_scope_current_tenant": "Current tenant",
+    "clear_audit_logs_consequence_all_tenants": "You have platform audit access, so every tenant's records are deleted — not just the current tenant's.",
+    "clear_audit_logs_consequence_tenant": "All audit records of the current tenant are permanently deleted.",
+    "clear_audit_logs_consequence_trace": "You won't be able to trace who did these actions, or when.",
+    "clear_audit_logs_phrase": "clear"
   },
   "apikey_usage": {
     "title": "API key usage",
@@ -5565,7 +5841,8 @@
     "empty_title": "Look up API key usage",
     "empty_desc": "Enter a key to view request logs and quick import. The key is saved in localStorage on this device.",
     "switch_key": "Switch key",
-    "logout": "Exit lookup"
+    "logout": "Exit lookup",
+    "key_storage_hint": "The key is kept in this browser, so the next visit loads it automatically."
   },
   "content_moderation": {
     "title": "Content Moderation",
@@ -5627,7 +5904,6 @@
     "profile_deleted": "Moderation profile deleted",
     "profile_delete_failed": "Failed to delete moderation profile",
     "profiles_load_failed": "Failed to load moderation profiles",
-    "delete_description": "Delete {{name}}? The server will reject deletion while {{count}} channel bindings still exist.",
     "delete_confirm": "Delete profile",
     "editor_description": "Profiles are tenant-scoped. Configure the check strategy here, then enable pre-blocking from the profile table.",
     "fail_open_notice": "Moderation API timeouts, 5xx responses, and invalid responses fail open. Keyword-only checks do not require an API key.",
@@ -5654,21 +5930,6 @@
       "violence": "Violence",
       "violence_graphic": "Graphic violence"
     },
-    "threshold_category_help": {
-      "harassment": "Content that demeans, intimidates, or abuses a person or group. A lower threshold flags lower-confidence matches, making moderation stricter.",
-      "harassment_threatening": "Harassment that includes threats of violence or serious harm toward a target. A lower threshold flags lower-confidence matches, making moderation stricter.",
-      "hate": "Content that attacks or dehumanizes people based on protected characteristics such as race, religion, gender, sexual orientation, disability, or nationality. A lower threshold flags lower-confidence matches, making moderation stricter.",
-      "hate_threatening": "Hateful content that also includes threats of violence or serious harm toward a protected group. A lower threshold flags lower-confidence matches, making moderation stricter.",
-      "illicit": "Content that provides instructions or actionable help to commit non-violent wrongdoing. A lower threshold flags lower-confidence matches, making moderation stricter.",
-      "illicit_violent": "Content that provides instructions or actionable help for wrongdoing involving violence or weapons. A lower threshold flags lower-confidence matches, making moderation stricter.",
-      "self_harm": "Content that promotes, encourages, or depicts self-harm, including suicide and eating disorders. A lower threshold flags lower-confidence matches, making moderation stricter.",
-      "self_harm_intent": "Content where the speaker states or signals an intention to engage in self-harm. A lower threshold flags lower-confidence matches, making moderation stricter.",
-      "self_harm_instructions": "Content that encourages self-harm or provides instructions or methods for carrying it out. A lower threshold flags lower-confidence matches, making moderation stricter.",
-      "sexual": "Content intended to arouse or that describes sexual activity or promotes sexual services, excluding sexual health and education. A lower threshold flags lower-confidence matches, making moderation stricter.",
-      "sexual_minors": "Sexual content involving anyone under 18. A lower threshold flags lower-confidence matches, making moderation stricter.",
-      "violence": "Content that depicts death, violence, or physical injury. A lower threshold flags lower-confidence matches, making moderation stricter.",
-      "violence_graphic": "Content that depicts death, violence, or physical injury in graphic detail. A lower threshold flags lower-confidence matches, making moderation stricter."
-    },
     "block_http_status": "Block HTTP status",
     "block_message": "Block message",
     "api_key_placeholder": "Enter an API key",
@@ -5676,16 +5937,6 @@
     "api_key_configured": "Configured: {{masked}}",
     "api_key_not_configured": "No API key configured",
     "clear_api_key": "Clear the configured API key",
-    "validation_name": "Profile name is required",
-    "validation_timeout": "Timeout must be an integer from 1 to 30000",
-    "validation_status": "HTTP status must be an integer from 400 to 599",
-    "validation_base_url_required": "Moderation base URL is required",
-    "validation_base_url_invalid": "Moderation base URL must be an absolute HTTP or HTTPS URL",
-    "validation_model": "Moderation model is required",
-    "validation_thresholds": "Every category threshold must be a number from 0 to 1",
-    "validation_api_key": "Moderation API key is required for this check strategy",
-    "validation_block_message": "Block message is required",
-    "validation_keywords": "Enter at least one blocked keyword for this check strategy",
     "channels_title": "Bind Channels",
     "channels_description": "Choose channels for {{name}}. Results are fetched page by page from the server.",
     "tab_auth_files": "AI accounts",
@@ -5728,7 +5979,6 @@
     "tag_bind_scanning": "Finding matches...",
     "tag_bind_hint": "Binds current matches now. Future channels with these tags are not bound automatically.",
     "tag_bind_title": "Bind matching channels?",
-    "tag_bind_confirm_description": "Tags: {{tags}}. Mode: {{mode}}. Matched channels: {{count}}. Bindings to update: {{changeCount}}.",
     "tag_bind_rebind_warning": "Currently bound to another profile: {{count}}. These bindings will be replaced.",
     "tag_bind_confirm": "Bind matched channels",
     "tag_bind_saved": "Saved channel bindings: {{count}}",
@@ -5807,8 +6057,6 @@
     "safety_safe": "Safe",
     "safety_controversial": "Controversial",
     "safety_unsafe": "Unsafe",
-    "validation_input_limit": "Characters per scan must be an integer from 128 to 100000",
-    "validation_max_chunks": "Maximum chunks must be an integer from 1 to 32",
     "scanner": {
       "violent": "Violent",
       "non_violent_illegal_acts": "Non-violent illegal acts",
@@ -5830,6 +6078,54 @@
       "politically_sensitive_topics": "Politically sensitive topics.",
       "copyright_violation": "Content that infringes copyright.",
       "jailbreak": "Prompt injection, or attempts to make the model bypass its own safety rules."
+    },
+    "rebind_existing_unknown": "Another profile",
+    "rebind_consequence": "From now on, requests are moderated by “{{name}}”; the old binding is replaced.",
+    "delete_profile_title": "Delete moderation profile “{{name}}”?",
+    "delete_lead": "This can't be undone.",
+    "delete_consequence_settings": "Its keywords, thresholds and API key are deleted with it.",
+    "delete_blocked_bindings_one": "{{count}} channel is still bound to it, so the server will refuse to delete it. Unbind it under Manage channels first.",
+    "delete_blocked_bindings_other": "{{count}} channels are still bound to it, so the server will refuse to delete it. Unbind them under Manage channels first.",
+    "tag_bind_lead": "Bind the channels matching these tags to “{{name}}”.",
+    "tag_bind_consequence_count_one": "{{count}} channel matches; bindings to update: {{changeCount}}.",
+    "tag_bind_consequence_count_other": "{{count}} channels match; bindings to update: {{changeCount}}.",
+    "channel_count_one": "{{count}} channel",
+    "channel_count_other": "{{count}} channels",
+    "rebind_from": "{{channel}} · currently “{{name}}”",
+    "rebind_more": "and {{count}} more",
+    "editor_section_basic": "Basics",
+    "editor_section_basic_desc": "The profile's name and which service moderation requests go to.",
+    "backend_openai_moderations_desc": "Calls the OpenAI moderation API and compares each category's score with its threshold.",
+    "backend_qwen3guard_desc": "A self-hosted Qwen3Guard guard model that judges by risk category.",
+    "editor_section_strategy_desc": "Check keywords, call the moderation service, or both.",
+    "keyword_mode_api_only_desc": "Only the moderation service decides.",
+    "keyword_mode_keyword_only_desc": "Only blocked keywords are matched; no service or API key needed.",
+    "keyword_mode_keyword_and_api_desc": "Keywords first; the moderation service runs only when none match.",
+    "editor_section_service": "Moderation service",
+    "editor_section_service_desc": "Where moderation requests go, which model, and the credentials.",
+    "editor_section_service_off": "Keyword-only checks don't call a moderation service, so this section is inactive.",
+    "timeout_hint": "1–30000 ms; a timeout lets the request through.",
+    "clear_api_key_hint": "Deletes the stored key when you save; add one again later if needed.",
+    "editor_section_block": "Block response",
+    "editor_section_block_desc": "Status code and message returned to the client when a request is blocked.",
+    "guard_policy_section": "Verdicts and chunking",
+    "controversial_action_elevated_only_desc": "Controversial content is blocked only when it hits a high-risk category below.",
+    "controversial_action_allow_desc": "Controversial content always gets through.",
+    "controversial_action_block_desc": "Controversial content is always blocked; expect more false positives.",
+    "threshold_category_desc": {
+      "harassment": "Content that demeans, intimidates, or abuses a person or group.",
+      "harassment_threatening": "Harassment that includes threats of violence or serious harm toward a target.",
+      "hate": "Content that attacks or dehumanizes people based on protected characteristics such as race, religion, gender, sexual orientation, disability, or nationality.",
+      "hate_threatening": "Hateful content that also includes threats of violence or serious harm toward a protected group.",
+      "illicit": "Content that provides instructions or actionable help to commit non-violent wrongdoing.",
+      "illicit_violent": "Content that provides instructions or actionable help for wrongdoing involving violence or weapons.",
+      "self_harm": "Content that promotes, encourages, or depicts self-harm, including suicide and eating disorders.",
+      "self_harm_intent": "Content where the speaker states or signals an intention to engage in self-harm.",
+      "self_harm_instructions": "Content that encourages self-harm or provides instructions or methods for carrying it out.",
+      "sexual": "Content intended to arouse or that describes sexual activity or promotes sexual services, excluding sexual health and education.",
+      "sexual_minors": "Sexual content involving anyone under 18.",
+      "violence": "Content that depicts death, violence, or physical injury.",
+      "violence_graphic": "Content that depicts death, violence, or physical injury in graphic detail."
     }
   },
   "ip_access": {
@@ -5878,7 +6174,6 @@
     "never_expires": "Never",
     "add_rule": "Add rule",
     "delete_rule": "Delete rule",
-    "delete_rule_confirm": "Delete the rule for {{cidr}}? The address immediately returns to the default policy.",
     "rule_created": "Rule created",
     "rule_deleted": "Rule deleted",
     "no_rules": "No IP rules yet",
@@ -5897,7 +6192,6 @@
     "duration_6h": "6 hours",
     "duration_24h": "24 hours",
     "duration_7d": "7 days",
-    "cidr_required": "Enter an address or CIDR",
     "section_lockdown": "Allow-list only mode",
     "section_lockdown_desc": "When on, only allow-listed addresses may reach the management surface.",
     "lockdown_label": "Only allow-listed addresses may connect",
@@ -6024,13 +6318,40 @@
     "retention_days": "Attempt retention (days)",
     "retention_days_hint": "Attempts older than this are purged. Capped at 365 days.",
     "lockdown_confirm_title": "Enable allow-list only mode?",
-    "lockdown_confirm_body": "Any address not on the allow list loses access to the management surface immediately. Your address ({{cidr}}) is listed, but check that your colleagues' addresses are too — otherwise they will be locked out.",
     "lockdown_confirm_ok": "Enable",
     "portal_recent_logins": "Recent sign-ins",
     "portal_recent_logins_hint": "Sign-ins to your account over the last 30 days. If you see one that was not you, change your password immediately.",
     "portal_no_logins": "No sign-ins in the last 30 days",
     "chain_title": "Forwarding chain for this request (rightmost is the hop talking to this service)",
-    "chain_hint": "Every hop must be declared before resolution reaches the real client on the left. Currently resolving to: {{client}}. A loopback result means one hop is still undeclared."
+    "chain_hint": "Every hop must be declared before resolution reaches the real client on the left. Currently resolving to: {{client}}. A loopback result means one hop is still undeclared.",
+    "rule_form_desc": "Rules take effect as soon as they're saved. When an address matches both, allow wins over deny.",
+    "cidr_preview_single_v4": "Single IPv4 address, saved as {{cidr}}",
+    "cidr_preview_single_v6": "Single IPv6 address, saved as {{cidr}}",
+    "cidr_preview_range_v4_one": "IPv4 range, {{formatted}} address",
+    "cidr_preview_range_v4_other": "IPv4 range, {{formatted}} addresses",
+    "cidr_preview_range_v6": "IPv6 range /{{prefix}}",
+    "expires_preview": "Expires {{time}}",
+    "expires_preview_never": "Never expires",
+    "edit_rule_desc": "You can change the expiry and the note; the address and effect stay fixed.",
+    "save_rule": "Save rule",
+    "delete_rule_title": "Delete the rule for {{cidr}}?",
+    "delete_rule_lead": "This can't be undone, but you can add the rule again later.",
+    "delete_rule_consequence_default": "The address goes back to the default policy immediately.",
+    "delete_rule_consequence_deny": "Its requests are no longer refused by this rule.",
+    "delete_rule_consequence_allow": "It's no longer exempt from rate limiting and can be auto-banned.",
+    "lockdown_confirm_lead": "Only allow-listed addresses will reach the admin panel. It takes effect when you click Save at the bottom of the page.",
+    "lockdown_consequence_others": "Addresses not on the allow list are refused immediately — other administrators included.",
+    "lockdown_consequence_self": "Your current address ({{cidr}}) is on the allow list, so you won't be locked out.",
+    "lockdown_consequence_self_unknown": "Your current address is on the allow list, so you won't be locked out.",
+    "lockdown_consequence_colleagues": "Make sure your colleagues' addresses are on the list first.",
+    "bulk_delete_title_one": "Delete the selected rule?",
+    "bulk_delete_title_other": "Delete {{count}} selected rules?",
+    "bulk_delete_consequence_deny_one": "1 deny rule: requests from that address are no longer refused.",
+    "bulk_delete_consequence_deny_other": "{{count}} deny rules: requests from those addresses are no longer refused.",
+    "bulk_delete_consequence_allow_one": "1 allow rule: that address is no longer exempt from rate limiting and can be auto-banned.",
+    "bulk_delete_consequence_allow_other": "{{count}} allow rules: those addresses are no longer exempt from rate limiting and can be auto-banned.",
+    "bulk_delete_more_one": "and 1 more",
+    "bulk_delete_more_other": "and {{count}} more"
   },
   "video_generation": {
     "title": "Video Models",
@@ -6066,18 +6387,382 @@
     "test_running": "Generating",
     "test_running_hint": "Video generation usually takes 1-3 minutes; keep this page open",
     "test_failed_generic": "Video generation failed",
-    "test_model_required": "Select a video model first",
-    "test_prompt_required": "Enter a prompt",
-    "test_image_required": "Image-to-video needs a source image URL",
     "field_model": "Model",
     "field_prompt": "Prompt",
     "field_prompt_placeholder": "e.g. ocean waves at sunset, camera slowly pulling back",
-    "field_image_url": "Source image URL (image-to-video)",
+    "field_image_url": "Source image URL",
     "field_duration": "Duration (seconds, max {{max}})",
     "field_aspect_ratio": "Aspect ratio",
     "field_resolution": "Resolution",
     "result_open_original": "Open the original clip in a new tab",
     "no_channel_hint": "This tenant has no usable xAI account, so video generation is unavailable. Add and enable a Grok account under AI Accounts first.",
-    "unavailable_suffix": "no account"
+    "unavailable_suffix": "no account",
+    "test_modal_desc": "Pick a model and settings, then write a prompt to try a clip. Generation is asynchronous and usually takes 1–3 minutes.",
+    "test_shortcut": "⌘ / Ctrl + Enter to generate",
+    "field_mode": "Mode",
+    "field_image_url_hint": "The image used as the first frame: a URL or a data URI."
+  },
+  "config_ui": {
+    "nav_label": "Config sections",
+    "search_label": "Search settings",
+    "search_placeholder": "Search settings, e.g. proxy, logs, port",
+    "search_clear": "Clear search",
+    "search_empty_title": "No settings match “{{query}}”",
+    "search_empty_desc": "Try another word, or switch to the source editor to search the raw config.yaml.",
+    "section_modified": "has unsaved changes",
+    "modified_count_one": "{{count}} change",
+    "modified_count_other": "{{count}} changes",
+    "unsaved_count_one": "{{count}} unsaved change",
+    "unsaved_count_other": "{{count}} unsaved changes",
+    "save_warning_lead": "Saving applies these changes to the running service right away:",
+    "on": "On",
+    "off": "Off",
+    "empty_value": "empty",
+    "units": {
+      "seconds": "sec",
+      "minutes": "min",
+      "days": "days",
+      "mb": "MB"
+    },
+    "badges": {
+      "restart": "Restart",
+      "security": "Security",
+      "cost": "Costly"
+    },
+    "groups": {
+      "basics": "Basics",
+      "behavior": "Behavior",
+      "data": "Logs & data",
+      "advanced": "Advanced"
+    },
+    "profile": {
+      "desc": "For a 2 vCPU / 2 GB host: turns off expensive logging and caps retention and storage. Routing, quotas, cost and latency stats are unaffected.",
+      "preview_one": "See the {{count}} setting it changes",
+      "preview_other": "See the {{count}} settings it changes"
+    },
+    "sections": {
+      "server": {
+        "title": "Server",
+        "desc": "Where the service listens and where account credentials are stored."
+      },
+      "remote": {
+        "title": "Remote management",
+        "desc": "Who may reach the management API, and where this panel updates from."
+      },
+      "cors": {
+        "title": "Cross-origin access",
+        "desc": "Which web pages or browser extensions may call the API from another origin."
+      },
+      "runtime": {
+        "title": "Mode & updates",
+        "desc": "High-concurrency mode and where automatic updates come from."
+      },
+      "network": {
+        "title": "Network & retries",
+        "desc": "How upstream AI services are reached and how failures are retried."
+      },
+      "access": {
+        "title": "Access rules",
+        "desc": "Model prefixes and access to the WebSocket API."
+      },
+      "streaming": {
+        "title": "Streaming",
+        "desc": "Keep-alives for long connections and safe retries before output starts."
+      },
+      "quota": {
+        "title": "When quota runs out",
+        "desc": "What to try automatically once an account's quota is used up."
+      },
+      "logging": {
+        "title": "Logging",
+        "desc": "What gets logged and where. The more you turn on, the more CPU and disk it costs."
+      },
+      "retention": {
+        "title": "Retention & cleanup",
+        "desc": "How long request details and bodies are kept, and how much space they may use."
+      },
+      "monitoring": {
+        "title": "System monitor",
+        "desc": "Caching and live connections for the System monitor page."
+      },
+      "payload": {
+        "title": "Request body rules",
+        "desc": "Add, override or remove parameters in upstream request bodies, per model."
+      },
+      "kimi": {
+        "title": "Kimi headers",
+        "desc": "Client identity sent to Kimi; shows up as the source in the Kimi console. Leave empty for the Kimi CLI defaults."
+      },
+      "codex": {
+        "title": "Codex client admission",
+        "desc": "Which other clients are accepted by accounts that only allow the official Codex client. Applies immediately."
+      }
+    },
+    "fields": {
+      "host": {
+        "label": "Listen address",
+        "desc": "Leave empty to listen on every interface (IPv4 and IPv6); use 127.0.0.1 to allow this machine only."
+      },
+      "port": {
+        "label": "Port",
+        "desc": "Shared by the API and this panel. Default 8317."
+      },
+      "auth_dir": {
+        "label": "Credentials directory",
+        "desc": "Where AI account credential files are stored; ~ means the home directory. In Docker the AUTH_PATH variable wins."
+      },
+      "tls_enable": {
+        "label": "Serve HTTPS directly",
+        "desc": "Leave off when a reverse proxy such as nginx already handles HTTPS."
+      },
+      "tls_cert": {
+        "label": "Certificate file",
+        "desc": "Path to the PEM certificate used when HTTPS is on."
+      },
+      "tls_key": {
+        "label": "Private key file",
+        "desc": "Path to the private key that matches the certificate."
+      },
+      "allow_remote": {
+        "label": "Allow remote management",
+        "desc": "When off, only this machine can call the management API (a key is still required). Make sure the key is strong before opening it."
+      },
+      "secret_key": {
+        "label": "Management key",
+        "desc": "Used to call the management API remotely — keep it safe. Plain text is hashed when the service starts."
+      },
+      "disable_panel": {
+        "label": "Disable the built-in panel",
+        "desc": "Stops downloading and serving this panel; the management API keeps working."
+      },
+      "panel_repo": {
+        "label": "Panel source repository",
+        "desc": "GitHub repository the panel files come from — a repository URL or owner/repo."
+      },
+      "cors_origins": {
+        "desc": "One origin per line. Only needed when a browser calls the API from another origin; same-origin access is always allowed.",
+        "warning": "Chrome extensions are not allowed by default. In production list the exact chrome-extension://<extension-id>; while developing, when the ID changes, chrome-extension://* allows any installed extension at your own risk."
+      },
+      "commercial": {
+        "label": "High-concurrency mode",
+        "desc": "Turns off high-overhead request middleware to cut per-request memory; full request diagnostics are unavailable while it's on."
+      },
+      "update_channel": {
+        "options": {
+          "main": {
+            "label": "Stable (main)",
+            "desc": "Recommended. Only released versions."
+          },
+          "dev": {
+            "label": "Development (dev)",
+            "desc": "Get new features early; may be unstable."
+          }
+        }
+      },
+      "proxy_url": {
+        "label": "Global outbound proxy",
+        "desc": "Upstream requests go through it by default (a proxy bound to an account wins); token refresh and OAuth sign-in use it too. http, https and socks5; leave empty to connect directly."
+      },
+      "prefer_ipv4": {
+        "label": "Use IPv4 only for upstream",
+        "desc": "Every outbound connection uses IPv4. Useful when IPv6 runs through a poor tunnel."
+      },
+      "request_retry": {
+        "label": "Retry attempts",
+        "desc": "How many times to retry when upstream returns 403, 408, 500, 502, 503 or 504. Default 3."
+      },
+      "max_retry_interval": {
+        "label": "Cooldown wait limit",
+        "desc": "Longest wait for a cooling-down account before retrying. Default 30 seconds."
+      },
+      "force_prefix": {
+        "label": "Require model prefixes",
+        "desc": "When on, model requests without a prefix only use accounts that have no prefix (unless the prefix equals the model name)."
+      },
+      "ws_auth": {
+        "label": "Require auth for WebSocket",
+        "desc": "When on, connections to /v1/ws must carry a valid API key."
+      },
+      "keepalive": {
+        "label": "Streaming keep-alive",
+        "desc": "How often streaming responses send a keep-alive so proxies and clients don't drop idle connections. Default 15; below 0 turns it off."
+      },
+      "bootstrap_retries": {
+        "label": "Retries before first byte",
+        "desc": "How many times an upstream error may be retried safely before anything was sent to the client. Default 1."
+      },
+      "nonstream_keepalive": {
+        "label": "Non-streaming keep-alive",
+        "desc": "Above 0, sends blank lines while a non-streaming request waits so gateways don't time it out. 0 turns it off."
+      },
+      "switch_project": {
+        "label": "Switch project automatically",
+        "desc": "When quota runs out, continue with another project on the same account."
+      },
+      "switch_preview": {
+        "label": "Switch to preview model",
+        "desc": "When quota runs out, continue with the matching preview model."
+      },
+      "request_log": {
+        "label": "Request logs",
+        "desc": "Writes every request's full payload to server log files for troubleshooting. Keep it off in production."
+      },
+      "store_content": {
+        "label": "Store request and response bodies",
+        "desc": "Keeps full inputs and model outputs for log replay. With it off, request metadata, tokens, cost, latency and trimmed errors are still kept."
+      },
+      "log_to_file": {
+        "label": "Log to file",
+        "desc": "Write application logs to rotating files instead of stdout, so error logs can be downloaded from the panel."
+      },
+      "debug": {
+        "label": "Debug mode",
+        "desc": "Verbose debug logging — turn it off once you're done troubleshooting."
+      },
+      "usage_stats": {
+        "label": "In-memory usage stats",
+        "desc": "Only controls in-memory aggregation; request metadata and quota history are still stored."
+      },
+      "log_size": {
+        "label": "File log size cap",
+        "desc": "The oldest log files are deleted beyond this. 128 recommended; 0 means unlimited."
+      },
+      "error_files": {
+        "label": "Error log files kept",
+        "desc": "How many recent trimmed error files to keep. 10 recommended."
+      },
+      "detail_retention": {
+        "label": "Keep request details",
+        "desc": "Request details are for troubleshooting only; default 7 days. Statistics are stored separately and survive cleanup."
+      },
+      "body_retention": {
+        "label": "Keep full bodies",
+        "desc": "Only affects stored full bodies. Default 3 days; 0 keeps them forever. Never longer than request details are kept."
+      },
+      "cleanup_enabled": {
+        "label": "Clean up request details",
+        "desc": "Deletes old details in batches by age, row count and size cap. Statistics are never deleted."
+      },
+      "cleanup_interval": {
+        "label": "Cleanup interval",
+        "desc": "How often background cleanup runs. Default 60 minutes; 1440 is once a day."
+      },
+      "max_rows": {
+        "label": "Max detail rows",
+        "desc": "Beyond this the oldest rows are deleted first. Statistics are unaffected."
+      },
+      "metadata_cap": {
+        "label": "Detail table size cap",
+        "desc": "Best-effort size limit for the request detail table, indexes included."
+      },
+      "body_cap": {
+        "label": "Body storage cap",
+        "desc": "Total size limit for stored bodies; the oldest are deleted early beyond it. 0 means unlimited."
+      },
+      "stats_cache": {
+        "label": "Monitor data cache",
+        "desc": "How long expensive data (database size, log directory scan, channel latency) is cached. CPU and memory stay live. Minimum 10 seconds."
+      },
+      "ws_max_age": {
+        "label": "Monitor connection rotation",
+        "desc": "How often the System monitor live connection is re-established so nginx can reload smoothly. Model streams are unaffected. Minimum 60 seconds."
+      },
+      "kimi_user_agent": {
+        "label": "User-Agent",
+        "desc": "Default KimiCLI/1.10.6."
+      },
+      "kimi_platform": {
+        "label": "X-Msh-Platform",
+        "desc": "Default kimi_cli."
+      },
+      "kimi_version": {
+        "label": "X-Msh-Version",
+        "desc": "Default 1.10.6."
+      }
+    },
+    "errors": {
+      "required": "Required",
+      "integer": "Enter a whole number",
+      "non_negative": "Enter a whole number of 0 or more",
+      "min": "Must be at least {{min}}",
+      "range": "Enter a whole number from {{min}} to {{max}}",
+      "summary_one": "{{count}} setting needs fixing — it's marked in place.",
+      "summary_other": "{{count}} settings need fixing — they're marked in place.",
+      "proxy_url": "The proxy address is incomplete or uses an unsupported protocol"
+    },
+    "payload": {
+      "default": {
+        "title": "Fill in missing parameters",
+        "desc": "Only set when the client didn't send the parameter; values it sent are kept."
+      },
+      "override": {
+        "title": "Force parameters",
+        "desc": "Always set to these values, whatever the client sent."
+      },
+      "filter": {
+        "title": "Remove parameters",
+        "desc": "Delete these parameter paths from the request body."
+      },
+      "hint": "Model names accept wildcards (e.g. gemini-*); parameter paths are dot-separated, e.g. generationConfig.thinkingConfig.thinkingBudget."
+    }
+  },
+  "validation": {
+    "required": "Required",
+    "format": "Invalid format",
+    "integer": "Enter a whole number",
+    "non_negative": "Enter a whole number of 0 or more",
+    "min": "Must be at least {{min}}",
+    "max": "Must be at most {{max}}",
+    "range": "Enter a whole number from {{min}} to {{max}}",
+    "max_length": "At most {{max}} characters",
+    "email": "Enter a valid email address",
+    "url": "Enter a full address, e.g. https://example.com",
+    "url_protocol": "Only {{protocols}} is supported",
+    "host": "Enter a domain, IPv4 or IPv6 address",
+    "port": "Port must be a number from 1 to 65535",
+    "cidr": "Enter an IP or CIDR, e.g. 203.0.113.0/24",
+    "json": "Not valid JSON",
+    "proxy_port_required": "SOCKS5 proxies need a port",
+    "proxy_username_required": "A password needs a username too",
+    "summary_one": "{{count}} field needs attention",
+    "summary_other": "{{count}} fields need attention",
+    "max_bytes": "At most {{max}} bytes (a CJK character counts as 3)",
+    "username_invalid_charset": "Use only letters, digits and . _ - @",
+    "username_too_long": "At most 128 bytes",
+    "display_name_too_long": "At most 128 bytes",
+    "password_too_short": "At least 12 characters",
+    "password_too_long": "At most 72 bytes",
+    "password_missing_upper": "Include at least one uppercase letter",
+    "password_missing_lower": "Include at least one lowercase letter",
+    "password_missing_special": "Include at least one special character (not a letter or digit)",
+    "datetime": "Enter a valid date and time, e.g. 2030-01-01 09:00",
+    "datetime_future": "Must be later than now",
+    "price": "Enter a price of 0 or more, up to 6 decimals",
+    "path_slash": "Must start with /",
+    "path_under_parent": "Must sit under the parent directory's path {{prefix}}",
+    "no_spaces": "Can't contain spaces",
+    "duplicate_name": "That name is already taken",
+    "exceeds_account_limit": "Can't exceed the account limit of {{limit}}",
+    "password_mismatch": "The passwords don't match",
+    "decimal_range": "Enter a number from {{min}} to {{max}}",
+    "api_key_cleared_required": "This check strategy needs an API key: turn off Clear, or switch to keywords only"
+  },
+  "proxy_input": {
+    "scheme": "Proxy protocol",
+    "host": "Host",
+    "port": "Port",
+    "username": "Username",
+    "password": "Password",
+    "paste_open": "Paste full address",
+    "paste_cancel": "Hide",
+    "paste_label": "Paste proxy address",
+    "paste_hint": "Paste or type the whole address and press Enter — it's split into the fields below.",
+    "paste_invalid": "Couldn't read that address. Only http, https and socks5 are supported.",
+    "preview": "Saved as",
+    "empty_means_direct": "Leave empty to connect directly.",
+    "unrecognized_title": "The current address can't be read",
+    "unrecognized_desc": "Its protocol isn't http / https / socks5, or it's incomplete. Filling the fields below replaces it.",
+    "add": "Add a proxy address",
+    "remove": "Remove"
   }
 }

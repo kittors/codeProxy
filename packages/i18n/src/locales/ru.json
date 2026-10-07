@@ -71,7 +71,19 @@
     "sort_ascending": "По возрастанию",
     "sort_descending": "По убыванию",
     "no_data": "Нет данных",
-    "disabled": "Отключено"
+    "disabled": "Отключено",
+    "copied": "Скопировано",
+    "show": "Показать",
+    "hide": "Скрыть",
+    "modified": "Изменено",
+    "revert": "Отменить",
+    "copy_named": "Копировать: {{name}}",
+    "confirm_phrase_label": "Введите «{{phrase}}» для подтверждения",
+    "secret_once_warning": "Скопируйте сейчас — после закрытия значение больше не будет показано.",
+    "secret_value": "Секрет",
+    "secret_saved_close": "Я сохранил",
+    "copy_all": "Копировать всё",
+    "retry": "Повторить"
   },
   "ccswitch": {
     "import_to_ccswitch": "Импорт в CC Switch",
@@ -179,7 +191,9 @@
     "config_claude_role_sonnet": "Sonnet default model",
     "config_claude_role_opus": "Opus default model",
     "config_claude_role_fable": "Fable default model",
-    "model_use_custom": "Use \"{{value}}\""
+    "model_use_custom": "Use \"{{value}}\"",
+    "config_delete_lead": "Пресет будет удалён только из этого списка.",
+    "config_delete_consequence": "Уже импортированные в CC Switch конфигурации продолжат работать, но ссылки импорта по этому пресету больше не создать."
   },
   "title": {
     "main": "Панель администратора CliRelay",
@@ -891,7 +905,34 @@
     "sort_label": "Сортировка аккаунтов",
     "sort_by_name": "По имени",
     "sort_quota_asc": "Сначала с наименьшим остатком",
-    "sort_quota_desc": "Сначала с наибольшим остатком"
+    "sort_quota_desc": "Сначала с наибольшим остатком",
+    "import_empty_desc": "Канал не вернул моделей. Проверьте учётные данные и повторите.",
+    "import_select_visible": "Выбрать все результаты",
+    "import_clear_selection": "Снять выбор",
+    "import_no_match": "Нет моделей по запросу «{{query}}»",
+    "tags_modal_desc": "Какие теги {{name}} показывать в списках и карточках.",
+    "tags_preview": "Отображение",
+    "tags_preview_empty": "Теги не показываются",
+    "no_custom_tags": "Пока нет своих тегов — введите и нажмите Enter.",
+    "display_tags_desc": "Отмеченные теги видны в списках и карточках; теги по умолчанию зависят от типа и тарифа.",
+    "proxy_url_title": "Адрес прокси",
+    "proxy_url_fallback_hint": "Используется без привязки к пулу прокси; иначе — как запасной. Пусто — удалить.",
+    "custom_tags_section": "Свои теги",
+    "batch_delete_lead_one": "Будет удалён {{count}} AI-аккаунт ниже. Отменить нельзя.",
+    "batch_delete_lead_few": "Будут удалены {{count}} AI-аккаунта ниже. Отменить нельзя.",
+    "batch_delete_lead_many": "Будут удалены {{count}} AI-аккаунтов ниже. Отменить нельзя.",
+    "batch_delete_lead_other": "Будут удалены {{count}} AI-аккаунтов ниже. Отменить нельзя.",
+    "batch_delete_more": "и ещё {{count}}",
+    "batch_delete_consequence_files": "Файлы учётных данных удаляются; для повторного использования нужно снова войти или импортировать.",
+    "batch_delete_consequence_traffic": "Запросы через эти аккаунты переходят на другие доступные.",
+    "download_sensitive_title": "Скачать полный файл учётных данных?",
+    "download_sensitive_button": "Всё равно скачать",
+    "identity_profile_delete_title": "Удалить этот профиль?",
+    "upload_progress_dialog_title": "Загрузка файлов учётных данных",
+    "upload_progress_background": "Продолжить в фоне",
+    "paste_json_shortcut": "⌘ / Ctrl + Enter — загрузить",
+    "model_owner_group_dialog_desc": "Откуда аккаунты {{type}} берут список моделей.",
+    "model_owner_group_applies_to": "Применяется к аккаунтам {{type}} в текущем фильтре."
   },
   "antigravity_quota": {
     "title": "Квота Antigravity",
@@ -907,7 +948,33 @@
     "window_weekly": "Неделя",
     "window_5h": "5 часов",
     "group_hint": "Модели этой группы делят один недельный и один пятичасовой лимит. Квота расходуется пропорционально стоимости токенов, поэтому короткие задачи и более экономичные модели растягивают её дольше.",
-    "measured_from": "Показатель модели {{model}}"
+    "measured_from": "Показатель модели {{model}}",
+    "warmup_load_failed_title": "Не удалось загрузить текущую политику прогрева",
+    "warmup_load_failed_desc": "Сохранение недоступно до загрузки, чтобы не перезаписать политику значениями по умолчанию. ({{message}})",
+    "warmup_targets_desc": "Какие аккаунты участвуют в автопрогреве.",
+    "warmup_target_antigravity_desc": "Квота Gemini и сторонних моделей (окно 5 часов).",
+    "warmup_target_codex_desc": "Spark и окно квоты 5 часов.",
+    "warmup_rhythm_title": "Ритм",
+    "warmup_rhythm_desc": "Как часто прогревать и насколько разносить один раунд во времени.",
+    "warmup_interval_label": "Интервал",
+    "warmup_interval_hint": "Как часто прогревается каждый аккаунт, 1–72 часа.",
+    "warmup_stagger_label": "Окно разброса",
+    "warmup_stagger_hint": "Аккаунты одного раунда случайно разносятся в этом окне, 1–120 минут.",
+    "unit_hours": "ч",
+    "unit_minutes": "мин",
+    "warmup_daily_window_desc": "Прогрев только в это время суток; ночью тихо.",
+    "warmup_schedule_title": "Период действия",
+    "warmup_schedule_desc": "По местному времени вашего компьютера.",
+    "warmup_start_label": "Начало",
+    "warmup_start_hint": "Пусто — начать сразу после сохранения.",
+    "warmup_stop_label": "Окончание",
+    "warmup_stop_hint": "В это время прогрев остановится.",
+    "warmup_exclude_title": "Исключённые аккаунты",
+    "warmup_exclude_desc": "Отмеченные аккаунты не прогреваются.",
+    "warmup_exclude_count": "Исключено {{excluded}} / {{total}}",
+    "warmup_exclude_search": "Поиск аккаунтов",
+    "warmup_excluded": "Исключён",
+    "warmup_included": "Прогревается"
   },
   "claude_quota": {
     "title": "Квота Claude",
@@ -1788,15 +1855,24 @@
     "form_unlimited_hint": "0 = Unlimited",
     "form_system_prompt": "System prompt",
     "save_config": "Save config",
-    "saving": "Saving...",
-    "name_required": "Please enter a config name",
     "profile_saved": "Permission config saved",
     "profile_deleted": "Permission config deleted",
     "delete_title": "Delete permission config",
-    "delete_desc": "Delete {{name}}? API Keys using it will keep the copied settings as custom config.",
     "load_failed": "Failed to load permission configs",
     "save_failed": "Failed to save permission config",
-    "delete_failed": "Failed to delete permission config"
+    "delete_failed": "Failed to delete permission config",
+    "basics_section": "Основное",
+    "form_name_hint": "По этому имени шаблон выбирают при редактировании аккаунта.",
+    "access_section": "Доступ",
+    "access_section_desc": "Ограничивает группы каналов, каналы и модели для аккаунтов с этим шаблоном. Пусто — без ограничений.",
+    "request_realtime_section": "Лимиты запросов и скорости",
+    "request_realtime_section_desc": "Число запросов в день и всего, а также параллельность, RPM и TPM. Пусто или 0 — без ограничений.",
+    "advanced_section": "Дополнительно",
+    "system_prompt_hint": "Этот системный промпт добавляется ко всем запросам ключей аккаунтов с этим шаблоном.",
+    "system_prompt_placeholder": "например: Всегда отвечай по-русски.",
+    "delete_lead": "Это действие нельзя отменить.",
+    "delete_consequence_accounts": "Аккаунты, использующие шаблон, сохранят скопированные лимиты и права как собственную конфигурацию.",
+    "delete_confirm": "Удалить шаблон"
   },
   "api_keys_page": {
     "usage_summary_tokens": "Использование токенов",
@@ -1806,15 +1882,46 @@
     "usage_summary_filtered": "Текущий фильтр",
     "col_input": "Входные токены",
     "col_output": "Выходные токены",
-    "col_total_token": "Всего токенов"
+    "col_total_token": "Всего токенов",
+    "create_desc": "Ключ работает сразу после создания; набор прав определяет доступные каналы, модели и квоту.",
+    "edit_desc": "Изменения имени, значения ключа или набора прав вступают в силу при сохранении.",
+    "form_name_placeholder": "например: Team-A",
+    "form_name_hint": "Так ключ отображается в списке и в журналах запросов.",
+    "form_key_hint": "Сгенерирован автоматически; можно вставить уже используемый ключ.",
+    "form_key_edit_hint": "Это значение клиенты передают в каждом запросе.",
+    "key_change_warning": "После сохранения старый ключ сразу перестанет работать; клиентам нужно перейти на новое значение.",
+    "owned_key_create_desc": "Будет создан новый ключ, он показывается только один раз; квота аккаунта общая для всех его ключей.",
+    "owned_key_edit_desc": "Изменения имени и подквоты вступают в силу при сохранении; само значение ключа не меняется.",
+    "owned_key_basics_section": "Основное",
+    "owned_key_name_hint": "Помогает различать источники в журналах запросов и статистике.",
+    "delete_key_title": "Удалить API-ключ",
+    "delete_lead": "Это действие нельзя отменить.",
+    "delete_consequence_clients": "Клиенты, использующие этот ключ, сразу потеряют доступ.",
+    "batch_delete_consequence_clients": "Клиенты, использующие эти ключи, сразу потеряют доступ.",
+    "delete_logs_option_hint": "Без отметки записи запросов сохранятся для последующей сверки."
   },
   "end_users": {
     "view_usage": "Просмотреть использование",
     "username_placeholder": "Пусто — сгенерировать из никнейма",
-    "password_placeholder": "Пусто — сгенерировать случайно; сразу скопируйте",
     "secrets_one_time_hint": "После закрытия окна пароль / API-ключ в открытом виде больше не отображаются.",
-    "secrets_copied_close": "Скопировано, закрыть",
-    "reset_password_title": "Сброс пароля"
+    "reset_password_title": "Сброс пароля",
+    "create_desc": "Пользователь сразу может войти в портал и при первом входе должен сменить пароль; сгенерированный пароль и начальный API-ключ показываются только один раз.",
+    "display_name_hint": "Отображается в списке пользователей и в портале.",
+    "password_label": "Пароль",
+    "new_password_label": "Новый пароль",
+    "new_password_hint": "Оставьте пустым, чтобы не менять. Новый пароль — не менее 12 символов, с заглавной, строчной буквой и спецсимволом.",
+    "edit_desc": "Изменения профиля, шаблона прав и квоты вступают в силу при сохранении; все ключи аккаунта используют эту квоту.",
+    "profile_section": "Профиль",
+    "profile_applied_hint": "При выборе шаблона квоты по периодам и лимиты запросов ниже заменяются значениями «{{profile}}» и блокируются; при сохранении применяется шаблон.",
+    "reset_password_lead": "Для аккаунта будет создан новый случайный пароль; старый сразу перестанет работать.",
+    "reset_password_consequence_sessions": "Все активные сеансы аккаунта завершатся; войти можно будет только с новым паролем.",
+    "reset_password_consequence_once": "Новый пароль показывается только один раз — сразу скопируйте его для пользователя.",
+    "delete_lead": "Это действие нельзя отменить.",
+    "delete_consequence_keys": "Его API-ключи будут отключены и отвязаны и больше не смогут использоваться.",
+    "delete_confirm": "Удалить аккаунт",
+    "usage_keys_summary": "Все ключи аккаунта",
+    "unnamed": "Пользователь без имени",
+    "no_keys_for_usage": "У пользователя пока нет API-ключей — показывать нечего"
   },
   "proxies": {
     "title": "Proxy Management",
@@ -1859,7 +1966,15 @@
     "select_placeholder": "Select proxy",
     "select_missing": "Missing proxy: {{id}}",
     "validation_name": "Proxy name is required",
-    "validation_url": "Proxy URL must start with http://, https://, or socks5://"
+    "validation_url": "Proxy URL must start with http://, https://, or socks5://",
+    "form_desc": "После сохранения его можно выбрать как выход для AI-провайдеров и аккаунтов.",
+    "name_hint": "Так прокси будет отображаться в списках.",
+    "name_placeholder": "например: резидентный IP HK",
+    "url_hint": "http, https или socks5; учётные данные — прямо в адресе.",
+    "remark_placeholder": "например: выход для Codex",
+    "enabled_hint": "Отключённые прокси не показываются в списках выбора; существующие привязки не меняются.",
+    "delete_lead": "Это действие нельзя отменить.",
+    "delete_consequence_bindings": "AI-провайдеры и аккаунты больше не смогут выбрать этот прокси."
   },
   "image_generation": {
     "title": "Image Models",
@@ -1867,9 +1982,9 @@
     "call_title": "Способ вызова",
     "call_description": "Используйте API key со страницы API Keys для вызова image endpoints. Сервис автоматически ротирует доступные Codex OAuth каналы.",
     "base_url_label": "BaseURL",
-    "text_to_image_title": "Text to Image",
+    "text_to_image_title": "Текст в изображение",
     "text_to_image_desc": "Генерация изображения напрямую по prompt.",
-    "image_to_image_title": "Image to Image",
+    "image_to_image_title": "Изображение в изображение",
     "image_to_image_desc": "Загрузите исходное изображение и опишите нужное изменение.",
     "request_params_title": "Параметры запроса",
     "response_schema_title": "Структура ответа",
@@ -1924,7 +2039,6 @@
     "test_hint": "Тестовые вызовы автоматически ротируют доступные каналы.",
     "generate_button": "Сгенерировать",
     "generating_button": "Генерация...",
-    "send_button": "Отправить",
     "preview_alt": "Предпросмотр {{model}}",
     "idle_hint": "Введите prompt, чтобы начать генерацию изображения",
     "idle_hint_edits": "Загрузите изображения и введите prompt, чтобы начать генерацию",
@@ -1943,7 +2057,12 @@
     "provider": "Канал",
     "model": "Модель",
     "model_placeholder": "Выберите модель",
-    "tab_label": "Генерация изображений"
+    "tab_label": "Генерация изображений",
+    "test_modal_desc": "Выберите модель и параметры, опишите изображение и запустите пробную генерацию. Загрузите референсы, чтобы вместо этого изменить их.",
+    "test_shortcut": "⌘ / Ctrl + Enter — сгенерировать",
+    "reference_image_hint": "Необязательно. С загруженными изображениями включается редактирование; не больше {{max}}.",
+    "prev_image": "Предыдущее изображение",
+    "next_image": "Следующее изображение"
   },
   "identity_fingerprint": {
     "title": "Identity Fingerprint",
@@ -2001,7 +2120,40 @@
     "kimi_custom_headers_hint": "JSON-объект. Управляемые заголовки Kimi (X-Msh-*) переопределить нельзя.",
     "kimi_preview_desc": "Текущая исходящая личность Kimi.",
     "kimi_notice": "Приоритет: выученное > пресет здесь > встроенный шаблон. Устаревший блок kimi-header-defaults остаётся запасным пресетом.",
-    "save_kimi": "Сохранить Kimi"
+    "save_kimi": "Сохранить Kimi",
+    "recommend_modal_title": "Рекомендуемые отпечатки Codex",
+    "recommend_modal_desc": "Проверено запросов за {{days}} дн.: {{inspected}}, найдено настоящих отпечатков Codex: {{matched}}.",
+    "recommend_modal_loading": "Проверяем запросы за последние {{days}} дн.…",
+    "recommend_load_failed": "Не удалось загрузить рекомендуемые отпечатки",
+    "recommend_last_seen": "Последний раз",
+    "recommend_count_one": "{{count}} раз",
+    "recommend_count_few": "{{count}} раза",
+    "recommend_count_many": "{{count}} раз",
+    "recommend_count_other": "{{count}} раза",
+    "recommend_diff": "Отличия",
+    "recommend_apply_selected": "Применить и сохранить",
+    "recommend_apply_confirm": "Применить и сохранить",
+    "recommend_confirm_title": "Применить этот отпечаток?",
+    "recommend_confirm_lead": "Он сразу сохраняется и становится действующим отпечатком Codex.",
+    "recommend_confirm_enables": "Отпечаток Codex также будет включён.",
+    "recommend_confirm_overwrites": "Заменит текущие значения: {{fields}}.",
+    "recommend_confirm_overwrites_more_one": "Заменит текущие значения: {{fields}} и другие (всего {{count}}).",
+    "recommend_confirm_overwrites_more_few": "Заменит текущие значения: {{fields}} и другие (всего {{count}}).",
+    "recommend_confirm_overwrites_more_many": "Заменит текущие значения: {{fields}} и другие (всего {{count}}).",
+    "recommend_confirm_overwrites_more_other": "Заменит текущие значения: {{fields}} и другие (всего {{count}}).",
+    "recommend_confirm_no_diff": "Все значения уже совпадают — они просто будут сохранены ещё раз.",
+    "recommend_confirm_custom_headers": "Пользовательские заголовки заменяются заголовками из рекомендации, текущие не сохраняются.",
+    "recommend_table_caption": "Недавние кандидаты отпечатков терминала Codex",
+    "recommend_empty": "В недавних запросах пока нет отпечатков Codex для рекомендации",
+    "recommend_detail_empty": "Выберите кандидата, чтобы увидеть подробности.",
+    "recommend_detail_title": "Подробности кандидата",
+    "recommend_seen_range": "{{first}} — {{last}}",
+    "recommend_will_apply": "Будет применено",
+    "recommend_current": "Сейчас",
+    "recommend_next": "Рекомендуется",
+    "recommend_same_detail": "Этот кандидат совпадает с текущей формой.",
+    "recommend_not_applied": "Только для распознавания",
+    "recommend_samples": "Примеры запросов"
   },
   "channel_groups_page": {
     "title": "Channel Groups Management",
@@ -2439,12 +2591,85 @@
     "credential_sort_label": "Сортировка учётных данных",
     "credential_sort_config": "Порядок из конфигурации",
     "credential_sort_remaining_asc": "Сначала с наименьшим остатком",
-    "credential_sort_remaining_desc": "Сначала с наибольшим остатком"
+    "credential_sort_remaining_desc": "Сначала с наибольшим остатком",
+    "proxy_url_fallback_hint": "Используется без привязки к пулу прокси; иначе — как запасной.",
+    "delete_openai_title": "Удалить этого OpenAI-совместимого провайдера?",
+    "delete_config_title": "Удалить эту конфигурацию учётных данных?",
+    "delete_lead": "Это действие нельзя отменить.",
+    "delete_consequence_openai": "Удалятся все его API-ключи и сопоставления моделей; запросы через него уйдут в другие каналы или завершатся ошибкой.",
+    "delete_consequence_config": "Она перестанет участвовать в маршрутизации; запросы через неё уйдут в другие каналы или завершатся ошибкой.",
+    "unnamed": "Без имени",
+    "diff_tile_added": "Добавлено",
+    "diff_tile_updated": "Обновлено",
+    "diff_tile_removed": "Удалено",
+    "diff_tile_duplicates": "Дубликаты",
+    "import_removes_title_one": "Импорт удалит {{count}} конфигурацию",
+    "import_removes_title_few": "Импорт удалит {{count}} конфигурации",
+    "import_removes_title_many": "Импорт удалит {{count}} конфигураций",
+    "import_removes_title_other": "Импорт удалит {{count}} конфигураций",
+    "import_removes_desc": "Конфигурации, которых нет в файле, будут удалены — они зачёркнуты ниже.",
+    "confirm_import_with_removals": "Импортировать и удалить {{count}}"
   },
   "log_content": {
     "detail_label_request": "Request",
     "detail_label_response": "Response",
-    "detail_group_fingerprint_headers": "Fingerprint / passthrough"
+    "detail_group_fingerprint_headers": "Fingerprint / passthrough",
+    "copy": "Копировать",
+    "no_input": "Нет записей входных данных",
+    "no_output": "Нет записей выходных данных",
+    "no_details": "Нет подробностей запроса",
+    "title": "Входные данные запроса и ответ модели",
+    "download": "Скачать",
+    "raw_data": "Исходные данные",
+    "rendered": "Форматированный вид",
+    "input_messages": "Вход",
+    "output": "Выход",
+    "request_details": "Подробности запроса",
+    "details_egress": "Исходящая сеть",
+    "details_client": "Запрос клиента",
+    "details_upstream": "Отправлено вышестоящему сервису",
+    "details_response": "Ответ вышестоящего сервиса",
+    "message_content": "Подробности запроса",
+    "egress_status": "Статус",
+    "egress_route": "Маршрут выхода",
+    "egress_upstream_ip": "IP, который видит вышестоящий сервис",
+    "egress_server_ip": "Исходящий IP сервера",
+    "egress_proxy_source": "Источник прокси",
+    "egress_proxy_id": "ID прокси",
+    "egress_proxy_name": "Имя прокси",
+    "egress_proxy_host": "Адрес прокси",
+    "egress_compare": "Сравнение с сервером",
+    "egress_error": "Результат проверки",
+    "egress_route_proxy": "Через прокси",
+    "egress_route_direct": "Напрямую с сервера",
+    "egress_source_proxy_id": "Пул прокси",
+    "egress_source_auth_proxy_url": "Прокси аккаунта",
+    "egress_source_global_proxy_url": "Глобальный прокси",
+    "egress_source_proxy_url": "Свой прокси",
+    "egress_source_direct": "Напрямую",
+    "egress_compare_same": "Совпадает с сервером",
+    "egress_compare_different": "Отличается от сервера",
+    "egress_badge_verifying": "Проверка",
+    "egress_badge_proxy": "Через прокси",
+    "egress_badge_server": "Напрямую с сервера",
+    "egress_badge_same": "Как у сервера",
+    "egress_badge_different": "Не как у сервера",
+    "egress_badge_failed": "Проверка не удалась",
+    "field_model": "Модель",
+    "field_prompt": "Промпт",
+    "field_parameters": "Параметры",
+    "role_system": "Системный промпт",
+    "role_developer": "Инструкции разработчика",
+    "role_instructions": "Инструкции",
+    "role_user": "Сообщение пользователя",
+    "role_assistant": "Ответ модели",
+    "role_tool": "Результат инструмента",
+    "role_function_call": "Вызов функции",
+    "role_function_return": "Результат функции",
+    "role_thinking": "Рассуждения",
+    "role_tool_use": "Вызов инструмента",
+    "role_message": "Сообщение",
+    "details_only_desc": "Хранение тел запросов выключено, поэтому доступны только адрес, заголовки и статус запроса."
   },
   "system_page": {
     "title": "Информация о системе",
@@ -2606,7 +2831,6 @@
     "new_password_prompt": "Новый пароль",
     "password_reset": "Пароль сброшен.",
     "reset_password": "Сбросить пароль",
-    "delete_user_confirm": "Удалить пользователя {{username}}?",
     "user_deleted": "Пользователь удален.",
     "delete": "Удалить",
     "new_role": "Новая роль",
@@ -2617,7 +2841,6 @@
     "role_created": "Роль создана.",
     "protected_role": "Защищенная роль",
     "select_role": "Выберите роль",
-    "delete_role_confirm": "Удалить роль {{name}}?",
     "role_deleted": "Роль удалена.",
     "role_permissions_saved": "Права роли сохранены.",
     "save": "Сохранить",
@@ -2627,10 +2850,6 @@
     "slug": "Идентификатор",
     "name": "Название",
     "expires_at": "Срок действия",
-    "expires_at_required": "Укажите дату и время окончания.",
-    "expires_at_invalid": "Некорректная дата и время окончания.",
-    "field_required": "Это поле обязательно.",
-    "name_too_long": "Название не может превышать {{max}} символов.",
     "admin_username": "Имя администратора",
     "admin_display_name": "Отображаемое имя администратора",
     "admin_password": "Пароль администратора",
@@ -2644,7 +2863,6 @@
     "new_expiry_prompt": "Новая дата и время окончания",
     "tenant_expiry_updated": "Срок аренды обновлен.",
     "renew": "Продлить",
-    "disable_tenant_confirm": "Отключить арендатора {{name}}?",
     "tenant_disabled": "Арендатор отключен.",
     "disable": "Отключить",
     "edit": "Изменить",
@@ -2694,7 +2912,6 @@
     "renew_tenant": "Продлить арендатора",
     "change_user_status": "Изменить статус пользователя {{username}}",
     "disable_user": "Отключить пользователя",
-    "disable_user_confirm": "Отключить пользователя {{username}}? Текущие сеансы будут немедленно отозваны.",
     "scope_platform": "Платформа",
     "scope_tenant": "Арендатор",
     "permissions": "Разрешения",
@@ -2754,7 +2971,6 @@
     "badge_content": "Бейдж",
     "hide_menu": "Скрыть в меню",
     "please_select": "Выберите",
-    "delete_menu_confirm": "Удалить меню {{name}}?",
     "permission_actions": {
       "read": "Чтение",
       "create": "Создание",
@@ -2807,10 +3023,8 @@
     "no_call_chain": "Цепочка вызовов не записана.",
     "no_project_method": "Метод проекта не записан.",
     "audit_log_detail_title": "Детали журнала аудита",
-    "delete_audit_log_confirm": "Удалить эту запись аудита?",
     "audit_log_deleted": "Запись аудита удалена.",
     "clear_audit_logs": "Очистить все",
-    "clear_audit_logs_confirm": "Очистить все записи аудита в текущей области видимости? Это действие нельзя отменить.",
     "clear_audit_logs_confirm_button": "Очистить все",
     "audit_logs_cleared": "Очищено записей аудита: {{count}}.",
     "source_ip": "Source IP",
@@ -2820,7 +3034,158 @@
     "password_rule_special": "Спецсимвол",
     "passwords_match": "Пароли совпадают",
     "change_password_hint": "Выберите пароль, который вы больше нигде не используете.",
-    "change_password_forced_hint": "Перед продолжением задайте новый пароль."
+    "change_password_forced_hint": "Перед продолжением задайте новый пароль.",
+    "new_user_desc": "Пользователь входит в панель с этим именем и паролем; доступ определяют назначенные роли.",
+    "user_section_account": "Учётная запись",
+    "user_section_account_desc": "Имя пользователя нужно для входа; отображаемое имя видно в списках и журнале аудита.",
+    "user_section_password_desc": "При первом входе пользователю нужно будет сменить пароль на свой.",
+    "password_mode_auto_desc": "Сервер создаст надёжный пароль и покажет его один раз после создания — скопируйте его.",
+    "password_mode_manual_desc": "Вы задаёте пароль и сообщаете его пользователю.",
+    "user_section_roles_desc": "Роли определяют, какие страницы видит пользователь и что может делать. Их можно изменить позже в списке.",
+    "user_roles_hint": "Показаны только роли, которые вы можете делегировать (все их права есть у вас).",
+    "user_roles_none_assignable": "Пока нет ролей, которые вы можете делегировать.",
+    "reset_password_desc": "Задайте новый пароль для {{name}} ({{username}}).",
+    "reset_password_effects": "Все его сеансы сразу завершатся. При входе с новым паролем его нужно будет сменить.",
+    "save_roles": "Сохранить роли",
+    "roles_locked_self": "Нельзя менять собственные роли.",
+    "roles_locked_super_admin": "Роли суперадминистратора защищены и не меняются.",
+    "roles_locked_tenant_admin": "Роли администратора арендатора защищены и здесь не меняются.",
+    "initial_password_handover": "Передайте имя пользователя и начальный пароль новому пользователю. При первом входе он задаст свой пароль.",
+    "disable_user_lead": "Пользователь больше не сможет войти в панель.",
+    "disable_user_consequence_sessions": "Его текущие сеансы сразу завершатся.",
+    "disable_user_consequence_restore": "Учётная запись и роли сохраняются; её можно снова включить в списке.",
+    "disable_user_confirm_button": "Отключить пользователя",
+    "delete_user_title": "Удалить пользователя «{{name}}»?",
+    "delete_lead": "Это действие нельзя отменить.",
+    "delete_user_consequence_account": "Учётная запись удаляется навсегда, войти с ней больше нельзя.",
+    "delete_user_consequence_disable_instead": "Чтобы лишь временно запретить вход, отключите учётную запись — она сохранится.",
+    "delete_user": "Удалить пользователя",
+    "new_role_desc": "Сначала создайте роль, затем настройте её права и участников в списке.",
+    "role_name_hint": "Отображается в списке пользователей и при выборе ролей.",
+    "role_description_hint": "Для кого роль и что она разрешает — так её проще назначать.",
+    "permissions_selected_one": "Выбрано {{count}} разрешение",
+    "permissions_selected_few": "Выбрано {{count}} разрешения",
+    "permissions_selected_many": "Выбрано {{count}} разрешений",
+    "permissions_selected_other": "Выбрано {{count}} разрешения",
+    "save_permissions": "Сохранить разрешения",
+    "permissions_read_only_protected": "Это защищённая встроенная роль: её разрешения поддерживает система, их можно только просматривать.",
+    "permissions_read_only_no_access": "У вас нет права менять разрешения ролей, поэтому здесь только просмотр.",
+    "no_matching_users": "Нет подходящих пользователей",
+    "no_matching_users_hint": "Попробуйте другой запрос — ищутся и отображаемые имена, и имена пользователей.",
+    "role_users_locked": "защищённое назначение, здесь не меняется",
+    "users_selected_one": "Выбран {{count}} пользователь",
+    "users_selected_few": "Выбрано {{count}} пользователя",
+    "users_selected_many": "Выбрано {{count}} пользователей",
+    "users_selected_other": "Выбрано {{count}} пользователя",
+    "save_role_users": "Сохранить назначения",
+    "search_users": "Поиск пользователей",
+    "search_users_placeholder": "Поиск по отображаемому имени или имени пользователя",
+    "delete_role_title": "Удалить роль «{{name}}»?",
+    "delete_role_consequence_permissions": "Роль и её набор разрешений удаляются навсегда.",
+    "delete_role_consequence_assigned": "Роль, назначенную пользователям, удалить нельзя — сначала уберите их в «Назначить пользователей».",
+    "delete_role_assigned_blocked_one": "Эта роль ещё есть у {{count}} пользователя, сервер откажет в удалении. Сначала уберите его в «Назначить пользователей».",
+    "delete_role_assigned_blocked_few": "Эта роль ещё есть у {{count}} пользователей, сервер откажет в удалении. Сначала уберите их в «Назначить пользователей».",
+    "delete_role_assigned_blocked_many": "Эта роль ещё есть у {{count}} пользователей, сервер откажет в удалении. Сначала уберите их в «Назначить пользователей».",
+    "delete_role_assigned_blocked_other": "Эта роль ещё есть у {{count}} пользователя, сервер откажет в удалении. Сначала уберите их в «Назначить пользователей».",
+    "delete_role": "Удалить роль",
+    "new_tenant_desc": "Создайте отдельное пространство арендатора вместе с его первым администратором.",
+    "tenant_section_info": "Арендатор",
+    "tenant_section_info_desc": "После окончания срока учётные записи арендатора не смогут войти, а запросы по его API-ключам будут отклоняться. Продлить можно в любой момент.",
+    "tenant_name_hint": "Отображается в списке арендаторов и в переключателе.",
+    "tenant_expires_hint": "В это время срок арендатора истечёт автоматически.",
+    "tenant_section_admin": "Первый администратор",
+    "tenant_section_admin_desc": "Станет администратором этого арендатора. При первом входе нужно будет сменить пароль.",
+    "edit_tenant_desc": "Идентификатор {{slug}} изменить нельзя; остальное вступает в силу сразу после сохранения.",
+    "save_changes": "Сохранить изменения",
+    "tenant_status_section_desc": "И приостановка, и отключение сразу останавливают арендатора; данные сохраняются.",
+    "tenant_status_active_desc": "Учётные записи входят, API-ключи работают как обычно.",
+    "tenant_status_suspended_desc": "Временная остановка, например до продления.",
+    "tenant_status_disabled_desc": "Долгосрочное отключение для неиспользуемых арендаторов.",
+    "tenant_status_revoke_warning": "После сохранения все учётные записи арендатора сразу выйдут из системы, а запросы по его API-ключам будут отклоняться.",
+    "tenant_section_sessions": "Время жизни сеанса",
+    "tenant_section_sessions_desc": "Истёкший токен доступа панель продлевает сама; если «Оставаться в системе» прошло без активности, нужно войти снова. Вход с «Запомнить меня» длится не меньше 30 дней.",
+    "access_token_ttl": "Время жизни токена доступа (секунды)",
+    "refresh_token_ttl": "Оставаться в системе (секунды)",
+    "access_token_ttl_short": "Время жизни токена доступа",
+    "refresh_token_ttl_short": "Оставаться в системе",
+    "ttl_equals": "= {{value}}",
+    "ttl_about": "≈ {{value}}",
+    "ttl_range": "допустимо от {{min}} до {{max}}",
+    "system_tenant_hint": "Системный арендатор — это арендатор администраторов платформы; его нельзя изменить, продлить или отключить.",
+    "created_at": "Создан",
+    "updated_at": "Обновлён",
+    "renew_tenant_desc": "Срок «{{name}}» сейчас истекает {{time}}.",
+    "renew_tenant_desc_never": "Для «{{name}}» срок не задан.",
+    "renew_quick": "Продлить на",
+    "renew_plus_1_month": "1 месяц",
+    "renew_plus_3_months": "3 месяца",
+    "renew_plus_1_year": "1 год",
+    "renew_in_past_warning": "Это время уже прошло: после сохранения срок арендатора сразу истечёт и никто из него не сможет войти.",
+    "disable_tenant_title": "Отключить арендатора «{{name}}»?",
+    "disable_tenant_lead": "Данные сохранятся, позже арендатора можно восстановить.",
+    "disable_tenant_consequence_sessions": "Все учётные записи арендатора сразу выйдут из системы и не смогут войти снова.",
+    "disable_tenant_consequence_api": "Запросы по API-ключам этого арендатора будут отклоняться.",
+    "disable_tenant_consequence_restore": "Чтобы восстановить, откройте «Изменить» и верните статус «Активен».",
+    "disable_tenant": "Отключить арендатора",
+    "menu_type_desc": {
+      "directory": "Группирует страницы; его путь — префикс для вложенных страниц.",
+      "menu": "Страница в боковом меню с фронтенд-компонентом.",
+      "button": "Право на действие внутри страницы; в навигации не показывается.",
+      "embed": "Открывает внешний адрес внутри панели во встроенном фрейме.",
+      "link": "Открывает внешний адрес в новом окне."
+    },
+    "menu_create_desc": "После сохранения пользователи с нужным правом увидят его в навигации.",
+    "menu_edit_desc": "Изменения {{code}} появятся в навигации у всех сразу после сохранения.",
+    "menu_create_submit": "Создать меню",
+    "menu_section_basic": "Основное",
+    "menu_section_basic_desc": "Что это, куда вложено и как называется.",
+    "menu_type_locked": "Это встроенное меню, его тип изменить нельзя.",
+    "menu_code_hint": "Уникальный идентификатор, после создания не меняется, например custom.feature.",
+    "menu_code_locked": "Код меню после создания не меняется.",
+    "menu_parent_hint": "Родителем может быть только каталог или страница; оставьте пустым для верхнего уровня.",
+    "menu_label_key_hint": "Ключ перевода названия, например shell.nav_users; без перевода показывается «Заголовок».",
+    "menu_title_hint": "Показывается, если у ключа нет перевода.",
+    "menu_icon_hint": "Показывается перед названием меню.",
+    "menu_section_route": "Маршрут и компонент",
+    "menu_section_route_desc": "Куда оно ведёт пользователя.",
+    "menu_path_hint_directory": "Общий префикс вложенных страниц, начинается с /, например /runtime.",
+    "menu_path_hint_nested": "Начинается с / и находится внутри {{prefix}} родительского каталога.",
+    "menu_path_hint": "Адрес внутри панели, начинается с /.",
+    "menu_component_hint": "Зарегистрированное имя страницы, например users; для каталогов — Layout.",
+    "menu_link_hint_embed": "Адрес, открываемый во встроенном фрейме внутри панели.",
+    "menu_link_hint_external": "Адрес, который открывается в новом окне по клику.",
+    "menu_button_no_route": "Кнопка — это право на действие внутри страницы, у неё нет маршрута и компонента.",
+    "menu_section_access": "Доступ и отображение",
+    "menu_section_access_desc": "Кто его видит, где оно в списке и показывается ли.",
+    "menu_permission_hint": "Видно только пользователям с этим правом. Это должен быть существующий код права; оставьте пустым, чтобы видели все.",
+    "menu_sort_hint": "Меньшее число — выше среди соседей (0–10000).",
+    "menu_badge_hint": "Короткая метка рядом с названием, например New.",
+    "menu_enabled_hint": "Выключенное меню пропадает из навигации, а прямой переход по его адресу запрещается.",
+    "hide_menu_hint": "Не показывается в боковом меню, но страница работает и открывается по адресу — удобно для страниц деталей.",
+    "menu_not_visible_hint": "Скрывает его и всё вложенное из навигации; адрес встроенной страницы тоже перестаёт работать.",
+    "delete_menu_title": "Удалить меню «{{name}}»?",
+    "delete_menu_consequence_nav": "Меню исчезнет из навигации у всех.",
+    "delete_menu_consequence_permissions": "Права, уже выданные ролям, не меняются; чтобы их отозвать, измените роли.",
+    "delete_menu": "Удалить меню",
+    "delete_menu_has_children_one": "У него ещё {{count}} вложенный пункт, поэтому сервер откажет в удалении. Сначала удалите или перенесите его.",
+    "delete_menu_has_children_few": "У него ещё {{count}} вложенных пункта, поэтому сервер откажет в удалении. Сначала удалите или перенесите их.",
+    "delete_menu_has_children_many": "У него ещё {{count}} вложенных пунктов, поэтому сервер откажет в удалении. Сначала удалите или перенесите их.",
+    "delete_menu_has_children_other": "У него ещё {{count}} вложенного пункта, поэтому сервер откажет в удалении. Сначала удалите или перенесите их.",
+    "delete_audit_log_title": "Удалить эту запись аудита?",
+    "delete_audit_log_consequence": "Это действие больше нельзя будет отследить по журналу аудита.",
+    "delete_audit_log_button": "Удалить запись",
+    "clear_audit_logs_title": "Очистить журнал аудита?",
+    "clear_audit_logs_lead": "Это действие нельзя отменить.",
+    "audit_log_count_one": "{{count}} запись аудита",
+    "audit_log_count_few": "{{count}} записи аудита",
+    "audit_log_count_many": "{{count}} записей аудита",
+    "audit_log_count_other": "{{count}} записи аудита",
+    "audit_scope_all_tenants": "Все арендаторы",
+    "audit_scope_current_tenant": "Текущий арендатор",
+    "clear_audit_logs_consequence_all_tenants": "У вас есть доступ к аудиту платформы, поэтому удалятся записи всех арендаторов, а не только текущего.",
+    "clear_audit_logs_consequence_tenant": "Все записи аудита текущего арендатора удаляются навсегда.",
+    "clear_audit_logs_consequence_trace": "Больше нельзя будет узнать, кто и когда выполнил эти действия.",
+    "clear_audit_logs_phrase": "очистить"
   },
   "apikey_lookup": {
     "available_models": "Model Plaza",
@@ -2903,7 +3268,6 @@
     "default_key": "Default",
     "keep_one_key": "Keep at least one key",
     "key_name": "Key name",
-    "key_name_duplicate": "Key name already exists. Choose another.",
     "key_name_placeholder": "e.g. Claude Desktop / Production",
     "key_name_required": "Enter a key name",
     "manage_keys": "Manage API Keys",
@@ -2916,9 +3280,7 @@
     "secret_once_warning": "You won't be able to view the plaintext key again after leaving. Copy and save it now.",
     "set_default": "Set as default",
     "confirm_delete_title": "Delete API key?",
-    "confirm_delete_desc": "This cannot be undone. Requests using this key will stop working.",
     "confirm_delete": "Delete",
-    "deleting": "Deleting…",
     "add_account": "Add account",
     "switch_account": "Switch account",
     "current_account": "Current account",
@@ -2960,7 +3322,15 @@
     "landing_console_kpi_tokens": "Токены",
     "landing_console_kpi_cost": "Стоимость",
     "landing_providers_eyebrow": "Подключено",
-    "landing_feature_gateway_diagram": "Ваше приложение"
+    "landing_feature_gateway_diagram": "Ваше приложение",
+    "change_password_desc": "При следующем входе используйте новый пароль.",
+    "change_password_forced_hint": "Для безопасности аккаунта сначала задайте новый пароль (обязательно при первом входе или после сброса администратором). После сохранения можно продолжить.",
+    "confirm_new_password": "Повторите новый пароль",
+    "save_password": "Сохранить пароль",
+    "keep_one_key_desc": "У аккаунта должен остаться хотя бы один ключ, поэтому последний удалить нельзя. Сначала создайте другой ключ.",
+    "delete_key_lead": "Это действие нельзя отменить.",
+    "delete_key_consequence_requests": "Запросы с этим ключом сразу начнут завершаться ошибкой.",
+    "delete_key_failed": "Не удалось удалить ключ. Попробуйте позже."
   },
   "content_moderation": {
     "title": "Модерация контента",
@@ -3022,7 +3392,6 @@
     "profile_deleted": "Профиль модерации удалён",
     "profile_delete_failed": "Не удалось удалить профиль модерации",
     "profiles_load_failed": "Не удалось загрузить профили модерации",
-    "delete_description": "Удалить {{name}}? Сервер отклонит удаление, пока существует {{count}} привязок.",
     "delete_confirm": "Удалить профиль",
     "editor_description": "Профили изолированы по tenant. Настройте стратегию здесь, затем включите блокировку до запроса в таблице профилей.",
     "fail_open_notice": "Таймауты, ответы 5xx и неверные ответы API модерации пропускают запрос. Для режима только по словам ключ не нужен.",
@@ -3041,16 +3410,6 @@
     "api_key_configured": "Настроено: {{masked}}",
     "api_key_not_configured": "API-ключ не настроен",
     "clear_api_key": "Удалить сохранённый API-ключ",
-    "validation_name": "Укажите название профиля",
-    "validation_timeout": "Таймаут должен быть целым числом от 1 до 30000",
-    "validation_status": "HTTP-статус должен быть целым числом от 400 до 599",
-    "validation_base_url_required": "Укажите Base URL модерации",
-    "validation_base_url_invalid": "Base URL модерации должен быть абсолютным HTTP- или HTTPS-адресом",
-    "validation_model": "Укажите модель модерации",
-    "validation_thresholds": "Используйте category=value со значением от 0 до 1",
-    "validation_api_key": "Для этой стратегии проверки требуется API-ключ модерации",
-    "validation_block_message": "Укажите сообщение блокировки",
-    "validation_keywords": "Добавьте хотя бы одно запрещённое слово для этой стратегии",
     "channels_title": "Привязка каналов",
     "channels_description": "Выберите каналы для {{name}}. Данные загружаются с сервера постранично.",
     "tab_auth_files": "AI-аккаунты",
@@ -3093,7 +3452,6 @@
     "tag_bind_scanning": "Поиск совпадений...",
     "tag_bind_hint": "Привязываются только текущие совпадения. Новые каналы с этими тегами не привязываются автоматически.",
     "tag_bind_title": "Привязать совпавшие каналы?",
-    "tag_bind_confirm_description": "Теги: {{tags}}. Режим: {{mode}}. Совпало каналов: {{count}}; будет обновлено привязок: {{changeCount}}.",
     "tag_bind_rebind_warning": "К другому профилю уже привязано: {{count}}; эти привязки будут заменены.",
     "tag_bind_confirm": "Привязать совпавшие каналы",
     "tag_bind_saved": "Сохранено привязок каналов: {{count}}",
@@ -3172,8 +3530,6 @@
     "safety_safe": "Безопасно",
     "safety_controversial": "Спорно",
     "safety_unsafe": "Небезопасно",
-    "validation_input_limit": "Символов за проверку: целое число от 128 до 100000",
-    "validation_max_chunks": "Максимум фрагментов: целое число от 1 до 32",
     "scanner": {
       "violent": "Насилие",
       "non_violent_illegal_acts": "Ненасильственные правонарушения",
@@ -3195,6 +3551,75 @@
       "politically_sensitive_topics": "Политически чувствительные темы.",
       "copyright_violation": "Контент, нарушающий авторские права.",
       "jailbreak": "Инъекция промпта или попытки обойти собственные правила безопасности модели."
+    },
+    "rebind_existing_unknown": "Другой профиль",
+    "rebind_consequence": "Дальше запросы проверяются по «{{name}}», прежняя привязка заменяется.",
+    "delete_profile_title": "Удалить профиль модерации «{{name}}»?",
+    "delete_lead": "Это действие нельзя отменить.",
+    "delete_consequence_settings": "Вместе с ним удаляются ключевые слова, пороги и API-ключ.",
+    "delete_blocked_bindings_one": "К нему ещё привязан {{count}} канал, сервер откажет в удалении. Сначала отвяжите его в «Управлении каналами».",
+    "delete_blocked_bindings_few": "К нему ещё привязано {{count}} канала, сервер откажет в удалении. Сначала отвяжите их в «Управлении каналами».",
+    "delete_blocked_bindings_many": "К нему ещё привязано {{count}} каналов, сервер откажет в удалении. Сначала отвяжите их в «Управлении каналами».",
+    "delete_blocked_bindings_other": "К нему ещё привязано {{count}} канала, сервер откажет в удалении. Сначала отвяжите их в «Управлении каналами».",
+    "tag_bind_lead": "Привязать каналы с этими метками к «{{name}}».",
+    "tag_bind_consequence_count_one": "Найден {{count}} канал; привязок к изменению: {{changeCount}}.",
+    "tag_bind_consequence_count_few": "Найдено {{count}} канала; привязок к изменению: {{changeCount}}.",
+    "tag_bind_consequence_count_many": "Найдено {{count}} каналов; привязок к изменению: {{changeCount}}.",
+    "tag_bind_consequence_count_other": "Найдено {{count}} канала; привязок к изменению: {{changeCount}}.",
+    "channel_count_one": "{{count}} канал",
+    "channel_count_few": "{{count}} канала",
+    "channel_count_many": "{{count}} каналов",
+    "channel_count_other": "{{count}} канала",
+    "rebind_from": "{{channel}} · сейчас «{{name}}»",
+    "rebind_more": "и ещё {{count}}",
+    "editor_section_basic": "Основное",
+    "editor_section_basic_desc": "Название профиля и сервис, куда уходят запросы модерации.",
+    "backend_openai_moderations_desc": "Вызывает API модерации OpenAI и сравнивает оценку каждой категории с порогом.",
+    "backend_qwen3guard_desc": "Собственная модель-страж Qwen3Guard, решает по категориям риска.",
+    "editor_section_strategy_desc": "Проверять ключевые слова, вызывать сервис модерации или и то и другое.",
+    "keyword_mode_api_only_desc": "Решает только сервис модерации.",
+    "keyword_mode_keyword_only_desc": "Только совпадение с ключевыми словами; сервис и API-ключ не нужны.",
+    "keyword_mode_keyword_and_api_desc": "Сначала ключевые слова; сервис вызывается, только если совпадений нет.",
+    "editor_section_service": "Сервис модерации",
+    "editor_section_service_desc": "Куда уходят запросы модерации, какая модель и учётные данные.",
+    "editor_section_service_off": "При проверке только по ключевым словам сервис не вызывается, раздел не действует.",
+    "timeout_hint": "1–30000 мс; при тайм-ауте запрос пропускается.",
+    "clear_api_key_hint": "При сохранении сохранённый ключ удаляется; при необходимости добавьте его позже.",
+    "editor_section_block": "Ответ при блокировке",
+    "editor_section_block_desc": "Код состояния и сообщение, которые получает клиент, когда запрос заблокирован.",
+    "guard_policy_section": "Вердикты и разбиение",
+    "controversial_action_elevated_only_desc": "Спорный контент блокируется, только если попадает в категорию высокого риска ниже.",
+    "controversial_action_allow_desc": "Спорный контент всегда пропускается.",
+    "controversial_action_block_desc": "Спорный контент всегда блокируется; ложных срабатываний станет больше.",
+    "threshold_category_desc": {
+      "harassment": "Контент, который унижает, запугивает или оскорбляет человека или группу.",
+      "harassment_threatening": "Травля с угрозами насилия или серьёзного вреда.",
+      "hate": "Нападки или унижение людей по защищённым признакам: раса, религия, пол, ориентация, инвалидность, национальность.",
+      "hate_threatening": "Ненавистнический контент с угрозами насилия или серьёзного вреда защищённой группе.",
+      "illicit": "Инструкции или практическая помощь в совершении ненасильственных правонарушений.",
+      "illicit_violent": "Инструкции или практическая помощь в правонарушениях с насилием или оружием.",
+      "self_harm": "Пропаганда, поощрение или изображение самоповреждения, включая суицид и расстройства пищевого поведения.",
+      "self_harm_intent": "Говорящий заявляет о намерении причинить себе вред или выдаёт его.",
+      "self_harm_instructions": "Поощрение самоповреждения или инструкции и способы его совершения.",
+      "sexual": "Контент, призванный возбуждать, описывающий сексуальные действия или рекламирующий сексуальные услуги (кроме сексуального просвещения).",
+      "sexual_minors": "Сексуальный контент с участием лиц младше 18 лет.",
+      "violence": "Изображение смерти, насилия или телесных повреждений.",
+      "violence_graphic": "Детальное или натуралистичное изображение смерти, насилия или телесных повреждений."
+    },
+    "threshold_category": {
+      "harassment": "Травля",
+      "harassment_threatening": "Травля с угрозами",
+      "hate": "Ненависть",
+      "hate_threatening": "Ненависть с угрозами",
+      "illicit": "Противоправные действия",
+      "illicit_violent": "Противоправные действия с насилием",
+      "self_harm": "Самоповреждение",
+      "self_harm_intent": "Намерение самоповреждения",
+      "self_harm_instructions": "Инструкции по самоповреждению",
+      "sexual": "Сексуальный контент",
+      "sexual_minors": "Сексуальный контент с несовершеннолетними",
+      "violence": "Насилие",
+      "violence_graphic": "Натуралистичное насилие"
     }
   },
   "ip_access": {
@@ -3243,7 +3668,6 @@
     "never_expires": "Never",
     "add_rule": "Add rule",
     "delete_rule": "Delete rule",
-    "delete_rule_confirm": "Delete the rule for {{cidr}}? The address immediately returns to the default policy.",
     "rule_created": "Rule created",
     "rule_deleted": "Rule deleted",
     "no_rules": "No IP rules yet",
@@ -3262,7 +3686,6 @@
     "duration_6h": "6 hours",
     "duration_24h": "24 hours",
     "duration_7d": "7 days",
-    "cidr_required": "Enter an address or CIDR",
     "section_lockdown": "Allow-list only mode",
     "section_lockdown_desc": "When on, only allow-listed addresses may reach the management surface.",
     "lockdown_label": "Only allow-listed addresses may connect",
@@ -3389,13 +3812,50 @@
     "retention_days": "Attempt retention (days)",
     "retention_days_hint": "Attempts older than this are purged. Capped at 365 days.",
     "lockdown_confirm_title": "Enable allow-list only mode?",
-    "lockdown_confirm_body": "Any address not on the allow list loses access to the management surface immediately. Your address ({{cidr}}) is listed, but check that your colleagues' addresses are too — otherwise they will be locked out.",
     "lockdown_confirm_ok": "Enable",
     "portal_recent_logins": "Recent sign-ins",
     "portal_recent_logins_hint": "Sign-ins to your account over the last 30 days. If you see one that was not you, change your password immediately.",
     "portal_no_logins": "No sign-ins in the last 30 days",
     "chain_title": "Forwarding chain for this request (rightmost is the hop talking to this service)",
-    "chain_hint": "Every hop must be declared before resolution reaches the real client on the left. Currently resolving to: {{client}}. A loopback result means one hop is still undeclared."
+    "chain_hint": "Every hop must be declared before resolution reaches the real client on the left. Currently resolving to: {{client}}. A loopback result means one hop is still undeclared.",
+    "rule_form_desc": "Правило действует сразу после сохранения. Если адрес попадает и под разрешение, и под запрет, побеждает разрешение.",
+    "cidr_preview_single_v4": "Один IPv4-адрес, сохранится как {{cidr}}",
+    "cidr_preview_single_v6": "Один IPv6-адрес, сохранится как {{cidr}}",
+    "cidr_preview_range_v4_one": "Диапазон IPv4: {{formatted}} адрес",
+    "cidr_preview_range_v4_few": "Диапазон IPv4: {{formatted}} адреса",
+    "cidr_preview_range_v4_many": "Диапазон IPv4: {{formatted}} адресов",
+    "cidr_preview_range_v4_other": "Диапазон IPv4: {{formatted}} адреса",
+    "cidr_preview_range_v6": "Диапазон IPv6 /{{prefix}}",
+    "expires_preview": "Истекает {{time}}",
+    "expires_preview_never": "Без срока действия",
+    "edit_rule_desc": "Можно изменить срок и заметку; адрес и действие не меняются.",
+    "save_rule": "Сохранить правило",
+    "delete_rule_title": "Удалить правило для {{cidr}}?",
+    "delete_rule_lead": "Это нельзя отменить, но правило можно добавить заново.",
+    "delete_rule_consequence_default": "Для адреса сразу начнёт действовать политика по умолчанию.",
+    "delete_rule_consequence_deny": "Его запросы больше не отклоняются этим правилом.",
+    "delete_rule_consequence_allow": "Он больше не освобождён от ограничения частоты и может быть заблокирован автоматически.",
+    "lockdown_confirm_lead": "Доступ к панели останется только у адресов из белого списка. Включится после нажатия «Сохранить» внизу страницы.",
+    "lockdown_consequence_others": "Адреса не из белого списка сразу получат отказ — включая других администраторов.",
+    "lockdown_consequence_self": "Ваш текущий адрес ({{cidr}}) в белом списке, вас не заблокирует.",
+    "lockdown_consequence_self_unknown": "Ваш текущий адрес в белом списке, вас не заблокирует.",
+    "lockdown_consequence_colleagues": "Сначала убедитесь, что адреса коллег тоже в списке.",
+    "bulk_delete_title_one": "Удалить {{count}} выбранное правило?",
+    "bulk_delete_title_few": "Удалить {{count}} выбранных правила?",
+    "bulk_delete_title_many": "Удалить {{count}} выбранных правил?",
+    "bulk_delete_title_other": "Удалить {{count}} выбранных правил?",
+    "bulk_delete_consequence_deny_one": "{{count}} запрещающее правило: запросы с этих адресов больше не отклоняются.",
+    "bulk_delete_consequence_deny_few": "{{count}} запрещающих правила: запросы с этих адресов больше не отклоняются.",
+    "bulk_delete_consequence_deny_many": "{{count}} запрещающих правил: запросы с этих адресов больше не отклоняются.",
+    "bulk_delete_consequence_deny_other": "{{count}} запрещающих правил: запросы с этих адресов больше не отклоняются.",
+    "bulk_delete_consequence_allow_one": "{{count}} разрешающее правило: адреса больше не освобождены от ограничения частоты и могут быть заблокированы автоматически.",
+    "bulk_delete_consequence_allow_few": "{{count}} разрешающих правила: адреса больше не освобождены от ограничения частоты и могут быть заблокированы автоматически.",
+    "bulk_delete_consequence_allow_many": "{{count}} разрешающих правил: адреса больше не освобождены от ограничения частоты и могут быть заблокированы автоматически.",
+    "bulk_delete_consequence_allow_other": "{{count}} разрешающих правил: адреса больше не освобождены от ограничения частоты и могут быть заблокированы автоматически.",
+    "bulk_delete_more_one": "и ещё {{count}}",
+    "bulk_delete_more_few": "и ещё {{count}}",
+    "bulk_delete_more_many": "и ещё {{count}}",
+    "bulk_delete_more_other": "и ещё {{count}}"
   },
   "add_account": {
     "title": "Добавить AI-аккаунт",
@@ -3677,5 +4137,462 @@
         "failed": "Импорт не удался. Попробуйте ещё раз."
       }
     }
+  },
+  "config_ui": {
+    "nav_label": "Разделы настроек",
+    "search_label": "Поиск настроек",
+    "search_placeholder": "Поиск: прокси, логи, порт…",
+    "search_clear": "Очистить поиск",
+    "search_empty_title": "Нет настроек по запросу «{{query}}»",
+    "search_empty_desc": "Попробуйте другое слово или найдите нужное в исходном config.yaml.",
+    "section_modified": "есть несохранённые изменения",
+    "modified_count_one": "{{count}} изменение",
+    "modified_count_few": "{{count}} изменения",
+    "modified_count_many": "{{count}} изменений",
+    "modified_count_other": "{{count}} изменений",
+    "unsaved_count_one": "{{count}} несохранённое изменение",
+    "unsaved_count_few": "{{count}} несохранённых изменения",
+    "unsaved_count_many": "{{count}} несохранённых изменений",
+    "unsaved_count_other": "{{count}} несохранённых изменений",
+    "save_warning_lead": "После сохранения изменения сразу применятся к работающему сервису:",
+    "on": "Вкл",
+    "off": "Выкл",
+    "empty_value": "пусто",
+    "units": {
+      "seconds": "с",
+      "minutes": "мин",
+      "days": "дн.",
+      "mb": "МБ"
+    },
+    "badges": {
+      "restart": "Перезапуск",
+      "security": "Безопасность",
+      "cost": "Нагрузка"
+    },
+    "groups": {
+      "basics": "Основное",
+      "behavior": "Работа",
+      "data": "Логи и данные",
+      "advanced": "Дополнительно"
+    },
+    "profile": {
+      "desc": "Для хоста 2 vCPU / 2 ГБ: отключает затратное логирование и ограничивает хранение. Маршрутизация, квоты, стоимость и задержки не затрагиваются.",
+      "preview_one": "Показать {{count}} изменяемую настройку",
+      "preview_few": "Показать {{count}} изменяемые настройки",
+      "preview_many": "Показать {{count}} изменяемых настроек",
+      "preview_other": "Показать {{count}} изменяемых настроек"
+    },
+    "sections": {
+      "server": {
+        "title": "Сервер",
+        "desc": "Где сервис принимает запросы и где хранятся учётные данные аккаунтов."
+      },
+      "remote": {
+        "title": "Удалённое управление",
+        "desc": "Кто может обращаться к API управления и откуда обновляется панель."
+      },
+      "cors": {
+        "title": "Кросс-доменный доступ",
+        "desc": "Какие сайты и расширения браузера могут вызывать API с другого origin."
+      },
+      "runtime": {
+        "title": "Режим и обновления",
+        "desc": "Режим высокой нагрузки и источник автообновлений."
+      },
+      "network": {
+        "title": "Сеть и повторы",
+        "desc": "Как подключаться к вышестоящим AI-сервисам и как повторять запросы при сбоях."
+      },
+      "access": {
+        "title": "Правила доступа",
+        "desc": "Префиксы моделей и доступ к WebSocket API."
+      },
+      "streaming": {
+        "title": "Потоковая передача",
+        "desc": "Keep-alive для долгих соединений и безопасные повторы до начала вывода."
+      },
+      "quota": {
+        "title": "Когда квота исчерпана",
+        "desc": "Что пробовать автоматически, когда квота аккаунта закончилась."
+      },
+      "logging": {
+        "title": "Логи",
+        "desc": "Что и куда записывать. Чем больше включено, тем выше нагрузка на CPU и диск."
+      },
+      "retention": {
+        "title": "Хранение и очистка",
+        "desc": "Сколько хранить детали запросов и тела, и сколько места они могут занять."
+      },
+      "monitoring": {
+        "title": "Мониторинг системы",
+        "desc": "Кэш и живые соединения страницы мониторинга."
+      },
+      "payload": {
+        "title": "Правила тела запроса",
+        "desc": "Добавление, замена или удаление параметров в теле запроса по моделям."
+      },
+      "kimi": {
+        "title": "Заголовки Kimi",
+        "desc": "Идентификация клиента для Kimi; отображается как источник в консоли Kimi. Пусто — значения Kimi CLI."
+      },
+      "codex": {
+        "title": "Допуск клиентов Codex",
+        "desc": "Какие ещё клиенты принимают аккаунты, разрешающие только официальный клиент Codex. Применяется сразу."
+      }
+    },
+    "fields": {
+      "host": {
+        "label": "Адрес прослушивания",
+        "desc": "Пусто — все интерфейсы (IPv4 и IPv6); 127.0.0.1 — только эта машина."
+      },
+      "port": {
+        "label": "Порт",
+        "desc": "Общий для API и этой панели. По умолчанию 8317."
+      },
+      "auth_dir": {
+        "label": "Каталог учётных данных",
+        "desc": "Где хранятся файлы аккаунтов; ~ — домашний каталог. В Docker приоритет у AUTH_PATH."
+      },
+      "tls_enable": {
+        "label": "Отдавать HTTPS напрямую",
+        "desc": "Оставьте выключенным, если HTTPS уже обеспечивает обратный прокси (например, nginx)."
+      },
+      "tls_cert": {
+        "label": "Файл сертификата",
+        "desc": "Путь к сертификату PEM для HTTPS."
+      },
+      "tls_key": {
+        "label": "Файл закрытого ключа",
+        "desc": "Путь к закрытому ключу сертификата."
+      },
+      "allow_remote": {
+        "label": "Разрешить удалённое управление",
+        "desc": "Если выключено, API управления доступен только с этой машины (ключ всё равно нужен)."
+      },
+      "secret_key": {
+        "label": "Ключ управления",
+        "desc": "Для удалённых вызовов API управления — храните надёжно. Открытый текст хешируется при запуске."
+      },
+      "disable_panel": {
+        "label": "Отключить встроенную панель",
+        "desc": "Панель больше не загружается и не отдаётся; API управления продолжает работать."
+      },
+      "panel_repo": {
+        "label": "Репозиторий панели",
+        "desc": "GitHub-репозиторий с файлами панели: URL или owner/repo."
+      },
+      "cors_origins": {
+        "desc": "По одному origin в строке. Нужно только для вызовов из браузера с другого origin.",
+        "warning": "Расширения Chrome по умолчанию не разрешены. В продакшене укажите точный chrome-extension://<id>; при разработке chrome-extension://* разрешает любое расширение на ваш риск."
+      },
+      "commercial": {
+        "label": "Режим высокой нагрузки",
+        "desc": "Отключает затратное промежуточное ПО и снижает память на запрос; полная диагностика запросов при этом недоступна."
+      },
+      "update_channel": {
+        "options": {
+          "main": {
+            "label": "Стабильная (main)",
+            "desc": "Рекомендуется. Только выпущенные версии."
+          },
+          "dev": {
+            "label": "Разработка (dev)",
+            "desc": "Новые функции раньше; возможна нестабильность."
+          }
+        }
+      },
+      "proxy_url": {
+        "label": "Глобальный исходящий прокси",
+        "desc": "Запросы к вышестоящим сервисам идут через него (прокси аккаунта важнее); обновление токенов и вход OAuth тоже. http, https, socks5; пусто — напрямую."
+      },
+      "prefer_ipv4": {
+        "label": "Только IPv4 для upstream",
+        "desc": "Все исходящие соединения через IPv4. Полезно, если IPv6 идёт через плохой туннель."
+      },
+      "request_retry": {
+        "label": "Число повторов",
+        "desc": "Сколько раз повторять при ответах 403, 408, 500, 502, 503, 504. По умолчанию 3."
+      },
+      "max_retry_interval": {
+        "label": "Предел ожидания охлаждения",
+        "desc": "Максимальное ожидание аккаунта на охлаждении перед повтором. По умолчанию 30 с."
+      },
+      "force_prefix": {
+        "label": "Требовать префикс модели",
+        "desc": "Запросы без префикса используют только аккаунты без префикса (кроме случая, когда префикс равен имени модели)."
+      },
+      "ws_auth": {
+        "label": "Аутентификация WebSocket",
+        "desc": "Подключение к /v1/ws требует действительного API-ключа."
+      },
+      "keepalive": {
+        "label": "Keep-alive потока",
+        "desc": "Как часто потоковые ответы шлют keep-alive. По умолчанию 15; меньше 0 — выключено."
+      },
+      "bootstrap_retries": {
+        "label": "Повторы до первого байта",
+        "desc": "Сколько раз можно безопасно повторить ошибку до отправки данных клиенту. По умолчанию 1."
+      },
+      "nonstream_keepalive": {
+        "label": "Keep-alive без потока",
+        "desc": "Больше 0 — во время ожидания отправляются пустые строки, чтобы шлюз не обрывал запрос. 0 — выключено."
+      },
+      "switch_project": {
+        "label": "Переключать проект",
+        "desc": "При исчерпании квоты продолжать с другим проектом того же аккаунта."
+      },
+      "switch_preview": {
+        "label": "Переключать на preview-модель",
+        "desc": "При исчерпании квоты продолжать с соответствующей preview-моделью."
+      },
+      "request_log": {
+        "label": "Журнал запросов",
+        "desc": "Полное содержимое каждого запроса пишется в файлы логов. В продакшене держите выключенным."
+      },
+      "store_content": {
+        "label": "Хранить тела запросов и ответов",
+        "desc": "Полные входы и ответы для воспроизведения. Без этого метаданные, токены, стоимость, задержки и краткие ошибки всё равно сохраняются."
+      },
+      "log_to_file": {
+        "label": "Логи в файл",
+        "desc": "Логи приложения пишутся в ротируемые файлы, их можно скачать из панели."
+      },
+      "debug": {
+        "label": "Режим отладки",
+        "desc": "Подробные отладочные логи — выключите после диагностики."
+      },
+      "usage_stats": {
+        "label": "Статистика в памяти",
+        "desc": "Только агрегация в памяти; метаданные запросов и история квот сохраняются."
+      },
+      "log_size": {
+        "label": "Лимит файлов логов",
+        "desc": "Старые файлы удаляются сверх лимита. Рекомендуется 128, 0 — без ограничения."
+      },
+      "error_files": {
+        "label": "Файлов ошибок хранить",
+        "desc": "Сколько последних кратких файлов ошибок хранить. Рекомендуется 10."
+      },
+      "detail_retention": {
+        "label": "Хранить детали запросов",
+        "desc": "Детали нужны только для диагностики, по умолчанию 7 дней. Статистика хранится отдельно."
+      },
+      "body_retention": {
+        "label": "Хранить полные тела",
+        "desc": "Только для сохранённых тел. По умолчанию 3 дня; 0 — бессрочно. Не дольше, чем хранятся детали запросов."
+      },
+      "cleanup_enabled": {
+        "label": "Очистка деталей запросов",
+        "desc": "Удаляет старые детали партиями по возрасту, числу строк и размеру. Статистика не удаляется."
+      },
+      "cleanup_interval": {
+        "label": "Интервал очистки",
+        "desc": "Как часто запускается очистка. По умолчанию 60 минут; 1440 — раз в день."
+      },
+      "max_rows": {
+        "label": "Макс. строк деталей",
+        "desc": "Сверх лимита удаляются самые старые строки. Статистика не затрагивается."
+      },
+      "metadata_cap": {
+        "label": "Лимит таблицы деталей",
+        "desc": "Ограничение размера таблицы деталей с индексами (по возможности)."
+      },
+      "body_cap": {
+        "label": "Лимит хранения тел",
+        "desc": "Общий размер сохранённых тел; сверх лимита старые удаляются раньше. 0 — без ограничения."
+      },
+      "stats_cache": {
+        "label": "Кэш данных мониторинга",
+        "desc": "Сколько кэшировать затратные данные (размер БД, сканирование логов, задержки каналов). Минимум 10 с."
+      },
+      "ws_max_age": {
+        "label": "Ротация соединения мониторинга",
+        "desc": "Как часто пересоздаётся живое соединение мониторинга для плавной перезагрузки nginx. Минимум 60 с."
+      },
+      "kimi_user_agent": {
+        "label": "User-Agent",
+        "desc": "По умолчанию KimiCLI/1.10.6."
+      },
+      "kimi_platform": {
+        "label": "X-Msh-Platform",
+        "desc": "По умолчанию kimi_cli."
+      },
+      "kimi_version": {
+        "label": "X-Msh-Version",
+        "desc": "По умолчанию 1.10.6."
+      }
+    },
+    "errors": {
+      "required": "Обязательно",
+      "integer": "Введите целое число",
+      "non_negative": "Введите целое число не меньше 0",
+      "min": "Не меньше {{min}}",
+      "range": "Целое число от {{min}} до {{max}}",
+      "summary_one": "{{count}} настройку нужно исправить — она отмечена.",
+      "summary_few": "{{count}} настройки нужно исправить — они отмечены.",
+      "summary_many": "{{count}} настроек нужно исправить — они отмечены.",
+      "summary_other": "{{count}} настроек нужно исправить — они отмечены.",
+      "proxy_url": "Адрес прокси неполный или протокол не поддерживается"
+    },
+    "payload": {
+      "default": {
+        "title": "Дополнять параметры",
+        "desc": "Задаются, только если клиент их не передал."
+      },
+      "override": {
+        "title": "Принудительные параметры",
+        "desc": "Всегда заменяются этими значениями."
+      },
+      "filter": {
+        "title": "Удалять параметры",
+        "desc": "Эти пути удаляются из тела запроса."
+      },
+      "hint": "Имена моделей поддерживают шаблоны (например, gemini-*); пути параметров разделяются точкой."
+    }
+  },
+  "validation": {
+    "required": "Обязательное поле",
+    "format": "Неверный формат",
+    "integer": "Введите целое число",
+    "non_negative": "Введите целое число не меньше 0",
+    "min": "Не меньше {{min}}",
+    "max": "Не больше {{max}}",
+    "range": "Целое число от {{min}} до {{max}}",
+    "max_length": "Не более {{max}} символов",
+    "email": "Неверный адрес почты",
+    "url": "Введите полный адрес, например https://example.com",
+    "url_protocol": "Поддерживается только {{protocols}}",
+    "host": "Укажите домен, IPv4 или IPv6",
+    "port": "Порт — число от 1 до 65535",
+    "cidr": "Укажите IP или CIDR, например 203.0.113.0/24",
+    "json": "Некорректный JSON",
+    "proxy_port_required": "Для SOCKS5 нужен порт",
+    "proxy_username_required": "С паролем нужно указать и имя пользователя",
+    "summary_one": "{{count}} поле требует внимания",
+    "summary_few": "{{count}} поля требуют внимания",
+    "summary_many": "{{count}} полей требуют внимания",
+    "summary_other": "{{count}} полей требуют внимания",
+    "max_bytes": "Не более {{max}} байт (символ CJK — 3 байта)",
+    "username_invalid_charset": "Только буквы, цифры и . _ - @",
+    "username_too_long": "Не более 128 байт",
+    "display_name_too_long": "Не более 128 байт",
+    "password_too_short": "Не менее 12 символов",
+    "password_too_long": "Не более 72 байт",
+    "password_missing_upper": "Добавьте хотя бы одну заглавную букву",
+    "password_missing_lower": "Добавьте хотя бы одну строчную букву",
+    "password_missing_special": "Добавьте хотя бы один специальный символ (не букву и не цифру)",
+    "datetime": "Введите корректные дату и время, например 2030-01-01 09:00",
+    "datetime_future": "Должно быть позже текущего момента",
+    "price": "Цена не меньше 0, до 6 знаков после запятой",
+    "path_slash": "Должен начинаться с /",
+    "path_under_parent": "Должен находиться внутри пути родительского каталога {{prefix}}",
+    "no_spaces": "Без пробелов",
+    "duplicate_name": "Такое имя уже используется",
+    "exceeds_account_limit": "Не больше лимита аккаунта {{limit}}",
+    "password_mismatch": "Пароли не совпадают",
+    "decimal_range": "Введите число от {{min}} до {{max}}",
+    "api_key_cleared_required": "Этой стратегии нужен API-ключ: выключите очистку или перейдите на проверку только по ключевым словам"
+  },
+  "proxy_input": {
+    "scheme": "Протокол прокси",
+    "host": "Хост",
+    "port": "Порт",
+    "username": "Имя пользователя",
+    "password": "Пароль",
+    "paste_open": "Вставить адрес",
+    "paste_cancel": "Скрыть",
+    "paste_label": "Вставьте адрес прокси",
+    "paste_hint": "Вставьте или введите адрес целиком и нажмите Enter — он разложится по полям ниже.",
+    "paste_invalid": "Не удалось распознать адрес. Поддерживаются http, https и socks5.",
+    "preview": "Будет сохранён как",
+    "empty_means_direct": "Пусто — прямое подключение.",
+    "unrecognized_title": "Текущий адрес не распознан",
+    "unrecognized_desc": "Протокол не http / https / socks5 или адрес неполный. Заполните поля ниже, чтобы заменить его.",
+    "add": "Указать адрес прокси",
+    "remove": "Удалить"
+  },
+  "models_page": {
+    "section_basics": "Модель",
+    "section_basics_desc": "Клиенты вызывают её по ID; владелец определяет группу вендора.",
+    "section_pricing": "Тарификация",
+    "section_pricing_desc": "Для оценки стоимости в статистике, в USD.",
+    "model_id_reuse_hint": "При вводе показываются модели из библиотеки; выберите, чтобы скопировать описание и цены.",
+    "owner_hint": "Выберите владельца или введите нового.",
+    "enabled_hint": "Отключённые модели пропадают из списков; текущие запросы не затрагиваются.",
+    "delete_model_desc": "{{model}} будет удалена из списка конфигураций вместе с описанием и ценами. Уже записанная статистика сохранится.",
+    "owner_value_hint": "Значение в конфигурации моделей — строчными, без пробелов.",
+    "owner_label_hint": "Имя в списках выбора.",
+    "owner_enabled_hint": "Отключённый владелец пропадает из списка выбора; модели, где он указан, не затрагиваются."
+  },
+  "quota": {
+    "reset": {
+      "account_single_lead": "Будет обнулён только текущий расход аккаунта за период «{{period}}». Журналы запросов сохранятся.",
+      "key_single_lead": "Будет обнулён только текущий расход этого ключа за период «{{period}}»; квота аккаунта и журналы запросов не изменятся.",
+      "account_multiple_lead": "Отметьте периоды для сброса. Обнулится только выбранный расход; журналы запросов сохранятся.",
+      "key_multiple_lead": "Отметьте периоды для сброса. Обнулится только выбранный расход этого ключа; квота аккаунта и журналы запросов не изменятся.",
+      "option_usage": "Израсходовано {{used}} из {{limit}}",
+      "option_limit": "Лимит {{limit}}",
+      "subject_account": "Аккаунт",
+      "subject_key": "Ключ"
+    }
+  },
+  "apikey_usage": {
+    "key_storage_hint": "Ключ сохраняется в этом браузере, и при следующем открытии запрос выполнится автоматически."
+  },
+  "logs_page": {
+    "clear_server_logs_title": "Очистить журналы сервера?",
+    "clear_server_logs_lead": "Это действие нельзя отменить.",
+    "clear_consequence_files": "Текущий журнал очищается, старые ротированные файлы журналов удаляются.",
+    "clear_consequence_error_logs": "Файлы журналов ошибок не затрагиваются, их по-прежнему можно скачать на вкладке ошибок."
+  },
+  "request_logs": {
+    "clear_database_logs": "Очистить журналы в базе данных",
+    "clear_database_logs_title": "Очистить журналы в базе данных?",
+    "clear_database_logs_lead": "Отметьте, какие данные очистить. Это действие нельзя отменить.",
+    "clear_database_logs_confirm_button": "Очистить выбранное",
+    "clear_scope_title": "Все журналы запросов текущего арендатора",
+    "clear_scope_hint": "Текущие фильтры и период не учитываются",
+    "clear_consequence_records": "Записи запросов тоже удаляются: список, число записей, токены, доля успешных и затраты будут очищены.",
+    "clear_option_body": "Очистить тела запросов и ответов (рекомендуется)",
+    "clear_option_body_desc": "Удаляет сохранённые тела запросов и ответов — обычно они занимают больше всего места. Записи и статистика остаются.",
+    "clear_option_details": "Очистить подробности запросов",
+    "clear_option_details_desc": "Удаляет дополнительные подробности запросов, которые нужны для глубокого разбора.",
+    "clear_option_records": "Очистить записи запросов (высокий риск)",
+    "clear_option_records_desc": "Удаляет сами записи журнала. Исчезнут строки списка, число записей, токены, доля успешных и статистика затрат.",
+    "clear_consequence_content": "Отмеченные тела и подробности удаляются сразу и больше не будут видны в этих запросах; записи и статистика сохраняются."
+  },
+  "video_generation": {
+    "test_title": "Тестовая генерация видео",
+    "test_modal_desc": "Выберите модель и параметры, затем опишите сцену, чтобы попробовать сгенерировать ролик. Генерация асинхронная и обычно занимает 1–3 минуты.",
+    "test_shortcut": "⌘ / Ctrl + Enter — сгенерировать",
+    "test_submit": "Сгенерировать",
+    "test_running": "Генерация",
+    "test_running_hint": "Генерация видео обычно занимает 1–3 минуты; не закрывайте страницу",
+    "test_failed_generic": "Не удалось сгенерировать видео",
+    "text_to_video_title": "Текст в видео",
+    "image_to_video_title": "Изображение в видео",
+    "param_image_prompt_desc": "Опишите, как должно ожить исходное изображение: наезд камеры, движение объектов.",
+    "field_mode": "Режим",
+    "field_model": "Модель",
+    "field_prompt": "Промпт",
+    "field_prompt_placeholder": "например: волны на закате, камера медленно отъезжает",
+    "field_image_url": "URL исходного изображения",
+    "field_image_url_hint": "Изображение для первого кадра: URL или data URI.",
+    "field_duration": "Длительность (сек., до {{max}})",
+    "field_aspect_ratio": "Соотношение сторон",
+    "field_resolution": "Разрешение",
+    "result_open_original": "Открыть исходный ролик в новой вкладке",
+    "no_channel_hint": "У этого тенанта нет доступного аккаунта xAI, поэтому генерация видео недоступна. Сначала добавьте и включите аккаунт Grok в разделе «AI-аккаунты».",
+    "unavailable_suffix": "нет аккаунта"
+  },
+  "error_detail": {
+    "upstream_error": "Ответ с ошибкой от вышестоящего API",
+    "reconstructed_from_details": "Сводка ошибки восстановлена по подробностям запроса",
+    "historical_missing": "Для этого старого запроса ответ с ошибкой не сохранён",
+    "full_response": "Полный ответ",
+    "copy_response": "Скопировать полный ответ",
+    "no_content": "В этом старом журнале нет ответа с ошибкой, и восстановить причину по подробностям запроса не удалось. Новые неудачные запросы сохраняют подробности ошибки.",
+    "load_failed": "Не удалось загрузить",
+    "request_failed": "Запрос не выполнен"
   }
 }

@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { LoaderCircle, RefreshCw, ScrollText, Trash2 } from "lucide-react";
+import { RefreshCw, ScrollText, Trash2 } from "lucide-react";
 import { configApi, usageApi } from "@code-proxy/api-client";
 import type {
   ClearUsageLogsPayload,
@@ -14,9 +14,10 @@ import {
   formatUsageMetricTooltipNumber,
   isUsageMetricCompact,
 } from "@code-proxy/domain";
-import { Button, Checkbox, DataTable, HoverTooltip, MaskToggleButton, Modal, useSensitiveDataMasking, useToast } from "@code-proxy/ui";
+import { DataTable, HoverTooltip, MaskToggleButton, useSensitiveDataMasking, useToast } from "@code-proxy/ui";
 import { ErrorDetailModal, LogContentModal } from "@features/log-content-viewer";
 import { ModelTag } from "@features/model-tags";
+import { ClearDatabaseLogsDialog, DEFAULT_CLEAR_OPTIONS } from "./ClearDatabaseLogsDialog";
 import { RequestLogsFilters } from "./RequestLogsFilters";
 import type { SearchableCheckboxMultiSelectOption } from "@code-proxy/ui";
 import {
@@ -46,11 +47,6 @@ const DEFAULT_LOG_STATS = {
   total_tokens: 0,
   total_cost: 0,
   cache_rate: 0,
-};
-const DEFAULT_CLEAR_OPTIONS: ClearUsageLogsPayload = {
-  clear_body_content: true,
-  clear_detail_content: true,
-  clear_request_records: false,
 };
 
 const isRequestCancelled = (err: unknown, signal?: AbortSignal) =>
@@ -443,41 +439,6 @@ export function RequestLogsPage() {
     setConfirmClearOpen(true);
   }, []);
 
-  const handleClearBodyContentChange = useCallback((checked: boolean) => {
-    setClearOptions((prev) => {
-      if (prev.clear_request_records) return prev;
-      return { ...prev, clear_body_content: checked };
-    });
-  }, []);
-
-  const handleClearDetailContentChange = useCallback((checked: boolean) => {
-    setClearOptions((prev) => {
-      if (prev.clear_request_records) return prev;
-      return { ...prev, clear_detail_content: checked };
-    });
-  }, []);
-
-  const handleClearRequestRecordsChange = useCallback((checked: boolean) => {
-    setClearOptions((prev) =>
-      checked
-        ? {
-            ...prev,
-            clear_body_content: true,
-            clear_detail_content: true,
-            clear_request_records: true,
-          }
-        : {
-            ...prev,
-            clear_request_records: false,
-          },
-    );
-  }, []);
-
-  const canSubmitCleanup =
-    clearOptions.clear_body_content ||
-    clearOptions.clear_detail_content ||
-    clearOptions.clear_request_records;
-
   const handleClearDatabaseLogs = useCallback(async () => {
     setClearingLogs(true);
     try {
@@ -516,31 +477,31 @@ export function RequestLogsPage() {
               <ScrollText size={18} className="text-ink-2" aria-hidden="true" />
               {t("request_logs.heading")}
             </h2>
-            <div className="hidden min-[640px]:flex items-center gap-2 text-xs text-slate-500 dark:text-white/50">
-              <span className="text-slate-300 dark:text-white/15">|</span>
+            <div className="hidden min-[640px]:flex items-center gap-2 text-xs text-ink-3">
+              <span className="text-ink-4">|</span>
               <RequestLogsRecordsCount count={stats.total} />
-              <span className="text-slate-300 dark:text-white/15">|</span>
+              <span className="text-ink-4">|</span>
               <span>
                 {t("common.success_rate")}{" "}
-                <span className="font-mono tabular-nums text-slate-900 dark:text-white">
+                <span className="font-mono tabular-nums text-ink">
                   {stats.success_rate.toFixed(1)}%
                 </span>
               </span>
-              <span className="text-slate-300 dark:text-white/15">|</span>
+              <span className="text-ink-4">|</span>
               <span>
                 {t("request_logs.col_total_token")}{" "}
-                <span className="font-mono tabular-nums text-slate-900 dark:text-white">
+                <span className="font-mono tabular-nums text-ink">
                   <RequestLogUsageMetricValue value={stats.total_tokens} compact />
                 </span>
               </span>
-              <span className="text-slate-300 dark:text-white/15">|</span>
+              <span className="text-ink-4">|</span>
               <span>
                 {t("request_logs.col_cost")}{" "}
                 <span className="font-mono tabular-nums text-ink">
                   <RequestLogUsageMetricValue value={stats.total_cost} variant="currency" compact />
                 </span>
               </span>
-              <span className="text-slate-300 dark:text-white/15">|</span>
+              <span className="text-ink-4">|</span>
               <span>
                 {t("request_logs.cache_rate")}{" "}
                 <span className="font-mono tabular-nums text-ink">
@@ -635,8 +596,8 @@ export function RequestLogsPage() {
 
           {/* Loading overlay */}
           {loading ? (
-            <div className="absolute inset-0 z-10 flex items-center justify-center rounded-b-2xl bg-white/70 backdrop-blur-sm dark:bg-neutral-950/55">
-              <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-900/8 bg-white/85 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm dark:border-white/8 dark:bg-neutral-950/70 dark:text-white/75">
+            <div className="absolute inset-0 z-10 flex items-center justify-center rounded-b-2xl bg-surface/70 backdrop-blur-sm">
+              <div className="inline-flex items-center gap-2 rounded-2xl border border-line bg-elevated/90 px-3 py-2 text-sm font-medium text-ink-2 shadow-sm dark:shadow-none">
                 <span
                   className="h-4 w-4 rounded-full border-2 border-ink/15 border-t-ink motion-reduce:animate-none motion-safe:animate-spin"
                   aria-hidden="true"
@@ -673,97 +634,16 @@ export function RequestLogsPage() {
         model={errorModalModel}
         onClose={() => setErrorModalOpen(false)}
       />
-      <Modal
+      <ClearDatabaseLogsDialog
         open={confirmClearOpen}
-        title={t("request_logs.clear_database_logs")}
-        maxWidth="max-w-xl"
+        options={clearOptions}
+        busy={clearingLogs}
+        onOptionsChange={setClearOptions}
+        onConfirm={() => void handleClearDatabaseLogs()}
         onClose={() => {
           if (!clearingLogs) setConfirmClearOpen(false);
         }}
-        footer={
-          <>
-            <Button
-              variant="secondary"
-              onClick={() => setConfirmClearOpen(false)}
-              disabled={clearingLogs}
-            >
-              {t("common.cancel")}
-            </Button>
-            <Button
-              variant="danger"
-              onClick={() => void handleClearDatabaseLogs()}
-              disabled={clearingLogs || !canSubmitCleanup}
-              aria-busy={clearingLogs}
-            >
-              {clearingLogs ? (
-                <LoaderCircle
-                  size={14}
-                  className="motion-reduce:animate-none motion-safe:animate-spin"
-                  aria-hidden="true"
-                />
-              ) : null}
-              {t("request_logs.clear_database_logs_confirm_button")}
-            </Button>
-          </>
-        }
-      >
-        <div className="space-y-4">
-          <div className="rounded-2xl border border-slate-900/8 bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:border-white/8 dark:bg-neutral-900/80 dark:text-white/65">
-            {t("request_logs.clear_database_logs_keep_records_hint")}
-          </div>
-
-          <label className="flex items-start gap-3 rounded-2xl border border-slate-900/8 px-4 py-3 dark:border-white/8">
-            <Checkbox
-              checked={clearOptions.clear_body_content}
-              onCheckedChange={handleClearBodyContentChange}
-              disabled={clearingLogs || clearOptions.clear_request_records}
-              aria-label={t("request_logs.clear_option_body")}
-            />
-            <span className="min-w-0">
-              <span className="block text-sm font-medium text-slate-900 dark:text-white">
-                {t("request_logs.clear_option_body")}
-              </span>
-              <span className="mt-1 block text-sm text-slate-500 dark:text-white/55">
-                {t("request_logs.clear_option_body_desc")}
-              </span>
-            </span>
-          </label>
-
-          <label className="flex items-start gap-3 rounded-2xl border border-slate-900/8 px-4 py-3 dark:border-white/8">
-            <Checkbox
-              checked={clearOptions.clear_detail_content}
-              onCheckedChange={handleClearDetailContentChange}
-              disabled={clearingLogs || clearOptions.clear_request_records}
-              aria-label={t("request_logs.clear_option_details")}
-            />
-            <span className="min-w-0">
-              <span className="block text-sm font-medium text-slate-900 dark:text-white">
-                {t("request_logs.clear_option_details")}
-              </span>
-              <span className="mt-1 block text-sm text-slate-500 dark:text-white/55">
-                {t("request_logs.clear_option_details_desc")}
-              </span>
-            </span>
-          </label>
-
-          <label className="flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50/70 px-4 py-3 dark:border-rose-500/20 dark:bg-rose-500/10">
-            <Checkbox
-              checked={clearOptions.clear_request_records}
-              onCheckedChange={handleClearRequestRecordsChange}
-              disabled={clearingLogs}
-              aria-label={t("request_logs.clear_option_records")}
-            />
-            <span className="min-w-0">
-              <span className="block text-sm font-medium text-rose-700 dark:text-rose-300">
-                {t("request_logs.clear_option_records")}
-              </span>
-              <span className="mt-1 block text-sm text-rose-600/90 dark:text-rose-200/70">
-                {t("request_logs.clear_option_records_desc")}
-              </span>
-            </span>
-          </label>
-        </div>
-      </Modal>
+      />
     </section>
   );
 }

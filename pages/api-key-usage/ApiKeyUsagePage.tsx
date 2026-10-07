@@ -1,14 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronRight, Key, KeyRound, LogOut, Search } from "lucide-react";
+import { ChevronRight, Key, KeyRound, LogOut } from "lucide-react";
 import { isApiClientError } from "@code-proxy/api-client";
 import { Button } from "@code-proxy/ui";
 import { DropdownMenu } from "@code-proxy/ui";
 import { LanguageSelector } from "@code-proxy/ui";
-import { Modal } from "@code-proxy/ui";
 import { PageBackground } from "@code-proxy/ui";
 import { Reveal } from "@code-proxy/ui";
-import { TextInput } from "@code-proxy/ui";
 import { ThemeToggleButton } from "@code-proxy/ui";
 import type { SearchableCheckboxMultiSelectOption } from "@code-proxy/ui";
 import type { TimeRange } from "@features/monitor-widgets/monitor-constants";
@@ -21,6 +19,7 @@ import {
 import { PublicLogsSection } from "../api-key-lookup/components/PublicLogsSection";
 import { QuickImportTabContent } from "../api-key-lookup/components/QuickImportTabContent";
 import type { PublicLogItem, PublicQuotaScope, PublicUsageLimits } from "../api-key-lookup/types";
+import { ApiKeyUsageKeyModal } from "./ApiKeyUsageKeyModal";
 import {
   buildRequestLogsColumns,
   formatOptionalRequestLogLatencyMs,
@@ -641,72 +640,21 @@ export function ApiKeyUsagePage() {
           )}
         </main>
 
-        <Modal
+        <ApiKeyUsageKeyModal
+          t={t}
           open={keyModalOpen}
-          title={t("apikey_usage.modal_title")}
-          hideHeader
-          maxWidth="max-w-md"
-          bodyClassName="!px-7 !py-8 sm:!px-9 sm:!py-9"
-          bodyHeightClassName="max-h-none"
-          bodyOverflowClassName="overflow-visible"
-          onClose={() => {
-            // Keep the modal when no key is active so users always have an entry point.
-            if (queriedKey) setKeyModalOpen(false);
+          value={apiKeyInput}
+          error={error && !queriedKey ? error : null}
+          loading={loading}
+          onChange={(value) => {
+            setApiKeyInput(value);
+            setError(null);
           }}
-        >
-          <div className="space-y-6">
-            <div className="space-y-2 pr-8">
-              <h2 className="text-xl font-semibold tracking-tight text-slate-950 dark:text-white">
-                {t("apikey_usage.modal_title")}
-              </h2>
-              <p className="text-sm text-slate-500 dark:text-white/55">
-                {t("apikey_usage.modal_desc")}
-              </p>
-            </div>
-            <form className="space-y-4" onSubmit={handleSubmit}>
-              <label className="block space-y-2">
-                <span className="text-xs font-medium text-slate-600 dark:text-white/60">
-                  {t("apikey_lookup.api_key_label")}
-                </span>
-                <TextInput
-                  type="password"
-                  id="apikey-usage-input"
-                  value={apiKeyInput}
-                  onChange={(e) => {
-                    setApiKeyInput(e.target.value);
-                    setError(null);
-                  }}
-                  autoComplete="off"
-                  spellCheck={false}
-                  autoFocus
-                  className="rounded-full px-5"
-                  placeholder={t("apikey_lookup.placeholder")}
-                  startAdornment={<Search size={16} />}
-                />
-              </label>
-              {error && !queriedKey ? (
-                <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-300">
-                  {error}
-                </div>
-              ) : null}
-              <Button
-                variant="primary"
-                type="submit"
-                data-testid="apikey-usage-submit"
-                disabled={!apiKeyInput.trim() || loading}
-                className="w-full"
-              >
-                {loading ? (
-                  <span
-                    className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white motion-reduce:animate-none motion-safe:animate-spin dark:border-neutral-950/30"
-                    aria-hidden="true"
-                  />
-                ) : null}
-                {t("apikey_lookup.query")}
-              </Button>
-            </form>
-          </div>
-        </Modal>
+          onSubmit={handleSubmit}
+          // 没有已查询的 Key 时也允许关闭：顶栏和空状态里都有「查询」按钮能再打开，
+          // 以前这里忽略关闭，右上角的关闭按钮点了没有任何反应。
+          onClose={() => setKeyModalOpen(false)}
+        />
       </div>
     </PageBackground>
   );

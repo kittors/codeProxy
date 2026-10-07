@@ -1,24 +1,17 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  ChevronDown,
-  Code2,
-  Download,
-  Eye,
-  FileInput,
-  FileOutput,
-  Info,
-  Loader2,
-} from "lucide-react";
+import { Code2, Download, Eye, FileInput, FileOutput, Info, Loader2 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { usageApi, type UsageLogEgressResponse } from "@code-proxy/api-client";
+import {
+  Button,
+  Callout,
+  EmptyState,
+  ImagePreviewOverlay,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+} from "@code-proxy/ui";
 import {
   buildInputRenderedView,
   buildOutputRenderedView,
@@ -29,9 +22,14 @@ import {
   MessageList,
   PlainPre,
 } from "../log-content/rendering";
+import {
+  OutputImageCard,
+  parseImageGenerationInput,
+  parseImageGenerationOutput,
+  StructuredRequestCard,
+} from "../log-content/imageGenerationViews";
+import { RequestDetailsView } from "../log-content/requestDetails";
 import { scheduleIdle, type CancelFn } from "../log-content/scheduler";
-import { Tabs, TabsList, TabsTrigger, surface } from "@code-proxy/ui";
-import { ImagePreviewOverlay } from "@code-proxy/ui";
 import type {
   AsyncParsedState,
   LogContentModalProps,
@@ -45,623 +43,7 @@ const MODAL_CONTENT_LOAD_DELAY_MS = 260;
 const LOADING_EXIT_MS = 220;
 const CONTENT_ENTER_MS = 340;
 type ContentPhase = "loading" | "error" | "content";
-type JsonObject = Record<string, unknown>;
-type ImageGenerationInputView = {
-  model: string;
-  prompt: string;
-  parameters: Array<{ key: string; value: string }>;
-};
-type ImageGenerationOutputView = {
-  created?: number;
-  images: Array<{ src: string; revisedPrompt?: string }>;
-};
-type ImageGenerationOutputImage = { src: string; revisedPrompt?: string };
-type RequestDetailRecord = Record<string, unknown>;
-type RequestDetailRow = { label: string; value: string };
-type RequestDetailGroup = { title: string; rows: RequestDetailRow[] };
-type RequestDetailAttempt = {
-  title?: string;
-  rows: RequestDetailRow[];
-  groups: RequestDetailGroup[];
-};
-type RequestDetailLabels = {
-  request: string;
-  response: string;
-  fingerprintHeaders: string;
-};
 
-function parseJsonObject(raw: string): JsonObject | null {
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
-      return null;
-    return parsed as JsonObject;
-  } catch {
-    return null;
-  }
-}
-
-function stringifyFieldValue(value: unknown): string {
-  if (typeof value === "string") return value;
-  if (typeof value === "number" || typeof value === "boolean")
-    return String(value);
-  if (value === null || value === undefined) return "";
-  return JSON.stringify(value, null, 2);
-}
-
-function parseRequestDetails(raw: string): RequestDetailRecord | null {
-  return parseJsonObject(raw);
-}
-
-function isRecord(value: unknown): value is RequestDetailRecord {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
-
-function formatDetailValue(value: unknown): string {
-  if (value === null) return "null";
-  if (value === undefined) return "";
-  if (typeof value === "string") return value.trim();
-  if (typeof value === "number" || typeof value === "boolean")
-    return String(value);
-  if (Array.isArray(value)) {
-    return value
-      .map((item) => formatDetailValue(item))
-      .filter(Boolean)
-      .join(", ");
-  }
-  try {
-    return JSON.stringify(value);
-  } catch {
-    return String(value);
-  }
-}
-
-function hasDetailValue(value: string): boolean {
-  return (
-    value.trim() !== "" &&
-    value.trim() !== "<empty>" &&
-    value.trim() !== "<none>"
-  );
-}
-
-function pushDetailRow(
-  rows: RequestDetailRow[],
-  label: string,
-  value: unknown,
-) {
-  const text = formatDetailValue(value);
-  if (hasDetailValue(text)) rows.push({ label, value: text });
-}
-
-function normalizeHeaderRows(value: unknown): RequestDetailRow[] {
-  if (!isRecord(value)) return [];
-  return Object.entries(value)
-    .map(([label, rawValue]) => ({ label, value: formatDetailValue(rawValue) }))
-    .filter((row) => hasDetailValue(row.value))
-    .sort((a, b) => a.label.localeCompare(b.label));
-}
-
-function parseExchangeLog(
-  raw: unknown,
-  kind: "request" | "response",
-  labels: RequestDetailLabels,
-): RequestDetailAttempt[] {
-  const text = formatDetailValue(raw);
-  if (!hasDetailValue(text)) return [];
-
-  const lines = text.split(/\r?\n/);
-  const attempts: RequestDetailAttempt[] = [];
-  let current: RequestDetailAttempt | null = null;
-  let currentGroup: RequestDetailGroup | null = null;
-  let readingHeaders = false;
-  let skippingBody = false;
-
-  const ensureCurrent = () => {
-    if (!current) {
-      current = { rows: [], groups: [] };
-      attempts.push(current);
-    }
-    return current;
-  };
-
-  const flushGroup = () => {
-    if (current && currentGroup && currentGroup.rows.length > 0) {
-      current.groups.push(currentGroup);
-    }
-    currentGroup = null;
-  };
-
-  for (const rawLine of lines) {
-    const line = rawLine.trimEnd();
-    const sectionMatch = line.match(
-      /^=== API (REQUEST|RESPONSE)\s*(\d+)? ===$/,
-    );
-    if (sectionMatch) {
-      flushGroup();
-      const attemptNumber = sectionMatch[2];
-      current = {
-        title: attemptNumber ? `#${attemptNumber}` : undefined,
-        rows: [],
-        groups: [],
-      };
-      attempts.push(current);
-      readingHeaders = false;
-      skippingBody = false;
-      continue;
-    }
-
-    if (!line.trim()) {
-      if (readingHeaders) {
-        flushGroup();
-        readingHeaders = false;
-      }
-      continue;
-    }
-
-    if (/^Body:$/i.test(line)) {
-      flushGroup();
-      readingHeaders = false;
-      skippingBody = true;
-      continue;
-    }
-    if (skippingBody) continue;
-
-    if (/^Headers:$/i.test(line)) {
-      flushGroup();
-      currentGroup = { title: "Headers", rows: [] };
-      readingHeaders = true;
-      ensureCurrent();
-      continue;
-    }
-
-    const separator = line.indexOf(":");
-    if (separator === -1) {
-      if (line !== "<missing>")
-        pushDetailRow(
-          ensureCurrent().rows,
-          kind === "request" ? labels.request : labels.response,
-          line,
-        );
-      continue;
-    }
-
-    const label = line.slice(0, separator).trim();
-    const value = line.slice(separator + 1).trim();
-    if (!hasDetailValue(value)) continue;
-
-    if (readingHeaders) {
-      currentGroup?.rows.push({ label, value });
-      continue;
-    }
-
-    pushDetailRow(ensureCurrent().rows, label, value);
-  }
-
-  flushGroup();
-  return attempts.filter(
-    (attempt) => attempt.rows.length > 0 || attempt.groups.length > 0,
-  );
-}
-
-const BODY_DETAIL_KEYS = new Set([
-  "body",
-  "bodytext",
-  "body_text",
-  "requestbody",
-  "request_body",
-  "responsebody",
-  "response_body",
-  "raw",
-  "payload",
-  "content",
-  "input_content",
-  "output_content",
-  "requestlog",
-  "request_log",
-  "upstreamlog",
-  "upstream_log",
-]);
-
-function isBodyDetailKey(key: string): boolean {
-  return BODY_DETAIL_KEYS.has(key.trim().toLowerCase());
-}
-
-function buildGenericRows(
-  record: unknown,
-  skipKeys: Iterable<string> = [],
-): RequestDetailRow[] {
-  if (!isRecord(record)) return [];
-  const skip = new Set([...BODY_DETAIL_KEYS, ...skipKeys]);
-  return Object.entries(record).reduce<RequestDetailRow[]>(
-    (rows, [key, value]) => {
-      const normalizedKey = key.trim().toLowerCase();
-      if (
-        skip.has(normalizedKey) ||
-        normalizedKey === "headers" ||
-        normalizedKey === "fingerprint_headers"
-      ) {
-        return rows;
-      }
-      pushDetailRow(rows, key, value);
-      return rows;
-    },
-    [],
-  );
-}
-
-function buildClientAttempt(
-  client: unknown,
-  labels: RequestDetailLabels,
-): RequestDetailAttempt {
-  const record = isRecord(client) ? client : {};
-  const preferredKeys = [
-    "ip",
-    "remote_addr",
-    "method",
-    "url",
-    "path",
-    "query",
-    "host",
-    "content_length",
-  ];
-  const rows: RequestDetailRow[] = [];
-  preferredKeys.forEach((key) => pushDetailRow(rows, key, record[key]));
-  const preferredSet = new Set(preferredKeys);
-  buildGenericRows(record, preferredSet).forEach((row) => rows.push(row));
-
-  const groups: RequestDetailGroup[] = [];
-  const headers = normalizeHeaderRows(record.headers);
-  if (headers.length > 0) groups.push({ title: "Headers", rows: headers });
-  const fingerprints = normalizeHeaderRows(record.fingerprint_headers);
-  if (fingerprints.length > 0)
-    groups.push({ title: labels.fingerprintHeaders, rows: fingerprints });
-
-  return { rows, groups };
-}
-
-function buildUpstreamAttempts(
-  upstream: unknown,
-  labels: RequestDetailLabels,
-): RequestDetailAttempt[] {
-  if (!isRecord(upstream)) return [];
-  const parsed = parseExchangeLog(upstream.request_log, "request", labels);
-  if (parsed.length > 0) return parsed;
-
-  const rows = buildGenericRows(upstream);
-  const headers = normalizeHeaderRows(upstream.headers);
-  return [
-    {
-      rows,
-      groups: headers.length > 0 ? [{ title: "Headers", rows: headers }] : [],
-    },
-  ];
-}
-
-function buildResponseAttempts(
-  response: unknown,
-  labels: RequestDetailLabels,
-): RequestDetailAttempt[] {
-  if (!isRecord(response)) return [];
-  const parsed = parseExchangeLog(response.upstream_log, "response", labels);
-  if (parsed.length > 0) return parsed;
-
-  const rows = buildGenericRows(response);
-  const headers = normalizeHeaderRows(response.headers);
-  return [
-    {
-      rows,
-      groups: headers.length > 0 ? [{ title: "Headers", rows: headers }] : [],
-    },
-  ];
-}
-
-function RequestDetailRows({ rows }: { rows: RequestDetailRow[] }) {
-  if (rows.length === 0) return null;
-  return (
-    <div className="divide-y divide-slate-100 dark:divide-neutral-800/80">
-      {rows.map((row) => (
-        <div
-          key={`${row.label}:${row.value}`}
-          className="grid min-w-0 gap-1.5 px-3 py-2.5 sm:grid-cols-[minmax(8rem,13rem)_minmax(0,1fr)] sm:gap-3"
-        >
-          <span className="min-w-0 font-mono text-xs leading-5 break-all text-slate-500 dark:text-white/40">
-            {row.label}
-          </span>
-          <span className="min-w-0 font-mono text-xs leading-5 break-words whitespace-pre-wrap text-slate-900 dark:text-slate-100">
-            {row.value}
-          </span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function RequestDetailGroupView({ group }: { group: RequestDetailGroup }) {
-  if (group.rows.length === 0) return null;
-  return (
-    <div className="border-t border-slate-100 dark:border-white/8">
-      <div className="px-3 pt-3 pb-1.5 text-xs font-medium text-slate-400 dark:text-white/35">
-        {group.title}
-      </div>
-      <RequestDetailRows rows={group.rows} />
-    </div>
-  );
-}
-
-function RequestDetailAttemptView({
-  attempt,
-  showTitle,
-}: {
-  attempt: RequestDetailAttempt;
-  showTitle: boolean;
-}) {
-  return (
-    <div className="overflow-hidden rounded-lg border border-slate-900/8 bg-white dark:border-white/8 dark:bg-neutral-950/60">
-      {showTitle && attempt.title ? (
-        <div className="border-b border-slate-100 px-3 py-2 font-mono text-xs text-slate-400 dark:border-white/8 dark:text-white/35">
-          {attempt.title}
-        </div>
-      ) : null}
-      <RequestDetailRows rows={attempt.rows} />
-      {attempt.groups.map((group) => (
-        <RequestDetailGroupView key={group.title} group={group} />
-      ))}
-    </div>
-  );
-}
-
-function RequestDetailEmpty() {
-  return (
-    <span className="px-3 py-3 text-sm text-slate-400 dark:text-white/35">
-      --
-    </span>
-  );
-}
-
-function RequestDetailSection({
-  title,
-  attempts,
-  testId,
-  defaultOpen = true,
-  headerExtras,
-}: {
-  title: string;
-  attempts: RequestDetailAttempt[];
-  testId?: string;
-  defaultOpen?: boolean;
-  headerExtras?: ReactNode;
-}) {
-  const [open, setOpen] = useState(defaultOpen);
-  const contentId = testId ? `${testId}-content` : undefined;
-  const visibleAttempts = attempts.filter(
-    (attempt) =>
-      attempt.rows.length > 0 ||
-      attempt.groups.some((group) => group.rows.length > 0),
-  );
-  const showAttemptTitle = visibleAttempts.length > 1;
-
-  return (
-    <section
-      data-testid={testId}
-      className={[surface({ tone: "plain", radius: "lg" }), "overflow-hidden"].join(" ")}
-    >
-      <button
-        type="button"
-        aria-expanded={open}
-        aria-controls={contentId}
-        onClick={() => setOpen((prev) => !prev)}
-        className="flex w-full touch-manipulation items-center justify-between gap-3 px-3.5 py-2.5 text-left transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/10 dark:hover:bg-white/[0.04] dark:focus-visible:ring-white/20"
-      >
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-          <h3 className="min-w-0 truncate text-sm font-medium text-slate-900 dark:text-white">
-            {title}
-          </h3>
-          {headerExtras ? (
-            <div className="flex flex-wrap items-center gap-1">
-              {headerExtras}
-            </div>
-          ) : null}
-        </div>
-        <ChevronDown
-          size={16}
-          className={`shrink-0 text-slate-400 transition-transform duration-200 dark:text-white/35 ${open ? "rotate-180" : ""}`}
-          aria-hidden="true"
-        />
-      </button>
-      <AnimatePresence initial={false}>
-        {open ? (
-          <motion.div
-            id={contentId}
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
-            className="overflow-hidden"
-          >
-            <div className="space-y-2 border-t border-slate-100 bg-slate-50/40 p-2.5 dark:border-white/8 dark:bg-white/[0.02]">
-              {visibleAttempts.length > 0 ? (
-                visibleAttempts.map((attempt, index) => (
-                  <RequestDetailAttemptView
-                    key={`${attempt.title ?? "attempt"}-${index}`}
-                    attempt={attempt}
-                    showTitle={showAttemptTitle}
-                  />
-                ))
-              ) : (
-                <RequestDetailEmpty />
-              )}
-            </div>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
-    </section>
-  );
-}
-
-function buildExtraDetailSections(details: RequestDetailRecord): Array<{
-  key: string;
-  attempts: RequestDetailAttempt[];
-}> {
-  return Object.entries(details)
-    .filter(
-      ([key]) =>
-        !["client", "upstream", "response"].includes(key) &&
-        !isBodyDetailKey(key),
-    )
-    .map(([key, value]) => {
-      if (isRecord(value)) {
-        const rows = buildGenericRows(value);
-        const headers = normalizeHeaderRows(value.headers);
-        return {
-          key,
-          attempts: [
-            {
-              rows,
-              groups:
-                headers.length > 0 ? [{ title: "Headers", rows: headers }] : [],
-            },
-          ],
-        };
-      }
-      const text = formatDetailValue(value);
-      return {
-        key,
-        attempts: hasDetailValue(text)
-          ? [{ rows: [{ label: key, value: text }], groups: [] }]
-          : [],
-      };
-    })
-    .filter((section) =>
-      section.attempts.some(
-        (attempt) =>
-          attempt.rows.length > 0 ||
-          attempt.groups.some((group) => group.rows.length > 0),
-      ),
-    );
-}
-
-function parseImageGenerationInput(
-  raw: string,
-): ImageGenerationInputView | null {
-  const parsed = parseJsonObject(raw);
-  if (!parsed) return null;
-  const model = typeof parsed.model === "string" ? parsed.model : "";
-  const prompt = typeof parsed.prompt === "string" ? parsed.prompt : "";
-  if (!model && !prompt) return null;
-
-  const parameters = Object.entries(parsed)
-    .filter(([key]) => key !== "model" && key !== "prompt")
-    .map(([key, value]) => ({ key, value: stringifyFieldValue(value) }))
-    .filter((item) => item.value);
-
-  return {
-    model,
-    prompt,
-    parameters,
-  };
-}
-
-function parseImageGenerationOutput(
-  raw: string,
-): ImageGenerationOutputView | null {
-  const parsed = parseJsonObject(raw);
-  if (!parsed || !Array.isArray(parsed.data)) return null;
-
-  const images = parsed.data
-    .map((item) => {
-      if (!item || typeof item !== "object") return null;
-      const record = item as JsonObject;
-      const b64Json =
-        typeof record.b64_json === "string" ? record.b64_json.trim() : "";
-      if (!b64Json) return null;
-      const src = `data:image/png;base64,${b64Json}`;
-      const revisedPrompt =
-        typeof record.revised_prompt === "string" &&
-        record.revised_prompt.trim()
-          ? record.revised_prompt.trim()
-          : "";
-      return revisedPrompt ? { src, revisedPrompt } : { src };
-    })
-    .filter((item): item is ImageGenerationOutputImage => item !== null);
-
-  if (images.length === 0) return null;
-
-  return {
-    created: typeof parsed.created === "number" ? parsed.created : undefined,
-    images,
-  };
-}
-
-function StructuredRequestCard({
-  model,
-  prompt,
-  parameters,
-  testId,
-  modelLabel,
-  promptLabel,
-  parametersLabel,
-}: {
-  model: string;
-  prompt: string;
-  parameters: Array<{ key: string; value: string }>;
-  testId?: string;
-  modelLabel: string;
-  promptLabel: string;
-  parametersLabel: string;
-}) {
-  return (
-    <div
-      data-testid={testId}
-      className="overflow-hidden rounded-3xl border border-slate-900/8 bg-slate-50/90 dark:border-white/8 dark:bg-neutral-900/75"
-    >
-      <div className="grid gap-0 divide-y divide-slate-200/90 dark:divide-neutral-800">
-        {model ? (
-          <div className="px-5 py-4 sm:px-6">
-            <p className="text-xs font-medium text-slate-500 dark:text-white/40">
-              {modelLabel}
-            </p>
-            <p className="mt-2 break-words text-sm font-semibold text-slate-900 dark:text-white">
-              {model}
-            </p>
-          </div>
-        ) : null}
-        {prompt ? (
-          <div className="px-5 py-4 sm:px-6">
-            <p className="text-xs font-medium text-slate-500 dark:text-white/40">
-              {promptLabel}
-            </p>
-            <pre className="mt-2 whitespace-pre-wrap break-words font-sans text-sm leading-7 text-slate-900 dark:text-white">
-              {prompt}
-            </pre>
-          </div>
-        ) : null}
-        {parameters.length > 0 ? (
-          <div className="px-5 py-4 sm:px-6">
-            <p className="text-xs font-medium text-slate-500 dark:text-white/40">
-              {parametersLabel}
-            </p>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              {parameters.map((item) => (
-                <div
-                  key={item.key}
-                  className={[surface({ tone: "plain", radius: "2xl" }), "px-3 py-3"].join(" ")}
-                >
-                  <p className="font-mono text-xs text-slate-500 dark:text-white/40">
-                    {item.key}
-                  </p>
-                  <pre className="mt-1 whitespace-pre-wrap break-words font-sans text-sm leading-6 text-slate-900 dark:text-white">
-                    {item.value}
-                  </pre>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : null}
-      </div>
-    </div>
-  );
-}
 export function LogContentModal({
   open,
   logId,
@@ -676,14 +58,6 @@ export function LogContentModal({
   fetchEgressFn,
 }: LogContentModalProps) {
   const { t } = useTranslation();
-  const requestDetailLabels = useMemo(
-    () => ({
-      request: t("log_content.detail_label_request"),
-      response: t("log_content.detail_label_response"),
-      fingerprintHeaders: t("log_content.detail_group_fingerprint_headers"),
-    }),
-    [t],
-  );
   const detailsOnly = showRequestDetails && !showBodyContent;
   const resolvedInitialTab: LogContentPart = detailsOnly ? "details" : initialTab;
   const [activeTab, setActiveTab] = useState<LogContentPart>(resolvedInitialTab);
@@ -958,29 +332,25 @@ export function LogContentModal({
     URL.revokeObjectURL(url);
   };
 
-  const renderRaw = (content: string) => {
-    if (!content) {
-      const Icon =
-        activeTab === "input"
-          ? FileInput
-          : activeTab === "output"
-            ? FileOutput
-            : Info;
-      return (
-        <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/25">
-          <Icon size={40} className="mb-3 opacity-40" />
-          <p className="text-sm">
-            {activeTab === "input"
-              ? t("log_content.no_input")
-              : activeTab === "output"
-                ? t("log_content.no_output")
-                : t("log_content.no_details")}
-          </p>
-        </div>
-      );
-    }
-    return <PlainPre text={content} />;
+  // 三个页签共用的空态：图标跟着页签走，一眼看出是哪一栏没有记录。
+  const renderEmpty = (part: LogContentPart) => {
+    const Icon = part === "input" ? FileInput : part === "output" ? FileOutput : Info;
+    const title =
+      part === "input"
+        ? t("log_content.no_input")
+        : part === "output"
+          ? t("log_content.no_output")
+          : t("log_content.no_details");
+    // 和加载态一样在内容区里上下居中：弹窗是固定高度，空态贴在顶上会显得下面空了一大块。
+    return (
+      <div className="flex h-full items-center justify-center">
+        <EmptyState icon={<Icon size={20} aria-hidden />} title={title} />
+      </div>
+    );
   };
+
+  const renderRaw = (content: string) =>
+    content ? <PlainPre text={content} /> : renderEmpty(activeTab);
 
   const currentContent =
     activeTab === "input"
@@ -1060,19 +430,16 @@ export function LogContentModal({
   }, [contentPhase, displayPhase]);
 
   const renderCenteredLoading = () => (
-    <div className="flex min-h-0 flex-1 items-center justify-center">
-      <Loader2
-        size={24}
-        className="animate-spin text-slate-400 dark:text-white/40"
-      />
-      <span className="ml-3 text-sm text-slate-500 dark:text-white/50">
-        {t("common.loading_ellipsis")}
-      </span>
+    <div className="flex min-h-0 flex-1 items-center justify-center text-ink-3">
+      <Loader2 size={22} className="animate-spin" aria-hidden />
+      <span className="ml-3 text-sm">{t("common.loading_ellipsis")}</span>
     </div>
   );
 
+  // 左边切换看哪一份（输入 / 输出 / 请求详情），右边是怎么看（渲染 / 原文）与下载。
+  // 视图切换带上文字：以前只有眼睛和代码两个图标，要悬停才知道是什么。
   const tabBar = detailsOnly ? null : (
-    <div className="flex items-center gap-3">
+    <div className="flex flex-wrap items-center justify-between gap-3">
       <Tabs
         value={activeTab}
         onValueChange={(next) => setActiveTab(next as typeof activeTab)}
@@ -1094,55 +461,46 @@ export function LogContentModal({
           ) : null}
         </TabsList>
       </Tabs>
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-2">
         {activeTab === "details" ? null : (
           <Tabs
+            size="sm"
             value={viewMode}
             onValueChange={(next) => setViewMode(next as typeof viewMode)}
           >
             <TabsList>
               <TabsTrigger value="rendered" title={t("log_content.rendered")}>
                 <Eye size={14} />
+                {t("log_content.rendered")}
               </TabsTrigger>
               <TabsTrigger value="raw" title={t("log_content.raw_data")}>
                 <Code2 size={14} />
+                {t("log_content.raw_data")}
               </TabsTrigger>
             </TabsList>
           </Tabs>
         )}
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={handleDownload}
           disabled={!currentContent}
           title={t("log_content.download")}
-          className="flex items-center justify-center rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 disabled:opacity-30 disabled:cursor-not-allowed dark:text-white/30 dark:hover:bg-neutral-900 dark:hover:text-white/60"
         >
-          <Download size={14} />
-        </button>
+          <Download size={15} />
+        </Button>
       </div>
     </div>
   );
 
   const renderInput = () => {
-    if (!inputContent) {
-      return (
-        <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/25">
-          <FileInput size={40} className="mb-3 opacity-40" />
-          <p className="text-sm">{t("log_content.no_input")}</p>
-        </div>
-      );
-    }
+    if (!inputContent) return renderEmpty("input");
     if (viewMode === "raw") return renderRaw(inputContent);
     if (imageGenerationInput) {
       return (
         <StructuredRequestCard
           testId="image-request-structured-card"
-          model={imageGenerationInput.model}
-          prompt={imageGenerationInput.prompt}
-          parameters={imageGenerationInput.parameters}
-          modelLabel={t("log_content.field_model")}
-          promptLabel={t("log_content.field_prompt")}
-          parametersLabel={t("log_content.field_parameters")}
+          view={imageGenerationInput}
         />
       );
     }
@@ -1162,55 +520,20 @@ export function LogContentModal({
   };
 
   const renderOutput = () => {
-    if (!outputContent) {
-      return (
-        <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/25">
-          <FileOutput size={40} className="mb-3 opacity-40" />
-          <p className="text-sm">{t("log_content.no_output")}</p>
-        </div>
-      );
-    }
+    if (!outputContent) return renderEmpty("output");
     if (viewMode === "raw") return renderRaw(outputContent);
     if (imageGenerationOutput) {
       return (
         <div className="space-y-4">
           {imageGenerationOutput.images.map((image, index) => (
-            <div
+            <OutputImageCard
               key={`${image.src.slice(0, 48)}-${index}`}
-              className={[surface({ tone: "inset", radius: "2xl" }), "p-3"].join(" ")}
-            >
-              <div className="relative min-h-[160px] overflow-hidden rounded-xl bg-slate-100 dark:bg-black">
-                <img
-                  src={image.src}
-                  alt={t("log_content.output")}
-                  className="block h-auto w-full cursor-zoom-in"
-                  onClick={() => {
-                    setOutputImagePreviewIndex(index);
-                    setImagePreviewOpen(true);
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    setOutputImagePreviewIndex(index);
-                    setImagePreviewOpen(true);
-                  }}
-                  className="absolute right-3 bottom-3 z-20 rounded-full bg-black/60 px-3 py-1 text-xs font-medium text-white/90 shadow-sm backdrop-blur transition-colors hover:bg-black/75 hover:text-white"
-                >
-                  {t("image_generation.open_preview")}
-                </button>
-              </div>
-              {image.revisedPrompt ? (
-                <div className="mt-3 rounded-xl bg-white px-3 py-2 dark:bg-neutral-950">
-                  <p className="text-xs font-medium text-slate-500 dark:text-white/40">
-                    {t("image_generation.revised_prompt_label")}
-                  </p>
-                  <p className="mt-1 text-sm text-slate-700 dark:text-slate-200">
-                    {image.revisedPrompt}
-                  </p>
-                </div>
-              ) : null}
-            </div>
+              image={image}
+              onPreview={() => {
+                setOutputImagePreviewIndex(index);
+                setImagePreviewOpen(true);
+              }}
+            />
           ))}
         </div>
       );
@@ -1219,296 +542,89 @@ export function LogContentModal({
       return renderCenteredLoading();
 
     const view = outputParsed.view;
-    const imagePreviewCard = outputImagePreviewSrc ? (
-      <div className={[surface({ tone: "inset", radius: "2xl" }), "mb-4 p-3"].join(" ")}>
-        <div className="relative min-h-[160px] overflow-hidden rounded-xl bg-slate-100 dark:bg-black">
-          <img
-            src={outputImagePreviewSrc}
-            alt={t("log_content.output")}
-            className="block h-auto w-full cursor-zoom-in"
-            onClick={() => setImagePreviewOpen(true)}
-          />
-          <button
-            type="button"
-            onClick={() => setImagePreviewOpen(true)}
-            className="absolute right-3 bottom-3 z-20 rounded-full bg-black/60 px-3 py-1 text-xs font-medium text-white/90 shadow-sm backdrop-blur transition-colors hover:bg-black/75 hover:text-white"
-          >
-            {t("image_generation.open_preview")}
-          </button>
-        </div>
-      </div>
-    ) : null;
     if (view.kind === "messages") {
       const count =
         outputRevealCount > 0
           ? outputRevealCount
           : Math.min(view.messages.length, 6);
-      return (
-        <div>
-          {imagePreviewCard}
-          <MessageList messages={view.messages.slice(0, count)} />
-        </div>
-      );
+      return <MessageList messages={view.messages.slice(0, count)} />;
     }
-    if (view.kind === "pretty_json") {
-      return (
-        <div>
-          {imagePreviewCard}
-          <PlainPre text={view.pretty} />
-        </div>
-      );
-    }
-    if (view.kind === "text") {
-      return (
-        <div className="space-y-3">
-          {imagePreviewCard}
-          <MessageBlock role="assistant" content={view.text} />
-        </div>
-      );
-    }
-    return (
-      <div>
-        {imagePreviewCard}
-        <PlainPre text={view.raw} />
-      </div>
-    );
+    if (view.kind === "pretty_json") return <PlainPre text={view.pretty} />;
+    if (view.kind === "text") return <MessageBlock role="assistant" content={view.text} />;
+    return <PlainPre text={view.raw} />;
   };
 
-  const renderDetails = () => {
-    if (!detailsContent) {
-      return (
-        <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/25">
-          <Info size={40} className="mb-3 opacity-40" />
-          <p className="text-sm">{t("log_content.no_details")}</p>
-        </div>
-      );
-    }
-
-    const details = parseRequestDetails(detailsContent);
-    if (!details) return renderRaw(detailsContent);
-    const clientAttempt = buildClientAttempt(details.client, requestDetailLabels);
-    const upstreamAttempts = buildUpstreamAttempts(details.upstream, requestDetailLabels);
-    const responseAttempts = buildResponseAttempts(details.response, requestDetailLabels);
-    const extraSections = buildExtraDetailSections(details);
-    const egressRows: RequestDetailRow[] = [];
-    const egressBadges: ReactNode[] = [];
-
-    const routeLabel = egressInfo?.using_proxy
-      ? t("log_content.egress_route_proxy")
-      : t("log_content.egress_route_direct");
-    if (egressInfo) {
-      pushDetailRow(
-        egressRows,
-        t("log_content.egress_upstream_ip"),
-        egressInfo.effective_ip,
-      );
-      pushDetailRow(
-        egressRows,
-        t("log_content.egress_server_ip"),
-        egressInfo.server_ip,
-      );
-      pushDetailRow(egressRows, t("log_content.egress_route"), routeLabel);
-      pushDetailRow(
-        egressRows,
-        t("log_content.egress_proxy_source"),
-        egressInfo.proxy_source === "proxy_id"
-          ? t("log_content.egress_source_proxy_id")
-          : egressInfo.proxy_source === "auth_proxy_url"
-            ? t("log_content.egress_source_auth_proxy_url")
-            : egressInfo.proxy_source === "global_proxy_url"
-              ? t("log_content.egress_source_global_proxy_url")
-              : egressInfo.proxy_source === "direct"
-                ? t("log_content.egress_source_direct")
-                : egressInfo.proxy_source === "proxy_url"
-                  ? t("log_content.egress_source_proxy_url")
-                  : egressInfo.proxy_source,
-      );
-      pushDetailRow(
-        egressRows,
-        t("log_content.egress_proxy_id"),
-        egressInfo.proxy_id,
-      );
-      pushDetailRow(
-        egressRows,
-        t("log_content.egress_proxy_name"),
-        egressInfo.proxy_name,
-      );
-      pushDetailRow(
-        egressRows,
-        t("log_content.egress_proxy_host"),
-        egressInfo.proxy_url_host,
-      );
-      if (typeof egressInfo.matches_server_ip === "boolean") {
-        pushDetailRow(
-          egressRows,
-          t("log_content.egress_compare"),
-          egressInfo.matches_server_ip
-            ? t("log_content.egress_compare_same")
-            : t("log_content.egress_compare_different"),
-        );
-      }
-      pushDetailRow(
-        egressRows,
-        t("log_content.egress_error"),
-        egressInfo.error,
-      );
-    } else if (egressLoading) {
-      pushDetailRow(
-        egressRows,
-        t("log_content.egress_status"),
-        t("common.loading"),
-      );
-    } else if (egressError) {
-      pushDetailRow(egressRows, t("log_content.egress_error"), egressError);
-    }
-
-    if (egressLoading) {
-      egressBadges.push(
-        <span
-          key="loading"
-          className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 dark:bg-white/10 dark:text-white/60"
-        >
-          {t("log_content.egress_badge_verifying")}
-        </span>,
-      );
-    } else if (egressInfo?.using_proxy) {
-      egressBadges.push(
-        <span
-          key="proxy"
-          className="rounded-full bg-sky-100 px-2 py-0.5 text-xs font-medium text-sky-700 dark:bg-sky-500/15 dark:text-sky-200"
-        >
-          {t("log_content.egress_badge_proxy")}
-        </span>,
-      );
-    } else if (egressInfo) {
-      egressBadges.push(
-        <span
-          key="direct"
-          className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700 dark:bg-white/10 dark:text-white/70"
-        >
-          {t("log_content.egress_badge_server")}
-        </span>,
-      );
-    }
-    if (egressInfo && typeof egressInfo.matches_server_ip === "boolean") {
-      egressBadges.push(
-        <span
-          key="compare"
-          className={[
-            "rounded-full px-2 py-0.5 text-xs font-medium",
-            egressInfo.matches_server_ip
-              ? "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-200"
-              : "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200",
-          ].join(" ")}
-        >
-          {egressInfo.matches_server_ip
-            ? t("log_content.egress_badge_same")
-            : t("log_content.egress_badge_different")}
-        </span>,
-      );
-    }
-    if ((egressInfo?.error || egressError) && !egressLoading) {
-      egressBadges.push(
-        <span
-          key="error"
-          className="rounded-full bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-700 dark:bg-rose-500/15 dark:text-rose-200"
-        >
-          {t("log_content.egress_badge_failed")}
-        </span>,
-      );
-    }
-
-    return (
-      <div className="space-y-3 p-1">
-        <RequestDetailSection
-          testId="request-detail-section-egress"
-          title={t("log_content.details_egress")}
-          attempts={
-            egressRows.length > 0 ? [{ rows: egressRows, groups: [] }] : []
-          }
-          headerExtras={egressBadges}
-        />
-        <RequestDetailSection
-          testId="request-detail-section-client"
-          title={t("log_content.details_client")}
-          attempts={[clientAttempt]}
-        />
-        <RequestDetailSection
-          testId="request-detail-section-upstream"
-          title={t("log_content.details_upstream")}
-          attempts={upstreamAttempts}
-        />
-        <RequestDetailSection
-          testId="request-detail-section-response"
-          title={t("log_content.details_response")}
-          attempts={responseAttempts}
-        />
-        {extraSections.map((section) => (
-          <RequestDetailSection
-            key={section.key}
-            title={section.key}
-            attempts={section.attempts}
-          />
-        ))}
-      </div>
+  const renderDetails = () =>
+    detailsContent ? (
+      <RequestDetailsView
+        content={detailsContent}
+        egressInfo={egressInfo}
+        egressLoading={egressLoading}
+        egressError={egressError}
+      />
+    ) : (
+      renderEmpty("details")
     );
-  };
 
   return (
-    <ContentModal
-      open={open}
-      model={displayModel?.trim() || model}
-      onClose={onClose}
-      tabs={tabBar}
-      description={detailsOnly ? t("log_content.request_details") : undefined}
-    >
-      <div className="relative min-h-0 flex-1">
-        <AnimatePresence initial={false}>
-          {displayPhase === "loading" ? (
-            <motion.div
-              key={`loading-${activeTab}-${logId ?? "none"}`}
-              className="absolute inset-0 flex overflow-y-auto overscroll-contain"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: contentPhase === "loading" ? 1 : 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
-            >
-              {renderCenteredLoading()}
-            </motion.div>
-          ) : displayPhase === "error" ? (
-            <motion.div
-              key={`error-${activeTab}-${logId ?? "none"}`}
-              className="absolute inset-0 flex flex-col items-center justify-center overflow-y-auto overscroll-contain"
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-            >
-              <p className="text-sm text-red-500 dark:text-red-400">
-                {activeError}
-              </p>
-            </motion.div>
-          ) : (
-            <motion.div
-              key={`content-${activeTab}-${viewMode}-${logId ?? "none"}`}
-              className="absolute inset-0 overflow-y-auto overscroll-contain will-change-[opacity,filter]"
-              initial={{ opacity: 0, filter: "blur(3px)" }}
-              animate={{ opacity: 1, filter: "blur(0px)" }}
-              exit={{ opacity: 0 }}
-              transition={{
-                duration: CONTENT_ENTER_MS / 1000,
-                ease: [0.16, 1, 0.3, 1],
-              }}
-            >
-              {activeTab === "input"
-                ? renderInput()
-                : activeTab === "output"
-                  ? renderOutput()
-                  : renderDetails()}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+    <>
+      <ContentModal
+        open={open}
+        model={displayModel?.trim() || model}
+        onClose={onClose}
+        tabs={tabBar}
+        // 只剩请求详情时说明原因（正文存储没开），不再把「请求详情」在标题和描述里各写一遍。
+        description={detailsOnly ? t("log_content.details_only_desc") : undefined}
+      >
+        <div className="relative min-h-0 flex-1">
+          <AnimatePresence initial={false}>
+            {displayPhase === "loading" ? (
+              <motion.div
+                key={`loading-${activeTab}-${logId ?? "none"}`}
+                className="absolute inset-0 flex overflow-y-auto overscroll-contain"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: contentPhase === "loading" ? 1 : 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+              >
+                {renderCenteredLoading()}
+              </motion.div>
+            ) : displayPhase === "error" ? (
+              <motion.div
+                key={`error-${activeTab}-${logId ?? "none"}`}
+                className="absolute inset-0 flex flex-col items-center justify-center overflow-y-auto overscroll-contain"
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+              >
+                <Callout tone="danger" role="alert" className="max-w-md">
+                  {activeError}
+                </Callout>
+              </motion.div>
+            ) : (
+              <motion.div
+                key={`content-${activeTab}-${viewMode}-${logId ?? "none"}`}
+                className="absolute inset-0 overflow-y-auto overscroll-contain will-change-[opacity,filter]"
+                initial={{ opacity: 0, filter: "blur(3px)" }}
+                animate={{ opacity: 1, filter: "blur(0px)" }}
+                exit={{ opacity: 0 }}
+                transition={{
+                  duration: CONTENT_ENTER_MS / 1000,
+                  ease: [0.16, 1, 0.3, 1],
+                }}
+              >
+                {activeTab === "input"
+                  ? renderInput()
+                  : activeTab === "output"
+                    ? renderOutput()
+                    : renderDetails()}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </ContentModal>
+      {/* 大图预览放在弹窗外：弹窗关闭时会冻结内容播完退场动画，预览不该跟着被冻住。 */}
       <ImagePreviewOverlay
         open={imagePreviewOpen && Boolean(outputImagePreviewSrc)}
         imageSrc={outputImagePreviewSrc}
@@ -1528,6 +644,6 @@ export function LogContentModal({
         onActiveIndexChange={setOutputImagePreviewIndex}
         onClose={() => setImagePreviewOpen(false)}
       />
-    </ContentModal>
+    </>
   );
 }

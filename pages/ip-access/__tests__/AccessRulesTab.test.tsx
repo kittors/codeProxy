@@ -1,7 +1,8 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { IpAccessRule } from "@code-proxy/api-client";
+import { ConfirmHost } from "@code-proxy/ui";
 import { AccessRulesTab } from "../AccessRulesTab";
 
 const rules = vi.fn();
@@ -146,6 +147,67 @@ describe("AccessRulesTab", () => {
     await waitFor(() =>
       expect(bulkUpdateRules).toHaveBeenCalledWith({ ids: ["r1", "r2"], enabled: true }),
     );
+  });
+
+  test("bulk delete asks first, lists the addresses, and explains deny and allow separately", async () => {
+    rules.mockResolvedValue({
+      items: [
+        ruleFixture(),
+        ruleFixture({ id: "r2", cidr: "45.83.0.0/16" }),
+        ruleFixture({ id: "r3", cidr: "10.0.0.0/8", effect: "allow", source: "manual" }),
+      ],
+      total: 3,
+      page: 1,
+      size: 50,
+    });
+    bulkUpdateRules.mockResolvedValue({ applied: ["r1", "r2", "r3"], failed: {} });
+    render(<ConfirmHost />);
+    renderTab();
+    await screen.findByText("10.0.0.0/8");
+
+    await userEvent.click(await screen.findByRole("checkbox", { name: "ip_access.select_all" }));
+    await userEvent.click(await screen.findByRole("button", { name: "ip_access.bulk_delete" }));
+    let dialog = await screen.findByRole("dialog", {
+      name: 'ip_access.bulk_delete_title:{"count":3}',
+    });
+    // 选中了却还没删：先把要删的地址和后果摆出来。
+    expect(bulkUpdateRules).not.toHaveBeenCalled();
+    expect(within(dialog).getByText("45.83.0.0/16")).toBeInTheDocument();
+    expect(within(dialog).getByText("10.0.0.0/8")).toBeInTheDocument();
+    expect(
+      within(dialog).getByText('ip_access.bulk_delete_consequence_deny:{"count":2}'),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByText('ip_access.bulk_delete_consequence_allow:{"count":1}'),
+    ).toBeInTheDocument();
+
+    await userEvent.click(within(dialog).getByRole("button", { name: "common.cancel" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(bulkUpdateRules).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole("button", { name: "ip_access.bulk_delete" }));
+    dialog = await screen.findByRole("dialog", { name: 'ip_access.bulk_delete_title:{"count":3}' });
+    await userEvent.click(within(dialog).getByRole("button", { name: "ip_access.bulk_delete" }));
+    await waitFor(() =>
+      expect(bulkUpdateRules).toHaveBeenCalledWith({ ids: ["r1", "r2", "r3"], delete: true }),
+    );
+  });
+
+  test("names the rule being deleted and what changes for that address", async () => {
+    deleteRule.mockResolvedValue(undefined);
+    renderTab();
+
+    await userEvent.click(await screen.findByRole("button", { name: "ip_access.delete_rule" }));
+    const dialog = await screen.findByRole("dialog", {
+      name: 'ip_access.delete_rule_title:{"cidr":"203.0.113.66/32"}',
+    });
+    expect(within(dialog).getByText("203.0.113.66/32")).toBeInTheDocument();
+    expect(within(dialog).getByText("ip_access.delete_rule_consequence_default")).toBeInTheDocument();
+    // 删掉的是拒绝规则：说明该地址之后不再被它拒绝。
+    expect(within(dialog).getByText("ip_access.delete_rule_consequence_deny")).toBeInTheDocument();
+
+    await userEvent.click(within(dialog).getByRole("button", { name: "ip_access.delete_rule" }));
+    await waitFor(() => expect(deleteRule).toHaveBeenCalledWith("r1"));
   });
 
   test("protected addresses are listed so a refused ban is explainable", async () => {

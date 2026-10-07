@@ -1,6 +1,6 @@
 import { useEffect, type Dispatch, type SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
-import { Check } from "lucide-react";
+import { AlertCircle, Check, Plug } from "lucide-react";
 import type { OpenAIDraft } from "../providers-helpers";
 import { Button } from "@code-proxy/ui";
 import { Modal } from "@code-proxy/ui";
@@ -66,14 +66,18 @@ export function OpenAIProviderModal({
           : t("providers.edit_openai_provider")
       }
       description={t("providers.openai_config_desc")}
+      icon={<Plug />}
       onClose={closeOpenAIEditor}
+      footerStart={
+        openaiDraftError ? (
+          <span role="alert" className="inline-flex items-center gap-1.5 text-sm font-medium text-rose-600 dark:text-rose-400">
+            <AlertCircle size={15} aria-hidden="true" />
+            {openaiDraftError}
+          </span>
+        ) : null
+      }
       footer={
-        <div className="flex flex-wrap items-center gap-2">
-          {openaiDraftError ? (
-            <span className="text-sm font-semibold text-rose-700 dark:text-rose-200">
-              {openaiDraftError}
-            </span>
-          ) : null}
+        <>
           <Button variant="secondary" onClick={closeOpenAIEditor}>
             {t("providers.cancel")}
           </Button>
@@ -81,16 +85,16 @@ export function OpenAIProviderModal({
             <Check size={14} />
             {t("providers.save")}
           </Button>
-        </div>
+        </>
       }
     >
       <div className="space-y-5">
         <OpenAIProviderBasicSection openaiDraft={openaiDraft} setOpenaiDraft={setOpenaiDraft} />
 
-        <div className="rounded-xl border border-slate-900/8 bg-white/70 p-4 shadow-sm dark:border-white/8 dark:bg-neutral-950/60">
+        <div className="rounded-xl border border-line bg-surface p-4 shadow-sm">
           <ModerationProfileSelect
-        canRead={moderationPerms.canRead}
-        canWrite={moderationPerms.canWrite}
+            canRead={moderationPerms.canRead}
+            canWrite={moderationPerms.canWrite}
             channelType="provider"
             channelId={openaiDraft.id}
             label={t("content_moderation.provider_default_profile_label")}
@@ -99,7 +103,7 @@ export function OpenAIProviderModal({
           />
         </div>
 
-        <div className="border-t border-slate-900/8 pt-5 dark:border-white/8">
+        <div className="border-t border-line pt-5">
           <OpenAIKeyEntriesEditor
             openaiDraft={openaiDraft}
             setOpenaiDraft={setOpenaiDraft}
@@ -109,7 +113,7 @@ export function OpenAIProviderModal({
           />
         </div>
 
-        <div className="border-t border-slate-900/8 pt-5 dark:border-white/8">
+        <div className="border-t border-line pt-5">
           <OpenAIProviderModelsSection
             openaiDraft={openaiDraft}
             setOpenaiDraft={setOpenaiDraft}

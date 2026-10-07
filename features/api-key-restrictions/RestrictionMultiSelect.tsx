@@ -24,6 +24,10 @@ interface RestrictionMultiSelectProps {
   noResultsLabel: string;
   disabled?: boolean;
   className?: string;
+  /** 由 FormField 注入：标签点得到触发器，读屏能把标签和说明读出来。 */
+  id?: string;
+  "aria-invalid"?: boolean | "true" | "false";
+  "aria-describedby"?: string;
 }
 
 function normalizeSelection(options: MultiSelectOption[], selected: string[]): string[] {
@@ -52,6 +56,9 @@ export function RestrictionMultiSelect({
   noResultsLabel,
   disabled = false,
   className = "",
+  id,
+  "aria-invalid": ariaInvalid,
+  "aria-describedby": ariaDescribedBy,
 }: RestrictionMultiSelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -290,7 +297,15 @@ export function RestrictionMultiSelect({
     <div className={`relative ${className}`}>
       <button
         ref={triggerRef}
+        id={id}
         type="button"
+        // 与 Select 一样是「只能选、不能打字」的 combobox：名称来自字段标签，当前选择作为它的值
+        // 被读出来；若还是普通 button，接上标签后读屏就只剩标签、听不到选了什么。
+        role="combobox"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-invalid={ariaInvalid}
+        aria-describedby={ariaDescribedBy}
         disabled={disabled}
         onClick={() => {
           if (!open) updatePosition();

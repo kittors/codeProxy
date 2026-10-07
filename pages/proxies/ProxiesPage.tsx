@@ -10,9 +10,6 @@ import { Button, COLUMN_WIDTH } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
 import { ConfirmModal } from "@code-proxy/ui";
 import { HoverTooltip } from "@code-proxy/ui";
-import { TextInput } from "@code-proxy/ui";
-import { Modal } from "@code-proxy/ui";
-import { ToggleSwitch } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
 import { DataTable, TABLE_ROW_ACTIONS_COLUMN, type DataTableColumn } from "@code-proxy/ui";
 import {
@@ -29,6 +26,7 @@ import {
   type ProxyCheckState,
   type ProxyLatencyTone,
 } from "@features/proxy-pool/proxy-utils";
+import { ProxyFormModal, type ProxyFormField } from "./ProxyFormModal";
 
 const latencyToneClasses: Record<ProxyLatencyTone, string> = {
   none: "bg-slate-100 text-slate-600 dark:bg-neutral-900 dark:text-slate-300",
@@ -48,6 +46,7 @@ export function ProxiesPage() {
   const [draft, setDraft] = useState<ProxyPoolEntry>(() => emptyProxyDraft());
   const [editingID, setEditingID] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ProxyPoolEntry | null>(null);
+  const [formError, setFormError] = useState<ProxyFormField | null>(null);
   const [checkState, setCheckState] = useState<ProxyCheckState>(() => readCachedProxyCheckState());
 
   const sortedEntries = useMemo(
@@ -115,22 +114,26 @@ export function ProxiesPage() {
   const closeModal = useCallback(() => {
     setEditingID(null);
     setDraft(emptyProxyDraft());
+    setFormError(null);
   }, []);
 
   const openCreate = useCallback(() => {
     setEditingID("");
     setDraft(emptyProxyDraft());
+    setFormError(null);
   }, []);
 
   const openEdit = useCallback((entry: ProxyPoolEntry) => {
     setEditingID(entry.id);
     setDraft({ ...entry });
+    setFormError(null);
   }, []);
 
   const saveDraft = async () => {
     const invalidField = validateProxyDraft(draft);
     if (invalidField) {
-      notify({ type: "error", message: t(`proxies.validation_${invalidField}`) });
+      // 错误就地标在对应输入框下（ProxyFormModal），不再只弹 toast。
+      setFormError(invalidField === "name" ? "name" : "url");
       return;
     }
 
@@ -379,7 +382,6 @@ export function ProxiesPage() {
     [checkEntry, checkState, deleteEntry, formatCheckBadgeLabel, formatCheckTooltip, openEdit, t],
   );
 
-  const modalTitle = editingID ? t("proxies.edit_title") : t("proxies.add_title");
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-5 md:overflow-hidden">
@@ -424,65 +426,34 @@ export function ProxiesPage() {
         />
       </Card>
 
-      <Modal
+      <ProxyFormModal
         open={editingID !== null}
-        title={modalTitle}
-        maxWidth="max-w-xl"
+        editing={Boolean(editingID)}
+        draft={draft}
+        setDraft={setDraft}
+        error={formError}
+        onClearError={() => setFormError(null)}
+        saving={saving}
+        onSubmit={() => void saveDraft()}
         onClose={closeModal}
-        footer={
-          <>
-            <Button onClick={closeModal} disabled={saving}>
-              {t("common.cancel")}
-            </Button>
-            <Button onClick={() => void saveDraft()} disabled={saving} variant="primary">
-              {t("common.save")}
-            </Button>
-          </>
-        }
-      >
-        <div className="space-y-4">
-          <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-slate-700 dark:text-white/75">
-              {t("proxies.name")}
-            </span>
-            <TextInput
-              value={draft.name}
-              onChange={(event) => setDraft((prev) => ({ ...prev, name: event.target.value }))}
-            />
-          </label>
-          <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-slate-700 dark:text-white/75">
-              {t("proxies.url")}
-            </span>
-            <TextInput
-              value={draft.url}
-              placeholder="socks5://user:pass@127.0.0.1:1080"
-              onChange={(event) => setDraft((prev) => ({ ...prev, url: event.target.value }))}
-            />
-          </label>
-          <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-slate-700 dark:text-white/75">
-              {t("proxies.description_label")}
-            </span>
-            <TextInput
-              value={draft.description ?? ""}
-              onChange={(event) =>
-                setDraft((prev) => ({ ...prev, description: event.target.value }))
-              }
-            />
-          </label>
-          <ToggleSwitch
-            checked={draft.enabled}
-            onCheckedChange={(enabled) => setDraft((prev) => ({ ...prev, enabled }))}
-            label={t("proxies.enabled")}
-          />
-        </div>
-      </Modal>
+      />
 
       <ConfirmModal
         open={deleteTarget !== null}
         title={t("proxies.delete_title")}
-        description={t("proxies.delete_description", { name: deleteTarget?.name ?? "" })}
+        description={t("proxies.delete_lead")}
+        subject={
+          deleteTarget ? (
+            <span className="flex min-w-0 items-center justify-between gap-3">
+              <span className="truncate font-medium">{deleteTarget.name}</span>
+              <span className="shrink-0 font-mono text-xs text-ink-3">
+                {proxyProtocol(deleteTarget.maskedUrl || deleteTarget.url)} ·{" "}
+                {proxyEndpoint(deleteTarget)}
+              </span>
+            </span>
+          ) : null
+        }
+        consequences={[t("proxies.delete_consequence_bindings")]}
         confirmText={t("proxies.delete_confirm")}
         busy={deleting}
         onClose={() => setDeleteTarget(null)}

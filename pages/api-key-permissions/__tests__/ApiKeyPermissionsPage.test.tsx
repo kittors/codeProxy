@@ -240,7 +240,9 @@ describe("ApiKeyPermissionsPage", () => {
       within(dialog).getByRole("textbox", { name: "系统提示词" }),
       "专业系统提示词",
     );
-    await userEvent.click(within(dialog).getByRole("button", { name: /全部渠道分组/i }));
+    const channelGroups = within(dialog).getByRole("combobox", { name: /允许的渠道分组/ });
+    expect(channelGroups).toHaveTextContent("全部渠道分组");
+    await userEvent.click(channelGroups);
     await userEvent.click(await screen.findByRole("button", { name: /pro/i }));
     await userEvent.click(within(dialog).getByRole("button", { name: "保存配置" }));
 
@@ -293,6 +295,28 @@ describe("ApiKeyPermissionsPage", () => {
     expect(mocks.endUsersUpdate).not.toHaveBeenCalled();
   });
 
+  test("flags a missing config name in place and spells out what a delete does", async () => {
+    renderPage();
+    expect(await screen.findByText("标准配置")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "新增配置" }));
+    const dialog = await screen.findByRole("dialog", { name: "新增权限配置" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "保存配置" }));
+    expect(within(dialog).getByText("这一项必填")).toBeInTheDocument();
+    expect(mocks.apiClientPut).not.toHaveBeenCalled();
+    await userEvent.click(within(dialog).getByRole("button", { name: "取消" }));
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog", { name: "新增权限配置" })).not.toBeInTheDocument(),
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "删除" }));
+    const confirm = await screen.findByRole("dialog", { name: "删除权限配置" });
+    expect(within(confirm).getByText("标准配置")).toBeInTheDocument();
+    expect(within(confirm).getByText("已绑定 2 个账号")).toBeInTheDocument();
+    expect(within(confirm).getByText(/转为自定义账户配置/)).toBeInTheDocument();
+    expect(within(confirm).getByRole("button", { name: "删除配置" })).toBeInTheDocument();
+  });
+
   test("loads provider channels from OpenCode Go, ClinePass and Ollama Cloud configs", async () => {
     mocks.getOpenCodeGoConfigs.mockResolvedValue([{ name: "OpenCode Go 主渠道" }]);
     mocks.getClineConfigs.mockResolvedValue([{ name: "ClinePass 主渠道" }]);
@@ -304,7 +328,7 @@ describe("ApiKeyPermissionsPage", () => {
     await userEvent.click(screen.getByRole("button", { name: "新增配置" }));
     const dialog = await screen.findByRole("dialog", { name: "新增权限配置" });
     await userEvent.click(within(dialog).getByRole("switch", { name: "精确渠道覆盖（高级）" }));
-    await userEvent.click(within(dialog).getByRole("button", { name: /^全部渠道$/i }));
+    await userEvent.click(within(dialog).getByRole("combobox", { name: /^允许的渠道（/ }));
 
     expect(await screen.findByRole("button", { name: /OpenCode Go 主渠道/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /ClinePass 主渠道/i })).toBeInTheDocument();

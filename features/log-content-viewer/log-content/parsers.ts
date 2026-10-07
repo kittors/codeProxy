@@ -326,6 +326,18 @@ export function tryPrettyPrintJson(raw: string): string | null {
   }
 }
 
+/** 解析成普通对象；不是 JSON、或顶层是数组 / 原始值时返回 null。 */
+export function parseJsonObject(raw: string): Record<string, unknown> | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    return parsed as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
 export function buildInputRenderedView(raw: string): RenderedView {
   const messages = parseInputMessages(raw);
   if (messages && messages.length > 0) return { kind: "messages", messages };

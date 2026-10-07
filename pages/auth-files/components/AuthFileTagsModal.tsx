@@ -1,12 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { X } from "lucide-react";
+import { Eye, Plus, Tags, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { AuthFileItem } from "@code-proxy/api-client";
-import { Button } from "@code-proxy/ui";
-import { Checkbox } from "@code-proxy/ui";
-import { Fieldset } from "@code-proxy/ui";
-import { TextInput } from "@code-proxy/ui";
-import { Modal } from "@code-proxy/ui";
+import { Button, Checkbox, FormSection, Modal, TextInput } from "@code-proxy/ui";
 import {
   normalizeTagValue,
   readAuthFileCustomTags,
@@ -92,129 +88,154 @@ export function AuthFileTagsModal({
     if (saved) onClose();
   };
 
+  const formId = "auth-file-tags-form";
+  const fileName = file ? resolveAuthFileDisplayName(file) || file.name : "";
+
   return (
     <Modal
       open={open}
       title={t("auth_files.tags_modal_title")}
-      description={file ? resolveAuthFileDisplayName(file) || file.name : undefined}
+      description={fileName ? t("auth_files.tags_modal_desc", { name: fileName }) : undefined}
+      icon={<Tags />}
+      size="lg"
       onClose={onClose}
-      maxWidth="max-w-2xl"
+      footerStart={
+        // 预览：保存后列表 / 卡片里会显示成这样，勾选时实时变化。
+        selectedDisplayTags.length ? (
+          <span className="flex min-w-0 flex-wrap items-center gap-1.5">
+            <span className="shrink-0">{t("auth_files.tags_preview")}</span>
+            {selectedDisplayTags.map((tag) => (
+              <span
+                key={tag}
+                className="rounded-full bg-selected px-2 py-0.5 text-2xs font-medium text-ink-2"
+              >
+                {tag}
+              </span>
+            ))}
+          </span>
+        ) : (
+          t("auth_files.tags_preview_empty")
+        )
+      }
+      footer={
+        <>
+          <Button variant="default" onClick={onClose} disabled={saving}>
+            {t("common.cancel")}
+          </Button>
+          <Button type="submit" form={formId} variant="primary" disabled={!file} loading={saving}>
+            {t("common.save")}
+          </Button>
+        </>
+      }
     >
       <form
-        className="space-y-7"
+        id={formId}
+        className="space-y-6"
         onSubmit={(event) => {
           event.preventDefault();
           void handleSave();
         }}
       >
-        <Fieldset disabled={saving}>
-          <Fieldset.Legend
-            description={t("auth_files.custom_tag_limit", { count: MAX_CUSTOM_TAGS })}
-          >
-            {t("auth_files.custom_tag_label")}
-          </Fieldset.Legend>
-          <Fieldset.Group>
-            <div className="flex items-center gap-2">
-              <TextInput
-                value={customTagInput}
-                onChange={(event) => setCustomTagInput(event.currentTarget.value)}
-                onKeyDown={(event) => {
-                  if (event.key !== "Enter") return;
-                  event.preventDefault();
-                  handleAddCustomTag();
-                }}
-                placeholder={t("auth_files.custom_tag_placeholder")}
-                aria-label={t("auth_files.custom_tag_label")}
-                disabled={saving}
-              />
-              <Button
-                variant="default"
-                onClick={handleAddCustomTag}
-                disabled={saving || !canAddCustomTag}
-              >
-                {t("auth_files.custom_tag_add")}
-              </Button>
-            </div>
+        <FormSection
+          title={t("auth_files.custom_tags_section")}
+          description={t("auth_files.custom_tag_limit", { count: MAX_CUSTOM_TAGS })}
+          icon={<Plus />}
+        >
+          <div className="flex items-center gap-2">
+            <TextInput
+              value={customTagInput}
+              onChange={(event) => setCustomTagInput(event.currentTarget.value)}
+              onKeyDown={(event) => {
+                if (event.key !== "Enter") return;
+                // 回车是「加这个标签」，不是保存整个弹窗。
+                event.preventDefault();
+                handleAddCustomTag();
+              }}
+              placeholder={t("auth_files.custom_tag_placeholder")}
+              aria-label={t("auth_files.custom_tag_label")}
+              disabled={saving || customTags.length >= MAX_CUSTOM_TAGS}
+            />
+            <Button
+              variant="default"
+              onClick={handleAddCustomTag}
+              disabled={saving || !canAddCustomTag}
+            >
+              {t("auth_files.custom_tag_add")}
+            </Button>
+          </div>
 
-            {customTags.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {customTags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-[#EBEBEC] px-2.5 py-1 text-xs font-medium text-[#3F3F46] dark:bg-[#27272A] dark:text-[#D4D4D8]"
+          {customTags.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {customTags.map((tag) => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center gap-1 rounded-full border border-line bg-subtle py-1 pr-1 pl-2.5 text-xs font-medium text-ink"
+                >
+                  <span>{tag}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveCustomTag(tag)}
+                    aria-label={t("auth_files.remove_custom_tag", { tag })}
+                    className="rounded-full p-0.5 text-ink-3 transition-colors hover:bg-hover hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={saving}
                   >
-                    <span>{tag}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveCustomTag(tag)}
-                      aria-label={t("auth_files.remove_custom_tag", { tag })}
-                      className="rounded-full p-0.5 text-[#71717A] transition-colors hover:bg-black/[0.06] hover:text-[#18181B] disabled:cursor-not-allowed disabled:opacity-50 dark:text-[#A1A1AA] dark:hover:bg-white/10 dark:hover:text-white"
-                      disabled={saving}
-                    >
-                      <X size={12} />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <Fieldset.Description className="text-xs">
-                {t("auth_files.no_tags")}
-              </Fieldset.Description>
-            )}
-          </Fieldset.Group>
-        </Fieldset>
+                    <X size={12} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-ink-3">{t("auth_files.no_custom_tags")}</p>
+          )}
+        </FormSection>
 
-        <Fieldset disabled={saving}>
-          <Fieldset.Legend>{t("auth_files.display_tags_label")}</Fieldset.Legend>
-          <Fieldset.Group>
-            {tagOptions.length > 0 ? (
-              <div className="grid gap-2 sm:grid-cols-2">
-                {tagOptions.map((tag) => {
-                  const checked = selectedTagSet.has(tag);
-                  const custom = customTags.includes(tag);
-                  const inherited = defaultTags.includes(tag);
-                  return (
-                    <label
-                      key={tag}
-                      className="flex cursor-pointer items-center justify-between gap-3 rounded-2xl bg-white px-3 py-2 text-sm text-[#18181B] shadow-[2px_2px_6px_rgb(0_0_0_/_0.055)] transition-colors hover:bg-[#FAFAFA] dark:bg-[#27272A] dark:text-white dark:shadow-[0_8px_24px_rgb(0_0_0_/_0.24)] dark:hover:bg-[#303036]"
-                    >
+        <FormSection
+          title={t("auth_files.display_tags_label")}
+          description={t("auth_files.display_tags_desc")}
+          icon={<Eye />}
+        >
+          {tagOptions.length > 0 ? (
+            <div className="grid gap-2 sm:grid-cols-2">
+              {tagOptions.map((tag) => {
+                const checked = selectedTagSet.has(tag);
+                const custom = customTags.includes(tag);
+                const inherited = defaultTags.includes(tag);
+                return (
+                  <label
+                    key={tag}
+                    className={[
+                      "flex cursor-pointer items-center justify-between gap-3 rounded-2xl border px-3.5 py-2.5 text-sm transition-colors",
+                      checked
+                        ? "border-ink/20 bg-surface text-ink dark:border-white/20"
+                        : "border-line bg-subtle text-ink-2 hover:bg-surface-hover",
+                    ].join(" ")}
+                  >
+                    <span className="flex min-w-0 items-center gap-2.5">
+                      <Checkbox
+                        checked={checked}
+                        onCheckedChange={(next) => handleToggleDisplayTag(tag, next)}
+                        aria-label={tag}
+                        disabled={saving}
+                      />
                       <span className="min-w-0 truncate font-medium">{tag}</span>
-                      <span className="flex shrink-0 items-center gap-2">
-                        {custom ? (
-                          <span className="rounded-full bg-sky-50 px-2 py-0.5 text-2xs font-semibold text-sky-700 dark:bg-sky-500/15 dark:text-sky-200">
-                            {t("auth_files.custom_tag_label")}
-                          </span>
-                        ) : inherited ? (
-                          <span className="rounded-full bg-[#EBEBEC] px-2 py-0.5 text-2xs font-semibold text-[#71717A] dark:bg-white/10 dark:text-white/60">
-                            {t("auth_files.default_tags_label")}
-                          </span>
-                        ) : null}
-                        <Checkbox
-                          checked={checked}
-                          onCheckedChange={(next) => handleToggleDisplayTag(tag, next)}
-                          aria-label={tag}
-                          disabled={saving}
-                        />
+                    </span>
+                    {custom ? (
+                      <span className="shrink-0 rounded-full bg-sky-500/10 px-2 py-0.5 text-2xs font-medium text-sky-700 dark:text-sky-300">
+                        {t("auth_files.custom_tag_label")}
                       </span>
-                    </label>
-                  );
-                })}
-              </div>
-            ) : (
-              <Fieldset.Description className="text-xs">
-                {t("auth_files.no_tags")}
-              </Fieldset.Description>
-            )}
-          </Fieldset.Group>
-          <Fieldset.Actions className="justify-end">
-            <Button variant="default" onClick={onClose} disabled={saving}>
-              {t("common.cancel")}
-            </Button>
-            <Button type="submit" variant="primary" disabled={saving || !file}>
-              {t("common.save")}
-            </Button>
-          </Fieldset.Actions>
-        </Fieldset>
+                    ) : inherited ? (
+                      <span className="shrink-0 rounded-full bg-selected px-2 py-0.5 text-2xs font-medium text-ink-3">
+                        {t("auth_files.default_tags_label")}
+                      </span>
+                    ) : null}
+                  </label>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-xs text-ink-3">{t("auth_files.no_tags")}</p>
+          )}
+        </FormSection>
       </form>
     </Modal>
   );

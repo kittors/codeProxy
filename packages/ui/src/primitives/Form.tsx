@@ -12,7 +12,9 @@ import {
   type PropsWithChildren,
   type ReactElement,
   type ReactNode,
+  type Ref,
 } from "react";
+import { useTranslation } from "react-i18next";
 import { cn } from "../utils/selectStyles";
 
 /* ------------------------------------------------------------------ */
@@ -21,6 +23,7 @@ import { cn } from "../utils/selectStyles";
 
 type FormFieldContextValue = {
   id: string;
+  labelId: string;
   descriptionId?: string;
   errorId?: string;
   countId?: string;
@@ -28,6 +31,14 @@ type FormFieldContextValue = {
 };
 
 const FormFieldContext = createContext<FormFieldContextValue | null>(null);
+
+/**
+ * 给不是原生表单元素的组合控件用（卡片单选是一组按钮，`<label for>` 指不到它）：
+ * 在 FormField 里时拿到字段标签与说明的 id，自己挂 aria-labelledby / aria-describedby。
+ */
+export function useOptionalFormField(): FormFieldContextValue | null {
+  return useContext(FormFieldContext);
+}
 
 function useFormFieldContext(component: string): FormFieldContextValue {
   const ctx = useContext(FormFieldContext);
@@ -41,7 +52,11 @@ function useFormFieldContext(component: string): FormFieldContextValue {
 /*  Form                                                               */
 /* ------------------------------------------------------------------ */
 
-export type FormProps = FormHTMLAttributes<HTMLFormElement>;
+/**
+ * React 19 里 ref 是普通 prop，展开到 `<form>` 上就能拿到节点——提交校验失败时
+ * `focusFirstInvalid(formRef.current)` 要用它，不必再在 Form 外面另包一层原生 form。
+ */
+export type FormProps = FormHTMLAttributes<HTMLFormElement> & { ref?: Ref<HTMLFormElement> };
 
 function FormRoot({ className, ...props }: FormProps) {
   return <form data-slot="form" className={cn("space-y-4", className)} {...props} />;
@@ -63,6 +78,8 @@ export type FormFieldProps = PropsWithChildren<
     error?: ReactNode;
     /** Show a required marker next to the label. */
     required?: boolean;
+    /** Show a muted "optional" hint next to the label (instead of baking it into the label text). */
+    optional?: boolean;
     /** Layout: vertical stacks label above control; horizontal puts label beside control. */
     orientation?: FormFieldOrientation;
     /** Optional explicit control id; defaults to a generated id. */
@@ -89,6 +106,7 @@ function FormField({
   description,
   error,
   required = false,
+  optional = false,
   orientation = "vertical",
   htmlFor,
   reserveMeta = true,
@@ -110,7 +128,7 @@ function FormField({
   const length = typeof valueLength === "number" ? valueLength : 0;
 
   const contextValue = useMemo<FormFieldContextValue>(
-    () => ({ id, descriptionId, errorId, countId, invalid }),
+    () => ({ id, labelId: `${id}-label`, descriptionId, errorId, countId, invalid }),
     [countId, descriptionId, errorId, id, invalid],
   );
 
@@ -119,20 +137,10 @@ function FormField({
   );
 
   const infoRow =
-    description || showCount || reserveMeta ? (
-      <div
-        data-slot="form-field-info"
-        className={cn(
-          "flex min-h-5 items-start justify-between gap-3",
-          !description && !showCount && reserveMeta ? "invisible" : null,
-        )}
-      >
+    description || showCount ? (
+      <div data-slot="form-field-info" className="flex min-h-5 items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          {description ? (
-            <FormDescription id={descriptionId}>{description}</FormDescription>
-          ) : reserveMeta ? (
-            <span className="block text-xs leading-5">&nbsp;</span>
-          ) : null}
+          {description ? <FormDescription id={descriptionId}>{description}</FormDescription> : null}
         </div>
         {showCount ? (
           <span
@@ -149,26 +157,30 @@ function FormField({
       </div>
     ) : null;
 
-  const errorRow =
-    error || reserveMeta ? (
+  // 只预留一行：没有说明时，这一行留给随时可能出现的错误，出现时不会把下面的字段往下推；
+  // 以前说明和错误各预留一行，每个字段下面都空着两行，弹窗里的表单显得很松。
+  const errorRow = error ? (
+    <div data-slot="form-field-error-slot" className="min-h-5">
+      <FormError id={errorId}>{error}</FormError>
+    </div>
+  ) : reserveMeta && !infoRow ? (
+    <div data-slot="form-field-error-slot" className="invisible min-h-5" aria-hidden="true">
+      <span className="block text-xs leading-5">&nbsp;</span>
+    </div>
+  ) : null;
+
+  // 竖排时说明 / 错误贴近输入框（往上收 4px），和下一个字段的标签拉开距离，
+  // 一眼看得出这行小字属于上面的输入框。
+  const meta =
+    infoRow || errorRow ? (
       <div
-        data-slot="form-field-error-slot"
-        className={cn("min-h-5", !error && reserveMeta ? "invisible" : null)}
+        data-slot="form-field-meta"
+        className={cn("space-y-0.5", isHorizontal ? null : "-mt-1")}
       >
-        {error ? (
-          <FormError id={errorId}>{error}</FormError>
-        ) : reserveMeta ? (
-          <span className="block text-xs leading-5">&nbsp;</span>
-        ) : null}
+        {infoRow}
+        {errorRow}
       </div>
     ) : null;
-
-  const meta = (
-    <div data-slot="form-field-meta" className="space-y-0.5">
-      {infoRow}
-      {errorRow}
-    </div>
-  );
 
   const labelClasses = cn(
     isHorizontal ? cn(resolvedLabelWidth, "shrink-0 text-left leading-9") : null,
@@ -190,7 +202,11 @@ function FormField({
         {...props}
       >
         {label != null && label !== false ? (
-          <FormLabel required={required} className={labelClasses || undefined}>
+          <FormLabel
+            required={required}
+            optional={optional}
+            className={labelClasses || undefined}
+          >
             {label}
           </FormLabel>
         ) : null}
@@ -216,21 +232,36 @@ function FormField({
 
 export type FormLabelProps = LabelHTMLAttributes<HTMLLabelElement> & {
   required?: boolean;
+  optional?: boolean;
 };
 
-function FormLabel({ children, className, required = false, ...props }: FormLabelProps) {
-  const { id } = useFormFieldContext("FormLabel");
+function FormLabel({
+  children,
+  className,
+  required = false,
+  optional = false,
+  ...props
+}: FormLabelProps) {
+  const { id, labelId } = useFormFieldContext("FormLabel");
+  const { t } = useTranslation();
   return (
     <label
       data-slot="form-label"
+      id={labelId}
       htmlFor={id}
-      className={cn("text-sm font-medium text-ink-2", className)}
+      // 标签用正文色、说明用浅灰：两层信息一眼分得开（以前标签和说明都是灰的）。
+      className={cn("text-sm font-medium text-ink", className)}
       {...props}
     >
       {children}
       {required ? (
         <span className="ml-0.5 text-rose-500" aria-hidden="true">
           *
+        </span>
+      ) : null}
+      {optional && !required ? (
+        <span className="ml-1.5 text-xs font-normal text-ink-3">
+          {t("common.optional", { defaultValue: "可选" })}
         </span>
       ) : null}
     </label>

@@ -15,7 +15,7 @@ import { OpenAIModelDiscoveryPanel } from "./OpenAIModelDiscoveryPanel";
 type ModelAccessRow = { id: string; owned_by?: string };
 
 const SectionCard = ({ children }: { children: React.ReactNode }) => (
-  <div className="rounded-lg border border-slate-900/8 bg-white/70 p-4 shadow-sm dark:border-white/8 dark:bg-neutral-950/60">
+  <div className="rounded-lg border border-line bg-surface p-4 shadow-sm">
     {children}
   </div>
 );
@@ -162,11 +162,11 @@ export function ProviderKeyModelsTab({
           model.owned_by ? `${model.id}\n${model.owned_by}` : model.id,
         render: (model) => (
           <span className="min-w-0">
-            <span className="block truncate font-mono text-xs font-semibold text-slate-800 dark:text-white/85">
+            <span className="block truncate font-mono text-xs font-semibold text-ink">
               {model.id}
             </span>
             {model.owned_by ? (
-              <span className="block truncate text-xs text-slate-500 dark:text-white/45">
+              <span className="block truncate text-xs text-ink-3">
                 {model.owned_by}
               </span>
             ) : null}
@@ -250,10 +250,10 @@ export function ProviderKeyModelsTab({
         <SectionCard>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">
+              <p className="text-sm font-semibold text-ink">
                 {modelAccessTitle}
               </p>
-              <p className="mt-1 text-xs text-slate-500 dark:text-white/55">
+              <p className="mt-1 text-xs text-ink-3">
                 {modelAccessHint}
               </p>
             </div>
@@ -278,7 +278,7 @@ export function ProviderKeyModelsTab({
               placeholder={t("providers.models_search_placeholder")}
               className="max-w-xs"
             />
-            <span className="text-xs tabular-nums text-slate-500 dark:text-white/55">
+            <span className="text-xs tabular-nums text-ink-3">
               {t("providers.models_allowed_count", {
                 allowed: allowedOpenCodeCount,
                 total: openCodeModels.length,
@@ -320,7 +320,7 @@ export function ProviderKeyModelsTab({
       <SectionCard>
         <div className="flex flex-wrap items-end gap-3">
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-slate-900 dark:text-white">
+            <p className="text-sm font-semibold text-ink">
               {t("providers.model_group_label")}
             </p>
             <div className="mt-2">
@@ -345,7 +345,7 @@ export function ProviderKeyModelsTab({
             {t("providers.load_models")}
           </Button>
         </div>
-        <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
+        <p className="mt-2 text-xs text-ink-3">
           {t("providers.model_group_hint")}
         </p>
       </SectionCard>
@@ -365,11 +365,11 @@ export function ProviderKeyModelsTab({
           showTestModel={false}
         />
         {editKeyType === "vertex" ? (
-          <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
+          <p className="mt-2 text-xs text-ink-3">
             {t("providers.vertex_alias_hint")}
           </p>
         ) : (
-          <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
+          <p className="mt-2 text-xs text-ink-3">
             {t("providers.models_default_hint")}
           </p>
         )}
@@ -385,7 +385,7 @@ export function ProviderKeyModelsTab({
             discoverSelected={discoverSelected}
             setDiscoverSelected={setDiscoverSelected!}
           />
-          <p className="mt-2 text-xs text-slate-500 dark:text-white/55">
+          <p className="mt-2 text-xs text-ink-3">
             {editKeyType === "claude"
               ? t("providers.claude_models_discovery_hint")
               : t("providers.codex_models_discovery_hint")}

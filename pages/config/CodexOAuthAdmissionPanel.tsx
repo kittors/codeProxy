@@ -5,7 +5,7 @@ import {
   type CodexOAuthAllowedClientPresetInfo,
   type CodexOAuthAdmissionResponse,
 } from "@code-proxy/api-client";
-import { Card, Checkbox, ConfirmModal, useToast } from "@code-proxy/ui";
+import { Checkbox, ConfirmModal, Skeleton, useToast } from "@code-proxy/ui";
 
 const emptyAdmission: CodexOAuthAdmissionResponse = {
   allowed_clients: [],
@@ -78,52 +78,66 @@ export function CodexOAuthAdmissionPanel() {
 
   return (
     <>
-      <Card
-        title={t("config_page.codex_oauth_admission_title")}
-        description={t("config_page.codex_oauth_admission_source_desc")}
-        loading={loading}
+      {/* 标题与说明由配置页的「Codex 客户端准入」分区给出，这里只放内容。 */}
+      <div
+        data-testid="codex-oauth-global-admission-panel"
+        aria-busy={loading}
+        className="space-y-3 rounded-2xl border border-line bg-surface p-5"
       >
-        <div data-testid="codex-oauth-global-admission-panel" className="space-y-3">
-          <div className="inline-flex rounded-full bg-sky-50 px-2.5 py-1 text-2xs font-semibold text-sky-700 ring-1 ring-sky-200 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-500/20">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="inline-flex rounded-full bg-sky-500/10 px-2.5 py-1 text-2xs font-medium text-sky-700 dark:text-sky-300">
             {t("config_page.tenant_override_badge")}
+          </span>
+          <span className="text-xs text-ink-3">{t("config_page.codex_oauth_admission_source_desc")}</span>
+        </div>
+        {loading ? (
+          <div className="grid gap-2 md:grid-cols-2">
+            <Skeleton className="h-16 rounded-2xl" />
+            <Skeleton className="h-16 rounded-2xl" />
           </div>
-          {availableClients.length ? (
-            <div className="grid gap-2 md:grid-cols-2">
-              {availableClients.map((preset) => (
+        ) : availableClients.length ? (
+          <div className="grid gap-2 md:grid-cols-2">
+            {availableClients.map((preset) => {
+              const checked = allowedClients.includes(preset.id);
+              return (
                 <label
                   key={preset.id}
-                  className="grid cursor-pointer grid-cols-[auto_minmax(0,1fr)] gap-3 rounded-xl bg-slate-50 px-3 py-2.5 ring-1 ring-slate-200 dark:bg-white/[0.04] dark:ring-white/10"
+                  className={[
+                    "grid cursor-pointer grid-cols-[auto_minmax(0,1fr)] gap-3 rounded-2xl border px-3.5 py-3 transition-colors",
+                    checked
+                      ? "border-ink/25 bg-surface dark:border-white/25"
+                      : "border-line bg-subtle hover:bg-surface-hover",
+                  ].join(" ")}
                 >
                   <Checkbox
-                    checked={allowedClients.includes(preset.id)}
+                    checked={checked}
                     disabled={loading || saving}
-                    onCheckedChange={(checked) => setPending({ preset, checked })}
+                    onCheckedChange={(next) => setPending({ preset, checked: next })}
                     aria-label={preset.label}
                     data-testid={`codex-oauth-global-preset-${preset.id}`}
+                    className="mt-0.5"
                   />
                   <span className="min-w-0">
-                    <span className="block text-sm font-semibold text-slate-900 dark:text-white">
-                      {preset.label}
-                    </span>
+                    <span className="block text-sm font-medium text-ink">{preset.label}</span>
                     {preset.description ? (
-                      <span className="mt-1 block text-xs leading-5 text-slate-500 dark:text-white/55">
+                      <span className="mt-0.5 block text-xs leading-5 text-ink-3">
                         {preset.description}
                       </span>
                     ) : null}
                   </span>
                 </label>
-              ))}
-            </div>
-          ) : (
-            <p className="text-xs text-slate-500 dark:text-white/55">
-              {t("config_page.codex_oauth_admission_empty")}
-            </p>
-          )}
-          <p className="text-xs leading-5 text-slate-500 dark:text-white/55">
-            {t("config_page.codex_oauth_admission_trace_hint")}
+              );
+            })}
+          </div>
+        ) : (
+          <p className="rounded-2xl border border-dashed border-line px-4 py-6 text-center text-sm text-ink-3">
+            {t("config_page.codex_oauth_admission_empty")}
           </p>
-        </div>
-      </Card>
+        )}
+        <p className="text-xs leading-5 text-ink-3">
+          {t("config_page.codex_oauth_admission_trace_hint")}
+        </p>
+      </div>
 
       <ConfirmModal
         open={pending !== null}
@@ -135,9 +149,19 @@ export function CodexOAuthAdmissionPanel() {
         description={t("config_page.oauth_admission_confirm_desc", {
           client: pending?.preset.label ?? "",
         })}
+        subject={
+          pending ? (
+            <span className="block">
+              <span className="block font-medium">{pending.preset.label}</span>
+              {pending.preset.description ? (
+                <span className="mt-0.5 block text-xs text-ink-3">{pending.preset.description}</span>
+              ) : null}
+            </span>
+          ) : null
+        }
         confirmText={t("config_page.oauth_admission_confirm")}
         cancelText={t("ui.cancel_default")}
-        variant={pending?.checked ? "primary" : "danger"}
+        variant={pending?.checked ? "primary" : "warning"}
         busy={saving}
         onClose={() => {
           if (!saving) setPending(null);

@@ -922,7 +922,7 @@ test("creates a tenant without selecting it on the login page", async ({ page })
   await page.getByLabel("Expires at", { exact: true }).fill("2030-01-01T00:00");
   await page.getByLabel("Admin username", { exact: true }).fill("tenant-admin");
   await page.getByLabel("Admin display name", { exact: true }).fill("Tenant Admin");
-  await page.getByLabel("Admin password", { exact: true }).fill("tenant-password-123");
+  await page.getByLabel("Admin password", { exact: true }).fill("Tenant-Password-123");
   await page.getByLabel("Description", { exact: true }).fill("Primary tenant");
   await page.getByRole("button", { name: "Create tenant" }).click();
   await expect.poll(() => createBody).not.toBeNull();
@@ -931,7 +931,7 @@ test("creates a tenant without selecting it on the login page", async ({ page })
     name: "Tenant A",
     admin_username: "tenant-admin",
     admin_display_name: "Tenant Admin",
-    admin_password: "tenant-password-123",
+    admin_password: "Tenant-Password-123",
     description: "Primary tenant",
   });
 });

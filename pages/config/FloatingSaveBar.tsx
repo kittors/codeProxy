@@ -7,6 +7,8 @@ type SaveBarStatus = "saved" | "dirty" | "saving" | "loading" | "error" | "offli
 
 interface FloatingSaveBarProps {
   status: SaveBarStatus;
+  /** 可视化编辑里改了几项；有数字时状态写成「3 项未保存」，比笼统的「未保存」更有底。 */
+  changeCount?: number;
   onSave: () => void;
   onReload: () => void;
   saveDisabled?: boolean;
@@ -26,13 +28,13 @@ const STATUS_TONE: Record<SaveBarStatus, { icon?: ReactNode; tone: string; dot?:
     tone: "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-400/20 dark:bg-sky-500/15 dark:text-sky-200",
   },
   loading: {
-    tone: "border-slate-900/8 bg-slate-50 text-slate-600 dark:border-neutral-700 dark:bg-neutral-800/60 dark:text-slate-300",
+    tone: "border-line bg-subtle text-ink-2",
   },
   error: {
     tone: "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-400/20 dark:bg-rose-500/15 dark:text-rose-300",
   },
   offline: {
-    tone: "border-slate-900/8 bg-slate-100 text-slate-500 dark:border-neutral-700 dark:bg-neutral-800/60 dark:text-slate-400",
+    tone: "border-line bg-subtle text-ink-3",
   },
 };
 
@@ -47,6 +49,7 @@ const STATUS_LABEL_KEYS: Record<SaveBarStatus, string> = {
 
 export function FloatingSaveBar({
   status,
+  changeCount,
   onSave,
   onReload,
   saveDisabled,
@@ -97,7 +100,10 @@ export function FloatingSaveBar({
   if (!rendered) return null;
 
   const displayTone = justSaved ? STATUS_TONE.saved : toneConfig;
-  const displayLabel = t(justSaved ? STATUS_LABEL_KEYS.saved : STATUS_LABEL_KEYS[status]);
+  const displayLabel =
+    !justSaved && status === "dirty" && changeCount && changeCount > 0
+      ? t("config_ui.unsaved_count", { count: changeCount })
+      : t(justSaved ? STATUS_LABEL_KEYS.saved : STATUS_LABEL_KEYS[status]);
 
   return (
     <div

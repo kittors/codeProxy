@@ -19,7 +19,6 @@ export function ImageModelPicker({
   provider,
   model,
   disabled = false,
-  variant = "labelled",
   onProviderChange,
   onModelChange,
 }: {
@@ -27,12 +26,6 @@ export function ImageModelPicker({
   provider: string;
   model: string;
   disabled?: boolean;
-  /**
-   * "compact" drops the field labels so the selectors can sit inline with other
-   * pill-shaped controls. Used in the test modal, where a labelled two-column block
-   * would split the controls across the dialog instead of grouping them.
-   */
-  variant?: "labelled" | "compact";
   onProviderChange: (provider: string) => void;
   onModelChange: (model: string) => void;
 }) {
@@ -59,39 +52,14 @@ export function ImageModelPicker({
   // one option is noise, and the legacy server shape reports no provider at all.
   const showProviderSelect = providerOptions.length > 1;
 
-  if (variant === "compact") {
-    return (
-      <>
-        {showProviderSelect ? (
-          <Select
-            aria-label={t("image_generation.provider")}
-            value={provider}
-            options={providerOptions}
-            disabled={disabled}
-            fullWidth={false}
-            onChange={onProviderChange}
-          />
-        ) : null}
-        <Select
-          aria-label={t("image_generation.model")}
-          value={model}
-          options={modelOptions}
-          disabled={disabled || modelOptions.length === 0}
-          placeholder={t("image_generation.model_placeholder")}
-          fullWidth={false}
-          onChange={onModelChange}
-        />
-      </>
-    );
-  }
-
   return (
     <div
       data-testid="image-model-picker"
       className={showProviderSelect ? "grid gap-3 sm:grid-cols-2" : "grid gap-3"}
     >
       {showProviderSelect ? (
-        <FormField label={t("image_generation.provider")} htmlFor="image-provider">
+        // 两个选择都有默认值、不会出错，不给错误提示留空行，和同一行的其他参数对齐。
+        <FormField label={t("image_generation.provider")} htmlFor="image-provider" reserveMeta={false}>
           <Select
             id="image-provider"
             value={provider}
@@ -102,7 +70,7 @@ export function ImageModelPicker({
         </FormField>
       ) : null}
 
-      <FormField label={t("image_generation.model")} htmlFor="image-model">
+      <FormField label={t("image_generation.model")} htmlFor="image-model" reserveMeta={false}>
         <Select
           id="image-model"
           value={model}

@@ -3,14 +3,13 @@ import { Check, Copy, ExternalLink, Loader2 } from "lucide-react";
 import { useState, type ComponentProps } from "react";
 import { useTranslation } from "react-i18next";
 import type { ProxyPoolEntry } from "@code-proxy/api-client";
-import { Button } from "@code-proxy/ui";
+import { Button, Step, Steps, type StepState } from "@code-proxy/ui";
 import type { ProxyPoolSelect } from "@features/proxy-pool";
 import { useOAuthLogin } from "../hooks/useOAuthLogin";
 import type { AccountProvider } from "../model/catalog";
 import { copyText } from "../model/clipboard";
 import { navigatePendingWindow, openInNewTab, openPendingWindow } from "../model/loginWindow";
 import type { StartedLogin } from "../model/startedLogin";
-import { FlowStep, FlowSteps, type StepState } from "./FlowSteps";
 import { LoginOptions, type LoginOptionValues } from "./LoginOptions";
 import { LoginStatusBar } from "./LoginStatusBar";
 
@@ -108,8 +107,8 @@ export function DeviceFlowPanel({
   return (
     <>
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6">
-        <FlowSteps>
-          <FlowStep
+        <Steps>
+          <Step
             index={1}
             state={stepOne}
             title={t("add_account.device.start_title")}
@@ -133,8 +132,8 @@ export function DeviceFlowPanel({
                 />
               </div>
             )}
-          </FlowStep>
-          <FlowStep
+          </Step>
+          <Step
             index={2}
             state={stepTwo}
             title={t("add_account.device.confirm_title", { provider: providerName })}
@@ -166,8 +165,8 @@ export function DeviceFlowPanel({
                 </div>
               </div>
             ) : null}
-          </FlowStep>
-          <FlowStep
+          </Step>
+          <Step
             index={3}
             state={stepThree}
             last
@@ -183,7 +182,7 @@ export function DeviceFlowPanel({
               )
             }
           />
-        </FlowSteps>
+        </Steps>
       </div>
       <LoginStatusBar
         phase={phase}

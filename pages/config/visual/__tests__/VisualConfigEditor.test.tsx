@@ -1,4 +1,12 @@
-import { act, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import i18n from "@code-proxy/i18n";
@@ -28,31 +36,36 @@ describe("VisualConfigEditor auto update config", () => {
     await i18n.changeLanguage("en");
   });
 
-  test("moves persistent descriptions into info tooltips", async () => {
+  test("shows every setting's description inline next to its YAML key", () => {
     renderEditor();
 
-    const description = "Host/port and auth directory.";
-    expect(screen.queryByText(description)).not.toBeInTheDocument();
-
-    await userEvent.hover(screen.getByRole("button", { name: description }));
-    expect(await screen.findByRole("tooltip")).toHaveTextContent(description);
+    // 说明常驻显示，不再藏在 ⓘ 悬停提示里；YAML 键作为辅助信息附在后面。
+    expect(
+      screen.getByText(/Leave empty to listen on every interface/, { selector: "p" }),
+    ).toBeVisible();
+    expect(screen.getByText("host", { selector: "code" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Listen address" })).toHaveAccessibleDescription(
+      /Leave empty to listen on every interface/,
+    );
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
   });
 
-  test("resource profile tooltip stays English when UI language is English", async () => {
-    renderEditor();
-
-    const enHint =
-      "Cleaning request details does not clear statistics. KPIs, quotas, public usage, and other metrics already on small aggregate projections are unaffected by request_logs cleanup; trend or diagnostic views that still rely on detail rows only cover the retention window.";
-    const zhLeak = "清理明细不会清理统计";
-
-    await userEvent.hover(
-      screen.getByRole("button", {
-        name: /A safe baseline for a 2 vCPU \/ 2 GB host[\s\S]*Cleaning request details does not clear statistics/,
-      }),
+  test("lists what the low-resource profile would change, in English", async () => {
+    render(
+      <ThemeProvider>
+        <VisualConfigEditor
+          values={{ ...DEFAULT_VISUAL_VALUES, debug: true, logsMaxTotalSizeMb: "512" }}
+          onChange={vi.fn()}
+        />
+      </ThemeProvider>,
     );
-    const tooltip = await screen.findByRole("tooltip");
-    expect(tooltip).toHaveTextContent(enHint);
-    expect(tooltip).not.toHaveTextContent(zhLeak);
+
+    expect(screen.getByText(/For a 2 vCPU \/ 2 GB host/)).toBeVisible();
+    expect(screen.queryByText(/清理明细不会清理统计|适合 2 核 2G/)).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /see the 2 settings it changes/i }));
+    const changes = await screen.findByRole("list");
+    expect(changes).toHaveTextContent(/Debug mode/);
+    expect(changes).toHaveTextContent(/File log size cap/);
   });
 
   test("shows automatic update settings and exposes main/dev source branches", async () => {
@@ -62,12 +75,69 @@ describe("VisualConfigEditor auto update config", () => {
     await userEvent.click(toggle);
     expect(onChange).toHaveBeenCalledWith({ autoUpdateEnabled: false });
 
-    const select = screen.getByRole("combobox", { name: /update source branch/i });
-    await userEvent.click(select);
-    expect(screen.queryByRole("option", { name: /auto-detect/i })).not.toBeInTheDocument();
-    await userEvent.click(await screen.findByRole("option", { name: /development/i }));
+    // 两个选项直接摊开成卡片，选了会怎样写在选项里。
+    const branches = screen.getByRole("radiogroup", { name: /update source branch/i });
+    expect(within(branches).getByRole("radio", { name: /^stable/i })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    expect(within(branches).queryByRole("radio", { name: /auto-detect/i })).toBeNull();
+    await userEvent.click(within(branches).getByRole("radio", { name: /development/i }));
 
     expect(onChange).toHaveBeenCalledWith({ autoUpdateChannel: "dev" });
+  });
+
+  test("marks changed settings, counts them per section and reverts one", async () => {
+    const onChange = vi.fn();
+    render(
+      <ThemeProvider>
+        <VisualConfigEditor
+          values={{ ...DEFAULT_VISUAL_VALUES, port: "9000", proxyUrl: "socks5://p:1080" }}
+          baseline={{ ...DEFAULT_VISUAL_VALUES, port: "8318" }}
+          onChange={onChange}
+        />
+      </ThemeProvider>,
+    );
+
+    const nav = screen.getByRole("navigation", { name: "Config sections" });
+    expect(within(nav).getByRole("button", { name: /Server.*has unsaved changes/ })).toBeTruthy();
+    expect(within(nav).getByRole("button", { name: /Network & retries.*has unsaved changes/ }))
+      .toBeTruthy();
+    expect(within(nav).getByRole("button", { name: /^Remote management$/ })).toBeTruthy();
+
+    const portRow = document.getElementById("config-field-port")!;
+    expect(portRow).toHaveAttribute("data-modified", "true");
+    await userEvent.click(within(portRow).getByRole("button", { name: /revert/i }));
+    expect(onChange).toHaveBeenLastCalledWith({ port: "8318" });
+  });
+
+  test("flags a non-numeric port inline instead of letting it be dropped on save", () => {
+    render(
+      <ThemeProvider>
+        <VisualConfigEditor values={{ ...DEFAULT_VISUAL_VALUES, port: "80a" }} onChange={vi.fn()} />
+      </ThemeProvider>,
+    );
+    // 网络分区的代理地址输入里也有一个「端口」，限定在服务分区里找监听端口。
+    const server = document.querySelector<HTMLElement>('[data-config-section="server"]')!;
+    const port = within(server).getByRole("textbox", { name: "Port" });
+    expect(port).toHaveAttribute("aria-invalid", "true");
+    expect(port).toHaveAccessibleDescription(/Enter a whole number/);
+  });
+
+  test("search narrows the page to matching settings", async () => {
+    renderEditor();
+    await userEvent.type(screen.getByRole("textbox", { name: "Search settings" }), "retry");
+
+    await waitFor(() =>
+      expect(screen.queryByRole("textbox", { name: "Listen address" })).not.toBeInTheDocument(),
+    );
+    expect(screen.getByRole("textbox", { name: "Retry attempts" })).toBeInTheDocument();
+    // YAML 键也参与搜索：max-retry-interval 的中文 / 英文名称里没有 retry。
+    expect(screen.getByRole("textbox", { name: "Cooldown wait limit" })).toBeInTheDocument();
+
+    await userEvent.clear(screen.getByRole("textbox", { name: "Search settings" }));
+    await userEvent.type(screen.getByRole("textbox", { name: "Search settings" }), "zzzz-nothing");
+    expect(await screen.findByText(/No settings match/)).toBeInTheDocument();
   });
 
   test("exposes custom docker image repository with a risk warning", async () => {

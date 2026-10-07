@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import i18n from "@code-proxy/i18n";
@@ -109,6 +109,8 @@ describe("ModerationChannelPickerModal", () => {
     await user.click(screen.getByRole("checkbox", { name: "Select Codex Team" }));
     await user.click(screen.getByRole("button", { name: "Bind selected" }));
     expect(screen.getByText("Replace existing binding?")).toBeInTheDocument();
+    // 替换不是删除：确认框里写清「哪个渠道原来绑定的是谁」。
+    expect(screen.getByText("Codex Team · currently “Existing profile”")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Replace binding" }));
 
     await waitFor(() =>
@@ -180,10 +182,10 @@ describe("ModerationChannelPickerModal", () => {
     await user.type(tagInput, "team-a{Enter}");
     await user.click(screen.getByRole("button", { name: "Bind by tag" }));
 
-    expect(
-      await screen.findByText(/Matched channels: 51\. Bindings to update: 51\./),
-    ).toBeInTheDocument();
-    expect(screen.getByText(/Currently bound to another profile: 1/)).toBeInTheDocument();
+    const confirm = await screen.findByRole("dialog", { name: "Bind matching channels?" });
+    expect(within(confirm).getByText("team-a")).toBeInTheDocument();
+    expect(within(confirm).getByText(/51 channels match; bindings to update: 51\./)).toBeInTheDocument();
+    expect(within(confirm).getByText(/Currently bound to another profile: 1/)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Bind matched channels" }));
 
     await waitFor(() => {

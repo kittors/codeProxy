@@ -1,80 +1,31 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Eye, Trash2 } from "lucide-react";
-import {
-  identityApi,
-  type AuditLogCallChainStep,
-  type AuditLogIdentity,
-} from "@code-proxy/api-client";
+import { identityApi, type AuditLogIdentity } from "@code-proxy/api-client";
 import {
   Button,
   COLUMN_WIDTH,
   ConfirmModal,
   DataTable,
-  Modal,
   PaginationBar,
   TABLE_ROW_ACTIONS_COLUMN,
   useToast,
   type DataTableColumn,
   surface,
 } from "@code-proxy/ui";
+import { useOptionalAuth } from "@app/providers/AuthProvider";
 import { PermissionGate } from "@app/providers/PermissionGate";
+import { AuditLogDetailModal } from "./AuditLogDetailModal";
+import { formatActor, formatWhatHappened, resultBadge } from "./auditLogFormat";
 
 const DEFAULT_PAGE_SIZE = 50;
 const PAGE_SIZE_OPTIONS = [20, 50, 100];
 
-/**
- * The backend records three outcomes, and rendering two of them identically hid
- * the distinction that matters most on this page: "the server refused this" and
- * "the server tried and errored" are different events with different follow-ups.
- */
-const RESULT_BADGE: Record<string, { labelKey: string; className: string }> = {
-  success: {
-    labelKey: "identity_admin.result_success",
-    className:
-      "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300",
-  },
-  denied: {
-    labelKey: "identity_admin.result_denied",
-    className: "bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
-  },
-  failed: {
-    labelKey: "identity_admin.result_failed",
-    className: "bg-rose-50 text-rose-600 dark:bg-rose-500/15 dark:text-rose-300",
-  },
-};
-
-function resultBadge(result: string) {
-  return RESULT_BADGE[result] ?? RESULT_BADGE.failed;
-}
-
-function formatActor(item: AuditLogIdentity): string {
-  const user =
-    item.actor_display_name?.trim() ||
-    item.actor_username?.trim() ||
-    item.actor_user_id ||
-    item.actor_kind;
-  const tenant = item.tenant_name?.trim() || item.tenant_slug?.trim() || item.tenant_id || "—";
-  return `${tenant} / ${user}`;
-}
-
-function formatWhatHappened(item: AuditLogIdentity): string {
-  const resource = item.resource_id
-    ? `${item.resource_type} · ${item.resource_id}`
-    : item.resource_type;
-  return resource || item.action || "—";
-}
-
-function asCallChain(value: unknown): AuditLogCallChainStep[] {
-  if (!Array.isArray(value)) return [];
-  return value.filter(
-    (step): step is AuditLogCallChainStep => Boolean(step) && typeof step === "object",
-  );
-}
-
 export function AuditLogsPage() {
   const { t, i18n } = useTranslation();
   const { notify } = useToast();
+  // 有平台审计读权限时，后端的「清空」会删掉所有租户的记录（见 CliRelay ClearAuditLogs），确认框要说清楚。
+  const clearsAllTenants = useOptionalAuth()?.can("platform.audit.read") ?? false;
   const [items, setItems] = useState<AuditLogIdentity[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
@@ -88,6 +39,8 @@ export function AuditLogsPage() {
 
   const requestSeqRef = useRef(0);
   const requestAbortRef = useRef<AbortController | null>(null);
+  // 正在加载完整记录的那一条：加载中关掉弹窗后，迟到的响应不能把弹窗重新打开。
+  const detailRequestRef = useRef<number | null>(null);
 
   const fetchLogs = useCallback(
     async (page: number, size: number) => {
@@ -149,22 +102,30 @@ export function AuditLogsPage() {
 
   const openDetail = useCallback(
     async (item: AuditLogIdentity) => {
+      detailRequestRef.current = item.id;
       setDetailLoading(true);
       setDetail(item);
       try {
         const full = await identityApi.auditLog(item.id);
-        setDetail(full);
+        if (detailRequestRef.current === item.id) setDetail(full);
       } catch (error) {
+        if (detailRequestRef.current !== item.id) return;
         notify({
           type: "error",
           message: error instanceof Error ? error.message : t("identity_admin.operation_failed"),
         });
       } finally {
-        setDetailLoading(false);
+        if (detailRequestRef.current === item.id) setDetailLoading(false);
       }
     },
     [notify, t],
   );
+
+  const closeDetail = useCallback(() => {
+    detailRequestRef.current = null;
+    setDetail(null);
+    setDetailLoading(false);
+  }, []);
 
   const confirmDelete = useCallback(async () => {
     if (!deleteTarget) return;
@@ -173,7 +134,7 @@ export function AuditLogsPage() {
       await identityApi.deleteAuditLog(deleteTarget.id);
       notify({ type: "success", message: t("identity_admin.audit_log_deleted") });
       setDeleteTarget(null);
-      if (detail?.id === deleteTarget.id) setDetail(null);
+      if (detail?.id === deleteTarget.id) closeDetail();
       const nextTotal = Math.max(0, totalCount - 1);
       const nextTotalPages = Math.max(1, Math.ceil(nextTotal / pageSize));
       const nextPage = Math.min(currentPage, nextTotalPages);
@@ -186,7 +147,7 @@ export function AuditLogsPage() {
     } finally {
       setBusy(false);
     }
-  }, [currentPage, deleteTarget, detail?.id, fetchLogs, notify, pageSize, t, totalCount]);
+  }, [closeDetail, currentPage, deleteTarget, detail?.id, fetchLogs, notify, pageSize, t, totalCount]);
 
   const confirmClearAll = useCallback(async () => {
     setBusy(true);
@@ -199,7 +160,7 @@ export function AuditLogsPage() {
         }),
       });
       setClearAllOpen(false);
-      setDetail(null);
+      closeDetail();
       await fetchLogs(1, pageSize);
     } catch (error) {
       notify({
@@ -209,7 +170,7 @@ export function AuditLogsPage() {
     } finally {
       setBusy(false);
     }
-  }, [fetchLogs, notify, pageSize, t]);
+  }, [closeDetail, fetchLogs, notify, pageSize, t]);
 
   const columns = useMemo<DataTableColumn<AuditLogIdentity>[]>(
     () => [
@@ -298,9 +259,6 @@ export function AuditLogsPage() {
     [busy, i18n.language, openDetail, t],
   );
 
-  const callChain = asCallChain(detail?.changes?.call_chain);
-  const projectMethod = detail?.changes?.project_method;
-
   return (
     <section className="flex flex-1 flex-col">
       <div className={`flex min-h-0 flex-1 flex-col ${surface({ radius: "3xl" })}`}>
@@ -360,123 +318,30 @@ export function AuditLogsPage() {
         />
       </div>
 
-      <Modal
-        open={detail !== null}
-        title={t("identity_admin.audit_log_detail_title")}
-        maxWidth="max-w-3xl"
-        onClose={() => {
-          if (!detailLoading) setDetail(null);
-        }}
-      >
-        {detail ? (
-          <div className="space-y-5 text-sm">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <DetailField
-                label={t("identity_admin.time")}
-                value={new Date(detail.created_at).toLocaleString(i18n.language)}
-              />
-              <DetailField label={t("identity_admin.actor")} value={formatActor(detail)} />
-              <DetailField
-                label={t("identity_admin.what_happened")}
-                value={formatWhatHappened(detail)}
-              />
-              <DetailField
-                label={t("identity_admin.result")}
-                value={t(resultBadge(detail.result).labelKey)}
-              />
-              <DetailField
-                label={t("identity_admin.request_id")}
-                value={detail.request_id || "—"}
-              />
-              <DetailField
-                label={t("identity_admin.resource")}
-                value={
-                  detail.resource_id
-                    ? `${detail.resource_type} · ${detail.resource_id}`
-                    : detail.resource_type
-                }
-              />
-            </div>
-
-            <section>
-              <h3 className="mb-2 text-sm font-semibold text-slate-900 dark:text-white">
-                {t("identity_admin.call_chain")}
-              </h3>
-              {detailLoading ? (
-                <p className="text-slate-500">{t("identity_admin.loading")}</p>
-              ) : callChain.length === 0 ? (
-                <p className="text-slate-500">{t("identity_admin.no_call_chain")}</p>
-              ) : (
-                <ol className="space-y-2">
-                  {callChain.map((step, index) => (
-                    <li
-                      key={`${step.step ?? index}-${step.name ?? "step"}`}
-                      className="rounded-xl border border-slate-900/8 bg-slate-50 px-3 py-2 dark:border-white/8 dark:bg-neutral-900/70"
-                    >
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-slate-200 px-1.5 text-2xs font-semibold text-slate-700 dark:bg-neutral-700 dark:text-white/80">
-                          {step.step ?? index + 1}
-                        </span>
-                        {step.layer ? (
-                          <span className="rounded-md bg-white px-1.5 py-0.5 text-2xs font-medium text-slate-600 ring-1 ring-slate-200 dark:bg-neutral-950 dark:text-white/70 dark:ring-neutral-700">
-                            {step.layer}
-                          </span>
-                        ) : null}
-                        <span className="font-medium text-slate-900 dark:text-white">
-                          {step.name || "—"}
-                        </span>
-                      </div>
-                      {step.detail || step.package || step.resource ? (
-                        <p className="mt-1 text-xs text-slate-500 dark:text-white/55">
-                          {[
-                            step.detail,
-                            step.package,
-                            step.resource
-                              ? `${step.resource}${step.resource_id ? ` · ${step.resource_id}` : ""}`
-                              : null,
-                          ]
-                            .filter(Boolean)
-                            .join(" · ")}
-                        </p>
-                      ) : null}
-                    </li>
-                  ))}
-                </ol>
-              )}
-            </section>
-
-            <section>
-              <h3 className="mb-2 text-sm font-semibold text-slate-900 dark:text-white">
-                {t("identity_admin.project_method")}
-              </h3>
-              {detailLoading ? (
-                <p className="text-slate-500">{t("identity_admin.loading")}</p>
-              ) : projectMethod ? (
-                <div className="rounded-xl border border-slate-900/8 bg-slate-50 px-3 py-2 font-mono text-xs text-slate-700 dark:border-white/8 dark:bg-neutral-900/70 dark:text-white/75">
-                  <div>
-                    {[projectMethod.package, projectMethod.handler || projectMethod.method]
-                      .filter(Boolean)
-                      .join(" · ") || "—"}
-                  </div>
-                  {projectMethod.route || projectMethod.resource ? (
-                    <div className="mt-1 text-slate-500 dark:text-white/50">
-                      {[projectMethod.route, projectMethod.resource].filter(Boolean).join(" · ")}
-                    </div>
-                  ) : null}
-                </div>
-              ) : (
-                <p className="text-slate-500">{t("identity_admin.no_project_method")}</p>
-              )}
-            </section>
-          </div>
-        ) : null}
-      </Modal>
+      <AuditLogDetailModal
+        detail={detail}
+        loading={detailLoading}
+        locale={i18n.language}
+        onClose={closeDetail}
+      />
 
       <ConfirmModal
         open={deleteTarget !== null}
-        title={t("identity_admin.delete")}
-        description={t("identity_admin.delete_audit_log_confirm")}
-        confirmText={t("identity_admin.delete")}
+        title={t("identity_admin.delete_audit_log_title")}
+        description={t("identity_admin.delete_lead")}
+        subject={
+          deleteTarget ? (
+            <span className="block min-w-0">
+              <span className="block truncate font-medium">{formatWhatHappened(deleteTarget)}</span>
+              <span className="mt-0.5 block truncate text-xs text-ink-3">
+                {formatActor(deleteTarget)} ·{" "}
+                {new Date(deleteTarget.created_at).toLocaleString(i18n.language)}
+              </span>
+            </span>
+          ) : null
+        }
+        consequences={[t("identity_admin.delete_audit_log_consequence")]}
+        confirmText={t("identity_admin.delete_audit_log_button")}
         cancelText={t("common.cancel")}
         variant="danger"
         busy={busy}
@@ -486,10 +351,31 @@ export function AuditLogsPage() {
         }}
       />
 
+      {/* 清空审计记录（取证依据）不可恢复，平台管理员清空的还是所有租户的记录：要求输入确认词，
+          防止顺手连点。单条删除不加，免得给日常清理添麻烦。 */}
       <ConfirmModal
         open={clearAllOpen}
-        title={t("identity_admin.clear_audit_logs")}
-        description={t("identity_admin.clear_audit_logs_confirm")}
+        title={t("identity_admin.clear_audit_logs_title")}
+        description={t("identity_admin.clear_audit_logs_lead")}
+        subject={
+          <span className="flex min-w-0 items-center justify-between gap-3">
+            <span className="truncate font-medium">
+              {t("identity_admin.audit_log_count", { count: totalCount })}
+            </span>
+            <span className="shrink-0 text-xs text-ink-3">
+              {clearsAllTenants
+                ? t("identity_admin.audit_scope_all_tenants")
+                : t("identity_admin.audit_scope_current_tenant")}
+            </span>
+          </span>
+        }
+        consequences={[
+          clearsAllTenants
+            ? t("identity_admin.clear_audit_logs_consequence_all_tenants")
+            : t("identity_admin.clear_audit_logs_consequence_tenant"),
+          t("identity_admin.clear_audit_logs_consequence_trace"),
+        ]}
+        confirmPhrase={t("identity_admin.clear_audit_logs_phrase")}
         confirmText={t("identity_admin.clear_audit_logs_confirm_button")}
         cancelText={t("common.cancel")}
         variant="danger"
@@ -500,14 +386,5 @@ export function AuditLogsPage() {
         }}
       />
     </section>
-  );
-}
-
-function DetailField({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="min-w-0">
-      <div className="text-xs font-medium text-slate-500 dark:text-white/50">{label}</div>
-      <div className="mt-0.5 break-all text-slate-900 dark:text-white">{value}</div>
-    </div>
   );
 }
