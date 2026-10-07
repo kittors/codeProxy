@@ -9,10 +9,13 @@ export function CopyButton({
   value,
   label,
   className,
+  onCopied,
 }: {
   value: string;
   label?: string;
   className?: string;
+  /** 复制成功后回调（例如一次性密钥弹窗据此放开「点遮罩关闭」）。 */
+  onCopied?: () => void;
 }) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
@@ -27,10 +30,11 @@ export function CopyButton({
     if (!value) return;
     const ok = await copyTextToClipboard(value);
     if (!ok) return;
+    onCopied?.();
     setCopied(true);
     if (timerRef.current) window.clearTimeout(timerRef.current);
     timerRef.current = window.setTimeout(() => setCopied(false), 1600);
-  }, [value]);
+  }, [onCopied, value]);
   const name = label ?? t("common.copy", { defaultValue: "复制" });
   return (
     <button

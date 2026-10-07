@@ -79,7 +79,10 @@
     "revert": "Отменить",
     "copy_named": "Копировать: {{name}}",
     "confirm_phrase_label": "Введите «{{phrase}}» для подтверждения",
-    "secret_once_warning": "Скопируйте сейчас — после закрытия значение больше не будет показано."
+    "secret_once_warning": "Скопируйте сейчас — после закрытия значение больше не будет показано.",
+    "secret_value": "Секрет",
+    "secret_saved_close": "Я сохранил",
+    "copy_all": "Копировать всё"
   },
   "ccswitch": {
     "import_to_ccswitch": "Импорт в CC Switch",
@@ -1867,7 +1870,15 @@
     "select_placeholder": "Select proxy",
     "select_missing": "Missing proxy: {{id}}",
     "validation_name": "Proxy name is required",
-    "validation_url": "Proxy URL must start with http://, https://, or socks5://"
+    "validation_url": "Proxy URL must start with http://, https://, or socks5://",
+    "form_desc": "После сохранения его можно выбрать как выход для AI-провайдеров и аккаунтов.",
+    "name_hint": "Так прокси будет отображаться в списках.",
+    "name_placeholder": "например: резидентный IP HK",
+    "url_hint": "http, https или socks5; учётные данные — прямо в адресе.",
+    "remark_placeholder": "например: выход для Codex",
+    "enabled_hint": "Отключённые прокси не показываются в списках выбора; существующие привязки не меняются.",
+    "delete_lead": "Это действие нельзя отменить.",
+    "delete_consequence_bindings": "AI-провайдеры и аккаунты больше не смогут выбрать этот прокси."
   },
   "image_generation": {
     "title": "Image Models",

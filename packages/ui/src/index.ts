@@ -151,6 +151,7 @@ export { CodeBlock } from "./code/CodeBlock";
 export { highlightSnippet, TOKEN_CLASS } from "./code/highlightSnippet";
 export type { CodeToken, SnippetLanguage, TokenKind } from "./code/highlightSnippet";
 export { SecretRevealModal } from "./overlays/SecretRevealModal";
+export type { SecretRevealItem } from "./overlays/SecretRevealModal";
 export { MaskToggleButton } from "./feedback/MaskToggleButton";
 export type { MaskToggleButtonProps } from "./feedback/MaskToggleButton";
 export {

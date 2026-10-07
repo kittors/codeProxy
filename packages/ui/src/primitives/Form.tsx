@@ -155,9 +155,14 @@ function FormField({
     </div>
   ) : null;
 
+  // 竖排时说明 / 错误贴近输入框（往上收 4px），和下一个字段的标签拉开距离，
+  // 一眼看得出这行小字属于上面的输入框。
   const meta =
     infoRow || errorRow ? (
-      <div data-slot="form-field-meta" className="space-y-0.5">
+      <div
+        data-slot="form-field-meta"
+        className={cn("space-y-0.5", isHorizontal ? null : "-mt-1")}
+      >
         {infoRow}
         {errorRow}
       </div>

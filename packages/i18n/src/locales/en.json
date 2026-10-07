@@ -101,7 +101,10 @@
     "revert": "Revert",
     "copy_named": "Copy {{name}}",
     "confirm_phrase_label": "Type “{{phrase}}” to confirm",
-    "secret_once_warning": "Copy it now — it won't be shown again after you close this."
+    "secret_once_warning": "Copy it now — it won't be shown again after you close this.",
+    "secret_value": "Secret",
+    "secret_saved_close": "I've saved it",
+    "copy_all": "Copy all"
   },
   "title": {
     "main": "CliRelay Admin Dashboard",
@@ -2200,7 +2203,15 @@
     "select_placeholder": "Select proxy",
     "select_missing": "Missing proxy: {{id}}",
     "validation_name": "Proxy name is required",
-    "validation_url": "Proxy URL must start with http://, https://, or socks5://"
+    "validation_url": "Proxy URL must start with http://, https://, or socks5://",
+    "form_desc": "Once saved, AI providers and AI accounts can use it as their egress.",
+    "name_hint": "How it shows up in lists and pickers.",
+    "name_placeholder": "e.g. HK residential IP",
+    "url_hint": "http, https or socks5; put credentials in the address.",
+    "remark_placeholder": "e.g. Codex egress",
+    "enabled_hint": "Disabled proxies disappear from pickers; existing bindings are unaffected.",
+    "delete_lead": "This can't be undone.",
+    "delete_consequence_bindings": "AI providers and AI accounts can no longer pick this proxy."
   },
   "image_generation": {
     "title": "Image Models",

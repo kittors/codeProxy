@@ -103,7 +103,10 @@
     "revert": "撤销",
     "copy_named": "复制{{name}}",
     "confirm_phrase_label": "请输入「{{phrase}}」以确认",
-    "secret_once_warning": "请立即复制，关闭后将无法再次查看。"
+    "secret_once_warning": "请立即复制，关闭后将无法再次查看。",
+    "secret_value": "密钥",
+    "secret_saved_close": "我已保存",
+    "copy_all": "复制全部"
   },
   "title": {
     "main": "CliRelay 管理后台",
@@ -2217,7 +2220,15 @@
     "select_placeholder": "选择代理",
     "select_missing": "代理不存在：{{id}}",
     "validation_name": "请填写代理名称",
-    "validation_url": "代理 URL 必须以 http://、https:// 或 socks5:// 开头"
+    "validation_url": "代理 URL 必须以 http://、https:// 或 socks5:// 开头",
+    "form_desc": "保存后可以在 AI 供应商和 AI 账号里选它作为出口。",
+    "name_hint": "在下拉框和列表里用这个名字认出它。",
+    "name_placeholder": "例如：香港住宅 IP",
+    "url_hint": "支持 http、https、socks5，账号密码直接写在地址里。",
+    "remark_placeholder": "例如：Codex 专用出口",
+    "enabled_hint": "停用后不会出现在可选列表里，已绑定的配置不受影响。",
+    "delete_lead": "删除后无法恢复。",
+    "delete_consequence_bindings": "AI 供应商和 AI 账号将不能再选择这个代理。"
   },
   "image_generation": {
     "title": "生图模型",

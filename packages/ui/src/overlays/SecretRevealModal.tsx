@@ -1,15 +1,32 @@
-import { useCallback, useState } from "react";
-import { Check, Copy, KeyRound, Loader2 } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Check, Copy, KeyRound } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { Callout } from "../forms/Callout";
+import { SecretValue } from "../forms/SecretValue";
 import { Button } from "../primitives/Button";
 import { Modal } from "../overlays/Modal";
 import { copyTextToClipboard } from "../utils/clipboard";
 
+export interface SecretRevealItem {
+  label: string;
+  value: string;
+}
+
+/**
+ * 一次性凭证：密码、API Key 这类关了就再也看不到的值。
+ *
+ * - 每个值单独一行，各自带复制按钮；多个值时底部还有「复制全部」（按「名称：值」逐行拼好）；
+ * - 顶部一条琥珀提示说明只显示这一次；
+ * - 还没复制过时，点遮罩或按 Esc 不会关闭（面板轻晃），只能点按钮关——
+ *   以前手一滑点到遮罩，刚生成的密码就永远找不回来了。
+ */
 export function SecretRevealModal({
   open,
   title,
   description,
   secret,
+  secretLabel,
+  items,
   warning,
   closeText = "",
   onClose,
@@ -17,82 +34,87 @@ export function SecretRevealModal({
   open: boolean;
   title: string;
   description?: string;
-  secret: string;
+  /** 单个值（兼容旧调用）；和 items 二选一。 */
+  secret?: string;
+  secretLabel?: string;
+  items?: SecretRevealItem[];
   warning?: string;
   closeText?: string;
   onClose: () => void;
 }) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
-  const [copying, setCopying] = useState(false);
-  const resolvedClose = closeText || t("common.close", { defaultValue: "关闭" });
-
-  const handleCopy = useCallback(async () => {
-    if (!secret || copying) return;
-    setCopying(true);
-    try {
-      const ok = await copyTextToClipboard(secret);
-      if (ok) {
-        setCopied(true);
-        window.setTimeout(() => setCopied(false), 2000);
-      }
-    } finally {
-      setCopying(false);
+  const [copiedAll, setCopiedAll] = useState(false);
+  useEffect(() => {
+    if (open) {
+      setCopied(false);
+      setCopiedAll(false);
     }
-  }, [copying, secret]);
+  }, [open]);
+
+  const values: SecretRevealItem[] = (
+    items ?? [
+      {
+        label: secretLabel ?? t("common.secret_value", { defaultValue: "密钥" }),
+        value: secret ?? "",
+      },
+    ]
+  ).filter((item) => item.value);
+  const resolvedClose = closeText || t("common.secret_saved_close", { defaultValue: "我已保存" });
+
+  const copyAll = useCallback(async () => {
+    const text =
+      values.length === 1 ? values[0]!.value : values.map((item) => `${item.label}: ${item.value}`).join("\n");
+    if (!text) return;
+    if (await copyTextToClipboard(text)) {
+      setCopied(true);
+      setCopiedAll(true);
+      window.setTimeout(() => setCopiedAll(false), 2000);
+    }
+  }, [values]);
 
   return (
     <Modal
       open={open}
       title={title}
       description={description}
+      icon={<KeyRound />}
+      tone="warning"
+      size="sm"
       onClose={onClose}
-      maxWidth="max-w-md"
+      dirty={!copied}
+      initialFocus="panel"
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
-            {resolvedClose}
-          </Button>
-          <Button variant="primary" onClick={() => void handleCopy()} disabled={!secret || copying}>
-            {copying ? (
-              <Loader2 size={16} className="animate-spin" aria-hidden="true" />
-            ) : copied ? (
-              <Check size={16} aria-hidden="true" />
-            ) : (
-              <Copy size={16} aria-hidden="true" />
-            )}
-            {copied
+          <Button variant="secondary" onClick={() => void copyAll()} disabled={values.length === 0}>
+            {copiedAll ? <Check size={16} aria-hidden="true" /> : <Copy size={16} aria-hidden="true" />}
+            {copiedAll
               ? t("common.copied", { defaultValue: "已复制" })
-              : t("common.copy", { defaultValue: "复制" })}
+              : values.length > 1
+                ? t("common.copy_all", { defaultValue: "复制全部" })
+                : t("common.copy", { defaultValue: "复制" })}
+          </Button>
+          <Button variant="primary" onClick={onClose}>
+            {resolvedClose}
           </Button>
         </>
       }
     >
       <div className="space-y-4">
-        <div className="flex items-start gap-3.5">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400">
-            <KeyRound size={20} />
-          </div>
-          <p className="min-w-0 pt-2.5 text-sm leading-relaxed text-ink-2">
-            {warning ||
-              t("common.secret_once_warning", {
-                defaultValue: "请立即复制，关闭后将无法再次查看。",
-              })}
-          </p>
-        </div>
-        <div className="relative rounded-2xl border border-line bg-subtle p-3.5">
-          <code className="block select-all break-all pr-10 font-mono text-sm text-ink">
-            {secret}
-          </code>
-          <button
-            type="button"
-            onClick={() => void handleCopy()}
-            className="absolute top-2 right-2 inline-flex h-8 w-8 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-hover hover:text-ink"
-            aria-label={t("common.copy", { defaultValue: "复制" })}
-          >
-            {copied ? <Check size={15} /> : <Copy size={15} />}
-          </button>
-        </div>
+        <Callout tone="warning">
+          {warning ||
+            t("common.secret_once_warning", {
+              defaultValue: "请立即复制，关闭后将无法再次查看。",
+            })}
+        </Callout>
+        {values.map((item) => (
+          <SecretValue
+            key={item.label}
+            label={item.label}
+            value={item.value}
+            onCopied={() => setCopied(true)}
+          />
+        ))}
       </div>
     </Modal>
   );

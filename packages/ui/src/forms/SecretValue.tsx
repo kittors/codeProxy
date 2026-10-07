@@ -18,6 +18,7 @@ export function SecretValue({
   maskable = false,
   hint,
   className,
+  onCopied,
 }: {
   label: ReactNode;
   value: string;
@@ -25,6 +26,7 @@ export function SecretValue({
   maskable?: boolean;
   hint?: ReactNode;
   className?: string;
+  onCopied?: () => void;
 }) {
   const { t } = useTranslation();
   const [revealed, setRevealed] = useState(!maskable);
@@ -57,6 +59,7 @@ export function SecretValue({
         ) : null}
         <CopyButton
           value={value}
+          onCopied={onCopied}
           label={
             labelText
               ? t("common.copy_named", { name: labelText, defaultValue: "复制{{name}}" })
