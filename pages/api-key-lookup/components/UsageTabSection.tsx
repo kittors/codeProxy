@@ -6,7 +6,9 @@ import { Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { EChart } from "@code-proxy/ui";
 import { ChartLegend } from "@code-proxy/ui";
 import { HoverTooltip } from "@code-proxy/ui";
+import { useTheme } from "@code-proxy/ui";
 import { KpiCard, MonitorCard as Card } from "@features/monitor-widgets";
+import { dailyTrendColors } from "@features/monitor-widgets/chart-options/daily-trend";
 import type {
   ModelDistributionDatum,
   DailySeriesPoint,
@@ -29,13 +31,14 @@ type HeatmapPoint = {
   cost: number;
 };
 
-// 热力图用中性灰阶：越忙越深（深色模式越亮），与门户、控制台统一的墨色主色一致
+// 热力图按请求数着色，用请求身份色（蓝）的单色深浅阶：越忙越浓，与监控中心的「活跃时段」热力格
+// 同一套。没有请求的格子保持中性的底色——它表示「没有数据」，不是「量很少」。
 const HEATMAP_LEVEL_CLASSES = [
   "bg-slate-100 dark:bg-white/10",
-  "bg-slate-300 dark:bg-neutral-700",
-  "bg-slate-500 dark:bg-neutral-500",
-  "bg-slate-700 dark:bg-neutral-300",
-  "bg-slate-950 dark:bg-neutral-100",
+  "bg-blue-500/20 dark:bg-blue-400/20",
+  "bg-blue-500/40 dark:bg-blue-400/40",
+  "bg-blue-500/65 dark:bg-blue-400/65",
+  "bg-blue-500 dark:bg-blue-400",
 ] as const;
 
 const formatInteger = (value: number) => Math.round(value).toLocaleString();
@@ -250,7 +253,7 @@ export function UsageTabSection({
     name: string;
     valueLabel: string;
     percentLabel: string;
-    colorClass: string;
+    color: string;
   }>;
   modelMetric: "requests" | "tokens";
   setModelMetric: (value: "requests" | "tokens") => void;
@@ -261,7 +264,7 @@ export function UsageTabSection({
     name: string;
     valueLabel: string;
     percentLabel: string;
-    colorClass: string;
+    color: string;
   }>;
   dailySeries: DailySeriesPoint[];
   dailyTrendOption: Record<string, unknown>;
@@ -273,6 +276,11 @@ export function UsageTabSection({
   dailyLegendSelected: Record<string, boolean>;
   toggleDailyLegend: (key: string) => void;
 }) {
+  const {
+    state: { mode },
+  } = useTheme();
+  // 每日用量图例的色点与图表同一份颜色（输入 / 输出 Token 紫的浅、深两档，请求数蓝）。
+  const dailyColors = dailyTrendColors(mode === "dark");
   const showInitialLoading = chartLoading && !chartStats;
   const renderKpiValue = (value: ReactNode) => (showInitialLoading ? <KpiValueSkeleton /> : value);
 
@@ -291,6 +299,7 @@ export function UsageTabSection({
               tone="portal"
               title={t("apikey_lookup.total_requests")}
               icon={Activity}
+              hue="blue"
               hint={t("apikey_lookup.last_n_days", { days: timeRange })}
               valueClassName={kpiValueSizeClass(formatInteger(chartStats?.total ?? 0))}
               value={renderKpiValue(
@@ -305,6 +314,7 @@ export function UsageTabSection({
               tone="portal"
               title={t("common.success_rate")}
               icon={ShieldCheck}
+              hue="emerald"
               hint={t("apikey_lookup.last_n_days", { days: timeRange })}
               valueClassName={kpiValueSizeClass(`${(chartStats?.success_rate ?? 0).toFixed(1)}%`)}
               value={renderKpiValue(
@@ -322,6 +332,7 @@ export function UsageTabSection({
               tone="portal"
               title={t("apikey_lookup.total_tokens")}
               icon={Sigma}
+              hue="violet"
               hint={t("apikey_lookup.last_n_days", { days: timeRange })}
               valueClassName={kpiValueSizeClass(formatInteger(chartStats?.total_tokens ?? 0))}
               value={renderKpiValue(
@@ -336,6 +347,7 @@ export function UsageTabSection({
               tone="portal"
               title={t("apikey_lookup.total_sessions")}
               icon={MessagesSquare}
+              hue="cyan"
               hint={t("apikey_lookup.last_n_days", { days: timeRange })}
               valueClassName={kpiValueSizeClass(formatInteger(chartStats?.total_sessions ?? 0))}
               value={renderKpiValue(
@@ -350,6 +362,7 @@ export function UsageTabSection({
               tone="portal"
               title={t("apikey_lookup.total_cost")}
               icon={Coins}
+              hue="amber"
               hint={t("apikey_lookup.last_n_days", { days: timeRange })}
               valueClassName={kpiValueSizeClass(formatQuotaUsd(chartStats?.total_cost ?? 0))}
               value={renderKpiValue(
@@ -409,7 +422,8 @@ export function UsageTabSection({
                     >
                       <div className="flex min-w-0 items-center gap-2">
                         <span
-                          className={`h-3.5 w-3.5 shrink-0 rounded-full opacity-80 ring-1 ring-black/5 dark:ring-white/10 ${item.colorClass}`}
+                          className="h-3.5 w-3.5 shrink-0 rounded-full ring-1 ring-black/5 dark:ring-white/10"
+                          style={{ backgroundColor: item.color }}
                         />
                         <span className="min-w-0 truncate text-slate-700 dark:text-white/80">
                           {item.name}
@@ -467,7 +481,8 @@ export function UsageTabSection({
                     >
                       <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
                         <span
-                          className={`h-3 w-3 shrink-0 rounded-full opacity-80 ring-1 ring-black/5 dark:ring-white/10 sm:h-3.5 sm:w-3.5 ${item.colorClass}`}
+                          className="h-3 w-3 shrink-0 rounded-full ring-1 ring-black/5 dark:ring-white/10 sm:h-3.5 sm:w-3.5"
+                          style={{ backgroundColor: item.color }}
                         />
                         <span className="min-w-0 truncate text-slate-700 dark:text-white/80">
                           {item.name}
@@ -514,8 +529,7 @@ export function UsageTabSection({
                           {
                             key: DAILY_LEGEND_KEYS.input,
                             label: t("apikey_lookup.input_token"),
-                            // 与 daily-trend 一致：输入浅灰、输出中灰、请求数主色。
-                            colorClass: "bg-[#e6e6e6] dark:bg-[#3a3a3a]",
+                            colorHex: dailyColors.input,
                             enabled: dailyLegendSelected[DAILY_LEGEND_KEYS.input] ?? true,
                             onToggle: toggleDailyLegend,
                           },
@@ -526,7 +540,7 @@ export function UsageTabSection({
                           {
                             key: DAILY_LEGEND_KEYS.output,
                             label: t("apikey_lookup.output_token"),
-                            colorClass: "bg-[#a3a3a3] dark:bg-[#767676]",
+                            colorHex: dailyColors.output,
                             enabled: dailyLegendSelected[DAILY_LEGEND_KEYS.output] ?? true,
                             onToggle: toggleDailyLegend,
                           },
@@ -537,7 +551,7 @@ export function UsageTabSection({
                           {
                             key: DAILY_LEGEND_KEYS.requests,
                             label: t("apikey_lookup.requests"),
-                            colorClass: "bg-ink",
+                            colorHex: dailyColors.requests,
                             enabled: dailyLegendSelected[DAILY_LEGEND_KEYS.requests] ?? true,
                             onToggle: toggleDailyLegend,
                           },

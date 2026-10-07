@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronRight, FileKey2, Folder, PanelTop } from "lucide-react";
-import { Button, Checkbox } from "@code-proxy/ui";
+import { Button, Checkbox, iconHueClass } from "@code-proxy/ui";
 import type { MenuIdentity, PermissionIdentity } from "@code-proxy/api-client";
 
 export interface PermissionTreeNode {
@@ -199,7 +199,7 @@ export function PermissionTree({
               onChange(next);
             }}
           />
-          <Icon size={15} className="shrink-0 text-ink-3" aria-hidden="true" />
+          <Icon size={15} className={`shrink-0 ${iconHueClass(Icon)}`} aria-hidden="true" />
           <span className="min-w-0 flex-1">
             <span className="block truncate text-sm font-medium text-ink">
               {node.label}

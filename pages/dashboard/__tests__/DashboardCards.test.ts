@@ -85,9 +85,12 @@ describe("dashboard card composition", () => {
     const chartSource = readModule("pages/dashboard/ThroughputTrendChart.tsx");
     const systemMonitorSource = readModule("pages/dashboard/SystemMonitorSection.tsx");
 
-    // Summary tiles use the theme-aware tokens (bg-subtle / text-ink-*), which switch
-    // with .dark on their own — no light-only fills left behind.
-    expect(chartSource).toContain("bg-subtle");
+    // RPM / TPM 读数格是白底卡片（surface 令牌随 .dark 切换）+ 与曲线同色的身份色图标块，
+    // 不再是灰底方块；文字仍用 text-ink-* 令牌，没有只顾浅色的填充色。
+    expect(chartSource).toContain('surface({ tone: "raised"');
+    expect(chartSource).toContain('<DialogIcon tone="blue"');
+    expect(chartSource).toContain('<DialogIcon tone="violet"');
+    expect(chartSource).not.toContain("bg-subtle");
     expect(chartSource).toContain("text-ink-3");
     expect(chartSource).not.toMatch(/bg-slate-50(?![\w/-])/);
     expect(systemMonitorSource).toContain("bg-subtle");

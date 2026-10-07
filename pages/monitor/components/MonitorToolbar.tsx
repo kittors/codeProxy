@@ -17,6 +17,7 @@ import {
   TabsTrigger,
   surface,
   type SearchableCheckboxMultiSelectOption,
+  iconHueClass,
 } from "@code-proxy/ui";
 import { isLegacyRangeSupported } from "../model/legacyOverview";
 import { formatMonitorAgo, formatMonitorCompact, formatMonitorStamp } from "../model/monitorFormat";
@@ -59,7 +60,7 @@ export function MonitorToolbar(props: MonitorToolbarProps) {
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2.5">
             <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight text-ink">
-              <Activity size={18} aria-hidden="true" />
+              <Activity size={18} aria-hidden="true" className={iconHueClass(Activity)} />
               {t("monitor_center.title")}
             </h2>
             <LiveStatus {...props} t={t} />
@@ -80,7 +81,7 @@ export function MonitorToolbar(props: MonitorToolbarProps) {
                 label: t(`monitor_center.auto_refresh_${seconds}`),
                 triggerLabel: (
                   <span className="flex min-w-0 items-center gap-1.5">
-                    <Timer size={14} className="shrink-0 text-ink-3" aria-hidden="true" />
+                    <Timer size={14} className={`shrink-0 ${iconHueClass(Timer)}`} aria-hidden="true" />
                     <span className="truncate">
                       {t(`monitor_center.auto_refresh_short_${seconds}`)}
                     </span>
@@ -224,7 +225,7 @@ function optionLabel(dimension: MonitorFilterDimension, option: MonitorFilterOpt
     const Icon = option.kind === "end_user" ? UserRound : KeyRound;
     return (
       <span className="flex min-w-0 items-center gap-1.5">
-        <Icon size={14} className="shrink-0 text-ink-3" aria-hidden="true" />
+        <Icon size={14} className={`shrink-0 ${iconHueClass(Icon)}`} aria-hidden="true" />
         <span className="truncate">{option.label || t("monitor_center.unnamed_consumer")}</span>
       </span>
     );

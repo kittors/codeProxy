@@ -1,5 +1,6 @@
 import type { ECBasicOption } from "echarts/types/dist/shared";
 import type { MonitorSeriesPoint } from "@code-proxy/api-client";
+import { chartGradient } from "@code-proxy/ui";
 import {
   formatMonitorAxis,
   formatMonitorCompact,
@@ -12,7 +13,6 @@ import {
   monitorPalette,
   monitorTooltip,
   tooltipHtml,
-  withAlpha,
 } from "./chartBase";
 
 export interface RealtimeLabels {
@@ -24,8 +24,8 @@ export interface RealtimeLabels {
 }
 
 /**
- * 最近 60 分钟、每分钟一根柱：成功是请求身份色，失败叠在上面用错误红。
- * 最后一根是还没走完的这一分钟，画成半透明，免得被读成「流量突然掉了」。
+ * 最近 60 分钟、每分钟一根柱：成功是请求身份色，失败叠在上面用错误红，都是上实下淡的同色渐变。
+ * 最后一根是还没走完的这一分钟，画成整体更淡的渐变，免得被读成「流量突然掉了」。
  */
 export function createRealtimeOption(
   points: MonitorSeriesPoint[],
@@ -39,7 +39,7 @@ export function createRealtimeOption(
   const categories = points.map((point) => formatMonitorStamp(point.start).slice(6));
   const fade = (value: number, index: number, color: string) => ({
     value,
-    itemStyle: index === last ? { color: withAlpha(color, 0.4) } : undefined,
+    itemStyle: index === last ? { color: chartGradient(color, 0.45, 0.2) } : undefined,
   });
 
   return {
@@ -95,8 +95,8 @@ export function createRealtimeOption(
         type: "bar",
         stack: "requests",
         barCategoryGap: "28%",
-        itemStyle: { color: requestsColor, borderRadius: [2, 2, 0, 0] },
-        emphasis: { itemStyle: { color: withAlpha(requestsColor, 0.85) } },
+        itemStyle: { color: chartGradient(requestsColor, 1, 0.6), borderRadius: [2, 2, 0, 0] },
+        emphasis: { itemStyle: { color: chartGradient(requestsColor, 1, 0.88) } },
         data: points.map((point, index) => fade(point.success, index, requestsColor)),
       },
       {
@@ -104,7 +104,7 @@ export function createRealtimeOption(
         name: labels.failed,
         type: "bar",
         stack: "requests",
-        itemStyle: { color: palette.err, borderRadius: [2, 2, 0, 0] },
+        itemStyle: { color: chartGradient(palette.err, 1, 0.7), borderRadius: [2, 2, 0, 0] },
         data: points.map((point, index) => fade(point.failed, index, palette.err)),
       },
     ],

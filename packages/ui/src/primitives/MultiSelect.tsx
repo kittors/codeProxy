@@ -27,6 +27,7 @@ import {
   selectTriggerState,
 } from "../utils/selectStyles";
 import type { ControlSize } from "../utils/controlStyles";
+import { useScrollFade } from "../hooks/useScrollFade";
 
 export interface MultiSelectOption {
   value: string;
@@ -74,6 +75,7 @@ export function MultiSelect({
   const { t } = useTranslation();
   const resolvedEmptyLabel = emptyLabel ?? t("ui.select_all_label");
   const [open, setOpen] = useState(false);
+  const listFade = useScrollFade<HTMLDivElement>({ enabled: open, size: 24 });
   const [search, setSearch] = useState("");
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -229,7 +231,12 @@ export function MultiSelect({
               />
             </div>
           )}
-          <div className="min-h-0 flex-1 overflow-y-auto p-1.5">
+          <div
+            ref={listFade.ref}
+            onScroll={listFade.onScroll}
+            style={listFade.style}
+            className={cn("min-h-0 flex-1 overflow-y-auto overscroll-contain p-1.5", listFade.className)}
+          >
             {/* Select All option */}
             <button
               type="button"

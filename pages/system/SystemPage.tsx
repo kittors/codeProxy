@@ -12,7 +12,7 @@ import {
   Server,
 } from "lucide-react";
 import { useAuth } from "@app/providers/AuthProvider";
-import { Card } from "@code-proxy/ui";
+import { Card, iconHueClass } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
 import { SystemUpdateCard } from "@features/online-update";
 
@@ -117,7 +117,7 @@ export function SystemPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-selected">
-            <Server size={16} className="text-ink" />
+            <Server size={16} className={iconHueClass(Server)} />
           </div>
           <div>
             <h2 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">

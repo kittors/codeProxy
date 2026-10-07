@@ -1,12 +1,11 @@
 {
   "comment": "Hand-rolled card surfaces awaiting migration to surface() from @code-proxy/ui. Counts may only shrink — see scripts/check-surface-usage.mjs.",
-  "total": 43,
+  "total": 41,
   "files": {
     "features/monitor-widgets/MonitorPagePieces.tsx": 1,
     "features/online-update/ui/UpdateModal.tsx": 1,
     "packages/ui/src/data-table/rowReorder.ts": 1,
     "pages/api-key-lookup/components/LookupResultsToolbar.tsx": 1,
-    "pages/api-key-lookup/components/ModelsTabContent.tsx": 1,
     "pages/api-key-lookup/components/PublicLogsSection.tsx": 1,
     "pages/api-key-lookup/components/QuickImportTabContent.tsx": 2,
     "pages/auth-files/hooks/useAuthFilesFilesPresentation.tsx": 1,
@@ -16,7 +15,6 @@
     "pages/identity-fingerprint/IdentityFingerprintPage.tsx": 14,
     "pages/logs/components/ErrorLogsTab.tsx": 2,
     "pages/logs/components/LiveLogsTab.tsx": 3,
-    "pages/model-plaza/ModelPlazaPage.tsx": 1,
     "pages/models/components/ModelTestModal.tsx": 1,
     "pages/providers/components/AmpcodePanel.tsx": 2,
     "pages/providers/components/OpenAIKeyEntrySummary.tsx": 1,

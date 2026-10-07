@@ -1,56 +1,9 @@
 /**
- * Quota constants for API URLs, headers, and theme colors.
+ * Quota constants for API URLs and headers.
+ * （供应商配色不放这里：品牌色统一取 @code-proxy/assets 的 vendorBrand()。）
  */
 
-import type { GeminiCliQuotaGroupDefinition, TypeColorSet } from "./types";
-
-// Theme colors for type badges
-export const TYPE_COLORS: Record<string, TypeColorSet> = {
-  qwen: {
-    light: { bg: "#e8f5e9", text: "#2e7d32" },
-    dark: { bg: "#1b5e20", text: "#81c784" },
-  },
-  gemini: {
-    light: { bg: "#e3f2fd", text: "#1565c0" },
-    dark: { bg: "#0d47a1", text: "#64b5f6" },
-  },
-  "gemini-cli": {
-    light: { bg: "#e7efff", text: "#1e4fa3" },
-    dark: { bg: "#1c3f73", text: "#a8c7ff" },
-  },
-  aistudio: {
-    light: { bg: "#f0f2f5", text: "#2f343c" },
-    dark: { bg: "#373c42", text: "#cfd3db" },
-  },
-  claude: {
-    light: { bg: "#fce4ec", text: "#c2185b" },
-    dark: { bg: "#880e4f", text: "#f48fb1" },
-  },
-  codex: {
-    light: { bg: "#fff3e0", text: "#ef6c00" },
-    dark: { bg: "#e65100", text: "#ffb74d" },
-  },
-  antigravity: {
-    light: { bg: "#e0f7fa", text: "#006064" },
-    dark: { bg: "#004d40", text: "#80deea" },
-  },
-  kiro: {
-    light: { bg: "#fff8e1", text: "#ff8f00" },
-    dark: { bg: "#ff6f00", text: "#ffe082" },
-  },
-  iflow: {
-    light: { bg: "#f3e5f5", text: "#7b1fa2" },
-    dark: { bg: "#4a148c", text: "#ce93d8" },
-  },
-  empty: {
-    light: { bg: "#f5f5f5", text: "#616161" },
-    dark: { bg: "#424242", text: "#bdbdbd" },
-  },
-  unknown: {
-    light: { bg: "#f0f0f0", text: "#666666", border: "1px dashed #999999" },
-    dark: { bg: "#3a3a3a", text: "#aaaaaa", border: "1px dashed #666666" },
-  },
-};
+import type { GeminiCliQuotaGroupDefinition } from "./types";
 
 // Antigravity API configuration
 export const ANTIGRAVITY_QUOTA_URLS = [

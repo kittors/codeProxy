@@ -16,6 +16,7 @@ import {
   TextInput,
   ToggleSwitch,
   useToast,
+  ScrollFade,
 } from "@code-proxy/ui";
 import { PermissionGate } from "@app/providers/PermissionGate";
 
@@ -92,7 +93,7 @@ export function ProtectionPolicyTab({ status, onPolicySaved }: ProtectionPolicyT
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto border-t border-slate-100 px-5 py-4 dark:border-white/8">
+    <ScrollFade className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto border-t border-slate-100 px-5 py-4 dark:border-white/8">
       {/* First, because nothing below it takes effect until this is right. */}
       <Section
         title={t("ip_access.section_trusted_proxies")}
@@ -451,7 +452,7 @@ export function ProtectionPolicyTab({ status, onPolicySaved }: ProtectionPolicyT
           </Button>
         </div>
       </PermissionGate>
-    </div>
+    </ScrollFade>
   );
 }
 

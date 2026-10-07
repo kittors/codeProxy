@@ -25,6 +25,7 @@ import {
   selectTriggerState,
 } from "../utils/selectStyles";
 import type { ControlSize } from "../utils/controlStyles";
+import { useScrollFade } from "../hooks/useScrollFade";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -88,6 +89,7 @@ export function Select({
   size = "default",
 }: SelectProps) {
   const [open, setOpen] = useState(false);
+  const listFade = useScrollFade<HTMLDivElement>({ enabled: open, size: 24 });
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
 
@@ -208,7 +210,7 @@ export function Select({
               role="listbox"
               data-side={pos.placement}
               aria-label={ariaLabel}
-              className={selectPanel}
+              className={cn(selectPanel, "!p-0")}
               {...getSelectDropdownMotion(pos.placement)}
               transition={selectDropdownTransition}
               style={{
@@ -216,10 +218,15 @@ export function Select({
                 left: pos.left,
                 minWidth: pos.width,
                 maxWidth: "min(500px, 90vw)",
-                maxHeight: 280,
-                overflowY: "auto",
               }}
             >
+              {/* 面板本身保留圆角与投影，滚动交给里面这一层：选项多到要滚时上下渐隐，不会被面板边缘一刀切断。 */}
+              <div
+                ref={listFade.ref}
+                onScroll={listFade.onScroll}
+                style={{ ...listFade.style, maxHeight: 280 }}
+                className={cn("overflow-y-auto overscroll-contain p-1.5", listFade.className)}
+              >
               {options.map((opt) => {
                 const selected = opt.value === value;
                 return (
@@ -241,6 +248,7 @@ export function Select({
                   </button>
                 );
               })}
+              </div>
             </motion.div>
           ) : null}
         </AnimatePresence>,

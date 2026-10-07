@@ -2,7 +2,7 @@ import { Check, ShieldCheck, TriangleAlert } from "lucide-react";
 import { useState, type ComponentProps } from "react";
 import { useTranslation } from "react-i18next";
 import { oauthApi, type ProxyPoolEntry } from "@code-proxy/api-client";
-import { Button, Textarea } from "@code-proxy/ui";
+import { Button, Textarea, ScrollFade } from "@code-proxy/ui";
 import type { ProxyPoolSelect } from "@features/proxy-pool";
 import { describeLoginError } from "../../model/loginErrors";
 import type { AddedAccount } from "../../model/addedAccount";
@@ -66,7 +66,7 @@ export function IFlowCookieImport({
   };
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6">
+    <ScrollFade className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6">
       <div className="grid gap-4">
         <ol className="grid list-decimal gap-1 pl-5 text-sm text-ink-2 marker:text-ink-3">
           <li>{t("add_account.import.iflow_step_1")}</li>
@@ -128,6 +128,6 @@ export function IFlowCookieImport({
           </Button>
         </div>
       </div>
-    </div>
+    </ScrollFade>
   );
 }

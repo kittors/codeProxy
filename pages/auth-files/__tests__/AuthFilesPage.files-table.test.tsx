@@ -2012,10 +2012,69 @@ describe("AuthFilesPage files table", () => {
     expect(within(card as HTMLElement).getByText("vip-team")).toBeInTheDocument();
     expect(within(card as HTMLElement).getAllByText(/^codex$/i)).toHaveLength(1);
     // Membership chip is PRO (not soft sky "pro" tag); only one membership badge.
-    expect(within(card as HTMLElement).getByTestId("auth-file-plan-badge")).toHaveTextContent(
-      "PRO",
-    );
+    const planBadge = within(card as HTMLElement).getByTestId("auth-file-plan-badge");
+    expect(planBadge).toHaveTextContent("PRO");
+    // 卡片上的徽章走品牌色 × 等级：Codex 的 PRO 是专业档、Codex 品牌色，供应商标签同色。
+    expect(planBadge).toHaveAttribute("data-plan-tier", "pro");
+    const codexBrand = planBadge.style.getPropertyValue("--brand-l");
+    expect(codexBrand).not.toBe("");
+    const providerTag = within(card as HTMLElement).getByText(/^codex$/i);
+    expect(providerTag.style.getPropertyValue("--brand-l")).toBe(codexBrand);
     expect(within(card as HTMLElement).queryByText("pro")).not.toBeInTheDocument();
+  });
+
+  test("table view ranks membership badges by tier in each vendor's brand colour", async () => {
+    useTableFilesView();
+    const account = (name: string, label: string, type: string, planType: string) => ({
+      name,
+      label,
+      account_type: "oauth",
+      type,
+      plan_type: planType,
+      size: 1024,
+      modified: Date.now(),
+      disabled: false,
+    });
+    mocks.list.mockImplementation(async () => ({
+      files: [
+        account("codex-top.json", "Codex Top", "codex", "pro_20x"),
+        account("codex-entry.json", "Codex Entry", "codex", "plus"),
+        account("codex-free.json", "Codex Free", "codex", "free"),
+        account("claude-max.json", "Claude Max", "claude", "max_5x"),
+      ],
+    }));
+
+    render(
+      <MemoryRouter initialEntries={["/auth-files"]}>
+        <ThemeProvider>
+          <ToastProvider>
+            <Routes>
+              <Route path="/auth-files" element={<AuthFilesPage />} />
+            </Routes>
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    const badgeOf = async (label: string) => {
+      const row = (await screen.findByText(label)).closest("tr") as HTMLElement;
+      return within(row).getByTestId("auth-file-plan-badge");
+    };
+    const codexTop = await badgeOf("Codex Top");
+    const codexEntry = await badgeOf("Codex Entry");
+    const codexFree = await badgeOf("Codex Free");
+    const claudeMax = await badgeOf("Claude Max");
+    expect(codexTop).toHaveTextContent("PRO 20X");
+    expect(codexTop).toHaveAttribute("data-plan-tier", "ultra");
+    expect(claudeMax).toHaveTextContent("MAX 5X");
+    expect(claudeMax).toHaveAttribute("data-plan-tier", "max");
+    expect(codexEntry).toHaveAttribute("data-plan-tier", "entry");
+    expect(codexFree).toHaveAttribute("data-plan-tier", "free");
+    // 同一家的不同档同一个品牌色（靠隆重程度分高低），不同厂商品牌色不同。
+    const brandOf = (badge: HTMLElement) => badge.style.getPropertyValue("--brand-l");
+    expect(brandOf(codexTop)).not.toBe("");
+    expect(brandOf(codexEntry)).toBe(brandOf(codexTop));
+    expect(brandOf(claudeMax)).not.toBe(brandOf(codexTop));
   });
 
   test("table view shows cycle calls without shared-scope or lifetime noise", async () => {

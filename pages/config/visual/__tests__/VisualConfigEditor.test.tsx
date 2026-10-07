@@ -70,6 +70,8 @@ describe("VisualConfigEditor auto update config", () => {
 
   test("shows automatic update settings and exposes main/dev source branches", async () => {
     const onChange = renderEditor();
+    // 运行模式与更新在「运行」分组里：分组页签切过去才看得到。
+    await userEvent.click(screen.getByRole("tab", { name: /^Behavior/ }));
 
     const toggle = screen.getByRole("switch", { name: /automatic update checks/i });
     await userEvent.click(toggle);
@@ -99,11 +101,21 @@ describe("VisualConfigEditor auto update config", () => {
       </ThemeProvider>,
     );
 
+    // 分组页签：有改动的组带「有未保存的修改」，没改动的组没有。
+    expect(screen.getByRole("tab", { name: /^Basics.*has unsaved changes/ })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: /^Behavior.*has unsaved changes/ })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: /^Logs & data$/ })).toBeTruthy();
+    // 当前分组的分区胶囊：精确到哪个分区改了。
     const nav = screen.getByRole("navigation", { name: "Config sections" });
     expect(within(nav).getByRole("button", { name: /Server.*has unsaved changes/ })).toBeTruthy();
-    expect(within(nav).getByRole("button", { name: /Network & retries.*has unsaved changes/ }))
-      .toBeTruthy();
     expect(within(nav).getByRole("button", { name: /^Remote management$/ })).toBeTruthy();
+    await userEvent.click(screen.getByRole("tab", { name: /^Behavior/ }));
+    expect(
+      within(screen.getByRole("navigation", { name: "Config sections" })).getByRole("button", {
+        name: /Network & retries.*has unsaved changes/,
+      }),
+    ).toBeTruthy();
+    await userEvent.click(screen.getByRole("tab", { name: /^Basics/ }));
 
     const portRow = document.getElementById("config-field-port")!;
     expect(portRow).toHaveAttribute("data-modified", "true");
@@ -124,6 +136,41 @@ describe("VisualConfigEditor auto update config", () => {
     expect(port).toHaveAccessibleDescription(/Enter a whole number/);
   });
 
+  test("groups are tabs above the content, one group at a time, arrow keys move between them", async () => {
+    renderEditor();
+    expect(screen.getByRole("tab", { name: /^Basics/ })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("heading", { name: "Server" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Streaming" })).toBeNull();
+    expect(screen.getByRole("tabpanel")).toHaveAccessibleName(/^Basics/);
+
+    await userEvent.click(screen.getByRole("tab", { name: /^Behavior/ }));
+    expect(screen.getByRole("heading", { name: "Streaming" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Server" })).toBeNull();
+
+    screen.getByRole("tab", { name: /^Behavior/ }).focus();
+    await userEvent.keyboard("{ArrowRight}");
+    expect(screen.getByRole("tab", { name: /^Logs & data/ })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: /^Logs & data/ })).toHaveFocus();
+    expect(screen.getByRole("heading", { name: "Logging" })).toBeInTheDocument();
+  });
+
+  test("search spans every group, shows hits per tab, and picking a tab ends the search", async () => {
+    renderEditor();
+    await userEvent.type(screen.getByRole("textbox", { name: "Search settings" }), "retry");
+
+    await waitFor(() =>
+      expect(screen.getByRole("tabpanel", { name: "Search results" })).toBeInTheDocument(),
+    );
+    // 命中的「网络与重试」在「运行」组：不用先切过去就能搜到。
+    expect(screen.getByRole("heading", { name: "Network & retries" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /^Behavior.*matching section/ })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: /^Basics.*0 matching sections/ })).toBeTruthy();
+
+    await userEvent.click(screen.getByRole("tab", { name: /^Basics/ }));
+    expect(screen.getByRole("textbox", { name: "Search settings" })).toHaveValue("");
+    expect(screen.getByRole("tab", { name: /^Basics/ })).toHaveAttribute("aria-selected", "true");
+  });
+
   test("search narrows the page to matching settings", async () => {
     renderEditor();
     await userEvent.type(screen.getByRole("textbox", { name: "Search settings" }), "retry");
@@ -142,6 +189,7 @@ describe("VisualConfigEditor auto update config", () => {
 
   test("exposes custom docker image repository with a risk warning", async () => {
     const onChange = renderEditor();
+    await userEvent.click(screen.getByRole("tab", { name: /^Behavior/ }));
 
     const input = screen.getByRole("textbox", { name: /docker image repository/i });
     expect(input).toHaveValue("ghcr.io/kittors/clirelay");

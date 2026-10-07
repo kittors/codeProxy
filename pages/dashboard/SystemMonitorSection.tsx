@@ -159,9 +159,9 @@ function DiskUsageRingCard({ stats }: { stats: SystemStats }) {
         </GradientRing>
       </div>
 
-      {/* 图例：已用的颜色就是环的颜色，可用是底槽色。 */}
+      {/* 图例：已用的格子铺环的颜色（随告警变琥珀 / 红），可用是中性的底槽色。 */}
       <div className="grid grid-cols-2 gap-2">
-        <div className="rounded-2xl bg-subtle px-3 py-2">
+        <div className={`rounded-2xl px-3 py-2 ${hue.track}`}>
           <p className="flex items-center gap-1.5 text-2xs text-ink-3">
             <span className={`size-1.5 rounded-full ${hue.bar}`} aria-hidden="true" />
             {t("system_monitor.disk_used")}
@@ -301,7 +301,9 @@ function NetworkCard({ stats }: { stats: SystemStats }) {
           </div>
         ))}
       </div>
-      <div className="mt-auto flex items-center justify-between rounded-xl bg-subtle px-3 py-2">
+      <div
+        className={`mt-auto flex items-center justify-between rounded-xl px-3 py-2 ${MONITOR_HUES.emerald.track}`}
+      >
         <span className="text-2xs text-ink-3">{t("system_monitor.total_traffic")}</span>
         <span className="text-xs font-semibold tabular-nums text-ink">
           {formatBytes(stats.net_bytes_sent + stats.net_bytes_recv)}
@@ -340,8 +342,8 @@ function AverageLatencyCard({
       </div>
       <div className="grid flex-1 grid-cols-2 gap-3">
         {tiles.map((tile) => (
-          // 左侧一道同色短竖条，把两个数字块和各自的含义对上。
-          <div key={tile.label} className="relative overflow-hidden rounded-xl bg-subtle px-3 py-2.5">
+          // 左侧一道同色短竖条 + 同色淡底，把两个数字块和各自的含义对上（不再是灰底块）。
+          <div key={tile.label} className={`relative overflow-hidden rounded-xl px-3 py-2.5 ${tile.hue.track}`}>
             <span aria-hidden="true" className={`absolute inset-y-2.5 left-0 w-1 rounded-r-full ${tile.hue.bar}`} />
             <div className="text-2xs font-medium text-ink-3">{tile.label}</div>
             <div className="mt-1 text-xl font-semibold tracking-tight tabular-nums text-ink">{tile.value}</div>

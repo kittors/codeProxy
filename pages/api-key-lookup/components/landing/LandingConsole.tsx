@@ -70,7 +70,8 @@ export function LandingConsole({ copy }: { copy: LandingCopy }) {
                         delay: 0.5 + index * 0.045,
                         ease: LANDING_EASE,
                       }}
-                      className={`flex-1 rounded-t-sm ${index === BARS.length - 1 ? "bg-ink" : "bg-[#e6e6e6] dark:bg-[#3a3a3a]"}`}
+                      // 请求量柱子用全站图表的「请求蓝」渐变，最新一根更饱和——和面板里的真实图表一个样子。
+                      className={`flex-1 rounded-t-sm bg-gradient-to-t ${index === BARS.length - 1 ? "from-blue-500 to-indigo-400" : "from-blue-500/35 to-blue-400/15 dark:from-blue-400/40 dark:to-blue-400/15"}`}
                     />
                   ))}
                 </div>

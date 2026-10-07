@@ -1,4 +1,5 @@
 import {
+  Children,
   createContext,
   use,
   useCallback,
@@ -10,8 +11,11 @@ import {
   type ButtonHTMLAttributes,
   type HTMLAttributes,
   type PropsWithChildren,
+  type ReactNode,
 } from "react";
 import { motion } from "framer-motion";
+import { useScrollFade } from "../hooks/useScrollFade";
+import { HUE_BUTTON_ICON, hueForIcon, type Hue } from "../theme/hues";
 import type { ControlSize } from "../utils/controlStyles";
 
 type TabsValue = string;
@@ -77,10 +81,22 @@ export function Tabs({
 export function TabsList({
   children,
   className,
+  style,
+  onScroll,
   ...divProps
 }: PropsWithChildren<HTMLAttributes<HTMLDivElement>>) {
   const { size, value, tone } = useTabs();
-  const containerRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  // 窄屏放不下时标签条横向滚动：两端还有标签就渐隐，而不是把半个标签硬切在边缘。
+  // 淡掉的是滚动条自己的两端（槽的底色跟着淡出，正好表示「后面还有」）；放得下时不挂遮罩。
+  const fade = useScrollFade<HTMLDivElement>({ size: 20, axis: "x" });
+  const setContainerRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      containerRef.current = node;
+      fade.ref.current = node;
+    },
+    [fade.ref],
+  );
   const [indicator, setIndicator] = useState<{ x: number; width: number } | null>(null);
 
   const updateIndicator = useCallback(() => {
@@ -116,8 +132,13 @@ export function TabsList({
 
   return (
     <div
-      ref={containerRef}
+      ref={setContainerRef}
       {...divProps}
+      onScroll={(event) => {
+        fade.onScroll();
+        onScroll?.(event);
+      }}
+      style={fade.style ? { ...style, ...fade.style } : style}
       role="tablist"
       className={[
         // w-fit + self-start: stay content-sized even when parent is flex-col
@@ -126,6 +147,7 @@ export function TabsList({
         // horizontal overscroll chains to the viewport and rubber-bands PageBackground.
         "scrollbar-hidden relative inline-flex w-fit max-w-full shrink-0 self-start gap-0.5 overflow-x-auto overscroll-x-contain whitespace-nowrap rounded-full bg-track p-0.5",
         tabsListHeightBySize[size],
+        fade.className,
         className,
       ].join(" ")}
     >
@@ -149,6 +171,15 @@ export function TabsList({
   );
 }
 
+function firstIconHue(children: ReactNode): Hue | null {
+  let found: Hue | null = null;
+  Children.forEach(children, (child) => {
+    if (found) return;
+    found = hueForIcon(child);
+  });
+  return found;
+}
+
 export function TabsTrigger({
   value,
   children,
@@ -160,6 +191,9 @@ export function TabsTrigger({
 >) {
   const { size, value: current, onValueChange, tone } = useTabs();
   const active = current === value;
+  // 标签里的图标按全站注册表上色（可视化是天蓝的眼睛、源码是品红的代码……）；
+  // 品牌色实心的选中块上图标跟随文字色，不再染色。
+  const iconHue = tone === "brand" && active ? null : firstIconHue(children);
 
   const onClick = useCallback(() => {
     onValueChange(value);
@@ -185,8 +219,11 @@ export function TabsTrigger({
             ? "text-accent-fg"
             : "text-ink"
           : "text-ink-2 hover:text-ink",
+        iconHue ? HUE_BUTTON_ICON[iconHue] : null,
         buttonProps.className,
-      ].join(" ")}
+      ]
+        .filter(Boolean)
+        .join(" ")}
     >
       {children}
     </button>

@@ -1,11 +1,15 @@
 import { motion, useReducedMotion } from "framer-motion";
-import { useEffect, useId, useRef, type KeyboardEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useRef, type KeyboardEvent, type ReactNode } from "react";
+import { useScrollFade } from "../hooks/useScrollFade";
+import { dialogToneClass, type DialogTone } from "../overlays/DialogIcon";
 import { cn } from "../utils/selectStyles";
 
 export interface NavListItem {
   id: string;
   label: ReactNode;
   icon?: ReactNode;
+  /** 图标块色调，默认按图标自动取色；厂商 logo 保持中性底。 */
+  tone?: DialogTone;
   /** 右侧的小标记（数量、状态）。 */
   badge?: ReactNode;
   /** 名称后的小圆点（例如「这一组有未保存的修改」）。 */
@@ -72,6 +76,16 @@ export function NavList({
   const prefix = idPrefix ?? `nav-${generatedId}`;
   const buttonsRef = useRef<Record<string, HTMLButtonElement | null>>({});
   const rootRef = useRef<HTMLDivElement | null>(null);
+  // 窄屏横排时列表自己横向滚动：两端还有项时渐隐，而不是在边缘把半个项硬切掉。
+  // 竖排后没有横向溢出，渐隐自动收起。
+  const fade = useScrollFade<HTMLDivElement>({ size: 24, axis: "x" });
+  const setRootRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      rootRef.current = node;
+      fade.ref.current = node;
+    },
+    [fade.ref],
+  );
   const items = groups.flatMap((group) => group.items);
   const isTabs = mode === "tabs";
   const layout = LAYOUT[breakpoint];
@@ -118,12 +132,14 @@ export function NavList({
 
   return (
     <div
-      ref={rootRef}
+      ref={setRootRef}
       role={isTabs ? "tablist" : "navigation"}
       aria-orientation={isTabs ? "vertical" : undefined}
       aria-label={ariaLabel}
       onKeyDown={onKeyDown}
-      className={cn(layout.root, className)}
+      onScroll={fade.onScroll}
+      style={fade.style}
+      className={cn(layout.root, fade.className, className)}
     >
       {groups.map((group) => {
         if (group.items.length === 0) return null;
@@ -171,7 +187,12 @@ export function NavList({
                     />
                   ) : null}
                   {item.icon ? (
-                    <span className="relative grid h-7 w-7 shrink-0 place-items-center rounded-lg border border-line bg-surface [&_svg.lucide]:size-[16px]">
+                    <span
+                      className={cn(
+                        "relative grid h-7 w-7 shrink-0 place-items-center rounded-lg border [&_svg.lucide]:size-[16px]",
+                        dialogToneClass(item.tone ?? "auto", item.icon),
+                      )}
+                    >
                       {item.icon}
                     </span>
                   ) : null}

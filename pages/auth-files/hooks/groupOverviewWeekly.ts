@@ -1,6 +1,5 @@
 import type { TFunction } from "i18next";
 import { parseAdditionalQuotaWindowLabel } from "@code-proxy/domain";
-import { CHART_CATEGORICAL } from "@code-proxy/ui";
 import type { QuotaCardSlot } from "./quotaCardSlots";
 
 export const WEEKLY_WINDOW_SECONDS = 7 * 24 * 60 * 60;
@@ -27,11 +26,6 @@ export type GroupTrendPoint = {
   weeklyPercent: number | null;
   weeklyPercents: Record<string, number | null>;
 };
-
-// Distinct from the call bars (blue) and from each other so two Antigravity
-// weeklies can sit on the same axis without blending into one "average".
-/** 周额度线的颜色：共享的分类色板（降饱和、不含紫色），与其它图表一致。 */
-export const WEEKLY_SERIES_COLORS: readonly string[] = CHART_CATEGORICAL;
 
 export const isWeeklyWindow = (windowSeconds: number | null | undefined): boolean =>
   typeof windowSeconds === "number" && Number.isFinite(windowSeconds) && windowSeconds >= WEEKLY_WINDOW_SECONDS;

@@ -33,11 +33,15 @@ vi.mock("@pages/config/visual/VisualConfigEditor", () => ({
   VisualConfigEditor: ({
     values,
     onChange,
+    toolbarEnd,
   }: {
     values: VisualConfigValues;
     onChange: (values: Partial<VisualConfigValues>) => void;
+    toolbarEnd?: React.ReactNode;
   }) => (
     <div data-testid="visual-config-editor">
+      {/* 真实编辑器把「可视化 / 源码」切换渲染在工具栏右侧，替身也要渲染出来。 */}
+      {toolbarEnd}
       {values.payloadOverrideRules[0]?.models[0]?.name ?? "no payload override"}
       <button
         type="button"

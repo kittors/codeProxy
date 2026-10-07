@@ -14,6 +14,8 @@ vi.mock("@code-proxy/ui", async (importOriginal) => {
       <div data-testid="api-key-distribution-chart" className={className} />
     ),
     Reveal: ({ children }: { children: ReactNode }) => <>{children}</>,
+    // 图例色点按主题取色；这里不挂 ThemeProvider，给一个固定的浅色主题。
+    useTheme: () => ({ state: { mode: "light" } }),
   };
 });
 
@@ -52,7 +54,7 @@ const baseProps: ComponentProps<typeof UsageTabSection> = {
       name: "Laptop",
       valueLabel: "4",
       percentLabel: "100.0%",
-      colorClass: "bg-sky-500",
+      color: "#6366f1",
     },
   ],
   modelMetric: "requests",

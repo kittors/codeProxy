@@ -10,7 +10,7 @@ import iconAmp from "@code-proxy/assets/icons/amp.svg";
 import iconOpenai from "@code-proxy/assets/icons/openai.svg";
 import iconOpenCodeDark from "@code-proxy/assets/icons/opencode-dark.svg";
 import iconOpenCodeLight from "@code-proxy/assets/icons/opencode-light.svg";
-import { TabsList, TabsTrigger } from "@code-proxy/ui";
+import { TabsList, TabsTrigger, brandVars } from "@code-proxy/ui";
 
 export type ProviderTabId =
   | "gemini"
@@ -69,6 +69,18 @@ const TAB_META: Record<ProviderTabId, { icon: ReactNode }> = {
   ampcode: { icon: <img src={iconAmp} alt="" className="size-4" /> },
 };
 
+/**
+ * tab 上的数量角标跟着供应商的品牌色：当前 tab 用品牌实色，其余用品牌淡底。淡底是和卡片底色
+ * 混出来的实色而不是半透明——角标压在 tab 文字上，半透明会透出下面的字。认不出品牌的
+ * （Bedrock、Command Code）回落到墨色，和以前一样是黑 / 灰。
+ */
+const COUNT_BADGE_BASE =
+  "absolute -right-0.5 -top-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-2xs font-semibold leading-none tabular-nums shadow-sm ring-1";
+const COUNT_BADGE_ACTIVE =
+  "bg-[var(--brand-fill)] text-[var(--brand-on)] ring-black/10 dark:ring-white/15";
+const COUNT_BADGE_IDLE =
+  "bg-[color-mix(in_oklab,var(--brand)_14%,var(--color-surface))] text-[var(--brand-text)] ring-[color-mix(in_oklab,var(--brand)_24%,transparent)] dark:bg-[color-mix(in_oklab,var(--brand)_26%,var(--color-surface))]";
+
 type ProviderTabsWithCountsProps = {
   tabs: ProviderTabMeta[];
   value: ProviderTabId;
@@ -80,6 +92,7 @@ export function ProviderTabsWithCounts({ tabs, value }: ProviderTabsWithCountsPr
       <TabsList>
         {tabs.map((tab) => {
           const icon = tab.icon ?? TAB_META[tab.id]?.icon ?? null;
+          const brand = brandVars(tab.id);
           return (
             <TabsTrigger key={tab.id} value={tab.id}>
               {icon}
@@ -87,11 +100,12 @@ export function ProviderTabsWithCounts({ tabs, value }: ProviderTabsWithCountsPr
                 {tab.label}
                 {tab.count !== null && tab.count > 0 ? (
                   <span
-                    className={
-                      value === tab.id
-                        ? "absolute -right-0.5 -top-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[#18181B] px-1 text-2xs font-semibold leading-none tabular-nums text-white shadow-sm ring-1 ring-black/10 dark:bg-white dark:text-[#18181B] dark:ring-white/15"
-                        : "absolute -right-0.5 -top-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-selected px-1 text-2xs font-semibold leading-none tabular-nums text-ink shadow-sm ring-1 ring-line-strong"
-                    }
+                    style={brand.style}
+                    className={[
+                      brand.className,
+                      COUNT_BADGE_BASE,
+                      value === tab.id ? COUNT_BADGE_ACTIVE : COUNT_BADGE_IDLE,
+                    ].join(" ")}
                   >
                     {tab.count}
                   </span>

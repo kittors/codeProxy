@@ -2,6 +2,7 @@ import { createPortal } from "react-dom";
 import { useCallback, useId, useRef, useState, type PropsWithChildren, type ReactNode } from "react";
 import { X } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useScrollFade } from "../hooks/useScrollFade";
 import { DialogIcon, type DialogTone } from "./DialogIcon";
 import { drawerPanelMotion, overlayBackdropMotion, useOverlayPresence } from "./overlayMotion";
 import {
@@ -15,7 +16,7 @@ export function Drawer({
   title,
   description,
   icon,
-  tone = "neutral",
+  tone = "auto",
   footer,
   widthClassName = "w-[min(720px,100vw)]",
   bodyClassName,
@@ -67,6 +68,7 @@ export function Drawer({
 
   // 与 Modal 同一套叠层：抽屉里再打开的确认框按 Esc 只关确认框；Tab 不会跑到背后的页面。
   useDialogBehavior({ open, visible, panelRef, onEscape: handleEscape, initialFocus });
+  const fade = useScrollFade<HTMLDivElement>({ enabled: mounted });
 
   if (!mounted) return null;
 
@@ -117,8 +119,8 @@ export function Drawer({
           nudging ? "overlay-nudge" : "",
         ].join(" ")}
       >
-        {/* 抽屉内容通常很长，头尾保留一条细分隔线，滚动时内容不会和标题、按钮粘在一起。 */}
-        <div className="flex items-start justify-between gap-3 border-b border-line py-4 pr-4 pl-6">
+        {/* 抽屉内容通常很长：头尾不画硬分隔线，正文滚动时上下渐隐，和 Modal 一致。 */}
+        <div className="flex items-start justify-between gap-3 py-4 pr-4 pl-6">
           <div className="flex min-w-0 items-start gap-3.5">
             {icon ? <DialogIcon tone={tone}>{icon}</DialogIcon> : null}
             <div className={["min-w-0", icon ? "pt-px" : "pt-1"].join(" ")}>
@@ -142,11 +144,16 @@ export function Drawer({
             <X size={18} />
           </button>
         </div>
-        <div className={`min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-5 ${bodyClassName ?? ""}`}>
+        <div
+          ref={fade.ref}
+          onScroll={fade.onScroll}
+          style={fade.style}
+          className={`min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-3 ${fade.className} ${bodyClassName ?? ""}`}
+        >
           {children}
         </div>
         {footer ? (
-          <div className="flex flex-wrap items-center justify-end gap-2.5 border-t border-line px-6 py-4">
+          <div className="flex flex-wrap items-center justify-end gap-2.5 px-6 py-4">
             {footer}
           </div>
         ) : null}

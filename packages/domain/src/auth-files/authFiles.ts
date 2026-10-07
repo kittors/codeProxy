@@ -1403,61 +1403,6 @@ export const matchesModelPattern = (modelId: string, pattern: string): boolean =
   }
 };
 
-/**
- * Provider tags. Every provider shares one quiet grey pill: the provider is named on
- * the tag (or shown by its vendor icon in dense cards), so a rainbow of tints added
- * colour without adding information — and colour is reserved for account state.
- * The keys still matter: they are the known provider list resolveFileType matches on.
- */
-const PROVIDER_TAG_CLASS = "bg-hover text-ink-2";
-
-export const TYPE_BADGE_CLASSES: Record<string, string> = Object.fromEntries(
-  // prettier-ignore
-  ["qwen", "kimi", "gemini", "gemini-cli", "aistudio", "claude", "codex", "antigravity", "iflow",
-    "vertex", "empty", "unknown"].map((type) => [type, PROVIDER_TAG_CLASS]),
-);
-
-/**
- * Membership plan pills. They must stay distinguishable from the soft info tags
- * (`bg-hover` pills) at a glance, and they do so through weight rather than hue:
- * top tiers are a solid ink chip, middle tiers a solid mid-grey chip, entry paid
- * tiers an outlined chip, and free/unknown the quiet grey. The tier name is spelled
- * out on the chip ("PRO 20X"), so the gradients that used to encode it were noise.
- */
-const PLAN_TOP = "bg-ink text-canvas";
-const PLAN_MID = "bg-ink-2 text-canvas";
-const PLAN_ENTRY = "text-ink ring-1 ring-inset ring-ink-3";
-const PLAN_QUIET = "bg-selected text-ink-2";
-
-export const PLAN_BADGE_CLASSES: Record<string, string> = {
-  // Codex: plus < pro < pro 5x / 20x
-  plus: PLAN_ENTRY,
-  pro: PLAN_MID,
-  chatgptpro: PLAN_MID,
-  pro_5x: PLAN_TOP,
-  "pro-5x": PLAN_TOP,
-  pro_20x: PLAN_TOP,
-  "pro-20x": PLAN_TOP,
-  // Claude Code: max < max 5x / 20x
-  max: PLAN_MID,
-  max_5x: PLAN_TOP,
-  "max-5x": PLAN_TOP,
-  max_20x: PLAN_TOP,
-  "max-20x": PLAN_TOP,
-  // Organisation plans
-  team: PLAN_MID,
-  business: PLAN_MID,
-  premium: PLAN_MID,
-  enterprise: PLAN_TOP,
-  // Grok
-  supergrok: PLAN_MID,
-  "supergrok-heavy": PLAN_TOP,
-  supergrok_heavy: PLAN_TOP,
-  supergrokheavy: PLAN_TOP,
-  free: PLAN_QUIET,
-  unknown: PLAN_QUIET,
-};
-
 /** Codex-only: weekly budget (USD) thresholds for Pro multiplier badges. */
 export const CODEX_PRO_20X_WEEKLY_BUDGET_USD = 1000;
 export const CODEX_PRO_5X_WEEKLY_BUDGET_USD = 200;
@@ -1540,11 +1485,51 @@ export const resolveAuthFileDisplayPlanType = (
   return base;
 };
 
-export const resolvePlanBadgeClass = (planType: string | null | undefined): string => {
+/**
+ * 会员等级，五档，由低到高。徽章按档位决定「有多隆重」，颜色由厂商品牌色决定：
+ * - free：免费（描边）；
+ * - entry：入门付费（Plus 这类，品牌色淡底）；
+ * - pro：专业 / 团队（Pro、Max、Team、SuperGrok……，品牌实色）；
+ * - max：高阶倍数（Pro 5x、Max 5x，品牌渐变）；
+ * - ultra：旗舰（Pro 20x、Max 20x、SuperGrok Heavy、Ultra、Enterprise，双色渐变 + 皇冠）。
+ * 认不出的付费名称按入门档处理：宁可低调，也不把未知套餐渲染成旗舰。
+ */
+export type PlanTier = "free" | "entry" | "pro" | "max" | "ultra";
+
+const PLAN_TIER_BY_KEY: Record<string, PlanTier> = {
+  free: "free",
+  plus: "entry",
+  standard: "entry",
+  basic: "entry",
+  lite: "entry",
+  starter: "entry",
+  go: "entry",
+  pro: "pro",
+  chatgptpro: "pro",
+  max: "pro",
+  team: "pro",
+  business: "pro",
+  premium: "pro",
+  supergrok: "pro",
+  pro_5x: "max",
+  "pro-5x": "max",
+  max_5x: "max",
+  "max-5x": "max",
+  pro_20x: "ultra",
+  "pro-20x": "ultra",
+  max_20x: "ultra",
+  "max-20x": "ultra",
+  "supergrok-heavy": "ultra",
+  supergrok_heavy: "ultra",
+  supergrokheavy: "ultra",
+  ultra: "ultra",
+  enterprise: "ultra",
+};
+
+export const planTierOf = (planType: string | null | undefined): PlanTier => {
   const normalized = normalizeTagValue(planType);
-  if (!normalized) return PLAN_BADGE_CLASSES.unknown;
-  if (normalized === "chatgptpro") return PLAN_BADGE_CLASSES.pro;
-  return PLAN_BADGE_CLASSES[normalized] ?? PLAN_BADGE_CLASSES.unknown;
+  if (!normalized || normalized === "unknown") return "free";
+  return PLAN_TIER_BY_KEY[normalized] ?? "entry";
 };
 
 /** Short membership chip copy (PRO / PLUS / PRO 20X), distinct from soft info tags. */
@@ -1574,9 +1559,14 @@ export const formatPlanBadgeLabel = (planType: string | null | undefined): strin
   return normalized.replace(/[-_]+/g, " ").toUpperCase();
 };
 
-const KNOWN_AUTH_FILE_PROVIDER_KEYS = Object.keys(TYPE_BADGE_CLASSES)
-  .filter((key) => key !== "empty" && key !== "unknown")
-  .sort((left, right) => right.length - left.length);
+/**
+ * resolveFileType 认得的供应商类型（以前借用灰色供应商标签类表的键，标签改成品牌色后单独列出）。
+ * 长的先匹配，"gemini-cli-xxx" 不会被 "gemini" 截走。
+ */
+// prettier-ignore
+const KNOWN_AUTH_FILE_PROVIDER_KEYS = [
+  "qwen", "kimi", "gemini", "gemini-cli", "aistudio", "claude", "codex", "antigravity", "iflow", "vertex",
+].sort((left, right) => right.length - left.length);
 
 const trimAuthFileExtension = (name: string): string =>
   String(name ?? "")

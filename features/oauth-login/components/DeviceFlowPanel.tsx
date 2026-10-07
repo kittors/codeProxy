@@ -3,7 +3,7 @@ import { Check, Copy, ExternalLink, Loader2 } from "lucide-react";
 import { useState, type ComponentProps } from "react";
 import { useTranslation } from "react-i18next";
 import type { ProxyPoolEntry } from "@code-proxy/api-client";
-import { Button, Step, Steps, type StepState } from "@code-proxy/ui";
+import { Button, Step, Steps, type StepState, ScrollFade } from "@code-proxy/ui";
 import type { ProxyPoolSelect } from "@features/proxy-pool";
 import { useOAuthLogin } from "../hooks/useOAuthLogin";
 import type { AccountProvider } from "../model/catalog";
@@ -106,7 +106,7 @@ export function DeviceFlowPanel({
 
   return (
     <>
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6">
+      <ScrollFade className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6">
         <Steps>
           <Step
             index={1}
@@ -183,7 +183,7 @@ export function DeviceFlowPanel({
             }
           />
         </Steps>
-      </div>
+      </ScrollFade>
       <LoginStatusBar
         phase={phase}
         waitingLabel={t("add_account.status.waiting_device")}

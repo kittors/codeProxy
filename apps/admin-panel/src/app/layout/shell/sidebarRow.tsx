@@ -1,6 +1,14 @@
 import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
+import { HUE_GLYPH, hueForIconName } from "@code-proxy/ui";
 import { ACTIVE_ICON_STROKE } from "./navModel";
+
+/**
+ * 侧边栏图标的颜色：按全站的「图标 → 色相」注册表取（与页面里同一个图标的颜色一致），
+ * 以前一整列灰图标，扫一眼分不出哪个是哪个。文字保持中性色，选中态仍靠白色小卡片表达。
+ */
+export const sidebarIconClass = (icon: LucideIcon) =>
+  HUE_GLYPH[hueForIconName((icon as { displayName?: string }).displayName ?? "")];
 
 /**
  * 侧边栏顶层一行（单页分区的链接、多页分区的标题）共用的外观。
@@ -26,7 +34,7 @@ export function SidebarRowIcon({ icon: Icon, active }: { icon: LucideIcon; activ
       <Icon
         size={18}
         strokeWidth={active ? ACTIVE_ICON_STROKE : undefined}
-        className={active ? "text-ink" : "text-ink-2"}
+        className={sidebarIconClass(Icon)}
         aria-hidden="true"
       />
     </span>

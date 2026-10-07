@@ -37,8 +37,42 @@
     --scroll-fade-bottom 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
+/* 横向版本（分区胶囊条、横向页签）：左右两端还有内容时淡出。 */
+@property --scroll-fade-left {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --scroll-fade-right {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+.code-proxy-scroll-edge-fade-x {
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 var(--scroll-fade-left),
+    #000 calc(100% - var(--scroll-fade-right)),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 var(--scroll-fade-left),
+    #000 calc(100% - var(--scroll-fade-right)),
+    transparent 100%
+  );
+  transition:
+    --scroll-fade-left 180ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    --scroll-fade-right 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .code-proxy-scroll-edge-fade {
+  .code-proxy-scroll-edge-fade,
+  .code-proxy-scroll-edge-fade-x {
     transition: none;
   }
 }

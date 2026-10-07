@@ -1,28 +1,27 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Activity, BarChart3, CalendarRange, FileStack, Gauge, LineChart, RefreshCw } from "lucide-react";
-import { Button, surface } from "@code-proxy/ui";
+import { VendorIcon } from "@code-proxy/assets";
+import { Button, DialogIcon, iconHueClass, surface, type Hue } from "@code-proxy/ui";
 import { Modal } from "@code-proxy/ui";
 import { Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { EChart } from "@code-proxy/ui";
+import { QUOTA_HUE } from "../helpers/quotaSeriesColors";
 
-// 四张指标卡各用一个固定的身份色（与仪表盘 / 系统监控一致）：数量蓝、调用绿、额度紫、样本琥珀。
-const STAT_TONE = {
-  sky: "bg-sky-500/10 text-sky-600 dark:text-sky-300",
-  emerald: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300",
-  violet: "bg-violet-500/10 text-violet-600 dark:text-violet-300",
-  amber: "bg-amber-500/10 text-amber-600 dark:text-amber-300",
-} as const;
-
+/**
+ * 四张指标卡各有一个身份色，并且和下面的趋势图对得上：总调用是请求蓝（= 图里的柱子），
+ * 周限是额度粉（= 图里第一条额度线）；文件数用文件类图标的橙、配额样本用统计类的翠绿
+ * （与全站图标色相注册表一致）。只给图标块上色，数值保持墨色。
+ */
 function StatCard({
   icon,
-  tone,
+  hue,
   label,
   value,
   help,
 }: {
   icon: ReactNode;
-  tone: keyof typeof STAT_TONE;
+  hue: Hue;
   label: ReactNode;
   value: ReactNode;
   help: ReactNode;
@@ -30,15 +29,9 @@ function StatCard({
   return (
     <div className={[surface({ tone: "raised", radius: "2xl" }), "flex flex-col px-4 py-3.5"].join(" ")}>
       <div className="flex items-center gap-2">
-        <span
-          aria-hidden="true"
-          className={[
-            "grid h-7 w-7 shrink-0 place-items-center rounded-lg [&_svg.lucide]:size-[15px]",
-            STAT_TONE[tone],
-          ].join(" ")}
-        >
+        <DialogIcon tone={hue} size="sm">
           {icon}
-        </span>
+        </DialogIcon>
         <p className="min-w-0 truncate text-xs font-medium text-ink-3">{label}</p>
       </div>
       <div className="mt-2.5 text-2xl font-semibold tracking-tight text-ink tabular-nums">{value}</div>
@@ -107,6 +100,8 @@ export function GroupOverviewModal({
             <TabsList>
               {groupOverviewTabs.map((key) => (
                 <TabsTrigger key={key} value={key}>
+                  {/* 供应商页签带上厂商 logo，与文件列表的供应商筛选一致，按品牌色一眼认出是谁家。 */}
+                  {key === "all" ? null : <VendorIcon modelId={key} size={14} />}
                   {key === "all"
                     ? t("auth_files.group_overview_current_results")
                     : resolveProviderLabel(key)}
@@ -116,7 +111,7 @@ export function GroupOverviewModal({
           </Tabs>
           <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex h-9 items-center gap-1.5 rounded-full bg-hover px-3.5 text-sm font-medium text-ink-2">
-              <CalendarRange size={14} aria-hidden="true" />
+              <CalendarRange size={14} aria-hidden="true" className={iconHueClass(CalendarRange)} />
               {t("auth_files.group_overview_fixed_7_days")}
             </span>
             <Button
@@ -140,21 +135,21 @@ export function GroupOverviewModal({
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard
             icon={<FileStack />}
-            tone="sky"
+            hue="orange"
             label={activeGroupTitle}
             value={activeGroupRows.length}
             help={t("auth_files.group_overview_file_count")}
           />
           <StatCard
             icon={<Activity />}
-            tone="emerald"
+            hue="blue"
             label={t("auth_files.group_overview_total_calls_label")}
             value={activeGroupOverview.totalCalls.toLocaleString()}
             help={t("auth_files.group_overview_total_calls_help")}
           />
           <StatCard
             icon={<Gauge />}
-            tone="violet"
+            hue={QUOTA_HUE}
             label={
               (activeGroupOverview.weeklyFamilies?.length ?? 0) > 1
                 ? t("auth_files.group_overview_weekly_limits_label")
@@ -189,7 +184,7 @@ export function GroupOverviewModal({
           />
           <StatCard
             icon={<LineChart />}
-            tone="amber"
+            hue="emerald"
             label={t("auth_files.group_overview_sample_count", {
               count: activeGroupOverview.quotaSampleCount,
             })}

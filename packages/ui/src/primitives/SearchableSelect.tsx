@@ -27,6 +27,8 @@ import {
   selectTriggerState,
 } from "../utils/selectStyles";
 import type { ControlSize } from "../utils/controlStyles";
+import { useTranslation } from "react-i18next";
+import { useScrollFade } from "../hooks/useScrollFade";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -136,7 +138,9 @@ export function SearchableSelect({
   dropdownMinWidth = 0,
   variant = "default",
 }: SearchableSelectProps) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  const listFade = useScrollFade<HTMLDivElement>({ enabled: open, size: 24 });
   const [query, setQuery] = useState("");
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
@@ -359,10 +363,15 @@ export function SearchableSelect({
                 />
               </div>
 
-              {/* Options list */}
-              <div className="flex-1 overflow-y-auto p-1.5">
+              {/* Options list：选项多到要滚时上下渐隐。 */}
+              <div
+                ref={listFade.ref}
+                onScroll={listFade.onScroll}
+                style={listFade.style}
+                className={cn("flex-1 overflow-y-auto overscroll-contain p-1.5", listFade.className)}
+              >
                 {filtered.length === 0 && !canCreate ? (
-                  <div className={selectEmptyState}>No results</div>
+                  <div className={selectEmptyState}>{t("ui.no_match")}</div>
                 ) : (
                   <>
                     {filtered.map((opt) => {

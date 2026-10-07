@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 import { Boxes, KeyRound, Network, UserRound, Users } from "lucide-react";
 import type { MonitorBreakdownRow, MonitorOverview } from "@code-proxy/api-client";
 import { VendorIcon } from "@code-proxy/assets";
-import { Card } from "@code-proxy/ui";
+import { Card, iconHueClass } from "@code-proxy/ui";
 import { ChannelIdentityLabel } from "@features/request-log-viewer";
 import { LevelDot } from "@features/monitor-widgets/monitorVisuals";
 import {
@@ -371,7 +371,7 @@ export function ConsumerLeaderboardCard({
             return (
               <span className="block min-w-0">
                 <span className="flex min-w-0 items-center gap-2">
-                  <Icon size={14} className="shrink-0 text-ink-3" aria-hidden="true" />
+                  <Icon size={14} className={`shrink-0 ${iconHueClass(Icon)}`} aria-hidden="true" />
                   <span className="truncate font-medium text-ink">
                     {row.label || t("monitor_center.unnamed_consumer")}
                   </span>

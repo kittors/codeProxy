@@ -15,6 +15,7 @@ import {
 } from "react";
 import { Loader2 } from "lucide-react";
 import { TooltipBubble, TooltipTriggerContext, type TooltipPlacement } from "../overlays/Tooltip";
+import { HUE_BUTTON_ICON, hueForIcon, type Hue } from "../theme/hues";
 
 type ButtonVariant =
   | "default"
@@ -119,19 +120,38 @@ export function buttonClassName({
   iconOnly = false,
   size = "md",
   variant = "default",
+  iconHue = null,
 }: {
   className?: string;
   iconOnly?: boolean;
   size?: ButtonSize;
   variant?: ButtonVariant;
+  /** 按钮里图标的色相（只对中性的 default / ghost 生效，实色按钮的图标跟随按钮文字色）。 */
+  iconHue?: Hue | null;
 }) {
   const resolvedVariant =
     variant === "secondary" ? "default" : variant === "danger" ? "error" : variant;
   const sizeClass = iconOnly ? BUTTON_SIZE_CLASSES[size].iconOnly : BUTTON_SIZE_CLASSES[size].text;
+  const iconClass =
+    iconHue && (resolvedVariant === "default" || resolvedVariant === "ghost")
+      ? HUE_BUTTON_ICON[iconHue]
+      : null;
 
-  return [BUTTON_BASE_CLASS, sizeClass, BUTTON_VARIANT_CLASSES[resolvedVariant], className]
+  return [BUTTON_BASE_CLASS, sizeClass, BUTTON_VARIANT_CLASSES[resolvedVariant], iconClass, className]
     .filter(Boolean)
     .join(" ");
+}
+
+/**
+ * 按钮里第一个 lucide 图标的色相：工具栏、行内操作的图标按本身的含义上色（刷新蓝绿、查看天蓝、
+ * 删除玫红……），不再一排灰色；关闭、箭头、「更多」这类纯操作提示保持中性（见 theme/hues）。
+ */
+function buttonIconHue(children: ReactNode): Hue | null {
+  for (const child of flattenButtonChildren(children)) {
+    const hue = hueForIcon(child);
+    if (hue) return hue;
+  }
+  return null;
 }
 
 export function Button({
@@ -220,7 +240,7 @@ export function Button({
         title={shouldSuppressNativeTitle ? undefined : title}
         disabled={props.disabled || loading}
         aria-busy={loading ? true : props["aria-busy"]}
-        className={buttonClassName({ className, iconOnly, size, variant })}
+        className={buttonClassName({ className, iconOnly, size, variant, iconHue: buttonIconHue(children) })}
       >
         {loading ? (
           <Loader2 size={size === "xs" ? 13 : 15} className="shrink-0 animate-spin" aria-hidden />

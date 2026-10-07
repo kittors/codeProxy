@@ -35,8 +35,10 @@ export { ChartLegend } from "./charts/ChartLegend";
 export {
   CHART_CATEGORICAL,
   chartAxisStyle,
+  chartGradient,
   chartPalette,
   chartTooltipStyle,
+  withAlpha,
 } from "./charts/chartTheme";
 export type { ChartPalette } from "./charts/chartTheme";
 export type { ChartLegendItem } from "./charts/ChartLegend";
@@ -58,8 +60,30 @@ export type {
 
 export { ConfirmModal } from "./overlays/ConfirmModal";
 export { ConfirmHost, confirmDialog } from "./overlays/confirmDialog";
-export { DialogIcon } from "./overlays/DialogIcon";
-export type { DialogTone } from "./overlays/DialogIcon";
+export { DialogIcon, dialogToneClass } from "./overlays/DialogIcon";
+export type { DialogIconSize, DialogSemanticTone, DialogTone } from "./overlays/DialogIcon";
+export {
+  HUES,
+  HUE_BUTTON_ICON,
+  HUE_DOT,
+  HUE_GLYPH,
+  HUE_HEX,
+  HUE_SOFT,
+  HUE_SOLID,
+  HUE_TILE,
+  hueForIcon,
+  hueForIconName,
+  iconHueClass,
+  isNeutralIconName,
+  hueHex,
+  isHue,
+} from "./theme/hues";
+export type { Hue } from "./theme/hues";
+export { useScrollFade } from "./hooks/useScrollFade";
+export { ScrollFade } from "./primitives/ScrollFade";
+export type { ScrollFadeEdges } from "./hooks/useScrollFade";
+export { PlanBadge, ProviderTag, brandVars } from "./brand/BrandBadges";
+export type { PlanBadgeTier } from "./brand/BrandBadges";
 export type { ModalSize } from "./overlays/Modal";
 export { Drawer } from "./overlays/Drawer";
 export { ImagePreviewOverlay } from "./overlays/ImagePreviewOverlay";

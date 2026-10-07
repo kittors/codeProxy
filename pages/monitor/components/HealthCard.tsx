@@ -82,7 +82,7 @@ export function HealthCard({
       {/* 标题自绘并置于柔光之上（Card 自带的标题行不在定位层里，会被柔光盖住）。 */}
       <div className="relative flex items-center justify-between gap-2">
         <h3 className="text-base font-semibold tracking-tight text-ink">
-          <MonitorCardTitle icon={HeartPulse} label={t("monitor_center.health.title")} />
+          <MonitorCardTitle icon={HeartPulse} hue="emerald" label={t("monitor_center.health.title")} />
         </h3>
         <span className={`rounded-full px-2 py-0.5 text-2xs font-semibold ${style.pill}`}>
           {t(`monitor_center.health.level_${report.level}`)}

@@ -1,5 +1,6 @@
 import type { ECBasicOption } from "echarts/types/dist/shared";
 import type { MonitorOverview, MonitorSeriesPoint } from "@code-proxy/api-client";
+import { chartGradient, chartPalette } from "@code-proxy/ui";
 import {
   formatMonitorAxis,
   formatMonitorAxisDuration,
@@ -51,7 +52,8 @@ export function trendSeriesColor(key: TrendSeriesKey, isDark: boolean): string {
     case "success_rate":
       return palette.ok;
     case "input":
-      return withAlpha(palette.metric.tokens, 0.45);
+      // 深色底上 45% 的紫偏灰，提高一档才看得出是紫色。
+      return withAlpha(palette.metric.tokens, isDark ? 0.62 : 0.45);
     case "output":
       return palette.metric.tokens;
     case "cache_rate":
@@ -62,8 +64,39 @@ export function trendSeriesColor(key: TrendSeriesKey, isDark: boolean): string {
       return withAlpha(palette.metric.latency, 0.55);
     case "cost":
       return palette.metric.cost;
+    case "cumulative_cost":
+      // 累计费用和每段费用同属「钱」：用与费用琥珀相邻的橙色虚线，一眼看出是同一类数，
+      // 又和琥珀柱分得开（以前跟着主色，主色改成靛蓝后会被读成「耗时」）。
+      return chartPalette(isDark).metric.costTotal;
     default:
       return palette.primary;
+  }
+}
+
+/**
+ * 柱子的同色渐变：上实下淡，比平涂的色块轻；悬停时下端也变实，像亮了一档。
+ * 输入 Token 与输出 Token 堆在一起，输入用淡一档的紫（与图例、提示框里的色块一致）。
+ */
+function barFill(key: TrendSeriesKey, isDark: boolean) {
+  const palette = monitorPalette(isDark);
+  const solid = (color: string) => ({
+    color: chartGradient(color, 1, 0.6),
+    hover: chartGradient(color, 1, 0.88),
+  });
+  switch (key) {
+    case "failed":
+      return solid(palette.err);
+    case "input":
+      return {
+        color: chartGradient(palette.metric.tokens, isDark ? 0.66 : 0.5, isDark ? 0.4 : 0.3),
+        hover: chartGradient(palette.metric.tokens, isDark ? 0.8 : 0.65, isDark ? 0.55 : 0.45),
+      };
+    case "output":
+      return solid(palette.metric.tokens);
+    case "cost":
+      return solid(palette.metric.cost);
+    default:
+      return solid(palette.metric.requests);
   }
 }
 
@@ -100,15 +133,19 @@ export function createTrafficTrendOption(
     key: TrendSeriesKey,
     data: (number | null)[],
     extra: Record<string, unknown> = {},
-  ) => ({
-    id: key,
-    name: key,
-    type: "bar",
-    data: visible(key) ? data : [],
-    barMaxWidth: 22,
-    itemStyle: { color: color(key), borderRadius: [3, 3, 0, 0] },
-    ...extra,
-  });
+  ) => {
+    const fill = barFill(key, isDark);
+    return {
+      id: key,
+      name: key,
+      type: "bar",
+      data: visible(key) ? data : [],
+      barMaxWidth: 22,
+      itemStyle: { color: fill.color, borderRadius: [3, 3, 0, 0] },
+      emphasis: { itemStyle: { color: fill.hover } },
+      ...extra,
+    };
+  };
   const line = (
     key: TrendSeriesKey,
     data: (number | null)[],
@@ -125,19 +162,7 @@ export function createTrafficTrendOption(
     itemStyle: { color: color(key) },
     ...extra,
   });
-  const area = (key: TrendSeriesKey) => ({
-    color: {
-      type: "linear",
-      x: 0,
-      y: 0,
-      x2: 0,
-      y2: 1,
-      colorStops: [
-        { offset: 0, color: withAlpha(color(key), 0.18) },
-        { offset: 1, color: withAlpha(color(key), 0) },
-      ],
-    },
-  });
+  const area = (key: TrendSeriesKey) => ({ color: chartGradient(color(key), 0.24, 0) });
 
   let series: Record<string, unknown>[] = [];
   let yAxis: Record<string, unknown>[] = [];
@@ -173,10 +198,7 @@ export function createTrafficTrendOption(
       bar(
         "failed",
         points.map((p) => p.failed),
-        {
-          stack: "requests",
-          itemStyle: { color: color("failed"), borderRadius: [3, 3, 0, 0] },
-        },
+        { stack: "requests" },
       ),
       line(
         "success_rate",

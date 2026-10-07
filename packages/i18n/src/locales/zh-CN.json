@@ -6691,7 +6691,10 @@
         "desc": "从请求体里删掉这些参数路径。"
       },
       "hint": "模型名支持通配符（如 gemini-*）；参数路径用点号分隔，如 generationConfig.thinkingConfig.thinkingBudget。"
-    }
+    },
+    "groups_label": "配置分组",
+    "group_matches": "{{count}} 个分区匹配",
+    "search_results": "搜索结果"
   },
   "validation": {
     "required": "这一项必填",

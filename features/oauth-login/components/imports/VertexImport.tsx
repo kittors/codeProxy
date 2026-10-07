@@ -3,7 +3,7 @@ import { FileJson, ShieldCheck, X } from "lucide-react";
 import { useState, type ComponentProps } from "react";
 import { useTranslation } from "react-i18next";
 import { vertexApi, type ProxyPoolEntry } from "@code-proxy/api-client";
-import { Button, TextInput } from "@code-proxy/ui";
+import { Button, TextInput, ScrollFade, iconHueClass } from "@code-proxy/ui";
 import type { ProxyPoolSelect } from "@features/proxy-pool";
 import { useLoginProblemText } from "../../hooks/useLoginProblemText";
 import type { AddedAccount } from "../../model/addedAccount";
@@ -113,7 +113,7 @@ export function VertexImport({
   };
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6">
+    <ScrollFade className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6">
       <div className="grid gap-4">
         <AnimatePresence initial={false} mode="wait">
           {summary && file ? (
@@ -125,7 +125,7 @@ export function VertexImport({
               className="flex items-center gap-3 rounded-2xl bg-subtle px-4 py-3"
             >
               <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-surface shadow-xs">
-                <FileJson size={17} className="text-ink-2" aria-hidden="true" />
+                <FileJson size={17} className={iconHueClass(FileJson)} aria-hidden="true" />
               </span>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-ink">{summary.clientEmail}</p>
@@ -199,6 +199,6 @@ export function VertexImport({
           </Button>
         </div>
       </div>
-    </div>
+    </ScrollFade>
   );
 }

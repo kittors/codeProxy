@@ -57,7 +57,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { TextInput, floatingPanelSurface, resolveMenuIcon } from "@code-proxy/ui";
+import { TextInput, floatingPanelSurface, resolveMenuIcon, iconHueClass, ScrollFade } from "@code-proxy/ui";
 
 
 type IconOption = { name: string; icon: LucideIcon };
@@ -205,7 +205,7 @@ export function MenuIconPicker({
               if (!disabled) setOpen(true);
             }}
             startAdornment={
-              value ? <SelectedIcon size={16} className="text-ink-3" aria-hidden="true" /> : null
+              value ? <SelectedIcon size={16} className={iconHueClass(SelectedIcon)} aria-hidden="true" /> : null
             }
             endAdornment={
               value && !disabled ? (
@@ -252,7 +252,7 @@ export function MenuIconPicker({
                   className="h-7 w-full bg-transparent text-sm text-ink outline-none placeholder:text-ink-4"
                 />
               </div>
-              <div className="grid max-h-64 grid-cols-6 gap-1 overflow-y-auto p-2">
+              <ScrollFade className="grid max-h-64 grid-cols-6 gap-1 overflow-y-auto p-2">
                 {icons.length === 0 ? (
                   <div className="col-span-6 px-2 py-6 text-center text-xs text-ink-3">
                     {t("common.no_results", { defaultValue: "无匹配结果" })}
@@ -284,7 +284,7 @@ export function MenuIconPicker({
                     );
                   })
                 )}
-              </div>
+              </ScrollFade>
             </div>,
             document.body,
           )

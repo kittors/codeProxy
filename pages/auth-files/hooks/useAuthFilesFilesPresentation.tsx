@@ -14,17 +14,16 @@ import {
 import type { AuthFileItem } from "@code-proxy/api-client";
 import { formatLatency } from "@features/provider-latency";
 import { AuthFileSuccessRateCell } from "../components/AuthFileSuccessRateCell";
-import { Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
+import { AuthFilePlanBadge } from "../components/AuthFilePlanBadge";
+import { ProviderTag, Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { COLUMN_WIDTH, HoverTooltip } from "@code-proxy/ui";
 import { ToggleSwitch } from "@code-proxy/ui";
 import { TABLE_ROW_ACTIONS_COLUMN, TableRowActions, type DataTableColumn } from "@code-proxy/ui";
 import {
   type FilesViewMode,
   type UsageIndex,
-  TYPE_BADGE_CLASSES,
   formatAuthFileRestrictionRemaining,
   formatModified,
-  formatPlanBadgeLabel,
   resolveClaudeOAuthHealthBadges,
   isRuntimeOnlyAuthFile,
   maskSensitiveIdentity,
@@ -39,7 +38,6 @@ import {
   resolveAuthFileStatusBar,
   resolveAuthFileSubscriptionStatus,
   resolveFileType,
-  resolvePlanBadgeClass,
   shouldShowAuthFileDisplayTag,
   shouldShowAuthFilePlanBadge,
   translateParameterizedQuotaLabel,
@@ -146,8 +144,6 @@ export function useAuthFilesFilesPresentation({
     },
     [t],
   );
-
-  const formatPlanTypeLabel = useCallback((planType: string) => formatPlanBadgeLabel(planType), []);
 
   const restrictionUnitLabels = useMemo(
     () => ({
@@ -598,7 +594,6 @@ export function useAuthFilesFilesPresentation({
         width: COLUMN_WIDTH.badgeStacked,
         render: (file) => {
           const typeKey = resolveFileType(file);
-          const badgeClass = TYPE_BADGE_CLASSES[typeKey] ?? TYPE_BADGE_CLASSES.unknown;
           const authIndex = normalizeAuthIndexValue(file.auth_index ?? file.authIndex);
           const basePlanType = resolveAuthFilePlanType(file, quotaByFileName[file.name]);
           const planType = resolveStickyDisplayPlanType(
@@ -614,22 +609,12 @@ export function useAuthFilesFilesPresentation({
             <div className="flex flex-col gap-1">
               <div className="flex flex-wrap items-center gap-2">
                 {showTypeBadge ? (
-                  <span
-                    className={`inline-flex rounded-lg px-2 py-1 text-xs font-semibold ${badgeClass}`}
-                  >
+                  <ProviderTag vendor={typeKey} withLogo className="h-5">
                     {typeKey}
-                  </span>
+                  </ProviderTag>
                 ) : null}
                 {showPlanBadge && planType ? (
-                  <span
-                    data-testid="auth-file-plan-badge"
-                    className={[
-                      "inline-flex items-center rounded-md px-2 py-0.5 text-2xs font-bold tracking-wide",
-                      resolvePlanBadgeClass(planType),
-                    ].join(" ")}
-                  >
-                    {formatPlanTypeLabel(planType)}
-                  </span>
+                  <AuthFilePlanBadge provider={typeKey} planType={planType} className="h-5" />
                 ) : null}
               </div>
               {runtimeOnly ? (
@@ -895,7 +880,6 @@ export function useAuthFilesFilesPresentation({
     statusUsageReady,
     downloadAuthFile,
     formatQuotaResetTextChip,
-    formatPlanTypeLabel,
     masked,
     openDetail,
     openTagsEditor,
@@ -924,7 +908,6 @@ export function useAuthFilesFilesPresentation({
 
   return {
     translateQuotaText,
-    formatPlanTypeLabel,
     resolveStickyDisplayPlanType,
     renderRestrictionBadges,
     renderClaudeOAuthHealthBadges,

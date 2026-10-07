@@ -1,7 +1,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
 import { FileJson, Plus, RefreshCw } from "lucide-react";
-import { Button, surface } from "@code-proxy/ui";
+import { Button, ProviderTag, surface, iconHueClass } from "@code-proxy/ui";
 import { EmptyState } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
 
@@ -83,7 +83,7 @@ export function AuthFilesExcludedTab({
               value={excludedNewProvider}
               onChange={(e) => setExcludedNewProvider(e.currentTarget.value)}
               placeholder={t("auth_files.add_provider_placeholder")}
-              endAdornment={<FileJson size={16} className="text-ink-3" />}
+              endAdornment={<FileJson size={16} className={iconHueClass(FileJson)} />}
               disabled={excludedUnsupported}
             />
             <Button
@@ -121,9 +121,10 @@ export function AuthFilesExcludedTab({
                     >
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="font-mono text-xs text-ink">
+                          {/* 供应商名用品牌色标签，和账号卡片上的供应商标签同色。 */}
+                          <ProviderTag vendor={provider} withLogo>
                             {provider}
-                          </p>
+                          </ProviderTag>
                           <p className="mt-1 text-xs text-ink-3">
                             {t("auth_files.count_items", { count })}
                           </p>

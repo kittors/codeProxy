@@ -9,7 +9,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { Check, ChevronDown } from "lucide-react";
-import { floatingPanelSurface, type MultiSelectOption } from "@code-proxy/ui";
+import { floatingPanelSurface, type MultiSelectOption, ScrollFade } from "@code-proxy/ui";
 
 interface RestrictionMultiSelectProps {
   options: MultiSelectOption[];
@@ -253,7 +253,7 @@ export function RestrictionMultiSelect({
               </button>
             </div>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto p-1">
+          <ScrollFade className="min-h-0 flex-1 overflow-y-auto p-1">
             {filteredOptions.length === 0 ? (
               <div className="px-3 py-4 text-center text-xs text-slate-400 dark:text-white/30">
                 {noResultsLabel}
@@ -287,7 +287,7 @@ export function RestrictionMultiSelect({
                 );
               })
             )}
-          </div>
+          </ScrollFade>
         </div>,
         document.body,
       )

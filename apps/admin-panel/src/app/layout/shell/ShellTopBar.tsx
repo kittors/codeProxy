@@ -6,6 +6,7 @@ import {
   SearchableSelect,
   ThemeToggleButton,
   type SearchableSelectOption,
+  iconHueClass,
 } from "@code-proxy/ui";
 import {
   identityApi,
@@ -133,7 +134,7 @@ function TenantSwitcher() {
         value: tenant.id,
         label,
         searchText: `${label} ${tenant.slug ?? ""} ${tenant.name}`,
-        icon: <Building2 size={16} className="shrink-0 text-ink-3" />,
+        icon: <Building2 size={16} className={`shrink-0 ${iconHueClass(Building2)}`} />,
       };
     });
   }, [effectiveTenant, systemTenantLabel, tenants]);

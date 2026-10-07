@@ -6704,7 +6704,11 @@
         "desc": "Delete these parameter paths from the request body."
       },
       "hint": "Model names accept wildcards (e.g. gemini-*); parameter paths are dot-separated, e.g. generationConfig.thinkingConfig.thinkingBudget."
-    }
+    },
+    "groups_label": "Config groups",
+    "group_matches_one": "{{count}} matching section",
+    "group_matches_other": "{{count}} matching sections",
+    "search_results": "Search results"
   },
   "validation": {
     "required": "Required",

@@ -9,6 +9,7 @@ import {
   TableRowActions,
   type DataTableColumn,
 } from "@code-proxy/ui";
+import { ModelOwnerTag } from "@features/model-tags";
 import { ModelCapabilityBadges } from "../components/ModelCapabilityBadges";
 import { ModelVendorIcon as VendorIcon } from "../components/ModelVendorIcon";
 import { formatPrice } from "../modelsUtils";
@@ -104,7 +105,8 @@ export function useModelColumns({
         key: "owner",
         label: t("models_page.col_owner"),
         width: COLUMN_WIDTH.compact,
-        render: (row) => row.owned_by || "-",
+        // 归属按归属方的品牌色上淡底（openai 绿、anthropic 珊瑚橙……），认不出的保持中性。
+        render: (row) => (row.owned_by ? <ModelOwnerTag owner={row.owned_by} withLogo /> : "-"),
       },
       {
         key: "capabilities",
