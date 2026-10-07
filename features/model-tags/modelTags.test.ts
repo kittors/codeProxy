@@ -40,9 +40,15 @@ describe("model tags", () => {
   });
 
   test("unrecognised vendors fall back to a neutral tag", () => {
-    expect(brandOf("llama-3.3-70b")).toBeUndefined();
     expect(brandOf("some-private-model")).toBeUndefined();
+    expect(brandOf("yi-lightning")).toBeUndefined();
     expect(brandOf("other")).toBeUndefined();
+  });
+
+  test("Llama, Mistral and Alibaba models carry their makers' colours", () => {
+    expect(brandOf("llama-3.3-70b")).toBe(vendorBrand("meta")?.color);
+    expect(brandOf("mistral-large-2")).toBe(vendorBrand("mistral")?.color);
+    expect(brandOf("alibaba")).toBe(vendorBrand("alibaba")?.color);
   });
 
   test("the rendered tag carries the brand variables", () => {

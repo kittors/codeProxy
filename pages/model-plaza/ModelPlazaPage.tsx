@@ -428,7 +428,7 @@ export function ModelPlazaPage() {
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-center gap-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-selected">
-            <Store size={16} className="text-ink" />
+            <Store size={16} className={iconHueClass(Store)} />
           </div>
           <div>
             <h2 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
