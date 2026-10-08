@@ -49,7 +49,9 @@
           }
           // 外观设置（系统设置 → 外观）：风格开关与自定义变量要在首屏绘制前写上，否则会先闪一帧
           // 默认的多彩样式。这里只搬运应用存下来的计算结果（attrs / vars），不重复颜色计算；
-          // 变量名只认外观会写的那几类，存储被篡改也写不进别的东西。读不到时保留 <html> 上的默认值。
+          // 变量名只认外观会写的那几类，值只认它会写的三种形状（#rrggbb、rgb(...)、数字）——
+          // 存储被篡改也写不进别的东西，比如进度条 background 里会去加载的 url()。
+          // 读不到时保留 <html> 上的默认值。
           try {
             var appearance = JSON.parse(localStorage.getItem("code-proxy-admin-appearance") || "null");
             if (appearance && appearance.version === 1) {
@@ -66,7 +68,7 @@
                   Object.prototype.hasOwnProperty.call(vars, name) &&
                   /^--(cp-pref-[a-z0-9-]+|color-(emerald|green|amber|rose|red)-\d{2,3})$/.test(name) &&
                   typeof vars[name] === "string" &&
-                  /^[#a-z0-9 ./()-]+$/i.test(vars[name])
+                  /^(#[0-9a-f]{6}|rgb\([0-9 ./]+\)|-?[0-9.]+)$/i.test(vars[name])
                 ) {
                   root.style.setProperty(name, vars[name]);
                 }

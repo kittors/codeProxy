@@ -6,12 +6,13 @@ import { dialogToneClass } from "../overlays/DialogIcon";
  * Quiet empty / no-data surface used by DataTable and page-level cards.
  *
  * Reads as inline feedback inside an existing panel: no dashed card chrome. The icon
- * sits in a quiet neutral round tile — an empty list is not news, so it takes no
- * accent colour — and the text stays in the neutral ink hierarchy.
+ * sits in a round tile coloured by the shared icon → hue registry (theme/hues) when the
+ * appearance setting colours icons, and in a neutral tile when icons are monochrome; the
+ * text stays in the neutral ink hierarchy either way.
  *
  * - `icon` omitted → default Inbox glyph
  * - `icon={null}` → no icon
- * - `icon={<MyIcon />}` → custom glyph in the same tile
+ * - `icon={<MyIcon />}` → custom glyph, coloured the same way
  */
 export function EmptyState({
   title = "",
@@ -42,7 +43,7 @@ export function EmptyState({
         <div
           className={[
             "mb-3 flex h-11 w-11 items-center justify-center rounded-full [&>svg]:h-5 [&>svg]:w-5",
-            dialogToneClass("neutral"),
+            dialogToneClass("auto", resolvedIcon),
           ].join(" ")}
           data-empty-icon
         >

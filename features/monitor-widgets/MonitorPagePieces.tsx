@@ -3,10 +3,13 @@ import { useReducedMotion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { TIME_RANGES, type TimeRange } from "@features/monitor-widgets/monitor-constants";
 import {
+  HUE_GLYPH,
   Tabs,
   TabsList,
   TabsTrigger,
+  iconHueClass,
   useResizeLayoutAnimation,
+  type Hue,
   type TabsTone,
   surface,
 } from "@code-proxy/ui";
@@ -28,6 +31,7 @@ export const KpiCard = ({
   value,
   hint,
   icon: Icon,
+  hue,
   valueClassName = "text-2xl",
   tone = "default",
 }: {
@@ -35,6 +39,11 @@ export const KpiCard = ({
   value: ReactNode;
   hint: string;
   icon: ComponentType<{ size?: number; className?: string }>;
+  /**
+   * 图标的色相（图标着色为多彩时生效）：指标卡传该指标的身份色（请求蓝、成功绿、Token 紫、
+   * 费用琥珀……）；不传时按全站「图标 → 色相」注册表取色，同一个图标到哪儿都是同一种颜色。
+   */
+  hue?: Hue;
   /** Optional size override when the value node does not carry its own text size. */
   valueClassName?: string;
   tone?: MonitorSurfaceTone;
@@ -55,7 +64,7 @@ export const KpiCard = ({
             : "flex min-w-0 items-center gap-1.5 text-xs font-medium text-ink-3"
         }
       >
-        <Icon size={14} className="shrink-0 text-ink-3" />
+        <Icon size={14} className={`shrink-0 text-ink-3 ${hue ? HUE_GLYPH[hue] : iconHueClass(Icon)}`} />
         <span className="min-w-0 truncate">{title}</span>
       </p>
       <p

@@ -72,10 +72,12 @@ function checkFile(filePath) {
 
 function walk(dirPath) {
   for (const entry of readdirSync(dirPath, { withFileTypes: true })) {
-    if (entry.name === "node_modules" || entry.name === "dist" || entry.name.startsWith(".")) continue;
+    if (entry.name === "node_modules" || entry.name === "dist" || entry.name.startsWith("."))
+      continue;
     const fullPath = join(dirPath, entry.name);
     if (entry.isDirectory()) walk(fullPath);
-    else if (/\.(ts|tsx)$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name)) checkFile(fullPath);
+    else if (/\.(ts|tsx)$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name))
+      checkFile(fullPath);
   }
 }
 

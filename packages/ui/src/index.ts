@@ -38,6 +38,7 @@ export {
   chartGradient,
   chartPalette,
   chartTooltipStyle,
+  chartUsesIdentityColors,
   withAlpha,
 } from "./charts/chartTheme";
 export type { ChartPalette } from "./charts/chartTheme";
@@ -159,6 +160,7 @@ export { ToggleSwitch } from "./primitives/ToggleSwitch";
 export type { ToggleSwitchProps } from "./primitives/ToggleSwitch";
 
 export { ThemeProvider, useTheme, ThemeToggleButton } from "./theme/ThemeProvider";
+export type { ThemeMode, ThemePreference } from "./theme/ThemeProvider";
 export {
   AppearanceProvider,
   applyAppearanceToDom,

@@ -161,6 +161,12 @@ export function setChartAppearance(settings: Pick<AppearanceSettings, "charts" |
   chartAccent = settings.accent;
 }
 
+/**
+ * 单个指标的迷你趋势、指标卡这类「一张图只有一个指标」的地方用不用身份色：多彩图表用
+ * （请求天蓝、Token 紫……），强调色图表一律用主序列色。
+ */
+export const chartUsesIdentityColors = (): boolean => chartStyle === "colorful";
+
 export const chartPalette = (isDark: boolean): ChartPalette => {
   if (chartStyle === "colorful") return isDark ? COLORFUL_DARK : COLORFUL_LIGHT;
   const key = `${chartAccent}:${isDark ? "dark" : "light"}`;

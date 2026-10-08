@@ -466,6 +466,18 @@
   height: max(2px, calc(var(--cp-bar-h) * 0.75));
 }
 
+/*
+ * 额度「健康」段的颜色，给写不了变体类的地方用（内联的 conic-gradient 圆环）：语义进度条是绿，
+ * 强调色进度条跟随强调色。与 QuotaBar 的 bar-semantic: 类同一个开关。
+ */
+:root {
+  --cp-bar-healthy: var(--cp-accent);
+}
+
+:root[data-bars="semantic"] {
+  --cp-bar-healthy: #10b981;
+}
+
 @layer components {
   .cp-edge {
     position: relative;

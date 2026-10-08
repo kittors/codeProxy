@@ -118,7 +118,7 @@ export function SettingRow({
       data-modified={modified || undefined}
       className={cn(
         "relative px-5 py-4 transition-colors duration-500",
-        highlighted ? "bg-accent-soft" : null,
+        highlighted ? "bg-accent-soft colorful:bg-sky-500/[0.07]" : null,
         className,
       )}
     >
@@ -133,7 +133,7 @@ export function SettingRow({
             {modified ? (
               <span
                 aria-hidden="true"
-                className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent"
+                className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent colorful:bg-sky-500"
               />
             ) : null}
             <LabelTag

@@ -1,13 +1,19 @@
 import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
+import { HUE_GLYPH, hueForIconName } from "@code-proxy/ui";
 import { ACTIVE_ICON_STROKE } from "./navModel";
 
 /**
- * 侧边栏图标的颜色：平时是弱化的墨色，只有当前页的图标用强调色——一列图标里只有一个
- * 带颜色，扫一眼就知道「我在哪」。以前每个分组一种颜色，七个图标七种颜色，侧边栏本身
- * 就成了整页最花的地方。
+ * 侧边栏图标的颜色，跟随「外观 → 图标着色」：
+ * - 多彩：按全站的「图标 → 色相」注册表取（与页面里同一个图标的颜色一致），扫一眼就分得出
+ *   哪个是哪个；文字保持中性色，选中态靠白色小卡片表达；
+ * - 单色：平时是弱化的墨色，只有当前页的图标用强调色，一列图标里只有一个带颜色。
  */
-export const sidebarIconClass = (active: boolean) => (active ? "text-accent-ink" : "text-ink-3");
+export const sidebarIconClass = (icon: LucideIcon, active: boolean) =>
+  [
+    active ? "text-accent-ink" : "text-ink-3",
+    HUE_GLYPH[hueForIconName((icon as { displayName?: string }).displayName ?? "")],
+  ].join(" ");
 
 /**
  * 侧边栏顶层一行（单页分区的链接、多页分区的标题）共用的外观。
@@ -36,7 +42,7 @@ export function SidebarRowIcon({ icon: Icon, active }: { icon: LucideIcon; activ
       <Icon
         size={18}
         strokeWidth={active ? ACTIVE_ICON_STROKE : undefined}
-        className={sidebarIconClass(active)}
+        className={sidebarIconClass(Icon, active)}
         aria-hidden="true"
       />
     </span>

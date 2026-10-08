@@ -1,4 +1,5 @@
 import {
+  Children,
   createContext,
   use,
   useCallback,
@@ -10,9 +11,11 @@ import {
   type ButtonHTMLAttributes,
   type HTMLAttributes,
   type PropsWithChildren,
+  type ReactNode,
 } from "react";
 import { motion } from "framer-motion";
 import { useScrollFade } from "../hooks/useScrollFade";
+import { HUE_BUTTON_ICON, hueForIcon, type Hue } from "../theme/hues";
 import type { ControlSize } from "../utils/controlStyles";
 
 type TabsValue = string;
@@ -168,6 +171,15 @@ export function TabsList({
   );
 }
 
+function firstIconHue(children: ReactNode): Hue | null {
+  let found: Hue | null = null;
+  Children.forEach(children, (child) => {
+    if (found) return;
+    found = hueForIcon(child);
+  });
+  return found;
+}
+
 export function TabsTrigger({
   value,
   children,
@@ -179,6 +191,9 @@ export function TabsTrigger({
 >) {
   const { size, value: current, onValueChange, tone } = useTabs();
   const active = current === value;
+  // 标签里的图标按全站注册表上色（可视化是天蓝的眼睛、源码是品红的代码……，只在图标着色为
+  // 「多彩」时生效）；强调色实心的选中块上图标跟随文字色，不再染色。
+  const iconHue = tone === "brand" && active ? null : firstIconHue(children);
 
   const onClick = useCallback(() => {
     onValueChange(value);
@@ -204,6 +219,7 @@ export function TabsTrigger({
             ? "text-accent-fg"
             : "text-ink"
           : "text-ink-2 hover:text-ink",
+        iconHue ? HUE_BUTTON_ICON[iconHue] : null,
         buttonProps.className,
       ]
         .filter(Boolean)

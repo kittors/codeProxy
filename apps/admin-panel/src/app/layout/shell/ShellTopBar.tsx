@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Building2, PanelLeft } from "lucide-react";
 import {
+  iconHueClass,
   LanguageSelector,
   SearchableSelect,
   ThemeToggleButton,
@@ -133,7 +134,7 @@ function TenantSwitcher() {
         value: tenant.id,
         label,
         searchText: `${label} ${tenant.slug ?? ""} ${tenant.name}`,
-        icon: <Building2 size={16} className="shrink-0 text-ink-3" />,
+        icon: <Building2 size={16} className={`shrink-0 text-ink-3 ${iconHueClass(Building2)}`} />,
       };
     });
   }, [effectiveTenant, systemTenantLabel, tenants]);

@@ -15,6 +15,7 @@ import {
 } from "react";
 import { Loader2 } from "lucide-react";
 import { TooltipBubble, TooltipTriggerContext, type TooltipPlacement } from "../overlays/Tooltip";
+import { HUE_BUTTON_ICON, hueForIcon, type Hue } from "../theme/hues";
 
 type ButtonVariant =
   | "default"
@@ -87,7 +88,7 @@ function isIconOnlyButtonChildren(children: ReactNode): boolean {
 
 /**
  * - default：白底 + 阴影描边，和输入框同一套轮廓，是页面上最常见的次要操作。
- * - primary：强调蓝实心（全站唯一的强调色），一屏通常只放一个。
+ * - primary：强调色实心（多彩风格默认墨色，深色模式反转成浅色实心；简约风格是蓝），一屏通常只放一个。
  * - error / success / warning：只给确实带后果的操作用，颜色来自重新校准过的状态色阶。
  * - ghost：无底色，悬停才出现浅灰叠层，用在工具栏图标和行内操作。
  * - ghost-danger：同 ghost，但文字与悬停底是红色，给行内的删除这类操作；
@@ -116,28 +117,46 @@ const BUTTON_VARIANT_CLASSES: Record<Exclude<ButtonVariant, "secondary" | "dange
 };
 
 /**
- * 按钮里的图标跟随按钮文字色，不再按图标含义各自上色：一排工具栏按钮里刷新绿、查看蓝、
- * 闪电橙同时出现，正是「强调色太多、颜色太杂」的来源。颜色只留给主按钮（强调蓝）和
- * 危险操作（红）。
+ * 按钮里的图标：图标着色为「多彩」时按图标含义上色（刷新蓝绿、查看天蓝、删除玫红……），
+ * 只对中性的 default / ghost 生效，实色按钮的图标跟随按钮文字色；图标着色为「单色」时
+ * HUE_BUTTON_ICON 的 icon-hue: 类不生效，图标跟随按钮文字色。
  */
 export function buttonClassName({
   className,
   iconOnly = false,
   size = "md",
   variant = "default",
+  iconHue = null,
 }: {
   className?: string;
   iconOnly?: boolean;
   size?: ButtonSize;
   variant?: ButtonVariant;
+  /** 按钮里图标的色相（只对中性的 default / ghost 生效）。 */
+  iconHue?: Hue | null;
 }) {
   const resolvedVariant =
     variant === "secondary" ? "default" : variant === "danger" ? "error" : variant;
   const sizeClass = iconOnly ? BUTTON_SIZE_CLASSES[size].iconOnly : BUTTON_SIZE_CLASSES[size].text;
+  const iconClass =
+    iconHue && (resolvedVariant === "default" || resolvedVariant === "ghost")
+      ? HUE_BUTTON_ICON[iconHue]
+      : null;
 
-  return [BUTTON_BASE_CLASS, sizeClass, BUTTON_VARIANT_CLASSES[resolvedVariant], className]
+  return [BUTTON_BASE_CLASS, sizeClass, BUTTON_VARIANT_CLASSES[resolvedVariant], iconClass, className]
     .filter(Boolean)
     .join(" ");
+}
+
+/**
+ * 按钮里第一个 lucide 图标的色相；关闭、箭头、「更多」这类纯操作提示保持中性（见 theme/hues）。
+ */
+function buttonIconHue(children: ReactNode): Hue | null {
+  for (const child of flattenButtonChildren(children)) {
+    const hue = hueForIcon(child);
+    if (hue) return hue;
+  }
+  return null;
 }
 
 export function Button({
@@ -226,7 +245,7 @@ export function Button({
         title={shouldSuppressNativeTitle ? undefined : title}
         disabled={props.disabled || loading}
         aria-busy={loading ? true : props["aria-busy"]}
-        className={buttonClassName({ className, iconOnly, size, variant })}
+        className={buttonClassName({ className, iconOnly, size, variant, iconHue: buttonIconHue(children) })}
       >
         {loading ? (
           <Loader2 size={size === "xs" ? 13 : 15} className="shrink-0 animate-spin" aria-hidden />

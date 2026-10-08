@@ -53,7 +53,7 @@ export function SidebarItemLink({
       <Icon
         size={18}
         strokeWidth={active ? ACTIVE_ICON_STROKE : undefined}
-        className={["shrink-0", sidebarIconClass(active)].join(" ")}
+        className={["shrink-0", sidebarIconClass(Icon, active)].join(" ")}
         aria-hidden="true"
       />
     );

@@ -5,11 +5,16 @@ import { clampPercent } from "./quota-helpers";
 
 export type QuotaVisualTone = {
   normalized: number | null;
-  /** Bar fill: one solid colour per band. */
+  /** Bar fill: one colour per band (a gradient within the band's hue when bars are semantic). */
   barFillClass: string;
-  /** Bar track: neutral, so the filled length contrasts with what is left. */
+  /** Bar track: neutral, or a faint wash of the band's hue when bars are semantic. */
   barTrackClass: string;
   percentClass: string;
+  /**
+   * The fill colour for places that cannot take a class (inline conic gradients).
+   * A CSS colour, not necessarily hex: the healthy band reads `--cp-bar-healthy`,
+   * which follows the appearance setting (styles/index.css).
+   */
   fillHex: string;
   /** Chip surface (border + background) mirroring the percent tone. */
   chipClass: string;
@@ -40,23 +45,26 @@ export const resolveQuotaVisualTone = (
     };
   }
 
-  // The bar is a rule under its label, thick enough (8px, 6px compact) that bars
-  // on neighbouring cards can be compared by length at a glance — the old 4px
-  // hairline with a same-hue track read as a tint, not as an amount.
+  // The bar is a rule under its label, thick enough (8px by default, 3/4 of that
+  // compact; the appearance setting changes it) that bars on neighbouring cards
+  // can be compared by length at a glance — the old 4px hairline read as a tint,
+  // not as an amount.
   //
-  // Colour is a band, not decoration: the accent while the window is healthy,
-  // amber when it is running low, red when it is nearly gone. The track is
-  // neutral so the filled length stands out against what is left, and fills are
-  // solid — a gradient made a short bar and a long one look like different
-  // colours. The percentage stays ink while healthy and only takes the band's
-  // colour once a window needs attention.
+  // Colour is a band, not decoration: amber when the window is running low, red
+  // when it is nearly gone. While it is healthy the bar is green when the
+  // appearance setting asks for semantic bars (the default: each band a gradient
+  // within its hue over a faint wash of the same hue, so the remainder reads as
+  // "unused") and the accent colour over a neutral track otherwise. The
+  // percentage stays ink while healthy and only takes the band's colour once a
+  // window needs attention.
   if (normalized >= 60) {
     return {
       normalized,
-      barFillClass: "bg-accent",
-      barTrackClass: "bg-track",
+      barFillClass:
+        "bg-accent bar-semantic:bg-gradient-to-r bar-semantic:from-emerald-400 bar-semantic:to-emerald-500 bar-semantic:dark:from-emerald-500 bar-semantic:dark:to-emerald-400",
+      barTrackClass: "bg-track bar-semantic:bg-emerald-500/12 bar-semantic:dark:bg-emerald-400/15",
       percentClass: "text-ink",
-      fillHex: "#2a6ee8",
+      fillHex: "var(--cp-bar-healthy)",
       chipClass: "bg-subtle",
       chipLabelClass: "text-ink-2",
       barLabelClass: "text-ink-2",
@@ -67,8 +75,9 @@ export const resolveQuotaVisualTone = (
   if (normalized >= 20) {
     return {
       normalized,
-      barFillClass: "bg-amber-500 dark:bg-amber-400",
-      barTrackClass: "bg-track",
+      barFillClass:
+        "bg-amber-500 dark:bg-amber-400 bar-semantic:bg-gradient-to-r bar-semantic:from-amber-300 bar-semantic:to-amber-500 bar-semantic:dark:from-amber-500 bar-semantic:dark:to-amber-300",
+      barTrackClass: "bg-track bar-semantic:bg-amber-500/15 bar-semantic:dark:bg-amber-400/15",
       percentClass: "text-amber-700 dark:text-amber-300",
       fillHex: "#f59e0b",
       chipClass: "bg-amber-50/80 dark:bg-amber-500/[0.1]",
@@ -80,8 +89,9 @@ export const resolveQuotaVisualTone = (
 
   return {
     normalized,
-    barFillClass: "bg-rose-500 dark:bg-rose-400",
-    barTrackClass: "bg-track",
+    barFillClass:
+      "bg-rose-500 dark:bg-rose-400 bar-semantic:bg-gradient-to-r bar-semantic:from-rose-400 bar-semantic:to-rose-500 bar-semantic:dark:from-rose-500 bar-semantic:dark:to-rose-400",
+    barTrackClass: "bg-track bar-semantic:bg-rose-500/12 bar-semantic:dark:bg-rose-400/15",
     percentClass: "text-rose-600 dark:text-rose-400",
     fillHex: "#f43f5e",
     chipClass: "bg-rose-50/80 dark:bg-rose-500/[0.1]",
@@ -136,8 +146,9 @@ export interface QuotaBarProps {
  *
  * Label, countdown and percentage share the line, which is what makes the
  * numbers scannable down a column instead of hunting between two rows; the bar
- * under them (8px, 6px compact) is thick enough to compare by length across
- * cards while a card still fits as many windows as the old one-row pill did.
+ * under them (`h-bar`, `h-bar-sm` compact — 8px / 6px unless the appearance
+ * setting changes it) is thick enough to compare by length across cards while
+ * a card still fits as many windows as the old one-row pill did.
  *
  * The fill grows in from zero the first time it appears and glides to the new
  * width when a refresh moves the number, so a change is seen rather than
@@ -235,7 +246,7 @@ export function QuotaBar({
         className={[
           "relative w-full overflow-hidden rounded-full",
           tone.barTrackClass,
-          compact ? "h-1.5" : "h-2",
+          compact ? "h-bar-sm" : "h-bar",
         ].join(" ")}
       >
         {normalized ? (
@@ -299,7 +310,7 @@ export function QuotaBarSkeleton({
         className={[
           "w-full rounded-full",
           barTrackClass,
-          compact ? "h-1.5" : "h-2",
+          compact ? "h-bar-sm" : "h-bar",
         ].join(" ")}
       />
     </div>
