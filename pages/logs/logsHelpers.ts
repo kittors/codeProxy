@@ -199,17 +199,21 @@ export const downloadBlob = (blob: Blob, filename: string) => {
 };
 
 /*
- * 日志级别与状态码的标签都只用淡底、不描边。颜色只给「出了状况」的那几档：警告琥珀、错误红；
- * info 是绝大多数行的常态，和 debug / trace、2xx / 3xx 一样用中性标签——以前 info 是天蓝标签
- * 加天蓝行底、200 是绿标签，满屏都是颜色，真正的警告和错误反而不显眼。
+ * 日志级别与状态码的标签都只用淡底、不描边。警告琥珀、错误红在两种配色风格下都有；
+ * info 与 2xx / 3xx 的基础形态（简约风格）是中性标签，多彩风格下叠回 info 天蓝标签加天蓝行底、
+ * 2xx 绿、3xx 天蓝。debug / trace 一直是中性的。
  */
 export const LOG_NEUTRAL_BADGE = "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]";
 export const LOG_MUTED_BADGE = "bg-ink/[0.05] text-ink-3 dark:bg-white/[0.07]";
 const WARN_BADGE = "bg-amber-500/10 text-amber-700 dark:bg-amber-400/15 dark:text-amber-300";
 const ERROR_BADGE = "bg-rose-500/10 text-rose-700 dark:bg-rose-400/15 dark:text-rose-300";
+const INFO_BADGE = `${LOG_NEUTRAL_BADGE} colorful:bg-sky-50 colorful:text-sky-700 colorful:dark:bg-sky-500/10 colorful:dark:text-sky-200`;
+const SUCCESS_BADGE = `${LOG_NEUTRAL_BADGE} colorful:bg-emerald-50 colorful:text-emerald-700 colorful:dark:bg-emerald-500/10 colorful:dark:text-emerald-200`;
 
 export const getLevelStyles = (level: LogLevel): { badge: string; row: string } => {
   switch (level) {
+    case "info":
+      return { badge: INFO_BADGE, row: "colorful:bg-sky-50/40 colorful:dark:bg-sky-500/5" };
     case "warn":
       return { badge: WARN_BADGE, row: "bg-amber-500/[0.05] dark:bg-amber-400/[0.06]" };
     case "error":
@@ -226,5 +230,7 @@ export const getLevelStyles = (level: LogLevel): { badge: string; row: string } 
 export const getStatusStyles = (statusCode: number): string => {
   if (statusCode >= 500) return ERROR_BADGE;
   if (statusCode >= 400) return WARN_BADGE;
+  if (statusCode >= 300) return INFO_BADGE;
+  if (statusCode >= 200) return SUCCESS_BADGE;
   return LOG_NEUTRAL_BADGE;
 };

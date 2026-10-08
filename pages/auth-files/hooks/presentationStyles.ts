@@ -1,3 +1,5 @@
+import type { IdentityFingerprintFieldSource } from "@code-proxy/api-client";
+
 export const KNOWN_QUOTA_TEXT_KEYS = new Set([
   "missing_auth_index",
   "no_model_quota",
@@ -37,6 +39,24 @@ export const CLAUDE_OAUTH_HEALTH_TONE_CLASSES = {
   danger: DANGER_TONE,
   warning: WARNING_TONE,
 } as const;
+
+/**
+ * 身份指纹字段的来源标签：基础是中性标签（简约风格），文字已经写明是学习、预设还是内置；
+ * 多彩风格下叠回来源色——学习绿、预设蓝，内置保持中性。
+ */
+const IDENTITY_SOURCE_TONE_CLASSES: Partial<Record<IdentityFingerprintFieldSource, string>> = {
+  learned:
+    "colorful:bg-emerald-50 colorful:text-emerald-700 colorful:dark:bg-emerald-500/15 colorful:dark:text-emerald-200",
+  preset:
+    "colorful:bg-blue-50 colorful:text-blue-700 colorful:dark:bg-blue-500/15 colorful:dark:text-blue-200",
+};
+
+export const identitySourceBadgeClass = (source: IdentityFingerprintFieldSource): string =>
+  `inline-flex max-w-full items-center rounded-full px-2 py-0.5 text-xs font-semibold ${NEUTRAL_TONE} ${IDENTITY_SOURCE_TONE_CLASSES[source] ?? ""}`;
+
+/** 身份档案列表里正在查看的那一项：强调色淡底，多彩风格下是蓝色淡底。 */
+export const VIEWED_PROFILE_CLASS =
+  "bg-accent-soft colorful:bg-blue-50 colorful:dark:bg-blue-500/10";
 
 export const STICKY_ACTIONS_HEADER_CLASS =
   "text-center md:sticky md:z-40 md:bg-slate-100 md:dark:bg-neutral-800";

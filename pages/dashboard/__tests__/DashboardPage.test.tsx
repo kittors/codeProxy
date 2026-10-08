@@ -54,6 +54,11 @@ vi.mock("@code-proxy/ui", async () => {
     chartGradient: (await vi.importActual<typeof import("@code-proxy/ui")>("@code-proxy/ui"))
       .chartGradient,
     hueHex: (await vi.importActual<typeof import("@code-proxy/ui")>("@code-proxy/ui")).hueHex,
+    // 外观：用真实实现（没有 Provider 时是默认的多彩风格），图表颜色按多彩取身份色。
+    chartUsesIdentityColors: (await vi.importActual<typeof import("@code-proxy/ui")>("@code-proxy/ui"))
+      .chartUsesIdentityColors,
+    useChartAppearanceKey: (await vi.importActual<typeof import("@code-proxy/ui")>("@code-proxy/ui"))
+      .useChartAppearanceKey,
     // 指标卡与吞吐读数格的身份色图标块用真实组件，颜色类名才会出现在断言里。
     DialogIcon: (await vi.importActual<typeof import("@code-proxy/ui")>("@code-proxy/ui"))
       .DialogIcon,

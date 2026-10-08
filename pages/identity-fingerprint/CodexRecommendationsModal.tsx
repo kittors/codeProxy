@@ -303,8 +303,8 @@ export function CodexRecommendationsModal({
               rowAriaSelected={(item) => item.id === selected?.id}
               rowClassName={(item) =>
                 item.id === selected?.id
-                  ? "[&>td]:!bg-accent-soft"
-                  : "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent"
+                  ? "[&>td]:!bg-accent-soft colorful:[&>td]:!bg-sky-500/10"
+                  : "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent colorful:focus-visible:outline-sky-500"
               }
             />
           </div>

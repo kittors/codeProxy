@@ -6,13 +6,13 @@ import "./loginNetwork.css";
 
 /**
  * 登录卡片四周的「中继网络」：左边是调用方（终端、Agent、编辑器），右边是各家模型，
- * 曲线都连到登录卡片的两侧——卡片本身就是那个网关。强调色（蓝）的短线沿线路流过代表一次请求，
- * 抵达时模型节点轻轻放大；右侧的模型图标会轮流换成别家，讲的是「接入所有模型」。
+ * 曲线都连到登录卡片的两侧——卡片本身就是那个网关。沿线路流过的短线代表一次请求（多彩风格是
+ * 品牌绿，简约风格是强调色蓝），抵达时模型节点轻轻放大；右侧的模型图标会轮流换成别家，讲的是
+ * 「接入所有模型」。
  * 整层随鼠标轻微反向位移，和卡片拉开前后层次。
  *
  * 节点是小卡片（伪元素细边 + 卡片投影），不画 border；出发 / 抵达时外圈闪一下的细环（动画的
- * 一部分，平时不可见）也用强调色。
- * 绿色现在只表示成功，不再用来装饰流动的请求。厂商 logo 保留各自的品牌色。
+ * 一部分，平时不可见）和短线同色。厂商 logo 保留各自的品牌色。
  *
  * 位置都按登录卡片的实际矩形算（ResizeObserver 跟踪），所以窗口多宽线路都接得上；
  * 两侧空间不够放节点时整层不渲染。纯装饰，对读屏隐藏；减少动态效果时只留静态线路。
@@ -180,7 +180,7 @@ export function LoginNetwork({ cardRef }: { cardRef: RefObject<HTMLElement | nul
                 key={`in-packet-${client.key}`}
                 d={curve(client.x + NODE / 2, client.y, geometry.left, client.anchorY)}
                 pathLength={100}
-                className="ln-packet stroke-accent"
+                className="ln-packet stroke-accent colorful:stroke-ok"
                 style={{ animationDelay: `${(index * CYCLE_S) / CLIENTS.length}s` }}
               />
             ))}
@@ -189,7 +189,7 @@ export function LoginNetwork({ cardRef }: { cardRef: RefObject<HTMLElement | nul
                 key={`out-packet-${index}`}
                 d={curve(geometry.right, slot.anchorY, slot.x - NODE / 2, slot.y)}
                 pathLength={100}
-                className="ln-packet stroke-accent"
+                className="ln-packet stroke-accent colorful:stroke-ok"
                 style={{ animationDelay: `${0.9 + (index * CYCLE_S) / MODEL_SLOTS.length}s` }}
               />
             ))}
@@ -202,7 +202,7 @@ export function LoginNetwork({ cardRef }: { cardRef: RefObject<HTMLElement | nul
               style={{ left: x, top: y }}
             >
               <span
-                className="ln-depart absolute -inset-1 rounded-3xl ring-1 ring-accent/40"
+                className="ln-depart absolute -inset-1 rounded-3xl ring-1 ring-accent/40 colorful:ring-ok/40"
                 style={{ animationDelay: `${(index * CYCLE_S) / CLIENTS.length}s`, animationDuration: `${CYCLE_S}s` }}
               />
               <Icon size={19} />
@@ -229,7 +229,7 @@ export function LoginNetwork({ cardRef }: { cardRef: RefObject<HTMLElement | nul
                   style={delay}
                 >
                   <span
-                    className="ln-glow absolute -inset-1 rounded-3xl ring-1 ring-accent/40"
+                    className="ln-glow absolute -inset-1 rounded-3xl ring-1 ring-accent/40 colorful:ring-ok/40"
                     style={delay}
                   />
                   <AnimatePresence initial={false}>

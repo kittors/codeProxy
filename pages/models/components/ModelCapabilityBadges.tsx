@@ -15,17 +15,17 @@ type BadgeItem = {
 };
 
 /**
- * 能力标签一律中性淡底，靠图标和文字区分。以前视觉天蓝、出图琥珀、音频绿……按类别上色，
- * 一张模型卡片上三四种颜色，读起来像状态告警；语义色只留给成功 / 警告 / 错误。
+ * 能力标签的基础形态（简约风格）是中性淡底，靠图标和文字区分。多彩风格下按类别叠回颜色：
+ * 视觉天蓝、出图琥珀、音频绿；文本与视频一直是中性的。
  */
 const NEUTRAL_BADGE = "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]";
 
 const BADGE_CLASS: Record<ModelCapabilityKey, string> = {
   text: NEUTRAL_BADGE,
-  vision: NEUTRAL_BADGE,
-  image: NEUTRAL_BADGE,
+  vision: `${NEUTRAL_BADGE} colorful:bg-sky-50 colorful:text-sky-700 colorful:dark:bg-sky-500/15 colorful:dark:text-sky-300`,
+  image: `${NEUTRAL_BADGE} colorful:bg-amber-50 colorful:text-amber-700 colorful:dark:bg-amber-500/15 colorful:dark:text-amber-300`,
   video: NEUTRAL_BADGE,
-  audio: NEUTRAL_BADGE,
+  audio: `${NEUTRAL_BADGE} colorful:bg-emerald-50 colorful:text-emerald-700 colorful:dark:bg-emerald-500/15 colorful:dark:text-emerald-300`,
 };
 
 const BADGE_ICON: Record<ModelCapabilityKey, ReactNode> = {

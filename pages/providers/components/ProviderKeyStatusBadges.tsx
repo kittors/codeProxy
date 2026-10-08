@@ -30,14 +30,14 @@ export function ProviderKeyStatusBadges({
     editKeyType !== "cline" &&
     editKeyType !== "ollama-cloud";
 
-  // 标签不描边：计数一律中性淡底；启用 / 停用是状态，启用用中性、停用用琥珀提醒；
-  // 「需要别名」「鉴权方式」是说明，不再用一块黑底实色抢眼。
+  // 标签不描边：计数一律中性淡底；启用 / 停用是状态，停用用琥珀提醒，启用简约风格是中性、
+  // 多彩风格是绿色淡底；「需要别名」「鉴权方式」是说明，不再用一块黑底实色抢眼。
   return (
     <div className="flex flex-wrap items-center gap-2">
       <span
         className={
           editKeyEnabled
-            ? NEUTRAL_BADGE
+            ? `${NEUTRAL_BADGE} colorful:bg-emerald-600/10 colorful:text-emerald-700 colorful:dark:bg-emerald-500/15 colorful:dark:text-emerald-200`
             : "rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:text-amber-300"
         }
       >

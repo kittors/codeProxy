@@ -2,22 +2,27 @@ import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Activity, BarChart3, CalendarRange, FileStack, Gauge, LineChart, RefreshCw } from "lucide-react";
 import { VendorIcon } from "@code-proxy/assets";
-import { Button } from "@code-proxy/ui";
+import { Button, DialogIcon, iconHueClass, type Hue } from "@code-proxy/ui";
 import { Modal } from "@code-proxy/ui";
 import { Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { EChart } from "@code-proxy/ui";
+import { QUOTA_HUE } from "../helpers/quotaSeriesColors";
 
 /**
- * 四格指标：无边淡底 + 线性图标 + 墨色数值。弹窗本身是一层，指标格只用一层淡底分组；图标不再按
- * 指标垫身份色底块（文件橙、调用蓝、周限粉、样本绿），颜色只留给下面趋势图里的数据。
+ * 四格指标：无边淡底 + 图标 + 墨色数值。弹窗本身是一层，指标格只用一层淡底分组。
+ * 图标着色为多彩时图标垫身份色图标块，并且和下面的趋势图对得上：总调用是请求蓝（= 图里的柱子），
+ * 周限是额度粉（= 图里第一条额度线）；文件数用文件类图标的橙、配额样本用统计类的翠绿。
+ * 单色时是中性的线性图标。只给图标上色，数值保持墨色。
  */
 function StatCard({
   icon,
+  hue,
   label,
   value,
   help,
 }: {
   icon: ReactNode;
+  hue: Hue;
   label: ReactNode;
   value: ReactNode;
   help: ReactNode;
@@ -25,9 +30,15 @@ function StatCard({
   return (
     <div className="flex flex-col rounded-2xl bg-subtle px-4 py-3.5">
       <div className="flex items-center gap-2">
-        <span aria-hidden="true" className="shrink-0 text-ink-3 [&_svg.lucide]:size-[16px]">
+        <span
+          aria-hidden="true"
+          className="shrink-0 text-ink-3 icon-hue:hidden [&_svg.lucide]:size-[16px]"
+        >
           {icon}
         </span>
+        <DialogIcon tone={hue} size="sm" className="hidden icon-hue:grid">
+          {icon}
+        </DialogIcon>
         <p className="min-w-0 truncate text-xs font-medium text-ink-3">{label}</p>
       </div>
       <div className="mt-2.5 text-2xl font-semibold tracking-tight text-ink tabular-nums">{value}</div>
@@ -107,7 +118,11 @@ export function GroupOverviewModal({
           </Tabs>
           <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex h-9 items-center gap-1.5 rounded-full bg-hover px-3.5 text-sm font-medium text-ink-2">
-              <CalendarRange size={14} aria-hidden="true" className="text-ink-3" />
+              <CalendarRange
+                size={14}
+                aria-hidden="true"
+                className={`text-ink-3 ${iconHueClass(CalendarRange)}`}
+              />
               {t("auth_files.group_overview_fixed_7_days")}
             </span>
             <Button
@@ -131,18 +146,21 @@ export function GroupOverviewModal({
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard
             icon={<FileStack />}
+            hue="orange"
             label={activeGroupTitle}
             value={activeGroupRows.length}
             help={t("auth_files.group_overview_file_count")}
           />
           <StatCard
             icon={<Activity />}
+            hue="blue"
             label={t("auth_files.group_overview_total_calls_label")}
             value={activeGroupOverview.totalCalls.toLocaleString()}
             help={t("auth_files.group_overview_total_calls_help")}
           />
           <StatCard
             icon={<Gauge />}
+            hue={QUOTA_HUE}
             label={
               (activeGroupOverview.weeklyFamilies?.length ?? 0) > 1
                 ? t("auth_files.group_overview_weekly_limits_label")
@@ -177,6 +195,7 @@ export function GroupOverviewModal({
           />
           <StatCard
             icon={<LineChart />}
+            hue="emerald"
             label={t("auth_files.group_overview_sample_count", {
               count: activeGroupOverview.quotaSampleCount,
             })}

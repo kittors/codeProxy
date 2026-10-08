@@ -25,7 +25,7 @@ export interface OwnedApiKeyActions {
   onDelete?: (key: EndUserAPIKey) => void;
 }
 
-/** 次要标签（default、掩码 Key）：中性淡底，不描边、不上色。 */
+/** 次要标签（default、掩码 Key）：中性淡底，不描边；多彩风格下 default 叠回绿色。 */
 const NEUTRAL_TAG = "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]";
 
 export const createOwnedApiKeyColumns = ({
@@ -55,7 +55,9 @@ export const createOwnedApiKeyColumns = ({
             </span>
           </OverflowTooltip>
           {row.is_default ? (
-            <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-2xs font-medium ${NEUTRAL_TAG}`}>
+            <span
+              className={`shrink-0 rounded-full px-1.5 py-0.5 text-2xs font-medium ${NEUTRAL_TAG} colorful:bg-emerald-50 colorful:text-emerald-700 colorful:dark:bg-emerald-500/15 colorful:dark:text-emerald-300`}
+            >
               default
             </span>
           ) : null}
@@ -121,7 +123,7 @@ export const createOwnedApiKeyColumns = ({
         <button
           type="button"
           onClick={() => actions.onViewResetHistory?.(row)}
-          className="tabular-nums font-medium text-accent-ink underline-offset-2 hover:underline"
+          className="tabular-nums font-medium text-accent-ink underline-offset-2 hover:underline colorful:text-orange-600 colorful:dark:text-orange-400"
           aria-label={t("api_keys_page.view_reset_history")}
         >
           {count}
@@ -180,6 +182,7 @@ export const createOwnedApiKeyColumns = ({
               icon: <RotateCcw size={15} />,
               visible: Boolean(actions.onRotate),
               disabled: busy,
+              className: "icon-hue:hover:text-orange-600 icon-hue:dark:hover:text-orange-400",
               onClick: () => actions.onRotate?.(row),
             },
             {
@@ -188,6 +191,7 @@ export const createOwnedApiKeyColumns = ({
               icon: <Pencil size={15} />,
               visible: Boolean(actions.onEdit),
               disabled: busy,
+              className: "icon-hue:hover:text-amber-600 icon-hue:dark:hover:text-amber-400",
               onClick: () => actions.onEdit?.(row),
             },
             {
@@ -198,6 +202,7 @@ export const createOwnedApiKeyColumns = ({
               icon: <RotateCcw size={15} className={busy ? "animate-spin" : ""} />,
               visible: Boolean(actions.onResetPeriodSpending),
               disabled: busy || !hasResettablePeriod,
+              className: "icon-hue:hover:text-orange-600 icon-hue:dark:hover:text-orange-400",
               onClick: () => actions.onResetPeriodSpending?.(row),
             },
             {

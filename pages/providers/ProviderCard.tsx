@@ -47,8 +47,8 @@ export interface ProviderCardProps {
  * EntityCard, the card the AI accounts page uses; this component only supplies
  * what is specific to a provider — the enable toggle and the edit/delete menu.
  *
- * 头部的小按钮和 AI 账号卡片同一套：中性淡底；电源键开着时换成强调色淡底（以前是绿色），
- * 「开着」是当前状态而不是一条成功消息，全站只有强调色表达「选中 / 开启」。
+ * 头部的小按钮和 AI 账号卡片同一套：中性淡底；电源键开着时，简约风格换成强调色淡底
+ * （强调色表达「选中 / 开启」），多彩风格是绿色淡底。
  */
 const HEADER_BUTTON =
   "inline-flex h-6 w-6 items-center justify-center rounded-md transition-colors focus-visible:outline-none focus-visible:shadow-control-focus";
@@ -100,7 +100,9 @@ export function ProviderCard({
                 type="button"
                 className={[
                   HEADER_BUTTON,
-                  enabled ? "bg-accent-soft text-accent-ink" : HEADER_BUTTON_IDLE,
+                  enabled
+                    ? "bg-accent-soft text-accent-ink colorful:bg-emerald-50 colorful:text-emerald-600 colorful:hover:bg-emerald-100 colorful:dark:bg-emerald-500/15 colorful:dark:text-emerald-300 colorful:dark:hover:bg-emerald-500/25"
+                    : HEADER_BUTTON_IDLE,
                 ].join(" ")}
                 aria-label={
                   enabled ? t("providers.disable") : t("providers.enable")

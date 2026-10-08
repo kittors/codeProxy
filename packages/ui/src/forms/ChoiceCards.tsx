@@ -2,16 +2,19 @@ import { motion, useReducedMotion } from "framer-motion";
 import { Check } from "lucide-react";
 import { useId, useRef, type KeyboardEvent, type ReactNode } from "react";
 import { useOptionalFormField } from "../primitives/Form";
+import { HUE_SOLID, HUE_TILE, hueForIcon } from "../theme/hues";
 import { cn } from "../utils/selectStyles";
 
 /**
- * 选项图标：中性淡底；选中时换成强调色的淡底与图标色。全站只有一个强调色，「选中」用它
- * 就足够区分，不再按图标含义给每个选项一种颜色。
+ * 选项图标：中性淡底，选中时换成强调色的淡底与图标色。图标着色为「多彩」时按图标的色相上色
+ * （同一个图标在全站同一种颜色），选中时换成同色相的实色渐变块、白色图标，更能看出「选的是
+ * 哪一类」；厂商 logo 等非 lucide 图标始终是中性底。
  */
-function choiceIconClass(selected: boolean): string {
-  return selected
-    ? "bg-accent-soft text-accent-ink"
-    : "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]";
+function choiceIconClass(icon: ReactNode, selected: boolean): string {
+  const base = selected ? "bg-accent-soft text-accent-ink" : "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]";
+  const hue = hueForIcon(icon);
+  if (!hue) return base;
+  return cn(base, selected ? HUE_SOLID[hue] : HUE_TILE[hue]);
 }
 
 export interface ChoiceCardOption<T extends string = string> {
@@ -120,7 +123,7 @@ export function ChoiceCards<T extends string>({
                 aria-hidden="true"
                 className={cn(
                   "relative grid h-8 w-8 shrink-0 place-items-center rounded-lg transition-colors [&_svg.lucide]:size-[16px]",
-                  choiceIconClass(selected),
+                  choiceIconClass(option.icon, selected),
                 )}
               >
                 {option.icon}

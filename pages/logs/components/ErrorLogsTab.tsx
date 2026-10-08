@@ -30,9 +30,12 @@ const formatTimestamp = (value: number | undefined): string | undefined => {
   return new Date(value < 1e12 ? value * 1000 : value).toLocaleString();
 };
 
-// 诊断标签与日志页同一套淡底：5xx 红、4xx 琥珀，其余中性，不描边。
+// 诊断标签与日志页同一套淡底：5xx 红、4xx 琥珀，其余中性，不描边。错误日志里的 2xx / 3xx
+// 不走日志页多彩风格下的绿 / 天蓝，两种风格都保持中性。
 const statusBadgeClass = (status: number | undefined): string =>
-  typeof status === "number" && Number.isFinite(status) ? getStatusStyles(status) : LOG_NEUTRAL_BADGE;
+  typeof status === "number" && Number.isFinite(status) && status >= 400
+    ? getStatusStyles(status)
+    : LOG_NEUTRAL_BADGE;
 
 const neutralBadgeClass = LOG_NEUTRAL_BADGE;
 

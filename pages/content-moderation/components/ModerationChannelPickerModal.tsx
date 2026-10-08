@@ -426,7 +426,7 @@ export function ModerationChannelPickerModal({
               className={[
                 "inline-flex max-w-full rounded-full px-2.5 py-1 text-xs font-semibold",
                 isCurrentProfile
-                  ? "bg-accent-soft text-accent-ink"
+                  ? "bg-accent-soft text-accent-ink colorful:bg-sky-500/10 colorful:text-sky-700 colorful:dark:text-sky-300"
                   : "bg-amber-500/10 text-amber-700 dark:text-amber-300",
               ].join(" ")}
             >
@@ -579,7 +579,9 @@ export function ModerationChannelPickerModal({
             columnResizable={false}
             columnReorderable={false}
             rowAriaSelected={(row) => selected.has(channelKey(row))}
-            rowClassName={(row) => (selected.has(channelKey(row)) ? "bg-accent-soft" : "")}
+            rowClassName={(row) =>
+              selected.has(channelKey(row)) ? "bg-accent-soft colorful:bg-sky-500/[0.06]" : ""
+            }
             onRowClick={(row) => toggleSelected(row)}
           />
         </div>

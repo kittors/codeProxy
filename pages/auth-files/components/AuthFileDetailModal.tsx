@@ -84,6 +84,7 @@ import {
   FIVE_HOUR_WINDOW_SECONDS,
   WEEK_WINDOW_SECONDS,
 } from "../hooks/trendQuotaSummary";
+import { VIEWED_PROFILE_CLASS, identitySourceBadgeClass } from "../hooks/presentationStyles";
 
 type DetailTab = "usage" | "identity" | "fields" | "models";
 type DetailTrendWindow = "5h" | "week";
@@ -548,11 +549,10 @@ export function AuthFileDetailModal({
   const formatIdentitySource = (source: IdentityFingerprintFieldSource): string =>
     t(`auth_files.identity_fingerprint_source_${source}`);
 
-  // 来源只是分类，不是状态：统一中性标签，文字已经写明是学习、预设还是内置（以前绿 / 蓝 / 灰三色）。
+  // 来源只是分类，靠文字区分学习、预设还是内置：基础是中性标签，多彩风格下叠回来源色
+  // （学习绿、预设蓝），类名见 presentationStyles。
   const renderIdentitySourceBadge = (source: IdentityFingerprintFieldSource) => (
-    <span className="inline-flex max-w-full items-center rounded-full bg-ink/[0.05] px-2 py-0.5 text-xs font-semibold text-ink-2 dark:bg-white/[0.07]">
-      {formatIdentitySource(source)}
-    </span>
+    <span className={identitySourceBadgeClass(source)}>{formatIdentitySource(source)}</span>
   );
 
   const identityFieldSectionLabel = (section: IdentityFingerprintFieldSection) => {
@@ -782,7 +782,7 @@ export function AuthFileDetailModal({
                           type="button"
                           className={[
                             "w-full rounded-lg px-3 py-3 text-left transition-colors",
-                            viewed ? "bg-accent-soft" : "hover:bg-hover",
+                            viewed ? VIEWED_PROFILE_CLASS : "hover:bg-hover",
                           ].join(" ")}
                           onClick={() => setViewedIdentityProfileKey(profileKey)}
                           data-testid={`identity-profile-${profileKey}`}

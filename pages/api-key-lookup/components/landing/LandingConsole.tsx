@@ -73,9 +73,9 @@ export function LandingConsole({ copy }: { copy: LandingCopy }) {
                         delay: 0.5 + index * 0.045,
                         ease: LANDING_EASE,
                       }}
-                      // 请求量柱子用全站图表的「请求蓝」单色：最新一根实色，其余淡一档。不再从蓝渐变到
-                      // 靛蓝——一根柱子两种颜色，只是装饰。
-                      className={`flex-1 rounded-t-sm ${index === BARS.length - 1 ? "bg-blue-500 dark:bg-blue-400" : "bg-blue-500/25 dark:bg-blue-400/25"}`}
+                      // 请求量柱子用全站图表的「请求蓝」，最新一根更饱和。简约风格是单色（最新一根实色、
+                      // 其余淡一档）；多彩风格叠一层蓝到靛蓝的渐变，淡柱先清掉底色，渐变才不会叠在单色上。
+                      className={`flex-1 rounded-t-sm ${index === BARS.length - 1 ? "bg-blue-500 dark:bg-blue-400 colorful:bg-gradient-to-t colorful:from-blue-500 colorful:to-indigo-400" : "bg-blue-500/25 dark:bg-blue-400/25 colorful:bg-transparent colorful:bg-gradient-to-t colorful:from-blue-500/35 colorful:to-blue-400/15 colorful:dark:from-blue-400/40 colorful:dark:to-blue-400/15"}`}
                     />
                   ))}
                 </div>

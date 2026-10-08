@@ -86,7 +86,7 @@ export function UploadProgressDialog({
             className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-track"
           >
             <motion.div
-              className="h-full rounded-full bg-accent"
+              className="h-full rounded-full bg-accent bar-semantic:bg-gradient-to-r bar-semantic:from-teal-400 bar-semantic:to-sky-500"
               initial={false}
               animate={{ width: `${percent}%` }}
               transition={reduceMotion ? { duration: 0 } : { duration: 0.45, ease: [0.16, 1, 0.3, 1] }}

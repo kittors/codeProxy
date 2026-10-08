@@ -172,9 +172,9 @@ export function RolesPage() {
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <span className="truncate font-medium text-ink">{roleName(role)}</span>
-              {/* 「受保护」是角色的属性说明，不是强调：中性淡底标签，不染蓝。 */}
+              {/* 「受保护」是角色的属性说明：简约风格是中性淡底标签，多彩风格是蓝色淡底。 */}
               {role.system_protected ? (
-                <span className="rounded-full bg-ink/[0.05] px-2 py-0.5 text-2xs font-semibold text-ink-2 dark:bg-white/[0.07]">
+                <span className="rounded-full bg-ink/[0.05] px-2 py-0.5 text-2xs font-semibold text-ink-2 dark:bg-white/[0.07] colorful:bg-blue-50 colorful:text-blue-700 colorful:dark:bg-blue-500/10 colorful:dark:text-blue-300">
                   {t("identity_admin.protected_role")}
                 </span>
               ) : null}

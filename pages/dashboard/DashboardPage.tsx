@@ -28,7 +28,7 @@ import { EmptyState } from "@code-proxy/ui";
 import { Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
 import { useInterval } from "@code-proxy/ui";
-import { chartPalette, useTheme } from "@code-proxy/ui";
+import { chartPalette, chartUsesIdentityColors, useChartAppearanceKey, useTheme } from "@code-proxy/ui";
 import { DashboardKpiCard } from "./DashboardKpiCard";
 import {
   DashboardMetricValue,
@@ -132,36 +132,45 @@ export function DashboardPage() {
     meta.throughput_scope === "all_tenants" || Boolean(principal?.platform_admin);
   const tenantBreakdown = trends?.tenants ?? [];
 
-  // 每格迷你趋势线都是强调色，只有失败请求用错误红：单独一条趋势线不需要身份色来区分，
-  // 以前六格六种颜色，是这一屏「强调色太多」的主要来源。
+  // 每格迷你趋势线的颜色跟随「外观 → 图表配色」：多彩时用该指标的身份色（chartTheme.metric：
+  // 请求蓝、成功绿、Token 紫、费用琥珀、缓存青），标题前的图标块同色，与监控中心、账号详情是
+  // 同一组颜色；强调色时都用强调色。失败请求始终是错误红。
   const {
     state: { mode },
   } = useTheme();
+  // 订阅外观：图表配色变了要重新生成 option（颜色写在 option 里，不跟 CSS 变量走）。
+  useChartAppearanceKey();
   const isDark = mode === "dark";
   const palette = chartPalette(isDark);
+  const sparkColor = (identity: string) => (chartUsesIdentityColors() ? identity : palette.primary);
+  const requestColor = sparkColor(palette.metric.requests);
+  const successColor = sparkColor(palette.metric.success);
+  const tokenColor = sparkColor(palette.metric.tokens);
+  const costColor = sparkColor(palette.metric.cost);
+  const cacheColor = sparkColor(palette.metric.cache);
   const totalRequestOption = useMemo(
-    () => createSparklineOption(trends?.request_volume ?? [], palette.primary, isDark),
-    [isDark, palette.primary, trends?.request_volume],
+    () => createSparklineOption(trends?.request_volume ?? [], requestColor, isDark),
+    [isDark, requestColor, trends?.request_volume],
   );
   const successRateOption = useMemo(
-    () => createSparklineOption(trends?.success_rate ?? [], palette.primary, isDark),
-    [isDark, palette.primary, trends?.success_rate],
+    () => createSparklineOption(trends?.success_rate ?? [], successColor, isDark),
+    [isDark, successColor, trends?.success_rate],
   );
   const totalTokenOption = useMemo(
-    () => createSparklineOption(trends?.total_tokens ?? [], palette.primary, isDark),
-    [isDark, palette.primary, trends?.total_tokens],
+    () => createSparklineOption(trends?.total_tokens ?? [], tokenColor, isDark),
+    [isDark, tokenColor, trends?.total_tokens],
   );
   const totalCostOption = useMemo(
-    () => createSparklineOption(trends?.total_cost ?? [], palette.primary, isDark),
-    [isDark, palette.primary, trends?.total_cost],
+    () => createSparklineOption(trends?.total_cost ?? [], costColor, isDark),
+    [isDark, costColor, trends?.total_cost],
   );
   const failedRequestOption = useMemo(
     () => createSparklineOption(trends?.failed_requests ?? [], palette.err, isDark),
     [isDark, palette.err, trends?.failed_requests],
   );
   const cacheRateOption = useMemo(
-    () => createSparklineOption([], palette.primary, isDark),
-    [isDark, palette.primary],
+    () => createSparklineOption([], cacheColor, isDark),
+    [isDark, cacheColor],
   );
 
   return (
@@ -234,6 +243,7 @@ export function DashboardPage() {
               : t("dashboard.total_hint_days", { count: range })
           }
           icon={Activity}
+          hue="blue"
           option={totalRequestOption}
         />
         <DashboardKpiCard
@@ -245,6 +255,7 @@ export function DashboardPage() {
             <DashboardMetricValue key="failed" value={kpi?.failed_requests ?? 0} />,
           )}
           icon={Sigma}
+          hue="emerald"
           option={successRateOption}
         />
         <DashboardKpiCard
@@ -256,6 +267,7 @@ export function DashboardPage() {
             <DashboardMetricValue key="output" value={kpi?.output_tokens ?? 0} />,
           )}
           icon={Sparkles}
+          hue="violet"
           option={totalTokenOption}
         />
         <DashboardKpiCard
@@ -263,6 +275,7 @@ export function DashboardPage() {
           value={<DashboardMetricValue value={kpi?.total_cost ?? 0} variant="currency" animated />}
           hint={t("dashboard.total_cost_hint")}
           icon={DollarSign}
+          hue="amber"
           option={totalCostOption}
         />
         <DashboardKpiCard
@@ -270,6 +283,7 @@ export function DashboardPage() {
           value={<DashboardMetricValue value={kpi?.failed_requests ?? 0} animated />}
           hint={t("dashboard.failed_hint")}
           icon={TriangleAlert}
+          hue="rose"
           option={failedRequestOption}
         />
         <DashboardKpiCard
@@ -281,6 +295,7 @@ export function DashboardPage() {
             <DashboardMetricValue key="input" value={kpi?.input_tokens ?? 0} />,
           )}
           icon={Database}
+          hue="teal"
           option={cacheRateOption}
         />
       </div>

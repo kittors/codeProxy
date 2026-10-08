@@ -64,21 +64,37 @@ export function KeyValueList({ title, entries }: { title: string; entries: Array
 export function SourceBadge({ source }: { source: string }) {
   const { t } = useTranslation();
   if (source === "custom" || source === "preset") {
-    return <SourcePill>{t("identity_fingerprint.source_custom")}</SourcePill>;
+    return <SourcePill tone="custom">{t("identity_fingerprint.source_custom")}</SourcePill>;
   }
   if (source === "learned") {
-    return <SourcePill>{t("identity_fingerprint.source_learned")}</SourcePill>;
+    return <SourcePill tone="learned">{t("identity_fingerprint.source_learned")}</SourcePill>;
   }
-  return <SourcePill>{t("identity_fingerprint.source_default")}</SourcePill>;
+  return <SourcePill tone="default">{t("identity_fingerprint.source_default")}</SourcePill>;
 }
 
 /**
- * 来源 / 状态小标签：中性淡底。来源只是分类（自定义、学习、默认），文字已经写明，
- * 不再按类别染红 / 绿 / 灰三色。
+ * 来源 / 状态小标签：基础样式是中性淡底，简约风格下来源只靠文字区分（自定义、学习、默认）；
+ * 多彩风格下按类别叠色：自定义红、学习绿，默认保持中性。
  */
-export function SourcePill({ children }: { children: ReactNode }) {
+const SOURCE_PILL_HUE = {
+  custom:
+    "colorful:bg-rose-50 colorful:text-rose-700 colorful:dark:bg-rose-400/10 colorful:dark:text-rose-200",
+  learned:
+    "colorful:bg-emerald-50 colorful:text-emerald-700 colorful:dark:bg-emerald-400/10 colorful:dark:text-emerald-200",
+  default: "",
+} as const;
+
+export function SourcePill({
+  tone = "default",
+  children,
+}: {
+  tone?: keyof typeof SOURCE_PILL_HUE;
+  children: ReactNode;
+}) {
   return (
-    <span className="rounded-full bg-ink/[0.05] px-2 py-0.5 text-xs font-semibold text-ink-2 dark:bg-white/[0.07]">
+    <span
+      className={`rounded-full bg-ink/[0.05] px-2 py-0.5 text-xs font-semibold text-ink-2 dark:bg-white/[0.07] ${SOURCE_PILL_HUE[tone]}`}
+    >
       {children}
     </span>
   );
@@ -109,10 +125,10 @@ export function ProviderActions({
   );
 }
 
-/** 需要留意的说明：共享提示条（淡底 + 琥珀图标，正文中性色），不再整段染成琥珀字。 */
+/** 需要留意的说明：共享提示条（淡底 + 琥珀图标）；简约风格正文中性色，多彩风格正文是琥珀字。 */
 export function ProviderNotice({ children }: { children: ReactNode }) {
   return (
-    <Callout tone="warning" className="mt-4">
+    <Callout tone="warning" className="mt-4 colorful:text-amber-900 colorful:dark:text-amber-100">
       {children}
     </Callout>
   );

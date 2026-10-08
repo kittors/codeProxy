@@ -200,7 +200,7 @@ export function NavList({
                   {item.dot ? (
                     <span
                       aria-hidden="true"
-                      className="relative h-1.5 w-1.5 shrink-0 rounded-full bg-accent"
+                      className="relative h-1.5 w-1.5 shrink-0 rounded-full bg-accent colorful:bg-sky-500"
                     />
                   ) : null}
                   {item.srHint ? <span className="sr-only">{item.srHint}</span> : null}

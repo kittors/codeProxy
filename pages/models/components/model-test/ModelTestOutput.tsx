@@ -31,8 +31,9 @@ function TextOutput({ text }: { text: string }) {
   return (
     <pre
       data-testid="model-test-text"
-      // 成功只用一层很淡的绿底表达，正文保持中性墨色：整段绿字读起来费劲（同 Callout）。
-      className="max-h-64 overflow-auto whitespace-pre-wrap rounded-lg bg-emerald-500/[0.07] px-3 py-2 text-xs text-ink"
+      // 成功用一层很淡的绿底表达；简约风格下正文是中性墨色（整段绿字读起来费劲，同 Callout），
+      // 多彩风格下正文沿用深绿字。
+      className="max-h-64 overflow-auto whitespace-pre-wrap rounded-lg bg-emerald-500/[0.07] px-3 py-2 text-xs text-ink colorful:text-emerald-900 colorful:dark:text-emerald-100"
     >
       {text || t("models_page.test_empty_response")}
     </pre>

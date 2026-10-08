@@ -38,6 +38,7 @@ export {
   chartGradient,
   chartPalette,
   chartTooltipStyle,
+  chartUsesIdentityColors,
   withAlpha,
 } from "./charts/chartTheme";
 export type { ChartPalette } from "./charts/chartTheme";
@@ -62,7 +63,23 @@ export { ConfirmModal } from "./overlays/ConfirmModal";
 export { ConfirmHost, confirmDialog } from "./overlays/confirmDialog";
 export { DialogIcon, dialogToneClass } from "./overlays/DialogIcon";
 export type { DialogIconSize, DialogSemanticTone, DialogTone } from "./overlays/DialogIcon";
-export { HUES, HUE_HEX, hueHex, isHue } from "./theme/hues";
+export {
+  HUES,
+  HUE_BUTTON_ICON,
+  HUE_DOT,
+  HUE_GLYPH,
+  HUE_HEX,
+  HUE_SOFT,
+  HUE_SOFT_BASE,
+  HUE_SOLID,
+  HUE_TILE,
+  hueForIcon,
+  hueForIconName,
+  iconHueClass,
+  isNeutralIconName,
+  hueHex,
+  isHue,
+} from "./theme/hues";
 export type { Hue } from "./theme/hues";
 export { useScrollFade } from "./hooks/useScrollFade";
 export { ScrollFade } from "./primitives/ScrollFade";
@@ -143,6 +160,44 @@ export { ToggleSwitch } from "./primitives/ToggleSwitch";
 export type { ToggleSwitchProps } from "./primitives/ToggleSwitch";
 
 export { ThemeProvider, useTheme, ThemeToggleButton } from "./theme/ThemeProvider";
+export type { ThemeMode, ThemePreference } from "./theme/ThemeProvider";
+export {
+  AppearanceProvider,
+  applyAppearanceToDom,
+  useAppearance,
+  useChartAppearanceKey,
+} from "./theme/AppearanceProvider";
+export {
+  ACCENT_PRESETS,
+  APPEARANCE_STORAGE_KEY,
+  BAR_THICKNESS_RANGE,
+  DEFAULT_APPEARANCE,
+  DEFAULT_STATUS_HEX,
+  STYLE_PRESETS,
+  TEXT_SCALE_RANGE,
+  UI_SCALE_RANGE,
+  WEIGHT_SHIFTS,
+  accentFill,
+  accentTokens,
+  appearanceAttributes,
+  appearanceVars,
+  applyStylePreset,
+  matchStylePreset,
+  normalizeAppearance,
+  parseStoredAppearance,
+  serializeAppearance,
+} from "./theme/appearance";
+export type {
+  AccentPreset,
+  AppearanceAttributes,
+  AppearanceSettings,
+  BarStyle,
+  ChartStyle,
+  IconStyle,
+  PaletteStyle,
+  StatusRole,
+  StylePresetId,
+} from "./theme/appearance";
 export { LanguageSelector } from "./theme/LanguageSelector";
 
 export { useCapsLock } from "./hooks/useCapsLock";

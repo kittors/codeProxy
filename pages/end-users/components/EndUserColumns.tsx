@@ -157,7 +157,7 @@ export function getEndUserColumns({
           <span className="inline-flex items-center gap-1">
             {!limit ? (
               <>
-                <InfinityIcon size={14} className="text-ink-3" />{" "}
+                <InfinityIcon size={14} className="text-ink-3 colorful:text-green-500" />{" "}
                 {t("api_keys_page.unlimited")}
               </>
             ) : (
@@ -182,7 +182,7 @@ export function getEndUserColumns({
           <span className="inline-flex items-center gap-1">
             {!limit ? (
               <>
-                <InfinityIcon size={14} className="text-ink-3" />{" "}
+                <InfinityIcon size={14} className="text-ink-3 colorful:text-green-500" />{" "}
                 {t("api_keys_page.unlimited")}
               </>
             ) : (
@@ -207,7 +207,7 @@ export function getEndUserColumns({
           <span className="inline-flex items-center gap-1">
             {!limit ? (
               <>
-                <InfinityIcon size={14} className="text-ink-3" />{" "}
+                <InfinityIcon size={14} className="text-ink-3 colorful:text-green-500" />{" "}
                 {t("api_keys_page.unlimited")}
               </>
             ) : (
@@ -232,7 +232,7 @@ export function getEndUserColumns({
           <span className="inline-flex items-center gap-1">
             {!limit ? (
               <>
-                <InfinityIcon size={14} className="text-ink-3" />{" "}
+                <InfinityIcon size={14} className="text-ink-3 colorful:text-green-500" />{" "}
                 {t("api_keys_page.unlimited")}
               </>
             ) : (
@@ -257,7 +257,7 @@ export function getEndUserColumns({
           <span className="inline-flex items-center gap-1">
             {!limit ? (
               <>
-                <InfinityIcon size={14} className="text-ink-3" />{" "}
+                <InfinityIcon size={14} className="text-ink-3 colorful:text-green-500" />{" "}
                 {t("api_keys_page.unlimited")}
               </>
             ) : (
@@ -279,7 +279,7 @@ export function getEndUserColumns({
           <button
             type="button"
             onClick={() => void handleViewResetHistory(row)}
-            className="tabular-nums font-medium text-accent-ink underline-offset-2 hover:underline"
+            className="tabular-nums font-medium text-accent-ink underline-offset-2 hover:underline colorful:text-orange-600 colorful:dark:text-orange-400"
             aria-label={t("end_users.view_reset_history")}
           >
             {count}

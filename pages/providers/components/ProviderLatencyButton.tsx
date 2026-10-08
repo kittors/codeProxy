@@ -13,8 +13,8 @@ export interface ProviderLatencyEntry {
  * Extracted from ProviderKeyListCard so the header can decide whether it has
  * anything to render before it renders a row for it.
  *
- * 延迟分档与代理池一致：快是绿、慢是琥珀、出错是红；200–500ms 属于正常范围，中性数字就够了
- * （以前三档绿 / 琥珀 / 红，一排卡片几乎每张都带颜色）。
+ * 延迟分档：快是绿、出错是红。简约风格与代理池一致——慢是琥珀，200–500ms 属于正常范围，
+ * 中性数字就够了；多彩风格是三档绿 / 琥珀 / 红。
  */
 export function ProviderLatencyButton({
   entry,
@@ -32,8 +32,8 @@ export function ProviderLatencyButton({
       : latencyMs < 200
         ? "text-emerald-700 dark:text-emerald-300"
         : latencyMs < 500
-          ? "text-ink-2"
-          : "text-amber-700 dark:text-amber-300";
+          ? "text-ink-2 colorful:text-amber-700 colorful:dark:text-amber-300"
+          : "text-amber-700 dark:text-amber-300 colorful:text-rose-700 colorful:dark:text-rose-300";
   const label = baseUrl
     ? `Check latency: ${baseUrl}`
     : "No base URL configured";

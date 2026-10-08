@@ -765,7 +765,7 @@ export function RoutingConfigEditor({
           }
           const channels = resolveGroupChannels(group);
           return (
-            <span className="inline-flex h-5 min-w-[24px] items-center justify-center rounded-md px-1.5 text-xs font-semibold tabular-nums bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]">
+            <span className="inline-flex h-5 min-w-[24px] items-center justify-center rounded-md px-1.5 text-xs font-semibold tabular-nums bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07] colorful:bg-sky-50 colorful:text-sky-700 colorful:dark:bg-sky-900/30 colorful:dark:text-sky-300">
               {channels.length}
             </span>
           );
@@ -950,7 +950,7 @@ export function RoutingConfigEditor({
               type="button"
               onClick={() => openEditGroup(group)}
               disabled={disabled}
-              className="rounded-lg p-1.5 text-ink-2 transition-colors hover:bg-hover hover:text-ink disabled:opacity-40"
+              className="rounded-lg p-1.5 text-ink-2 transition-colors hover:bg-hover hover:text-ink disabled:opacity-40 icon-hue:hover:text-amber-600 icon-hue:dark:hover:text-amber-400"
               title={t("channel_groups_page.edit_group")}
               aria-label={t("channel_groups_page.edit_group")}
             >
@@ -1015,7 +1015,7 @@ export function RoutingConfigEditor({
                     {displayTags.map((tag) => (
                       <span
                         key={tag}
-                        className="inline-flex items-center rounded-full px-2 py-0.5 text-2xs font-semibold bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]"
+                        className="inline-flex items-center rounded-full px-2 py-0.5 text-2xs font-semibold bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07] colorful:bg-sky-50 colorful:text-sky-700 colorful:dark:bg-sky-500/15 colorful:dark:text-sky-200"
                       >
                         {tag}
                       </span>

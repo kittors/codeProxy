@@ -424,7 +424,9 @@ export function WarmupPolicyModal({ open, onClose, allFileNames }: WarmupPolicyM
                         key={name}
                         className={[
                           "flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm transition-colors",
-                          excluded ? "bg-selected text-ink" : "text-ink-2 hover:bg-hover",
+                          excluded
+                            ? "bg-selected text-ink colorful:bg-rose-500/[0.06]"
+                            : "text-ink-2 hover:bg-hover",
                         ].join(" ")}
                       >
                         <Checkbox
@@ -437,7 +439,9 @@ export function WarmupPolicyModal({ open, onClose, allFileNames }: WarmupPolicyM
                         <span
                           className={[
                             "shrink-0 text-2xs font-medium",
-                            excluded ? "text-ink-2" : "text-ink-3",
+                            excluded
+                              ? "text-ink-2 colorful:text-rose-600 colorful:dark:text-rose-400"
+                              : "text-ink-3",
                           ].join(" ")}
                         >
                           {excluded

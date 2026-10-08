@@ -28,7 +28,7 @@ export interface CredentialImportProps {
 
 const STATUS_TONE: Record<ImportRow["status"], string> = {
   pending: "text-ink-3",
-  running: "text-accent-ink",
+  running: "text-accent-ink colorful:text-sky-600 colorful:dark:text-sky-300",
   ok: "text-emerald-700 dark:text-emerald-300",
   error: "text-rose-600 dark:text-rose-300",
 };
@@ -144,8 +144,10 @@ export function CredentialImport({
   return (
     <ScrollFade className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6">
       <div className="grid gap-4">
-        {/* 风险提示用共享的提示条：淡底 + 琥珀图标，正文保持中性色（以前是琥珀描边框 + 整段琥珀字）。 */}
-        <Callout tone="warning">{t(`${base}.risk`)}</Callout>
+        {/* 风险提示用共享的提示条：淡底 + 琥珀图标；简约风格正文保持中性色，多彩风格正文是琥珀字。 */}
+        <Callout tone="warning" className="colorful:text-amber-800 colorful:dark:text-amber-200">
+          {t(`${base}.risk`)}
+        </Callout>
         {steps.length > 0 ? (
           <ol className="grid list-decimal gap-1 pl-5 text-sm text-ink-2 marker:text-ink-3">
             {steps.map((step, index) => (
@@ -159,7 +161,7 @@ export function CredentialImport({
             components={{
               link: (
                 <a
-                  className="inline-flex items-center gap-0.5 text-accent-ink underline-offset-2 hover:underline"
+                  className="inline-flex items-center gap-0.5 text-accent-ink underline-offset-2 hover:underline colorful:text-sky-600 colorful:dark:text-sky-300"
                   href={t(`${base}.where_url`)}
                   target="_blank"
                   rel="noreferrer noopener"

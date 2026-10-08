@@ -32,11 +32,18 @@ function CodeBlock({ language, children }: { language: string; children: string 
   const normalized = children.endsWith("\n") ? children.slice(0, -1) : children;
 
   // 代码块在两种主题下都是 oneDark 的深底（语法高亮只有这一套配色）。轮廓交给伪元素细边，
-  // 不画 border；标题栏去掉了红黄绿三个「窗口按钮」圆点——纯装饰，三种颜色什么也不表达。
+  // 不画 border；标题栏红黄绿三个「窗口按钮」圆点是纯装饰，只在多彩风格下显示。
   return (
     <div className="cp-edge my-3 overflow-hidden rounded-xl bg-[#282c34]">
       <div className="flex items-center justify-between px-4 py-1.5">
-        <span className="font-mono text-xs font-medium text-white/50">{displayLang}</span>
+        <div className="flex items-center gap-3">
+          <div aria-hidden="true" className="hidden items-center gap-1.5 colorful:flex">
+            <span className="inline-block h-3 w-3 rounded-full bg-[#FF5F57]" />
+            <span className="inline-block h-3 w-3 rounded-full bg-[#FEBC2E]" />
+            <span className="inline-block h-3 w-3 rounded-full bg-[#28C840]" />
+          </div>
+          <span className="font-mono text-xs font-medium text-white/50">{displayLang}</span>
+        </div>
         <button
           type="button"
           onClick={handleCopy}

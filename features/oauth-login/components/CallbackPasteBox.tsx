@@ -320,7 +320,7 @@ export function CallbackPasteBox({
               initial={{ opacity: 0, y: -3 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              className="text-xs text-accent-ink"
+              className="text-xs text-accent-ink colorful:text-sky-700 colorful:dark:text-sky-300"
             >
               {t("add_account.paste.nudge")}
             </motion.p>

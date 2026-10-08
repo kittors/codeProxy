@@ -31,26 +31,76 @@ const LazyRichMarkdown = lazy(() =>
 );
 
 /**
- * 消息角色只靠图标和名称区分。以前每种角色一套描边和表头底色（用户天蓝、助手绿、工具琥珀、
- * 函数调用橙、函数返回青），一段对话里同时出现五六种颜色；颜色不表达任何状态，只是在分类。
+ * 角色色（多彩风格）：标题行的淡底与文字色；标题行里的图标和展开箭头基础类是弱化墨色，
+ * 多彩时跟着角色色走。悬停时基础类的 hover:bg-hover 会盖掉淡底，所以多彩下悬停重申同一层淡底、
+ * 只压暗一点。
  */
-const ROLE_STYLES: Record<string, { labelKey: string; icon: ReactNode }> = {
+type RoleTint = { header: string; icon: string };
+
+const ROLE_TINT_HOVER = "colorful:hover:brightness-95 colorful:dark:hover:brightness-110";
+
+const ROLE_TINTS = {
+  sky: {
+    header:
+      "colorful:bg-sky-50 colorful:text-sky-700 colorful:hover:bg-sky-50 colorful:dark:bg-sky-500/10 colorful:dark:text-sky-300 colorful:dark:hover:bg-sky-500/10",
+    icon: "colorful:text-sky-700 colorful:dark:text-sky-300",
+  },
+  emerald: {
+    header:
+      "colorful:bg-emerald-50 colorful:text-emerald-700 colorful:hover:bg-emerald-50 colorful:dark:bg-emerald-500/10 colorful:dark:text-emerald-300 colorful:dark:hover:bg-emerald-500/10",
+    icon: "colorful:text-emerald-700 colorful:dark:text-emerald-300",
+  },
+  amber: {
+    header:
+      "colorful:bg-amber-50 colorful:text-amber-700 colorful:hover:bg-amber-50 colorful:dark:bg-amber-500/10 colorful:dark:text-amber-300 colorful:dark:hover:bg-amber-500/10",
+    icon: "colorful:text-amber-700 colorful:dark:text-amber-300",
+  },
+  orange: {
+    header:
+      "colorful:bg-orange-50 colorful:text-orange-700 colorful:hover:bg-orange-50 colorful:dark:bg-orange-500/10 colorful:dark:text-orange-300 colorful:dark:hover:bg-orange-500/10",
+    icon: "colorful:text-orange-700 colorful:dark:text-orange-300",
+  },
+  teal: {
+    header:
+      "colorful:bg-teal-50 colorful:text-teal-700 colorful:hover:bg-teal-50 colorful:dark:bg-teal-500/10 colorful:dark:text-teal-300 colorful:dark:hover:bg-teal-500/10",
+    icon: "colorful:text-teal-700 colorful:dark:text-teal-300",
+  },
+} satisfies Record<string, RoleTint>;
+
+/**
+ * 消息角色的基础形态（简约风格）只靠图标和名称区分。多彩风格下按角色给标题行上色：
+ * 用户天蓝、助手绿、工具琥珀、函数调用橙、函数返回青；系统 / 开发者 / 指令 / 思考保持中性。
+ */
+const ROLE_STYLES: Record<string, { labelKey: string; icon: ReactNode; tint?: RoleTint }> = {
   system: { labelKey: "log_content.role_system", icon: <Settings size={15} /> },
   developer: { labelKey: "log_content.role_developer", icon: <Settings size={15} /> },
   instructions: { labelKey: "log_content.role_instructions", icon: <ClipboardList size={15} /> },
-  user: { labelKey: "log_content.role_user", icon: <User size={15} /> },
-  assistant: { labelKey: "log_content.role_assistant", icon: <Bot size={15} /> },
-  tool: { labelKey: "log_content.role_tool", icon: <Wrench size={15} /> },
-  function_call: { labelKey: "log_content.role_function_call", icon: <Zap size={15} /> },
+  user: { labelKey: "log_content.role_user", icon: <User size={15} />, tint: ROLE_TINTS.sky },
+  assistant: {
+    labelKey: "log_content.role_assistant",
+    icon: <Bot size={15} />,
+    tint: ROLE_TINTS.emerald,
+  },
+  tool: { labelKey: "log_content.role_tool", icon: <Wrench size={15} />, tint: ROLE_TINTS.amber },
+  function_call: {
+    labelKey: "log_content.role_function_call",
+    icon: <Zap size={15} />,
+    tint: ROLE_TINTS.orange,
+  },
   function_call_output: {
     labelKey: "log_content.role_function_return",
     icon: <Upload size={15} />,
+    tint: ROLE_TINTS.teal,
   },
   thinking: { labelKey: "log_content.role_thinking", icon: <Brain size={15} /> },
-  tool_use: { labelKey: "log_content.role_tool_use", icon: <Wrench size={15} /> },
+  tool_use: {
+    labelKey: "log_content.role_tool_use",
+    icon: <Wrench size={15} />,
+    tint: ROLE_TINTS.amber,
+  },
 };
 
-const DEFAULT_STYLE = {
+const DEFAULT_STYLE: { labelKey: string; icon: ReactNode; tint?: RoleTint } = {
   labelKey: "log_content.role_message",
   icon: <MessageSquare size={15} />,
 };
@@ -247,24 +297,28 @@ export function MessageBlock({
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(defaultExpanded);
   const style = ROLE_STYLES[role] || DEFAULT_STYLE;
+  const tint = style.tint;
 
   // 一条消息是弹窗里的一块淡底（不描边），标题行与正文之间靠留白分开，不画分隔线。
+  // 多彩风格下有角色色的标题行是一条色带，正文补回上边距，不贴着色带。
   return (
     <div className="overflow-hidden rounded-xl bg-subtle [contain:layout_paint]">
       <button
         type="button"
         onClick={() => setExpanded((prev) => !prev)}
-        className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-semibold text-ink transition-colors hover:bg-hover"
+        className={`flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-semibold text-ink transition-colors hover:bg-hover ${tint ? `${tint.header} ${ROLE_TINT_HOVER}` : ""}`}
       >
-        <span className="flex shrink-0 items-center text-ink-3">{style.icon}</span>
+        <span className={`flex shrink-0 items-center text-ink-3 ${tint?.icon ?? ""}`}>
+          {style.icon}
+        </span>
         <span className="flex-1 truncate">{t(style.labelKey)}</span>
         <ChevronDown
           size={16}
-          className={`shrink-0 text-ink-3 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
+          className={`shrink-0 text-ink-3 transition-transform duration-200 ${tint?.icon ?? ""} ${expanded ? "rotate-180" : ""}`}
         />
       </button>
       {expanded && (
-        <div className="px-4 pb-3 text-sm text-ink">
+        <div className={`px-4 pb-3 text-sm text-ink ${tint ? "colorful:pt-3" : ""}`}>
           <MarkdownContent content={content} />
         </div>
       )}

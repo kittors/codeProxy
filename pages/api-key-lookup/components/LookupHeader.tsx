@@ -150,8 +150,11 @@ export function LookupHeader({
                                   {account.user.display_name || account.user.username}
                                 </span>
                                 {isCurrent ? (
-                                  // 当前账号是「选中项」，对勾用强调色而不是成功绿。
-                                  <Check size={15} className="ml-auto shrink-0 text-accent-ink" />
+                                  // 当前账号是「选中项」：简约风格下对勾是强调色，多彩风格下是绿色。
+                                  <Check
+                                    size={15}
+                                    className="ml-auto shrink-0 text-accent-ink colorful:text-emerald-600 colorful:dark:text-emerald-400"
+                                  />
                                 ) : null}
                               </DropdownMenu.Item>
                             );

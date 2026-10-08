@@ -1,10 +1,11 @@
 import { type ReactNode } from "react";
 
 /**
- * 只有语义色调：数量、请求头这类计数一律中性；只有「失败」这种出了问题的数才用红色淡底。
- * 以前按类别上色（模型蓝、排除红、成功绿），一张卡片上一排三四种颜色，读起来花而且没有主次。
+ * 语义色调 danger 只给「失败」这种出了问题的数，两种配色风格都是红色淡底。
+ * 色相名（模型蓝、排除红、成功绿）是类别色：基础样式与 neutral 一样是中性淡底（简约风格），
+ * 多彩风格下才叠上对应的颜色；请求头这类计数始终中性。
  */
-type MetricTone = "neutral" | "danger";
+type MetricTone = "neutral" | "danger" | "blue" | "rose" | "emerald";
 
 interface ProviderMetricChipProps {
   tone?: MetricTone;
@@ -14,11 +15,16 @@ interface ProviderMetricChipProps {
   title?: string;
 }
 
+const NEUTRAL_CHIP = "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]";
+
 // Squared corners, 2xs type, flat tint: the badge language of the AI accounts
 // card, so a provider card and an account card read as the same component.
 const toneClass: Record<MetricTone, string> = {
-  neutral: "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]",
+  neutral: NEUTRAL_CHIP,
   danger: "bg-rose-500/10 text-rose-700 dark:text-rose-300",
+  blue: `${NEUTRAL_CHIP} colorful:bg-blue-50 colorful:text-blue-700 colorful:dark:bg-blue-500/15 colorful:dark:text-blue-200`,
+  rose: `${NEUTRAL_CHIP} colorful:bg-rose-50 colorful:text-rose-700 colorful:dark:bg-rose-500/15 colorful:dark:text-rose-200`,
+  emerald: `${NEUTRAL_CHIP} colorful:bg-emerald-50 colorful:text-emerald-700 colorful:dark:bg-emerald-500/15 colorful:dark:text-emerald-200`,
 };
 
 export function ProviderMetricChip({

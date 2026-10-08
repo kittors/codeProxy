@@ -360,7 +360,7 @@ describe("AuthFileDetailModal", () => {
     expect(chartOptions.at(-1)?.series?.every((item: any) => item.animation === true)).toBe(true);
   });
 
-  test("keeps the usage tab quiet: colour lives only in the chart data", () => {
+  test("keeps the usage tab flat: hues come from the chart data and appearance variants", () => {
     renderDetailModal();
 
     const chart = screen.getByTestId("auth-file-trend-chart");
@@ -369,21 +369,27 @@ describe("AuthFileDetailModal", () => {
     expect(chartBox).not.toMatch(/\bbg-(subtle|surface)\b/);
     expect(chartBox).not.toMatch(/\b(border|ring-1|shadow-card|cp-edge)\b/);
 
-    // 数据色仍然留在图里：请求数是强调蓝的渐变柱，费用是琥珀线（与仪表盘、监控中心同一组身份色）。
+    // 数据色留在图里：默认的多彩图表下请求数是请求蓝（#3b82f6）的渐变柱，费用是琥珀线
+    // （与仪表盘、监控中心同一组身份色）。
     const series = JSON.parse(chart.dataset.series ?? "[]");
-    expect(series[0].itemStyle.color.colorStops[0].color).toBe("rgba(42, 110, 232, 1)");
+    expect(series[0].itemStyle.color.colorStops[0].color).toBe("rgba(59, 130, 246, 1)");
     expect(series[1].lineStyle.color).toBe("#f59e0b");
 
-    // 统计格：一层无边淡底 + 中性线性图标，数值墨色；图标不再垫身份色底块（以前费用琥珀、Token 紫……）。
+    // 统计格：一层无边淡底 + 墨色数值。基础形态（单色图标）是中性线性图标；身份色图标块（费用琥珀、
+    // Token 紫……）只挂在 icon-hue: 变体上，图标着色为多彩时才显示。
+    const hueClass = /(?:^|\s)(?:text|bg|from|to)-(?:amber|violet|purple|sky|blue|pink|cyan|emerald|orange)-/;
     for (const label of ["Current cycle cost", "Current cycle tokens"]) {
       const card = screen.getByText(label).closest("div");
       if (!(card instanceof HTMLElement)) throw new Error(`Missing summary card for ${label}`);
       expect(card.className).toContain("bg-subtle");
       expect(card.className).not.toMatch(/\b(border|ring-1|shadow-card|cp-edge)\b/);
-      const icon = card.querySelector("[aria-hidden='true']");
-      expect(icon?.className ?? "").not.toMatch(
-        /\b(?:text|bg)-(?:amber|violet|purple|sky|blue|pink|cyan|emerald|orange)-/,
+      const [plainIcon, hueTile] = Array.from(card.querySelector("p")?.children ?? []).filter(
+        (node) => node.getAttribute("aria-hidden") === "true",
       );
+      expect(plainIcon?.className ?? "").toContain("icon-hue:hidden");
+      expect(plainIcon?.className ?? "").not.toMatch(hueClass);
+      expect(hueTile?.className.split(/\s+/)).toEqual(expect.arrayContaining(["hidden", "icon-hue:grid"]));
+      expect(hueTile?.className ?? "").not.toMatch(hueClass);
     }
     const costCard = screen.getByText("Current cycle cost").closest("div") as HTMLElement;
     expect(within(costCard).getByText("$1.2345")).toHaveClass("text-ink");

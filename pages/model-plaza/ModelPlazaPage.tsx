@@ -10,6 +10,7 @@ import {
   TabsList,
   TabsTrigger,
   TextInput,
+  iconHueClass,
   useToast,
 } from "@code-proxy/ui";
 import {
@@ -218,7 +219,11 @@ function ModelPlazaCard({
                 title={t("model_plaza.copy_id")}
                 aria-label={t("model_plaza.copy_id")}
               >
-                {copied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} className="text-ink-3" />}
+                {copied ? (
+                  <Check size={14} className="text-emerald-500" />
+                ) : (
+                  <Copy size={14} className={`text-ink-3 ${iconHueClass(Copy)}`} />
+                )}
               </button>
             </div>
             <div className="mt-1.5">
@@ -419,8 +424,8 @@ export function ModelPlazaPage() {
     <div className="flex min-w-0 flex-col">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-center gap-2.5">
-          {/* 标题前是线性图标，不垫图标块（同请求日志页）。 */}
-          <Store size={18} className="shrink-0 text-ink-3" aria-hidden="true" />
+          {/* 标题前是线性图标，不垫图标块（同请求日志页）；图标着色为多彩时按图标取色。 */}
+          <Store size={18} className={`shrink-0 text-ink-3 ${iconHueClass(Store)}`} aria-hidden="true" />
           <div>
             <h2 className="text-lg font-semibold tracking-tight text-ink">{t("model_plaza.title")}</h2>
             <p className="hidden text-xs text-ink-3 sm:block">

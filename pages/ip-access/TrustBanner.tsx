@@ -50,12 +50,18 @@ export function TrustBanner({ status }: { status: IpAccessStatus | null }) {
 }
 
 /**
- * 和共享的 Callout 同一种读法：同色系淡底 + 彩色图标，正文保持中性色，不描边。
- * 整段文字染成红 / 琥珀很难读，也会让一行提醒看起来像报错弹窗。
+ * 同色系淡底 + 彩色图标，不描边。简约风格下正文保持中性色（和共享的 Callout 同一种读法：
+ * 整段文字染成红 / 琥珀很难读）；多彩风格下正文叠回同色系的文字色。
  */
 const TONE_CLASS = {
-  danger: { box: "bg-rose-500/[0.08]", icon: "text-rose-600 dark:text-rose-400" },
-  warning: { box: "bg-amber-500/[0.09]", icon: "text-amber-600 dark:text-amber-300" },
+  danger: {
+    box: "bg-rose-500/[0.08] colorful:text-rose-800 colorful:dark:text-rose-200",
+    icon: "text-rose-600 dark:text-rose-400",
+  },
+  warning: {
+    box: "bg-amber-500/[0.09] colorful:text-amber-800 colorful:dark:text-amber-200",
+    icon: "text-amber-600 dark:text-amber-300",
+  },
 } as const;
 
 function Banner({

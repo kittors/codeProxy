@@ -7,32 +7,46 @@ import { DialogIcon } from "../../overlays/DialogIcon";
 import { hueHex, isHue } from "../hues";
 
 describe("icon tiles", () => {
-  test("only semantic tones carry colour; everything else is the neutral tile", () => {
+  test("tiles are neutral at base and take the icon's hue only through the icon-hue variant", () => {
     const { container, rerender } = render(
       <DialogIcon>
         <KeyRound />
       </DialogIcon>,
     );
     const tile = () => container.firstElementChild as HTMLElement;
-    expect(tile()).toHaveClass("text-ink-2");
-    // 不描边、不渐变：图标块只有一层淡底。
-    expect(tile().className).not.toMatch(/\bborder\b|gradient/);
+    // 单色图标（基础类）：一层中性淡底；多彩图标（icon-hue: 变体）：按图标取色相的渐变块，
+    // 钥匙是琥珀。两套类名都在元素上，由 <html data-icons> 决定哪套生效。
+    expect(tile()).toHaveClass("text-ink-2", "icon-hue:bg-gradient-to-b", "icon-hue:text-amber-600");
+    // 不描边：盒子的边一律用阴影表达。
+    expect(tile().className).not.toMatch(/(^|\s)border(\s|$)|border-/);
 
     rerender(
       <DialogIcon tone="danger">
         <Trash2 />
       </DialogIcon>,
     );
-    expect(tile()).toHaveClass("text-rose-600");
+    // 语义色调两种风格都带颜色，多彩时再叠同色渐变。
+    expect(tile()).toHaveClass("text-rose-600", "icon-hue:from-rose-500/[0.13]");
 
-    // 旧的「自动取色」和色相名都落到中性，不再按图标名上色。
-    for (const tone of ["auto", "teal", "violet"] as const) {
-      rerender(
-        <DialogIcon tone={tone}>
-          <KeyRound />
-        </DialogIcon>,
-      );
+    rerender(
+      <DialogIcon tone="violet">
+        <KeyRound />
+      </DialogIcon>,
+    );
+    expect(tile()).toHaveClass("text-ink-2", "icon-hue:text-violet-600");
+
+    // 明确要中性、或内容不是 lucide 图标（厂商 logo 自带品牌色）时，不叠任何色相。
+    for (const node of [
+      <DialogIcon key="neutral" tone="neutral">
+        <KeyRound />
+      </DialogIcon>,
+      <DialogIcon key="logo">
+        <img alt="" src="data:," />
+      </DialogIcon>,
+    ]) {
+      rerender(node);
       expect(tile()).toHaveClass("text-ink-2");
+      expect(tile().className).not.toContain("icon-hue:");
     }
   });
 });
@@ -47,7 +61,7 @@ describe("chart hues", () => {
 });
 
 describe("brand badges", () => {
-  test("plan badges carry the vendor colours and say which tier they are", () => {
+  test("plan badges carry the vendor colours, and the flagship tiers glow only in the colourful palette", () => {
     render(
       <>
         <PlanBadge vendor="codex" tier="ultra">
@@ -64,9 +78,11 @@ describe("brand badges", () => {
     const codex = screen.getByText("PRO 20X").closest("[data-plan-tier]") as HTMLElement;
     expect(codex).toHaveAttribute("data-plan-tier", "ultra");
     expect(codex.style.getPropertyValue("--brand-l")).toBe("#3941ff");
-    // 旗舰档：品牌实色 + 皇冠，不再叠渐变、外发光和循环流光。
-    expect(codex).toHaveClass("bg-[var(--brand-fill)]");
-    expect(codex.className).not.toMatch(/gradient|shine|ring-/);
+    // 旗舰档：简约风格是品牌实色 + 皇冠；多彩风格叠双向渐变与光晕，流光由 brandBadges.css
+    // 只在 data-palette="colorful" 下播放。
+    expect(codex).toHaveClass("bg-[var(--brand-fill)]", "brand-badge-shine");
+    expect(codex.className).toContain("colorful:bg-[linear-gradient(115deg");
+    expect(codex.className).not.toMatch(/(^|\s)bg-\[linear-gradient/);
     expect(codex.querySelector("svg.lucide-crown")).not.toBeNull();
 
     const claude = screen.getByText("PLUS").closest("[data-plan-tier]") as HTMLElement;
@@ -77,11 +93,13 @@ describe("brand badges", () => {
     expect(unknown.style.getPropertyValue("--brand-l")).toBe("");
   });
 
-  test("provider tags are neutral chips; the vendor logo carries the brand", () => {
-    render(<ProviderTag vendor="gemini-cli">gemini-cli</ProviderTag>);
-    const tag = screen.getByText("gemini-cli");
-    expect(tag).toHaveClass("text-ink-2");
-    expect(tag.style.getPropertyValue("--brand-l")).toBe("");
+  test("provider tags are neutral chips that take the brand tint in the colourful palette", () => {
+    render(<ProviderTag vendor="claude">claude</ProviderTag>);
+    const tag = screen.getByText("claude");
+    expect(tag).toHaveClass("text-ink-2", "colorful:text-[var(--brand-text)]");
+    expect(tag.style.getPropertyValue("--brand-l")).toBe("#d97757");
+    // logo 默认不画：只放图标的紧凑卡片会把 VendorIcon 当内容传进来，再画一个就成了两个。
+    expect(tag.querySelector("img, svg")).toBeNull();
   });
 });
 

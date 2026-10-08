@@ -30,6 +30,7 @@ import { changePasswordRoute } from "./change-password/route";
 import { auditLogsRoute } from "./audit-logs/route";
 import { ipAccessRoute } from "./ip-access/route";
 import { menuManagementRoute } from "./menu-management/route";
+import { appearanceRoute } from "./appearance/route";
 
 export interface PageRoute {
   path: string;
@@ -56,6 +57,7 @@ export const pageRoutes: PageRoute[] = [
   auditLogsRoute,
   ipAccessRoute,
   menuManagementRoute,
+  appearanceRoute,
   dashboardRoute,
   monitorRoute,
   requestLogsRoute,

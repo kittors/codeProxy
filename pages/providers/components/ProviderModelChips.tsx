@@ -28,8 +28,8 @@ export function ProviderModelChips({
   };
 
   // Same flat, squared, 2xs badge as the metric chips and the AI account card.
-  // 外观取全站模型标签（modelVendorBrand）：现在一律是中性淡底，品牌色只留在厂商 logo 上；
-  // 「+N」同样中性。
+  // 外观取全站模型标签（modelVendorBrand）：简约风格是中性淡底；多彩风格每个模型按自己的
+  // 厂商品牌色上淡底（claude 珊瑚橙、gpt 绿……）。「+N」代表一组不同厂商的模型，保持中性。
   //
   // Chips are sized by their text, not by an equal-width track. On a 3-column
   // grid every chip was as wide as a third of the card, so "gpt-5.2" sat in a

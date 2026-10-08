@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { Loader2, Search, Tags, X } from "lucide-react";
 import type { ContentModerationTagMode } from "@code-proxy/api-client";
-import { Button, Select, TextInput, surface } from "@code-proxy/ui";
+import { Button, Select, TextInput, surface, iconHueClass } from "@code-proxy/ui";
 
 export type PickerTab = "auth" | "provider";
 export type ProviderScope = "provider_key" | "provider";
@@ -113,7 +113,7 @@ export function ChannelPickerFilters({
       <div>
         <div className="flex flex-wrap items-center gap-2">
           <span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-medium text-ink-2">
-            <Tags size={14} className="text-ink-3" aria-hidden="true" />
+            <Tags size={14} className={`text-ink-3 ${iconHueClass(Tags)}`} aria-hidden="true" />
             {t("content_moderation.tags")}
           </span>
           {tags.map((tag) => (

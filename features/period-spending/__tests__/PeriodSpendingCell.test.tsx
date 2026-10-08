@@ -60,8 +60,9 @@ describe("PeriodSpendingCell", () => {
     render(<PeriodSpendingCell t={t} items={[]} />);
     const chip = screen.getByText("Unlimited");
     expect(chip).toBeInTheDocument();
-    // 「不限制」只是没有上限，不是「成功」：中性淡底标签，不用绿色、不描边。
-    expect(chip.className).not.toMatch(/emerald|(^|\s)border(-|\s|$)/);
+    // 「不限制」的基础形态是中性淡底标签（简约风格），绿色只挂在多彩变体上；不描边。
+    expect(chip).toHaveClass("bg-ink/[0.05]", "text-ink-2", "colorful:bg-emerald-50");
+    expect(chip.className).not.toMatch(/(^|\s)(bg|text)-emerald-|(^|\s)border(-|\s|$)/);
   });
 
   test("surfaces the 5h reset instant, and only where the backend anchors one", () => {

@@ -29,15 +29,15 @@ import {
 import { ProxyFormModal, type ProxyFormField } from "./ProxyFormModal";
 
 /**
- * 延迟分档只用语义色：快是绿、慢是琥珀、失败是红；中等延迟（300ms–1s）属于正常范围，
- * 中性标签 + 数字就够了。以前「慢」用橙色、「中等」用琥珀，两档暖色挨在一起分不清，
- * 橙色也不在语义色里。
+ * 延迟分档。简约风格只用语义色：快是绿、慢是琥珀、失败是红；中等延迟（300ms–1s）属于正常范围，
+ * 中性标签 + 数字就够了。多彩风格下中等叠回琥珀、慢叠回橙色，每一档都有自己的颜色。
  */
 const latencyToneClasses: Record<ProxyLatencyTone, string> = {
   none: "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]",
   fast: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
-  medium: "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]",
-  slow: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
+  medium:
+    "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07] colorful:bg-amber-50 colorful:text-amber-700 colorful:dark:bg-amber-950/30 colorful:dark:text-amber-200",
+  slow: "bg-amber-500/10 text-amber-700 dark:text-amber-300 colorful:bg-orange-50 colorful:text-orange-700 colorful:dark:bg-orange-950/30 colorful:dark:text-orange-200",
   failed: "bg-rose-500/10 text-rose-700 dark:text-rose-300",
 };
 

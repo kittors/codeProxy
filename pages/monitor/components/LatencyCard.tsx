@@ -57,7 +57,7 @@ export function LatencyCard({
 
   return (
     <Card
-      title={<MonitorCardTitle icon={Timer} label={t("monitor_center.latency.title")} />}
+      title={<MonitorCardTitle icon={Timer} hue="indigo" label={t("monitor_center.latency.title")} />}
       actions={
         legacy ? null : (
           <Tabs value={metric} onValueChange={(next) => setMetric(next as LatencyMetric)} size="sm">
@@ -96,7 +96,7 @@ export function LatencyCard({
             {PERCENTILES.map((item) => (
               <div key={item.key} className="min-w-0">
                 <dt
-                  className={`text-2xs font-semibold tracking-wide ${item.key === "p95_ms" ? "text-accent-ink" : "text-ink-3"}`}
+                  className={`text-2xs font-semibold tracking-wide ${item.key === "p95_ms" ? "text-accent-ink colorful:text-indigo-600 colorful:dark:text-indigo-300" : "text-ink-3"}`}
                 >
                   {item.label}
                 </dt>

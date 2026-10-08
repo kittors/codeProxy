@@ -5,9 +5,10 @@ import { ModelVendorTile, modelVendorBrand } from "@features/model-tags";
 import type { ModelOwnerPreset } from "../types";
 
 /**
- * 模型库左侧归属列表的一行：厂商 logo + 名称 + 模型数。认得出的归属方（openai、anthropic、
- * google……）带自家 logo，自定义归属方露出首字母；数量是中性胶囊。悬停时数量左移，让出编辑、
- * 删除按钮；选中态用唯一的强调色淡底，不描边。
+ * 模型库左侧归属列表的一行：厂商标识 + 名称 + 模型数。认得出的归属方（openai、anthropic、
+ * google……）带自家 logo，自定义归属方露出首字母；数量胶囊在简约风格下是中性的，多彩风格下是
+ * 归属方的品牌色（见 modelVendorBrand）。悬停时数量左移，让出编辑、删除按钮；选中态用强调色淡底，
+ * 不描边——颜色只用来认人，不用来表示状态。
  */
 export function OwnerSidebarItem({
   owner,

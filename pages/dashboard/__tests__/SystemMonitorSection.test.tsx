@@ -57,7 +57,7 @@ describe("SystemMonitorSection", () => {
     expect(screen.queryByText(/sqlite/i)).toBeNull();
   });
 
-  test("keeps every resource on the accent and switches to amber / red only as it climbs", () => {
+  test("draws each resource in both styles and switches to amber / red only as it climbs", () => {
     render(
       <SystemMonitorSection
         stats={{ ...stats, system_cpu_pct: 23, system_mem_pct: 85, process_cpu_pct: 97, process_mem_pct: 7 }}
@@ -68,24 +68,29 @@ describe("SystemMonitorSection", () => {
 
     const [sysCpu, sysMem, svcCpu, svcMem] = screen.getAllByTestId("monitor-meter-fill");
     expect(sysCpu).toHaveStyle({ width: "23%" });
-    // 正常档一律强调色：颜色只在出问题的那一张卡上出现，不再按类别各用一种颜色。
+    // 简约风格（基础类）：正常档一律强调色，颜色只在出问题的那一张卡上出现。
     expect(sysCpu).toHaveClass("bg-accent");
     expect(sysMem).toHaveClass("bg-amber-500");
     expect(svcCpu).toHaveClass("bg-rose-500");
     expect(svcMem).toHaveClass("bg-accent");
-    expect(sysCpu.className).not.toContain("gradient");
+    // 多彩风格（colorful: 变体）：正常档用指标的分类色——CPU 天蓝、内存紫——告警档覆盖成琥珀 / 红。
+    expect(sysCpu).toHaveClass("colorful:from-sky-400", "colorful:to-blue-500");
+    expect(svcMem).toHaveClass("colorful:from-violet-400");
+    expect(sysMem).toHaveClass("colorful:from-amber-300");
+    expect(svcCpu).toHaveClass("colorful:from-rose-400");
+    expect(sysCpu.parentElement).toHaveClass("bg-track", "colorful:bg-sky-500/10");
     // 进度条首次出现从 0 长到实际值，减少动态效果时关掉。
     expect(sysCpu.className).toContain("motion-safe:animate-[quota-bar-grow");
     expect(screen.getByRole("img", { name: "Critical" })).toBeInTheDocument();
   });
 
-  test("labels the health score and disk state with quiet pills and shows the live channel", () => {
+  test("labels the health score and disk state in both styles and shows the live channel", () => {
     render(<SystemMonitorSection stats={stats} connected apiKeyCount={1} />);
 
-    // 夹具的加权健康分是 88.5，落在「良好」档；磁盘 40% 是「正常」。一切正常不是需要注意的
-    // 消息，标签是中性的灰，颜色留给留意和告急。
-    expect(screen.getByText("Good")).toHaveClass("text-ink-2");
-    expect(screen.getByText("Normal")).toHaveClass("text-ink-2");
+    // 夹具的加权健康分是 88.5，落在「良好」档；磁盘 40% 是「正常」。简约风格下一切正常不是
+    // 需要注意的消息，标签是中性的灰；多彩风格下是绿色标签。
+    expect(screen.getByText("Good")).toHaveClass("text-ink-2", "colorful:text-emerald-700");
+    expect(screen.getByText("Normal")).toHaveClass("text-ink-2", "colorful:text-emerald-700");
     expect(screen.getByText("Live")).toBeInTheDocument();
     // 「已用」出现两次：环中央的说明，和环下方图例行（图例改成纯文字行，不再是淡底小块）。
     expect(screen.getAllByText("Used", { selector: "span" })).toHaveLength(2);

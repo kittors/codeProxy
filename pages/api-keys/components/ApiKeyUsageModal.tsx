@@ -218,7 +218,7 @@ export function ApiKeyUsageModal({
             <div className="text-xs font-medium text-ink-2">
               {t("api_keys_page.usage_summary_success_rate")}
             </div>
-            <div className="mt-2 font-mono text-xl font-semibold tabular-nums text-ink">
+            <div className="mt-2 font-mono text-xl font-semibold tabular-nums text-ink colorful:text-emerald-700 colorful:dark:text-emerald-300">
               {usageSummary.successRate.toFixed(1)}%
             </div>
             <div className={`mt-0.5 ${metricLabel}`}>{t("api_keys_page.usage_summary_filtered")}</div>

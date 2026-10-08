@@ -7,7 +7,8 @@ export type LandingButtonTone = "primary" | "outline" | "invert";
  * 落地页按钮的唯一样式来源。
  *
  * 之前顶栏用设计系统的黑底 Button、hero 用靛蓝按钮，同屏两套主色显得割裂；
- * 这里统一收口：主按钮是全站唯一的强调色（蓝），反色区（深底）才切到白底按钮。
+ * 这里统一收口：主按钮是全站的强调色（多彩风格默认墨色，简约风格是蓝），反色区（深底）才切到
+ * 白底按钮。
  * 描边按钮和控件一样用阴影描边（shadow-control），不画 border；焦点也是同一套阴影焦点环。
  */
 const TONE_CLASS: Record<LandingButtonTone, string> = {

@@ -105,7 +105,7 @@ export function useModelColumns({
         key: "owner",
         label: t("models_page.col_owner"),
         width: COLUMN_WIDTH.compact,
-        // 归属是中性标签 + 归属方 logo：认人靠 logo，标签不再按品牌上色。
+        // 归属标签 + 归属方 logo；标签配色（多彩风格下的品牌淡底）由 ModelOwnerTag 统一决定。
         render: (row) => (row.owned_by ? <ModelOwnerTag owner={row.owned_by} withLogo /> : "-"),
       },
       {
@@ -174,7 +174,11 @@ export function useModelColumns({
                   icon: <Power size={15} />,
                   visible: Boolean(onToggleEnabled),
                   disabled: isToggling,
-                  // 行内操作图标一律用共享 ghost 按钮的中性墨色：启用状态看「状态」列，不靠图标染绿。
+                  // 简约风格下用共享 ghost 按钮的中性墨色（启用状态看「状态」列）；
+                  // 多彩风格下启用中的开关是绿色，停用的开关悬停时提示红色。
+                  className: row.enabled
+                    ? "colorful:text-emerald-500 colorful:hover:bg-emerald-50 colorful:dark:text-emerald-400 colorful:dark:hover:bg-emerald-900/20"
+                    : "colorful:hover:bg-red-50 colorful:hover:text-red-500 colorful:dark:hover:bg-red-900/20 colorful:dark:hover:text-red-400",
                   onClick: () => onToggleEnabled?.(row),
                 },
                 {
@@ -182,6 +186,7 @@ export function useModelColumns({
                   label: testLabel,
                   icon: <FlaskConical size={15} />,
                   visible: Boolean(onTestModel),
+                  className: "icon-hue:hover:text-sky-600 icon-hue:dark:hover:text-sky-400",
                   onClick: () => onTestModel?.(row),
                 },
                 {

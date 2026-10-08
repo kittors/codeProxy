@@ -57,7 +57,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { TextInput, floatingPanelSurface, resolveMenuIcon, ScrollFade } from "@code-proxy/ui";
+import { TextInput, floatingPanelSurface, resolveMenuIcon, iconHueClass, ScrollFade } from "@code-proxy/ui";
 
 
 type IconOption = { name: string; icon: LucideIcon };
@@ -205,7 +205,9 @@ export function MenuIconPicker({
               if (!disabled) setOpen(true);
             }}
             startAdornment={
-              value ? <SelectedIcon size={16} className="text-ink-3" aria-hidden="true" /> : null
+              value ? (
+                <SelectedIcon size={16} className={`text-ink-3 ${iconHueClass(SelectedIcon)}`} aria-hidden="true" />
+              ) : null
             }
             endAdornment={
               value && !disabled ? (

@@ -1,5 +1,6 @@
 import { AlertTriangle, CheckCircle2, Info, OctagonAlert } from "lucide-react";
 import type { ReactNode } from "react";
+import { HUE_GLYPH, hueForIcon } from "../theme/hues";
 import { cn } from "../utils/selectStyles";
 
 export type CalloutTone = "neutral" | "info" | "success" | "warning" | "danger";
@@ -50,8 +51,10 @@ export function Callout({
 }) {
   const styles = TONE_CLASS[tone];
   const resolvedIcon = icon === false ? null : (icon ?? DEFAULT_ICON[tone]);
-  // 中性提示条的图标保持中性：颜色只留给语义色调，否则一个普通说明会和警告抢注意力。
-  const iconClass = styles.icon;
+  // 中性提示条的底色保持灰；图标着色为「多彩」时图标按全站的「图标 → 色相」上色（锁是紫、
+  // 信息是天蓝……），「单色」时保持中性。语义色调的图标颜色不变。
+  const neutralHue = tone === "neutral" ? hueForIcon(resolvedIcon) : null;
+  const iconClass = neutralHue ? cn(styles.icon, HUE_GLYPH[neutralHue]) : styles.icon;
   return (
     <div
       role={role}
