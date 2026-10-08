@@ -91,7 +91,8 @@ export function OpenAIProviderModal({
       <div className="space-y-5">
         <OpenAIProviderBasicSection openaiDraft={openaiDraft} setOpenaiDraft={setOpenaiDraft} />
 
-        <div className="rounded-xl border border-line bg-surface p-4 shadow-sm">
+        {/* 弹窗里只有一层：审核配置用无边淡底分组，分区之间靠留白，不再画分隔线、套描边卡。 */}
+        <div className="rounded-2xl bg-subtle p-4">
           <ModerationProfileSelect
             canRead={moderationPerms.canRead}
             canWrite={moderationPerms.canWrite}
@@ -103,7 +104,7 @@ export function OpenAIProviderModal({
           />
         </div>
 
-        <div className="border-t border-line pt-5">
+        <div className="pt-4">
           <OpenAIKeyEntriesEditor
             openaiDraft={openaiDraft}
             setOpenaiDraft={setOpenaiDraft}
@@ -113,7 +114,7 @@ export function OpenAIProviderModal({
           />
         </div>
 
-        <div className="border-t border-line pt-5">
+        <div className="pt-4">
           <OpenAIProviderModelsSection
             openaiDraft={openaiDraft}
             setOpenaiDraft={setOpenaiDraft}

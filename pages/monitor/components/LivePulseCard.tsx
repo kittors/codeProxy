@@ -50,7 +50,6 @@ export function LivePulseCard({
   const title = (
     <MonitorCardTitle
       icon={RadioTower}
-      hue="blue"
       label={t("monitor_center.live.title")}
       note={t("monitor_center.live.note")}
     />

@@ -30,88 +30,29 @@ const LazyRichMarkdown = lazy(() =>
   import("./rendering-markdown").then((mod) => ({ default: mod.RichMarkdown })),
 );
 
-const ROLE_STYLES: Record<
-  string,
-  { labelKey: string; icon: ReactNode; border: string; headerBg: string; headerText: string }
-> = {
-  system: {
-    labelKey: "log_content.role_system",
-    icon: <Settings size={15} />,
-    border: "border-line-strong",
-    headerBg: "bg-hover",
-    headerText: "text-ink",
-  },
-  developer: {
-    labelKey: "log_content.role_developer",
-    icon: <Settings size={15} />,
-    border: "border-line-strong",
-    headerBg: "bg-hover",
-    headerText: "text-ink",
-  },
-  instructions: {
-    labelKey: "log_content.role_instructions",
-    icon: <ClipboardList size={15} />,
-    border: "border-line-strong",
-    headerBg: "bg-hover",
-    headerText: "text-ink",
-  },
-  user: {
-    labelKey: "log_content.role_user",
-    icon: <User size={15} />,
-    border: "border-sky-500/25 dark:border-sky-400/20",
-    headerBg: "bg-sky-50 dark:bg-sky-500/10",
-    headerText: "text-sky-700 dark:text-sky-300",
-  },
-  assistant: {
-    labelKey: "log_content.role_assistant",
-    icon: <Bot size={15} />,
-    border: "border-emerald-500/25 dark:border-emerald-400/20",
-    headerBg: "bg-emerald-50 dark:bg-emerald-500/10",
-    headerText: "text-emerald-700 dark:text-emerald-300",
-  },
-  tool: {
-    labelKey: "log_content.role_tool",
-    icon: <Wrench size={15} />,
-    border: "border-amber-500/25 dark:border-amber-400/20",
-    headerBg: "bg-amber-50 dark:bg-amber-500/10",
-    headerText: "text-amber-700 dark:text-amber-300",
-  },
-  function_call: {
-    labelKey: "log_content.role_function_call",
-    icon: <Zap size={15} />,
-    border: "border-orange-500/25 dark:border-orange-400/20",
-    headerBg: "bg-orange-50 dark:bg-orange-500/10",
-    headerText: "text-orange-700 dark:text-orange-300",
-  },
+/**
+ * 消息角色只靠图标和名称区分。以前每种角色一套描边和表头底色（用户天蓝、助手绿、工具琥珀、
+ * 函数调用橙、函数返回青），一段对话里同时出现五六种颜色；颜色不表达任何状态，只是在分类。
+ */
+const ROLE_STYLES: Record<string, { labelKey: string; icon: ReactNode }> = {
+  system: { labelKey: "log_content.role_system", icon: <Settings size={15} /> },
+  developer: { labelKey: "log_content.role_developer", icon: <Settings size={15} /> },
+  instructions: { labelKey: "log_content.role_instructions", icon: <ClipboardList size={15} /> },
+  user: { labelKey: "log_content.role_user", icon: <User size={15} /> },
+  assistant: { labelKey: "log_content.role_assistant", icon: <Bot size={15} /> },
+  tool: { labelKey: "log_content.role_tool", icon: <Wrench size={15} /> },
+  function_call: { labelKey: "log_content.role_function_call", icon: <Zap size={15} /> },
   function_call_output: {
     labelKey: "log_content.role_function_return",
     icon: <Upload size={15} />,
-    border: "border-teal-500/25 dark:border-teal-400/20",
-    headerBg: "bg-teal-50 dark:bg-teal-500/10",
-    headerText: "text-teal-700 dark:text-teal-300",
   },
-  thinking: {
-    labelKey: "log_content.role_thinking",
-    icon: <Brain size={15} />,
-    border: "border-line-strong",
-    headerBg: "bg-hover",
-    headerText: "text-ink",
-  },
-  tool_use: {
-    labelKey: "log_content.role_tool_use",
-    icon: <Wrench size={15} />,
-    border: "border-amber-500/25 dark:border-amber-400/20",
-    headerBg: "bg-amber-50 dark:bg-amber-500/10",
-    headerText: "text-amber-700 dark:text-amber-300",
-  },
+  thinking: { labelKey: "log_content.role_thinking", icon: <Brain size={15} /> },
+  tool_use: { labelKey: "log_content.role_tool_use", icon: <Wrench size={15} /> },
 };
 
 const DEFAULT_STYLE = {
   labelKey: "log_content.role_message",
   icon: <MessageSquare size={15} />,
-  border: "border-line-strong",
-  headerBg: "bg-subtle",
-  headerText: "text-ink-2",
 };
 
 function cleanContent(raw: string): string {
@@ -139,9 +80,15 @@ function MarkdownBlock({ text }: { text: string }) {
   );
 }
 
+/*
+ * 消息正文里的 XML 标签段（<context>…</context> 这类）：消息本身已经是一块淡底，标签段再叠一层
+ * 半透明的墨色 / 白色，比所在的块深（浅色）或亮（深色）一档，不描边。
+ */
+const TAG_BLOCK = "rounded-lg bg-ink/[0.04] dark:bg-white/[0.05]";
+
 function TagBadge({ name, content }: { name: string; content: string }) {
   return (
-    <div className="flex items-baseline gap-2 rounded-lg bg-subtle px-3 py-2">
+    <div className={`flex items-baseline gap-2 px-3 py-2 ${TAG_BLOCK}`}>
       <code className="shrink-0 rounded bg-selected px-1.5 py-0.5 font-mono text-xs text-ink-3">
         {name}
       </code>
@@ -161,11 +108,11 @@ function TagSection({
 }) {
   const [expanded, setExpanded] = useState(defaultExpanded);
   return (
-    <div className="overflow-hidden rounded-lg border border-line">
+    <div className={`overflow-hidden ${TAG_BLOCK}`}>
       <button
         type="button"
         onClick={() => setExpanded((prev) => !prev)}
-        className="flex w-full items-center gap-2 bg-subtle px-3.5 py-2 text-left text-xs font-medium text-ink-3 transition-colors hover:bg-hover"
+        className="flex w-full items-center gap-2 px-3.5 py-2 text-left text-xs font-medium text-ink-3 transition-colors hover:bg-hover"
       >
         <code className="shrink-0 rounded bg-selected px-1.5 py-0.5 font-mono text-xs text-ink-2">
           {name}
@@ -177,7 +124,7 @@ function TagSection({
         />
       </button>
       {expanded && (
-        <div className="border-t border-inherit px-3.5 py-3 text-sm text-ink">
+        <div className="px-3.5 pb-3 text-sm text-ink">
           <MarkdownContent content={content} />
         </div>
       )}
@@ -301,24 +248,23 @@ export function MessageBlock({
   const [expanded, setExpanded] = useState(defaultExpanded);
   const style = ROLE_STYLES[role] || DEFAULT_STYLE;
 
+  // 一条消息是弹窗里的一块淡底（不描边），标题行与正文之间靠留白分开，不画分隔线。
   return (
-    <div
-      className={`overflow-hidden rounded-xl border ${style.border} transition-colors [contain:layout_paint]`}
-    >
+    <div className="overflow-hidden rounded-xl bg-subtle [contain:layout_paint]">
       <button
         type="button"
         onClick={() => setExpanded((prev) => !prev)}
-        className={`flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-semibold transition-colors ${style.headerBg} ${style.headerText} hover:brightness-95 dark:hover:brightness-110`}
+        className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-semibold text-ink transition-colors hover:bg-hover"
       >
-        <span className="shrink-0 flex items-center">{style.icon}</span>
+        <span className="flex shrink-0 items-center text-ink-3">{style.icon}</span>
         <span className="flex-1 truncate">{t(style.labelKey)}</span>
         <ChevronDown
           size={16}
-          className={`shrink-0 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
+          className={`shrink-0 text-ink-3 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
         />
       </button>
       {expanded && (
-        <div className="border-t border-inherit px-4 py-3 text-sm text-ink">
+        <div className="px-4 pb-3 text-sm text-ink">
           <MarkdownContent content={content} />
         </div>
       )}

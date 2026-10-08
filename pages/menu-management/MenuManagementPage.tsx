@@ -15,7 +15,6 @@ import {
   resolveMenuIcon,
   useToast,
   type DataTableColumn,
-  surface,
 } from "@code-proxy/ui";
 import { useAuth } from "@app/providers/AuthProvider";
 import { MenuDeleteConfirm } from "./MenuDeleteConfirm";
@@ -30,22 +29,11 @@ const displayCell = (value: string | null | undefined, fallback = "—") => {
   return text || fallback;
 };
 
-const typeBadgeClass = (type: MenuType) => {
-  switch (type) {
-    case "directory":
-      return "bg-blue-500/15 text-blue-600 dark:text-blue-300";
-    case "menu":
-      return "bg-slate-500/15 text-slate-600 dark:text-slate-300";
-    case "button":
-      return "bg-rose-500/15 text-rose-600 dark:text-rose-300";
-    case "embed":
-      return "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300";
-    case "link":
-      return "bg-amber-500/15 text-amber-700 dark:text-amber-300";
-    default:
-      return "bg-slate-500/15 text-slate-600";
-  }
-};
+/**
+ * 菜单类型、徽标都是中性淡底标签。以前五种类型各染一种颜色（蓝 / 灰 / 红 / 绿 / 琥珀），
+ * 一列里红绿并排像是状态告警；类型靠文字区分就够了，颜色只留给「启用 / 停用」这类状态。
+ */
+const NEUTRAL_TAG = "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]";
 
 export function MenuManagementPage() {
   const { t } = useTranslation();
@@ -258,19 +246,19 @@ export function MenuManagementPage() {
               ) : (
                 <span className="h-7 w-7" aria-hidden="true" />
               )}
-              <Icon size={16} className="shrink-0 text-slate-400" aria-hidden="true" />
+              <Icon size={16} className="shrink-0 text-ink-3" aria-hidden="true" />
               <span className="min-w-0">
                 <span className="flex min-w-0 items-center gap-1.5">
-                  <span className="truncate font-medium text-slate-900 dark:text-white">
-                    {label}
-                  </span>
+                  <span className="truncate font-medium text-ink">{label}</span>
                   {menu.badge_content ? (
-                    <span className="shrink-0 rounded-full bg-blue-500 px-1.5 py-0.5 text-2xs font-medium text-white">
+                    <span
+                      className={`shrink-0 rounded-full px-1.5 py-0.5 text-2xs font-medium ${NEUTRAL_TAG}`}
+                    >
                       {menu.badge_content}
                     </span>
                   ) : null}
                 </span>
-                <span className="block truncate text-xs text-slate-400">{menu.code}</span>
+                <span className="block truncate text-xs text-ink-3">{menu.code}</span>
               </span>
             </div>
           );
@@ -282,7 +270,7 @@ export function MenuManagementPage() {
         width: COLUMN_WIDTH.badge,
         render: (menu) => (
           <span
-            className={`inline-flex rounded-md px-2 py-0.5 text-xs font-medium ${typeBadgeClass(menu.type)}`}
+            className={`inline-flex rounded-md px-2 py-0.5 text-xs font-medium ${NEUTRAL_TAG}`}
           >
             {typeLabel(menu.type)}
           </span>
@@ -293,7 +281,7 @@ export function MenuManagementPage() {
         label: t("identity_admin.permission_code"),
         width: COLUMN_WIDTH.badgeStacked,
         render: (menu) => (
-          <span className="truncate text-xs text-slate-600 dark:text-slate-300">
+          <span className="truncate text-xs text-ink-2">
             {displayCell(menu.permission_code)}
           </span>
         ),
@@ -304,10 +292,8 @@ export function MenuManagementPage() {
         width: COLUMN_WIDTH.badgeStacked,
         render: (menu) => (
           <div className="min-w-0 text-xs">
-            <div className="truncate text-slate-700 dark:text-slate-200">
-              {displayCell(menu.path)}
-            </div>
-            {menu.link_url ? <div className="truncate text-slate-400">{menu.link_url}</div> : null}
+            <div className="truncate text-ink-2">{displayCell(menu.path)}</div>
+            {menu.link_url ? <div className="truncate text-ink-3">{menu.link_url}</div> : null}
           </div>
         ),
       },
@@ -316,7 +302,7 @@ export function MenuManagementPage() {
         label: t("identity_admin.page_component"),
         width: COLUMN_WIDTH.timestamp,
         render: (menu) => (
-          <span className="truncate text-xs text-slate-600 dark:text-slate-300">
+          <span className="truncate text-xs text-ink-2">
             {menu.type === "directory"
               ? displayCell(menu.component, "Layout")
               : displayCell(menu.component)}
@@ -331,8 +317,8 @@ export function MenuManagementPage() {
           <span
             className={
               menu.enabled
-                ? "inline-flex rounded-md bg-emerald-500/12 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-300"
-                : "inline-flex rounded-md bg-rose-500/12 px-2 py-0.5 text-xs font-medium text-rose-600 dark:text-rose-300"
+                ? "inline-flex rounded-md bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300"
+                : "inline-flex rounded-md bg-rose-500/10 px-2 py-0.5 text-xs font-medium text-rose-700 dark:text-rose-300"
             }
           >
             {menu.enabled
@@ -382,16 +368,15 @@ export function MenuManagementPage() {
   );
 
   return (
-    <section className="flex flex-1 flex-col">
-      <div className={`flex min-h-0 flex-1 flex-col ${surface({ radius: "3xl" })}`}>
-        <div className="flex items-start justify-between gap-3 px-5 pt-5 pb-3">
+    <section data-page-fill="always" className="flex flex-1 flex-col">
+      {/* 不再包一层卡片：外壳内容区就是这一页的面板，标题和表格直接落在上面（同请求日志页）。 */}
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="flex items-start justify-between gap-3 pb-3">
           <div>
-            <h2 className="text-base font-semibold text-slate-950 dark:text-white">
+            <h2 className="text-base font-semibold text-ink">
               {t("identity_admin.menu_management_title")}
             </h2>
-            <p className="text-sm text-slate-500">
-              {t("identity_admin.menu_management_description")}
-            </p>
+            <p className="text-sm text-ink-3">{t("identity_admin.menu_management_description")}</p>
           </div>
           {canUpdate ? (
             <Button variant="primary" size="sm" onClick={() => openCreate("")}>
@@ -400,8 +385,8 @@ export function MenuManagementPage() {
             </Button>
           ) : null}
         </div>
-        {/* 表格吃掉卡片剩余高度、内部滚动；不设最小高度保底——卡片高度被窗口钉死，保底只会在矮窗口下把表格挤出卡片（见请求日志页）。 */}
-        <div className="relative min-h-0 flex-1 overflow-hidden px-5 pb-5">
+        {/* 表格吃掉页面剩余高度、内部滚动；不设最小高度保底——页面高度被窗口钉死，保底只会在矮窗口下把表格挤出页面（见请求日志页）。 */}
+        <div className="relative min-h-0 flex-1 overflow-hidden">
           <DataTable<(typeof rows)[number]>
             tableId="identity-menus"
             rows={rows}

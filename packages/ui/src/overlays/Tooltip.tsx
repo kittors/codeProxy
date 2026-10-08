@@ -314,7 +314,7 @@ export function TooltipChip({ children, mono = false }: { children: ReactNode; m
   return (
     <span
       className={[
-        "inline-flex items-center gap-1 rounded-md border border-canvas/15 bg-canvas/10 px-2 py-0.5 text-xs text-canvas",
+        "inline-flex items-center gap-1 rounded-md bg-canvas/12 px-2 py-0.5 text-xs text-canvas",
         mono ? "font-mono" : "",
       ].join(" ")}
     >

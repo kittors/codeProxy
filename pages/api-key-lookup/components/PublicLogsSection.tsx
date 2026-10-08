@@ -68,10 +68,12 @@ export function PublicLogsSection({
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
 }) {
+  // 请求日志页签就是页面本身（flat）：筛选、表格、分页直接落在页面上，与控制台的请求日志页
+  // 同一种结构。以前整页包在一张卡里，筛选行与表格之间再画一道分隔线。
   return (
     <Reveal>
-      <Card padding="none" className="overflow-hidden" bodyClassName="mt-0">
-        <div className="border-b border-slate-100 px-3 py-3 sm:px-5 dark:border-white/8">
+      <Card flat bodyClassName="mt-0">
+        <div className="pb-3">
           <div className="grid gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-2">
             <div className="grid grid-cols-1 gap-2 sm:flex sm:items-center sm:gap-2">
               {keyOptions.length > 0 ? (
@@ -124,7 +126,7 @@ export function PublicLogsSection({
 
             <div className="hidden sm:block sm:flex-1" />
 
-            <div className="grid grid-cols-2 items-center gap-x-3 gap-y-1.5 text-xs text-slate-600 dark:text-white/55 sm:flex sm:items-center sm:gap-1.5">
+            <div className="grid grid-cols-2 items-center gap-x-3 gap-y-1.5 text-xs text-ink-2 sm:flex sm:items-center sm:gap-1.5">
               <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
                 <Filter size={12} aria-hidden="true" />
                 <span className="font-mono tabular-nums">
@@ -136,7 +138,7 @@ export function PublicLogsSection({
                 <span className="font-mono tabular-nums">{stats.success_rate.toFixed(1)}%</span>
               </span>
               <span className="hidden sm:inline-flex items-center gap-1.5 whitespace-nowrap">
-                <span className="text-slate-300 dark:text-white/10" aria-hidden="true">
+                <span className="text-ink-4" aria-hidden="true">
                   ·
                 </span>
                 {t("apikey_lookup.token")}
@@ -146,10 +148,10 @@ export function PublicLogsSection({
               </span>
               {lastUpdatedText ? (
                 <span className="hidden sm:inline-flex items-center gap-1.5 whitespace-nowrap">
-                  <span className="text-slate-300 dark:text-white/10" aria-hidden="true">
+                  <span className="text-ink-4" aria-hidden="true">
                     ·
                   </span>
-                  <span className="text-slate-400 dark:text-white/40">
+                  <span className="text-ink-3">
                     {t("request_logs.updated_at", { time: lastUpdatedText })}
                   </span>
                 </span>
@@ -158,7 +160,7 @@ export function PublicLogsSection({
           </div>
         </div>
 
-        <div className="relative min-h-[360px] h-[calc(100dvh-300px)] overflow-hidden px-3 sm:px-5">
+        <div className="relative min-h-[360px] h-[calc(100dvh-300px)] overflow-hidden">
           <DataTable
             tableId="apikey-lookup-request-logs"
             rows={rows}
@@ -174,10 +176,11 @@ export function PublicLogsSection({
             showAllLoadedMessage={false}
           />
           {loading ? (
-            <div className="absolute inset-0 z-10 flex items-center justify-center rounded-b-2xl bg-white/70 backdrop-blur-sm dark:bg-neutral-950/55">
-              <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-900/8 bg-white/85 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm dark:border-white/8 dark:bg-neutral-950/70 dark:text-white/75">
+            // 与控制台请求日志页同一套加载遮罩：页面底色的半透明层 + 浮起的胶囊，不描边。
+            <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-canvas/70 backdrop-blur-sm">
+              <div className="inline-flex items-center gap-2 rounded-full bg-elevated px-3.5 py-2 text-sm font-medium text-ink-2 shadow-pop">
                 <span
-                  className="h-4 w-4 rounded-full border-2 border-slate-300 border-t-ink motion-reduce:animate-none motion-safe:animate-spin dark:border-white/20 dark:border-t-white/80"
+                  className="h-4 w-4 rounded-full border-2 border-ink/15 border-t-ink motion-reduce:animate-none motion-safe:animate-spin"
                   aria-hidden="true"
                 />
                 <span role="status">{t("common.loading_ellipsis")}</span>
@@ -187,6 +190,7 @@ export function PublicLogsSection({
         </div>
 
         <RequestLogsPaginationBar
+          flush
           currentPage={currentPage}
           totalPages={totalPages}
           totalCount={totalCount}

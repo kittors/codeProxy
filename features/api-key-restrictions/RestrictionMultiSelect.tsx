@@ -9,7 +9,13 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { Check, ChevronDown } from "lucide-react";
-import { floatingPanelSurface, type MultiSelectOption, ScrollFade } from "@code-proxy/ui";
+import {
+  floatingPanelSurface,
+  getSelectTriggerBase,
+  selectTriggerState,
+  type MultiSelectOption,
+  ScrollFade,
+} from "@code-proxy/ui";
 
 interface RestrictionMultiSelectProps {
   options: MultiSelectOption[];
@@ -181,8 +187,8 @@ export function RestrictionMultiSelect({
   const triggerSummary = useMemo(() => {
     if (selectedValues.length === 0) {
       return (
-        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
-          <Check size={12} />
+        <span className="inline-flex items-center gap-1 rounded-full bg-ink/[0.05] px-2 py-0.5 text-xs font-medium text-ink-2 dark:bg-white/[0.07]">
+          <Check size={12} className="text-ink-3" />
           {unrestrictedLabel}
         </span>
       );
@@ -190,10 +196,10 @@ export function RestrictionMultiSelect({
 
     return (
       <div className="flex min-w-0 items-center gap-2">
-        <span className="inline-flex rounded-full bg-hover px-2 py-0.5 text-xs font-medium text-ink">
+        <span className="inline-flex rounded-full bg-ink/[0.05] px-2 py-0.5 text-xs font-medium text-ink dark:bg-white/[0.07]">
           {selectedCountLabel(selectedValues.length)}
         </span>
-        <span className="min-w-0 truncate text-xs text-slate-500 dark:text-white/50">
+        <span className="min-w-0 truncate text-xs font-normal text-ink-3">
           {selectedValues
             .slice(0, 2)
             .map((item) => labelMap.get(item)?.label || item)
@@ -213,24 +219,18 @@ export function RestrictionMultiSelect({
           data-side={dropdownPlacement}
           className={`flex flex-col overflow-hidden ${floatingPanelSurface}`}
         >
-          <div className="border-b border-slate-100 px-3 py-2 dark:border-white/8">
+          <div className="px-2 pt-2">
             <input
               ref={searchRef}
               type="text"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder={searchPlaceholder}
-              className="w-full rounded-lg bg-slate-50 px-2.5 py-2 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:bg-white dark:bg-neutral-800 dark:text-white dark:placeholder:text-white/30 dark:focus:bg-neutral-900"
+              className="w-full rounded-lg bg-subtle px-2.5 py-2 text-sm text-ink outline-none placeholder:text-ink-3"
             />
           </div>
-          <div className="flex items-center justify-between gap-2 border-b border-slate-100 px-3 py-2 dark:border-white/8">
-            <span
-              className={`text-xs font-medium ${
-                selectedValues.length === 0
-                  ? "text-emerald-600 dark:text-emerald-300"
-                  : "text-slate-500 dark:text-white/50"
-              }`}
-            >
+          <div className="flex items-center justify-between gap-2 px-3 pt-2 pb-1">
+            <span className="text-xs font-medium text-ink-3">
               {selectedValues.length === 0
                 ? unrestrictedLabel
                 : selectedCountLabel(selectedValues.length)}
@@ -240,14 +240,14 @@ export function RestrictionMultiSelect({
                 type="button"
                 onClick={selectFiltered}
                 disabled={filteredOptions.length === 0}
-                className="rounded-md px-2 py-1 text-xs font-medium text-ink transition hover:bg-hover disabled:cursor-not-allowed disabled:text-slate-300 dark:disabled:text-white/20"
+                className="rounded-md px-2 py-1 text-xs font-medium text-ink transition hover:bg-hover disabled:cursor-not-allowed disabled:text-ink-4"
               >
                 {selectFilteredLabel}
               </button>
               <button
                 type="button"
                 onClick={clearRestriction}
-                className="rounded-md px-2 py-1 text-xs font-medium text-slate-500 transition hover:bg-slate-100 dark:text-white/60 dark:hover:bg-white/5"
+                className="rounded-md px-2 py-1 text-xs font-medium text-ink-2 transition hover:bg-hover hover:text-ink"
               >
                 {clearRestrictionLabel}
               </button>
@@ -255,7 +255,7 @@ export function RestrictionMultiSelect({
           </div>
           <ScrollFade className="min-h-0 flex-1 overflow-y-auto p-1">
             {filteredOptions.length === 0 ? (
-              <div className="px-3 py-4 text-center text-xs text-slate-400 dark:text-white/30">
+              <div className="px-3 py-4 text-center text-xs text-ink-3">
                 {noResultsLabel}
               </div>
             ) : (
@@ -266,12 +266,11 @@ export function RestrictionMultiSelect({
                     key={option.value}
                     type="button"
                     onClick={() => toggle(option.value)}
-                    className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
-                      checked
-                        ? "bg-hover text-ink"
-                        : "text-slate-700 hover:bg-slate-50 dark:text-white/70 dark:hover:bg-white/5"
+                    className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-hover ${
+                      checked ? "text-ink" : "text-ink-2"
                     }`}
                   >
+                    {/* 勾选框的 1px 描边是控件轮廓，与共享 Checkbox（Checkbox.css）一致，不是盒子描边。 */}
                     <div
                       className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border transition ${
                         checked
@@ -307,28 +306,23 @@ export function RestrictionMultiSelect({
         aria-invalid={ariaInvalid}
         aria-describedby={ariaDescribedBy}
         disabled={disabled}
+        data-state={selectTriggerState(open)}
         onClick={() => {
           if (!open) updatePosition();
           setOpen(!open);
         }}
-        className={`flex min-h-[42px] w-full items-center justify-between gap-2 rounded-xl border px-3 py-2 text-left text-sm transition-all ${
-          disabled
-            ? "cursor-not-allowed border-slate-900/8 bg-slate-100 text-slate-500 dark:border-neutral-700 dark:bg-neutral-800 dark:text-white/40"
-            : open
-              ? "border-line-strong bg-white ring-2 ring-line-strong dark:bg-neutral-900"
-              : "border-slate-900/8 bg-white hover:border-slate-300 dark:border-neutral-700 dark:bg-neutral-900 dark:hover:border-neutral-600"
-        }`}
+        className={`${getSelectTriggerBase()} w-full text-left`}
       >
         <div className="min-w-0 flex-1">
           {options.length === 0 ? (
-            <span className="text-slate-400 dark:text-white/30">{placeholder}</span>
+            <span className="font-normal text-ink-3">{placeholder}</span>
           ) : (
             triggerSummary
           )}
         </div>
         <ChevronDown
           size={16}
-          className={`flex-shrink-0 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`}
+          className={`flex-shrink-0 text-ink-3 transition-transform ${open ? "rotate-180" : ""}`}
         />
       </button>
 

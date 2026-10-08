@@ -1,4 +1,5 @@
 import { VendorIcon } from "@code-proxy/assets";
+import { surface } from "@code-proxy/ui";
 import { LandingSectionHead } from "./LandingSectionHead";
 import type { LandingCopy } from "./landingCopy";
 
@@ -30,8 +31,9 @@ const PROVIDERS = [
 ] as const;
 
 export function LandingProviders({ copy }: { copy: LandingCopy }) {
+  // 整段换一层底色和上下段分开，不再在上下边各画一条通栏分隔线。
   return (
-    <section className="border-y border-slate-900/8 bg-white py-28 dark:border-white/8 dark:bg-white/[0.015] lg:py-40">
+    <section className="bg-white py-28 dark:bg-white/[0.015] lg:py-40">
       <div className="mx-auto w-full max-w-screen-xl px-5 sm:px-8 lg:px-10">
         <LandingSectionHead
           index="01"
@@ -53,10 +55,11 @@ export function LandingProviders({ copy }: { copy: LandingCopy }) {
               {PROVIDERS.map((provider) => (
                 <li
                   key={`${copyIndex}-${provider.id}`}
-                  className="inline-flex items-center gap-3 rounded-2xl bg-white px-6 py-4 ring-1 ring-slate-900/8 dark:bg-white/[0.04] dark:ring-white/8"
+                  // 厂商块是卡片（伪元素细边 + 投影），不描 ring；颜色只留在厂商 logo 上。
+                  className={`${surface({ radius: "2xl" })} inline-flex items-center gap-3 px-6 py-4`}
                 >
                   <VendorIcon modelId={provider.id} size={22} />
-                  <span className="font-display text-sm font-medium text-slate-700 dark:text-white/75">
+                  <span className="font-display text-sm font-medium text-ink-2">
                     {provider.label}
                   </span>
                 </li>

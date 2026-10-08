@@ -8,7 +8,6 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
-  surface,
   useToast,
 } from "@code-proxy/ui";
 import { AccessRulesTab } from "./AccessRulesTab";
@@ -71,35 +70,37 @@ export function IpAccessPage() {
   }, [loadStatus]);
 
   return (
-    <section className="flex min-h-0 flex-1 flex-col gap-3">
+    <section data-page-fill="always" className="flex min-h-0 flex-1 flex-col gap-3">
       <TrustBanner status={status} />
 
-      <div className={`flex min-h-0 flex-1 flex-col ${surface({ radius: "3xl" })}`}>
-        <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-5 pb-3">
+      {/*
+        不再包一层卡片：外壳内容区就是这一页的面板，标题、页签、筛选、表格直接落在上面（同请求日志页）。
+        各页签自己的筛选行、表格、分页也随之去掉左右内边距和分隔线，和标题左右对齐。
+      */}
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-3">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <h2 className="flex items-center gap-2 text-base font-semibold text-slate-950 dark:text-white">
-              <ShieldBan size={18} className="text-slate-900 dark:text-white" aria-hidden="true" />
+            <h2 className="flex items-center gap-2 text-base font-semibold text-ink">
+              <ShieldBan size={18} className="text-ink-3" aria-hidden="true" />
               {t("ip_access.page_title")}
             </h2>
             {status ? (
-              <div className="hidden min-[720px]:flex items-center gap-2 text-xs text-slate-500 dark:text-white/50">
-                <span className="text-slate-300 dark:text-white/15">|</span>
+              <div className="hidden min-[720px]:flex items-center gap-2 text-xs text-ink-3">
+                <span className="text-ink-4">|</span>
                 <span>
                   {t("ip_access.stat_active_rules")}{" "}
-                  <span className="font-mono tabular-nums text-slate-900 dark:text-white">
-                    {status.active_rules}
-                  </span>
+                  <span className="font-mono tabular-nums text-ink">{status.active_rules}</span>
                 </span>
-                <span className="text-slate-300 dark:text-white/15">|</span>
+                <span className="text-ink-4">|</span>
                 <span>
                   {t("ip_access.stat_auto_ban")}{" "}
-                  <span className="font-mono text-slate-900 dark:text-white">
+                  <span className="font-mono text-ink">
                     {t(`ip_access.auto_ban_mode_${status.auto_ban_mode}`)}
                   </span>
                 </span>
                 {status.lockdown ? (
                   <>
-                    <span className="text-slate-300 dark:text-white/15">|</span>
+                    <span className="text-ink-4">|</span>
                     <span className="font-medium text-amber-600 dark:text-amber-400">
                       {t("ip_access.stat_lockdown_on")}
                     </span>
@@ -125,7 +126,7 @@ export function IpAccessPage() {
         </div>
 
         <Tabs value={tab} onValueChange={(next) => setTab(next as TabKey)} size="sm">
-          <div className="px-5 pb-3">
+          <div className="pb-3">
             <TabsList aria-label={t("ip_access.page_title")} className="max-w-full">
               <TabsTrigger value="overview">{t("ip_access.tab_overview")}</TabsTrigger>
               <TabsTrigger value="rules">{t("ip_access.tab_rules")}</TabsTrigger>

@@ -10,10 +10,12 @@ import type { OpenAIDraft } from "../providers-helpers";
 import { ModerationProfileSelect } from "@features/content-moderation";
 import { useModerationPermissions } from "@app/providers/useModerationPermissions";
 
-const SectionCard = ({ children }: { children: React.ReactNode }) => (
-  <div className="rounded-xl border border-line bg-surface p-4 shadow-sm">
-    {children}
-  </div>
+/**
+ * 一条密钥：可以有很多条、结构相同，用一层无边淡底把每条框在一起（不描边、不投影）；
+ * 条目里面的审核配置不再垫第二层底。
+ */
+const FieldGroup = ({ children }: { children: React.ReactNode }) => (
+  <div className="rounded-2xl bg-subtle p-4">{children}</div>
 );
 
 interface OpenAIKeyEntriesEditorProps {
@@ -67,7 +69,7 @@ export function OpenAIKeyEntriesEditor({
 
       <div className="space-y-3">
         {openaiDraft.apiKeyEntries.map((entry, idx) => (
-          <SectionCard key={entry.id}>
+          <FieldGroup key={entry.id}>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex flex-wrap items-center gap-3">
                 <p className="text-sm font-semibold text-ink">
@@ -110,7 +112,7 @@ export function OpenAIKeyEntriesEditor({
               </Button>
             </div>
 
-            <div className="mt-3 rounded-lg bg-subtle p-3">
+            <div className="mt-4">
               <ModerationProfileSelect
         canRead={moderationPerms.canRead}
         canWrite={moderationPerms.canWrite}
@@ -200,7 +202,7 @@ export function OpenAIKeyEntriesEditor({
                 }}
               />
             </div>
-          </SectionCard>
+          </FieldGroup>
         ))}
       </div>
     </section>

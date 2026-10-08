@@ -163,7 +163,8 @@ export function useStickyColumnLayout<T>({
   );
 }
 
-const RAIL_CLASS = "pointer-events-none absolute z-0 hidden bg-surface md:block";
+// 背衬跟随表格所在的底色（内容区 / 卡片 / 弹窗，见 styles/index.css 的 --cp-backdrop）。
+const RAIL_CLASS = "pointer-events-none absolute z-0 hidden bg-backdrop md:block";
 const BOUNDARY_CLASS =
   "pointer-events-none absolute top-0 z-[75] hidden to-transparent transition-opacity duration-150 md:block dark:from-black/35";
 

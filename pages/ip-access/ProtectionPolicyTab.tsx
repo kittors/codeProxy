@@ -17,6 +17,7 @@ import {
   ToggleSwitch,
   useToast,
   ScrollFade,
+  surface,
 } from "@code-proxy/ui";
 import { PermissionGate } from "@app/providers/PermissionGate";
 
@@ -76,7 +77,7 @@ export function ProtectionPolicyTab({ status, onPolicySaved }: ProtectionPolicyT
 
   if (loading || !policy) {
     return (
-      <div className="border-t border-slate-100 px-5 py-10 dark:border-white/8">
+      <div className="py-10">
         <PageLoader />
       </div>
     );
@@ -93,7 +94,9 @@ export function ProtectionPolicyTab({ status, onPolicySaved }: ProtectionPolicyT
   };
 
   return (
-    <ScrollFade className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto border-t border-slate-100 px-5 py-4 dark:border-white/8">
+    // 页面不再有外层大卡片，下面每个分区就是唯一一层卡片。左右各让出 4px（-mx-1 px-1），
+    // 卡片的投影不会被滚动容器裁掉，卡片边缘仍和上面的标题、页签对齐。
+    <ScrollFade className="-mx-1 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-1 pb-4">
       {/* First, because nothing below it takes effect until this is right. */}
       <Section
         title={t("ip_access.section_trusted_proxies")}
@@ -101,7 +104,7 @@ export function ProtectionPolicyTab({ status, onPolicySaved }: ProtectionPolicyT
       >
         <div className="flex flex-wrap items-center gap-2">
           {proxies.length === 0 ? (
-            <span className="text-xs text-slate-500 dark:text-white/50">
+            <span className="text-xs text-ink-3">
               {status?.trusted_proxies_source === "config"
                 ? t("ip_access.proxies_from_config", {
                     list: (status.trusted_proxies ?? []).join(", "),
@@ -112,7 +115,7 @@ export function ProtectionPolicyTab({ status, onPolicySaved }: ProtectionPolicyT
             proxies.map((proxy) => (
               <span
                 key={proxy}
-                className="inline-flex items-center gap-1 rounded-full bg-slate-100 py-0.5 pr-1 pl-2 font-mono text-xs text-slate-700 dark:bg-white/10 dark:text-white/80"
+                className="inline-flex items-center gap-1 rounded-full bg-ink/[0.05] py-0.5 pr-1 pl-2 font-mono text-xs text-ink-2 dark:bg-white/[0.07]"
               >
                 {proxy}
                 <PermissionGate permission="platform.ip_access.write">
@@ -125,7 +128,7 @@ export function ProtectionPolicyTab({ status, onPolicySaved }: ProtectionPolicyT
                       })
                     }
                     aria-label={t("ip_access.proxy_remove", { cidr: proxy })}
-                    className="inline-flex h-4 w-4 items-center justify-center rounded-full transition hover:bg-black/10 dark:hover:bg-white/15"
+                    className="inline-flex h-4 w-4 items-center justify-center rounded-full transition hover:bg-hover hover:text-ink"
                   >
                     <X size={11} aria-hidden="true" />
                   </button>
@@ -138,14 +141,12 @@ export function ProtectionPolicyTab({ status, onPolicySaved }: ProtectionPolicyT
           // Without this an operator is guessing which hops to declare, and a
           // chain declared one hop short resolves to loopback and silently
           // exempts everyone.
-          <div className="mt-3 rounded-xl bg-slate-50 px-3 py-2 dark:bg-white/5">
-            <p className="text-xs font-medium text-slate-700 dark:text-white/80">
-              {t("ip_access.chain_title")}
-            </p>
-            <p className="mt-1 font-mono text-xs text-slate-600 dark:text-white/70">
+          <div className="mt-3 rounded-inner bg-subtle px-3 py-2">
+            <p className="text-xs font-medium text-ink-2">{t("ip_access.chain_title")}</p>
+            <p className="mt-1 font-mono text-xs text-ink-2">
               {[...status.forwarded_chain, status.peer].filter(Boolean).join("  ←  ")}
             </p>
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs text-ink-3">
               {t("ip_access.chain_hint", { client: status.client_ip || "-" })}
             </p>
           </div>
@@ -203,10 +204,8 @@ export function ProtectionPolicyTab({ status, onPolicySaved }: ProtectionPolicyT
       >
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-sm font-medium text-slate-700 dark:text-white/80">
-              {t("ip_access.lockdown_label")}
-            </p>
-            <p className="mt-0.5 text-xs text-slate-500">
+            <p className="text-sm font-medium text-ink-2">{t("ip_access.lockdown_label")}</p>
+            <p className="mt-0.5 text-xs text-ink-3">
               {lockdownBlocked && !policy.lockdown
                 ? t("ip_access.lockdown_blocked_hint", {
                     cidr: status?.suggested_self_rule ?? "",
@@ -357,10 +356,8 @@ export function ProtectionPolicyTab({ status, onPolicySaved }: ProtectionPolicyT
           />
           <div className="flex items-start justify-between gap-4 sm:col-span-2">
             <div className="min-w-0">
-              <p className="text-sm font-medium text-slate-700 dark:text-white/80">
-                {t("ip_access.alert_notify_observe")}
-              </p>
-              <p className="mt-0.5 text-xs text-slate-500">
+              <p className="text-sm font-medium text-ink-2">{t("ip_access.alert_notify_observe")}</p>
+              <p className="mt-0.5 text-xs text-ink-3">
                 {t("ip_access.alert_notify_observe_hint")}
               </p>
             </div>
@@ -390,7 +387,7 @@ export function ProtectionPolicyTab({ status, onPolicySaved }: ProtectionPolicyT
       >
         <div className="overflow-x-auto">
           <table className="w-full min-w-[560px] text-left text-sm">
-            <thead className="text-xs text-slate-500">
+            <thead className="text-xs text-ink-3">
               <tr>
                 <th className="py-1.5 pr-3 font-medium">{t("ip_access.effective_scope")}</th>
                 <th className="py-1.5 pr-3 font-medium">{t("ip_access.effective_key")}</th>
@@ -399,11 +396,11 @@ export function ProtectionPolicyTab({ status, onPolicySaved }: ProtectionPolicyT
                 <th className="py-1.5 font-medium">{t("ip_access.effective_reset")}</th>
               </tr>
             </thead>
-            <tbody className="text-slate-700 dark:text-white/80">
+            <tbody className="text-ink-2">
               {throttle.map((row) => (
-                <tr key={row.scope} className="border-t border-slate-100 dark:border-white/8">
+                <tr key={row.scope} className="border-t border-line">
                   <td className="py-1.5 pr-3">{t(`ip_access.scope_${row.scope}`)}</td>
-                  <td className="py-1.5 pr-3 text-slate-500">
+                  <td className="py-1.5 pr-3 text-ink-3">
                     {t(`ip_access.dimension_${row.key_dimension}`)}
                   </td>
                   <td className="py-1.5 pr-3 tabular-nums">
@@ -466,9 +463,10 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border border-black/[0.06] px-4 py-4 dark:border-white/[0.06]">
-      <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{title}</h3>
-      <p className="mt-0.5 mb-3 text-xs text-slate-500">{description}</p>
+    // 外层大卡片去掉后，分区就是页面上唯一一层卡片：伪元素细边 + 投影，不画 border。
+    <div className={`p-4 [--cp-inner-radius:var(--radius-lg)] ${surface({ radius: "3xl" })}`}>
+      <h3 className="text-sm font-semibold text-ink">{title}</h3>
+      <p className="mt-0.5 mb-3 text-xs text-ink-3">{description}</p>
       {children}
     </div>
   );
@@ -485,11 +483,9 @@ function Field({
 }) {
   return (
     <div className="space-y-1.5">
-      <label className="block text-sm font-medium text-slate-700 dark:text-white/80">
-        {label}
-      </label>
+      <label className="block text-sm font-medium text-ink-2">{label}</label>
       {children}
-      {hint ? <p className="text-xs text-slate-500">{hint}</p> : null}
+      {hint ? <p className="text-xs text-ink-3">{hint}</p> : null}
     </div>
   );
 }

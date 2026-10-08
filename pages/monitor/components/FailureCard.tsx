@@ -4,7 +4,7 @@ import { CircleCheck, FileWarning, OctagonAlert } from "lucide-react";
 import type { MonitorBreakdownRow, MonitorOverview } from "@code-proxy/api-client";
 import { Card, ScrollArea, Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { ErrorDetailModal } from "@features/log-content-viewer";
-import { MONITOR_HUES, MeterBar } from "@features/monitor-widgets/monitorVisuals";
+import { METER_TONES, MeterBar } from "@features/monitor-widgets/monitorVisuals";
 import {
   formatMonitorCompact,
   formatMonitorDuration,
@@ -59,7 +59,6 @@ export function FailureCard({
       title={
         <MonitorCardTitle
           icon={OctagonAlert}
-          hue="rose"
           label={t("monitor_center.failures.title")}
           note={
             current.failed > 0
@@ -145,7 +144,7 @@ export function FailureCard({
                       </span>
                     </span>
                     <span className="col-span-2">
-                      <MeterBar pct={rowRate} hue={MONITOR_HUES.rose} className="h-1.5" />
+                      <MeterBar pct={rowRate} tone={METER_TONES.critical} className="h-1.5" />
                     </span>
                   </button>
                 );

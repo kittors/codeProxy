@@ -12,7 +12,7 @@ import {
 import { normalizeProviderKey } from "@code-proxy/domain";
 import { useOptionalAuth } from "@app/providers/AuthProvider";
 import { ccSwitchImportConfigsApi } from "@code-proxy/api-client/endpoints/ccswitch-import-configs";
-import { Button, COLUMN_WIDTH, surface } from "@code-proxy/ui";
+import { Button, COLUMN_WIDTH } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
 import { ConfirmModal } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
@@ -36,6 +36,9 @@ const iconByType: Record<CcSwitchClientType, string> = {
   codex: iconCodex,
   gemini: iconGemini,
 };
+
+/** 表格里的模型、渠道分组等次要标签：中性淡底，不描边。 */
+const NEUTRAL_TAG = "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]";
 
 function createDraft(clientType: CcSwitchClientType = "codex") {
   return {
@@ -204,9 +207,7 @@ export function CcSwitchImportSettingsPage() {
           const client = getCcSwitchClientConfig(row.clientType);
           return (
             <div className="flex min-w-0 items-center gap-3">
-              <span className={[surface({ tone: "inset", radius: "xl" }), "flex h-9 w-9 shrink-0 items-center justify-center"].join(" ")}>
-                <img src={iconByType[row.clientType]} alt="" className="h-5 w-5" />
-              </span>
+              <img src={iconByType[row.clientType]} alt="" className="h-5 w-5 shrink-0" />
               <div className="min-w-0">
                 <div className="truncate font-medium text-ink">
                   {t(client.labelKey)}
@@ -242,7 +243,7 @@ export function CcSwitchImportSettingsPage() {
         width: COLUMN_WIDTH.name,
         overflowTooltip: true,
         render: (row) => (
-          <span className={[surface({ tone: "plain", radius: "md" }), "inline-flex max-w-full overflow-hidden text-ellipsis whitespace-nowrap px-2 py-1 font-mono text-xs text-ink-2"].join(" ")}>
+          <span className={`inline-flex max-w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-md px-2 py-1 font-mono text-xs ${NEUTRAL_TAG}`}>
             {row.defaultModel}
           </span>
         ),
@@ -259,7 +260,7 @@ export function CcSwitchImportSettingsPage() {
               {row.allowedChannelGroups.map((group) => (
                 <span
                   key={group}
-                  className={[surface({ tone: "inset", radius: "full" }), "px-2 py-1 text-xs font-medium text-ink-2"].join(" ")}
+                  className={`rounded-full px-2 py-1 text-xs font-medium ${NEUTRAL_TAG}`}
                 >
                   {group}
                 </span>
@@ -293,7 +294,7 @@ export function CcSwitchImportSettingsPage() {
             </Button>
             <Button
               size="xs"
-              variant="ghost"
+              variant="ghost-danger"
               aria-label={t("ccswitch.config_delete")}
               onClick={() => setPendingDelete(row)}
             >
@@ -314,7 +315,7 @@ export function CcSwitchImportSettingsPage() {
   const importBaseUrl = auth?.state.apiBase || detectApiBaseFromLocation();
 
   return (
-    <div className="space-y-6 md:flex md:min-h-0 md:flex-1 md:flex-col">
+    <div data-page-fill="md" className="space-y-6 md:flex md:min-h-0 md:flex-1 md:flex-col">
       <div className="flex flex-wrap items-start justify-between gap-3 md:shrink-0">
         <div className="space-y-1">
           <h2 className="text-lg font-semibold tracking-normal text-ink">
@@ -338,11 +339,12 @@ export function CcSwitchImportSettingsPage() {
         </Button>
       </div>
 
+      {/* 外壳内容区就是页面面板：配置列表是页面里的一个分区（flat），不再包一张卡。 */}
       <Card
+        flat
         title={t("ccswitch.config_table_title")}
         description={t("ccswitch.config_table_description", { count: configs.length })}
-        padding="compact"
-        className="rounded-2xl md:flex md:min-h-0 md:flex-1 md:flex-col md:overflow-hidden"
+        className="md:flex md:min-h-0 md:flex-1 md:flex-col"
         bodyClassName="md:flex md:min-h-0 md:flex-1 md:flex-col"
       >
         <DataTable<CcSwitchImportConfigListItem>
@@ -400,7 +402,7 @@ export function CcSwitchImportSettingsPage() {
           pendingDelete ? (
             <span className="flex min-w-0 items-center justify-between gap-3">
               <span className="truncate font-medium">{pendingDelete.providerName}</span>
-              <span className="shrink-0 rounded-full bg-selected px-2 py-0.5 text-2xs font-medium uppercase text-ink-2">
+              <span className={`shrink-0 rounded-full px-2 py-0.5 text-2xs font-medium uppercase ${NEUTRAL_TAG}`}>
                 {pendingDelete.clientType}
               </span>
             </span>

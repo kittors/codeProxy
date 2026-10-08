@@ -567,9 +567,8 @@ export function SearchableCheckboxMultiSelect({
                     <span
                       className={cn(
                         "block text-xs font-medium",
-                        showAllSelectionSummary
-                          ? "text-emerald-600 dark:text-emerald-300"
-                          : "text-ink-2",
+                        // 「全部」是当前生效的选择：用强调色，不用表示成功的绿。
+                        showAllSelectionSummary ? "text-accent-ink" : "text-ink-2",
                       )}
                     >
                       {showAllSelectionSummary

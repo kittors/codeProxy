@@ -392,12 +392,15 @@ export function ModerationChannelPickerModal({
           row.tags.length ? (
             <div className="flex flex-wrap gap-1">
               {row.tags.slice(0, 3).map((tag) => (
-                <span key={tag} className="rounded-full bg-subtle px-2 py-0.5 text-xs text-ink-2">
+                <span
+                  key={tag}
+                  className="rounded-full bg-ink/[0.05] px-2 py-0.5 text-xs text-ink-2 dark:bg-white/[0.07]"
+                >
                   {tag}
                 </span>
               ))}
               {row.tags.length > 3 ? (
-                <span className="rounded-full bg-subtle px-2 py-0.5 text-xs text-ink-3">
+                <span className="rounded-full bg-ink/[0.05] px-2 py-0.5 text-xs text-ink-3 dark:bg-white/[0.07]">
                   +{row.tags.length - 3}
                 </span>
               ) : null}
@@ -413,7 +416,8 @@ export function ModerationChannelPickerModal({
         render: (row) => {
           if (!row.profile_id) {
             return (
-              <span className="text-ink-4">{t("content_moderation.profile_none")}</span>
+              // 「未绑定」是要读得清的信息，用弱化色 ink-3（ink-4 只给占位装饰，对比度不够）。
+              <span className="text-ink-3">{t("content_moderation.profile_none")}</span>
             );
           }
           const isCurrentProfile = row.profile_id === profile?.id;
@@ -422,7 +426,7 @@ export function ModerationChannelPickerModal({
               className={[
                 "inline-flex max-w-full rounded-full px-2.5 py-1 text-xs font-semibold",
                 isCurrentProfile
-                  ? "bg-sky-500/10 text-sky-700 dark:text-sky-300"
+                  ? "bg-accent-soft text-accent-ink"
                   : "bg-amber-500/10 text-amber-700 dark:text-amber-300",
               ].join(" ")}
             >
@@ -575,7 +579,7 @@ export function ModerationChannelPickerModal({
             columnResizable={false}
             columnReorderable={false}
             rowAriaSelected={(row) => selected.has(channelKey(row))}
-            rowClassName={(row) => (selected.has(channelKey(row)) ? "bg-sky-500/[0.06]" : "")}
+            rowClassName={(row) => (selected.has(channelKey(row)) ? "bg-accent-soft" : "")}
             onRowClick={(row) => toggleSelected(row)}
           />
         </div>

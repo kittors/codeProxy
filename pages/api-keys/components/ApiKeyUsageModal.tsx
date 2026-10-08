@@ -107,8 +107,8 @@ export function ApiKeyUsageModal({
       dirty={false}
     >
       <div className="flex h-full flex-col">
-        {/* 筛选条：时间范围和四个筛选并排，右侧是更新时间与刷新。 */}
-        <div className="flex flex-wrap items-center gap-2 border-b border-line pb-3">
+        {/* 筛选条：时间范围和四个筛选并排，右侧是更新时间与刷新。各段之间靠留白分开，不画分隔线。 */}
+        <div className="flex flex-wrap items-center gap-2 pb-3">
           <RequestLogsTimeRangeSelector value={usageTimeRange} onChange={setUsageTimeRange} />
           <div className="grid w-full gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
             <SearchableSelect
@@ -176,7 +176,7 @@ export function ApiKeyUsageModal({
 
         <div
           data-testid="api-key-usage-summary"
-          className="grid gap-2 border-b border-line py-3 md:grid-cols-[minmax(0,2fr)_repeat(2,minmax(0,1fr))]"
+          className="grid gap-2 py-3 md:grid-cols-[minmax(0,2fr)_repeat(2,minmax(0,1fr))]"
         >
           <section aria-label={t("api_keys_page.usage_summary_tokens")} className={summaryCard}>
             <div className="text-xs font-medium text-ink-2">
@@ -218,7 +218,7 @@ export function ApiKeyUsageModal({
             <div className="text-xs font-medium text-ink-2">
               {t("api_keys_page.usage_summary_success_rate")}
             </div>
-            <div className="mt-2 font-mono text-xl font-semibold tabular-nums text-emerald-700 dark:text-emerald-300">
+            <div className="mt-2 font-mono text-xl font-semibold tabular-nums text-ink">
               {usageSummary.successRate.toFixed(1)}%
             </div>
             <div className={`mt-0.5 ${metricLabel}`}>{t("api_keys_page.usage_summary_filtered")}</div>

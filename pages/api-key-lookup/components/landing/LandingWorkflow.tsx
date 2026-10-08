@@ -90,7 +90,8 @@ export function LandingWorkflow({ copy }: { copy: LandingCopy }) {
   }, [active.code]);
 
   return (
-    <section className="border-y border-slate-900/8 bg-white py-28 dark:border-white/8 dark:bg-white/[0.015] lg:py-40">
+    // 和厂商墙一样靠一层底色与相邻段落分开，不画通栏分隔线。
+    <section className="bg-white py-28 dark:bg-white/[0.015] lg:py-40">
       <div className="mx-auto w-full max-w-screen-xl px-5 sm:px-8 lg:px-10">
         <LandingSectionHead
           index="03"
@@ -105,15 +106,15 @@ export function LandingWorkflow({ copy }: { copy: LandingCopy }) {
               <motion.li
                 key={step.title}
                 {...fade({ delay: 0.06 * index, distance: 12 })}
-                className="border-t border-slate-900/8 py-7 first:border-t-0 first:pt-0 dark:border-white/8"
+                className="border-t border-line py-7 first:border-t-0 first:pt-0"
               >
                 <span className="font-display text-2xs uppercase tracking-[0.28em] text-ink-3">
                   {`STEP ${index + 1}`}
                 </span>
-                <h3 className="mt-3 font-display text-lg font-bold tracking-tight text-slate-900 dark:text-white">
+                <h3 className="mt-3 font-display text-lg font-bold tracking-tight text-ink">
                   {step.title}
                 </h3>
-                <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-white/50">
+                <p className="mt-2 text-sm leading-7 text-ink-2">
                   {step.desc}
                 </p>
               </motion.li>
@@ -122,9 +123,10 @@ export function LandingWorkflow({ copy }: { copy: LandingCopy }) {
 
           <motion.div
             {...fade({ delay: 0.1 })}
-            className="overflow-hidden rounded-3xl bg-[#0B0D13] ring-1 ring-slate-900/10 dark:ring-white/10"
+            // 代码面板两种主题下都是深底；轮廓用伪元素细边，页签条与代码之间靠留白分开。
+            className="cp-edge overflow-hidden rounded-3xl bg-[#0B0D13]"
           >
-            <div className="flex items-center gap-1 border-b border-white/8 px-3 py-2.5">
+            <div className="flex items-center gap-1 px-3 pt-2.5">
               {snippets.map((snippet) => (
                 <button
                   key={snippet.id}
@@ -135,7 +137,7 @@ export function LandingWorkflow({ copy }: { copy: LandingCopy }) {
                     "relative rounded-full px-4 py-1.5 font-display text-xs font-medium transition-colors duration-150",
                     snippet.id === activeId
                       ? "text-white"
-                      : "text-white/45 hover:text-white/75",
+                      : "text-white/55 hover:text-white/85",
                   ].join(" ")}
                 >
                   {snippet.id === activeId ? (
@@ -152,7 +154,7 @@ export function LandingWorkflow({ copy }: { copy: LandingCopy }) {
               <button
                 type="button"
                 onClick={handleCopy}
-                className="ml-auto inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 font-display text-xs font-medium text-white/45 transition-colors duration-150 hover:bg-white/10 hover:text-white/80"
+                className="ml-auto inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 font-display text-xs font-medium text-white/55 transition-colors duration-150 hover:bg-white/10 hover:text-white/85"
               >
                 {copied ? <Check size={13} aria-hidden /> : <Copy size={13} aria-hidden />}
                 {copied ? copy.workflow.copied : copy.workflow.copy}

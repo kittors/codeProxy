@@ -60,7 +60,9 @@ export function OpenAIProvidersTab({
   const showSkeleton = loading && providers.length === 0;
 
   return (
+    // 页面级分区而不是卡片：标题、说明和「添加」按钮直接落在内容区上，里面只有提供商卡片这一层。
     <Card
+      flat
       title={t("providers.openai_compatible")}
       description={t("providers.openai_tab_desc")}
       className="flex h-full min-h-0 flex-col"
@@ -136,16 +138,16 @@ export function OpenAIProvidersTab({
                 onDelete={canWrite ? () => confirmDelete(idx) : undefined}
               >
                 {provider.id ? (
-                  <p className="mt-1 truncate font-mono text-xs text-slate-500 dark:text-white/50" title={provider.id}>
+                  <p className="mt-1 truncate font-mono text-xs text-ink-3" title={provider.id}>
                     ID: {provider.id}
                   </p>
                 ) : null}
                 {provider.prefix ? (
-                  <p className="mt-1 truncate font-mono text-xs text-slate-700 dark:text-slate-200">
+                  <p className="mt-1 truncate font-mono text-xs text-ink-2">
                     prefix: {provider.prefix}
                   </p>
                 ) : null}
-                <p className="mt-1 truncate font-mono text-xs text-slate-700 dark:text-slate-200">
+                <p className="mt-1 truncate font-mono text-xs text-ink-2">
                   baseUrl: {provider.baseUrl || "--"}
                 </p>
 
@@ -154,7 +156,7 @@ export function OpenAIProvidersTab({
                     {headerEntries.map(([key, value]) => (
                       <span
                         key={key}
-                        className="inline-flex max-w-full min-w-0 items-center gap-1 rounded-full border border-slate-900/8 bg-white px-2 py-0.5 text-xs text-slate-700 dark:border-white/8 dark:bg-neutral-950/60 dark:text-white/75"
+                        className="inline-flex max-w-full min-w-0 items-center gap-1 rounded-full bg-ink/[0.05] px-2 py-0.5 text-xs text-ink-2 dark:bg-white/[0.07]"
                         title={`${key}: ${String(value)}`}
                       >
                         <span className="shrink-0 font-semibold">{key}:</span>
@@ -185,14 +187,12 @@ export function OpenAIProvidersTab({
                 <div className="mt-2 flex flex-wrap gap-1.5 empty:mt-0">
                   {provider.models?.length ? (
                     <ProviderMetricChip
-                      tone="blue"
                       label={t("providers.models_label")}
                       value={provider.models.length}
                     />
                   ) : null}
                   {stats.success > 0 ? (
                     <ProviderMetricChip
-                      tone="emerald"
                       label={t("providers.success_stats", {
                         count: stats.success,
                       })}
@@ -200,14 +200,14 @@ export function OpenAIProvidersTab({
                   ) : null}
                   {stats.failure > 0 ? (
                     <ProviderMetricChip
-                      tone="rose"
+                      tone="danger"
                       label={t("providers.failed_stats", {
                         count: stats.failure,
                       })}
                     />
                   ) : null}
                   {provider.testModel ? (
-                    <span className="inline-flex items-center rounded-full bg-slate-600/10 px-2 py-0.5 text-xs font-medium text-slate-700 dark:bg-white/10 dark:text-white/65">
+                    <span className="inline-flex items-center rounded-full bg-ink/[0.05] px-2 py-0.5 text-xs font-medium text-ink-2 dark:bg-white/[0.07]">
                       testModel: {provider.testModel}
                     </span>
                   ) : null}

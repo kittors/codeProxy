@@ -20,7 +20,7 @@ export function LookupSearchSection({
     <Card>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4 sm:flex-row sm:items-end">
         <div className="flex-1">
-          <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-white/80">
+          <label className="mb-1.5 block text-sm font-medium text-ink-2">
             {t("apikey_lookup.api_key_label")}
           </label>
           <TextInput
@@ -31,7 +31,7 @@ export function LookupSearchSection({
             placeholder={t("apikey_lookup.placeholder")}
             autoComplete="off"
             spellCheck={false}
-            startAdornment={<Search size={16} className="text-slate-400 dark:text-white/40" />}
+            startAdornment={<Search size={16} className="text-ink-3" />}
           />
         </div>
         <Button
@@ -43,7 +43,7 @@ export function LookupSearchSection({
         >
           {loading ? (
             <span
-              className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white motion-reduce:animate-none motion-safe:animate-spin dark:border-neutral-950/30"
+              className="h-4 w-4 rounded-full border-2 border-accent-fg/30 border-t-accent-fg motion-reduce:animate-none motion-safe:animate-spin"
               aria-hidden="true"
             />
           ) : null}

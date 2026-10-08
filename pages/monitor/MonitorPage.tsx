@@ -189,9 +189,9 @@ function Rise({ index, children }: { index: number; children: ReactNode }) {
   );
 }
 
-/** 首次加载的骨架：与真实版面同一套栅格，数据到位时不跳动。 */
+/** 首次加载的骨架：与真实版面同一套栅格和卡片内边距（Card 默认 p-4），数据到位时不跳动。 */
 function MonitorSkeleton() {
-  const block = `${surface({ radius: "3xl" })} p-5`;
+  const block = `${surface({ radius: "3xl" })} p-4`;
   return (
     <div className="space-y-4" aria-hidden="true">
       <div className="grid gap-4 xl:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">

@@ -47,15 +47,21 @@ describe("PeriodSpendingCell", () => {
 
     const warning = screen.getByText("Near quota limit").parentElement;
     const danger = screen.getByText("Quota exceeded").parentElement;
-    expect(warning).toHaveClass("border-amber-200");
-    expect(danger).toHaveClass("border-rose-200");
+    // 语义只靠淡底 + 同色字 + 图标表达（琥珀 = 接近上限，红 = 用尽），胶囊不再描边。
+    expect(warning).toHaveClass("bg-amber-500/10", "text-amber-700");
+    expect(danger).toHaveClass("bg-rose-500/10", "text-rose-700");
+    expect(warning?.className).not.toMatch(/(^|\s)border(-|\s|$)/);
+    expect(danger?.className).not.toMatch(/(^|\s)border(-|\s|$)/);
     expect(warning?.querySelector("svg")).not.toBeNull();
     expect(danger?.querySelector("svg")).not.toBeNull();
   });
 
   test("shows unlimited when no finite period is configured", () => {
     render(<PeriodSpendingCell t={t} items={[]} />);
-    expect(screen.getByText("Unlimited")).toBeInTheDocument();
+    const chip = screen.getByText("Unlimited");
+    expect(chip).toBeInTheDocument();
+    // 「不限制」只是没有上限，不是「成功」：中性淡底标签，不用绿色、不描边。
+    expect(chip.className).not.toMatch(/emerald|(^|\s)border(-|\s|$)/);
   });
 
   test("surfaces the 5h reset instant, and only where the backend anchors one", () => {

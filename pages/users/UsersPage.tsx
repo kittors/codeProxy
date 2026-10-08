@@ -11,7 +11,6 @@ import {
   ToggleSwitch,
   useToast,
   type DataTableColumn,
-  surface,
 } from "@code-proxy/ui";
 import { PermissionGate } from "@app/providers/PermissionGate";
 import { useAuth } from "@app/providers/AuthProvider";
@@ -165,10 +164,8 @@ export function UsersPage() {
         width: COLUMN_WIDTH.name,
         render: (user) => (
           <div className="min-w-0">
-            <div className="truncate font-medium text-slate-900 dark:text-white">
-              {userName(user)}
-            </div>
-            <div className="truncate text-xs text-slate-400">{user.username}</div>
+            <div className="truncate font-medium text-ink">{userName(user)}</div>
+            <div className="truncate text-xs text-ink-3">{user.username}</div>
           </div>
         ),
       },
@@ -207,7 +204,7 @@ export function UsersPage() {
                     );
                   }}
                 />
-                <span className="text-sm text-slate-600 dark:text-slate-300">{label}</span>
+                <span className="text-sm text-ink-2">{label}</span>
               </div>
             </PermissionGate>
           );
@@ -226,13 +223,13 @@ export function UsersPage() {
               {(labels.length ? labels : (user.role_codes ?? [])).map((label) => (
                 <span
                   key={label}
-                  className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 dark:bg-white/8 dark:text-slate-300"
+                  className="rounded-full bg-ink/[0.05] px-2.5 py-1 text-xs font-medium text-ink-2 dark:bg-white/[0.07]"
                 >
                   {label}
                 </span>
               ))}
               {!labels.length && !user.role_codes?.length ? (
-                <span className="text-slate-400">{t("identity_admin.no_role")}</span>
+                <span className="text-ink-3">{t("identity_admin.no_role")}</span>
               ) : null}
             </div>
           );
@@ -371,14 +368,13 @@ export function UsersPage() {
   };
 
   return (
-    <section className="flex flex-1 flex-col">
-      <div className={`flex min-h-0 flex-1 flex-col ${surface({ radius: "3xl" })}`}>
-        <div className="flex flex-wrap items-start justify-between gap-3 px-5 pt-5 pb-3">
+    <section data-page-fill="always" className="flex flex-1 flex-col">
+      {/* 不再包一层卡片：外壳内容区就是这一页的面板，标题和表格直接落在上面（同请求日志页）。 */}
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="flex flex-wrap items-start justify-between gap-3 pb-3">
           <div>
-            <h2 className="text-base font-semibold text-slate-950 dark:text-white">
-              {t("identity_admin.users_title")}
-            </h2>
-            <p className="text-sm text-slate-500">{t("identity_admin.users_description")}</p>
+            <h2 className="text-base font-semibold text-ink">{t("identity_admin.users_title")}</h2>
+            <p className="text-sm text-ink-3">{t("identity_admin.users_description")}</p>
           </div>
           <PermissionGate permission="tenant.users.create">
             <Button
@@ -390,8 +386,8 @@ export function UsersPage() {
           </PermissionGate>
         </div>
 
-        {/* 表格吃掉卡片剩余高度、内部滚动；不设最小高度保底——卡片高度被窗口钉死，保底只会在矮窗口下把表格挤出卡片（见请求日志页）。 */}
-        <div className="relative min-h-0 flex-1 overflow-hidden px-5 pb-5">
+        {/* 表格吃掉页面剩余高度、内部滚动；不设最小高度保底——页面高度被窗口钉死，保底只会在矮窗口下把表格挤出页面（见请求日志页）。 */}
+        <div className="relative min-h-0 flex-1 overflow-hidden">
           <DataTable<UserIdentity>
             tableId="identity-users"
             rows={users}

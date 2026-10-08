@@ -10,7 +10,6 @@ import {
   TableRowActions,
   useToast,
   type DataTableColumn,
-  surface,
 } from "@code-proxy/ui";
 import { PermissionGate } from "@app/providers/PermissionGate";
 import { useAuth } from "@app/providers/AuthProvider";
@@ -118,10 +117,8 @@ export function TenantsPage() {
         width: "w-64",
         render: (item) => (
           <div className="min-w-0">
-            <div className="truncate font-medium text-slate-900 dark:text-white">
-              {tenantName(item)}
-            </div>
-            <div className="truncate text-xs text-slate-400">{item.slug}</div>
+            <div className="truncate font-medium text-ink">{tenantName(item)}</div>
+            <div className="truncate text-xs text-ink-3">{item.slug}</div>
           </div>
         ),
       },
@@ -134,10 +131,10 @@ export function TenantsPage() {
             className={[
               "inline-flex rounded-full px-2.5 py-1 text-xs font-semibold",
               item.effective_status === "active"
-                ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
+                ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
                 : item.effective_status === "expired"
-                  ? "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300"
-                  : "bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300",
+                  ? "bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                  : "bg-rose-500/10 text-rose-700 dark:text-rose-300",
             ].join(" ")}
           >
             {statusLabel(item.effective_status)}
@@ -258,14 +255,13 @@ export function TenantsPage() {
   };
 
   return (
-    <section className="flex flex-1 flex-col">
-      <div className={`flex min-h-0 flex-1 flex-col ${surface({ radius: "3xl" })}`}>
-        <div className="flex flex-wrap items-start justify-between gap-3 px-5 pt-5 pb-3">
+    <section data-page-fill="always" className="flex flex-1 flex-col">
+      {/* 不再包一层卡片：外壳内容区就是这一页的面板，标题和表格直接落在上面（同请求日志页）。 */}
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="flex flex-wrap items-start justify-between gap-3 pb-3">
           <div>
-            <h2 className="text-base font-semibold text-slate-950 dark:text-white">
-              {t("identity_admin.tenants_title")}
-            </h2>
-            <p className="text-sm text-slate-500">{t("identity_admin.tenants_description")}</p>
+            <h2 className="text-base font-semibold text-ink">{t("identity_admin.tenants_title")}</h2>
+            <p className="text-sm text-ink-3">{t("identity_admin.tenants_description")}</p>
           </div>
           <PermissionGate permission="platform.tenants.create">
             <Button variant="primary" onClick={() => setCreateOpen(true)}>
@@ -274,8 +270,8 @@ export function TenantsPage() {
           </PermissionGate>
         </div>
 
-        {/* 表格吃掉卡片剩余高度、内部滚动；不设最小高度保底——卡片高度被窗口钉死，保底只会在矮窗口下把表格挤出卡片（见请求日志页）。 */}
-        <div className="relative min-h-0 flex-1 overflow-hidden px-5 pb-5">
+        {/* 表格吃掉页面剩余高度、内部滚动；不设最小高度保底——页面高度被窗口钉死，保底只会在矮窗口下把表格挤出页面（见请求日志页）。 */}
+        <div className="relative min-h-0 flex-1 overflow-hidden">
           <DataTable<TenantIdentity>
             tableId="identity-tenants"
             rows={items}

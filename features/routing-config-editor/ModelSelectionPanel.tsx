@@ -34,8 +34,9 @@ export type ModelSelectionPanelProps = {
   onChange: (update: (current: ModelSelectionDraft) => ModelSelectionDraft) => void;
 };
 
+// 提醒条只用琥珀淡底、不描边（同 Callout）。
 const NOTICE_CLASS =
-  "rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-5 text-amber-800 dark:border-amber-400/25 dark:bg-amber-500/10 dark:text-amber-200";
+  "rounded-2xl bg-amber-500/[0.09] px-4 py-3 text-xs leading-5 text-amber-800 dark:text-amber-200";
 
 type RuleChip = { list: ModelListName; entry: string; tagKey: string };
 
@@ -278,7 +279,7 @@ export function ModelSelectionPanel({
                 className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-surface py-0.5 pl-2.5 pr-1"
               >
                 <span className="truncate font-mono">{entry}</span>
-                <span className="shrink-0 rounded-full bg-amber-100 px-1.5 text-2xs font-semibold dark:bg-amber-500/15">
+                <span className="shrink-0 rounded-full bg-amber-500/15 px-1.5 text-2xs font-semibold">
                   {t(tagKey)}
                 </span>
                 <button
@@ -286,7 +287,7 @@ export function ModelSelectionPanel({
                   onClick={() => onChange((current) => removeModelRule(current, list, entry))}
                   disabled={disabled}
                   aria-label={t("channel_groups_page.models_rule_remove", { rule: entry })}
-                  className="shrink-0 rounded-full p-0.5 transition-colors hover:bg-amber-100 disabled:opacity-40 dark:hover:bg-amber-500/20"
+                  className="shrink-0 rounded-full p-0.5 transition-colors hover:bg-amber-500/15 disabled:opacity-40"
                 >
                   <X size={12} />
                 </button>
@@ -306,7 +307,7 @@ export function ModelSelectionPanel({
           {t("channel_groups_page.models_need_channels")}
         </div>
       ) : modelsError ? (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-400/25 dark:bg-rose-500/10 dark:text-rose-200">
+        <div className="rounded-2xl bg-rose-500/[0.08] px-4 py-3 text-sm text-rose-700 dark:text-rose-300">
           {modelsError}
         </div>
       ) : (

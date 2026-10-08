@@ -194,13 +194,14 @@ export function CallbackPasteBox({
   return (
     <div className="grid gap-2">
       <div
+        // 和输入框同一套阴影描边（不画 border）：出错是红色描边，可以提交是绿色描边。
         className={[
-          "group relative rounded-2xl border bg-field transition-[border-color,box-shadow] duration-200",
+          "group relative rounded-2xl bg-field transition-shadow duration-200",
           message?.tone === "bad"
-            ? "border-rose-400/70"
+            ? "shadow-[0_0_0_1px_rgb(229_72_77/0.8)]"
             : ready
-              ? "border-emerald-500/60"
-              : "border-line-strong focus-within:border-ink-3",
+              ? "shadow-[0_0_0_1px_rgb(16_163_127/0.7)]"
+              : "shadow-control hover:shadow-control-hover focus-within:shadow-control-focus",
         ].join(" ")}
       >
         <textarea
@@ -268,7 +269,7 @@ export function CallbackPasteBox({
                 {nudge ? (
                   <motion.span
                     aria-hidden="true"
-                    className="pointer-events-none absolute -inset-1 rounded-full ring-2 ring-sky-500/60"
+                    className="pointer-events-none absolute -inset-1 rounded-full shadow-control-focus"
                     animate={{ opacity: [0.2, 1, 0.2] }}
                     transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
                   />
@@ -284,7 +285,7 @@ export function CallbackPasteBox({
                 </Button>
               </span>
             ) : (
-              <kbd className="rounded-md border border-line bg-surface px-1.5 py-0.5 font-sans text-2xs text-ink-3">
+              <kbd className="rounded-md bg-ink/[0.05] px-1.5 py-0.5 font-sans text-2xs text-ink-3 dark:bg-white/[0.07]">
                 {t("add_account.paste.shortcut")}
               </kbd>
             )}
@@ -319,7 +320,7 @@ export function CallbackPasteBox({
               initial={{ opacity: 0, y: -3 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              className="text-xs text-sky-700 dark:text-sky-300"
+              className="text-xs text-accent-ink"
             >
               {t("add_account.paste.nudge")}
             </motion.p>

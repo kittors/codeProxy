@@ -3,11 +3,11 @@ import { ModelInputList } from "../ModelInputList";
 import type { OpenAIDraft } from "../providers-helpers";
 import { OpenAIModelDiscoveryPanel } from "./OpenAIModelDiscoveryPanel";
 
-const SectionCard = ({ children }: { children: React.ReactNode }) => (
-  <div className="rounded-xl border border-line bg-surface p-4 shadow-sm">
-    {children}
-  </div>
-);
+/**
+ * 一组字段。弹窗本身就是一层，组与组之间靠留白分开，不再各自套一张描边卡片——以前一个页签里
+ * 叠着五六张描边小卡，读起来像一摞框。
+ */
+const FieldGroup = ({ children }: { children: React.ReactNode }) => <div>{children}</div>;
 
 interface OpenAIProviderModelsSectionProps {
   openaiDraft: OpenAIDraft;
@@ -33,8 +33,8 @@ export function OpenAIProviderModelsSection({
   const { t } = useTranslation();
 
   return (
-    <section className="space-y-3">
-      <SectionCard>
+    <section className="space-y-6">
+      <FieldGroup>
         <ModelInputList
           title={t("providers.models_optional")}
           entries={openaiDraft.modelEntries}
@@ -42,9 +42,9 @@ export function OpenAIProviderModelsSection({
           showPriority
           showTestModel
         />
-      </SectionCard>
+      </FieldGroup>
 
-      <SectionCard>
+      <FieldGroup>
         <OpenAIModelDiscoveryPanel
           discovering={discovering}
           discoverModels={discoverModels}
@@ -53,7 +53,7 @@ export function OpenAIProviderModelsSection({
           discoverSelected={discoverSelected}
           setDiscoverSelected={setDiscoverSelected}
         />
-      </SectionCard>
+      </FieldGroup>
     </section>
   );
 }

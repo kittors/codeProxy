@@ -11,14 +11,14 @@ export function normalizeChannelAuthType(authType?: string | null): "oauth" | "a
 
 /**
  * 渠道认证方式的小标签。OAuth / API 只是类型说明、不是状态，两者都用中性灰，
- * 靠文字区分；OAuth 用描边、API 用实底，扫一眼也能分开。
+ * 靠文字区分；API 的底色深一档，扫一眼也能分开。都不描边。
  */
 export function channelAuthTypeBadgeClass(authType: "oauth" | "api" | ""): string {
   if (authType === "api") {
     return "bg-selected text-ink-2";
   }
   if (authType === "oauth") {
-    return "text-ink-2 ring-1 ring-inset ring-line-strong";
+    return "bg-hover text-ink-2";
   }
   return "bg-hover text-ink-3";
 }

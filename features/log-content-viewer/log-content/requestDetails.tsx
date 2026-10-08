@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 import type { UsageLogEgressResponse } from "@code-proxy/api-client";
-import { surface } from "@code-proxy/ui";
 import { parseJsonObject } from "./parsers";
 import { PlainPre } from "./rendering";
 
@@ -340,7 +339,7 @@ function RequestDetailRows({ rows }: { rows: RequestDetailRow[] }) {
       {rows.map((row) => (
         <div
           key={`${row.label}:${row.value}`}
-          className="grid min-w-0 gap-1.5 px-3 py-2.5 sm:grid-cols-[minmax(8rem,13rem)_minmax(0,1fr)] sm:gap-3"
+          className="grid min-w-0 gap-1.5 py-2.5 sm:grid-cols-[minmax(8rem,13rem)_minmax(0,1fr)] sm:gap-3"
         >
           <span className="min-w-0 font-mono text-xs leading-5 break-all text-ink-3">
             {row.label}
@@ -357,10 +356,8 @@ function RequestDetailRows({ rows }: { rows: RequestDetailRow[] }) {
 function RequestDetailGroupView({ group }: { group: RequestDetailGroup }) {
   if (group.rows.length === 0) return null;
   return (
-    <div className="border-t border-line">
-      <div className="px-3 pt-3 pb-1.5 text-xs font-medium text-ink-3">
-        {group.title}
-      </div>
+    <div className="pt-3">
+      <div className="pb-1 text-xs font-medium text-ink-3">{group.title}</div>
       <RequestDetailRows rows={group.rows} />
     </div>
   );
@@ -373,12 +370,11 @@ function RequestDetailAttemptView({
   attempt: RequestDetailAttempt;
   showTitle: boolean;
 }) {
+  // 一次上游尝试不再是分区里又一张描边小卡：多次尝试时只用等宽标题隔开，行仍是数据行的细线。
   return (
-    <div className={[surface({ tone: "plain", radius: "lg" }), "overflow-hidden"].join(" ")}>
+    <div className="min-w-0">
       {showTitle && attempt.title ? (
-        <div className="border-b border-line px-3 py-2 font-mono text-xs text-ink-3">
-          {attempt.title}
-        </div>
+        <div className="pb-1 font-mono text-xs text-ink-3">{attempt.title}</div>
       ) : null}
       <RequestDetailRows rows={attempt.rows} />
       {attempt.groups.map((group) => (
@@ -411,10 +407,8 @@ function RequestDetailSection({
   const showAttemptTitle = visibleAttempts.length > 1;
 
   return (
-    <section
-      data-testid={testId}
-      className={[surface({ tone: "plain", radius: "lg" }), "overflow-hidden"].join(" ")}
-    >
+    // 分区是弹窗里的一块无描边淡底：以前是「描边分区 → 灰底内衬 → 描边小卡」三层框。
+    <section data-testid={testId} className="overflow-hidden rounded-xl bg-subtle">
       {/* 分区是 overflow-hidden 的：焦点环往里画，否则全局的外扩描边会被裁掉。 */}
       <button
         type="button"
@@ -449,7 +443,7 @@ function RequestDetailSection({
             transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
             className="overflow-hidden"
           >
-            <div className="space-y-2 border-t border-line bg-subtle p-2.5">
+            <div className="space-y-4 px-3.5 pb-3">
               {visibleAttempts.length > 0 ? (
                 visibleAttempts.map((attempt, index) => (
                   <RequestDetailAttemptView
@@ -459,7 +453,7 @@ function RequestDetailSection({
                   />
                 ))
               ) : (
-                <span className="px-3 py-3 text-sm text-ink-3">--</span>
+                <span className="block py-1 text-sm text-ink-3">--</span>
               )}
             </div>
           </motion.div>
@@ -471,7 +465,7 @@ function RequestDetailSection({
 
 // 出口网络的小标签：只用状态色的淡底，深浅色由同一组类名覆盖。
 const BADGE_TONE = {
-  neutral: "bg-selected text-ink-2",
+  neutral: "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]",
   info: "bg-sky-500/10 text-sky-700 dark:text-sky-300",
   warning: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
   success: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",

@@ -489,21 +489,22 @@ export function ApiKeyUsagePage() {
 
   const displayName = apiKeyName || (queriedKey ? t("apikey_lookup.unnamed_key") : "");
   const headerControlClass =
-    "inline-flex items-center rounded-xl p-2 text-slate-600 transition hover:bg-slate-100 dark:text-white/70 dark:hover:bg-white/10";
+    "inline-flex items-center rounded-xl p-2 text-ink-2 transition hover:bg-hover hover:text-ink";
 
   return (
     <PageBackground variant="app">
       <div className="relative min-h-dvh pt-14">
+        {/* 顶栏是页面底色的半透明毛玻璃，不画底边线：内容滚到下面时靠模糊和页面拉开。 */}
         <header
           data-testid="apikey-usage-header"
-          className="fixed inset-x-0 top-0 z-30 border-b border-line bg-canvas/80 backdrop-blur-xl"
+          className="fixed inset-x-0 top-0 z-30 bg-canvas/80 backdrop-blur-xl"
         >
           <div className="mx-auto flex h-14 max-w-screen-xl items-center justify-between gap-3 px-4 sm:px-6">
             <div className="flex min-w-0 items-center gap-2.5">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-900 shadow-sm dark:bg-white">
-                <Key size={16} className="text-white dark:text-neutral-950" />
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-ink">
+                <Key size={16} className="text-canvas" />
               </div>
-              <span className="truncate text-base font-bold tracking-tight text-slate-900 dark:text-white">
+              <span className="truncate text-base font-bold tracking-tight text-ink">
                 {t("apikey_usage.title")}
               </span>
             </div>
@@ -515,14 +516,11 @@ export function ApiKeyUsagePage() {
                       type="button"
                       aria-label={displayName}
                       data-testid="apikey-usage-key-menu"
-                      className="inline-flex max-w-[34vw] items-center gap-1.5 rounded-xl px-1 py-1 text-sm font-medium text-slate-700 transition hover:bg-slate-100 dark:text-white/80 dark:hover:bg-white/10 sm:max-w-56"
+                      className="inline-flex max-w-[34vw] items-center gap-1.5 rounded-xl px-1 py-1 text-sm font-medium text-ink-2 transition hover:bg-hover hover:text-ink sm:max-w-56"
                     >
                       <KeyRound size={14} className="shrink-0" />
                       <span className="min-w-0 truncate">{displayName}</span>
-                      <ChevronRight
-                        size={14}
-                        className="shrink-0 rotate-90 text-slate-400 dark:text-white/40"
-                      />
+                      <ChevronRight size={14} className="shrink-0 rotate-90 text-ink-3" />
                     </button>
                   </DropdownMenu.Trigger>
                   <DropdownMenu.Portal>
@@ -562,7 +560,7 @@ export function ApiKeyUsagePage() {
 
         <main className="mx-auto max-w-screen-xl space-y-4 px-4 py-6 sm:px-6">
           {error && queriedKey ? (
-            <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-300">
+            <div className="rounded-2xl bg-rose-500/10 p-4 text-sm text-rose-700 dark:bg-rose-400/15 dark:text-rose-300">
               {error}
             </div>
           ) : null}
@@ -622,13 +620,13 @@ export function ApiKeyUsagePage() {
               data-testid="apikey-usage-empty"
               className="bg-subtle rounded-3xl px-6 py-16 text-center"
             >
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-500 dark:bg-white/10 dark:text-white/60">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]">
                 <KeyRound size={22} />
               </div>
-              <h2 className="mt-4 text-lg font-semibold text-slate-900 dark:text-white">
+              <h2 className="mt-4 text-lg font-semibold text-ink">
                 {t("apikey_usage.empty_title")}
               </h2>
-              <p className="mx-auto mt-2 max-w-md text-sm text-slate-500 dark:text-white/55">
+              <p className="mx-auto mt-2 max-w-md text-sm text-ink-3">
                 {t("apikey_usage.empty_desc")}
               </p>
               <div className="mt-6">

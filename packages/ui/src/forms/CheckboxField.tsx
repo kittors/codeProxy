@@ -31,10 +31,10 @@ export function CheckboxField({
     <label
       htmlFor={id}
       className={cn(
-        "flex items-start gap-3 rounded-2xl border px-3.5 py-3 transition-colors",
+        "flex items-start gap-3 rounded-2xl px-3.5 py-3 transition-[background-color,box-shadow]",
         checked && tone === "danger"
-          ? "border-rose-500/30 bg-rose-500/[0.05]"
-          : "border-line bg-surface hover:bg-surface-hover",
+          ? "bg-rose-500/[0.05] shadow-[0_0_0_1px_rgb(229_72_77/0.3)]"
+          : "bg-surface shadow-control hover:bg-surface-hover",
         disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer",
         className,
       )}

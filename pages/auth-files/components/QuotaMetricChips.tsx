@@ -117,7 +117,7 @@ export function QuotaMetricChips({
           <div
             key={slot.id}
             className={[
-              "flex min-w-0 items-center gap-1.5 rounded-md border px-2 py-1",
+              "flex min-w-0 items-center gap-1.5 rounded-md px-2 py-1",
               tone.chipClass,
               wide ? "col-span-2" : "",
             ]
@@ -187,7 +187,7 @@ export function QuotaMetricChipsSkeleton({ chips = 2 }: { chips?: number }) {
       {Array.from({ length: safeChips }, (_, index) => (
         <div
           key={index}
-          className={["flex min-w-0 items-center gap-1.5 rounded-md border px-2 py-1", chipClass].join(
+          className={["flex min-w-0 items-center gap-1.5 rounded-md px-2 py-1", chipClass].join(
             " ",
           )}
         >

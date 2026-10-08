@@ -89,9 +89,10 @@ export function LoginOptions({
               key={chip.key}
               className={[
                 "truncate rounded-full px-2 py-0.5",
+                // 改过默认值的项用强调色淡底标出来，其余中性。
                 chip.custom
-                  ? "bg-sky-500/12 text-sky-800 dark:text-sky-200"
-                  : "bg-hover text-ink-3",
+                  ? "bg-accent-soft text-accent-ink"
+                  : "bg-ink/[0.05] text-ink-3 dark:bg-white/[0.07]",
               ].join(" ")}
             >
               {chip.label}

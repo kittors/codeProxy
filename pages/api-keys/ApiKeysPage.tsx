@@ -846,7 +846,7 @@ export function ApiKeysPage({
     <EmptyState
       title={t("api_keys_page.no_keys")}
       description={t("api_keys_page.no_keys_desc")}
-      icon={<KeyRound size={32} className="text-slate-400" />}
+      icon={<KeyRound size={32} className="text-ink-3" />}
     />
   ) : (
     <div className="space-y-3 md:flex md:min-h-0 md:flex-1 md:flex-col">
@@ -868,17 +868,16 @@ export function ApiKeysPage({
   );
 
   return (
-    <div className={embed ? "flex h-full min-h-0 flex-col" : "flex flex-1 flex-col"}>
+    <div data-page-fill="always" className={embed ? "flex h-full min-h-0 flex-col" : "flex flex-1 flex-col"}>
       {embed ? (
         <div className="flex h-full min-h-0 flex-col">
-          <div className="flex shrink-0 items-center justify-end border-b border-line px-4 py-3">
-            {toolbar}
-          </div>
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 py-3">{tableBody}</div>
+          <div className="flex shrink-0 items-center justify-end px-6 pt-3">{toolbar}</div>
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-6 pt-3 pb-6">{tableBody}</div>
         </div>
       ) : (
         <Card
-          className="md:flex md:min-h-0 md:flex-1 md:flex-col md:overflow-hidden"
+          flat
+          className="md:flex md:min-h-0 md:flex-1 md:flex-col"
           bodyClassName="md:flex md:min-h-0 md:flex-1 md:flex-col"
           title={
             endUserIdFilter

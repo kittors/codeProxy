@@ -439,7 +439,7 @@ export function DateTimePicker({
                 <button
                   type="button"
                   onClick={setToday}
-                  className="rounded-full border border-line-strong bg-surface px-3 py-1.5 text-xs font-medium text-ink transition-colors hover:bg-hover"
+                  className="rounded-full bg-surface px-3 py-1.5 text-xs font-medium text-ink shadow-control transition-[background-color,box-shadow] hover:bg-hover hover:shadow-control-hover"
                 >
                   {labels.today}
                 </button>

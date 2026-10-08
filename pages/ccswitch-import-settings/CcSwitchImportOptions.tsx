@@ -50,21 +50,16 @@ function ImportOptionButton({
       aria-label={importLabel}
       title={model ? `${importLabel} · ${model}` : importLabel}
       onClick={() => onSelect(client.type)}
+      // 轮廓用阴影描边（shadow-control），和按钮、ChoiceCards 的选项卡同一套；焦点走全局 :focus-visible。
+      // 客户端 logo 直接放，不再垫带细边的白底方块。
       className={[
-        "group inline-flex min-w-0 items-center text-left transition active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/10 dark:focus-visible:ring-white/15",
+        "group inline-flex min-w-0 items-center bg-surface text-left shadow-control transition-[background-color,box-shadow,color] active:translate-y-px hover:shadow-control-hover",
         compact
-          ? "h-8 gap-1.5 rounded-lg border border-transparent bg-white/80 px-2 text-slate-700 hover:border-slate-900/8 hover:bg-white hover:text-slate-950 dark:bg-neutral-950/60 dark:text-white/70 dark:hover:border-neutral-700 dark:hover:bg-neutral-900 dark:hover:text-white"
-          : "gap-3 rounded-xl border border-black/[0.06] bg-slate-50/55 p-3 shadow-[0_1px_2px_rgb(15_23_42_/_0.035)] hover:border-slate-900/8 hover:bg-white hover:shadow-sm dark:border-white/[0.06] dark:bg-neutral-900/55 dark:hover:border-neutral-700 dark:hover:bg-neutral-900",
+          ? "h-8 gap-1.5 rounded-full px-2.5 text-ink-2 hover:text-ink"
+          : "gap-3 rounded-2xl px-3.5 py-3 hover:bg-surface-hover",
       ].join(" ")}
     >
-      <span
-        className={[
-          "inline-flex shrink-0 items-center justify-center rounded-lg border bg-surface",
-          compact
-            ? "h-5 w-5 border-transparent"
-            : "h-10 w-10 border-slate-900/8 shadow-xs dark:border-white/8",
-        ].join(" ")}
-      >
+      <span className="inline-flex shrink-0 items-center justify-center">
         <img
           src={icon}
           alt=""
@@ -75,19 +70,19 @@ function ImportOptionButton({
       <span className="min-w-0">
         <span
           className={[
-            "block truncate font-semibold text-slate-900 dark:text-white",
+            "block truncate font-semibold text-ink",
             compact ? "text-xs" : "text-sm",
           ].join(" ")}
         >
           {label}
         </span>
         {compact ? null : (
-          <span className="mt-0.5 block text-xs text-slate-500 dark:text-white/55">
+          <span className="mt-0.5 block text-xs text-ink-3">
             {t(client.descriptionKey)}
           </span>
         )}
         {model && !compact ? (
-          <span className="mt-2 inline-flex max-w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-slate-900/8 bg-white px-1.5 py-0.5 font-mono text-2xs text-slate-500 dark:border-white/8 dark:bg-neutral-950 dark:text-white/45">
+          <span className="mt-2 inline-flex max-w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-md bg-ink/[0.05] px-1.5 py-0.5 font-mono text-2xs text-ink-3 dark:bg-white/[0.07]">
             {t("ccswitch.model_hint", { model })}
           </span>
         ) : null}
@@ -132,7 +127,7 @@ function ClaudeAuthFieldSelect({
       }
     >
       {compact ? null : (
-        <span className="text-xs font-semibold text-slate-600 dark:text-white/55">{label}</span>
+        <span className="text-xs font-semibold text-ink-2">{label}</span>
       )}
       <Select
         fullWidth={!compact}
@@ -195,9 +190,9 @@ export function CcSwitchImportOptions({
     <div
       role="group"
       aria-label={t("ccswitch.import_to_ccswitch")}
-      className="inline-flex min-w-0 flex-wrap items-center gap-1 rounded-xl border border-slate-900/8 bg-slate-50/75 p-1 dark:border-white/8 dark:bg-neutral-900/45"
+      className="inline-flex min-w-0 flex-wrap items-center gap-1 rounded-2xl bg-subtle p-1"
     >
-      <span className="px-1.5 text-xs font-semibold text-slate-500 dark:text-white/45">
+      <span className="px-1.5 text-xs font-semibold text-ink-3">
         {t("ccswitch.import_to_ccswitch")}
       </span>
       <ClaudeAuthFieldSelect

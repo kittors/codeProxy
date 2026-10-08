@@ -91,9 +91,13 @@ describe("ImageGenerationPage", () => {
     const specCards = screen.getAllByTestId("image-generation-spec-card");
     expect(specCards).toHaveLength(2);
     for (const card of specCards) {
+      // 规格表和「调用方式」是同一层：内容区上的第一层卡片（伪元素细边 + 卡片投影），
+      // 不套进调用卡片里，也不是看不出边界的同色底块。
       expect(callCard).not.toContainElement(card);
       expect(card.className).toContain("p-4");
-      expect(card.className).not.toContain("shadow");
+      expect(card.className).toContain("cp-edge");
+      expect(card.className).toContain("shadow-card");
+      expect(card.className).not.toMatch(/(?:^|\s)border(?:\s|$)/);
     }
     expect(within(callCard as HTMLElement).queryByText("请求参数")).not.toBeInTheDocument();
     expect(within(callCard as HTMLElement).queryByText("返回结构")).not.toBeInTheDocument();

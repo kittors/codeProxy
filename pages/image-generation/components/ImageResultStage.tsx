@@ -6,8 +6,8 @@ import { imageStageClassName } from "./stageStyles";
 import type { GeneratedImage } from "./useImageGenerationTask";
 
 // 浮在画布 / 图片上的小部件（计时、计数、翻页）：半透明的浮层底 + 模糊，任何底色上都看得清。
-const FLOATING =
-  "border border-line bg-elevated/80 text-ink-2 shadow-sm backdrop-blur-md dark:shadow-none";
+// 浮在画布上的小胶囊：半透明浮层底 + 阴影描边（shadow-control），不画 border。
+const FLOATING = "bg-elevated/80 text-ink-2 shadow-control backdrop-blur-md";
 
 /**
  * 测试弹窗中间的画布：空闲时一句引导，生成中显示阶段文案和计时，失败时收成一行错误，

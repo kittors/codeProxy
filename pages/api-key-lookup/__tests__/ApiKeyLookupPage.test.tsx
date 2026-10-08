@@ -790,15 +790,20 @@ describe("ApiKeyLookupPage", () => {
       screen.queryByText(/manage all api keys under this account|管理本账号下全部 api key/i),
     ).not.toBeInTheDocument();
 
+    // 「管理 API Key」页签不再包一张卡片：操作行直接落在页面上，与下面的表格靠留白分开，
+    // 不再画分隔线。
     const cardToolbar = screen.getByTestId("apikey-lookup-keys-card-toolbar");
-    expect(cardToolbar).toHaveClass("border-b", "px-3", "py-3", "sm:px-5");
+    expect(cardToolbar).toHaveClass("pb-3");
+    expect(cardToolbar).not.toHaveClass("border-b");
     expect(within(cardToolbar).getByRole("button", { name: /refresh|刷新/i })).toBeInTheDocument();
     expect(
       within(cardToolbar).getByRole("button", { name: /new key|新建 key/i }),
     ).toBeInTheDocument();
 
+    // 表格仍是固定高度、内部滚动的视口；没有外层卡片后不再留左右内边距，和操作行左右对齐。
     const tableViewport = screen.getByTestId("apikey-lookup-keys-table-viewport");
-    expect(tableViewport).toHaveClass("min-h-[360px]", "h-[calc(100dvh-240px)]", "px-3", "sm:px-5");
+    expect(tableViewport).toHaveClass("min-h-[360px]", "h-[calc(100dvh-240px)]");
+    expect(tableViewport).not.toHaveClass("px-3");
     expect(tableViewport.querySelector(".h-full.min-h-full")).not.toBeNull();
 
     await waitFor(() => {
@@ -1315,7 +1320,9 @@ describe("ApiKeyLookupPage", () => {
       // sticky 必须是自身节点，不能再包一层短 relative 切断包含块。
       expect(toolbar.parentElement?.tagName.toLowerCase()).toBe("main");
       expect(toolbar).toHaveAttribute("data-stuck", "false");
-      expect(toolbar.className).toMatch(/ring-transparent/);
+      // 没吸顶时完全透明，和页面融为一体：没有细边、没有投影。
+      expect(toolbar.className).not.toMatch(/(?:^|\s)cp-edge(?:\s|$)/);
+      expect(toolbar.className).toMatch(/(?:^|\s)shadow-none(?:\s|$)/);
 
       const header = screen.getByTestId("apikey-lookup-header");
       expect(header).toHaveAttribute("data-collapsed", "false");
@@ -1333,8 +1340,10 @@ describe("ApiKeyLookupPage", () => {
       });
       expect(header.className).toMatch(/-translate-y-full/);
       expect(header.className).toMatch(/opacity-0/);
-      expect(toolbar.className).toMatch(/ring-slate-900\/8/);
-      expect(toolbar.className).not.toMatch(/ring-transparent/);
+      // 吸顶后浮成一张卡片：伪元素细边 + 卡片投影，不画 ring 描边。
+      expect(toolbar.className).toMatch(/(?:^|\s)cp-edge(?:\s|$)/);
+      expect(toolbar.className).toMatch(/(?:^|\s)shadow-card(?:\s|$)/);
+      expect(toolbar.className).not.toMatch(/ring-/);
 
       Object.defineProperty(window, "scrollY", {
         configurable: true,
@@ -1347,7 +1356,7 @@ describe("ApiKeyLookupPage", () => {
         expect(header).toHaveAttribute("data-collapsed", "false");
         expect(toolbar).toHaveAttribute("data-stuck", "false");
       });
-      expect(toolbar.className).toMatch(/ring-transparent/);
+      expect(toolbar.className).not.toMatch(/(?:^|\s)cp-edge(?:\s|$)/);
     } finally {
       Element.prototype.getBoundingClientRect = originalGetBoundingClientRect;
     }

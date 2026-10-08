@@ -92,10 +92,12 @@ export function EntityCard({
         // group variant keep working, and tests locate a card by `.group`.
         // 悬停只把投影加深一档，不上浮：卡片里有开关、勾选框这类小目标，鼠标移上去时
         // 整张卡跟着挪 2px，正要点的那个控件也会跟着跑。
-        "group group/card flex w-full max-w-[34rem] flex-col transition-[box-shadow,border-color,opacity] duration-250 ease-soft hover:shadow-lift md:max-w-none",
+        "group group/card flex w-full max-w-[34rem] flex-col transition-[box-shadow,opacity] duration-250 ease-soft hover:shadow-lift md:max-w-none",
         fill ? "h-full" : "",
-        dense ? "rounded-2xl" : "rounded-3xl",
-        selected ? "border-ink ring-1 ring-ink/15" : "",
+        // 紧凑卡片的圆角小一档（16），同心内圆角跟着改成 16 − 12 = 4（见 Card 的说明）。
+        dense ? "rounded-2xl [--cp-inner-radius:var(--radius-sm)]" : "rounded-3xl",
+        // 选中：把伪元素细边换成强调色，不再叠一圈墨色 ring——投影照常，卡片不会因为选中「变厚」。
+        selected ? "[--cp-edge:var(--cp-accent)] dark:[--cp-edge:var(--cp-accent-ink)]" : "",
         muted ? "opacity-90" : "",
         dimmed ? "opacity-85" : "",
         className,
@@ -162,7 +164,8 @@ export function EntityCard({
       {footer ? (
         <div
           className={[
-            "mt-auto flex items-center justify-between gap-2 border-t border-line",
+            // 底部操作行靠留白和正文分开，不画分隔线。
+            "mt-auto flex items-center justify-between gap-2",
             dense ? "pt-2" : "pt-3",
           ].join(" ")}
         >
@@ -214,7 +217,7 @@ export function EntityCardSkeleton({
       className={[
         "relative flex w-full min-w-0 max-w-[34rem] flex-col md:max-w-none",
         surface({ tone: "card", radius: "3xl" }),
-        dense ? "rounded-2xl p-3.5" : "rounded-3xl p-5",
+        dense ? "rounded-2xl p-3" : "rounded-3xl p-4",
         fill ? "h-full" : "",
         className,
       ]
@@ -255,7 +258,7 @@ export function EntityCardSkeleton({
       {footer ? (
         <div
           className={[
-            "mt-auto flex items-center gap-1.5 border-t border-line",
+            "mt-auto flex items-center gap-1.5",
             dense ? "pt-2" : "pt-3",
           ].join(" ")}
         >

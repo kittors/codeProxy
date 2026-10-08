@@ -8,7 +8,6 @@ import {
   FormField,
   Modal,
   SearchableSelect,
-  SettingGroup,
   SettingRow,
   Skeleton,
   Textarea,
@@ -87,7 +86,7 @@ export function UploadProgressDialog({
             className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-track"
           >
             <motion.div
-              className="h-full rounded-full bg-gradient-to-r from-teal-400 to-sky-500"
+              className="h-full rounded-full bg-accent"
               initial={false}
               animate={{ width: `${percent}%` }}
               transition={reduceMotion ? { duration: 0 } : { duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
@@ -258,7 +257,8 @@ export function ModelOwnerGroupDialog({
       }
     >
       <div className="space-y-5">
-        <SettingGroup>
+        {/* 弹窗里不用 SettingGroup（它是带细边和投影的卡片）：一层无边淡底就够了。 */}
+        <div className="overflow-hidden rounded-2xl bg-subtle">
           <SettingRow
             label={t("auth_files.model_owner_group_enabled")}
             description={t("auth_files.model_owner_group_enabled_desc")}
@@ -272,7 +272,7 @@ export function ModelOwnerGroupDialog({
               />
             }
           />
-        </SettingGroup>
+        </div>
 
         <FormField
           label={t("auth_files.model_owner_group")}
@@ -290,16 +290,17 @@ export function ModelOwnerGroupDialog({
           />
         </FormField>
 
-        <section className="rounded-2xl border border-line">
-          <header className="flex items-center justify-between gap-3 border-b border-line px-4 py-2.5">
+        {/* 标题行 + 模型行（淡底），不再套一个描边框、也不再用分隔线切出表头。 */}
+        <section>
+          <header className="mb-2 flex items-center justify-between gap-3">
             <p className="text-sm font-medium text-ink">{t("auth_files.detail_tab_models")}</p>
             {models ? (
-              <span className="rounded-full bg-selected px-2 py-0.5 text-xs font-medium text-ink-2 tabular-nums">
+              <span className="rounded-full bg-ink/[0.05] px-2 py-0.5 text-xs font-medium text-ink-2 tabular-nums dark:bg-white/[0.07]">
                 {t("auth_files.count_items", { count: models.length })}
               </span>
             ) : null}
           </header>
-          <div className="p-3">
+          <div>
             {loading ? (
               <div className="space-y-2" aria-busy="true">
                 <Skeleton className="h-10 rounded-xl" />

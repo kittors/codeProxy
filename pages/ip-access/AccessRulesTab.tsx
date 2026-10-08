@@ -274,7 +274,7 @@ export function AccessRulesTab({
         width: COLUMN_WIDTH.name,
         overflowTooltip: true,
         render: (item) => (
-          <span className="font-mono text-sm text-slate-900 dark:text-white">{item.cidr}</span>
+          <span className="font-mono text-sm text-ink">{item.cidr}</span>
         ),
       },
       {
@@ -285,8 +285,8 @@ export function AccessRulesTab({
           <span
             className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
               item.effect === "deny"
-                ? "bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300"
-                : "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
+                ? "bg-rose-500/10 text-rose-700 dark:text-rose-300"
+                : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
             }`}
           >
             {t(`ip_access.effect_${item.effect}`)}
@@ -298,7 +298,7 @@ export function AccessRulesTab({
         label: t("ip_access.col_rule_source"),
         width: COLUMN_WIDTH.compact,
         render: (item) => (
-          <span className="text-sm text-slate-600 dark:text-white/70">
+          <span className="text-sm text-ink-2">
             {t(`ip_access.source_${item.source}`)}
           </span>
         ),
@@ -311,7 +311,7 @@ export function AccessRulesTab({
           item.expires_at ? (
             new Date(item.expires_at).toLocaleString(i18n.language)
           ) : (
-            <span className="text-slate-400">{t("ip_access.never_expires")}</span>
+            <span className="text-ink-3">{t("ip_access.never_expires")}</span>
           ),
       },
       {
@@ -326,7 +326,7 @@ export function AccessRulesTab({
         width: COLUMN_WIDTH.composite,
         overflowTooltip: true,
         render: (item) => (
-          <span className="text-sm text-slate-600 dark:text-white/70">
+          <span className="text-sm text-ink-2">
             {item.note || item.reason || "—"}
           </span>
         ),
@@ -396,7 +396,7 @@ export function AccessRulesTab({
 
   return (
     <>
-      <div className="border-t border-slate-100 px-5 py-3 dark:border-white/8">
+      <div className="pb-3">
         <div className="flex flex-wrap items-center gap-2">
           <div className="w-full min-[480px]:w-auto sm:w-[220px]">
             <TextInput
@@ -437,7 +437,7 @@ export function AccessRulesTab({
           {selected.length > 0 ? (
             <PermissionGate permission="platform.ip_access.write">
               <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-500 dark:text-white/50">
+                <span className="text-xs text-ink-3">
                   {t("ip_access.selected_count", { count: selected.length })}
                 </span>
                 <Button size="sm" variant="secondary" disabled={busy} onClick={() => void bulkApply({ enabled: false })}>
@@ -466,7 +466,7 @@ export function AccessRulesTab({
         </div>
       </div>
 
-      <div className="relative min-h-0 flex-1 overflow-hidden px-5">
+      <div className="relative min-h-0 flex-1 overflow-hidden">
         <DataTable<IpAccessRule>
           tableId="ip-access-rules"
           rows={items}
@@ -483,21 +483,21 @@ export function AccessRulesTab({
       </div>
 
       {protectedEntries.length > 0 ? (
-        <div className="border-t border-slate-100 px-5 py-3 dark:border-white/8">
+        <div className="pt-3">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-            <span className="text-xs font-medium text-slate-700 dark:text-white/80">
+            <span className="text-xs font-medium text-ink-2">
               {t("ip_access.protected_title")}
             </span>
             {protectedEntries.map((entry) => (
               <span
                 key={entry.cidr}
                 title={t(`ip_access.protected_${entry.reason}`)}
-                className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 font-mono text-xs text-slate-600 dark:bg-white/10 dark:text-white/70"
+                className="inline-flex items-center gap-1 rounded-full bg-ink/[0.05] px-2 py-0.5 font-mono text-xs text-ink-2 dark:bg-white/[0.07]"
               >
                 {entry.cidr}
               </span>
             ))}
-            <span className="text-xs text-slate-500 dark:text-white/50">
+            <span className="text-xs text-ink-3">
               {t("ip_access.protected_hint")}
             </span>
           </div>
@@ -512,7 +512,8 @@ export function AccessRulesTab({
         onPageChange={(next) => void load(Math.max(1, Math.min(next, totalPages)), pageSize)}
         onPageSizeChange={(size) => void load(1, size)}
         pageSizeOptions={PAGE_SIZE_OPTIONS}
-        className="border-t border-slate-100 px-3 py-3 sm:px-5 dark:border-white/8"
+        // 分页条和表格之间靠留白分开，不画分隔线（同请求日志页）。
+        className="pt-3"
         labels={{
           firstPage: t("request_logs.first_page"),
           previousPage: t("request_logs.prev_page"),

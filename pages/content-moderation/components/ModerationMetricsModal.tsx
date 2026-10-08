@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type ComponentType } from "react";
 import { useTranslation } from "react-i18next";
 import { Activity, AlertTriangle, CheckCircle2, Clock3, ScanSearch, ShieldX } from "lucide-react";
 import { contentModerationApi, type ContentModerationMetrics } from "@code-proxy/api-client";
-import { AnimatedNumber, Callout, Modal, Skeleton, surface, iconHueClass } from "@code-proxy/ui";
+import { AnimatedNumber, Callout, Modal, Skeleton, surface } from "@code-proxy/ui";
 
 export interface ModerationMetricsModalProps {
   open: boolean;
@@ -137,10 +137,10 @@ export function ModerationMetricsModal({ open, onClose }: ModerationMetricsModal
           title={
             <span className="flex flex-wrap items-center gap-2">
               {t("content_moderation.metrics_card_title")}
-              <span className="rounded-full bg-selected px-2 py-0.5 text-2xs font-semibold text-ink-2">
+              <span className="rounded-full bg-ink/[0.05] px-2 py-0.5 text-2xs font-semibold text-ink-2 dark:bg-white/[0.07]">
                 {t("content_moderation.metrics_badge_sync")}
               </span>
-              <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-2xs font-semibold text-emerald-700 dark:text-emerald-300">
+              <span className="rounded-full bg-ink/[0.05] px-2 py-0.5 text-2xs font-semibold text-ink-2 dark:bg-white/[0.07]">
                 {t("content_moderation.metrics_badge_pre_block")}
               </span>
             </span>
@@ -164,7 +164,7 @@ export function ModerationMetricsModal({ open, onClose }: ModerationMetricsModal
                 className={`flex h-full min-w-0 flex-col p-4 ${surface({ tone: "raised", radius: "2xl" })}`}
               >
                 <p className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-ink-3">
-                  <Icon size={14} className={`shrink-0 ${iconHueClass(Icon)}`} aria-hidden="true" />
+                  <Icon size={14} className="shrink-0 text-ink-3" aria-hidden="true" />
                   <span className="min-w-0 truncate">{tile.title}</span>
                 </p>
                 <div className="mt-2.5 min-w-0 overflow-hidden text-2xl font-semibold tracking-tight tabular-nums text-ink">

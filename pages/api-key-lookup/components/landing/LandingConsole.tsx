@@ -29,16 +29,19 @@ export function LandingConsole({ copy }: { copy: LandingCopy }) {
           initial={reduceMotion ? { opacity: 1 } : { opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.3, ease: LANDING_EASE }}
-          // 强调色外框 + 深色面板：把预览板当成一个被「装裱」起来的产品实物。
-          className="rounded-t-4xl border border-b-0 border-line-strong bg-subtle p-1.5 pb-0"
+          /*
+           * 一层面板，不再「外框 + 面板」两层套着。轮廓只画上边和两侧（内嵌阴影，用卡片细边同一个
+           * 颜色），底部不封口：面板与下一段的底色相同，直接融进去，暗示「还有更多」。
+           * 不用 cp-edge——它四边都画，底边会把这条接缝重新描出来。
+           */
+          className="overflow-hidden rounded-t-3xl bg-white shadow-[inset_0_1px_0_var(--cp-edge),inset_1px_0_0_var(--cp-edge),inset_-1px_0_0_var(--cp-edge)] dark:bg-[#0C0C10]"
         >
-          {/* 底部不封口，面板向下溢出被视口裁掉，暗示「还有更多」。 */}
-          <div className="overflow-hidden rounded-t-3xl bg-white dark:bg-[#0C0C10]">
-            <div className="flex items-center gap-2 border-b border-slate-900/8 px-5 py-3.5 dark:border-white/8">
-              <span className="h-2.5 w-2.5 rounded-full bg-slate-300 dark:bg-white/15" aria-hidden />
-              <span className="h-2.5 w-2.5 rounded-full bg-slate-300 dark:bg-white/15" aria-hidden />
-              <span className="h-2.5 w-2.5 rounded-full bg-slate-300 dark:bg-white/15" aria-hidden />
-              <span className="ml-3 font-display text-2xs uppercase tracking-[0.1em] text-slate-400 dark:text-white/35">
+          <div>
+            <div className="flex items-center gap-2 px-5 py-3.5">
+              <span className="h-2.5 w-2.5 rounded-full bg-ink-4" aria-hidden />
+              <span className="h-2.5 w-2.5 rounded-full bg-ink-4" aria-hidden />
+              <span className="h-2.5 w-2.5 rounded-full bg-ink-4" aria-hidden />
+              <span className="ml-3 font-display text-2xs uppercase tracking-[0.1em] text-ink-3">
                 {copy.console.title}
               </span>
             </div>
@@ -48,10 +51,10 @@ export function LandingConsole({ copy }: { copy: LandingCopy }) {
                 <ul className="flex flex-wrap gap-x-10 gap-y-4">
                   {copy.console.kpis.map((kpi) => (
                     <li key={kpi.label}>
-                      <p className="font-display text-2xs uppercase tracking-[0.1em] text-slate-400 dark:text-white/35">
+                      <p className="font-display text-2xs uppercase tracking-[0.1em] text-ink-3">
                         {kpi.label}
                       </p>
-                      <p className="mt-1.5 font-display text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+                      <p className="mt-1.5 font-display text-2xl font-bold tracking-tight text-ink">
                         {kpi.value}
                       </p>
                     </li>
@@ -70,25 +73,26 @@ export function LandingConsole({ copy }: { copy: LandingCopy }) {
                         delay: 0.5 + index * 0.045,
                         ease: LANDING_EASE,
                       }}
-                      // 请求量柱子用全站图表的「请求蓝」渐变，最新一根更饱和——和面板里的真实图表一个样子。
-                      className={`flex-1 rounded-t-sm bg-gradient-to-t ${index === BARS.length - 1 ? "from-blue-500 to-indigo-400" : "from-blue-500/35 to-blue-400/15 dark:from-blue-400/40 dark:to-blue-400/15"}`}
+                      // 请求量柱子用全站图表的「请求蓝」单色：最新一根实色，其余淡一档。不再从蓝渐变到
+                      // 靛蓝——一根柱子两种颜色，只是装饰。
+                      className={`flex-1 rounded-t-sm ${index === BARS.length - 1 ? "bg-blue-500 dark:bg-blue-400" : "bg-blue-500/25 dark:bg-blue-400/25"}`}
                     />
                   ))}
                 </div>
               </div>
 
               <div>
-                <p className="font-display text-2xs uppercase tracking-[0.1em] text-slate-400 dark:text-white/35">
+                <p className="font-display text-2xs uppercase tracking-[0.1em] text-ink-3">
                   {copy.console.logsTitle}
                 </p>
                 <ul className="mt-4">
                   {SAMPLE_ROWS.map((row) => (
                     <li
                       key={row.model}
-                      className="flex items-center gap-3 border-b border-slate-900/8 py-3 last:border-b-0 dark:border-white/8"
+                      className="flex items-center gap-3 border-b border-line py-3 last:border-b-0"
                     >
                       <VendorIcon modelId={row.model} size={16} />
-                      <span className="min-w-0 flex-1 truncate font-mono text-xs text-slate-700 dark:text-white/70">
+                      <span className="min-w-0 flex-1 truncate font-mono text-xs text-ink-2">
                         {row.model}
                       </span>
                       <span
@@ -101,10 +105,10 @@ export function LandingConsole({ copy }: { copy: LandingCopy }) {
                       >
                         {row.status}
                       </span>
-                      <span className="w-14 text-right font-mono text-xs text-slate-400 dark:text-white/35">
+                      <span className="w-14 text-right font-mono text-xs text-ink-3">
                         {row.latency}
                       </span>
-                      <span className="hidden w-12 text-right font-mono text-xs text-slate-400 sm:block dark:text-white/35">
+                      <span className="hidden w-12 text-right font-mono text-xs text-ink-3 sm:block">
                         {row.tokens}
                       </span>
                     </li>

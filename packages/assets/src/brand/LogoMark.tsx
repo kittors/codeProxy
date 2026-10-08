@@ -8,7 +8,8 @@
  *
  * 两个变体：
  * - `inline`（默认）：跟随主题的墨色底板——浅色界面里是近黑底板 + 白色箭头，深色界面里
- *   反转成浅色底板 + 深色箭头，颜色取自 `--cp-accent` / `--cp-accent-fg`。
+ *   反转成浅色底板 + 深色箭头，颜色取自 `--cp-ink` / `--cp-canvas`。不用强调色：强调色
+ *   （蓝）是交互状态的颜色，品牌标记染成蓝色会读成「被选中」。
  * - `solid`：固定近黑底板 + 白色箭头，给拿不到主题变量的场合（导出图片、外部嵌入）。
  *
  * favicon、apple-touch-icon、og-image 由同一份图形导出（apps/admin-panel/public），
@@ -30,8 +31,8 @@ export interface LogoMarkProps {
 
 export function LogoMark({ size = 32, variant = "inline", className, title }: LogoMarkProps) {
   const fixed = variant === "solid";
-  const plate = fixed ? "#0d0d0d" : "var(--cp-accent, #0d0d0d)";
-  const glyph = fixed ? "#ffffff" : "var(--cp-accent-fg, #ffffff)";
+  const plate = fixed ? "#0d0d0d" : "var(--cp-ink, #0d0d0d)";
+  const glyph = fixed ? "#ffffff" : "var(--cp-canvas, #ffffff)";
 
   return (
     <svg

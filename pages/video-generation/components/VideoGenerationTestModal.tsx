@@ -326,7 +326,7 @@ export function VideoGenerationTestModal({
             <video
               src={test.result.video.url}
               controls
-              className="w-full rounded-2xl border border-line bg-subtle"
+              className="w-full rounded-2xl bg-subtle"
             />
             <a
               href={test.result.video.url}

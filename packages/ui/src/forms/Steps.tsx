@@ -35,7 +35,7 @@ function StepMarker({ index, state }: { index: number; state: StepState }) {
             ? "bg-emerald-500 text-white"
             : state === "active"
               ? "bg-accent text-accent-fg"
-              : "border border-line-strong bg-surface text-ink-3",
+              : "bg-surface text-ink-3 shadow-control",
         ].join(" ")}
       >
         <AnimatePresence initial={false} mode="popLayout">

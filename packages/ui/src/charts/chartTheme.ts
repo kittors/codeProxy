@@ -7,11 +7,13 @@
  *
  * 配色原则：
  * - 网格、坐标轴、刻度文字是中性灰，越不重要越浅——它们是背景，不该抢眼；
- * - 数据本身一律有颜色：主序列靛蓝，其余序列与分类色是一组明快、彼此分得开的色相。
- *   以前主序列墨黑、次序列灰阶、柱子灰色，整张图像没加载完；
+ * - 数据本身一律有颜色：主序列用界面的强调蓝（与主按钮、选中态同一个颜色，图表和界面读起来
+ *   是一套），其余序列与分类色是一组明快、彼此分得开的色相。以前主序列墨黑、次序列灰阶、柱子
+ *   灰色，整张图像没加载完；
  * - 柱子与面积用同色系渐变（`chartGradient`），比平涂的色块轻；
- * - 指标各有一个身份色（metric），与监控中心、系统监控同一组：请求蓝、成功绿、Token 紫、
- *   费用琥珀、缓存青、耗时靛蓝。按厂商着色时用 assets 的品牌色（vendorBrand）；
+ * - 指标各有一个身份色（metric），只在同一张图里要同时画几个指标时用来区分：请求蓝（即强调色）、
+ *   成功绿、Token 紫、费用琥珀、缓存青。单独一条迷你趋势线不需要身份色，用强调色即可（仪表盘
+ *   KPI 卡片以前六张卡六种颜色，正是「强调色太多」的一处）。按厂商着色时用 assets 的品牌色；
  * - 绿、橙、红、蓝仍表达成功、警告、失败、信息。
  */
 
@@ -55,58 +57,58 @@ export interface ChartPalette {
 }
 
 const LIGHT: ChartPalette = {
-  ink: "#0d0d0d",
-  ink2: "#5d5d5d",
-  ink3: "#8f8f8f",
-  grid: "#f1f1f1",
+  ink: "#111113",
+  ink2: "#55555c",
+  ink3: "#76767d",
+  grid: "#f1f1f2",
   surface: "#ffffff",
-  axis: "#e2e2e2",
-  primary: "#6366f1",
-  series: ["#6366f1", "#06b6d4", "#f59e0b", "#ec4899"],
-  bar: "#a5b4fc",
-  barHover: "#818cf8",
+  axis: "#e4e4e7",
+  primary: "#2a6ee8",
+  series: ["#2a6ee8", "#06b6d4", "#f59e0b", "#ec4899"],
+  bar: "#a9c5f7",
+  barHover: "#5f93ec",
   ok: "#10a37f",
   warn: "#e08e1f",
   err: "#e5484d",
   info: "#2a6ee8",
   metric: {
-    requests: "#3b82f6",
+    requests: "#2a6ee8",
     success: "#10a37f",
     tokens: "#8b5cf6",
     cost: "#f59e0b",
     costTotal: "#ea580c",
     cache: "#14b8a6",
-    rpm: "#3b82f6",
+    rpm: "#2a6ee8",
     tpm: "#8b5cf6",
-    latency: "#6366f1",
+    latency: "#2a6ee8",
   },
 };
 
 const DARK: ChartPalette = {
-  ink: "#ececec",
-  ink2: "#b4b4b4",
-  ink3: "#8a8a8a",
+  ink: "#f2f2f4",
+  ink2: "#b4b4bc",
+  ink3: "#86868f",
   grid: "rgba(255, 255, 255, 0.06)",
-  surface: "#2a2a2a",
+  surface: "#18181c",
   axis: "rgba(255, 255, 255, 0.12)",
-  primary: "#818cf8",
-  series: ["#818cf8", "#22d3ee", "#fbbf24", "#f472b6"],
-  bar: "#4f46e5",
-  barHover: "#6366f1",
+  primary: "#5f93ec",
+  series: ["#5f93ec", "#22d3ee", "#fbbf24", "#f472b6"],
+  bar: "#2a5bc0",
+  barHover: "#3b7cf0",
   ok: "#3ecf9a",
   warn: "#f0ad4e",
   err: "#ff6b6b",
   info: "#77a6ff",
   metric: {
-    requests: "#60a5fa",
+    requests: "#5f93ec",
     success: "#3ecf9a",
     tokens: "#a78bfa",
     cost: "#fbbf24",
     costTotal: "#f97316",
     cache: "#2dd4bf",
-    rpm: "#60a5fa",
+    rpm: "#5f93ec",
     tpm: "#a78bfa",
-    latency: "#818cf8",
+    latency: "#5f93ec",
   },
 };
 
@@ -175,10 +177,10 @@ export function chartGradient(
 export const chartTooltipStyle = (isDark: boolean) => {
   const palette = chartPalette(isDark);
   return {
-    backgroundColor: isDark ? "#ececec" : "#0d0d0d",
+    backgroundColor: isDark ? "#f2f2f4" : "#111113",
     borderWidth: 0,
     padding: [8, 11],
-    textStyle: { color: isDark ? "#0d0d0d" : "#ffffff", fontSize: 12 },
+    textStyle: { color: isDark ? "#111113" : "#ffffff", fontSize: 12 },
     extraCssText: `border-radius: 10px; box-shadow: 0 8px 20px -6px rgba(0, 0, 0, 0.28);`,
     axisPointer: {
       lineStyle: { color: palette.axis },

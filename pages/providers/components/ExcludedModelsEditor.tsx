@@ -3,11 +3,11 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@code-proxy/ui";
 import type { ProviderKeyDraft } from "../providers-helpers";
 
-const SectionCard = ({ children }: { children: React.ReactNode }) => (
-  <div className="rounded-xl border border-line bg-surface p-4 shadow-sm">
-    {children}
-  </div>
-);
+/**
+ * 一组字段。弹窗本身就是一层，组与组之间靠留白分开，不再各自套一张描边卡片——以前一个页签里
+ * 叠着五六张描边小卡，读起来像一摞框。
+ */
+const FieldGroup = ({ children }: { children: React.ReactNode }) => <div>{children}</div>;
 
 export function ExcludedModelsEditor({
   count,
@@ -23,7 +23,7 @@ export function ExcludedModelsEditor({
   const { t } = useTranslation();
 
   return (
-    <SectionCard>
+    <FieldGroup>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm font-semibold text-ink">
           {t("providers.excluded_models_label")}
@@ -53,12 +53,13 @@ export function ExcludedModelsEditor({
         }}
         placeholder={t("providers.excluded_placeholder")}
         aria-label="excludedModels"
-        className="mt-3 min-h-[140px] w-full resize-y rounded-xl border border-line bg-surface px-3 py-2 font-mono text-xs text-ink outline-none transition placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:placeholder:text-neutral-500 dark:focus-visible:ring-white/15"
+        // 多行输入框和共享 Textarea 同一套阴影描边；单独写是因为这里要等宽小字号。
+        className="mt-3 min-h-[140px] w-full resize-y rounded-2xl bg-field px-3.5 py-3 font-mono text-xs text-ink shadow-control outline-none transition-[box-shadow] duration-150 placeholder:text-ink-3 hover:shadow-control-hover focus:shadow-control-focus"
       />
 
       <p className="mt-2 text-xs text-ink-3">
         {t("providers.excluded_count_hint", { count })}
       </p>
-    </SectionCard>
+    </FieldGroup>
   );
 }

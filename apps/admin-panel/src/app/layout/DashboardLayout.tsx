@@ -18,18 +18,24 @@ export function DashboardLayout() {
         {/*
          * 页面内容的唯一包装层，也是「底部留白等于其余三边」这条约束的落点。
          *
-         * 这里必须用 flex-1 而不是 min-h-full：子元素的百分比高度需要父级有确定高度，
-         * 实测会比内容盒矮十几到几十像素，底部于是凭空多出一条比左右宽的留白。
-         * flex-1 由 flex 直接分配剩余空间，不依赖百分比。
+         * 页面有两种高度模式，由页面根元素上的 data-page-fill 声明，外壳用 :has() 读取：
          *
-         * 配套地，AppShell 的 <main> 用的是 h-full 而不是 min-h-full：min-height 撑出来的
-         * 高度不是确定值，整条 flex 链就没有可分配的上限，页面里「表格吃掉剩余高度、自己
-         * 内部滚」的写法会全部落空，内容把外壳一路撑开——各页面以前正是靠
-         * h-[calc(100dvh-300px)] 这类手工累加的数字绕开它，代价是每次尺寸变动集体失准。
-         * 钉死高度后长页面照样能滚：main 不裁剪，溢出部分仍算进外层滚动容器的可滚区域。
+         * - 默认「随内容流动」：<main> 是 min-h-full，内容长了 main 跟着长高，底部内边距
+         *   始终排在最后一块内容之后——滚到底时内容离底边仍留着一条和左右一样宽的留白。
+         *   仪表盘、监控中心这类长页面都是这种。
+         * - data-page-fill="always" | "md"「钉满一屏、内部滚动」：表格类页面让表格吃掉剩余
+         *   高度、自己在内部滚。这需要一条确定高度的 flex 链：<main> 改 h-full，这一层与
+         *   页面根都补 min-h-0（flex item 默认 min-height:auto 会被内容撑开，断一层约束
+         *   整条就失效）。"md" 只在桌面宽度钉高，窄屏照样随内容流动。
          *
-         * 不加 min-h-0：保留 min-height:auto，内容超过一屏时容器仍会被撑开、交给外层滚动；
-         * 加了反而会把长页面裁掉。需要内部滚动的页面在自己的根容器上写 flex-1 + min-h-0。
+         * 以前（#909）是反过来的：对所有页面一律钉高。表格页因此不用声明，但长页面的内容
+         * 会溢出被钉死的页面根，<main> 的底部内边距停在一屏高的位置，滚到底内容紧贴底边。
+         * 现在默认流动：新写的长页面不会再踩这个坑；新写的表格页忘了声明，开发时就能
+         * 看到表格没有在内部滚。
+         *
+         * flex-1 而不是 min-h-full：子元素的百分比高度需要父级有确定高度，实测会比内容盒
+         * 矮十几到几十像素，底部于是凭空多出一条比左右宽的留白。flex-1 由 flex 直接分配
+         * 剩余空间，不依赖百分比。
          *
          * `[&>*:only-child]:flex-1` 是给页面兜底的默认值：包装层撑满了，但它是透明的，
          * 里面的页面根要是没撑满，用户看到的还是底部那条更宽的留白。限定 :only-child 是
@@ -39,7 +45,11 @@ export function DashboardLayout() {
          */}
         <Reveal
           key={`${location.pathname}:${tenantKey}`}
-          className="flex min-h-0 flex-1 flex-col [&>*:only-child]:min-h-0 [&>*:only-child]:flex-1"
+          className={[
+            "flex flex-1 flex-col [&>*:only-child]:flex-1",
+            "has-[>[data-page-fill=always]]:min-h-0 [&>[data-page-fill=always]]:min-h-0",
+            "md:has-[>[data-page-fill=md]]:min-h-0 md:[&>[data-page-fill=md]]:min-h-0",
+          ].join(" ")}
         >
           {outlet}
         </Reveal>

@@ -28,8 +28,8 @@ const RELEASE_NOTES_PROSE = `prose prose-sm dark:prose-invert max-w-none break-w
   prose-headings:mt-3 prose-headings:mb-2 prose-headings:font-semibold
   prose-h1:text-base prose-h2:text-sm prose-h3:text-sm
   prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5
-  prose-code:rounded-md prose-code:bg-slate-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:text-sm prose-code:font-mono prose-code:text-slate-700 prose-code:before:content-none prose-code:after:content-none
-  dark:prose-code:bg-neutral-800 dark:prose-code:text-slate-300
+  prose-code:rounded-md prose-code:bg-ink/[0.06] prose-code:px-1.5 prose-code:py-0.5 prose-code:text-sm prose-code:font-mono prose-code:text-ink-2 prose-code:before:content-none prose-code:after:content-none
+  dark:prose-code:bg-white/[0.08]
   prose-pre:rounded-lg prose-pre:bg-slate-900 prose-pre:text-xs dark:prose-pre:bg-neutral-900
   prose-a:break-all prose-a:text-ink`;
 
@@ -141,7 +141,7 @@ function ReleaseNotes({ candidate }: { candidate: UpdateCheckResponse }) {
 
       <div
         data-testid="update-release-notes"
-        className={`mt-2 overflow-y-auto break-words rounded-lg border border-slate-900/8 bg-slate-50 p-3 text-sm text-slate-700 dark:border-white/8 dark:bg-neutral-900/50 dark:text-slate-200 ${
+        className={`mt-2 overflow-y-auto break-words rounded-lg bg-subtle p-3 text-sm text-ink-2 ${
           expanded ? "max-h-72" : "max-h-32"
         }`}
       >
@@ -296,7 +296,8 @@ export function UpdateModal({
 
         {display ? (
           <>
-            <dl className="min-w-0 divide-y divide-line rounded-2xl border border-line px-3">
+            {/* 弹窗里的版本摘要是一块无边淡底；行与行之间的细线是数据分隔线。 */}
+            <dl className="min-w-0 divide-y divide-line rounded-2xl bg-subtle px-3">
               <VersionRow
                 label={t("auto_update.service_version")}
                 from={versionLabel(

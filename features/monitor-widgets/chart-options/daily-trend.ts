@@ -2,15 +2,20 @@ import { chartPalette, chartTooltipStyle } from "@code-proxy/ui";
 import { formatNumber } from "../monitor-utils";
 import type { DailySeriesPoint } from "./types";
 
-/** 与卡片底色按比例混出不透明的浅一档（amount 越大越接近底色）。只认 #rrggbb。 */
+/**
+ * 与卡片底色按比例混出不透明的浅一档（amount 越大越接近底色）。只认 #rrggbb。
+ * 底色取图表主题里的卡片色（chartPalette.surface），深色卡片换成近黑之后，混色目标跟着走——
+ * 以前写死成旧的 #2a2a2a，深色下浅一档的柱子会混出一层灰。
+ */
 const tint = (hex: string, isDark: boolean, amount: number): string => {
   const value = Number.parseInt(hex.replace(/^#/, ""), 16);
-  if (!Number.isFinite(value)) return hex;
-  const surface = isDark ? 0x2a : 0xff;
+  const surface = Number.parseInt(chartPalette(isDark).surface.replace(/^#/, ""), 16);
+  if (!Number.isFinite(value) || !Number.isFinite(surface)) return hex;
   return `#${[16, 8, 0]
     .map((shift) => {
       const channel = (value >> shift) & 255;
-      return Math.round(channel + (surface - channel) * amount)
+      const base = (surface >> shift) & 255;
+      return Math.round(channel + (base - channel) * amount)
         .toString(16)
         .padStart(2, "0");
     })

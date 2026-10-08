@@ -145,7 +145,7 @@ export function AuthFilesToolbarActions({
             aria-label={t("antigravity_quota.warmup_policy_title")}
             title={t("antigravity_quota.warmup_policy_title")}
           >
-            <Zap size={15} className="text-amber-500" />
+            <Zap size={15} />
           </Button>
         </HoverTooltip>
       ) : null}

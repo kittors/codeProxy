@@ -1,4 +1,3 @@
-import { useId } from "react";
 import { useReducedMotion } from "framer-motion";
 import { LogoMark, VendorIcon } from "@code-proxy/assets";
 
@@ -23,10 +22,10 @@ const UPSTREAM_Y = UPSTREAMS.map((_, index) => {
  *
  * 连线用 SVG stroke-dasharray 做流动效果：相比逐个小球沿路径运动，dash 动画只占一条
  * path，滚动时不会掉帧，也天然支持 prefers-reduced-motion（关掉动画即为静态虚线）。
+ * 连线是单一的强调色，不再从靛蓝渐变到青色；节点是卡片里的淡底块，不描 ring。
  */
 export function LandingRelayDiagram({ appLabel }: { appLabel: string }) {
   const reduceMotion = useReducedMotion();
-  const gradientId = `relay-flow-${useId()}`;
 
   return (
     <div className="relative mt-10 flex h-48 items-center justify-between gap-4">
@@ -34,7 +33,7 @@ export function LandingRelayDiagram({ appLabel }: { appLabel: string }) {
         {UPSTREAMS.map((id) => (
           <li
             key={id}
-            className="flex h-10 w-10 items-center justify-center rounded-xl bg-white ring-1 ring-slate-900/8 dark:bg-white/[0.06] dark:ring-white/10"
+            className="flex h-10 w-10 items-center justify-center rounded-xl bg-subtle"
           >
             <VendorIcon modelId={id} size={18} />
           </li>
@@ -47,29 +46,15 @@ export function LandingRelayDiagram({ appLabel }: { appLabel: string }) {
         className="h-full min-w-0 flex-1"
         aria-hidden
       >
-        <defs>
-          <linearGradient
-            id={gradientId}
-            x1="0"
-            y1="0"
-            x2="120"
-            y2="0"
-            gradientUnits="userSpaceOnUse"
-          >
-            <stop stopColor="#6366F1" stopOpacity="0.2" />
-            <stop offset="0.55" stopColor="#6366F1" stopOpacity="0.9" />
-            <stop offset="1" stopColor="#06B6D4" stopOpacity="0.5" />
-          </linearGradient>
-        </defs>
         <g
           fill="none"
-          stroke={`url(#${gradientId})`}
           strokeWidth="1.8"
           strokeLinecap="round"
           strokeDasharray="5 7"
-          className={
-            reduceMotion ? undefined : "motion-safe:animate-[landing-flow_1.4s_linear_infinite]"
-          }
+          className={[
+            "stroke-accent/70",
+            reduceMotion ? "" : "motion-safe:animate-[landing-flow_1.4s_linear_infinite]",
+          ].join(" ")}
         >
           {UPSTREAM_Y.map((y) => (
             <path key={y} d={`M0 ${y} C46 ${y} 56 ${CENTER_Y} 120 ${CENTER_Y}`} />
@@ -82,10 +67,10 @@ export function LandingRelayDiagram({ appLabel }: { appLabel: string }) {
         整列居中会把标记推离连线汇聚点（也就是之前连线看着没对齐的原因）。
       */}
       <div className="relative flex h-full shrink-0 items-center">
-        <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-surface ring-1 ring-line-strong">
+        <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-subtle">
           <LogoMark size={20} />
         </span>
-        <span className="absolute left-1/2 top-[calc(50%+2.25rem)] w-max -translate-x-1/2 font-display text-2xs uppercase tracking-[0.06em] text-slate-400 dark:text-white/40">
+        <span className="absolute left-1/2 top-[calc(50%+2.25rem)] w-max -translate-x-1/2 font-display text-2xs uppercase tracking-[0.06em] text-ink-3">
           {appLabel}
         </span>
       </div>

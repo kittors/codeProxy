@@ -5,7 +5,7 @@ import {
   type CodexOAuthAllowedClientPresetInfo,
   type CodexOAuthAdmissionResponse,
 } from "@code-proxy/api-client";
-import { Checkbox, ConfirmModal, Skeleton, useToast } from "@code-proxy/ui";
+import { Checkbox, ConfirmModal, Skeleton, surface, useToast } from "@code-proxy/ui";
 
 const emptyAdmission: CodexOAuthAdmissionResponse = {
   allowed_clients: [],
@@ -82,7 +82,8 @@ export function CodexOAuthAdmissionPanel() {
       <div
         data-testid="codex-oauth-global-admission-panel"
         aria-busy={loading}
-        className="space-y-3 rounded-2xl border border-line bg-surface p-5"
+        // 分区标题下面的唯一一层卡片（和设置组同一种外观）；客户端选项是卡片里的无边淡底块。
+        className={`space-y-3 p-5 ${surface({ radius: "2xl" })}`}
       >
         <div className="flex flex-wrap items-center gap-2">
           <span className="inline-flex rounded-full bg-sky-500/10 px-2.5 py-1 text-2xs font-medium text-sky-700 dark:text-sky-300">
@@ -92,8 +93,8 @@ export function CodexOAuthAdmissionPanel() {
         </div>
         {loading ? (
           <div className="grid gap-2 md:grid-cols-2">
-            <Skeleton className="h-16 rounded-2xl" />
-            <Skeleton className="h-16 rounded-2xl" />
+            <Skeleton className="h-16 rounded-xl" />
+            <Skeleton className="h-16 rounded-xl" />
           </div>
         ) : availableClients.length ? (
           <div className="grid gap-2 md:grid-cols-2">
@@ -103,10 +104,8 @@ export function CodexOAuthAdmissionPanel() {
                 <label
                   key={preset.id}
                   className={[
-                    "grid cursor-pointer grid-cols-[auto_minmax(0,1fr)] gap-3 rounded-2xl border px-3.5 py-3 transition-colors",
-                    checked
-                      ? "border-ink/25 bg-surface dark:border-white/25"
-                      : "border-line bg-subtle hover:bg-surface-hover",
+                    "grid cursor-pointer grid-cols-[auto_minmax(0,1fr)] gap-3 rounded-xl px-3.5 py-3 transition-colors",
+                    checked ? "bg-accent-soft" : "bg-subtle hover:bg-hover",
                   ].join(" ")}
                 >
                   <Checkbox
@@ -130,7 +129,7 @@ export function CodexOAuthAdmissionPanel() {
             })}
           </div>
         ) : (
-          <p className="rounded-2xl border border-dashed border-line px-4 py-6 text-center text-sm text-ink-3">
+          <p className="rounded-xl bg-subtle px-4 py-6 text-center text-sm text-ink-3">
             {t("config_page.codex_oauth_admission_empty")}
           </p>
         )}

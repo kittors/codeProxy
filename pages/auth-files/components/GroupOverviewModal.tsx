@@ -2,36 +2,32 @@ import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Activity, BarChart3, CalendarRange, FileStack, Gauge, LineChart, RefreshCw } from "lucide-react";
 import { VendorIcon } from "@code-proxy/assets";
-import { Button, DialogIcon, iconHueClass, surface, type Hue } from "@code-proxy/ui";
+import { Button } from "@code-proxy/ui";
 import { Modal } from "@code-proxy/ui";
 import { Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { EChart } from "@code-proxy/ui";
-import { QUOTA_HUE } from "../helpers/quotaSeriesColors";
 
 /**
- * 四张指标卡各有一个身份色，并且和下面的趋势图对得上：总调用是请求蓝（= 图里的柱子），
- * 周限是额度粉（= 图里第一条额度线）；文件数用文件类图标的橙、配额样本用统计类的翠绿
- * （与全站图标色相注册表一致）。只给图标块上色，数值保持墨色。
+ * 四格指标：无边淡底 + 线性图标 + 墨色数值。弹窗本身是一层，指标格只用一层淡底分组；图标不再按
+ * 指标垫身份色底块（文件橙、调用蓝、周限粉、样本绿），颜色只留给下面趋势图里的数据。
  */
 function StatCard({
   icon,
-  hue,
   label,
   value,
   help,
 }: {
   icon: ReactNode;
-  hue: Hue;
   label: ReactNode;
   value: ReactNode;
   help: ReactNode;
 }) {
   return (
-    <div className={[surface({ tone: "raised", radius: "2xl" }), "flex flex-col px-4 py-3.5"].join(" ")}>
+    <div className="flex flex-col rounded-2xl bg-subtle px-4 py-3.5">
       <div className="flex items-center gap-2">
-        <DialogIcon tone={hue} size="sm">
+        <span aria-hidden="true" className="shrink-0 text-ink-3 [&_svg.lucide]:size-[16px]">
           {icon}
-        </DialogIcon>
+        </span>
         <p className="min-w-0 truncate text-xs font-medium text-ink-3">{label}</p>
       </div>
       <div className="mt-2.5 text-2xl font-semibold tracking-tight text-ink tabular-nums">{value}</div>
@@ -111,7 +107,7 @@ export function GroupOverviewModal({
           </Tabs>
           <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex h-9 items-center gap-1.5 rounded-full bg-hover px-3.5 text-sm font-medium text-ink-2">
-              <CalendarRange size={14} aria-hidden="true" className={iconHueClass(CalendarRange)} />
+              <CalendarRange size={14} aria-hidden="true" className="text-ink-3" />
               {t("auth_files.group_overview_fixed_7_days")}
             </span>
             <Button
@@ -135,21 +131,18 @@ export function GroupOverviewModal({
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard
             icon={<FileStack />}
-            hue="orange"
             label={activeGroupTitle}
             value={activeGroupRows.length}
             help={t("auth_files.group_overview_file_count")}
           />
           <StatCard
             icon={<Activity />}
-            hue="blue"
             label={t("auth_files.group_overview_total_calls_label")}
             value={activeGroupOverview.totalCalls.toLocaleString()}
             help={t("auth_files.group_overview_total_calls_help")}
           />
           <StatCard
             icon={<Gauge />}
-            hue={QUOTA_HUE}
             label={
               (activeGroupOverview.weeklyFamilies?.length ?? 0) > 1
                 ? t("auth_files.group_overview_weekly_limits_label")
@@ -184,7 +177,6 @@ export function GroupOverviewModal({
           />
           <StatCard
             icon={<LineChart />}
-            hue="emerald"
             label={t("auth_files.group_overview_sample_count", {
               count: activeGroupOverview.quotaSampleCount,
             })}
@@ -199,7 +191,7 @@ export function GroupOverviewModal({
 
         <div className="min-h-0 flex-1">
           {activeGroupRows.length === 0 ? (
-            <div className="grid place-items-center rounded-2xl border border-dashed border-line px-4 py-12 text-center text-sm text-ink-3">
+            <div className="grid place-items-center rounded-2xl bg-subtle px-4 py-12 text-center text-sm text-ink-3">
               <BarChart3 size={20} className="mb-2 text-ink-4" aria-hidden="true" />
               {t("auth_files.group_overview_empty")}
             </div>

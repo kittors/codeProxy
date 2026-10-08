@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Check, Copy, Layers, RefreshCw, Search, Store } from "lucide-react";
 import { VendorIcon } from "@code-proxy/assets";
-import { Card, EmptyState, Tabs, TabsList, TabsTrigger, TextInput, iconHueClass, useToast } from "@code-proxy/ui";
+import { Card, EmptyState, Tabs, TabsList, TabsTrigger, TextInput, useToast } from "@code-proxy/ui";
 import { formatModelPriceAmount, hasModelPricing } from "@features/model-availability";
 import {
   buildModelVendorStats,
@@ -16,6 +16,7 @@ import type { PublicModelItem } from "../api";
 
 type VendorFilter = "all" | ModelVendorKey;
 
+/** 一项价格：标签 + 等宽数值。没有定价的项数值淡一档，不再各套一个描边小框。 */
 function PriceChip({
   label,
   value,
@@ -26,21 +27,12 @@ function PriceChip({
   muted?: boolean;
 }) {
   return (
-    <div
-      className={[
-        "min-w-0 rounded-lg border px-2 py-1.5",
-        muted
-          ? "border-slate-100 bg-slate-50/70 dark:border-white/8 dark:bg-neutral-900/40"
-          : "border-slate-900/8 bg-white dark:border-neutral-700/70 dark:bg-neutral-950/50",
-      ].join(" ")}
-    >
-      <div className="text-2xs font-medium text-slate-400 dark:text-white/35">
-        {label}
-      </div>
+    <div className="min-w-0">
+      <div className="text-2xs font-medium text-ink-3">{label}</div>
       <div
         className={[
           "mt-0.5 truncate font-mono text-xs font-semibold tabular-nums",
-          muted ? "text-slate-400 dark:text-white/35" : "text-slate-800 dark:text-white/90",
+          muted ? "text-ink-3" : "text-ink",
         ].join(" ")}
       >
         {value}
@@ -48,6 +40,12 @@ function PriceChip({
     </div>
   );
 }
+
+/*
+ * 价格区是卡片底部的一块无描边淡底：贴着卡片的两个下角，所以圆角取 rounded-inner，
+ * 与卡片圆角同一个圆心（Card compact：24 − 12 = 12）。
+ */
+const PRICE_GRID = "rounded-inner bg-subtle px-2.5 py-2";
 
 function formatPriceCell(amount: number, notPriced: string): string {
   if (!Number.isFinite(amount) || amount <= 0) return notPriced;
@@ -69,7 +67,7 @@ function ModelPlazaCard({ model, onCopied }: { model: PublicModelItem; onCopied:
 
   const priceGrid =
     model.pricing.mode === "call" ? (
-      <div className="grid grid-cols-1 gap-1.5">
+      <div className={`grid grid-cols-1 gap-1.5 ${PRICE_GRID}`}>
         <PriceChip
           label={t("model_plaza.price_per_call")}
           value={formatPriceCell(model.pricing.pricePerCall, notPriced)}
@@ -77,7 +75,7 @@ function ModelPlazaCard({ model, onCopied }: { model: PublicModelItem; onCopied:
         />
       </div>
     ) : (
-      <div className="grid grid-cols-3 gap-1.5">
+      <div className={`grid grid-cols-3 gap-3 ${PRICE_GRID}`}>
         <PriceChip
           label={t("model_plaza.input_price")}
           value={formatPriceCell(model.pricing.inputPricePerMillion, notPriced)}
@@ -108,7 +106,7 @@ function ModelPlazaCard({ model, onCopied }: { model: PublicModelItem; onCopied:
       <Card
         padding="compact"
         bodyClassName="mt-0 flex h-full min-h-[196px] min-w-0 flex-col"
-        className="group h-full min-w-0 overflow-hidden transition hover:border-ink-4 hover:shadow-[2px_2px_10px_rgb(0_0_0_/_0.06)] dark:hover:shadow-[2px_2px_10px_rgb(0_0_0_/_0.28)]"
+        className="group h-full min-w-0 overflow-hidden transition-shadow hover:shadow-lift"
       >
         <div className="flex items-start gap-3">
           <ModelVendorTile modelId={model.id} />
@@ -116,7 +114,7 @@ function ModelPlazaCard({ model, onCopied }: { model: PublicModelItem; onCopied:
             <div className="flex items-start gap-2">
               <div className="min-w-0 flex-1">
                 <h3
-                  className="truncate font-mono text-sm font-semibold text-slate-900 dark:text-white"
+                  className="truncate font-mono text-sm font-semibold text-ink"
                   title={model.id}
                 >
                   {model.id}
@@ -124,7 +122,7 @@ function ModelPlazaCard({ model, onCopied }: { model: PublicModelItem; onCopied:
                 {model.ownedBy ? (
                   <ModelOwnerTag owner={model.ownedBy} className="mt-1" />
                 ) : (
-                  <p className="mt-0.5 truncate text-2xs text-slate-400 dark:text-white/35">
+                  <p className="mt-0.5 truncate text-2xs text-ink-3">
                     {t("model_plaza.no_owner")}
                   </p>
                 )}
@@ -132,11 +130,11 @@ function ModelPlazaCard({ model, onCopied }: { model: PublicModelItem; onCopied:
               <button
                 type="button"
                 onClick={handleCopy}
-                className="inline-flex shrink-0 items-center justify-center rounded-md p-1.5 text-slate-400 opacity-100 transition hover:bg-slate-100 hover:text-slate-700 sm:opacity-0 sm:group-hover:opacity-100 dark:hover:bg-neutral-800 dark:hover:text-white"
+                className="inline-flex shrink-0 items-center justify-center rounded-md p-1.5 text-ink-3 opacity-100 transition hover:bg-hover hover:text-ink sm:opacity-0 sm:group-hover:opacity-100"
                 title={t("model_plaza.copy_id")}
                 aria-label={t("model_plaza.copy_id")}
               >
-                {copied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} className={iconHueClass(Copy)} />}
+                {copied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} className="text-ink-3" />}
               </button>
             </div>
             <div className="mt-1.5">
@@ -156,7 +154,7 @@ function ModelPlazaCard({ model, onCopied }: { model: PublicModelItem; onCopied:
 
         <div className="mt-3 min-h-10 min-w-0 flex-1" data-testid="model-description-space">
           <p
-            className="line-clamp-2 break-words text-xs leading-5 text-slate-500 dark:text-white/55"
+            className="line-clamp-2 break-words text-xs leading-5 text-ink-3"
             data-testid="model-description-clamp"
           >
             {model.description?.trim() ? model.description : t("model_plaza.no_description")}
@@ -165,15 +163,11 @@ function ModelPlazaCard({ model, onCopied }: { model: PublicModelItem; onCopied:
 
         <div className="mt-auto pt-2">
           <div className="mb-1.5 flex items-center justify-between gap-2">
-            <span className="text-2xs font-medium text-slate-400 dark:text-white/35">
-              {t("model_plaza.pricing")}
-            </span>
+            <span className="text-2xs font-medium text-ink-3">{t("model_plaza.pricing")}</span>
             {!priced ? (
-              <span className="text-2xs text-slate-400 dark:text-white/30">
-                {t("model_plaza.not_priced")}
-              </span>
+              <span className="text-2xs text-ink-3">{t("model_plaza.not_priced")}</span>
             ) : model.pricing.mode === "token" ? (
-              <span className="text-2xs text-slate-400 dark:text-white/30">
+              <span className="text-2xs text-ink-3">
                 {t("model_plaza.per_million")}
               </span>
             ) : null}
@@ -235,21 +229,21 @@ export function ModelsTabContent({
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-center gap-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-selected">
-            <Store size={16} className={iconHueClass(Store)} />
+            <Store size={16} className="text-ink-3" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
+            <h3 className="text-lg font-semibold tracking-tight text-ink">
               {t("model_plaza.title")}
             </h3>
-            <p className="hidden text-xs text-slate-500 dark:text-white/45 sm:block">
+            <p className="hidden text-xs text-ink-3 sm:block">
               {t("model_plaza.subtitle")}
             </p>
           </div>
-          <span className="rounded-full bg-hover px-2 py-0.5 text-xs font-bold tabular-nums text-ink">
+          <span className="rounded-full bg-ink/[0.05] px-2 py-0.5 text-xs font-bold tabular-nums text-ink dark:bg-white/[0.07]">
             {filteredModels.length}
           </span>
           {isFilterActive && filteredModels.length !== models.length ? (
-            <span className="text-2xs text-slate-400 dark:text-white/30">/ {models.length}</span>
+            <span className="text-2xs text-ink-3">/ {models.length}</span>
           ) : null}
         </div>
       </div>
@@ -257,7 +251,7 @@ export function ModelsTabContent({
       {vendorStats.length > 0 && !loading ? (
         <div
           data-testid="apikey-lookup-model-tabs-sticky"
-          className="sticky top-20 z-10 -mx-1 flex flex-col gap-2 bg-white/95 px-1 py-2.5 backdrop-blur-sm sm:flex-row sm:items-center sm:justify-between dark:bg-neutral-950/90"
+          className="sticky top-20 z-10 -mx-1 flex flex-col gap-2 bg-canvas/95 px-1 py-2.5 backdrop-blur-sm sm:flex-row sm:items-center sm:justify-between"
         >
           <Tabs
             value={selectedVendor}
@@ -268,17 +262,13 @@ export function ModelsTabContent({
               <TabsTrigger value="all">
                 <Layers size={12} aria-hidden="true" />
                 {t("common.all", { defaultValue: "All" })}
-                <span className="tabular-nums text-slate-400 dark:text-white/40">
-                  {models.length}
-                </span>
+                <span className="tabular-nums text-ink-3">{models.length}</span>
               </TabsTrigger>
               {vendorStats.map((stat) => (
                 <TabsTrigger key={stat.key} value={stat.key}>
                   <VendorIcon modelId={stat.key} size={12} />
                   {stat.label}
-                  <span className="tabular-nums text-slate-400 dark:text-white/40">
-                    {stat.count}
-                  </span>
+                  <span className="tabular-nums text-ink-3">{stat.count}</span>
                 </TabsTrigger>
               ))}
             </TabsList>
@@ -288,7 +278,7 @@ export function ModelsTabContent({
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder={t("model_plaza.search")}
             className="!w-full sm:!w-56 sm:shrink-0"
-            startAdornment={<Search size={14} className="text-slate-400 dark:text-white/35" />}
+            startAdornment={<Search size={14} className="text-ink-3" />}
           />
         </div>
       ) : (
@@ -297,19 +287,19 @@ export function ModelsTabContent({
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder={t("model_plaza.search")}
           className="!w-full sm:!w-56"
-          startAdornment={<Search size={14} className="text-slate-400 dark:text-white/35" />}
+          startAdornment={<Search size={14} className="text-ink-3" />}
         />
       )}
 
       <div className="mt-4 flex min-w-0 flex-col gap-4">
         {error ? (
-          <div className="rounded-xl border border-rose-100 bg-rose-50 px-4 py-2.5 text-sm text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-200">
+          <div className="rounded-xl bg-rose-500/10 px-4 py-2.5 text-sm text-rose-700 dark:bg-rose-400/15 dark:text-rose-300">
             {error}
           </div>
         ) : null}
 
         {loading && models.length === 0 ? (
-          <div className="flex items-center justify-center py-16 text-sm text-slate-500 dark:text-white/50">
+          <div className="flex items-center justify-center py-16 text-sm text-ink-3">
             <RefreshCw size={14} className="mr-2 animate-spin" />
             {t("model_plaza.loading")}
           </div>

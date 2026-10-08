@@ -54,7 +54,7 @@ export function renderChannelTags(tags: string[]) {
       {tags.map((tag) => (
         <span
           key={tag}
-          className="inline-flex items-center rounded-full bg-sky-50 px-2 py-0.5 text-2xs font-semibold text-sky-700 dark:bg-sky-500/15 dark:text-sky-200"
+          className="inline-flex items-center rounded-full px-2 py-0.5 text-2xs font-semibold bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]"
         >
           {tag}
         </span>

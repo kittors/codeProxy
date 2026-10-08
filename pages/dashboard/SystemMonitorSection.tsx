@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Activity,
@@ -15,23 +16,26 @@ import {
   Zap,
   type LucideIcon,
 } from "lucide-react";
-import { AnimatedNumber, Card, surface } from "@code-proxy/ui";
+import { AnimatedNumber, Card } from "@code-proxy/ui";
 import type { SystemStats } from "./useSystemStats";
 import {
-  GradientRing,
-  IconChip,
   LevelDot,
   LevelPill,
   MeterBar,
-  MONITOR_HUES,
+  MeterRing,
+  METER_TONES,
+  MetricIcon,
   USAGE_LEVEL_LABEL_KEY,
-  usageHue,
   usageLevel,
-  type MonitorHue,
+  usageTone,
   type UsageLevel,
 } from "@features/monitor-widgets/monitorVisuals";
 
-const PANEL_SURFACE = surface({ tone: "panel", radius: "2xl" });
+/*
+ * 层级：「系统监控」是页面上的一个分区（标题 + 网格），不是一张大卡片；网格里的每个指标才是
+ * 卡片，而且只有这一层——卡片里不再套淡底小块、彩色图标块和带光晕的状态点。以前这里是
+ * 「大卡 → 小卡 → 淡底块 / 图标块」四层圆角叠在一起，圆角各有各的圆心，看着别扭。
+ */
 
 /* ═══════════════════════════════════════════════════════════
    Helpers
@@ -74,12 +78,33 @@ function computeHealthScore(s: SystemStats): number {
   return cpuScore * 0.3 + memScore * 0.3 + procCpu * 0.2 + procMem * 0.2;
 }
 
-/** 健康评分分档：健康、良好用绿，告警琥珀，风险红；环、标签、数字同色。 */
-function healthTone(score: number): { key: string; level: UsageLevel; hue: MonitorHue } {
-  if (score >= 90) return { key: "system_monitor.health_healthy", level: "normal", hue: "emerald" };
-  if (score >= 70) return { key: "system_monitor.health_good", level: "normal", hue: "emerald" };
-  if (score >= 50) return { key: "system_monitor.health_warning", level: "warn", hue: "amber" };
-  return { key: "system_monitor.health_risk", level: "critical", hue: "rose" };
+/** 健康评分分档：健康、良好是正常档（强调色），告警琥珀，风险红；环与标签同档。 */
+function healthTone(score: number): { key: string; level: UsageLevel } {
+  if (score >= 90) return { key: "system_monitor.health_healthy", level: "normal" };
+  if (score >= 70) return { key: "system_monitor.health_good", level: "normal" };
+  if (score >= 50) return { key: "system_monitor.health_warning", level: "warn" };
+  return { key: "system_monitor.health_risk", level: "critical" };
+}
+
+/** 卡片标题行：线性图标 + 标签，右侧可放状态。 */
+function MetricHeader({
+  icon,
+  label,
+  children,
+}: {
+  icon: LucideIcon;
+  label: string;
+  children?: ReactNode;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <span className="flex min-w-0 items-center gap-2 text-xs font-medium text-ink-2">
+        <MetricIcon icon={icon} />
+        <span className="truncate">{label}</span>
+      </span>
+      {children}
+    </div>
+  );
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -89,44 +114,36 @@ function healthTone(score: number): { key: string; level: UsageLevel; hue: Monit
 function HealthHeroCard({ score }: { score: number }) {
   const { t } = useTranslation();
   const tone = healthTone(score);
-  const hue = MONITOR_HUES[tone.hue];
 
   return (
-    <Card
-      padding="compact"
-      className={`${PANEL_SURFACE} relative h-full min-h-[246px] overflow-hidden`}
-      bodyClassName="mt-0 flex h-full flex-col"
-    >
-      {/* 顶部一层同色系的柔光，让主角卡和旁边的指标卡拉开层次。 */}
-      <div
-        aria-hidden="true"
-        className={[
-          "pointer-events-none absolute inset-x-0 top-0 h-40 opacity-70",
-          tone.level === "normal"
-            ? "bg-[radial-gradient(70%_100%_at_50%_0%,rgb(16_185_129/0.14),transparent)]"
-            : tone.level === "warn"
-              ? "bg-[radial-gradient(70%_100%_at_50%_0%,rgb(245_158_11/0.16),transparent)]"
-              : "bg-[radial-gradient(70%_100%_at_50%_0%,rgb(244_63_94/0.16),transparent)]",
-        ].join(" ")}
-      />
-      <div className="relative flex items-center justify-between gap-2">
-        <span className="flex items-center gap-2 text-xs font-semibold text-ink-2 dark:text-white/80">
-          <IconChip icon={Activity} hue={hue} />
-          {t("system_monitor.health_score")}
-        </span>
+    <Card className="h-full min-h-[246px]" bodyClassName="mt-0 flex h-full flex-col">
+      <MetricHeader icon={Activity} label={t("system_monitor.health_score")}>
         <LevelPill level={tone.level}>{t(tone.key)}</LevelPill>
-      </div>
-      <div className="relative flex flex-1 items-center justify-center pt-2">
-        <GradientRing value={score} hue={hue} className="h-36 w-36" strokeWidth={11}>
+      </MetricHeader>
+      <div className="flex flex-1 items-center justify-center pt-2">
+        <MeterRing value={score} tone={METER_TONES[tone.level]} className="h-36 w-36" strokeWidth={11}>
           <AnimatedNumber
             value={score}
             format={(value) => String(Math.round(value))}
             className="text-4xl font-semibold tracking-tight tabular-nums text-ink"
           />
-          <span className="mt-0.5 text-2xs font-medium text-ink-3">/ 100</span>
-        </GradientRing>
+          <span className="mt-0.5 text-xs font-medium text-ink-3">/ 100</span>
+        </MeterRing>
       </div>
     </Card>
+  );
+}
+
+/** 一行「标签 … 数值」，代替以前卡片里的淡底小块。 */
+function StatLine({ label, value, marker }: { label: string; value: string; marker?: ReactNode }) {
+  return (
+    <div className="flex items-baseline justify-between gap-3">
+      <span className="flex min-w-0 items-center gap-1.5 text-xs text-ink-3">
+        {marker}
+        <span className="truncate">{label}</span>
+      </span>
+      <span className="shrink-0 text-sm font-semibold tabular-nums text-ink">{value}</span>
+    </div>
   );
 }
 
@@ -134,51 +151,39 @@ function DiskUsageRingCard({ stats }: { stats: SystemStats }) {
   const { t } = useTranslation();
   const pct = Math.min(Math.max(stats.disk_pct, 0), 100);
   const level = usageLevel(pct);
-  const hue = usageHue("sky", pct);
+  const tone = usageTone(pct);
 
   return (
-    <Card
-      padding="compact"
-      className={`${PANEL_SURFACE} h-full min-h-[246px] overflow-hidden`}
-      bodyClassName="mt-0 flex h-full flex-col justify-between gap-3"
-    >
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-xs font-semibold text-ink-2 dark:text-white/80">
-          <IconChip icon={HardDrive} hue={hue} />
-          {t("system_monitor.disk")}
-        </div>
+    <Card className="h-full min-h-[246px]" bodyClassName="mt-0 flex h-full flex-col justify-between gap-3">
+      <MetricHeader icon={HardDrive} label={t("system_monitor.disk")}>
         <LevelPill level={level}>{t(USAGE_LEVEL_LABEL_KEY[level])}</LevelPill>
-      </div>
+      </MetricHeader>
 
       <div className="flex flex-1 items-center justify-center">
-        <GradientRing value={pct} hue={hue} className="h-32 w-32" strokeWidth={12}>
+        <MeterRing value={pct} tone={tone} className="h-32 w-32" strokeWidth={12}>
           <span className="text-2xl font-semibold tracking-tight tabular-nums text-ink">
             {stats.disk_pct.toFixed(1)}%
           </span>
-          <span className="mt-0.5 text-2xs font-medium text-ink-3">{t("system_monitor.disk_used")}</span>
-        </GradientRing>
+          <span className="mt-0.5 text-xs font-medium text-ink-3">{t("system_monitor.disk_used")}</span>
+        </MeterRing>
       </div>
 
-      {/* 图例：已用的格子铺环的颜色（随告警变琥珀 / 红），可用是中性的底槽色。 */}
-      <div className="grid grid-cols-2 gap-2">
-        <div className={`rounded-2xl px-3 py-2 ${hue.track}`}>
-          <p className="flex items-center gap-1.5 text-2xs text-ink-3">
-            <span className={`size-1.5 rounded-full ${hue.bar}`} aria-hidden="true" />
-            {t("system_monitor.disk_used")}
-          </p>
-          <p className="mt-1 text-sm font-semibold tabular-nums text-ink">{formatBytes(stats.disk_used)}</p>
-        </div>
-        <div className="rounded-2xl bg-subtle px-3 py-2">
-          <p className="flex items-center gap-1.5 text-2xs text-ink-3">
-            <span className="size-1.5 rounded-full bg-track ring-1 ring-line-strong" aria-hidden="true" />
-            {t("system_monitor.disk_free")}
-          </p>
-          <p className="mt-1 text-sm font-semibold tabular-nums text-ink">{formatBytes(stats.disk_free)}</p>
-        </div>
+      {/* 图例：已用的圆点是环的颜色（随告警变琥珀 / 红），可用是中性的底槽色。 */}
+      <div className="space-y-1.5">
+        <StatLine
+          label={t("system_monitor.disk_used")}
+          value={formatBytes(stats.disk_used)}
+          marker={<span className={`size-1.5 rounded-full ${tone.bar}`} aria-hidden="true" />}
+        />
+        <StatLine
+          label={t("system_monitor.disk_free")}
+          value={formatBytes(stats.disk_free)}
+          marker={<span className="size-1.5 rounded-full bg-ink-4" aria-hidden="true" />}
+        />
+        <p className="pt-0.5 text-center text-xs text-ink-3">
+          {t("system_monitor.total_size", { size: formatBytes(stats.disk_total) })}
+        </p>
       </div>
-      <p className="-mt-1 text-center text-2xs text-ink-3">
-        {t("system_monitor.total_size", { size: formatBytes(stats.disk_total) })}
-      </p>
     </Card>
   );
 }
@@ -189,14 +194,12 @@ function DiskUsageRingCard({ stats }: { stats: SystemStats }) {
 
 function ResourceBar({
   icon,
-  hue: baseHue,
   label,
   value,
   pct,
   detail,
 }: {
   icon: LucideIcon;
-  hue: MonitorHue;
   label: string;
   value: string;
   pct: number;
@@ -204,21 +207,16 @@ function ResourceBar({
 }) {
   const { t } = useTranslation();
   const level = usageLevel(pct);
-  const hue = usageHue(baseHue, pct);
   return (
-    <Card padding="compact" bodyClassName="mt-0" className={`${PANEL_SURFACE} h-full`}>
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-2">
-          <IconChip icon={icon} hue={MONITOR_HUES[baseHue]} />
-          <span className="truncate text-xs font-medium text-ink-2 dark:text-white/80">{label}</span>
-        </div>
-        <div className="flex shrink-0 items-center gap-2.5">
+    <Card bodyClassName="mt-0" className="h-full">
+      <MetricHeader icon={icon} label={label}>
+        <span className="flex shrink-0 items-center gap-2">
           <span className="text-base font-semibold tabular-nums text-ink">{value}</span>
           <LevelDot level={level} label={t(USAGE_LEVEL_LABEL_KEY[level])} />
-        </div>
-      </div>
-      <MeterBar pct={pct} hue={hue} className="mt-3 h-2" />
-      {detail ? <p className="mt-1.5 text-2xs text-ink-3">{detail}</p> : null}
+        </span>
+      </MetricHeader>
+      <MeterBar pct={pct} tone={METER_TONES[level]} className="mt-3 h-2" />
+      {detail ? <p className="mt-1.5 text-xs text-ink-3">{detail}</p> : null}
     </Card>
   );
 }
@@ -231,28 +229,19 @@ function MiniKpi({
   label,
   value,
   icon,
-  hue,
   sublabel,
 }: {
   label: string;
   value: string;
   icon: LucideIcon;
-  hue: MonitorHue;
   sublabel?: string;
 }) {
   return (
-    <Card
-      padding="compact"
-      bodyClassName="mt-0 flex h-full flex-col justify-between gap-3"
-      className={`${PANEL_SURFACE} h-full`}
-    >
-      <div className="flex items-center gap-2 text-xs font-medium text-ink-2 dark:text-white/80">
-        <IconChip icon={icon} hue={MONITOR_HUES[hue]} />
-        {label}
-      </div>
+    <Card bodyClassName="mt-0 flex h-full flex-col justify-between gap-3" className="h-full">
+      <MetricHeader icon={icon} label={label} />
       <div className="min-w-0">
         <p className="truncate text-xl font-semibold tracking-tight tabular-nums text-ink">{value}</p>
-        {sublabel ? <p className="mt-0.5 truncate text-2xs text-ink-3">{sublabel}</p> : null}
+        {sublabel ? <p className="mt-0.5 truncate text-xs text-ink-3">{sublabel}</p> : null}
       </div>
     </Card>
   );
@@ -267,47 +256,34 @@ function NetworkCard({ stats }: { stats: SystemStats }) {
   const rows = [
     {
       icon: ArrowUpRight,
-      hue: MONITOR_HUES.emerald,
       rate: formatRate(stats.net_send_rate),
       total: t("system_monitor.up_total", { size: formatBytes(stats.net_bytes_sent) }),
     },
     {
       icon: ArrowDownRight,
-      hue: MONITOR_HUES.sky,
       rate: formatRate(stats.net_recv_rate),
       total: t("system_monitor.down_total", { size: formatBytes(stats.net_bytes_recv) }),
     },
   ];
   return (
-    <Card
-      padding="compact"
-      bodyClassName="mt-0 flex h-full flex-col gap-3"
-      className={`${PANEL_SURFACE} h-full`}
-    >
-      <div className="flex items-center gap-2 text-xs font-medium text-ink-2 dark:text-white/80">
-        <IconChip icon={Wifi} hue={MONITOR_HUES.emerald} />
-        {t("system_monitor.network_traffic")}
-      </div>
+    <Card bodyClassName="mt-0 flex h-full flex-col gap-3" className="h-full">
+      <MetricHeader icon={Wifi} label={t("system_monitor.network_traffic")} />
       <div className="grid grid-cols-1 gap-3 min-[400px]:grid-cols-2">
         {rows.map((row) => (
-          <div key={row.total} className="flex items-center gap-2.5">
-            <span className={`grid size-7 shrink-0 place-items-center rounded-full ${row.hue.chip}`}>
-              <row.icon size={14} className={row.hue.icon} aria-hidden="true" />
-            </span>
+          <div key={row.total} className="flex min-w-0 items-start gap-2">
+            <row.icon size={14} className="mt-1 shrink-0 text-ink-3" aria-hidden="true" />
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold tabular-nums text-ink">{row.rate}</p>
-              <p className="truncate text-2xs text-ink-3">{row.total}</p>
+              <p className="truncate text-xs text-ink-3">{row.total}</p>
             </div>
           </div>
         ))}
       </div>
-      <div
-        className={`mt-auto flex items-center justify-between rounded-xl px-3 py-2 ${MONITOR_HUES.emerald.track}`}
-      >
-        <span className="text-2xs text-ink-3">{t("system_monitor.total_traffic")}</span>
-        <span className="text-xs font-semibold tabular-nums text-ink">
-          {formatBytes(stats.net_bytes_sent + stats.net_bytes_recv)}
-        </span>
+      <div className="mt-auto">
+        <StatLine
+          label={t("system_monitor.total_traffic")}
+          value={formatBytes(stats.net_bytes_sent + stats.net_bytes_recv)}
+        />
       </div>
     </Card>
   );
@@ -326,27 +302,20 @@ function AverageLatencyCard({
 }) {
   const { t } = useTranslation();
   const tiles = [
-    { label: t("system_monitor.latency"), value: formatMs(avgLatency), hue: MONITOR_HUES.indigo },
-    { label: t("system_monitor.key_count"), value: String(apiKeyCount), hue: MONITOR_HUES.violet },
+    { label: t("system_monitor.latency"), value: formatMs(avgLatency) },
+    { label: t("system_monitor.key_count"), value: String(apiKeyCount) },
   ];
 
   return (
-    <Card
-      padding="compact"
-      bodyClassName="mt-0 flex h-full flex-col gap-3"
-      className={`${PANEL_SURFACE} h-full overflow-hidden`}
-    >
-      <div className="flex items-center gap-2 text-xs font-medium text-ink-2 dark:text-white/80">
-        <IconChip icon={Network} hue={MONITOR_HUES.indigo} />
-        {t("system_monitor.channel_avg_latency")}
-      </div>
-      <div className="grid flex-1 grid-cols-2 gap-3">
+    <Card bodyClassName="mt-0 flex h-full flex-col gap-3" className="h-full">
+      <MetricHeader icon={Network} label={t("system_monitor.channel_avg_latency")} />
+      <div className="grid flex-1 grid-cols-2 items-end gap-3">
         {tiles.map((tile) => (
-          // 左侧一道同色短竖条 + 同色淡底，把两个数字块和各自的含义对上（不再是灰底块）。
-          <div key={tile.label} className={`relative overflow-hidden rounded-xl px-3 py-2.5 ${tile.hue.track}`}>
-            <span aria-hidden="true" className={`absolute inset-y-2.5 left-0 w-1 rounded-r-full ${tile.hue.bar}`} />
-            <div className="text-2xs font-medium text-ink-3">{tile.label}</div>
-            <div className="mt-1 text-xl font-semibold tracking-tight tabular-nums text-ink">{tile.value}</div>
+          <div key={tile.label} className="min-w-0">
+            <div className="truncate text-xs text-ink-3">{tile.label}</div>
+            <div className="mt-1 truncate text-xl font-semibold tracking-tight tabular-nums text-ink">
+              {tile.value}
+            </div>
           </div>
         ))}
       </div>
@@ -366,32 +335,24 @@ function SkeletonLayout() {
   return (
     <div className="space-y-4">
       <div className="grid gap-3 xl:grid-cols-[260px_minmax(0,1fr)_280px]">
-        <Card
-          padding="compact"
-          bodyClassName="mt-0 flex h-full items-center justify-center p-2.5"
-          className={`${PANEL_SURFACE} min-h-[246px]`}
-        >
+        <Card bodyClassName="mt-0 flex h-full items-center justify-center p-2.5" className="min-h-[246px]">
           <Skeleton className="h-32 w-32 rounded-full" />
         </Card>
         <div className="grid gap-3 sm:grid-cols-2">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Card key={i} padding="compact" bodyClassName="mt-0">
+            <Card key={i} bodyClassName="mt-0">
               <Skeleton className="h-3 w-16 mb-3" />
               <Skeleton className="h-5 w-20" />
             </Card>
           ))}
         </div>
-        <Card
-          padding="compact"
-          bodyClassName="mt-0 flex h-full items-center justify-center"
-          className={`${PANEL_SURFACE} min-h-[246px]`}
-        >
+        <Card bodyClassName="mt-0 flex h-full items-center justify-center" className="min-h-[246px]">
           <Skeleton className="h-36 w-36 rounded-full" />
         </Card>
       </div>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <Card key={i} padding="compact" bodyClassName="mt-0">
+          <Card key={i} bodyClassName="mt-0">
             <Skeleton className="h-3 w-12 mb-2" />
             <Skeleton className="h-4 w-16 mb-2" />
             <Skeleton className="h-1.5 w-full" />
@@ -406,16 +367,17 @@ function SkeletonLayout() {
    Main Section — exported
    ═══════════════════════════════════════════════════════════ */
 
-/** 右上角的数据通道状态：实时推送是绿色呼吸点，退回轮询时是安静的灰色。 */
+/**
+ * 右上角的数据通道状态：实时推送是一颗绿色呼吸点，退回轮询时点是灰色。胶囊本身保持中性，
+ * 颜色只在那颗点上——「正在实时更新」是常态，不需要整块染绿。
+ */
 function LiveIndicator({ connected }: { connected: boolean }) {
   const { t } = useTranslation();
   return (
     <span
       className={[
-        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium",
-        connected
-          ? "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-300"
-          : "bg-hover text-ink-3",
+        "inline-flex items-center gap-1.5 rounded-full bg-ink/[0.05] px-2.5 py-1 text-xs font-medium dark:bg-white/[0.07]",
+        connected ? "text-ink-2" : "text-ink-3",
       ].join(" ")}
     >
       <span className="relative flex size-2">
@@ -443,8 +405,8 @@ export function SystemMonitorSection({
   if (!stats) {
     return (
       <Card
+        flat
         title={t("system_monitor.title")}
-        className={PANEL_SURFACE}
         actions={
           <span className="inline-flex items-center gap-1.5 rounded-full bg-hover px-2.5 py-1 text-xs font-medium text-ink-3">
             <span className="size-2 rounded-full bg-ink-4 motion-safe:animate-pulse" />
@@ -474,9 +436,9 @@ export function SystemMonitorSection({
 
   return (
     <Card
+      flat
       title={t("system_monitor.title")}
       description={t("system_monitor.updated_at", { time: new Date().toLocaleTimeString() })}
-      className={PANEL_SURFACE}
       actions={<LiveIndicator connected={connected} />}
     >
       <div className="space-y-3">
@@ -488,7 +450,6 @@ export function SystemMonitorSection({
               label={t("system_monitor.uptime")}
               value={formatUptime(stats.uptime_seconds)}
               icon={Clock}
-              hue="emerald"
               sublabel={t("system_monitor.started", {
                 time: new Date(stats.start_time).toLocaleString(),
               })}
@@ -497,21 +458,18 @@ export function SystemMonitorSection({
               label={t("system_monitor.goroutines")}
               value={String(stats.go_routines)}
               icon={Zap}
-              hue="violet"
               sublabel={t("system_monitor.heap", { size: formatBytes(stats.go_heap_bytes) })}
             />
             <MiniKpi
               label={t("system_monitor.database")}
               value={formatBytes(stats.db_size_bytes)}
               icon={Database}
-              hue="sky"
               sublabel={dbSublabel}
             />
             <MiniKpi
               label={t("system_monitor.log_storage")}
               value={formatBytes(stats.log_content_store_bytes)}
               icon={FileText}
-              hue="amber"
               sublabel={t("system_monitor.request_log_content")}
             />
           </div>
@@ -522,14 +480,12 @@ export function SystemMonitorSection({
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <ResourceBar
             icon={Cpu}
-            hue="sky"
             label={t("system_monitor.system_cpu")}
             value={`${stats.system_cpu_pct.toFixed(1)}%`}
             pct={stats.system_cpu_pct}
           />
           <ResourceBar
             icon={MemoryStick}
-            hue="violet"
             label={t("system_monitor.system_memory")}
             value={`${stats.system_mem_pct.toFixed(1)}%`}
             pct={stats.system_mem_pct}
@@ -537,14 +493,12 @@ export function SystemMonitorSection({
           />
           <ResourceBar
             icon={Cpu}
-            hue="sky"
             label={t("system_monitor.service_cpu")}
             value={`${stats.process_cpu_pct.toFixed(1)}%`}
             pct={Math.min(stats.process_cpu_pct, 100)}
           />
           <ResourceBar
             icon={MemoryStick}
-            hue="violet"
             label={t("system_monitor.service_memory")}
             value={`${stats.process_mem_pct.toFixed(1)}%`}
             pct={stats.process_mem_pct}
@@ -559,7 +513,6 @@ export function SystemMonitorSection({
             label={t("system_monitor.log_dir")}
             value={formatBytes(logDirSizeBytes)}
             icon={Layers}
-            hue="amber"
             sublabel={t("system_monitor.log_files")}
           />
         </div>

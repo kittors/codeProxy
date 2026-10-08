@@ -231,7 +231,12 @@ describe("ProxiesPage", () => {
 
     const table = await screen.findByRole("table", { name: /proxy pool table/i });
     expect(table).toBeInTheDocument();
-    expect(table.closest("section")).toHaveClass("p-5");
+    // 外壳内容区就是页面面板：表格外面那层 Card 是 flat 的（无内边距、无填充、无细边与投影），
+    // 不再在内容区里再套一张卡片。
+    const tableSection = table.closest("section");
+    expect(tableSection).toHaveClass("p-0");
+    expect(tableSection).not.toHaveClass("shadow-card");
+    expect(tableSection).not.toHaveClass("cp-edge");
     expect(screen.queryByText("Proxy Pool")).not.toBeInTheDocument();
     expect(screen.queryByText(/Manage proxy entries in a compact table/i)).not.toBeInTheDocument();
     expect(screen.getByText("No proxies yet")).toBeInTheDocument();

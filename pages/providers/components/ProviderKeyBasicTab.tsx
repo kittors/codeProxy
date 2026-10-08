@@ -7,10 +7,12 @@ import { ToggleSwitch } from "@code-proxy/ui";
 import type { ProviderKeyDraft } from "../providers-helpers";
 import { isModelAccessProvider } from "../provider-model-access";
 
-const SectionCard = ({ children }: { children: React.ReactNode }) => (
-  <div className="rounded-xl border border-line bg-surface p-4 shadow-sm">
-    {children}
-  </div>
+/**
+ * 一组字段。弹窗本身就是一层，组与组之间靠留白分开，不再各自套一张描边卡片——以前一个页签里
+ * 叠着五六张描边小卡，读起来像一摞框。只读的渠道 ID 传 `well`，用无边淡底和可编辑的字段区分开。
+ */
+const FieldGroup = ({ children, well = false }: { children: React.ReactNode; well?: boolean }) => (
+  <div className={well ? "rounded-xl bg-subtle px-4 py-3" : undefined}>{children}</div>
 );
 
 interface ProviderKeyBasicTabProps {
@@ -43,21 +45,21 @@ export function ProviderKeyBasicTab({
   const usesDisabledFlag = isModelAccessProvider(editKeyType);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {statusBadges}
 
       {keyDraft.id ? (
-        <SectionCard>
+        <FieldGroup well>
           <p className="text-xs font-semibold text-ink-3">
             {t("content_moderation.channel_id")}
           </p>
           <p className="mt-1 break-all font-mono text-xs text-ink-2">
             {keyDraft.id}
           </p>
-        </SectionCard>
+        </FieldGroup>
       ) : null}
 
-      <SectionCard>
+      <FieldGroup>
         <p className="text-sm font-semibold text-ink">
           {t("providers.channel_name_label")}
         </p>
@@ -74,9 +76,9 @@ export function ProviderKeyBasicTab({
         <p className="mt-2 text-xs text-ink-3">
           {t("providers.channel_name_hint")}
         </p>
-      </SectionCard>
+      </FieldGroup>
 
-      <SectionCard>
+      <FieldGroup>
         <ToggleSwitch
           label={t("providers.enable")}
           description={
@@ -94,10 +96,10 @@ export function ProviderKeyBasicTab({
         <p className="mt-2 text-xs text-ink-3">
           {t(usesDisabledFlag ? "providers.disable_hint_flag" : "providers.disable_hint")}
         </p>
-      </SectionCard>
+      </FieldGroup>
 
       {isBedrock ? (
-        <SectionCard>
+        <FieldGroup>
           <p className="text-sm font-semibold text-ink">
             {t("providers.bedrock_auth_mode")}
           </p>
@@ -120,11 +122,11 @@ export function ProviderKeyBasicTab({
           <p className="mt-2 text-xs text-ink-3">
             {t("providers.bedrock_auth_mode_hint")}
           </p>
-        </SectionCard>
+        </FieldGroup>
       ) : null}
 
       {!isBedrockSigV4 ? (
-        <SectionCard>
+        <FieldGroup>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm font-semibold text-ink">
               {isBedrock ? t("providers.bedrock_auth_api_key") : t("providers.api_key")}
@@ -146,7 +148,7 @@ export function ProviderKeyBasicTab({
                   type="button"
                   onClick={() => void copyText(keyDraft.apiKey.trim())}
                   disabled={!keyDraft.apiKey.trim()}
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-line bg-surface text-ink-2 shadow-sm transition hover:bg-white disabled:opacity-50 dark:hover:bg-neutral-950"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-ink-3 transition-colors hover:bg-hover hover:text-ink disabled:opacity-50"
                   aria-label={t("providers.copy_api_key")}
                   title={t("providers.copy")}
                 >
@@ -158,11 +160,11 @@ export function ProviderKeyBasicTab({
           <p className="mt-2 text-xs text-ink-3">
             {isBedrock ? t("providers.bedrock_api_key_hint") : t("providers.api_key_hint")}
           </p>
-        </SectionCard>
+        </FieldGroup>
       ) : null}
 
       {isBedrockSigV4 ? (
-        <SectionCard>
+        <FieldGroup>
           <p className="text-sm font-semibold text-ink">
             {t("providers.bedrock_sigv4_credentials")}
           </p>
@@ -211,10 +213,10 @@ export function ProviderKeyBasicTab({
           <p className="mt-2 text-xs text-ink-3">
             {t("providers.bedrock_sigv4_hint")}
           </p>
-        </SectionCard>
+        </FieldGroup>
       ) : null}
 
-      <SectionCard>
+      <FieldGroup>
         <p className="text-sm font-semibold text-ink">
           {t("providers.prefix_label")}
         </p>
@@ -231,7 +233,7 @@ export function ProviderKeyBasicTab({
         <p className="mt-2 text-xs text-ink-3">
           {t("providers.prefix_hint")}
         </p>
-      </SectionCard>
+      </FieldGroup>
     </div>
   );
 }

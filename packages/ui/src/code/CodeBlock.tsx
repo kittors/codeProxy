@@ -29,8 +29,9 @@ export function CodeBlock({
   return (
     <div
       className={[
-        // 代码块在浅色和深色模式里都是深底：语法高亮只调了一套深色配色。
-        "overflow-hidden rounded-2xl border border-black/10 bg-[#171717] dark:border-white/10",
+        // 代码块在浅色和深色模式里都是深底：语法高亮只调了一套深色配色。深色模式下压得比
+        // 卡片（#18181c）更深一档，读起来是「凹进去的一块」；轮廓交给伪元素细边，不画 border。
+        "cp-edge overflow-hidden rounded-2xl bg-[#171717] dark:bg-[#0d0d10]",
         className,
       ]
         .filter(Boolean)

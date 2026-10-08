@@ -114,7 +114,7 @@ export function Drawer({
         }}
         style={panelMotion.style}
         className={[
-          `relative z-10 flex h-full ${widthClassName} flex-col overflow-hidden bg-elevated text-ink shadow-dialog outline-none sm:max-w-[calc(100vw-1rem)] sm:rounded-3xl`,
+          `relative z-10 flex h-full ${widthClassName} flex-col overflow-hidden bg-elevated text-ink shadow-dialog outline-none [--cp-backdrop:var(--cp-elevated)] sm:max-w-[calc(100vw-1rem)] sm:rounded-3xl`,
           panelMotion.className,
           nudging ? "overlay-nudge" : "",
         ].join(" ")}

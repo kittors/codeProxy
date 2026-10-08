@@ -56,9 +56,10 @@ export function PasswordChecklist({
             ].join(" ")}
           >
             <span
+              // 未满足是一颗中性的实心小圆，满足后变绿打勾；不再画空心描边圈。
               className={[
-                "flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border transition-colors duration-200",
-                item.met ? "border-transparent bg-ok text-white" : "border-line-strong",
+                "flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full transition-colors duration-200",
+                item.met ? "bg-ok text-white" : "bg-track",
               ].join(" ")}
             >
               <Check

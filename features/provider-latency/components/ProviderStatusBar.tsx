@@ -5,7 +5,7 @@ const blockClass = (state: StatusBarData["blocks"][number]) => {
   if (state === "success") return "bg-emerald-500";
   if (state === "failure") return "bg-rose-500";
   if (state === "mixed") return "bg-amber-500";
-  return "bg-slate-200 dark:bg-neutral-700";
+  return "bg-track";
 };
 
 export function ProviderStatusBar({
@@ -21,17 +21,19 @@ export function ProviderStatusBar({
   const hasData = data.totalSuccess + data.totalFailure > 0;
   const rateText = hasData ? `${data.successRate.toFixed(1)}%` : "--";
 
+  // 达标（≥90%）是常态，数字用墨色；只有偏低才变琥珀、很低变红——和卡片上的成功率同一套规则。
   const rateClass = !hasData
-    ? "text-slate-400 dark:text-white/40"
+    ? "text-ink-3"
     : data.successRate >= 90
-      ? "text-emerald-600 dark:text-emerald-300"
+      ? "text-ink"
       : data.successRate >= 50
-        ? "text-amber-600 dark:text-amber-300"
-        : "text-rose-600 dark:text-rose-300";
+        ? "text-amber-700 dark:text-amber-300"
+        : "text-rose-700 dark:text-rose-300";
 
+  // 不再垫一块白底（深色下是一块更黑的底）：放在表格格子里，它本来就落在行的底色上。
   const containerCls = compact
-    ? "flex min-w-0 flex-col items-stretch gap-1 rounded-lg bg-white px-2 py-1 sm:flex-row sm:items-center sm:gap-2 dark:bg-neutral-950"
-    : "flex min-w-0 flex-col items-stretch gap-1 rounded-lg bg-white px-2.5 py-1.5 sm:flex-row sm:items-center sm:gap-2 dark:bg-neutral-950";
+    ? "flex min-w-0 flex-col items-stretch gap-1 px-2 py-1 sm:flex-row sm:items-center sm:gap-2"
+    : "flex min-w-0 flex-col items-stretch gap-1 px-2.5 py-1.5 sm:flex-row sm:items-center sm:gap-2";
 
   const ariaLabel = hasData
     ? `${t("common.success_rate")} ${rateText}, ${t("providers.success_stats", { count: data.totalSuccess })}, ${t("providers.failed_stats", { count: data.totalFailure })}`

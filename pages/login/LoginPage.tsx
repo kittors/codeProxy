@@ -147,7 +147,7 @@ export function LoginPage() {
   return (
     <PageBackground variant="login">
       <div className="absolute right-6 top-6 z-20">
-        <ThemeToggleButton className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-line-strong bg-surface text-ink-2 shadow-xs transition-colors hover:bg-hover hover:text-ink dark:shadow-none" />
+        <ThemeToggleButton className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-surface text-ink-2 shadow-control transition-[background-color,box-shadow,color] hover:bg-surface-hover hover:text-ink hover:shadow-control-hover" />
       </div>
       {/* 卡片四周的中继网络：卡片就是网关，线路从两侧接进来。宽屏才出现。 */}
       <LoginNetwork cardRef={cardRef} />
@@ -171,9 +171,10 @@ export function LoginPage() {
           <p className="mt-3 max-w-md text-sm leading-6 text-ink-3">{t("login.hero_description")}</p>
         </motion.div>
         <motion.div ref={cardRef} variants={page.item} className="w-full max-w-[420px]">
+            {/* 登录卡浮在页面上：伪元素细边 + 抬起一档的投影，不画 border。 */}
             <motion.section
               animate={shakeControls}
-              className="rounded-3xl border border-line bg-surface p-7 shadow-lift sm:p-8"
+              className="cp-edge rounded-3xl bg-surface p-7 shadow-lift sm:p-8"
             >
               <div className="mb-7">
                 <h2 className="text-2xl font-semibold tracking-tight text-ink">{t("login.sign_in")}</h2>
@@ -190,7 +191,7 @@ export function LoginPage() {
                 <AnimatePresence initial={false}>
                   {accessFailureMessage ? (
                     <motion.div {...HINT_MOTION} className="overflow-hidden">
-                      <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
+                      <div className="rounded-2xl bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:bg-amber-400/15 dark:text-amber-300">
                         {accessFailureMessage}
                       </div>
                     </motion.div>

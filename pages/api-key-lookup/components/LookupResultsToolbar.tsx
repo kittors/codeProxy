@@ -88,12 +88,13 @@ export function LookupResultsToolbar({
       ref={toolbarRef}
       data-testid="apikey-lookup-toolbar-sticky"
       data-stuck={stuck ? "true" : "false"}
+      // 吸顶后才成为一块浮起的卡片：伪元素细边（cp-edge）+ 卡片投影 + 卡片色的半透明底，
+      // 不画 ring；没吸顶时完全透明，和页面融为一体。cp-edge 的 position: relative 在
+      // components 层，盖不过这里 utilities 层的 sticky。
       className={[
         "sticky top-3 z-20 -mx-1 space-y-3 rounded-3xl px-2 py-2 backdrop-blur-md",
-        "motion-safe:transition-[border-color,box-shadow,background-color] motion-safe:duration-300 motion-safe:ease-[cubic-bezier(0.22,1,0.36,1)]",
-        stuck
-          ? "ring-1 ring-slate-900/8 bg-white/90 shadow-[0_10px_40px_-24px_rgba(15,23,42,0.35)] dark:bg-white/[0.05] dark:ring-white/10 dark:shadow-none"
-          : "ring-1 ring-transparent bg-transparent",
+        "motion-safe:transition-[box-shadow,background-color] motion-safe:duration-300 motion-safe:ease-[cubic-bezier(0.22,1,0.36,1)]",
+        stuck ? "cp-edge bg-surface/90 shadow-card" : "bg-transparent shadow-none",
       ].join(" ")}
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -134,10 +135,10 @@ export function LookupResultsToolbar({
               {logsQuotaItems.map((item) => (
                 <div
                   key={item.key}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-900/8 bg-white/80 px-2 py-1 text-xs text-slate-600 shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-white/60"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-ink/[0.05] px-2 py-1 text-xs text-ink-2 dark:bg-white/[0.07]"
                 >
                   <span>{item.title}</span>
-                  <span className="font-mono font-semibold tabular-nums text-slate-900 dark:text-white">
+                  <span className="font-mono font-semibold tabular-nums text-ink">
                     {item.format(item.used)} / {item.format(item.limit)}
                   </span>
                 </div>
@@ -156,7 +157,7 @@ export function LookupResultsToolbar({
               onClick={handleRefresh}
               disabled={loading || chartLoading || modelsLoading}
               aria-label={t("common.refresh")}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-900/5 hover:text-slate-900 disabled:opacity-40 dark:text-white/55 dark:hover:bg-white/10 dark:hover:text-white"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-ink-2 transition hover:bg-hover hover:text-ink disabled:opacity-40"
             >
               <RefreshCw
                 size={16}

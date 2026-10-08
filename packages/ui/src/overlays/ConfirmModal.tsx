@@ -111,7 +111,7 @@ export function ConfirmModal({
       {hasBody ? (
         <div className="space-y-4">
           {subject ? (
-            <div className="rounded-2xl border border-line bg-subtle px-4 py-3 text-sm text-ink">
+            <div className="rounded-2xl bg-subtle px-4 py-3 text-sm text-ink">
               {subject}
             </div>
           ) : null}

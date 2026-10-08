@@ -59,17 +59,16 @@ export function LandingClosing({
         </motion.div>
       </section>
 
-      <footer className="border-t border-slate-900/8 py-12 dark:border-white/8">
+      {/* 页脚紧跟在深色收尾段之后，那一块深色已经把两段分开，不再画通栏分隔线。 */}
+      <footer className="py-12">
         <div className="mx-auto flex w-full max-w-screen-xl flex-col items-center gap-5 px-5 text-center sm:flex-row sm:justify-between sm:px-8 sm:text-left lg:px-10">
           <Wordmark
             markSize={22}
-            className="text-base text-slate-900 dark:text-white"
+            className="text-base text-ink"
             textClassName="font-display text-base"
           />
-          <p className="font-display text-xs text-slate-400 dark:text-white/35">
-            {copy.footer.tagline}
-          </p>
-          <p className="font-display text-xs text-slate-400 dark:text-white/35">
+          <p className="font-display text-xs text-ink-3">{copy.footer.tagline}</p>
+          <p className="font-display text-xs text-ink-3">
             {BRAND_NAME} · {copy.footer.rights}
           </p>
         </div>

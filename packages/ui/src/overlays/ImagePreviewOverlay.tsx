@@ -260,7 +260,7 @@ export function ImagePreviewOverlay({
       <button
         type="button"
         onClick={onClose}
-        className="absolute top-4 right-4 z-20 inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/35 text-white/80 backdrop-blur transition-colors hover:bg-black/55 hover:text-white sm:top-5 sm:right-5"
+        className="absolute top-4 right-4 z-20 inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/35 text-white/80 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.1)] backdrop-blur transition-colors hover:bg-black/55 hover:text-white sm:top-5 sm:right-5"
         aria-label={t("common.close")}
       >
         <X size={18} />

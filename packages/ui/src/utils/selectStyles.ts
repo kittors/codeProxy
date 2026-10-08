@@ -32,13 +32,12 @@ export const selectTriggerBase = getSelectTriggerBase();
  */
 export const selectTriggerState = (open: boolean) => (open ? "open" : "closed");
 
-/** 紧凑型触发器（分页条的每页条数等）：小号胶囊，白底细描边，和默认按钮同一套轮廓。 */
+/** 紧凑型触发器（分页条的每页条数等）：小号胶囊，白底阴影描边，和默认按钮同一套轮廓。 */
 export const selectTriggerChip = [
-  "inline-flex h-7 items-center justify-center gap-1.5 rounded-full border border-line-strong bg-surface px-2.5",
-  "text-xs font-medium text-ink-2 shadow-xs outline-none transition-colors duration-150 ease-soft",
-  "hover:bg-hover hover:text-ink data-[state=open]:text-ink",
-  "disabled:cursor-not-allowed disabled:text-ink-4 disabled:shadow-none disabled:hover:bg-surface disabled:hover:text-ink-4",
-  "dark:shadow-none",
+  "inline-flex h-7 items-center justify-center gap-1.5 rounded-full bg-surface px-2.5 shadow-control",
+  "text-xs font-medium text-ink-2 outline-none transition-[color,background-color,box-shadow] duration-150 ease-soft",
+  "hover:text-ink hover:shadow-control-hover data-[state=open]:text-ink data-[state=open]:shadow-control-hover",
+  "disabled:cursor-not-allowed disabled:text-ink-4 disabled:hover:shadow-control disabled:hover:text-ink-4",
 ].join(" ");
 
 /** 幽灵触发器（顶栏里的切换租户）：无边框无底色，悬停与展开共用同一层浅灰。 */
@@ -53,8 +52,8 @@ export const selectChevron =
   "ml-auto shrink-0 text-ink-3 transition-transform duration-200 ease-soft";
 
 /**
- * 所有浮层（下拉、菜单、日期面板）共用的表面：16px 圆角、实心底、一层很轻的投影。
- * 不再画 border——shadow-pop 里第一层 0.5px 的描边阴影负责轮廓，深浅色各自一套。
+ * 所有浮层（下拉、菜单、日期面板）共用的表面：16px 圆角、实心底、堆叠投影。
+ * 不画 border——shadow-pop 里第一层 1px 的阴影描边负责轮廓，深浅色各自一套。
  */
 export const floatingPanelSurface =
   "code-proxy-floating-surface rounded-2xl bg-elevated text-ink shadow-pop";

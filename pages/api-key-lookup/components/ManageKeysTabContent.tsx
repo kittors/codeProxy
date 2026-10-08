@@ -27,11 +27,13 @@ export function ManageKeysTabContent({
   onEdit: (key: EndUserAPIKey) => void;
   onResetPeriodSpending: (key: EndUserAPIKey) => void;
 }) {
+  // 「管理 API Key」页签就是页面本身（flat）：操作按钮、Key 表格直接落在页面上，最近登录是下面
+  // 唯一的一张卡片。以前整页包在一张卡里，按钮行和表格之间再画一道分隔线。
   return (
-    <Card padding="none" className="overflow-hidden" bodyClassName="mt-0">
+    <Card flat bodyClassName="mt-0">
       <div
         data-testid="apikey-lookup-keys-card-toolbar"
-        className="flex flex-wrap items-center justify-end gap-2 border-b border-slate-100 px-3 py-3 sm:px-5 dark:border-white/8"
+        className="flex flex-wrap items-center justify-end gap-2 pb-3"
       >
         <Button size="sm" variant="secondary" onClick={onRefresh} disabled={loading || busy}>
           <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
@@ -45,7 +47,7 @@ export function ManageKeysTabContent({
 
       <div
         data-testid="apikey-lookup-keys-table-viewport"
-        className="relative min-h-[360px] h-[calc(100dvh-240px)] overflow-hidden px-3 sm:px-5"
+        className="relative min-h-[360px] h-[calc(100dvh-240px)] overflow-hidden"
       >
         <OwnedApiKeysTable
           t={t}

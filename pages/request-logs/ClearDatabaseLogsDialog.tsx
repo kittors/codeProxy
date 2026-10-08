@@ -1,7 +1,7 @@
 import { Database } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { ClearUsageLogsPayload } from "@code-proxy/api-client/endpoints/usage";
-import { CheckboxField, ConfirmModal, iconHueClass } from "@code-proxy/ui";
+import { CheckboxField, ConfirmModal } from "@code-proxy/ui";
 
 export const DEFAULT_CLEAR_OPTIONS: ClearUsageLogsPayload = {
   clear_body_content: true,
@@ -56,7 +56,7 @@ export function ClearDatabaseLogsDialog({
       description={t("request_logs.clear_database_logs_lead")}
       subject={
         <span className="flex items-center gap-3">
-          <Database size={18} className={`shrink-0 ${iconHueClass(Database)}`} aria-hidden="true" />
+          <Database size={18} className="shrink-0 text-ink-3" aria-hidden="true" />
           <span className="min-w-0">
             <span className="block font-medium">{t("request_logs.clear_scope_title")}</span>
             <span className="mt-0.5 block text-xs text-ink-3">

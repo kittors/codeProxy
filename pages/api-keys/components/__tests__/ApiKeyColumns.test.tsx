@@ -171,7 +171,9 @@ describe("ApiKeyColumns", () => {
     if (!pill || !tooltipTrigger) return;
 
     expect(modelText).toHaveClass("min-w-0", "truncate");
-    expect(pill).toHaveClass("flex", "min-w-0", "max-w-full", "rounded-full", "border");
+    // 胶囊仍是完整的圆角胶囊（截断发生在里面的文字上），但它是中性淡底标签，不再描边。
+    expect(pill).toHaveClass("flex", "min-w-0", "max-w-full", "rounded-full");
+    expect(pill?.className).not.toMatch(/(^|\s)border(-|\s|$)/);
     expect(tooltipTrigger).toHaveAttribute("data-tooltip-managed", "true");
     expect(tooltipTrigger).toHaveClass("!flex", "min-w-0", "max-w-full");
   });

@@ -10,14 +10,7 @@ import {
 import { Search, SearchX, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { VisualConfigValues } from "@features/visual-config-editor";
-import {
-  Callout,
-  DialogIcon,
-  HUE_GLYPH,
-  SettingGroup,
-  TextInput,
-  useScrollFade,
-} from "@code-proxy/ui";
+import { Callout, SettingGroup, TextInput, useScrollFade } from "@code-proxy/ui";
 import { ConfigFieldRow } from "./ConfigFieldRow";
 import { ConfigGroupTabs, ConfigSectionChips, type ConfigGroupTab } from "./ConfigNavBar";
 import {
@@ -52,17 +45,16 @@ function ConfigSection({
       aria-labelledby={titleId}
       className="scroll-mt-4 space-y-3"
     >
-      <header className="flex items-start gap-3 px-1">
-        <DialogIcon size="sm" tone={section.hue}>
-          <Icon />
-        </DialogIcon>
+      {/* 分区标题只是一行标题：线性图标 + 名称 + 说明，不垫图标块（标题下面的设置组才是卡片）。 */}
+      <header className="flex items-start gap-2.5 px-1">
+        <Icon size={18} className="mt-0.5 shrink-0 text-ink-3" aria-hidden="true" />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h2 id={titleId} className="text-base font-semibold tracking-tight text-ink">
               {t(`config_ui.sections.${section.id}.title`)}
             </h2>
             {modifiedCount > 0 ? (
-              <span className="rounded-full bg-sky-500/10 px-2 py-px text-2xs font-medium text-sky-700 dark:text-sky-300">
+              <span className="rounded-full bg-accent-soft px-2 py-px text-2xs font-medium text-accent-ink">
                 {t("config_ui.modified_count", { count: modifiedCount })}
               </span>
             ) : null}
@@ -81,7 +73,7 @@ function ConfigSection({
  *
  * - 以前分区目录竖在页面左侧，和外壳的侧边栏并排成两层纵向菜单；现在分组横向排在上方，
  *   一次只看一组（3–5 个分区），不用在一整页长滚动里找；
- * - 每个分区一个色相（configSchema），胶囊、分区标题的图标块、选中态都用它；
+ * - 分组页签、分区胶囊、分区标题都是中性的线性图标，选中与「改过」只用强调色表达；
  * - 每一项说明常驻、YAML 键作为辅助信息；改过的项有圆点并可单独撤销，有改动的分区与分组带圆点；
  * - 搜索跨分组：按名称 / 说明 / 键名过滤，结果按分组排开，页签上显示各组命中数；
  * - 内容区上下渐隐，滚动时不会被页签条和保存条硬生生截断。
@@ -293,8 +285,8 @@ export function VisualConfigEditor({
           <ResourceProfileBanner values={values} disabled={disabled} onChange={onChange} />
         ) : null}
         {visibleSections.length === 0 ? (
-          <div className="grid place-items-center rounded-2xl border border-dashed border-line px-6 py-16 text-center">
-            <SearchX size={22} className="text-sky-500" aria-hidden="true" />
+          <div className="grid place-items-center rounded-2xl bg-subtle px-6 py-16 text-center">
+            <SearchX size={22} className="text-ink-3" aria-hidden="true" />
             <p className="mt-3 text-sm font-medium text-ink">
               {t("config_ui.search_empty_title", { query: deferredQuery.trim() })}
             </p>
@@ -309,7 +301,7 @@ export function VisualConfigEditor({
             return (
               <div key={def.id} className="space-y-6">
                 <p className="flex items-center gap-1.5 px-1 text-xs font-semibold text-ink-3">
-                  <GroupIcon size={13} aria-hidden="true" className={HUE_GLYPH[def.hue]} />
+                  <GroupIcon size={13} aria-hidden="true" />
                   {t(`config_ui.groups.${def.id}`)}
                 </p>
                 {renderSections(sections)}

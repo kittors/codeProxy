@@ -1,26 +1,12 @@
 import { chartPalette } from "@code-proxy/ui";
 import { MONITOR_SUCCESS_CRITICAL_BELOW, MONITOR_SUCCESS_WARN_BELOW } from "../model/monitorHealth";
-import {
-  MONITOR_HUES,
-  type MonitorHue,
-  type UsageLevel,
-} from "@features/monitor-widgets/monitorVisuals";
+import type { UsageLevel } from "@features/monitor-widgets/monitorVisuals";
 
 /**
- * 监控中心的身份色。与仪表盘、系统监控同一组色系（chartTheme.metric）：请求蓝、成功绿、
- * 耗时与首字时间靛蓝、Token 紫、费用琥珀、缓存青。颜色只用来认出「这是哪类指标」，
- * 数值本身保持墨色；需要表达好坏时由状态色（绿 / 琥珀 / 红）覆盖。
+ * 监控中心的指标身份色（chartTheme.metric）：只在同一张图里同时画几个指标、需要彼此区分时
+ * 用；单个指标的卡片、迷你趋势一律用强调色，数值保持墨色，出问题时由状态色覆盖。
  */
 export type MonitorMetric = "requests" | "success" | "latency" | "tokens" | "cost" | "cache";
-
-export const METRIC_HUE: Record<MonitorMetric, MonitorHue> = {
-  requests: "sky",
-  success: "emerald",
-  latency: "indigo",
-  tokens: "violet",
-  cost: "amber",
-  cache: "emerald",
-};
 
 export function metricColor(metric: MonitorMetric, isDark: boolean): string {
   const palette = chartPalette(isDark).metric;
@@ -47,15 +33,6 @@ export function successLevel(rate: number): UsageLevel {
     : rate >= MONITOR_SUCCESS_CRITICAL_BELOW
       ? "warn"
       : "critical";
-}
-
-export function successHue(rate: number) {
-  const level = successLevel(rate);
-  return level === "critical"
-    ? MONITOR_HUES.rose
-    : level === "warn"
-      ? MONITOR_HUES.amber
-      : MONITOR_HUES.emerald;
 }
 
 /** 成功率文字色：正常保持墨色（不必满屏绿），出问题才上色。 */

@@ -28,12 +28,17 @@ import {
 } from "@features/proxy-pool/proxy-utils";
 import { ProxyFormModal, type ProxyFormField } from "./ProxyFormModal";
 
+/**
+ * 延迟分档只用语义色：快是绿、慢是琥珀、失败是红；中等延迟（300ms–1s）属于正常范围，
+ * 中性标签 + 数字就够了。以前「慢」用橙色、「中等」用琥珀，两档暖色挨在一起分不清，
+ * 橙色也不在语义色里。
+ */
 const latencyToneClasses: Record<ProxyLatencyTone, string> = {
-  none: "bg-slate-100 text-slate-600 dark:bg-neutral-900 dark:text-slate-300",
-  fast: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300",
-  medium: "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-200",
-  slow: "bg-orange-50 text-orange-700 dark:bg-orange-950/30 dark:text-orange-200",
-  failed: "bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-300",
+  none: "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]",
+  fast: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+  medium: "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]",
+  slow: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
+  failed: "bg-rose-500/10 text-rose-700 dark:text-rose-300",
 };
 
 export function ProxiesPage() {
@@ -266,8 +271,8 @@ export function ProxiesPage() {
         width: COLUMN_WIDTH.badgeGroup,
         render: (entry) => (
           <div className="min-w-0">
-            <p className="truncate font-semibold text-slate-950 dark:text-white">{entry.name}</p>
-            <p className="mt-1 truncate font-mono text-xs text-slate-500 dark:text-white/50">
+            <p className="truncate font-semibold text-ink">{entry.name}</p>
+            <p className="mt-1 truncate font-mono text-xs text-ink-3">
               {entry.id}
             </p>
           </div>
@@ -279,10 +284,10 @@ export function ProxiesPage() {
         width: COLUMN_WIDTH.badgeGroup,
         render: (entry) => (
           <div className="flex min-w-0 items-center gap-2">
-            <span className="rounded-full border border-slate-900/8 bg-slate-50 px-2 py-0.5 text-xs font-semibold text-slate-600 dark:border-white/8 dark:bg-neutral-900 dark:text-slate-300">
+            <span className="rounded-full bg-ink/[0.05] px-2 py-0.5 text-xs font-semibold text-ink-2 dark:bg-white/[0.07]">
               {proxyProtocol(entry.url)}
             </span>
-            <span className="truncate font-mono text-xs text-slate-700 dark:text-white/70">
+            <span className="truncate font-mono text-xs text-ink-2">
               {proxyEndpoint(entry)}
             </span>
           </div>
@@ -297,7 +302,7 @@ export function ProxiesPage() {
           const hasCheckResult = typeof result?.ok === "boolean";
           if (!result || !hasCheckResult) {
             return (
-              <span className="text-xs text-slate-500 dark:text-white/45">
+              <span className="text-xs text-ink-3">
                 {result?.checking ? t("common.loading_ellipsis") : "--"}
               </span>
             );
@@ -329,7 +334,7 @@ export function ProxiesPage() {
         label: t("proxies.remark_label"),
         width: COLUMN_WIDTH.badgeGroup,
         render: (entry) => (
-          <p className="truncate text-xs text-slate-600 dark:text-white/60">
+          <p className="truncate text-xs text-ink-2">
             {entry.description || "--"}
           </p>
         ),
@@ -384,13 +389,11 @@ export function ProxiesPage() {
 
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-5 md:overflow-hidden">
+    <div data-page-fill="always" className="flex min-h-0 flex-1 flex-col gap-5 md:overflow-hidden">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">
-            {t("proxies.title")}
-          </h2>
-          <p className="mt-1 max-w-3xl text-sm text-slate-600 dark:text-white/65">
+          <h2 className="text-2xl font-semibold tracking-tight text-ink">{t("proxies.title")}</h2>
+          <p className="mt-1 max-w-3xl text-sm text-ink-2">
             {t("proxies.description")}
           </p>
         </div>
@@ -406,7 +409,9 @@ export function ProxiesPage() {
         </div>
       </div>
 
+      {/* flat：外壳内容区就是这一页的面板，表格直接落在上面，不再套一张卡片。 */}
       <Card
+        flat
         className="overflow-hidden md:flex md:min-h-0 md:flex-1 md:flex-col"
         bodyClassName="md:flex md:min-h-0 md:flex-1 md:flex-col"
         loading={loading && entries.length === 0}

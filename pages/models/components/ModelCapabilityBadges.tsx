@@ -14,12 +14,18 @@ type BadgeItem = {
   icon: ReactNode | null;
 };
 
+/**
+ * 能力标签一律中性淡底，靠图标和文字区分。以前视觉天蓝、出图琥珀、音频绿……按类别上色，
+ * 一张模型卡片上三四种颜色，读起来像状态告警；语义色只留给成功 / 警告 / 错误。
+ */
+const NEUTRAL_BADGE = "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]";
+
 const BADGE_CLASS: Record<ModelCapabilityKey, string> = {
-  text: "bg-slate-100 text-slate-600 dark:bg-white/[0.08] dark:text-white/60",
-  vision: "bg-sky-50 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300",
-  image: "bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
-  video: "bg-hover text-ink",
-  audio: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
+  text: NEUTRAL_BADGE,
+  vision: NEUTRAL_BADGE,
+  image: NEUTRAL_BADGE,
+  video: NEUTRAL_BADGE,
+  audio: NEUTRAL_BADGE,
 };
 
 const BADGE_ICON: Record<ModelCapabilityKey, ReactNode> = {
@@ -73,7 +79,7 @@ export function ModelCapabilityBadges({
     badges.push({
       key: "unknown",
       label: t("models_page.capability_unknown"),
-      className: "bg-slate-100 text-slate-500 dark:bg-white/[0.06] dark:text-white/45",
+      className: "bg-ink/[0.05] text-ink-3 dark:bg-white/[0.07]",
       icon: null,
     });
   }

@@ -15,9 +15,7 @@ import {
   Tabs,
   TabsList,
   TabsTrigger,
-  surface,
   type SearchableCheckboxMultiSelectOption,
-  iconHueClass,
 } from "@code-proxy/ui";
 import { isLegacyRangeSupported } from "../model/legacyOverview";
 import { formatMonitorAgo, formatMonitorCompact, formatMonitorStamp } from "../model/monitorFormat";
@@ -49,18 +47,23 @@ export interface MonitorToolbarProps {
   onRefresh: () => void;
 }
 
-/** 页头：标题、实时状态、自动刷新；下面一行是时间范围与三个维度的筛选。 */
+/**
+ * 页头：标题、实时状态、自动刷新；下面一行是时间范围与三个维度的筛选。
+ *
+ * 页头直接落在外壳内容区上，不再包一张卡片：内容区本身就是页面的面板，页头再套一层卡、
+ * 行与行之间再画分隔线，下面的指标卡就成了「卡片里的卡片」。行之间靠留白分开。
+ */
 export function MonitorToolbar(props: MonitorToolbarProps) {
   const { t } = useTranslation();
   const { query, overview, legacy } = props;
 
   return (
-    <section className={`${surface({ radius: "3xl" })} relative`}>
-      <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-4 pb-3">
+    <section className="relative space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2.5">
             <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight text-ink">
-              <Activity size={18} aria-hidden="true" className={iconHueClass(Activity)} />
+              <Activity size={18} aria-hidden="true" className="text-ink-3" />
               {t("monitor_center.title")}
             </h2>
             <LiveStatus {...props} t={t} />
@@ -81,7 +84,7 @@ export function MonitorToolbar(props: MonitorToolbarProps) {
                 label: t(`monitor_center.auto_refresh_${seconds}`),
                 triggerLabel: (
                   <span className="flex min-w-0 items-center gap-1.5">
-                    <Timer size={14} className={`shrink-0 ${iconHueClass(Timer)}`} aria-hidden="true" />
+                    <Timer size={14} className="shrink-0 text-ink-3" aria-hidden="true" />
                     <span className="truncate">
                       {t(`monitor_center.auto_refresh_short_${seconds}`)}
                     </span>
@@ -101,7 +104,7 @@ export function MonitorToolbar(props: MonitorToolbarProps) {
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-line px-5 py-3">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <Tabs
           value={query.range}
           onValueChange={(value) => props.onRangeChange(value as MonitorRangeKey)}
@@ -187,8 +190,9 @@ function LiveStatus({
       : refreshSeconds === 0 || legacy
         ? "paused"
         : "live";
+  // 正在刷新是进行中的状态，用强调色；天蓝留给「说明」类提示。
   const dotClass = {
-    updating: "bg-sky-500",
+    updating: "bg-accent",
     failed: "bg-rose-500",
     paused: "bg-ink-4",
     live: "bg-emerald-500",
@@ -207,7 +211,7 @@ function LiveStatus({
       role="status"
       aria-live="polite"
       title={error ?? undefined}
-      className="inline-flex items-center gap-1.5 rounded-full bg-hover px-2.5 py-1 text-xs font-medium text-ink-2"
+      className="inline-flex items-center gap-1.5 rounded-full bg-ink/[0.05] px-2.5 py-1 text-xs font-medium text-ink-2 dark:bg-white/[0.07]"
     >
       <span className="relative inline-flex size-2" aria-hidden="true">
         {state === "live" ? (
@@ -225,7 +229,7 @@ function optionLabel(dimension: MonitorFilterDimension, option: MonitorFilterOpt
     const Icon = option.kind === "end_user" ? UserRound : KeyRound;
     return (
       <span className="flex min-w-0 items-center gap-1.5">
-        <Icon size={14} className={`shrink-0 ${iconHueClass(Icon)}`} aria-hidden="true" />
+        <Icon size={14} className="shrink-0 text-ink-3" aria-hidden="true" />
         <span className="truncate">{option.label || t("monitor_center.unnamed_consumer")}</span>
       </span>
     );
@@ -322,7 +326,7 @@ function ActiveFilterChips({
     overview?.filters[dimension].find((option) => option.value === value)?.label || value;
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5 border-t border-line px-5 py-2.5">
+    <div className="flex flex-wrap items-center gap-1.5">
       <span className="mr-1 text-xs text-ink-3">{t("monitor_center.filter.active")}</span>
       {DIMENSIONS.flatMap((dimension) =>
         query[dimension].map((value) => (

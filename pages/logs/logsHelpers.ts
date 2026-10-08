@@ -198,60 +198,33 @@ export const downloadBlob = (blob: Blob, filename: string) => {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
 
+/*
+ * 日志级别与状态码的标签都只用淡底、不描边。颜色只给「出了状况」的那几档：警告琥珀、错误红；
+ * info 是绝大多数行的常态，和 debug / trace、2xx / 3xx 一样用中性标签——以前 info 是天蓝标签
+ * 加天蓝行底、200 是绿标签，满屏都是颜色，真正的警告和错误反而不显眼。
+ */
+export const LOG_NEUTRAL_BADGE = "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]";
+export const LOG_MUTED_BADGE = "bg-ink/[0.05] text-ink-3 dark:bg-white/[0.07]";
+const WARN_BADGE = "bg-amber-500/10 text-amber-700 dark:bg-amber-400/15 dark:text-amber-300";
+const ERROR_BADGE = "bg-rose-500/10 text-rose-700 dark:bg-rose-400/15 dark:text-rose-300";
+
 export const getLevelStyles = (level: LogLevel): { badge: string; row: string } => {
   switch (level) {
-    case "info":
-      return {
-        badge:
-          "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/25 dark:bg-sky-500/10 dark:text-sky-200",
-        row: "bg-sky-50/40 dark:bg-sky-500/5",
-      };
     case "warn":
-      return {
-        badge:
-          "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-200",
-        row: "bg-amber-50/40 dark:bg-amber-500/5",
-      };
+      return { badge: WARN_BADGE, row: "bg-amber-500/[0.05] dark:bg-amber-400/[0.06]" };
     case "error":
     case "fatal":
-      return {
-        badge:
-          "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-200",
-        row: "bg-rose-50/40 dark:bg-rose-500/5",
-      };
+      return { badge: ERROR_BADGE, row: "bg-rose-500/[0.05] dark:bg-rose-400/[0.06]" };
     case "debug":
-      return {
-        badge:
-          "border-slate-900/8 bg-slate-100 text-slate-700 dark:border-white/8 dark:bg-white/10 dark:text-white/70",
-        row: "",
-      };
     case "trace":
-      return {
-        badge:
-          "border-slate-900/8 bg-slate-50 text-slate-600 dark:border-white/8 dark:bg-white/5 dark:text-white/55",
-        row: "",
-      };
+      return { badge: LOG_MUTED_BADGE, row: "" };
     default:
-      return {
-        badge:
-          "border-slate-900/8 bg-slate-50 text-slate-700 dark:border-white/8 dark:bg-white/5 dark:text-white/70",
-        row: "",
-      };
+      return { badge: LOG_NEUTRAL_BADGE, row: "" };
   }
 };
 
 export const getStatusStyles = (statusCode: number): string => {
-  if (statusCode >= 200 && statusCode < 300) {
-    return "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-200";
-  }
-  if (statusCode >= 300 && statusCode < 400) {
-    return "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/25 dark:bg-sky-500/10 dark:text-sky-200";
-  }
-  if (statusCode >= 400 && statusCode < 500) {
-    return "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-200";
-  }
-  if (statusCode >= 500) {
-    return "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-200";
-  }
-  return "border-slate-900/8 bg-slate-50 text-slate-700 dark:border-white/8 dark:bg-white/5 dark:text-white/70";
+  if (statusCode >= 500) return ERROR_BADGE;
+  if (statusCode >= 400) return WARN_BADGE;
+  return LOG_NEUTRAL_BADGE;
 };

@@ -9,7 +9,6 @@ import {
   FormField,
   FormSection,
   Modal,
-  SettingGroup,
   SettingRow,
   Skeleton,
   TextInput,
@@ -239,7 +238,8 @@ export function WarmupPolicyModal({ open, onClose, allFileNames }: WarmupPolicyM
             void handleSave();
           }}
         >
-          <SettingGroup>
+          {/* 弹窗里不用 SettingGroup（它是带细边和投影的卡片）：设置行放在一层无边淡底里。 */}
+          <div className="overflow-hidden rounded-2xl bg-subtle">
             <SettingRow
               label={t("antigravity_quota.warmup_policy_enabled")}
               description={t("antigravity_quota.warmup_tooltip")}
@@ -253,7 +253,7 @@ export function WarmupPolicyModal({ open, onClose, allFileNames }: WarmupPolicyM
                 />
               }
             />
-          </SettingGroup>
+          </div>
 
           <FormSection
             title={t("antigravity_quota.warmup_target_providers")}
@@ -315,7 +315,7 @@ export function WarmupPolicyModal({ open, onClose, allFileNames }: WarmupPolicyM
                 />
               </FormField>
             </div>
-            <SettingGroup>
+            <div className="overflow-hidden rounded-2xl bg-subtle">
               <SettingRow
                 label={t("antigravity_quota.warmup_daily_window_enable")}
                 description={t("antigravity_quota.warmup_daily_window_desc")}
@@ -350,7 +350,7 @@ export function WarmupPolicyModal({ open, onClose, allFileNames }: WarmupPolicyM
                   </div>
                 ) : null}
               </SettingRow>
-            </SettingGroup>
+            </div>
           </FormSection>
 
           <FormSection
@@ -401,9 +401,10 @@ export function WarmupPolicyModal({ open, onClose, allFileNames }: WarmupPolicyM
                 </span>
               }
             >
-              <div className="overflow-hidden rounded-2xl border border-line">
+              {/* 一层无边淡底装下搜索框和账号列表，不再描边、也不再用分隔线切开。 */}
+              <div className="overflow-hidden rounded-2xl bg-subtle">
                 {allFileNames.length > 6 ? (
-                  <div className="border-b border-line bg-subtle p-2">
+                  <div className="p-2 pb-0.5">
                     <TextInput
                       size="sm"
                       value={accountQuery}
@@ -423,7 +424,7 @@ export function WarmupPolicyModal({ open, onClose, allFileNames }: WarmupPolicyM
                         key={name}
                         className={[
                           "flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm transition-colors",
-                          excluded ? "bg-rose-500/[0.06] text-ink" : "text-ink-2 hover:bg-hover",
+                          excluded ? "bg-selected text-ink" : "text-ink-2 hover:bg-hover",
                         ].join(" ")}
                       >
                         <Checkbox
@@ -436,7 +437,7 @@ export function WarmupPolicyModal({ open, onClose, allFileNames }: WarmupPolicyM
                         <span
                           className={[
                             "shrink-0 text-2xs font-medium",
-                            excluded ? "text-rose-600 dark:text-rose-400" : "text-ink-3",
+                            excluded ? "text-ink-2" : "text-ink-3",
                           ].join(" ")}
                         >
                           {excluded
