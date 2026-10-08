@@ -5,7 +5,7 @@ import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@app/providers/AuthProvider";
 import { ProtectedRoute } from "@/app/guards/ProtectedRoute";
 import { DashboardLayout } from "@app/layout/DashboardLayout";
-import { Button, ThemeProvider, ToastProvider } from "@code-proxy/ui";
+import { AppearanceProvider, Button, ThemeProvider, ToastProvider } from "@code-proxy/ui";
 import { OnlineUpdateProvider } from "@features/online-update";
 import { ChunkLoadErrorBoundary } from "@/app/bootstrap/ChunkLoadErrorBoundary";
 import { dismissAppLoader } from "@/app/bootstrap/dismissAppLoader";
@@ -227,38 +227,40 @@ export function AppRouter() {
 
   return (
     <ThemeProvider>
-      <ToastProvider>
-        <div className="font-sans antialiased">
-          <ChunkLoadErrorBoundary>
-            <Suspense fallback={<RouteFallback />}>
-              <Routes>
-                {standalonePublicRoutes.map((route) => (
-                  <Route key={route.path} path={route.path} element={readyRoute(route.element)} />
-                ))}
-                {loginRoute ? (
+      <AppearanceProvider>
+        <ToastProvider>
+          <div className="font-sans antialiased">
+            <ChunkLoadErrorBoundary>
+              <Suspense fallback={<RouteFallback />}>
+                <Routes>
+                  {standalonePublicRoutes.map((route) => (
+                    <Route key={route.path} path={route.path} element={readyRoute(route.element)} />
+                  ))}
+                  {loginRoute ? (
+                    <Route
+                      path={loginRoute.path}
+                      element={
+                        <AuthProvider>
+                          <LoginRouteReady>{loginRoute.element}</LoginRouteReady>
+                        </AuthProvider>
+                      }
+                    />
+                  ) : null}
+
                   <Route
-                    path={loginRoute.path}
+                    path="*"
                     element={
                       <AuthProvider>
-                        <LoginRouteReady>{loginRoute.element}</LoginRouteReady>
+                        <AuthenticatedRoutes />
                       </AuthProvider>
                     }
                   />
-                ) : null}
-
-                <Route
-                  path="*"
-                  element={
-                    <AuthProvider>
-                      <AuthenticatedRoutes />
-                    </AuthProvider>
-                  }
-                />
-              </Routes>
-            </Suspense>
-          </ChunkLoadErrorBoundary>
-        </div>
-      </ToastProvider>
+                </Routes>
+              </Suspense>
+            </ChunkLoadErrorBoundary>
+          </div>
+        </ToastProvider>
+      </AppearanceProvider>
     </ThemeProvider>
   );
 }

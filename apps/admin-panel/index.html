@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-palette="colorful" data-icons="colorful" data-bars="semantic">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -33,6 +33,32 @@
           if (/^win/i.test(platform)) {
             root.setAttribute("data-os", "windows");
           }
+          // 外观设置（系统设置 → 外观）：风格开关与自定义变量要在首屏绘制前写上，否则会先闪一帧
+          // 默认的多彩样式。这里只搬运应用存下来的计算结果（attrs / vars），不重复颜色计算；
+          // 变量名只认外观会写的那几类，存储被篡改也写不进别的东西。读不到时保留 <html> 上的默认值。
+          try {
+            var appearance = JSON.parse(localStorage.getItem("code-proxy-admin-appearance") || "null");
+            if (appearance && appearance.version === 1) {
+              var attrs = appearance.attrs || {};
+              var names = ["palette", "icons", "bars"];
+              for (var i = 0; i < names.length; i++) {
+                if (typeof attrs[names[i]] === "string" && /^[a-z]+$/.test(attrs[names[i]])) {
+                  root.setAttribute("data-" + names[i], attrs[names[i]]);
+                }
+              }
+              var vars = appearance.vars || {};
+              for (var name in vars) {
+                if (
+                  Object.prototype.hasOwnProperty.call(vars, name) &&
+                  /^--(cp-pref-[a-z0-9-]+|color-(emerald|green|amber|rose|red)-\d{2,3})$/.test(name) &&
+                  typeof vars[name] === "string" &&
+                  /^[#a-z0-9 ./()-]+$/i.test(vars[name])
+                ) {
+                  root.style.setProperty(name, vars[name]);
+                }
+              }
+            }
+          } catch (appearanceError) {}
           var t = localStorage.getItem("code-proxy-admin-theme");
           if (t === "dark") {
             apply(true);
