@@ -50,12 +50,13 @@ export function ProviderDeleteConfirm({
   );
 }
 
-// 颜色只在名称前的小圆点上（新增绿、更新蓝、删除红）；数字一律墨色，四格不再是四种颜色的大字。
+// 名称前的小圆点始终带颜色（新增绿、更新蓝、删除红）；大数字简约风格一律墨色，
+// 多彩风格跟圆点同色系。
 const TILES = [
-  { key: "added", dot: "bg-emerald-500" },
-  { key: "changed", dot: "bg-sky-500" },
-  { key: "removed", dot: "bg-rose-500" },
-  { key: "duplicateEntriesRemoved", dot: "bg-ink-4" },
+  { key: "added", dot: "bg-emerald-500", tone: "colorful:text-emerald-700 colorful:dark:text-emerald-300" },
+  { key: "changed", dot: "bg-sky-500", tone: "colorful:text-sky-700 colorful:dark:text-sky-300" },
+  { key: "removed", dot: "bg-rose-500", tone: "colorful:text-rose-700 colorful:dark:text-rose-300" },
+  { key: "duplicateEntriesRemoved", dot: "bg-ink-4", tone: "" },
 ] as const;
 
 // 读屏用完整句子（沿用原来的「新增：N」文案），视觉上拆成小标签 + 大数字。
@@ -158,7 +159,7 @@ export function ProviderImportPreviewModal({
                   <span aria-hidden="true" className={["h-1.5 w-1.5 rounded-full", tile.dot].join(" ")} />
                   {t(TILE_LABEL[tile.key])}
                 </p>
-                <p className="mt-1 text-2xl font-semibold tabular-nums text-ink">
+                <p className={["mt-1 text-2xl font-semibold tabular-nums text-ink", tile.tone].join(" ")}>
                   {diff[tile.key]}
                 </p>
               </div>

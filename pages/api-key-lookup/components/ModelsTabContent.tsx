@@ -2,7 +2,16 @@ import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Check, Copy, Layers, RefreshCw, Search, Store } from "lucide-react";
 import { VendorIcon } from "@code-proxy/assets";
-import { Card, EmptyState, Tabs, TabsList, TabsTrigger, TextInput, useToast } from "@code-proxy/ui";
+import {
+  Card,
+  EmptyState,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TextInput,
+  iconHueClass,
+  useToast,
+} from "@code-proxy/ui";
 import { formatModelPriceAmount, hasModelPricing } from "@features/model-availability";
 import {
   buildModelVendorStats,
@@ -134,7 +143,11 @@ function ModelPlazaCard({ model, onCopied }: { model: PublicModelItem; onCopied:
                 title={t("model_plaza.copy_id")}
                 aria-label={t("model_plaza.copy_id")}
               >
-                {copied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} className="text-ink-3" />}
+                {copied ? (
+                  <Check size={14} className="text-emerald-500" />
+                ) : (
+                  <Copy size={14} className={`text-ink-3 ${iconHueClass(Copy)}`} />
+                )}
               </button>
             </div>
             <div className="mt-1.5">
@@ -229,7 +242,7 @@ export function ModelsTabContent({
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-center gap-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-selected">
-            <Store size={16} className="text-ink-3" />
+            <Store size={16} className={`text-ink-3 ${iconHueClass(Store)}`} />
           </div>
           <div>
             <h3 className="text-lg font-semibold tracking-tight text-ink">

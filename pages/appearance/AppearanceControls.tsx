@@ -67,9 +67,7 @@ export function AccentPicker({
                 size={13}
                 strokeWidth={3}
                 aria-hidden="true"
-                className={
-                  preset.id === "ink" ? "text-accent-fg mix-blend-difference" : "text-white"
-                }
+                className="text-white drop-shadow-[0_0_1.5px_rgb(0_0_0/0.85)]"
               />
             ) : null}
           </button>

@@ -30,10 +30,17 @@ const displayCell = (value: string | null | undefined, fallback = "—") => {
 };
 
 /**
- * 菜单类型、徽标都是中性淡底标签。以前五种类型各染一种颜色（蓝 / 灰 / 红 / 绿 / 琥珀），
- * 一列里红绿并排像是状态告警；类型靠文字区分就够了，颜色只留给「启用 / 停用」这类状态。
+ * 菜单类型、徽标的基础样式是中性淡底标签：简约风格下类型只靠文字区分。
+ * 多彩风格下按类型叠一层颜色（目录蓝 / 按钮红 / 内嵌绿 / 外链琥珀，普通菜单保持中性），徽标是实色蓝。
  */
 const NEUTRAL_TAG = "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]";
+
+const TYPE_TAG_HUE: Partial<Record<MenuType, string>> = {
+  directory: "colorful:bg-blue-500/15 colorful:text-blue-600 colorful:dark:text-blue-300",
+  button: "colorful:bg-rose-500/15 colorful:text-rose-600 colorful:dark:text-rose-300",
+  embed: "colorful:bg-emerald-500/15 colorful:text-emerald-600 colorful:dark:text-emerald-300",
+  link: "colorful:bg-amber-500/15 colorful:text-amber-700 colorful:dark:text-amber-300",
+};
 
 export function MenuManagementPage() {
   const { t } = useTranslation();
@@ -252,7 +259,7 @@ export function MenuManagementPage() {
                   <span className="truncate font-medium text-ink">{label}</span>
                   {menu.badge_content ? (
                     <span
-                      className={`shrink-0 rounded-full px-1.5 py-0.5 text-2xs font-medium ${NEUTRAL_TAG}`}
+                      className={`shrink-0 rounded-full px-1.5 py-0.5 text-2xs font-medium ${NEUTRAL_TAG} colorful:bg-blue-500 colorful:text-white`}
                     >
                       {menu.badge_content}
                     </span>
@@ -270,7 +277,7 @@ export function MenuManagementPage() {
         width: COLUMN_WIDTH.badge,
         render: (menu) => (
           <span
-            className={`inline-flex rounded-md px-2 py-0.5 text-xs font-medium ${NEUTRAL_TAG}`}
+            className={`inline-flex rounded-md px-2 py-0.5 text-xs font-medium ${NEUTRAL_TAG} ${TYPE_TAG_HUE[menu.type] ?? ""}`}
           >
             {typeLabel(menu.type)}
           </span>

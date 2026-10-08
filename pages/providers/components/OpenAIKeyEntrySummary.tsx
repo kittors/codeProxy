@@ -55,24 +55,25 @@ export function OpenAIKeyEntrySummary({
                 ) : null}
               </div>
               <div className="flex flex-wrap items-center gap-2 tabular-nums sm:justify-end">
-                {/* 开着是常态：中性文字即可；停了才用琥珀提醒。成功数中性，失败数大于 0 才标红。 */}
+                {/* 简约风格：开着是常态，中性文字即可；停了才用琥珀提醒；成功数中性，失败数大于 0 才标红。
+                    多彩风格：「启用」和成功数是绿色胶囊，失败数始终是红色胶囊。 */}
                 <span
                   className={
                     entryEnabled
-                      ? "px-1 font-medium text-ink-3"
+                      ? "px-1 font-medium text-ink-3 colorful:rounded-full colorful:bg-emerald-600/10 colorful:px-2 colorful:py-0.5 colorful:font-semibold colorful:text-emerald-700 colorful:dark:bg-emerald-500/15 colorful:dark:text-emerald-200"
                       : "rounded-full bg-amber-500/10 px-2 py-0.5 font-semibold text-amber-700 dark:text-amber-300"
                   }
                 >
                   {entryEnabled ? t("providers.enabled") : t("providers.disabled")}
                 </span>
-                <span className="rounded-full bg-ink/[0.05] px-2 py-0.5 text-ink-2 dark:bg-white/[0.07]">
+                <span className="rounded-full bg-ink/[0.05] px-2 py-0.5 text-ink-2 dark:bg-white/[0.07] colorful:bg-emerald-600/10 colorful:text-emerald-700 colorful:dark:bg-emerald-500/15 colorful:dark:text-emerald-200">
                   {t("providers.success_stats", { count: entryStats.success })}
                 </span>
                 <span
                   className={
                     entryStats.failure > 0
                       ? "rounded-full bg-rose-500/10 px-2 py-0.5 text-rose-700 dark:text-rose-300"
-                      : "rounded-full bg-ink/[0.05] px-2 py-0.5 text-ink-2 dark:bg-white/[0.07]"
+                      : "rounded-full bg-ink/[0.05] px-2 py-0.5 text-ink-2 dark:bg-white/[0.07] colorful:bg-rose-600/10 colorful:text-rose-700 colorful:dark:bg-rose-500/15 colorful:dark:text-rose-200"
                   }
                 >
                   {t("providers.failed_stats", { count: entryStats.failure })}

@@ -1,7 +1,7 @@
 import { useState, type CSSProperties } from "react";
 import { Check } from "lucide-react";
 import { VendorIcon } from "@code-proxy/assets";
-import { cn } from "@code-proxy/ui";
+import { brandVars, cn } from "@code-proxy/ui";
 
 export type ModelVendorKey =
   | "amp"
@@ -188,24 +188,45 @@ export function getModelVendorLabel(modelId: string, otherLabel = "Other"): stri
   return MODEL_VENDOR_DEFINITIONS.find((item) => item.key === key)?.label ?? key;
 }
 
+const MODEL_VENDOR_KEYS = new Set<string>([
+  ...MODEL_VENDOR_DEFINITIONS.map((definition) => definition.key),
+  "other",
+]);
+
 /**
- * 模型 / 厂商标签：中性淡底、不描边，和 ProviderTag 同一套配方。
- *
- * 以前每个标签按厂商品牌色整块上淡底、再加一圈品牌描边，一屏模型标签七八种颜色（外部评审：
- * 「色太杂」）。认厂商现在只靠 logo——logo 本身就是品牌色；没有 logo 的厂商只显示名字。
+ * 模型 / 厂商标签：不描边，和 ProviderTag 同一套配方。基础样式是中性淡底——简约风格下认厂商
+ * 只靠 logo（logo 本身就是品牌色），没有 logo 的厂商只显示名字。
+ * 多彩风格叠一层品牌淡底 + 品牌色的字，模型标签与供应商标签放在一起时颜色对得上；认不出的
+ * 厂商 brandVars 回落到墨色，于是仍是中性的浅灰底、黑字。
  */
 const NEUTRAL_TAG_CLASS = "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]";
+const BRAND_TINT_CLASS =
+  "colorful:bg-[color-mix(in_oklab,var(--brand)_10%,transparent)] colorful:text-[var(--brand-text)] colorful:dark:bg-[color-mix(in_oklab,var(--brand)_18%,transparent)]";
+/** 厂商图标块的品牌淡底：图标块跟随「图标着色」开关（同 DialogIcon 的色相图标块）。 */
+const BRAND_TILE_CLASS =
+  "icon-hue:bg-[color-mix(in_oklab,var(--brand)_10%,transparent)] icon-hue:text-[var(--brand-text)] icon-hue:dark:bg-[color-mix(in_oklab,var(--brand)_18%,transparent)]";
 
 export type ModelVendorBrand = { className: string; style: CSSProperties };
 
 /**
- * 模型或厂商 key 的标签外观（类名 + 行内样式，两者要一起挂到同一个元素上）。
- *
- * 品牌色只留给 logo，这里对所有厂商都返回同一套中性外观；保留这个函数和返回形状，是为了
- * 调用方（供应商页的模型胶囊、归属列表的数量胶囊）不用同步改写。
+ * 品牌 CSS 变量：先用 getModelVendorKey 认厂商——它认得的写法比品牌表全（"chatgpt-4o"、
+ * "tencent/hunyuan-large"、"cline-pass/…" 都算），再从 brandVars() 取颜色；它认不出的，拿原始 ID
+ * 再按品牌前缀表试一次，仍认不出就回落中性。颜色只从品牌表来，这里不手写色板。
  */
-export function modelVendorBrand(_modelIdOrVendorKey: string): ModelVendorBrand {
-  return { className: NEUTRAL_TAG_CLASS, style: {} };
+function vendorBrandVars(modelIdOrVendorKey: string): ModelVendorBrand {
+  const key = MODEL_VENDOR_KEYS.has(modelIdOrVendorKey)
+    ? (modelIdOrVendorKey as ModelVendorKey)
+    : getModelVendorKey(modelIdOrVendorKey);
+  return brandVars(key === "other" ? modelIdOrVendorKey : key);
+}
+
+/**
+ * 模型或厂商 key 的标签外观（类名 + 品牌 CSS 变量，两者要一起挂到同一个元素上）：
+ * 中性淡底，多彩风格下是品牌淡底。
+ */
+export function modelVendorBrand(modelIdOrVendorKey: string): ModelVendorBrand {
+  const vars = vendorBrandVars(modelIdOrVendorKey);
+  return { className: cn(vars.className, NEUTRAL_TAG_CLASS, BRAND_TINT_CLASS), style: vars.style };
 }
 
 export function buildModelVendorStats(models: string[], otherLabel = "Other") {
@@ -247,9 +268,9 @@ function ModelTagContent({ id, iconSize }: { id: string; iconSize: number }) {
 }
 
 /**
- * 厂商标识（模型卡片左上角、归属列表）：只有 logo，不再垫品牌淡底和描边——卡片角落里的
- * 带底色图标块和卡片圆角不同心，也是「色太杂」的一部分。没有 logo 的露出首字母
- * （peer-empty：logo 那一格渲染为空时才显示），用弱化墨色。
+ * 厂商标识（模型卡片左上角、归属列表）：图标着色多彩时是品牌淡底的图标块（认不出品牌的回落
+ * 中性浅灰）；单色时只有 logo，不垫底色。没有 logo 的露出首字母（peer-empty：logo 那一格
+ * 渲染为空时才显示），用弱化墨色（图标块里是淡一档的品牌色）。不描边。
  */
 export function ModelVendorTile({
   modelId,
@@ -260,17 +281,23 @@ export function ModelVendorTile({
   /** 列表里用的小号块。 */
   compact?: boolean;
 }) {
+  const vars = vendorBrandVars(modelId);
   return (
     <div
+      style={vars.style}
       className={cn(
+        vars.className,
         "relative flex shrink-0 items-center justify-center text-ink-3",
-        compact ? "h-5 w-5" : "h-6 w-6",
+        compact
+          ? "h-5 w-5 icon-hue:h-8 icon-hue:w-8 icon-hue:rounded-lg"
+          : "h-6 w-6 icon-hue:h-11 icon-hue:w-11 icon-hue:rounded-xl",
+        BRAND_TILE_CLASS,
       )}
     >
       <span className="peer flex items-center justify-center empty:hidden">
         <VendorIcon modelId={vendorIconId(modelId)} size={compact ? 16 : 20} />
       </span>
-      <span className="hidden text-sm font-bold peer-empty:inline" aria-hidden="true">
+      <span className="hidden text-sm font-bold peer-empty:inline icon-hue:opacity-60" aria-hidden="true">
         {modelId.trim().charAt(0).toUpperCase() || "M"}
       </span>
     </div>
@@ -278,8 +305,9 @@ export function ModelVendorTile({
 }
 
 /**
- * 归属标签（owned_by：openai、anthropic、google……）：中性淡底，`withLogo` 时前面放归属方的
- * logo——认人靠 logo，标签本身不再按品牌上色。
+ * 归属标签（owned_by：openai、anthropic、google……）：`withLogo` 时前面放归属方的 logo。
+ * 简约风格是中性淡底（认人靠 logo）；多彩风格按归属方自己的品牌上淡底，认不出的归属方保持
+ * 中性——颜色只回答「这是谁家的」，不替未知归属方编一个颜色。
  */
 export function ModelOwnerTag({
   owner,
@@ -290,10 +318,12 @@ export function ModelOwnerTag({
   withLogo?: boolean;
   className?: string;
 }) {
+  const brand = modelVendorBrand(owner);
   return (
     <span
+      style={brand.style}
       className={cn(
-        NEUTRAL_TAG_CLASS,
+        brand.className,
         "inline-flex max-w-full min-w-0 items-center gap-1 rounded-md px-1.5 py-px text-2xs font-medium",
         className,
       )}
@@ -315,6 +345,7 @@ export function ModelTag({
   className?: string;
   title?: string;
 }) {
+  const brand = modelVendorBrand(id);
   const sizeClasses = MODEL_TAG_SIZE_CLASSES[size];
 
   return (
@@ -323,10 +354,11 @@ export function ModelTag({
       // tooltip stacked on top of the managed one. Callers that truncate the tag
       // wrap it in OverflowTooltip, which only opens when the text is cut off.
       title={title}
+      style={brand.style}
       className={cn(
         "inline-flex max-w-full items-center font-mono font-semibold leading-none",
         sizeClasses.wrapper,
-        NEUTRAL_TAG_CLASS,
+        brand.className,
         className,
       )}
     >
@@ -349,6 +381,7 @@ export function CopyableModelTag({
   className?: string;
 }) {
   const [copied, setCopied] = useState(false);
+  const brand = modelVendorBrand(id);
 
   const handleClick = () => {
     void navigator.clipboard.writeText(id);
@@ -362,9 +395,12 @@ export function CopyableModelTag({
       type="button"
       onClick={handleClick}
       title={title}
+      style={brand.style}
       className={cn(
         "inline-flex max-w-full items-center gap-1.5 rounded-lg px-2.5 py-1.5 font-mono text-xs font-semibold leading-none transition hover:bg-ink/[0.08] active:scale-95 dark:hover:bg-white/[0.1]",
-        NEUTRAL_TAG_CLASS,
+        brand.className,
+        // 多彩风格悬停时保留品牌淡底，只浮起一层投影（中性的悬停底会把品牌色盖掉）。
+        "colorful:hover:bg-[color-mix(in_oklab,var(--brand)_10%,transparent)] colorful:hover:shadow-sm colorful:dark:hover:bg-[color-mix(in_oklab,var(--brand)_18%,transparent)]",
         className,
       )}
     >
@@ -393,10 +429,15 @@ export function ModelVendorStatBadge({
   active?: boolean;
   onClick?: () => void;
 }) {
+  const vars = vendorBrandVars(vendorKey);
   const className = cn(
     "inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-2xs font-semibold",
-    // 选中用唯一的强调色淡底，不再套一圈品牌色描边。
-    active ? "bg-accent-soft text-accent-ink" : NEUTRAL_TAG_CLASS,
+    vars.className,
+    // 选中：简约风格用唯一的强调色淡底；多彩风格是品牌淡底再套一圈品牌色的选中圈，和淡底同一家族。
+    active
+      ? "bg-accent-soft text-accent-ink colorful:ring-2 colorful:ring-[color-mix(in_oklab,var(--brand)_45%,transparent)] colorful:ring-offset-1 colorful:ring-offset-white colorful:dark:ring-offset-neutral-950"
+      : NEUTRAL_TAG_CLASS,
+    BRAND_TINT_CLASS,
     onClick ? "cursor-pointer transition-colors" : "",
   );
   const content = (
@@ -414,6 +455,7 @@ export function ModelVendorStatBadge({
         aria-label={`${label} ${count}`}
         aria-pressed={active}
         onClick={onClick}
+        style={vars.style}
         className={className}
       >
         {content}
@@ -421,5 +463,9 @@ export function ModelVendorStatBadge({
     );
   }
 
-  return <span className={className}>{content}</span>;
+  return (
+    <span style={vars.style} className={className}>
+      {content}
+    </span>
+  );
 }

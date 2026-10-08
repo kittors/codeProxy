@@ -14,7 +14,14 @@ import {
   formatUsageMetricTooltipNumber,
   isUsageMetricCompact,
 } from "@code-proxy/domain";
-import { DataTable, HoverTooltip, MaskToggleButton, useSensitiveDataMasking, useToast } from "@code-proxy/ui";
+import {
+  DataTable,
+  HoverTooltip,
+  MaskToggleButton,
+  useSensitiveDataMasking,
+  useToast,
+  iconHueClass,
+} from "@code-proxy/ui";
 import { ErrorDetailModal, LogContentModal } from "@features/log-content-viewer";
 import { ModelTag } from "@features/model-tags";
 import { ClearDatabaseLogsDialog, DEFAULT_CLEAR_OPTIONS } from "./ClearDatabaseLogsDialog";
@@ -477,7 +484,11 @@ export function RequestLogsPage() {
         <div className="flex flex-wrap items-center justify-between gap-3 pb-3">
           <div className="flex flex-wrap items-center gap-3">
             <h2 className="flex items-center gap-2 text-base font-semibold tracking-tight text-ink">
-              <ScrollText size={18} className="text-ink-3" aria-hidden="true" />
+              <ScrollText
+                size={18}
+                className={`text-ink-3 ${iconHueClass(ScrollText)}`}
+                aria-hidden="true"
+              />
               {t("request_logs.heading")}
             </h2>
             <div className="hidden min-[640px]:flex items-center gap-2 text-xs text-ink-3">

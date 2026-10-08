@@ -270,12 +270,14 @@ export function ProviderKeyListCard({
                 <div className="mt-2 flex flex-wrap items-center gap-1.5 empty:mt-0">
                   {showModelMetric && models.length ? (
                     <ProviderMetricChip
+                      tone="blue"
                       label={t("providers.models_label")}
                       value={models.length}
                     />
                   ) : null}
                   {showExcludedModels && excludedModels.length ? (
                     <ProviderMetricChip
+                      tone="rose"
                       label={t("providers.excluded_models_label")}
                       value={excludedModels.length}
                     />
@@ -289,6 +291,7 @@ export function ProviderKeyListCard({
                   ) : null}
                   {stats.success > 0 ? (
                     <ProviderMetricChip
+                      tone="emerald"
                       label={t("providers.success_stats", {
                         count: stats.success,
                       })}
@@ -328,8 +331,8 @@ export function ProviderKeyListCard({
                     {excludedModels.map((model) => (
                       <span
                         key={model}
-                        // 排除是配置不是故障：中性标签 + 删除线，不再整块染红。
-                        className="inline-flex h-5 max-w-full min-w-0 items-center rounded-md bg-ink/[0.05] px-1.5 text-2xs font-semibold leading-none text-ink-3 line-through decoration-ink-4 dark:bg-white/[0.07]"
+                        // 排除用删除线表达：简约风格下是中性标签，多彩风格下叠回红色淡底（与「排除」计数同色）。
+                        className="inline-flex h-5 max-w-full min-w-0 items-center rounded-md bg-ink/[0.05] px-1.5 text-2xs font-semibold leading-none text-ink-3 line-through decoration-ink-4 dark:bg-white/[0.07] colorful:bg-rose-50 colorful:text-rose-700 colorful:dark:bg-rose-500/15 colorful:dark:text-rose-200"
                         title={model}
                       >
                         <span className="min-w-0 truncate">{model}</span>

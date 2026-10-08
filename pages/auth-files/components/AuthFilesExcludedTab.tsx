@@ -1,7 +1,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
 import { FileJson, Plus, RefreshCw } from "lucide-react";
-import { Button, ProviderTag, surface } from "@code-proxy/ui";
+import { Button, ProviderTag, surface, iconHueClass } from "@code-proxy/ui";
 import { EmptyState } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
 
@@ -83,7 +83,7 @@ export function AuthFilesExcludedTab({
               value={excludedNewProvider}
               onChange={(e) => setExcludedNewProvider(e.currentTarget.value)}
               placeholder={t("auth_files.add_provider_placeholder")}
-              endAdornment={<FileJson size={16} className="text-ink-3" />}
+              endAdornment={<FileJson size={16} className={`text-ink-3 ${iconHueClass(FileJson)}`} />}
               disabled={excludedUnsupported}
             />
             <Button

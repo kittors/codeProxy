@@ -219,7 +219,7 @@ export function AuthFileTagsModal({
                       <span className="min-w-0 truncate font-medium">{tag}</span>
                     </span>
                     {custom ? (
-                      <span className="shrink-0 rounded-full bg-ink/[0.05] px-2 py-0.5 text-2xs font-medium text-ink-2 dark:bg-white/[0.07]">
+                      <span className="shrink-0 rounded-full bg-ink/[0.05] px-2 py-0.5 text-2xs font-medium text-ink-2 dark:bg-white/[0.07] colorful:bg-sky-500/10 colorful:text-sky-700 colorful:dark:text-sky-300">
                         {t("auth_files.custom_tag_label")}
                       </span>
                     ) : inherited ? (

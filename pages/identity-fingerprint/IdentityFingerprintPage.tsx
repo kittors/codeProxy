@@ -1877,7 +1877,7 @@ export function IdentityFingerprintPage() {
         </Tabs>
 
         {error ? (
-          <Callout tone="danger" role="alert" className="mt-4">
+          <Callout tone="danger" role="alert" className="mt-4 colorful:text-rose-700 colorful:dark:text-rose-200">
             {error}
           </Callout>
         ) : null}
@@ -1916,7 +1916,7 @@ function RuntimeStatePanel({
       description={t("identity_fingerprint.learned_desc")}
     >
       <div className="flex flex-wrap items-center gap-2 text-xs">
-        <SourcePill>
+        <SourcePill tone={status.enabled ? "learned" : "default"}>
           {status.enabled
             ? t("identity_fingerprint.status_enabled")
             : t("identity_fingerprint.status_disabled")}

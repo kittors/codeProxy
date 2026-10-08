@@ -243,7 +243,7 @@ export function ContentModerationPage() {
         width: COLUMN_WIDTH.name,
         render: (profile) =>
           profile.api_key_configured ? (
-            <span className="font-mono text-xs text-ink-2">
+            <span className="font-mono text-xs text-ink-2 colorful:text-emerald-700 colorful:dark:text-emerald-200">
               {profile.api_key_masked ?? "****"}
             </span>
           ) : (

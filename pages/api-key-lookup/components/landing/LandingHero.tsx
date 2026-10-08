@@ -94,11 +94,12 @@ export function LandingHero({
 
               {/*
                 可复制的接入命令：既是 CTA 也是产品说明，比再放一个按钮更有信息量。终端风格的深色
-                胶囊在两种主题下都是深底；轮廓用伪元素细边，提示符不再染成绿色（绿色只表示成功）。
+                胶囊在两种主题下都是深底；轮廓用伪元素细边。提示符在简约风格下是弱化白，多彩风格下
+                是终端绿。
               */}
               <div className="cp-edge inline-flex h-12 items-center gap-3 rounded-full bg-[#0B0D13] pl-5 pr-2">
                 <code className="max-w-[13rem] truncate font-mono text-xs text-slate-300 sm:max-w-none sm:text-sm">
-                  <span className="text-white/45">$ </span>
+                  <span className="text-white/45 colorful:text-emerald-400">$ </span>
                   {command}
                 </code>
                 <button

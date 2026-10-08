@@ -20,7 +20,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { VisualConfigValues } from "@features/visual-config-editor";
-import type { SettingControlWidth } from "@code-proxy/ui";
+import type { Hue, SettingControlWidth } from "@code-proxy/ui";
 import { parseProxyUrl, validateProxyParts } from "@features/proxy-pool";
 
 /**
@@ -53,6 +53,11 @@ export interface ConfigSectionDef {
   id: ConfigSectionId;
   group: ConfigNavGroupId;
   icon: LucideIcon;
+  /**
+   * 分区的色相：同一组里相邻分区颜色分得开。图标着色多彩时用于分区标题的图标块与胶囊图标，
+   * 配色风格多彩时用于选中胶囊的淡底；都关掉时是中性线性图标 + 强调色选中态。
+   */
+  hue: Hue;
   /** 自定义内容（规则编辑器、准入面板）的分区没有字段，搜索时额外匹配这些词。 */
   keywords?: string[];
 }
@@ -62,39 +67,45 @@ export const CONFIG_NAV_GROUPS: readonly ConfigNavGroupId[] = ["basics", "behavi
 export interface ConfigGroupDef {
   id: ConfigNavGroupId;
   icon: LucideIcon;
+  hue: Hue;
 }
 
-/** 顶部分组页签：四组各一个图标；选中靠强调色表达，不再一组一种颜色。 */
+/**
+ * 顶部分组页签：四组各一个图标与色相。图标着色多彩时选中那组的图标块变成该色相的实色，
+ * 单色时选中靠强调色表达。
+ */
 export const CONFIG_GROUPS: readonly ConfigGroupDef[] = [
-  { id: "basics", icon: SlidersHorizontal },
-  { id: "behavior", icon: Workflow },
-  { id: "data", icon: Database },
-  { id: "advanced", icon: Wrench },
+  { id: "basics", icon: SlidersHorizontal, hue: "blue" },
+  { id: "behavior", icon: Workflow, hue: "violet" },
+  { id: "data", icon: Database, hue: "emerald" },
+  { id: "advanced", icon: Wrench, hue: "orange" },
 ];
 
 export const CONFIG_SECTIONS: readonly ConfigSectionDef[] = [
-  { id: "server", group: "basics", icon: Server },
-  { id: "remote", group: "basics", icon: ShieldCheck },
-  { id: "cors", group: "basics", icon: Globe },
-  { id: "runtime", group: "behavior", icon: RefreshCw },
-  { id: "network", group: "behavior", icon: Network },
-  { id: "access", group: "behavior", icon: KeyRound },
-  { id: "streaming", group: "behavior", icon: Waves },
-  { id: "quota", group: "behavior", icon: Gauge },
-  { id: "logging", group: "data", icon: ScrollText },
-  { id: "retention", group: "data", icon: Archive },
-  { id: "monitoring", group: "data", icon: MonitorDot },
+  { id: "server", group: "basics", icon: Server, hue: "blue" },
+  { id: "remote", group: "basics", icon: ShieldCheck, hue: "violet" },
+  { id: "cors", group: "basics", icon: Globe, hue: "cyan" },
+  { id: "runtime", group: "behavior", icon: RefreshCw, hue: "indigo" },
+  { id: "network", group: "behavior", icon: Network, hue: "sky" },
+  { id: "access", group: "behavior", icon: KeyRound, hue: "amber" },
+  { id: "streaming", group: "behavior", icon: Waves, hue: "teal" },
+  { id: "quota", group: "behavior", icon: Gauge, hue: "orange" },
+  { id: "logging", group: "data", icon: ScrollText, hue: "orange" },
+  { id: "retention", group: "data", icon: Archive, hue: "lime" },
+  { id: "monitoring", group: "data", icon: MonitorDot, hue: "emerald" },
   {
     id: "payload",
     group: "advanced",
     icon: Braces,
+    hue: "fuchsia",
     keywords: ["payload", "default", "override", "filter", "body", "params"],
   },
-  { id: "kimi", group: "advanced", icon: Tag, keywords: ["kimi", "header", "user-agent"] },
+  { id: "kimi", group: "advanced", icon: Tag, hue: "sky", keywords: ["kimi", "header", "user-agent"] },
   {
     id: "codex",
     group: "advanced",
     icon: BadgeCheck,
+    hue: "indigo",
     keywords: ["codex", "oauth", "admission", "client", "preset"],
   },
 ];

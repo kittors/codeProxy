@@ -21,11 +21,11 @@ export function ProviderStatusBar({
   const hasData = data.totalSuccess + data.totalFailure > 0;
   const rateText = hasData ? `${data.successRate.toFixed(1)}%` : "--";
 
-  // 达标（≥90%）是常态，数字用墨色；只有偏低才变琥珀、很低变红——和卡片上的成功率同一套规则。
+  // 偏低变琥珀、很低变红——和卡片上的成功率同一套规则；达标（≥90%）简约风格是墨色，多彩风格是绿色。
   const rateClass = !hasData
     ? "text-ink-3"
     : data.successRate >= 90
-      ? "text-ink"
+      ? "text-ink colorful:text-emerald-600 colorful:dark:text-emerald-300"
       : data.successRate >= 50
         ? "text-amber-700 dark:text-amber-300"
         : "text-rose-700 dark:text-rose-300";

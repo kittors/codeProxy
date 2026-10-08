@@ -187,12 +187,14 @@ export function OpenAIProvidersTab({
                 <div className="mt-2 flex flex-wrap gap-1.5 empty:mt-0">
                   {provider.models?.length ? (
                     <ProviderMetricChip
+                      tone="blue"
                       label={t("providers.models_label")}
                       value={provider.models.length}
                     />
                   ) : null}
                   {stats.success > 0 ? (
                     <ProviderMetricChip
+                      tone="emerald"
                       label={t("providers.success_stats", {
                         count: stats.success,
                       })}

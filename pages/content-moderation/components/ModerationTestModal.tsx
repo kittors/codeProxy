@@ -155,10 +155,12 @@ export function ModerationTestModal({ profile, onClose }: ModerationTestModalPro
                   return (
                     <span
                       key={category}
+                      // 命中的类别：简约风格是强调色淡底；多彩风格的强调色是墨色，淡底和未命中的中性底
+                      // 几乎分不出，所以和以前一样用强调色实心。
                       className={[
                         "rounded-full px-2.5 py-1 text-xs",
                         matched
-                          ? "bg-accent-soft font-medium text-accent-ink"
+                          ? "bg-accent-soft font-medium text-accent-ink colorful:bg-accent colorful:text-accent-fg"
                           : "bg-ink/[0.05] text-ink-3 dark:bg-white/[0.07]",
                       ].join(" ")}
                       title={

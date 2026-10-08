@@ -1,3 +1,4 @@
+import { useId, type CSSProperties } from "react";
 import { useReducedMotion } from "framer-motion";
 import { LogoMark, VendorIcon } from "@code-proxy/assets";
 
@@ -22,10 +23,12 @@ const UPSTREAM_Y = UPSTREAMS.map((_, index) => {
  *
  * 连线用 SVG stroke-dasharray 做流动效果：相比逐个小球沿路径运动，dash 动画只占一条
  * path，滚动时不会掉帧，也天然支持 prefers-reduced-motion（关掉动画即为静态虚线）。
- * 连线是单一的强调色，不再从靛蓝渐变到青色；节点是卡片里的淡底块，不描 ring。
+ * 连线的基础形态（简约风格）是单一的强调色，多彩风格下是靛蓝到青色的渐变；
+ * 节点是卡片里的淡底块，不描 ring。
  */
 export function LandingRelayDiagram({ appLabel }: { appLabel: string }) {
   const reduceMotion = useReducedMotion();
+  const gradientId = `relay-flow-${useId()}`;
 
   return (
     <div className="relative mt-10 flex h-48 items-center justify-between gap-4">
@@ -46,13 +49,29 @@ export function LandingRelayDiagram({ appLabel }: { appLabel: string }) {
         className="h-full min-w-0 flex-1"
         aria-hidden
       >
+        <defs>
+          <linearGradient
+            id={gradientId}
+            x1="0"
+            y1="0"
+            x2="120"
+            y2="0"
+            gradientUnits="userSpaceOnUse"
+          >
+            <stop stopColor="#6366F1" stopOpacity="0.2" />
+            <stop offset="0.55" stopColor="#6366F1" stopOpacity="0.9" />
+            <stop offset="1" stopColor="#06B6D4" stopOpacity="0.5" />
+          </linearGradient>
+        </defs>
         <g
           fill="none"
           strokeWidth="1.8"
           strokeLinecap="round"
           strokeDasharray="5 7"
+          // 渐变 id 每个实例不同，类名里写不进去，经 CSS 变量交给 colorful: 类引用。
+          style={{ "--relay-flow": `url(#${gradientId})` } as CSSProperties}
           className={[
-            "stroke-accent/70",
+            "stroke-accent/70 colorful:[stroke:var(--relay-flow)]",
             reduceMotion ? "" : "motion-safe:animate-[landing-flow_1.4s_linear_infinite]",
           ].join(" ")}
         >

@@ -56,10 +56,22 @@ type CreateApiKeyColumnsOptions = {
 };
 
 /**
- * 标签一律中性淡底、不描边。模型 / 渠道分组 / 渠道三列以前各用一种颜色（青、靛、紫），
- * 按类别上色只会让表格变花，列名已经说明了这是哪一类。
+ * 标签基础是中性淡底、不描边（简约风格）。多彩风格下渠道列叠回青色淡底，
+ * 模型 / 渠道分组两列一直是中性的。
  */
 const NEUTRAL_TAG = "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]";
+
+type PermissionSummaryTone = "neutral" | "cyan";
+
+const permissionSummaryToneClasses: Record<PermissionSummaryTone, string> = {
+  neutral: "",
+  cyan: "colorful:bg-cyan-50/65 colorful:text-cyan-700 colorful:dark:bg-cyan-500/10 colorful:dark:text-cyan-200",
+};
+
+const permissionCountToneClasses: Record<PermissionSummaryTone, string> = {
+  neutral: "",
+  cyan: "colorful:bg-cyan-100 colorful:text-cyan-700 colorful:dark:bg-cyan-500/20 colorful:dark:text-cyan-200",
+};
 
 // 冻结列的底色要和表格所在的底一致：这张表直接放在页面上（外壳内容区 canvas），不在卡片里。
 const stickySelectHeaderClass = "md:sticky md:z-40 md:bg-slate-100 md:dark:bg-neutral-800";
@@ -83,18 +95,22 @@ function ApiKeyBadge({ value }: { value: string }) {
 function ApiKeyPermissionSummary({
   count,
   firstValue,
+  tone = "neutral",
   tooltipContent,
 }: {
   count: number;
   firstValue: string;
+  tone?: PermissionSummaryTone;
   tooltipContent: ReactNode;
 }) {
   return (
     <HoverTooltip content={tooltipContent} className="!flex min-w-0 max-w-full">
       <span
-        className={`flex min-w-0 max-w-full items-center gap-1 rounded-full py-0.5 pl-0.5 pr-1.5 text-xs ${NEUTRAL_TAG}`}
+        className={`flex min-w-0 max-w-full items-center gap-1 rounded-full py-0.5 pl-0.5 pr-1.5 text-xs ${NEUTRAL_TAG} ${permissionSummaryToneClasses[tone]}`}
       >
-        <span className="inline-flex h-5 min-w-[20px] shrink-0 items-center justify-center rounded-full bg-ink/[0.07] px-1.5 font-semibold tabular-nums text-ink">
+        <span
+          className={`inline-flex h-5 min-w-[20px] shrink-0 items-center justify-center rounded-full bg-ink/[0.07] px-1.5 font-semibold tabular-nums text-ink ${permissionCountToneClasses[tone]}`}
+        >
           {count}
         </span>
         <span className="block min-w-0 flex-1 truncate font-mono text-xs leading-5">
@@ -170,7 +186,9 @@ export const createApiKeyColumns = ({
             </span>
           </OverflowTooltip>
           {row.is_default ? (
-            <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-2xs font-medium ${NEUTRAL_TAG}`}>
+            <span
+              className={`shrink-0 rounded-full px-1.5 py-0.5 text-2xs font-medium ${NEUTRAL_TAG} colorful:bg-emerald-50 colorful:text-emerald-700 colorful:dark:bg-emerald-500/15 colorful:dark:text-emerald-300`}
+            >
               default
             </span>
           ) : null}
@@ -264,7 +282,7 @@ export const createApiKeyColumns = ({
           <button
             type="button"
             onClick={() => onViewResetHistory(row)}
-            className="tabular-nums font-medium text-accent-ink underline-offset-2 hover:underline"
+            className="tabular-nums font-medium text-accent-ink underline-offset-2 hover:underline colorful:text-orange-600 colorful:dark:text-orange-400"
             aria-label={t("api_keys_page.view_reset_history")}
           >
             {count}
@@ -288,7 +306,8 @@ export const createApiKeyColumns = ({
         <span className="inline-flex items-center gap-1">
           {!row["daily-limit"] ? (
             <>
-              <InfinityIcon size={14} className="text-ink-3" /> {t("api_keys_page.unlimited")}
+              <InfinityIcon size={14} className="text-ink-3 colorful:text-green-500" />{" "}
+              {t("api_keys_page.unlimited")}
             </>
           ) : (
             formatApiKeyLimit(row["daily-limit"])
@@ -305,7 +324,8 @@ export const createApiKeyColumns = ({
         <span className="inline-flex items-center gap-1">
           {!row["total-quota"] ? (
             <>
-              <InfinityIcon size={14} className="text-ink-3" /> {t("api_keys_page.unlimited")}
+              <InfinityIcon size={14} className="text-ink-3 colorful:text-green-500" />{" "}
+              {t("api_keys_page.unlimited")}
             </>
           ) : (
             formatApiKeyLimit(row["total-quota"])
@@ -331,7 +351,8 @@ export const createApiKeyColumns = ({
         <span className="inline-flex items-center gap-1">
           {!row["spending-limit"] ? (
             <>
-              <InfinityIcon size={14} className="text-ink-3" /> {t("api_keys_page.unlimited")}
+              <InfinityIcon size={14} className="text-ink-3 colorful:text-green-500" />{" "}
+              {t("api_keys_page.unlimited")}
             </>
           ) : (
             formatApiKeySpendingLimit(row["spending-limit"])
@@ -354,7 +375,8 @@ export const createApiKeyColumns = ({
         <span className="inline-flex items-center gap-1">
           {!row["rpm-limit"] ? (
             <>
-              <InfinityIcon size={14} className="text-ink-3" /> {t("api_keys_page.unlimited")}
+              <InfinityIcon size={14} className="text-ink-3 colorful:text-green-500" />{" "}
+              {t("api_keys_page.unlimited")}
             </>
           ) : (
             formatApiKeyLimit(row["rpm-limit"])
@@ -377,7 +399,8 @@ export const createApiKeyColumns = ({
         <span className="inline-flex items-center gap-1">
           {!row["tpm-limit"] ? (
             <>
-              <InfinityIcon size={14} className="text-ink-3" /> {t("api_keys_page.unlimited")}
+              <InfinityIcon size={14} className="text-ink-3 colorful:text-green-500" />{" "}
+              {t("api_keys_page.unlimited")}
             </>
           ) : (
             formatApiKeyLimit(row["tpm-limit"])
@@ -407,8 +430,12 @@ export const createApiKeyColumns = ({
             }
           />
         ) : (
-          <span className="inline-flex items-center gap-1 whitespace-nowrap">
-            <ShieldCheck size={14} className="text-ink-3" /> {t("api_keys_page.all_models")}
+          <span className="inline-flex items-center gap-1 whitespace-nowrap colorful:text-green-600 colorful:dark:text-green-400">
+            <ShieldCheck
+              size={14}
+              className="text-ink-3 colorful:text-green-600 colorful:dark:text-green-400"
+            />{" "}
+            {t("api_keys_page.all_models")}
           </span>
         ),
     },
@@ -433,8 +460,12 @@ export const createApiKeyColumns = ({
             }
           />
         ) : (
-          <span className="inline-flex items-center gap-1 whitespace-nowrap">
-            <ShieldCheck size={14} className="text-ink-3" /> {t("api_keys_page.all_channel_groups")}
+          <span className="inline-flex items-center gap-1 whitespace-nowrap colorful:text-green-600 colorful:dark:text-green-400">
+            <ShieldCheck
+              size={14}
+              className="text-ink-3 colorful:text-green-600 colorful:dark:text-green-400"
+            />{" "}
+            {t("api_keys_page.all_channel_groups")}
           </span>
         ),
     },
@@ -448,6 +479,7 @@ export const createApiKeyColumns = ({
           <ApiKeyPermissionSummary
             count={row["allowed-channels"].length}
             firstValue={row["allowed-channels"][0]}
+            tone="cyan"
             tooltipContent={
               <div className="flex max-w-xs flex-wrap gap-1.5">
                 {row["allowed-channels"].map((channel) => (
@@ -459,8 +491,12 @@ export const createApiKeyColumns = ({
             }
           />
         ) : (
-          <span className="inline-flex items-center gap-1 whitespace-nowrap">
-            <ShieldCheck size={14} className="text-ink-3" /> {t("api_keys_page.all_channels")}
+          <span className="inline-flex items-center gap-1 whitespace-nowrap colorful:text-green-600 colorful:dark:text-green-400">
+            <ShieldCheck
+              size={14}
+              className="text-ink-3 colorful:text-green-600 colorful:dark:text-green-400"
+            />{" "}
+            {t("api_keys_page.all_channels")}
           </span>
         ),
     },
@@ -504,6 +540,11 @@ export const createApiKeyColumns = ({
                 key: "toggle",
                 label: toggleLabel,
                 icon: <Power size={15} />,
+                // 行内操作是纯图标按钮：表示状态的颜色（启用绿、停用悬停红）和悬停淡底挂在
+                // colorful:，表示操作身份的图标色（导入青、编辑琥珀……）挂在 icon-hue:。
+                className: row.disabled
+                  ? "colorful:hover:bg-red-50 colorful:hover:text-red-500 colorful:dark:hover:bg-red-900/20 colorful:dark:hover:text-red-400"
+                  : "colorful:text-emerald-500 colorful:hover:bg-emerald-50 colorful:dark:text-emerald-400 colorful:dark:hover:bg-emerald-900/20",
                 onClick: () => onToggleDisable(idx),
               },
               {
@@ -523,6 +564,7 @@ export const createApiKeyColumns = ({
                 key: "import",
                 label: importLabel,
                 icon: <Upload size={15} />,
+                className: "icon-hue:hover:text-cyan-600 icon-hue:dark:hover:text-cyan-400",
                 onClick: () => onImportToCcSwitch(row),
               },
               {
@@ -530,6 +572,8 @@ export const createApiKeyColumns = ({
                 label: rotateKeyLabel,
                 icon: <RotateCcw size={15} />,
                 visible: accountScoped,
+                className:
+                  "colorful:hover:bg-orange-50 colorful:dark:hover:bg-orange-900/20 icon-hue:hover:text-orange-600 icon-hue:dark:hover:text-orange-400",
                 onClick: () => onRotate(idx),
               },
               {
@@ -537,12 +581,14 @@ export const createApiKeyColumns = ({
                 label: resetLabel,
                 icon: <RotateCcw size={15} className={isResetting ? "animate-spin" : ""} />,
                 disabled: !hasResettablePeriod || isResetting,
+                className: "icon-hue:hover:text-orange-600 icon-hue:dark:hover:text-orange-400",
                 onClick: () => onResetPeriodSpending(idx),
               },
               {
                 key: "edit",
                 label: editLabel,
                 icon: <Pencil size={15} />,
+                className: "icon-hue:hover:text-amber-600 icon-hue:dark:hover:text-amber-400",
                 onClick: () => onEdit(idx),
               },
               {

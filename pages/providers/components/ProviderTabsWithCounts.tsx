@@ -10,7 +10,7 @@ import iconAmp from "@code-proxy/assets/icons/amp.svg";
 import iconOpenai from "@code-proxy/assets/icons/openai.svg";
 import iconOpenCodeDark from "@code-proxy/assets/icons/opencode-dark.svg";
 import iconOpenCodeLight from "@code-proxy/assets/icons/opencode-light.svg";
-import { TabsList, TabsTrigger } from "@code-proxy/ui";
+import { TabsList, TabsTrigger, brandVars } from "@code-proxy/ui";
 
 export type ProviderTabId =
   | "gemini"
@@ -70,14 +70,18 @@ const TAB_META: Record<ProviderTabId, { icon: ReactNode }> = {
 };
 
 /**
- * tab 上的数量角标：当前 tab 用强调色实底，其余是卡片底色的白（深色是卡片色）小圆点，都不描边。
- * 以前按供应商品牌色上色，一条页签上十几个角标十几种颜色；认厂商靠 tab 里的 logo 就够了。
- * 角标压在 tab 文字上，所以必须是不透明的实色，半透明会透出下面的字。
+ * tab 上的数量角标，都不描边。简约风格：当前 tab 用强调色实底，其余是卡片底色的白（深色是卡片色）
+ * 小圆点，认厂商靠 tab 里的 logo。多彩风格跟着供应商的品牌色：当前 tab 用品牌实色，其余用品牌
+ * 淡底；认不出品牌的（Bedrock、Command Code）回落到墨色。
+ * 角标压在 tab 文字上，所以必须是不透明的实色（品牌淡底是和卡片底色混出来的实色），半透明会透出
+ * 下面的字。
  */
 const COUNT_BADGE_BASE =
   "absolute -right-0.5 -top-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-2xs font-semibold leading-none tabular-nums";
-const COUNT_BADGE_ACTIVE = "bg-accent text-accent-fg";
-const COUNT_BADGE_IDLE = "bg-surface text-ink-2 shadow-xs";
+const COUNT_BADGE_ACTIVE =
+  "bg-accent text-accent-fg colorful:bg-[var(--brand-fill)] colorful:text-[var(--brand-on)]";
+const COUNT_BADGE_IDLE =
+  "bg-surface text-ink-2 shadow-xs colorful:bg-[color-mix(in_oklab,var(--brand)_14%,var(--color-surface))] colorful:text-[var(--brand-text)] colorful:dark:bg-[color-mix(in_oklab,var(--brand)_26%,var(--color-surface))]";
 
 type ProviderTabsWithCountsProps = {
   tabs: ProviderTabMeta[];
@@ -90,6 +94,7 @@ export function ProviderTabsWithCounts({ tabs, value }: ProviderTabsWithCountsPr
       <TabsList>
         {tabs.map((tab) => {
           const icon = tab.icon ?? TAB_META[tab.id]?.icon ?? null;
+          const brand = brandVars(tab.id);
           return (
             <TabsTrigger key={tab.id} value={tab.id}>
               {icon}
@@ -97,7 +102,9 @@ export function ProviderTabsWithCounts({ tabs, value }: ProviderTabsWithCountsPr
                 {tab.label}
                 {tab.count !== null && tab.count > 0 ? (
                   <span
+                    style={brand.style}
                     className={[
+                      brand.className,
                       COUNT_BADGE_BASE,
                       value === tab.id ? COUNT_BADGE_ACTIVE : COUNT_BADGE_IDLE,
                     ].join(" ")}

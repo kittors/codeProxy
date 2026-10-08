@@ -71,10 +71,12 @@ const resetHint = (
 
 /*
  * 额度胶囊只用淡底、不描边：正常是中性灰，接近上限（≥ 90%）琥珀、用尽红色。
- * 「不限制」也是中性的——它不是「成功」，以前整列绿色胶囊，真正要注意的琥珀 / 红色反而不显眼。
+ * 「不限制」的基础形态（简约风格）是中性胶囊，多彩风格下叠回绿色胶囊。
  */
 const CHIP = "inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium";
 const NEUTRAL_CHIP = "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]";
+const UNLIMITED_CHIP =
+  "colorful:bg-emerald-50 colorful:text-emerald-700 colorful:dark:bg-emerald-500/10 colorful:dark:text-emerald-300";
 
 const chipTone = (ratio: number) => {
   if (ratio >= 1) return "bg-rose-500/10 text-rose-700 dark:text-rose-300";
@@ -84,8 +86,12 @@ const chipTone = (ratio: number) => {
 
 function UnlimitedChip({ label }: { label: string }) {
   return (
-    <span className={`${CHIP} ${NEUTRAL_CHIP}`}>
-      <InfinityIcon size={13} className="text-ink-3" aria-hidden="true" />
+    <span className={`${CHIP} ${NEUTRAL_CHIP} ${UNLIMITED_CHIP}`}>
+      <InfinityIcon
+        size={13}
+        className="text-ink-3 colorful:text-emerald-700 colorful:dark:text-emerald-300"
+        aria-hidden="true"
+      />
       {label}
     </span>
   );

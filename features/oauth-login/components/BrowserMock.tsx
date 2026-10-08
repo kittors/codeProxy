@@ -115,7 +115,7 @@ export function BrowserMock({
       <motion.figcaption
         className={[
           "mt-2 flex items-center gap-1.5 text-xs font-medium",
-          animate ? "text-accent-ink" : "text-ink-3",
+          animate ? "text-accent-ink colorful:text-sky-700 colorful:dark:text-sky-300" : "text-ink-3",
           variant === "redirect" ? "pl-14" : "justify-center",
         ].join(" ")}
         initial={play ? { opacity: 0, y: -4 } : false}

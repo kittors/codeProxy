@@ -56,7 +56,7 @@ function StageTimeline({ progress }: { progress?: UpdateProgressResponse | null 
           ) : state === "skipped" ? (
             <Minus size={12} className="text-ink-3" />
           ) : state === "active" ? (
-            <Loader size={12} className="animate-spin text-accent-ink" />
+            <Loader size={12} className="animate-spin text-accent-ink colorful:text-sky-600 colorful:dark:text-sky-300" />
           ) : (
             <span className="h-1.5 w-1.5 rounded-full bg-ink-4" />
           );
@@ -174,10 +174,14 @@ export function UpdateProgressPanel({
   // reason a working update looked broken.
   const reconnecting = running && link === "reconnecting";
 
-  // 进行中用唯一的强调色；完成绿、失败红只表达结果。
+  // 进行中：进度条为语义色时是天蓝，选了统一强调色时跟随强调色；完成绿、失败红只表达结果。
   const tone = completed ? "emerald" : failed ? "rose" : "accent";
   const barClass =
-    tone === "emerald" ? "bg-emerald-500" : tone === "rose" ? "bg-rose-500" : "bg-accent";
+    tone === "emerald"
+      ? "bg-emerald-500"
+      : tone === "rose"
+        ? "bg-rose-500"
+        : "bg-accent bar-semantic:bg-sky-500";
 
   const bytes = formatBytes(progress?.progress_bytes);
   const totalBytes = formatBytes(progress?.progress_total_bytes);
@@ -240,8 +244,8 @@ export function UpdateProgressPanel({
       {reconnecting ? (
         <p
           data-testid="update-reconnecting"
-          // 说明条：天蓝淡底 + 彩色图标，正文保持中性色（同 Callout）。
-          className="mt-3 flex items-start gap-2 rounded-lg bg-sky-500/[0.07] p-2.5 text-xs leading-5 text-ink-2"
+          // 说明条：天蓝淡底 + 彩色图标；简约风格正文保持中性色（同 Callout），多彩风格正文是天蓝字。
+          className="mt-3 flex items-start gap-2 rounded-lg bg-sky-500/[0.07] p-2.5 text-xs leading-5 text-ink-2 colorful:text-sky-800 colorful:dark:text-sky-200"
         >
           <WifiOff size={14} className="mt-0.5 shrink-0 text-sky-600 dark:text-sky-300" />
           {stale ? t("auto_update.reconnecting_slow") : t("auto_update.reconnecting")}

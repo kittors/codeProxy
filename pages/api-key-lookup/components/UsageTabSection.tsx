@@ -300,6 +300,7 @@ export function UsageTabSection({
               tone="portal"
               title={t("apikey_lookup.total_requests")}
               icon={Activity}
+              hue="blue"
               hint={t("apikey_lookup.last_n_days", { days: timeRange })}
               valueClassName={kpiValueSizeClass(formatInteger(chartStats?.total ?? 0))}
               value={renderKpiValue(
@@ -314,6 +315,7 @@ export function UsageTabSection({
               tone="portal"
               title={t("common.success_rate")}
               icon={ShieldCheck}
+              hue="emerald"
               hint={t("apikey_lookup.last_n_days", { days: timeRange })}
               valueClassName={kpiValueSizeClass(`${(chartStats?.success_rate ?? 0).toFixed(1)}%`)}
               value={renderKpiValue(
@@ -331,6 +333,7 @@ export function UsageTabSection({
               tone="portal"
               title={t("apikey_lookup.total_tokens")}
               icon={Sigma}
+              hue="violet"
               hint={t("apikey_lookup.last_n_days", { days: timeRange })}
               valueClassName={kpiValueSizeClass(formatInteger(chartStats?.total_tokens ?? 0))}
               value={renderKpiValue(
@@ -345,6 +348,7 @@ export function UsageTabSection({
               tone="portal"
               title={t("apikey_lookup.total_sessions")}
               icon={MessagesSquare}
+              hue="cyan"
               hint={t("apikey_lookup.last_n_days", { days: timeRange })}
               valueClassName={kpiValueSizeClass(formatInteger(chartStats?.total_sessions ?? 0))}
               value={renderKpiValue(
@@ -359,6 +363,7 @@ export function UsageTabSection({
               tone="portal"
               title={t("apikey_lookup.total_cost")}
               icon={Coins}
+              hue="amber"
               hint={t("apikey_lookup.last_n_days", { days: timeRange })}
               valueClassName={kpiValueSizeClass(formatQuotaUsd(chartStats?.total_cost ?? 0))}
               value={renderKpiValue(

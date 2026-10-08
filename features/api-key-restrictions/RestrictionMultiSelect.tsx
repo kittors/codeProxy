@@ -187,8 +187,9 @@ export function RestrictionMultiSelect({
   const triggerSummary = useMemo(() => {
     if (selectedValues.length === 0) {
       return (
-        <span className="inline-flex items-center gap-1 rounded-full bg-ink/[0.05] px-2 py-0.5 text-xs font-medium text-ink-2 dark:bg-white/[0.07]">
-          <Check size={12} className="text-ink-3" />
+        // 「不限制」：简约风格是中性淡底；多彩风格是绿色胶囊，勾跟随胶囊的字色。
+        <span className="inline-flex items-center gap-1 rounded-full bg-ink/[0.05] px-2 py-0.5 text-xs font-medium text-ink-2 dark:bg-white/[0.07] colorful:bg-emerald-50 colorful:text-emerald-700 colorful:dark:bg-emerald-500/15 colorful:dark:text-emerald-300">
+          <Check size={12} className="text-ink-3 colorful:text-current" />
           {unrestrictedLabel}
         </span>
       );
@@ -230,7 +231,11 @@ export function RestrictionMultiSelect({
             />
           </div>
           <div className="flex items-center justify-between gap-2 px-3 pt-2 pb-1">
-            <span className="text-xs font-medium text-ink-3">
+            <span
+              className={`text-xs font-medium text-ink-3 ${
+                selectedValues.length === 0 ? "colorful:text-emerald-600 colorful:dark:text-emerald-300" : ""
+              }`}
+            >
               {selectedValues.length === 0
                 ? unrestrictedLabel
                 : selectedCountLabel(selectedValues.length)}
