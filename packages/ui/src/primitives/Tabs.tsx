@@ -1,5 +1,4 @@
 import {
-  Children,
   createContext,
   use,
   useCallback,
@@ -11,11 +10,9 @@ import {
   type ButtonHTMLAttributes,
   type HTMLAttributes,
   type PropsWithChildren,
-  type ReactNode,
 } from "react";
 import { motion } from "framer-motion";
 import { useScrollFade } from "../hooks/useScrollFade";
-import { HUE_BUTTON_ICON, hueForIcon, type Hue } from "../theme/hues";
 import type { ControlSize } from "../utils/controlStyles";
 
 type TabsValue = string;
@@ -158,7 +155,7 @@ export function TabsList({
             "pointer-events-none absolute bottom-0.5 left-0 top-0.5 z-0 rounded-full",
             tone === "brand"
               ? "bg-accent"
-              : "bg-surface shadow-[0_0_0_0.5px_rgb(0_0_0/0.06),0_1px_3px_rgb(0_0_0/0.1)] dark:bg-white/10 dark:shadow-none",
+              : "bg-surface shadow-[0_0_0_1px_rgb(0_0_0/0.05),0_1px_3px_rgb(0_0_0/0.1)] dark:bg-white/[0.12] dark:shadow-[0_1px_2px_rgb(0_0_0/0.4)]",
           ].join(" ")}
           initial={false}
           animate={{ x: indicator.x, width: indicator.width }}
@@ -169,15 +166,6 @@ export function TabsList({
       {children}
     </div>
   );
-}
-
-function firstIconHue(children: ReactNode): Hue | null {
-  let found: Hue | null = null;
-  Children.forEach(children, (child) => {
-    if (found) return;
-    found = hueForIcon(child);
-  });
-  return found;
 }
 
 export function TabsTrigger({
@@ -191,9 +179,6 @@ export function TabsTrigger({
 >) {
   const { size, value: current, onValueChange, tone } = useTabs();
   const active = current === value;
-  // 标签里的图标按全站注册表上色（可视化是天蓝的眼睛、源码是品红的代码……）；
-  // 品牌色实心的选中块上图标跟随文字色，不再染色。
-  const iconHue = tone === "brand" && active ? null : firstIconHue(children);
 
   const onClick = useCallback(() => {
     onValueChange(value);
@@ -219,7 +204,6 @@ export function TabsTrigger({
             ? "text-accent-fg"
             : "text-ink"
           : "text-ink-2 hover:text-ink",
-        iconHue ? HUE_BUTTON_ICON[iconHue] : null,
         buttonProps.className,
       ]
         .filter(Boolean)

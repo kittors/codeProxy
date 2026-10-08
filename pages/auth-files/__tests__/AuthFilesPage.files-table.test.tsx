@@ -2014,12 +2014,14 @@ describe("AuthFilesPage files table", () => {
     // Membership chip is PRO (not soft sky "pro" tag); only one membership badge.
     const planBadge = within(card as HTMLElement).getByTestId("auth-file-plan-badge");
     expect(planBadge).toHaveTextContent("PRO");
-    // 卡片上的徽章走品牌色 × 等级：Codex 的 PRO 是专业档、Codex 品牌色，供应商标签同色。
+    // 卡片上的徽章走品牌色 × 等级：Codex 的 PRO 是专业档、Codex 品牌色；供应商标签是中性
+    // 胶囊，品牌只体现在 logo 上（一张卡只留会员徽章这一块品牌色）。
     expect(planBadge).toHaveAttribute("data-plan-tier", "pro");
     const codexBrand = planBadge.style.getPropertyValue("--brand-l");
     expect(codexBrand).not.toBe("");
     const providerTag = within(card as HTMLElement).getByText(/^codex$/i);
-    expect(providerTag.style.getPropertyValue("--brand-l")).toBe(codexBrand);
+    expect(providerTag.style.getPropertyValue("--brand-l")).toBe("");
+    expect(providerTag).toHaveClass("text-ink-2");
     expect(within(card as HTMLElement).queryByText("pro")).not.toBeInTheDocument();
   });
 

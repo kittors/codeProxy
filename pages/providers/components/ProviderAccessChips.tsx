@@ -10,14 +10,14 @@ export function ProviderAccessChips({ accessSummary }: ProviderAccessChipsProps)
 
   if (accessSummary === null) return null;
 
+  // 只用淡底、不描边：全部可达是常态（中性），部分可达琥珀，全部不可达红色。
   const accessTone =
-    accessSummary.totalKeys === 0
-      ? "border-slate-900/8 bg-slate-50 text-slate-600 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white/65"
+    accessSummary.totalKeys === 0 ||
+    accessSummary.reachableKeys >= accessSummary.totalKeys
+      ? "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]"
       : accessSummary.reachableKeys === 0
-        ? "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200"
-        : accessSummary.reachableKeys < accessSummary.totalKeys
-          ? "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100"
-          : "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100";
+        ? "bg-rose-500/10 text-rose-700 dark:text-rose-300"
+        : "bg-amber-500/10 text-amber-700 dark:text-amber-300";
 
   const label =
     accessSummary.totalKeys === 0
@@ -33,9 +33,9 @@ export function ProviderAccessChips({ accessSummary }: ProviderAccessChipsProps)
 
   return (
     <div className="flex flex-wrap gap-1.5 text-xs">
-      <span className={`rounded-full border px-2 py-0.5 font-medium ${accessTone}`}>{label}</span>
+      <span className={`rounded-full px-2 py-0.5 font-medium ${accessTone}`}>{label}</span>
       {accessSummary.exactOverrideKeys > 0 ? (
-        <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
+        <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-amber-700 dark:text-amber-300">
           {t("providers.access_exact_overrides", {
             count: accessSummary.exactOverrideKeys,
           })}

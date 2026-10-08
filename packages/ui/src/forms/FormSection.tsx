@@ -21,9 +21,9 @@ export function FormSection({
 }: {
   title: ReactNode;
   description?: ReactNode;
-  /** 标题前的小图标块（按图标自动取色相，见 theme/hues），帮助扫读。 */
+  /** 标题前的小图标块（中性淡底），帮助扫读。 */
   icon?: ReactNode;
-  /** 图标块色调，默认按图标自动取色。 */
+  /** 图标块色调，默认中性；只有危险 / 警告这类语义才需要指定。 */
   tone?: DialogTone;
   /** 标题行右侧的操作（例如「全部展开」「添加一条」）。 */
   actions?: ReactNode;
@@ -37,7 +37,8 @@ export function FormSection({
       aria-labelledby={titleId}
       data-slot="form-section"
       className={cn(
-        "border-t border-line pt-5 first:border-t-0 first:pt-0",
+        // 分区之间靠留白分开，不再画分隔线：一张表单里每隔几行一道横线，读起来像一摞框。
+        "pt-7 first:pt-0",
         className,
       )}
     >

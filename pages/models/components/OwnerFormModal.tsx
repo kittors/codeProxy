@@ -133,7 +133,7 @@ export function OwnerFormModal({
               placeholder={t("models_page.owner_description_placeholder")}
             />
           </FormField>
-          <SettingGroup>
+          <SettingGroup flat>
             <SettingRow
               label={t("models_page.enabled")}
               description={t("models_page.owner_enabled_hint")}

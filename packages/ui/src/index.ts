@@ -62,22 +62,7 @@ export { ConfirmModal } from "./overlays/ConfirmModal";
 export { ConfirmHost, confirmDialog } from "./overlays/confirmDialog";
 export { DialogIcon, dialogToneClass } from "./overlays/DialogIcon";
 export type { DialogIconSize, DialogSemanticTone, DialogTone } from "./overlays/DialogIcon";
-export {
-  HUES,
-  HUE_BUTTON_ICON,
-  HUE_DOT,
-  HUE_GLYPH,
-  HUE_HEX,
-  HUE_SOFT,
-  HUE_SOLID,
-  HUE_TILE,
-  hueForIcon,
-  hueForIconName,
-  iconHueClass,
-  isNeutralIconName,
-  hueHex,
-  isHue,
-} from "./theme/hues";
+export { HUES, HUE_HEX, hueHex, isHue } from "./theme/hues";
 export type { Hue } from "./theme/hues";
 export { useScrollFade } from "./hooks/useScrollFade";
 export { ScrollFade } from "./primitives/ScrollFade";

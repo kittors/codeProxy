@@ -1,8 +1,8 @@
 import { useState, type ReactNode } from "react";
 import {
-  Card,
   DropdownMenu,
   EntityCard,
+  EntityCardSkeleton,
   HoverTooltip,
 } from "@code-proxy/ui";
 import { Ellipsis, Power, Settings2, Trash2 } from "lucide-react";
@@ -46,7 +46,14 @@ export interface ProviderCardProps {
  * The surface, header layout, selection checkbox and footer rule all come from
  * EntityCard, the card the AI accounts page uses; this component only supplies
  * what is specific to a provider — the enable toggle and the edit/delete menu.
+ *
+ * 头部的小按钮和 AI 账号卡片同一套：中性淡底；电源键开着时换成强调色淡底（以前是绿色），
+ * 「开着」是当前状态而不是一条成功消息，全站只有强调色表达「选中 / 开启」。
  */
+const HEADER_BUTTON =
+  "inline-flex h-6 w-6 items-center justify-center rounded-md transition-colors focus-visible:outline-none focus-visible:shadow-control-focus";
+const HEADER_BUTTON_IDLE =
+  "bg-ink/[0.05] text-ink-3 hover:bg-ink/[0.08] hover:text-ink-2 dark:bg-white/[0.07] dark:hover:bg-white/[0.1]";
 export function ProviderCard({
   title,
   selected = false,
@@ -92,10 +99,8 @@ export function ProviderCard({
               <button
                 type="button"
                 className={[
-                  "inline-flex h-6 w-6 items-center justify-center rounded-md transition-colors",
-                  enabled
-                    ? "bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-300"
-                    : "bg-slate-100 text-slate-400 hover:bg-slate-200 dark:bg-white/10 dark:text-white/45",
+                  HEADER_BUTTON,
+                  enabled ? "bg-accent-soft text-accent-ink" : HEADER_BUTTON_IDLE,
                 ].join(" ")}
                 aria-label={
                   enabled ? t("providers.disable") : t("providers.enable")
@@ -112,7 +117,7 @@ export function ProviderCard({
                 <DropdownMenu.Trigger asChild>
                   <button
                     type="button"
-                    className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-slate-100 text-slate-500 transition-colors hover:bg-slate-200 hover:text-slate-700 dark:bg-white/10 dark:text-white/55 dark:hover:bg-white/15 dark:hover:text-white/80"
+                    className={`${HEADER_BUTTON} ${HEADER_BUTTON_IDLE}`}
                     aria-label={t("providers.more_actions")}
                     title={t("providers.more_actions")}
                     data-tooltip-placement="top"
@@ -166,40 +171,10 @@ export function ProviderCard({
   );
 }
 
+/**
+ * 加载占位：直接用 EntityCard 的骨架，和真卡片同一个外观、内边距与行节奏，数据到达时不跳动。
+ * 以前手写了一张带描边和自定义投影的卡片，和真卡片对不上。
+ */
 export function ProviderCardSkeleton({ dense = false }: { dense?: boolean }) {
-  return (
-    <div
-      aria-hidden="true"
-      className="flex h-full w-full max-w-[34rem] md:max-w-none"
-    >
-      <Card
-        padding={dense ? "compact" : "default"}
-        bodyClassName="mt-0 flex min-h-0 flex-1 flex-col"
-        className={[
-          "flex h-full w-full flex-col border-slate-900/8 shadow-[0_8px_24px_rgb(15_23_42_/_0.04)] dark:border-white/[0.08] dark:shadow-[0_8px_24px_rgb(0_0_0_/_0.28)]",
-          dense ? "rounded-2xl" : "rounded-3xl",
-        ].join(" ")}
-      >
-        <div className="flex items-center justify-between gap-3">
-          <div className="h-4 w-32 animate-pulse rounded-full bg-slate-200 dark:bg-white/10" />
-          <div className="h-6 w-12 animate-pulse rounded-full bg-slate-200 dark:bg-white/10" />
-        </div>
-        <div className="mt-4 space-y-2">
-          <div className="h-3 w-11/12 animate-pulse rounded-full bg-slate-200 dark:bg-white/10" />
-          <div className="h-3 w-3/4 animate-pulse rounded-full bg-slate-200 dark:bg-white/10" />
-        </div>
-        <div className="mt-4 flex flex-wrap gap-1.5">
-          {Array.from({ length: 4 }, (_, index) => (
-            <div
-              key={index}
-              className="h-5 w-20 animate-pulse rounded-full bg-slate-200 dark:bg-white/10"
-            />
-          ))}
-        </div>
-        <div className="mt-auto border-t border-slate-100 pt-3 dark:border-white/[0.06]">
-          <div className="h-2 w-full animate-pulse rounded-full bg-slate-200 dark:bg-white/10" />
-        </div>
-      </Card>
-    </div>
-  );
+  return <EntityCardSkeleton dense={dense} headerRows={1} />;
 }

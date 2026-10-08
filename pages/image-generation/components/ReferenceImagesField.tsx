@@ -66,7 +66,8 @@ export function ReferenceImagesField({
                 className="inline-flex min-w-0 flex-1 items-center gap-2 rounded-lg text-left text-xs font-medium text-ink-2 transition-colors hover:text-ink"
                 aria-label={t("image_generation.preview_upload_label", { name: item.file.name })}
               >
-                <span className="h-7 w-7 shrink-0 overflow-hidden rounded-lg border border-line bg-surface">
+                {/* 缩略图的轮廓用伪元素细边（cp-edge）画在图片上面，不用 border。 */}
+                <span className="cp-edge h-7 w-7 shrink-0 overflow-hidden rounded-lg bg-surface">
                   <img src={item.previewUrl} alt={item.file.name} className="h-full w-full object-cover" />
                 </span>
                 <span className="truncate">{item.file.name}</span>

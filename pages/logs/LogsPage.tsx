@@ -301,7 +301,9 @@ export function LogsPage() {
   }, [latestTimestamp]);
 
   return (
-    <div className="space-y-6 md:flex md:min-h-0 md:flex-1 md:flex-col md:space-y-0 md:gap-4 md:overflow-hidden">
+    // 不加 overflow-hidden：两个页签的最后一张卡片贴着页面根的底边，裁掉的话卡片投影会被切掉。
+    // 高度由整条 flex 链上的 min-h-0 约束，日志列表在卡片内部滚动，不会撑出页面根。
+    <div data-page-fill="md" className="space-y-6 md:flex md:min-h-0 md:flex-1 md:flex-col md:space-y-0 md:gap-4">
       <Tabs value={tab} onValueChange={(next) => setTab(next as typeof tab)}>
         <TabsList>
           <TabsTrigger value="content">{t("logs_page.log_content")}</TabsTrigger>

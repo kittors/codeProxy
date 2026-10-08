@@ -1,33 +1,22 @@
 import { render, screen } from "@testing-library/react";
-import { Building2, KeyRound, ScrollText, Trash2, UserPlus } from "lucide-react";
+import { KeyRound, Trash2 } from "lucide-react";
 import { describe, expect, test } from "vitest";
 import { PlanBadge, ProviderTag } from "../../brand/BrandBadges";
 import { chartGradient, withAlpha } from "../../charts/chartTheme";
 import { DialogIcon } from "../../overlays/DialogIcon";
-import { HUE_TILE, hueForIcon, hueForIconName } from "../hues";
+import { hueHex, isHue } from "../hues";
 
-describe("icon hues", () => {
-  test("the same icon always gets the same hue, by its lucide name", () => {
-    expect(hueForIcon(<UserPlus />)).toBe("blue");
-    expect(hueForIcon(<Building2 />)).toBe("indigo");
-    expect(hueForIcon(<KeyRound size={16} />)).toBe("amber");
-    expect(hueForIcon(<ScrollText />)).toBe("orange");
-  });
-
-  test("unregistered icons hash to a stable hue; non-icons have none", () => {
-    expect(hueForIconName("SomeFutureIcon")).toBe(hueForIconName("SomeFutureIcon"));
-    expect(hueForIcon(<img alt="" src="logo.svg" />)).toBeNull();
-    expect(hueForIcon("text")).toBeNull();
-  });
-
-  test("DialogIcon colours its tile from the icon unless a tone is given", () => {
+describe("icon tiles", () => {
+  test("only semantic tones carry colour; everything else is the neutral tile", () => {
     const { container, rerender } = render(
       <DialogIcon>
         <KeyRound />
       </DialogIcon>,
     );
     const tile = () => container.firstElementChild as HTMLElement;
-    for (const cls of HUE_TILE.amber.split(" ").slice(0, 3)) expect(tile()).toHaveClass(cls);
+    expect(tile()).toHaveClass("text-ink-2");
+    // 不描边、不渐变：图标块只有一层淡底。
+    expect(tile().className).not.toMatch(/\bborder\b|gradient/);
 
     rerender(
       <DialogIcon tone="danger">
@@ -36,20 +25,24 @@ describe("icon hues", () => {
     );
     expect(tile()).toHaveClass("text-rose-600");
 
-    rerender(
-      <DialogIcon tone="teal">
-        <KeyRound />
-      </DialogIcon>,
-    );
-    expect(tile()).toHaveClass("text-teal-600");
+    // 旧的「自动取色」和色相名都落到中性，不再按图标名上色。
+    for (const tone of ["auto", "teal", "violet"] as const) {
+      rerender(
+        <DialogIcon tone={tone}>
+          <KeyRound />
+        </DialogIcon>,
+      );
+      expect(tile()).toHaveClass("text-ink-2");
+    }
+  });
+});
 
-    // 厂商 logo 自带品牌色：底块保持中性。
-    rerender(
-      <DialogIcon>
-        <img alt="" src="logo.svg" />
-      </DialogIcon>,
-    );
-    expect(tile()).toHaveClass("bg-surface");
+describe("chart hues", () => {
+  test("data series colours brighten one step on dark backgrounds", () => {
+    expect(isHue("emerald")).toBe(true);
+    expect(isHue("grey")).toBe(false);
+    expect(hueHex("emerald", false)).toBe("#10b981");
+    expect(hueHex("emerald", true)).toBe("#34d399");
   });
 });
 
@@ -71,7 +64,10 @@ describe("brand badges", () => {
     const codex = screen.getByText("PRO 20X").closest("[data-plan-tier]") as HTMLElement;
     expect(codex).toHaveAttribute("data-plan-tier", "ultra");
     expect(codex.style.getPropertyValue("--brand-l")).toBe("#3941ff");
-    expect(codex).toHaveClass("brand-badge-shine");
+    // 旗舰档：品牌实色 + 皇冠，不再叠渐变、外发光和循环流光。
+    expect(codex).toHaveClass("bg-[var(--brand-fill)]");
+    expect(codex.className).not.toMatch(/gradient|shine|ring-/);
+    expect(codex.querySelector("svg.lucide-crown")).not.toBeNull();
 
     const claude = screen.getByText("PLUS").closest("[data-plan-tier]") as HTMLElement;
     expect(claude.style.getPropertyValue("--brand-l")).toBe("#d97757");
@@ -81,9 +77,11 @@ describe("brand badges", () => {
     expect(unknown.style.getPropertyValue("--brand-l")).toBe("");
   });
 
-  test("provider tags use the brand of the longest matching vendor prefix", () => {
+  test("provider tags are neutral chips; the vendor logo carries the brand", () => {
     render(<ProviderTag vendor="gemini-cli">gemini-cli</ProviderTag>);
-    expect(screen.getByText("gemini-cli").style.getPropertyValue("--brand-l")).toBe("#3186ff");
+    const tag = screen.getByText("gemini-cli");
+    expect(tag).toHaveClass("text-ink-2");
+    expect(tag.style.getPropertyValue("--brand-l")).toBe("");
   });
 });
 

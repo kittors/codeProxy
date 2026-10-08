@@ -27,7 +27,7 @@ export const TABLE_ROW_ACTIONS_STICKY_END_COLUMN = {
   ...TABLE_ROW_ACTIONS_COLUMN,
   lockOrder: "end",
   headerClassName: "text-center md:sticky md:z-40 md:bg-slate-100 md:dark:bg-neutral-800",
-  cellClassName: "whitespace-nowrap md:sticky md:z-30 md:bg-surface",
+  cellClassName: "whitespace-nowrap md:sticky md:z-30 md:bg-backdrop",
 } as const;
 
 const alignClassNames = {

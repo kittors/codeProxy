@@ -56,9 +56,9 @@ function StageTimeline({ progress }: { progress?: UpdateProgressResponse | null 
           ) : state === "skipped" ? (
             <Minus size={12} className="text-ink-3" />
           ) : state === "active" ? (
-            <Loader size={12} className="animate-spin text-sky-600 dark:text-sky-300" />
+            <Loader size={12} className="animate-spin text-accent-ink" />
           ) : (
-            <span className="h-1.5 w-1.5 rounded-full bg-slate-300 dark:bg-white/20" />
+            <span className="h-1.5 w-1.5 rounded-full bg-ink-4" />
           );
 
         return (
@@ -102,7 +102,8 @@ function LogConsole({ progress }: { progress?: UpdateProgressResponse | null }) 
   }, [expanded, logs.length]);
 
   return (
-    <div className="mt-4 border-t border-line pt-3">
+    // 和上面的进度、阶段之间靠留白分开，不画分隔线。
+    <div className="mt-4">
       <Button
         variant="ghost"
         size="xs"
@@ -124,7 +125,8 @@ function LogConsole({ progress }: { progress?: UpdateProgressResponse | null }) 
         <div
           ref={scrollRef}
           data-testid="update-log-console"
-          className="mt-2 max-h-48 overflow-y-auto rounded-lg bg-slate-900 p-3 dark:bg-neutral-950"
+          // 和共享 CodeBlock 同一种终端底色（深色模式压得比卡片更深一档）。
+          className="mt-2 max-h-48 overflow-y-auto rounded-lg bg-[#171717] p-3 dark:bg-[#0d0d10]"
         >
           {logs.length === 0 ? (
             <p className="font-mono text-xs text-ink-3">
@@ -172,9 +174,10 @@ export function UpdateProgressPanel({
   // reason a working update looked broken.
   const reconnecting = running && link === "reconnecting";
 
-  const tone = completed ? "emerald" : failed ? "rose" : "sky";
+  // 进行中用唯一的强调色；完成绿、失败红只表达结果。
+  const tone = completed ? "emerald" : failed ? "rose" : "accent";
   const barClass =
-    tone === "emerald" ? "bg-emerald-500" : tone === "rose" ? "bg-rose-500" : "bg-sky-500";
+    tone === "emerald" ? "bg-emerald-500" : tone === "rose" ? "bg-rose-500" : "bg-accent";
 
   const bytes = formatBytes(progress?.progress_bytes);
   const totalBytes = formatBytes(progress?.progress_total_bytes);
@@ -206,7 +209,7 @@ export function UpdateProgressPanel({
         </span>
       </div>
 
-      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-white/10">
+      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-track">
         <div
           data-testid="update-progress-fill"
           className={`h-full rounded-full transition-[width] duration-500 ease-out ${barClass}`}
@@ -237,9 +240,10 @@ export function UpdateProgressPanel({
       {reconnecting ? (
         <p
           data-testid="update-reconnecting"
-          className="mt-3 flex items-start gap-2 rounded-lg bg-sky-50 p-2.5 text-xs leading-5 text-sky-800 dark:bg-sky-500/10 dark:text-sky-200"
+          // 说明条：天蓝淡底 + 彩色图标，正文保持中性色（同 Callout）。
+          className="mt-3 flex items-start gap-2 rounded-lg bg-sky-500/[0.07] p-2.5 text-xs leading-5 text-ink-2"
         >
-          <WifiOff size={14} className="mt-0.5 shrink-0" />
+          <WifiOff size={14} className="mt-0.5 shrink-0 text-sky-600 dark:text-sky-300" />
           {stale ? t("auto_update.reconnecting_slow") : t("auto_update.reconnecting")}
         </p>
       ) : null}

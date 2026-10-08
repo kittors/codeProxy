@@ -47,9 +47,10 @@ export function EndUserResetHistoryModal({
       events={events}
       showEventId
       summary={
+        // 两张数字卡同一种淡底：「实际消耗」不是警告，不用琥珀色区分，靠标题区分。
         <div className="grid gap-2 sm:grid-cols-2">
-          <div className="rounded-2xl bg-amber-500/[0.08] px-4 py-3">
-            <div className="text-xs font-medium text-amber-700 dark:text-amber-300">
+          <div className="rounded-2xl bg-subtle px-4 py-3">
+            <div className="text-xs font-medium text-ink-3">
               {t("end_users.reset_history_raw_today_summary")}
             </div>
             <div className="mt-1 text-lg font-semibold tabular-nums text-ink">

@@ -59,7 +59,7 @@ export function TagBindingConfirm({
               {preview.tags.map((tag) => (
                 <span
                   key={tag}
-                  className="rounded-full border border-line bg-surface px-2 py-0.5 text-xs font-medium text-ink"
+                  className="rounded-full bg-ink/[0.05] px-2 py-0.5 text-xs font-medium text-ink-2 dark:bg-white/[0.07]"
                 >
                   {tag}
                 </span>

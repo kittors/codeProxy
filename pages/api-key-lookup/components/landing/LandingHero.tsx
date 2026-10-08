@@ -74,7 +74,7 @@ export function LandingHero({
 
             <motion.h1
               {...enter(0.06)}
-              className="mt-7 font-display text-4xl font-bold leading-[1.1] tracking-tight text-slate-950 dark:text-white sm:text-5xl lg:text-6xl"
+              className="mt-7 font-display text-4xl font-bold leading-[1.1] tracking-tight text-ink sm:text-5xl lg:text-6xl"
             >
               <span className="block">{copy.hero.titleLine1}</span>
               <span className="mt-2 block text-ink-3">
@@ -84,7 +84,7 @@ export function LandingHero({
 
             <motion.p
               {...enter(0.12)}
-              className="mt-8 max-w-2xl text-base leading-8 text-slate-600 dark:text-white/55"
+              className="mt-8 max-w-2xl text-base leading-8 text-ink-2"
             >
               {copy.hero.description}
             </motion.p>
@@ -92,17 +92,20 @@ export function LandingHero({
             <motion.div {...enter(0.18)} className="mt-10 flex flex-wrap items-center gap-3">
               <LandingButton onClick={onLogin}>{copy.hero.primaryCta}</LandingButton>
 
-              {/* 可复制的接入命令：既是 CTA 也是产品说明，比再放一个按钮更有信息量。 */}
-              <div className="inline-flex h-12 items-center gap-3 rounded-full bg-[#0B0D13] pl-5 pr-2 ring-1 ring-slate-900/10 dark:ring-white/10">
+              {/*
+                可复制的接入命令：既是 CTA 也是产品说明，比再放一个按钮更有信息量。终端风格的深色
+                胶囊在两种主题下都是深底；轮廓用伪元素细边，提示符不再染成绿色（绿色只表示成功）。
+              */}
+              <div className="cp-edge inline-flex h-12 items-center gap-3 rounded-full bg-[#0B0D13] pl-5 pr-2">
                 <code className="max-w-[13rem] truncate font-mono text-xs text-slate-300 sm:max-w-none sm:text-sm">
-                  <span className="text-emerald-400">$ </span>
+                  <span className="text-white/45">$ </span>
                   {command}
                 </code>
                 <button
                   type="button"
                   onClick={handleCopy}
                   aria-label={copied ? copy.workflow.copied : copy.workflow.copy}
-                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white/40 transition-colors duration-150 hover:bg-white/10 hover:text-white/80"
+                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white/55 transition-colors duration-150 hover:bg-white/10 hover:text-white/85"
                 >
                   {copied ? <Check size={15} aria-hidden /> : <Copy size={15} aria-hidden />}
                 </button>
@@ -111,7 +114,7 @@ export function LandingHero({
               <button
                 type="button"
                 onClick={onBrowseModels}
-                className="group inline-flex h-12 items-center gap-1.5 px-2 text-sm font-semibold text-slate-700 transition-colors duration-150 hover:text-ink dark:text-white/70"
+                className="group inline-flex h-12 items-center gap-1.5 px-2 text-sm font-semibold text-ink-2 transition-colors duration-150 hover:text-ink"
               >
                 {copy.hero.secondaryCta}
                 <ArrowRight
@@ -125,20 +128,20 @@ export function LandingHero({
 
           {/* 右侧信息栏：细分隔线 + 等宽标签，把「已接入哪些上游」当成事实清单直接摆出来。 */}
           <motion.aside {...enter(0.24)} className="lg:pt-2">
-            <p className="font-display text-2xs uppercase tracking-[0.1em] text-slate-400 dark:text-white/35">
+            <p className="font-display text-2xs uppercase tracking-[0.1em] text-ink-3">
               {copy.hero.railTitle}
             </p>
             <ul className="mt-5">
               {RAIL_VENDORS.map((vendor) => (
                 <li
                   key={vendor.id}
-                  className="flex items-center gap-3 border-t border-slate-900/8 py-3 text-sm text-slate-700 first:border-t-0 dark:border-white/8 dark:text-white/70"
+                  className="flex items-center gap-3 border-t border-line py-3 text-sm text-ink-2 first:border-t-0"
                 >
                   <VendorIcon modelId={vendor.id} size={17} />
                   {vendor.label}
                 </li>
               ))}
-              <li className="border-t border-slate-900/8 pt-3 dark:border-white/8">
+              <li className="border-t border-line pt-3">
                 <button
                   type="button"
                   onClick={onBrowseModels}

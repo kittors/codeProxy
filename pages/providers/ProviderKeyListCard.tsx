@@ -29,6 +29,10 @@ import { useOptionalAuth } from "@app/providers/AuthProvider";
  * a resolved height: the default `align-content: stretch` would hand its single
  * row all of that height and drag every card to the bottom of the scroll box.
  *
+ * 卡片直接落在内容区上（外层是 Card flat，不再是「大卡套小卡」）。滚动区左右各外扩 12px
+ * 再用等量内边距把卡片拉回来、底部也留出空间，卡片的投影才不会被滚动区裁成一条硬边；
+ * 页面壳（ProvidersPageContent）同样左右外扩 12px，它的 overflow-hidden 才不会再裁一次。
+ *
  * Cards are levelled within a row, as on the accounts page. Letting each end at
  * its own content does not remove empty space, it only moves it: the row is
  * still as tall as its tallest card, so a short card leaves a gap between its
@@ -36,7 +40,7 @@ import { useOptionalAuth } from "@app/providers/AuthProvider";
  * where it reads as padding rather than as a hole in the grid.
  */
 export const CARD_GRID_CLASS = [
-  "min-h-0 flex-1 content-start pr-1",
+  "-mx-3 min-h-0 flex-1 content-start px-3 pt-1 pb-4",
   entityCardGridClass({ columns: 3, dense: true }),
 ].join(" ");
 
@@ -140,6 +144,7 @@ export function ProviderKeyListCard({
     // openKeyEditor(tab, null) action, and two of them on one screen just made
     // the header noisier.
     <Card
+      flat
       // 用 flex-1 而不是 h-full：父级高度是 flex 分配出来的，百分比高度在这条链上解析
       // 不到基准，会回退成内容高度，卡片就缩成一小块、底下空一大片。
       className="flex min-h-0 flex-1 flex-col"
@@ -265,21 +270,18 @@ export function ProviderKeyListCard({
                 <div className="mt-2 flex flex-wrap items-center gap-1.5 empty:mt-0">
                   {showModelMetric && models.length ? (
                     <ProviderMetricChip
-                      tone="blue"
                       label={t("providers.models_label")}
                       value={models.length}
                     />
                   ) : null}
                   {showExcludedModels && excludedModels.length ? (
                     <ProviderMetricChip
-                      tone="rose"
                       label={t("providers.excluded_models_label")}
                       value={excludedModels.length}
                     />
                   ) : null}
                   {headerEntries.length ? (
                     <ProviderMetricChip
-                      tone="slate"
                       label={t("providers.headers_optional")}
                       value={headerEntries.length}
                       title={`${headerEntries.length} header(s)`}
@@ -287,7 +289,6 @@ export function ProviderKeyListCard({
                   ) : null}
                   {stats.success > 0 ? (
                     <ProviderMetricChip
-                      tone="emerald"
                       label={t("providers.success_stats", {
                         count: stats.success,
                       })}
@@ -295,7 +296,7 @@ export function ProviderKeyListCard({
                   ) : null}
                   {stats.failure > 0 ? (
                     <ProviderMetricChip
-                      tone="rose"
+                      tone="danger"
                       label={t("providers.failed_stats", {
                         count: stats.failure,
                       })}
@@ -308,7 +309,7 @@ export function ProviderKeyListCard({
                     {headerEntries.map(([k, v]) => (
                       <span
                         key={k}
-                        className="inline-flex h-5 max-w-full min-w-0 items-center gap-1 rounded-md bg-slate-100 px-1.5 text-2xs font-semibold leading-none text-slate-700 dark:bg-white/10 dark:text-white/70"
+                        className="inline-flex h-5 max-w-full min-w-0 items-center gap-1 rounded-md bg-ink/[0.05] px-1.5 text-2xs font-semibold leading-none text-ink-2 dark:bg-white/[0.07]"
                         title={`${k}: ${String(v)}`}
                       >
                         <span className="shrink-0 font-semibold">{k}:</span>
@@ -327,7 +328,8 @@ export function ProviderKeyListCard({
                     {excludedModels.map((model) => (
                       <span
                         key={model}
-                        className="inline-flex h-5 max-w-full min-w-0 items-center rounded-md bg-rose-50 px-1.5 text-2xs font-semibold leading-none text-rose-700 dark:bg-rose-500/15 dark:text-rose-200"
+                        // 排除是配置不是故障：中性标签 + 删除线，不再整块染红。
+                        className="inline-flex h-5 max-w-full min-w-0 items-center rounded-md bg-ink/[0.05] px-1.5 text-2xs font-semibold leading-none text-ink-3 line-through decoration-ink-4 dark:bg-white/[0.07]"
                         title={model}
                       >
                         <span className="min-w-0 truncate">{model}</span>

@@ -1,7 +1,7 @@
 import { motion, useReducedMotion } from "framer-motion";
 import { useRef, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { HUE_GLYPH, HUE_SOFT, HUE_SOLID, HUE_TILE, useScrollFade } from "@code-proxy/ui";
+import { useScrollFade } from "@code-proxy/ui";
 import type { ConfigGroupDef, ConfigNavGroupId, ConfigSectionDef, ConfigSectionId } from "./configSchema";
 
 const cn = (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(" ");
@@ -18,8 +18,9 @@ export interface ConfigGroupTab {
  * 顶部的分组页签（基础 / 运行 / 日志与数据 / 高级）。
  *
  * 取代原来页面左侧的纵向分区目录：外壳已经有一列纵向侧边栏，页面里再竖一列目录，
- * 两层纵向菜单并排看着很挤。分组横向排在内容上方，选中的那组图标块变成该组色相的实色，
- * 背后的选中底块用共享布局动画滑过去；有未保存修改的组带一个圆点，搜索时显示命中数。
+ * 两层纵向菜单并排看着很挤。分组横向排在内容上方，图标平时是弱化墨色，选中的那组图标
+ * 换成强调色淡底，背后的选中底块用共享布局动画滑过去；有未保存修改的组带一个强调色圆点，
+ * 搜索时显示命中数。
  */
 export function ConfigGroupTabs({
   tabs,
@@ -87,15 +88,15 @@ export function ConfigGroupTabs({
               <motion.span
                 layoutId={`${idPrefix}-group-pill`}
                 aria-hidden="true"
-                className="absolute inset-0 rounded-xl bg-elevated shadow-xs"
+                className="absolute inset-0 rounded-xl bg-elevated shadow-control"
                 transition={reduceMotion ? { duration: 0 } : { type: "spring", stiffness: 520, damping: 40 }}
               />
             ) : null}
             <span
               aria-hidden="true"
               className={cn(
-                "relative grid h-7 w-7 shrink-0 place-items-center rounded-lg border transition-colors [&_svg]:size-[15px]",
-                selected ? cn("border-transparent shadow-xs", HUE_SOLID[def.hue]) : HUE_TILE[def.hue],
+                "relative grid h-7 w-7 shrink-0 place-items-center rounded-lg transition-colors [&_svg]:size-[15px]",
+                selected ? "bg-accent-soft text-accent-ink" : "text-ink-3",
               )}
             >
               <Icon />
@@ -105,7 +106,7 @@ export function ConfigGroupTabs({
               <span
                 className={cn(
                   "relative min-w-5 rounded-full px-1.5 text-center text-2xs font-semibold tabular-nums",
-                  matches > 0 ? HUE_SOFT[def.hue] : "bg-hover text-ink-3",
+                  matches > 0 ? "bg-accent-soft text-accent-ink" : "bg-hover text-ink-3",
                 )}
               >
                 {matches}
@@ -113,7 +114,7 @@ export function ConfigGroupTabs({
               </span>
             ) : modified > 0 ? (
               <>
-                <span aria-hidden="true" className="relative h-1.5 w-1.5 shrink-0 rounded-full bg-sky-500" />
+                <span aria-hidden="true" className="relative h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
                 <span className="sr-only">{t("config_ui.section_modified")}</span>
               </>
             ) : null}
@@ -126,8 +127,8 @@ export function ConfigGroupTabs({
 
 /**
  * 当前分组里的分区胶囊：点一下滚到对应分区，滚动时高亮跟着走（`aria-current`）。
- * 每个胶囊前是该分区的彩色小图标，选中时整颗胶囊染成同色相的淡底；放不下时横向滚动，
- * 两端渐隐提示还有更多。
+ * 每个胶囊前是该分区的线性小图标，未选中是阴影描边的中性胶囊，选中时整颗胶囊换成强调色
+ * 淡底；放不下时横向滚动，两端渐隐提示还有更多。
  */
 export function ConfigSectionChips({
   sections,
@@ -162,17 +163,17 @@ export function ConfigSectionChips({
               aria-current={selected ? "true" : undefined}
               onClick={() => onSelect(section.id)}
               className={cn(
-                "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                "inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-[background-color,color,box-shadow]",
                 selected
-                  ? cn("border-transparent", HUE_SOFT[section.hue])
-                  : "border-line text-ink-2 hover:bg-hover hover:text-ink",
+                  ? "bg-accent-soft text-accent-ink"
+                  : "bg-surface text-ink-2 shadow-control hover:text-ink hover:shadow-control-hover",
               )}
             >
-              <Icon size={13} aria-hidden="true" className={HUE_GLYPH[section.hue]} />
+              <Icon size={13} aria-hidden="true" className={selected ? undefined : "text-ink-3"} />
               {t(`config_ui.sections.${section.id}.title`)}
               {dirty ? (
                 <>
-                  <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full bg-sky-500" />
+                  <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
                   <span className="sr-only">{t("config_ui.section_modified")}</span>
                 </>
               ) : null}

@@ -249,6 +249,7 @@ const readResponseMetricsColumnState = async (page: Page) =>
         left: rect.left,
         right: rect.right,
         borderTopWidth: style.borderTopWidth,
+        backgroundColor: style.backgroundColor,
       };
     });
     const storedWidths = JSON.parse(
@@ -286,8 +287,8 @@ test("Request Logs: filter dropdown uses the shared floating surface", async ({
 
   const filterPanel = page.locator(".code-proxy-floating-surface").last();
   await expect(filterPanel).toBeVisible();
-  // 浮层统一是 rounded-2xl（1rem，随根字号缩放），轮廓靠 shadow-pop 里那层 0.5px 描边阴影，
-  // 不再画 border。
+  // 浮层统一是 rounded-2xl（1rem，随根字号缩放），轮廓靠 shadow-pop 里那层 1px 阴影描边
+  // （堆叠投影的第一层），不画 border。
   const surface = await filterPanel.evaluate((el) => {
     const style = getComputedStyle(el);
     const rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize);
@@ -303,7 +304,7 @@ test("Request Logs: filter dropdown uses the shared floating surface", async ({
     .poll(async () =>
       filterPanel.evaluate((el) => getComputedStyle(el).boxShadow),
     )
-    .toMatch(/0px 0px 0px 0\.5px/);
+    .toMatch(/0px 0px 0px 1px/);
 });
 
 test("Request Logs: centers every header except ID over its column content", async ({
@@ -455,10 +456,10 @@ test("Request Logs: response metrics column resize clamps at its minimum width",
   expect(during.text).toMatch(/Streaming|流式/);
   expect(during.text).not.toContain("--");
   expect(during.chipsStayInsideCell).toBe(true);
-  expect(
-    during.chips.find((chip) => /Streaming|流式/.test(chip.text))
-      ?.borderTopWidth,
-  ).toBe("1px");
+  // 「流式」仍是一个胶囊，只是靠淡底成形、不再描边（标签一律不画 border）。
+  const streamingChip = during.chips.find((chip) => /Streaming|流式/.test(chip.text));
+  expect(streamingChip?.borderTopWidth).toBe("0px");
+  expect(streamingChip?.backgroundColor).not.toMatch(/^rgba\(0, 0, 0, 0\)$|^transparent$/);
 
   await page.mouse.up();
 

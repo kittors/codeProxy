@@ -36,27 +36,25 @@ export function CodexImageGenerationBridgePanel({
 
   return (
     <div
-      className="min-w-0 space-y-4 rounded-lg bg-slate-50/80 px-4 py-4 lg:col-span-2 dark:bg-white/[0.04]"
+      className="min-w-0 space-y-4 rounded-lg bg-subtle px-4 py-4 lg:col-span-2"
       data-testid="codex-image-generation-bridge-panel"
     >
       <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-slate-900 dark:text-white">
+          <p className="text-sm font-semibold text-ink">
             {t("auth_files.codex_image_generation_bridge_title")}
           </p>
-          <p className="mt-1 text-xs text-slate-500 dark:text-white/55">
+          <p className="mt-1 text-xs text-ink-3">
             {t("auth_files.codex_image_generation_bridge_desc")}
           </p>
         </div>
-        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 dark:bg-white/10 dark:text-white/65">
+        <span className="rounded-full bg-ink/[0.05] px-2.5 py-1 text-xs font-semibold text-ink-2 dark:bg-white/[0.07]">
           {editor.enabled ? t("auth_files.enabled") : t("auth_files.disabled")}
         </span>
       </div>
 
-      <div
-        className="rounded-lg bg-white px-3 py-3 ring-1 ring-slate-200 dark:bg-neutral-950/40 dark:ring-white/10"
-        data-testid="codex-image-generation-bridge-toggle"
-      >
+      {/* 面板本身就是一层淡底：开关和模型选择直接放在里面，不再各自套一张描边白卡。 */}
+      <div data-testid="codex-image-generation-bridge-toggle">
         <ToggleSwitch
           checked={editor.enabled}
           onCheckedChange={(checked) =>
@@ -69,13 +67,10 @@ export function CodexImageGenerationBridgePanel({
       </div>
 
       {editor.availableModels.length > 0 ? (
-        <div
-          className="space-y-2 rounded-lg bg-white px-3 py-3 ring-1 ring-slate-200 dark:bg-neutral-950/40 dark:ring-white/10"
-          data-testid="codex-image-generation-model-select"
-        >
+        <div className="space-y-2" data-testid="codex-image-generation-model-select">
           <label
             htmlFor="codex-image-generation-model"
-            className="block text-sm font-medium text-slate-800 dark:text-white/85"
+            className="block text-sm font-medium text-ink"
           >
             {t("auth_files.codex_image_generation_model_label")}
           </label>
@@ -87,7 +82,7 @@ export function CodexImageGenerationBridgePanel({
             disabled={editor.saving || !editor.enabled}
             aria-label={t("auth_files.codex_image_generation_model_label")}
           />
-          <p className="text-xs text-slate-500 dark:text-white/55">
+          <p className="text-xs text-ink-3">
             {t("auth_files.codex_image_generation_model_hint")}
           </p>
         </div>

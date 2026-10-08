@@ -57,7 +57,7 @@ describe("SystemMonitorSection", () => {
     expect(screen.queryByText(/sqlite/i)).toBeNull();
   });
 
-  test("colours each resource by category and switches to amber / red as it climbs", () => {
+  test("keeps every resource on the accent and switches to amber / red only as it climbs", () => {
     render(
       <SystemMonitorSection
         stats={{ ...stats, system_cpu_pct: 23, system_mem_pct: 85, process_cpu_pct: 97, process_mem_pct: 7 }}
@@ -68,22 +68,26 @@ describe("SystemMonitorSection", () => {
 
     const [sysCpu, sysMem, svcCpu, svcMem] = screen.getAllByTestId("monitor-meter-fill");
     expect(sysCpu).toHaveStyle({ width: "23%" });
-    expect(sysCpu.className).toContain("from-sky-400");
-    expect(sysMem.className).toContain("from-amber-300");
-    expect(svcCpu.className).toContain("from-rose-400");
-    expect(svcMem.className).toContain("from-violet-400");
+    // 正常档一律强调色：颜色只在出问题的那一张卡上出现，不再按类别各用一种颜色。
+    expect(sysCpu).toHaveClass("bg-accent");
+    expect(sysMem).toHaveClass("bg-amber-500");
+    expect(svcCpu).toHaveClass("bg-rose-500");
+    expect(svcMem).toHaveClass("bg-accent");
+    expect(sysCpu.className).not.toContain("gradient");
     // 进度条首次出现从 0 长到实际值，减少动态效果时关掉。
     expect(sysCpu.className).toContain("motion-safe:animate-[quota-bar-grow");
     expect(screen.getByRole("img", { name: "Critical" })).toBeInTheDocument();
   });
 
-  test("labels the health score and disk state with tinted pills and shows the live channel", () => {
+  test("labels the health score and disk state with quiet pills and shows the live channel", () => {
     render(<SystemMonitorSection stats={stats} connected apiKeyCount={1} />);
 
-    // 夹具的加权健康分是 88.5，落在「良好」档（同为绿色）；磁盘 40% 是「正常」。
-    expect(screen.getByText("Good")).toHaveClass("text-emerald-700");
-    expect(screen.getByText("Normal")).toHaveClass("text-emerald-700");
+    // 夹具的加权健康分是 88.5，落在「良好」档；磁盘 40% 是「正常」。一切正常不是需要注意的
+    // 消息，标签是中性的灰，颜色留给留意和告急。
+    expect(screen.getByText("Good")).toHaveClass("text-ink-2");
+    expect(screen.getByText("Normal")).toHaveClass("text-ink-2");
     expect(screen.getByText("Live")).toBeInTheDocument();
-    expect(screen.getByText("Used", { selector: "span" })).toBeInTheDocument();
+    // 「已用」出现两次：环中央的说明，和环下方图例行（图例改成纯文字行，不再是淡底小块）。
+    expect(screen.getAllByText("Used", { selector: "span" })).toHaveLength(2);
   });
 });

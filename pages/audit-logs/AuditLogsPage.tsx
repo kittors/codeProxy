@@ -11,7 +11,6 @@ import {
   TABLE_ROW_ACTIONS_COLUMN,
   useToast,
   type DataTableColumn,
-  surface,
 } from "@code-proxy/ui";
 import { useOptionalAuth } from "@app/providers/AuthProvider";
 import { PermissionGate } from "@app/providers/PermissionGate";
@@ -201,11 +200,9 @@ export function AuditLogsPage() {
         // "Who changed this" is only half an answer without "from where".
         render: (item) =>
           item.ip_address ? (
-            <span className="font-mono text-xs text-slate-600 dark:text-white/70">
-              {item.ip_address}
-            </span>
+            <span className="font-mono text-xs text-ink-2">{item.ip_address}</span>
           ) : (
-            <span className="text-slate-400">—</span>
+            <span className="text-ink-3">—</span>
           ),
       },
       {
@@ -260,14 +257,13 @@ export function AuditLogsPage() {
   );
 
   return (
-    <section className="flex flex-1 flex-col">
-      <div className={`flex min-h-0 flex-1 flex-col ${surface({ radius: "3xl" })}`}>
-        <div className="flex flex-wrap items-start justify-between gap-3 px-5 pt-5 pb-3">
+    <section data-page-fill="always" className="flex flex-1 flex-col">
+      {/* 不再包一层卡片：外壳内容区就是这一页的面板，标题、表格、分页直接落在上面（同请求日志页）。 */}
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="flex flex-wrap items-start justify-between gap-3 pb-3">
           <div className="min-w-0">
-            <h2 className="text-base font-semibold text-slate-950 dark:text-white">
-              {t("identity_admin.audit_logs_title")}
-            </h2>
-            <p className="text-sm text-slate-500">{t("identity_admin.audit_logs_description")}</p>
+            <h2 className="text-base font-semibold text-ink">{t("identity_admin.audit_logs_title")}</h2>
+            <p className="text-sm text-ink-3">{t("identity_admin.audit_logs_description")}</p>
           </div>
           <PermissionGate permission="tenant.audit.delete">
             <Button
@@ -282,8 +278,8 @@ export function AuditLogsPage() {
             </Button>
           </PermissionGate>
         </div>
-        {/* 表格吃掉卡片剩余高度、内部滚动；不设最小高度保底——卡片高度被窗口钉死，保底只会在矮窗口下把表格挤出卡片（见请求日志页）。 */}
-        <div className="relative min-h-0 flex-1 overflow-hidden px-5">
+        {/* 表格吃掉页面剩余高度、内部滚动；不设最小高度保底——页面高度被窗口钉死，保底只会在矮窗口下把表格挤出页面（见请求日志页）。 */}
+        <div className="relative min-h-0 flex-1 overflow-hidden">
           <DataTable<AuditLogIdentity>
             tableId="identity-audit-logs"
             rows={items}
@@ -306,7 +302,8 @@ export function AuditLogsPage() {
           onPageChange={handlePageChange}
           onPageSizeChange={handlePageSizeChange}
           pageSizeOptions={PAGE_SIZE_OPTIONS}
-          className="border-t border-slate-100 px-3 py-3 sm:px-5 dark:border-white/8"
+          // 分页条和表格之间靠留白分开，不画分隔线；左右与表格对齐（同请求日志页的 flush）。
+          className="pt-3"
           labels={{
             firstPage: t("request_logs.first_page"),
             previousPage: t("request_logs.prev_page"),

@@ -360,28 +360,33 @@ describe("AuthFileDetailModal", () => {
     expect(chartOptions.at(-1)?.series?.every((item: any) => item.animation === true)).toBe(true);
   });
 
-  test("colours the usage tab by metric instead of grey blocks", () => {
+  test("keeps the usage tab quiet: colour lives only in the chart data", () => {
     renderDetailModal();
 
     const chart = screen.getByTestId("auth-file-trend-chart");
-    // 图表放在白底卡片里，不再是把整张图压灰的灰底面板。
-    expect(chart.parentElement?.className).toContain("bg-surface");
-    expect(chart.parentElement?.className).not.toContain("bg-subtle");
+    // 图表直接放在弹窗上：弹窗本身是一层，不再套灰底面板或白底卡片，也不描边。
+    const chartBox = chart.parentElement?.className ?? "";
+    expect(chartBox).not.toMatch(/\bbg-(subtle|surface)\b/);
+    expect(chartBox).not.toMatch(/\b(border|ring-1|shadow-card|cp-edge)\b/);
 
-    // 请求数是请求蓝的渐变柱，费用是琥珀线（与仪表盘、监控中心同一组身份色）。
+    // 数据色仍然留在图里：请求数是强调蓝的渐变柱，费用是琥珀线（与仪表盘、监控中心同一组身份色）。
     const series = JSON.parse(chart.dataset.series ?? "[]");
-    expect(series[0].itemStyle.color.colorStops[0].color).toBe("rgba(59, 130, 246, 1)");
+    expect(series[0].itemStyle.color.colorStops[0].color).toBe("rgba(42, 110, 232, 1)");
     expect(series[1].lineStyle.color).toBe("#f59e0b");
 
-    // 统计格：白底卡片 + 身份色图标块，数值保持墨色。
-    const costCard = screen.getByText("Current cycle cost").closest("div");
-    if (!(costCard instanceof HTMLElement)) throw new Error("Missing cost card");
-    expect(costCard.className).toContain("bg-surface");
-    expect(costCard.className).not.toContain("bg-subtle");
-    expect(costCard.querySelector("[aria-hidden='true']")?.className).toContain("text-amber-600");
+    // 统计格：一层无边淡底 + 中性线性图标，数值墨色；图标不再垫身份色底块（以前费用琥珀、Token 紫……）。
+    for (const label of ["Current cycle cost", "Current cycle tokens"]) {
+      const card = screen.getByText(label).closest("div");
+      if (!(card instanceof HTMLElement)) throw new Error(`Missing summary card for ${label}`);
+      expect(card.className).toContain("bg-subtle");
+      expect(card.className).not.toMatch(/\b(border|ring-1|shadow-card|cp-edge)\b/);
+      const icon = card.querySelector("[aria-hidden='true']");
+      expect(icon?.className ?? "").not.toMatch(
+        /\b(?:text|bg)-(?:amber|violet|purple|sky|blue|pink|cyan|emerald|orange)-/,
+      );
+    }
+    const costCard = screen.getByText("Current cycle cost").closest("div") as HTMLElement;
     expect(within(costCard).getByText("$1.2345")).toHaveClass("text-ink");
-    const tokensCard = screen.getByText("Current cycle tokens").closest("div");
-    expect(tokensCard?.querySelector("[aria-hidden='true']")?.className).toContain("text-violet-600");
   });
 
   test("hides zero and empty summary cards when Codex trend data is incomplete", () => {

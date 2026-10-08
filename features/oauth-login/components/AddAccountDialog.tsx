@@ -2,7 +2,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { ProxyPoolEntry } from "@code-proxy/api-client";
-import { Modal, ScrollFade } from "@code-proxy/ui";
+import { DialogIcon, Modal, ScrollFade } from "@code-proxy/ui";
 import { useProxyPoolChecks } from "@features/proxy-pool";
 import type { AddedAccount } from "../model/addedAccount";
 import {
@@ -289,21 +289,23 @@ export function AddAccountDialog({
       bodyClassName="!p-0"
       bodyTestId="add-account-dialog-body"
     >
+      {/* 左栏用一层淡底和右侧分开，不画竖线（窄屏横排时也不画横线）：选中项是一张浮起的白片，
+          落在淡底上才读得出来。 */}
       <div className="flex h-full min-h-0 flex-col sm:flex-row">
-        <nav className="shrink-0 border-line sm:w-56 sm:overflow-y-auto sm:border-r">
+        <nav className="shrink-0 sm:w-56 sm:overflow-y-auto sm:bg-subtle">
           <ProviderList providers={providers} value={providerId} onChange={selectProvider} />
         </nav>
         <section
           id={PROVIDER_PANEL_ID}
           role="tabpanel"
           aria-labelledby={providerTabId(providerId)}
-          className="flex min-h-0 min-w-0 flex-1 flex-col border-t border-line sm:border-t-0"
+          className="flex min-h-0 min-w-0 flex-1 flex-col"
         >
           {success ? null : (
             <header className="flex items-center gap-3 px-5 pt-5 sm:px-6">
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-line bg-surface shadow-xs">
+              <DialogIcon>
                 <ProviderGlyph provider={provider} size={20} />
-              </span>
+              </DialogIcon>
               <div className="min-w-0 flex-1">
                 <h3 className="truncate text-base font-semibold text-ink">{providerName}</h3>
                 <p className="truncate text-xs text-ink-3">

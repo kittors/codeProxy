@@ -175,7 +175,8 @@ export function ProxyUrlInput({
         <button
           type="button"
           onClick={() => setExpanded(true)}
-          className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-line-strong px-3 py-1.5 text-xs font-medium text-ink-2 transition-colors hover:border-ink-4 hover:text-ink"
+          // 阴影描边的小按钮，和输入框同一套描边；虚线框只留给文件拖放区。
+          className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-ink-2 shadow-control transition-[color,box-shadow] hover:text-ink hover:shadow-control-hover focus-visible:shadow-control-focus focus-visible:outline-none"
         >
           <Plus size={13} aria-hidden="true" />
           {t("proxy_input.add")}
@@ -224,7 +225,7 @@ export function ProxyUrlInput({
               setPasteOpen(false);
               setExpanded(false);
             }}
-            className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium text-ink-3 transition-colors hover:bg-rose-500/10 hover:text-rose-600"
+            className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium text-ink-3 transition-colors hover:bg-rose-500/10 hover:text-rose-600 dark:hover:text-rose-300"
           >
             <Trash2 size={13} aria-hidden="true" />
             {t("proxy_input.remove")}

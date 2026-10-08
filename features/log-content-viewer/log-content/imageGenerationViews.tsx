@@ -87,20 +87,21 @@ export function StructuredRequestCard({
 }) {
   const { t } = useTranslation();
   const { model, prompt, parameters } = view;
+  // 一块无描边的淡底：模型、提示词、参数之间靠留白分开，参数也不再各套一张描边小卡。
   return (
     <div
       data-testid={testId}
-      className={[surface({ tone: "inset", radius: "3xl" }), "overflow-hidden"].join(" ")}
+      className={[surface({ tone: "inset", radius: "2xl" }), "px-5 py-4 sm:px-6"].join(" ")}
     >
-      <div className="grid gap-0 divide-y divide-line">
+      <div className="space-y-5">
         {model ? (
-          <div className="px-5 py-4 sm:px-6">
+          <div>
             <p className="text-xs font-medium text-ink-3">{t("log_content.field_model")}</p>
             <p className="mt-2 break-words text-sm font-semibold text-ink">{model}</p>
           </div>
         ) : null}
         {prompt ? (
-          <div className="px-5 py-4 sm:px-6">
+          <div>
             <p className="text-xs font-medium text-ink-3">{t("log_content.field_prompt")}</p>
             <pre className="mt-2 whitespace-pre-wrap break-words font-sans text-sm leading-7 text-ink">
               {prompt}
@@ -108,14 +109,11 @@ export function StructuredRequestCard({
           </div>
         ) : null}
         {parameters.length > 0 ? (
-          <div className="px-5 py-4 sm:px-6">
+          <div>
             <p className="text-xs font-medium text-ink-3">{t("log_content.field_parameters")}</p>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <div className="mt-3 grid gap-x-6 gap-y-3 sm:grid-cols-2">
               {parameters.map((item) => (
-                <div
-                  key={item.key}
-                  className={[surface({ tone: "plain", radius: "2xl" }), "px-3 py-3"].join(" ")}
-                >
+                <div key={item.key} className="min-w-0">
                   <p className="font-mono text-xs text-ink-3">{item.key}</p>
                   <pre className="mt-1 whitespace-pre-wrap break-words font-sans text-sm leading-6 text-ink">
                     {item.value}
@@ -139,9 +137,10 @@ export function OutputImageCard({
   onPreview: () => void;
 }) {
   const { t } = useTranslation();
+  // 图片本身就是内容，不再外面再套一块淡底框：底色只在图片加载出来之前垫在图片位置上。
   return (
-    <div className={[surface({ tone: "inset", radius: "2xl" }), "p-3"].join(" ")}>
-      <div className="relative min-h-[160px] overflow-hidden rounded-xl bg-subtle">
+    <div className="space-y-2">
+      <div className="relative min-h-[160px] overflow-hidden rounded-2xl bg-subtle">
         <img
           src={image.src}
           alt={t("log_content.output")}
@@ -158,7 +157,7 @@ export function OutputImageCard({
         </button>
       </div>
       {image.revisedPrompt ? (
-        <div className="mt-3 rounded-xl bg-surface px-3 py-2">
+        <div className="px-1">
           <p className="text-xs font-medium text-ink-3">{t("image_generation.revised_prompt_label")}</p>
           <p className="mt-1 text-sm text-ink-2">{image.revisedPrompt}</p>
         </div>

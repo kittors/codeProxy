@@ -14,11 +14,11 @@ import { OpenAIModelDiscoveryPanel } from "./OpenAIModelDiscoveryPanel";
 
 type ModelAccessRow = { id: string; owned_by?: string };
 
-const SectionCard = ({ children }: { children: React.ReactNode }) => (
-  <div className="rounded-lg border border-line bg-surface p-4 shadow-sm">
-    {children}
-  </div>
-);
+/**
+ * 一组字段。弹窗本身就是一层，组与组之间靠留白分开，不再各自套一张描边卡片——以前一个页签里
+ * 叠着五六张描边小卡，读起来像一摞框。
+ */
+const FieldGroup = ({ children }: { children: React.ReactNode }) => <div>{children}</div>;
 
 interface ProviderKeyModelsTabProps {
   isCline: boolean;
@@ -246,8 +246,8 @@ export function ProviderKeyModelsTab({
 
   if (isModelAccessProvider) {
     return (
-      <div className="space-y-4">
-        <SectionCard>
+      <div className="space-y-6">
+        <FieldGroup>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <p className="text-sm font-semibold text-ink">
@@ -287,7 +287,7 @@ export function ProviderKeyModelsTab({
           </div>
 
           {openCodeModelsError ? (
-            <p className="mt-3 rounded-lg bg-rose-500/10 px-3 py-2 text-xs font-medium text-rose-700 dark:text-rose-200">
+            <p className="mt-3 rounded-lg bg-rose-500/10 px-3 py-2 text-xs font-medium text-rose-700 dark:text-rose-300">
               {openCodeModelsError}
             </p>
           ) : null}
@@ -310,14 +310,14 @@ export function ProviderKeyModelsTab({
               persistColumnOrder={false}
             />
           </div>
-        </SectionCard>
+        </FieldGroup>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <SectionCard>
+    <div className="space-y-6">
+      <FieldGroup>
         <div className="flex flex-wrap items-end gap-3">
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-ink">
@@ -348,9 +348,9 @@ export function ProviderKeyModelsTab({
         <p className="mt-2 text-xs text-ink-3">
           {t("providers.model_group_hint")}
         </p>
-      </SectionCard>
+      </FieldGroup>
 
-      <SectionCard>
+      <FieldGroup>
         <ModelInputList
           title={
             editKeyType === "vertex"
@@ -373,10 +373,10 @@ export function ProviderKeyModelsTab({
             {t("providers.models_default_hint")}
           </p>
         )}
-      </SectionCard>
+      </FieldGroup>
 
       {supportsLiveDiscovery ? (
-        <SectionCard>
+        <FieldGroup>
           <OpenAIModelDiscoveryPanel
             discovering={discovering}
             discoverModels={discoverModels!}
@@ -390,7 +390,7 @@ export function ProviderKeyModelsTab({
               ? t("providers.claude_models_discovery_hint")
               : t("providers.codex_models_discovery_hint")}
           </p>
-        </SectionCard>
+        </FieldGroup>
       ) : null}
 
       <ExcludedModelsEditor

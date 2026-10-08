@@ -10,6 +10,10 @@ import { expect, test, type Page } from "@playwright/test";
  *
  * `/runtime/system` 是内容本来就短的信息页，最后一张卡按内容高度收束，不再把空卡片拉满视口。
  * 底部多出来的是页面背景而不是卡片内腔，所以不纳入「画出来的内容必须撑满」这条约束。
+ *
+ * 内容超过一屏的页面反过来查：滚到底以后，最后一块内容离滚动容器底边必须还留着那条内边距。
+ * 以前外壳对所有页面一律钉高，长页面的内容溢出被钉死的页面根，<main> 的底部内边距停在
+ * 一屏高的位置，滚到底内容紧贴底边——这条用例当时对溢出页面直接跳过，所以没抓到。
  */
 
 const HUG_CONTENT_ROUTES = new Set(["/runtime/system"]);
@@ -178,8 +182,14 @@ const measure = (page: Page) =>
      * 包装层（Reveal）撑满了不等于页面内容撑满了——它是透明的，内部内容矮一截时，
      * 用户照样看到底部多出一条留白。所以向下钻取，跳过没有可见表面（无背景、无边框、
      * 无阴影）的纯布局容器，直到找到真正画出东西的元素。
+     *
+     * 页面压平之后（2026-10，外壳内容区就是页面面板，表格页不再包一张大卡），底部不再有
+     * 一张被拉满的卡片可量；这时「撑满」指的是表格 / 列表的滚动区一直延伸到底——它就是
+     * 用户能滚动的那块区域，矮一截就是 #909 修过的「滚轮不响应的死区」。所以滚动区
+     * （DataTable 的滚动容器、ScrollArea 的视口）也算作画出来的边界。
      */
     const paints = (el: Element) => {
+      if (el.matches("[data-scroll-area-viewport], [data-scrollbar-visibility]")) return true;
       const s = getComputedStyle(el);
       if (s.visibility === "hidden" || s.display === "none" || s.opacity === "0") return false;
       const bg = s.backgroundColor;
@@ -206,6 +216,18 @@ const measure = (page: Page) =>
       for (const kid of el.children) collect(kid);
     };
     for (const kid of main.children) collect(kid);
+
+    // 钉高页（data-page-fill）在空数据时往往不渲染表格、只有一句空态，没有滚动区可量。
+    // 这时检查页面根是否撑到底——高度链完整，表格一出现就会吃满剩余高度。
+    const root = main.firstElementChild?.firstElementChild as HTMLElement | null;
+    const fillMode = root?.getAttribute("data-page-fill");
+    const fillActive =
+      fillMode === "always" || (fillMode === "md" && window.matchMedia("(min-width: 48rem)").matches);
+    const hasScrollRegion = Boolean(
+      main.querySelector("[data-scroll-area-viewport], [data-scrollbar-visibility]"),
+    );
+    if (root && fillActive && !hasScrollRegion) bottoms.push(root.getBoundingClientRect().bottom);
+
     const contentBottom = bottoms.length ? Math.max(...bottoms) : rect.top;
     const scroller = main.parentElement as HTMLElement;
     return {
@@ -215,6 +237,23 @@ const measure = (page: Page) =>
       padLeft: Math.round(padLeft),
       overflow: Math.round(scroller.scrollHeight - scroller.clientHeight),
     };
+  });
+
+/** 外层滚到底后，最后一块画出来的内容离滚动容器底边还剩多少 */
+const measureScrolledEnd = (page: Page) =>
+  page.evaluate(() => {
+    const main = document.getElementById("main-content") as HTMLElement;
+    const scroller = main.parentElement as HTMLElement;
+    scroller.scrollTop = scroller.scrollHeight;
+    let lowest = Number.NEGATIVE_INFINITY;
+    main.querySelectorAll("*").forEach((el) => {
+      const r = el.getBoundingClientRect();
+      if (r.width <= 0 || r.height <= 0) return;
+      const s = getComputedStyle(el);
+      if (s.visibility === "hidden" || s.display === "none") return;
+      lowest = Math.max(lowest, r.bottom);
+    });
+    return Math.round(scroller.getBoundingClientRect().bottom - lowest);
   });
 
 test.describe("页面底部留白", () => {
@@ -246,6 +285,17 @@ test.describe("页面底部留白", () => {
         last.padBottom,
         `底部留白 ${last.padBottom + last.gap}px，左右 ${last.padLeft}px`,
       ).toBe(last.padLeft);
+
+      // 外层在滚的页面：滚到底以后内容不能贴着底边。同样轮询——卡片的入场动画带几像素
+      // 位移，动画没走完时量到的底边会偏低。
+      if (last.overflow > 1) {
+        await expect
+          .poll(() => measureScrolledEnd(page), {
+            message: "滚到底后最后一块内容离底边的距离",
+            timeout: 15_000,
+          })
+          .toBeGreaterThanOrEqual(last.padBottom - 2);
+      }
     });
   }
 });

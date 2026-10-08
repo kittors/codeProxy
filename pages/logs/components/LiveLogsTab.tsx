@@ -1,17 +1,23 @@
 import type { Dispatch, SetStateAction } from "react";
 import type { ParsedLogLine } from "../logsHelpers";
-import { getLevelStyles, getStatusStyles } from "../logsHelpers";
-import { Button, surface } from "@code-proxy/ui";
+import {
+  LOG_MUTED_BADGE,
+  LOG_NEUTRAL_BADGE,
+  getLevelStyles,
+  getStatusStyles,
+} from "../logsHelpers";
+import { Button, ScrollFade, surface } from "@code-proxy/ui";
 import { EmptyState } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
 import { ToggleSwitch } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
 
+/** 日志行里的小标签：只有淡底、不描边，颜色由调用方按级别 / 状态码给（见 logsHelpers）。 */
 function Badge({ children, className }: { children: React.ReactNode; className: string }) {
   return (
     <span
       className={[
-        "inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold",
+        "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold",
         className,
       ].join(" ")}
     >
@@ -22,7 +28,9 @@ function Badge({ children, className }: { children: React.ReactNode; className: 
 
 function RequestPath({ children }: { children: string }) {
   return (
-    <code className="inline-block max-w-full rounded-md border border-slate-900/8 bg-slate-50 px-2 py-1 font-mono text-xs font-medium leading-relaxed text-slate-700 dark:border-white/8 dark:bg-white/5 dark:text-white/70">
+    <code
+      className={`inline-block max-w-full rounded-md px-2 py-1 font-mono text-xs font-medium leading-relaxed ${LOG_NEUTRAL_BADGE}`}
+    >
       <span className="break-all">{children}</span>
     </code>
   );
@@ -84,8 +92,12 @@ export function LiveLogsTab({
   onScroll: () => void;
 }) {
   return (
+    // 整个页签就是页面本身：标题区、搜索和选项直接落在外壳内容区上（flat），
+    // 只有下面的日志列表是一张卡片——以前是「大卡 → 选项小卡 + 日志淡底块 → 描边列表」三层。
+    // 不加 overflow-hidden：日志卡片贴着页签底边，裁掉的话卡片的投影会被切掉。
     <Card
-      className="md:flex md:min-h-0 md:flex-1 md:flex-col md:overflow-hidden"
+      flat
+      className="md:flex md:min-h-0 md:flex-1 md:flex-col"
       bodyClassName="md:flex md:min-h-0 md:flex-1 md:flex-col"
       title={t("logs_page.live_logs")}
       description={t("logs_page.latest_label", {
@@ -133,9 +145,9 @@ export function LiveLogsTab({
           spellCheck={false}
         />
 
-        <div className="rounded-2xl border border-slate-900/8 bg-white/60 px-4 py-3 shadow-sm dark:border-white/8 dark:bg-neutral-950/40">
+        <div>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="text-xs text-slate-600 dark:text-white/65">{quotaSummary}</div>
+            <div className="text-xs text-ink-2">{quotaSummary}</div>
             <Button
               variant="ghost"
               size="sm"
@@ -147,7 +159,7 @@ export function LiveLogsTab({
           </div>
 
           {optionsOpen ? (
-            <div className="mt-3 grid gap-4 border-t border-slate-900/8 pt-4 dark:border-white/8 sm:grid-cols-2">
+            <div className="mt-2 grid gap-4 pb-1 sm:grid-cols-2">
               <ToggleSwitch
                 label={t("logs_page.auto_refresh")}
                 description={t("logs_page.auto_refresh_desc")}
@@ -174,8 +186,13 @@ export function LiveLogsTab({
         </div>
       </div>
 
-      <div className={[surface({ tone: "raised", radius: "2xl" }), "mt-4 overflow-hidden md:flex md:min-h-0 md:flex-1 md:flex-col"].join(" ")}>
-        <div className="flex min-h-11 items-center justify-between gap-3 border-b border-slate-900/8 px-4 py-3 text-xs text-slate-600 dark:border-white/8 dark:text-white/65">
+      <div
+        className={[
+          surface({ radius: "3xl" }),
+          "mt-4 overflow-hidden md:flex md:min-h-0 md:flex-1 md:flex-col",
+        ].join(" ")}
+      >
+        <div className="flex min-h-11 items-center justify-between gap-3 px-4 pt-3 pb-1 text-xs text-ink-2">
           <div className="min-w-0">
             <span className="block whitespace-pre-wrap break-words tabular-nums">
               {t("logs_page.showing_lines", {
@@ -199,10 +216,11 @@ export function LiveLogsTab({
             </Button>
           </div>
         </div>
-        <div
+        {/* 列表上下渐隐：表头行下面不画分隔线，滚上去的日志在这里淡出，而不是被硬生生截断。 */}
+        <ScrollFade
           ref={containerRef}
           onScroll={onScroll}
-          className="max-h-[60vh] overflow-y-auto bg-slate-50 px-4 py-3 text-slate-900 md:max-h-none md:min-h-0 md:flex-1 dark:bg-neutral-950/60 dark:text-slate-100"
+          className="max-h-[60vh] overflow-y-auto px-4 pb-3 text-ink md:max-h-none md:min-h-0 md:flex-1"
         >
           {visibleLines.length === 0 ? (
             <div className="px-1 py-4">
@@ -220,12 +238,13 @@ export function LiveLogsTab({
             </pre>
           ) : (
             <div className="overflow-x-auto">
-              <div className="min-w-[640px] divide-y divide-slate-200 rounded-xl border border-slate-900/8 bg-white/70 dark:divide-neutral-800 dark:border-white/8 dark:bg-neutral-950/40">
+              {/* 一行一条日志，行与行之间只留数据行的细分隔线。 */}
+              <div className="min-w-[640px] divide-y divide-line">
                 {parsedVisibleLines.map((line, index) => {
                   const levelStyles = line.level ? getLevelStyles(line.level) : null;
                   const rowClassName = [
                     "px-3 py-2",
-                    "hover:bg-slate-50 dark:hover:bg-white/5",
+                    "hover:bg-hover",
                     levelStyles?.row,
                   ]
                     .filter(Boolean)
@@ -237,7 +256,7 @@ export function LiveLogsTab({
                       className={rowClassName}
                     >
                       <div className="flex items-start gap-3">
-                        <div className="w-36 shrink-0 tabular-nums text-xs text-slate-500 dark:text-white/55">
+                        <div className="w-36 shrink-0 tabular-nums text-xs text-ink-3">
                           {line.timestamp ?? ""}
                         </div>
                         <div className="min-w-0 flex-1">
@@ -248,12 +267,10 @@ export function LiveLogsTab({
                               </Badge>
                             ) : null}
                             {line.source ? (
-                              <Badge className="border-slate-900/8 bg-white text-slate-700 dark:border-white/8 dark:bg-neutral-950/60 dark:text-white/70">
-                                {line.source}
-                              </Badge>
+                              <Badge className={LOG_MUTED_BADGE}>{line.source}</Badge>
                             ) : null}
                             {line.requestId ? (
-                              <Badge className="border-slate-900/8 bg-slate-50 font-mono text-slate-700 dark:border-white/8 dark:bg-white/5 dark:text-white/70">
+                              <Badge className={`font-mono ${LOG_NEUTRAL_BADGE}`}>
                                 {line.requestId}
                               </Badge>
                             ) : null}
@@ -263,23 +280,17 @@ export function LiveLogsTab({
                               </Badge>
                             ) : null}
                             {line.latency ? (
-                              <Badge className="border-slate-900/8 bg-white text-slate-700 dark:border-white/8 dark:bg-neutral-950/60 dark:text-white/70">
-                                {line.latency}
-                              </Badge>
+                              <Badge className={LOG_NEUTRAL_BADGE}>{line.latency}</Badge>
                             ) : null}
                             {line.ip ? (
-                              <Badge className="border-slate-900/8 bg-white font-mono text-slate-700 dark:border-white/8 dark:bg-neutral-950/60 dark:text-white/70">
-                                {line.ip}
-                              </Badge>
+                              <Badge className={`font-mono ${LOG_NEUTRAL_BADGE}`}>{line.ip}</Badge>
                             ) : null}
                             {line.method ? (
-                              <Badge className="border-slate-900/8 bg-white text-slate-700 dark:border-white/8 dark:bg-neutral-950/60 dark:text-white/70">
-                                {line.method}
-                              </Badge>
+                              <Badge className={LOG_NEUTRAL_BADGE}>{line.method}</Badge>
                             ) : null}
                             {line.path ? <RequestPath>{line.path}</RequestPath> : null}
                           </div>
-                          <div className="mt-1 whitespace-pre-wrap break-words font-mono text-xs leading-relaxed text-slate-900 dark:text-slate-100">
+                          <div className="mt-1 whitespace-pre-wrap break-words font-mono text-xs leading-relaxed text-ink">
                             {line.message}
                           </div>
                         </div>
@@ -290,7 +301,7 @@ export function LiveLogsTab({
               </div>
             </div>
           )}
-        </div>
+        </ScrollFade>
       </div>
     </Card>
   );

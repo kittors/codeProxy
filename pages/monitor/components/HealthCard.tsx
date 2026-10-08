@@ -8,7 +8,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { AnimatedNumber, Card } from "@code-proxy/ui";
-import { GradientRing, MONITOR_HUES } from "@features/monitor-widgets/monitorVisuals";
+import { METER_TONES, MeterRing } from "@features/monitor-widgets/monitorVisuals";
 import type {
   MonitorCheckLevel,
   MonitorHealthLevel,
@@ -16,31 +16,25 @@ import type {
 } from "../model/monitorHealth";
 import { MonitorCardTitle } from "./MonitorCardTitle";
 
+/**
+ * 档位的标签与环色：健康 / 良好是正常档（强调色环、中性标签），告警琥珀，告急红；空闲是灰环。
+ * 不再铺同色柔光——一张卡片顶上一团绿光，比它要说的「一切正常」还抢眼。
+ */
 const LEVEL_STYLE: Record<
   MonitorHealthLevel,
-  { pill: string; hue: (typeof MONITOR_HUES)[keyof typeof MONITOR_HUES] | null; glow: string }
+  { pill: string; ring: (typeof METER_TONES)[keyof typeof METER_TONES] }
 > = {
-  healthy: {
-    pill: "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-300",
-    hue: MONITOR_HUES.emerald,
-    glow: "bg-[radial-gradient(70%_100%_at_50%_0%,rgb(16_185_129/0.13),transparent)]",
-  },
-  good: {
-    pill: "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-300",
-    hue: MONITOR_HUES.emerald,
-    glow: "bg-[radial-gradient(70%_100%_at_50%_0%,rgb(16_185_129/0.1),transparent)]",
-  },
+  healthy: { pill: "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]", ring: METER_TONES.normal },
+  good: { pill: "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]", ring: METER_TONES.normal },
   warning: {
     pill: "bg-amber-500/10 text-amber-700 dark:bg-amber-400/15 dark:text-amber-300",
-    hue: MONITOR_HUES.amber,
-    glow: "bg-[radial-gradient(70%_100%_at_50%_0%,rgb(245_158_11/0.15),transparent)]",
+    ring: METER_TONES.warn,
   },
   critical: {
     pill: "bg-rose-500/10 text-rose-700 dark:bg-rose-400/15 dark:text-rose-300",
-    hue: MONITOR_HUES.rose,
-    glow: "bg-[radial-gradient(70%_100%_at_50%_0%,rgb(244_63_94/0.15),transparent)]",
+    ring: METER_TONES.critical,
   },
-  idle: { pill: "bg-hover text-ink-3", hue: null, glow: "" },
+  idle: { pill: "bg-hover text-ink-3", ring: METER_TONES.normal },
 };
 
 const CHECK_ICON: Record<MonitorCheckLevel, { icon: LucideIcon; className: string }> = {
@@ -51,8 +45,8 @@ const CHECK_ICON: Record<MonitorCheckLevel, { icon: LucideIcon; className: strin
 };
 
 /**
- * 健康评分：渐变环 + 逐项诊断。环与诊断用同一套颜色语义（绿正常、琥珀留意、红告急），
- * 顶部一层同色柔光让它在一排白卡片里成为视觉起点。没有流量时不打分，显示「空闲」。
+ * 健康评分：环形图 + 逐项诊断。环与诊断用同一套语义（正常强调色、琥珀留意、红告急）。
+ * 没有流量时不打分，显示「空闲」。
  */
 export function HealthCard({
   report,
@@ -68,30 +62,20 @@ export function HealthCard({
   const style = LEVEL_STYLE[report.level];
 
   return (
-    <Card
-      loading={loading}
-      className="h-full overflow-hidden"
-      bodyClassName="flex h-full flex-col gap-4"
-    >
-      {style.glow ? (
-        <div
-          aria-hidden="true"
-          className={`pointer-events-none absolute inset-x-0 top-0 h-40 ${style.glow}`}
-        />
-      ) : null}
-      {/* 标题自绘并置于柔光之上（Card 自带的标题行不在定位层里，会被柔光盖住）。 */}
-      <div className="relative flex items-center justify-between gap-2">
+    <Card loading={loading} className="h-full" bodyClassName="flex h-full flex-col gap-4">
+      {/* 标题自绘：档位标签和标题在同一行、垂直居中（Card 的操作区是顶端对齐的）。 */}
+      <div className="flex items-center justify-between gap-2">
         <h3 className="text-base font-semibold tracking-tight text-ink">
-          <MonitorCardTitle icon={HeartPulse} hue="emerald" label={t("monitor_center.health.title")} />
+          <MonitorCardTitle icon={HeartPulse} label={t("monitor_center.health.title")} />
         </h3>
         <span className={`rounded-full px-2 py-0.5 text-2xs font-semibold ${style.pill}`}>
           {t(`monitor_center.health.level_${report.level}`)}
         </span>
       </div>
-      <div className="relative flex justify-center">
-        <GradientRing
+      <div className="flex justify-center">
+        <MeterRing
           value={report.score ?? 0}
-          hue={style.hue ?? MONITOR_HUES.sky}
+          tone={style.ring}
           className="size-32"
           strokeWidth={11}
         >
@@ -109,9 +93,9 @@ export function HealthCard({
               {t("monitor_center.health.level_idle")}
             </span>
           )}
-        </GradientRing>
+        </MeterRing>
       </div>
-      <ul className="relative space-y-2.5">
+      <ul className="space-y-2.5">
         {report.checks.length === 0 ? (
           <li className="text-center text-xs text-ink-3">{t("monitor_center.health.idle_hint")}</li>
         ) : (

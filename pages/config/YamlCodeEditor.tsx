@@ -45,21 +45,20 @@ const findCommentIndex = (line: string): number => {
 
 const classifyValue = (value: string): string => {
   const trimmed = value.trim();
-  if (!trimmed) return "text-slate-700 dark:text-white/80";
-  if (trimmed.startsWith("#")) return "text-slate-400 dark:text-white/45";
+  if (!trimmed) return "text-ink-2";
+  if (trimmed.startsWith("#")) return "text-ink-3";
   if (trimmed.startsWith('"') || trimmed.startsWith("'"))
     return "text-emerald-700 dark:text-emerald-300";
   if (/^(true|false|null|~)\b/i.test(trimmed)) return "text-ink";
   if (/^[+-]?\d+(\.\d+)?\b/.test(trimmed)) return "text-amber-700 dark:text-amber-300";
-  if (/^\[.*\]$/.test(trimmed) || /^\{.*\}$/.test(trimmed))
-    return "text-slate-700 dark:text-white/80";
-  return "text-slate-700 dark:text-white/80";
+  if (/^\[.*\]$/.test(trimmed) || /^\{.*\}$/.test(trimmed)) return "text-ink-2";
+  return "text-ink-2";
 };
 
 const tokenizeYamlLine = (line: string, lineGlobalStart: number): Token[] => {
   if (!line)
     return [
-      { text: "", className: "text-slate-700 dark:text-white/80", globalStart: lineGlobalStart },
+      { text: "", className: "text-ink-2", globalStart: lineGlobalStart },
     ];
 
   const commentIndex = findCommentIndex(line);
@@ -76,11 +75,11 @@ const tokenizeYamlLine = (line: string, lineGlobalStart: number): Token[] => {
 
   const trimmedBody = body.replace(/\s+$/, "");
   const leading = body.match(/^\s*/)?.[0] ?? "";
-  push(leading, "text-slate-400 dark:text-white/35");
+  push(leading, "text-ink-3");
 
   let rest = body.slice(leading.length);
   if (rest.startsWith("- ")) {
-    push("- ", "text-slate-500 dark:text-white/45");
+    push("- ", "text-ink-3");
     rest = rest.slice(2);
   }
 
@@ -99,8 +98,8 @@ const tokenizeYamlLine = (line: string, lineGlobalStart: number): Token[] => {
     const keyPadding = key.slice(keyTrimmed.length);
 
     push(keyTrimmed, "text-sky-700 dark:text-sky-300 font-semibold");
-    push(keyPadding, "text-slate-400 dark:text-white/35");
-    push(":", "text-slate-400 dark:text-white/35");
+    push(keyPadding, "text-ink-3");
+    push(":", "text-ink-3");
     const valueText = afterColon;
     push(valueText, classifyValue(valueText));
   } else {
@@ -113,7 +112,7 @@ const tokenizeYamlLine = (line: string, lineGlobalStart: number): Token[] => {
   }
 
   if (comment) {
-    push(comment, "text-slate-400 dark:text-white/45");
+    push(comment, "text-ink-3");
   }
 
   return tokens;
@@ -292,7 +291,7 @@ export const YamlCodeEditor = forwardRef<
           key={`l-${idx}`}
           className={[
             "h-6 whitespace-pre",
-            idx === activeLineIndex ? "bg-slate-50/80 dark:bg-white/5" : null,
+            idx === activeLineIndex ? "bg-hover" : null,
           ]
             .filter(Boolean)
             .join(" ")}
@@ -319,7 +318,7 @@ export const YamlCodeEditor = forwardRef<
     return Array.from({ length: count }, (_, i) => (
       <div
         key={`n-${i}`}
-        className={["h-6", i === activeLineIndex ? "text-slate-600 dark:text-white/60" : null]
+        className={["h-6", i === activeLineIndex ? "text-ink-2" : null]
           .filter(Boolean)
           .join(" ")}
       >
@@ -467,7 +466,8 @@ export const YamlCodeEditor = forwardRef<
   return (
     <div
       className={[
-        "overflow-hidden rounded-2xl border border-slate-900/8 bg-white dark:border-white/8 dark:bg-neutral-950",
+        // 编辑器就是一个大输入框：和其它输入框同一种阴影描边，聚焦时换成强调色描边，不画 border。
+        "overflow-hidden rounded-2xl bg-field shadow-control transition-[box-shadow] focus-within:shadow-control-focus",
         heightClass,
       ].join(" ")}
     >
@@ -476,7 +476,8 @@ export const YamlCodeEditor = forwardRef<
           ref={gutterRef}
           aria-hidden="true"
           className={[
-            "scrollbar-hidden w-14 shrink-0 overflow-y-scroll overflow-x-hidden border-r border-slate-900/8 bg-slate-50/70 px-3 py-3 text-right font-mono text-xs leading-6 text-slate-400 dark:border-white/8 dark:bg-neutral-950/60 dark:text-white/35",
+            // 行号栏靠更深一档的淡底和代码区分开，不画竖线。
+            "scrollbar-hidden w-14 shrink-0 overflow-y-scroll overflow-x-hidden bg-subtle px-3 py-3 text-right font-mono text-xs leading-6 text-ink-3",
             "pointer-events-none",
           ].join(" ")}
         >
@@ -489,7 +490,7 @@ export const YamlCodeEditor = forwardRef<
             aria-hidden="true"
             className={[
               "scrollbar-hidden absolute inset-0 overflow-auto px-4 py-3 font-mono text-xs leading-6",
-              "text-slate-900 dark:text-white",
+              "text-ink",
               "pointer-events-none",
             ].join(" ")}
           >
@@ -521,10 +522,9 @@ export const YamlCodeEditor = forwardRef<
             className={[
               "absolute inset-0 resize-none overflow-auto bg-transparent px-4 py-3 font-mono text-xs leading-6 outline-none",
               "[scrollbar-color:#C7C7C7_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-corner]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#C7C7C7] [&::-webkit-scrollbar-track]:bg-transparent",
-              "text-transparent caret-slate-900 dark:caret-white",
-              "selection:bg-sky-200/60 dark:selection:bg-white/15",
+              "text-transparent caret-ink",
+              "selection:bg-accent/20 dark:selection:bg-accent/30",
               disabled ? "cursor-not-allowed" : null,
-              "focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:focus-visible:ring-white/15",
             ]
               .filter(Boolean)
               .join(" ")}

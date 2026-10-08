@@ -31,7 +31,8 @@ function TextOutput({ text }: { text: string }) {
   return (
     <pre
       data-testid="model-test-text"
-      className="max-h-64 overflow-auto whitespace-pre-wrap rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-900 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100"
+      // 成功只用一层很淡的绿底表达，正文保持中性墨色：整段绿字读起来费劲（同 Callout）。
+      className="max-h-64 overflow-auto whitespace-pre-wrap rounded-lg bg-emerald-500/[0.07] px-3 py-2 text-xs text-ink"
     >
       {text || t("models_page.test_empty_response")}
     </pre>
@@ -47,7 +48,7 @@ function ImageOutput({ payload }: { payload: ModelTestPayload }) {
 
   if (images.length === 0) {
     return (
-      <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+      <p className="rounded-lg bg-amber-500/[0.09] px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
         {t("models_page.test_no_image_returned")}
       </p>
     );
@@ -87,7 +88,8 @@ function ImageCard({ image, onPreview }: { image: ModelTestImage; onPreview: () 
     .join(" · ");
 
   return (
-    <figure className="overflow-hidden rounded-lg border border-line">
+    // 弹窗里不再套描边小卡片：图和说明落在同一块淡底上。
+    <figure className="overflow-hidden rounded-lg bg-subtle">
       <button
         type="button"
         onClick={onPreview}
@@ -147,7 +149,7 @@ function VideoOutput({ payload }: { payload: ModelTestPayload }) {
   const url = payload.video?.url;
   if (!url) {
     return (
-      <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+      <p className="rounded-lg bg-amber-500/[0.09] px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
         {t("models_page.test_no_video_returned")}
       </p>
     );
@@ -158,7 +160,7 @@ function VideoOutput({ payload }: { payload: ModelTestPayload }) {
         src={url}
         controls
         playsInline
-        className="w-full rounded-lg border border-line bg-black"
+        className="w-full rounded-lg bg-black"
       />
       <div className="flex items-center justify-between gap-2 text-2xs text-ink-3">
         <span className="tabular-nums">
@@ -191,7 +193,7 @@ export function ProvenanceWarning({ result }: { result: ModelTestResult }) {
   return (
     <p
       data-testid="model-test-provenance-warning"
-      className="flex items-start gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200"
+      className="flex items-start gap-1.5 rounded-lg bg-amber-500/[0.09] px-3 py-2 text-xs text-amber-800 dark:text-amber-200"
     >
       <ShieldAlert size={13} className="mt-0.5 shrink-0" aria-hidden />
       <span>

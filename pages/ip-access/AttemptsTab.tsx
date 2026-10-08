@@ -22,13 +22,14 @@ const WINDOW_OPTIONS: AuthAttemptWindow[] = ["1h", "6h", "24h", "7d"];
 const OUTCOMES = ["", "failure", "throttled", "blocked", "success", "auto_banned", "would_ban"];
 const SURFACES = ["", "admin_login", "portal_login", "management_key", "refresh", "request"];
 
+// 语义色只用淡底 + 同色字；「已拦截 / 已自动封禁」沿用墨色实底和失败的红色区分开（墨色不是装饰色）。
 const OUTCOME_TONE: Record<string, string> = {
-  failure: "bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300",
-  throttled: "bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
-  blocked: "bg-slate-800 text-white dark:bg-white/20",
-  auto_banned: "bg-slate-800 text-white dark:bg-white/20",
+  failure: "bg-rose-500/10 text-rose-700 dark:text-rose-300",
+  throttled: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
+  blocked: "bg-ink text-canvas dark:bg-white/20 dark:text-ink",
+  auto_banned: "bg-ink text-canvas dark:bg-white/20 dark:text-ink",
   would_ban: "bg-hover text-ink",
-  success: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
+  success: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
 };
 
 export function AttemptsTab({
@@ -142,7 +143,7 @@ export function AttemptsTab({
         render: (item) => (
           <span
             className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-              OUTCOME_TONE[item.outcome] ?? "bg-slate-100 text-slate-600 dark:bg-white/10"
+              OUTCOME_TONE[item.outcome] ?? "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]"
             }`}
           >
             {t(`ip_access.outcome_${item.outcome}`)}
@@ -168,7 +169,7 @@ export function AttemptsTab({
         width: COLUMN_WIDTH.composite,
         overflowTooltip: true,
         render: (item) => (
-          <span className="text-sm text-slate-600 dark:text-white/70">{item.reason || "—"}</span>
+          <span className="text-sm text-ink-2">{item.reason || "—"}</span>
         ),
       },
       {
@@ -177,7 +178,7 @@ export function AttemptsTab({
         width: COLUMN_WIDTH.composite,
         overflowTooltip: true,
         render: (item) => (
-          <span className="text-xs text-slate-500">{item.user_agent || "—"}</span>
+          <span className="text-xs text-ink-3">{item.user_agent || "—"}</span>
         ),
       },
     ],
@@ -186,7 +187,7 @@ export function AttemptsTab({
 
   return (
     <>
-      <div className="border-t border-slate-100 px-5 py-3 dark:border-white/8">
+      <div className="pb-3">
         <div className="flex flex-wrap items-center gap-2">
           <div className="w-full min-[480px]:w-auto sm:w-[220px]">
             <TextInput
@@ -258,7 +259,7 @@ export function AttemptsTab({
         </div>
       </div>
 
-      <div className="relative min-h-0 flex-1 overflow-hidden px-5">
+      <div className="relative min-h-0 flex-1 overflow-hidden">
         <DataTable<AuthAttempt>
           tableId="ip-access-attempts"
           rows={items}
@@ -282,7 +283,8 @@ export function AttemptsTab({
         onPageChange={(next) => void load(Math.max(1, Math.min(next, totalPages)), pageSize)}
         onPageSizeChange={(size) => void load(1, size)}
         pageSizeOptions={PAGE_SIZE_OPTIONS}
-        className="border-t border-slate-100 px-3 py-3 sm:px-5 dark:border-white/8"
+        // 分页条和表格之间靠留白分开，不画分隔线（同请求日志页）。
+        className="pt-3"
         labels={{
           firstPage: t("request_logs.first_page"),
           previousPage: t("request_logs.prev_page"),

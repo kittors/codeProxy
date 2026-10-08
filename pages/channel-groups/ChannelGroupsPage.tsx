@@ -492,14 +492,16 @@ export function ChannelGroupsPage() {
   );
 
   return (
-    <div className="space-y-4 overflow-x-hidden md:flex md:min-h-0 md:flex-1 md:flex-col">
+    <div data-page-fill="md" className="space-y-4 overflow-x-hidden md:flex md:min-h-0 md:flex-1 md:flex-col">
+      {/* flat：外壳内容区就是这一页的面板，标题、工具栏和表格直接落在上面，不再套一张大卡片。 */}
       <Card
+        flat
         className="md:flex md:min-h-0 md:flex-1 md:flex-col md:overflow-hidden"
         bodyClassName="md:flex md:min-h-0 md:flex-1 md:flex-col"
         loading={loading}
       >
         {error ? (
-          <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900 dark:border-rose-400/25 dark:bg-rose-500/15 dark:text-white">
+          <div className="rounded-2xl bg-rose-500/[0.08] px-4 py-3 text-sm text-rose-700 dark:text-rose-300">
             {error}
           </div>
         ) : null}

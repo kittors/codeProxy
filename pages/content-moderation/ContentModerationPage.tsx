@@ -181,7 +181,7 @@ export function ContentModerationPage() {
         key: "name",
         label: t("content_moderation.profile_name"),
         width: COLUMN_WIDTH.badgeGroup,
-        cellClassName: "font-medium text-slate-900 dark:text-white",
+        cellClassName: "font-medium text-ink",
         render: (profile) => profile.name,
       },
       {
@@ -198,7 +198,7 @@ export function ContentModerationPage() {
                 ariaLabel={t("content_moderation.toggle_enabled", { name: profile.name })}
                 onCheckedChange={(next) => void updateProfileMode(profile, next)}
               />
-              <span className="text-xs text-slate-600 dark:text-white/60">
+              <span className="text-xs text-ink-2">
                 {enabled
                   ? t("content_moderation.mode_pre_block")
                   : t("content_moderation.mode_off")}
@@ -211,7 +211,7 @@ export function ContentModerationPage() {
         key: "method",
         label: t("content_moderation.moderation_method"),
         width: COLUMN_WIDTH.badgeGroup,
-        cellClassName: "text-slate-700 dark:text-white/70",
+        cellClassName: "text-ink-2",
         render: (profile) => t(`content_moderation.keyword_mode_${profile.keyword_mode}`),
       },
       {
@@ -219,14 +219,7 @@ export function ContentModerationPage() {
         label: t("content_moderation.backend"),
         width: COLUMN_WIDTH.badgeGroup,
         render: (profile) => (
-          <span
-            className={[
-              "rounded-full px-2.5 py-1 text-xs font-semibold",
-              profile.backend === "qwen3guard"
-                ? "bg-selected text-ink"
-                : "bg-slate-100 text-slate-700 dark:bg-white/10 dark:text-white/70",
-            ].join(" ")}
-          >
+          <span className="rounded-full bg-ink/[0.05] px-2.5 py-1 text-xs font-medium text-ink-2 dark:bg-white/[0.07]">
             {t(`content_moderation.backend_${profile.backend}`)}
           </span>
         ),
@@ -237,10 +230,10 @@ export function ContentModerationPage() {
         width: "w-[240px] min-w-[240px]",
         render: (profile) => (
           <div className="min-w-0 text-xs">
-            <p className="truncate font-mono text-slate-700 dark:text-white/75">
+            <p className="truncate font-mono text-ink-2">
               {profile.base_url}
             </p>
-            <p className="mt-1 truncate text-slate-500 dark:text-white/50">{profile.model}</p>
+            <p className="mt-1 truncate text-ink-3">{profile.model}</p>
           </div>
         ),
       },
@@ -250,13 +243,11 @@ export function ContentModerationPage() {
         width: COLUMN_WIDTH.name,
         render: (profile) =>
           profile.api_key_configured ? (
-            <span className="font-mono text-xs text-emerald-700 dark:text-emerald-200">
+            <span className="font-mono text-xs text-ink-2">
               {profile.api_key_masked ?? "****"}
             </span>
           ) : (
-            <span className="text-xs text-slate-400 dark:text-white/40">
-              {t("content_moderation.not_configured")}
-            </span>
+            <span className="text-xs text-ink-3">{t("content_moderation.not_configured")}</span>
           ),
       },
       {
@@ -264,9 +255,9 @@ export function ContentModerationPage() {
         label: t("content_moderation.bindings"),
         width: COLUMN_WIDTH.badgeStacked,
         render: (profile) => (
-          <div className="text-xs text-slate-700 dark:text-white/70">
+          <div className="text-xs text-ink-2">
             <p>{t("content_moderation.binding_total", { count: bindingCount(profile) })}</p>
-            <p className="mt-1 text-slate-500 dark:text-white/50">
+            <p className="mt-1 text-ink-3">
               {t("content_moderation.binding_breakdown", {
                 auth: profile.binding_counts.auth_file ?? 0,
                 keys: profile.binding_counts.provider_key ?? 0,
@@ -281,7 +272,7 @@ export function ContentModerationPage() {
         label: t("content_moderation.updated_at"),
         width: COLUMN_WIDTH.timestamp,
         render: (profile) => (
-          <span className="text-xs tabular-nums text-slate-600 dark:text-white/60">
+          <span className="text-xs tabular-nums text-ink-2">
             {new Intl.DateTimeFormat(undefined, {
               dateStyle: "medium",
               timeStyle: "short",
@@ -343,9 +334,11 @@ export function ContentModerationPage() {
   );
 
   return (
-    <div className="flex flex-1 flex-col">
+    <div data-page-fill="always" className="flex flex-1 flex-col">
+      {/* 外壳内容区就是页面面板：这里是页面分区（flat），不再包一张大卡。 */}
       <Card
-        className="md:flex md:min-h-0 md:flex-1 md:flex-col md:overflow-hidden"
+        flat
+        className="md:flex md:min-h-0 md:flex-1 md:flex-col"
         bodyClassName="md:flex md:min-h-0 md:flex-1 md:flex-col"
         title={t("content_moderation.title")}
         description={t("content_moderation.description")}

@@ -63,7 +63,8 @@ export function VideoGenerationPageContent() {
         </p>
       </header>
 
-      <Card>
+      {/* flat：整页内容原来包在一张大卡片里；外壳内容区就是页面面板，不再多套一层。 */}
+      <Card flat>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0 space-y-1">
             <h2 className="text-base font-semibold text-ink">

@@ -55,34 +55,25 @@ type CreateApiKeyColumnsOptions = {
   accountScoped?: boolean;
 };
 
-type PermissionSummaryTone = "cyan" | "indigo" | "violet";
+/**
+ * 标签一律中性淡底、不描边。模型 / 渠道分组 / 渠道三列以前各用一种颜色（青、靛、紫），
+ * 按类别上色只会让表格变花，列名已经说明了这是哪一类。
+ */
+const NEUTRAL_TAG = "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]";
 
-const permissionSummaryToneClasses: Record<PermissionSummaryTone, string> = {
-  cyan: "border-cyan-100 bg-cyan-50/65 text-cyan-700 dark:border-cyan-500/20 dark:bg-cyan-500/10 dark:text-cyan-200",
-  indigo:
-    "border-line-strong bg-subtle text-ink",
-  violet:
-    "border-line-strong bg-subtle text-ink",
-};
-
-const permissionCountToneClasses: Record<PermissionSummaryTone, string> = {
-  cyan: "bg-cyan-100 text-cyan-700 dark:bg-cyan-500/20 dark:text-cyan-200",
-  indigo: "bg-selected text-ink",
-  violet: "bg-selected text-ink",
-};
-
+// 冻结列的底色要和表格所在的底一致：这张表直接放在页面上（外壳内容区 canvas），不在卡片里。
 const stickySelectHeaderClass = "md:sticky md:z-40 md:bg-slate-100 md:dark:bg-neutral-800";
-const stickySelectCellClass = "md:sticky md:z-30 md:bg-surface";
+const stickySelectCellClass = "md:sticky md:z-30 md:bg-backdrop";
 const stickyNameHeaderClass = "md:sticky md:z-40 md:bg-slate-100 md:dark:bg-neutral-800";
-const stickyNameCellClass = "font-medium md:sticky md:z-30 md:bg-surface";
+const stickyNameCellClass = "font-medium md:sticky md:z-30 md:bg-backdrop";
 const stickyActionsHeaderClass =
   "text-center md:sticky md:z-40 md:bg-slate-100 md:dark:bg-neutral-800";
-const stickyActionsCellClass = "md:sticky md:z-30 md:bg-surface";
+const stickyActionsCellClass = "md:sticky md:z-30 md:bg-backdrop";
 
 function ApiKeyBadge({ value }: { value: string }) {
   return (
     <OverflowTooltip as="div" content={value} className="block min-w-0 max-w-full">
-      <code className="inline-flex min-w-0 max-w-full items-center rounded-md bg-slate-100 px-2 py-0.5 font-mono text-xs text-slate-700 dark:bg-neutral-800 dark:text-white/70">
+      <code className={`inline-flex min-w-0 max-w-full items-center rounded-md px-2 py-0.5 font-mono text-xs ${NEUTRAL_TAG}`}>
         <span className="block min-w-0 truncate">{value}</span>
       </code>
     </OverflowTooltip>
@@ -92,22 +83,18 @@ function ApiKeyBadge({ value }: { value: string }) {
 function ApiKeyPermissionSummary({
   count,
   firstValue,
-  tone,
   tooltipContent,
 }: {
   count: number;
   firstValue: string;
-  tone: PermissionSummaryTone;
   tooltipContent: ReactNode;
 }) {
   return (
     <HoverTooltip content={tooltipContent} className="!flex min-w-0 max-w-full">
       <span
-        className={`flex min-w-0 max-w-full items-center gap-1 rounded-full border py-0.5 pl-0.5 pr-1.5 text-xs ${permissionSummaryToneClasses[tone]}`}
+        className={`flex min-w-0 max-w-full items-center gap-1 rounded-full py-0.5 pl-0.5 pr-1.5 text-xs ${NEUTRAL_TAG}`}
       >
-        <span
-          className={`inline-flex h-5 min-w-[20px] shrink-0 items-center justify-center rounded-full px-1.5 font-semibold tabular-nums ${permissionCountToneClasses[tone]}`}
-        >
+        <span className="inline-flex h-5 min-w-[20px] shrink-0 items-center justify-center rounded-full bg-ink/[0.07] px-1.5 font-semibold tabular-nums text-ink">
           {count}
         </span>
         <span className="block min-w-0 flex-1 truncate font-mono text-xs leading-5">
@@ -178,12 +165,12 @@ export const createApiKeyColumns = ({
           >
             <span className="block min-w-0 truncate">
               {row.name || (
-                <span className="text-slate-400 dark:text-white/40">{t("common.unnamed")}</span>
+                <span className="text-ink-3">{t("common.unnamed")}</span>
               )}
             </span>
           </OverflowTooltip>
           {row.is_default ? (
-            <span className="shrink-0 rounded-full bg-emerald-50 px-1.5 py-0.5 text-2xs font-medium text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+            <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-2xs font-medium ${NEUTRAL_TAG}`}>
               default
             </span>
           ) : null}
@@ -200,7 +187,7 @@ export const createApiKeyColumns = ({
           className="inline-flex items-center gap-1"
         >
           <span>{t("quota.period_spending_column")}</span>
-          <Info size={12} className="text-slate-400 dark:text-white/40" />
+          <Info size={12} className="text-ink-3" />
         </HoverTooltip>
       ),
       render: (row) => {
@@ -226,14 +213,14 @@ export const createApiKeyColumns = ({
       key: "dailySpending",
       label: t("quota.daily_spending_column"),
       width: COLUMN_WIDTH.compact,
-      cellClassName: "whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
+      cellClassName: "whitespace-nowrap tabular-nums text-ink-2",
       headerRender: () => (
         <HoverTooltip
           content={t("api_keys_page.daily_spending_fact_help")}
           className="inline-flex items-center gap-1"
         >
           <span>{t("quota.daily_spending_column")}</span>
-          <Info size={12} className="text-slate-400 dark:text-white/40" />
+          <Info size={12} className="text-ink-3" />
         </HoverTooltip>
       ),
       render: (row) => formatApiKeySpendingAmount(row["daily-spending-used"]),
@@ -242,14 +229,14 @@ export const createApiKeyColumns = ({
       key: "lifetimeSpending",
       label: t("quota.lifetime_spending_column"),
       width: COLUMN_WIDTH.numericWide,
-      cellClassName: "whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
+      cellClassName: "whitespace-nowrap tabular-nums text-ink-2",
       headerRender: () => (
         <HoverTooltip
           content={t("api_keys_page.lifetime_spending_help")}
           className="inline-flex items-center gap-1"
         >
           <span>{t("quota.lifetime_spending_column")}</span>
-          <Info size={12} className="text-slate-400 dark:text-white/40" />
+          <Info size={12} className="text-ink-3" />
         </HoverTooltip>
       ),
       render: (row) => formatApiKeySpendingAmount(row["lifetime-spending-used"]),
@@ -258,26 +245,26 @@ export const createApiKeyColumns = ({
       key: "dailySpendingResetCount",
       label: t("quota.total_resets"),
       width: COLUMN_WIDTH.timestamp,
-      cellClassName: "whitespace-nowrap text-slate-700 dark:text-white/70",
+      cellClassName: "whitespace-nowrap text-ink-2",
       headerRender: () => (
         <HoverTooltip
           content={t("api_keys_page.reset_count_help")}
           className="inline-flex items-center gap-1"
         >
           <span>{t("quota.total_resets")}</span>
-          <Info size={12} className="text-slate-400 dark:text-white/40" />
+          <Info size={12} className="text-ink-3" />
         </HoverTooltip>
       ),
       render: (row) => {
         const count = row["daily-spending-reset-count"] ?? 0;
         if (count <= 0) {
-          return <span className="tabular-nums text-slate-400 dark:text-white/40">0</span>;
+          return <span className="tabular-nums text-ink-3">0</span>;
         }
         return (
           <button
             type="button"
             onClick={() => onViewResetHistory(row)}
-            className="tabular-nums font-medium text-orange-600 underline-offset-2 hover:underline dark:text-orange-400"
+            className="tabular-nums font-medium text-accent-ink underline-offset-2 hover:underline"
             aria-label={t("api_keys_page.view_reset_history")}
           >
             {count}
@@ -296,12 +283,12 @@ export const createApiKeyColumns = ({
       key: "dailyLimit",
       label: t("api_keys_page.col_daily_limit"),
       width: COLUMN_WIDTH.compact,
-      cellClassName: "whitespace-nowrap text-slate-700 dark:text-white/70",
+      cellClassName: "whitespace-nowrap text-ink-2",
       render: (row) => (
         <span className="inline-flex items-center gap-1">
           {!row["daily-limit"] ? (
             <>
-              <InfinityIcon size={14} className="text-green-500" /> {t("api_keys_page.unlimited")}
+              <InfinityIcon size={14} className="text-ink-3" /> {t("api_keys_page.unlimited")}
             </>
           ) : (
             formatApiKeyLimit(row["daily-limit"])
@@ -313,12 +300,12 @@ export const createApiKeyColumns = ({
       key: "totalQuota",
       label: t("api_keys_page.col_total_quota"),
       width: COLUMN_WIDTH.compact,
-      cellClassName: "whitespace-nowrap text-slate-700 dark:text-white/70",
+      cellClassName: "whitespace-nowrap text-ink-2",
       render: (row) => (
         <span className="inline-flex items-center gap-1">
           {!row["total-quota"] ? (
             <>
-              <InfinityIcon size={14} className="text-green-500" /> {t("api_keys_page.unlimited")}
+              <InfinityIcon size={14} className="text-ink-3" /> {t("api_keys_page.unlimited")}
             </>
           ) : (
             formatApiKeyLimit(row["total-quota"])
@@ -330,21 +317,21 @@ export const createApiKeyColumns = ({
       key: "spendingLimit",
       label: t("api_keys_page.col_spending_limit"),
       width: COLUMN_WIDTH.timestamp,
-      cellClassName: "whitespace-nowrap text-slate-700 dark:text-white/70",
+      cellClassName: "whitespace-nowrap text-ink-2",
       headerRender: () => (
         <HoverTooltip
           content={t("api_keys_page.spending_limit_help")}
           className="inline-flex items-center gap-1"
         >
           <span>{t("api_keys_page.col_spending_limit")}</span>
-          <Info size={12} className="text-slate-400 dark:text-white/40" />
+          <Info size={12} className="text-ink-3" />
         </HoverTooltip>
       ),
       render: (row) => (
         <span className="inline-flex items-center gap-1">
           {!row["spending-limit"] ? (
             <>
-              <InfinityIcon size={14} className="text-green-500" /> {t("api_keys_page.unlimited")}
+              <InfinityIcon size={14} className="text-ink-3" /> {t("api_keys_page.unlimited")}
             </>
           ) : (
             formatApiKeySpendingLimit(row["spending-limit"])
@@ -356,18 +343,18 @@ export const createApiKeyColumns = ({
       key: "rpmLimit",
       label: "RPM",
       width: COLUMN_WIDTH.toggle,
-      cellClassName: "whitespace-nowrap text-slate-700 dark:text-white/70",
+      cellClassName: "whitespace-nowrap text-ink-2",
       headerRender: () => (
         <HoverTooltip content={t("api_keys.rpm_full")} className="inline-flex items-center gap-1">
           <span>{t("api_keys_page.rpm")}</span>
-          <Info size={12} className="text-slate-400 dark:text-white/40" />
+          <Info size={12} className="text-ink-3" />
         </HoverTooltip>
       ),
       render: (row) => (
         <span className="inline-flex items-center gap-1">
           {!row["rpm-limit"] ? (
             <>
-              <InfinityIcon size={14} className="text-green-500" /> {t("api_keys_page.unlimited")}
+              <InfinityIcon size={14} className="text-ink-3" /> {t("api_keys_page.unlimited")}
             </>
           ) : (
             formatApiKeyLimit(row["rpm-limit"])
@@ -379,18 +366,18 @@ export const createApiKeyColumns = ({
       key: "tpmLimit",
       label: "TPM",
       width: COLUMN_WIDTH.toggle,
-      cellClassName: "whitespace-nowrap text-slate-700 dark:text-white/70",
+      cellClassName: "whitespace-nowrap text-ink-2",
       headerRender: () => (
         <HoverTooltip content={t("api_keys.tpm_full")} className="inline-flex items-center gap-1">
           <span>{t("api_keys_page.tpm")}</span>
-          <Info size={12} className="text-slate-400 dark:text-white/40" />
+          <Info size={12} className="text-ink-3" />
         </HoverTooltip>
       ),
       render: (row) => (
         <span className="inline-flex items-center gap-1">
           {!row["tpm-limit"] ? (
             <>
-              <InfinityIcon size={14} className="text-green-500" /> {t("api_keys_page.unlimited")}
+              <InfinityIcon size={14} className="text-ink-3" /> {t("api_keys_page.unlimited")}
             </>
           ) : (
             formatApiKeyLimit(row["tpm-limit"])
@@ -402,13 +389,12 @@ export const createApiKeyColumns = ({
       key: "allowedModels",
       label: t("api_keys_page.col_models"),
       width: COLUMN_WIDTH.numericWide,
-      cellClassName: "min-w-0 overflow-hidden text-slate-700 dark:text-white/70",
+      cellClassName: "min-w-0 overflow-hidden text-ink-2",
       render: (row) =>
         row["allowed-models"]?.length ? (
           <ApiKeyPermissionSummary
             count={row["allowed-models"].length}
             firstValue={row["allowed-models"][0]}
-            tone="indigo"
             tooltipContent={
               <div className="flex max-w-xs flex-wrap gap-1.5">
                 {row["allowed-models"].map((model) => (
@@ -421,8 +407,8 @@ export const createApiKeyColumns = ({
             }
           />
         ) : (
-          <span className="inline-flex items-center gap-1 whitespace-nowrap text-green-600 dark:text-green-400">
-            <ShieldCheck size={14} /> {t("api_keys_page.all_models")}
+          <span className="inline-flex items-center gap-1 whitespace-nowrap">
+            <ShieldCheck size={14} className="text-ink-3" /> {t("api_keys_page.all_models")}
           </span>
         ),
     },
@@ -430,13 +416,12 @@ export const createApiKeyColumns = ({
       key: "allowedChannelGroups",
       label: t("api_keys_page.col_channel_groups"),
       width: COLUMN_WIDTH.badgeGroup,
-      cellClassName: "min-w-0 overflow-hidden text-slate-700 dark:text-white/70",
+      cellClassName: "min-w-0 overflow-hidden text-ink-2",
       render: (row) =>
         row["allowed-channel-groups"]?.length ? (
           <ApiKeyPermissionSummary
             count={row["allowed-channel-groups"].length}
             firstValue={row["allowed-channel-groups"][0]}
-            tone="violet"
             tooltipContent={
               <div className="flex max-w-xs flex-wrap gap-1.5">
                 {row["allowed-channel-groups"].map((group) => (
@@ -448,8 +433,8 @@ export const createApiKeyColumns = ({
             }
           />
         ) : (
-          <span className="inline-flex items-center gap-1 whitespace-nowrap text-green-600 dark:text-green-400">
-            <ShieldCheck size={14} /> {t("api_keys_page.all_channel_groups")}
+          <span className="inline-flex items-center gap-1 whitespace-nowrap">
+            <ShieldCheck size={14} className="text-ink-3" /> {t("api_keys_page.all_channel_groups")}
           </span>
         ),
     },
@@ -457,13 +442,12 @@ export const createApiKeyColumns = ({
       key: "allowedChannels",
       label: t("api_keys_page.col_channels"),
       width: COLUMN_WIDTH.badgeGroup,
-      cellClassName: "min-w-0 overflow-hidden text-slate-700 dark:text-white/70",
+      cellClassName: "min-w-0 overflow-hidden text-ink-2",
       render: (row) =>
         row["allowed-channels"]?.length ? (
           <ApiKeyPermissionSummary
             count={row["allowed-channels"].length}
             firstValue={row["allowed-channels"][0]}
-            tone="cyan"
             tooltipContent={
               <div className="flex max-w-xs flex-wrap gap-1.5">
                 {row["allowed-channels"].map((channel) => (
@@ -475,8 +459,8 @@ export const createApiKeyColumns = ({
             }
           />
         ) : (
-          <span className="inline-flex items-center gap-1 whitespace-nowrap text-green-600 dark:text-green-400">
-            <ShieldCheck size={14} /> {t("api_keys_page.all_channels")}
+          <span className="inline-flex items-center gap-1 whitespace-nowrap">
+            <ShieldCheck size={14} className="text-ink-3" /> {t("api_keys_page.all_channels")}
           </span>
         ),
     },
@@ -484,7 +468,7 @@ export const createApiKeyColumns = ({
       key: "createdAt",
       label: t("api_keys_page.col_created"),
       width: COLUMN_WIDTH.timestamp,
-      cellClassName: "whitespace-nowrap text-slate-500 dark:text-white/50",
+      cellClassName: "whitespace-nowrap text-ink-3",
       render: (row) => <>{formatApiKeyDate(row["created-at"])}</>,
     },
     {
@@ -520,9 +504,6 @@ export const createApiKeyColumns = ({
                 key: "toggle",
                 label: toggleLabel,
                 icon: <Power size={15} />,
-                className: row.disabled
-                  ? "text-slate-400 hover:bg-red-50 hover:text-red-500 dark:text-white/30 dark:hover:bg-red-900/20 dark:hover:text-red-400"
-                  : "text-emerald-500 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-900/20",
                 onClick: () => onToggleDisable(idx),
               },
               {
@@ -530,24 +511,18 @@ export const createApiKeyColumns = ({
                 label: viewUsageLabel,
                 icon: <BarChart3 size={15} />,
                 visible: !accountScoped,
-                className:
-                  "text-slate-500 hover:bg-slate-100 hover:text-ink dark:text-white/50 dark:hover:bg-neutral-800",
                 onClick: () => onViewUsage(row),
               },
               {
                 key: "copy",
                 label: copyKeyLabel,
                 icon: <Copy size={15} />,
-                className:
-                  "text-slate-500 hover:bg-slate-100 hover:text-ink dark:text-white/50 dark:hover:bg-neutral-800",
                 onClick: () => onCopy(row.key),
               },
               {
                 key: "import",
                 label: importLabel,
                 icon: <Upload size={15} />,
-                className:
-                  "text-slate-500 hover:bg-slate-100 hover:text-cyan-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-cyan-400",
                 onClick: () => onImportToCcSwitch(row),
               },
               {
@@ -555,8 +530,6 @@ export const createApiKeyColumns = ({
                 label: rotateKeyLabel,
                 icon: <RotateCcw size={15} />,
                 visible: accountScoped,
-                className:
-                  "text-slate-500 hover:bg-orange-50 hover:text-orange-600 dark:text-white/50 dark:hover:bg-orange-900/20 dark:hover:text-orange-400",
                 onClick: () => onRotate(idx),
               },
               {
@@ -564,16 +537,12 @@ export const createApiKeyColumns = ({
                 label: resetLabel,
                 icon: <RotateCcw size={15} className={isResetting ? "animate-spin" : ""} />,
                 disabled: !hasResettablePeriod || isResetting,
-                className:
-                  "text-slate-500 hover:bg-slate-100 hover:text-orange-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-orange-400",
                 onClick: () => onResetPeriodSpending(idx),
               },
               {
                 key: "edit",
                 label: editLabel,
                 icon: <Pencil size={15} />,
-                className:
-                  "text-slate-500 hover:bg-slate-100 hover:text-amber-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-amber-400",
                 onClick: () => onEdit(idx),
               },
               {

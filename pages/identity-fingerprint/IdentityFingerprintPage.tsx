@@ -18,7 +18,7 @@ import {
   type KimiIdentityFingerprint,
   type XAIIdentityFingerprint,
 } from "@code-proxy/api-client/endpoints/identity-fingerprint";
-import { Button, surface } from "@code-proxy/ui";
+import { Button, Callout, Textarea, surface } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
 import { Select } from "@code-proxy/ui";
@@ -1006,7 +1006,7 @@ export function IdentityFingerprintPage() {
 
   return (
     <div className="space-y-4 overflow-x-hidden">
-      <Card
+      <Card flat
         title={t("identity_fingerprint.title")}
         description={t("identity_fingerprint.description")}
         loading={loading}
@@ -1022,7 +1022,7 @@ export function IdentityFingerprintPage() {
 
           <TabsContent value="codex" className="mt-5">
             <div className="space-y-4">
-              <section className="rounded-2xl border border-slate-900/8 bg-slate-50/70 p-4 dark:border-white/8 dark:bg-neutral-900/45">
+              <section className={`${surface()} p-4`}>
                 <div className="flex flex-col gap-4 2xl:flex-row 2xl:items-start 2xl:justify-between">
                   <ToggleSwitch
                     checked={Boolean(codex.enabled)}
@@ -1161,14 +1161,14 @@ export function IdentityFingerprintPage() {
                       </Field>
                     </div>
                     <Field label={t("identity_fingerprint.custom_headers")}>
-                      <textarea
+                      <Textarea
                         value={customHeadersText}
                         onChange={(event) => setCustomHeadersText(event.target.value)}
                         disabled={saving}
                         spellCheck={false}
-                        className="min-h-24 w-full rounded-2xl border border-slate-900/8 bg-white px-3 py-2 font-mono text-sm text-slate-900 shadow-sm outline-none dark:border-white/8 dark:bg-neutral-900 dark:text-slate-100"
+                        className="font-mono"
                       />
-                      <p className="mt-2 text-xs text-slate-500 dark:text-white/50">
+                      <p className="mt-2 text-xs text-ink-3">
                         {t("identity_fingerprint.custom_headers_hint")}
                       </p>
                     </Field>
@@ -1185,9 +1185,9 @@ export function IdentityFingerprintPage() {
                         <PreviewRow key={label} label={label} value={value} />
                       ))}
                     </div>
-                    <div className="mt-4 rounded-xl bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+                    <ProviderNotice>
                       {t("identity_fingerprint.notice_desc")}
-                    </div>
+                    </ProviderNotice>
                   </SimplePanel>
                   <RuntimeStatePanel
                     provider="codex"
@@ -1204,7 +1204,7 @@ export function IdentityFingerprintPage() {
 
           <TabsContent value="claude" className="mt-5">
             <div className="space-y-4">
-              <section className="rounded-2xl border border-slate-900/8 bg-slate-50/70 p-4 dark:border-white/8 dark:bg-neutral-900/45">
+              <section className={`${surface()} p-4`}>
                 <div className="flex flex-col gap-4 2xl:flex-row 2xl:items-start 2xl:justify-between">
                   <ToggleSwitch
                     checked={Boolean(claude.enabled)}
@@ -1370,14 +1370,14 @@ export function IdentityFingerprintPage() {
                       />
                     </Field>
                     <Field label={t("identity_fingerprint.custom_headers")}>
-                      <textarea
+                      <Textarea
                         value={claudeCustomHeadersText}
                         onChange={(event) => setClaudeCustomHeadersText(event.target.value)}
                         disabled={saving}
                         spellCheck={false}
-                        className="min-h-24 w-full rounded-2xl border border-slate-900/8 bg-white px-3 py-2 font-mono text-sm text-slate-900 shadow-sm outline-none dark:border-white/8 dark:bg-neutral-900 dark:text-slate-100"
+                        className="font-mono"
                       />
-                      <p className="mt-2 text-xs text-slate-500 dark:text-white/50">
+                      <p className="mt-2 text-xs text-ink-3">
                         {t("identity_fingerprint.claude_custom_headers_hint")}
                       </p>
                     </Field>
@@ -1411,7 +1411,7 @@ export function IdentityFingerprintPage() {
 
           <TabsContent value="gemini" className="mt-5">
             <div className="space-y-4">
-              <section className="rounded-2xl border border-slate-900/8 bg-slate-50/70 p-4 dark:border-white/8 dark:bg-neutral-900/45">
+              <section className={`${surface()} p-4`}>
                 <div className="flex flex-col gap-4 2xl:flex-row 2xl:items-start 2xl:justify-between">
                   <ToggleSwitch
                     checked={Boolean(geminiFingerprint.enabled)}
@@ -1484,14 +1484,14 @@ export function IdentityFingerprintPage() {
                       />
                     </Field>
                     <Field label={t("identity_fingerprint.custom_headers")}>
-                      <textarea
+                      <Textarea
                         value={geminiCustomHeadersText}
                         onChange={(event) => setGeminiCustomHeadersText(event.target.value)}
                         disabled={saving}
                         spellCheck={false}
-                        className="min-h-24 w-full rounded-2xl border border-slate-900/8 bg-white px-3 py-2 font-mono text-sm text-slate-900 shadow-sm outline-none dark:border-white/8 dark:bg-neutral-900 dark:text-slate-100"
+                        className="font-mono"
                       />
-                      <p className="mt-2 text-xs text-slate-500 dark:text-white/50">
+                      <p className="mt-2 text-xs text-ink-3">
                         {t("identity_fingerprint.gemini_custom_headers_hint")}
                       </p>
                     </Field>
@@ -1502,14 +1502,14 @@ export function IdentityFingerprintPage() {
                     description={t("identity_fingerprint.gemini_desc")}
                   >
                     <Field label={t("identity_fingerprint.headers_json")}>
-                      <textarea
+                      <Textarea
                         value={geminiHeadersText}
                         onChange={(event) => setGeminiHeadersText(event.target.value)}
                         disabled={saving}
                         spellCheck={false}
-                        className="min-h-36 w-full rounded-2xl border border-slate-900/8 bg-white px-3 py-2 font-mono text-sm text-slate-900 shadow-sm outline-none dark:border-white/8 dark:bg-neutral-900 dark:text-slate-100"
+                        className="min-h-36 font-mono"
                       />
-                      <p className="mt-2 text-xs text-slate-500 dark:text-white/50">
+                      <p className="mt-2 text-xs text-ink-3">
                         {t("identity_fingerprint.gemini_headers_hint")}
                       </p>
                     </Field>
@@ -1564,7 +1564,7 @@ export function IdentityFingerprintPage() {
 
           <TabsContent value="xai" className="mt-5">
             <div className="space-y-4">
-              <section className="rounded-2xl border border-slate-900/8 bg-slate-50/70 p-4 dark:border-white/8 dark:bg-neutral-900/45">
+              <section className={`${surface()} p-4`}>
                 <div className="flex flex-col gap-4 2xl:flex-row 2xl:items-start 2xl:justify-between">
                   <ToggleSwitch
                     checked={Boolean(xaiFingerprint.enabled)}
@@ -1640,14 +1640,14 @@ export function IdentityFingerprintPage() {
                       </Field>
                     </div>
                     <Field label={t("identity_fingerprint.custom_headers")}>
-                      <textarea
+                      <Textarea
                         value={xaiCustomHeadersText}
                         onChange={(event) => setXAICustomHeadersText(event.target.value)}
                         disabled={saving}
                         spellCheck={false}
-                        className="min-h-24 w-full rounded-2xl border border-slate-900/8 bg-white px-3 py-2 font-mono text-sm text-slate-900 shadow-sm outline-none dark:border-white/8 dark:bg-neutral-900 dark:text-slate-100"
+                        className="font-mono"
                       />
-                      <p className="mt-2 text-xs text-slate-500 dark:text-white/50">
+                      <p className="mt-2 text-xs text-ink-3">
                         {t("identity_fingerprint.xai_custom_headers_hint")}
                       </p>
                     </Field>
@@ -1681,7 +1681,7 @@ export function IdentityFingerprintPage() {
 
           <TabsContent value="kimi" className="mt-5">
             <div className="space-y-4">
-              <section className="rounded-2xl border border-slate-900/8 bg-slate-50/70 p-4 dark:border-white/8 dark:bg-neutral-900/45">
+              <section className={`${surface()} p-4`}>
                 <div className="flex flex-col gap-4 2xl:flex-row 2xl:items-start 2xl:justify-between">
                   <ToggleSwitch
                     checked={Boolean(kimiFingerprint.enabled)}
@@ -1732,14 +1732,14 @@ export function IdentityFingerprintPage() {
                       ))}
                     </div>
                     <Field label={t("identity_fingerprint.custom_headers")}>
-                      <textarea
+                      <Textarea
                         value={kimiCustomHeadersText}
                         onChange={(event) => setKimiCustomHeadersText(event.target.value)}
                         disabled={saving}
                         spellCheck={false}
-                        className="min-h-24 w-full rounded-2xl border border-slate-900/8 bg-white px-3 py-2 font-mono text-sm text-slate-900 shadow-sm outline-none dark:border-white/8 dark:bg-neutral-900 dark:text-slate-100"
+                        className="font-mono"
                       />
-                      <p className="mt-2 text-xs text-slate-500 dark:text-white/50">
+                      <p className="mt-2 text-xs text-ink-3">
                         {t("identity_fingerprint.kimi_custom_headers_hint")}
                       </p>
                     </Field>
@@ -1772,7 +1772,7 @@ export function IdentityFingerprintPage() {
           </TabsContent>
           <TabsContent value="antigravity" className="mt-5">
             <div className="space-y-4">
-              <section className="rounded-2xl border border-slate-900/8 bg-slate-50/70 p-4 dark:border-white/8 dark:bg-neutral-900/45">
+              <section className={`${surface()} p-4`}>
                 <div className="flex flex-col gap-4 2xl:flex-row 2xl:items-start 2xl:justify-between">
                   <ToggleSwitch
                     checked={Boolean(antigravityFingerprint.enabled)}
@@ -1836,14 +1836,14 @@ export function IdentityFingerprintPage() {
                       </Field>
                     </div>
                     <Field label={t("identity_fingerprint.custom_headers")}>
-                      <textarea
+                      <Textarea
                         value={antigravityCustomHeadersText}
                         onChange={(event) => setAntigravityCustomHeadersText(event.target.value)}
                         disabled={saving}
                         spellCheck={false}
-                        className="min-h-24 w-full rounded-2xl border border-slate-900/8 bg-white px-3 py-2 font-mono text-sm text-slate-900 shadow-sm outline-none dark:border-white/8 dark:bg-neutral-900 dark:text-slate-100"
+                        className="font-mono"
                       />
-                      <p className="mt-2 text-xs text-slate-500 dark:text-white/50">
+                      <p className="mt-2 text-xs text-ink-3">
                         {t("identity_fingerprint.antigravity_custom_headers_hint")}
                       </p>
                     </Field>
@@ -1877,9 +1877,9 @@ export function IdentityFingerprintPage() {
         </Tabs>
 
         {error ? (
-          <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-400/30 dark:bg-rose-400/10 dark:text-rose-200">
+          <Callout tone="danger" role="alert" className="mt-4">
             {error}
-          </div>
+          </Callout>
         ) : null}
       </Card>
       <CodexRecommendationsModal
@@ -1916,12 +1916,12 @@ function RuntimeStatePanel({
       description={t("identity_fingerprint.learned_desc")}
     >
       <div className="flex flex-wrap items-center gap-2 text-xs">
-        <SourcePill tone={status.enabled ? "learned" : "default"}>
+        <SourcePill>
           {status.enabled
             ? t("identity_fingerprint.status_enabled")
             : t("identity_fingerprint.status_disabled")}
         </SourcePill>
-        <span className="text-slate-500 dark:text-white/50">
+        <span className="text-ink-3">
           {t("identity_fingerprint.learned_count", {
             count: status.learned_count ?? learned.length,
           })}
@@ -1930,13 +1930,13 @@ function RuntimeStatePanel({
 
       {effective.length > 0 ? (
         <div className="space-y-3">
-          <h4 className="text-xs font-medium text-slate-500 dark:text-white/45">
+          <h4 className="text-xs font-medium text-ink-3">
             {t("identity_fingerprint.effective_title")}
           </h4>
           {effective.map((record, index) => (
             <div
               key={`${record.account_key || "default"}-${index}`}
-              className="rounded-xl border border-slate-900/8 bg-slate-50/70 p-3 dark:border-white/8 dark:bg-neutral-900/60"
+              className="rounded-xl bg-subtle p-3"
             >
               <RecordHeader
                 accountKey={record.account_key}
@@ -1946,14 +1946,14 @@ function RuntimeStatePanel({
               />
               <div className="mt-3 space-y-2">
                 {orderedFieldEntries(provider, record.fields).map(([field, fieldValue]) => (
-                  <div key={field} className="rounded-lg bg-white px-3 py-2 dark:bg-neutral-950">
+                  <div key={field} className="py-1">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-semibold text-slate-600 dark:text-white/60">
+                      <span className="text-xs font-semibold text-ink-2">
                         {t(FIELD_LABEL_KEYS[field] ?? field)}
                       </span>
                       <SourceBadge source={fieldValue.source} />
                     </div>
-                    <div className="mt-1 break-all text-xs text-slate-900 dark:text-white">
+                    <div className="mt-1 break-all text-xs text-ink">
                       {fieldValue.value || "-"}
                     </div>
                   </div>
@@ -1963,20 +1963,20 @@ function RuntimeStatePanel({
           ))}
         </div>
       ) : (
-        <p className="rounded-xl bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-500 dark:bg-neutral-900/70 dark:text-white/50">
+        <p className="rounded-xl bg-subtle px-3 py-2 text-xs leading-5 text-ink-3">
           {t("identity_fingerprint.no_effective_records")}
         </p>
       )}
 
       {learned.length > 0 ? (
         <div className="space-y-3">
-          <h4 className="text-xs font-medium text-slate-500 dark:text-white/45">
+          <h4 className="text-xs font-medium text-ink-3">
             {t("identity_fingerprint.learned_records_title")}
           </h4>
           {learned.map((record) => (
             <div
               key={record.account_key}
-              className={[surface({ tone: "plain", radius: "xl" }), "p-3"].join(" ")}
+              className="space-y-2 rounded-xl bg-subtle p-3"
             >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <RecordHeader

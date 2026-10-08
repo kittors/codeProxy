@@ -22,10 +22,13 @@ export function EmbedPage() {
     );
   }
   return (
+    // 嵌入页钉满一屏：iframe 没有内容高度可言，高度只能来自外壳分配的剩余空间。
+    // 内嵌页面就是这一页的内容，直接铺在外壳内容区上，不再描一圈边框。
     <iframe
+      data-page-fill="always"
       title={t(menu.label_key, { defaultValue: menu.title || menu.code })}
       src={menu.link_url}
-      className="h-[calc(100dvh-140px)] min-h-[420px] w-full rounded-2xl border border-line bg-surface"
+      className="w-full rounded-2xl bg-surface"
     />
   );
 }

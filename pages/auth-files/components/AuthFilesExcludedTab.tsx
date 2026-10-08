@@ -1,7 +1,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
 import { FileJson, Plus, RefreshCw } from "lucide-react";
-import { Button, ProviderTag, surface, iconHueClass } from "@code-proxy/ui";
+import { Button, ProviderTag, surface } from "@code-proxy/ui";
 import { EmptyState } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
 
@@ -83,7 +83,7 @@ export function AuthFilesExcludedTab({
               value={excludedNewProvider}
               onChange={(e) => setExcludedNewProvider(e.currentTarget.value)}
               placeholder={t("auth_files.add_provider_placeholder")}
-              endAdornment={<FileJson size={16} className={iconHueClass(FileJson)} />}
+              endAdornment={<FileJson size={16} className="text-ink-3" />}
               disabled={excludedUnsupported}
             />
             <Button
@@ -149,7 +149,7 @@ export function AuthFilesExcludedTab({
                         placeholder={t("auth_files.one_model_per_line")}
                         aria-label={`${provider} ${t("auth_files_page.excluded_tab")}`}
                         disabled={excludedUnsupported}
-                        className="mt-3 min-h-[120px] w-full resize-y rounded-2xl border border-line bg-surface px-3 py-2 font-mono text-xs text-ink outline-none transition-colors duration-200 ease-out placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:placeholder:text-neutral-500 dark:focus-visible:ring-white/15"
+                        className="mt-3 min-h-[120px] w-full resize-y rounded-inner bg-field px-3 py-2 font-mono text-xs text-ink shadow-control outline-none transition-[box-shadow] duration-200 ease-out placeholder:text-ink-3 hover:shadow-control-hover focus-visible:shadow-control-focus"
                       />
                     </div>
                   );

@@ -2,7 +2,6 @@ import type { CSSProperties, ReactNode } from "react";
 import { Crown, Zap } from "lucide-react";
 import { vendorBrand, vendorBrandStyle, VendorIcon } from "@code-proxy/assets";
 import { cn } from "../utils/selectStyles";
-import "./brandBadges.css";
 
 /** 与 domain 的 PlanTier 同一组取值（ui 包不依赖 domain，这里单独声明）。 */
 export type PlanBadgeTier = "free" | "entry" | "pro" | "max" | "ultra";
@@ -30,21 +29,24 @@ const brandStyle = (vendor: string | null | undefined, style?: CSSProperties): C
 };
 
 /**
- * 会员等级的样式，由低到高越来越「隆重」，颜色都来自厂商品牌色：
- * - free：品牌色细描边，字色偏淡；
- * - entry：品牌色淡底；
+ * 会员等级的样式：颜色来自厂商品牌色，等级只靠「填充有多重」和小图标区分——
+ * - free：极淡的品牌底、偏灰的字；
+ * - entry：品牌淡底 + 品牌色字；
  * - pro：品牌实色；
- * - max：品牌主色到辅色的渐变 + 闪电；
- * - ultra：辅色—主色—辅色的双向渐变 + 皇冠 + 光晕 + 流光。
+ * - max：品牌实色 + 闪电；
+ * - ultra：品牌实色 + 皇冠。
+ *
+ * 以前高阶档是渐变 + 外发光 + 描边 + 循环流光，一张卡片上它是最抢眼的东西，比账号状态还
+ * 显眼；全站收敛到「一个强调色 + 状态色」之后，徽章保留品牌色但去掉这些装饰，一张卡里
+ * 只有它一块实色，仍然一眼看得出档位。
  */
 const TIER_CLASS: Record<PlanBadgeTier, string> = {
-  free: "text-[color-mix(in_oklab,var(--brand-text)_70%,var(--color-ink-2))] ring-1 ring-inset ring-[color-mix(in_oklab,var(--brand)_32%,transparent)]",
+  free: "bg-[color-mix(in_oklab,var(--brand)_7%,transparent)] text-[color-mix(in_oklab,var(--brand-text)_70%,var(--color-ink-2))] dark:bg-[color-mix(in_oklab,var(--brand)_12%,transparent)]",
   entry:
-    "bg-[color-mix(in_oklab,var(--brand)_13%,transparent)] text-[var(--brand-text)] ring-1 ring-inset ring-[color-mix(in_oklab,var(--brand)_24%,transparent)] dark:bg-[color-mix(in_oklab,var(--brand)_18%,transparent)]",
-  pro: "bg-[var(--brand-fill)] text-[var(--brand-on)] shadow-[inset_0_1px_0_rgb(255_255_255/0.2)]",
-  max: "bg-[linear-gradient(120deg,var(--brand-fill),var(--brand-fill-2))] text-[var(--brand-on)] shadow-[inset_0_1px_0_rgb(255_255_255/0.22),0_2px_8px_-3px_color-mix(in_oklab,var(--brand)_70%,transparent)]",
-  ultra:
-    "brand-badge-shine bg-[linear-gradient(115deg,var(--brand-fill-2),var(--brand-fill)_48%,var(--brand-fill-2))] text-[var(--brand-on)] ring-1 ring-inset ring-white/25 shadow-[inset_0_1px_0_rgb(255_255_255/0.28),0_3px_12px_-3px_color-mix(in_oklab,var(--brand)_80%,transparent)]",
+    "bg-[color-mix(in_oklab,var(--brand)_13%,transparent)] text-[var(--brand-text)] dark:bg-[color-mix(in_oklab,var(--brand)_18%,transparent)]",
+  pro: "bg-[var(--brand-fill)] text-[var(--brand-on)]",
+  max: "bg-[var(--brand-fill)] text-[var(--brand-on)]",
+  ultra: "bg-[var(--brand-fill)] text-[var(--brand-on)]",
 };
 
 /**
@@ -90,30 +92,29 @@ export function PlanBadge({
 }
 
 /**
- * 供应商标签（codex、claude、gemini-cli……）：品牌色淡底 + 品牌色文字，可带一个小 logo。
- * 以前所有供应商同一个灰色胶囊，扫一眼分不出是谁家的号。
+ * 供应商标签（codex、claude、gemini-cli……）：中性淡底 + 厂商 logo。
+ *
+ * 认厂商靠 logo（它本身就是品牌色），胶囊不再整块染成品牌色：一张账号卡上供应商标签、
+ * 会员徽章、用量标签各染一种颜色，正是「色太杂」的来源。没有 logo 的厂商只显示名字。
  */
 export function ProviderTag({
   vendor,
   children,
-  withLogo = false,
+  withLogo = true,
   className,
   ...rest
 }: {
   vendor: string | null | undefined;
   children: ReactNode;
-  /** 在文字前放厂商 logo（列表很密时可以只用颜色）。 */
+  /** 在文字前放厂商 logo；极密的列表可以关掉，只留名字。 */
   withLogo?: boolean;
   className?: string;
 } & Omit<React.HTMLAttributes<HTMLSpanElement>, "children" | "className">) {
   return (
     <span
       {...rest}
-      style={brandStyle(vendor, rest.style)}
       className={cn(
-        BRAND_VARS,
-        "inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-px text-2xs font-medium whitespace-nowrap",
-        "bg-[color-mix(in_oklab,var(--brand)_11%,transparent)] text-[var(--brand-text)] dark:bg-[color-mix(in_oklab,var(--brand)_18%,transparent)]",
+        "inline-flex shrink-0 items-center gap-1 rounded-md bg-ink/[0.05] px-1.5 py-px text-2xs font-medium whitespace-nowrap text-ink-2 dark:bg-white/[0.07]",
         className,
       )}
     >

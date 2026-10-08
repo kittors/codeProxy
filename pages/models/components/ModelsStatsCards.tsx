@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { Activity, Check, Cpu } from "lucide-react";
-import { Card, DialogIcon } from "@code-proxy/ui";
+import { Card } from "@code-proxy/ui";
 
 interface ModelsStatsCardsProps {
   stats: {
@@ -18,9 +18,8 @@ export function ModelsStatsCards({ stats, totalCost }: ModelsStatsCardsProps) {
     <div className="grid gap-4 md:grid-cols-3">
       <Card padding="compact" bodyClassName="mt-0">
         <div className="flex items-center gap-2 text-xs font-semibold text-ink-3">
-          <DialogIcon size="xs">
-            <Cpu />
-          </DialogIcon>
+          {/* 标题前是线性图标，不垫图标块（同仪表盘的指标卡）。 */}
+          <Cpu size={14} className="shrink-0" aria-hidden="true" />
           {t("models_page.available_models")}
         </div>
         <div className="mt-2 text-2xl font-bold tabular-nums text-ink">
@@ -29,9 +28,7 @@ export function ModelsStatsCards({ stats, totalCost }: ModelsStatsCardsProps) {
       </Card>
       <Card padding="compact" bodyClassName="mt-0">
         <div className="flex items-center gap-2 text-xs font-semibold text-ink-3">
-          <DialogIcon size="xs" tone="emerald">
-            <Check />
-          </DialogIcon>
+          <Check size={14} className="shrink-0" aria-hidden="true" />
           {t("models_page.enabled_models")}
         </div>
         <div className="mt-2 text-2xl font-bold tabular-nums text-ink">
@@ -43,10 +40,7 @@ export function ModelsStatsCards({ stats, totalCost }: ModelsStatsCardsProps) {
       </Card>
       <Card padding="compact" bodyClassName="mt-0">
         <div className="flex items-center gap-2 text-xs font-semibold text-ink-3">
-          {/* 费用沿用全站图表的「费用琥珀」。 */}
-          <DialogIcon size="xs" tone="amber">
-            <Activity />
-          </DialogIcon>
+          <Activity size={14} className="shrink-0" aria-hidden="true" />
           {t("models_page.quota_cost")}
         </div>
         <div className="mt-2 text-2xl font-bold tabular-nums text-ink">

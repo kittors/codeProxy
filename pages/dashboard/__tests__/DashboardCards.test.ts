@@ -66,12 +66,15 @@ describe("dashboard card composition", () => {
 
     expect(source).toContain("HealthHeroCard");
     expect(source).toContain("DiskUsageRingCard");
-    // 两个环都走同一个渐变环组件：描边从 0 转到当前值，告警时换色。
-    expect(source.match(/<GradientRing/g)?.length).toBe(2);
+    // 两个环都走同一个环形组件：描边从 0 转到当前值，告警时换色。
+    expect(source.match(/<MeterRing/g)?.length).toBe(2);
     expect(visuals).toContain("strokeDasharray={circumference}");
     expect(visuals).toContain("transition-[stroke-dashoffset]");
     expect(source).toContain("grid gap-3 xl:grid-cols-[260px_minmax(0,1fr)_280px]");
-    expect(source).not.toContain('label={t("system_monitor.disk_free")}');
+    // 只有一层卡片：卡片里不再套淡底小块和彩色图标块，「系统监控」本身是扁平分区。
+    expect(source).not.toContain("bg-subtle");
+    expect(source).not.toContain("IconChip");
+    expect(source).toMatch(/<Card\s+flat/);
   });
 
   test("labels api key count explicitly instead of users in latency summary", () => {
@@ -85,15 +88,14 @@ describe("dashboard card composition", () => {
     const chartSource = readModule("pages/dashboard/ThroughputTrendChart.tsx");
     const systemMonitorSource = readModule("pages/dashboard/SystemMonitorSection.tsx");
 
-    // RPM / TPM 读数格是白底卡片（surface 令牌随 .dark 切换）+ 与曲线同色的身份色图标块，
-    // 不再是灰底方块；文字仍用 text-ink-* 令牌，没有只顾浅色的填充色。
-    expect(chartSource).toContain('surface({ tone: "raised"');
-    expect(chartSource).toContain('<DialogIcon tone="blue"');
-    expect(chartSource).toContain('<DialogIcon tone="violet"');
+    // RPM / TPM 读数直接写在卡片上（标签前一颗与曲线同色的圆点），不再套白底小卡和
+    // 彩色图标块；文字用 text-ink-* 令牌，深浅色都跟着切换，没有只顾浅色的填充色。
+    expect(chartSource).not.toContain("surface(");
+    expect(chartSource).not.toContain("DialogIcon");
     expect(chartSource).not.toContain("bg-subtle");
     expect(chartSource).toContain("text-ink-3");
     expect(chartSource).not.toMatch(/bg-slate-50(?![\w/-])/);
-    expect(systemMonitorSource).toContain("bg-subtle");
-    expect(systemMonitorSource).toContain("dark:text-white/80");
+    expect(systemMonitorSource).not.toContain("dark:text-white/80");
+    expect(systemMonitorSource).toContain("text-ink-2");
   });
 });

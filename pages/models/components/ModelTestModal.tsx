@@ -215,7 +215,7 @@ export function ModelTestModal({
     typeof displayDurationMs === "number" && Number.isFinite(displayDurationMs) ? (
       <span
         data-testid="model-test-duration"
-        className="inline-flex shrink-0 items-center gap-1 rounded-full border border-slate-900/8 bg-slate-50 px-2 py-0.5 text-2xs font-semibold tabular-nums text-slate-600 dark:border-white/10 dark:bg-white/[0.06] dark:text-white/70"
+        className="inline-flex shrink-0 items-center gap-1 rounded-full bg-ink/[0.05] px-2 py-0.5 text-2xs font-semibold tabular-nums text-ink-2 dark:bg-white/[0.07]"
       >
         <Timer size={11} className="shrink-0" aria-hidden />
         {t("models_page.test_duration", { duration: formatLatency(displayDurationMs) })}
@@ -306,7 +306,7 @@ export function ModelTestModal({
                   </div>
                   <div
                     role="alert"
-                    className="max-h-64 overflow-auto whitespace-pre-wrap rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200"
+                    className="max-h-64 overflow-auto whitespace-pre-wrap rounded-lg bg-rose-500/[0.08] px-3 py-2 text-sm text-rose-700 dark:text-rose-300"
                   >
                     {displayError}
                   </div>

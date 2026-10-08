@@ -101,13 +101,11 @@ describe("monitor center chart colours", () => {
     expect(fills).toContainEqual(chartGradient(palette.metric.latency, 0.42, 0.2));
   });
 
-  test("card title icons are coloured: a metric hue when given, the icon registry otherwise", () => {
-    const { container: latency } = render(<MonitorCardTitle icon={Timer} hue="indigo" label="Latency" />);
-    expect(latency.querySelector("svg")?.getAttribute("class")).toContain("text-indigo-500");
+  test("card title icons are neutral: colour belongs to the data and to states", () => {
+    const { container: latency } = render(<MonitorCardTitle icon={Timer} label="Latency" />);
+    expect(latency.querySelector("svg")?.getAttribute("class")).toContain("text-ink-3");
 
     const { container: flows } = render(<MonitorCardTitle icon={Waypoints} label="Flows" />);
-    const flowClass = flows.querySelector("svg")?.getAttribute("class") ?? "";
-    expect(flowClass).toContain("text-teal-500");
-    expect(flowClass).not.toContain("text-ink-3");
+    expect(flows.querySelector("svg")?.getAttribute("class")).toContain("text-ink-3");
   });
 });

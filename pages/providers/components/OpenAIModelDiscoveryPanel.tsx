@@ -100,10 +100,7 @@ export function OpenAIModelDiscoveryPanel({
       </div>
 
       {discoveredModels.length ? (
-        <div
-          ref={discoveredSectionRef}
-          className="rounded-xl border border-line bg-subtle p-4"
-        >
+        <div ref={discoveredSectionRef} className="rounded-2xl bg-subtle p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-xs font-medium text-ink-2">
               {t("providers.found_models", { count: discoveredModels.length })}
@@ -153,7 +150,8 @@ export function OpenAIModelDiscoveryPanel({
 
           <div
             ref={discoveredListRef}
-            className="mt-2.5 max-h-52 overflow-y-auto rounded-xl border border-line bg-surface"
+            // 列表直接放在淡底里滚动，不再套一层描边白框；行悬停加深一档。
+            className="mt-2.5 max-h-52 overflow-y-auto"
             role="list"
             aria-label={t("providers.found_models", {
               count: discoveredModels.length,
@@ -180,12 +178,12 @@ export function OpenAIModelDiscoveryPanel({
                       transform: `translateY(${item.start}px)`,
                     }}
                   >
-                    <label className="flex cursor-pointer items-center gap-2.5 px-3 py-1 text-xs font-mono text-ink-2 transition-colors hover:bg-hover">
+                    <label className="flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1 text-xs font-mono text-ink-2 transition-colors hover:bg-hover">
                       <input
                         type="checkbox"
                         checked={checked}
                         onChange={() => handleCheckboxChange(model.id)}
-                        className="h-3.5 w-3.5 shrink-0 rounded border-slate-300 text-ink focus-visible:ring-2 focus-visible:ring-ink/[0.06] dark:border-neutral-600 dark:bg-neutral-900"
+                        className="h-3.5 w-3.5 shrink-0 accent-accent"
                       />
                       <span className="truncate">{model.id}</span>
                     </label>

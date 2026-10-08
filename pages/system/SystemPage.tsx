@@ -12,7 +12,7 @@ import {
   Server,
 } from "lucide-react";
 import { useAuth } from "@app/providers/AuthProvider";
-import { Card, iconHueClass } from "@code-proxy/ui";
+import { Card } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
 import { SystemUpdateCard } from "@features/online-update";
 
@@ -54,7 +54,8 @@ function InfoCard({
       padding="compact"
       bodyClassName="mt-0"
       className={[
-        "group transition hover:shadow-[2px_2px_8px_rgb(0_0_0_/_0.06)] dark:hover:shadow-[2px_2px_8px_rgb(0_0_0_/_0.24)]",
+        // 悬停只把投影换成抬起一档的 shadow-lift，不另写一套阴影。
+        "group transition-shadow hover:shadow-lift",
         hasCopy || hasExternal ? "pr-11" : "",
       ]
         .filter(Boolean)
@@ -64,7 +65,7 @@ function InfoCard({
         <button
           type="button"
           onClick={handleCopy}
-          className="absolute right-2.5 top-2.5 rounded-md p-1 text-slate-400 opacity-100 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-neutral-800 dark:hover:text-white sm:opacity-0 sm:group-hover:opacity-100"
+          className="absolute right-2.5 top-2.5 rounded-md p-1 text-ink-3 opacity-100 transition hover:bg-hover hover:text-ink sm:opacity-0 sm:group-hover:opacity-100"
           title={t("system_page.copy")}
         >
           {copied ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
@@ -72,8 +73,8 @@ function InfoCard({
       ) : null}
 
       <div className="flex items-center gap-2 mb-1.5">
-        <Icon size={13} className="hidden text-slate-400 dark:text-white/35 sm:block" />
-        <span className="text-2xs font-medium text-slate-400 dark:text-white/35">
+        <Icon size={13} className="hidden text-ink-3 sm:block" />
+        <span className="text-2xs font-medium text-ink-3">
           {label}
         </span>
       </div>
@@ -89,7 +90,7 @@ function InfoCard({
           </a>
         ) : (
           <span
-            className={`truncate text-sm font-medium text-slate-800 dark:text-white ${mono ? "font-mono text-xs" : ""}`}
+            className={`truncate text-sm font-medium text-ink ${mono ? "font-mono text-xs" : ""}`}
           >
             {value}
           </span>
@@ -117,13 +118,13 @@ export function SystemPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-selected">
-            <Server size={16} className={iconHueClass(Server)} />
+            <Server size={16} className="text-ink-3" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
+            <h2 className="text-lg font-semibold tracking-tight text-ink">
               {t("system_page.title")}
             </h2>
-            <p className="hidden text-xs text-slate-500 dark:text-white/45 sm:block">
+            <p className="hidden text-xs text-ink-3 sm:block">
               {t("system_page.subtitle")}
             </p>
           </div>

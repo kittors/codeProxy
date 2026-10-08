@@ -206,7 +206,7 @@ export function Modal({
         }}
         style={panelMotion.style}
         className={[
-          `relative z-10 flex max-h-[calc(100dvh-0.5rem)] w-full ${widthCls} flex-col overflow-hidden rounded-t-3xl bg-elevated text-ink shadow-dialog outline-none sm:max-h-[calc(100dvh-2rem)] sm:rounded-3xl`,
+          `relative z-10 flex max-h-[calc(100dvh-0.5rem)] w-full ${widthCls} flex-col overflow-hidden rounded-t-3xl bg-elevated text-ink shadow-dialog outline-none [--cp-backdrop:var(--cp-elevated)] sm:max-h-[calc(100dvh-2rem)] sm:rounded-3xl`,
           panelMotion.className,
           nudging ? "overlay-nudge" : "",
           panelClassName,

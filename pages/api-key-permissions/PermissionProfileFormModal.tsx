@@ -149,7 +149,7 @@ export function PermissionProfileFormModal({
               {...restrictionLabels}
             />
           </FormField>
-          <SettingGroup>
+          <SettingGroup flat>
             <SettingRow
               label={t("api_keys_page.form_exact_channels")}
               description={t("api_keys_page.form_exact_channels_desc")}

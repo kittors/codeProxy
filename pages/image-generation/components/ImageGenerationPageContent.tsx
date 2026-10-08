@@ -105,7 +105,7 @@ export function ImageGenerationPage() {
                       </TabsContent>
                     ))}
                   </Tabs>
-                  <div className={[surface({ tone: "inset", radius: "2xl" }), "px-4 py-3 text-xs leading-6 text-ink-2"].join(" ")}>
+                  <div className="rounded-inner bg-subtle px-4 py-3 text-xs leading-6 text-ink-2">
                     {t("image_generation.active_endpoint_hint", {
                       method: activeDoc.method,
                       path: activeDoc.path,
@@ -141,7 +141,8 @@ function EndpointCallDoc({ doc }: { doc: EndpointDoc }) {
 
   return (
     <div className="space-y-4">
-      <div className={[surface({ tone: "inset", radius: "3xl" }), "p-4"].join(" ")}>
+      {/* 卡片里的分组只用无边淡底，圆角取卡片的同心内圆角（rounded-inner）。 */}
+      <div className="rounded-inner bg-subtle p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-sm font-semibold text-ink">
@@ -151,8 +152,9 @@ function EndpointCallDoc({ doc }: { doc: EndpointDoc }) {
               {t(doc.descriptionKey)}
             </p>
           </div>
-          <div className={[surface({ tone: "plain", radius: "full" }), "flex max-w-full items-center gap-2 px-3 py-1.5 font-mono text-xs"].join(" ")}>
-            <span className="rounded-full bg-accent px-2 py-0.5 font-semibold text-accent-fg">
+          {/* 淡底上的白色胶囊，不描边；请求方法是中性标签，蓝色只留给操作与选中。 */}
+          <div className="flex max-w-full items-center gap-2 rounded-full bg-surface px-3 py-1.5 font-mono text-xs">
+            <span className="rounded-full bg-ink/[0.06] px-2 py-0.5 font-semibold text-ink dark:bg-white/[0.1]">
               {doc.method}
             </span>
             <span className="truncate text-ink-2">{doc.path}</span>
@@ -168,11 +170,7 @@ function EndpointCallDoc({ doc }: { doc: EndpointDoc }) {
         </div>
       </div>
 
-      <CodeBlock
-        code={doc.curl}
-        label="curl"
-        className="shadow-[0_14px_42px_rgb(15_23_42_/_0.16)]"
-      />
+      <CodeBlock code={doc.curl} label="curl" />
     </div>
   );
 }
@@ -213,9 +211,10 @@ function SpecTable({ tableId, title, rows }: { tableId: string; title: string; r
   );
 
   return (
+    // 和上面的「调用方式」同一层：内容区上的第一层卡片（伪元素细边 + 投影），不套在调用卡片里。
     <div
       data-testid="image-generation-spec-card"
-      className="overflow-hidden rounded-2xl bg-surface p-4"
+      className={`overflow-hidden p-4 ${surface({ radius: "3xl" })}`}
     >
       <h4 className="text-sm font-semibold text-ink">{title}</h4>
       <div className="mt-4">

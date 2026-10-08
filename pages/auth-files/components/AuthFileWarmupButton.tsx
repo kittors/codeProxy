@@ -38,7 +38,6 @@ export function AuthFileWarmupButton({ file, actionSize, actionIconSize }: AuthF
         }}
         title={t("antigravity_quota.warmup")}
         aria-label={t("antigravity_quota.warmup")}
-        className="text-amber-500 hover:text-amber-600 dark:text-amber-400"
       >
         {loading ? (
           <Loader2 size={actionIconSize} className="animate-spin" />

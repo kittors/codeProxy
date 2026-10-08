@@ -57,7 +57,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { TextInput, floatingPanelSurface, resolveMenuIcon, iconHueClass, ScrollFade } from "@code-proxy/ui";
+import { TextInput, floatingPanelSurface, resolveMenuIcon, ScrollFade } from "@code-proxy/ui";
 
 
 type IconOption = { name: string; icon: LucideIcon };
@@ -205,7 +205,7 @@ export function MenuIconPicker({
               if (!disabled) setOpen(true);
             }}
             startAdornment={
-              value ? <SelectedIcon size={16} className={iconHueClass(SelectedIcon)} aria-hidden="true" /> : null
+              value ? <SelectedIcon size={16} className="text-ink-3" aria-hidden="true" /> : null
             }
             endAdornment={
               value && !disabled ? (
@@ -224,7 +224,8 @@ export function MenuIconPicker({
         <button
           type="button"
           disabled={disabled}
-          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-line bg-field text-ink-3 transition-colors hover:border-line-strong hover:text-ink disabled:opacity-50"
+          // 和左边的输入框同一种控件外观：胶囊形、阴影描边，不画 border。
+          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-field text-ink-2 shadow-control transition-[color,box-shadow] hover:text-ink hover:shadow-control-hover focus-visible:shadow-control-focus focus-visible:outline-none disabled:opacity-50"
           aria-label={t("identity_admin.menu_icon_picker")}
           onClick={() => {
             if (!disabled) setOpen((current) => !current);

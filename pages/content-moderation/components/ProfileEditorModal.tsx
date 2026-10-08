@@ -449,7 +449,7 @@ export function ProfileEditorModal({
             </FormField>
           </div>
           {profile?.api_key_configured ? (
-            <SettingGroup>
+            <SettingGroup flat>
               <SettingRow
                 label={t("content_moderation.clear_api_key")}
                 description={t("content_moderation.clear_api_key_hint")}

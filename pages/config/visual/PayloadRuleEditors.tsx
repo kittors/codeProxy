@@ -14,11 +14,14 @@ import {
   VISUAL_CONFIG_PROTOCOL_OPTIONS,
 } from "@features/visual-config-editor";
 import type { ReactNode } from "react";
-import { Button, Select, Textarea, TextInput } from "@code-proxy/ui";
+import { Button, Select, surface, Textarea, TextInput } from "@code-proxy/ui";
 
 /**
  * 一类规则（默认 / 覆盖 / 过滤）：标题与说明常驻，右上角「添加规则」。
  * 放在配置页「请求体改写」分区里，三类规则上下排列，不再各套一张带 ⓘ 提示的卡片。
+ *
+ * 层级只有一层卡片：这一类规则是卡片（和设置组同一种外观），卡片里每条规则是一块无边淡底，
+ * 规则里的模型、参数直接排在淡底上——以前是「描边卡 → 描边淡底块 → 描边白卡」三层框。
  */
 function RuleBlock({
   title,
@@ -35,7 +38,7 @@ function RuleBlock({
   children: ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border border-line bg-surface">
+    <div className={surface({ radius: "2xl" })}>
       <div className="flex flex-wrap items-start justify-between gap-3 px-5 pt-4 pb-3">
         <div className="min-w-0 flex-1">
           <h3 className="text-sm font-semibold text-ink">{title}</h3>
@@ -235,7 +238,7 @@ export function PayloadRulesEditor({
       }
     >
       {rules.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-line px-4 py-6 text-center text-sm text-ink-3">
+        <div className="rounded-xl bg-subtle px-4 py-6 text-center text-sm text-ink-3">
           {t("visual_config.no_rules")}
         </div>
       ) : (
@@ -243,7 +246,7 @@ export function PayloadRulesEditor({
           {rules.map((rule, ruleIndex) => (
             <div
               key={rule.id}
-              className="space-y-4 rounded-2xl border border-line bg-subtle p-4"
+              className="space-y-4 rounded-xl bg-subtle p-4"
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="text-sm font-semibold text-ink">
@@ -329,16 +332,13 @@ export function PayloadRulesEditor({
                 </div>
 
                 {(rule.params || []).length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-line p-3 text-center text-xs text-ink-3">
+                  <div className="py-2 text-center text-xs text-ink-3">
                     {t("visual_config.no_params")}
                   </div>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-4">
                     {(rule.params || []).map((param, paramIndex) => (
-                      <div
-                        key={param.id}
-                        className="space-y-2 rounded-xl border border-line bg-surface p-3"
-                      >
+                      <div key={param.id} className="space-y-2">
                         <div className="grid gap-2 lg:grid-cols-[1fr_180px_auto]">
                           <TextInput
                             value={param.path}
@@ -485,7 +485,7 @@ export function PayloadFilterRulesEditor({
       }
     >
       {rules.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-line px-4 py-6 text-center text-sm text-ink-3">
+        <div className="rounded-xl bg-subtle px-4 py-6 text-center text-sm text-ink-3">
           {t("visual_config.no_rules")}
         </div>
       ) : (
@@ -493,7 +493,7 @@ export function PayloadFilterRulesEditor({
           {rules.map((rule, ruleIndex) => (
             <div
               key={rule.id}
-              className="space-y-4 rounded-2xl border border-line bg-subtle p-4"
+              className="space-y-4 rounded-xl bg-subtle p-4"
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="text-sm font-semibold text-ink">
@@ -579,7 +579,7 @@ export function PayloadFilterRulesEditor({
                 </div>
 
                 {(rule.params || []).length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-line p-3 text-center text-xs text-ink-3">
+                  <div className="py-2 text-center text-xs text-ink-3">
                     {t("visual_config.no_paths")}
                   </div>
                 ) : (

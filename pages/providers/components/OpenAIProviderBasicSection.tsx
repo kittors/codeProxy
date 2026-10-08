@@ -4,11 +4,11 @@ import { KeyValueInputList } from "../KeyValueInputList";
 import { buildModelsEndpoint } from "../providers-helpers";
 import type { OpenAIDraft } from "../providers-helpers";
 
-const SectionCard = ({ children }: { children: React.ReactNode }) => (
-  <div className="rounded-xl border border-line bg-surface p-4 shadow-sm">
-    {children}
-  </div>
-);
+/**
+ * 一组字段。弹窗本身就是一层，组与组之间靠留白分开，不再各自套一张描边卡片——以前一个页签里
+ * 叠着五六张描边小卡，读起来像一摞框。
+ */
+const FieldGroup = ({ children }: { children: React.ReactNode }) => <div>{children}</div>;
 
 interface OpenAIProviderBasicSectionProps {
   openaiDraft: OpenAIDraft;
@@ -22,10 +22,10 @@ export function OpenAIProviderBasicSection({
   const { t } = useTranslation();
 
   return (
-    <div className="space-y-5">
-      <SectionCard>
+    <div className="space-y-6">
+      <FieldGroup>
         {openaiDraft.id ? (
-          <div className="mb-3 rounded-lg bg-subtle px-3 py-2">
+          <div className="mb-4 rounded-xl bg-subtle px-4 py-3">
             <p className="text-xs font-semibold text-ink-3">
               {t("content_moderation.channel_id")}
             </p>
@@ -109,15 +109,15 @@ export function OpenAIProviderBasicSection({
             />
           </div>
         </div>
-      </SectionCard>
+      </FieldGroup>
 
-      <SectionCard>
+      <FieldGroup>
         <KeyValueInputList
           title={t("providers.provider_headers")}
           entries={openaiDraft.headersEntries}
           onChange={(next) => setOpenaiDraft((prev) => ({ ...prev, headersEntries: next }))}
         />
-      </SectionCard>
+      </FieldGroup>
     </div>
   );
 }

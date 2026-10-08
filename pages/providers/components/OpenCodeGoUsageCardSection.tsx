@@ -249,6 +249,7 @@ export function OpenCodeGoUsageCardSection({
   // One line, not a stacked icon block: this is a status note on a card that is
   // otherwise two or three lines tall, and a centred 8x8 medallion above a
   // caption made the note the largest thing on it.
+  // 只用淡底、不描边：失败是红色淡底，未查询 / 未配置是中性淡底。
   const renderPlaceholder = (
     message: string,
     tone: "muted" | "error",
@@ -256,10 +257,10 @@ export function OpenCodeGoUsageCardSection({
   ) => (
     <div
       className={[
-        "flex h-6 w-full items-center gap-1.5 rounded-md border px-2 text-xs font-medium",
+        "flex h-6 w-full items-center gap-1.5 rounded-md px-2 text-xs font-medium",
         tone === "error"
-          ? "border-rose-200 bg-rose-50/60 text-rose-600 dark:border-rose-500/20 dark:bg-rose-500/[0.08] dark:text-rose-300"
-          : "border-slate-200 bg-slate-50/60 text-slate-500 dark:border-white/10 dark:bg-white/[0.03] dark:text-white/50",
+          ? "bg-rose-500/10 text-rose-700 dark:text-rose-300"
+          : "bg-ink/[0.05] text-ink-3 dark:bg-white/[0.07]",
       ].join(" ")}
       data-testid="opencode-go-usage-footprint"
     >
@@ -363,9 +364,9 @@ export function OpenCodeGoUsageRefreshButton({
       disabled={loading}
       className={[
         // Matches the power and menu buttons it now sits beside in the header.
-        "inline-flex h-6 w-6 items-center justify-center rounded-md bg-slate-100 transition-all duration-150",
-        "text-slate-500 hover:bg-slate-200 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/25",
-        "dark:bg-white/10 dark:text-white/55 dark:hover:bg-white/15 dark:hover:text-white/80 dark:focus-visible:ring-white/20",
+        "inline-flex h-6 w-6 items-center justify-center rounded-md transition-colors duration-150",
+        "bg-ink/[0.05] text-ink-3 hover:bg-ink/[0.08] hover:text-ink-2 dark:bg-white/[0.07] dark:hover:bg-white/[0.1]",
+        "focus-visible:outline-none focus-visible:shadow-control-focus",
       ].join(" ")}
       aria-label={refreshLabel}
       title={refreshLabel}

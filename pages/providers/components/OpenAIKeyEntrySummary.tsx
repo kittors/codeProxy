@@ -26,7 +26,7 @@ export function OpenAIKeyEntrySummary({
 
   return (
     <div className="mt-2 space-y-1">
-      <p className="text-xs font-semibold text-slate-700 dark:text-white/75">
+      <p className="text-xs font-semibold text-ink-2">
         {t("providers.api_key_entries")}: {entries.length}
       </p>
       <div className="space-y-1">
@@ -34,39 +34,47 @@ export function OpenAIKeyEntrySummary({
           const entryStats = getKeyEntryStats(entry);
           const entryEnabled = entry.disabled !== true;
           return (
+            // 卡片里的一行：无边淡底，不再是卡片里再套一张描边白卡。
             <div
               key={`${entry.apiKey}:${entryIndex}`}
-              className="grid gap-2 rounded-xl border border-slate-900/8 bg-white/70 px-3 py-2 text-xs dark:border-white/8 dark:bg-neutral-950/60 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+              className="grid gap-2 rounded-inner bg-subtle px-3 py-2 text-xs sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
             >
               <div className="min-w-0">
-                <p className="truncate font-mono text-slate-900 dark:text-white">
+                <p className="truncate font-mono text-ink">
                   {entryIndex + 1}. {maskApiKey(entry.apiKey)}
                 </p>
                 {entry.id ? (
-                  <p className="mt-0.5 truncate font-mono text-slate-500 dark:text-white/50" title={entry.id}>
+                  <p className="mt-0.5 truncate font-mono text-ink-3" title={entry.id}>
                     ID: {entry.id}
                   </p>
                 ) : null}
                 {entry.proxyUrl ? (
-                  <p className="mt-0.5 truncate font-mono text-slate-600 dark:text-white/55">
+                  <p className="mt-0.5 truncate font-mono text-ink-3">
                     proxy: {entry.proxyUrl}
                   </p>
                 ) : null}
               </div>
               <div className="flex flex-wrap items-center gap-2 tabular-nums sm:justify-end">
+                {/* 开着是常态：中性文字即可；停了才用琥珀提醒。成功数中性，失败数大于 0 才标红。 */}
                 <span
                   className={
                     entryEnabled
-                      ? "rounded-full bg-emerald-600/10 px-2 py-0.5 font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200"
-                      : "rounded-full bg-amber-500/15 px-2 py-0.5 font-semibold text-amber-700 dark:text-amber-200"
+                      ? "px-1 font-medium text-ink-3"
+                      : "rounded-full bg-amber-500/10 px-2 py-0.5 font-semibold text-amber-700 dark:text-amber-300"
                   }
                 >
                   {entryEnabled ? t("providers.enabled") : t("providers.disabled")}
                 </span>
-                <span className="rounded-full bg-emerald-600/10 px-2 py-0.5 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">
+                <span className="rounded-full bg-ink/[0.05] px-2 py-0.5 text-ink-2 dark:bg-white/[0.07]">
                   {t("providers.success_stats", { count: entryStats.success })}
                 </span>
-                <span className="rounded-full bg-rose-600/10 px-2 py-0.5 text-rose-700 dark:bg-rose-500/15 dark:text-rose-200">
+                <span
+                  className={
+                    entryStats.failure > 0
+                      ? "rounded-full bg-rose-500/10 px-2 py-0.5 text-rose-700 dark:text-rose-300"
+                      : "rounded-full bg-ink/[0.05] px-2 py-0.5 text-ink-2 dark:bg-white/[0.07]"
+                  }
+                >
                   {t("providers.failed_stats", { count: entryStats.failure })}
                 </span>
                 {onToggleKeyEntryEnabled ? (
@@ -82,7 +90,7 @@ export function OpenAIKeyEntrySummary({
         })}
       </div>
       {remaining > 0 ? (
-        <p className="text-xs font-medium text-slate-500 dark:text-white/55">
+        <p className="text-xs font-medium text-ink-3">
           +{remaining} {t("providers.api_key_entries").toLowerCase()}
         </p>
       ) : null}

@@ -7,11 +7,11 @@ import { LandingSectionHead } from "./LandingSectionHead";
 import type { LandingCopy, LandingFeatureCopy } from "./landingCopy";
 
 /**
- * 卡片刻意不加边框和阴影，只用一层极淡的底色与画布拉开层次。
- * 描边 + 阴影 + 模糊叠在一起会让整页显得毛躁，留白本身就足以分区。
+ * 能力卡与控制台的卡片同一套：伪元素细边（cp-edge）+ 堆叠投影，悬停抬起一档；不描 ring。
+ * 卡片底色是卡片色：深色下是近黑的卡片色，不再是一层发灰的白色叠层。
  */
 const CARD_CLASS =
-  "group relative flex flex-col overflow-hidden rounded-3xl bg-white p-8 ring-1 ring-slate-900/8 transition-colors duration-200 hover:ring-slate-900/15 dark:bg-white/[0.03] dark:ring-white/8 dark:hover:bg-white/[0.05] dark:hover:ring-white/15";
+  "cp-edge group relative flex flex-col overflow-hidden rounded-3xl bg-surface p-8 shadow-card transition-shadow duration-200 hover:shadow-lift";
 
 function FeatureCard({
   copy,
@@ -37,10 +37,8 @@ function FeatureCard({
         aria-hidden
         className="text-ink transition-transform duration-200 group-hover:scale-110"
       />
-      <h3 className="mt-6 font-display text-lg font-bold tracking-tight text-slate-900 dark:text-white">
-        {copy.title}
-      </h3>
-      <p className="mt-3 text-sm leading-7 text-slate-600 dark:text-white/50">{copy.desc}</p>
+      <h3 className="mt-6 font-display text-lg font-bold tracking-tight text-ink">{copy.title}</h3>
+      <p className="mt-3 text-sm leading-7 text-ink-2">{copy.desc}</p>
     </motion.li>
   );
 }
@@ -70,10 +68,10 @@ export function LandingFeatures({ copy }: { copy: LandingCopy }) {
             aria-hidden
             className="text-ink"
           />
-          <h3 className="mt-6 font-display text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+          <h3 className="mt-6 font-display text-2xl font-bold tracking-tight text-ink">
             {features.gateway.title}
           </h3>
-          <p className="mt-3 max-w-xl text-sm leading-7 text-slate-600 dark:text-white/50">
+          <p className="mt-3 max-w-xl text-sm leading-7 text-ink-2">
             {features.gateway.desc}
           </p>
           <LandingRelayDiagram appLabel={features.gateway.diagramLabel} />

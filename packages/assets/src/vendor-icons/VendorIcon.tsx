@@ -71,6 +71,12 @@ function getVendorPrefix(modelId: string): string {
   return "";
 }
 
+/**
+ * 单色黑的 logo（没写 fill，或写的是 currentColor）：通过 <img> 加载时拿不到页面的文字色，
+ * 一律画成黑色，深色界面上几乎看不见。这些在深色下整体反色成白色；彩色 logo 不能反色。
+ */
+const INVERT_IN_DARK = new Set(["cline", "grok", "xai", "mimo", "ollama"]);
+
 export function VendorIcon({ modelId, size = 14 }: { modelId: string; size?: number }) {
   const prefix = getVendorPrefix(modelId);
   const icons = prefix ? VENDOR_ICONS[prefix] : null;
@@ -78,7 +84,13 @@ export function VendorIcon({ modelId, size = 14 }: { modelId: string; size?: num
   return (
     <>
       <img src={icons.light} alt="" width={size} height={size} className="dark:hidden" />
-      <img src={icons.dark} alt="" width={size} height={size} className="hidden dark:block" />
+      <img
+        src={icons.dark}
+        alt=""
+        width={size}
+        height={size}
+        className={INVERT_IN_DARK.has(prefix) ? "hidden dark:block dark:invert" : "hidden dark:block"}
+      />
     </>
   );
 }

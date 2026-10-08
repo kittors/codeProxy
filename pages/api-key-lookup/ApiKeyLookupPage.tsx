@@ -1283,7 +1283,7 @@ export function ApiKeyLookupPage() {
         >
           {/* Error */}
           {error && (
-            <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-300">
+            <div className="rounded-2xl bg-rose-500/10 p-4 text-sm text-rose-700 dark:bg-rose-400/15 dark:text-rose-300">
               {error}
             </div>
           )}
@@ -1434,7 +1434,7 @@ export function ApiKeyLookupPage() {
               {(activeTab === "models" || activeTab === "quickImport") &&
               !queriedKey &&
               portalUser ? (
-                <div className="bg-subtle rounded-2xl px-6 py-12 text-center text-sm text-slate-500 dark:text-white/55">
+                <div className="bg-subtle rounded-2xl px-6 py-12 text-center text-sm text-ink-3">
                   {t("apikey_lookup.operational_key_required", {
                     defaultValue:
                       "请先创建一把可用 Key；模型列表和快速导入需要凭证，用量与日志仍按账号聚合。",

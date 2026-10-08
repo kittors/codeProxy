@@ -32,9 +32,10 @@ type HeatmapPoint = {
 };
 
 // 热力图按请求数着色，用请求身份色（蓝）的单色深浅阶：越忙越浓，与监控中心的「活跃时段」热力格
-// 同一套。没有请求的格子保持中性的底色——它表示「没有数据」，不是「量很少」。
+// 同一套。没有请求的格子保持中性的槽色（bg-track）——它表示「没有数据」，不是「量很少」。
+// 格子不再各描一圈细边：三百多个小方块每个都带轮廓，整块读起来是一张网格纸。
 const HEATMAP_LEVEL_CLASSES = [
-  "bg-slate-100 dark:bg-white/10",
+  "bg-track",
   "bg-blue-500/20 dark:bg-blue-400/20",
   "bg-blue-500/40 dark:bg-blue-400/40",
   "bg-blue-500/65 dark:bg-blue-400/65",
@@ -143,7 +144,7 @@ function CalendarHeatmap({
               >
                 <span
                   tabIndex={0}
-                  className={`block h-3 w-3 cursor-pointer rounded-sm ring-1 ring-black/[0.03] transition duration-150 hover:scale-110 hover:ring-blue-400/70 focus:outline-none focus:ring-2 focus:ring-blue-400/70 dark:ring-white/[0.04] ${HEATMAP_LEVEL_CLASSES[level]}`}
+                  className={`block h-3 w-3 cursor-pointer rounded-sm transition duration-150 hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 ${HEATMAP_LEVEL_CLASSES[level]}`}
                   aria-label={`${date}: ${point?.requests ?? 0} ${t("apikey_lookup.requests")}`}
                 />
               </HoverTooltip>
@@ -151,12 +152,12 @@ function CalendarHeatmap({
           })}
         </div>
       </div>
-      <div className="flex items-center justify-center gap-1 text-xs text-slate-500 dark:text-white/55 sm:justify-end">
+      <div className="flex items-center justify-center gap-1 text-xs text-ink-3 sm:justify-end">
         <span>{t("apikey_lookup.heatmap_less")}</span>
         {HEATMAP_LEVEL_CLASSES.map((className) => (
           <span
             key={className}
-            className={`h-3 w-3 rounded-sm ring-1 ring-black/[0.03] dark:ring-white/[0.04] ${className}`}
+            className={`h-3 w-3 rounded-sm ${className}`}
             aria-hidden="true"
           />
         ))}
@@ -177,12 +178,12 @@ function HeatmapSkeleton() {
           {Array.from({ length: 371 }, (_, index) => (
             <span
               key={index}
-              className="h-3 w-3 rounded-sm bg-slate-100 motion-safe:animate-pulse dark:bg-white/10"
+              className="h-3 w-3 rounded-sm bg-track motion-safe:animate-pulse"
             />
           ))}
         </div>
       </div>
-      <div className="ml-auto h-3 w-28 rounded bg-slate-100 motion-safe:animate-pulse dark:bg-white/10" />
+      <div className="ml-auto h-3 w-28 rounded bg-track motion-safe:animate-pulse" />
     </div>
   );
 }
@@ -190,7 +191,7 @@ function HeatmapSkeleton() {
 function ChartSkeleton() {
   return (
     <div
-      className="h-72 rounded-xl bg-slate-100 motion-safe:animate-pulse dark:bg-white/10"
+      className="h-72 rounded-inner bg-track motion-safe:animate-pulse"
       aria-hidden="true"
     />
   );
@@ -199,7 +200,7 @@ function ChartSkeleton() {
 function KpiValueSkeleton() {
   return (
     <span
-      className="block h-8 w-24 rounded-md bg-slate-100 motion-safe:animate-pulse dark:bg-white/10"
+      className="block h-8 w-24 rounded-md bg-track motion-safe:animate-pulse"
       aria-hidden="true"
     />
   );
@@ -299,7 +300,6 @@ export function UsageTabSection({
               tone="portal"
               title={t("apikey_lookup.total_requests")}
               icon={Activity}
-              hue="blue"
               hint={t("apikey_lookup.last_n_days", { days: timeRange })}
               valueClassName={kpiValueSizeClass(formatInteger(chartStats?.total ?? 0))}
               value={renderKpiValue(
@@ -314,7 +314,6 @@ export function UsageTabSection({
               tone="portal"
               title={t("common.success_rate")}
               icon={ShieldCheck}
-              hue="emerald"
               hint={t("apikey_lookup.last_n_days", { days: timeRange })}
               valueClassName={kpiValueSizeClass(`${(chartStats?.success_rate ?? 0).toFixed(1)}%`)}
               value={renderKpiValue(
@@ -332,7 +331,6 @@ export function UsageTabSection({
               tone="portal"
               title={t("apikey_lookup.total_tokens")}
               icon={Sigma}
-              hue="violet"
               hint={t("apikey_lookup.last_n_days", { days: timeRange })}
               valueClassName={kpiValueSizeClass(formatInteger(chartStats?.total_tokens ?? 0))}
               value={renderKpiValue(
@@ -347,7 +345,6 @@ export function UsageTabSection({
               tone="portal"
               title={t("apikey_lookup.total_sessions")}
               icon={MessagesSquare}
-              hue="cyan"
               hint={t("apikey_lookup.last_n_days", { days: timeRange })}
               valueClassName={kpiValueSizeClass(formatInteger(chartStats?.total_sessions ?? 0))}
               value={renderKpiValue(
@@ -362,7 +359,6 @@ export function UsageTabSection({
               tone="portal"
               title={t("apikey_lookup.total_cost")}
               icon={Coins}
-              hue="amber"
               hint={t("apikey_lookup.last_n_days", { days: timeRange })}
               valueClassName={kpiValueSizeClass(formatQuotaUsd(chartStats?.total_cost ?? 0))}
               value={renderKpiValue(
@@ -422,25 +418,21 @@ export function UsageTabSection({
                     >
                       <div className="flex min-w-0 items-center gap-2">
                         <span
-                          className="h-3.5 w-3.5 shrink-0 rounded-full ring-1 ring-black/5 dark:ring-white/10"
+                          className="h-3.5 w-3.5 shrink-0 rounded-full"
                           style={{ backgroundColor: item.color }}
                         />
-                        <span className="min-w-0 truncate text-slate-700 dark:text-white/80">
-                          {item.name}
-                        </span>
+                        <span className="min-w-0 truncate text-ink-2">{item.name}</span>
                       </div>
-                      <span className="text-right font-semibold tabular-nums text-slate-900 dark:text-white">
+                      <span className="text-right font-semibold tabular-nums text-ink">
                         {item.valueLabel}
                       </span>
-                      <span className="text-right tabular-nums text-slate-500 dark:text-white/55">
-                        {item.percentLabel}
-                      </span>
+                      <span className="text-right tabular-nums text-ink-3">{item.percentLabel}</span>
                     </div>
                   ))}
                 </div>
               </div>
             ) : (
-              <p className="py-8 text-center text-sm text-slate-400 dark:text-white/30">
+              <p className="py-8 text-center text-sm text-ink-3">
                 {t("apikey_lookup.no_data")}
               </p>
             )}
@@ -481,17 +473,15 @@ export function UsageTabSection({
                     >
                       <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
                         <span
-                          className="h-3 w-3 shrink-0 rounded-full ring-1 ring-black/5 dark:ring-white/10 sm:h-3.5 sm:w-3.5"
+                          className="h-3 w-3 shrink-0 rounded-full sm:h-3.5 sm:w-3.5"
                           style={{ backgroundColor: item.color }}
                         />
-                        <span className="min-w-0 truncate text-slate-700 dark:text-white/80">
-                          {item.name}
-                        </span>
+                        <span className="min-w-0 truncate text-ink-2">{item.name}</span>
                       </div>
-                      <span className="text-right font-semibold tabular-nums text-slate-900 dark:text-white">
+                      <span className="text-right font-semibold tabular-nums text-ink">
                         {item.valueLabel}
                       </span>
-                      <span className="hidden text-right tabular-nums text-slate-500 dark:text-white/55 sm:inline">
+                      <span className="hidden text-right tabular-nums text-ink-3 sm:inline">
                         {item.percentLabel}
                       </span>
                     </div>
@@ -499,7 +489,7 @@ export function UsageTabSection({
                 </div>
               </div>
             ) : (
-              <p className="py-8 text-center text-sm text-slate-400 dark:text-white/30">
+              <p className="py-8 text-center text-sm text-ink-3">
                 {t("apikey_lookup.no_data")}
               </p>
             )}
@@ -561,7 +551,7 @@ export function UsageTabSection({
                 />
               </div>
             ) : (
-              <p className="py-8 text-center text-sm text-slate-400 dark:text-white/30">
+              <p className="py-8 text-center text-sm text-ink-3">
                 {t("apikey_lookup.no_data")}
               </p>
             )}

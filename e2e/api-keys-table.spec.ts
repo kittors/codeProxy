@@ -157,7 +157,8 @@ test("API Keys: limited model summary truncates inside the rounded pill", async 
   const summaryState = await page.evaluate(() => {
     const cell = document.querySelector<HTMLElement>('td[data-vt-column-key="allowedModels"]');
     const tooltip = cell?.querySelector<HTMLElement>("[data-tooltip-managed='true']");
-    const pill = tooltip?.querySelector<HTMLElement>(".rounded-full.border");
+    // 胶囊靠淡底成形、不描边（标签一律不画 border），按圆角形状找。
+    const pill = tooltip?.querySelector<HTMLElement>(".rounded-full");
     const count = pill?.querySelector<HTMLElement>(".tabular-nums");
     const text = pill?.querySelector<HTMLElement>(".truncate");
 
@@ -215,7 +216,7 @@ test("API Keys: limited model summary truncates inside the rounded pill", async 
   expect(summaryState.textLeft).toBeGreaterThanOrEqual(summaryState.pillLeft - 1);
   expect(summaryState.textRight).toBeLessThanOrEqual(summaryState.pillRight + 1);
   expect(summaryState.textScrollWidth).toBeGreaterThan(summaryState.textClientWidth);
-  expect(summaryState.borderRightWidth).toBe("1px");
+  expect(summaryState.borderRightWidth).toBe("0px");
   expect(Number.parseFloat(summaryState.borderTopRightRadius)).toBeGreaterThan(0);
 });
 

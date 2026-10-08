@@ -136,7 +136,9 @@ describe("DataTable sorting and row reordering", () => {
 
     const dragPreview = document.querySelector<HTMLElement>("[data-vt-row-reorder-preview]");
     expect(dragPreview).toHaveTextContent("alpha");
-    expect(dragPreview).toHaveClass("border", "border-slate-900/8");
+    // 拖拽中的行是浮起的一层：浮层阴影成形，不画描边。
+    expect(dragPreview).toHaveClass("shadow-pop");
+    expect(dragPreview).not.toHaveClass("border");
     expect(
       Array.from(dragPreview?.querySelectorAll("td") ?? []).every(
         (cell) => cell.style.borderTopWidth === "0px" && cell.style.borderBottomWidth === "0px",

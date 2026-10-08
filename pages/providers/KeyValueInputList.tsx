@@ -52,7 +52,7 @@ export function KeyValueInputList({
   return (
     <section className="space-y-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-semibold text-slate-900 dark:text-white">{title}</p>
+        <p className="text-sm font-semibold text-ink">{title}</p>
         <Button
           variant="secondary"
           size="sm"
@@ -65,7 +65,7 @@ export function KeyValueInputList({
       </div>
 
       {entries.length === 0 ? (
-        <p className="text-xs text-slate-500 dark:text-white/55">{t("common.not_set")}</p>
+        <p className="text-xs text-ink-3">{t("common.not_set")}</p>
       ) : (
         <div className="space-y-2">
           {entries.map((entry, idx) => (

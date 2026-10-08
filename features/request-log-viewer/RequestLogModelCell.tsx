@@ -75,7 +75,7 @@ function UpstreamModelMismatchBadge({ row }: { row: RequestLogsRow }) {
     >
       <span
         aria-label={`${title}: ${row.upstreamResponseModel}`}
-        className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-rose-50 text-2xs font-bold leading-none text-rose-600 ring-1 ring-inset ring-rose-200 dark:bg-rose-500/15 dark:text-rose-300 dark:ring-rose-500/30"
+        className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-rose-500/12 text-2xs font-bold leading-none text-rose-600 dark:bg-rose-400/20 dark:text-rose-300"
       >
         ≠
       </span>
@@ -94,7 +94,7 @@ function UpstreamModelMismatchBadge({ row }: { row: RequestLogsRow }) {
 export function RequestLogModelCell({ row }: { row: RequestLogsRow }) {
   const { t } = useTranslation();
   if (!row.model) {
-    return <span className="text-xs text-slate-400 dark:text-white/30">--</span>;
+    return <span className="text-xs text-ink-3">--</span>;
   }
 
   const label = row.displayModel || row.model;

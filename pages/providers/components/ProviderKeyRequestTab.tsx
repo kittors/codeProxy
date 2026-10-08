@@ -10,23 +10,12 @@ import { useModerationPermissions } from "@app/providers/useModerationPermission
 import { KeyValueInputList } from "../KeyValueInputList";
 import type { ProviderKeyDraft } from "../providers-helpers";
 
-const SectionCard = ({
-  children,
-  className,
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) => (
-  <div
-    className={[
-      "rounded-xl border border-line bg-surface p-4 shadow-sm",
-      className,
-    ]
-      .filter(Boolean)
-      .join(" ")}
-  >
-    {children}
-  </div>
+/**
+ * 一组字段。弹窗本身就是一层，组与组之间靠留白分开，不再各自套一张描边卡片——以前一个页签里
+ * 叠着五六张描边小卡，读起来像一摞框。只读的说明（固定端点、调用地址）传 `well`，用无边淡底和可编辑的字段区分开。
+ */
+const FieldGroup = ({ children, well = false }: { children: React.ReactNode; well?: boolean }) => (
+  <div className={well ? "rounded-xl bg-subtle px-4 py-3" : undefined}>{children}</div>
 );
 
 const OPENCODE_GO_MODELS_URL = "https://opencode.ai/zen/go/v1/models";
@@ -84,8 +73,8 @@ export function ProviderKeyRequestTab({
   const dashboardUsageHint = t("providers.dashboard_usage_config_hint");
 
   return (
-    <div className="space-y-4">
-      <SectionCard>
+    <div className="space-y-6">
+      <FieldGroup>
         <ModerationProfileSelect
         canRead={moderationPerms.canRead}
         canWrite={moderationPerms.canWrite}
@@ -95,11 +84,11 @@ export function ProviderKeyRequestTab({
           hint={t("content_moderation.provider_key_profile_hint")}
           unpersistedHint={t("content_moderation.provider_key_profile_save_first")}
         />
-      </SectionCard>
+      </FieldGroup>
 
       {isOpenCodeGo ? (
         <>
-          <SectionCard className="bg-subtle">
+          <FieldGroup well>
             <p className="text-sm font-semibold text-ink">
               {t("providers.opencode_go_fixed_endpoint_title")}
             </p>
@@ -111,20 +100,20 @@ export function ProviderKeyRequestTab({
             <p className="mt-2 text-xs text-ink-3">
               {t("providers.opencode_go_fixed_endpoint_hint")}
             </p>
-          </SectionCard>
-          <SectionCard>
+          </FieldGroup>
+          <FieldGroup>
             <p className="text-sm font-semibold text-ink">
               {t("providers.opencode_go_usage_title")}
             </p>
             <p className="mt-1 text-xs text-ink-3">
               {t("providers.opencode_go_usage_hint")}
             </p>
-          </SectionCard>
+          </FieldGroup>
         </>
       ) : null}
 
       {isCline ? (
-        <SectionCard className="bg-subtle">
+        <FieldGroup well>
           <p className="text-sm font-semibold text-ink">
             {t("providers.cline_endpoint_title")}
           </p>
@@ -134,23 +123,23 @@ export function ProviderKeyRequestTab({
           <p className="mt-2 text-xs text-ink-3">
             {t("providers.cline_endpoint_hint")}
           </p>
-        </SectionCard>
+        </FieldGroup>
       ) : null}
 
       {isOllamaCloud ? (
-        <SectionCard className="bg-subtle">
+        <FieldGroup well>
           <p className="text-sm font-semibold text-ink">
             {t("providers.ollama_cloud_endpoint_title")}
           </p>
           <p className="mt-3 break-all font-mono text-xs text-ink-2">
             {ollamaCloudChatUrl}
           </p>
-        </SectionCard>
+        </FieldGroup>
       ) : null}
 
       {isCommandCode ? (
         <>
-          <SectionCard className="bg-subtle">
+          <FieldGroup well>
             <p className="text-sm font-semibold text-ink">
               {t("providers.commandcode_endpoint_title")}
             </p>
@@ -160,20 +149,20 @@ export function ProviderKeyRequestTab({
             <p className="mt-2 text-xs text-ink-3">
               {t("providers.commandcode_endpoint_hint")}
             </p>
-          </SectionCard>
-          <SectionCard>
+          </FieldGroup>
+          <FieldGroup>
             <p className="text-sm font-semibold text-ink">
               {t("providers.commandcode_usage_title")}
             </p>
             <p className="mt-1 text-xs text-ink-3">
               {t("providers.commandcode_usage_hint")}
             </p>
-          </SectionCard>
+          </FieldGroup>
         </>
       ) : null}
 
       {hasDashboardUsage ? (
-        <SectionCard>
+        <FieldGroup>
           <p className="text-sm font-semibold text-ink">
             {dashboardUsageTitle}
           </p>
@@ -197,11 +186,11 @@ export function ProviderKeyRequestTab({
               />
             </div>
           </div>
-        </SectionCard>
+        </FieldGroup>
       ) : null}
 
       {isOpenCodeGo || isCline || isOllamaCloud || isCommandCode ? (
-        <SectionCard>
+        <FieldGroup>
           <p className="text-sm font-semibold text-ink">
             {t("providers.opencode_go_vision_fallback_title")}
           </p>
@@ -219,11 +208,11 @@ export function ProviderKeyRequestTab({
           <p className="mt-2 text-xs text-ink-3">
             {t("providers.opencode_go_vision_fallback_hint")}
           </p>
-        </SectionCard>
+        </FieldGroup>
       ) : null}
 
       {isBedrock ? (
-        <SectionCard>
+        <FieldGroup>
           <p className="text-sm font-semibold text-ink">
             {t("providers.bedrock_region")}
           </p>
@@ -250,10 +239,10 @@ export function ProviderKeyRequestTab({
           <p className="mt-2 text-xs text-ink-3">
             {t("providers.bedrock_region_hint")}
           </p>
-        </SectionCard>
+        </FieldGroup>
       ) : null}
 
-      <SectionCard>
+      <FieldGroup>
         <p className="text-sm font-semibold text-ink">
           {t("providers.connection_proxy_label")}
         </p>
@@ -306,9 +295,9 @@ export function ProviderKeyRequestTab({
               ? t("providers.cline_connection_hint")
               : t("providers.connection_proxy_hint")}
         </p>
-      </SectionCard>
+      </FieldGroup>
 
-      <SectionCard>
+      <FieldGroup>
         <KeyValueInputList
           title={t("providers.headers_optional")}
           entries={keyDraft.headersEntries}
@@ -319,10 +308,10 @@ export function ProviderKeyRequestTab({
         <p className="mt-2 text-xs text-ink-3">
           {t("providers.headers_common_hint")}
         </p>
-      </SectionCard>
+      </FieldGroup>
 
       {editKeyType === "claude" ? (
-        <SectionCard>
+        <FieldGroup>
           <div className="flex items-center justify-between gap-3">
             <div className="flex-1">
               <p className="text-sm font-semibold text-ink">
@@ -342,7 +331,7 @@ export function ProviderKeyRequestTab({
               }
             />
           </div>
-        </SectionCard>
+        </FieldGroup>
       ) : null}
     </div>
   );

@@ -9,7 +9,7 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/manage/favicon-192.png" />
     <link rel="apple-touch-icon" href="/manage/apple-touch-icon.png" />
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#212121" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#111114" media="(prefers-color-scheme: dark)" />
     <script>
       (function () {
         try {
@@ -23,6 +23,16 @@
               root.removeAttribute("data-theme");
             }
           };
+          // Windows 用系统字体与 1.0 根字号（见 styles/index.css 的 data-os 说明）。
+          // 只认平台字段开头的 Win（Win32 / Windows），不能宽松匹配——"darwin" 里也有 win。
+          // 先读 navigator.platform：UA 字符串常被伪装（Playwright 的 Desktop Chrome 设备就是
+          // Windows UA），Chrome 会照着伪装的 UA 推导 userAgentData.platform，只有
+          // navigator.platform 始终是真实系统；它为空时才退回 userAgentData。
+          var platform =
+            navigator.platform || (navigator.userAgentData && navigator.userAgentData.platform) || "";
+          if (/^win/i.test(platform)) {
+            root.setAttribute("data-os", "windows");
+          }
           var t = localStorage.getItem("code-proxy-admin-theme");
           if (t === "dark") {
             apply(true);
@@ -40,14 +50,14 @@
       :root {
         --pl-bg: #ffffff;
         --pl-ring-track: rgba(13, 13, 13, 0.1);
-        --pl-ring: #0d0d0d;
-        --pl-text: #8f8f8f;
+        --pl-ring: #111113;
+        --pl-text: #76767d;
       }
       .dark {
-        --pl-bg: #212121;
+        --pl-bg: #111114;
         --pl-ring-track: rgba(255, 255, 255, 0.12);
-        --pl-ring: #ececec;
-        --pl-text: #8a8a8a;
+        --pl-ring: #f2f2f4;
+        --pl-text: #86868f;
       }
       body {
         margin: 0;

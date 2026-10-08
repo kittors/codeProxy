@@ -1,9 +1,13 @@
 import { type ReactNode } from "react";
 
-type MetricTone = "slate" | "emerald" | "rose" | "amber" | "blue";
+/**
+ * 只有语义色调：数量、请求头这类计数一律中性；只有「失败」这种出了问题的数才用红色淡底。
+ * 以前按类别上色（模型蓝、排除红、成功绿），一张卡片上一排三四种颜色，读起来花而且没有主次。
+ */
+type MetricTone = "neutral" | "danger";
 
 interface ProviderMetricChipProps {
-  tone: MetricTone;
+  tone?: MetricTone;
   icon?: ReactNode;
   label: string;
   value?: number | string;
@@ -13,16 +17,12 @@ interface ProviderMetricChipProps {
 // Squared corners, 2xs type, flat tint: the badge language of the AI accounts
 // card, so a provider card and an account card read as the same component.
 const toneClass: Record<MetricTone, string> = {
-  slate: "bg-slate-100 text-slate-700 dark:bg-white/10 dark:text-white/70",
-  emerald:
-    "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200",
-  rose: "bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-200",
-  amber: "bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-200",
-  blue: "bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-200",
+  neutral: "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]",
+  danger: "bg-rose-500/10 text-rose-700 dark:text-rose-300",
 };
 
 export function ProviderMetricChip({
-  tone,
+  tone = "neutral",
   icon,
   label,
   value,

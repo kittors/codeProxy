@@ -2315,7 +2315,7 @@ export function DataTable<T>({
                         >
                           <span
                             aria-hidden="true"
-                            className={`mx-auto block h-6 w-px rounded-full bg-slate-300/80 transition-[width,background-color,opacity] dark:bg-white/25 ${
+                            className={`mx-auto block h-6 w-px rounded-full bg-slate-900/12 transition-[width,background-color,opacity] dark:bg-white/15 ${
                               isResizingThisColumn
                                 ? "opacity-0"
                                 : "opacity-70 group-hover/resize:w-0.5 group-hover/resize:bg-slate-500 group-hover/resize:opacity-100 group-focus-visible/resize:w-0.5 group-focus-visible/resize:bg-slate-500 group-focus-visible/resize:opacity-100 dark:group-hover/resize:bg-white/55 dark:group-focus-visible/resize:bg-white/55"
@@ -2457,7 +2457,7 @@ export function DataTable<T>({
                           const hoverChromeClass = naturalFlow
                             ? ""
                             : stickyPlacement
-                              ? "group-hover/row:bg-surface-hover"
+                              ? "group-hover/row:bg-backdrop-hover"
                               : "group-hover/row:bg-slate-50 dark:group-hover/row:bg-white/[0.04]";
                           return (
                             <td

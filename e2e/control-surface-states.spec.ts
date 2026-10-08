@@ -154,9 +154,11 @@ test.describe("下拉控件表面状态", () => {
     const openFill = await compositedOnWhite(refreshSelect);
     expect(Math.max(...openFill)).toBeLessThanOrEqual(Math.max(...idleFill));
 
-    // 焦点仍在按钮上，但鼠标交互不该留下描边环。
+    // 焦点仍在按钮上，但鼠标交互不该留下聚焦光晕。控件的轮廓本身就是一圈 1px 阴影描边
+    // （shadow-control，不用 border），所以这里查的是键盘聚焦才有的那圈 4px 光晕。
     const shadow = await refreshSelect.evaluate((el) => getComputedStyle(el).boxShadow);
-    expect(shadow).not.toMatch(/0px 0px 0px [1-9]/);
+    expect(shadow).toMatch(/0px 0px 0px 1px/);
+    expect(shadow).not.toMatch(/0px 0px 0px [2-9]px/);
 
     await page.keyboard.press("Escape");
     const closedFill = await compositedOnWhite(refreshSelect);

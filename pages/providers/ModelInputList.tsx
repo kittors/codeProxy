@@ -47,7 +47,7 @@ export function ModelInputList({
   return (
     <section className="space-y-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-semibold text-slate-900 dark:text-white">{title}</p>
+        <p className="text-sm font-semibold text-ink">{title}</p>
         <Button
           variant="secondary"
           size="sm"
@@ -60,7 +60,7 @@ export function ModelInputList({
       </div>
 
       {entries.length === 0 ? (
-        <p className="text-xs text-slate-500 dark:text-white/55">{t("common.not_set")}</p>
+        <p className="text-xs text-ink-3">{t("common.not_set")}</p>
       ) : (
         <div className="space-y-2">
           {entries.map((entry, idx) => (
@@ -126,7 +126,7 @@ export function ModelInputList({
                 disabled={disabled}
                 aria-label={t("common.delete_model")}
                 title={t("common.delete")}
-                className="mt-1.5 shrink-0 inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-rose-50 hover:text-rose-500 disabled:opacity-40 dark:text-white/35 dark:hover:bg-rose-500/10 dark:hover:text-rose-400"
+                className="mt-1.5 shrink-0 inline-flex h-7 w-7 items-center justify-center rounded-lg text-ink-3 transition hover:bg-rose-500/10 hover:text-rose-600 disabled:opacity-40 dark:hover:text-rose-300"
               >
                 <Trash2 size={14} />
               </button>
@@ -135,7 +135,7 @@ export function ModelInputList({
         </div>
       )}
 
-      <p className="text-xs text-slate-500 dark:text-white/55">{t("providers.models_hint")}</p>
+      <p className="text-xs text-ink-3">{t("providers.models_hint")}</p>
     </section>
   );
 }

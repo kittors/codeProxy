@@ -49,11 +49,13 @@ export function TrustBanner({ status }: { status: IpAccessStatus | null }) {
   return null;
 }
 
+/**
+ * 和共享的 Callout 同一种读法：同色系淡底 + 彩色图标，正文保持中性色，不描边。
+ * 整段文字染成红 / 琥珀很难读，也会让一行提醒看起来像报错弹窗。
+ */
 const TONE_CLASS = {
-  danger:
-    "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-200",
-  warning:
-    "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-200",
+  danger: { box: "bg-rose-500/[0.08]", icon: "text-rose-600 dark:text-rose-400" },
+  warning: { box: "bg-amber-500/[0.09]", icon: "text-amber-600 dark:text-amber-300" },
 } as const;
 
 function Banner({
@@ -67,9 +69,9 @@ function Banner({
 }) {
   return (
     <div
-      className={`flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-2xl border px-4 py-2 text-sm ${TONE_CLASS[tone]}`}
+      className={`flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-2xl px-4 py-2 text-sm text-ink-2 ${TONE_CLASS[tone].box}`}
     >
-      <span className="shrink-0">{icon}</span>
+      <span className={`shrink-0 ${TONE_CLASS[tone].icon}`}>{icon}</span>
       {children}
     </div>
   );

@@ -28,7 +28,7 @@ import { EmptyState } from "@code-proxy/ui";
 import { Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
 import { useInterval } from "@code-proxy/ui";
-import { Card, chartPalette, useTheme } from "@code-proxy/ui";
+import { chartPalette, useTheme } from "@code-proxy/ui";
 import { DashboardKpiCard } from "./DashboardKpiCard";
 import {
   DashboardMetricValue,
@@ -132,36 +132,36 @@ export function DashboardPage() {
     meta.throughput_scope === "all_tenants" || Boolean(principal?.platform_admin);
   const tenantBreakdown = trends?.tenants ?? [];
 
-  // 每格迷你趋势线用该指标的身份色（chartTheme.metric：请求蓝、成功绿、Token 紫、费用琥珀、
-  // 缓存青），标题前的图标块同色；失败请求用错误红。与监控中心、账号详情是同一组颜色。
+  // 每格迷你趋势线都是强调色，只有失败请求用错误红：单独一条趋势线不需要身份色来区分，
+  // 以前六格六种颜色，是这一屏「强调色太多」的主要来源。
   const {
     state: { mode },
   } = useTheme();
   const isDark = mode === "dark";
   const palette = chartPalette(isDark);
   const totalRequestOption = useMemo(
-    () => createSparklineOption(trends?.request_volume ?? [], palette.metric.requests, isDark),
-    [isDark, palette.metric.requests, trends?.request_volume],
+    () => createSparklineOption(trends?.request_volume ?? [], palette.primary, isDark),
+    [isDark, palette.primary, trends?.request_volume],
   );
   const successRateOption = useMemo(
-    () => createSparklineOption(trends?.success_rate ?? [], palette.metric.success, isDark),
-    [isDark, palette.metric.success, trends?.success_rate],
+    () => createSparklineOption(trends?.success_rate ?? [], palette.primary, isDark),
+    [isDark, palette.primary, trends?.success_rate],
   );
   const totalTokenOption = useMemo(
-    () => createSparklineOption(trends?.total_tokens ?? [], palette.metric.tokens, isDark),
-    [isDark, palette.metric.tokens, trends?.total_tokens],
+    () => createSparklineOption(trends?.total_tokens ?? [], palette.primary, isDark),
+    [isDark, palette.primary, trends?.total_tokens],
   );
   const totalCostOption = useMemo(
-    () => createSparklineOption(trends?.total_cost ?? [], palette.metric.cost, isDark),
-    [isDark, palette.metric.cost, trends?.total_cost],
+    () => createSparklineOption(trends?.total_cost ?? [], palette.primary, isDark),
+    [isDark, palette.primary, trends?.total_cost],
   );
   const failedRequestOption = useMemo(
     () => createSparklineOption(trends?.failed_requests ?? [], palette.err, isDark),
     [isDark, palette.err, trends?.failed_requests],
   );
   const cacheRateOption = useMemo(
-    () => createSparklineOption([], palette.metric.cache, isDark),
-    [isDark, palette.metric.cache],
+    () => createSparklineOption([], palette.primary, isDark),
+    [isDark, palette.primary],
   );
 
   return (
@@ -221,11 +221,10 @@ export function DashboardPage() {
       ) : null}
 
       {/*
-        六格指标共用一张卡片，格子之间用细线分隔。每格自带右、下两条边，外层用 -mr-px -mb-px
-        把最右一列、最下一行的边推到卡片外（卡片 overflow-hidden 裁掉），任何列数下都只剩内部分隔线。
+        六格指标各是一张卡片，用间距分开，不再挤在一张卡里用分隔线隔开——和下面系统监控的
+        网格是同一种结构，整页只有一层卡片。
       */}
-      <Card padding="none" className="overflow-hidden">
-        <div className="-mr-px -mb-px grid sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <DashboardKpiCard
           title={t("dashboard.total_requests")}
           value={<DashboardMetricValue value={kpi?.total_requests ?? 0} animated />}
@@ -235,7 +234,6 @@ export function DashboardPage() {
               : t("dashboard.total_hint_days", { count: range })
           }
           icon={Activity}
-          hue="blue"
           option={totalRequestOption}
         />
         <DashboardKpiCard
@@ -247,7 +245,6 @@ export function DashboardPage() {
             <DashboardMetricValue key="failed" value={kpi?.failed_requests ?? 0} />,
           )}
           icon={Sigma}
-          hue="emerald"
           option={successRateOption}
         />
         <DashboardKpiCard
@@ -259,7 +256,6 @@ export function DashboardPage() {
             <DashboardMetricValue key="output" value={kpi?.output_tokens ?? 0} />,
           )}
           icon={Sparkles}
-          hue="violet"
           option={totalTokenOption}
         />
         <DashboardKpiCard
@@ -267,7 +263,6 @@ export function DashboardPage() {
           value={<DashboardMetricValue value={kpi?.total_cost ?? 0} variant="currency" animated />}
           hint={t("dashboard.total_cost_hint")}
           icon={DollarSign}
-          hue="amber"
           option={totalCostOption}
         />
         <DashboardKpiCard
@@ -275,7 +270,6 @@ export function DashboardPage() {
           value={<DashboardMetricValue value={kpi?.failed_requests ?? 0} animated />}
           hint={t("dashboard.failed_hint")}
           icon={TriangleAlert}
-          hue="rose"
           option={failedRequestOption}
         />
         <DashboardKpiCard
@@ -287,11 +281,9 @@ export function DashboardPage() {
             <DashboardMetricValue key="input" value={kpi?.input_tokens ?? 0} />,
           )}
           icon={Database}
-          hue="teal"
           option={cacheRateOption}
         />
-        </div>
-      </Card>
+      </div>
 
       {canViewSystemMonitor ? (
         <SystemMonitorSection

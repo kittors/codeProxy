@@ -303,8 +303,8 @@ export function CodexRecommendationsModal({
               rowAriaSelected={(item) => item.id === selected?.id}
               rowClassName={(item) =>
                 item.id === selected?.id
-                  ? "[&>td]:!bg-sky-500/10"
-                  : "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-sky-500"
+                  ? "[&>td]:!bg-accent-soft"
+                  : "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent"
               }
             />
           </div>
@@ -346,6 +346,7 @@ export function CodexRecommendationsModal({
   );
 }
 
+// 详情区是一层无边淡底；里面的差异、样本、请求头只是一行行文字，不再各垫一块白底（弹窗里叠三层）。
 const DETAIL_BOX = [surface({ tone: "inset", radius: "2xl" }), "min-w-0 p-4"].join(" ");
 
 function RecommendationDetail({
@@ -403,7 +404,7 @@ function RecommendationDetail({
         {diffs.length > 0 ? (
           <div className="space-y-2">
             {diffs.map((diff) => (
-              <div key={diff.key} className="rounded-xl bg-surface px-3 py-2">
+              <div key={diff.key} className="py-1">
                 <div className="text-xs font-medium text-ink-3">{diff.label}</div>
                 <div className="mt-1 grid gap-1 text-xs">
                   <DiffLine
@@ -440,7 +441,7 @@ function RecommendationDetail({
           {item.samples.map((sample) => (
             <div
               key={`${sample.log_id}:${sample.timestamp}`}
-              className="rounded-xl bg-surface px-3 py-2 text-xs text-ink-2"
+              className="py-1 text-xs text-ink-2"
             >
               <div className="flex items-center justify-between gap-2">
                 <span className="font-mono">#{sample.log_id}</span>
@@ -478,7 +479,7 @@ function HeaderValueList({
   return (
     <div className="space-y-2">
       {entries.map(([key, value]) => (
-        <div key={key} className="min-w-0 rounded-xl bg-surface px-3 py-2">
+        <div key={key} className="min-w-0 py-1">
           <div className="text-xs font-medium text-ink-3">{key}</div>
           <div
             className={[
