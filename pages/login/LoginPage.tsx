@@ -3,14 +3,11 @@ import { useTranslation } from "react-i18next";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowBigUpDash, ArrowRight, ChevronDown, Eye, EyeOff, KeyRound, UserRound } from "lucide-react";
-import {
-  detectApiBaseFromLocation,
-  extractApiErrorCode,
-  isApiClientError,
-} from "@code-proxy/api-client";
+import { detectApiBaseFromLocation } from "@code-proxy/api-client";
 import { useAuth } from "@app/providers/AuthProvider";
 import {
   Button,
+  Callout,
   Checkbox,
   PageBackground,
   TextInput,
@@ -21,9 +18,15 @@ import {
   useToast,
 } from "@code-proxy/ui";
 import { BRAND_NAME_PREFIX, BRAND_NAME_SUFFIX, LogoMark } from "@code-proxy/assets";
+import {
+  isFailureForUsername,
+  LoginLockMessage,
+  useLoginLockCountdown,
+  type LoginFailure,
+} from "@features/login-lock";
 import { LoginNetwork } from "./LoginNetwork";
 import { RotatingModelName } from "./RotatingModelName";
-import { resolveLoginErrorMessage } from "./loginErrors";
+import { describeLoginFailure } from "./loginErrors";
 
 interface RedirectState {
   from?: { pathname?: string };
@@ -64,6 +67,8 @@ export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [loading, setLoading] = useState(false);
+  /** 上一次登录失败：表单里常驻的「还剩几次 / 锁定倒计时」都从这里来。 */
+  const [failure, setFailure] = useState<LoginFailure | null>(null);
   const usernameRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -75,6 +80,11 @@ export function LoginPage() {
     () => (location.state as RedirectState | null)?.from?.pathname ?? "/dashboard",
     [location.state],
   );
+  // 锁定和剩余次数都按账号算：换了账号就不拿上一个账号的状态拦人。
+  const failureApplies = isFailureForUsername(failure, username);
+  const lockSeconds = useLoginLockCountdown(failureApplies ? failure?.lockedUntil : undefined);
+  const locked = lockSeconds > 0;
+  const remainingAttempts = failureApplies ? failure?.remainingAttempts : undefined;
   const accessFailureMessage =
     authFailureCode === "tenant_expired"
       ? t("login.tenant_expired")
@@ -89,6 +99,11 @@ export function LoginPage() {
   const handleSubmit = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
+      // 按钮已禁用，但在输入框里按回车仍会走到这里；锁定中不再发请求。
+      if (locked) {
+        shake();
+        return;
+      }
       const trimmedUsername = username.trim();
       // 必填项没填：提示之外把焦点送回那个输入框，卡片晃一下把视线拉回来。
       if (!trimmedUsername) {
@@ -111,30 +126,24 @@ export function LoginPage() {
           password,
           rememberPassword,
         });
+        setFailure(null);
         notify({ type: "success", message: t("login.login_success") });
         navigate(principal.user.must_change_password ? "/change-password" : redirect, {
           replace: true,
           viewTransition: true,
         });
       } catch (error) {
-        const code = isApiClientError(error) ? extractApiErrorCode(error.payload) : "";
-        const status = isApiClientError(error) ? error.status : 0;
-        notify({
-          type: "error",
-          message: resolveLoginErrorMessage({
-            t,
-            code,
-            status,
-            isTimeout: isApiClientError(error) ? error.isTimeout : false,
-            fallbackMessage: error instanceof Error ? error.message : "",
-          }),
-        });
+        // 以前这里不传 details，服务端给的「还剩几次」「锁多久」到不了界面，
+        // 锁住之后只剩一句「请稍后再试」。
+        const next = describeLoginFailure(t, error, { username: trimmedUsername });
+        setFailure(next);
+        notify({ type: "error", message: next.message });
         shake();
       } finally {
         setLoading(false);
       }
     },
-    [apiBase, login, navigate, notify, password, redirect, rememberPassword, shake, t, username],
+    [apiBase, locked, login, navigate, notify, password, redirect, rememberPassword, shake, t, username],
   );
 
   if (isRestoring) return null;
@@ -194,6 +203,24 @@ export function LoginPage() {
                       <div className="rounded-2xl bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:bg-amber-400/15 dark:text-amber-300">
                         {accessFailureMessage}
                       </div>
+                    </motion.div>
+                  ) : null}
+                </AnimatePresence>
+                {/* 登录失败后的常驻提示：toast 几秒就消失，还剩几次、还要锁多久得一直留在表单上，
+                    直到用户换了账号或者情况变了。toast 本身是 role="alert"，已经替读屏播报过，
+                    这里不再设播报角色，免得同一件事念两遍。 */}
+                <AnimatePresence initial={false}>
+                  {locked ? (
+                    <motion.div key="login-locked" {...HINT_MOTION} className="overflow-hidden">
+                      <Callout tone="danger">
+                        <LoginLockMessage t={t} seconds={lockSeconds} />
+                      </Callout>
+                    </motion.div>
+                  ) : remainingAttempts ? (
+                    <motion.div key="login-remaining" {...HINT_MOTION} className="overflow-hidden">
+                      <Callout tone="warning">
+                        {t("login.remaining_attempts_notice", { count: remainingAttempts })}
+                      </Callout>
                     </motion.div>
                   ) : null}
                 </AnimatePresence>
@@ -300,7 +327,13 @@ export function LoginPage() {
                   </AnimatePresence>
                 </motion.div>
                 <motion.div variants={form.item}>
-                  <Button type="submit" variant="primary" loading={loading} className="group h-12 w-full">
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    loading={loading}
+                    disabled={locked}
+                    className="group h-12 w-full"
+                  >
                     {loading ? (
                       t("login.signing_in")
                     ) : (

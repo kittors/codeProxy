@@ -21,7 +21,10 @@ const authMocks = vi.hoisted(() => ({
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
-    t: (key: string) => key,
+    // Interpolation values are appended so assertions can see the numbers the
+    // page passed (remaining attempts, countdown); string defaults are ignored.
+    t: (key: string, options?: unknown) =>
+      options && typeof options === "object" ? `${key}${JSON.stringify(options)}` : key,
   }),
 }));
 
@@ -36,6 +39,9 @@ vi.mock("@app/providers/AuthProvider", () => ({
 
 vi.mock("@code-proxy/ui", () => ({
   PageBackground: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  Callout: ({ children, role }: { children?: React.ReactNode; role?: "alert" | "status" }) => (
+    <div role={role}>{children}</div>
+  ),
   Reveal: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   TextInput: ({
     value,
@@ -208,5 +214,123 @@ describe("LoginPage toasts", () => {
         message: "login.login_success",
       });
     });
+  });
+});
+
+function fillAndSubmit(username: string, password: string) {
+  fireEvent.change(document.querySelector('input[autocomplete="username"]') as HTMLInputElement, {
+    target: { value: username },
+  });
+  fireEvent.change(
+    document.querySelector('input[autocomplete="current-password"]') as HTMLInputElement,
+    { target: { value: password } },
+  );
+  fireEvent.click(screen.getByRole("button", { name: "login.submit_button" }));
+}
+
+describe("LoginPage attempt limits", () => {
+  beforeEach(() => {
+    toastMocks.notify.mockReset();
+    authMocks.login.mockReset();
+    authMocks.state.isAuthenticated = false;
+    authMocks.state.isRestoring = false;
+    authMocks.state.authFailureCode = "";
+  });
+
+  // Reported: a wrong password never said how many tries were left, so people
+  // only learned there was a limit by being locked out.
+  test("says how many attempts remain, in the toast and on the form", async () => {
+    const { ApiError } = await import("@code-proxy/api-client");
+    authMocks.login.mockRejectedValue(
+      new ApiError({
+        message: "invalid credentials",
+        status: 401,
+        payload: {
+          error: {
+            code: "invalid_credentials",
+            message: "invalid credentials",
+            details: { remaining_attempts: 2 },
+          },
+        },
+      }),
+    );
+    renderLogin();
+    fillAndSubmit("admin", "wrong");
+
+    await waitFor(() => {
+      expect(toastMocks.notify).toHaveBeenCalledWith({
+        type: "error",
+        message: 'login.error_invalid_credentials_remaining{"count":2}',
+      });
+    });
+    // The toast fades; the warning stays on the form.
+    expect(screen.getByText('login.remaining_attempts_notice{"count":2}')).toBeInTheDocument();
+  });
+
+  // Reported: once locked, the page said only "try again later", so people kept
+  // submitting — every attempt looked like one more wrong password.
+  test("counts a reported lock down with sign-in disabled, then lets the user back in", async () => {
+    const { ApiError } = await import("@code-proxy/api-client");
+    authMocks.login.mockRejectedValue(
+      new ApiError({
+        message: "too many login attempts",
+        status: 429,
+        payload: {
+          error: {
+            code: "login_rate_limited",
+            message: "too many login attempts",
+            details: { retry_after_seconds: 1 },
+          },
+        },
+      }),
+    );
+    renderLogin();
+    fillAndSubmit("admin", "wrong");
+
+    await screen.findByText('login.locked_notice{"time":"0:01"}');
+    // The toast states the lock once; the form keeps counting it down.
+    expect(toastMocks.notify).toHaveBeenCalledWith({
+      type: "error",
+      message: 'login.error_rate_limited_seconds{"count":1,"seconds":1}',
+    });
+    const submit = screen.getByRole("button", { name: "login.submit_button" });
+    expect(submit).toBeDisabled();
+
+    // Enter in a field cannot slip past the lock either.
+    fireEvent.submit(submit.closest("form") as HTMLFormElement);
+    expect(authMocks.login).toHaveBeenCalledTimes(1);
+
+    await waitFor(() => expect(submit).not.toBeDisabled(), { timeout: 3_000 });
+    // The notice leaves with its exit animation once the lock has lapsed.
+    await waitFor(() => expect(screen.queryByText(/login\.locked_notice/)).toBeNull());
+  });
+
+  test("a lock on one account does not block signing in to another", async () => {
+    const { ApiError } = await import("@code-proxy/api-client");
+    authMocks.login.mockRejectedValue(
+      new ApiError({
+        message: "login cooldown",
+        status: 429,
+        payload: {
+          error: {
+            code: "login_cooldown",
+            message: "login cooldown: retry after 5m0s",
+            details: { retry_after_seconds: 300 },
+          },
+        },
+      }),
+    );
+    renderLogin();
+    fillAndSubmit("admin", "wrong");
+
+    await screen.findByText(/login\.locked_notice/);
+    const submit = screen.getByRole("button", { name: "login.submit_button" });
+    expect(submit).toBeDisabled();
+
+    fireEvent.change(document.querySelector('input[autocomplete="username"]') as HTMLInputElement, {
+      target: { value: "operator" },
+    });
+    expect(submit).not.toBeDisabled();
+    await waitFor(() => expect(screen.queryByText(/login\.locked_notice/)).toBeNull());
   });
 });

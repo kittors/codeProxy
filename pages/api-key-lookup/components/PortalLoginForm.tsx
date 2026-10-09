@@ -3,6 +3,12 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Eye, EyeOff, KeyRound, Loader2, UserRound } from "lucide-react";
 import { LogoMark } from "@code-proxy/assets";
 import { Callout, FormField, TextInput, rules, useFormValidation } from "@code-proxy/ui";
+import {
+  isFailureForUsername,
+  LoginLockMessage,
+  useLoginLockCountdown,
+  type LoginFailure,
+} from "@features/login-lock";
 import { LandingButton } from "./landing/LandingButton";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
@@ -16,6 +22,9 @@ const EASE = [0.16, 1, 0.3, 1] as const;
  * 弹窗用 hideHeader：顶部是品牌标识 + 大标题，和落地页同一种语气，不是后台那种图标头。
  * 字段用统一的 FormField；账号、密码为空时在字段下就地提示（失焦或点登录后），
  * 不再把按钮置灰让人猜还差什么。服务端的失败原因放在按钮上方的提示条里。
+ *
+ * 被锁定时提示条改成倒计时，倒计时结束前登录按钮不可点：只写「请 1 分钟后重试」时，
+ * 用户仍会隔几秒点一次，每次都以为是自己又输错了。
  */
 export function PortalLoginForm({
   t,
@@ -33,7 +42,7 @@ export function PortalLoginForm({
   username: string;
   password: string;
   showPassword: boolean;
-  error: string | null;
+  error: LoginFailure | null;
   busy: boolean;
   onUsernameChange: (value: string) => void;
   onPasswordChange: (value: string) => void;
@@ -46,6 +55,13 @@ export function PortalLoginForm({
     { username, password },
     { username: [rules.required()], password: [rules.required()] },
   );
+
+  // 锁是按账号算的：换了账号就不拿上一个账号的锁拦人。
+  const errorApplies = isFailureForUsername(error, username);
+  const lockSeconds = useLoginLockCountdown(errorApplies ? error?.lockedUntil : undefined);
+  const locked = lockSeconds > 0;
+  // 锁定倒计时走完后，那句「请 N 分钟后重试」已经过时，不再显示。
+  const showError = Boolean(error) && (locked || !error?.lockedUntil);
 
   const fieldClass = "h-12 rounded-2xl px-4 text-sm";
   const adornmentClass = "text-ink-3";
@@ -68,6 +84,8 @@ export function PortalLoginForm({
         noValidate
         onSubmit={(event) => {
           event.preventDefault();
+          // 按钮已禁用；在输入框里按回车也不能绕过锁定。
+          if (locked) return;
           if (!validation.validate()) {
             validation.focusFirstInvalid(formRef.current);
             return;
@@ -125,7 +143,7 @@ export function PortalLoginForm({
 
         {/* 错误条用高度动画展开，避免它突然出现把按钮顶下去 */}
         <AnimatePresence initial={false}>
-          {error ? (
+          {showError && error ? (
             <motion.div
               key="login-error"
               initial={reduceMotion ? false : { opacity: 0, height: 0, y: -4 }}
@@ -135,13 +153,17 @@ export function PortalLoginForm({
               className="overflow-hidden"
             >
               <Callout tone="danger" role="alert">
-                {error}
+                {locked ? (
+                  <LoginLockMessage t={t} seconds={lockSeconds} announcement={error.message} />
+                ) : (
+                  error.message
+                )}
               </Callout>
             </motion.div>
           ) : null}
         </AnimatePresence>
 
-        <LandingButton type="submit" disabled={busy} className="mt-1 h-12 w-full">
+        <LandingButton type="submit" disabled={busy || locked} className="mt-1 h-12 w-full">
           {busy ? (
             <>
               <Loader2 size={16} className="animate-spin" aria-hidden />

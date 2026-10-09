@@ -8,7 +8,7 @@
     "packages/domain/src/auth-files/authFiles.ts": 2142,
     "packages/domain/src/ccswitch/ccswitchImport.ts": 845,
     "packages/ui/src/data-table/DataTable.tsx": 2621,
-    "pages/api-key-lookup/ApiKeyLookupPage.tsx": 1607,
+    "pages/api-key-lookup/ApiKeyLookupPage.tsx": 1589,
     "pages/api-keys/ApiKeysPage.tsx": 1065,
     "pages/auth-files/AuthFilesPage.tsx": 1063,
     "pages/auth-files/components/AuthFileDetailModal.tsx": 1841,
