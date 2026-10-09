@@ -299,6 +299,7 @@ const ICON_HUE: Record<string, Hue> = {
   ImagePlay: "pink",
   ImagePlus: "pink",
   Camera: "pink",
+  Palette: "pink",
   Video: "rose",
   Clapperboard: "rose",
   Film: "rose",

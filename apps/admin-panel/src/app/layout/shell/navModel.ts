@@ -61,7 +61,7 @@ const toSidebarItem = (menu: MenuIdentity): SidebarNavItem => ({
   external: menu.type === "link",
 });
 
-/** 服务端没下发菜单时（旧版后端、管理密钥登录）保底能进的入口：菜单管理本身与外观。 */
+/** 服务端没下发菜单时（旧版后端、管理密钥登录）保底能进的入口：菜单管理本身。 */
 export const FALLBACK_NAV_GROUPS: readonly SidebarNavGroup[] = [
   {
     id: "group.system",
@@ -78,70 +78,9 @@ export const FALLBACK_NAV_GROUPS: readonly SidebarNavGroup[] = [
         permission: "platform.menus.read",
         sortOrder: 20,
       },
-      {
-        menuCode: "system.appearance",
-        to: "/system/appearance",
-        i18nKey: "shell.nav_appearance",
-        icon: resolveMenuIcon("palette"),
-        permission: "",
-        sortOrder: 30,
-      },
     ],
   },
 ];
-
-const synthesizedMenu = (
-  partial: Pick<MenuIdentity, "code" | "parent_code" | "type" | "path" | "component" | "label_key" | "icon" | "sort_order">,
-): MenuIdentity => ({
-  ...partial,
-  link_url: "",
-  title: "",
-  permission_code: "",
-  visible: true,
-  enabled: true,
-  badge_type: "",
-  badge_content: "",
-  hide_menu: false,
-  system_protected: true,
-  version: 1,
-});
-
-/** 与 CliRelay MenuCatalog 里的 system.appearance / group.system 同形。 */
-const APPEARANCE_MENU = synthesizedMenu({
-  code: "system.appearance",
-  parent_code: "group.system",
-  type: "menu",
-  path: "/system/appearance",
-  component: "appearance",
-  label_key: "shell.nav_appearance",
-  icon: "palette",
-  sort_order: 30,
-});
-
-const SYSTEM_GROUP_MENU = synthesizedMenu({
-  code: "group.system",
-  parent_code: "",
-  type: "directory",
-  path: "/system",
-  component: "Layout",
-  label_key: "shell.nav_group_system",
-  icon: "settings",
-  sort_order: 60,
-});
-
-/**
- * 外观页只改本机浏览器里的偏好，不依赖后端；面板会自动更新到最新版本，比这个菜单更早的后端
- * 也会用上新面板，它们下发的菜单里没有这一项。这里补一条与后端目录同形的菜单（没有「系统设置」
- * 目录的租户用户连目录一起补），入口始终在。后端已经下发了这一项——哪怕在菜单管理里被隐藏或
- * 停用——就以后端为准，不再补。
- */
-export function withAppearanceMenu(menus: readonly MenuIdentity[]): MenuIdentity[] {
-  if (menus.some((menu) => menu.code === APPEARANCE_MENU.code || menu.component === APPEARANCE_MENU.component)) {
-    return [...menus];
-  }
-  const hasSystemGroup = menus.some((menu) => menu.code === SYSTEM_GROUP_MENU.code);
-  return [...menus, ...(hasSystemGroup ? [] : [SYSTEM_GROUP_MENU]), APPEARANCE_MENU];
-}
 
 export const FALLBACK_DASHBOARD_ITEM: SidebarNavItem = {
   menuCode: "dashboard",
@@ -275,7 +214,6 @@ export const getPageTitleKey = (pathname: string, menus?: MenuIdentity[] | null)
   if (pathname.startsWith("/system/config") || pathname.startsWith("/config")) {
     return "shell.nav_config";
   }
-  if (pathname.startsWith("/system/appearance")) return "shell.nav_appearance";
   return "shell.page_home";
 };
 

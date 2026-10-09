@@ -348,16 +348,6 @@ export const LEGACY_SERVICE_MENUS: MenuIdentity[] = [
     permission_code: "platform.menus.read",
     sort_order: 20,
   }),
-  menu({
-    code: "system.appearance",
-    parent_code: "group.system",
-    type: "menu",
-    path: "/system/appearance",
-    component: "appearance",
-    label_key: "shell.nav_appearance",
-    icon: "palette",
-    sort_order: 30,
-  }),
 ];
 
 export const legacyServicePrincipal = (): ManagementPrincipal => ({

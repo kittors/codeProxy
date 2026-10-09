@@ -203,8 +203,7 @@
     "monitor": "Monitor Center",
     "menuManagement": "Menu Management",
     "content_moderation": "Content Moderation",
-    "videoGeneration": "Video Models",
-    "appearance": "Appearance"
+    "videoGeneration": "Video Models"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -2466,8 +2465,7 @@
     "stale_route_shortcut": "Hard refresh: Cmd+Shift+R on macOS; Ctrl+Shift+R on Windows/Linux.",
     "stale_route_reload": "Reload page",
     "nav_ip_access": "IP Access Control",
-    "nav_video_generation": "Video Models",
-    "nav_appearance": "Appearance"
+    "nav_video_generation": "Video Models"
   },
   "proxies": {
     "title": "Proxy Management",
@@ -6773,16 +6771,13 @@
   },
   "appearance": {
     "title": "Appearance",
-    "description": "Adjust the panel's colours, progress-bar thickness and text size. Settings are kept in this browser and only change what you see.",
     "reset": "Restore defaults",
     "style_title": "Style",
-    "style_description": "Pick a style first, then fine-tune any of the settings below.",
     "preset_colorful": "Colourful",
     "preset_colorful_description": "Coloured icons, semantic progress bars, metric identity colours and badge glows — the panel's signature look.",
     "preset_quiet": "Quiet",
     "preset_quiet_description": "One blue accent and neutral icons; colour is used only for states.",
     "preset_current": "Current",
-    "preset_custom": "Custom",
     "preset_custom_note": "You are using a custom colour setup. Pick a style above to switch back as a whole.",
     "colors_title": "Colours",
     "accent": "Accent colour",
@@ -6824,7 +6819,6 @@
     "bar_thickness_description": "Height of quota, usage and monitor bars; the small bars on compact cards scale to 3/4.",
     "ui_scale": "Interface scale",
     "ui_scale_description": "Scales spacing, controls and text together. Automatic is 100% on Windows and 90% elsewhere.",
-    "ui_scale_auto": "Automatic",
     "ui_scale_auto_value": "Automatic · {{value}}",
     "text_scale": "Text size",
     "text_scale_description": "Makes only the text larger or smaller; spacing and controls keep their size.",
@@ -6834,20 +6828,19 @@
     "weight_regular": "Regular",
     "weight_medium": "Medium",
     "weight_bold": "Bold",
-    "mode_title": "Light and dark",
     "mode": "Colour mode",
     "mode_description": "When following the system, the panel switches with your operating system's light or dark setting.",
     "preview_title": "Preview",
-    "preview_description": "The sample follows your current settings live.",
     "preview_primary": "Save changes",
     "preview_secondary": "Cancel",
     "preview_success": "Healthy",
-    "preview_info": "Info",
     "preview_warning": "Attention",
     "preview_danger": "Failed",
     "preview_quota_5h": "5-hour window",
     "preview_quota_week": "Weekly quota",
     "preview_quota_month": "Monthly quota",
-    "preview_plan": "Flagship"
+    "preview_plan": "Flagship",
+    "drawer_description": "Changes apply right away and are saved in this browser only.",
+    "done": "Done"
   }
 }

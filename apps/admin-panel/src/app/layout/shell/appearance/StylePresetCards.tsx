@@ -102,21 +102,22 @@ export function StylePresetCards({
             )}
           >
             <PresetSample preset={preset} />
-            <span className="flex items-start justify-between gap-2">
-              <span className="min-w-0">
-                <span className="block text-sm font-semibold text-ink">
+            {/* 「当前」标记和名称同一行，说明独占下一行：窄抽屉里说明不被标记挤成竖条。 */}
+            <span className="min-w-0">
+              <span className="flex items-center justify-between gap-2">
+                <span className="truncate text-sm font-semibold text-ink">
                   {t(`appearance.preset_${preset}`)}
                 </span>
-                <span className="mt-0.5 block text-xs text-ink-3">
-                  {t(`appearance.preset_${preset}_description`)}
-                </span>
+                {selected ? (
+                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-accent px-2 py-0.5 text-2xs font-semibold text-accent-fg">
+                    <Check size={11} strokeWidth={3} aria-hidden="true" />
+                    {t("appearance.preset_current")}
+                  </span>
+                ) : null}
               </span>
-              {selected ? (
-                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-accent px-2 py-0.5 text-2xs font-semibold text-accent-fg">
-                  <Check size={11} strokeWidth={3} aria-hidden="true" />
-                  {t("appearance.preset_current")}
-                </span>
-              ) : null}
+              <span className="mt-1 block text-xs text-ink-3">
+                {t(`appearance.preset_${preset}_description`)}
+              </span>
             </span>
           </button>
         );
