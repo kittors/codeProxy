@@ -108,6 +108,69 @@ test("Login: successful sign in persists auth snapshot and restores dashboard af
   await expect(page).toHaveURL(/#\/dashboard$/);
 });
 
+test("Login: wrong passwords warn before the lock, and the lock counts down @critical", async ({
+  page,
+}) => {
+  // Reported: a wrong password never said how many tries were left, and once
+  // locked the page said only "try again later" — so people kept submitting
+  // into the lock, each time believing the password was wrong.
+  let attempts = 0;
+  await page.route("**/v0/auth/login", async (route) => {
+    attempts += 1;
+    if (attempts === 1) {
+      await route.fulfill({
+        status: 401,
+        contentType: "application/json",
+        body: JSON.stringify({
+          error: {
+            code: "invalid_credentials",
+            message: "invalid credentials",
+            details: { remaining_attempts: 1 },
+          },
+        }),
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 429,
+      headers: { "Retry-After": "2" },
+      contentType: "application/json",
+      body: JSON.stringify({
+        error: {
+          code: "login_rate_limited",
+          message: "too many login attempts",
+          details: { retry_after_seconds: 2 },
+        },
+      }),
+    });
+  });
+
+  await page.goto("/#/login");
+  await page.evaluate(() => {
+    localStorage.removeItem("code-proxy-admin-auth");
+    sessionStorage.removeItem("code-proxy-admin-auth");
+  });
+
+  await page.getByLabel(/username/i).fill("admin");
+  await page.getByLabel(/^password$/i).fill("wrong-password");
+  const signIn = page.getByRole("button", { name: /^login$/i });
+  await signIn.click();
+  // The toast fades; the warning stays on the form.
+  const notice = page.locator('[data-slot="callout"]');
+  await expect(notice.filter({ hasText: /1 more wrong password/i })).toBeVisible();
+
+  await signIn.click();
+  const lock = notice.filter({ hasText: /temporarily locked; try again in 0:0\d/i });
+  await expect(lock).toBeVisible();
+  await expect(signIn).toBeDisabled();
+  expect(attempts).toBe(2);
+
+  // The lock lapses on its own and sign-in comes back without a reload.
+  await expect(signIn).toBeEnabled({ timeout: 5_000 });
+  await expect(lock).toBeHidden();
+  expect(attempts).toBe(2);
+});
+
 test("Login: a throttled refresh keeps the session instead of signing the user out @critical", async ({
   page,
 }) => {

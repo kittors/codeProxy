@@ -1,9 +1,11 @@
 import { describe, expect, test } from "vitest";
 import type { TFunction } from "i18next";
-import { resolveLoginErrorMessage } from "../loginErrors";
+import { ApiError } from "@code-proxy/api-client";
+import { describeLoginFailure, resolveLoginErrorMessage } from "../loginErrors";
 
 const messages: Record<string, string> = {
   "login.error_invalid_credentials": "用户名或密码错误",
+  "login.error_invalid_credentials_remaining": "用户名或密码错误，还可尝试 {{count}} 次",
   "login.account_unavailable": "账号不可用",
   "login.tenant_expired": "租户已到期",
   "login.tenant_suspended": "租户已暂停",
@@ -119,5 +121,107 @@ describe("password policy codes", () => {
     expect(
       resolveLoginErrorMessage({ t, code: "password_missing_upper", status: 400 }),
     ).toBe("密码须包含至少一个大写字母。");
+  });
+});
+
+describe("remaining attempts", () => {
+  // Users were locked out with no warning: every wrong password read only
+  // "incorrect username or password", so the lock was the first sign that
+  // there was a limit at all.
+  test("says how many attempts remain when the server reports it", () => {
+    expect(
+      resolveLoginErrorMessage({
+        t,
+        code: "invalid_credentials",
+        status: 401,
+        details: { remaining_attempts: 2 },
+      }),
+    ).toBe("用户名或密码错误，还可尝试 2 次");
+  });
+
+  test("keeps the plain copy for servers that do not report it", () => {
+    expect(
+      resolveLoginErrorMessage({ t, code: "invalid_credentials", status: 401, details: {} }),
+    ).toBe("用户名或密码错误");
+    expect(
+      resolveLoginErrorMessage({
+        t,
+        code: "invalid_credentials",
+        status: 401,
+        details: { remaining_attempts: "two" },
+      }),
+    ).toBe("用户名或密码错误");
+  });
+});
+
+describe("describeLoginFailure", () => {
+  const now = Date.parse("2026-10-09T09:45:51Z");
+  const apiError = (status: number, error: Record<string, unknown>) =>
+    new ApiError({ message: String(error.message ?? ""), status, payload: { error } });
+
+  test("turns a reported lock into a deadline for the countdown", () => {
+    const failure = describeLoginFailure(
+      t,
+      apiError(429, {
+        code: "login_rate_limited",
+        message: "too many login attempts",
+        details: { retry_after_seconds: 300 },
+      }),
+      { username: "  Admin ", now },
+    );
+    expect(failure).toEqual({
+      message: "请 5 分钟后重试",
+      lockedUntil: now + 300_000,
+      username: "admin",
+    });
+  });
+
+  test("a cooldown and a bare 429 lock the form too", () => {
+    expect(
+      describeLoginFailure(
+        t,
+        apiError(429, { code: "login_cooldown", details: { retry_after_seconds: 60 } }),
+        { now },
+      ).lockedUntil,
+    ).toBe(now + 60_000);
+    expect(
+      describeLoginFailure(t, apiError(429, { details: { retry_after_seconds: 30 } }), { now })
+        .lockedUntil,
+    ).toBe(now + 30_000);
+  });
+
+  test("carries the remaining attempts of a wrong password", () => {
+    const failure = describeLoginFailure(
+      t,
+      apiError(401, {
+        code: "invalid_credentials",
+        message: "invalid credentials",
+        details: { remaining_attempts: 3 },
+      }),
+      { username: "admin", now },
+    );
+    expect(failure).toEqual({
+      message: "用户名或密码错误，还可尝试 3 次",
+      remainingAttempts: 3,
+      username: "admin",
+    });
+  });
+
+  test("never locks the form on a lock it cannot time, or on a non-lock error", () => {
+    // No duration: still a message, but a countdown would be a guess.
+    expect(
+      describeLoginFailure(t, apiError(429, { code: "login_rate_limited" }), { now }).lockedUntil,
+    ).toBeUndefined();
+    // A stray retry hint on an unrelated error must not disable sign-in.
+    expect(
+      describeLoginFailure(
+        t,
+        apiError(503, { code: "identity_unavailable", details: { retry_after_seconds: 30 } }),
+        { now },
+      ).lockedUntil,
+    ).toBeUndefined();
+    expect(describeLoginFailure(t, new TypeError("Failed to fetch"), { now })).toEqual({
+      message: "网络失败",
+    });
   });
 });
