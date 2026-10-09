@@ -14,6 +14,7 @@ import {
   type TenantIdentity,
 } from "@code-proxy/api-client";
 import { useOptionalAuth } from "@app/providers/AuthProvider";
+import { AppearanceButton } from "./appearance/AppearanceButton";
 import { tenantDisplayName } from "./navModel";
 
 const TOPBAR_ICON_BUTTON =
@@ -21,7 +22,7 @@ const TOPBAR_ICON_BUTTON =
 
 /**
  * 内容区顶栏：左侧是「分区 / 页面」位置提示（手机上多一个打开抽屉的按钮），右侧是切换租户、
- * 语言与主题。不画分隔线、不加底色，和内容区连成一片。
+ * 语言、主题与外观（外观在侧边抽屉里调）。不画分隔线、不加底色，和内容区连成一片。
  *
  * 页面标题仍是一个只给读屏的 h1：各页面自己的卡片里已经有可见标题，这里再放一个可见的
  * 大标题会重复，也会让「按名称找 heading」的测试多匹配一个。
@@ -69,6 +70,7 @@ export function ShellTopBar({
         <TenantSwitcher />
         <LanguageSelector className={`${TOPBAR_ICON_BUTTON} gap-0.5 px-2.5`} />
         <ThemeToggleButton className={`${TOPBAR_ICON_BUTTON} w-9`} />
+        <AppearanceButton className={`${TOPBAR_ICON_BUTTON} w-9`} />
       </div>
     </header>
   );

@@ -7,7 +7,6 @@ import {
   FALLBACK_DASHBOARD_ITEM,
   FALLBACK_NAV_GROUPS,
   mergeSidebarEntries,
-  withAppearanceMenu,
   tenantDisplayName,
   type NavSection,
   type SidebarNavItem,
@@ -39,7 +38,7 @@ export function useShellNav(): { sections: NavSection[]; items: SidebarNavItem[]
     [menuByCode],
   );
   const builtNav = useMemo(() => {
-    if (principal?.menus?.length) return buildSidebarFromMenus(withAppearanceMenu(principal.menus));
+    if (principal?.menus?.length) return buildSidebarFromMenus(principal.menus);
     return { primaryItems: [FALLBACK_DASHBOARD_ITEM], groups: [...FALLBACK_NAV_GROUPS] };
   }, [principal?.menus]);
   const canSeeMenuItem = useCallback(
