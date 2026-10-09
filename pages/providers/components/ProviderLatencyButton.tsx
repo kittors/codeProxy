@@ -12,6 +12,9 @@ export interface ProviderLatencyEntry {
  *
  * Extracted from ProviderKeyListCard so the header can decide whether it has
  * anything to render before it renders a row for it.
+ *
+ * 延迟分档：快是绿、出错是红。简约风格与代理池一致——慢是琥珀，200–500ms 属于正常范围，
+ * 中性数字就够了；多彩风格是三档绿 / 琥珀 / 红。
  */
 export function ProviderLatencyButton({
   entry,
@@ -25,12 +28,12 @@ export function ProviderLatencyButton({
   const { latencyMs } = entry;
   const latencyColor =
     latencyMs === null
-      ? "text-slate-500 dark:text-white/55"
+      ? "text-ink-3"
       : latencyMs < 200
         ? "text-emerald-700 dark:text-emerald-300"
         : latencyMs < 500
-          ? "text-amber-700 dark:text-amber-300"
-          : "text-rose-700 dark:text-rose-300";
+          ? "text-ink-2 colorful:text-amber-700 colorful:dark:text-amber-300"
+          : "text-amber-700 dark:text-amber-300 colorful:text-rose-700 colorful:dark:text-rose-300";
   const label = baseUrl
     ? `Check latency: ${baseUrl}`
     : "No base URL configured";
@@ -39,9 +42,9 @@ export function ProviderLatencyButton({
     <button
       type="button"
       className={[
-        "inline-flex h-5 shrink-0 items-center gap-1 rounded-md bg-slate-100 px-1.5 text-2xs font-semibold leading-none tabular-nums transition-colors hover:bg-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/25 dark:bg-white/10 dark:hover:bg-white/15 dark:focus-visible:ring-white/20",
+        "inline-flex h-5 shrink-0 items-center gap-1 rounded-md bg-ink/[0.05] px-1.5 text-2xs font-semibold leading-none tabular-nums transition-colors hover:bg-ink/[0.08] focus-visible:outline-none focus-visible:shadow-control-focus dark:bg-white/[0.07] dark:hover:bg-white/[0.1]",
         entry.loading
-          ? "text-slate-500 dark:text-white/55"
+          ? "text-ink-3"
           : entry.error
             ? "text-rose-700 dark:text-rose-300"
             : latencyColor,

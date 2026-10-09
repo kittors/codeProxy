@@ -31,24 +31,23 @@ function CodeBlock({ language, children }: { language: string; children: string 
   const displayLang = language || "text";
   const normalized = children.endsWith("\n") ? children.slice(0, -1) : children;
 
+  // 代码块在两种主题下都是 oneDark 的深底（语法高亮只有这一套配色）。轮廓交给伪元素细边，
+  // 不画 border；标题栏红黄绿三个「窗口按钮」圆点是纯装饰，只在多彩风格下显示。
   return (
-    <div className="my-3 overflow-hidden rounded-xl" style={{ border: "1px solid #3e4451" }}>
-      <div
-        className="flex items-center justify-between px-4 py-1.5"
-        style={{ backgroundColor: "#282c34" }}
-      >
+    <div className="cp-edge my-3 overflow-hidden rounded-xl bg-[#282c34]">
+      <div className="flex items-center justify-between px-4 py-1.5">
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5">
+          <div aria-hidden="true" className="hidden items-center gap-1.5 colorful:flex">
             <span className="inline-block h-3 w-3 rounded-full bg-[#FF5F57]" />
             <span className="inline-block h-3 w-3 rounded-full bg-[#FEBC2E]" />
             <span className="inline-block h-3 w-3 rounded-full bg-[#28C840]" />
           </div>
-          <span className="text-xs font-medium text-slate-400">{displayLang}</span>
+          <span className="font-mono text-xs font-medium text-white/50">{displayLang}</span>
         </div>
         <button
           type="button"
           onClick={handleCopy}
-          className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-slate-400 transition-colors hover:bg-white/10 hover:text-slate-200"
+          className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-white/55 transition-colors hover:bg-white/10 hover:text-white/85"
         >
           {copied ? (
             <>

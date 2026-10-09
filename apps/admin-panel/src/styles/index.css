@@ -8,6 +8,23 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/*
+ * 外观开关（系统设置 → 外观，模型见 packages/ui/src/theme/appearance.ts）。
+ * 两个 HTML 入口在首屏绘制前把它们写到 <html> 上，默认都是多彩：
+ * - data-palette="colorful | quiet"：页面里的语义色与装饰色——成功 / 信息标签、指标身份色、
+ *   监控分类色、会员徽章的渐变与光效；
+ * - data-icons="colorful | mono"：图标按名字着色（theme/hues 的注册表）还是统一中性灰；
+ * - data-bars="semantic | accent"：额度 / 用量进度条按余量走绿 → 琥珀 → 红，还是统一强调色。
+ *
+ * 写法约定：简约形态是基础类名，多彩是叠在同一元素上的变体类（colorful:bg-emerald-50），
+ * 切换开关不需要重新渲染。变体用 :where 保持零特异度——它们在生成的样式里排在 dark: 之后，
+ * 能盖住同属性的基础类和 dark: 基础类，又不会压过 hover: / focus: 这类状态变体（特异度更高）。
+ * 基础类带 dark: 的属性，多彩一侧要写成对的 colorful:dark:，否则深色下会沿用浅色的多彩值。
+ */
+@custom-variant colorful (&:where([data-palette="colorful"], [data-palette="colorful"] *));
+@custom-variant icon-hue (&:where([data-icons="colorful"], [data-icons="colorful"] *));
+@custom-variant bar-semantic (&:where([data-bars="semantic"], [data-bars="semantic"] *));
+
 @theme {
   /*
    * 全局排版与圆角规范。页面只使用这些 Tailwind token，图表等非 DOM 渲染同样遵循对应像素值。
@@ -17,45 +34,66 @@
    * 16px（卡片、菜单、浮动面板），列表选中块与表单内部用 8–12px。
    */
   /*
-   * 字体栈：macOS / iOS 上优先用系统字体（SF Pro + 苹方），这是设计稿的基准观感；
-   * 其它平台没有这两款字体，-apple-system 不生效，直接落到自托管的 Inter + Noto Sans SC，
-   * 跨平台仍然一致，不会退回 Segoe UI / 微软雅黑那种字重字宽对不上的组合（见 styles/fonts.css）。
-   * 浏览器只在真正渲染到某个字符时才下载对应字体，所以 macOS 上不会白下载 Inter/Noto。
+   * 字体栈按平台落到「该平台为屏幕调过的字体」上：
+   *   - macOS / iOS：-apple-system（SF Pro）+ 苹方，设计稿的基准观感；
+   *   - Windows：Segoe UI + 微软雅黑 UI。这两款带完整 hinting，是为 ClearType 调过的；
+   *     之前这里刻意绕开它们、改用自托管的 Inter + Noto Sans SC 可变字体，结果那两款 web 字体
+   *     没有 hinting，在 Windows 的小字号下发虚、锯齿明显（用户拿 mintimate.cn 对比——它用的正是
+   *     Segoe UI + 系统中文回退）；
+   *   - 其它平台（Linux 等）两边都没有，照旧落到自托管的 Inter + Noto（见 styles/fonts.css）。
+   * 浏览器只在真正渲染到某个字符时才下载对应字体，所以 macOS / Windows 上不会白下载 Inter/Noto。
    */
-  --font-sans: -apple-system, BlinkMacSystemFont, "Inter Variable", "PingFang SC",
-    "Noto Sans SC Variable", "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono Variable", "SFMono-Regular", Consolas, "Liberation Mono", Menlo,
-    monospace;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB",
+    "Microsoft YaHei UI", "Microsoft YaHei", "Inter Variable", "Noto Sans SC Variable", system-ui,
+    sans-serif;
+  /*
+   * 等宽字体必须带中文回退：表格里的时间、计数、模型名常和中文混排，等宽字体都没有中文字形，
+   * 没写回退时浏览器按 monospace 的系统默认补字——Windows 简体中文下是新宋体，小字号是点阵，
+   * 一行里中英文一清一糊。Windows 的等宽字体在下面按平台换成系统自带的 Cascadia Mono / Consolas。
+   */
+  --font-mono: "JetBrains Mono Variable", "SFMono-Regular", Menlo, Consolas, "Liberation Mono",
+    "PingFang SC", "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans SC Variable", monospace;
   /*
    * 展示级字体：落地页大标题、章节序号、eyebrow 标签统一用等宽。
    * CliRelay 是 CLI / 网关类基础设施产品，等宽字形本身就是这类产品的视觉母语；
    * 中文回落到 sans，避免等宽字体缺中文字形时出现豆腐块与参差基线。
    */
-  --font-display: "JetBrains Mono Variable", "SFMono-Regular", Menlo, "Noto Sans SC Variable",
-    "PingFang SC", "Microsoft YaHei", monospace;
+  --font-display: "JetBrains Mono Variable", "SFMono-Regular", Menlo, "PingFang SC",
+    "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans SC Variable", monospace;
 
-  --text-2xs: 0.625rem;
-  --text-2xs--line-height: 0.875rem;
-  --text-xs: 0.75rem;
-  --text-xs--line-height: 1rem;
-  --text-sm: 0.875rem;
-  --text-sm--line-height: 1.25rem;
-  --text-base: 1rem;
-  --text-base--line-height: 1.5rem;
-  --text-lg: 1.125rem;
-  --text-lg--line-height: 1.75rem;
-  --text-xl: 1.25rem;
-  --text-xl--line-height: 1.75rem;
-  --text-2xl: 1.5rem;
-  --text-2xl--line-height: 2rem;
-  --text-3xl: 1.875rem;
-  --text-3xl--line-height: 2.25rem;
-  --text-4xl: 2.25rem;
-  --text-4xl--line-height: 2.5rem;
-  --text-5xl: 3rem;
+  /*
+   * 字号与字重都乘上「外观」里的偏好：--cp-pref-text-scale 只放大缩小文字（不动间距与控件尺寸，
+   * 和整体缩放 --ui-scale 是两回事），--cp-pref-weight-shift 给所有字重统一加减（可变字体逐级变化，
+   * Windows 的系统字体只有几档字重，会就近取档）。没设置时两者分别是 1 和 0，与原来完全一致。
+   */
+  --text-2xs: calc(0.625rem * var(--cp-pref-text-scale, 1));
+  --text-2xs--line-height: calc(0.875rem * var(--cp-pref-text-scale, 1));
+  --text-xs: calc(0.75rem * var(--cp-pref-text-scale, 1));
+  --text-xs--line-height: calc(1rem * var(--cp-pref-text-scale, 1));
+  --text-sm: calc(0.875rem * var(--cp-pref-text-scale, 1));
+  --text-sm--line-height: calc(1.25rem * var(--cp-pref-text-scale, 1));
+  --text-base: calc(1rem * var(--cp-pref-text-scale, 1));
+  --text-base--line-height: calc(1.5rem * var(--cp-pref-text-scale, 1));
+  --text-lg: calc(1.125rem * var(--cp-pref-text-scale, 1));
+  --text-lg--line-height: calc(1.75rem * var(--cp-pref-text-scale, 1));
+  --text-xl: calc(1.25rem * var(--cp-pref-text-scale, 1));
+  --text-xl--line-height: calc(1.75rem * var(--cp-pref-text-scale, 1));
+  --text-2xl: calc(1.5rem * var(--cp-pref-text-scale, 1));
+  --text-2xl--line-height: calc(2rem * var(--cp-pref-text-scale, 1));
+  --text-3xl: calc(1.875rem * var(--cp-pref-text-scale, 1));
+  --text-3xl--line-height: calc(2.25rem * var(--cp-pref-text-scale, 1));
+  --text-4xl: calc(2.25rem * var(--cp-pref-text-scale, 1));
+  --text-4xl--line-height: calc(2.5rem * var(--cp-pref-text-scale, 1));
+  --text-5xl: calc(3rem * var(--cp-pref-text-scale, 1));
   --text-5xl--line-height: 1;
-  --text-6xl: 3.75rem;
+  --text-6xl: calc(3.75rem * var(--cp-pref-text-scale, 1));
   --text-6xl--line-height: 1;
+
+  --font-weight-light: calc(300 + var(--cp-pref-weight-shift, 0));
+  --font-weight-normal: calc(400 + var(--cp-pref-weight-shift, 0));
+  --font-weight-medium: calc(500 + var(--cp-pref-weight-shift, 0));
+  --font-weight-semibold: calc(600 + var(--cp-pref-weight-shift, 0));
+  --font-weight-bold: calc(700 + var(--cp-pref-weight-shift, 0));
 
   --radius-xs: 0.125rem;
   --radius-sm: 0.25rem;
@@ -71,8 +109,10 @@
    * 中性色板。页面里 slate-* 用于浅色语境的文字、浅底和描边（2400+ 处），
    * neutral-* 主要用于深色语境的卡片与浮层背景（dark:bg-neutral-950 等）。
    * 两套都重定义为不带色相的中性灰：灰仍然是灰，只是去掉了原来 slate 的蓝调，
-   * 现有类名不用改就能落到新的配色上。neutral 整体偏亮一档，是因为它在深色模式里
-   * 承担的是「表面」而不是「文字」：950 正好是深色内容区背景。
+   * 现有类名不用改就能落到新的配色上。neutral 只出现在 dark: 变体里，承担的是深色「表面」
+   * 而不是「文字」，所以它的深色端与下面的深色语义令牌一一对齐：950 = 内容区、900 = 卡片、
+   * 800 = 卡片上再提一档（表头、悬停）。深色端带一点点冷调，近黑底上读起来更「干净」，
+   * 不再是 #212121 / #2a2a2a 那种发闷的中灰。
    */
   --color-slate-50: #f9f9f9;
   --color-slate-100: #f3f3f3;
@@ -110,17 +150,17 @@
   --color-zinc-900: #171717;
   --color-zinc-950: #0d0d0d;
 
-  --color-neutral-50: #f7f7f7;
-  --color-neutral-100: #ececec;
-  --color-neutral-200: #d4d4d4;
-  --color-neutral-300: #b4b4b4;
-  --color-neutral-400: #8f8f8f;
-  --color-neutral-500: #737373;
-  --color-neutral-600: #525252;
-  --color-neutral-700: #404040;
-  --color-neutral-800: #333333;
-  --color-neutral-900: #2a2a2a;
-  --color-neutral-950: #212121;
+  --color-neutral-50: #f7f7f8;
+  --color-neutral-100: #ececef;
+  --color-neutral-200: #d4d4d8;
+  --color-neutral-300: #b4b4bc;
+  --color-neutral-400: #8b8b94;
+  --color-neutral-500: #74747c;
+  --color-neutral-600: #4a4a52;
+  --color-neutral-700: #33333a;
+  --color-neutral-800: #222227;
+  --color-neutral-900: #18181c;
+  --color-neutral-950: #111114;
 
   /*
    * 状态色板：成功 / 错误 / 警告 / 信息各一套色阶，500 是基准色。
@@ -257,6 +297,9 @@
   --color-accent: var(--cp-accent);
   --color-accent-hover: var(--cp-accent-hover);
   --color-accent-fg: var(--cp-accent-fg);
+  --color-accent-ink: var(--cp-accent-ink);
+  --color-accent-soft: var(--cp-accent-soft);
+  --color-backdrop: var(--cp-backdrop);
   --color-ok: var(--color-emerald-500);
   --color-warn: var(--color-amber-500);
   --color-err: var(--color-rose-500);
@@ -266,64 +309,190 @@
   --shadow-lift: var(--cp-shadow-lift);
   --shadow-pop: var(--cp-shadow-pop);
   --shadow-dialog: var(--cp-shadow-dialog);
+  --shadow-control: var(--cp-shadow-control);
+  --shadow-control-hover: var(--cp-shadow-control-hover);
+  --shadow-control-focus: var(--cp-shadow-control-focus);
 }
 
+/*
+ * 配色与层级（2026-10 起）：
+ *
+ * - 强调色（主按钮、选中、开关、链接、路由进度条）由「外观」设置决定：默认的多彩风格是墨色
+ *   （浅色下黑、深色下白，颜色留给图标、状态和数据），简约风格是蓝，也可以自选。下面写的是
+ *   墨色默认值；选了别的强调色时，外观设置在 <html> 上写 --cp-pref-accent* 这组变量盖过它们
+ *   （浅色、深色各一套，派生的悬停色 / 文字色 / 淡底由 theme/appearance.ts 按对比度算好）。
+ * - 不用 border 画盒子。卡片、浮层的细边是 .cp-edge 伪元素上的内嵌阴影，立体感由元素自身的
+ *   多层堆叠投影给（shadow-card / pop / dialog）；控件（input 不能挂伪元素）用 shadow-control
+ *   这组「阴影描边 + 1px 投影」。line / line-strong 只留给分隔线这类真正的「线」。
+ * - 深色是近黑底带一点冷调：之前的 #212121 / #2a2a2a 落在 13%–18% 亮度的中灰带里，层与层只差
+ *   3%，整页读起来灰蒙蒙的；现在内容区 #111114、卡片 #18181c，文字 #f2f2f4，对比拉开。
+ * - accent 是填充色（accent-fg 压在上面 ≥ 4.5:1）；accent-ink 是写在普通底色上的强调色文字，
+ *   深色下要更亮才够对比度，所以单独一个令牌，不要直接拿 text-accent 当文字色。
+ * - focus 是键盘焦点环与选区的颜色：墨色强调色下用信息蓝（黑色焦点环和主按钮混在一起），
+ *   选了彩色强调色时跟随强调色。
+ */
 :root {
-  --cp-rail: #f2f2f2;
-  --cp-panel: #f9f9f9;
+  --cp-rail: #f3f3f4;
+  --cp-panel: #f8f8f9;
   --cp-canvas: #ffffff;
   --cp-surface: #ffffff;
-  --cp-surface-hover: #f9f9f9;
-  --cp-track: #f3f3f3;
+  --cp-surface-hover: #f8f8f9;
+  --cp-track: #ebebee;
   --cp-elevated: #ffffff;
-  --cp-subtle: #f9f9f9;
+  --cp-subtle: #f6f6f7;
   --cp-field: #ffffff;
   --cp-hover: rgb(0 0 0 / 0.045);
-  --cp-selected: rgb(0 0 0 / 0.075);
-  --cp-ink: #0d0d0d;
-  --cp-ink-2: #5d5d5d;
-  --cp-ink-3: #8f8f8f;
-  --cp-ink-4: #c4c4c4;
-  --cp-line: #ececec;
-  --cp-line-strong: #e2e2e2;
-  --cp-accent: #0d0d0d;
-  --cp-accent-hover: #2f2f2f;
-  --cp-accent-fg: #ffffff;
-  /* 卡片只留柔和投影；细边由真实 border 画（ring/0.5px 阴影会被滚动容器裁掉，见 Surface.tsx） */
-  --cp-shadow-card: 0 1px 3px rgb(0 0 0 / 0.03), 0 8px 24px -10px rgb(0 0 0 / 0.07);
-  --cp-shadow-lift: 0 4px 10px rgb(0 0 0 / 0.04), 0 18px 40px -14px rgb(0 0 0 / 0.14);
-  --cp-shadow-pop: 0 0 0 0.5px rgb(0 0 0 / 0.08), 0 12px 32px -6px rgb(0 0 0 / 0.16),
-    0 2px 6px rgb(0 0 0 / 0.04);
-  --cp-shadow-dialog: 0 0 0 0.5px rgb(0 0 0 / 0.06), 0 28px 70px -14px rgb(0 0 0 / 0.28);
+  --cp-selected: rgb(0 0 0 / 0.07);
+  --cp-ink: #111113;
+  --cp-ink-2: #55555c;
+  /* 弱化文字在白底上 4.5:1（原 #8f8f8f 只有 3.3:1，小字号在 Windows 上更难认） */
+  --cp-ink-3: #76767d;
+  --cp-ink-4: #c2c2c7;
+  --cp-line: rgb(0 0 0 / 0.07);
+  --cp-line-strong: rgb(0 0 0 / 0.1);
+  --cp-accent: var(--cp-pref-accent, #111113);
+  --cp-accent-hover: var(--cp-pref-accent-hover, #2c2c31);
+  --cp-accent-fg: var(--cp-pref-accent-fg, #ffffff);
+  --cp-accent-ink: var(--cp-pref-accent-ink, #111113);
+  --cp-accent-soft: var(--cp-pref-accent-soft, rgb(0 0 0 / 0.06));
+  --cp-focus: var(--cp-pref-focus, #2a6ee8);
+  /* 伪元素细边：只有 7% 的黑，比原来的 #ececec 实线轻，靠下面的投影把盒子「托起来」 */
+  --cp-edge: rgb(0 0 0 / 0.07);
+  --cp-edge-highlight: rgb(255 255 255 / 0);
+  --cp-shadow-card: 0 1px 2px rgb(0 0 0 / 0.04), 0 2px 6px -1px rgb(0 0 0 / 0.04),
+    0 10px 24px -12px rgb(0 0 0 / 0.1);
+  --cp-shadow-lift: 0 2px 4px rgb(0 0 0 / 0.04), 0 8px 16px -4px rgb(0 0 0 / 0.06),
+    0 22px 44px -16px rgb(0 0 0 / 0.16);
+  --cp-shadow-pop: 0 0 0 1px rgb(0 0 0 / 0.06), 0 2px 4px rgb(0 0 0 / 0.04),
+    0 12px 28px -6px rgb(0 0 0 / 0.14);
+  --cp-shadow-dialog: 0 0 0 1px rgb(0 0 0 / 0.05), 0 4px 10px rgb(0 0 0 / 0.04),
+    0 28px 70px -14px rgb(0 0 0 / 0.26);
+  --cp-shadow-control: 0 0 0 1px rgb(0 0 0 / 0.09), 0 1px 2px rgb(0 0 0 / 0.05);
+  --cp-shadow-control-hover: 0 0 0 1px rgb(0 0 0 / 0.16), 0 1px 2px rgb(0 0 0 / 0.06);
+  --cp-shadow-control-focus: 0 0 0 1px color-mix(in srgb, var(--cp-focus) 55%, transparent),
+    0 0 0 4px color-mix(in srgb, var(--cp-focus) 14%, transparent);
 }
 
 .dark {
-  --cp-rail: #0e0e0e;
-  --cp-panel: #171717;
-  --cp-canvas: #212121;
-  --cp-surface: #2a2a2a;
-  --cp-surface-hover: #313131;
-  --cp-track: #303030;
-  --cp-elevated: #2f2f2f;
-  --cp-subtle: #262626;
+  --cp-rail: #0b0b0d;
+  --cp-panel: #131316;
+  --cp-canvas: #111114;
+  --cp-surface: #18181c;
+  --cp-surface-hover: #1e1e23;
+  --cp-track: #26262c;
+  --cp-elevated: #1d1d22;
+  --cp-subtle: #141417;
   --cp-field: rgb(255 255 255 / 0.04);
   --cp-hover: rgb(255 255 255 / 0.06);
   --cp-selected: rgb(255 255 255 / 0.1);
-  --cp-ink: #ececec;
-  --cp-ink-2: #b4b4b4;
-  --cp-ink-3: #8a8a8a;
-  --cp-ink-4: #555555;
-  --cp-line: rgb(255 255 255 / 0.08);
-  --cp-line-strong: rgb(255 255 255 / 0.12);
-  --cp-accent: #ececec;
-  --cp-accent-hover: #ffffff;
-  --cp-accent-fg: #0d0d0d;
-  /* 深色下卡片靠底色差和描边区分，不要投影；写透明阴影而不是 none——none 不能出现在
-     阴影列表里，和 ring 等工具类拼在一起会让整条 box-shadow 失效 */
-  --cp-shadow-card: 0 0 #0000;
-  --cp-shadow-lift: 0 18px 40px -14px rgb(0 0 0 / 0.6);
-  --cp-shadow-pop: 0 0 0 0.5px rgb(255 255 255 / 0.1), 0 16px 40px -8px rgb(0 0 0 / 0.6);
-  --cp-shadow-dialog: 0 0 0 0.5px rgb(255 255 255 / 0.1), 0 28px 70px -14px rgb(0 0 0 / 0.7);
+  --cp-ink: #f2f2f4;
+  --cp-ink-2: #b4b4bc;
+  --cp-ink-3: #86868f;
+  --cp-ink-4: #4e4e56;
+  --cp-line: rgb(255 255 255 / 0.07);
+  --cp-line-strong: rgb(255 255 255 / 0.11);
+  --cp-accent: var(--cp-pref-accent-dark, #f2f2f4);
+  --cp-accent-hover: var(--cp-pref-accent-hover-dark, #ffffff);
+  --cp-accent-fg: var(--cp-pref-accent-fg-dark, #111113);
+  --cp-accent-ink: var(--cp-pref-accent-ink-dark, #f2f2f4);
+  --cp-accent-soft: var(--cp-pref-accent-soft-dark, rgb(255 255 255 / 0.1));
+  --cp-focus: var(--cp-pref-focus-dark, #6e9ef0);
+  /* 深色下投影几乎看不见，层次靠「细边 + 顶部一道 4% 的高光」：像光从上方打在卡片边缘 */
+  --cp-edge: rgb(255 255 255 / 0.07);
+  --cp-edge-highlight: rgb(255 255 255 / 0.04);
+  --cp-shadow-card: 0 1px 2px rgb(0 0 0 / 0.5), 0 10px 24px -12px rgb(0 0 0 / 0.6);
+  --cp-shadow-lift: 0 2px 4px rgb(0 0 0 / 0.5), 0 22px 44px -16px rgb(0 0 0 / 0.75);
+  --cp-shadow-pop: 0 0 0 1px rgb(255 255 255 / 0.09), 0 2px 4px rgb(0 0 0 / 0.4),
+    0 16px 40px -8px rgb(0 0 0 / 0.7);
+  --cp-shadow-dialog: 0 0 0 1px rgb(255 255 255 / 0.09), 0 28px 70px -14px rgb(0 0 0 / 0.8);
+  --cp-shadow-control: 0 0 0 1px rgb(255 255 255 / 0.09), 0 1px 2px rgb(0 0 0 / 0.35);
+  --cp-shadow-control-hover: 0 0 0 1px rgb(255 255 255 / 0.16), 0 1px 2px rgb(0 0 0 / 0.35);
+  --cp-shadow-control-focus: 0 0 0 1px color-mix(in srgb, var(--cp-focus) 70%, transparent),
+    0 0 0 4px color-mix(in srgb, var(--cp-focus) 20%, transparent);
+}
+
+/*
+ * 「当前所在底色」：表格冻结列、冻结格悬停这类必须不透明、又要和周围底色一致的地方读它。
+ * 内容区上是 canvas（压平后的页面直接把表格放在内容区上），卡片里是 surface（见 Surface.tsx），
+ * 弹窗 / 抽屉里是 elevated。自定义属性会继承，所以放在哪层容器里就自动拿到哪层的颜色，
+ * 各页面不必再各自猜冻结列该写 bg-surface 还是 bg-canvas——猜错了深色下就露出一道亮边。
+ */
+:root {
+  --cp-backdrop: var(--cp-canvas);
+}
+
+/* 冻结格的悬停色：所在底色上叠一层悬停（与 bg-hover 同档），但必须是不透明的实色。 */
+@utility bg-backdrop-hover {
+  background-color: color-mix(in srgb, var(--cp-backdrop) 95.5%, #000);
+
+  @variant dark {
+    background-color: color-mix(in srgb, var(--cp-backdrop) 94%, #fff);
+  }
+}
+
+/*
+ * 盒子的细边：画在 ::after 上的内嵌阴影，而不是 border。
+ *
+ * - 压在内容之上：表头、冻结列、图片这类自带底色的子元素贴边时，不会把边线盖掉；
+ * - 画在盒子内部：滚动容器、overflow-hidden 的祖先都裁不到它（以前改用 border 正是因为
+ *   外描边的 ring 会被裁掉，见 Surface.tsx）；
+ * - 不占布局，换成它不会让任何盒子的尺寸变化。
+ *
+ * 放在 components 层：position: relative 是伪元素定位的前提，但调用方写的 absolute / sticky /
+ * fixed 是 utilities 层，天然盖过它，不会把浮动的卡片改成相对定位。
+ */
+/*
+ * 同心内圆角：Card 按自己的内边距导出 --cp-inner-radius（外圆角 − 内边距），贴在卡片角落的
+ * 子块（淡底块、表头、图片）用 rounded-inner 取这个值，两条圆弧同一个圆心，间距处处相等。
+ * 不在卡片里时退回 8px。
+ */
+@utility rounded-inner {
+  border-radius: var(--cp-inner-radius, var(--radius-lg));
+}
+
+/*
+ * 进度条的粗细（额度、用量、监控仪表）。「外观」里按像素调，默认 8px；乘 rem 是为了和整体
+ * 缩放保持比例。h-bar-sm 给表格行、紧凑卡片里的小条，固定为常规粗细的 3/4，最细 2px。
+ */
+:root {
+  --cp-bar-h: calc(var(--cp-pref-bar, 8) / 16 * 1rem);
+}
+
+@utility h-bar {
+  height: var(--cp-bar-h);
+}
+
+@utility h-bar-sm {
+  height: max(2px, calc(var(--cp-bar-h) * 0.75));
+}
+
+/*
+ * 额度「健康」段的颜色，给写不了变体类的地方用（内联的 conic-gradient 圆环）：语义进度条是绿，
+ * 强调色进度条跟随强调色。与 QuotaBar 的 bar-semantic: 类同一个开关。
+ */
+:root {
+  --cp-bar-healthy: var(--cp-accent);
+}
+
+:root[data-bars="semantic"] {
+  --cp-bar-healthy: #10b981;
+}
+
+@layer components {
+  .cp-edge {
+    position: relative;
+  }
+
+  .cp-edge::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    box-shadow:
+      inset 0 0 0 1px var(--cp-edge),
+      inset 0 1px 0 var(--cp-edge-highlight);
+  }
 }
 
 @layer base {
@@ -336,9 +505,23 @@
    * 同一个尺度上，浮层会整体偏移。改根字号没有这个问题。
    *
    * 用 % 而不是 px：用户在浏览器里调过默认字号时，这个比例仍然作用在他们自己的基准上。
+   * 「外观」里选了界面缩放时，--cp-pref-ui-scale 盖过下面按平台给的默认值。
    */
   :root {
-    --ui-scale: 0.9;
+    --ui-scale: var(--cp-pref-ui-scale, 0.9);
+  }
+
+  /*
+   * Windows 用 1.0（正文 14px、小字 12px）。0.9 档下小字只有 10.8px / 9px：macOS 的高分屏和
+   * 字形平滑撑得住，Windows 的 ClearType 在这个字号下中文笔画糊成一团——微软雅黑的 hinting
+   * 是按 12px 起调的。同样的取舍 VS Code 也有：非 macOS 平台默认字号更大。
+   * data-os 由两个 HTML 入口在首屏绘制前写上（见 index.html / manage.html）；等宽与展示字体
+   * 一并换成系统自带、带 hinting 的 Cascadia Mono / Consolas（JetBrains Mono 的 web 版没有）。
+   */
+  :root[data-os="windows"] {
+    --ui-scale: var(--cp-pref-ui-scale, 1);
+    --font-mono: "Cascadia Mono", Consolas, "Microsoft YaHei UI", "Microsoft YaHei", monospace;
+    --font-display: "Cascadia Mono", Consolas, "Microsoft YaHei UI", "Microsoft YaHei", monospace;
   }
 
   html {
@@ -368,6 +551,7 @@
 
   body {
     font-family: var(--font-sans);
+    font-weight: var(--font-weight-normal);
     font-size: var(--text-sm);
     line-height: var(--text-sm--line-height);
     color: var(--cp-ink);
@@ -384,15 +568,15 @@
   }
 
   ::selection {
-    background-color: rgb(42 110 232 / 0.2);
+    background-color: color-mix(in srgb, var(--cp-focus) 20%, transparent);
   }
 
   /*
-   * 焦点环：只在键盘导航时出现（:focus-visible），颜色用信息蓝的半透明，
-   * 在黑白界面里足够醒目又不会和主按钮的黑色混在一起。组件可以按需覆盖。
+   * 焦点环：只在键盘导航时出现（:focus-visible），颜色取 --cp-focus 的半透明——墨色强调色下是
+   * 信息蓝，在黑白界面里足够醒目又不会和主按钮的黑色混在一起。组件可以按需覆盖。
    */
   :focus-visible {
-    outline: 2px solid rgb(42 110 232 / 0.65);
+    outline: 2px solid color-mix(in srgb, var(--cp-focus) 65%, transparent);
     outline-offset: 2px;
   }
 }
@@ -449,7 +633,7 @@ html.theme-transition-lock *::after {
 }
 
 /*
- * 路由进度条：一条 2px 的中性细条，不再用渐变和发光。
+ * 路由进度条：一条 2px 的强调色细条，不用渐变和发光。
  * 时序保持不变（最短停留与淡出由外壳控制），只换外观。
  */
 .rp {
@@ -467,7 +651,7 @@ html.theme-transition-lock *::after {
   position: absolute;
   inset: 0;
   transform-origin: left;
-  background: var(--cp-ink);
+  background: var(--cp-accent);
   animation: rp-load 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
@@ -717,15 +901,15 @@ html.theme-transition-lock *::after {
 :root {
   --pl-bg: #ffffff;
   --pl-ring-track: rgb(13 13 13 / 0.1);
-  --pl-ring: #0d0d0d;
-  --pl-text: #8f8f8f;
+  --pl-ring: #111113;
+  --pl-text: #76767d;
 }
 
 .dark {
-  --pl-bg: #212121;
+  --pl-bg: #111114;
   --pl-ring-track: rgb(255 255 255 / 0.12);
-  --pl-ring: #ececec;
-  --pl-text: #8a8a8a;
+  --pl-ring: #f2f2f4;
+  --pl-text: #86868f;
 }
 
 /*

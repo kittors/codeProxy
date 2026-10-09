@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-palette="colorful" data-icons="colorful" data-bars="semantic">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -13,7 +13,7 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/manage/favicon-192.png" />
     <link rel="apple-touch-icon" href="/manage/apple-touch-icon.png" />
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#212121" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#111114" media="(prefers-color-scheme: dark)" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="CliRelay" />
     <meta property="og:title" content="CliRelay · 一个入口，接入全部模型能力" />
@@ -37,6 +37,44 @@
               root.removeAttribute("data-theme");
             }
           };
+          // Windows 用系统字体与 1.0 根字号（见 styles/index.css 的 data-os 说明）。
+          // 只认平台字段开头的 Win（Win32 / Windows），不能宽松匹配——"darwin" 里也有 win。
+          // 先读 navigator.platform：UA 字符串常被伪装（Playwright 的 Desktop Chrome 设备就是
+          // Windows UA），Chrome 会照着伪装的 UA 推导 userAgentData.platform，只有
+          // navigator.platform 始终是真实系统；它为空时才退回 userAgentData。
+          var platform =
+            navigator.platform || (navigator.userAgentData && navigator.userAgentData.platform) || "";
+          if (/^win/i.test(platform)) {
+            root.setAttribute("data-os", "windows");
+          }
+          // 外观设置（系统设置 → 外观）：风格开关与自定义变量要在首屏绘制前写上，否则会先闪一帧
+          // 默认的多彩样式。这里只搬运应用存下来的计算结果（attrs / vars），不重复颜色计算；
+          // 变量名只认外观会写的那几类，值只认它会写的三种形状（#rrggbb、rgb(...)、数字）——
+          // 存储被篡改也写不进别的东西，比如进度条 background 里会去加载的 url()。
+          // 读不到时保留 <html> 上的默认值。
+          try {
+            var appearance = JSON.parse(localStorage.getItem("code-proxy-admin-appearance") || "null");
+            if (appearance && appearance.version === 1) {
+              var attrs = appearance.attrs || {};
+              var names = ["palette", "icons", "bars"];
+              for (var i = 0; i < names.length; i++) {
+                if (typeof attrs[names[i]] === "string" && /^[a-z]+$/.test(attrs[names[i]])) {
+                  root.setAttribute("data-" + names[i], attrs[names[i]]);
+                }
+              }
+              var vars = appearance.vars || {};
+              for (var name in vars) {
+                if (
+                  Object.prototype.hasOwnProperty.call(vars, name) &&
+                  /^--(cp-pref-[a-z0-9-]+|color-(emerald|green|amber|rose|red)-\d{2,3})$/.test(name) &&
+                  typeof vars[name] === "string" &&
+                  /^(#[0-9a-f]{6}|rgb\([0-9 ./]+\)|-?[0-9.]+)$/i.test(vars[name])
+                ) {
+                  root.style.setProperty(name, vars[name]);
+                }
+              }
+            }
+          } catch (appearanceError) {}
           var t = localStorage.getItem("code-proxy-admin-theme");
           if (t === "dark") {
             apply(true);
@@ -55,14 +93,14 @@
       :root {
         --pl-bg: #ffffff;
         --pl-ring-track: rgba(13, 13, 13, 0.1);
-        --pl-ring: #0d0d0d;
-        --pl-text: #8f8f8f;
+        --pl-ring: #111113;
+        --pl-text: #76767d;
       }
       .dark {
-        --pl-bg: #212121;
+        --pl-bg: #111114;
         --pl-ring-track: rgba(255, 255, 255, 0.12);
-        --pl-ring: #ececec;
-        --pl-text: #8a8a8a;
+        --pl-ring: #f2f2f4;
+        --pl-text: #86868f;
       }
       body {
         margin: 0;

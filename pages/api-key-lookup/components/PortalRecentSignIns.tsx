@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ShieldCheck } from "lucide-react";
 import { portalApi, type PortalAttempt } from "@code-proxy/api-client";
+import { Card } from "@code-proxy/ui";
 
 /**
  * The customer-facing half of the attempt log.
@@ -38,40 +39,40 @@ export function PortalRecentSignIns() {
   if (loading) return null;
 
   return (
-    <div className="mt-4 rounded-2xl border border-black/[0.06] bg-white p-5 dark:border-white/[0.06] dark:bg-neutral-950/70">
-      <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white">
-        <ShieldCheck size={16} aria-hidden="true" />
+    <Card className="mt-4">
+      <h3 className="flex items-center gap-2 text-sm font-semibold text-ink">
+        <ShieldCheck size={16} className="text-ink-3" aria-hidden="true" />
         {t("ip_access.portal_recent_logins")}
       </h3>
-      <p className="mt-0.5 text-xs text-slate-500">{t("ip_access.portal_recent_logins_hint")}</p>
+      <p className="mt-0.5 text-xs text-ink-3">{t("ip_access.portal_recent_logins_hint")}</p>
 
       {items.length === 0 ? (
-        <p className="mt-3 text-sm text-slate-500">{t("ip_access.portal_no_logins")}</p>
+        <p className="mt-3 text-sm text-ink-3">{t("ip_access.portal_no_logins")}</p>
       ) : (
-        <ul className="mt-3 divide-y divide-slate-100 dark:divide-white/8">
+        <ul className="mt-3 divide-y divide-line">
           {items.map((item, index) => (
             <li
               key={`${item.occurred_at}-${index}`}
               className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 py-2 text-sm"
             >
-              <span className="text-slate-700 dark:text-white/80">
+              <span className="text-ink-2">
                 {new Date(item.occurred_at).toLocaleString(i18n.language)}
               </span>
-              <span className="font-mono text-xs text-slate-600 dark:text-white/70">{item.ip}</span>
+              <span className="font-mono text-xs text-ink-2">{item.ip}</span>
               <span
                 className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
                   item.outcome === "success"
-                    ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
-                    : "bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300"
+                    ? "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-300"
+                    : "bg-rose-500/10 text-rose-700 dark:bg-rose-400/15 dark:text-rose-300"
                 }`}
               >
                 {t(`ip_access.outcome_${item.outcome}`, { defaultValue: item.outcome })}
               </span>
-              <span className="max-w-full truncate text-xs text-slate-400">{item.user_agent}</span>
+              <span className="max-w-full truncate text-xs text-ink-3">{item.user_agent}</span>
             </li>
           ))}
         </ul>
       )}
-    </div>
+    </Card>
   );
 }

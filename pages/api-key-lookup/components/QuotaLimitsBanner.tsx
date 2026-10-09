@@ -126,7 +126,7 @@ export function QuotaLimitKpiCards({
               value={renderValue(
                 <span className="block whitespace-nowrap tabular-nums leading-tight">
                   {usedText}
-                  <span className="mx-1 font-normal text-slate-400 dark:text-white/40">/</span>
+                  <span className="mx-1 font-normal text-ink-3">/</span>
                   {limitText}
                 </span>,
               )}

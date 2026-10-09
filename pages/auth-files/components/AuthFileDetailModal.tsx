@@ -41,7 +41,7 @@ import { CodexImageGenerationBridgePanel } from "./CodexImageGenerationBridgePan
 import { AuthFilePlanBadge } from "./AuthFilePlanBadge";
 import { buildDetailTrendChartOption } from "./detailTrendChartOption";
 import { TrendSummaryGrid } from "./TrendSummaryGrid";
-import { EChart, surface, useTheme } from "@code-proxy/ui";
+import { EChart, useTheme } from "@code-proxy/ui";
 import { ProxyPoolSelect, ProxyUrlInput, useProxyPoolChecks } from "@features/proxy-pool";
 import { ModerationProfileSelect } from "@features/content-moderation";
 import { useModerationPermissions } from "@app/providers/useModerationPermissions";
@@ -84,6 +84,7 @@ import {
   FIVE_HOUR_WINDOW_SECONDS,
   WEEK_WINDOW_SECONDS,
 } from "../hooks/trendQuotaSummary";
+import { VIEWED_PROFILE_CLASS, identitySourceBadgeClass } from "../hooks/presentationStyles";
 
 type DetailTab = "usage" | "identity" | "fields" | "models";
 type DetailTrendWindow = "5h" | "week";
@@ -522,7 +523,7 @@ export function AuthFileDetailModal({
   );
 
   const renderHealthWindow = (label: string, window: ClaudeOAuthHealthWindow | undefined) => (
-    <div className="min-w-0 rounded-lg bg-surface px-3 py-3 ring-1 ring-slate-200 dark:ring-white/10">
+    <div className="min-w-0">
       <p className="text-xs font-semibold text-ink">{label}</p>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         {renderHealthValue(
@@ -548,22 +549,11 @@ export function AuthFileDetailModal({
   const formatIdentitySource = (source: IdentityFingerprintFieldSource): string =>
     t(`auth_files.identity_fingerprint_source_${source}`);
 
-  const renderIdentitySourceBadge = (source: IdentityFingerprintFieldSource) => {
-    const className =
-      source === "learned"
-        ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200"
-        : source === "preset"
-          ? "bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-200"
-          : "bg-subtle text-ink-2 dark:bg-white/10";
-
-    return (
-      <span
-        className={`inline-flex max-w-full items-center rounded-full px-2 py-0.5 text-xs font-semibold ${className}`}
-      >
-        {formatIdentitySource(source)}
-      </span>
-    );
-  };
+  // 来源只是分类，靠文字区分学习、预设还是内置：基础是中性标签，多彩风格下叠回来源色
+  // （学习绿、预设蓝），类名见 presentationStyles。
+  const renderIdentitySourceBadge = (source: IdentityFingerprintFieldSource) => (
+    <span className={identitySourceBadgeClass(source)}>{formatIdentitySource(source)}</span>
+  );
 
   const identityFieldSectionLabel = (section: IdentityFingerprintFieldSection) => {
     if (section === "effective") return t("auth_files.identity_fingerprint_effective_fields");
@@ -746,7 +736,7 @@ export function AuthFileDetailModal({
           >
             {hasCodexProfiles ? (
               <div className="space-y-4" data-testid="auth-file-identity-profiles">
-                <div className="rounded-lg bg-surface px-3 py-3 ring-1 ring-slate-200 dark:ring-white/10">
+                <div>
                   <p className="text-xs font-semibold text-ink-3">
                     {t("auth_files.identity_outbound_strategy")}
                   </p>
@@ -791,10 +781,8 @@ export function AuthFileDetailModal({
                           key={profileKey || label}
                           type="button"
                           className={[
-                            "w-full rounded-lg px-3 py-3 text-left ring-1 transition",
-                            viewed
-                              ? "bg-blue-50 ring-blue-300 dark:bg-blue-500/10 dark:ring-blue-400/40"
-                              : "bg-surface ring-slate-200 hover:ring-slate-300 dark:ring-white/10 dark:hover:ring-white/20",
+                            "w-full rounded-lg px-3 py-3 text-left transition-colors",
+                            viewed ? VIEWED_PROFILE_CLASS : "hover:bg-hover",
                           ].join(" ")}
                           onClick={() => setViewedIdentityProfileKey(profileKey)}
                           data-testid={`identity-profile-${profileKey}`}
@@ -809,11 +797,11 @@ export function AuthFileDetailModal({
                               </p>
                             </div>
                             {outbound ? (
-                              <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">
+                              <span className="shrink-0 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
                                 {t("auth_files.identity_outbound_active")}
                               </span>
                             ) : profile.selectable === false ? (
-                              <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700 dark:bg-amber-500/15 dark:text-amber-200">
+                              <span className="shrink-0 rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-semibold text-amber-700 dark:text-amber-300">
                                 {t("auth_files.identity_profile_observe_only")}
                               </span>
                             ) : null}
@@ -862,7 +850,7 @@ export function AuthFileDetailModal({
 
             <div
               className={
-                hasCodexProfiles ? "mt-5 border-t border-line pt-4" : ""
+                hasCodexProfiles ? "mt-7" : ""
               }
             >
               <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
@@ -898,16 +886,16 @@ export function AuthFileDetailModal({
               </dl>
 
               <div className="mt-4 flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-surface px-2.5 py-1 text-xs font-semibold text-ink-2 ring-1 ring-slate-200 dark:ring-white/10">
+                <span className="rounded-full bg-ink/[0.05] px-2.5 py-1 text-xs font-semibold text-ink-2 dark:bg-white/[0.07]">
                   {t("auth_files.identity_fingerprint_effective_count")}: {summary.effective_fields}
                 </span>
-                <span className="rounded-full bg-surface px-2.5 py-1 text-xs font-semibold text-ink-2 ring-1 ring-slate-200 dark:ring-white/10">
+                <span className="rounded-full bg-ink/[0.05] px-2.5 py-1 text-xs font-semibold text-ink-2 dark:bg-white/[0.07]">
                   {t("auth_files.identity_fingerprint_learned_count")}: {summary.learned_fields}
                 </span>
                 {IDENTITY_FINGERPRINT_SOURCE_ORDER.map((source) => (
                   <span
                     key={source}
-                    className="rounded-full bg-surface px-2.5 py-1 text-xs font-semibold text-ink-2 ring-1 ring-slate-200 dark:ring-white/10"
+                    className="rounded-full bg-ink/[0.05] px-2.5 py-1 text-xs font-semibold text-ink-2 dark:bg-white/[0.07]"
                   >
                     {formatIdentitySource(source)}: {summary.source_counts?.[source] ?? 0}
                   </span>
@@ -925,9 +913,9 @@ export function AuthFileDetailModal({
                 className="grid gap-2 rounded-lg bg-subtle px-3 py-3"
                 data-testid="auth-file-identity-loading"
               >
-                <div className="h-3 w-36 animate-pulse rounded bg-slate-200 dark:bg-white/10" />
-                <div className="h-3 w-5/6 animate-pulse rounded bg-slate-200 dark:bg-white/10" />
-                <div className="h-3 w-2/3 animate-pulse rounded bg-slate-200 dark:bg-white/10" />
+                <div className="h-3 w-36 animate-pulse rounded bg-track" />
+                <div className="h-3 w-5/6 animate-pulse rounded bg-track" />
+                <div className="h-3 w-2/3 animate-pulse rounded bg-track" />
               </div>
             ) : null}
 
@@ -944,7 +932,7 @@ export function AuthFileDetailModal({
                   <p className="text-sm font-semibold text-ink">
                     {t("auth_files.identity_fingerprint_title")}
                   </p>
-                  <span className="rounded-full bg-subtle px-2.5 py-1 text-xs font-semibold text-ink-2 dark:bg-white/10">
+                  <span className="rounded-full bg-ink/[0.05] px-2.5 py-1 text-xs font-semibold text-ink-2 dark:bg-white/[0.07]">
                     {t("auth_files.count_items", {
                       count: identityFieldRows.length,
                     })}
@@ -1079,8 +1067,8 @@ export function AuthFileDetailModal({
           </Tabs>
         </div>
 
-        {/* 白底卡片而不是灰底：灰底会把整张图压成灰色，彩色的柱和线也显得发闷。 */}
-        <div className={`${surface({ tone: "raised", radius: "xl" })} min-w-0 p-3`}>
+        {/* 图表直接放在弹窗上：灰底会把整张图压灰，白底卡片又是弹窗里的第二层框。 */}
+        <div className="min-w-0">
           <EChart
             option={trendChartOption}
             className="h-80 min-w-0"
@@ -1188,11 +1176,12 @@ export function AuthFileDetailModal({
             </div>
 
             <div
+              // 左右各留 4px（再用负边距拉回对齐）：输入框的阴影描边和聚焦光晕画在框外，贴着滚动区的边会被裁掉。
               className={[
-                "mt-4 min-h-0 flex-1",
+                "-mx-1 mt-4 min-h-0 flex-1 px-1",
                 detailTab === "identity"
-                  ? "overflow-x-hidden overflow-y-auto overscroll-contain pr-1 lg:overflow-hidden lg:pr-0"
-                  : "overflow-y-auto overscroll-contain pr-1",
+                  ? "overflow-x-hidden overflow-y-auto overscroll-contain lg:overflow-hidden"
+                  : "overflow-y-auto overscroll-contain",
               ].join(" ")}
               data-testid="auth-file-detail-scroll"
             >
@@ -1243,7 +1232,7 @@ export function AuthFileDetailModal({
                             </p>
                           </div>
                           {claudeOAuthHealth.status ? (
-                            <span className="inline-flex max-w-full items-center rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-200">
+                            <span className="inline-flex max-w-full items-center rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:text-amber-300">
                               {claudeOAuthHealth.status}
                             </span>
                           ) : null}
@@ -1342,7 +1331,7 @@ export function AuthFileDetailModal({
                               {t("auth_files.xai_endpoint_desc")}
                             </p>
                           </div>
-                          <span className="rounded-full bg-subtle px-2.5 py-1 text-xs font-semibold text-ink-2 dark:bg-white/10">
+                          <span className="rounded-full bg-ink/[0.05] px-2.5 py-1 text-xs font-semibold text-ink-2 dark:bg-white/[0.07]">
                             {xaiEndpointEditor.usingApi
                               ? t("auth_files.xai_endpoint_api")
                               : t("auth_files.xai_endpoint_build")}
@@ -1411,17 +1400,14 @@ export function AuthFileDetailModal({
                               {t("auth_files.codex_oauth_admission_desc")}
                             </p>
                           </div>
-                          <span className="rounded-full bg-subtle px-2.5 py-1 text-xs font-semibold text-ink-2 dark:bg-white/10">
+                          <span className="rounded-full bg-ink/[0.05] px-2.5 py-1 text-xs font-semibold text-ink-2 dark:bg-white/[0.07]">
                             {codexOAuthAdmissionEditor.enabled
                               ? t("auth_files.enabled")
                               : t("auth_files.disabled")}
                           </span>
                         </div>
 
-                        <div
-                          className="rounded-lg bg-surface px-3 py-3 ring-1 ring-slate-200 dark:ring-white/10"
-                          data-testid="codex-oauth-admission-toggle"
-                        >
+                        <div data-testid="codex-oauth-admission-toggle">
                           <ToggleSwitch
                             checked={codexOAuthAdmissionEditor.enabled}
                             onCheckedChange={(checked) =>
@@ -1437,7 +1423,7 @@ export function AuthFileDetailModal({
                           />
                         </div>
 
-                        <div className="rounded-lg bg-surface px-3 py-3 ring-1 ring-slate-200 dark:ring-white/10">
+                        <div>
                           <p className="text-xs font-semibold text-ink-2">
                             {t("auth_files.codex_oauth_admission_allowed_clients")}
                           </p>
@@ -1449,7 +1435,7 @@ export function AuthFileDetailModal({
                               {codexOAuthAdmissionEditor.availableAllowedClients.map((preset) => (
                                 <label
                                   key={preset.id}
-                                  className="grid cursor-pointer grid-cols-[auto_minmax(0,1fr)] gap-3 rounded-lg bg-subtle px-3 py-2.5 ring-1 ring-slate-200 dark:ring-white/10"
+                                  className="-mx-3 grid cursor-pointer grid-cols-[auto_minmax(0,1fr)] gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-hover"
                                 >
                                   <Checkbox
                                     checked={codexOAuthAdmissionEditor.allowedClients.includes(
@@ -1482,10 +1468,10 @@ export function AuthFileDetailModal({
                         </div>
 
                         <div className="grid gap-3 lg:grid-cols-2">
-                          <p className="rounded-lg bg-surface px-3 py-2.5 text-xs leading-5 text-ink-2 ring-1 ring-slate-200 dark:ring-white/10">
+                          <p className="text-xs leading-5 text-ink-3">
                             {t("auth_files.codex_oauth_admission_auto_learning")}
                           </p>
-                          <p className="rounded-lg bg-surface px-3 py-2.5 text-xs leading-5 text-ink-2 ring-1 ring-slate-200 dark:ring-white/10">
+                          <p className="text-xs leading-5 text-ink-3">
                             {t("auth_files.codex_oauth_admission_fixed_presets")}
                           </p>
                         </div>
@@ -1772,7 +1758,7 @@ export function AuthFileDetailModal({
                     </p>
                   </div>
                   {!visibleModelsLoading && visibleModelsError !== "unsupported" ? (
-                    <span className="rounded-full bg-subtle px-2.5 py-1 text-xs font-semibold text-ink-2 dark:bg-white/10">
+                    <span className="rounded-full bg-ink/[0.05] px-2.5 py-1 text-xs font-semibold text-ink-2 dark:bg-white/[0.07]">
                       {t("auth_files.count_items", {
                         count: visibleModelsList.length,
                       })}
@@ -1828,14 +1814,14 @@ export function AuthFileDetailModal({
                         </div>
                         <div className="flex flex-wrap items-center gap-1.5 sm:justify-end">
                           {model.owned_by ? (
-                            <span className="rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-ink-2 dark:bg-white/10">
+                            <span className="rounded-full bg-ink/[0.05] px-2 py-0.5 text-xs font-semibold text-ink-2 dark:bg-white/[0.07]">
                               {model.owned_by}
                             </span>
                           ) : null}
                           {excludedModels.some((pattern) =>
                             matchesModelPattern(model.id, pattern),
                           ) ? (
-                            <span className="rounded-full bg-rose-600/10 px-2 py-0.5 text-xs font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-200">
+                            <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-semibold text-amber-700 dark:text-amber-300">
                               {t("auth_files.oauth_excluded")}
                             </span>
                           ) : null}

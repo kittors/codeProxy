@@ -758,14 +758,14 @@ export function RoutingConfigEditor({
         render: (group) => {
           if (group.system) {
             return (
-              <span className="inline-flex items-center rounded-md bg-subtle px-2 py-0.5 text-xs font-semibold text-ink-2 dark:bg-neutral-800">
+              <span className="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]">
                 {t("channel_groups_page.default_pool_label")}
               </span>
             );
           }
           const channels = resolveGroupChannels(group);
           return (
-            <span className="inline-flex h-5 min-w-[24px] items-center justify-center rounded-md bg-sky-50 px-1.5 text-xs font-semibold tabular-nums text-sky-700 dark:bg-sky-900/30 dark:text-sky-300">
+            <span className="inline-flex h-5 min-w-[24px] items-center justify-center rounded-md px-1.5 text-xs font-semibold tabular-nums bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07] colorful:bg-sky-50 colorful:text-sky-700 colorful:dark:bg-sky-900/30 colorful:dark:text-sky-300">
               {channels.length}
             </span>
           );
@@ -780,7 +780,7 @@ export function RoutingConfigEditor({
           const staleChannels = staleChannelsByGroup.get(group.id) ?? [];
           if (staleChannels.length === 0) {
             return (
-              <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">
+              <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
                 {t("channel_groups_page.status_normal")}
               </span>
             );
@@ -791,7 +791,7 @@ export function RoutingConfigEditor({
               onClick={() => setIssueGroup(group)}
               disabled={disabled}
               title={t("channel_groups_page.view_issue_reason")}
-              className="inline-flex items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700 transition-colors hover:bg-rose-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-300/50 disabled:opacity-40 dark:border-rose-400/30 dark:bg-rose-500/10 dark:text-rose-200 dark:hover:bg-rose-500/15 dark:focus-visible:ring-rose-300/20"
+              className="inline-flex items-center gap-1.5 rounded-full bg-rose-500/10 px-2.5 py-1 text-xs font-semibold text-rose-700 transition-[background-color,box-shadow] hover:bg-rose-500/15 focus-visible:shadow-control-focus focus-visible:outline-none disabled:opacity-40 dark:text-rose-300"
             >
               <TriangleAlert size={13} />
               <span>{t("channel_groups_page.status_invalid")}</span>
@@ -813,17 +813,17 @@ export function RoutingConfigEditor({
         render: (group) => {
           if (group.system) {
             return (
-              <span className="inline-flex items-center rounded-full bg-subtle px-2.5 py-1 text-xs font-semibold text-ink-2 dark:bg-neutral-800">
+              <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]">
                 {t("channel_groups_page.system_default_route")}
               </span>
             );
           }
           return group.excludeFromDefault ? (
-            <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-500/15 dark:text-amber-200">
+            <span className="inline-flex items-center rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:text-amber-300">
               {t("channel_groups_page.default_scope_isolated")}
             </span>
           ) : (
-            <span className="inline-flex items-center rounded-full bg-subtle px-2.5 py-1 text-xs font-semibold text-ink-2 dark:bg-neutral-800">
+            <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]">
               {t("channel_groups_page.default_scope_included")}
             </span>
           );
@@ -837,7 +837,7 @@ export function RoutingConfigEditor({
         render: (group) => {
           if (group.system) {
             return (
-              <span className="inline-flex items-center rounded-full bg-subtle px-2.5 py-1 text-xs font-semibold text-ink-2 dark:bg-neutral-800">
+              <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]">
                 {t("channel_groups_page.default_pool_label")}
               </span>
             );
@@ -943,13 +943,14 @@ export function RoutingConfigEditor({
         key: "actions",
         label: t("common.action"),
         ...TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
+        cellClassName: "whitespace-nowrap md:sticky md:z-30 md:bg-backdrop", // 冻结列底色跟随所在底（--cp-backdrop）
         render: (group) => (
           <div className="flex items-center gap-1.5">
             <button
               type="button"
               onClick={() => openEditGroup(group)}
               disabled={disabled}
-              className="rounded-lg p-1.5 text-ink-3 transition-colors hover:bg-hover hover:text-amber-600 disabled:opacity-40 dark:hover:text-amber-400"
+              className="rounded-lg p-1.5 text-ink-2 transition-colors hover:bg-hover hover:text-ink disabled:opacity-40 icon-hue:hover:text-amber-600 icon-hue:dark:hover:text-amber-400"
               title={t("channel_groups_page.edit_group")}
               aria-label={t("channel_groups_page.edit_group")}
             >
@@ -960,7 +961,7 @@ export function RoutingConfigEditor({
                 type="button"
                 onClick={() => setDeleteGroupTarget(group)}
                 disabled={disabled}
-                className="rounded-lg p-1.5 text-ink-3 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-40 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+                className="rounded-lg p-1.5 text-ink-2 transition-colors hover:bg-rose-500/10 hover:text-rose-600 disabled:opacity-40 dark:hover:text-rose-400"
                 title={t("visual_config.delete_group")}
                 aria-label={t("visual_config.delete_group")}
               >
@@ -999,12 +1000,12 @@ export function RoutingConfigEditor({
                 >
                   <span className="truncate">{channel.name}</span>
                   {isStale ? (
-                    <span className="inline-flex shrink-0 items-center rounded-full bg-rose-50 px-2 py-0.5 text-2xs font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-200">
+                    <span className="inline-flex shrink-0 items-center rounded-full bg-rose-500/10 px-2 py-0.5 text-2xs font-semibold text-rose-700 dark:text-rose-300">
                       {t("channel_groups_page.deleted_badge")}
                     </span>
                   ) : null}
                   {!isStale && isDisabled ? (
-                    <span className="inline-flex shrink-0 items-center rounded-full bg-subtle px-2 py-0.5 text-2xs font-semibold text-ink-2 dark:bg-white/10">
+                    <span className="inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-2xs font-semibold bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]">
                       {t("channel_groups_page.disabled_badge")}
                     </span>
                   ) : null}
@@ -1014,7 +1015,7 @@ export function RoutingConfigEditor({
                     {displayTags.map((tag) => (
                       <span
                         key={tag}
-                        className="inline-flex items-center rounded-full bg-sky-50 px-2 py-0.5 text-2xs font-semibold text-sky-700 dark:bg-sky-500/15 dark:text-sky-200"
+                        className="inline-flex items-center rounded-full px-2 py-0.5 text-2xs font-semibold bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07] colorful:bg-sky-50 colorful:text-sky-700 colorful:dark:bg-sky-500/15 colorful:dark:text-sky-200"
                       >
                         {tag}
                       </span>
@@ -1179,7 +1180,7 @@ export function RoutingConfigEditor({
             group.system
               ? "bg-subtle"
               : (staleChannelsByGroup.get(group.id)?.length ?? 0) > 0
-                ? "bg-rose-50/35 dark:bg-rose-500/5"
+                ? "bg-rose-500/[0.04]"
                 : ""
           }
         />
@@ -1338,7 +1339,6 @@ export function RoutingConfigEditor({
                             />
                           </Field>
                         </div>
-
                       </>
                     ) : null}
 
@@ -1601,7 +1601,7 @@ export function RoutingConfigEditor({
                       }
                       rowClassName={(channel) =>
                         draftStaleChannelIds.has(channel.id)
-                          ? "bg-rose-50/70 dark:bg-rose-500/10"
+                          ? "bg-rose-500/[0.06]"
                           : ""
                       }
                       naturalFlow

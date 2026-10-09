@@ -40,9 +40,10 @@ export function ProvidersToolbar({
   const hasSelection = selectedExportCount > 0;
 
   return (
+    // 按钮直接排在内容区上，不再垫一条灰底：按钮本身有阴影描边，底条只是又多一层框。
     <div
       data-testid="providers-batch-actions"
-      className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-slate-50/80 px-2 py-1.5 transition-colors duration-200 ease-out dark:bg-white/3"
+      className="flex flex-wrap items-center justify-between gap-2"
     >
       {/* Left group: import/export/select/refresh */}
       <div className="flex flex-wrap items-center gap-1">

@@ -19,10 +19,12 @@ import {
 } from "./configSchema";
 import { fieldDescriptionKey, fieldLabelKey } from "./configSearch";
 
+// 「需重启」是要留意的变更（琥珀），「安全相关」是说明（天蓝）；「影响费用」简约风格同为琥珀
+// （红色只留给错误），多彩风格是红色。
 const BADGE_TONE: Record<ConfigBadge, string> = {
   restart: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
   security: "bg-sky-500/10 text-sky-700 dark:text-sky-300",
-  cost: "bg-rose-500/10 text-rose-700 dark:text-rose-300",
+  cost: "bg-amber-500/10 text-amber-700 dark:text-amber-300 colorful:bg-rose-500/10 colorful:text-rose-700 colorful:dark:text-rose-300",
 };
 
 export function configFieldDomId(fieldId: string) {

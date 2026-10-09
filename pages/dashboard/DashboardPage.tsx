@@ -28,7 +28,7 @@ import { EmptyState } from "@code-proxy/ui";
 import { Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
 import { useInterval } from "@code-proxy/ui";
-import { Card, chartPalette, useTheme } from "@code-proxy/ui";
+import { chartPalette, chartUsesIdentityColors, useChartAppearanceKey, useTheme } from "@code-proxy/ui";
 import { DashboardKpiCard } from "./DashboardKpiCard";
 import {
   DashboardMetricValue,
@@ -132,36 +132,45 @@ export function DashboardPage() {
     meta.throughput_scope === "all_tenants" || Boolean(principal?.platform_admin);
   const tenantBreakdown = trends?.tenants ?? [];
 
-  // 每格迷你趋势线用该指标的身份色（chartTheme.metric：请求蓝、成功绿、Token 紫、费用琥珀、
-  // 缓存青），标题前的图标块同色；失败请求用错误红。与监控中心、账号详情是同一组颜色。
+  // 每格迷你趋势线的颜色跟随「外观 → 图表配色」：多彩时用该指标的身份色（chartTheme.metric：
+  // 请求蓝、成功绿、Token 紫、费用琥珀、缓存青），标题前的图标块同色，与监控中心、账号详情是
+  // 同一组颜色；强调色时都用强调色。失败请求始终是错误红。
   const {
     state: { mode },
   } = useTheme();
+  // 订阅外观：图表配色变了要重新生成 option（颜色写在 option 里，不跟 CSS 变量走）。
+  useChartAppearanceKey();
   const isDark = mode === "dark";
   const palette = chartPalette(isDark);
+  const sparkColor = (identity: string) => (chartUsesIdentityColors() ? identity : palette.primary);
+  const requestColor = sparkColor(palette.metric.requests);
+  const successColor = sparkColor(palette.metric.success);
+  const tokenColor = sparkColor(palette.metric.tokens);
+  const costColor = sparkColor(palette.metric.cost);
+  const cacheColor = sparkColor(palette.metric.cache);
   const totalRequestOption = useMemo(
-    () => createSparklineOption(trends?.request_volume ?? [], palette.metric.requests, isDark),
-    [isDark, palette.metric.requests, trends?.request_volume],
+    () => createSparklineOption(trends?.request_volume ?? [], requestColor, isDark),
+    [isDark, requestColor, trends?.request_volume],
   );
   const successRateOption = useMemo(
-    () => createSparklineOption(trends?.success_rate ?? [], palette.metric.success, isDark),
-    [isDark, palette.metric.success, trends?.success_rate],
+    () => createSparklineOption(trends?.success_rate ?? [], successColor, isDark),
+    [isDark, successColor, trends?.success_rate],
   );
   const totalTokenOption = useMemo(
-    () => createSparklineOption(trends?.total_tokens ?? [], palette.metric.tokens, isDark),
-    [isDark, palette.metric.tokens, trends?.total_tokens],
+    () => createSparklineOption(trends?.total_tokens ?? [], tokenColor, isDark),
+    [isDark, tokenColor, trends?.total_tokens],
   );
   const totalCostOption = useMemo(
-    () => createSparklineOption(trends?.total_cost ?? [], palette.metric.cost, isDark),
-    [isDark, palette.metric.cost, trends?.total_cost],
+    () => createSparklineOption(trends?.total_cost ?? [], costColor, isDark),
+    [isDark, costColor, trends?.total_cost],
   );
   const failedRequestOption = useMemo(
     () => createSparklineOption(trends?.failed_requests ?? [], palette.err, isDark),
     [isDark, palette.err, trends?.failed_requests],
   );
   const cacheRateOption = useMemo(
-    () => createSparklineOption([], palette.metric.cache, isDark),
-    [isDark, palette.metric.cache],
+    () => createSparklineOption([], cacheColor, isDark),
+    [isDark, cacheColor],
   );
 
   return (
@@ -221,11 +230,10 @@ export function DashboardPage() {
       ) : null}
 
       {/*
-        六格指标共用一张卡片，格子之间用细线分隔。每格自带右、下两条边，外层用 -mr-px -mb-px
-        把最右一列、最下一行的边推到卡片外（卡片 overflow-hidden 裁掉），任何列数下都只剩内部分隔线。
+        六格指标各是一张卡片，用间距分开，不再挤在一张卡里用分隔线隔开——和下面系统监控的
+        网格是同一种结构，整页只有一层卡片。
       */}
-      <Card padding="none" className="overflow-hidden">
-        <div className="-mr-px -mb-px grid sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <DashboardKpiCard
           title={t("dashboard.total_requests")}
           value={<DashboardMetricValue value={kpi?.total_requests ?? 0} animated />}
@@ -290,8 +298,7 @@ export function DashboardPage() {
           hue="teal"
           option={cacheRateOption}
         />
-        </div>
-      </Card>
+      </div>
 
       {canViewSystemMonitor ? (
         <SystemMonitorSection

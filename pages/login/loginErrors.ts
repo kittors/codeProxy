@@ -1,5 +1,11 @@
 import type { TFunction } from "i18next";
+import {
+  extractApiErrorCode,
+  extractApiErrorDetails,
+  isApiClientError,
+} from "@code-proxy/api-client";
 import { isPasswordPolicyCode } from "@code-proxy/domain";
+import { normalizeLoginUsername, type LoginFailure } from "@features/login-lock";
 import { passwordPolicyMessage } from "@features/password-policy";
 
 export type LoginErrorInput = {
@@ -11,11 +17,20 @@ export type LoginErrorInput = {
   fallbackMessage?: string;
   /**
    * Structured `error.details` from the API envelope. Carries
-   * `retry_after_seconds` for cooldowns, which is what turns "try again later"
-   * into an answerable wait.
+   * `retry_after_seconds` for locks, which is what turns "try again later" into
+   * an answerable wait, and `remaining_attempts` for wrong passwords, which is
+   * what warns before the lock instead of after it.
    */
   details?: Record<string, unknown>;
 };
+
+/** Codes the server uses for a sign-in that a lock is holding shut. */
+const LOCK_CODES = new Set(["login_rate_limited", "login_cooldown"]);
+
+/** A positive whole number from an untrusted details field, or 0. */
+function positiveCount(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0 ? Math.ceil(value) : 0;
+}
 
 /**
  * Copy for a throttled or cooled-down sign-in.
@@ -26,15 +41,17 @@ export type LoginErrorInput = {
  * lockout ladder rather than waiting it out.
  */
 function rateLimitedMessage(t: TFunction, details: Record<string, unknown>): string {
-  const raw = details.retry_after_seconds;
-  const seconds = typeof raw === "number" ? Math.ceil(raw) : Number.NaN;
-  if (!Number.isFinite(seconds) || seconds <= 0) {
+  const seconds = positiveCount(details.retry_after_seconds);
+  if (seconds <= 0) {
     return t("login.error_rate_limited");
   }
+  // `count` drives the plural form ("1 minute" / "2 minutes"); the named value
+  // stays for locales whose copy is plural-free.
   if (seconds < 60) {
-    return t("login.error_rate_limited_seconds", { seconds });
+    return t("login.error_rate_limited_seconds", { count: seconds, seconds });
   }
-  return t("login.error_rate_limited_minutes", { minutes: Math.ceil(seconds / 60) });
+  const minutes = Math.ceil(seconds / 60);
+  return t("login.error_rate_limited_minutes", { count: minutes, minutes });
 }
 
 /**
@@ -60,8 +77,12 @@ export function resolveLoginErrorMessage({
   }
 
   switch (normalized) {
-    case "invalid_credentials":
-      return t("login.error_invalid_credentials");
+    case "invalid_credentials": {
+      const remaining = positiveCount(details.remaining_attempts);
+      return remaining > 0
+        ? t("login.error_invalid_credentials_remaining", { count: remaining })
+        : t("login.error_invalid_credentials");
+    }
     case "account_disabled":
     case "account_locked":
       return t("login.account_unavailable");
@@ -105,4 +126,47 @@ export function resolveLoginErrorMessage({
   const trimmed = fallbackMessage.trim();
   if (trimmed) return trimmed;
   return t("login.error_invalid");
+}
+
+/**
+ * Turn a failed sign-in into what both sign-in forms need: the copy, and — when
+ * the server reported them — how long the lock lasts and how many attempts are
+ * left before it.
+ *
+ * `username` is the account that was tried. Locks and attempt counts belong to
+ * that account, so a form can drop them as soon as the user types another one.
+ */
+export function describeLoginFailure(
+  t: TFunction,
+  error: unknown,
+  { username, now = Date.now() }: { username?: string; now?: number } = {},
+): LoginFailure {
+  const apiError = isApiClientError(error) ? error : null;
+  const code = apiError ? extractApiErrorCode(apiError.payload) : "";
+  const status = apiError?.status ?? 0;
+  const details = apiError ? extractApiErrorDetails(apiError.payload) : {};
+  const failure: LoginFailure = {
+    message: resolveLoginErrorMessage({
+      t,
+      code,
+      status,
+      isTimeout: apiError?.isTimeout ?? false,
+      fallbackMessage: error instanceof Error ? error.message : "",
+      details,
+    }),
+  };
+  if (username !== undefined) {
+    failure.username = normalizeLoginUsername(username);
+  }
+
+  const normalized = code.trim().toLowerCase();
+  const lockSeconds = positiveCount(details.retry_after_seconds);
+  if (lockSeconds > 0 && (LOCK_CODES.has(normalized) || (!normalized && status === 429))) {
+    failure.lockedUntil = now + lockSeconds * 1000;
+  }
+  const remaining = positiveCount(details.remaining_attempts);
+  if (remaining > 0 && normalized === "invalid_credentials") {
+    failure.remainingAttempts = remaining;
+  }
+  return failure;
 }

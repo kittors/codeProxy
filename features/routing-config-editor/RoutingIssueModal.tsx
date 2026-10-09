@@ -58,8 +58,9 @@ export function RoutingIssueModal({
           >
             {t("channel_groups_page.stale_alert_message", { count: staleChannels.length })}
           </Callout>
-          <div className="overflow-hidden rounded-2xl border border-line">
-            <div className="grid grid-cols-[minmax(0,1fr)_88px] bg-subtle px-3 py-2 text-xs font-medium text-ink-3">
+          {/* 弹窗里不再套描边表格框：表头一条淡底，行与行之间只留数据分隔线。 */}
+          <div>
+            <div className="grid grid-cols-[minmax(0,1fr)_88px] rounded-lg bg-subtle px-3 py-2 text-xs font-medium text-ink-3">
               <span>{t("channel_groups_page.table_channels")}</span>
               <span className="text-center">{t("channel_groups_page.table_status")}</span>
             </div>
@@ -81,7 +82,7 @@ export function RoutingIssueModal({
           </div>
         </div>
       ) : (
-        <p className="rounded-2xl border border-dashed border-line px-4 py-6 text-center text-sm text-ink-3">
+        <p className="rounded-2xl bg-subtle px-4 py-6 text-center text-sm text-ink-3">
           {t("channel_groups_page.issue_modal_empty")}
         </p>
       )}

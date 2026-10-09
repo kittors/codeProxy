@@ -69,15 +69,33 @@ const resetHint = (
   return t("quota.window_resets_at", { time: resetsAt.toLocaleString() });
 };
 
+/*
+ * 额度胶囊只用淡底、不描边：正常是中性灰，接近上限（≥ 90%）琥珀、用尽红色。
+ * 「不限制」的基础形态（简约风格）是中性胶囊，多彩风格下叠回绿色胶囊。
+ */
+const CHIP = "inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium";
+const NEUTRAL_CHIP = "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]";
+const UNLIMITED_CHIP =
+  "colorful:bg-emerald-50 colorful:text-emerald-700 colorful:dark:bg-emerald-500/10 colorful:dark:text-emerald-300";
+
 const chipTone = (ratio: number) => {
-  if (ratio >= 1) {
-    return "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200";
-  }
-  if (ratio >= 0.9) {
-    return "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100";
-  }
-  return "border-slate-900/8 bg-slate-50 text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-white/75";
+  if (ratio >= 1) return "bg-rose-500/10 text-rose-700 dark:text-rose-300";
+  if (ratio >= 0.9) return "bg-amber-500/10 text-amber-700 dark:text-amber-300";
+  return NEUTRAL_CHIP;
 };
+
+function UnlimitedChip({ label }: { label: string }) {
+  return (
+    <span className={`${CHIP} ${NEUTRAL_CHIP} ${UNLIMITED_CHIP}`}>
+      <InfinityIcon
+        size={13}
+        className="text-ink-3 colorful:text-emerald-700 colorful:dark:text-emerald-300"
+        aria-hidden="true"
+      />
+      {label}
+    </span>
+  );
+}
 
 export function PeriodSpendingCell({
   t,
@@ -96,12 +114,7 @@ export function PeriodSpendingCell({
   const visible = orderedItems(items);
   const showLifetime = hasLifetimeLimit(lifetime);
   if (visible.length === 0 && !showLifetime) {
-    return (
-      <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300">
-        <InfinityIcon size={13} aria-hidden="true" />
-        {t("quota.unlimited")}
-      </span>
-    );
+    return <UnlimitedChip label={t("quota.unlimited")} />;
   }
 
   return (
@@ -119,7 +132,7 @@ export function PeriodSpendingCell({
         return (
           <span
             key={item.period}
-            className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs font-medium tabular-nums ${chipTone(ratio)}`}
+            className={`${CHIP} tabular-nums ${chipTone(ratio)}`}
             title={reset ? `${usage} · ${reset}` : usage}
           >
             {danger ? <AlertCircle size={13} aria-hidden="true" /> : null}
@@ -158,7 +171,7 @@ function LifetimeSpendingChip({
   const warning = ratio >= 0.9 && !danger;
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs font-medium tabular-nums ${chipTone(ratio)}`}
+      className={`${CHIP} tabular-nums ${chipTone(ratio)}`}
       title={t("quota.lifetime_remaining_detail", {
         used: formatQuotaUsd(used),
         limit: formatQuotaUsd(limit),
@@ -187,21 +200,13 @@ export function PeriodSpendingLimitsCell({
 }) {
   const visible = PERIOD_SPENDING_PERIODS.filter((period) => (limits?.[period] ?? 0) > 0);
   if (visible.length === 0) {
-    return (
-      <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300">
-        <InfinityIcon size={13} aria-hidden="true" />
-        {t("quota.unlimited")}
-      </span>
-    );
+    return <UnlimitedChip label={t("quota.unlimited")} />;
   }
 
   return (
     <div className="flex min-w-[12rem] flex-wrap gap-1.5">
       {visible.map((period) => (
-        <span
-          key={period}
-          className="inline-flex items-center gap-1 rounded-full border border-line-strong bg-hover px-2 py-1 text-xs font-medium text-ink"
-        >
+        <span key={period} className={`${CHIP} ${NEUTRAL_CHIP}`}>
           <span className="font-semibold">{periodLabel(t, period)}</span>
           <span className="tabular-nums">{formatQuotaUsd(limits?.[period] ?? 0)}</span>
         </span>

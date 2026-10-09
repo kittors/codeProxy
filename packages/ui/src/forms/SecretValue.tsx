@@ -34,7 +34,7 @@ export function SecretValue({
   return (
     <div className={cn("min-w-0", className)}>
       <div className="mb-1.5 text-xs font-medium text-ink-2">{label}</div>
-      <div className="flex min-w-0 items-center gap-1 rounded-xl border border-line bg-subtle py-1.5 pr-1.5 pl-3.5">
+      <div className="flex min-w-0 items-center gap-1 rounded-xl bg-subtle py-1.5 pr-1.5 pl-3.5">
         <code
           className={cn(
             "min-w-0 flex-1 font-mono text-sm leading-6 text-ink",

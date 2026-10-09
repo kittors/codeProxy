@@ -1,6 +1,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import type { ErrorLogItem } from "../logsHelpers";
-import { Button, surface, ScrollFade } from "@code-proxy/ui";
+import { LOG_NEUTRAL_BADGE, getStatusStyles } from "../logsHelpers";
+import { Button, ScrollFade } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
 import { EmptyState } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
@@ -29,21 +30,14 @@ const formatTimestamp = (value: number | undefined): string | undefined => {
   return new Date(value < 1e12 ? value * 1000 : value).toLocaleString();
 };
 
-const statusBadgeClass = (status: number | undefined): string => {
-  if (typeof status !== "number" || !Number.isFinite(status)) {
-    return "border-slate-900/8 bg-slate-50 text-slate-700 dark:border-white/8 dark:bg-white/5 dark:text-white/70";
-  }
-  if (status >= 500) {
-    return "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-200";
-  }
-  if (status >= 400) {
-    return "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-200";
-  }
-  return "border-slate-900/8 bg-slate-50 text-slate-700 dark:border-white/8 dark:bg-white/5 dark:text-white/70";
-};
+// 诊断标签与日志页同一套淡底：5xx 红、4xx 琥珀，其余中性，不描边。错误日志里的 2xx / 3xx
+// 不走日志页多彩风格下的绿 / 天蓝，两种风格都保持中性。
+const statusBadgeClass = (status: number | undefined): string =>
+  typeof status === "number" && Number.isFinite(status) && status >= 400
+    ? getStatusStyles(status)
+    : LOG_NEUTRAL_BADGE;
 
-const neutralBadgeClass =
-  "border-slate-900/8 bg-slate-50 text-slate-700 dark:border-white/8 dark:bg-white/5 dark:text-white/70";
+const neutralBadgeClass = LOG_NEUTRAL_BADGE;
 
 const buildDiagnosticBadges = (file: ErrorLogItem, t: Translate) => {
   const status = numberValue(file.status);
@@ -126,8 +120,8 @@ const buildDiagnosticBadges = (file: ErrorLogItem, t: Translate) => {
 function DiagnosticLine({ label, value }: { label: string; value: string }) {
   return (
     <div className="grid gap-1 text-xs sm:grid-cols-[7rem_minmax(0,1fr)]">
-      <span className="text-slate-500 dark:text-white/45">{label}</span>
-      <code className="min-w-0 break-all rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-800 dark:bg-white/5 dark:text-white/75">
+      <span className="text-ink-3">{label}</span>
+      <code className="min-w-0 break-all rounded-md bg-ink/[0.05] px-2 py-1 text-xs text-ink-2 dark:bg-white/[0.07]">
         {value}
       </code>
     </div>
@@ -154,8 +148,11 @@ export function ErrorLogsTab({
   downloadErrorLog: (file: ErrorLogItem) => Promise<void>;
 }) {
   return (
+    // 页签本身是页面（flat）；「按请求 ID 下载」和「错误日志文件」是其中仅有的两张卡片，
+    // 文件列表里每一项不再垫淡底块，用数据行的细分隔线分开。
     <Card
-      className="md:flex md:min-h-0 md:flex-1 md:flex-col md:overflow-hidden"
+      flat
+      className="md:flex md:min-h-0 md:flex-1 md:flex-col"
       bodyClassName="md:flex md:min-h-0 md:flex-1 md:flex-col"
       title={t("logs_page.error_logs_title")}
       description={t("logs_page.error_fetch_desc")}
@@ -173,13 +170,13 @@ export function ErrorLogsTab({
       }
     >
       <div className="space-y-4 md:flex md:min-h-0 md:flex-1 md:flex-col md:space-y-0 md:gap-4">
-        <div className="rounded-2xl border border-slate-900/8 bg-white p-4 shadow-sm md:shrink-0 dark:border-white/8 dark:bg-neutral-950/60">
+        <Card className="md:shrink-0">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">
+              <p className="text-sm font-semibold text-ink">
                 {t("logs_page.request_id_download_title")}
               </p>
-              <p className="mt-1 text-sm text-slate-600 dark:text-white/65">
+              <p className="mt-1 text-sm text-ink-2">
                 {t("logs_page.request_id_download_desc")}
               </p>
             </div>
@@ -203,19 +200,18 @@ export function ErrorLogsTab({
               </Button>
             </div>
           </div>
-        </div>
+        </Card>
 
-        <div className="rounded-2xl border border-slate-900/8 bg-white p-4 shadow-sm md:flex md:min-h-0 md:flex-1 md:flex-col dark:border-white/8 dark:bg-neutral-950/60">
-          <p className="text-sm font-semibold text-slate-900 dark:text-white">
-            {t("logs_page.error_log_files")}
-          </p>
-          <p className="mt-1 text-sm text-slate-600 dark:text-white/65">
-            {t("logs_page.error_log_list_desc")}
-          </p>
+        <Card
+          className="md:flex md:min-h-0 md:flex-1 md:flex-col"
+          bodyClassName="md:flex md:min-h-0 md:flex-1 md:flex-col"
+        >
+          <p className="text-sm font-semibold text-ink">{t("logs_page.error_log_files")}</p>
+          <p className="mt-1 text-sm text-ink-2">{t("logs_page.error_log_list_desc")}</p>
 
-          <ScrollFade className="mt-4 md:min-h-0 md:flex-1 md:overflow-y-auto">
+          <ScrollFade className="mt-3 md:min-h-0 md:flex-1 md:overflow-y-auto">
             {errorLogsLoading ? (
-              <div className="text-sm text-slate-600 dark:text-white/65">
+              <div className="text-sm text-ink-2">
                 {t("logs_page.loading")}
               </div>
             ) : errorLogs.length === 0 ? (
@@ -224,7 +220,7 @@ export function ErrorLogsTab({
                 description={t("logs_page.no_error_desc")}
               />
             ) : (
-              <div className="space-y-2">
+              <div className="divide-y divide-line">
                 {errorLogs.map((file) => {
                   const badges = buildDiagnosticBadges(file, t);
                   const originalUrl = textValue(file.original_url);
@@ -235,14 +231,12 @@ export function ErrorLogsTab({
                   return (
                     <div
                       key={file.name}
-                      className={[surface({ tone: "raised", radius: "2xl" }), "flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-start sm:justify-between"].join(" ")}
+                      className="flex flex-col gap-3 py-3 sm:flex-row sm:items-start sm:justify-between"
                     >
                       <div className="min-w-0 flex-1 space-y-2">
                         <div className="min-w-0">
-                          <p className="break-all font-mono text-xs text-slate-900 dark:text-white">
-                            {file.name}
-                          </p>
-                          <p className="mt-1 text-xs text-slate-600 dark:text-white/65">
+                          <p className="break-all font-mono text-xs text-ink">{file.name}</p>
+                          <p className="mt-1 text-xs text-ink-2">
                             {typeof file.size === "number"
                               ? t("logs_page.bytes", { size: file.size.toLocaleString() })
                               : "--"}{" "}
@@ -255,7 +249,7 @@ export function ErrorLogsTab({
                             {badges.map((badge) => (
                               <span
                                 key={badge.key}
-                                className={`inline-flex max-w-full items-center gap-1 rounded-md border px-2 py-1 text-xs ${badge.className}`}
+                                className={`inline-flex max-w-full items-center gap-1 rounded-md px-2 py-1 text-xs ${badge.className}`}
                               >
                                 <span className="shrink-0 text-current opacity-65">
                                   {badge.label}
@@ -301,7 +295,7 @@ export function ErrorLogsTab({
               </div>
             )}
           </ScrollFade>
-        </div>
+        </Card>
       </div>
     </Card>
   );

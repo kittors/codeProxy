@@ -51,10 +51,10 @@ export function Callout({
 }) {
   const styles = TONE_CLASS[tone];
   const resolvedIcon = icon === false ? null : (icon ?? DEFAULT_ICON[tone]);
-  // 中性提示条的底色保持灰，图标按全站的「图标 → 色相」上色（锁是紫、信息是天蓝……），
-  // 不再是一个灰图标压在灰底上。语义色调的图标颜色不变。
+  // 中性提示条的底色保持灰；图标着色为「多彩」时图标按全站的「图标 → 色相」上色（锁是紫、
+  // 信息是天蓝……），「单色」时保持中性。语义色调的图标颜色不变。
   const neutralHue = tone === "neutral" ? hueForIcon(resolvedIcon) : null;
-  const iconClass = neutralHue ? HUE_GLYPH[neutralHue] : styles.icon;
+  const iconClass = neutralHue ? cn(styles.icon, HUE_GLYPH[neutralHue]) : styles.icon;
   return (
     <div
       role={role}

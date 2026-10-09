@@ -468,7 +468,7 @@ export function buildRequestLogsColumns(
       width: "w-64",
       minWidthPx: 240,
       headerClassName: CENTERED_REQUEST_LOG_HEADER_CLASS,
-      cellClassName: "text-center text-xs tabular-nums text-slate-700 dark:text-slate-200",
+      cellClassName: "text-center text-xs tabular-nums text-ink-2",
       render: (row) => {
         const tps = computeOutputTokensPerSecond(row);
         const tpsText = formatTokensPerSecond(tps);
@@ -500,7 +500,7 @@ export function buildRequestLogsColumns(
                 <RequestLogMetricChip
                   ariaLabel={`${t("request_logs.col_first_token")}: ${row.firstTokenText}`}
                   value={row.firstTokenText}
-                  className="border-line bg-subtle text-ink-2"
+                  className="bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]"
                 />
               ) : null}
               <RequestLogModeChip
@@ -522,7 +522,7 @@ export function buildRequestLogsColumns(
       width: "w-32",
       headerClassName: CENTERED_REQUEST_LOG_HEADER_CLASS,
       cellClassName:
-        "text-center font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200 pl-6",
+        "text-center font-mono text-xs tabular-nums text-ink-2 pl-6",
       render: (row) =>
         row.hasContent && onContentClick ? (
           <button
@@ -690,6 +690,7 @@ export function RequestLogsPaginationBar({
   pageSize,
   onPageChange,
   onPageSizeChange,
+  flush = false,
 }: {
   currentPage: number;
   totalPages: number;
@@ -697,6 +698,8 @@ export function RequestLogsPaginationBar({
   pageSize: number;
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
+  /** 直接放在内容区上（没有外层卡片）时不再留左右内边距，和上方表格左右对齐。 */
+  flush?: boolean;
 }) {
   const { t } = useTranslation();
 
@@ -709,7 +712,8 @@ export function RequestLogsPaginationBar({
       onPageChange={onPageChange}
       onPageSizeChange={onPageSizeChange}
       pageSizeOptions={REQUEST_LOG_PAGE_SIZE_OPTIONS}
-      className="border-t border-slate-100 px-3 py-3 sm:px-5 dark:border-white/8"
+      // 分页条和表格之间靠留白分开，不画分隔线。
+      className={flush ? "pt-3" : "px-3 py-3 sm:px-5"}
       labels={{
         firstPage: t("request_logs.first_page"),
         previousPage: t("request_logs.prev_page"),

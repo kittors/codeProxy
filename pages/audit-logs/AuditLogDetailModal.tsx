@@ -95,7 +95,7 @@ export function AuditLogDetailModal({
                         {step.step ?? index + 1}
                       </span>
                       {step.layer ? (
-                        <span className="rounded-md border border-line bg-surface px-1.5 py-0.5 text-2xs font-medium text-ink-2">
+                        <span className="rounded-md bg-ink/[0.05] px-1.5 py-0.5 text-2xs font-medium text-ink-2 dark:bg-white/[0.07]">
                           {step.layer}
                         </span>
                       ) : null}

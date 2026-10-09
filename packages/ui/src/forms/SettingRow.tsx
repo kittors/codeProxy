@@ -4,20 +4,29 @@ import { useTranslation } from "react-i18next";
 import { cn } from "../utils/selectStyles";
 
 /**
- * 一组设置：圆角卡片里一行一项，行间细线分隔（和系统设置里的分组列表同一种读法）。
+ * 一组设置：一行一项，行间细线分隔（和系统设置里的分组列表同一种读法）。
+ *
+ * 默认是一张卡片（伪元素细边 + 投影），给直接放在页面上的设置组用；放进弹窗时传 `flat`：
+ * 弹窗本身已经是一层，里面再套一张卡就是「框里套框」，扁平组只留行间分隔线。
  */
 export function SettingGroup({
   children,
   className,
+  flat = false,
 }: {
   children: ReactNode;
   className?: string;
+  flat?: boolean;
 }) {
   return (
     <div
       data-slot="setting-group"
       className={cn(
-        "divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface",
+        "divide-y divide-line",
+        flat
+          ? // 扁平组没有卡片边，行也不再缩进，和弹窗里其它字段左右对齐。
+            "[&>[data-slot=setting-row]]:px-0"
+          : "cp-edge overflow-hidden rounded-2xl bg-surface shadow-card [--cp-backdrop:var(--cp-surface)]",
         className,
       )}
     >
@@ -109,7 +118,7 @@ export function SettingRow({
       data-modified={modified || undefined}
       className={cn(
         "relative px-5 py-4 transition-colors duration-500",
-        highlighted ? "bg-sky-500/[0.07]" : null,
+        highlighted ? "bg-accent-soft colorful:bg-sky-500/[0.07]" : null,
         className,
       )}
     >
@@ -124,7 +133,7 @@ export function SettingRow({
             {modified ? (
               <span
                 aria-hidden="true"
-                className="h-1.5 w-1.5 shrink-0 rounded-full bg-sky-500"
+                className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent colorful:bg-sky-500"
               />
             ) : null}
             <LabelTag

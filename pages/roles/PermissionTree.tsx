@@ -160,7 +160,7 @@ export function PermissionTree({
         aria-expanded={hasChildren ? isExpanded : undefined}
       >
         <div
-          className="flex min-h-11 items-center gap-2 border-b border-line px-3 py-2 transition-colors last:border-b-0 hover:bg-hover"
+          className="flex min-h-11 items-center gap-2 rounded-lg px-3 py-2 transition-colors hover:bg-hover"
           style={{ paddingLeft: 12 + depth * 24 }}
         >
           {hasChildren ? (
@@ -199,7 +199,7 @@ export function PermissionTree({
               onChange(next);
             }}
           />
-          <Icon size={15} className={`shrink-0 ${iconHueClass(Icon)}`} aria-hidden="true" />
+          <Icon size={15} className={`shrink-0 text-ink-3 ${iconHueClass(Icon)}`} aria-hidden="true" />
           <span className="min-w-0 flex-1">
             <span className="block truncate text-sm font-medium text-ink">
               {node.label}
@@ -214,12 +214,6 @@ export function PermissionTree({
     );
   };
 
-  return (
-    <ul
-      role="tree"
-      className="overflow-hidden rounded-2xl border border-line bg-surface"
-    >
-      {nodes.map((node) => renderNode(node, 0))}
-    </ul>
-  );
+  // 弹窗本身就是一层面板：树直接排在里面，不再套一个描边盒子；行与行靠留白和悬停底色分开。
+  return <ul role="tree">{nodes.map((node) => renderNode(node, 0))}</ul>;
 }

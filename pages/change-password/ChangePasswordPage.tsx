@@ -130,7 +130,7 @@ export function ChangePasswordPage() {
   return (
     <PageBackground variant="login">
       <div className="absolute right-6 top-6 z-20">
-        <ThemeToggleButton className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-line-strong bg-surface text-ink-2 shadow-xs transition-colors hover:bg-hover hover:text-ink dark:shadow-none" />
+        <ThemeToggleButton className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-surface text-ink-2 shadow-control transition-[background-color,box-shadow,color] hover:bg-surface-hover hover:text-ink hover:shadow-control-hover" />
       </div>
       <main className="relative flex min-h-[100dvh] items-center justify-center px-6 py-12">
         <motion.div
@@ -142,7 +142,7 @@ export function ChangePasswordPage() {
           <motion.div variants={card.item}>
             <motion.section
               animate={shakeControls}
-              className="relative rounded-3xl border border-line bg-surface p-7 shadow-lift sm:p-9"
+              className="cp-edge relative rounded-3xl bg-surface p-7 shadow-lift sm:p-9"
             >
               {forced ? null : (
                 <button
@@ -155,8 +155,19 @@ export function ChangePasswordPage() {
                 </button>
               )}
               <div className="mb-8 text-center">
-                {/* 规则全部满足、两次输入一致时盾牌打上对勾：不用看清单也知道可以提交了。 */}
-                <div className="mx-auto mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-accent text-accent-fg shadow-sm">
+                {/*
+                  规则全部满足、两次输入一致时盾牌打上对勾：不用看清单也知道可以提交了。
+                  图标块平时是中性淡底，满足后换成成功的淡绿底——颜色只表达「可以提交了」这个状态，
+                  不再常驻一块强调色的实色方块。
+                */}
+                <div
+                  className={[
+                    "mx-auto mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl transition-colors duration-200",
+                    ready
+                      ? "bg-emerald-500/10 text-emerald-600 dark:bg-emerald-400/15 dark:text-emerald-300"
+                      : "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]",
+                  ].join(" ")}
+                >
                   <AnimatePresence mode="wait" initial={false}>
                     <motion.span
                       key={ready ? "ready" : "pending"}
@@ -204,7 +215,8 @@ export function ChangePasswordPage() {
                   />
                 </motion.label>
 
-                <motion.div variants={form.item} className="h-px bg-line" />
+                {/* 当前密码与新密码两组之间多留一段空白，不再画分隔线。 */}
+                <motion.div variants={form.item} className="h-1" aria-hidden="true" />
 
                 <motion.div variants={form.item}>
                   {/* 清单和错误放在 label 外面：放进去会改变输入框的可访问名称。 */}

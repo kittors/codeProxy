@@ -70,16 +70,18 @@ const TAB_META: Record<ProviderTabId, { icon: ReactNode }> = {
 };
 
 /**
- * tab 上的数量角标跟着供应商的品牌色：当前 tab 用品牌实色，其余用品牌淡底。淡底是和卡片底色
- * 混出来的实色而不是半透明——角标压在 tab 文字上，半透明会透出下面的字。认不出品牌的
- * （Bedrock、Command Code）回落到墨色，和以前一样是黑 / 灰。
+ * tab 上的数量角标，都不描边。简约风格：当前 tab 用强调色实底，其余是卡片底色的白（深色是卡片色）
+ * 小圆点，认厂商靠 tab 里的 logo。多彩风格跟着供应商的品牌色：当前 tab 用品牌实色，其余用品牌
+ * 淡底；认不出品牌的（Bedrock、Command Code）回落到墨色。
+ * 角标压在 tab 文字上，所以必须是不透明的实色（品牌淡底是和卡片底色混出来的实色），半透明会透出
+ * 下面的字。
  */
 const COUNT_BADGE_BASE =
-  "absolute -right-0.5 -top-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-2xs font-semibold leading-none tabular-nums shadow-sm ring-1";
+  "absolute -right-0.5 -top-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-2xs font-semibold leading-none tabular-nums";
 const COUNT_BADGE_ACTIVE =
-  "bg-[var(--brand-fill)] text-[var(--brand-on)] ring-black/10 dark:ring-white/15";
+  "bg-accent text-accent-fg colorful:bg-[var(--brand-fill)] colorful:text-[var(--brand-on)]";
 const COUNT_BADGE_IDLE =
-  "bg-[color-mix(in_oklab,var(--brand)_14%,var(--color-surface))] text-[var(--brand-text)] ring-[color-mix(in_oklab,var(--brand)_24%,transparent)] dark:bg-[color-mix(in_oklab,var(--brand)_26%,var(--color-surface))]";
+  "bg-surface text-ink-2 shadow-xs colorful:bg-[color-mix(in_oklab,var(--brand)_14%,var(--color-surface))] colorful:text-[var(--brand-text)] colorful:dark:bg-[color-mix(in_oklab,var(--brand)_26%,var(--color-surface))]";
 
 type ProviderTabsWithCountsProps = {
   tabs: ProviderTabMeta[];

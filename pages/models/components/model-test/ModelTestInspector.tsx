@@ -1,7 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronRight } from "lucide-react";
-import { surface } from "@code-proxy/ui";
 import type { ModelTestC2PA, ModelTestResult } from "@code-proxy/api-client";
 
 /**
@@ -126,7 +125,7 @@ function RawProvenance({ provenance }: { provenance: ModelTestC2PA }) {
           : t("models_page.test_meta_show_raw_manifest")}
       </button>
       {open ? (
-        <pre className="mt-1 max-h-40 overflow-auto rounded-md bg-slate-900/[0.04] px-2 py-1.5 text-2xs text-ink-2 dark:bg-white/[0.06]">
+        <pre className="mt-1 max-h-40 overflow-auto rounded-md bg-subtle px-2 py-1.5 text-2xs text-ink-2">
           {provenance.fields?.map((field) => `${field.key}: ${field.value}`).join("\n")}
         </pre>
       ) : null}
@@ -144,13 +143,15 @@ function Disclosure({
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  // 弹窗本身就是一层面板：折叠区不再是一张带细边和投影的小卡片，只是一行可展开的标题，
+  // 展开的内容靠缩进和留白跟标题归到一起，不画分隔线。
   return (
-    <div data-testid={testId} className={`overflow-hidden ${surface({ tone: "card", radius: "lg" })}`}>
+    <div data-testid={testId}>
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
-        className="flex w-full items-center gap-1.5 px-2.5 py-1.5 text-left text-xs font-medium text-ink-2 transition-colors hover:bg-hover"
+        className="flex w-full items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-left text-xs font-medium text-ink-2 transition-colors hover:bg-hover"
       >
         <ChevronRight
           size={12}
@@ -159,14 +160,14 @@ function Disclosure({
         />
         {title}
       </button>
-      {open ? <div className="border-t border-line px-2.5 py-2">{children}</div> : null}
+      {open ? <div className="px-2.5 pt-1 pb-2">{children}</div> : null}
     </div>
   );
 }
 
 function JSONBlock({ value }: { value: unknown }) {
   return (
-    <pre className="max-h-56 overflow-auto rounded-md bg-slate-900/[0.04] px-2 py-1.5 text-2xs leading-relaxed text-ink-2 dark:bg-white/[0.06]">
+    <pre className="max-h-56 overflow-auto rounded-md bg-subtle px-2 py-1.5 text-2xs leading-relaxed text-ink-2">
       {JSON.stringify(value, null, 2)}
     </pre>
   );

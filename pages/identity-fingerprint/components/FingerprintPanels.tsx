@@ -1,6 +1,6 @@
 import { type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Button } from "@code-proxy/ui";
+import { Button, Callout, surface } from "@code-proxy/ui";
 
 // Presentational pieces of the identity fingerprint page.
 //
@@ -25,16 +25,16 @@ export function RecordHeader({
   const productLine = [product, variant, version].filter(Boolean).join(" / ");
   return (
     <div className="min-w-0">
-      <div className="break-all text-xs font-semibold text-slate-900 dark:text-white">
+      <div className="break-all text-xs font-semibold text-ink">
         {accountKey || t("identity_fingerprint.default_account")}
       </div>
       {authSubjectId ? (
-        <div className="mt-1 break-all text-xs text-slate-500 dark:text-white/50">
+        <div className="mt-1 break-all text-xs text-ink-3">
           {authSubjectId}
         </div>
       ) : null}
       {productLine ? (
-        <div className="mt-1 break-all text-xs text-slate-500 dark:text-white/50">
+        <div className="mt-1 break-all text-xs text-ink-3">
           {productLine}
         </div>
       ) : null}
@@ -45,15 +45,15 @@ export function RecordHeader({
 export function KeyValueList({ title, entries }: { title: string; entries: Array<[string, string]> }) {
   if (entries.length === 0) return null;
   return (
-    <details className="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-xs dark:bg-neutral-900">
-      <summary className="cursor-pointer font-semibold text-slate-600 dark:text-white/60">
+    <details className="mt-3 rounded-lg bg-subtle px-3 py-2 text-xs">
+      <summary className="cursor-pointer font-semibold text-ink-2">
         {title}
       </summary>
       <div className="mt-2 space-y-2">
         {entries.map(([key, value]) => (
           <div key={key}>
-            <div className="font-semibold text-slate-500 dark:text-white/45">{key}</div>
-            <div className="break-all text-slate-900 dark:text-white">{value || "-"}</div>
+            <div className="font-semibold text-ink-3">{key}</div>
+            <div className="break-all text-ink">{value || "-"}</div>
           </div>
         ))}
       </div>
@@ -69,27 +69,32 @@ export function SourceBadge({ source }: { source: string }) {
   if (source === "learned") {
     return <SourcePill tone="learned">{t("identity_fingerprint.source_learned")}</SourcePill>;
   }
-  if (source === "default" || source === "builtin_default") {
-    return <SourcePill tone="default">{t("identity_fingerprint.source_default")}</SourcePill>;
-  }
   return <SourcePill tone="default">{t("identity_fingerprint.source_default")}</SourcePill>;
 }
 
+/**
+ * 来源 / 状态小标签：基础样式是中性淡底，简约风格下来源只靠文字区分（自定义、学习、默认）；
+ * 多彩风格下按类别叠色：自定义红、学习绿，默认保持中性。
+ */
+const SOURCE_PILL_HUE = {
+  custom:
+    "colorful:bg-rose-50 colorful:text-rose-700 colorful:dark:bg-rose-400/10 colorful:dark:text-rose-200",
+  learned:
+    "colorful:bg-emerald-50 colorful:text-emerald-700 colorful:dark:bg-emerald-400/10 colorful:dark:text-emerald-200",
+  default: "",
+} as const;
+
 export function SourcePill({
-  tone,
+  tone = "default",
   children,
 }: {
-  tone: "custom" | "learned" | "default";
+  tone?: keyof typeof SOURCE_PILL_HUE;
   children: ReactNode;
 }) {
-  const className =
-    tone === "custom"
-      ? "bg-rose-50 text-rose-700 dark:bg-rose-400/10 dark:text-rose-200"
-      : tone === "learned"
-        ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-200"
-        : "bg-slate-100 text-slate-600 dark:bg-neutral-800 dark:text-white/60";
   return (
-    <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${className}`}>
+    <span
+      className={`rounded-full bg-ink/[0.05] px-2 py-0.5 text-xs font-semibold text-ink-2 dark:bg-white/[0.07] ${SOURCE_PILL_HUE[tone]}`}
+    >
       {children}
     </span>
   );
@@ -120,11 +125,12 @@ export function ProviderActions({
   );
 }
 
+/** 需要留意的说明：共享提示条（淡底 + 琥珀图标）；简约风格正文中性色，多彩风格正文是琥珀字。 */
 export function ProviderNotice({ children }: { children: ReactNode }) {
   return (
-    <div className="mt-4 rounded-xl bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+    <Callout tone="warning" className="mt-4 colorful:text-amber-900 colorful:dark:text-amber-100">
       {children}
-    </div>
+    </Callout>
   );
 }
 
@@ -138,11 +144,12 @@ export function SimplePanel({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-slate-900/8 bg-white p-4 dark:border-white/8 dark:bg-neutral-950/60">
+    // 页面上的一张卡片：外观来自 surface()（伪元素细边 + 投影），不再手写描边。
+    <section className={`${surface()} p-4`}>
       <div className="mb-4">
-        <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{title}</h3>
+        <h3 className="text-sm font-semibold text-ink">{title}</h3>
         {description ? (
-          <p className="mt-1 text-xs leading-5 text-slate-600 dark:text-white/60">{description}</p>
+          <p className="mt-1 text-xs leading-5 text-ink-3">{description}</p>
         ) : null}
       </div>
       <div className="space-y-3">{children}</div>
@@ -153,10 +160,10 @@ export function SimplePanel({
 export function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
     <label className="block space-y-2">
-      <span className="text-xs font-semibold text-slate-700 dark:text-white/75">{label}</span>
+      <span className="text-xs font-semibold text-ink-2">{label}</span>
       {children}
       {hint ? (
-        <span className="block text-xs text-slate-500 dark:text-white/45">{hint}</span>
+        <span className="block text-xs text-ink-3">{hint}</span>
       ) : null}
     </label>
   );
@@ -164,9 +171,9 @@ export function Field({ label, hint, children }: { label: string; hint?: string;
 
 export function PreviewRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl bg-slate-50 px-3 py-2 dark:bg-neutral-900/70">
-      <div className="text-xs text-slate-500 dark:text-white/45">{label}</div>
-      <div className="mt-1 break-all text-sm font-medium text-slate-900 dark:text-white">
+    <div className="rounded-xl bg-subtle px-3 py-2">
+      <div className="text-xs text-ink-3">{label}</div>
+      <div className="mt-1 break-all text-sm font-medium text-ink">
         {value || "-"}
       </div>
     </div>

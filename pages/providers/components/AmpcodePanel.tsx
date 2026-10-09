@@ -67,7 +67,8 @@ export function AmpcodePanel({
             onChange={(e) => setAmpUpstreamApiKey(e.currentTarget.value)}
             placeholder={t("providers.upstream_key_hint")}
           />
-          <div className="rounded-2xl border border-slate-900/8 bg-white/70 p-4 shadow-sm dark:border-white/8 dark:bg-neutral-950/60">
+          {/* 卡片里不再套描边小卡：开关和状态说明直接排在输入框下面，靠留白分开。 */}
+          <div className="pt-1">
             <ToggleSwitch
               label={t("providers.force_mapping")}
               description={t("providers.force_mapping_desc")}
@@ -75,18 +76,16 @@ export function AmpcodePanel({
               onCheckedChange={setAmpForceMappings}
             />
           </div>
-          <div className="rounded-2xl border border-slate-900/8 bg-white/70 p-4 shadow-sm dark:border-white/8 dark:bg-neutral-950/60">
-            <p className="text-xs text-slate-600 dark:text-white/65">
-              {t("providers.current_status", {
-                status: ampcode ? t("providers.status_loaded") : t("providers.status_not_loaded"),
-                count: ampMappings.length,
-              })}
-            </p>
-          </div>
+          <p className="text-xs text-ink-3">
+            {t("providers.current_status", {
+              status: ampcode ? t("providers.status_loaded") : t("providers.status_not_loaded"),
+              count: ampMappings.length,
+            })}
+          </p>
         </div>
 
         <div className="space-y-2">
-          <p className="text-sm font-semibold text-slate-900 dark:text-white">
+          <p className="text-sm font-semibold text-ink">
             {t("providers.model_mappings")}
           </p>
           {ampMappings.map((entry, idx) => (

@@ -14,7 +14,14 @@ import {
   formatUsageMetricTooltipNumber,
   isUsageMetricCompact,
 } from "@code-proxy/domain";
-import { DataTable, HoverTooltip, MaskToggleButton, useSensitiveDataMasking, useToast, iconHueClass } from "@code-proxy/ui";
+import {
+  DataTable,
+  HoverTooltip,
+  MaskToggleButton,
+  useSensitiveDataMasking,
+  useToast,
+  iconHueClass,
+} from "@code-proxy/ui";
 import { ErrorDetailModal, LogContentModal } from "@features/log-content-viewer";
 import { ModelTag } from "@features/model-tags";
 import { ClearDatabaseLogsDialog, DEFAULT_CLEAR_OPTIONS } from "./ClearDatabaseLogsDialog";
@@ -464,17 +471,24 @@ export function RequestLogsPage() {
   }, [clearOptions, fetchLogs, notify, pageSize, t]);
 
   return (
-    <section className="flex flex-1 flex-col">
+    <section data-page-fill="always" className="flex flex-1 flex-col">
       <h1 className="sr-only">{t("request_logs.title")}</h1>
 
-      {/* 单层卡片：标题 + 筛选 + 统计 + 表格 + 分页 */}
+      {/*
+        不再包一层卡片：外壳的内容区就是这一页的面板，标题、筛选、表格、分页直接落在上面。
+        以前这里是「内容区 → 大卡片 → 表头灰条」三层，和其它页面叠出了太多层级。
+      */}
       {/* min-h-0：flex item 默认 min-height:auto，会被表格内容撑开，把「内部滚动」变成整页变长 */}
-      <div className="flex min-h-0 flex-1 flex-col rounded-3xl border border-line bg-surface shadow-card">
+      <div className="flex min-h-0 flex-1 flex-col">
         {/* 标题栏 */}
-        <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-5 pb-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-3">
           <div className="flex flex-wrap items-center gap-3">
             <h2 className="flex items-center gap-2 text-base font-semibold tracking-tight text-ink">
-              <ScrollText size={18} className={iconHueClass(ScrollText)} aria-hidden="true" />
+              <ScrollText
+                size={18}
+                className={`text-ink-3 ${iconHueClass(ScrollText)}`}
+                aria-hidden="true"
+              />
               {t("request_logs.heading")}
             </h2>
             <div className="hidden min-[640px]:flex items-center gap-2 text-xs text-ink-3">
@@ -534,7 +548,7 @@ export function RequestLogsPage() {
               aria-busy={loading}
               aria-label={t("request_logs.refresh")}
               title={t("request_logs.refresh")}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-line-strong bg-surface text-ink shadow-xs transition-colors hover:bg-hover disabled:cursor-not-allowed disabled:opacity-70 dark:shadow-none"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-surface text-ink shadow-control transition-[background-color,box-shadow] hover:bg-surface-hover hover:shadow-control-hover disabled:cursor-not-allowed disabled:opacity-70"
             >
               <RefreshCw
                 size={14}
@@ -576,7 +590,7 @@ export function RequestLogsPage() {
           内部滚动）。这里不能写 min-h-[360px] 之类的保底：卡片本身是 min-h-0、高度被窗口钉死，
           窗口一矮，保底高度只会把表格和分页条挤出卡片边框之外，而不是让页面滚动。
         */}
-        <div className="relative min-h-0 flex-1 overflow-hidden px-5">
+        <div className="relative min-h-0 flex-1 overflow-hidden">
           <DataTable
             tableId="request-logs"
             rows={rows}
@@ -596,8 +610,8 @@ export function RequestLogsPage() {
 
           {/* Loading overlay */}
           {loading ? (
-            <div className="absolute inset-0 z-10 flex items-center justify-center rounded-b-2xl bg-surface/70 backdrop-blur-sm">
-              <div className="inline-flex items-center gap-2 rounded-2xl border border-line bg-elevated/90 px-3 py-2 text-sm font-medium text-ink-2 shadow-sm dark:shadow-none">
+            <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-canvas/70 backdrop-blur-sm">
+              <div className="inline-flex items-center gap-2 rounded-full bg-elevated px-3.5 py-2 text-sm font-medium text-ink-2 shadow-pop">
                 <span
                   className="h-4 w-4 rounded-full border-2 border-ink/15 border-t-ink motion-reduce:animate-none motion-safe:animate-spin"
                   aria-hidden="true"
@@ -610,6 +624,7 @@ export function RequestLogsPage() {
 
         {/* 分页控件 — flex-shrink-0 固定在底部 */}
         <RequestLogsPaginationBar
+          flush
           currentPage={currentPage}
           totalPages={totalPages}
           totalCount={totalCount}

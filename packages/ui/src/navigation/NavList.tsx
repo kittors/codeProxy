@@ -178,7 +178,7 @@ export function NavList({
                     <motion.span
                       layoutId={`${prefix}-selection`}
                       aria-hidden="true"
-                      className="absolute inset-0 rounded-xl border border-line bg-elevated shadow-xs"
+                      className="absolute inset-0 rounded-xl bg-elevated shadow-control"
                       transition={
                         reduceMotion
                           ? { duration: 0 }
@@ -189,7 +189,7 @@ export function NavList({
                   {item.icon ? (
                     <span
                       className={cn(
-                        "relative grid h-7 w-7 shrink-0 place-items-center rounded-lg border [&_svg.lucide]:size-[16px]",
+                        "relative grid h-7 w-7 shrink-0 place-items-center rounded-lg [&_svg.lucide]:size-[16px]",
                         dialogToneClass(item.tone ?? "auto", item.icon),
                       )}
                     >
@@ -200,7 +200,7 @@ export function NavList({
                   {item.dot ? (
                     <span
                       aria-hidden="true"
-                      className="relative h-1.5 w-1.5 shrink-0 rounded-full bg-sky-500"
+                      className="relative h-1.5 w-1.5 shrink-0 rounded-full bg-accent colorful:bg-sky-500"
                     />
                   ) : null}
                   {item.srHint ? <span className="sr-only">{item.srHint}</span> : null}

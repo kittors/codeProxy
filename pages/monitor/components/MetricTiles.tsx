@@ -10,8 +10,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { MonitorOverview } from "@code-proxy/api-client";
-import { AnimatedNumber, chartPalette, surface } from "@code-proxy/ui";
-import { IconChip, MONITOR_HUES } from "@features/monitor-widgets/monitorVisuals";
+import { AnimatedNumber, chartPalette, chartUsesIdentityColors, surface } from "@code-proxy/ui";
+import { MetricIcon, type MonitorHue } from "@features/monitor-widgets/monitorVisuals";
 import { computePointDelta, computeRelativeDelta, type MonitorDelta } from "../model/monitorDelta";
 import {
   formatMonitorCompact,
@@ -25,7 +25,7 @@ import {
 import { carryForward, elapsedWindowMinutes, seriesValues } from "../model/monitorSeries";
 import { DeltaBadge } from "./DeltaBadge";
 import { MonitorSparkline } from "./MonitorSparkline";
-import { METRIC_HUE, metricColor, successHue, successLevel } from "./monitorTheme";
+import { METRIC_HUE, sparkColor, successHue, successLevel } from "./monitorTheme";
 
 interface TileSpec {
   key: string;
@@ -33,7 +33,12 @@ interface TileSpec {
   sparkBaseline?: "zero" | "auto";
   label: string;
   icon: LucideIcon;
-  hue: (typeof MONITOR_HUES)[keyof typeof MONITOR_HUES];
+  /** 图标块的分类色（图标着色为多彩时显示）。 */
+  hue: MonitorHue;
+  /**
+   * 迷你趋势线的颜色：多彩图表用指标身份色，强调色图表用强调色；成功率出问题时换成对应的
+   * 状态色。
+   */
   color: string;
   value: number;
   format: (value: number) => string;
@@ -49,7 +54,9 @@ interface TileSpec {
 
 /**
  * 六格黄金指标：请求、成功率、P95 耗时、首字时间、Token、费用。
- * 每格：身份色图标 + 大数字 + 环比（按好坏方向着色）+ 一句补充 + 迷你趋势。
+ * 每格：图标 + 大数字 + 环比（按好坏方向着色）+ 一句补充 + 迷你趋势。多彩风格下每格有自己的
+ * 身份色（图标块与趋势线同色）；简约风格下六格都是线性图标 + 强调色趋势，颜色只在成功率出问题
+ * 时出现，一眼就能看到哪一格需要注意。
  */
 export function MetricTiles({
   overview,
@@ -87,8 +94,8 @@ export function MetricTiles({
       key: "requests",
       label: t("monitor_center.tiles.requests"),
       icon: Activity,
-      hue: MONITOR_HUES[METRIC_HUE.requests],
-      color: metricColor("requests", isDark),
+      hue: METRIC_HUE.requests,
+      color: sparkColor("requests", isDark),
       value: current.requests,
       format: formatMonitorCount,
       delta: computeRelativeDelta(current.requests, previous.requests, "neutral"),
@@ -110,7 +117,13 @@ export function MetricTiles({
       icon: ShieldCheck,
       hue: successHue(rate),
       color:
-        rateLevel === "critical" ? palette.err : rateLevel === "warn" ? palette.warn : palette.ok,
+        rateLevel === "critical"
+          ? palette.err
+          : rateLevel === "warn"
+            ? palette.warn
+            : chartUsesIdentityColors()
+              ? palette.ok
+              : palette.primary,
       value: rate,
       format: (value) => formatMonitorPercent(value),
       valueClassName:
@@ -143,8 +156,8 @@ export function MetricTiles({
         ? t("monitor_center.tiles.latency_p95")
         : t("monitor_center.tiles.latency_avg"),
       icon: Timer,
-      hue: MONITOR_HUES[METRIC_HUE.latency],
-      color: metricColor("latency", isDark),
+      hue: METRIC_HUE.latency,
+      color: sparkColor("latency", isDark),
       value: hasLatencySamples ? latency.total.p95_ms : current.latency_avg_ms,
       format: formatMonitorDuration,
       delta: computeRelativeDelta(
@@ -174,8 +187,8 @@ export function MetricTiles({
         ? t("monitor_center.tiles.first_token_p50")
         : t("monitor_center.tiles.first_token_avg"),
       icon: Gauge,
-      hue: MONITOR_HUES[METRIC_HUE.latency],
-      color: metricColor("latency", isDark),
+      hue: METRIC_HUE.latency,
+      color: sparkColor("latency", isDark),
       value: hasFirstTokenSamples ? latency.first_token.p50_ms : current.first_token_avg_ms,
       format: formatMonitorDuration,
       delta: computeRelativeDelta(
@@ -203,8 +216,8 @@ export function MetricTiles({
       key: "tokens",
       label: t("monitor_center.tiles.tokens"),
       icon: Sparkles,
-      hue: MONITOR_HUES[METRIC_HUE.tokens],
-      color: metricColor("tokens", isDark),
+      hue: METRIC_HUE.tokens,
+      color: sparkColor("tokens", isDark),
       value: current.total_tokens,
       format: formatMonitorCount,
       delta: computeRelativeDelta(current.total_tokens, previous.total_tokens, "neutral"),
@@ -223,8 +236,8 @@ export function MetricTiles({
       key: "cost",
       label: t("monitor_center.tiles.cost"),
       icon: CircleDollarSign,
-      hue: MONITOR_HUES[METRIC_HUE.cost],
-      color: metricColor("cost", isDark),
+      hue: METRIC_HUE.cost,
+      color: sparkColor("cost", isDark),
       value: current.cost,
       format: formatMonitorCost,
       delta: computeRelativeDelta(current.cost, previous.cost, "neutral"),
@@ -291,7 +304,7 @@ function MetricTile({
     >
       <div className="flex items-center justify-between gap-2">
         <span className="flex min-w-0 items-center gap-2 text-xs font-medium text-ink-2">
-          <IconChip icon={tile.icon} hue={tile.hue} />
+          <MetricIcon icon={tile.icon} hue={tile.hue} />
           <span className="truncate">{tile.label}</span>
         </span>
         {tile.unavailable ? null : <DeltaBadge delta={tile.delta} hint={deltaHint} />}

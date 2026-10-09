@@ -135,7 +135,7 @@ export function ModerationTestModal({ profile, onClose }: ModerationTestModalPro
                   : t("content_moderation.test_allowed")
               }
               actions={
-                <span className="rounded-full bg-surface px-2.5 py-1 text-xs font-semibold tabular-nums text-ink-2">
+                <span className="rounded-full bg-ink/[0.05] px-2.5 py-1 text-xs font-semibold tabular-nums text-ink-2 dark:bg-white/[0.07]">
                   {t("content_moderation.latency_value", { value: decision.latency_ms })}
                 </span>
               }
@@ -155,9 +155,13 @@ export function ModerationTestModal({ profile, onClose }: ModerationTestModalPro
                   return (
                     <span
                       key={category}
+                      // 命中的类别：简约风格是强调色淡底；多彩风格的强调色是墨色，淡底和未命中的中性底
+                      // 几乎分不出，所以和以前一样用强调色实心。
                       className={[
                         "rounded-full px-2.5 py-1 text-xs",
-                        matched ? "bg-accent text-accent-fg" : "bg-subtle text-ink-3",
+                        matched
+                          ? "bg-accent-soft font-medium text-accent-ink colorful:bg-accent colorful:text-accent-fg"
+                          : "bg-ink/[0.05] text-ink-3 dark:bg-white/[0.07]",
                       ].join(" ")}
                       title={
                         matched
@@ -202,10 +206,10 @@ export function ModerationTestModal({ profile, onClose }: ModerationTestModalPro
 
             {scoreRows.length ? (
               <div
-                className={`max-h-52 overflow-y-auto ${surface({ tone: "plain", radius: "xl" })}`}
+                className={`max-h-52 overflow-y-auto ${surface({ tone: "inset", radius: "xl" })}`}
               >
                 <table className="w-full text-left text-xs">
-                  <thead className="sticky top-0 bg-surface text-ink-3">
+                  <thead className="sticky top-0 bg-subtle text-ink-3">
                     <tr>
                       <th className="px-3 py-2 font-semibold">
                         {t("content_moderation.category")}

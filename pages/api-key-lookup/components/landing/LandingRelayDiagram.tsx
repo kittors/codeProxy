@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { useId, type CSSProperties } from "react";
 import { useReducedMotion } from "framer-motion";
 import { LogoMark, VendorIcon } from "@code-proxy/assets";
 
@@ -23,6 +23,8 @@ const UPSTREAM_Y = UPSTREAMS.map((_, index) => {
  *
  * 连线用 SVG stroke-dasharray 做流动效果：相比逐个小球沿路径运动，dash 动画只占一条
  * path，滚动时不会掉帧，也天然支持 prefers-reduced-motion（关掉动画即为静态虚线）。
+ * 连线的基础形态（简约风格）是单一的强调色，多彩风格下是靛蓝到青色的渐变；
+ * 节点是卡片里的淡底块，不描 ring。
  */
 export function LandingRelayDiagram({ appLabel }: { appLabel: string }) {
   const reduceMotion = useReducedMotion();
@@ -34,7 +36,7 @@ export function LandingRelayDiagram({ appLabel }: { appLabel: string }) {
         {UPSTREAMS.map((id) => (
           <li
             key={id}
-            className="flex h-10 w-10 items-center justify-center rounded-xl bg-white ring-1 ring-slate-900/8 dark:bg-white/[0.06] dark:ring-white/10"
+            className="flex h-10 w-10 items-center justify-center rounded-xl bg-subtle"
           >
             <VendorIcon modelId={id} size={18} />
           </li>
@@ -63,13 +65,15 @@ export function LandingRelayDiagram({ appLabel }: { appLabel: string }) {
         </defs>
         <g
           fill="none"
-          stroke={`url(#${gradientId})`}
           strokeWidth="1.8"
           strokeLinecap="round"
           strokeDasharray="5 7"
-          className={
-            reduceMotion ? undefined : "motion-safe:animate-[landing-flow_1.4s_linear_infinite]"
-          }
+          // 渐变 id 每个实例不同，类名里写不进去，经 CSS 变量交给 colorful: 类引用。
+          style={{ "--relay-flow": `url(#${gradientId})` } as CSSProperties}
+          className={[
+            "stroke-accent/70 colorful:[stroke:var(--relay-flow)]",
+            reduceMotion ? "" : "motion-safe:animate-[landing-flow_1.4s_linear_infinite]",
+          ].join(" ")}
         >
           {UPSTREAM_Y.map((y) => (
             <path key={y} d={`M0 ${y} C46 ${y} 56 ${CENTER_Y} 120 ${CENTER_Y}`} />
@@ -82,10 +86,10 @@ export function LandingRelayDiagram({ appLabel }: { appLabel: string }) {
         整列居中会把标记推离连线汇聚点（也就是之前连线看着没对齐的原因）。
       */}
       <div className="relative flex h-full shrink-0 items-center">
-        <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-surface ring-1 ring-line-strong">
+        <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-subtle">
           <LogoMark size={20} />
         </span>
-        <span className="absolute left-1/2 top-[calc(50%+2.25rem)] w-max -translate-x-1/2 font-display text-2xs uppercase tracking-[0.06em] text-slate-400 dark:text-white/40">
+        <span className="absolute left-1/2 top-[calc(50%+2.25rem)] w-max -translate-x-1/2 font-display text-2xs uppercase tracking-[0.06em] text-ink-3">
           {appLabel}
         </span>
       </div>

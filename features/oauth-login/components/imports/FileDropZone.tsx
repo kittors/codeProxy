@@ -58,9 +58,10 @@ export function FileDropZone({
       transition={{ type: "spring", stiffness: 400, damping: 30 }}
       className={[
         "grid cursor-pointer justify-items-center gap-2 rounded-2xl border border-dashed px-5 py-8 text-center transition-colors",
+        // 虚线框只留给文件拖放区；拖进来时简约风格换成强调色，多彩风格是天蓝。
         dragging
-          ? "border-sky-500 bg-sky-500/8"
-          : "border-line-strong bg-subtle hover:border-ink-3",
+          ? "border-accent bg-accent-soft colorful:border-sky-500 colorful:bg-sky-500/8"
+          : "border-line-strong bg-subtle hover:border-ink-4",
         busy ? "cursor-progress opacity-60" : "",
       ].join(" ")}
     >

@@ -228,7 +228,7 @@ export function useAuthFilesFilesPresentation({
               <span
                 data-testid="auth-file-restriction-badge"
                 className={[
-                  "inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-2xs font-semibold tabular-nums",
+                  "inline-flex max-w-full items-center gap-1 rounded-full px-2 py-0.5 text-2xs font-semibold tabular-nums",
                   RESTRICTION_TONE_CLASSES[badge.tone],
                 ].join(" ")}
               >
@@ -284,7 +284,7 @@ export function useAuthFilesFilesPresentation({
             <HoverTooltip key={badge.key} content={formatBadgeTooltip(badge)} placement="top">
               <span
                 className={[
-                  "inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-2xs font-semibold tabular-nums",
+                  "inline-flex max-w-full items-center gap-1 rounded-full px-2 py-0.5 text-2xs font-semibold tabular-nums",
                   CLAUDE_OAUTH_HEALTH_TONE_CLASSES[badge.tone],
                 ].join(" ")}
               >
@@ -320,7 +320,7 @@ export function useAuthFilesFilesPresentation({
         <HoverTooltip content={title}>
           <span
             className={[
-              "inline-flex max-w-full items-center gap-1 rounded-md border px-1.5 py-0.5 text-2xs font-semibold tabular-nums",
+              "inline-flex max-w-full items-center gap-1 rounded-md px-1.5 py-0.5 text-2xs font-semibold tabular-nums",
               SUBSCRIPTION_TONE_CLASSES[status.tone],
             ].join(" ")}
           >
@@ -488,7 +488,7 @@ export function useAuthFilesFilesPresentation({
           <span
             data-testid="auth-file-quota-error-badge"
             className={[
-              "inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-2xs font-semibold tabular-nums",
+              "inline-flex max-w-full items-center gap-1 rounded-full px-2 py-0.5 text-2xs font-semibold tabular-nums",
               RESTRICTION_TONE_CLASSES.danger,
             ].join(" ")}
           >
@@ -526,13 +526,13 @@ export function useAuthFilesFilesPresentation({
                 if (node) node.indeterminate = somePageSelected;
               }}
               onChange={(event) => selectCurrentPage(event.currentTarget.checked)}
-              className="h-4 w-4 rounded border-slate-300 text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-400/35 disabled:cursor-not-allowed disabled:opacity-40 dark:border-neutral-700 dark:bg-neutral-950 dark:text-white dark:focus-visible:ring-white/15"
+              className="h-4 w-4 accent-accent disabled:cursor-not-allowed disabled:opacity-40"
             />
           </div>
         ),
         render: (file) => {
           if (isRuntimeOnlyAuthFile(file)) {
-            return <span className="text-xs text-slate-400 dark:text-white/40">--</span>;
+            return <span className="text-xs text-ink-3">--</span>;
           }
           const checked = selectedFileNameSet.has(file.name);
           return (
@@ -544,7 +544,7 @@ export function useAuthFilesFilesPresentation({
                 })}
                 checked={checked}
                 onChange={(event) => toggleFileSelection(file.name, event.currentTarget.checked)}
-                className="h-4 w-4 rounded border-slate-300 text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:border-neutral-700 dark:bg-neutral-950 dark:text-white dark:focus-visible:ring-white/15"
+                className="h-4 w-4 accent-accent"
               />
             </div>
           );
@@ -573,7 +573,7 @@ export function useAuthFilesFilesPresentation({
                   {supplementalTags.map((tag) => (
                     <span
                       key={tag}
-                      className="inline-flex items-center rounded-full bg-sky-50 px-2 py-0.5 text-2xs font-semibold text-sky-700 dark:bg-sky-500/15 dark:text-sky-200"
+                      className="inline-flex items-center rounded-full bg-ink/[0.05] px-2 py-0.5 text-2xs font-semibold text-ink-2 dark:bg-white/[0.07] colorful:bg-sky-50 colorful:text-sky-700 colorful:dark:bg-sky-500/15 colorful:dark:text-sky-200"
                     >
                       {tag}
                     </span>
@@ -655,7 +655,7 @@ export function useAuthFilesFilesPresentation({
             <button
               type="button"
               disabled={state?.loading}
-              className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-slate-900/8 bg-slate-50 px-2 py-1 text-xs tabular-nums text-slate-600 transition-colors hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-default disabled:opacity-40 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white/60 dark:hover:border-blue-600 dark:hover:bg-blue-950 dark:hover:text-blue-300"
+              className="inline-flex cursor-pointer items-center gap-1 rounded-full bg-ink/[0.05] px-2 py-1 text-xs tabular-nums text-ink-2 transition-colors hover:bg-accent-soft hover:text-accent-ink disabled:cursor-default disabled:opacity-40 dark:bg-white/[0.07] colorful:hover:bg-blue-50 colorful:hover:text-blue-700 colorful:dark:hover:bg-blue-950 colorful:dark:hover:text-blue-300"
               onClick={() => void checkAuthFileConnectivity(file.name)}
               title={t("auth_files.check_connectivity")}
               aria-label={t("auth_files.check_connectivity")}
@@ -683,7 +683,7 @@ export function useAuthFilesFilesPresentation({
           const authIndex = normalizeAuthIndexValue(file.auth_index ?? file.authIndex);
           const calls = authIndex ? cycleCallsByAuthIndex[authIndex] : undefined;
           return (
-            <span className="inline-flex items-center justify-end gap-1 text-xs font-semibold tabular-nums text-slate-700 dark:text-white/70">
+            <span className="inline-flex items-center justify-end gap-1 text-xs font-semibold tabular-nums text-ink-2">
               {typeof calls === "number" ? (
                 calls
               ) : !statusUsageReady && statusUsageLoading ? (
@@ -705,7 +705,7 @@ export function useAuthFilesFilesPresentation({
           const stats = resolveAuthFileStats(file, usageIndex);
           const hasUsage = stats.success + stats.failure > 0;
           return (
-            <span className="text-xs font-semibold tabular-nums text-emerald-700 dark:text-emerald-200">
+            <span className="text-xs font-semibold tabular-nums text-ink-2 colorful:text-emerald-700 colorful:dark:text-emerald-200">
               {statusUsageReady || hasUsage ? stats.success : "--"}
             </span>
           );
@@ -772,7 +772,7 @@ export function useAuthFilesFilesPresentation({
         cellClassName: "text-center",
         render: (file) => {
           if (isRuntimeOnlyAuthFile(file)) {
-            return <span className="text-xs text-slate-400 dark:text-white/40">--</span>;
+            return <span className="text-xs text-ink-3">--</span>;
           }
           return (
             <ToggleSwitch

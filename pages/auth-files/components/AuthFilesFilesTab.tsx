@@ -956,7 +956,7 @@ export function AuthFilesFilesTab({
           label: (
             <span className="flex min-w-0 items-center gap-2">
               <span className="min-w-0 truncate">{label}</span>
-              <span className="ml-auto inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-slate-100 px-1 text-2xs font-semibold tabular-nums text-slate-700 dark:bg-white/10 dark:text-white/70">
+              <span className="ml-auto inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-ink/[0.05] px-1 text-2xs font-semibold tabular-nums text-ink-2 dark:bg-white/[0.07]">
                 {count}
               </span>
             </span>
@@ -1102,7 +1102,7 @@ export function AuthFilesFilesTab({
         className={[
           "!h-8 px-3 text-xs",
           selectedModelOwner
-            ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-400/10 dark:text-emerald-100 dark:hover:bg-emerald-400/15"
+            ? "bg-accent-soft text-accent-ink hover:bg-accent-soft colorful:bg-emerald-50 colorful:text-emerald-700 colorful:hover:bg-emerald-100 colorful:dark:bg-emerald-400/10 colorful:dark:text-emerald-100 colorful:dark:hover:bg-emerald-400/15"
             : "",
         ].join(" ")}
         onClick={() => {
@@ -1121,7 +1121,7 @@ export function AuthFilesFilesTab({
         {selectedModelOwner ? (
           <span
             aria-hidden="true"
-            className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500"
+            className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent colorful:bg-emerald-500"
           />
         ) : null}
       </Button>
@@ -1140,7 +1140,7 @@ export function AuthFilesFilesTab({
         setPage(1);
       }}
       pageSizeOptions={pageSizeOptions}
-      className="border-t border-slate-100 px-4 pb-4 pt-3 sm:px-5 sm:pb-5 dark:border-white/8"
+      className="pt-3"
       labels={{
         firstPage: t("request_logs.first_page"),
         previousPage: t("auth_files.prev"),
@@ -1158,11 +1158,8 @@ export function AuthFilesFilesTab({
   );
 
   return (
-    <Card
-      padding="none"
-      className="md:flex md:min-h-0 md:flex-1 md:flex-col md:overflow-hidden"
-      bodyClassName="md:flex md:min-h-0 md:flex-1 md:flex-col"
-    >
+    // 页面级分区而不是卡片：内容区就是面板，里面只有账号卡片这一层（不再裁剪，卡片投影要伸出去）。
+    <Card flat className="md:flex md:min-h-0 md:flex-1 md:flex-col" bodyClassName="md:flex md:min-h-0 md:flex-1 md:flex-col">
       <input
         ref={fileInputRef}
         type="file"
@@ -1172,7 +1169,7 @@ export function AuthFilesFilesTab({
         onChange={(e) => void handleUpload(e.currentTarget.files)}
       />
 
-      <div className="shrink-0 border-b border-slate-100 p-3.5 dark:border-white/8">
+      <div className="shrink-0">
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between gap-2 md:hidden">
             <Button
@@ -1403,7 +1400,7 @@ export function AuthFilesFilesTab({
         </>
       ) : pageItems.length === 0 ? (
         <>
-          <div className="p-4 sm:p-5 md:min-h-0 md:flex-1 md:overflow-hidden">
+          <div className="py-4 sm:py-5 md:min-h-0 md:flex-1 md:overflow-hidden">
             <EmptyState
               title={t("auth_files_page.no_files")}
               description={t("auth_files_page.no_files_desc")}
@@ -1417,7 +1414,8 @@ export function AuthFilesFilesTab({
             ref={cardGridHostRef}
             className={[
               "md:min-h-0 md:flex-1 md:overflow-hidden",
-              filesViewMode === "table" ? "p-4 sm:p-5" : "",
+              // 卡片视图：滚动区自己留出投影的空间，这里用等量负边距把卡片拉回和筛选行对齐。
+              filesViewMode === "table" ? "pt-4" : "-mx-4 sm:-mx-5",
             ]
               .filter(Boolean)
               .join(" ")}
@@ -1442,12 +1440,8 @@ export function AuthFilesFilesTab({
                   const disabled = Boolean(row.disabled);
                   const selected = selectedFileNameSet.has(row.name);
                   return [
-                    selected
-                      ? "bg-slate-100/80 dark:bg-white/[0.08] hover:bg-slate-100 dark:hover:bg-white/[0.1]"
-                      : "",
-                    runtimeOnly
-                      ? "bg-slate-50/80 dark:bg-neutral-950/55 hover:bg-slate-100/80 dark:hover:bg-neutral-900/60"
-                      : "",
+                    selected ? "bg-selected hover:bg-selected" : "",
+                    runtimeOnly ? "bg-subtle hover:bg-hover" : "",
                     disabled ? "opacity-85" : "",
                   ]
                     .filter(Boolean)
@@ -1552,9 +1546,9 @@ export function AuthFilesFilesTab({
                       : null;
                   const successRateClass =
                     successRate === null
-                      ? "text-slate-500 dark:text-white/45"
+                      ? "text-ink-3"
                       : successRate >= 90
-                        ? "text-emerald-700 dark:text-emerald-200"
+                        ? "text-ink colorful:text-emerald-700 colorful:dark:text-emerald-200"
                         : successRate >= 50
                           ? "text-amber-700 dark:text-amber-200"
                           : "text-rose-700 dark:text-rose-200";
@@ -1672,8 +1666,8 @@ export function AuthFilesFilesTab({
                                   className={[
                                     "inline-flex h-6 w-6 items-center justify-center rounded-md transition-colors",
                                     fileDisabled
-                                      ? "bg-slate-100 text-slate-400 hover:bg-slate-200 dark:bg-white/10 dark:text-white/45"
-                                      : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-300",
+                                      ? "bg-ink/[0.05] text-ink-3 hover:bg-ink/[0.08] dark:bg-white/[0.07]"
+                                      : "bg-accent-soft text-accent-ink colorful:bg-emerald-50 colorful:text-emerald-600 colorful:hover:bg-emerald-100 colorful:dark:bg-emerald-500/15 colorful:dark:text-emerald-300",
                                     statusUpdating[file.name]
                                       ? "cursor-wait opacity-70"
                                       : "",
@@ -1737,7 +1731,7 @@ export function AuthFilesFilesTab({
                               <button
                                 type="button"
                                 className={[
-                                  "inline-flex shrink-0 items-center gap-1 rounded-md bg-slate-100 text-2xs font-semibold text-slate-700 transition-colors hover:bg-blue-50 hover:text-blue-700 disabled:cursor-wait disabled:opacity-70 dark:bg-white/10 dark:text-white/70 dark:hover:bg-blue-500/15 dark:hover:text-blue-200",
+                                  "inline-flex shrink-0 items-center gap-1 rounded-md bg-ink/[0.05] text-2xs font-semibold text-ink-2 transition-colors hover:bg-accent-soft hover:text-accent-ink disabled:cursor-wait disabled:opacity-70 dark:bg-white/[0.07] colorful:hover:bg-blue-50 colorful:hover:text-blue-700 colorful:dark:hover:bg-blue-500/15 colorful:dark:hover:text-blue-200",
                                   denseCards ? "h-5 px-1.5" : "px-2 py-0.5",
                                 ].join(" ")}
                                 disabled={quotaRefreshing}
@@ -1748,7 +1742,7 @@ export function AuthFilesFilesTab({
                               >
                                 <RefreshCw
                                   size={10}
-                                  className={`${iconHueClass(RefreshCw)} ${quotaRefreshing ? "animate-spin" : ""}`}
+                                  className={`text-ink-3 ${iconHueClass(RefreshCw)} ${quotaRefreshing ? "animate-spin" : ""}`}
                                 />
                                 <span className="tabular-nums">
                                   {denseCards
@@ -1767,7 +1761,7 @@ export function AuthFilesFilesTab({
                             >
                               <span
                                 className={[
-                                  "inline-flex shrink-0 items-center rounded-md bg-slate-100 text-2xs font-semibold tabular-nums text-slate-700 dark:bg-white/10 dark:text-white/70",
+                                  "inline-flex shrink-0 items-center rounded-md bg-ink/[0.05] text-2xs font-semibold tabular-nums text-ink-2 dark:bg-white/[0.07]",
                                   denseCards ? "h-5 px-1.5" : "px-2 py-0.5",
                                 ].join(" ")}
                               >
@@ -1779,7 +1773,7 @@ export function AuthFilesFilesTab({
                             <HoverTooltip content={cycleTokensTooltip} className="shrink-0">
                               <span
                                 className={[
-                                  "inline-flex shrink-0 items-center rounded-md bg-slate-100 text-2xs font-semibold tabular-nums text-slate-700 dark:bg-white/10 dark:text-white/70",
+                                  "inline-flex shrink-0 items-center rounded-md bg-ink/[0.05] text-2xs font-semibold tabular-nums text-ink-2 dark:bg-white/[0.07]",
                                   denseCards ? "h-5 px-1.5" : "px-2 py-0.5",
                                 ].join(" ")}
                               >
@@ -1794,7 +1788,7 @@ export function AuthFilesFilesTab({
                             >
                               <span
                                 className={[
-                                  "inline-flex shrink-0 items-center rounded-md bg-slate-100 text-2xs font-semibold text-slate-700 dark:bg-white/10 dark:text-white/70",
+                                  "inline-flex shrink-0 items-center rounded-md bg-ink/[0.05] text-2xs font-semibold text-ink-2 dark:bg-white/[0.07]",
                                   denseCards ? "h-5 gap-0 px-1.5" : "gap-1 px-2 py-0.5",
                                 ].join(" ")}
                               >
@@ -1835,7 +1829,7 @@ export function AuthFilesFilesTab({
                             {visibleTags.map((tag) => (
                               <span
                                 key={tag}
-                                className="inline-flex max-w-full items-center truncate rounded-md bg-sky-50 px-1.5 py-0.5 text-2xs font-semibold text-sky-700 dark:bg-sky-500/15 dark:text-sky-200"
+                                className="inline-flex max-w-full items-center truncate rounded-full bg-ink/[0.05] px-2 py-0.5 text-2xs font-semibold text-ink-2 dark:bg-white/[0.07] colorful:bg-sky-50 colorful:text-sky-700 colorful:dark:bg-sky-500/15 colorful:dark:text-sky-200"
                               >
                                 {tag}
                               </span>
@@ -1845,7 +1839,7 @@ export function AuthFilesFilesTab({
                                 content={displayTags.join("\n")}
                                 className="shrink-0"
                               >
-                                <span className="inline-flex items-center rounded-md bg-sky-50 px-1.5 py-0.5 text-2xs font-semibold text-sky-700 dark:bg-sky-500/15 dark:text-sky-200">
+                                <span className="inline-flex items-center rounded-full bg-ink/[0.05] px-2 py-0.5 text-2xs font-semibold text-ink-2 dark:bg-white/[0.07] colorful:bg-sky-50 colorful:text-sky-700 colorful:dark:bg-sky-500/15 colorful:dark:text-sky-200">
                                   +{hiddenTagCount}
                                 </span>
                               </HoverTooltip>

@@ -1483,8 +1483,9 @@ describe("CcSwitchImportSettingsPage", () => {
     headerCells.forEach((cell) => expect(cell).not.toHaveClass("sticky"));
     // The viewport-fixed header plate only exists for sticky headers; without an inner
     // scrollport the thead scrolls with the rows and carries its own background.
+    // The fill colour is DataTable's token, so only "it has a fill" is pinned here.
     expect(mappingTable.querySelector("[data-vt-header-chrome]")).toBeNull();
-    expect(mappingTable.querySelector("thead")).toHaveClass("bg-slate-100");
+    expect(mappingTable.querySelector("thead")?.className).toMatch(/(^|\s)bg-\S+/);
     expect(mappingTable.querySelector("[data-vt-column-resizer]")).toBeNull();
 
     const mappingRows = Array.from(
@@ -1492,9 +1493,12 @@ describe("CcSwitchImportSettingsPage", () => {
         "tbody tr[data-vt-row-index]",
       ),
     );
+    // Quiet UI keeps exactly one kind of line: the divider between data rows. Every row but
+    // the last draws it (its colour token belongs to DataTable), and rows are square-cornered
+    // strips rather than rounded pills.
     mappingRows.slice(0, -1).forEach((row) => {
       Array.from(row.cells).forEach((cell) => {
-        expect(cell).toHaveClass("border-b", "border-slate-900/8");
+        expect(cell).toHaveClass("border-b");
         expect(cell).not.toHaveClass("first:rounded-l-lg", "last:rounded-r-lg");
       });
     });

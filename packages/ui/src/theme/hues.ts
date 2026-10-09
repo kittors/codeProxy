@@ -3,11 +3,20 @@ import { isValidElement, type ReactNode } from "react";
 /**
  * 全站色相体系。
  *
- * 以前图标块、分区图标、空态、侧边栏图标都是中性灰，整个面板读起来灰蒙蒙的。现在每个图标
- * 有自己的色相：用于「认出这是什么」（用户是蓝、权限是紫、密钥是琥珀……），不表达好坏——
+ * 每个图标有自己的色相：用于「认出这是什么」（用户是蓝、权限是紫、密钥是琥珀……），不表达好坏——
  * 侧边栏的几个顶层分组（仪表盘靛蓝、运行观测翠绿、接入与凭证紫、模型与调度橙、组织与权限蓝、
  * 系统设置蓝绿、系统信息天蓝）彼此不撞色，调整注册表时注意保持这一点——
  * 危险 / 警告 / 完成仍然只用 DialogIcon 的 danger / warning / success 语义色调。
+ *
+ * 着色受「外观」设置控制（见 theme/appearance.ts 与 styles/index.css 顶部的变体说明）：
+ * - 图标块、无底图标、实色块、按钮图标（HUE_TILE / GLYPH / SOLID / BUTTON_ICON）挂在
+ *   `icon-hue:` 变体上——图标着色选「多彩」时生效，选「单色」时落回调用方写的中性基础类；
+ * - 淡底胶囊、小圆点（HUE_SOFT / DOT）是页面里的装饰色，挂在 `colorful:` 变体上，跟随配色风格。
+ * 所以这里的类名只是「多彩时叠上去的那一层」，调用方必须自己写中性的基础类（例如图标的
+ * text-ink-3、图标块的淡灰底），否则单色 / 简约时元素没有颜色可落。
+ *
+ * 不画描边：盒子的边一律由阴影表达（见 index.css 的 .cp-edge），图标块只用同色系渐变淡底。
+ * 图标块先把基础类的淡灰底清成透明，渐变才不会叠在灰底上发脏。
  *
  * Tailwind 只认源码里完整出现的类名，所以每个色相的每种用法都写成完整字符串，不能拼接。
  */
@@ -33,101 +42,104 @@ export type Hue = (typeof HUES)[number];
 export const isHue = (value: unknown): value is Hue =>
   typeof value === "string" && (HUES as readonly string[]).includes(value);
 
-/** 图标块：同色系由浓到淡的渐变底 + 细描边 + 饱和的图标色（配合 DialogIcon 的 `border` 类）。 */
+/** 图标块（多彩时）：同色系由浓到淡的渐变底 + 饱和的图标色。 */
 export const HUE_TILE: Record<Hue, string> = {
-  blue: "border-blue-500/15 bg-gradient-to-b from-blue-500/[0.14] to-blue-500/[0.06] text-blue-600 dark:border-blue-400/20 dark:from-blue-400/20 dark:to-blue-400/10 dark:text-blue-300",
-  sky: "border-sky-500/15 bg-gradient-to-b from-sky-500/[0.14] to-sky-500/[0.06] text-sky-600 dark:border-sky-400/20 dark:from-sky-400/20 dark:to-sky-400/10 dark:text-sky-300",
-  cyan: "border-cyan-500/20 bg-gradient-to-b from-cyan-500/[0.14] to-cyan-500/[0.06] text-cyan-600 dark:border-cyan-400/20 dark:from-cyan-400/20 dark:to-cyan-400/10 dark:text-cyan-300",
-  teal: "border-teal-500/20 bg-gradient-to-b from-teal-500/[0.14] to-teal-500/[0.06] text-teal-600 dark:border-teal-400/20 dark:from-teal-400/20 dark:to-teal-400/10 dark:text-teal-300",
+  blue: "icon-hue:bg-transparent icon-hue:bg-gradient-to-b icon-hue:from-blue-500/[0.14] icon-hue:to-blue-500/[0.06] icon-hue:text-blue-600 icon-hue:dark:from-blue-400/20 icon-hue:dark:to-blue-400/10 icon-hue:dark:text-blue-300",
+  sky: "icon-hue:bg-transparent icon-hue:bg-gradient-to-b icon-hue:from-sky-500/[0.14] icon-hue:to-sky-500/[0.06] icon-hue:text-sky-600 icon-hue:dark:from-sky-400/20 icon-hue:dark:to-sky-400/10 icon-hue:dark:text-sky-300",
+  cyan: "icon-hue:bg-transparent icon-hue:bg-gradient-to-b icon-hue:from-cyan-500/[0.14] icon-hue:to-cyan-500/[0.06] icon-hue:text-cyan-600 icon-hue:dark:from-cyan-400/20 icon-hue:dark:to-cyan-400/10 icon-hue:dark:text-cyan-300",
+  teal: "icon-hue:bg-transparent icon-hue:bg-gradient-to-b icon-hue:from-teal-500/[0.14] icon-hue:to-teal-500/[0.06] icon-hue:text-teal-600 icon-hue:dark:from-teal-400/20 icon-hue:dark:to-teal-400/10 icon-hue:dark:text-teal-300",
   emerald:
-    "border-emerald-500/20 bg-gradient-to-b from-emerald-500/[0.14] to-emerald-500/[0.06] text-emerald-600 dark:border-emerald-400/20 dark:from-emerald-400/20 dark:to-emerald-400/10 dark:text-emerald-300",
-  lime: "border-lime-500/25 bg-gradient-to-b from-lime-500/[0.16] to-lime-500/[0.07] text-lime-700 dark:border-lime-400/20 dark:from-lime-400/20 dark:to-lime-400/10 dark:text-lime-300",
+    "icon-hue:bg-transparent icon-hue:bg-gradient-to-b icon-hue:from-emerald-500/[0.14] icon-hue:to-emerald-500/[0.06] icon-hue:text-emerald-600 icon-hue:dark:from-emerald-400/20 icon-hue:dark:to-emerald-400/10 icon-hue:dark:text-emerald-300",
+  lime: "icon-hue:bg-transparent icon-hue:bg-gradient-to-b icon-hue:from-lime-500/[0.16] icon-hue:to-lime-500/[0.07] icon-hue:text-lime-700 icon-hue:dark:from-lime-400/20 icon-hue:dark:to-lime-400/10 icon-hue:dark:text-lime-300",
   amber:
-    "border-amber-500/20 bg-gradient-to-b from-amber-500/[0.16] to-amber-500/[0.07] text-amber-600 dark:border-amber-400/20 dark:from-amber-400/20 dark:to-amber-400/10 dark:text-amber-300",
+    "icon-hue:bg-transparent icon-hue:bg-gradient-to-b icon-hue:from-amber-500/[0.16] icon-hue:to-amber-500/[0.07] icon-hue:text-amber-600 icon-hue:dark:from-amber-400/20 icon-hue:dark:to-amber-400/10 icon-hue:dark:text-amber-300",
   orange:
-    "border-orange-500/20 bg-gradient-to-b from-orange-500/[0.14] to-orange-500/[0.06] text-orange-600 dark:border-orange-400/20 dark:from-orange-400/20 dark:to-orange-400/10 dark:text-orange-300",
-  rose: "border-rose-500/15 bg-gradient-to-b from-rose-500/[0.13] to-rose-500/[0.05] text-rose-600 dark:border-rose-400/20 dark:from-rose-400/20 dark:to-rose-400/10 dark:text-rose-300",
-  pink: "border-pink-500/15 bg-gradient-to-b from-pink-500/[0.13] to-pink-500/[0.05] text-pink-600 dark:border-pink-400/20 dark:from-pink-400/20 dark:to-pink-400/10 dark:text-pink-300",
+    "icon-hue:bg-transparent icon-hue:bg-gradient-to-b icon-hue:from-orange-500/[0.14] icon-hue:to-orange-500/[0.06] icon-hue:text-orange-600 icon-hue:dark:from-orange-400/20 icon-hue:dark:to-orange-400/10 icon-hue:dark:text-orange-300",
+  rose: "icon-hue:bg-transparent icon-hue:bg-gradient-to-b icon-hue:from-rose-500/[0.13] icon-hue:to-rose-500/[0.05] icon-hue:text-rose-600 icon-hue:dark:from-rose-400/20 icon-hue:dark:to-rose-400/10 icon-hue:dark:text-rose-300",
+  pink: "icon-hue:bg-transparent icon-hue:bg-gradient-to-b icon-hue:from-pink-500/[0.13] icon-hue:to-pink-500/[0.05] icon-hue:text-pink-600 icon-hue:dark:from-pink-400/20 icon-hue:dark:to-pink-400/10 icon-hue:dark:text-pink-300",
   fuchsia:
-    "border-fuchsia-500/15 bg-gradient-to-b from-fuchsia-500/[0.13] to-fuchsia-500/[0.05] text-fuchsia-600 dark:border-fuchsia-400/20 dark:from-fuchsia-400/20 dark:to-fuchsia-400/10 dark:text-fuchsia-300",
+    "icon-hue:bg-transparent icon-hue:bg-gradient-to-b icon-hue:from-fuchsia-500/[0.13] icon-hue:to-fuchsia-500/[0.05] icon-hue:text-fuchsia-600 icon-hue:dark:from-fuchsia-400/20 icon-hue:dark:to-fuchsia-400/10 icon-hue:dark:text-fuchsia-300",
   purple:
-    "border-purple-500/15 bg-gradient-to-b from-purple-500/[0.13] to-purple-500/[0.05] text-purple-600 dark:border-purple-400/20 dark:from-purple-400/20 dark:to-purple-400/10 dark:text-purple-300",
+    "icon-hue:bg-transparent icon-hue:bg-gradient-to-b icon-hue:from-purple-500/[0.13] icon-hue:to-purple-500/[0.05] icon-hue:text-purple-600 icon-hue:dark:from-purple-400/20 icon-hue:dark:to-purple-400/10 icon-hue:dark:text-purple-300",
   violet:
-    "border-violet-500/15 bg-gradient-to-b from-violet-500/[0.13] to-violet-500/[0.05] text-violet-600 dark:border-violet-400/20 dark:from-violet-400/20 dark:to-violet-400/10 dark:text-violet-300",
+    "icon-hue:bg-transparent icon-hue:bg-gradient-to-b icon-hue:from-violet-500/[0.13] icon-hue:to-violet-500/[0.05] icon-hue:text-violet-600 icon-hue:dark:from-violet-400/20 icon-hue:dark:to-violet-400/10 icon-hue:dark:text-violet-300",
   indigo:
-    "border-indigo-500/15 bg-gradient-to-b from-indigo-500/[0.13] to-indigo-500/[0.05] text-indigo-600 dark:border-indigo-400/20 dark:from-indigo-400/20 dark:to-indigo-400/10 dark:text-indigo-300",
+    "icon-hue:bg-transparent icon-hue:bg-gradient-to-b icon-hue:from-indigo-500/[0.13] icon-hue:to-indigo-500/[0.05] icon-hue:text-indigo-600 icon-hue:dark:from-indigo-400/20 icon-hue:dark:to-indigo-400/10 icon-hue:dark:text-indigo-300",
 };
 
-/** 不带底块的彩色图标（侧边栏、行内小图标）。 */
+/** 不带底块的彩色图标（侧边栏、行内小图标）。基础类由调用方给（通常是 text-ink-3）。 */
 export const HUE_GLYPH: Record<Hue, string> = {
-  blue: "text-blue-500 dark:text-blue-400",
-  sky: "text-sky-500 dark:text-sky-400",
-  cyan: "text-cyan-500 dark:text-cyan-400",
-  teal: "text-teal-500 dark:text-teal-400",
-  emerald: "text-emerald-500 dark:text-emerald-400",
-  lime: "text-lime-600 dark:text-lime-400",
-  amber: "text-amber-500 dark:text-amber-400",
-  orange: "text-orange-500 dark:text-orange-400",
-  rose: "text-rose-500 dark:text-rose-400",
-  pink: "text-pink-500 dark:text-pink-400",
-  fuchsia: "text-fuchsia-500 dark:text-fuchsia-400",
-  purple: "text-purple-500 dark:text-purple-400",
-  violet: "text-violet-500 dark:text-violet-400",
-  indigo: "text-indigo-500 dark:text-indigo-400",
+  blue: "icon-hue:text-blue-500 icon-hue:dark:text-blue-400",
+  sky: "icon-hue:text-sky-500 icon-hue:dark:text-sky-400",
+  cyan: "icon-hue:text-cyan-500 icon-hue:dark:text-cyan-400",
+  teal: "icon-hue:text-teal-500 icon-hue:dark:text-teal-400",
+  emerald: "icon-hue:text-emerald-500 icon-hue:dark:text-emerald-400",
+  lime: "icon-hue:text-lime-600 icon-hue:dark:text-lime-400",
+  amber: "icon-hue:text-amber-500 icon-hue:dark:text-amber-400",
+  orange: "icon-hue:text-orange-500 icon-hue:dark:text-orange-400",
+  rose: "icon-hue:text-rose-500 icon-hue:dark:text-rose-400",
+  pink: "icon-hue:text-pink-500 icon-hue:dark:text-pink-400",
+  fuchsia: "icon-hue:text-fuchsia-500 icon-hue:dark:text-fuchsia-400",
+  purple: "icon-hue:text-purple-500 icon-hue:dark:text-purple-400",
+  violet: "icon-hue:text-violet-500 icon-hue:dark:text-violet-400",
+  indigo: "icon-hue:text-indigo-500 icon-hue:dark:text-indigo-400",
 };
 
-/** 淡底胶囊（标签、计数、选中的分区胶囊）。 */
+/** 淡底胶囊（标签、计数、选中的分区胶囊）：叠在 HUE_SOFT_BASE 这类中性淡底上。 */
 export const HUE_SOFT: Record<Hue, string> = {
-  blue: "bg-blue-500/10 text-blue-700 dark:bg-blue-400/15 dark:text-blue-300",
-  sky: "bg-sky-500/10 text-sky-700 dark:bg-sky-400/15 dark:text-sky-300",
-  cyan: "bg-cyan-500/10 text-cyan-700 dark:bg-cyan-400/15 dark:text-cyan-300",
-  teal: "bg-teal-500/10 text-teal-700 dark:bg-teal-400/15 dark:text-teal-300",
-  emerald: "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-300",
-  lime: "bg-lime-500/15 text-lime-800 dark:bg-lime-400/15 dark:text-lime-300",
-  amber: "bg-amber-500/10 text-amber-700 dark:bg-amber-400/15 dark:text-amber-300",
-  orange: "bg-orange-500/10 text-orange-700 dark:bg-orange-400/15 dark:text-orange-300",
-  rose: "bg-rose-500/10 text-rose-700 dark:bg-rose-400/15 dark:text-rose-300",
-  pink: "bg-pink-500/10 text-pink-700 dark:bg-pink-400/15 dark:text-pink-300",
-  fuchsia: "bg-fuchsia-500/10 text-fuchsia-700 dark:bg-fuchsia-400/15 dark:text-fuchsia-300",
-  purple: "bg-purple-500/10 text-purple-700 dark:bg-purple-400/15 dark:text-purple-300",
-  violet: "bg-violet-500/10 text-violet-700 dark:bg-violet-400/15 dark:text-violet-300",
-  indigo: "bg-indigo-500/10 text-indigo-700 dark:bg-indigo-400/15 dark:text-indigo-300",
+  blue: "colorful:bg-blue-500/10 colorful:text-blue-700 colorful:dark:bg-blue-400/15 colorful:dark:text-blue-300",
+  sky: "colorful:bg-sky-500/10 colorful:text-sky-700 colorful:dark:bg-sky-400/15 colorful:dark:text-sky-300",
+  cyan: "colorful:bg-cyan-500/10 colorful:text-cyan-700 colorful:dark:bg-cyan-400/15 colorful:dark:text-cyan-300",
+  teal: "colorful:bg-teal-500/10 colorful:text-teal-700 colorful:dark:bg-teal-400/15 colorful:dark:text-teal-300",
+  emerald: "colorful:bg-emerald-500/10 colorful:text-emerald-700 colorful:dark:bg-emerald-400/15 colorful:dark:text-emerald-300",
+  lime: "colorful:bg-lime-500/15 colorful:text-lime-800 colorful:dark:bg-lime-400/15 colorful:dark:text-lime-300",
+  amber: "colorful:bg-amber-500/10 colorful:text-amber-700 colorful:dark:bg-amber-400/15 colorful:dark:text-amber-300",
+  orange: "colorful:bg-orange-500/10 colorful:text-orange-700 colorful:dark:bg-orange-400/15 colorful:dark:text-orange-300",
+  rose: "colorful:bg-rose-500/10 colorful:text-rose-700 colorful:dark:bg-rose-400/15 colorful:dark:text-rose-300",
+  pink: "colorful:bg-pink-500/10 colorful:text-pink-700 colorful:dark:bg-pink-400/15 colorful:dark:text-pink-300",
+  fuchsia: "colorful:bg-fuchsia-500/10 colorful:text-fuchsia-700 colorful:dark:bg-fuchsia-400/15 colorful:dark:text-fuchsia-300",
+  purple: "colorful:bg-purple-500/10 colorful:text-purple-700 colorful:dark:bg-purple-400/15 colorful:dark:text-purple-300",
+  violet: "colorful:bg-violet-500/10 colorful:text-violet-700 colorful:dark:bg-violet-400/15 colorful:dark:text-violet-300",
+  indigo: "colorful:bg-indigo-500/10 colorful:text-indigo-700 colorful:dark:bg-indigo-400/15 colorful:dark:text-indigo-300",
 };
+
+/** HUE_SOFT 叠上去之前的中性淡底（简约风格下胶囊就是这个样子）。 */
+export const HUE_SOFT_BASE = "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]";
 
 /** 小圆点（有改动、状态点）。 */
 export const HUE_DOT: Record<Hue, string> = {
-  blue: "bg-blue-500",
-  sky: "bg-sky-500",
-  cyan: "bg-cyan-500",
-  teal: "bg-teal-500",
-  emerald: "bg-emerald-500",
-  lime: "bg-lime-500",
-  amber: "bg-amber-500",
-  orange: "bg-orange-500",
-  rose: "bg-rose-500",
-  pink: "bg-pink-500",
-  fuchsia: "bg-fuchsia-500",
-  purple: "bg-purple-500",
-  violet: "bg-violet-500",
-  indigo: "bg-indigo-500",
+  blue: "colorful:bg-blue-500",
+  sky: "colorful:bg-sky-500",
+  cyan: "colorful:bg-cyan-500",
+  teal: "colorful:bg-teal-500",
+  emerald: "colorful:bg-emerald-500",
+  lime: "colorful:bg-lime-500",
+  amber: "colorful:bg-amber-500",
+  orange: "colorful:bg-orange-500",
+  rose: "colorful:bg-rose-500",
+  pink: "colorful:bg-pink-500",
+  fuchsia: "colorful:bg-fuchsia-500",
+  purple: "colorful:bg-purple-500",
+  violet: "colorful:bg-violet-500",
+  indigo: "colorful:bg-indigo-500",
 };
 
 /** 实色渐变块（选中的分组页签、强调按钮的图标底）：白色图标压在上面。 */
 export const HUE_SOLID: Record<Hue, string> = {
-  blue: "bg-gradient-to-br from-blue-400 to-blue-600 text-white",
-  sky: "bg-gradient-to-br from-sky-400 to-sky-600 text-white",
-  cyan: "bg-gradient-to-br from-cyan-400 to-cyan-600 text-white",
-  teal: "bg-gradient-to-br from-teal-400 to-teal-600 text-white",
-  emerald: "bg-gradient-to-br from-emerald-400 to-emerald-600 text-white",
-  lime: "bg-gradient-to-br from-lime-400 to-lime-600 text-white",
-  amber: "bg-gradient-to-br from-amber-400 to-orange-500 text-white",
-  orange: "bg-gradient-to-br from-orange-400 to-orange-600 text-white",
-  rose: "bg-gradient-to-br from-rose-400 to-rose-600 text-white",
-  pink: "bg-gradient-to-br from-pink-400 to-pink-600 text-white",
-  fuchsia: "bg-gradient-to-br from-fuchsia-400 to-fuchsia-600 text-white",
-  purple: "bg-gradient-to-br from-purple-400 to-purple-600 text-white",
-  violet: "bg-gradient-to-br from-violet-400 to-violet-600 text-white",
-  indigo: "bg-gradient-to-br from-indigo-400 to-indigo-600 text-white",
+  blue: "icon-hue:bg-gradient-to-br icon-hue:from-blue-400 icon-hue:to-blue-600 icon-hue:text-white",
+  sky: "icon-hue:bg-gradient-to-br icon-hue:from-sky-400 icon-hue:to-sky-600 icon-hue:text-white",
+  cyan: "icon-hue:bg-gradient-to-br icon-hue:from-cyan-400 icon-hue:to-cyan-600 icon-hue:text-white",
+  teal: "icon-hue:bg-gradient-to-br icon-hue:from-teal-400 icon-hue:to-teal-600 icon-hue:text-white",
+  emerald: "icon-hue:bg-gradient-to-br icon-hue:from-emerald-400 icon-hue:to-emerald-600 icon-hue:text-white",
+  lime: "icon-hue:bg-gradient-to-br icon-hue:from-lime-400 icon-hue:to-lime-600 icon-hue:text-white",
+  amber: "icon-hue:bg-gradient-to-br icon-hue:from-amber-400 icon-hue:to-orange-500 icon-hue:text-white",
+  orange: "icon-hue:bg-gradient-to-br icon-hue:from-orange-400 icon-hue:to-orange-600 icon-hue:text-white",
+  rose: "icon-hue:bg-gradient-to-br icon-hue:from-rose-400 icon-hue:to-rose-600 icon-hue:text-white",
+  pink: "icon-hue:bg-gradient-to-br icon-hue:from-pink-400 icon-hue:to-pink-600 icon-hue:text-white",
+  fuchsia: "icon-hue:bg-gradient-to-br icon-hue:from-fuchsia-400 icon-hue:to-fuchsia-600 icon-hue:text-white",
+  purple: "icon-hue:bg-gradient-to-br icon-hue:from-purple-400 icon-hue:to-purple-600 icon-hue:text-white",
+  violet: "icon-hue:bg-gradient-to-br icon-hue:from-violet-400 icon-hue:to-violet-600 icon-hue:text-white",
+  indigo: "icon-hue:bg-gradient-to-br icon-hue:from-indigo-400 icon-hue:to-indigo-600 icon-hue:text-white",
 };
 
 /** 画布（echarts / SVG）用的色值：浅色取 500，深色取 400，与上面的类名同一档。 */
@@ -287,6 +299,7 @@ const ICON_HUE: Record<string, Hue> = {
   ImagePlay: "pink",
   ImagePlus: "pink",
   Camera: "pink",
+  Palette: "pink",
   Video: "rose",
   Clapperboard: "rose",
   Film: "rose",
@@ -444,29 +457,30 @@ export function hueForIcon(icon: ReactNode): Hue | null {
  * 用后代选择器而不是改按钮的 text 色——按钮的文字色与悬停色各变体自己管，不和它们抢优先级。
  */
 export const HUE_BUTTON_ICON: Record<Hue, string> = {
-  blue: "[&_svg.lucide]:text-blue-500 dark:[&_svg.lucide]:text-blue-400",
-  sky: "[&_svg.lucide]:text-sky-500 dark:[&_svg.lucide]:text-sky-400",
-  cyan: "[&_svg.lucide]:text-cyan-500 dark:[&_svg.lucide]:text-cyan-400",
-  teal: "[&_svg.lucide]:text-teal-500 dark:[&_svg.lucide]:text-teal-400",
-  emerald: "[&_svg.lucide]:text-emerald-500 dark:[&_svg.lucide]:text-emerald-400",
-  lime: "[&_svg.lucide]:text-lime-600 dark:[&_svg.lucide]:text-lime-400",
-  amber: "[&_svg.lucide]:text-amber-500 dark:[&_svg.lucide]:text-amber-400",
-  orange: "[&_svg.lucide]:text-orange-500 dark:[&_svg.lucide]:text-orange-400",
-  rose: "[&_svg.lucide]:text-rose-500 dark:[&_svg.lucide]:text-rose-400",
-  pink: "[&_svg.lucide]:text-pink-500 dark:[&_svg.lucide]:text-pink-400",
-  fuchsia: "[&_svg.lucide]:text-fuchsia-500 dark:[&_svg.lucide]:text-fuchsia-400",
-  purple: "[&_svg.lucide]:text-purple-500 dark:[&_svg.lucide]:text-purple-400",
-  violet: "[&_svg.lucide]:text-violet-500 dark:[&_svg.lucide]:text-violet-400",
-  indigo: "[&_svg.lucide]:text-indigo-500 dark:[&_svg.lucide]:text-indigo-400",
+  blue: "icon-hue:[&_svg.lucide]:text-blue-500 icon-hue:dark:[&_svg.lucide]:text-blue-400",
+  sky: "icon-hue:[&_svg.lucide]:text-sky-500 icon-hue:dark:[&_svg.lucide]:text-sky-400",
+  cyan: "icon-hue:[&_svg.lucide]:text-cyan-500 icon-hue:dark:[&_svg.lucide]:text-cyan-400",
+  teal: "icon-hue:[&_svg.lucide]:text-teal-500 icon-hue:dark:[&_svg.lucide]:text-teal-400",
+  emerald: "icon-hue:[&_svg.lucide]:text-emerald-500 icon-hue:dark:[&_svg.lucide]:text-emerald-400",
+  lime: "icon-hue:[&_svg.lucide]:text-lime-600 icon-hue:dark:[&_svg.lucide]:text-lime-400",
+  amber: "icon-hue:[&_svg.lucide]:text-amber-500 icon-hue:dark:[&_svg.lucide]:text-amber-400",
+  orange: "icon-hue:[&_svg.lucide]:text-orange-500 icon-hue:dark:[&_svg.lucide]:text-orange-400",
+  rose: "icon-hue:[&_svg.lucide]:text-rose-500 icon-hue:dark:[&_svg.lucide]:text-rose-400",
+  pink: "icon-hue:[&_svg.lucide]:text-pink-500 icon-hue:dark:[&_svg.lucide]:text-pink-400",
+  fuchsia: "icon-hue:[&_svg.lucide]:text-fuchsia-500 icon-hue:dark:[&_svg.lucide]:text-fuchsia-400",
+  purple: "icon-hue:[&_svg.lucide]:text-purple-500 icon-hue:dark:[&_svg.lucide]:text-purple-400",
+  violet: "icon-hue:[&_svg.lucide]:text-violet-500 icon-hue:dark:[&_svg.lucide]:text-violet-400",
+  indigo: "icon-hue:[&_svg.lucide]:text-indigo-500 icon-hue:dark:[&_svg.lucide]:text-indigo-400",
 };
 
 /**
- * 直接拿图标组件（不是元素）取无底图标的颜色类：`<Icon className={iconHueClass(Icon)} />`。
- * 用在页面标题、行内小图标这类不需要底块的地方；认不出名字时用天蓝。
+ * 直接拿图标组件（不是元素）取无底图标的颜色类：`<Icon className={cn("text-ink-3", iconHueClass(Icon))} />`。
+ * 用在页面标题、行内小图标这类不需要底块的地方；认不出名字时用天蓝，纯操作提示类图标返回空串
+ * （保持调用方的中性色）。
  */
 export function iconHueClass(icon: unknown): string {
   const name = componentName(icon);
-  if (name && isNeutralIconName(name)) return "text-ink-3";
+  if (name && isNeutralIconName(name)) return "";
   return HUE_GLYPH[name ? hueForIconName(name) : "sky"];
 }
 

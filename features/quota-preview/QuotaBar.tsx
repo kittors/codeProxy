@@ -5,11 +5,16 @@ import { clampPercent } from "./quota-helpers";
 
 export type QuotaVisualTone = {
   normalized: number | null;
-  /** Bar fill: a left-to-right gradient within the tone's hue. */
+  /** Bar fill: one colour per band (a gradient within the band's hue when bars are semantic). */
   barFillClass: string;
-  /** Bar track: a faint wash of the same hue, so the remainder is not a grey slab. */
+  /** Bar track: neutral, or a faint wash of the band's hue when bars are semantic. */
   barTrackClass: string;
   percentClass: string;
+  /**
+   * The fill colour for places that cannot take a class (inline conic gradients).
+   * A CSS colour, not necessarily hex: the healthy band reads `--cp-bar-healthy`,
+   * which follows the appearance setting (styles/index.css).
+   */
   fillHex: string;
   /** Chip surface (border + background) mirroring the percent tone. */
   chipClass: string;
@@ -33,31 +38,34 @@ export const resolveQuotaVisualTone = (
       barTrackClass: "bg-track",
       percentClass: "text-ink-3",
       fillHex: "#c4c4c4",
-      chipClass: "border-line bg-subtle",
+      chipClass: "bg-subtle",
       chipLabelClass: "text-ink-2",
       barLabelClass: "text-ink-2",
       barMetaClass: "text-ink-3",
     };
   }
 
-  // The bar is a slim rule under its label, not the row's background: a fill
-  // that covers the whole line turned every healthy card into a wall of tint,
-  // which is why the old bar fell back to grey. A 4px rule can carry real colour
-  // without that cost — green when the window is healthy, amber when it is
-  // running low, red when it is nearly gone — and the label keeps the plain card
-  // surface to sit on. The track takes a faint wash of the same hue so the
-  // remainder reads as "unused", not as a grey slab.
+  // The bar is a rule under its label, thick enough (8px by default, 3/4 of that
+  // compact; the appearance setting changes it) that bars on neighbouring cards
+  // can be compared by length at a glance — the old 4px hairline read as a tint,
+  // not as an amount.
   //
-  // The percentage stays ink while healthy (four green numbers per card said
-  // nothing) and only takes the hue once a window needs attention.
+  // Colour is a band, not decoration: amber when the window is running low, red
+  // when it is nearly gone. While it is healthy the bar is green when the
+  // appearance setting asks for semantic bars (the default: each band a gradient
+  // within its hue over a faint wash of the same hue, so the remainder reads as
+  // "unused") and the accent colour over a neutral track otherwise. The
+  // percentage stays ink while healthy and only takes the band's colour once a
+  // window needs attention.
   if (normalized >= 60) {
     return {
       normalized,
-      barFillClass: "bg-gradient-to-r from-emerald-400 to-emerald-500 dark:from-emerald-500 dark:to-emerald-400",
-      barTrackClass: "bg-emerald-500/12 dark:bg-emerald-400/15",
+      barFillClass:
+        "bg-accent bar-semantic:bg-gradient-to-r bar-semantic:from-emerald-400 bar-semantic:to-emerald-500 bar-semantic:dark:from-emerald-500 bar-semantic:dark:to-emerald-400",
+      barTrackClass: "bg-track bar-semantic:bg-emerald-500/12 bar-semantic:dark:bg-emerald-400/15",
       percentClass: "text-ink",
-      fillHex: "#10b981",
-      chipClass: "border-line bg-subtle",
+      fillHex: "var(--cp-bar-healthy)",
+      chipClass: "bg-subtle",
       chipLabelClass: "text-ink-2",
       barLabelClass: "text-ink-2",
       barMetaClass: "text-ink-3",
@@ -67,12 +75,12 @@ export const resolveQuotaVisualTone = (
   if (normalized >= 20) {
     return {
       normalized,
-      barFillClass: "bg-gradient-to-r from-amber-300 to-amber-500 dark:from-amber-500 dark:to-amber-300",
-      barTrackClass: "bg-amber-500/15 dark:bg-amber-400/15",
+      barFillClass:
+        "bg-amber-500 dark:bg-amber-400 bar-semantic:bg-gradient-to-r bar-semantic:from-amber-300 bar-semantic:to-amber-500 bar-semantic:dark:from-amber-500 bar-semantic:dark:to-amber-300",
+      barTrackClass: "bg-track bar-semantic:bg-amber-500/15 bar-semantic:dark:bg-amber-400/15",
       percentClass: "text-amber-700 dark:text-amber-300",
       fillHex: "#f59e0b",
-      chipClass:
-        "border-amber-200/70 bg-amber-50/70 dark:border-amber-500/20 dark:bg-amber-500/[0.08]",
+      chipClass: "bg-amber-50/80 dark:bg-amber-500/[0.1]",
       chipLabelClass: "text-amber-900 dark:text-amber-100/80",
       barLabelClass: "text-ink-2",
       barMetaClass: "text-ink-3",
@@ -81,11 +89,12 @@ export const resolveQuotaVisualTone = (
 
   return {
     normalized,
-    barFillClass: "bg-gradient-to-r from-rose-400 to-rose-500 dark:from-rose-500 dark:to-rose-400",
-    barTrackClass: "bg-rose-500/12 dark:bg-rose-400/15",
+    barFillClass:
+      "bg-rose-500 dark:bg-rose-400 bar-semantic:bg-gradient-to-r bar-semantic:from-rose-400 bar-semantic:to-rose-500 bar-semantic:dark:from-rose-500 bar-semantic:dark:to-rose-400",
+    barTrackClass: "bg-track bar-semantic:bg-rose-500/12 bar-semantic:dark:bg-rose-400/15",
     percentClass: "text-rose-600 dark:text-rose-400",
     fillHex: "#f43f5e",
-    chipClass: "border-rose-200/70 bg-rose-50/70 dark:border-rose-500/20 dark:bg-rose-500/[0.08]",
+    chipClass: "bg-rose-50/80 dark:bg-rose-500/[0.1]",
     chipLabelClass: "text-rose-900 dark:text-rose-100/80",
     barLabelClass: "text-ink-2",
     barMetaClass: "text-ink-3",
@@ -132,13 +141,14 @@ export interface QuotaBarProps {
 }
 
 /**
- * One quota window: label, countdown and percentage on one line, a slim
- * coloured bar beneath.
+ * One quota window: label, countdown and percentage on one line, a coloured bar
+ * beneath.
  *
  * Label, countdown and percentage share the line, which is what makes the
  * numbers scannable down a column instead of hunting between two rows; the bar
- * under them is short enough (4px, 3px compact) that a card still fits as many
- * windows as the old one-row pill did.
+ * under them (`h-bar`, `h-bar-sm` compact — 8px / 6px unless the appearance
+ * setting changes it) is thick enough to compare by length across cards while
+ * a card still fits as many windows as the old one-row pill did.
  *
  * The fill grows in from zero the first time it appears and glides to the new
  * width when a refresh moves the number, so a change is seen rather than
@@ -176,8 +186,7 @@ export function QuotaBar({
         className={[
           // leading-tight 而不是 leading-none：标签会 truncate（overflow:hidden），行高等于字号时
           // g、p 这类下伸笔画会被切掉。
-          "flex w-full min-w-0 items-center gap-1.5 leading-tight",
-          compact ? "text-2xs" : "text-xs",
+          "flex w-full min-w-0 items-center gap-1.5 leading-tight text-xs",
         ].join(" ")}
       >
         <span
@@ -197,7 +206,7 @@ export function QuotaBar({
                 data-testid="quota-bar-hint"
                 aria-label={hint}
               >
-                <Info size={compact ? 10 : 11} aria-hidden />
+                <Info size={11} aria-hidden />
               </span>
             </HoverTooltip>
           ) : null}
@@ -217,13 +226,17 @@ export function QuotaBar({
             ].join(" ")}
           >
             {detailIcon ?? (
-              <Clock size={compact ? 9 : 10} className="shrink-0" aria-hidden />
+              <Clock size={10} className="shrink-0" aria-hidden />
             )}
             <span className="min-w-0 truncate">{detailText}</span>
           </span>
         ) : null}
         <span
-          className={["shrink-0 font-semibold tabular-nums", tone.percentClass].join(" ")}
+          className={[
+            "shrink-0 font-semibold tabular-nums",
+            compact ? "text-xs" : "text-sm",
+            tone.percentClass,
+          ].join(" ")}
         >
           {shownPercent}
         </span>
@@ -233,7 +246,7 @@ export function QuotaBar({
         className={[
           "relative w-full overflow-hidden rounded-full",
           tone.barTrackClass,
-          compact ? "h-[3px]" : "h-1",
+          compact ? "h-bar-sm" : "h-bar",
         ].join(" ")}
       >
         {normalized ? (
@@ -287,7 +300,7 @@ export function QuotaBarSkeleton({
         className={[
           // 与真实标签行同一个行高（1.25em），占位到数据之间卡片高度不变。
           "flex h-[1.25em] w-full items-center justify-between gap-2",
-          compact ? "text-2xs" : "text-xs",
+          compact ? "text-xs" : "text-sm",
         ].join(" ")}
       >
         <Skeleton className={`h-2.5 ${labelWidthClass}`} rounded="full" />
@@ -297,7 +310,7 @@ export function QuotaBarSkeleton({
         className={[
           "w-full rounded-full",
           barTrackClass,
-          compact ? "h-[3px]" : "h-1",
+          compact ? "h-bar-sm" : "h-bar",
         ].join(" ")}
       />
     </div>

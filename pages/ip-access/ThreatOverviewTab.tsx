@@ -64,7 +64,7 @@ export function ThreatOverviewTab({
         width: COLUMN_WIDTH.name,
         overflowTooltip: true,
         render: (item) => (
-          <span className="font-mono text-sm text-slate-900 dark:text-white">
+          <span className="font-mono text-sm text-ink">
             {item.sample_ip || item.ip_prefix}
             {item.trusted ? "" : ` (${t("ip_access.untrusted_short")})`}
           </span>
@@ -98,7 +98,7 @@ export function ThreatOverviewTab({
               {item.successes}
             </span>
           ) : (
-            <span className="tabular-nums text-slate-400">0</span>
+            <span className="tabular-nums text-ink-3">0</span>
           ),
       },
       {
@@ -163,7 +163,7 @@ export function ThreatOverviewTab({
 
   return (
     <>
-      <div className="border-t border-slate-100 px-5 py-3 dark:border-white/8">
+      <div className="pb-3">
         <div className="flex flex-wrap items-center gap-2">
           <div className="w-full min-[480px]:w-auto sm:w-[140px]">
             <Select
@@ -178,13 +178,13 @@ export function ThreatOverviewTab({
               aria-label={t("ip_access.filter_window")}
             />
           </div>
-          <span className="text-xs text-slate-500 dark:text-white/50">
+          <span className="text-xs text-ink-3">
             {t("ip_access.overview_description")}
           </span>
         </div>
       </div>
 
-      <div className="relative min-h-0 flex-1 overflow-hidden px-5">
+      <div className="relative min-h-0 flex-1 overflow-hidden">
         <DataTable<AuthSourceSummary>
           tableId="ip-access-threat-overview"
           rows={items}
@@ -218,10 +218,10 @@ function SourceState({ summary }: { summary: AuthSourceSummary }) {
 }
 
 const STATE_TONE = {
-  danger: "bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300",
-  warning: "bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
-  success: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
-  neutral: "bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-white/70",
+  danger: "bg-rose-500/10 text-rose-700 dark:text-rose-300",
+  warning: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
+  success: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+  neutral: "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]",
 } as const;
 
 function StateBadge({ tone, label }: { tone: keyof typeof STATE_TONE; label: string }) {

@@ -16,7 +16,7 @@ export function ProviderConnectionRows({
   showBaseUrl = true,
 }: ProviderConnectionRowsProps) {
   return (
-    <div className="space-y-1 text-xs text-slate-600 dark:text-white/65">
+    <div className="space-y-1 text-xs text-ink-2">
       {apiKey ? (
         <p className="truncate font-mono" title={apiKey}>
           {maskApiKey(apiKey)}

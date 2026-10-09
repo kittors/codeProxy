@@ -11,7 +11,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import type { AuthFileTrendResponse } from "@code-proxy/api-client/endpoints/usage";
-import { DialogIcon, surface, type Hue } from "@code-proxy/ui";
+import { DialogIcon, type Hue } from "@code-proxy/ui";
 import { QUOTA_HUE } from "../helpers/quotaSeriesColors";
 import { buildTrendQuotaSummary, formatCurrency, formatPercent } from "../hooks/trendQuotaSummary";
 
@@ -19,7 +19,9 @@ const VALUE_CLASS_NAME =
   "min-w-0 whitespace-nowrap text-lg font-semibold leading-tight tracking-tight tabular-nums text-ink";
 
 /**
- * 一格统计：白底卡片 + 身份色小图标块 + 墨色数值。只给图标块上色——整块染色会让数字难读。
+ * 一格统计：无边淡底 + 图标 + 墨色数值。弹窗本身是一层，统计格只用一层淡底分组。
+ * 图标着色为多彩时图标垫身份色小图标块（hue，和下面趋势图里的柱 / 线同色），单色时是中性的
+ * 线性图标；只给图标上色——整块染色会让数字难读。
  * 一排放七格时较长的名称会折成两行，数值用 mt-auto 压到底部，各格的数字仍然对齐在同一条线上。
  */
 function TrendSummaryTile({
@@ -40,12 +42,12 @@ function TrendSummaryTile({
   testId?: string;
 }) {
   return (
-    <div
-      className={[surface({ tone: "raised", radius: "xl" }), "flex h-full min-w-0 flex-col gap-2.5 p-3"].join(" ")}
-      data-testid={testId}
-    >
+    <div className="flex h-full min-w-0 flex-col gap-2.5 rounded-xl bg-subtle p-3" data-testid={testId}>
       <p className="flex min-w-0 items-center gap-2 text-xs leading-snug font-semibold text-ink-3">
-        <DialogIcon tone={hue} size="xs">
+        <span aria-hidden="true" className="shrink-0 icon-hue:hidden [&_svg.lucide]:size-[14px]">
+          {icon}
+        </span>
+        <DialogIcon tone={hue} size="xs" className="hidden icon-hue:grid">
           {icon}
         </DialogIcon>
         {/* 折行时不让最后一个字孤零零地掉到第二行（pretty 只挪末尾，不会像 balance 那样把「小时」拆开）。 */}
@@ -64,9 +66,8 @@ const formatCount = (value: number) =>
 
 /**
  * 账号详情「用量」页签顶部的统计格：周期请求、费用、Token、预测窗口额度、已消耗、周期开始。
- *
- * 以前是一排灰底方块。现在每格的颜色说明「这是哪类数」，并且和下面趋势图里的柱 / 线同色：
- * 请求蓝、费用琥珀、Token 紫、额度粉（quotaSeriesColors 的第一个色相）、时间青。
+ * 每格靠名称和图标区分是哪类数；图标着色为多彩时图标块的颜色说明「这是哪类数」，并且和下面
+ * 趋势图里的柱 / 线同色：请求蓝、费用琥珀、Token 紫、额度粉（quotaSeriesColors 的第一个色相）、时间青。
  */
 export function TrendSummaryGrid({
   trend,

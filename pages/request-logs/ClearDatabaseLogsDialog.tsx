@@ -56,7 +56,11 @@ export function ClearDatabaseLogsDialog({
       description={t("request_logs.clear_database_logs_lead")}
       subject={
         <span className="flex items-center gap-3">
-          <Database size={18} className={`shrink-0 ${iconHueClass(Database)}`} aria-hidden="true" />
+          <Database
+            size={18}
+            className={`shrink-0 text-ink-3 ${iconHueClass(Database)}`}
+            aria-hidden="true"
+          />
           <span className="min-w-0">
             <span className="block font-medium">{t("request_logs.clear_scope_title")}</span>
             <span className="mt-0.5 block text-xs text-ink-3">

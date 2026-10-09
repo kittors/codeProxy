@@ -169,7 +169,7 @@ export function AuthFileTagsModal({
               {customTags.map((tag) => (
                 <span
                   key={tag}
-                  className="inline-flex items-center gap-1 rounded-full border border-line bg-subtle py-1 pr-1 pl-2.5 text-xs font-medium text-ink"
+                  className="inline-flex items-center gap-1 rounded-full bg-ink/[0.05] py-1 pr-1 pl-2.5 text-xs font-medium text-ink dark:bg-white/[0.07]"
                 >
                   <span>{tag}</span>
                   <button
@@ -203,11 +203,10 @@ export function AuthFileTagsModal({
                 return (
                   <label
                     key={tag}
+                    // 不描边：未选是淡底，选中换成强调色淡底（勾选框本身也是强调色）。
                     className={[
-                      "flex cursor-pointer items-center justify-between gap-3 rounded-2xl border px-3.5 py-2.5 text-sm transition-colors",
-                      checked
-                        ? "border-ink/20 bg-surface text-ink dark:border-white/20"
-                        : "border-line bg-subtle text-ink-2 hover:bg-surface-hover",
+                      "flex cursor-pointer items-center justify-between gap-3 rounded-2xl px-3.5 py-2.5 text-sm transition-colors",
+                      checked ? "bg-accent-soft text-ink" : "bg-subtle text-ink-2 hover:bg-hover",
                     ].join(" ")}
                   >
                     <span className="flex min-w-0 items-center gap-2.5">
@@ -220,11 +219,11 @@ export function AuthFileTagsModal({
                       <span className="min-w-0 truncate font-medium">{tag}</span>
                     </span>
                     {custom ? (
-                      <span className="shrink-0 rounded-full bg-sky-500/10 px-2 py-0.5 text-2xs font-medium text-sky-700 dark:text-sky-300">
+                      <span className="shrink-0 rounded-full bg-ink/[0.05] px-2 py-0.5 text-2xs font-medium text-ink-2 dark:bg-white/[0.07] colorful:bg-sky-500/10 colorful:text-sky-700 colorful:dark:text-sky-300">
                         {t("auth_files.custom_tag_label")}
                       </span>
                     ) : inherited ? (
-                      <span className="shrink-0 rounded-full bg-selected px-2 py-0.5 text-2xs font-medium text-ink-3">
+                      <span className="shrink-0 rounded-full bg-ink/[0.05] px-2 py-0.5 text-2xs font-medium text-ink-3 dark:bg-white/[0.07]">
                         {t("auth_files.default_tags_label")}
                       </span>
                     ) : null}

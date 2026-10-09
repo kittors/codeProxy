@@ -15,7 +15,8 @@ import type { Dispatch, SetStateAction } from "react";
 
 const stickyActionsHeaderClass =
   "text-center md:sticky md:z-40 md:bg-slate-100 md:dark:bg-neutral-800";
-const stickyActionsCellClass = "md:sticky md:z-30 md:bg-surface";
+// 表格直接放在页面上（外壳内容区 canvas），冻结列的底色跟着它走；用 surface 的话深色下是一条亮一档的竖条。
+const stickyActionsCellClass = "md:sticky md:z-30 md:bg-backdrop";
 
 export interface UseEndUserColumnsParams {
   t: (key: string, options?: Record<string, unknown>) => string;
@@ -68,14 +69,14 @@ export function getEndUserColumns({
         return (
           <div className="min-w-0">
             <div className="flex min-w-0 items-center gap-1.5">
-              <span className="truncate font-medium text-slate-900 dark:text-white">
+              <span className="truncate font-medium text-ink">
                 {displayName}
               </span>
-              <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-2xs font-medium text-slate-600 dark:bg-white/10 dark:text-white/70">
+              <span className="shrink-0 rounded-full bg-ink/[0.05] px-1.5 py-0.5 text-2xs font-medium text-ink-2 dark:bg-white/[0.07]">
                 {row.api_key_count ?? 0} Key
               </span>
             </div>
-            <div className="truncate text-xs text-slate-400">{username}</div>
+            <div className="truncate text-xs text-ink-3">{username}</div>
           </div>
         );
       },
@@ -90,7 +91,7 @@ export function getEndUserColumns({
         const active = row.status === "active";
         return (
           <span
-            className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${active ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300" : "bg-sky-50 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300"}`}
+            className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${active ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" : "bg-sky-500/10 text-sky-700 dark:text-sky-300"}`}
           >
             {active ? t("end_users.status_active") : t("end_users.status_frozen")}
           </span>
@@ -102,7 +103,7 @@ export function getEndUserColumns({
       label: t("end_users.account_permission_profile"),
       width: COLUMN_WIDTH.name,
       headerClassName: "text-center",
-      cellClassName: "text-center text-slate-700 dark:text-white/70",
+      cellClassName: "text-center text-ink-2",
       render: (row) => {
         const id = row["permission-profile-id"]?.trim() ?? "";
         return id
@@ -130,7 +131,7 @@ export function getEndUserColumns({
       label: t("quota.daily_spending_column"),
       width: COLUMN_WIDTH.compact,
       cellClassName:
-        "text-center whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
+        "text-center whitespace-nowrap tabular-nums text-ink-2",
       render: (row) => formatQuotaUsdAmount(row["daily-spending-used"]),
     },
     {
@@ -138,7 +139,7 @@ export function getEndUserColumns({
       label: t("quota.lifetime_spending_column"),
       width: COLUMN_WIDTH.compact,
       cellClassName:
-        "text-center whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
+        "text-center whitespace-nowrap tabular-nums text-ink-2",
       render: (row) => formatQuotaUsdAmount(row["lifetime-spending-used"]),
     },
     {
@@ -146,7 +147,7 @@ export function getEndUserColumns({
       label: t("api_keys_page.col_daily_limit"),
       width: COLUMN_WIDTH.compact,
       headerClassName: "text-center",
-      cellClassName: "text-center whitespace-nowrap text-slate-700 dark:text-white/70",
+      cellClassName: "text-center whitespace-nowrap text-ink-2",
       render: (row) => {
         const profile = row["permission-profile-id"]
           ? (permissionProfiles.find((item) => item.id === row["permission-profile-id"]) ?? null)
@@ -156,7 +157,7 @@ export function getEndUserColumns({
           <span className="inline-flex items-center gap-1">
             {!limit ? (
               <>
-                <InfinityIcon size={14} className="text-green-500" />{" "}
+                <InfinityIcon size={14} className="text-ink-3 colorful:text-green-500" />{" "}
                 {t("api_keys_page.unlimited")}
               </>
             ) : (
@@ -171,7 +172,7 @@ export function getEndUserColumns({
       label: t("api_keys_page.col_total_quota"),
       width: COLUMN_WIDTH.compact,
       headerClassName: "text-center",
-      cellClassName: "text-center whitespace-nowrap text-slate-700 dark:text-white/70",
+      cellClassName: "text-center whitespace-nowrap text-ink-2",
       render: (row) => {
         const profile = row["permission-profile-id"]
           ? (permissionProfiles.find((item) => item.id === row["permission-profile-id"]) ?? null)
@@ -181,7 +182,7 @@ export function getEndUserColumns({
           <span className="inline-flex items-center gap-1">
             {!limit ? (
               <>
-                <InfinityIcon size={14} className="text-green-500" />{" "}
+                <InfinityIcon size={14} className="text-ink-3 colorful:text-green-500" />{" "}
                 {t("api_keys_page.unlimited")}
               </>
             ) : (
@@ -196,7 +197,7 @@ export function getEndUserColumns({
       label: t("end_users.concurrency_limit_col", { defaultValue: "并发" }),
       width: COLUMN_WIDTH.toggle,
       headerClassName: "text-center",
-      cellClassName: "text-center whitespace-nowrap text-slate-700 dark:text-white/70",
+      cellClassName: "text-center whitespace-nowrap text-ink-2",
       render: (row) => {
         const profile = row["permission-profile-id"]
           ? (permissionProfiles.find((item) => item.id === row["permission-profile-id"]) ?? null)
@@ -206,7 +207,7 @@ export function getEndUserColumns({
           <span className="inline-flex items-center gap-1">
             {!limit ? (
               <>
-                <InfinityIcon size={14} className="text-green-500" />{" "}
+                <InfinityIcon size={14} className="text-ink-3 colorful:text-green-500" />{" "}
                 {t("api_keys_page.unlimited")}
               </>
             ) : (
@@ -221,7 +222,7 @@ export function getEndUserColumns({
       label: "RPM",
       width: COLUMN_WIDTH.toggle,
       headerClassName: "text-center",
-      cellClassName: "text-center whitespace-nowrap text-slate-700 dark:text-white/70",
+      cellClassName: "text-center whitespace-nowrap text-ink-2",
       render: (row) => {
         const profile = row["permission-profile-id"]
           ? (permissionProfiles.find((item) => item.id === row["permission-profile-id"]) ?? null)
@@ -231,7 +232,7 @@ export function getEndUserColumns({
           <span className="inline-flex items-center gap-1">
             {!limit ? (
               <>
-                <InfinityIcon size={14} className="text-green-500" />{" "}
+                <InfinityIcon size={14} className="text-ink-3 colorful:text-green-500" />{" "}
                 {t("api_keys_page.unlimited")}
               </>
             ) : (
@@ -246,7 +247,7 @@ export function getEndUserColumns({
       label: "TPM",
       width: COLUMN_WIDTH.toggle,
       headerClassName: "text-center",
-      cellClassName: "text-center whitespace-nowrap text-slate-700 dark:text-white/70",
+      cellClassName: "text-center whitespace-nowrap text-ink-2",
       render: (row) => {
         const profile = row["permission-profile-id"]
           ? (permissionProfiles.find((item) => item.id === row["permission-profile-id"]) ?? null)
@@ -256,7 +257,7 @@ export function getEndUserColumns({
           <span className="inline-flex items-center gap-1">
             {!limit ? (
               <>
-                <InfinityIcon size={14} className="text-green-500" />{" "}
+                <InfinityIcon size={14} className="text-ink-3 colorful:text-green-500" />{" "}
                 {t("api_keys_page.unlimited")}
               </>
             ) : (
@@ -278,13 +279,13 @@ export function getEndUserColumns({
           <button
             type="button"
             onClick={() => void handleViewResetHistory(row)}
-            className="tabular-nums font-medium text-orange-600 underline-offset-2 hover:underline dark:text-orange-400"
+            className="tabular-nums font-medium text-accent-ink underline-offset-2 hover:underline colorful:text-orange-600 colorful:dark:text-orange-400"
             aria-label={t("end_users.view_reset_history")}
           >
             {count}
           </button>
         ) : (
-          <span className="tabular-nums text-slate-400 dark:text-white/40">0</span>
+          <span className="tabular-nums text-ink-3">0</span>
         );
       },
     },
@@ -292,7 +293,7 @@ export function getEndUserColumns({
       key: "lastLogin",
       label: t("end_users.last_login"),
       width: COLUMN_WIDTH.timestamp,
-      cellClassName: "text-center text-xs text-slate-500 dark:text-white/50",
+      cellClassName: "text-center text-xs text-ink-3",
       render: (row) => (row.last_login_at ? new Date(row.last_login_at).toLocaleString() : "-"),
     },
     {

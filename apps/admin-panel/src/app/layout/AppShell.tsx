@@ -174,7 +174,8 @@ export function AppShell({ children, onLogout }: PropsWithChildren<{ onLogout?: 
         <div
           className={[
             "flex min-w-0 flex-1 flex-col overflow-hidden bg-canvas",
-            isMobile ? "" : "my-2 mr-2 rounded-2xl shadow-card ring-1 ring-line",
+            // 内容区就是页面的面板：伪元素细边 + 堆叠投影把它从窗口底色上托起来，不画 ring/border。
+            isMobile ? "" : "cp-edge my-2 mr-2 rounded-2xl shadow-card",
           ].join(" ")}
         >
           <ShellTopBar
@@ -186,10 +187,18 @@ export function AppShell({ children, onLogout }: PropsWithChildren<{ onLogout?: 
             onToggleMobileNav={toggleMobile}
           />
           <div className="flex-1 overflow-x-hidden overflow-y-auto">
+            {/*
+             * 默认 min-h-full：内容长了 main 跟着长高，底部内边距排在内容之后。
+             * 页面根声明了 data-page-fill 时改 h-full，给「表格吃满剩余高度、内部滚动」的
+             * 页面一条确定高度的 flex 链（见 DashboardLayout 的说明）。
+             */}
             <main
               id="main-content"
               tabIndex={-1}
-              className="flex h-full flex-col px-4 pt-1 pb-4 focus-visible:outline-none sm:px-6 sm:pb-6"
+              className={[
+                "flex min-h-full flex-col px-4 pt-1 pb-4 focus-visible:outline-none sm:px-6 sm:pb-6",
+                "has-[[data-page-fill=always]]:h-full md:has-[[data-page-fill=md]]:h-full",
+              ].join(" ")}
             >
               {children}
             </main>

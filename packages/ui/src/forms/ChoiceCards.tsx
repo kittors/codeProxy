@@ -6,13 +6,15 @@ import { HUE_SOLID, HUE_TILE, hueForIcon } from "../theme/hues";
 import { cn } from "../utils/selectStyles";
 
 /**
- * 选项图标：按图标的色相上色（同一个图标在全站同一种颜色）。选中时换成同色相的实色渐变块、
- * 白色图标，比以前的黑块更能看出「选的是哪一类」；厂商 logo 等非 lucide 图标保持中性底。
+ * 选项图标：中性淡底，选中时换成强调色的淡底与图标色。图标着色为「多彩」时按图标的色相上色
+ * （同一个图标在全站同一种颜色），选中时换成同色相的实色渐变块、白色图标，更能看出「选的是
+ * 哪一类」；厂商 logo 等非 lucide 图标始终是中性底。
  */
 function choiceIconClass(icon: ReactNode, selected: boolean): string {
+  const base = selected ? "bg-accent-soft text-accent-ink" : "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]";
   const hue = hueForIcon(icon);
-  if (!hue) return selected ? "border-line bg-surface shadow-xs" : "border-line bg-subtle text-ink-2";
-  return selected ? cn("border-transparent shadow-xs", HUE_SOLID[hue]) : HUE_TILE[hue];
+  if (!hue) return base;
+  return cn(base, selected ? HUE_SOLID[hue] : HUE_TILE[hue]);
 }
 
 export interface ChoiceCardOption<T extends string = string> {
@@ -101,10 +103,8 @@ export function ChoiceCards<T extends string>({
             tabIndex={selected || (!enabled.some((o) => o.value === value) && option === enabled[0]) ? 0 : -1}
             onClick={() => onChange(option.value)}
             className={cn(
-              "group relative flex min-w-0 items-start gap-3 rounded-2xl border px-3.5 py-3 text-left transition-colors duration-150",
-              selected
-                ? "border-transparent bg-surface"
-                : "border-line bg-surface hover:border-line-strong hover:bg-surface-hover",
+              "group relative flex min-w-0 items-start gap-3 rounded-2xl bg-surface px-3.5 py-3 text-left transition-[background-color,box-shadow] duration-150",
+              selected ? null : "shadow-control hover:bg-surface-hover hover:shadow-control-hover",
               optionDisabled ? "cursor-not-allowed opacity-50" : null,
             )}
           >
@@ -112,7 +112,7 @@ export function ChoiceCards<T extends string>({
               <motion.span
                 layoutId={`choice-card-${groupId}`}
                 aria-hidden="true"
-                className="pointer-events-none absolute inset-0 rounded-2xl border-[1.5px] border-ink shadow-xs"
+                className="pointer-events-none absolute inset-0 rounded-2xl shadow-[inset_0_0_0_1.5px_var(--cp-accent),0_1px_2px_rgb(0_0_0/0.06)]"
                 transition={
                   reduceMotion ? { duration: 0 } : { type: "spring", stiffness: 520, damping: 42 }
                 }
@@ -122,7 +122,7 @@ export function ChoiceCards<T extends string>({
               <span
                 aria-hidden="true"
                 className={cn(
-                  "relative grid h-8 w-8 shrink-0 place-items-center rounded-lg border transition-colors [&_svg.lucide]:size-[16px]",
+                  "relative grid h-8 w-8 shrink-0 place-items-center rounded-lg transition-colors [&_svg.lucide]:size-[16px]",
                   choiceIconClass(option.icon, selected),
                 )}
               >
@@ -140,8 +140,8 @@ export function ChoiceCards<T extends string>({
             <span
               aria-hidden="true"
               className={cn(
-                "relative mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full border transition-colors",
-                selected ? "border-ink bg-ink text-surface" : "border-line-strong bg-field",
+                "relative mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full transition-colors",
+                selected ? "bg-accent text-accent-fg" : "bg-field shadow-control",
               )}
             >
               {selected ? <Check size={10} strokeWidth={3} /> : null}

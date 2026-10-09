@@ -221,7 +221,8 @@ export function OAuthFlowPanel({
                           initial={{ height: 0, opacity: 0 }}
                           animate={{ height: "auto", opacity: 1 }}
                           exit={{ height: 0, opacity: 0 }}
-                          className="overflow-hidden"
+                          // 高度动画要裁切，但粘贴框的阴影描边画在框外：四周各留 4px 再用负边距拉回。
+                          className="-m-1 overflow-hidden p-1"
                         >
                           <CallbackPasteBox
                             flow="redirect"
@@ -287,7 +288,8 @@ export function OAuthFlowPanel({
                     />
                   </div>
                 ) : (
-                  <div className="rounded-2xl border border-dashed border-line-strong px-4 py-3 text-xs text-ink-3">
+                  // 粘贴框出现之前的占位：无边淡底（虚线框只留给文件拖放区）。
+                  <div className="rounded-2xl bg-subtle px-4 py-3 text-xs text-ink-3">
                     {t("add_account.steps.paste_locked")}
                   </div>
                 )}

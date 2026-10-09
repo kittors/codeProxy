@@ -8,15 +8,15 @@ import type { AuditLogCallChainStep, AuditLogIdentity } from "@code-proxy/api-cl
 export const RESULT_BADGE: Record<string, { labelKey: string; className: string }> = {
   success: {
     labelKey: "identity_admin.result_success",
-    className: "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300",
+    className: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
   },
   denied: {
     labelKey: "identity_admin.result_denied",
-    className: "bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
+    className: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
   },
   failed: {
     labelKey: "identity_admin.result_failed",
-    className: "bg-rose-50 text-rose-600 dark:bg-rose-500/15 dark:text-rose-300",
+    className: "bg-rose-500/10 text-rose-700 dark:text-rose-300",
   },
 };
 

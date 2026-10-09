@@ -493,10 +493,14 @@ export function EndUsersPage() {
 
   return (
     <PermissionGate permission="end_users.read" anyOf={["api_keys.read"]}>
-      {/* 页面根撑满外壳，卡片再撑满页面根，底部留白才等于其余三边 */}
-      <div className="flex flex-1 flex-col">
+      {/*
+       * 页面根撑满外壳，分区再撑满页面根，底部留白才等于其余三边。
+       * 外壳内容区本身就是页面面板，这里不再包一张大卡（flat），表格直接落在内容区上。
+       */}
+      <div data-page-fill="md" className="flex flex-1 flex-col">
         <Card
-          className="md:flex md:min-h-0 md:flex-1 md:flex-col md:overflow-hidden"
+          flat
+          className="md:flex md:min-h-0 md:flex-1 md:flex-col"
           bodyClassName="md:flex md:min-h-0 md:flex-1 md:flex-col"
           title={t("end_users.title", { defaultValue: "用户账号" })}
           description={t("end_users.subtitle", {
@@ -529,7 +533,7 @@ export function EndUsersPage() {
                 })}
                 aria-label={t("end_users.search_label", { defaultValue: "搜索用户账号" })}
                 startAdornment={
-                  <Search className="h-4 w-4 text-slate-400 dark:text-white/40" aria-hidden />
+                  <Search className="h-4 w-4 text-ink-3" aria-hidden />
                 }
               />
             </div>
@@ -589,7 +593,7 @@ export function EndUsersPage() {
               setCurrentPage(1);
             }}
             pageSizeOptions={END_USER_PAGE_SIZE_OPTIONS}
-            className="mt-3 border-t border-slate-100 pt-3 dark:border-white/8"
+            className="mt-3"
             labels={{
               firstPage: t("end_users.first_page", { defaultValue: "首页" }),
               previousPage: t("end_users.previous_page", { defaultValue: "上一页" }),

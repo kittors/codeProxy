@@ -138,7 +138,8 @@ export function ModelTestForm({
             {state.images.map((image, index) => (
               <div
                 key={`${index}-${image.slice(0, 32)}`}
-                className="group relative h-16 w-16 overflow-hidden rounded-lg border border-line"
+                // 细边用伪元素（cp-edge）画在图片上面，浅色图片也看得出轮廓，不再用 border。
+                className="cp-edge group relative h-16 w-16 overflow-hidden rounded-lg"
               >
                 <img src={image} alt="" className="h-full w-full object-cover" />
                 <button
@@ -156,7 +157,7 @@ export function ModelTestForm({
                 type="button"
                 disabled={disabled}
                 onClick={() => fileInput.current?.click()}
-                className="bg-subtle flex h-16 w-16 flex-col items-center justify-center gap-1 rounded-lg border-slate-900/15 text-ink-3 transition-colors hover:border-ink-4 hover:text-ink disabled:opacity-50 dark:border-white/15"
+                className="flex h-16 w-16 flex-col items-center justify-center gap-1 rounded-lg bg-subtle text-ink-3 transition-colors hover:bg-hover hover:text-ink disabled:opacity-50"
               >
                 <ImagePlus size={16} aria-hidden />
                 <span className="text-2xs">{t("models_page.test_add_image")}</span>

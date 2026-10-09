@@ -124,9 +124,7 @@ export function VertexImport({
               exit={{ opacity: 0, y: -4 }}
               className="flex items-center gap-3 rounded-2xl bg-subtle px-4 py-3"
             >
-              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-surface shadow-xs">
-                <FileJson size={17} className={iconHueClass(FileJson)} aria-hidden="true" />
-              </span>
+              <FileJson size={18} className={`shrink-0 text-ink-3 ${iconHueClass(FileJson)}`} aria-hidden="true" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-ink">{summary.clientEmail}</p>
                 <p className="truncate text-xs text-ink-3">

@@ -5,7 +5,7 @@ import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@app/providers/AuthProvider";
 import { ProtectedRoute } from "@/app/guards/ProtectedRoute";
 import { DashboardLayout } from "@app/layout/DashboardLayout";
-import { Button, ThemeProvider, ToastProvider } from "@code-proxy/ui";
+import { AppearanceProvider, Button, ThemeProvider, ToastProvider } from "@code-proxy/ui";
 import { OnlineUpdateProvider } from "@features/online-update";
 import { ChunkLoadErrorBoundary } from "@/app/bootstrap/ChunkLoadErrorBoundary";
 import { dismissAppLoader } from "@/app/bootstrap/dismissAppLoader";
@@ -116,14 +116,10 @@ function StaleRoutePage() {
   return (
     <div className="mx-auto grid min-h-[60vh] max-w-xl place-items-center text-center">
       <div>
-        <FileQuestion className="mx-auto mb-5 text-amber-500" size={48} />
-        <h2 className="text-2xl font-semibold text-slate-950 dark:text-white">
-          {t("shell.stale_route_title")}
-        </h2>
-        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-          {t("shell.stale_route_description")}
-        </p>
-        <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
+        <FileQuestion className="mx-auto mb-5 text-ink-3 colorful:text-amber-500" size={48} />
+        <h2 className="text-2xl font-semibold text-ink">{t("shell.stale_route_title")}</h2>
+        <p className="mt-2 text-sm text-ink-2">{t("shell.stale_route_description")}</p>
+        <p className="mt-2 text-xs text-ink-3">
           {t("shell.stale_route_shortcut")}
         </p>
         <Button className="mt-6" variant="primary" onClick={() => window.location.reload()}>
@@ -231,38 +227,40 @@ export function AppRouter() {
 
   return (
     <ThemeProvider>
-      <ToastProvider>
-        <div className="font-sans antialiased">
-          <ChunkLoadErrorBoundary>
-            <Suspense fallback={<RouteFallback />}>
-              <Routes>
-                {standalonePublicRoutes.map((route) => (
-                  <Route key={route.path} path={route.path} element={readyRoute(route.element)} />
-                ))}
-                {loginRoute ? (
+      <AppearanceProvider>
+        <ToastProvider>
+          <div className="font-sans antialiased">
+            <ChunkLoadErrorBoundary>
+              <Suspense fallback={<RouteFallback />}>
+                <Routes>
+                  {standalonePublicRoutes.map((route) => (
+                    <Route key={route.path} path={route.path} element={readyRoute(route.element)} />
+                  ))}
+                  {loginRoute ? (
+                    <Route
+                      path={loginRoute.path}
+                      element={
+                        <AuthProvider>
+                          <LoginRouteReady>{loginRoute.element}</LoginRouteReady>
+                        </AuthProvider>
+                      }
+                    />
+                  ) : null}
+
                   <Route
-                    path={loginRoute.path}
+                    path="*"
                     element={
                       <AuthProvider>
-                        <LoginRouteReady>{loginRoute.element}</LoginRouteReady>
+                        <AuthenticatedRoutes />
                       </AuthProvider>
                     }
                   />
-                ) : null}
-
-                <Route
-                  path="*"
-                  element={
-                    <AuthProvider>
-                      <AuthenticatedRoutes />
-                    </AuthProvider>
-                  }
-                />
-              </Routes>
-            </Suspense>
-          </ChunkLoadErrorBoundary>
-        </div>
-      </ToastProvider>
+                </Routes>
+              </Suspense>
+            </ChunkLoadErrorBoundary>
+          </div>
+        </ToastProvider>
+      </AppearanceProvider>
     </ThemeProvider>
   );
 }

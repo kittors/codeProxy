@@ -207,8 +207,8 @@ export function SidebarGroup({
           与投影会被切掉一边（右侧看着像缺了竖线）。左右各外扩 1 格再用内边距收回，阴影就有地方画。
         */}
         <div className="-mx-1 min-h-0 overflow-hidden px-1">
-          {/* 竖向引导线对准分区图标的中线，子项文字与分区标题文字左对齐。 */}
-          <div className="ml-4.5 space-y-0.5 border-l border-line py-1 pl-1.5">
+          {/* 子项靠缩进表达层级、不画竖向引导线；子项文字与分区标题文字左对齐。 */}
+          <div className="ml-4.5 space-y-0.5 py-1 pl-1.5">
             {section.items.map((item) => (
               <SidebarItemLink
                 key={item.to}

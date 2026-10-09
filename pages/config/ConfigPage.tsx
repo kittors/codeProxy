@@ -491,6 +491,7 @@ export function ConfigPage() {
 
   return (
     <div
+      data-page-fill="always"
       className={
         visualLayoutEnabled
           ? "flex min-h-0 flex-1 flex-col gap-6 overflow-x-hidden"
@@ -535,7 +536,9 @@ export function ConfigPage() {
 
             <TabsContent value="source">
               <div className="space-y-4">
+                {/* flat：源码模式整页只有这一块内容，外壳内容区就是面板；编辑器本身是一个大输入框。 */}
                 <Card
+                  flat
                   title={t("config_page.source_title")}
                   description={t("config_page.search_hint")}
                   loading={loading}

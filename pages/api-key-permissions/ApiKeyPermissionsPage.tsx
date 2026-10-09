@@ -13,7 +13,12 @@ import { Card } from "@code-proxy/ui";
 import { ConfirmModal } from "@code-proxy/ui";
 import { EmptyState } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
-import { DataTable, TABLE_ROW_ACTIONS_COLUMN, type DataTableColumn } from "@code-proxy/ui";
+import {
+  DataTable,
+  TABLE_ROW_ACTIONS_COLUMN,
+  TableRowActions,
+  type DataTableColumn,
+} from "@code-proxy/ui";
 import { PermissionProfileFormModal } from "./PermissionProfileFormModal";
 import {
   boundProfileCount,
@@ -25,7 +30,8 @@ import {
 
 const stickyActionsHeaderClass =
   "text-center md:sticky md:z-40 md:bg-slate-100 md:dark:bg-neutral-800";
-const stickyActionsCellClass = "md:sticky md:z-30 md:bg-surface";
+// 表格直接放在页面上（外壳内容区 canvas），冻结列的底色跟着它走，不用卡片的 surface。
+const stickyActionsCellClass = "md:sticky md:z-30 md:bg-backdrop";
 
 const formatRestrictionCount = (count: number, unlimited: string) =>
   count > 0 ? count.toLocaleString() : unlimited;
@@ -220,7 +226,7 @@ export function ApiKeyPermissionsPage() {
         key: "name",
         label: t("api_key_permissions_page.col_name"),
         width: COLUMN_WIDTH.badgeGroup,
-        cellClassName: "font-medium text-slate-900 dark:text-white",
+        cellClassName: "font-medium text-ink",
         render: (profile) => profile.name,
       },
       {
@@ -255,14 +261,12 @@ export function ApiKeyPermissionsPage() {
         key: "prompt",
         label: t("api_key_permissions_page.col_system_prompt"),
         width: "w-[260px] min-w-[260px]",
-        cellClassName: "min-w-0 text-slate-600 dark:text-white/60",
+        cellClassName: "min-w-0 text-ink-2",
         render: (profile) =>
           profile["system-prompt"] ? (
             <span className="block truncate">{profile["system-prompt"]}</span>
           ) : (
-            <span className="text-slate-400 dark:text-white/40">
-              {t("api_key_permissions_page.no_system_prompt")}
-            </span>
+            <span className="text-ink-3">{t("api_key_permissions_page.no_system_prompt")}</span>
           ),
       },
       {
@@ -282,24 +286,24 @@ export function ApiKeyPermissionsPage() {
         headerClassName: stickyActionsHeaderClass,
         cellClassName: stickyActionsCellClass,
         render: (profile) => (
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => openEditModal(profile)}
-              className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-amber-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-amber-400"
-              aria-label={t("common.edit")}
-            >
-              <Pencil size={15} />
-            </button>
-            <button
-              type="button"
-              onClick={() => setDeleteTarget(profile)}
-              className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:text-white/50 dark:hover:bg-red-900/20 dark:hover:text-red-400"
-              aria-label={t("common.delete")}
-            >
-              <Trash2 size={15} />
-            </button>
-          </div>
+          <TableRowActions
+            moreLabel={t("common.more_actions")}
+            actions={[
+              {
+                key: "edit",
+                label: t("common.edit"),
+                icon: <Pencil size={15} />,
+                onClick: () => openEditModal(profile),
+              },
+              {
+                key: "delete",
+                label: t("common.delete"),
+                icon: <Trash2 size={15} />,
+                destructive: true,
+                onClick: () => setDeleteTarget(profile),
+              },
+            ]}
+          />
         ),
       },
     ],
@@ -307,9 +311,11 @@ export function ApiKeyPermissionsPage() {
   );
 
   return (
-    <div className="flex flex-1 flex-col">
+    <div data-page-fill="always" className="flex flex-1 flex-col">
+      {/* 外壳内容区就是页面面板：这里是页面分区（flat），不再包一张大卡。 */}
       <Card
-        className="md:flex md:min-h-0 md:flex-1 md:flex-col md:overflow-hidden"
+        flat
+        className="md:flex md:min-h-0 md:flex-1 md:flex-col"
         bodyClassName="md:flex md:min-h-0 md:flex-1 md:flex-col"
         title={t("api_key_permissions_page.title")}
         description={t("api_key_permissions_page.description")}

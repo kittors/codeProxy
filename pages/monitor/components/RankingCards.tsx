@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 import { Boxes, KeyRound, Network, UserRound, Users } from "lucide-react";
 import type { MonitorBreakdownRow, MonitorOverview } from "@code-proxy/api-client";
 import { VendorIcon } from "@code-proxy/assets";
-import { Card, iconHueClass } from "@code-proxy/ui";
+import { Card, chartUsesIdentityColors, iconHueClass } from "@code-proxy/ui";
 import { ChannelIdentityLabel } from "@features/request-log-viewer";
 import { LevelDot } from "@features/monitor-widgets/monitorVisuals";
 import {
@@ -284,9 +284,10 @@ export function ChannelHealthCard({
             const idle = row.requests < MONITOR_CHANNEL_MIN_REQUESTS;
             return (
               <span className="flex min-w-0 items-center gap-2.5">
+                {/* 空闲点与 LevelDot 一样：多彩风格加一圈淡光晕，简约风格只有实心点。 */}
                 {idle ? (
                   <span
-                    className="size-2 shrink-0 rounded-full bg-ink-4 ring-4 ring-ink-4/15"
+                    className="size-2 shrink-0 rounded-full bg-ink-4 colorful:ring-4 colorful:ring-ink-4/15"
                     role="img"
                     aria-label={t("monitor_center.channels.status_idle")}
                     title={t("monitor_center.channels.status_idle")}
@@ -338,7 +339,8 @@ export function ConsumerLeaderboardCard({
   const { t } = useTranslation();
   const columns = useCommonColumns(overview, legacy, true);
   const rows = overview.consumers.rows;
-  const tokensColor = metricColor("tokens", isDark);
+  // 占比细条：多彩图表沿用 Token 紫（这张表的身份色），强调色图表和模型榜一样用请求色（即强调色）。
+  const shareColor = metricColor(chartUsesIdentityColors() ? "tokens" : "requests", isDark);
 
   return (
     <Card
@@ -371,7 +373,7 @@ export function ConsumerLeaderboardCard({
             return (
               <span className="block min-w-0">
                 <span className="flex min-w-0 items-center gap-2">
-                  <Icon size={14} className={`shrink-0 ${iconHueClass(Icon)}`} aria-hidden="true" />
+                  <Icon size={14} className={`shrink-0 text-ink-3 ${iconHueClass(Icon)}`} aria-hidden="true" />
                   <span className="truncate font-medium text-ink">
                     {row.label || t("monitor_center.unnamed_consumer")}
                   </span>
@@ -379,7 +381,7 @@ export function ConsumerLeaderboardCard({
                     <span className="shrink-0 font-mono text-2xs text-ink-3">{row.key_hint}</span>
                   ) : null}
                 </span>
-                <ShareBar share={shareOf(row, overview)} color={tokensColor} />
+                <ShareBar share={shareOf(row, overview)} color={shareColor} />
               </span>
             );
           }}

@@ -17,7 +17,7 @@ import type { ModelItem } from "../types";
 
 const stickyActionsHeaderClass =
   "text-center md:sticky md:z-40 md:bg-slate-100 md:dark:bg-neutral-800";
-const stickyActionsCellClass = "md:sticky md:z-30 md:bg-surface";
+const stickyActionsCellClass = "md:sticky md:z-30 md:bg-backdrop";
 
 interface UseModelColumnsOptions {
   canDeleteModels: boolean;
@@ -92,7 +92,7 @@ export function useModelColumns({
               </OverflowTooltip>
               {row.description ? (
                 <OverflowTooltip content={row.description} className="block min-w-0">
-                  <span className="block min-w-0 truncate text-xs text-slate-500 dark:text-white/45">
+                  <span className="block min-w-0 truncate text-xs text-ink-3">
                     {row.description}
                   </span>
                 </OverflowTooltip>
@@ -105,7 +105,7 @@ export function useModelColumns({
         key: "owner",
         label: t("models_page.col_owner"),
         width: COLUMN_WIDTH.compact,
-        // 归属按归属方的品牌色上淡底（openai 绿、anthropic 珊瑚橙……），认不出的保持中性。
+        // 归属标签 + 归属方 logo；标签配色（多彩风格下的品牌淡底）由 ModelOwnerTag 统一决定。
         render: (row) => (row.owned_by ? <ModelOwnerTag owner={row.owned_by} withLogo /> : "-"),
       },
       {
@@ -125,7 +125,7 @@ export function useModelColumns({
         key: "price",
         label: t("models_page.col_price"),
         width: COLUMN_WIDTH.name,
-        cellClassName: "font-mono text-xs tabular-nums text-slate-700 dark:text-slate-200",
+        cellClassName: "font-mono text-xs tabular-nums text-ink-2",
         render: (row) => formatPrice(row, t("models_page.not_priced")),
       },
       {
@@ -139,8 +139,8 @@ export function useModelColumns({
             className={[
               "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-2xs font-semibold",
               row.enabled
-                ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300"
-                : "bg-slate-100 text-slate-500 dark:bg-neutral-800 dark:text-white/40",
+                ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                : "bg-ink/[0.05] text-ink-3 dark:bg-white/[0.07]",
             ].join(" ")}
           >
             {row.enabled ? <Check size={10} /> : null}
@@ -174,9 +174,11 @@ export function useModelColumns({
                   icon: <Power size={15} />,
                   visible: Boolean(onToggleEnabled),
                   disabled: isToggling,
+                  // 简约风格下用共享 ghost 按钮的中性墨色（启用状态看「状态」列）；
+                  // 多彩风格下启用中的开关是绿色，停用的开关悬停时提示红色。
                   className: row.enabled
-                    ? "text-emerald-500 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-900/20"
-                    : "text-slate-400 hover:bg-red-50 hover:text-red-500 dark:text-white/30 dark:hover:bg-red-900/20 dark:hover:text-red-400",
+                    ? "colorful:text-emerald-500 colorful:hover:bg-emerald-50 colorful:dark:text-emerald-400 colorful:dark:hover:bg-emerald-900/20"
+                    : "colorful:hover:bg-red-50 colorful:hover:text-red-500 colorful:dark:hover:bg-red-900/20 colorful:dark:hover:text-red-400",
                   onClick: () => onToggleEnabled?.(row),
                 },
                 {
@@ -184,16 +186,13 @@ export function useModelColumns({
                   label: testLabel,
                   icon: <FlaskConical size={15} />,
                   visible: Boolean(onTestModel),
-                  className:
-                    "text-slate-500 hover:bg-slate-100 hover:text-sky-600 dark:text-white/50 dark:hover:bg-neutral-800 dark:hover:text-sky-400",
+                  className: "icon-hue:hover:text-sky-600 icon-hue:dark:hover:text-sky-400",
                   onClick: () => onTestModel?.(row),
                 },
                 {
                   key: "edit",
                   label: editLabel,
                   icon: <Edit3 size={15} />,
-                  className:
-                    "text-slate-500 hover:bg-slate-100 hover:text-ink dark:text-white/50 dark:hover:bg-neutral-800",
                   onClick: () => onEditModel(row.id),
                 },
                 {

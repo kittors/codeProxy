@@ -30,21 +30,24 @@ const brandStyle = (vendor: string | null | undefined, style?: CSSProperties): C
 };
 
 /**
- * 会员等级的样式，由低到高越来越「隆重」，颜色都来自厂商品牌色：
- * - free：品牌色细描边，字色偏淡；
- * - entry：品牌色淡底；
+ * 会员等级的样式：颜色来自厂商品牌色，由低到高越来越「隆重」——
+ * - free：极淡的品牌底、偏灰的字；
+ * - entry：品牌淡底 + 品牌色字；
  * - pro：品牌实色；
- * - max：品牌主色到辅色的渐变 + 闪电；
- * - ultra：辅色—主色—辅色的双向渐变 + 皇冠 + 光晕 + 流光。
+ * - max：品牌实色 + 闪电；多彩风格下是品牌主色到辅色的渐变 + 柔光；
+ * - ultra：品牌实色 + 皇冠；多彩风格下是辅色—主色—辅色的双向渐变 + 光晕 + 流光。
+ *
+ * 渐变、光晕和流光只在「外观 → 配色风格」为多彩时出现（colorful: 变体，流光见 brandBadges.css）；
+ * 简约风格里一张卡上它们是最抢眼的东西，比账号状态还显眼，所以只留品牌实色和图标。
  */
 const TIER_CLASS: Record<PlanBadgeTier, string> = {
-  free: "text-[color-mix(in_oklab,var(--brand-text)_70%,var(--color-ink-2))] ring-1 ring-inset ring-[color-mix(in_oklab,var(--brand)_32%,transparent)]",
+  free: "bg-[color-mix(in_oklab,var(--brand)_7%,transparent)] text-[color-mix(in_oklab,var(--brand-text)_70%,var(--color-ink-2))] dark:bg-[color-mix(in_oklab,var(--brand)_12%,transparent)]",
   entry:
-    "bg-[color-mix(in_oklab,var(--brand)_13%,transparent)] text-[var(--brand-text)] ring-1 ring-inset ring-[color-mix(in_oklab,var(--brand)_24%,transparent)] dark:bg-[color-mix(in_oklab,var(--brand)_18%,transparent)]",
-  pro: "bg-[var(--brand-fill)] text-[var(--brand-on)] shadow-[inset_0_1px_0_rgb(255_255_255/0.2)]",
-  max: "bg-[linear-gradient(120deg,var(--brand-fill),var(--brand-fill-2))] text-[var(--brand-on)] shadow-[inset_0_1px_0_rgb(255_255_255/0.22),0_2px_8px_-3px_color-mix(in_oklab,var(--brand)_70%,transparent)]",
+    "bg-[color-mix(in_oklab,var(--brand)_13%,transparent)] text-[var(--brand-text)] dark:bg-[color-mix(in_oklab,var(--brand)_18%,transparent)]",
+  pro: "bg-[var(--brand-fill)] text-[var(--brand-on)] colorful:shadow-[inset_0_1px_0_rgb(255_255_255/0.2)]",
+  max: "bg-[var(--brand-fill)] text-[var(--brand-on)] colorful:bg-[linear-gradient(120deg,var(--brand-fill),var(--brand-fill-2))] colorful:shadow-[inset_0_1px_0_rgb(255_255_255/0.22),0_2px_8px_-3px_color-mix(in_oklab,var(--brand)_70%,transparent)]",
   ultra:
-    "brand-badge-shine bg-[linear-gradient(115deg,var(--brand-fill-2),var(--brand-fill)_48%,var(--brand-fill-2))] text-[var(--brand-on)] ring-1 ring-inset ring-white/25 shadow-[inset_0_1px_0_rgb(255_255_255/0.28),0_3px_12px_-3px_color-mix(in_oklab,var(--brand)_80%,transparent)]",
+    "brand-badge-shine bg-[var(--brand-fill)] text-[var(--brand-on)] colorful:bg-[linear-gradient(115deg,var(--brand-fill-2),var(--brand-fill)_48%,var(--brand-fill-2))] colorful:shadow-[inset_0_0_0_1px_rgb(255_255_255/0.25),inset_0_1px_0_rgb(255_255_255/0.28),0_3px_12px_-3px_color-mix(in_oklab,var(--brand)_80%,transparent)]",
 };
 
 /**
@@ -90,8 +93,12 @@ export function PlanBadge({
 }
 
 /**
- * 供应商标签（codex、claude、gemini-cli……）：品牌色淡底 + 品牌色文字，可带一个小 logo。
- * 以前所有供应商同一个灰色胶囊，扫一眼分不出是谁家的号。
+ * 供应商标签（codex、claude、gemini-cli……）：多彩风格下是品牌色淡底 + 品牌色文字，扫一眼就分得出
+ * 是谁家的号；简约风格下是中性淡底，认厂商靠 logo（一张账号卡上供应商标签、会员徽章、用量标签
+ * 各染一种颜色，是简约风格要避免的）。
+ *
+ * logo 默认不画：有的调用点把 VendorIcon 直接当内容放进来（只显示图标的紧凑卡片），有的是计数
+ * 胶囊；要「logo + 名字」的调用点显式传 withLogo。
  */
 export function ProviderTag({
   vendor,
@@ -102,7 +109,7 @@ export function ProviderTag({
 }: {
   vendor: string | null | undefined;
   children: ReactNode;
-  /** 在文字前放厂商 logo（列表很密时可以只用颜色）。 */
+  /** 在文字前放厂商 logo。 */
   withLogo?: boolean;
   className?: string;
 } & Omit<React.HTMLAttributes<HTMLSpanElement>, "children" | "className">) {
@@ -112,8 +119,8 @@ export function ProviderTag({
       style={brandStyle(vendor, rest.style)}
       className={cn(
         BRAND_VARS,
-        "inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-px text-2xs font-medium whitespace-nowrap",
-        "bg-[color-mix(in_oklab,var(--brand)_11%,transparent)] text-[var(--brand-text)] dark:bg-[color-mix(in_oklab,var(--brand)_18%,transparent)]",
+        "inline-flex shrink-0 items-center gap-1 rounded-md bg-ink/[0.05] px-1.5 py-px text-2xs font-medium whitespace-nowrap text-ink-2 dark:bg-white/[0.07]",
+        "colorful:bg-[color-mix(in_oklab,var(--brand)_11%,transparent)] colorful:text-[var(--brand-text)] colorful:dark:bg-[color-mix(in_oklab,var(--brand)_18%,transparent)]",
         className,
       )}
     >

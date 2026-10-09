@@ -3,7 +3,7 @@ import { ArrowRight, ChevronDown, Gauge, Leaf } from "lucide-react";
 import { useId, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { VisualConfigValues } from "@features/visual-config-editor";
-import { Button, DialogIcon } from "@code-proxy/ui";
+import { Button, DialogIcon, surface } from "@code-proxy/ui";
 import { CONFIG_FIELDS, type ConfigFieldDef } from "./configSchema";
 import { fieldLabelKey } from "./configSearch";
 
@@ -84,13 +84,18 @@ export function ResourceProfileBanner({
   };
 
   return (
-    // 淡绿渐变底：这是一条「推荐」，和下面白底的设置分区区分开；图标块始终是绿色（叶子 = 省资源）。
-    <section className="rounded-2xl border border-emerald-500/15 bg-gradient-to-r from-emerald-500/[0.07] via-teal-500/[0.04] to-transparent dark:border-emerald-400/15 dark:from-emerald-400/[0.08] dark:via-teal-400/[0.04]">
+    // 和下面的设置组同一层、同一种卡片（伪元素细边 + 投影），不描边。简约风格下「推荐」靠标题、
+    // 按钮和「已应用」状态说清；多彩风格叠一层绿→青渐变淡底，和下面白底的设置分区区分开。
+    // 叶子图标：图标着色多彩时是绿色图标块（叶子 = 省资源），单色时是无底的中性小图标。
+    <section
+      className={`${surface({ radius: "2xl" })} colorful:bg-gradient-to-r colorful:from-emerald-500/[0.07] colorful:via-teal-500/[0.04] colorful:to-transparent colorful:dark:from-emerald-400/[0.08] colorful:dark:via-teal-400/[0.04]`}
+    >
       <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:p-5">
-        <div className="flex min-w-0 flex-1 items-start gap-3.5">
-          <DialogIcon tone="emerald">
+        <div className="flex min-w-0 flex-1 items-start gap-3 icon-hue:gap-3.5">
+          <DialogIcon tone="emerald" className="hidden icon-hue:grid">
             <Leaf />
           </DialogIcon>
+          <Leaf size={18} className="mt-0.5 shrink-0 text-ink-3 icon-hue:hidden" aria-hidden="true" />
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="text-base font-semibold text-ink">{t("resource_config.title")}</h3>
@@ -146,14 +151,14 @@ export function ResourceProfileBanner({
             transition={{ duration: 0.22, ease: [0.2, 0.8, 0.2, 1] }}
             className="overflow-hidden"
           >
-            <ul className="grid gap-x-6 gap-y-1.5 border-t border-emerald-500/10 px-5 py-4 text-sm sm:grid-cols-2 dark:border-emerald-400/10">
+            <ul className="grid gap-x-6 gap-y-1.5 px-4 pb-4 text-sm sm:grid-cols-2 sm:px-5 sm:pb-5">
               {changes.map(({ field, from, to }) => (
                 <li key={field.id} className="flex min-w-0 items-center gap-2">
                   <span className="min-w-0 flex-1 truncate text-ink-2">{t(fieldLabelKey(field))}</span>
                   <span className="shrink-0 font-mono text-xs text-ink-3 line-through decoration-ink-4">
                     {formatValue(from)}
                   </span>
-                  <ArrowRight size={12} className="shrink-0 text-emerald-500" aria-hidden="true" />
+                  <ArrowRight size={12} className="shrink-0 text-ink-3 colorful:text-emerald-500" aria-hidden="true" />
                   <span className="shrink-0 font-mono text-xs font-medium text-ink">
                     {formatValue(to)}
                   </span>

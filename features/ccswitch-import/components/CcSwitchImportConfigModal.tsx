@@ -844,7 +844,7 @@ export function CcSwitchImportConfigModal({
         </section>
 
         <section className={`overflow-hidden ${surface({ tone: "inset" })}`}>
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 px-4 pt-4 pb-1">
             <div>
               <div className="text-sm font-semibold text-ink">
                 {t("ccswitch.config_model_mapping_title")}
@@ -856,7 +856,7 @@ export function CcSwitchImportConfigModal({
               </p>
             </div>
             {modelMappingsLoading ? (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-subtle px-2 py-1 text-xs font-semibold text-ink-3 dark:bg-white/10">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-ink/[0.05] px-2 py-1 text-xs font-semibold text-ink-3 dark:bg-white/[0.07]">
                 <LoaderCircle size={12} className="animate-spin" />
                 {t("ccswitch.import_model_loading")}
               </span>
@@ -880,8 +880,8 @@ export function CcSwitchImportConfigModal({
               data-testid="ccswitch-model-mapping-loading"
               className="px-4 py-5"
             >
-              <div className="flex items-center gap-3 rounded-2xl bg-subtle px-4 py-3">
-                <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-ink-3 ring-1 ring-slate-900/8 dark:bg-white/10 dark:ring-white/8">
+              <div className="flex items-center gap-3">
+                <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center text-ink-3">
                   <LoaderCircle size={17} className="animate-spin" />
                 </span>
                 <div className="min-w-0">
@@ -899,9 +899,9 @@ export function CcSwitchImportConfigModal({
                     key={row}
                     className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] items-center gap-3 rounded-xl bg-subtle px-3 py-3.5"
                   >
-                    <span className="h-3 rounded-full bg-slate-200/90 dark:bg-white/10" />
+                    <span className="h-3 rounded-full bg-track" />
                     <span
-                      className={`h-3 rounded-full bg-slate-200/90 dark:bg-white/10 ${
+                      className={`h-3 rounded-full bg-track ${
                         row === "short" ? "w-1/2" : row === "medium" ? "w-2/3" : "w-5/6"
                       }`}
                     />
@@ -945,7 +945,7 @@ export function CcSwitchImportConfigModal({
                 />
               </div>
               {duplicateRequestModels.length > 0 ? (
-                <div className="mt-3 rounded-xl bg-rose-50 px-4 py-2 text-xs font-medium text-rose-700 dark:bg-rose-500/10 dark:text-rose-200">
+                <div className="mt-3 rounded-xl bg-rose-500/10 px-4 py-2 text-xs font-medium text-rose-700 dark:text-rose-300">
                   {t("ccswitch.config_request_model_duplicate", {
                     model: duplicateRequestModels.join(", "),
                   })}

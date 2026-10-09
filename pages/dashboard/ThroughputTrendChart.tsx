@@ -5,7 +5,7 @@ import {
   useState,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { Activity, CircleAlert, Sparkles } from "lucide-react";
+import { CircleAlert } from "lucide-react";
 import type { ECBasicOption } from "echarts/types/dist/shared";
 import type {
   DashboardTenantThroughputItem,
@@ -15,7 +15,6 @@ import {
   Card,
   ChartLegend,
   type ChartLegendItem,
-  DialogIcon,
   EChart,
   HoverTooltip,
   type Hue,
@@ -27,13 +26,10 @@ import {
   chartPalette,
   chartTooltipStyle,
   hueHex,
-  surface,
   useTheme,
 } from "@code-proxy/ui";
 import { DashboardMetricValue, formatThroughputValue, formatThroughputTooltip } from "./DashboardMetrics";
 
-const PANEL_SURFACE = surface({ tone: "panel", radius: "2xl" });
-const STAT_SURFACE = surface({ tone: "raised", radius: "2xl" });
 
 /**
  * 按租户拆开时每个租户一条线的颜色：CHART_CATEGORICAL 去掉靛蓝、紫与红——汇总线用的是当前指标的
@@ -288,7 +284,6 @@ export function ThroughputTrendChart({
 
   return (
     <Card
-      className={PANEL_SURFACE}
       title={titleNode}
       actions={
         <div className="flex items-center gap-2">
@@ -304,48 +299,47 @@ export function ThroughputTrendChart({
               </TabsList>
             </Tabs>
           ) : null}
+          {/* 简约风格是中性胶囊、颜色只在那颗点上；多彩风格整块绿色淡底（与系统监控的数据通道状态一致）。 */}
           <div
-            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
+            className={`inline-flex items-center gap-1.5 rounded-full bg-ink/[0.05] px-2.5 py-1 text-xs font-medium dark:bg-white/[0.07] ${
               connected
-                ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300"
-                : "bg-slate-100 text-slate-400 dark:bg-neutral-800 dark:text-white/45"
+                ? "text-ink-2 colorful:bg-emerald-50 colorful:text-emerald-600 colorful:dark:bg-emerald-500/10 colorful:dark:text-emerald-300"
+                : "text-ink-3"
             }`}
           >
             <span
-              className={`h-2 w-2 rounded-full ${
-                active ? "animate-pulse bg-emerald-500" : "bg-slate-300 dark:bg-neutral-600"
-              }`}
+              className={`h-2 w-2 rounded-full ${active ? "animate-pulse bg-emerald-500" : "bg-ink-4"}`}
             />
             {connected ? t("system_monitor.live") : t("system_monitor.polling")}
           </div>
         </div>
       }
-      padding="compact"
     >
-      {/* 当前读数：白底卡片 + 与曲线同色的图标块（RPM 蓝、TPM 紫），数值保持墨色。 */}
-      <div className="mb-3 grid gap-3 sm:grid-cols-2">
-        <div className={`${STAT_SURFACE} flex items-center gap-3 px-3 py-2.5`}>
-          <DialogIcon tone="blue" size="sm">
-            <Activity />
-          </DialogIcon>
-          <div className="min-w-0">
-            <div className="text-2xs font-medium text-ink-3">RPM</div>
+      {/*
+        当前读数：直接写在卡片上，标签前一颗与曲线同色的小圆点把数字和线对上。以前是卡片里
+        再套两张白底小卡 + 彩色图标块，圆角一层套一层。
+      */}
+      <div className="mb-3 grid grid-cols-2 gap-3">
+        {(
+          [
+            { key: "rpm", label: "RPM", value: rpm, color: palette.metric.rpm },
+            { key: "tpm", label: "TPM", value: tpm, color: palette.metric.tpm },
+          ] as const
+        ).map((reading) => (
+          <div key={reading.key} className="min-w-0">
+            <div className="flex items-center gap-1.5 text-xs font-medium text-ink-3">
+              <span
+                aria-hidden="true"
+                className="size-2 shrink-0 rounded-full"
+                style={{ backgroundColor: reading.color }}
+              />
+              {reading.label}
+            </div>
             <div className="mt-0.5 text-xl font-semibold tabular-nums text-ink">
-              <DashboardMetricValue value={rpm} />
+              <DashboardMetricValue value={reading.value} />
             </div>
           </div>
-        </div>
-        <div className={`${STAT_SURFACE} flex items-center gap-3 px-3 py-2.5`}>
-          <DialogIcon tone="violet" size="sm">
-            <Sparkles />
-          </DialogIcon>
-          <div className="min-w-0">
-            <div className="text-2xs font-medium text-ink-3">TPM</div>
-            <div className="mt-0.5 text-xl font-semibold tabular-nums text-ink">
-              <DashboardMetricValue value={tpm} />
-            </div>
-          </div>
-        </div>
+        ))}
       </div>
       <EChart option={option} className="h-56" />
       <ChartLegend className="justify-start pt-3" items={legendItems} />

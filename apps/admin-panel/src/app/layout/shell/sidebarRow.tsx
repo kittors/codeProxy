@@ -4,11 +4,16 @@ import { HUE_GLYPH, hueForIconName } from "@code-proxy/ui";
 import { ACTIVE_ICON_STROKE } from "./navModel";
 
 /**
- * 侧边栏图标的颜色：按全站的「图标 → 色相」注册表取（与页面里同一个图标的颜色一致），
- * 以前一整列灰图标，扫一眼分不出哪个是哪个。文字保持中性色，选中态仍靠白色小卡片表达。
+ * 侧边栏图标的颜色，跟随「外观 → 图标着色」：
+ * - 多彩：按全站的「图标 → 色相」注册表取（与页面里同一个图标的颜色一致），扫一眼就分得出
+ *   哪个是哪个；文字保持中性色，选中态靠白色小卡片表达；
+ * - 单色：平时是弱化的墨色，只有当前页的图标用强调色，一列图标里只有一个带颜色。
  */
-export const sidebarIconClass = (icon: LucideIcon) =>
-  HUE_GLYPH[hueForIconName((icon as { displayName?: string }).displayName ?? "")];
+export const sidebarIconClass = (icon: LucideIcon, active: boolean) =>
+  [
+    active ? "text-accent-ink" : "text-ink-3",
+    HUE_GLYPH[hueForIconName((icon as { displayName?: string }).displayName ?? "")],
+  ].join(" ");
 
 /**
  * 侧边栏顶层一行（单页分区的链接、多页分区的标题）共用的外观。
@@ -17,9 +22,12 @@ export const sidebarIconClass = (icon: LucideIcon) =>
  * 行宽正好缩到这个格子大小，所以图标在展开 / 收起之间一动不动，只有文字淡出、被裁掉。
  */
 
-/** 选中项：灰底上的一块白色小卡片（深色模式是浅一档的灰）加极轻投影。 */
+/**
+ * 选中项：灰底上的一块白色小卡片加堆叠投影；深色模式是卡片色加一道细边（投影在近黑底上
+ * 看不见）。都是阴影，不画 border。
+ */
 export const SIDEBAR_ACTIVE_CARD =
-  "bg-surface text-ink shadow-[0_0_0_0.5px_rgb(0_0_0/0.06),0_1px_3px_rgb(0_0_0/0.08)] dark:shadow-none";
+  "bg-surface text-ink shadow-[0_0_0_1px_rgb(0_0_0/0.05),0_1px_3px_rgb(0_0_0/0.08)] dark:shadow-[inset_0_0_0_1px_rgb(255_255_255/0.06)]";
 
 export const sidebarRowClass = (active: boolean) =>
   [
@@ -34,7 +42,7 @@ export function SidebarRowIcon({ icon: Icon, active }: { icon: LucideIcon; activ
       <Icon
         size={18}
         strokeWidth={active ? ACTIVE_ICON_STROKE : undefined}
-        className={sidebarIconClass(Icon)}
+        className={sidebarIconClass(Icon, active)}
         aria-hidden="true"
       />
     </span>

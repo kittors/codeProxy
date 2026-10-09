@@ -1,16 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  extractApiErrorCode,
-  extractApiErrorDetails,
-  isApiClientError,
   portalApi,
   normalizePeriodSpendingLimits,
   type EndUser,
   type EndUserAPIKey,
   type SavedPortalAccount,
 } from "@code-proxy/api-client";
-import { resolveLoginErrorMessage } from "../login/loginErrors";
+import type { LoginFailure } from "@features/login-lock";
+import { describeLoginFailure } from "../login/loginErrors";
 import { useTheme } from "@code-proxy/ui";
 import { Reveal } from "@code-proxy/ui";
 import { Modal } from "@code-proxy/ui";
@@ -307,7 +305,7 @@ export function ApiKeyLookupPage() {
   );
   const [loginUsername, setLoginUsername] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
-  const [loginError, setLoginError] = useState<string | null>(null);
+  const [loginError, setLoginError] = useState<LoginFailure | null>(null);
   const [loginBusy, setLoginBusy] = useState(false);
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
@@ -902,16 +900,8 @@ export function ApiKeyLookupPage() {
         if (firstUsable) await activateOwnedKey(firstUsable.id);
       }
     } catch (err) {
-      setLoginError(
-        resolveLoginErrorMessage({
-          t,
-          code: isApiClientError(err) ? extractApiErrorCode(err.payload) : "",
-          status: isApiClientError(err) ? err.status : 0,
-          isTimeout: isApiClientError(err) ? err.isTimeout : false,
-          fallbackMessage: err instanceof Error ? err.message : "",
-          details: isApiClientError(err) ? extractApiErrorDetails(err.payload) : {},
-        }),
-      );
+      // 结构化保存：表单据此显示剩余次数、锁定倒计时，并在锁定期间禁用登录按钮。
+      setLoginError(describeLoginFailure(t, err, { username: loginUsername }));
     } finally {
       setLoginBusy(false);
     }
@@ -920,15 +910,7 @@ export function ApiKeyLookupPage() {
   // Owns the session state the dialog has to update on success, so it stays on
   // the page rather than moving into the presentational modal.
   const submitPortalPasswordChange = useCallback(() => {
-    const describe = (err: unknown) =>
-      resolveLoginErrorMessage({
-        t,
-        code: isApiClientError(err) ? extractApiErrorCode(err.payload) : "",
-        status: isApiClientError(err) ? err.status : 0,
-        isTimeout: isApiClientError(err) ? err.isTimeout : false,
-        fallbackMessage: err instanceof Error ? err.message : "",
-        details: isApiClientError(err) ? extractApiErrorDetails(err.payload) : {},
-      });
+    const describe = (err: unknown) => describeLoginFailure(t, err).message;
 
     setPwdError(null);
     setPortalKeysBusy(true);
@@ -1283,7 +1265,7 @@ export function ApiKeyLookupPage() {
         >
           {/* Error */}
           {error && (
-            <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-300">
+            <div className="rounded-2xl bg-rose-500/10 p-4 text-sm text-rose-700 dark:bg-rose-400/15 dark:text-rose-300">
               {error}
             </div>
           )}
@@ -1434,7 +1416,7 @@ export function ApiKeyLookupPage() {
               {(activeTab === "models" || activeTab === "quickImport") &&
               !queriedKey &&
               portalUser ? (
-                <div className="bg-subtle rounded-2xl px-6 py-12 text-center text-sm text-slate-500 dark:text-white/55">
+                <div className="bg-subtle rounded-2xl px-6 py-12 text-center text-sm text-ink-3">
                   {t("apikey_lookup.operational_key_required", {
                     defaultValue:
                       "请先创建一把可用 Key；模型列表和快速导入需要凭证，用量与日志仍按账号聚合。",

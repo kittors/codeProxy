@@ -44,7 +44,7 @@ export function SystemUpdateCard({ className }: { className?: string }) {
         </Button>
       }
     >
-      <p className="text-sm text-slate-600 dark:text-white/60">{summary}</p>
+      <p className="text-sm text-ink-2">{summary}</p>
     </Card>
   );
 }

@@ -1,8 +1,8 @@
-import { ArrowUpRight, Check, KeyRound, Loader2, RotateCcw, ShieldCheck, TriangleAlert, X } from "lucide-react";
+import { ArrowUpRight, Check, KeyRound, Loader2, RotateCcw, ShieldCheck, X } from "lucide-react";
 import { useMemo, useState, type ComponentProps } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import type { ProxyPoolEntry } from "@code-proxy/api-client";
-import { Button, Textarea, ScrollFade } from "@code-proxy/ui";
+import { Button, Callout, Textarea, ScrollFade } from "@code-proxy/ui";
 import type { ProxyPoolSelect } from "@features/proxy-pool";
 import type { AccountProvider } from "../../model/catalog";
 import {
@@ -28,7 +28,7 @@ export interface CredentialImportProps {
 
 const STATUS_TONE: Record<ImportRow["status"], string> = {
   pending: "text-ink-3",
-  running: "text-sky-600 dark:text-sky-300",
+  running: "text-accent-ink colorful:text-sky-600 colorful:dark:text-sky-300",
   ok: "text-emerald-700 dark:text-emerald-300",
   error: "text-rose-600 dark:text-rose-300",
 };
@@ -89,7 +89,7 @@ export function CredentialImport({
             {rows.map((row) => (
               <li
                 key={row.id}
-                className="flex items-center gap-2.5 rounded-lg border border-line bg-surface px-3 py-2"
+                className="flex items-center gap-2.5 rounded-lg bg-subtle px-3 py-2"
               >
                 <span className={["shrink-0", STATUS_TONE[row.status]].join(" ")}>
                   <RowIcon status={row.status} />
@@ -144,10 +144,10 @@ export function CredentialImport({
   return (
     <ScrollFade className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6">
       <div className="grid gap-4">
-        <div className="flex items-start gap-2 rounded-lg border border-amber-300/60 bg-amber-50 px-3 py-2.5 text-xs text-amber-800 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-200">
-          <TriangleAlert size={14} className="mt-0.5 shrink-0" aria-hidden="true" />
-          <span>{t(`${base}.risk`)}</span>
-        </div>
+        {/* 风险提示用共享的提示条：淡底 + 琥珀图标；简约风格正文保持中性色，多彩风格正文是琥珀字。 */}
+        <Callout tone="warning" className="colorful:text-amber-800 colorful:dark:text-amber-200">
+          {t(`${base}.risk`)}
+        </Callout>
         {steps.length > 0 ? (
           <ol className="grid list-decimal gap-1 pl-5 text-sm text-ink-2 marker:text-ink-3">
             {steps.map((step, index) => (
@@ -161,7 +161,7 @@ export function CredentialImport({
             components={{
               link: (
                 <a
-                  className="inline-flex items-center gap-0.5 text-sky-600 underline-offset-2 hover:underline dark:text-sky-300"
+                  className="inline-flex items-center gap-0.5 text-accent-ink underline-offset-2 hover:underline colorful:text-sky-600 colorful:dark:text-sky-300"
                   href={t(`${base}.where_url`)}
                   target="_blank"
                   rel="noreferrer noopener"

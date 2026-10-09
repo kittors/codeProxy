@@ -1,7 +1,7 @@
-import { useEffect, useMemo, type CSSProperties, type ReactNode } from "react";
+import { Fragment, useEffect, useMemo, type CSSProperties, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { CircleAlert, Info, RefreshCw } from "lucide-react";
-import { Button, Skeleton, surface, useTheme } from "@code-proxy/ui";
+import { Button, Skeleton, surface, useChartAppearanceKey, useTheme } from "@code-proxy/ui";
 import { useAuth } from "@app/providers/AuthProvider";
 import { ActivityHeatmapCard, FlowSankeyCard } from "./components/FlowHeatmapCards";
 import { FailureCard } from "./components/FailureCard";
@@ -33,6 +33,8 @@ export function MonitorPage() {
     state: { mode: themeMode },
   } = useTheme();
   const isDark = themeMode === "dark";
+  // 图表颜色写在 echarts option 里，外观的图表配色变了（另一个标签页里改的）要整组重建。
+  const chartAppearanceKey = useChartAppearanceKey();
   const { can } = useAuth();
   const view = useMonitorQueryState();
   const { query } = view;
@@ -91,7 +93,7 @@ export function MonitorPage() {
       ) : null}
 
       {overview && health ? (
-        <>
+        <Fragment key={chartAppearanceKey}>
           <Rise index={0}>
             <section className="grid gap-4 xl:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">
               <HealthCard report={health} loading={switching} legacy={legacy} />
@@ -153,7 +155,7 @@ export function MonitorPage() {
               <ActivityHeatmapCard overview={overview} {...shared} />
             </section>
           </Rise>
-        </>
+        </Fragment>
       ) : data.error ? (
         <section
           className={`${surface({ radius: "3xl" })} flex flex-col items-center gap-3 px-6 py-14 text-center`}
@@ -189,9 +191,9 @@ function Rise({ index, children }: { index: number; children: ReactNode }) {
   );
 }
 
-/** 首次加载的骨架：与真实版面同一套栅格，数据到位时不跳动。 */
+/** 首次加载的骨架：与真实版面同一套栅格和卡片内边距（Card 默认 p-4），数据到位时不跳动。 */
 function MonitorSkeleton() {
-  const block = `${surface({ radius: "3xl" })} p-5`;
+  const block = `${surface({ radius: "3xl" })} p-4`;
   return (
     <div className="space-y-4" aria-hidden="true">
       <div className="grid gap-4 xl:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">

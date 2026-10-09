@@ -198,60 +198,39 @@ export const downloadBlob = (blob: Blob, filename: string) => {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
 
+/*
+ * 日志级别与状态码的标签都只用淡底、不描边。警告琥珀、错误红在两种配色风格下都有；
+ * info 与 2xx / 3xx 的基础形态（简约风格）是中性标签，多彩风格下叠回 info 天蓝标签加天蓝行底、
+ * 2xx 绿、3xx 天蓝。debug / trace 一直是中性的。
+ */
+export const LOG_NEUTRAL_BADGE = "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]";
+export const LOG_MUTED_BADGE = "bg-ink/[0.05] text-ink-3 dark:bg-white/[0.07]";
+const WARN_BADGE = "bg-amber-500/10 text-amber-700 dark:bg-amber-400/15 dark:text-amber-300";
+const ERROR_BADGE = "bg-rose-500/10 text-rose-700 dark:bg-rose-400/15 dark:text-rose-300";
+const INFO_BADGE = `${LOG_NEUTRAL_BADGE} colorful:bg-sky-50 colorful:text-sky-700 colorful:dark:bg-sky-500/10 colorful:dark:text-sky-200`;
+const SUCCESS_BADGE = `${LOG_NEUTRAL_BADGE} colorful:bg-emerald-50 colorful:text-emerald-700 colorful:dark:bg-emerald-500/10 colorful:dark:text-emerald-200`;
+
 export const getLevelStyles = (level: LogLevel): { badge: string; row: string } => {
   switch (level) {
     case "info":
-      return {
-        badge:
-          "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/25 dark:bg-sky-500/10 dark:text-sky-200",
-        row: "bg-sky-50/40 dark:bg-sky-500/5",
-      };
+      return { badge: INFO_BADGE, row: "colorful:bg-sky-50/40 colorful:dark:bg-sky-500/5" };
     case "warn":
-      return {
-        badge:
-          "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-200",
-        row: "bg-amber-50/40 dark:bg-amber-500/5",
-      };
+      return { badge: WARN_BADGE, row: "bg-amber-500/[0.05] dark:bg-amber-400/[0.06]" };
     case "error":
     case "fatal":
-      return {
-        badge:
-          "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-200",
-        row: "bg-rose-50/40 dark:bg-rose-500/5",
-      };
+      return { badge: ERROR_BADGE, row: "bg-rose-500/[0.05] dark:bg-rose-400/[0.06]" };
     case "debug":
-      return {
-        badge:
-          "border-slate-900/8 bg-slate-100 text-slate-700 dark:border-white/8 dark:bg-white/10 dark:text-white/70",
-        row: "",
-      };
     case "trace":
-      return {
-        badge:
-          "border-slate-900/8 bg-slate-50 text-slate-600 dark:border-white/8 dark:bg-white/5 dark:text-white/55",
-        row: "",
-      };
+      return { badge: LOG_MUTED_BADGE, row: "" };
     default:
-      return {
-        badge:
-          "border-slate-900/8 bg-slate-50 text-slate-700 dark:border-white/8 dark:bg-white/5 dark:text-white/70",
-        row: "",
-      };
+      return { badge: LOG_NEUTRAL_BADGE, row: "" };
   }
 };
 
 export const getStatusStyles = (statusCode: number): string => {
-  if (statusCode >= 200 && statusCode < 300) {
-    return "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-200";
-  }
-  if (statusCode >= 300 && statusCode < 400) {
-    return "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/25 dark:bg-sky-500/10 dark:text-sky-200";
-  }
-  if (statusCode >= 400 && statusCode < 500) {
-    return "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-200";
-  }
-  if (statusCode >= 500) {
-    return "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-200";
-  }
-  return "border-slate-900/8 bg-slate-50 text-slate-700 dark:border-white/8 dark:bg-white/5 dark:text-white/70";
+  if (statusCode >= 500) return ERROR_BADGE;
+  if (statusCode >= 400) return WARN_BADGE;
+  if (statusCode >= 300) return INFO_BADGE;
+  if (statusCode >= 200) return SUCCESS_BADGE;
+  return LOG_NEUTRAL_BADGE;
 };

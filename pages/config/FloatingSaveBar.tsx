@@ -15,26 +15,27 @@ interface FloatingSaveBarProps {
   reloadDisabled?: boolean;
 }
 
+// 状态胶囊只用淡底 + 同色字，不描边（语义色：成功绿、待保存琥珀、保存中天蓝、失败红）。
 const STATUS_TONE: Record<SaveBarStatus, { icon?: ReactNode; tone: string; dot?: boolean }> = {
   saved: {
     icon: <Check size={12} strokeWidth={3} />,
-    tone: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-500/15 dark:text-emerald-300",
+    tone: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
   },
   dirty: {
     dot: true,
-    tone: "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-400/20 dark:bg-amber-500/15 dark:text-amber-200",
+    tone: "bg-amber-500/10 text-amber-800 dark:text-amber-200",
   },
   saving: {
-    tone: "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-400/20 dark:bg-sky-500/15 dark:text-sky-200",
+    tone: "bg-sky-500/10 text-sky-700 dark:text-sky-300",
   },
   loading: {
-    tone: "border-line bg-subtle text-ink-2",
+    tone: "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]",
   },
   error: {
-    tone: "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-400/20 dark:bg-rose-500/15 dark:text-rose-300",
+    tone: "bg-rose-500/10 text-rose-700 dark:text-rose-300",
   },
   offline: {
-    tone: "border-line bg-subtle text-ink-3",
+    tone: "bg-ink/[0.05] text-ink-3 dark:bg-white/[0.07]",
   },
 };
 
@@ -126,7 +127,7 @@ export function FloatingSaveBar({
       >
         <div
           className={[
-            "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold",
+            "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold",
             "transition-all duration-300",
             displayTone.tone,
           ].join(" ")}
@@ -140,8 +141,6 @@ export function FloatingSaveBar({
             </span>
           )}
         </div>
-
-        <div className="h-5 w-px bg-line" />
 
         <div className="flex items-center gap-1.5">
           <Button

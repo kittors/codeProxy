@@ -31,15 +31,16 @@ type ButtonVariant =
 type ButtonSize = "xs" | "sm" | "md";
 
 /**
- * 所有按钮都是胶囊形，带一条 1px 描边位（默认透明），这样有描边的「默认」按钮和实心按钮
- * 放在一起时高度、内容位置完全一致。
+ * 所有按钮都是胶囊形。轮廓一律用阴影描边（shadow-control），不用 border：border 占布局，
+ * 以前为了让有描边的「默认」按钮和实心按钮等高，每个按钮都要带一条透明描边位；阴影不占
+ * 布局，两种按钮天然等高，描边也不会在深浅底色上各自显成一道硬线。
  *
  * 只保留按下时的轻微缩小作为触感反馈，去掉了悬停上浮——一排按钮跟着鼠标上下跳，会让
  * 工具栏显得浮躁。键盘焦点统一走全局 :focus-visible 的蓝色描边（styles/index.css），
  * 不再按颜色变体各配一圈光晕。
  */
 const BUTTON_BASE_CLASS =
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full border border-transparent font-medium transition-[background-color,border-color,color,box-shadow,scale] duration-150 ease-soft active:scale-[0.97] disabled:pointer-events-none disabled:opacity-45";
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full font-medium transition-[background-color,color,box-shadow,scale] duration-150 ease-soft active:scale-[0.97] disabled:pointer-events-none disabled:opacity-45";
 
 const BUTTON_SIZE_CLASSES: Record<ButtonSize, { iconOnly: string; text: string }> = {
   xs: {
@@ -86,8 +87,8 @@ function isIconOnlyButtonChildren(children: ReactNode): boolean {
 }
 
 /**
- * - default：白底 + 细描边，和输入框同一套轮廓，是页面上最常见的次要操作。
- * - primary：墨色实心（深色模式反转成浅色实心），一屏通常只放一个。
+ * - default：白底 + 阴影描边，和输入框同一套轮廓，是页面上最常见的次要操作。
+ * - primary：强调色实心（多彩风格默认墨色，深色模式反转成浅色实心；简约风格是蓝），一屏通常只放一个。
  * - error / success / warning：只给确实带后果的操作用，颜色来自重新校准过的状态色阶。
  * - ghost：无底色，悬停才出现浅灰叠层，用在工具栏图标和行内操作。
  * - ghost-danger：同 ghost，但文字与悬停底是红色，给行内的删除这类操作；
@@ -99,8 +100,8 @@ function isIconOnlyButtonChildren(children: ReactNode): boolean {
  */
 const BUTTON_VARIANT_CLASSES: Record<Exclude<ButtonVariant, "secondary" | "danger">, string> = {
   default:
-    "border-line-strong bg-surface text-ink shadow-xs hover:bg-hover active:bg-selected dark:shadow-none",
-  primary: "bg-accent text-accent-fg hover:bg-accent-hover",
+    "bg-surface text-ink shadow-control hover:bg-surface-hover hover:shadow-control-hover active:bg-selected",
+  primary: "bg-accent text-accent-fg shadow-xs hover:bg-accent-hover",
   error:
     "bg-rose-500 text-white hover:bg-rose-600 active:bg-rose-700 dark:hover:bg-rose-400 dark:active:bg-rose-600",
   success:
@@ -112,9 +113,14 @@ const BUTTON_VARIANT_CLASSES: Record<Exclude<ButtonVariant, "secondary" | "dange
   "ghost-danger":
     "bg-transparent text-rose-600 hover:bg-rose-500/10 hover:text-rose-700 active:bg-rose-500/15 dark:text-rose-400 dark:hover:text-rose-300",
   "secondary-danger":
-    "border-line-strong bg-surface text-rose-600 shadow-xs hover:bg-rose-500/5 active:bg-rose-500/10 dark:text-rose-400 dark:shadow-none dark:hover:bg-rose-500/10",
+    "bg-surface text-rose-600 shadow-control hover:bg-rose-500/5 hover:shadow-control-hover active:bg-rose-500/10 dark:text-rose-400 dark:hover:bg-rose-500/10",
 };
 
+/**
+ * 按钮里的图标：图标着色为「多彩」时按图标含义上色（刷新蓝绿、查看天蓝、删除玫红……），
+ * 只对中性的 default / ghost 生效，实色按钮的图标跟随按钮文字色；图标着色为「单色」时
+ * HUE_BUTTON_ICON 的 icon-hue: 类不生效，图标跟随按钮文字色。
+ */
 export function buttonClassName({
   className,
   iconOnly = false,
@@ -126,7 +132,7 @@ export function buttonClassName({
   iconOnly?: boolean;
   size?: ButtonSize;
   variant?: ButtonVariant;
-  /** 按钮里图标的色相（只对中性的 default / ghost 生效，实色按钮的图标跟随按钮文字色）。 */
+  /** 按钮里图标的色相（只对中性的 default / ghost 生效）。 */
   iconHue?: Hue | null;
 }) {
   const resolvedVariant =
@@ -143,8 +149,7 @@ export function buttonClassName({
 }
 
 /**
- * 按钮里第一个 lucide 图标的色相：工具栏、行内操作的图标按本身的含义上色（刷新蓝绿、查看天蓝、
- * 删除玫红……），不再一排灰色；关闭、箭头、「更多」这类纯操作提示保持中性（见 theme/hues）。
+ * 按钮里第一个 lucide 图标的色相；关闭、箭头、「更多」这类纯操作提示保持中性（见 theme/hues）。
  */
 function buttonIconHue(children: ReactNode): Hue | null {
   for (const child of flattenButtonChildren(children)) {

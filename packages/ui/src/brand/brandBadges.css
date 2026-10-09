@@ -1,6 +1,7 @@
 /*
  * 旗舰会员徽章的流光：一道斜向高光每隔几秒从左扫到右。只在旗舰档（Pro 20x、Max 20x、
- * SuperGrok Heavy……）上出现，用来和高阶档拉开差距；减少动态效果时不播放。
+ * SuperGrok Heavy……）上出现，用来和高阶档拉开差距；只在「外观 → 配色风格」为多彩时播放，
+ * 简约风格与减少动态效果时不出现。徽章本身是 relative + overflow-hidden（见 BrandBadges.tsx）。
  */
 @keyframes brand-badge-shine {
   0%,
@@ -12,7 +13,7 @@
   }
 }
 
-.brand-badge-shine::after {
+:where([data-palette="colorful"]) .brand-badge-shine::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -23,7 +24,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .brand-badge-shine::after {
+  :where([data-palette="colorful"]) .brand-badge-shine::after {
     animation: none;
     display: none;
   }

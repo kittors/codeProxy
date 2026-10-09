@@ -50,11 +50,13 @@ export function ProviderDeleteConfirm({
   );
 }
 
+// 名称前的小圆点始终带颜色（新增绿、更新蓝、删除红）；大数字简约风格一律墨色，
+// 多彩风格跟圆点同色系。
 const TILES = [
-  { key: "added", dot: "bg-emerald-500", tone: "text-emerald-700 dark:text-emerald-300" },
-  { key: "changed", dot: "bg-sky-500", tone: "text-sky-700 dark:text-sky-300" },
-  { key: "removed", dot: "bg-rose-500", tone: "text-rose-700 dark:text-rose-300" },
-  { key: "duplicateEntriesRemoved", dot: "bg-ink-4", tone: "text-ink-2" },
+  { key: "added", dot: "bg-emerald-500", tone: "colorful:text-emerald-700 colorful:dark:text-emerald-300" },
+  { key: "changed", dot: "bg-sky-500", tone: "colorful:text-sky-700 colorful:dark:text-sky-300" },
+  { key: "removed", dot: "bg-rose-500", tone: "colorful:text-rose-700 colorful:dark:text-rose-300" },
+  { key: "duplicateEntriesRemoved", dot: "bg-ink-4", tone: "" },
 ] as const;
 
 // 读屏用完整句子（沿用原来的「新增：N」文案），视觉上拆成小标签 + 大数字。
@@ -151,13 +153,13 @@ export function ProviderImportPreviewModal({
                 key={tile.key}
                 role="group"
                 aria-label={t(TILE_ARIA[tile.key], { count: diff[tile.key] })}
-                className="rounded-2xl border border-line bg-surface px-3.5 py-3"
+                className="rounded-2xl bg-subtle px-3.5 py-3"
               >
                 <p className="flex items-center gap-1.5 text-xs text-ink-3">
                   <span aria-hidden="true" className={["h-1.5 w-1.5 rounded-full", tile.dot].join(" ")} />
                   {t(TILE_LABEL[tile.key])}
                 </p>
-                <p className={["mt-1 text-2xl font-semibold tabular-nums", tile.tone].join(" ")}>
+                <p className={["mt-1 text-2xl font-semibold tabular-nums text-ink", tile.tone].join(" ")}>
                   {diff[tile.key]}
                 </p>
               </div>

@@ -1160,8 +1160,8 @@ export function ProvidersPage() {
 
   return (
     <div
-      data-testid="providers-page-shell"
-      className="flex min-h-0 flex-1 flex-col gap-6 overflow-hidden"
+      data-testid="providers-page-shell" data-page-fill="always"
+      className="-mx-3 flex min-h-0 flex-1 flex-col gap-6 overflow-hidden px-3"
     >
       {canWriteProviders ? (
         <input

@@ -38,7 +38,8 @@ export function AuthFileWarmupButton({ file, actionSize, actionIconSize }: AuthF
         }}
         title={t("antigravity_quota.warmup")}
         aria-label={t("antigravity_quota.warmup")}
-        className="text-amber-500 hover:text-amber-600 dark:text-amber-400"
+        // 纯图标按钮，琥珀是「预热」这个操作的图标色，跟随图标着色设置。
+        className="icon-hue:text-amber-500 icon-hue:hover:text-amber-600 icon-hue:dark:text-amber-400"
       >
         {loading ? (
           <Loader2 size={actionIconSize} className="animate-spin" />

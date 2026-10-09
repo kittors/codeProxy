@@ -8,16 +8,16 @@
     "packages/domain/src/auth-files/authFiles.ts": 2142,
     "packages/domain/src/ccswitch/ccswitchImport.ts": 845,
     "packages/ui/src/data-table/DataTable.tsx": 2621,
-    "pages/api-key-lookup/ApiKeyLookupPage.tsx": 1607,
-    "pages/api-keys/ApiKeysPage.tsx": 1066,
+    "pages/api-key-lookup/ApiKeyLookupPage.tsx": 1589,
+    "pages/api-keys/ApiKeysPage.tsx": 1065,
     "pages/auth-files/AuthFilesPage.tsx": 1063,
-    "pages/auth-files/components/AuthFileDetailModal.tsx": 1855,
-    "pages/auth-files/components/AuthFilesFilesTab.tsx": 2069,
+    "pages/auth-files/components/AuthFileDetailModal.tsx": 1841,
+    "pages/auth-files/components/AuthFilesFilesTab.tsx": 2063,
     "pages/auth-files/hooks/useAuthFilesDetailEditors.ts": 1323,
     "pages/auth-files/hooks/useAuthFilesFilesPresentation.tsx": 921,
     "pages/auth-files/hooks/useAuthFilesStatusState.ts": 1298,
     "pages/identity-fingerprint/IdentityFingerprintPage.tsx": 2020,
-    "pages/models/ModelsPage.tsx": 1201,
+    "pages/models/ModelsPage.tsx": 1193,
     "pages/providers/components/ProvidersPageContent.tsx": 1503
   }
 }

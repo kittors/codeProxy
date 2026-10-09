@@ -25,12 +25,12 @@ export function imageStageClassName({
       : "h-[clamp(240px,42vh,400px)] sm:h-[clamp(260px,38vh,440px)]";
 
   // 只用语义令牌：失败和面板里的危险提示条同一种样子（玫红淡底 + 中性正文），
-  // 画布和其它凹陷区域一样用 subtle 底。
+  // 画布和其它凹陷区域一样用 subtle 底。弹窗里的画布不描边：淡底本身就分出了这块区域。
   const tone = failed
-    ? "border-rose-500/20 bg-rose-500/[0.08] text-ink-2"
+    ? "bg-rose-500/[0.08] text-ink-2"
     : hasImage
-      ? "border-line bg-subtle"
-      : "border-line bg-subtle text-ink-3";
+      ? "bg-subtle"
+      : "bg-subtle text-ink-3";
 
-  return ["relative overflow-hidden rounded-2xl border transition-all duration-200", size, tone].join(" ");
+  return ["relative overflow-hidden rounded-2xl transition-all duration-200", size, tone].join(" ");
 }

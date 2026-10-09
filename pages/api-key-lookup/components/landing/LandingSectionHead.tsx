@@ -35,16 +35,16 @@ export function LandingSectionHead({
         ].join(" ")}
       >
         <span className="text-ink">{index}</span>
-        <span className="h-px w-8 bg-slate-900/15 dark:bg-white/15" aria-hidden />
-        <span className="tracking-[0.1em] text-slate-400 dark:text-white/35">{eyebrow}</span>
+        <span className="h-px w-8 bg-line-strong" aria-hidden />
+        <span className="tracking-[0.1em] text-ink-3">{eyebrow}</span>
       </div>
 
-      <h2 className="mt-6 font-display text-3xl font-bold leading-tight tracking-tight text-slate-950 dark:text-white sm:text-4xl">
+      <h2 className="mt-6 font-display text-3xl font-bold leading-tight tracking-tight text-ink sm:text-4xl">
         {title}
       </h2>
 
       {subtitle ? (
-        <p className="mt-5 text-base leading-8 text-slate-600 dark:text-white/55">{subtitle}</p>
+        <p className="mt-5 text-base leading-8 text-ink-2">{subtitle}</p>
       ) : null}
     </motion.div>
   );

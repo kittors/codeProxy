@@ -23,12 +23,17 @@ interface ProxyPoolSelectProps {
   showDetails?: boolean;
 }
 
+/**
+ * 与代理池页同一套分档。简约风格：快是绿、慢是琥珀、失败是红；中等延迟（300ms–1s）属于正常范围，
+ * 中性标签 + 数字就够了。多彩风格下中等叠回琥珀、慢叠回橙色，每一档都有自己的颜色。
+ */
 const latencyToneClasses: Record<ProxyLatencyTone, string> = {
-  none: "bg-slate-100 text-slate-500 dark:bg-neutral-900 dark:text-white/45",
-  fast: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300",
-  medium: "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-200",
-  slow: "bg-orange-50 text-orange-700 dark:bg-orange-950/30 dark:text-orange-200",
-  failed: "bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-300",
+  none: "bg-ink/[0.05] text-ink-3 dark:bg-white/[0.07]",
+  fast: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+  medium:
+    "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07] colorful:bg-amber-50 colorful:text-amber-700 colorful:dark:bg-amber-950/30 colorful:dark:text-amber-200",
+  slow: "bg-amber-500/10 text-amber-700 dark:text-amber-300 colorful:bg-orange-50 colorful:text-orange-700 colorful:dark:bg-orange-950/30 colorful:dark:text-orange-200",
+  failed: "bg-rose-500/10 text-rose-700 dark:text-rose-300",
 };
 
 export function ProxyPoolSelect({
@@ -75,23 +80,23 @@ export function ProxyPoolSelect({
         value: id,
         triggerLabel: showDetails ? (
           <span className="flex min-w-0 items-center gap-2">
-            <Network size={14} className="shrink-0 text-slate-400 dark:text-white/45" />
+            <Network size={14} className="shrink-0 text-ink-3" />
             <span className="min-w-0 flex-1 truncate">{displayName}</span>
-            <span className="shrink-0 text-xs font-semibold text-slate-500 dark:text-white/50">
+            <span className="shrink-0 text-xs font-semibold text-ink-3">
               {protocol} · {endpoint}
             </span>
           </span>
         ) : undefined,
         label: (
           <span className="flex min-w-0 flex-1 items-center gap-2">
-            <Network size={14} className="shrink-0 text-slate-400 dark:text-white/45" />
+            <Network size={14} className="shrink-0 text-ink-3" />
             <span className="min-w-0 flex-1">
               <span className="block truncate">
                 {displayName}
-                <span className="ml-1 text-xs text-slate-500 dark:text-white/50">({id})</span>
+                <span className="ml-1 text-xs text-ink-3">({id})</span>
               </span>
               {showDetails ? (
-                <span className="mt-0.5 flex min-w-0 flex-wrap items-center gap-1.5 text-xs text-slate-500 dark:text-white/50">
+                <span className="mt-0.5 flex min-w-0 flex-wrap items-center gap-1.5 text-xs text-ink-3">
                   <span className="font-semibold">{protocol}</span>
                   <span className="font-mono">{endpoint}</span>
                   {entry.description ? <span className="truncate">{entry.description}</span> : null}
@@ -116,7 +121,7 @@ export function ProxyPoolSelect({
               </span>
             ) : null}
             {!entry.enabled ? (
-              <span className="shrink-0 rounded-md bg-amber-500/10 px-1.5 py-0.5 text-2xs font-semibold text-amber-700 dark:text-amber-200">
+              <span className="shrink-0 rounded-md bg-amber-500/10 px-1.5 py-0.5 text-2xs font-semibold text-amber-700 dark:text-amber-300">
                 {t("proxies.disabled")}
               </span>
             ) : null}
@@ -138,7 +143,7 @@ export function ProxyPoolSelect({
   return (
     <div className="space-y-2">
       {label ? (
-        <p className="text-xs font-semibold text-slate-700 dark:text-white/75">{label}</p>
+        <p className="text-xs font-semibold text-ink-2">{label}</p>
       ) : null}
       <Select
         value={value.trim()}
@@ -148,7 +153,7 @@ export function ProxyPoolSelect({
         aria-label={ariaLabel ?? label ?? t("proxies.select_label")}
         className="w-full"
       />
-      {hint ? <p className="text-xs text-slate-500 dark:text-white/55">{hint}</p> : null}
+      {hint ? <p className="text-xs text-ink-3">{hint}</p> : null}
     </div>
   );
 }

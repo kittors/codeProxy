@@ -15,7 +15,7 @@ export function ProviderModelChips({
 }: ProviderModelChipsProps) {
   if (!models.length) {
     return emptyLabel ? (
-      <span className="text-xs text-slate-400 dark:text-white/40">{emptyLabel}</span>
+      <span className="text-xs text-ink-3">{emptyLabel}</span>
     ) : null;
   }
 
@@ -28,8 +28,8 @@ export function ProviderModelChips({
   };
 
   // Same flat, squared, 2xs badge as the metric chips and the AI account card.
-  // 每个模型按自己的厂商品牌色上淡底（claude 珊瑚橙、gpt 绿……），和全站模型标签同色；
-  // 「+N」代表一组不同厂商的模型，保持中性。
+  // 外观取全站模型标签（modelVendorBrand）：简约风格是中性淡底；多彩风格每个模型按自己的
+  // 厂商品牌色上淡底（claude 珊瑚橙、gpt 绿……）。「+N」代表一组不同厂商的模型，保持中性。
   //
   // Chips are sized by their text, not by an equal-width track. On a 3-column
   // grid every chip was as wide as a third of the card, so "gpt-5.2" sat in a
@@ -68,7 +68,7 @@ export function ProviderModelChips({
           placement="top"
           className="shrink-0"
         >
-          <span className="inline-flex h-5 shrink-0 cursor-default items-center rounded-md bg-slate-100 px-1.5 text-2xs font-semibold leading-none tabular-nums text-slate-500 dark:bg-white/10 dark:text-white/55">
+          <span className="inline-flex h-5 shrink-0 cursor-default items-center rounded-md bg-ink/[0.05] px-1.5 text-2xs font-semibold leading-none tabular-nums text-ink-3 dark:bg-white/[0.07]">
             +{remaining}
           </span>
         </HoverTooltip>

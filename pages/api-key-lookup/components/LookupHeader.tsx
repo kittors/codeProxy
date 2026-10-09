@@ -26,7 +26,7 @@ export interface LookupHeaderProps {
 }
 
 const ICON_BUTTON_CLASS =
-  "inline-flex items-center rounded-full p-2 text-slate-600 transition-colors duration-150 hover:bg-slate-900/5 dark:text-white/70 dark:hover:bg-white/10";
+  "inline-flex items-center rounded-full p-2 text-ink-2 transition-colors duration-150 hover:bg-hover hover:text-ink";
 
 export function LookupHeader({
   t,
@@ -58,19 +58,19 @@ export function LookupHeader({
         scrolled ? "px-3 pt-2" : "px-4 pt-4",
         // 顶栏收起是为了给结果页的 sticky tabs 让出视口；落地页没有 tabs，
         // 且导航与 CTA 需要全程可达，因此落地态下始终保持展开。
-        collapsed
-          ? "pointer-events-none -translate-y-full border-transparent opacity-0"
-          : "translate-y-0 opacity-100",
+        collapsed ? "pointer-events-none -translate-y-full opacity-0" : "translate-y-0 opacity-100",
       ].join(" ")}
     >
+      {/*
+        浮岛的轮廓是伪元素细边（cp-edge），不画 border；滚动后底色加实一点、再给卡片投影，
+        和页面内容拉开前后层次。底色用卡片色的半透明：深色下是近黑的卡片色，不再是一层发灰的白。
+      */}
       <div
         className={[
-          "mx-auto flex h-14 max-w-screen-xl items-center justify-between",
-          "motion-safe:transition-[background-color,box-shadow,border-color] motion-safe:duration-300",
-          "rounded-full border px-4 backdrop-blur-xl sm:px-5",
-          scrolled
-            ? "border-slate-900/10 bg-white/85 shadow-[0_10px_40px_-18px_rgba(15,23,42,0.35)] dark:border-white/12 dark:bg-white/[0.07]"
-            : "border-slate-900/6 bg-white/60 dark:border-white/8 dark:bg-white/[0.03]",
+          "cp-edge mx-auto flex h-14 max-w-screen-xl items-center justify-between",
+          "motion-safe:transition-[background-color,box-shadow] motion-safe:duration-300",
+          "rounded-full px-4 backdrop-blur-xl sm:px-5",
+          scrolled ? "bg-surface/85 shadow-card" : "bg-surface/60",
         ].join(" ")}
       >
         <LookupBrand showLanding={showLanding} title={t("apikey_lookup.title")} />
@@ -83,19 +83,16 @@ export function LookupHeader({
                   type="button"
                   aria-label={displayName}
                   data-testid="apikey-lookup-account-menu"
-                  className="inline-flex max-w-[34vw] items-center gap-1.5 rounded-full px-2 py-1 text-sm font-medium text-slate-700 transition-colors duration-150 hover:bg-slate-900/5 dark:text-white/80 dark:hover:bg-white/10 sm:max-w-56"
+                  className="inline-flex max-w-[34vw] items-center gap-1.5 rounded-full px-2 py-1 text-sm font-medium text-ink-2 transition-colors duration-150 hover:bg-hover hover:text-ink sm:max-w-56"
                 >
                   <Key size={14} className="shrink-0" />
                   <span className="min-w-0 truncate">{displayName}</span>
                   {extraKeyCount > 0 ? (
-                    <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-2xs font-medium text-slate-600 dark:bg-white/10 dark:text-white/70">
+                    <span className="shrink-0 rounded-full bg-ink/[0.05] px-1.5 py-0.5 text-2xs font-medium text-ink-2 dark:bg-white/[0.07]">
                       +{extraKeyCount}
                     </span>
                   ) : null}
-                  <ChevronRight
-                    size={14}
-                    className="shrink-0 rotate-90 text-slate-400 dark:text-white/40"
-                  />
+                  <ChevronRight size={14} className="shrink-0 rotate-90 text-ink-3" />
                 </button>
               </DropdownMenu.Trigger>
               <DropdownMenu.Portal>
@@ -117,7 +114,7 @@ export function LookupHeader({
                         <span className="min-w-0 flex-1">
                           {t("apikey_lookup.switch_account", { defaultValue: "切换账号" })}
                         </span>
-                        <ChevronRight size={14} className="ml-auto shrink-0 text-slate-400" />
+                        <ChevronRight size={14} className="ml-auto shrink-0 text-ink-3" />
                       </DropdownMenu.SubTrigger>
                       <DropdownMenu.Portal>
                         <DropdownMenu.SubContent
@@ -153,9 +150,10 @@ export function LookupHeader({
                                   {account.user.display_name || account.user.username}
                                 </span>
                                 {isCurrent ? (
+                                  // 当前账号是「选中项」：简约风格下对勾是强调色，多彩风格下是绿色。
                                   <Check
                                     size={15}
-                                    className="ml-auto shrink-0 text-emerald-600 dark:text-emerald-400"
+                                    className="ml-auto shrink-0 text-accent-ink colorful:text-emerald-600 colorful:dark:text-emerald-400"
                                   />
                                 ) : null}
                               </DropdownMenu.Item>

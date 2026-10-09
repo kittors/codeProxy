@@ -53,7 +53,10 @@ export interface ConfigSectionDef {
   id: ConfigSectionId;
   group: ConfigNavGroupId;
   icon: LucideIcon;
-  /** 分区的色相：同一组里相邻分区颜色分得开；导航胶囊、分区标题的图标块都用它。 */
+  /**
+   * 分区的色相：同一组里相邻分区颜色分得开。图标着色多彩时用于分区标题的图标块与胶囊图标，
+   * 配色风格多彩时用于选中胶囊的淡底；都关掉时是中性线性图标 + 强调色选中态。
+   */
   hue: Hue;
   /** 自定义内容（规则编辑器、准入面板）的分区没有字段，搜索时额外匹配这些词。 */
   keywords?: string[];
@@ -67,7 +70,10 @@ export interface ConfigGroupDef {
   hue: Hue;
 }
 
-/** 顶部分组页签：四组各一个色相，选中时图标块变成该色相的实色。 */
+/**
+ * 顶部分组页签：四组各一个图标与色相。图标着色多彩时选中那组的图标块变成该色相的实色，
+ * 单色时选中靠强调色表达。
+ */
 export const CONFIG_GROUPS: readonly ConfigGroupDef[] = [
   { id: "basics", icon: SlidersHorizontal, hue: "blue" },
   { id: "behavior", icon: Workflow, hue: "violet" },

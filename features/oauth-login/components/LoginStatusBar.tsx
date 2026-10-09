@@ -74,7 +74,8 @@ export function LoginStatusBar({
     <div
       role="status"
       aria-live="polite"
-      className="flex min-h-12 items-center gap-3 border-t border-line bg-subtle/70 px-5 py-2.5 sm:px-6"
+      // 面板底部的一行状态：不画分隔线、不垫底色，和上面的步骤靠留白分开。
+      className="flex min-h-12 items-center gap-3 px-5 py-2.5 sm:px-6"
     >
       <span className="relative grid h-4 w-4 shrink-0 place-items-center" aria-hidden="true">
         {dot ? (

@@ -109,16 +109,17 @@ export function ChannelPickerFilters({
         </div>
       </div>
 
-      <div className="border-t border-line pt-3">
+      {/* 两行之间靠留白分开，不画分隔线。 */}
+      <div>
         <div className="flex flex-wrap items-center gap-2">
           <span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-medium text-ink-2">
-            <Tags size={14} className={iconHueClass(Tags)} aria-hidden="true" />
+            <Tags size={14} className={`text-ink-3 ${iconHueClass(Tags)}`} aria-hidden="true" />
             {t("content_moderation.tags")}
           </span>
           {tags.map((tag) => (
             <span
               key={tag}
-              className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface py-0.5 pr-1 pl-2.5 text-xs font-medium text-ink"
+              className="inline-flex items-center gap-1.5 rounded-full bg-ink/[0.05] py-0.5 pr-1 pl-2.5 text-xs font-medium text-ink-2 dark:bg-white/[0.07]"
             >
               {tag}
               <button

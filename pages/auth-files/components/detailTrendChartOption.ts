@@ -8,7 +8,8 @@ import { formatTrendChartTooltip } from "./trendTooltipFormatter";
  * 配色走共享图表主题，颜色都有含义，和仪表盘、监控中心对得上：
  * - 请求数：请求身份色（蓝）的同色渐变柱，悬停时渐变变实，像亮了一档；
  * - 费用：费用身份色（琥珀）实线 + 同色渐隐面积（压在柱子上，所以很淡）；
- * - 额度占用：额度线配色（第一条粉色，见 quotaSeriesColors），与账号详情里额度相关的统计格同色。
+ * - 额度占用：额度线配色（第一条粉色，见 quotaSeriesColors），与组概览里同一种额度的线同色。
+ * 上方统计格的图标在图标着色为多彩时与这里的序列同色（见 TrendSummaryGrid），单色时是中性的。
  * 网格、坐标轴、图例文字保持中性灰；深色模式整套换成 chartPalette(true) / hueHex(…, true) 的亮一档。
  *
  * 序列顺序不能动：trendTooltipFormatter 按 seriesIndex 判断格式——0 是请求柱，1 是费用线

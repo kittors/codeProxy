@@ -25,6 +25,9 @@ export interface OwnedApiKeyActions {
   onDelete?: (key: EndUserAPIKey) => void;
 }
 
+/** 次要标签（default、掩码 Key）：中性淡底，不描边；多彩风格下 default 叠回绿色。 */
+const NEUTRAL_TAG = "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]";
+
 export const createOwnedApiKeyColumns = ({
   t,
   actions,
@@ -47,12 +50,14 @@ export const createOwnedApiKeyColumns = ({
       <div className="min-w-0">
         <div className="flex min-w-0 items-center gap-1.5">
           <OverflowTooltip content={row.name || row.id} className="block min-w-0">
-            <span className="block truncate text-slate-900 dark:text-white">
+            <span className="block truncate text-ink">
               {row.name || t("api_keys_page.unnamed")}
             </span>
           </OverflowTooltip>
           {row.is_default ? (
-            <span className="shrink-0 rounded-full bg-emerald-50 px-1.5 py-0.5 text-2xs font-medium text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+            <span
+              className={`shrink-0 rounded-full px-1.5 py-0.5 text-2xs font-medium ${NEUTRAL_TAG} colorful:bg-emerald-50 colorful:text-emerald-700 colorful:dark:bg-emerald-500/15 colorful:dark:text-emerald-300`}
+            >
               default
             </span>
           ) : null}
@@ -67,7 +72,7 @@ export const createOwnedApiKeyColumns = ({
     // Masked secret is already shown in-cell; overflow tooltip only leaks noise.
     overflowTooltip: false,
     render: (row) => (
-      <code className="block truncate rounded-md bg-slate-100 px-2 py-1 font-mono text-xs text-slate-700 dark:bg-neutral-800 dark:text-white/70">
+      <code className={`block truncate rounded-md px-2 py-1 font-mono text-xs ${NEUTRAL_TAG}`}>
         {row.key_masked || row.key || row.id}
       </code>
     ),
@@ -79,7 +84,7 @@ export const createOwnedApiKeyColumns = ({
     cellClassName: "text-center",
     render: (row) => (
       <span
-        className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${row.disabled ? "bg-slate-100 text-slate-500 dark:bg-white/10 dark:text-white/50" : "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"}`}
+        className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${row.disabled ? "bg-ink/[0.05] text-ink-3 dark:bg-white/[0.07]" : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"}`}
       >
         {row.disabled ? t("common.disabled") : t("common.enabled")}
       </span>
@@ -97,14 +102,14 @@ export const createOwnedApiKeyColumns = ({
     key: "dailySpending",
     label: t("quota.daily_spending_column"),
     width: COLUMN_WIDTH.compact,
-    cellClassName: "whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
+    cellClassName: "whitespace-nowrap tabular-nums text-ink-2",
     render: (row) => formatQuotaUsdAmount(row["daily-spending-used"]),
   },
   {
     key: "lifetimeSpending",
     label: t("quota.lifetime_spending_column"),
     width: COLUMN_WIDTH.compact,
-    cellClassName: "whitespace-nowrap tabular-nums text-slate-700 dark:text-white/70",
+    cellClassName: "whitespace-nowrap tabular-nums text-ink-2",
     render: (row) => formatQuotaUsdAmount(row["lifetime-spending-used"]),
   },
   {
@@ -118,13 +123,13 @@ export const createOwnedApiKeyColumns = ({
         <button
           type="button"
           onClick={() => actions.onViewResetHistory?.(row)}
-          className="tabular-nums font-medium text-orange-600 underline-offset-2 hover:underline dark:text-orange-400"
+          className="tabular-nums font-medium text-accent-ink underline-offset-2 hover:underline colorful:text-orange-600 colorful:dark:text-orange-400"
           aria-label={t("api_keys_page.view_reset_history")}
         >
           {count}
         </button>
       ) : (
-        <span className="tabular-nums text-slate-500 dark:text-white/55">{count}</span>
+        <span className="tabular-nums text-ink-3">{count}</span>
       );
     },
   },
@@ -132,7 +137,7 @@ export const createOwnedApiKeyColumns = ({
     key: "created",
     label: t("api_keys_page.col_created"),
     width: COLUMN_WIDTH.numericWide,
-    cellClassName: "whitespace-nowrap text-xs text-slate-500 dark:text-white/50",
+    cellClassName: "whitespace-nowrap text-xs text-ink-3",
     render: (row) => (row.created_at ? new Date(row.created_at).toLocaleString() : "-"),
   },
   {
@@ -141,7 +146,8 @@ export const createOwnedApiKeyColumns = ({
     ...TABLE_ROW_ACTIONS_COLUMN,
     lockOrder: "end",
     headerClassName: "text-center md:sticky md:z-40 md:bg-slate-100 md:dark:bg-neutral-800",
-    cellClassName: "md:sticky md:z-30 md:bg-surface",
+    // 冻结列盖住横向滚过去的单元格，底色跟随表格所在的底（内容区 / 卡片 / 弹窗，见 --cp-backdrop）。
+    cellClassName: "md:sticky md:z-30 md:bg-backdrop",
     render: (row) => {
       const busy = busyAll || busyKeyId === row.id;
       const hasResettablePeriod = hasPeriodSpendingLimits(
@@ -176,7 +182,7 @@ export const createOwnedApiKeyColumns = ({
               icon: <RotateCcw size={15} />,
               visible: Boolean(actions.onRotate),
               disabled: busy,
-              className: "hover:text-orange-600 dark:hover:text-orange-400",
+              className: "icon-hue:hover:text-orange-600 icon-hue:dark:hover:text-orange-400",
               onClick: () => actions.onRotate?.(row),
             },
             {
@@ -185,7 +191,7 @@ export const createOwnedApiKeyColumns = ({
               icon: <Pencil size={15} />,
               visible: Boolean(actions.onEdit),
               disabled: busy,
-              className: "hover:text-amber-600 dark:hover:text-amber-400",
+              className: "icon-hue:hover:text-amber-600 icon-hue:dark:hover:text-amber-400",
               onClick: () => actions.onEdit?.(row),
             },
             {
@@ -196,7 +202,7 @@ export const createOwnedApiKeyColumns = ({
               icon: <RotateCcw size={15} className={busy ? "animate-spin" : ""} />,
               visible: Boolean(actions.onResetPeriodSpending),
               disabled: busy || !hasResettablePeriod,
-              className: "hover:text-orange-600 dark:hover:text-orange-400",
+              className: "icon-hue:hover:text-orange-600 icon-hue:dark:hover:text-orange-400",
               onClick: () => actions.onResetPeriodSpending?.(row),
             },
             {
@@ -248,7 +254,7 @@ export function OwnedApiKeysTable({
   if (loading && keys.length === 0) {
     return (
       <div
-        className="flex min-h-[240px] flex-1 items-center justify-center text-sm text-slate-500 dark:text-white/55"
+        className="flex min-h-[240px] flex-1 items-center justify-center text-sm text-ink-3"
         role="status"
         aria-live="polite"
       >
@@ -261,7 +267,7 @@ export function OwnedApiKeysTable({
       <EmptyState
         title={t("api_keys_page.no_keys")}
         description={t("api_keys_page.no_keys_desc")}
-        icon={<KeyRound size={32} className="text-slate-400" />}
+        icon={<KeyRound size={32} className="text-ink-3" />}
       />
     );
   }
