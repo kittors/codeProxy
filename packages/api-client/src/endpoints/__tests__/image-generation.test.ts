@@ -102,7 +102,10 @@ describe("imageGenerationApi", () => {
     expect(form.get("quality")).toBeNull();
   });
 
-  test("polls image generation test task status with a short request timeout", async () => {
+  // The poll that sees the task finish downloads every image as base64. A 1 MB
+  // result took about 40s on a ~25 KB/s link, so a 10s ceiling threw away images the
+  // account had already paid for.
+  test("gives the task poll room to download the finished images", async () => {
     const { imageGenerationApi } =
       await import("@code-proxy/api-client/endpoints/image-generation");
 
@@ -112,9 +115,9 @@ describe("imageGenerationApi", () => {
 
     expect(getMock).toHaveBeenCalledWith(
       "/image-generation/test/task-1",
-      expect.objectContaining({
-        timeoutMs: 10000,
-      }),
+      expect.objectContaining({ timeoutMs: expect.any(Number) }),
     );
+    const { timeoutMs } = getMock.mock.calls[0][1] as { timeoutMs: number };
+    expect(timeoutMs).toBeGreaterThanOrEqual(5 * 60 * 1000);
   });
 });

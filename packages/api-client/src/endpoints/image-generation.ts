@@ -1,6 +1,12 @@
 import { apiClient } from "../client/client";
 
-const IMAGE_GENERATION_TASK_POLL_TIMEOUT_MS = 10 * 1000;
+// The poll that sees the task finish carries every image as base64: about 1 MB at
+// 1K and several MB at 2K or 4K. On a slow link that download alone outlasts a
+// short timeout. Measured on 2026-10-11, a 1 MB result took about 40s at ~25 KB/s,
+// and the 10s this used to allow discarded images the account had already paid
+// for. Progress polls are a few hundred bytes and answer at once, so the long
+// ceiling only ever applies to that final download.
+const IMAGE_GENERATION_TASK_POLL_TIMEOUT_MS = 10 * 60 * 1000;
 
 /**
  * Output shape of a request. gpt-image and the other WIDTHxHEIGHT models read
