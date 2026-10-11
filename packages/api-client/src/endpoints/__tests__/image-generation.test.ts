@@ -81,6 +81,27 @@ describe("imageGenerationApi", () => {
     expect(postFormMock).toHaveBeenCalledWith("/image-generation/test", expect.any(FormData));
   });
 
+  test("carries a Gemini model's ratio and size tier on a multipart edit", async () => {
+    const { imageGenerationApi } =
+      await import("@code-proxy/api-client/endpoints/image-generation");
+
+    postFormMock.mockResolvedValue({ task_id: "task-3", status: "queued" });
+    await imageGenerationApi.startTestTask({
+      mode: "edits",
+      model: "gemini-3.1-flash-image",
+      prompt: "make it night",
+      aspect_ratio: "9:16",
+      image_size: "2K",
+      images: [new File(["hello"], "ref.png", { type: "image/png" })],
+    });
+
+    const form = postFormMock.mock.calls[0][1] as FormData;
+    expect(form.get("aspect_ratio")).toBe("9:16");
+    expect(form.get("image_size")).toBe("2K");
+    expect(form.get("size")).toBeNull();
+    expect(form.get("quality")).toBeNull();
+  });
+
   test("polls image generation test task status with a short request timeout", async () => {
     const { imageGenerationApi } =
       await import("@code-proxy/api-client/endpoints/image-generation");

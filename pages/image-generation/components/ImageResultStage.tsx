@@ -1,4 +1,4 @@
-import { useRef, type PointerEvent } from "react";
+import { useRef, useState, type PointerEvent } from "react";
 import { ChevronLeft, ChevronRight, CircleAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { surface } from "@code-proxy/ui";
@@ -8,6 +8,9 @@ import type { GeneratedImage } from "./useImageGenerationTask";
 // 浮在画布 / 图片上的小部件（计时、计数、翻页）：半透明的浮层底 + 模糊，任何底色上都看得清。
 // 浮在画布上的小胶囊：半透明浮层底 + 阴影描边（shadow-control），不画 border。
 const FLOATING = "bg-elevated/80 text-ink-2 shadow-control backdrop-blur-md";
+
+/** 某一批结果里每张图（按下标）实际加载出来的像素尺寸。 */
+type MeasuredPixelSizes = { images: GeneratedImage[]; sizes: Record<number, string> };
 
 /**
  * 测试弹窗中间的画布：空闲时一句引导，生成中显示阶段文案和计时，失败时收成一行错误，
@@ -46,6 +49,17 @@ export function ImageResultStage({
   const hasMultipleResults = images.length > 1;
   const showGeneratingState = submitting && !activeImage && !errorMessage;
   const showIdleCanvas = !submitting && !activeImage && !errorMessage;
+  // 每张图加载后读出的真实像素。比例和分辨率档位只是请求，上游实际出多大以这里为准。
+  // 记录和它所属的那一批结果绑在一起：换了一批图，旧记录自然作废，不用 effect 清空。
+  const [measured, setMeasured] = useState<MeasuredPixelSizes>({ images, sizes: {} });
+  const pixelSizes = measured.images === images ? measured.sizes : {};
+  const recordPixelSize = (index: number, width: number, height: number) => {
+    if (width <= 0 || height <= 0) return;
+    setMeasured((current) => ({
+      images,
+      sizes: { ...(current.images === images ? current.sizes : {}), [index]: `${width} × ${height}` },
+    }));
+  };
 
   const showImageAt = (index: number) => {
     onActiveIndexChange(Math.min(Math.max(index, 0), Math.max(images.length - 1, 0)));
@@ -131,6 +145,13 @@ export function ImageResultStage({
                           className="block h-auto w-full cursor-zoom-in select-none"
                           draggable={false}
                           onClick={onPreview}
+                          onLoad={(event) =>
+                            recordPixelSize(
+                              index,
+                              event.currentTarget.naturalWidth,
+                              event.currentTarget.naturalHeight,
+                            )
+                          }
                         />
                       </div>
                     </div>
@@ -171,6 +192,18 @@ export function ImageResultStage({
                   </button>
                 ))}
               </>
+            ) : null}
+            {pixelSizes[activeIndex] ? (
+              <div
+                data-testid="image-generation-pixel-size"
+                className={[
+                  "absolute bottom-3 left-3 z-20 rounded-full px-2.5 py-1 text-xs font-semibold tabular-nums",
+                  FLOATING,
+                ].join(" ")}
+              >
+                {pixelSizes[activeIndex]}
+                {activeImage.format ? ` · ${activeImage.format.toUpperCase()}` : ""}
+              </div>
             ) : null}
             {/* 浮在图片上：固定用半透明黑底白字，任何底色的图上都看得清。 */}
             <button

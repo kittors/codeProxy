@@ -14,21 +14,26 @@ import {
 } from "@code-proxy/ui";
 import {
   ImageModelPicker,
+  imageShapeOptions,
   resolveInitialModel,
   resolveInitialProvider,
   supportsImageEditing,
 } from "@features/image-model-picker";
 import { useImageGenerationChannels } from "../hooks/useImageGenerationChannels";
 import {
+  AUTO_ASPECT_RATIO,
   COUNT_OPTIONS,
+  DEFAULT_ASPECT_RATIO,
+  DEFAULT_IMAGE_SIZE,
   DEFAULT_QUALITY,
   MAX_UPLOAD_IMAGES,
   QUALITY_OPTIONS,
+  pickShapeDefault,
   type QualityOption,
 } from "./generationOptions";
 import { ImageResultStage } from "./ImageResultStage";
 import { ReferenceImagesField, type UploadedImage } from "./ReferenceImagesField";
-import { useImageGenerationTask } from "./useImageGenerationTask";
+import { imageFileExtension, useImageGenerationTask } from "./useImageGenerationTask";
 import { normalizeImageGenerationSizePreset, useSizePresets } from "./useSizePresets";
 
 const FORM_ID = "image-generation-test-form";
@@ -99,6 +104,20 @@ export function ImageGenerationTestModal({
 
   const activeModel = selectedModel || FALLBACK_IMAGE_MODEL;
   const editingSupported = catalog.models.length === 0 || supportsImageEditing(catalog, activeModel);
+  // Gemini image models take a ratio and a size tier instead of size and quality.
+  const shape = imageShapeOptions(catalog, activeModel);
+  const [aspectRatio, setAspectRatio] = useState(DEFAULT_ASPECT_RATIO);
+  const [imageSize, setImageSize] = useState(DEFAULT_IMAGE_SIZE);
+
+  // Re-seeded whenever the model changes or the dialog reopens: a ratio picked for
+  // one model may not exist on the next, and a stale value would be sent anyway.
+  useEffect(() => {
+    if (!open) return;
+    const options = imageShapeOptions(catalog, activeModel);
+    if (!options) return;
+    setAspectRatio(pickShapeDefault(options.aspectRatios, DEFAULT_ASPECT_RATIO));
+    setImageSize(pickShapeDefault(options.imageSizes, DEFAULT_IMAGE_SIZE));
+  }, [open, catalog, activeModel]);
 
   const handleProviderChange = useCallback(
     (provider: string) => {
@@ -176,9 +195,16 @@ export function ImageGenerationTestModal({
     const base = {
       model: activeModel,
       prompt: prompt.trim(),
-      size: sizes.size,
-      quality,
       n: count,
+      ...(shape
+        ? {
+            // "auto" is sent as no ratio, which leaves the shape to the model.
+            ...(aspectRatio && aspectRatio !== AUTO_ASPECT_RATIO
+              ? { aspect_ratio: aspectRatio }
+              : {}),
+            ...(imageSize ? { image_size: imageSize } : {}),
+          }
+        : { size: sizes.size, quality }),
     };
     setPreviewOpen(false);
     void task.generate(
@@ -254,40 +280,66 @@ export function ImageGenerationTestModal({
                 onModelChange={setSelectedModel}
               />
             </div>
-            <FormField label={t("image_generation.size_label")} reserveMeta={false}>
-              <SearchableSelect
-                aria-label={t("image_generation.size_label")}
-                value={sizes.size}
-                onChange={sizes.setSize}
-                options={sizes.options}
-                allowCreate
-                normalizeCreateValue={normalizeImageGenerationSizePreset}
-                createLabel={(value) => {
-                  const normalized = normalizeImageGenerationSizePreset(value) || value.trim();
-                  return (
-                    <span className="flex min-w-0 items-center justify-between gap-3">
-                      <span className="truncate">
-                        {t("image_generation.size_create_option", { size: normalized })}
-                      </span>
-                      <span className="shrink-0 text-xs font-semibold text-ink-3">
-                        {t("image_generation.size_create_confirm")}
-                      </span>
-                    </span>
-                  );
-                }}
-                onCreate={sizes.createPreset}
-                searchPlaceholder={t("image_generation.size_search_placeholder")}
-                className="w-full"
-              />
-            </FormField>
-            <FormField label={t("image_generation.quality_label")} reserveMeta={false}>
-              <Select
-                aria-label={t("image_generation.quality_label")}
-                value={quality}
-                onChange={(value) => setQuality(value as QualityOption)}
-                options={QUALITY_OPTIONS.map((value) => ({ value, label: value }))}
-              />
-            </FormField>
+            {shape ? (
+              <>
+                <FormField label={t("image_generation.aspect_ratio_label")} reserveMeta={false}>
+                  <Select
+                    aria-label={t("image_generation.aspect_ratio_label")}
+                    value={aspectRatio}
+                    onChange={setAspectRatio}
+                    options={[
+                      { value: AUTO_ASPECT_RATIO, label: t("image_generation.aspect_ratio_auto") },
+                      ...shape.aspectRatios.map((value) => ({ value, label: value })),
+                    ]}
+                  />
+                </FormField>
+                <FormField label={t("image_generation.image_size_label")} reserveMeta={false}>
+                  <Select
+                    aria-label={t("image_generation.image_size_label")}
+                    value={imageSize}
+                    onChange={setImageSize}
+                    options={shape.imageSizes.map((value) => ({ value, label: value }))}
+                  />
+                </FormField>
+              </>
+            ) : (
+              <>
+                <FormField label={t("image_generation.size_label")} reserveMeta={false}>
+                  <SearchableSelect
+                    aria-label={t("image_generation.size_label")}
+                    value={sizes.size}
+                    onChange={sizes.setSize}
+                    options={sizes.options}
+                    allowCreate
+                    normalizeCreateValue={normalizeImageGenerationSizePreset}
+                    createLabel={(value) => {
+                      const normalized = normalizeImageGenerationSizePreset(value) || value.trim();
+                      return (
+                        <span className="flex min-w-0 items-center justify-between gap-3">
+                          <span className="truncate">
+                            {t("image_generation.size_create_option", { size: normalized })}
+                          </span>
+                          <span className="shrink-0 text-xs font-semibold text-ink-3">
+                            {t("image_generation.size_create_confirm")}
+                          </span>
+                        </span>
+                      );
+                    }}
+                    onCreate={sizes.createPreset}
+                    searchPlaceholder={t("image_generation.size_search_placeholder")}
+                    className="w-full"
+                  />
+                </FormField>
+                <FormField label={t("image_generation.quality_label")} reserveMeta={false}>
+                  <Select
+                    aria-label={t("image_generation.quality_label")}
+                    value={quality}
+                    onChange={(value) => setQuality(value as QualityOption)}
+                    options={QUALITY_OPTIONS.map((value) => ({ value, label: value }))}
+                  />
+                </FormField>
+              </>
+            )}
             <FormField label={t("image_generation.count_label")} reserveMeta={false}>
               <Select
                 aria-label={t("image_generation.count_label")}
@@ -358,11 +410,11 @@ export function ImageGenerationTestModal({
         imageSrc={activeImage?.src ?? null}
         imageAlt={t("image_generation.preview_alt", { model: activeModel })}
         title={t("image_generation.image_preview_title")}
-        downloadName={`${activeModel}-${task.activeImageIndex + 1}.png`}
+        downloadName={`${activeModel}-${task.activeImageIndex + 1}.${imageFileExtension(activeImage?.format)}`}
         images={task.images.map((image, index) => ({
           src: image.src,
           alt: t("image_generation.preview_alt", { model: activeModel }),
-          downloadName: `${activeModel}-${index + 1}.png`,
+          downloadName: `${activeModel}-${index + 1}.${imageFileExtension(image.format)}`,
         }))}
         activeIndex={task.activeImageIndex}
         onActiveIndexChange={task.setActiveImageIndex}

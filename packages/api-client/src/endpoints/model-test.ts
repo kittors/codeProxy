@@ -37,6 +37,12 @@ export interface ModelTestOptions {
   modes: ModelTestModeInfo[];
   sizes?: string[];
   qualities?: string[];
+  /**
+   * Replace `sizes` and `qualities` for models shaped by ratio and size tier
+   * (Gemini image models); the server sends one pair or the other.
+   */
+  aspect_ratios?: string[];
+  image_sizes?: string[];
   max_images?: number;
   max_duration_seconds?: number;
 }
@@ -127,7 +133,10 @@ export interface ModelTestRequest {
   quality?: string;
   n?: number;
   duration?: number;
+  /** Shared by video and by Gemini image models. */
   aspect_ratio?: string;
+  /** Size tier of a Gemini image model: 512, 1K, 2K or 4K. */
+  image_size?: string;
   resolution?: string;
 }
 

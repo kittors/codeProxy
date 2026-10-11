@@ -122,6 +122,8 @@ const emptyForm: ModelTestFormState = {
   images: [],
   size: "",
   quality: "",
+  aspectRatio: "",
+  imageSize: "",
   n: 1,
   duration: 0,
 };
@@ -179,6 +181,14 @@ export function ModelTestModal({
       prompt: first.default_prompt || current.prompt,
       size: options.sizes?.[0] ?? current.size,
       quality: options.qualities?.[1] ?? options.qualities?.[0] ?? current.quality,
+      // A square at the upstream's default 1K tier, the closest match to the
+      // 1024x1024 the size picker opens on for every other image model.
+      aspectRatio: options.aspect_ratios?.includes("1:1")
+        ? "1:1"
+        : (options.aspect_ratios?.[0] ?? current.aspectRatio),
+      imageSize: options.image_sizes?.includes("1K")
+        ? "1K"
+        : (options.image_sizes?.[0] ?? current.imageSize),
       duration: options.max_duration_seconds
         ? Math.min(6, options.max_duration_seconds)
         : current.duration,
@@ -232,6 +242,8 @@ export function ModelTestModal({
       images: form.images,
       size: form.size,
       quality: form.quality,
+      aspectRatio: form.aspectRatio,
+      imageSize: form.imageSize,
       n: form.n,
       duration: form.duration,
     });

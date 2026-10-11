@@ -24,6 +24,8 @@ export type EndpointDoc = {
   requestRows: SpecRow[];
   responseRows: SpecRow[];
   curl: string;
+  /** The same call for a Gemini image model, which is shaped by ratio and size tier. */
+  geminiCurl: string;
 };
 
 /** Image editing is served by every currently supported provider. */
@@ -53,6 +55,44 @@ const imageToImageCurl = [
   '  -F "image=@/path/to/image.png"',
 ].join("\n");
 
+const geminiTextToImageCurl = [
+  "curl http://127.0.0.1:8317/v1/images/generations \\",
+  '  -H "Authorization: Bearer $API_KEY" \\',
+  '  -H "Content-Type: application/json" \\',
+  "  -d '{",
+  '    "model": "gemini-3.1-flash-image",',
+  '    "prompt": "你的中文描述",',
+  '    "aspect_ratio": "16:9",',
+  '    "image_size": "2K"',
+  "  }'",
+].join("\n");
+
+const geminiImageToImageCurl = [
+  "curl http://127.0.0.1:8317/v1/images/edits \\",
+  '  -H "Authorization: Bearer $API_KEY" \\',
+  '  -F "model=gemini-3.1-flash-image" \\',
+  '  -F "prompt=把背景换成雪山" \\',
+  '  -F "aspect_ratio=1:1" \\',
+  '  -F "image_size=1K" \\',
+  '  -F "image=@/path/to/image.png"',
+].join("\n");
+
+// Gemini image models only; every other model reads size and quality.
+const GEMINI_SHAPE_ROWS: SpecRow[] = [
+  {
+    name: "aspect_ratio",
+    type: "string",
+    required: false,
+    descriptionKey: "image_generation.param_aspect_ratio_desc",
+  },
+  {
+    name: "image_size",
+    type: "string",
+    required: false,
+    descriptionKey: "image_generation.param_image_size_desc",
+  },
+];
+
 export const RESPONSE_ROWS: SpecRow[] = [
   {
     name: "created",
@@ -71,6 +111,18 @@ export const RESPONSE_ROWS: SpecRow[] = [
     type: "string",
     required: false,
     descriptionKey: "image_generation.response_revised_prompt_desc",
+  },
+  {
+    name: "output_format",
+    type: "string",
+    required: false,
+    descriptionKey: "image_generation.response_output_format_desc",
+  },
+  {
+    name: "size",
+    type: "string",
+    required: false,
+    descriptionKey: "image_generation.response_size_desc",
   },
 ];
 
@@ -107,6 +159,7 @@ const ENDPOINT_DOCS: EndpointDoc[] = [
         required: false,
         descriptionKey: "image_generation.param_quality_desc",
       },
+      ...GEMINI_SHAPE_ROWS,
       {
         name: "n",
         type: "number",
@@ -116,6 +169,7 @@ const ENDPOINT_DOCS: EndpointDoc[] = [
     ],
     responseRows: RESPONSE_ROWS,
     curl: textToImageCurl,
+    geminiCurl: geminiTextToImageCurl,
   },
   {
     mode: "edits",
@@ -155,6 +209,7 @@ const ENDPOINT_DOCS: EndpointDoc[] = [
         required: false,
         descriptionKey: "image_generation.param_quality_desc",
       },
+      ...GEMINI_SHAPE_ROWS,
       {
         name: "n",
         type: "number",
@@ -164,6 +219,7 @@ const ENDPOINT_DOCS: EndpointDoc[] = [
     ],
     responseRows: RESPONSE_ROWS,
     curl: imageToImageCurl,
+    geminiCurl: geminiImageToImageCurl,
   },
 ];
 export const VISIBLE_ENDPOINT_DOCS = IMAGE_EDITS_ENABLED

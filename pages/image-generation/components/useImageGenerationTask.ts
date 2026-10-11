@@ -13,7 +13,28 @@ import {
  * 每次生成和每次重新打开弹窗都换一个会话号：关掉弹窗后旧任务的轮询结果不会再写回界面。
  */
 
-export type GeneratedImage = { src: string; revisedPrompt?: string };
+/** `format` is the encoding the server reported (e.g. "jpeg"), when it did. */
+export type GeneratedImage = { src: string; revisedPrompt?: string; format?: string };
+
+// 服务端报告的编码（Gemini 生图返回 JPEG）。没报的按以前的 PNG 处理。
+const IMAGE_MIME_BY_FORMAT: Record<string, string> = {
+  jpeg: "image/jpeg",
+  jpg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+};
+
+function imageMimeType(format: string | undefined): string {
+  return IMAGE_MIME_BY_FORMAT[format?.trim().toLowerCase() ?? ""] ?? "image/png";
+}
+
+/** 下载文件名的扩展名，跟图片的真实编码走，而不是一律写 .png。 */
+export function imageFileExtension(format: string | undefined): string {
+  const normalized = format?.trim().toLowerCase() ?? "";
+  if (normalized === "jpeg" || normalized === "jpg") return "jpg";
+  if (normalized === "webp") return "webp";
+  return "png";
+}
 
 export const GENERATION_STATUS_KEYS = [
   "image_generation.generation_status_drafting",
@@ -149,13 +170,15 @@ export function useImageGenerationTask(open: boolean) {
             if (!task.result) {
               throw new Error(t("image_generation.test_empty_result"));
             }
+            const format = task.result.output_format?.trim() || undefined;
             const nextImages = (task.result.data ?? [])
               .map<GeneratedImage | null>((item) => {
                 const b64Json = item.b64_json?.trim() ?? "";
                 if (!b64Json) return null;
                 return {
-                  src: `data:image/png;base64,${b64Json}`,
+                  src: `data:${imageMimeType(format)};base64,${b64Json}`,
                   revisedPrompt: item.revised_prompt?.trim() || undefined,
+                  format,
                 };
               })
               .filter((item): item is GeneratedImage => item !== null);
