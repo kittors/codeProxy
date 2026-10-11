@@ -14,6 +14,12 @@ import type {
 } from "./types";
 import { DEFAULT_VISUAL_VALUES, makeClientId } from "./types";
 import {
+  databaseInteger,
+  effectiveConfigDocument,
+  keepChangedDatabaseSettings,
+  type LiveConfig,
+} from "./databaseSettings";
+import {
   parseRoutingChannelGroups,
   parseRoutingPathRoutes,
   parseRoutingStrategy,
@@ -66,23 +72,6 @@ function deleteIfEmpty(parent: Record<string, unknown>, key: string): void {
   const value = asRecord(parent[key]);
   if (!value) return;
   if (Object.keys(value).length === 0) delete parent[key];
-}
-
-function hasPayloadRuleSections(
-  payload: Record<string, unknown> | null,
-): payload is Record<string, unknown> {
-  return Boolean(
-    payload &&
-    (hasOwn(payload, "default") || hasOwn(payload, "override") || hasOwn(payload, "filter")),
-  );
-}
-
-function hasVisualPayloadRules(values: VisualConfigValues): boolean {
-  return (
-    values.payloadDefaultRules.length > 0 ||
-    values.payloadOverrideRules.length > 0 ||
-    values.payloadFilterRules.length > 0
-  );
 }
 
 function setBoolean(obj: Record<string, unknown>, key: string, value: boolean): void {
@@ -294,18 +283,17 @@ export function useVisualConfig() {
     return JSON.stringify(visualValues) !== JSON.stringify(baselineValues);
   }, [baselineValues, visualValues]);
 
+  /** `live` 为 null（没读到）时，存在数据库里的设置只能按文件内容显示（通常是默认值）。 */
   const loadVisualValuesFromYaml = useCallback(
-    (yamlContent: string, runtimeConfig?: Record<string, unknown>) => {
+    (yamlContent: string, live: LiveConfig | null) => {
       try {
         const parsedRaw: unknown = parseYaml(yamlContent) || {};
-        const parsed = asRecord(parsedRaw) ?? {};
+        const parsed = effectiveConfigDocument(asRecord(parsedRaw) ?? {}, live);
         const tls = asRecord(parsed.tls);
         const remoteManagement = asRecord(parsed["remote-management"]);
         const quotaExceeded = asRecord(parsed["quota-exceeded"]);
         const routing = asRecord(parsed.routing);
-        const yamlPayload = asRecord(parsed.payload);
-        const runtimePayload = asRecord(runtimeConfig?.payload);
-        const payload = hasPayloadRuleSections(runtimePayload) ? runtimePayload : yamlPayload;
+        const payload = asRecord(parsed.payload);
         const streaming = asRecord(parsed.streaming);
         const autoUpdate = asRecord(parsed["auto-update"]);
         const requestLogStorage = asRecord(parsed["request-log-storage"]);
@@ -405,9 +393,13 @@ export function useVisualConfig() {
   );
 
   const applyVisualChangesToYaml = useCallback(
-    (currentYaml: string): string => {
+    (currentYaml: string, live: LiveConfig | null): string => {
       try {
-        const parsed = (parseYaml(currentYaml) || {}) as Record<string, unknown>;
+        const original = asRecord(parseYaml(currentYaml)) ?? {};
+        // 在「文件 + 数据库当前值」上改：数据库里的设置是整块存的（例如 request-log-storage），
+        // 改其中一项也要带上页面不编辑的其它子项。存在数据库里的设置下面一律明确写出
+        // （包括 false 和清空），最后由 keepChangedDatabaseSettings 只留下改过的。
+        const parsed = effectiveConfigDocument(deepClone(original), live);
         const values = visualValues;
 
         setString(parsed, "host", values.host);
@@ -453,13 +445,13 @@ export function useVisualConfig() {
           }
         }
 
-        setBoolean(parsed, "debug", values.debug);
+        parsed.debug = values.debug;
         setBoolean(parsed, "commercial-mode", values.commercialMode);
-        setBoolean(parsed, "logging-to-file", values.loggingToFile);
-        setIntFromString(parsed, "logs-max-total-size-mb", values.logsMaxTotalSizeMb);
-        setIntFromString(parsed, "error-logs-max-files", values.errorLogsMaxFiles);
-        setBoolean(parsed, "usage-statistics-enabled", values.usageStatisticsEnabled);
-        setBoolean(parsed, "request-log", values.requestLog);
+        parsed["logging-to-file"] = values.loggingToFile;
+        parsed["logs-max-total-size-mb"] = databaseInteger(values.logsMaxTotalSizeMb);
+        parsed["error-logs-max-files"] = databaseInteger(values.errorLogsMaxFiles);
+        parsed["usage-statistics-enabled"] = values.usageStatisticsEnabled;
+        parsed["request-log"] = values.requestLog;
         setIntFromString(parsed, "system-stats-cache-seconds", values.systemStatsCacheSeconds);
         setIntFromString(
           parsed,
@@ -468,41 +460,25 @@ export function useVisualConfig() {
         );
 
         const requestLogStorageValues = values.requestLogStorage;
-        if (
-          hasOwn(parsed, "request-log-storage") ||
-          requestLogStorageValues.storeContent ||
-          requestLogStorageValues.retentionDays.trim() !== "7" ||
-          requestLogStorageValues.contentRetentionDays.trim() !== "3" ||
-          !requestLogStorageValues.cleanupEnabled ||
-          requestLogStorageValues.cleanupIntervalMinutes.trim() !== "60" ||
-          requestLogStorageValues.maxRows.trim() !== "100000" ||
-          requestLogStorageValues.maxMetadataSizeMb.trim() !== "256" ||
-          requestLogStorageValues.maxTotalSizeMb.trim() !== "128"
-        ) {
-          const storage = ensureRecord(parsed, "request-log-storage");
-          setBoolean(storage, "store-content", requestLogStorageValues.storeContent);
-          setIntFromString(storage, "retention-days", requestLogStorageValues.retentionDays);
-          setIntFromString(
-            storage,
-            "content-retention-days",
-            requestLogStorageValues.contentRetentionDays,
-          );
-          storage["cleanup-enabled"] = requestLogStorageValues.cleanupEnabled;
-          setIntFromString(
-            storage,
-            "cleanup-interval-minutes",
-            requestLogStorageValues.cleanupIntervalMinutes,
-          );
-          setIntFromString(storage, "max-rows", requestLogStorageValues.maxRows);
-          setIntFromString(
-            storage,
-            "max-metadata-size-mb",
-            requestLogStorageValues.maxMetadataSizeMb,
-          );
-          setIntFromString(storage, "max-total-size-mb", requestLogStorageValues.maxTotalSizeMb);
-          if (hasOwn(storage, "vacuum-on-cleanup")) delete storage["vacuum-on-cleanup"];
-          deleteIfEmpty(parsed, "request-log-storage");
-        }
+        const storage = { ...asRecord(parsed["request-log-storage"]) };
+        storage["store-content"] = requestLogStorageValues.storeContent;
+        setIntFromString(storage, "retention-days", requestLogStorageValues.retentionDays);
+        setIntFromString(
+          storage,
+          "content-retention-days",
+          requestLogStorageValues.contentRetentionDays,
+        );
+        storage["cleanup-enabled"] = requestLogStorageValues.cleanupEnabled;
+        setIntFromString(
+          storage,
+          "cleanup-interval-minutes",
+          requestLogStorageValues.cleanupIntervalMinutes,
+        );
+        setIntFromString(storage, "max-rows", requestLogStorageValues.maxRows);
+        setIntFromString(storage, "max-metadata-size-mb", requestLogStorageValues.maxMetadataSizeMb);
+        setIntFromString(storage, "max-total-size-mb", requestLogStorageValues.maxTotalSizeMb);
+        if (hasOwn(storage, "vacuum-on-cleanup")) delete storage["vacuum-on-cleanup"];
+        parsed["request-log-storage"] = storage;
 
         if (
           hasOwn(parsed, "auto-update") ||
@@ -517,23 +493,19 @@ export function useVisualConfig() {
           deleteIfEmpty(parsed, "auto-update");
         }
 
-        setString(parsed, "proxy-url", values.proxyUrl);
+        // 清空代理写空串：数据库里的旧代理要被明确覆盖，删掉这个键后端不会动它。
+        parsed["proxy-url"] = values.proxyUrl.trim();
         setBoolean(parsed, "prefer-ipv4", values.preferIPv4);
-        setBoolean(parsed, "force-model-prefix", values.forceModelPrefix);
-        setIntFromString(parsed, "request-retry", values.requestRetry);
-        setIntFromString(parsed, "max-retry-interval", values.maxRetryInterval);
-        setBoolean(parsed, "ws-auth", values.wsAuth);
+        parsed["force-model-prefix"] = values.forceModelPrefix;
+        parsed["request-retry"] = databaseInteger(values.requestRetry);
+        parsed["max-retry-interval"] = databaseInteger(values.maxRetryInterval);
+        parsed["ws-auth"] = values.wsAuth;
 
-        if (
-          hasOwn(parsed, "quota-exceeded") ||
-          !values.quotaSwitchProject ||
-          !values.quotaSwitchPreviewModel
-        ) {
-          const quota = ensureRecord(parsed, "quota-exceeded");
-          quota["switch-project"] = values.quotaSwitchProject;
-          quota["switch-preview-model"] = values.quotaSwitchPreviewModel;
-          deleteIfEmpty(parsed, "quota-exceeded");
-        }
+        parsed["quota-exceeded"] = {
+          ...asRecord(parsed["quota-exceeded"]),
+          "switch-project": values.quotaSwitchProject,
+          "switch-preview-model": values.quotaSwitchPreviewModel,
+        };
 
         if (
           hasOwn(parsed, "routing") ||
@@ -604,58 +576,37 @@ export function useVisualConfig() {
             ? values.kimiHeaderDefaults.version
             : "";
 
-        if (
-          hasOwn(parsed, "kimi-header-defaults") ||
-          kimiUserAgent.trim() ||
-          kimiPlatform.trim() ||
-          kimiVersion.trim()
-        ) {
-          const kimiHeaderDefaults: Record<string, unknown> = {};
-          if (kimiUserAgent.trim()) {
-            kimiHeaderDefaults["user-agent"] = kimiUserAgent.trim();
-          }
-          if (kimiPlatform.trim()) {
-            kimiHeaderDefaults["platform"] = kimiPlatform.trim();
-          }
-          if (kimiVersion.trim()) {
-            kimiHeaderDefaults["version"] = kimiVersion.trim();
-          }
-          if (Object.keys(kimiHeaderDefaults).length > 0) {
-            parsed["kimi-header-defaults"] = kimiHeaderDefaults;
-          } else if (hasOwn(parsed, "kimi-header-defaults")) {
-            delete parsed["kimi-header-defaults"];
-          }
+        // 全部清空时写 `{}`，后端才会把数据库里的旧值清掉。
+        const kimiHeaderDefaults: Record<string, unknown> = {};
+        if (kimiUserAgent.trim()) kimiHeaderDefaults["user-agent"] = kimiUserAgent.trim();
+        if (kimiPlatform.trim()) kimiHeaderDefaults["platform"] = kimiPlatform.trim();
+        if (kimiVersion.trim()) kimiHeaderDefaults["version"] = kimiVersion.trim();
+        parsed["kimi-header-defaults"] = kimiHeaderDefaults;
+
+        // 页面不编辑的 default-raw / override-raw 原样带上；GET /config 里没有规则的类别是 null，不写。
+        // 规则全部删掉时同样写 `{}`。
+        const payload = { ...asRecord(parsed.payload) };
+        for (const [key, value] of Object.entries(payload)) {
+          if (value === null) delete payload[key];
         }
-
-        const currentHasPayloadRules = hasVisualPayloadRules(values);
-        const baselineHadPayloadRules = hasVisualPayloadRules(baselineValues);
-
-        if (hasOwn(parsed, "payload") || currentHasPayloadRules || baselineHadPayloadRules) {
-          const payload = ensureRecord(parsed, "payload");
-          if (values.payloadDefaultRules.length > 0) {
-            payload.default = serializePayloadRulesForYaml(values.payloadDefaultRules);
-          } else if (hasOwn(payload, "default")) {
-            delete payload.default;
-          }
-          if (values.payloadOverrideRules.length > 0) {
-            payload.override = serializePayloadRulesForYaml(values.payloadOverrideRules);
-          } else if (hasOwn(payload, "override")) {
-            delete payload.override;
-          }
-          if (values.payloadFilterRules.length > 0) {
-            payload.filter = serializePayloadFilterRulesForYaml(values.payloadFilterRules);
-          } else if (hasOwn(payload, "filter")) {
-            delete payload.filter;
-          }
-          if (Object.keys(payload).length === 0) {
-            if (baselineHadPayloadRules && !currentHasPayloadRules) {
-              parsed.payload = {};
-            } else {
-              delete parsed.payload;
-            }
-          }
+        if (values.payloadDefaultRules.length > 0) {
+          payload.default = serializePayloadRulesForYaml(values.payloadDefaultRules);
+        } else {
+          delete payload.default;
         }
+        if (values.payloadOverrideRules.length > 0) {
+          payload.override = serializePayloadRulesForYaml(values.payloadOverrideRules);
+        } else {
+          delete payload.override;
+        }
+        if (values.payloadFilterRules.length > 0) {
+          payload.filter = serializePayloadFilterRulesForYaml(values.payloadFilterRules);
+        } else {
+          delete payload.filter;
+        }
+        parsed.payload = payload;
 
+        keepChangedDatabaseSettings(parsed, original, values, baselineValues);
         return stringifyYaml(parsed, { indent: 2, lineWidth: 120, minContentWidth: 0 });
       } catch {
         return currentYaml;

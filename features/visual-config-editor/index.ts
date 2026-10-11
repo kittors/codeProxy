@@ -6,6 +6,11 @@ export {
   VISUAL_CONFIG_PROTOCOL_OPTIONS,
 } from "./useVisualConfig";
 export {
+  effectiveConfigDocument,
+  isDatabaseSetting,
+  type LiveConfig,
+} from "./databaseSettings";
+export {
   DEFAULT_STICKY_MAX_REQUESTS,
   defaultScheduling,
   normalizeDistribution,

@@ -35,6 +35,12 @@ export const configApi = {
   getConfig: () => apiClient.get<Record<string, unknown>>("/config"),
 
   updateDebug: (enabled: boolean) => apiClient.put("/debug", { value: enabled }),
+  /** 全局代理原文（含账号密码）。GET /config 里的代理是脱敏的，配置页回显要用这个。 */
+  getProxyUrl: async (): Promise<string> => {
+    const data = await apiClient.get<Record<string, unknown>>("/proxy-url");
+    const value = data?.["proxy-url"] ?? data?.proxyUrl;
+    return typeof value === "string" ? value : "";
+  },
   updateProxyUrl: (proxyUrl: string) => apiClient.put("/proxy-url", { value: proxyUrl }),
   clearProxyUrl: () => apiClient.delete("/proxy-url"),
   updateRequestRetry: (retryCount: number) =>
