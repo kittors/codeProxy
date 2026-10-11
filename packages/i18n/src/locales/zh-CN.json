@@ -2626,7 +2626,6 @@
     "model": "模型",
     "model_placeholder": "选择模型",
     "tab_label": "图片生成",
-    "test_modal_desc": "选好模型和参数、写下提示词，试生成一张图片；上传参考图则按图生图处理。",
     "test_shortcut": "⌘ / Ctrl + Enter 生成图片",
     "reference_image_hint": "可选。上传后按图生图处理，最多 {{max}} 张。"
   },
@@ -4899,6 +4898,10 @@
     "test_model_aria": "测试 {{model}}",
     "test_model_title": "测试模型",
     "test_model_desc": "向 {{model}} 发送一条测试消息，可指定渠道与提示词。",
+    "test_model_desc_image": "用 {{model}} 试生成图片，可指定渠道、提示词与参数。",
+    "test_model_desc_video": "用 {{model}} 试生成视频，可指定渠道、提示词与参数。",
+    "test_result_idle_image": "运行后，生成的图片会显示在这里",
+    "test_result_idle_video": "运行后，生成的视频会显示在这里",
     "test_channel": "渠道",
     "test_channel_placeholder": "选择渠道",
     "test_prompt": "测试提示词",

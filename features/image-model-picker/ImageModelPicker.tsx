@@ -1,17 +1,20 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { FormField, Select } from "@code-proxy/ui";
-import {
-  modelLabel,
-  providerLabel,
-  type ImageModelCatalog,
-} from "./imageModels";
+import { modelLabel, providerLabel, type ImageModelCatalog } from "./imageModels";
+
+// 服务商 + 模型拼成一个选项值：同一个模型 ID 理论上可以挂在两个服务商下，只用 ID 会撞。
+const OPTION_SEPARATOR = "\u0000";
+
+const optionValue = (provider: string, model: string) => `${provider}${OPTION_SEPARATOR}${model}`;
 
 /**
- * Provider and model selectors for image generation.
+ * The model selector for image generation.
  *
- * Both lists come from the server's catalog. The component deliberately holds no
- * knowledge of which providers or models exist — adding one server-side makes it
+ * One control instead of a provider select followed by a model select: picking a
+ * model already decides the credential pool, so each option names its provider in a
+ * muted suffix. Both lists come from the server's catalog; the component holds no
+ * knowledge of which providers or models exist, so one added server-side becomes
  * selectable here without a panel release.
  */
 export function ImageModelPicker({
@@ -19,67 +22,53 @@ export function ImageModelPicker({
   provider,
   model,
   disabled = false,
-  onProviderChange,
-  onModelChange,
+  onChange,
 }: {
   catalog: ImageModelCatalog;
   provider: string;
   model: string;
   disabled?: boolean;
-  onProviderChange: (provider: string) => void;
-  onModelChange: (model: string) => void;
+  onChange: (provider: string, model: string) => void;
 }) {
   const { t } = useTranslation();
 
-  const providerOptions = useMemo(
+  const options = useMemo(
     () =>
-      catalog.providers.map((entry) => ({
-        value: entry.provider,
-        label: providerLabel(entry.provider),
-      })),
+      catalog.providers.flatMap((entry) =>
+        entry.models.map((item) => {
+          const label = (
+            <span className="flex min-w-0 items-baseline gap-2">
+              <span className="truncate">{modelLabel(item)}</span>
+              {entry.provider ? (
+                <>
+                  {/* 读屏读到「模型名 服务商」，而不是两段文字粘在一起。 */}
+                  <span className="sr-only"> </span>
+                  <span className="shrink-0 text-xs font-normal text-ink-3">
+                    {providerLabel(entry.provider)}
+                  </span>
+                </>
+              ) : null}
+            </span>
+          );
+          return { value: optionValue(entry.provider, item.id), label, triggerLabel: label };
+        }),
+      ),
     [catalog.providers],
   );
 
-  const modelOptions = useMemo(() => {
-    const entry = catalog.providers.find((item) => item.provider === provider);
-    return (entry?.models ?? catalog.models).map((item) => ({
-      value: item.id,
-      label: modelLabel(item),
-    }));
-  }, [catalog, provider]);
-
-  // A deployment with a single provider gets no provider selector: a control with
-  // one option is noise, and the legacy server shape reports no provider at all.
-  const showProviderSelect = providerOptions.length > 1;
-
   return (
-    <div
-      data-testid="image-model-picker"
-      className={showProviderSelect ? "grid gap-3 sm:grid-cols-2" : "grid gap-3"}
-    >
-      {showProviderSelect ? (
-        // 两个选择都有默认值、不会出错，不给错误提示留空行，和同一行的其他参数对齐。
-        <FormField label={t("image_generation.provider")} htmlFor="image-provider" reserveMeta={false}>
-          <Select
-            id="image-provider"
-            value={provider}
-            options={providerOptions}
-            disabled={disabled}
-            onChange={onProviderChange}
-          />
-        </FormField>
-      ) : null}
-
-      <FormField label={t("image_generation.model")} htmlFor="image-model" reserveMeta={false}>
-        <Select
-          id="image-model"
-          value={model}
-          options={modelOptions}
-          disabled={disabled || modelOptions.length === 0}
-          placeholder={t("image_generation.model_placeholder")}
-          onChange={onModelChange}
-        />
-      </FormField>
-    </div>
+    <FormField label={t("image_generation.model")} htmlFor="image-model" reserveMeta={false}>
+      <Select
+        id="image-model"
+        value={optionValue(provider, model)}
+        options={options}
+        disabled={disabled || options.length === 0}
+        placeholder={t("image_generation.model_placeholder")}
+        onChange={(value) => {
+          const [nextProvider = "", nextModel = ""] = value.split(OPTION_SEPARATOR);
+          onChange(nextProvider, nextModel);
+        }}
+      />
+    </FormField>
   );
 }

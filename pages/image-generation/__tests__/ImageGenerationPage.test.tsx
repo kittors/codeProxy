@@ -156,7 +156,8 @@ describe("ImageGenerationPage", () => {
     await user.click(screen.getByRole("button", { name: "测试生成" }));
 
     const dialog = await screen.findByRole("dialog", { name: "测试生成" });
-    expect(dialog.className).toContain("max-w-3xl");
+    // Two panes on wide screens: inputs on the left, the result canvas on the right.
+    expect(dialog.className).toContain("max-w-5xl");
     expect(dialog.className).not.toContain("w-[78vw]");
     expect(dialog.className).not.toContain("min-w-[720px]");
     expect(within(dialog).getByTestId("image-generation-stage")).toBeInTheDocument();
@@ -183,9 +184,15 @@ describe("ImageGenerationPage", () => {
     expect(sendButton).toHaveAttribute("type", "submit");
     expect(within(dialog).getByTestId("image-generation-send-button")).toBe(sendButton);
     expect(within(dialog).getByText("文生图 · ⌘ / Ctrl + Enter 生成图片")).toBeInTheDocument();
+    // The canvas size comes from the layout, never from the result.
+    expect(within(dialog).getByTestId("image-generation-stage")).toHaveAttribute(
+      "data-state",
+      "idle",
+    );
     expect(within(dialog).getByTestId("image-generation-stage")).toHaveClass(
       "bg-subtle",
-      "h-[clamp(240px,42vh,400px)]",
+      "lg:flex-1",
+      "h-[clamp(220px,38vh,340px)]",
     );
     expect(dialog.querySelector(".image-generation-dots-layer")).not.toBeInTheDocument();
 
@@ -288,10 +295,10 @@ describe("ImageGenerationPage", () => {
     expect(within(dialog).getByTestId("image-generation-carousel-track")).toHaveStyle({
       transform: "translateX(-100%)",
     });
-    expect(within(dialog).getByTestId("image-generation-result-scroll")).toHaveClass(
-      "overflow-auto",
-    );
-    expect(image).toHaveClass("w-full");
+    // Every result is scaled to fit the canvas, whatever its aspect ratio, instead of
+    // filling the width and scrolling: a 1:8 strip used to show only its top slice.
+    expect(image).toHaveClass("max-h-full", "max-w-full", "object-contain");
+    expect(image).not.toHaveClass("w-full");
     expect(within(dialog).getByText("第二张")).toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: "点击预览" })).toBeVisible();
 
@@ -476,7 +483,7 @@ describe("ImageGenerationPage", () => {
     });
   });
 
-  test("collapses the preview area into an alert when generation fails", async () => {
+  test("shows a failure inside the result canvas without resizing the dialog", async () => {
     const deferred = createDeferred<{
       task_id: string;
       status: "failed";
@@ -527,13 +534,16 @@ describe("ImageGenerationPage", () => {
 
     expect(await within(dialog).findByText("上游图片生成失败")).toBeInTheDocument();
     expect(within(dialog).getByText("00:02")).toBeInTheDocument();
-    // The failure now uses the panel's alert treatment and collapses the stage: a
-    // full-height grey canvas for one line of text is what forced the dialog to
-    // scroll. Asserting the tone on the stage keeps the intent without pinning the
-    // exact palette.
-    const stage = dialog.querySelector('[data-state="error"]');
-    expect(stage?.className).toContain("bg-rose-500/");
-    expect(stage?.className).toContain("h-auto");
+    // The canvas keeps its neutral tone and its size: the reason sits in a rose
+    // notice inside it. A canvas that collapsed or recoloured on failure is what made
+    // the dialog jump around between attempts.
+    const stage = within(dialog).getByTestId("image-generation-stage");
+    expect(stage).toHaveAttribute("data-state", "error");
+    expect(stage).toHaveClass("bg-subtle");
+    expect(stage).not.toHaveClass("h-auto");
+    expect(within(stage).getByText("上游图片生成失败").parentElement?.className).toContain(
+      "bg-rose-500/",
+    );
   });
 
   test("flags an empty prompt in place and generates with the keyboard shortcut", async () => {
