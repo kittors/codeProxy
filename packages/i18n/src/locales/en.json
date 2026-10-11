@@ -2619,7 +2619,6 @@
     "model": "Model",
     "model_placeholder": "Select a model",
     "tab_label": "Image generation",
-    "test_modal_desc": "Pick a model and settings, describe the image and try a generation. Add reference images to edit them instead.",
     "test_shortcut": "⌘ / Ctrl + Enter to generate",
     "reference_image_hint": "Optional. Uploading switches to image editing; up to {{max}}."
   },
@@ -4382,6 +4381,10 @@
     "test_model_aria": "Test {{model}}",
     "test_model_title": "Test model",
     "test_model_desc": "Send a test message to {{model}}. Pick a channel and optional prompt.",
+    "test_model_desc_image": "Generate a test image with {{model}}. Pick a channel, prompt and parameters.",
+    "test_model_desc_video": "Generate a test clip with {{model}}. Pick a channel, prompt and parameters.",
+    "test_result_idle_image": "The generated image will appear here after a run",
+    "test_result_idle_video": "The generated clip will appear here after a run",
     "test_channel": "Channel",
     "test_channel_placeholder": "Select a channel",
     "test_prompt": "Test prompt",
