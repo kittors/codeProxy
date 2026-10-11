@@ -38,7 +38,7 @@ const setAuthed = async (page: Page) => {
  * 按 CliRelay 68ed2258 之后的行为模拟后端：PUT /config.yaml 把文件里写出来的数据库设置存进「数据库」，
  * 随即从文件里删掉；GET /config 给出运行中的值（代理脱敏），GET /proxy-url 给出代理原文。
  */
-async function fakeBackend(page: Page, { proxyUrlFails = false } = {}) {
+async function fakeBackend(page: Page, { proxyUrlFails = false, rejectSave = false } = {}) {
   let fileYaml = "port: 8318\n";
   const database: Record<string, unknown> = { "proxy-url": "", "request-retry": 5, debug: true };
   const saved: string[] = [];
@@ -50,6 +50,10 @@ async function fakeBackend(page: Page, { proxyUrlFails = false } = {}) {
       route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
 
     if (path === "/config.yaml") {
+      if (request.method() === "PUT" && rejectSave) {
+        // CliRelay 拒绝保存时回的是扁平体：error 放代码，message 放原因。
+        return json({ error: "invalid_config", message: 'duplicate channel group "team-a"' }, 422);
+      }
       if (request.method() === "PUT") {
         const body = request.postData() ?? "";
         saved.push(body);
@@ -151,4 +155,23 @@ test("Config: database-backed settings lock with a warning when their running va
   await expect(network.getByRole("textbox", { name: /^(主机|Host)$/ })).toBeDisabled();
   await expect(network.getByRole("switch", { name: /IPv4/ })).toBeEnabled();
   await page.screenshot({ path: "test-results/config-database-settings/locked.png" });
+});
+
+test("Config: a rejected save shows the server's reason, not just its code", async ({ page }) => {
+  await setAuthed(page);
+  await fakeBackend(page, { rejectSave: true });
+  await page.goto("/#/system/config");
+
+  await page.getByRole("tab", { name: /^(运行|Behavior)/ }).click();
+  await page
+    .locator('[data-config-section="network"]')
+    .getByRole("textbox", { name: /^(失败重试次数|Retry attempts)$/ })
+    .fill("6");
+  await page.getByRole("button", { name: /^保存$|^Save$/i }).click();
+
+  // 以前只弹出 invalid_config，看不出是哪里写错了。
+  await expect(
+    page.getByRole("alert").filter({ hasText: 'invalid_config: duplicate channel group "team-a"' }),
+  ).toBeVisible();
+  await page.screenshot({ path: "test-results/config-database-settings/rejected-save-reason.png" });
 });
