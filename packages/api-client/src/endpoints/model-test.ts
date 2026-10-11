@@ -140,9 +140,13 @@ export interface ModelTestRequest {
   resolution?: string;
 }
 
-// A clip takes minutes upstream, so the poll only asks for the task's current
-// phase and must not inherit the client's default long timeout.
-const MODEL_TEST_TASK_POLL_TIMEOUT_MS = 10 * 1000;
+// A clip takes minutes upstream, so the probe polls for the task's phase instead
+// of holding one request open for the whole clip. The poll that sees an image
+// probe finish, though, carries the image as base64 (1 MB and up). On a slow link
+// that download alone outlasts a short timeout, and the 10s this used to allow
+// discarded finished images. Progress polls are tiny and answer at once, so the
+// long ceiling only ever applies to that final download.
+const MODEL_TEST_TASK_POLL_TIMEOUT_MS = 10 * 60 * 1000;
 
 function normalizeResult(payload: ModelTestResult | null | undefined): ModelTestResult {
   return {
