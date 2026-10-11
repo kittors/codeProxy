@@ -3,6 +3,7 @@ import type { ImageGenerationChannelsResponse } from "@code-proxy/api-client";
 import {
   buildImageModelCatalog,
   findImageModel,
+  imageShapeOptions,
   providerLabel,
   resolveInitialModel,
   resolveInitialProvider,
@@ -114,10 +115,46 @@ describe("providerLabel", () => {
   test("maps known providers to display names", () => {
     expect(providerLabel("xai")).toBe("Grok");
     expect(providerLabel("codex")).toBe("Codex");
+    expect(providerLabel("antigravity")).toBe("Antigravity");
+    expect(providerLabel("minimax")).toBe("MiniMax");
   });
 
   /** An unknown provider stays usable rather than rendering as blank. */
   test("falls back to the raw id for an unknown provider", () => {
     expect(providerLabel("some-new-provider")).toBe("some-new-provider");
+  });
+});
+
+describe("imageShapeOptions", () => {
+  const catalog = buildImageModelCatalog({
+    model: "gpt-image-2",
+    channels: ["codex-a", "gemini-a"],
+    providers: [
+      { provider: "codex", channels: ["codex-a"], models: ["gpt-image-2"] },
+      { provider: "antigravity", channels: ["gemini-a"], models: ["gemini-3.1-flash-image"] },
+    ],
+    models: [
+      { id: "gpt-image-2", provider: "codex", supports_edit: true },
+      {
+        id: "gemini-3.1-flash-image",
+        provider: "antigravity",
+        supports_edit: true,
+        aspect_ratios: ["1:1", "16:9"],
+        image_sizes: ["1K", "2K"],
+      },
+    ],
+  });
+
+  test("describes a model shaped by ratio and size tier", () => {
+    expect(imageShapeOptions(catalog, "gemini-3.1-flash-image")).toEqual({
+      aspectRatios: ["1:1", "16:9"],
+      imageSizes: ["1K", "2K"],
+    });
+  });
+
+  /** gpt-image keeps the WIDTHxHEIGHT size and quality pickers. */
+  test("is null for models shaped by WIDTHxHEIGHT and for unknown models", () => {
+    expect(imageShapeOptions(catalog, "gpt-image-2")).toBeNull();
+    expect(imageShapeOptions(catalog, "not-a-model")).toBeNull();
   });
 });

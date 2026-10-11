@@ -11,8 +11,9 @@ import {
 import type { ModelAvailabilitySource, ModelItem } from "../types";
 import { ModelTestForm, type ModelTestFormState } from "./model-test/ModelTestForm";
 import { ModelTestInspector } from "./model-test/ModelTestInspector";
+import { ModelTestMediaPane } from "./model-test/ModelTestMediaPane";
 import { ModelTestOutput, ProvenanceWarning } from "./model-test/ModelTestOutput";
-import { MODE_LABEL_KEY, resolveModes } from "./model-test/modelTestModes";
+import { MODE_LABEL_KEY, isImageMode, isVideoMode, resolveModes } from "./model-test/modelTestModes";
 import type { ModelTestRunInput } from "../hooks/useModelTestRunner";
 
 export type ModelTestChannelOption = {
@@ -122,6 +123,8 @@ const emptyForm: ModelTestFormState = {
   images: [],
   size: "",
   quality: "",
+  aspectRatio: "",
+  imageSize: "",
   n: 1,
   duration: 0,
 };
@@ -179,6 +182,14 @@ export function ModelTestModal({
       prompt: first.default_prompt || current.prompt,
       size: options.sizes?.[0] ?? current.size,
       quality: options.qualities?.[1] ?? options.qualities?.[0] ?? current.quality,
+      // A square at the upstream's default 1K tier, the closest match to the
+      // 1024x1024 the size picker opens on for every other image model.
+      aspectRatio: options.aspect_ratios?.includes("1:1")
+        ? "1:1"
+        : (options.aspect_ratios?.[0] ?? current.aspectRatio),
+      imageSize: options.image_sizes?.includes("1K")
+        ? "1K"
+        : (options.image_sizes?.[0] ?? current.imageSize),
       duration: options.max_duration_seconds
         ? Math.min(6, options.max_duration_seconds)
         : current.duration,
@@ -199,6 +210,10 @@ export function ModelTestModal({
   };
 
   const activeMode = modes.find((item) => item.mode === form.mode);
+  // 生图、生视频的模型走左右两栏：结果在右边一直看得见，画布不随结果变形。
+  // 文本模型的回答是一段文字，接在表单下方更顺，不改。
+  const videoModel = modes.some((item) => isVideoMode(item.mode));
+  const mediaModel = videoModel || modes.some((item) => isImageMode(item.mode));
   const open = model !== null;
   const noChannels = Boolean(displayModel) && channelOptions.length === 0;
   const missingImage = Boolean(activeMode?.requires_image) && form.images.length === 0;
@@ -232,6 +247,8 @@ export function ModelTestModal({
       images: form.images,
       size: form.size,
       quality: form.quality,
+      aspectRatio: form.aspectRatio,
+      imageSize: form.imageSize,
       n: form.n,
       duration: form.duration,
     });
@@ -246,10 +263,17 @@ export function ModelTestModal({
       title={t("models_page.test_model_title")}
       description={
         displayModel
-          ? t("models_page.test_model_desc", { model: displayModel.id })
+          ? t(
+              mediaModel
+                ? videoModel
+                  ? "models_page.test_model_desc_video"
+                  : "models_page.test_model_desc_image"
+                : "models_page.test_model_desc",
+              { model: displayModel.id },
+            )
           : undefined
       }
-      maxWidth="max-w-2xl"
+      maxWidth={mediaModel ? "max-w-5xl" : "max-w-2xl"}
       footer={
         <>
           <Button variant="secondary" onClick={onClose} disabled={running}>
@@ -265,7 +289,37 @@ export function ModelTestModal({
         </>
       }
     >
-      {displayModel ? (
+      {displayModel && mediaModel ? (
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,24rem)_minmax(0,1fr)]">
+          <div className="min-w-0 space-y-4">
+            <ModelTestForm
+              state={form}
+              modes={modes}
+              options={options}
+              channelOptions={channelOptions.map((option) => ({
+                value: option.value,
+                label: option.label,
+              }))}
+              disabled={running}
+              noChannels={noChannels}
+              onChange={(patch) => setForm((current) => ({ ...current, ...patch }))}
+              onModeChange={changeMode}
+            />
+            {missingImage ? (
+              <Callout tone="warning">{t("models_page.test_reference_image_required")}</Callout>
+            ) : null}
+          </div>
+          <ModelTestMediaPane
+            video={videoModel}
+            running={running}
+            phase={phase}
+            result={displayResult}
+            error={displayError}
+            durationBadge={durationBadge}
+            className="h-[clamp(220px,38vh,340px)] lg:h-auto lg:min-h-[clamp(300px,50vh,480px)] lg:flex-1"
+          />
+        </div>
+      ) : displayModel ? (
         <div className="space-y-4">
           <ModelTestForm
             state={form}

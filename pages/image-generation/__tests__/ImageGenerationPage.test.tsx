@@ -103,12 +103,23 @@ describe("ImageGenerationPage", () => {
     expect(within(callCard as HTMLElement).queryByText("返回结构")).not.toBeInTheDocument();
     expect(screen.getByText("data[].revised_prompt").className).toContain("break-all");
     expect(screen.queryByText(/已加载全部/)).not.toBeInTheDocument();
-    expect(screen.getByText("size")).toBeInTheDocument();
-    expect(screen.getByText("quality")).toBeInTheDocument();
-    expect(screen.getByText("n")).toBeInTheDocument();
+    // `size` is both a request parameter and, now, a response field, so each table
+    // is asserted on its own.
+    const [requestCard, responseCard] = specCards;
+    for (const name of ["size", "quality", "n", "aspect_ratio", "image_size"]) {
+      expect(within(requestCard).getByText(name)).toBeInTheDocument();
+    }
+    for (const name of ["output_format", "size"]) {
+      expect(within(responseCard).getByText(name)).toBeInTheDocument();
+    }
     // Same reason as above: the highlighted snippet has no single node holding these.
     expect(textCurl.textContent).toContain('"size": "1024x1024"');
     expect(textCurl.textContent).toContain('"quality": "high"');
+    // Gemini image models are shaped by ratio and size tier, shown as a second example.
+    const geminiCurl = document.querySelectorAll("[data-code-block]")[1] as HTMLElement;
+    expect(geminiCurl.textContent).toContain('"model": "gemini-3.1-flash-image"');
+    expect(geminiCurl.textContent).toContain('"aspect_ratio": "16:9"');
+    expect(geminiCurl.textContent).toContain('"image_size": "2K"');
     expect(screen.queryByText("BaseURL")).not.toBeInTheDocument();
     expect(screen.getByText(/Authorization: Bearer YOUR_API_KEY/)).toBeInTheDocument();
     expect(within(callCard as HTMLElement).getByRole("button", { name: "测试生成" })).toBeEnabled();
@@ -145,7 +156,8 @@ describe("ImageGenerationPage", () => {
     await user.click(screen.getByRole("button", { name: "测试生成" }));
 
     const dialog = await screen.findByRole("dialog", { name: "测试生成" });
-    expect(dialog.className).toContain("max-w-3xl");
+    // Two panes on wide screens: inputs on the left, the result canvas on the right.
+    expect(dialog.className).toContain("max-w-5xl");
     expect(dialog.className).not.toContain("w-[78vw]");
     expect(dialog.className).not.toContain("min-w-[720px]");
     expect(within(dialog).getByTestId("image-generation-stage")).toBeInTheDocument();
@@ -172,9 +184,15 @@ describe("ImageGenerationPage", () => {
     expect(sendButton).toHaveAttribute("type", "submit");
     expect(within(dialog).getByTestId("image-generation-send-button")).toBe(sendButton);
     expect(within(dialog).getByText("文生图 · ⌘ / Ctrl + Enter 生成图片")).toBeInTheDocument();
+    // The canvas size comes from the layout, never from the result.
+    expect(within(dialog).getByTestId("image-generation-stage")).toHaveAttribute(
+      "data-state",
+      "idle",
+    );
     expect(within(dialog).getByTestId("image-generation-stage")).toHaveClass(
       "bg-subtle",
-      "h-[clamp(240px,42vh,400px)]",
+      "lg:flex-1",
+      "h-[clamp(220px,38vh,340px)]",
     );
     expect(dialog.querySelector(".image-generation-dots-layer")).not.toBeInTheDocument();
 
@@ -277,10 +295,10 @@ describe("ImageGenerationPage", () => {
     expect(within(dialog).getByTestId("image-generation-carousel-track")).toHaveStyle({
       transform: "translateX(-100%)",
     });
-    expect(within(dialog).getByTestId("image-generation-result-scroll")).toHaveClass(
-      "overflow-auto",
-    );
-    expect(image).toHaveClass("w-full");
+    // Every result is scaled to fit the canvas, whatever its aspect ratio, instead of
+    // filling the width and scrolling: a 1:8 strip used to show only its top slice.
+    expect(image).toHaveClass("max-h-full", "max-w-full", "object-contain");
+    expect(image).not.toHaveClass("w-full");
     expect(within(dialog).getByText("第二张")).toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: "点击预览" })).toBeVisible();
 
@@ -465,7 +483,7 @@ describe("ImageGenerationPage", () => {
     });
   });
 
-  test("collapses the preview area into an alert when generation fails", async () => {
+  test("shows a failure inside the result canvas without resizing the dialog", async () => {
     const deferred = createDeferred<{
       task_id: string;
       status: "failed";
@@ -516,13 +534,16 @@ describe("ImageGenerationPage", () => {
 
     expect(await within(dialog).findByText("上游图片生成失败")).toBeInTheDocument();
     expect(within(dialog).getByText("00:02")).toBeInTheDocument();
-    // The failure now uses the panel's alert treatment and collapses the stage: a
-    // full-height grey canvas for one line of text is what forced the dialog to
-    // scroll. Asserting the tone on the stage keeps the intent without pinning the
-    // exact palette.
-    const stage = dialog.querySelector('[data-state="error"]');
-    expect(stage?.className).toContain("bg-rose-500/");
-    expect(stage?.className).toContain("h-auto");
+    // The canvas keeps its neutral tone and its size: the reason sits in a rose
+    // notice inside it. A canvas that collapsed or recoloured on failure is what made
+    // the dialog jump around between attempts.
+    const stage = within(dialog).getByTestId("image-generation-stage");
+    expect(stage).toHaveAttribute("data-state", "error");
+    expect(stage).toHaveClass("bg-subtle");
+    expect(stage).not.toHaveClass("h-auto");
+    expect(within(stage).getByText("上游图片生成失败").parentElement?.className).toContain(
+      "bg-rose-500/",
+    );
   });
 
   test("flags an empty prompt in place and generates with the keyboard shortcut", async () => {
@@ -575,7 +596,7 @@ describe("ImageGenerationPage", () => {
 
     renderPage();
 
-    expect(await screen.findByText("当前没有可用于 gpt-image-2 的渠道。")).toBeInTheDocument();
+    expect(await screen.findByText("当前没有可用的生图渠道。")).toBeInTheDocument();
     const callCard = screen.getByText("调用方式").closest("section");
     expect(
       within(callCard as HTMLElement).getByRole("button", { name: "测试生成" }),
@@ -603,9 +624,9 @@ describe("ImageGenerationPage", () => {
 
     expect(
       await screen.findByText(
-        "无法获取 gpt-image-2 的渠道可用性。请确认账号具有生图管理权限后重试。",
+        "无法获取生图渠道的可用性。请确认账号具有生图管理权限后重试。",
       ),
     ).toBeInTheDocument();
-    expect(screen.queryByText("当前没有可用于 gpt-image-2 的渠道。")).not.toBeInTheDocument();
+    expect(screen.queryByText("当前没有可用的生图渠道。")).not.toBeInTheDocument();
   });
 });

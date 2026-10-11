@@ -33,6 +33,9 @@ export interface ModelTestRunInput {
   images?: string[];
   size?: string;
   quality?: string;
+  /** Gemini image models: ratio ("auto" means let the model decide) and size tier. */
+  aspectRatio?: string;
+  imageSize?: string;
   n?: number;
   duration?: number;
 }
@@ -115,6 +118,10 @@ export function useModelTestRunner() {
         ...(input.images?.length ? { images: input.images } : {}),
         ...(input.size ? { size: input.size } : {}),
         ...(input.quality ? { quality: input.quality } : {}),
+        ...(input.aspectRatio && input.aspectRatio !== "auto"
+          ? { aspect_ratio: input.aspectRatio }
+          : {}),
+        ...(input.imageSize ? { image_size: input.imageSize } : {}),
         ...(input.n && input.n > 1 ? { n: input.n } : {}),
         ...(input.duration ? { duration: input.duration } : {}),
       };

@@ -157,11 +157,12 @@ function VideoOutput({ payload }: { payload: ModelTestPayload }) {
   }
   return (
     <div className="space-y-1" data-testid="model-test-video">
+      {/* 竖版视频按宽度铺满会把弹窗撑高：限高并按比例缩放，和图片画布一样不随结果变形。 */}
       <video
         src={url}
         controls
         playsInline
-        className="w-full rounded-lg bg-black"
+        className="max-h-[min(60vh,480px)] w-full rounded-lg bg-black object-contain"
       />
       <div className="flex items-center justify-between gap-2 text-2xs text-ink-3">
         <span className="tabular-nums">
@@ -207,7 +208,7 @@ export function ProvenanceWarning({ result }: { result: ModelTestResult }) {
   );
 }
 
-function imageSource(image: ModelTestImage): string {
+export function imageSource(image: ModelTestImage): string {
   if (image.url) return image.url;
   if (!image.b64_json) return "";
   return `data:image/${image.format || "png"};base64,${image.b64_json}`;

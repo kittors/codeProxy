@@ -28,11 +28,35 @@ export const truncateErrorText = (text: string): string => {
   return `${text.slice(0, MAX_ERROR_TEXT_LENGTH)}...`;
 };
 
+/**
+ * Reads the flat `{"error": "<code>", "message": "<reason>"}` body several CliRelay
+ * management handlers answer with (PUT /config.yaml's invalid_yaml / invalid_config,
+ * the update and Vertex import handlers) as "code: reason". The string `error` alone
+ * gave operators the bare code and hid the reason they act on, such as which YAML
+ * line or channel group failed; the code stays in front so a message can still be
+ * matched against server logs. Handled here rather than reshaped on the server: the
+ * panel auto-updates onto older backends that keep answering this way.
+ */
+const joinErrorCodeAndReason = (error: unknown, message: unknown): string => {
+  if (typeof error !== "string" || typeof message !== "string") return "";
+  const code = error.trim();
+  const reason = message.trim();
+  if (!code || !reason) return "";
+  const lowerCode = code.toLowerCase();
+  const lowerReason = reason.toLowerCase();
+  // A reason that already is, or leads with, its code is not prefixed twice.
+  if (lowerReason === lowerCode || lowerReason.startsWith(`${lowerCode}:`)) return reason;
+  return `${code}: ${reason}`;
+};
+
 export const extractApiErrorMessage = (payload: unknown, fallback: string): string => {
   if (typeof payload === "string" && payload.trim()) {
     return truncateErrorText(payload.trim());
   }
   if (!isRecord(payload)) return fallback;
+
+  const codeWithReason = joinErrorCodeAndReason(payload.error, payload.message);
+  if (codeWithReason) return truncateErrorText(codeWithReason);
 
   const nestedError = isRecord(payload.error) ? payload.error : null;
   const candidates = [payload.error, nestedError?.message, payload.message, payload.detail];

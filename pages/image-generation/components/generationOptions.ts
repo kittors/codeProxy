@@ -31,6 +31,22 @@ export type QualityOption = (typeof QUALITY_OPTIONS)[number];
 
 export const DEFAULT_QUALITY: QualityOption = "medium";
 
+/**
+ * Ratio and size-tier pickers for models shaped that way (Gemini image models).
+ * The values themselves come from the server; these are the picker's defaults and
+ * its "let the model decide" entry, which is sent as no aspect_ratio at all.
+ */
+export const AUTO_ASPECT_RATIO = "auto";
+
+export const DEFAULT_ASPECT_RATIO = "1:1";
+
+/** The upstream's own default tier, so picking it changes nothing. */
+export const DEFAULT_IMAGE_SIZE = "1K";
+
+/** Picks a default that the model offers, falling back to its first value. */
+export const pickShapeDefault = (values: string[], preferred: string) =>
+  values.includes(preferred) ? preferred : (values[0] ?? "");
+
 export const COUNT_OPTIONS = [1, 2, 3, 4] as const;
 
 export const MAX_UPLOAD_IMAGES = 5;

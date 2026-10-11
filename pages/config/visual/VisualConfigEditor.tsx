@@ -9,7 +9,7 @@ import {
 } from "react";
 import { Search, SearchX, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import type { VisualConfigValues } from "@features/visual-config-editor";
+import { isDatabaseSetting, type VisualConfigValues } from "@features/visual-config-editor";
 import { Callout, DialogIcon, HUE_GLYPH, SettingGroup, TextInput, useScrollFade } from "@code-proxy/ui";
 import { ConfigFieldRow } from "./ConfigFieldRow";
 import { ConfigGroupTabs, ConfigSectionChips, type ConfigGroupTab } from "./ConfigNavBar";
@@ -88,6 +88,7 @@ export function VisualConfigEditor({
   values,
   baseline,
   disabled,
+  lockDatabaseSettings = false,
   onChange,
   codexAdmission,
   toolbarEnd,
@@ -96,6 +97,11 @@ export function VisualConfigEditor({
   /** 加载时的值，用来标出「改过的项」；不传时视为没有改动。 */
   baseline?: VisualConfigValues;
   disabled?: boolean;
+  /**
+   * 没读到存在数据库里的设置的当前值：这些项显示的只是默认值，锁住不让改，
+   * 免得保存时拿默认值把数据库里的值盖掉。
+   */
+  lockDatabaseSettings?: boolean;
   onChange: (values: Partial<VisualConfigValues>) => void;
   /** 「Codex 客户端准入」分区的内容（它直接调用接口、立即生效，由页面注入）。 */
   codexAdmission?: ReactNode;
@@ -166,6 +172,9 @@ export function VisualConfigEditor({
     setGroup(next);
   };
 
+  // 请求体规则（payload）与推荐档位动到的日志、保留设置都存在数据库里。
+  const databaseLocked = disabled || lockDatabaseSettings;
+
   const renderSectionBody = (section: ConfigSectionDef) => {
     if (section.id === "payload") {
       return (
@@ -176,7 +185,7 @@ export function VisualConfigEditor({
             description={t("config_ui.payload.default.desc")}
             meta="payload.default"
             rules={values.payloadDefaultRules}
-            disabled={disabled}
+            disabled={databaseLocked}
             onChange={(payloadDefaultRules) => onChange({ payloadDefaultRules })}
           />
           <PayloadRulesEditor
@@ -184,12 +193,12 @@ export function VisualConfigEditor({
             description={t("config_ui.payload.override.desc")}
             meta="payload.override"
             rules={values.payloadOverrideRules}
-            disabled={disabled}
+            disabled={databaseLocked}
             onChange={(payloadOverrideRules) => onChange({ payloadOverrideRules })}
           />
           <PayloadFilterRulesEditor
             rules={values.payloadFilterRules}
-            disabled={disabled}
+            disabled={databaseLocked}
             onChange={(payloadFilterRules) => onChange({ payloadFilterRules })}
           />
         </div>
@@ -207,7 +216,7 @@ export function VisualConfigEditor({
             field={field}
             values={values}
             baseline={reference}
-            disabled={disabled}
+            disabled={isDatabaseSetting(field.yamlKey) ? databaseLocked : disabled}
             onChange={onChange}
           />
         ))}
@@ -287,7 +296,7 @@ export function VisualConfigEditor({
       >
         {/* 推荐档位动的主要是日志、保留与监控：在打开页面看到的「基础」和「日志与数据」两组都放一份。 */}
         {!searching && (group === "basics" || group === "data") ? (
-          <ResourceProfileBanner values={values} disabled={disabled} onChange={onChange} />
+          <ResourceProfileBanner values={values} disabled={databaseLocked} onChange={onChange} />
         ) : null}
         {visibleSections.length === 0 ? (
           <div className="grid place-items-center rounded-2xl bg-subtle px-6 py-16 text-center">

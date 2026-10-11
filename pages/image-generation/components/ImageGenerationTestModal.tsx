@@ -7,13 +7,12 @@ import {
   ImagePreviewOverlay,
   Modal,
   rules,
-  SearchableSelect,
-  Select,
   Textarea,
   useFormValidation,
 } from "@code-proxy/ui";
 import {
   ImageModelPicker,
+  imageShapeOptions,
   resolveInitialModel,
   resolveInitialProvider,
   supportsImageEditing,
@@ -21,15 +20,19 @@ import {
 import { useImageGenerationChannels } from "../hooks/useImageGenerationChannels";
 import {
   COUNT_OPTIONS,
+  DEFAULT_ASPECT_RATIO,
+  DEFAULT_IMAGE_SIZE,
   DEFAULT_QUALITY,
   MAX_UPLOAD_IMAGES,
-  QUALITY_OPTIONS,
+  pickShapeDefault,
+  AUTO_ASPECT_RATIO,
   type QualityOption,
 } from "./generationOptions";
+import { ImageParameterFields } from "./ImageParameterFields";
 import { ImageResultStage } from "./ImageResultStage";
 import { ReferenceImagesField, type UploadedImage } from "./ReferenceImagesField";
-import { useImageGenerationTask } from "./useImageGenerationTask";
-import { normalizeImageGenerationSizePreset, useSizePresets } from "./useSizePresets";
+import { imageFileExtension, useImageGenerationTask } from "./useImageGenerationTask";
+import { useSizePresets } from "./useSizePresets";
 
 const FORM_ID = "image-generation-test-form";
 /**
@@ -55,9 +58,9 @@ function revokeUploadPreviewUrl(url: string) {
 /**
  * 测试生成图片。
  *
- * 自上而下：生成参数（每个下拉都有看得见的标签）→ 结果画布 → 提示词与参考图；主按钮「生成图片」
- * 在底部，⌘/Ctrl + Enter 也能生成。以前是聊天式输入框：发送是输入框角落里一个箭头、上传是一个
- * 不带文字的「+」，几个下拉只有读屏才知道是什么。上传了参考图就按图生图处理，底部提示会跟着变。
+ * 左右两栏：左边是全部输入（模型 → 提示词 → 生成参数 → 参考图），右边是结果画布；窄屏时上下排。
+ * 画布尺寸由布局决定、不随结果变化，任何比例的图都完整缩放在里面，弹窗不会被结果撑开或挤变形。
+ * 主按钮「生成图片」在底部，⌘/Ctrl + Enter 也能生成；上传了参考图就按图生图处理，底部提示跟着变。
  * 从 ImageGenerationPageContent 拆出（那个文件卡在行数棘轮上）。
  */
 export function ImageGenerationTestModal({
@@ -84,6 +87,7 @@ export function ImageGenerationTestModal({
   const validation = useFormValidation({ prompt }, { prompt: [rules.required()] });
   const { reset } = validation;
   const uploadedImagesRef = useRef<UploadedImage[]>([]);
+  const resultRef = useRef<HTMLDivElement | null>(null);
 
   // The catalog arrives asynchronously, so the selection is seeded once it does and
   // then left alone; re-deriving it on every render would fight the user's choice.
@@ -99,16 +103,26 @@ export function ImageGenerationTestModal({
 
   const activeModel = selectedModel || FALLBACK_IMAGE_MODEL;
   const editingSupported = catalog.models.length === 0 || supportsImageEditing(catalog, activeModel);
+  // Gemini image models take a ratio and a size tier instead of size and quality.
+  const shape = imageShapeOptions(catalog, activeModel);
+  const [aspectRatio, setAspectRatio] = useState(DEFAULT_ASPECT_RATIO);
+  const [imageSize, setImageSize] = useState(DEFAULT_IMAGE_SIZE);
 
-  const handleProviderChange = useCallback(
-    (provider: string) => {
-      setSelectedProvider(provider);
-      // The current model usually belongs to the previous provider, so it is
-      // reselected rather than left pointing at something this provider cannot serve.
-      setSelectedModel(resolveInitialModel(catalog, provider, null));
-    },
-    [catalog],
-  );
+  // Re-seeded whenever the model changes or the dialog reopens: a ratio picked for
+  // one model may not exist on the next, and a stale value would be sent anyway.
+  useEffect(() => {
+    if (!open) return;
+    const options = imageShapeOptions(catalog, activeModel);
+    if (!options) return;
+    setAspectRatio(pickShapeDefault(options.aspectRatios, DEFAULT_ASPECT_RATIO));
+    setImageSize(pickShapeDefault(options.imageSizes, DEFAULT_IMAGE_SIZE));
+  }, [open, catalog, activeModel]);
+
+  // One selector names both: picking a model decides the credential pool that serves it.
+  const handleModelChange = useCallback((provider: string, model: string) => {
+    setSelectedProvider(provider);
+    setSelectedModel(model);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -176,11 +190,23 @@ export function ImageGenerationTestModal({
     const base = {
       model: activeModel,
       prompt: prompt.trim(),
-      size: sizes.size,
-      quality,
       n: count,
+      ...(shape
+        ? {
+            // "auto" is sent as no ratio, which leaves the shape to the model.
+            ...(aspectRatio && aspectRatio !== AUTO_ASPECT_RATIO
+              ? { aspect_ratio: aspectRatio }
+              : {}),
+            ...(imageSize ? { image_size: imageSize } : {}),
+          }
+        : { size: sizes.size, quality }),
     };
     setPreviewOpen(false);
+    // 窄屏上下排时结果在表单下方：开始生成就把它带进视野，不用自己往下翻。宽屏两栏时
+    // 结果本来就在视野里，nearest 不会滚动。
+    window.requestAnimationFrame(() =>
+      resultRef.current?.scrollIntoView?.({ block: "nearest", behavior: "smooth" }),
+    );
     void task.generate(
       requestMode === "edits"
         ? { mode: "edits", ...base, images: references.map((item) => item.file) }
@@ -188,8 +214,6 @@ export function ImageGenerationTestModal({
     );
   };
 
-  // 服务商不止一个时，服务商 + 模型独占一行，其余三项在下一行；只有一个时四项排一行。
-  const multiProvider = catalog.providers.length > 1;
   const modeLabel = t(
     requestMode === "edits"
       ? "image_generation.image_to_image_title"
@@ -201,11 +225,8 @@ export function ImageGenerationTestModal({
       <Modal
         open={open}
         title={t("image_generation.test_title")}
-        description={t("image_generation.test_modal_desc")}
         icon={<ImagePlay />}
-        size="lg"
-        // 画布、提示词、参考图一屏放得下：正文不另设 70vh 上限，由面板的视口上限兜底。
-        bodyHeightClassName="max-h-none"
+        size="xl"
         onClose={onClose}
         onSubmitShortcut={submit}
         footerStart={`${modeLabel} · ${t("image_generation.test_shortcut")}`}
@@ -232,110 +253,53 @@ export function ImageGenerationTestModal({
           ref={formRef}
           id={FORM_ID}
           noValidate
-          className="space-y-4"
+          // 宽屏左右两栏；左栏定宽，右栏的画布随行高拉伸，最低一档由画布自己保证。
+          className="grid gap-5 lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]"
           onSubmit={(event) => {
             event.preventDefault();
             submit();
           }}
         >
-          <div
-            className={[
-              "grid grid-cols-2 gap-x-3 gap-y-1",
-              multiProvider ? "sm:grid-cols-3" : "sm:grid-cols-4",
-            ].join(" ")}
-          >
-            <div className={multiProvider ? "col-span-2 sm:col-span-3" : "col-span-2 sm:col-span-1"}>
-              <ImageModelPicker
-                catalog={catalog}
-                provider={selectedProvider}
-                model={activeModel}
-                disabled={task.submitting || catalogLoading}
-                onProviderChange={handleProviderChange}
-                onModelChange={setSelectedModel}
-              />
-            </div>
-            <FormField label={t("image_generation.size_label")} reserveMeta={false}>
-              <SearchableSelect
-                aria-label={t("image_generation.size_label")}
-                value={sizes.size}
-                onChange={sizes.setSize}
-                options={sizes.options}
-                allowCreate
-                normalizeCreateValue={normalizeImageGenerationSizePreset}
-                createLabel={(value) => {
-                  const normalized = normalizeImageGenerationSizePreset(value) || value.trim();
-                  return (
-                    <span className="flex min-w-0 items-center justify-between gap-3">
-                      <span className="truncate">
-                        {t("image_generation.size_create_option", { size: normalized })}
-                      </span>
-                      <span className="shrink-0 text-xs font-semibold text-ink-3">
-                        {t("image_generation.size_create_confirm")}
-                      </span>
-                    </span>
-                  );
-                }}
-                onCreate={sizes.createPreset}
-                searchPlaceholder={t("image_generation.size_search_placeholder")}
-                className="w-full"
-              />
-            </FormField>
-            <FormField label={t("image_generation.quality_label")} reserveMeta={false}>
-              <Select
-                aria-label={t("image_generation.quality_label")}
-                value={quality}
-                onChange={(value) => setQuality(value as QualityOption)}
-                options={QUALITY_OPTIONS.map((value) => ({ value, label: value }))}
-              />
-            </FormField>
-            <FormField label={t("image_generation.count_label")} reserveMeta={false}>
-              <Select
-                aria-label={t("image_generation.count_label")}
-                value={String(count)}
-                onChange={(value) => setCount(Number(value) as (typeof COUNT_OPTIONS)[number])}
-                options={COUNT_OPTIONS.map((value) => ({
-                  value: String(value),
-                  label: t("image_generation.count_option", { count: value }),
-                }))}
-              />
-            </FormField>
-          </div>
+          <div data-testid="image-generation-composer" className="flex min-w-0 flex-col gap-4">
+            <ImageModelPicker
+              catalog={catalog}
+              provider={selectedProvider}
+              model={activeModel}
+              disabled={task.submitting || catalogLoading}
+              onChange={handleModelChange}
+            />
 
-          <ImageResultStage
-            submitting={task.submitting}
-            images={task.images}
-            activeIndex={task.activeImageIndex}
-            onActiveIndexChange={task.setActiveImageIndex}
-            errorMessage={task.errorMessage}
-            statusText={t(task.statusKey)}
-            elapsedLabel={task.elapsedLabel}
-            hasUploads={references.length > 0}
-            editing={requestMode === "edits"}
-            model={activeModel}
-            onPreview={() => setPreviewOpen(true)}
-          />
-
-          <div data-testid="image-generation-composer" className="space-y-4">
             <FormField
               htmlFor="image-generation-prompt"
               label={t("image_generation.prompt_label")}
               required
-              description={t(
-                requestMode === "edits"
-                  ? "image_generation.param_edit_prompt_desc"
-                  : "image_generation.param_prompt_desc",
-              )}
               error={validation.error("prompt")}
+              reserveMeta={false}
             >
               <Textarea
                 value={prompt}
                 onChange={(event) => setPrompt(event.target.value)}
                 {...validation.bind("prompt")}
                 placeholder={t("image_generation.prompt_placeholder")}
-                rows={3}
-                className="min-h-24"
+                rows={5}
+                // cn 只是拼接、不合并冲突类，要用 ! 盖过 Textarea 自带的 resize-y：
+                // 拖高输入框会把右侧画布一起拉长。
+                className="!resize-none"
               />
             </FormField>
+
+            <ImageParameterFields
+              shape={shape}
+              aspectRatio={aspectRatio}
+              onAspectRatioChange={setAspectRatio}
+              imageSize={imageSize}
+              onImageSizeChange={setImageSize}
+              sizes={sizes}
+              quality={quality}
+              onQualityChange={setQuality}
+              count={count}
+              onCountChange={setCount}
+            />
 
             {editingSupported ? (
               <ReferenceImagesField
@@ -350,6 +314,22 @@ export function ImageGenerationTestModal({
               />
             ) : null}
           </div>
+
+          <ImageResultStage
+            submitting={task.submitting}
+            images={task.images}
+            activeIndex={task.activeImageIndex}
+            onActiveIndexChange={task.setActiveImageIndex}
+            errorMessage={task.errorMessage}
+            statusText={t(task.statusKey)}
+            elapsedLabel={task.elapsedLabel}
+            editing={requestMode === "edits"}
+            model={activeModel}
+            onPreview={() => setPreviewOpen(true)}
+            rootRef={resultRef}
+            // 窄屏上下排时给定高度；宽屏占满右栏，最低一档保证结果有地方放。
+            className="h-[clamp(220px,38vh,340px)] lg:h-auto lg:min-h-[clamp(320px,52vh,520px)] lg:flex-1"
+          />
         </form>
       </Modal>
 
@@ -358,11 +338,11 @@ export function ImageGenerationTestModal({
         imageSrc={activeImage?.src ?? null}
         imageAlt={t("image_generation.preview_alt", { model: activeModel })}
         title={t("image_generation.image_preview_title")}
-        downloadName={`${activeModel}-${task.activeImageIndex + 1}.png`}
+        downloadName={`${activeModel}-${task.activeImageIndex + 1}.${imageFileExtension(activeImage?.format)}`}
         images={task.images.map((image, index) => ({
           src: image.src,
           alt: t("image_generation.preview_alt", { model: activeModel }),
-          downloadName: `${activeModel}-${index + 1}.png`,
+          downloadName: `${activeModel}-${index + 1}.${imageFileExtension(image.format)}`,
         }))}
         activeIndex={task.activeImageIndex}
         onActiveIndexChange={task.setActiveImageIndex}

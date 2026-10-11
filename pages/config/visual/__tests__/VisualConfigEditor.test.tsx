@@ -123,6 +123,23 @@ describe("VisualConfigEditor auto update config", () => {
     expect(onChange).toHaveBeenLastCalledWith({ port: "8318" });
   });
 
+  test("locks the database-backed settings while their running values are unknown", async () => {
+    render(
+      <ThemeProvider>
+        <VisualConfigEditor values={DEFAULT_VISUAL_VALUES} lockDatabaseSettings onChange={vi.fn()} />
+      </ThemeProvider>,
+    );
+    await userEvent.click(screen.getByRole("tab", { name: /^Behavior/ }));
+
+    // 代理和重试次数存在数据库里，只看得到默认值时不能改；「只用 IPv4」在 config.yaml 里，照常可改。
+    const network = document.querySelector<HTMLElement>('[data-config-section="network"]')!;
+    expect(within(network).getByRole("textbox", { name: "Host" })).toBeDisabled();
+    expect(within(network).getByRole("textbox", { name: "Retry attempts" })).toBeDisabled();
+    expect(within(network).getByRole("switch", { name: "Use IPv4 only for upstream" })).toBeEnabled();
+    const streaming = document.querySelector<HTMLElement>('[data-config-section="streaming"]')!;
+    expect(within(streaming).getByRole("textbox", { name: "Streaming keep-alive" })).toBeEnabled();
+  });
+
   test("flags a non-numeric port inline instead of letting it be dropped on save", () => {
     render(
       <ThemeProvider>
@@ -208,6 +225,7 @@ describe("VisualConfigEditor auto update config", () => {
     act(() => {
       result.current.loadVisualValuesFromYaml(
         "auto-update:\n  enabled: false\n  channel: dev\n  docker-image: registry.local/mirror/clirelay\n",
+        null,
       );
     });
 
@@ -228,10 +246,10 @@ describe("VisualConfigEditor auto update config", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.applyVisualChangesToYaml("")).toContain("auto-update:");
-      expect(result.current.applyVisualChangesToYaml("")).toContain("enabled: true");
-      expect(result.current.applyVisualChangesToYaml("")).toContain("channel: dev");
-      expect(result.current.applyVisualChangesToYaml("")).toContain(
+      expect(result.current.applyVisualChangesToYaml("", null)).toContain("auto-update:");
+      expect(result.current.applyVisualChangesToYaml("", null)).toContain("enabled: true");
+      expect(result.current.applyVisualChangesToYaml("", null)).toContain("channel: dev");
+      expect(result.current.applyVisualChangesToYaml("", null)).toContain(
         "docker-image: registry.example.com/team/clirelay",
       );
     });
@@ -262,6 +280,7 @@ describe("VisualConfigEditor auto update config", () => {
           "  - https://admin.example.com",
           "  - chrome-extension://abcdefghijklmnop",
         ].join("\n"),
+        null,
       );
     });
 
@@ -279,7 +298,7 @@ describe("VisualConfigEditor auto update config", () => {
     });
 
     await waitFor(() => {
-      const nextYaml = result.current.applyVisualChangesToYaml("");
+      const nextYaml = result.current.applyVisualChangesToYaml("", null);
       expect(nextYaml).toContain("cors-allow-origins:");
       expect(nextYaml).toContain("- https://plugin.example");
       expect(nextYaml).toContain("- chrome-extension://abcdefghijklmnop");
@@ -302,6 +321,7 @@ describe("VisualConfigEditor auto update config", () => {
           "        channels:",
           "          - Main Codex",
         ].join("\n"),
+        null,
       );
     });
 
@@ -311,7 +331,7 @@ describe("VisualConfigEditor auto update config", () => {
     });
 
     await waitFor(() => {
-      const nextYaml = result.current.applyVisualChangesToYaml("");
+      const nextYaml = result.current.applyVisualChangesToYaml("", null);
       expect(nextYaml).toContain("strategy: session-sticky");
       expect(nextYaml).toContain("name: sticky-pool");
     });
@@ -322,13 +342,16 @@ describe("VisualConfigEditor auto update config", () => {
 
     act(() => {
       result.current.loadVisualValuesFromYaml("port: 8318\nlogging-to-file: true\n", {
-        payload: {
-          override: [
-            {
-              models: [{ name: "gpt-5.4", protocol: "codex" }],
-              params: { service_tier: "priority" },
-            },
-          ],
+        proxyUrl: "",
+        config: {
+          payload: {
+            override: [
+              {
+                models: [{ name: "gpt-5.4", protocol: "codex" }],
+                params: { service_tier: "priority" },
+              },
+            ],
+          },
         },
       });
     });
@@ -348,18 +371,27 @@ describe("VisualConfigEditor auto update config", () => {
 
   test("writes empty payload marker when DB-backed payload rules are cleared visually", async () => {
     const { result } = renderHook(() => useVisualConfig());
-
-    act(() => {
-      result.current.loadVisualValuesFromYaml("port: 8318\n", {
+    // GET /config 里没有规则的类别是 null；清空后写出的 `payload: {}` 不该带上它们。
+    const live = {
+      proxyUrl: "",
+      config: {
         payload: {
+          default: null,
+          "default-raw": null,
           override: [
             {
               models: [{ name: "gpt-5.4", protocol: "codex" }],
               params: { service_tier: "priority" },
             },
           ],
+          "override-raw": null,
+          filter: null,
         },
-      });
+      },
+    };
+
+    act(() => {
+      result.current.loadVisualValuesFromYaml("port: 8318\n", live);
     });
 
     await waitFor(() => {
@@ -371,7 +403,7 @@ describe("VisualConfigEditor auto update config", () => {
     });
 
     await waitFor(() => {
-      const nextYaml = result.current.applyVisualChangesToYaml("port: 8318\n");
+      const nextYaml = result.current.applyVisualChangesToYaml("port: 8318\n", live);
       expect(nextYaml).toContain("payload: {}\n");
       expect(nextYaml).not.toContain("service_tier");
     });
@@ -421,6 +453,7 @@ describe("VisualConfigEditor auto update config", () => {
           "  cleanup-interval-minutes: 720",
           "  max-total-size-mb: 512",
         ].join("\n"),
+        null,
       );
     });
 
@@ -457,7 +490,7 @@ describe("VisualConfigEditor auto update config", () => {
     });
 
     await waitFor(() => {
-      const yaml = result.current.applyVisualChangesToYaml("");
+      const yaml = result.current.applyVisualChangesToYaml("", null);
       expect(yaml).toContain("system-stats-cache-seconds: 60");
       expect(yaml).toContain("system-stats-websocket-max-age-seconds: 300");
       expect(yaml).toContain("max-total-size-mb: 256");

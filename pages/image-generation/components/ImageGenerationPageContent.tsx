@@ -171,6 +171,7 @@ function EndpointCallDoc({ doc }: { doc: EndpointDoc }) {
       </div>
 
       <CodeBlock code={doc.curl} label="curl" />
+      <CodeBlock code={doc.geminiCurl} label={t("image_generation.gemini_curl_label")} />
     </div>
   );
 }

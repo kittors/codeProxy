@@ -16,7 +16,11 @@ import { CodexOAuthAdmissionPanel } from "./CodexOAuthAdmissionPanel";
 import { VisualConfigEditor } from "./visual/VisualConfigEditor";
 import { collectInvalidFields, collectModified } from "./visual/configSchema";
 import { configFieldDomId } from "./visual/ConfigFieldRow";
-import { useVisualConfig } from "@features/visual-config-editor";
+import {
+  effectiveConfigDocument,
+  useVisualConfig,
+  type LiveConfig,
+} from "@features/visual-config-editor";
 import { Callout, Card } from "@code-proxy/ui";
 import { ConfirmModal } from "@code-proxy/ui";
 import { EmptyState } from "@code-proxy/ui";
@@ -52,9 +56,23 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   return value as Record<string, unknown>;
 }
 
-function readConfigRiskSnapshot(yamlContent: string): ConfigRiskSnapshot {
+/**
+ * 读服务端正在用的配置：存在数据库里的设置（代理、重试、日志……）只有这里有当前值。
+ * 读不到不算加载失败——页面照常打开，只是这些设置锁住不让改，免得拿默认值把数据库里的值盖掉。
+ */
+async function fetchLiveConfig(): Promise<{ live: LiveConfig | null; error: string }> {
   try {
-    const parsed = asRecord(parseYaml(yamlContent)) ?? {};
+    const [config, proxyUrl] = await Promise.all([configApi.getConfig(), configApi.getProxyUrl()]);
+    return { live: { config, proxyUrl }, error: "" };
+  } catch (err: unknown) {
+    return { live: null, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+/** `live` 补上存在数据库里、config.yaml 里没有的设置，否则调试、请求体存储这些开关永远读成关。 */
+function readConfigRiskSnapshot(yamlContent: string, live: LiveConfig | null): ConfigRiskSnapshot {
+  try {
+    const parsed = effectiveConfigDocument(asRecord(parseYaml(yamlContent)) ?? {}, live);
     const requestLogStorage = asRecord(parsed["request-log-storage"]);
     const remoteManagement = asRecord(parsed["remote-management"]);
     const autoUpdate = asRecord(parsed["auto-update"]);
@@ -170,6 +188,11 @@ export function ConfigPage() {
 
   const [yamlText, setYamlText] = useState("");
   const [yamlDirty, setYamlDirty] = useState(false);
+  // 最近一次从服务端读到的 config.yaml 与运行中的配置：保存时判断「这次改了什么」以它们为准，
+  // 编辑中的文本里可能已经带着还没保存的改动。
+  const [serverYaml, setServerYaml] = useState("");
+  const [live, setLive] = useState<LiveConfig | null>(null);
+  const [liveError, setLiveError] = useState("");
 
   const [confirmReloadOpen, setConfirmReloadOpen] = useState(false);
   const [confirmSaveOpen, setConfirmSaveOpen] = useState(false);
@@ -190,16 +213,19 @@ export function ConfigPage() {
     setLoading(true);
     setError("");
     try {
-      const [text, runtimeConfig] = await Promise.all([
+      const [text, fetched] = await Promise.all([
         configFileApi.fetchConfigYaml(),
-        configApi.getConfig().catch(() => undefined),
+        fetchLiveConfig(),
       ]);
       setYamlText(text);
+      setServerYaml(text);
+      setLive(fetched.live);
+      setLiveError(fetched.error);
       setYamlDirty(false);
       setSearchPositions([]);
       setSearchIndex(0);
       setLastSearchedQuery("");
-      loadVisualValuesFromYaml(text, runtimeConfig);
+      loadVisualValuesFromYaml(text, fetched.live);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : t("config_page.toast_load_failed");
       setError(message);
@@ -226,8 +252,8 @@ export function ConfigPage() {
   const saveConfig = useCallback(
     async (nextYaml: string) => {
       setSaving(true);
-      const previous = readConfigRiskSnapshot(yamlText);
-      const next = readConfigRiskSnapshot(nextYaml);
+      const previous = readConfigRiskSnapshot(serverYaml, live);
+      const next = readConfigRiskSnapshot(nextYaml, live);
       const commercialModeChanged = previous.commercialMode !== next.commercialMode;
       const disablingBodyStorage = previous.storeContent && !next.storeContent;
 
@@ -254,13 +280,16 @@ export function ConfigPage() {
           }
         }
 
-        const [latest, runtimeConfig] = await Promise.all([
+        const [latest, fetched] = await Promise.all([
           configFileApi.fetchConfigYaml(),
-          configApi.getConfig().catch(() => undefined),
+          fetchLiveConfig(),
         ]);
         setYamlText(latest);
+        setServerYaml(latest);
+        setLive(fetched.live);
+        setLiveError(fetched.error);
         setYamlDirty(false);
-        loadVisualValuesFromYaml(latest, runtimeConfig);
+        loadVisualValuesFromYaml(latest, fetched.live);
         notify({ type: "success", message: t("config_page.toast_saved") });
         if (commercialModeChanged) {
           notify({ type: "info", message: t("config_page.toast_commercial_changed") });
@@ -274,7 +303,7 @@ export function ConfigPage() {
         setSaving(false);
       }
     },
-    [loadVisualValuesFromYaml, loadYaml, notify, t, yamlText],
+    [live, loadVisualValuesFromYaml, loadYaml, notify, serverYaml, t],
   );
 
   const requestSave = useCallback(() => {
@@ -293,10 +322,10 @@ export function ConfigPage() {
         return;
       }
     }
-    const nextYaml = tab === "visual" ? applyVisualChangesToYaml(yamlText) : yamlText;
+    const nextYaml = tab === "visual" ? applyVisualChangesToYaml(yamlText, live) : yamlText;
     const warnings = collectSaveWarningKeys(
-      readConfigRiskSnapshot(yamlText),
-      readConfigRiskSnapshot(nextYaml),
+      readConfigRiskSnapshot(serverYaml, live),
+      readConfigRiskSnapshot(nextYaml, live),
     );
     if (warnings.length > 0) {
       setPendingSaveYaml(nextYaml);
@@ -305,7 +334,17 @@ export function ConfigPage() {
       return;
     }
     void saveConfig(nextYaml);
-  }, [applyVisualChangesToYaml, notify, saveConfig, t, tab, visualValues, yamlText]);
+  }, [
+    applyVisualChangesToYaml,
+    live,
+    notify,
+    saveConfig,
+    serverYaml,
+    t,
+    tab,
+    visualValues,
+    yamlText,
+  ]);
 
   const buildSearchPositions = useCallback(
     (query: string) => {
@@ -440,7 +479,7 @@ export function ConfigPage() {
       if (next === tab) return;
 
       if (tab === "visual" && visualDirty) {
-        const nextText = applyVisualChangesToYaml(yamlText);
+        const nextText = applyVisualChangesToYaml(yamlText, live);
         if (nextText !== yamlText) {
           setYamlText(nextText);
           setYamlDirty(true);
@@ -451,12 +490,12 @@ export function ConfigPage() {
       }
 
       if (next === "visual") {
-        loadVisualValuesFromYaml(yamlText);
+        loadVisualValuesFromYaml(yamlText, live);
       }
 
       setTab(next);
     },
-    [applyVisualChangesToYaml, loadVisualValuesFromYaml, setTab, tab, visualDirty, yamlText],
+    [applyVisualChangesToYaml, live, loadVisualValuesFromYaml, setTab, tab, visualDirty, yamlText],
   );
 
   const requestReload = useCallback(() => {
@@ -485,6 +524,9 @@ export function ConfigPage() {
       </TabsTrigger>
     </TabsList>
   );
+  // 后端从 CliRelay 68ed2258 起把这些设置存进数据库，GET /config 随之带上各设置的版本号；
+  // 更早的后端仍把它们写在 config.yaml 里，面板会自动更新到它们那里，不能对它们这样提示。
+  const settingsInDatabase = Boolean(asRecord(live?.config["runtime-setting-versions"]));
   const saveDisabled = disableControls || loading || saving || !isDirty;
   const reloadDisabled = loading || saving;
   const showFloatingBar = true;
@@ -512,11 +554,17 @@ export function ConfigPage() {
                     {error}
                   </Callout>
                 ) : null}
+                {liveError ? (
+                  <Callout tone="warning" title={t("config_page.live_settings_unavailable_title")}>
+                    {t("config_page.live_settings_unavailable_desc", { error: liveError })}
+                  </Callout>
+                ) : null}
                 <div className="min-h-0 flex-1">
                   <VisualConfigEditor
                     values={visualValues}
                     baseline={baselineValues}
                     disabled={disableControls || loading || saving}
+                    lockDatabaseSettings={Boolean(liveError)}
                     onChange={setVisualValues}
                     codexAdmission={<CodexOAuthAdmissionPanel />}
                     toolbarEnd={modeSwitch}
@@ -546,6 +594,12 @@ export function ConfigPage() {
                   {error ? (
                     <Callout tone="danger" role="alert" className="mb-4">
                       {error}
+                    </Callout>
+                  ) : null}
+                  {/* 存在数据库里的设置保存后会从文件里移走，不说明的话看起来就是「保存后消失了」。 */}
+                  {settingsInDatabase ? (
+                    <Callout tone="neutral" className="mb-4">
+                      {t("config_page.source_database_settings_hint")}
                     </Callout>
                   ) : null}
 

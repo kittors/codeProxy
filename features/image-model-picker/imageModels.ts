@@ -33,7 +33,9 @@ export interface ImageModelCatalog {
  * the panel ships a label for it.
  */
 const PROVIDER_LABELS: Record<string, string> = {
+  antigravity: "Antigravity",
   codex: "Codex",
+  minimax: "MiniMax",
   xai: "Grok",
 };
 
@@ -130,3 +132,28 @@ export const findImageModel = (catalog: ImageModelCatalog, modelID: string) =>
  */
 export const supportsImageEditing = (catalog: ImageModelCatalog, modelID: string) =>
   findImageModel(catalog, modelID)?.supports_edit ?? false;
+
+/** The ratio and size-tier choices of a model shaped that way, or null. */
+export interface ImageShapeOptions {
+  aspectRatios: string[];
+  imageSizes: string[];
+}
+
+/**
+ * Whether a model is shaped by aspect ratio and size tier rather than by a
+ * WIDTHxHEIGHT size, and which values it accepts.
+ *
+ * Read from the server's catalog: Gemini image models answer a size with the
+ * nearest ratio and tier, so offering the size picker for them would promise a
+ * resolution the upstream does not produce.
+ */
+export const imageShapeOptions = (
+  catalog: ImageModelCatalog,
+  modelID: string,
+): ImageShapeOptions | null => {
+  const model = findImageModel(catalog, modelID);
+  const aspectRatios = model?.aspect_ratios ?? [];
+  const imageSizes = model?.image_sizes ?? [];
+  if (aspectRatios.length === 0 && imageSizes.length === 0) return null;
+  return { aspectRatios, imageSizes };
+};

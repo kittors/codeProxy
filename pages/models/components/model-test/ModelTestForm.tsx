@@ -18,6 +18,9 @@ export interface ModelTestFormState {
   images: string[];
   size: string;
   quality: string;
+  /** Gemini image models replace size and quality with these two. */
+  aspectRatio: string;
+  imageSize: string;
   n: number;
   duration: number;
 }
@@ -199,23 +202,49 @@ export function ModelTestForm({
 
       {isImageMode(state.mode) ? (
         <div className="grid grid-cols-3 gap-2">
-          <LabeledSelect
-            id="model-test-size"
-            label={t("models_page.test_size")}
-            value={state.size}
-            options={(options?.sizes ?? []).map((size) => ({ value: size, label: size }))}
-            onChange={(value) => onChange({ size: value })}
-          />
-          <LabeledSelect
-            id="model-test-quality"
-            label={t("models_page.test_quality")}
-            value={state.quality}
-            options={(options?.qualities ?? []).map((quality) => ({
-              value: quality,
-              label: t(`models_page.test_quality_${quality}`, { defaultValue: quality }),
-            }))}
-            onChange={(value) => onChange({ quality: value })}
-          />
+          {options?.aspect_ratios?.length ? (
+            // Gemini image models: the server sends ratios and size tiers instead of
+            // sizes and qualities, and only one pair is ever shown.
+            <>
+              <LabeledSelect
+                id="model-test-aspect-ratio"
+                label={t("models_page.test_aspect_ratio")}
+                value={state.aspectRatio}
+                options={[
+                  { value: "auto", label: t("models_page.test_aspect_ratio_auto") },
+                  ...options.aspect_ratios.map((ratio) => ({ value: ratio, label: ratio })),
+                ]}
+                onChange={(value) => onChange({ aspectRatio: value })}
+              />
+              <LabeledSelect
+                id="model-test-image-size"
+                label={t("models_page.test_image_size")}
+                value={state.imageSize}
+                options={(options.image_sizes ?? []).map((size) => ({ value: size, label: size }))}
+                onChange={(value) => onChange({ imageSize: value })}
+              />
+            </>
+          ) : (
+            <>
+              <LabeledSelect
+                id="model-test-size"
+                label={t("models_page.test_size")}
+                value={state.size}
+                options={(options?.sizes ?? []).map((size) => ({ value: size, label: size }))}
+                onChange={(value) => onChange({ size: value })}
+              />
+              <LabeledSelect
+                id="model-test-quality"
+                label={t("models_page.test_quality")}
+                value={state.quality}
+                options={(options?.qualities ?? []).map((quality) => ({
+                  value: quality,
+                  label: t(`models_page.test_quality_${quality}`, { defaultValue: quality }),
+                }))}
+                onChange={(value) => onChange({ quality: value })}
+              />
+            </>
+          )}
           <div>
             <label
               htmlFor="model-test-count"
