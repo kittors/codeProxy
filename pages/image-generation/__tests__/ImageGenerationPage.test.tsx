@@ -103,12 +103,23 @@ describe("ImageGenerationPage", () => {
     expect(within(callCard as HTMLElement).queryByText("返回结构")).not.toBeInTheDocument();
     expect(screen.getByText("data[].revised_prompt").className).toContain("break-all");
     expect(screen.queryByText(/已加载全部/)).not.toBeInTheDocument();
-    expect(screen.getByText("size")).toBeInTheDocument();
-    expect(screen.getByText("quality")).toBeInTheDocument();
-    expect(screen.getByText("n")).toBeInTheDocument();
+    // `size` is both a request parameter and, now, a response field, so each table
+    // is asserted on its own.
+    const [requestCard, responseCard] = specCards;
+    for (const name of ["size", "quality", "n", "aspect_ratio", "image_size"]) {
+      expect(within(requestCard).getByText(name)).toBeInTheDocument();
+    }
+    for (const name of ["output_format", "size"]) {
+      expect(within(responseCard).getByText(name)).toBeInTheDocument();
+    }
     // Same reason as above: the highlighted snippet has no single node holding these.
     expect(textCurl.textContent).toContain('"size": "1024x1024"');
     expect(textCurl.textContent).toContain('"quality": "high"');
+    // Gemini image models are shaped by ratio and size tier, shown as a second example.
+    const geminiCurl = document.querySelectorAll("[data-code-block]")[1] as HTMLElement;
+    expect(geminiCurl.textContent).toContain('"model": "gemini-3.1-flash-image"');
+    expect(geminiCurl.textContent).toContain('"aspect_ratio": "16:9"');
+    expect(geminiCurl.textContent).toContain('"image_size": "2K"');
     expect(screen.queryByText("BaseURL")).not.toBeInTheDocument();
     expect(screen.getByText(/Authorization: Bearer YOUR_API_KEY/)).toBeInTheDocument();
     expect(within(callCard as HTMLElement).getByRole("button", { name: "测试生成" })).toBeEnabled();
@@ -575,7 +586,7 @@ describe("ImageGenerationPage", () => {
 
     renderPage();
 
-    expect(await screen.findByText("当前没有可用于 gpt-image-2 的渠道。")).toBeInTheDocument();
+    expect(await screen.findByText("当前没有可用的生图渠道。")).toBeInTheDocument();
     const callCard = screen.getByText("调用方式").closest("section");
     expect(
       within(callCard as HTMLElement).getByRole("button", { name: "测试生成" }),
@@ -603,9 +614,9 @@ describe("ImageGenerationPage", () => {
 
     expect(
       await screen.findByText(
-        "无法获取 gpt-image-2 的渠道可用性。请确认账号具有生图管理权限后重试。",
+        "无法获取生图渠道的可用性。请确认账号具有生图管理权限后重试。",
       ),
     ).toBeInTheDocument();
-    expect(screen.queryByText("当前没有可用于 gpt-image-2 的渠道。")).not.toBeInTheDocument();
+    expect(screen.queryByText("当前没有可用的生图渠道。")).not.toBeInTheDocument();
   });
 });

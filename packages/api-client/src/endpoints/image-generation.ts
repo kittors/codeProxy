@@ -2,21 +2,30 @@ import { apiClient } from "../client/client";
 
 const IMAGE_GENERATION_TASK_POLL_TIMEOUT_MS = 10 * 1000;
 
-export interface ImageGenerationTestRequest {
+/**
+ * Output shape of a request. gpt-image and the other WIDTHxHEIGHT models read
+ * `size` and `quality`; Gemini image models are shaped by `aspect_ratio` and the
+ * `image_size` tier instead, and the server maps a `size` onto those when that is
+ * all a caller sends.
+ */
+interface ImageGenerationShape {
+  size?: string;
+  quality?: string;
+  aspect_ratio?: string;
+  image_size?: string;
+}
+
+export interface ImageGenerationTestRequest extends ImageGenerationShape {
   mode?: "generations";
   model: "gpt-image-2" | string;
   prompt: string;
-  size?: string;
-  quality?: string;
   n?: number;
 }
 
-export interface ImageEditTestRequest {
+export interface ImageEditTestRequest extends ImageGenerationShape {
   mode: "edits";
   model: "gpt-image-2" | string;
   prompt: string;
-  size?: string;
-  quality?: string;
   n?: number;
   images: File[];
 }
@@ -29,6 +38,10 @@ export interface ImageGenerationResultItem {
 export interface ImageGenerationTestResponse {
   created?: number;
   data?: ImageGenerationResultItem[];
+  /** Encoding of `b64_json`, e.g. "jpeg". Absent from providers that do not report it. */
+  output_format?: string;
+  /** Pixel size of the first image, e.g. "1408x768". */
+  size?: string;
 }
 
 export type ImageGenerationTestTaskStatus = "queued" | "running" | "succeeded" | "failed";
@@ -74,6 +87,12 @@ export interface ImageGenerationModel {
   /** True when the model accepts reference images through the edits endpoint. */
   supports_edit: boolean;
   price_per_call?: number;
+  /**
+   * Set for models shaped by ratio and size tier (Gemini image models). When
+   * present, the page offers these two pickers instead of size and quality.
+   */
+  aspect_ratios?: string[];
+  image_sizes?: string[];
 }
 
 export interface ImageGenerationChannelsResponse {
@@ -115,6 +134,8 @@ export const imageGenerationApi = {
       formData.set("prompt", payload.prompt);
       if (payload.size) formData.set("size", payload.size);
       if (payload.quality) formData.set("quality", payload.quality);
+      if (payload.aspect_ratio) formData.set("aspect_ratio", payload.aspect_ratio);
+      if (payload.image_size) formData.set("image_size", payload.image_size);
       if (payload.n) formData.set("n", String(payload.n));
       payload.images.forEach((image) => formData.append("image", image));
       return apiClient.postForm<ImageGenerationTestTaskStartResponse>(

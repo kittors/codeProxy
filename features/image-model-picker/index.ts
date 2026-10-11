@@ -9,10 +9,11 @@ export { ImageModelPicker } from "./ImageModelPicker";
 export {
   buildImageModelCatalog,
   findImageModel,
+  imageShapeOptions,
   modelLabel,
   providerLabel,
   resolveInitialModel,
   resolveInitialProvider,
   supportsImageEditing,
 } from "./imageModels";
-export type { ImageModelCatalog, ImageProviderOption } from "./imageModels";
+export type { ImageModelCatalog, ImageProviderOption, ImageShapeOptions } from "./imageModels";
