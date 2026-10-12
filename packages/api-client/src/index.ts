@@ -155,7 +155,14 @@ export {
 export type * from "./endpoints/content-moderation";
 export {
   ccSwitchImportConfigsApi,
+  NO_CC_SWITCH_IMPORT_CAPABILITIES,
   normalizeCcSwitchImportConfigs,
+  parseCcSwitchImportCapabilities,
+  serializeCcSwitchImportConfig,
+} from "./endpoints/ccswitch-import-configs";
+export type {
+  CcSwitchImportCapabilities,
+  CcSwitchImportConfigsSnapshot,
 } from "./endpoints/ccswitch-import-configs";
 export { channelGroupsApi } from "./endpoints/channel-groups";
 export type * from "./endpoints/channel-groups";
