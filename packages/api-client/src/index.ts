@@ -142,7 +142,9 @@ export type * from "./endpoints/content-moderation";
 export {
   ccSwitchImportConfigsApi,
   normalizeCcSwitchImportConfigs,
+  serializeCcSwitchImportConfig,
 } from "./endpoints/ccswitch-import-configs";
+export type { CcSwitchImportConfigsSnapshot } from "./endpoints/ccswitch-import-configs";
 export { channelGroupsApi } from "./endpoints/channel-groups";
 export type * from "./endpoints/channel-groups";
 export { routingConfigApi } from "./endpoints/routing-config";

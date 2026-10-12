@@ -68,7 +68,7 @@ const quickImportConfigs = [
     "api-key-field": "ANTHROPIC_AUTH_TOKEN",
   },
   {
-    id: "gemini-hidden",
+    id: "gemini-team",
     "client-type": "gemini",
     "provider-name": "Team Gemini",
     note: "",
@@ -76,7 +76,19 @@ const quickImportConfigs = [
     "model-mappings": [],
     "allowed-channel-groups": [],
     "route-path": "/gemini/cs_gemini",
-    "endpoint-path": "/v1beta",
+    "endpoint-path": "",
+    "usage-auto-interval": 60,
+  },
+  {
+    id: "opencode-team",
+    "client-type": "opencode",
+    "provider-name": "Team OpenCode",
+    note: "",
+    "default-model": "kimi-k2",
+    "model-mappings": [{ "request-model": "kimi-k2", "target-model": "kimi-k2" }],
+    "allowed-channel-groups": ["pro"],
+    "route-path": "/pro/cs_opencode",
+    "endpoint-path": "/v1",
     "usage-auto-interval": 60,
   },
 ];
@@ -108,7 +120,7 @@ describe("QuickImportTabContent", () => {
     vi.restoreAllMocks();
   });
 
-  test("groups Codex and Claude quick import cards and launches the selected preset", async () => {
+  test("groups the cards by app and launches the selected preset", async () => {
     const openSpy = vi.spyOn(window, "open").mockReturnValue(null);
 
     render(
@@ -124,16 +136,26 @@ describe("QuickImportTabContent", () => {
       "https://github.com/farion1231/cc-switch/releases",
     );
 
-    const codexSection = await screen.findByRole("region", { name: /codex quick imports/i });
-    const claudeSection = await screen.findByRole("region", { name: /claude quick imports/i });
+    const codexSection = await screen.findByRole("region", { name: /^codex quick imports/i });
+    const claudeSection = await screen.findByRole("region", { name: /claude code quick imports/i });
+    const geminiSection = await screen.findByRole("region", { name: /gemini cli quick imports/i });
+    const opencodeSection = await screen.findByRole("region", { name: /opencode quick imports/i });
 
-    expect(screen.queryByRole("heading", { name: /cc switch card presets/i })).toBeNull();
     expect(
-      screen.queryByText(/only codex and claude presets are shown here for now/i),
-    ).not.toBeInTheDocument();
+      screen
+        .getAllByRole("region", { name: /quick imports$/i })
+        .map((region) => region.getAttribute("aria-label")),
+    ).toEqual([
+      "Claude Code quick imports",
+      "Codex quick imports",
+      "Gemini CLI quick imports",
+      "OpenCode quick imports",
+    ]);
     expect(within(codexSection).getByRole("button", { name: /team codex/i })).toBeInTheDocument();
     expect(within(claudeSection).getByRole("button", { name: /team claude/i })).toBeInTheDocument();
-    expect(screen.queryByText("Team Gemini")).not.toBeInTheDocument();
+    expect(within(geminiSection).getByRole("button", { name: /team gemini/i })).toBeInTheDocument();
+    // The group heading and the card both carry the app's mark.
+    expect(within(opencodeSection).getAllByTestId("ccswitch-client-icon-opencode")).toHaveLength(2);
 
     await userEvent.click(within(codexSection).getByRole("button", { name: /team codex/i }));
 
@@ -150,14 +172,50 @@ describe("QuickImportTabContent", () => {
     expect(parsed.searchParams.get("name")).toBe("Team Codex");
     expect(parsed.searchParams.get("apiKey")).toBe("sk-lookup-key");
     expect(parsed.searchParams.get("endpoint")).toMatch(/\/pro\/cs_codex\/v1$/);
-    expect(decodeConfigFromImportUrl(openedUrl)).toMatchObject({
-      modelCatalog: {
-        models: [
-          expect.objectContaining({ slug: "gpt-5.3-codex" }),
-          expect.objectContaining({ slug: "deepseek-v4-flash" }),
-        ],
-      },
-    });
+    expect(parsed.searchParams.get("icon")).toBe("openai");
+    expect(parsed.searchParams.has("apiFormat")).toBe(false);
+    const config = decodeConfigFromImportUrl(openedUrl);
+    expect(Object.keys(config)).toEqual(["auth", "config"]);
+    expect(config.auth).toEqual({ OPENAI_API_KEY: "sk-lookup-key" });
+    // The backend catalog's default effort for the default model, without the catalog itself.
+    expect(config.config).toContain('model_reasoning_effort = "medium"');
+    expect(config.config).not.toContain("model_catalog_json");
+
+    await userEvent.click(within(opencodeSection).getByRole("button", { name: /team opencode/i }));
+    await waitFor(() => expect(openSpy).toHaveBeenCalledTimes(2));
+    const opencode = new URL(String(openSpy.mock.calls.at(-1)?.[0] ?? ""));
+    expect(opencode.searchParams.get("app")).toBe("opencode");
+    expect(opencode.searchParams.get("endpoint")).toMatch(/\/pro\/cs_opencode\/v1$/);
+    expect(opencode.searchParams.get("model")).toBe("kimi-k2");
+    expect(opencode.searchParams.has("enabled")).toBe(false);
+  });
+
+  test("links built from the session cache keep the Codex reasoning effort", async () => {
+    const openSpy = vi.spyOn(window, "open").mockReturnValue(null);
+    const first = render(
+      <ThemeProvider>
+        <ToastProvider>
+          <QuickImportTabContent apiKey="sk-lookup-key" />
+        </ToastProvider>
+      </ThemeProvider>,
+    );
+    await screen.findByRole("region", { name: /^codex quick imports/i });
+    first.unmount();
+
+    // The second visit renders from the cache while the request never answers.
+    vi.mocked(globalThis.fetch).mockReturnValue(new Promise<Response>(() => {}));
+    render(
+      <ThemeProvider>
+        <ToastProvider>
+          <QuickImportTabContent apiKey="sk-lookup-key" />
+        </ToastProvider>
+      </ThemeProvider>,
+    );
+    const codexSection = await screen.findByRole("region", { name: /^codex quick imports/i });
+    await userEvent.click(within(codexSection).getByRole("button", { name: /team codex/i }));
+    await waitFor(() => expect(openSpy).toHaveBeenCalled());
+    const config = decodeConfigFromImportUrl(String(openSpy.mock.calls.at(-1)?.[0] ?? ""));
+    expect(config.config).toContain('model_reasoning_effort = "medium"');
   });
 
   test("copies the selected quick import link without launching CC Switch", async () => {
@@ -178,7 +236,7 @@ describe("QuickImportTabContent", () => {
         </ThemeProvider>,
       );
 
-      const codexSection = await screen.findByRole("region", { name: /codex quick imports/i });
+      const codexSection = await screen.findByRole("region", { name: /^codex quick imports/i });
 
       await userEvent.click(
         within(codexSection).getByRole("button", { name: /copy import link/i }),
@@ -198,13 +256,9 @@ describe("QuickImportTabContent", () => {
       expect(parsed.searchParams.get("name")).toBe("Team Codex");
       expect(parsed.searchParams.get("apiKey")).toBe("sk-lookup-key");
       expect(parsed.searchParams.get("endpoint")).toMatch(/\/pro\/cs_codex\/v1$/);
-      expect(decodeConfigFromImportUrl(copiedUrl)).toMatchObject({
-        modelCatalog: {
-          models: [
-            expect.objectContaining({ slug: "gpt-5.3-codex" }),
-            expect.objectContaining({ slug: "deepseek-v4-flash" }),
-          ],
-        },
+      expect(decodeConfigFromImportUrl(copiedUrl)).toEqual({
+        auth: { OPENAI_API_KEY: "sk-lookup-key" },
+        config: expect.stringContaining('model = "gpt-5.3-codex"'),
       });
     } finally {
       Object.defineProperty(navigator, "clipboard", {
@@ -223,7 +277,7 @@ describe("QuickImportTabContent", () => {
       </ThemeProvider>,
     );
 
-    const codexSection = await screen.findByRole("region", { name: /codex quick imports/i });
+    const codexSection = await screen.findByRole("region", { name: /^codex quick imports/i });
     expect(
       within(codexSection).queryByRole("button", { name: /download codex model catalog/i }),
     ).not.toBeInTheDocument();
@@ -244,10 +298,10 @@ describe("QuickImportTabContent", () => {
       </ThemeProvider>,
     );
 
-    const codexSection = await screen.findByRole("region", { name: /codex quick imports/i });
+    const codexSection = await screen.findByRole("region", { name: /^codex quick imports/i });
 
     expect(within(codexSection).getByRole("button", { name: /team codex/i })).toBeInTheDocument();
-    expect(screen.queryByRole("region", { name: /claude quick imports/i })).not.toBeInTheDocument();
+    expect(screen.getAllByRole("region", { name: /quick imports$/i })).toHaveLength(1);
     expect(screen.queryByText(/no claude presets yet/i)).not.toBeInTheDocument();
   });
 
@@ -297,7 +351,7 @@ describe("QuickImportTabContent", () => {
       </ThemeProvider>,
     );
 
-    const codexSection = await screen.findByRole("region", { name: /codex quick imports/i });
+    const codexSection = await screen.findByRole("region", { name: /^codex quick imports/i });
     expect(within(codexSection).getByRole("button", { name: /team codex/i })).toBeInTheDocument();
 
     expect(fetchMock).toHaveBeenCalled();
@@ -338,10 +392,8 @@ describe("QuickImportTabContent", () => {
     );
 
     expect(await screen.findByText(/no quick import presets available/i)).toBeInTheDocument();
-    expect(
-      screen.getByText(/this api key has no matching codex \/ claude import cards/i),
-    ).toBeInTheDocument();
-    expect(screen.queryByRole("region", { name: /codex quick imports/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/this api key has no matching import cards/i)).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: /quick imports$/i })).not.toBeInTheDocument();
     expect(screen.queryByTestId("quick-import-loading-skeleton")).not.toBeInTheDocument();
   });
 });

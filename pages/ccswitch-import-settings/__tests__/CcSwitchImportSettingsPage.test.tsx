@@ -1,29 +1,31 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import i18n from "@code-proxy/i18n";
 import { CcSwitchImportSettingsPage } from "@pages/ccswitch-import-settings/CcSwitchImportSettingsPage";
 import { ThemeProvider } from "@code-proxy/ui";
 import { ToastProvider } from "@code-proxy/ui";
-import type { CcSwitchImportConfigListItem } from "@code-proxy/domain/ccswitch/ccswitchImportConfigList";
+import {
+  normalizeCcSwitchImportConfigList,
+  type CcSwitchImportConfigListItem,
+} from "@code-proxy/domain/ccswitch/ccswitchImportConfigList";
 
 const listChannelGroups = vi.fn();
 const listAvailableModels = vi.fn();
 const getModelConfigs = vi.fn();
 const getAuthGroupModelOwnerMappingMap = vi.fn();
-const listConfigs = vi.fn();
+const listConfigs = vi.fn<() => Promise<Array<Partial<CcSwitchImportConfigListItem>>>>();
+const listClientTypes = vi.fn<() => string[] | null>();
 const replaceConfigs = vi.fn();
 const loadConfiguredModelAvailability = vi.fn();
 const filterByConfiguredModelAvailability = vi.fn();
 
 function createDeferred<T>() {
   let resolve!: (value: T) => void;
-  let reject!: (reason?: unknown) => void;
-  const promise = new Promise<T>((promiseResolve, promiseReject) => {
+  const promise = new Promise<T>((promiseResolve) => {
     resolve = promiseResolve;
-    reject = promiseReject;
   });
-  return { promise, resolve, reject };
+  return { promise, resolve };
 }
 
 vi.mock("@code-proxy/api-client/endpoints/channel-groups", () => ({
@@ -34,9 +36,12 @@ vi.mock("@code-proxy/api-client/endpoints/channel-groups", () => ({
 
 vi.mock("@code-proxy/api-client/endpoints/ccswitch-import-configs", () => ({
   ccSwitchImportConfigsApi: {
-    list: () => listConfigs(),
-    replace: (configs: CcSwitchImportConfigListItem[]) =>
-      replaceConfigs(configs),
+    // Like the real endpoint, presets arrive normalized.
+    snapshot: async () => ({
+      configs: normalizeCcSwitchImportConfigList(await listConfigs()),
+      clientTypes: listClientTypes(),
+    }),
+    replace: (configs: CcSwitchImportConfigListItem[]) => replaceConfigs(configs),
   },
 }));
 
@@ -46,16 +51,14 @@ vi.mock("@code-proxy/api-client/endpoints/models", () => ({
       allowedChannelGroups?: string[];
       allowedChannels?: string[];
     }) => listAvailableModels(params),
-    getModelConfigs: (scope: "active" | "library" | "all") =>
-      getModelConfigs(scope),
+    getModelConfigs: (scope: "active" | "library" | "all") => getModelConfigs(scope),
     getAuthGroupModelOwnerMappingMap: () => getAuthGroupModelOwnerMappingMap(),
   },
 }));
 
 vi.mock("@features/model-availability", () => ({
-  loadConfiguredModelAvailability: (options?: {
-    allowedChannelGroups?: string[];
-  }) => loadConfiguredModelAvailability(options),
+  loadConfiguredModelAvailability: (options?: { allowedChannelGroups?: string[] }) =>
+    loadConfiguredModelAvailability(options),
   filterByConfiguredModelAvailability: <T extends { id: string }>(
     models: T[],
     availability: { scoped: boolean; idSet: Set<string> },
@@ -72,18 +75,65 @@ function renderPage() {
   );
 }
 
+async function openCreate(user: UserEvent) {
+  await user.click(screen.getByRole("button", { name: /new config/i }));
+  return screen.findByRole("dialog", { name: /new cc switch config/i });
+}
+
+async function openEdit(user: UserEvent, name: string) {
+  expect(await screen.findByText(name)).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: /edit config/i }));
+  return screen.findByRole("dialog", { name: /edit cc switch config/i });
+}
+
+async function pickOption(user: UserEvent, combobox: HTMLElement, name: string | RegExp) {
+  await user.click(combobox);
+  await user.click(await screen.findByRole("option", { name }));
+}
+
+async function pickGroup(user: UserEvent, dialog: HTMLElement, name: RegExp) {
+  await pickOption(user, within(dialog).getByRole("combobox", { name: /^channel group$/i }), name);
+}
+
+/**
+ * Opens a picker, reads its option names and closes it again. A listbox that is still
+ * animating out stays in the DOM for a moment; the one just opened is the last one.
+ */
+async function optionNames(user: UserEvent, combobox: HTMLElement) {
+  await user.click(combobox);
+  const listbox = (await screen.findAllByRole("listbox")).at(-1)!;
+  const names = within(listbox)
+    .getAllByRole("option")
+    .map((option) => option.textContent ?? "");
+  await user.keyboard("{Escape}");
+  return names;
+}
+
+const nameInput = (dialog: HTMLElement) => within(dialog).getByRole("textbox", { name: /^name$/i });
+
+const defaultModelPicker = (dialog: HTMLElement) =>
+  within(dialog).getByRole("combobox", { name: /^default model$/i });
+
+const savedConfig = () =>
+  (replaceConfigs.mock.calls.at(-1)?.[0] as CcSwitchImportConfigListItem[] | undefined)?.[0];
+
 describe("CcSwitchImportSettingsPage", () => {
   beforeEach(async () => {
     await i18n.changeLanguage("en");
     window.localStorage.clear();
-    listChannelGroups.mockReset();
-    listAvailableModels.mockReset();
-    getModelConfigs.mockReset();
-    getAuthGroupModelOwnerMappingMap.mockReset();
-    listConfigs.mockReset();
-    replaceConfigs.mockReset();
-    loadConfiguredModelAvailability.mockReset();
-    filterByConfiguredModelAvailability.mockReset();
+    for (const mock of [
+      listChannelGroups,
+      listAvailableModels,
+      getModelConfigs,
+      getAuthGroupModelOwnerMappingMap,
+      listConfigs,
+      listClientTypes,
+      replaceConfigs,
+      loadConfiguredModelAvailability,
+      filterByConfiguredModelAvailability,
+    ]) {
+      mock.mockReset();
+    }
     loadConfiguredModelAvailability.mockResolvedValue({
       scoped: false,
       items: [],
@@ -95,62 +145,91 @@ describe("CcSwitchImportSettingsPage", () => {
         availability: { scoped: boolean; idSet: Set<string> },
       ) =>
         availability.scoped
-          ? models.filter((model) =>
-              availability.idSet.has(model.id.toLowerCase()),
-            )
+          ? models.filter((model) => availability.idSet.has(model.id.toLowerCase()))
           : models,
     );
     listChannelGroups.mockResolvedValue([
       { name: "pro", description: "Pro route", "path-routes": ["/pro"] },
-      {
-        name: "team-a",
-        description: "Team A route",
-        "path-routes": ["/team-a"],
-      },
+      { name: "team-a", description: "Team A route", "path-routes": ["/team-a"] },
     ]);
-    listAvailableModels.mockResolvedValue([
-      { id: "deepseek-v4-flash" },
-      { id: "kimi-k2" },
-    ]);
+    listAvailableModels.mockResolvedValue([{ id: "deepseek-v4-flash" }, { id: "kimi-k2" }]);
     getModelConfigs.mockResolvedValue(Array<unknown>());
     getAuthGroupModelOwnerMappingMap.mockResolvedValue({});
-    listConfigs.mockResolvedValue(Array<unknown>());
+    listConfigs.mockResolvedValue([]);
+    listClientTypes.mockReturnValue(null);
     replaceConfigs.mockResolvedValue(undefined);
   });
 
-  test("starts empty from the API even when legacy local storage exists", async () => {
-    window.localStorage.setItem(
-      "ccswitch.importSettings.v1",
-      JSON.stringify({
-        claude: {
-          endpointPath: "",
-          defaultModel: "claude-sonnet-4-5",
-          usageAutoInterval: 30,
-          apiKeyField: "ANTHROPIC_AUTH_TOKEN",
-        },
-        codex: {
-          endpointPath: "/openai/v1",
-          defaultModel: "gpt-5.6",
-          usageAutoInterval: 45,
-        },
-        gemini: {
-          endpointPath: "",
-          defaultModel: "gemini-2.5-pro",
-          usageAutoInterval: 30,
-        },
-      }),
-    );
-
+  test("starts empty from the API", async () => {
     renderPage();
-
-    expect(
-      await screen.findByText(/no cc switch configs yet/i),
-    ).toBeInTheDocument();
-    expect(screen.queryByText("CliProxy Codex")).not.toBeInTheDocument();
+    expect(await screen.findByText(/no cc switch configs yet/i)).toBeInTheDocument();
     expect(listConfigs).toHaveBeenCalledTimes(1);
   });
 
-  test("creates a Codex config from a single channel group and model mapping table", async () => {
+  test("offers only claude, codex and gemini when the backend does not report client-types", async () => {
+    renderPage();
+    const user = userEvent.setup();
+    const dialog = await openCreate(user);
+
+    const tabs = within(dialog)
+      .getAllByRole("tab")
+      .map((tab) => tab.textContent);
+    expect(tabs).toEqual(["Claude Code", "Codex", "Gemini CLI"]);
+    expect(within(dialog).getByRole("tab", { name: "Codex" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+  });
+
+  test("offers OpenCode, OpenClaw and Hermes when the backend lists them", async () => {
+    listClientTypes.mockReturnValue([
+      "claude",
+      "codex",
+      "gemini",
+      "opencode",
+      "openclaw",
+      "hermes",
+    ]);
+    listChannelGroups.mockResolvedValue([
+      { name: "pro", "path-routes": ["/pro"], "allowed-models": ["kimi-k2", "qwen3.5-plus"] },
+    ]);
+    renderPage();
+    const user = userEvent.setup();
+    const dialog = await openCreate(user);
+
+    expect(
+      within(dialog)
+        .getAllByRole("tab")
+        .map((tab) => tab.textContent),
+    ).toEqual(["Claude Code", "Codex", "Gemini CLI", "OpenCode", "OpenClaw", "Hermes"]);
+    await user.click(within(dialog).getByRole("tab", { name: "OpenCode" }));
+    expect(nameInput(dialog)).toHaveValue("CliProxy OpenCode");
+    await pickGroup(user, dialog, /pro.*\/pro/i);
+    await pickOption(user, defaultModelPicker(dialog), "kimi-k2");
+
+    const preview = within(dialog).getByTestId("ccswitch-import-preview");
+    expect(preview).toHaveTextContent("~/.config/opencode/opencode.json");
+    expect(within(dialog).getByTestId("ccswitch-config-endpoint-preview").textContent).toMatch(
+      /\/pro\/cs_[a-z0-9]+\/v1$/,
+    );
+
+    await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
+    await waitFor(() =>
+      expect(savedConfig()).toMatchObject({
+        clientType: "opencode",
+        providerName: "CliProxy OpenCode",
+        defaultModel: "kimi-k2",
+        endpointPath: "/v1",
+        allowedChannelGroups: ["pro"],
+        modelMappings: [
+          { requestModel: "kimi-k2", targetModel: "kimi-k2" },
+          { requestModel: "qwen3.5-plus", targetModel: "qwen3.5-plus" },
+        ],
+      }),
+    );
+  });
+
+  test("creates a Codex preset: all group models on the route, a default and its context window", async () => {
     listChannelGroups.mockResolvedValue([
       {
         name: "pro",
@@ -158,249 +237,354 @@ describe("CcSwitchImportSettingsPage", () => {
         "path-routes": ["/pro"],
         "allowed-models": ["deepseek-v4-flash", "kimi-k2"],
       },
-      {
-        name: "team-a",
-        description: "Team A route",
-        "path-routes": ["/team-a"],
-      },
-    ]);
-    listAvailableModels.mockResolvedValue([
-      { id: "deepseek-v4-flash" },
-      { id: "gpt-4o-mini" },
-      { id: "kimi-k2" },
     ]);
     renderPage();
     const user = userEvent.setup();
+    const dialog = await openCreate(user);
 
-    await user.click(screen.getByRole("button", { name: /new config/i }));
-
-    const dialog = await screen.findByRole("dialog", {
-      name: /new cc switch config/i,
-    });
-    const origin = window.location.origin;
-
+    expect(defaultModelPicker(dialog)).toBeDisabled();
     expect(
-      within(dialog).queryByLabelText(/codex endpoint path/i),
-    ).not.toBeInTheDocument();
-    const defaultModelSelect = within(dialog).getByRole("combobox", {
-      name: /^default model$/i,
-    });
-    expect(defaultModelSelect).toBeDisabled();
-    expect(
-      within(dialog).queryByText(/for codex cli/i),
-    ).not.toBeInTheDocument();
-    expect(
-      within(dialog).getByText(
-        /select a channel group to load available models/i,
-      ),
+      within(dialog).getByText(/select a channel group to load its models/i),
     ).toBeInTheDocument();
-    expect(
-      within(dialog).queryByDisplayValue("gpt-5.5"),
-    ).not.toBeInTheDocument();
+    // No group, no route: the preview waits instead of showing a wrong endpoint.
+    expect(within(dialog).getByTestId("ccswitch-import-preview-pending")).toBeInTheDocument();
+    expect(within(dialog).queryByTestId("ccswitch-import-preview")).not.toBeInTheDocument();
 
-    await user.click(
-      within(dialog).getByRole("combobox", { name: /select channel group/i }),
-    );
-    await user.click(
-      await screen.findByRole("option", { name: /pro.*\/pro/i }),
-    );
-
-    expect(
-      within(dialog).getByTestId("ccswitch-config-endpoint-preview"),
-    ).toHaveTextContent(
-      new RegExp(
-        `^${origin.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/pro/cs_[a-z0-9]+/v1$`,
-      ),
-    );
-
-    expect(
-      await within(dialog).findByDisplayValue("deepseek-v4-flash"),
-    ).toBeInTheDocument();
-    expect(
-      await within(dialog).findByDisplayValue("kimi-k2"),
-    ).toBeInTheDocument();
+    await pickGroup(user, dialog, /pro.*\/pro/i);
     expect(listAvailableModels).not.toHaveBeenCalled();
-    expect(defaultModelSelect).not.toBeDisabled();
-    expect(defaultModelSelect).toHaveTextContent("deepseek-v4-flash");
-    const requestModelInput = within(dialog).getByLabelText(
-      /cc switch request model for mapping 1/i,
-    );
-    await user.clear(requestModelInput);
-    await user.type(requestModelInput, "gpt-5.5");
-    await waitFor(() =>
-      expect(defaultModelSelect).toHaveTextContent("gpt-5.5"),
-    );
-    const contextWindowInput = within(dialog).getByLabelText(
-      /context window for mapping 1/i,
-    );
-    expect(contextWindowInput).toHaveValue(128000);
-    await user.clear(contextWindowInput);
-    await user.type(contextWindowInput, "272000");
+    expect(await optionNames(user, defaultModelPicker(dialog))).toEqual([
+      "deepseek-v4-flash",
+      "kimi-k2",
+    ]);
+    await pickOption(user, defaultModelPicker(dialog), "kimi-k2");
 
-    await user.type(
-      within(dialog).getByLabelText(/provider name/i),
-      "Relay Codex",
-    );
-    await user.type(within(dialog).getByLabelText(/remark/i), "Pro preset");
+    await user.type(within(dialog).getByRole("spinbutton", { name: /^context window/i }), "200000");
+    await user.clear(nameInput(dialog));
+    await user.type(nameInput(dialog), "Relay Codex");
+    await user.type(within(dialog).getByRole("textbox", { name: /^remark/i }), "Pro preset");
 
-    // Explicit default is already following the renamed first mapping row.
-    expect(defaultModelSelect).toHaveTextContent("gpt-5.5");
+    const preview = within(dialog).getByTestId("ccswitch-import-preview");
+    expect(preview).toHaveTextContent("~/.codex/config.toml");
+    expect(preview).toHaveTextContent('model = "kimi-k2"');
+    expect(preview).toHaveTextContent("model_context_window = 200000");
+    expect(preview).not.toHaveTextContent("model_catalog_json");
 
     await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
-
-    await waitFor(() =>
-      expect(replaceConfigs).toHaveBeenCalledWith([
-        expect.objectContaining({
-          clientType: "codex",
-          providerName: "Relay Codex",
-          note: "Pro preset",
-          defaultModel: "gpt-5.5",
-          allowedChannelGroups: ["pro"],
-          routePath: expect.stringMatching(/^\/pro\/cs_[a-z0-9]+$/),
-          endpointPath: "/v1",
-          modelMappings: expect.arrayContaining([
-            {
-              requestModel: "gpt-5.5",
-              targetModel: "deepseek-v4-flash",
-              contextWindow: 272000,
-            },
-          ]),
-          codexModelCatalog: {
-            models: [
-              expect.objectContaining({
-                slug: "gpt-5.5",
-                context_window: 272000,
-                max_context_window: 272000,
-                model_messages: expect.objectContaining({
-                  context_window: 272000,
-                  max_context_window: 272000,
-                }),
-              }),
-              expect.objectContaining({
-                slug: "kimi-k2",
-                context_window: 128000,
-              }),
-            ],
-          },
-        }),
-      ]),
-    );
-
-    expect(screen.getByText(/1 saved CC Switch config preset/i)).toBeInTheDocument();
+    await waitFor(() => expect(replaceConfigs).toHaveBeenCalled());
+    const saved = savedConfig()!;
+    expect(saved).toMatchObject({
+      clientType: "codex",
+      providerName: "Relay Codex",
+      note: "Pro preset",
+      defaultModel: "kimi-k2",
+      allowedChannelGroups: ["pro"],
+      endpointPath: "/v1",
+      modelMappings: [
+        { requestModel: "deepseek-v4-flash", targetModel: "deepseek-v4-flash" },
+        { requestModel: "kimi-k2", targetModel: "kimi-k2", contextWindow: 200000 },
+      ],
+    });
+    expect(saved.routePath).toMatch(/^\/pro\/cs_[a-z0-9]+$/);
+    expect(saved).not.toHaveProperty("codexModelCatalog");
+    expect(saved).not.toHaveProperty("apiKeyField");
+    expect(await screen.findByText(/1 saved CC Switch config preset/i)).toBeInTheDocument();
   });
 
-  test("hides the Gemini CLI client from the CC Switch config modal", async () => {
+  test("blocks saving until a group, a name and a model are set", async () => {
     renderPage();
     const user = userEvent.setup();
+    const dialog = await openCreate(user);
 
-    await user.click(screen.getByRole("button", { name: /new config/i }));
+    await user.clear(nameInput(dialog));
+    await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
 
-    const dialog = await screen.findByRole("dialog", {
-      name: /new cc switch config/i,
-    });
-    expect(
-      within(dialog).getByRole("tab", { name: /codex/i }),
-    ).toBeInTheDocument();
-    expect(
-      within(dialog).getByRole("tab", { name: /claude code/i }),
-    ).toBeInTheDocument();
-    expect(
-      within(dialog).queryByRole("tab", { name: /gemini cli/i }),
-    ).not.toBeInTheDocument();
+    expect(await within(dialog).findAllByText(/required/i)).toHaveLength(3);
+    expect(replaceConfigs).not.toHaveBeenCalled();
   });
 
-  test("manually adds and deletes Codex model mappings while validating duplicate request models", async () => {
+  test("creates a Claude Code preset whose tiers follow the main model until set", async () => {
     listChannelGroups.mockResolvedValue([
       {
         name: "pro",
-        description: "Pro route",
         "path-routes": ["/pro"],
-        "allowed-models": ["deepseek-v4-flash", "kimi-k2"],
+        "allowed-models": ["claude-haiku-4-5", "claude-opus-4-8", "claude-sonnet-5"],
       },
     ]);
     renderPage();
     const user = userEvent.setup();
+    const dialog = await openCreate(user);
+    await user.click(within(dialog).getByRole("tab", { name: "Claude Code" }));
+    await pickGroup(user, dialog, /pro.*\/pro/i);
 
-    await user.click(screen.getByRole("button", { name: /new config/i }));
+    const tierPicker = within(dialog).getByRole("combobox", { name: /^fable default model/i });
+    expect(tierPicker).toHaveTextContent(/same as main model/i);
+    // No request-name column any more, and no auth-field choice.
+    expect(within(dialog).queryByText(/request model/i)).not.toBeInTheDocument();
+    expect(within(dialog).queryByText(/auth field/i)).not.toBeInTheDocument();
 
-    const dialog = await screen.findByRole("dialog", {
-      name: /new cc switch config/i,
-    });
-    await user.click(
-      within(dialog).getByRole("combobox", { name: /select channel group/i }),
+    await pickOption(
+      user,
+      within(dialog).getByRole("combobox", { name: /^main model$/i }),
+      "claude-sonnet-5",
     );
-    await user.click(
-      await screen.findByRole("option", { name: /pro.*\/pro/i }),
-    );
+    await pickOption(user, tierPicker, "claude-opus-4-8");
 
-    // Auto-populated: row 1 = deepseek-v4-flash, row 2 = kimi-k2
-    expect(
-      await within(dialog).findByDisplayValue("deepseek-v4-flash"),
-    ).toBeInTheDocument();
-    expect(
-      await within(dialog).findByDisplayValue("kimi-k2"),
-    ).toBeInTheDocument();
-    expect(
-      within(dialog).getByRole("button", { name: /^save$/i }),
-    ).toBeDisabled();
+    const preview = within(dialog).getByTestId("ccswitch-import-preview");
+    expect(preview).toHaveTextContent("~/.claude/settings.json");
+    expect(preview).toHaveTextContent('"ANTHROPIC_MODEL": "claude-sonnet-5"');
+    expect(preview).toHaveTextContent('"ANTHROPIC_DEFAULT_FABLE_MODEL": "claude-opus-4-8"');
+    expect(preview).not.toHaveTextContent("ANTHROPIC_DEFAULT_HAIKU_MODEL");
+    expect(preview).toHaveTextContent(/tiers left empty follow the main model/i);
 
-    // Row 1: change request model to gpt-5.5
-    await user.clear(
-      within(dialog).getByLabelText(/cc switch request model for mapping 1/i),
-    );
-    await user.type(
-      within(dialog).getByLabelText(/cc switch request model for mapping 1/i),
-      "gpt-5.5",
-    );
-
-    // Row 2: change request model to gpt-5.5 (duplicate request model)
-    await user.clear(
-      within(dialog).getByLabelText(/cc switch request model for mapping 2/i),
-    );
-    await user.type(
-      within(dialog).getByLabelText(/cc switch request model for mapping 2/i),
-      "gpt-5.5",
-    );
-
-    expect(
-      await within(dialog).findByText(
-        /cc switch request model cannot be repeated/i,
-      ),
-    ).toBeInTheDocument();
-    expect(
-      within(dialog).getByRole("button", { name: /^save$/i }),
-    ).toBeDisabled();
-
-    // Delete mapping 2 — error should go away
-    await user.click(
-      within(dialog).getByRole("button", { name: /delete model mapping 2/i }),
-    );
-    expect(
-      within(dialog).queryByText(/cc switch request model cannot be repeated/i),
-    ).not.toBeInTheDocument();
-
-    await user.type(
-      within(dialog).getByLabelText(/provider name/i),
-      "Relay Codex",
-    );
     await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
-
     await waitFor(() =>
-      expect(replaceConfigs).toHaveBeenCalledWith([
-        expect.objectContaining({
-          clientType: "codex",
-          providerName: "Relay Codex",
-          defaultModel: "gpt-5.5",
-          modelMappings: [
-            {
-              contextWindow: 128000,
-              requestModel: "gpt-5.5",
-              targetModel: "deepseek-v4-flash",
-            },
-          ],
-        }),
-      ]),
+      expect(savedConfig()).toMatchObject({
+        clientType: "claude",
+        providerName: "CliProxy Claude Code",
+        defaultModel: "claude-sonnet-5",
+        endpointPath: "",
+        modelMappings: [
+          { role: "main", requestModel: "claude-sonnet-5", targetModel: "claude-sonnet-5" },
+          { role: "fable", requestModel: "claude-opus-4-8", targetModel: "claude-opus-4-8" },
+        ],
+      }),
     );
+  });
+
+  test("editing an earlier Claude preset keeps its request names and moves only targets", async () => {
+    listChannelGroups.mockResolvedValue([
+      {
+        name: "grok",
+        "path-routes": ["/grok"],
+        "allowed-models": ["grok-4.5", "grok-code-fast-1"],
+      },
+    ]);
+    listConfigs.mockResolvedValue([
+      {
+        id: "cfg-grok-claude",
+        clientType: "claude",
+        providerName: "Grok Claude",
+        note: "",
+        defaultModel: "grok-4.5",
+        allowedChannelGroups: ["grok"],
+        routePath: "/grok/cs_legacy1",
+        endpointPath: "",
+        usageAutoInterval: 30,
+        modelMappings: [
+          { role: "main", requestModel: "claude-fable-5", targetModel: "grok-4.5" },
+          { role: "haiku", requestModel: "claude-haiku-4-5", targetModel: "grok-4.5" },
+          { role: "fable", requestModel: "claude-fable-5", targetModel: "grok-4.5" },
+        ],
+      },
+    ]);
+    renderPage();
+    const user = userEvent.setup();
+    const dialog = await openEdit(user, "Grok Claude");
+
+    // An existing preset keeps its app.
+    expect(within(dialog).queryByRole("tab")).not.toBeInTheDocument();
+    const main = within(dialog).getByRole("combobox", { name: /^main model$/i });
+    expect(main).toHaveTextContent("grok-4.5");
+    // Main and Fable share that request name, so both pickers explain it.
+    expect(within(dialog).getAllByText(/^sent as claude-fable-5$/i)).toHaveLength(2);
+
+    await pickOption(user, main, "grok-code-fast-1");
+    await pickOption(
+      user,
+      within(dialog).getByRole("combobox", { name: /^haiku default model/i }),
+      /same as main model/i,
+    );
+
+    const aliasList = within(dialog).getByTestId("ccswitch-alias-list");
+    expect(aliasList).toHaveTextContent("claude-haiku-4-5");
+    expect(aliasList).toHaveTextContent("grok-4.5");
+
+    await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
+    await waitFor(() =>
+      expect(savedConfig()).toMatchObject({
+        id: "cfg-grok-claude",
+        defaultModel: "grok-code-fast-1",
+        routePath: "/grok/cs_legacy1",
+        modelMappings: [
+          { role: "main", requestModel: "claude-fable-5", targetModel: "grok-code-fast-1" },
+          { role: "fable", requestModel: "claude-fable-5", targetModel: "grok-code-fast-1" },
+          { requestModel: "claude-haiku-4-5", targetModel: "grok-4.5" },
+        ],
+      }),
+    );
+  });
+
+  test("editing an earlier Codex preset lists its aliases and saves them untouched", async () => {
+    listChannelGroups.mockResolvedValue([
+      {
+        name: "kimicode",
+        "path-routes": ["/kimicode"],
+        "allowed-models": ["gpt-5.5", "kimi-k2.5"],
+      },
+    ]);
+    listConfigs.mockResolvedValue([
+      {
+        id: "cfg-kimi",
+        clientType: "codex",
+        providerName: "Relay Kimi",
+        note: "saved mapping",
+        defaultModel: "gpt-5.4-mini",
+        allowedChannelGroups: ["kimicode"],
+        routePath: "/kimicode/cs_kimi01",
+        endpointPath: "/v1",
+        usageAutoInterval: 45,
+        modelMappings: [
+          { requestModel: "gpt-5.5", targetModel: "gpt-5.5", contextWindow: 128000 },
+          { requestModel: "gpt-5.4-mini", targetModel: "kimi-k2.5", contextWindow: 128000 },
+        ],
+      },
+    ]);
+    renderPage();
+    const user = userEvent.setup();
+    const dialog = await openEdit(user, "Relay Kimi");
+
+    expect(defaultModelPicker(dialog)).toHaveTextContent("kimi-k2.5");
+    expect(within(dialog).getByText(/^sent as gpt-5\.4-mini$/i)).toBeInTheDocument();
+    const aliasList = within(dialog).getByTestId("ccswitch-alias-list");
+    expect(aliasList).toHaveTextContent("gpt-5.4-mini");
+    expect(aliasList).toHaveTextContent("kimi-k2.5");
+    expect(within(dialog).getByRole("spinbutton", { name: /^context window/i })).toHaveValue(
+      128000,
+    );
+
+    await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
+    await waitFor(() =>
+      expect(savedConfig()).toMatchObject({
+        id: "cfg-kimi",
+        defaultModel: "gpt-5.4-mini",
+        usageAutoInterval: 45,
+        modelMappings: [
+          { requestModel: "gpt-5.5", targetModel: "gpt-5.5" },
+          { requestModel: "gpt-5.4-mini", targetModel: "kimi-k2.5", contextWindow: 128000 },
+        ],
+      }),
+    );
+  });
+
+  test("deleting the default alias keeps the default on its model under the model's own name", async () => {
+    listChannelGroups.mockResolvedValue([
+      { name: "kimicode", "path-routes": ["/kimicode"], "allowed-models": ["kimi-k2.5"] },
+    ]);
+    listConfigs.mockResolvedValue([
+      {
+        id: "cfg-kimi",
+        clientType: "codex",
+        providerName: "Relay Kimi",
+        defaultModel: "gpt-5.4-mini",
+        allowedChannelGroups: ["kimicode"],
+        routePath: "/kimicode/cs_kimi01",
+        modelMappings: [{ requestModel: "gpt-5.4-mini", targetModel: "kimi-k2.5" }],
+      },
+    ]);
+    renderPage();
+    const user = userEvent.setup();
+    const dialog = await openEdit(user, "Relay Kimi");
+
+    await user.click(within(dialog).getByRole("button", { name: /delete gpt-5\.4-mini/i }));
+    expect(within(dialog).queryByTestId("ccswitch-alias-list")).not.toBeInTheDocument();
+    expect(defaultModelPicker(dialog)).toHaveTextContent("kimi-k2.5");
+
+    await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
+    await waitFor(() =>
+      expect(savedConfig()).toMatchObject({
+        defaultModel: "kimi-k2.5",
+        modelMappings: [{ requestModel: "kimi-k2.5", targetModel: "kimi-k2.5" }],
+      }),
+    );
+  });
+
+  test("shows a saved preset immediately while its group's models still load", async () => {
+    const modelsDeferred = createDeferred<{ id: string }[]>();
+    listChannelGroups.mockResolvedValue([{ name: "kimicode", "path-routes": ["/kimicode"] }]);
+    listAvailableModels.mockReturnValue(modelsDeferred.promise);
+    listConfigs.mockResolvedValue([
+      {
+        id: "cfg-kimi",
+        clientType: "codex",
+        providerName: "Relay Kimi",
+        defaultModel: "gpt-5.5",
+        allowedChannelGroups: ["kimicode"],
+        routePath: "/kimicode/cs_kimi01",
+        modelMappings: [{ requestModel: "gpt-5.5", targetModel: "moonshot-v1-128k" }],
+      },
+    ]);
+    renderPage();
+    const user = userEvent.setup();
+    const dialog = await openEdit(user, "Relay Kimi");
+
+    expect(within(dialog).getByText(/loading models/i)).toBeInTheDocument();
+    expect(defaultModelPicker(dialog)).toHaveTextContent("moonshot-v1-128k");
+    modelsDeferred.resolve([{ id: "kimi-k2.5" }]);
+    await waitFor(() =>
+      expect(within(dialog).queryByText(/loading models/i)).not.toBeInTheDocument(),
+    );
+
+    // Loading the group's models does not re-seed an existing preset.
+    await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
+    await waitFor(() =>
+      expect(savedConfig()).toMatchObject({
+        modelMappings: [{ requestModel: "gpt-5.5", targetModel: "moonshot-v1-128k" }],
+      }),
+    );
+  });
+
+  test("warns that a new channel group changes the endpoint of an existing preset", async () => {
+    listChannelGroups.mockResolvedValue([
+      { name: "pro", "path-routes": ["/pro"], "allowed-models": ["gpt-5.5"] },
+      { name: "team-a", "path-routes": ["/team-a"], "allowed-models": ["gpt-5.5"] },
+    ]);
+    listConfigs.mockResolvedValue([
+      {
+        id: "cfg-move",
+        clientType: "codex",
+        providerName: "Relay Pro",
+        defaultModel: "gpt-5.5",
+        allowedChannelGroups: ["pro"],
+        routePath: "/pro/cs_saved01",
+        modelMappings: [{ requestModel: "gpt-5.5", targetModel: "gpt-5.5" }],
+      },
+    ]);
+    renderPage();
+    const user = userEvent.setup();
+    const dialog = await openEdit(user, "Relay Pro");
+
+    expect(within(dialog).queryByText(/changes the endpoint address/i)).not.toBeInTheDocument();
+    await pickGroup(user, dialog, /team-a.*\/team-a/i);
+    expect(within(dialog).getByText(/changes the endpoint address/i)).toBeInTheDocument();
+    expect(within(dialog).getByTestId("ccswitch-config-endpoint-preview").textContent).toMatch(
+      /\/team-a\/cs_[a-z0-9]+\/v1$/,
+    );
+    await pickGroup(user, dialog, /pro.*\/pro/i);
+    expect(within(dialog).queryByText(/changes the endpoint address/i)).not.toBeInTheDocument();
+    expect(within(dialog).getByTestId("ccswitch-config-endpoint-preview").textContent).toMatch(
+      /\/pro\/cs_saved01\/v1$/,
+    );
+  });
+
+  test("Gemini names starting with Google are renamed so CC Switch keeps the API key", async () => {
+    listChannelGroups.mockResolvedValue([
+      { name: "pro", "path-routes": ["/pro"], "allowed-models": ["gemini-2.5-pro"] },
+    ]);
+    renderPage();
+    const user = userEvent.setup();
+    const dialog = await openCreate(user);
+    await user.click(within(dialog).getByRole("tab", { name: "Gemini CLI" }));
+    await user.clear(nameInput(dialog));
+    await user.type(nameInput(dialog), "Google relay");
+
+    expect(within(dialog).getByText(/official sign-in/i)).toHaveTextContent(
+      "CliProxy Google relay",
+    );
+    await pickGroup(user, dialog, /pro.*\/pro/i);
+    const preview = within(dialog).getByTestId("ccswitch-import-preview");
+    expect(preview).toHaveTextContent("~/.gemini/.env");
+    // The group serves one model, so it is picked as the default.
+    expect(preview).toHaveTextContent("GEMINI_MODEL=gemini-2.5-pro");
   });
 
   test("uses the channel group allowed models as the authoritative model list", async () => {
@@ -409,69 +593,32 @@ describe("CcSwitchImportSettingsPage", () => {
         name: "chatgpt-pro",
         description: "ChatGPT Pro route",
         "path-routes": ["/openai/pro"],
-        "allowed-models": [
-          "codex-auto-review",
-          "gpt-5",
-          "gpt-5.1",
-          "gpt-5.2",
-          "gpt-5.3-codex",
-          "gpt-5.5",
-        ],
+        "allowed-models": ["codex-auto-review", "gpt-5", "gpt-5.5"],
       },
     ]);
-    listAvailableModels.mockResolvedValue([
-      { id: "codex-auto-review" },
-      { id: "gpt-5" },
-      { id: "unexpected-extra-model" },
-    ]);
+    listAvailableModels.mockResolvedValue([{ id: "gpt-5" }, { id: "unexpected-extra-model" }]);
     renderPage();
     const user = userEvent.setup();
+    const dialog = await openCreate(user);
+    await pickGroup(user, dialog, /chatgpt-pro.*\/openai\/pro/i);
 
-    await user.click(screen.getByRole("button", { name: /new config/i }));
-
-    const dialog = await screen.findByRole("dialog", {
-      name: /new cc switch config/i,
-    });
-    const tabList = within(dialog).getByRole("tablist", { name: /type/i });
-    const groupLabel = within(dialog).getByText(/select channel group/i);
-
-    expect(
-      groupLabel.compareDocumentPosition(tabList) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
-
-    await user.click(
-      within(dialog).getByRole("combobox", { name: /select channel group/i }),
-    );
-    await user.click(
-      await screen.findByRole("option", {
-        name: /chatgpt-pro.*\/openai\/pro/i,
-      }),
-    );
-
-    const groupSelect = within(dialog).getByRole("combobox", {
-      name: /select channel group/i,
-    });
+    const groupSelect = within(dialog).getByRole("combobox", { name: /^channel group$/i });
     expect(groupSelect).toHaveTextContent("chatgpt-pro");
     expect(groupSelect).toHaveTextContent("/openai/pro");
-    expect(within(dialog).queryByText(/path address/i)).not.toBeInTheDocument();
-
-    expect(
-      await within(dialog).findByDisplayValue("gpt-5.5"),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("option", { name: "unexpected-extra-model" }),
-    ).not.toBeInTheDocument();
+    expect(await optionNames(user, defaultModelPicker(dialog))).toEqual([
+      "codex-auto-review",
+      "gpt-5",
+      "gpt-5.5",
+    ]);
     expect(listAvailableModels).not.toHaveBeenCalled();
   });
 
-  // The group refuses what it excludes, so an excluded model offered here became
-  // a mapping whose requests were rejected with a 403.
-  test("leaves models the channel group excludes out of the mapping candidates", async () => {
+  // The group refuses what it excludes, so an excluded model offered here became a preset
+  // whose requests were rejected with a 403.
+  test("leaves models the channel group excludes out of the candidates", async () => {
     listChannelGroups.mockResolvedValue([
       {
         name: "chatgpt-pro",
-        description: "ChatGPT Pro route",
         channels: ["A_GptPro"],
         "path-routes": ["/openai/pro"],
         // Matched like the backend does: through the route prefix and the wildcard.
@@ -486,28 +633,19 @@ describe("CcSwitchImportSettingsPage", () => {
     ]);
     renderPage();
     const user = userEvent.setup();
+    const dialog = await openCreate(user);
+    await pickGroup(user, dialog, /chatgpt-pro.*\/openai\/pro/i);
 
-    await user.click(screen.getByRole("button", { name: /new config/i }));
-    const dialog = await screen.findByRole("dialog", { name: /new cc switch config/i });
-    await user.click(within(dialog).getByRole("combobox", { name: /select channel group/i }));
-    await user.click(await screen.findByRole("option", { name: /chatgpt-pro.*\/openai\/pro/i }));
-
-    expect(await within(dialog).findByDisplayValue("gpt-5.5")).toBeInTheDocument();
-    expect(within(dialog).getByDisplayValue("gpt-5")).toBeInTheDocument();
-    expect(within(dialog).queryByDisplayValue("gpt-image-2")).not.toBeInTheDocument();
-    expect(within(dialog).queryByDisplayValue("gpt-5-codex")).not.toBeInTheDocument();
-
-    await user.click(within(dialog).getByRole("combobox", { name: "Actual channel model 1" }));
-    expect(await screen.findByRole("option", { name: "gpt-5.5" })).toBeInTheDocument();
-    expect(screen.queryByRole("option", { name: "gpt-image-2" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("option", { name: "gpt-5-codex" })).not.toBeInTheDocument();
+    await waitFor(() => expect(listAvailableModels).toHaveBeenCalled());
+    await waitFor(async () =>
+      expect(await optionNames(user, defaultModelPicker(dialog))).toEqual(["gpt-5", "gpt-5.5"]),
+    );
   });
 
   test("applies a channel group's exclusions to its allow list too", async () => {
     listChannelGroups.mockResolvedValue([
       {
         name: "pro",
-        description: "Pro route",
         "path-routes": ["/pro"],
         "allowed-models": ["deepseek-v4-flash", "kimi-k2"],
         "excluded-models": ["DeepSeek-*"],
@@ -515,22 +653,18 @@ describe("CcSwitchImportSettingsPage", () => {
     ]);
     renderPage();
     const user = userEvent.setup();
+    const dialog = await openCreate(user);
+    await pickGroup(user, dialog, /pro.*\/pro/i);
 
-    await user.click(screen.getByRole("button", { name: /new config/i }));
-    const dialog = await screen.findByRole("dialog", { name: /new cc switch config/i });
-    await user.click(within(dialog).getByRole("combobox", { name: /select channel group/i }));
-    await user.click(await screen.findByRole("option", { name: /pro.*\/pro/i }));
-
-    expect(await within(dialog).findByDisplayValue("kimi-k2")).toBeInTheDocument();
-    expect(within(dialog).queryByDisplayValue("deepseek-v4-flash")).not.toBeInTheDocument();
-    expect(listAvailableModels).not.toHaveBeenCalled();
+    expect(await optionNames(user, defaultModelPicker(dialog))).toEqual(["kimi-k2"]);
+    // A single model is picked for you.
+    expect(defaultModelPicker(dialog)).toHaveTextContent("kimi-k2");
   });
 
   test("filters fallback channel group models by configured model availability", async () => {
     listChannelGroups.mockResolvedValue([
       {
         name: "chatgpt-pro",
-        description: "ChatGPT Pro route",
         channels: ["A_GptPro"],
         channelDetails: [
           {
@@ -549,11 +683,8 @@ describe("CcSwitchImportSettingsPage", () => {
       { id: "codex-auto-review" },
       { id: "gpt-5" },
       { id: "gpt-5-codex" },
-      { id: "gpt-5.1" },
-      { id: "gpt-5.1-codex" },
       { id: "gpt-5.3-codex" },
       { id: "gpt-5.5" },
-      { id: "gpt-image-2" },
     ]);
     loadConfiguredModelAvailability.mockResolvedValue({
       scoped: true,
@@ -562,53 +693,75 @@ describe("CcSwitchImportSettingsPage", () => {
         { id: "gpt-5-codex", owned_by: "openai" },
         { id: "gpt-5.3-codex", owned_by: "codex" },
         { id: "gpt-5.5", owned_by: "codex" },
-        { id: "gpt-image-2", owned_by: "openai" },
       ],
-      idSet: new Set([
-        "codex-auto-review",
-        "gpt-5",
-        "gpt-5-codex",
-        "gpt-5.1",
-        "gpt-5.1-codex",
-        "gpt-5.3-codex",
-        "gpt-5.5",
-        "gpt-image-2",
-      ]),
+      idSet: new Set(["codex-auto-review", "gpt-5", "gpt-5-codex", "gpt-5.3-codex", "gpt-5.5"]),
     });
     renderPage();
     const user = userEvent.setup();
+    const dialog = await openCreate(user);
+    await pickGroup(user, dialog, /chatgpt-pro.*\/openai\/pro/i);
 
-    await user.click(screen.getByRole("button", { name: /new config/i }));
-
-    const dialog = await screen.findByRole("dialog", {
-      name: /new cc switch config/i,
-    });
-    await user.click(
-      within(dialog).getByRole("combobox", { name: /select channel group/i }),
+    await waitFor(() =>
+      expect(listAvailableModels).toHaveBeenCalledWith({ allowedChannels: ["A_GptPro"] }),
     );
-    await user.click(
-      await screen.findByRole("option", {
-        name: /chatgpt-pro.*\/openai\/pro/i,
-      }),
+    await waitFor(async () =>
+      expect(await optionNames(user, defaultModelPicker(dialog))).toEqual([
+        "gpt-5.3-codex",
+        "gpt-5.5",
+      ]),
     );
-
-    expect(
-      await within(dialog).findByDisplayValue("gpt-5.5"),
-    ).toBeInTheDocument();
-    expect(screen.queryByDisplayValue("gpt-5-codex")).not.toBeInTheDocument();
-    expect(listAvailableModels).toHaveBeenCalledWith({
-      allowedChannels: ["A_GptPro"],
-    });
     expect(loadConfiguredModelAvailability).toHaveBeenCalledWith(undefined);
     expect(getModelConfigs).not.toHaveBeenCalled();
   });
 
-  test("hydrates the Kimi and DeepSeek channel group from resolved channels", async () => {
+  test("uses the auth-file owner model group as the model source", async () => {
+    getAuthGroupModelOwnerMappingMap.mockResolvedValue({ kimi: "kimi-code" });
+    listChannelGroups.mockResolvedValue([
+      {
+        name: "kimicode",
+        channels: ["kimi"],
+        channelDetails: [
+          {
+            name: "kimi",
+            source: "kimi",
+            default_tags: ["kimi"],
+            custom_tags: [],
+            hidden_default_tags: [],
+            display_tags: ["kimi"],
+          },
+        ],
+        "path-routes": ["/kimicode"],
+      },
+    ]);
+    listAvailableModels.mockResolvedValue([{ id: "kimi-k2" }, { id: "kimi-k2.5" }]);
+    loadConfiguredModelAvailability.mockResolvedValue({
+      scoped: true,
+      items: [
+        { id: "kimi-k2.5", owned_by: "kimi-code" },
+        { id: "kimi-k2.6", owned_by: "kimi-code" },
+        { id: "kimi-k2.7-code", owned_by: "kimi-code" },
+      ],
+      idSet: new Set(["kimi-k2.5", "kimi-k2.6"]),
+    });
+    renderPage();
+    const user = userEvent.setup();
+    const dialog = await openCreate(user);
+    await user.click(within(dialog).getByRole("tab", { name: "Claude Code" }));
+    await pickGroup(user, dialog, /kimicode.*\/kimicode/i);
+
+    const main = within(dialog).getByRole("combobox", { name: /^main model$/i });
+    await waitFor(async () =>
+      expect(await optionNames(user, main)).toEqual(["kimi-k2.5", "kimi-k2.6", "kimi-k2.7-code"]),
+    );
+    expect(listAvailableModels).toHaveBeenCalledWith({ allowedChannels: ["kimi"] });
+    expect(getModelConfigs).not.toHaveBeenCalled();
+  });
+
+  test("hydrates a mixed Kimi and OpenCode Go group from its resolved channels", async () => {
     getAuthGroupModelOwnerMappingMap.mockResolvedValue({ kimi: "kimi-code" });
     listChannelGroups.mockResolvedValue([
       {
         name: "kimi+deepseek v4 flash",
-        description: "Kimi and DeepSeek route",
         channels: ["kimi-code", "opencode"],
         channelDetails: [
           {
@@ -632,7 +785,6 @@ describe("CcSwitchImportSettingsPage", () => {
     listAvailableModels.mockResolvedValue([
       { id: "deepseek-v4-flash" },
       { id: "kimi-k2.5" },
-      { id: "kimi-k2.6" },
       { id: "qwen3.5-plus" },
     ]);
     loadConfiguredModelAvailability.mockResolvedValue({
@@ -640,1071 +792,55 @@ describe("CcSwitchImportSettingsPage", () => {
       items: [
         { id: "deepseek-v4-flash", owned_by: "opencode", source: "seed" },
         { id: "kimi-k2.5", owned_by: "kimi-code", source: "seed" },
-        { id: "kimi-k2.6", owned_by: "kimi-code", source: "seed" },
         { id: "kimi-k2.7", owned_by: "kimi-code", source: "seed" },
-        { id: "kimi-k2.7-code", owned_by: "kimi-code", source: "seed" },
         { id: "qwen3.5-plus", owned_by: "opencode", source: "seed" },
         { id: "unrelated-openai", owned_by: "openai", source: "seed" },
       ],
-      idSet: new Set([
-        "deepseek-v4-flash",
-        "kimi-k2.5",
-        "kimi-k2.6",
-        "kimi-k2.7",
-        "kimi-k2.7-code",
-        "qwen3.5-plus",
-      ]),
+      idSet: new Set(["deepseek-v4-flash", "kimi-k2.5", "kimi-k2.7", "qwen3.5-plus"]),
     });
     renderPage();
     const user = userEvent.setup();
+    const dialog = await openCreate(user);
+    await pickGroup(user, dialog, /kimi\+deepseek v4 flash.*\/deepseekkimi/i);
 
-    await user.click(screen.getByRole("button", { name: /new config/i }));
-
-    const dialog = await screen.findByRole("dialog", {
-      name: /new cc switch config/i,
-    });
-    await user.click(
-      within(dialog).getByRole("combobox", { name: /select channel group/i }),
+    await waitFor(async () =>
+      expect(await optionNames(user, defaultModelPicker(dialog))).toEqual([
+        "deepseek-v4-flash",
+        "kimi-k2.5",
+        "kimi-k2.7",
+        "qwen3.5-plus",
+      ]),
     );
-    await user.click(
-      await screen.findByRole("option", {
-        name: /kimi\+deepseek v4 flash.*\/deepseekkimi/i,
-      }),
-    );
-
-    expect(
-      await within(dialog).findByDisplayValue("deepseek-v4-flash"),
-    ).toBeInTheDocument();
-    expect(within(dialog).getByDisplayValue("kimi-k2.5")).toBeInTheDocument();
-    expect(within(dialog).getByDisplayValue("kimi-k2.6")).toBeInTheDocument();
-    expect(within(dialog).getByDisplayValue("kimi-k2.7")).toBeInTheDocument();
-    expect(
-      within(dialog).getByDisplayValue("kimi-k2.7-code"),
-    ).toBeInTheDocument();
-    expect(
-      within(dialog).getByDisplayValue("qwen3.5-plus"),
-    ).toBeInTheDocument();
-    expect(
-      within(dialog).queryByDisplayValue("unrelated-openai"),
-    ).not.toBeInTheDocument();
-    expect(
-      within(dialog).queryByText(
-        /no models are available for this channel group/i,
-      ),
-    ).not.toBeInTheDocument();
     expect(listAvailableModels).toHaveBeenCalledWith({
       allowedChannels: ["kimi-code", "opencode"],
     });
-    expect(loadConfiguredModelAvailability).toHaveBeenCalledWith(undefined);
-    expect(getModelConfigs).not.toHaveBeenCalled();
-  });
-
-  test("loads resolved tag group channel models for CC Switch presets", async () => {
-    getAuthGroupModelOwnerMappingMap.mockResolvedValue({ codex: "codex" });
-    listChannelGroups.mockResolvedValue([
-      {
-        name: "group1",
-        description: "plus pool and opencode go",
-        channels: ["inroi", "haoxinren", "opencode go", "便宜的"],
-        channelDetails: [
-          {
-            name: "inroi",
-            source: "codex",
-            default_tags: ["codex"],
-            custom_tags: [],
-            display_tags: ["codex"],
-          },
-          {
-            name: "haoxinren",
-            source: "codex",
-            default_tags: ["codex"],
-            custom_tags: [],
-            display_tags: ["codex"],
-          },
-          {
-            name: "opencode go",
-            source: "opencode-go",
-            default_tags: ["opencode-go"],
-            custom_tags: [],
-            display_tags: ["opencode-go"],
-          },
-          {
-            name: "便宜的",
-            source: "codex",
-            default_tags: ["codex"],
-            custom_tags: [],
-            display_tags: ["codex"],
-          },
-        ],
-        "path-routes": ["/group1"],
-      },
-    ]);
-    listAvailableModels.mockResolvedValue([
-      { id: "deepseek-v4-flash" },
-      { id: "deepseek-v4-pro" },
-      { id: "gpt-5.3-codex-spark" },
-    ]);
-    loadConfiguredModelAvailability.mockImplementation(
-      async (options?: { allowedChannelGroups?: string[] }) => {
-        if (options?.allowedChannelGroups?.includes("group1")) {
-          return {
-            scoped: true,
-            items: [
-              { id: "gpt-5.3-codex-spark", owned_by: "codex", source: "seed" },
-            ],
-            idSet: new Set(["gpt-5.3-codex-spark"]),
-          };
-        }
-        return {
-          scoped: true,
-          items: [
-            {
-              id: "deepseek-v4-flash",
-              owned_by: "deepseek",
-              source: "openrouter",
-            },
-            {
-              id: "deepseek-v4-pro",
-              owned_by: "deepseek",
-              source: "openrouter",
-            },
-            { id: "gpt-5.3-codex-spark", owned_by: "codex", source: "seed" },
-          ],
-          idSet: new Set([
-            "deepseek-v4-flash",
-            "deepseek-v4-pro",
-            "gpt-5.3-codex-spark",
-          ]),
-        };
-      },
-    );
-    renderPage();
-    const user = userEvent.setup();
-
-    await user.click(screen.getByRole("button", { name: /new config/i }));
-
-    const dialog = await screen.findByRole("dialog", {
-      name: /new cc switch config/i,
-    });
-    await user.click(
-      within(dialog).getByRole("combobox", { name: /select channel group/i }),
-    );
-    await user.click(
-      await screen.findByRole("option", { name: /group1.*\/group1/i }),
-    );
-
-    expect(
-      await within(dialog).findByDisplayValue("deepseek-v4-flash"),
-    ).toBeInTheDocument();
-    expect(
-      within(dialog).getByDisplayValue("deepseek-v4-pro"),
-    ).toBeInTheDocument();
-    expect(
-      within(dialog).getByDisplayValue("gpt-5.3-codex-spark"),
-    ).toBeInTheDocument();
-    expect(listAvailableModels).toHaveBeenCalledWith({
-      allowedChannels: expect.arrayContaining([
-        "haoxinren",
-        "inroi",
-        "opencode go",
-        "便宜的",
-      ]),
-    });
-    expect(
-      listAvailableModels.mock.calls.at(-1)?.[0]?.allowedChannels,
-    ).toHaveLength(4);
-    expect(loadConfiguredModelAvailability).toHaveBeenCalledWith(undefined);
-    expect(loadConfiguredModelAvailability).not.toHaveBeenCalledWith({
-      allowedChannelGroups: ["group1"],
-    });
-  });
-
-  test("merges mapped Codex owner models with OpenCode Go channel models in CC Switch presets", async () => {
-    getAuthGroupModelOwnerMappingMap.mockResolvedValue({ codex: "codex" });
-    listChannelGroups.mockResolvedValue([
-      {
-        name: "opencodego+gpt",
-        description: "OpenCode Go and GPT route",
-        channels: ["A_GptPro", "opencode go"],
-        channelDetails: [
-          {
-            name: "A_GptPro",
-            source: "codex",
-            default_tags: ["codex", "pro"],
-            custom_tags: ["20x"],
-            display_tags: ["codex", "pro", "20x"],
-          },
-          {
-            name: "opencode go",
-            source: "opencode-go",
-            default_tags: ["opencode-go"],
-            custom_tags: [],
-            display_tags: ["opencode-go"],
-          },
-        ],
-        "path-routes": ["/codexdeepseek"],
-      },
-    ]);
-    listAvailableModels.mockResolvedValue([
-      { id: "gpt-5.5" },
-      { id: "gpt-5.3-codex" },
-      { id: "minimax-m2.7" },
-      { id: "kimi-k2.6" },
-    ]);
-    loadConfiguredModelAvailability.mockResolvedValue({
-      scoped: true,
-      items: [],
-      idSet: new Set(["gpt-5.5", "gpt-5.3-codex", "minimax-m2.7", "kimi-k2.6"]),
-    });
-    getModelConfigs.mockResolvedValue([
-      { id: "gpt-5.5", owned_by: "codex" },
-      { id: "gpt-5.3-codex", owned_by: "codex" },
-    ]);
-    renderPage();
-    const user = userEvent.setup();
-
-    await user.click(screen.getByRole("button", { name: /new config/i }));
-
-    const dialog = await screen.findByRole("dialog", {
-      name: /new cc switch config/i,
-    });
-    await user.click(
-      within(dialog).getByRole("combobox", { name: /select channel group/i }),
-    );
-    await user.click(
-      await screen.findByRole("option", {
-        name: /opencodego\+gpt.*\/codexdeepseek/i,
-      }),
-    );
-
-    expect(
-      await within(dialog).findByDisplayValue("gpt-5.5"),
-    ).toBeInTheDocument();
-    expect(screen.getByDisplayValue("minimax-m2.7")).toBeInTheDocument();
-    expect(screen.getByDisplayValue("kimi-k2.6")).toBeInTheDocument();
-    expect(listAvailableModels).toHaveBeenCalledWith({
-      allowedChannels: ["A_GptPro", "opencode go"],
-    });
-  });
-
-  test("uses the auth-file owner model group as the CC Switch actual model source", async () => {
-    getAuthGroupModelOwnerMappingMap.mockResolvedValue({ kimi: "kimi-code" });
-    listChannelGroups.mockResolvedValue([
-      {
-        name: "kimicode",
-        description: "Kimi Code route",
-        channels: ["kimi"],
-        channelDetails: [
-          {
-            name: "kimi",
-            source: "kimi",
-            default_tags: ["kimi"],
-            custom_tags: [],
-            hidden_default_tags: [],
-            display_tags: ["kimi"],
-          },
-        ],
-        "path-routes": ["/kimicode"],
-      },
-    ]);
-    listAvailableModels.mockResolvedValue([
-      { id: "kimi-k2" },
-      { id: "kimi-k2-thinking" },
-      { id: "kimi-k2.5" },
-    ]);
-    loadConfiguredModelAvailability.mockResolvedValue({
-      scoped: true,
-      items: [
-        { id: "kimi-k2.5", owned_by: "kimi-code" },
-        { id: "kimi-k2.6", owned_by: "kimi-code" },
-        { id: "kimi-k2.7", owned_by: "kimi-code" },
-        { id: "kimi-k2.7-code", owned_by: "kimi-code" },
-      ],
-      idSet: new Set(["kimi-k2.5", "kimi-k2.6"]),
-    });
-    renderPage();
-    const user = userEvent.setup();
-
-    await user.click(screen.getByRole("button", { name: /new config/i }));
-
-    const dialog = await screen.findByRole("dialog", {
-      name: /new cc switch config/i,
-    });
-    await user.click(within(dialog).getByRole("tab", { name: /claude code/i }));
-    await user.click(
-      within(dialog).getByRole("combobox", { name: /select channel group/i }),
-    );
-    await user.click(
-      await screen.findByRole("option", { name: /kimicode.*\/kimicode/i }),
-    );
-
-    expect(
-      await within(dialog).findAllByDisplayValue("kimi-k2.5"),
-    ).toHaveLength(4);
-    expect(
-      await within(dialog).findByDisplayValue("claude-fable-5"),
-    ).toBeInTheDocument();
-    await user.click(
-      within(dialog).getByRole("combobox", { name: /^main model$/i }),
-    );
-
-    expect(
-      await screen.findByRole("option", { name: "kimi-k2.6" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("option", { name: "kimi-k2.7" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("option", { name: "kimi-k2.7-code" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("option", { name: "kimi-k2" }),
-    ).not.toBeInTheDocument();
-    expect(listAvailableModels).toHaveBeenCalledWith({
-      allowedChannels: ["kimi"],
-    });
-    expect(loadConfiguredModelAvailability).toHaveBeenCalledWith(undefined);
-    expect(getModelConfigs).not.toHaveBeenCalled();
-  });
-
-  test("preserves saved generic model mappings when reopening an edited config", async () => {
-    listChannelGroups.mockResolvedValue([
-      {
-        name: "kimicode",
-        description: "Kimi Code route",
-        "path-routes": ["/kimicode"],
-        "allowed-models": ["kimi-k2.5"],
-      },
-    ]);
-    listConfigs.mockResolvedValue([
-      {
-        id: "cfg-kimi",
-        clientType: "codex",
-        providerName: "Relay Kimi",
-        note: "saved mapping",
-        defaultModel: "gpt-5.5",
-        allowedChannelGroups: ["kimicode"],
-        endpointPath: "/v1",
-        usageAutoInterval: 30,
-        modelMappings: [
-          {
-            requestModel: "gpt-5.5",
-            targetModel: "gpt-5.5",
-          },
-          {
-            requestModel: "gpt-5.4-mini",
-            targetModel: "gpt-5.5",
-          },
-        ],
-      },
-    ]);
-    renderPage();
-    const user = userEvent.setup();
-
-    expect(await screen.findByText("Relay Kimi")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: /edit config/i }));
-
-    const dialog = await screen.findByRole("dialog", {
-      name: /edit cc switch config/i,
-    });
-    expect(
-      await within(dialog).findByRole("combobox", {
-        name: /actual channel model 1/i,
-      }),
-    ).toHaveTextContent("gpt-5.5");
-    expect(
-      within(dialog).getByLabelText(/cc switch request model for mapping 1/i),
-    ).toHaveValue("gpt-5.5");
-    expect(
-      within(dialog).getByLabelText(/cc switch request model for mapping 2/i),
-    ).toHaveValue("gpt-5.4-mini");
-    expect(
-      within(dialog).getByRole("combobox", { name: /actual channel model 2/i }),
-    ).toHaveTextContent("gpt-5.5");
-    const defaultModelSelect = within(dialog).getByRole("combobox", {
-      name: /^default model$/i,
-    });
-    expect(defaultModelSelect).toHaveTextContent("gpt-5.5");
-
-    await user.click(defaultModelSelect);
-    await user.click(
-      await screen.findByRole("option", { name: "gpt-5.4-mini" }),
-    );
-    expect(defaultModelSelect).toHaveTextContent("gpt-5.4-mini");
-
-    await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
-
-    await waitFor(() =>
-      expect(replaceConfigs).toHaveBeenCalledWith([
-        expect.objectContaining({
-          id: "cfg-kimi",
-          defaultModel: "gpt-5.4-mini",
-          allowedChannelGroups: ["kimicode"],
-          modelMappings: [
-            {
-              contextWindow: 128000,
-              requestModel: "gpt-5.5",
-              targetModel: "gpt-5.5",
-            },
-            {
-              contextWindow: 128000,
-              requestModel: "gpt-5.4-mini",
-              targetModel: "gpt-5.5",
-            },
-          ],
-        }),
-      ]),
-    );
-  });
-
-  test("preserves explicit Codex reasoning and max context metadata when saving", async () => {
-    listChannelGroups.mockResolvedValue([
-      {
-        name: "pro",
-        description: "Pro route",
-        "path-routes": ["/pro"],
-        "allowed-models": ["gpt-5.6-sol"],
-      },
-    ]);
-    listConfigs.mockResolvedValue([
-      {
-        id: "cfg-gpt56",
-        clientType: "codex",
-        providerName: "Relay GPT-5.6",
-        note: "explicit catalog",
-        defaultModel: "gpt-5.6-sol",
-        allowedChannelGroups: ["pro"],
-        routePath: "/pro/cs_gpt56",
-        endpointPath: "/v1",
-        usageAutoInterval: 30,
-        modelMappings: [
-          { requestModel: "gpt-5.6-sol", targetModel: "gpt-5.6-sol" },
-        ],
-        codexModelCatalogFilename: "cc-switch-model-catalog.json",
-        codexModelCatalog: {
-          models: [
-            {
-              slug: "gpt-5.6-sol",
-              model: "gpt-5.6-sol",
-              context_window: 900000,
-              max_context_window: 1050000,
-              default_reasoning_level: "medium",
-              supported_reasoning_levels: [
-                { effort: "low", description: "Low" },
-                { effort: "max", description: "Maximum" },
-                { effort: "ultra", description: "Delegated" },
-              ],
-              model_messages: {
-                context_window: 900000,
-                max_context_window: 1050000,
-              },
-            },
-          ],
-        },
-      },
-    ]);
-    renderPage();
-    const user = userEvent.setup();
-
-    expect(await screen.findByText("Relay GPT-5.6")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: /edit config/i }));
-    const dialog = await screen.findByRole("dialog", {
-      name: /edit cc switch config/i,
-    });
-    expect(
-      within(dialog).getByLabelText(/context window for mapping 1/i),
-    ).toHaveValue(900000);
-    await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
-
-    await waitFor(() => {
-      const saved = replaceConfigs.mock.calls[0]?.[0]?.[0];
-      expect(saved?.codexModelCatalog?.models[0]).toMatchObject({
-        context_window: 900000,
-        max_context_window: 1050000,
-        default_reasoning_level: "medium",
-        supported_reasoning_levels: [
-          { effort: "low", description: "Low" },
-          { effort: "max", description: "Maximum" },
-          { effort: "ultra", description: "Delegated" },
-        ],
-        model_messages: {
-          context_window: 900000,
-          max_context_window: 1050000,
-        },
-      });
-    });
-  });
-
-  test("shows saved model mappings immediately while edited config models refresh", async () => {
-    const modelsDeferred = createDeferred<{ id: string }[]>();
-    listChannelGroups.mockResolvedValue([
-      {
-        name: "kimicode",
-        description: "Kimi Code route",
-        "path-routes": ["/kimicode"],
-      },
-    ]);
-    listAvailableModels.mockReturnValue(modelsDeferred.promise);
-    listConfigs.mockResolvedValue([
-      {
-        id: "cfg-kimi",
-        clientType: "codex",
-        providerName: "Relay Kimi",
-        note: "saved mapping",
-        defaultModel: "gpt-5.5",
-        allowedChannelGroups: ["kimicode"],
-        endpointPath: "/v1",
-        usageAutoInterval: 30,
-        modelMappings: [
-          {
-            requestModel: "gpt-5.5",
-            targetModel: "moonshot-v1-128k",
-          },
-        ],
-      },
-    ]);
-    renderPage();
-    const user = userEvent.setup();
-
-    expect(await screen.findByText("Relay Kimi")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: /edit config/i }));
-
-    const dialog = await screen.findByRole("dialog", {
-      name: /edit cc switch config/i,
-    });
-
-    expect(
-      within(dialog).queryByTestId("ccswitch-model-mapping-loading"),
-    ).toBeNull();
-    expect(
-      within(dialog).queryByText(
-        /no models are available for this channel group/i,
-      ),
-    ).not.toBeInTheDocument();
-    expect(
-      within(dialog).getByLabelText(/cc switch request model for mapping 1/i),
-    ).toHaveValue("gpt-5.5");
-    expect(
-      within(dialog).getByRole("combobox", { name: /actual channel model 1/i }),
-    ).toHaveTextContent("moonshot-v1-128k");
-    expect(
-      within(dialog).getByRole("button", { name: /^save$/i }),
-    ).not.toBeDisabled();
-
-    modelsDeferred.resolve([{ id: "kimi-k2.5" }]);
-
-    await waitFor(() =>
-      expect(
-        within(dialog).queryByTestId("ccswitch-model-mapping-loading"),
-      ).toBeNull(),
-    );
-    expect(
-      within(dialog).getByLabelText(/cc switch request model for mapping 1/i),
-    ).toHaveValue("gpt-5.5");
-  });
-
-  test("does not auto-expand saved generic mappings into identity rows after model refresh", async () => {
-    const modelsDeferred = createDeferred<{ id: string }[]>();
-    listChannelGroups.mockResolvedValue([
-      {
-        name: "deepseekv4flash+chatgpt",
-        description: "DeepSeek v4 flash route",
-        "path-routes": ["/deepseekv4flash-chatgpt"],
-      },
-    ]);
-    listAvailableModels.mockReturnValue(modelsDeferred.promise);
-    listConfigs.mockResolvedValue([
-      {
-        id: "cfg-deepseek",
-        clientType: "codex",
-        providerName: "Relay DeepSeek",
-        note: "saved mapping",
-        defaultModel: "gpt-5.4",
-        allowedChannelGroups: ["deepseekv4flash+chatgpt"],
-        endpointPath: "/v1",
-        usageAutoInterval: 30,
-        modelMappings: [
-          {
-            requestModel: "gpt-5.4",
-            targetModel: "deepseek-v4-flash",
-          },
-        ],
-      },
-    ]);
-
-    renderPage();
-    const user = userEvent.setup();
-
-    expect(await screen.findByText("Relay DeepSeek")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: /edit config/i }));
-
-    const dialog = await screen.findByRole("dialog", {
-      name: /edit cc switch config/i,
-    });
-    expect(
-      within(dialog).getByLabelText(/cc switch request model for mapping 1/i),
-    ).toHaveValue("gpt-5.4");
-    expect(
-      within(dialog).getByRole("combobox", { name: /actual channel model 1/i }),
-    ).toHaveTextContent("deepseek-v4-flash");
-
-    modelsDeferred.resolve([
-      { id: "gpt-5.5" },
-      { id: "gpt-5.4" },
-      { id: "deepseek-v4-flash" },
-      { id: "deepseek-v4-pro" },
-    ]);
-
-    await waitFor(() =>
-      expect(
-        within(dialog).queryByTestId("ccswitch-model-mapping-loading"),
-      ).toBeNull(),
-    );
-
-    await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
-
-    await waitFor(() =>
-      expect(replaceConfigs).toHaveBeenCalledWith([
-        expect.objectContaining({
-          id: "cfg-deepseek",
-          defaultModel: "gpt-5.4",
-          allowedChannelGroups: ["deepseekv4flash+chatgpt"],
-          modelMappings: [
-            {
-              contextWindow: 128000,
-              requestModel: "gpt-5.4",
-              targetModel: "deepseek-v4-flash",
-            },
-          ],
-        }),
-      ]),
-    );
-  });
-
-  test("previews the full BaseURL request address from the selected channel group path", async () => {
-    renderPage();
-    const user = userEvent.setup();
-
-    await user.click(screen.getByRole("button", { name: /new config/i }));
-
-    const dialog = await screen.findByRole("dialog", {
-      name: /new cc switch config/i,
-    });
-    const endpointPreview = within(dialog).getByTestId(
-      "ccswitch-config-endpoint-preview",
-    );
-    const origin = window.location.origin;
-
-    expect(endpointPreview).toHaveTextContent(`${origin}/v1`);
-
-    await user.click(
-      within(dialog).getByRole("combobox", { name: /select channel group/i }),
-    );
-    await user.click(
-      await screen.findByRole("option", { name: /team-a.*\/team-a/i }),
-    );
-
-    expect(endpointPreview).toHaveTextContent(
-      new RegExp(
-        `^${origin.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/team-a/cs_[a-z0-9]+/v1$`,
-      ),
-    );
-  });
-
-  test("creates a Claude Code config with main and family default models", async () => {
-    listChannelGroups.mockResolvedValue([
-      {
-        name: "pro",
-        description: "Pro route",
-        "path-routes": ["/pro"],
-        "allowed-models": [
-          "claude-haiku-4-5",
-          "claude-sonnet-4-5",
-          "claude-opus-4-1",
-        ],
-      },
-    ]);
-    renderPage();
-    const user = userEvent.setup();
-
-    await user.click(screen.getByRole("button", { name: /new config/i }));
-
-    const dialog = await screen.findByRole("dialog", {
-      name: /new cc switch config/i,
-    });
-    await user.click(within(dialog).getByRole("tab", { name: /claude code/i }));
-    await user.click(
-      within(dialog).getByRole("combobox", { name: /select channel group/i }),
-    );
-    await user.click(
-      await screen.findByRole("option", { name: /pro.*\/pro/i }),
-    );
-
-    const roleTable = await within(dialog).findByTestId(
-      "ccswitch-model-mapping-table",
-    );
-    expect(within(roleTable).getByText("Main model")).toBeInTheDocument();
-    expect(
-      within(roleTable).getByText(/haiku default model/i),
-    ).toBeInTheDocument();
-    expect(
-      within(roleTable).getByText(/sonnet default model/i),
-    ).toBeInTheDocument();
-    expect(
-      within(roleTable).getByText(/opus default model/i),
-    ).toBeInTheDocument();
-    expect(
-      within(roleTable).getByText(/fable default model/i),
-    ).toBeInTheDocument();
-    expect(
-      within(dialog).getByText(/cc switch request model/i),
-    ).toBeInTheDocument();
-
-    const mainRequestModelInput = within(dialog).getByLabelText(
-      /main model request model/i,
-    );
-    await user.clear(mainRequestModelInput);
-    await user.type(mainRequestModelInput, "claude-main-router");
-
-    await user.type(
-      within(dialog).getByLabelText(/provider name/i),
-      "Relay Claude",
-    );
-    await user.click(
-      within(dialog).getByRole("combobox", { name: /^auth field$/i }),
-    );
-    await user.click(
-      await screen.findByRole("option", { name: "ANTHROPIC_AUTH_TOKEN" }),
-    );
-    await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
-
-    await waitFor(() =>
-      expect(replaceConfigs).toHaveBeenCalledWith([
-        expect.objectContaining({
-          clientType: "claude",
-          providerName: "Relay Claude",
-          defaultModel: "claude-sonnet-4-5",
-          allowedChannelGroups: ["pro"],
-          routePath: expect.stringMatching(/^\/pro\/cs_[a-z0-9]+$/),
-          apiKeyField: "ANTHROPIC_AUTH_TOKEN",
-          modelMappings: expect.arrayContaining([
-            {
-              role: "main",
-              requestModel: "claude-main-router",
-              targetModel: "claude-sonnet-4-5",
-            },
-            {
-              role: "haiku",
-              requestModel: "claude-haiku-4-5",
-              targetModel: "claude-haiku-4-5",
-            },
-            {
-              role: "sonnet",
-              requestModel: "claude-sonnet-4-5",
-              targetModel: "claude-sonnet-4-5",
-            },
-            {
-              role: "opus",
-              requestModel: "claude-opus-4-1",
-              targetModel: "claude-opus-4-1",
-            },
-            {
-              role: "fable",
-              requestModel: "claude-fable-5",
-              targetModel: "claude-opus-4-1",
-            },
-          ]),
-        }),
-      ]),
-    );
-  });
-
-  test("sorts Codex mappings from the shared table menu and saves the visible order", async () => {
-    listChannelGroups.mockResolvedValue([
-      {
-        name: "pro",
-        description: "Pro route",
-        "path-routes": ["/pro"],
-        "allowed-models": ["model-1", "model-2", "model-3"],
-      },
-    ]);
-    listConfigs.mockResolvedValue([
-      {
-        id: "cfg-sort-codex",
-        clientType: "codex",
-        providerName: "Sorted Codex",
-        note: "",
-        defaultModel: "request-c",
-        allowedChannelGroups: ["pro"],
-        endpointPath: "/v1",
-        usageAutoInterval: 30,
-        modelMappings: [
-          {
-            requestModel: "request-c",
-            targetModel: "model-3",
-            contextWindow: 300000,
-          },
-          {
-            requestModel: "request-a",
-            targetModel: "model-1",
-            contextWindow: 100000,
-          },
-          {
-            requestModel: "request-b",
-            targetModel: "model-2",
-            contextWindow: 200000,
-          },
-        ],
-      },
-    ]);
-    renderPage();
-    const user = userEvent.setup();
-
-    expect(await screen.findByText("Sorted Codex")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: /edit config/i }));
-    const dialog = await screen.findByRole("dialog", {
-      name: /edit cc switch config/i,
-    });
-
-    const mappingTable = within(dialog).getByTestId(
-      "ccswitch-model-mapping-table",
-    );
-    expect(mappingTable).toHaveClass("px-4", "pt-3", "pb-4");
-    // The table grows with its rows: a fixed inner height used to clip the last mapping
-    // behind a second scroll area that users could not find inside the scrolling modal body.
-    expect(
-      mappingTable.querySelector("[data-scrollbar-visibility='hover']"),
-    ).toBeNull();
-    expect(mappingTable.querySelector("[data-vt-natural-flow]")).not.toBeNull();
-    const headerCells = Array.from(
-      mappingTable.querySelectorAll("thead th"),
-    );
-    expect(headerCells).not.toHaveLength(0);
-    headerCells.forEach((cell) => expect(cell).not.toHaveClass("sticky"));
-    // The viewport-fixed header plate only exists for sticky headers; without an inner
-    // scrollport the thead scrolls with the rows and carries its own background.
-    // The fill colour is DataTable's token, so only "it has a fill" is pinned here.
-    expect(mappingTable.querySelector("[data-vt-header-chrome]")).toBeNull();
-    expect(mappingTable.querySelector("thead")?.className).toMatch(/(^|\s)bg-\S+/);
-    expect(mappingTable.querySelector("[data-vt-column-resizer]")).toBeNull();
-
-    const mappingRows = Array.from(
-      mappingTable.querySelectorAll<HTMLTableRowElement>(
-        "tbody tr[data-vt-row-index]",
-      ),
-    );
-    // Quiet UI keeps exactly one kind of line: the divider between data rows. Every row but
-    // the last draws it (its colour token belongs to DataTable), and rows are square-cornered
-    // strips rather than rounded pills.
-    mappingRows.slice(0, -1).forEach((row) => {
-      Array.from(row.cells).forEach((cell) => {
-        expect(cell).toHaveClass("border-b");
-        expect(cell).not.toHaveClass("first:rounded-l-lg", "last:rounded-r-lg");
-      });
-    });
-    Array.from(mappingRows.at(-1)?.cells ?? []).forEach((cell) => {
-      expect(cell).not.toHaveClass(
-        "border-b",
-        "first:rounded-l-lg",
-        "last:rounded-r-lg",
-      );
-    });
-
-    const requestSort = within(dialog).getByRole("button", {
-      name: /sort cc switch request model/i,
-    });
-    const targetSort = within(dialog).getByRole("button", {
-      name: /sort actual channel model/i,
-    });
-    await user.click(requestSort);
-    await user.click(screen.getByRole("menuitem", { name: /ascending/i }));
-
-    expect(
-      within(dialog)
-        .getAllByLabelText(/cc switch request model for mapping/i)
-        .map((input) => (input as HTMLInputElement).value),
-    ).toEqual(["request-a", "request-b", "request-c"]);
-    expect(requestSort).toHaveAttribute("data-vt-sort-direction", "asc");
-    expect(targetSort).toHaveAttribute("data-vt-sort-direction", "none");
-
-    await user.click(targetSort);
-    await user.click(screen.getByRole("menuitem", { name: /descending/i }));
-
-    expect(
-      within(dialog)
-        .getAllByLabelText(/cc switch request model for mapping/i)
-        .map((input) => (input as HTMLInputElement).value),
-    ).toEqual(["request-c", "request-b", "request-a"]);
-    expect(requestSort).toHaveAttribute("data-vt-sort-direction", "none");
-    expect(targetSort).toHaveAttribute("data-vt-sort-direction", "desc");
-
-    await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
-    await waitFor(() =>
-      expect(replaceConfigs).toHaveBeenCalledWith([
-        expect.objectContaining({
-          id: "cfg-sort-codex",
-          modelMappings: [
-            {
-              requestModel: "request-c",
-              targetModel: "model-3",
-              contextWindow: 300000,
-            },
-            {
-              requestModel: "request-b",
-              targetModel: "model-2",
-              contextWindow: 200000,
-            },
-            {
-              requestModel: "request-a",
-              targetModel: "model-1",
-              contextWindow: 100000,
-            },
-          ],
-        }),
-      ]),
-    );
-  });
-
-  test("sorts and persists Claude Code mappings without restoring the fixed role order", async () => {
-    listChannelGroups.mockResolvedValue([
-      {
-        name: "pro",
-        description: "Pro route",
-        "path-routes": ["/pro"],
-        "allowed-models": [
-          "target-main",
-          "target-haiku",
-          "target-sonnet",
-          "target-opus",
-        ],
-      },
-    ]);
-    listConfigs.mockResolvedValue([
-      {
-        id: "cfg-sort-claude",
-        clientType: "claude",
-        providerName: "Sorted Claude",
-        note: "",
-        defaultModel: "target-main",
-        allowedChannelGroups: ["pro"],
-        endpointPath: "",
-        usageAutoInterval: 30,
-        apiKeyField: "ANTHROPIC_API_KEY",
-        modelMappings: [
-          { role: "main", requestModel: "z-main", targetModel: "target-main" },
-          {
-            role: "haiku",
-            requestModel: "a-haiku",
-            targetModel: "target-haiku",
-          },
-          {
-            role: "sonnet",
-            requestModel: "m-sonnet",
-            targetModel: "target-sonnet",
-          },
-          { role: "opus", requestModel: "b-opus", targetModel: "target-opus" },
-          {
-            role: "fable",
-            requestModel: "c-fable",
-            targetModel: "target-opus",
-          },
-        ],
-      },
-    ]);
-    renderPage();
-    const user = userEvent.setup();
-
-    expect(await screen.findByText("Sorted Claude")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: /edit config/i }));
-    const dialog = await screen.findByRole("dialog", {
-      name: /edit cc switch config/i,
-    });
-
-    await user.click(
-      within(dialog).getByRole("button", {
-        name: /sort cc switch request model/i,
-      }),
-    );
-    await user.click(screen.getByRole("menuitem", { name: /ascending/i }));
-
-    const orderedRequestModels = Array.from(
-      dialog.querySelectorAll<HTMLTableRowElement>("tr[data-vt-row-index]"),
-    ).map((row) => row.querySelector<HTMLInputElement>("input")?.value);
-    expect(orderedRequestModels).toEqual([
-      "a-haiku",
-      "b-opus",
-      "c-fable",
-      "m-sonnet",
-      "z-main",
-    ]);
-
-    await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
-    await waitFor(() =>
-      expect(replaceConfigs).toHaveBeenCalledWith([
-        expect.objectContaining({
-          id: "cfg-sort-claude",
-          defaultModel: "target-main",
-          modelMappings: [
-            {
-              role: "haiku",
-              requestModel: "a-haiku",
-              targetModel: "target-haiku",
-            },
-            {
-              role: "opus",
-              requestModel: "b-opus",
-              targetModel: "target-opus",
-            },
-            {
-              role: "fable",
-              requestModel: "c-fable",
-              targetModel: "target-opus",
-            },
-            {
-              role: "sonnet",
-              requestModel: "m-sonnet",
-              targetModel: "target-sonnet",
-            },
-            {
-              role: "main",
-              requestModel: "z-main",
-              targetModel: "target-main",
-            },
-          ],
-        }),
-      ]),
-    );
   });
 
   test("deletes a saved config row through the API", async () => {
     listConfigs.mockResolvedValue([
       {
         id: "cfg-1",
-        clientType: "codex",
-        providerName: "Relay Codex",
+        clientType: "hermes",
+        providerName: "Relay Hermes",
         note: "Delete me",
-        defaultModel: "gpt-5.5",
+        defaultModel: "kimi-k2",
         allowedChannelGroups: ["team-a"],
-        endpointPath: "/v1",
-        usageAutoInterval: 30,
       },
     ]);
-
     renderPage();
     const user = userEvent.setup();
 
-    expect(await screen.findByText("Relay Codex")).toBeInTheDocument();
+    expect(await screen.findByText("Relay Hermes")).toBeInTheDocument();
+    expect(screen.getByTestId("ccswitch-client-icon-hermes")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /delete config/i }));
-
-    const dialog = await screen.findByRole("dialog", {
-      name: /delete cc switch config/i,
-    });
+    const dialog = await screen.findByRole("dialog", { name: /delete cc switch config/i });
+    expect(dialog).toHaveTextContent("Hermes");
     await user.click(within(dialog).getByRole("button", { name: /^delete$/i }));
 
     await waitFor(() => expect(replaceConfigs).toHaveBeenCalledWith([]));
   });
 
-  test("filters out implicit channel groups except default from the CC Switch dropdown", async () => {
+  test("filters out implicit channel groups except default", async () => {
     listChannelGroups.mockResolvedValue([
       { name: "pro", description: "Pro route", "path-routes": ["/pro"] },
       { name: "default", implicit: true },
@@ -1712,28 +848,18 @@ describe("CcSwitchImportSettingsPage", () => {
     ]);
     renderPage();
     const user = userEvent.setup();
+    const dialog = await openCreate(user);
 
-    await user.click(screen.getByRole("button", { name: /new config/i }));
-
-    const dialog = await screen.findByRole("dialog", {
-      name: /new cc switch config/i,
-    });
-    await user.click(
-      within(dialog).getByRole("combobox", { name: /select channel group/i }),
-    );
-
-    const options = await screen.findAllByRole("option");
-    const optionLabels = options.map((el) => el.textContent ?? "");
-
-    expect(optionLabels.some((text) => text.includes("pro"))).toBe(true);
-    expect(optionLabels.some((text) => text.includes("default"))).toBe(true);
-    expect(optionLabels.some((text) => text.includes("nvidia"))).toBe(false);
+    await user.click(within(dialog).getByRole("combobox", { name: /^channel group$/i }));
+    const labels = (await screen.findAllByRole("option")).map((el) => el.textContent ?? "");
+    expect(labels.some((text) => text.includes("pro"))).toBe(true);
+    expect(labels.some((text) => text.includes("default"))).toBe(true);
+    expect(labels.some((text) => text.includes("nvidia"))).toBe(false);
   });
 
-  test("shows hidden channel group label when editing a config with an implicit filtered-out group", async () => {
+  test("keeps a hidden channel group when editing a preset that uses one", async () => {
     listChannelGroups.mockResolvedValue([
-      { name: "pro", description: "Pro route", "path-routes": ["/pro"] },
-      { name: "default", implicit: true },
+      { name: "pro", "path-routes": ["/pro"] },
       { name: "nvidia", implicit: true },
     ]);
     listAvailableModels.mockResolvedValue(Array<unknown>());
@@ -1742,38 +868,26 @@ describe("CcSwitchImportSettingsPage", () => {
         id: "cfg-nvidia",
         clientType: "codex",
         providerName: "Relay NVIDIA",
-        note: "old config",
         defaultModel: "gpt-5.5",
         allowedChannelGroups: ["nvidia"],
-        endpointPath: "/v1",
-        usageAutoInterval: 30,
+        routePath: "/nvidia/cs_nvidia1",
         modelMappings: [{ requestModel: "gpt-5.5", targetModel: "mistral-7b" }],
       },
     ]);
     renderPage();
     const user = userEvent.setup();
+    const dialog = await openEdit(user, "Relay NVIDIA");
 
-    expect(await screen.findByText("Relay NVIDIA")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: /edit config/i }));
-
-    const dialog = await screen.findByRole("dialog", {
-      name: /edit cc switch config/i,
-    });
-    expect(
-      await within(dialog).findByRole("combobox", {
-        name: /select channel group/i,
-      }),
-    ).toHaveTextContent(/nvidia/i);
-
+    expect(within(dialog).getByRole("combobox", { name: /^channel group$/i })).toHaveTextContent(
+      /nvidia/i,
+    );
     await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
-
     await waitFor(() =>
-      expect(replaceConfigs).toHaveBeenCalledWith([
-        expect.objectContaining({
-          id: "cfg-nvidia",
-          allowedChannelGroups: ["nvidia"],
-        }),
-      ]),
+      expect(savedConfig()).toMatchObject({
+        id: "cfg-nvidia",
+        allowedChannelGroups: ["nvidia"],
+        modelMappings: [{ requestModel: "gpt-5.5", targetModel: "mistral-7b" }],
+      }),
     );
   });
 });

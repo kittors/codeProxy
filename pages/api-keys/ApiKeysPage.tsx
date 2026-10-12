@@ -43,10 +43,7 @@ import { useApiKeyPermissionOptions } from "@features/api-key-restrictions";
 import { useApiKeyUsageView } from "./hooks/useApiKeyUsageView";
 import { CcSwitchImportCardList } from "./components/CcSwitchImportCardList";
 import { openCcSwitchImportUrl } from "@code-proxy/domain/ccswitch/ccswitchImport";
-import {
-  appendCcSwitchRoutePath,
-  buildCcSwitchImportUrlForConfig,
-} from "@code-proxy/domain/ccswitch/ccswitchImportLinks";
+import { buildCcSwitchImportUrlForConfig } from "@code-proxy/domain/ccswitch/ccswitchImportLinks";
 import type { CcSwitchImportConfigListItem } from "@code-proxy/domain/ccswitch/ccswitchImportConfigList";
 import { ccSwitchConfigMatchesApiKeyPermissions } from "@code-proxy/domain/ccswitch/ccswitchImportCompatibility";
 import type { ApiKeyFormValues } from "./types";
@@ -677,23 +674,21 @@ export function ApiKeysPage({
             .trim()
             .toLowerCase() === matchingGroup,
       );
-      const routePath = Array.isArray(groupItem?.["path-routes"])
+      const groupRoutePath = Array.isArray(groupItem?.["path-routes"])
         ? groupItem["path-routes"][0]
         : "";
-      const baseApiUrl = auth?.state.apiBase || detectApiBaseFromLocation();
-      const baseUrl = appendCcSwitchRoutePath(baseApiUrl, config.routePath || routePath || "");
 
       return buildCcSwitchImportUrlForConfig({
         apiKey: ccSwitchImportEntry.key,
-        baseUrl,
+        baseUrl: auth?.state.apiBase || detectApiBaseFromLocation(),
         config,
-        configs: ccSwitchImportConfigs,
+        // Presets saved before presets had their own route fall back to the group's path.
+        routePath: config.routePath || groupRoutePath || "",
         providerName: ccSwitchImportEntry.name,
-        usageBaseUrl: baseApiUrl,
         usageLanguage: i18n.language,
       });
     },
-    [ccSwitchImportEntry, ccSwitchImportConfigs, channelGroupItems, auth, i18n.language],
+    [ccSwitchImportEntry, channelGroupItems, auth, i18n.language],
   );
 
   const handleImportWithConfig = useCallback(

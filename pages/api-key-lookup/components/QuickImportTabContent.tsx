@@ -2,19 +2,19 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Check, Copy, Download, ExternalLink, Inbox } from "lucide-react";
-import iconClaude from "@code-proxy/assets/icons/claude.svg";
-import iconCodex from "@code-proxy/assets/icons/codex.svg";
 import { detectApiBaseFromLocation, publicApiClient } from "@code-proxy/api-client";
-import { normalizeCcSwitchImportConfigs } from "@code-proxy/api-client/endpoints/ccswitch-import-configs";
 import {
-  openCcSwitchImportUrl,
-  type CcSwitchClientType,
-} from "@code-proxy/domain/ccswitch/ccswitchImport";
+  normalizeCcSwitchImportConfigs,
+  serializeCcSwitchImportConfig,
+} from "@code-proxy/api-client/endpoints/ccswitch-import-configs";
+import { openCcSwitchImportUrl } from "@code-proxy/domain/ccswitch/ccswitchImport";
 import {
-  appendCcSwitchRoutePath,
-  buildCcSwitchImportUrlForConfig,
-} from "@code-proxy/domain/ccswitch/ccswitchImportLinks";
+  CC_SWITCH_CLIENT_TYPES,
+  getCcSwitchClientConfig,
+} from "@code-proxy/domain/ccswitch/ccswitchClients";
+import { buildCcSwitchImportUrlForConfig } from "@code-proxy/domain/ccswitch/ccswitchImportLinks";
 import type { CcSwitchImportConfigListItem } from "@code-proxy/domain/ccswitch/ccswitchImportConfigList";
+import { CcSwitchClientIcon, getPrimaryModel } from "@features/ccswitch-import";
 import {
   getActiveCacheTenantId,
   readTenantBucketMapEntry,
@@ -27,7 +27,8 @@ import { copyTextToClipboard } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
 
 const CC_SWITCH_RELEASES_URL = "https://github.com/farion1231/cc-switch/releases";
-const QUICK_IMPORT_CLIENTS: CcSwitchClientType[] = ["codex", "claude"];
+/** Placeholder groups shown while the presets load. */
+const SKELETON_GROUPS = ["first", "second"];
 /**
  * Tenant-scoped quick-import cache (v3).
  * Lookup always loads presets via the public endpoint keyed by API key, so residual
@@ -36,47 +37,18 @@ const QUICK_IMPORT_CLIENTS: CcSwitchClientType[] = ["codex", "claude"];
  */
 const QUICK_IMPORT_CACHE_STORAGE_KEY = "apiKeyLookup.quickImportCache.v3";
 
-const iconByType: Record<"codex" | "claude", string> = {
-  codex: iconCodex,
-  claude: iconClaude,
-};
-
 /** 中性小标签：只有淡底、不描边。 */
 const NEUTRAL_TAG = "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]";
-
-const clientLabelKey: Record<"codex" | "claude", string> = {
-  codex: "apikey_lookup.quick_import_codex",
-  claude: "apikey_lookup.quick_import_claude",
-};
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
+/** The backend row shape, plus the Codex reasoning efforts the link needs offline. */
 function serializeQuickImportConfig(config: CcSwitchImportConfigListItem): Record<string, unknown> {
   return {
-    id: config.id,
-    "client-type": config.clientType,
-    "provider-name": config.providerName,
-    note: config.note,
-    "default-model": config.defaultModel,
-    "model-mappings": config.modelMappings.map((mapping) => ({
-      ...(mapping.role ? { role: mapping.role } : {}),
-      "request-model": mapping.requestModel,
-      "target-model": mapping.targetModel,
-      ...(mapping.contextWindow ? { "context-window": mapping.contextWindow } : {}),
-    })),
-    "allowed-channel-groups": [...config.allowedChannelGroups],
-    "route-path": config.routePath,
-    "endpoint-path": config.endpointPath,
-    "usage-auto-interval": config.usageAutoInterval,
-    ...(config.apiKeyField ? { "api-key-field": config.apiKeyField } : {}),
-    ...(config.codexModelCatalog
-      ? {
-          "codex-model-catalog-filename": config.codexModelCatalogFilename,
-          "codex-model-catalog": config.codexModelCatalog,
-        }
-      : {}),
+    ...serializeCcSwitchImportConfig(config),
+    ...(config.codexReasoningEfforts ? { codexReasoningEfforts: config.codexReasoningEfforts } : {}),
   };
 }
 
@@ -152,7 +124,7 @@ function QuickImportCard({
 }) {
   const { t } = useTranslation();
   const reduceMotion = useReducedMotion();
-  const clientType = config.clientType as "codex" | "claude";
+  const clientType = config.clientType;
 
   return (
     <motion.div
@@ -173,14 +145,14 @@ function QuickImportCard({
         className="flex min-w-0 items-start gap-3 rounded-l-2xl p-4 text-left transition active:translate-y-px"
       >
         {/* 客户端 logo 直接放在标题前，不再垫一块描边小方块（卡片角落里的框中框）。 */}
-        <img src={iconByType[clientType]} alt="" className="mt-0.5 h-5 w-5 shrink-0" />
+        <CcSwitchClientIcon clientType={clientType} className="mt-0.5 h-5 w-5" />
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-2">
             <span className="truncate text-sm font-semibold text-ink">
               {config.providerName}
             </span>
             <span className={`rounded-md px-1.5 py-0.5 text-2xs font-semibold ${NEUTRAL_TAG}`}>
-              {t(clientLabelKey[clientType])}
+              {t(getCcSwitchClientConfig(clientType).labelKey)}
             </span>
           </span>
           {config.note ? (
@@ -192,7 +164,7 @@ function QuickImportCard({
             <span
               className={`inline-flex max-w-full overflow-hidden rounded-md px-1.5 py-0.5 font-mono text-2xs text-ellipsis whitespace-nowrap ${NEUTRAL_TAG}`}
             >
-              {config.defaultModel || t("common.no_model_data")}
+              {getPrimaryModel(config) || t("common.no_model_data")}
             </span>
             {config.allowedChannelGroups.length > 0 ? (
               <span className="truncate text-2xs text-ink-3">
@@ -229,8 +201,8 @@ function QuickImportLoadingSkeleton() {
         aria-label={t("common.loading_ellipsis")}
         className="space-y-5"
       >
-        {QUICK_IMPORT_CLIENTS.map((clientType) => (
-          <section key={clientType} className="space-y-3">
+        {SKELETON_GROUPS.map((group) => (
+          <section key={group} className="space-y-3">
             <div className="flex items-center gap-2">
               <span className="h-4 w-4 rounded-md bg-track motion-safe:animate-pulse" />
               <span className="h-4 w-24 rounded-md bg-track motion-safe:animate-pulse" />
@@ -313,7 +285,9 @@ export function QuickImportTabContent({
     fetchQuickImportConfigs(apiKey)
       .then((items) => {
         if (cancelled) return;
-        const nextConfigs = items.filter((item) => QUICK_IMPORT_CLIENTS.includes(item.clientType));
+        // The public endpoint already filters by the key's permissions; every app the
+        // panel knows gets its cards (the normalizer drops apps it does not).
+        const nextConfigs = items;
         writeStoredQuickImportCache(cacheKey, { configs: nextConfigs });
         setConfigs((prev) => (sameJsonValue(prev, nextConfigs) ? prev : nextConfigs));
       })
@@ -334,36 +308,33 @@ export function QuickImportTabContent({
     };
   }, [apiKey, cacheKey, reloadToken, t]);
 
+  // One group per app, in the panel's app order; apps without presets are left out.
   const groupedConfigs = useMemo(
-    () => ({
-      // Server public endpoint already filters by the API key's effective permissions.
-      codex: configs.filter((config) => config.clientType === "codex"),
-      claude: configs.filter((config) => config.clientType === "claude"),
-    }),
+    () =>
+      CC_SWITCH_CLIENT_TYPES.map((clientType) => ({
+        clientType,
+        items: configs.filter((config) => config.clientType === clientType),
+      })).filter((group) => group.items.length > 0),
     [configs],
   );
 
-  const visibleCount = groupedConfigs.codex.length + groupedConfigs.claude.length;
+  const visibleCount = configs.length;
 
   const buildImportUrl = useCallback(
     (config: CcSwitchImportConfigListItem) => {
       const key = apiKey.trim();
       if (!key) return "";
 
-      const baseUrl = appendCcSwitchRoutePath(detectApiBaseFromLocation(), config.routePath);
-      // Use root base URL for usage queries so that usage/summary is not
-      // routed through the CC Switch routePath (which the server does not rewrite for /v0/management/* paths).
-      const usageBaseUrl = detectApiBaseFromLocation();
+      // The link's usage query runs against the root: the preset's route path does not
+      // serve /v0/management/*.
       return buildCcSwitchImportUrlForConfig({
         apiKey: key,
-        baseUrl,
+        baseUrl: detectApiBaseFromLocation(),
         config,
-        configs,
-        usageBaseUrl,
         usageLanguage: i18n.language,
       });
     },
-    [apiKey, configs, i18n.language],
+    [apiKey, i18n.language],
   );
 
   const handleImport = useCallback(
@@ -446,17 +417,13 @@ export function QuickImportTabContent({
         <div>
           <div className="space-y-5">
             <AnimatePresence initial={false}>
-              {QUICK_IMPORT_CLIENTS.map((clientType) => {
-                const typedClient = clientType as "codex" | "claude";
-                const items = groupedConfigs[typedClient];
-                const label = t(clientLabelKey[typedClient]);
-
-                if (items.length === 0) return null;
+              {groupedConfigs.map(({ clientType, items }) => {
+                const label = t(getCcSwitchClientConfig(clientType).labelKey);
 
                 return (
                   <motion.section
                     layout
-                    key={typedClient}
+                    key={clientType}
                     aria-label={t("apikey_lookup.quick_import_group_aria", { client: label })}
                     className="space-y-3"
                     initial={reduceMotion ? false : { opacity: 0, y: 8 }}
@@ -469,11 +436,11 @@ export function QuickImportTabContent({
                     }
                   >
                     <div className="flex items-center gap-2">
-                      <img src={iconByType[typedClient]} alt="" className="h-4 w-4" />
+                      <CcSwitchClientIcon clientType={clientType} />
                       <h3 className="text-sm font-semibold text-ink">{label}</h3>
                       <AnimatePresence mode="popLayout" initial={false}>
                         <motion.span
-                          key={`${typedClient}-${items.length}`}
+                          key={`${clientType}-${items.length}`}
                           initial={reduceMotion ? false : { opacity: 0, y: 4 }}
                           animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
                           exit={reduceMotion ? undefined : { opacity: 0, y: -4 }}

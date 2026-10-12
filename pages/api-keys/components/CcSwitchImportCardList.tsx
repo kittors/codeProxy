@@ -1,17 +1,9 @@
 import { useTranslation } from "react-i18next";
 import { Check, Copy, Import } from "lucide-react";
-import iconClaude from "@code-proxy/assets/icons/claude.svg";
-import iconCodex from "@code-proxy/assets/icons/codex.svg";
-import iconGemini from "@code-proxy/assets/icons/gemini.svg";
 import { Button, EmptyState, Modal, surface } from "@code-proxy/ui";
 import type { CcSwitchImportConfigListItem } from "@code-proxy/domain/ccswitch/ccswitchImportConfigList";
-import type { CcSwitchClientType } from "@code-proxy/domain/ccswitch/ccswitchImport";
-
-const iconByType: Record<CcSwitchClientType, string> = {
-  claude: iconClaude,
-  codex: iconCodex,
-  gemini: iconGemini,
-};
+import { getCcSwitchClientConfig } from "@code-proxy/domain/ccswitch/ccswitchClients";
+import { CcSwitchClientIcon, getPrimaryModel } from "@features/ccswitch-import";
 
 export interface CcSwitchImportCardListProps {
   open: boolean;
@@ -25,7 +17,7 @@ export interface CcSwitchImportCardListProps {
 /**
  * 选择要导入 CC Switch 的预设。
  *
- * 每个预设是一张可点的卡片：左侧客户端图标，中间名称、备注、默认模型与渠道分组，
+ * 每个预设是一张可点的卡片：左侧应用图标，中间名称、应用、备注、默认模型与渠道分组，
  * 点卡片即导入；右侧单独的复制按钮复制导入链接（发给别人或在另一台机器上打开）。
  * 卡片和「添加 AI 账号」里的提供商选择用同一种外观。
  *
@@ -71,24 +63,22 @@ export function CcSwitchImportCardList({
                   onClick={() => onSelect(config)}
                   className="flex min-w-0 items-start gap-3.5 rounded-l-2xl p-4 text-left transition active:translate-y-px"
                 >
-                  <img src={iconByType[config.clientType]} alt="" className="mt-0.5 h-5 w-5 shrink-0" />
+                  <CcSwitchClientIcon clientType={config.clientType} className="mt-0.5 h-5 w-5" />
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-2">
                       <span className="truncate text-sm font-semibold text-ink">
                         {config.providerName}
                       </span>
-                      {config.clientType === "claude" && config.apiKeyField ? (
-                        <span className="shrink-0 rounded-md bg-ink/[0.05] px-1.5 py-0.5 font-mono text-2xs text-ink-3 dark:bg-white/[0.07]">
-                          {config.apiKeyField}
-                        </span>
-                      ) : null}
+                      <span className="shrink-0 rounded-md bg-ink/[0.05] px-1.5 py-0.5 text-2xs font-semibold text-ink-3 dark:bg-white/[0.07]">
+                        {t(getCcSwitchClientConfig(config.clientType).labelKey)}
+                      </span>
                     </span>
                     {config.note ? (
                       <span className="mt-0.5 block truncate text-xs text-ink-3">{config.note}</span>
                     ) : null}
                     <span className="mt-2 flex flex-wrap items-center gap-2">
                       <span className="inline-flex max-w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-md bg-ink/[0.05] px-1.5 py-0.5 font-mono text-2xs text-ink-2 dark:bg-white/[0.07]">
-                        {config.defaultModel}
+                        {getPrimaryModel(config)}
                       </span>
                       {config.allowedChannelGroups.length > 0 ? (
                         <span className="truncate text-2xs text-ink-3">

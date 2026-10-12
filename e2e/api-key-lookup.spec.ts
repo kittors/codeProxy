@@ -200,8 +200,6 @@ const decodeCodexConfigBlob = (url: string) => {
   return JSON.parse(new TextDecoder().decode(bytes)) as {
     auth: { OPENAI_API_KEY?: string };
     config: string;
-    apiFormat?: string;
-    modelCatalog?: { models: Array<Record<string, unknown>> };
   };
 };
 
@@ -271,7 +269,7 @@ test("API Key Lookup: Heatmap tooltip stays inside the heatmap card when hoverin
   expect(tooltipBox!.y).toBeGreaterThanOrEqual(cardBox!.y);
 });
 
-test("API Key Lookup: Quick Import codex card opens a ccswitch deep link with embedded catalog", async ({
+test("API Key Lookup: Quick Import codex card opens a ccswitch deep link CC Switch reads in full", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -312,21 +310,18 @@ test("API Key Lookup: Quick Import codex card opens a ccswitch deep link with em
 
   const parsed = new URL(openedUrl!);
   expect(parsed.searchParams.get("app")).toBe("codex");
-  expect(parsed.searchParams.get("apiFormat")).toBe("openai_responses");
+  expect(parsed.searchParams.get("model")).toBe("gpt-5.5");
+  expect(parsed.searchParams.get("endpoint")).toMatch(/\/pro\/cs_lookup\/v1$/);
+  // CC Switch ignores these, so the link no longer carries them.
+  expect(parsed.searchParams.has("apiFormat")).toBe(false);
 
   const decoded = decodeCodexConfigBlob(openedUrl!);
-  expect(decoded.apiFormat).toBe("openai_responses");
+  expect(Object.keys(decoded)).toEqual(["auth", "config"]);
   expect(decoded.auth.OPENAI_API_KEY).toBe(TEST_API_KEY);
-  expect(decoded.modelCatalog?.models).toBeTruthy();
-  expect(decoded.modelCatalog!.models.length).toBe(2);
-  expect(decoded.modelCatalog!.models[0]).toMatchObject({
-    slug: "gpt-5.5",
-    default_reasoning_level: "medium",
-  });
-  // Catalog default for the selected model (gpt-5.5) is medium, so the
-  // generated config.toml should use model_reasoning_effort = "medium".
+  // The backend catalog's default for the selected model (gpt-5.5) is medium.
   expect(decoded.config).toContain(`model_reasoning_effort = "medium"`);
-  expect(decoded.config).toContain(`model_catalog_json = "cc-switch-model-catalog.json"`);
+  // cc-switch-model-catalog.json is CC Switch's own file; the link must not point at it.
+  expect(decoded.config).not.toContain("model_catalog_json");
 });
 
 test("API Key Lookup: Quick Import copy button surfaces the ccswitch link via clipboard", async ({
@@ -370,16 +365,12 @@ test("API Key Lookup: Quick Import copy button surfaces the ccswitch link via cl
   const copiedButton = page.getByRole("button", { name: /Import link copied|导入链接已复制/i });
   await expect(copiedButton).toBeVisible({ timeout: 1500 });
 
-  // Verify the clipboard content matches a ccswitch:// deep link with the
-  // catalog payload intact.
+  // Verify the clipboard content matches the ccswitch:// deep link.
   const clipText = await page.evaluate(() => navigator.clipboard.readText());
   expect(clipText.startsWith("ccswitch://v1/import?")).toBe(true);
   const clipParsed = new URL(clipText);
   expect(clipParsed.searchParams.get("app")).toBe("codex");
   const clipDecoded = decodeCodexConfigBlob(clipText);
-  expect(clipDecoded.modelCatalog?.models.length).toBe(2);
-  expect(clipDecoded.modelCatalog!.models[0]).toMatchObject({
-    slug: "gpt-5.5",
-    default_reasoning_level: "medium",
-  });
+  expect(clipDecoded.auth.OPENAI_API_KEY).toBe(TEST_API_KEY);
+  expect(clipDecoded.config).toContain(`model_reasoning_effort = "medium"`);
 });
