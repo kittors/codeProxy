@@ -2,12 +2,8 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 import { useOptionalAuth } from "@app/providers/AuthProvider";
-import {
-  useLocalStorage,
-  useSensitiveDataMasking,
-  useToast,
-} from "@code-proxy/ui";
-import { quotaApi, type AuthFileItem } from "@code-proxy/api-client";
+import { useLocalStorage, useSensitiveDataMasking } from "@code-proxy/ui";
+import type { AuthFileItem } from "@code-proxy/api-client";
 import {
   proxiesApi,
   type ProxyPoolEntry,
@@ -32,10 +28,7 @@ import { useAuthFilesModelOwnerGroups } from "./hooks/useAuthFilesModelOwnerGrou
 import { useAuthFilesQuotaState } from "./hooks/useAuthFilesQuotaState";
 import { useAuthFilesGroupOverview } from "./hooks/useAuthFilesGroupOverview";
 import { useAuthFilesOAuthConfig } from "./hooks/useAuthFilesOAuthConfig";
-import {
-  consumeCodexResetCredit,
-  resolveQuotaProvider,
-} from "@features/quota-preview/quota-fetch";
+import { resolveQuotaProvider } from "@features/quota-preview/quota-fetch";
 import {
   alignAuthFilesPageSizeToColumns,
   AUTH_FILES_CARD_COLUMNS_KEY,
@@ -46,11 +39,9 @@ import {
   DEFAULT_AUTH_FILES_CARD_COLUMNS,
   getActiveCacheTenantId,
   normalizeAuthFilesCardColumns,
-  normalizeAuthIndexValue,
   normalizeProviderKey,
   normalizeQuotaAutoRefreshMs,
   readAuthFilesUiState,
-  resolveAuthFileDisplayName,
   resolveAuthFileStats,
   resolveFileType,
   resolveProviderLabel,
@@ -66,13 +57,15 @@ import {
   type AuthFilesConfirmAction,
 } from "./components/AuthFilesConfirmModal";
 import { useAuthFilesWarmup } from "./hooks/useAuthFilesWarmup";
+import { useAuthFilesCredentialActions } from "./hooks/useAuthFilesCredentialActions";
+import { useAuthFilesSharing } from "./hooks/useAuthFilesSharing";
+import { SharedAuthFilesPanel } from "./components/SharedAuthFilesPanel";
 import { useAddAccountDialogSync } from "./hooks/useAddAccountDialogSync";
 
 export type AuthFilesConfigModalTab = "excluded" | "alias";
 
 export function AuthFilesPage() {
   const { t } = useTranslation();
-  const { notify } = useToast();
   const auth = useOptionalAuth();
   // Account identity fingerprint is auth-file scoped (same as /identity-fingerprint/account
   // RBAC: auth_files.read/write). Must not use platform system.config.read, or ordinary
@@ -138,15 +131,11 @@ export function AuthFilesPage() {
     usageIndex,
     loadAll,
     refreshFilesForItems,
+    sharingCapability,
+    sharedFiles,
   } = useAuthFilesDataState();
 
   const [confirm, setConfirm] = useState<AuthFilesConfirmAction | null>(null);
-  const [resettingCreditFileName, setResettingCreditFileName] = useState<
-    string | null
-  >(null);
-  const [clearingStatusFileName, setClearingStatusFileName] = useState<
-    string | null
-  >(null);
 
   const [oauthDialogOpen, setOauthDialogOpen] = useState(false);
   // File type the list was filtered to when the dialog opened; it preselects that provider.
@@ -337,8 +326,9 @@ export function AuthFilesPage() {
       setProxyPoolEntries([]);
       return;
     }
+    // 代理下拉：自有代理 + 平台共享给本租户、且没被同 ID 自有代理覆盖的代理。
     void proxiesApi
-      .list()
+      .listSelectable()
       .then(setProxyPoolEntries)
       .catch(() => setProxyPoolEntries([]));
   }, [canReadProxies]);
@@ -538,80 +528,18 @@ export function AuthFilesPage() {
     [openDetail, refreshDetailTrend, refreshQuota],
   );
 
-  const requestResetCredit = useCallback(
-    (file: AuthFileItem) => {
-      const count = quotaByFileName[file.name]?.resetCreditCount ?? 0;
-      if (count <= 0) return;
-      setConfirm({ type: "resetCredit", file });
-    },
-    [quotaByFileName],
-  );
-
-  const handleResetCredit = useCallback(
-    async (file: AuthFileItem) => {
-      if (resettingCreditFileName) return;
-      const name = resolveAuthFileDisplayName(file) || file.name;
-      setResettingCreditFileName(file.name);
-      try {
-        await consumeCodexResetCredit(file);
-        await refreshQuota(file, "codex", { showLoading: true });
-        notify({
-          type: "success",
-          message: t("auth_files.reset_credit_success", { name }),
-        });
-      } catch (err: unknown) {
-        const message =
-          err instanceof Error ? err.message : t("common.unknown_error");
-        notify({
-          type: "error",
-          message: t("auth_files.reset_credit_failed", { name, message }),
-        });
-      } finally {
-        setResettingCreditFileName(null);
-      }
-    },
-    [notify, refreshQuota, resettingCreditFileName, t],
-  );
-
-  const clearAuthFileStatus = useCallback(
-    async (file: AuthFileItem) => {
-      if (clearingStatusFileName) return;
-      const name = resolveAuthFileDisplayName(file) || file.name;
-      const authIndex = normalizeAuthIndexValue(
-        file.auth_index ?? file.authIndex,
-      );
-      if (!authIndex) {
-        notify({
-          type: "error",
-          message: t("auth_files.clear_status_failed", {
-            name,
-            message: t("auth_files.trend_missing_auth_index"),
-          }),
-        });
-        return;
-      }
-
-      setClearingStatusFileName(file.name);
-      try {
-        await quotaApi.clearStatus(authIndex);
-        await refreshFilesForItems([file]);
-        notify({
-          type: "success",
-          message: t("auth_files.clear_status_success", { name }),
-        });
-      } catch (err: unknown) {
-        const message =
-          err instanceof Error ? err.message : t("common.unknown_error");
-        notify({
-          type: "error",
-          message: t("auth_files.clear_status_failed", { name, message }),
-        });
-      } finally {
-        setClearingStatusFileName(null);
-      }
-    },
-    [clearingStatusFileName, notify, refreshFilesForItems, t],
-  );
+  const {
+    resettingCreditFileName,
+    clearingStatusFileName,
+    requestResetCredit,
+    handleResetCredit,
+    clearAuthFileStatus,
+  } = useAuthFilesCredentialActions({
+    quotaByFileName,
+    refreshQuota,
+    refreshFilesForItems,
+    setConfirm,
+  });
 
   const refreshFilesAndQuota = useCallback(async () => {
     if (
@@ -773,108 +701,129 @@ export function AuthFilesPage() {
     usageIndex,
     masked,
   });
+  const sharing = useAuthFilesSharing({
+    files,
+    setFiles,
+    capability: sharingCapability,
+    sharedFiles,
+    fileColumns,
+    masked,
+  });
 
   return (
     <div data-page-fill="always" className="flex flex-1 flex-col">
-      <AuthFilesFilesTab
-        fileInputRef={fileInputRef}
-        handleUpload={handleUploadAndRefreshQuota}
-        filterChips={filterChips}
-        filter={filter}
-        setFilter={updateFilter}
-        filterCounts={filterCounts}
-        tagFilter={tagFilter}
-        setTagFilter={updateTagFilter}
-        customTagOptions={customTagOptions}
-        statusFilter={statusFilter}
-        setStatusFilter={updateStatusFilter}
-        statusFilterCounts={statusFilterCounts}
-        modelOwnerGroupsLoading={modelOwnerGroupsLoading}
-        modelOwnerGroups={modelOwnerGroups}
-        selectedModelOwner={selectedModelOwner}
-        setSelectedModelOwner={(owner) =>
-          setModelOwnerForAuthGroup(filter, owner)
-        }
-        search={search}
-        setSearch={updateSearch}
-        loading={loading}
-        files={files}
-        filesLength={files.length}
-        renderFilesViewModeTabs={renderFilesViewModeTabs}
-        quotaAutoRefreshMs={quotaAutoRefreshMs}
-        setQuotaAutoRefreshMsRaw={setQuotaAutoRefreshMsRaw}
-        normalizeQuotaAutoRefreshMs={normalizeQuotaAutoRefreshMs}
-        openGroupOverview={openGroupOverview}
-        groupOverviewLoading={groupOverviewLoading}
-        filteredFiles={filteredFiles}
-        refreshFilesAndQuota={refreshFilesAndQuota}
-        usageLoading={usageLoading}
-        refreshingAll={refreshingAll || refreshingCurrentPage}
-        uploading={uploading}
-        uploadProgress={uploadProgress}
-        setAddAccountHint={setAddAccountHint}
-        setOauthDialogOpen={setOAuthDialogOpenWithBaseline}
-        openConfigModal={() =>
-          setConfigModalTab(oauthExcludedEnabled ? "excluded" : "alias")
-        }
-        selectableFilteredFiles={selectableFilteredFiles}
-        selectedCount={selectedCount}
-        selectCurrentPage={selectCurrentPage}
-        allPageSelected={allPageSelected}
-        selectablePageNames={selectablePageNames}
-        selectFilteredFiles={selectFilteredFiles}
-        allFilteredSelected={allFilteredSelected}
-        setSelectedFileNames={setSelectedFileNames}
-        setConfirm={setConfirm}
-        selectedFileNames={selectedFileNames}
-        deletingAll={deletingAll}
-        batchStatusUpdating={batchStatusUpdating}
-        handleSetSelectionDisabled={handleSetSelectionDisabled}
-        pageItems={pageItems}
-        fileColumns={fileColumns}
-        filesViewMode={filesViewMode}
-        masked={masked}
-        onToggleMask={() => setMasked((prev) => !prev)}
-        cardColumns={cardColumns}
-        setCardColumns={setCardColumns}
-        pageSize={pageSize}
-        setPageSize={setPageSize}
-        selectedFileNameSet={selectedFileNameSet}
-        quotaByFileName={quotaByFileName}
-        cycleCallsByAuthIndex={callsByAuthIndex}
-        cycleTotalTokensByAuthIndex={cycleTotalTokensByAuthIndex}
-        cycleBudgetByAuthIndex={cycleBudgetByAuthIndex}
-        statusUsageLoading={statusUsageLoading}
-        resolveQuotaProvider={resolveQuotaProvider}
-        resolveQuotaCardSlots={resolveQuotaCardSlots}
-        refreshQuota={refreshQuotaAndCycleUsage}
-        requestResetCredit={requestResetCredit}
-        resettingCreditFileName={resettingCreditFileName}
-        clearAuthFileStatus={clearAuthFileStatus}
-        clearingStatusFileName={clearingStatusFileName}
-        setFileEnabled={setFileEnabled}
-        statusUpdating={statusUpdating}
-        usageIndex={usageIndex}
-        resolveAuthFileStats={resolveAuthFileStats}
-        toggleFileSelection={toggleFileSelection}
-        resolveStickyDisplayPlanType={resolveStickyDisplayPlanType}
-        renderRestrictionBadges={renderRestrictionBadges}
-        renderClaudeOAuthHealthBadges={renderClaudeOAuthHealthBadges}
-        renderSubscriptionBadge={renderSubscriptionBadge}
-        renderQuotaBar={renderQuotaBar}
-        renderQuotaErrorBadge={renderQuotaErrorBadge}
-        openTagsEditor={(file) => setTagsEditorFileName(file.name)}
-        openDetail={openDetailWithQuotaRefresh}
-        downloadAuthFile={downloadAuthFile}
-        handleDownloadSelection={handleDownloadSelection}
-        onBatchWarmup={handleBatchWarmup}
-        batchWarmupBusy={batchWarmupBusy}
-        onOpenWarmupPolicy={() => setWarmupPolicyModalOpen(true)}
-        safePage={safePage}
-        totalPages={totalPages}
-        setPage={setPage}
-        usageData={usageData}
-      />
+      {sharing.scopeSwitch}
+      {sharing.scope === "shared" ? (
+        <SharedAuthFilesPanel
+          files={sharedFiles}
+          masked={masked}
+          renderRestrictionBadges={renderRestrictionBadges}
+          renderSubscriptionBadge={renderSubscriptionBadge}
+        />
+      ) : (
+        <AuthFilesFilesTab
+          fileInputRef={fileInputRef}
+          handleUpload={handleUploadAndRefreshQuota}
+          filterChips={filterChips}
+          filter={filter}
+          setFilter={updateFilter}
+          filterCounts={filterCounts}
+          tagFilter={tagFilter}
+          setTagFilter={updateTagFilter}
+          customTagOptions={customTagOptions}
+          statusFilter={statusFilter}
+          setStatusFilter={updateStatusFilter}
+          statusFilterCounts={statusFilterCounts}
+          modelOwnerGroupsLoading={modelOwnerGroupsLoading}
+          modelOwnerGroups={modelOwnerGroups}
+          selectedModelOwner={selectedModelOwner}
+          setSelectedModelOwner={(owner) =>
+            setModelOwnerForAuthGroup(filter, owner)
+          }
+          search={search}
+          setSearch={updateSearch}
+          loading={loading}
+          files={files}
+          filesLength={files.length}
+          renderFilesViewModeTabs={renderFilesViewModeTabs}
+          quotaAutoRefreshMs={quotaAutoRefreshMs}
+          setQuotaAutoRefreshMsRaw={setQuotaAutoRefreshMsRaw}
+          normalizeQuotaAutoRefreshMs={normalizeQuotaAutoRefreshMs}
+          openGroupOverview={openGroupOverview}
+          groupOverviewLoading={groupOverviewLoading}
+          filteredFiles={filteredFiles}
+          refreshFilesAndQuota={refreshFilesAndQuota}
+          usageLoading={usageLoading}
+          refreshingAll={refreshingAll || refreshingCurrentPage}
+          uploading={uploading}
+          uploadProgress={uploadProgress}
+          setAddAccountHint={setAddAccountHint}
+          setOauthDialogOpen={setOAuthDialogOpenWithBaseline}
+          openConfigModal={() =>
+            setConfigModalTab(oauthExcludedEnabled ? "excluded" : "alias")
+          }
+          selectableFilteredFiles={selectableFilteredFiles}
+          selectedCount={selectedCount}
+          selectCurrentPage={selectCurrentPage}
+          allPageSelected={allPageSelected}
+          selectablePageNames={selectablePageNames}
+          selectFilteredFiles={selectFilteredFiles}
+          allFilteredSelected={allFilteredSelected}
+          setSelectedFileNames={setSelectedFileNames}
+          setConfirm={setConfirm}
+          selectedFileNames={selectedFileNames}
+          deletingAll={deletingAll}
+          batchStatusUpdating={batchStatusUpdating}
+          handleSetSelectionDisabled={handleSetSelectionDisabled}
+          pageItems={pageItems}
+          fileColumns={sharing.tableColumns}
+          filesViewMode={filesViewMode}
+          masked={masked}
+          onToggleMask={() => setMasked((prev) => !prev)}
+          cardColumns={cardColumns}
+          setCardColumns={setCardColumns}
+          pageSize={pageSize}
+          setPageSize={setPageSize}
+          selectedFileNameSet={selectedFileNameSet}
+          quotaByFileName={quotaByFileName}
+          cycleCallsByAuthIndex={callsByAuthIndex}
+          cycleTotalTokensByAuthIndex={cycleTotalTokensByAuthIndex}
+          cycleBudgetByAuthIndex={cycleBudgetByAuthIndex}
+          statusUsageLoading={statusUsageLoading}
+          resolveQuotaProvider={resolveQuotaProvider}
+          resolveQuotaCardSlots={resolveQuotaCardSlots}
+          refreshQuota={refreshQuotaAndCycleUsage}
+          requestResetCredit={requestResetCredit}
+          resettingCreditFileName={resettingCreditFileName}
+          clearAuthFileStatus={clearAuthFileStatus}
+          clearingStatusFileName={clearingStatusFileName}
+          setFileEnabled={setFileEnabled}
+          statusUpdating={statusUpdating}
+          usageIndex={usageIndex}
+          resolveAuthFileStats={resolveAuthFileStats}
+          toggleFileSelection={toggleFileSelection}
+          resolveStickyDisplayPlanType={resolveStickyDisplayPlanType}
+          renderRestrictionBadges={renderRestrictionBadges}
+          renderClaudeOAuthHealthBadges={renderClaudeOAuthHealthBadges}
+          renderSubscriptionBadge={renderSubscriptionBadge}
+          renderQuotaBar={renderQuotaBar}
+          renderQuotaErrorBadge={renderQuotaErrorBadge}
+          renderSharingBadges={sharing.renderSharingBadges}
+          onShareFiles={sharing.onShareFiles}
+          openTagsEditor={(file) => setTagsEditorFileName(file.name)}
+          openDetail={openDetailWithQuotaRefresh}
+          downloadAuthFile={downloadAuthFile}
+          handleDownloadSelection={handleDownloadSelection}
+          onBatchWarmup={handleBatchWarmup}
+          batchWarmupBusy={batchWarmupBusy}
+          onOpenWarmupPolicy={() => setWarmupPolicyModalOpen(true)}
+          safePage={safePage}
+          totalPages={totalPages}
+          setPage={setPage}
+          usageData={usageData}
+        />
+      )}
+      {sharing.dialog}
 
       <AuthFilesConfigModal
         configModalTab={configModalTab}
@@ -1040,6 +989,7 @@ export function AuthFilesPage() {
             ? (quotaByFileName[confirm.file.name]?.resetCreditCount ?? 0)
             : 0
         }
+        sharedCount={confirm?.type === "deleteSelection" ? sharing.countShared(confirm.names) : 0}
         busy={confirm?.type === "resetCredit" ? Boolean(resettingCreditFileName) : deletingAll}
         onClose={() => {
           if (resettingCreditFileName) return;

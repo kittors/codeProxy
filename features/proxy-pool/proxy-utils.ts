@@ -30,10 +30,16 @@ export const proxyProtocol = (rawUrl: string): string => {
   return match?.[1]?.toUpperCase() ?? "PROXY";
 };
 
-export const proxyDisplayURL = (entry: ProxyPoolEntry): string => entry.maskedUrl || entry.url;
+/**
+ * 只看地址的那部分字段。平台共享给本租户的代理没有 url（地址和凭据不下发），只有打码后的
+ * maskedUrl（协议 + 主机），展示时一律优先读 maskedUrl。
+ */
+type ProxyAddress = { url?: string; maskedUrl?: string };
 
-export const proxyEndpoint = (entry: ProxyPoolEntry): string => {
-  const raw = (entry.maskedUrl || entry.url).trim();
+export const proxyDisplayURL = (entry: ProxyAddress): string => entry.maskedUrl || entry.url || "";
+
+export const proxyEndpoint = (entry: ProxyAddress): string => {
+  const raw = proxyDisplayURL(entry).trim();
   try {
     const url = new URL(raw);
     const host = url.hostname;

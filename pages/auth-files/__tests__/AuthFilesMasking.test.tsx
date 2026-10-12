@@ -119,7 +119,7 @@ vi.mock("@code-proxy/api-client/endpoints/proxies", async (importOriginal) => {
     ...actual,
     proxiesApi: {
       ...actual.proxiesApi,
-      list: mocks.listProxies,
+      listSelectable: mocks.listProxies,
     },
   };
 });

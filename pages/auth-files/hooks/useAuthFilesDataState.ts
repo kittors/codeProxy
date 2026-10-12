@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { authFilesApi } from "@code-proxy/api-client";
-import type { AuthFileItem, EntityStatsResponse } from "@code-proxy/api-client";
+import type { AuthFileItem, AuthFilesResponse, EntityStatsResponse } from "@code-proxy/api-client";
+import { readAuthFilesSharing } from "@code-proxy/api-client/endpoints/auth-files";
+import {
+  NO_SHARING_CAPABILITY,
+  type ResourceSharingCapability,
+} from "@code-proxy/api-client/endpoints/resource-sharing";
 import { useToast } from "@code-proxy/ui";
 import {
   buildUsageIndex,
@@ -43,6 +48,16 @@ export function useAuthFilesDataState() {
   const [usageData, setUsageData] = useState<EntityStatsResponse | null>(
     () => initialDataCache?.usageData ?? EMPTY_USAGE,
   );
+  // 平台共享：能力字段与共享给本租户的只读账号。不进本地缓存——旧后端没有这些字段，
+  // 首屏一律按「不支持」渲染，列表回来后再出现共享界面。
+  const [sharingCapability, setSharingCapability] =
+    useState<ResourceSharingCapability>(NO_SHARING_CAPABILITY);
+  const [sharedFiles, setSharedFiles] = useState<AuthFileItem[]>([]);
+  const applySharing = useCallback((response: AuthFilesResponse | null | undefined) => {
+    const view = readAuthFilesSharing(response);
+    setSharingCapability(view.sharing);
+    setSharedFiles(view.sharedFiles);
+  }, []);
 
   const filesRef = useRef<AuthFileItem[]>(files);
   const usageDataRef = useRef<EntityStatsResponse | null>(usageData);
@@ -79,6 +94,7 @@ export function useAuthFilesDataState() {
         );
         filesRef.current = merged;
         setFiles(merged);
+        applySharing(filesRes);
         warmPaintRef.current = true;
         // Calls / success-rate come from ai-accounts status usage — no entity-stats.
         return merged;
@@ -98,7 +114,7 @@ export function useAuthFilesDataState() {
         }
       }
     },
-    [notify, t],
+    [applySharing, notify, t],
   );
 
   const refreshFilesForItems = useCallback(
@@ -112,6 +128,7 @@ export function useAuthFilesDataState() {
         const filesRes = await authFilesApi.list();
         if (!mountedRef.current) return filesRef.current;
         const list = Array.isArray(filesRes?.files) ? filesRes.files : [];
+        applySharing(filesRes);
         const filesByName = new Map(list.map((file) => [file.name, file]));
         let updatedFiles = filesRef.current;
 
@@ -137,7 +154,7 @@ export function useAuthFilesDataState() {
         return filesRef.current;
       }
     },
-    [notify, t],
+    [applySharing, notify, t],
   );
 
   useEffect(() => {
@@ -194,5 +211,7 @@ export function useAuthFilesDataState() {
     usageIndex,
     loadAll,
     refreshFilesForItems,
+    sharingCapability,
+    sharedFiles,
   };
 }

@@ -90,7 +90,21 @@ export type {
   OAuthCallbackSubmission,
   OAuthProxyOptions,
 } from "./endpoints/oauth";
-export { authFilesApi } from "./endpoints/auth-files";
+export {
+  authFilesApi,
+  authFileSharingId,
+  readAuthFileSharing,
+  readAuthFilesSharing,
+} from "./endpoints/auth-files";
+export type { AuthFilesSharingView } from "./endpoints/auth-files";
+export {
+  NO_SHARING_CAPABILITY,
+  normalizeResourceSharing,
+  normalizeSharingCapability,
+  normalizeTenantRefs,
+  toRawResourceSharing,
+} from "./endpoints/resource-sharing";
+export type * from "./endpoints/resource-sharing";
 export { apiCallApi, getApiCallErrorMessage } from "./endpoints/api-call";
 export { ampcodeApi } from "./endpoints/ampcode";
 export { vertexApi } from "./endpoints/vertex";
