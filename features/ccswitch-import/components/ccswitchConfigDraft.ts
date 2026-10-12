@@ -3,6 +3,7 @@ import {
   type CcSwitchClaudeModelRole,
   type CcSwitchClientType,
 } from "@code-proxy/domain/ccswitch/ccswitchClients";
+import { pickCcSwitchDefaultModel } from "@code-proxy/domain/ccswitch/ccswitchDefaultModel";
 import {
   createCcSwitchImportConfig,
   defaultCcSwitchProviderName,
@@ -210,32 +211,20 @@ export function removeAliasMapping(draft: ConfigDraft, requestModel: string): Co
       (mapping) => !mapping.role && sameModel(mapping.requestModel, alias.targetModel),
     );
     if (!served) {
-      mappings = [
-        ...mappings,
-        {
-          requestModel: alias.targetModel,
-          targetModel: alias.targetModel,
-          ...(alias.contextWindow ? { contextWindow: alias.contextWindow } : {}),
-        },
-      ];
+      mappings = [...mappings, { requestModel: alias.targetModel, targetModel: alias.targetModel }];
     }
   }
   return { ...draft, defaultModel, modelMappings: mappings };
 }
 
-/** Codex: the default model's context window; empty clears it. */
-export function setDefaultContextWindow(draft: ConfigDraft, value: unknown): ConfigDraft {
-  const mapping = getDefaultMapping(draft);
-  if (!mapping) return draft;
+/**
+ * Codex: the preset's context window (`model_context_window`); empty leaves it to Codex.
+ * Per-mapping windows from earlier editors are not touched — links no longer read them.
+ */
+export function setCodexContextWindow(draft: ConfigDraft, value: unknown): ConfigDraft {
+  const { codexContextWindow: _previous, ...rest } = draft;
   const contextWindow = normalizeCcSwitchContextWindow(value);
-  return {
-    ...draft,
-    modelMappings: draft.modelMappings.map((item) => {
-      if (item !== mapping) return item;
-      const { contextWindow: _previous, ...rest } = item;
-      return contextWindow ? { ...rest, contextWindow } : rest;
-    }),
-  };
+  return contextWindow ? { ...rest, codexContextWindow: contextWindow } : rest;
 }
 
 /**
@@ -263,15 +252,28 @@ export function setChannelGroup(
   });
 }
 
-/** Fills a fresh model selection from the group's models (new presets, or a new group). */
-export function seedModels(draft: ConfigDraft, models: readonly string[]): ConfigDraft {
+/**
+ * Fills a fresh model selection from the group's models (new presets, or a new group). A
+ * main / default model that is not set yet becomes the admin's own earlier pick when the
+ * group serves it — a pick the group does not serve is not replaced by a guess. Without an
+ * earlier pick it becomes the only model, or the app's usual first choice. Claude Code's
+ * tiers stay empty and follow the main model.
+ */
+export function seedModels(
+  draft: ConfigDraft,
+  models: readonly string[],
+  earlierPick = "",
+): ConfigDraft {
+  const pick = earlierPick.trim()
+    ? (models.find((model) => sameModel(model, earlierPick)) ?? "")
+    : models.length === 1
+      ? models[0]!
+      : (pickCcSwitchDefaultModel(draft.clientType, models) ?? "");
   if (draft.clientType === "claude") {
-    return !getRoleMapping(draft, "main") && models.length === 1
-      ? setClaudeRoleModel(draft, "main", models[0]!)
-      : draft;
+    return !getRoleMapping(draft, "main") && pick ? setClaudeRoleModel(draft, "main", pick) : draft;
   }
   const seeded = setRouteModels(draft, models);
-  return !seeded.defaultModel && models.length === 1 ? setDefaultModel(seeded, models[0]!) : seeded;
+  return !seeded.defaultModel && pick ? setDefaultModel(seeded, pick) : seeded;
 }
 
 /** New presets only: an existing preset's app is fixed, its imported clients depend on it. */
@@ -292,12 +294,12 @@ export function setClientType(draft: ConfigDraft, clientType: CcSwitchClientType
 
 /**
  * The preset as saved: the route path settled for the group, the endpoint path kept in step
- * with the app (older panels read it), the default model on the route, and a context window
- * only where Codex reads one — the default model.
+ * with the app (older panels read it) and the default model on the route. Mappings are kept
+ * as they are, per-mapping context windows from earlier editors included.
  */
 export function prepareDraftForSave(draft: ConfigDraft): ConfigDraft {
   const group = draft.allowedChannelGroups[0] ?? "";
-  let mappings = draft.modelMappings
+  const mappings = draft.modelMappings
     .map((mapping) => ({
       ...mapping,
       requestModel: mapping.requestModel.trim(),
@@ -315,18 +317,13 @@ export function prepareDraftForSave(draft: ConfigDraft): ConfigDraft {
     mappings.push({ requestModel: defaultModel, targetModel: defaultModel });
   }
 
-  mappings = mappings.map((mapping) => {
-    const isCodexDefault =
-      draft.clientType === "codex" &&
-      !mapping.role &&
-      sameModel(mapping.requestModel, defaultModel);
-    if (isCodexDefault || mapping.contextWindow === undefined) return mapping;
-    const { contextWindow: _unused, ...rest } = mapping;
-    return rest;
-  });
-
+  const { codexContextWindow: _window, ...rest } = draft;
   return {
-    ...draft,
+    ...rest,
+    // Only Codex reads it; switching a new preset to another app drops it.
+    ...(draft.clientType === "codex" && draft.codexContextWindow
+      ? { codexContextWindow: draft.codexContextWindow }
+      : {}),
     providerName: draft.providerName.trim(),
     note: draft.note.trim(),
     defaultModel,

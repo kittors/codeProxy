@@ -8,7 +8,11 @@ import {
 } from "@code-proxy/api-client/endpoints/channel-groups";
 import { normalizeProviderKey } from "@code-proxy/domain";
 import { useOptionalAuth } from "@app/providers/AuthProvider";
-import { ccSwitchImportConfigsApi } from "@code-proxy/api-client/endpoints/ccswitch-import-configs";
+import {
+  ccSwitchImportConfigsApi,
+  NO_CC_SWITCH_IMPORT_CAPABILITIES,
+  type CcSwitchImportCapabilities,
+} from "@code-proxy/api-client/endpoints/ccswitch-import-configs";
 import { Button, COLUMN_WIDTH } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
 import { ConfirmModal } from "@code-proxy/ui";
@@ -110,6 +114,11 @@ export function CcSwitchImportSettingsPage() {
   const [clientTypes, setClientTypes] = useState<readonly CcSwitchClientType[]>(
     LEGACY_CC_SWITCH_CLIENT_TYPES,
   );
+  // Fields beyond the base row (the Codex context window) are shown and sent only when the
+  // backend reports it stores them.
+  const [capabilities, setCapabilities] = useState<CcSwitchImportCapabilities>(
+    NO_CC_SWITCH_IMPORT_CAPABILITIES,
+  );
   const [pendingDelete, setPendingDelete] = useState<CcSwitchImportConfigListItem | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [channelGroupsLoading, setChannelGroupsLoading] = useState(false);
@@ -176,6 +185,7 @@ export function CcSwitchImportSettingsPage() {
         if (cancelled) return;
         setConfigs(snapshot.configs);
         setClientTypes(snapshot.clientTypes ?? LEGACY_CC_SWITCH_CLIENT_TYPES);
+        setCapabilities(snapshot.capabilities);
       })
       .catch((error: unknown) => {
         if (cancelled) return;
@@ -322,7 +332,7 @@ export function CcSwitchImportSettingsPage() {
 
   const persistConfigs = async (next: CcSwitchImportConfigListItem[]) => {
     const normalized = normalizeCcSwitchImportConfigList(next);
-    await ccSwitchImportConfigsApi.replace(normalized);
+    await ccSwitchImportConfigsApi.replace(normalized, capabilities);
     setConfigs(normalized);
   };
   const importBaseUrl = auth?.state.apiBase || detectApiBaseFromLocation();
@@ -384,6 +394,7 @@ export function CcSwitchImportSettingsPage() {
         channelGroupOptions={channelGroupOptions}
         channelGroupsLoading={channelGroupsLoading}
         clientTypes={clientTypes}
+        codexContextWindowSupported={capabilities.codexContextWindow}
         onClose={() => setModalOpen(false)}
         onSave={async (value) => {
           const next =

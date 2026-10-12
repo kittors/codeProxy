@@ -1,3 +1,4 @@
+import { buildCcSwitchCodexConfigToml } from "./ccswitchCodexConfig";
 import { buildCcSwitchLinkConfig } from "./ccswitchImport";
 import type { CcSwitchImportPlan } from "./ccswitchImportPlan";
 
@@ -37,13 +38,26 @@ const json = (value: unknown) => JSON.stringify(value, null, 2);
 /** YAML accepts JSON's double-quoted strings, which keeps any model name unambiguous. */
 const yamlString = (value: string) => JSON.stringify(value);
 
+/** Words the preview puts inside a file; the caller localizes them. */
+export interface CcSwitchImportPreviewLabels {
+  /** TOML comment above Codex's `requires_openai_auth`. */
+  codexLoginNote: string;
+}
+
+const DEFAULT_PREVIEW_LABELS: CcSwitchImportPreviewLabels = {
+  codexLoginNote: "true when this computer is signed in to ChatGPT",
+};
+
 /**
  * What CC Switch v4.0.10 writes when the plan's link is imported (and, for Claude Code /
  * Codex / Gemini CLI, switched to). Built from the same plan as the link and with the
  * link's own `config` payload, so the two cannot disagree; the key is masked.
  * Files list only the provider's part — CC Switch merges it into the existing file.
  */
-export function buildCcSwitchImportPreview(plan: CcSwitchImportPlan): CcSwitchImportPreviewFile[] {
+export function buildCcSwitchImportPreview(
+  plan: CcSwitchImportPlan,
+  labels: CcSwitchImportPreviewLabels = DEFAULT_PREVIEW_LABELS,
+): CcSwitchImportPreviewFile[] {
   const apiKey = maskCcSwitchApiKey(plan.apiKey);
   const model = plan.model;
 
@@ -67,9 +81,21 @@ export function buildCcSwitchImportPreview(plan: CcSwitchImportPlan): CcSwitchIm
       return [{ path: "~/.claude/settings.json", language: "json", content: json({ env }) }];
     }
     case "codex":
+      // The same config.toml the link carries, rendered the way CC Switch writes it: the key
+      // lands in the provider table, and auth.json is left to the official ChatGPT login.
       return [
-        { path: "~/.codex/config.toml", language: "toml", content: plan.codex?.configToml ?? "" },
-        { path: "~/.codex/auth.json", language: "json", content: json({ OPENAI_API_KEY: apiKey }) },
+        {
+          path: "~/.codex/config.toml",
+          language: "toml",
+          content: buildCcSwitchCodexConfigToml({
+            model,
+            reasoningEffort: plan.codex?.reasoningEffort ?? "",
+            contextWindow: plan.codex?.contextWindow ?? null,
+            providerName: plan.name,
+            endpoint: plan.endpoint,
+            written: { bearerToken: apiKey, loginNote: labels.codexLoginNote },
+          }),
+        },
       ];
     case "gemini":
       return [

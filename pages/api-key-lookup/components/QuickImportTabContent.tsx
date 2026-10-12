@@ -44,10 +44,13 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
-/** The backend row shape, plus the Codex reasoning efforts the link needs offline. */
+/**
+ * The backend row shape, plus what the Codex link needs offline: the reasoning efforts and
+ * the context window (kept whatever the backend supports — the cache never goes back to it).
+ */
 function serializeQuickImportConfig(config: CcSwitchImportConfigListItem): Record<string, unknown> {
   return {
-    ...serializeCcSwitchImportConfig(config),
+    ...serializeCcSwitchImportConfig(config, { codexContextWindow: true }),
     ...(config.codexReasoningEfforts ? { codexReasoningEfforts: config.codexReasoningEfforts } : {}),
   };
 }

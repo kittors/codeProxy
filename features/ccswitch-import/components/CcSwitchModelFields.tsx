@@ -24,7 +24,7 @@ import {
   isAliasMapping,
   removeAliasMapping,
   setClaudeRoleModel,
-  setDefaultContextWindow,
+  setCodexContextWindow,
   setDefaultModel,
   setRouteModels,
   type ConfigDraft,
@@ -47,9 +47,12 @@ function modelOptions(
  * The preset's models, the way CC Switch uses them.
  *
  * Claude Code: a main model and four optional tiers. Other apps: a default model, the list of
- * models the route serves, and — for Codex — the default model's context window. Names left
- * over from earlier editors (a request name rewritten to another model) are listed compactly
- * so they can be removed, and never disappear on their own.
+ * models the route serves, and — for Codex, when the backend stores it — the preset's context
+ * window. Names left over from earlier editors (a request name rewritten to another model)
+ * are listed compactly so they can be removed, and never disappear on their own.
+ *
+ * `onPrimaryPicked` reports a main / default model the admin chose by hand, so the editor
+ * does not replace it with a suggestion later.
  */
 export function CcSwitchModelFields({
   draft,
@@ -57,14 +60,19 @@ export function CcSwitchModelFields({
   modelsLoading,
   groupSelected,
   primaryError,
+  codexContextWindowSupported,
   onChange,
+  onPrimaryPicked,
 }: {
   draft: ConfigDraft;
   groupModels: readonly string[];
   modelsLoading: boolean;
   groupSelected: boolean;
   primaryError?: string;
+  /** The backend stores `codex-context-window`; older ones would drop the value. */
+  codexContextWindowSupported: boolean;
   onChange: DraftUpdate;
+  onPrimaryPicked: (model: string) => void;
 }) {
   const { t } = useTranslation();
   const isClaude = draft.clientType === "claude";
@@ -135,9 +143,10 @@ export function CcSwitchModelFields({
             <SearchableSelect
               {...selectCopy}
               value={primaryModel}
-              onChange={(model) =>
-                onChange((current) => setClaudeRoleModel(current, "main", model))
-              }
+              onChange={(model) => {
+                onPrimaryPicked(model);
+                onChange((current) => setClaudeRoleModel(current, "main", model));
+              }}
               options={optionsFor(getRoleMapping(draft, "main"))}
             />
           </FormField>
@@ -185,7 +194,10 @@ export function CcSwitchModelFields({
             <SearchableSelect
               {...selectCopy}
               value={primaryModel}
-              onChange={(model) => onChange((current) => setDefaultModel(current, model))}
+              onChange={(model) => {
+                onPrimaryPicked(model);
+                onChange((current) => setDefaultModel(current, model));
+              }}
               options={optionsFor(defaultMapping, routeModels)}
             />
           </FormField>
@@ -197,7 +209,18 @@ export function CcSwitchModelFields({
               value={routeModels}
               onChange={(models) => onChange((current) => setRouteModels(current, models))}
               options={routeModelOptions}
-              placeholder={t("ccswitch.config_route_models_placeholder")}
+              // The picker shows its placeholder when every option is ticked: that is the
+              // default (the whole group), so it says so. Before the group's models are in,
+              // the route is about to start with all of them; an emptied list with models to
+              // pick from leaves only the default model and the names kept below.
+              placeholder={t("ccswitch.config_route_models_all", {
+                count: routeModelOptions.length,
+              })}
+              emptySelectionLabel={
+                routeModelOptions.length === 0
+                  ? t("ccswitch.config_route_models_placeholder")
+                  : t("ccswitch.config_route_models_none")
+              }
               searchPlaceholder={t("ccswitch.config_model_search_placeholder")}
               selectFilteredLabel={t("ccswitch.config_select_shown")}
               deselectFilteredLabel={t("ccswitch.config_deselect_shown")}
@@ -208,7 +231,7 @@ export function CcSwitchModelFields({
               className="w-full"
             />
           </FormField>
-          {draft.clientType === "codex" ? (
+          {draft.clientType === "codex" && codexContextWindowSupported ? (
             <FormField
               label={t("ccswitch.config_codex_context_window")}
               optional
@@ -218,13 +241,12 @@ export function CcSwitchModelFields({
                 type="number"
                 min={1}
                 inputMode="numeric"
-                value={defaultMapping?.contextWindow ? String(defaultMapping.contextWindow) : ""}
+                value={draft.codexContextWindow ? String(draft.codexContextWindow) : ""}
                 onChange={(event) => {
                   const value = event.currentTarget.value;
-                  onChange((current) => setDefaultContextWindow(current, value));
+                  onChange((current) => setCodexContextWindow(current, value));
                 }}
                 placeholder={t("ccswitch.config_codex_context_window_placeholder")}
-                disabled={!defaultMapping}
               />
             </FormField>
           ) : null}

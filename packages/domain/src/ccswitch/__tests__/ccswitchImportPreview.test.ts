@@ -85,21 +85,44 @@ describe("buildCcSwitchImportPreview", () => {
     expect(files[0]!.content).not.toContain(KEY);
   });
 
-  test("Codex: config.toml is the link's own config.toml, auth.json holds the masked key", () => {
+  test("Codex: the link's config.toml as CC Switch writes it — key in the table, no auth.json", () => {
     const { params, files } = render(
       preset({
         clientType: "codex",
         defaultModel: "gpt-5.5",
-        modelMappings: [{ requestModel: "gpt-5.5", targetModel: "gpt-5.5", contextWindow: 272000 }],
+        codexContextWindow: 272000,
+        modelMappings: [{ requestModel: "gpt-5.5", targetModel: "gpt-5.5" }],
       }),
     );
+    // auth.json stays with the official ChatGPT login (codex_login.rs).
     expect(files.map((file) => [file.path, file.language])).toEqual([
       ["~/.codex/config.toml", "toml"],
-      ["~/.codex/auth.json", "json"],
     ]);
-    expect(files[0]!.content).toBe(linkConfig(params).config);
+    const linkToml = linkConfig(params).config ?? "";
+    // The link keeps requires_openai_auth = true for CC Switch v4.0.9 and earlier; what
+    // v4.0.10 writes differs only in the table's credential lines.
+    expect(linkToml.endsWith("\nrequires_openai_auth = true")).toBe(true);
+    expect(files[0]!.content).toBe(
+      [
+        linkToml.slice(0, -"requires_openai_auth = true".length) +
+          "# true when this computer is signed in to ChatGPT",
+        "requires_openai_auth = false",
+        `experimental_bearer_token = "${MASKED}"`,
+      ].join("\n"),
+    );
     expect(files[0]!.content).toContain("model_context_window = 272000");
-    expect(JSON.parse(files[1]!.content)).toEqual({ OPENAI_API_KEY: MASKED });
+  });
+
+  test("Codex: the login note is the caller's words", () => {
+    const plan = resolveCcSwitchImportPlan({
+      apiKey: KEY,
+      baseUrl: ROOT,
+      config: preset({ clientType: "codex", defaultModel: "gpt-5.5" }),
+    });
+    const [file] = buildCcSwitchImportPreview(plan, {
+      codexLoginNote: "本机已登录 ChatGPT 时为 true",
+    });
+    expect(file!.content).toContain("# 本机已登录 ChatGPT 时为 true\nrequires_openai_auth = false");
   });
 
   test("Gemini CLI: .env lines with the endpoint and model of the link", () => {

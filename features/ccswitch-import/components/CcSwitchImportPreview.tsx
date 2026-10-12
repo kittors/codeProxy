@@ -22,7 +22,11 @@ const HIGHLIGHT_LANGUAGE: Record<CcSwitchPreviewLanguage, SnippetLanguage> = {
 export function CcSwitchImportPreview({ plan }: { plan: CcSwitchImportPlan }) {
   const { t } = useTranslation();
   const titleId = useId();
-  const files = useMemo(() => buildCcSwitchImportPreview(plan), [plan]);
+  const codexLoginNote = t("ccswitch.preview_codex_login_note");
+  const files = useMemo(
+    () => buildCcSwitchImportPreview(plan, { codexLoginNote }),
+    [codexLoginNote, plan],
+  );
   const clientLabel = t(plan.client.labelKey);
   const tiersFollowMain =
     plan.claudeTiers !== null && Object.values(plan.claudeTiers).some((model) => !model);

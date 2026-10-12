@@ -16,6 +16,7 @@ const getModelConfigs = vi.fn();
 const getAuthGroupModelOwnerMappingMap = vi.fn();
 const listConfigs = vi.fn<() => Promise<Array<Partial<CcSwitchImportConfigListItem>>>>();
 const listClientTypes = vi.fn<() => string[] | null>();
+const listCapabilities = vi.fn<() => { codexContextWindow: boolean }>();
 const replaceConfigs = vi.fn();
 const loadConfiguredModelAvailability = vi.fn();
 const filterByConfiguredModelAvailability = vi.fn();
@@ -35,13 +36,18 @@ vi.mock("@code-proxy/api-client/endpoints/channel-groups", () => ({
 }));
 
 vi.mock("@code-proxy/api-client/endpoints/ccswitch-import-configs", () => ({
+  NO_CC_SWITCH_IMPORT_CAPABILITIES: { codexContextWindow: false },
   ccSwitchImportConfigsApi: {
     // Like the real endpoint, presets arrive normalized.
     snapshot: async () => ({
       configs: normalizeCcSwitchImportConfigList(await listConfigs()),
       clientTypes: listClientTypes(),
+      capabilities: listCapabilities(),
     }),
-    replace: (configs: CcSwitchImportConfigListItem[]) => replaceConfigs(configs),
+    replace: (
+      configs: CcSwitchImportConfigListItem[],
+      capabilities?: { codexContextWindow: boolean },
+    ) => replaceConfigs(configs, capabilities),
   },
 }));
 
@@ -128,6 +134,7 @@ describe("CcSwitchImportSettingsPage", () => {
       getAuthGroupModelOwnerMappingMap,
       listConfigs,
       listClientTypes,
+      listCapabilities,
       replaceConfigs,
       loadConfiguredModelAvailability,
       filterByConfiguredModelAvailability,
@@ -157,6 +164,7 @@ describe("CcSwitchImportSettingsPage", () => {
     getAuthGroupModelOwnerMappingMap.mockResolvedValue({});
     listConfigs.mockResolvedValue([]);
     listClientTypes.mockReturnValue(null);
+    listCapabilities.mockReturnValue({ codexContextWindow: false });
     replaceConfigs.mockResolvedValue(undefined);
   });
 
@@ -230,6 +238,7 @@ describe("CcSwitchImportSettingsPage", () => {
   });
 
   test("creates a Codex preset: all group models on the route, a default and its context window", async () => {
+    listCapabilities.mockReturnValue({ codexContextWindow: true });
     listChannelGroups.mockResolvedValue([
       {
         name: "pro",
@@ -249,9 +258,14 @@ describe("CcSwitchImportSettingsPage", () => {
     // No group, no route: the preview waits instead of showing a wrong endpoint.
     expect(within(dialog).getByTestId("ccswitch-import-preview-pending")).toBeInTheDocument();
     expect(within(dialog).queryByTestId("ccswitch-import-preview")).not.toBeInTheDocument();
+    const routeModels = within(dialog).getByRole("combobox", { name: /^available models/i });
+    // Nothing to tick yet, but the route will start with every model: say that, not "select".
+    expect(routeModels).toHaveTextContent(/^all models \(default\)$/i);
 
     await pickGroup(user, dialog, /pro.*\/pro/i);
     expect(listAvailableModels).not.toHaveBeenCalled();
+    // Every model the group serves is on the route, and the picker says so.
+    expect(routeModels).toHaveTextContent(/^all 2 models \(default\)$/i);
     expect(await optionNames(user, defaultModelPicker(dialog))).toEqual([
       "deepseek-v4-flash",
       "kimi-k2",
@@ -265,6 +279,10 @@ describe("CcSwitchImportSettingsPage", () => {
 
     const preview = within(dialog).getByTestId("ccswitch-import-preview");
     expect(preview).toHaveTextContent("~/.codex/config.toml");
+    // CC Switch writes the key into the provider table and leaves auth.json to ChatGPT.
+    expect(preview).toHaveTextContent('experimental_bearer_token = "sk-••••••••"');
+    expect(preview).toHaveTextContent("requires_openai_auth = false");
+    expect(preview).not.toHaveTextContent("auth.json");
     expect(preview).toHaveTextContent('model = "kimi-k2"');
     expect(preview).toHaveTextContent("model_context_window = 200000");
     expect(preview).not.toHaveTextContent("model_catalog_json");
@@ -279,11 +297,14 @@ describe("CcSwitchImportSettingsPage", () => {
       defaultModel: "kimi-k2",
       allowedChannelGroups: ["pro"],
       endpointPath: "/v1",
+      codexContextWindow: 200000,
       modelMappings: [
         { requestModel: "deepseek-v4-flash", targetModel: "deepseek-v4-flash" },
-        { requestModel: "kimi-k2", targetModel: "kimi-k2", contextWindow: 200000 },
+        { requestModel: "kimi-k2", targetModel: "kimi-k2" },
       ],
     });
+    // The capability travels with the save, so the field is sent to this backend.
+    expect(replaceConfigs.mock.calls.at(-1)?.[1]).toEqual({ codexContextWindow: true });
     expect(saved.routePath).toMatch(/^\/pro\/cs_[a-z0-9]+$/);
     expect(saved).not.toHaveProperty("codexModelCatalog");
     expect(saved).not.toHaveProperty("apiKeyField");
@@ -316,17 +337,22 @@ describe("CcSwitchImportSettingsPage", () => {
     await user.click(within(dialog).getByRole("tab", { name: "Claude Code" }));
     await pickGroup(user, dialog, /pro.*\/pro/i);
 
+    // The main model is suggested (Sonnet first); every tier still follows it.
+    await waitFor(() =>
+      expect(within(dialog).getByRole("combobox", { name: /^main model$/i })).toHaveTextContent(
+        "claude-sonnet-5",
+      ),
+    );
+    for (const tier of ["haiku", "sonnet", "opus", "fable"]) {
+      expect(
+        within(dialog).getByRole("combobox", { name: new RegExp(`^${tier} default model`, "i") }),
+      ).toHaveTextContent(/same as main model/i);
+    }
     const tierPicker = within(dialog).getByRole("combobox", { name: /^fable default model/i });
-    expect(tierPicker).toHaveTextContent(/same as main model/i);
     // No request-name column any more, and no auth-field choice.
     expect(within(dialog).queryByText(/request model/i)).not.toBeInTheDocument();
     expect(within(dialog).queryByText(/auth field/i)).not.toBeInTheDocument();
 
-    await pickOption(
-      user,
-      within(dialog).getByRole("combobox", { name: /^main model$/i }),
-      "claude-sonnet-5",
-    );
     await pickOption(user, tierPicker, "claude-opus-4-8");
 
     const preview = within(dialog).getByTestId("ccswitch-import-preview");
@@ -415,6 +441,7 @@ describe("CcSwitchImportSettingsPage", () => {
   });
 
   test("editing an earlier Codex preset lists its aliases and saves them untouched", async () => {
+    listCapabilities.mockReturnValue({ codexContextWindow: true });
     listChannelGroups.mockResolvedValue([
       {
         name: "kimicode",
@@ -448,8 +475,10 @@ describe("CcSwitchImportSettingsPage", () => {
     const aliasList = within(dialog).getByTestId("ccswitch-alias-list");
     expect(aliasList).toHaveTextContent("gpt-5.4-mini");
     expect(aliasList).toHaveTextContent("kimi-k2.5");
-    expect(within(dialog).getByRole("spinbutton", { name: /^context window/i })).toHaveValue(
-      128000,
+    // The earlier editor's per-mapping 128000 is neither the preset's window nor in the link.
+    expect(within(dialog).getByRole("spinbutton", { name: /^context window/i })).toHaveValue(null);
+    expect(within(dialog).getByTestId("ccswitch-import-preview")).not.toHaveTextContent(
+      "model_context_window",
     );
 
     await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
@@ -459,11 +488,53 @@ describe("CcSwitchImportSettingsPage", () => {
         defaultModel: "gpt-5.4-mini",
         usageAutoInterval: 45,
         modelMappings: [
-          { requestModel: "gpt-5.5", targetModel: "gpt-5.5" },
+          { requestModel: "gpt-5.5", targetModel: "gpt-5.5", contextWindow: 128000 },
           { requestModel: "gpt-5.4-mini", targetModel: "kimi-k2.5", contextWindow: 128000 },
         ],
       }),
     );
+    expect(savedConfig()).not.toHaveProperty("codexContextWindow");
+  });
+
+  test("hides the Codex context window from a backend that cannot store it", async () => {
+    listChannelGroups.mockResolvedValue([
+      { name: "pro", "path-routes": ["/pro"], "allowed-models": ["gpt-5.5", "kimi-k2"] },
+    ]);
+    renderPage();
+    const user = userEvent.setup();
+    const dialog = await openCreate(user);
+    await pickGroup(user, dialog, /pro.*\/pro/i);
+
+    expect(within(dialog).queryByRole("spinbutton", { name: /^context window/i })).toBeNull();
+    await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
+    await waitFor(() => expect(replaceConfigs).toHaveBeenCalled());
+    expect(replaceConfigs.mock.calls.at(-1)?.[1]).toEqual({ codexContextWindow: false });
+  });
+
+  test("suggests the usual default model and keeps the admin's own pick afterwards", async () => {
+    listChannelGroups.mockResolvedValue([
+      {
+        name: "pro",
+        "path-routes": ["/pro"],
+        "allowed-models": ["deepseek-v4-flash", "gpt-5.3-codex", "gpt-5.5", "kimi-k2"],
+      },
+      {
+        name: "team-a",
+        "path-routes": ["/team-a"],
+        "allowed-models": ["gpt-5.5", "kimi-k2"],
+      },
+    ]);
+    renderPage();
+    const user = userEvent.setup();
+    const dialog = await openCreate(user);
+
+    await pickGroup(user, dialog, /pro.*\/pro/i);
+    await waitFor(() => expect(defaultModelPicker(dialog)).toHaveTextContent("gpt-5.5"));
+
+    await pickOption(user, defaultModelPicker(dialog), "kimi-k2");
+    // Another group that also serves the pick keeps it instead of suggesting gpt-5.5 again.
+    await pickGroup(user, dialog, /team-a.*\/team-a/i);
+    await waitFor(() => expect(defaultModelPicker(dialog)).toHaveTextContent("kimi-k2"));
   });
 
   test("deleting the default alias keeps the default on its model under the model's own name", async () => {
@@ -484,6 +555,10 @@ describe("CcSwitchImportSettingsPage", () => {
     renderPage();
     const user = userEvent.setup();
     const dialog = await openEdit(user, "Relay Kimi");
+    // Only the alias is on the route: the picker has models to offer but none ticked.
+    expect(within(dialog).getByRole("combobox", { name: /^available models/i })).toHaveTextContent(
+      /^no other models$/i,
+    );
 
     await user.click(within(dialog).getByRole("button", { name: /delete gpt-5\.4-mini/i }));
     expect(within(dialog).queryByTestId("ccswitch-alias-list")).not.toBeInTheDocument();
@@ -837,7 +912,9 @@ describe("CcSwitchImportSettingsPage", () => {
     expect(dialog).toHaveTextContent("Hermes");
     await user.click(within(dialog).getByRole("button", { name: /^delete$/i }));
 
-    await waitFor(() => expect(replaceConfigs).toHaveBeenCalledWith([]));
+    await waitFor(() =>
+      expect(replaceConfigs).toHaveBeenCalledWith([], { codexContextWindow: false }),
+    );
   });
 
   test("filters out implicit channel groups except default", async () => {

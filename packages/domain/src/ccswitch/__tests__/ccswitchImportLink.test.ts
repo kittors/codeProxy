@@ -141,17 +141,14 @@ describe("CC Switch links: Claude Code", () => {
 });
 
 describe("CC Switch links: Codex", () => {
-  const codexPreset = (contextWindow?: number) =>
+  const codexPreset = (codexContextWindow?: number) =>
     preset({
       clientType: "codex",
       providerName: "Relay Codex",
       defaultModel: "gpt-5.5",
+      ...(codexContextWindow ? { codexContextWindow } : {}),
       modelMappings: [
-        {
-          requestModel: "gpt-5.5",
-          targetModel: "gpt-5.5",
-          ...(contextWindow ? { contextWindow } : {}),
-        },
+        { requestModel: "gpt-5.5", targetModel: "gpt-5.5" },
         { requestModel: "kimi-k2", targetModel: "kimi-k2" },
       ],
     });
@@ -188,13 +185,32 @@ describe("CC Switch links: Codex", () => {
     expect(String(config.config)).not.toContain("model_catalog_json");
   });
 
-  test("model_context_window appears only when the default model has a context window", () => {
+  test("model_context_window comes from the preset's own context window only", () => {
     const withWindow = decodeJson(link(codexPreset(272000)).params.get("config"));
     expect(withWindow.config).toContain(
       "disable_response_storage = true\nmodel_context_window = 272000\n",
     );
     const withoutWindow = decodeJson(link(codexPreset()).params.get("config"));
     expect(withoutWindow.config).not.toContain("model_context_window");
+  });
+
+  test("per-mapping context windows saved by earlier editors never reach the link", () => {
+    // The earlier editor pre-filled 128000 on every Codex mapping.
+    const legacy = preset({
+      clientType: "codex",
+      defaultModel: "gpt-5.5",
+      modelMappings: [
+        { requestModel: "gpt-5.5", targetModel: "gpt-5.5", contextWindow: 128000 },
+        { requestModel: "kimi-k2", targetModel: "kimi-k2", contextWindow: 128000 },
+      ],
+    });
+    expect(decodeJson(link(legacy).params.get("config")).config).not.toContain(
+      "model_context_window",
+    );
+    const withPresetWindow = { ...legacy, codexContextWindow: 400000 };
+    expect(decodeJson(link(withPresetWindow).params.get("config")).config).toContain(
+      "model_context_window = 400000",
+    );
   });
 
   test("the reasoning effort comes from the backend catalog, falling back to high", () => {

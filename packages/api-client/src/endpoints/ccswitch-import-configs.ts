@@ -62,6 +62,9 @@ export function normalizeCcSwitchImportConfigs(raw: unknown): CcSwitchImportConf
         routePath: normalizeString(record["route-path"] ?? record.routePath),
         endpointPath: normalizeString(record["endpoint-path"]),
         usageAutoInterval: normalizeNumber(record["usage-auto-interval"]),
+        codexContextWindow: normalizeNumber(
+          record["codex-context-window"] ?? record.codexContextWindow,
+        ),
         codexReasoningEfforts:
           ccSwitchCodexReasoningEffortsFromCatalog(
             record["codex-model-catalog"] ?? record.codexModelCatalog,
@@ -74,11 +77,31 @@ export function normalizeCcSwitchImportConfigs(raw: unknown): CcSwitchImportConf
     .filter((item): item is CcSwitchImportConfigListItem => Boolean(item));
 }
 
+/** What the backend says it supports beyond the base preset row. */
+export interface CcSwitchImportCapabilities {
+  /** Presets carry `codex-context-window`; older backends neither store nor return it. */
+  codexContextWindow: boolean;
+}
+
+export const NO_CC_SWITCH_IMPORT_CAPABILITIES: CcSwitchImportCapabilities = {
+  codexContextWindow: false,
+};
+
+/** Reads `capabilities` from GET; a backend without the field supports none of them. */
+export function parseCcSwitchImportCapabilities(value: unknown): CcSwitchImportCapabilities {
+  const record = asRecord(value);
+  return { codexContextWindow: record?.["codex-context-window"] === true };
+}
+
 /**
  * Preset → backend row. The Codex catalog is never sent: the backend regenerates it on
- * every GET and drops it on PUT.
+ * every GET and drops it on PUT. `codex-context-window` only goes to a backend that reported
+ * the capability (0 means "not set", and is what every non-Codex row carries).
  */
-export function serializeCcSwitchImportConfig(config: CcSwitchImportConfigListItem) {
+export function serializeCcSwitchImportConfig(
+  config: CcSwitchImportConfigListItem,
+  capabilities: CcSwitchImportCapabilities = NO_CC_SWITCH_IMPORT_CAPABILITIES,
+) {
   return {
     id: config.id,
     "client-type": config.clientType,
@@ -95,6 +118,12 @@ export function serializeCcSwitchImportConfig(config: CcSwitchImportConfigListIt
     "route-path": config.routePath,
     "endpoint-path": config.endpointPath,
     "usage-auto-interval": config.usageAutoInterval,
+    ...(capabilities.codexContextWindow
+      ? {
+          "codex-context-window":
+            config.clientType === "codex" ? (config.codexContextWindow ?? 0) : 0,
+        }
+      : {}),
   };
 }
 
@@ -105,6 +134,7 @@ export interface CcSwitchImportConfigsSnapshot {
    * the field — that one only accepts claude, codex and gemini.
    */
   clientTypes: CcSwitchClientType[] | null;
+  capabilities: CcSwitchImportCapabilities;
 }
 
 const configsFromResponse = (data: Record<string, unknown>) =>
@@ -121,13 +151,20 @@ export const ccSwitchImportConfigsApi = {
     return {
       configs: configsFromResponse(data),
       clientTypes: parseCcSwitchClientTypes(asRecord(data)?.["client-types"]),
+      capabilities: parseCcSwitchImportCapabilities(asRecord(data)?.capabilities),
     };
   },
 
-  async replace(configs: CcSwitchImportConfigListItem[]): Promise<void> {
+  /** Pass the capabilities from `snapshot()`, so only fields the backend stores are sent. */
+  async replace(
+    configs: CcSwitchImportConfigListItem[],
+    capabilities: CcSwitchImportCapabilities = NO_CC_SWITCH_IMPORT_CAPABILITIES,
+  ): Promise<void> {
     await apiClient.put(
       "/ccswitch-import-configs",
-      configs.map((config) => serializeCcSwitchImportConfig(createCcSwitchImportConfig(config))),
+      configs.map((config) =>
+        serializeCcSwitchImportConfig(createCcSwitchImportConfig(config), capabilities),
+      ),
     );
   },
 };

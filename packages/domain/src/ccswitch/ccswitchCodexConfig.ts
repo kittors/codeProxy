@@ -32,6 +32,14 @@ export function buildCcSwitchCodexConfigToml(input: {
   contextWindow: number | null;
   providerName: string;
   endpoint: string;
+  /**
+   * Render the provider table the way CC Switch v4.0.10 writes it into ~/.codex/config.toml
+   * rather than the way the link carries it (live/project/codex.rs): `auth.json` is kept for
+   * the official login, so the key goes into the table as `experimental_bearer_token`, and
+   * `requires_openai_auth` is decided at write time — true only when this computer is signed
+   * in to ChatGPT. `loginNote` explains that on a TOML comment line.
+   */
+  written?: { bearerToken: string; loginNote: string };
 }): string {
   const model = input.model.trim();
   const lines = [
@@ -50,7 +58,16 @@ export function buildCcSwitchCodexConfigToml(input: {
     `name = ${tomlString(input.providerName)}`,
     `base_url = ${tomlString(input.endpoint)}`,
     `wire_api = "responses"`,
-    "requires_openai_auth = true",
   );
+  if (input.written) {
+    lines.push(
+      `# ${input.written.loginNote}`,
+      "requires_openai_auth = false",
+      `experimental_bearer_token = ${tomlString(input.written.bearerToken)}`,
+    );
+  } else {
+    // CC Switch v4.0.9 and earlier rebuild the file from a template with this same value.
+    lines.push("requires_openai_auth = true");
+  }
   return lines.join("\n");
 }

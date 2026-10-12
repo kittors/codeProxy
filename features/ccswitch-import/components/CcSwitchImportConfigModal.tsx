@@ -45,6 +45,10 @@ const routeLabel = (routePath: string | undefined) => normalizeCcSwitchRoutePath
  *
  * `clientTypes` are the apps the backend accepts. An existing preset keeps its app: clients
  * already imported from it depend on its route and model names.
+ *
+ * Once a group's models arrive, a model selection that is still empty is filled: the main /
+ * default model becomes the admin's own pick when the group serves it (an existing preset's
+ * model counts as one), otherwise the app's usual first choice.
  */
 export function CcSwitchImportConfigModal({
   open,
@@ -54,6 +58,7 @@ export function CcSwitchImportConfigModal({
   channelGroupOptions,
   channelGroupsLoading,
   clientTypes,
+  codexContextWindowSupported,
   onClose,
   onSave,
 }: {
@@ -64,6 +69,8 @@ export function CcSwitchImportConfigModal({
   channelGroupOptions: CcSwitchChannelGroupOption[];
   channelGroupsLoading: boolean;
   clientTypes: readonly CcSwitchClientType[];
+  /** The backend stores a preset-level `codex-context-window`. */
+  codexContextWindowSupported: boolean;
   onClose: () => void;
   onSave: (value: ConfigDraft) => void;
 }) {
@@ -73,12 +80,15 @@ export function CcSwitchImportConfigModal({
   const [draft, setDraft] = useState<ConfigDraft>(value);
   // Set when the model selection should be refilled from the group once its models arrive.
   const [seedPending, setSeedPending] = useState(false);
+  // The main / default model the admin chose; a suggestion never replaces it.
+  const [pickedPrimary, setPickedPrimary] = useState("");
 
   useEffect(() => {
     if (!open) return;
     setDraft(value);
     setSeedPending(false);
-  }, [open, value]);
+    setPickedPrimary(mode === "edit" ? getPrimaryModel(value) : "");
+  }, [mode, open, value]);
 
   const selectedGroup = draft.allowedChannelGroups[0] ?? "";
   const savedGroup = value.allowedChannelGroups[0] ?? "";
@@ -91,9 +101,9 @@ export function CcSwitchImportConfigModal({
 
   useEffect(() => {
     if (!seedPending || !selectedGroup || modelsLoading || loadedGroup !== selectedGroup) return;
-    setDraft((current) => seedModels(current, groupModels));
+    setDraft((current) => seedModels(current, groupModels, pickedPrimary));
     setSeedPending(false);
-  }, [seedPending, selectedGroup, modelsLoading, loadedGroup, groupModels]);
+  }, [seedPending, selectedGroup, modelsLoading, loadedGroup, groupModels, pickedPrimary]);
 
   const primaryModel = getPrimaryModel(draft);
   const validation = useFormValidation(
@@ -172,7 +182,10 @@ export function CcSwitchImportConfigModal({
     const crossesClaude = (draft.clientType === "claude") !== (clientType === "claude");
     setDraft((current) => setClientType(current, clientType));
     // Claude Code tiers and the other apps' model lists do not carry over; start fresh.
-    if (crossesClaude && selectedGroup) setSeedPending(true);
+    if (crossesClaude) {
+      setPickedPrimary("");
+      if (selectedGroup) setSeedPending(true);
+    }
   };
 
   const submit = () => {
@@ -307,7 +320,9 @@ export function CcSwitchImportConfigModal({
               modelsLoading={modelsLoading}
               groupSelected={Boolean(selectedGroup)}
               primaryError={validation.error("primaryModel")}
+              codexContextWindowSupported={codexContextWindowSupported}
               onChange={(update) => setDraft(update)}
+              onPrimaryPicked={setPickedPrimary}
             />
           </form>
 

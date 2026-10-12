@@ -47,6 +47,7 @@ const quickImportConfigs = [
     "route-path": "/pro/cs_codex",
     "endpoint-path": "/v1",
     "usage-auto-interval": 60,
+    "codex-context-window": 400000,
   },
   {
     id: "claude-team",
@@ -179,6 +180,7 @@ describe("QuickImportTabContent", () => {
     expect(config.auth).toEqual({ OPENAI_API_KEY: "sk-lookup-key" });
     // The backend catalog's default effort for the default model, without the catalog itself.
     expect(config.config).toContain('model_reasoning_effort = "medium"');
+    expect(config.config).toContain("model_context_window = 400000");
     expect(config.config).not.toContain("model_catalog_json");
 
     await userEvent.click(within(opencodeSection).getByRole("button", { name: /team opencode/i }));
@@ -190,7 +192,7 @@ describe("QuickImportTabContent", () => {
     expect(opencode.searchParams.has("enabled")).toBe(false);
   });
 
-  test("links built from the session cache keep the Codex reasoning effort", async () => {
+  test("links built from the session cache keep the Codex reasoning effort and window", async () => {
     const openSpy = vi.spyOn(window, "open").mockReturnValue(null);
     const first = render(
       <ThemeProvider>
@@ -216,6 +218,7 @@ describe("QuickImportTabContent", () => {
     await waitFor(() => expect(openSpy).toHaveBeenCalled());
     const config = decodeConfigFromImportUrl(String(openSpy.mock.calls.at(-1)?.[0] ?? ""));
     expect(config.config).toContain('model_reasoning_effort = "medium"');
+    expect(config.config).toContain("model_context_window = 400000");
   });
 
   test("copies the selected quick import link without launching CC Switch", async () => {

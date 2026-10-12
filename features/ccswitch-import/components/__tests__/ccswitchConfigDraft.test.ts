@@ -14,7 +14,7 @@ import {
   setChannelGroup,
   setClaudeRoleModel,
   setClientType,
-  setDefaultContextWindow,
+  setCodexContextWindow,
   setDefaultModel,
   setRouteModels,
 } from "../ccswitchConfigDraft";
@@ -175,74 +175,68 @@ describe("other apps' models", () => {
     expect(getRouteModels(setRouteModels(identity, []))).toEqual(["kimi-k2"]);
   });
 
-  test("deleting the default alias keeps the default on the same model, context window included", () => {
+  test("deleting the default alias keeps the default on the same model", () => {
     const next = removeAliasMapping(legacyCodex(), "gpt-5.4");
     expect(next.defaultModel).toBe("deepseek-v4-flash");
+    // The deleted alias takes its old per-mapping window with it; nothing new is invented.
     expect(next.modelMappings).toContainEqual({
       requestModel: "deepseek-v4-flash",
       targetModel: "deepseek-v4-flash",
-      contextWindow: 128000,
     });
     expect(next.modelMappings.some((mapping) => mapping.requestModel === "gpt-5.4")).toBe(false);
   });
 
-  test("the Codex context window belongs to the default model", () => {
-    const draft = preset({
-      clientType: "codex",
-      defaultModel: "gpt-5.5",
-      modelMappings: [{ requestModel: "gpt-5.5", targetModel: "gpt-5.5" }],
-    });
-    const withWindow = setDefaultContextWindow(draft, "272000");
-    expect(withWindow.modelMappings[0]).toEqual({
-      requestModel: "gpt-5.5",
-      targetModel: "gpt-5.5",
-      contextWindow: 272000,
-    });
-    expect(setDefaultContextWindow(withWindow, "").modelMappings[0]).toEqual({
-      requestModel: "gpt-5.5",
-      targetModel: "gpt-5.5",
-    });
+  test("the Codex context window is the preset's own and leaves mappings alone", () => {
+    const draft = legacyCodex();
+    const withWindow = setCodexContextWindow(draft, "272000");
+    expect(withWindow.codexContextWindow).toBe(272000);
+    expect(withWindow.modelMappings).toBe(draft.modelMappings);
+    const cleared = setCodexContextWindow(withWindow, "");
+    expect(cleared).not.toHaveProperty("codexContextWindow");
+    expect(setCodexContextWindow(withWindow, "0")).not.toHaveProperty("codexContextWindow");
   });
 });
 
 describe("saving", () => {
-  test("never drops a request≠target mapping and keeps a context window only on the Codex default", () => {
+  test("never drops a request≠target mapping and keeps every mapping as stored", () => {
+    const mappings = [
+      { requestModel: "gpt-5.4", targetModel: "deepseek-v4-flash", contextWindow: 200000 },
+      { requestModel: "kimi-k2", targetModel: "kimi-k2", contextWindow: 128000 },
+      { requestModel: "gpt-5.5", targetModel: "deepseek-v4-pro", contextWindow: 128000 },
+    ];
     const before = preset({
       clientType: "codex",
       defaultModel: "gpt-5.4",
       endpointPath: "/openai",
-      modelMappings: [
-        { requestModel: "gpt-5.4", targetModel: "deepseek-v4-flash", contextWindow: 200000 },
-        { requestModel: "kimi-k2", targetModel: "kimi-k2", contextWindow: 128000 },
-        { requestModel: "gpt-5.5", targetModel: "deepseek-v4-pro", contextWindow: 128000 },
-      ],
+      codexContextWindow: 400000,
+      modelMappings: mappings,
     });
     const saved = prepareDraftForSave(before);
     expectAliasesKept(before, saved);
-    expect(saved.modelMappings).toEqual([
-      { requestModel: "gpt-5.4", targetModel: "deepseek-v4-flash", contextWindow: 200000 },
-      { requestModel: "kimi-k2", targetModel: "kimi-k2" },
-      { requestModel: "gpt-5.5", targetModel: "deepseek-v4-pro" },
-    ]);
+    // Per-mapping windows from earlier editors stay exactly as they were.
+    expect(saved.modelMappings).toEqual(mappings);
+    expect(saved.codexContextWindow).toBe(400000);
     // Older panels join endpoint-path onto the route when they build a link.
     expect(saved.endpointPath).toBe("/v1");
     expect(saved.routePath).toBe("/team/cs_saved1");
   });
 
-  test("puts the default model on the route and drops context windows outside Codex", () => {
-    const saved = prepareDraftForSave(
-      preset({
+  test("puts the default model on the route; only Codex keeps a preset context window", () => {
+    // A new preset switched away from Codex still carries the window it was given there.
+    const draft = {
+      ...preset({
         clientType: "opencode",
         defaultModel: "kimi-k2",
-        modelMappings: [
-          { requestModel: "qwen3.5-plus", targetModel: "qwen3.5-plus", contextWindow: 1 },
-        ],
+        modelMappings: [{ requestModel: "qwen3.5-plus", targetModel: "qwen3.5-plus" }],
       }),
-    );
+      codexContextWindow: 272000,
+    };
+    const saved = prepareDraftForSave(draft);
     expect(saved.modelMappings).toEqual([
       { requestModel: "qwen3.5-plus", targetModel: "qwen3.5-plus" },
       { requestModel: "kimi-k2", targetModel: "kimi-k2" },
     ]);
+    expect(saved).not.toHaveProperty("codexContextWindow");
   });
 
   test("Claude Code stores the main target as default-model", () => {
@@ -278,14 +272,55 @@ describe("group and app changes", () => {
     expect(setChannelGroup(moved, "team", before.routePath).routePath).toBe("/team/cs_saved1");
   });
 
-  test("seeding fills the route with every model and picks a default only when there is one", () => {
-    const empty = preset({ clientType: "codex", modelMappings: [] });
-    const many = seedModels(empty, ["a", "b"]);
-    expect(getRouteModels(many)).toEqual(["a", "b"]);
-    expect(many.defaultModel).toBe("");
-    expect(seedModels(empty, ["only"]).defaultModel).toBe("only");
-    const claude = seedModels(preset({ clientType: "claude", modelMappings: [] }), ["only"]);
-    expect(getPrimaryModel(claude)).toBe("only");
+  test("seeding fills the route with every model and picks the app's usual first choice", () => {
+    const codex = preset({ clientType: "codex", modelMappings: [] });
+    const codexModels = ["deepseek-v4-flash", "gpt-5", "gpt-5.3-codex", "gpt-5.5", "kimi-k2"];
+    const seeded = seedModels(codex, codexModels);
+    expect(getRouteModels(seeded)).toEqual(codexModels);
+    expect(seeded.defaultModel).toBe("gpt-5.5");
+    // Nothing on the list matches: no guess, the admin picks.
+    expect(seedModels(codex, ["deepseek-v4-flash", "kimi-k2"]).defaultModel).toBe("");
+    expect(seedModels(codex, ["only"]).defaultModel).toBe("only");
+
+    const gemini = seedModels(preset({ clientType: "gemini", modelMappings: [] }), [
+      "gemini-2.5-flash",
+      "gemini-2.5-pro",
+      "gemini-3-pro",
+    ]);
+    expect(gemini.defaultModel).toBe("gemini-3-pro");
+    // OpenCode, OpenClaw and Hermes never had a rule.
+    const opencode = seedModels(preset({ clientType: "opencode", modelMappings: [] }), [
+      "gpt-5.5",
+      "kimi-k2",
+    ]);
+    expect(opencode.defaultModel).toBe("");
+  });
+
+  test("seeding Claude Code picks Sonnet for the main model and leaves the tiers empty", () => {
+    const claude = seedModels(preset({ clientType: "claude", modelMappings: [] }), [
+      "claude-haiku-4-5",
+      "claude-opus-4-8",
+      "claude-sonnet-5",
+    ]);
+    expect(claude.modelMappings).toEqual([
+      { role: "main", requestModel: "claude-sonnet-5", targetModel: "claude-sonnet-5" },
+    ]);
+    expect(claude.defaultModel).toBe("claude-sonnet-5");
+  });
+
+  test("seeding keeps the admin's own pick and never replaces it with a suggestion", () => {
+    const codex = preset({ clientType: "codex", modelMappings: [] });
+    // The pick is served by the group: it wins over the usual first choice.
+    expect(seedModels(codex, ["gpt-5.5", "kimi-k2"], "KIMI-K2").defaultModel).toBe("kimi-k2");
+    // Not served: left for the admin rather than guessed.
+    expect(seedModels(codex, ["gpt-5.5", "qwen3.5-plus"], "kimi-k2").defaultModel).toBe("");
+    // A model already chosen is never touched.
+    const chosen = setDefaultModel(codex, "qwen3.5-plus");
+    expect(seedModels(chosen, ["gpt-5.5", "qwen3.5-plus"]).defaultModel).toBe("qwen3.5-plus");
+    const claude = setClaudeRoleModel(preset({ clientType: "claude" }), "main", "claude-opus-4-8");
+    expect(getPrimaryModel(seedModels(claude, ["claude-sonnet-5", "claude-opus-4-8"]))).toBe(
+      "claude-opus-4-8",
+    );
   });
 
   test("switching apps follows the default name and resets models across Claude Code", () => {

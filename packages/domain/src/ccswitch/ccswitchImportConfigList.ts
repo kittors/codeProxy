@@ -19,7 +19,10 @@ export interface CcSwitchModelMapping {
   role?: CcSwitchClaudeModelRole;
   requestModel: string;
   targetModel: string;
-  /** Codex: becomes `model_context_window` when this mapping is the default model. */
+  /**
+   * Per-model context window saved by earlier editors. Links no longer read it (the preset's
+   * `codexContextWindow` replaced it); it is kept as stored and never edited.
+   */
   contextWindow?: number;
 }
 
@@ -42,6 +45,11 @@ export interface CcSwitchImportConfigListItem {
    */
   endpointPath: string;
   usageAutoInterval: number;
+  /**
+   * Codex: the `model_context_window` the link writes into config.toml. Unset leaves the
+   * window to Codex. Stored by backends that report the `codex-context-window` capability.
+   */
+  codexContextWindow?: number;
   /**
    * Codex: each request model's default reasoning effort, lower-cased id → effort, read from
    * the catalog the backend generates on GET. Never saved back.
@@ -259,6 +267,11 @@ export function createCcSwitchImportConfig(
     input.clientType === "codex"
       ? normalizeReasoningEfforts(input.codexReasoningEfforts)
       : undefined;
+  // Only Codex reads a context window; the backend stores 0 for every other app.
+  const codexContextWindow =
+    input.clientType === "codex"
+      ? normalizeCcSwitchContextWindow(input.codexContextWindow)
+      : undefined;
 
   return {
     id: String(input.id ?? "").trim() || createConfigId(),
@@ -273,6 +286,7 @@ export function createCcSwitchImportConfig(
     routePath: normalizeCcSwitchRoutePath(input.routePath),
     endpointPath: normalizeCcSwitchRoutePath(input.endpointPath ?? client.endpointSuffix),
     usageAutoInterval: normalizeUsageAutoInterval(input.usageAutoInterval),
+    ...(codexContextWindow ? { codexContextWindow } : {}),
     ...(codexReasoningEfforts ? { codexReasoningEfforts } : {}),
   };
 }

@@ -184,7 +184,7 @@
     "config_default_model_hint": "Модель, которую {{client}} использует по умолчанию.",
     "config_route_models": "Доступные модели",
     "config_route_models_hint": "Модели, доступные через пресет; клиенты видят их в /v1/models. По умолчанию — всё, что обслуживает группа каналов.",
-    "config_route_models_placeholder": "Выберите модели",
+    "config_route_models_placeholder": "Все модели (по умолчанию)",
     "config_select_shown": "Выбрать показанные",
     "config_deselect_shown": "Снять выбор с показанных",
     "config_selected_count": "Выбрано: {{count}}",
@@ -204,7 +204,10 @@
     "config_table_more_models": "ещё: {{count}}",
     "config_alias_request_explain": "«Отправляется как» — имя, которое всё ещё запрашивают клиенты, импортированные ранее; маршрут обслуживает выбранную здесь модель.",
     "config_codex_context_window_placeholder": "например, 272000",
-    "preview_pending_group": "Выберите группу каналов, чтобы увидеть, что запишет CC Switch."
+    "preview_pending_group": "Выберите группу каналов, чтобы увидеть, что запишет CC Switch.",
+    "config_route_models_all": "Все модели (по умолчанию): {{count}}",
+    "preview_codex_login_note": "true, если на этом компьютере выполнен вход в ChatGPT",
+    "config_route_models_none": "Других моделей нет"
   },
   "title": {
     "main": "Панель администратора CliRelay",

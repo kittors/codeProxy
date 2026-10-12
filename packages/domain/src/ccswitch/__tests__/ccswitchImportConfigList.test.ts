@@ -64,6 +64,19 @@ describe("ccswitchImportConfigList", () => {
     expect(createCcSwitchImportConfig({ clientType: "claude" }).endpointPath).toBe("");
   });
 
+  test("keeps a positive context window on Codex presets only", () => {
+    expect(
+      createCcSwitchImportConfig({ clientType: "codex", codexContextWindow: 272000.4 })
+        .codexContextWindow,
+    ).toBe(272000);
+    expect(
+      createCcSwitchImportConfig({ clientType: "codex", codexContextWindow: 0 }),
+    ).not.toHaveProperty("codexContextWindow");
+    expect(
+      createCcSwitchImportConfig({ clientType: "opencode", codexContextWindow: 272000 }),
+    ).not.toHaveProperty("codexContextWindow");
+  });
+
   test("keeps only the default reasoning effort of the backend's Codex catalog", () => {
     expect(
       ccSwitchCodexReasoningEffortsFromCatalog({

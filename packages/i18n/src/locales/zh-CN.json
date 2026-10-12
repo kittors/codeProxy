@@ -3560,7 +3560,7 @@
     "config_default_model_hint": "导入后 {{client}} 默认使用的模型。",
     "config_route_models": "可用模型",
     "config_route_models_hint": "这条预设能访问的模型，客户端在 /v1/models 里看到的也是它们。默认是渠道分组提供的全部模型。",
-    "config_route_models_placeholder": "选择模型",
+    "config_route_models_placeholder": "全部模型（默认）",
     "config_select_shown": "选择当前结果",
     "config_deselect_shown": "清空当前结果",
     "config_selected_count": "已选 {{count}} 项",
@@ -3580,7 +3580,10 @@
     "config_table_more_models": "另 {{count}} 个",
     "config_alias_request_explain": "「请求名」是早先导入的客户端仍在使用的模型名，服务端会改写为这里选的模型。",
     "config_codex_context_window_placeholder": "如 272000",
-    "preview_pending_group": "选择渠道分组后，这里显示 CC Switch 导入后写入的内容。"
+    "preview_pending_group": "选择渠道分组后，这里显示 CC Switch 导入后写入的内容。",
+    "config_route_models_all": "全部 {{count}} 个模型（默认）",
+    "preview_codex_login_note": "本机已登录 ChatGPT 时为 true",
+    "config_route_models_none": "未选择其他模型"
   },
   "api_keys_page": {
     "title": "API 密钥管理",

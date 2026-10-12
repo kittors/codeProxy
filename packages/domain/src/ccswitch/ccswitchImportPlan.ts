@@ -118,9 +118,6 @@ export function resolveCcSwitchProviderName(
   return { name, adjustment: null };
 }
 
-const sameModel = (left: string, right: string) =>
-  left.trim().toLowerCase() === right.trim().toLowerCase();
-
 const roleRequestModel = (
   mappings: readonly CcSwitchModelMapping[],
   role: CcSwitchClaudeModelRole,
@@ -164,12 +161,10 @@ export function resolveCcSwitchImportPlan(input: CcSwitchImportPlanInput): CcSwi
 
   let codex: CcSwitchImportPlan["codex"] = null;
   if (config.clientType === "codex") {
-    const defaultMapping = model
-      ? config.modelMappings.find(
-          (mapping) => !mapping.role && sameModel(mapping.requestModel, model),
-        )
-      : undefined;
-    const contextWindow = defaultMapping?.contextWindow ?? null;
+    // Only the preset's own setting counts. Per-mapping windows saved by earlier editors were
+    // pre-filled defaults rather than choices, so they never reach the link.
+    const contextWindow =
+      config.codexContextWindow && config.codexContextWindow > 0 ? config.codexContextWindow : null;
     const reasoningEffort = resolveCcSwitchCodexReasoningEffort(
       model,
       config.codexReasoningEfforts,

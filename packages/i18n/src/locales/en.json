@@ -3250,7 +3250,7 @@
     "config_default_model_hint": "The model {{client}} uses by default.",
     "config_route_models": "Available models",
     "config_route_models_hint": "Models this preset can reach; clients see them on /v1/models. Starts with everything the channel group serves.",
-    "config_route_models_placeholder": "Select models",
+    "config_route_models_placeholder": "All models (default)",
     "config_select_shown": "Select shown",
     "config_deselect_shown": "Clear shown",
     "config_selected_count": "{{count}} selected",
@@ -3270,7 +3270,10 @@
     "config_table_more_models": "+{{count}} more",
     "config_alias_request_explain": "\"Sent as\" is the name clients imported earlier still request; the route serves the model picked here.",
     "config_codex_context_window_placeholder": "e.g. 272000",
-    "preview_pending_group": "Pick a channel group to see what CC Switch will write."
+    "preview_pending_group": "Pick a channel group to see what CC Switch will write.",
+    "config_route_models_all": "All {{count}} models (default)",
+    "preview_codex_login_note": "true when this computer is signed in to ChatGPT",
+    "config_route_models_none": "No other models"
   },
   "api_keys_page": {
     "title": "API Keys Management",

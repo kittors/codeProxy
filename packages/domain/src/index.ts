@@ -1,5 +1,6 @@
 export * from "./ccswitch/ccswitchClients";
 export * from "./ccswitch/ccswitchCodexConfig";
+export * from "./ccswitch/ccswitchDefaultModel";
 export * from "./ccswitch/ccswitchImport";
 export * from "./ccswitch/ccswitchImportConfigList";
 export * from "./ccswitch/ccswitchImportCompatibility";
