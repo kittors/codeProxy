@@ -1029,11 +1029,11 @@ describe("ApiKeysPage", () => {
     expect(parsed.searchParams.get("app")).toBe("codex");
     expect(parsed.searchParams.get("apiKey")).toBe("sk-group-1234567890");
     expect(parsed.searchParams.get("name")).toBe("Preset Codex");
-    expect(parsed.searchParams.get("endpoint")).toBe(
-      "http://localhost:3000/pro/cs_codex/openai/v2",
-    );
+    // A stored endpoint-path is not used: Codex always gets the route plus /v1.
+    expect(parsed.searchParams.get("endpoint")).toBe("http://localhost:3000/pro/cs_codex/v1");
     expect(parsed.searchParams.get("model")).toBe("gpt-5.4");
     expect(parsed.searchParams.get("usageAutoInterval")).toBe("45");
+    expect(parsed.searchParams.get("usageBaseUrl")).toBe("http://localhost:3000");
 
     openSpy.mockRestore();
   });
@@ -1105,9 +1105,7 @@ describe("ApiKeysPage", () => {
       expect(parsed.searchParams.get("app")).toBe("codex");
       expect(parsed.searchParams.get("apiKey")).toBe("sk-group-1234567890");
       expect(parsed.searchParams.get("name")).toBe("Preset Codex");
-      expect(parsed.searchParams.get("endpoint")).toBe(
-        "http://localhost:3000/pro/cs_codex/openai/v2",
-      );
+      expect(parsed.searchParams.get("endpoint")).toBe("http://localhost:3000/pro/cs_codex/v1");
       expect(parsed.searchParams.get("model")).toBe("gpt-5.4");
     } finally {
       Object.defineProperty(navigator, "clipboard", {
@@ -1117,7 +1115,7 @@ describe("ApiKeysPage", () => {
     }
   });
 
-  test("imports a saved Claude Code preset with auth field and model mappings", async () => {
+  test("imports a saved Claude Code preset with its tiers and without the dead auth field", async () => {
     const openSpy = vi.spyOn(window, "open").mockReturnValue(null);
     vi.spyOn(document, "hasFocus").mockReturnValue(false);
     state.entries = [
@@ -1190,7 +1188,8 @@ describe("ApiKeysPage", () => {
     expect(parsed.searchParams.get("haikuModel")).toBe("claude-haiku-4-5");
     expect(parsed.searchParams.get("sonnetModel")).toBe("claude-sonnet-4-5");
     expect(parsed.searchParams.get("opusModel")).toBe("claude-opus-4-1");
-    expect(parsed.searchParams.get("apiKeyField")).toBe("ANTHROPIC_AUTH_TOKEN");
+    // CC Switch always writes ANTHROPIC_AUTH_TOKEN and never read apiKeyField.
+    expect(parsed.searchParams.has("apiKeyField")).toBe(false);
 
     openSpy.mockRestore();
   });

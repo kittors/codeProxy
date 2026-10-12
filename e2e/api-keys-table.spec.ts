@@ -1017,8 +1017,6 @@ const decodeCodexConfigBlob = (url: string) => {
   return JSON.parse(new TextDecoder().decode(bytes)) as {
     auth: { OPENAI_API_KEY?: string };
     config: string;
-    apiFormat?: string;
-    modelCatalog?: { models: Array<Record<string, unknown>> };
   };
 };
 
@@ -1125,7 +1123,7 @@ const mockApiKeysApisForImport = async (page: Page) => {
   });
 };
 
-test("API Keys: import-to-CC-Switch opens a codex deep link with embedded model catalog", async ({
+test("API Keys: import-to-CC-Switch opens a codex deep link CC Switch reads in full", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1360, height: 980 });
@@ -1172,22 +1170,17 @@ test("API Keys: import-to-CC-Switch opens a codex deep link with embedded model 
 
   const parsed = new URL(openedUrl!);
   expect(parsed.searchParams.get("app")).toBe("codex");
-  expect(parsed.searchParams.get("apiFormat")).toBe("openai_responses");
+  expect(parsed.searchParams.get("model")).toBe("gpt-5.5");
+  // Responses is Codex's default format and CC Switch drops a linked model catalog,
+  // so neither travels.
+  expect(parsed.searchParams.has("apiFormat")).toBe(false);
   expect(parsed.searchParams.get("config")).toBeTruthy();
 
   const decoded = decodeCodexConfigBlob(openedUrl!);
-  expect(decoded.apiFormat).toBe("openai_responses");
+  expect(Object.keys(decoded)).toEqual(["auth", "config"]);
   expect(decoded.auth.OPENAI_API_KEY).toBe("sk-e2e-import-yyyyyyyyyyyyyyyyyyyy-imp");
-  expect(decoded.modelCatalog?.models).toBeTruthy();
-  expect(decoded.modelCatalog!.models.length).toBe(3);
-  expect(decoded.modelCatalog!.models[0]).toMatchObject({
-    slug: "gpt-5.5",
-    model: "gpt-5.5",
-    default_reasoning_level: "medium",
-  });
-  // The default model catalogs's default_reasoning_level for the selected
-  // model (gpt-5.5) should drive model_reasoning_effort (medium) instead of
-  // the old hardcoded "high".
+  // The backend catalog's default_reasoning_level for the selected model (gpt-5.5)
+  // drives model_reasoning_effort (medium) instead of the "high" fallback.
   expect(decoded.config).toContain(`model_reasoning_effort = "medium"`);
-  expect(decoded.config).toContain(`model_catalog_json = "cc-switch-model-catalog.json"`);
+  expect(decoded.config).not.toContain("model_catalog_json");
 });

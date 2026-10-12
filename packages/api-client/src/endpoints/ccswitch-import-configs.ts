@@ -1,9 +1,13 @@
 import { apiClient } from "../client/client";
-import { normalizeCcSwitchCodexInlineModelCatalog } from "@code-proxy/domain/ccswitch/ccswitchImport";
 import {
+  parseCcSwitchClientTypes,
+  isCcSwitchClientType,
+  type CcSwitchClientType,
+} from "@code-proxy/domain/ccswitch/ccswitchClients";
+import {
+  ccSwitchCodexReasoningEffortsFromCatalog,
   createCcSwitchImportConfig,
-  type CcSwitchImportCodexModelCatalog,
-  type CcSwitchModelMapping,
+  normalizeCcSwitchModelMappings,
   type CcSwitchImportConfigListItem,
 } from "@code-proxy/domain/ccswitch/ccswitchImportConfigList";
 
@@ -22,58 +26,17 @@ const normalizeNumber = (value: unknown): number | undefined => {
   return Number.isFinite(parsed) ? parsed : undefined;
 };
 
-const normalizePositiveNumber = (value: unknown): number | undefined => {
-  const parsed = normalizeNumber(value);
-  return parsed !== undefined && parsed > 0 ? Math.round(parsed) : undefined;
-};
-
 const normalizeStringList = (value: unknown): string[] => {
   if (!Array.isArray(value)) return [];
   return value.map((item) => (typeof item === "string" ? item.trim() : "")).filter(Boolean);
 };
 
-const normalizeModelMappings = (value: unknown): CcSwitchModelMapping[] => {
-  if (!Array.isArray(value)) return [];
-  return value
-    .map((entry): CcSwitchModelMapping | null => {
-      const record = asRecord(entry);
-      if (!record) return null;
-      const role = normalizeString(record.role)?.toLowerCase();
-      const normalizedRole =
-        role === "main" ||
-        role === "haiku" ||
-        role === "sonnet" ||
-        role === "opus" ||
-        role === "fable"
-          ? role
-          : undefined;
-      const targetModel = normalizeString(
-        record["target-model"] ?? record.targetModel ?? record.target ?? record.name,
-      );
-      const requestModel =
-        normalizeString(
-          record["request-model"] ?? record.requestModel ?? record.request ?? record.alias,
-        ) ?? (normalizedRole ? normalizedRole : targetModel);
-      if (!targetModel || !requestModel) return null;
-      return {
-        ...(normalizedRole ? { role: normalizedRole } : {}),
-        requestModel,
-        targetModel,
-        ...(normalizePositiveNumber(record["context-window"] ?? record.contextWindow) !== undefined
-          ? {
-              contextWindow: normalizePositiveNumber(
-                record["context-window"] ?? record.contextWindow,
-              ),
-            }
-          : {}),
-      };
-    })
-    .filter((item): item is CcSwitchModelMapping => Boolean(item));
-};
-
-const normalizeCodexModelCatalog = (value: unknown): CcSwitchImportCodexModelCatalog | undefined =>
-  normalizeCcSwitchCodexInlineModelCatalog(value);
-
+/**
+ * Backend rows → presets. Rows for apps this panel does not know are skipped. The
+ * backend's generated Codex catalog only contributes each model's default reasoning
+ * effort; `api-key-field` is not read at all (CC Switch always writes
+ * ANTHROPIC_AUTH_TOKEN and ignores the old `apiKeyField` link parameter).
+ */
 export function normalizeCcSwitchImportConfigs(raw: unknown): CcSwitchImportConfigListItem[] {
   if (!Array.isArray(raw)) return [];
 
@@ -81,10 +44,8 @@ export function normalizeCcSwitchImportConfigs(raw: unknown): CcSwitchImportConf
     .map((item) => {
       const record = asRecord(item);
       if (!record) return null;
-      const clientType = record["client-type"];
-      if (clientType !== "claude" && clientType !== "codex" && clientType !== "gemini") {
-        return null;
-      }
+      const clientType = normalizeString(record["client-type"])?.toLowerCase();
+      if (!isCcSwitchClientType(clientType)) return null;
 
       return createCcSwitchImportConfig({
         id: normalizeString(record.id),
@@ -92,67 +53,118 @@ export function normalizeCcSwitchImportConfigs(raw: unknown): CcSwitchImportConf
         providerName: normalizeString(record["provider-name"]),
         note: normalizeString(record.note),
         defaultModel: normalizeString(record["default-model"]),
-        modelMappings: normalizeModelMappings(record["model-mappings"] ?? record.modelMappings),
+        modelMappings: normalizeCcSwitchModelMappings(
+          record["model-mappings"] ?? record.modelMappings,
+        ),
         allowedChannelGroups: normalizeStringList(
           record["allowed-channel-groups"] ?? record.allowedChannelGroups,
         ),
         routePath: normalizeString(record["route-path"] ?? record.routePath),
         endpointPath: normalizeString(record["endpoint-path"]),
         usageAutoInterval: normalizeNumber(record["usage-auto-interval"]),
-        codexModelCatalogFilename: normalizeString(
-          record["codex-model-catalog-filename"] ?? record.codexModelCatalogFilename,
+        codexContextWindow: normalizeNumber(
+          record["codex-context-window"] ?? record.codexContextWindow,
         ),
-        codexModelCatalog: normalizeCodexModelCatalog(
-          record["codex-model-catalog"] ?? record.codexModelCatalog,
-        ),
-        apiKeyField:
-          record["api-key-field"] === "ANTHROPIC_AUTH_TOKEN"
-            ? "ANTHROPIC_AUTH_TOKEN"
-            : record["api-key-field"] === "ANTHROPIC_API_KEY"
-              ? "ANTHROPIC_API_KEY"
-              : undefined,
+        codexReasoningEfforts:
+          ccSwitchCodexReasoningEffortsFromCatalog(
+            record["codex-model-catalog"] ?? record.codexModelCatalog,
+          ) ??
+          // Rows the portal cached itself carry the efforts directly.
+          (asRecord(record.codexReasoningEfforts) as Record<string, string> | null) ??
+          undefined,
       });
     })
     .filter((item): item is CcSwitchImportConfigListItem => Boolean(item));
 }
 
-const serializeCcSwitchImportConfig = (config: CcSwitchImportConfigListItem) => ({
-  id: config.id,
-  "client-type": config.clientType,
-  "provider-name": config.providerName,
-  note: config.note,
-  "default-model": config.defaultModel,
-  "model-mappings": config.modelMappings.map((mapping) => ({
-    ...(mapping.role ? { role: mapping.role } : {}),
-    "request-model": mapping.requestModel,
-    "target-model": mapping.targetModel,
-    ...(mapping.contextWindow ? { "context-window": mapping.contextWindow } : {}),
-  })),
-  "allowed-channel-groups": [...config.allowedChannelGroups],
-  "route-path": config.routePath,
-  "endpoint-path": config.endpointPath,
-  "usage-auto-interval": config.usageAutoInterval,
-  ...(config.clientType === "claude" && config.apiKeyField
-    ? { "api-key-field": config.apiKeyField }
-    : {}),
-  ...(config.clientType === "codex" && config.codexModelCatalog
-    ? {
-        "codex-model-catalog-filename": config.codexModelCatalogFilename,
-        "codex-model-catalog": config.codexModelCatalog,
-      }
-    : {}),
-});
+/** What the backend says it supports beyond the base preset row. */
+export interface CcSwitchImportCapabilities {
+  /** Presets carry `codex-context-window`; older backends neither store nor return it. */
+  codexContextWindow: boolean;
+}
+
+export const NO_CC_SWITCH_IMPORT_CAPABILITIES: CcSwitchImportCapabilities = {
+  codexContextWindow: false,
+};
+
+/** Reads `capabilities` from GET; a backend without the field supports none of them. */
+export function parseCcSwitchImportCapabilities(value: unknown): CcSwitchImportCapabilities {
+  const record = asRecord(value);
+  return { codexContextWindow: record?.["codex-context-window"] === true };
+}
+
+/**
+ * Preset → backend row. The Codex catalog is never sent: the backend regenerates it on
+ * every GET and drops it on PUT. `codex-context-window` only goes to a backend that reported
+ * the capability (0 means "not set", and is what every non-Codex row carries).
+ */
+export function serializeCcSwitchImportConfig(
+  config: CcSwitchImportConfigListItem,
+  capabilities: CcSwitchImportCapabilities = NO_CC_SWITCH_IMPORT_CAPABILITIES,
+) {
+  return {
+    id: config.id,
+    "client-type": config.clientType,
+    "provider-name": config.providerName,
+    note: config.note,
+    "default-model": config.defaultModel,
+    "model-mappings": config.modelMappings.map((mapping) => ({
+      ...(mapping.role ? { role: mapping.role } : {}),
+      "request-model": mapping.requestModel,
+      "target-model": mapping.targetModel,
+      ...(mapping.contextWindow ? { "context-window": mapping.contextWindow } : {}),
+    })),
+    "allowed-channel-groups": [...config.allowedChannelGroups],
+    "route-path": config.routePath,
+    "endpoint-path": config.endpointPath,
+    "usage-auto-interval": config.usageAutoInterval,
+    ...(capabilities.codexContextWindow
+      ? {
+          "codex-context-window":
+            config.clientType === "codex" ? (config.codexContextWindow ?? 0) : 0,
+        }
+      : {}),
+  };
+}
+
+export interface CcSwitchImportConfigsSnapshot {
+  configs: CcSwitchImportConfigListItem[];
+  /**
+   * The apps the backend accepts (`client-types`), or null for a backend that predates
+   * the field — that one only accepts claude, codex and gemini.
+   */
+  clientTypes: CcSwitchClientType[] | null;
+  capabilities: CcSwitchImportCapabilities;
+}
+
+const configsFromResponse = (data: Record<string, unknown>) =>
+  normalizeCcSwitchImportConfigs(data["ccswitch-import-configs"] ?? data.items ?? data);
 
 export const ccSwitchImportConfigsApi = {
   async list(): Promise<CcSwitchImportConfigListItem[]> {
     const data = await apiClient.get<Record<string, unknown>>("/ccswitch-import-configs");
-    return normalizeCcSwitchImportConfigs(data["ccswitch-import-configs"] ?? data.items ?? data);
+    return configsFromResponse(data);
   },
 
-  async replace(configs: CcSwitchImportConfigListItem[]): Promise<void> {
+  async snapshot(): Promise<CcSwitchImportConfigsSnapshot> {
+    const data = await apiClient.get<Record<string, unknown>>("/ccswitch-import-configs");
+    return {
+      configs: configsFromResponse(data),
+      clientTypes: parseCcSwitchClientTypes(asRecord(data)?.["client-types"]),
+      capabilities: parseCcSwitchImportCapabilities(asRecord(data)?.capabilities),
+    };
+  },
+
+  /** Pass the capabilities from `snapshot()`, so only fields the backend stores are sent. */
+  async replace(
+    configs: CcSwitchImportConfigListItem[],
+    capabilities: CcSwitchImportCapabilities = NO_CC_SWITCH_IMPORT_CAPABILITIES,
+  ): Promise<void> {
     await apiClient.put(
       "/ccswitch-import-configs",
-      configs.map((config) => serializeCcSwitchImportConfig(createCcSwitchImportConfig(config))),
+      configs.map((config) =>
+        serializeCcSwitchImportConfig(createCcSwitchImportConfig(config), capabilities),
+      ),
     );
   },
 };
