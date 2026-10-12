@@ -590,7 +590,7 @@ export function ProvidersPage() {
 
   const loadProxyPool = useCallback(async () => {
     try {
-      setProxyPoolEntries(await proxiesApi.list());
+      setProxyPoolEntries(await proxiesApi.listSelectable());
     } catch {
       setProxyPoolEntries([]);
     }

@@ -220,12 +220,33 @@ export interface AuthFileItem extends TagDisplayFields {
   codex_convergence_mode?: "off" | "device" | "session" | "full" | "";
   /** Codex service_tier policy override: "default", "pass", "priority", "flex", "drop", or unset. */
   codex_service_tier?: "default" | "pass" | "priority" | "flex" | "drop" | "";
+  /**
+   * 系统租户视角：平台把这个账号共享给了谁（未共享时没有），原样 `{all, tenant_ids}`，
+   * 读的时候用 normalizeResourceSharing。
+   */
+  sharing?: { all?: boolean; tenant_ids?: string[] } | null;
+  /**
+   * 系统租户视角：还各自持有同一上游账号副本凭据的租户。副本和共享凭据每次刷新都会让对方的
+   * refresh token 失效，应该删掉副本改用共享。
+   */
+  tenant_copies?: { id: string; name: string }[];
+  /** 非系统租户视角：这个自有账号与某个平台共享账号是同一上游账号。 */
+  duplicates_shared?: boolean;
+  /** shared_files 里的条目恒为 true：平台共享给本租户的只读账号。 */
+  shared?: boolean;
   [key: string]: unknown;
 }
 
 export interface AuthFilesResponse {
   files: AuthFileItem[];
   total?: number;
+  /**
+   * 非系统租户视角：平台共享给本租户的账号（只读摘要，没有 path、token 等）。
+   * 旧后端、系统租户都没有这个字段。
+   */
+  shared_files?: AuthFileItem[];
+  /** 平台共享能力；旧后端没有这个字段，此时所有共享界面都要隐藏。 */
+  sharing?: { supported?: boolean; manageable?: boolean };
 }
 
 export interface UsageDetail {

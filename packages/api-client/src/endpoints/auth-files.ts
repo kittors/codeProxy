@@ -1,6 +1,45 @@
 import { apiClient } from "../client/client";
-import type { AuthFilesResponse, OAuthModelAliasEntry } from "../dto/types";
+import type { AuthFileItem, AuthFilesResponse, OAuthModelAliasEntry } from "../dto/types";
 import { normalizeOauthExcludedModels, normalizeOauthModelAlias } from "./helpers";
+import {
+  normalizeResourceSharing,
+  normalizeSharingCapability,
+  toSharingRequestBody,
+  type ResourceSharing,
+  type ResourceSharingCapability,
+  type ResourceSharingInput,
+} from "./resource-sharing";
+
+export interface AuthFilesSharingView {
+  sharing: ResourceSharingCapability;
+  /** 平台共享给本租户的只读账号；不支持共享时为空。 */
+  sharedFiles: AuthFileItem[];
+}
+
+/**
+ * 从 GET /auth-files 的响应里取出共享相关的部分。`files` 仍是本租户自己的账号、契约不变；
+ * 后端不支持共享（旧后端没有 sharing 字段）时 sharedFiles 一律为空，界面整体降级。
+ */
+export const readAuthFilesSharing = (
+  response: Partial<AuthFilesResponse> | null | undefined,
+): AuthFilesSharingView => {
+  const sharing = normalizeSharingCapability(response?.sharing);
+  const sharedFiles =
+    sharing.supported && Array.isArray(response?.shared_files)
+      ? response.shared_files
+          .filter((file) => Boolean(file) && typeof file.name === "string" && file.name.trim() !== "")
+          .map((file) => ({ ...file, shared: true }))
+      : [];
+  return { sharing, sharedFiles };
+};
+
+/** 账号的共享设置（只有系统租户视角下的自有账号才会有）。 */
+export const readAuthFileSharing = (file: Pick<AuthFileItem, "sharing">): ResourceSharing | null =>
+  normalizeResourceSharing(file.sharing);
+
+/** PUT /auth-files/sharing 用的是账号 ID（后端 auth.ID）；没有 ID 的旧条目退回文件名。 */
+export const authFileSharingId = (file: Pick<AuthFileItem, "id" | "name">): string =>
+  (typeof file.id === "string" && file.id.trim()) || file.name;
 
 export const authFilesApi = {
   list: (options?: { signal?: AbortSignal }): Promise<AuthFilesResponse> => {
@@ -171,5 +210,22 @@ export const authFilesApi = {
 
   saveWarmupPolicy: async (policy: Record<string, unknown>): Promise<void> => {
     await apiClient.post("/auth-files/warmup/policies", policy);
+  },
+
+  /**
+   * 把系统租户的账号共享给租户（平台管理员、系统租户视角，可批量）；all 与 tenantIds 都为空表示
+   * 取消共享。ids 只能是系统租户自己的账号 ID，否则后端回 404。
+   */
+  updateSharing: async (
+    input: ResourceSharingInput & { ids: string[] },
+  ): Promise<{ ids: string[]; sharing: ResourceSharing | null }> => {
+    const data = await apiClient.put<{ ids?: unknown; sharing?: unknown }>("/auth-files/sharing", {
+      ids: input.ids,
+      ...toSharingRequestBody(input),
+    });
+    const ids = Array.isArray(data?.ids)
+      ? data.ids.filter((id): id is string => typeof id === "string")
+      : input.ids;
+    return { ids, sharing: normalizeResourceSharing(data?.sharing) };
   },
 };

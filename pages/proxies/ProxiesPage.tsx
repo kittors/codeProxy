@@ -1,45 +1,40 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CheckCircle2, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { ArrowRightLeft, CheckCircle2, Pencil, Plus, RefreshCw, Share2, Trash2 } from "lucide-react";
+import {
+  NO_SHARING_CAPABILITY,
+  type ResourceSharingCapability,
+} from "@code-proxy/api-client/endpoints/resource-sharing";
 import {
   proxiesApi,
+  proxyIdKey,
   type ProxyCheckResult,
   type ProxyPoolEntry,
+  type SharedProxyEntry,
 } from "@code-proxy/api-client/endpoints/proxies";
-import { Button, COLUMN_WIDTH } from "@code-proxy/ui";
+import { Button, Callout, COLUMN_WIDTH } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
 import { ConfirmModal } from "@code-proxy/ui";
-import { HoverTooltip } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
 import { DataTable, TABLE_ROW_ACTIONS_COLUMN, type DataTableColumn } from "@code-proxy/ui";
 import {
   emptyProxyDraft,
   proxyEndpoint,
-  proxyLatencyTone,
   proxyProtocol,
   readCachedProxyCheckState,
   slugifyProxyID,
   uniqueProxyID,
   validateProxyDraft,
-  type ProxyCheckStateEntry,
   writeCachedProxyCheckState,
   type ProxyCheckState,
-  type ProxyLatencyTone,
 } from "@features/proxy-pool/proxy-utils";
+import { SharingNoticeBadge } from "@features/resource-sharing";
 import { ProxyFormModal, type ProxyFormField } from "./ProxyFormModal";
-
-/**
- * 延迟分档。简约风格只用语义色：快是绿、慢是琥珀、失败是红；中等延迟（300ms–1s）属于正常范围，
- * 中性标签 + 数字就够了。多彩风格下中等叠回琥珀、慢叠回橙色，每一档都有自己的颜色。
- */
-const latencyToneClasses: Record<ProxyLatencyTone, string> = {
-  none: "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]",
-  fast: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
-  medium:
-    "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07] colorful:bg-amber-50 colorful:text-amber-700 colorful:dark:bg-amber-950/30 colorful:dark:text-amber-200",
-  slow: "bg-amber-500/10 text-amber-700 dark:text-amber-300 colorful:bg-orange-50 colorful:text-orange-700 colorful:dark:bg-orange-950/30 colorful:dark:text-orange-200",
-  failed: "bg-rose-500/10 text-rose-700 dark:text-rose-300",
-};
+import { ProxyLatencyCell } from "./ProxyLatencyCell";
+import { ProxySharingCell } from "./ProxySharingCell";
+import { ProxySharingDialogs } from "./ProxySharingDialogs";
+import { SharedProxiesSection } from "./SharedProxiesSection";
+import { useProxySharing } from "./useProxySharing";
 
 export function ProxiesPage() {
   const { t } = useTranslation();
@@ -53,10 +48,20 @@ export function ProxiesPage() {
   const [deleteTarget, setDeleteTarget] = useState<ProxyPoolEntry | null>(null);
   const [formError, setFormError] = useState<ProxyFormField | null>(null);
   const [checkState, setCheckState] = useState<ProxyCheckState>(() => readCachedProxyCheckState());
+  // 平台共享（租户视角）：只读的共享代理，以及自有代理里覆盖了共享条目、可以改用共享版本的那条。
+  const [sharedEntries, setSharedEntries] = useState<SharedProxyEntry[]>([]);
+  const [sharingCapability, setSharingCapability] =
+    useState<ResourceSharingCapability>(NO_SHARING_CAPABILITY);
+  const [switchTarget, setSwitchTarget] = useState<ProxyPoolEntry | null>(null);
 
   const sortedEntries = useMemo(
     () => [...entries].sort((a, b) => a.name.localeCompare(b.name)),
     [entries],
+  );
+  const overriddenSharedKeys = useMemo(
+    () =>
+      new Set(sharedEntries.filter((entry) => entry.overridden).map((entry) => proxyIdKey(entry.id))),
+    [sharedEntries],
   );
 
   const storeCheckResult = useCallback((id: string, result: ProxyCheckResult) => {
@@ -67,25 +72,26 @@ export function ProxiesPage() {
     });
   }, []);
 
+  // 按 ID 在服务端检测：自有代理和平台共享代理都一样（共享代理的地址不下发到面板）。
   const refreshCheckResults = useCallback(
-    async (items: ProxyPoolEntry[]) => {
-      if (!items.length) return;
+    async (ids: string[]) => {
+      if (!ids.length) return;
 
       setCheckState((prev) => {
         const next = { ...prev };
-        for (const entry of items) {
-          next[entry.id] = { ...next[entry.id], checking: true };
+        for (const id of ids) {
+          next[id] = { ...next[id], checking: true };
         }
         return next;
       });
 
       await Promise.all(
-        items.map(async (entry) => {
+        ids.map(async (id) => {
           try {
-            const result = await proxiesApi.check({ id: entry.id });
-            storeCheckResult(entry.id, result);
+            const result = await proxiesApi.check({ id });
+            storeCheckResult(id, result);
           } catch (error) {
-            storeCheckResult(entry.id, {
+            storeCheckResult(id, {
               ok: false,
               message: error instanceof Error ? error.message : t("common.error"),
             });
@@ -99,9 +105,15 @@ export function ProxiesPage() {
   const loadEntries = useCallback(async () => {
     setLoading(true);
     try {
-      const nextEntries = await proxiesApi.list();
-      setEntries(nextEntries);
-      void refreshCheckResults(nextEntries);
+      const listing = await proxiesApi.listWithSharing();
+      setEntries(listing.items);
+      setSharedEntries(listing.sharedItems);
+      setSharingCapability(listing.sharing);
+      // 被本租户同 ID 代理覆盖的共享条目不测：按 ID 检测测到的会是自有那条。
+      void refreshCheckResults([
+        ...listing.items.map((entry) => entry.id),
+        ...listing.sharedItems.filter((entry) => !entry.overridden).map((entry) => entry.id),
+      ]);
     } catch (error) {
       notify({
         type: "error",
@@ -168,12 +180,13 @@ export function ProxiesPage() {
           writeCachedProxyCheckState(next);
           return next;
         });
-        void refreshCheckResults([normalized]);
+        void refreshCheckResults([normalized.id]);
       } else {
+        // 整表替换只提交自有条目：平台共享的代理不在 entries 里，混进来就会被复制成本租户的一份。
         const nextEntries = [...entries, normalized];
         await proxiesApi.saveAll(nextEntries);
         setEntries(nextEntries);
-        void refreshCheckResults([normalized]);
+        void refreshCheckResults([normalized.id]);
       }
       notify({ type: "success", message: t("proxies.saved") });
       closeModal();
@@ -187,8 +200,10 @@ export function ProxiesPage() {
     }
   };
 
-  const deleteEntry = useCallback(
-    async (id: string) => {
+  // 从本租户的代理池里删掉一条自有代理（整表替换，只提交自有条目）。成功返回 true，失败时
+  // 弹窗保持打开。删除和「改用平台共享」都走这里，区别只在提示文案。
+  const removeOwnEntry = useCallback(
+    async (id: string, successMessage: string) => {
       const nextEntries = entries.filter((entry) => entry.id !== id);
       setDeleting(true);
       try {
@@ -200,13 +215,14 @@ export function ProxiesPage() {
           writeCachedProxyCheckState(next);
           return next;
         });
-        setDeleteTarget(null);
-        notify({ type: "success", message: t("proxies.deleted") });
+        notify({ type: "success", message: successMessage });
+        return true;
       } catch (error) {
         notify({
           type: "error",
           message: error instanceof Error ? error.message : t("common.error"),
         });
+        return false;
       } finally {
         setDeleting(false);
       }
@@ -215,53 +231,27 @@ export function ProxiesPage() {
   );
 
   const checkEntry = useCallback(
-    async (entry: ProxyPoolEntry) => {
-      await refreshCheckResults([entry]);
+    async (entry: { id: string }) => {
+      await refreshCheckResults([entry.id]);
     },
     [refreshCheckResults],
   );
-
-  const formatCheckBadgeLabel = useCallback(
-    (result?: ProxyCheckStateEntry) => {
-      if (!result || typeof result.ok !== "boolean") return "";
-      if (result.ok) {
-        return typeof result.latencyMs === "number"
-          ? `${result.latencyMs} ms`
-          : t("proxies.latency_unknown");
-      }
-      if (typeof result.statusCode === "number" && result.statusCode > 0) {
-        return `HTTP ${result.statusCode}`;
-      }
-      return t("proxies.check_failed");
-    },
-    [t],
+  const checkSharedEntry = useCallback(
+    (entry: SharedProxyEntry) => void checkEntry(entry),
+    [checkEntry],
   );
 
-  const formatCheckTooltip = useCallback(
-    (result?: ProxyCheckStateEntry) => {
-      if (!result || typeof result.ok !== "boolean") return "";
-
-      const lines = [
-        `${t("proxies.tooltip_status")}: ${
-          result.ok ? t("proxies.check_ok") : t("proxies.check_failed")
-        }`,
-        `${t("proxies.tooltip_target")}: ${t("proxies.tooltip_target_server")}`,
-      ];
-
-      if (typeof result.latencyMs === "number") {
-        lines.push(`${t("proxies.tooltip_latency")}: ${result.latencyMs} ms`);
-      }
-      if (typeof result.statusCode === "number" && result.statusCode > 0) {
-        lines.push(`${t("proxies.tooltip_http_status")}: ${result.statusCode}`);
-      }
-      if (result.message) {
-        lines.push(`${t("proxies.tooltip_error")}: ${result.message}`);
-      }
-
-      return lines.join("\n");
-    },
-    [t],
-  );
+  const proxySharing = useProxySharing({ capability: sharingCapability, reload: loadEntries });
+  const { manageable: sharingManageable, openAdopt, openSharing } = proxySharing;
+  const sharingTenantNames = proxySharing.tenants.names;
+  // 只有系统租户的条目会带共享信息；非平台管理员也能看到共享状态，但没有任何编辑入口。
+  const showSharingColumn =
+    sharingCapability.supported &&
+    (sharingManageable || entries.some((entry) => entry.sharing || entry.overriddenBy));
+  const switchSharedEntry = switchTarget
+    ? sharedEntries.find((entry) => proxyIdKey(entry.id) === proxyIdKey(switchTarget.id))
+    : undefined;
+  const switchBlocked = switchSharedEntry ? !switchSharedEntry.enabled : false;
 
   const columns = useMemo<DataTableColumn<ProxyPoolEntry>[]>(
     () => [
@@ -271,7 +261,16 @@ export function ProxiesPage() {
         width: COLUMN_WIDTH.badgeGroup,
         render: (entry) => (
           <div className="min-w-0">
-            <p className="truncate font-semibold text-ink">{entry.name}</p>
+            <div className="flex min-w-0 items-center gap-1.5">
+              <p className="truncate font-semibold text-ink">{entry.name}</p>
+              {overriddenSharedKeys.has(proxyIdKey(entry.id)) ? (
+                <SharingNoticeBadge
+                  label={t("proxies.overrides_shared_badge")}
+                  tooltip={t("proxies.overrides_shared_tooltip")}
+                  testId="proxy-overrides-shared"
+                />
+              ) : null}
+            </div>
             <p className="mt-1 truncate font-mono text-xs text-ink-3">
               {entry.id}
             </p>
@@ -297,38 +296,24 @@ export function ProxiesPage() {
         key: "status",
         label: t("proxies.latency"),
         width: COLUMN_WIDTH.badgeStacked,
-        render: (entry) => {
-          const result = checkState[entry.id];
-          const hasCheckResult = typeof result?.ok === "boolean";
-          if (!result || !hasCheckResult) {
-            return (
-              <span className="text-xs text-ink-3">
-                {result?.checking ? t("common.loading_ellipsis") : "--"}
-              </span>
-            );
-          }
-          const tone = proxyLatencyTone(result);
-          const badgeLabel = formatCheckBadgeLabel(result);
-          const tooltipContent = formatCheckTooltip(result);
-          return (
-            <HoverTooltip
-              content={tooltipContent}
-              disabled={!tooltipContent}
-              className="max-w-full"
-            >
-              <span
-                data-latency-tone={tone}
-                className={[
-                  "inline-flex max-w-full rounded-full px-2 py-0.5 text-xs font-semibold",
-                  latencyToneClasses[tone],
-                ].join(" ")}
-              >
-                <span className="truncate">{badgeLabel}</span>
-              </span>
-            </HoverTooltip>
-          );
-        },
+        render: (entry) => <ProxyLatencyCell result={checkState[entry.id]} />,
       },
+      ...(showSharingColumn
+        ? [
+            {
+              key: "sharing",
+              label: t("resource_sharing.column"),
+              width: COLUMN_WIDTH.name,
+              render: (entry: ProxyPoolEntry) => (
+                <ProxySharingCell
+                  entry={entry}
+                  tenantNames={sharingTenantNames}
+                  onAdopt={sharingManageable ? openAdopt : undefined}
+                />
+              ),
+            },
+          ]
+        : []),
       {
         key: "description",
         label: t("proxies.remark_label"),
@@ -362,6 +347,26 @@ export function ProxiesPage() {
                   <CheckCircle2 size={14} />
                 )}
               </Button>
+              {sharingManageable ? (
+                <Button
+                  aria-label={t("proxies.sharing_label", { name: entry.name })}
+                  title={t("proxies.sharing_label", { name: entry.name })}
+                  onClick={() => openSharing(entry)}
+                  size="xs"
+                >
+                  <Share2 size={14} />
+                </Button>
+              ) : null}
+              {overriddenSharedKeys.has(proxyIdKey(entry.id)) ? (
+                <Button
+                  aria-label={t("proxies.switch_label", { name: entry.name })}
+                  title={t("proxies.switch_label", { name: entry.name })}
+                  onClick={() => setSwitchTarget(entry)}
+                  size="xs"
+                >
+                  <ArrowRightLeft size={14} />
+                </Button>
+              ) : null}
               <Button
                 aria-label={t("proxies.edit_label", { name: entry.name })}
                 title={t("proxies.edit_label", { name: entry.name })}
@@ -384,12 +389,34 @@ export function ProxiesPage() {
         },
       },
     ],
-    [checkEntry, checkState, deleteEntry, formatCheckBadgeLabel, formatCheckTooltip, openEdit, t],
+    [
+      checkEntry,
+      checkState,
+      openAdopt,
+      openEdit,
+      openSharing,
+      overriddenSharedKeys,
+      sharingManageable,
+      sharingTenantNames,
+      showSharingColumn,
+      t,
+    ],
   );
 
 
+  // 有平台共享分区时改成随内容流动：两张表都按内容定高、整页滚动。钉满一屏的写法会让自有表
+  // 吃掉所有剩余高度，几条自有代理下面空出一大片，共享分区却被挤到最底下。
+  const hasSharedSection = sharedEntries.length > 0;
+
   return (
-    <div data-page-fill="always" className="flex min-h-0 flex-1 flex-col gap-5 md:overflow-hidden">
+    <div
+      data-page-fill={hasSharedSection ? undefined : "always"}
+      className={
+        hasSharedSection
+          ? "flex flex-col gap-5"
+          : "flex min-h-0 flex-1 flex-col gap-5 md:overflow-hidden"
+      }
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 className="text-2xl font-semibold tracking-tight text-ink">{t("proxies.title")}</h2>
@@ -412,8 +439,12 @@ export function ProxiesPage() {
       {/* flat：外壳内容区就是这一页的面板，表格直接落在上面，不再套一张卡片。 */}
       <Card
         flat
-        className="overflow-hidden md:flex md:min-h-0 md:flex-1 md:flex-col"
-        bodyClassName="md:flex md:min-h-0 md:flex-1 md:flex-col"
+        className={
+          hasSharedSection
+            ? "overflow-hidden"
+            : "overflow-hidden md:flex md:min-h-0 md:flex-1 md:flex-col"
+        }
+        bodyClassName={hasSharedSection ? undefined : "md:flex md:min-h-0 md:flex-1 md:flex-col"}
         loading={loading && entries.length === 0}
       >
         <DataTable<ProxyPoolEntry>
@@ -422,14 +453,25 @@ export function ProxiesPage() {
           columns={columns}
           rowKey={(entry) => entry.id}
           rowHeight={56}
-          height="h-auto max-h-[70vh] md:max-h-none md:flex-1"
-          minHeight="min-h-[240px] md:min-h-0"
+          height={
+            hasSharedSection ? "h-auto max-h-[60vh]" : "h-auto max-h-[70vh] md:max-h-none md:flex-1"
+          }
+          minHeight={hasSharedSection ? "min-h-0" : "min-h-[240px] md:min-h-0"}
           minWidth="min-w-[960px]"
           caption={t("proxies.table_caption")}
           emptyText={t("proxies.empty_title")}
           showAllLoadedMessage={false}
         />
       </Card>
+
+      {/* 租户视角：平台共享给本租户的代理，只读；和上面同为页面级分区，不再套卡片。 */}
+      {hasSharedSection ? (
+        <SharedProxiesSection
+          entries={sharedEntries}
+          checkState={checkState}
+          onCheck={checkSharedEntry}
+        />
+      ) : null}
 
       <ProxyFormModal
         open={editingID !== null}
@@ -447,26 +489,72 @@ export function ProxiesPage() {
         open={deleteTarget !== null}
         title={t("proxies.delete_title")}
         description={t("proxies.delete_lead")}
-        subject={
-          deleteTarget ? (
-            <span className="flex min-w-0 items-center justify-between gap-3">
-              <span className="truncate font-medium">{deleteTarget.name}</span>
-              <span className="shrink-0 font-mono text-xs text-ink-3">
-                {proxyProtocol(deleteTarget.maskedUrl || deleteTarget.url)} ·{" "}
-                {proxyEndpoint(deleteTarget)}
-              </span>
-            </span>
-          ) : null
-        }
-        consequences={[t("proxies.delete_consequence_bindings")]}
+        subject={deleteTarget ? <ProxySubject entry={deleteTarget} /> : null}
+        consequences={[
+          deleteTarget && overriddenSharedKeys.has(proxyIdKey(deleteTarget.id))
+            ? t("proxies.delete_consequence_shared")
+            : t("proxies.delete_consequence_bindings"),
+          // 系统租户删除已共享的代理：被授权租户里选用它的账号也一起失去它。
+          ...(deleteTarget?.sharing ? [t("proxies.delete_consequence_granted")] : []),
+        ]}
         confirmText={t("proxies.delete_confirm")}
         busy={deleting}
         onClose={() => setDeleteTarget(null)}
         onConfirm={() => {
           if (!deleteTarget) return;
-          void deleteEntry(deleteTarget.id);
+          void removeOwnEntry(deleteTarget.id, t("proxies.deleted")).then((removed) => {
+            if (removed) setDeleteTarget(null);
+          });
         }}
       />
+
+      {/* 租户视角：删掉覆盖了平台共享代理的那条自有代理，账号按 ID 引用，自动改用共享版本。 */}
+      <ConfirmModal
+        open={switchTarget !== null}
+        variant="warning"
+        icon={<ArrowRightLeft />}
+        title={t("proxies.switch_title", { name: switchTarget?.name ?? "" })}
+        description={t("proxies.switch_lead")}
+        subject={switchTarget ? <ProxySubject entry={switchTarget} /> : null}
+        consequences={[
+          t("proxies.switch_consequence_delete"),
+          t("proxies.switch_consequence_accounts"),
+        ]}
+        confirmText={t("proxies.switch_confirm")}
+        confirmDisabled={switchBlocked}
+        busy={deleting}
+        onClose={() => setSwitchTarget(null)}
+        onConfirm={() => {
+          if (!switchTarget) return;
+          const target = switchTarget;
+          void removeOwnEntry(target.id, t("proxies.switch_done", { name: target.name })).then(
+            (removed) => {
+              if (!removed) return;
+              setSwitchTarget(null);
+              // 共享分区的「已被覆盖」标记与延迟检测以服务端为准，重新拉一次。
+              void loadEntries();
+            },
+          );
+        }}
+      >
+        {switchBlocked ? (
+          <Callout tone="warning">{t("proxies.switch_blocked_disabled")}</Callout>
+        ) : null}
+      </ConfirmModal>
+
+      <ProxySharingDialogs sharing={proxySharing} />
     </div>
+  );
+}
+
+/** 确认框里的对象卡片：名称 + 协议 · 主机（不显示账号密码）。 */
+function ProxySubject({ entry }: { entry: ProxyPoolEntry }) {
+  return (
+    <span className="flex min-w-0 items-center justify-between gap-3">
+      <span className="truncate font-medium">{entry.name}</span>
+      <span className="shrink-0 font-mono text-xs text-ink-3">
+        {proxyProtocol(entry.maskedUrl || entry.url)} · {proxyEndpoint(entry)}
+      </span>
+    </span>
   );
 }
