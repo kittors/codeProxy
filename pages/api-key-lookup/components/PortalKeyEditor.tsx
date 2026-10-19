@@ -89,6 +89,7 @@ export function PortalKeyEditor({
     <KeyPolicyModal
       open={state !== null}
       mode={state?.mode ?? "create"}
+      subtitle={editing ? editing.name || t("api_keys_page.unnamed") : undefined}
       initial={editing ? { name: editing.name, limits: editing["quota-limits"], rules: editing["model-rules"] } : undefined}
       ceiling={account?.["quota-limits"] ?? emptyQuotaMatrix()}
       allowedModels={account?.["allowed-models"]}

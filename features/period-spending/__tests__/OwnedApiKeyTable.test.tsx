@@ -139,8 +139,9 @@ describe("createOwnedApiKeyColumns", () => {
     expect(columns.find((column) => column.key === "actions")?.maxWidthPx).toBe(160);
   });
 
-  test("keeps three actions inline and moves the remaining actions into the more menu", async () => {
+  test("keeps edit and two more actions inline and moves the rest, rotation included, into the more menu", async () => {
     const onEdit = vi.fn();
+    const onRotate = vi.fn();
     const row = {
       id: "key-1",
       key: "sk-owned",
@@ -152,7 +153,7 @@ describe("createOwnedApiKeyColumns", () => {
       actions: {
         onToggleDisabled: vi.fn(),
         onCopy: vi.fn(),
-        onRotate: vi.fn(),
+        onRotate,
         onEdit,
         onDelete: vi.fn(),
       },
@@ -162,11 +163,13 @@ describe("createOwnedApiKeyColumns", () => {
     render(<div>{actionsColumn?.render(row, 0)}</div>);
 
     expect(screen.getAllByRole("button")).toHaveLength(4);
-    expect(screen.queryByRole("button", { name: "Edit quota" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Edit quota" }));
+    expect(onEdit).toHaveBeenCalledWith(row);
+    expect(screen.queryByRole("button", { name: "Rotate key" })).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "More actions" }));
-    await userEvent.click(await screen.findByRole("menuitem", { name: "Edit quota" }));
-    expect(onEdit).toHaveBeenCalledWith(row);
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Rotate key" }));
+    expect(onRotate).toHaveBeenCalledWith(row);
   });
 });
 
@@ -220,5 +223,41 @@ describe("injected columns for the access-policy view", () => {
     expect(reset).toBeEnabled();
     await userEvent.click(reset);
     expect(onResetPeriodSpending).toHaveBeenCalledWith(row);
+  });
+
+  test("compact layout folds key and status into the name cell and drops the secondary columns", () => {
+    const columns = createOwnedApiKeyColumns({
+      t,
+      actions: { onCopy: vi.fn() },
+      renderQuota: () => <span>matrix-cell</span>,
+      extraColumns: [{ key: "rules", label: "Rules", render: () => "2 rules" }],
+      quotaLabel: "Quota usage",
+      compact: true,
+    });
+    // 弹窗里放得下：密钥、状态、当日、重置次数、创建时间不单列。
+    expect(columns.map((column) => column.key)).toEqual(["name", "quota", "rules", "lifetimeSpending", "actions"]);
+    expect(columns.find((column) => column.key === "quota")?.label).toBe("Quota usage");
+
+    const nameColumn = columns.find((column) => column.key === "name");
+    render(<div>{nameColumn?.render({ ...row, disabled: true }, 0)}</div>);
+    expect(screen.getByText("Policy key")).toBeInTheDocument();
+    expect(screen.getByText("sk-****abcd")).toBeInTheDocument();
+    expect(screen.getByText("Disabled")).toBeInTheDocument();
+  });
+
+  test("full layout keeps the key and status columns and the default quota header", () => {
+    const columns = createOwnedApiKeyColumns({ t, actions: {} });
+    expect(columns.map((column) => column.key)).toEqual([
+      "name",
+      "key",
+      "status",
+      "quota",
+      "dailySpending",
+      "lifetimeSpending",
+      "resetCount",
+      "created",
+      "actions",
+    ]);
+    expect(columns.find((column) => column.key === "quota")?.label).toBe("Quota");
   });
 });

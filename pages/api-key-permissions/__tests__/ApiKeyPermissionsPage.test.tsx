@@ -187,9 +187,9 @@ describe("ApiKeyPermissionsPage", () => {
     renderPage();
     expect(await screen.findByText("标准配置")).toBeInTheDocument();
 
-    await userEvent.click(screen.getAllByRole("button", { name: "新增配置" })[0]!);
-    const dialog = await screen.findByRole("dialog", { name: "新增权限配置" });
-    await userEvent.type(within(dialog).getByRole("textbox", { name: "配置名称" }), "专业配置");
+    await userEvent.click(screen.getAllByRole("button", { name: "新增模板" })[0]!);
+    const dialog = await screen.findByRole("dialog", { name: "新增权限模板" });
+    await userEvent.type(within(dialog).getByRole("textbox", { name: "模板名称" }), "专业配置");
 
     await openSection(dialog, /额度/);
     await userEvent.type(within(dialog).getByRole("textbox", { name: "花费 · 5 小时" }), "100");
@@ -207,7 +207,7 @@ describe("ApiKeyPermissionsPage", () => {
 
     await openSection(dialog, /速率与提示词/);
     await userEvent.type(within(dialog).getByRole("textbox", { name: "系统提示词" }), "专业系统提示词");
-    await userEvent.click(within(dialog).getByRole("button", { name: "保存配置" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "保存模板" }));
 
     await waitFor(() => expect(mocks.replace).toHaveBeenCalled());
     const created = savedItems().find((item) => item.name === "专业配置")!;
@@ -227,14 +227,14 @@ describe("ApiKeyPermissionsPage", () => {
     expect(await screen.findByText("标准配置")).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "编辑「标准配置」" }));
-    const dialog = await screen.findByRole("dialog", { name: "编辑权限配置" });
+    const dialog = await screen.findByRole("dialog", { name: "编辑权限模板" });
     expect(within(dialog).getByText("保存后同步到 2 个绑定账号")).toBeInTheDocument();
 
     await openSection(dialog, /模型规则/);
     const weekly = within(dialog).getByRole("textbox", { name: "请求次数 · 每周" });
     await userEvent.clear(weekly);
     await userEvent.type(weekly, "300");
-    await userEvent.click(within(dialog).getByRole("button", { name: "保存配置" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "保存模板" }));
 
     await waitFor(() => expect(mocks.replace).toHaveBeenCalled());
     const [standard] = savedItems();
@@ -249,9 +249,9 @@ describe("ApiKeyPermissionsPage", () => {
     expect(await screen.findByText("标准配置")).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "复制「标准配置」" }));
-    const dialog = await screen.findByRole("dialog", { name: "新增权限配置" });
-    expect(within(dialog).getByRole("textbox", { name: "配置名称" })).toHaveValue("标准配置 副本");
-    await userEvent.click(within(dialog).getByRole("button", { name: "保存配置" }));
+    const dialog = await screen.findByRole("dialog", { name: "新增权限模板" });
+    expect(within(dialog).getByRole("textbox", { name: "模板名称" })).toHaveValue("标准配置 副本");
+    await userEvent.click(within(dialog).getByRole("button", { name: "保存模板" }));
 
     await waitFor(() => expect(mocks.replace).toHaveBeenCalled());
     const items = savedItems();
@@ -267,20 +267,20 @@ describe("ApiKeyPermissionsPage", () => {
     renderPage();
     expect(await screen.findByText("标准配置")).toBeInTheDocument();
 
-    await userEvent.click(screen.getAllByRole("button", { name: "新增配置" })[0]!);
-    const dialog = await screen.findByRole("dialog", { name: "新增权限配置" });
-    await userEvent.click(within(dialog).getByRole("button", { name: "保存配置" }));
+    await userEvent.click(screen.getAllByRole("button", { name: "新增模板" })[0]!);
+    const dialog = await screen.findByRole("dialog", { name: "新增权限模板" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "保存模板" }));
     expect(within(dialog).getByText("这一项必填")).toBeInTheDocument();
     expect(mocks.replace).not.toHaveBeenCalled();
     await userEvent.click(within(dialog).getByRole("button", { name: "取消" }));
-    await waitFor(() => expect(screen.queryByRole("dialog", { name: "新增权限配置" })).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "新增权限模板" })).not.toBeInTheDocument());
 
     await userEvent.click(screen.getByRole("button", { name: "删除「标准配置」" }));
-    const confirm = await screen.findByRole("dialog", { name: "删除权限配置" });
+    const confirm = await screen.findByRole("dialog", { name: "删除权限模板" });
     expect(within(confirm).getByText("标准配置")).toBeInTheDocument();
     expect(within(confirm).getByText("已绑定 2 个账号")).toBeInTheDocument();
-    expect(within(confirm).getByText(/转为自定义账户配置/)).toBeInTheDocument();
-    expect(within(confirm).getByRole("button", { name: "删除配置" })).toBeInTheDocument();
+    expect(within(confirm).getByText(/转为单独设置/)).toBeInTheDocument();
+    expect(within(confirm).getByRole("button", { name: "删除模板" })).toBeInTheDocument();
   });
 
   test("an old backend only offers the cells it can store and no rules", async () => {
@@ -288,8 +288,8 @@ describe("ApiKeyPermissionsPage", () => {
     renderPage();
     expect(await screen.findByText("标准配置")).toBeInTheDocument();
 
-    await userEvent.click(screen.getAllByRole("button", { name: "新增配置" })[0]!);
-    const dialog = await screen.findByRole("dialog", { name: "新增权限配置" });
+    await userEvent.click(screen.getAllByRole("button", { name: "新增模板" })[0]!);
+    const dialog = await screen.findByRole("dialog", { name: "新增权限模板" });
     expect(within(dialog).queryByRole("tab", { name: /模型规则/ })).toBeNull();
     await openSection(dialog, /额度/);
     expect(within(dialog).queryByRole("textbox", { name: "Token 用量 · 每日" })).toBeNull();
@@ -304,8 +304,8 @@ describe("ApiKeyPermissionsPage", () => {
     renderPage();
     expect(await screen.findByText("标准配置")).toBeInTheDocument();
 
-    await userEvent.click(screen.getAllByRole("button", { name: "新增配置" })[0]!);
-    const dialog = await screen.findByRole("dialog", { name: "新增权限配置" });
+    await userEvent.click(screen.getAllByRole("button", { name: "新增模板" })[0]!);
+    const dialog = await screen.findByRole("dialog", { name: "新增权限模板" });
     await openSection(dialog, /访问范围/);
     await userEvent.click(within(dialog).getByRole("switch", { name: "精确渠道覆盖（高级）" }));
     await userEvent.click(within(dialog).getByRole("combobox", { name: /^允许的渠道（/ }));

@@ -309,37 +309,24 @@ export function PermissionProfileFormModal({
     },
   );
 
+  const title = draft.id ? t("api_key_permissions_page.edit_config") : t("api_key_permissions_page.create_config");
+
   return (
     <Modal
       open={open}
-      title={draft.id ? t("api_key_permissions_page.edit_config") : t("api_key_permissions_page.create_config")}
-      description={t("api_key_permissions_page.config_modal_desc")}
-      icon={<ShieldCheck />}
-      size="xl"
-      bodyHeightClassName="h-[min(44rem,calc(100dvh-12rem))]"
+      title={title}
+      hideHeader
+      size="2xl"
+      bodyHeightClassName="h-[min(46rem,calc(100dvh-4rem))]"
       bodyOverflowClassName="overflow-hidden"
       bodyClassName="!p-0"
       onClose={onClose}
       onSubmitShortcut={submit}
-      footerStart={
-        <span className="text-xs text-ink-3">
-          {draft.id && boundCount > 0
-            ? t("access_policy.profile_sync_note", { count: boundCount })
-            : t("access_policy.profile_new_note")}
-        </span>
-      }
-      footer={
-        <>
-          <Button variant="secondary" onClick={onClose} disabled={saving}>
-            {t("common.cancel")}
-          </Button>
-          <Button variant="primary" loading={saving} onClick={submit}>
-            {t("api_key_permissions_page.save_config")}
-          </Button>
-        </>
-      }
     >
       <PolicyEditorLayout
+        icon={<ShieldCheck />}
+        title={title}
+        subtitle={draft.name.trim() || undefined}
         groups={[
           { id: "profile", label: t("access_policy.group_profile") },
           { id: "quota", label: t("access_policy.group_quota") },
@@ -350,6 +337,21 @@ export function PermissionProfileFormModal({
         value={section}
         onChange={(id) => setSection(id as SectionId)}
         ariaLabel={t("access_policy.profile_editor_nav")}
+        sidebarNote={
+          draft.id && boundCount > 0
+            ? t("access_policy.profile_sync_note", { count: boundCount })
+            : t("access_policy.profile_new_note")
+        }
+        footer={
+          <>
+            <Button variant="secondary" onClick={onClose} disabled={saving}>
+              {t("common.cancel")}
+            </Button>
+            <Button variant="primary" loading={saving} onClick={submit}>
+              {t("api_key_permissions_page.save_config")}
+            </Button>
+          </>
+        }
       />
     </Modal>
   );

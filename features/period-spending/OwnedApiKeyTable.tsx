@@ -42,9 +42,16 @@ export interface OwnedApiKeyColumnOptions {
   copyOnDemand?: boolean;
   /** 能否重置额度；缺省只看美元四周期。 */
   canResetQuota?: (key: EndUserAPIKey) => boolean;
+  /** 额度列的表头；缺省是「配额」（美元四周期）。 */
+  quotaLabel?: string;
+  /**
+   * 弹窗等窄容器用的紧凑布局：密钥并到名称下面一行，停用改成名称旁的标签；当日消费（额度格里已有）、
+   * 重置次数（操作菜单里有重置记录）与创建时间不再单列，整张表不必横向滚动。
+   */
+  compact?: boolean;
 }
 
-export const createOwnedApiKeyColumns = ({
+const buildOwnedApiKeyColumns = ({
   t,
   actions,
   busyKeyId,
@@ -54,6 +61,8 @@ export const createOwnedApiKeyColumns = ({
   extraColumns = [],
   copyOnDemand = false,
   canResetQuota,
+  quotaLabel,
+  compact = false,
 }: {
   t: (key: string, options?: Record<string, unknown>) => string;
   actions: OwnedApiKeyActions;
@@ -64,8 +73,10 @@ export const createOwnedApiKeyColumns = ({
   {
     key: "name",
     label: t("api_keys_page.col_name"),
-    width: COLUMN_WIDTH.numericWide,
+    width: compact ? COLUMN_WIDTH.name : COLUMN_WIDTH.numericWide,
     cellClassName: "font-medium",
+    // 紧凑布局的名称格是两行（名称、掩码密钥），整格的溢出提示只会重复第一行。
+    overflowTooltip: compact ? false : undefined,
     render: (row) => (
       <div className="min-w-0">
         <div className="flex min-w-0 items-center gap-1.5">
@@ -81,7 +92,17 @@ export const createOwnedApiKeyColumns = ({
               default
             </span>
           ) : null}
+          {compact && row.disabled ? (
+            <span className="shrink-0 rounded-full bg-ink/[0.05] px-1.5 py-0.5 text-2xs font-medium text-ink-3 dark:bg-white/[0.07]">
+              {t("common.disabled")}
+            </span>
+          ) : null}
         </div>
+        {compact ? (
+          <code className="mt-0.5 block truncate font-mono text-2xs font-normal text-ink-3">
+            {row.key_masked || row.key || row.id}
+          </code>
+        ) : null}
       </div>
     ),
   },
@@ -112,7 +133,7 @@ export const createOwnedApiKeyColumns = ({
   },
   {
     key: "quota",
-    label: t("quota.period_spending_column"),
+    label: quotaLabel ?? t("quota.period_spending_column"),
     width: "w-[360px] min-w-[260px]",
     // Keys have no lifetime cap of their own — it lives on the account and is
     // enforced across all of the account's keys — so this column stays periodic.
@@ -180,7 +201,18 @@ export const createOwnedApiKeyColumns = ({
       return (
         <TableRowActions
           moreLabel={t("common.more_actions")}
+          // 行内只放前三个：编辑（子额度与按模型规则都在里面）最常用排第一；轮换会让旧密钥立即失效，
+          // 留在更多菜单里，避免误点。
           actions={[
+            {
+              key: "edit",
+              label: t("api_keys_page.edit_key_quota"),
+              icon: <Pencil size={15} />,
+              visible: Boolean(actions.onEdit),
+              disabled: busy,
+              className: "icon-hue:hover:text-amber-600 icon-hue:dark:hover:text-amber-400",
+              onClick: () => actions.onEdit?.(row),
+            },
             {
               key: "toggle",
               label: row.disabled
@@ -207,15 +239,6 @@ export const createOwnedApiKeyColumns = ({
               disabled: busy,
               className: "icon-hue:hover:text-orange-600 icon-hue:dark:hover:text-orange-400",
               onClick: () => actions.onRotate?.(row),
-            },
-            {
-              key: "edit",
-              label: t("api_keys_page.edit_key_quota"),
-              icon: <Pencil size={15} />,
-              visible: Boolean(actions.onEdit),
-              disabled: busy,
-              className: "icon-hue:hover:text-amber-600 icon-hue:dark:hover:text-amber-400",
-              onClick: () => actions.onEdit?.(row),
             },
             {
               key: "reset-spending",
@@ -258,6 +281,16 @@ export const createOwnedApiKeyColumns = ({
     },
   },
 ];
+
+/** 紧凑布局不单列的几列（密钥与停用状态并进了名称格）。 */
+const COMPACT_OMITTED_COLUMNS = new Set(["key", "status", "dailySpending", "resetCount", "created"]);
+
+export const createOwnedApiKeyColumns = (
+  options: Parameters<typeof buildOwnedApiKeyColumns>[0],
+): DataTableColumn<EndUserAPIKey>[] => {
+  const columns = buildOwnedApiKeyColumns(options);
+  return options.compact ? columns.filter((column) => !COMPACT_OMITTED_COLUMNS.has(column.key)) : columns;
+};
 
 export function OwnedApiKeysTable({
   t,

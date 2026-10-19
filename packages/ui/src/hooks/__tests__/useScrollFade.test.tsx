@@ -53,4 +53,23 @@ describe("useScrollFade", () => {
     expect(scroller.style.getPropertyValue("--scroll-fade-top")).toBe("20px");
     expect(scroller.style.getPropertyValue("--scroll-fade-bottom")).toBe("0px");
   });
+
+  test("never fades a container that cannot scroll (overflow hidden)", () => {
+    render(<Harness />);
+    const scroller = screen.getByTestId("scroller");
+    // 子元素入场位移会让 scrollHeight 暂时大于 clientHeight；overflow: hidden 的盒子滚不动，
+    // 挂上渐隐只会把边缘的内容抹掉。
+    scroller.style.overflowY = "hidden";
+    fakeLayout(scroller, { scrollHeight: 606, clientHeight: 600 });
+    act(() => {
+      fireEvent.scroll(scroller);
+    });
+    expect(scroller).not.toHaveClass("code-proxy-scroll-edge-fade");
+
+    scroller.style.overflowY = "auto";
+    act(() => {
+      fireEvent.scroll(scroller);
+    });
+    expect(scroller).toHaveClass("code-proxy-scroll-edge-fade");
+  });
 });

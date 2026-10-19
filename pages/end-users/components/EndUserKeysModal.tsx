@@ -291,7 +291,10 @@ export function EndUserKeysModal({
               busy={saving}
               loading={loading}
               height="min-h-0 flex-1"
-              minWidth={policyCaps ? "min-w-[1500px]" : "min-w-[1400px]"}
+              // 紧凑布局：密钥、状态并进名称格，弹窗宽度内放得下全部列，不用横向滚动。
+              compact
+              minWidth={policyCaps ? "min-w-[960px]" : "min-w-[820px]"}
+              quotaLabel={policyCaps ? t("access_policy.col_quota") : undefined}
               canDelete={() => keys.length > 1}
               copyOnDemand
               renderQuota={
@@ -332,6 +335,8 @@ export function EndUserKeysModal({
         <KeyPolicyModal
           open={editor !== null}
           mode={editor?.mode ?? "create"}
+          // 外层弹窗已写明账号：编辑时只标出是哪把 Key，新建时标出 Key 建在哪个账号下。
+          subtitle={editing ? editing.name || t("api_keys_page.unnamed") : endUserLabel(user)}
           initial={
             editing
               ? { name: editing.name, limits: editing["quota-limits"], rules: editing["model-rules"] }

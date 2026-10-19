@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Boxes, Gauge, KeyRound, Tag } from "lucide-react";
 import {
@@ -52,6 +52,7 @@ const toForm = (initial?: KeyPolicyValue): KeyForm => ({
 export function KeyPolicyModal({
   open,
   mode,
+  subtitle,
   initial,
   ceiling,
   allowedModels,
@@ -66,6 +67,8 @@ export function KeyPolicyModal({
 }: {
   open: boolean;
   mode: "create" | "edit";
+  /** 写在标题下面的对象（Key 所属的账号、正在编辑的 Key）。 */
+  subtitle?: ReactNode;
   initial?: KeyPolicyValue;
   /** 账号的生效额度（模板覆盖后）。 */
   ceiling: QuotaMatrix;
@@ -208,39 +211,24 @@ export function KeyPolicyModal({
     });
   }
 
+  const title = mode === "create" ? t("api_keys_page.create_key") : t("api_keys_page.edit_key_quota");
+
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title={mode === "create" ? t("api_keys_page.create_key") : t("api_keys_page.edit_key_quota")}
-      description={
-        mode === "create" ? t("api_keys_page.owned_key_create_desc") : t("api_keys_page.owned_key_edit_desc")
-      }
-      icon={<KeyRound />}
+      title={title}
+      hideHeader
       size="xl"
-      bodyHeightClassName="h-[min(40rem,calc(100dvh-12rem))]"
+      bodyHeightClassName="h-[min(40rem,calc(100dvh-4rem))]"
       bodyOverflowClassName="overflow-hidden"
       bodyClassName="!p-0"
       onSubmitShortcut={submit}
-      footerStart={
-        serverError ? (
-          <p role="alert" className="max-w-md text-xs leading-5 text-rose-600 dark:text-rose-400">
-            {serverError}
-          </p>
-        ) : undefined
-      }
-      footer={
-        <>
-          <Button variant="secondary" onClick={onClose} disabled={saving}>
-            {t("common.cancel")}
-          </Button>
-          <Button variant="primary" loading={saving} onClick={submit}>
-            {mode === "create" ? t("api_keys_page.create_btn") : t("api_keys_page.save_btn")}
-          </Button>
-        </>
-      }
     >
       <PolicyEditorLayout
+        icon={<KeyRound />}
+        title={title}
+        subtitle={subtitle}
         groups={[
           { id: "key", label: t("access_policy.group_key") },
           { id: "policy", label: t("access_policy.group_policy") },
@@ -249,6 +237,26 @@ export function KeyPolicyModal({
         value={section}
         onChange={setSection}
         ariaLabel={t("access_policy.key_editor_nav")}
+        sidebarNote={
+          mode === "create" ? t("api_keys_page.owned_key_create_desc") : t("api_keys_page.owned_key_edit_desc")
+        }
+        footerStart={
+          serverError ? (
+            <p role="alert" className="text-xs leading-5 text-rose-600 dark:text-rose-400">
+              {serverError}
+            </p>
+          ) : undefined
+        }
+        footer={
+          <>
+            <Button variant="secondary" onClick={onClose} disabled={saving}>
+              {t("common.cancel")}
+            </Button>
+            <Button variant="primary" loading={saving} onClick={submit}>
+              {mode === "create" ? t("api_keys_page.create_btn") : t("api_keys_page.save_btn")}
+            </Button>
+          </>
+        }
       />
     </Modal>
   );

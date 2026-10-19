@@ -177,7 +177,8 @@ export function ModelRulesEditor({
               </div>
 
               {allowFallback && (editable || rule.fallback) ? (
-                <div className="grid gap-1.5 sm:grid-cols-[minmax(0,10rem)_minmax(0,1fr)] sm:items-start sm:gap-3">
+                // 标签列与上方紧凑矩阵的行头同宽（7rem），降级模型的输入框与矩阵第一列左对齐。
+                <div className="grid gap-1.5 sm:grid-cols-[7rem_minmax(0,1fr)] sm:items-start sm:gap-2">
                   <label
                     htmlFor={`${ruleId}-fallback`}
                     className="flex items-center gap-1.5 pt-1.5 text-xs font-medium text-ink-2"

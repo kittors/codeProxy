@@ -57,6 +57,7 @@ import {
   type ManagedPolicy,
   type PolicySource,
 } from "../accountEditForm";
+import { endUserLabel } from "../endUserForm";
 
 const RATE_FIELDS = ["concurrencyLimit", "rpmLimit", "tpmLimit"] as const;
 const countRules = [rules.integer({ min: 0 })];
@@ -202,7 +203,7 @@ export function EndUserEditModal({
 
   if (!form || !user) {
     return (
-      <Modal open={open} onClose={onClose} title={t("end_users.edit")} icon={<UserCog />} size="xl">
+      <Modal open={open} onClose={onClose} title={t("end_users.edit")} hideHeader size="2xl">
         {null}
       </Modal>
     );
@@ -338,7 +339,14 @@ export function EndUserEditModal({
             options={[
               {
                 value: "template",
-                label: t("access_policy.source_template"),
+                label: (
+                  <span className="inline-flex items-center gap-1.5">
+                    {t("access_policy.source_template")}
+                    <span className="rounded-full bg-ink/[0.05] px-1.5 py-0.5 text-2xs font-medium text-ink-2 dark:bg-white/[0.07] colorful:bg-emerald-50 colorful:text-emerald-700 colorful:dark:bg-emerald-500/15 colorful:dark:text-emerald-300">
+                      {t("access_policy.recommended")}
+                    </span>
+                  </span>
+                ),
                 description: t("access_policy.source_template_desc"),
                 icon: <ShieldCheck />,
               },
@@ -556,38 +564,17 @@ export function EndUserEditModal({
       open={open}
       onClose={onClose}
       title={t("end_users.edit")}
-      description={t("end_users.edit_desc")}
-      icon={<UserCog />}
-      size="xl"
-      bodyHeightClassName="h-[min(44rem,calc(100dvh-12rem))]"
+      hideHeader
+      size="2xl"
+      bodyHeightClassName="h-[min(46rem,calc(100dvh-4rem))]"
       bodyOverflowClassName="overflow-hidden"
       bodyClassName="!p-0"
       onSubmitShortcut={submit}
-      footerStart={
-        serverError ? (
-          <p role="alert" className="max-w-md text-xs leading-5 text-rose-600 dark:text-rose-400">
-            {serverError}
-          </p>
-        ) : (
-          <span className="text-xs text-ink-3">
-            {selectedProfile
-              ? t("access_policy.footer_profile", { profile: selectedProfile.name })
-              : t("access_policy.footer_custom")}
-          </span>
-        )
-      }
-      footer={
-        <>
-          <Button onClick={onClose} disabled={saving}>
-            {t("common.cancel")}
-          </Button>
-          <Button variant="primary" loading={saving} onClick={submit}>
-            {t("common.save")}
-          </Button>
-        </>
-      }
     >
       <PolicyEditorLayout
+        icon={<UserCog />}
+        title={t("end_users.edit")}
+        subtitle={endUserLabel(user)}
         groups={[
           { id: "account", label: t("access_policy.group_account") },
           { id: "quota", label: t("access_policy.group_quota") },
@@ -598,6 +585,28 @@ export function EndUserEditModal({
         value={section}
         onChange={(id) => setSection(id as SectionId)}
         ariaLabel={t("access_policy.account_editor_nav")}
+        sidebarNote={
+          selectedProfile
+            ? t("access_policy.footer_profile", { profile: selectedProfile.name })
+            : t("access_policy.footer_custom")
+        }
+        footerStart={
+          serverError ? (
+            <p role="alert" className="text-xs leading-5 text-rose-600 dark:text-rose-400">
+              {serverError}
+            </p>
+          ) : undefined
+        }
+        footer={
+          <>
+            <Button onClick={onClose} disabled={saving}>
+              {t("common.cancel")}
+            </Button>
+            <Button variant="primary" loading={saving} onClick={submit}>
+              {t("common.save")}
+            </Button>
+          </>
+        }
       />
     </Modal>
   );

@@ -85,8 +85,9 @@ export function QuotaMatrixEditor({
         ))}
       </div>
       {metrics.map((metric) => (
-        <div key={metric} className={cn("grid grid-cols-2 items-start gap-2 sm:items-center", gridTemplate)}>
-          <div className="col-span-2 flex min-w-0 items-center gap-2 sm:col-span-1">
+        // 顶端对齐：格子下方的「已用 / ≤ 上限」提示只往下长，同一行的输入框始终在一条线上。
+        <div key={metric} className={cn("grid grid-cols-2 items-start gap-2", gridTemplate)}>
+          <div className="col-span-2 flex min-w-0 items-center gap-2 sm:col-span-1 sm:min-h-8">
             <MetricTile metric={metric} />
             <div className="min-w-0 leading-tight">
               <div className="truncate text-xs font-semibold text-ink">
