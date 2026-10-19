@@ -16,8 +16,11 @@ const usdAmountFormatter = new Intl.NumberFormat("en-US", {
 
 const integerFormatter = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
 
+// 紧凑写法显式写 minimumFractionDigits: 0：旧版 ICU（Node 22 及更早、部分浏览器）会沿用货币的
+// 两位小数下限，把 4000 写成 "$4.0K"，新版写成 "$4K"，同一份数据在不同环境显示不一样。
 const compactFormatter = new Intl.NumberFormat("en-US", {
   notation: "compact",
+  minimumFractionDigits: 0,
   maximumFractionDigits: 1,
 });
 
@@ -25,6 +28,7 @@ const usdCompactFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
   notation: "compact",
+  minimumFractionDigits: 0,
   maximumFractionDigits: 1,
 });
 
