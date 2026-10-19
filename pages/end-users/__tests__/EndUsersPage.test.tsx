@@ -1,17 +1,36 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
+import { MemoryRouter } from "react-router-dom";
 import { ThemeProvider, ToastProvider } from "@code-proxy/ui";
 import i18n from "@code-proxy/i18n";
-import type { ApiKeyPermissionProfile } from "@code-proxy/api-client";
+import {
+  NO_ACCESS_POLICY_CAPABILITIES,
+  emptyQuotaMatrix,
+  normalizeEndUser,
+  type AccessPolicyCapabilities,
+  type ApiKeyPermissionProfile,
+  type ApiKeyPermissionProfileList,
+  type EndUser,
+} from "@code-proxy/api-client";
 import { EndUsersPage } from "../EndUsersPage";
+
+const FULL: AccessPolicyCapabilities = {
+  accessPolicy: true,
+  modelFallback: true,
+  batchProfileBinding: true,
+  createWithProfile: true,
+  ownedKeyAdmin: true,
+};
 
 const mocks = vi.hoisted(() => ({
   list: vi.fn(),
   update: vi.fn(),
+  bindProfile: vi.fn(),
   resetPeriodSpending: vi.fn(),
   listDailySpendingResetHistory: vi.fn(),
-  permissionProfiles: vi.fn(async (): Promise<ApiKeyPermissionProfile[]> => []),
+  getUsageLogs: vi.fn(),
+  profiles: vi.fn(async (): Promise<ApiKeyPermissionProfileList> => ({ items: [], capabilities: {} as never })),
 }));
 
 vi.mock("@app/providers/PermissionGate", () => ({
@@ -22,545 +41,344 @@ vi.mock("@app/providers/AuthProvider", () => ({
   useAuth: () => ({ can: () => true }),
 }));
 
+// 渠道、分组与模型选项只在打开弹窗时才拉；这里给空选项，不发真实请求。
+vi.mock("@features/api-key-restrictions", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@features/api-key-restrictions")>()),
+  useApiKeyPermissionOptions: () => ({
+    availableModels: [],
+    availableChannels: [],
+    availableChannelGroups: [],
+    channelRouteGroupsByName: {},
+    fetchModelOptions: async () => [],
+    loadModels: async () => [],
+    refreshPermissionOptions: async () => undefined,
+  }),
+}));
+
 vi.mock("@code-proxy/api-client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@code-proxy/api-client")>();
   return {
     ...actual,
-    apiKeyPermissionProfilesApi: { list: mocks.permissionProfiles },
+    apiKeyPermissionProfilesApi: { ...actual.apiKeyPermissionProfilesApi, listDetailed: mocks.profiles },
+    usageApi: { ...actual.usageApi, getUsageLogs: mocks.getUsageLogs },
     endUsersApi: {
       ...actual.endUsersApi,
       list: mocks.list,
       update: mocks.update,
+      bindProfile: mocks.bindProfile,
       resetPeriodSpending: mocks.resetPeriodSpending,
       listDailySpendingResetHistory: mocks.listDailySpendingResetHistory,
     },
   };
 });
 
-const users = [
-  {
+const goldLimits = emptyQuotaMatrix();
+goldLimits.cost.day = 300;
+goldLimits.requests.week = 800;
+const opusLimits = emptyQuotaMatrix();
+opusLimits.requests.week = 100;
+
+const gold: ApiKeyPermissionProfile = {
+  id: "gold",
+  name: "Gold",
+  "daily-limit": 0,
+  "total-quota": 0,
+  "daily-spending-limit": 300,
+  "period-spending-limits": { "5h": 0, day: 300, week: 0, month: 0 },
+  "concurrency-limit": 0,
+  "rpm-limit": 0,
+  "tpm-limit": 0,
+  "allowed-channel-groups": [],
+  "allowed-channels": [],
+  "allowed-models": [],
+  "system-prompt": "",
+  "quota-limits": goldLimits,
+  "model-rules": [{ id: "opus", name: "Opus weekly", models: ["claude-opus-*"], limits: opusLimits }],
+  "model-routes": [],
+};
+
+const base = {
+  tenant_id: "tenant-1",
+  must_change_password: false,
+  created_at: "2026-07-01T00:00:00Z",
+  updated_at: "2026-07-01T00:00:00Z",
+  version: 1,
+};
+
+const usedBob = emptyQuotaMatrix();
+usedBob.cost.day = 120;
+usedBob.requests.week = 200;
+const usedOpus = emptyQuotaMatrix();
+usedOpus.requests.week = 100;
+
+const lifetimeOnly = emptyQuotaMatrix();
+lifetimeOnly.cost.lifetime = 100;
+const usedCarol = emptyQuotaMatrix();
+usedCarol.cost.lifetime = 12;
+
+const users: EndUser[] = [
+  normalizeEndUser({
+    ...base,
     id: "user-active",
-    tenant_id: "tenant-1",
     username: "alice",
     display_name: "Alice",
     status: "active",
-    must_change_password: false,
-    created_at: "2026-07-01T00:00:00Z",
-    updated_at: "2026-07-01T00:00:00Z",
-    version: 1,
     api_key_count: 2,
     "daily-spending-used": 12,
     "lifetime-spending-used": 88.7,
-    "daily-spending-reset-count": 0,
-    "daily-spending-limit": 0,
-    "period-spending-limits": { "5h": 0, day: 0, week: 0, month: 0 },
-    "period-spending": [],
-  },
-  {
+  }),
+  normalizeEndUser({
+    ...base,
     id: "user-frozen",
-    tenant_id: "tenant-1",
     username: "bob",
     display_name: "Bob",
     status: "locked",
-    must_change_password: false,
-    created_at: "2026-07-01T00:00:00Z",
-    updated_at: "2026-07-01T00:00:00Z",
-    version: 1,
     api_key_count: 1,
+    last_login_at: new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString(),
     "daily-spending-used": 120,
     "lifetime-spending-used": 912.34,
     "daily-spending-reset-count": 2,
-    "daily-spending-limit": 300,
-    "period-spending-limits": { "5h": 100, day: 300, week: 800, month: 4000 },
-    "period-spending": [
-      { period: "5h", limit: 100, used: 95, remaining: 5 },
-      { period: "day", limit: 300, used: 120, remaining: 180 },
-      { period: "week", limit: 800, used: 220, remaining: 580 },
-      { period: "month", limit: 4000, used: 912.34, remaining: 3087.66 },
-    ],
-  },
+    "permission-profile-id": "gold",
+    "rpm-limit": 60,
+    "quota-limits": goldLimits,
+    "model-rules": gold["model-rules"],
+    "quota-usage": { total: usedBob, rules: [{ id: "opus", used: usedOpus }] },
+  }),
+  normalizeEndUser({
+    ...base,
+    id: "user-carol",
+    username: "carol",
+    display_name: "Carol",
+    status: "active",
+    "spending-limit": 100,
+    "lifetime-spending-used": 12,
+    "quota-limits": lifetimeOnly,
+    "quota-usage": { total: usedCarol, rules: [] },
+  }),
 ];
 
 function renderPage() {
   render(
-    <ThemeProvider>
-      <ToastProvider>
-        <EndUsersPage />
-      </ToastProvider>
-    </ThemeProvider>,
+    <MemoryRouter>
+      <ThemeProvider>
+        <ToastProvider>
+          <EndUsersPage />
+        </ToastProvider>
+      </ThemeProvider>
+    </MemoryRouter>,
   );
 }
 
-async function openRowMoreActions(displayName: string) {
-  const row = screen.getByText(displayName).closest("tr");
-  expect(row).not.toBeNull();
-  await userEvent.click(within(row as HTMLElement).getByRole("button", { name: "More actions" }));
+const rowOf = (name: string) => screen.getByText(name).closest("tr") as HTMLElement;
+
+async function openRowMoreActions(name: string) {
+  await userEvent.click(within(rowOf(name)).getByRole("button", { name: "More actions" }));
 }
 
-describe("EndUsersPage account semantics", () => {
+describe("EndUsersPage", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
+    window.localStorage.clear();
     await i18n.changeLanguage("en");
-    mocks.list.mockResolvedValue({ items: users });
+    mocks.list.mockResolvedValue({ items: users, capabilities: FULL });
+    mocks.profiles.mockResolvedValue({ items: [gold], capabilities: FULL });
     mocks.update.mockResolvedValue(users[0]);
-    mocks.resetPeriodSpending.mockResolvedValue({
-      status: "ok",
-      end_user_id: "user-frozen",
-      "daily-spending-used": 0,
-      "daily-spending-reset-count": 3,
-      "effective-used-before": 120,
-      "raw-today-cost": 120,
+    mocks.bindProfile.mockResolvedValue({ updated: 2 });
+    mocks.resetPeriodSpending.mockResolvedValue({ status: "ok" });
+    mocks.getUsageLogs.mockResolvedValue({
+      items: [],
+      total: 0,
+      page: 1,
+      size: 50,
+      stats: { total: 0, success_rate: 0, total_tokens: 0 },
+      filters: { api_keys: [], api_key_names: {}, models: [], channels: [] },
     });
     mocks.listDailySpendingResetHistory.mockResolvedValue({
-      items: [
-        {
-          id: 41,
-          day_key: "2026-07-20",
-          reset_at: "2026-07-20T10:00:00Z",
-          actor_username: "admin-1",
-          cost_baseline: 92.25,
-          effective_used_before: 12.5,
-          raw_today_cost: 92.25,
-        },
-        {
-          id: 42,
-          day_key: "2026-07-21",
-          reset_at: "2026-07-21T11:00:00Z",
-          actor_kind: "service_credential",
-          cost_baseline: 148.25,
-          effective_used_before: 28.25,
-          raw_today_cost: 148.25,
-        },
-      ],
-      total: 2,
+      items: [{ id: 42, day_key: "2026-07-21", reset_at: "2026-07-21T11:00:00Z", actor_kind: "service_credential" }],
+      total: 1,
       "raw-today-cost": 175.5,
       "daily-spending-used": 28.25,
     });
   });
 
-  test("shows account status, reset count, and account-level actions", async () => {
+  test("one row reads the source, the tightest limits, model policy, spend and rate", async () => {
     renderPage();
-
     expect(await screen.findByText("Alice")).toBeInTheDocument();
-    expect(screen.getByText("Active")).toBeInTheDocument();
-    expect(screen.getByText("Frozen")).toBeInTheDocument();
-    expect(screen.getAllByText("Unlimited").length).toBeGreaterThan(0);
-    expect(screen.getByText("$120 / $300")).toBeInTheDocument();
-    expect(screen.getByText("$95 / $100")).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: "Quota" })).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: "Today" })).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: "Lifetime" })).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: "Total resets" })).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: "Daily limit" })).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: "Total quota" })).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: "Concurrency" })).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: "RPM" })).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: "TPM" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "View reset history" })).toHaveTextContent("2");
-    expect(screen.getAllByRole("button", { name: "View usage" })).toHaveLength(users.length);
-    expect(screen.queryByRole("button", { name: "end_users.view_usage" })).not.toBeInTheDocument();
-    expect(
-      screen.getByRole("columnheader", { name: "Account Permission Profile" }),
-    ).toBeInTheDocument();
 
-    await openRowMoreActions("Alice");
-    expect(
-      screen.getByRole("menuitem", {
-        name: "No resettable period quota; edit the account quota",
-      }),
-    ).toHaveAttribute("data-disabled");
-    await userEvent.keyboard("{Escape}");
+    for (const header of ["Permission source", "Quota usage", "Model policy", "Spend", "Rate limits"]) {
+      expect(screen.getByRole("columnheader", { name: header })).toBeInTheDocument();
+    }
 
-    await openRowMoreActions("Bob");
-    expect(screen.getByRole("menuitem", { name: "Reset account quota" })).toBeInTheDocument();
-    await userEvent.keyboard("{Escape}");
+    const alice = rowOf("Alice");
+    expect(within(alice).getByText("Individual")).toBeInTheDocument();
+    expect(within(alice).getByText("Unlimited")).toBeInTheDocument();
+    expect(within(alice).getByText("Never signed in")).toBeInTheDocument();
+    expect(within(alice).getByText("$88.70")).toBeInTheDocument();
 
-    await openRowMoreActions("Alice");
-    await userEvent.click(screen.getByRole("menuitem", { name: "Freeze account" }));
-    await waitFor(() => {
-      expect(mocks.update).toHaveBeenCalledWith("user-active", {
-        status: "locked",
-      });
-    });
+    const bob = rowOf("Bob");
+    expect(within(bob).getByText("Gold")).toBeInTheDocument();
+    expect(within(bob).getByText("Frozen")).toBeInTheDocument();
+    expect(within(bob).getByText("Signed in 3 days ago")).toBeInTheDocument();
+    expect(within(bob).getByText("$120 / $300")).toBeInTheDocument();
+    expect(within(bob).getByText("200 / 800")).toBeInTheDocument();
+    expect(within(bob).getByText("60 RPM")).toBeInTheDocument();
+    // 规则已用满：胶囊变成警告色，读屏也能听到。
+    expect(within(bob).getByText("1 rule")).toBeInTheDocument();
+    expect(within(bob).getByText("1 of these rules has a limit used up")).toBeInTheDocument();
+
+    // 只有累计额度的账号不能读成「不限制」。
+    const carol = rowOf("Carol");
+    expect(within(carol).getByText("$12 / $100")).toBeInTheDocument();
+    expect(within(carol).queryByText("Unlimited")).toBeNull();
   });
 
-  test("requires period selection before resetting account quota", async () => {
+  test("filters by permission source", async () => {
     renderPage();
-
     await screen.findByText("Alice");
+
+    await userEvent.click(screen.getByRole("combobox", { name: "Filter by permission source" }));
+    await userEvent.click(await screen.findByRole("option", { name: "Gold" }));
+    expect(screen.getByText("Bob")).toBeInTheDocument();
+    expect(screen.queryByText("Alice")).toBeNull();
+
+    await userEvent.click(screen.getByRole("combobox", { name: "Filter by permission source" }));
+    await userEvent.click(await screen.findByRole("option", { name: "Individual" }));
+    expect(screen.getByText("Alice")).toBeInTheDocument();
+    expect(screen.getByText("Carol")).toBeInTheDocument();
+    expect(screen.queryByText("Bob")).toBeNull();
+  });
+
+  test("binds the selected accounts to a template in one request", async () => {
+    renderPage();
+    await screen.findByText("Alice");
+
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select Alice" }));
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select Carol" }));
+    expect(screen.getByText("2 accounts selected")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Bind template" }));
+    const dialog = await screen.findByRole("dialog", { name: "Bind a permission template to 2 accounts" });
+    expect(within(dialog).getByRole("radio", { name: /Gold/ })).toHaveAttribute("aria-checked", "true");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Bind 2 accounts" }));
+
+    await waitFor(() => expect(mocks.bindProfile).toHaveBeenCalledWith(["user-active", "user-carol"], "gold"));
+    await waitFor(() => expect(mocks.list).toHaveBeenCalledTimes(2));
+    expect(screen.queryByText("2 accounts selected")).toBeNull();
+  });
+
+  test("old backends get no selection column and keep legacy reset periods", async () => {
+    mocks.list.mockResolvedValue({ items: users, capabilities: NO_ACCESS_POLICY_CAPABILITIES });
+    renderPage();
+    await screen.findByText("Alice");
+    expect(screen.queryByRole("checkbox", { name: "Select Alice" })).toBeNull();
+  });
+
+  test("a window reset lists every limit it clears, totals and rules alike", async () => {
+    renderPage();
+    await screen.findByText("Bob");
     await openRowMoreActions("Bob");
     await userEvent.click(screen.getByRole("menuitem", { name: "Reset account quota" }));
 
     const dialog = await screen.findByRole("dialog", { name: "Reset account quota" });
-    expect(within(dialog).getByText(/Bob \/ bob/)).toBeInTheDocument();
-    expect(mocks.resetPeriodSpending).not.toHaveBeenCalled();
+    expect(within(dialog).getByText("Spend $120 / $300")).toBeInTheDocument();
+    expect(within(dialog).getByText("Requests 200 / 800 · Opus weekly: Requests 100 / 100")).toBeInTheDocument();
 
-    await userEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
-    await waitFor(() => {
-      expect(screen.queryByRole("dialog", { name: "Reset account quota" })).toBeNull();
-    });
-    expect(mocks.resetPeriodSpending).not.toHaveBeenCalled();
-
-    await openRowMoreActions("Bob");
-    await userEvent.click(screen.getByRole("menuitem", { name: "Reset account quota" }));
-    const confirmDialog = await screen.findByRole("dialog", {
-      name: "Reset account quota",
-    });
-    await userEvent.click(within(confirmDialog).getByRole("checkbox", { name: "Reset Day quota" }));
-    await userEvent.click(
-      within(confirmDialog).getByRole("button", { name: "Reset selected quotas" }),
-    );
-
-    await waitFor(() => {
-      expect(mocks.resetPeriodSpending).toHaveBeenCalledWith("user-frozen", ["day"]);
-      expect(mocks.list.mock.calls.length).toBeGreaterThan(1);
-    });
+    await userEvent.click(within(dialog).getByRole("checkbox", { name: "Reset Week quota" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Reset selected quotas" }));
+    await waitFor(() => expect(mocks.resetPeriodSpending).toHaveBeenCalledWith("user-frozen", ["week"]));
   });
 
-  test("filters and paginates the loaded accounts client-side", async () => {
-    const manyUsers = Array.from({ length: 25 }, (_, index) => {
-      const number = index + 1;
-      const suffix = String(number).padStart(2, "0");
-      return {
-        ...users[0],
+  test("an account with only a lifetime allowance can reach the reset action", async () => {
+    renderPage();
+    await screen.findByText("Carol");
+    await openRowMoreActions("Carol");
+    const action = screen.getByRole("menuitem", { name: "Reset account quota" });
+    expect(action).not.toHaveAttribute("data-disabled");
+    await userEvent.keyboard("{Escape}");
+
+    await openRowMoreActions("Alice");
+    expect(
+      screen.getByRole("menuitem", { name: "No resettable period quota; edit the account quota" }),
+    ).toHaveAttribute("data-disabled");
+  });
+
+  test("reset history sits in the actions menu with its count", async () => {
+    renderPage();
+    await screen.findByText("Bob");
+    await openRowMoreActions("Bob");
+    await userEvent.click(screen.getByRole("menuitem", { name: "Reset history (2)" }));
+
+    await waitFor(() => expect(mocks.listDailySpendingResetHistory).toHaveBeenCalledWith("user-frozen", 200));
+    expect(await screen.findByText("Reset history · Bob / bob")).toBeInTheDocument();
+    expect(screen.getByText("$175.50")).toBeInTheDocument();
+  });
+
+  test("account usage is filtered by the account id, without fetching key secrets", async () => {
+    renderPage();
+    await screen.findByText("Alice");
+    await userEvent.click(within(rowOf("Alice")).getByRole("button", { name: "View usage" }));
+
+    await waitFor(() =>
+      expect(mocks.getUsageLogs).toHaveBeenCalledWith(expect.objectContaining({ end_user_id: "user-active", api_keys: [] })),
+    );
+  });
+
+  test("saving the editor patches only what changed and refreshes the list", async () => {
+    renderPage();
+    await screen.findByText("Alice");
+    await userEvent.click(within(rowOf("Alice")).getByRole("button", { name: "Edit user account" }));
+    const dialog = await screen.findByRole("dialog", { name: "Edit user account" });
+
+    await userEvent.click(within(dialog).getByRole("tab", { name: /Rate limits/ }));
+    await userEvent.type(within(dialog).getByRole("textbox", { name: "Requests per minute (RPM)" }), "60");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(mocks.update).toHaveBeenCalledWith("user-active", { "rpm-limit": 60 }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Edit user account" })).toBeNull());
+    expect(mocks.list).toHaveBeenCalledTimes(2);
+  });
+
+  test("a rejected save keeps the editor open with the reason", async () => {
+    mocks.update.mockRejectedValueOnce(new Error("boom"));
+    renderPage();
+    await screen.findByText("Alice");
+    await userEvent.click(within(rowOf("Alice")).getByRole("button", { name: "Edit user account" }));
+    const dialog = await screen.findByRole("dialog", { name: "Edit user account" });
+    await userEvent.click(within(dialog).getByRole("tab", { name: /Rate limits/ }));
+    await userEvent.type(within(dialog).getByRole("textbox", { name: "Requests per minute (RPM)" }), "5");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent("boom");
+  });
+
+  test("searches and paginates client-side", async () => {
+    const many = Array.from({ length: 25 }, (_, index) => {
+      const suffix = String(index + 1).padStart(2, "0");
+      return normalizeEndUser({
+        ...base,
         id: `end-user-${suffix}`,
         username: `user-${suffix}`,
         display_name: `User ${suffix}`,
-        status: number % 5 === 0 ? "locked" : "active",
-      };
+        status: (index + 1) % 5 === 0 ? "locked" : "active",
+      });
     });
-    mocks.list.mockResolvedValueOnce({ items: manyUsers });
+    mocks.list.mockResolvedValue({ items: many, capabilities: FULL });
     renderPage();
 
     expect(await screen.findByText("User 01")).toBeInTheDocument();
-    expect(screen.getByText("User 20")).toBeInTheDocument();
     expect(screen.queryByText("User 21")).toBeNull();
     expect(screen.getByText("1-20 of 25")).toBeInTheDocument();
-
-    await userEvent.click(screen.getByRole("button", { name: "Next page" }));
-    expect(await screen.findByText("User 21")).toBeInTheDocument();
-    expect(screen.queryByText("User 01")).toBeNull();
-
-    await userEvent.click(screen.getByRole("combobox", { name: "Rows per page" }));
-    await userEvent.click(screen.getByRole("option", { name: "50" }));
-    expect(await screen.findByText("User 01")).toBeInTheDocument();
-    expect(screen.getByText("User 25")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "1" })).toHaveAttribute("aria-current", "page");
 
     await userEvent.click(screen.getByRole("combobox", { name: "Filter by status" }));
     await userEvent.click(screen.getByRole("option", { name: "Frozen" }));
     expect(await screen.findByText("User 05")).toBeInTheDocument();
-    expect(screen.queryByText("User 01")).toBeNull();
     expect(screen.getByText("1-5 of 5")).toBeInTheDocument();
 
-    const searchInput = screen.getByRole("textbox", { name: "Search user accounts" });
-    await userEvent.type(searchInput, "end-user-25");
-    expect(await screen.findByText("User 25")).toBeInTheDocument();
-    expect(screen.queryByText("User 05")).toBeNull();
-    expect(screen.getByText("1-1 of 1")).toBeInTheDocument();
-
-    await userEvent.clear(searchInput);
-    await userEvent.type(searchInput, "missing");
+    await userEvent.type(screen.getByRole("textbox", { name: "Search user accounts" }), "missing");
     expect(await screen.findByText("No user accounts match the filters")).toBeInTheDocument();
-    expect(screen.getByText("0-0 of 0")).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Clear filters" }));
     expect(await screen.findByText("User 01")).toBeInTheDocument();
-    expect(screen.getByText("1-25 of 25")).toBeInTheDocument();
-  });
-
-  test("edits unbound account quota and secondary limits directly", async () => {
-    renderPage();
-    await screen.findByText("Alice");
-
-    await userEvent.click(screen.getAllByRole("button", { name: "Edit user account" })[0]!);
-    const dialog = await screen.findByRole("dialog", {
-      name: "Edit user account",
-    });
-
-    await userEvent.type(
-      within(dialog).getByRole("spinbutton", { name: "5-hour quota (USD)" }),
-      "50",
-    );
-    await userEvent.type(
-      within(dialog).getByRole("spinbutton", { name: "Daily quota (USD)" }),
-      "100",
-    );
-    await userEvent.type(
-      within(dialog).getByRole("spinbutton", { name: "Daily request limit" }),
-      "1000",
-    );
-    await userEvent.type(
-      within(dialog).getByRole("spinbutton", { name: "Total request quota" }),
-      "9000",
-    );
-    await userEvent.type(
-      within(dialog).getByRole("spinbutton", {
-        name: "Concurrent request limit",
-      }),
-      "3",
-    );
-    await userEvent.type(within(dialog).getByRole("spinbutton", { name: "RPM limit" }), "60");
-    await userEvent.type(within(dialog).getByRole("spinbutton", { name: "TPM limit" }), "12000");
-    await userEvent.type(
-      within(dialog).getByRole("spinbutton", {
-        name: "Lifetime spending limit (USD)",
-      }),
-      "500",
-    );
-    await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
-
-    await waitFor(() => {
-      expect(mocks.update).toHaveBeenCalledWith(
-        "user-active",
-        expect.objectContaining({
-          "daily-limit": 1000,
-          "total-quota": 9000,
-          "concurrency-limit": 3,
-          "rpm-limit": 60,
-          "tpm-limit": 12000,
-          "spending-limit": 500,
-          "daily-spending-limit": 100,
-          "period-spending-limits": { "5h": 50, day: 100, week: 0, month: 0 },
-        }),
-      );
-    });
-  });
-
-  test("binds a permission profile without sending a conflicting account period patch", async () => {
-    mocks.permissionProfiles.mockResolvedValueOnce([
-      {
-        id: "standard",
-        name: "Standard",
-        "daily-limit": 15000,
-        "total-quota": 50000,
-        "daily-spending-limit": 300,
-        "period-spending-limits": {
-          "5h": 100,
-          day: 300,
-          week: 800,
-          month: 4000,
-        },
-        "concurrency-limit": 4,
-        "rpm-limit": 120,
-        "tpm-limit": 50000,
-        "allowed-channel-groups": ["pro"],
-        "allowed-channels": [],
-        "allowed-models": ["gpt-5.4"],
-        "system-prompt": "Standard prompt",
-      },
-    ]);
-    renderPage();
-    await screen.findByText("Alice");
-
-    await userEvent.click(screen.getAllByRole("button", { name: "Edit user account" })[0]!);
-    const dialog = await screen.findByRole("dialog", {
-      name: "Edit user account",
-    });
-    await userEvent.click(
-      within(dialog).getByRole("combobox", {
-        name: "Account Permission Profile",
-      }),
-    );
-    await userEvent.click(await screen.findByRole("option", { name: "Standard" }));
-
-    expect(within(dialog).getByRole("spinbutton", { name: "Daily quota (USD)" })).toBeDisabled();
-    expect(within(dialog).getByRole("spinbutton", { name: "Daily request limit" })).toBeDisabled();
-    expect(
-      within(dialog).getByRole("spinbutton", {
-        name: "Lifetime spending limit (USD)",
-      }),
-    ).not.toBeDisabled();
-
-    await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
-
-    await waitFor(() => {
-      expect(mocks.update).toHaveBeenCalledWith(
-        "user-active",
-        expect.objectContaining({
-          "permission-profile-id": "standard",
-          "daily-limit": 15000,
-          "total-quota": 50000,
-          "concurrency-limit": 4,
-          "rpm-limit": 120,
-          "tpm-limit": 50000,
-        }),
-      );
-    });
-    const updateBody = mocks.update.mock.calls.at(-1)?.[1];
-    expect(updateBody).not.toHaveProperty("daily-spending-limit");
-    expect(updateBody).not.toHaveProperty("period-spending-limits");
-    expect(updateBody).not.toHaveProperty("spending-limit");
-  });
-
-  test("reloads the list when reset response does not include a reset count", async () => {
-    mocks.resetPeriodSpending.mockResolvedValueOnce({
-      status: "ok",
-      end_user_id: "user-frozen",
-      "daily-spending-used": 0,
-    });
-    renderPage();
-
-    await screen.findByText("Alice");
-    await openRowMoreActions("Bob");
-    await userEvent.click(screen.getByRole("menuitem", { name: "Reset account quota" }));
-    const dialog = await screen.findByRole("dialog", { name: "Reset account quota" });
-    await userEvent.click(within(dialog).getByRole("checkbox", { name: "Reset Day quota" }));
-    await userEvent.click(within(dialog).getByRole("button", { name: "Reset selected quotas" }));
-
-    await waitFor(() => {
-      expect(mocks.list).toHaveBeenCalledTimes(2);
-    });
-  });
-
-  test("opens all-date reset history with true and effective today spending summaries", async () => {
-    renderPage();
-
-    await userEvent.click(await screen.findByRole("button", { name: "View reset history" }));
-
-    await waitFor(() => {
-      expect(mocks.listDailySpendingResetHistory).toHaveBeenCalledWith("user-frozen", 200);
-    });
-    expect(await screen.findByText("Reset history · Bob / bob")).toBeInTheDocument();
-    expect(screen.getByText("Today's true spend")).toBeInTheDocument();
-    expect(screen.getByText("$175.50")).toBeInTheDocument();
-    expect(screen.getByText("Current effective today usage")).toBeInTheDocument();
-    expect(screen.getAllByText("$28.25").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("$148.25").length).toBeGreaterThan(0);
-    expect(screen.getByText("Management key")).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: "Reset ID" })).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: "Reset time" })).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: "Project day" })).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: "Usage before reset" })).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: "Stored baseline" })).toBeInTheDocument();
-    expect(screen.getByText("2026-07-21")).toBeInTheDocument();
-
-    const newerId = screen.getByText("42");
-    const olderId = screen.getByText("41");
-    expect(
-      newerId.compareDocumentPosition(olderId) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
-  });
-
-  test("falls back to the row's effective today usage when true spend is absent", async () => {
-    mocks.listDailySpendingResetHistory.mockResolvedValueOnce({
-      items: [],
-      total: 0,
-    });
-    renderPage();
-
-    await userEvent.click(await screen.findByRole("button", { name: "View reset history" }));
-
-    expect(await screen.findByText("Not returned")).toBeInTheDocument();
-    expect(screen.getAllByText("$120.00").length).toBeGreaterThan(0);
-    expect(
-      screen.getByText(
-        "All manual daily-spending reset records for this account. Today's true spend was not returned, so only current effective today usage is available.",
-      ),
-    ).toBeInTheDocument();
-  });
-});
-
-describe("EndUsersPage lifetime allowance", () => {
-  // 100 cap with 12 spent is the operator-facing example: the field must read 88.
-  const cappedUser = {
-    ...users[0],
-    id: "user-capped",
-    username: "carol",
-    display_name: "Carol",
-    "spending-limit": 100,
-    "lifetime-spending-used": 12,
-  };
-
-  beforeEach(async () => {
-    vi.clearAllMocks();
-    await i18n.changeLanguage("en");
-    mocks.permissionProfiles.mockResolvedValue([]);
-    mocks.list.mockResolvedValue({ items: [cappedUser] });
-    mocks.update.mockResolvedValue(cappedUser);
-  });
-
-  async function openEditDialog() {
-    renderPage();
-    await screen.findByText("Carol");
-    await userEvent.click(screen.getAllByRole("button", { name: "Edit user account" })[0]!);
-    return screen.findByRole("dialog", { name: "Edit user account" });
-  }
-
-  test("the lifetime field edits the cap, with usage shown alongside", async () => {
-    // Showing the remainder in a limit editor made "set 1000" read back as 405
-    // and forced operators to reverse-engineer what to type. The field is the
-    // cap; usage belongs next to it.
-    const dialog = await openEditDialog();
-
-    const field = within(dialog).getByRole("spinbutton", {
-      name: "Lifetime spending limit (USD)",
-    });
-    expect((field as HTMLInputElement).value).toBe("100");
-    expect(within(dialog).getByText(/\$12\.00 used this cycle/)).toBeTruthy();
-    expect(within(dialog).getByText(/\$88\.00 left/)).toBeTruthy();
-  });
-
-  test("saving an untouched form sends nothing at all", async () => {
-    const dialog = await openEditDialog();
-
-    await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
-
-    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-    expect(mocks.update).not.toHaveBeenCalled();
-  });
-
-  test("editing another field leaves the cap untouched", async () => {
-    const dialog = await openEditDialog();
-
-    await userEvent.type(within(dialog).getByRole("spinbutton", { name: "RPM limit" }), "60");
-    await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
-
-    await waitFor(() => expect(mocks.update).toHaveBeenCalled());
-    const body = mocks.update.mock.calls[0]![1];
-    expect(body).toMatchObject({ "rpm-limit": 60 });
-    expect(body).not.toHaveProperty("spending-limit");
-  });
-
-  test("an edited value is stored as the new cap", async () => {
-    const dialog = await openEditDialog();
-
-    const field = within(dialog).getByRole("spinbutton", {
-      name: "Lifetime spending limit (USD)",
-    });
-    await userEvent.clear(field);
-    await userEvent.type(field, "200");
-    await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
-
-    await waitFor(() => {
-      expect(mocks.update).toHaveBeenCalledWith(
-        "user-capped",
-        expect.objectContaining({ "spending-limit": 200 }),
-      );
-    });
-  });
-
-  test("an account with only a lifetime allowance can reach the reset action", async () => {
-    // The dialog gained a lifetime option, but the menu entry that opens it was
-    // still gated on the rolling period limits, so the one account type that
-    // needs granting most could never open it.
-    renderPage();
-    await screen.findByText("Carol");
-    await openRowMoreActions("Carol");
-
-    // Enabled label is "Reset account quota"; the disabled state renders the
-    // "No resettable period quota" label instead.
-    const action = screen.getByRole("menuitem", { name: "Reset account quota" });
-    expect(action.getAttribute("aria-disabled")).not.toBe("true");
-  });
-
-  test("the quota column surfaces a lifetime-only cap instead of reading unlimited", async () => {
-    renderPage();
-    await screen.findByText("Carol");
-
-    const row = screen.getByText("Carol").closest("tr")!;
-    expect(within(row).getByText(/\$88 left/)).toBeTruthy();
-    const quotaCell = row.querySelector('[data-vt-column-key="quota"]')!;
-    expect(within(quotaCell as HTMLElement).queryByText("Unlimited")).toBeNull();
+    expect(screen.getByText("1-20 of 25")).toBeInTheDocument();
   });
 });

@@ -225,6 +225,7 @@ export {
   controlTextBySize,
   controlPaddingBySize,
   controlSurface,
+  controlMultilineSurface,
   controlSurfaceTrigger,
 } from "./utils/controlStyles";
 export {

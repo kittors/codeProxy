@@ -64,7 +64,13 @@ export {
 } from "./client/portal-client";
 export type { PortalAuthSnapshot, SavedPortalAccount } from "./client/portal-client";
 export type * from "./dto/types";
-export { endUsersApi, portalApi } from "./endpoints/end-users";
+export {
+  endUsersApi,
+  normalizeEndUser,
+  normalizeEndUserAPIKey,
+  portalApi,
+} from "./endpoints/end-users";
+export * from "./endpoints/access-policy";
 export type * from "./endpoints/end-users";
 
 export { configApi } from "./endpoints/config";

@@ -1,4 +1,5 @@
-import { Copy, History, KeyRound, Pencil, Power, RotateCcw, Trash2 } from "lucide-react";
+import type { ReactNode } from "react";
+import { BarChart3, Copy, History, KeyRound, Pencil, Power, RotateCcw, Trash2 } from "lucide-react";
 import {
   hasPeriodSpendingLimits,
   normalizePeriodSpendingLimits,
@@ -16,6 +17,7 @@ import {
 import { PeriodSpendingCell, formatQuotaUsdAmount } from "./PeriodSpendingCell";
 
 export interface OwnedApiKeyActions {
+  onViewUsage?: (key: EndUserAPIKey) => void;
   onToggleDisabled?: (key: EndUserAPIKey) => void;
   onCopy?: (key: EndUserAPIKey) => void;
   onRotate?: (key: EndUserAPIKey) => void;
@@ -28,24 +30,53 @@ export interface OwnedApiKeyActions {
 /** 次要标签（default、掩码 Key）：中性淡底，不描边；多彩风格下 default 叠回绿色。 */
 const NEUTRAL_TAG = "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]";
 
-export const createOwnedApiKeyColumns = ({
+export interface OwnedApiKeyColumnOptions {
+  /**
+   * 额度列的内容。缺省是美元四周期胶囊；后端支持访问策略时，页面传入完整矩阵的用量格
+   * （本特性不依赖访问策略特性，渲染由页面注入）。
+   */
+  renderQuota?: (key: EndUserAPIKey) => ReactNode;
+  /** 额度列之后追加的列（例如 Key 的按模型规则）。 */
+  extraColumns?: DataTableColumn<EndUserAPIKey>[];
+  /** 复制时再按需取明文：列表里没有明文也不禁用复制。 */
+  copyOnDemand?: boolean;
+  /** 能否重置额度；缺省只看美元四周期。 */
+  canResetQuota?: (key: EndUserAPIKey) => boolean;
+  /** 额度列的表头；缺省是「配额」（美元四周期）。 */
+  quotaLabel?: string;
+  /**
+   * 弹窗等窄容器用的紧凑布局：密钥并到名称下面一行，停用改成名称旁的标签；当日消费（额度格里已有）、
+   * 重置次数（操作菜单里有重置记录）与创建时间不再单列，整张表不必横向滚动。
+   */
+  compact?: boolean;
+}
+
+const buildOwnedApiKeyColumns = ({
   t,
   actions,
   busyKeyId,
   busy: busyAll = false,
   canDelete = () => true,
+  renderQuota,
+  extraColumns = [],
+  copyOnDemand = false,
+  canResetQuota,
+  quotaLabel,
+  compact = false,
 }: {
   t: (key: string, options?: Record<string, unknown>) => string;
   actions: OwnedApiKeyActions;
   busyKeyId?: string | null;
   busy?: boolean;
   canDelete?: (key: EndUserAPIKey) => boolean;
-}): DataTableColumn<EndUserAPIKey>[] => [
+} & OwnedApiKeyColumnOptions): DataTableColumn<EndUserAPIKey>[] => [
   {
     key: "name",
     label: t("api_keys_page.col_name"),
-    width: COLUMN_WIDTH.numericWide,
+    width: compact ? COLUMN_WIDTH.name : COLUMN_WIDTH.numericWide,
     cellClassName: "font-medium",
+    // 紧凑布局的名称格是两行（名称、掩码密钥），整格的溢出提示只会重复第一行。
+    overflowTooltip: compact ? false : undefined,
     render: (row) => (
       <div className="min-w-0">
         <div className="flex min-w-0 items-center gap-1.5">
@@ -61,7 +92,17 @@ export const createOwnedApiKeyColumns = ({
               default
             </span>
           ) : null}
+          {compact && row.disabled ? (
+            <span className="shrink-0 rounded-full bg-ink/[0.05] px-1.5 py-0.5 text-2xs font-medium text-ink-3 dark:bg-white/[0.07]">
+              {t("common.disabled")}
+            </span>
+          ) : null}
         </div>
+        {compact ? (
+          <code className="mt-0.5 block truncate font-mono text-2xs font-normal text-ink-3">
+            {row.key_masked || row.key || row.id}
+          </code>
+        ) : null}
       </div>
     ),
   },
@@ -92,12 +133,13 @@ export const createOwnedApiKeyColumns = ({
   },
   {
     key: "quota",
-    label: t("quota.period_spending_column"),
+    label: quotaLabel ?? t("quota.period_spending_column"),
     width: "w-[360px] min-w-[260px]",
     // Keys have no lifetime cap of their own — it lives on the account and is
     // enforced across all of the account's keys — so this column stays periodic.
-    render: (row) => <PeriodSpendingCell t={t} items={row["period-spending"]} />,
+    render: (row) => (renderQuota ? renderQuota(row) : <PeriodSpendingCell t={t} items={row["period-spending"]} />),
   },
+  ...extraColumns,
   {
     key: "dailySpending",
     label: t("quota.daily_spending_column"),
@@ -150,14 +192,27 @@ export const createOwnedApiKeyColumns = ({
     cellClassName: "md:sticky md:z-30 md:bg-backdrop",
     render: (row) => {
       const busy = busyAll || busyKeyId === row.id;
-      const hasResettablePeriod = hasPeriodSpendingLimits(
-        normalizePeriodSpendingLimits(row["period-spending-limits"], row["daily-spending-limit"]),
-      );
+      const hasResettablePeriod = canResetQuota
+        ? canResetQuota(row)
+        : hasPeriodSpendingLimits(
+            normalizePeriodSpendingLimits(row["period-spending-limits"], row["daily-spending-limit"]),
+          );
       const deletable = canDelete(row);
       return (
         <TableRowActions
           moreLabel={t("common.more_actions")}
+          // 行内只放前三个：编辑（子额度与按模型规则都在里面）最常用排第一；轮换会让旧密钥立即失效，
+          // 留在更多菜单里，避免误点。
           actions={[
+            {
+              key: "edit",
+              label: t("api_keys_page.edit_key_quota"),
+              icon: <Pencil size={15} />,
+              visible: Boolean(actions.onEdit),
+              disabled: busy,
+              className: "icon-hue:hover:text-amber-600 icon-hue:dark:hover:text-amber-400",
+              onClick: () => actions.onEdit?.(row),
+            },
             {
               key: "toggle",
               label: row.disabled
@@ -173,7 +228,7 @@ export const createOwnedApiKeyColumns = ({
               label: t("api_keys_page.copy_key"),
               icon: <Copy size={15} />,
               visible: Boolean(actions.onCopy),
-              disabled: busy || !row.key,
+              disabled: busy || (!row.key && !copyOnDemand),
               onClick: () => actions.onCopy?.(row),
             },
             {
@@ -184,15 +239,6 @@ export const createOwnedApiKeyColumns = ({
               disabled: busy,
               className: "icon-hue:hover:text-orange-600 icon-hue:dark:hover:text-orange-400",
               onClick: () => actions.onRotate?.(row),
-            },
-            {
-              key: "edit",
-              label: t("api_keys_page.edit_key_quota"),
-              icon: <Pencil size={15} />,
-              visible: Boolean(actions.onEdit),
-              disabled: busy,
-              className: "icon-hue:hover:text-amber-600 icon-hue:dark:hover:text-amber-400",
-              onClick: () => actions.onEdit?.(row),
             },
             {
               key: "reset-spending",
@@ -214,6 +260,13 @@ export const createOwnedApiKeyColumns = ({
               onClick: () => actions.onViewResetHistory?.(row),
             },
             {
+              key: "usage",
+              label: t("api_keys_page.view_usage"),
+              icon: <BarChart3 size={15} />,
+              visible: Boolean(actions.onViewUsage),
+              onClick: () => actions.onViewUsage?.(row),
+            },
+            {
               key: "delete",
               label: deletable ? t("common.delete") : t("apikey_lookup.keep_one_key"),
               icon: <Trash2 size={15} />,
@@ -229,6 +282,16 @@ export const createOwnedApiKeyColumns = ({
   },
 ];
 
+/** 紧凑布局不单列的几列（密钥与停用状态并进了名称格）。 */
+const COMPACT_OMITTED_COLUMNS = new Set(["key", "status", "dailySpending", "resetCount", "created"]);
+
+export const createOwnedApiKeyColumns = (
+  options: Parameters<typeof buildOwnedApiKeyColumns>[0],
+): DataTableColumn<EndUserAPIKey>[] => {
+  const columns = buildOwnedApiKeyColumns(options);
+  return options.compact ? columns.filter((column) => !COMPACT_OMITTED_COLUMNS.has(column.key)) : columns;
+};
+
 export function OwnedApiKeysTable({
   t,
   keys,
@@ -239,6 +302,9 @@ export function OwnedApiKeysTable({
   canDelete,
   height = "h-[460px]",
   minHeight = "min-h-[320px]",
+  tableId = "owned-api-keys",
+  minWidth = "min-w-[1580px]",
+  ...columnOptions
 }: {
   t: (key: string, options?: Record<string, unknown>) => string;
   keys: EndUserAPIKey[];
@@ -249,7 +315,10 @@ export function OwnedApiKeysTable({
   canDelete?: (key: EndUserAPIKey) => boolean;
   height?: string;
   minHeight?: string;
-}) {
+  /** 列宽按表格 id 记忆；列不同的两处用法用不同的 id。 */
+  tableId?: string;
+  minWidth?: string;
+} & OwnedApiKeyColumnOptions) {
   // Avoid flashing the empty state while the owner-scoped list is still loading.
   if (loading && keys.length === 0) {
     return (
@@ -273,15 +342,15 @@ export function OwnedApiKeysTable({
   }
   return (
     <DataTable
-      tableId="owned-api-keys"
+      tableId={tableId}
       rows={keys}
-      columns={createOwnedApiKeyColumns({ t, actions, busyKeyId, busy, canDelete })}
+      columns={createOwnedApiKeyColumns({ t, actions, busyKeyId, busy, canDelete, ...columnOptions })}
       rowKey={(row) => row.id}
       rowHeight={52}
       height={height}
       loading={loading}
       minHeight={minHeight}
-      minWidth="min-w-[1580px]"
+      minWidth={minWidth}
       caption={t("api_keys_page.table_caption")}
       emptyText={t("api_keys_page.no_api_keys")}
       showAllLoadedMessage={false}

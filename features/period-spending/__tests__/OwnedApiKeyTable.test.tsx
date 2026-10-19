@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { EndUserAPIKey } from "@code-proxy/api-client";
+import { emptyQuotaMatrix, type EndUserAPIKey } from "@code-proxy/api-client";
 import { describe, expect, test, vi } from "vitest";
 import { createOwnedApiKeyColumns, OwnedApiKeysTable } from "../OwnedApiKeyTable";
 
@@ -22,6 +22,7 @@ const t = (key: string) => {
     "api_keys_page.reset_period_spending": "Reset this Key quota",
     "api_keys_page.reset_period_spending_disabled": "No resettable period quota; edit Key quota",
     "api_keys_page.view_reset_history": "View this key reset history",
+    "api_keys_page.view_usage": "View usage",
     "end_users.rotate_key": "Rotate key",
     "common.delete": "Delete",
     "common.enabled": "Enabled",
@@ -63,6 +64,8 @@ describe("OwnedApiKeysTable", () => {
             key_masked: "sk-****",
             disabled: false,
             is_default: true,
+            "quota-limits": emptyQuotaMatrix(),
+            "model-rules": [],
           },
         ]}
         actions={{}}
@@ -84,6 +87,8 @@ describe("OwnedApiKeysTable", () => {
       is_default: false,
       "period-spending-limits": { "5h": 0, day: 0, week: 300, month: 0 },
       "daily-spending-reset-count": 2,
+      "quota-limits": emptyQuotaMatrix(),
+      "model-rules": [],
     } satisfies EndUserAPIKey;
     const onResetPeriodSpending = vi.fn();
     const onViewResetHistory = vi.fn();
@@ -134,8 +139,9 @@ describe("createOwnedApiKeyColumns", () => {
     expect(columns.find((column) => column.key === "actions")?.maxWidthPx).toBe(160);
   });
 
-  test("keeps three actions inline and moves the remaining actions into the more menu", async () => {
+  test("keeps edit and two more actions inline and moves the rest, rotation included, into the more menu", async () => {
     const onEdit = vi.fn();
+    const onRotate = vi.fn();
     const row = {
       id: "key-1",
       key: "sk-owned",
@@ -147,7 +153,7 @@ describe("createOwnedApiKeyColumns", () => {
       actions: {
         onToggleDisabled: vi.fn(),
         onCopy: vi.fn(),
-        onRotate: vi.fn(),
+        onRotate,
         onEdit,
         onDelete: vi.fn(),
       },
@@ -157,10 +163,101 @@ describe("createOwnedApiKeyColumns", () => {
     render(<div>{actionsColumn?.render(row, 0)}</div>);
 
     expect(screen.getAllByRole("button")).toHaveLength(4);
-    expect(screen.queryByRole("button", { name: "Edit quota" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Edit quota" }));
+    expect(onEdit).toHaveBeenCalledWith(row);
+    expect(screen.queryByRole("button", { name: "Rotate key" })).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "More actions" }));
-    await userEvent.click(await screen.findByRole("menuitem", { name: "Edit quota" }));
-    expect(onEdit).toHaveBeenCalledWith(row);
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Rotate key" }));
+    expect(onRotate).toHaveBeenCalledWith(row);
+  });
+});
+
+describe("injected columns for the access-policy view", () => {
+  const row = {
+    id: "key-2",
+    tenant_id: "tenant-1",
+    end_user_id: "user-1",
+    key_masked: "sk-****abcd",
+    name: "Policy key",
+    disabled: false,
+    is_default: false,
+    "quota-limits": emptyQuotaMatrix(),
+    "model-rules": [],
+  } satisfies EndUserAPIKey;
+
+  test("uses the page's quota renderer, extra columns and reset predicate", async () => {
+    const onResetPeriodSpending = vi.fn();
+    const onViewUsage = vi.fn();
+    const onCopy = vi.fn();
+    const columns = createOwnedApiKeyColumns({
+      t,
+      actions: { onViewUsage, onCopy, onResetPeriodSpending },
+      renderQuota: () => <span>matrix-cell</span>,
+      extraColumns: [{ key: "rules", label: "Rules", render: () => "2 rules" }],
+      copyOnDemand: true,
+      canResetQuota: () => true,
+    });
+    expect(columns.map((column) => column.key)).toContain("rules");
+    const quotaColumn = columns.find((column) => column.key === "quota");
+    const actionsColumn = columns.find((column) => column.key === "actions");
+    render(
+      <div>
+        {quotaColumn?.render(row, 0)}
+        {actionsColumn?.render(row, 0)}
+      </div>,
+    );
+    expect(screen.getByText("matrix-cell")).toBeInTheDocument();
+
+    // 列表里没有明文时，按需取明文的复制也不能被禁用。
+    const copy = screen.getByRole("button", { name: "Copy key" });
+    expect(copy).toBeEnabled();
+    await userEvent.click(copy);
+    expect(onCopy).toHaveBeenCalledWith(row);
+
+    await userEvent.click(screen.getByRole("button", { name: "View usage" }));
+    expect(onViewUsage).toHaveBeenCalledWith(row);
+
+    // 三个操作都放得下，重置也在行内；由页面判定可重置（不只看美元四周期）。
+    const reset = screen.getByRole("button", { name: "Reset this Key quota" });
+    expect(reset).toBeEnabled();
+    await userEvent.click(reset);
+    expect(onResetPeriodSpending).toHaveBeenCalledWith(row);
+  });
+
+  test("compact layout folds key and status into the name cell and drops the secondary columns", () => {
+    const columns = createOwnedApiKeyColumns({
+      t,
+      actions: { onCopy: vi.fn() },
+      renderQuota: () => <span>matrix-cell</span>,
+      extraColumns: [{ key: "rules", label: "Rules", render: () => "2 rules" }],
+      quotaLabel: "Quota usage",
+      compact: true,
+    });
+    // 弹窗里放得下：密钥、状态、当日、重置次数、创建时间不单列。
+    expect(columns.map((column) => column.key)).toEqual(["name", "quota", "rules", "lifetimeSpending", "actions"]);
+    expect(columns.find((column) => column.key === "quota")?.label).toBe("Quota usage");
+
+    const nameColumn = columns.find((column) => column.key === "name");
+    render(<div>{nameColumn?.render({ ...row, disabled: true }, 0)}</div>);
+    expect(screen.getByText("Policy key")).toBeInTheDocument();
+    expect(screen.getByText("sk-****abcd")).toBeInTheDocument();
+    expect(screen.getByText("Disabled")).toBeInTheDocument();
+  });
+
+  test("full layout keeps the key and status columns and the default quota header", () => {
+    const columns = createOwnedApiKeyColumns({ t, actions: {} });
+    expect(columns.map((column) => column.key)).toEqual([
+      "name",
+      "key",
+      "status",
+      "quota",
+      "dailySpending",
+      "lifetimeSpending",
+      "resetCount",
+      "created",
+      "actions",
+    ]);
+    expect(columns.find((column) => column.key === "quota")?.label).toBe("Quota");
   });
 });

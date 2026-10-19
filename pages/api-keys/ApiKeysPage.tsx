@@ -8,7 +8,7 @@ import {
   type ApiKeyEntry,
   type ApiKeyDailySpendingResetEvent,
 } from "@code-proxy/api-client/endpoints/api-keys";
-import { endUsersApi, type EndUserAPIKey } from "@code-proxy/api-client/endpoints/end-users";
+import { endUsersApi, normalizeEndUserAPIKey, type EndUserAPIKey } from "@code-proxy/api-client/endpoints/end-users";
 import {
   applyApiKeyPermissionProfile,
   apiKeyPermissionProfilesApi,
@@ -255,7 +255,7 @@ export function ApiKeysPage({
   );
   const ownedKeys = useMemo<EndUserAPIKey[]>(
     () =>
-      entries.map((entry) => ({
+      entries.map((entry) => normalizeEndUserAPIKey({
         id: entry.id ?? entry.key,
         tenant_id: "",
         end_user_id: endUserIdFilter,

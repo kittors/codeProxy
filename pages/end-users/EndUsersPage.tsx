@@ -1,14 +1,13 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
+import { Link, useSearchParams } from "react-router-dom";
+import { ShieldCheck } from "lucide-react";
 import {
-  RotateCcw,
-  Search,
-} from "lucide-react";
-import {
+  NO_ACCESS_POLICY_CAPABILITIES,
   apiKeyEntriesApi,
   apiKeyPermissionProfilesApi,
   endUsersApi,
-  normalizePeriodSpendingLimits,
+  type AccessPolicyCapabilities,
   type ApiKeyPermissionProfile,
   type CreateEndUserResult,
   type EndUser,
@@ -22,184 +21,199 @@ import {
   DataTable,
   MaskToggleButton,
   PaginationBar,
-  Select,
-  TextInput,
+  buttonClassName,
   useSensitiveDataMasking,
   useToast,
-  type DataTableColumn,
+  type MultiSelectOption,
 } from "@code-proxy/ui";
 import { PermissionGate } from "@app/providers/PermissionGate";
 import { useAuth } from "@app/providers/AuthProvider";
+import { describeWindowParts, formatAccessPolicyError, resettableWindows } from "@features/access-policy";
 import { useApiKeyPermissionOptions } from "@features/api-key-restrictions";
 import { resolvePasswordApiError } from "@features/password-policy";
+import { PeriodQuotaResetModal, formatQuotaValidationError } from "@features/period-spending";
 import { ApiKeyUsageDialogs } from "../api-keys/components/ApiKeyUsageDialogs";
 import { useApiKeyUsageView } from "../api-keys/hooks/useApiKeyUsageView";
-import { EndUserResetHistoryModal } from "./components/EndUserResetHistoryModal";
-import { EndUserCreateModal } from "./components/EndUserCreateModal";
-import { EndUserCreatedSecretsModal } from "./components/EndUserCreatedSecretsModal";
-import { EndUserEditModal } from "./components/EndUserEditModal";
+import { EndUserBindProfileModal } from "./components/EndUserBindProfileModal";
+import { getEndUserColumns } from "./components/EndUserColumns";
 import {
   EndUserDeleteModal,
   EndUserNewPasswordModal,
   EndUserResetPasswordModal,
 } from "./components/EndUserConfirmModals";
+import { EndUserCreatedSecretsModal } from "./components/EndUserCreatedSecretsModal";
+import { EndUserCreateModal } from "./components/EndUserCreateModal";
+import { EndUserEditModal } from "./components/EndUserEditModal";
 import { EndUserKeysModal } from "./components/EndUserKeysModal";
-import { getEndUserColumns } from "./components/EndUserColumns";
+import { EndUserResetHistoryModal } from "./components/EndUserResetHistoryModal";
 import {
-  emptyForm,
-  endUserLabel,
-  requestLimitFromText,
-  spendingLimitFromText,
-} from "./endUserForm";
-import type { EndUserForm } from "./endUserForm";
-import {
-  PeriodQuotaResetModal,
-  formatQuotaValidationError,
-  periodSpendingDraftToLimits,
-} from "@features/period-spending";
+  EndUserToolbar,
+  type EndUserSourceFilter,
+  type EndUserStatusFilter,
+} from "./components/EndUserToolbar";
+import { emptyForm, endUserLabel, type EndUserForm } from "./endUserForm";
 
-type EndUserStatusFilter = "all" | "active" | "frozen";
-const DEFAULT_END_USER_PAGE_SIZE = 20;
-const END_USER_PAGE_SIZE_OPTIONS = [20, 50, 100];
+const DEFAULT_PAGE_SIZE = 20;
+const PAGE_SIZE_OPTIONS = [20, 50, 100];
+
+const errorMessage = (err: unknown, fallback: string) => (err instanceof Error ? err.message : fallback);
 
 export function EndUsersPage() {
   const { notify } = useToast();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { can } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [masked, setMasked] = useSensitiveDataMasking();
   const [users, setUsers] = useState<EndUser[]>([]);
+  const [capabilities, setCapabilities] = useState<AccessPolicyCapabilities>(NO_ACCESS_POLICY_CAPABILITIES);
+  const [profiles, setProfiles] = useState<ApiKeyPermissionProfile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<EndUserStatusFilter>("all");
+  const [sourceFilter, setSourceFilter] = useState<EndUserSourceFilter>("all");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set());
   const [createOpen, setCreateOpen] = useState(false);
-  const [form, setForm] = useState<EndUserForm>(() => emptyForm());
+  const [createForm, setCreateForm] = useState<EndUserForm>(() => emptyForm());
+  const [createPasswordError, setCreatePasswordError] = useState("");
   const [createdSecrets, setCreatedSecrets] = useState<CreateEndUserResult | null>(null);
   const [editUser, setEditUser] = useState<EndUser | null>(null);
-  const [editForm, setEditForm] = useState<EndUserForm>(() => emptyForm());
-  const [resetUser, setResetUser] = useState<EndUser | null>(null);
-  const [resetSpendingUser, setResetSpendingUser] = useState<EndUser | null>(null);
-  const [generatedReset, setGeneratedReset] = useState("");
-  const [createPasswordError, setCreatePasswordError] = useState("");
-  const [deleteUser, setDeleteUser] = useState<EndUser | null>(null);
+  const [editError, setEditError] = useState("");
   const [keysUser, setKeysUser] = useState<EndUser | null>(null);
-  const [resetHistoryUser, setResetHistoryUser] = useState<EndUser | null>(null);
-  const [resetHistoryLoading, setResetHistoryLoading] = useState(false);
-  const [resetHistoryEvents, setResetHistoryEvents] = useState<EndUserDailySpendingResetEvent[]>(
-    [],
-  );
-  const [resetHistoryRawTodayCost, setResetHistoryRawTodayCost] = useState<number>();
-  const [resetHistoryDailySpendingUsed, setResetHistoryDailySpendingUsed] = useState<number>();
-  const [busy, setBusy] = useState(false);
-  const [permissionProfiles, setPermissionProfiles] = useState<ApiKeyPermissionProfile[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<EndUserStatusFilter>("all");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(DEFAULT_END_USER_PAGE_SIZE);
+  const [bindOpen, setBindOpen] = useState(false);
+  const [resetUser, setResetUser] = useState<EndUser | null>(null);
+  const [resetQuotaUser, setResetQuotaUser] = useState<EndUser | null>(null);
+  const [resetQuotaError, setResetQuotaError] = useState("");
+  const [generatedReset, setGeneratedReset] = useState("");
+  const [deleteUser, setDeleteUser] = useState<EndUser | null>(null);
+  const [historyUser, setHistoryUser] = useState<EndUser | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyEvents, setHistoryEvents] = useState<EndUserDailySpendingResetEvent[]>([]);
+  const [historyRawTodayCost, setHistoryRawTodayCost] = useState<number>();
+  const [historyDailyUsed, setHistoryDailyUsed] = useState<number>();
+  const [catalog, setCatalog] = useState<MultiSelectOption[]>([]);
+  /** 用量弹窗描述里的对象：「账号下全部密钥」或单把 Key 的名称。 */
+  const [usageLabel, setUsageLabel] = useState("");
+  const [optionsLoaded, setOptionsLoaded] = useState(false);
   const canWrite = can("end_users.write");
-  const { refreshPermissionOptions } = useApiKeyPermissionOptions();
+  const permissionOptions = useApiKeyPermissionOptions();
+  const { fetchModelOptions, refreshPermissionOptions, loadModels } = permissionOptions;
   const usageView = useApiKeyUsageView();
-  const { openUsageView } = usageView;
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await endUsersApi.list();
-      setUsers(res.items ?? []);
-    } catch (e) {
-      notify({ type: "error", message: e instanceof Error ? e.message : "load failed" });
+      const [list, profileList] = await Promise.all([
+        endUsersApi.list(),
+        apiKeyPermissionProfilesApi.listDetailed().catch(() => null),
+      ]);
+      setUsers(list.items);
+      setCapabilities(list.capabilities);
+      if (profileList) setProfiles(profileList.items);
+    } catch (err) {
+      notify({ type: "error", message: errorMessage(err, t("end_users.load_failed")) });
     } finally {
       setLoading(false);
     }
-  }, [notify]);
-
-  const loadProfiles = useCallback(async () => {
-    try {
-      const profiles = await apiKeyPermissionProfilesApi.list();
-      setPermissionProfiles(Array.isArray(profiles) ? profiles : []);
-    } catch {
-      setPermissionProfiles([]);
-    }
-  }, []);
+  }, [notify, t]);
 
   useEffect(() => {
     void load();
-    void loadProfiles();
+  }, [load]);
+
+  // 渠道、分组与模型目录只在打开编辑 / Key 弹窗时才需要：以前一进列表页就并发十几个请求去拉。
+  const ensurePolicyOptions = useCallback(() => {
+    if (optionsLoaded) return;
+    setOptionsLoaded(true);
     void refreshPermissionOptions();
-  }, [load, loadProfiles, refreshPermissionOptions]);
+    void fetchModelOptions().then(setCatalog);
+  }, [fetchModelOptions, optionsLoaded, refreshPermissionOptions]);
 
-  const profileNameById = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const p of permissionProfiles) map.set(p.id, p.name);
-    return map;
-  }, [permissionProfiles]);
-
-  const permissionProfileOptions = useMemo(
-    () => [
-      {
-        value: "",
-        label: t("api_keys_page.permission_profile_unrestricted", { defaultValue: "不限制" }),
+  // 旧的 /access/api-keys?endUserId= 深链改到这里，直接打开该账号的 Key 管理。
+  const keysParam = searchParams.get("keys");
+  useEffect(() => {
+    if (!keysParam || loading) return;
+    const target = users.find((user) => user.id === keysParam);
+    if (target) {
+      ensurePolicyOptions();
+      setKeysUser(target);
+    }
+    setSearchParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        next.delete("keys");
+        return next;
       },
-      ...permissionProfiles.map((p) => ({ value: p.id, label: p.name })),
-    ],
-    [permissionProfiles, t],
-  );
+      { replace: true },
+    );
+  }, [ensurePolicyOptions, keysParam, loading, setSearchParams, users]);
 
-  const statusFilterOptions = useMemo(
-    () => [
-      { value: "all", label: t("end_users.status_all", { defaultValue: "全部状态" }) },
-      { value: "active", label: t("end_users.status_active") },
-      { value: "frozen", label: t("end_users.status_frozen") },
-    ],
-    [t],
-  );
+  const profileById = useMemo(() => new Map(profiles.map((profile) => [profile.id, profile])), [profiles]);
+  const boundCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const user of users) {
+      const id = user["permission-profile-id"]?.trim();
+      if (id) counts.set(id, (counts.get(id) ?? 0) + 1);
+    }
+    return counts;
+  }, [users]);
 
   const filteredUsers = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
+    const query = search.trim().toLowerCase();
     return users.filter((user) => {
-      const matchesStatus =
-        statusFilter === "all" ||
-        (statusFilter === "active" ? user.status === "active" : user.status !== "active");
-      if (!matchesStatus) return false;
+      if (statusFilter === "active" && user.status !== "active") return false;
+      if (statusFilter === "frozen" && user.status === "active") return false;
+      const profileId = user["permission-profile-id"]?.trim() ?? "";
+      if (sourceFilter === "custom" && profileId) return false;
+      if (sourceFilter !== "all" && sourceFilter !== "custom" && profileId !== sourceFilter) return false;
       if (!query) return true;
-      return [user.username, user.display_name, user.id].some((value) =>
-        value.toLowerCase().includes(query),
-      );
+      return [user.username, user.display_name, user.id].some((value) => value.toLowerCase().includes(query));
     });
-  }, [searchQuery, statusFilter, users]);
+  }, [search, sourceFilter, statusFilter, users]);
 
   const totalPages = Math.max(1, Math.ceil(filteredUsers.length / pageSize));
-  const effectivePage = Math.min(currentPage, totalPages);
-  const paginatedUsers = useMemo(() => {
-    const start = (effectivePage - 1) * pageSize;
-    return filteredUsers.slice(start, start + pageSize);
-  }, [effectivePage, filteredUsers, pageSize]);
-  const hasActiveFilters = searchQuery.trim().length > 0 || statusFilter !== "all";
+  const currentPage = Math.min(page, totalPages);
+  const pageUsers = useMemo(
+    () => filteredUsers.slice((currentPage - 1) * pageSize, currentPage * pageSize),
+    [currentPage, filteredUsers, pageSize],
+  );
+  const hasFilters = search.trim().length > 0 || statusFilter !== "all" || sourceFilter !== "all";
 
+  // 列表刷新或筛选后，选中项只保留仍然存在的账号。
   useEffect(() => {
-    setCurrentPage((page) => Math.min(page, totalPages));
-  }, [totalPages]);
+    setSelected((current) => {
+      if (current.size === 0) return current;
+      const alive = new Set(users.map((user) => user.id));
+      const next = new Set([...current].filter((id) => alive.has(id)));
+      return next.size === current.size ? current : next;
+    });
+  }, [users]);
 
-  const selectedEditProfile = useMemo(
-    () =>
-      editForm.permissionProfileId
-        ? (permissionProfiles.find((profile) => profile.id === editForm.permissionProfileId) ??
-          null)
-        : null,
-    [editForm.permissionProfileId, permissionProfiles],
+  const batchEnabled = canWrite && capabilities.batchProfileBinding && profiles.length > 0;
+  const pageIds = pageUsers.map((user) => user.id);
+  const allPageSelected = pageIds.length > 0 && pageIds.every((id) => selected.has(id));
+
+  const openEdit = useCallback(
+    (user: EndUser) => {
+      ensurePolicyOptions();
+      setEditError("");
+      setEditUser(user);
+    },
+    [ensurePolicyOptions],
   );
 
-  const setFrozen = useCallback(
-    async (row: EndUser, frozen: boolean) => {
+  const toggleFrozen = useCallback(
+    async (user: EndUser) => {
+      const frozen = user.status === "active";
       setBusy(true);
       try {
-        await endUsersApi.update(row.id, { status: frozen ? "locked" : "active" });
-        notify({
-          type: "success",
-          message: frozen
-            ? t("end_users.frozen_success", { defaultValue: "账号已冻结" })
-            : t("end_users.activated_success", { defaultValue: "账号已激活" }),
-        });
+        await endUsersApi.update(user.id, { status: frozen ? "locked" : "active" });
+        notify({ type: "success", message: frozen ? t("end_users.frozen_success") : t("end_users.activated_success") });
         await load();
-      } catch (e) {
-        notify({ type: "error", message: e instanceof Error ? e.message : "failed" });
+      } catch (err) {
+        notify({ type: "error", message: errorMessage(err, t("common.operation_failed")) });
       } finally {
         setBusy(false);
       }
@@ -207,148 +221,130 @@ export function EndUsersPage() {
     [load, notify, t],
   );
 
-  const resetPeriodSpending = useCallback(
-    async (row: EndUser, periods: QuotaResetPeriod[]) => {
-      if (periods.length === 0) return;
-      setBusy(true);
+  const openHistory = useCallback(
+    async (user: EndUser) => {
+      setHistoryUser(user);
+      setHistoryEvents([]);
+      setHistoryRawTodayCost(undefined);
+      setHistoryDailyUsed(user["daily-spending-used"]);
+      setHistoryLoading(true);
       try {
-        await endUsersApi.resetPeriodSpending(row.id, periods);
-        notify({
-          type: "success",
-          message: t("end_users.reset_period_spending_success"),
-        });
-        setResetSpendingUser(null);
-        await load();
-      } catch (e) {
-        notify({
-          type: "error",
-          message: e instanceof Error ? e.message : t("end_users.reset_period_spending_failed"),
-        });
+        const response = await endUsersApi.listDailySpendingResetHistory(user.id, 200);
+        setHistoryEvents(Array.isArray(response?.items) ? response.items : []);
+        setHistoryRawTodayCost(response?.["raw-today-cost"]);
+        setHistoryDailyUsed(response?.["daily-spending-used"] ?? user["daily-spending-used"]);
+      } catch (err) {
+        notify({ type: "error", message: errorMessage(err, t("end_users.reset_history_load_failed")) });
+        setHistoryUser(null);
       } finally {
-        setBusy(false);
-      }
-    },
-    [load, notify, t],
-  );
-
-  const handleViewResetHistory = useCallback(
-    async (row: EndUser) => {
-      setResetHistoryUser(row);
-      setResetHistoryEvents([]);
-      setResetHistoryRawTodayCost(undefined);
-      setResetHistoryDailySpendingUsed(row["daily-spending-used"]);
-      setResetHistoryLoading(true);
-      try {
-        const response = await endUsersApi.listDailySpendingResetHistory(row.id, 200);
-        setResetHistoryEvents(Array.isArray(response?.items) ? response.items : []);
-        setResetHistoryRawTodayCost(response?.["raw-today-cost"]);
-        setResetHistoryDailySpendingUsed(
-          response?.["daily-spending-used"] ?? row["daily-spending-used"],
-        );
-      } catch (e) {
-        notify({
-          type: "error",
-          message:
-            e instanceof Error
-              ? e.message
-              : t("end_users.reset_history_load_failed", {
-                  defaultValue: "加载重置历史失败",
-                }),
-        });
-        setResetHistoryUser(null);
-      } finally {
-        setResetHistoryLoading(false);
+        setHistoryLoading(false);
       }
     },
     [notify, t],
   );
 
-  const handleViewUserUsage = useCallback(
-    async (row: EndUser) => {
-      const name =
-        row.display_name || row.username || t("end_users.unnamed", { defaultValue: "未命名用户" });
-      try {
-        const entries = await apiKeyEntriesApi.list();
-        const keyNames: Record<string, string> = {};
-        const keys = entries
-          .filter((e) => e.end_user_id === row.id && e.key?.trim())
-          .map((e) => {
-            const key = e.key.trim();
-            if (e.name?.trim()) keyNames[key] = e.name.trim();
-            return key;
-          });
-        if (keys.length === 0) {
-          notify({
-            type: "info",
-            message: t("end_users.no_keys_for_usage", {
-              defaultValue: "该用户暂无 API 密钥，无法查看用量",
-            }),
-          });
-          return;
-        }
-        openUsageView(keys, name, keyNames);
-      } catch (e) {
-        notify({
-          type: "error",
-          message: e instanceof Error ? e.message : t("api_keys_page.load_usage_failed"),
-        });
+  const viewUsage = useCallback(
+    (user: EndUser) => {
+      const name = user.display_name || user.username || t("end_users.unnamed");
+      // 新后端按账号 id 过滤日志；旧后端不认识 end_user_id，会返回整个租户的日志，所以只在声明了能力时用。
+      setUsageLabel(t("end_users.usage_keys_summary"));
+      if (capabilities.ownedKeyAdmin) {
+        usageView.openEndUserUsageView(user.id, name);
+        return;
       }
+      void (async () => {
+        try {
+          // 旧后端的账号 Key 列表不带明文，只能从租户的 Key 条目里按账号挑出来。
+          const entries = await apiKeyEntriesApi.list();
+          const keyNames: Record<string, string> = {};
+          const keys = entries.flatMap((entry) => {
+            const key = entry.key?.trim();
+            if (entry.end_user_id !== user.id || !key) return [];
+            if (entry.name?.trim()) keyNames[key] = entry.name.trim();
+            return [key];
+          });
+          if (keys.length === 0) {
+            notify({ type: "info", message: t("end_users.no_keys_for_usage") });
+            return;
+          }
+          usageView.openUsageView(keys, name, keyNames);
+        } catch (err) {
+          notify({ type: "error", message: errorMessage(err, t("api_keys_page.load_usage_failed")) });
+        }
+      })();
     },
-    [notify, openUsageView, t],
+    [capabilities.ownedKeyAdmin, notify, t, usageView],
   );
 
-  const columns = useMemo<DataTableColumn<EndUser>[]>(
+  const columns = useMemo(
     () =>
       getEndUserColumns({
         t,
+        locale: i18n.resolvedLanguage ?? "en",
         can,
         canWrite,
         busy,
-        permissionProfiles,
-        profileNameById,
-        handleViewResetHistory,
-        handleViewUserUsage,
-        setFrozen,
-        setEditUser,
-        setEditForm,
-        setResetSpendingUser,
-        setResetUser,
-        setDeleteUser,
-        setKeysUser,
         masked,
+        profileById,
+        selection: batchEnabled
+          ? {
+              selected,
+              allSelected: allPageSelected,
+              someSelected: !allPageSelected && pageIds.some((id) => selected.has(id)),
+              onSelectAll: (checked) =>
+                setSelected((current) => {
+                  const next = new Set(current);
+                  for (const id of pageIds) {
+                    if (checked) next.add(id);
+                    else next.delete(id);
+                  }
+                  return next;
+                }),
+              onSelect: (id, checked) =>
+                setSelected((current) => {
+                  const next = new Set(current);
+                  if (checked) next.add(id);
+                  else next.delete(id);
+                  return next;
+                }),
+            }
+          : undefined,
+        onViewUsage: viewUsage,
+        onManageKeys: (user) => {
+          ensurePolicyOptions();
+          setKeysUser(user);
+        },
+        onEdit: openEdit,
+        onToggleFrozen: (user) => void toggleFrozen(user),
+        onResetQuota: (user) => {
+          setResetQuotaError("");
+          setResetQuotaUser(user);
+        },
+        onViewResetHistory: (user) => void openHistory(user),
+        onResetPassword: setResetUser,
+        onDelete: setDeleteUser,
       }),
-    [
-      busy,
-      can,
-      canWrite,
-      handleViewResetHistory,
-      handleViewUserUsage,
-      masked,
-      permissionProfiles,
-      profileNameById,
-      setFrozen,
-      t,
-    ],
+    // pageIds 由 pageUsers 推出，allPageSelected 由 selected 推出。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [allPageSelected, batchEnabled, busy, can, canWrite, ensurePolicyOptions, i18n.resolvedLanguage, masked, openEdit, openHistory, pageUsers, profileById, selected, t, toggleFrozen, viewUsage],
   );
 
-  const onCreate = async (e: FormEvent) => {
-    e.preventDefault();
-    // 密码策略（留空 = 由服务端生成）已在创建弹窗里就地校验；这里只处理服务端的拒绝。
+  const onCreate = async (event: FormEvent) => {
+    event.preventDefault();
     setCreatePasswordError("");
     setBusy(true);
     try {
+      const profileId = capabilities.createWithProfile ? createForm.permissionProfileId.trim() : "";
       const result = await endUsersApi.create({
-        username: form.username.trim() || undefined,
-        display_name: form.displayName.trim(),
-        password: form.password || undefined,
+        username: createForm.username.trim() || undefined,
+        display_name: createForm.displayName.trim(),
+        password: createForm.password || undefined,
+        ...(profileId ? { "permission-profile-id": profileId } : {}),
       });
       setCreateOpen(false);
-      setForm(emptyForm());
-      if (result.generated_password || result.default_api_key?.key) {
-        setCreatedSecrets(result);
-      } else {
-        notify({ type: "success", message: t("end_users.created", { defaultValue: "已创建" }) });
-      }
+      setCreateForm(emptyForm());
+      if (result.generated_password || result.default_api_key?.key) setCreatedSecrets(result);
+      else notify({ type: "success", message: t("end_users.created") });
       await load();
     } catch (err) {
       const policy = resolvePasswordApiError(err, t);
@@ -356,140 +352,89 @@ export function EndUsersPage() {
         setCreatePasswordError(policy);
         return;
       }
-      notify({ type: "error", message: err instanceof Error ? err.message : "failed" });
+      notify({ type: "error", message: errorMessage(err, t("common.operation_failed")) });
     } finally {
       setBusy(false);
     }
   };
 
-  const onReset = async () => {
-    if (!resetUser) return;
-    setBusy(true);
-    try {
-      const res = await endUsersApi.resetPassword(resetUser.id);
-      setGeneratedReset(res.generated_password || "");
-      notify({
-        type: "success",
-        message: t("end_users.password_reset", { defaultValue: "密码已重置，请立即复制" }),
-      });
-      setResetUser(null);
-      await load();
-    } catch (err) {
-      notify({ type: "error", message: err instanceof Error ? err.message : "failed" });
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const onEdit = async (e: FormEvent) => {
-    e.preventDefault();
+  const onEdit = async (body: EndUserUpdateBody) => {
     if (!editUser) return;
+    if (Object.keys(body).length === 0) {
+      setEditUser(null);
+      return;
+    }
     setBusy(true);
+    setEditError("");
     try {
-      const body: EndUserUpdateBody = {};
-      const nextUsername = editForm.username.trim();
-      const nextDisplay = editForm.displayName.trim();
-      const nextProfile = editForm.permissionProfileId.trim();
-      const prevProfile = (editUser["permission-profile-id"] ?? "").trim();
-      const nextSpendingLimit = spendingLimitFromText(editForm.spendingLimit);
-      const previousSpendingLimit = editUser["spending-limit"] ?? 0;
-      const directLimits = {
-        "daily-limit": requestLimitFromText(editForm.dailyLimit),
-        "total-quota": requestLimitFromText(editForm.totalQuota),
-        "concurrency-limit": requestLimitFromText(editForm.concurrencyLimit),
-        "rpm-limit": requestLimitFromText(editForm.rpmLimit),
-        "tpm-limit": requestLimitFromText(editForm.tpmLimit),
-      };
-
-      if (nextUsername && nextUsername !== editUser.username) body.username = nextUsername;
-      if (nextDisplay && nextDisplay !== editUser.display_name) body.display_name = nextDisplay;
-      if (editForm.password.trim()) body.password = editForm.password;
-      if (nextSpendingLimit !== previousSpendingLimit) {
-        body["spending-limit"] = nextSpendingLimit;
-      }
-
-      if (nextProfile !== prevProfile) {
-        body["permission-profile-id"] = nextProfile;
-      }
-
-      const profile = nextProfile
-        ? (permissionProfiles.find((item) => item.id === nextProfile) ?? null)
-        : null;
-      if (profile && nextProfile !== prevProfile) {
-        body["daily-limit"] = profile["daily-limit"];
-        body["total-quota"] = profile["total-quota"];
-        body["concurrency-limit"] = profile["concurrency-limit"];
-        body["rpm-limit"] = profile["rpm-limit"];
-        body["tpm-limit"] = profile["tpm-limit"];
-        body["allowed-models"] = [...profile["allowed-models"]];
-        body["allowed-channels"] = [...profile["allowed-channels"]];
-        body["allowed-channel-groups"] = [...profile["allowed-channel-groups"]];
-        body["system-prompt"] = profile["system-prompt"];
-      }
-
-      if (!profile) {
-        if (directLimits["daily-limit"] !== (editUser["daily-limit"] ?? 0)) {
-          body["daily-limit"] = directLimits["daily-limit"];
-        }
-        if (directLimits["total-quota"] !== (editUser["total-quota"] ?? 0)) {
-          body["total-quota"] = directLimits["total-quota"];
-        }
-        if (directLimits["concurrency-limit"] !== (editUser["concurrency-limit"] ?? 0)) {
-          body["concurrency-limit"] = directLimits["concurrency-limit"];
-        }
-        if (directLimits["rpm-limit"] !== (editUser["rpm-limit"] ?? 0)) {
-          body["rpm-limit"] = directLimits["rpm-limit"];
-        }
-        if (directLimits["tpm-limit"] !== (editUser["tpm-limit"] ?? 0)) {
-          body["tpm-limit"] = directLimits["tpm-limit"];
-        }
-        const nextLimits = periodSpendingDraftToLimits(editForm.periodSpending);
-        const previousLimits = normalizePeriodSpendingLimits(
-          editUser["period-spending-limits"],
-          editUser["daily-spending-limit"],
-        );
-        if (JSON.stringify(nextLimits) !== JSON.stringify(previousLimits)) {
-          body["daily-spending-limit"] = nextLimits.day;
-          body["period-spending-limits"] = nextLimits;
-        }
-      }
-
-      if (Object.keys(body).length === 0) {
-        setEditUser(null);
-        return;
-      }
       const updated = await endUsersApi.update(editUser.id, body);
+      const capped = updated["capped-cells"]?.length ?? updated["capped-keys"]?.length ?? 0;
       notify({
         type: "success",
-        message: updated["capped-keys"]?.length
-          ? t("api_key_permissions_page.saved_with_caps", {
-              keys: updated["capped-keys"].length,
-            })
-          : t("end_users.updated"),
+        message: capped > 0 ? t("access_policy.saved_with_caps", { count: capped }) : t("end_users.updated"),
       });
       setEditUser(null);
-      setEditForm(emptyForm());
       await load();
     } catch (err) {
-      notify({ type: "error", message: formatQuotaValidationError(err, t) });
+      setEditError(formatAccessPolicyError(err, t) ?? formatQuotaValidationError(err, t));
     } finally {
       setBusy(false);
     }
   };
 
-  const onDelete = async () => {
-    if (!deleteUser) return;
+  const onBind = async (profileId: string) => {
     setBusy(true);
     try {
-      await endUsersApi.remove(deleteUser.id);
-      setDeleteUser(null);
+      const result = await endUsersApi.bindProfile([...selected], profileId);
+      const capped = result["capped-cells"]?.length ?? result["capped-keys"]?.length ?? 0;
+      notify({
+        type: "success",
+        message:
+          capped > 0
+            ? t("access_policy.batch_bind_done_with_caps", { count: result.updated, keys: capped })
+            : t("access_policy.batch_bind_done", { count: result.updated }),
+      });
+      setBindOpen(false);
+      setSelected(new Set());
       await load();
     } catch (err) {
-      notify({ type: "error", message: err instanceof Error ? err.message : "failed" });
+      notify({ type: "error", message: formatAccessPolicyError(err, t) ?? errorMessage(err, t("common.operation_failed")) });
     } finally {
       setBusy(false);
     }
   };
+
+  const onResetQuota = async (periods: QuotaResetPeriod[]) => {
+    if (!resetQuotaUser || periods.length === 0) return;
+    setBusy(true);
+    setResetQuotaError("");
+    try {
+      await endUsersApi.resetPeriodSpending(resetQuotaUser.id, periods);
+      notify({ type: "success", message: t("end_users.reset_period_spending_success") });
+      setResetQuotaUser(null);
+      await load();
+    } catch (err) {
+      setResetQuotaError(errorMessage(err, t("end_users.reset_period_spending_failed")));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const runConfirmed = async (action: () => Promise<void>) => {
+    setBusy(true);
+    try {
+      await action();
+      await load();
+    } catch (err) {
+      notify({ type: "error", message: errorMessage(err, t("common.operation_failed")) });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const resetWindows = resetQuotaUser
+    ? resettableWindows(resetQuotaUser["quota-limits"], resetQuotaUser["model-rules"], resetQuotaUser["quota-usage"])
+    : [];
 
   return (
     <PermissionGate permission="end_users.read" anyOf={["api_keys.read"]}>
@@ -502,111 +447,88 @@ export function EndUsersPage() {
           flat
           className="md:flex md:min-h-0 md:flex-1 md:flex-col"
           bodyClassName="md:flex md:min-h-0 md:flex-1 md:flex-col"
-          title={t("end_users.title", { defaultValue: "用户账号" })}
-          description={t("end_users.subtitle", {
-            defaultValue:
-              "门户用户账号（与后台管理员隔离）。每日限额/总配额/权限在账号上统一配置，该用户下全部 API Key 共用同一额度池。",
-          })}
+          title={t("end_users.title")}
+          description={t("access_policy.page_subtitle")}
           actions={
             <div className="flex items-center gap-2">
               <MaskToggleButton masked={masked} onToggle={() => setMasked((prev) => !prev)} />
+              {can("api_key_profiles.read") ? (
+                <Link to="/access/api-key-permissions" className={buttonClassName({ size: "sm", variant: "secondary" })}>
+                  <ShieldCheck size={14} aria-hidden="true" />
+                  {t("access_policy.manage_profiles")}
+                </Link>
+              ) : null}
               {canWrite ? (
                 <Button variant="primary" size="sm" onClick={() => setCreateOpen(true)}>
-                  {t("end_users.create", { defaultValue: "创建用户" })}
+                  {t("end_users.create")}
                 </Button>
               ) : null}
             </div>
           }
           loading={loading}
         >
-          <div className="mb-3 flex flex-shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
-            <div className="min-w-0 flex-1 sm:max-w-sm">
-              <TextInput
-                size="sm"
-                value={searchQuery}
-                onChange={(event) => {
-                  setSearchQuery(event.target.value);
-                  setCurrentPage(1);
-                }}
-                placeholder={t("end_users.search_placeholder", {
-                  defaultValue: "搜索用户名、昵称或 ID",
-                })}
-                aria-label={t("end_users.search_label", { defaultValue: "搜索用户账号" })}
-                startAdornment={
-                  <Search className="h-4 w-4 text-ink-3" aria-hidden />
-                }
-              />
-            </div>
-            <Select
-              size="sm"
-              value={statusFilter}
-              onChange={(value) => {
-                setStatusFilter(value === "active" || value === "frozen" ? value : "all");
-                setCurrentPage(1);
-              }}
-              options={statusFilterOptions}
-              aria-label={t("end_users.status_filter", { defaultValue: "按状态筛选" })}
-              className="w-full sm:w-40"
-            />
-            {hasActiveFilters ? (
-              <Button
-                size="sm"
-                variant="ghost"
-                className="self-start"
-                onClick={() => {
-                  setSearchQuery("");
-                  setStatusFilter("all");
-                  setCurrentPage(1);
-                }}
-              >
-                <RotateCcw className="h-3.5 w-3.5" aria-hidden />
-                {t("end_users.clear_filters", { defaultValue: "清除筛选" })}
-              </Button>
-            ) : null}
-          </div>
+          <EndUserToolbar
+            search={search}
+            onSearchChange={(value) => {
+              setSearch(value);
+              setPage(1);
+            }}
+            status={statusFilter}
+            onStatusChange={(value) => {
+              setStatusFilter(value);
+              setPage(1);
+            }}
+            source={sourceFilter}
+            onSourceChange={(value) => {
+              setSourceFilter(value);
+              setPage(1);
+            }}
+            profiles={profiles}
+            showSourceFilter={profiles.length > 0}
+            selectedCount={selected.size}
+            onBindSelected={batchEnabled ? () => setBindOpen(true) : undefined}
+            onClearSelection={() => setSelected(new Set())}
+            onClearFilters={() => {
+              setSearch("");
+              setStatusFilter("all");
+              setSourceFilter("all");
+              setPage(1);
+            }}
+          />
           <DataTable
             tableId="end-users"
-            rows={paginatedUsers}
+            rows={pageUsers}
             columns={columns}
-            rowKey={(r) => r.id}
+            rowKey={(row) => row.id}
             virtualize={false}
-            rowHeight={60}
+            rowHeight={64}
             height="h-[calc(100dvh-360px)] md:h-auto md:flex-1"
             minHeight="min-h-[320px] md:min-h-0"
-            minWidth="min-w-[1720px]"
-            emptyText={
-              hasActiveFilters
-                ? t("end_users.filtered_empty", { defaultValue: "没有符合筛选条件的用户账号" })
-                : t("end_users.empty", { defaultValue: "暂无用户账号" })
-            }
+            minWidth="min-w-[1520px]"
+            rowClassName={(row) => (selected.has(row.id) ? "bg-accent-soft/60" : "")}
+            emptyText={hasFilters ? t("end_users.filtered_empty") : t("end_users.empty")}
             showAllLoadedMessage={false}
             columnResizable
           />
           <PaginationBar
-            currentPage={effectivePage}
+            currentPage={currentPage}
             totalPages={totalPages}
             totalCount={filteredUsers.length}
             pageSize={pageSize}
-            onPageChange={setCurrentPage}
+            onPageChange={setPage}
             onPageSizeChange={(size) => {
               setPageSize(size);
-              setCurrentPage(1);
+              setPage(1);
             }}
-            pageSizeOptions={END_USER_PAGE_SIZE_OPTIONS}
+            pageSizeOptions={PAGE_SIZE_OPTIONS}
             className="mt-3"
             labels={{
-              firstPage: t("end_users.first_page", { defaultValue: "首页" }),
-              previousPage: t("end_users.previous_page", { defaultValue: "上一页" }),
-              nextPage: t("end_users.next_page", { defaultValue: "下一页" }),
-              lastPage: t("end_users.last_page", { defaultValue: "末页" }),
-              rowsPerPage: t("end_users.rows_per_page", { defaultValue: "每页行数" }),
-              pageInfo: ({ start, end, total }) =>
-                t("end_users.page_info", {
-                  defaultValue: "第 {{start}}-{{end}} 条，共 {{total}} 条",
-                  start,
-                  end,
-                  total,
-                }),
+              firstPage: t("end_users.first_page"),
+              previousPage: t("end_users.previous_page"),
+              nextPage: t("end_users.next_page"),
+              lastPage: t("end_users.last_page"),
+              rowsPerPage: t("end_users.rows_per_page"),
+              pageInfo: ({ start, end, total }) => t("end_users.page_info", { start, end, total }),
             }}
           />
         </Card>
@@ -615,35 +537,62 @@ export function EndUsersPage() {
       <EndUserCreateModal
         t={t}
         open={createOpen}
-        form={form}
-        setForm={setForm}
+        form={createForm}
+        setForm={setCreateForm}
         busy={busy}
         createPasswordError={createPasswordError}
         setCreatePasswordError={setCreatePasswordError}
+        profiles={profiles}
+        allowProfile={capabilities.createWithProfile}
         onSubmit={onCreate}
         onClose={() => setCreateOpen(false)}
       />
-
-      <EndUserCreatedSecretsModal
-        createdSecrets={createdSecrets}
-        onClose={() => setCreatedSecrets(null)}
-      />
+      <EndUserCreatedSecretsModal createdSecrets={createdSecrets} onClose={() => setCreatedSecrets(null)} />
 
       <EndUserEditModal
-        t={t}
         open={Boolean(editUser)}
         user={editUser}
-        form={editForm}
-        onFormChange={setEditForm}
-        permissionProfiles={permissionProfiles}
-        permissionProfileOptions={permissionProfileOptions}
-        selectedProfile={selectedEditProfile}
-        busy={busy}
-        onSubmit={onEdit}
-        onClose={() => {
-          setEditUser(null);
-          setEditForm(emptyForm());
+        profiles={profiles}
+        boundCounts={boundCounts}
+        capabilities={capabilities}
+        catalog={catalog}
+        availableChannelGroups={permissionOptions.availableChannelGroups}
+        availableChannels={permissionOptions.availableChannels}
+        channelRouteGroupsByName={permissionOptions.channelRouteGroupsByName}
+        availableModels={permissionOptions.availableModels}
+        onAccessScopeChange={(channels, groups) => void loadModels(channels, groups)}
+        saving={busy}
+        serverError={editError}
+        onSubmit={(body) => void onEdit(body)}
+        onClose={() => setEditUser(null)}
+      />
+
+      <EndUserKeysModal
+        user={keysUser}
+        catalog={catalog}
+        canWrite={canWrite || can("api_keys.write")}
+        onViewKeyUsage={(key, secret) => {
+          setUsageLabel(key.key_masked || key.name || t("api_keys_page.unnamed"));
+          usageView.openUsageView(
+            [secret],
+            key.name || t("api_keys_page.unnamed"),
+            key.name ? { [secret]: key.name } : undefined,
+          );
         }}
+        onClose={() => {
+          setKeysUser(null);
+          void load();
+        }}
+      />
+
+      <EndUserBindProfileModal
+        open={bindOpen}
+        count={selected.size}
+        profiles={profiles}
+        boundCounts={boundCounts}
+        busy={busy}
+        onConfirm={(profileId) => void onBind(profileId)}
+        onClose={() => setBindOpen(false)}
       />
 
       <EndUserNewPasswordModal password={generatedReset} onClose={() => setGeneratedReset("")} />
@@ -651,63 +600,55 @@ export function EndUsersPage() {
         user={resetUser}
         busy={busy}
         onClose={() => setResetUser(null)}
-        onConfirm={() => void onReset()}
+        onConfirm={() =>
+          void runConfirmed(async () => {
+            if (!resetUser) return;
+            const res = await endUsersApi.resetPassword(resetUser.id);
+            setGeneratedReset(res.generated_password || "");
+            notify({ type: "success", message: t("end_users.password_reset") });
+            setResetUser(null);
+          })
+        }
       />
       <PeriodQuotaResetModal
-        open={Boolean(resetSpendingUser)}
+        open={Boolean(resetQuotaUser)}
         scope="account"
-        subjectName={resetSpendingUser ? endUserLabel(resetSpendingUser) : ""}
-        configuredLimits={
-          resetSpendingUser
-            ? normalizePeriodSpendingLimits(
-                resetSpendingUser["period-spending-limits"],
-                resetSpendingUser["daily-spending-limit"],
-              )
+        subjectName={resetQuotaUser ? endUserLabel(resetQuotaUser) : ""}
+        configuredLimits={resetQuotaUser?.["period-spending-limits"]}
+        periodSpendingItems={resetQuotaUser?.["period-spending"]}
+        lifetimeLimit={resetQuotaUser?.["spending-limit"]}
+        windows={
+          capabilities.accessPolicy
+            ? resetWindows.map((item) => ({ period: item.window, description: describeWindowParts(t, item.parts) }))
             : undefined
         }
-        periodSpendingItems={resetSpendingUser?.["period-spending"]}
-        lifetimeLimit={resetSpendingUser?.["spending-limit"]}
         busy={busy}
-        onClose={() => setResetSpendingUser(null)}
-        onConfirm={(periods) => resetSpendingUser && void resetPeriodSpending(resetSpendingUser, periods)}
+        error={resetQuotaError}
+        onClose={() => setResetQuotaUser(null)}
+        onConfirm={(periods) => void onResetQuota(periods)}
       />
       <EndUserDeleteModal
         user={deleteUser}
         busy={busy}
         onClose={() => setDeleteUser(null)}
-        onConfirm={() => void onDelete()}
-      />
-      <EndUserKeysModal
-        user={keysUser}
-        onClose={() => {
-          setKeysUser(null);
-          void load();
-        }}
-      />
-
-      <EndUserResetHistoryModal
-        open={resetHistoryUser !== null}
-        onClose={() => {
-          setResetHistoryUser(null);
-          setResetHistoryEvents([]);
-          setResetHistoryRawTodayCost(undefined);
-          setResetHistoryDailySpendingUsed(undefined);
-        }}
-        userName={resetHistoryUser ? endUserLabel(resetHistoryUser) : ""}
-        loading={resetHistoryLoading}
-        events={resetHistoryEvents}
-        rawTodayCost={resetHistoryRawTodayCost}
-        dailySpendingUsed={resetHistoryDailySpendingUsed}
-      />
-
-      <ApiKeyUsageDialogs
-        view={usageView}
-        maskedKey={
-          usageView.usageViewKey
-            ? t("end_users.usage_keys_summary", { defaultValue: "账号下全部密钥" })
-            : ""
+        onConfirm={() =>
+          void runConfirmed(async () => {
+            if (!deleteUser) return;
+            await endUsersApi.remove(deleteUser.id);
+            setDeleteUser(null);
+          })
         }
       />
+      <EndUserResetHistoryModal
+        open={historyUser !== null}
+        onClose={() => setHistoryUser(null)}
+        userName={historyUser ? endUserLabel(historyUser) : ""}
+        loading={historyLoading}
+        events={historyEvents}
+        rawTodayCost={historyRawTodayCost}
+        dailySpendingUsed={historyDailyUsed}
+      />
+      <ApiKeyUsageDialogs view={usageView} maskedKey={usageView.usageOpen ? usageLabel : ""} />
     </PermissionGate>
   );
 }

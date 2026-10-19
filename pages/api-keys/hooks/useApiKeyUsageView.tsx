@@ -36,6 +36,9 @@ export function useApiKeyUsageView() {
   const { notify } = useToast();
 
   const [usageViewKeys, setUsageViewKeys] = useState<string[]>([]);
+  // 按账号查看：后端用账号名下 Key 的稳定 ID 过滤（含已删除 Key 的历史），不必先拉取这些
+  // Key 的明文放进查询串。与 usageViewKeys 二选一。
+  const [usageEndUserId, setUsageEndUserId] = useState("");
   const [usageViewName, setUsageViewName] = useState("");
   const [usageLoading, setUsageLoading] = useState(false);
   const [usageRawItems, setUsageRawItems] = useState<UsageLogItem[]>([]);
@@ -77,6 +80,7 @@ export function useApiKeyUsageView() {
   const usageFetchSeqRef = useRef(0);
   /** First key — keeps ApiKeysPage mask display working. */
   const usageViewKey = usageViewKeys[0] ?? null;
+  const usageOpen = usageViewKeys.length > 0 || usageEndUserId !== "";
 
   const handleUsageContentClick = useCallback(
     (logId: number, tab: "input" | "output", model: string) => {
@@ -107,16 +111,18 @@ export function useApiKeyUsageView() {
   const usageTotalPages = Math.max(1, Math.ceil(usageTotalCount / usagePageSize));
 
   const resolveScopedApiKeys = useCallback(() => {
+    const selected = usageKeyQuery.trim();
+    // 账号范围由 end_user_id 限定，这里只需要带上用户在下拉里挑的那一把 Key。
+    if (usageEndUserId) return selected ? [selected] : [];
     const scope = usageViewKeys;
     if (scope.length === 0) return [];
-    const selected = usageKeyQuery.trim();
     if (!selected) return scope;
     return scope.includes(selected) ? [selected] : ["__no_match__"];
-  }, [usageKeyQuery, usageViewKeys]);
+  }, [usageEndUserId, usageKeyQuery, usageViewKeys]);
 
   const fetchUsageLogs = useCallback(
     async (page: number, size: number) => {
-      if (usageViewKeys.length === 0) return;
+      if (usageViewKeys.length === 0 && !usageEndUserId) return;
       const seq = ++usageFetchSeqRef.current;
       setUsageLoading(true);
 
@@ -125,6 +131,7 @@ export function useApiKeyUsageView() {
           page,
           size,
           days: usageTimeRange,
+          end_user_id: usageEndUserId || undefined,
           api_keys: resolveScopedApiKeys(),
           model: usageModelQuery || undefined,
           channel: usageChannelQuery || undefined,
@@ -144,14 +151,16 @@ export function useApiKeyUsageView() {
         });
         setUsageCurrentPage(page);
         // Keep key options within the opened scope; merge names from response.
+        // 按账号查看时后端已按账号过滤，返回的 Key 就是这个账号的。
         const scopeSet = new Set(usageViewKeys);
+        const inScope = (key: string) => Boolean(usageEndUserId) || scopeSet.has(key);
         const responseKeys = Array.isArray(result.filters?.api_keys)
-          ? result.filters.api_keys.filter((key) => scopeSet.has(key))
+          ? result.filters.api_keys.filter(inScope)
           : [];
         const keys = responseKeys.length > 0 ? responseKeys : usageViewKeys;
         const names = { ...result.filters?.api_key_names };
         const counts = Object.fromEntries(
-          Object.entries(result.filters?.api_key_counts ?? {}).filter(([key]) => scopeSet.has(key)),
+          Object.entries(result.filters?.api_key_counts ?? {}).filter(([key]) => inScope(key)),
         );
         setUsageFilterOptions({
           api_keys: keys,
@@ -181,6 +190,7 @@ export function useApiKeyUsageView() {
       resolveScopedApiKeys,
       t,
       usageChannelQuery,
+      usageEndUserId,
       usageModelQuery,
       usageStatusFilter,
       usageTimeRange,
@@ -215,6 +225,7 @@ export function useApiKeyUsageView() {
       const cleaned = Array.from(new Set(keys.map((k) => k.trim()).filter(Boolean)));
       if (cleaned.length === 0) return;
       resetUsageViewState();
+      setUsageEndUserId("");
       setUsageViewKeys(cleaned);
       setUsageViewName(name);
       // Seed key filter options before first fetch so the dropdown is usable immediately.
@@ -226,6 +237,19 @@ export function useApiKeyUsageView() {
         channel_options: [],
         models: [],
       });
+    },
+    [resetUsageViewState],
+  );
+
+  /** 查看一个门户账号名下全部 Key 的用量（后端 end_user_id 过滤）。 */
+  const openEndUserUsageView = useCallback(
+    (endUserId: string, name: string) => {
+      const id = endUserId.trim();
+      if (!id) return;
+      resetUsageViewState();
+      setUsageViewKeys([]);
+      setUsageEndUserId(id);
+      setUsageViewName(name);
     },
     [resetUsageViewState],
   );
@@ -350,10 +374,11 @@ export function useApiKeyUsageView() {
   });
 
   useEffect(() => {
-    if (usageViewKeys.length === 0) return;
+    if (usageViewKeys.length === 0 && !usageEndUserId) return;
     reloadUsageLogs();
   }, [
     usageChannelQuery,
+    usageEndUserId,
     usageKeyQuery,
     usageModelQuery,
     usagePageSize,
@@ -364,6 +389,7 @@ export function useApiKeyUsageView() {
 
   const closeUsageModal = useCallback(() => {
     setUsageViewKeys([]);
+    setUsageEndUserId("");
     setUsageViewName("");
     resetUsageViewState();
   }, [resetUsageViewState]);
@@ -371,8 +397,10 @@ export function useApiKeyUsageView() {
   return {
     usageViewKey,
     usageViewKeys,
+    usageOpen,
     usageViewName,
     openUsageView,
+    openEndUserUsageView,
     usageLoading,
     usageTotalCount,
     usageSummary,

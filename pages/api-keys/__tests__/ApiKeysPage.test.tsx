@@ -211,7 +211,10 @@ vi.mock("@code-proxy/api-client/endpoints/api-keys", () => ({
   },
 }));
 
-vi.mock("@code-proxy/api-client/endpoints/end-users", () => ({
+vi.mock("@code-proxy/api-client/endpoints/end-users", async (importOriginal) => ({
+  // 归一化函数是纯函数，用真实实现；只替换会发请求的接口。
+  normalizeEndUserAPIKey: (await importOriginal<typeof import("@code-proxy/api-client/endpoints/end-users")>())
+    .normalizeEndUserAPIKey,
   endUsersApi: {
     listKeys: mocks.endUserListKeys,
     createKey: mocks.endUserCreateKey,
@@ -564,9 +567,9 @@ describe("ApiKeysPage", () => {
     });
     await userEvent.click(screen.getByRole("button", { name: "Close" }));
 
+    // 编辑是行内第一个操作，重置额度在更多菜单里。
+    expect(screen.getByRole("button", { name: "Edit Key quota" })).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "More actions" }));
-
-    expect(screen.getByRole("menuitem", { name: "Edit Key quota" })).toBeInTheDocument();
     await userEvent.click(screen.getByRole("menuitem", { name: "Reset this Key quota" }));
     const resetDialog = await screen.findByRole("dialog", { name: "Reset Key quota" });
     expect(resetDialog).toHaveTextContent(/only this Key's current Week usage/i);
@@ -658,8 +661,7 @@ describe("ApiKeysPage", () => {
     );
 
     expect(await screen.findByText("Owned Key")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "More actions" }));
-    await userEvent.click(await screen.findByRole("menuitem", { name: "Edit Key quota" }));
+    await userEvent.click(screen.getByRole("button", { name: "Edit Key quota" }));
 
     const editDialog = await screen.findByRole("dialog");
     expect(
@@ -690,7 +692,9 @@ describe("ApiKeysPage", () => {
     expect(await screen.findByText("Renamed Owned Key")).toBeInTheDocument();
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
 
-    await userEvent.click(screen.getByRole("button", { name: /rotate key/i }));
+    // 轮换会让旧密钥立即失效，放在更多菜单里。
+    await userEvent.click(screen.getByRole("button", { name: "More actions" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: /rotate key/i }));
     const rotateDialog = await screen.findByRole("dialog");
     expect(rotateDialog).toHaveTextContent(/old key becomes invalid immediately/i);
     await userEvent.click(within(rotateDialog).getByRole("button", { name: /rotate key/i }));

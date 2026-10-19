@@ -41,7 +41,13 @@ export function useScrollFade<T extends HTMLElement = HTMLDivElement>({
     const scrollSize = axis === "x" ? node.scrollWidth : node.scrollHeight;
     const clientSize = axis === "x" ? node.clientWidth : node.clientHeight;
     const offset = axis === "x" ? Math.abs(node.scrollLeft) : node.scrollTop;
-    const overflow = scrollSize - clientSize > 1;
+    // overflow: hidden / clip 的容器滚不动，渐隐只会把边缘的内容抹掉。子元素的 transform
+    // （入场动画的位移）也会让 scrollHeight 短暂大于 clientHeight，而 transform 变化不触发
+    // ResizeObserver，量到的「溢出」会一直留着。
+    const style = typeof window === "undefined" ? null : window.getComputedStyle(node);
+    const overflowStyle = style ? (axis === "x" ? style.overflowX : style.overflowY) : "";
+    const scrollable = overflowStyle !== "hidden" && overflowStyle !== "clip";
+    const overflow = scrollable && scrollSize - clientSize > 1;
     const top = overflow && offset > 1;
     const bottom = overflow && offset + clientSize < scrollSize - 1;
     setEdges((previous) =>
