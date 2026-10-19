@@ -374,10 +374,13 @@ export const usageApi = {
       models_empty?: boolean;
       channels_empty?: boolean;
       statuses_empty?: boolean;
+      /** 按门户账号查看：后端按账号名下 Key 的稳定 ID 过滤，不必携带 Key 明文。 */
+      end_user_id?: string;
     },
     options?: { signal?: AbortSignal },
   ): Promise<UsageLogsResponse> {
     const qs = new URLSearchParams();
+    if (params.end_user_id) qs.set("end_user_id", params.end_user_id);
     if (params.page) qs.set("page", String(params.page));
     if (params.size) qs.set("size", String(params.size));
     if (params.days) qs.set("days", String(params.days));

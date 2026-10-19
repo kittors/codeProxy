@@ -8,9 +8,25 @@ import type {
   PeriodSpendingItem,
   PeriodSpendingLimits,
   PeriodSpendingLimitsPatch,
-  PeriodSpendingPeriod,
   QuotaResetPeriod,
 } from "./period-spending";
+import {
+  legacyQuotaMatrix,
+  normalizeCappedCells,
+  normalizeModelRoutes,
+  normalizeModelRules,
+  normalizeQuotaMatrix,
+  normalizeQuotaUsageView,
+  readAccessPolicyCapabilities,
+  type AccessPolicyCapabilities,
+  type CappedCell,
+  type ModelRoute,
+  type ModelRule,
+  type QuotaMatrix,
+  type QuotaMatrixPatch,
+  type QuotaUsageView,
+} from "./access-policy";
+import { isRecord } from "../client/response";
 import {
   buildPortalAccountKey,
   detectApiBaseFromLocation,
@@ -55,6 +71,16 @@ export interface EndUser {
   "allowed-channels"?: string[];
   "allowed-channel-groups"?: string[];
   "system-prompt"?: string;
+  /**
+   * 生效的总额度矩阵、按模型规则与模型路由（绑定模板时就是模板的值）。后端不支持访问策略
+   * 时由面板用旧字段拼出矩阵，规则与路由为空。
+   */
+  "quota-limits": QuotaMatrix;
+  "model-rules": ModelRule[];
+  "model-routes": ModelRoute[];
+  /** 总额度各格与每条规则当前的用量（列表接口填充）。 */
+  "quota-usage"?: QuotaUsageView;
+  "capped-cells"?: CappedCell[];
 }
 
 export type EndUserUpdateBody = {
@@ -75,6 +101,9 @@ export type EndUserUpdateBody = {
   "allowed-channels"?: string[];
   "allowed-channel-groups"?: string[];
   "system-prompt"?: string;
+  "quota-limits"?: QuotaMatrixPatch;
+  "model-rules"?: ModelRule[];
+  "model-routes"?: ModelRoute[];
 };
 
 export interface EndUserDailySpendingResetResult {
@@ -124,13 +153,82 @@ export interface EndUserAPIKey {
   "daily-spending-used"?: number;
   "lifetime-spending-used"?: number;
   "daily-spending-reset-count"?: number;
+  /** Key 的子额度矩阵（每格不超过账号同一格）与 Key 自己的按模型规则。 */
+  "quota-limits": QuotaMatrix;
+  "model-rules": ModelRule[];
+  "quota-usage"?: QuotaUsageView;
 }
 
 export interface EndUserAPIKeyMutationBody {
   name?: string;
   "daily-spending-limit"?: number;
   "period-spending-limits"?: PeriodSpendingLimitsPatch;
+  "quota-limits"?: QuotaMatrixPatch;
+  "model-rules"?: ModelRule[];
+  /** 暂停 / 恢复（仅管理端）。 */
+  disabled?: boolean;
 }
+
+export interface EndUserListResult {
+  items: EndUser[];
+  capabilities: AccessPolicyCapabilities;
+}
+
+export interface EndUserKeyListResult {
+  items: EndUserAPIKey[];
+  capabilities: AccessPolicyCapabilities;
+}
+
+export interface BindPermissionProfileResult {
+  updated: number;
+  "capped-keys"?: CappedKey[];
+  "capped-cells"?: CappedCell[];
+}
+
+/**
+ * 归一化后端返回的账号：新字段缺失（旧后端）时用旧的扁平字段拼出矩阵，界面只需读一种形态。
+ */
+export const normalizeEndUser = (raw: unknown): EndUser => {
+  const record = (isRecord(raw) ? raw : {}) as Record<string, unknown>;
+  const user = record as unknown as EndUser;
+  return {
+    ...user,
+    "quota-limits": isRecord(record["quota-limits"])
+      ? normalizeQuotaMatrix(record["quota-limits"])
+      : legacyQuotaMatrix({
+          periodSpendingLimits: record["period-spending-limits"],
+          dailySpendingLimit: record["daily-spending-limit"],
+          spendingLimit: record["spending-limit"],
+          dailyLimit: record["daily-limit"],
+          totalQuota: record["total-quota"],
+        }),
+    "model-rules": normalizeModelRules(record["model-rules"]),
+    "model-routes": normalizeModelRoutes(record["model-routes"]),
+    "quota-usage": normalizeQuotaUsageView(record["quota-usage"]),
+    "capped-cells": normalizeCappedCells(record["capped-cells"]),
+  };
+};
+
+export const normalizeEndUserAPIKey = (raw: unknown): EndUserAPIKey => {
+  const record = (isRecord(raw) ? raw : {}) as Record<string, unknown>;
+  const key = record as unknown as EndUserAPIKey;
+  return {
+    ...key,
+    "quota-limits": isRecord(record["quota-limits"])
+      ? normalizeQuotaMatrix(record["quota-limits"])
+      : legacyQuotaMatrix({
+          periodSpendingLimits: record["period-spending-limits"],
+          dailySpendingLimit: record["daily-spending-limit"],
+        }),
+    "model-rules": normalizeModelRules(record["model-rules"]),
+    "quota-usage": normalizeQuotaUsageView(record["quota-usage"]),
+  };
+};
+
+const readItems = <T>(raw: unknown, normalize: (value: unknown) => T): T[] => {
+  const items = isRecord(raw) && Array.isArray(raw.items) ? raw.items : [];
+  return items.map(normalize);
+};
 
 export interface CreateEndUserResult {
   user: EndUser;
@@ -154,11 +252,31 @@ export interface PortalLoginResult {
 }
 
 export const endUsersApi = {
-  list: () => apiClient.get<{ items: EndUser[] }>("/end-users"),
-  create: (body: { username?: string; display_name: string; password?: string }) =>
-    apiClient.post<CreateEndUserResult>("/end-users", body),
-  update: (id: string, body: EndUserUpdateBody) =>
-    apiClient.patch<EndUser>(`/end-users/${id}`, body),
+  list: async (): Promise<EndUserListResult> => {
+    const raw = await apiClient.get<unknown>("/end-users");
+    return {
+      items: readItems(raw, normalizeEndUser),
+      capabilities: readAccessPolicyCapabilities(isRecord(raw) ? raw.capabilities : undefined),
+    };
+  },
+  create: async (body: {
+    username?: string;
+    display_name: string;
+    password?: string;
+    /** 只在后端声明 create-with-profile 时提交。 */
+    "permission-profile-id"?: string;
+  }): Promise<CreateEndUserResult> => {
+    const result = await apiClient.post<CreateEndUserResult>("/end-users", body);
+    return { ...result, user: normalizeEndUser(result.user) };
+  },
+  update: async (id: string, body: EndUserUpdateBody): Promise<EndUser> =>
+    normalizeEndUser(await apiClient.patch<unknown>(`/end-users/${id}`, body)),
+  /** 把一批账号绑定到同一个权限模板（后端 batch-profile-binding 能力）。 */
+  bindProfile: (ids: string[], profileId: string) =>
+    apiClient.post<BindPermissionProfileResult>("/end-users/batch/permission-profile", {
+      ids,
+      "permission-profile-id": profileId,
+    }),
   remove: (id: string) => apiClient.delete(`/end-users/${id}`),
   resetPassword: (id: string, password?: string) =>
     apiClient.post<{ generated_password?: string }>(`/end-users/${id}/reset-password`, {
@@ -176,11 +294,22 @@ export const endUsersApi = {
       `/end-users/${id}/daily-spending/reset-history${suffix}`,
     );
   },
-  listKeys: (id: string) => apiClient.get<{ items: EndUserAPIKey[] }>(`/end-users/${id}/api-keys`),
+  listKeys: async (id: string): Promise<EndUserKeyListResult> => {
+    const raw = await apiClient.get<unknown>(`/end-users/${id}/api-keys`);
+    return {
+      items: readItems(raw, normalizeEndUserAPIKey),
+      capabilities: readAccessPolicyCapabilities(isRecord(raw) ? raw.capabilities : undefined),
+    };
+  },
   createKey: (id: string, body: EndUserAPIKeyMutationBody) =>
     apiClient.post<EndUserAPIKeySecretResult>(`/end-users/${id}/api-keys`, body),
-  updateKey: (userId: string, keyId: string, body: EndUserAPIKeyMutationBody) =>
-    apiClient.patch<EndUserAPIKey>(`/end-users/${userId}/api-keys/${keyId}`, body),
+  updateKey: async (userId: string, keyId: string, body: EndUserAPIKeyMutationBody) =>
+    normalizeEndUserAPIKey(
+      await apiClient.patch<unknown>(`/end-users/${userId}/api-keys/${keyId}`, body),
+    ),
+  /** 按需取一把 Key 的明文（复制用），不再为此拉取整个租户的明文列表。 */
+  keySecret: (userId: string, keyId: string) =>
+    apiClient.get<{ id: string; key: string }>(`/end-users/${userId}/api-keys/${keyId}/secret`),
   updateKeyName: (userId: string, keyId: string, name: string) =>
     apiClient.patch<EndUserAPIKey>(`/end-users/${userId}/api-keys/${keyId}`, { name }),
   resetKeyDailySpending: (userId: string, keyId: string) =>
@@ -188,7 +317,8 @@ export const endUsersApi = {
       `/end-users/${userId}/api-keys/${keyId}/daily-spending/reset`,
       {},
     ),
-  resetKeyPeriodSpending: (userId: string, keyId: string, periods: PeriodSpendingPeriod[]) =>
+  /** 支持访问策略的后端也接受 lifetime（Key 上配了累计格子时）。 */
+  resetKeyPeriodSpending: (userId: string, keyId: string, periods: QuotaResetPeriod[]) =>
     apiClient.post<unknown>(`/end-users/${userId}/api-keys/${keyId}/period-spending/reset`, {
       periods,
     }),
@@ -251,7 +381,7 @@ export const portalApi = {
       },
     };
     portalClient.setSession(snap);
-    return result;
+    return { ...result, user: normalizeEndUser(result.user) };
   },
   logout: async () => {
     const current = portalClient.loadFromStorage();
@@ -265,7 +395,14 @@ export const portalApi = {
     }
     portalClient.clearSession();
   },
-  me: () => portalClient.get<{ user: EndUser }>("/v0/portal/auth/me"),
+  me: async (): Promise<{ user: EndUser; capabilities: AccessPolicyCapabilities }> => {
+    const raw = await portalClient.get<unknown>("/v0/portal/auth/me");
+    const record = isRecord(raw) ? raw : {};
+    return {
+      user: normalizeEndUser(record.user),
+      capabilities: readAccessPolicyCapabilities(record.capabilities),
+    };
+  },
   /**
    * The caller's own sign-in history. The server derives the account from the
    * session, so this can only ever return the current user's records.
@@ -276,7 +413,13 @@ export const portalApi = {
     ),
   changePassword: (current_password: string, new_password: string) =>
     portalClient.put<void>("/v0/portal/auth/password", { current_password, new_password }),
-  listKeys: () => portalClient.get<{ items: EndUserAPIKey[] }>("/v0/portal/api-keys"),
+  listKeys: async (): Promise<EndUserKeyListResult> => {
+    const raw = await portalClient.get<unknown>("/v0/portal/api-keys");
+    return {
+      items: readItems(raw, normalizeEndUserAPIKey),
+      capabilities: readAccessPolicyCapabilities(isRecord(raw) ? raw.capabilities : undefined),
+    };
+  },
   keySecret: (id: string) =>
     portalClient.get<{ id: string; key: string }>(`/v0/portal/api-keys/${id}/secret`),
   createKey: (body: EndUserAPIKeyMutationBody) =>
@@ -284,9 +427,9 @@ export const portalApi = {
       "/v0/portal/api-keys",
       body,
     ),
-  updateKey: (id: string, body: EndUserAPIKeyMutationBody) =>
-    portalClient.patch<EndUserAPIKey>(`/v0/portal/api-keys/${id}`, body),
-  resetKeyPeriodSpending: (id: string, periods: PeriodSpendingPeriod[]) =>
+  updateKey: async (id: string, body: EndUserAPIKeyMutationBody) =>
+    normalizeEndUserAPIKey(await portalClient.patch<unknown>(`/v0/portal/api-keys/${id}`, body)),
+  resetKeyPeriodSpending: (id: string, periods: QuotaResetPeriod[]) =>
     portalClient.post<unknown>(`/v0/portal/api-keys/${id}/period-spending/reset`, { periods }),
   rotateKey: (id: string) =>
     portalClient.post<{ api_key: EndUserAPIKey; plaintext_key?: string }>(

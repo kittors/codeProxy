@@ -120,4 +120,72 @@ describe("endUsersApi", () => {
     });
     expect(mocks.post).toHaveBeenCalledWith("/end-users/user-1/api-keys/key-1/rotate", {});
   });
+
+  test("normalizes accounts: the matrix from a new backend, legacy fields from an old one", async () => {
+    mocks.get.mockResolvedValueOnce({
+      items: [
+        {
+          id: "new",
+          username: "new",
+          display_name: "New",
+          "quota-limits": { cost: { day: 10 }, tokens: { month: 5000000 } },
+          "model-rules": [{ id: "r1", models: ["claude-opus-*"], limits: { requests: { week: 100 } } }],
+          "model-routes": [{ id: "x", from: ["gpt-5"], to: "gpt-5-mini" }],
+          "quota-usage": { total: { cost: { day: 3 } }, rules: [{ id: "r1", used: { requests: { week: 40 } } }] },
+        },
+        {
+          id: "old",
+          username: "old",
+          display_name: "Old",
+          "daily-limit": 500,
+          "spending-limit": 80,
+          "period-spending-limits": { "5h": 0, day: 12, week: 0, month: 0 },
+        },
+      ],
+      capabilities: { "access-policy": true, "batch-profile-binding": true },
+    });
+
+    const { items, capabilities } = await endUsersApi.list();
+    expect(capabilities).toEqual({
+      accessPolicy: true,
+      modelFallback: false,
+      batchProfileBinding: true,
+      createWithProfile: false,
+      ownedKeyAdmin: false,
+    });
+    const [fresh, legacy] = items;
+    expect(fresh["quota-limits"].cost.day).toBe(10);
+    expect(fresh["quota-limits"].tokens.month).toBe(5_000_000);
+    expect(fresh["quota-limits"].requests.day).toBe(0);
+    expect(fresh["model-rules"][0].limits.requests.week).toBe(100);
+    expect(fresh["model-routes"]).toEqual([{ id: "x", from: ["gpt-5"], to: "gpt-5-mini" }]);
+    expect(fresh["quota-usage"]?.rules[0].used.requests.week).toBe(40);
+
+    // 旧后端：矩阵由扁平字段拼出，规则与路由为空。
+    expect(legacy["quota-limits"].requests.day).toBe(500);
+    expect(legacy["quota-limits"].cost.lifetime).toBe(80);
+    expect(legacy["quota-limits"].cost.day).toBe(12);
+    expect(legacy["model-rules"]).toEqual([]);
+    expect(legacy["model-routes"]).toEqual([]);
+  });
+
+  test("a missing capabilities object means nothing new is supported", async () => {
+    mocks.get.mockResolvedValueOnce({ items: [] });
+    const { capabilities } = await endUsersApi.listKeys("user-1");
+    expect(Object.values(capabilities).every((value) => value === false)).toBe(true);
+  });
+
+  test("binds a batch of accounts to one template and fetches a single key secret", async () => {
+    mocks.post.mockResolvedValueOnce({ updated: 2 });
+    mocks.get.mockResolvedValueOnce({ id: "key-1", key: "sk-secret" });
+
+    await expect(endUsersApi.bindProfile(["a", "b"], "gold")).resolves.toEqual({ updated: 2 });
+    await expect(endUsersApi.keySecret("user-1", "key-1")).resolves.toEqual({ id: "key-1", key: "sk-secret" });
+
+    expect(mocks.post).toHaveBeenCalledWith("/end-users/batch/permission-profile", {
+      ids: ["a", "b"],
+      "permission-profile-id": "gold",
+    });
+    expect(mocks.get).toHaveBeenCalledWith("/end-users/user-1/api-keys/key-1/secret");
+  });
 });

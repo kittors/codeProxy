@@ -211,7 +211,10 @@ vi.mock("@code-proxy/api-client/endpoints/api-keys", () => ({
   },
 }));
 
-vi.mock("@code-proxy/api-client/endpoints/end-users", () => ({
+vi.mock("@code-proxy/api-client/endpoints/end-users", async (importOriginal) => ({
+  // 归一化函数是纯函数，用真实实现；只替换会发请求的接口。
+  normalizeEndUserAPIKey: (await importOriginal<typeof import("@code-proxy/api-client/endpoints/end-users")>())
+    .normalizeEndUserAPIKey,
   endUsersApi: {
     listKeys: mocks.endUserListKeys,
     createKey: mocks.endUserCreateKey,

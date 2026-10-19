@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  NO_ACCESS_POLICY_CAPABILITIES,
+  normalizeEndUser,
   portalApi,
-  normalizePeriodSpendingLimits,
+  type AccessPolicyCapabilities,
   type EndUser,
   type EndUserAPIKey,
   type SavedPortalAccount,
@@ -18,13 +20,6 @@ import type { SearchableCheckboxMultiSelectOption } from "@code-proxy/ui";
 import type { TimeRange } from "@features/monitor-widgets/monitor-constants";
 import { ModelTag } from "@features/model-tags";
 import {
-  OwnedApiKeyQuotaModal,
-  emptyPeriodSpendingDraft,
-  formatQuotaValidationError,
-  limitsToPeriodSpendingDraft,
-  periodSpendingDraftToLimits,
-} from "@features/period-spending";
-import {
   fetchAvailableModels,
   fetchPublicChartData,
   fetchPublicLogs,
@@ -37,6 +32,7 @@ import { PortalChangePasswordModal } from "./components/PortalChangePasswordModa
 import { PortalDeleteKeyModal } from "./components/PortalDeleteKeyModal";
 import { PortalLoginForm } from "./components/PortalLoginForm";
 import { PortalKeyPeriodQuotaResetModal } from "./components/PortalKeyPeriodQuotaResetModal";
+import { PortalKeyEditor, type PortalKeyEditorState } from "./components/PortalKeyEditor";
 import { LookupEmptyState } from "./components/LookupEmptyState";
 import { LookupResultsToolbar, type ApiKeyLookupTab } from "./components/LookupResultsToolbar";
 import { ManageKeysTabContent } from "./components/ManageKeysTabContent";
@@ -312,25 +308,12 @@ export function ApiKeyLookupPage() {
   const [pwdForm, setPwdForm] = useState({ current: "", next: "" });
   const [pwdError, setPwdError] = useState<string | null>(null);
   const [secretOnce, setSecretOnce] = useState<string | null>(null);
-  const [createKeyOpen, setCreateKeyOpen] = useState(false);
-  const [portalKeyForm, setPortalKeyForm] = useState({
-    name: "",
-    periods: emptyPeriodSpendingDraft(),
-  });
-  const [editKeyTarget, setEditKeyTarget] = useState<EndUserAPIKey | null>(null);
-  const [portalKeyQuotaError, setPortalKeyQuotaError] = useState("");
+  const [keyEditor, setKeyEditor] = useState<PortalKeyEditorState>(null);
+  const [portalCaps, setPortalCaps] = useState<AccessPolicyCapabilities>(NO_ACCESS_POLICY_CAPABILITIES);
   const [resetSpendingTarget, setResetSpendingTarget] = useState<EndUserAPIKey | null>(null);
   const [deleteKeyTarget, setDeleteKeyTarget] = useState<EndUserAPIKey | null>(null);
   const [portalKeysBusy, setPortalKeysBusy] = useState(false);
   const [portalKeysLoading, setPortalKeysLoading] = useState(false);
-  const portalAccountPeriodLimits = useMemo(
-    () =>
-      normalizePeriodSpendingLimits(
-        portalUser?.["period-spending-limits"],
-        portalUser?.["daily-spending-limit"],
-      ),
-    [portalUser],
-  );
 
   const usageSubject = useMemo<UsageLookupSubject | null>(() => {
     if (portalUser) {
@@ -378,6 +361,7 @@ export function ApiKeyLookupPage() {
 
   // ── Models state ──
   const [availableModels, setAvailableModels] = useState<PublicModelItem[]>([]);
+  const portalModelCatalog = useMemo(() => availableModels.map((model) => ({ value: model.id })), [availableModels]);
   const [modelsLoading, setModelsLoading] = useState(false);
   const [modelsError, setModelsError] = useState<string | null>(null);
   const [modelsSearchFilter, setModelsSearchFilter] = useState("");
@@ -863,6 +847,7 @@ export function ApiKeyLookupPage() {
   const hydratePortalSession = useCallback(async () => {
     const res = await portalApi.me();
     setPortalUser(res.user);
+    setPortalCaps(res.capabilities ?? NO_ACCESS_POLICY_CAPABILITIES);
     setSavedPortalAccounts(portalApi.listSavedAccounts());
     if (res.user.must_change_password) {
       setChangePasswordOpen(true);
@@ -893,6 +878,15 @@ export function ApiKeyLookupPage() {
         setChangePasswordOpen(true);
         setPortalKeys([]);
       } else {
+        // 登录响应里的账号没有模板覆盖后的额度与用量，也没有能力声明：再取一次 /auth/me，
+        // 否则刚登录时 Key 的子额度天花板和「我的账号额度」都是空的，要刷新页面才对。
+        try {
+          const me = await portalApi.me();
+          setPortalUser(me.user);
+          setPortalCaps(me.capabilities ?? NO_ACCESS_POLICY_CAPABILITIES);
+        } catch {
+          // 拿不到时保持登录响应里的账号，按旧后端的能力显示。
+        }
         const keys = await portalApi.listKeys();
         const items = keys.items ?? [];
         setPortalKeys(items);
@@ -1015,7 +1009,7 @@ export function ApiKeyLookupPage() {
       setChartLoading(false);
 
       // Align usageSubject immediately so the effect can revalidate under the new id.
-      setPortalUser({
+      setPortalUser(normalizeEndUser({
         id: target.user.id,
         tenant_id: "",
         username: target.user.username,
@@ -1025,7 +1019,7 @@ export function ApiKeyLookupPage() {
         created_at: "",
         updated_at: "",
         version: 0,
-      });
+      }));
 
       try {
         await hydratePortalSession();
@@ -1324,14 +1318,9 @@ export function ApiKeyLookupPage() {
                     busy={portalKeysBusy}
                     loading={portalKeysLoading}
                     onRefresh={() => void syncPortalKeys()}
-                    onCreate={() => {
-                      setPortalKeyForm({
-                        name: "",
-                        periods: emptyPeriodSpendingDraft(),
-                      });
-                      setPortalKeyQuotaError("");
-                      setCreateKeyOpen(true);
-                    }}
+                    account={portalUser}
+                    accessPolicy={portalCaps.accessPolicy}
+                    onCreate={() => setKeyEditor({ mode: "create" })}
                     onRotate={(key) => {
                       setPortalKeysBusy(true);
                       void portalApi
@@ -1347,19 +1336,7 @@ export function ApiKeyLookupPage() {
                         })
                         .finally(() => setPortalKeysBusy(false));
                     }}
-                    onEdit={(key) => {
-                      setEditKeyTarget(key);
-                      setPortalKeyQuotaError("");
-                      setPortalKeyForm({
-                        name: key.name ?? "",
-                        periods: limitsToPeriodSpendingDraft(
-                          normalizePeriodSpendingLimits(
-                            key["period-spending-limits"],
-                            key["daily-spending-limit"],
-                          ),
-                        ),
-                      });
-                    }}
+                    onEdit={(key) => setKeyEditor({ mode: "edit", key })}
                     onResetPeriodSpending={setResetSpendingTarget}
                     onDelete={setDeleteKeyTarget}
                   />
@@ -1490,84 +1467,29 @@ export function ApiKeyLookupPage() {
           }}
         />
 
-        <OwnedApiKeyQuotaModal
-          t={t}
-          open={createKeyOpen}
-          mode="create"
-          value={portalKeyForm}
-          accountLimits={portalAccountPeriodLimits}
-          saving={portalKeysBusy}
-          serverError={portalKeyQuotaError}
-          onChange={setPortalKeyForm}
-          onClose={() => {
-            if (portalKeysBusy) return;
-            setCreateKeyOpen(false);
-            setPortalKeyQuotaError("");
-          }}
-          // 名称必填与重名由表单就地校验（existingNames），走到这里时已经通过。
-          existingNames={portalKeys.map((key) => key.name || "")}
-          onSubmit={() => {
-            const name = portalKeyForm.name.trim();
-            const limits = periodSpendingDraftToLimits(portalKeyForm.periods);
-            setPortalKeysBusy(true);
-            setPortalKeyQuotaError("");
-            void portalApi
-              .createKey({
-                name,
-                "daily-spending-limit": limits.day,
-                "period-spending-limits": limits,
-              })
-              .then(async (response) => {
-                if (response.plaintext_key) {
-                  setSecretOnce(response.plaintext_key);
-                  setOperationalKeyId(response.api_key.id);
-                  setApiKeyInput(response.plaintext_key);
-                  setQueriedKey(response.plaintext_key);
-                }
-                setCreateKeyOpen(false);
-                await refreshPortalKeys();
-              })
-              .catch((err) => setPortalKeyQuotaError(formatQuotaValidationError(err, t)))
-              .finally(() => setPortalKeysBusy(false));
-          }}
-        />
-
-        <OwnedApiKeyQuotaModal
-          t={t}
-          open={editKeyTarget !== null}
-          mode="edit"
-          value={portalKeyForm}
-          accountLimits={portalAccountPeriodLimits}
-          saving={portalKeysBusy}
-          serverError={portalKeyQuotaError}
-          onChange={setPortalKeyForm}
-          onClose={() => {
-            if (portalKeysBusy) return;
-            setEditKeyTarget(null);
-            setPortalKeyQuotaError("");
-          }}
-          onSubmit={() => {
-            if (!editKeyTarget) return;
-            const limits = periodSpendingDraftToLimits(portalKeyForm.periods);
-            setPortalKeysBusy(true);
-            setPortalKeyQuotaError("");
-            void portalApi
-              .updateKey(editKeyTarget.id, {
-                name: portalKeyForm.name.trim(),
-                "daily-spending-limit": limits.day,
-                "period-spending-limits": limits,
-              })
-              .then(async () => {
-                setEditKeyTarget(null);
-                await refreshPortalKeys();
-              })
-              .catch((err) => setPortalKeyQuotaError(formatQuotaValidationError(err, t)))
-              .finally(() => setPortalKeysBusy(false));
+        <PortalKeyEditor
+          state={keyEditor}
+          account={portalUser}
+          keys={portalKeys}
+          capabilities={portalCaps}
+          catalog={portalModelCatalog}
+          busy={portalKeysBusy}
+          onBusyChange={setPortalKeysBusy}
+          onClose={() => setKeyEditor(null)}
+          onSaved={refreshPortalKeys}
+          onCreated={async (response) => {
+            if (response.plaintext_key) {
+              setSecretOnce(response.plaintext_key);
+              setOperationalKeyId(response.api_key.id);
+              setApiKeyInput(response.plaintext_key);
+              setQueriedKey(response.plaintext_key);
+            }
+            await refreshPortalKeys();
           }}
         />
 
         <PortalKeyPeriodQuotaResetModal
-          target={resetSpendingTarget} busy={portalKeysBusy}
+          target={resetSpendingTarget} busy={portalKeysBusy} accessPolicy={portalCaps.accessPolicy}
           onClose={() => setResetSpendingTarget(null)}
           onReset={refreshPortalKeys} onBusyChange={setPortalKeysBusy}
         />

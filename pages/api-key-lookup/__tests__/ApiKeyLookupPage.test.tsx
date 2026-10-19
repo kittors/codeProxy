@@ -852,7 +852,9 @@ describe("ApiKeyLookupPage", () => {
       refresh_token: "cpr_test",
       must_change_password: false,
     } as never);
-    vi.mocked(portalApi.listKeys).mockResolvedValue({ items: [key] } as never);
+    // 真实的 portalApi.listKeys 会归一化（补齐额度矩阵与规则）；这里被替换了，手动归一化。
+    const { normalizeEndUserAPIKey } = await import("@code-proxy/api-client");
+    vi.mocked(portalApi.listKeys).mockResolvedValue({ items: [normalizeEndUserAPIKey(key)] } as never);
     vi.mocked(portalApi.keySecret).mockResolvedValue({ id: "k1", key: "sk-primary" });
     vi.mocked(portalApi.updateKey).mockResolvedValue({ ...key, name: "renamed" } as never);
     vi.mocked(portalApi.resetKeyPeriodSpending).mockResolvedValue({ status: "ok" } as never);
@@ -884,14 +886,16 @@ describe("ApiKeyLookupPage", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Edit Key quota" }));
     const editDialog = await screen.findByRole("dialog", { name: "Edit Key quota" });
-    const dayInput = within(editDialog).getByRole("spinbutton", { name: "Daily quota (USD)" });
+    await userEvent.click(within(editDialog).getByRole("tab", { name: /Quota/ }));
+    // 旧后端（没有声明访问策略）只开放美元四周期子额度。
+    expect(within(editDialog).queryByRole("textbox", { name: "Tokens · Daily" })).toBeNull();
+    const dayInput = within(editDialog).getByRole("textbox", { name: "Spend · Daily" });
     await userEvent.clear(dayInput);
     await userEvent.type(dayInput, "80");
     await userEvent.click(within(editDialog).getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
       expect(portalApi.updateKey).toHaveBeenCalledWith("k1", {
-        name: "primary",
         "daily-spending-limit": 80,
         "period-spending-limits": { "5h": 50, day: 80, week: 300, month: 1000 },
       });
