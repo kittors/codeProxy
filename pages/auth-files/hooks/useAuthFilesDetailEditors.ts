@@ -1172,7 +1172,7 @@ export function useAuthFilesDetailEditors(
     const codexServiceTier = prefixProxyEditor.codexServiceTier.trim().toLowerCase();
     delete next.service_tier;
     delete next["codex-service-tier"];
-    if (codexServiceTier && ["pass", "priority", "flex", "drop"].includes(codexServiceTier)) {
+    if (codexServiceTier && ["pass", "priority", "ultrafast", "flex", "drop"].includes(codexServiceTier)) {
       next.codex_service_tier = codexServiceTier;
     } else {
       delete next.codex_service_tier;
