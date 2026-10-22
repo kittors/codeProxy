@@ -1700,7 +1700,7 @@ test("shows auth-level quota recovery records as 429 restriction badges", () => 
     });
   });
 
-  test("edits and serializes codex_service_tier in prefixProxyEditor", async () => {
+  test.each(["priority", "ultrafast"])("edits and serializes codex_service_tier=%s", async (tier) => {
     let uploadedText = "";
     mocks.downloadText.mockImplementation(async () =>
       JSON.stringify({
@@ -1730,12 +1730,12 @@ test("shows auth-level quota recovery records as 429 restriction badges", () => 
     await act(async () => {
       result.current.setPrefixProxyEditor((prev) => ({
         ...prev,
-        codexServiceTier: "priority",
+        codexServiceTier: tier,
       }));
     });
 
     expect(result.current.prefixProxyDirty).toBe(true);
-    expect(result.current.prefixProxyUpdatedText).toContain('"codex_service_tier": "priority"');
+    expect(JSON.parse(result.current.prefixProxyUpdatedText).codex_service_tier).toBe(tier);
 
     await act(async () => {
       await result.current.savePrefixProxy();
@@ -1744,7 +1744,7 @@ test("shows auth-level quota recovery records as 429 restriction badges", () => 
     expect(mocks.upload).toHaveBeenCalledTimes(1);
     expect(JSON.parse(uploadedText)).toEqual({
       type: "codex",
-      codex_service_tier: "priority",
+      codex_service_tier: tier,
     });
   });
 });

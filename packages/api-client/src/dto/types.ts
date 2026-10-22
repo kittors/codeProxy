@@ -218,8 +218,8 @@ export interface AuthFileItem extends TagDisplayFields {
   concurrency_limit?: number;
   /** Codex identity fingerprint convergence mode override: "off", "device", "session", "full", or unset. */
   codex_convergence_mode?: "off" | "device" | "session" | "full" | "";
-  /** Codex service_tier policy override: "default", "pass", "priority", "flex", "drop", or unset. */
-  codex_service_tier?: "default" | "pass" | "priority" | "flex" | "drop" | "";
+  /** Codex service_tier policy override; upstream enforces model/account eligibility. */
+  codex_service_tier?: "default" | "pass" | "priority" | "ultrafast" | "flex" | "drop" | "";
   /**
    * 系统租户视角：平台把这个账号共享给了谁（未共享时没有），原样 `{all, tenant_ids}`，
    * 读的时候用 normalizeResourceSharing。

@@ -7,6 +7,7 @@ const codexOAuthFile = {
   label: "Codex OAuth Primary",
   account_type: "oauth",
   auth_index: "codex-oauth-1",
+  codex_service_tier: "priority",
   disabled: false,
   size: 1024,
   modified: 1782268800000,
@@ -56,6 +57,7 @@ const setAuthed = async (page: Page) => {
 
 const routeManagementMocks = async (page: Page) => {
   const patchBodies: Array<Record<string, unknown>> = [];
+  const uploadedBodies: string[] = [];
   let currentCodexOAuthFile = { ...codexOAuthFile };
 
   await page.route("**/v0/management/**", async (route) => {
@@ -99,6 +101,7 @@ const routeManagementMocks = async (page: Page) => {
           type: "codex",
           account_type: name === "codex-api-key.json" ? "api_key" : "oauth",
           proxy_id: "primary",
+          codex_service_tier: currentCodexOAuthFile.codex_service_tier,
         }),
       });
       return;
@@ -114,6 +117,15 @@ const routeManagementMocks = async (page: Page) => {
     }
 
     if (path.endsWith("/v0/management/auth-files")) {
+      if (request.method() === "POST") {
+        const body = request.postData() ?? "";
+        uploadedBodies.push(body);
+        if (body.includes('"codex_service_tier": "ultrafast"')) {
+          currentCodexOAuthFile = { ...currentCodexOAuthFile, codex_service_tier: "ultrafast" };
+        }
+        await route.fulfill({ status: 200, contentType: "application/json", body: "{}" });
+        return;
+      }
       await route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -198,7 +210,7 @@ const routeManagementMocks = async (page: Page) => {
     await route.fulfill({ status: 200, contentType: "application/json", body: "{}" });
   });
 
-  return { patchBodies };
+  return { patchBodies, uploadedBodies };
 };
 
 test("Auth Files: Codex OAuth admission controls save the cli-only policy", async ({ page }) => {
@@ -259,3 +271,34 @@ test("Auth Files: Codex API key files do not expose OAuth admission controls", a
   await dialog.getByRole("tab", { name: /Fields|字段/i }).click();
   await expect(dialog.getByTestId("codex-oauth-admission-panel")).toHaveCount(0);
 });
+
+for (const width of [1440, 390]) {
+  test(`Auth Files: Ultrafast saves and reloads at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await setAuthed(page);
+    const state = await routeManagementMocks(page);
+    await page.goto("/#/auth-files");
+
+    const row = page.locator("tr", { hasText: "Codex OAuth Primary" });
+    await row.getByRole("button", { name: /Details|详情/i }).click();
+    const dialog = page.getByRole("dialog", { name: /Codex OAuth Primary|查看/i });
+    await dialog.getByRole("tab", { name: /Fields|字段/i }).click();
+    const tier = dialog.getByRole("combobox", { name: /Service Tier Policy|服务档位策略/i });
+    await tier.click();
+    await page.getByRole("option", { name: /Force Ultrafast|强制 Ultrafast/i }).click();
+    await expect(tier).toContainText(/Ultrafast/);
+    await expect(dialog).toContainText(/8x Standard|8 倍/);
+    await expect(page.getByRole("listbox")).toHaveCount(0);
+    await tier.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: `output/playwright/ultrafast-${width}.png` });
+    await dialog.getByRole("button", { name: /Save|保存/i }).click();
+    await expect(dialog).not.toBeVisible();
+    expect(state.uploadedBodies).toHaveLength(1);
+    expect(state.uploadedBodies[0]).toContain('"codex_service_tier": "ultrafast"');
+
+    await row.getByRole("button", { name: /Details|详情/i }).click();
+    await dialog.getByRole("tab", { name: /Fields|字段/i }).click();
+    await expect(tier).toContainText(/Ultrafast/);
+    await expect(dialog.getByRole("button", { name: /Save|保存/i })).toBeDisabled();
+  });
+}

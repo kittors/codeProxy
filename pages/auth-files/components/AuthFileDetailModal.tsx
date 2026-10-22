@@ -1705,26 +1705,18 @@ export function AuthFileDetailModal({
                                   }))
                                 }
                                 options={[
-                                  {
-                                    value: "",
-                                    label: t("auth_files.codex_service_tier_default"),
-                                  },
-                                  {
-                                    value: "pass",
-                                    label: t("auth_files.codex_service_tier_pass"),
-                                  },
+                                  { value: "", label: t("auth_files.codex_service_tier_default") },
+                                  { value: "pass", label: t("auth_files.codex_service_tier_pass") },
                                   {
                                     value: "priority",
                                     label: t("auth_files.codex_service_tier_priority"),
                                   },
                                   {
-                                    value: "flex",
-                                    label: t("auth_files.codex_service_tier_flex"),
+                                    value: "ultrafast",
+                                    label: t("auth_files.codex_service_tier_ultrafast"),
                                   },
-                                  {
-                                    value: "drop",
-                                    label: t("auth_files.codex_service_tier_drop"),
-                                  },
+                                  { value: "flex", label: t("auth_files.codex_service_tier_flex") },
+                                  { value: "drop", label: t("auth_files.codex_service_tier_drop") },
                                 ]}
                                 aria-label={t("auth_files.codex_service_tier_label")}
                               />

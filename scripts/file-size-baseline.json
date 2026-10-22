@@ -9,7 +9,7 @@
     "pages/api-key-lookup/ApiKeyLookupPage.tsx": 1511,
     "pages/api-keys/ApiKeysPage.tsx": 1060,
     "pages/auth-files/AuthFilesPage.tsx": 1013,
-    "pages/auth-files/components/AuthFileDetailModal.tsx": 1841,
+    "pages/auth-files/components/AuthFileDetailModal.tsx": 1833,
     "pages/auth-files/components/AuthFilesFilesTab.tsx": 1676,
     "pages/auth-files/hooks/useAuthFilesDetailEditors.ts": 1323,
     "pages/auth-files/hooks/useAuthFilesFilesPresentation.tsx": 921,
