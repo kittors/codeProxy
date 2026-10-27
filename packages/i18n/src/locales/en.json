@@ -644,9 +644,6 @@
     "excluded_models_label": "Excluded models (excluded_models)",
     "excluded_models_placeholder": "Comma or newline separated, e.g. model-a, gpt-5-*, *-preview",
     "excluded_models_hint": "Saved as an array and normalized by trim/lowercase/dedup/sort.",
-    "disable_cooling_label": "Disable cooling (disable_cooling)",
-    "disable_cooling_placeholder": "e.g. true / false / 1 / 0",
-    "disable_cooling_hint": "Supports booleans, numeric 0/non-0, and strings like true/false/1/0; unparseable values are ignored.",
     "prefix_proxy_invalid_json": "This auth file is not a JSON object, so fields cannot be edited.",
     "prefix_proxy_saved_success": "Updated auth file \"{{name}}\" successfully",
     "quota_refresh_success": "Quota refreshed for \"{{name}}\"",
@@ -6530,6 +6527,14 @@
     "field_mode": "Mode",
     "field_image_url_hint": "The image used as the first frame: a URL or a data URI."
   },
+  "channel_cooling": {
+    "label": "429 / 5xx cooldown",
+    "inherit": "Follow global setting",
+    "off": "Cooldown off",
+    "on": "Cooldown on",
+    "hint_channel": "Whether this channel is paused after it answers 429 or 5xx. With cooldown off the error goes straight to the client and the next request may use this channel again; a reset time the upstream announces is still waited out, and 401, 403 and 404 still pause it. The global setting is under Config → Network & retries.",
+    "hint_account": "Whether this account is paused after it answers 429 or 5xx. With cooldown off the error goes straight to the client and the next request may use this account again; a reset time the upstream announces (such as a usage window) is still waited out, and 401, 403 and 404 still pause it. The global setting is under Config → Network & retries."
+  },
   "config_ui": {
     "nav_label": "Config sections",
     "search_label": "Search settings",
@@ -6702,6 +6707,10 @@
       "max_retry_interval": {
         "label": "Cooldown wait limit",
         "desc": "Longest wait for a cooling-down account before retrying. Default 30 seconds."
+      },
+      "disable_cooling": {
+        "label": "Turn off failure cooldown",
+        "desc": "When on, an account or channel that answers 429, 408 or 5xx is not paused and the error goes straight to the client. A reset time the upstream announces is still waited out. Each channel and account can override this on its own edit page."
       },
       "force_prefix": {
         "label": "Require model prefixes",

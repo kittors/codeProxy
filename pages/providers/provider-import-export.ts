@@ -161,6 +161,12 @@ const normalizeEntryList = (
   return { entries: next.length ? next : undefined, duplicateCount };
 };
 
+// 导出文件里写的是 disable-cooling，手写的 JSON 也可能用 camelCase。不写就是跟随全局设置。
+const readCoolingOverride = (value: Record<string, unknown>): { disableCooling?: boolean } => {
+  const raw = value["disable-cooling"] ?? value.disableCooling;
+  return typeof raw === "boolean" ? { disableCooling: raw } : {};
+};
+
 const normalizeSimpleItem = (
   kind: Exclude<ProviderImportKind, "bedrock" | "openai">,
   value: unknown,
@@ -220,6 +226,7 @@ const normalizeSimpleItem = (
       kind === "claude"
         ? { skipAnthropicProcessing: true }
         : {}),
+      ...readCoolingOverride(value),
     },
     duplicateCount,
   };
@@ -274,6 +281,7 @@ const normalizeBedrockItem = (
       ...(authMode === "sigv4" && normalizeString(value["session-token"] ?? value.sessionToken)
         ? { sessionToken: normalizeString(value["session-token"] ?? value.sessionToken)! }
         : {}),
+      ...readCoolingOverride(value),
     },
     duplicateCount,
   };
@@ -309,6 +317,7 @@ const normalizeOpenAIItem = (
       ...(normalizeString(value["test-model"] ?? value.testModel)
         ? { testModel: normalizeString(value["test-model"] ?? value.testModel)! }
         : {}),
+      ...readCoolingOverride(value),
     },
     duplicateCount: modelDuplicates + entryDuplicates,
   };

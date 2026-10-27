@@ -355,6 +355,7 @@ export function useVisualConfig() {
           forceModelPrefix: Boolean(parsed["force-model-prefix"]),
           requestRetry: String(parsed["request-retry"] ?? ""),
           maxRetryInterval: String(parsed["max-retry-interval"] ?? ""),
+          disableCooling: Boolean(parsed["disable-cooling"]),
           wsAuth: Boolean(parsed["ws-auth"]),
 
           quotaSwitchProject: Boolean(quotaExceeded?.["switch-project"] ?? true),
@@ -499,6 +500,7 @@ export function useVisualConfig() {
         parsed["force-model-prefix"] = values.forceModelPrefix;
         parsed["request-retry"] = databaseInteger(values.requestRetry);
         parsed["max-retry-interval"] = databaseInteger(values.maxRetryInterval);
+        parsed["disable-cooling"] = values.disableCooling;
         parsed["ws-auth"] = values.wsAuth;
 
         parsed["quota-exceeded"] = {

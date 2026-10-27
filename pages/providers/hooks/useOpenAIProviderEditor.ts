@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { apiCallApi, getApiCallErrorMessage, providersApi } from "@code-proxy/api-client";
 import type { ApiCallResult, OpenAIProvider } from "@code-proxy/api-client";
 import { useToast } from "@code-proxy/ui";
+import { coolingOverrideField } from "@features/channel-cooling";
 import { invalidateConfiguredModelAvailability } from "@features/model-availability";
 import { keyValueEntriesToRecord } from "../KeyValueInputList";
 import { createEmptyModelEntry } from "../ModelInputList";
@@ -115,6 +116,7 @@ export function useOpenAIProviderEditor({
       ...(openaiDraft.testModel.trim() ? { testModel: openaiDraft.testModel.trim() } : {}),
       ...(modelCommit.models ? { models: modelCommit.models } : {}),
       ...(apiKeyEntries?.length ? { apiKeyEntries } : {}),
+      ...coolingOverrideField(openaiDraft.coolingMode),
     };
   }, [openaiDraft, t]);
 

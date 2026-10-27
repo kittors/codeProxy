@@ -352,6 +352,8 @@ export interface OpenAIProvider {
   apiKeyEntries?: ProviderApiKeyEntry[];
   priority?: number;
   testModel?: string;
+  /** 覆盖全局 disable-cooling，对这个供应商的所有 Key 生效；undefined 表示跟随全局。 */
+  disableCooling?: boolean;
 }
 
 export interface ProviderSimpleConfig {
@@ -371,6 +373,8 @@ export interface ProviderSimpleConfig {
   /** Dashboard session for Cline and Ollama Cloud usage checks. */
   authCookie?: string;
   skipAnthropicProcessing?: boolean;
+  /** 覆盖全局 disable-cooling；undefined 表示跟随全局。 */
+  disableCooling?: boolean;
 }
 
 export interface OpenCodeGoUsageItem {

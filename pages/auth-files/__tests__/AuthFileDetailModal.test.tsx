@@ -70,6 +70,7 @@ const basePrefixProxyEditor: DetailModalProps["prefixProxyEditor"] = {
   concurrencyLimit: "5",
   codexConvergenceMode: "device",
   codexServiceTier: "priority",
+  disableCooling: "",
 };
 
 const baseCodexOAuthAdmissionEditor: DetailModalProps["codexOAuthAdmissionEditor"] = {
@@ -1376,6 +1377,31 @@ describe("AuthFileDetailModal", () => {
 
     fireEvent.change(input, { target: { value: "12" } });
     expect(setPrefixProxyEditor).toHaveBeenCalled();
+  });
+
+  test("edits the account's 429 cooling override in fields tab", async () => {
+    const setPrefixProxyEditor = vi.fn();
+    renderDetailModal({
+      detailTab: "fields",
+      detailFile: {
+        name: "codex.json",
+        label: "Codex Primary",
+        type: "codex",
+        size: 256,
+      },
+      prefixProxyEditor: { ...basePrefixProxyEditor, disableCooling: "off" },
+      setPrefixProxyEditor,
+    });
+
+    const select = screen.getByRole("combobox", { name: "429 / 5xx cooldown" });
+    expect(select).toHaveTextContent("Cooldown off");
+    fireEvent.click(select);
+    fireEvent.click(await screen.findByRole("option", { name: "Follow global setting" }));
+
+    const update = setPrefixProxyEditor.mock.calls.at(-1)?.[0];
+    expect(update({ ...basePrefixProxyEditor, disableCooling: "off" })).toMatchObject({
+      disableCooling: "",
+    });
   });
 
   test("shows the channel alias editor for Kimi auth files without account_type metadata", () => {

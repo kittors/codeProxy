@@ -1,4 +1,9 @@
 import { apiClient } from "../client/client";
+import {
+  readDisableCooling,
+  rememberChannelCoolingSupport,
+  withDisableCoolingPatch,
+} from "./channel-cooling";
 import type {
   BedrockAuthMode,
   BedrockProviderConfig,
@@ -58,6 +63,7 @@ const normalizeModelAccessExcludedModels = (
 export const providersApi = {
   async getGeminiKeys(): Promise<ProviderSimpleConfig[]> {
     const data = await apiClient.get("/gemini-api-key");
+    rememberChannelCoolingSupport(data);
     const list = extractArrayPayload(data, "gemini-api-key");
     return list
       .map((item) => {
@@ -87,6 +93,7 @@ export const providersApi = {
           ...(headers ? { headers } : {}),
           ...(models ? { models } : {}),
           ...(excludedModels ? { excludedModels } : {}),
+          ...readDisableCooling(item),
         };
       })
       .filter(Boolean) as ProviderSimpleConfig[];
@@ -105,6 +112,7 @@ export const providersApi = {
 
   async getCodexConfigs(): Promise<ProviderSimpleConfig[]> {
     const data = await apiClient.get("/codex-api-key");
+    rememberChannelCoolingSupport(data);
     const list = extractArrayPayload(data, "codex-api-key");
     return list
       .map((item) => {
@@ -137,6 +145,7 @@ export const providersApi = {
           ...(headers ? { headers } : {}),
           ...(models ? { models } : {}),
           ...(excludedModels ? { excludedModels } : {}),
+          ...readDisableCooling(item),
         };
       })
       .filter(Boolean) as ProviderSimpleConfig[];
@@ -155,6 +164,7 @@ export const providersApi = {
 
   async getOpenCodeGoConfigs(): Promise<ProviderSimpleConfig[]> {
     const data = await apiClient.get("/opencode-go-api-key");
+    rememberChannelCoolingSupport(data);
     const list = extractArrayPayload(data, "opencode-go-api-key");
     return list
       .map((item) => {
@@ -190,6 +200,7 @@ export const providersApi = {
           ...(models ? { models } : {}),
           ...(excludedModels ? { excludedModels } : {}),
           ...(visionFallbackModel ? { visionFallbackModel } : {}),
+          ...readDisableCooling(item),
         };
       })
       .filter(Boolean) as ProviderSimpleConfig[];
@@ -204,9 +215,10 @@ export const providersApi = {
   patchOpenCodeGoConfig: (index: number, config: ProviderSimpleConfig) =>
     apiClient.patch("/opencode-go-api-key", {
       index,
-      value: serializeOpenCodeGoKey(config, {
-        includeApiKey: Boolean(config.apiKey.trim()),
-      }),
+      value: withDisableCoolingPatch(
+        serializeOpenCodeGoKey(config, { includeApiKey: Boolean(config.apiKey.trim()) }),
+        config.disableCooling,
+      ),
     }),
 
   patchOpenCodeGoExcludedModels: (index: number, excludedModels: string[]) =>
@@ -222,6 +234,7 @@ export const providersApi = {
 
   async getClineConfigs(): Promise<ProviderSimpleConfig[]> {
     const data = await apiClient.get("/cline-api-key");
+    rememberChannelCoolingSupport(data);
     const list = extractArrayPayload(data, "cline-api-key");
     return list
       .map((item) => {
@@ -264,6 +277,7 @@ export const providersApi = {
           ...(excludedModels ? { excludedModels } : {}),
           ...(visionFallbackModel ? { visionFallbackModel } : {}),
           ...(authCookie ? { authCookie } : {}),
+          ...readDisableCooling(item),
         };
       })
       .filter(Boolean) as ProviderSimpleConfig[];
@@ -278,9 +292,10 @@ export const providersApi = {
   patchClineConfig: (index: number, config: ProviderSimpleConfig) =>
     apiClient.patch("/cline-api-key", {
       index,
-      value: serializeClineKey(config, {
-        includeApiKey: Boolean(config.apiKey.trim()),
-      }),
+      value: withDisableCoolingPatch(
+        serializeClineKey(config, { includeApiKey: Boolean(config.apiKey.trim()) }),
+        config.disableCooling,
+      ),
     }),
 
   patchClineExcludedModels: (index: number, excludedModels: string[]) =>
@@ -296,6 +311,7 @@ export const providersApi = {
 
   async getOllamaCloudConfigs(): Promise<ProviderSimpleConfig[]> {
     const data = await apiClient.get("/ollama-cloud-api-key");
+    rememberChannelCoolingSupport(data);
     const list = extractArrayPayload(data, "ollama-cloud-api-key");
     return list
       .map((item) => {
@@ -338,6 +354,7 @@ export const providersApi = {
           ...(excludedModels ? { excludedModels } : {}),
           ...(visionFallbackModel ? { visionFallbackModel } : {}),
           ...(authCookie ? { authCookie } : {}),
+          ...readDisableCooling(item),
         };
       })
       .filter(Boolean) as ProviderSimpleConfig[];
@@ -352,9 +369,10 @@ export const providersApi = {
   patchOllamaCloudConfig: (index: number, config: ProviderSimpleConfig) =>
     apiClient.patch("/ollama-cloud-api-key", {
       index,
-      value: serializeOllamaCloudKey(config, {
-        includeApiKey: Boolean(config.apiKey.trim()),
-      }),
+      value: withDisableCoolingPatch(
+        serializeOllamaCloudKey(config, { includeApiKey: Boolean(config.apiKey.trim()) }),
+        config.disableCooling,
+      ),
     }),
 
   patchOllamaCloudExcludedModels: (index: number, excludedModels: string[]) =>
@@ -370,6 +388,7 @@ export const providersApi = {
 
   async getCommandCodeConfigs(): Promise<ProviderSimpleConfig[]> {
     const data = await apiClient.get("/commandcode-api-key");
+    rememberChannelCoolingSupport(data);
     const list = extractArrayPayload(data, "commandcode-api-key");
     return list
       .map((item) => {
@@ -409,6 +428,7 @@ export const providersApi = {
           ...(models ? { models } : {}),
           ...(excludedModels ? { excludedModels } : {}),
           ...(visionFallbackModel ? { visionFallbackModel } : {}),
+          ...readDisableCooling(item),
         };
       })
       .filter(Boolean) as ProviderSimpleConfig[];
@@ -423,9 +443,10 @@ export const providersApi = {
   patchCommandCodeConfig: (index: number, config: ProviderSimpleConfig) =>
     apiClient.patch("/commandcode-api-key", {
       index,
-      value: serializeCommandCodeKey(config, {
-        includeApiKey: Boolean(config.apiKey.trim()),
-      }),
+      value: withDisableCoolingPatch(
+        serializeCommandCodeKey(config, { includeApiKey: Boolean(config.apiKey.trim()) }),
+        config.disableCooling,
+      ),
     }),
 
   patchCommandCodeExcludedModels: (index: number, excludedModels: string[]) =>
@@ -491,6 +512,7 @@ export const providersApi = {
 
   async getClaudeConfigs(): Promise<ProviderSimpleConfig[]> {
     const data = await apiClient.get("/claude-api-key");
+    rememberChannelCoolingSupport(data);
     const list = extractArrayPayload(data, "claude-api-key");
     return list
       .map((item) => {
@@ -527,6 +549,7 @@ export const providersApi = {
           ...(models ? { models } : {}),
           ...(excludedModels ? { excludedModels } : {}),
           ...(skipAnthropicProcessing ? { skipAnthropicProcessing } : {}),
+          ...readDisableCooling(item),
         };
       })
       .filter(Boolean) as ProviderSimpleConfig[];
@@ -545,6 +568,7 @@ export const providersApi = {
 
   async getBedrockConfigs(): Promise<BedrockProviderConfig[]> {
     const data = await apiClient.get("/bedrock-api-key");
+    rememberChannelCoolingSupport(data);
     const list = extractArrayPayload(data, "bedrock-api-key");
     return list
       .map((item) => {
@@ -605,6 +629,7 @@ export const providersApi = {
           ...(headers ? { headers } : {}),
           ...(models ? { models } : {}),
           ...(excludedModels ? { excludedModels } : {}),
+          ...readDisableCooling(item),
         };
       })
       .filter(Boolean) as BedrockProviderConfig[];
@@ -621,6 +646,7 @@ export const providersApi = {
 
   async getVertexConfigs(): Promise<ProviderSimpleConfig[]> {
     const data = await apiClient.get("/vertex-api-key");
+    rememberChannelCoolingSupport(data);
     const list = extractArrayPayload(data, "vertex-api-key");
     return list
       .map((item) => {
@@ -649,6 +675,7 @@ export const providersApi = {
           ...(proxyId ? { proxyId } : {}),
           ...(headers ? { headers } : {}),
           ...(models ? { models } : {}),
+          ...readDisableCooling(item),
         };
       })
       .filter(Boolean) as ProviderSimpleConfig[];
@@ -667,6 +694,7 @@ export const providersApi = {
 
   async getOpenAIProviders(): Promise<OpenAIProvider[]> {
     const data = await apiClient.get("/openai-compatibility");
+    rememberChannelCoolingSupport(data);
     const list = extractArrayPayload(data, "openai-compatibility");
     return list
       .map((item) => {
@@ -702,6 +730,7 @@ export const providersApi = {
           ...(apiKeyEntries ? { apiKeyEntries } : {}),
           ...(priority !== undefined ? { priority } : {}),
           ...(testModel ? { testModel } : {}),
+          ...readDisableCooling(item),
         };
       })
       .filter(Boolean) as OpenAIProvider[];

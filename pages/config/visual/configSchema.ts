@@ -368,6 +368,14 @@ export const CONFIG_FIELDS: readonly ConfigFieldDef[] = [
     (_, maxRetryInterval) => ({ maxRetryInterval }),
     { placeholder: "30", unit: "seconds" },
   ),
+  // 各渠道和账号可以在自己的编辑页覆盖这个开关。
+  toggle(
+    "disable_cooling",
+    "network",
+    "disable-cooling",
+    (v) => v.disableCooling,
+    (_, disableCooling) => ({ disableCooling }),
+  ),
 
   // 访问规则
   toggle(

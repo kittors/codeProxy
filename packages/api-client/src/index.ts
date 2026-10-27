@@ -88,6 +88,12 @@ export {
 } from "./endpoints/usage-monitor";
 export type * from "./endpoints/usage-monitor";
 export { providersApi } from "./endpoints/providers";
+export {
+  isChannelCoolingSupported,
+  readChannelCoolingSupport,
+  rememberChannelCoolingSupport,
+  subscribeChannelCoolingSupport,
+} from "./endpoints/channel-cooling";
 export { configFileApi } from "./endpoints/config-file";
 export { logsApi } from "./endpoints/logs";
 export { oauthApi } from "./endpoints/oauth";
