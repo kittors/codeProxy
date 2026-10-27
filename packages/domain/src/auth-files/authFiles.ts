@@ -2056,23 +2056,6 @@ export const resolveAuthFileStatusBar = (file: AuthFileItem, index: UsageIndex):
   };
 };
 
-export type PrefixProxyEditorState = {
-  open: boolean;
-  fileName: string;
-  loading: boolean;
-  saving: boolean;
-  error: string | null;
-  json: Record<string, unknown> | null;
-  prefix: string;
-  proxyUrl: string;
-  proxyId: string;
-  subscriptionStartedAt: string;
-  subscriptionPeriod: AuthFileSubscriptionPeriod;
-  concurrencyLimit: string;
-  codexConvergenceMode: string;
-  codexServiceTier: string;
-};
-
 export type AuthFilesGroupOverview = {
   totalCalls: number;
   averageFiveHour: number | null;

@@ -198,6 +198,7 @@ describe("providersApi OpenCode Go", () => {
         models: [],
         "excluded-models": [],
         "vision-fallback-model": "qwen3.5-plus",
+        "disable-cooling": null,
       },
     });
 
@@ -226,6 +227,7 @@ describe("providersApi OpenCode Go", () => {
         name: "OpenCode Go",
         models: [{ name: "qwen3.5-plus" }],
         "vision-fallback-model": "qwen3.5-plus",
+        "disable-cooling": null,
       },
     });
   });

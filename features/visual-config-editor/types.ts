@@ -145,6 +145,7 @@ export type VisualConfigValues = {
   forceModelPrefix: boolean;
   requestRetry: string;
   maxRetryInterval: string;
+  disableCooling: boolean;
   wsAuth: boolean;
 
   quotaSwitchProject: boolean;
@@ -212,6 +213,7 @@ export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
   forceModelPrefix: false,
   requestRetry: "",
   maxRetryInterval: "",
+  disableCooling: false,
   wsAuth: false,
   quotaSwitchProject: true,
   quotaSwitchPreviewModel: true,

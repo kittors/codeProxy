@@ -644,9 +644,6 @@
     "excluded_models_label": "排除模型（excluded_models）",
     "excluded_models_placeholder": "用逗号或换行分隔，例如: model-a, gpt-5-*, *-preview",
     "excluded_models_hint": "保存为数组；会自动 trim、小写、去重并排序。",
-    "disable_cooling_label": "禁用冷却（disable_cooling）",
-    "disable_cooling_placeholder": "例如: true / false / 1 / 0",
-    "disable_cooling_hint": "支持布尔值、0/非0 数字或字符串 true/false/1/0；无法解析时忽略。",
     "prefix_proxy_invalid_json": "该认证文件不是 JSON 对象，无法编辑字段。",
     "prefix_proxy_saved_success": "已更新认证文件 \"{{name}}\"",
     "quota_refresh_success": "已刷新 \"{{name}}\" 的额度",
@@ -6509,6 +6506,14 @@
     "field_mode": "生成方式",
     "field_image_url_hint": "作为视频首帧的图片：网址或 data URI。"
   },
+  "channel_cooling": {
+    "label": "429 / 5xx 冷却",
+    "inherit": "跟随全局设置",
+    "off": "关闭冷却",
+    "on": "开启冷却",
+    "hint_channel": "渠道返回 429 或 5xx 时是否暂停调度它。关闭后错误直接返回给客户端，下一个请求照常发给这个渠道；上游明确告知的恢复时间仍会等待，401、403、404 照旧暂停。全局设置在「配置面板 → 网络与重试」。",
+    "hint_account": "账号返回 429 或 5xx 时是否暂停调度它。关闭后错误直接返回给客户端，下一个请求照常发给这个账号；上游明确告知的恢复时间（例如额度窗口）仍会等待，401、403、404 照旧暂停。全局设置在「配置面板 → 网络与重试」。"
+  },
   "config_ui": {
     "nav_label": "配置分区",
     "search_label": "搜索设置",
@@ -6678,6 +6683,10 @@
       "max_retry_interval": {
         "label": "冷却等待上限",
         "desc": "账号正在冷却时，最多等待多久再重试，默认 30 秒。"
+      },
+      "disable_cooling": {
+        "label": "关闭失败冷却",
+        "desc": "开启后，账号或渠道返回 429、408、5xx 时不再暂停调度，错误直接返回给客户端；上游明确告知的恢复时间仍会等待。各渠道和账号可以在自己的编辑页单独覆盖。"
       },
       "force_prefix": {
         "label": "强制模型前缀",

@@ -12,6 +12,7 @@ import type {
   ProviderSimpleConfig,
 } from "@code-proxy/api-client";
 import { providersApi } from "@code-proxy/api-client";
+import { coolingOverrideField } from "@features/channel-cooling";
 import { invalidateConfiguredModelAvailability } from "@features/model-availability";
 import { keyValueEntriesToRecord } from "../KeyValueInputList";
 import { setCachedData } from "../provider-cache";
@@ -291,6 +292,7 @@ export function useProviderKeyEditor({
       ...(editKeyType === "claude" && keyDraft.skipAnthropicProcessing
         ? { skipAnthropicProcessing: true }
         : {}),
+      ...coolingOverrideField(keyDraft.coolingMode),
       ...(editKeyType === "bedrock"
         ? {
             authMode: keyDraft.authMode,

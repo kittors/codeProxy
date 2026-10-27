@@ -31,6 +31,7 @@ const LIVE: LiveConfig = {
     debug: true,
     "request-retry": 5,
     "max-retry-interval": 30,
+    "disable-cooling": true,
     "quota-exceeded": { "switch-project": false, "switch-preview-model": true },
     "force-model-prefix": false,
     "ws-auth": true,
@@ -98,6 +99,7 @@ describe("effectiveConfigDocument", () => {
 
 test.each([
   ["proxy-url", true],
+  ["disable-cooling", true],
   ["request-log-storage.max-rows", true],
   ["kimi-header-defaults.user-agent", true],
   ["quota-exceeded.switch-project", true],
@@ -177,6 +179,15 @@ describe("useVisualConfig with settings stored in the database", () => {
       "request-retry": null,
       "ws-auth": false,
     });
+  });
+
+  // 全局冷却开关存在数据库里：页面显示运行中的值，关掉时要明确写 false，否则库里的 true 原样保留。
+  test("shows and switches off the global disable-cooling", () => {
+    const hook = loaded();
+    expect(hook.result.current.visualValues.disableCooling).toBe(true);
+
+    act(() => hook.result.current.setVisualValues({ disableCooling: false }));
+    expect(save(hook)).toEqual({ "disable-cooling": false });
   });
 
   test("changing one storage field keeps the sub-keys the page does not edit", () => {

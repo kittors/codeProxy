@@ -39,6 +39,7 @@ import {
 } from "@code-proxy/ui";
 import { CodexImageGenerationBridgePanel } from "./CodexImageGenerationBridgePanel";
 import { AuthFilePlanBadge } from "./AuthFilePlanBadge";
+import { AuthFileSchedulingFields } from "./AuthFileSchedulingFields";
 import { buildDetailTrendChartOption } from "./detailTrendChartOption";
 import { TrendSummaryGrid } from "./TrendSummaryGrid";
 import { EChart, useTheme } from "@code-proxy/ui";
@@ -1625,29 +1626,10 @@ export function AuthFileDetailModal({
                             setPrefixProxyEditor((prev) => ({ ...prev, proxyUrl }))
                           }
                         />
-                        <div className="grid gap-2">
-                          <p className="text-xs font-semibold text-ink-2">
-                            {t("auth_files.concurrency_limit_label")}
-                          </p>
-                          <TextInput
-                            type="number"
-                            min="0"
-                            step="1"
-                            value={prefixProxyEditor.concurrencyLimit}
-                            onChange={(e) => {
-                              const value = e.currentTarget.value;
-                              setPrefixProxyEditor((prev) => ({
-                                ...prev,
-                                concurrencyLimit: value,
-                              }));
-                            }}
-                            placeholder={t("auth_files.concurrency_limit_placeholder")}
-                            aria-label={t("auth_files.concurrency_limit_label")}
-                          />
-                          <p className="text-xs text-ink-3">
-                            {t("auth_files.concurrency_limit_hint")}
-                          </p>
-                        </div>
+                        <AuthFileSchedulingFields
+                          editor={prefixProxyEditor}
+                          setEditor={setPrefixProxyEditor}
+                        />
 
                         {normalizeProviderKey(resolveFileType(detailFile)) === "codex" ? (
                           <>

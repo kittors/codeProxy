@@ -155,3 +155,23 @@ export interface OAuthModelAliasEntry {
   alias: string;
   fork?: boolean;
 }
+
+/** 账号详情「字段」页的编辑状态：从账号 JSON 读出、改完写回整个 JSON 再上传。 */
+export type PrefixProxyEditorState = {
+  open: boolean;
+  fileName: string;
+  loading: boolean;
+  saving: boolean;
+  error: string | null;
+  json: Record<string, unknown> | null;
+  prefix: string;
+  proxyUrl: string;
+  proxyId: string;
+  subscriptionStartedAt: string;
+  subscriptionPeriod: AuthFileSubscriptionPeriod;
+  concurrencyLimit: string;
+  codexConvergenceMode: string;
+  codexServiceTier: string;
+  /** 账号 JSON 的 disable_cooling：""=跟随全局，"off"=关闭冷却，"on"=开启冷却（同 features/channel-cooling 的 CoolingMode）。 */
+  disableCooling: "" | "off" | "on";
+};

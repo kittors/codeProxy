@@ -5,6 +5,7 @@ import { SearchableSelect } from "@code-proxy/ui";
 import { ToggleSwitch } from "@code-proxy/ui";
 import type { ProxyPoolEntry } from "@code-proxy/api-client/endpoints/proxies";
 import { ProxyPoolSelect, ProxyUrlInput } from "@features/proxy-pool";
+import { ChannelCoolingField, useChannelCoolingSupported } from "@features/channel-cooling";
 import { ModerationProfileSelect } from "@features/content-moderation";
 import { useModerationPermissions } from "@app/providers/useModerationPermissions";
 import { KeyValueInputList } from "../KeyValueInputList";
@@ -49,6 +50,7 @@ export function ProviderKeyRequestTab({
 }: ProviderKeyRequestTabProps) {
   const { t } = useTranslation();
   const moderationPerms = useModerationPermissions();
+  const coolingSupported = useChannelCoolingSupported();
   const isBedrock = editKeyType === "bedrock";
   const clineChatUrl = useMemo(() => {
     const baseUrl = keyDraft.baseUrl.trim().replace(/\/+$/g, "") || CLINE_BASE_URL;
@@ -309,6 +311,16 @@ export function ProviderKeyRequestTab({
           {t("providers.headers_common_hint")}
         </p>
       </FieldGroup>
+
+      {coolingSupported ? (
+        <FieldGroup>
+          <ChannelCoolingField
+            scope="channel"
+            value={keyDraft.coolingMode}
+            onChange={(coolingMode) => setKeyDraft((prev) => ({ ...prev, coolingMode }))}
+          />
+        </FieldGroup>
+      ) : null}
 
       {editKeyType === "claude" ? (
         <FieldGroup>

@@ -9,6 +9,7 @@ import type { KeyValueEntry } from "./KeyValueInputList";
 import { recordToKeyValueEntries } from "./KeyValueInputList";
 import type { ModelEntryDraft } from "./ModelInputList";
 import type { KeyStatBucket } from "@code-proxy/domain";
+import { coolingModeFromOverride, type CoolingMode } from "@features/channel-cooling";
 
 const DISABLE_ALL_MODELS_RULE = "*";
 
@@ -175,6 +176,7 @@ export type ProviderKeyDraft = {
   headersEntries: KeyValueEntry[];
   modelEntries: ModelEntryDraft[];
   skipAnthropicProcessing: boolean;
+  coolingMode: CoolingMode;
 };
 
 export const buildModelEntries = (
@@ -261,6 +263,7 @@ export const buildProviderKeyDraft = (
     headersEntries: recordToKeyValueEntries(input?.headers),
     modelEntries: buildModelEntries(input?.models),
     skipAnthropicProcessing: input?.skipAnthropicProcessing ?? false,
+    coolingMode: coolingModeFromOverride(input?.disableCooling),
   };
 };
 
@@ -284,6 +287,7 @@ export type OpenAIDraft = {
     id: string;
   }[];
   modelEntries: ModelEntryDraft[];
+  coolingMode: CoolingMode;
 };
 
 export const buildOpenAIDraft = (
@@ -319,6 +323,7 @@ export const buildOpenAIDraft = (
           },
         ],
   modelEntries: buildModelEntries(input?.models),
+  coolingMode: coolingModeFromOverride(input?.disableCooling),
 });
 
 export type AmpMappingEntry = { id: string; from: string; to: string };

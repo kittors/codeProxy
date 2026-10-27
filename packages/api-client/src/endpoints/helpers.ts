@@ -6,6 +6,7 @@ import type {
   ProviderModel,
   ProviderSimpleConfig,
 } from "../dto/types";
+import { writeDisableCooling } from "./channel-cooling";
 
 export const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === "object" && !Array.isArray(value);
@@ -154,6 +155,7 @@ export const serializeProviderKey = (config: ProviderSimpleConfig) => {
   if (config.skipAnthropicProcessing) {
     payload["skip-anthropic-processing"] = true;
   }
+  writeDisableCooling(payload, config.disableCooling);
   return payload;
 };
 
@@ -185,6 +187,7 @@ export const serializeOpenCodeGoKey = (
   const visionFallbackModel = normalizeString(config.visionFallbackModel);
   if (visionFallbackModel)
     payload["vision-fallback-model"] = visionFallbackModel;
+  writeDisableCooling(payload, config.disableCooling);
   return payload;
 };
 
@@ -220,6 +223,7 @@ export const serializeClineKey = (
     payload["vision-fallback-model"] = visionFallbackModel;
   const authCookie = normalizeString(config.authCookie);
   if (authCookie) payload["auth-cookie"] = authCookie;
+  writeDisableCooling(payload, config.disableCooling);
   return payload;
 };
 
@@ -255,6 +259,7 @@ export const serializeOllamaCloudKey = (
     payload["vision-fallback-model"] = visionFallbackModel;
   const authCookie = normalizeString(config.authCookie);
   if (authCookie) payload["auth-cookie"] = authCookie;
+  writeDisableCooling(payload, config.disableCooling);
   return payload;
 };
 
@@ -291,6 +296,7 @@ export const serializeCommandCodeKey = (
   const visionFallbackModel = normalizeString(config.visionFallbackModel);
   if (visionFallbackModel)
     payload["vision-fallback-model"] = visionFallbackModel;
+  writeDisableCooling(payload, config.disableCooling);
   return payload;
 };
 
@@ -313,6 +319,7 @@ export const serializeGeminiKey = (config: ProviderSimpleConfig) => {
   if (config.excludedModels && config.excludedModels.length) {
     payload["excluded-models"] = config.excludedModels;
   }
+  writeDisableCooling(payload, config.disableCooling);
   return payload;
 };
 
@@ -354,6 +361,7 @@ export const serializeBedrockKey = (config: BedrockProviderConfig) => {
     if (sessionToken) payload["session-token"] = sessionToken;
   }
 
+  writeDisableCooling(payload, config.disableCooling);
   return payload;
 };
 
@@ -403,6 +411,7 @@ export const serializeOpenAIProvider = (provider: OpenAIProvider) => {
     }
   }
 
+  writeDisableCooling(payload, provider.disableCooling);
   return payload;
 };
 

@@ -118,6 +118,7 @@ describe("providersApi Ollama Cloud", () => {
         "excluded-models": [],
         "vision-fallback-model": "gpt-oss:120b",
         "auth-cookie": "ollama_session=ok",
+        "disable-cooling": null,
       },
     });
 
@@ -148,6 +149,7 @@ describe("providersApi Ollama Cloud", () => {
         "base-url": "https://ollama.com",
         models: [{ name: "gpt-oss:120b" }],
         "vision-fallback-model": "gpt-oss:120b",
+        "disable-cooling": null,
       },
     });
   });
