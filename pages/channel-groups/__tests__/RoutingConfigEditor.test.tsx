@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
@@ -46,6 +46,7 @@ function Harness({
   initialValues,
   loadModelsForChannels,
   modelExclusionsSupported,
+  followUpstreamSupported,
   availableChannels = ["Team A Claude", "Main Codex", "Backup Claude"],
   availableChannelDetails,
   availableChannelDetailsByGroup,
@@ -58,6 +59,8 @@ function Harness({
   ) => Promise<Array<string | RoutingModelOption>>;
   /** Off by default, like a backend that predates the capability. */
   modelExclusionsSupported?: boolean;
+  /** Off by default, like a backend that predates follow-upstream-models. */
+  followUpstreamSupported?: boolean;
   availableChannels?: string[];
   availableChannelDetails?: Record<string, ChannelGroupChannelDetail>;
   availableChannelDetailsByGroup?: Record<string, Record<string, ChannelGroupChannelDetail>>;
@@ -72,13 +75,21 @@ function Harness({
     routingPathRoutes: [],
     ...initialValues,
   });
+  // Stable like the page's state, so the editor's callbacks are not rebuilt each render.
+  const modelGateSupport = useMemo(
+    () => ({
+      channelGroupExcludedModels: modelExclusionsSupported === true,
+      channelGroupFollowUpstreamModels: followUpstreamSupported === true,
+    }),
+    [followUpstreamSupported, modelExclusionsSupported],
+  );
 
   return (
     <ThemeProvider>
       <ToastProvider>
         <RoutingConfigEditor
           values={values}
-          modelExclusionsSupported={modelExclusionsSupported}
+          modelGateSupport={modelGateSupport}
           availableChannels={availableChannels}
           availableChannelDetails={availableChannelDetails}
           availableChannelDetailsByGroup={availableChannelDetailsByGroup}
@@ -117,6 +128,9 @@ function Harness({
       </div>
       <div data-testid="excluded-models">
         {values.routingChannelGroups[0]?.excludedModels?.join(",") ?? ""}
+      </div>
+      <div data-testid="saved-follow-upstream">
+        {String(values.routingChannelGroups[0]?.followUpstreamModels ?? "")}
       </div>
     </ThemeProvider>
   );
@@ -452,6 +466,102 @@ describe("RoutingConfigEditor", () => {
     await user.click(screen.getByRole("button", { name: "保存" }));
 
     expect(savedLists()).toEqual({ allowed: "", excluded: "grok-4.7,grok-4.7-build-fast" });
+  });
+
+  // The 2026-10-28 report: a curated group stopped at the models it was saved
+  // with while the upstream had published another. Following upstream keeps the
+  // list and also admits what Codex discovery lists; what that opens is shown
+  // before anything is saved, since discovery may list models left unchecked.
+  test("follows upstream on a fixed list, showing what that opens first", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+    const loadModelsForChannels = vi.fn(
+      async (): Promise<string[]> => ["grok-4.6", "grok-4.7"],
+    );
+    const values = xaiPool({ allowedModels: ["grok-4.6"] });
+    // grok-4.6 is already on the list, so it is not news.
+    values.routingChannelGroups[0].discoveredModels = ["grok-4.7", "grok-4.6"];
+
+    render(
+      <Harness
+        initialValues={values}
+        loadModelsForChannels={loadModelsForChannels}
+        modelExclusionsSupported
+        followUpstreamSupported
+      />,
+    );
+    await openXaiPoolModels(user);
+
+    const toggle = await screen.findByRole("switch", { name: "跟随上游新模型" });
+    expect(toggle).not.toBeChecked();
+    expect(screen.getByTestId("follow-upstream-models-preview")).toHaveTextContent(
+      "开启后还会放行：grok-4.7",
+    );
+    await user.click(toggle);
+    expect(toggle).toBeChecked();
+    expect(screen.getByTestId("follow-upstream-models-preview")).toHaveTextContent(
+      "现在额外放行：grok-4.7",
+    );
+    expect(screen.getByTestId("model-gate-mode-hint")).toHaveTextContent("外加 Codex");
+    // Neither list changes; only the setting does.
+    expect(screen.getByLabelText("grok-4.7")).not.toBeChecked();
+    await user.click(screen.getByRole("button", { name: "保存" }));
+
+    expect(savedLists()).toEqual({ allowed: "grok-4.6", excluded: "" });
+    expect(screen.getByTestId("saved-follow-upstream")).toHaveTextContent("true");
+  });
+
+  test("saves an untouched group without the setting it never had", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+    render(
+      <Harness
+        initialValues={xaiPool({ allowedModels: ["grok-4.6"] })}
+        loadModelsForChannels={vi.fn(async (): Promise<string[]> => ["grok-4.6", "grok-4.7"])}
+        modelExclusionsSupported
+        followUpstreamSupported
+      />,
+    );
+    await openXaiPoolModels(user);
+    expect(await screen.findByRole("switch", { name: "跟随上游新模型" })).not.toBeChecked();
+    // Nothing discovered beyond the list: there is nothing to preview.
+    expect(screen.queryByTestId("follow-upstream-models-preview")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "保存" }));
+
+    expect(screen.getByTestId("saved-follow-upstream")).toHaveTextContent("");
+  });
+
+  test("offers no follow-upstream switch to a backend that would drop it", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+    render(
+      <Harness
+        initialValues={xaiPool({ allowedModels: ["grok-4.6"] })}
+        loadModelsForChannels={vi.fn(async (): Promise<string[]> => ["grok-4.6"])}
+        modelExclusionsSupported
+      />,
+    );
+    await openXaiPoolModels(user);
+    await screen.findByLabelText("grok-4.6");
+
+    expect(screen.queryByRole("switch", { name: "跟随上游新模型" })).not.toBeInTheDocument();
+  });
+
+  test("hides the follow-upstream switch while auto-allow already takes every new model", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+    render(
+      <Harness
+        initialValues={xaiPool({ excludedModels: ["grok-4.7"] })}
+        loadModelsForChannels={vi.fn(async (): Promise<string[]> => ["grok-4.6", "grok-4.7"])}
+        modelExclusionsSupported
+        followUpstreamSupported
+      />,
+    );
+    await openXaiPoolModels(user);
+    expect(await screen.findByRole("switch", { name: "自动允许新模型" })).toBeChecked();
+
+    expect(screen.queryByRole("switch", { name: "跟随上游新模型" })).not.toBeInTheDocument();
   });
 
   test("turning off auto-allow saves the checked models as a fixed allow list", async () => {

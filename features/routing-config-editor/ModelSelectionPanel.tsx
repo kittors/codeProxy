@@ -11,13 +11,16 @@ import { emptyModelPricing, formatModelPrice } from "@features/model-availabilit
 import type { RoutingModelOption } from "./types";
 import {
   clearAllModels,
+  followsUpstreamModels,
   lockedModelRules,
   modelRulesOutsideList,
   removeModelRule,
   selectAllModels,
   selectedModelIds,
   setAutoAllowNewModels,
+  setFollowUpstreamModels,
   toggleModelSelection,
+  upstreamModelsBeyondList,
   type ModelListName,
   type ModelSelectionDraft,
 } from "./modelSelectionDraft";
@@ -95,11 +98,18 @@ export function ModelSelectionPanel({
   const canSwitch =
     selection.exclusionsSupported && listReady && modelOptionIds.length > 0 && !disabled;
   const confirming = confirmingAutoAllow && canSwitch && !selection.autoAllowNewModels;
+  // Following upstream only means something on a fixed list: with exclusions the
+  // group already takes every new model.
+  const showFollowSwitch = selection.followUpstreamSupported && !selection.autoAllowNewModels;
+  const following = showFollowSwitch && followsUpstreamModels(selection);
+  const upstreamPreview = useMemo(() => upstreamModelsBeyondList(selection), [selection]);
   const modeHintKey = !selection.exclusionsSupported
     ? "channel_groups_page.auto_allow_new_models_unsupported"
     : selection.autoAllowNewModels
       ? "channel_groups_page.auto_allow_new_models_on_hint"
-      : "channel_groups_page.auto_allow_new_models_off_hint";
+      : following
+        ? "channel_groups_page.auto_allow_new_models_off_following_hint"
+        : "channel_groups_page.auto_allow_new_models_off_hint";
 
   const columns = useMemo<DataTableColumn<RoutingModelOption>[]>(
     () => [
@@ -240,8 +250,38 @@ export function ModelSelectionPanel({
         ) : null}
       </div>
 
-      {/* Turning the switch on is the one step here that widens the group
-          beyond what the list shows, so it is spelled out and confirmed. */}
+      {/* The models it would open are listed before it is turned on: discovery
+          may list models this list leaves unchecked, and those pass too. */}
+      {showFollowSwitch ? (
+        <div
+          data-testid="follow-upstream-models"
+          className={[surface({ tone: "inset", radius: "2xl" }), "space-y-2 px-4 py-3"].join(" ")}
+        >
+          <ToggleSwitch
+            checked={following}
+            onCheckedChange={(next) =>
+              onChange((current) => setFollowUpstreamModels(current, next))
+            }
+            disabled={Boolean(disabled)}
+            label={t("channel_groups_page.follow_upstream_models_label")}
+            description={t("channel_groups_page.follow_upstream_models_hint")}
+          />
+          {upstreamPreview.length > 0 ? (
+            <p data-testid="follow-upstream-models-preview" className="text-xs text-ink-2">
+              {t(
+                following
+                  ? "channel_groups_page.follow_upstream_models_preview_on"
+                  : "channel_groups_page.follow_upstream_models_preview_off",
+                { models: upstreamPreview.join(", ") },
+              )}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {/* Turning auto-allow on widens the group to every model its channels
+          serve, now and later, so it is spelled out and confirmed. Following
+          upstream widens it less, by the models listed above. */}
       {confirming ? (
         <div role="alert" data-testid="auto-allow-confirm" className={NOTICE_CLASS}>
           <p>

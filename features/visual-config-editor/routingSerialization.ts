@@ -100,6 +100,10 @@ export function parseRoutingChannelGroups(raw: unknown): RoutingChannelGroupEntr
       tags,
       allowedModels: parseModelList(record["allowed-models"]),
       excludedModels: parseModelList(record["excluded-models"]),
+      followUpstreamModels:
+        typeof record["follow-upstream-models"] === "boolean"
+          ? record["follow-upstream-models"]
+          : undefined,
     };
   });
 }
@@ -185,6 +189,11 @@ export function serializeRoutingChannelGroupsForYaml(
       }
       if (excludedModels.length > 0) {
         item["excluded-models"] = excludedModels;
+      }
+      // Written back exactly as read (or as the operator set it): leaving it out
+      // would reset a group someone switched to follow upstream.
+      if (typeof group.followUpstreamModels === "boolean") {
+        item["follow-upstream-models"] = group.followUpstreamModels;
       }
 
       return item;

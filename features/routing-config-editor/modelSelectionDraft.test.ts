@@ -11,14 +11,23 @@ import {
   selectedModelIds,
   serializeModelSelection,
   setAutoAllowNewModels,
+  setFollowUpstreamModels,
+  followsUpstreamModels,
   toggleModelSelection,
+  upstreamModelsBeyondList,
 } from "./modelSelectionDraft";
 
 const CATALOG = ["grok-4.5", "grok-4.6", "grok-4.7", "grok-imagine-video-1.5"];
 
+/** Routing-config capabilities; most cases only care about exclusions. */
+const gate = (exclusions: boolean, followUpstream = false) => ({
+  channelGroupExcludedModels: exclusions,
+  channelGroupFollowUpstreamModels: followUpstream,
+});
+
 describe("modelSelectionDraft", () => {
   test("a fresh draft allows everything and follows the upstream", () => {
-    const selection = createModelSelectionDraft(true);
+    const selection = createModelSelectionDraft(gate(true));
     expect(selection.autoAllowNewModels).toBe(true);
     expect(selectedModelIds(selection, CATALOG)).toEqual(new Set(CATALOG));
     expect(serializeModelSelection(selection)).toEqual({
@@ -29,7 +38,7 @@ describe("modelSelectionDraft", () => {
 
   test("unchecking one model saves an exclusion, not a snapshot of the rest", () => {
     const selection = toggleModelSelection(
-      createModelSelectionDraft(true),
+      createModelSelectionDraft(gate(true)),
       CATALOG,
       "grok-imagine-video-1.5",
       false,
@@ -45,7 +54,7 @@ describe("modelSelectionDraft", () => {
   });
 
   test("re-checking the last exclusion returns the group to pure follow-upstream", () => {
-    const narrowed = toggleModelSelection(createModelSelectionDraft(true), CATALOG, "grok-4.5", false);
+    const narrowed = toggleModelSelection(createModelSelectionDraft(gate(true)), CATALOG, "grok-4.5", false);
     const restored = toggleModelSelection(narrowed, CATALOG, "grok-4.5", true);
     expect(serializeModelSelection(restored)).toEqual({
       allowedModels: [],
@@ -56,7 +65,7 @@ describe("modelSelectionDraft", () => {
   test("clearing every model saves the exclude-all wildcard", () => {
     // An empty allow list means "everything" on the backend, so "nothing" needs
     // the wildcard instead.
-    const selection = clearAllModels(createModelSelectionDraft(true), CATALOG);
+    const selection = clearAllModels(createModelSelectionDraft(gate(true)), CATALOG);
     expect(serializeModelSelection(selection)).toEqual({
       allowedModels: [],
       excludedModels: ["*"],
@@ -65,7 +74,7 @@ describe("modelSelectionDraft", () => {
   });
 
   test("turning the switch off freezes the current selection as an allow list", () => {
-    const narrowed = toggleModelSelection(createModelSelectionDraft(true), CATALOG, "grok-4.7", false);
+    const narrowed = toggleModelSelection(createModelSelectionDraft(gate(true)), CATALOG, "grok-4.7", false);
     const frozen = setAutoAllowNewModels(narrowed, CATALOG, false);
     expect(serializeModelSelection(frozen)).toEqual({
       allowedModels: ["grok-4.5", "grok-4.6", "grok-imagine-video-1.5"],
@@ -76,7 +85,7 @@ describe("modelSelectionDraft", () => {
   });
 
   test("a saved exclusion list reopens in automatic mode", () => {
-    const selection = modelSelectionFromEntry({ excludedModels: ["grok-4.5"] }, true);
+    const selection = modelSelectionFromEntry({ excludedModels: ["grok-4.5"] }, gate(true));
     expect(selection.autoAllowNewModels).toBe(true);
     expect(selectedModelIds(selection, CATALOG).has("grok-4.5")).toBe(false);
   });
@@ -88,7 +97,7 @@ describe("modelSelectionDraft", () => {
   test("a saved allow list reopens as a fixed list and stays one through edits", () => {
     const saved = modelSelectionFromEntry(
       { allowedModels: ["grok-4.5", "grok-4.6", "grok-imagine-video-1.5"] },
-      true,
+      gate(true),
     );
     expect(saved.autoAllowNewModels).toBe(false);
     expect(serializeModelSelection(saved)).toEqual({
@@ -107,7 +116,7 @@ describe("modelSelectionDraft", () => {
     // The reported case: the list was saved before grok-4.7 existed.
     const saved = modelSelectionFromEntry(
       { allowedModels: ["grok-4.5", "grok-4.6", "grok-imagine-video-1.5"] },
-      true,
+      gate(true),
     );
     const converted = setAutoAllowNewModels(saved, CATALOG, true);
     expect(converted.autoAllowNewModels).toBe(true);
@@ -121,9 +130,9 @@ describe("modelSelectionDraft", () => {
   test("the switch cannot move without a loaded model list", () => {
     // With no list every model reads as unchecked, so a flip would store the
     // group as excluding everything (or keep a stale allow list under "on").
-    const fixed = modelSelectionFromEntry({ allowedModels: ["grok-4.5"] }, true);
+    const fixed = modelSelectionFromEntry({ allowedModels: ["grok-4.5"] }, gate(true));
     expect(setAutoAllowNewModels(fixed, [], true)).toBe(fixed);
-    const automatic = modelSelectionFromEntry({ excludedModels: ["grok-4.5"] }, true);
+    const automatic = modelSelectionFromEntry({ excludedModels: ["grok-4.5"] }, gate(true));
     expect(setAutoAllowNewModels(automatic, [], false)).toBe(automatic);
   });
 
@@ -134,7 +143,7 @@ describe("modelSelectionDraft", () => {
   test("exclusions the list cannot show are kept through every edit", () => {
     const saved = modelSelectionFromEntry(
       { excludedModels: ["grok-4.5", "retired-model"] },
-      true,
+      gate(true),
     );
     expect(modelRulesOutsideList(saved, CATALOG).unlistedExclusions).toEqual(["retired-model"]);
 
@@ -162,7 +171,7 @@ describe("modelSelectionDraft", () => {
   });
 
   test("allow entries the list cannot show are kept and reported", () => {
-    const saved = modelSelectionFromEntry({ allowedModels: ["grok-4.5", "grok-3-legacy"] }, true);
+    const saved = modelSelectionFromEntry({ allowedModels: ["grok-4.5", "grok-3-legacy"] }, gate(true));
     expect(modelRulesOutsideList(saved, CATALOG).unlistedAllowed).toEqual(["grok-3-legacy"]);
     const edited = toggleModelSelection(saved, CATALOG, "grok-4.6", true);
     expect(serializeModelSelection(edited).allowedModels).toEqual([
@@ -175,7 +184,7 @@ describe("modelSelectionDraft", () => {
   test("a group with both lists keeps both and opens as a fixed list", () => {
     const saved = modelSelectionFromEntry(
       { allowedModels: ["grok-4.5", "grok-4.6"], excludedModels: ["grok-4.6"] },
-      true,
+      gate(true),
     );
     expect(saved.autoAllowNewModels).toBe(false);
     expect(serializeModelSelection(saved)).toEqual({
@@ -193,7 +202,7 @@ describe("modelSelectionDraft", () => {
   });
 
   test("an exclude-all group reopens as a fixed list, so one check opens one model", () => {
-    const blocked = modelSelectionFromEntry({ excludedModels: ["*"] }, true);
+    const blocked = modelSelectionFromEntry({ excludedModels: ["*"] }, gate(true));
     expect(blocked.autoAllowNewModels).toBe(false);
     const opened = toggleModelSelection(blocked, CATALOG, "grok-4.5", true);
     expect(serializeModelSelection(opened)).toEqual({
@@ -203,7 +212,7 @@ describe("modelSelectionDraft", () => {
   });
 
   test("a wildcard exclusion locks the rows it covers until the rule is removed", () => {
-    const saved = modelSelectionFromEntry({ excludedModels: ["grok-imagine-*"] }, true);
+    const saved = modelSelectionFromEntry({ excludedModels: ["grok-imagine-*"] }, gate(true));
     expect(lockedModelRules(saved, CATALOG)).toEqual(
       new Map([["grok-imagine-video-1.5", "grok-imagine-*"]]),
     );
@@ -220,7 +229,7 @@ describe("modelSelectionDraft", () => {
 
   test("an exclusion covers every spelling of a model, so those rows move together", () => {
     const listed = ["grok-4.6", "grok-4.7", "xai/grok-4.7"];
-    const narrowed = toggleModelSelection(createModelSelectionDraft(true), listed, "xai/grok-4.7", false);
+    const narrowed = toggleModelSelection(createModelSelectionDraft(gate(true)), listed, "xai/grok-4.7", false);
     expect(selectedModelIds(narrowed, listed)).toEqual(new Set(["grok-4.6"]));
 
     const restored = toggleModelSelection(narrowed, listed, "grok-4.7", true);
@@ -229,13 +238,13 @@ describe("modelSelectionDraft", () => {
   });
 
   test("removing the last allow entry does not open the group to everything", () => {
-    const saved = modelSelectionFromEntry({ allowedModels: ["grok-3-legacy"] }, true);
+    const saved = modelSelectionFromEntry({ allowedModels: ["grok-3-legacy"] }, gate(true));
     const removed = removeModelRule(saved, "allowed", "grok-3-legacy");
     expect(serializeModelSelection(removed)).toEqual({ allowedModels: [], excludedModels: ["*"] });
   });
 
   test("edits that change nothing return the same draft", () => {
-    const selection = createModelSelectionDraft(true);
+    const selection = createModelSelectionDraft(gate(true));
     expect(toggleModelSelection(selection, CATALOG, "grok-4.5", true)).toBe(selection);
     expect(selectAllModels(selection, CATALOG)).toBe(selection);
     expect(toggleModelSelection(selection, CATALOG, "not-listed", false)).toBe(selection);
@@ -243,10 +252,10 @@ describe("modelSelectionDraft", () => {
 
   describe("on a backend without exclusion support", () => {
     test("everything opens and is saved as a fixed allow list", () => {
-      const selection = createModelSelectionDraft(false);
+      const selection = createModelSelectionDraft(gate(false));
       expect(selection.autoAllowNewModels).toBe(false);
-      expect(modelSelectionFromEntry({}, false).autoAllowNewModels).toBe(false);
-      expect(modelSelectionFromEntry({ excludedModels: ["grok-4.5"] }, false).autoAllowNewModels).toBe(
+      expect(modelSelectionFromEntry({}, gate(false)).autoAllowNewModels).toBe(false);
+      expect(modelSelectionFromEntry({ excludedModels: ["grok-4.5"] }, gate(false)).autoAllowNewModels).toBe(
         false,
       );
 
@@ -262,7 +271,7 @@ describe("modelSelectionDraft", () => {
 
     test("an edit that relies on exclusions alone cannot be saved", () => {
       // The backend would drop ["*"] and store a group that serves every model.
-      const cleared = clearAllModels(createModelSelectionDraft(false), CATALOG);
+      const cleared = clearAllModels(createModelSelectionDraft(gate(false)), CATALOG);
       expect(serializeModelSelection(cleared)).toEqual({ allowedModels: [], excludedModels: ["*"] });
       expect(modelSelectionSaveError(cleared)).toBe(
         "channel_groups_page.models_save_needs_exclusions",
@@ -270,12 +279,89 @@ describe("modelSelectionDraft", () => {
     });
 
     test("exclusions the backend itself returned are written back untouched", () => {
-      const saved = modelSelectionFromEntry({ excludedModels: ["grok-4.5"] }, false);
+      const saved = modelSelectionFromEntry({ excludedModels: ["grok-4.5"] }, gate(false));
       expect(modelSelectionSaveError(saved)).toBe("");
       expect(serializeModelSelection(saved)).toEqual({
         allowedModels: [],
         excludedModels: ["grok-4.5"],
       });
+    });
+  });
+  describe("following upstream", () => {
+    // Unset keeps what the backend did before the setting existed: the root
+    // group follows Codex discovery, a curated group stays frozen.
+    test("an unset group follows only when it is the default one", () => {
+      const both = gate(true, true);
+      expect(followsUpstreamModels(modelSelectionFromEntry({ name: "default" }, both))).toBe(true);
+      expect(followsUpstreamModels(modelSelectionFromEntry({ name: " Default " }, both))).toBe(true);
+      expect(
+        followsUpstreamModels(modelSelectionFromEntry({ name: "deepseekv4flash+chatgpt" }, both)),
+      ).toBe(false);
+      expect(followsUpstreamModels(createModelSelectionDraft(both))).toBe(false);
+      expect(
+        followsUpstreamModels(
+          modelSelectionFromEntry({ name: "default", followUpstreamModels: false }, both),
+        ),
+      ).toBe(false);
+    });
+
+    test("an untouched group is saved as it was read", () => {
+      const unset = modelSelectionFromEntry(
+        { name: "team", allowedModels: ["gpt-6.1-sol"] },
+        gate(true, true),
+      );
+      expect(serializeModelSelection(unset).followUpstreamModels).toBeUndefined();
+      const set = modelSelectionFromEntry(
+        { name: "team", allowedModels: ["gpt-6.1-sol"], followUpstreamModels: true },
+        gate(true, true),
+      );
+      expect(serializeModelSelection(set).followUpstreamModels).toBe(true);
+    });
+
+    test("turning it on keeps both lists and marks the draft", () => {
+      const saved = modelSelectionFromEntry(
+        { name: "team", allowedModels: ["gpt-6.1-sol"] },
+        gate(true, true),
+      );
+      const following = setFollowUpstreamModels(saved, true);
+      expect(following.touched).toBe(true);
+      expect(serializeModelSelection(following)).toEqual({
+        allowedModels: ["gpt-6.1-sol"],
+        excludedModels: [],
+        followUpstreamModels: true,
+      });
+      // Already in that state: nothing to change.
+      expect(setFollowUpstreamModels(following, true)).toBe(following);
+    });
+
+    test("a backend without the capability is never sent the setting", () => {
+      const saved = modelSelectionFromEntry(
+        { name: "team", allowedModels: ["gpt-6.1-sol"] },
+        gate(true, false),
+      );
+      expect(setFollowUpstreamModels(saved, true)).toBe(saved);
+    });
+
+    test("the preview leaves out what the draft now checks or excludes", () => {
+      const saved = modelSelectionFromEntry(
+        {
+          name: "team",
+          allowedModels: ["gpt-6.1-sol"],
+          discoveredModels: ["gpt-6.1-terra", "gpt-6-chat-thinking", "gpt-5.4"],
+        },
+        gate(true, true),
+      );
+      expect(upstreamModelsBeyondList(saved)).toEqual([
+        "gpt-6.1-terra",
+        "gpt-6-chat-thinking",
+        "gpt-5.4",
+      ]);
+      const edited = {
+        ...saved,
+        allowedModels: [...saved.allowedModels, "gpt-6.1-terra"],
+        excludedModels: ["gpt-6-chat-*"],
+      };
+      expect(upstreamModelsBeyondList(edited)).toEqual(["gpt-5.4"]);
     });
   });
 });

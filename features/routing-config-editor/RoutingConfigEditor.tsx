@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2, Pencil, Plus, Route, Trash2, TriangleAlert, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { ChannelGroupChannelDetail } from "@code-proxy/api-client/endpoints/channel-groups";
+import { NO_ROUTING_CONFIG_SUPPORT, type RoutingConfigSupport } from "@code-proxy/api-client/endpoints/routing-config";
 import type {
   RoutingChannelGroupEntry,
   RoutingChannelGroupMatchMode,
@@ -76,7 +77,7 @@ type GroupDraft = {
 
 export type { RoutingModelOption } from "./types";
 
-const createEmptyGroupDraft = (exclusionsSupported = false): GroupDraft => ({
+const createEmptyGroupDraft = (support = NO_ROUTING_CONFIG_SUPPORT): GroupDraft => ({
   name: "",
   description: "",
   scheduling: defaultScheduling(),
@@ -84,7 +85,7 @@ const createEmptyGroupDraft = (exclusionsSupported = false): GroupDraft => ({
   matchMode: "channels",
   channels: [],
   tags: [],
-  models: createModelSelectionDraft(exclusionsSupported),
+  models: createModelSelectionDraft(support),
   routes: [{ ...EMPTY_ROUTE_DRAFT() }],
 });
 
@@ -100,7 +101,7 @@ export function RoutingConfigEditor({
   title,
   values,
   disabled,
-  modelExclusionsSupported = false,
+  modelGateSupport = NO_ROUTING_CONFIG_SUPPORT,
   availableChannels,
   availableChannelDetails = {},
   availableChannelDetailsByGroup = {},
@@ -111,8 +112,8 @@ export function RoutingConfigEditor({
   title?: string;
   values: VisualConfigValues;
   disabled?: boolean;
-  /** The backend stores channel-group `excluded-models` (routing-config capabilities). */
-  modelExclusionsSupported?: boolean;
+  /** What the backend stores for channel-group model gates (routing-config capabilities). */
+  modelGateSupport?: RoutingConfigSupport;
   availableChannels: string[];
   availableChannelDetails?: Record<string, ChannelGroupChannelDetail>;
   availableChannelDetailsByGroup?: Record<string, Record<string, ChannelGroupChannelDetail>>;
@@ -408,12 +409,12 @@ export function RoutingConfigEditor({
   const openCreateGroup = useCallback(() => {
     void Promise.resolve(onRefreshAvailableChannels?.()).catch(() => undefined);
     setGroupEditorId(null);
-    setGroupDraft(createEmptyGroupDraft(modelExclusionsSupported));
+    setGroupDraft(createEmptyGroupDraft(modelGateSupport));
     setGroupEditorTab("basic");
     setModelOptions([]);
     setModelsError("");
     setGroupEditorOpen(true);
-  }, [modelExclusionsSupported, onRefreshAvailableChannels]);
+  }, [modelGateSupport, onRefreshAvailableChannels]);
 
   const openEditGroup = useCallback(
     (group: RoutingChannelGroupEntry, options?: { notifyStale?: boolean }) => {
@@ -438,7 +439,7 @@ export function RoutingConfigEditor({
         matchMode: isSystemDefault ? "channels" : (group.matchMode ?? "channels"),
         channels: cloneMembers(group.channels),
         tags: isSystemDefault ? [] : syncDraftTags(group.tags ?? []),
-        models: modelSelectionFromEntry(group, modelExclusionsSupported),
+        models: modelSelectionFromEntry(group, modelGateSupport),
         routes: isSystemDefault
           ? []
           : existingRoutes.length > 0
@@ -454,7 +455,7 @@ export function RoutingConfigEditor({
       setGroupEditorOpen(true);
     },
     [
-      modelExclusionsSupported,
+      modelGateSupport,
       notifyStaleChannels,
       onRefreshAvailableChannels,
       staleChannelsByGroup,
@@ -565,7 +566,7 @@ export function RoutingConfigEditor({
   const saveGroupDraft = useCallback(async () => {
     if (groupDraftError || groupSaving) return;
 
-    const { allowedModels, excludedModels } = serializeModelSelection(groupDraft.models);
+    const modelGate = serializeModelSelection(groupDraft.models);
     let patch: Partial<VisualConfigValues>;
     if (editingSystemDefaultGroup) {
       const existingDefault = values.routingChannelGroups.find(
@@ -585,8 +586,7 @@ export function RoutingConfigEditor({
         // today's channel list into an explicit match.
         channels: cloneMembers(groupDraft.channels),
         tags: [],
-        allowedModels,
-        excludedModels,
+        ...modelGate,
       };
       const defaultRoutes = values.routingPathRoutes.filter(
         (route) => route.group.trim().toLowerCase() === SYSTEM_DEFAULT_GROUP_NAME,
@@ -616,8 +616,7 @@ export function RoutingConfigEditor({
           groupDraft.excludeFromDefault && groupName.toLowerCase() !== SYSTEM_DEFAULT_GROUP_NAME,
         matchMode: groupDraft.matchMode,
         tags: groupDraft.matchMode === "tags" ? syncDraftTags(groupDraft.tags) : [],
-        allowedModels,
-        excludedModels,
+        ...modelGate,
         channels: (groupDraft.matchMode === "tags" ? resolvedDraftChannels : groupDraft.channels)
           .map((channel) => ({
             id: channel.id || makeClientId(),

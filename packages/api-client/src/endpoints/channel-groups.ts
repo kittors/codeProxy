@@ -20,6 +20,13 @@ export interface ChannelGroupItem {
   "allowed-models"?: string[];
   /** Wins over the allow list, and matches loosely (see channelGroupModelGate in domain). */
   "excluded-models"?: string[];
+  /** Resolved setting: the backend already applied the default for an unset one. */
+  "follow-upstream-models"?: boolean;
+  /**
+   * What the group serves beyond its allow list because it follows upstream and
+   * Codex discovery listed them since. Worked out by the backend.
+   */
+  "discovered-models"?: string[];
   "path-routes"?: string[];
   channelDetails?: ChannelGroupChannelDetail[];
 }
@@ -84,6 +91,8 @@ export const channelGroupsApi = {
           channels: normalizeStringList(item.channels),
           "allowed-models": normalizeStringList(item["allowed-models"]),
           "excluded-models": normalizeStringList(item["excluded-models"]),
+          "follow-upstream-models": item["follow-upstream-models"] === true,
+          "discovered-models": normalizeStringList(item["discovered-models"]),
           "path-routes": normalizeStringList(item["path-routes"]),
           channelDetails: Array.isArray(item["channel-details"])
             ? item["channel-details"]

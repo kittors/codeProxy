@@ -8,7 +8,25 @@ describe("readRoutingConfigSupport", () => {
         "channel-groups": [],
         capabilities: { "channel-group-excluded-models": true },
       }),
-    ).toEqual({ channelGroupExcludedModels: true });
+    ).toEqual({ channelGroupExcludedModels: true, channelGroupFollowUpstreamModels: false });
+  });
+
+  // An older backend drops `follow-upstream-models` on PUT, which would reset a
+  // group the operator just switched to follow upstream.
+  test("unlocks following upstream only when the backend says so", () => {
+    expect(
+      readRoutingConfigSupport({
+        capabilities: {
+          "channel-group-excluded-models": true,
+          "channel-group-follow-upstream-models": true,
+        },
+      }),
+    ).toEqual({ channelGroupExcludedModels: true, channelGroupFollowUpstreamModels: true });
+    expect(
+      readRoutingConfigSupport({
+        capabilities: { "channel-group-follow-upstream-models": "true" },
+      }).channelGroupFollowUpstreamModels,
+    ).toBe(false);
   });
 
   // A backend that predates the field drops `excluded-models` on PUT without an
@@ -21,6 +39,9 @@ describe("readRoutingConfigSupport", () => {
     ["an empty response", undefined],
     ["a non-object response", "ok"],
   ])("treats %s as unsupported", (_name, payload) => {
-    expect(readRoutingConfigSupport(payload)).toEqual({ channelGroupExcludedModels: false });
+    expect(readRoutingConfigSupport(payload)).toEqual({
+      channelGroupExcludedModels: false,
+      channelGroupFollowUpstreamModels: false,
+    });
   });
 });

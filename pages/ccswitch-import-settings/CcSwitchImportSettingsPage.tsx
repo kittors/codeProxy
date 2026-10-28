@@ -1,4 +1,4 @@
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2, TriangleAlert } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { detectApiBaseFromLocation, modelsApi } from "@code-proxy/api-client";
@@ -18,12 +18,14 @@ import { Card } from "@code-proxy/ui";
 import { ConfirmModal } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
 import { DataTable, TABLE_ROW_ACTIONS_COLUMN, type DataTableColumn } from "@code-proxy/ui";
+import { HoverTooltip } from "@code-proxy/ui";
 import {
   CcSwitchClientIcon,
   CcSwitchImportConfigModal,
   createConfigDraft,
   getPrimaryModel,
   getRouteModels,
+  presetModelsRefusedByGroup,
   type CcSwitchChannelGroupOption,
 } from "@features/ccswitch-import";
 import {
@@ -150,6 +152,10 @@ export function CcSwitchImportSettingsPage() {
               routePath: Array.isArray(item["path-routes"]) ? item["path-routes"][0] : "",
               allowedModels: Array.isArray(item["allowed-models"]) ? item["allowed-models"] : [],
               excludedModels: Array.isArray(item["excluded-models"]) ? item["excluded-models"] : [],
+              followUpstreamModels: item["follow-upstream-models"] === true,
+              discoveredModels: Array.isArray(item["discovered-models"])
+                ? item["discovered-models"]
+                : [],
               channels: Array.isArray(item.channels) ? item.channels : [],
               modelOwnerKeys: getChannelGroupModelOwnerKeys(item.channelDetails, item.channels),
               authoritativeModelOwnerKeys: getChannelGroupMappedModelOwnerKeys(
@@ -255,6 +261,15 @@ export function CcSwitchImportSettingsPage() {
             row.clientType === "claude"
               ? 0
               : getRouteModels(row).filter((model) => model !== primary).length;
+          const group = (row.allowedChannelGroups[0] ?? "").trim().toLowerCase();
+          const refused = presetModelsRefusedByGroup(
+            row,
+            channelGroupOptions.find((option) => option.value === group),
+          );
+          const refusedMessage = t("ccswitch.config_unserved_models", {
+            group,
+            models: refused.join(", "),
+          });
           return (
             <span className="inline-flex max-w-full min-w-0 items-center gap-1.5">
               <span
@@ -266,6 +281,17 @@ export function CcSwitchImportSettingsPage() {
                 <span className="shrink-0 text-xs text-ink-3">
                   {t("ccswitch.config_table_more_models", { count: others })}
                 </span>
+              ) : null}
+              {refused.length > 0 ? (
+                <HoverTooltip content={refusedMessage} className="shrink-0">
+                  <TriangleAlert
+                    size={14}
+                    role="img"
+                    aria-label={refusedMessage}
+                    data-testid="ccswitch-row-unserved-models"
+                    className="text-amber-600 dark:text-amber-300"
+                  />
+                </HoverTooltip>
               ) : null}
             </span>
           );
@@ -327,7 +353,7 @@ export function CcSwitchImportSettingsPage() {
         ),
       },
     ],
-    [t],
+    [channelGroupOptions, t],
   );
 
   const persistConfigs = async (next: CcSwitchImportConfigListItem[]) => {

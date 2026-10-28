@@ -95,10 +95,22 @@ export type RoutingChannelGroupEntry = {
   matchMode?: RoutingChannelGroupMatchMode;
   channels: RoutingChannelGroupMemberEntry[];
   tags?: string[];
-  /** Frozen allow list: models added upstream later are rejected. */
+  /** Allow list: models added upstream later are rejected unless the group follows upstream. */
   allowedModels: string[];
   /** "All but these", so models added upstream later stay usable. */
   excludedModels?: string[];
+  /**
+   * `follow-upstream-models` as stored; undefined when never set, which the
+   * backend reads as on for the default group and off for every other one.
+   * Carried through every save so a whole-config write does not drop it.
+   */
+  followUpstreamModels?: boolean;
+  /**
+   * Read-only, from GET /channel-groups: what following upstream admits beyond
+   * the allow list (served now if the group follows, opened if it is turned on).
+   * Shown next to the switch and never written back.
+   */
+  discoveredModels?: string[];
   system?: boolean;
 };
 

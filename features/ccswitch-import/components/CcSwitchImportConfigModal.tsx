@@ -33,6 +33,7 @@ import {
   type ConfigDraft,
 } from "./ccswitchConfigDraft";
 import { useChannelGroupModels, type CcSwitchChannelGroupOption } from "./useChannelGroupModels";
+import { presetModelsRefusedByGroup } from "./presetGroupGate";
 
 const FORM_ID = "ccswitch-config-form";
 
@@ -106,6 +107,10 @@ export function CcSwitchImportConfigModal({
   }, [seedPending, selectedGroup, modelsLoading, loadedGroup, groupModels, pickedPrimary]);
 
   const primaryModel = getPrimaryModel(draft);
+  const refusedModels = useMemo(
+    () => presetModelsRefusedByGroup(draft, selectedGroupOption),
+    [draft, selectedGroupOption],
+  );
   const validation = useFormValidation(
     { group: selectedGroup, providerName: draft.providerName, primaryModel },
     {
@@ -321,6 +326,20 @@ export function CcSwitchImportConfigModal({
               groupSelected={Boolean(selectedGroup)}
               primaryError={validation.error("primaryModel")}
               codexContextWindowSupported={codexContextWindowSupported}
+              // Right under the section title: a refused default model means the
+              // preset does not work at all, which must not wait at the bottom.
+              notice={
+                refusedModels.length > 0 ? (
+                  <div data-testid="ccswitch-unserved-models">
+                    <Callout tone="warning">
+                      {t("ccswitch.config_unserved_models", {
+                        group: selectedGroup,
+                        models: refusedModels.join(", "),
+                      })}
+                    </Callout>
+                  </div>
+                ) : null
+              }
               onChange={(update) => setDraft(update)}
               onPrimaryPicked={setPickedPrimary}
             />
