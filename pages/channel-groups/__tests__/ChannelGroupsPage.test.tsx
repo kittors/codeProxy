@@ -174,6 +174,10 @@ vi.mock("@code-proxy/api-client/endpoints/channel-groups", () => ({
             channels: Array.isArray(item.channels)
               ? item.channels.map((channel) => String(channel ?? "").trim()).filter(Boolean)
               : [],
+            "follow-upstream-models": item["follow-upstream-models"] === true,
+            "discovered-models": Array.isArray(item["discovered-models"])
+              ? item["discovered-models"]
+              : [],
             channelDetails: Array.isArray(item["channel-details"])
               ? item["channel-details"]
                   .map((detail) => {
@@ -1279,6 +1283,87 @@ describe("ChannelGroupsPage", () => {
       expect(group).not.toHaveProperty("allowed-models");
       // The capability is read-only; it is never echoed back on save.
       expect(payload).not.toHaveProperty("capabilities");
+    });
+
+    // The page saves the whole routing config, so follow-upstream-models has to
+    // survive for a group nobody opened, and the preview of what following
+    // would open is display-only: it must never be sent back as config.
+    test("saves follow-upstream-models and never sends the preview back", async () => {
+      const fallback = mockedApiGet.getMockImplementation();
+      mockedApiGet.mockImplementation((...args: Parameters<typeof apiClient.get>) => {
+        const [path] = args;
+        if (path === "/routing-config") {
+          return Promise.resolve({
+            strategy: "round-robin",
+            "include-default-group": true,
+            "channel-groups": [
+              {
+                name: "claude-pool",
+                strategy: "round-robin",
+                match: { channels: ["Team A Claude"] },
+                "allowed-models": ["claude-3-7-sonnet-latest", "claude-opus-4-5"],
+              },
+              {
+                name: "codex-pool",
+                strategy: "round-robin",
+                match: { channels: ["Main Codex"] },
+                "allowed-models": ["gpt-6.1-sol"],
+                "follow-upstream-models": true,
+              },
+            ],
+            "path-routes": [{ path: "/claude-pool", group: "claude-pool" }],
+            capabilities: {
+              "channel-group-excluded-models": true,
+              "channel-group-follow-upstream-models": true,
+            },
+          });
+        }
+        if (path === "/channel-groups") {
+          return Promise.resolve({
+            items: [
+              { name: "claude-pool", channels: ["Team A Claude"], "discovered-models": ["claude-sonnet-5"] },
+              {
+                name: "codex-pool",
+                channels: ["Main Codex"],
+                "follow-upstream-models": true,
+                "discovered-models": ["gpt-6.1-terra"],
+              },
+            ],
+          });
+        }
+        if (path.startsWith("/models/configured-availability?allowed_channel_groups=claude-pool")) {
+          return Promise.resolve({ scoped: true, data: MODELS });
+        }
+        if (path.startsWith("/models?")) {
+          return Promise.resolve({ data: MODELS.map(({ id }) => ({ id })) });
+        }
+        return fallback!(...args);
+      });
+      const user = userEvent.setup();
+      renderPage();
+
+      await openGroupModels(user);
+      const toggle = screen.getByRole("switch", { name: "跟随上游新模型" });
+      expect(toggle).not.toBeChecked();
+      expect(screen.getByTestId("follow-upstream-models-preview")).toHaveTextContent(
+        "开启后还会放行：claude-sonnet-5",
+      );
+      await user.click(toggle);
+      await user.click(screen.getByRole("button", { name: "保存" }));
+      await waitFor(() => expect(mockedApiPut).toHaveBeenCalled());
+
+      const payload = mockedApiPut.mock.calls[0]?.[1] as Record<string, unknown>;
+      const groups = payload["channel-groups"] as Array<Record<string, unknown>>;
+      const byName = Object.fromEntries(groups.map((group) => [group.name, group]));
+      expect(byName["claude-pool"]).toMatchObject({
+        "allowed-models": ["claude-3-7-sonnet-latest", "claude-opus-4-5"],
+        "follow-upstream-models": true,
+      });
+      expect(byName["codex-pool"]).toMatchObject({ "follow-upstream-models": true });
+      for (const group of groups) {
+        expect(group).not.toHaveProperty("discovered-models");
+        expect(group).not.toHaveProperty("discoveredModels");
+      }
     });
 
     // An older backend drops excluded-models silently: saving "all but one" as

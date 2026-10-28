@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowRight, LoaderCircle, Trash2 } from "lucide-react";
 import {
@@ -61,6 +62,7 @@ export function CcSwitchModelFields({
   groupSelected,
   primaryError,
   codexContextWindowSupported,
+  notice,
   onChange,
   onPrimaryPicked,
 }: {
@@ -71,6 +73,8 @@ export function CcSwitchModelFields({
   primaryError?: string;
   /** The backend stores `codex-context-window`; older ones would drop the value. */
   codexContextWindowSupported: boolean;
+  /** Shown above the pickers, e.g. models the channel group refuses. */
+  notice?: ReactNode;
   onChange: DraftUpdate;
   onPrimaryPicked: (model: string) => void;
 }) {
@@ -130,6 +134,7 @@ export function CcSwitchModelFields({
         ) : null
       }
     >
+      {notice}
       {isClaude ? (
         <>
           <FormField

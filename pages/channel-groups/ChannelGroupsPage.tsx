@@ -5,11 +5,13 @@ import {
   type ChannelGroupChannelDetail,
 } from "@code-proxy/api-client/endpoints/channel-groups";
 import {
+  NO_ROUTING_CONFIG_SUPPORT,
   readRoutingConfigSupport,
   routingConfigApi,
   type RoutingConfigGroupItem,
   type RoutingConfigItem,
   type RoutingConfigPathRouteItem,
+  type RoutingConfigSupport,
 } from "@code-proxy/api-client/endpoints/routing-config";
 import { apiClient, modelsApi } from "@code-proxy/api-client";
 import { RoutingConfigEditor, type RoutingModelOption } from "@features/routing-config-editor";
@@ -77,6 +79,25 @@ type MappedOwnerSelection = {
 
 type ChannelDetailsByName = Record<string, ChannelGroupChannelDetail>;
 type ChannelDetailsByGroup = Record<string, ChannelDetailsByName>;
+/** Lower-cased group name → `discovered-models` from GET /channel-groups. */
+type DiscoveredModelsByGroup = Record<string, string[]>;
+
+/**
+ * Attaches what following upstream admits per group, for the editor to show
+ * next to the switch. Read-only: serializeRoutingValues never writes it.
+ */
+function withDiscoveredModels(
+  values: VisualConfigValues,
+  byGroup: DiscoveredModelsByGroup,
+): VisualConfigValues {
+  return {
+    ...values,
+    routingChannelGroups: values.routingChannelGroups.map((group) => ({
+      ...group,
+      discoveredModels: byGroup[group.name.trim().toLowerCase()] ?? [],
+    })),
+  };
+}
 
 const collectMappedOwnersForChannels = (
   channels: string[],
@@ -138,6 +159,10 @@ function hydrateRoutingValues(payload: RoutingConfigItem | undefined): VisualCon
           tags,
           allowedModels: parseModelList(group?.["allowed-models"]),
           excludedModels: parseModelList(group?.["excluded-models"]),
+          followUpstreamModels:
+            typeof group?.["follow-upstream-models"] === "boolean"
+              ? group["follow-upstream-models"]
+              : undefined,
           channels: mergedNames.map((name, channelIndex) => ({
             id: `routing-group-${index}-channel-${channelIndex}-${makeClientId()}`,
             name,
@@ -215,6 +240,11 @@ function serializeRoutingValues(values: VisualConfigValues): RoutingConfigItem {
     if (excludedModels.length > 0) {
       item["excluded-models"] = excludedModels;
     }
+    // Written back as read or as the operator set it: this page saves the whole
+    // routing config, so leaving it out would reset every following group.
+    if (typeof group.followUpstreamModels === "boolean") {
+      item["follow-upstream-models"] = group.followUpstreamModels;
+    }
     acc.push(item);
     return acc;
   }, []);
@@ -257,9 +287,11 @@ export function ChannelGroupsPage() {
     useState<ChannelDetailsByGroup>({});
   const [authGroupOwnerMap, setAuthGroupOwnerMap] = useState<Record<string, string>>({});
   // The panel can be newer than the backend (CliRelay pulls the latest release),
-  // and an older backend drops `excluded-models` on save. Until the backend says
-  // otherwise, the editor only writes fixed allow lists.
-  const [modelExclusionsSupported, setModelExclusionsSupported] = useState(false);
+  // and an older backend drops `excluded-models` and `follow-upstream-models` on
+  // save. Until the backend says otherwise, the editor writes fixed allow lists
+  // and offers no follow-upstream switch.
+  const [modelGateSupport, setModelGateSupport] =
+    useState<RoutingConfigSupport>(NO_ROUTING_CONFIG_SUPPORT);
 
   const loadAvailableChannels = useCallback(async (options?: { signal?: AbortSignal }) => {
     const items = await channelGroupsApi.list(
@@ -268,8 +300,10 @@ export function ChannelGroupsPage() {
     const known = new Set<string>();
     const detailsByName: ChannelDetailsByName = {};
     const detailsByGroup: ChannelDetailsByGroup = {};
+    const discoveredByGroup: DiscoveredModelsByGroup = {};
     for (const item of items) {
       const groupKey = item.name.trim().toLowerCase();
+      if (groupKey) discoveredByGroup[groupKey] = item["discovered-models"] ?? [];
       for (const channel of item.channels ?? []) {
         const name = String(channel ?? "").trim();
         if (name) known.add(name);
@@ -294,6 +328,7 @@ export function ChannelGroupsPage() {
       names: Array.from(known).sort((a, b) => a.localeCompare(b)),
       detailsByName,
       detailsByGroup,
+      discoveredByGroup,
     };
   }, []);
 
@@ -302,6 +337,7 @@ export function ChannelGroupsPage() {
     setAvailableChannels(channels.names);
     setAvailableChannelDetails(channels.detailsByName);
     setAvailableChannelDetailsByGroup(channels.detailsByGroup);
+    setVisualValues((current) => withDiscoveredModels(current, channels.discoveredByGroup));
   }, [loadAvailableChannels]);
 
   const loadModelsForChannels = useCallback(
@@ -402,6 +438,7 @@ export function ChannelGroupsPage() {
           names: [],
           detailsByName: {},
           detailsByGroup: {},
+          discoveredByGroup: {},
         })),
         modelsApi
           .getAuthGroupModelOwnerMappingMap(signal ? { signal } : undefined)
@@ -409,8 +446,8 @@ export function ChannelGroupsPage() {
       ]);
       if (signal?.aborted) return;
       const nextValues = hydrateRoutingValues(routing);
-      setVisualValues(nextValues);
-      setModelExclusionsSupported(readRoutingConfigSupport(routing).channelGroupExcludedModels);
+      setVisualValues(withDiscoveredModels(nextValues, channels.discoveredByGroup));
+      setModelGateSupport(readRoutingConfigSupport(routing));
       setAvailableChannels(channels.names);
       setAvailableChannelDetails(channels.detailsByName);
       setAvailableChannelDetailsByGroup(channels.detailsByGroup);
@@ -446,11 +483,13 @@ export function ChannelGroupsPage() {
             names: availableChannels,
             detailsByName: availableChannelDetails,
             detailsByGroup: availableChannelDetailsByGroup,
+            // A failed reload shows no preview rather than one for the old lists.
+            discoveredByGroup: {},
           })),
         ]);
         const hydrated = hydrateRoutingValues(latest);
-        setVisualValues(hydrated);
-        setModelExclusionsSupported(readRoutingConfigSupport(latest).channelGroupExcludedModels);
+        setVisualValues(withDiscoveredModels(hydrated, channels.discoveredByGroup));
+        setModelGateSupport(readRoutingConfigSupport(latest));
         setAvailableChannels(channels.names);
         setAvailableChannelDetails(channels.detailsByName);
         setAvailableChannelDetailsByGroup(channels.detailsByGroup);
@@ -518,7 +557,7 @@ export function ChannelGroupsPage() {
             title={t("channel_groups_page.title")}
             values={visualValues}
             disabled={loading || saving}
-            modelExclusionsSupported={modelExclusionsSupported}
+            modelGateSupport={modelGateSupport}
             availableChannels={availableChannels}
             availableChannelDetails={availableChannelDetails}
             availableChannelDetailsByGroup={availableChannelDetailsByGroup}

@@ -258,7 +258,7 @@ describe("CcSwitchImportSettingsPage", () => {
     // No group, no route: the preview waits instead of showing a wrong endpoint.
     expect(within(dialog).getByTestId("ccswitch-import-preview-pending")).toBeInTheDocument();
     expect(within(dialog).queryByTestId("ccswitch-import-preview")).not.toBeInTheDocument();
-    const routeModels = within(dialog).getByRole("combobox", { name: /^available models/i });
+    const routeModels = within(dialog).getByRole("combobox", { name: /^featured models/i });
     // Nothing to tick yet, but the route will start with every model: say that, not "select".
     expect(routeModels).toHaveTextContent(/^all models \(default\)$/i);
 
@@ -556,7 +556,7 @@ describe("CcSwitchImportSettingsPage", () => {
     const user = userEvent.setup();
     const dialog = await openEdit(user, "Relay Kimi");
     // Only the alias is on the route: the picker has models to offer but none ticked.
-    expect(within(dialog).getByRole("combobox", { name: /^available models/i })).toHaveTextContent(
+    expect(within(dialog).getByRole("combobox", { name: /^featured models/i })).toHaveTextContent(
       /^no other models$/i,
     );
 
@@ -734,6 +734,76 @@ describe("CcSwitchImportSettingsPage", () => {
     expect(await optionNames(user, defaultModelPicker(dialog))).toEqual(["kimi-k2"]);
     // A single model is picked for you.
     expect(defaultModelPicker(dialog)).toHaveTextContent("kimi-k2");
+  });
+
+  // A group that follows upstream also serves what Codex discovery listed after
+  // its allow list was saved, so a preset can pick those. A frozen group's
+  // would-be additions are not offered: requests for them are refused.
+  test("offers what a following group admits beyond its allow list, and only then", async () => {
+    listChannelGroups.mockResolvedValue([
+      {
+        name: "following",
+        "path-routes": ["/following"],
+        "allowed-models": ["gpt-6.1-sol"],
+        "follow-upstream-models": true,
+        "discovered-models": ["gpt-6.1-terra"],
+      },
+      {
+        name: "frozen",
+        "path-routes": ["/frozen"],
+        "allowed-models": ["gpt-6.1-sol"],
+        "discovered-models": ["gpt-6.1-terra"],
+      },
+    ]);
+    renderPage();
+    const user = userEvent.setup();
+    const dialog = await openCreate(user);
+
+    await pickGroup(user, dialog, /following.*\/following/i);
+    expect(await optionNames(user, defaultModelPicker(dialog))).toEqual([
+      "gpt-6.1-sol",
+      "gpt-6.1-terra",
+    ]);
+    await pickGroup(user, dialog, /frozen.*\/frozen/i);
+    await waitFor(async () =>
+      expect(await optionNames(user, defaultModelPicker(dialog))).toEqual(["gpt-6.1-sol"]),
+    );
+  });
+
+  // The preset of the 2026-10-28 report kept gpt-5.4 as its default model after
+  // its group's allow list stopped naming it, so every request for it failed.
+  test("points out preset models the channel group refuses, in the list and the editor", async () => {
+    listChannelGroups.mockResolvedValue([
+      {
+        name: "deepseekv4flash+chatgpt",
+        "path-routes": ["/chatgpt"],
+        "allowed-models": ["gpt-6.1-sol"],
+      },
+    ]);
+    listConfigs.mockResolvedValue([
+      {
+        id: "cfg-pro",
+        clientType: "codex",
+        providerName: "gpt pro pool",
+        defaultModel: "gpt-5.4",
+        allowedChannelGroups: ["deepseekv4flash+chatgpt"],
+        routePath: "/deepseekv4flash-chatgpt/cs_3e13ca9880fc",
+        modelMappings: [
+          { requestModel: "gpt-5.4", targetModel: "gpt-5.4" },
+          { requestModel: "gpt-6.1-sol", targetModel: "gpt-6.1-sol" },
+        ],
+      },
+    ]);
+    renderPage();
+    const user = userEvent.setup();
+
+    expect(await screen.findByTestId("ccswitch-row-unserved-models")).toHaveAccessibleName(
+      /does not allow these models.*: gpt-5\.4$/i,
+    );
+    const dialog = await openEdit(user, "gpt pro pool");
+    expect(within(dialog).getByTestId("ccswitch-unserved-models")).toHaveTextContent(
+      'Channel group "deepseekv4flash+chatgpt" does not allow these models, so requests for them are refused: gpt-5.4',
+    );
   });
 
   test("filters fallback channel group models by configured model availability", async () => {

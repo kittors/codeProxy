@@ -84,4 +84,17 @@ describe("routing scheduling weight round-trip", () => {
     expect(result?.["allowed-models"]).toEqual(["grok-4.5", "grok-4.6"]);
     expect(result?.["excluded-models"]).toEqual(["grok-4.6", "grok-imagine-*"]);
   });
+
+  // Only a setting that was read (or set) is written: leaving it out resets a
+  // following group, and writing it for every group would freeze each unset one
+  // at today's default.
+  it("writes follow-upstream-models back exactly as read", () => {
+    expect(roundTrip({ "allowed-models": ["gpt-6.1-sol"], "follow-upstream-models": true })).toMatchObject({
+      "follow-upstream-models": true,
+    });
+    expect(roundTrip({ name: "default", "follow-upstream-models": false })).toMatchObject({
+      "follow-upstream-models": false,
+    });
+    expect(roundTrip({ "allowed-models": ["gpt-6.1-sol"] })).not.toHaveProperty("follow-upstream-models");
+  });
 });

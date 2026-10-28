@@ -36,18 +36,34 @@ export interface RoutingConfigGroupItem {
    * drops it silently, leaving whatever allow list remains.
    */
   "excluded-models"?: string[];
+  /**
+   * With an allow list: also admit what Codex discovery lists after the list
+   * was saved. Absent means never set, which the backend reads as on for the
+   * default group and off for every other one. Only changed when the backend
+   * advertises `channel-group-follow-upstream-models`.
+   */
+  "follow-upstream-models"?: boolean;
 }
 
 /** What the backend can enforce. Read-only: GET returns it, PUT ignores it. */
 export interface RoutingConfigCapabilities {
   "channel-group-excluded-models"?: boolean;
+  "channel-group-follow-upstream-models"?: boolean;
 }
 
 /** Capabilities normalized for the panel; anything not advertised reads as unsupported. */
 export interface RoutingConfigSupport {
   /** The backend stores and enforces `excluded-models` on channel groups. */
   channelGroupExcludedModels: boolean;
+  /** The backend stores and enforces `follow-upstream-models` on channel groups. */
+  channelGroupFollowUpstreamModels: boolean;
 }
+
+/** What a backend that advertises nothing supports. */
+export const NO_ROUTING_CONFIG_SUPPORT: RoutingConfigSupport = {
+  channelGroupExcludedModels: false,
+  channelGroupFollowUpstreamModels: false,
+};
 
 export interface RoutingConfigPathRouteItem {
   path?: string;
@@ -79,6 +95,8 @@ export function readRoutingConfigSupport(payload: unknown): RoutingConfigSupport
   const capabilities = asRecord(asRecord(payload)?.capabilities);
   return {
     channelGroupExcludedModels: capabilities?.["channel-group-excluded-models"] === true,
+    channelGroupFollowUpstreamModels:
+      capabilities?.["channel-group-follow-upstream-models"] === true,
   };
 }
 

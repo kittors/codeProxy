@@ -16,6 +16,10 @@ export interface CcSwitchChannelGroupOption {
   routePath?: string;
   allowedModels?: string[];
   excludedModels?: string[];
+  /** The group's resolved follow-upstream-models (GET /channel-groups). */
+  followUpstreamModels?: boolean;
+  /** What following upstream admits beyond the allow list (`discovered-models`). */
+  discoveredModels?: string[];
   channels?: string[];
   modelOwnerKeys?: string[];
   authoritativeModelOwnerKeys?: string[];
@@ -50,6 +54,21 @@ export function dedupeModels(models: readonly string[]): string[] {
     result.push(normalized);
   });
   return result.sort((a, b) => a.localeCompare(b));
+}
+
+/**
+ * A channel group's model gate as the backend applies it now. The backend
+ * reports what following upstream would admit for every group with an allow
+ * list; that only counts while the group follows.
+ */
+export function channelGroupGateOf(
+  option: CcSwitchChannelGroupOption | undefined,
+): ChannelGroupModelGate {
+  return {
+    allowedModels: option?.allowedModels ?? [],
+    excludedModels: option?.excludedModels ?? [],
+    discoveredModels: option?.followUpstreamModels ? (option.discoveredModels ?? []) : [],
+  };
 }
 
 /**
@@ -106,6 +125,9 @@ export function useChannelGroupModels(
 
   const allowedModelsKey = (selectedGroupOption?.allowedModels ?? []).join("\n");
   const excludedModelsKey = (selectedGroupOption?.excludedModels ?? []).join("\n");
+  const discoveredModelsKey = (channelGroupGateOf(selectedGroupOption).discoveredModels ?? []).join(
+    "\n",
+  );
   const channelsKey = (selectedGroupOption?.channels ?? []).join("\n");
   const authoritativeOwnerKey = (selectedGroupOption?.authoritativeModelOwnerKeys ?? []).join("\n");
   const ownerKey = (selectedGroupOption?.modelOwnerKeys ?? []).join("\n");
@@ -119,9 +141,14 @@ export function useChannelGroupModels(
     }
 
     let cancelled = false;
+    const gate = channelGroupGateOf(selectedGroupOption);
     const groupAllowedModels = dedupeModels(selectedGroupOption?.allowedModels ?? []);
     if (groupAllowedModels.length > 0) {
-      setModels(modelsServedByChannelGroup(groupAllowedModels, selectedGroupOption));
+      // A following group also serves what discovery listed since the list was
+      // saved, so those are offered too.
+      setModels(
+        modelsServedByChannelGroup([...groupAllowedModels, ...(gate.discoveredModels ?? [])], gate),
+      );
       setLoadedGroup(selectedGroup);
       setLoading(false);
       return;
@@ -196,7 +223,7 @@ export function useChannelGroupModels(
           }
         }
         for (const model of visibleModels) addModelId(model.id);
-        setModels(modelsServedByChannelGroup(optionMap.values(), selectedGroupOption));
+        setModels(modelsServedByChannelGroup(optionMap.values(), gate));
         setLoadedGroup(selectedGroup);
       })
       .catch(() => {
@@ -218,6 +245,7 @@ export function useChannelGroupModels(
     selectedGroup,
     allowedModelsKey,
     excludedModelsKey,
+    discoveredModelsKey,
     channelsKey,
     authoritativeOwnerKey,
     ownerKey,
