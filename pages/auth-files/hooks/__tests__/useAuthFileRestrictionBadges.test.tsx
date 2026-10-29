@@ -129,6 +129,24 @@ describe("useAuthFileRestrictionBadges", () => {
       expect(screen.getByTestId("auth-file-restriction-badge")).toHaveTextContent("429 Error");
     });
 
+    test("the tooltip spells out the cause above the upstream details", async () => {
+      const user = userEvent.setup();
+      renderBadges(codexFile({ restrictions: [rateLimited(90)] }));
+      await user.hover(screen.getByTestId("auth-file-restriction-badge"));
+      const tooltip = await screen.findByRole("tooltip");
+      expect(tooltip).toHaveTextContent(/^Cause: Rate limited\b/);
+      // The existing recovery lines are still there after the new one.
+      expect(tooltip).toHaveTextContent(/Recovery in/i);
+    });
+
+    test("the tooltip has no cause line when the backend names none", async () => {
+      const user = userEvent.setup();
+      renderBadges(codexFile({ restrictions: [rateLimited(90, { cooldown_reason: undefined })] }));
+      await user.hover(screen.getByTestId("auth-file-restriction-badge"));
+      const tooltip = await screen.findByRole("tooltip");
+      expect(tooltip).not.toHaveTextContent(/Cause/);
+    });
+
     test("shows only the cause when there is no time to wait", () => {
       renderBadges(
         codexFile({
