@@ -28,13 +28,16 @@ import { ClearDatabaseLogsDialog, DEFAULT_CLEAR_OPTIONS } from "./ClearDatabaseL
 import { RequestLogsFilters } from "./RequestLogsFilters";
 import type { SearchableCheckboxMultiSelectOption } from "@code-proxy/ui";
 import {
-  buildRequestLogKeyOptions,
+  buildRequestLogKeyOptionsFromFacet,
   buildRequestLogsColumns,
   ChannelIdentityLabel,
   DEFAULT_REQUEST_LOG_PAGE_SIZE,
+  EMPTY_REQUEST_LOG_KEY_FACET,
   hasActiveFilterSelection,
   normalizeFilterSelection,
+  readRequestLogKeyFacet,
   RequestLogFilterCount,
+  requestLogKeyFilterQuery,
   RequestLogUsageMetricValue,
   RequestLogsPaginationBar,
   RequestLogsTimeRangeSelector,
@@ -43,6 +46,7 @@ import {
   toRequestLogsRow,
   toStatusFilterValues,
   type MultiSelectFilterState,
+  type RequestLogKeyFacet,
   type StatusFilterValue,
   type RequestLogsRow as LogRow,
   type TimeRange,
@@ -146,22 +150,21 @@ export function RequestLogsPage() {
 
   // Backend-provided metadata
   const [filterOptions, setFilterOptions] = useState<{
-    api_keys: string[];
-    api_key_names: Record<string, string>;
-    api_key_counts: Record<string, number>;
     models: string[];
     channels: string[];
     channel_options: UsageChannelFilterOption[];
     statuses: string[];
   }>({
-    api_keys: [],
-    api_key_names: {},
-    api_key_counts: {},
     models: [],
     channels: [],
     channel_options: [],
     statuses: ["success", "failed"],
   });
+  // The key facet, and the vocabulary (key ids or the older secrets) the last
+  // response offered it in. The ref lets a request be built in that vocabulary
+  // without making every response re-create fetchLogs.
+  const [keyFacet, setKeyFacet] = useState<RequestLogKeyFacet>(EMPTY_REQUEST_LOG_KEY_FACET);
+  const keyFacetRef = useRef<RequestLogKeyFacet>(EMPTY_REQUEST_LOG_KEY_FACET);
   const [stats, setStats] = useState<{
     total: number;
     success_rate: number;
@@ -192,15 +195,10 @@ export function RequestLogsPage() {
 
   // Build multi-select options from backend filter data (exclude the "" "all" option)
   const keyOptions = useMemo<SearchableCheckboxMultiSelectOption[]>(() => {
-    const opts = buildRequestLogKeyOptions(
-      filterOptions.api_keys,
-      filterOptions.api_key_names ?? {},
-      {
-        allKeys: t("request_logs.all_users"),
-        systemCall: t("request_logs.system_call"),
-      },
-      filterOptions.api_key_counts,
-    );
+    const opts = buildRequestLogKeyOptionsFromFacet(keyFacet, {
+      allKeys: t("request_logs.all_users"),
+      systemCall: t("request_logs.system_call"),
+    });
     return sortRequestLogKeyOptionsByCount(opts, i18n.resolvedLanguage)
       .filter((option) => option.value !== "")
       .map((option) => ({
@@ -209,13 +207,7 @@ export function RequestLogsPage() {
         searchText: option.searchText,
         trailing: <RequestLogFilterCount count={option.count} />,
       }));
-  }, [
-    filterOptions.api_key_counts,
-    filterOptions.api_key_names,
-    filterOptions.api_keys,
-    i18n.resolvedLanguage,
-    t,
-  ]);
+  }, [i18n.resolvedLanguage, keyFacet, t]);
 
   const modelOptions = useMemo<SearchableCheckboxMultiSelectOption[]>(() => {
     return filterOptions.models.map((m) => ({
@@ -361,11 +353,10 @@ export function RequestLogsPage() {
             page,
             size,
             days: timeRange,
-            api_keys: apiKeyFilterParam.values,
+            ...requestLogKeyFilterQuery(keyFacetRef.current, apiKeyFilterParam),
             models: modelFilterParam.values,
             channels: channelFilterParam.values,
             statuses: statusFilterParam.values,
-            api_keys_empty: apiKeyFilterParam.matchesNone,
             models_empty: modelFilterParam.matchesNone,
             channels_empty: channelFilterParam.matchesNone,
             statuses_empty: statusFilterParam.matchesNone,
@@ -378,10 +369,18 @@ export function RequestLogsPage() {
         setRawItems(resp.items ?? []);
         setTotalCount(resp.total ?? 0);
         setCurrentPage(page);
+        const facet = readRequestLogKeyFacet(resp);
+        if (
+          facet.byId !== keyFacetRef.current.byId &&
+          (apiKeyFilterParam.values || apiKeyFilterParam.matchesNone)
+        ) {
+          // The backend changed vocabulary under an open page (upgraded, or rolled
+          // back): the selection names keys the new facet does not know.
+          setSelectedApiKeys(null);
+        }
+        keyFacetRef.current = facet;
+        setKeyFacet(facet);
         setFilterOptions({
-          api_keys: resp.filters?.api_keys ?? [],
-          api_key_names: resp.filters?.api_key_names ?? {},
-          api_key_counts: resp.filters?.api_key_counts ?? {},
           models: resp.filters?.models ?? [],
           channels: resp.filters?.channels ?? [],
           channel_options: resp.filters?.channel_options ?? [],

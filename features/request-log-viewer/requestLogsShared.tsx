@@ -284,6 +284,12 @@ export const buildRequestLogKeyOptions = (
     systemCall: string;
   },
   apiKeyCounts: Record<string, number> = {},
+  /**
+   * What to call a key that has no name. The default masks the value, which is
+   * right when the values are client secrets (the older facet); a facet of key ids
+   * passes something that shortens an id instead.
+   */
+  fallbackLabel: (value: string) => string = maskRequestLogApiKey,
 ): RequestLogKeyOption[] => {
   const countFor = (key: string) => {
     const count = apiKeyCounts[key];
@@ -317,7 +323,7 @@ export const buildRequestLogKeyOptions = (
     }
     options.push({
       value: key,
-      label: name || maskRequestLogApiKey(key),
+      label: name || fallbackLabel(key),
       searchText: `${name || ""} ${key}`,
       count,
     });
