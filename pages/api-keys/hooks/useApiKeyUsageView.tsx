@@ -17,6 +17,7 @@ import {
   EMPTY_REQUEST_LOG_KEY_FACET,
   readRequestLogKeyFacet,
   sortRequestLogKeyOptionsByCount,
+  requestLogsHaveCacheBreakdown,
   toRequestLogsRow,
   type RequestLogKeyFacet,
   type RequestLogsRow,
@@ -97,14 +98,17 @@ export function useApiKeyUsageView() {
     setUsageErrorModalOpen(true);
   }, []);
 
-  const usageLogColumns = useMemo(
-    () => buildRequestLogsColumns(t, handleUsageContentClick, handleUsageErrorClick),
-    [t, handleUsageContentClick, handleUsageErrorClick],
-  );
-
   const usageRows = useMemo<RequestLogsRow[]>(
     () => (usageRawItems ?? []).map((item) => toRequestLogsRow(item)),
     [usageRawItems],
+  );
+  const usageCacheBreakdown = useMemo(() => requestLogsHaveCacheBreakdown(usageRows), [usageRows]);
+  const usageLogColumns = useMemo(
+    () =>
+      buildRequestLogsColumns(t, handleUsageContentClick, handleUsageErrorClick, {
+        cacheBreakdown: usageCacheBreakdown,
+      }),
+    [t, handleUsageContentClick, handleUsageErrorClick, usageCacheBreakdown],
   );
 
   const usageTotalPages = Math.max(1, Math.ceil(usageTotalCount / usagePageSize));

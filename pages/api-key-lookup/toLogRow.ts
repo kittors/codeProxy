@@ -5,6 +5,7 @@ import {
   normalizeChannelAuthType,
   type RequestLogsRow,
 } from "@features/request-log-viewer";
+import { readRequestCacheUse } from "@code-proxy/domain";
 import type { PublicLogItem } from "./types";
 
 /** Maps one public usage-log item onto the shared request-log row shape. */
@@ -38,6 +39,7 @@ export function toLogRow(item: PublicLogItem): RequestLogsRow {
     firstTokenText: formatOptionalRequestLogLatencyMs(firstTokenMs),
     inputTokens: item.input_tokens,
     cachedTokens: item.cached_tokens,
+    cacheUse: readRequestCacheUse(item),
     outputTokens: item.output_tokens,
     totalTokens: item.total_tokens,
     cost: item.cost ?? 0,

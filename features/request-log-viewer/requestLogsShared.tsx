@@ -9,6 +9,7 @@ import { SearchableCheckboxMultiSelect, Tabs, TabsList, TabsTrigger } from "@cod
 import type { SearchableCheckboxMultiSelectOption } from "@code-proxy/ui";
 import { HoverTooltip, OverflowTooltip } from "@code-proxy/ui";
 import { PaginationBar } from "@code-proxy/ui";
+import { RequestLogCacheCell } from "./RequestLogCacheCell";
 import { RequestLogModelCell } from "./RequestLogModelCell";
 import {
   formatRequestLogTimestamp,
@@ -367,6 +368,8 @@ export function buildRequestLogsColumns(
     identityColumn?: "user" | "key" | "none";
     hideChannel?: boolean;
     masked?: boolean;
+    /** Show cache reads and writes as two columns; see requestLogsHaveCacheBreakdown. */
+    cacheBreakdown?: boolean;
   } = {},
 ): RequestLogsTableColumn<RequestLogsRow>[] {
   const apiLabel = t("request_logs.auth_type_api");
@@ -552,17 +555,22 @@ export function buildRequestLogsColumns(
       width: "w-24",
       headerClassName: CENTERED_REQUEST_LOG_HEADER_CLASS,
       cellClassName: "text-center font-mono text-xs tabular-nums",
-      render: (row) => (
-        <RequestLogUsageMetricValue
-          value={row.cachedTokens}
-          className={
-            row.cachedTokens > 0
-              ? "font-medium text-ink"
-              : "text-ink-4"
-          }
-        />
-      ),
+      render: (row) => <RequestLogCacheCell use={row.cacheUse} side="read" />,
     },
+    ...(options.cacheBreakdown === true
+      ? [
+          {
+            key: "cacheWriteTokens",
+            label: t("request_logs.col_cache_write"),
+            width: "w-24",
+            headerClassName: CENTERED_REQUEST_LOG_HEADER_CLASS,
+            cellClassName: "text-center font-mono text-xs tabular-nums",
+            render: (row: RequestLogsRow) => (
+              <RequestLogCacheCell use={row.cacheUse} side="write" />
+            ),
+          },
+        ]
+      : []),
     {
       key: "outputTokens",
       label: t("request_logs.col_output"),

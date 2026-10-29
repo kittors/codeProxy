@@ -34,6 +34,9 @@ export interface PublicLogItem {
   input_tokens: number;
   output_tokens: number;
   cached_tokens: number;
+  /** Absent on older backends, null when the request's cache use is unknown. */
+  cache_read_tokens?: number | null;
+  cache_write_tokens?: number | null;
   total_tokens: number;
   cost: number;
   has_content: boolean;

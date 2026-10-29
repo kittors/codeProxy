@@ -39,6 +39,8 @@ const labels = Object.fromEntries(
     "tokens",
     "reasoning",
     "cached",
+    "cache_read",
+    "cache_write",
   ].map((key) => [key, key]),
 ) as Parameters<typeof createTrafficTrendOption>[3];
 

@@ -6,7 +6,7 @@
     "features/routing-config-editor/RoutingConfigEditor.tsx": 1647,
     "packages/domain/src/auth-files/authFiles.ts": 2125,
     "packages/ui/src/data-table/DataTable.tsx": 2621,
-    "pages/api-key-lookup/ApiKeyLookupPage.tsx": 1511,
+    "pages/api-key-lookup/ApiKeyLookupPage.tsx": 1501,
     "pages/api-keys/ApiKeysPage.tsx": 1060,
     "pages/auth-files/AuthFilesPage.tsx": 1013,
     "pages/auth-files/components/AuthFileDetailModal.tsx": 1815,
