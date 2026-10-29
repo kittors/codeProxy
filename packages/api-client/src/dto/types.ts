@@ -61,6 +61,18 @@ export interface AuthFileRestriction {
   retryable?: boolean;
   next_retry_after?: string | number;
   next_recover_at?: string | number;
+  /** 为什么被暂停调度的原因码；只在确实有东西被暂停时才有，旧后端没有。 */
+  cooldown_reason?: string;
+}
+
+/** 账号上一个正在冷却的模型（GET /auth-files 的 `model_cooldowns`）；旧后端没有这个字段。 */
+export interface AuthFileModelCooldown {
+  model: string;
+  reason?: string;
+  /** 暂停到何时（ISO 时间）；没有表示要等探测确认才恢复。 */
+  until?: string | number;
+  http_status?: number;
+  quota_exceeded?: boolean;
 }
 
 export interface ClaudeOAuthHealthWindow {
@@ -188,6 +200,7 @@ export interface AuthFileItem extends TagDisplayFields {
   unavailable?: boolean;
   next_retry_after?: string | number;
   restrictions?: AuthFileRestriction[];
+  model_cooldowns?: AuthFileModelCooldown[];
   modified?: number;
   modtime?: number;
   subscription_started_at?: string;

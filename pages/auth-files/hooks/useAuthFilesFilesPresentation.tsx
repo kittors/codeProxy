@@ -22,7 +22,6 @@ import { TABLE_ROW_ACTIONS_COLUMN, TableRowActions, type DataTableColumn } from 
 import {
   type FilesViewMode,
   type UsageIndex,
-  formatAuthFileRestrictionRemaining,
   formatModified,
   resolveClaudeOAuthHealthBadges,
   isRuntimeOnlyAuthFile,
@@ -31,8 +30,6 @@ import {
   parseAdditionalQuotaWindowLabel,
   resolveAuthFileDisplayName,
   resolveAuthFilePlanType,
-  resolveAuthFileRestrictionBadges,
-  resolveAuthFileWeeklyQuotaResetAtMs,
   resolveAuthFileSupplementalTags,
   resolveAuthFileStats,
   resolveAuthFileStatusBar,
@@ -47,6 +44,7 @@ import {
 import { resolveQuotaProvider, type QuotaProvider } from "@features/quota-preview/quota-fetch";
 import { quotaMetaHasMoney, resolveDisplayableQuotaMeta } from "@features/quota-preview/quota-meta";
 import { useStickyDisplayPlans } from "./useStickyDisplayPlans";
+import { useAuthFileRestrictionBadges } from "./useAuthFileRestrictionBadges";
 import { AuthFileQuotaCell } from "../components/AuthFileQuotaCell";
 import { useQuotaBarRenderer } from "./quotaBar";
 import type { QuotaItem, QuotaState } from "@features/quota-preview/quota-helpers";
@@ -81,6 +79,7 @@ interface UseAuthFilesFilesPresentationOptions {
   statusUsageReady: boolean;
   statusUsageLoading: boolean;
   refreshQuota: (file: AuthFileItem, provider: QuotaProvider) => Promise<void>;
+  refreshFilesForItems: (files: AuthFileItem[]) => Promise<AuthFileItem[]>;
   requestResetCredit: (file: AuthFileItem) => void;
   resettingCreditFileName: string | null;
   openDetail: (file: AuthFileItem) => Promise<void>;
@@ -111,6 +110,7 @@ export function useAuthFilesFilesPresentation({
   statusUsageReady,
   statusUsageLoading,
   refreshQuota,
+  refreshFilesForItems,
   requestResetCredit,
   resettingCreditFileName,
   openDetail,
@@ -145,103 +145,11 @@ export function useAuthFilesFilesPresentation({
     [t],
   );
 
-  const restrictionUnitLabels = useMemo(
-    () => ({
-      day: t("auth_files.restriction_duration_day"),
-      hour: t("auth_files.restriction_duration_hour"),
-      minute: t("auth_files.restriction_duration_minute"),
-      second: t("auth_files.restriction_duration_second"),
-    }),
-    [t],
-  );
-
-  const formatRestrictionBadgeLabel = useCallback(
-    (label: string) => {
-      const status = label.match(/^(\d+)\s+Error$/i)?.[1];
-      if (status) return t("auth_files.restriction_http_label", { status });
-      if (label === "Quota Limited") return t("auth_files.restriction_quota_label");
-      if (label === "Restricted") return t("auth_files.restriction_generic_label");
-      return label;
-    },
-    [t],
-  );
-
-  const formatRestrictionQuotaWindowLabel = useCallback(
-    (badge: ReturnType<typeof resolveAuthFileRestrictionBadges>[number]) => {
-      if (badge.quotaWindow === "5h") return t("auth_files.restriction_window_5h");
-      if (badge.quotaWindow === "week") return t("auth_files.restriction_window_week");
-      if (badge.quotaWindow) return badge.quotaWindow;
-      if (badge.quotaWindowMinutes) {
-        return t("auth_files.restriction_window_minutes", { minutes: badge.quotaWindowMinutes });
-      }
-      return "";
-    },
-    [t],
-  );
-
-  const formatRestrictionTooltip = useCallback(
-    (badge: ReturnType<typeof resolveAuthFileRestrictionBadges>[number]) => {
-      const quotaWindow = formatRestrictionQuotaWindowLabel(badge);
-      // Always surface the upstream reason (parsed status_message / quota reason).
-      // Hiding it for quota-limited badges left 429 chips without any error detail.
-      // ponytail: multi-line string; HoverTooltip already uses whitespace-pre-line.
-      const reason =
-        badge.reason === "quota" ? t("auth_files.restriction_quota_label") : badge.reason;
-      const parts = [
-        badge.quotaLimited ? t("auth_files.restriction_limited") : "",
-        quotaWindow ? t("auth_files.restriction_window", { window: quotaWindow }) : "",
-        badge.model ? t("auth_files.restriction_model", { model: badge.model }) : "",
-        reason ? t("auth_files.restriction_reason", { reason }) : "",
-      ].filter(Boolean);
-      if (badge.recoverAtMs) {
-        const remaining = formatAuthFileRestrictionRemaining(
-          badge.recoverAtMs,
-          nowMs,
-          restrictionUnitLabels,
-        );
-        parts.push(
-          t("auth_files.restriction_resets_at", {
-            time: new Date(badge.recoverAtMs).toLocaleString(),
-          }),
-        );
-        parts.push(t("auth_files.restriction_recovery_in", { time: remaining }));
-      } else {
-        parts.push(t("auth_files.restriction_recovery_unknown"));
-      }
-      return parts.join("\n");
-    },
-    [formatRestrictionQuotaWindowLabel, nowMs, restrictionUnitLabels, t],
-  );
-
-  const renderRestrictionBadges = useCallback(
-    (file: AuthFileItem): ReactNode | null => {
-      // xAI week restriction recovery is the account weekly_limit reset, not probe cooldown.
-      const weeklyResetAtMs = resolveAuthFileWeeklyQuotaResetAtMs(
-        quotaByFileName[file.name]?.items,
-      );
-      const badges = resolveAuthFileRestrictionBadges(file, nowMs, weeklyResetAtMs);
-      if (badges.length === 0) return null;
-      return (
-        <div className="flex min-w-0 flex-wrap gap-1.5">
-          {badges.map((badge) => (
-            <HoverTooltip key={badge.key} content={formatRestrictionTooltip(badge)} placement="top">
-              <span
-                data-testid="auth-file-restriction-badge"
-                className={[
-                  "inline-flex max-w-full items-center gap-1 rounded-full px-2 py-0.5 text-2xs font-semibold tabular-nums",
-                  RESTRICTION_TONE_CLASSES[badge.tone],
-                ].join(" ")}
-              >
-                <AlertTriangle size={11} className="shrink-0" />
-                <span className="min-w-0 truncate">{formatRestrictionBadgeLabel(badge.label)}</span>
-              </span>
-            </HoverTooltip>
-          ))}
-        </div>
-      );
-    },
-    [formatRestrictionBadgeLabel, formatRestrictionTooltip, nowMs, quotaByFileName],
-  );
+  const { renderRestrictionBadges } = useAuthFileRestrictionBadges({
+    nowMs,
+    quotaByFileName,
+    refreshFilesForItems,
+  });
 
   const renderClaudeOAuthHealthBadges = useCallback(
     (file: AuthFileItem): ReactNode | null => {
