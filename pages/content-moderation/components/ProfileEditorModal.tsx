@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Ban, Bot, ListFilter, Server, ShieldCheck, Sparkles } from "lucide-react";
-import type {
-  ContentModerationBackend,
-  ContentModerationKeywordMode,
-  ContentModerationProfileView,
-  ContentModerationScanner,
-  CreateContentModerationProfileInput,
-  PatchContentModerationProfileInput,
+import {
+  NO_CONTENT_MODERATION_PROFILE_CAPABILITIES,
+  type ContentModerationBackend,
+  type ContentModerationKeywordMode,
+  type ContentModerationProfileCapabilities,
+  type ContentModerationProfileView,
+  type ContentModerationScanner,
+  type CreateContentModerationProfileInput,
+  type PatchContentModerationProfileInput,
 } from "@code-proxy/api-client";
 import {
   Button,
@@ -56,6 +58,8 @@ export interface ModerationProfileDraft extends Qwen3GuardDraft {
   thresholds: Record<string, string>;
   blockHttpStatus: string;
   blockMessage: string;
+  keywordFoldTraditionalChinese: boolean;
+  apiIncludesToolOutput: boolean;
 }
 
 const createDraft = (profile: ContentModerationProfileView | null): ModerationProfileDraft => ({
@@ -77,6 +81,25 @@ const createDraft = (profile: ContentModerationProfileView | null): ModerationPr
   blockHttpStatus: String(profile?.block_http_status ?? 403),
   blockMessage:
     profile?.block_message ?? "Your request was blocked by the content moderation policy.",
+  keywordFoldTraditionalChinese: profile?.keyword_fold_traditional_chinese ?? false,
+  apiIncludesToolOutput: profile?.api_includes_tool_output ?? false,
+});
+
+/**
+ * 两个文本覆盖开关只在后端声明能保存时才显示、才随保存发送：面板会自动更新到最新 release，
+ * 可能连着旧后端，旧后端会把不认识的字段静默丢掉，开关看着打开了实际却没生效。
+ * 编辑已有配置时还要求这条配置本身带着该字段。
+ */
+const coverageOptionSupport = (
+  capabilities: ContentModerationProfileCapabilities,
+  profile: ContentModerationProfileView | null,
+) => ({
+  foldTraditional:
+    capabilities.keywordFoldTraditionalChinese &&
+    (!profile || typeof profile.keyword_fold_traditional_chinese === "boolean"),
+  toolOutput:
+    capabilities.apiIncludesToolOutput &&
+    (!profile || typeof profile.api_includes_tool_output === "boolean"),
 });
 
 const parseKeywords = (value: string) => {
@@ -95,6 +118,8 @@ const parseKeywords = (value: string) => {
 export interface ProfileEditorModalProps {
   open: boolean;
   profile: ContentModerationProfileView | null;
+  /** 配置列表里后端声明的能力；不传等于旧后端，两个文本覆盖开关都不出现。 */
+  capabilities?: ContentModerationProfileCapabilities;
   saving: boolean;
   onClose: () => void;
   onSave: (
@@ -117,6 +142,7 @@ const keywordsRule: Rule<string> = (value) =>
 export function ProfileEditorModal({
   open,
   profile,
+  capabilities = NO_CONTENT_MODERATION_PROFILE_CAPABILITIES,
   saving,
   onClose,
   onSave,
@@ -135,6 +161,7 @@ export function ProfileEditorModal({
   const thresholdMode = apiModeEnabled && !isGuard;
   const apiKeyMissing =
     apiKeyRequired && !draft.apiKey.trim() && (!profile?.api_key_configured || draft.clearApiKey);
+  const coverage = coverageOptionSupport(capabilities, profile);
 
   const validation = useFormValidation(draft, {
     name: [rules.required()],
@@ -234,6 +261,10 @@ export function ProfileEditorModal({
       max_chunks: Number(draft.maxChunks),
       block_http_status: Number(draft.blockHttpStatus),
       block_message: draft.blockMessage.trim(),
+      ...(coverage.foldTraditional
+        ? { keyword_fold_traditional_chinese: draft.keywordFoldTraditionalChinese }
+        : {}),
+      ...(coverage.toolOutput ? { api_includes_tool_output: draft.apiIncludesToolOutput } : {}),
     };
 
     if (profile) {
@@ -366,6 +397,25 @@ export function ProfileEditorModal({
               className="min-h-28 font-mono text-xs"
             />
           </FormField>
+          {coverage.foldTraditional ? (
+            <SettingGroup flat>
+              <SettingRow
+                label={t("content_moderation.keyword_fold_traditional_chinese")}
+                description={t("content_moderation.keyword_fold_traditional_chinese_hint")}
+                controlWidth="auto"
+                control={
+                  <ToggleSwitch
+                    checked={draft.keywordFoldTraditionalChinese}
+                    disabled={draft.keywordMode === "api_only"}
+                    ariaLabel={t("content_moderation.keyword_fold_traditional_chinese")}
+                    onCheckedChange={(keywordFoldTraditionalChinese) =>
+                      update({ keywordFoldTraditionalChinese })
+                    }
+                  />
+                }
+              />
+            </SettingGroup>
+          ) : null}
         </FormSection>
 
         <FormSection
@@ -448,20 +498,37 @@ export function ProfileEditorModal({
               />
             </FormField>
           </div>
-          {profile?.api_key_configured ? (
+          {coverage.toolOutput || profile?.api_key_configured ? (
             <SettingGroup flat>
-              <SettingRow
-                label={t("content_moderation.clear_api_key")}
-                description={t("content_moderation.clear_api_key_hint")}
-                controlWidth="auto"
-                control={
-                  <ToggleSwitch
-                    checked={draft.clearApiKey}
-                    ariaLabel={t("content_moderation.clear_api_key")}
-                    onCheckedChange={(clearApiKey) => update({ clearApiKey, apiKey: "" })}
-                  />
-                }
-              />
+              {coverage.toolOutput ? (
+                <SettingRow
+                  label={t("content_moderation.api_includes_tool_output")}
+                  description={t("content_moderation.api_includes_tool_output_hint")}
+                  controlWidth="auto"
+                  control={
+                    <ToggleSwitch
+                      checked={draft.apiIncludesToolOutput}
+                      disabled={!apiModeEnabled}
+                      ariaLabel={t("content_moderation.api_includes_tool_output")}
+                      onCheckedChange={(apiIncludesToolOutput) => update({ apiIncludesToolOutput })}
+                    />
+                  }
+                />
+              ) : null}
+              {profile?.api_key_configured ? (
+                <SettingRow
+                  label={t("content_moderation.clear_api_key")}
+                  description={t("content_moderation.clear_api_key_hint")}
+                  controlWidth="auto"
+                  control={
+                    <ToggleSwitch
+                      checked={draft.clearApiKey}
+                      ariaLabel={t("content_moderation.clear_api_key")}
+                      onCheckedChange={(clearApiKey) => update({ clearApiKey, apiKey: "" })}
+                    />
+                  }
+                />
+              ) : null}
             </SettingGroup>
           ) : null}
           <Callout tone="info">{t("content_moderation.fail_open_notice")}</Callout>

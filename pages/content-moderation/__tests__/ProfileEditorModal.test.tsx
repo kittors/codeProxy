@@ -1,7 +1,10 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import type { ContentModerationProfileView } from "@code-proxy/api-client";
+import type {
+  ContentModerationProfileCapabilities,
+  ContentModerationProfileView,
+} from "@code-proxy/api-client";
 import i18n from "@code-proxy/i18n";
 import { ProfileEditorModal, type ProfileEditorModalProps } from "../components/ProfileEditorModal";
 
@@ -49,15 +52,18 @@ const profile: ContentModerationProfileView = {
 
 function renderEditor({
   editedProfile = null,
+  capabilities,
   onSave = vi.fn<ProfileEditorModalProps["onSave"]>().mockResolvedValue(undefined),
 }: {
   editedProfile?: ContentModerationProfileView | null;
+  capabilities?: ContentModerationProfileCapabilities;
   onSave?: ProfileEditorModalProps["onSave"];
 } = {}) {
   render(
     <ProfileEditorModal
       open
       profile={editedProfile}
+      capabilities={capabilities}
       saving={false}
       onClose={() => undefined}
       onSave={onSave}
@@ -391,5 +397,173 @@ describe("ProfileEditorModal qwen3guard backend", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent(message);
     expect(onSave).not.toHaveBeenCalled();
+  });
+});
+
+describe("ProfileEditorModal text coverage options", () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage("en");
+  });
+
+  const DECLARED: ContentModerationProfileCapabilities = {
+    keywordFoldTraditionalChinese: true,
+    apiIncludesToolOutput: true,
+  };
+  const FOLD = "Match Traditional Chinese as Simplified";
+  const TOOL_OUTPUT = "Send tool output to the moderation service";
+  const withOptions = (
+    fold: boolean,
+    toolOutput: boolean,
+    overrides: Partial<ContentModerationProfileView> = {},
+  ): ContentModerationProfileView => ({
+    ...profile,
+    keyword_fold_traditional_chinese: fold,
+    api_includes_tool_output: toolOutput,
+    ...overrides,
+  });
+
+  // 旧后端不声明这两个字段，也不在配置里返回它们：开关不出现，保存时也不发送。
+  test("hides both options and sends neither to a backend that does not declare them", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn<ProfileEditorModalProps["onSave"]>().mockResolvedValue(undefined);
+    renderEditor({ editedProfile: profile, onSave });
+
+    expect(screen.queryByRole("switch", { name: FOLD })).toBeNull();
+    expect(screen.queryByRole("switch", { name: TOOL_OUTPUT })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave.mock.calls[0]?.[0]).not.toHaveProperty("keyword_fold_traditional_chinese");
+    expect(onSave.mock.calls[0]?.[0]).not.toHaveProperty("api_includes_tool_output");
+  });
+
+  test("offers neither option on create when the backend declares nothing", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn<ProfileEditorModalProps["onSave"]>().mockResolvedValue(undefined);
+    renderEditor({ onSave });
+
+    expect(screen.queryByRole("switch", { name: FOLD })).toBeNull();
+    expect(screen.queryByRole("switch", { name: TOOL_OUTPUT })).toBeNull();
+    fireEvent.change(screen.getByRole("textbox", { name: "Profile name" }), {
+      target: { value: "Older backend" },
+    });
+    fireEvent.change(screen.getByLabelText(/Moderation API key/), {
+      target: { value: "sk-test" },
+    });
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave.mock.calls[0]?.[0]).not.toHaveProperty("keyword_fold_traditional_chinese");
+    expect(onSave.mock.calls[0]?.[0]).not.toHaveProperty("api_includes_tool_output");
+  });
+
+  test("does not send an option the edited profile came back without", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn<ProfileEditorModalProps["onSave"]>().mockResolvedValue(undefined);
+    renderEditor({ editedProfile: profile, capabilities: DECLARED, onSave });
+
+    expect(screen.queryByRole("switch", { name: FOLD })).toBeNull();
+    expect(screen.queryByRole("switch", { name: TOOL_OUTPUT })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave.mock.calls[0]?.[0]).not.toHaveProperty("keyword_fold_traditional_chinese");
+    expect(onSave.mock.calls[0]?.[0]).not.toHaveProperty("api_includes_tool_output");
+  });
+
+  test("creates a profile with both options switched on", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn<ProfileEditorModalProps["onSave"]>().mockResolvedValue(undefined);
+    renderEditor({ capabilities: DECLARED, onSave });
+
+    // 默认「仅审核 API」不查关键词，繁简开关此时不起作用。
+    expect(screen.getByRole("switch", { name: FOLD })).toBeDisabled();
+    expect(screen.getByRole("switch", { name: FOLD })).toHaveAccessibleDescription(
+      /converted to Simplified before comparing/,
+    );
+    fireEvent.change(screen.getByRole("textbox", { name: "Profile name" }), {
+      target: { value: "Coverage" },
+    });
+    await user.click(screen.getByRole("radio", { name: /^Keywords, then moderation API/ }));
+    fireEvent.change(screen.getByLabelText(/Blocked keywords/), { target: { value: "blocked" } });
+    fireEvent.change(screen.getByLabelText(/Moderation API key/), {
+      target: { value: "sk-test" },
+    });
+    await user.click(screen.getByRole("switch", { name: FOLD }));
+    await user.click(screen.getByRole("switch", { name: TOOL_OUTPUT }));
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        keyword_mode: "keyword_and_api",
+        keyword_fold_traditional_chinese: true,
+        api_includes_tool_output: true,
+      }),
+    );
+  });
+
+  test("creates a profile with both options off unless switched on", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn<ProfileEditorModalProps["onSave"]>().mockResolvedValue(undefined);
+    renderEditor({ capabilities: DECLARED, onSave });
+
+    fireEvent.change(screen.getByRole("textbox", { name: "Profile name" }), {
+      target: { value: "Defaults" },
+    });
+    fireEvent.change(screen.getByLabelText(/Moderation API key/), {
+      target: { value: "sk-test" },
+    });
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        keyword_fold_traditional_chinese: false,
+        api_includes_tool_output: false,
+      }),
+    );
+  });
+
+  test("edits the stored values", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn<ProfileEditorModalProps["onSave"]>().mockResolvedValue(undefined);
+    renderEditor({
+      editedProfile: withOptions(true, false, { keyword_mode: "keyword_and_api" }),
+      capabilities: DECLARED,
+      onSave,
+    });
+
+    expect(screen.getByRole("switch", { name: FOLD })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("switch", { name: TOOL_OUTPUT })).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
+    await user.click(screen.getByRole("switch", { name: TOOL_OUTPUT }));
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        version: 3,
+        keyword_fold_traditional_chinese: true,
+        api_includes_tool_output: true,
+      }),
+    );
+  });
+
+  test("disables tool output when no moderation service is called", () => {
+    renderEditor({ editedProfile: withOptions(false, true), capabilities: DECLARED });
+
+    // profile 是「仅关键词」：不调审核服务，工具输出开关不起作用；繁简开关照常可用。
+    expect(screen.getByRole("switch", { name: TOOL_OUTPUT })).toBeDisabled();
+    expect(screen.getByRole("switch", { name: FOLD })).not.toBeDisabled();
+  });
+
+  test("provides zh-CN labels", async () => {
+    await i18n.changeLanguage("zh-CN");
+    renderEditor({ editedProfile: withOptions(false, false), capabilities: DECLARED });
+    expect(screen.getByRole("switch", { name: "繁体字按简体匹配" })).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: "工具输出也送审核服务" })).toBeInTheDocument();
   });
 });

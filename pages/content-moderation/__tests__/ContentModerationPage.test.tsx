@@ -1,6 +1,10 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
+import type {
+  ContentModerationProfileCapabilities,
+  ContentModerationProfileView,
+} from "@code-proxy/api-client";
 import i18n from "@code-proxy/i18n";
 import { ThemeProvider, ToastProvider } from "@code-proxy/ui";
 import { ContentModerationPage } from "../ContentModerationPage";
@@ -16,11 +20,22 @@ const mocks = vi.hoisted(() => ({
   patchBindings: vi.fn(),
 }));
 
-vi.mock("@code-proxy/api-client", () => ({
+vi.mock("@code-proxy/api-client", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@code-proxy/api-client")>()),
   contentModerationApi: mocks,
   extractApiErrorCode: () => "",
   isApiClientError: () => false,
 }));
+
+const NOTHING_DECLARED: ContentModerationProfileCapabilities = {
+  keywordFoldTraditionalChinese: false,
+  apiIncludesToolOutput: false,
+};
+
+const listResponse = (
+  items: ContentModerationProfileView[],
+  capabilities: ContentModerationProfileCapabilities = NOTHING_DECLARED,
+) => ({ items, capabilities });
 
 const profile = {
   id: "profile-1",
@@ -80,7 +95,7 @@ describe("ContentModerationPage", () => {
       latency_samples: 10,
       avg_latency_ms: 18,
     });
-    mocks.listProfiles.mockResolvedValue([profile]);
+    mocks.listProfiles.mockResolvedValue(listResponse([profile]));
     mocks.patchProfile.mockResolvedValue({ ...profile, mode: "off", version: 4 });
     mocks.testProfile.mockResolvedValue({
       would_block: true,
@@ -120,9 +135,11 @@ describe("ContentModerationPage", () => {
 
   test("shows the backend column and renders a guard verdict in the test modal", async () => {
     const user = userEvent.setup();
-    mocks.listProfiles.mockResolvedValue([
-      { ...profile, backend: "qwen3guard" as const, scanners: ["jailbreak" as const] },
-    ]);
+    mocks.listProfiles.mockResolvedValue(
+      listResponse([
+        { ...profile, backend: "qwen3guard" as const, scanners: ["jailbreak" as const] },
+      ]),
+    );
     mocks.testProfile.mockResolvedValue({
       would_block: true,
       action: "guard_block",
@@ -153,7 +170,7 @@ describe("ContentModerationPage", () => {
   });
 
   test("renders the card empty state when no profiles exist", async () => {
-    mocks.listProfiles.mockResolvedValue([]);
+    mocks.listProfiles.mockResolvedValue(listResponse([]));
     renderPage();
 
     expect(await screen.findByRole("heading", { name: "Content Moderation" })).toBeInTheDocument();
@@ -219,15 +236,17 @@ describe("ContentModerationPage", () => {
 
   test("blocks enabling API moderation when no API key is configured", async () => {
     const user = userEvent.setup();
-    mocks.listProfiles.mockResolvedValue([
-      {
-        ...profile,
-        mode: "off",
-        keyword_mode: "api_only",
-        api_key_configured: false,
-        api_key_masked: undefined,
-      },
-    ]);
+    mocks.listProfiles.mockResolvedValue(
+      listResponse([
+        {
+          ...profile,
+          mode: "off",
+          keyword_mode: "api_only",
+          api_key_configured: false,
+          api_key_masked: undefined,
+        },
+      ]),
+    );
     renderPage();
 
     await user.click(
@@ -238,5 +257,25 @@ describe("ContentModerationPage", () => {
       await screen.findByText("Configure an API key before enabling this API moderation profile."),
     ).toBeInTheDocument();
     expect(mocks.patchProfile).not.toHaveBeenCalled();
+  });
+
+  test("offers the text coverage options only when the backend declares them", async () => {
+    const user = userEvent.setup();
+    mocks.listProfiles.mockResolvedValue(
+      listResponse(
+        [{ ...profile, keyword_fold_traditional_chinese: true, api_includes_tool_output: false }],
+        { keywordFoldTraditionalChinese: true, apiIncludesToolOutput: true },
+      ),
+    );
+    renderPage();
+
+    await user.click(await screen.findByRole("button", { name: "Edit Profile" }));
+
+    expect(
+      await screen.findByRole("switch", { name: "Match Traditional Chinese as Simplified" }),
+    ).toHaveAttribute("aria-checked", "true");
+    expect(
+      screen.getByRole("switch", { name: "Send tool output to the moderation service" }),
+    ).toHaveAttribute("aria-checked", "false");
   });
 });
