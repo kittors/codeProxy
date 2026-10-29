@@ -362,15 +362,29 @@ export const usageApi = {
       page?: number;
       size?: number;
       days?: number;
+      /**
+       * Key selectors the caller already holds (a client secret). A current backend
+       * resolves them to key ids and compares nothing against the log rows; a
+       * backend without the api-key-id-filters capability only understands these.
+       */
       api_key?: string;
       model?: string;
       channel?: string;
       status?: string;
       api_keys?: string[];
+      /**
+       * Key filter by the stable ids the response's key facet offers (and
+       * "__system__" for system calls). Only a backend that declares the
+       * api-key-id-filters capability reads it; an older one ignores it and would
+       * return every key's logs, so send it only after a response declared that.
+       */
+      api_key_ids?: string[];
       models?: string[];
       channels?: string[];
       statuses?: string[];
       api_keys_empty?: boolean;
+      /** Explicit empty selection of api_key_ids: match no key at all. */
+      api_key_ids_empty?: boolean;
       models_empty?: boolean;
       channels_empty?: boolean;
       statuses_empty?: boolean;
@@ -386,10 +400,13 @@ export const usageApi = {
     if (params.days) qs.set("days", String(params.days));
     // Multi-value params take priority
     appendUniqueParams(qs, "api_key", params.api_keys);
+    // The backend reads repeated api_key_id values; its plural form is one comma list.
+    appendUniqueParams(qs, "api_key_id", params.api_key_ids);
     appendUniqueParams(qs, "model", params.models);
     appendUniqueParams(qs, "channel", params.channels);
     appendUniqueParams(qs, "status", params.statuses);
     if (params.api_keys_empty) qs.set("api_keys_empty", "1");
+    if (params.api_key_ids_empty) qs.set("api_key_ids_empty", "1");
     if (params.models_empty) qs.set("models_empty", "1");
     if (params.channels_empty) qs.set("channels_empty", "1");
     if (params.statuses_empty) qs.set("statuses_empty", "1");
@@ -404,15 +421,27 @@ export const usageApi = {
       ? apiClient.get<UsageLogsPayload | null>(path, { signal: options.signal })
       : apiClient.get<UsageLogsPayload | null>(path));
     const filters = resp?.filters;
+    const capabilities = readUsageLogsCapabilities(resp?.capabilities);
+    // A backend that declares the id filters has no secret-keyed facet; ignore one
+    // even if it were sent, so nothing downstream can fall back to showing it.
+    const secretFacet = !capabilities.apiKeyIdFilters;
     return {
       items: Array.isArray(resp?.items) ? resp.items : [],
       total: resp?.total ?? 0,
       page: resp?.page ?? 1,
       size: resp?.size ?? params.size ?? 50,
+      capabilities,
       filters: {
-        api_keys: Array.isArray(filters?.api_keys) ? filters.api_keys : [],
-        api_key_names: isStringRecord(filters?.api_key_names) ? filters.api_key_names : {},
-        api_key_counts: isNumberRecord(filters?.api_key_counts) ? filters.api_key_counts : {},
+        api_key_ids: Array.isArray(filters?.api_key_ids) ? filters.api_key_ids : [],
+        api_key_id_names: isStringRecord(filters?.api_key_id_names) ? filters.api_key_id_names : {},
+        api_key_id_counts: isNumberRecord(filters?.api_key_id_counts)
+          ? filters.api_key_id_counts
+          : {},
+        api_keys: secretFacet && Array.isArray(filters?.api_keys) ? filters.api_keys : [],
+        api_key_names:
+          secretFacet && isStringRecord(filters?.api_key_names) ? filters.api_key_names : {},
+        api_key_counts:
+          secretFacet && isNumberRecord(filters?.api_key_counts) ? filters.api_key_counts : {},
         models: Array.isArray(filters?.models) ? filters.models : [],
         channels: Array.isArray(filters?.channels) ? filters.channels : [],
         channel_options: normalizeChannelOptions(filters?.channel_options, filters?.channels),
@@ -570,6 +599,11 @@ export interface UsageChannelFilterOption {
 export interface UsageLogItem {
   id: number;
   timestamp: string;
+  /**
+   * What the log row says about its key. A current backend never returns the
+   * secret here: it is a mask ("sk-abc***wxyz") or a route / internal origin
+   * ("POST /v1/models", "warmup"). Only a backend that predates that stored it.
+   */
   api_key: string;
   api_key_id?: string;
   api_key_masked?: string;
@@ -602,12 +636,43 @@ export interface UsageLogItem {
   has_content: boolean;
 }
 
+/** What /usage/logs says about itself. */
+export interface UsageLogsCapabilities {
+  /**
+   * The key filter is id-based ("api-key-id-filters"): the key facet is
+   * filters.api_key_ids / api_key_id_names / api_key_id_counts, the api_key_id
+   * query parameters select from it, and no field of the response holds a client
+   * secret. A backend without it is older and still speaks the secret-keyed facet
+   * (filters.api_keys / api_key_names / api_key_counts).
+   */
+  apiKeyIdFilters: boolean;
+}
+
+/** Only an explicit true counts: a backend that predates a capability sends no object. */
+export const readUsageLogsCapabilities = (value: unknown): UsageLogsCapabilities => ({
+  apiKeyIdFilters:
+    value !== null &&
+    typeof value === "object" &&
+    (value as Record<string, unknown>)["api-key-id-filters"] === true,
+});
+
 export interface UsageLogsResponse {
   items: UsageLogItem[];
   total: number;
   page: number;
   size: number;
+  capabilities: UsageLogsCapabilities;
   filters: {
+    /** Key facet: stable key ids, "__system__" standing for system calls. */
+    api_key_ids: string[];
+    api_key_id_names: Record<string, string>;
+    api_key_id_counts: Record<string, number>;
+    /**
+     * Key facet of a backend WITHOUT the api-key-id-filters capability, keyed by
+     * client secret. Empty whenever the capability is declared. Only the
+     * compatibility path of the request log filters reads these, and they are never
+     * displayed as they are.
+     */
     api_keys: string[];
     api_key_names: Record<string, string>;
     api_key_counts: Record<string, number>;
@@ -626,6 +691,9 @@ export interface UsageLogsResponse {
 }
 
 type UsageLogsFilterPayload = {
+  api_key_ids?: unknown;
+  api_key_id_names?: unknown;
+  api_key_id_counts?: unknown;
   api_keys?: unknown;
   api_key_names?: unknown;
   api_key_counts?: unknown;
@@ -642,6 +710,7 @@ type UsageLogsPayload = {
   size?: number | null;
   filters?: UsageLogsFilterPayload | null;
   stats?: Partial<UsageLogsResponse["stats"]> | null;
+  capabilities?: unknown;
 };
 
 export interface LogContentResponse {
