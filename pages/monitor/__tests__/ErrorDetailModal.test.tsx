@@ -134,6 +134,39 @@ describe("ErrorDetailModal", () => {
     expect(mocks.getLogContentPart).not.toHaveBeenCalled();
   });
 
+  test("summarises a stream cut before its error event from the request details", async () => {
+    await i18n.changeLanguage("zh-CN");
+    mocks.getLogContent.mockResolvedValue({
+      id: 54003,
+      model: "gpt-5",
+      input_content: "",
+      output_content:
+        'event: response.created\ndata: {"type":"response.created","response":{"id":"resp_1"}}\n\n',
+    });
+    mocks.getLogContentPart.mockResolvedValue({
+      id: 54003,
+      model: "gpt-5",
+      part: "details",
+      content: JSON.stringify({
+        diagnostic: { upstream: { status: 200, error_message: "stream disconnected before completion" } },
+      }),
+    });
+
+    render(
+      <ThemeProvider>
+        <ErrorDetailModal open logId={54003} model="gpt-5" onClose={() => {}} />
+      </ThemeProvider>,
+    );
+
+    expect(await screen.findByText("stream disconnected before completion")).toBeInTheDocument();
+    expect(mocks.getLogContentPart).toHaveBeenCalledWith(54003, "details");
+    // The stream itself is shown only in the full-response block.
+    const streamBlocks = screen.getAllByText(/event: response\.created/);
+    expect(streamBlocks).toHaveLength(1);
+    expect(streamBlocks[0]?.tagName).toBe("PRE");
+    expect(screen.getByText("完整响应")).toBeInTheDocument();
+  });
+
   test("is a labelled dialog with a copy button for the full response and closes on Escape", async () => {
     await i18n.changeLanguage("zh-CN");
     mocks.getLogContent.mockResolvedValue({
