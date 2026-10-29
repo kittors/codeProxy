@@ -90,6 +90,22 @@ export const authFilesApi = {
     codex_service_tier?: string;
   }) => apiClient.patch("/auth-files/fields", payload),
 
+  /**
+   * 只清除这个账号上这一个模型的冷却（POST /auth-files/model-cooldown/clear），下一次请求马上可以
+   * 再试它；账号的其它模型和凭据状态不动。changed=false 表示这个模型本来就没在冷却。
+   * 旧后端没有这个接口，列表也不会带 `model_cooldowns`，所以调用方只对带了它的条目才会走到这里。
+   */
+  clearModelCooldown: async (input: {
+    authIndex: string;
+    model: string;
+  }): Promise<{ changed: boolean }> => {
+    const data = await apiClient.post<{ changed?: unknown }>("/auth-files/model-cooldown/clear", {
+      auth_index: input.authIndex,
+      model: input.model,
+    });
+    return { changed: data?.changed === true };
+  },
+
   getOauthExcludedModels: async (): Promise<Record<string, string[]>> => {
     const data = await apiClient.get("/oauth-excluded-models");
     return normalizeOauthExcludedModels(data);

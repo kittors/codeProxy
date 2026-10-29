@@ -26,6 +26,7 @@ const baseRow: RequestLogsRow = {
   firstTokenText: "0.3s",
   inputTokens: 1,
   cachedTokens: 0,
+  cacheUse: { kind: "legacy", cachedTokens: 0 },
   outputTokens: 1,
   totalTokens: 2,
   cost: 0,

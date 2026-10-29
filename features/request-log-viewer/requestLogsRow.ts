@@ -1,4 +1,5 @@
 import type { UsageLogItem } from "@code-proxy/api-client/endpoints/usage";
+import { readRequestCacheUse, type RequestCacheUse } from "@code-proxy/domain";
 import { parseUsageTimestampMs } from "@features/monitor-widgets/monitor-utils";
 import { normalizeChannelAuthType } from "./ChannelIdentityLabel";
 
@@ -36,11 +37,20 @@ export type RequestLogsRow = {
   firstTokenText: string;
   inputTokens: number;
   cachedTokens: number;
+  /** Cache reads and writes where the backend stores them apart. */
+  cacheUse: RequestCacheUse;
   outputTokens: number;
   totalTokens: number;
   cost: number;
   hasContent: boolean;
 };
+
+/**
+ * Whether the backend behind these rows stores cache reads and writes apart,
+ * which is when the table shows them as two columns.
+ */
+export const requestLogsHaveCacheBreakdown = (rows: readonly RequestLogsRow[]): boolean =>
+  rows.some((row) => row.cacheUse.kind !== "legacy");
 
 const KEY_MASK_FILLER = "***";
 
@@ -114,6 +124,7 @@ export const toRequestLogsRow = (item: UsageLogItem): RequestLogsRow => {
     firstTokenText: formatOptionalRequestLogLatencyMs(item.first_token_ms),
     inputTokens: item.input_tokens,
     cachedTokens: item.cached_tokens,
+    cacheUse: readRequestCacheUse(item),
     outputTokens: item.output_tokens,
     totalTokens: item.total_tokens,
     cost: item.cost ?? 0,

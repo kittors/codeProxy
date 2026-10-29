@@ -26,7 +26,6 @@ import {
   fetchPublicUsageSummary,
   type PublicModelItem,
 } from "./api";
-import { toLogRow } from "./toLogRow";
 import { LookupHeader } from "./components/LookupHeader";
 import { PortalChangePasswordModal } from "./components/PortalChangePasswordModal";
 import { PortalDeleteKeyModal } from "./components/PortalDeleteKeyModal";
@@ -41,6 +40,7 @@ import { PublicLogsSection } from "./components/PublicLogsSection";
 import { QuickImportTabContent } from "./components/QuickImportTabContent";
 import { UsageTabSection } from "./components/UsageTabSection";
 import { useApiKeyLookupCharts } from "./hooks/useApiKeyLookupCharts";
+import { useLookupLogTable } from "./hooks/useLookupLogTable";
 import type {
   ChartDataResponse,
   PublicLogItem,
@@ -48,14 +48,12 @@ import type {
   PublicUsageLimits,
 } from "./types";
 import {
-  buildRequestLogsColumns,
   normalizeFilterSelection,
   RequestLogFilterCount,
   sortRequestLogKeyOptionsByCount,
   toFilterParam,
   toStatusFilterValues,
   type MultiSelectFilterState,
-  type RequestLogsRow,
   type StatusFilterValue,
 } from "@features/request-log-viewer";
 import {
@@ -326,14 +324,6 @@ export function ApiKeyLookupPage() {
   // ponytail: landing first; open login only via CTA / header
   const [loginModalOpen, setLoginModalOpen] = useState(false);
 
-  const logColumns = useMemo(
-    () =>
-      buildRequestLogsColumns((key) => t(key), undefined, undefined, {
-        identityColumn: "key",
-        hideChannel: true,
-      }),
-    [t],
-  );
   // ── Tab state ──
   const [activeTab, setActiveTab] = useState<ApiKeyLookupTab>("usage");
   const [quickImportReloadToken, setQuickImportReloadToken] = useState(0);
@@ -648,7 +638,7 @@ export function ApiKeyLookupPage() {
   //  Derived rows for VirtualTable
   // ================================================================
 
-  const rows = useMemo<RequestLogsRow[]>(() => rawItems.map((item) => toLogRow(item)), [rawItems]);
+  const { rows, logColumns } = useLookupLogTable(rawItems);
 
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 

@@ -4,10 +4,7 @@ import { useSearchParams } from "react-router-dom";
 import { useOptionalAuth } from "@app/providers/AuthProvider";
 import { useLocalStorage, useSensitiveDataMasking } from "@code-proxy/ui";
 import type { AuthFileItem } from "@code-proxy/api-client";
-import {
-  proxiesApi,
-  type ProxyPoolEntry,
-} from "@code-proxy/api-client/endpoints/proxies";
+import { proxiesApi, type ProxyPoolEntry } from "@code-proxy/api-client/endpoints/proxies";
 import { LazyAddAccountDialog } from "@features/oauth-login";
 import { AuthFileDetailModal } from "./components/AuthFileDetailModal";
 import { AuthFileTagsModal } from "./components/AuthFileTagsModal";
@@ -691,6 +688,7 @@ export function AuthFilesPage() {
     statusUsageReady,
     statusUsageLoading,
     refreshQuota,
+    refreshFilesForItems,
     requestResetCredit,
     resettingCreditFileName,
     openDetail: openDetailWithQuotaRefresh,

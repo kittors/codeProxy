@@ -14,6 +14,7 @@ import { AnimatedNumber, chartPalette, chartUsesIdentityColors, surface } from "
 import { MetricIcon, type MonitorHue } from "@features/monitor-widgets/monitorVisuals";
 import { computePointDelta, computeRelativeDelta, type MonitorDelta } from "../model/monitorDelta";
 import {
+  formatMonitorCacheRate,
   formatMonitorCompact,
   formatMonitorCost,
   formatMonitorCount,
@@ -226,7 +227,7 @@ export function MetricTiles({
             output: formatMonitorCompact(current.output_tokens),
           })
         : t("monitor_center.tiles.tokens_hint", {
-            cache: formatMonitorPercent(current.cache_rate, 1),
+            cache: formatMonitorCacheRate(current),
             output: formatMonitorCompact(current.output_tokens),
           }),
       spark: seriesValues(series, (point) => point.total_tokens),
