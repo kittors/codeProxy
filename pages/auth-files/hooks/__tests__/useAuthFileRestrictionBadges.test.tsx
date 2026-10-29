@@ -334,7 +334,10 @@ describe("useAuthFileRestrictionBadges", () => {
       renderBadges(codexFile({ model_cooldowns: twoCooling }));
       const trigger = () => screen.queryByTestId("auth-file-model-cooldown-trigger");
       expect(trigger()).toHaveTextContent("Cooling models: 2");
-      tick(121_000);
+      tick(119_000);
+      expect(trigger()).toHaveTextContent("Cooling models: 2");
+      // The first model ends exactly now: it is over, not "1s left".
+      tick(1_000);
       expect(trigger()).toHaveTextContent("Cooling models: 1");
       tick(3_600_000);
       expect(trigger()).not.toBeInTheDocument();
