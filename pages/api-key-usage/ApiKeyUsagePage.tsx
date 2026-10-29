@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronRight, Key, KeyRound, LogOut } from "lucide-react";
 import { isApiClientError } from "@code-proxy/api-client";
+import { readRequestCacheUse } from "@code-proxy/domain";
 import { Button } from "@code-proxy/ui";
 import { DropdownMenu } from "@code-proxy/ui";
 import { LanguageSelector } from "@code-proxy/ui";
@@ -22,6 +23,7 @@ import type { PublicLogItem, PublicQuotaScope, PublicUsageLimits } from "../api-
 import { ApiKeyUsageKeyModal } from "./ApiKeyUsageKeyModal";
 import {
   buildRequestLogsColumns,
+  requestLogsHaveCacheBreakdown,
   formatOptionalRequestLogLatencyMs,
   formatRequestLogLatencyMs,
   maskRequestLogApiKey,
@@ -161,6 +163,7 @@ function toLogRow(item: PublicLogItem): RequestLogsRow {
     firstTokenText: formatOptionalRequestLogLatencyMs(item.first_token_ms ?? 0),
     inputTokens: item.input_tokens,
     cachedTokens: item.cached_tokens,
+    cacheUse: readRequestCacheUse(item),
     outputTokens: item.output_tokens,
     totalTokens: item.total_tokens,
     cost: item.cost ?? 0,
@@ -218,15 +221,6 @@ export function ApiKeyUsagePage() {
   const [quotaScopes, setQuotaScopes] = useState<PublicQuotaScope[]>([]);
   const summaryAbortControllerRef = useRef<AbortController | null>(null);
   const summaryFetchIdRef = useRef(0);
-
-  const logColumns = useMemo(
-    () =>
-      buildRequestLogsColumns((key) => t(key), undefined, undefined, {
-        identityColumn: "none",
-        hideChannel: true,
-      }),
-    [t],
-  );
 
   const modelOptions = useMemo<SearchableCheckboxMultiSelectOption[]>(() => {
     return filterOptions.models.map((model) => ({
@@ -394,6 +388,16 @@ export function ApiKeyUsagePage() {
   );
 
   const rows = useMemo(() => rawItems.map((item) => toLogRow(item)), [rawItems]);
+  const cacheBreakdown = useMemo(() => requestLogsHaveCacheBreakdown(rows), [rows]);
+  const logColumns = useMemo(
+    () =>
+      buildRequestLogsColumns((key) => t(key), undefined, undefined, {
+        identityColumn: "none",
+        hideChannel: true,
+        cacheBreakdown,
+      }),
+    [t, cacheBreakdown],
+  );
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
   const handlePageChange = useCallback(

@@ -77,6 +77,38 @@ describe("usageMonitorApi", () => {
     expect(overview.recent_failures[0].streaming).toBe(false);
   });
 
+  test("keeps the cache hit rate apart from the legacy cache_rate", async () => {
+    const { normalizeMonitorTotals, normalizeMonitorOverview } = await import("../usage-monitor");
+    // An older backend sends no cache_hit_rate: it stays absent, not 0.
+    const older = normalizeMonitorTotals({ input_tokens: 10, cache_rate: 30 });
+    expect(older.cache_rate).toBe(30);
+    expect(Object.prototype.hasOwnProperty.call(older, "cache_hit_rate")).toBe(false);
+
+    expect(normalizeMonitorTotals({ cache_rate: 0, cache_hit_rate: null })).toMatchObject({
+      cache_rate: 0,
+      cache_hit_rate: null,
+      cache_read_tokens: 0,
+      cache_write_tokens: 0,
+    });
+    const overview = normalizeMonitorOverview({
+      summary: {
+        current: {
+          cache_rate: 45,
+          cache_hit_rate: 45,
+          cache_read_tokens: 900,
+          cache_write_tokens: 1000,
+        },
+      },
+      series: [{ start: "2026-10-30T00:00:00+08:00", cache_rate: 0, cache_hit_rate: null }],
+    });
+    expect(overview.summary.current).toMatchObject({
+      cache_hit_rate: 45,
+      cache_read_tokens: 900,
+      cache_write_tokens: 1000,
+    });
+    expect(overview.series[0].cache_hit_rate).toBeNull();
+  });
+
   test("normalises the realtime strip", async () => {
     const { normalizeMonitorRealtime } = await import("../usage-monitor");
     const realtime = normalizeMonitorRealtime({

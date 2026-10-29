@@ -9,10 +9,12 @@ import type {
   UsageLogsResponse,
 } from "@code-proxy/api-client/endpoints/usage";
 import {
+  cacheRatePercent,
   formatUsageMetricNumber,
   formatUsageMetricRate,
   formatUsageMetricTooltipNumber,
   isUsageMetricCompact,
+  readCacheRate,
 } from "@code-proxy/domain";
 import {
   DataTable,
@@ -43,6 +45,7 @@ import {
   RequestLogsTimeRangeSelector,
   sortRequestLogKeyOptionsByCount,
   toFilterParam,
+  requestLogsHaveCacheBreakdown,
   toRequestLogsRow,
   toStatusFilterValues,
   type MultiSelectFilterState,
@@ -52,7 +55,7 @@ import {
   type TimeRange,
 } from "@features/request-log-viewer";
 
-const DEFAULT_LOG_STATS = {
+const DEFAULT_LOG_STATS: UsageLogsResponse["stats"] = {
   total: 0,
   success_rate: 0,
   total_tokens: 0,
@@ -62,6 +65,22 @@ const DEFAULT_LOG_STATS = {
 
 const isRequestCancelled = (err: unknown, signal?: AbortSignal) =>
   signal?.aborted || (err instanceof Error && err.message === "Request was cancelled");
+
+// Newer backends report a hit rate, null when no request in the selection
+// reported its cache use; older ones a share of cached tokens under its own name.
+function RequestLogsCacheRate({ stats }: { stats: UsageLogsResponse["stats"] }) {
+  const { t } = useTranslation();
+  const view = readCacheRate(stats);
+  const rate = cacheRatePercent(view, stats.total > 0);
+  return (
+    <span>
+      {t(view.kind === "hit_rate" ? "request_logs.cache_hit_rate" : "request_logs.cache_rate")}{" "}
+      <span className="font-mono tabular-nums text-ink">
+        {rate === null ? "—" : formatUsageMetricRate(rate)}
+      </span>
+    </span>
+  );
+}
 
 function RequestLogsRecordsCount({ count }: { count: number }) {
   const { t } = useTranslation();
@@ -133,12 +152,6 @@ export function RequestLogsPage() {
     setErrorModalOpen(true);
   }, []);
 
-  // Build columns with content click handler
-  const logColumns = useMemo(
-    () => buildRequestLogsColumns(t, handleContentClick, handleErrorClick, { masked }),
-    [t, handleContentClick, handleErrorClick, masked],
-  );
-
   // Data state (page-based, no accumulation)
   const [rawItems, setRawItems] = useState<UsageLogItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -165,13 +178,7 @@ export function RequestLogsPage() {
   // without making every response re-create fetchLogs.
   const [keyFacet, setKeyFacet] = useState<RequestLogKeyFacet>(EMPTY_REQUEST_LOG_KEY_FACET);
   const keyFacetRef = useRef<RequestLogKeyFacet>(EMPTY_REQUEST_LOG_KEY_FACET);
-  const [stats, setStats] = useState<{
-    total: number;
-    success_rate: number;
-    total_tokens: number;
-    total_cost: number;
-    cache_rate: number;
-  }>(DEFAULT_LOG_STATS);
+  const [stats, setStats] = useState<UsageLogsResponse["stats"]>(DEFAULT_LOG_STATS);
 
   // Multi-value filters
   const [timeRange, setTimeRange] = useState<TimeRange>(7);
@@ -191,6 +198,15 @@ export function RequestLogsPage() {
   const rows = useMemo<LogRow[]>(
     () => (rawItems ?? []).map((item) => toRequestLogsRow(item)),
     [rawItems],
+  );
+
+  // Build columns with content click handler. Cache reads and writes get a
+  // column each once the backend stores them apart.
+  const cacheBreakdown = useMemo(() => requestLogsHaveCacheBreakdown(rows), [rows]);
+  const logColumns = useMemo(
+    () =>
+      buildRequestLogsColumns(t, handleContentClick, handleErrorClick, { masked, cacheBreakdown }),
+    [t, handleContentClick, handleErrorClick, masked, cacheBreakdown],
   );
 
   // Build multi-select options from backend filter data (exclude the "" "all" option)
@@ -515,12 +531,7 @@ export function RequestLogsPage() {
                 </span>
               </span>
               <span className="text-ink-4">|</span>
-              <span>
-                {t("request_logs.cache_rate")}{" "}
-                <span className="font-mono tabular-nums text-ink">
-                  {formatUsageMetricRate(stats.cache_rate)}
-                </span>
-              </span>
+              <RequestLogsCacheRate stats={stats} />
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">

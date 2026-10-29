@@ -1,3 +1,4 @@
+import { pickCacheRateFields, type CacheRateFields } from "@code-proxy/domain/usage/cacheRate";
 import { apiClient } from "../client/client";
 import type { UsageData, ChartDataResponse, EntityStatsResponse } from "../dto/types";
 
@@ -452,7 +453,7 @@ export const usageApi = {
         success_rate: resp?.stats?.success_rate ?? 0,
         total_tokens: resp?.stats?.total_tokens ?? 0,
         total_cost: resp?.stats?.total_cost ?? 0,
-        cache_rate: resp?.stats?.cache_rate ?? 0,
+        ...pickCacheRateFields(resp?.stats),
       },
     };
   },
@@ -540,8 +541,7 @@ export interface DashboardSummary {
     cached_tokens: number;
     total_tokens: number;
     total_cost: number;
-    cache_rate: number;
-  };
+  } & CacheRateFields;
   trends?: {
     request_volume?: DashboardTrendPoint[];
     success_rate?: DashboardTrendPoint[];
@@ -631,6 +631,14 @@ export interface UsageLogItem {
   output_tokens: number;
   reasoning_tokens: number;
   cached_tokens: number;
+  /**
+   * Cache reads and writes, and the prompt size, from backends that store them
+   * apart; null when the request's cache use is unknown. Absent on older
+   * backends. See readRequestCacheUse.
+   */
+  cache_read_tokens?: number | null;
+  cache_write_tokens?: number | null;
+  prompt_tokens?: number | null;
   total_tokens: number;
   cost: number;
   has_content: boolean;
@@ -686,8 +694,7 @@ export interface UsageLogsResponse {
     success_rate: number;
     total_tokens: number;
     total_cost: number;
-    cache_rate: number;
-  };
+  } & CacheRateFields;
 }
 
 type UsageLogsFilterPayload = {

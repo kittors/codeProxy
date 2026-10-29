@@ -1,3 +1,4 @@
+import { pickCacheRateFields } from "@code-proxy/domain/usage/cacheRate";
 import { apiClient } from "../client/client";
 
 /**
@@ -34,8 +35,14 @@ export interface MonitorTotals {
   cost: number;
   /** Percent (0-100); 0 when there was no traffic. */
   success_rate: number;
-  /** Percent (0-100) of effective input served from cache. */
+  /**
+   * cache_rate, and on newer backends cache_hit_rate with the read and write
+   * totals; see readCacheRate.
+   */
   cache_rate: number;
+  cache_hit_rate?: number | null;
+  cache_read_tokens?: number;
+  cache_write_tokens?: number;
   latency_avg_ms: number;
   first_token_avg_ms: number;
   output_tokens_per_second: number;
@@ -206,7 +213,6 @@ const TOTAL_FIELDS = [
   "total_tokens",
   "cost",
   "success_rate",
-  "cache_rate",
   "latency_avg_ms",
   "first_token_avg_ms",
   "output_tokens_per_second",
@@ -234,7 +240,9 @@ export function normalizeMonitorTotals(raw: unknown): MonitorTotals {
   const record = asRecord(raw);
   const totals = {} as MonitorTotals;
   for (const field of TOTAL_FIELDS) totals[field] = toNumber(record[field]);
-  return totals;
+  // The cache fields keep the difference between "absent" (an older backend)
+  // and null (no request reported its cache use), which toNumber would erase.
+  return Object.assign(totals, pickCacheRateFields(record));
 }
 
 const normalizeSeries = (raw: unknown): MonitorSeriesPoint[] =>

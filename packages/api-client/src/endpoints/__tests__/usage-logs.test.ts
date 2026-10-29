@@ -59,6 +59,48 @@ describe("usage logs api", () => {
     expect(getMock).toHaveBeenCalledWith("/usage/logs?page=1&size=50");
   });
 
+  test("keeps whether the backend reports a cache hit rate", async () => {
+    const { usageApi } = await import("@code-proxy/api-client/endpoints/usage");
+    const base = { items: [], total: 0, page: 1, size: 50, filters: {} };
+
+    // An older backend: cache_rate only, and no cache_hit_rate key at all.
+    getMock.mockResolvedValueOnce({ ...base, stats: { total: 3, cache_rate: 91.2 } });
+    const older = await usageApi.getUsageLogs({ page: 1, size: 50 });
+    expect(older.stats.cache_rate).toBe(91.2);
+    expect(Object.prototype.hasOwnProperty.call(older.stats, "cache_hit_rate")).toBe(false);
+
+    // A newer backend over requests that reported nothing: null, not 0.
+    getMock.mockResolvedValueOnce({
+      ...base,
+      stats: {
+        total: 3,
+        cache_rate: 0,
+        cache_hit_rate: null,
+        cache_read_tokens: 0,
+        cache_write_tokens: 0,
+      },
+    });
+    const unknown = await usageApi.getUsageLogs({ page: 1, size: 50 });
+    expect(unknown.stats).toMatchObject({ cache_rate: 0, cache_hit_rate: null });
+
+    getMock.mockResolvedValueOnce({
+      ...base,
+      stats: {
+        total: 3,
+        cache_rate: 45,
+        cache_hit_rate: 45,
+        cache_read_tokens: 900,
+        cache_write_tokens: 1000,
+      },
+    });
+    const known = await usageApi.getUsageLogs({ page: 1, size: 50 });
+    expect(known.stats).toMatchObject({
+      cache_hit_rate: 45,
+      cache_read_tokens: 900,
+      cache_write_tokens: 1000,
+    });
+  });
+
   test("preserves valid request counts and rejects malformed count maps", async () => {
     const { usageApi } = await import("@code-proxy/api-client/endpoints/usage");
     getMock
