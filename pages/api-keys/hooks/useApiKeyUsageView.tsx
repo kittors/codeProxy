@@ -9,13 +9,16 @@ import type {
 import { useToast, type SearchableSelectOption } from "@code-proxy/ui";
 import { ModelTag } from "@features/model-tags";
 import {
-  buildRequestLogKeyOptions,
+  buildRequestLogKeyOptionsFromFacet,
   buildRequestLogsColumns,
   RequestLogFilterCount,
   ChannelIdentityLabel,
   DEFAULT_REQUEST_LOG_PAGE_SIZE,
+  EMPTY_REQUEST_LOG_KEY_FACET,
+  readRequestLogKeyFacet,
   sortRequestLogKeyOptionsByCount,
   toRequestLogsRow,
+  type RequestLogKeyFacet,
   type RequestLogsRow,
   type TimeRange,
 } from "@features/request-log-viewer";
@@ -48,16 +51,12 @@ export function useApiKeyUsageView() {
   const [usagePageSize, setUsagePageSize] = useState(DEFAULT_REQUEST_LOG_PAGE_SIZE);
   const [usageLastUpdatedAt, setUsageLastUpdatedAt] = useState<number | null>(null);
   const [usageFilterOptions, setUsageFilterOptions] = useState<{
-    api_keys: string[];
-    api_key_names: Record<string, string>;
-    api_key_counts: Record<string, number>;
+    keyFacet: RequestLogKeyFacet;
     channels: string[];
     channel_options: UsageChannelFilterOption[];
     models: string[];
   }>({
-    api_keys: [],
-    api_key_names: {},
-    api_key_counts: {},
+    keyFacet: EMPTY_REQUEST_LOG_KEY_FACET,
     channels: [],
     channel_options: [],
     models: [],
@@ -110,15 +109,29 @@ export function useApiKeyUsageView() {
 
   const usageTotalPages = Math.max(1, Math.ceil(usageTotalCount / usagePageSize));
 
-  const resolveScopedApiKeys = useCallback(() => {
+  // Which keys a request is limited to. The scope this dialog was opened for is
+  // sent as selectors it already holds (the secrets listed on the keys page, or the
+  // account id); the key picked in the dropdown narrows it. A pick made from a key
+  // facet travels as a key id, which an older backend does not read, so a pick that
+  // came from its secret-valued facet (or from the options seeded before the first
+  // response) stays a selector. When nothing narrows the request it still carries an
+  // empty api_keys, as it always has (the account view is the case: the account id
+  // limits it, and no key list is fetched for it).
+  const resolveKeyScope = useCallback((): { api_keys?: string[]; api_key_ids?: string[] } => {
     const selected = usageKeyQuery.trim();
+    const facet = usageFilterOptions.keyFacet;
+    const pickedById = selected !== "" && facet.byId && facet.values.includes(selected);
     // 账号范围由 end_user_id 限定，这里只需要带上用户在下拉里挑的那一把 Key。
-    if (usageEndUserId) return selected ? [selected] : [];
+    if (usageEndUserId) {
+      if (!selected) return { api_keys: [] };
+      return pickedById ? { api_key_ids: [selected] } : { api_keys: [selected] };
+    }
     const scope = usageViewKeys;
-    if (scope.length === 0) return [];
-    if (!selected) return scope;
-    return scope.includes(selected) ? [selected] : ["__no_match__"];
-  }, [usageEndUserId, usageKeyQuery, usageViewKeys]);
+    if (scope.length === 0) return { api_keys: [] };
+    if (!selected) return { api_keys: scope };
+    if (pickedById) return { api_keys: scope, api_key_ids: [selected] };
+    return { api_keys: scope.includes(selected) ? [selected] : ["__no_match__"] };
+  }, [usageEndUserId, usageFilterOptions.keyFacet, usageKeyQuery, usageViewKeys]);
 
   const fetchUsageLogs = useCallback(
     async (page: number, size: number) => {
@@ -132,7 +145,7 @@ export function useApiKeyUsageView() {
           size,
           days: usageTimeRange,
           end_user_id: usageEndUserId || undefined,
-          api_keys: resolveScopedApiKeys(),
+          ...resolveKeyScope(),
           model: usageModelQuery || undefined,
           channel: usageChannelQuery || undefined,
           status: usageStatusFilter || undefined,
@@ -152,20 +165,25 @@ export function useApiKeyUsageView() {
         setUsageCurrentPage(page);
         // Keep key options within the opened scope; merge names from response.
         // 按账号查看时后端已按账号过滤，返回的 Key 就是这个账号的。
-        const scopeSet = new Set(usageViewKeys);
-        const inScope = (key: string) => Boolean(usageEndUserId) || scopeSet.has(key);
-        const responseKeys = Array.isArray(result.filters?.api_keys)
-          ? result.filters.api_keys.filter(inScope)
-          : [];
-        const keys = responseKeys.length > 0 ? responseKeys : usageViewKeys;
-        const names = { ...result.filters?.api_key_names };
-        const counts = Object.fromEntries(
-          Object.entries(result.filters?.api_key_counts ?? {}).filter(([key]) => inScope(key)),
-        );
+        const responseFacet = readRequestLogKeyFacet(result);
+        let keyFacet = responseFacet;
+        if (!responseFacet.byId) {
+          // An older backend lists every key it can see by secret, scope or not, so the
+          // scope is applied here; a facet of key ids was computed inside the scope.
+          const scopeSet = new Set(usageViewKeys);
+          const inScope = (key: string) => Boolean(usageEndUserId) || scopeSet.has(key);
+          const responseKeys = responseFacet.values.filter(inScope);
+          keyFacet = {
+            byId: false,
+            values: responseKeys.length > 0 ? responseKeys : usageViewKeys,
+            names: { ...responseFacet.names },
+            counts: Object.fromEntries(
+              Object.entries(responseFacet.counts).filter(([key]) => inScope(key)),
+            ),
+          };
+        }
         setUsageFilterOptions({
-          api_keys: keys,
-          api_key_names: names,
-          api_key_counts: counts,
+          keyFacet,
           channels: Array.isArray(result.filters?.channels) ? result.filters.channels : [],
           channel_options: Array.isArray(result.filters?.channel_options)
             ? result.filters.channel_options
@@ -187,7 +205,7 @@ export function useApiKeyUsageView() {
     },
     [
       notify,
-      resolveScopedApiKeys,
+      resolveKeyScope,
       t,
       usageChannelQuery,
       usageEndUserId,
@@ -206,9 +224,7 @@ export function useApiKeyUsageView() {
     setUsagePageSize(DEFAULT_REQUEST_LOG_PAGE_SIZE);
     setUsageLastUpdatedAt(null);
     setUsageFilterOptions({
-      api_keys: [],
-      api_key_names: {},
-      api_key_counts: {},
+      keyFacet: EMPTY_REQUEST_LOG_KEY_FACET,
       channels: [],
       channel_options: [],
       models: [],
@@ -229,10 +245,10 @@ export function useApiKeyUsageView() {
       setUsageViewKeys(cleaned);
       setUsageViewName(name);
       // Seed key filter options before first fetch so the dropdown is usable immediately.
+      // They are the secrets this page already holds, so they are selectors rather than
+      // key ids; the first response replaces them with the backend's own facet.
       setUsageFilterOptions({
-        api_keys: cleaned,
-        api_key_names: keyNames ?? {},
-        api_key_counts: {},
+        keyFacet: { byId: false, values: cleaned, names: keyNames ?? {}, counts: {} },
         channels: [],
         channel_options: [],
         models: [],
@@ -263,17 +279,10 @@ export function useApiKeyUsageView() {
   );
 
   const usageKeyOptions = useMemo<SearchableSelectOption[]>(() => {
-    const sourceKeys =
-      usageFilterOptions.api_keys.length > 0 ? usageFilterOptions.api_keys : usageViewKeys;
-    const opts = buildRequestLogKeyOptions(
-      sourceKeys,
-      usageFilterOptions.api_key_names,
-      {
-        allKeys: t("request_logs.all_keys"),
-        systemCall: t("request_logs.system_call"),
-      },
-      usageFilterOptions.api_key_counts,
-    );
+    const opts = buildRequestLogKeyOptionsFromFacet(usageFilterOptions.keyFacet, {
+      allKeys: t("request_logs.all_keys"),
+      systemCall: t("request_logs.system_call"),
+    });
     return sortRequestLogKeyOptionsByCount(opts, i18n.resolvedLanguage).map((option) => ({
       value: option.value,
       label: option.label,
@@ -281,14 +290,7 @@ export function useApiKeyUsageView() {
       searchText: option.searchText ?? option.label,
       trailing: <RequestLogFilterCount count={option.count} />,
     }));
-  }, [
-    i18n.resolvedLanguage,
-    t,
-    usageFilterOptions.api_key_counts,
-    usageFilterOptions.api_key_names,
-    usageFilterOptions.api_keys,
-    usageViewKeys,
-  ]);
+  }, [i18n.resolvedLanguage, t, usageFilterOptions.keyFacet]);
 
   const usageChannelOptions = useMemo<SearchableSelectOption[]>(() => {
     const apiLabel = t("request_logs.auth_type_api");

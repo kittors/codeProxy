@@ -42,11 +42,23 @@ export type RequestLogsRow = {
   hasContent: boolean;
 };
 
+const KEY_MASK_FILLER = "***";
+
+/**
+ * The twin of the backend's MaskAPIKey (internal/usage/api_key_mask.go): the same
+ * shape on both sides, so a mask the server stored reads the same as one built
+ * here, and masking a mask returns it unchanged. Counts code points, not UTF-16
+ * units, as the server counts runes. Nothing is left of a key of 4 or fewer.
+ */
 export const maskRequestLogApiKey = (value: string): string => {
   const trimmed = value.trim();
   if (!trimmed) return "--";
-  if (trimmed.length <= 10) return `${trimmed.slice(0, 2)}***${trimmed.slice(-2)}`;
-  return `${trimmed.slice(0, 6)}***${trimmed.slice(-4)}`;
+  const chars = Array.from(trimmed);
+  if (chars.length <= 4) return KEY_MASK_FILLER;
+  if (chars.length <= 10) {
+    return `${chars.slice(0, 2).join("")}${KEY_MASK_FILLER}${chars.slice(-2).join("")}`;
+  }
+  return `${chars.slice(0, 6).join("")}${KEY_MASK_FILLER}${chars.slice(-4).join("")}`;
 };
 
 export const formatRequestLogTimestamp = (value: string): string => {
