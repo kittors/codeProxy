@@ -28,6 +28,7 @@ import {
   serializeOpenAIProvider,
   serializeProviderKey,
 } from "./helpers";
+import { withRawRecord } from "./provider-raw";
 
 const isOauthBackedProviderRow = (item: Record<string, unknown>): boolean => {
   const accountType = normalizeString(
@@ -60,6 +61,9 @@ const normalizeModelAccessExcludedModels = (
     ? ["*"]
     : undefined;
 
+// 每个 get* 都用 withRawRecord 把后端返回的原始记录挂到读出的对象上：整表 PUT 不合并旧值，
+// serializer 要靠它把面板没建模的字段（priority、cloak……）原样写回，见 provider-raw.ts。
+// patch* 的 body 只写建模字段（keepUnmodeled: false）：PATCH 由后端保留没写的键。
 export const providersApi = {
   async getGeminiKeys(): Promise<ProviderSimpleConfig[]> {
     const data = await apiClient.get("/gemini-api-key");
@@ -83,7 +87,7 @@ export const providersApi = {
         const excludedModels = normalizeExcludedModels(
           item["excluded-models"] ?? item.excludedModels,
         );
-        return {
+        return withRawRecord(item, {
           ...(id ? { id } : {}),
           apiKey,
           ...(name ? { name } : {}),
@@ -94,7 +98,7 @@ export const providersApi = {
           ...(models ? { models } : {}),
           ...(excludedModels ? { excludedModels } : {}),
           ...readDisableCooling(item),
-        };
+        });
       })
       .filter(Boolean) as ProviderSimpleConfig[];
   },
@@ -134,7 +138,7 @@ export const providersApi = {
         const excludedModels = normalizeExcludedModels(
           item["excluded-models"] ?? item.excludedModels,
         );
-        return {
+        return withRawRecord(item, {
           ...(id ? { id } : {}),
           apiKey,
           ...(name ? { name } : {}),
@@ -146,7 +150,7 @@ export const providersApi = {
           ...(models ? { models } : {}),
           ...(excludedModels ? { excludedModels } : {}),
           ...readDisableCooling(item),
-        };
+        });
       })
       .filter(Boolean) as ProviderSimpleConfig[];
   },
@@ -188,7 +192,7 @@ export const providersApi = {
           normalizeString(
             item["vision-fallback-model"] ?? item.visionFallbackModel,
           ) ?? undefined;
-        return {
+        return withRawRecord(item, {
           ...(id ? { id } : {}),
           apiKey,
           ...(item.disabled === true ? { disabled: true } : {}),
@@ -201,7 +205,7 @@ export const providersApi = {
           ...(excludedModels ? { excludedModels } : {}),
           ...(visionFallbackModel ? { visionFallbackModel } : {}),
           ...readDisableCooling(item),
-        };
+        });
       })
       .filter(Boolean) as ProviderSimpleConfig[];
   },
@@ -216,7 +220,10 @@ export const providersApi = {
     apiClient.patch("/opencode-go-api-key", {
       index,
       value: withDisableCoolingPatch(
-        serializeOpenCodeGoKey(config, { includeApiKey: Boolean(config.apiKey.trim()) }),
+        serializeOpenCodeGoKey(config, {
+          includeApiKey: Boolean(config.apiKey.trim()),
+          keepUnmodeled: false,
+        }),
         config.disableCooling,
       ),
     }),
@@ -263,7 +270,7 @@ export const providersApi = {
           ) ?? undefined;
         const authCookie =
           normalizeString(item["auth-cookie"] ?? item.authCookie) ?? undefined;
-        return {
+        return withRawRecord(item, {
           ...(id ? { id } : {}),
           apiKey,
           ...(item.disabled === true ? { disabled: true } : {}),
@@ -278,7 +285,7 @@ export const providersApi = {
           ...(visionFallbackModel ? { visionFallbackModel } : {}),
           ...(authCookie ? { authCookie } : {}),
           ...readDisableCooling(item),
-        };
+        });
       })
       .filter(Boolean) as ProviderSimpleConfig[];
   },
@@ -293,7 +300,10 @@ export const providersApi = {
     apiClient.patch("/cline-api-key", {
       index,
       value: withDisableCoolingPatch(
-        serializeClineKey(config, { includeApiKey: Boolean(config.apiKey.trim()) }),
+        serializeClineKey(config, {
+          includeApiKey: Boolean(config.apiKey.trim()),
+          keepUnmodeled: false,
+        }),
         config.disableCooling,
       ),
     }),
@@ -340,7 +350,7 @@ export const providersApi = {
           ) ?? undefined;
         const authCookie =
           normalizeString(item["auth-cookie"] ?? item.authCookie) ?? undefined;
-        return {
+        return withRawRecord(item, {
           ...(id ? { id } : {}),
           apiKey,
           ...(item.disabled === true ? { disabled: true } : {}),
@@ -355,7 +365,7 @@ export const providersApi = {
           ...(visionFallbackModel ? { visionFallbackModel } : {}),
           ...(authCookie ? { authCookie } : {}),
           ...readDisableCooling(item),
-        };
+        });
       })
       .filter(Boolean) as ProviderSimpleConfig[];
   },
@@ -370,7 +380,10 @@ export const providersApi = {
     apiClient.patch("/ollama-cloud-api-key", {
       index,
       value: withDisableCoolingPatch(
-        serializeOllamaCloudKey(config, { includeApiKey: Boolean(config.apiKey.trim()) }),
+        serializeOllamaCloudKey(config, {
+          includeApiKey: Boolean(config.apiKey.trim()),
+          keepUnmodeled: false,
+        }),
         config.disableCooling,
       ),
     }),
@@ -415,7 +428,7 @@ export const providersApi = {
           normalizeString(
             item["vision-fallback-model"] ?? item.visionFallbackModel,
           ) ?? undefined;
-        return {
+        return withRawRecord(item, {
           ...(id ? { id } : {}),
           apiKey,
           ...(item.disabled === true ? { disabled: true } : {}),
@@ -429,7 +442,7 @@ export const providersApi = {
           ...(excludedModels ? { excludedModels } : {}),
           ...(visionFallbackModel ? { visionFallbackModel } : {}),
           ...readDisableCooling(item),
-        };
+        });
       })
       .filter(Boolean) as ProviderSimpleConfig[];
   },
@@ -444,7 +457,10 @@ export const providersApi = {
     apiClient.patch("/commandcode-api-key", {
       index,
       value: withDisableCoolingPatch(
-        serializeCommandCodeKey(config, { includeApiKey: Boolean(config.apiKey.trim()) }),
+        serializeCommandCodeKey(config, {
+          includeApiKey: Boolean(config.apiKey.trim()),
+          keepUnmodeled: false,
+        }),
         config.disableCooling,
       ),
     }),
@@ -537,7 +553,7 @@ export const providersApi = {
         const skipAnthropicProcessing =
           item["skip-anthropic-processing"] === true ||
           item.skipAnthropicProcessing === true;
-        return {
+        return withRawRecord(item, {
           ...(id ? { id } : {}),
           apiKey,
           ...(name ? { name } : {}),
@@ -550,7 +566,7 @@ export const providersApi = {
           ...(excludedModels ? { excludedModels } : {}),
           ...(skipAnthropicProcessing ? { skipAnthropicProcessing } : {}),
           ...readDisableCooling(item),
-        };
+        });
       })
       .filter(Boolean) as ProviderSimpleConfig[];
   },
@@ -610,7 +626,7 @@ export const providersApi = {
         const excludedModels = normalizeExcludedModels(
           item["excluded-models"] ?? item.excludedModels,
         );
-        return {
+        return withRawRecord(item, {
           ...(id ? { id } : {}),
           apiKey: credential,
           authMode,
@@ -630,7 +646,7 @@ export const providersApi = {
           ...(models ? { models } : {}),
           ...(excludedModels ? { excludedModels } : {}),
           ...readDisableCooling(item),
-        };
+        });
       })
       .filter(Boolean) as BedrockProviderConfig[];
   },
@@ -665,7 +681,7 @@ export const providersApi = {
           normalizeString(item["proxy-id"] ?? item.proxyId) ?? undefined;
         const headers = normalizeHeaders(item.headers);
         const models = normalizeModels(item.models);
-        return {
+        return withRawRecord(item, {
           ...(id ? { id } : {}),
           apiKey,
           ...(name ? { name } : {}),
@@ -676,7 +692,7 @@ export const providersApi = {
           ...(headers ? { headers } : {}),
           ...(models ? { models } : {}),
           ...readDisableCooling(item),
-        };
+        });
       })
       .filter(Boolean) as ProviderSimpleConfig[];
   },
@@ -719,7 +735,7 @@ export const providersApi = {
             : undefined;
         const testModel =
           normalizeString(item["test-model"] ?? item.testModel) ?? undefined;
-        return {
+        return withRawRecord(item, {
           ...(id ? { id } : {}),
           name,
           ...(disabled ? { disabled } : {}),
@@ -731,7 +747,7 @@ export const providersApi = {
           ...(priority !== undefined ? { priority } : {}),
           ...(testModel ? { testModel } : {}),
           ...readDisableCooling(item),
-        };
+        });
       })
       .filter(Boolean) as OpenAIProvider[];
   },

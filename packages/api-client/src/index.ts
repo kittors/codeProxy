@@ -200,6 +200,7 @@ export {
   normalizeOauthModelAlias,
   normalizeApiKeyEntries,
 } from "./endpoints/helpers";
+export { carryRawRecord, readRawRecord, withRawRecord } from "./endpoints/provider-raw";
 
 export {
   identityApi,
