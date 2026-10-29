@@ -7,12 +7,13 @@ import {
   type AuthFileModelCooldownView,
 } from "@code-proxy/domain";
 import { RESTRICTION_TONE_CLASSES } from "../hooks/presentationStyles";
+import { useLiveNowMs } from "../hooks/useLiveNowMs";
 
 type DurationLabels = { day: string; hour: string; minute: string; second: string };
 
 interface AuthFileModelCooldownMenuProps {
+  /** 候选列表；已经走完的由菜单按自己的时钟丢掉。 */
   cooldowns: AuthFileModelCooldownView[];
-  nowMs: number;
   /** 没有写权限时菜单只读：照样列出被暂停的模型，但不能点。 */
   canRetry: boolean;
   isRetrying: (model: string) => boolean;
@@ -28,10 +29,12 @@ interface AuthFileModelCooldownMenuProps {
  *
  * 只在后端的列表带了 `model_cooldowns` 时才会被渲染（见 useAuthFileRestrictionBadges），
  * 所以连着没有这个接口的旧后端时，它不出现，也不会点出一个必败的请求。
+ *
+ * 剩余时间和「还剩几个」都按菜单自己的时钟算（见 useLiveNowMs）：走完的模型从菜单里消失，
+ * 全部走完则整个菜单收起，和重新读一遍列表后的样子一致。
  */
 export function AuthFileModelCooldownMenu({
-  cooldowns,
-  nowMs,
+  cooldowns: candidates,
   canRetry,
   isRetrying,
   onRetry,
@@ -39,6 +42,10 @@ export function AuthFileModelCooldownMenu({
   durationLabels,
 }: AuthFileModelCooldownMenuProps) {
   const { t } = useTranslation();
+  const nowMs = useLiveNowMs();
+  const cooldowns = candidates.filter(
+    (cooldown) => cooldown.untilMs === null || cooldown.untilMs > nowMs,
+  );
 
   const describe = (cooldown: AuthFileModelCooldownView): string => {
     const time =
@@ -48,6 +55,8 @@ export function AuthFileModelCooldownMenu({
     const reason = formatReason(cooldown.reason);
     return reason ? t("auth_files.cooldown_badge", { reason, time }) : time;
   };
+
+  if (cooldowns.length === 0) return null;
 
   return (
     <DropdownMenu.Root size="sm">

@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { ToastProvider, toast } from "@code-proxy/ui";
@@ -81,6 +81,10 @@ const twoCooling = [
 describe("useAuthFileRestrictionBadges", () => {
   beforeEach(async () => {
     await i18n.changeLanguage("en");
+    // The countdowns read the wall clock themselves (the page clock is not live), so the clock is
+    // pinned to the same instant the fixtures are written against. Only Date is faked here:
+    // timers stay real so user-event and findBy keep working.
+    vi.setSystemTime(NOW);
     // The toast store is global: a toast left over from the previous test must not be on screen.
     toast.dismiss();
     mocks.auth.current = null;
@@ -90,6 +94,7 @@ describe("useAuthFileRestrictionBadges", () => {
 
   afterEach(async () => {
     cleanup();
+    vi.useRealTimers();
     toast.dismiss();
     await i18n.changeLanguage("en");
   });
@@ -230,6 +235,120 @@ describe("useAuthFileRestrictionBadges", () => {
       renderBadges(codexFile({ restrictions: [rateLimited(90)], model_cooldowns: twoCooling }));
       expect(screen.getByTestId("auth-file-restriction-badge")).toBeInTheDocument();
       expect(screen.getByTestId("auth-file-model-cooldown-trigger")).toBeInTheDocument();
+    });
+  });
+
+  describe("countdowns run on their own clock", () => {
+    // The Harness hands the hook a page clock that never moves, like a page with quota auto-refresh
+    // off (the default). Only the chips themselves can make time pass. Date and the interval are
+    // faked; setTimeout stays real so user-event and findBy keep working.
+    const fakeClock = () =>
+      vi.useFakeTimers({ now: NOW, toFake: ["Date", "setInterval", "clearInterval"] });
+    const tick = (ms: number) =>
+      act(() => {
+        vi.advanceTimersByTime(ms);
+      });
+    const badge = () => screen.queryByTestId("auth-file-restriction-badge");
+
+    test("the badge counts down even though the page clock stands still", () => {
+      fakeClock();
+      renderBadges(codexFile({ restrictions: [rateLimited(90)] }));
+      expect(badge()).toHaveTextContent("Rate limited · 1m 30s");
+      tick(31_000);
+      expect(badge()).toHaveTextContent("Rate limited · 59s");
+      tick(58_000);
+      expect(badge()).toHaveTextContent("Rate limited · 1s");
+    });
+
+    test("the badge goes away when its cooldown ends, as a reload would show", () => {
+      fakeClock();
+      renderBadges(codexFile({ restrictions: [rateLimited(5)] }));
+      tick(4_000);
+      expect(badge()).toHaveTextContent("Rate limited · 1s");
+      tick(1_000);
+      expect(badge()).not.toBeInTheDocument();
+    });
+
+    test("only a badge that shows a time keeps a timer", () => {
+      fakeClock();
+      const plain = renderBadges(
+        codexFile({ restrictions: [rateLimited(90, { cooldown_reason: undefined })] }),
+      );
+      expect(vi.getTimerCount()).toBe(0);
+      plain.unmount();
+      const cooling = renderBadges(codexFile({ restrictions: [rateLimited(90)] }));
+      expect(vi.getTimerCount()).toBe(1);
+      cooling.unmount();
+      expect(vi.getTimerCount()).toBe(0);
+    });
+
+    test("a reason with no time to wait has nothing to count down", () => {
+      fakeClock();
+      renderBadges(
+        codexFile({
+          restrictions: [
+            rateLimited(0, {
+              next_retry_after: undefined,
+              cooldown_reason: "reauth_required",
+              http_status: 401,
+            }),
+          ],
+        }),
+      );
+      expect(badge()).toHaveTextContent("Re-login required");
+      expect(vi.getTimerCount()).toBe(0);
+    });
+
+    test("a badge without a reason does not disappear by itself, it never did", () => {
+      fakeClock();
+      renderBadges(codexFile({ restrictions: [rateLimited(5, { cooldown_reason: undefined })] }));
+      tick(60_000);
+      expect(badge()).toHaveTextContent("429 Error");
+    });
+
+    test("the tooltip counts against the same clock as the badge", () => {
+      fakeClock();
+      renderBadges(codexFile({ restrictions: [rateLimited(90)] }));
+      fireEvent.mouseEnter(screen.getByTestId("auth-file-restriction-badge"));
+      const tooltip = screen.getByRole("tooltip");
+      expect(tooltip).toHaveTextContent("Auto recovery in 1m 30s");
+      tick(35_000);
+      expect(tooltip).toHaveTextContent("Auto recovery in 55s");
+      expect(badge()).toHaveTextContent("Rate limited · 55s");
+    });
+
+    test("the tooltip of a badge without a reason counts down while it is open too", () => {
+      fakeClock();
+      renderBadges(codexFile({ restrictions: [rateLimited(90, { cooldown_reason: undefined })] }));
+      fireEvent.mouseEnter(screen.getByTestId("auth-file-restriction-badge"));
+      const tooltip = screen.getByRole("tooltip");
+      expect(tooltip).toHaveTextContent("Auto recovery in 1m 30s");
+      tick(35_000);
+      expect(tooltip).toHaveTextContent("Auto recovery in 55s");
+      // The badge itself never showed a time, so it still reads the way it always did.
+      expect(badge()).toHaveTextContent("429 Error");
+    });
+
+    test("the models in the menu count down and drop out when they end", () => {
+      fakeClock();
+      renderBadges(codexFile({ model_cooldowns: twoCooling }));
+      const trigger = () => screen.queryByTestId("auth-file-model-cooldown-trigger");
+      expect(trigger()).toHaveTextContent("Cooling models: 2");
+      tick(121_000);
+      expect(trigger()).toHaveTextContent("Cooling models: 1");
+      tick(3_600_000);
+      expect(trigger()).not.toBeInTheDocument();
+    });
+
+    test("an open menu shows the time left now, not the time left when it was drawn", async () => {
+      fakeClock();
+      const user = userEvent.setup();
+      renderBadges(codexFile({ model_cooldowns: twoCooling }));
+      const menu = await openMenu(user);
+      const first = () => within(menu).getAllByRole("menuitem")[0]!;
+      expect(first()).toHaveTextContent("Rate limited · 2m");
+      tick(30_000);
+      expect(first()).toHaveTextContent("Rate limited · 1m 30s");
     });
   });
 

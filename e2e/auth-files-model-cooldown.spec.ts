@@ -3,7 +3,8 @@ import { expect, test, type Page } from "@playwright/test";
 /*
  * Why an account is cooling and the per-model "retry now" on the AI accounts page, against a mocked
  * management API: the reason and time on the card badge, the cooling-models menu, the retry round
- * trip, a failed retry, and a backend that predates all of it (no menu, no request).
+ * trip, a failed retry, the countdown running on its own clock, and a backend that predates all of
+ * it (no menu, no request).
  */
 
 const inSeconds = (seconds: number) => new Date(Date.now() + seconds * 1000).toISOString();
@@ -181,6 +182,39 @@ test("Auth Files: a cooling account says why, and one model can be retried now",
   );
 });
 
+test("Auth Files: the countdown keeps running, and the chip and the menu go away when the cooldown ends", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await setAuthed(page);
+  // The page clock only moves while quota auto-refresh is on, and it is off by default. The
+  // countdown has to run anyway, so the browser clock is driven here instead of waiting.
+  await page.clock.install({ time: new Date() });
+  await routeManagementMocks(page, {
+    list: () => [
+      coolingFile([
+        { model: "gpt-5.5", reason: "rate_limited", until: inSeconds(95), http_status: 429 },
+      ]),
+    ],
+  });
+
+  await page.goto("/#/auth-files");
+
+  const cooling = card(page, "Cooling Codex");
+  const badge = cooling.getByTestId("auth-file-restriction-badge");
+  const trigger = cooling.getByTestId("auth-file-model-cooldown-trigger");
+  await expect(badge).toHaveText(/^Rate limited · 1m \d+s$/);
+  await expect(trigger).toHaveText("Cooling models: 1");
+
+  // 95s minus a minute: seconds only, no minutes left.
+  await page.clock.fastForward(60_000);
+  await expect(badge).toHaveText(/^Rate limited · \d{1,2}s$/);
+
+  await page.clock.fastForward(60_000);
+  await expect(badge).toHaveCount(0);
+  await expect(trigger).toHaveCount(0);
+});
+
 test("Auth Files: a failed retry is reported and the card keeps its cooling models", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await setAuthed(page);
@@ -229,7 +263,7 @@ test("Auth Files: the table row carries the same badge and menu", async ({ page 
   await expect(row.getByTestId("auth-file-model-cooldown-trigger")).toHaveText("Cooling models: 2");
 });
 
-test("Auth Files: on a phone the menu stays on screen and inside its card", async ({ page }) => {
+test("Auth Files: on a phone the chip stays inside its card and the menu stays on screen", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await setAuthed(page);
   await routeManagementMocks(page, { list: () => [coolingFile(coolingModels())] });
@@ -247,8 +281,9 @@ test("Auth Files: on a phone the menu stays on screen and inside its card", asyn
   expect(triggerBox!.x + triggerBox!.width).toBeLessThanOrEqual(cardBox!.x + cardBox!.width + 1);
 
   await trigger.click();
-  const menuBox = await page.getByRole("menu").boundingBox();
-  expect(menuBox).not.toBeNull();
-  expect(menuBox!.x).toBeGreaterThanOrEqual(0);
-  expect(menuBox!.x + menuBox!.width).toBeLessThanOrEqual(390);
+  const menu = page.getByRole("menu");
+  await expect(menu).toBeVisible();
+  // Fully inside the viewport. The popper places the menu a frame after it mounts (more under
+  // load), so this is retried until the menu has settled, and fails if it never fits.
+  await expect(menu).toBeInViewport({ ratio: 1 });
 });

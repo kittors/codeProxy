@@ -1,9 +1,7 @@
 import { useCallback, useMemo, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { AlertTriangle } from "lucide-react";
 import { useOptionalAuth } from "@app/providers/AuthProvider";
 import type { AuthFileItem } from "@code-proxy/api-client";
-import { HoverTooltip } from "@code-proxy/ui";
 import {
   formatAuthFileRestrictionRemaining,
   formatCooldownRemaining,
@@ -16,7 +14,7 @@ import {
 } from "@code-proxy/domain";
 import type { QuotaState } from "@features/quota-preview/quota-helpers";
 import { AuthFileModelCooldownMenu } from "../components/AuthFileModelCooldownMenu";
-import { RESTRICTION_TONE_CLASSES } from "./presentationStyles";
+import { AuthFileRestrictionChip } from "../components/AuthFileRestrictionChip";
 import { modelCooldownKey, useAuthFileModelCooldownActions } from "./useAuthFileModelCooldownActions";
 
 /**
@@ -25,6 +23,9 @@ import { modelCooldownKey, useAuthFileModelCooldownActions } from "./useAuthFile
  * 徽章在后端给了原因码（`cooldown_reason`）时写成「原因 · 剩余时间」，没有时（旧后端、或这条限制
  * 不是冷却）仍是原来的「429 错误」「额度受限」。菜单只在列表带了 `model_cooldowns` 时出现，
  * 所以旧后端上没有「立即重试」。
+ *
+ * 带倒计时的徽章和菜单各自走表（AuthFileRestrictionChip、AuthFileModelCooldownMenu），
+ * 不依赖页面时钟：页面时钟默认不走（见 useLiveNowMs）。
  *
  * 从 useAuthFilesFilesPresentation 原样搬出（页面文件在行数棘轮基线上只能变小），
  * 在此基础上加了原因和菜单。
@@ -71,17 +72,18 @@ export function useAuthFileRestrictionBadges({
     [t],
   );
 
+  // `atMs` 由徽章组件给：带倒计时的徽章用它自己的时钟，不是页面时钟（见 useLiveNowMs）。
   const formatBadgeText = useCallback(
-    (badge: AuthFileRestrictionBadge) => {
+    (badge: AuthFileRestrictionBadge, atMs: number) => {
       if (!badge.cooldownReason) return formatRestrictionBadgeLabel(badge.label);
       const reason = formatCooldownReason(badge.cooldownReason);
       if (!badge.recoverAtMs) return reason;
       return t("auth_files.cooldown_badge", {
         reason,
-        time: formatCooldownRemaining(badge.recoverAtMs, nowMs, restrictionUnitLabels),
+        time: formatCooldownRemaining(badge.recoverAtMs, atMs, restrictionUnitLabels),
       });
     },
-    [formatCooldownReason, formatRestrictionBadgeLabel, nowMs, restrictionUnitLabels, t],
+    [formatCooldownReason, formatRestrictionBadgeLabel, restrictionUnitLabels, t],
   );
 
   const formatRestrictionQuotaWindowLabel = useCallback(
@@ -98,7 +100,7 @@ export function useAuthFileRestrictionBadges({
   );
 
   const formatRestrictionTooltip = useCallback(
-    (badge: AuthFileRestrictionBadge) => {
+    (badge: AuthFileRestrictionBadge, atMs: number) => {
       const quotaWindow = formatRestrictionQuotaWindowLabel(badge);
       // Always surface the upstream reason (parsed status_message / quota reason).
       // Hiding it for quota-limited badges left 429 chips without any error detail.
@@ -117,7 +119,7 @@ export function useAuthFileRestrictionBadges({
       if (badge.recoverAtMs) {
         const remaining = formatAuthFileRestrictionRemaining(
           badge.recoverAtMs,
-          nowMs,
+          atMs,
           restrictionUnitLabels,
         );
         parts.push(
@@ -131,7 +133,7 @@ export function useAuthFileRestrictionBadges({
       }
       return parts.join("\n");
     },
-    [formatCooldownReason, formatRestrictionQuotaWindowLabel, nowMs, restrictionUnitLabels, t],
+    [formatCooldownReason, formatRestrictionQuotaWindowLabel, restrictionUnitLabels, t],
   );
 
   const renderRestrictionBadges = useCallback(
@@ -151,23 +153,17 @@ export function useAuthFileRestrictionBadges({
       return (
         <div className="flex min-w-0 flex-wrap gap-1.5">
           {badges.map((badge) => (
-            <HoverTooltip key={badge.key} content={formatRestrictionTooltip(badge)} placement="top">
-              <span
-                data-testid="auth-file-restriction-badge"
-                className={[
-                  "inline-flex max-w-full items-center gap-1 rounded-full px-2 py-0.5 text-2xs font-semibold tabular-nums",
-                  RESTRICTION_TONE_CLASSES[badge.tone],
-                ].join(" ")}
-              >
-                <AlertTriangle size={11} className="shrink-0" />
-                <span className="min-w-0 truncate">{formatBadgeText(badge)}</span>
-              </span>
-            </HoverTooltip>
+            <AuthFileRestrictionChip
+              key={badge.key}
+              badge={badge}
+              nowMs={nowMs}
+              formatText={formatBadgeText}
+              formatTooltip={formatRestrictionTooltip}
+            />
           ))}
           {cooldowns.length > 0 ? (
             <AuthFileModelCooldownMenu
               cooldowns={cooldowns}
-              nowMs={nowMs}
               canRetry={canRetry}
               isRetrying={(model) => retrying.has(modelCooldownKey(file.name, model))}
               onRetry={(model) => void retryModel(file, model)}
