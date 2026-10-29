@@ -26,8 +26,9 @@ export function ErrorDetailModal({ open, logId, model, onClose }: ErrorDetailMod
   const [errorMessage, setErrorMessage] = useState("");
   const [reconstructed, setReconstructed] = useState(false);
 
-  // Fetch output first; when empty, fall back to request details so historical
-  // failed logs (store-content off) can still surface status / diagnostic info.
+  // Fetch output first. When it is missing (store-content off, older failed
+  // logs) or does not say what went wrong (a stream cut before its error
+  // event), the request details' diagnostic does: fetch them too.
   useEffect(() => {
     if (!open || !logId) return;
     let cancelled = false;
@@ -41,26 +42,23 @@ export function ErrorDetailModal({ open, logId, model, onClose }: ErrorDetailMod
       try {
         const outputRes = await usageApi.getLogContent(logId);
         if (cancelled) return;
-        const extracted = extractErrorFromLogContent(outputRes.output_content || "");
+        const output = outputRes.output_content || "";
+        let extracted = extractErrorFromLogContent(output);
+        if (!extracted?.message) {
+          let details = "";
+          try {
+            const detailsRes = await usageApi.getLogContentPart(logId, "details");
+            if (cancelled) return;
+            details = detailsRes.content || "";
+          } catch {
+            // Details may be unauthorized or missing; the output alone decides.
+          }
+          extracted = extractErrorFromLogContent(output, details);
+        }
         if (extracted) {
           setErrorContent(extracted.content);
           setErrorMessage(extracted.message);
           setReconstructed(extracted.reconstructed);
-          return;
-        }
-
-        try {
-          const detailsRes = await usageApi.getLogContentPart(logId, "details");
-          if (cancelled) return;
-          const fromDetails = extractErrorFromLogContent("", detailsRes.content || "");
-          if (fromDetails) {
-            setErrorContent(fromDetails.content);
-            setErrorMessage(fromDetails.message);
-            setReconstructed(fromDetails.reconstructed);
-            return;
-          }
-        } catch {
-          // Details may be unauthorized or missing; keep empty-state UX.
         }
       } catch (err) {
         if (!cancelled) {
