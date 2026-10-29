@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import {
   contentModerationApi,
+  NO_CONTENT_MODERATION_PROFILE_CAPABILITIES,
+  type ContentModerationProfileCapabilities,
   type ContentModerationProfileView,
   type CreateContentModerationProfileInput,
   type PatchContentModerationProfileInput,
@@ -50,6 +52,9 @@ export function ContentModerationPage() {
   const canWrite = auth?.can("content_moderation.write") ?? true;
   const canTest = auth?.can("content_moderation.test") ?? true;
   const [profiles, setProfiles] = useState<ContentModerationProfileView[]>([]);
+  const [capabilities, setCapabilities] = useState<ContentModerationProfileCapabilities>(
+    NO_CONTENT_MODERATION_PROFILE_CAPABILITIES,
+  );
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [modeUpdatingId, setModeUpdatingId] = useState<string | null>(null);
@@ -64,7 +69,9 @@ export function ContentModerationPage() {
   const loadProfiles = useCallback(async () => {
     setLoading(true);
     try {
-      setProfiles(await contentModerationApi.listProfiles());
+      const list = await contentModerationApi.listProfiles();
+      setProfiles(list.items);
+      setCapabilities(list.capabilities);
     } catch (error) {
       notify({
         type: "error",
@@ -390,6 +397,7 @@ export function ContentModerationPage() {
       <ProfileEditorModal
         open={editorOpen}
         profile={editorProfile}
+        capabilities={capabilities}
         saving={saving}
         onClose={() => {
           if (saving) return;

@@ -1,4 +1,5 @@
 import { apiClient } from "../client/client";
+import { isRecord } from "../client/response";
 
 export type ContentModerationMode = "off" | "pre_block";
 export type ContentModerationKeywordMode = "api_only" | "keyword_only" | "keyword_and_api";
@@ -47,6 +48,13 @@ export interface ContentModerationProfileView {
   max_chunks: number;
   block_http_status: number;
   block_message: string;
+  /**
+   * Keyword matching folds Traditional Chinese into Simplified. Older backends
+   * do not return it (see ContentModerationProfileCapabilities).
+   */
+  keyword_fold_traditional_chinese?: boolean;
+  /** Tool output is sent to the moderation service too. Older backends do not return it. */
+  api_includes_tool_output?: boolean;
   version: number;
   created_at: string;
   updated_at: string;
@@ -73,6 +81,9 @@ export interface CreateContentModerationProfileInput {
   max_chunks: number;
   block_http_status: number;
   block_message: string;
+  /** Sent only when the backend declares them; omitted, the backend stores them off. */
+  keyword_fold_traditional_chinese?: boolean;
+  api_includes_tool_output?: boolean;
 }
 
 export interface PatchContentModerationProfileInput {
@@ -95,6 +106,44 @@ export interface PatchContentModerationProfileInput {
   max_chunks?: number;
   block_http_status?: number;
   block_message?: string;
+  /** Omitted means unchanged, so saving from a panel that lacks them keeps them as they are. */
+  keyword_fold_traditional_chinese?: boolean;
+  api_includes_tool_output?: boolean;
+}
+
+/**
+ * Profile fields added after the first release that the backend declares, in the
+ * profile list, that it stores. The panel updates itself from the latest release
+ * and may talk to an older backend, which silently drops fields it does not know
+ * (gin ignores unknown JSON keys), so a field is shown and sent only when declared.
+ */
+export interface ContentModerationProfileCapabilities {
+  /** keyword_fold_traditional_chinese */
+  keywordFoldTraditionalChinese: boolean;
+  /** api_includes_tool_output */
+  apiIncludesToolOutput: boolean;
+}
+
+export const NO_CONTENT_MODERATION_PROFILE_CAPABILITIES: ContentModerationProfileCapabilities = {
+  keywordFoldTraditionalChinese: false,
+  apiIncludesToolOutput: false,
+};
+
+/** Reads the declaration from a profile list response; anything not declared is unsupported. */
+export const readContentModerationProfileCapabilities = (
+  payload: unknown,
+): ContentModerationProfileCapabilities => {
+  const capabilities =
+    isRecord(payload) && isRecord(payload.capabilities) ? payload.capabilities : {};
+  return {
+    keywordFoldTraditionalChinese: capabilities.keyword_fold_traditional_chinese === true,
+    apiIncludesToolOutput: capabilities.api_includes_tool_output === true,
+  };
+};
+
+export interface ContentModerationProfileList {
+  items: ContentModerationProfileView[];
+  capabilities: ContentModerationProfileCapabilities;
 }
 
 export interface ContentModerationChannelView {
@@ -182,11 +231,15 @@ export const contentModerationApi = {
     return apiClient.get<ContentModerationMetrics>("/content-moderation/metrics");
   },
 
-  async listProfiles(): Promise<ContentModerationProfileView[]> {
-    const response = await apiClient.get<{ items?: ContentModerationProfileView[] }>(
-      "/content-moderation/profiles",
-    );
-    return Array.isArray(response.items) ? response.items : [];
+  async listProfiles(): Promise<ContentModerationProfileList> {
+    const response = await apiClient.get<{
+      items?: ContentModerationProfileView[];
+      capabilities?: unknown;
+    }>("/content-moderation/profiles");
+    return {
+      items: Array.isArray(response.items) ? response.items : [],
+      capabilities: readContentModerationProfileCapabilities(response),
+    };
   },
 
   createProfile(input: CreateContentModerationProfileInput) {

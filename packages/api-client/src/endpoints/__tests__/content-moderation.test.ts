@@ -43,9 +43,11 @@ describe("contentModerationApi", () => {
     mocks.get.mockResolvedValue({ items: [{ id: "profile-1", name: "Primary" }] });
     mocks.patch.mockResolvedValue({ id: "profile-1", version: 4 });
 
-    await expect(contentModerationApi.listProfiles()).resolves.toEqual([
-      { id: "profile-1", name: "Primary" },
-    ]);
+    // A backend that declares nothing offers none of the later fields.
+    await expect(contentModerationApi.listProfiles()).resolves.toEqual({
+      items: [{ id: "profile-1", name: "Primary" }],
+      capabilities: { keywordFoldTraditionalChinese: false, apiIncludesToolOutput: false },
+    });
     await contentModerationApi.patchProfile("profile/1", {
       version: 3,
       name: "Updated",
@@ -57,6 +59,28 @@ describe("contentModerationApi", () => {
       version: 3,
       name: "Updated",
       clear_api_key: true,
+    });
+  });
+
+  test("reads the profile fields the backend declares it stores", async () => {
+    mocks.get
+      .mockResolvedValueOnce({
+        items: null,
+        capabilities: { keyword_fold_traditional_chinese: true, api_includes_tool_output: true },
+      })
+      .mockResolvedValueOnce({
+        items: [],
+        // Only an explicit true counts as a declaration.
+        capabilities: { keyword_fold_traditional_chinese: "yes", api_includes_tool_output: true },
+      });
+
+    await expect(contentModerationApi.listProfiles()).resolves.toEqual({
+      items: [],
+      capabilities: { keywordFoldTraditionalChinese: true, apiIncludesToolOutput: true },
+    });
+    await expect(contentModerationApi.listProfiles()).resolves.toEqual({
+      items: [],
+      capabilities: { keywordFoldTraditionalChinese: false, apiIncludesToolOutput: true },
     });
   });
 

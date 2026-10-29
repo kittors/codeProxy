@@ -163,6 +163,8 @@ export type * from "./endpoints/proxies";
 export {
   contentModerationApi,
   CONTENT_MODERATION_SCANNERS,
+  NO_CONTENT_MODERATION_PROFILE_CAPABILITIES,
+  readContentModerationProfileCapabilities,
 } from "./endpoints/content-moderation";
 export type * from "./endpoints/content-moderation";
 export {
