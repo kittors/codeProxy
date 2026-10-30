@@ -6658,6 +6658,10 @@
         "title": "System monitor",
         "desc": "Caching and live connections for the System monitor page."
       },
+      "observability": {
+        "title": "Metrics endpoint",
+        "desc": "Runtime metrics for Prometheus, Grafana and similar tools to scrape: request volume, latency, time to first token, token usage and account state."
+      },
       "payload": {
         "title": "Request body rules",
         "desc": "Add, override or remove parameters in upstream request bodies, per model."
@@ -7276,5 +7280,27 @@
     "scope_models_one": "{{count}} model",
     "scope_models_other": "{{count}} models",
     "scope_unrestricted": "Any channel and model"
+  },
+  "metrics_export": {
+    "enable_label": "Enable the metrics endpoint",
+    "enable_desc": "When on, {{path}} can be scraped with the token. When off, the address answers 404 and reveals nothing.",
+    "not_persistent": "This backend has no database attached, so the metrics settings cannot be saved and the endpoint cannot be turned on.",
+    "read_only": "Changing these settings requires write access to the system configuration.",
+    "token_label": "Scrape token",
+    "token_configured": "Configured, ending in {{hint}}, created {{time}}. A token is shown only once, when it is generated.",
+    "token_missing": "No token yet. One is generated when the endpoint is turned on.",
+    "rotate": "Regenerate",
+    "address_label": "Scrape address",
+    "copy_address": "Copy address",
+    "copy_snippet": "Copy config",
+    "snippet_hint": "Store the token on its own in {{file}} on the Prometheus host, readable only by the Prometheus process, and keep it out of your config repository. An OpenTelemetry Collector can scrape the same address with the same bearer token through its prometheus receiver.",
+    "disable_title": "Turn off the metrics endpoint?",
+    "disable_desc": "Scrapes will get 404 and monitoring will show the target as down. The token is kept, so the existing scrape config works again once the endpoint is back on.",
+    "disable_confirm": "Turn off",
+    "rotate_title": "Regenerate the scrape token?",
+    "rotate_desc": "The old token stops working at once. A Prometheus still using it gets 401 until it has the new one.",
+    "rotate_confirm": "Regenerate",
+    "reveal_title": "Save the scrape token",
+    "reveal_warning": "This token is shown only once. After you close this dialog it cannot be viewed again, only regenerated. Save it to {{file}} and reference it with credentials_file in the Prometheus config."
   }
 }

@@ -1,4 +1,5 @@
 import {
+  Activity,
   Archive,
   BadgeCheck,
   Braces,
@@ -43,6 +44,7 @@ export type ConfigSectionId =
   | "logging"
   | "retention"
   | "monitoring"
+  | "observability"
   | "payload"
   | "kimi"
   | "codex";
@@ -58,7 +60,7 @@ export interface ConfigSectionDef {
    * 配色风格多彩时用于选中胶囊的淡底；都关掉时是中性线性图标 + 强调色选中态。
    */
   hue: Hue;
-  /** 自定义内容（规则编辑器、准入面板）的分区没有字段，搜索时额外匹配这些词。 */
+  /** 自定义内容（规则编辑器、准入面板、指标接口）的分区没有字段，搜索时额外匹配这些词。 */
   keywords?: string[];
 }
 
@@ -93,6 +95,13 @@ export const CONFIG_SECTIONS: readonly ConfigSectionDef[] = [
   { id: "logging", group: "data", icon: ScrollText, hue: "orange" },
   { id: "retention", group: "data", icon: Archive, hue: "lime" },
   { id: "monitoring", group: "data", icon: MonitorDot, hue: "emerald" },
+  {
+    id: "observability",
+    group: "data",
+    icon: Activity,
+    hue: "violet",
+    keywords: ["metrics", "prometheus", "grafana", "opentelemetry", "otel", "scrape", "/metrics"],
+  },
   {
     id: "payload",
     group: "advanced",
