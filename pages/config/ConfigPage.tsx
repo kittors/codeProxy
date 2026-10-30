@@ -13,6 +13,8 @@ import { parse as parseYaml } from "yaml";
 import { configApi, configFileApi } from "@code-proxy/api-client";
 import { FloatingSaveBar } from "./FloatingSaveBar";
 import { CodexOAuthAdmissionPanel } from "./CodexOAuthAdmissionPanel";
+import { ObservabilityMetricsPanel } from "./observability/ObservabilityMetricsPanel";
+import { useObservabilityMetrics } from "./observability/useObservabilityMetrics";
 import { VisualConfigEditor } from "./visual/VisualConfigEditor";
 import { collectInvalidFields, collectModified } from "./visual/configSchema";
 import { configFieldDomId } from "./visual/ConfigFieldRow";
@@ -172,6 +174,7 @@ export function ConfigPage() {
   const { t } = useTranslation();
   const { notify } = useToast();
   const [tab, setTab] = useStickyTab();
+  const metricsSettings = useObservabilityMetrics();
 
   const {
     visualValues,
@@ -567,6 +570,11 @@ export function ConfigPage() {
                     lockDatabaseSettings={Boolean(liveError)}
                     onChange={setVisualValues}
                     codexAdmission={<CodexOAuthAdmissionPanel />}
+                    observability={
+                      metricsSettings ? (
+                        <ObservabilityMetricsPanel initial={metricsSettings} />
+                      ) : undefined
+                    }
                     toolbarEnd={modeSwitch}
                   />
                 </div>

@@ -6634,6 +6634,10 @@
         "title": "系统监控",
         "desc": "面板「系统监控」页的缓存与实时连接。"
       },
+      "observability": {
+        "title": "指标接口",
+        "desc": "给 Prometheus、Grafana 这类监控系统抓取的运行指标：请求量、延迟、首 token 时间、token 用量和账号状态。"
+      },
       "payload": {
         "title": "请求体改写",
         "desc": "按模型给发往上游的请求体追加、覆盖或移除参数。"
@@ -7232,5 +7236,27 @@
     "scope_channels": "渠道 {{count}}",
     "scope_models": "模型 {{count}}",
     "scope_unrestricted": "渠道与模型不限"
+  },
+  "metrics_export": {
+    "enable_label": "开启指标接口",
+    "enable_desc": "开启后可以带令牌抓取 {{path}}。关闭时这个地址返回 404，不暴露任何信息。",
+    "not_persistent": "这个后端没有接数据库，指标接口的设置保存不下来，所以不能开启。",
+    "read_only": "需要系统配置的修改权限才能更改这里的设置。",
+    "token_label": "抓取令牌",
+    "token_configured": "已配置，结尾是 {{hint}}，生成于 {{time}}。令牌只在生成时显示一次。",
+    "token_missing": "还没有令牌，开启指标接口时自动生成。",
+    "rotate": "重新生成",
+    "address_label": "抓取地址",
+    "copy_address": "复制地址",
+    "copy_snippet": "复制配置",
+    "snippet_hint": "把令牌单独存进 Prometheus 所在机器的 {{file}}，只让 Prometheus 进程可读，不要写进配置仓库。OpenTelemetry Collector 用 prometheus receiver 抓同一个地址、带同样的 Bearer 令牌即可。",
+    "disable_title": "关闭指标接口？",
+    "disable_desc": "关闭后抓取会收到 404，监控上会显示目标下线。令牌会保留，重新开启后原来的抓取配置照常可用。",
+    "disable_confirm": "关闭",
+    "rotate_title": "重新生成抓取令牌？",
+    "rotate_desc": "旧令牌立即失效，还在用它抓取的 Prometheus 会收到 401，直到换上新令牌。",
+    "rotate_confirm": "重新生成",
+    "reveal_title": "保存抓取令牌",
+    "reveal_warning": "令牌只显示这一次，关闭后无法再查看，只能重新生成。把它存进 {{file}}，在 Prometheus 配置里用 credentials_file 引用。"
   }
 }
