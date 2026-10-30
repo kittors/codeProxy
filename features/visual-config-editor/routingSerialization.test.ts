@@ -98,3 +98,35 @@ describe("routing scheduling weight round-trip", () => {
     expect(roundTrip({ "allowed-models": ["gpt-6.1-sol"] })).not.toHaveProperty("follow-upstream-models");
   });
 });
+
+describe("channel-group stream guards round-trip", () => {
+  const roundTrip = (fields: Record<string, unknown>) =>
+    serializeRoutingChannelGroupsForYaml(
+      parseRoutingChannelGroups([{ name: "group", match: { channels: ["A"] }, ...fields }]),
+    )[0];
+
+  // Routing is saved whole: a key the panel drops is a setting it resets.
+  it("writes both back exactly as stored", () => {
+    expect(
+      roundTrip({ "first-token-timeout-seconds": 30, "busy-wait-max-seconds": 120 }),
+    ).toMatchObject({ "first-token-timeout-seconds": 30, "busy-wait-max-seconds": 120 });
+  });
+
+  // Unset waits 60s by default; 0 does not wait at all.
+  it("keeps a busy wait of 0 apart from an unset one", () => {
+    expect(roundTrip({ "busy-wait-max-seconds": 0 })).toMatchObject({ "busy-wait-max-seconds": 0 });
+    expect(roundTrip({})).not.toHaveProperty("busy-wait-max-seconds");
+  });
+
+  it("leaves out what was never set, and an off timeout", () => {
+    const result = roundTrip({ "first-token-timeout-seconds": 0 });
+    expect(result).not.toHaveProperty("first-token-timeout-seconds");
+    expect(result).not.toHaveProperty("busy-wait-max-seconds");
+  });
+
+  it("ignores values that are not whole seconds", () => {
+    const result = roundTrip({ "first-token-timeout-seconds": "30", "busy-wait-max-seconds": -1 });
+    expect(result).not.toHaveProperty("first-token-timeout-seconds");
+    expect(result).not.toHaveProperty("busy-wait-max-seconds");
+  });
+});

@@ -21,7 +21,9 @@ import {
   makeClientId,
   parseModelList,
   parseScheduling,
+  parseStreamGuards,
   serializeScheduling,
+  serializeStreamGuards,
   strategyFromScheduling,
   type RoutingStrategy,
   type VisualConfigValues,
@@ -163,6 +165,7 @@ function hydrateRoutingValues(payload: RoutingConfigItem | undefined): VisualCon
             typeof group?.["follow-upstream-models"] === "boolean"
               ? group["follow-upstream-models"]
               : undefined,
+          ...parseStreamGuards(group),
           channels: mergedNames.map((name, channelIndex) => ({
             id: `routing-group-${index}-channel-${channelIndex}-${makeClientId()}`,
             name,
@@ -245,6 +248,9 @@ function serializeRoutingValues(values: VisualConfigValues): RoutingConfigItem {
     if (typeof group.followUpstreamModels === "boolean") {
       item["follow-upstream-models"] = group.followUpstreamModels;
     }
+    // Same for the stream guards; an older backend never returns them, so
+    // nothing new is written to it.
+    Object.assign(item, serializeStreamGuards(group));
     acc.push(item);
     return acc;
   }, []);
