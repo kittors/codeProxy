@@ -62,8 +62,8 @@ function Harness({
   modelExclusionsSupported?: boolean;
   /** Off by default, like a backend that predates follow-upstream-models. */
   followUpstreamSupported?: boolean;
-  /** Off by default, like a backend that predates the stream guards. */
-  streamGuardsSupported?: boolean;
+  /** Off by default, like a backend that predates the stream guards; a name advertises only that one. */
+  streamGuardsSupported?: boolean | "first-token-timeout" | "busy-wait";
   availableChannels?: string[];
   availableChannelDetails?: Record<string, ChannelGroupChannelDetail>;
   availableChannelDetailsByGroup?: Record<string, Record<string, ChannelGroupChannelDetail>>;
@@ -83,8 +83,9 @@ function Harness({
     () => ({
       channelGroupExcludedModels: modelExclusionsSupported === true,
       channelGroupFollowUpstreamModels: followUpstreamSupported === true,
-      channelGroupFirstTokenTimeout: streamGuardsSupported === true,
-      channelGroupBusyWait: streamGuardsSupported === true,
+      channelGroupFirstTokenTimeout:
+        streamGuardsSupported === true || streamGuardsSupported === "first-token-timeout",
+      channelGroupBusyWait: streamGuardsSupported === true || streamGuardsSupported === "busy-wait",
     }),
     [followUpstreamSupported, modelExclusionsSupported, streamGuardsSupported],
   );
@@ -1622,6 +1623,19 @@ describe("RoutingConfigEditor scheduling", () => {
       await editDefaultGroup(user);
       expect(screen.getByRole("textbox", { name: TIMEOUT })).toHaveValue("");
       expect(screen.getByRole("textbox", { name: BUSY_WAIT })).toHaveAttribute("placeholder", "60");
+    });
+
+    // Each capability unlocks its own field: a backend could ship one first.
+    test.each<["first-token-timeout" | "busy-wait", string, string]>([
+      ["first-token-timeout", TIMEOUT, BUSY_WAIT],
+      ["busy-wait", BUSY_WAIT, TIMEOUT],
+    ])("offers only the %s field when only that is advertised", async (capability, shown, hidden) => {
+      await i18n.changeLanguage("zh-CN");
+      const user = userEvent.setup();
+      render(<Harness streamGuardsSupported={capability} />);
+      await editDefaultGroup(user);
+      expect(screen.getByRole("textbox", { name: shown })).toBeInTheDocument();
+      expect(screen.queryByRole("textbox", { name: hidden })).not.toBeInTheDocument();
     });
 
     // Unset takes the 60s default, 0 turns waiting off: the two must stay apart.
