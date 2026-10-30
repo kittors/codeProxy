@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => ({
   getCodexOAuthAdmission: vi.fn(),
   updateCodexOAuthAdmission: vi.fn(),
   updateRequestLogBodyStorage: vi.fn(),
+  getMetrics: vi.fn(),
 }));
 
 vi.mock("@code-proxy/api-client", () => ({
@@ -30,6 +31,9 @@ vi.mock("@code-proxy/api-client", () => ({
     fetchConfigYaml: mocks.fetchConfigYaml,
     saveConfigYaml: mocks.saveConfigYaml,
   },
+  observabilityApi: {
+    getMetrics: mocks.getMetrics,
+  },
 }));
 
 const SAVED_PROXY = "socks5://relay:p%40ss@203.0.113.7:1080";
@@ -40,11 +44,13 @@ vi.mock("@pages/config/visual/VisualConfigEditor", () => ({
     onChange,
     toolbarEnd,
     lockDatabaseSettings,
+    observability,
   }: {
     values: VisualConfigValues;
     onChange: (values: Partial<VisualConfigValues>) => void;
     toolbarEnd?: React.ReactNode;
     lockDatabaseSettings?: boolean;
+    observability?: React.ReactNode;
   }) => (
     <div data-testid="visual-config-editor">
       {/* 真实编辑器把「可视化 / 源码」切换渲染在工具栏右侧，替身也要渲染出来。 */}
@@ -52,6 +58,7 @@ vi.mock("@pages/config/visual/VisualConfigEditor", () => ({
       {values.payloadOverrideRules[0]?.models[0]?.name ?? "no payload override"}
       <output data-testid="proxy-url">{values.proxyUrl || "no proxy"}</output>
       <output data-testid="database-settings">{lockDatabaseSettings ? "locked" : "editable"}</output>
+      <output data-testid="metrics-section">{observability ? "shown" : "hidden"}</output>
       <button
         type="button"
         onClick={() =>
@@ -105,6 +112,26 @@ describe("ConfigPage", () => {
       },
     });
     mocks.getProxyUrl.mockResolvedValue("");
+    // 默认按旧后端：没有指标接口。
+    mocks.getMetrics.mockRejectedValue(new Error("404 page not found"));
+  });
+
+  test("leaves the metrics section out on a backend without the endpoint", async () => {
+    renderPage();
+    await waitFor(() => expect(mocks.getMetrics).toHaveBeenCalledOnce());
+    await Promise.resolve();
+    expect(screen.getByTestId("metrics-section")).toHaveTextContent("hidden");
+  });
+
+  test("adds the metrics section once the backend answers for it", async () => {
+    mocks.getMetrics.mockResolvedValue({
+      enabled: false,
+      token_configured: false,
+      path: "/metrics",
+      persistent: true,
+    });
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId("metrics-section")).toHaveTextContent("shown"));
   });
 
   test("loads DB-backed payload rules into the visual editor after YAML cleanup", async () => {

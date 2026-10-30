@@ -91,6 +91,7 @@ export function VisualConfigEditor({
   lockDatabaseSettings = false,
   onChange,
   codexAdmission,
+  observability,
   toolbarEnd,
 }: {
   values: VisualConfigValues;
@@ -105,6 +106,11 @@ export function VisualConfigEditor({
   onChange: (values: Partial<VisualConfigValues>) => void;
   /** 「Codex 客户端准入」分区的内容（它直接调用接口、立即生效，由页面注入）。 */
   codexAdmission?: ReactNode;
+  /**
+   * 「指标接口」分区的内容（直接调用接口、立即生效，由页面注入）。只有后端支持时页面才传，
+   * 不传时整个分区不出现。
+   */
+  observability?: ReactNode;
   /** 工具栏最右侧的附加控件（页面把「可视化 / 源码」切换放在这里，省掉单独一行）。 */
   toolbarEnd?: ReactNode;
 }) {
@@ -121,9 +127,17 @@ export function VisualConfigEditor({
   const modified = useMemo(() => collectModified(values, reference), [reference, values]);
   const searching = search.fields !== null;
 
+  // 由页面注入内容的分区：没注入就不出现（后端不支持或没有权限）。
+  const injectedSections = useMemo<Partial<Record<ConfigSectionId, ReactNode>>>(
+    () => ({ codex: codexAdmission, observability }),
+    [codexAdmission, observability],
+  );
   const availableSections = useMemo(
-    () => CONFIG_SECTIONS.filter((section) => section.id !== "codex" || Boolean(codexAdmission)),
-    [codexAdmission],
+    () =>
+      CONFIG_SECTIONS.filter(
+        (section) => !(section.id in injectedSections) || Boolean(injectedSections[section.id]),
+      ),
+    [injectedSections],
   );
   const visibleSections = useMemo(
     () =>
@@ -204,7 +218,7 @@ export function VisualConfigEditor({
         </div>
       );
     }
-    if (section.id === "codex") return codexAdmission;
+    if (section.id in injectedSections) return injectedSections[section.id];
     const fields = fieldsOfSection(section.id).filter(
       (field) => !search.fields || search.fields.has(field.id),
     );

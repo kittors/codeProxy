@@ -171,6 +171,38 @@ describe("VisualConfigEditor auto update config", () => {
     expect(screen.getByRole("heading", { name: "Logging" })).toBeInTheDocument();
   });
 
+  test("shows the metrics section only when the page supplies its content", async () => {
+    const { unmount } = render(
+      <ThemeProvider>
+        <VisualConfigEditor values={DEFAULT_VISUAL_VALUES} onChange={vi.fn()} />
+      </ThemeProvider>,
+    );
+    await userEvent.click(screen.getByRole("tab", { name: /^Logs & data/ }));
+    expect(screen.getByRole("heading", { name: "Logging" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Metrics endpoint" })).toBeNull();
+    unmount();
+
+    render(
+      <ThemeProvider>
+        <VisualConfigEditor
+          values={DEFAULT_VISUAL_VALUES}
+          onChange={vi.fn()}
+          observability={<p>metrics panel</p>}
+        />
+      </ThemeProvider>,
+    );
+    await userEvent.click(screen.getByRole("tab", { name: /^Logs & data/ }));
+    expect(screen.getByRole("heading", { name: "Metrics endpoint" })).toBeInTheDocument();
+    expect(screen.getByText("metrics panel")).toBeInTheDocument();
+
+    // 分区没有字段，靠关键词被搜到。
+    await userEvent.type(screen.getByRole("textbox", { name: "Search settings" }), "prometheus");
+    await waitFor(() =>
+      expect(screen.getByRole("tabpanel", { name: "Search results" })).toBeInTheDocument(),
+    );
+    expect(screen.getByRole("heading", { name: "Metrics endpoint" })).toBeInTheDocument();
+  });
+
   test("search spans every group, shows hits per tab, and picking a tab ends the search", async () => {
     renderEditor();
     await userEvent.type(screen.getByRole("textbox", { name: "Search settings" }), "retry");
