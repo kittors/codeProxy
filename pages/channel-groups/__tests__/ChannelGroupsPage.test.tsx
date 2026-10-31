@@ -1,6 +1,6 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import i18n from "@code-proxy/i18n";
 import { apiClient } from "@code-proxy/api-client";
 import { ChannelGroupsPage } from "@pages/channel-groups/ChannelGroupsPage";
@@ -18,6 +18,20 @@ const toastMocks = vi.hoisted(() => ({
 const apiMocks = vi.hoisted(() => ({
   get: vi.fn(),
   put: vi.fn(),
+}));
+
+// Signed-in admin for the simulator's permission checks; null renders the page without an
+// AuthProvider, which is how every other test here sees it.
+const authMocks = vi.hoisted(() => ({
+  current: null as null | { can: (permission: string) => boolean },
+}));
+
+vi.mock("@app/providers/AuthProvider", () => ({
+  useOptionalAuth: () => authMocks.current,
+}));
+
+vi.mock("@code-proxy/api-client/endpoints/api-keys", () => ({
+  apiKeyEntriesApi: { list: async () => [] },
 }));
 
 function deferred<T>() {
@@ -1473,6 +1487,73 @@ describe("ChannelGroupsPage", () => {
         expect(group).not.toHaveProperty("first-token-timeout-seconds");
         expect(group).not.toHaveProperty("busy-wait-max-seconds");
       }
+    });
+  });
+
+  describe("routing simulator", () => {
+    const serveRoutingConfig = (capabilities?: Record<string, boolean>) => {
+      const fallback = mockedApiGet.getMockImplementation();
+      mockedApiGet.mockImplementation((...args: Parameters<typeof apiClient.get>) => {
+        const [path] = args;
+        if (path === "/routing-config") {
+          return Promise.resolve({
+            strategy: "round-robin",
+            "include-default-group": true,
+            "channel-groups": [],
+            "path-routes": [],
+            ...(capabilities ? { capabilities } : {}),
+          });
+        }
+        return fallback!(...args);
+      });
+    };
+
+    const waitForLoad = () =>
+      waitFor(() => expect(screen.getByRole("button", { name: "新增分组" })).toBeEnabled());
+
+    afterEach(() => {
+      authMocks.current = null;
+    });
+
+    test("opens the simulator when the backend can run it", async () => {
+      serveRoutingConfig({ "routing-simulation": true });
+      const user = userEvent.setup();
+      renderPage();
+
+      await waitForLoad();
+      await user.click(screen.getByRole("button", { name: "模拟请求" }));
+      expect(await screen.findByRole("dialog", { name: "模拟一次请求" })).toBeInTheDocument();
+    });
+
+    test("leaves it out for a backend that does not offer it", async () => {
+      serveRoutingConfig();
+      renderPage();
+
+      await waitForLoad();
+      expect(screen.queryByRole("button", { name: "模拟请求" })).not.toBeInTheDocument();
+    });
+
+    // The simulation shows the key's scope and the accounts with their cooldowns; the backend
+    // refuses an admin who could not read those pages, so the panel does not offer it either.
+    test.each(["api_keys.read", "auth_files.read"])(
+      "leaves it out for an admin without %s",
+      async (missing) => {
+        authMocks.current = { can: (permission) => permission !== missing };
+        serveRoutingConfig({ "routing-simulation": true });
+        renderPage();
+
+        await waitForLoad();
+        expect(screen.queryByRole("button", { name: "模拟请求" })).not.toBeInTheDocument();
+      },
+    );
+
+    test("offers it to an admin who can read both", async () => {
+      authMocks.current = { can: () => true };
+      serveRoutingConfig({ "routing-simulation": true });
+      renderPage();
+
+      await waitForLoad();
+      expect(screen.getByRole("button", { name: "模拟请求" })).toBeEnabled();
     });
   });
 });

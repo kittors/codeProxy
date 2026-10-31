@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Loader2, Pencil, Plus, Route, Trash2, TriangleAlert, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { ChannelGroupChannelDetail } from "@code-proxy/api-client/endpoints/channel-groups";
@@ -17,16 +17,9 @@ import {
   schedulingFromStrategy,
   strategyFromScheduling,
 } from "@features/visual-config-editor";
-import { Button, Callout, COLUMN_WIDTH, surface } from "@code-proxy/ui";
-import { Checkbox } from "@code-proxy/ui";
-import { ConfirmModal } from "@code-proxy/ui";
-import { TextInput } from "@code-proxy/ui";
-import { Modal } from "@code-proxy/ui";
-import { SearchableCheckboxMultiSelect } from "@code-proxy/ui";
-import { ScrollArea } from "@code-proxy/ui";
-import { Select } from "@code-proxy/ui";
+import { Button, Callout, Checkbox, COLUMN_WIDTH, ConfirmModal, Modal, ScrollArea, Select } from "@code-proxy/ui";
+import { SearchableCheckboxMultiSelect, surface, TextInput, useToast } from "@code-proxy/ui";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@code-proxy/ui";
-import { useToast } from "@code-proxy/ui";
 import { HoverTooltip, OverflowTooltip, TooltipChip } from "@code-proxy/ui";
 import { DataTable, TABLE_ROW_ACTIONS_COLUMN, TABLE_ROW_ACTIONS_STICKY_END_COLUMN, type DataTableColumn } from "@code-proxy/ui";
 import { Field, InfoTooltip, TooltipHeader, renderChannelTags } from "./fields";
@@ -108,6 +101,7 @@ const EMPTY_ROUTE_DRAFT = (): RoutingPathRouteEntry => ({
 
 export function RoutingConfigEditor({
   title,
+  headerActions,
   values,
   disabled,
   modelGateSupport = NO_ROUTING_CONFIG_SUPPORT,
@@ -119,6 +113,8 @@ export function RoutingConfigEditor({
   onChange,
 }: {
   title?: string;
+  /** Tools shown next to「新增分组」, such as the routing simulator. */
+  headerActions?: ReactNode;
   values: VisualConfigValues;
   disabled?: boolean;
   /** What the backend stores for channel groups: model gates and distributions (routing-config capabilities). */
@@ -1173,10 +1169,13 @@ export function RoutingConfigEditor({
           ) : (
             <span aria-hidden="true" />
           )}
-          <Button variant="primary" size="sm" onClick={openCreateGroup} disabled={disabled}>
-            <Plus size={14} />
-            {t("channel_groups_page.add_group")}
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            {headerActions}
+            <Button variant="primary" size="sm" onClick={openCreateGroup} disabled={disabled}>
+              <Plus size={14} />
+              {t("channel_groups_page.add_group")}
+            </Button>
+          </div>
         </div>
 
         <DataTable<RoutingChannelGroupEntry>

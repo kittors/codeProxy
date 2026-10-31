@@ -52,6 +52,7 @@ describe("readRoutingConfigSupport", () => {
       channelGroupFirstTokenTimeout: false,
       channelGroupBusyWait: false,
       channelGroupResetAwareDistribution: false,
+      routingSimulation: false,
     });
   });
 
@@ -81,6 +82,19 @@ describe("readRoutingConfigSupport", () => {
     expect(
       readRoutingConfigSupport({ capabilities: { "channel-group-distribution-reset-aware": "true" } })
         .channelGroupResetAwareDistribution,
+    ).toBe(false);
+  });
+
+  // An older backend has no /routing-simulation route: the panel would offer a
+  // tool that answers 404.
+  test("offers the routing simulator only when the backend says so", () => {
+    expect(readRoutingConfigSupport({ capabilities: { "routing-simulation": true } })).toEqual({
+      ...NO_ROUTING_CONFIG_SUPPORT,
+      routingSimulation: true,
+    });
+    expect(
+      readRoutingConfigSupport({ capabilities: { "routing-simulation": "true" } })
+        .routingSimulation,
     ).toBe(false);
   });
 });
