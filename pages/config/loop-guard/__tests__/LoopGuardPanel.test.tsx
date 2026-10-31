@@ -134,6 +134,23 @@ describe("LoopGuardPanel (the tenant's loop protection)", () => {
     expect(screen.getByRole("textbox", { name: "Lines compared" })).toHaveValue("128");
   });
 
+  test("after a save the panel shows what the server stored, not what was typed", async () => {
+    // Another administrator turned the tool check on while this one saved the reply check.
+    mocks.putTenant.mockResolvedValue(
+      view({
+        reply: { enabled: true, window: 128, max_distinct: 0 },
+        tool: { enabled: true, repeats: 5 },
+      }),
+    );
+    renderPanel(view());
+    await userEvent.click(replySwitch());
+    await userEvent.click(saveButton());
+
+    await waitFor(() => expect(toolSwitch()).toBeChecked());
+    expect(screen.getByRole("textbox", { name: "Identical turns in a row" })).toHaveValue("5");
+    expect(saveButton()).toBeDisabled();
+  });
+
   test("the tool check is saved on its own terms", async () => {
     renderPanel(view());
     await userEvent.click(toolSwitch());

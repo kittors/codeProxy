@@ -298,6 +298,47 @@ describe("the loop protection section of the API key dialog", () => {
     expect(mocks.putKey).toHaveBeenCalledTimes(1);
   });
 
+  test("after a save the section shows what the server stored, not what was typed", async () => {
+    // Someone else changed this key in the meantime: the answer is the truth.
+    mocks.putKey.mockResolvedValue(
+      keyView({ reply: { enabled: true, window: 512, max_distinct: 0 } }),
+    );
+    render(<Harness />);
+    await screen.findByRole("heading", { name: "Loop protection" });
+    await choose(replyMode(), "Off for this key");
+
+    await userEvent.click(screen.getByRole("button", { name: "save override" }));
+
+    await waitFor(() => expect(replyMode()).toHaveTextContent("On for this key"));
+    expect(screen.getByRole("textbox", { name: "Lines compared" })).toHaveValue("512");
+  });
+
+  test("the empty boxes show what the tenant uses, and only then the built-in default", async () => {
+    mocks.getKey.mockResolvedValue(
+      keyView({
+        reply: { enabled: true, window: 0, max_distinct: 0 },
+        tenant: {
+          reply: { enabled: true, window: 128, max_distinct: 12 },
+          tool: { enabled: true, repeats: 6 },
+        },
+      }),
+    );
+    render(<Harness />);
+    await screen.findByRole("heading", { name: "Loop protection" });
+    expect(screen.getByRole("textbox", { name: "Lines compared" })).toHaveAttribute(
+      "placeholder",
+      "128",
+    );
+    expect(screen.getByRole("textbox", { name: "Most different lines" })).toHaveAttribute(
+      "placeholder",
+      "12",
+    );
+    expect(screen.getByRole("textbox", { name: "Identical turns in a row" })).toHaveAttribute(
+      "placeholder",
+      "6",
+    );
+  });
+
   test("a gateway without a database shows the reason and locks the controls", async () => {
     mocks.getKey.mockResolvedValue(keyView({ persistent: false }));
     render(<Harness />);

@@ -191,6 +191,18 @@ describe("the PUT body", () => {
     });
   });
 
+  test("every threshold that was filled is written, the distinct limit included", () => {
+    expect(
+      loopGuardWriteOf(
+        draft({ replyWindow: "128", replyMaxDistinct: "16", toolRepeats: "5" }),
+        "tenant",
+      ),
+    ).toEqual({
+      reply: { enabled: true, window: 128, max_distinct: 16 },
+      tool: { enabled: true, repeats: 5 },
+    });
+  });
+
   test("a check that is off is stored as off alone, so no invisible old threshold stays behind", () => {
     expect(
       loopGuardWriteOf(
@@ -253,14 +265,27 @@ describe("comparing drafts and the limits", () => {
     expect(loopGuardDraftsEqual(draft(), draft({ toolMode: "off" }))).toBe(false);
   });
 
+  test("every box is compared on its trimmed text", () => {
+    for (const field of ["replyWindow", "replyMaxDistinct", "toolRepeats"] as const) {
+      expect(loopGuardDraftsEqual(draft({ [field]: "5" }), draft({ [field]: " 5 " })), field).toBe(
+        true,
+      );
+      expect(loopGuardDraftsEqual(draft({ [field]: "5" }), draft({ [field]: "6" })), field).toBe(
+        false,
+      );
+    }
+  });
+
   test("the limit of most different lines is a share of the window, clamped to the window bounds", () => {
     expect(maxDistinctFor(256, INFO)).toBe(64);
     expect(maxDistinctFor(10, INFO)).toBe(16);
     expect(maxDistinctFor(100000, INFO)).toBe(512);
     expect(maxDistinctFor(130, INFO)).toBe(32);
-    // A backend that reports no share leaves only the window itself as the limit.
-    expect(
-      maxDistinctFor(256, { bounds: { ...INFO.bounds, reply_distinct_window_share: 0 } }),
-    ).toBe(256);
+    // A backend that reports no share leaves only the window itself as the limit...
+    const noShare = { bounds: { ...INFO.bounds, reply_distinct_window_share: 0 } };
+    expect(maxDistinctFor(256, noShare)).toBe(256);
+    // ...still held to the backend's window bounds first.
+    expect(maxDistinctFor(100000, noShare)).toBe(2048);
+    expect(maxDistinctFor(10, noShare)).toBe(64);
   });
 });

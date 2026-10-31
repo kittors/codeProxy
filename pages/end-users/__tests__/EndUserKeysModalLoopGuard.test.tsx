@@ -311,6 +311,10 @@ describe("a portal account's key editor and its loop protection", () => {
     await userEvent.click(within(editor).getByRole("button", { name: "Save" }));
 
     expect(await within(editor).findByText("database is read-only")).toBeInTheDocument();
+    // From any section the navigation says where the problem is.
+    expect(within(editor).getByRole("tab", { name: /Loop protection/ })).toHaveAccessibleName(
+      /This section needs changes/,
+    );
     expect(mocks.updateKey).not.toHaveBeenCalled();
     expect(screen.getByRole("dialog", { name: /Edit Key quota/ })).toBeInTheDocument();
     // The choice is still there to retry.
