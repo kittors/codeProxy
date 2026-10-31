@@ -6,6 +6,7 @@ import { useAuth } from "@app/providers/AuthProvider";
 import { ActivityHeatmapCard, FlowSankeyCard } from "./components/FlowHeatmapCards";
 import { FailureCard } from "./components/FailureCard";
 import { HealthCard } from "./components/HealthCard";
+import { InFlightCard } from "./components/InFlightCard";
 import { LatencyCard } from "./components/LatencyCard";
 import { LivePulseCard } from "./components/LivePulseCard";
 import { MetricTiles } from "./components/MetricTiles";
@@ -16,6 +17,7 @@ import {
   ModelLeaderboardCard,
 } from "./components/RankingCards";
 import { TrafficTrendCard } from "./components/TrafficTrendCard";
+import { useMonitorInFlight } from "./hooks/useMonitorInFlight";
 import { useMonitorOverview } from "./hooks/useMonitorOverview";
 import { useMonitorQueryState } from "./hooks/useMonitorQueryState";
 import { useMonitorRealtime } from "./hooks/useMonitorRealtime";
@@ -43,6 +45,10 @@ export function MonitorPage() {
   const realtime = useMonitorRealtime(
     { consumers: query.consumers, models: query.models, channels: query.channels },
     !legacy,
+  );
+  // 面板跟随最新发布、不跟随后端：只有后端在概览里声明了在途列表，才去取、才显示这张卡。
+  const inFlight = useMonitorInFlight(
+    !legacy && data.overview?.capabilities.inFlightRequests === true,
   );
 
   // 旧后端只能按天聚合：地址栏里若是分钟 / 小时级范围，切到「今天」。
@@ -104,6 +110,15 @@ export function MonitorPage() {
               />
             </section>
           </Rise>
+          {inFlight.unavailable ? null : (
+            <Rise index={1}>
+              <InFlightCard
+                inFlight={inFlight.inFlight}
+                receivedAt={inFlight.receivedAt}
+                error={inFlight.error}
+              />
+            </Rise>
+          )}
           <Rise index={1}>
             <div className={`transition-opacity duration-200 ${switching ? "opacity-60" : ""}`}>
               <MetricTiles overview={overview} legacy={legacy} isDark={isDark} />

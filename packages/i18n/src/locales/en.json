@@ -2469,7 +2469,36 @@
     "auto_refresh_short_0": "Off",
     "auto_refresh_short_30": "30s",
     "auto_refresh_short_60": "1 min",
-    "auto_refresh_short_300": "5 min"
+    "auto_refresh_short_300": "5 min",
+    "in_flight": {
+      "title": "Requests in flight",
+      "note_one": "{{count}} request on this node",
+      "note_other": "{{count}} requests on this node",
+      "note_listed": "The oldest {{shown}} of {{total}} on this node",
+      "load_failed": "Could not load the requests in flight",
+      "empty": "Nothing in flight right now",
+      "empty_hint": "Requests show up here while they are being served, with the stage each one is in.",
+      "col_started": "Started",
+      "col_stage": "Stage",
+      "col_request": "Request",
+      "col_account": "Account",
+      "col_key": "Key",
+      "elapsed": "{{duration}} so far",
+      "in_stage": "{{duration}} in this stage",
+      "stage": {
+        "preparing": "Preparing",
+        "queued": "Queued for a slot",
+        "waiting": "Waiting for an account",
+        "upstream": "Waiting for upstream",
+        "first_token": "Waiting for first token",
+        "streaming": "Streaming"
+      },
+      "stream": "stream",
+      "slow_hint": "In this stage for over 15 seconds",
+      "attempt": "Attempt {{attempt}}",
+      "group": "Group {{group}}",
+      "no_account": "Not placed on an account yet"
+    }
   },
   "shell": {
     "console": "Console",
@@ -5255,7 +5284,97 @@
     "role_thinking": "Thinking",
     "role_tool_use": "Tool use",
     "role_message": "Message",
-    "details_only_desc": "Request body storage is off, so only the URL, headers and status of this request are available."
+    "details_only_desc": "Request body storage is off, so only the URL, headers and status of this request are available.",
+    "route_trace": {
+      "title": "Route timeline",
+      "badge_attempts_one": "{{count}} attempt",
+      "badge_attempts_other": "{{count}} attempts",
+      "badge_pinned": "Bound to one account",
+      "lead": {
+        "served_first": "Served by {{account}} on the first attempt.",
+        "served_after_one": "Served by {{account}} on attempt {{attempt}}, after {{count}} failed attempt.",
+        "served_after_other": "Served by {{account}} on attempt {{attempt}}, after {{count}} failed attempts.",
+        "failed": "Attempt {{attempt}} on {{account}} failed: {{failure}}.",
+        "client_left_attempt": "The client left during attempt {{attempt}} on {{account}}.",
+        "client_left_queue": "The client left while the request waited for a free slot.",
+        "client_left_wait": "The client left while the request waited for an account to recover.",
+        "running": "Attempt {{attempt}} on {{account}} was still running when this record was written.",
+        "queue_gave_up": "The request waited {{duration}} for a free slot, then gave up.",
+        "no_account": "No account could take the request."
+      },
+      "account_state": {
+        "paused_until": "{{account}} is paused for {{remaining}}, until {{time}}.",
+        "paused_no_end": "{{account}} is paused until a probe or an operator brings it back.",
+        "model_disabled": "The model is now disabled on {{account}}."
+      },
+      "next": {
+        "moved_on": "The request moved on to {{account}}.",
+        "queued": "The request then waited for a free slot.",
+        "waiting": "The request then waited about {{duration}} before trying again.",
+        "waiting_retry": "Per the request-retry settings, the request then waited about {{duration}} before trying again.",
+        "waiting_busy": "The channel group waits while every account is busy: the request then waited about {{duration}} for one to recover.",
+        "exhausted": "No other account could take the request.",
+        "not_retried_pinned": "It was not tried on another account: the request is bound to this one.",
+        "not_retried_request": "It was not tried on another account: the upstream refused the request itself."
+      },
+      "exhausted_detail": {
+        "earliest": "The first account is back at {{time}}.",
+        "retry_after": "The client was told to retry in {{duration}}."
+      },
+      "cause": {
+        "request_invalid": "Request rejected as invalid",
+        "content_policy": "Blocked by content policy",
+        "first_token_timeout": "No first token in time",
+        "stream_incomplete": "Stream ended before completing",
+        "network_error": "Network error"
+      },
+      "cause_unknown": "cause unknown",
+      "failure_with_status": "{{cause}} ({{status}})",
+      "outcome": {
+        "success": "Succeeded",
+        "failed": "Failed",
+        "canceled": "Client left",
+        "running": "In progress"
+      },
+      "step": {
+        "attempt": "Attempt {{attempt}}",
+        "skip": "Skipped",
+        "queue": "Queued for a free slot",
+        "wait": "Waited",
+        "exhausted": "No account available"
+      },
+      "skip_reason": {
+        "saturated": "at its concurrency limit"
+      },
+      "queue_accounts_one": "{{count}} busy account",
+      "queue_accounts_other": "{{count}} busy accounts",
+      "queue_granted": "A slot freed up on {{account}}",
+      "queue_gave_up": "Gave up waiting",
+      "wait_kind": {
+        "request-retry": "Request retry",
+        "busy-wait": "Group busy wait"
+      },
+      "wait_planned": "Planned {{duration}}",
+      "first_token": "First token after {{duration}}",
+      "before_first_byte": "Failed before anything reached the client",
+      "optimistic": "Tried while still cooling down (until {{time}}): every account was paused only briefly",
+      "blocked_until": "Paused for {{remaining}}, until {{time}}",
+      "blocked_no_end": "Paused until a probe or an operator brings it back",
+      "model": "Model {{model}}",
+      "group": "Group {{group}}",
+      "until": "until {{time}}",
+      "retry_after": "Retry in {{duration}}",
+      "candidates_title": "Why each account could not take it",
+      "candidates_omitted_one": "And {{count}} more account",
+      "candidates_omitted_other": "And {{count}} more accounts",
+      "state": {
+        "available": "Could have served",
+        "tried": "Already tried",
+        "saturated": "At its concurrency limit"
+      },
+      "omitted_one": "{{count}} step omitted",
+      "omitted_other": "{{count}} steps omitted"
+    }
   },
   "error_detail": {
     "upstream_error": "Error response from upstream API",

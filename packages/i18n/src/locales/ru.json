@@ -2584,7 +2584,38 @@
     "auto_refresh_short_0": "Выкл",
     "auto_refresh_short_30": "30 с",
     "auto_refresh_short_60": "1 мин",
-    "auto_refresh_short_300": "5 мин"
+    "auto_refresh_short_300": "5 мин",
+    "in_flight": {
+      "title": "Запросы в работе",
+      "note_one": "{{count}} запрос на этом узле",
+      "note_few": "{{count}} запроса на этом узле",
+      "note_many": "{{count}} запросов на этом узле",
+      "note_other": "{{count}} запроса на этом узле",
+      "note_listed": "Самые ранние {{shown}} из {{total}} на этом узле",
+      "load_failed": "Не удалось загрузить запросы в работе",
+      "empty": "Сейчас запросов в работе нет",
+      "empty_hint": "Запросы появляются здесь, пока обслуживаются, вместе с этапом, на котором находится каждый.",
+      "col_started": "Начало",
+      "col_stage": "Этап",
+      "col_request": "Запрос",
+      "col_account": "Аккаунт",
+      "col_key": "Ключ",
+      "elapsed": "Идёт {{duration}}",
+      "in_stage": "{{duration}} на этом этапе",
+      "stage": {
+        "preparing": "Подготовка",
+        "queued": "В очереди за слотом",
+        "waiting": "Ждёт аккаунт",
+        "upstream": "Ждёт апстрим",
+        "first_token": "Ждёт первый токен",
+        "streaming": "Передача потока"
+      },
+      "stream": "поток",
+      "slow_hint": "На этом этапе дольше 15 секунд",
+      "attempt": "Попытка {{attempt}}",
+      "group": "Группа {{group}}",
+      "no_account": "Аккаунт ещё не выбран"
+    }
   },
   "shell": {
     "console": "Консоль",
@@ -4360,7 +4391,107 @@
     "role_thinking": "Рассуждения",
     "role_tool_use": "Вызов инструмента",
     "role_message": "Сообщение",
-    "details_only_desc": "Хранение тел запросов выключено, поэтому доступны только адрес, заголовки и статус запроса."
+    "details_only_desc": "Хранение тел запросов выключено, поэтому доступны только адрес, заголовки и статус запроса.",
+    "route_trace": {
+      "title": "Маршрут запроса",
+      "badge_attempts_one": "{{count}} попытка",
+      "badge_attempts_few": "{{count}} попытки",
+      "badge_attempts_many": "{{count}} попыток",
+      "badge_attempts_other": "{{count}} попытки",
+      "badge_pinned": "Привязан к одному аккаунту",
+      "lead": {
+        "served_first": "Обслужен аккаунтом {{account}} с первой попытки.",
+        "served_after_one": "Обслужен аккаунтом {{account}} с попытки {{attempt}}, после {{count}} неудачной попытки.",
+        "served_after_few": "Обслужен аккаунтом {{account}} с попытки {{attempt}}, после {{count}} неудачных попыток.",
+        "served_after_many": "Обслужен аккаунтом {{account}} с попытки {{attempt}}, после {{count}} неудачных попыток.",
+        "served_after_other": "Обслужен аккаунтом {{account}} с попытки {{attempt}}, после {{count}} неудачной попытки.",
+        "failed": "Попытка {{attempt}} на {{account}} не удалась: {{failure}}.",
+        "client_left_attempt": "Клиент отключился во время попытки {{attempt}} на {{account}}.",
+        "client_left_queue": "Клиент отключился, пока запрос ждал свободного слота.",
+        "client_left_wait": "Клиент отключился, пока запрос ждал восстановления аккаунта.",
+        "running": "Когда писалась эта запись, попытка {{attempt}} на {{account}} ещё шла.",
+        "queue_gave_up": "Запрос ждал свободного слота {{duration}} и перестал ждать.",
+        "no_account": "Ни один аккаунт не смог принять запрос."
+      },
+      "account_state": {
+        "paused_until": "{{account}} приостановлен на {{remaining}}, до {{time}}.",
+        "paused_no_end": "{{account}} приостановлен, пока его не вернёт проверка или оператор.",
+        "model_disabled": "Модель теперь отключена на {{account}}."
+      },
+      "next": {
+        "moved_on": "Запрос перешёл на {{account}}.",
+        "queued": "Затем запрос встал в очередь за свободным слотом.",
+        "waiting": "Затем запрос подождал около {{duration}} и попробовал снова.",
+        "waiting_retry": "По настройкам повтора запросов запрос затем подождал около {{duration}} и попробовал снова.",
+        "waiting_busy": "Группа ждёт, пока все аккаунты заняты: запрос затем подождал около {{duration}}, пока один из них освободится.",
+        "exhausted": "Ни один другой аккаунт не смог принять запрос.",
+        "not_retried_pinned": "На другом аккаунте не повторяли: запрос привязан к этому.",
+        "not_retried_request": "На другом аккаунте не повторяли: апстрим отклонил сам запрос."
+      },
+      "exhausted_detail": {
+        "earliest": "Первый аккаунт вернётся в {{time}}.",
+        "retry_after": "Клиенту сказали повторить через {{duration}}."
+      },
+      "cause": {
+        "request_invalid": "Запрос отклонён как некорректный",
+        "content_policy": "Заблокирован политикой контента",
+        "first_token_timeout": "Первый токен не пришёл вовремя",
+        "stream_incomplete": "Поток оборвался до завершения",
+        "network_error": "Сетевая ошибка"
+      },
+      "cause_unknown": "причина неизвестна",
+      "failure_with_status": "{{cause}} ({{status}})",
+      "outcome": {
+        "success": "Успешно",
+        "failed": "Ошибка",
+        "canceled": "Клиент отключился",
+        "running": "Выполняется"
+      },
+      "step": {
+        "attempt": "Попытка {{attempt}}",
+        "skip": "Пропущен",
+        "queue": "Очередь за свободным слотом",
+        "wait": "Ожидание",
+        "exhausted": "Нет доступных аккаунтов"
+      },
+      "skip_reason": {
+        "saturated": "достигнут лимит параллельных запросов"
+      },
+      "queue_accounts_one": "{{count}} занятый аккаунт",
+      "queue_accounts_few": "{{count}} занятых аккаунта",
+      "queue_accounts_many": "{{count}} занятых аккаунтов",
+      "queue_accounts_other": "{{count}} занятого аккаунта",
+      "queue_granted": "Освободился слот на {{account}}",
+      "queue_gave_up": "Ожидание прекращено",
+      "wait_kind": {
+        "request-retry": "Повтор запроса",
+        "busy-wait": "Ожидание группы"
+      },
+      "wait_planned": "Запланировано {{duration}}",
+      "first_token": "Первый токен через {{duration}}",
+      "before_first_byte": "Ошибка до того, как клиент что-либо получил",
+      "optimistic": "Попробовали, пока аккаунт ещё остывал (до {{time}}): все аккаунты были приостановлены лишь ненадолго",
+      "blocked_until": "Приостановлен на {{remaining}}, до {{time}}",
+      "blocked_no_end": "Приостановлен, пока его не вернёт проверка или оператор",
+      "model": "Модель {{model}}",
+      "group": "Группа {{group}}",
+      "until": "до {{time}}",
+      "retry_after": "Повторить через {{duration}}",
+      "candidates_title": "Почему каждый аккаунт не смог принять запрос",
+      "candidates_omitted_one": "И ещё {{count}} аккаунт",
+      "candidates_omitted_few": "И ещё {{count}} аккаунта",
+      "candidates_omitted_many": "И ещё {{count}} аккаунтов",
+      "candidates_omitted_other": "И ещё {{count}} аккаунта",
+      "state": {
+        "available": "Мог бы обслужить",
+        "tried": "Уже пробовали",
+        "saturated": "Достигнут лимит параллельных запросов"
+      },
+      "omitted_one": "Пропущен {{count}} шаг",
+      "omitted_few": "Пропущено {{count}} шага",
+      "omitted_many": "Пропущено {{count}} шагов",
+      "omitted_other": "Пропущено {{count}} шага"
+    }
   },
   "system_page": {
     "title": "Информация о системе",

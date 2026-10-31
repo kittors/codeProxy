@@ -160,4 +160,76 @@ describe("usageMonitorApi", () => {
     expect(realtime.peak_tpm).toBe(0);
     expect(realtime.last_5m).toMatchObject({ requests: 9, success_rate: 100 });
   });
+
+  test("reads the in-flight capability only when the backend declares it", async () => {
+    const { normalizeMonitorOverview } = await import("../usage-monitor");
+    expect(normalizeMonitorOverview({}).capabilities).toEqual({ inFlightRequests: false });
+    expect(
+      normalizeMonitorOverview({ capabilities: { "in-flight-requests": "yes" } }).capabilities,
+    ).toEqual({ inFlightRequests: false });
+    expect(
+      normalizeMonitorOverview({ capabilities: { "in-flight-requests": true } }).capabilities,
+    ).toEqual({ inFlightRequests: true });
+  });
+
+  test("fetches and normalises the requests in flight", async () => {
+    const { usageMonitorApi } = await import("../usage-monitor");
+    getMock.mockResolvedValue({
+      requests: [
+        {
+          request_id: "req-1",
+          method: "POST",
+          path: "/v1/messages",
+          started_at: "2026-11-01T05:00:00.123+08:00",
+          elapsed_ms: 18_250,
+          stage: "first_token",
+          stage_elapsed_ms: "16000",
+          model: "claude-sonnet-5-5",
+          stream: true,
+          attempt: 2,
+          account: { auth_id: "claude-a.json", label: "Team A", provider: "claude" },
+          api_key_id: "key-7",
+          api_key_name: "CI",
+        },
+        // A request the scheduler has not placed yet, with fields an older build leaves out.
+        { request_id: "req-2", stage: "preparing", account: { label: "no id" } },
+        "garbage",
+      ],
+      total: 1,
+      generated_at: "2026-11-01T05:00:18+08:00",
+    });
+    const inFlight = await usageMonitorApi.getInFlight();
+    expect(getMock).toHaveBeenCalledWith("/usage/monitor/in-flight", { signal: undefined });
+    // An entry that is not an object is dropped; total is never below what is listed.
+    expect(inFlight.requests).toHaveLength(2);
+    expect(inFlight.total).toBe(2);
+    expect(inFlight.requests[0]).toEqual({
+      request_id: "req-1",
+      method: "POST",
+      path: "/v1/messages",
+      started_at: "2026-11-01T05:00:00.123+08:00",
+      elapsed_ms: 18_250,
+      stage: "first_token",
+      stage_elapsed_ms: 16_000,
+      model: "claude-sonnet-5-5",
+      stream: true,
+      attempt: 2,
+      account: {
+        auth_id: "claude-a.json",
+        label: "Team A",
+        provider: "claude",
+        group: "",
+        model: "",
+      },
+      api_key_id: "key-7",
+      api_key_name: "CI",
+    });
+    expect(inFlight.requests[1]).toMatchObject({
+      request_id: "req-2",
+      stage: "preparing",
+      account: null,
+      attempt: 0,
+      stream: false,
+    });
+  });
 });
