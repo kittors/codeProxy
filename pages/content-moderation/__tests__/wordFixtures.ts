@@ -16,6 +16,8 @@ export const WORD_LIMITS: WordPolicyLimits = {
   max_regex: 50,
   max_keyword_chars: 128,
   max_regex_bytes: 512,
+  max_regex_program: 500,
+  max_regex_program_total: 2000,
   max_note_chars: 200,
   max_replacement_chars: 64,
   max_block_message_chars: 500,
@@ -61,6 +63,9 @@ export const wordView = (
   version: 3,
   rules: [],
   effective: WORD_DEFAULTS,
+  rule_count: patch.rules?.length ?? 0,
+  rules_hidden: false,
+  unbounded_regex_ids: [],
   can_edit: true,
   ...patch,
 });

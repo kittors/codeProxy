@@ -17,6 +17,8 @@ const TEXT_BOX = `max-h-52 overflow-auto whitespace-pre-wrap break-words px-3 py
  * 敏感词测试的结果：先给结论，再给依据——高亮标出原文里每一处命中，
  * 说明哪些命中是规范化（大小写、全角、零宽字符、空白、繁简体）之后才对上的，
  * 并给出上游实际会收到的文本，以及开了回复过滤时同样的文本出现在回复里会变成什么。
+ *
+ * 平台的词表不给租户看：来自平台规则的命中不带规则文本（pattern_hidden），这里只说它是平台的规则。
  */
 export function WordTestResult({ input, result }: WordTestResultProps) {
   const { t } = useTranslation();
@@ -65,7 +67,15 @@ export function WordTestResult({ input, result }: WordTestResultProps) {
             <p className="text-sm text-ink-2">{result.block_message}</p>
           ) : null}
           {result.action === "log" ? <p>{t("content_moderation.words.test_logged_hint")}</p> : null}
+          {/* 替换挪不动的位置（对象的键、字符串里嵌套的 JSON……）时，放过去就等于没拦，所以整条拒绝。 */}
+          {result.reason === "unrewritable" || result.reason === "rewrite_invalid" ? (
+            <p>{t(`content_moderation.words.test_reason_${result.reason}`)}</p>
+          ) : null}
+          {result.field ? (
+            <p className="break-all">{t("content_moderation.words.test_reason_field", { field: result.field })}</p>
+          ) : null}
           {layers ? <p>{t("content_moderation.words.test_layers", { layers })}</p> : null}
+          {result.regex_skipped ? <p>{t("content_moderation.words.test_regex_skipped")}</p> : null}
         </div>
       </Callout>
 
@@ -147,7 +157,11 @@ export function WordTestResult({ input, result }: WordTestResultProps) {
                       <span className="mr-1.5 text-ink-3">
                         {t(`content_moderation.words.kind_${match.kind}`)}
                       </span>
-                      <span className="font-mono text-ink-2">{match.pattern}</span>
+                      {match.pattern_hidden ? (
+                        <span className="text-ink-3">{t("content_moderation.words.pattern_hidden")}</span>
+                      ) : (
+                        <span className="font-mono text-ink-2">{match.pattern}</span>
+                      )}
                     </td>
                     <td className="px-3 py-2 text-ink-2">
                       {t(`content_moderation.words.action_${match.action}`)}

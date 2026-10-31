@@ -35,18 +35,15 @@ export function useWordPolicyEditor(scope: WordPolicyScope, keyId: string) {
   // Key 层要先选了一把 Key 才有策略可编辑。
   const selected = scope !== "key" || keyId !== "";
 
-  const adopt = useCallback(
-    (next: WordPolicyView) => {
-      const nextDraft = draftFromView(next, scope);
-      setView(next);
-      setDraft(nextDraft);
-      setBaseline(JSON.stringify(nextDraft));
-      setProblems(null);
-      setSaveError("");
-      setConflict(false);
-    },
-    [scope],
-  );
+  const adopt = useCallback((next: WordPolicyView) => {
+    const nextDraft = draftFromView(next);
+    setView(next);
+    setDraft(nextDraft);
+    setBaseline(JSON.stringify(nextDraft));
+    setProblems(null);
+    setSaveError("");
+    setConflict(false);
+  }, []);
 
   const load = useCallback(async () => {
     const mine = ++sequence.current;

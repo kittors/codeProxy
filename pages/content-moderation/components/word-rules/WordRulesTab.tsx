@@ -25,8 +25,15 @@ import type { WordTestTarget } from "../ModerationTestModal";
 import { WordImportModal } from "./WordImportModal";
 import { WordPolicySettings } from "./WordPolicySettings";
 import { WordRuleList } from "./WordRuleList";
-import { WordRuleModal, type WordRuleFields } from "./WordRuleModal";
-import { createDraftRule, inputFromDraft, type DraftRule } from "./wordPolicyModel";
+import { WordRuleModal } from "./WordRuleModal";
+import {
+  applyRuleFields,
+  createDraftRule,
+  inputFromDraft,
+  unboundedRegexKeys,
+  type DraftRule,
+  type WordRuleFields,
+} from "./wordPolicyModel";
 import { useWordPolicyEditor } from "./useWordPolicyEditor";
 
 export interface WordRulesTabProps {
@@ -34,12 +41,17 @@ export interface WordRulesTabProps {
   canTest: boolean;
   /** 测试弹窗由页面持有（和审核配置的测试共用同一个弹窗）。 */
   onTest: (target: WordTestTarget) => void;
+  /**
+   * 草稿有没有未保存的改动。切到页面的另一个标签会卸载这一页、丢掉草稿，所以页面要知道，
+   * 并在那之前确认。卸载时会再报一次 false。
+   */
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
-interface PendingSwitch {
-  scope: WordPolicyScope;
-  keyId: string;
-}
+/** 有未保存改动时被拦下、等用户确认的操作：换层级 / 换 Key，或重新载入（刷新）。 */
+type PendingAction =
+  | { type: "switch"; scope: WordPolicyScope; keyId: string }
+  | { type: "reload" };
 
 const SCOPES: readonly WordPolicyScope[] = ["platform", "tenant", "key"];
 
@@ -49,11 +61,12 @@ const messageOf = (error: unknown, fallback: string) =>
 /**
  * 「敏感词规则」：平台（所有租户共用，租户只读）、租户默认、单把 API Key 的覆盖，三层各一份策略。
  *
- * 改动先落在本地草稿里，点「保存」才整份提交；切换层级或 Key 时有未保存的改动会先确认，
+ * 改动先落在本地草稿里，点「保存」才整份提交；切换层级或 Key、点「刷新」、切到页面的另一个标签时，
+ * 有未保存的改动都会先确认（关闭或刷新浏览器标签页则由浏览器自己的提示拦下）。
  * 保存被拒（规则不合法）时在对应的行上标出原因，别处同时改过（版本冲突）则提示重新载入。
  * 只有后端声明支持（`capabilities.word_guard`）时页面才会显示这一页——旧后端没有这些接口。
  */
-export function WordRulesTab({ canWrite, canTest, onTest }: WordRulesTabProps) {
+export function WordRulesTab({ canWrite, canTest, onTest, onDirtyChange }: WordRulesTabProps) {
   const { t } = useTranslation();
   const { notify } = useToast();
   const [overview, setOverview] = useState<WordPolicyOverview | null>(null);
@@ -68,9 +81,25 @@ export function WordRulesTab({ canWrite, canTest, onTest }: WordRulesTabProps) {
   });
   const [importOpen, setImportOpen] = useState(false);
   const [removeOpen, setRemoveOpen] = useState(false);
-  const [pending, setPending] = useState<PendingSwitch | null>(null);
+  const [pending, setPending] = useState<PendingAction | null>(null);
   const editor = useWordPolicyEditor(scope, keyId);
   const { view, draft } = editor;
+
+  useEffect(() => {
+    onDirtyChange?.(editor.dirty);
+    return () => onDirtyChange?.(false);
+  }, [editor.dirty, onDirtyChange]);
+
+  // 关闭或刷新浏览器标签页同样会丢掉草稿：交给浏览器的离开确认（和配置页一致）。
+  useEffect(() => {
+    if (!editor.dirty) return;
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [editor.dirty]);
 
   const loadOverview = useCallback(async () => {
     try {
@@ -143,18 +172,39 @@ export function WordRulesTab({ canWrite, canTest, onTest }: WordRulesTabProps) {
     return options;
   }, [keyEntries, overview?.keys, t]);
 
-  const requestSwitch = (next: PendingSwitch) => {
+  const requestSwitch = (next: { scope: WordPolicyScope; keyId: string }) => {
     if (next.scope === scope && next.keyId === keyId) return;
     if (editor.dirty) {
-      setPending(next);
+      setPending({ type: "switch", ...next });
       return;
     }
     setScope(next.scope);
     setKeyId(next.keyId);
   };
 
+  // 重新载入会用服务端的版本覆盖草稿，和换层级一样要先确认。
+  const reloadAll = () => {
+    void loadOverview();
+    void editor.reload();
+  };
+  const requestReload = () => {
+    if (editor.dirty) {
+      setPending({ type: "reload" });
+      return;
+    }
+    reloadAll();
+  };
+
   const readOnly = !canWrite || !view?.can_edit;
   const limits = overview?.limits;
+
+  // 回复过滤开着时，匹配长度不限的正则在流式回复里可能漏掉跨两个事件的匹配：在规则上标出来。
+  // 过滤没开，或者规则内容不给看（平台词表对租户隐藏）时没有可标的。
+  const replyFilterOn = draft && view ? (draft.replyFilter ?? view.effective.reply_filter) : false;
+  const unbounded = useMemo(
+    () => (view && draft && replyFilterOn ? unboundedRegexKeys(view, draft) : new Set<string>()),
+    [draft, replyFilterOn, view],
+  );
 
   // 上次保存被拒时，把原因按位置对到草稿里的规则上。
   const problemByRule = useMemo(() => {
@@ -194,11 +244,7 @@ export function WordRulesTab({ canWrite, canTest, onTest }: WordRulesTabProps) {
     const target = ruleModal.rule;
     editor.updateRules((rules) =>
       target
-        ? rules.map((rule) =>
-            rule.key === target.key
-              ? { ...rule, ...fields, note: fields.note === "" ? undefined : fields.note }
-              : rule,
-          )
+        ? rules.map((rule) => (rule.key === target.key ? applyRuleFields(rule, fields) : rule))
         : [createDraftRule(fields), ...rules],
     );
     setRuleModal({ open: false, rule: null });
@@ -228,10 +274,7 @@ export function WordRulesTab({ canWrite, canTest, onTest }: WordRulesTabProps) {
             variant="secondary"
             size="sm"
             disabled={editor.loading || editor.saving}
-            onClick={() => {
-              void loadOverview();
-              void editor.reload();
-            }}
+            onClick={requestReload}
           >
             <RefreshCw size={14} className={editor.loading ? "animate-spin" : ""} />
             {t("common.refresh")}
@@ -254,6 +297,16 @@ export function WordRulesTab({ canWrite, canTest, onTest }: WordRulesTabProps) {
           <SkeletonLines rows={4} />
         ) : (
           <div className="space-y-4">
+            {/* 运营方用 CLIRELAY_WORD_GUARD 关掉了检查：这里存的规则不会生效，别让人以为在拦。 */}
+            {overview.guard_enabled === false ? (
+              <Callout
+                tone="warning"
+                role="status"
+                title={t("content_moderation.words.guard_off_title")}
+              >
+                {t("content_moderation.words.guard_off_description")}
+              </Callout>
+            ) : null}
             <div className="flex flex-wrap items-center gap-3">
               <SegmentedControl<WordPolicyScope>
                 value={scope}
@@ -427,26 +480,40 @@ export function WordRulesTab({ canWrite, canTest, onTest }: WordRulesTabProps) {
                   view={view}
                   limits={limits}
                   readOnly={readOnly}
+                  unboundedRegex={unbounded.size}
                   onChange={editor.update}
                 />
 
-                <WordRuleList
-                  rules={draft.rules}
-                  limits={limits}
-                  readOnly={readOnly}
-                  problems={problemByRule}
-                  onAdd={() => setRuleModal({ open: true, rule: null })}
-                  onImport={() => setImportOpen(true)}
-                  onEdit={(rule) => setRuleModal({ open: true, rule })}
-                  onToggle={(rule, enabled) =>
-                    editor.updateRules((rules) =>
-                      rules.map((item) => (item.key === rule.key ? { ...item, enabled } : item)),
-                    )
-                  }
-                  onDelete={(rule) =>
-                    editor.updateRules((rules) => rules.filter((item) => item.key !== rule.key))
-                  }
-                />
+                {view.rules_hidden ? (
+                  // 平台的词表不给租户看：只说有多少条，免得把空列表读成「平台没设规则」。
+                  <Callout
+                    tone="info"
+                    title={t("content_moderation.words.rules_hidden_title", {
+                      count: view.rule_count,
+                    })}
+                  >
+                    {t("content_moderation.words.rules_hidden_description")}
+                  </Callout>
+                ) : (
+                  <WordRuleList
+                    rules={draft.rules}
+                    limits={limits}
+                    readOnly={readOnly}
+                    problems={problemByRule}
+                    unbounded={unbounded}
+                    onAdd={() => setRuleModal({ open: true, rule: null })}
+                    onImport={() => setImportOpen(true)}
+                    onEdit={(rule) => setRuleModal({ open: true, rule })}
+                    onToggle={(rule, enabled) =>
+                      editor.updateRules((rules) =>
+                        rules.map((item) => (item.key === rule.key ? { ...item, enabled } : item)),
+                      )
+                    }
+                    onDelete={(rule) =>
+                      editor.updateRules((rules) => rules.filter((item) => item.key !== rule.key))
+                    }
+                  />
+                )}
               </div>
             )}
           </div>
@@ -506,14 +573,24 @@ export function WordRulesTab({ canWrite, canTest, onTest }: WordRulesTabProps) {
       <ConfirmModal
         open={pending !== null}
         title={t("content_moderation.words.discard_title")}
-        description={t("content_moderation.words.discard_description")}
-        confirmText={t("content_moderation.words.discard_confirm")}
+        description={
+          pending?.type === "reload"
+            ? t("content_moderation.words.discard_description_reload")
+            : t("content_moderation.words.discard_description")
+        }
+        confirmText={
+          pending?.type === "reload"
+            ? t("content_moderation.words.discard_confirm_reload")
+            : t("content_moderation.words.discard_confirm")
+        }
         variant="warning"
         onClose={() => setPending(null)}
         onConfirm={() => {
-          if (pending) {
+          if (pending?.type === "switch") {
             setScope(pending.scope);
             setKeyId(pending.keyId);
+          } else if (pending?.type === "reload") {
+            reloadAll();
           }
           setPending(null);
         }}

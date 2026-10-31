@@ -160,6 +160,121 @@ describe("testing sensitive-word rules", () => {
     expect(within(dialog).getByText("Showing the first 1 of 25 hits.")).toBeInTheDocument();
   });
 
+  test("a hit of the platform's word list names the rule's place, not its word", async () => {
+    const user = userEvent.setup();
+    const input = "a secret b";
+    mocks.words.test.mockResolvedValue({
+      ...base,
+      action: "block",
+      blocked: true,
+      block_message: "Blocked by policy",
+      output: input,
+      match_count: 1,
+      matches: [
+        {
+          layer: "platform",
+          rule_id: "p1",
+          kind: "keyword",
+          // What the server sends a tenant: the word is taken out and the rule says so.
+          pattern: "",
+          pattern_hidden: true,
+          action: "block",
+          source: "messages.0.content",
+          start: 2,
+          end: 8,
+          normalized_only: false,
+        },
+      ],
+    } satisfies WordTestResult);
+    renderPage();
+    const dialog = await openTestDialog(user);
+
+    await user.type(within(dialog).getByLabelText("Test input"), input);
+    await user.click(within(dialog).getByRole("button", { name: "Run test" }));
+
+    const row = (await within(dialog).findAllByRole("row"))[1];
+    expect(row).toHaveTextContent("Platform");
+    expect(row).toHaveTextContent("Platform rule (not shown)");
+    // The tenant's own text is still marked where the platform's rule hit it.
+    const marks = within(dialog).getByTestId("word-test-highlight").querySelectorAll("mark");
+    expect(marks).toHaveLength(1);
+    expect(marks[0]).toHaveTextContent("secret");
+  });
+
+  test("a request refused because a hit cannot be replaced says why, and where it sits", async () => {
+    const user = userEvent.setup();
+    mocks.words.test.mockResolvedValue({
+      ...base,
+      action: "block",
+      blocked: true,
+      reason: "unrewritable",
+      field: "messages[0].content[1].input (an object key)",
+      block_message: "Blocked by policy. The text in messages[0].content[1].input cannot be replaced.",
+      output: "x",
+    } satisfies WordTestResult);
+    renderPage();
+    const dialog = await openTestDialog(user);
+
+    await user.type(within(dialog).getByLabelText("Test input"), "x");
+    await user.click(within(dialog).getByRole("button", { name: "Run test" }));
+
+    expect(await within(dialog).findByText("This request would be blocked")).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(/sits where it cannot be replaced \(an object key, or JSON inside a string\)/),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByText("Where: messages[0].content[1].input (an object key)"),
+    ).toBeInTheDocument();
+  });
+
+  test("says when the regular expressions had to be left out of a very large text", async () => {
+    const user = userEvent.setup();
+    mocks.words.test.mockResolvedValue({ ...base, regex_skipped: true, output: "x" });
+    renderPage();
+    const dialog = await openTestDialog(user);
+
+    await user.type(within(dialog).getByLabelText("Test input"), "x");
+    await user.click(within(dialog).getByRole("button", { name: "Run test" }));
+
+    expect(
+      await within(dialog).findByText(/larger than the regular expressions may work on, so only keywords were checked/),
+    ).toBeInTheDocument();
+  });
+
+  test("explains a dotted underline on a keyword that ignores separators", async () => {
+    const user = userEvent.setup();
+    const input = "a 敏 感 词 b";
+    mocks.words.test.mockResolvedValue({
+      ...base,
+      action: "log",
+      output: input,
+      match_count: 1,
+      matches: [
+        {
+          layer: "tenant",
+          rule_id: "r1",
+          kind: "keyword",
+          pattern: "敏感词",
+          action: "log",
+          source: "messages.0.content",
+          start: 2,
+          end: 7,
+          normalized_only: true,
+        },
+      ],
+    } satisfies WordTestResult);
+    renderPage();
+    const dialog = await openTestDialog(user);
+
+    await user.type(within(dialog).getByLabelText("Test input"), input);
+    await user.click(within(dialog).getByRole("button", { name: "Run test" }));
+
+    const marks = (await within(dialog).findByTestId("word-test-highlight")).querySelectorAll("mark");
+    expect(marks[0]).toHaveTextContent("敏 感 词");
+    expect(marks[0]).toHaveAttribute("data-normalized-only", "true");
+    expect(within(dialog).getByText(/for a keyword that ignores separators/)).toBeInTheDocument();
+  });
+
   test("a text with nothing in it says so, and sends the text exactly as typed", async () => {
     const user = userEvent.setup();
     mocks.words.test.mockResolvedValue({ ...base, output: "  hello  " });

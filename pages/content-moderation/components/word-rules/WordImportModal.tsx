@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FileUp } from "lucide-react";
 import {
-  WORD_VALIDATE_MAX_RULES,
   wordPolicyApi,
   type WordPolicyLimits,
   type WordPolicyScope,
@@ -11,6 +10,7 @@ import {
 import {
   Button,
   Callout,
+  CheckboxField,
   FormField,
   Modal,
   SegmentedControl,
@@ -83,6 +83,7 @@ export function WordImportModal({
   const { t } = useTranslation();
   const fileInput = useRef<HTMLInputElement | null>(null);
   const [kind, setKind] = useState<WordRuleKind>("keyword");
+  const [ignoreSeparators, setIgnoreSeparators] = useState(false);
   const [text, setText] = useState("");
   const [fileName, setFileName] = useState("");
   const [problem, setProblem] = useState("");
@@ -92,6 +93,7 @@ export function WordImportModal({
   useEffect(() => {
     if (!open) return;
     setKind("keyword");
+    setIgnoreSeparators(false);
     setText("");
     setFileName("");
     setProblem("");
@@ -125,23 +127,38 @@ export function WordImportModal({
     if (checking) return;
     setReview(null);
     setProblem("");
-    const parsed = parseRuleFile(text, kind, WORD_VALIDATE_MAX_RULES);
+    // 一次请求最多带一份策略能放下的条数；再多服务端整个拒收，所以在这里先拆文件。
+    const parsed = parseRuleFile(text, kind, limits.max_rules);
     if (parsed.lines.length === 0) {
       setProblem(t("content_moderation.words.import_nothing"));
       return;
     }
     if (parsed.tooMany) {
-      setProblem(t("content_moderation.words.import_too_many", { max: WORD_VALIDATE_MAX_RULES }));
+      setProblem(t("content_moderation.words.import_too_many", { max: limits.max_rules }));
       return;
     }
+    const loose = kind === "keyword" && ignoreSeparators;
     setChecking(true);
     try {
       const result = await wordPolicyApi.validate({
         scope,
         ...(scope === "key" ? { key_id: keyId } : {}),
-        rules: parsed.lines.map((line) => ({ kind, pattern: line.text })),
+        rules: parsed.lines.map((line) => ({
+          kind,
+          pattern: line.text,
+          ...(loose ? { ignore_separators: true } : {}),
+        })),
       });
-      setReview(reviewImport({ lines: parsed.lines, kind, result, draftRules: rules, limits }));
+      setReview(
+        reviewImport({
+          lines: parsed.lines,
+          kind,
+          ignoreSeparators: loose,
+          result,
+          draftRules: rules,
+          limits,
+        }),
+      );
     } catch (error) {
       setProblem(
         error instanceof Error ? error.message : t("content_moderation.words.validate_failed"),
@@ -199,11 +216,26 @@ export function WordImportModal({
             ]}
             onChange={(next) => {
               setKind(next);
+              if (next === "regex") setIgnoreSeparators(false);
               setReview(null);
               setProblem("");
             }}
           />
         </FormField>
+
+        {kind === "keyword" ? (
+          <CheckboxField
+            checked={ignoreSeparators}
+            label={t("content_moderation.words.field_ignore_separators")}
+            description={t("content_moderation.words.import_ignore_separators_hint")}
+            onCheckedChange={(next) => {
+              setIgnoreSeparators(next);
+              // 检查结果是按上一个选择算的，换了就不能再拿它来导入。
+              setReview(null);
+              setProblem("");
+            }}
+          />
+        ) : null}
 
         <FormField
           label={t("content_moderation.words.import_text")}

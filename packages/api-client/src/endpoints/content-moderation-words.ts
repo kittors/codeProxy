@@ -33,6 +33,11 @@ export interface WordRule {
   pattern: string;
   enabled: boolean;
   note?: string;
+  /**
+   * Keywords only: also match when spaces, punctuation or symbols sit between the characters
+   * (敏 感 词, 敏-感-词). Absent means off; a regular expression is refused if it asks for this.
+   */
+  ignore_separators?: boolean;
 }
 
 /** A rule as submitted: the server gives a rule without an id one. */
@@ -42,6 +47,7 @@ export interface WordRuleInput {
   pattern: string;
   enabled: boolean;
   note?: string;
+  ignore_separators?: boolean;
 }
 
 /** What a policy's empty settings resolve to (the defaults, or the tenant policy under a key's). */
@@ -55,10 +61,14 @@ export interface WordSettings {
 }
 
 export interface WordPolicyLimits {
+  /** Also the most rules one request (a save or a validation) may carry. */
   max_rules: number;
   max_regex: number;
   max_keyword_chars: number;
   max_regex_bytes: number;
+  /** How big a regular expression may compile, in instructions: one expression, and all of a policy's. */
+  max_regex_program: number;
+  max_regex_program_total: number;
   max_note_chars: number;
   max_replacement_chars: number;
   max_block_message_chars: number;
@@ -85,6 +95,19 @@ export interface WordPolicyView {
   created_at?: string;
   updated_at?: string;
   effective: WordSettings;
+  /** How many rules the policy has, whether or not `rules` lists them. */
+  rule_count: number;
+  /**
+   * `rules` is left empty because the caller may not read the rules: the platform's word list is
+   * kept from the tenants it applies to, who see its settings and its size.
+   */
+  rules_hidden: boolean;
+  /**
+   * Ids of the enabled regular expressions whose matches can be of any length (`\d+`). A reply that
+   * streams cannot have the start of such a match held back, so a match split between two stream
+   * events can get through.
+   */
+  unbounded_regex_ids: string[];
   /** The caller may change this policy. The platform policy is read-only to everyone but a platform administrator. */
   can_edit: boolean;
   key_name?: string;
@@ -125,6 +148,11 @@ export interface WordKeyPolicyBrief extends Omit<WordPolicyBrief, "exists"> {
 export interface WordPolicyOverview {
   defaults: WordSettings;
   limits: WordPolicyLimits;
+  /**
+   * False when the operator has switched the word guard off on this server (CLIRELAY_WORD_GUARD):
+   * no request is checked, whatever is saved. Absent on a backend that does not say.
+   */
+  guard_enabled?: boolean;
   can_manage_platform: boolean;
   platform: WordPolicyBrief;
   tenant: WordPolicyBrief;
@@ -140,6 +168,13 @@ export interface WordRuleProblem {
   code: string;
   message: string;
 }
+
+/**
+ * Why a request is blocked other than by a hit under the block action: a hit under the replace
+ * action sits where it cannot be replaced (an object key, JSON nested in a string), or the
+ * rewritten body failed its checks. Letting it through would defeat the policy.
+ */
+export type WordBlockReason = "unrewritable" | "rewrite_invalid";
 
 export type WordReviewStatus = "new" | "duplicate" | "existing" | "invalid";
 
@@ -174,13 +209,20 @@ export interface WordTestMatch {
   layer: WordPolicyScope;
   rule_id: string;
   kind: WordRuleKind;
+  /** Empty when `pattern_hidden`. */
   pattern: string;
+  /** The rule belongs to the platform's list, which the caller may not read; only its id is given. */
+  pattern_hidden?: boolean;
   action: WordAction;
   source: string;
   /** Location of the hit in the tested text, in UTF-16 code units (a JavaScript string index). */
   start: number;
   end: number;
-  /** The hit matched only after case, width, zero-width characters, white space or script were normalized. */
+  /**
+   * The text as written differs from what matched: the hit was found only after case, width,
+   * zero-width characters, white space or script were normalized, or, for a keyword that ignores
+   * separators, it has spaces or punctuation inside it that the keyword lacks.
+   */
   normalized_only: boolean;
 }
 
@@ -188,7 +230,12 @@ export interface WordTestResult {
   action: WordVerdictAction;
   blocked: boolean;
   block_message?: string;
-  reason?: string;
+  /** Set when the request is blocked for a reason other than a hit under the block action. */
+  reason?: WordBlockReason | string;
+  /** With reason `unrewritable`: where in the request the text that could not be replaced sits. */
+  field?: string;
+  /** The request was larger than the regular expressions may work on, so only keywords were checked. */
+  regex_skipped?: boolean;
   /** The text as the upstream would receive it. */
   output: string;
   /** The first hits only; match_count counts them all. */
@@ -215,7 +262,8 @@ export interface WordTestRequest {
 export interface WordValidateRequest {
   scope: WordPolicyScope;
   key_id?: string;
-  rules: Array<Pick<WordRuleInput, "kind" | "pattern">>;
+  /** At most `limits.max_rules` of them: a longer list is refused (422 too_many_rules). */
+  rules: Array<Pick<WordRuleInput, "kind" | "pattern" | "ignore_separators">>;
 }
 
 const BASE = "/content-moderation/word-policies";
@@ -249,9 +297,6 @@ export const wordPolicyApi = {
     return apiClient.post<WordTestResult>(`${BASE}/test`, request);
   },
 };
-
-/** The most rules one validate request is judged on; larger files have to be split. */
-export const WORD_VALIDATE_MAX_RULES = 20000;
 
 export interface WordRuleProblems {
   problems: WordRuleProblem[];

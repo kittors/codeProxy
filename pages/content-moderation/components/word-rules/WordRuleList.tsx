@@ -24,6 +24,8 @@ export interface WordRuleListProps {
   readOnly: boolean;
   /** 上次保存被拒时，每条问题规则（按草稿里的 key）对应的原因。 */
   problems: ReadonlyMap<string, string>;
+  /** 匹配长度不限、流式回复里可能漏掉跨事件匹配的正则（草稿里的 key）；回复过滤没开时传空集合。 */
+  unbounded: ReadonlySet<string>;
   onAdd: () => void;
   onImport: () => void;
   onEdit: (rule: DraftRule) => void;
@@ -47,6 +49,31 @@ function KindBadge({ kind }: { kind: WordRuleKind }) {
   );
 }
 
+/** 规则下面的小标签：忽略分隔符、匹配长度不限。 */
+function RuleTag({
+  children,
+  title,
+  warning = false,
+}: {
+  children: string;
+  title?: string;
+  warning?: boolean;
+}) {
+  return (
+    <span
+      title={title}
+      className={[
+        "rounded-full px-2 py-0.5 text-2xs font-medium",
+        warning
+          ? "bg-amber-500/10 text-amber-700 dark:text-amber-300"
+          : "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]",
+      ].join(" ")}
+    >
+      {children}
+    </span>
+  );
+}
+
 /**
  * 规则列表：搜索、按类型筛选、分页（一份策略最多上万条，不能一次全画出来），
  * 行内启停、编辑、删除。所有改动只落在草稿里，保存由上层统一做。
@@ -56,6 +83,7 @@ export function WordRuleList({
   limits,
   readOnly,
   problems,
+  unbounded,
   onAdd,
   onImport,
   onEdit,
@@ -99,6 +127,20 @@ export function WordRuleList({
               <p className="truncate font-mono text-xs text-ink" title={rule.pattern}>
                 {rule.pattern}
               </p>
+              {rule.ignore_separators || unbounded.has(rule.key) ? (
+                <div className="mt-1 flex flex-wrap gap-1.5">
+                  {rule.ignore_separators ? (
+                    <RuleTag title={t("content_moderation.words.badge_ignore_separators_hint")}>
+                      {t("content_moderation.words.badge_ignore_separators")}
+                    </RuleTag>
+                  ) : null}
+                  {unbounded.has(rule.key) ? (
+                    <RuleTag warning title={t("content_moderation.words.badge_unbounded_hint")}>
+                      {t("content_moderation.words.badge_unbounded")}
+                    </RuleTag>
+                  ) : null}
+                </div>
+              ) : null}
               {problem ? (
                 <p role="alert" className="mt-1 text-xs text-rose-600 dark:text-rose-400">
                   {problem}
@@ -159,7 +201,7 @@ export function WordRuleList({
             } satisfies DataTableColumn<DraftRule>,
           ]),
     ],
-    [onDelete, onEdit, onToggle, problems, readOnly, t],
+    [onDelete, onEdit, onToggle, problems, readOnly, t, unbounded],
   );
 
   return (

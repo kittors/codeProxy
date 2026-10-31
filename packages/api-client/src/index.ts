@@ -174,7 +174,6 @@ export type * from "./endpoints/content-moderation";
 export {
   WORD_ACTIONS,
   WORD_SCAN_SCOPES,
-  WORD_VALIDATE_MAX_RULES,
   isWordPolicyVersionConflict,
   readWordRuleProblems,
   wordPolicyApi,

@@ -72,10 +72,23 @@ export function ContentModerationPage() {
   const [testProfile, setTestProfile] = useState<ContentModerationProfileView | null>(null);
   const [metricsOpen, setMetricsOpen] = useState(false);
   const [tab, setTab] = useState<PageTab>("profiles");
+  const [wordsDirty, setWordsDirty] = useState(false);
+  const [pendingTab, setPendingTab] = useState<PageTab | null>(null);
   const [wordTest, setWordTest] = useState<WordTestTarget | null>(null);
   // 敏感词规则的接口只有新后端才有：后端没声明时不显示这一页，也不会去请求它。
   const wordsAvailable = capabilities.wordGuard;
   const activeTab: PageTab = wordsAvailable ? tab : "profiles";
+
+  // 敏感词页是按需挂载的：切到别的标签会卸载它，连同还没保存的草稿一起丢掉。
+  // 有改动时先确认，和页内切换层级用同一套提示。
+  const requestTab = (next: PageTab) => {
+    if (next === activeTab) return;
+    if (activeTab === "words" && wordsDirty) {
+      setPendingTab(next);
+      return;
+    }
+    setTab(next);
+  };
 
   const loadProfiles = useCallback(async () => {
     setLoading(true);
@@ -355,7 +368,7 @@ export function ContentModerationPage() {
     <div data-page-fill="always" className="flex flex-1 flex-col">
       {wordsAvailable ? (
         <div className="mb-3 flex">
-          <Tabs value={activeTab} size="sm" onValueChange={(next) => setTab(next as PageTab)}>
+          <Tabs value={activeTab} size="sm" onValueChange={(next) => requestTab(next as PageTab)}>
             <TabsList>
               <TabsTrigger value="profiles">{t("content_moderation.tab_profiles")}</TabsTrigger>
               <TabsTrigger value="words">{t("content_moderation.tab_words")}</TabsTrigger>
@@ -365,7 +378,12 @@ export function ContentModerationPage() {
       ) : null}
 
       {activeTab === "words" ? (
-        <WordRulesTab canWrite={canWrite} canTest={canTest} onTest={setWordTest} />
+        <WordRulesTab
+          canWrite={canWrite}
+          canTest={canTest}
+          onTest={setWordTest}
+          onDirtyChange={setWordsDirty}
+        />
       ) : (
         /* 外壳内容区就是页面面板：这里是页面分区（flat），不再包一张大卡。 */
         <Card
@@ -451,6 +469,19 @@ export function ContentModerationPage() {
       />
 
       <ModerationMetricsModal open={metricsOpen} onClose={() => setMetricsOpen(false)} />
+
+      <ConfirmModal
+        open={pendingTab !== null}
+        title={t("content_moderation.words.discard_title")}
+        description={t("content_moderation.words.discard_description")}
+        confirmText={t("content_moderation.words.discard_confirm")}
+        variant="warning"
+        onClose={() => setPendingTab(null)}
+        onConfirm={() => {
+          if (pendingTab) setTab(pendingTab);
+          setPendingTab(null);
+        }}
+      />
 
       <ConfirmModal
         open={deleteTarget !== null}

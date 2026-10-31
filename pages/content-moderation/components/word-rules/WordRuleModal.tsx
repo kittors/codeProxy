@@ -10,6 +10,7 @@ import {
 import {
   Button,
   Callout,
+  CheckboxField,
   Form,
   FormField,
   Modal,
@@ -17,14 +18,13 @@ import {
   TextInput,
   ToggleSwitch,
 } from "@code-proxy/ui";
-import { ruleIdentity, type DraftRule } from "./wordPolicyModel";
-
-export interface WordRuleFields {
-  kind: WordRuleKind;
-  pattern: string;
-  note: string;
-  enabled: boolean;
-}
+import {
+  isOnlySeparators,
+  ruleIdentity,
+  ruleIdentityOf,
+  type DraftRule,
+  type WordRuleFields,
+} from "./wordPolicyModel";
 
 export interface WordRuleModalProps {
   open: boolean;
@@ -65,6 +65,7 @@ export function WordRuleModal({
   const [pattern, setPattern] = useState("");
   const [note, setNote] = useState("");
   const [enabled, setEnabled] = useState(true);
+  const [ignoreSeparators, setIgnoreSeparators] = useState(false);
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState("");
   const [failure, setFailure] = useState("");
@@ -75,6 +76,7 @@ export function WordRuleModal({
     setPattern(rule?.pattern ?? "");
     setNote(rule?.note ?? "");
     setEnabled(rule?.enabled ?? true);
+    setIgnoreSeparators(rule?.kind !== "regex" && rule?.ignore_separators === true);
     setChecking(false);
     setError("");
     setFailure("");
@@ -98,8 +100,14 @@ export function WordRuleModal({
       setError(t("content_moderation.words.error_regex_too_long", { max: limits.max_regex_bytes }));
       return;
     }
-    const identity = ruleIdentity(kind, value);
-    if (rules.some((other) => other.key !== rule?.key && ruleIdentity(other.kind, other.pattern) === identity)) {
+    // 只有关键词能忽略分隔符；弹窗里切到正则时这个选项已被清掉，这里再兜一次，不把它带给正则。
+    const loose = kind === "keyword" && ignoreSeparators;
+    if (loose && isOnlySeparators(value)) {
+      setError(t("content_moderation.words.error_only_separators"));
+      return;
+    }
+    const identity = ruleIdentity(kind, value, loose);
+    if (rules.some((other) => other.key !== rule?.key && ruleIdentityOf(other) === identity)) {
       setError(t("content_moderation.words.error_duplicate"));
       return;
     }
@@ -111,14 +119,18 @@ export function WordRuleModal({
       }
     }
     // 改的只是备注或开关时，规则本身没变，不必再问服务端。
-    const unchanged = rule !== null && rule.kind === kind && rule.pattern === value;
+    const unchanged =
+      rule !== null &&
+      rule.kind === kind &&
+      rule.pattern === value &&
+      (rule.ignore_separators === true) === loose;
     if (!unchanged) {
       setChecking(true);
       try {
         const verdict = await wordPolicyApi.validate({
           scope,
           ...(scope === "key" ? { key_id: keyId } : {}),
-          rules: [{ kind, pattern: value }],
+          rules: [{ kind, pattern: value, ...(loose ? { ignore_separators: true } : {}) }],
         });
         const invalid = verdict.reviews.find((review) => review.status === "invalid");
         if (invalid) {
@@ -136,7 +148,7 @@ export function WordRuleModal({
         setChecking(false);
       }
     }
-    onSubmit({ kind, pattern: value, note: note.trim(), enabled });
+    onSubmit({ kind, pattern: value, note: note.trim(), enabled, ignoreSeparators: loose });
   };
 
   return (
@@ -177,6 +189,8 @@ export function WordRuleModal({
             ]}
             onChange={(next) => {
               setKind(next);
+              // 忽略分隔符只对关键词有意义；换成正则就清掉，换回来也不替用户记着。
+              if (next === "regex") setIgnoreSeparators(false);
               setError("");
             }}
           />
@@ -208,6 +222,18 @@ export function WordRuleModal({
             spellCheck={false}
           />
         </FormField>
+
+        {kind === "keyword" ? (
+          <CheckboxField
+            checked={ignoreSeparators}
+            label={t("content_moderation.words.field_ignore_separators")}
+            description={t("content_moderation.words.field_ignore_separators_hint")}
+            onCheckedChange={(next) => {
+              setIgnoreSeparators(next);
+              setError("");
+            }}
+          />
+        ) : null}
 
         <FormField label={t("content_moderation.words.field_note")} optional>
           <TextInput

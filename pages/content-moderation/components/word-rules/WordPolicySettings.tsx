@@ -18,6 +18,8 @@ interface FlagControlProps {
   /** Key 层的开关有第三态「继承」，其余层只有开 / 关。 */
   inheritable: boolean;
   value: boolean | null;
+  /** 没有「继承」选项的层里，空值（继承）按这个生效值显示；它不会写进草稿。 */
+  effectiveValue: boolean;
   inheritedLabel: string;
   ariaLabel: string;
   disabled: boolean;
@@ -28,6 +30,7 @@ interface FlagControlProps {
 function FlagControl({
   inheritable,
   value,
+  effectiveValue,
   inheritedLabel,
   ariaLabel,
   disabled,
@@ -38,7 +41,7 @@ function FlagControl({
   if (!inheritable) {
     return (
       <ToggleSwitch
-        checked={value === true}
+        checked={value ?? effectiveValue}
         disabled={disabled}
         ariaLabel={ariaLabel}
         aria-describedby={describedBy}
@@ -69,14 +72,20 @@ export interface WordPolicySettingsProps {
   view: WordPolicyView;
   limits: WordPolicyLimits;
   readOnly: boolean;
+  /**
+   * 已保存的、启用的、匹配长度不限的正则有几条（服务端数的）。开了回复过滤时，流式回复里
+   * 跨两个流事件的匹配拦不住，要在回复过滤旁边说清楚。
+   */
+  unboundedRegex: number;
   onChange: (patch: Partial<WordPolicyDraft>) => void;
 }
 
 /**
  * 一份敏感词策略的设置：启用、命中后怎么处理、检查哪些文本、是否过滤回复。
  *
- * 平台和租户层的设置都是具体的值（空设置在载入时已换成生效值，所见即保存后的行为）；
- * Key 层的每一项可以选「继承」，并把继承到的值写在选项上，免得用户猜「继承」是什么。
+ * 平台和租户层没有「继承」选项，空设置按服务端给的生效值显示，但草稿里仍是空值，保存后依旧是「继承」
+ * （见 WordPolicyDraft）；选了一个值才算用户明确定下的。Key 层的每一项可以选「继承」，
+ * 并把继承到的值写在选项上，免得用户猜「继承」是什么。
  */
 export function WordPolicySettings({
   scope,
@@ -84,6 +93,7 @@ export function WordPolicySettings({
   view,
   limits,
   readOnly,
+  unboundedRegex,
   onChange,
 }: WordPolicySettingsProps) {
   const { t } = useTranslation();
@@ -97,6 +107,10 @@ export function WordPolicySettings({
 
   // 替换文本和拦截提示只在对应的处理方式下有意义，其余时候收起来，免得设置里堆着用不上的输入框。
   const resolvedAction = draft.action || effective.action;
+  // 没有「继承」选项的层，选中项按生效值显示；Key 层空值就是「继承」那一项。
+  const shownAction = isKey ? draft.action : resolvedAction;
+  const shownScanScope = isKey ? draft.scanScope : draft.scanScope || effective.scan_scope;
+  const replyFilterOn = draft.replyFilter ?? effective.reply_filter;
 
   return (
     <SettingGroup>
@@ -120,7 +134,7 @@ export function WordPolicySettings({
         controlWidth="lg"
         control={
           <Select
-            value={draft.action === "" ? INHERIT : draft.action}
+            value={shownAction === "" ? INHERIT : shownAction}
             disabled={readOnly}
             aria-label={t("content_moderation.words.setting_action")}
             options={[
@@ -130,7 +144,13 @@ export function WordPolicySettings({
             onChange={(next) => onChange({ action: next === INHERIT ? "" : (next as WordAction) })}
           />
         }
-      />
+      >
+        {resolvedAction === "replace" ? (
+          <p className="text-xs leading-5 text-ink-3">
+            {t("content_moderation.words.setting_action_replace_note")}
+          </p>
+        ) : null}
+      </SettingRow>
 
       {resolvedAction === "replace" ? (
         <SettingRow
@@ -174,7 +194,7 @@ export function WordPolicySettings({
         controlWidth="lg"
         control={
           <Select
-            value={draft.scanScope === "" ? INHERIT : draft.scanScope}
+            value={shownScanScope === "" ? INHERIT : shownScanScope}
             disabled={readOnly}
             aria-label={t("content_moderation.words.setting_scan_scope")}
             options={[
@@ -205,13 +225,20 @@ export function WordPolicySettings({
           <FlagControl
             inheritable={isKey}
             value={draft.replyFilter}
+            effectiveValue={effective.reply_filter}
             inheritedLabel={inherit(onOff(effective.reply_filter))}
             ariaLabel={t("content_moderation.words.setting_reply_filter")}
             disabled={readOnly}
             onChange={(replyFilter) => onChange({ replyFilter })}
           />
         }
-      />
+      >
+        {replyFilterOn && unboundedRegex > 0 ? (
+          <p className="text-xs leading-5 text-amber-700 dark:text-amber-300">
+            {t("content_moderation.words.reply_unbounded_warning", { count: unboundedRegex })}
+          </p>
+        ) : null}
+      </SettingRow>
 
       <SettingRow
         label={t("content_moderation.words.setting_fold")}
@@ -221,6 +248,7 @@ export function WordPolicySettings({
           <FlagControl
             inheritable={isKey}
             value={draft.foldTraditionalChinese}
+            effectiveValue={effective.fold_traditional_chinese}
             inheritedLabel={inherit(onOff(effective.fold_traditional_chinese))}
             ariaLabel={t("content_moderation.words.setting_fold")}
             disabled={readOnly}
