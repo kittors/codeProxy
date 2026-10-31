@@ -3,7 +3,11 @@ import { apiClient } from "../client/client";
 /** Legacy enum; superseded by RoutingConfigScheduling but still written on save. */
 export type RoutingStrategy = "round-robin" | "fill-first" | "session-sticky";
 
-export type RoutingDistribution = "weighted" | "least-load" | "fill-first";
+/**
+ * `reset-aware` is only written when the backend advertises
+ * `channel-group-distribution-reset-aware`: an older one reads it as weighted.
+ */
+export type RoutingDistribution = "weighted" | "least-load" | "fill-first" | "reset-aware";
 
 export interface RoutingConfigSticky {
   enabled?: boolean;
@@ -65,6 +69,7 @@ export interface RoutingConfigCapabilities {
   "channel-group-follow-upstream-models"?: boolean;
   "channel-group-first-token-timeout"?: boolean;
   "channel-group-busy-wait"?: boolean;
+  "channel-group-distribution-reset-aware"?: boolean;
 }
 
 /** Capabilities normalized for the panel; anything not advertised reads as unsupported. */
@@ -77,6 +82,8 @@ export interface RoutingConfigSupport {
   channelGroupFirstTokenTimeout: boolean;
   /** The backend enforces `busy-wait-max-seconds` on channel groups. */
   channelGroupBusyWait: boolean;
+  /** Channel groups accept the reset-aware distribution. */
+  channelGroupResetAwareDistribution: boolean;
 }
 
 /** What a backend that advertises nothing supports. */
@@ -85,6 +92,7 @@ export const NO_ROUTING_CONFIG_SUPPORT: RoutingConfigSupport = {
   channelGroupFollowUpstreamModels: false,
   channelGroupFirstTokenTimeout: false,
   channelGroupBusyWait: false,
+  channelGroupResetAwareDistribution: false,
 };
 
 export interface RoutingConfigPathRouteItem {
@@ -121,6 +129,8 @@ export function readRoutingConfigSupport(payload: unknown): RoutingConfigSupport
       capabilities?.["channel-group-follow-upstream-models"] === true,
     channelGroupFirstTokenTimeout: capabilities?.["channel-group-first-token-timeout"] === true,
     channelGroupBusyWait: capabilities?.["channel-group-busy-wait"] === true,
+    channelGroupResetAwareDistribution:
+      capabilities?.["channel-group-distribution-reset-aware"] === true,
   };
 }
 

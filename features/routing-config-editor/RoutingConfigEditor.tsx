@@ -14,7 +14,6 @@ import type {
 import {
   defaultScheduling,
   makeClientId,
-  normalizeDistribution,
   schedulingFromStrategy,
   strategyFromScheduling,
 } from "@features/visual-config-editor";
@@ -49,6 +48,7 @@ import {
   syncDraftChannels,
   syncDraftTags,
 } from "./routingHelpers";
+import { DistributionField } from "./DistributionField";
 import { ModelSelectionPanel } from "./ModelSelectionPanel";
 import { StickyLimitFields, StreamGuardFields } from "./GroupLimitFields";
 import {
@@ -121,7 +121,7 @@ export function RoutingConfigEditor({
   title?: string;
   values: VisualConfigValues;
   disabled?: boolean;
-  /** What the backend stores for channel-group model gates (routing-config capabilities). */
+  /** What the backend stores for channel groups: model gates and distributions (routing-config capabilities). */
   modelGateSupport?: RoutingConfigSupport;
   availableChannels: string[];
   availableChannelDetails?: Record<string, ChannelGroupChannelDetail>;
@@ -1358,41 +1358,17 @@ export function RoutingConfigEditor({
                       </>
                     ) : null}
 
-                    <Field
-                      label={t("channel_groups_page.distribution_label")}
-                      tooltip={t("channel_groups_page.distribution_tooltip")}
-                      hint={t("channel_groups_page.distribution_hint")}
-                    >
-                      <Select
-                        aria-label={t("channel_groups_page.distribution_label")}
-                        value={groupDraft.scheduling.distribution}
-                        disabled={disabled}
-                        className="w-full"
-                        options={[
-                          {
-                            value: "weighted",
-                            label: t("channel_groups_page.distribution_weighted"),
-                          },
-                          {
-                            value: "least-load",
-                            label: t("channel_groups_page.distribution_least_load"),
-                          },
-                          {
-                            value: "fill-first",
-                            label: t("channel_groups_page.distribution_fill_first"),
-                          },
-                        ]}
-                        onChange={(value) => {
-                          setGroupDraft((current) => ({
-                            ...current,
-                            scheduling: {
-                              ...current.scheduling,
-                              distribution: normalizeDistribution(value),
-                            },
-                          }));
-                        }}
-                      />
-                    </Field>
+                    <DistributionField
+                      value={groupDraft.scheduling.distribution}
+                      resetAwareSupported={modelGateSupport.channelGroupResetAwareDistribution}
+                      disabled={disabled}
+                      onChange={(distribution) =>
+                        setGroupDraft((current) => ({
+                          ...current,
+                          scheduling: { ...current.scheduling, distribution },
+                        }))
+                      }
+                    />
 
                     <label className={[surface({ tone: "inset", radius: "lg" }), "flex items-start gap-3 px-3 py-3 text-sm"].join(" ")}>
                       <Checkbox

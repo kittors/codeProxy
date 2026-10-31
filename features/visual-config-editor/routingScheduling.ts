@@ -8,7 +8,9 @@ import type {
 export const DEFAULT_STICKY_MAX_REQUESTS = 200;
 
 export function normalizeDistribution(value: unknown): RoutingDistribution {
-  return value === "least-load" || value === "fill-first" ? value : "weighted";
+  return value === "least-load" || value === "fill-first" || value === "reset-aware"
+    ? value
+    : "weighted";
 }
 
 export function defaultScheduling(): RoutingScheduling {
@@ -45,11 +47,15 @@ export function schedulingFromStrategy(strategy: RoutingStrategy): RoutingSchedu
 /**
  * Keeps the legacy field in sync on save so a backend or panel build that
  * predates `scheduling` still reads a coherent value during a staged rollout.
- * least-load has no legacy equivalent and degrades to round-robin.
+ * least-load has no legacy equivalent and degrades to round-robin; reset-aware
+ * keeps one account answering until it is nearly spent, like fill-first. The
+ * backend mirrors the same values.
  */
 export function strategyFromScheduling(scheduling: RoutingScheduling): RoutingStrategy {
   if (scheduling.sticky.enabled) return "session-sticky";
-  if (scheduling.distribution === "fill-first") return "fill-first";
+  if (scheduling.distribution === "fill-first" || scheduling.distribution === "reset-aware") {
+    return "fill-first";
+  }
   return "round-robin";
 }
 

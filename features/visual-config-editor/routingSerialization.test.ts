@@ -25,6 +25,11 @@ describe("routing scheduling weight round-trip", () => {
     expect(result?.["channel-priorities"]).toEqual({ A: 0, B: 4 });
   });
 
+  it("keeps the reset-aware distribution and mirrors fill-first for older readers", () => {
+    const result = roundTrip({ scheduling: { distribution: "reset-aware" } });
+    expect(result).toMatchObject({ scheduling: { distribution: "reset-aware" }, strategy: "fill-first" });
+  });
+
   it("retains legacy priorities when scheduling has no weight map", () => {
     const result = roundTrip({
       scheduling: { distribution: "least-load" },

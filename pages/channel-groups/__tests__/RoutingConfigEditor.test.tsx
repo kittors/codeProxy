@@ -48,6 +48,7 @@ function Harness({
   modelExclusionsSupported,
   followUpstreamSupported,
   streamGuardsSupported,
+  resetAwareSupported,
   availableChannels = ["Team A Claude", "Main Codex", "Backup Claude"],
   availableChannelDetails,
   availableChannelDetailsByGroup,
@@ -64,6 +65,8 @@ function Harness({
   followUpstreamSupported?: boolean;
   /** Off by default, like a backend that predates the stream guards; a name advertises only that one. */
   streamGuardsSupported?: boolean | "first-token-timeout" | "busy-wait";
+  /** Off by default, like a backend that predates the reset-aware distribution. */
+  resetAwareSupported?: boolean;
   availableChannels?: string[];
   availableChannelDetails?: Record<string, ChannelGroupChannelDetail>;
   availableChannelDetailsByGroup?: Record<string, Record<string, ChannelGroupChannelDetail>>;
@@ -86,8 +89,9 @@ function Harness({
       channelGroupFirstTokenTimeout:
         streamGuardsSupported === true || streamGuardsSupported === "first-token-timeout",
       channelGroupBusyWait: streamGuardsSupported === true || streamGuardsSupported === "busy-wait",
+      channelGroupResetAwareDistribution: resetAwareSupported === true,
     }),
-    [followUpstreamSupported, modelExclusionsSupported, streamGuardsSupported],
+    [followUpstreamSupported, modelExclusionsSupported, resetAwareSupported, streamGuardsSupported],
   );
 
   return (
@@ -1553,6 +1557,35 @@ describe("RoutingConfigEditor scheduling", () => {
       expect(screen.getByTestId("group-name")).toHaveTextContent("default");
     });
     expect(screen.getByTestId("channel-priority")).toHaveTextContent("3");
+  });
+
+  // An older backend reads an unknown distribution as weighted, so the choice
+  // only appears once the backend says it accepts it.
+  test("offers the reset-aware distribution only on a backend that accepts it", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+
+    const { unmount } = render(<Harness />);
+    await user.click(screen.getByRole("button", { name: "新增分组" }));
+    await user.click(screen.getByRole("combobox", { name: "分配方式" }));
+    expect(screen.queryByRole("option", { name: /按重置时间/ })).not.toBeInTheDocument();
+    unmount();
+
+    render(<Harness resetAwareSupported />);
+    await user.click(screen.getByRole("button", { name: "新增分组" }));
+    await user.click(screen.getByRole("combobox", { name: "分配方式" }));
+    await user.click(screen.getByRole("option", { name: /按重置时间/ }));
+    expect(screen.getByText(/优先用额度最先重置的账号/)).toBeInTheDocument();
+    await user.type(screen.getByPlaceholderText("pro"), "team-smart");
+    await user.type(screen.getByPlaceholderText("/pro"), "/team-smart");
+    await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
+    await user.click(screen.getByRole("option", { name: "Main Codex" }));
+    await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
+    await user.click(screen.getByRole("button", { name: "添加" }));
+
+    expect(screen.getByTestId("group-distribution")).toHaveTextContent("reset-aware");
+    // The legacy mirror matches the backend's: one account answers until spent.
+    expect(screen.getByTestId("group-strategy")).toHaveTextContent("fill-first");
   });
 
   test("offers the root path the same distribution choices as any other group", async () => {

@@ -51,6 +51,7 @@ describe("readRoutingConfigSupport", () => {
       channelGroupFollowUpstreamModels: false,
       channelGroupFirstTokenTimeout: false,
       channelGroupBusyWait: false,
+      channelGroupResetAwareDistribution: false,
     });
   });
 
@@ -68,5 +69,18 @@ describe("readRoutingConfigSupport", () => {
         capabilities: { "channel-group-first-token-timeout": 1, "channel-group-busy-wait": "true" },
       }),
     ).toEqual(NO_ROUTING_CONFIG_SUPPORT);
+  });
+
+  // An older backend reads an unknown distribution as weighted, so saving
+  // reset-aware there would quietly switch the group to weighted.
+  test("offers the reset-aware distribution only when the backend says so", () => {
+    expect(
+      readRoutingConfigSupport({ capabilities: { "channel-group-distribution-reset-aware": true } })
+        .channelGroupResetAwareDistribution,
+    ).toBe(true);
+    expect(
+      readRoutingConfigSupport({ capabilities: { "channel-group-distribution-reset-aware": "true" } })
+        .channelGroupResetAwareDistribution,
+    ).toBe(false);
   });
 });
