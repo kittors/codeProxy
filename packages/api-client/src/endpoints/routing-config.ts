@@ -70,6 +70,8 @@ export interface RoutingConfigCapabilities {
   "channel-group-first-token-timeout"?: boolean;
   "channel-group-busy-wait"?: boolean;
   "channel-group-distribution-reset-aware"?: boolean;
+  /** GET /routing-simulation is there to simulate a request. */
+  "routing-simulation"?: boolean;
 }
 
 /** Capabilities normalized for the panel; anything not advertised reads as unsupported. */
@@ -84,6 +86,8 @@ export interface RoutingConfigSupport {
   channelGroupBusyWait: boolean;
   /** Channel groups accept the reset-aware distribution. */
   channelGroupResetAwareDistribution: boolean;
+  /** The backend can simulate where a request would go (GET /routing-simulation). */
+  routingSimulation: boolean;
 }
 
 /** What a backend that advertises nothing supports. */
@@ -93,6 +97,7 @@ export const NO_ROUTING_CONFIG_SUPPORT: RoutingConfigSupport = {
   channelGroupFirstTokenTimeout: false,
   channelGroupBusyWait: false,
   channelGroupResetAwareDistribution: false,
+  routingSimulation: false,
 };
 
 export interface RoutingConfigPathRouteItem {
@@ -131,6 +136,7 @@ export function readRoutingConfigSupport(payload: unknown): RoutingConfigSupport
     channelGroupBusyWait: capabilities?.["channel-group-busy-wait"] === true,
     channelGroupResetAwareDistribution:
       capabilities?.["channel-group-distribution-reset-aware"] === true,
+    routingSimulation: capabilities?.["routing-simulation"] === true,
   };
 }
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   channelGroupsApi,
@@ -35,6 +35,8 @@ import {
 } from "@features/model-availability";
 import { Card } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
+import { useOptionalAuth } from "@app/providers/AuthProvider";
+import { RoutingSimulatorButton } from "./routing-simulator/RoutingSimulatorButton";
 
 function createEmptyRoutingValues(): VisualConfigValues {
   return {
@@ -281,6 +283,7 @@ function serializeRoutingValues(values: VisualConfigValues): RoutingConfigItem {
 export function ChannelGroupsPage() {
   const { t } = useTranslation();
   const { notify } = useToast();
+  const auth = useOptionalAuth();
   const [visualValues, setVisualValues] = useState<VisualConfigValues>(() =>
     createEmptyRoutingValues(),
   );
@@ -527,6 +530,17 @@ export function ChannelGroupsPage() {
     ],
   );
 
+  // The simulation shows the key's scope and the AI accounts with their cooldowns, so the
+  // backend also asks for the permissions of those two pages.
+  const canSimulate =
+    modelGateSupport.routingSimulation &&
+    (auth?.can("api_keys.read") ?? true) &&
+    (auth?.can("auth_files.read") ?? true);
+  const simulatorPathRoutes = useMemo(
+    () => visualValues.routingPathRoutes.map(({ path, group }) => ({ path, group })),
+    [visualValues.routingPathRoutes],
+  );
+
   const handleEditorChange = useCallback(
     async (patch: Partial<VisualConfigValues>): Promise<boolean> => {
       const nextValues: VisualConfigValues = { ...visualValues, ...patch };
@@ -561,6 +575,11 @@ export function ChannelGroupsPage() {
         >
           <RoutingConfigEditor
             title={t("channel_groups_page.title")}
+            headerActions={
+              canSimulate ? (
+                <RoutingSimulatorButton pathRoutes={simulatorPathRoutes} disabled={loading} />
+              ) : undefined
+            }
             values={visualValues}
             disabled={loading || saving}
             modelGateSupport={modelGateSupport}
