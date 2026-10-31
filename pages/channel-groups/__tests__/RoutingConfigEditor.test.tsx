@@ -47,6 +47,7 @@ function Harness({
   loadModelsForChannels,
   modelExclusionsSupported,
   followUpstreamSupported,
+  streamGuardsSupported,
   resetAwareSupported,
   availableChannels = ["Team A Claude", "Main Codex", "Backup Claude"],
   availableChannelDetails,
@@ -62,6 +63,8 @@ function Harness({
   modelExclusionsSupported?: boolean;
   /** Off by default, like a backend that predates follow-upstream-models. */
   followUpstreamSupported?: boolean;
+  /** Off by default, like a backend that predates the stream guards; a name advertises only that one. */
+  streamGuardsSupported?: boolean | "first-token-timeout" | "busy-wait";
   /** Off by default, like a backend that predates the reset-aware distribution. */
   resetAwareSupported?: boolean;
   availableChannels?: string[];
@@ -83,9 +86,12 @@ function Harness({
     () => ({
       channelGroupExcludedModels: modelExclusionsSupported === true,
       channelGroupFollowUpstreamModels: followUpstreamSupported === true,
+      channelGroupFirstTokenTimeout:
+        streamGuardsSupported === true || streamGuardsSupported === "first-token-timeout",
+      channelGroupBusyWait: streamGuardsSupported === true || streamGuardsSupported === "busy-wait",
       channelGroupResetAwareDistribution: resetAwareSupported === true,
     }),
-    [followUpstreamSupported, modelExclusionsSupported, resetAwareSupported],
+    [followUpstreamSupported, modelExclusionsSupported, resetAwareSupported, streamGuardsSupported],
   );
 
   return (
@@ -135,6 +141,12 @@ function Harness({
       </div>
       <div data-testid="saved-follow-upstream">
         {String(values.routingChannelGroups[0]?.followUpstreamModels ?? "")}
+      </div>
+      <div data-testid="saved-first-token-timeout">
+        {String(values.routingChannelGroups[0]?.firstTokenTimeoutSeconds ?? "")}
+      </div>
+      <div data-testid="saved-busy-wait">
+        {String(values.routingChannelGroups[0]?.busyWaitMaxSeconds ?? "")}
       </div>
     </ThemeProvider>
   );
@@ -1590,6 +1602,160 @@ describe("RoutingConfigEditor scheduling", () => {
 
     await waitFor(() => {
       expect(screen.getByTestId("group-distribution")).toHaveTextContent("least-load");
+    });
+  });
+
+  describe("stream guards", () => {
+    const TIMEOUT = "首 token 超时（秒）";
+    const BUSY_WAIT = "全员繁忙等待上限（秒）";
+
+    const editDefaultGroup = async (user: ReturnType<typeof userEvent.setup>) => {
+      const row = screen.getByRole("row", { name: /系统默认/ });
+      await user.click(within(row).getByRole("button", { name: "编辑分组" }));
+    };
+
+    const teamPool = (guards: {
+      firstTokenTimeoutSeconds?: number;
+      busyWaitMaxSeconds?: number;
+    }): VisualConfigValues => ({
+      ...DEFAULT_VISUAL_VALUES,
+      routingChannelGroups: [
+        {
+          id: "group-team",
+          name: "team-pool",
+          description: "",
+          strategy: "round-robin",
+          scheduling: schedulingFromStrategy("round-robin"),
+          allowedModels: ["gpt-6.1-sol"],
+          channels: [{ id: "channel-main-codex", name: "Main Codex", priority: "" }],
+          ...guards,
+        },
+      ],
+      routingPathRoutes: [
+        { id: "route-team", path: "/team-pool", group: "team-pool", stripPrefix: true, fallback: "none" },
+      ],
+    });
+
+    const editTeamPool = async (user: ReturnType<typeof userEvent.setup>) => {
+      const row = screen.getByRole("row", { name: /team-pool/ });
+      await user.click(within(row).getByRole("button", { name: "编辑分组" }));
+    };
+
+    // An older backend neither stores nor enforces them; the panel must look
+    // exactly as it did before for it.
+    test("offers the stream guards only to a backend that enforces them", async () => {
+      await i18n.changeLanguage("zh-CN");
+      const user = userEvent.setup();
+      const { unmount } = render(<Harness />);
+      await editDefaultGroup(user);
+      expect(screen.queryByRole("textbox", { name: TIMEOUT })).not.toBeInTheDocument();
+      expect(screen.queryByRole("textbox", { name: BUSY_WAIT })).not.toBeInTheDocument();
+      unmount();
+
+      render(<Harness streamGuardsSupported />);
+      await editDefaultGroup(user);
+      expect(screen.getByRole("textbox", { name: TIMEOUT })).toHaveValue("");
+      // Waiting is opt-in, so an empty field has to read as off, not as a number.
+      expect(screen.getByRole("textbox", { name: BUSY_WAIT })).toHaveAttribute("placeholder", "关闭");
+    });
+
+    // Waiting is opt-in, and a non-streaming client sees nothing while it
+    // happens, so the field has to say both before anyone turns it on.
+    test("says that waiting is opt-in and silent for non-streaming requests", async () => {
+      await i18n.changeLanguage("zh-CN");
+      const user = userEvent.setup();
+      render(<Harness streamGuardsSupported />);
+      await editDefaultGroup(user);
+      const hint = screen.getByText(/^未设置时关闭/);
+      expect(hint).toHaveTextContent("每个请求最多等待两次");
+      expect(hint).toHaveTextContent("非流式请求以及图片、视频提交会静默等待");
+    });
+
+    // Each capability unlocks its own field: a backend could ship one first.
+    test.each<["first-token-timeout" | "busy-wait", string, string]>([
+      ["first-token-timeout", TIMEOUT, BUSY_WAIT],
+      ["busy-wait", BUSY_WAIT, TIMEOUT],
+    ])("offers only the %s field when only that is advertised", async (capability, shown, hidden) => {
+      await i18n.changeLanguage("zh-CN");
+      const user = userEvent.setup();
+      render(<Harness streamGuardsSupported={capability} />);
+      await editDefaultGroup(user);
+      expect(screen.getByRole("textbox", { name: shown })).toBeInTheDocument();
+      expect(screen.queryByRole("textbox", { name: hidden })).not.toBeInTheDocument();
+    });
+
+    // Unset and 0 are both off, but the stored form keeps them apart.
+    test("saves the default group's guards, telling unset apart from 0", async () => {
+      await i18n.changeLanguage("zh-CN");
+      const user = userEvent.setup();
+      render(<Harness streamGuardsSupported />);
+
+      await editDefaultGroup(user);
+      await user.type(screen.getByRole("textbox", { name: TIMEOUT }), "30");
+      await user.type(screen.getByRole("textbox", { name: BUSY_WAIT }), "0");
+      await user.click(screen.getByRole("button", { name: "保存" }));
+      expect(screen.getByTestId("saved-first-token-timeout")).toHaveTextContent("30");
+      expect(screen.getByTestId("saved-busy-wait")).toHaveTextContent("0");
+
+      await editDefaultGroup(user);
+      expect(screen.getByRole("textbox", { name: TIMEOUT })).toHaveValue("30");
+      expect(screen.getByRole("textbox", { name: BUSY_WAIT })).toHaveValue("0");
+      await user.clear(screen.getByRole("textbox", { name: TIMEOUT }));
+      await user.clear(screen.getByRole("textbox", { name: BUSY_WAIT }));
+      await user.click(screen.getByRole("button", { name: "保存" }));
+      expect(screen.getByTestId("saved-first-token-timeout")).toBeEmptyDOMElement();
+      expect(screen.getByTestId("saved-busy-wait")).toBeEmptyDOMElement();
+    });
+
+    const TIMEOUT_INVALID = "首 token 超时须留空（关闭）或填 5–300 之间的整数秒。";
+    const BUSY_WAIT_INVALID = "全员繁忙等待上限须留空（关闭）或填 0–240 之间的整数秒。";
+    // The backend answers these with a 400; the editor says why before saving.
+    test.each<[string, string, string, string]>([
+      [TIMEOUT, "4", "5", TIMEOUT_INVALID],
+      [TIMEOUT, "301", "300", TIMEOUT_INVALID],
+      [BUSY_WAIT, "241", "240", BUSY_WAIT_INVALID],
+    ])("refuses %s = %s but accepts %s", async (field, rejected, accepted, message) => {
+      await i18n.changeLanguage("zh-CN");
+      const user = userEvent.setup();
+      render(<Harness initialValues={teamPool({})} streamGuardsSupported />);
+
+      await editTeamPool(user);
+      const input = screen.getByRole("textbox", { name: field });
+      await user.type(input, rejected);
+      expect(screen.getByText(message)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "保存" })).toBeDisabled();
+
+      await user.clear(input);
+      await user.type(input, accepted);
+      expect(screen.queryByText(message)).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "保存" })).toBeEnabled();
+    });
+
+    test("accepts only digits", async () => {
+      await i18n.changeLanguage("zh-CN");
+      const user = userEvent.setup();
+      render(<Harness streamGuardsSupported />);
+      await editDefaultGroup(user);
+      await user.type(screen.getByRole("textbox", { name: BUSY_WAIT }), "-1.5s");
+      expect(screen.getByRole("textbox", { name: BUSY_WAIT })).toHaveValue("15");
+    });
+
+    // Routing is saved whole: a group saved where the fields are not shown
+    // keeps what it had instead of being reset.
+    test("keeps stored guards when saving a group where they are not shown", async () => {
+      await i18n.changeLanguage("zh-CN");
+      const user = userEvent.setup();
+      render(
+        <Harness
+          initialValues={teamPool({ firstTokenTimeoutSeconds: 20, busyWaitMaxSeconds: 0 })}
+        />,
+      );
+
+      await editTeamPool(user);
+      expect(screen.queryByRole("textbox", { name: TIMEOUT })).not.toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "保存" }));
+      expect(screen.getByTestId("saved-first-token-timeout")).toHaveTextContent("20");
+      expect(screen.getByTestId("saved-busy-wait")).toHaveTextContent("0");
     });
   });
 });

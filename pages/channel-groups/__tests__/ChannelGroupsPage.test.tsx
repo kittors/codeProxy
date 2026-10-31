@@ -1381,4 +1381,98 @@ describe("ChannelGroupsPage", () => {
       expect(group).not.toHaveProperty("excluded-models");
     });
   });
+
+  describe("stream guards capability", () => {
+    // Serves routing-config with the default group and one group over
+    // "Team A Claude", plus whatever a test adds.
+    const serveRoutingConfig = (
+      groups: { default?: Record<string, unknown>; pool?: Record<string, unknown> },
+      extra: Record<string, unknown>,
+    ) => {
+      const fallback = mockedApiGet.getMockImplementation();
+      mockedApiGet.mockImplementation((...args: Parameters<typeof apiClient.get>) => {
+        const [path] = args;
+        if (path === "/routing-config") {
+          return Promise.resolve({
+            strategy: "round-robin",
+            "include-default-group": true,
+            "channel-groups": [
+              { name: "default", strategy: "round-robin", ...groups.default },
+              {
+                name: "claude-pool",
+                strategy: "round-robin",
+                match: { channels: ["Team A Claude"] },
+                ...groups.pool,
+              },
+            ],
+            "path-routes": [{ path: "/claude-pool", group: "claude-pool" }],
+            ...extra,
+          });
+        }
+        return fallback!(...args);
+      });
+    };
+
+    const saveClaudePool = async (
+      user: ReturnType<typeof userEvent.setup>,
+      edit?: () => Promise<void>,
+    ) => {
+      const row = await screen.findByRole("row", { name: /claude-pool/ });
+      await user.click(within(row).getByRole("button", { name: "编辑分组" }));
+      await edit?.();
+      await user.click(screen.getByRole("button", { name: "保存" }));
+      await waitFor(() => expect(mockedApiPut).toHaveBeenCalled());
+      const payload = mockedApiPut.mock.calls[0]?.[1] as Record<string, unknown>;
+      const groups = payload["channel-groups"] as Array<Record<string, unknown>>;
+      return Object.fromEntries(groups.map((group) => [group.name, group]));
+    };
+
+    // The page saves the whole routing config: a group nobody opened keeps its
+    // guards, and an explicit busy-wait 0 is not turned into unset.
+    test("edits the guards and keeps them on groups nobody opened", async () => {
+      serveRoutingConfig(
+        { default: { "busy-wait-max-seconds": 0 }, pool: { "first-token-timeout-seconds": 20 } },
+        {
+          capabilities: {
+            "channel-group-first-token-timeout": true,
+            "channel-group-busy-wait": true,
+          },
+        },
+      );
+      const user = userEvent.setup();
+      renderPage();
+
+      const byName = await saveClaudePool(user, async () => {
+        expect(screen.getByRole("textbox", { name: "首 token 超时（秒）" })).toHaveValue("20");
+        await user.type(screen.getByRole("textbox", { name: "全员繁忙等待上限（秒）" }), "120");
+      });
+
+      expect(byName["claude-pool"]).toMatchObject({
+        "first-token-timeout-seconds": 20,
+        "busy-wait-max-seconds": 120,
+      });
+      expect(byName.default).toMatchObject({ "busy-wait-max-seconds": 0 });
+      expect(byName.default).not.toHaveProperty("first-token-timeout-seconds");
+    });
+
+    // The panel updates on its own; against an older backend the editor and
+    // what it saves must stay exactly as before.
+    test("shows and writes nothing new for a backend without the capability", async () => {
+      serveRoutingConfig({}, {});
+      const user = userEvent.setup();
+      renderPage();
+
+      const byName = await saveClaudePool(user, async () => {
+        expect(screen.queryByRole("textbox", { name: "首 token 超时（秒）" })).not.toBeInTheDocument();
+        expect(
+          screen.queryByRole("textbox", { name: "全员繁忙等待上限（秒）" }),
+        ).not.toBeInTheDocument();
+      });
+
+      for (const group of Object.values(byName)) {
+        expect(group).not.toHaveProperty("first-token-timeout-seconds");
+        expect(group).not.toHaveProperty("busy-wait-max-seconds");
+      }
+    });
+  });
 });

@@ -1,5 +1,8 @@
 import { describe, expect, test } from "vitest";
-import { readRoutingConfigSupport } from "@code-proxy/api-client/endpoints/routing-config";
+import {
+  NO_ROUTING_CONFIG_SUPPORT,
+  readRoutingConfigSupport,
+} from "@code-proxy/api-client/endpoints/routing-config";
 
 describe("readRoutingConfigSupport", () => {
   test("unlocks channel-group exclusions only when the backend says so", () => {
@@ -8,11 +11,7 @@ describe("readRoutingConfigSupport", () => {
         "channel-groups": [],
         capabilities: { "channel-group-excluded-models": true },
       }),
-    ).toEqual({
-      channelGroupExcludedModels: true,
-      channelGroupFollowUpstreamModels: false,
-      channelGroupResetAwareDistribution: false,
-    });
+    ).toEqual({ ...NO_ROUTING_CONFIG_SUPPORT, channelGroupExcludedModels: true });
   });
 
   // An older backend drops `follow-upstream-models` on PUT, which would reset a
@@ -26,9 +25,9 @@ describe("readRoutingConfigSupport", () => {
         },
       }),
     ).toEqual({
+      ...NO_ROUTING_CONFIG_SUPPORT,
       channelGroupExcludedModels: true,
       channelGroupFollowUpstreamModels: true,
-      channelGroupResetAwareDistribution: false,
     });
     expect(
       readRoutingConfigSupport({
@@ -50,8 +49,26 @@ describe("readRoutingConfigSupport", () => {
     expect(readRoutingConfigSupport(payload)).toEqual({
       channelGroupExcludedModels: false,
       channelGroupFollowUpstreamModels: false,
+      channelGroupFirstTokenTimeout: false,
+      channelGroupBusyWait: false,
       channelGroupResetAwareDistribution: false,
     });
+  });
+
+  // An older backend keeps neither field: a timeout the operator typed would
+  // be dropped on save and never enforced.
+  test("unlocks the stream guards one by one, only when the backend says so", () => {
+    expect(
+      readRoutingConfigSupport({ capabilities: { "channel-group-first-token-timeout": true } }),
+    ).toEqual({ ...NO_ROUTING_CONFIG_SUPPORT, channelGroupFirstTokenTimeout: true });
+    expect(
+      readRoutingConfigSupport({ capabilities: { "channel-group-busy-wait": true } }),
+    ).toEqual({ ...NO_ROUTING_CONFIG_SUPPORT, channelGroupBusyWait: true });
+    expect(
+      readRoutingConfigSupport({
+        capabilities: { "channel-group-first-token-timeout": 1, "channel-group-busy-wait": "true" },
+      }),
+    ).toEqual(NO_ROUTING_CONFIG_SUPPORT);
   });
 
   // An older backend reads an unknown distribution as weighted, so saving

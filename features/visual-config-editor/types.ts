@@ -106,6 +106,18 @@ export type RoutingChannelGroupEntry = {
    */
   followUpstreamModels?: boolean;
   /**
+   * `first-token-timeout-seconds` as stored; undefined when off. A stream with
+   * no first token by then is abandoned and, while the client has received
+   * nothing, retried on another account. Carried through every save.
+   */
+  firstTokenTimeoutSeconds?: number;
+  /**
+   * `busy-wait-max-seconds` as stored. Waiting is opt-in, so undefined and 0
+   * are both off, but the two are kept apart: an explicit 0 is the operator's
+   * choice and must survive a save. Carried through every save.
+   */
+  busyWaitMaxSeconds?: number;
+  /**
    * Read-only, from GET /channel-groups: what following upstream admits beyond
    * the allow list (served now if the group follows, opened if it is turned on).
    * Shown next to the switch and never written back.

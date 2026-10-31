@@ -47,12 +47,28 @@ export interface RoutingConfigGroupItem {
    * advertises `channel-group-follow-upstream-models`.
    */
   "follow-upstream-models"?: boolean;
+  /**
+   * Seconds a stream may go without its first token before the attempt is
+   * abandoned and, when nothing reached the client yet, retried on another
+   * account. Absent or 0 is off. Only written when the backend advertises
+   * `channel-group-first-token-timeout`.
+   */
+  "first-token-timeout-seconds"?: number;
+  /**
+   * Longest a request waits when every account it may use is cooling down
+   * after a recoverable failure. Waiting is opt-in: absent and 0 are both
+   * off (an explicit 0 is still stored). Only written when the backend
+   * advertises `channel-group-busy-wait`.
+   */
+  "busy-wait-max-seconds"?: number;
 }
 
 /** What the backend can enforce. Read-only: GET returns it, PUT ignores it. */
 export interface RoutingConfigCapabilities {
   "channel-group-excluded-models"?: boolean;
   "channel-group-follow-upstream-models"?: boolean;
+  "channel-group-first-token-timeout"?: boolean;
+  "channel-group-busy-wait"?: boolean;
   "channel-group-distribution-reset-aware"?: boolean;
 }
 
@@ -62,6 +78,10 @@ export interface RoutingConfigSupport {
   channelGroupExcludedModels: boolean;
   /** The backend stores and enforces `follow-upstream-models` on channel groups. */
   channelGroupFollowUpstreamModels: boolean;
+  /** The backend enforces `first-token-timeout-seconds` on channel groups. */
+  channelGroupFirstTokenTimeout: boolean;
+  /** The backend enforces `busy-wait-max-seconds` on channel groups. */
+  channelGroupBusyWait: boolean;
   /** Channel groups accept the reset-aware distribution. */
   channelGroupResetAwareDistribution: boolean;
 }
@@ -70,6 +90,8 @@ export interface RoutingConfigSupport {
 export const NO_ROUTING_CONFIG_SUPPORT: RoutingConfigSupport = {
   channelGroupExcludedModels: false,
   channelGroupFollowUpstreamModels: false,
+  channelGroupFirstTokenTimeout: false,
+  channelGroupBusyWait: false,
   channelGroupResetAwareDistribution: false,
 };
 
@@ -105,6 +127,8 @@ export function readRoutingConfigSupport(payload: unknown): RoutingConfigSupport
     channelGroupExcludedModels: capabilities?.["channel-group-excluded-models"] === true,
     channelGroupFollowUpstreamModels:
       capabilities?.["channel-group-follow-upstream-models"] === true,
+    channelGroupFirstTokenTimeout: capabilities?.["channel-group-first-token-timeout"] === true,
+    channelGroupBusyWait: capabilities?.["channel-group-busy-wait"] === true,
     channelGroupResetAwareDistribution:
       capabilities?.["channel-group-distribution-reset-aware"] === true,
   };

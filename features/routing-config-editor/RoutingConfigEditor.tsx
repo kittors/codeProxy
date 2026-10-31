@@ -12,7 +12,6 @@ import type {
   VisualConfigValues,
 } from "@features/visual-config-editor";
 import {
-  DEFAULT_STICKY_MAX_REQUESTS,
   defaultScheduling,
   makeClientId,
   schedulingFromStrategy,
@@ -51,6 +50,14 @@ import {
 } from "./routingHelpers";
 import { DistributionField } from "./DistributionField";
 import { ModelSelectionPanel } from "./ModelSelectionPanel";
+import { StickyLimitFields, StreamGuardFields } from "./GroupLimitFields";
+import {
+  emptyStreamGuardsDraft,
+  streamGuardsError,
+  streamGuardsFromEntry,
+  streamGuardsToEntry,
+  type StreamGuardsDraft,
+} from "./streamGuards";
 import { RoutingIssueModal } from "./RoutingIssueModal";
 import {
   createModelSelectionDraft,
@@ -72,6 +79,7 @@ type GroupDraft = {
   channels: RoutingChannelGroupMemberEntry[];
   tags: string[];
   models: ModelSelectionDraft;
+  streamGuards: StreamGuardsDraft;
   routes: RoutingPathRouteEntry[];
 };
 
@@ -86,6 +94,7 @@ const createEmptyGroupDraft = (support = NO_ROUTING_CONFIG_SUPPORT): GroupDraft 
   channels: [],
   tags: [],
   models: createModelSelectionDraft(support),
+  streamGuards: emptyStreamGuardsDraft(),
   routes: [{ ...EMPTY_ROUTE_DRAFT() }],
 });
 
@@ -355,6 +364,8 @@ export function RoutingConfigEditor({
   const groupDraftError = useMemo(() => {
     const modelGateError = modelSelectionSaveError(groupDraft.models);
     if (modelGateError) return t(modelGateError);
+    const guardError = streamGuardsError(groupDraft.streamGuards, modelGateSupport);
+    if (guardError) return t(guardError);
     if (editingSystemDefaultGroup) return "";
     if (!groupDraft.name.trim()) return t("channel_groups_page.group_name_required");
     if (!primaryRoute.path.trim()) return t("channel_groups_page.route_path_required");
@@ -397,7 +408,9 @@ export function RoutingConfigEditor({
     groupDraft.matchMode,
     groupDraft.models,
     groupDraft.name,
+    groupDraft.streamGuards,
     groupEditorId,
+    modelGateSupport,
     normalizedPrimaryRoutePath,
     primaryRoute.path,
     selectedTagValues.length,
@@ -440,6 +453,7 @@ export function RoutingConfigEditor({
         channels: cloneMembers(group.channels),
         tags: isSystemDefault ? [] : syncDraftTags(group.tags ?? []),
         models: modelSelectionFromEntry(group, modelGateSupport),
+        streamGuards: streamGuardsFromEntry(group),
         routes: isSystemDefault
           ? []
           : existingRoutes.length > 0
@@ -566,7 +580,10 @@ export function RoutingConfigEditor({
   const saveGroupDraft = useCallback(async () => {
     if (groupDraftError || groupSaving) return;
 
-    const modelGate = serializeModelSelection(groupDraft.models);
+    const savedFields = {
+      ...serializeModelSelection(groupDraft.models),
+      ...streamGuardsToEntry(groupDraft.streamGuards),
+    };
     let patch: Partial<VisualConfigValues>;
     if (editingSystemDefaultGroup) {
       const existingDefault = values.routingChannelGroups.find(
@@ -586,7 +603,7 @@ export function RoutingConfigEditor({
         // today's channel list into an explicit match.
         channels: cloneMembers(groupDraft.channels),
         tags: [],
-        ...modelGate,
+        ...savedFields,
       };
       const defaultRoutes = values.routingPathRoutes.filter(
         (route) => route.group.trim().toLowerCase() === SYSTEM_DEFAULT_GROUP_NAME,
@@ -616,7 +633,7 @@ export function RoutingConfigEditor({
           groupDraft.excludeFromDefault && groupName.toLowerCase() !== SYSTEM_DEFAULT_GROUP_NAME,
         matchMode: groupDraft.matchMode,
         tags: groupDraft.matchMode === "tags" ? syncDraftTags(groupDraft.tags) : [],
-        ...modelGate,
+        ...savedFields,
         channels: (groupDraft.matchMode === "tags" ? resolvedDraftChannels : groupDraft.channels)
           .map((channel) => ({
             id: channel.id || makeClientId(),
@@ -1381,55 +1398,32 @@ export function RoutingConfigEditor({
                     </label>
 
                     {groupDraft.scheduling.sticky.enabled ? (
-                      <div className="grid gap-4 md:grid-cols-2">
-                        <Field
-                          label={t("channel_groups_page.sticky_max_requests_label")}
-                          hint={t("channel_groups_page.sticky_max_requests_hint")}
-                        >
-                          <TextInput
-                            value={groupDraft.scheduling.sticky.maxRequests}
-                            onChange={(event) => {
-                              const value = event.currentTarget.value;
-                              if (!/^\d*$/.test(value)) return;
-                              setGroupDraft((current) => ({
-                                ...current,
-                                scheduling: {
-                                  ...current.scheduling,
-                                  sticky: { ...current.scheduling.sticky, maxRequests: value },
-                                },
-                              }));
-                            }}
-                            placeholder={String(DEFAULT_STICKY_MAX_REQUESTS)}
-                            inputMode="numeric"
-                            aria-label={t("channel_groups_page.sticky_max_requests_label")}
-                            disabled={disabled}
-                          />
-                        </Field>
-                        <Field
-                          label={t("channel_groups_page.sticky_release_label")}
-                          hint={t("channel_groups_page.sticky_release_hint")}
-                        >
-                          <TextInput
-                            value={groupDraft.scheduling.sticky.releaseAtLoad}
-                            onChange={(event) => {
-                              const value = event.currentTarget.value;
-                              if (!/^\d*\.?\d*$/.test(value)) return;
-                              setGroupDraft((current) => ({
-                                ...current,
-                                scheduling: {
-                                  ...current.scheduling,
-                                  sticky: { ...current.scheduling.sticky, releaseAtLoad: value },
-                                },
-                              }));
-                            }}
-                            placeholder="0.8"
-                            inputMode="decimal"
-                            aria-label={t("channel_groups_page.sticky_release_label")}
-                            disabled={disabled}
-                          />
-                        </Field>
-                      </div>
+                      <StickyLimitFields
+                        sticky={groupDraft.scheduling.sticky}
+                        disabled={disabled}
+                        onChange={(patch) =>
+                          setGroupDraft((current) => ({
+                            ...current,
+                            scheduling: {
+                              ...current.scheduling,
+                              sticky: { ...current.scheduling.sticky, ...patch },
+                            },
+                          }))
+                        }
+                      />
                     ) : null}
+
+                    <StreamGuardFields
+                      draft={groupDraft.streamGuards}
+                      support={modelGateSupport}
+                      disabled={disabled}
+                      onChange={(patch) =>
+                        setGroupDraft((current) => ({
+                          ...current,
+                          streamGuards: { ...current.streamGuards, ...patch },
+                        }))
+                      }
+                    />
 
                     {!editingSystemDefaultGroup ? (
                       <>
