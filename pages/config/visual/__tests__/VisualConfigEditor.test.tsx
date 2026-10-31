@@ -531,3 +531,28 @@ describe("VisualConfigEditor auto update config", () => {
     });
   });
 });
+
+describe("VisualConfigEditor payload rules trial", () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage("en");
+  });
+
+  test("offers the trial under the payload rules only when the backend has it", async () => {
+    const editor = (payloadDryRun: boolean) => (
+      <ThemeProvider>
+        <VisualConfigEditor
+          values={DEFAULT_VISUAL_VALUES}
+          onChange={vi.fn()}
+          payloadDryRun={payloadDryRun}
+        />
+      </ThemeProvider>
+    );
+    const view = render(editor(false));
+    await userEvent.click(screen.getByRole("tab", { name: /^Advanced/ }));
+    expect(screen.getByRole("heading", { name: "Remove parameters" })).toBeVisible();
+    expect(screen.queryByRole("heading", { name: "Try it" })).toBeNull();
+
+    view.rerender(editor(true));
+    expect(screen.getByRole("heading", { name: "Try it" })).toBeVisible();
+  });
+});
