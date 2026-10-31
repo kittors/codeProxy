@@ -23,6 +23,7 @@ const CATALOG = ["grok-4.5", "grok-4.6", "grok-4.7", "grok-imagine-video-1.5"];
 const gate = (exclusions: boolean, followUpstream = false) => ({
   channelGroupExcludedModels: exclusions,
   channelGroupFollowUpstreamModels: followUpstream,
+  channelGroupResetAwareDistribution: false,
 });
 
 describe("modelSelectionDraft", () => {

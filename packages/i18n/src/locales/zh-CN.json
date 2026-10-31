@@ -4118,6 +4118,8 @@
     "distribution_weighted": "按权重分配",
     "distribution_least_load": "最少负载优先",
     "distribution_fill_first": "填满一个再换下一个",
+    "distribution_reset_aware": "按重置时间（优先用最先重置的额度）",
+    "distribution_reset_aware_hint": "优先用额度最先重置的账号：重置时没用完的额度会作废，晚重置的账号能把额度留到以后。看账号里最长的那个窗口（周窗口优先于 5 小时），重置时间按小时比较；某个窗口用到 90% 往后排，用到 98% 排最后。条件相同的账号固定顺序，集中用同一个，保住上游的提示缓存。",
     "sticky_enabled_label": "启用会话粘性",
     "sticky_enabled_tooltip": "同一会话尽量固定在同一个渠道上，以命中上游的前缀缓存。新会话仍按上面的分配方式来分。",
     "sticky_enabled_hint": "不设上限时，一个长会话会一直占用同一个账号，直到它被限流。",

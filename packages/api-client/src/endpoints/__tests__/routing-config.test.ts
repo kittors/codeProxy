@@ -8,7 +8,11 @@ describe("readRoutingConfigSupport", () => {
         "channel-groups": [],
         capabilities: { "channel-group-excluded-models": true },
       }),
-    ).toEqual({ channelGroupExcludedModels: true, channelGroupFollowUpstreamModels: false });
+    ).toEqual({
+      channelGroupExcludedModels: true,
+      channelGroupFollowUpstreamModels: false,
+      channelGroupResetAwareDistribution: false,
+    });
   });
 
   // An older backend drops `follow-upstream-models` on PUT, which would reset a
@@ -21,7 +25,11 @@ describe("readRoutingConfigSupport", () => {
           "channel-group-follow-upstream-models": true,
         },
       }),
-    ).toEqual({ channelGroupExcludedModels: true, channelGroupFollowUpstreamModels: true });
+    ).toEqual({
+      channelGroupExcludedModels: true,
+      channelGroupFollowUpstreamModels: true,
+      channelGroupResetAwareDistribution: false,
+    });
     expect(
       readRoutingConfigSupport({
         capabilities: { "channel-group-follow-upstream-models": "true" },
@@ -42,6 +50,20 @@ describe("readRoutingConfigSupport", () => {
     expect(readRoutingConfigSupport(payload)).toEqual({
       channelGroupExcludedModels: false,
       channelGroupFollowUpstreamModels: false,
+      channelGroupResetAwareDistribution: false,
     });
+  });
+
+  // An older backend reads an unknown distribution as weighted, so saving
+  // reset-aware there would quietly switch the group to weighted.
+  test("offers the reset-aware distribution only when the backend says so", () => {
+    expect(
+      readRoutingConfigSupport({ capabilities: { "channel-group-distribution-reset-aware": true } })
+        .channelGroupResetAwareDistribution,
+    ).toBe(true);
+    expect(
+      readRoutingConfigSupport({ capabilities: { "channel-group-distribution-reset-aware": "true" } })
+        .channelGroupResetAwareDistribution,
+    ).toBe(false);
   });
 });
