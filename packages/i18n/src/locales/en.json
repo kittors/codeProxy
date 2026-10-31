@@ -7076,6 +7076,8 @@
     "cell_used": "{{used}} used",
     "cell_ceiling": "≤ {{limit}}",
     "cell_usage_detail": "{{metric}} · {{window}}: {{used}} used of {{limit}}",
+    "cell_used_in_flight": "{{used}} used · {{held}} in flight",
+    "cell_usage_detail_in_flight": "{{metric}} · {{window}}: {{used}} used of {{limit}}, plus {{held}} reserved by requests in flight",
     "more_cells_one": "{{count}} more limit",
     "more_cells_other": "{{count}} more limits",
     "more_limits": "+{{count}} more",

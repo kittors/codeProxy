@@ -122,6 +122,63 @@ describe("access policy editors", () => {
     expect(screen.getByRole("button", { name: "2 more limits" })).toHaveTextContent("+2");
   });
 
+  test("the list cell counts what requests in flight hold, as the admission checks do", () => {
+    const limits = emptyQuotaMatrix();
+    limits.cost.day = 10;
+    limits.requests.day = 100;
+    const usage = emptyQuotaMatrix();
+    usage.cost.day = 7.5;
+    usage.requests.day = 50;
+    const inFlight = { requests: 2, tokens: 3000, cost: 1 };
+    render(<QuotaUsageCell limits={limits} usage={usage} inFlight={inFlight} />);
+
+    // 7.5 + 1 已过 80%：按已用加在途的和变色、排到前面；格子里的数字仍是已用。
+    const cost = screen.getByTitle("Spend · Daily: $7.5 used of $10, plus $1 reserved by requests in flight");
+    expect(within(cost).getByText("$7.5 / $10")).toHaveClass("text-amber-700");
+    expect(screen.getAllByText(/\//).map((node) => node.textContent)).toEqual(["$7.5 / $10", "50 / 100"]);
+    // 进度条：浅色的在途段接在已用之后，总长是两者之和。
+    expect(within(cost).getByTestId("quota-bar-in-flight")).toHaveStyle({ width: "85%" });
+    expect(screen.getByTitle("Requests · Daily: 50 used of 100, plus 2 reserved by requests in flight")).toBeInTheDocument();
+  });
+
+  test("the list cell leaves out a reservation that shows as nothing", () => {
+    const limits = emptyQuotaMatrix();
+    limits.cost.day = 10;
+    const usage = emptyQuotaMatrix();
+    usage.cost.day = 2;
+    // 还没有计费历史的 Key：在途请求只预留了请求数，花费格子没有可说的。
+    render(<QuotaUsageCell limits={limits} usage={usage} inFlight={{ requests: 1, tokens: 0, cost: 0 }} />);
+    expect(screen.getByTitle("Spend · Daily: $2 used of $10")).toBeInTheDocument();
+    expect(screen.queryByTestId("quota-bar-in-flight")).not.toBeInTheDocument();
+  });
+
+  test("the matrix tells what is used, what requests in flight hold and the limit apart", () => {
+    const usage = emptyQuotaMatrix();
+    usage.cost.day = 4;
+    usage.requests.day = 9;
+    usage.tokens.day = 1000;
+    const draft = emptyMatrixDraft();
+    draft.cost.day = "5";
+    draft.requests.day = "100";
+    draft.tokens.day = "5K";
+    render(
+      <QuotaMatrixEditor
+        value={draft}
+        usage={usage}
+        inFlight={{ requests: 2, tokens: 300, cost: 1.5 }}
+        idPrefix="m"
+        label="Quota"
+      />,
+    );
+    const group = screen.getByRole("group", { name: "Quota" });
+    // 4 + 1.5 超过上限 5：下一次请求会被拒，提示是用尽的颜色。
+    const cost = within(group).getByText("$4 used · $1.5 in flight");
+    expect(cost).toHaveClass("text-rose-600");
+    expect(cost).toHaveAttribute("title", "$4 used · $1.5 in flight");
+    expect(within(group).getByText("9 used · 2 in flight")).toHaveClass("text-ink-2");
+    expect(within(group).getByText("1,000 used · 300 in flight")).toBeInTheDocument();
+  });
+
   test("the key editor checks the account ceiling before submitting", async () => {
     const onSubmit = vi.fn();
     const ceiling = emptyQuotaMatrix();

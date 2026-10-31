@@ -7049,6 +7049,8 @@
     "cell_used": "已用 {{used}}",
     "cell_ceiling": "≤ {{limit}}",
     "cell_usage_detail": "{{metric}} · {{window}}：已用 {{used}}，上限 {{limit}}",
+    "cell_used_in_flight": "已用 {{used}} · 在途 {{held}}",
+    "cell_usage_detail_in_flight": "{{metric}} · {{window}}：已用 {{used}}，在途预留 {{held}}，上限 {{limit}}",
     "more_cells": "还有 {{count}} 项额度",
     "more_limits": "另 {{count}} 项",
     "limits_input_hint": "留空表示不限制。花费按整美元向上取整；请求与 Token 可以写 1.5K、5M 这样的缩写。同一行从左到右是从短到长的窗口，任何一格用满都会拒绝请求。",

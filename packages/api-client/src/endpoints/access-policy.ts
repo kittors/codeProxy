@@ -50,12 +50,25 @@ export interface RuleUsage {
   used: QuotaMatrix;
 }
 
+/**
+ * 在途预留：已准入、用量还没入账的请求占着的额度。请求数是准确的，Token 与花费按近期
+ * 已入账请求的平均值估算。准入检查把它和 total 加在一起比上限，所以它解释了「已用没到上限
+ * 却被拒」。只统计后端这一个节点，是取数那一刻的快照。
+ */
+export interface InFlightUsage {
+  requests: number;
+  tokens: number;
+  cost: number;
+}
+
 export interface QuotaUsageView {
   total: QuotaMatrix;
   rules: RuleUsage[];
   /** 只有 5h 窗口由服务端锚定，才有确定的起止时刻（RFC 3339）。 */
   "five-hour-window-start"?: string;
   "five-hour-resets-at"?: string;
+  /** 没有在途请求时缺省；旧后端从不下发。 */
+  "in-flight"?: InFlightUsage;
 }
 
 export interface CappedCell {
@@ -202,6 +215,14 @@ export const normalizeModelRoutes = (value: unknown): ModelRoute[] => {
   });
 };
 
+/** 没有在途请求就没有预留：requests 不到 1 时整项丢掉，界面不必再判断。 */
+const normalizeInFlightUsage = (value: unknown): InFlightUsage | undefined => {
+  if (!isRecord(value)) return undefined;
+  const requests = finiteNonNegative(value.requests);
+  if (requests < 1) return undefined;
+  return { requests, tokens: finiteNonNegative(value.tokens), cost: finiteNonNegative(value.cost) };
+};
+
 export const normalizeQuotaUsageView = (value: unknown): QuotaUsageView | undefined => {
   if (!isRecord(value)) return undefined;
   const rules = Array.isArray(value.rules)
@@ -216,6 +237,8 @@ export const normalizeQuotaUsageView = (value: unknown): QuotaUsageView | undefi
   const resets = normalizeString(value["five-hour-resets-at"]);
   if (start) view["five-hour-window-start"] = start;
   if (resets) view["five-hour-resets-at"] = resets;
+  const inFlight = normalizeInFlightUsage(value["in-flight"]);
+  if (inFlight) view["in-flight"] = inFlight;
   return view;
 };
 

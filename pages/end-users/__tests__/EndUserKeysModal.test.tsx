@@ -98,11 +98,11 @@ const keys = [
   }),
 ];
 
-function renderModal(onViewKeyUsage = vi.fn()) {
+function renderModal(onViewKeyUsage = vi.fn(), user = account) {
   render(
     <ThemeProvider>
       <ToastProvider>
-        <EndUserKeysModal user={account} catalog={[]} canWrite onViewKeyUsage={onViewKeyUsage} onClose={vi.fn()} />
+        <EndUserKeysModal user={user} catalog={[]} canWrite onViewKeyUsage={onViewKeyUsage} onClose={vi.fn()} />
       </ToastProvider>
     </ThemeProvider>,
   );
@@ -128,6 +128,52 @@ describe("EndUserKeysModal", () => {
     expect(within(dialog).getByText("Account quota")).toBeInTheDocument();
     expect(within(rowOf("primary")).getByText("120 / 300")).toBeInTheDocument();
     expect(within(rowOf("spare")).getByText("Unlimited")).toBeInTheDocument();
+  });
+
+  test("the account and each key show what their requests in flight hold", async () => {
+    const accountUsed = emptyQuotaMatrix();
+    accountUsed.cost.day = 40;
+    const busyAccount = normalizeEndUser({
+      id: "user-1",
+      tenant_id: "t1",
+      username: "alice",
+      display_name: "Alice",
+      status: "active",
+      must_change_password: false,
+      created_at: "",
+      updated_at: "",
+      version: 1,
+      "quota-limits": accountLimits,
+      "quota-usage": { total: accountUsed, rules: [], "in-flight": { requests: 3, tokens: 0, cost: 1.5 } },
+    });
+    const busyKey = normalizeEndUserAPIKey({
+      id: "k1",
+      tenant_id: "t1",
+      end_user_id: "user-1",
+      name: "primary",
+      key_masked: "sk-****1111",
+      disabled: false,
+      is_default: true,
+      "quota-limits": keyLimits,
+      "model-rules": [],
+      "quota-usage": { total: keyUsed, rules: [], "in-flight": { requests: 2, tokens: 0, cost: 0 } },
+    });
+    mocks.listKeys.mockResolvedValue({ items: [busyKey], capabilities: FULL });
+    const dialog = renderModal(vi.fn(), busyAccount);
+    await within(dialog).findByText("primary");
+
+    expect(
+      within(dialog).getByTitle("Spend · Daily: $40 used of $50, plus $1.5 reserved by requests in flight"),
+    ).toBeInTheDocument();
+    expect(
+      within(rowOf("primary")).getByTitle("Requests · Weekly: 120 used of 300, plus 2 reserved by requests in flight"),
+    ).toBeInTheDocument();
+
+    // Key 详情：每格写明已用与在途，上限就在输入框里。
+    await userEvent.click(within(rowOf("primary")).getByRole("button", { name: "Edit Key quota" }));
+    const editor = await screen.findByRole("dialog", { name: /Edit Key quota/ });
+    await userEvent.click(within(editor).getByRole("tab", { name: /Quota/ }));
+    expect(within(editor).getByText("120 used · 2 in flight")).toBeInTheDocument();
   });
 
   test("copies a key by fetching only its own secret", async () => {
