@@ -353,6 +353,9 @@ describe("sensitive-word rules: the platform's list", () => {
 
     expect(await screen.findByText("Platform rules: 120")).toBeInTheDocument();
     expect(screen.getByText(/The platform's word list is not shown to tenants/)).toBeInTheDocument();
+    // The line under the layer switch must not promise what the list no longer allows.
+    expect(screen.getByText(/Tenants cannot see the word list, change it or switch it off/)).toBeInTheDocument();
+    expect(screen.queryByText(/can read these rules/)).not.toBeInTheDocument();
     // An empty list would read as "the platform has no rules".
     expect(screen.queryByText("No rules yet")).not.toBeInTheDocument();
     expect(screen.queryByRole("table", { name: "Sensitive-word rule table" })).not.toBeInTheDocument();

@@ -6410,7 +6410,7 @@
       "scope_platform": "平台",
       "scope_tenant": "本租户",
       "scope_key": "API Key",
-      "scope_hint_platform": "对所有租户的请求生效。租户可以查看这些规则，但不能修改，也不能关闭。",
+      "scope_hint_platform": "对所有租户的请求生效。租户看不到这份词表，也不能修改或关闭。",
       "scope_hint_tenant": "本租户所有请求的默认策略。单个 API Key 可以为自己的请求增加规则或调整下面的设置。",
       "scope_hint_key": "只对使用这把 API Key 的请求生效，与租户的规则叠加。可以增加规则、调整设置，但不能关闭平台规则。",
       "key_label": "API Key",

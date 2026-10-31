@@ -6432,7 +6432,7 @@
       "scope_platform": "Platform",
       "scope_tenant": "This tenant",
       "scope_key": "API key",
-      "scope_hint_platform": "Applies to every tenant's requests. Tenants can read these rules but cannot change or switch them off.",
+      "scope_hint_platform": "Applies to every tenant's requests. Tenants cannot see the word list, change it or switch it off.",
       "scope_hint_tenant": "The default for every request of this tenant. An API key can add rules or change the settings below for its own requests.",
       "scope_hint_key": "Applies only to requests made with one API key, together with the tenant's rules. It can add rules and change settings but cannot switch off the platform's rules.",
       "key_label": "API key",
