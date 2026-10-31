@@ -451,9 +451,11 @@ describe("sensitive-word rules tab", () => {
 
     expect(
       await screen.findByText(
-        /An object key, or JSON inside a string\) blocks the request instead\. Replayed thinking blocks are signed/i,
+        /text that is not valid UTF-8, or JSON nested too deeply\) blocks the request instead, and the refusal names the field\. Replayed thinking blocks are signed/i,
       ),
     ).toBeInTheDocument();
+    // Object keys and tool-call arguments are rewritten now; the note must not claim they are refused.
+    expect(screen.queryByText(/object key/i)).not.toBeInTheDocument();
   });
 
   test("leaving a layer with unsaved changes asks first", async () => {

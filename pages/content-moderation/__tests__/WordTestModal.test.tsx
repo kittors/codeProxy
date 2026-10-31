@@ -220,7 +220,9 @@ describe("testing sensitive-word rules", () => {
 
     expect(await within(dialog).findByText("This request would be blocked")).toBeInTheDocument();
     expect(
-      within(dialog).getByText(/sits where it cannot be replaced \(an object key, or JSON inside a string\)/),
+      within(dialog).getByText(
+        /sits where it cannot be replaced \(text that is not valid UTF-8, or JSON nested too deeply\)/,
+      ),
     ).toBeInTheDocument();
     expect(
       within(dialog).getByText("Where: messages[0].content[1].input (an object key)"),
