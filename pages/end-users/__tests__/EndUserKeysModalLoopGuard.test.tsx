@@ -319,6 +319,32 @@ describe("a portal account's key editor and its loop protection", () => {
     ).toHaveTextContent("Off for this key");
   });
 
+  test("while the override is being written the editor cannot be cancelled and the key waits", async () => {
+    let finish!: (view: LoopGuardKeyView) => void;
+    mocks.putKey.mockImplementation(
+      () => new Promise<LoopGuardKeyView>((resolve) => void (finish = resolve)),
+    );
+    renderModal();
+    const editor = await openEditor();
+    await userEvent.click(await within(editor).findByRole("tab", { name: "Loop protection" }));
+    await choose(
+      within(editor).getByRole("combobox", { name: "Stop repeating replies" }),
+      "Off for this key",
+    );
+    await userEvent.click(within(editor).getByRole("button", { name: "Save" }));
+
+    await waitFor(() =>
+      expect(within(editor).getByRole("button", { name: "Cancel" })).toBeDisabled(),
+    );
+    expect(within(editor).getByRole("combobox", { name: "Stop repeating replies" })).toBeDisabled();
+    expect(mocks.updateKey).not.toHaveBeenCalled();
+
+    finish(keyView({ reply: { enabled: false, window: 0, max_distinct: 0 } }));
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog", { name: /Edit Key quota/ })).toBeNull(),
+    );
+  });
+
   test("an account that may not write keys can read the section but not change it", async () => {
     mocks.can.mockImplementation((permission) => permission !== "api_keys.write");
     renderModal();

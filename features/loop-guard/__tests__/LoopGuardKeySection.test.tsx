@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, renderHook, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import i18n from "@code-proxy/i18n";
@@ -262,6 +262,39 @@ describe("the loop protection section of the API key dialog", () => {
     await waitFor(() => expect(mocks.putKey).toHaveBeenCalledTimes(1));
     await userEvent.click(screen.getByRole("button", { name: "save override" }));
     await waitFor(() => expect(screen.getByTestId("answer")).toHaveTextContent("true"));
+    expect(mocks.putKey).toHaveBeenCalledTimes(1);
+  });
+
+  test("a second save while the first is still writing writes nothing and says not to go on", async () => {
+    let finish!: (view: LoopGuardKeyView) => void;
+    mocks.putKey.mockImplementation(
+      () => new Promise<LoopGuardKeyView>((resolve) => void (finish = resolve)),
+    );
+    const { result } = renderHook(() => useLoopGuardKey("key-1", true));
+    await waitFor(() => expect(result.current.state.status).toBe("ready"));
+    act(() => result.current.form.patch({ replyMode: "off" }));
+
+    let first!: Promise<boolean>;
+    act(() => {
+      first = result.current.save();
+    });
+    // The submit shortcut does not wait for the button: this is the second one.
+    let second = true;
+    await act(async () => {
+      second = await result.current.save();
+    });
+    expect(second).toBe(false);
+    expect(mocks.putKey).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      finish(keyView({ reply: { enabled: false, window: 0, max_distinct: 0 } }));
+      await first;
+    });
+    expect(await first).toBe(true);
+    // Once the write is over the next save is a new one (and has nothing left to write).
+    await act(async () => {
+      expect(await result.current.save()).toBe(true);
+    });
     expect(mocks.putKey).toHaveBeenCalledTimes(1);
   });
 

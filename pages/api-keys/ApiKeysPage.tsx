@@ -28,8 +28,7 @@ import { generateApiKey, makeEmptyApiKeyForm, maskApiKey } from "./apiKeyPageUti
 import { createApiKeyColumns } from "./components/ApiKeyColumns";
 import { DeleteApiKeyModal } from "./components/DeleteApiKeyModal";
 import { copyTextToClipboard } from "@code-proxy/ui";
-import { Card } from "@code-proxy/ui";
-import { Button, buttonClassName } from "@code-proxy/ui";
+import { Button, Card, buttonClassName } from "@code-proxy/ui";
 import { EmptyState } from "@code-proxy/ui";
 import { ConfirmModal, SecretRevealModal } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
