@@ -1428,7 +1428,7 @@ describe("ChannelGroupsPage", () => {
     };
 
     // The page saves the whole routing config: a group nobody opened keeps its
-    // guards, and busy-wait 0 (off) is not confused with unset (60s).
+    // guards, and an explicit busy-wait 0 is not turned into unset.
     test("edits the guards and keeps them on groups nobody opened", async () => {
       serveRoutingConfig(
         { default: { "busy-wait-max-seconds": 0 }, pool: { "first-token-timeout-seconds": 20 } },

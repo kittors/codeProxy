@@ -142,7 +142,7 @@ export function serializeStreamGuards(group: StreamGuardEntryFields): {
   if (group.firstTokenTimeoutSeconds) {
     fields["first-token-timeout-seconds"] = group.firstTokenTimeoutSeconds;
   }
-  // Absent means the default wait and 0 means none, so 0 is written.
+  // Absent and 0 are both off, but 0 is the operator's explicit choice, so it is written back.
   if (typeof group.busyWaitMaxSeconds === "number") {
     fields["busy-wait-max-seconds"] = group.busyWaitMaxSeconds;
   }

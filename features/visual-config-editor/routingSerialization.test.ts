@@ -112,7 +112,7 @@ describe("channel-group stream guards round-trip", () => {
     ).toMatchObject({ "first-token-timeout-seconds": 30, "busy-wait-max-seconds": 120 });
   });
 
-  // Unset waits 60s by default; 0 does not wait at all.
+  // Both are off, but a stored 0 is an explicit choice and must not turn into unset.
   it("keeps a busy wait of 0 apart from an unset one", () => {
     expect(roundTrip({ "busy-wait-max-seconds": 0 })).toMatchObject({ "busy-wait-max-seconds": 0 });
     expect(roundTrip({})).not.toHaveProperty("busy-wait-max-seconds");

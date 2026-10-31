@@ -9,8 +9,9 @@ import type { RoutingChannelGroupEntry } from "@features/visual-config-editor";
  *   produced its first token in time and, while the client has received
  *   nothing, retries it on another account. Unset or 0 is off.
  * - `busy-wait-max-seconds` caps how long a request waits when every account
- *   it may use is cooling down after a recoverable failure. Unset is the
- *   backend default (60s); 0 turns waiting off.
+ *   it may use is cooling down after a recoverable failure. Waiting is
+ *   opt-in: unset and 0 are both off. They are still stored apart (an explicit
+ *   0 survives a save), so a save never rewrites what the operator chose.
  *
  * Requests confined to one group use its values; every other request uses the
  * default group's. The backend rejects values outside these bounds with a 400,
@@ -18,10 +19,9 @@ import type { RoutingChannelGroupEntry } from "@features/visual-config-editor";
  */
 export const FIRST_TOKEN_TIMEOUT_MIN_SECONDS = 5;
 export const FIRST_TOKEN_TIMEOUT_MAX_SECONDS = 300;
-export const BUSY_WAIT_DEFAULT_SECONDS = 60;
 export const BUSY_WAIT_MAX_SECONDS = 240;
 
-/** Both settings as typed. Blank is "unset", which is not the same as "0" for the wait. */
+/** Both settings as typed. Blank is "unset"; for the wait it is kept apart from "0" although both are off. */
 export type StreamGuardsDraft = {
   firstTokenTimeout: string;
   busyWaitMax: string;

@@ -1622,7 +1622,20 @@ describe("RoutingConfigEditor scheduling", () => {
       render(<Harness streamGuardsSupported />);
       await editDefaultGroup(user);
       expect(screen.getByRole("textbox", { name: TIMEOUT })).toHaveValue("");
-      expect(screen.getByRole("textbox", { name: BUSY_WAIT })).toHaveAttribute("placeholder", "60");
+      // Waiting is opt-in, so an empty field has to read as off, not as a number.
+      expect(screen.getByRole("textbox", { name: BUSY_WAIT })).toHaveAttribute("placeholder", "关闭");
+    });
+
+    // Waiting is opt-in, and a non-streaming client sees nothing while it
+    // happens, so the field has to say both before anyone turns it on.
+    test("says that waiting is opt-in and silent for non-streaming requests", async () => {
+      await i18n.changeLanguage("zh-CN");
+      const user = userEvent.setup();
+      render(<Harness streamGuardsSupported />);
+      await editDefaultGroup(user);
+      const hint = screen.getByText(/^未设置时关闭/);
+      expect(hint).toHaveTextContent("每个请求最多等待两次");
+      expect(hint).toHaveTextContent("非流式请求以及图片、视频提交会静默等待");
     });
 
     // Each capability unlocks its own field: a backend could ship one first.
@@ -1638,7 +1651,7 @@ describe("RoutingConfigEditor scheduling", () => {
       expect(screen.queryByRole("textbox", { name: hidden })).not.toBeInTheDocument();
     });
 
-    // Unset takes the 60s default, 0 turns waiting off: the two must stay apart.
+    // Unset and 0 are both off, but the stored form keeps them apart.
     test("saves the default group's guards, telling unset apart from 0", async () => {
       await i18n.changeLanguage("zh-CN");
       const user = userEvent.setup();
@@ -1662,7 +1675,7 @@ describe("RoutingConfigEditor scheduling", () => {
     });
 
     const TIMEOUT_INVALID = "首 token 超时须留空（关闭）或填 5–300 之间的整数秒。";
-    const BUSY_WAIT_INVALID = "全员繁忙等待上限须留空（60）或填 0–240 之间的整数秒。";
+    const BUSY_WAIT_INVALID = "全员繁忙等待上限须留空（关闭）或填 0–240 之间的整数秒。";
     // The backend answers these with a 400; the editor says why before saving.
     test.each<[string, string, string, string]>([
       [TIMEOUT, "4", "5", TIMEOUT_INVALID],

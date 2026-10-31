@@ -52,9 +52,9 @@ export interface RoutingConfigGroupItem {
   "first-token-timeout-seconds"?: number;
   /**
    * Longest a request waits when every account it may use is cooling down
-   * after a recoverable failure. Absent means the backend default (60s); 0
-   * turns waiting off. Only written when the backend advertises
-   * `channel-group-busy-wait`.
+   * after a recoverable failure. Waiting is opt-in: absent and 0 are both
+   * off (an explicit 0 is still stored). Only written when the backend
+   * advertises `channel-group-busy-wait`.
    */
   "busy-wait-max-seconds"?: number;
 }

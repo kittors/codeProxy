@@ -4,7 +4,7 @@ import type { RoutingConfigSupport } from "@code-proxy/api-client/endpoints/rout
 import { TextInput } from "@code-proxy/ui";
 import { DEFAULT_STICKY_MAX_REQUESTS, type RoutingSticky } from "@features/visual-config-editor";
 import { Field } from "./fields";
-import { BUSY_WAIT_DEFAULT_SECONDS, type StreamGuardsDraft } from "./streamGuards";
+import type { StreamGuardsDraft } from "./streamGuards";
 
 /** Typed text is only accepted while it matches the pattern. */
 const acceptMatching =
@@ -102,7 +102,7 @@ export function StreamGuardFields({
           <TextInput
             value={draft.busyWaitMax}
             onChange={acceptMatching(/^\d*$/, (busyWaitMax) => onChange({ busyWaitMax }))}
-            placeholder={String(BUSY_WAIT_DEFAULT_SECONDS)}
+            placeholder={t("channel_groups_page.busy_wait_placeholder")}
             inputMode="numeric"
             aria-label={t("channel_groups_page.busy_wait_label")}
             disabled={disabled}

@@ -112,9 +112,9 @@ export type RoutingChannelGroupEntry = {
    */
   firstTokenTimeoutSeconds?: number;
   /**
-   * `busy-wait-max-seconds` as stored; undefined means the backend default
-   * (60s) and 0 turns waiting off, so the two must not be merged. Carried
-   * through every save.
+   * `busy-wait-max-seconds` as stored. Waiting is opt-in, so undefined and 0
+   * are both off, but the two are kept apart: an explicit 0 is the operator's
+   * choice and must survive a save. Carried through every save.
    */
   busyWaitMaxSeconds?: number;
   /**
