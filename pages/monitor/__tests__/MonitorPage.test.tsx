@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import i18n from "@code-proxy/i18n";
 import {
   ApiClientError,
+  normalizeMonitorInFlight,
   normalizeMonitorOverview,
   normalizeMonitorRealtime,
   type ChartDataResponse,
@@ -15,6 +16,7 @@ import { resetMonitorBackendProbe } from "../hooks/useMonitorOverview";
 const mocks = vi.hoisted(() => ({
   getOverview: vi.fn(),
   getRealtime: vi.fn(),
+  getInFlight: vi.fn(),
   getChartData: vi.fn(),
   getLogContent: vi.fn(),
   can: vi.fn((_permission: string) => true),
@@ -24,7 +26,11 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@code-proxy/api-client")>();
   return {
     ...actual,
-    usageMonitorApi: { getOverview: mocks.getOverview, getRealtime: mocks.getRealtime },
+    usageMonitorApi: {
+      getOverview: mocks.getOverview,
+      getRealtime: mocks.getRealtime,
+      getInFlight: mocks.getInFlight,
+    },
     usageApi: {
       ...actual.usageApi,
       getChartData: mocks.getChartData,
@@ -58,7 +64,7 @@ const BOUNDS = [
   25000, 30000, 40000, 50000, 60000, 90000, 120000, 180000, 300000, 600000,
 ];
 
-function overviewFixture() {
+function overviewFixture(extra: Record<string, unknown> = {}) {
   const histogram = Array.from({ length: BOUNDS.length + 1 }, (_, index) =>
     index === 9 ? 80 : index === 12 ? 20 : 0,
   );
@@ -227,6 +233,7 @@ function overviewFixture() {
       channels: [{ value: "codex-a", label: "Codex-A", requests: 900, provider: "codex" }],
       consumers: [{ value: "eu:alice", label: "Alice", requests: 1200, kind: "end_user" }],
     },
+    ...extra,
   });
 }
 
@@ -275,6 +282,7 @@ describe("MonitorPage", () => {
     localStorage.clear();
     mocks.getOverview.mockReset().mockResolvedValue(overviewFixture());
     mocks.getRealtime.mockReset().mockResolvedValue(realtimeFixture());
+    mocks.getInFlight.mockReset();
     mocks.getChartData.mockReset();
     mocks.getLogContent
       .mockReset()
@@ -399,6 +407,54 @@ describe("MonitorPage", () => {
     expect(screen.getByText("boom")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Retry" }));
     expect(await screen.findByText("Health score")).toBeInTheDocument();
+  });
+
+  test("lists the requests in flight once the backend says it has them", async () => {
+    mocks.getOverview.mockResolvedValue(
+      overviewFixture({ capabilities: { "in-flight-requests": true } }),
+    );
+    mocks.getInFlight.mockResolvedValue(
+      normalizeMonitorInFlight({
+        requests: [
+          {
+            request_id: "req-1",
+            started_at: "2026-10-07T13:46:50+08:00",
+            elapsed_ms: 10_000,
+            stage: "queued",
+            stage_elapsed_ms: 4_000,
+            model: "gpt-test",
+            account: { auth_id: "codex-a.json", label: "Codex-A", provider: "codex" },
+            api_key_name: "CI",
+          },
+        ],
+        total: 1,
+      }),
+    );
+    renderPage();
+    const card = (await screen.findByRole("heading", { name: /^Requests in flight/ })).closest(
+      "section",
+    )!;
+    await waitFor(() => expect(within(card).getByText("Queued for a slot")).toBeInTheDocument());
+    expect(within(card).getByText("Codex-A")).toBeInTheDocument();
+    expect(mocks.getInFlight).toHaveBeenCalled();
+  });
+
+  test("leaves the in-flight card out where the backend has no such list", async () => {
+    renderPage();
+    await screen.findByText("Health score");
+    expect(screen.queryByRole("heading", { name: /^Requests in flight/ })).toBeNull();
+    expect(mocks.getInFlight).not.toHaveBeenCalled();
+
+    // Declared, but the node that answers lacks the route: the card goes away for good.
+    mocks.getOverview.mockResolvedValue(
+      overviewFixture({ capabilities: { "in-flight-requests": true } }),
+    );
+    mocks.getInFlight.mockRejectedValue(notFound());
+    fireEvent.click(screen.getByRole("tab", { name: "7 days" }));
+    await waitFor(() => expect(mocks.getInFlight).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(screen.queryByRole("heading", { name: /^Requests in flight/ })).toBeNull(),
+    );
   });
 
   test("opens the upstream error of a recent failure only with content permission", async () => {

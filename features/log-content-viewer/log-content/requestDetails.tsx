@@ -3,8 +3,11 @@ import { useTranslation } from "react-i18next";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 import type { UsageLogEgressResponse } from "@code-proxy/api-client";
+import { DetailBadge } from "./detailBadge";
 import { parseJsonObject } from "./parsers";
 import { PlainPre } from "./rendering";
+import { RouteTimeline, RouteTimelineBadges } from "./RouteTimeline";
+import { readRouteTrace } from "./routeTrace";
 
 /**
  * 「请求详情」页签：出口网络、客户端传入、传给上游、上游响应，再加 details 里其余的键。
@@ -302,7 +305,8 @@ function buildExtraDetailSections(details: RequestDetailRecord): Array<{
     )
     .map(([key, value]) => {
       if (isRecord(value)) {
-        const rows = buildGenericRows(value);
+        // 路由轨迹在「路由时间线」分区里逐步展开，这里不再把它压成一行 JSON。
+        const rows = buildGenericRows(value, key === "diagnostic" ? ["route_trace"] : []);
         const headers = normalizeHeaderRows(value.headers);
         return {
           key,
@@ -386,16 +390,19 @@ function RequestDetailAttemptView({
 
 function RequestDetailSection({
   title,
-  attempts,
+  attempts = [],
   testId,
   defaultOpen = true,
   headerExtras,
+  children,
 }: {
   title: string;
-  attempts: RequestDetailAttempt[];
+  attempts?: RequestDetailAttempt[];
   testId?: string;
   defaultOpen?: boolean;
   headerExtras?: ReactNode;
+  /** 分区自己排版的内容（路由时间线），代替按尝试列出的行。 */
+  children?: ReactNode;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const contentId = testId ? `${testId}-content` : undefined;
@@ -444,7 +451,9 @@ function RequestDetailSection({
             className="overflow-hidden"
           >
             <div className="space-y-4 px-3.5 pb-3">
-              {visibleAttempts.length > 0 ? (
+              {children ? (
+                children
+              ) : visibleAttempts.length > 0 ? (
                 visibleAttempts.map((attempt, index) => (
                   <RequestDetailAttemptView
                     key={`${attempt.title ?? "attempt"}-${index}`}
@@ -460,23 +469,6 @@ function RequestDetailSection({
         ) : null}
       </AnimatePresence>
     </section>
-  );
-}
-
-// 出口网络的小标签：只用状态色的淡底，深浅色由同一组类名覆盖。
-const BADGE_TONE = {
-  neutral: "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]",
-  info: "bg-sky-500/10 text-sky-700 dark:text-sky-300",
-  warning: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
-  success: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
-  danger: "bg-rose-500/10 text-rose-700 dark:text-rose-300",
-} as const;
-
-function Badge({ tone, children }: { tone: keyof typeof BADGE_TONE; children: ReactNode }) {
-  return (
-    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${BADGE_TONE[tone]}`}>
-      {children}
-    </span>
   );
 }
 
@@ -532,38 +524,38 @@ function useEgressSection(
 
   if (egressLoading) {
     egressBadges.push(
-      <Badge key="loading" tone="neutral">
+      <DetailBadge key="loading" tone="neutral">
         {t("log_content.egress_badge_verifying")}
-      </Badge>,
+      </DetailBadge>,
     );
   } else if (egressInfo?.using_proxy) {
     egressBadges.push(
-      <Badge key="proxy" tone="info">
+      <DetailBadge key="proxy" tone="info">
         {t("log_content.egress_badge_proxy")}
-      </Badge>,
+      </DetailBadge>,
     );
   } else if (egressInfo) {
     egressBadges.push(
-      <Badge key="direct" tone="neutral">
+      <DetailBadge key="direct" tone="neutral">
         {t("log_content.egress_badge_server")}
-      </Badge>,
+      </DetailBadge>,
     );
   }
   if (egressInfo && typeof egressInfo.matches_server_ip === "boolean") {
     // 沿用原来的配色语义：出口 IP 与服务器相同用琥珀提醒，不同用绿色。
     egressBadges.push(
-      <Badge key="compare" tone={egressInfo.matches_server_ip ? "warning" : "success"}>
+      <DetailBadge key="compare" tone={egressInfo.matches_server_ip ? "warning" : "success"}>
         {egressInfo.matches_server_ip
           ? t("log_content.egress_badge_same")
           : t("log_content.egress_badge_different")}
-      </Badge>,
+      </DetailBadge>,
     );
   }
   if ((egressInfo?.error || egressError) && !egressLoading) {
     egressBadges.push(
-      <Badge key="error" tone="danger">
+      <DetailBadge key="error" tone="danger">
         {t("log_content.egress_badge_failed")}
-      </Badge>,
+      </DetailBadge>,
     );
   }
 
@@ -594,6 +586,7 @@ export function RequestDetailsView({
 
   const details = parseJsonObject(content);
   if (!details) return <PlainPre text={content} />;
+  const routeTrace = readRouteTrace(details);
   const clientAttempt = buildClientAttempt(details.client, labels);
   const upstreamAttempts = buildUpstreamAttempts(details.upstream, labels);
   const responseAttempts = buildResponseAttempts(details.response, labels);
@@ -601,6 +594,15 @@ export function RequestDetailsView({
 
   return (
     <div className="space-y-3 p-1">
+      {routeTrace ? (
+        <RequestDetailSection
+          testId="request-detail-section-route"
+          title={t("log_content.route_trace.title")}
+          headerExtras={<RouteTimelineBadges trace={routeTrace} />}
+        >
+          <RouteTimeline trace={routeTrace} />
+        </RequestDetailSection>
+      ) : null}
       <RequestDetailSection
         testId="request-detail-section-egress"
         title={t("log_content.details_egress")}

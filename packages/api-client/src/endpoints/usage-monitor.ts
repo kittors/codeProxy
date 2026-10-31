@@ -2,12 +2,13 @@ import { pickCacheRateFields } from "@code-proxy/domain/usage/cacheRate";
 import { apiClient } from "../client/client";
 
 /**
- * Monitor center endpoints (CliRelay `GET /usage/monitor/overview|realtime`).
+ * Monitor center endpoints (CliRelay `GET /usage/monitor/overview|realtime|in-flight`).
  *
  * Every payload goes through a normaliser: the panel auto-updates onto older
  * backends and must never crash on a missing or malformed field. Older
  * backends answer 404 for these paths; callers detect that and fall back to
- * `/usage/chart-data` (see pages/monitor).
+ * `/usage/chart-data` (see pages/monitor). The in-flight list is newer still:
+ * the overview's `capabilities` says whether the backend has it.
  */
 
 export type MonitorRangeKey = "1h" | "6h" | "24h" | "today" | "7d" | "14d" | "30d";
@@ -162,8 +163,15 @@ export interface MonitorFilterOptions {
   consumers: MonitorFilterOption[];
 }
 
+/** What the backend's monitor center offers beyond the overview itself. */
+export interface MonitorCapabilities {
+  /** `GET /usage/monitor/in-flight` answers. */
+  inFlightRequests: boolean;
+}
+
 export interface MonitorOverview {
   generated_at: string;
+  capabilities: MonitorCapabilities;
   range: MonitorRange;
   summary: { current: MonitorTotals; previous: MonitorTotals };
   series: MonitorSeriesPoint[];
@@ -188,6 +196,61 @@ export interface MonitorRealtime {
   avg_rpm: number;
   avg_tpm: number;
   last_5m: MonitorTotals;
+}
+
+/**
+ * Where a request in flight stands (CliRelay routetrace `Stage*`): accepted and between the
+ * scheduler's decisions, waiting for an account's free slot, waiting for an account to recover,
+ * sent and waiting for the answer, stream open with nothing yet, stream delivering. The backend
+ * adds stages and never renames them, so an unknown one is kept as sent.
+ */
+export const MONITOR_IN_FLIGHT_STAGES = [
+  "preparing",
+  "queued",
+  "waiting",
+  "upstream",
+  "first_token",
+  "streaming",
+] as const;
+
+export type MonitorInFlightStage = (typeof MONITOR_IN_FLIGHT_STAGES)[number];
+
+export interface MonitorInFlightAccount {
+  auth_id: string;
+  label: string;
+  provider: string;
+  /** Channel group the account was picked from; empty outside groups. */
+  group: string;
+  /** Model sent upstream, after the account's aliases. */
+  model: string;
+}
+
+export interface MonitorInFlightRequest {
+  request_id: string;
+  method: string;
+  path: string;
+  started_at: string;
+  elapsed_ms: number;
+  stage: string;
+  stage_elapsed_ms: number;
+  /** Model the client asked for. */
+  model: string;
+  stream: boolean;
+  /** 1-based number of the attempt under way or last made; 0 before the first. */
+  attempt: number;
+  /** Account the request is on or last tried; null before its first attempt. */
+  account: MonitorInFlightAccount | null;
+  /** The key is named by id and name only, never by its secret. */
+  api_key_id: string;
+  api_key_name: string;
+}
+
+export interface MonitorInFlight {
+  /** Oldest first; the backend lists at most 500. */
+  requests: MonitorInFlightRequest[];
+  /** How many there are in all, of which `requests` are the oldest. */
+  total: number;
+  generated_at: string;
 }
 
 export interface MonitorFilterSelection {
@@ -313,8 +376,10 @@ export function normalizeMonitorOverview(raw: unknown): MonitorOverview {
   const heatmap = asRecord(record.heatmap);
   const flows = asRecord(record.flows);
   const filters = asRecord(record.filters);
+  const capabilities = asRecord(record.capabilities);
   return {
     generated_at: toText(record.generated_at),
+    capabilities: { inFlightRequests: capabilities["in-flight-requests"] === true },
     range: {
       key: isRangeKey(rangeKey) ? rangeKey : "24h",
       start: toText(range.start),
@@ -413,6 +478,46 @@ export function normalizeMonitorRealtime(raw: unknown): MonitorRealtime {
   };
 }
 
+export function normalizeMonitorInFlight(raw: unknown): MonitorInFlight {
+  const record = asRecord(raw);
+  const entries = asArray(record.requests).filter(
+    (item) => item !== null && typeof item === "object" && !Array.isArray(item),
+  );
+  const requests = entries.map((item): MonitorInFlightRequest => {
+    const entry = asRecord(item);
+    const account = asRecord(entry.account);
+    const authId = toText(account.auth_id);
+    return {
+      request_id: toText(entry.request_id),
+      method: toText(entry.method),
+      path: toText(entry.path),
+      started_at: toText(entry.started_at),
+      elapsed_ms: Math.max(0, toNumber(entry.elapsed_ms)),
+      stage: toText(entry.stage),
+      stage_elapsed_ms: Math.max(0, toNumber(entry.stage_elapsed_ms)),
+      model: toText(entry.model),
+      stream: entry.stream === true,
+      attempt: Math.max(0, toNumber(entry.attempt)),
+      account: authId
+        ? {
+            auth_id: authId,
+            label: toText(account.label),
+            provider: toText(account.provider),
+            group: toText(account.group),
+            model: toText(account.model),
+          }
+        : null,
+      api_key_id: toText(entry.api_key_id),
+      api_key_name: toText(entry.api_key_name),
+    };
+  });
+  return {
+    requests,
+    total: Math.max(toNumber(record.total), requests.length),
+    generated_at: toText(record.generated_at),
+  };
+}
+
 /** Builds the query string; multi-value filters repeat the parameter. */
 export function buildMonitorQueryString(
   query: MonitorFilterSelection & { range?: MonitorRangeKey },
@@ -446,5 +551,13 @@ export const usageMonitorApi = {
       signal: options?.signal,
     });
     return normalizeMonitorRealtime(raw);
+  },
+
+  /** Requests the backend is serving right now; only when the overview's capabilities say so. */
+  async getInFlight(options?: { signal?: AbortSignal }): Promise<MonitorInFlight> {
+    const raw = await apiClient.get<unknown>("/usage/monitor/in-flight", {
+      signal: options?.signal,
+    });
+    return normalizeMonitorInFlight(raw);
   },
 };

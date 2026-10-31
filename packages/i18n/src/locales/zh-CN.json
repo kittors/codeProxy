@@ -2467,7 +2467,35 @@
     "auto_refresh_short_0": "不刷新",
     "auto_refresh_short_30": "30 秒",
     "auto_refresh_short_60": "1 分钟",
-    "auto_refresh_short_300": "5 分钟"
+    "auto_refresh_short_300": "5 分钟",
+    "in_flight": {
+      "title": "在途请求",
+      "note": "本节点 {{count}} 个",
+      "note_listed": "本节点共 {{total}} 个，显示最早的 {{shown}} 个",
+      "load_failed": "在途请求加载失败",
+      "empty": "当前没有进行中的请求",
+      "empty_hint": "请求处理期间会出现在这里，并显示它正处在哪个阶段。",
+      "col_started": "开始",
+      "col_stage": "阶段",
+      "col_request": "请求",
+      "col_account": "账号",
+      "col_key": "Key",
+      "elapsed": "已 {{duration}}",
+      "in_stage": "本阶段 {{duration}}",
+      "stage": {
+        "preparing": "准备中",
+        "queued": "排队",
+        "waiting": "等账号恢复",
+        "upstream": "等上游",
+        "first_token": "等首 token",
+        "streaming": "流式中"
+      },
+      "stream": "流式",
+      "slow_hint": "在这个阶段已超过 15 秒",
+      "attempt": "第 {{attempt}} 次尝试",
+      "group": "分组 {{group}}",
+      "no_account": "还没分到账号"
+    }
   },
   "shell": {
     "console": "控制台",
@@ -5442,7 +5470,92 @@
     "role_thinking": "思考",
     "role_tool_use": "工具调用",
     "role_message": "消息",
-    "details_only_desc": "未开启请求正文存储，只能查看这次请求的地址、请求头和状态。"
+    "details_only_desc": "未开启请求正文存储，只能查看这次请求的地址、请求头和状态。",
+    "route_trace": {
+      "title": "路由时间线",
+      "badge_attempts": "{{count}} 次尝试",
+      "badge_pinned": "绑定单一账号",
+      "lead": {
+        "served_first": "由 {{account}} 一次完成。",
+        "served_after": "前 {{count}} 次尝试失败，第 {{attempt}} 次由 {{account}} 完成。",
+        "failed": "第 {{attempt}} 次尝试在 {{account}} 上失败：{{failure}}。",
+        "client_left_attempt": "第 {{attempt}} 次尝试（{{account}}）还没结束，客户端就断开了。",
+        "client_left_queue": "请求排队等空闲名额时，客户端断开了。",
+        "client_left_wait": "请求等账号恢复时，客户端断开了。",
+        "running": "写下这条记录时，第 {{attempt}} 次尝试（{{account}}）还在进行。",
+        "queue_gave_up": "请求排队等了 {{duration}} 仍没有空闲名额，放弃了。",
+        "no_account": "没有账号能接这个请求。"
+      },
+      "account_state": {
+        "paused_until": "{{account}} 暂停调度 {{remaining}}，至 {{time}}。",
+        "paused_no_end": "{{account}} 已暂停调度，要等探测或人工处理后恢复。",
+        "model_disabled": "这个模型在 {{account}} 上已停用。"
+      },
+      "next": {
+        "moved_on": "请求换到了 {{account}}。",
+        "queued": "请求随后排队等空闲名额。",
+        "waiting": "请求随后等了约 {{duration}} 再试。",
+        "waiting_retry": "按请求重试设置，请求随后等了约 {{duration}} 再试。",
+        "waiting_busy": "分组开启了忙等：请求随后等了约 {{duration}}，等有账号恢复。",
+        "exhausted": "没有别的账号能接。",
+        "not_retried_pinned": "没有换号重试：这个请求绑定在该账号上。",
+        "not_retried_request": "没有换号重试：上游拒绝的是请求本身。"
+      },
+      "exhausted_detail": {
+        "earliest": "最早 {{time}} 有账号恢复。",
+        "retry_after": "已告知客户端 {{duration}} 后重试。"
+      },
+      "cause": {
+        "request_invalid": "请求无效被拒",
+        "content_policy": "被内容策略拦截",
+        "first_token_timeout": "首 token 超时",
+        "stream_incomplete": "流没有正常结束",
+        "network_error": "网络错误"
+      },
+      "cause_unknown": "原因未知",
+      "failure_with_status": "{{cause}}（{{status}}）",
+      "outcome": {
+        "success": "成功",
+        "failed": "失败",
+        "canceled": "客户端已断开",
+        "running": "进行中"
+      },
+      "step": {
+        "attempt": "第 {{attempt}} 次尝试",
+        "skip": "跳过",
+        "queue": "排队等空闲名额",
+        "wait": "等待",
+        "exhausted": "没有可用账号"
+      },
+      "skip_reason": {
+        "saturated": "并发已满"
+      },
+      "queue_accounts": "{{count}} 个账号都在忙",
+      "queue_granted": "{{account}} 空出了名额",
+      "queue_gave_up": "等待超时，放弃",
+      "wait_kind": {
+        "request-retry": "请求重试",
+        "busy-wait": "分组忙等"
+      },
+      "wait_planned": "计划等 {{duration}}",
+      "first_token": "{{duration}} 后收到首 token",
+      "before_first_byte": "失败时还没给客户端发出任何内容",
+      "optimistic": "账号还在冷却（至 {{time}}）时就试了：全部账号都只是短暂暂停",
+      "blocked_until": "暂停调度 {{remaining}}，至 {{time}}",
+      "blocked_no_end": "已暂停调度，等探测或人工处理后恢复",
+      "model": "模型 {{model}}",
+      "group": "分组 {{group}}",
+      "until": "至 {{time}}",
+      "retry_after": "{{duration}} 后重试",
+      "candidates_title": "各账号为什么接不了",
+      "candidates_omitted": "另有 {{count}} 个账号",
+      "state": {
+        "available": "本可以接",
+        "tried": "已试过",
+        "saturated": "并发已满"
+      },
+      "omitted": "省略了 {{count}} 步"
+    }
   },
   "error_detail": {
     "upstream_error": "上游 API 错误响应",
