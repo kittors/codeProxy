@@ -58,7 +58,7 @@ export interface StreamingConfig {
 export type RoutingStrategy = "round-robin" | "fill-first" | "session-sticky";
 
 /** How a group picks among its candidates. Orthogonal to stickiness. */
-export type RoutingDistribution = "weighted" | "least-load" | "fill-first";
+export type RoutingDistribution = "weighted" | "least-load" | "fill-first" | "reset-aware";
 
 export type RoutingSticky = {
   enabled: boolean;
