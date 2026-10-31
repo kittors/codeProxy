@@ -75,6 +75,8 @@ export type * from "./endpoints/end-users";
 
 export { configApi } from "./endpoints/config";
 export type * from "./endpoints/config";
+export { payloadRulesApi, readConfigCapabilities } from "./endpoints/payload-rules";
+export type * from "./endpoints/payload-rules";
 export { usageApi } from "./endpoints/usage";
 export type * from "./endpoints/usage";
 export {

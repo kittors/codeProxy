@@ -23,6 +23,7 @@ import {
   type ConfigSectionId,
 } from "./configSchema";
 import { searchConfig } from "./configSearch";
+import { PayloadRuleDryRun } from "./PayloadRuleDryRun";
 import { PayloadFilterRulesEditor, PayloadRulesEditor } from "./PayloadRuleEditors";
 import { ResourceProfileBanner } from "./ResourceProfileBanner";
 import { useSectionScrollSpy } from "./useSectionScrollSpy";
@@ -92,6 +93,7 @@ export function VisualConfigEditor({
   onChange,
   codexAdmission,
   observability,
+  payloadDryRun = false,
   toolbarEnd,
 }: {
   values: VisualConfigValues;
@@ -111,6 +113,8 @@ export function VisualConfigEditor({
    * 不传时整个分区不出现。
    */
   observability?: ReactNode;
+  /** 后端支持 payload 规则试运行时，在「请求体改写」分区末尾放「试一试」。 */
+  payloadDryRun?: boolean;
   /** 工具栏最右侧的附加控件（页面把「可视化 / 源码」切换放在这里，省掉单独一行）。 */
   toolbarEnd?: ReactNode;
 }) {
@@ -215,6 +219,7 @@ export function VisualConfigEditor({
             disabled={databaseLocked}
             onChange={(payloadFilterRules) => onChange({ payloadFilterRules })}
           />
+          {payloadDryRun ? <PayloadRuleDryRun values={values} /> : null}
         </div>
       );
     }
