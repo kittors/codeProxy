@@ -6487,7 +6487,7 @@
       "scan_with_tools_hint": "再加上工具结果、附带文档、工具调用参数和回放的助手回合。",
       "setting_reply_filter": "过滤模型回复",
       "setting_reply_filter_hint": "模型的回复流回来时也检查一遍。回复里只能替换或记录：设为拦截时，回复中的命中会被替换，因为回复的一部分可能已经发出。",
-      "reply_unbounded_warning": "可匹配任意长度文本的正则（例如 \\d+）：{{count}} 条。流式回复里，被拆在两个流事件之间的匹配可能漏过；请给它们加上长度，例如 \\d{11}。",
+      "reply_unbounded_warning": "可匹配任意长度文本的正则：{{count}} 条。流式回复里，被拆在两个流事件之间的匹配可能漏过；请给它们加上长度，例如用 \\d{11} 代替 \\d+。",
       "setting_fold": "繁体字按简体匹配",
       "setting_fold_hint": "匹配时把一个字的繁体和简体写法当成同一个字。",
       "setting_inherit_tenant": "同时应用租户的规则",

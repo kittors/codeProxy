@@ -6509,7 +6509,7 @@
       "scan_with_tools_hint": "Also tool results, attached documents, tool-call arguments and replayed assistant turns.",
       "setting_reply_filter": "Filter model replies",
       "setting_reply_filter_hint": "Also check the model's reply as it streams back. A reply can only be replaced or logged: under Block, hits in a reply are replaced, because part of it may already have been sent.",
-      "reply_unbounded_warning": "Regular expressions that can match text of any length (for example \\d+): {{count}}. In a streamed reply, a match split between two stream events can get through; give them a length, such as \\d{11}.",
+      "reply_unbounded_warning": "Regular expressions that can match text of any length: {{count}}. In a streamed reply, a match split between two stream events can get through; give them a length, such as \\d{11} instead of \\d+.",
       "setting_fold": "Match traditional and simplified Chinese",
       "setting_fold_hint": "Treat the traditional and simplified forms of a character as the same when matching.",
       "setting_inherit_tenant": "Also apply the tenant's rules",

@@ -409,7 +409,7 @@ describe("sensitive-word rules: expressions that can match text of any length", 
     const table = await openWordRules(user);
 
     expect(
-      screen.getByText(/Regular expressions that can match text of any length \(for example \\d\+\): 1\./),
+      screen.getByText(/Regular expressions that can match text of any length: 1\./),
     ).toBeInTheDocument();
     const flagged = within(table).getByText("\\d+").closest("tr")!;
     expect(within(flagged).getByText("Unbounded")).toBeInTheDocument();
