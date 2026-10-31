@@ -9,6 +9,7 @@ import { SearchableCheckboxMultiSelect, Tabs, TabsList, TabsTrigger } from "@cod
 import type { SearchableCheckboxMultiSelectOption } from "@code-proxy/ui";
 import { HoverTooltip, OverflowTooltip } from "@code-proxy/ui";
 import { PaginationBar } from "@code-proxy/ui";
+import { loopStoppedExplanation } from "./requestLogGuard";
 import { RequestLogCacheCell } from "./RequestLogCacheCell";
 import { RequestLogModelCell } from "./RequestLogModelCell";
 import {
@@ -454,7 +455,20 @@ export function buildRequestLogsColumns(
       headerClassName: CENTERED_REQUEST_LOG_HEADER_CLASS,
       cellClassName: "text-center",
       render: (row) =>
-        row.failed ? (
+        row.failed && row.guardKind ? (
+          // Loop protection ended it on purpose: not the model or the upstream failing,
+          // so not the red of a failure. It still opens the same detail. The column is
+          // fixed (72px of content, 54px for the text): keep this label to a word in every
+          // language, the sentence is the title.
+          <button
+            type="button"
+            onClick={() => onErrorClick?.(Number(row.id), row.displayModel || row.model)}
+            className="inline-flex min-w-[52px] cursor-pointer justify-center rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 transition hover:bg-amber-100 hover:shadow-sm dark:bg-amber-500/15 dark:text-amber-300 dark:hover:bg-amber-500/25"
+            title={loopStoppedExplanation(t, row.guardKind)}
+          >
+            {t("request_logs.status_loop_stopped")}
+          </button>
+        ) : row.failed ? (
           <button
             type="button"
             onClick={() => onErrorClick?.(Number(row.id), row.displayModel || row.model)}

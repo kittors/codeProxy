@@ -35,6 +35,7 @@ import { ConfirmModal, SecretRevealModal } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
 import { DataTable } from "@code-proxy/ui";
 import { ApiKeyFormModal } from "./components/ApiKeyFormModal";
+import { OwnedApiKeyEditModal } from "./components/OwnedApiKeyEditModal";
 import { ApiKeyPeriodQuotaResetModal } from "./components/ApiKeyPeriodQuotaResetModal";
 import { ApiKeyUsageDialogs } from "./components/ApiKeyUsageDialogs";
 import { ApiKeySubject } from "./components/ApiKeySubject";
@@ -916,10 +917,10 @@ export function ApiKeysPage({
             }}
             onSubmit={() => void handleCreate()}
           />
-          <OwnedApiKeyQuotaModal
+          <OwnedApiKeyEditModal
             t={t}
             open={editIndex !== null}
-            mode="edit"
+            keyId={editIndex === null ? undefined : entries[editIndex]?.id}
             value={{ name: form.name, periods: form.periodSpending }}
             accountLimits={accountPeriodSpendingLimits}
             saving={saving}

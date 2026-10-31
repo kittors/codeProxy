@@ -29,6 +29,9 @@ const mocks = vi.hoisted(() => ({
   entries: vi.fn(),
   updateEntry: vi.fn(),
   copy: vi.fn(async () => true),
+  // The editor also asks for the key's loop protection; this suite is about everything else,
+  // so the backend has no such route (see EndUserKeysModalLoopGuard.test.tsx for the rest).
+  loopGuardGetKey: vi.fn(async (_id: string): Promise<unknown> => null),
 }));
 
 vi.mock("@code-proxy/api-client", async (importOriginal) => {
@@ -44,6 +47,7 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
       createKey: mocks.createKey,
       resetKeyPeriodSpending: mocks.resetKeyPeriodSpending,
     },
+    loopGuardApi: { ...actual.loopGuardApi, getKey: mocks.loopGuardGetKey },
   };
 });
 

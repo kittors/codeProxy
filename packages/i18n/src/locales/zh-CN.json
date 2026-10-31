@@ -2391,6 +2391,13 @@
       "none_hint": "所有请求都成功完成",
       "upgrade_hint": "共失败 {{failed}} 次。升级 CliRelay 后可按渠道、模型、门户用户定位失败来源。"
     },
+    "loop_guard": {
+      "title": "循环保护",
+      "reply_loops": "被截断的复读回复",
+      "tool_loops": "网关代答的工具调用死循环",
+      "saved": "避免的上游费用（估算）",
+      "hint": "这些请求是被有意拦下的，也计入失败数。节省的费用只估算了工具调用死循环：被截断的回复本来会写多长无从得知。"
+    },
     "models": {
       "title": "模型性能",
       "model": "模型"
@@ -3621,7 +3628,16 @@
     "clear_scope_title": "当前租户的全部请求日志",
     "clear_scope_hint": "不受当前筛选条件和时间范围影响",
     "clear_consequence_records": "请求记录会一起删除：列表、记录条数、Token、成功率和费用统计都会清空。",
-    "clear_consequence_content": "勾选的正文和详情会立即删除，之后打开这些请求看不到对应内容；请求记录与统计保留。"
+    "clear_consequence_content": "勾选的正文和详情会立即删除，之后打开这些请求看不到对应内容；请求记录与统计保留。",
+    "status_loop_stopped": "循环已拦截",
+    "loop_stopped_reply": "循环保护结束了这次回复，因为模型在反复写同样的内容。点击查看详情。",
+    "loop_stopped_tool": "循环保护由网关自己回复了这次请求，因为智能体陷入了工具调用死循环，没有请求发往上游。点击查看详情。",
+    "loop_stopped_other": "循环保护结束了这次请求。点击查看详情。",
+    "guard_filter_label": "循环保护",
+    "guard_filter_all": "全部请求",
+    "guard_filter_any": "被循环保护拦截的",
+    "guard_filter_reply_loop": "被截断的复读回复",
+    "guard_filter_tool_loop": "网关代答的工具调用死循环"
   },
   "ccswitch": {
     "import_to_ccswitch": "导入到 CC Switch",
@@ -6747,6 +6763,10 @@
         "title": "额度用尽时",
         "desc": "账号额度用完后自动换一种方式继续请求。"
       },
+      "loop_guard": {
+        "title": "循环保护",
+        "desc": "拦下反复复读的模型，和卡在同一个工具调用上的智能体。两项检查默认关闭，在这里开启；单个 API Key 也可以单独设置。"
+      },
       "logging": {
         "title": "日志",
         "desc": "记录哪些日志、写到哪里。开得越多，CPU 和磁盘开销越大。"
@@ -7439,5 +7459,39 @@
     "rotate_confirm": "重新生成",
     "reveal_title": "保存抓取令牌",
     "reveal_warning": "令牌只显示这一次，关闭后无法再查看，只能重新生成。把它存进 {{file}}，在 Prometheus 配置里用 credentials_file 引用。"
+  },
+  "loop_guard": {
+    "reply_label": "终止复读回复",
+    "reply_desc": "回复陷入反复写同几行时，在用满输出上限之前结束它。客户端会收到一个引用了重复内容的错误。",
+    "tool_label": "终止工具调用死循环",
+    "tool_desc": "对话最近几轮都是同一个工具调用、同一个结果时，由网关直接回复，不再发给上游。智能体会被告知它卡住了，上游不产生任何费用。",
+    "window_label": "比较的行数",
+    "window_hint": "比较最近多少行或多少句。默认 {{value}}，范围 {{min}} 到 {{max}}。",
+    "max_distinct_label": "不同行数上限",
+    "max_distinct_hint": "比较范围内不同的行不超过这个数时，结束回复。默认 {{value}}，范围 {{min}} 到 {{max}}。",
+    "repeats_label": "连续相同的轮数",
+    "repeats_hint": "连续多少轮调用相同、结果也相同就算死循环。默认 {{value}}，范围 {{min}} 到 {{max}}。",
+    "mode_inherit": "跟随租户（{{state}}）",
+    "mode_on": "此 Key 开启",
+    "mode_off": "此 Key 关闭",
+    "state_on": "开",
+    "state_off": "关",
+    "effective_off": "目前不对使用此 Key 的请求生效。",
+    "effective_on_tenant": "目前对使用此 Key 的请求生效，由租户开启。",
+    "effective_on_key": "目前对使用此 Key 的请求生效，由此 Key 自己开启。",
+    "error_window": "请输入 {{min}} 到 {{max}} 之间的整数。",
+    "error_max_distinct": "请输入 {{min}} 到 {{max}} 之间的整数（上限随 {{window}} 的窗口而定）。",
+    "error_repeats": "请输入 {{min}} 到 {{max}} 之间的整数。",
+    "key_overrides": "有自己设置的 API Key：{{count}} 个。它们的设置优先于这里的设置。",
+    "not_persistent": "这个网关没有接数据库，这些设置只能查看，不能保存。",
+    "read_only": "当前账号只能查看这些设置，不能修改。",
+    "saved": "循环保护已保存",
+    "save_failed": "保存循环保护失败",
+    "conflict": "这些设置在此期间被别人改过。你的修改已保留，已保存的值已更新；核对后再点一次保存即可覆盖。",
+    "revert": "还原",
+    "key_section_title": "循环保护",
+    "key_section_hint": "只为这把 Key 覆盖租户的循环保护设置。选「跟随租户」就沿用租户的。",
+    "key_load_failed": "无法加载这把 Key 的循环保护设置。",
+    "key_retry": "重试"
   }
 }

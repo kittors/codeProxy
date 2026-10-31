@@ -35,8 +35,9 @@ describe("usage logs api", () => {
     });
 
     await expect(usageApi.getUsageLogs({ page: 1, size: 50 })).resolves.toMatchObject({
-      // A response that declares nothing is from a backend that predates the id filters.
-      capabilities: { apiKeyIdFilters: false },
+      // A response that declares nothing is from a backend that predates the id filters
+      // and loop protection.
+      capabilities: { apiKeyIdFilters: false, loopGuard: false },
       filters: {
         api_key_ids: [],
         api_key_id_names: {},
@@ -47,6 +48,7 @@ describe("usage logs api", () => {
         models: [],
         channels: [],
         channel_options: [],
+        guard_kinds: [],
       },
       stats: {
         total: 0,
@@ -141,7 +143,7 @@ describe("usage logs api", () => {
 
     const result = await usageApi.getUsageLogs({});
 
-    expect(result.capabilities).toEqual({ apiKeyIdFilters: true });
+    expect(result.capabilities).toEqual({ apiKeyIdFilters: true, loopGuard: false });
     expect(result.filters).toMatchObject({
       api_key_ids: ["key-primary", "__system__"],
       api_key_id_names: { "key-primary": "Primary" },
@@ -157,9 +159,76 @@ describe("usage logs api", () => {
 
     expect(readUsageLogsCapabilities({ "api-key-id-filters": true })).toEqual({
       apiKeyIdFilters: true,
+      loopGuard: false,
     });
     for (const value of [undefined, null, "yes", [], {}, { "api-key-id-filters": "true" }]) {
-      expect(readUsageLogsCapabilities(value)).toEqual({ apiKeyIdFilters: false });
+      expect(readUsageLogsCapabilities(value)).toEqual({ apiKeyIdFilters: false, loopGuard: false });
+    }
+  });
+
+  // An older backend ignores guard_kind and would answer every request, so the panel
+  // only asks after a response declared the capability.
+  test("declares loop protection only on an explicit true, independently of the id filters", async () => {
+    const { readUsageLogsCapabilities } = await import("@code-proxy/api-client/endpoints/usage");
+
+    expect(readUsageLogsCapabilities({ "loop-guard": true })).toEqual({
+      apiKeyIdFilters: false,
+      loopGuard: true,
+    });
+    expect(
+      readUsageLogsCapabilities({ "api-key-id-filters": true, "loop-guard": true }),
+    ).toEqual({ apiKeyIdFilters: true, loopGuard: true });
+    for (const value of [undefined, null, "yes", [], {}, { "loop-guard": "true" }, { "loop-guard": 1 }]) {
+      expect(readUsageLogsCapabilities(value).loopGuard).toBe(false);
+    }
+  });
+
+  test("sends loop protection kinds as repeated guard_kind parameters", async () => {
+    const { usageApi } = await import("@code-proxy/api-client/endpoints/usage");
+    getMock.mockResolvedValue({ filters: {}, stats: {} });
+
+    await usageApi.getUsageLogs({ guard_kinds: ["reply_loop", " tool_loop ", "reply_loop", ""] });
+    await usageApi.getUsageLogs({ guard_kinds: [] });
+    await usageApi.getUsageLogs({ page: 2, guard_kinds: ["tool_loop"], statuses: ["failed"] });
+
+    expect(getMock).toHaveBeenNthCalledWith(
+      1,
+      "/usage/logs?guard_kind=reply_loop&guard_kind=tool_loop",
+    );
+    expect(getMock).toHaveBeenNthCalledWith(2, "/usage/logs");
+    expect(getMock).toHaveBeenNthCalledWith(
+      3,
+      "/usage/logs?page=2&status=failed&guard_kind=tool_loop",
+    );
+  });
+
+  test("reads the loop protection facet and keeps each row's guard_kind", async () => {
+    const { usageApi } = await import("@code-proxy/api-client/endpoints/usage");
+    getMock.mockResolvedValue({
+      items: [
+        { id: 1, failed: true, guard_kind: "tool_loop" },
+        { id: 2, failed: false },
+      ],
+      capabilities: { "loop-guard": true },
+      filters: { guard_kinds: ["reply_loop", "tool_loop", 7, null] },
+      stats: {},
+    });
+
+    const result = await usageApi.getUsageLogs({});
+
+    expect(result.capabilities.loopGuard).toBe(true);
+    // Only strings are kinds; anything else a backend might send is dropped.
+    expect(result.filters.guard_kinds).toEqual(["reply_loop", "tool_loop"]);
+    expect(result.items.map((item) => item.guard_kind)).toEqual(["tool_loop", undefined]);
+  });
+
+  test("treats a malformed loop protection facet as empty", async () => {
+    const { usageApi } = await import("@code-proxy/api-client/endpoints/usage");
+
+    for (const guard_kinds of [null, "tool_loop", { tool_loop: 1 }, 3]) {
+      getMock.mockResolvedValue({ filters: { guard_kinds }, stats: {} });
+      const result = await usageApi.getUsageLogs({});
+      expect(result.filters.guard_kinds).toEqual([]);
     }
   });
 

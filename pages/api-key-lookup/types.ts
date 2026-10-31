@@ -28,6 +28,8 @@ export interface PublicLogItem {
   upstream_model_mismatch?: boolean;
   vision_fallback_model?: string;
   failed: boolean;
+  /** The loop protection check that ended the request; absent for every other request and on older backends. */
+  guard_kind?: string;
   streaming?: boolean;
   latency_ms: number;
   first_token_ms?: number;

@@ -162,6 +162,25 @@ export interface MonitorFilterOptions {
   consumers: MonitorFilterOption[];
 }
 
+/**
+ * What loop protection ended in the window (under the same filters as the rest of
+ * the overview). The backend sends it with every overview it builds, zeros
+ * included; an older backend sends none, which is how the panel knows there is
+ * nothing to show.
+ */
+export interface MonitorLoopGuard {
+  /** Replies cut because the model was repeating itself. */
+  reply_loops: number;
+  /** Requests the gateway answered itself because the agent was stuck in a tool-call loop. */
+  tool_loops: number;
+  /**
+   * USD the answered tool-loop requests would have cost upstream, each priced at the
+   * average of that model's successful requests; an estimate, and 0 when no model
+   * has a priced success to average. Cut replies are not priced.
+   */
+  estimated_saved_cost: number;
+}
+
 export interface MonitorOverview {
   generated_at: string;
   range: MonitorRange;
@@ -175,6 +194,8 @@ export interface MonitorOverview {
   flows: MonitorFlowGraph;
   recent_failures: MonitorFailure[];
   filters: MonitorFilterOptions;
+  /** null from a backend without loop protection. */
+  loop_guard: MonitorLoopGuard | null;
 }
 
 export interface MonitorRealtime {
@@ -303,6 +324,16 @@ const normalizeFilterOptions = (raw: unknown): MonitorFilterOption[] =>
     })
     .filter((option) => option.value !== "");
 
+const normalizeLoopGuard = (value: unknown): MonitorLoopGuard | null => {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  return {
+    reply_loops: toNumber(record.reply_loops),
+    tool_loops: toNumber(record.tool_loops),
+    estimated_saved_cost: toNumber(record.estimated_saved_cost),
+  };
+};
+
 export function normalizeMonitorOverview(raw: unknown): MonitorOverview {
   const record = asRecord(raw);
   const range = asRecord(record.range);
@@ -394,6 +425,7 @@ export function normalizeMonitorOverview(raw: unknown): MonitorOverview {
       channels: normalizeFilterOptions(filters.channels),
       consumers: normalizeFilterOptions(filters.consumers),
     },
+    loop_guard: normalizeLoopGuard(record.loop_guard),
   };
 }
 

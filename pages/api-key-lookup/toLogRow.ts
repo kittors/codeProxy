@@ -3,6 +3,7 @@ import {
   formatRequestLogLatencyMs,
   maskRequestLogApiKey,
   normalizeChannelAuthType,
+  normalizeGuardKind,
   type RequestLogsRow,
 } from "@features/request-log-viewer";
 import { readRequestCacheUse } from "@code-proxy/domain";
@@ -32,6 +33,7 @@ export function toLogRow(item: PublicLogItem): RequestLogsRow {
     upstreamModelMismatch: item.upstream_model_mismatch === true,
     visionFallbackModel: item.vision_fallback_model || "",
     failed: item.failed,
+    guardKind: normalizeGuardKind(item.guard_kind),
     streaming: item.streaming === true,
     latencyMs: item.latency_ms,
     firstTokenMs,

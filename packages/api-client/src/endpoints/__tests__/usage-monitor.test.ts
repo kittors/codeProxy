@@ -109,6 +109,41 @@ describe("usageMonitorApi", () => {
     expect(overview.series[0].cache_hit_rate).toBeNull();
   });
 
+  // The backend sends loop_guard with every overview, zeros included, so its
+  // presence is how the panel tells a backend with loop protection from one without.
+  test("reads the loop protection counts, and null from a backend that sends none", async () => {
+    const { normalizeMonitorOverview } = await import("../usage-monitor");
+
+    expect(
+      normalizeMonitorOverview({
+        loop_guard: { reply_loops: 3, tool_loops: "4", estimated_saved_cost: 1.25 },
+      }).loop_guard,
+    ).toEqual({ reply_loops: 3, tool_loops: 4, estimated_saved_cost: 1.25 });
+    // Zeros are a backend that has the feature and nothing to report: not null.
+    expect(
+      normalizeMonitorOverview({
+        loop_guard: { reply_loops: 0, tool_loops: 0, estimated_saved_cost: 0 },
+      }).loop_guard,
+    ).toEqual({ reply_loops: 0, tool_loops: 0, estimated_saved_cost: 0 });
+    // A partial object still counts as declared, with what is missing read as 0.
+    expect(normalizeMonitorOverview({ loop_guard: { tool_loops: 2 } }).loop_guard).toEqual({
+      reply_loops: 0,
+      tool_loops: 2,
+      estimated_saved_cost: 0,
+    });
+    // Bad numbers do not leak NaN into the arithmetic that formats them.
+    expect(
+      normalizeMonitorOverview({
+        loop_guard: { reply_loops: "x", tool_loops: null, estimated_saved_cost: "NaN" },
+      }).loop_guard,
+    ).toEqual({ reply_loops: 0, tool_loops: 0, estimated_saved_cost: 0 });
+
+    for (const raw of [{}, { loop_guard: null }, { loop_guard: "yes" }, { loop_guard: [1, 2] }]) {
+      expect(normalizeMonitorOverview(raw).loop_guard).toBeNull();
+    }
+    expect(normalizeMonitorOverview(null).loop_guard).toBeNull();
+  });
+
   test("normalises the realtime strip", async () => {
     const { normalizeMonitorRealtime } = await import("../usage-monitor");
     const realtime = normalizeMonitorRealtime({

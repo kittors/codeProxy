@@ -35,6 +35,8 @@ import {
   ChannelIdentityLabel,
   DEFAULT_REQUEST_LOG_PAGE_SIZE,
   EMPTY_REQUEST_LOG_KEY_FACET,
+  guardFilterVisible,
+  guardKindsOfFilter,
   hasActiveFilterSelection,
   normalizeFilterSelection,
   readRequestLogKeyFacet,
@@ -48,6 +50,7 @@ import {
   requestLogsHaveCacheBreakdown,
   toRequestLogsRow,
   toStatusFilterValues,
+  type GuardFilterValue,
   type MultiSelectFilterState,
   type RequestLogKeyFacet,
   type StatusFilterValue,
@@ -187,6 +190,13 @@ export function RequestLogsPage() {
   const [selectedChannels, setSelectedChannels] = useState<MultiSelectFilterState<string>>(null);
   const [selectedStatuses, setSelectedStatuses] =
     useState<MultiSelectFilterState<StatusFilterValue>>(null);
+  // Loop protection: the choice, and what the last response said about it (whether the
+  // backend has it, which kinds the other filters leave).
+  const [guardFilter, setGuardFilter] = useState<GuardFilterValue>("all");
+  const [guardFacet, setGuardFacet] = useState<{ supported: boolean; kinds: string[] }>({
+    supported: false,
+    kinds: [],
+  });
   const [confirmClearOpen, setConfirmClearOpen] = useState(false);
   const [clearingLogs, setClearingLogs] = useState(false);
   const [clearOptions, setClearOptions] = useState<ClearUsageLogsPayload>(DEFAULT_CLEAR_OPTIONS);
@@ -301,7 +311,8 @@ export function RequestLogsPage() {
     hasActiveFilterSelection(selectedApiKeys, apiKeyFilterValues) ||
     hasActiveFilterSelection(selectedModels, modelFilterValues) ||
     hasActiveFilterSelection(selectedChannels, channelFilterValues) ||
-    hasActiveFilterSelection(selectedStatuses, statusFilterValues);
+    hasActiveFilterSelection(selectedStatuses, statusFilterValues) ||
+    guardFilter !== "all";
 
   const handleApiKeysChange = useCallback(
     (value: string[]) => {
@@ -336,6 +347,7 @@ export function RequestLogsPage() {
     setSelectedModels(null);
     setSelectedChannels(null);
     setSelectedStatuses(null);
+    setGuardFilter("all");
   }, []);
 
   const clearApiKeyFilter = useCallback(() => {
@@ -376,6 +388,7 @@ export function RequestLogsPage() {
             models_empty: modelFilterParam.matchesNone,
             channels_empty: channelFilterParam.matchesNone,
             statuses_empty: statusFilterParam.matchesNone,
+            guard_kinds: guardKindsOfFilter(guardFilter),
           },
           { signal: controller.signal },
         );
@@ -396,6 +409,13 @@ export function RequestLogsPage() {
         }
         keyFacetRef.current = facet;
         setKeyFacet(facet);
+        // The API client fills every capability, but a response that declares nothing is, by
+        // definition, from a backend that predates loop protection.
+        const guardSupported = resp.capabilities?.loopGuard === true;
+        setGuardFacet({ supported: guardSupported, kinds: resp.filters?.guard_kinds ?? [] });
+        // A backend that lost loop protection under an open page (rolled back) would answer
+        // every request to a filter it ignores, which would read as "nothing was stopped".
+        if (!guardSupported) setGuardFilter("all");
         setFilterOptions({
           models: resp.filters?.models ?? [],
           channels: resp.filters?.channels ?? [],
@@ -418,6 +438,7 @@ export function RequestLogsPage() {
     [
       apiKeyFilterParam,
       channelFilterParam,
+      guardFilter,
       modelFilterParam,
       notify,
       statusFilterParam,
@@ -454,7 +475,7 @@ export function RequestLogsPage() {
   // Fetch page 1 when filters change
   useEffect(() => {
     fetchLogs(1, pageSize);
-  }, [timeRange, selectedApiKeys, selectedModels, selectedChannels, selectedStatuses]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [timeRange, selectedApiKeys, selectedModels, selectedChannels, selectedStatuses, guardFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleOpenClearDialog = useCallback(() => {
     setClearOptions(DEFAULT_CLEAR_OPTIONS);
@@ -589,6 +610,11 @@ export function RequestLogsPage() {
           onStatusesClear={clearStatusFilter}
           onResetFilters={resetFilters}
           hasActiveFilters={hasActiveFilters}
+          guardFilter={
+            guardFilterVisible(guardFacet.supported, guardFacet.kinds, guardFilter)
+              ? { value: guardFilter, kinds: guardFacet.kinds, onChange: setGuardFilter }
+              : undefined
+          }
         />
 
         {/*

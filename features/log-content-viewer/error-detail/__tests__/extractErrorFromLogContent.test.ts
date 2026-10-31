@@ -140,3 +140,57 @@ describe("extractErrorFromLogContent", () => {
     expect(extractErrorFromLogContent("", `{"client":{"ip":"1.2.3.4"}}`)).toBeNull();
   });
 });
+
+// A reply loop protection cut has no upstream error and its error event is the last
+// thing in a stream that may have been stored only up to the cap.
+describe("extractErrorFromLogContent for a request loop protection ended", () => {
+  const cutStream =
+    'event: message_start\ndata: {"type":"message_start","message":{"id":"msg_1"}}\n\n' +
+    'event: content_block_delta\ndata: {"type":"content_block_delta","delta":{"type":"text_delta","text":"Done."}}\n\n';
+  const told = "Stopped: the reply kept repeating 'Done.'";
+  const details = (diagnostic: Record<string, unknown>) => JSON.stringify({ diagnostic });
+
+  test("the summary is what the client was told, read from the diagnostic", () => {
+    const result = extractErrorFromLogContent(
+      cutStream,
+      details({ loop_guard: { kind: "reply_loop", message: told } }),
+    );
+    expect(result?.message).toBe(told);
+    expect(result?.content).toBe(cutStream.trim());
+  });
+
+  test("an error event the stored output still has wins, as for any other failure", () => {
+    const withEvent = `${cutStream}event: error\ndata: {"type":"error","error":{"type":"reply_loop_detected","message":"from the stream"}}\n\n`;
+    expect(
+      extractErrorFromLogContent(
+        withEvent,
+        details({ loop_guard: { kind: "reply_loop", message: told } }),
+      )?.message,
+    ).toBe("from the stream");
+  });
+
+  test("the error the response recorded still comes before it", () => {
+    expect(
+      extractErrorFromLogContent(
+        cutStream,
+        details({
+          response: { status: 422, error_message: "recorded on the response" },
+          loop_guard: { kind: "reply_loop", message: told },
+        }),
+      )?.message,
+    ).toBe("recorded on the response");
+  });
+
+  test("a tool loop's stored answer is a failure body of its own and reads like one", () => {
+    const body = JSON.stringify({
+      error: { message: "Tell the agent how to go on", type: "loop_guard", code: "tool_loop_answered" },
+    });
+    expect(extractErrorFromLogContent(body)?.message).toBe("Tell the agent how to go on");
+  });
+
+  test("a diagnostic without loop protection changes nothing", () => {
+    expect(
+      extractErrorFromLogContent(cutStream, details({ upstream: { status: 500 } }))?.message,
+    ).toBe("");
+  });
+});
