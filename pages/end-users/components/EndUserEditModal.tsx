@@ -415,6 +415,7 @@ export function EndUserEditModal({
             onChange={(limits) => setPolicy({ limits })}
             editableCells={bound ? ACCOUNT_OWNED_CELLS : policyCaps ? undefined : LEGACY_ACCOUNT_CELLS}
             usage={user["quota-usage"]?.total}
+            inFlight={user["quota-usage"]?.["in-flight"]}
             issues={visiblePolicyIssues}
             idPrefix="account-limits"
             label={t("access_policy.account_limits_title")}

@@ -55,7 +55,13 @@ export function ManageKeysTabContent({
       {accessPolicy && account ? (
         <div className={`${surface({ tone: "inset", radius: "2xl" })} mb-3 flex flex-wrap items-center gap-x-5 gap-y-2 px-4 py-3`}>
           <span className="shrink-0 text-xs font-semibold text-ink-2">{t("access_policy.my_account_quota")}</span>
-          <QuotaUsageCell limits={account["quota-limits"]} usage={account["quota-usage"]?.total} max={4} className="min-w-0 flex-1 sm:grid-cols-4" />
+          <QuotaUsageCell
+            limits={account["quota-limits"]}
+            usage={account["quota-usage"]?.total}
+            inFlight={account["quota-usage"]?.["in-flight"]}
+            max={4}
+            className="min-w-0 flex-1 sm:grid-cols-4"
+          />
           <PolicyBadges rules={account["model-rules"]} routes={account["model-routes"]} usage={account["quota-usage"]} />
         </div>
       ) : null}
@@ -70,7 +76,15 @@ export function ManageKeysTabContent({
           loading={loading}
           canDelete={() => keys.length > 1}
           renderQuota={
-            accessPolicy ? (row) => <QuotaUsageCell limits={row["quota-limits"]} usage={row["quota-usage"]?.total} /> : undefined
+            accessPolicy
+              ? (row) => (
+                  <QuotaUsageCell
+                    limits={row["quota-limits"]}
+                    usage={row["quota-usage"]?.total}
+                    inFlight={row["quota-usage"]?.["in-flight"]}
+                  />
+                )
+              : undefined
           }
           canResetQuota={
             accessPolicy ? (row) => resettableWindows(row["quota-limits"], row["model-rules"]).length > 0 : undefined

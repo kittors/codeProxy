@@ -257,7 +257,13 @@ export function EndUserKeysModal({
           {accountLimits ? (
             <div className={`${surface({ tone: "inset", radius: "2xl" })} flex flex-wrap items-center gap-x-5 gap-y-2 px-4 py-3`}>
               <span className="shrink-0 text-xs font-semibold text-ink-2">{t("access_policy.account_ceiling")}</span>
-              <QuotaUsageCell limits={accountLimits} usage={user?.["quota-usage"]?.total} max={4} className="min-w-0 flex-1 sm:grid-cols-4" />
+              <QuotaUsageCell
+                limits={accountLimits}
+                usage={user?.["quota-usage"]?.total}
+                inFlight={user?.["quota-usage"]?.["in-flight"]}
+                max={4}
+                className="min-w-0 flex-1 sm:grid-cols-4"
+              />
             </div>
           ) : null}
           <div className="flex shrink-0 items-center justify-between gap-2">
@@ -299,7 +305,13 @@ export function EndUserKeysModal({
               copyOnDemand
               renderQuota={
                 policyCaps
-                  ? (row) => <QuotaUsageCell limits={row["quota-limits"]} usage={row["quota-usage"]?.total} />
+                  ? (row) => (
+                      <QuotaUsageCell
+                        limits={row["quota-limits"]}
+                        usage={row["quota-usage"]?.total}
+                        inFlight={row["quota-usage"]?.["in-flight"]}
+                      />
+                    )
                   : undefined
               }
               canResetQuota={

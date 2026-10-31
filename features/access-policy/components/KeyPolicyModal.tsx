@@ -180,6 +180,7 @@ export function KeyPolicyModal({
           editableCells={capabilities.accessPolicy ? undefined : LEGACY_KEY_CELLS}
           ceiling={ceiling}
           usage={usage?.total}
+          inFlight={usage?.["in-flight"]}
           issues={visibleIssues}
           idPrefix={`key-${mode}-limits`}
           label={t("access_policy.key_limits_title")}

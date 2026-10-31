@@ -4,6 +4,7 @@ import {
   QUOTA_METRICS,
   QUOTA_WINDOWS,
   quotaCellKey,
+  type InFlightUsage,
   type QuotaCellKey,
   type QuotaMatrix,
   type QuotaMetric,
@@ -12,7 +13,14 @@ import {
 import { HoverTooltip, TextInput, cn } from "@code-proxy/ui";
 import { parseQuotaInput, type QuotaMatrixDraft } from "../model/policyDraft";
 import type { PolicyIssues } from "../model/policyValidation";
-import { formatQuotaAmount, usageRatio, usageTone, USAGE_TEXT } from "../model/quotaFormat";
+import {
+  formatQuotaAmount,
+  inFlightAmount,
+  showsInFlight,
+  usageRatio,
+  usageTone,
+  USAGE_TEXT,
+} from "../model/quotaFormat";
 import { MetricTile } from "./metricMeta";
 import { useIssueText } from "./useIssueText";
 
@@ -29,6 +37,8 @@ export interface QuotaMatrixEditorProps {
   ceiling?: QuotaMatrix;
   /** 当前用量：每格下方提示「已用 X」，接近上限时变色。 */
   usage?: QuotaMatrix;
+  /** 在途预留：提示变成「已用 X · 在途 Y」，颜色按两者之和算（准入检查比的就是这个和）。 */
+  inFlight?: InFlightUsage;
   issues?: PolicyIssues;
   /** 错误路径前缀，例如 "limits" 或 "rules.<key>.limits"。 */
   issuePrefix?: string;
@@ -55,6 +65,7 @@ export function QuotaMatrixEditor({
   unavailableCells,
   ceiling,
   usage,
+  inFlight,
   issues,
   issuePrefix = "limits",
   idPrefix,
@@ -115,10 +126,19 @@ export function QuotaMatrixEditor({
             if (issue) {
               hint = <span className="text-rose-600 dark:text-rose-400">{issueText(issue)}</span>;
             } else if (typeof used === "number" && (limit > 0 || used > 0)) {
-              const tone = usageTone(usageRatio(used, limit));
+              const held = inFlightAmount(inFlight, metric);
+              const tone = usageTone(usageRatio(used + held, limit));
+              const withHeld = showsInFlight(metric, held);
+              const text = withHeld
+                ? t("access_policy.cell_used_in_flight", {
+                    used: formatQuotaAmount(metric, used),
+                    held: formatQuotaAmount(metric, held),
+                  })
+                : t("access_policy.cell_used", { used: formatQuotaAmount(metric, used) });
+              // 带在途的那句更长，窄格子里会被截断：title 留一份完整的。
               hint = (
-                <span className={limit > 0 ? USAGE_TEXT[tone] : "text-ink-3"}>
-                  {t("access_policy.cell_used", { used: formatQuotaAmount(metric, used) })}
+                <span className={limit > 0 ? USAGE_TEXT[tone] : "text-ink-3"} title={withHeld ? text : undefined}>
+                  {text}
                 </span>
               );
             } else if (ceilingValue > 0 && editable) {
