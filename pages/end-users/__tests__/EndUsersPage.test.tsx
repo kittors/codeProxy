@@ -232,6 +232,29 @@ describe("EndUsersPage", () => {
     expect(within(carol).queryByText("Unlimited")).toBeNull();
   });
 
+  test("an account's requests in flight show next to what it used, in the list and the editor", async () => {
+    const busyCarol = normalizeEndUser({
+      ...base,
+      id: "user-carol",
+      username: "carol",
+      display_name: "Carol",
+      status: "active",
+      "quota-limits": lifetimeOnly,
+      "quota-usage": { total: usedCarol, rules: [], "in-flight": { requests: 2, tokens: 0, cost: 3 } },
+    });
+    mocks.list.mockResolvedValue({ items: [users[0], users[1], busyCarol], capabilities: FULL });
+    renderPage();
+    await screen.findByText("Carol");
+    expect(
+      within(rowOf("Carol")).getByTitle("Spend · Total: $12 used of $100, plus $3 reserved by requests in flight"),
+    ).toBeInTheDocument();
+
+    await userEvent.click(within(rowOf("Carol")).getByRole("button", { name: "Edit user account" }));
+    const dialog = await screen.findByRole("dialog", { name: "Edit user account" });
+    await userEvent.click(within(dialog).getByRole("tab", { name: /Quota/ }));
+    expect(within(dialog).getByText("$12 used · $3 in flight")).toBeInTheDocument();
+  });
+
   test("filters by permission source", async () => {
     renderPage();
     await screen.findByText("Alice");

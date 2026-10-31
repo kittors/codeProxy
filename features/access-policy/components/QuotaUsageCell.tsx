@@ -3,6 +3,7 @@ import { Infinity as InfinityIcon } from "lucide-react";
 import {
   QUOTA_METRICS,
   QUOTA_WINDOWS,
+  type InFlightUsage,
   type QuotaMatrix,
   type QuotaMetric,
   type QuotaWindow,
@@ -13,6 +14,8 @@ import {
   USAGE_BAR_TRACK,
   USAGE_TEXT,
   formatQuotaAmount,
+  inFlightAmount,
+  showsInFlight,
   usageRatio,
   usageTone,
 } from "../model/quotaFormat";
@@ -23,18 +26,27 @@ interface CellUsage {
   window: QuotaWindow;
   limit: number;
   used?: number;
+  /** 在途预留：准入检查在已用之外还计入的部分。 */
+  held: number;
+  /** (已用 + 在途) / 上限：准入检查比的就是这个和。 */
   ratio: number;
 }
 
-const collectCells = (limits: QuotaMatrix, usage?: QuotaMatrix): CellUsage[] =>
+const collectCells = (limits: QuotaMatrix, usage?: QuotaMatrix, inFlight?: InFlightUsage): CellUsage[] =>
   QUOTA_METRICS.flatMap((metric) =>
     QUOTA_WINDOWS.flatMap((window): CellUsage[] => {
       const limit = limits[metric][window];
       if (limit <= 0) return [];
       const used = usage?.[metric][window];
-      return [{ metric, window, limit, used, ratio: usageRatio(used, limit) }];
+      const held = inFlightAmount(inFlight, metric);
+      // 没有用量（模板列表）就没有占比，在途也不算。
+      const ratio = usageRatio(typeof used === "number" ? used + held : used, limit);
+      return [{ metric, window, limit, used, held, ratio }];
     }),
   );
+
+/** 进度条宽度（%）：有一点用量也至少露出 4%，免得看起来像没用过。 */
+const barPercent = (ratio: number): number => Math.min(100, Math.max(ratio > 0 ? 4 : 0, ratio * 100));
 
 /** 「不限制」：简约风格是中性胶囊，多彩风格叠回绿色。 */
 export function UnlimitedChip({ label }: { label: string }) {
@@ -63,10 +75,18 @@ function CellLine({ cell, withBar }: { cell: CellUsage; withBar: boolean }) {
         </span>
       </div>
       {withBar && hasUsage ? (
-        <div className={cn("mt-1 h-1 overflow-hidden rounded-full", USAGE_BAR_TRACK[tone])}>
+        <div className={cn("relative mt-1 h-1 overflow-hidden rounded-full", USAGE_BAR_TRACK[tone])}>
+          {/* 在途预留画在已用后面、颜色更浅：条的总长就是准入检查看到的量。 */}
+          {cell.held > 0 ? (
+            <div
+              data-testid="quota-bar-in-flight"
+              className={cn("absolute inset-y-0 left-0 rounded-full opacity-40", USAGE_BAR_FILL[tone])}
+              style={{ width: `${barPercent(cell.ratio)}%` }}
+            />
+          ) : null}
           <div
-            className={cn("h-full rounded-full", USAGE_BAR_FILL[tone])}
-            style={{ width: `${Math.min(100, Math.max(cell.ratio > 0 ? 4 : 0, cell.ratio * 100))}%` }}
+            className={cn("relative h-full rounded-full", USAGE_BAR_FILL[tone])}
+            style={{ width: `${barPercent(usageRatio(cell.used, cell.limit))}%` }}
           />
         </div>
       ) : null}
@@ -78,35 +98,43 @@ function CellLine({ cell, withBar }: { cell: CellUsage; withBar: boolean }) {
  * 列表里的额度格：只列出配置了的格子，按用量占比从高到低排——最该关注的在最前面。
  * 两列网格，最多四格（两行，和账号名两行等高）；放不下的收进最后一格的「+N」，悬停看全部。
  * 没有任何限额时显示「不限制」。不传 usage 时只显示上限（模板列表）。
+ * inFlight 是在途预留：进度条在已用之后用浅色接上，悬停写明「已用 / 在途预留 / 上限」。
  */
 export function QuotaUsageCell({
   limits,
   usage,
+  inFlight,
   max = 4,
   className,
 }: {
   limits: QuotaMatrix;
   usage?: QuotaMatrix;
+  inFlight?: InFlightUsage;
   max?: number;
   className?: string;
 }) {
   const { t } = useTranslation();
-  const cells = collectCells(limits, usage);
+  const cells = collectCells(limits, usage, inFlight);
   if (cells.length === 0) return <UnlimitedChip label={t("access_policy.unlimited")} />;
   const ordered = usage ? [...cells].sort((a, b) => b.ratio - a.ratio) : cells;
   // 超出时最后一格让给「+N」，总格数仍是 max。
   const visible = ordered.length > max ? ordered.slice(0, max - 1) : ordered;
   const hidden = ordered.length - visible.length;
   const withBar = Boolean(usage);
-  const describe = (cell: CellUsage) =>
-    typeof cell.used === "number"
-      ? t("access_policy.cell_usage_detail", {
-          metric: t(`access_policy.metric.${cell.metric}`),
-          window: t(`access_policy.window.${cell.window}`),
-          used: formatQuotaAmount(cell.metric, cell.used),
-          limit: formatQuotaAmount(cell.metric, cell.limit),
-        })
-      : `${t(`access_policy.metric.${cell.metric}`)} · ${t(`access_policy.window.${cell.window}`)}: ${formatQuotaAmount(cell.metric, cell.limit)}`;
+  const describe = (cell: CellUsage) => {
+    if (typeof cell.used !== "number") {
+      return `${t(`access_policy.metric.${cell.metric}`)} · ${t(`access_policy.window.${cell.window}`)}: ${formatQuotaAmount(cell.metric, cell.limit)}`;
+    }
+    const values = {
+      metric: t(`access_policy.metric.${cell.metric}`),
+      window: t(`access_policy.window.${cell.window}`),
+      used: formatQuotaAmount(cell.metric, cell.used),
+      limit: formatQuotaAmount(cell.metric, cell.limit),
+    };
+    return showsInFlight(cell.metric, cell.held)
+      ? t("access_policy.cell_usage_detail_in_flight", { ...values, held: formatQuotaAmount(cell.metric, cell.held) })
+      : t("access_policy.cell_usage_detail", values);
+  };
   return (
     <div className={cn("grid min-w-0 grid-cols-2 items-center gap-x-4 gap-y-1.5", className)}>
       {visible.map((cell) => (
