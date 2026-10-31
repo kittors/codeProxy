@@ -3,7 +3,7 @@
   "maxLines": 800,
   "files": {
     "features/model-availability/modelAvailability.ts": 1271,
-    "features/routing-config-editor/RoutingConfigEditor.tsx": 1623,
+    "features/routing-config-editor/RoutingConfigEditor.tsx": 1617,
     "packages/domain/src/auth-files/authFiles.ts": 2117,
     "packages/ui/src/data-table/DataTable.tsx": 2621,
     "pages/api-key-lookup/ApiKeyLookupPage.tsx": 1501,

@@ -10,7 +10,7 @@ import {
   Search,
 } from "lucide-react";
 import { parse as parseYaml } from "yaml";
-import { configApi, configFileApi } from "@code-proxy/api-client";
+import { configApi, configFileApi, readConfigCapabilities } from "@code-proxy/api-client";
 import { FloatingSaveBar } from "./FloatingSaveBar";
 import { CodexOAuthAdmissionPanel } from "./CodexOAuthAdmissionPanel";
 import { ObservabilityMetricsPanel } from "./observability/ObservabilityMetricsPanel";
@@ -575,6 +575,7 @@ export function ConfigPage() {
                         <ObservabilityMetricsPanel initial={metricsSettings} />
                       ) : undefined
                     }
+                    payloadDryRun={readConfigCapabilities(live?.config).payloadRulesDryRun}
                     toolbarEnd={modeSwitch}
                   />
                 </div>

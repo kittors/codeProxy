@@ -4127,6 +4127,15 @@
     "sticky_max_requests_hint": "同一会话在一个渠道上累计这么多次请求后，重新分配。留空使用默认值。",
     "sticky_release_label": "负载超过时释放",
     "sticky_release_hint": "绑定渠道的负载达到该比例（0-1）时提前换号，不用等到限流。留空表示不提前释放。",
+    "first_token_timeout_label": "首 token 超时（秒）",
+    "first_token_timeout_hint": "仅对流式请求生效。账号在这段时间内没有返回第一个 token 就放弃本次尝试；客户端还没收到任何内容时，自动换其他账号重试。留空表示关闭，可填 5–300。",
+    "first_token_timeout_placeholder": "关闭",
+    "first_token_timeout_invalid": "首 token 超时须留空（关闭）或填 5–300 之间的整数秒。",
+    "busy_wait_label": "全员繁忙等待上限（秒）",
+    "busy_wait_hint": "未设置时关闭。请求可用的账号全部因临时故障（超时、5xx、短时限流）冷却时，若最先恢复的账号预计在这个秒数（每个请求累计）内恢复，请求会等它接手，而不是立即报错；每个请求最多等待两次。以下情况不会等待：额度耗尽、密钥被拒，以及上游过载或首 token 超时后仅几秒的短暂退避。流式请求等待期间会收到保活注释；非流式请求以及图片、视频提交会静默等待，超时设置更短的客户端会把等待当作失败。留空或填 0 表示关闭，最大 240。",
+    "busy_wait_placeholder": "关闭",
+    "busy_wait_invalid": "全员繁忙等待上限须留空（关闭）或填 0–240 之间的整数秒。",
+    "stream_guards_scope_tooltip": "路由到本分组的请求使用本分组的值；未限定在单一分组的请求使用默认分组的值。",
     "sticky_badge": "会话粘性",
     "default_members_label": "默认调度池成员",
     "channel_weight_label": "权重"
@@ -6920,7 +6929,7 @@
       },
       "bootstrap_retries": {
         "label": "首包前重试次数",
-        "desc": "还没向客户端输出任何内容时，上游出错可以安全重试的次数，默认 1。"
+        "desc": "还没向客户端输出任何内容时，上游出错后最多换几次账号重试。留空用默认值 2（较旧的后端默认不重试），0 表示关闭。"
       },
       "nonstream_keepalive": {
         "label": "非流式保活间隔",
@@ -7033,7 +7042,61 @@
         "title": "移除参数",
         "desc": "从请求体里删掉这些参数路径。"
       },
-      "hint": "模型名支持通配符（如 gemini-*）；参数路径用点号分隔，如 generationConfig.thinkingConfig.thinkingBudget。"
+      "hint": "模型名支持通配符（如 gemini-*）；参数路径用点号分隔，如 generationConfig.thinkingConfig.thinkingBudget。",
+      "dry_run": {
+        "title": "试一试",
+        "desc": "贴一段请求体，用页面上的规则（包括还没保存的改动）跑一遍，看发往上游时会变成什么样。不会真的发出请求。",
+        "model": "上游模型",
+        "requested_model": "客户端请求的模型",
+        "requested_model_placeholder": "别名或带思考后缀，如 fast(high)",
+        "protocol": "协议",
+        "body": "请求体（JSON）",
+        "body_hint": "规则里的路径相对于这个请求体。Gemini CLI 和 Antigravity 的规则作用在 request 字段里，请贴 request 里面的内容。",
+        "body_empty": "请贴一段请求体",
+        "body_invalid": "请求体必须是 JSON 对象",
+        "model_required": "请填写上游模型或客户端请求的模型",
+        "run": "运行",
+        "running": "运行中…",
+        "stale": "规则改过了，重新运行才能看到最新结果",
+        "no_permission": "试运行需要「写入系统配置」权限",
+        "changes": "改动 {{count}} 处",
+        "no_changes": "规则没有改动这个请求体",
+        "path": "路径",
+        "before": "改写前",
+        "after": "改写后",
+        "absent": "（无）",
+        "removed": "（已删除）",
+        "rules": "每条规则做了什么",
+        "models": "按这些模型名依次匹配：{{models}}",
+        "no_rules": "没有规则",
+        "rule_title": "{{section}} · 规则 {{n}}",
+        "matched": "命中：{{pattern}} 匹配 {{model}}",
+        "miss": {
+          "no-models": "未命中：没有填模型",
+          "protocol": "未命中：限定了别的协议",
+          "model": "未命中：模型不匹配"
+        },
+        "param_set": "写入",
+        "param_removed": "删除",
+        "param_skipped": "跳过",
+        "skip_reason": "（{{reason}}）",
+        "skip": {
+          "present": "请求里已有，不补",
+          "already-defaulted": "前面的规则已经补过",
+          "absent": "请求里没有",
+          "invalid-path": "路径无效",
+          "invalid-value": "值不是合法 JSON"
+        },
+        "section": {
+          "default": "补全缺省参数",
+          "default-raw": "补全缺省参数（原始 JSON）",
+          "override": "强制覆盖参数",
+          "override-raw": "强制覆盖参数（原始 JSON）",
+          "filter": "移除参数"
+        },
+        "dropped": "{{section}}的规则 {{n}} 没有参与：参数 {{param}} 的值不是合法 JSON，保存时这条规则会被丢弃",
+        "body_after": "改写后的完整请求体"
+      }
     },
     "groups_label": "配置分组",
     "group_matches": "{{count}} 个分区匹配",

@@ -19,7 +19,10 @@ const mocks = vi.hoisted(() => ({
   getMetrics: vi.fn(),
 }));
 
-vi.mock("@code-proxy/api-client", () => ({
+vi.mock("@code-proxy/api-client", async (importOriginal) => ({
+  // 纯函数用真实实现：页面按它从 GET /config 读出后端声明的工具。
+  readConfigCapabilities: (await importOriginal<typeof import("@code-proxy/api-client")>())
+    .readConfigCapabilities,
   configApi: {
     getConfig: mocks.getConfig,
     getProxyUrl: mocks.getProxyUrl,
@@ -45,12 +48,14 @@ vi.mock("@pages/config/visual/VisualConfigEditor", () => ({
     toolbarEnd,
     lockDatabaseSettings,
     observability,
+    payloadDryRun,
   }: {
     values: VisualConfigValues;
     onChange: (values: Partial<VisualConfigValues>) => void;
     toolbarEnd?: React.ReactNode;
     lockDatabaseSettings?: boolean;
     observability?: React.ReactNode;
+    payloadDryRun?: boolean;
   }) => (
     <div data-testid="visual-config-editor">
       {/* 真实编辑器把「可视化 / 源码」切换渲染在工具栏右侧，替身也要渲染出来。 */}
@@ -59,6 +64,7 @@ vi.mock("@pages/config/visual/VisualConfigEditor", () => ({
       <output data-testid="proxy-url">{values.proxyUrl || "no proxy"}</output>
       <output data-testid="database-settings">{lockDatabaseSettings ? "locked" : "editable"}</output>
       <output data-testid="metrics-section">{observability ? "shown" : "hidden"}</output>
+      <output data-testid="payload-dry-run">{payloadDryRun ? "on" : "off"}</output>
       <button
         type="button"
         onClick={() =>
@@ -132,6 +138,19 @@ describe("ConfigPage", () => {
     });
     renderPage();
     await waitFor(() => expect(screen.getByTestId("metrics-section")).toHaveTextContent("shown"));
+  });
+
+  test("offers the payload rule trial only when the backend advertises it", async () => {
+    const view = renderPage();
+    await waitFor(() =>
+      expect(screen.getByTestId("visual-config-editor")).toHaveTextContent("gpt-5.4"),
+    );
+    expect(screen.getByTestId("payload-dry-run")).toHaveTextContent("off");
+    view.unmount();
+
+    mocks.getConfig.mockResolvedValue({ capabilities: { "payload-rules-dry-run": true } });
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId("payload-dry-run")).toHaveTextContent("on"));
   });
 
   test("loads DB-backed payload rules into the visual editor after YAML cleanup", async () => {

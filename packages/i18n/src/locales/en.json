@@ -3825,6 +3825,15 @@
     "sticky_max_requests_hint": "Re-pick after a conversation has used one channel this many times. Empty uses the default.",
     "sticky_release_label": "Release above load",
     "sticky_release_hint": "Move off the bound channel once its load reaches this ratio (0-1), instead of waiting for a rate limit. Empty never releases early.",
+    "first_token_timeout_label": "First-token timeout (seconds)",
+    "first_token_timeout_hint": "Streaming only. An account that sends no first token in this time is given up on, and while the client has received nothing yet the request moves to another account. Empty turns it off; otherwise 5–300.",
+    "first_token_timeout_placeholder": "Off",
+    "first_token_timeout_invalid": "First-token timeout must be empty (off) or a whole number of seconds from 5 to 300.",
+    "busy_wait_label": "Wait when every account is busy (seconds)",
+    "busy_wait_hint": "Off unless set. When every account a request may use is cooling down after a temporary failure (timeout, 5xx, short rate limit), the request waits for the first one to recover, if that happens within this many seconds in total, instead of failing at once; it waits at most twice. Never waited for: spent quota, rejected keys, and the few-second pause after a provider overload or first-token timeout. Streaming requests get keep-alive comments while they wait; non-streaming and image/video requests wait silently, so a client with a shorter timeout will count the wait as a failure. Empty or 0 is off; at most 240.",
+    "busy_wait_placeholder": "Off",
+    "busy_wait_invalid": "The busy wait limit must be empty (off) or a whole number of seconds from 0 to 240.",
+    "stream_guards_scope_tooltip": "Requests routed to this group use its value. Requests not confined to a single group use the value of the default group.",
     "sticky_badge": "Sticky",
     "default_members_label": "Default pool members",
     "channel_weight_label": "Weight"
@@ -6944,7 +6953,7 @@
       },
       "bootstrap_retries": {
         "label": "Retries before first byte",
-        "desc": "How many times an upstream error may be retried safely before anything was sent to the client. Default 1."
+        "desc": "How many times a stream may move to another account after an upstream error, while nothing has reached the client yet. Empty uses the default, 2 (older backends: off); 0 turns it off."
       },
       "nonstream_keepalive": {
         "label": "Non-streaming keep-alive",
@@ -7058,7 +7067,62 @@
         "title": "Remove parameters",
         "desc": "Delete these parameter paths from the request body."
       },
-      "hint": "Model names accept wildcards (e.g. gemini-*); parameter paths are dot-separated, e.g. generationConfig.thinkingConfig.thinkingBudget."
+      "hint": "Model names accept wildcards (e.g. gemini-*); parameter paths are dot-separated, e.g. generationConfig.thinkingConfig.thinkingBudget.",
+      "dry_run": {
+        "title": "Try it",
+        "desc": "Paste a request body and run the rules on this page, unsaved changes included, to see what would be sent upstream. Nothing is sent.",
+        "model": "Upstream model",
+        "requested_model": "Model the client asks for",
+        "requested_model_placeholder": "An alias or a thinking suffix, e.g. fast(high)",
+        "protocol": "Protocol",
+        "body": "Request body (JSON)",
+        "body_hint": "Rule paths are relative to this body. Gemini CLI and Antigravity apply the rules inside the request field, so paste what is inside it.",
+        "body_empty": "Paste a request body",
+        "body_invalid": "The request body must be a JSON object",
+        "model_required": "Enter the upstream model or the model the client asks for",
+        "run": "Run",
+        "running": "Running…",
+        "stale": "The rules changed after this run. Run again to see the current result.",
+        "no_permission": "Trying the rules needs permission to write the system configuration",
+        "changes_one": "{{count}} change",
+        "changes_other": "{{count}} changes",
+        "no_changes": "The rules do not change this body",
+        "path": "Path",
+        "before": "Before",
+        "after": "After",
+        "absent": "(absent)",
+        "removed": "(removed)",
+        "rules": "What each rule did",
+        "models": "Matched against, in order: {{models}}",
+        "no_rules": "No rules",
+        "rule_title": "{{section}} · rule {{n}}",
+        "matched": "Matched: {{pattern}} fits {{model}}",
+        "miss": {
+          "no-models": "Not matched: no model listed",
+          "protocol": "Not matched: limited to another protocol",
+          "model": "Not matched: no model pattern fits"
+        },
+        "param_set": "Set",
+        "param_removed": "Removed",
+        "param_skipped": "Skipped",
+        "skip_reason": " ({{reason}})",
+        "skip": {
+          "present": "the request already has it",
+          "already-defaulted": "an earlier rule already filled it in",
+          "absent": "the request does not have it",
+          "invalid-path": "the path is not valid",
+          "invalid-value": "the value is not valid JSON"
+        },
+        "section": {
+          "default": "Fill in missing parameters",
+          "default-raw": "Fill in missing parameters (raw JSON)",
+          "override": "Force parameters",
+          "override-raw": "Force parameters (raw JSON)",
+          "filter": "Remove parameters"
+        },
+        "dropped": "{{section}} rule {{n}} did not run: the value of {{param}} is not valid JSON, so saving would drop the rule",
+        "body_after": "Full body after the rules"
+      }
     },
     "groups_label": "Config groups",
     "group_matches_one": "{{count}} matching section",

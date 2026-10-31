@@ -104,8 +104,49 @@ export function parseRoutingChannelGroups(raw: unknown): RoutingChannelGroupEntr
         typeof record["follow-upstream-models"] === "boolean"
           ? record["follow-upstream-models"]
           : undefined,
+      ...parseStreamGuards(record),
     };
   });
+}
+
+type StreamGuardEntryFields = Pick<
+  RoutingChannelGroupEntry,
+  "firstTokenTimeoutSeconds" | "busyWaitMaxSeconds"
+>;
+
+const parseWholeSeconds = (raw: unknown): number | undefined =>
+  typeof raw === "number" && Number.isInteger(raw) && raw >= 0 ? raw : undefined;
+
+/** A channel group's stream guards as stored; absent stays absent. */
+export function parseStreamGuards(
+  record: { "first-token-timeout-seconds"?: unknown; "busy-wait-max-seconds"?: unknown } | undefined,
+): StreamGuardEntryFields {
+  return {
+    firstTokenTimeoutSeconds: parseWholeSeconds(record?.["first-token-timeout-seconds"]),
+    busyWaitMaxSeconds: parseWholeSeconds(record?.["busy-wait-max-seconds"]),
+  };
+}
+
+/**
+ * The stream guard keys to write for a group, exactly as read or as the
+ * operator set them: routing is saved whole, so a key left out resets the
+ * group. A backend that predates them never returns them, so nothing is
+ * written to it.
+ */
+export function serializeStreamGuards(group: StreamGuardEntryFields): {
+  "first-token-timeout-seconds"?: number;
+  "busy-wait-max-seconds"?: number;
+} {
+  const fields: { "first-token-timeout-seconds"?: number; "busy-wait-max-seconds"?: number } = {};
+  // 0 and absent both mean off for the timeout.
+  if (group.firstTokenTimeoutSeconds) {
+    fields["first-token-timeout-seconds"] = group.firstTokenTimeoutSeconds;
+  }
+  // Absent and 0 are both off, but 0 is the operator's explicit choice, so it is written back.
+  if (typeof group.busyWaitMaxSeconds === "number") {
+    fields["busy-wait-max-seconds"] = group.busyWaitMaxSeconds;
+  }
+  return fields;
 }
 
 /** Normalizes an allow/exclude model list from either the wire or a draft. */
@@ -195,6 +236,7 @@ export function serializeRoutingChannelGroupsForYaml(
       if (typeof group.followUpstreamModels === "boolean") {
         item["follow-upstream-models"] = group.followUpstreamModels;
       }
+      Object.assign(item, serializeStreamGuards(group));
 
       return item;
     })

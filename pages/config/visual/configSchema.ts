@@ -413,7 +413,7 @@ export const CONFIG_FIELDS: readonly ConfigFieldDef[] = [
     "streaming.bootstrap-retries",
     (v) => v.streaming.bootstrapRetries,
     (v, bootstrapRetries) => streaming(v, { bootstrapRetries }),
-    { placeholder: "1" },
+    { placeholder: "2" },
   ),
   number(
     "nonstream_keepalive",
