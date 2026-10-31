@@ -6861,7 +6861,61 @@
         "title": "移除参数",
         "desc": "从请求体里删掉这些参数路径。"
       },
-      "hint": "模型名支持通配符（如 gemini-*）；参数路径用点号分隔，如 generationConfig.thinkingConfig.thinkingBudget。"
+      "hint": "模型名支持通配符（如 gemini-*）；参数路径用点号分隔，如 generationConfig.thinkingConfig.thinkingBudget。",
+      "dry_run": {
+        "title": "试一试",
+        "desc": "贴一段请求体，用页面上的规则（包括还没保存的改动）跑一遍，看发往上游时会变成什么样。不会真的发出请求。",
+        "model": "上游模型",
+        "requested_model": "客户端请求的模型",
+        "requested_model_placeholder": "别名或带思考后缀，如 fast(high)",
+        "protocol": "协议",
+        "body": "请求体（JSON）",
+        "body_hint": "规则里的路径相对于这个请求体。Gemini CLI 和 Antigravity 的规则作用在 request 字段里，请贴 request 里面的内容。",
+        "body_empty": "请贴一段请求体",
+        "body_invalid": "请求体必须是 JSON 对象",
+        "model_required": "请填写上游模型或客户端请求的模型",
+        "run": "运行",
+        "running": "运行中…",
+        "stale": "规则改过了，重新运行才能看到最新结果",
+        "no_permission": "试运行需要「写入系统配置」权限",
+        "changes": "改动 {{count}} 处",
+        "no_changes": "规则没有改动这个请求体",
+        "path": "路径",
+        "before": "改写前",
+        "after": "改写后",
+        "absent": "（无）",
+        "removed": "（已删除）",
+        "rules": "每条规则做了什么",
+        "models": "按这些模型名依次匹配：{{models}}",
+        "no_rules": "没有规则",
+        "rule_title": "{{section}} · 规则 {{n}}",
+        "matched": "命中：{{pattern}} 匹配 {{model}}",
+        "miss": {
+          "no-models": "未命中：没有填模型",
+          "protocol": "未命中：限定了别的协议",
+          "model": "未命中：模型不匹配"
+        },
+        "param_set": "写入",
+        "param_removed": "删除",
+        "param_skipped": "跳过",
+        "skip_reason": "（{{reason}}）",
+        "skip": {
+          "present": "请求里已有，不补",
+          "already-defaulted": "前面的规则已经补过",
+          "absent": "请求里没有",
+          "invalid-path": "路径无效",
+          "invalid-value": "值不是合法 JSON"
+        },
+        "section": {
+          "default": "补全缺省参数",
+          "default-raw": "补全缺省参数（原始 JSON）",
+          "override": "强制覆盖参数",
+          "override-raw": "强制覆盖参数（原始 JSON）",
+          "filter": "移除参数"
+        },
+        "dropped": "{{section}}的规则 {{n}} 没有参与：参数 {{param}} 的值不是合法 JSON，保存时这条规则会被丢弃",
+        "body_after": "改写后的完整请求体"
+      }
     },
     "groups_label": "配置分组",
     "group_matches": "{{count}} 个分区匹配",
