@@ -28,6 +28,9 @@ import {
   EmptyState,
   TABLE_ROW_ACTIONS_COLUMN,
   TableRowActions,
+  Tabs,
+  TabsList,
+  TabsTrigger,
   ToggleSwitch,
   useToast,
   type DataTableColumn,
@@ -35,8 +38,11 @@ import {
 import { useOptionalAuth } from "@app/providers/AuthProvider";
 import { ModerationChannelPickerModal } from "./components/ModerationChannelPickerModal";
 import { ModerationMetricsModal } from "./components/ModerationMetricsModal";
-import { ModerationTestModal } from "./components/ModerationTestModal";
+import { ModerationTestModal, type WordTestTarget } from "./components/ModerationTestModal";
 import { ProfileEditorModal } from "./components/ProfileEditorModal";
+import { WordRulesTab } from "./components/word-rules/WordRulesTab";
+
+type PageTab = "profiles" | "words";
 
 const bindingCount = (profile: ContentModerationProfileView) =>
   Object.values(profile.binding_counts ?? {}).reduce((sum, count) => sum + (count ?? 0), 0);
@@ -65,6 +71,11 @@ export function ContentModerationPage() {
   const [pickerProfile, setPickerProfile] = useState<ContentModerationProfileView | null>(null);
   const [testProfile, setTestProfile] = useState<ContentModerationProfileView | null>(null);
   const [metricsOpen, setMetricsOpen] = useState(false);
+  const [tab, setTab] = useState<PageTab>("profiles");
+  const [wordTest, setWordTest] = useState<WordTestTarget | null>(null);
+  // 敏感词规则的接口只有新后端才有：后端没声明时不显示这一页，也不会去请求它。
+  const wordsAvailable = capabilities.wordGuard;
+  const activeTab: PageTab = wordsAvailable ? tab : "profiles";
 
   const loadProfiles = useCallback(async () => {
     setLoading(true);
@@ -342,57 +353,72 @@ export function ContentModerationPage() {
 
   return (
     <div data-page-fill="always" className="flex flex-1 flex-col">
-      {/* 外壳内容区就是页面面板：这里是页面分区（flat），不再包一张大卡。 */}
-      <Card
-        flat
-        className="md:flex md:min-h-0 md:flex-1 md:flex-col"
-        bodyClassName="md:flex md:min-h-0 md:flex-1 md:flex-col"
-        title={t("content_moderation.title")}
-        description={t("content_moderation.description")}
-        actions={
-          <div className="flex gap-2">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => void loadProfiles()}
-              disabled={loading}
-            >
-              <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-              {t("common.refresh")}
-            </Button>
-            {canWrite ? (
-              <Button size="sm" variant="primary" onClick={openCreate}>
-                <Plus size={14} />
-                {t("content_moderation.create_profile")}
+      {wordsAvailable ? (
+        <div className="mb-3 flex">
+          <Tabs value={activeTab} size="sm" onValueChange={(next) => setTab(next as PageTab)}>
+            <TabsList>
+              <TabsTrigger value="profiles">{t("content_moderation.tab_profiles")}</TabsTrigger>
+              <TabsTrigger value="words">{t("content_moderation.tab_words")}</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+      ) : null}
+
+      {activeTab === "words" ? (
+        <WordRulesTab canWrite={canWrite} canTest={canTest} onTest={setWordTest} />
+      ) : (
+        /* 外壳内容区就是页面面板：这里是页面分区（flat），不再包一张大卡。 */
+        <Card
+          flat
+          className="md:flex md:min-h-0 md:flex-1 md:flex-col"
+          bodyClassName="md:flex md:min-h-0 md:flex-1 md:flex-col"
+          title={t("content_moderation.title")}
+          description={t("content_moderation.description")}
+          actions={
+            <div className="flex gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => void loadProfiles()}
+                disabled={loading}
+              >
+                <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+                {t("common.refresh")}
               </Button>
-            ) : null}
-          </div>
-        }
-        loading={loading}
-      >
-        {profiles.length === 0 ? (
-          <EmptyState
-            title={t("content_moderation.empty_title")}
-            description={t("content_moderation.empty_description")}
-            icon={<ShieldCheck size={32} />}
-          />
-        ) : (
-          <DataTable<ContentModerationProfileView>
-            tableId="content-moderation-profiles"
-            rows={profiles}
-            columns={columns}
-            rowKey={(profile) => profile.id}
-            loading={loading}
-            virtualize={false}
-            minWidth="min-w-[1280px]"
-            height="h-[calc(100dvh-260px)] md:h-auto md:flex-1"
-            minHeight="min-h-[320px] md:min-h-0"
-            caption={t("content_moderation.table_caption")}
-            emptyText={t("content_moderation.empty_title")}
-            showAllLoadedMessage={false}
-          />
-        )}
-      </Card>
+              {canWrite ? (
+                <Button size="sm" variant="primary" onClick={openCreate}>
+                  <Plus size={14} />
+                  {t("content_moderation.create_profile")}
+                </Button>
+              ) : null}
+            </div>
+          }
+          loading={loading}
+        >
+          {profiles.length === 0 ? (
+            <EmptyState
+              title={t("content_moderation.empty_title")}
+              description={t("content_moderation.empty_description")}
+              icon={<ShieldCheck size={32} />}
+            />
+          ) : (
+            <DataTable<ContentModerationProfileView>
+              tableId="content-moderation-profiles"
+              rows={profiles}
+              columns={columns}
+              rowKey={(profile) => profile.id}
+              loading={loading}
+              virtualize={false}
+              minWidth="min-w-[1280px]"
+              height="h-[calc(100dvh-260px)] md:h-auto md:flex-1"
+              minHeight="min-h-[320px] md:min-h-0"
+              caption={t("content_moderation.table_caption")}
+              emptyText={t("content_moderation.empty_title")}
+              showAllLoadedMessage={false}
+            />
+          )}
+        </Card>
+      )}
 
       <ProfileEditorModal
         open={editorOpen}
@@ -415,7 +441,14 @@ export function ContentModerationPage() {
         onBindingsChanged={() => void loadProfiles()}
       />
 
-      <ModerationTestModal profile={testProfile} onClose={() => setTestProfile(null)} />
+      <ModerationTestModal
+        profile={testProfile}
+        words={wordTest}
+        onClose={() => {
+          setTestProfile(null);
+          setWordTest(null);
+        }}
+      />
 
       <ModerationMetricsModal open={metricsOpen} onClose={() => setMetricsOpen(false)} />
 
