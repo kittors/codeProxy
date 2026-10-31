@@ -80,9 +80,11 @@ export type * from "./endpoints/payload-rules";
 export { usageApi } from "./endpoints/usage";
 export type * from "./endpoints/usage";
 export {
+  MONITOR_IN_FLIGHT_STAGES,
   MONITOR_RANGE_KEYS,
   buildMonitorQueryString,
   emptyMonitorTotals,
+  normalizeMonitorInFlight,
   normalizeMonitorOverview,
   normalizeMonitorRealtime,
   normalizeMonitorTotals,
