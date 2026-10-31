@@ -13,6 +13,8 @@ import { parse as parseYaml } from "yaml";
 import { configApi, configFileApi, readConfigCapabilities } from "@code-proxy/api-client";
 import { FloatingSaveBar } from "./FloatingSaveBar";
 import { CodexOAuthAdmissionPanel } from "./CodexOAuthAdmissionPanel";
+import { LoopGuardPanel } from "./loop-guard/LoopGuardPanel";
+import { useLoopGuardTenant } from "./loop-guard/useLoopGuardTenant";
 import { ObservabilityMetricsPanel } from "./observability/ObservabilityMetricsPanel";
 import { useObservabilityMetrics } from "./observability/useObservabilityMetrics";
 import { VisualConfigEditor } from "./visual/VisualConfigEditor";
@@ -175,6 +177,7 @@ export function ConfigPage() {
   const { notify } = useToast();
   const [tab, setTab] = useStickyTab();
   const metricsSettings = useObservabilityMetrics();
+  const loopGuardSettings = useLoopGuardTenant();
 
   const {
     visualValues,
@@ -574,6 +577,9 @@ export function ConfigPage() {
                       metricsSettings ? (
                         <ObservabilityMetricsPanel initial={metricsSettings} />
                       ) : undefined
+                    }
+                    loopGuard={
+                      loopGuardSettings ? <LoopGuardPanel initial={loopGuardSettings} /> : undefined
                     }
                     payloadDryRun={readConfigCapabilities(live?.config).payloadRulesDryRun}
                     toolbarEnd={modeSwitch}

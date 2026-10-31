@@ -2,6 +2,7 @@ import type { UsageLogItem } from "@code-proxy/api-client/endpoints/usage";
 import { readRequestCacheUse, type RequestCacheUse } from "@code-proxy/domain";
 import { parseUsageTimestampMs } from "@features/monitor-widgets/monitor-utils";
 import { normalizeChannelAuthType } from "./ChannelIdentityLabel";
+import { normalizeGuardKind } from "./requestLogGuard";
 
 // Row mapping and cell formatting for request logs, split out of
 // requestLogsShared.tsx to keep that file to its table/filter components.
@@ -30,6 +31,12 @@ export type RequestLogsRow = {
   upstreamModelMismatch: boolean;
   visionFallbackModel: string;
   failed: boolean;
+  /**
+   * Which loop protection check ended the request ("reply_loop", "tool_loop"; a kind
+   * this panel does not know is kept as it came), "" for every other request and
+   * for backends without loop protection. Such a request is also failed.
+   */
+  guardKind: string;
   streaming: boolean;
   latencyMs?: number;
   firstTokenMs?: number;
@@ -117,6 +124,7 @@ export const toRequestLogsRow = (item: UsageLogItem): RequestLogsRow => {
     upstreamModelMismatch: item.upstream_model_mismatch === true,
     visionFallbackModel: item.vision_fallback_model || "",
     failed: item.failed,
+    guardKind: normalizeGuardKind(item.guard_kind),
     streaming: item.streaming === true,
     latencyMs: item.latency_ms,
     firstTokenMs: item.first_token_ms,

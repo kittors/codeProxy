@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Boxes, Gauge, KeyRound, Tag } from "lucide-react";
 import {
@@ -48,6 +48,9 @@ const toForm = (initial?: KeyPolicyValue): KeyForm => ({
  * 子额度每格都不能超过账号同一格（账号该格不限制时随意），格子下方常驻「≤ 账号上限」；
  * 留空表示这一格不单独限制，只受账号额度约束。路由只在账号 / 模板上配置，Key 上没有。
  * 旧后端只认识美元四周期，其余格子与规则都不显示。
+ *
+ * 页面可以在「策略」组末尾追加别的功能的一段（extraSection，例如循环保护），并在校验通过后、
+ * 提交前先保存它（beforeSubmit）：那些段属于别的功能，由页面组装，这里不认识它们。
  */
 export function KeyPolicyModal({
   open,
@@ -62,6 +65,8 @@ export function KeyPolicyModal({
   existingNames = [],
   saving,
   serverError,
+  extraSection,
+  beforeSubmit,
   onSubmit,
   onClose,
 }: {
@@ -80,6 +85,13 @@ export function KeyPolicyModal({
   existingNames?: readonly string[];
   saving: boolean;
   serverError?: string;
+  /** 追加在「策略」组末尾的一段；内容与保存都由页面负责。没有（或为 null）就和以前一样。 */
+  extraSection?: Omit<PolicyEditorSection, "group"> | null;
+  /**
+   * 校验通过后、onSubmit 之前调用：先保存 extraSection 里的内容。返回 false 表示不要继续保存
+   * （那一段校验没过或写入失败，原因已经写在它里面），弹窗留在原地并切到那一段。
+   */
+  beforeSubmit?: () => Promise<boolean>;
   onSubmit: (value: KeyPolicyValue) => void;
   onClose: () => void;
 }) {
@@ -88,6 +100,8 @@ export function KeyPolicyModal({
   const [section, setSection] = useState("basics");
   const [submitted, setSubmitted] = useState(false);
   const [wasOpen, setWasOpen] = useState(false);
+  // 提交快捷键（⌘/Ctrl + Enter）不看保存按钮是否置灰：页面那一段还在保存时不能再提交一遍。
+  const beforeSubmitPending = useRef(false);
 
   // 每次打开时在渲染期间用传入的初始值重置（effect 会晚一帧，先闪出上一把 Key 的值）；
   // 编辑过程中父组件重新渲染不能冲掉正在填写的内容。
@@ -124,6 +138,7 @@ export function KeyPolicyModal({
   const invalidSections = new Set(Object.keys(visibleIssues).map(issueSection));
 
   const submit = () => {
+    if (beforeSubmitPending.current) return;
     setSubmitted(true);
     if (nameIssue) {
       setSection("basics");
@@ -134,11 +149,24 @@ export function KeyPolicyModal({
       setSection(first === "limits" ? "limits" : "rules");
       return;
     }
-    onSubmit({
+    const value: KeyPolicyValue = {
       name: form.name.trim(),
       limits: parseMatrixDraft(form.policy.limits).matrix,
       rules: capabilities.accessPolicy ? draftToRules(form.policy.rules) : [],
-    });
+    };
+    if (!beforeSubmit) {
+      onSubmit(value);
+      return;
+    }
+    beforeSubmitPending.current = true;
+    void beforeSubmit()
+      // 页面那一段自己会接住错误；万一抛出来，也按「不要继续」处理，不放过去存一半。
+      .catch(() => false)
+      .then((proceed) => {
+        beforeSubmitPending.current = false;
+        if (proceed) onSubmit(value);
+        else if (extraSection) setSection(extraSection.id);
+      });
   };
 
   const setPolicy = (patch: Partial<AccessPolicyDraft>) =>
@@ -211,6 +239,8 @@ export function KeyPolicyModal({
       ),
     });
   }
+
+  if (extraSection) sections.push({ ...extraSection, group: "policy" });
 
   const title = mode === "create" ? t("api_keys_page.create_key") : t("api_keys_page.edit_key_quota");
 

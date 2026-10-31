@@ -10,6 +10,7 @@ import {
   MonitorDot,
   Network,
   RefreshCw,
+  Repeat,
   ScrollText,
   Server,
   ShieldCheck,
@@ -41,6 +42,7 @@ export type ConfigSectionId =
   | "access"
   | "streaming"
   | "quota"
+  | "loop_guard"
   | "logging"
   | "retention"
   | "monitoring"
@@ -92,6 +94,13 @@ export const CONFIG_SECTIONS: readonly ConfigSectionDef[] = [
   { id: "access", group: "behavior", icon: KeyRound, hue: "amber" },
   { id: "streaming", group: "behavior", icon: Waves, hue: "teal" },
   { id: "quota", group: "behavior", icon: Gauge, hue: "orange" },
+  {
+    id: "loop_guard",
+    group: "behavior",
+    icon: Repeat,
+    hue: "pink",
+    keywords: ["loop", "repeat", "stuck", "tool call", "agent", "guard", "stop"],
+  },
   { id: "logging", group: "data", icon: ScrollText, hue: "orange" },
   { id: "retention", group: "data", icon: Archive, hue: "lime" },
   { id: "monitoring", group: "data", icon: MonitorDot, hue: "emerald" },

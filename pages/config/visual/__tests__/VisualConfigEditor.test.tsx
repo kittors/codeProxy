@@ -203,6 +203,38 @@ describe("VisualConfigEditor auto update config", () => {
     expect(screen.getByRole("heading", { name: "Metrics endpoint" })).toBeInTheDocument();
   });
 
+  test("shows the loop protection section only when the page supplies its content", async () => {
+    const { unmount } = render(
+      <ThemeProvider>
+        <VisualConfigEditor values={DEFAULT_VISUAL_VALUES} onChange={vi.fn()} />
+      </ThemeProvider>,
+    );
+    await userEvent.click(screen.getByRole("tab", { name: /^Behavior/ }));
+    expect(screen.getByRole("heading", { name: "Streaming" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Loop protection" })).toBeNull();
+    unmount();
+
+    render(
+      <ThemeProvider>
+        <VisualConfigEditor
+          values={DEFAULT_VISUAL_VALUES}
+          onChange={vi.fn()}
+          loopGuard={<p>loop protection panel</p>}
+        />
+      </ThemeProvider>,
+    );
+    await userEvent.click(screen.getByRole("tab", { name: /^Behavior/ }));
+    expect(screen.getByRole("heading", { name: "Loop protection" })).toBeInTheDocument();
+    expect(screen.getByText("loop protection panel")).toBeInTheDocument();
+
+    // 分区没有字段，靠关键词被搜到。
+    await userEvent.type(screen.getByRole("textbox", { name: "Search settings" }), "stuck");
+    await waitFor(() =>
+      expect(screen.getByRole("tabpanel", { name: "Search results" })).toBeInTheDocument(),
+    );
+    expect(screen.getByRole("heading", { name: "Loop protection" })).toBeInTheDocument();
+  });
+
   test("search spans every group, shows hits per tab, and picking a tab ends the search", async () => {
     renderEditor();
     await userEvent.type(screen.getByRole("textbox", { name: "Search settings" }), "retry");

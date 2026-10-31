@@ -98,6 +98,12 @@ export {
   rememberChannelCoolingSupport,
   subscribeChannelCoolingSupport,
 } from "./endpoints/channel-cooling";
+export {
+  loopGuardApi,
+  normalizeLoopGuardKey,
+  normalizeLoopGuardTenant,
+} from "./endpoints/loop-guard";
+export type * from "./endpoints/loop-guard";
 export { configFileApi } from "./endpoints/config-file";
 export { logsApi } from "./endpoints/logs";
 export { oauthApi } from "./endpoints/oauth";

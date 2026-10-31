@@ -2383,6 +2383,13 @@
       "none_hint": "Every request completed successfully",
       "upgrade_hint": "{{failed}} requests failed. Upgrade CliRelay to trace failures by channel, model and portal user."
     },
+    "loop_guard": {
+      "title": "Loop protection",
+      "reply_loops": "Replies cut for repeating",
+      "tool_loops": "Tool-call loops answered by the gateway",
+      "saved": "Upstream cost avoided (estimate)",
+      "hint": "Stopped on purpose, and counted among the failures. The saving covers tool-call loops only: how long a cut reply would have run is not known."
+    },
     "models": {
       "title": "Model performance",
       "model": "Model"
@@ -3348,7 +3355,16 @@
     "clear_scope_title": "All request logs in the current tenant",
     "clear_scope_hint": "Not limited by the current filters or time range",
     "clear_consequence_records": "Request records are deleted too: the list, record count, token totals, success rate and cost stats are all cleared.",
-    "clear_consequence_content": "The checked bodies and details are deleted right away and won't show when you open these requests; request records and stats stay."
+    "clear_consequence_content": "The checked bodies and details are deleted right away and won't show when you open these requests; request records and stats stay.",
+    "status_loop_stopped": "Stopped",
+    "loop_stopped_reply": "Loop protection ended this reply because the model kept repeating itself. Click to see the detail.",
+    "loop_stopped_tool": "Loop protection answered this request itself because the agent was stuck in a tool-call loop. Nothing was sent upstream. Click to see the detail.",
+    "loop_stopped_other": "Loop protection ended this request. Click to see the detail.",
+    "guard_filter_label": "Loop protection",
+    "guard_filter_all": "All requests",
+    "guard_filter_any": "Stopped by loop protection",
+    "guard_filter_reply_loop": "Replies cut for repeating",
+    "guard_filter_tool_loop": "Tool-call loops answered"
   },
   "ccswitch": {
     "import_to_ccswitch": "Import to CC Switch",
@@ -7089,6 +7105,10 @@
         "title": "When quota runs out",
         "desc": "What to try automatically once an account's quota is used up."
       },
+      "loop_guard": {
+        "title": "Loop protection",
+        "desc": "Stop a model that repeats itself and an agent stuck on the same tool call. Both checks are off until you turn them on here, and an API key can set its own."
+      },
       "logging": {
         "title": "Logging",
         "desc": "What gets logged and where. The more you turn on, the more CPU and disk it costs."
@@ -7802,5 +7822,39 @@
     "rotate_confirm": "Regenerate",
     "reveal_title": "Save the scrape token",
     "reveal_warning": "This token is shown only once. After you close this dialog it cannot be viewed again, only regenerated. Save it to {{file}} and reference it with credentials_file in the Prometheus config."
+  },
+  "loop_guard": {
+    "reply_label": "Stop repeating replies",
+    "reply_desc": "End a reply that has fallen into writing the same few lines over and over, before it runs to its output limit. The client gets an error that quotes the repeated text.",
+    "tool_label": "Stop tool-call loops",
+    "tool_desc": "When the last turns of a conversation are the same tool call with the same result, answer from the gateway instead of the upstream. The agent is told it is stuck, and nothing is billed upstream.",
+    "window_label": "Lines compared",
+    "window_hint": "How many of the latest lines or sentences are compared. Default {{value}}, from {{min}} to {{max}}.",
+    "max_distinct_label": "Most different lines",
+    "max_distinct_hint": "The reply is ended when the lines compared hold no more than this many different ones. Default {{value}}, from {{min}} to {{max}}.",
+    "repeats_label": "Identical turns in a row",
+    "repeats_hint": "How many turns in a row with the same call and the same result make a loop. Default {{value}}, from {{min}} to {{max}}.",
+    "mode_inherit": "Follow the tenant ({{state}})",
+    "mode_on": "On for this key",
+    "mode_off": "Off for this key",
+    "state_on": "on",
+    "state_off": "off",
+    "effective_off": "Not applied to requests with this key right now.",
+    "effective_on_tenant": "Applied to requests with this key right now, switched on by the tenant.",
+    "effective_on_key": "Applied to requests with this key right now, switched on for this key.",
+    "error_window": "Enter a whole number from {{min}} to {{max}}.",
+    "error_max_distinct": "Enter a whole number from {{min}} to {{max}} (the limit follows the window of {{window}}).",
+    "error_repeats": "Enter a whole number from {{min}} to {{max}}.",
+    "key_overrides": "API keys with settings of their own: {{count}}. Those settings take precedence over the ones here.",
+    "not_persistent": "This gateway runs without a database, so these settings can be read but not saved.",
+    "read_only": "Your account can view these settings but not change them.",
+    "saved": "Loop protection saved",
+    "save_failed": "Could not save loop protection",
+    "conflict": "These settings were changed by someone else in the meantime. Your edits are kept and the saved values are updated; check them and save again to overwrite.",
+    "revert": "Revert",
+    "key_section_title": "Loop protection",
+    "key_section_hint": "Override the tenant's loop protection for this key only. Leave a check on \"Follow the tenant\" to inherit it.",
+    "key_load_failed": "Could not load this key's loop protection settings.",
+    "key_retry": "Retry"
   }
 }
