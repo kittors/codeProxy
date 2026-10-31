@@ -90,6 +90,7 @@ function Harness({
         streamGuardsSupported === true || streamGuardsSupported === "first-token-timeout",
       channelGroupBusyWait: streamGuardsSupported === true || streamGuardsSupported === "busy-wait",
       channelGroupResetAwareDistribution: resetAwareSupported === true,
+      routingSimulation: false,
     }),
     [followUpstreamSupported, modelExclusionsSupported, resetAwareSupported, streamGuardsSupported],
   );
