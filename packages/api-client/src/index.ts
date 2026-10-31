@@ -174,6 +174,14 @@ export {
 } from "./endpoints/content-moderation";
 export type * from "./endpoints/content-moderation";
 export {
+  WORD_ACTIONS,
+  WORD_SCAN_SCOPES,
+  isWordPolicyVersionConflict,
+  readWordRuleProblems,
+  wordPolicyApi,
+} from "./endpoints/content-moderation-words";
+export type * from "./endpoints/content-moderation-words";
+export {
   ccSwitchImportConfigsApi,
   NO_CC_SWITCH_IMPORT_CAPABILITIES,
   normalizeCcSwitchImportConfigs,

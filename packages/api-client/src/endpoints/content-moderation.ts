@@ -122,11 +122,17 @@ export interface ContentModerationProfileCapabilities {
   keywordFoldTraditionalChinese: boolean;
   /** api_includes_tool_output */
   apiIncludesToolOutput: boolean;
+  /**
+   * word_guard: the sensitive-word policy endpoints (content-moderation-words.ts) exist. An older
+   * backend does not list it, and has no such routes to call.
+   */
+  wordGuard: boolean;
 }
 
 export const NO_CONTENT_MODERATION_PROFILE_CAPABILITIES: ContentModerationProfileCapabilities = {
   keywordFoldTraditionalChinese: false,
   apiIncludesToolOutput: false,
+  wordGuard: false,
 };
 
 /** Reads the declaration from a profile list response; anything not declared is unsupported. */
@@ -138,6 +144,7 @@ export const readContentModerationProfileCapabilities = (
   return {
     keywordFoldTraditionalChinese: capabilities.keyword_fold_traditional_chinese === true,
     apiIncludesToolOutput: capabilities.api_includes_tool_output === true,
+    wordGuard: capabilities.word_guard === true,
   };
 };
 

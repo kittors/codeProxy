@@ -408,6 +408,7 @@ describe("ProfileEditorModal text coverage options", () => {
   const DECLARED: ContentModerationProfileCapabilities = {
     keywordFoldTraditionalChinese: true,
     apiIncludesToolOutput: true,
+    wordGuard: false,
   };
   const FOLD = "Match Traditional Chinese as Simplified";
   const TOOL_OUTPUT = "Send tool output to the moderation service";

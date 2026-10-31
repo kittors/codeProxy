@@ -30,6 +30,7 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => ({
 const NOTHING_DECLARED: ContentModerationProfileCapabilities = {
   keywordFoldTraditionalChinese: false,
   apiIncludesToolOutput: false,
+  wordGuard: false,
 };
 
 const listResponse = (
@@ -264,7 +265,7 @@ describe("ContentModerationPage", () => {
     mocks.listProfiles.mockResolvedValue(
       listResponse(
         [{ ...profile, keyword_fold_traditional_chinese: true, api_includes_tool_output: false }],
-        { keywordFoldTraditionalChinese: true, apiIncludesToolOutput: true },
+        { keywordFoldTraditionalChinese: true, apiIncludesToolOutput: true, wordGuard: false },
       ),
     );
     renderPage();
