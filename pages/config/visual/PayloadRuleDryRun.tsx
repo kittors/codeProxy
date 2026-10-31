@@ -112,10 +112,7 @@ export function PayloadRuleDryRun({
               spellCheck={false}
             />
           </FormField>
-          <div className="space-y-1.5">
-            <span className="block text-sm font-medium text-ink">
-              {t("config_ui.payload.dry_run.protocol")}
-            </span>
+          <FormField label={t("config_ui.payload.dry_run.protocol")} className="min-w-0">
             <Select
               value={protocol}
               onChange={setProtocol}
@@ -126,7 +123,7 @@ export function PayloadRuleDryRun({
               aria-label={t("config_ui.payload.dry_run.protocol")}
               className="w-full"
             />
-          </div>
+          </FormField>
         </div>
         <FormField
           label={t("config_ui.payload.dry_run.body")}
