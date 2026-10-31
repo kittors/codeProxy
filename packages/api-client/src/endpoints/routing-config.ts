@@ -3,7 +3,11 @@ import { apiClient } from "../client/client";
 /** Legacy enum; superseded by RoutingConfigScheduling but still written on save. */
 export type RoutingStrategy = "round-robin" | "fill-first" | "session-sticky";
 
-export type RoutingDistribution = "weighted" | "least-load" | "fill-first";
+/**
+ * `reset-aware` is only written when the backend advertises
+ * `channel-group-distribution-reset-aware`: an older one reads it as weighted.
+ */
+export type RoutingDistribution = "weighted" | "least-load" | "fill-first" | "reset-aware";
 
 export interface RoutingConfigSticky {
   enabled?: boolean;
@@ -49,6 +53,7 @@ export interface RoutingConfigGroupItem {
 export interface RoutingConfigCapabilities {
   "channel-group-excluded-models"?: boolean;
   "channel-group-follow-upstream-models"?: boolean;
+  "channel-group-distribution-reset-aware"?: boolean;
 }
 
 /** Capabilities normalized for the panel; anything not advertised reads as unsupported. */
@@ -57,12 +62,15 @@ export interface RoutingConfigSupport {
   channelGroupExcludedModels: boolean;
   /** The backend stores and enforces `follow-upstream-models` on channel groups. */
   channelGroupFollowUpstreamModels: boolean;
+  /** Channel groups accept the reset-aware distribution. */
+  channelGroupResetAwareDistribution: boolean;
 }
 
 /** What a backend that advertises nothing supports. */
 export const NO_ROUTING_CONFIG_SUPPORT: RoutingConfigSupport = {
   channelGroupExcludedModels: false,
   channelGroupFollowUpstreamModels: false,
+  channelGroupResetAwareDistribution: false,
 };
 
 export interface RoutingConfigPathRouteItem {
@@ -97,6 +105,8 @@ export function readRoutingConfigSupport(payload: unknown): RoutingConfigSupport
     channelGroupExcludedModels: capabilities?.["channel-group-excluded-models"] === true,
     channelGroupFollowUpstreamModels:
       capabilities?.["channel-group-follow-upstream-models"] === true,
+    channelGroupResetAwareDistribution:
+      capabilities?.["channel-group-distribution-reset-aware"] === true,
   };
 }
 

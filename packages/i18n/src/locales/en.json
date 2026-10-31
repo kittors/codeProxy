@@ -3816,6 +3816,8 @@
     "distribution_weighted": "Weighted share",
     "distribution_least_load": "Least loaded first",
     "distribution_fill_first": "Fill one before the next",
+    "distribution_reset_aware": "By reset time (spend what renews first)",
+    "distribution_reset_aware_hint": "Sends traffic to the account whose quota renews soonest: whatever a window has left is lost when it renews, while an account renewing later keeps what it is spared. The longest window decides (the week before the five hours), compared to the hour. An account past 90% of a window goes after the others, past 98% last. Accounts that tie keep a fixed order, so one account keeps answering and the upstream prompt cache stays warm.",
     "sticky_enabled_label": "Enable session stickiness",
     "sticky_enabled_tooltip": "Keeps one conversation on the same channel so the upstream prefix cache keeps hitting. New conversations are still placed by the distribution above.",
     "sticky_enabled_hint": "Without a bound, a long conversation holds the same account until it gets rate limited.",
