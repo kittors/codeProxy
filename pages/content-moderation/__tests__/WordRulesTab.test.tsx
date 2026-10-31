@@ -440,6 +440,22 @@ describe("sensitive-word rules tab", () => {
     });
   });
 
+  test("choosing to replace says what replace cannot do, and block does not", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await openWordRules(user);
+    expect(screen.queryByText(/Replayed thinking blocks are signed/)).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("combobox", { name: "When a rule matches" }));
+    await user.click(await screen.findByRole("option", { name: "Replace the text" }));
+
+    expect(
+      await screen.findByText(
+        /An object key, or JSON inside a string\) blocks the request instead\. Replayed thinking blocks are signed/i,
+      ),
+    ).toBeInTheDocument();
+  });
+
   test("leaving a layer with unsaved changes asks first", async () => {
     const user = userEvent.setup();
     renderPage();

@@ -303,6 +303,11 @@ describe("sensitive-word rules: keywords that ignore separators", () => {
           rules: [{ kind: "regex", pattern: "a+" }],
         }),
       );
+
+      // Coming back to keywords starts from "off" again: a box that was ticked before the detour
+      // must not come back ticked, with nobody having looked at it since.
+      await user.click(within(dialog).getByRole("radio", { name: "Keyword" }));
+      expect(within(dialog).getByRole("checkbox", { name: IGNORE })).not.toBeChecked();
     });
 
     test("takes no more lines at a time than a request may carry", async () => {

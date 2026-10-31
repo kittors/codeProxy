@@ -118,6 +118,38 @@ describe("sensitive-word rules: the draft is not lost or rewritten silently", ()
       });
     });
 
+    test("a switch that follows a default which is on shows as on, and is saved as inherited", async () => {
+      const user = userEvent.setup();
+      // The server's view of a policy that follows a default which happens to be on.
+      const followingDefault = (replyFilter: boolean | null, rules: WordRule[], version: number) =>
+        wordView("tenant", {
+          version,
+          reply_filter: replyFilter,
+          effective: { ...wordOverview().defaults, reply_filter: replyFilter ?? true },
+          rules,
+        });
+      mocks.words.get.mockImplementation(async () => followingDefault(null, tenantRules, 3));
+      mocks.words.put.mockImplementation(
+        async (_scope: string, input: { reply_filter: boolean | null; rules: WordRule[]; version: number }) =>
+          followingDefault(input.reply_filter, input.rules, input.version + 1),
+      );
+      renderPage();
+      await openWordRules(user);
+
+      expect(screen.getByRole("switch", { name: "Filter model replies" })).toBeChecked();
+
+      // An unrelated change leaves it inherited; turning it off is a choice.
+      await user.click(screen.getByRole("switch", { name: "Toggle rule alpha" }));
+      await user.click(screen.getByRole("button", { name: "Save changes" }));
+      await waitFor(() => expect(mocks.words.put).toHaveBeenCalledTimes(1));
+      expect(mocks.words.put.mock.calls[0][1].reply_filter).toBeNull();
+
+      await user.click(screen.getByRole("switch", { name: "Filter model replies" }));
+      await user.click(screen.getByRole("button", { name: "Save changes" }));
+      await waitFor(() => expect(mocks.words.put).toHaveBeenCalledTimes(2));
+      expect(mocks.words.put.mock.calls[1][1].reply_filter).toBe(false);
+    });
+
     test("only the setting that was changed becomes a choice", async () => {
       const user = userEvent.setup();
       renderPage();
