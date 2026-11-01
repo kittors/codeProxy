@@ -15,7 +15,7 @@
     "pages/auth-files/hooks/useAuthFilesFilesPresentation.tsx": 829,
     "pages/auth-files/hooks/useAuthFilesStatusState.ts": 1298,
     "pages/identity-fingerprint/IdentityFingerprintPage.tsx": 2020,
-    "pages/models/ModelsPage.tsx": 1193,
+    "pages/models/ModelsPage.tsx": 1186,
     "pages/providers/components/ProvidersPageContent.tsx": 1503
   }
 }

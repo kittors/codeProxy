@@ -18,7 +18,8 @@ export type {
 } from "@features/model-availability";
 
 export type ModelScope = "active" | "library";
-export type ModelPageTab = ModelScope;
+/** The virtual tab edits virtual models and loads no model data of its own. */
+export type ModelPageTab = ModelScope | "virtual";
 
 export interface ModelItem {
   id: string;

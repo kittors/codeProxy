@@ -242,6 +242,112 @@ describe("routeTraceVerdict", () => {
   });
 });
 
+describe("virtual model members", () => {
+  // Virtual model "smart" of three members: the key may not use the first, the
+  // second (team/gpt-5-codex) is tried first, the third is the fallback.
+  const member = (patch: Record<string, unknown>) => ({
+    kind: "member",
+    at: "2026-11-01T05:09:59.990+08:00",
+    virtual_model: "smart",
+    members: 3,
+    ...patch,
+  });
+  const notAllowed = member({
+    member: 1,
+    group: "vip",
+    model: "gpt-5",
+    reason: "not_allowed",
+    error: 'the API key may not use channel group "vip"',
+  });
+  const first = member({ member: 2, group: "team", model: "gpt-5-codex", reason: "first" });
+  const fallback = member({
+    at: "2026-11-01T05:10:01.240+08:00",
+    member: 3,
+    model: "claude-opus-4",
+    reason: "fallback",
+    status: 429,
+    cause: "rate_limited",
+  });
+  const exhausted = { kind: "exhausted", at: "2026-11-01T05:10:01.230+08:00", status: 429 };
+  const onClaude = {
+    ...onB,
+    attempt: 2,
+    auth_id: "claude-c.json",
+    auth_label: "Claude C",
+    provider: "claude",
+    model: "claude-opus-4",
+  };
+
+  test("reads the member fields", () => {
+    expect(trace({ steps: [notAllowed] }).steps[0]).toMatchObject({
+      kind: "member",
+      virtualModel: "smart",
+      member: 1,
+      members: 3,
+      group: "vip",
+      model: "gpt-5",
+      reason: "not_allowed",
+      error: 'the API key may not use channel group "vip"',
+    });
+  });
+
+  test("a failed member's row ends on the member the request moved on to", () => {
+    expect(
+      routeTraceVerdict(trace({ steps: [notAllowed, first, failedOnA, fallback] })),
+    ).toMatchObject({
+      lead: { kind: "failed", attempt: { authId: "codex-a.json" } },
+      next: { kind: "member", member: { member: 3, model: "claude-opus-4" }, exhausted: null },
+    });
+    // The member ran out of accounts after the failure before the request left it.
+    expect(
+      routeTraceVerdict(trace({ steps: [first, failedOnA, exhausted, fallback] })).next,
+    ).toMatchObject({ kind: "member", exhausted: { kind: "exhausted" } });
+    // No attempt at all: the pass that found no account leads, and says so only once.
+    expect(routeTraceVerdict(trace({ steps: [first, exhausted, fallback] }))).toMatchObject({
+      lead: { kind: "no_account" },
+      next: { kind: "member", exhausted: null },
+    });
+  });
+
+  test("blames the member the request just left, not an earlier one", () => {
+    const second = { ...fallback, member: 2, group: "backup", model: "gpt-5" };
+    expect(
+      routeTraceVerdict(trace({ steps: [first, failedOnA, second, exhausted, fallback] })),
+    ).toMatchObject({
+      lead: { kind: "no_account" },
+      next: { kind: "member", member: { member: 3 } },
+    });
+  });
+
+  test("a success names the member that served", () => {
+    expect(
+      routeTraceVerdict(
+        trace({
+          steps: [notAllowed, first, failedOnA, fallback, { ...onClaude, outcome: "success" }],
+        }),
+      ),
+    ).toMatchObject({
+      lead: { kind: "served", failedBefore: 1, member: { member: 3, model: "claude-opus-4" } },
+      next: null,
+    });
+    expect(
+      routeTraceVerdict(trace({ steps: [first, { ...onB, attempt: 1, outcome: "success" }] })).lead,
+    ).toMatchObject({ kind: "served", failedBefore: 0, member: { member: 2, reason: "first" } });
+    // A request that named a real model has no member.
+    expect(
+      routeTraceVerdict(trace({ steps: [{ ...onB, attempt: 1, outcome: "success" }] })).lead,
+    ).toMatchObject({ kind: "served", member: null });
+  });
+
+  test("a trace that ends on passed-over members tried none of them", () => {
+    const noProvider = member({ member: 2, model: "gpt-5-codex", reason: "no_provider" });
+    expect(routeTraceVerdict(trace({ steps: [notAllowed, noProvider] }))).toMatchObject({
+      lead: { kind: "no_member", step: { member: 2, reason: "no_provider" } },
+      next: null,
+    });
+  });
+});
+
 describe("helpers", () => {
   test("the earliest recovery among the candidates", () => {
     const step = trace({
