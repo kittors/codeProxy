@@ -27,11 +27,9 @@ const KIND_ICON: Record<AlertChannelKind, LucideIcon> = {
 /** 一行底下的发送目标：只写打码后的地址和 Chat ID，不显示任何还没保存的明文。 */
 function destinationText(channel: ChannelDraft, t: T) {
   if (channel.kind === "telegram") {
-    if (channel.botToken.clear) return t("alerts_page.channel.dest_cleared");
     if (channel.chatId.trim() === "") return t("alerts_page.channel.dest_unset");
     return t("alerts_page.channel.dest_chat", { chat: channel.chatId.trim() });
   }
-  if (channel.url.clear) return t("alerts_page.channel.dest_cleared");
   if (channel.url.input.trim() !== "") return t("alerts_page.channel.dest_new");
   return channel.url.masked || t("alerts_page.channel.dest_unset");
 }

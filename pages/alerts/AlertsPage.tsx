@@ -52,6 +52,8 @@ function AlertsWorkspace() {
   // 后端没有设置库时写入一律 503：和没有权限一样整页只读，别让人改完才被退回。
   const persistent = settings.settings?.persistent !== false;
   const locked = !canWrite || !persistent;
+  // 保存期间输入也锁住：保存成功后草稿会换成后端返回的那份，这段时间里改的内容会被悄悄盖掉。
+  const frozen = locked || saving;
   const hasIssues = Object.keys(settings.issues).length > 0;
 
   useEffect(() => {
@@ -166,7 +168,7 @@ function AlertsWorkspace() {
             update={settings.update}
             issues={settings.issues}
             saveError={saveError}
-            locked={locked}
+            locked={frozen}
             maxChannels={settings.settings?.limits?.max_channels}
             changedChannelKeys={settings.changedChannelKeys}
             testPendingKey={channelTest.pendingKey}
@@ -179,7 +181,7 @@ function AlertsWorkspace() {
             rules={draft.rules}
             update={settings.update}
             saveError={saveError}
-            locked={locked}
+            locked={frozen}
           />
         </TabsContent>
         <TabsContent value="events">

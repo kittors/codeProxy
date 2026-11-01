@@ -8,8 +8,7 @@ export type AlertSeverity = "info" | "warning" | "critical";
 /** `test` is the message the "send a test" button produces; it is never raised by a rule. */
 export type AlertEventRule = AlertRuleKey | "test";
 export type AlertSubjectKind = "account" | "key" | "end_user" | "channel";
-/** `dropped`: the delivery queue was full, so the message was discarded rather than delayed. */
-export type AlertDeliveryStatus = "sent" | "failed" | "dropped";
+export type AlertDeliveryStatus = "sent" | "failed";
 
 /**
  * A notification channel.

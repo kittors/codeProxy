@@ -62,12 +62,28 @@ const EVENTS = [
     at: iso(-12 * 60_000),
     rule: "quota_window",
     severity: "warning",
-    subject: { kind: "account", id: "codex-a.json", name: "a-very-long-mailbox-name-of-a-shared-account@example-enterprise.com" },
+    subject: {
+      kind: "account",
+      id: "codex-a.json",
+      name: "a-very-long-mailbox-name-of-a-shared-account@example-enterprise.com",
+    },
     title: "Codex 账号本周用量已达 92%",
     text: "账号 a-very-long-mailbox-name-of-a-shared-account@example-enterprise.com 的每周窗口已用 92%，约 2 天后重置。",
     deliveries: [
-      { channel_id: "ch-ops", channel_name: "运维 Webhook", kind: "webhook", status: "sent", error: "" },
-      { channel_id: "ch-team", channel_name: "团队群", kind: "feishu", status: "failed", error: "连接超时（5s）" },
+      {
+        channel_id: "ch-ops",
+        channel_name: "运维 Webhook",
+        kind: "webhook",
+        status: "sent",
+        error: "",
+      },
+      {
+        channel_id: "ch-team",
+        channel_name: "团队群",
+        kind: "feishu",
+        status: "failed",
+        error: "连接超时（5s）",
+      },
     ],
   },
   {
@@ -79,8 +95,20 @@ const EVENTS = [
     title: "Claude 账号凭据已失效，需要重新授权",
     text: "上游返回 401，凭据被吊销。",
     deliveries: [
-      { channel_id: "ch-ops", channel_name: "运维 Webhook", kind: "webhook", status: "sent", error: "" },
-      { channel_id: "ch-tg", channel_name: "Telegram 值班", kind: "telegram", status: "dropped", error: "" },
+      {
+        channel_id: "ch-ops",
+        channel_name: "运维 Webhook",
+        kind: "webhook",
+        status: "sent",
+        error: "",
+      },
+      {
+        channel_id: "ch-tg",
+        channel_name: "Telegram 值班",
+        kind: "telegram",
+        status: "failed",
+        error: "the receiver answered HTTP 429",
+      },
     ],
   },
   {
@@ -102,7 +130,13 @@ const EVENTS = [
     title: "告警测试消息",
     text: "这是一条测试消息。",
     deliveries: [
-      { channel_id: "ch-ops", channel_name: "运维 Webhook", kind: "webhook", status: "sent", error: "" },
+      {
+        channel_id: "ch-ops",
+        channel_name: "运维 Webhook",
+        kind: "webhook",
+        status: "sent",
+        error: "",
+      },
     ],
   },
 ];
@@ -168,7 +202,10 @@ const POOLS = [
   },
 ];
 
-const credentials = async (page: Page, options: { permissions: string[]; platformAdmin: boolean }) => {
+const credentials = async (
+  page: Page,
+  options: { permissions: string[]; platformAdmin: boolean },
+) => {
   await page.addInitScript(() => {
     sessionStorage.setItem(
       "code-proxy-admin-auth",
@@ -239,10 +276,6 @@ interface MockOptions {
 
 const mockApis = async (page: Page, options: MockOptions = {}) => {
   const requests: RecordedRequest[] = [];
-  page.on("pageerror", (error) => console.log("PAGEERROR", error.message, error.stack?.split("\n").slice(0, 6).join("\n")));
-  page.on("console", (message) => {
-    if (message.type() === "error" || message.type() === "warning") console.log("CONSOLE", message.type(), message.text().slice(0, 600));
-  });
   let settings = baseSettings() as ReturnType<typeof baseSettings> & Record<string, unknown>;
   await credentials(page, {
     permissions: options.permissions ?? [
@@ -259,7 +292,9 @@ const mockApis = async (page: Page, options: MockOptions = {}) => {
     route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
 
   // Playwright 先试最后注册的路由：兜底要最先注册，免得盖住具体的。
-  await page.route("**/v0/management/**", (route) => json(route, { items: [], files: [], data: [], total: 0 }));
+  await page.route("**/v0/management/**", (route) =>
+    json(route, { items: [], files: [], data: [], total: 0 }),
+  );
   await page.route("**/v0/management/**", async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -276,7 +311,9 @@ const mockApis = async (page: Page, options: MockOptions = {}) => {
     }
 
     if (path === "/config") {
-      return json(route, { capabilities: options.capabilities ?? { alerts: true, "pool-capacity": true } });
+      return json(route, {
+        capabilities: options.capabilities ?? { alerts: true, "pool-capacity": true },
+      });
     }
     if (path === "/update/check") return json(route, { has_update: false });
     if (path === "/alerts/settings" && method === "GET") return json(route, settings);
@@ -286,7 +323,7 @@ const mockApis = async (page: Page, options: MockOptions = {}) => {
           route,
           {
             error: {
-              code: "alerts_invalid",
+              code: "invalid_alert_settings",
               message: options.rejectPut.message,
               details: { field: options.rejectPut.field },
             },
@@ -298,13 +335,14 @@ const mockApis = async (page: Page, options: MockOptions = {}) => {
       settings = {
         ...settings,
         ...patch,
-        rules: { ...settings.rules, ...((patch.rules as object | undefined) ?? {}) },
+        rules: { ...settings.rules, ...(patch.rules as object | undefined) },
         updated_at: new Date().toISOString(),
       } as typeof settings;
       return json(route, settings);
     }
     if (path === "/alerts/test") {
-      const channel = (body as { channel?: { id?: string; name?: string; kind?: string } } | null)?.channel;
+      const channel = (body as { channel?: { id?: string; name?: string; kind?: string } } | null)
+        ?.channel;
       return json(route, {
         results: [
           {
@@ -374,7 +412,10 @@ for (const width of [1280, 1470]) {
 
     await page.getByRole("tab", { name: "规则" }).click();
     await expect(page.getByText("账号额度用量")).toBeVisible();
-    await page.screenshot({ path: testInfo.outputPath(`alerts-rules-${width}.png`), fullPage: true });
+    await page.screenshot({
+      path: testInfo.outputPath(`alerts-rules-${width}.png`),
+      fullPage: true,
+    });
     await expectNoHorizontalOverflow(page, width);
 
     await page.getByRole("tab", { name: "最近记录" }).click();
@@ -506,7 +547,9 @@ test("the pool capacity card stays away when the backend does not declare it", a
   await page.goto("/#/models/channel-groups");
   await expect(page.getByRole("heading", { name: "渠道分组管理" })).toBeVisible();
   await expect(page.getByRole("region", { name: "池容量" })).toHaveCount(0);
-  expect(mock.requests.filter((request) => request.path === "/ai-accounts/pool-capacity")).toEqual([]);
+  expect(mock.requests.filter((request) => request.path === "/ai-accounts/pool-capacity")).toEqual(
+    [],
+  );
 });
 
 test("the pool capacity card stays away without auth_files.read", async ({ page }) => {
@@ -515,5 +558,7 @@ test("the pool capacity card stays away without auth_files.read", async ({ page 
   // 页面照常打开（路由权限是 routing.read），只是没有池容量卡，也没有去请求那个接口。
   await expect(page.getByRole("heading", { name: "渠道分组管理" })).toBeVisible();
   await expect(page.getByRole("region", { name: "池容量" })).toHaveCount(0);
-  expect(mock.requests.filter((request) => request.path === "/ai-accounts/pool-capacity")).toEqual([]);
+  expect(mock.requests.filter((request) => request.path === "/ai-accounts/pool-capacity")).toEqual(
+    [],
+  );
 });

@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Ban, Check, RefreshCw, X, type LucideIcon } from "lucide-react";
+import { Check, RefreshCw, X, type LucideIcon } from "lucide-react";
 import type {
   AlertDeliveryStatus,
   AlertEvent,
@@ -19,7 +19,6 @@ const SEVERITY_TONE: Record<AlertSeverity, string> = {
 const DELIVERY_TONE: Record<AlertDeliveryStatus, { chip: string; icon: LucideIcon }> = {
   sent: { chip: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300", icon: Check },
   failed: { chip: "bg-rose-500/10 text-rose-700 dark:text-rose-300", icon: X },
-  dropped: { chip: "bg-amber-500/10 text-amber-800 dark:text-amber-200", icon: Ban },
 };
 
 function DeliveryItem({ delivery }: { delivery: AlertEventDelivery }) {
@@ -27,9 +26,7 @@ function DeliveryItem({ delivery }: { delivery: AlertEventDelivery }) {
   // 状态不只靠颜色和图标：读屏和黑白打印都要能读出「发出去了没有」。
   const tone = DELIVERY_TONE[delivery.status] ?? DELIVERY_TONE.failed;
   const Icon = tone.icon;
-  const reason =
-    delivery.error ||
-    (delivery.status === "dropped" ? t("alerts_page.events.delivery.dropped_hint") : "");
+  const reason = delivery.error;
   return (
     <li className="min-w-0">
       <span

@@ -7909,7 +7909,6 @@
       "toggle": "Enable {{name}}",
       "edit_named": "Edit {{name}}",
       "delete_named": "Delete {{name}}",
-      "dest_cleared": "Destination will be cleared on save",
       "dest_unset": "No destination set",
       "dest_chat": "Chat {{chat}}",
       "dest_new": "New address (hidden once saved)"
@@ -7942,7 +7941,7 @@
         "label": "Account failures",
         "desc": "Alert when an AI account keeps failing or becomes unusable.",
         "for_minutes": "Wait before alerting",
-        "for_minutes_hint": "Default 10 minutes. 5xx errors and timeouts usually clear up within minutes, so a short blip stays quiet. Failures that need a person, such as a revoked credential (401), alert immediately regardless. 0 alerts on the first failure."
+        "for_minutes_hint": "Default 10 minutes. 5xx errors and timeouts usually clear up within minutes, so a short blip stays quiet. A credential the provider has revoked, which only signing in again fixes, alerts immediately regardless. 0 alerts on the first failure."
       },
       "spending": {
         "label": "Spending limits",
@@ -7996,8 +7995,6 @@
       "delivery": {
         "sent": "Sent",
         "failed": "Failed",
-        "dropped": "Dropped",
-        "dropped_hint": "The queue was full, so this message was dropped",
         "none": "No channel was enabled"
       }
     }
