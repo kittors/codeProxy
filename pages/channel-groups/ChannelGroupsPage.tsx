@@ -36,6 +36,7 @@ import {
 import { Card } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
 import { useOptionalAuth } from "@app/providers/AuthProvider";
+import { PoolCapacitySection } from "./PoolCapacitySection";
 import { RoutingSimulatorButton } from "./routing-simulator/RoutingSimulatorButton";
 
 function createEmptyRoutingValues(): VisualConfigValues {
@@ -573,6 +574,7 @@ export function ChannelGroupsPage() {
             .filter(Boolean)
             .join(" ")}
         >
+          <PoolCapacitySection />
           <RoutingConfigEditor
             title={t("channel_groups_page.title")}
             headerActions={

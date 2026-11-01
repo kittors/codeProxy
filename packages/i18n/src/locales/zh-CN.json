@@ -209,7 +209,8 @@
     "monitor": "监控中心",
     "menuManagement": "菜单管理",
     "content_moderation": "内容审核",
-    "videoGeneration": "视频模型"
+    "videoGeneration": "视频模型",
+    "alerts": "告警"
   },
   "dashboard": {
     "title": "仪表盘",
@@ -2563,7 +2564,8 @@
     "stale_route_shortcut": "硬刷新：macOS 按 Cmd+Shift+R；Windows/Linux 按 Ctrl+Shift+R。",
     "stale_route_reload": "重新加载页面",
     "nav_ip_access": "IP 访问控制",
-    "nav_video_generation": "视频模型"
+    "nav_video_generation": "视频模型",
+    "nav_alerts": "告警"
   },
   "proxies": {
     "title": "代理管理",
@@ -7911,6 +7913,206 @@
     "rotate_confirm": "重新生成",
     "reveal_title": "保存抓取令牌",
     "reveal_warning": "令牌只显示这一次，关闭后无法再查看，只能重新生成。把它存进 {{file}}，在 Prometheus 配置里用 credentials_file 引用。"
+  },
+  "alerts_page": {
+    "tab": {
+      "notify": "通知",
+      "rules": "规则",
+      "events": "最近记录"
+    },
+    "unsaved": "有未保存的修改",
+    "discard": "放弃修改",
+    "fix_errors": "先修正标红的字段才能保存",
+    "saved_toast": "告警设置已保存",
+    "save_failed": "保存失败",
+    "load_failed": "告警设置读取失败",
+    "capability_failed": "无法确认当前后端是否支持告警",
+    "unsupported_title": "当前后端不支持告警",
+    "unsupported_desc": "后端升级到带告警功能的版本后，才能在这里配置通道和规则。",
+    "not_persistent": "当前后端没有设置存储，告警设置无法保存，页面只读。",
+    "read_only": "你只有查看权限，不能修改告警设置（需要租户设置的写权限）。",
+    "range_error": "请输入 {{min}} 到 {{max}} 之间的整数",
+    "master": {
+      "label": "启用告警",
+      "desc": "默认关闭。没配通道就不会发任何消息。",
+      "no_channel": "告警已开启，但没有启用的通道，不会发出任何消息。先在下面添加一个通道。"
+    },
+    "language": {
+      "label": "消息语言",
+      "desc": "发到通道里的告警文字用哪种语言，和面板界面语言无关。默认跟随当前界面语言。",
+      "en": "English",
+      "zh": "简体中文"
+    },
+    "cooldown": {
+      "label": "重复提醒冷却",
+      "desc": "同一对象的同一个问题，在这段时间内不会重复提醒。默认 360 分钟（6 小时）；按周期计的规则（额度窗口、消费周期）同一个周期只提醒一次，周期变了才会再提醒。范围 {{min}}–{{max}}。",
+      "unit": "分钟"
+    },
+    "unit": {
+      "minutes": "分钟",
+      "hours": "小时"
+    },
+    "kind": {
+      "webhook": "Webhook",
+      "feishu": "飞书",
+      "telegram": "Telegram"
+    },
+    "channels": {
+      "title": "通知通道",
+      "desc": "最多 {{max}} 个。每个启用的通道都会收到每一条告警。",
+      "add": "添加通道",
+      "limit_reached": "最多 {{max}} 个通道",
+      "empty_title": "还没有通知通道",
+      "empty_desc": "添加 Webhook、飞书机器人或 Telegram Bot 来接收告警。"
+    },
+    "channel": {
+      "add_title": "添加通知通道",
+      "edit_title": "编辑通知通道",
+      "modal_desc": "选择告警发到哪里。",
+      "draft_note": "回到页面点「保存」后才会生效",
+      "commit": "完成",
+      "kind": "类型",
+      "name": "名称",
+      "name_hint": "用来在告警记录和测试结果里认出这个通道",
+      "name_placeholder": "例如：运维群",
+      "name_required": "请填写名称",
+      "bot_token": "Bot Token",
+      "bot_token_hint": "创建 Bot 时由 @BotFather 给出。",
+      "bot_token_required": "请填写 Bot Token",
+      "chat_id": "Chat ID",
+      "chat_id_hint": "接收消息的用户、群或频道的 ID。群和频道需要先把 Bot 加进去。",
+      "chat_id_required": "请填写 Chat ID",
+      "url_webhook": "Webhook 地址",
+      "url_webhook_hint": "每条告警会以 JSON POST 发到这个地址。内容里不含任何密钥、令牌或请求正文。",
+      "url_feishu": "飞书机器人 Webhook 地址",
+      "url_feishu_hint": "在飞书群里添加「自定义机器人」后得到的地址。",
+      "url_required": "请填写地址",
+      "secret": "签名密钥",
+      "secret_webhook_hint": "可选。填写后每个请求都会带 HMAC 签名，接收方可以据此确认来源。",
+      "secret_feishu_hint": "可选。只有机器人开启了「签名校验」才需要填。",
+      "secret_placeholder": "不需要就留空",
+      "enabled": "启用",
+      "enabled_hint": "停用的通道会保留配置，但不会收到任何消息。",
+      "unnamed": "未命名通道",
+      "unsaved": "未保存",
+      "toggle": "启用 {{name}}",
+      "edit_named": "编辑 {{name}}",
+      "delete_named": "删除 {{name}}",
+      "dest_unset": "未设置发送目标",
+      "dest_chat": "Chat {{chat}}",
+      "dest_new": "新地址（保存后隐藏）"
+    },
+    "secret": {
+      "keep_placeholder": "已设置，留空保持不变",
+      "clear_pending": "保存时清除",
+      "current": "当前：",
+      "show": "显示内容",
+      "hide": "隐藏内容",
+      "clear": "清除",
+      "undo_clear": "撤销清除"
+    },
+    "test": {
+      "send": "发送测试消息",
+      "send_named": "给 {{name}} 发送测试消息",
+      "sending": "发送中...",
+      "sent": "已发送（{{ms}} ms）",
+      "failed": "发送失败：{{error}}",
+      "no_result": "后端没有返回结果"
+    },
+    "rules": {
+      "quota_window": {
+        "label": "账号额度用量",
+        "desc": "AI 账号在某个额度窗口（5 小时、每周等）里用掉的比例达到阈值时告警。",
+        "threshold": "用量阈值",
+        "threshold_hint": "默认 90%。与调度器按重置时间避让账号的 90% 软阈值一致；等到 99% 才告警已经来不及处理。"
+      },
+      "account_failure": {
+        "label": "账号异常",
+        "desc": "AI 账号持续失败或变得不可用时告警。",
+        "for_minutes": "持续多久才告警",
+        "for_minutes_hint": "默认 10 分钟。5xx 和超时通常几分钟内自愈，短暂抖动不打扰你；凭据被服务商吊销、只能重新登录才能恢复的账号不受此限，会立即告警。填 0 表示第一次失败就告警。"
+      },
+      "spending": {
+        "label": "消费限额",
+        "desc": "API Key 或门户账号的某个限额（花费、请求数、Token，按 5 小时、日、周、月或累计）用到阈值时告警。",
+        "threshold": "用量阈值",
+        "threshold_hint": "默认 90%。留出时间在请求被拒绝之前调高限额或通知用户。"
+      },
+      "use_it_or_lose_it": {
+        "label": "重置前记得用掉",
+        "desc": "提示性质，默认关闭：长额度窗口（7 天及以上）快重置了还剩很多，没用掉的额度马上作废。",
+        "min_remaining": "剩余至少",
+        "min_remaining_hint": "默认 40%。剩得比这少，就不值得专门提醒。",
+        "hours_before_reset": "距重置不到",
+        "hours_before_reset_hint": "默认 24 小时。再早提醒没意义，还会连着重复好几天。"
+      }
+    },
+    "events": {
+      "title": "最近记录",
+      "desc": "告警和测试消息会记在这里，并标出各个通道的投递结果。",
+      "summary": "共 {{total}} 条，显示最近 {{shown}} 条，新的在前",
+      "refresh": "刷新",
+      "load_failed": "最近记录读取失败：{{error}}",
+      "empty_title": "还没有告警记录",
+      "empty_desc": "规则触发、或点「发送测试消息」后，这里会留下记录。",
+      "column": {
+        "time": "时间",
+        "rule": "规则",
+        "severity": "级别",
+        "subject": "对象",
+        "title": "内容",
+        "deliveries": "投递"
+      },
+      "rule": {
+        "quota_window": "额度用量",
+        "account_failure": "账号异常",
+        "spending": "消费限额",
+        "use_it_or_lose_it": "重置前提醒",
+        "test": "测试消息"
+      },
+      "severity": {
+        "info": "提示",
+        "warning": "警告",
+        "critical": "严重"
+      },
+      "subject": {
+        "account": "AI 账号",
+        "key": "API Key",
+        "end_user": "门户账号",
+        "channel": "通道"
+      },
+      "delivery": {
+        "sent": "已发送",
+        "failed": "发送失败",
+        "none": "当时没有启用的通道"
+      }
+    }
+  },
+  "pool_capacity": {
+    "title": "池容量",
+    "description": "各服务商的 AI 账号在每个额度窗口里平均还剩多少，以及按近期速度什么时候会用完。",
+    "refresh": "刷新",
+    "load_failed": "池容量读取失败：{{error}}",
+    "sentence": "{{provider}} 池{{window}}剩 {{percent}}%，最早 {{reset}}重置",
+    "sentence_no_reset": "{{provider}} 池{{window}}剩 {{percent}}%",
+    "sentence_no_data": "{{provider}} 池{{window}}暂无数据",
+    "projection_exhaustion": "按近 6 小时的速度，{{time}} 用完",
+    "projection_safe": "按近期速度，重置前不会用完",
+    "coverage": "{{total}} 个账号里 {{withData}} 个有数据，按这几个平均",
+    "stale": "最旧的数据是 {{time}}的",
+    "show_all": "显示全部 {{total}} 项",
+    "show_less": "收起",
+    "window": {
+      "code_5h": "的 5 小时窗口",
+      "five_hour": "的 5 小时窗口",
+      "code_week": "本周",
+      "seven_day": "本周",
+      "weekly_limit": "本周",
+      "monthly_credits": "本月额度",
+      "base_quota": "基础额度",
+      "trial_quota": "试用额度",
+      "unknown": "的“{{label}}”窗口"
+    }
   },
   "loop_guard": {
     "reply_label": "终止复读回复",

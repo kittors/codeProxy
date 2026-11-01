@@ -211,7 +211,8 @@
     "monitor": "Monitor Center",
     "menuManagement": "Menu Management",
     "content_moderation": "Content Moderation",
-    "videoGeneration": "Video Models"
+    "videoGeneration": "Video Models",
+    "alerts": "Alerts"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -2559,7 +2560,8 @@
     "stale_route_shortcut": "Hard refresh: Cmd+Shift+R on macOS; Ctrl+Shift+R on Windows/Linux.",
     "stale_route_reload": "Reload page",
     "nav_ip_access": "IP Access Control",
-    "nav_video_generation": "Video Models"
+    "nav_video_generation": "Video Models",
+    "nav_alerts": "Alerts"
   },
   "proxies": {
     "title": "Proxy Management",
@@ -7968,6 +7970,206 @@
     "rotate_confirm": "Regenerate",
     "reveal_title": "Save the scrape token",
     "reveal_warning": "This token is shown only once. After you close this dialog it cannot be viewed again, only regenerated. Save it to {{file}} and reference it with credentials_file in the Prometheus config."
+  },
+  "alerts_page": {
+    "tab": {
+      "notify": "Notifications",
+      "rules": "Rules",
+      "events": "Recent alerts"
+    },
+    "unsaved": "Unsaved changes",
+    "discard": "Discard changes",
+    "fix_errors": "Fix the fields marked in red before saving",
+    "saved_toast": "Alert settings saved",
+    "save_failed": "Couldn't save the alert settings",
+    "load_failed": "Couldn't load the alert settings",
+    "capability_failed": "Couldn't check whether this backend supports alerts",
+    "unsupported_title": "This backend doesn't support alerts",
+    "unsupported_desc": "Upgrade the backend to a version with alerts to set up channels and rules here.",
+    "not_persistent": "This backend has no settings store, so alert settings can't be saved. The page is read-only.",
+    "read_only": "You can view the alert settings but not change them. Changing them needs the tenant settings write permission.",
+    "range_error": "Enter a whole number from {{min}} to {{max}}",
+    "master": {
+      "label": "Send alerts",
+      "desc": "Off by default. With no channel set up, no message is ever sent.",
+      "no_channel": "Alerts are on, but no channel is enabled, so nothing will be sent. Add a channel below."
+    },
+    "language": {
+      "label": "Message language",
+      "desc": "The language of the alert text sent to your channels, not of this panel. Defaults to the panel language.",
+      "en": "English",
+      "zh": "简体中文"
+    },
+    "cooldown": {
+      "label": "Repeat cooldown",
+      "desc": "The same problem on the same object isn't sent again within this time. Default 360 minutes (6 hours). Rules tied to a period, such as a quota window or a spending period, alert once per period and again only when the period changes. Range {{min}}–{{max}}.",
+      "unit": "min"
+    },
+    "unit": {
+      "minutes": "min",
+      "hours": "h"
+    },
+    "kind": {
+      "webhook": "Webhook",
+      "feishu": "Feishu",
+      "telegram": "Telegram"
+    },
+    "channels": {
+      "title": "Notification channels",
+      "desc": "Up to {{max}} channels. Every enabled channel receives every alert.",
+      "add": "Add channel",
+      "limit_reached": "Up to {{max}} channels",
+      "empty_title": "No channels yet",
+      "empty_desc": "Add a webhook, a Feishu bot or a Telegram bot to receive alerts."
+    },
+    "channel": {
+      "add_title": "Add channel",
+      "edit_title": "Edit channel",
+      "modal_desc": "Choose where alerts are delivered.",
+      "draft_note": "Takes effect after you save the page",
+      "commit": "Done",
+      "kind": "Type",
+      "name": "Name",
+      "name_hint": "Shown in the alert records and in test results",
+      "name_placeholder": "e.g. Ops group",
+      "name_required": "Enter a name",
+      "bot_token": "Bot token",
+      "bot_token_hint": "Given by @BotFather when you create the bot.",
+      "bot_token_required": "Enter the bot token",
+      "chat_id": "Chat ID",
+      "chat_id_hint": "The ID of the user, group or channel that receives the messages. Add the bot to the group or channel first.",
+      "chat_id_required": "Enter the chat ID",
+      "url_webhook": "Webhook URL",
+      "url_webhook_hint": "Each alert is sent here as a JSON POST. The payload carries no keys, tokens or request content.",
+      "url_feishu": "Feishu bot webhook URL",
+      "url_feishu_hint": "The address of the custom bot you add to a Feishu group.",
+      "url_required": "Enter the address",
+      "secret": "Signing key",
+      "secret_webhook_hint": "Optional. If set, every request is signed with HMAC so the receiver can verify where it came from.",
+      "secret_feishu_hint": "Optional. Only needed if signature verification is turned on for the bot.",
+      "secret_placeholder": "Leave empty if not needed",
+      "enabled": "Enabled",
+      "enabled_hint": "A disabled channel keeps its settings but receives nothing.",
+      "unnamed": "Unnamed channel",
+      "unsaved": "Unsaved",
+      "toggle": "Enable {{name}}",
+      "edit_named": "Edit {{name}}",
+      "delete_named": "Delete {{name}}",
+      "dest_unset": "No destination set",
+      "dest_chat": "Chat {{chat}}",
+      "dest_new": "New address (hidden once saved)"
+    },
+    "secret": {
+      "keep_placeholder": "Set. Leave empty to keep it",
+      "clear_pending": "Will be cleared on save",
+      "current": "Current:",
+      "show": "Show value",
+      "hide": "Hide value",
+      "clear": "Clear",
+      "undo_clear": "Undo clear"
+    },
+    "test": {
+      "send": "Send test message",
+      "send_named": "Send a test message to {{name}}",
+      "sending": "Sending...",
+      "sent": "Sent in {{ms}} ms",
+      "failed": "Failed: {{error}}",
+      "no_result": "The backend returned no result"
+    },
+    "rules": {
+      "quota_window": {
+        "label": "Account quota usage",
+        "desc": "Alert when an AI account has used this much of a quota window (5 hours, a week, ...).",
+        "threshold": "Usage threshold",
+        "threshold_hint": "Default 90%. It matches the 90% soft threshold the scheduler already uses to steer traffic away from an account; alerting at 99% would be too late to act on."
+      },
+      "account_failure": {
+        "label": "Account failures",
+        "desc": "Alert when an AI account keeps failing or becomes unusable.",
+        "for_minutes": "Wait before alerting",
+        "for_minutes_hint": "Default 10 minutes. 5xx errors and timeouts usually clear up within minutes, so a short blip stays quiet. A credential the provider has revoked, which only signing in again fixes, alerts immediately regardless. 0 alerts on the first failure."
+      },
+      "spending": {
+        "label": "Spending limits",
+        "desc": "Alert when an API key or portal account has used this much of a limit (spend, requests or tokens per 5 hours, day, week, month or in total).",
+        "threshold": "Usage threshold",
+        "threshold_hint": "Default 90%. Leaves time to raise the limit or tell the user before requests start being refused."
+      },
+      "use_it_or_lose_it": {
+        "label": "Use it before it resets",
+        "desc": "A nudge, off by default: a long quota window (7 days or more) still has plenty left shortly before it resets, so the unused quota is about to go to waste.",
+        "min_remaining": "Remaining at least",
+        "min_remaining_hint": "Default 40%. If less is left, it isn't worth a nudge.",
+        "hours_before_reset": "Resets within",
+        "hours_before_reset_hint": "Default 24 hours. Reminding earlier gives you nothing to act on yet, and the message would repeat for days."
+      }
+    },
+    "events": {
+      "title": "Recent alerts",
+      "desc": "Alerts and test messages show up here with how each channel delivered them.",
+      "summary": "Showing the latest {{shown}} of {{total}}, newest first",
+      "refresh": "Refresh",
+      "load_failed": "Couldn't load recent alerts: {{error}}",
+      "empty_title": "No alerts yet",
+      "empty_desc": "Rules that fire and test messages you send leave a record here.",
+      "column": {
+        "time": "Time",
+        "rule": "Rule",
+        "severity": "Severity",
+        "subject": "Subject",
+        "title": "Message",
+        "deliveries": "Delivery"
+      },
+      "rule": {
+        "quota_window": "Quota usage",
+        "account_failure": "Account failure",
+        "spending": "Spending limit",
+        "use_it_or_lose_it": "Use before reset",
+        "test": "Test message"
+      },
+      "severity": {
+        "info": "Info",
+        "warning": "Warning",
+        "critical": "Critical"
+      },
+      "subject": {
+        "account": "AI account",
+        "key": "API key",
+        "end_user": "Portal account",
+        "channel": "Channel"
+      },
+      "delivery": {
+        "sent": "Sent",
+        "failed": "Failed",
+        "none": "No channel was enabled"
+      }
+    }
+  },
+  "pool_capacity": {
+    "title": "Pool capacity",
+    "description": "How much of each quota window the AI accounts of each provider have left on average, and when they would run out at the recent pace.",
+    "refresh": "Refresh",
+    "load_failed": "Couldn't load pool capacity: {{error}}",
+    "sentence": "{{provider}} pool has {{percent}}% left {{window}}, earliest reset {{reset}}",
+    "sentence_no_reset": "{{provider}} pool has {{percent}}% left {{window}}",
+    "sentence_no_data": "No quota data yet for the {{provider}} pool {{window}}",
+    "projection_exhaustion": "At the pace of the last 6 hours, it runs out {{time}}",
+    "projection_safe": "At the recent pace it won't run out before the reset",
+    "coverage": "Average of the {{withData}} of {{total}} accounts that report data",
+    "stale": "Oldest data is from {{time}}",
+    "show_all": "Show all {{total}}",
+    "show_less": "Show less",
+    "window": {
+      "code_5h": "in the 5-hour window",
+      "five_hour": "in the 5-hour window",
+      "code_week": "this week",
+      "seven_day": "this week",
+      "weekly_limit": "this week",
+      "monthly_credits": "in monthly credits",
+      "base_quota": "in base quota",
+      "trial_quota": "in trial quota",
+      "unknown": "in {{label}}"
+    }
   },
   "loop_guard": {
     "reply_label": "Stop repeating replies",

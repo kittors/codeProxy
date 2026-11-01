@@ -65,11 +65,13 @@ export const payloadRulesApi = {
 };
 
 /**
- * GET /config 的 `capabilities`：配置页上需要后端新接口的工具，只在后端声明时才出现。
- * 面板跟着最新版本自动更新，后端可能还是旧版。
+ * GET /config 的 `capabilities`：需要后端新接口的页面和工具（配置页的试跑、告警页、池容量卡），
+ * 只在后端声明时才出现。面板跟着最新版本自动更新，后端可能还是旧版。
  */
 export interface ConfigCapabilities {
   payloadRulesDryRun: boolean;
+  alerts: boolean;
+  poolCapacity: boolean;
 }
 
 export function readConfigCapabilities(
@@ -80,5 +82,9 @@ export function readConfigCapabilities(
     raw !== null && typeof raw === "object" && !Array.isArray(raw)
       ? (raw as Record<string, unknown>)
       : {};
-  return { payloadRulesDryRun: capabilities["payload-rules-dry-run"] === true };
+  return {
+    payloadRulesDryRun: capabilities["payload-rules-dry-run"] === true,
+    alerts: capabilities["alerts"] === true,
+    poolCapacity: capabilities["pool-capacity"] === true,
+  };
 }
