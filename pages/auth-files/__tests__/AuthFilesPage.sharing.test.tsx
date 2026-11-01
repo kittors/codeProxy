@@ -366,6 +366,49 @@ describe("AuthFilesPage platform sharing", () => {
     }
   });
 
+  test("warns about copies of an account that other tenants imported", async () => {
+    mocks.list.mockImplementation(async () => ({
+      files: [
+        {
+          ...claudeUnshared,
+          name: "my-claude.json",
+          id: "my-claude.json",
+          label: "My Claude",
+          copies_elsewhere: 2,
+        },
+        {
+          ...codexShared,
+          sharing: undefined,
+          tenant_copies: undefined,
+          label: "My Codex",
+          copies_elsewhere: 1,
+          // Only a platform administrator acting in the tenant gets the names.
+          copies_elsewhere_tenants: [{ id: "t9", name: "Potato" }],
+        },
+        {
+          ...claudeUnshared,
+          name: "solo.json",
+          id: "solo.json",
+          label: "Solo",
+          copies_elsewhere: 0,
+        },
+      ],
+      shared_files: [],
+      sharing: { supported: true, manageable: false },
+    }));
+    renderPage();
+
+    const mine = await cardOf("My Claude");
+    expect(mine.getByTestId("auth-file-copies-elsewhere")).toHaveTextContent(
+      "In 2 other tenants too",
+    );
+    const named = await cardOf("My Codex");
+    expect(named.getByTestId("auth-file-copies-elsewhere")).toHaveTextContent(
+      "In 1 other tenant too",
+    );
+    expect((await cardOf("Solo")).queryByTestId("auth-file-copies-elsewhere")).toBeNull();
+  });
+
   test("an old backend without sharing keeps the page exactly as before", async () => {
     mocks.list.mockImplementation(async () => ({
       files: [codexShared, claudeUnshared],
