@@ -17,27 +17,34 @@ const mocks = vi.hoisted(() => ({
   updateCodexOAuthAdmission: vi.fn(),
   updateRequestLogBodyStorage: vi.fn(),
   getMetrics: vi.fn(),
+  getLoopGuard: vi.fn(),
 }));
 
-vi.mock("@code-proxy/api-client", async (importOriginal) => ({
-  // 纯函数用真实实现：页面按它从 GET /config 读出后端声明的工具。
-  readConfigCapabilities: (await importOriginal<typeof import("@code-proxy/api-client")>())
-    .readConfigCapabilities,
-  configApi: {
-    getConfig: mocks.getConfig,
-    getProxyUrl: mocks.getProxyUrl,
-    getCodexOAuthAdmission: mocks.getCodexOAuthAdmission,
-    updateCodexOAuthAdmission: mocks.updateCodexOAuthAdmission,
-    updateRequestLogBodyStorage: mocks.updateRequestLogBodyStorage,
-  },
-  configFileApi: {
-    fetchConfigYaml: mocks.fetchConfigYaml,
-    saveConfigYaml: mocks.saveConfigYaml,
-  },
-  observabilityApi: {
-    getMetrics: mocks.getMetrics,
-  },
-}));
+vi.mock("@code-proxy/api-client", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@code-proxy/api-client")>();
+  return {
+    // 纯函数用真实实现：页面按它从 GET /config 读出后端声明的工具。
+    readConfigCapabilities: actual.readConfigCapabilities,
+    ApiError: actual.ApiError,
+    configApi: {
+      getConfig: mocks.getConfig,
+      getProxyUrl: mocks.getProxyUrl,
+      getCodexOAuthAdmission: mocks.getCodexOAuthAdmission,
+      updateCodexOAuthAdmission: mocks.updateCodexOAuthAdmission,
+      updateRequestLogBodyStorage: mocks.updateRequestLogBodyStorage,
+    },
+    configFileApi: {
+      fetchConfigYaml: mocks.fetchConfigYaml,
+      saveConfigYaml: mocks.saveConfigYaml,
+    },
+    observabilityApi: {
+      getMetrics: mocks.getMetrics,
+    },
+    loopGuardApi: {
+      getTenant: mocks.getLoopGuard,
+    },
+  };
+});
 
 const SAVED_PROXY = "socks5://relay:p%40ss@203.0.113.7:1080";
 
@@ -48,6 +55,7 @@ vi.mock("@pages/config/visual/VisualConfigEditor", () => ({
     toolbarEnd,
     lockDatabaseSettings,
     observability,
+    loopGuard,
     payloadDryRun,
   }: {
     values: VisualConfigValues;
@@ -55,6 +63,7 @@ vi.mock("@pages/config/visual/VisualConfigEditor", () => ({
     toolbarEnd?: React.ReactNode;
     lockDatabaseSettings?: boolean;
     observability?: React.ReactNode;
+    loopGuard?: React.ReactNode;
     payloadDryRun?: boolean;
   }) => (
     <div data-testid="visual-config-editor">
@@ -64,6 +73,7 @@ vi.mock("@pages/config/visual/VisualConfigEditor", () => ({
       <output data-testid="proxy-url">{values.proxyUrl || "no proxy"}</output>
       <output data-testid="database-settings">{lockDatabaseSettings ? "locked" : "editable"}</output>
       <output data-testid="metrics-section">{observability ? "shown" : "hidden"}</output>
+      <output data-testid="loop-guard-section">{loopGuard ? "shown" : "hidden"}</output>
       <output data-testid="payload-dry-run">{payloadDryRun ? "on" : "off"}</output>
       <button
         type="button"
@@ -120,6 +130,8 @@ describe("ConfigPage", () => {
     mocks.getProxyUrl.mockResolvedValue("");
     // 默认按旧后端：没有指标接口。
     mocks.getMetrics.mockRejectedValue(new Error("404 page not found"));
+    // 循环保护同理：旧后端没有这个接口（404）。
+    mocks.getLoopGuard.mockRejectedValue(new Error("404 page not found"));
   });
 
   test("leaves the metrics section out on a backend without the endpoint", async () => {
@@ -138,6 +150,34 @@ describe("ConfigPage", () => {
     });
     renderPage();
     await waitFor(() => expect(screen.getByTestId("metrics-section")).toHaveTextContent("shown"));
+  });
+
+  test("leaves the loop protection section out on a backend without it", async () => {
+    renderPage();
+    await waitFor(() => expect(mocks.getLoopGuard).toHaveBeenCalledOnce());
+    await Promise.resolve();
+    expect(screen.getByTestId("loop-guard-section")).toHaveTextContent("hidden");
+  });
+
+  test("adds the loop protection section once the backend answers for it", async () => {
+    mocks.getLoopGuard.mockResolvedValue({
+      reply: { enabled: false, window: 0, max_distinct: 0 },
+      tool: { enabled: false, repeats: 0 },
+      key_overrides: 0,
+      persistent: true,
+      updated_at: "",
+      defaults: { reply_window: 256, reply_max_distinct: 24, tool_repeats: 8 },
+      bounds: {
+        min_reply_window: 64,
+        max_reply_window: 2048,
+        min_reply_distinct: 2,
+        reply_distinct_window_share: 4,
+        min_tool_repeats: 3,
+        max_tool_repeats: 32,
+      },
+    });
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId("loop-guard-section")).toHaveTextContent("shown"));
   });
 
   test("offers the payload rule trial only when the backend advertises it", async () => {

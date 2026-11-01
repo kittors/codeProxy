@@ -21,6 +21,7 @@ const baseRow: RequestLogsRow = {
   upstreamModelMismatch: false,
   visionFallbackModel: "",
   failed: false,
+  guardKind: "",
   streaming: true,
   latencyText: "1.2s",
   firstTokenText: "0.3s",

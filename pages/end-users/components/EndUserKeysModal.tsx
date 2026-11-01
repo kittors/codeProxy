@@ -22,7 +22,6 @@ import {
   type DataTableColumn,
 } from "@code-proxy/ui";
 import {
-  KeyPolicyModal,
   PolicyBadges,
   QuotaUsageCell,
   describeWindowParts,
@@ -38,6 +37,7 @@ import {
 } from "@features/period-spending";
 import { useOwnedKeys } from "../hooks/useOwnedKeys";
 import { endUserLabel } from "../endUserForm";
+import { EndUserKeyPolicyModal } from "./EndUserKeyPolicyModal";
 
 type EditorState = { mode: "create" } | { mode: "edit"; key: EndUserAPIKey } | null;
 
@@ -344,9 +344,10 @@ export function EndUserKeysModal({
       </Modal>
 
       {user ? (
-        <KeyPolicyModal
+        <EndUserKeyPolicyModal
           open={editor !== null}
           mode={editor?.mode ?? "create"}
+          keyId={editing?.id}
           // 外层弹窗已写明账号：编辑时只标出是哪把 Key，新建时标出 Key 建在哪个账号下。
           subtitle={editing ? editing.name || t("api_keys_page.unnamed") : endUserLabel(user)}
           initial={

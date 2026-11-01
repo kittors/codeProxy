@@ -46,7 +46,11 @@ describe("contentModerationApi", () => {
     // A backend that declares nothing offers none of the later fields.
     await expect(contentModerationApi.listProfiles()).resolves.toEqual({
       items: [{ id: "profile-1", name: "Primary" }],
-      capabilities: { keywordFoldTraditionalChinese: false, apiIncludesToolOutput: false },
+      capabilities: {
+        keywordFoldTraditionalChinese: false,
+        apiIncludesToolOutput: false,
+        wordGuard: false,
+      },
     });
     await contentModerationApi.patchProfile("profile/1", {
       version: 3,
@@ -66,21 +70,37 @@ describe("contentModerationApi", () => {
     mocks.get
       .mockResolvedValueOnce({
         items: null,
-        capabilities: { keyword_fold_traditional_chinese: true, api_includes_tool_output: true },
+        capabilities: {
+          keyword_fold_traditional_chinese: true,
+          api_includes_tool_output: true,
+          word_guard: true,
+        },
       })
       .mockResolvedValueOnce({
         items: [],
         // Only an explicit true counts as a declaration.
-        capabilities: { keyword_fold_traditional_chinese: "yes", api_includes_tool_output: true },
+        capabilities: {
+          keyword_fold_traditional_chinese: "yes",
+          api_includes_tool_output: true,
+          word_guard: "true",
+        },
       });
 
     await expect(contentModerationApi.listProfiles()).resolves.toEqual({
       items: [],
-      capabilities: { keywordFoldTraditionalChinese: true, apiIncludesToolOutput: true },
+      capabilities: {
+        keywordFoldTraditionalChinese: true,
+        apiIncludesToolOutput: true,
+        wordGuard: true,
+      },
     });
     await expect(contentModerationApi.listProfiles()).resolves.toEqual({
       items: [],
-      capabilities: { keywordFoldTraditionalChinese: false, apiIncludesToolOutput: true },
+      capabilities: {
+        keywordFoldTraditionalChinese: false,
+        apiIncludesToolOutput: true,
+        wordGuard: false,
+      },
     });
   });
 

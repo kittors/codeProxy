@@ -192,6 +192,10 @@ const mocks = vi.hoisted(() => ({
     }
     return { data: [{ id: "gpt-4.1" }] };
   }),
+  // Loop protection of a key reads through its own endpoint module, not through the mocked
+  // `apiClient` above. By default the backend has no such route, as for every other test here.
+  loopGuardGetKey: vi.fn(async (_id: string): Promise<unknown> => null),
+  loopGuardPutKey: vi.fn(async (_id: string, _body: unknown): Promise<unknown> => null),
   handleViewUsage: vi.fn(),
   fetchUsageLogs: vi.fn(),
 }));
@@ -284,6 +288,11 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
     apiClient: {
       get: mocks.apiClientGet,
       put: mocks.apiClientPut,
+    },
+    loopGuardApi: {
+      ...mod.loopGuardApi,
+      getKey: mocks.loopGuardGetKey,
+      putKey: mocks.loopGuardPutKey,
     },
     authFilesApi: {
       ...mod.authFilesApi,
@@ -412,6 +421,8 @@ describe("ApiKeysPage", () => {
     mocks.getVertexConfigs.mockClear();
     mocks.getOpenAIProviders.mockClear();
     mocks.apiClientGet.mockClear();
+    mocks.loopGuardGetKey.mockClear();
+    mocks.loopGuardPutKey.mockClear();
   });
 
   test("creates, edits, and deletes API key entries", async () => {
@@ -1404,6 +1415,92 @@ describe("ApiKeysPage", () => {
     });
     await waitFor(() => {
       expect(mocks.apiKeyEntriesList).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  test("an end-user key's edit dialog carries that key's loop protection, saved before the key", async () => {
+    state.entries = [
+      {
+        id: "owned-key-1",
+        key: "sk-owned-original-secret",
+        name: "Owned Key",
+        end_user_id: "end-user-1",
+        disabled: false,
+        is_default: true,
+        "created-at": "2026-07-21T00:00:00Z",
+        "period-spending-limits": { "5h": 0, day: 0, week: 0, month: 0 },
+      },
+    ];
+    const keyView = (replyEnabled: boolean | null) => ({
+      key_id: "owned-key-1",
+      reply: { enabled: replyEnabled, window: 0, max_distinct: 0 },
+      tool: { enabled: null, repeats: 0 },
+      tenant: {
+        reply: { enabled: false, window: 0, max_distinct: 0 },
+        tool: { enabled: false, repeats: 0 },
+      },
+      effective: {
+        reply: { enabled: false, source: "", window: 0, max_distinct: 0 },
+        tool: { enabled: false, source: "", repeats: 0 },
+      },
+      persistent: true,
+      updated_at: "",
+      defaults: { reply_window: 256, reply_max_distinct: 24, tool_repeats: 8 },
+      bounds: {
+        min_reply_window: 64,
+        max_reply_window: 2048,
+        min_reply_distinct: 2,
+        reply_distinct_window_share: 4,
+        min_tool_repeats: 3,
+        max_tool_repeats: 32,
+      },
+    });
+    const order: string[] = [];
+    mocks.loopGuardGetKey.mockResolvedValue(keyView(null));
+    mocks.loopGuardPutKey.mockImplementation(async () => {
+      order.push("override");
+      return keyView(false);
+    });
+    const fallbackUpdate = mocks.endUserUpdateKey.getMockImplementation()!;
+    mocks.endUserUpdateKey.mockImplementation(async (...args: Parameters<typeof fallbackUpdate>) => {
+      order.push("key");
+      return fallbackUpdate(...args);
+    });
+
+    render(
+      <MemoryRouter>
+        <ThemeProvider>
+          <ToastProvider>
+            <ApiKeysPage
+              endUserId="end-user-1"
+              accountPeriodSpendingLimits={{ "5h": 100, day: 300, week: 800, month: 4000 }}
+              embed
+            />
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Owned Key")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Edit Key quota" }));
+    const editDialog = await screen.findByRole("dialog");
+    // The section is for the key being edited, not for some other entry.
+    expect(
+      await within(editDialog).findByRole("heading", { name: "Loop protection" }),
+    ).toBeInTheDocument();
+    expect(mocks.loopGuardGetKey).toHaveBeenCalledWith("owned-key-1");
+
+    await userEvent.click(
+      within(editDialog).getByRole("combobox", { name: "Stop repeating replies" }),
+    );
+    await userEvent.click(await screen.findByRole("option", { name: "Off for this key" }));
+    await userEvent.click(within(editDialog).getByRole("button", { name: /save/i }));
+
+    await waitFor(() => expect(mocks.endUserUpdateKey).toHaveBeenCalledTimes(1));
+    expect(order).toEqual(["override", "key"]);
+    expect(mocks.loopGuardPutKey).toHaveBeenCalledWith("owned-key-1", {
+      reply: { enabled: false },
+      tool: { enabled: null },
     });
   });
 });

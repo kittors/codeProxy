@@ -63,3 +63,27 @@ describe("toRequestLogsRow upstream response audit fields", () => {
     expect(row.upstreamModelMismatch).toBe(false);
   });
 });
+
+// The amber "Stopped" tag and the loop protection filter both start from this field.
+describe("toRequestLogsRow loop protection kind", () => {
+  test("carries the kind through, trimmed", () => {
+    expect(toRequestLogsRow(apiItem({ failed: true, guard_kind: "reply_loop" })).guardKind).toBe(
+      "reply_loop",
+    );
+    expect(toRequestLogsRow(apiItem({ failed: true, guard_kind: " tool_loop " })).guardKind).toBe(
+      "tool_loop",
+    );
+  });
+
+  test("keeps a kind this panel does not know, so a newer backend still gets the tag", () => {
+    expect(toRequestLogsRow(apiItem({ failed: true, guard_kind: "something_new" })).guardKind).toBe(
+      "something_new",
+    );
+  });
+
+  test("is empty for an ordinary request and for a backend that has no loop protection", () => {
+    expect(toRequestLogsRow(apiItem()).guardKind).toBe("");
+    expect(toRequestLogsRow(apiItem({ failed: true })).guardKind).toBe("");
+    expect(toRequestLogsRow(apiItem({ guard_kind: "" })).guardKind).toBe("");
+  });
+});

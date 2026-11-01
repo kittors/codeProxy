@@ -100,6 +100,7 @@ type Diagnostic = {
   upstream: Record<string, unknown> | null;
   response: Record<string, unknown> | null;
   quota: Record<string, unknown> | null;
+  loopGuard: Record<string, unknown> | null;
 };
 
 function parseDetails(detailsRaw: string): Record<string, unknown> | null {
@@ -113,18 +114,23 @@ function diagnosticOf(details: Record<string, unknown> | null): Diagnostic {
     upstream: asRecord(diagnostic?.upstream),
     response: asRecord(diagnostic?.response),
     quota: asRecord(diagnostic?.quota),
+    loopGuard: asRecord(diagnostic?.loop_guard),
   };
 }
 
 /**
  * What the diagnostic says went wrong: the error the client was answered with,
- * else the error the upstream call ended in, else the quota rejection.
+ * else the error the upstream call ended in, else the quota rejection, else what
+ * loop protection told the client when it ended the request. A reply it cut has
+ * no upstream error, and the error event it sent is often past the stored-output
+ * cap; the diagnostic keeps that message whole.
  */
 function messageFromDiagnostic(diagnostic: Diagnostic): string {
   return pickString(
     diagnostic.response?.error_message,
     messageFromErrorText(pickString(diagnostic.upstream?.error_message)),
     diagnostic.quota?.error_message,
+    diagnostic.loopGuard?.message,
   );
 }
 

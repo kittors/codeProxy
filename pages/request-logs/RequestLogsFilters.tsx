@@ -5,6 +5,8 @@ import type { SearchableCheckboxMultiSelectOption } from "@code-proxy/ui";
 import { cn } from "@code-proxy/ui";
 import {
   RequestLogFacetFilters,
+  RequestLogGuardFilter,
+  type GuardFilterValue,
   type MultiSelectFilterState,
   type StatusFilterValue,
 } from "@features/request-log-viewer";
@@ -28,6 +30,12 @@ interface RequestLogsFiltersProps {
   onStatusesClear: () => void;
   onResetFilters: () => void;
   hasActiveFilters: boolean;
+  /** The loop protection filter; absent on a backend without it, or while nothing was stopped. */
+  guardFilter?: {
+    value: GuardFilterValue;
+    kinds: readonly string[];
+    onChange: (value: GuardFilterValue) => void;
+  };
 }
 
 export function RequestLogsFilters({
@@ -49,6 +57,7 @@ export function RequestLogsFilters({
   onStatusesClear,
   onResetFilters,
   hasActiveFilters,
+  guardFilter,
 }: RequestLogsFiltersProps) {
   const { t } = useTranslation();
 
@@ -96,6 +105,7 @@ export function RequestLogsFilters({
           onChannelsClear={onChannelsClear}
           onStatusesClear={onStatusesClear}
         />
+        {guardFilter ? <RequestLogGuardFilter {...guardFilter} /> : null}
 
         {/* Reset filters button */}
         {hasActiveFilters ? (

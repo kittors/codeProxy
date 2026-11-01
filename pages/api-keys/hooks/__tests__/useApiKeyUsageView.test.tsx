@@ -56,6 +56,7 @@ function legacyFilters(
     channels: [],
     channel_options: [],
     statuses: ["success", "failed"],
+    guard_kinds: [],
   };
 }
 
@@ -74,6 +75,7 @@ function idFilters(
     channels: [],
     channel_options: [],
     statuses: ["success", "failed"],
+    guard_kinds: [],
   };
 }
 
@@ -87,7 +89,7 @@ function logsResponse(
     total,
     page: 1,
     size: 50,
-    capabilities: { apiKeyIdFilters: options.byId === true },
+    capabilities: { apiKeyIdFilters: options.byId === true, loopGuard: false },
     filters,
     stats: { total, success_rate: 100, total_tokens: 0, total_cost: 0, cache_rate: 0 },
   };

@@ -383,6 +383,13 @@ export const usageApi = {
       models?: string[];
       channels?: string[];
       statuses?: string[];
+      /**
+       * Requests loop protection ended (see UsageLogItem.guard_kind). Only a backend
+       * that declares the loop-guard capability reads it; an older one ignores it
+       * and would return every request, so send it only after a response declared
+       * that.
+       */
+      guard_kinds?: string[];
       api_keys_empty?: boolean;
       /** Explicit empty selection of api_key_ids: match no key at all. */
       api_key_ids_empty?: boolean;
@@ -406,6 +413,7 @@ export const usageApi = {
     appendUniqueParams(qs, "model", params.models);
     appendUniqueParams(qs, "channel", params.channels);
     appendUniqueParams(qs, "status", params.statuses);
+    appendUniqueParams(qs, "guard_kind", params.guard_kinds);
     if (params.api_keys_empty) qs.set("api_keys_empty", "1");
     if (params.api_key_ids_empty) qs.set("api_key_ids_empty", "1");
     if (params.models_empty) qs.set("models_empty", "1");
@@ -447,6 +455,9 @@ export const usageApi = {
         channels: Array.isArray(filters?.channels) ? filters.channels : [],
         channel_options: normalizeChannelOptions(filters?.channel_options, filters?.channels),
         statuses: Array.isArray(filters?.statuses) ? filters.statuses : ["success", "failed"],
+        guard_kinds: Array.isArray(filters?.guard_kinds)
+          ? filters.guard_kinds.filter((kind): kind is string => typeof kind === "string")
+          : [],
       },
       stats: {
         total: resp?.stats?.total ?? 0,
@@ -642,6 +653,13 @@ export interface UsageLogItem {
   total_tokens: number;
   cost: number;
   has_content: boolean;
+  /**
+   * Which loop protection check ended the request, "reply_loop" (the reply was cut)
+   * or "tool_loop" (the gateway answered, nothing went upstream). Such a request is
+   * also failed. Absent on backends without loop protection and on every other row;
+   * a value this panel does not know is shown like the known ones.
+   */
+  guard_kind?: string;
 }
 
 /** What /usage/logs says about itself. */
@@ -654,15 +672,22 @@ export interface UsageLogsCapabilities {
    * (filters.api_keys / api_key_names / api_key_counts).
    */
   apiKeyIdFilters: boolean;
+  /**
+   * The backend has loop protection ("loop-guard"): rows carry guard_kind, the
+   * guard_kind query parameters filter by it and filters.guard_kinds is its facet.
+   */
+  loopGuard: boolean;
 }
 
 /** Only an explicit true counts: a backend that predates a capability sends no object. */
-export const readUsageLogsCapabilities = (value: unknown): UsageLogsCapabilities => ({
-  apiKeyIdFilters:
-    value !== null &&
-    typeof value === "object" &&
-    (value as Record<string, unknown>)["api-key-id-filters"] === true,
-});
+export const readUsageLogsCapabilities = (value: unknown): UsageLogsCapabilities => {
+  const declared = (name: string) =>
+    value !== null && typeof value === "object" && (value as Record<string, unknown>)[name] === true;
+  return {
+    apiKeyIdFilters: declared("api-key-id-filters"),
+    loopGuard: declared("loop-guard"),
+  };
+};
 
 export interface UsageLogsResponse {
   items: UsageLogItem[];
@@ -688,6 +713,8 @@ export interface UsageLogsResponse {
     channels: string[];
     channel_options: UsageChannelFilterOption[];
     statuses: string[];
+    /** The loop protection kinds present in the selection; empty without the loop-guard capability. */
+    guard_kinds: string[];
   };
   stats: {
     total: number;
@@ -708,6 +735,7 @@ type UsageLogsFilterPayload = {
   channels?: unknown;
   channel_options?: unknown;
   statuses?: unknown;
+  guard_kinds?: unknown;
 };
 
 type UsageLogsPayload = {

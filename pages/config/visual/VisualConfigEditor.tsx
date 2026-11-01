@@ -93,6 +93,7 @@ export function VisualConfigEditor({
   onChange,
   codexAdmission,
   observability,
+  loopGuard,
   payloadDryRun = false,
   toolbarEnd,
 }: {
@@ -113,6 +114,11 @@ export function VisualConfigEditor({
    * 不传时整个分区不出现。
    */
   observability?: ReactNode;
+  /**
+   * 「循环保护」分区的内容（直接调用接口，由页面注入）。只有后端有这个功能、且当前账号读得到
+   * 租户设置时页面才传，不传时整个分区不出现。
+   */
+  loopGuard?: ReactNode;
   /** 后端支持 payload 规则试运行时，在「请求体改写」分区末尾放「试一试」。 */
   payloadDryRun?: boolean;
   /** 工具栏最右侧的附加控件（页面把「可视化 / 源码」切换放在这里，省掉单独一行）。 */
@@ -133,8 +139,8 @@ export function VisualConfigEditor({
 
   // 由页面注入内容的分区：没注入就不出现（后端不支持或没有权限）。
   const injectedSections = useMemo<Partial<Record<ConfigSectionId, ReactNode>>>(
-    () => ({ codex: codexAdmission, observability }),
-    [codexAdmission, observability],
+    () => ({ codex: codexAdmission, observability, loop_guard: loopGuard }),
+    [codexAdmission, loopGuard, observability],
   );
   const availableSections = useMemo(
     () =>
