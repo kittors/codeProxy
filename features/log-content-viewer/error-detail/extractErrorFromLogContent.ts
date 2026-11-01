@@ -81,6 +81,37 @@ function messageFromOutput(output: string): string {
 }
 
 /**
+ * The error object of a body, in the shapes errorMessageOf reads, or a
+ * Responses stream's `{"type":"error","code"}` event, which is its own error.
+ */
+function errorRecordOf(value: unknown): Record<string, unknown> | null {
+  const record = asRecord(Array.isArray(value) ? value[0] : value);
+  if (!record) return null;
+  const error = asRecord(record.error) ?? asRecord(asRecord(record.response)?.error);
+  if (error) return error;
+  return record.type === "error" && typeof record.code === "string" ? record : null;
+}
+
+/**
+ * The structured error a stored failure carries: that of a JSON body, or of the
+ * first error event of a stream. Its `code`, `type` and, for the relay's quota
+ * refusals, `period` say what kind of failure it was.
+ */
+export function errorRecordFromOutput(outputContent: string): Record<string, unknown> | null {
+  const output = (outputContent || "").trim();
+  if (!output) return null;
+  if (!isEventStream(output)) return errorRecordOf(parseJson(output));
+  for (const line of output.split(/\r?\n/)) {
+    if (!line.startsWith("data:")) continue;
+    const payload = line.slice("data:".length).trim();
+    if (!payload || payload === "[DONE]") continue;
+    const record = errorRecordOf(parseJson(payload));
+    if (record) return record;
+  }
+  return null;
+}
+
+/**
  * The summary of an error text recorded in the diagnostic: the message of the
  * JSON error it holds (whole, or after a prefix such as `status 429: `), or the
  * text itself.

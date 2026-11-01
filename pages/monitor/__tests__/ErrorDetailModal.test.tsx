@@ -118,6 +118,7 @@ describe("ErrorDetailModal", () => {
       input_content: '{"model":"gpt-image-2"}',
       output_content: '{"error":{"message":"context canceled","type":"upstream_error"}}',
     });
+    mocks.getLogContentPart.mockResolvedValue({ id: 54000, part: "details", content: "" });
 
     render(
       <ThemeProvider>
@@ -131,7 +132,8 @@ describe("ErrorDetailModal", () => {
 
     expect(screen.getByText("context canceled")).toBeInTheDocument();
     expect(screen.getByText("完整响应")).toBeInTheDocument();
-    expect(mocks.getLogContentPart).not.toHaveBeenCalled();
+    // The details are read even so: what happens next comes from their diagnostic.
+    expect(mocks.getLogContentPart).toHaveBeenCalledWith(54000, "details");
   });
 
   test("summarises a stream cut before its error event from the request details", async () => {
@@ -206,5 +208,136 @@ describe("ErrorDetailModal", () => {
     expect(alert).toHaveTextContent("加载失败");
     expect(alert).toHaveTextContent("403 forbidden");
     expect(screen.queryByText("该历史请求未记录上游错误响应")).not.toBeInTheDocument();
+  });
+
+  describe("what happened and what happens next", () => {
+    const at = (second: number) => `2026-11-01T01:00:${String(second).padStart(2, "0")}Z`;
+
+    function renderFor(logId: number, output: string, details: unknown) {
+      mocks.getLogContent.mockResolvedValue({ id: logId, model: "gpt-5", output_content: output });
+      mocks.getLogContentPart.mockResolvedValue({
+        id: logId,
+        part: "details",
+        content: details === undefined ? "" : JSON.stringify(details),
+      });
+      render(
+        <ThemeProvider>
+          <ErrorDetailModal open logId={logId} model="gpt-5" onClose={() => {}} />
+        </ThemeProvider>,
+      );
+    }
+
+    test("an attempt the upstream rate-limited says where the request went next", async () => {
+      await i18n.changeLanguage("zh-CN");
+      renderFor(
+        61001,
+        '{"error":{"message":"Rate limit reached","type":"rate_limit_error"}}',
+        {
+          diagnostic: {
+            upstream: { status: 429 },
+            route_trace: {
+              steps: [
+                {
+                  kind: "attempt",
+                  at: at(0),
+                  attempt: 1,
+                  auth_id: "a",
+                  auth_label: "acc-a",
+                  outcome: "failed",
+                  status: 429,
+                  cause: "rate_limited",
+                },
+                { kind: "attempt", at: at(1), attempt: 2, auth_id: "b", auth_label: "acc-b" },
+              ],
+            },
+          },
+        },
+      );
+
+      const next = await screen.findByRole("region", { name: "接下来会怎样" });
+      expect(screen.getByText("上游限流")).toBeInTheDocument();
+      expect(screen.getByText("Rate limit reached")).toBeInTheDocument();
+      expect(next).toHaveTextContent("请求换到了 acc-b。");
+      // The trace already says the request moved on: no general word on recovery.
+      expect(next).not.toHaveTextContent("到点自动恢复");
+      expect(screen.getByText("上游 API 错误响应")).toBeInTheDocument();
+    });
+
+    test("a key's daily limit is the gateway's answer and says when it recovers", async () => {
+      await i18n.changeLanguage("zh-CN");
+      const body =
+        '{"error":{"message":"Daily request limit exceeded: 100/100 requests used today.","type":"rate_limit_exceeded","code":"daily_limit_exceeded"}}';
+      renderFor(61002, body, {
+        diagnostic: {
+          quota: { rejected: true, rejected_by: "daily", error_code: "daily_limit_exceeded" },
+          response: { status: 429, error_code: "daily_limit_exceeded", source: "local_quota" },
+        },
+      });
+
+      expect(await screen.findByText("Key 触到了限额")).toBeInTheDocument();
+      expect(
+        screen.getByText("下一个项目日开始时自动恢复；等不了时，调高每日上限或重置今日额度。"),
+      ).toBeInTheDocument();
+      expect(screen.getByText("网关的错误响应")).toBeInTheDocument();
+    });
+
+    test("a canceled request with no body says nothing was retried", async () => {
+      await i18n.changeLanguage("zh-CN");
+      renderFor(61003, "", { diagnostic: { response: { status: 499 } } });
+
+      expect(await screen.findByText("客户端取消了请求")).toBeInTheDocument();
+      expect(
+        screen.getByText("客户端在回复完成前断开了连接，网关随即停止：没有再请求上游，也不会重试。"),
+      ).toBeInTheDocument();
+      expect(screen.queryByText("该历史请求未记录上游错误响应")).not.toBeInTheDocument();
+      expect(screen.queryByText("完整响应")).not.toBeInTheDocument();
+    });
+
+    test("speaks the panel's language", async () => {
+      await i18n.changeLanguage("en");
+      renderFor(61004, '{"error":{"message":"Loop detected"}}', {
+        diagnostic: { loop_guard: { kind: "tool_loop", source: "api_key" } },
+      });
+
+      expect(await screen.findByText("Loop protection stopped a tool-call loop")).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          "If it was not a loop, raise the thresholds or turn the check off in this key's loop protection settings.",
+        ),
+      ).toBeInTheDocument();
+      expect(screen.getByRole("region", { name: "What happens next" })).toBeInTheDocument();
+    });
+
+    test("shows the error at once and what happens next once the details arrive", async () => {
+      await i18n.changeLanguage("zh-CN");
+      let sendDetails: (value: { id: number; part: string; content: string }) => void = () => {};
+      mocks.getLogContent.mockResolvedValue({
+        id: 61005,
+        model: "gpt-5",
+        output_content: '{"error":{"message":"Overloaded","type":"overloaded_error"}}',
+      });
+      mocks.getLogContentPart.mockReturnValue(
+        new Promise((resolve) => {
+          sendDetails = resolve;
+        }),
+      );
+      render(
+        <ThemeProvider>
+          <ErrorDetailModal open logId={61005} model="gpt-5" onClose={() => {}} />
+        </ThemeProvider>,
+      );
+
+      expect(await screen.findByText("Overloaded")).toBeInTheDocument();
+      expect(screen.queryByRole("region", { name: "接下来会怎样" })).not.toBeInTheDocument();
+
+      sendDetails({
+        id: 61005,
+        part: "details",
+        content: JSON.stringify({ diagnostic: { upstream: { status: 529 } } }),
+      });
+      const next = await screen.findByRole("region", { name: "接下来会怎样" });
+      expect(next).toHaveTextContent("通常是上游的临时故障，过一会儿会自己恢复。");
+      expect(screen.getByText("上游服务出错")).toBeInTheDocument();
+    });
   });
 });
