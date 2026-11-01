@@ -127,12 +127,18 @@ export interface ContentModerationProfileCapabilities {
    * backend does not list it, and has no such routes to call.
    */
   wordGuard: boolean;
+  /**
+   * secret_masking: the outbound secret masking switch (getSecretMasking / setSecretMasking)
+   * exists. An older backend does not list it, and has no such route to call.
+   */
+  secretMasking: boolean;
 }
 
 export const NO_CONTENT_MODERATION_PROFILE_CAPABILITIES: ContentModerationProfileCapabilities = {
   keywordFoldTraditionalChinese: false,
   apiIncludesToolOutput: false,
   wordGuard: false,
+  secretMasking: false,
 };
 
 /** Reads the declaration from a profile list response; anything not declared is unsupported. */
@@ -145,8 +151,21 @@ export const readContentModerationProfileCapabilities = (
     keywordFoldTraditionalChinese: capabilities.keyword_fold_traditional_chinese === true,
     apiIncludesToolOutput: capabilities.api_includes_tool_output === true,
     wordGuard: capabilities.word_guard === true,
+    secretMasking: capabilities.secret_masking === true,
   };
 };
+
+/**
+ * A tenant's outbound secret masking: API keys, tokens and passwords in requests are replaced
+ * with placeholders before they reach the upstream, and put back in the reply. The backend keeps
+ * the tenant's placeholder key to itself.
+ */
+export interface SecretMaskingState {
+  enabled: boolean;
+  /** False when the backend has no settings store: the switch can be read but not saved. */
+  persistent: boolean;
+  updated_at?: string;
+}
 
 export interface ContentModerationProfileList {
   items: ContentModerationProfileView[];
@@ -316,5 +335,14 @@ export const contentModerationApi = {
       "/content-moderation/channel-bindings",
       input,
     );
+  },
+
+  /** Only when the profile list declares capabilities.secretMasking. */
+  getSecretMasking() {
+    return apiClient.get<SecretMaskingState>("/content-moderation/secret-masking");
+  },
+
+  setSecretMasking(enabled: boolean) {
+    return apiClient.put<SecretMaskingState>("/content-moderation/secret-masking", { enabled });
   },
 };

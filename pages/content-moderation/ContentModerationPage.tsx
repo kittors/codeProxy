@@ -40,6 +40,7 @@ import { ModerationChannelPickerModal } from "./components/ModerationChannelPick
 import { ModerationMetricsModal } from "./components/ModerationMetricsModal";
 import { ModerationTestModal, type WordTestTarget } from "./components/ModerationTestModal";
 import { ProfileEditorModal } from "./components/ProfileEditorModal";
+import { SecretMaskingSwitch } from "./components/SecretMaskingSwitch";
 import { WordRulesTab } from "./components/word-rules/WordRulesTab";
 
 type PageTab = "profiles" | "words";
@@ -366,14 +367,22 @@ export function ContentModerationPage() {
 
   return (
     <div data-page-fill="always" className="flex flex-1 flex-col">
-      {wordsAvailable ? (
-        <div className="mb-3 flex">
-          <Tabs value={activeTab} size="sm" onValueChange={(next) => requestTab(next as PageTab)}>
-            <TabsList>
-              <TabsTrigger value="profiles">{t("content_moderation.tab_profiles")}</TabsTrigger>
-              <TabsTrigger value="words">{t("content_moderation.tab_words")}</TabsTrigger>
-            </TabsList>
-          </Tabs>
+      {wordsAvailable || capabilities.secretMasking ? (
+        <div className="mb-3 flex flex-wrap items-start gap-x-6 gap-y-3">
+          {wordsAvailable ? (
+            <Tabs value={activeTab} size="sm" onValueChange={(next) => requestTab(next as PageTab)}>
+              <TabsList>
+                <TabsTrigger value="profiles">{t("content_moderation.tab_profiles")}</TabsTrigger>
+                <TabsTrigger value="words">{t("content_moderation.tab_words")}</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          ) : null}
+          {/* 出站密钥脱敏是租户级的一个开关，和两个标签页都无关，放在标签旁边。 */}
+          {capabilities.secretMasking ? (
+            <div className="w-full sm:ml-auto sm:w-auto sm:max-w-md">
+              <SecretMaskingSwitch canWrite={canWrite} />
+            </div>
+          ) : null}
         </div>
       ) : null}
 
