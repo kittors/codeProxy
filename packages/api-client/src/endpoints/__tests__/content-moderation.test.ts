@@ -4,6 +4,7 @@ import { contentModerationApi } from "../content-moderation";
 const mocks = vi.hoisted(() => ({
   get: vi.fn(),
   post: vi.fn(),
+  put: vi.fn(),
   patch: vi.fn(),
   delete: vi.fn(),
 }));
@@ -16,6 +17,7 @@ describe("contentModerationApi", () => {
   beforeEach(() => {
     mocks.get.mockReset();
     mocks.post.mockReset();
+    mocks.put.mockReset();
     mocks.patch.mockReset();
     mocks.delete.mockReset();
   });
@@ -50,6 +52,7 @@ describe("contentModerationApi", () => {
         keywordFoldTraditionalChinese: false,
         apiIncludesToolOutput: false,
         wordGuard: false,
+        secretMasking: false,
       },
     });
     await contentModerationApi.patchProfile("profile/1", {
@@ -74,6 +77,7 @@ describe("contentModerationApi", () => {
           keyword_fold_traditional_chinese: true,
           api_includes_tool_output: true,
           word_guard: true,
+          secret_masking: true,
         },
       })
       .mockResolvedValueOnce({
@@ -83,6 +87,7 @@ describe("contentModerationApi", () => {
           keyword_fold_traditional_chinese: "yes",
           api_includes_tool_output: true,
           word_guard: "true",
+          secret_masking: 1,
         },
       });
 
@@ -92,6 +97,7 @@ describe("contentModerationApi", () => {
         keywordFoldTraditionalChinese: true,
         apiIncludesToolOutput: true,
         wordGuard: true,
+        secretMasking: true,
       },
     });
     await expect(contentModerationApi.listProfiles()).resolves.toEqual({
@@ -100,7 +106,26 @@ describe("contentModerationApi", () => {
         keywordFoldTraditionalChinese: false,
         apiIncludesToolOutput: true,
         wordGuard: false,
+        secretMasking: false,
       },
+    });
+  });
+
+  test("reads and writes the secret masking switch", async () => {
+    mocks.get.mockResolvedValue({ enabled: false, persistent: true });
+    mocks.put.mockResolvedValue({ enabled: true, persistent: true });
+
+    await expect(contentModerationApi.getSecretMasking()).resolves.toEqual({
+      enabled: false,
+      persistent: true,
+    });
+    expect(mocks.get).toHaveBeenCalledWith("/content-moderation/secret-masking");
+    await expect(contentModerationApi.setSecretMasking(true)).resolves.toEqual({
+      enabled: true,
+      persistent: true,
+    });
+    expect(mocks.put).toHaveBeenCalledWith("/content-moderation/secret-masking", {
+      enabled: true,
     });
   });
 
