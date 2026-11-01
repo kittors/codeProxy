@@ -20,6 +20,12 @@ const apiMocks = vi.hoisted(() => ({
   put: vi.fn(),
 }));
 
+// 页面顺带读 GET /config 的能力声明（池容量卡的门控）。这里的用例都不关心它：什么能力都没声明，
+// 卡片不出现、也不会发池容量请求。
+const capabilityMocks = vi.hoisted(() => ({
+  getConfig: vi.fn(async (): Promise<Record<string, unknown>> => ({})),
+}));
+
 // Signed-in admin for the simulator's permission checks; null renders the page without an
 // AuthProvider, which is how every other test here sees it.
 const authMocks = vi.hoisted(() => ({
@@ -86,6 +92,12 @@ vi.mock("@code-proxy/api-client", () => ({
     get: apiMocks.get,
     put: apiMocks.put,
   },
+  configApi: { getConfig: capabilityMocks.getConfig },
+  readConfigCapabilities: () => ({
+    payloadRulesDryRun: false,
+    alerts: false,
+    poolCapacity: false,
+  }),
   authFilesApi: {
     list: () => apiMocks.get("/auth-files"),
     getModelsForAuthFile: async (name: string) => {

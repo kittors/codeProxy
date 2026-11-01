@@ -23,6 +23,8 @@ describe("payload rules dry-run", () => {
     const { readConfigCapabilities } = await import("../payload-rules");
     expect(readConfigCapabilities({ capabilities: { "payload-rules-dry-run": true } })).toEqual({
       payloadRulesDryRun: true,
+      alerts: false,
+      poolCapacity: false,
     });
     for (const config of [
       { capabilities: { "payload-rules-dry-run": "true" } },
@@ -34,7 +36,20 @@ describe("payload rules dry-run", () => {
     ]) {
       expect(readConfigCapabilities(config as Record<string, unknown> | null | undefined)).toEqual({
         payloadRulesDryRun: false,
+        alerts: false,
+        poolCapacity: false,
       });
     }
+  });
+
+  test("reads the alerts and pool-capacity declarations by their kebab-case keys", async () => {
+    const { readConfigCapabilities } = await import("../payload-rules");
+    expect(
+      readConfigCapabilities({ capabilities: { alerts: true, "pool-capacity": true } }),
+    ).toEqual({ payloadRulesDryRun: false, alerts: true, poolCapacity: true });
+    // Only an explicit true unlocks a page: a truthy string or a camelCase key is not a declaration.
+    expect(
+      readConfigCapabilities({ capabilities: { alerts: "yes", poolCapacity: true, "pool-capacity": 1 } }),
+    ).toEqual({ payloadRulesDryRun: false, alerts: false, poolCapacity: false });
   });
 });
