@@ -18,6 +18,8 @@ const mocks = vi.hoisted(() => ({
   testProfile: vi.fn(),
   listChannels: vi.fn(),
   patchBindings: vi.fn(),
+  getSecretMasking: vi.fn(),
+  setSecretMasking: vi.fn(),
 }));
 
 vi.mock("@code-proxy/api-client", async (importOriginal) => ({
@@ -31,6 +33,7 @@ const NOTHING_DECLARED: ContentModerationProfileCapabilities = {
   keywordFoldTraditionalChinese: false,
   apiIncludesToolOutput: false,
   wordGuard: false,
+  secretMasking: false,
 };
 
 const listResponse = (
@@ -85,6 +88,8 @@ describe("ContentModerationPage", () => {
     mocks.testProfile.mockReset();
     mocks.listChannels.mockReset();
     mocks.patchBindings.mockReset();
+    mocks.getSecretMasking.mockReset();
+    mocks.setSecretMasking.mockReset();
     mocks.getMetrics.mockResolvedValue({
       requests: 12,
       allows: 9,
@@ -265,7 +270,12 @@ describe("ContentModerationPage", () => {
     mocks.listProfiles.mockResolvedValue(
       listResponse(
         [{ ...profile, keyword_fold_traditional_chinese: true, api_includes_tool_output: false }],
-        { keywordFoldTraditionalChinese: true, apiIncludesToolOutput: true, wordGuard: false },
+        {
+          keywordFoldTraditionalChinese: true,
+          apiIncludesToolOutput: true,
+          wordGuard: false,
+          secretMasking: false,
+        },
       ),
     );
     renderPage();
@@ -278,5 +288,30 @@ describe("ContentModerationPage", () => {
     expect(
       screen.getByRole("switch", { name: "Send tool output to the moderation service" }),
     ).toHaveAttribute("aria-checked", "false");
+  });
+
+  test("offers the secret masking switch only when the backend declares it", async () => {
+    mocks.listProfiles.mockResolvedValue(listResponse([profile]));
+    const { unmount } = renderPage();
+    await screen.findByText("Strict prompts");
+    expect(screen.queryByRole("switch", { name: "Outbound secret masking" })).toBeNull();
+    expect(mocks.getSecretMasking).not.toHaveBeenCalled();
+    unmount();
+
+    mocks.listProfiles.mockResolvedValue(
+      listResponse([profile], { ...NOTHING_DECLARED, secretMasking: true }),
+    );
+    mocks.getSecretMasking.mockResolvedValue({ enabled: false, persistent: true });
+    mocks.setSecretMasking.mockResolvedValue({
+      enabled: true,
+      persistent: true,
+      updated_at: "2026-11-01T05:00:00Z",
+    });
+    renderPage();
+    const toggle = await screen.findByRole("switch", { name: "Outbound secret masking" });
+    expect(toggle).toHaveAttribute("aria-checked", "false");
+    await userEvent.click(toggle);
+    expect(mocks.setSecretMasking).toHaveBeenCalledWith(true);
+    await waitFor(() => expect(toggle).toHaveAttribute("aria-checked", "true"));
   });
 });

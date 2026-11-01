@@ -6902,6 +6902,14 @@
       "matched_as_written": "As written",
       "matched_normalized": "After normalization",
       "pattern_hidden": "Platform rule (not shown)"
+    },
+    "secret_masking": {
+      "label": "Outbound secret masking",
+      "description": "API keys, tokens and passwords in requests are replaced with placeholders before they reach the upstream, and put back in the reply.",
+      "enabled_toast": "Secret masking is on",
+      "disabled_toast": "Secret masking is off",
+      "save_failed": "Could not save the secret masking switch",
+      "load_failed": "Could not load the secret masking switch"
     }
   },
   "ip_access": {

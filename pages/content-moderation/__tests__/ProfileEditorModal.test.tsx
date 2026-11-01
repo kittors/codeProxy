@@ -409,6 +409,7 @@ describe("ProfileEditorModal text coverage options", () => {
     keywordFoldTraditionalChinese: true,
     apiIncludesToolOutput: true,
     wordGuard: false,
+    secretMasking: false,
   };
   const FOLD = "Match Traditional Chinese as Simplified";
   const TOOL_OUTPUT = "Send tool output to the moderation service";

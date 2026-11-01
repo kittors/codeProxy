@@ -36,6 +36,7 @@ export const WITH_WORD_GUARD: ContentModerationProfileCapabilities = {
   keywordFoldTraditionalChinese: false,
   apiIncludesToolOutput: false,
   wordGuard: true,
+  secretMasking: false,
 };
 
 export const wordRule = (id: string, pattern: string, patch: Partial<WordRule> = {}): WordRule => ({

@@ -6873,6 +6873,14 @@
       "matched_as_written": "按原文",
       "matched_normalized": "规范化后",
       "pattern_hidden": "平台规则（不显示）"
+    },
+    "secret_masking": {
+      "label": "出站密钥脱敏",
+      "description": "请求里的 API Key、令牌和密码先换成占位符再发往上游，回复里自动换回原值。",
+      "enabled_toast": "已开启出站密钥脱敏",
+      "disabled_toast": "已关闭出站密钥脱敏",
+      "save_failed": "保存密钥脱敏开关失败",
+      "load_failed": "读取密钥脱敏开关失败"
     }
   },
   "ip_access": {
