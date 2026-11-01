@@ -4893,6 +4893,7 @@
     "prefix_optional": "Prefix (optional)",
     "proxy_url": "Proxy URL",
     "copy_api_key": "Copy API Key",
+    "copy_channel_id": "Copy channel ID",
     "openai_desc": "API Key / Prefix / Base URL / Excluded Models / Headers / Models",
     "openai_config_desc": "Configure name/baseUrl, apiKeyEntries, headers & model aliases; supports /models auto-fetch.",
     "ampcode_desc": "Configure upstream URL / API Key, model mapping & force mapping.",

@@ -3257,6 +3257,7 @@
     "prefix_optional": "前缀（可选）",
     "proxy_url": "代理地址",
     "copy_api_key": "复制 API 密钥",
+    "copy_channel_id": "复制渠道 ID",
     "openai_desc": "API 密钥 / 前缀 / 基础地址 / 禁用模型 / 请求头 / 模型",
     "openai_config_desc": "配置名称/基础地址、API 密钥、请求头和模型别名；支持 /models 自动获取。",
     "ampcode_desc": "配置上游 URL / API 密钥、模型映射和强制映射。",
