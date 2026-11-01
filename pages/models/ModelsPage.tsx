@@ -29,7 +29,6 @@ import type {
   ModelFormState,
   ModelItem,
   ModelOwnerPreset,
-  ModelPageTab,
   ModelScope,
   OpenRouterModelSyncState,
   OwnerFormState,
@@ -51,23 +50,17 @@ import {
   normalizeOwnerPresetItems,
   normalizeOwnerValue,
   patchModelsPageSnapshot,
+  readOpenRouterSyncCache,
   saveModelConfig,
   setModelsPageSnapshot,
   syncIntervalHoursValue,
   syncIntervalMinutesFromHours,
   toFormState,
   toOwnerFormState,
+  writeOpenRouterSyncCache,
 } from "./modelsUtils";
-
-const openRouterSyncStateByTenant = new Map<string, OpenRouterModelSyncState>();
-
-function readOpenRouterSyncCache(tenantKey: string): OpenRouterModelSyncState | null {
-  return openRouterSyncStateByTenant.get(tenantKey) ?? null;
-}
-
-function writeOpenRouterSyncCache(tenantKey: string, state: OpenRouterModelSyncState): void {
-  openRouterSyncStateByTenant.set(tenantKey, state);
-}
+import { useModelsPageTabs } from "./hooks/useModelsPageTabs";
+import { VirtualModelsPanel } from "./virtual-models/VirtualModelsPanel";
 
 export function ModelsPage() {
   const { t } = useTranslation();
@@ -86,7 +79,7 @@ export function ModelsPage() {
   const [totalCost, setTotalCost] = useState(() => initialActiveSnapshot?.totalCost ?? 0);
   const [form, setForm] = useState<ModelFormState | null>(null);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<ModelPageTab>("active");
+  const { activeTab, modelScope, selectTab, virtualModelsSupported } = useModelsPageTabs();
   const [ownerPresets, setOwnerPresets] = useState<ModelOwnerPreset[]>(
     () => initialActiveSnapshot?.ownerPresets ?? [],
   );
@@ -150,8 +143,6 @@ export function ModelsPage() {
   useEffect(() => {
     totalCostRef.current = totalCost;
   }, [totalCost]);
-
-  const modelScope: ModelScope = activeTab;
 
   const applyScopeSnapshot = useCallback((scope: ModelScope) => {
     const snapshot = getModelsPageSnapshot(scope);
@@ -820,9 +811,11 @@ export function ModelsPage() {
     <section data-page-fill="md" className="flex flex-1 flex-col gap-4 md:min-h-0 md:overflow-hidden">
       <ModelsStatsCards stats={totalStats} totalCost={totalCost} />
 
-      <ModelsPageTabs activeTab={activeTab} onTabChange={setActiveTab} />
+      <ModelsPageTabs activeTab={activeTab} onTabChange={selectTab} showVirtual={virtualModelsSupported} />
 
-      {activeTab === "library" ? (
+      {activeTab === "virtual" ? (
+        <VirtualModelsPanel />
+      ) : activeTab === "library" ? (
         <div
           data-testid="owner-library-layout"
           className="grid h-[calc(100dvh-300px)] min-h-[28rem] gap-4 md:h-auto md:min-h-0 md:flex-1 lg:grid-cols-[18rem_minmax(0,1fr)]"

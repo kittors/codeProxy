@@ -6,8 +6,10 @@ import {
   earliestCandidateRecovery,
   formatStepDuration,
   formatTraceClock,
+  MEMBER_TURNS,
   msBetween,
   routeTraceAccountName,
+  routeTraceMemberRoute,
   routeTraceVerdict,
   type RouteTrace,
   type RouteTraceCandidate,
@@ -36,6 +38,15 @@ const SIMULATOR_BLOCKS = new Set(["cooldown", "unavailable", "disabled", "weight
 const TRACE_STATES = new Set(["tried", "saturated"]);
 const WAIT_KINDS = new Set(["request-retry", "busy-wait"]);
 const OUTCOMES = new Set(["success", "failed", "canceled"]);
+/** 虚拟模型成员步骤的原因：前三个是换到了它，后三个是跳过了它。 */
+const MEMBER_REASONS = new Set([
+  "first",
+  "weighted",
+  "fallback",
+  "not_allowed",
+  "disabled",
+  "no_provider",
+]);
 
 function causeLabel(t: TFunction, cause: string): string {
   const reason = normalizeCooldownReason(cause);
@@ -150,8 +161,18 @@ function leadSentence(t: TFunction, lead: NonNullable<RouteTraceVerdict["lead"]>
       });
     case "no_account":
       return t("log_content.route_trace.lead.no_account");
+    case "no_member":
+      return t("log_content.route_trace.lead.no_member", { name: lead.step.virtualModel });
   }
 }
+
+/** 「第 2 个成员（共 3 个）」这类句子的参数。 */
+const memberParams = (step: RouteTraceStep) => ({
+  member: step.member,
+  members: step.members,
+  name: step.virtualModel,
+  route: routeTraceMemberRoute(step),
+});
 
 /** 没有账号能接时补的两句：最早什么时候有账号恢复，客户端被告知多久后重试。 */
 function exhaustedSentences(
@@ -202,6 +223,8 @@ function nextSentence(t: TFunction, next: NonNullable<RouteTraceVerdict["next"]>
     }
     case "exhausted":
       return t("log_content.route_trace.next.exhausted");
+    case "member":
+      return t("log_content.route_trace.next.member", memberParams(next.member));
     case "not_retried":
       return next.why === "pinned"
         ? t("log_content.route_trace.next.not_retried_pinned")
@@ -222,16 +245,23 @@ export function routeTraceSummary(
   const sentences: string[] = [];
   if (lead) {
     sentences.push(leadSentence(t, lead));
+    if (lead.kind === "served" && lead.member) {
+      sentences.push(t("log_content.route_trace.served_by_member", memberParams(lead.member)));
+    }
     if (lead.kind === "failed") {
       const state = accountStateSentence(t, language, lead.attempt);
       if (state) sentences.push(state);
     }
   }
+  if (next?.kind === "member" && next.exhausted) {
+    sentences.push(t("log_content.route_trace.next.exhausted"));
+  }
   if (next) sentences.push(nextSentence(t, next));
+  // 换到下一个成员时请求没有等，也没让客户端重试：恢复时刻和重试时间都不说。
   const exhausted =
     next?.kind === "exhausted"
       ? next.exhausted
-      : lead?.kind === "no_account"
+      : lead?.kind === "no_account" && next?.kind !== "member"
         ? lead.exhausted
         : null;
   if (exhausted) sentences.push(...exhaustedSentences(t, language, exhausted));
@@ -272,6 +302,8 @@ function stepTone(step: RouteTraceStep): DetailBadgeTone {
       return step.outcome === "failed" ? "danger" : "warning";
     case "exhausted":
       return "danger";
+    case "member":
+      return MEMBER_TURNS.has(step.reason) ? "info" : "warning";
     default:
       return "neutral";
   }
@@ -434,6 +466,46 @@ function CandidateList({ step, language }: { step: RouteTraceStep; language: str
   );
 }
 
+/** 虚拟模型的一个成员：请求换到了它，或者跳过了它。 */
+function MemberStep({ step }: { step: RouteTraceStep }) {
+  const { t } = useTranslation();
+  const turned = MEMBER_TURNS.has(step.reason);
+  const lines: ReactNode[] = [];
+  if (step.reason === "fallback" && (step.cause || step.status > 0)) {
+    lines.push(
+      t("log_content.route_trace.member_detail.fallback", { failure: failureText(t, step) }),
+    );
+  } else if (!turned && MEMBER_REASONS.has(step.reason)) {
+    lines.push(t(`log_content.route_trace.member_detail.${step.reason}`));
+  }
+  // 换到成员时的错误是上一个成员的，那一行已经写过；跳过时的原文说的是哪里拒绝了它。
+  if (!turned && step.error) lines.push(<ErrorText value={step.error} />);
+  return (
+    <>
+      <StepHeading
+        title={t("log_content.route_trace.step.member", {
+          member: step.member,
+          members: step.members,
+        })}
+        badge={
+          step.reason ? (
+            <DetailBadge tone={turned ? "info" : "warning"}>
+              {MEMBER_REASONS.has(step.reason)
+                ? t(`log_content.route_trace.member_reason.${step.reason}`)
+                : step.reason}
+            </DetailBadge>
+          ) : null
+        }
+      >
+        <span className="min-w-0 font-mono text-xs text-ink [overflow-wrap:anywhere]">
+          {routeTraceMemberRoute(step)}
+        </span>
+      </StepHeading>
+      <StepLines lines={lines} />
+    </>
+  );
+}
+
 function StepBody({ step, language }: { step: RouteTraceStep; language: string | undefined }) {
   const { t } = useTranslation();
   switch (step.kind) {
@@ -541,6 +613,8 @@ function StepBody({ step, language }: { step: RouteTraceStep; language: string |
           <CandidateList step={step} language={language} />
         </>
       );
+    case "member":
+      return <MemberStep step={step} />;
     default:
       return <StepHeading title={step.kind} />;
   }
@@ -572,6 +646,16 @@ export function RouteTimelineBadges({ trace }: { trace: RouteTrace }) {
     0,
   );
   const badges: ReactNode[] = [];
+  const virtualModel = trace.steps.find(
+    (step) => step.kind === "member" && step.virtualModel,
+  )?.virtualModel;
+  if (virtualModel) {
+    badges.push(
+      <DetailBadge key="virtual-model" tone="info">
+        {t("log_content.route_trace.badge_virtual_model", { name: virtualModel })}
+      </DetailBadge>,
+    );
+  }
   if (attempts > 0) {
     badges.push(
       <DetailBadge key="attempts" tone="neutral">

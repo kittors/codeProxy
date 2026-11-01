@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   NO_ROUTING_CONFIG_SUPPORT,
   readRoutingConfigSupport,
+  readRoutingVirtualModels,
 } from "@code-proxy/api-client/endpoints/routing-config";
 
 describe("readRoutingConfigSupport", () => {
@@ -53,6 +54,7 @@ describe("readRoutingConfigSupport", () => {
       channelGroupBusyWait: false,
       channelGroupResetAwareDistribution: false,
       routingSimulation: false,
+      virtualModels: false,
     });
   });
 
@@ -96,5 +98,47 @@ describe("readRoutingConfigSupport", () => {
       readRoutingConfigSupport({ capabilities: { "routing-simulation": "true" } })
         .routingSimulation,
     ).toBe(false);
+  });
+
+  // An older backend has no /routing-config/virtual-models route: the panel
+  // would offer an editor whose saves answer 404.
+  test("offers virtual models only when the backend says so", () => {
+    expect(readRoutingConfigSupport({ capabilities: { "virtual-models": true } })).toEqual({
+      ...NO_ROUTING_CONFIG_SUPPORT,
+      virtualModels: true,
+    });
+    expect(
+      readRoutingConfigSupport({ capabilities: { "virtual-models": "true" } }).virtualModels,
+    ).toBe(false);
+  });
+});
+
+describe("readRoutingVirtualModels", () => {
+  test("keeps what the backend stores and drops what is not a virtual model", () => {
+    expect(
+      readRoutingVirtualModels([
+        {
+          name: " smart ",
+          description: " GPT first ",
+          members: [{ group: " team ", model: " gpt-5 ", weight: 0 }, { model: "claude-opus-4" }],
+        },
+        { name: "fast", strategy: "weighted", members: [{ model: "gpt-5-mini", weight: 2.7 }] },
+        // An unknown strategy reads as in order, which is what the backend does with it.
+        { name: "odd", strategy: "random", members: [{ model: "" }, "gpt-5", { model: "o3" }] },
+        { name: "  ", members: [{ model: "gpt-5" }] },
+        "smart",
+        null,
+      ]),
+    ).toEqual([
+      {
+        name: "smart",
+        description: "GPT first",
+        members: [{ group: "team", model: "gpt-5" }, { model: "claude-opus-4" }],
+      },
+      { name: "fast", strategy: "weighted", members: [{ model: "gpt-5-mini", weight: 2 }] },
+      { name: "odd", members: [{ model: "o3" }] },
+    ]);
+    expect(readRoutingVirtualModels(undefined)).toEqual([]);
+    expect(readRoutingVirtualModels({ smart: {} })).toEqual([]);
   });
 });
