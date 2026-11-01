@@ -3638,7 +3638,8 @@
     "delete_lead": "This can't be undone.",
     "delete_consequence_clients": "Clients using this key lose access immediately.",
     "batch_delete_consequence_clients": "Clients using these keys lose access immediately.",
-    "delete_logs_option_hint": "Leave unchecked to keep the request records for later reconciliation."
+    "delete_logs_option_hint": "Leave unchecked to keep the request records for later reconciliation.",
+    "virtual_model_tag": "Virtual"
   },
   "api_key_permissions_page": {
     "title": "Portal Account Permissions",
@@ -4804,7 +4805,78 @@
     "enabled_hint": "Disabled models disappear from model lists; requests in flight are unaffected.",
     "owner_value_hint": "The value stored on models — lowercase, no spaces.",
     "owner_label_hint": "The name shown in pickers.",
-    "owner_enabled_hint": "Disabled owners disappear from the owner picker; models already using it are unaffected."
+    "owner_enabled_hint": "Disabled owners disappear from the owner picker; models already using it are unaffected.",
+    "virtual": {
+      "tab": "Virtual models",
+      "title": "Virtual models",
+      "description": "One model name served by several real models. A request tries the members in order and moves on to the next one when a member cannot serve it, as long as nothing has reached the client yet.",
+      "search": "Search virtual models",
+      "add": "Add virtual model",
+      "at_limit": "A tenant can have at most {{max}} virtual models",
+      "col_name": "Name",
+      "col_members": "Members, in the order tried",
+      "col_strategy": "First member",
+      "strategy": "First member",
+      "strategy_order": "In order",
+      "strategy_weighted": "By weight",
+      "strategy_order_hint": "Requests try the members from top to bottom.",
+      "strategy_weighted_hint": "The first member is picked by weight, then the others follow from top to bottom. A member with weight 0 is only a fallback.",
+      "any_route": "Request's route",
+      "empty_title": "No virtual models yet",
+      "empty_description": "A virtual model gives clients one model name that falls back to other models or channel groups when the first one cannot serve.",
+      "no_results": "No virtual model matches the search",
+      "load_failed": "Failed to load virtual models",
+      "save_failed": "Failed to save virtual models",
+      "saved": "Virtual model saved",
+      "deleted": "Virtual model deleted",
+      "conflict": "The virtual models were changed while you were editing. The list was reloaded; save again to apply your change on top of it.",
+      "edit": "Edit {{name}}",
+      "delete": "Delete {{name}}",
+      "delete_title": "Delete virtual model",
+      "delete_desc": "Requests for {{name}} will then fail, unless a real model has that name. Keys that allow {{name}} keep it in their allowed models.",
+      "add_title": "Add virtual model",
+      "edit_title": "Edit virtual model",
+      "editor_desc": "Clients ask for the name like any model. A key still needs it in its allowed models, and each member runs only where the key and the request's route may run.",
+      "name": "Name",
+      "name_hint": "What clients send as the model. Use a real model's name to add fallbacks to that model.",
+      "description_label": "Description",
+      "description_hint": "Shown next to the name in the model list.",
+      "description_placeholder": "For example: GPT first, Claude when it is busy",
+      "members": "Members",
+      "members_hint": "Drag a row by its handle to change the order, or focus the handle and use the arrow keys.",
+      "member_count": "{{used}}/{{max}} members",
+      "member_group": "Channel group",
+      "member_group_aria": "Channel group of member {{index}}",
+      "member_model": "Model",
+      "member_model_aria": "Model of member {{index}}",
+      "member_weight": "Weight",
+      "member_weight_aria": "Weight of member {{index}}",
+      "member_share": "about {{share}}% first",
+      "model_placeholder": "Choose or type a model",
+      "model_search": "Search models",
+      "model_create": "Use {{model}}",
+      "add_member": "Add member",
+      "remove_member": "Remove member {{index}}",
+      "errors": {
+        "title": "Fix these before saving",
+        "name_required": "Enter a name.",
+        "name_too_long": "The name can have at most 128 characters.",
+        "name_slash": "The name cannot contain \"/\": group/model already means a model in a channel group.",
+        "name_reserved": "\"auto\" is reserved.",
+        "name_not_printable": "Use printable ASCII without spaces: the name goes back to clients in a response header.",
+        "name_duplicate": "Another virtual model already has this name.",
+        "members_none": "Add at least one member.",
+        "members_too_many": "A virtual model can have at most 16 members.",
+        "members_no_weight": "Picking by weight needs at least one member with a weight above 0.",
+        "member_model_required": "Member {{index}}: choose a model.",
+        "member_model_not_printable": "Member {{index}}: the model must be printable ASCII without spaces.",
+        "member_other_group_prefix": "Member {{index}}: {{model}} starts with another channel group. Pick that group in the group field instead.",
+        "member_nested": "Member {{index}}: {{model}} is another virtual model, and virtual models cannot contain each other.",
+        "member_unknown_group": "Member {{index}}: channel group {{group}} does not exist.",
+        "member_duplicate": "Member {{index}} repeats an earlier member.",
+        "member_weight_range": "Member {{index}}: the weight must be a whole number from 0 to 1000."
+      }
+    }
   },
   "providers_page": {
     "openai_title": "OpenAI Compatible Providers",
@@ -5300,7 +5372,8 @@
         "client_left_wait": "The client left while the request waited for an account to recover.",
         "running": "Attempt {{attempt}} on {{account}} was still running when this record was written.",
         "queue_gave_up": "The request waited {{duration}} for a free slot, then gave up.",
-        "no_account": "No account could take the request."
+        "no_account": "No account could take the request.",
+        "no_member": "No member of virtual model {{name}} could take the request."
       },
       "account_state": {
         "paused_until": "{{account}} is paused for {{remaining}}, until {{time}}.",
@@ -5315,7 +5388,8 @@
         "waiting_busy": "The channel group waits while every account is busy: the request then waited about {{duration}} for one to recover.",
         "exhausted": "No other account could take the request.",
         "not_retried_pinned": "It was not tried on another account: the request is bound to this one.",
-        "not_retried_request": "It was not tried on another account: the upstream refused the request itself."
+        "not_retried_request": "It was not tried on another account: the upstream refused the request itself.",
+        "member": "The request moved on to member {{member}} of {{members}} of {{name}}: {{route}}."
       },
       "exhausted_detail": {
         "earliest": "The first account is back at {{time}}.",
@@ -5341,7 +5415,8 @@
         "skip": "Skipped",
         "queue": "Queued for a free slot",
         "wait": "Waited",
-        "exhausted": "No account available"
+        "exhausted": "No account available",
+        "member": "Member {{member}} of {{members}}"
       },
       "skip_reason": {
         "saturated": "at its concurrency limit"
@@ -5373,7 +5448,23 @@
         "saturated": "At its concurrency limit"
       },
       "omitted_one": "{{count}} step omitted",
-      "omitted_other": "{{count}} steps omitted"
+      "omitted_other": "{{count}} steps omitted",
+      "member_reason": {
+        "first": "First in order",
+        "weighted": "Picked by weight",
+        "fallback": "Fallback",
+        "not_allowed": "Not allowed",
+        "disabled": "Model disabled",
+        "no_provider": "No account"
+      },
+      "member_detail": {
+        "fallback": "The member before it failed: {{failure}}.",
+        "not_allowed": "The key or the request's route may not use this channel group, or the group does not serve the model.",
+        "disabled": "The model is switched off in the model catalog.",
+        "no_provider": "No account the request may use serves this model."
+      },
+      "badge_virtual_model": "Virtual model {{name}}",
+      "served_by_member": "It ran as member {{member}} of {{members}} of virtual model {{name}}: {{route}}."
     }
   },
   "error_detail": {

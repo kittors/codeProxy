@@ -91,6 +91,7 @@ function Harness({
       channelGroupBusyWait: streamGuardsSupported === true || streamGuardsSupported === "busy-wait",
       channelGroupResetAwareDistribution: resetAwareSupported === true,
       routingSimulation: false,
+      virtualModels: false,
     }),
     [followUpstreamSupported, modelExclusionsSupported, resetAwareSupported, streamGuardsSupported],
   );
