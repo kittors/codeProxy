@@ -7,6 +7,9 @@
  * 才写出，所以它的轨迹比那次尝试多出一截「接下来做了什么」——换到下一个账号、排队、等待或放弃。
  *
  * 后端只新增步骤种类、结果和原因码，不改名；不认识的值原样保留，界面按原文显示。
+ *
+ * 请求的模型是虚拟模型时，轨迹里还有成员步骤（member）：开头先记下请求用不了的成员，之后每换一个
+ * 成员记一步，它后面就是这个成员的尝试。尝试序号跨成员连续编号。
  */
 
 export interface RouteTraceCandidate {
@@ -24,7 +27,7 @@ export interface RouteTraceCandidate {
 }
 
 export interface RouteTraceStep {
-  /** attempt / skip / queue / wait / exhausted。 */
+  /** attempt / skip / queue / wait / exhausted / member。 */
   kind: string;
   at: string;
   /** 这一步用了多久；还在进行时为 0。 */
@@ -51,8 +54,12 @@ export interface RouteTraceStep {
   firstTokenMs: number;
   /** 流在给客户端发出任何内容前就失败了：处理器还可能换个账号重试。 */
   beforeFirstByte: boolean;
-  /** 跳过的原因。 */
+  /** 跳过的原因。成员步骤里是换到这个成员的原因（MEMBER_TURNS），或跳过它的原因。 */
   reason: string;
+  /** 成员步骤：所属虚拟模型，和成员在全部 members 个里排第几（从 1 开始）。 */
+  virtualModel: string;
+  member: number;
+  members: number;
   /** 排队时在等的账号数。 */
   accounts: number;
   /** request-retry / busy-wait，以及调度器打算等多久。 */
@@ -125,6 +132,9 @@ function normalizeStep(raw: unknown): RouteTraceStep | null {
     firstTokenMs: count(raw.first_token_ms),
     beforeFirstByte: raw.before_first_byte === true,
     reason: text(raw.reason),
+    virtualModel: text(raw.virtual_model),
+    member: count(raw.member),
+    members: count(raw.members),
     accounts: count(raw.accounts),
     waitKind: text(raw.wait_kind),
     plannedMs: count(raw.planned_ms),
@@ -174,14 +184,32 @@ export const REQUEST_FAULT_CAUSES: ReadonlySet<string> = new Set([
   "content_policy",
 ]);
 
+/**
+ * 请求换到了这个成员：按顺序第一个、按权重挑中的第一个，或前一个成员失败后的下一个。
+ * 其余原因（not_allowed / disabled / no_provider 和以后新增的）都是跳过了它。
+ */
+export const MEMBER_TURNS: ReadonlySet<string> = new Set(["first", "weighted", "fallback"]);
+
+/** 成员在界面和请求日志里的写法：`分组/模型`，没有分组时只写模型。 */
+export const routeTraceMemberRoute = (step: Pick<RouteTraceStep, "group" | "model">) =>
+  step.group ? `${step.group}/${step.model}` : step.model;
+
 /** 时间线开头的一句话：请求最后怎样了，或者它最近一次尝试怎样了。 */
 export type RouteTraceLead =
-  | { kind: "served"; attempt: RouteTraceStep; failedBefore: number }
+  | {
+      kind: "served";
+      attempt: RouteTraceStep;
+      failedBefore: number;
+      /** 请求的是虚拟模型时，接下这次请求的成员。 */
+      member: RouteTraceStep | null;
+    }
   | { kind: "failed"; attempt: RouteTraceStep }
   | { kind: "client_left"; step: RouteTraceStep }
   | { kind: "running"; attempt: RouteTraceStep }
   | { kind: "queue_gave_up"; queue: RouteTraceStep }
-  | { kind: "no_account"; exhausted: RouteTraceStep };
+  | { kind: "no_account"; exhausted: RouteTraceStep }
+  /** 虚拟模型的成员全都用不了，一个也没试；step 是最后一个被跳过的成员。 */
+  | { kind: "no_member"; step: RouteTraceStep };
 
 /** 失败之后请求做了什么；lead 已经说完整时为 null。 */
 export type RouteTraceNext =
@@ -189,6 +217,8 @@ export type RouteTraceNext =
   | { kind: "queued"; queue: RouteTraceStep }
   | { kind: "waiting"; wait: RouteTraceStep }
   | { kind: "exhausted"; exhausted: RouteTraceStep }
+  /** 换到了虚拟模型的下一个成员；exhausted：换之前，上一个成员已经没有别的账号能接了。 */
+  | { kind: "member"; member: RouteTraceStep; exhausted: RouteTraceStep | null }
   | { kind: "not_retried"; why: "pinned" | "request" };
 
 export interface RouteTraceVerdict {
@@ -225,6 +255,13 @@ export function routeTraceVerdict(trace: RouteTrace): RouteTraceVerdict {
     }
     return null;
   };
+  // 最近一个换到的成员；成员步骤只出现在虚拟模型的请求里。
+  const memberBefore = (end: number): RouteTraceStep | null => {
+    for (let i = end - 1; i >= 0; i -= 1) {
+      if (steps[i].kind === "member" && MEMBER_TURNS.has(steps[i].reason)) return steps[i];
+    }
+    return null;
+  };
   const withFailure = (next: RouteTraceNext): RouteTraceVerdict => {
     const failed = failedAttemptBefore(lastIndex);
     if (failed) return { lead: { kind: "failed", attempt: failed }, next };
@@ -240,7 +277,10 @@ export function routeTraceVerdict(trace: RouteTrace): RouteTraceVerdict {
           last.attempt > 0
             ? last.attempt - 1
             : steps.filter((step) => step.kind === "attempt" && step !== last).length;
-        return { lead: { kind: "served", attempt: last, failedBefore }, next: null };
+        return {
+          lead: { kind: "served", attempt: last, failedBefore, member: memberBefore(lastIndex) },
+          next: null,
+        };
       }
       if (last.outcome === "failed") {
         const next: RouteTraceNext | null = trace.pinned
@@ -278,6 +318,32 @@ export function routeTraceVerdict(trace: RouteTrace): RouteTraceVerdict {
       if (last.outcome === "canceled")
         return { lead: { kind: "client_left", step: last }, next: null };
       return withFailure({ kind: "waiting", wait: last });
+    }
+    case "member": {
+      // 跳过的成员都记在任何尝试之前：轨迹停在跳过上，就是一个成员也没试。
+      if (!MEMBER_TURNS.has(last.reason)) {
+        return { lead: { kind: "no_member", step: last }, next: null };
+      }
+      // 失败的那条记录等到换成员才写出。只看上一个成员自己的那几步（再往前是更早的成员）：
+      // 它最近一次尝试，和那之后是不是已经没有账号能接。
+      let attempt: RouteTraceStep | null = null;
+      let exhausted: RouteTraceStep | null = null;
+      for (let i = lastIndex - 1; i >= 0 && steps[i].kind !== "member"; i -= 1) {
+        if (steps[i].kind === "attempt") {
+          attempt = steps[i];
+          break;
+        }
+        if (steps[i].kind === "exhausted") exhausted ??= steps[i];
+      }
+      if (attempt?.outcome === "failed") {
+        return {
+          lead: { kind: "failed", attempt },
+          next: { kind: "member", member: last, exhausted },
+        };
+      }
+      const next: RouteTraceNext = { kind: "member", member: last, exhausted: null };
+      if (exhausted) return { lead: { kind: "no_account", exhausted }, next };
+      return { lead: null, next: last.reason === "fallback" ? next : null };
     }
     default: {
       const failed = failedAttemptBefore(lastIndex);

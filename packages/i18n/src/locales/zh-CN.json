@@ -3941,7 +3941,8 @@
     "delete_lead": "删除后无法恢复。",
     "delete_consequence_clients": "使用这把 Key 的客户端会立即无法调用。",
     "batch_delete_consequence_clients": "使用这些 Key 的客户端会立即无法调用。",
-    "delete_logs_option_hint": "不勾选时保留请求记录，之后仍可对账。"
+    "delete_logs_option_hint": "不勾选时保留请求记录，之后仍可对账。",
+    "virtual_model_tag": "虚拟"
   },
   "api_key_permissions_page": {
     "title": "门户账号权限",
@@ -5311,7 +5312,78 @@
     "enabled_hint": "停用后不再出现在模型列表里，正在进行的请求不受影响。",
     "owner_value_hint": "写进模型配置的值，小写、不含空格。",
     "owner_label_hint": "下拉框里显示的名字。",
-    "owner_enabled_hint": "停用后不会出现在归属下拉框里，已使用它的模型不受影响。"
+    "owner_enabled_hint": "停用后不会出现在归属下拉框里，已使用它的模型不受影响。",
+    "virtual": {
+      "tab": "虚拟模型",
+      "title": "虚拟模型",
+      "description": "一个模型名由几个真实模型承接。请求按成员顺序尝试，某个成员接不了、而且还没有内容发给客户端时，换下一个成员。",
+      "search": "搜索虚拟模型",
+      "add": "新增虚拟模型",
+      "at_limit": "每个租户最多 {{max}} 个虚拟模型",
+      "col_name": "名称",
+      "col_members": "成员（按尝试顺序）",
+      "col_strategy": "第一个成员",
+      "strategy": "第一个成员",
+      "strategy_order": "按顺序",
+      "strategy_weighted": "按权重",
+      "strategy_order_hint": "请求从上到下依次尝试各成员。",
+      "strategy_weighted_hint": "按权重挑第一个成员，其余成员再从上到下依次尝试。权重为 0 的成员只做后备。",
+      "any_route": "按请求的路由",
+      "empty_title": "还没有虚拟模型",
+      "empty_description": "虚拟模型让客户端只用一个模型名：第一个成员接不了时，自动换到别的模型或别的渠道分组。",
+      "no_results": "没有符合搜索的虚拟模型",
+      "load_failed": "加载虚拟模型失败",
+      "save_failed": "保存虚拟模型失败",
+      "saved": "虚拟模型已保存",
+      "deleted": "虚拟模型已删除",
+      "conflict": "编辑期间虚拟模型被别人改过。已重新加载列表，再点一次保存，会把你的修改改在新列表上。",
+      "edit": "编辑 {{name}}",
+      "delete": "删除 {{name}}",
+      "delete_title": "删除虚拟模型",
+      "delete_desc": "删除后请求 {{name}} 会失败，除非有同名的真实模型。允许了 {{name}} 的 Key，允许模型里仍保留这个名字。",
+      "add_title": "新增虚拟模型",
+      "edit_title": "编辑虚拟模型",
+      "editor_desc": "客户端像请求普通模型一样请求这个名字。Key 的允许模型里仍要有它；每个成员只在 Key 和请求路由允许的地方运行。",
+      "name": "名称",
+      "name_hint": "客户端请求时填的模型名。用真实模型的名字，就是给这个模型加上后备。",
+      "description_label": "描述",
+      "description_hint": "在模型列表里显示在名称旁边。",
+      "description_placeholder": "例如：先用 GPT，忙时换 Claude",
+      "members": "成员",
+      "members_hint": "拖动行首的手柄调整顺序；也可以聚焦手柄后用方向键移动。",
+      "member_count": "{{used}}/{{max}} 个成员",
+      "member_group": "渠道分组",
+      "member_group_aria": "第 {{index}} 个成员的渠道分组",
+      "member_model": "模型",
+      "member_model_aria": "第 {{index}} 个成员的模型",
+      "member_weight": "权重",
+      "member_weight_aria": "第 {{index}} 个成员的权重",
+      "member_share": "约 {{share}}% 先试它",
+      "model_placeholder": "选择或输入模型",
+      "model_search": "搜索模型",
+      "model_create": "使用 {{model}}",
+      "add_member": "添加成员",
+      "remove_member": "移除第 {{index}} 个成员",
+      "errors": {
+        "title": "保存前请先修正",
+        "name_required": "请填写名称。",
+        "name_too_long": "名称最多 128 个字符。",
+        "name_slash": "名称不能包含「/」：「分组/模型」已经表示某个渠道分组里的模型。",
+        "name_reserved": "「auto」是保留名称。",
+        "name_not_printable": "只能用不含空格的可打印 ASCII 字符：这个名字会写进返回给客户端的响应头。",
+        "name_duplicate": "已经有同名的虚拟模型。",
+        "members_none": "至少添加一个成员。",
+        "members_too_many": "一个虚拟模型最多 16 个成员。",
+        "members_no_weight": "按权重挑选时，至少要有一个成员的权重大于 0。",
+        "member_model_required": "第 {{index}} 个成员：请选择模型。",
+        "member_model_not_printable": "第 {{index}} 个成员：模型名只能用不含空格的可打印 ASCII 字符。",
+        "member_other_group_prefix": "第 {{index}} 个成员：{{model}} 以另一个渠道分组开头，请改在分组一栏选那个分组。",
+        "member_nested": "第 {{index}} 个成员：{{model}} 是另一个虚拟模型，虚拟模型不能互相包含。",
+        "member_unknown_group": "第 {{index}} 个成员：渠道分组 {{group}} 不存在。",
+        "member_duplicate": "第 {{index}} 个成员和前面的成员重复。",
+        "member_weight_range": "第 {{index}} 个成员：权重必须是 0 到 1000 的整数。"
+      }
+    }
   },
   "providers_page": {
     "openai_title": "OpenAI 兼容提供商",
@@ -5502,7 +5574,8 @@
         "client_left_wait": "请求等账号恢复时，客户端断开了。",
         "running": "写下这条记录时，第 {{attempt}} 次尝试（{{account}}）还在进行。",
         "queue_gave_up": "请求排队等了 {{duration}} 仍没有空闲名额，放弃了。",
-        "no_account": "没有账号能接这个请求。"
+        "no_account": "没有账号能接这个请求。",
+        "no_member": "虚拟模型 {{name}} 没有成员能接这个请求。"
       },
       "account_state": {
         "paused_until": "{{account}} 暂停调度 {{remaining}}，至 {{time}}。",
@@ -5517,7 +5590,8 @@
         "waiting_busy": "分组开启了忙等：请求随后等了约 {{duration}}，等有账号恢复。",
         "exhausted": "没有别的账号能接。",
         "not_retried_pinned": "没有换号重试：这个请求绑定在该账号上。",
-        "not_retried_request": "没有换号重试：上游拒绝的是请求本身。"
+        "not_retried_request": "没有换号重试：上游拒绝的是请求本身。",
+        "member": "请求换到了 {{name}} 的第 {{member}} 个成员（共 {{members}} 个）：{{route}}。"
       },
       "exhausted_detail": {
         "earliest": "最早 {{time}} 有账号恢复。",
@@ -5543,7 +5617,8 @@
         "skip": "跳过",
         "queue": "排队等空闲名额",
         "wait": "等待",
-        "exhausted": "没有可用账号"
+        "exhausted": "没有可用账号",
+        "member": "第 {{member}} 个成员（共 {{members}} 个）"
       },
       "skip_reason": {
         "saturated": "并发已满"
@@ -5572,18 +5647,89 @@
         "tried": "已试过",
         "saturated": "并发已满"
       },
-      "omitted": "省略了 {{count}} 步"
+      "omitted": "省略了 {{count}} 步",
+      "member_reason": {
+        "first": "按顺序第一个",
+        "weighted": "按权重挑中",
+        "fallback": "后备",
+        "not_allowed": "不允许",
+        "disabled": "模型已停用",
+        "no_provider": "没有账号"
+      },
+      "member_detail": {
+        "fallback": "前一个成员失败：{{failure}}。",
+        "not_allowed": "Key 或请求路由不能用这个渠道分组，或者这个分组不提供该模型。",
+        "disabled": "这个模型在模型库里已停用。",
+        "no_provider": "请求能用的账号里没有提供这个模型的。"
+      },
+      "badge_virtual_model": "虚拟模型 {{name}}",
+      "served_by_member": "这是虚拟模型 {{name}} 的第 {{member}} 个成员（共 {{members}} 个）：{{route}}。"
     }
   },
   "error_detail": {
     "upstream_error": "上游 API 错误响应",
+    "gateway_error": "网关的错误响应",
     "reconstructed_from_details": "已从请求详情还原上游错误摘要",
     "historical_missing": "该历史请求未记录上游错误响应",
     "full_response": "完整响应",
     "no_content": "该历史日志未记录上游错误响应，也无法从请求详情还原失败原因。新的失败日志会保存错误详情。",
     "load_failed": "加载失败",
     "request_failed": "请求失败",
-    "copy_response": "复制完整响应"
+    "copy_response": "复制完整响应",
+    "next_title": "接下来会怎样",
+    "category": {
+      "client_canceled": "客户端取消了请求",
+      "loop_guard_reply": "循环保护截断了回复",
+      "loop_guard_tool": "循环保护拦下了工具调用死循环",
+      "key_quota": "Key 触到了限额",
+      "quota_unavailable": "读不到额度用量",
+      "relay_auth": "网关拒绝了客户端的 Key",
+      "tenant_unavailable": "租户已停用或到期",
+      "route": "渠道分组不可用",
+      "content_moderation": "内容审核拦截了请求",
+      "virtual_model": "虚拟模型没有成员能接这个请求",
+      "context_length": "对话超出了模型的上下文窗口",
+      "no_account": "没有账号能接这个请求",
+      "upstream_rate_limit": "上游限流",
+      "upstream_quota": "账号的上游额度用完了",
+      "upstream_auth": "上游不认账号的凭据",
+      "upstream_billing": "上游要求付费或没有权限",
+      "upstream_model": "账号不提供这个模型",
+      "upstream_server": "上游服务出错",
+      "upstream_request": "上游拒绝了这个请求",
+      "upstream_timeout": "首 token 超时",
+      "stream_cut": "回复中途断开",
+      "network": "连不上上游"
+    },
+    "hint": {
+      "client_canceled": "客户端在回复完成前断开了连接，网关随即停止：没有再请求上游，也不会重试。",
+      "loop_guard_api_key": "确属误判时，到这个 Key 的「循环保护」设置里调高阈值或关掉。",
+      "loop_guard_tenant": "确属误判时，到租户的「循环保护」设置里调高阈值或关掉。",
+      "key_quota_concurrency": "等这个 Key 正在进行的请求结束就能继续；经常不够用时，调高它的并发上限。",
+      "key_quota_minute": "一分钟内自动恢复，客户端按响应里的 Retry-After 稍后重试即可。",
+      "key_quota_day": "下一个项目日开始时自动恢复；等不了时，调高每日上限或重置今日额度。",
+      "key_quota_period": "这个额度周期重置后自动恢复，响应里的 Retry-After 会告诉客户端还要等多久。",
+      "key_quota_lifetime": "这是总额度，不会自动恢复：调高额度后才能继续。",
+      "quota_unavailable": "读不到用量时，为了不超额，网关按拒绝处理；用量库恢复后自动恢复。",
+      "relay_auth": "请求在网关就被拒绝了，没有发往上游。检查客户端用的 Key：是否填错、已停用或已过期。",
+      "tenant_unavailable": "请求没有发往上游。租户恢复后即可使用。",
+      "route": "请求没有发往上游。检查请求路径里的分组名，以及这个 Key 能用的渠道分组。",
+      "content_moderation": "请求没有发往上游。确属误判时，到内容审核设置里调整规则。",
+      "virtual_model": "检查成员的模型，以及这个 Key 能用的渠道分组。",
+      "context_length": "换账号也一样会失败：压缩对话或新开会话后再试。",
+      "no_account": "账号恢复后新请求会自动接上；等不了时，到账号页对冷却中的模型用「立即重试模型」。",
+      "upstream_rate_limit": "被限流的账号暂停调度到上游给的时间，到点自动恢复。",
+      "upstream_quota": "这个账号在上游额度重置或充值后恢复。",
+      "upstream_auth": "网关会先尝试刷新凭据；刷新不了就要重新登录这个账号，到账号页看它的状态。",
+      "upstream_billing": "检查这个账号的订阅和余额。",
+      "upstream_model": "检查模型名，或这个渠道的模型列表。",
+      "upstream_server": "通常是上游的临时故障，过一会儿会自己恢复。",
+      "upstream_request": "换账号也一样会失败：检查请求的参数、模型名或大小。",
+      "upstream_timeout": "经常发生时，调大渠道分组的首 token 超时。",
+      "stream_cut": "回复已经有一部分发给了客户端，网关不能换账号接着发：客户端需要重新发起请求。",
+      "stream_cut_before": "那时还没有内容发给客户端，网关可以换账号重试。",
+      "network": "通常是临时的；同一个代理反复出错时，检查账号用的代理。"
+    }
   },
   "system_page": {
     "title": "系统信息",

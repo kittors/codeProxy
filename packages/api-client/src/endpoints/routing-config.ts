@@ -72,6 +72,8 @@ export interface RoutingConfigCapabilities {
   "channel-group-distribution-reset-aware"?: boolean;
   /** GET /routing-simulation is there to simulate a request. */
   "routing-simulation"?: boolean;
+  /** The backend serves virtual models (GET/PUT /routing-config/virtual-models). */
+  "virtual-models"?: boolean;
 }
 
 /** Capabilities normalized for the panel; anything not advertised reads as unsupported. */
@@ -88,6 +90,8 @@ export interface RoutingConfigSupport {
   channelGroupResetAwareDistribution: boolean;
   /** The backend can simulate where a request would go (GET /routing-simulation). */
   routingSimulation: boolean;
+  /** The backend serves virtual models. */
+  virtualModels: boolean;
 }
 
 /** What a backend that advertises nothing supports. */
@@ -98,6 +102,7 @@ export const NO_ROUTING_CONFIG_SUPPORT: RoutingConfigSupport = {
   channelGroupBusyWait: false,
   channelGroupResetAwareDistribution: false,
   routingSimulation: false,
+  virtualModels: false,
 };
 
 export interface RoutingConfigPathRouteItem {
@@ -107,11 +112,50 @@ export interface RoutingConfigPathRouteItem {
   fallback?: "none" | "default";
 }
 
+/**
+ * A member of a virtual model: a real model, optionally confined to one channel
+ * group. Without a group it runs where the request would run a model it named
+ * itself (its path route, the key's channel groups, or the default group).
+ */
+export interface RoutingVirtualModelMember {
+  group?: string;
+  model: string;
+  /** Share of first picks under the weighted strategy; 0 is only ever a fallback. */
+  weight?: number;
+}
+
+/** `order` tries the members as listed; `weighted` picks the first one by weight. */
+export type RoutingVirtualModelStrategy = "order" | "weighted";
+
+/**
+ * A model name the gateway serves from one of several real models (CliRelay
+ * `routing.virtual-models`). A request runs on the first member that can take it
+ * and moves on to the next one while nothing has reached the client.
+ */
+export interface RoutingVirtualModel {
+  name: string;
+  description?: string;
+  /** Stored empty for `order`. */
+  strategy?: RoutingVirtualModelStrategy | "";
+  members: RoutingVirtualModelMember[];
+}
+
+/** The virtual models and the version of the routing config they were read at. */
+export interface RoutingVirtualModelsSnapshot {
+  virtualModels: RoutingVirtualModel[];
+  version: number;
+}
+
 export interface RoutingConfigItem {
   strategy?: RoutingStrategy;
   "include-default-group"?: boolean;
   "channel-groups"?: RoutingConfigGroupItem[];
   "path-routes"?: RoutingConfigPathRouteItem[];
+  /**
+   * Read only for this client: the channel group editor leaves the key out of its
+   * PUT, which keeps them, and edits them through routingVirtualModelsApi.
+   */
+  "virtual-models"?: RoutingVirtualModel[];
   /** Response only. Absent on backends that predate it, which is itself the answer. */
   capabilities?: RoutingConfigCapabilities;
 }
@@ -137,6 +181,7 @@ export function readRoutingConfigSupport(payload: unknown): RoutingConfigSupport
     channelGroupResetAwareDistribution:
       capabilities?.["channel-group-distribution-reset-aware"] === true,
     routingSimulation: capabilities?.["routing-simulation"] === true,
+    virtualModels: capabilities?.["virtual-models"] === true,
   };
 }
 
@@ -148,4 +193,63 @@ export const routingConfigApi = {
     return apiClient.get<RoutingConfigItem>("/routing-config");
   },
   update: (payload: RoutingConfigItem) => apiClient.put("/routing-config", payload),
+};
+
+const readMember = (value: unknown): RoutingVirtualModelMember | null => {
+  const raw = asRecord(value);
+  const model = typeof raw?.model === "string" ? raw.model.trim() : "";
+  if (!raw || !model) return null;
+  const group = typeof raw.group === "string" ? raw.group.trim() : "";
+  const weight = typeof raw.weight === "number" && raw.weight > 0 ? Math.floor(raw.weight) : 0;
+  return { ...(group ? { group } : {}), model, ...(weight > 0 ? { weight } : {}) };
+};
+
+/**
+ * The virtual models of a response; anything that is not one is dropped. The
+ * strategy is left out unless it is `weighted`, as the backend stores it, so a
+ * virtual model nobody edited goes back on PUT as it came.
+ */
+export function readRoutingVirtualModels(value: unknown): RoutingVirtualModel[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry): RoutingVirtualModel[] => {
+    const raw = asRecord(entry);
+    const name = typeof raw?.name === "string" ? raw.name.trim() : "";
+    if (!raw || !name) return [];
+    const members = Array.isArray(raw.members)
+      ? raw.members.map(readMember).filter((m): m is RoutingVirtualModelMember => m !== null)
+      : [];
+    const description = typeof raw.description === "string" ? raw.description.trim() : "";
+    return [
+      {
+        name,
+        ...(description ? { description } : {}),
+        ...(raw.strategy === "weighted" ? { strategy: "weighted" as const } : {}),
+        members,
+      },
+    ];
+  });
+}
+
+export const routingVirtualModelsApi = {
+  async get(options?: { signal?: AbortSignal }): Promise<RoutingVirtualModelsSnapshot> {
+    const data = await (options?.signal
+      ? apiClient.get<Record<string, unknown>>("/routing-config/virtual-models", {
+          signal: options.signal,
+        })
+      : apiClient.get<Record<string, unknown>>("/routing-config/virtual-models"));
+    const version = Number(data?.version);
+    return {
+      virtualModels: readRoutingVirtualModels(data?.["virtual-models"]),
+      version: Number.isFinite(version) && version > 0 ? version : 0,
+    };
+  },
+  /**
+   * Replaces the tenant's virtual models. `version` is the one they were read at:
+   * a change made since then answers 409 `config_version_conflict`.
+   */
+  update: (virtualModels: RoutingVirtualModel[], version: number) =>
+    apiClient.put("/routing-config/virtual-models", {
+      "virtual-models": virtualModels,
+      version,
+    }),
 };

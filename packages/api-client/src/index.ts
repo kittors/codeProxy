@@ -204,7 +204,7 @@ export type {
 } from "./endpoints/ccswitch-import-configs";
 export { channelGroupsApi } from "./endpoints/channel-groups";
 export type * from "./endpoints/channel-groups";
-export { routingConfigApi } from "./endpoints/routing-config";
+export { routingConfigApi, routingVirtualModelsApi } from "./endpoints/routing-config";
 export type * from "./endpoints/routing-config";
 export { routingSimulationApi } from "./endpoints/routing-simulation";
 export type * from "./endpoints/routing-simulation";
