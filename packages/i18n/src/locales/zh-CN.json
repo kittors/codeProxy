@@ -1136,6 +1136,9 @@
     "tenant_copies_lead": "这些租户还各自保存着同一个上游账号的凭据。两份凭据每次刷新都会让对方的 refresh token 失效，建议让它们删除副本、改用平台共享：",
     "duplicates_shared_badge": "与平台共享账号重复",
     "duplicates_shared_tooltip": "平台已经把同一个上游账号共享给本租户。两份凭据每次刷新都会让对方的 refresh token 失效，账号会反复掉线。建议删除这个账号，改用「平台共享账号」里的那份：请求会自动调度过去，用量仍计入本租户。删除前请确认渠道分组没有单独引用它。",
+    "copies_elsewhere_badge": "另有 {{count}} 个租户导入了此账号",
+    "copies_elsewhere_tooltip": "平台上另有租户导入了同一个上游账号的凭据。双方共用这个账号的额度；如果是同一份凭据文件，各自刷新还会互相顶掉 refresh token，账号会反复掉线。请确认这是你的账号，并只保留一份。",
+    "copies_elsewhere_lead": "这些租户也导入了同一个上游账号的凭据。它们共用账号额度；同一份凭据文件的副本每次刷新都会让对方的 refresh token 失效。建议只留一份，让其余租户删除：",
     "sharing_saved": "已更新「{{name}}」的共享设置",
     "sharing_saved_batch": "已更新 {{count}} 个账号的共享设置",
     "batch_delete_consequence_shared": "其中 {{count}} 个账号共享给了其它租户，删除后那些租户也无法再使用。"
