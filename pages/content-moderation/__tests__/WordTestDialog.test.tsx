@@ -41,7 +41,7 @@ function renderPage() {
 }
 
 async function openTestDialog(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(await screen.findByRole("tab", { name: "Sensitive words" }));
+  // 敏感词是页面默认打开的标签。
   await screen.findByRole("table", { name: "Sensitive-word rule table" });
   await user.click(screen.getByRole("button", { name: "Test" }));
   return screen.findByRole("dialog", { name: "Test sensitive-word rules" });
@@ -96,7 +96,7 @@ describe("testing sensitive-word rules", () => {
     renderPage();
     const dialog = await openTestDialog(user);
 
-    await user.type(within(dialog).getByLabelText("Test input"), input);
+    await user.type(within(dialog).getByLabelText("Text to test"), input);
     await user.click(within(dialog).getByRole("button", { name: "Run test" }));
 
     await waitFor(() =>
@@ -148,7 +148,7 @@ describe("testing sensitive-word rules", () => {
     renderPage();
     const dialog = await openTestDialog(user);
 
-    await user.type(within(dialog).getByLabelText("Test input"), "my secret");
+    await user.type(within(dialog).getByLabelText("Text to test"), "my secret");
     await user.click(within(dialog).getByRole("button", { name: "Run test" }));
 
     expect(
@@ -189,7 +189,7 @@ describe("testing sensitive-word rules", () => {
     renderPage();
     const dialog = await openTestDialog(user);
 
-    await user.type(within(dialog).getByLabelText("Test input"), input);
+    await user.type(within(dialog).getByLabelText("Text to test"), input);
     await user.click(within(dialog).getByRole("button", { name: "Run test" }));
 
     const row = (await within(dialog).findAllByRole("row"))[1];
@@ -215,7 +215,7 @@ describe("testing sensitive-word rules", () => {
     renderPage();
     const dialog = await openTestDialog(user);
 
-    await user.type(within(dialog).getByLabelText("Test input"), "x");
+    await user.type(within(dialog).getByLabelText("Text to test"), "x");
     await user.click(within(dialog).getByRole("button", { name: "Run test" }));
 
     expect(await within(dialog).findByText("This request would be blocked")).toBeInTheDocument();
@@ -235,7 +235,7 @@ describe("testing sensitive-word rules", () => {
     renderPage();
     const dialog = await openTestDialog(user);
 
-    await user.type(within(dialog).getByLabelText("Test input"), "x");
+    await user.type(within(dialog).getByLabelText("Text to test"), "x");
     await user.click(within(dialog).getByRole("button", { name: "Run test" }));
 
     expect(
@@ -268,7 +268,7 @@ describe("testing sensitive-word rules", () => {
     renderPage();
     const dialog = await openTestDialog(user);
 
-    await user.type(within(dialog).getByLabelText("Test input"), input);
+    await user.type(within(dialog).getByLabelText("Text to test"), input);
     await user.click(within(dialog).getByRole("button", { name: "Run test" }));
 
     const marks = (await within(dialog).findByTestId("word-test-highlight")).querySelectorAll("mark");
@@ -283,7 +283,7 @@ describe("testing sensitive-word rules", () => {
     renderPage();
     const dialog = await openTestDialog(user);
 
-    await user.type(within(dialog).getByLabelText("Test input"), "  hello  ");
+    await user.type(within(dialog).getByLabelText("Text to test"), "  hello  ");
     await user.click(within(dialog).getByRole("button", { name: "Run test" }));
 
     expect(await within(dialog).findByText("No sensitive words found")).toBeInTheDocument();
@@ -303,9 +303,9 @@ describe("testing sensitive-word rules", () => {
     await user.click(screen.getByRole("switch", { name: "Toggle rule secret" }));
     await user.click(screen.getByRole("button", { name: "Test" }));
     const dialog = await screen.findByRole("dialog", { name: "Test sensitive-word rules" });
-    expect(within(dialog).getByText(/Runs the text through your unsaved changes/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/You have unsaved changes: this test uses them/)).toBeInTheDocument();
 
-    await user.type(within(dialog).getByLabelText("Test input"), "hello");
+    await user.type(within(dialog).getByLabelText("Text to test"), "hello");
     await user.click(within(dialog).getByRole("button", { name: "Run test" }));
 
     await waitFor(() => expect(mocks.words.test).toHaveBeenCalledTimes(1));

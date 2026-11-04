@@ -53,6 +53,7 @@ describe("contentModerationApi", () => {
         apiIncludesToolOutput: false,
         wordGuard: false,
         secretMasking: false,
+        wordPortal: false,
       },
     });
     await contentModerationApi.patchProfile("profile/1", {
@@ -78,6 +79,7 @@ describe("contentModerationApi", () => {
           api_includes_tool_output: true,
           word_guard: true,
           secret_masking: true,
+          word_portal: true,
         },
       })
       .mockResolvedValueOnce({
@@ -88,6 +90,7 @@ describe("contentModerationApi", () => {
           api_includes_tool_output: true,
           word_guard: "true",
           secret_masking: 1,
+          word_portal: "yes",
         },
       });
 
@@ -98,6 +101,7 @@ describe("contentModerationApi", () => {
         apiIncludesToolOutput: true,
         wordGuard: true,
         secretMasking: true,
+        wordPortal: true,
       },
     });
     await expect(contentModerationApi.listProfiles()).resolves.toEqual({
@@ -107,6 +111,7 @@ describe("contentModerationApi", () => {
         apiIncludesToolOutput: true,
         wordGuard: false,
         secretMasking: false,
+        wordPortal: false,
       },
     });
   });

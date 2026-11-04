@@ -3,28 +3,13 @@ import { useTranslation } from "react-i18next";
 import { FlaskConical, ShieldCheck, ShieldX, TriangleAlert } from "lucide-react";
 import {
   contentModerationApi,
-  wordPolicyApi,
   type ContentModerationDecision,
   type ContentModerationProfileView,
-  type WordPolicyInput,
-  type WordPolicyScope,
-  type WordTestResult as WordTestOutcome,
 } from "@code-proxy/api-client";
 import { Button, Callout, FormField, Modal, Textarea, surface } from "@code-proxy/ui";
-import { WordTestResult } from "./word-rules/WordTestResult";
-
-/** 测试敏感词规则（而不是某个审核配置）：测哪一层、带不带某把 Key，以及要不要试未保存的草稿。 */
-export interface WordTestTarget {
-  scope: WordPolicyScope;
-  keyId?: string;
-  /** 传了就测这份未保存的草稿，不传就测已保存的策略。 */
-  draft?: WordPolicyInput;
-}
 
 export interface ModerationTestModalProps {
   profile: ContentModerationProfileView | null;
-  /** 有值时弹窗测试敏感词规则，忽略 profile。 */
-  words?: WordTestTarget | null;
   onClose: () => void;
 }
 
@@ -39,28 +24,21 @@ const SAFETY_BADGE: Record<NonNullable<ContentModerationDecision["safety"]>, str
  *
  * 结论放在最显眼的位置（红 = 会阻断、绿 = 会放行、琥珀 = 审核 API 出错按 fail-open 放行），
  * 依据（命中关键词、最高分类、各分类分数）跟在下面；运行按钮在底部，⌘/Ctrl + Enter 也能运行。
- * 测试输入不保存，弹窗关掉就没了。
- *
- * 同一个弹窗也用来测敏感词规则（传 `words`）：结论之外还要给出替换后的文本、
- * 高亮每处命中、说明是不是规范化之后才命中的——见 word-rules/WordTestResult。
+ * 测试输入不保存，弹窗关掉就没了。敏感词规则有自己的测试弹窗（@features/word-policy）。
  */
-export function ModerationTestModal({ profile, words = null, onClose }: ModerationTestModalProps) {
+export function ModerationTestModal({ profile, onClose }: ModerationTestModalProps) {
   const { t } = useTranslation();
   const [input, setInput] = useState("");
   const [running, setRunning] = useState(false);
   const [decision, setDecision] = useState<ContentModerationDecision | null>(null);
-  const [wordResult, setWordResult] = useState<{ input: string; result: WordTestOutcome } | null>(
-    null,
-  );
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!profile && !words) return;
+    if (!profile) return;
     setInput("");
     setDecision(null);
-    setWordResult(null);
     setError("");
-  }, [profile, words]);
+  }, [profile]);
 
   const scoreRows = useMemo(
     () =>
@@ -71,25 +49,12 @@ export function ModerationTestModal({ profile, words = null, onClose }: Moderati
   );
 
   const run = async () => {
-    if ((!profile && !words) || !input.trim() || running) return;
+    if (!profile || !input.trim() || running) return;
     setRunning(true);
     setDecision(null);
-    setWordResult(null);
     setError("");
     try {
-      if (words) {
-        // 原样发送、不 trim：返回的命中位置是相对这段文本的，改动一个字符就会错位。
-        const sent = input;
-        const result = await wordPolicyApi.test({
-          input: sent,
-          scope: words.scope,
-          ...(words.keyId ? { key_id: words.keyId } : {}),
-          ...(words.draft ? { draft: words.draft } : {}),
-        });
-        setWordResult({ input: sent, result });
-      } else if (profile) {
-        setDecision(await contentModerationApi.testProfile(profile.id, input.trim()));
-      }
+      setDecision(await contentModerationApi.testProfile(profile.id, input.trim()));
     } catch (requestError) {
       setError(
         requestError instanceof Error ? requestError.message : t("content_moderation.test_failed"),
@@ -114,20 +79,10 @@ export function ModerationTestModal({ profile, words = null, onClose }: Moderati
 
   return (
     <Modal
-      open={profile !== null || words !== null}
+      open={profile !== null}
       onClose={onClose}
-      title={words ? t("content_moderation.words.test_title") : t("content_moderation.test_title")}
-      description={
-        words
-          ? t(
-              words.draft
-                ? "content_moderation.words.test_description_draft"
-                : "content_moderation.words.test_description_saved",
-            )
-          : profile
-            ? t("content_moderation.test_description", { name: profile.name })
-            : undefined
-      }
+      title={t("content_moderation.test_title")}
+      description={profile ? t("content_moderation.test_description", { name: profile.name }) : undefined}
       icon={<FlaskConical />}
       size="lg"
       onSubmitShortcut={() => void run()}
@@ -155,11 +110,7 @@ export function ModerationTestModal({ profile, words = null, onClose }: Moderati
           <Textarea
             value={input}
             onChange={(event) => setInput(event.currentTarget.value)}
-            placeholder={
-              words
-                ? t("content_moderation.words.test_input_placeholder")
-                : t("content_moderation.test_input_placeholder")
-            }
+            placeholder={t("content_moderation.test_input_placeholder")}
             aria-label={t("content_moderation.test_input")}
             className="min-h-36"
           />
@@ -170,8 +121,6 @@ export function ModerationTestModal({ profile, words = null, onClose }: Moderati
             {error}
           </Callout>
         ) : null}
-
-        {wordResult ? <WordTestResult input={wordResult.input} result={wordResult.result} /> : null}
 
         {decision ? (
           <section className="space-y-3" aria-live="polite">

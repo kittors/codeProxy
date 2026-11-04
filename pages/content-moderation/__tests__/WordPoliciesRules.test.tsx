@@ -44,17 +44,23 @@ function renderPage() {
   );
 }
 
-async function openWordRules(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(await screen.findByRole("tab", { name: "Sensitive words" }));
+// 敏感词是页面默认打开的标签。
+async function openWordRules(_user: ReturnType<typeof userEvent.setup>) {
   return screen.findByRole("table", { name: "Sensitive-word rule table" });
 }
 
 type User = ReturnType<typeof userEvent.setup>;
 
+/** 普通关键词直接在输入框里加；要带选项的关键词走规则弹窗（从「正则表达式」打开，再切回关键词）。 */
 async function openAddDialog(user: User) {
-  await user.click(screen.getByRole("button", { name: "Add rule" }));
-  return screen.findByRole("dialog", { name: "Add rule" });
+  await user.click(screen.getByRole("button", { name: "Regular expression" }));
+  const dialog = await screen.findByRole("dialog", { name: "Add rule" });
+  await user.click(within(dialog).getByRole("radio", { name: "Keyword" }));
+  return dialog;
 }
+
+const saveButton = () =>
+  within(screen.getByRole("region", { name: "Unsaved changes" })).getByRole("button", { name: "Save changes" });
 
 describe("sensitive-word rules: keywords that ignore separators", () => {
   beforeEach(async () => {
@@ -126,7 +132,7 @@ describe("sensitive-word rules: keywords that ignore separators", () => {
       const row = (await screen.findByText("敏感词")).closest("tr")!;
       expect(within(row).getByText("Ignores separators")).toBeInTheDocument();
 
-      await user.click(screen.getByRole("button", { name: "Save changes" }));
+      await user.click(saveButton());
       await waitFor(() => expect(mocks.words.put).toHaveBeenCalledTimes(1));
       expect(mocks.words.put.mock.calls[0][1].rules[0]).toEqual({
         kind: "keyword",
@@ -175,7 +181,7 @@ describe("sensitive-word rules: keywords that ignore separators", () => {
         }),
       );
       expect(await screen.findByText(/Unsaved changes/)).toBeInTheDocument();
-      await user.click(screen.getByRole("button", { name: "Save changes" }));
+      await user.click(saveButton());
       await waitFor(() => expect(mocks.words.put).toHaveBeenCalledTimes(1));
       expect(mocks.words.put.mock.calls[0][1].rules[0]).toEqual({
         id: "r1",
@@ -263,7 +269,7 @@ describe("sensitive-word rules: keywords that ignore separators", () => {
       await user.click(await within(dialog).findByRole("button", { name: "Add to list (2)" }));
 
       expect(await screen.findAllByText("Ignores separators")).toHaveLength(2);
-      await user.click(screen.getByRole("button", { name: "Save changes" }));
+      await user.click(saveButton());
       await waitFor(() => expect(mocks.words.put).toHaveBeenCalledTimes(1));
       expect(
         mocks.words.put.mock.calls[0][1].rules.slice(0, 2).map((rule: WordRule) => rule.ignore_separators),
@@ -349,7 +355,9 @@ describe("sensitive-word rules: the platform's list", () => {
     renderPage();
     await openWordRules(user);
 
-    await user.click(screen.getByRole("radio", { name: "Platform" }));
+    await user.click(
+      within(screen.getByRole("navigation", { name: "Rule sets" })).getByRole("button", { name: /Platform rules/ }),
+    );
 
     expect(await screen.findByText("Platform rules: 120")).toBeInTheDocument();
     expect(screen.getByText(/The platform's word list is not shown to tenants/)).toBeInTheDocument();
@@ -359,10 +367,10 @@ describe("sensitive-word rules: the platform's list", () => {
     // An empty list would read as "the platform has no rules".
     expect(screen.queryByText("No rules yet")).not.toBeInTheDocument();
     expect(screen.queryByRole("table", { name: "Sensitive-word rule table" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Add rule" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Add sensitive words" })).not.toBeInTheDocument();
     // The settings that apply to the tenant's requests are still there to read.
     expect(screen.getByRole("switch", { name: "Enabled" })).toBeDisabled();
-    expect(screen.getByRole("combobox", { name: "When a rule matches" })).toBeInTheDocument();
+    expect(screen.getByRole("radiogroup", { name: "When a rule matches" })).toBeInTheDocument();
   });
 
   test("is listed for whoever may read it", async () => {
@@ -375,7 +383,9 @@ describe("sensitive-word rules: the platform's list", () => {
     renderPage();
     await openWordRules(user);
 
-    await user.click(screen.getByRole("radio", { name: "Platform" }));
+    await user.click(
+      within(screen.getByRole("navigation", { name: "Rule sets" })).getByRole("button", { name: /Platform rules/ }),
+    );
 
     expect(await screen.findByText("forbidden")).toBeInTheDocument();
     expect(screen.queryByText(/not shown to tenants/)).not.toBeInTheDocument();

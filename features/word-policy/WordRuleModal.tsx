@@ -1,12 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ListFilter } from "lucide-react";
-import {
-  wordPolicyApi,
-  type WordPolicyLimits,
-  type WordPolicyScope,
-  type WordRuleKind,
-} from "@code-proxy/api-client";
+import type { WordPolicyLimits, WordRuleKind } from "@code-proxy/api-client";
 import {
   Button,
   Callout,
@@ -24,14 +19,17 @@ import {
   ruleIdentityOf,
   type DraftRule,
   type WordRuleFields,
+  type WordRuleValidator,
 } from "./wordPolicyModel";
 
 export interface WordRuleModalProps {
   open: boolean;
   /** null 表示新增。 */
   rule: DraftRule | null;
-  scope: WordPolicyScope;
-  keyId: string;
+  /** 新增时预选的类型（例如从「添加正则表达式」进来）。 */
+  initialKind?: WordRuleKind;
+  /** 问服务端这条规则能不能存进当前这份策略。 */
+  validate: WordRuleValidator;
   /** 草稿里的全部规则，用来在本地提示重复。 */
   rules: readonly DraftRule[];
   limits: WordPolicyLimits;
@@ -53,8 +51,8 @@ const utf8Length = (value: string) => new TextEncoder().encode(value).length;
 export function WordRuleModal({
   open,
   rule,
-  scope,
-  keyId,
+  initialKind = "keyword",
+  validate,
   rules,
   limits,
   onClose,
@@ -72,7 +70,7 @@ export function WordRuleModal({
 
   useEffect(() => {
     if (!open) return;
-    setKind(rule?.kind ?? "keyword");
+    setKind(rule?.kind ?? initialKind);
     setPattern(rule?.pattern ?? "");
     setNote(rule?.note ?? "");
     setEnabled(rule?.enabled ?? true);
@@ -80,7 +78,7 @@ export function WordRuleModal({
     setChecking(false);
     setError("");
     setFailure("");
-  }, [open, rule]);
+  }, [initialKind, open, rule]);
 
   const submit = async () => {
     if (checking) return;
@@ -127,11 +125,9 @@ export function WordRuleModal({
     if (!unchanged) {
       setChecking(true);
       try {
-        const verdict = await wordPolicyApi.validate({
-          scope,
-          ...(scope === "key" ? { key_id: keyId } : {}),
-          rules: [{ kind, pattern: value, ...(loose ? { ignore_separators: true } : {}) }],
-        });
+        const verdict = await validate([
+          { kind, pattern: value, ...(loose ? { ignore_separators: true } : {}) },
+        ]);
         const invalid = verdict.reviews.find((review) => review.status === "invalid");
         if (invalid) {
           setError(invalid.problem?.message || t("content_moderation.words.error_invalid"));

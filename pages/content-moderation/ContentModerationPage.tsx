@@ -26,6 +26,8 @@ import {
   ConfirmModal,
   DataTable,
   EmptyState,
+  SettingGroup,
+  SkeletonLines,
   TABLE_ROW_ACTIONS_COLUMN,
   TableRowActions,
   Tabs,
@@ -38,12 +40,16 @@ import {
 import { useOptionalAuth } from "@app/providers/AuthProvider";
 import { ModerationChannelPickerModal } from "./components/ModerationChannelPickerModal";
 import { ModerationMetricsModal } from "./components/ModerationMetricsModal";
-import { ModerationTestModal, type WordTestTarget } from "./components/ModerationTestModal";
+import { ModerationTestModal } from "./components/ModerationTestModal";
 import { ProfileEditorModal } from "./components/ProfileEditorModal";
 import { SecretMaskingSwitch } from "./components/SecretMaskingSwitch";
-import { WordRulesTab } from "./components/word-rules/WordRulesTab";
+import { WordPoliciesTab } from "./components/word-rules/WordPoliciesTab";
 
-type PageTab = "profiles" | "words";
+/**
+ * 页面的三个标签：敏感词（最常用，放第一个）、调用外部审核服务的审核配置、出站密钥脱敏。
+ * 三者互不相干，各占一页，不再把开关和两种规则挤在同一屏。
+ */
+type PageTab = "words" | "profiles" | "masking";
 
 const bindingCount = (profile: ContentModerationProfileView) =>
   Object.values(profile.binding_counts ?? {}).reduce((sum, count) => sum + (count ?? 0), 0);
@@ -72,13 +78,16 @@ export function ContentModerationPage() {
   const [pickerProfile, setPickerProfile] = useState<ContentModerationProfileView | null>(null);
   const [testProfile, setTestProfile] = useState<ContentModerationProfileView | null>(null);
   const [metricsOpen, setMetricsOpen] = useState(false);
-  const [tab, setTab] = useState<PageTab>("profiles");
+  const [tab, setTab] = useState<PageTab>("words");
+  const [loaded, setLoaded] = useState(false);
   const [wordsDirty, setWordsDirty] = useState(false);
   const [pendingTab, setPendingTab] = useState<PageTab | null>(null);
-  const [wordTest, setWordTest] = useState<WordTestTarget | null>(null);
-  // 敏感词规则的接口只有新后端才有：后端没声明时不显示这一页，也不会去请求它。
+  // 敏感词规则和密钥脱敏的接口只有新后端才有：后端没声明时不显示对应的标签，也不会去请求它。
   const wordsAvailable = capabilities.wordGuard;
-  const activeTab: PageTab = wordsAvailable ? tab : "profiles";
+  const activeTab: PageTab =
+    (tab === "words" && !wordsAvailable) || (tab === "masking" && !capabilities.secretMasking)
+      ? "profiles"
+      : tab;
 
   // 敏感词页是按需挂载的：切到别的标签会卸载它，连同还没保存的草稿一起丢掉。
   // 有改动时先确认，和页内切换层级用同一套提示。
@@ -105,6 +114,8 @@ export function ContentModerationPage() {
       });
     } finally {
       setLoading(false);
+      // 读失败也算读过：按旧后端的能力显示，至少审核配置那一页能用。
+      setLoaded(true);
     }
   }, [notify, t]);
 
@@ -365,86 +376,103 @@ export function ContentModerationPage() {
     [canTest, canWrite, modeUpdatingId, t, updateProfileMode],
   );
 
+  const profilesCard = (
+    /* 外壳内容区就是页面面板：这里是页面分区（flat），不再包一张大卡。 */
+    <Card
+      flat
+      className="md:flex md:min-h-0 md:flex-1 md:flex-col"
+      bodyClassName="md:flex md:min-h-0 md:flex-1 md:flex-col"
+      title={t("content_moderation.title")}
+      description={t("content_moderation.description")}
+      actions={
+        <div className="flex gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => void loadProfiles()}
+            disabled={loading}
+          >
+            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+            {t("common.refresh")}
+          </Button>
+          {canWrite ? (
+            <Button size="sm" variant="primary" onClick={openCreate}>
+              <Plus size={14} />
+              {t("content_moderation.create_profile")}
+            </Button>
+          ) : null}
+        </div>
+      }
+      loading={loading}
+    >
+      {profiles.length === 0 ? (
+        <EmptyState
+          title={t("content_moderation.empty_title")}
+          description={t("content_moderation.empty_description")}
+          icon={<ShieldCheck size={32} />}
+        />
+      ) : (
+        <DataTable<ContentModerationProfileView>
+          tableId="content-moderation-profiles"
+          rows={profiles}
+          columns={columns}
+          rowKey={(profile) => profile.id}
+          loading={loading}
+          virtualize={false}
+          minWidth="min-w-[1280px]"
+          height="h-[calc(100dvh-260px)] md:h-auto md:flex-1"
+          minHeight="min-h-[320px] md:min-h-0"
+          caption={t("content_moderation.table_caption")}
+          emptyText={t("content_moderation.empty_title")}
+          showAllLoadedMessage={false}
+        />
+      )}
+    </Card>
+  );
+
   return (
     <div data-page-fill="always" className="flex flex-1 flex-col">
       {wordsAvailable || capabilities.secretMasking ? (
-        <div className="mb-3 flex flex-wrap items-start gap-x-6 gap-y-3">
-          {wordsAvailable ? (
-            <Tabs value={activeTab} size="sm" onValueChange={(next) => requestTab(next as PageTab)}>
-              <TabsList>
-                <TabsTrigger value="profiles">{t("content_moderation.tab_profiles")}</TabsTrigger>
+        <div className="mb-4">
+          <Tabs value={activeTab} size="sm" onValueChange={(next) => requestTab(next as PageTab)}>
+            <TabsList>
+              {wordsAvailable ? (
                 <TabsTrigger value="words">{t("content_moderation.tab_words")}</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          ) : null}
-          {/* 出站密钥脱敏是租户级的一个开关，和两个标签页都无关，放在标签旁边。 */}
-          {capabilities.secretMasking ? (
-            <div className="w-full sm:ml-auto sm:w-auto sm:max-w-md">
-              <SecretMaskingSwitch canWrite={canWrite} />
-            </div>
-          ) : null}
+              ) : null}
+              <TabsTrigger value="profiles">{t("content_moderation.tab_profiles")}</TabsTrigger>
+              {capabilities.secretMasking ? (
+                <TabsTrigger value="masking">{t("content_moderation.tab_masking")}</TabsTrigger>
+              ) : null}
+            </TabsList>
+          </Tabs>
         </div>
       ) : null}
 
-      {activeTab === "words" ? (
-        <WordRulesTab
+      {!loaded ? (
+        <SkeletonLines rows={6} />
+      ) : activeTab === "words" ? (
+        <WordPoliciesTab
           canWrite={canWrite}
           canTest={canTest}
-          onTest={setWordTest}
+          portalSupported={capabilities.wordPortal}
           onDirtyChange={setWordsDirty}
         />
-      ) : (
-        /* 外壳内容区就是页面面板：这里是页面分区（flat），不再包一张大卡。 */
-        <Card
-          flat
-          className="md:flex md:min-h-0 md:flex-1 md:flex-col"
-          bodyClassName="md:flex md:min-h-0 md:flex-1 md:flex-col"
-          title={t("content_moderation.title")}
-          description={t("content_moderation.description")}
-          actions={
-            <div className="flex gap-2">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => void loadProfiles()}
-                disabled={loading}
-              >
-                <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-                {t("common.refresh")}
-              </Button>
-              {canWrite ? (
-                <Button size="sm" variant="primary" onClick={openCreate}>
-                  <Plus size={14} />
-                  {t("content_moderation.create_profile")}
-                </Button>
-              ) : null}
+      ) : activeTab === "masking" ? (
+        <section className="max-w-3xl space-y-3">
+          <h3 className="text-base font-semibold text-ink">
+            {t("content_moderation.secret_masking.label")}
+          </h3>
+          <p className="text-xs leading-5 text-ink-3">
+            {t("content_moderation.secret_masking.explainer")}
+          </p>
+          <SettingGroup>
+            <div className="px-4 py-3">
+              <SecretMaskingSwitch canWrite={canWrite} />
             </div>
-          }
-          loading={loading}
-        >
-          {profiles.length === 0 ? (
-            <EmptyState
-              title={t("content_moderation.empty_title")}
-              description={t("content_moderation.empty_description")}
-              icon={<ShieldCheck size={32} />}
-            />
-          ) : (
-            <DataTable<ContentModerationProfileView>
-              tableId="content-moderation-profiles"
-              rows={profiles}
-              columns={columns}
-              rowKey={(profile) => profile.id}
-              loading={loading}
-              virtualize={false}
-              minWidth="min-w-[1280px]"
-              height="h-[calc(100dvh-260px)] md:h-auto md:flex-1"
-              minHeight="min-h-[320px] md:min-h-0"
-              caption={t("content_moderation.table_caption")}
-              emptyText={t("content_moderation.empty_title")}
-              showAllLoadedMessage={false}
-            />
-          )}
-        </Card>
+          </SettingGroup>
+        </section>
+      ) : (
+        profilesCard
       )}
 
       <ProfileEditorModal
@@ -468,14 +496,7 @@ export function ContentModerationPage() {
         onBindingsChanged={() => void loadProfiles()}
       />
 
-      <ModerationTestModal
-        profile={testProfile}
-        words={wordTest}
-        onClose={() => {
-          setTestProfile(null);
-          setWordTest(null);
-        }}
-      />
+      <ModerationTestModal profile={testProfile} onClose={() => setTestProfile(null)} />
 
       <ModerationMetricsModal open={metricsOpen} onClose={() => setMetricsOpen(false)} />
 

@@ -13,13 +13,15 @@ import {
   inputFromDraft,
   isOnlySeparators,
   parseRuleFile,
+  planQuickAdd,
   reviewImport,
   ruleIdentity,
   ruleInputFrom,
+  splitWordInput,
   unboundedRegexKeys,
   type DraftRule,
   type WordRuleFields,
-} from "../components/word-rules/wordPolicyModel";
+} from "../wordPolicyModel";
 
 const EFFECTIVE = {
   action: "block" as const,
@@ -514,5 +516,44 @@ describe("reviewImport", () => {
     });
     expect(review.regexAfter).toBe(3);
     expect(review.fits).toBe(false);
+  });
+});
+
+describe("quick add", () => {
+  test("splits on new lines, commas, enumeration commas and semicolons, but not on spaces", () => {
+    expect(splitWordInput(" 赌博，诈骗、毒品;bad word\r\n\n;；  next ")).toEqual([
+      "赌博",
+      "诈骗",
+      "毒品",
+      "bad word",
+      "next",
+    ]);
+    expect(splitWordInput(" ,\n ")).toEqual([]);
+  });
+
+  test("adds the new words in the order typed, and says what it skipped and why", () => {
+    const existing = [createDraftRule({ kind: "keyword", pattern: "Alpha" })];
+    const plan = planQuickAdd("alpha, beta, BETA, toolongword, gamma", existing, {
+      max_rules: 3,
+      max_keyword_chars: 8,
+    });
+    expect(plan.fresh.map((rule) => rule.pattern)).toEqual(["beta", "gamma"]);
+    expect(plan.fresh.every((rule) => rule.kind === "keyword" && rule.enabled && rule.id === "")).toBe(true);
+    // Case does not make another rule, in the list or in the same input.
+    expect(plan.duplicates).toEqual(["alpha", "BETA"]);
+    expect(plan.tooLong).toEqual(["toolongword"]);
+    expect(plan.overLimit).toEqual([]);
+  });
+
+  test("stops at the rule limit and names what did not fit", () => {
+    const existing = [createDraftRule({ kind: "keyword", pattern: "one" })];
+    const plan = planQuickAdd("two\nthree\nfour", existing, { max_rules: 2, max_keyword_chars: 128 });
+    expect(plan.fresh.map((rule) => rule.pattern)).toEqual(["two"]);
+    expect(plan.overLimit).toEqual(["three", "four"]);
+  });
+
+  test("a keyword that ignores separators is another rule than the plain word", () => {
+    const existing = [createDraftRule({ kind: "keyword", pattern: "敏感词", ignoreSeparators: true })];
+    expect(planQuickAdd("敏感词", existing, { max_rules: 10, max_keyword_chars: 128 }).fresh).toHaveLength(1);
   });
 });

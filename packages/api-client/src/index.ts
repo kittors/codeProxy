@@ -191,6 +191,8 @@ export {
   wordPolicyApi,
 } from "./endpoints/content-moderation-words";
 export type * from "./endpoints/content-moderation-words";
+export { portalWordPolicyApi } from "./endpoints/portal-word-policy";
+export type * from "./endpoints/portal-word-policy";
 export {
   ccSwitchImportConfigsApi,
   NO_CC_SWITCH_IMPORT_CAPABILITIES,
