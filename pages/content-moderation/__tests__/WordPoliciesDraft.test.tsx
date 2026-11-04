@@ -9,7 +9,7 @@ import { WITH_WORD_GUARD, wordOverview, wordRule, wordView } from "./wordFixture
 
 /**
  * What keeps an editor's work from going missing or being changed behind their back: the draft is
- * confirmed away before a refresh or a tab switch drops it, and a setting nobody touched is saved
+ * confirmed away before a tab switch drops it, and a setting nobody touched is saved
  * as "inherit" instead of as the default of the day.
  */
 
@@ -45,10 +45,18 @@ function renderPage() {
   );
 }
 
-async function openWordRules(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(await screen.findByRole("tab", { name: "Sensitive words" }));
+// 敏感词是页面默认打开的标签。
+async function openWordRules(_user: ReturnType<typeof userEvent.setup>) {
   return screen.findByRole("table", { name: "Sensitive-word rule table" });
 }
+
+const saveButton = () =>
+  within(screen.getByRole("region", { name: "Unsaved changes" })).getByRole("button", { name: "Save changes" });
+
+/** 不常改的设置收在「高级选项」里，用之前先展开。 */
+const openAdvanced = async (user: ReturnType<typeof userEvent.setup>) => {
+  await user.click(screen.getByRole("button", { name: /Advanced options/ }));
+};
 
 describe("sensitive-word rules: the draft is not lost or rewritten silently", () => {
   beforeEach(async () => {
@@ -92,21 +100,17 @@ describe("sensitive-word rules: the draft is not lost or rewritten silently", ()
       await openWordRules(user);
 
       // The policy has chosen nothing, so the screen shows what the defaults amount to.
-      expect(screen.getByRole("combobox", { name: "When a rule matches" })).toHaveTextContent(
-        "Block the request",
-      );
+      expect(screen.getByRole("radio", { name: /Block the request/ })).toBeChecked();
+      await openAdvanced(user);
       expect(screen.getByRole("combobox", { name: "Text to check" })).toHaveTextContent(
         "All user messages",
       );
       expect(screen.getByRole("switch", { name: "Filter model replies" })).not.toBeChecked();
 
       // An unrelated change: one more rule.
-      await user.click(screen.getByRole("button", { name: "Add rule" }));
-      const dialog = await screen.findByRole("dialog", { name: "Add rule" });
-      await user.type(within(dialog).getByRole("textbox", { name: /^Rule/ }), "gamma");
-      await user.click(within(dialog).getByRole("button", { name: "Add rule" }));
+      await user.type(screen.getByRole("textbox", { name: "Add sensitive words" }), "gamma{Enter}");
       await screen.findByText("gamma");
-      await user.click(screen.getByRole("button", { name: "Save changes" }));
+      await user.click(saveButton());
 
       await waitFor(() => expect(mocks.words.put).toHaveBeenCalledTimes(1));
       // Writing the defaults in would freeze today's defaults into the policy.
@@ -136,16 +140,17 @@ describe("sensitive-word rules: the draft is not lost or rewritten silently", ()
       renderPage();
       await openWordRules(user);
 
+      await openAdvanced(user);
       expect(screen.getByRole("switch", { name: "Filter model replies" })).toBeChecked();
 
       // An unrelated change leaves it inherited; turning it off is a choice.
       await user.click(screen.getByRole("switch", { name: "Toggle rule alpha" }));
-      await user.click(screen.getByRole("button", { name: "Save changes" }));
+      await user.click(saveButton());
       await waitFor(() => expect(mocks.words.put).toHaveBeenCalledTimes(1));
       expect(mocks.words.put.mock.calls[0][1].reply_filter).toBeNull();
 
-      await user.click(screen.getByRole("switch", { name: "Filter model replies" }));
-      await user.click(screen.getByRole("button", { name: "Save changes" }));
+      await user.click(await screen.findByRole("switch", { name: "Filter model replies" }));
+      await user.click(saveButton());
       await waitFor(() => expect(mocks.words.put).toHaveBeenCalledTimes(2));
       expect(mocks.words.put.mock.calls[1][1].reply_filter).toBe(false);
     });
@@ -155,10 +160,10 @@ describe("sensitive-word rules: the draft is not lost or rewritten silently", ()
       renderPage();
       await openWordRules(user);
 
-      await user.click(screen.getByRole("combobox", { name: "When a rule matches" }));
-      await user.click(await screen.findByRole("option", { name: "Log only" }));
+      await user.click(screen.getByRole("radio", { name: /Log only/ }));
+      await openAdvanced(user);
       await user.click(screen.getByRole("switch", { name: "Filter model replies" }));
-      await user.click(screen.getByRole("button", { name: "Save changes" }));
+      await user.click(saveButton());
 
       await waitFor(() => expect(mocks.words.put).toHaveBeenCalledTimes(1));
       expect(mocks.words.put.mock.calls[0][1]).toMatchObject({
@@ -167,56 +172,6 @@ describe("sensitive-word rules: the draft is not lost or rewritten silently", ()
         reply_filter: true,
         fold_traditional_chinese: null,
       });
-    });
-  });
-
-  describe("refreshing", () => {
-    test("with unsaved changes asks first, and cancelling keeps the draft", async () => {
-      const user = userEvent.setup();
-      renderPage();
-      await openWordRules(user);
-      await user.click(screen.getByRole("switch", { name: "Toggle rule alpha" }));
-      const loads = mocks.words.get.mock.calls.length;
-      const overviews = mocks.words.overview.mock.calls.length;
-
-      await user.click(screen.getByRole("button", { name: "Refresh" }));
-      const dialog = await screen.findByRole("dialog", { name: "Discard unsaved changes?" });
-      expect(within(dialog).getByText(/Reloading now loses them/)).toBeInTheDocument();
-      await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
-
-      // Nothing was reloaded and the edit is still there.
-      expect(mocks.words.get.mock.calls.length).toBe(loads);
-      expect(mocks.words.overview.mock.calls.length).toBe(overviews);
-      expect(screen.getByRole("switch", { name: "Toggle rule alpha" })).not.toBeChecked();
-      expect(screen.getByText(/Unsaved changes/)).toBeInTheDocument();
-    });
-
-    test("with unsaved changes reloads once the loss is confirmed", async () => {
-      const user = userEvent.setup();
-      renderPage();
-      await openWordRules(user);
-      await user.click(screen.getByRole("switch", { name: "Toggle rule alpha" }));
-      const loads = mocks.words.get.mock.calls.length;
-
-      await user.click(screen.getByRole("button", { name: "Refresh" }));
-      const dialog = await screen.findByRole("dialog", { name: "Discard unsaved changes?" });
-      await user.click(within(dialog).getByRole("button", { name: "Discard and reload" }));
-
-      await waitFor(() => expect(mocks.words.get.mock.calls.length).toBe(loads + 1));
-      expect(await screen.findByRole("switch", { name: "Toggle rule alpha" })).toBeChecked();
-      expect(screen.queryByText(/Unsaved changes/)).not.toBeInTheDocument();
-    });
-
-    test("without changes reloads straight away", async () => {
-      const user = userEvent.setup();
-      renderPage();
-      await openWordRules(user);
-      const loads = mocks.words.get.mock.calls.length;
-
-      await user.click(screen.getByRole("button", { name: "Refresh" }));
-
-      await waitFor(() => expect(mocks.words.get.mock.calls.length).toBe(loads + 1));
-      expect(screen.queryByRole("dialog", { name: "Discard unsaved changes?" })).not.toBeInTheDocument();
     });
   });
 
@@ -270,9 +225,10 @@ describe("sensitive-word rules: the draft is not lost or rewritten silently", ()
       renderPage();
       await openWordRules(user);
       await user.click(screen.getByRole("switch", { name: "Toggle rule alpha" }));
-      await user.click(screen.getByRole("button", { name: "Save changes" }));
-      await waitFor(() => expect(screen.getByText("Saved · version 4")).toBeInTheDocument());
-      expect(screen.queryByText(/Unsaved changes/)).not.toBeInTheDocument();
+      await user.click(saveButton());
+      await waitFor(() =>
+        expect(screen.queryByRole("region", { name: "Unsaved changes" })).not.toBeInTheDocument(),
+      );
 
       await user.click(screen.getByRole("tab", { name: "Moderation profiles" }));
 
@@ -296,7 +252,9 @@ describe("sensitive-word rules: the draft is not lost or rewritten silently", ()
       await user.click(screen.getByRole("switch", { name: "Toggle rule alpha" }));
       expect(leave()).toBe(true);
 
-      await user.click(screen.getByRole("button", { name: "Discard changes" }));
+      await user.click(
+        within(screen.getByRole("region", { name: "Unsaved changes" })).getByRole("button", { name: "Discard changes" }),
+      );
       expect(leave()).toBe(false);
     });
 

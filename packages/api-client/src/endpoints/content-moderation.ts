@@ -132,6 +132,12 @@ export interface ContentModerationProfileCapabilities {
    * exists. An older backend does not list it, and has no such route to call.
    */
   secretMasking: boolean;
+  /**
+   * word_portal: portal accounts may keep sensitive words of their own. The tenant decides who may
+   * (wordPolicyApi.portal / setPortalDefault / setPortalUser) and reads them as end_user policies.
+   * An older backend does not list it, and has no such routes to call.
+   */
+  wordPortal: boolean;
 }
 
 export const NO_CONTENT_MODERATION_PROFILE_CAPABILITIES: ContentModerationProfileCapabilities = {
@@ -139,6 +145,7 @@ export const NO_CONTENT_MODERATION_PROFILE_CAPABILITIES: ContentModerationProfil
   apiIncludesToolOutput: false,
   wordGuard: false,
   secretMasking: false,
+  wordPortal: false,
 };
 
 /** Reads the declaration from a profile list response; anything not declared is unsupported. */
@@ -152,6 +159,7 @@ export const readContentModerationProfileCapabilities = (
     apiIncludesToolOutput: capabilities.api_includes_tool_output === true,
     wordGuard: capabilities.word_guard === true,
     secretMasking: capabilities.secret_masking === true,
+    wordPortal: capabilities.word_portal === true,
   };
 };
 

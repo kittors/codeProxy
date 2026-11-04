@@ -37,6 +37,7 @@ export const WITH_WORD_GUARD: ContentModerationProfileCapabilities = {
   apiIncludesToolOutput: false,
   wordGuard: true,
   secretMasking: false,
+  wordPortal: false,
 };
 
 export const wordRule = (id: string, pattern: string, patch: Partial<WordRule> = {}): WordRule => ({

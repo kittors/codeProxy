@@ -34,6 +34,7 @@ const NOTHING_DECLARED: ContentModerationProfileCapabilities = {
   apiIncludesToolOutput: false,
   wordGuard: false,
   secretMasking: false,
+  wordPortal: false,
 };
 
 const listResponse = (
@@ -275,6 +276,7 @@ describe("ContentModerationPage", () => {
           apiIncludesToolOutput: true,
           wordGuard: false,
           secretMasking: false,
+          wordPortal: false,
         },
       ),
     );
@@ -294,6 +296,7 @@ describe("ContentModerationPage", () => {
     mocks.listProfiles.mockResolvedValue(listResponse([profile]));
     const { unmount } = renderPage();
     await screen.findByText("Strict prompts");
+    expect(screen.queryByRole("tab", { name: "Secret masking" })).toBeNull();
     expect(screen.queryByRole("switch", { name: "Outbound secret masking" })).toBeNull();
     expect(mocks.getSecretMasking).not.toHaveBeenCalled();
     unmount();
@@ -308,6 +311,9 @@ describe("ContentModerationPage", () => {
       updated_at: "2026-11-01T05:00:00Z",
     });
     renderPage();
+    // 密钥脱敏和两种规则互不相干，有自己的标签。
+    await userEvent.click(await screen.findByRole("tab", { name: "Secret masking" }));
+    expect(mocks.getSecretMasking).toHaveBeenCalledTimes(1);
     const toggle = await screen.findByRole("switch", { name: "Outbound secret masking" });
     expect(toggle).toHaveAttribute("aria-checked", "false");
     await userEvent.click(toggle);

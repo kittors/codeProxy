@@ -1,12 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FileUp } from "lucide-react";
-import {
-  wordPolicyApi,
-  type WordPolicyLimits,
-  type WordPolicyScope,
-  type WordRuleKind,
-} from "@code-proxy/api-client";
+import type { WordPolicyLimits, WordRuleKind } from "@code-proxy/api-client";
 import {
   Button,
   Callout,
@@ -22,6 +17,7 @@ import {
   reviewImport,
   type DraftRule,
   type ImportReview,
+  type WordRuleValidator,
 } from "./wordPolicyModel";
 
 /** 词表文本文件的上限：两万行、每行几十字也远小于它；再大多半选错了文件。 */
@@ -31,8 +27,8 @@ const PROBLEM_PREVIEW_LIMIT = 50;
 
 export interface WordImportModalProps {
   open: boolean;
-  scope: WordPolicyScope;
-  keyId: string;
+  /** 问服务端这些条目能不能存进当前这份策略。 */
+  validate: WordRuleValidator;
   limits: WordPolicyLimits;
   /** 草稿里现有的规则：用来判断哪些导入项重复，以及加上之后放不放得下。 */
   rules: readonly DraftRule[];
@@ -73,8 +69,7 @@ function Stat({ label, value, tone }: { label: string; value: number; tone?: "da
  */
 export function WordImportModal({
   open,
-  scope,
-  keyId,
+  validate,
   limits,
   rules,
   onClose,
@@ -140,15 +135,13 @@ export function WordImportModal({
     const loose = kind === "keyword" && ignoreSeparators;
     setChecking(true);
     try {
-      const result = await wordPolicyApi.validate({
-        scope,
-        ...(scope === "key" ? { key_id: keyId } : {}),
-        rules: parsed.lines.map((line) => ({
+      const result = await validate(
+        parsed.lines.map((line) => ({
           kind,
           pattern: line.text,
           ...(loose ? { ignore_separators: true } : {}),
         })),
-      });
+      );
       setReview(
         reviewImport({
           lines: parsed.lines,

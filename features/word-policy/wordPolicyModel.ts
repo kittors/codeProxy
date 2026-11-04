@@ -173,6 +173,11 @@ export function unboundedRegexKeys(view: WordPolicyView, draft: WordPolicyDraft)
   return keys;
 }
 
+/** 问服务端一批规则能不能存进当前这份策略（管理端和门户各走自己的接口）。 */
+export type WordRuleValidator = (
+  rules: Array<Pick<WordRuleInput, "kind" | "pattern" | "ignore_separators">>,
+) => Promise<WordValidateResult>;
+
 export interface RuleFilter {
   query: string;
   kind: WordRuleKind | "all";
@@ -361,4 +366,56 @@ export function reviewImport(input: {
     regexAfter,
     fits: rulesAfter <= limits.max_rules && regexAfter <= limits.max_regex,
   };
+}
+
+// 快速添加时用来拆词的分隔符：换行、中英文逗号、顿号、中英文分号、制表符。空格不拆——英文短语里的空格是词的一部分。
+const QUICK_ADD_SEPARATORS = /[\r\n,，、;；\t]+/u;
+
+/** 把输入框里打的或粘贴进来的一段文字拆成若干关键词（去掉两端空白和空项，保留原顺序）。 */
+export const splitWordInput = (text: string): string[] =>
+  text
+    .split(QUICK_ADD_SEPARATORS)
+    .map((part) => part.trim())
+    .filter((part) => part !== "");
+
+export interface QuickAddPlan {
+  /** 会加进草稿的新关键词，按输入顺序。 */
+  fresh: DraftRule[];
+  /** 列表里已经有的，或这次输入里重复写了的。 */
+  duplicates: string[];
+  /** 超过关键词长度上限的。 */
+  tooLong: string[];
+  /** 加上会超过规则总数上限、因此没加的。 */
+  overLimit: string[];
+}
+
+/**
+ * 快速添加：把一段输入拆成关键词，去掉列表里已有的和本次重复的、过长的，
+ * 并在规则总数上限处截断。只在本地判断，服务端保存时仍会整份校验（例如繁简、全角规范化后的重复）。
+ */
+export function planQuickAdd(
+  text: string,
+  rules: readonly DraftRule[],
+  limits: Pick<WordPolicyLimits, "max_rules" | "max_keyword_chars">,
+): QuickAddPlan {
+  const present = new Set(rules.map(ruleIdentityOf));
+  const plan: QuickAddPlan = { fresh: [], duplicates: [], tooLong: [], overLimit: [] };
+  for (const word of splitWordInput(text)) {
+    if ([...word].length > limits.max_keyword_chars) {
+      plan.tooLong.push(word);
+      continue;
+    }
+    const identity = ruleIdentity("keyword", word);
+    if (present.has(identity)) {
+      plan.duplicates.push(word);
+      continue;
+    }
+    if (rules.length + plan.fresh.length >= limits.max_rules) {
+      plan.overLimit.push(word);
+      continue;
+    }
+    present.add(identity);
+    plan.fresh.push(createDraftRule({ kind: "keyword", pattern: word }));
+  }
+  return plan;
 }

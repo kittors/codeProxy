@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FileUp, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { Pencil, Search, Trash2 } from "lucide-react";
 import type { WordPolicyLimits, WordRuleKind } from "@code-proxy/api-client";
 import {
-  Button,
   COLUMN_WIDTH,
   DataTable,
   PaginationBar,
@@ -18,7 +17,7 @@ import { filterRules, type DraftRule } from "./wordPolicyModel";
 
 const PAGE_SIZE = 20;
 
-export interface WordRuleListProps {
+export interface WordRuleTableProps {
   rules: readonly DraftRule[];
   limits: WordPolicyLimits;
   readOnly: boolean;
@@ -26,8 +25,6 @@ export interface WordRuleListProps {
   problems: ReadonlyMap<string, string>;
   /** 匹配长度不限、流式回复里可能漏掉跨事件匹配的正则（草稿里的 key）；回复过滤没开时传空集合。 */
   unbounded: ReadonlySet<string>;
-  onAdd: () => void;
-  onImport: () => void;
   onEdit: (rule: DraftRule) => void;
   onToggle: (rule: DraftRule, enabled: boolean) => void;
   onDelete: (rule: DraftRule) => void;
@@ -76,20 +73,18 @@ function RuleTag({
 
 /**
  * 规则列表：搜索、按类型筛选、分页（一份策略最多上万条，不能一次全画出来），
- * 行内启停、编辑、删除。所有改动只落在草稿里，保存由上层统一做。
+ * 行内启停、编辑、删除。添加和导入在列表上方的快速添加栏里。所有改动只落在草稿里，保存由上层统一做。
  */
-export function WordRuleList({
+export function WordRuleTable({
   rules,
   limits,
   readOnly,
   problems,
   unbounded,
-  onAdd,
-  onImport,
   onEdit,
   onToggle,
   onDelete,
-}: WordRuleListProps) {
+}: WordRuleTableProps) {
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState<WordRuleKind | "all">("all");
@@ -111,21 +106,26 @@ export function WordRuleList({
   const columns = useMemo<DataTableColumn<DraftRule>[]>(
     () => [
       {
-        key: "kind",
-        label: t("content_moderation.words.col_kind"),
-        width: COLUMN_WIDTH.badge,
-        render: (rule) => <KindBadge kind={rule.kind} />,
-      },
-      {
         key: "pattern",
         label: t("content_moderation.words.col_pattern"),
         width: COLUMN_WIDTH.composite,
         render: (rule) => {
           const problem = problems.get(rule.key);
+          // 绝大多数规则是关键词：只给正则挂类型标签，免得每一行都重复「关键词」三个字。
           return (
             <div className="min-w-0">
-              <p className="truncate font-mono text-xs text-ink" title={rule.pattern}>
-                {rule.pattern}
+              <p className="flex min-w-0 items-center gap-2">
+                {rule.kind === "regex" ? <KindBadge kind={rule.kind} /> : null}
+                <span
+                  className={[
+                    "truncate text-ink",
+                    rule.kind === "regex" ? "font-mono text-xs" : "text-sm",
+                    rule.enabled ? "" : "text-ink-3 line-through",
+                  ].join(" ")}
+                  title={rule.pattern}
+                >
+                  {rule.pattern}
+                </span>
               </p>
               {rule.ignore_separators || unbounded.has(rule.key) ? (
                 <div className="mt-1 flex flex-wrap gap-1.5">
@@ -234,11 +234,7 @@ export function WordRuleList({
             }}
           />
         </div>
-        {/* 窄屏上计数单独占一行排在最后；否则它在筛选框和按钮之间被挤成一字一行。 */}
-        <p
-          className="order-last min-w-0 basis-full text-xs text-ink-3 sm:order-none sm:basis-0 sm:flex-1"
-          aria-live="polite"
-        >
+        <p className="min-w-0 text-xs text-ink-3 sm:ml-auto" aria-live="polite">
           {t("content_moderation.words.rule_counts", {
             count: rules.length,
             max: limits.max_rules,
@@ -246,27 +242,18 @@ export function WordRuleList({
             maxRegex: limits.max_regex,
           })}
         </p>
-        {readOnly ? null : (
-          <div className="ml-auto flex gap-2">
-            <Button variant="secondary" size="sm" onClick={onImport}>
-              <FileUp size={14} />
-              {t("content_moderation.words.import")}
-            </Button>
-            <Button variant="primary" size="sm" onClick={onAdd}>
-              <Plus size={14} />
-              {t("content_moderation.words.add_rule")}
-            </Button>
-          </div>
-        )}
       </div>
 
       <DataTable<DraftRule>
-        tableId="content-moderation-word-rules"
+        tableId="word-policy-rules"
         rows={pageRules}
         columns={columns}
         rowKey={(rule) => rule.key}
         virtualize={false}
         naturalFlow
+        // 一页最多 20 行，按内容撑开就好；默认的「占满视口」会在规则少的时候留下一大片空白。
+        height="h-auto"
+        minHeight="min-h-0"
         columnResizable={false}
         columnReorderable={false}
         minWidth="min-w-[760px]"

@@ -103,6 +103,32 @@ describe("wordPolicyApi", () => {
   });
 });
 
+describe("wordPolicyApi for portal accounts", () => {
+  beforeEach(() => {
+    for (const mock of Object.values(mocks)) mock.mockReset();
+  });
+
+  test("reads, saves and removes one account's words under end-users", async () => {
+    await wordPolicyApi.get("end_user", "user/1");
+    await wordPolicyApi.put("end_user", policy, "user/1");
+    await wordPolicyApi.remove("end_user", "user/1");
+    expect(mocks.get).toHaveBeenCalledWith("/content-moderation/word-policies/end-users/user%2F1");
+    expect(mocks.put).toHaveBeenCalledWith("/content-moderation/word-policies/end-users/user%2F1", policy);
+    expect(mocks.delete).toHaveBeenCalledWith("/content-moderation/word-policies/end-users/user%2F1");
+  });
+
+  test("sets the tenant's default and one account's permission, null following the default", async () => {
+    await wordPolicyApi.portal();
+    await wordPolicyApi.setPortalDefault(true);
+    await wordPolicyApi.setPortalUser("u 1", null);
+    await wordPolicyApi.setPortalUser("u2", false);
+    expect(mocks.get).toHaveBeenCalledWith("/content-moderation/word-policies/portal");
+    expect(mocks.put).toHaveBeenNthCalledWith(1, "/content-moderation/word-policies/portal", { default_allowed: true });
+    expect(mocks.put).toHaveBeenNthCalledWith(2, "/content-moderation/word-policies/portal/users/u%201", { allowed: null });
+    expect(mocks.put).toHaveBeenNthCalledWith(3, "/content-moderation/word-policies/portal/users/u2", { allowed: false });
+  });
+});
+
 describe("readWordRuleProblems", () => {
   test("reads the rules a refused save names, with their positions", () => {
     const error = apiError(422, {
