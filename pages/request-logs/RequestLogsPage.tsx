@@ -618,15 +618,15 @@ export function RequestLogsPage() {
         />
 
         {/*
-          表格区域 — 吃掉卡片里剩下的高度，内部滚动。
-          用 flex-1 而不是 h-[calc(100dvh-300px)]：那个 300 是标题栏 + 筛选区 + 分页条的
-          手工累加，筛选区换行、字号或密度一变就对不上，表格要么矮一截、下面空一块滚不动，
-          要么高出去把分页顶掉。
+          表格区域 — 按行数收高，最多占到标题、筛选、分页之外剩下的高度，再多就内部滚动。
+          不写 flex-1：行少时表格不被拉成一整屏的空框，分页条紧跟在最后一行下面。
+          也不用 h-[calc(100dvh-300px)]：那个 300 是标题栏 + 筛选区 + 分页条的手工累加，
+          筛选区换行、字号或密度一变就对不上，表格要么矮一截、要么高出去把分页顶掉。
           min-h-0 覆盖 flex item 默认的 min-height:auto（否则表格会被内容撑开，整页变长而不是
-          内部滚动）。这里不能写 min-h-[360px] 之类的保底：卡片本身是 min-h-0、高度被窗口钉死，
-          窗口一矮，保底高度只会把表格和分页条挤出卡片边框之外，而不是让页面滚动。
+          内部滚动）。这里不能写 min-h-[360px] 之类的保底：页面高度被窗口钉死，
+          窗口一矮，保底高度只会把表格和分页条挤出页面之外，而不是让页面滚动。
         */}
-        <div className="relative min-h-0 flex-1 overflow-hidden">
+        <div className="relative flex min-h-0 flex-col overflow-hidden">
           <DataTable
             tableId="request-logs"
             rows={rows}
@@ -635,8 +635,6 @@ export function RequestLogsPage() {
             loading={loading}
             virtualize={false}
             minWidth="min-w-[1240px]"
-            height="h-full"
-            minHeight="min-h-full"
             caption={t("request_logs.table_caption")}
             emptyText={t("request_logs.no_data")}
             emptyDescription={t("request_logs.no_data_desc")}

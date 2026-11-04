@@ -34,6 +34,7 @@ import { PortalKeyPeriodQuotaResetModal } from "./components/PortalKeyPeriodQuot
 import { PortalKeyEditor, type PortalKeyEditorState } from "./components/PortalKeyEditor";
 import { LookupEmptyState } from "./components/LookupEmptyState";
 import { LookupResultsToolbar, type ApiKeyLookupTab } from "./components/LookupResultsToolbar";
+import { isPinnedLookupTab, lookupMainClassName, lookupShellClassName } from "./lookupLayout";
 import { ManageKeysTabContent } from "./components/ManageKeysTabContent";
 import { ModelsTabContent } from "./components/ModelsTabContent";
 import { OperationalKeyRequired } from "./components/OperationalKeyRequired";
@@ -1115,15 +1116,11 @@ export function ApiKeyLookupPage() {
   // ================================================================
 
   const showLanding = !queriedKey && !portalUser && !portalSessionPending && !error;
+  const pinnedTab = isPinnedLookupTab(activeTab);
 
   return (
     <PageBackground variant={showLanding ? "landing" : "app"}>
-      <div
-        className={[
-          "relative min-h-dvh pt-14",
-          showLanding ? "" : "bg-canvas",
-        ].join(" ")}
-      >
+      <div className={lookupShellClassName(showLanding, pinnedTab)}>
         <LookupHeader
           t={t}
           showLanding={showLanding}
@@ -1143,7 +1140,7 @@ export function ApiKeyLookupPage() {
         />
 
         <main
-          className={showLanding ? "w-full" : "mx-auto max-w-screen-xl space-y-5 px-4 py-6 sm:px-6"}
+          className={lookupMainClassName(showLanding, pinnedTab)}
         >
           {/* Error */}
           {error && (
@@ -1234,7 +1231,7 @@ export function ApiKeyLookupPage() {
 
               {/* 一直挂着、只在当前标签时显示：切到别的标签再回来，未保存的修改还在。 */}
               {portalUser && portalWordsAllowed ? (
-                <div hidden={activeTab !== "words"}>
+                <div hidden={activeTab !== "words"} className="flex flex-col md:min-h-0 md:flex-1">
                   <PortalWordsTab />
                 </div>
               ) : null}

@@ -10,8 +10,8 @@ import {
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { ArrowDown, ArrowUp, ArrowUpDown, Check, GripVertical } from "lucide-react";
-import { EmptyState } from "../feedback/EmptyState";
 import { DropdownMenu } from "../primitives/DropdownMenu";
+import { TableEmptyRow, TableLoadingRows } from "./TableBodyPlaceholder";
 import { TableCellOverflowTooltip } from "./TableCellOverflowTooltip";
 
 export type {
@@ -134,8 +134,9 @@ export function DataTable<T>({
   scrollThreshold = DEFAULT_SCROLL_THRESHOLD,
   bottomDebounceMs = DEFAULT_BOTTOM_DEBOUNCE_MS,
   minWidth = "min-w-[1320px]",
-  height = "h-[calc(100dvh-260px)]",
-  minHeight = "min-h-[360px]",
+  height = "h-auto",
+  minHeight = "min-h-0",
+  maxHeight = "max-h-full",
   caption = "data table",
   emptyText = "",
   emptyDescription,
@@ -854,7 +855,8 @@ export function DataTable<T>({
       }
 
       if (wantsY || wantsX) {
-        if (allowWheelPropagationAtBoundary && wantsY) {
+        // A table with nothing to scroll vertically never keeps the wheel from the page.
+        if ((allowWheelPropagationAtBoundary || !canScrollY) && wantsY) {
           const parentScrollTarget = findVerticalScrollTarget(el, e.deltaY);
           if (parentScrollTarget) {
             const maxParentScrollTop = Math.max(
@@ -2052,10 +2054,14 @@ export function DataTable<T>({
       ref={rootRef}
       aria-busy={loading || loadingMore ? true : undefined}
       data-vt-natural-flow={naturalFlow ? true : undefined}
+      // Height model: as tall as the rows, never taller than the box it sits in (maxHeight,
+      // or flex-shrink in a flex column). Few rows: no blank body and the pager and
+      // horizontal scrollbar stay right under the last row. Many rows: it fills what is
+      // left and scrolls inside. Nothing pins it to the viewport any more.
       className={
         naturalFlow
           ? `${height} ${minHeight} relative min-w-0 overflow-visible`
-          : `${height} ${minHeight} group relative isolate grid min-w-0 overflow-hidden rounded-xl ${vThumb ? "grid-cols-[minmax(0,1fr)_0.75rem]" : "grid-cols-1"}`
+          : `${height} ${minHeight} ${maxHeight} group relative isolate grid min-w-0 overflow-hidden rounded-xl ${vThumb ? "grid-cols-[minmax(0,1fr)_0.75rem]" : "grid-cols-1"}`
       }
     >
       {!naturalFlow ? (
@@ -2090,16 +2096,18 @@ export function DataTable<T>({
         className={
           naturalFlow
             ? "relative z-10 min-h-0 overflow-visible rounded-xl"
-            : // Always contain vertical overscroll so sticky headers never rubber-band;
-              // boundary wheel handoff is handled in JS (handleWheel), not overscroll-behavior.
-              `relative col-start-1 row-start-1 h-full min-h-0 table-scrollbar overscroll-x-none overscroll-y-none ${
-                isEmpty ? "overflow-x-hidden overflow-y-auto" : "overflow-auto"
-              }`
+            : // Contain vertical overscroll while the table scrolls vertically, so sticky headers
+              // never rubber-band (boundary wheel handoff is JS, see handleWheel). A short table
+              // leaves it alone: vertical swipes over it must reach the page it sits in.
+              `relative col-start-1 row-start-1 h-full min-h-0 table-scrollbar overscroll-x-none ${
+                vThumb ? "overscroll-y-none" : ""
+              } ${isEmpty ? "overflow-x-hidden overflow-y-auto" : "overflow-auto"}`
         }
       >
         <div
           data-vt-scroll-content
-          className={`relative min-h-full ${scrollContentClassName ?? ""}`}
+          // A lane for the horizontal scrollbar, so it sits under the last row instead of on it.
+          className={`relative min-h-full ${hThumb ? "pb-3.5" : ""} ${scrollContentClassName ?? ""}`}
         >
           {!naturalFlow && rowHoverOverlay ? (
             <div
@@ -2332,50 +2340,15 @@ export function DataTable<T>({
             {/* ── Body ── */}
             <tbody className="relative z-0 text-slate-900 dark:text-white">
               {loading && rows.length === 0 ? (
-                <>
-                  <tr>
-                    <td colSpan={colCount} className="p-0">
-                      <span role="status" className="sr-only">
-                        {t("common.loading")}
-                      </span>
-                    </td>
-                  </tr>
-                  {Array.from({ length: 5 }, (_, rowIndex) => (
-                    <tr key={`loading-${rowIndex}`} aria-hidden="true">
-                      {orderedColumns.map((col, colIndex) => (
-                        <td
-                          key={col.key}
-                          data-vt-column-key={col.key}
-                          className={`overflow-hidden px-4 py-3 align-middle ${col.cellClassName ?? ""}`}
-                        >
-                          <div
-                            className={[
-                              "h-3 animate-pulse rounded-full bg-slate-200 dark:bg-white/10",
-                              colIndex === 0 ? "w-2/3" : "w-4/5",
-                            ].join(" ")}
-                          />
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </>
+                <TableLoadingRows columns={orderedColumns} colCount={colCount} />
               ) : isEmpty ? (
-                <tr data-vt-empty-row className="h-full">
-                  <td colSpan={colCount} className="h-full px-4 py-8 align-middle sm:px-6 sm:py-10">
-                    {/*
-                      Fill the remaining table viewport so EmptyState sits in the
-                      middle of the blank body, not stuck under the header.
-                    */}
-                    <div className="flex min-h-[min(18rem,calc(100dvh-28rem))] w-full items-center justify-center">
-                      <EmptyState
-                        title={emptyText || t("common.no_data")}
-                        description={emptyDescription}
-                        icon={emptyIcon}
-                        action={emptyAction}
-                      />
-                    </div>
-                  </td>
-                </tr>
+                <TableEmptyRow
+                  colCount={colCount}
+                  title={emptyText}
+                  description={emptyDescription}
+                  icon={emptyIcon}
+                  action={emptyAction}
+                />
               ) : (
                 <>
                   {virtualize ? (

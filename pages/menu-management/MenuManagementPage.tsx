@@ -11,7 +11,8 @@ import {
   Button,
   COLUMN_WIDTH,
   DataTable,
-  TABLE_ROW_ACTIONS_COLUMN,
+  TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
+  TableRowActions,
   resolveMenuIcon,
   useToast,
   type DataTableColumn,
@@ -337,37 +338,34 @@ export function MenuManagementPage() {
       {
         key: "actions",
         label: t("identity_admin.actions"),
-        ...TABLE_ROW_ACTIONS_COLUMN,
+        ...TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
         render: (menu) => (
-          <div className="flex items-center gap-1">
-            <Button
-              size="xs"
-              variant="ghost"
-              disabled={!canUpdate || menu.type === "button" || menu.type === "link"}
-              tooltip={t("identity_admin.menu_add_child")}
-              onClick={() => openCreate(menu.code)}
-            >
-              <Plus size={15} />
-            </Button>
-            <Button
-              size="xs"
-              variant="ghost"
-              disabled={!canUpdate}
-              tooltip={t("identity_admin.edit")}
-              onClick={() => openEdit(menu)}
-            >
-              <Pencil size={15} />
-            </Button>
-            <Button
-              size="xs"
-              variant="ghost"
-              disabled={!canUpdate || menu.system_protected}
-              tooltip={t("identity_admin.delete")}
-              onClick={() => setDeleteTarget(menu)}
-            >
-              <Trash2 size={15} />
-            </Button>
-          </div>
+          <TableRowActions
+            actions={[
+              {
+                key: "add-child",
+                label: t("identity_admin.menu_add_child"),
+                icon: <Plus />,
+                disabled: !canUpdate || menu.type === "button" || menu.type === "link",
+                onClick: () => openCreate(menu.code),
+              },
+              {
+                key: "edit",
+                label: t("identity_admin.edit"),
+                icon: <Pencil />,
+                disabled: !canUpdate,
+                onClick: () => openEdit(menu),
+              },
+              {
+                key: "delete",
+                label: t("identity_admin.delete"),
+                icon: <Trash2 />,
+                destructive: true,
+                disabled: !canUpdate || menu.system_protected,
+                onClick: () => setDeleteTarget(menu),
+              },
+            ]}
+          />
         ),
       },
     ],
@@ -392,8 +390,8 @@ export function MenuManagementPage() {
             </Button>
           ) : null}
         </div>
-        {/* 表格吃掉页面剩余高度、内部滚动；不设最小高度保底——页面高度被窗口钉死，保底只会在矮窗口下把表格挤出页面（见请求日志页）。 */}
-        <div className="relative min-h-0 flex-1 overflow-hidden">
+        {/* 表格按行数收高，最多占到页面剩余高度、再多就内部滚动，分页条始终紧跟在下面；不设最小高度保底——页面高度被窗口钉死，保底只会在矮窗口下把表格挤出页面（见请求日志页）。 */}
+        <div className="relative flex min-h-0 flex-col overflow-hidden">
           <DataTable<(typeof rows)[number]>
             tableId="identity-menus"
             rows={rows}
@@ -402,8 +400,6 @@ export function MenuManagementPage() {
             loading={loading}
             virtualize={false}
             rowHeight={60}
-            height="h-full"
-            minHeight="min-h-full"
             minWidth="min-w-[1100px]"
             emptyText={t("identity_admin.no_menus")}
             showAllLoadedMessage={false}

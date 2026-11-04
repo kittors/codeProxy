@@ -370,6 +370,9 @@ describe("sensitive-word rules: the platform's list", () => {
     expect(screen.queryByRole("textbox", { name: "Add sensitive words" })).not.toBeInTheDocument();
     // The settings that apply to the tenant's requests are still there to read.
     expect(screen.getByRole("switch", { name: "Enabled" })).toBeDisabled();
+    // The words tab still counts the hidden list, so it does not read as empty either.
+    expect(screen.getByRole("tab", { name: "Words 120" })).toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: /On match/ }));
     expect(screen.getByRole("radiogroup", { name: "When a rule matches" })).toBeInTheDocument();
   });
 

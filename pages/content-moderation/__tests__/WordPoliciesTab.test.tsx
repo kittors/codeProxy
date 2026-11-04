@@ -312,6 +312,7 @@ describe("sensitive words tab", () => {
     const user = userEvent.setup();
     renderPage();
     await ruleTable();
+    await user.click(screen.getByRole("tab", { name: /On match/ }));
     expect(screen.queryByText(/Replayed thinking blocks are signed/)).not.toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: /Block message/ })).toBeInTheDocument();
 
@@ -395,11 +396,13 @@ describe("sensitive words of one API key", () => {
     await user.click(await screen.findByRole("option", { name: /Team A/ }));
     await waitFor(() => expect(mocks.words.get).toHaveBeenCalledWith("key", "k1"));
 
-    // A key follows the tenant's handling until it picks its own.
+    // A key follows the tenant's handling until it picks its own; the tab says so before it is opened.
+    await user.click(await screen.findByRole("tab", { name: /On match Follow the tenant/ }));
     expect(await screen.findByRole("radio", { name: /Follow the tenant/ })).toBeChecked();
     await user.click(screen.getByRole("button", { name: /Advanced options/ }));
     expect(screen.getByRole("switch", { name: "Also apply the tenant's rules" })).toBeChecked();
 
+    await user.click(screen.getByRole("tab", { name: /^Words/ }));
     await user.type(screen.getByRole("textbox", { name: "Add sensitive words" }), "keyword{Enter}");
     await user.click(within(saveBar()!).getByRole("button", { name: "Save changes" }));
     await waitFor(() => expect(mocks.words.put).toHaveBeenCalledTimes(1));

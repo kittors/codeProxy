@@ -296,7 +296,6 @@ export function EndUserKeysModal({
               busyKeyId={busyKeyId}
               busy={saving}
               loading={loading}
-              height="min-h-0 flex-1"
               // 紧凑布局：密钥、状态并进名称格，弹窗宽度内放得下全部列，不用横向滚动。
               compact
               minWidth={policyCaps ? "min-w-[960px]" : "min-w-[820px]"}

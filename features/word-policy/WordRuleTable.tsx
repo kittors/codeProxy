@@ -7,7 +7,7 @@ import {
   DataTable,
   PaginationBar,
   Select,
-  TABLE_ROW_ACTIONS_COLUMN,
+  TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
   TableRowActions,
   TextInput,
   ToggleSwitch,
@@ -176,10 +176,9 @@ export function WordRuleTable({
             {
               key: "actions",
               label: t("content_moderation.actions"),
-              ...TABLE_ROW_ACTIONS_COLUMN,
+              ...TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
               render: (rule: DraftRule) => (
                 <TableRowActions
-                  align="start"
                   moreLabel={t("content_moderation.more_actions")}
                   actions={[
                     {
@@ -205,7 +204,9 @@ export function WordRuleTable({
   );
 
   return (
-    <div className="space-y-3">
+    // 一页最多 20 行：表格按行数收高，上层给出确定高度时最多占到剩余高度、在内部滚动，
+    // 分页条紧跟在下面，不用滚到列表底部才看得到。
+    <div className="flex min-h-0 flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
         <div className="w-full min-w-48 sm:w-72">
           <TextInput
@@ -250,10 +251,6 @@ export function WordRuleTable({
         columns={columns}
         rowKey={(rule) => rule.key}
         virtualize={false}
-        naturalFlow
-        // 一页最多 20 行，按内容撑开就好；默认的「占满视口」会在规则少的时候留下一大片空白。
-        height="h-auto"
-        minHeight="min-h-0"
         columnResizable={false}
         columnReorderable={false}
         minWidth="min-w-[760px]"

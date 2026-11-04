@@ -334,7 +334,9 @@ describe("DataTable scroll chrome and row dividers", () => {
 
     expect(viewport.scrollTop).toBe(240);
     expect(parent.scrollTop).toBe(120);
-    // Wheel handoff is JS-driven; keep overscroll contained so sticky headers never bounce.
+    // Wheel handoff is JS-driven; once the table scrolls vertically, overscroll stays contained so
+    // sticky headers never bounce.
+    fireEvent.scroll(viewport);
     expect(viewport).toHaveClass("overscroll-y-none");
     expect(viewport).not.toHaveClass("overscroll-y-auto");
     const headerChrome = document.querySelector("[data-vt-header-chrome]");
@@ -347,6 +349,82 @@ describe("DataTable scroll chrome and row dividers", () => {
       // Free-scroll headers stay transparent; viewport chrome owns the plate fill.
       expect(cell).toHaveClass("sticky", "top-0", "bg-transparent");
     });
+  });
+
+  test("is as tall as its rows and capped by its box, unless a page asks for another cap", () => {
+    const { rerender } = render(
+      <DataTable rows={initialRows} columns={plainColumns} rowKey={(row) => row.id} showAllLoadedMessage={false} />,
+    );
+    const root = () => document.querySelector<HTMLElement>("[aria-busy], .isolate");
+    // Nothing pins it to the viewport any more: few rows mean no blank body under them.
+    expect(root()).toHaveClass("h-auto", "min-h-0", "max-h-full");
+    expect(root()?.className).not.toMatch(/100dvh|min-h-\[360px\]/);
+
+    rerender(
+      <DataTable
+        rows={initialRows}
+        columns={plainColumns}
+        rowKey={(row) => row.id}
+        maxHeight="max-h-[40vh]"
+        showAllLoadedMessage={false}
+      />,
+    );
+    expect(root()).toHaveClass("max-h-[40vh]");
+    expect(root()).not.toHaveClass("max-h-full");
+  });
+
+  test("hands vertical wheel scrolling to the page when it has nothing to scroll itself", () => {
+    render(
+      <div data-testid="parent-scroll" style={{ height: 160, overflowY: "auto" }}>
+        <DataTable rows={initialRows} columns={plainColumns} rowKey={(row) => row.id} showAllLoadedMessage={false} />
+      </div>,
+    );
+    const parent = screen.getByTestId("parent-scroll");
+    const viewport = document.querySelector<HTMLElement>("[data-scrollbar-visibility='hover']");
+    if (!viewport) throw new Error("table viewport missing");
+    // Short table: everything fits, no vertical overflow of its own.
+    Object.defineProperties(viewport, {
+      clientHeight: { configurable: true, value: 150 },
+      scrollHeight: { configurable: true, value: 150 },
+    });
+    Object.defineProperties(parent, {
+      clientHeight: { configurable: true, value: 160 },
+      scrollHeight: { configurable: true, value: 480 },
+    });
+    parent.scrollTop = 0;
+
+    fireEvent.wheel(viewport, { deltaY: 60 });
+
+    // Without allowWheelPropagationAtBoundary the wheel used to be swallowed here.
+    expect(parent.scrollTop).toBe(60);
+    // And vertical overscroll is not contained, so touch swipes reach the page too.
+    expect(viewport).not.toHaveClass("overscroll-y-none");
+  });
+
+  test("gives the horizontal scrollbar its own lane under the last row", () => {
+    render(
+      <DataTable
+        rows={initialRows}
+        columns={plainColumns}
+        rowKey={(row) => row.id}
+        minWidth="min-w-[1200px]"
+        showAllLoadedMessage={false}
+      />,
+    );
+    const viewport = document.querySelector<HTMLElement>("[data-scrollbar-visibility='hover']");
+    const content = document.querySelector<HTMLElement>("[data-vt-scroll-content]");
+    if (!viewport || !content) throw new Error("table viewport missing");
+    expect(content).not.toHaveClass("pb-3.5");
+
+    Object.defineProperties(viewport, {
+      clientWidth: { configurable: true, value: 600 },
+      scrollWidth: { configurable: true, value: 1200 },
+      clientHeight: { configurable: true, value: 150 },
+      scrollHeight: { configurable: true, value: 150 },
+    });
+    fireEvent.scroll(viewport);
+
+    expect(content).toHaveClass("pb-3.5");
   });
 
   test("renders straight full-width dividers without rounded cell edges", () => {

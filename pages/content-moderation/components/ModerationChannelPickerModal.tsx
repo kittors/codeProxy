@@ -562,7 +562,7 @@ export function ModerationChannelPickerModal({
           onTagBind={() => void prepareTagBinding()}
         />
 
-        <div className="min-h-0 flex-1">
+        <div className="flex min-h-0 flex-col">
           <DataTable<ContentModerationChannelView>
             tableId="content-moderation-channels"
             rows={rows}
@@ -571,8 +571,6 @@ export function ModerationChannelPickerModal({
             loading={loading}
             rowHeight={56}
             minWidth="min-w-[980px]"
-            height="h-full"
-            minHeight="min-h-[300px]"
             caption={t("content_moderation.channels_table_caption")}
             emptyText={t("content_moderation.channels_empty")}
             showAllLoadedMessage={false}

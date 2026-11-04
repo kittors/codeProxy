@@ -8,9 +8,11 @@ import {
   ConfirmModal,
   DataTable,
   PaginationBar,
-  TABLE_ROW_ACTIONS_COLUMN,
+  TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
+  TableRowActions,
   useToast,
   type DataTableColumn,
+  type TableRowAction,
 } from "@code-proxy/ui";
 import { useOptionalAuth } from "@app/providers/AuthProvider";
 import { PermissionGate } from "@app/providers/PermissionGate";
@@ -225,32 +227,34 @@ export function AuditLogsPage() {
       {
         key: "actions",
         label: t("identity_admin.actions"),
-        ...TABLE_ROW_ACTIONS_COLUMN,
-        lockOrder: "end",
-        render: (item) => (
-          <div className="flex items-center gap-1.5">
-            <Button
-              size="xs"
-              variant="ghost"
-              disabled={busy}
-              tooltip={t("identity_admin.view")}
-              onClick={() => void openDetail(item)}
-            >
-              <Eye size={15} />
-            </Button>
-            <PermissionGate permission="tenant.audit.delete">
-              <Button
-                size="xs"
-                variant="ghost-danger"
-                disabled={busy}
-                tooltip={t("identity_admin.delete")}
-                onClick={() => setDeleteTarget(item)}
-              >
-                <Trash2 size={15} />
-              </Button>
+        ...TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
+        render: (item) => {
+          const view: TableRowAction = {
+            key: "view",
+            label: t("identity_admin.view"),
+            icon: <Eye />,
+            disabled: busy,
+            onClick: () => void openDetail(item),
+          };
+          // 没有删除权限时只剩「查看」，仍是同一组按钮、同一种对齐。
+          return (
+            <PermissionGate permission="tenant.audit.delete" fallback={<TableRowActions actions={[view]} />}>
+              <TableRowActions
+                actions={[
+                  view,
+                  {
+                    key: "delete",
+                    label: t("identity_admin.delete"),
+                    icon: <Trash2 />,
+                    destructive: true,
+                    disabled: busy,
+                    onClick: () => setDeleteTarget(item),
+                  },
+                ]}
+              />
             </PermissionGate>
-          </div>
-        ),
+          );
+        },
       },
     ],
     [busy, i18n.language, openDetail, t],
@@ -278,8 +282,8 @@ export function AuditLogsPage() {
             </Button>
           </PermissionGate>
         </div>
-        {/* 表格吃掉页面剩余高度、内部滚动；不设最小高度保底——页面高度被窗口钉死，保底只会在矮窗口下把表格挤出页面（见请求日志页）。 */}
-        <div className="relative min-h-0 flex-1 overflow-hidden">
+        {/* 表格按行数收高，最多占到页面剩余高度、再多就内部滚动，分页条始终紧跟在下面；不设最小高度保底——页面高度被窗口钉死，保底只会在矮窗口下把表格挤出页面（见请求日志页）。 */}
+        <div className="relative flex min-h-0 flex-col overflow-hidden">
           <DataTable<AuditLogIdentity>
             tableId="identity-audit-logs"
             rows={items}
@@ -287,8 +291,6 @@ export function AuditLogsPage() {
             rowKey={(item) => String(item.id)}
             loading={loading}
             virtualize={false}
-            height="h-full"
-            minHeight="min-h-full"
             minWidth="min-w-[960px]"
             emptyText={t("identity_admin.no_audit_logs")}
             showAllLoadedMessage={false}

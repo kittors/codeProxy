@@ -941,7 +941,7 @@ export function AuthFileDetailModal({
                 </div>
                 {isIdentityDesktopLayout ? (
                   <div
-                    className="min-h-0 flex-1 overflow-hidden"
+                    className="flex min-h-0 flex-col overflow-hidden"
                     data-testid="auth-file-identity-table-desktop"
                   >
                     <DataTable<IdentityFingerprintFieldRow>
@@ -950,8 +950,6 @@ export function AuthFileDetailModal({
                       rowKey={(row) => row.id}
                       rowHeight={48}
                       minWidth="min-w-[920px]"
-                      minHeight="min-h-0"
-                      height="h-full"
                       caption={t("auth_files.identity_fingerprint_title")}
                       emptyText={t("auth_files.identity_fingerprint_no_fields")}
                       showAllLoadedMessage={false}
@@ -970,8 +968,6 @@ export function AuthFileDetailModal({
                       rowKey={(row) => row.id}
                       rowHeight={48}
                       minWidth="min-w-[920px]"
-                      minHeight="min-h-0"
-                      height="h-auto"
                       caption={t("auth_files.identity_fingerprint_title")}
                       emptyText={t("auth_files.identity_fingerprint_no_fields")}
                       showAllLoadedMessage={false}

@@ -13,6 +13,7 @@ import {
   Select,
   SettingGroup,
   SettingRow,
+  TableRowActions,
   TextInput,
   type DataTableColumn,
   type SearchableSelectOption,
@@ -197,20 +198,23 @@ export function VirtualModelEditorModal({
       {
         key: "remove",
         label: "",
-        width: "w-14 min-w-14",
+        // 一个图标按钮加单元格左右内边距正好放下；删除和其它表格的行操作同一种按钮、红色区分。
+        width: "w-16 min-w-16",
         resizable: false,
         overflowTooltip: false,
         render: (member, index) => (
-          <Button
-            variant="ghost"
-            size="xs"
-            onClick={() => updateMembers((list) => list.filter((m) => m.id !== member.id))}
-            disabled={saving || memberCount <= 1}
-            aria-label={t("models_page.virtual.remove_member", { index: index + 1 })}
-            title={t("models_page.virtual.remove_member", { index: index + 1 })}
-          >
-            <Trash2 size={14} />
-          </Button>
+          <TableRowActions
+            actions={[
+              {
+                key: "remove",
+                label: t("models_page.virtual.remove_member", { index: index + 1 }),
+                icon: <Trash2 />,
+                destructive: true,
+                disabled: saving || memberCount <= 1,
+                onClick: () => updateMembers((list) => list.filter((m) => m.id !== member.id)),
+              },
+            ]}
+          />
         ),
       },
     ],
@@ -369,8 +373,6 @@ export function VirtualModelEditorModal({
               rowKey={(member) => member.id}
               virtualize={false}
               rowHeight={52}
-              height="h-auto"
-              minHeight="min-h-0"
               minWidth={draft.weighted ? "min-w-[760px]" : "min-w-[600px]"}
               caption={t("models_page.virtual.members")}
               emptyText={t("models_page.virtual.errors.members_none")}

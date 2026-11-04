@@ -28,7 +28,7 @@ import {
   EmptyState,
   SettingGroup,
   SkeletonLines,
-  TABLE_ROW_ACTIONS_COLUMN,
+  TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
   TableRowActions,
   Tabs,
   TabsList,
@@ -326,18 +326,18 @@ export function ContentModerationPage() {
       {
         key: "actions",
         label: t("content_moderation.actions"),
-        ...TABLE_ROW_ACTIONS_COLUMN,
+        ...TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
         render: (profile) => (
           <TableRowActions
-            maxInline={5}
-            align="start"
             moreLabel={t("content_moderation.more_actions")}
+            // 常用的放前面平铺（编辑、绑定渠道、测试），查看状态和删除收进「更多」，四个位置放得下、不溢出列宽。
             actions={[
               {
-                key: "metrics",
-                label: t("content_moderation.view_status"),
-                icon: <Activity size={15} />,
-                onClick: () => setMetricsOpen(true),
+                key: "edit",
+                label: t("content_moderation.edit_profile"),
+                icon: <Pencil size={15} />,
+                onClick: () => openEdit(profile),
+                visible: canWrite,
               },
               {
                 key: "channels",
@@ -354,11 +354,10 @@ export function ContentModerationPage() {
                 visible: canTest,
               },
               {
-                key: "edit",
-                label: t("content_moderation.edit_profile"),
-                icon: <Pencil size={15} />,
-                onClick: () => openEdit(profile),
-                visible: canWrite,
+                key: "metrics",
+                label: t("content_moderation.view_status"),
+                icon: <Activity size={15} />,
+                onClick: () => setMetricsOpen(true),
               },
               {
                 key: "delete",
@@ -420,8 +419,6 @@ export function ContentModerationPage() {
           loading={loading}
           virtualize={false}
           minWidth="min-w-[1280px]"
-          height="h-[calc(100dvh-260px)] md:h-auto md:flex-1"
-          minHeight="min-h-[320px] md:min-h-0"
           caption={t("content_moderation.table_caption")}
           emptyText={t("content_moderation.empty_title")}
           showAllLoadedMessage={false}
@@ -430,10 +427,14 @@ export function ContentModerationPage() {
     </Card>
   );
 
+  // 各标签的高度模式不同：敏感词在宽屏是左右两栏、各自滚动，窄屏上下堆叠随页面流动；审核配置是
+  // 整页一张表（桌面宽度钉满）；密钥脱敏只是一小段设置，随内容流动。
+  const pageFill = activeTab === "words" ? "lg" : activeTab === "profiles" ? "md" : undefined;
+
   return (
-    <div data-page-fill="always" className="flex flex-1 flex-col">
+    <div data-page-fill={pageFill} className="flex flex-1 flex-col">
       {wordsAvailable || capabilities.secretMasking ? (
-        <div className="mb-4">
+        <div className="mb-4 shrink-0">
           <Tabs value={activeTab} size="sm" onValueChange={(next) => requestTab(next as PageTab)}>
             <TabsList>
               {wordsAvailable ? (

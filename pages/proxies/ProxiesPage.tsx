@@ -16,7 +16,7 @@ import { Button, Callout, COLUMN_WIDTH } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
 import { ConfirmModal } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
-import { DataTable, TABLE_ROW_ACTIONS_COLUMN, type DataTableColumn } from "@code-proxy/ui";
+import { DataTable, TABLE_ROW_ACTIONS_STICKY_END_COLUMN, TableRowActions, type DataTableColumn } from "@code-proxy/ui";
 import {
   emptyProxyDraft,
   proxyEndpoint,
@@ -327,64 +327,51 @@ export function ProxiesPage() {
       {
         key: "actions",
         label: t("proxies.actions"),
-        ...TABLE_ROW_ACTIONS_COLUMN,
-        headerClassName: "text-right",
-        cellClassName: "text-right",
+        ...TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
         render: (entry) => {
           const result = checkState[entry.id];
           return (
-            <div className="flex justify-end gap-1">
-              <Button
-                aria-label={t("proxies.check_label", { name: entry.name })}
-                title={t("proxies.check_label", { name: entry.name })}
-                onClick={() => void checkEntry(entry)}
-                disabled={result?.checking}
-                size="xs"
-              >
-                {result?.checking ? (
-                  <RefreshCw size={14} className="animate-spin" />
-                ) : (
-                  <CheckCircle2 size={14} />
-                )}
-              </Button>
-              {sharingManageable ? (
-                <Button
-                  aria-label={t("proxies.sharing_label", { name: entry.name })}
-                  title={t("proxies.sharing_label", { name: entry.name })}
-                  onClick={() => openSharing(entry)}
-                  size="xs"
-                >
-                  <Share2 size={14} />
-                </Button>
-              ) : null}
-              {overriddenSharedKeys.has(proxyIdKey(entry.id)) ? (
-                <Button
-                  aria-label={t("proxies.switch_label", { name: entry.name })}
-                  title={t("proxies.switch_label", { name: entry.name })}
-                  onClick={() => setSwitchTarget(entry)}
-                  size="xs"
-                >
-                  <ArrowRightLeft size={14} />
-                </Button>
-              ) : null}
-              <Button
-                aria-label={t("proxies.edit_label", { name: entry.name })}
-                title={t("proxies.edit_label", { name: entry.name })}
-                onClick={() => openEdit(entry)}
-                size="xs"
-              >
-                <Pencil size={14} />
-              </Button>
-              <Button
-                aria-label={t("proxies.delete_label", { name: entry.name })}
-                title={t("proxies.delete_label", { name: entry.name })}
-                onClick={() => setDeleteTarget(entry)}
-                variant="ghost"
-                size="xs"
-              >
-                <Trash2 size={14} />
-              </Button>
-            </div>
+            <TableRowActions
+              // 普通租户三个（检测、编辑、删除）；平台管理员多出共享、切换时最多平铺四个，再多收进「更多」。
+              maxInline={4}
+              moreLabel={t("common.more_actions")}
+              actions={[
+                {
+                  key: "check",
+                  label: t("proxies.check_label", { name: entry.name }),
+                  icon: result?.checking ? <RefreshCw className="animate-spin" /> : <CheckCircle2 />,
+                  disabled: result?.checking,
+                  onClick: () => void checkEntry(entry),
+                },
+                {
+                  key: "edit",
+                  label: t("proxies.edit_label", { name: entry.name }),
+                  icon: <Pencil />,
+                  onClick: () => openEdit(entry),
+                },
+                {
+                  key: "sharing",
+                  label: t("proxies.sharing_label", { name: entry.name }),
+                  icon: <Share2 />,
+                  visible: sharingManageable,
+                  onClick: () => openSharing(entry),
+                },
+                {
+                  key: "switch",
+                  label: t("proxies.switch_label", { name: entry.name }),
+                  icon: <ArrowRightLeft />,
+                  visible: overriddenSharedKeys.has(proxyIdKey(entry.id)),
+                  onClick: () => setSwitchTarget(entry),
+                },
+                {
+                  key: "delete",
+                  label: t("proxies.delete_label", { name: entry.name }),
+                  icon: <Trash2 />,
+                  destructive: true,
+                  onClick: () => setDeleteTarget(entry),
+                },
+              ]}
+            />
           );
         },
       },
@@ -453,10 +440,9 @@ export function ProxiesPage() {
           columns={columns}
           rowKey={(entry) => entry.id}
           rowHeight={56}
-          height={
-            hasSharedSection ? "h-auto max-h-[60vh]" : "h-auto max-h-[70vh] md:max-h-none md:flex-1"
-          }
-          minHeight={hasSharedSection ? "min-h-0" : "min-h-[240px] md:min-h-0"}
+          // 下面还有共享分区时给自有表封个顶，两张表都留在一屏里；否则桌面宽度按页面剩余高度封顶，
+          // 窄屏（卡片不是 flex，拿不到确定高度）最多占七成屏高。
+          maxHeight={hasSharedSection ? "max-h-[60vh]" : "max-h-[70vh] md:max-h-full"}
           minWidth="min-w-[960px]"
           caption={t("proxies.table_caption")}
           emptyText={t("proxies.empty_title")}

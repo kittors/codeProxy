@@ -292,8 +292,7 @@ export function CodexRecommendationsModal({
               rowKey={(item) => item.id}
               loading={loading && !hasLoaded && items.length === 0}
               rowHeight={58}
-              height="h-[220px] sm:h-[300px] lg:h-[430px]"
-              minHeight="min-h-[180px]"
+              maxHeight="max-h-[220px] sm:max-h-[300px] lg:max-h-[430px]"
               minWidth="min-w-full"
               caption={t("identity_fingerprint.recommend_table_caption")}
               emptyText={t("identity_fingerprint.recommend_empty")}

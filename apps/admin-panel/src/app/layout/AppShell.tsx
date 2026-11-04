@@ -198,6 +198,7 @@ export function AppShell({ children, onLogout }: PropsWithChildren<{ onLogout?: 
               className={[
                 "flex min-h-full flex-col px-4 pt-1 pb-4 focus-visible:outline-none sm:px-6 sm:pb-6",
                 "has-[[data-page-fill=always]]:h-full md:has-[[data-page-fill=md]]:h-full",
+                "lg:has-[[data-page-fill=lg]]:h-full",
               ].join(" ")}
             >
               {children}

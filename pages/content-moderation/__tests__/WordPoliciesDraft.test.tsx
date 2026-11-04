@@ -53,8 +53,17 @@ async function openWordRules(_user: ReturnType<typeof userEvent.setup>) {
 const saveButton = () =>
   within(screen.getByRole("region", { name: "Unsaved changes" })).getByRole("button", { name: "Save changes" });
 
+/** 命中处理和高级选项在编辑器的「命中处理」页，词表独占另一页。 */
+const openHandling = async (user: ReturnType<typeof userEvent.setup>) => {
+  await user.click(screen.getByRole("tab", { name: /On match/ }));
+};
+const openWords = async (user: ReturnType<typeof userEvent.setup>) => {
+  await user.click(screen.getByRole("tab", { name: /^Words/ }));
+};
+
 /** 不常改的设置收在「高级选项」里，用之前先展开。 */
 const openAdvanced = async (user: ReturnType<typeof userEvent.setup>) => {
+  await openHandling(user);
   await user.click(screen.getByRole("button", { name: /Advanced options/ }));
 };
 
@@ -100,6 +109,7 @@ describe("sensitive-word rules: the draft is not lost or rewritten silently", ()
       await openWordRules(user);
 
       // The policy has chosen nothing, so the screen shows what the defaults amount to.
+      await openHandling(user);
       expect(screen.getByRole("radio", { name: /Block the request/ })).toBeChecked();
       await openAdvanced(user);
       expect(screen.getByRole("combobox", { name: "Text to check" })).toHaveTextContent(
@@ -108,6 +118,7 @@ describe("sensitive-word rules: the draft is not lost or rewritten silently", ()
       expect(screen.getByRole("switch", { name: "Filter model replies" })).not.toBeChecked();
 
       // An unrelated change: one more rule.
+      await openWords(user);
       await user.type(screen.getByRole("textbox", { name: "Add sensitive words" }), "gamma{Enter}");
       await screen.findByText("gamma");
       await user.click(saveButton());
@@ -144,11 +155,14 @@ describe("sensitive-word rules: the draft is not lost or rewritten silently", ()
       expect(screen.getByRole("switch", { name: "Filter model replies" })).toBeChecked();
 
       // An unrelated change leaves it inherited; turning it off is a choice.
+      await openWords(user);
       await user.click(screen.getByRole("switch", { name: "Toggle rule alpha" }));
       await user.click(saveButton());
       await waitFor(() => expect(mocks.words.put).toHaveBeenCalledTimes(1));
       expect(mocks.words.put.mock.calls[0][1].reply_filter).toBeNull();
 
+      // 两页都挂着：切回「命中处理」，展开过的高级选项还开着。
+      await openHandling(user);
       await user.click(await screen.findByRole("switch", { name: "Filter model replies" }));
       await user.click(saveButton());
       await waitFor(() => expect(mocks.words.put).toHaveBeenCalledTimes(2));
@@ -160,6 +174,7 @@ describe("sensitive-word rules: the draft is not lost or rewritten silently", ()
       renderPage();
       await openWordRules(user);
 
+      await openHandling(user);
       await user.click(screen.getByRole("radio", { name: /Log only/ }));
       await openAdvanced(user);
       await user.click(screen.getByRole("switch", { name: "Filter model replies" }));

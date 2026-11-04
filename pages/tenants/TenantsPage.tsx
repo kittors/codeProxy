@@ -6,7 +6,7 @@ import {
   Button,
   COLUMN_WIDTH,
   DataTable,
-  TABLE_ROW_ACTIONS_COLUMN,
+  TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
   TableRowActions,
   useToast,
   type DataTableColumn,
@@ -159,14 +159,12 @@ export function TenantsPage() {
       {
         key: "actions",
         label: t("identity_admin.actions"),
-        ...TABLE_ROW_ACTIONS_COLUMN,
-        lockOrder: "end",
+        ...TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
         render: (item) => {
           const canUpdateTenant = item.type !== "system" && can("platform.tenants.update");
           return (
             <TableRowActions
               moreLabel={t("common.more_actions")}
-              align="start"
               actions={[
                 {
                   key: "view",
@@ -270,8 +268,8 @@ export function TenantsPage() {
           </PermissionGate>
         </div>
 
-        {/* 表格吃掉页面剩余高度、内部滚动；不设最小高度保底——页面高度被窗口钉死，保底只会在矮窗口下把表格挤出页面（见请求日志页）。 */}
-        <div className="relative min-h-0 flex-1 overflow-hidden">
+        {/* 表格按行数收高，最多占到页面剩余高度、再多就内部滚动，分页条始终紧跟在下面；不设最小高度保底——页面高度被窗口钉死，保底只会在矮窗口下把表格挤出页面（见请求日志页）。 */}
+        <div className="relative flex min-h-0 flex-col overflow-hidden">
           <DataTable<TenantIdentity>
             tableId="identity-tenants"
             rows={items}
@@ -280,8 +278,6 @@ export function TenantsPage() {
             loading={loading}
             virtualize={false}
             rowHeight={60}
-            height="h-full"
-            minHeight="min-h-full"
             minWidth="min-w-[980px]"
             emptyText={t("identity_admin.no_tenants")}
             showAllLoadedMessage={false}

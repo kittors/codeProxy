@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { FlaskConical, RotateCcw, Save, Trash2 } from "lucide-react";
 import type {
@@ -8,7 +8,18 @@ import type {
   WordRuleKind,
   WordTestResult,
 } from "@code-proxy/api-client";
-import { Button, Callout, ConfirmModal, SkeletonLines, ToggleSwitch, surface, useToast } from "@code-proxy/ui";
+import {
+  Button,
+  Callout,
+  ConfirmModal,
+  SkeletonLines,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  ToggleSwitch,
+  surface,
+  useToast,
+} from "@code-proxy/ui";
 import { WordActionPicker } from "./WordActionPicker";
 import { WordAdvancedSettings } from "./WordAdvancedSettings";
 import { WordImportModal } from "./WordImportModal";
@@ -58,24 +69,17 @@ export interface WordPolicyEditorProps {
 }
 
 type RuleModalState = { open: boolean; rule: DraftRule | null; kind: WordRuleKind };
-
-function Section({ title, aside, children }: { title: string; aside?: ReactNode; children: ReactNode }) {
-  return (
-    <section className="space-y-3">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h4 className="text-sm font-semibold text-ink">{title}</h4>
-        {aside}
-      </div>
-      {children}
-    </section>
-  );
-}
+type EditorPanel = "rules" | "handling";
 
 /**
  * 一份敏感词策略的编辑器，管理端各层级和门户共用。
  *
- * 从上到下是用户最常做的事：先加词（输入框回车即加，可一次粘贴很多个），再选命中后怎么处理，
- * 不常改的设置收在「高级选项」里。所有改动先进草稿，有改动时页面底部才出现「保存 / 放弃」栏；
+ * 分两页：「词表」是最常做的事（输入框回车即加，可一次粘贴很多个；列表搜索、分页），
+ * 「命中处理」放命中后怎么处理和不常改的高级选项。分开是为了让词表独占剩余高度：上层给出
+ * 确定高度时，列表在内部滚动，分页条和保存栏始终看得见；以前三段上下堆在一起，规则一多，
+ * 分页条和处理方式都得把整页滚到底才找得到。
+ *
+ * 所有改动先进同一份草稿，有改动时底部才出现「保存 / 放弃」栏，两页都看得见；
  * 保存被拒（规则不合法）时在对应的行上标出原因，别处同时改过（版本冲突）则提示重新载入。
  */
 export function WordPolicyEditor({
@@ -100,6 +104,8 @@ export function WordPolicyEditor({
   const [importOpen, setImportOpen] = useState(false);
   const [removeOpen, setRemoveOpen] = useState(false);
   const [testOpen, setTestOpen] = useState(false);
+  const [panel, setPanel] = useState<EditorPanel>("rules");
+  const panelIds = useId();
   const limits = view?.limits ?? fallbackLimits;
   const readOnly = readOnlyProp || view?.can_edit === false;
 
@@ -194,8 +200,14 @@ export function WordPolicyEditor({
         ? t("content_moderation.words.status_disabled", { count: view.rule_count })
         : t("content_moderation.words.status_active", { count: view.rules_hidden ? view.rule_count : savedActive });
 
+  // 标签上直接写出现在命中后会怎么处理，停在词表页也知道。
+  const actionLabel =
+    scope === "key" && draft.action === ""
+      ? t("content_moderation.words.action_inherit")
+      : t(`content_moderation.words.action_${draft.action || view.effective.action}`);
+
   return (
-    <div className="space-y-6">
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 space-y-1">
           <h3 className="text-base font-semibold text-ink">{title}</h3>
@@ -280,7 +292,27 @@ export function WordPolicyEditor({
         </Callout>
       ) : null}
 
-      <Section title={t("content_moderation.words.section_words")}>
+      <Tabs value={panel} onValueChange={(next) => setPanel(next as EditorPanel)} size="sm">
+        <TabsList aria-label={t("content_moderation.words.panels_label")}>
+          <TabsTrigger value="rules" id={`${panelIds}-tab-rules`} aria-controls={`${panelIds}-rules`}>
+            {t("content_moderation.words.tab_rules")}{" "}
+            <span className="tabular-nums text-ink-3">{view.rules_hidden ? view.rule_count : draft.rules.length}</span>
+          </TabsTrigger>
+          <TabsTrigger value="handling" id={`${panelIds}-tab-handling`} aria-controls={`${panelIds}-handling`}>
+            {t("content_moderation.words.tab_handling")}{" "}
+            <span className="text-ink-3">{actionLabel}</span>
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      {/* 两页都保持挂载（只隐藏）：切过去再切回来，列表的搜索词和页码还在。 */}
+      <div
+        role="tabpanel"
+        id={`${panelIds}-rules`}
+        aria-labelledby={`${panelIds}-tab-rules`}
+        hidden={panel !== "rules"}
+        className="flex min-h-0 flex-1 flex-col gap-3"
+      >
         {view.rules_hidden ? (
           // 平台的词表不给租户看：只说有多少条，免得把空列表读成「平台没设规则」。
           <Callout tone="info" title={t("content_moderation.words.rules_hidden_title", { count: view.rule_count })}>
@@ -313,9 +345,16 @@ export function WordPolicyEditor({
             />
           </>
         )}
-      </Section>
+      </div>
 
-      <Section title={t("content_moderation.words.section_action")}>
+      {/* 卡片的投影伸出盒子一点：这一页自己滚动时用等量内边距和负边距留出位置，不被裁掉。 */}
+      <div
+        role="tabpanel"
+        id={`${panelIds}-handling`}
+        aria-labelledby={`${panelIds}-tab-handling`}
+        hidden={panel !== "handling"}
+        className="-m-1 min-h-0 flex-1 space-y-6 overflow-y-auto p-1"
+      >
         <WordActionPicker
           draft={draft}
           view={view}
@@ -324,16 +363,15 @@ export function WordPolicyEditor({
           readOnly={readOnly}
           onChange={editor.update}
         />
-      </Section>
-
-      <WordAdvancedSettings
-        draft={draft}
-        view={view}
-        keyScope={scope === "key"}
-        readOnly={readOnly}
-        unboundedRegex={unbounded.size}
-        onChange={editor.update}
-      />
+        <WordAdvancedSettings
+          draft={draft}
+          view={view}
+          keyScope={scope === "key"}
+          readOnly={readOnly}
+          unboundedRegex={unbounded.size}
+          onChange={editor.update}
+        />
+      </div>
 
       {!readOnly && editor.dirty ? (
         // 有改动才出现，贴在可视区底部：改了什么都不会因为滚动而找不到保存按钮。

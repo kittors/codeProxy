@@ -300,8 +300,9 @@ export function OwnedApiKeysTable({
   busy = false,
   loading = false,
   canDelete,
-  height = "h-[460px]",
-  minHeight = "min-h-[320px]",
+  height,
+  minHeight,
+  maxHeight,
   tableId = "owned-api-keys",
   minWidth = "min-w-[1580px]",
   ...columnOptions
@@ -313,8 +314,10 @@ export function OwnedApiKeysTable({
   busy?: boolean;
   loading?: boolean;
   canDelete?: (key: EndUserAPIKey) => boolean;
+  /** 不传就用 DataTable 的默认：按行数收高，最多占到所在区域的高度。 */
   height?: string;
   minHeight?: string;
+  maxHeight?: string;
   /** 列宽按表格 id 记忆；列不同的两处用法用不同的 id。 */
   tableId?: string;
   minWidth?: string;
@@ -350,6 +353,7 @@ export function OwnedApiKeysTable({
       height={height}
       loading={loading}
       minHeight={minHeight}
+      maxHeight={maxHeight}
       minWidth={minWidth}
       caption={t("api_keys_page.table_caption")}
       emptyText={t("api_keys_page.no_api_keys")}

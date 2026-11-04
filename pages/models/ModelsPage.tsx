@@ -1057,8 +1057,6 @@ export function ModelsPage() {
                   searchFilter ? t("models_page.no_results") : t("models_page.no_model_data")
                 }
                 minWidth="min-w-[1440px]"
-                height="h-full"
-                minHeight="min-h-0"
               />
             </Card>
           </div>
@@ -1067,7 +1065,7 @@ export function ModelsPage() {
         <Card
           title={t("models_page.model_configs")}
           description={t("models_page.model_configs_desc")}
-          className="flex flex-1 flex-col overflow-hidden md:min-h-0"
+          className="flex flex-col overflow-hidden md:min-h-0"
           bodyClassName="relative flex min-h-0 flex-1 flex-col"
           actions={
             <div className="flex flex-wrap items-center justify-end gap-2">
@@ -1111,8 +1109,6 @@ export function ModelsPage() {
             caption={t("models_page.table_caption")}
             emptyText={searchFilter ? t("models_page.no_results") : t("models_page.no_model_data")}
             minWidth="min-w-[1440px]"
-            height="h-[calc(100vh-430px)] md:h-auto md:flex-1"
-            minHeight="min-h-[360px] md:min-h-0"
           />
         </Card>
       )}

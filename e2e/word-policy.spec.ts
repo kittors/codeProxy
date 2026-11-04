@@ -288,8 +288,11 @@ test.describe("sensitive words in the admin panel", () => {
     await expect(page.getByRole("cell", { name: "诈骗", exact: true })).toBeVisible();
     await expect(page.getByTestId("word-policy-status")).toHaveText("共 3 个词 · 保存后生效");
 
+    // 命中后怎么处理在编辑器的「命中处理」页，标签上写着现在的处理方式。
+    await page.getByRole("tab", { name: "命中处理 拦截请求" }).click();
     await page.getByRole("radio", { name: /替换文本/ }).click();
     await page.getByRole("textbox", { name: "替换文本" }).fill("[已屏蔽]");
+    await expect(page.getByRole("tab", { name: "命中处理 替换文本" })).toBeVisible();
 
     // 有改动才出现保存栏。
     const saveBar = page.getByRole("region", { name: "有未保存的修改" });
