@@ -22,6 +22,7 @@ import {
 import { useAuth } from "@app/providers/AuthProvider";
 import { SystemMonitorSection } from "./SystemMonitorSection";
 import { useSystemStats } from "./useSystemStats";
+import { cacheRatePercent, readCacheRate } from "@code-proxy/domain";
 import { AnimatedNumber } from "@code-proxy/ui";
 import { Button } from "@code-proxy/ui";
 import { EmptyState } from "@code-proxy/ui";
@@ -172,6 +173,10 @@ export function DashboardPage() {
     () => createSparklineOption([], cacheColor, isDark),
     [isDark, cacheColor],
   );
+  // Newer backends report a hit rate (reads over the prompt of the requests
+  // that reported their cache use); older ones a share of cached tokens.
+  const cacheView = readCacheRate(kpi);
+  const cacheRate = cacheRatePercent(cacheView, (kpi?.input_tokens ?? 0) > 0);
 
   return (
     <div className="space-y-4">
@@ -287,13 +292,29 @@ export function DashboardPage() {
           option={failedRequestOption}
         />
         <DashboardKpiCard
-          title={t("dashboard.cache_rate")}
-          value={<AnimatedNumber value={kpi?.cache_rate ?? 0} format={formatRate} />}
-          hint={renderDashboardHint(
-            "dashboard.cache_hint",
-            <DashboardMetricValue key="cached" value={kpi?.cached_tokens ?? 0} />,
-            <DashboardMetricValue key="input" value={kpi?.input_tokens ?? 0} />,
+          title={t(
+            cacheView.kind === "hit_rate" ? "dashboard.cache_hit_rate" : "dashboard.cache_rate",
           )}
+          value={
+            cacheRate === null ? (
+              <span aria-label={t("dashboard.cache_hit_rate_unknown")}>—</span>
+            ) : (
+              <AnimatedNumber value={cacheRate} format={formatRate} />
+            )
+          }
+          hint={
+            cacheView.kind === "hit_rate"
+              ? renderDashboardHint(
+                  "dashboard.cache_hit_hint",
+                  <DashboardMetricValue key="read" value={cacheView.readTokens} />,
+                  <DashboardMetricValue key="write" value={cacheView.writeTokens} />,
+                )
+              : renderDashboardHint(
+                  "dashboard.cache_hint",
+                  <DashboardMetricValue key="cached" value={kpi?.cached_tokens ?? 0} />,
+                  <DashboardMetricValue key="input" value={kpi?.input_tokens ?? 0} />,
+                )
+          }
           icon={Database}
           hue="teal"
           option={cacheRateOption}

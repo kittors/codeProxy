@@ -5,7 +5,8 @@
  *
  *   both lists empty → every model the group's channels serve, including ones
  *                      the upstream adds later
- *   allowed-models   → only these; a model the upstream adds later is rejected
+ *   allowed-models   → only these, plus what discovery listed since when the
+ *                      group follows upstream (`discoveredModels`)
  *   excluded-models  → everything except these, so later models pass untouched
  *   both             → the allow list minus the exclusions; an exclusion wins
  *
@@ -19,6 +20,12 @@
 export type ChannelGroupModelGate = {
   allowedModels?: readonly string[];
   excludedModels?: readonly string[];
+  /**
+   * What a group that follows upstream admits beyond its allow list, as GET
+   * /channel-groups reports it (`discovered-models`). The backend works out
+   * which listed models the group's channels serve; the panel only reads it.
+   */
+  discoveredModels?: readonly string[];
 };
 
 /**
@@ -93,7 +100,11 @@ export function channelGroupServesModel(gate: ChannelGroupModelGate, model: stri
   if (!model.trim()) return false;
   if (channelGroupExcludesModel(gate.excludedModels ?? [], model)) return false;
   const allowed = (gate.allowedModels ?? []).filter((entry) => entry.trim());
-  return allowed.length === 0 || channelGroupAllowListHas(allowed, model);
+  return (
+    allowed.length === 0 ||
+    channelGroupAllowListHas(allowed, model) ||
+    channelGroupAllowListHas(gate.discoveredModels ?? [], model)
+  );
 }
 
 /** The models out of `models` that the group serves, in their original order. */

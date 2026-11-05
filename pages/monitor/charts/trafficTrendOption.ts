@@ -1,15 +1,18 @@
 import type { ECBasicOption } from "echarts/types/dist/shared";
 import type { MonitorOverview, MonitorSeriesPoint } from "@code-proxy/api-client";
 import { chartGradient, chartPalette } from "@code-proxy/ui";
+import { readCacheRate } from "@code-proxy/domain";
 import {
   formatMonitorAxis,
   formatMonitorAxisDuration,
   formatMonitorBucketLabel,
   formatMonitorBucketRange,
+  formatMonitorCacheRate,
   formatMonitorCompact,
   formatMonitorCost,
   formatMonitorDuration,
   formatMonitorPercent,
+  monitorCacheRate,
 } from "../model/monitorFormat";
 import {
   firstParam,
@@ -101,9 +104,24 @@ function barFill(key: TrendSeriesKey, isDark: boolean) {
 }
 
 export type TrendLabels = Record<
-  TrendSeriesKey | "requests" | "tokens" | "reasoning" | "cached",
+  TrendSeriesKey | "requests" | "tokens" | "reasoning" | "cached" | "cache_read" | "cache_write",
   string
 >;
+
+/**
+ * 提示框里的缓存 token。新后端把读取和写入分开记（写入不算在「其中缓存」里，
+ * 它是写进缓存、按写入价计费的部分）；旧后端只有一个缓存数，读取或写入不分。
+ */
+function cacheTokenRows(point: MonitorSeriesPoint, labels: TrendLabels) {
+  const view = readCacheRate(point);
+  if (view.kind === "hit_rate") {
+    return [
+      { label: labels.cache_read, value: formatMonitorCompact(view.readTokens), muted: true },
+      { label: labels.cache_write, value: formatMonitorCompact(view.writeTokens), muted: true },
+    ];
+  }
+  return [{ label: labels.cached, value: formatMonitorCompact(point.cached_tokens), muted: true }];
+}
 
 /**
  * 主趋势图。后端给的是连续、补零的时间轴，所以空档就是真实的「没有请求」，不会再出现
@@ -244,8 +262,8 @@ export function createTrafficTrendOption(
       line(
         "cache_rate",
         gapAware(
-          (p) => p.cache_rate,
-          (p) => p.input_tokens > 0,
+          (p) => monitorCacheRate(p) ?? 0,
+          (p) => monitorCacheRate(p) !== null,
         ),
         {
           yAxisIndex: 1,
@@ -260,7 +278,7 @@ export function createTrafficTrendOption(
         label: labels.input,
         value: formatMonitorCompact(point.input_tokens),
       },
-      { label: labels.cached, value: formatMonitorCompact(point.cached_tokens), muted: true },
+      ...cacheTokenRows(point, labels),
       {
         color: color("output"),
         label: labels.output,
@@ -271,7 +289,7 @@ export function createTrafficTrendOption(
       {
         color: color("cache_rate"),
         label: labels.cache_rate,
-        value: point.input_tokens > 0 ? formatMonitorPercent(point.cache_rate, 1) : "—",
+        value: formatMonitorCacheRate(point),
       },
     ];
   } else if (view === "latency") {

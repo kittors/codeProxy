@@ -5,11 +5,17 @@
  * are mirrored in @code-proxy/domain channelGroupModelGate):
  *
  *   both lists empty    → every model the group's channels serve, now and later
- *   allowed-models set  → a frozen allow list; models the upstream adds later
- *                         are rejected until an operator edits the group
+ *   allowed-models set  → an allow list; models the upstream adds later are
+ *                         rejected until an operator edits the group, unless
+ *                         the group follows upstream (see below)
  *   excluded-models set → everything except these, so new upstream models stay
  *                         usable untouched
  *   both set            → the allow list minus the exclusions
+ *
+ * `follow-upstream-models` only matters with an allow list: the list then also
+ * admits what Codex discovery lists later, so a curated group gets new OpenAI
+ * models without opening up to every model its channels serve. Unset means on
+ * for the default group and off for every other one, as the backend reads it.
  *
  * The "auto-allow new models" switch only decides which list an edit writes:
  * on → exclusions, off → a fixed allow list. Two rules keep the editor from
@@ -32,6 +38,15 @@ import {
   exclusionEntryMatchesModel,
 } from "@code-proxy/domain/models/channelGroupModelGate";
 
+/**
+ * What the backend stores for a group's model gate, read off the routing-config
+ * capabilities (RoutingConfigSupport in the api-client has this shape).
+ */
+export type ModelGateSupport = {
+  channelGroupExcludedModels: boolean;
+  channelGroupFollowUpstreamModels: boolean;
+};
+
 export type ModelSelectionDraft = {
   /** On: edits are saved as exclusions, so models the upstream adds later stay allowed. */
   autoAllowNewModels: boolean;
@@ -43,6 +58,20 @@ export type ModelSelectionDraft = {
    * are written.
    */
   exclusionsSupported: boolean;
+  /**
+   * `follow-upstream-models` as stored or as the operator set it; undefined when
+   * never set. Kept as read so a save leaves an unset group unset.
+   */
+  followUpstreamModels?: boolean;
+  /** What an unset setting means for this group: on only for the default group. */
+  followsByDefault: boolean;
+  /** The backend advertises `channel-group-follow-upstream-models`; an older one drops it. */
+  followUpstreamSupported: boolean;
+  /**
+   * What following upstream admits beyond the allow list, as the backend worked
+   * it out for the saved group (GET /channel-groups). Read-only.
+   */
+  upstreamModels: string[];
   /** The operator changed the model gate during this edit. */
   touched: boolean;
 };
@@ -62,6 +91,9 @@ export type ModelRulesOutsideList = {
 /** Exclusion entry meaning "no model at all", matching the backend wildcard. */
 const EXCLUDE_ALL = "*";
 
+/** The root group behind /v1, the one group that follows upstream when unset. */
+const ROOT_GROUP_NAME = "default";
+
 const normalizeList = (models: readonly string[]): string[] =>
   Array.from(new Set(models.map((model) => model.trim()).filter(Boolean)));
 
@@ -72,12 +104,16 @@ const isWildcardRule = (entry: string) => entry.includes("*") && !isExcludeAll(e
 const sameEntries = (a: readonly string[], b: readonly string[]) =>
   a.length === b.length && a.every((entry) => b.includes(entry));
 
-export function createModelSelectionDraft(exclusionsSupported: boolean): ModelSelectionDraft {
+export function createModelSelectionDraft(support: ModelGateSupport): ModelSelectionDraft {
   return {
-    autoAllowNewModels: exclusionsSupported,
+    autoAllowNewModels: support.channelGroupExcludedModels,
     allowedModels: [],
     excludedModels: [],
-    exclusionsSupported,
+    exclusionsSupported: support.channelGroupExcludedModels,
+    // A new group is never the default one, which always exists already.
+    followsByDefault: false,
+    followUpstreamSupported: support.channelGroupFollowUpstreamModels,
+    upstreamModels: [],
     touched: false,
   };
 }
@@ -92,11 +128,18 @@ export function excludesEveryModel(selection: ModelSelectionDraft): boolean {
  * list, and exclusions alone or no lists at all follow the upstream.
  */
 export function modelSelectionFromEntry(
-  entry: { allowedModels?: readonly string[]; excludedModels?: readonly string[] },
-  exclusionsSupported: boolean,
+  entry: {
+    name?: string;
+    allowedModels?: readonly string[];
+    excludedModels?: readonly string[];
+    followUpstreamModels?: boolean;
+    discoveredModels?: readonly string[];
+  },
+  support: ModelGateSupport,
 ): ModelSelectionDraft {
   const allowedModels = normalizeList(entry.allowedModels ?? []);
   const excludedModels = normalizeList(entry.excludedModels ?? []);
+  const exclusionsSupported = support.channelGroupExcludedModels;
   return {
     // "*" blocks every model, so it implies neither reading; the fixed one makes
     // the next checkbox open that model alone instead of everything but the list.
@@ -105,8 +148,46 @@ export function modelSelectionFromEntry(
     allowedModels,
     excludedModels,
     exclusionsSupported,
+    followUpstreamModels: entry.followUpstreamModels,
+    followsByDefault: (entry.name ?? "").trim().toLowerCase() === ROOT_GROUP_NAME,
+    followUpstreamSupported: support.channelGroupFollowUpstreamModels,
+    upstreamModels: normalizeList(entry.discoveredModels ?? []),
     touched: false,
   };
+}
+
+/** Whether the group's allow list also admits models Codex discovery lists later. */
+export function followsUpstreamModels(selection: ModelSelectionDraft): boolean {
+  return selection.followUpstreamModels ?? selection.followsByDefault;
+}
+
+/**
+ * The models following upstream adds to this draft's allow list: what the
+ * backend reported for the saved group, minus what the draft now checks or
+ * excludes, since an edit can take a model off that list either way.
+ */
+export function upstreamModelsBeyondList(selection: ModelSelectionDraft): string[] {
+  return selection.upstreamModels.filter(
+    (model) =>
+      !channelGroupAllowListHas(selection.allowedModels, model) &&
+      !channelGroupExcludesModel(selection.excludedModels, model),
+  );
+}
+
+/**
+ * Sets whether the allow list also admits what Codex discovery lists later.
+ * Unlike the auto-allow switch it rewrites neither list, so it needs no loaded
+ * model list. Turning it on still widens the group, to every model discovery
+ * lists from now on, which the panel spells out next to the switch.
+ */
+export function setFollowUpstreamModels(
+  selection: ModelSelectionDraft,
+  follow: boolean,
+): ModelSelectionDraft {
+  if (!selection.followUpstreamSupported || followsUpstreamModels(selection) === follow) {
+    return selection;
+  }
+  return { ...selection, followUpstreamModels: follow, touched: true };
 }
 
 /** Model ids to render as checked: exactly the listed ones the backend would serve. */
@@ -308,14 +389,16 @@ export function removeModelRule(
   };
 }
 
-/** The two lists to persist on the group entry, as they stand. */
+/** The model gate to persist on the group entry, as it stands. */
 export function serializeModelSelection(selection: ModelSelectionDraft): {
   allowedModels: string[];
   excludedModels: string[];
+  followUpstreamModels?: boolean;
 } {
   return {
     allowedModels: normalizeList(selection.allowedModels),
     excludedModels: normalizeList(selection.excludedModels),
+    followUpstreamModels: selection.followUpstreamModels,
   };
 }
 

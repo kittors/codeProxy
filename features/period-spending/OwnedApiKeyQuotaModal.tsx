@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { Gauge, KeyRound, Tag } from "lucide-react";
 import type { PeriodSpendingLimits, PeriodSpendingPeriod } from "@code-proxy/api-client";
 import {
@@ -30,6 +30,9 @@ export interface OwnedApiKeyQuotaForm {
  * 分两段：先起名字（在请求日志里靠它区分来源），再设子额度。每个周期输入框下面常驻
  * 「账号上限 $X」；超过账号上限、名称为空或与已有 Key 重名，都在对应字段下就地报错
  * （失焦或点提交后出现），不再只是把按钮置灰让人猜原因。服务端拒绝的原因放在表单末尾。
+ *
+ * 页面可以在子额度之后追加别的功能的分区（extra），并在校验通过后、提交前先保存它们
+ * （beforeSubmit）：这些分区属于别的功能，由页面组装，这里不认识它们。
  */
 export function OwnedApiKeyQuotaModal({
   t,
@@ -40,6 +43,8 @@ export function OwnedApiKeyQuotaModal({
   saving,
   serverError,
   existingNames,
+  extra,
+  beforeSubmit,
   onChange,
   onClose,
   onSubmit,
@@ -53,6 +58,13 @@ export function OwnedApiKeyQuotaModal({
   serverError?: string;
   /** 已有 Key 的名称：传入时在前端拦下重名（比较时忽略大小写与首尾空格）。 */
   existingNames?: string[];
+  /** 子额度之后追加的表单分区（页面组装，通常是别的功能的 FormSection）。 */
+  extra?: ReactNode;
+  /**
+   * 校验通过后、onSubmit 之前调用：先保存 extra 里的内容。返回 false 表示不要继续保存
+   * （那边校验没过或写入失败，原因已经在它的分区里显示），弹窗留在原地让用户改。
+   */
+  beforeSubmit?: () => Promise<boolean>;
   onChange: (next: OwnedApiKeyQuotaForm) => void;
   onClose: () => void;
   onSubmit: () => void;
@@ -131,7 +143,13 @@ export function OwnedApiKeyQuotaModal({
             validation.focusFirstInvalid(formRef.current);
             return;
           }
-          onSubmit();
+          if (!beforeSubmit) {
+            onSubmit();
+            return;
+          }
+          void beforeSubmit().then((proceed) => {
+            if (proceed) onSubmit();
+          });
         }}
       >
         <FormSection title={t("api_keys_page.owned_key_basics_section")} icon={<Tag />}>
@@ -166,6 +184,8 @@ export function OwnedApiKeyQuotaModal({
             idPrefix={`owned-key-${mode}`}
           />
         </FormSection>
+
+        {extra}
 
         {serverError ? (
           <Callout tone="danger" role="alert">

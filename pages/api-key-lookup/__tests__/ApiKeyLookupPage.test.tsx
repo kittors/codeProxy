@@ -800,11 +800,12 @@ describe("ApiKeyLookupPage", () => {
       within(cardToolbar).getByRole("button", { name: /new key|新建 key/i }),
     ).toBeInTheDocument();
 
-    // 表格仍是固定高度、内部滚动的视口；没有外层卡片后不再留左右内边距，和操作行左右对齐。
+    // Key 通常就几条：表格按行数收高，不再钉成一屏高的视口（行少时下面是一整屏空框）；
+    // 没有外层卡片后不再留左右内边距，和操作行左右对齐。
     const tableViewport = screen.getByTestId("apikey-lookup-keys-table-viewport");
-    expect(tableViewport).toHaveClass("min-h-[360px]", "h-[calc(100dvh-240px)]");
+    expect(tableViewport.className).not.toMatch(/100dvh|min-h-\[360px\]/);
     expect(tableViewport).not.toHaveClass("px-3");
-    expect(tableViewport.querySelector(".h-full.min-h-full")).not.toBeNull();
+    expect(tableViewport.querySelector(".h-auto.min-h-0.max-h-full")).not.toBeNull();
 
     await waitFor(() => {
       expect(portalApi.listKeys).toHaveBeenCalledTimes(2);

@@ -38,7 +38,7 @@ describe("usageMonitorApi", () => {
     ]) {
       const overview = normalizeMonitorOverview(raw);
       expect(overview.series).toEqual([]);
-      expect(overview.models).toEqual({ rows: [], total: 0 });
+      expect(overview.models).toEqual({ rows: [], total: 0, performance_coverage_start: "" });
       expect(overview.filters).toEqual({ models: [], channels: [], consumers: [] });
       expect(overview.range.key).toBe("24h");
       expect(overview.summary.current.requests).toBe(0);
@@ -77,6 +77,145 @@ describe("usageMonitorApi", () => {
     expect(overview.recent_failures[0].streaming).toBe(false);
   });
 
+  test("keeps the cache hit rate apart from the legacy cache_rate", async () => {
+    const { normalizeMonitorTotals, normalizeMonitorOverview } = await import("../usage-monitor");
+    // An older backend sends no cache_hit_rate: it stays absent, not 0.
+    const older = normalizeMonitorTotals({ input_tokens: 10, cache_rate: 30 });
+    expect(older.cache_rate).toBe(30);
+    expect(Object.prototype.hasOwnProperty.call(older, "cache_hit_rate")).toBe(false);
+
+    expect(normalizeMonitorTotals({ cache_rate: 0, cache_hit_rate: null })).toMatchObject({
+      cache_rate: 0,
+      cache_hit_rate: null,
+      cache_read_tokens: 0,
+      cache_write_tokens: 0,
+    });
+    const overview = normalizeMonitorOverview({
+      summary: {
+        current: {
+          cache_rate: 45,
+          cache_hit_rate: 45,
+          cache_read_tokens: 900,
+          cache_write_tokens: 1000,
+        },
+      },
+      series: [{ start: "2026-10-30T00:00:00+08:00", cache_rate: 0, cache_hit_rate: null }],
+    });
+    expect(overview.summary.current).toMatchObject({
+      cache_hit_rate: 45,
+      cache_read_tokens: 900,
+      cache_write_tokens: 1000,
+    });
+    expect(overview.series[0].cache_hit_rate).toBeNull();
+  });
+
+  // A null speed is "nothing measured it" and must not turn into 0 tok/s; an older backend
+  // sends neither field, and its output_tokens_per_second (first-token wait included) is dropped.
+  test("keeps the generation speed null when nothing measured it", async () => {
+    const { normalizeMonitorTotals, normalizeMonitorOverview } = await import("../usage-monitor");
+
+    const older = normalizeMonitorTotals({ requests: 3, output_tokens_per_second: 17.5 });
+    expect(older).toMatchObject({
+      generation_samples: null,
+      generation_tokens_per_second: null,
+      generation_output_tokens: 0,
+      generation_ms: 0,
+    });
+    expect(Object.prototype.hasOwnProperty.call(older, "output_tokens_per_second")).toBe(false);
+
+    expect(
+      normalizeMonitorTotals({ generation_samples: 0, generation_tokens_per_second: null }),
+    ).toMatchObject({ generation_samples: 0, generation_tokens_per_second: null });
+    expect(
+      normalizeMonitorTotals({
+        generation_samples: "1081",
+        generation_tokens_per_second: 152.4,
+        generation_output_tokens: 300000,
+        generation_ms: 2000000,
+      }),
+    ).toMatchObject({
+      generation_samples: 1081,
+      generation_tokens_per_second: 152.4,
+      generation_output_tokens: 300000,
+      generation_ms: 2000000,
+    });
+    expect(
+      normalizeMonitorTotals({ generation_tokens_per_second: "NaN" }).generation_tokens_per_second,
+    ).toBeNull();
+
+    const overview = normalizeMonitorOverview({
+      models: {
+        rows: [
+          {
+            key: "gemini",
+            performance: {
+              generation_speed: { samples: 1081, p50: 146.3, p90: "207.3" },
+              first_token_ms: { samples: 11667, p50: 8425, p90: 24950 },
+              first_token_ms_per_1k_input: 112,
+            },
+          },
+          {
+            key: "plain",
+            performance: { generation_speed: {}, first_token_ms_per_1k_input: null },
+          },
+          { key: "older" },
+        ],
+        performance_coverage_start: "2026-10-27T14:56:28+08:00",
+      },
+      channels: { rows: [{ key: "a" }] },
+    });
+    const [gemini, plain, older2] = overview.models.rows;
+    expect(gemini.performance).toEqual({
+      generation_speed: { samples: 1081, p50: 146.3, p90: 207.3 },
+      first_token_ms: { samples: 11667, p50: 8425, p90: 24950 },
+      first_token_ms_per_1k_input: 112,
+    });
+    expect(plain.performance).toEqual({
+      generation_speed: { samples: 0, p50: 0, p90: 0 },
+      first_token_ms: { samples: 0, p50: 0, p90: 0 },
+      first_token_ms_per_1k_input: null,
+    });
+    expect(older2.performance).toBeNull();
+    expect(overview.models.performance_coverage_start).toBe("2026-10-27T14:56:28+08:00");
+    expect(overview.channels.rows[0].performance).toBeNull();
+    expect(overview.channels.performance_coverage_start).toBe("");
+  });
+
+  // The backend sends loop_guard with every overview, zeros included, so its
+  // presence is how the panel tells a backend with loop protection from one without.
+  test("reads the loop protection counts, and null from a backend that sends none", async () => {
+    const { normalizeMonitorOverview } = await import("../usage-monitor");
+
+    expect(
+      normalizeMonitorOverview({
+        loop_guard: { reply_loops: 3, tool_loops: "4", estimated_saved_cost: 1.25 },
+      }).loop_guard,
+    ).toEqual({ reply_loops: 3, tool_loops: 4, estimated_saved_cost: 1.25 });
+    // Zeros are a backend that has the feature and nothing to report: not null.
+    expect(
+      normalizeMonitorOverview({
+        loop_guard: { reply_loops: 0, tool_loops: 0, estimated_saved_cost: 0 },
+      }).loop_guard,
+    ).toEqual({ reply_loops: 0, tool_loops: 0, estimated_saved_cost: 0 });
+    // A partial object still counts as declared, with what is missing read as 0.
+    expect(normalizeMonitorOverview({ loop_guard: { tool_loops: 2 } }).loop_guard).toEqual({
+      reply_loops: 0,
+      tool_loops: 2,
+      estimated_saved_cost: 0,
+    });
+    // Bad numbers do not leak NaN into the arithmetic that formats them.
+    expect(
+      normalizeMonitorOverview({
+        loop_guard: { reply_loops: "x", tool_loops: null, estimated_saved_cost: "NaN" },
+      }).loop_guard,
+    ).toEqual({ reply_loops: 0, tool_loops: 0, estimated_saved_cost: 0 });
+
+    for (const raw of [{}, { loop_guard: null }, { loop_guard: "yes" }, { loop_guard: [1, 2] }]) {
+      expect(normalizeMonitorOverview(raw).loop_guard).toBeNull();
+    }
+    expect(normalizeMonitorOverview(null).loop_guard).toBeNull();
+  });
+
   test("normalises the realtime strip", async () => {
     const { normalizeMonitorRealtime } = await import("../usage-monitor");
     const realtime = normalizeMonitorRealtime({
@@ -92,5 +231,77 @@ describe("usageMonitorApi", () => {
     expect(realtime.current_rpm).toBe(2);
     expect(realtime.peak_tpm).toBe(0);
     expect(realtime.last_5m).toMatchObject({ requests: 9, success_rate: 100 });
+  });
+
+  test("reads the in-flight capability only when the backend declares it", async () => {
+    const { normalizeMonitorOverview } = await import("../usage-monitor");
+    expect(normalizeMonitorOverview({}).capabilities).toEqual({ inFlightRequests: false });
+    expect(
+      normalizeMonitorOverview({ capabilities: { "in-flight-requests": "yes" } }).capabilities,
+    ).toEqual({ inFlightRequests: false });
+    expect(
+      normalizeMonitorOverview({ capabilities: { "in-flight-requests": true } }).capabilities,
+    ).toEqual({ inFlightRequests: true });
+  });
+
+  test("fetches and normalises the requests in flight", async () => {
+    const { usageMonitorApi } = await import("../usage-monitor");
+    getMock.mockResolvedValue({
+      requests: [
+        {
+          request_id: "req-1",
+          method: "POST",
+          path: "/v1/messages",
+          started_at: "2026-11-01T05:00:00.123+08:00",
+          elapsed_ms: 18_250,
+          stage: "first_token",
+          stage_elapsed_ms: "16000",
+          model: "claude-sonnet-5-5",
+          stream: true,
+          attempt: 2,
+          account: { auth_id: "claude-a.json", label: "Team A", provider: "claude" },
+          api_key_id: "key-7",
+          api_key_name: "CI",
+        },
+        // A request the scheduler has not placed yet, with fields an older build leaves out.
+        { request_id: "req-2", stage: "preparing", account: { label: "no id" } },
+        "garbage",
+      ],
+      total: 1,
+      generated_at: "2026-11-01T05:00:18+08:00",
+    });
+    const inFlight = await usageMonitorApi.getInFlight();
+    expect(getMock).toHaveBeenCalledWith("/usage/monitor/in-flight", { signal: undefined });
+    // An entry that is not an object is dropped; total is never below what is listed.
+    expect(inFlight.requests).toHaveLength(2);
+    expect(inFlight.total).toBe(2);
+    expect(inFlight.requests[0]).toEqual({
+      request_id: "req-1",
+      method: "POST",
+      path: "/v1/messages",
+      started_at: "2026-11-01T05:00:00.123+08:00",
+      elapsed_ms: 18_250,
+      stage: "first_token",
+      stage_elapsed_ms: 16_000,
+      model: "claude-sonnet-5-5",
+      stream: true,
+      attempt: 2,
+      account: {
+        auth_id: "claude-a.json",
+        label: "Team A",
+        provider: "claude",
+        group: "",
+        model: "",
+      },
+      api_key_id: "key-7",
+      api_key_name: "CI",
+    });
+    expect(inFlight.requests[1]).toMatchObject({
+      request_id: "req-2",
+      stage: "preparing",
+      account: null,
+      attempt: 0,
+      stream: false,
+    });
   });
 });

@@ -6,3 +6,4 @@ export {
   getRouteModels,
 } from "./components/ccswitchConfigDraft";
 export type { CcSwitchChannelGroupOption } from "./components/useChannelGroupModels";
+export { presetModelsRefusedByGroup } from "./components/presetGroupGate";

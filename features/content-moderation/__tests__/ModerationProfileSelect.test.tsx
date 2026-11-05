@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { ApiError } from "@code-proxy/api-client";
+import { ApiError, NO_CONTENT_MODERATION_PROFILE_CAPABILITIES } from "@code-proxy/api-client";
 import i18n from "@code-proxy/i18n";
 import { ThemeProvider, ToastProvider } from "@code-proxy/ui";
 import { ModerationProfileSelect } from "../ModerationProfileSelect";
@@ -30,12 +30,15 @@ describe("ModerationProfileSelect", () => {
     mocks.listChannels.mockReset();
     mocks.patchBindings.mockReset();
     mocks.notify.mockReset();
-    mocks.listProfiles.mockResolvedValue([
-      {
-        id: "profile-1",
-        name: "Strict prompts",
-      },
-    ]);
+    mocks.listProfiles.mockResolvedValue({
+      items: [
+        {
+          id: "profile-1",
+          name: "Strict prompts",
+        },
+      ],
+      capabilities: NO_CONTENT_MODERATION_PROFILE_CAPABILITIES,
+    });
     mocks.listChannels.mockResolvedValue({
       items: [
         {
@@ -135,10 +138,13 @@ describe("ModerationProfileSelect", () => {
 
   test("confirms replacing an existing binding as old → new, not as a delete", async () => {
     const user = userEvent.setup();
-    mocks.listProfiles.mockResolvedValue([
-      { id: "profile-1", name: "Strict prompts" },
-      { id: "profile-2", name: "Relaxed prompts" },
-    ]);
+    mocks.listProfiles.mockResolvedValue({
+      items: [
+        { id: "profile-1", name: "Strict prompts" },
+        { id: "profile-2", name: "Relaxed prompts" },
+      ],
+      capabilities: NO_CONTENT_MODERATION_PROFILE_CAPABILITIES,
+    });
     mocks.listChannels.mockResolvedValue({
       items: [
         {

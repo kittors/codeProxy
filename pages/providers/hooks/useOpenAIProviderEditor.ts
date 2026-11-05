@@ -1,6 +1,11 @@
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { apiCallApi, getApiCallErrorMessage, providersApi } from "@code-proxy/api-client";
+import {
+  apiCallApi,
+  carryRawRecord,
+  getApiCallErrorMessage,
+  providersApi,
+} from "@code-proxy/api-client";
 import type { ApiCallResult, OpenAIProvider } from "@code-proxy/api-client";
 import { useToast } from "@code-proxy/ui";
 import { coolingOverrideField } from "@features/channel-cooling";
@@ -130,7 +135,8 @@ export function useOpenAIProviderEditor({
         index === null
           ? [...openaiProviders, value]
           : openaiProviders.map((provider, providerIndex) =>
-              providerIndex === index ? value : provider,
+              // 表单交出的是新对象，后端原始记录（含 codex-tool-bridge 等没建模的字段）在旧项上。
+              providerIndex === index ? carryRawRecord(value, provider) : provider,
             );
       setOpenaiProviders(next);
       setCachedData("openai", next);
@@ -189,14 +195,17 @@ export function useOpenAIProviderEditor({
       const prev = openaiProviders;
       const next = prev.map((item, itemIndex) => {
         if (itemIndex !== providerIndex) return item;
-        return {
-          ...item,
-          apiKeyEntries: (item.apiKeyEntries ?? []).map((keyEntry, keyIndex) =>
-            keyIndex === entryIndex
-              ? { ...keyEntry, ...(enabled ? { disabled: undefined } : { disabled: true }) }
-              : keyEntry,
-          ),
-        };
+        return carryRawRecord(
+          {
+            ...item,
+            apiKeyEntries: (item.apiKeyEntries ?? []).map((keyEntry, keyIndex) =>
+              keyIndex === entryIndex
+                ? { ...keyEntry, ...(enabled ? { disabled: undefined } : { disabled: true }) }
+                : keyEntry,
+            ),
+          },
+          item,
+        );
       });
 
       setOpenaiProviders(next);

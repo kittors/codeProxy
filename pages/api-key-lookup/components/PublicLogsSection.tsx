@@ -71,8 +71,9 @@ export function PublicLogsSection({
   // 请求日志页签就是页面本身（flat）：筛选、表格、分页直接落在页面上，与控制台的请求日志页
   // 同一种结构。以前整页包在一张卡里，筛选行与表格之间再画一道分隔线。
   return (
-    <Reveal>
-      <Card flat bodyClassName="mt-0">
+    // 桌面宽度由门户页钉满一屏（见 lookupLayout），这里把高度一路传给表格。
+    <Reveal className="flex flex-col md:min-h-0 md:flex-1">
+      <Card flat className="flex flex-col md:min-h-0 md:flex-1" bodyClassName="mt-0 flex flex-col md:min-h-0 md:flex-1">
         <div className="pb-3">
           <div className="grid gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-2">
             <div className="grid grid-cols-1 gap-2 sm:flex sm:items-center sm:gap-2">
@@ -160,7 +161,8 @@ export function PublicLogsSection({
           </div>
         </div>
 
-        <div className="relative min-h-[360px] h-[calc(100dvh-300px)] overflow-hidden">
+        {/* 表格按行数收高，分页条紧跟最后一行；窄屏随页面流动，最多占一屏左右再在内部滚动。 */}
+        <div className="relative flex min-h-0 flex-col overflow-hidden">
           <DataTable
             tableId="apikey-lookup-request-logs"
             rows={rows}
@@ -169,8 +171,7 @@ export function PublicLogsSection({
             loading={loading}
             virtualize={false}
             minWidth="min-w-[1240px]"
-            height="h-full"
-            minHeight="min-h-full"
+            maxHeight="max-h-[max(22.5rem,calc(100dvh-300px))] md:max-h-full"
             caption={t("request_logs.table_caption")}
             emptyText={t("request_logs.no_data")}
             showAllLoadedMessage={false}

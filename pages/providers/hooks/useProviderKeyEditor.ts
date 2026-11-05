@@ -11,7 +11,7 @@ import type {
   BedrockProviderConfig,
   ProviderSimpleConfig,
 } from "@code-proxy/api-client";
-import { providersApi } from "@code-proxy/api-client";
+import { carryRawRecord, providersApi } from "@code-proxy/api-client";
 import { coolingOverrideField } from "@features/channel-cooling";
 import { invalidateConfiguredModelAvailability } from "@features/model-availability";
 import { keyValueEntriesToRecord } from "../KeyValueInputList";
@@ -345,7 +345,11 @@ export function useProviderKeyEditor({
       if (index === null) return [...list, value];
       return list.map((item, itemIndex) =>
         itemIndex === index
-          ? { ...value, apiKey: value.apiKey || item.apiKey }
+          ? // 表单交出的是新对象，后端原始记录在 item 上：不接过来，整表 PUT 就会清掉面板没建模的字段。
+            carryRawRecord(
+              { ...value, apiKey: value.apiKey || item.apiKey },
+              item,
+            )
           : item,
       );
     };
@@ -595,11 +599,14 @@ export function useProviderKeyEditor({
           ? withoutDisableAllModelsRule(current.excludedModels)
           : withDisableAllModelsRule(current.excludedModels);
 
-      const nextItem: ProviderSimpleConfig = {
-        ...current,
-        ...(usesExplicitDisabled ? { disabled: !enabled } : {}),
-        ...(nextExcluded ? { excludedModels: nextExcluded } : {}),
-      };
+      const nextItem: ProviderSimpleConfig = carryRawRecord(
+        {
+          ...current,
+          ...(usesExplicitDisabled ? { disabled: !enabled } : {}),
+          ...(nextExcluded ? { excludedModels: nextExcluded } : {}),
+        },
+        current,
+      );
       const nextList = prev.map((item, itemIndex) =>
         itemIndex === index ? nextItem : item,
       );

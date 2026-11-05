@@ -9,10 +9,12 @@ import type {
   UsageLogsResponse,
 } from "@code-proxy/api-client/endpoints/usage";
 import {
+  cacheRatePercent,
   formatUsageMetricNumber,
   formatUsageMetricRate,
   formatUsageMetricTooltipNumber,
   isUsageMetricCompact,
+  readCacheRate,
 } from "@code-proxy/domain";
 import {
   DataTable,
@@ -28,27 +30,35 @@ import { ClearDatabaseLogsDialog, DEFAULT_CLEAR_OPTIONS } from "./ClearDatabaseL
 import { RequestLogsFilters } from "./RequestLogsFilters";
 import type { SearchableCheckboxMultiSelectOption } from "@code-proxy/ui";
 import {
-  buildRequestLogKeyOptions,
+  buildRequestLogKeyOptionsFromFacet,
   buildRequestLogsColumns,
   ChannelIdentityLabel,
   DEFAULT_REQUEST_LOG_PAGE_SIZE,
+  EMPTY_REQUEST_LOG_KEY_FACET,
+  guardFilterVisible,
+  guardKindsOfFilter,
   hasActiveFilterSelection,
   normalizeFilterSelection,
+  readRequestLogKeyFacet,
   RequestLogFilterCount,
+  requestLogKeyFilterQuery,
   RequestLogUsageMetricValue,
   RequestLogsPaginationBar,
   RequestLogsTimeRangeSelector,
   sortRequestLogKeyOptionsByCount,
   toFilterParam,
+  requestLogsHaveCacheBreakdown,
   toRequestLogsRow,
   toStatusFilterValues,
+  type GuardFilterValue,
   type MultiSelectFilterState,
+  type RequestLogKeyFacet,
   type StatusFilterValue,
   type RequestLogsRow as LogRow,
   type TimeRange,
 } from "@features/request-log-viewer";
 
-const DEFAULT_LOG_STATS = {
+const DEFAULT_LOG_STATS: UsageLogsResponse["stats"] = {
   total: 0,
   success_rate: 0,
   total_tokens: 0,
@@ -58,6 +68,22 @@ const DEFAULT_LOG_STATS = {
 
 const isRequestCancelled = (err: unknown, signal?: AbortSignal) =>
   signal?.aborted || (err instanceof Error && err.message === "Request was cancelled");
+
+// Newer backends report a hit rate, null when no request in the selection
+// reported its cache use; older ones a share of cached tokens under its own name.
+function RequestLogsCacheRate({ stats }: { stats: UsageLogsResponse["stats"] }) {
+  const { t } = useTranslation();
+  const view = readCacheRate(stats);
+  const rate = cacheRatePercent(view, stats.total > 0);
+  return (
+    <span>
+      {t(view.kind === "hit_rate" ? "request_logs.cache_hit_rate" : "request_logs.cache_rate")}{" "}
+      <span className="font-mono tabular-nums text-ink">
+        {rate === null ? "—" : formatUsageMetricRate(rate)}
+      </span>
+    </span>
+  );
+}
 
 function RequestLogsRecordsCount({ count }: { count: number }) {
   const { t } = useTranslation();
@@ -129,12 +155,6 @@ export function RequestLogsPage() {
     setErrorModalOpen(true);
   }, []);
 
-  // Build columns with content click handler
-  const logColumns = useMemo(
-    () => buildRequestLogsColumns(t, handleContentClick, handleErrorClick, { masked }),
-    [t, handleContentClick, handleErrorClick, masked],
-  );
-
   // Data state (page-based, no accumulation)
   const [rawItems, setRawItems] = useState<UsageLogItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -146,29 +166,22 @@ export function RequestLogsPage() {
 
   // Backend-provided metadata
   const [filterOptions, setFilterOptions] = useState<{
-    api_keys: string[];
-    api_key_names: Record<string, string>;
-    api_key_counts: Record<string, number>;
     models: string[];
     channels: string[];
     channel_options: UsageChannelFilterOption[];
     statuses: string[];
   }>({
-    api_keys: [],
-    api_key_names: {},
-    api_key_counts: {},
     models: [],
     channels: [],
     channel_options: [],
     statuses: ["success", "failed"],
   });
-  const [stats, setStats] = useState<{
-    total: number;
-    success_rate: number;
-    total_tokens: number;
-    total_cost: number;
-    cache_rate: number;
-  }>(DEFAULT_LOG_STATS);
+  // The key facet, and the vocabulary (key ids or the older secrets) the last
+  // response offered it in. The ref lets a request be built in that vocabulary
+  // without making every response re-create fetchLogs.
+  const [keyFacet, setKeyFacet] = useState<RequestLogKeyFacet>(EMPTY_REQUEST_LOG_KEY_FACET);
+  const keyFacetRef = useRef<RequestLogKeyFacet>(EMPTY_REQUEST_LOG_KEY_FACET);
+  const [stats, setStats] = useState<UsageLogsResponse["stats"]>(DEFAULT_LOG_STATS);
 
   // Multi-value filters
   const [timeRange, setTimeRange] = useState<TimeRange>(7);
@@ -177,6 +190,13 @@ export function RequestLogsPage() {
   const [selectedChannels, setSelectedChannels] = useState<MultiSelectFilterState<string>>(null);
   const [selectedStatuses, setSelectedStatuses] =
     useState<MultiSelectFilterState<StatusFilterValue>>(null);
+  // Loop protection: the choice, and what the last response said about it (whether the
+  // backend has it, which kinds the other filters leave).
+  const [guardFilter, setGuardFilter] = useState<GuardFilterValue>("all");
+  const [guardFacet, setGuardFacet] = useState<{ supported: boolean; kinds: string[] }>({
+    supported: false,
+    kinds: [],
+  });
   const [confirmClearOpen, setConfirmClearOpen] = useState(false);
   const [clearingLogs, setClearingLogs] = useState(false);
   const [clearOptions, setClearOptions] = useState<ClearUsageLogsPayload>(DEFAULT_CLEAR_OPTIONS);
@@ -190,17 +210,21 @@ export function RequestLogsPage() {
     [rawItems],
   );
 
+  // Build columns with content click handler. Cache reads and writes get a
+  // column each once the backend stores them apart.
+  const cacheBreakdown = useMemo(() => requestLogsHaveCacheBreakdown(rows), [rows]);
+  const logColumns = useMemo(
+    () =>
+      buildRequestLogsColumns(t, handleContentClick, handleErrorClick, { masked, cacheBreakdown }),
+    [t, handleContentClick, handleErrorClick, masked, cacheBreakdown],
+  );
+
   // Build multi-select options from backend filter data (exclude the "" "all" option)
   const keyOptions = useMemo<SearchableCheckboxMultiSelectOption[]>(() => {
-    const opts = buildRequestLogKeyOptions(
-      filterOptions.api_keys,
-      filterOptions.api_key_names ?? {},
-      {
-        allKeys: t("request_logs.all_users"),
-        systemCall: t("request_logs.system_call"),
-      },
-      filterOptions.api_key_counts,
-    );
+    const opts = buildRequestLogKeyOptionsFromFacet(keyFacet, {
+      allKeys: t("request_logs.all_users"),
+      systemCall: t("request_logs.system_call"),
+    });
     return sortRequestLogKeyOptionsByCount(opts, i18n.resolvedLanguage)
       .filter((option) => option.value !== "")
       .map((option) => ({
@@ -209,13 +233,7 @@ export function RequestLogsPage() {
         searchText: option.searchText,
         trailing: <RequestLogFilterCount count={option.count} />,
       }));
-  }, [
-    filterOptions.api_key_counts,
-    filterOptions.api_key_names,
-    filterOptions.api_keys,
-    i18n.resolvedLanguage,
-    t,
-  ]);
+  }, [i18n.resolvedLanguage, keyFacet, t]);
 
   const modelOptions = useMemo<SearchableCheckboxMultiSelectOption[]>(() => {
     return filterOptions.models.map((m) => ({
@@ -293,7 +311,8 @@ export function RequestLogsPage() {
     hasActiveFilterSelection(selectedApiKeys, apiKeyFilterValues) ||
     hasActiveFilterSelection(selectedModels, modelFilterValues) ||
     hasActiveFilterSelection(selectedChannels, channelFilterValues) ||
-    hasActiveFilterSelection(selectedStatuses, statusFilterValues);
+    hasActiveFilterSelection(selectedStatuses, statusFilterValues) ||
+    guardFilter !== "all";
 
   const handleApiKeysChange = useCallback(
     (value: string[]) => {
@@ -328,6 +347,7 @@ export function RequestLogsPage() {
     setSelectedModels(null);
     setSelectedChannels(null);
     setSelectedStatuses(null);
+    setGuardFilter("all");
   }, []);
 
   const clearApiKeyFilter = useCallback(() => {
@@ -361,14 +381,14 @@ export function RequestLogsPage() {
             page,
             size,
             days: timeRange,
-            api_keys: apiKeyFilterParam.values,
+            ...requestLogKeyFilterQuery(keyFacetRef.current, apiKeyFilterParam),
             models: modelFilterParam.values,
             channels: channelFilterParam.values,
             statuses: statusFilterParam.values,
-            api_keys_empty: apiKeyFilterParam.matchesNone,
             models_empty: modelFilterParam.matchesNone,
             channels_empty: channelFilterParam.matchesNone,
             statuses_empty: statusFilterParam.matchesNone,
+            guard_kinds: guardKindsOfFilter(guardFilter),
           },
           { signal: controller.signal },
         );
@@ -378,10 +398,25 @@ export function RequestLogsPage() {
         setRawItems(resp.items ?? []);
         setTotalCount(resp.total ?? 0);
         setCurrentPage(page);
+        const facet = readRequestLogKeyFacet(resp);
+        if (
+          facet.byId !== keyFacetRef.current.byId &&
+          (apiKeyFilterParam.values || apiKeyFilterParam.matchesNone)
+        ) {
+          // The backend changed vocabulary under an open page (upgraded, or rolled
+          // back): the selection names keys the new facet does not know.
+          setSelectedApiKeys(null);
+        }
+        keyFacetRef.current = facet;
+        setKeyFacet(facet);
+        // The API client fills every capability, but a response that declares nothing is, by
+        // definition, from a backend that predates loop protection.
+        const guardSupported = resp.capabilities?.loopGuard === true;
+        setGuardFacet({ supported: guardSupported, kinds: resp.filters?.guard_kinds ?? [] });
+        // A backend that lost loop protection under an open page (rolled back) would answer
+        // every request to a filter it ignores, which would read as "nothing was stopped".
+        if (!guardSupported) setGuardFilter("all");
         setFilterOptions({
-          api_keys: resp.filters?.api_keys ?? [],
-          api_key_names: resp.filters?.api_key_names ?? {},
-          api_key_counts: resp.filters?.api_key_counts ?? {},
           models: resp.filters?.models ?? [],
           channels: resp.filters?.channels ?? [],
           channel_options: resp.filters?.channel_options ?? [],
@@ -403,6 +438,7 @@ export function RequestLogsPage() {
     [
       apiKeyFilterParam,
       channelFilterParam,
+      guardFilter,
       modelFilterParam,
       notify,
       statusFilterParam,
@@ -439,7 +475,7 @@ export function RequestLogsPage() {
   // Fetch page 1 when filters change
   useEffect(() => {
     fetchLogs(1, pageSize);
-  }, [timeRange, selectedApiKeys, selectedModels, selectedChannels, selectedStatuses]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [timeRange, selectedApiKeys, selectedModels, selectedChannels, selectedStatuses, guardFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleOpenClearDialog = useCallback(() => {
     setClearOptions(DEFAULT_CLEAR_OPTIONS);
@@ -516,12 +552,7 @@ export function RequestLogsPage() {
                 </span>
               </span>
               <span className="text-ink-4">|</span>
-              <span>
-                {t("request_logs.cache_rate")}{" "}
-                <span className="font-mono tabular-nums text-ink">
-                  {formatUsageMetricRate(stats.cache_rate)}
-                </span>
-              </span>
+              <RequestLogsCacheRate stats={stats} />
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -579,18 +610,23 @@ export function RequestLogsPage() {
           onStatusesClear={clearStatusFilter}
           onResetFilters={resetFilters}
           hasActiveFilters={hasActiveFilters}
+          guardFilter={
+            guardFilterVisible(guardFacet.supported, guardFacet.kinds, guardFilter)
+              ? { value: guardFilter, kinds: guardFacet.kinds, onChange: setGuardFilter }
+              : undefined
+          }
         />
 
         {/*
-          表格区域 — 吃掉卡片里剩下的高度，内部滚动。
-          用 flex-1 而不是 h-[calc(100dvh-300px)]：那个 300 是标题栏 + 筛选区 + 分页条的
-          手工累加，筛选区换行、字号或密度一变就对不上，表格要么矮一截、下面空一块滚不动，
-          要么高出去把分页顶掉。
+          表格区域 — 按行数收高，最多占到标题、筛选、分页之外剩下的高度，再多就内部滚动。
+          不写 flex-1：行少时表格不被拉成一整屏的空框，分页条紧跟在最后一行下面。
+          也不用 h-[calc(100dvh-300px)]：那个 300 是标题栏 + 筛选区 + 分页条的手工累加，
+          筛选区换行、字号或密度一变就对不上，表格要么矮一截、要么高出去把分页顶掉。
           min-h-0 覆盖 flex item 默认的 min-height:auto（否则表格会被内容撑开，整页变长而不是
-          内部滚动）。这里不能写 min-h-[360px] 之类的保底：卡片本身是 min-h-0、高度被窗口钉死，
-          窗口一矮，保底高度只会把表格和分页条挤出卡片边框之外，而不是让页面滚动。
+          内部滚动）。这里不能写 min-h-[360px] 之类的保底：页面高度被窗口钉死，
+          窗口一矮，保底高度只会把表格和分页条挤出页面之外，而不是让页面滚动。
         */}
-        <div className="relative min-h-0 flex-1 overflow-hidden">
+        <div className="relative flex min-h-0 flex-col overflow-hidden">
           <DataTable
             tableId="request-logs"
             rows={rows}
@@ -599,8 +635,6 @@ export function RequestLogsPage() {
             loading={loading}
             virtualize={false}
             minWidth="min-w-[1240px]"
-            height="h-full"
-            minHeight="min-h-full"
             caption={t("request_logs.table_caption")}
             emptyText={t("request_logs.no_data")}
             emptyDescription={t("request_logs.no_data_desc")}

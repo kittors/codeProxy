@@ -1,12 +1,14 @@
+import { pickCacheRateFields } from "@code-proxy/domain/usage/cacheRate";
 import { apiClient } from "../client/client";
 
 /**
- * Monitor center endpoints (CliRelay `GET /usage/monitor/overview|realtime`).
+ * Monitor center endpoints (CliRelay `GET /usage/monitor/overview|realtime|in-flight`).
  *
  * Every payload goes through a normaliser: the panel auto-updates onto older
  * backends and must never crash on a missing or malformed field. Older
  * backends answer 404 for these paths; callers detect that and fall back to
- * `/usage/chart-data` (see pages/monitor).
+ * `/usage/chart-data` (see pages/monitor). The in-flight list is newer still:
+ * the overview's `capabilities` says whether the backend has it.
  */
 
 export type MonitorRangeKey = "1h" | "6h" | "24h" | "today" | "7d" | "14d" | "30d";
@@ -34,11 +36,29 @@ export interface MonitorTotals {
   cost: number;
   /** Percent (0-100); 0 when there was no traffic. */
   success_rate: number;
-  /** Percent (0-100) of effective input served from cache. */
+  /**
+   * cache_rate, and on newer backends cache_hit_rate with the read and write
+   * totals; see readCacheRate.
+   */
   cache_rate: number;
+  cache_hit_rate?: number | null;
+  cache_read_tokens?: number;
+  cache_write_tokens?: number;
   latency_avg_ms: number;
   first_token_avg_ms: number;
-  output_tokens_per_second: number;
+  /**
+   * Generation speed: per request, output tokens over the time after the first token, over
+   * successful streams with at least 0.5 s of generation and 50 output tokens (reasoning tokens
+   * do not count). `generation_samples` counts those requests and `generation_tokens_per_second`
+   * is the mean of their speeds, null without a sample. Both are null from a backend older than
+   * these fields: its `output_tokens_per_second` divided by the whole duration, first-token wait
+   * included, and is deliberately not read.
+   */
+  generation_samples: number | null;
+  generation_tokens_per_second: number | null;
+  /** Output tokens and time after the first token, summed over the same samples. */
+  generation_output_tokens: number;
+  generation_ms: number;
 }
 
 export interface MonitorSeriesPoint extends MonitorTotals {
@@ -65,6 +85,11 @@ export interface MonitorBreakdownRow extends MonitorTotals {
   kind: string;
   /** Masked key hint such as `sk-…ab12`; never the secret. */
   key_hint: string;
+  /**
+   * Per-request distributions read from the request details. Model rows only; null from older
+   * backends, on other rankings, and when the backend could not read the details.
+   */
+  performance: MonitorModelPerformance | null;
   /** Requests per series bucket; only the top rows carry it. */
   trend: number[];
   trend_failed: number[];
@@ -74,6 +99,30 @@ export interface MonitorBreakdown {
   rows: MonitorBreakdownRow[];
   /** Distinct values in the window, of which `rows` are the heaviest. */
   total: number;
+  /**
+   * Oldest request detail behind the rows' `performance` (model ranking only; "" otherwise).
+   * Details expire before rollups do, so on long ranges it is later than the range start.
+   */
+  performance_coverage_start: string;
+}
+
+/** One per-request measurement; p50 and p90 are 0 when there is no sample. */
+export interface MonitorQuantiles {
+  samples: number;
+  p50: number;
+  p90: number;
+}
+
+export interface MonitorModelPerformance {
+  /** Tokens per second, over the samples of `generation_tokens_per_second`. */
+  generation_speed: MonitorQuantiles;
+  /** Time to the first token in ms, over successful streams that recorded one. */
+  first_token_ms: MonitorQuantiles;
+  /**
+   * Summed first-token time over summed input tokens, per thousand input tokens, over the same
+   * streams (those that reported their input); null without one.
+   */
+  first_token_ms_per_1k_input: number | null;
 }
 
 export interface MonitorLatencyStats {
@@ -155,8 +204,34 @@ export interface MonitorFilterOptions {
   consumers: MonitorFilterOption[];
 }
 
+/**
+ * What loop protection ended in the window (under the same filters as the rest of
+ * the overview). The backend sends it with every overview it builds, zeros
+ * included; an older backend sends none, which is how the panel knows there is
+ * nothing to show.
+ */
+export interface MonitorLoopGuard {
+  /** Replies cut because the model was repeating itself. */
+  reply_loops: number;
+  /** Requests the gateway answered itself because the agent was stuck in a tool-call loop. */
+  tool_loops: number;
+  /**
+   * USD the answered tool-loop requests would have cost upstream, each priced at the
+   * average of that model's successful requests; an estimate, and 0 when no model
+   * has a priced success to average. Cut replies are not priced.
+   */
+  estimated_saved_cost: number;
+}
+
+/** What the backend's monitor center offers beyond the overview itself. */
+export interface MonitorCapabilities {
+  /** `GET /usage/monitor/in-flight` answers. */
+  inFlightRequests: boolean;
+}
+
 export interface MonitorOverview {
   generated_at: string;
+  capabilities: MonitorCapabilities;
   range: MonitorRange;
   summary: { current: MonitorTotals; previous: MonitorTotals };
   series: MonitorSeriesPoint[];
@@ -168,6 +243,8 @@ export interface MonitorOverview {
   flows: MonitorFlowGraph;
   recent_failures: MonitorFailure[];
   filters: MonitorFilterOptions;
+  /** null from a backend without loop protection. */
+  loop_guard: MonitorLoopGuard | null;
 }
 
 export interface MonitorRealtime {
@@ -181,6 +258,61 @@ export interface MonitorRealtime {
   avg_rpm: number;
   avg_tpm: number;
   last_5m: MonitorTotals;
+}
+
+/**
+ * Where a request in flight stands (CliRelay routetrace `Stage*`): accepted and between the
+ * scheduler's decisions, waiting for an account's free slot, waiting for an account to recover,
+ * sent and waiting for the answer, stream open with nothing yet, stream delivering. The backend
+ * adds stages and never renames them, so an unknown one is kept as sent.
+ */
+export const MONITOR_IN_FLIGHT_STAGES = [
+  "preparing",
+  "queued",
+  "waiting",
+  "upstream",
+  "first_token",
+  "streaming",
+] as const;
+
+export type MonitorInFlightStage = (typeof MONITOR_IN_FLIGHT_STAGES)[number];
+
+export interface MonitorInFlightAccount {
+  auth_id: string;
+  label: string;
+  provider: string;
+  /** Channel group the account was picked from; empty outside groups. */
+  group: string;
+  /** Model sent upstream, after the account's aliases. */
+  model: string;
+}
+
+export interface MonitorInFlightRequest {
+  request_id: string;
+  method: string;
+  path: string;
+  started_at: string;
+  elapsed_ms: number;
+  stage: string;
+  stage_elapsed_ms: number;
+  /** Model the client asked for. */
+  model: string;
+  stream: boolean;
+  /** 1-based number of the attempt under way or last made; 0 before the first. */
+  attempt: number;
+  /** Account the request is on or last tried; null before its first attempt. */
+  account: MonitorInFlightAccount | null;
+  /** The key is named by id and name only, never by its secret. */
+  api_key_id: string;
+  api_key_name: string;
+}
+
+export interface MonitorInFlight {
+  /** Oldest first; the backend lists at most 500. */
+  requests: MonitorInFlightRequest[];
+  /** How many there are in all, of which `requests` are the oldest. */
+  total: number;
+  generated_at: string;
 }
 
 export interface MonitorFilterSelection {
@@ -206,10 +338,10 @@ const TOTAL_FIELDS = [
   "total_tokens",
   "cost",
   "success_rate",
-  "cache_rate",
   "latency_avg_ms",
   "first_token_avg_ms",
-  "output_tokens_per_second",
+  "generation_output_tokens",
+  "generation_ms",
 ] as const satisfies readonly (keyof MonitorTotals)[];
 
 const asRecord = (value: unknown): Record<string, unknown> =>
@@ -224,6 +356,13 @@ const toNumber = (value: unknown): number => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
+/** null for a field that is absent (an older backend) or null (nothing measured it). */
+const toNullableNumber = (value: unknown): number | null => {
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
 const toText = (value: unknown): string => (typeof value === "string" ? value : "");
 
 const toNumbers = (value: unknown): number[] => asArray(value).map(toNumber);
@@ -234,7 +373,13 @@ export function normalizeMonitorTotals(raw: unknown): MonitorTotals {
   const record = asRecord(raw);
   const totals = {} as MonitorTotals;
   for (const field of TOTAL_FIELDS) totals[field] = toNumber(record[field]);
-  return totals;
+  // The generation speed is null, never 0, when nothing measured it, so a dash
+  // can tell "no sample" from a speed; toNumber would turn both into 0.
+  totals.generation_samples = toNullableNumber(record.generation_samples);
+  totals.generation_tokens_per_second = toNullableNumber(record.generation_tokens_per_second);
+  // The cache fields keep the difference between "absent" (an older backend)
+  // and null (no request reported its cache use), which toNumber would erase.
+  return Object.assign(totals, pickCacheRateFields(record));
 }
 
 const normalizeSeries = (raw: unknown): MonitorSeriesPoint[] =>
@@ -245,6 +390,25 @@ const normalizeSeries = (raw: unknown): MonitorSeriesPoint[] =>
 
 const isRangeKey = (value: string): value is MonitorRangeKey =>
   (MONITOR_RANGE_KEYS as readonly string[]).includes(value);
+
+const normalizeQuantiles = (raw: unknown): MonitorQuantiles => {
+  const record = asRecord(raw);
+  return {
+    samples: toNumber(record.samples),
+    p50: toNumber(record.p50),
+    p90: toNumber(record.p90),
+  };
+};
+
+const normalizePerformance = (raw: unknown): MonitorModelPerformance | null => {
+  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const record = raw as Record<string, unknown>;
+  return {
+    generation_speed: normalizeQuantiles(record.generation_speed),
+    first_token_ms: normalizeQuantiles(record.first_token_ms),
+    first_token_ms_per_1k_input: toNullableNumber(record.first_token_ms_per_1k_input),
+  };
+};
 
 const normalizeBreakdown = (raw: unknown): MonitorBreakdown => {
   const record = asRecord(raw);
@@ -258,11 +422,16 @@ const normalizeBreakdown = (raw: unknown): MonitorBreakdown => {
       auth_type: toText(row.auth_type),
       kind: toText(row.kind),
       key_hint: toText(row.key_hint),
+      performance: normalizePerformance(row.performance),
       trend: toNumbers(row.trend),
       trend_failed: toNumbers(row.trend_failed),
     };
   });
-  return { rows, total: Math.max(toNumber(record.total), rows.length) };
+  return {
+    rows,
+    total: Math.max(toNumber(record.total), rows.length),
+    performance_coverage_start: toText(record.performance_coverage_start),
+  };
 };
 
 const normalizeLatencyStats = (raw: unknown, bins: number): MonitorLatencyStats => {
@@ -295,6 +464,16 @@ const normalizeFilterOptions = (raw: unknown): MonitorFilterOption[] =>
     })
     .filter((option) => option.value !== "");
 
+const normalizeLoopGuard = (value: unknown): MonitorLoopGuard | null => {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  return {
+    reply_loops: toNumber(record.reply_loops),
+    tool_loops: toNumber(record.tool_loops),
+    estimated_saved_cost: toNumber(record.estimated_saved_cost),
+  };
+};
+
 export function normalizeMonitorOverview(raw: unknown): MonitorOverview {
   const record = asRecord(raw);
   const range = asRecord(record.range);
@@ -305,8 +484,10 @@ export function normalizeMonitorOverview(raw: unknown): MonitorOverview {
   const heatmap = asRecord(record.heatmap);
   const flows = asRecord(record.flows);
   const filters = asRecord(record.filters);
+  const capabilities = asRecord(record.capabilities);
   return {
     generated_at: toText(record.generated_at),
+    capabilities: { inFlightRequests: capabilities["in-flight-requests"] === true },
     range: {
       key: isRangeKey(rangeKey) ? rangeKey : "24h",
       start: toText(range.start),
@@ -386,6 +567,7 @@ export function normalizeMonitorOverview(raw: unknown): MonitorOverview {
       channels: normalizeFilterOptions(filters.channels),
       consumers: normalizeFilterOptions(filters.consumers),
     },
+    loop_guard: normalizeLoopGuard(record.loop_guard),
   };
 }
 
@@ -402,6 +584,46 @@ export function normalizeMonitorRealtime(raw: unknown): MonitorRealtime {
     avg_rpm: toNumber(record.avg_rpm),
     avg_tpm: toNumber(record.avg_tpm),
     last_5m: normalizeMonitorTotals(record.last_5m),
+  };
+}
+
+export function normalizeMonitorInFlight(raw: unknown): MonitorInFlight {
+  const record = asRecord(raw);
+  const entries = asArray(record.requests).filter(
+    (item) => item !== null && typeof item === "object" && !Array.isArray(item),
+  );
+  const requests = entries.map((item): MonitorInFlightRequest => {
+    const entry = asRecord(item);
+    const account = asRecord(entry.account);
+    const authId = toText(account.auth_id);
+    return {
+      request_id: toText(entry.request_id),
+      method: toText(entry.method),
+      path: toText(entry.path),
+      started_at: toText(entry.started_at),
+      elapsed_ms: Math.max(0, toNumber(entry.elapsed_ms)),
+      stage: toText(entry.stage),
+      stage_elapsed_ms: Math.max(0, toNumber(entry.stage_elapsed_ms)),
+      model: toText(entry.model),
+      stream: entry.stream === true,
+      attempt: Math.max(0, toNumber(entry.attempt)),
+      account: authId
+        ? {
+            auth_id: authId,
+            label: toText(account.label),
+            provider: toText(account.provider),
+            group: toText(account.group),
+            model: toText(account.model),
+          }
+        : null,
+      api_key_id: toText(entry.api_key_id),
+      api_key_name: toText(entry.api_key_name),
+    };
+  });
+  return {
+    requests,
+    total: Math.max(toNumber(record.total), requests.length),
+    generated_at: toText(record.generated_at),
   };
 }
 
@@ -438,5 +660,13 @@ export const usageMonitorApi = {
       signal: options?.signal,
     });
     return normalizeMonitorRealtime(raw);
+  },
+
+  /** Requests the backend is serving right now; only when the overview's capabilities say so. */
+  async getInFlight(options?: { signal?: AbortSignal }): Promise<MonitorInFlight> {
+    const raw = await apiClient.get<unknown>("/usage/monitor/in-flight", {
+      signal: options?.signal,
+    });
+    return normalizeMonitorInFlight(raw);
   },
 };

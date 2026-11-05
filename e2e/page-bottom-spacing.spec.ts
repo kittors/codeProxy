@@ -184,9 +184,11 @@ const measure = (page: Page) =>
      * 无阴影）的纯布局容器，直到找到真正画出东西的元素。
      *
      * 页面压平之后（2026-10，外壳内容区就是页面面板，表格页不再包一张大卡），底部不再有
-     * 一张被拉满的卡片可量；这时「撑满」指的是表格 / 列表的滚动区一直延伸到底——它就是
-     * 用户能滚动的那块区域，矮一截就是 #909 修过的「滚轮不响应的死区」。所以滚动区
-     * （DataTable 的滚动容器、ScrollArea 的视口）也算作画出来的边界。
+     * 一张被拉满的卡片可量；滚动区（DataTable 的滚动容器、ScrollArea 的视口）也算作画出来的边界。
+     *
+     * 2026-11 起表格按行数收高（行少时不再被拉成一整屏的空框，分页条紧跟最后一行），钉高页的
+     * 表格不一定延伸到底了；行多时它占满剩余高度、在内部滚动，所以也没有 #909 那种「滚轮不响应
+     * 的死区」。钉高页改为检查页面根撑到底：高度链完整，表格才有一块确定的高度可以封顶。
      */
     const paints = (el: Element) => {
       if (el.matches("[data-scroll-area-viewport], [data-scrollbar-visibility]")) return true;
@@ -217,16 +219,15 @@ const measure = (page: Page) =>
     };
     for (const kid of main.children) collect(kid);
 
-    // 钉高页（data-page-fill）在空数据时往往不渲染表格、只有一句空态，没有滚动区可量。
-    // 这时检查页面根是否撑到底——高度链完整，表格一出现就会吃满剩余高度。
+    // 钉高页（data-page-fill）检查页面根是否撑到底——高度链完整，行多时表格才能占满剩余高度、
+    // 在内部滚动。表格本身按行数收高，空数据时只有表头和一句空态，量它量不出高度链断没断。
     const root = main.firstElementChild?.firstElementChild as HTMLElement | null;
     const fillMode = root?.getAttribute("data-page-fill");
     const fillActive =
-      fillMode === "always" || (fillMode === "md" && window.matchMedia("(min-width: 48rem)").matches);
-    const hasScrollRegion = Boolean(
-      main.querySelector("[data-scroll-area-viewport], [data-scrollbar-visibility]"),
-    );
-    if (root && fillActive && !hasScrollRegion) bottoms.push(root.getBoundingClientRect().bottom);
+      fillMode === "always" ||
+      (fillMode === "md" && window.matchMedia("(min-width: 48rem)").matches) ||
+      (fillMode === "lg" && window.matchMedia("(min-width: 64rem)").matches);
+    if (root && fillActive) bottoms.push(root.getBoundingClientRect().bottom);
 
     const contentBottom = bottoms.length ? Math.max(...bottoms) : rect.top;
     const scroller = main.parentElement as HTMLElement;

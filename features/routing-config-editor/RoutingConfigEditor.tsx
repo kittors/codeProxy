@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Loader2, Pencil, Plus, Route, Trash2, TriangleAlert, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { ChannelGroupChannelDetail } from "@code-proxy/api-client/endpoints/channel-groups";
+import { NO_ROUTING_CONFIG_SUPPORT, type RoutingConfigSupport } from "@code-proxy/api-client/endpoints/routing-config";
 import type {
   RoutingChannelGroupEntry,
   RoutingChannelGroupMatchMode,
@@ -11,25 +12,16 @@ import type {
   VisualConfigValues,
 } from "@features/visual-config-editor";
 import {
-  DEFAULT_STICKY_MAX_REQUESTS,
   defaultScheduling,
   makeClientId,
-  normalizeDistribution,
   schedulingFromStrategy,
   strategyFromScheduling,
 } from "@features/visual-config-editor";
-import { Button, Callout, COLUMN_WIDTH, surface } from "@code-proxy/ui";
-import { Checkbox } from "@code-proxy/ui";
-import { ConfirmModal } from "@code-proxy/ui";
-import { TextInput } from "@code-proxy/ui";
-import { Modal } from "@code-proxy/ui";
-import { SearchableCheckboxMultiSelect } from "@code-proxy/ui";
-import { ScrollArea } from "@code-proxy/ui";
-import { Select } from "@code-proxy/ui";
+import { Button, Callout, Checkbox, COLUMN_WIDTH, ConfirmModal, Modal, ScrollArea, Select } from "@code-proxy/ui";
+import { SearchableCheckboxMultiSelect, surface, TextInput, useToast } from "@code-proxy/ui";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@code-proxy/ui";
-import { useToast } from "@code-proxy/ui";
 import { HoverTooltip, OverflowTooltip, TooltipChip } from "@code-proxy/ui";
-import { DataTable, TABLE_ROW_ACTIONS_COLUMN, TABLE_ROW_ACTIONS_STICKY_END_COLUMN, type DataTableColumn } from "@code-proxy/ui";
+import { DataTable, TABLE_ROW_ACTIONS_COLUMN, TABLE_ROW_ACTIONS_STICKY_END_COLUMN, TableRowActions, type DataTableColumn } from "@code-proxy/ui";
 import { Field, InfoTooltip, TooltipHeader, renderChannelTags } from "./fields";
 import type { RoutingModelLoadResult, RoutingModelOption } from "./types";
 import {
@@ -49,7 +41,16 @@ import {
   syncDraftChannels,
   syncDraftTags,
 } from "./routingHelpers";
+import { DistributionField } from "./DistributionField";
 import { ModelSelectionPanel } from "./ModelSelectionPanel";
+import { StickyLimitFields, StreamGuardFields } from "./GroupLimitFields";
+import {
+  emptyStreamGuardsDraft,
+  streamGuardsError,
+  streamGuardsFromEntry,
+  streamGuardsToEntry,
+  type StreamGuardsDraft,
+} from "./streamGuards";
 import { RoutingIssueModal } from "./RoutingIssueModal";
 import {
   createModelSelectionDraft,
@@ -71,12 +72,13 @@ type GroupDraft = {
   channels: RoutingChannelGroupMemberEntry[];
   tags: string[];
   models: ModelSelectionDraft;
+  streamGuards: StreamGuardsDraft;
   routes: RoutingPathRouteEntry[];
 };
 
 export type { RoutingModelOption } from "./types";
 
-const createEmptyGroupDraft = (exclusionsSupported = false): GroupDraft => ({
+const createEmptyGroupDraft = (support = NO_ROUTING_CONFIG_SUPPORT): GroupDraft => ({
   name: "",
   description: "",
   scheduling: defaultScheduling(),
@@ -84,7 +86,8 @@ const createEmptyGroupDraft = (exclusionsSupported = false): GroupDraft => ({
   matchMode: "channels",
   channels: [],
   tags: [],
-  models: createModelSelectionDraft(exclusionsSupported),
+  models: createModelSelectionDraft(support),
+  streamGuards: emptyStreamGuardsDraft(),
   routes: [{ ...EMPTY_ROUTE_DRAFT() }],
 });
 
@@ -98,9 +101,10 @@ const EMPTY_ROUTE_DRAFT = (): RoutingPathRouteEntry => ({
 
 export function RoutingConfigEditor({
   title,
+  headerActions,
   values,
   disabled,
-  modelExclusionsSupported = false,
+  modelGateSupport = NO_ROUTING_CONFIG_SUPPORT,
   availableChannels,
   availableChannelDetails = {},
   availableChannelDetailsByGroup = {},
@@ -109,10 +113,12 @@ export function RoutingConfigEditor({
   onChange,
 }: {
   title?: string;
+  /** Tools shown next to「新增分组」, such as the routing simulator. */
+  headerActions?: ReactNode;
   values: VisualConfigValues;
   disabled?: boolean;
-  /** The backend stores channel-group `excluded-models` (routing-config capabilities). */
-  modelExclusionsSupported?: boolean;
+  /** What the backend stores for channel groups: model gates and distributions (routing-config capabilities). */
+  modelGateSupport?: RoutingConfigSupport;
   availableChannels: string[];
   availableChannelDetails?: Record<string, ChannelGroupChannelDetail>;
   availableChannelDetailsByGroup?: Record<string, Record<string, ChannelGroupChannelDetail>>;
@@ -354,6 +360,8 @@ export function RoutingConfigEditor({
   const groupDraftError = useMemo(() => {
     const modelGateError = modelSelectionSaveError(groupDraft.models);
     if (modelGateError) return t(modelGateError);
+    const guardError = streamGuardsError(groupDraft.streamGuards, modelGateSupport);
+    if (guardError) return t(guardError);
     if (editingSystemDefaultGroup) return "";
     if (!groupDraft.name.trim()) return t("channel_groups_page.group_name_required");
     if (!primaryRoute.path.trim()) return t("channel_groups_page.route_path_required");
@@ -396,7 +404,9 @@ export function RoutingConfigEditor({
     groupDraft.matchMode,
     groupDraft.models,
     groupDraft.name,
+    groupDraft.streamGuards,
     groupEditorId,
+    modelGateSupport,
     normalizedPrimaryRoutePath,
     primaryRoute.path,
     selectedTagValues.length,
@@ -408,12 +418,12 @@ export function RoutingConfigEditor({
   const openCreateGroup = useCallback(() => {
     void Promise.resolve(onRefreshAvailableChannels?.()).catch(() => undefined);
     setGroupEditorId(null);
-    setGroupDraft(createEmptyGroupDraft(modelExclusionsSupported));
+    setGroupDraft(createEmptyGroupDraft(modelGateSupport));
     setGroupEditorTab("basic");
     setModelOptions([]);
     setModelsError("");
     setGroupEditorOpen(true);
-  }, [modelExclusionsSupported, onRefreshAvailableChannels]);
+  }, [modelGateSupport, onRefreshAvailableChannels]);
 
   const openEditGroup = useCallback(
     (group: RoutingChannelGroupEntry, options?: { notifyStale?: boolean }) => {
@@ -438,7 +448,8 @@ export function RoutingConfigEditor({
         matchMode: isSystemDefault ? "channels" : (group.matchMode ?? "channels"),
         channels: cloneMembers(group.channels),
         tags: isSystemDefault ? [] : syncDraftTags(group.tags ?? []),
-        models: modelSelectionFromEntry(group, modelExclusionsSupported),
+        models: modelSelectionFromEntry(group, modelGateSupport),
+        streamGuards: streamGuardsFromEntry(group),
         routes: isSystemDefault
           ? []
           : existingRoutes.length > 0
@@ -454,7 +465,7 @@ export function RoutingConfigEditor({
       setGroupEditorOpen(true);
     },
     [
-      modelExclusionsSupported,
+      modelGateSupport,
       notifyStaleChannels,
       onRefreshAvailableChannels,
       staleChannelsByGroup,
@@ -565,7 +576,10 @@ export function RoutingConfigEditor({
   const saveGroupDraft = useCallback(async () => {
     if (groupDraftError || groupSaving) return;
 
-    const { allowedModels, excludedModels } = serializeModelSelection(groupDraft.models);
+    const savedFields = {
+      ...serializeModelSelection(groupDraft.models),
+      ...streamGuardsToEntry(groupDraft.streamGuards),
+    };
     let patch: Partial<VisualConfigValues>;
     if (editingSystemDefaultGroup) {
       const existingDefault = values.routingChannelGroups.find(
@@ -585,8 +599,7 @@ export function RoutingConfigEditor({
         // today's channel list into an explicit match.
         channels: cloneMembers(groupDraft.channels),
         tags: [],
-        allowedModels,
-        excludedModels,
+        ...savedFields,
       };
       const defaultRoutes = values.routingPathRoutes.filter(
         (route) => route.group.trim().toLowerCase() === SYSTEM_DEFAULT_GROUP_NAME,
@@ -616,8 +629,7 @@ export function RoutingConfigEditor({
           groupDraft.excludeFromDefault && groupName.toLowerCase() !== SYSTEM_DEFAULT_GROUP_NAME,
         matchMode: groupDraft.matchMode,
         tags: groupDraft.matchMode === "tags" ? syncDraftTags(groupDraft.tags) : [],
-        allowedModels,
-        excludedModels,
+        ...savedFields,
         channels: (groupDraft.matchMode === "tags" ? resolvedDraftChannels : groupDraft.channels)
           .map((channel) => ({
             id: channel.id || makeClientId(),
@@ -943,32 +955,27 @@ export function RoutingConfigEditor({
         key: "actions",
         label: t("common.action"),
         ...TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
-        cellClassName: "whitespace-nowrap md:sticky md:z-30 md:bg-backdrop", // 冻结列底色跟随所在底（--cp-backdrop）
         render: (group) => (
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => openEditGroup(group)}
-              disabled={disabled}
-              className="rounded-lg p-1.5 text-ink-2 transition-colors hover:bg-hover hover:text-ink disabled:opacity-40 icon-hue:hover:text-amber-600 icon-hue:dark:hover:text-amber-400"
-              title={t("channel_groups_page.edit_group")}
-              aria-label={t("channel_groups_page.edit_group")}
-            >
-              <Pencil size={15} />
-            </button>
-            {group.system ? null : (
-              <button
-                type="button"
-                onClick={() => setDeleteGroupTarget(group)}
-                disabled={disabled}
-                className="rounded-lg p-1.5 text-ink-2 transition-colors hover:bg-rose-500/10 hover:text-rose-600 disabled:opacity-40 dark:hover:text-rose-400"
-                title={t("visual_config.delete_group")}
-                aria-label={t("visual_config.delete_group")}
-              >
-                <Trash2 size={15} />
-              </button>
-            )}
-          </div>
+          <TableRowActions
+            actions={[
+              {
+                key: "edit",
+                label: t("channel_groups_page.edit_group"),
+                icon: <Pencil />,
+                disabled,
+                onClick: () => openEditGroup(group),
+              },
+              {
+                key: "delete",
+                label: t("visual_config.delete_group"),
+                icon: <Trash2 />,
+                destructive: true,
+                visible: !group.system,
+                disabled,
+                onClick: () => setDeleteGroupTarget(group),
+              },
+            ]}
+          />
         ),
       },
     ],
@@ -1054,20 +1061,18 @@ export function RoutingConfigEditor({
               key: "actions",
               label: t("common.action"),
               ...TABLE_ROW_ACTIONS_COLUMN,
-              headerClassName: "text-right",
-              cellClassName: "whitespace-nowrap text-right",
               render: (channel) => (
-                <div className="flex justify-end">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeDraftChannel(channel.id)}
-                    disabled={disabled}
-                    aria-label={t("channel_groups_page.remove_channel")}
-                  >
-                    <X size={14} />
-                  </Button>
-                </div>
+                <TableRowActions
+                  actions={[
+                    {
+                      key: "remove",
+                      label: t("channel_groups_page.remove_channel"),
+                      icon: <X />,
+                      disabled,
+                      onClick: () => removeDraftChannel(channel.id),
+                    },
+                  ]}
+                />
               ),
             } satisfies DataTableColumn<RoutingChannelGroupMemberEntry>,
           ]),
@@ -1157,10 +1162,13 @@ export function RoutingConfigEditor({
           ) : (
             <span aria-hidden="true" />
           )}
-          <Button variant="primary" size="sm" onClick={openCreateGroup} disabled={disabled}>
-            <Plus size={14} />
-            {t("channel_groups_page.add_group")}
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            {headerActions}
+            <Button variant="primary" size="sm" onClick={openCreateGroup} disabled={disabled}>
+              <Plus size={14} />
+              {t("channel_groups_page.add_group")}
+            </Button>
+          </div>
         </div>
 
         <DataTable<RoutingChannelGroupEntry>
@@ -1170,8 +1178,6 @@ export function RoutingConfigEditor({
           rowKey={(group) => group.id}
           virtualize={false}
           rowHeight={44}
-          height="h-[calc(100dvh-200px)] md:h-auto md:flex-1"
-          minHeight="min-h-[320px] md:min-h-0"
           minWidth="min-w-[1360px]"
           caption={t("channel_groups_page.table_group")}
           emptyText={t("channel_groups_page.empty_groups")}
@@ -1342,41 +1348,17 @@ export function RoutingConfigEditor({
                       </>
                     ) : null}
 
-                    <Field
-                      label={t("channel_groups_page.distribution_label")}
-                      tooltip={t("channel_groups_page.distribution_tooltip")}
-                      hint={t("channel_groups_page.distribution_hint")}
-                    >
-                      <Select
-                        aria-label={t("channel_groups_page.distribution_label")}
-                        value={groupDraft.scheduling.distribution}
-                        disabled={disabled}
-                        className="w-full"
-                        options={[
-                          {
-                            value: "weighted",
-                            label: t("channel_groups_page.distribution_weighted"),
-                          },
-                          {
-                            value: "least-load",
-                            label: t("channel_groups_page.distribution_least_load"),
-                          },
-                          {
-                            value: "fill-first",
-                            label: t("channel_groups_page.distribution_fill_first"),
-                          },
-                        ]}
-                        onChange={(value) => {
-                          setGroupDraft((current) => ({
-                            ...current,
-                            scheduling: {
-                              ...current.scheduling,
-                              distribution: normalizeDistribution(value),
-                            },
-                          }));
-                        }}
-                      />
-                    </Field>
+                    <DistributionField
+                      value={groupDraft.scheduling.distribution}
+                      resetAwareSupported={modelGateSupport.channelGroupResetAwareDistribution}
+                      disabled={disabled}
+                      onChange={(distribution) =>
+                        setGroupDraft((current) => ({
+                          ...current,
+                          scheduling: { ...current.scheduling, distribution },
+                        }))
+                      }
+                    />
 
                     <label className={[surface({ tone: "inset", radius: "lg" }), "flex items-start gap-3 px-3 py-3 text-sm"].join(" ")}>
                       <Checkbox
@@ -1406,55 +1388,32 @@ export function RoutingConfigEditor({
                     </label>
 
                     {groupDraft.scheduling.sticky.enabled ? (
-                      <div className="grid gap-4 md:grid-cols-2">
-                        <Field
-                          label={t("channel_groups_page.sticky_max_requests_label")}
-                          hint={t("channel_groups_page.sticky_max_requests_hint")}
-                        >
-                          <TextInput
-                            value={groupDraft.scheduling.sticky.maxRequests}
-                            onChange={(event) => {
-                              const value = event.currentTarget.value;
-                              if (!/^\d*$/.test(value)) return;
-                              setGroupDraft((current) => ({
-                                ...current,
-                                scheduling: {
-                                  ...current.scheduling,
-                                  sticky: { ...current.scheduling.sticky, maxRequests: value },
-                                },
-                              }));
-                            }}
-                            placeholder={String(DEFAULT_STICKY_MAX_REQUESTS)}
-                            inputMode="numeric"
-                            aria-label={t("channel_groups_page.sticky_max_requests_label")}
-                            disabled={disabled}
-                          />
-                        </Field>
-                        <Field
-                          label={t("channel_groups_page.sticky_release_label")}
-                          hint={t("channel_groups_page.sticky_release_hint")}
-                        >
-                          <TextInput
-                            value={groupDraft.scheduling.sticky.releaseAtLoad}
-                            onChange={(event) => {
-                              const value = event.currentTarget.value;
-                              if (!/^\d*\.?\d*$/.test(value)) return;
-                              setGroupDraft((current) => ({
-                                ...current,
-                                scheduling: {
-                                  ...current.scheduling,
-                                  sticky: { ...current.scheduling.sticky, releaseAtLoad: value },
-                                },
-                              }));
-                            }}
-                            placeholder="0.8"
-                            inputMode="decimal"
-                            aria-label={t("channel_groups_page.sticky_release_label")}
-                            disabled={disabled}
-                          />
-                        </Field>
-                      </div>
+                      <StickyLimitFields
+                        sticky={groupDraft.scheduling.sticky}
+                        disabled={disabled}
+                        onChange={(patch) =>
+                          setGroupDraft((current) => ({
+                            ...current,
+                            scheduling: {
+                              ...current.scheduling,
+                              sticky: { ...current.scheduling.sticky, ...patch },
+                            },
+                          }))
+                        }
+                      />
                     ) : null}
+
+                    <StreamGuardFields
+                      draft={groupDraft.streamGuards}
+                      support={modelGateSupport}
+                      disabled={disabled}
+                      onChange={(patch) =>
+                        setGroupDraft((current) => ({
+                          ...current,
+                          streamGuards: { ...current.streamGuards, ...patch },
+                        }))
+                      }
+                    />
 
                     {!editingSystemDefaultGroup ? (
                       <>
@@ -1584,8 +1543,6 @@ export function RoutingConfigEditor({
                       rowKey={(channel) => channel.id}
                       virtualize={false}
                       rowHeight={52}
-                      height="h-auto"
-                      minHeight="min-h-0"
                       minWidth="min-w-[640px]"
                       caption={
                         editingSystemDefaultGroup

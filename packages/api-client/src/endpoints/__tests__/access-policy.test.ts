@@ -8,6 +8,7 @@ import {
   normalizeModelRoutes,
   normalizeModelRules,
   normalizeQuotaMatrix,
+  normalizeQuotaUsageView,
   quotaMatrixEquals,
   quotaMatrixToPatch,
   readAccessPolicyCapabilities,
@@ -49,6 +50,21 @@ describe("access policy normalization", () => {
     expect(normalizeCappedCells([{ id: "k", metric: "tokens", window: "day", from: 9, to: 5 }, { metric: "x" }])).toEqual([
       { id: "k", metric: "tokens", window: "day", from: 9, to: 5 },
     ]);
+  });
+
+  test("what requests in flight hold is kept only while something is held", () => {
+    const held = normalizeQuotaUsageView({ total: {}, "in-flight": { requests: 2, tokens: "1200", cost: 0.3 } });
+    expect(held?.["in-flight"]).toEqual({ requests: 2, tokens: 1200, cost: 0.3 });
+    // 还没有计费历史的 Key 只预留请求数，Token 与花费是 0。
+    expect(normalizeQuotaUsageView({ total: {}, "in-flight": { requests: 1, cost: -1 } })?.["in-flight"]).toEqual({
+      requests: 1,
+      tokens: 0,
+      cost: 0,
+    });
+    // 没有在途请求、旧后端或垃圾值：整项缺省，界面不必再判断。
+    for (const inFlight of [undefined, null, "2", { requests: 0, cost: 5 }, { requests: "x" }]) {
+      expect(normalizeQuotaUsageView({ total: {}, "in-flight": inFlight })).not.toHaveProperty("in-flight");
+    }
   });
 
   test("legacy flat fields map onto their cells", () => {

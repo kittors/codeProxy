@@ -303,8 +303,7 @@ export function ProviderKeyModelsTab({
               caption={modelAccessTitle}
               emptyText={t("providers.no_discovered_models")}
               minWidth="min-w-[720px]"
-              height="h-80"
-              minHeight="min-h-0"
+              maxHeight="max-h-80"
               showAllLoadedMessage={false}
               columnReorderable={false}
               persistColumnOrder={false}

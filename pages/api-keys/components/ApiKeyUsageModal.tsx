@@ -225,7 +225,8 @@ export function ApiKeyUsageModal({
           </section>
         </div>
 
-        <div className="relative min-h-[320px] flex-1 overflow-hidden pt-3">
+        {/* 表格按行数收高、最多占到弹窗剩余高度，分页条紧跟在最后一行下面。 */}
+        <div className="relative flex min-h-0 flex-col overflow-hidden pt-3">
           <DataTable
             tableId="api-key-usage-logs"
             rows={usageRows}
@@ -234,8 +235,6 @@ export function ApiKeyUsageModal({
             loading={usageLoading}
             virtualize={false}
             minWidth="min-w-[1320px]"
-            height="h-full"
-            minHeight="min-h-full"
             caption={t("api_keys_page.usage_table_caption")}
             emptyText={t("api_keys_page.no_usage_records")}
             showAllLoadedMessage={false}

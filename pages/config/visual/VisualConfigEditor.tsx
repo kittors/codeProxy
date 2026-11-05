@@ -23,6 +23,7 @@ import {
   type ConfigSectionId,
 } from "./configSchema";
 import { searchConfig } from "./configSearch";
+import { PayloadRuleDryRun } from "./PayloadRuleDryRun";
 import { PayloadFilterRulesEditor, PayloadRulesEditor } from "./PayloadRuleEditors";
 import { ResourceProfileBanner } from "./ResourceProfileBanner";
 import { useSectionScrollSpy } from "./useSectionScrollSpy";
@@ -91,6 +92,9 @@ export function VisualConfigEditor({
   lockDatabaseSettings = false,
   onChange,
   codexAdmission,
+  observability,
+  loopGuard,
+  payloadDryRun = false,
   toolbarEnd,
 }: {
   values: VisualConfigValues;
@@ -105,6 +109,18 @@ export function VisualConfigEditor({
   onChange: (values: Partial<VisualConfigValues>) => void;
   /** 「Codex 客户端准入」分区的内容（它直接调用接口、立即生效，由页面注入）。 */
   codexAdmission?: ReactNode;
+  /**
+   * 「指标接口」分区的内容（直接调用接口、立即生效，由页面注入）。只有后端支持时页面才传，
+   * 不传时整个分区不出现。
+   */
+  observability?: ReactNode;
+  /**
+   * 「循环保护」分区的内容（直接调用接口，由页面注入）。只有后端有这个功能、且当前账号读得到
+   * 租户设置时页面才传，不传时整个分区不出现。
+   */
+  loopGuard?: ReactNode;
+  /** 后端支持 payload 规则试运行时，在「请求体改写」分区末尾放「试一试」。 */
+  payloadDryRun?: boolean;
   /** 工具栏最右侧的附加控件（页面把「可视化 / 源码」切换放在这里，省掉单独一行）。 */
   toolbarEnd?: ReactNode;
 }) {
@@ -121,9 +137,17 @@ export function VisualConfigEditor({
   const modified = useMemo(() => collectModified(values, reference), [reference, values]);
   const searching = search.fields !== null;
 
+  // 由页面注入内容的分区：没注入就不出现（后端不支持或没有权限）。
+  const injectedSections = useMemo<Partial<Record<ConfigSectionId, ReactNode>>>(
+    () => ({ codex: codexAdmission, observability, loop_guard: loopGuard }),
+    [codexAdmission, loopGuard, observability],
+  );
   const availableSections = useMemo(
-    () => CONFIG_SECTIONS.filter((section) => section.id !== "codex" || Boolean(codexAdmission)),
-    [codexAdmission],
+    () =>
+      CONFIG_SECTIONS.filter(
+        (section) => !(section.id in injectedSections) || Boolean(injectedSections[section.id]),
+      ),
+    [injectedSections],
   );
   const visibleSections = useMemo(
     () =>
@@ -201,10 +225,11 @@ export function VisualConfigEditor({
             disabled={databaseLocked}
             onChange={(payloadFilterRules) => onChange({ payloadFilterRules })}
           />
+          {payloadDryRun ? <PayloadRuleDryRun values={values} /> : null}
         </div>
       );
     }
-    if (section.id === "codex") return codexAdmission;
+    if (section.id in injectedSections) return injectedSections[section.id];
     const fields = fieldsOfSection(section.id).filter(
       (field) => !search.fields || search.fields.has(field.id),
     );

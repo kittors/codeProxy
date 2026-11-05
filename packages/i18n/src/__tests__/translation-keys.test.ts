@@ -38,6 +38,16 @@ const PORTAL_USAGE_KEYS = [
   "api_keys_page.col_total_token",
 ] as const;
 
+// The busy-wait field is shown in every language. ru.json may leave a key out (English shows
+// instead), and ru-translation-coverage only catches values copied byte for byte, so this pins that
+// the field's copy exists in all three languages and that the Russian one is Russian.
+const BUSY_WAIT_KEYS = [
+  "channel_groups_page.busy_wait_label",
+  "channel_groups_page.busy_wait_hint",
+  "channel_groups_page.busy_wait_placeholder",
+  "channel_groups_page.busy_wait_invalid",
+] as const;
+
 describe("translation keys", () => {
   test.each(REQUIRED_KEYS)("%s exists in zh-CN and en as a non-empty string", (key) => {
     const zh = resolve(zhCN as Record<string, unknown>, key);
@@ -58,5 +68,18 @@ describe("translation keys", () => {
       expect(String(value).trim().length).toBeGreaterThan(0);
       expect(value).not.toBe(key);
     }
+  });
+
+  test.each(BUSY_WAIT_KEYS)("%s exists in every locale, and the Russian one is Russian", (key) => {
+    for (const resource of [zhCN, en, ru]) {
+      const value = resolve(resource as Record<string, unknown>, key);
+      expect(typeof value).toBe("string");
+      expect(String(value).trim().length).toBeGreaterThan(0);
+      expect(value).not.toBe(key);
+    }
+    const russian = String(resolve(ru as Record<string, unknown>, key));
+    expect(russian).toMatch(/[А-Яа-яЁё]{3,}/);
+    // Not an English sentence with a Russian tail: three Latin words in a row is a sentence.
+    expect(russian).not.toMatch(/\b[A-Za-z]{3,}\s+[A-Za-z]{3,}\s+[A-Za-z]{3,}\b/);
   });
 });

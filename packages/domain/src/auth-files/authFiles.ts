@@ -16,6 +16,12 @@ import { resolveCodexPlanType } from "../quota/resolvers";
 import { normalizePlanType } from "../quota/parsers";
 import { isAntigravityFile } from "../quota/validators";
 import { sanitizeQuotaByFileNameForCache } from "./quotaCache";
+import {
+  normalizeCooldownReason,
+  resolveCooldownReasonTone,
+  type AuthFileCooldownReason,
+} from "./cooldowns";
+import { parseDateLikeMs } from "./dateLike";
 import type { QuotaItem, QuotaState } from "../quota/types";
 import type { StatusBarData, StatusBlockDetail, StatusBlockState } from "../usage";
 import {
@@ -759,23 +765,6 @@ export const formatModified = (file: AuthFileItem): string => {
   return Number.isNaN(date.getTime()) ? "--" : date.toLocaleString();
 };
 
-const parseDateLikeMs = (value: unknown): number | null => {
-  if (typeof value === "number" && Number.isFinite(value) && value > 0) {
-    return value < 1e12 ? value * 1000 : value;
-  }
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    if (!trimmed) return null;
-    const numeric = Number(trimmed);
-    if (Number.isFinite(numeric) && numeric > 0) {
-      return numeric < 1e12 ? numeric * 1000 : numeric;
-    }
-    const parsed = Date.parse(trimmed);
-    return Number.isNaN(parsed) ? null : parsed;
-  }
-  return null;
-};
-
 export type AuthFileRestrictionBadge = {
   key: string;
   label: string;
@@ -784,6 +773,7 @@ export type AuthFileRestrictionBadge = {
   quotaWindow?: string;
   quotaWindowMinutes?: number;
   quotaLimited?: boolean;
+  cooldownReason?: AuthFileCooldownReason;
   recoverAtMs?: number;
   remainingText?: string;
   tone: "danger" | "warning" | "neutral";
@@ -1171,6 +1161,7 @@ export const resolveAuthFileRestrictionBadges = (
       const quotaWindow = normalizeRestrictionQuotaWindow(restriction);
       const quotaWindowMinutes = Number(restriction.quota_window_minutes);
       const quotaLimited = isQuotaRestriction(restriction);
+      const cooldownReason = normalizeCooldownReason(restriction.cooldown_reason);
       const key = [
         restriction.scope || "auth",
         model,
@@ -1187,13 +1178,14 @@ export const resolveAuthFileRestrictionBadges = (
           ? { quotaWindowMinutes }
           : {}),
         ...(quotaLimited ? { quotaLimited: true } : {}),
+        ...(cooldownReason ? { cooldownReason } : {}),
         ...(recoverAtMs !== null
           ? {
               recoverAtMs,
               remainingText: formatAuthFileRestrictionRemaining(recoverAtMs, nowMs),
             }
           : {}),
-        tone: resolveRestrictionTone(restriction),
+        tone: resolveCooldownReasonTone(cooldownReason) ?? resolveRestrictionTone(restriction),
       };
     })
     .filter((badge): badge is AuthFileRestrictionBadge => Boolean(badge));

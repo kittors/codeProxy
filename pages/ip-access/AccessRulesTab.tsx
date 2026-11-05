@@ -17,7 +17,8 @@ import {
   DataTable,
   PaginationBar,
   Select,
-  TABLE_ROW_ACTIONS_COLUMN,
+  TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
+  TableRowActions,
   TextInput,
   ToggleSwitch,
   useToast,
@@ -352,41 +353,36 @@ export function AccessRulesTab({
       {
         key: "actions",
         label: t("ip_access.col_actions"),
-        ...TABLE_ROW_ACTIONS_COLUMN,
-        lockOrder: "end" as const,
+        ...TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
         render: (item) => (
           <PermissionGate permission="platform.ip_access.write">
-            <div className="flex items-center gap-1.5">
-              <Button
-                size="xs"
-                variant="ghost"
-                disabled={busy}
-                tooltip={t("ip_access.edit_rule")}
-                onClick={() => setEditTarget(item)}
-              >
-                <Pencil size={15} />
-              </Button>
-              {item.effect === "deny" ? (
-                <Button
-                  size="xs"
-                  variant="ghost"
-                  disabled={busy}
-                  tooltip={t("ip_access.unban_and_allow")}
-                  onClick={() => void unbanAndAllow(item)}
-                >
-                  <ShieldCheck size={15} />
-                </Button>
-              ) : null}
-              <Button
-                size="xs"
-                variant="ghost"
-                disabled={busy}
-                tooltip={t("ip_access.delete_rule")}
-                onClick={() => setDeleteTarget(item)}
-              >
-                <Trash2 size={15} />
-              </Button>
-            </div>
+            <TableRowActions
+              actions={[
+                {
+                  key: "edit",
+                  label: t("ip_access.edit_rule"),
+                  icon: <Pencil />,
+                  disabled: busy,
+                  onClick: () => setEditTarget(item),
+                },
+                {
+                  key: "unban",
+                  label: t("ip_access.unban_and_allow"),
+                  icon: <ShieldCheck />,
+                  visible: item.effect === "deny",
+                  disabled: busy,
+                  onClick: () => void unbanAndAllow(item),
+                },
+                {
+                  key: "delete",
+                  label: t("ip_access.delete_rule"),
+                  icon: <Trash2 />,
+                  destructive: true,
+                  disabled: busy,
+                  onClick: () => setDeleteTarget(item),
+                },
+              ]}
+            />
           </PermissionGate>
         ),
       },
@@ -466,7 +462,7 @@ export function AccessRulesTab({
         </div>
       </div>
 
-      <div className="relative min-h-0 flex-1 overflow-hidden">
+      <div className="relative flex min-h-0 flex-col overflow-hidden">
         <DataTable<IpAccessRule>
           tableId="ip-access-rules"
           rows={items}
@@ -474,8 +470,6 @@ export function AccessRulesTab({
           rowKey={(item) => item.id}
           loading={loading}
           virtualize={false}
-          height="h-full"
-          minHeight="min-h-full"
           minWidth="min-w-[1040px]"
           emptyText={t("ip_access.no_rules")}
           showAllLoadedMessage={false}

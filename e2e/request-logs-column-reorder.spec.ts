@@ -29,7 +29,9 @@ const mockRequestLogsApis = async (page: Page) => {
       const items = Array.from({ length: 12 }, (_, index) => ({
         id: 2000 + index,
         timestamp: `2026-06-14T08:${String(index).padStart(2, "0")}:00Z`,
-        api_key: `sk-test-${String(index).padStart(4, "0")}-extra-long-key-for-drag-visual-qa`,
+        // A masked key and its id, as an upgraded backend returns them.
+        api_key: "sk-tes***l-qa",
+        api_key_id: `qa-key-${String(index).padStart(4, "0")}`,
         api_key_name: `QA Key ${index + 1} with deliberately long display name`,
         model:
           index % 2
@@ -58,14 +60,18 @@ const mockRequestLogsApis = async (page: Page) => {
         status: 200,
         contentType: "application/json",
         body: JSON.stringify({
+          capabilities: { "api-key-id-filters": true },
           items,
           total: items.length,
           page: 1,
           size: 50,
           filters: {
-            api_keys: items.map((item) => item.api_key),
-            api_key_names: Object.fromEntries(
-              items.map((item) => [item.api_key, item.api_key_name]),
+            api_key_ids: items.map((item) => item.api_key_id),
+            api_key_id_names: Object.fromEntries(
+              items.map((item) => [item.api_key_id, item.api_key_name]),
+            ),
+            api_key_id_counts: Object.fromEntries(
+              items.map((item) => [item.api_key_id, 1]),
             ),
             models: ["gpt-4.1", "claude-sonnet-4"],
             channels: ["OpenAI", "Anthropic"],

@@ -3,12 +3,13 @@ import { useTranslation } from "react-i18next";
 import { Ban, ListFilter, ShieldCheck } from "lucide-react";
 import { ipAccessApi, type AuthAttemptWindow, type AuthSourceSummary } from "@code-proxy/api-client";
 import {
-  Button,
   COLUMN_WIDTH,
   DataTable,
   Select,
-  TABLE_ROW_ACTIONS_COLUMN,
+  TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
+  TableRowActions,
   useToast,
+  type TableRowAction,
   type DataTableColumn,
 } from "@code-proxy/ui";
 import { PermissionGate } from "@app/providers/PermissionGate";
@@ -122,40 +123,42 @@ export function ThreatOverviewTab({
       {
         key: "actions",
         label: t("ip_access.col_actions"),
-        ...TABLE_ROW_ACTIONS_COLUMN,
-        lockOrder: "end" as const,
-        render: (item) => (
-          <div className="flex items-center gap-1.5">
-            <Button
-              size="xs"
-              variant="ghost"
-              tooltip={t("ip_access.inspect")}
-              onClick={() => onInspect(item.ip_prefix)}
+        ...TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
+        render: (item) => {
+          const inspect: TableRowAction = {
+            key: "inspect",
+            label: t("ip_access.inspect"),
+            icon: <ListFilter />,
+            onClick: () => onInspect(item.ip_prefix),
+          };
+          // 查看人人可点，封禁 / 放行要写权限：没权限时只剩「查看」，仍是同一组按钮、同一种对齐。
+          return (
+            <PermissionGate
+              permission="platform.ip_access.write"
+              fallback={<TableRowActions actions={[inspect]} />}
             >
-              <ListFilter size={15} />
-            </Button>
-            <PermissionGate permission="platform.ip_access.write">
-              <Button
-                size="xs"
-                variant="ghost"
-                tooltip={t("ip_access.ban_source")}
-                disabled={!item.trusted}
-                onClick={() => onBan(item.ip_prefix)}
-              >
-                <Ban size={15} />
-              </Button>
-              <Button
-                size="xs"
-                variant="ghost"
-                tooltip={t("ip_access.allow_source")}
-                disabled={!item.trusted}
-                onClick={() => onAllow(item.ip_prefix)}
-              >
-                <ShieldCheck size={15} />
-              </Button>
+              <TableRowActions
+                actions={[
+                  inspect,
+                  {
+                    key: "ban",
+                    label: t("ip_access.ban_source"),
+                    icon: <Ban />,
+                    disabled: !item.trusted,
+                    onClick: () => onBan(item.ip_prefix),
+                  },
+                  {
+                    key: "allow",
+                    label: t("ip_access.allow_source"),
+                    icon: <ShieldCheck />,
+                    disabled: !item.trusted,
+                    onClick: () => onAllow(item.ip_prefix),
+                  },
+                ]}
+              />
             </PermissionGate>
-          </div>
-        ),
+          );
+        },
       },
     ],
     [i18n.language, onAllow, onBan, onInspect, t],
@@ -184,7 +187,7 @@ export function ThreatOverviewTab({
         </div>
       </div>
 
-      <div className="relative min-h-0 flex-1 overflow-hidden">
+      <div className="relative flex min-h-0 flex-col overflow-hidden">
         <DataTable<AuthSourceSummary>
           tableId="ip-access-threat-overview"
           rows={items}
@@ -192,8 +195,6 @@ export function ThreatOverviewTab({
           rowKey={(item) => item.ip_prefix}
           loading={loading}
           virtualize={false}
-          height="h-full"
-          minHeight="min-h-full"
           minWidth="min-w-[900px]"
           emptyText={t("ip_access.no_threats")}
           showAllLoadedMessage={false}

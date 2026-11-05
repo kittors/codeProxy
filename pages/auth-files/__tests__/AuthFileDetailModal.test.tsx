@@ -1103,7 +1103,7 @@ describe("AuthFileDetailModal", () => {
       throw new Error("identity fingerprint fields table must own its scroll viewport");
     }
     expect(tableViewport.className).toContain("overflow-auto");
-    expect(tableViewport.className).toContain("overscroll-y-none");
+    expect(tableViewport.className).toContain("overscroll-x-none");
     expect(fields.querySelector("[data-vt-natural-flow]")).toBeNull();
   });
 

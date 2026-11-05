@@ -1,4 +1,10 @@
-import { formatCompactNumber, formatUsd } from "@code-proxy/domain";
+import type { MonitorTotals } from "@code-proxy/api-client";
+import {
+  cacheRatePercent,
+  formatCompactNumber,
+  formatUsd,
+  readCacheRate,
+} from "@code-proxy/domain";
 
 /**
  * 监控中心的数字写法。与请求日志、仪表盘同一套紧凑写法（K / M / B）和美元费用。
@@ -57,6 +63,20 @@ export function formatMonitorDuration(ms: number): string {
 
 export function formatMonitorPercent(value: number, digits = 2): string {
   return `${finite(value).toFixed(digits)}%`;
+}
+
+/**
+ * 一段时间的缓存率，没有可显示的数时为 null（显示「—」）。新后端给命中率：缓存读取 ÷
+ * 报告了缓存用量的请求的提示词，没有一个请求报告时为 null；旧后端给缓存 token 占比，
+ * 没有输入时同样不显示。
+ */
+export function monitorCacheRate(totals: MonitorTotals): number | null {
+  return cacheRatePercent(readCacheRate(totals), totals.input_tokens > 0);
+}
+
+export function formatMonitorCacheRate(totals: MonitorTotals, digits = 1): string {
+  const rate = monitorCacheRate(totals);
+  return rate === null ? "—" : formatMonitorPercent(rate, digits);
 }
 
 /** 坐标轴刻度：短，不带小数尾巴。 */

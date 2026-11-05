@@ -1,5 +1,11 @@
 import { describe, expect, test } from "vitest";
 import type { OpenAIProvider, ProviderSimpleConfig } from "@code-proxy/api-client";
+import { readRawRecord, withRawRecord } from "@code-proxy/api-client";
+import {
+  serializeOpenAIProvider,
+  serializeOpenCodeGoKey,
+  serializeProviderKey,
+} from "@code-proxy/api-client/endpoints/helpers";
 import {
   createProviderExportText,
   prepareProviderImport,
@@ -209,5 +215,156 @@ describe("provider import/export helpers", () => {
         models: [{ name: "gpt-4.1" }],
       },
     ]);
+  });
+});
+
+/*
+ * 面板没有输入框的字段（priority、alpha-search、codex-tool-bridge……）：导出要带上，导入后整表保存也不能丢。
+ * 当前条目用 withRawRecord 挂上后端记录，和 providersApi 的 getter 读出来的一样。
+ */
+describe("provider import/export keeps the fields the panel does not model", () => {
+  const backendCodex = {
+    "api-key": "sk-codex",
+    name: "Codex Main",
+    priority: 5,
+    websockets: true,
+    "alpha-search": true,
+  };
+  const loadedCodex = (): ProviderSimpleConfig =>
+    withRawRecord(backendCodex, { apiKey: "sk-codex", name: "Codex Main" });
+
+  test("an export carries them", () => {
+    const [exported] = JSON.parse(createProviderExportText("codex", [loadedCodex()])).items;
+
+    expect(exported).toEqual(backendCodex);
+  });
+
+  test("a new channel exports only what the panel models", () => {
+    const [exported] = JSON.parse(
+      createProviderExportText("codex", [{ apiKey: "sk-new", name: "New" }]),
+    ).items;
+
+    expect(exported).toEqual({ "api-key": "sk-new", name: "New" });
+  });
+
+  test("importing an unchanged export is not a change", () => {
+    const text = createProviderExportText("codex", [loadedCodex()]);
+
+    const preview = prepareProviderImport("codex", text, [loadedCodex()]);
+
+    expect(preview.diff).toMatchObject({ unchanged: 1, changed: 0, hasChanges: false });
+    expect(readRawRecord(preview.nextItems[0])).toEqual(backendCodex);
+  });
+
+  test("the order of the unmodeled fields, nested ones included, does not make a change", () => {
+    const withCloak = withRawRecord(
+      { "api-key": "sk-claude", priority: 1, cloak: { mode: "always", "strict-mode": true } },
+      { apiKey: "sk-claude" },
+    );
+    const text = JSON.stringify({
+      provider: "claude",
+      items: [
+        { cloak: { "strict-mode": true, mode: "always" }, priority: 1, "api-key": "sk-claude" },
+      ],
+    });
+
+    expect(prepareProviderImport("claude", text, [withCloak]).diff.hasChanges).toBe(false);
+  });
+
+  test("the imported file's fields are what the next save writes, the current ones are not kept", () => {
+    const text = JSON.stringify({
+      provider: "codex",
+      items: [{ "api-key": "sk-codex", name: "Codex Main", priority: 9, "alpha-search": false }],
+    });
+
+    const preview = prepareProviderImport("codex", text, [loadedCodex()]);
+
+    expect(preview.diff).toMatchObject({ changed: 1, hasChanges: true });
+    // 导入是「用文件替换当前配置」：文件里没有 websockets，导入后就没有它。
+    expect(serializeProviderKey(preview.nextItems[0])).toEqual({
+      "api-key": "sk-codex",
+      name: "Codex Main",
+      priority: 9,
+      "alpha-search": false,
+    });
+  });
+
+  test("a file written by hand with camelCase keys does not smuggle them in as extra fields", () => {
+    const text = JSON.stringify({
+      provider: "claude",
+      items: [
+        {
+          apiKey: "sk-hand",
+          baseUrl: "https://claude.example",
+          excludedModels: ["claude-opus-4"],
+          priority: 2,
+        },
+      ],
+    });
+
+    const [item] = prepareProviderImport("claude", text, []).nextItems;
+
+    expect(serializeProviderKey(item)).toEqual({
+      "api-key": "sk-hand",
+      "base-url": "https://claude.example",
+      "excluded-models": ["claude-opus-4"],
+      priority: 2,
+    });
+  });
+
+  test("the retired OpenCode Go dashboard keys stay out even when the record still has them", () => {
+    const text = JSON.stringify({
+      provider: "opencode-go",
+      items: [
+        {
+          "api-key": "go-key",
+          "workspace-id": "wrk_123",
+          "auth-cookie": "auth-token",
+          priority: 3,
+          "codex-tool-bridge": true,
+        },
+      ],
+    });
+    const stillHasThem = withRawRecord(
+      {
+        "api-key": "go-key",
+        "workspace-id": "wrk_123",
+        "auth-cookie": "auth-token",
+        priority: 3,
+        "codex-tool-bridge": true,
+      },
+      { apiKey: "go-key" },
+    );
+
+    const [imported] = prepareProviderImport("opencode-go", text, []).nextItems;
+    const [exported] = JSON.parse(createProviderExportText("opencode-go", [stillHasThem])).items;
+
+    expect(serializeOpenCodeGoKey(imported)).toEqual({
+      "api-key": "go-key",
+      priority: 3,
+      "codex-tool-bridge": true,
+    });
+    expect(exported).toEqual({ "api-key": "go-key", priority: 3, "codex-tool-bridge": true });
+  });
+
+  test("an OpenAI-compatible provider keeps codex-tool-bridge through export and import", () => {
+    const backend = {
+      name: "Relay",
+      "base-url": "https://relay.example/v1",
+      "codex-tool-bridge": true,
+      "api-key-entries": [{ "api-key": "sk-relay" }],
+    };
+    const loaded: OpenAIProvider = withRawRecord(backend, {
+      name: "Relay",
+      baseUrl: "https://relay.example/v1",
+      apiKeyEntries: [{ apiKey: "sk-relay" }],
+    });
+
+    const text = createProviderExportText("openai", [loaded]);
+    const preview = prepareProviderImport("openai", text, [loaded]);
+
+    expect(JSON.parse(text).items[0]).toEqual(backend);
+    expect(preview.diff.hasChanges).toBe(false);
+    expect(serializeOpenAIProvider(preview.nextItems[0])).toEqual(backend);
   });
 });

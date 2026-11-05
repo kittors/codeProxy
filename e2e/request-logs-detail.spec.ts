@@ -42,12 +42,16 @@ test("Request Logs: opens full detail content and switches output raw view", asy
     await route.fulfill({
       status: 200,
       contentType: "application/json",
+      // The shape an upgraded backend answers in: it declares the id filters, rows carry
+      // only a mask and the key id, and the key facet is listed by id.
       body: JSON.stringify({
+        capabilities: { "api-key-id-filters": true },
         items: [
           {
             id: 101,
             timestamp: "2026-04-14T12:00:00Z",
-            api_key: "sk-test-1234567890",
+            api_key: "sk-tes***7890",
+            api_key_id: "key-primary",
             api_key_name: "Primary",
             model: "gpt-4.1",
             source: "openai",
@@ -70,8 +74,9 @@ test("Request Logs: opens full detail content and switches output raw view", asy
         page: 1,
         size: 50,
         filters: {
-          api_keys: ["sk-test-1234567890"],
-          api_key_names: { "sk-test-1234567890": "Primary" },
+          api_key_ids: ["key-primary"],
+          api_key_id_names: { "key-primary": "Primary" },
+          api_key_id_counts: { "key-primary": 1 },
           models: ["gpt-4.1"],
           channels: ["OpenAI"],
         },

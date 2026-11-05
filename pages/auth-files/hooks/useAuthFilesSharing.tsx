@@ -34,6 +34,12 @@ import {
 } from "@features/resource-sharing";
 import { AuthFilesScopeTabs, type AuthFilesScope } from "../components/SharedAuthFilesPanel";
 
+/** 其他租户导入同一上游账号的份数；旧后端不给这个字段。 */
+const copiesElsewhere = (file: AuthFileItem) =>
+  typeof file.copies_elsewhere === "number" && file.copies_elsewhere > 0
+    ? file.copies_elsewhere
+    : 0;
+
 /**
  * AI 账号页的平台共享：
  * - 系统租户视角：账号上的共享徽标、「N 个租户有副本」提示；平台管理员（manageable）还能在单个
@@ -129,7 +135,10 @@ export function useAuthFilesSharing({
       const sharing = readAuthFileSharing(file);
       const copies = normalizeTenantRefs(file.tenant_copies);
       const duplicate = file.duplicates_shared === true;
-      if (!sharing && copies.length === 0 && !duplicate) return null;
+      const elsewhere = copiesElsewhere(file);
+      // 平台管理员能拿到是哪几个租户，普通租户只知道有几个。
+      const elsewhereTenants = normalizeTenantRefs(file.copies_elsewhere_tenants);
+      if (!sharing && copies.length === 0 && !duplicate && elsewhere === 0) return null;
       return (
         <>
           <SharingStatusBadge sharing={sharing} tenantNames={tenants.names} />
@@ -149,6 +158,23 @@ export function useAuthFilesSharing({
               testId="auth-file-duplicates-shared"
             />
           ) : null}
+          {elsewhereTenants.length > 0 ? (
+            <TenantRefsBadge
+              tenants={elsewhereTenants}
+              label={t("auth_files.copies_elsewhere_badge", { count: elsewhereTenants.length })}
+              lead={t("auth_files.copies_elsewhere_lead")}
+              icon={<Copy size={11} aria-hidden="true" />}
+              testId="auth-file-copies-elsewhere"
+            />
+          ) : elsewhere > 0 ? (
+            <SharingNoticeBadge
+              tone="warning"
+              label={t("auth_files.copies_elsewhere_badge", { count: elsewhere })}
+              tooltip={t("auth_files.copies_elsewhere_tooltip")}
+              icon={<Copy size={11} aria-hidden="true" />}
+              testId="auth-file-copies-elsewhere"
+            />
+          ) : null}
         </>
       );
     },
@@ -164,7 +190,8 @@ export function useAuthFilesSharing({
           (file) =>
             readAuthFileSharing(file) !== null ||
             normalizeTenantRefs(file.tenant_copies).length > 0 ||
-            file.duplicates_shared === true,
+            file.duplicates_shared === true ||
+            copiesElsewhere(file) > 0,
         )),
     [capability.supported, files, manageable],
   );

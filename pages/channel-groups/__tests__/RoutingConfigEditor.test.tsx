@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
@@ -46,6 +46,9 @@ function Harness({
   initialValues,
   loadModelsForChannels,
   modelExclusionsSupported,
+  followUpstreamSupported,
+  streamGuardsSupported,
+  resetAwareSupported,
   availableChannels = ["Team A Claude", "Main Codex", "Backup Claude"],
   availableChannelDetails,
   availableChannelDetailsByGroup,
@@ -58,6 +61,12 @@ function Harness({
   ) => Promise<Array<string | RoutingModelOption>>;
   /** Off by default, like a backend that predates the capability. */
   modelExclusionsSupported?: boolean;
+  /** Off by default, like a backend that predates follow-upstream-models. */
+  followUpstreamSupported?: boolean;
+  /** Off by default, like a backend that predates the stream guards; a name advertises only that one. */
+  streamGuardsSupported?: boolean | "first-token-timeout" | "busy-wait";
+  /** Off by default, like a backend that predates the reset-aware distribution. */
+  resetAwareSupported?: boolean;
   availableChannels?: string[];
   availableChannelDetails?: Record<string, ChannelGroupChannelDetail>;
   availableChannelDetailsByGroup?: Record<string, Record<string, ChannelGroupChannelDetail>>;
@@ -72,13 +81,27 @@ function Harness({
     routingPathRoutes: [],
     ...initialValues,
   });
+  // Stable like the page's state, so the editor's callbacks are not rebuilt each render.
+  const modelGateSupport = useMemo(
+    () => ({
+      channelGroupExcludedModels: modelExclusionsSupported === true,
+      channelGroupFollowUpstreamModels: followUpstreamSupported === true,
+      channelGroupFirstTokenTimeout:
+        streamGuardsSupported === true || streamGuardsSupported === "first-token-timeout",
+      channelGroupBusyWait: streamGuardsSupported === true || streamGuardsSupported === "busy-wait",
+      channelGroupResetAwareDistribution: resetAwareSupported === true,
+      routingSimulation: false,
+      virtualModels: false,
+    }),
+    [followUpstreamSupported, modelExclusionsSupported, resetAwareSupported, streamGuardsSupported],
+  );
 
   return (
     <ThemeProvider>
       <ToastProvider>
         <RoutingConfigEditor
           values={values}
-          modelExclusionsSupported={modelExclusionsSupported}
+          modelGateSupport={modelGateSupport}
           availableChannels={availableChannels}
           availableChannelDetails={availableChannelDetails}
           availableChannelDetailsByGroup={availableChannelDetailsByGroup}
@@ -117,6 +140,15 @@ function Harness({
       </div>
       <div data-testid="excluded-models">
         {values.routingChannelGroups[0]?.excludedModels?.join(",") ?? ""}
+      </div>
+      <div data-testid="saved-follow-upstream">
+        {String(values.routingChannelGroups[0]?.followUpstreamModels ?? "")}
+      </div>
+      <div data-testid="saved-first-token-timeout">
+        {String(values.routingChannelGroups[0]?.firstTokenTimeoutSeconds ?? "")}
+      </div>
+      <div data-testid="saved-busy-wait">
+        {String(values.routingChannelGroups[0]?.busyWaitMaxSeconds ?? "")}
       </div>
     </ThemeProvider>
   );
@@ -452,6 +484,102 @@ describe("RoutingConfigEditor", () => {
     await user.click(screen.getByRole("button", { name: "保存" }));
 
     expect(savedLists()).toEqual({ allowed: "", excluded: "grok-4.7,grok-4.7-build-fast" });
+  });
+
+  // The 2026-10-28 report: a curated group stopped at the models it was saved
+  // with while the upstream had published another. Following upstream keeps the
+  // list and also admits what Codex discovery lists; what that opens is shown
+  // before anything is saved, since discovery may list models left unchecked.
+  test("follows upstream on a fixed list, showing what that opens first", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+    const loadModelsForChannels = vi.fn(
+      async (): Promise<string[]> => ["grok-4.6", "grok-4.7"],
+    );
+    const values = xaiPool({ allowedModels: ["grok-4.6"] });
+    // grok-4.6 is already on the list, so it is not news.
+    values.routingChannelGroups[0].discoveredModels = ["grok-4.7", "grok-4.6"];
+
+    render(
+      <Harness
+        initialValues={values}
+        loadModelsForChannels={loadModelsForChannels}
+        modelExclusionsSupported
+        followUpstreamSupported
+      />,
+    );
+    await openXaiPoolModels(user);
+
+    const toggle = await screen.findByRole("switch", { name: "跟随上游新模型" });
+    expect(toggle).not.toBeChecked();
+    expect(screen.getByTestId("follow-upstream-models-preview")).toHaveTextContent(
+      "开启后还会放行：grok-4.7",
+    );
+    await user.click(toggle);
+    expect(toggle).toBeChecked();
+    expect(screen.getByTestId("follow-upstream-models-preview")).toHaveTextContent(
+      "现在额外放行：grok-4.7",
+    );
+    expect(screen.getByTestId("model-gate-mode-hint")).toHaveTextContent("外加 Codex");
+    // Neither list changes; only the setting does.
+    expect(screen.getByLabelText("grok-4.7")).not.toBeChecked();
+    await user.click(screen.getByRole("button", { name: "保存" }));
+
+    expect(savedLists()).toEqual({ allowed: "grok-4.6", excluded: "" });
+    expect(screen.getByTestId("saved-follow-upstream")).toHaveTextContent("true");
+  });
+
+  test("saves an untouched group without the setting it never had", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+    render(
+      <Harness
+        initialValues={xaiPool({ allowedModels: ["grok-4.6"] })}
+        loadModelsForChannels={vi.fn(async (): Promise<string[]> => ["grok-4.6", "grok-4.7"])}
+        modelExclusionsSupported
+        followUpstreamSupported
+      />,
+    );
+    await openXaiPoolModels(user);
+    expect(await screen.findByRole("switch", { name: "跟随上游新模型" })).not.toBeChecked();
+    // Nothing discovered beyond the list: there is nothing to preview.
+    expect(screen.queryByTestId("follow-upstream-models-preview")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "保存" }));
+
+    expect(screen.getByTestId("saved-follow-upstream")).toHaveTextContent("");
+  });
+
+  test("offers no follow-upstream switch to a backend that would drop it", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+    render(
+      <Harness
+        initialValues={xaiPool({ allowedModels: ["grok-4.6"] })}
+        loadModelsForChannels={vi.fn(async (): Promise<string[]> => ["grok-4.6"])}
+        modelExclusionsSupported
+      />,
+    );
+    await openXaiPoolModels(user);
+    await screen.findByLabelText("grok-4.6");
+
+    expect(screen.queryByRole("switch", { name: "跟随上游新模型" })).not.toBeInTheDocument();
+  });
+
+  test("hides the follow-upstream switch while auto-allow already takes every new model", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+    render(
+      <Harness
+        initialValues={xaiPool({ excludedModels: ["grok-4.7"] })}
+        loadModelsForChannels={vi.fn(async (): Promise<string[]> => ["grok-4.6", "grok-4.7"])}
+        modelExclusionsSupported
+        followUpstreamSupported
+      />,
+    );
+    await openXaiPoolModels(user);
+    expect(await screen.findByRole("switch", { name: "自动允许新模型" })).toBeChecked();
+
+    expect(screen.queryByRole("switch", { name: "跟随上游新模型" })).not.toBeInTheDocument();
   });
 
   test("turning off auto-allow saves the checked models as a fixed allow list", async () => {
@@ -1433,6 +1561,35 @@ describe("RoutingConfigEditor scheduling", () => {
     expect(screen.getByTestId("channel-priority")).toHaveTextContent("3");
   });
 
+  // An older backend reads an unknown distribution as weighted, so the choice
+  // only appears once the backend says it accepts it.
+  test("offers the reset-aware distribution only on a backend that accepts it", async () => {
+    await i18n.changeLanguage("zh-CN");
+    const user = userEvent.setup();
+
+    const { unmount } = render(<Harness />);
+    await user.click(screen.getByRole("button", { name: "新增分组" }));
+    await user.click(screen.getByRole("combobox", { name: "分配方式" }));
+    expect(screen.queryByRole("option", { name: /按重置时间/ })).not.toBeInTheDocument();
+    unmount();
+
+    render(<Harness resetAwareSupported />);
+    await user.click(screen.getByRole("button", { name: "新增分组" }));
+    await user.click(screen.getByRole("combobox", { name: "分配方式" }));
+    await user.click(screen.getByRole("option", { name: /按重置时间/ }));
+    expect(screen.getByText(/优先用额度最先重置的账号/)).toBeInTheDocument();
+    await user.type(screen.getByPlaceholderText("pro"), "team-smart");
+    await user.type(screen.getByPlaceholderText("/pro"), "/team-smart");
+    await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
+    await user.click(screen.getByRole("option", { name: "Main Codex" }));
+    await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
+    await user.click(screen.getByRole("button", { name: "添加" }));
+
+    expect(screen.getByTestId("group-distribution")).toHaveTextContent("reset-aware");
+    // The legacy mirror matches the backend's: one account answers until spent.
+    expect(screen.getByTestId("group-strategy")).toHaveTextContent("fill-first");
+  });
+
   test("offers the root path the same distribution choices as any other group", async () => {
     await i18n.changeLanguage("zh-CN");
     const user = userEvent.setup();
@@ -1447,6 +1604,160 @@ describe("RoutingConfigEditor scheduling", () => {
 
     await waitFor(() => {
       expect(screen.getByTestId("group-distribution")).toHaveTextContent("least-load");
+    });
+  });
+
+  describe("stream guards", () => {
+    const TIMEOUT = "首 token 超时（秒）";
+    const BUSY_WAIT = "全员繁忙等待上限（秒）";
+
+    const editDefaultGroup = async (user: ReturnType<typeof userEvent.setup>) => {
+      const row = screen.getByRole("row", { name: /系统默认/ });
+      await user.click(within(row).getByRole("button", { name: "编辑分组" }));
+    };
+
+    const teamPool = (guards: {
+      firstTokenTimeoutSeconds?: number;
+      busyWaitMaxSeconds?: number;
+    }): VisualConfigValues => ({
+      ...DEFAULT_VISUAL_VALUES,
+      routingChannelGroups: [
+        {
+          id: "group-team",
+          name: "team-pool",
+          description: "",
+          strategy: "round-robin",
+          scheduling: schedulingFromStrategy("round-robin"),
+          allowedModels: ["gpt-6.1-sol"],
+          channels: [{ id: "channel-main-codex", name: "Main Codex", priority: "" }],
+          ...guards,
+        },
+      ],
+      routingPathRoutes: [
+        { id: "route-team", path: "/team-pool", group: "team-pool", stripPrefix: true, fallback: "none" },
+      ],
+    });
+
+    const editTeamPool = async (user: ReturnType<typeof userEvent.setup>) => {
+      const row = screen.getByRole("row", { name: /team-pool/ });
+      await user.click(within(row).getByRole("button", { name: "编辑分组" }));
+    };
+
+    // An older backend neither stores nor enforces them; the panel must look
+    // exactly as it did before for it.
+    test("offers the stream guards only to a backend that enforces them", async () => {
+      await i18n.changeLanguage("zh-CN");
+      const user = userEvent.setup();
+      const { unmount } = render(<Harness />);
+      await editDefaultGroup(user);
+      expect(screen.queryByRole("textbox", { name: TIMEOUT })).not.toBeInTheDocument();
+      expect(screen.queryByRole("textbox", { name: BUSY_WAIT })).not.toBeInTheDocument();
+      unmount();
+
+      render(<Harness streamGuardsSupported />);
+      await editDefaultGroup(user);
+      expect(screen.getByRole("textbox", { name: TIMEOUT })).toHaveValue("");
+      // Waiting is opt-in, so an empty field has to read as off, not as a number.
+      expect(screen.getByRole("textbox", { name: BUSY_WAIT })).toHaveAttribute("placeholder", "关闭");
+    });
+
+    // Waiting is opt-in, and a non-streaming client sees nothing while it
+    // happens, so the field has to say both before anyone turns it on.
+    test("says that waiting is opt-in and silent for non-streaming requests", async () => {
+      await i18n.changeLanguage("zh-CN");
+      const user = userEvent.setup();
+      render(<Harness streamGuardsSupported />);
+      await editDefaultGroup(user);
+      const hint = screen.getByText(/^未设置时关闭/);
+      expect(hint).toHaveTextContent("每个请求最多等待两次");
+      expect(hint).toHaveTextContent("非流式请求以及图片、视频提交会静默等待");
+    });
+
+    // Each capability unlocks its own field: a backend could ship one first.
+    test.each<["first-token-timeout" | "busy-wait", string, string]>([
+      ["first-token-timeout", TIMEOUT, BUSY_WAIT],
+      ["busy-wait", BUSY_WAIT, TIMEOUT],
+    ])("offers only the %s field when only that is advertised", async (capability, shown, hidden) => {
+      await i18n.changeLanguage("zh-CN");
+      const user = userEvent.setup();
+      render(<Harness streamGuardsSupported={capability} />);
+      await editDefaultGroup(user);
+      expect(screen.getByRole("textbox", { name: shown })).toBeInTheDocument();
+      expect(screen.queryByRole("textbox", { name: hidden })).not.toBeInTheDocument();
+    });
+
+    // Unset and 0 are both off, but the stored form keeps them apart.
+    test("saves the default group's guards, telling unset apart from 0", async () => {
+      await i18n.changeLanguage("zh-CN");
+      const user = userEvent.setup();
+      render(<Harness streamGuardsSupported />);
+
+      await editDefaultGroup(user);
+      await user.type(screen.getByRole("textbox", { name: TIMEOUT }), "30");
+      await user.type(screen.getByRole("textbox", { name: BUSY_WAIT }), "0");
+      await user.click(screen.getByRole("button", { name: "保存" }));
+      expect(screen.getByTestId("saved-first-token-timeout")).toHaveTextContent("30");
+      expect(screen.getByTestId("saved-busy-wait")).toHaveTextContent("0");
+
+      await editDefaultGroup(user);
+      expect(screen.getByRole("textbox", { name: TIMEOUT })).toHaveValue("30");
+      expect(screen.getByRole("textbox", { name: BUSY_WAIT })).toHaveValue("0");
+      await user.clear(screen.getByRole("textbox", { name: TIMEOUT }));
+      await user.clear(screen.getByRole("textbox", { name: BUSY_WAIT }));
+      await user.click(screen.getByRole("button", { name: "保存" }));
+      expect(screen.getByTestId("saved-first-token-timeout")).toBeEmptyDOMElement();
+      expect(screen.getByTestId("saved-busy-wait")).toBeEmptyDOMElement();
+    });
+
+    const TIMEOUT_INVALID = "首 token 超时须留空（关闭）或填 5–300 之间的整数秒。";
+    const BUSY_WAIT_INVALID = "全员繁忙等待上限须留空（关闭）或填 0–240 之间的整数秒。";
+    // The backend answers these with a 400; the editor says why before saving.
+    test.each<[string, string, string, string]>([
+      [TIMEOUT, "4", "5", TIMEOUT_INVALID],
+      [TIMEOUT, "301", "300", TIMEOUT_INVALID],
+      [BUSY_WAIT, "241", "240", BUSY_WAIT_INVALID],
+    ])("refuses %s = %s but accepts %s", async (field, rejected, accepted, message) => {
+      await i18n.changeLanguage("zh-CN");
+      const user = userEvent.setup();
+      render(<Harness initialValues={teamPool({})} streamGuardsSupported />);
+
+      await editTeamPool(user);
+      const input = screen.getByRole("textbox", { name: field });
+      await user.type(input, rejected);
+      expect(screen.getByText(message)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "保存" })).toBeDisabled();
+
+      await user.clear(input);
+      await user.type(input, accepted);
+      expect(screen.queryByText(message)).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "保存" })).toBeEnabled();
+    });
+
+    test("accepts only digits", async () => {
+      await i18n.changeLanguage("zh-CN");
+      const user = userEvent.setup();
+      render(<Harness streamGuardsSupported />);
+      await editDefaultGroup(user);
+      await user.type(screen.getByRole("textbox", { name: BUSY_WAIT }), "-1.5s");
+      expect(screen.getByRole("textbox", { name: BUSY_WAIT })).toHaveValue("15");
+    });
+
+    // Routing is saved whole: a group saved where the fields are not shown
+    // keeps what it had instead of being reset.
+    test("keeps stored guards when saving a group where they are not shown", async () => {
+      await i18n.changeLanguage("zh-CN");
+      const user = userEvent.setup();
+      render(
+        <Harness
+          initialValues={teamPool({ firstTokenTimeoutSeconds: 20, busyWaitMaxSeconds: 0 })}
+        />,
+      );
+
+      await editTeamPool(user);
+      expect(screen.queryByRole("textbox", { name: TIMEOUT })).not.toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "保存" }));
+      expect(screen.getByTestId("saved-first-token-timeout")).toHaveTextContent("20");
+      expect(screen.getByTestId("saved-busy-wait")).toHaveTextContent("0");
     });
   });
 });

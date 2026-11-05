@@ -1,6 +1,7 @@
 import {
   Activity,
   ArrowDownToLine,
+  Bell,
   Bot,
   Building2,
   Circle,
@@ -33,6 +34,7 @@ import {
 const ICON_MAP: Record<string, LucideIcon> = {
   activity: Activity,
   "arrow-down-to-line": ArrowDownToLine,
+  bell: Bell,
   bot: Bot,
   "building-2": Building2,
   cpu: Cpu,

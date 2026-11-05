@@ -67,7 +67,7 @@
   },
   "packageManager": "bun@1.2.2",
   "overrides": {
-    "follow-redirects": "1.16.1",
+    "follow-redirects": "1.16.2",
     "vite": "7.3.7",
     "yaml": "^2.9.0",
     "postcss": "^8.5.23",

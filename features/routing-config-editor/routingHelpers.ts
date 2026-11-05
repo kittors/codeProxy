@@ -34,6 +34,9 @@ export function distributionLabel(
   if (distribution === "fill-first") {
     return t("channel_groups_page.distribution_fill_first");
   }
+  if (distribution === "reset-aware") {
+    return t("channel_groups_page.distribution_reset_aware");
+  }
   return t("channel_groups_page.distribution_weighted");
 }
 

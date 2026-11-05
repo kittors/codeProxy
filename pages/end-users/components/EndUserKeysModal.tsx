@@ -22,7 +22,6 @@ import {
   type DataTableColumn,
 } from "@code-proxy/ui";
 import {
-  KeyPolicyModal,
   PolicyBadges,
   QuotaUsageCell,
   describeWindowParts,
@@ -38,6 +37,7 @@ import {
 } from "@features/period-spending";
 import { useOwnedKeys } from "../hooks/useOwnedKeys";
 import { endUserLabel } from "../endUserForm";
+import { EndUserKeyPolicyModal } from "./EndUserKeyPolicyModal";
 
 type EditorState = { mode: "create" } | { mode: "edit"; key: EndUserAPIKey } | null;
 
@@ -257,7 +257,13 @@ export function EndUserKeysModal({
           {accountLimits ? (
             <div className={`${surface({ tone: "inset", radius: "2xl" })} flex flex-wrap items-center gap-x-5 gap-y-2 px-4 py-3`}>
               <span className="shrink-0 text-xs font-semibold text-ink-2">{t("access_policy.account_ceiling")}</span>
-              <QuotaUsageCell limits={accountLimits} usage={user?.["quota-usage"]?.total} max={4} className="min-w-0 flex-1 sm:grid-cols-4" />
+              <QuotaUsageCell
+                limits={accountLimits}
+                usage={user?.["quota-usage"]?.total}
+                inFlight={user?.["quota-usage"]?.["in-flight"]}
+                max={4}
+                className="min-w-0 flex-1 sm:grid-cols-4"
+              />
             </div>
           ) : null}
           <div className="flex shrink-0 items-center justify-between gap-2">
@@ -290,7 +296,6 @@ export function EndUserKeysModal({
               busyKeyId={busyKeyId}
               busy={saving}
               loading={loading}
-              height="min-h-0 flex-1"
               // 紧凑布局：密钥、状态并进名称格，弹窗宽度内放得下全部列，不用横向滚动。
               compact
               minWidth={policyCaps ? "min-w-[960px]" : "min-w-[820px]"}
@@ -299,7 +304,13 @@ export function EndUserKeysModal({
               copyOnDemand
               renderQuota={
                 policyCaps
-                  ? (row) => <QuotaUsageCell limits={row["quota-limits"]} usage={row["quota-usage"]?.total} />
+                  ? (row) => (
+                      <QuotaUsageCell
+                        limits={row["quota-limits"]}
+                        usage={row["quota-usage"]?.total}
+                        inFlight={row["quota-usage"]?.["in-flight"]}
+                      />
+                    )
                   : undefined
               }
               canResetQuota={
@@ -332,9 +343,10 @@ export function EndUserKeysModal({
       </Modal>
 
       {user ? (
-        <KeyPolicyModal
+        <EndUserKeyPolicyModal
           open={editor !== null}
           mode={editor?.mode ?? "create"}
+          keyId={editing?.id}
           // 外层弹窗已写明账号：编辑时只标出是哪把 Key，新建时标出 Key 建在哪个账号下。
           subtitle={editing ? editing.name || t("api_keys_page.unnamed") : endUserLabel(user)}
           initial={

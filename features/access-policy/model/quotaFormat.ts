@@ -1,4 +1,4 @@
-import type { QuotaMetric } from "@code-proxy/api-client";
+import type { InFlightUsage, QuotaMetric } from "@code-proxy/api-client";
 
 const usdFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -60,6 +60,21 @@ export const formatUsdAmount = (value: number | null | undefined): string =>
   usdAmountFormatter.format(safeAmount(value));
 
 export type UsageTone = "healthy" | "warning" | "danger";
+
+/**
+ * 在途预留在一个度量上的量。准入检查把它和已用加在一起比上限，所以格子的占比与颜色
+ * 都按两者之和算。在途请求对每个窗口都算数（每个窗口都包含此刻），所以与窗口无关。
+ */
+export const inFlightAmount = (inFlight: InFlightUsage | undefined, metric: QuotaMetric): number => {
+  if (!inFlight) return 0;
+  if (metric === "cost") return inFlight.cost;
+  if (metric === "tokens") return inFlight.tokens;
+  return inFlight.requests;
+};
+
+/** 按显示精度是 0 的预留不提：还没有计费历史的 Key，花费与 Token 的预留就是 0。 */
+export const showsInFlight = (metric: QuotaMetric, amount: number): boolean =>
+  metric === "cost" ? amount >= 0.005 : amount >= 1;
 
 /** 用量占比：上限为 0（不限制）时没有占比。 */
 export const usageRatio = (used: number | null | undefined, limit: number): number =>

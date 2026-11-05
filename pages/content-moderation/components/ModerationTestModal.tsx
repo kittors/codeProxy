@@ -24,7 +24,7 @@ const SAFETY_BADGE: Record<NonNullable<ContentModerationDecision["safety"]>, str
  *
  * 结论放在最显眼的位置（红 = 会阻断、绿 = 会放行、琥珀 = 审核 API 出错按 fail-open 放行），
  * 依据（命中关键词、最高分类、各分类分数）跟在下面；运行按钮在底部，⌘/Ctrl + Enter 也能运行。
- * 测试输入不保存，弹窗关掉就没了。
+ * 测试输入不保存，弹窗关掉就没了。敏感词规则有自己的测试弹窗（@features/word-policy）。
  */
 export function ModerationTestModal({ profile, onClose }: ModerationTestModalProps) {
   const { t } = useTranslation();
@@ -82,9 +82,7 @@ export function ModerationTestModal({ profile, onClose }: ModerationTestModalPro
       open={profile !== null}
       onClose={onClose}
       title={t("content_moderation.test_title")}
-      description={
-        profile ? t("content_moderation.test_description", { name: profile.name }) : undefined
-      }
+      description={profile ? t("content_moderation.test_description", { name: profile.name }) : undefined}
       icon={<FlaskConical />}
       size="lg"
       onSubmitShortcut={() => void run()}

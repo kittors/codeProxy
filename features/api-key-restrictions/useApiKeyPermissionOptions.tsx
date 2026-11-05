@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
-import { apiClient } from "@code-proxy/api-client";
+import { useTranslation } from "react-i18next";
+import { apiClient, routingVirtualModelsApi } from "@code-proxy/api-client";
 import { authFilesApi, providersApi } from "@code-proxy/api-client";
 import {
   channelGroupsApi,
@@ -10,6 +11,35 @@ import type { AuthFileItem } from "@code-proxy/api-client";
 import type { MultiSelectOption } from "@code-proxy/ui";
 
 const normalizeChannelKey = (value: string) => value.trim().toLowerCase();
+
+/** 选项前面的来源小标签：渠道的 API / OAuth，模型的「虚拟」。 */
+const SOURCE_TAG =
+  "inline-flex rounded-md bg-ink/[0.05] px-1.5 py-0.5 text-2xs font-medium text-ink-2 dark:bg-white/[0.07]";
+
+/**
+ * 租户的虚拟模型名：Key 要在允许模型里写上它才能请求，但 /models 只列真实模型，所以另读一次。
+ * groups 不为空时只留至少有一个成员能用的：成员的分组得在 groups 里，没写分组的成员跟着请求
+ * 本来的路由走。旧后端没有这个接口、或者角色读不了路由配置时，当作没有虚拟模型。
+ */
+async function fetchVirtualModelNames(groups: string[]): Promise<string[]> {
+  try {
+    const { virtualModels } = await routingVirtualModelsApi.get();
+    const allowed = new Set(groups);
+    return virtualModels
+      .filter(
+        (vm) =>
+          allowed.size === 0 ||
+          vm.members.some((member) => {
+            const group = member.group?.trim().toLowerCase();
+            return !group || allowed.has(group);
+          }),
+      )
+      .map((vm) => vm.name.trim())
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+}
 
 const readAuthFileChannelName = (file: AuthFileItem): string => {
   const candidates = [file.label, file.email, file.provider, file.type];
@@ -29,8 +59,10 @@ export function useApiKeyPermissionOptions() {
   >({});
   const [channelGroupByName, setChannelGroupByName] = useState<Record<string, string>>({});
 
-  const fetchModelOptions = useCallback(async (channels?: string[], groups?: string[]) => {
-    try {
+  const { t } = useTranslation();
+  const virtualTag = t("api_keys_page.virtual_model_tag");
+  const fetchModelOptions = useCallback(
+    async (channels?: string[], groups?: string[]) => {
       const normalizedChannels = (Array.isArray(channels) ? channels : [])
         .map((c) => String(c ?? "").trim())
         .filter(Boolean);
@@ -49,22 +81,30 @@ export function useApiKeyPermissionOptions() {
         params.set("allowed_channel_groups", normalizedGroups.join(","));
       }
       const qs = params.toString() ? `?${params.toString()}` : "";
-      const data = await apiClient.get<{ data?: Array<{ id?: string }> }>(`/models${qs}`);
-      if (data?.data) {
-        return data.data
-          .filter((m) => m.id)
-          .map((m) => ({
-            value: m.id!,
-            label: m.id!,
-            icon: <VendorIcon modelId={m.id!} size={14} />,
-          }))
-          .sort((a, b) => a.label.localeCompare(b.label));
-      }
-    } catch {
-      // 模型列表只是权限配置的辅助信息，失败时不阻断页面。
-    }
-    return [] as MultiSelectOption[];
-  }, []);
+      const [models, virtualModels] = await Promise.all([
+        apiClient
+          .get<{ data?: Array<{ id?: string }> }>(`/models${qs}`)
+          .then((data) => (data?.data ?? []).map((m) => m.id ?? "").filter(Boolean))
+          // 模型列表只是权限配置的辅助信息，失败时不阻断页面。
+          .catch(() => [] as string[]),
+        fetchVirtualModelNames(normalizedGroups),
+      ]);
+      const options = new Map<string, MultiSelectOption>();
+      models.forEach((id) =>
+        options.set(id, { value: id, label: id, icon: <VendorIcon modelId={id} size={14} /> }),
+      );
+      // 和真实模型同名的虚拟模型（给那个模型加回退）只列一次，标成虚拟：请求按它的成员走。
+      virtualModels.forEach((name) =>
+        options.set(name, {
+          value: name,
+          label: name,
+          icon: <span className={SOURCE_TAG}>{virtualTag}</span>,
+        }),
+      );
+      return Array.from(options.values()).sort((a, b) => a.label.localeCompare(b.label));
+    },
+    [virtualTag],
+  );
 
   const loadModels = useCallback(
     async (channels?: string[], groups?: string[]) => {
@@ -161,11 +201,7 @@ export function useApiKeyPermissionOptions() {
         options.push({
           value: name,
           label: name,
-          icon: (
-            <span className="inline-flex rounded-md bg-ink/[0.05] px-1.5 py-0.5 text-2xs font-medium text-ink-2 dark:bg-white/[0.07]">
-              {source}
-            </span>
-          ),
+          icon: <span className={SOURCE_TAG}>{source}</span>,
         });
       };
 

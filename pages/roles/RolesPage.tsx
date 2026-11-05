@@ -11,7 +11,8 @@ import {
   Button,
   COLUMN_WIDTH,
   DataTable,
-  TABLE_ROW_ACTIONS_COLUMN,
+  TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
+  TableRowActions,
   useToast,
   type DataTableColumn,
 } from "@code-proxy/ui";
@@ -47,6 +48,7 @@ export function RolesPage() {
   const [deleteRole, setDeleteRole] = useState<RoleIdentity | null>(null);
   const [busy, setBusy] = useState(false);
   const canUpdateRoles = can("tenant.roles.update");
+  const canDeleteRoles = can("tenant.roles.delete");
   const canReadUsers = can("tenant.users.read");
   const canAssignUsers = can("tenant.users.assign_roles") && canReadUsers && canUpdateRoles;
 
@@ -208,63 +210,50 @@ export function RolesPage() {
       {
         key: "actions",
         label: t("identity_admin.actions"),
-        ...TABLE_ROW_ACTIONS_COLUMN,
-        lockOrder: "end",
+        ...TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
         render: (role) => (
-          <div className="flex items-center gap-2">
-            <Button
-              size="xs"
-              variant="ghost"
-              tooltip={
-                role.system_protected || !canUpdateRoles
-                  ? t("identity_admin.view_permissions")
-                  : t("identity_admin.edit_permissions")
-              }
-              onClick={() => {
-                setPermissionRole(role);
-                setSelectedPermissions(new Set(role.permissions));
-              }}
-            >
-              <ShieldCheck size={15} />
-            </Button>
-            {role.scope === "tenant" && canAssignUsers ? (
-              <Button
-                size="xs"
-                variant="ghost"
-                disabled={role.system_protected}
-                tooltip={t("identity_admin.assign_users")}
-                onClick={() => {
+          <TableRowActions
+            actions={[
+              {
+                key: "permissions",
+                label:
+                  role.system_protected || !canUpdateRoles
+                    ? t("identity_admin.view_permissions")
+                    : t("identity_admin.edit_permissions"),
+                icon: <ShieldCheck />,
+                onClick: () => {
+                  setPermissionRole(role);
+                  setSelectedPermissions(new Set(role.permissions));
+                },
+              },
+              {
+                key: "users",
+                label: t("identity_admin.assign_users"),
+                icon: <UserRoundCog />,
+                visible: role.scope === "tenant" && canAssignUsers,
+                disabled: role.system_protected,
+                onClick: () => {
                   if (role.system_protected) return;
                   setUserRole(role);
                   setSelectedUsers(
-                    new Set(
-                      users
-                        .filter((user) => user.role_ids?.includes(role.id))
-                        .map((user) => user.id),
-                    ),
+                    new Set(users.filter((user) => user.role_ids?.includes(role.id)).map((user) => user.id)),
                   );
-                }}
-              >
-                <UserRoundCog size={15} />
-              </Button>
-            ) : null}
-            {!role.system_protected ? (
-              <PermissionGate permission="tenant.roles.delete">
-                <Button
-                  size="xs"
-                  variant="ghost-danger"
-                  onClick={() => setDeleteRole(role)}
-                  tooltip={t("identity_admin.delete")}
-                >
-                  <Trash2 size={15} />
-                </Button>
-              </PermissionGate>
-            ) : null}
-          </div>
+                },
+              },
+              {
+                key: "delete",
+                label: t("identity_admin.delete"),
+                icon: <Trash2 />,
+                destructive: true,
+                visible: !role.system_protected && canDeleteRoles,
+                onClick: () => setDeleteRole(role),
+              },
+            ]}
+          />
         ),
       },
     ],
-    [assignedUserCount, canAssignUsers, canUpdateRoles, roleName, t, users],
+    [assignedUserCount, canAssignUsers, canDeleteRoles, canUpdateRoles, roleName, t, users],
   );
 
   const createRole = async (form: RoleForm) => {
@@ -314,8 +303,8 @@ export function RolesPage() {
           </PermissionGate>
         </div>
 
-        {/* 表格吃掉页面剩余高度、内部滚动；不设最小高度保底——页面高度被窗口钉死，保底只会在矮窗口下把表格挤出页面（见请求日志页）。 */}
-        <div className="relative min-h-0 flex-1 overflow-hidden">
+        {/* 表格按行数收高，最多占到页面剩余高度、再多就内部滚动，分页条始终紧跟在下面；不设最小高度保底——页面高度被窗口钉死，保底只会在矮窗口下把表格挤出页面（见请求日志页）。 */}
+        <div className="relative flex min-h-0 flex-col overflow-hidden">
           <DataTable<RoleIdentity>
             tableId="identity-roles"
             rows={roles}
@@ -324,8 +313,6 @@ export function RolesPage() {
             loading={loading}
             virtualize={false}
             rowHeight={64}
-            height="h-full"
-            minHeight="min-h-full"
             minWidth="min-w-[920px]"
             emptyText={t("identity_admin.no_roles")}
             showAllLoadedMessage={false}

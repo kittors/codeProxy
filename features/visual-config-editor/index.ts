@@ -5,6 +5,7 @@ export {
   VISUAL_CONFIG_PAYLOAD_VALUE_TYPE_OPTIONS,
   VISUAL_CONFIG_PROTOCOL_OPTIONS,
 } from "./useVisualConfig";
+export { payloadRulesDraft, type PayloadDraftSection } from "./payloadSerialization";
 export {
   effectiveConfigDocument,
   isDatabaseSetting,
@@ -21,4 +22,4 @@ export {
   serializeScheduling,
   strategyFromScheduling,
 } from "./routingScheduling";
-export { parseModelList } from "./routingSerialization";
+export { parseModelList, parseStreamGuards, serializeStreamGuards } from "./routingSerialization";

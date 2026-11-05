@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import {
   contentModerationApi,
+  NO_CONTENT_MODERATION_PROFILE_CAPABILITIES,
+  type ContentModerationProfileCapabilities,
   type ContentModerationProfileView,
   type CreateContentModerationProfileInput,
   type PatchContentModerationProfileInput,
@@ -24,8 +26,13 @@ import {
   ConfirmModal,
   DataTable,
   EmptyState,
-  TABLE_ROW_ACTIONS_COLUMN,
+  SettingGroup,
+  SkeletonLines,
+  TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
   TableRowActions,
+  Tabs,
+  TabsList,
+  TabsTrigger,
   ToggleSwitch,
   useToast,
   type DataTableColumn,
@@ -35,6 +42,14 @@ import { ModerationChannelPickerModal } from "./components/ModerationChannelPick
 import { ModerationMetricsModal } from "./components/ModerationMetricsModal";
 import { ModerationTestModal } from "./components/ModerationTestModal";
 import { ProfileEditorModal } from "./components/ProfileEditorModal";
+import { SecretMaskingSwitch } from "./components/SecretMaskingSwitch";
+import { WordPoliciesTab } from "./components/word-rules/WordPoliciesTab";
+
+/**
+ * 页面的三个标签：敏感词（最常用，放第一个）、调用外部审核服务的审核配置、出站密钥脱敏。
+ * 三者互不相干，各占一页，不再把开关和两种规则挤在同一屏。
+ */
+type PageTab = "words" | "profiles" | "masking";
 
 const bindingCount = (profile: ContentModerationProfileView) =>
   Object.values(profile.binding_counts ?? {}).reduce((sum, count) => sum + (count ?? 0), 0);
@@ -50,6 +65,9 @@ export function ContentModerationPage() {
   const canWrite = auth?.can("content_moderation.write") ?? true;
   const canTest = auth?.can("content_moderation.test") ?? true;
   const [profiles, setProfiles] = useState<ContentModerationProfileView[]>([]);
+  const [capabilities, setCapabilities] = useState<ContentModerationProfileCapabilities>(
+    NO_CONTENT_MODERATION_PROFILE_CAPABILITIES,
+  );
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [modeUpdatingId, setModeUpdatingId] = useState<string | null>(null);
@@ -60,11 +78,34 @@ export function ContentModerationPage() {
   const [pickerProfile, setPickerProfile] = useState<ContentModerationProfileView | null>(null);
   const [testProfile, setTestProfile] = useState<ContentModerationProfileView | null>(null);
   const [metricsOpen, setMetricsOpen] = useState(false);
+  const [tab, setTab] = useState<PageTab>("words");
+  const [loaded, setLoaded] = useState(false);
+  const [wordsDirty, setWordsDirty] = useState(false);
+  const [pendingTab, setPendingTab] = useState<PageTab | null>(null);
+  // 敏感词规则和密钥脱敏的接口只有新后端才有：后端没声明时不显示对应的标签，也不会去请求它。
+  const wordsAvailable = capabilities.wordGuard;
+  const activeTab: PageTab =
+    (tab === "words" && !wordsAvailable) || (tab === "masking" && !capabilities.secretMasking)
+      ? "profiles"
+      : tab;
+
+  // 敏感词页是按需挂载的：切到别的标签会卸载它，连同还没保存的草稿一起丢掉。
+  // 有改动时先确认，和页内切换层级用同一套提示。
+  const requestTab = (next: PageTab) => {
+    if (next === activeTab) return;
+    if (activeTab === "words" && wordsDirty) {
+      setPendingTab(next);
+      return;
+    }
+    setTab(next);
+  };
 
   const loadProfiles = useCallback(async () => {
     setLoading(true);
     try {
-      setProfiles(await contentModerationApi.listProfiles());
+      const list = await contentModerationApi.listProfiles();
+      setProfiles(list.items);
+      setCapabilities(list.capabilities);
     } catch (error) {
       notify({
         type: "error",
@@ -73,6 +114,8 @@ export function ContentModerationPage() {
       });
     } finally {
       setLoading(false);
+      // 读失败也算读过：按旧后端的能力显示，至少审核配置那一页能用。
+      setLoaded(true);
     }
   }, [notify, t]);
 
@@ -283,18 +326,18 @@ export function ContentModerationPage() {
       {
         key: "actions",
         label: t("content_moderation.actions"),
-        ...TABLE_ROW_ACTIONS_COLUMN,
+        ...TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
         render: (profile) => (
           <TableRowActions
-            maxInline={5}
-            align="start"
             moreLabel={t("content_moderation.more_actions")}
+            // 常用的放前面平铺（编辑、绑定渠道、测试），查看状态和删除收进「更多」，四个位置放得下、不溢出列宽。
             actions={[
               {
-                key: "metrics",
-                label: t("content_moderation.view_status"),
-                icon: <Activity size={15} />,
-                onClick: () => setMetricsOpen(true),
+                key: "edit",
+                label: t("content_moderation.edit_profile"),
+                icon: <Pencil size={15} />,
+                onClick: () => openEdit(profile),
+                visible: canWrite,
               },
               {
                 key: "channels",
@@ -311,11 +354,10 @@ export function ContentModerationPage() {
                 visible: canTest,
               },
               {
-                key: "edit",
-                label: t("content_moderation.edit_profile"),
-                icon: <Pencil size={15} />,
-                onClick: () => openEdit(profile),
-                visible: canWrite,
+                key: "metrics",
+                label: t("content_moderation.view_status"),
+                icon: <Activity size={15} />,
+                onClick: () => setMetricsOpen(true),
               },
               {
                 key: "delete",
@@ -333,63 +375,111 @@ export function ContentModerationPage() {
     [canTest, canWrite, modeUpdatingId, t, updateProfileMode],
   );
 
-  return (
-    <div data-page-fill="always" className="flex flex-1 flex-col">
-      {/* 外壳内容区就是页面面板：这里是页面分区（flat），不再包一张大卡。 */}
-      <Card
-        flat
-        className="md:flex md:min-h-0 md:flex-1 md:flex-col"
-        bodyClassName="md:flex md:min-h-0 md:flex-1 md:flex-col"
-        title={t("content_moderation.title")}
-        description={t("content_moderation.description")}
-        actions={
-          <div className="flex gap-2">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => void loadProfiles()}
-              disabled={loading}
-            >
-              <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-              {t("common.refresh")}
+  const profilesCard = (
+    /* 外壳内容区就是页面面板：这里是页面分区（flat），不再包一张大卡。 */
+    <Card
+      flat
+      className="md:flex md:min-h-0 md:flex-1 md:flex-col"
+      bodyClassName="md:flex md:min-h-0 md:flex-1 md:flex-col"
+      title={t("content_moderation.title")}
+      description={t("content_moderation.description")}
+      actions={
+        <div className="flex gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => void loadProfiles()}
+            disabled={loading}
+          >
+            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+            {t("common.refresh")}
+          </Button>
+          {canWrite ? (
+            <Button size="sm" variant="primary" onClick={openCreate}>
+              <Plus size={14} />
+              {t("content_moderation.create_profile")}
             </Button>
-            {canWrite ? (
-              <Button size="sm" variant="primary" onClick={openCreate}>
-                <Plus size={14} />
-                {t("content_moderation.create_profile")}
-              </Button>
-            ) : null}
-          </div>
-        }
-        loading={loading}
-      >
-        {profiles.length === 0 ? (
-          <EmptyState
-            title={t("content_moderation.empty_title")}
-            description={t("content_moderation.empty_description")}
-            icon={<ShieldCheck size={32} />}
-          />
-        ) : (
-          <DataTable<ContentModerationProfileView>
-            tableId="content-moderation-profiles"
-            rows={profiles}
-            columns={columns}
-            rowKey={(profile) => profile.id}
-            loading={loading}
-            virtualize={false}
-            minWidth="min-w-[1280px]"
-            height="h-[calc(100dvh-260px)] md:h-auto md:flex-1"
-            minHeight="min-h-[320px] md:min-h-0"
-            caption={t("content_moderation.table_caption")}
-            emptyText={t("content_moderation.empty_title")}
-            showAllLoadedMessage={false}
-          />
-        )}
-      </Card>
+          ) : null}
+        </div>
+      }
+      loading={loading}
+    >
+      {profiles.length === 0 ? (
+        <EmptyState
+          title={t("content_moderation.empty_title")}
+          description={t("content_moderation.empty_description")}
+          icon={<ShieldCheck size={32} />}
+        />
+      ) : (
+        <DataTable<ContentModerationProfileView>
+          tableId="content-moderation-profiles"
+          rows={profiles}
+          columns={columns}
+          rowKey={(profile) => profile.id}
+          loading={loading}
+          virtualize={false}
+          minWidth="min-w-[1280px]"
+          caption={t("content_moderation.table_caption")}
+          emptyText={t("content_moderation.empty_title")}
+          showAllLoadedMessage={false}
+        />
+      )}
+    </Card>
+  );
+
+  // 各标签的高度模式不同：敏感词在宽屏是左右两栏、各自滚动，窄屏上下堆叠随页面流动；审核配置是
+  // 整页一张表（桌面宽度钉满）；密钥脱敏只是一小段设置，随内容流动。
+  const pageFill = activeTab === "words" ? "lg" : activeTab === "profiles" ? "md" : undefined;
+
+  return (
+    <div data-page-fill={pageFill} className="flex flex-1 flex-col">
+      {wordsAvailable || capabilities.secretMasking ? (
+        <div className="mb-4 shrink-0">
+          <Tabs value={activeTab} size="sm" onValueChange={(next) => requestTab(next as PageTab)}>
+            <TabsList>
+              {wordsAvailable ? (
+                <TabsTrigger value="words">{t("content_moderation.tab_words")}</TabsTrigger>
+              ) : null}
+              <TabsTrigger value="profiles">{t("content_moderation.tab_profiles")}</TabsTrigger>
+              {capabilities.secretMasking ? (
+                <TabsTrigger value="masking">{t("content_moderation.tab_masking")}</TabsTrigger>
+              ) : null}
+            </TabsList>
+          </Tabs>
+        </div>
+      ) : null}
+
+      {!loaded ? (
+        <SkeletonLines rows={6} />
+      ) : activeTab === "words" ? (
+        <WordPoliciesTab
+          canWrite={canWrite}
+          canTest={canTest}
+          portalSupported={capabilities.wordPortal}
+          onDirtyChange={setWordsDirty}
+        />
+      ) : activeTab === "masking" ? (
+        <section className="max-w-3xl space-y-3">
+          <h3 className="text-base font-semibold text-ink">
+            {t("content_moderation.secret_masking.label")}
+          </h3>
+          <p className="text-xs leading-5 text-ink-3">
+            {t("content_moderation.secret_masking.explainer")}
+          </p>
+          <SettingGroup>
+            <div className="px-4 py-3">
+              <SecretMaskingSwitch canWrite={canWrite} />
+            </div>
+          </SettingGroup>
+        </section>
+      ) : (
+        profilesCard
+      )}
 
       <ProfileEditorModal
         open={editorOpen}
         profile={editorProfile}
+        capabilities={capabilities}
         saving={saving}
         onClose={() => {
           if (saving) return;
@@ -410,6 +500,19 @@ export function ContentModerationPage() {
       <ModerationTestModal profile={testProfile} onClose={() => setTestProfile(null)} />
 
       <ModerationMetricsModal open={metricsOpen} onClose={() => setMetricsOpen(false)} />
+
+      <ConfirmModal
+        open={pendingTab !== null}
+        title={t("content_moderation.words.discard_title")}
+        description={t("content_moderation.words.discard_description")}
+        confirmText={t("content_moderation.words.discard_confirm")}
+        variant="warning"
+        onClose={() => setPendingTab(null)}
+        onConfirm={() => {
+          if (pendingTab) setTab(pendingTab);
+          setPendingTab(null);
+        }}
+      />
 
       <ConfirmModal
         open={deleteTarget !== null}

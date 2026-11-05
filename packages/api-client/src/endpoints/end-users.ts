@@ -395,12 +395,21 @@ export const portalApi = {
     }
     portalClient.clearSession();
   },
-  me: async (): Promise<{ user: EndUser; capabilities: AccessPolicyCapabilities }> => {
+  me: async (): Promise<{
+    user: EndUser;
+    capabilities: AccessPolicyCapabilities;
+    /**
+     * The tenant lets this account keep sensitive words of its own (portalWordPolicyApi). An older
+     * backend does not say, which reads as not allowed.
+     */
+    wordPolicyAllowed: boolean;
+  }> => {
     const raw = await portalClient.get<unknown>("/v0/portal/auth/me");
     const record = isRecord(raw) ? raw : {};
     return {
       user: normalizeEndUser(record.user),
       capabilities: readAccessPolicyCapabilities(record.capabilities),
+      wordPolicyAllowed: record.word_policy_allowed === true,
     };
   },
   /**

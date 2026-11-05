@@ -17,7 +17,13 @@ concurrency:
 jobs:
   quality_build_e2e:
     name: quality-build-e2e
-    runs-on: ubuntu-latest
+    # Pinned rather than ubuntu-latest: since ubuntu-latest moved to 26.04,
+    # `playwright install chromium` fails there with "Playwright does not
+    # support chromium on ubuntu26.04-x64" for the Playwright locked in
+    # bun.lock. Move to a newer image together with a Playwright upgrade that
+    # supports it. The other jobs use the same image so that every check runs
+    # where this one does.
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -69,7 +75,7 @@ jobs:
 
   vitest:
     name: vitest-${{ matrix.shard }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -101,7 +107,7 @@ jobs:
 
   test-build:
     name: test-build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: always()
     needs:
       - quality_build_e2e

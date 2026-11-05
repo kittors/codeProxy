@@ -284,7 +284,13 @@ export function getEndUserColumns({
       label: t("access_policy.col_quota"),
       width: "w-[22rem] min-w-[18rem]",
       overflowTooltip: false,
-      render: (row) => <QuotaUsageCell limits={row["quota-limits"]} usage={row["quota-usage"]?.total} />,
+      render: (row) => (
+        <QuotaUsageCell
+          limits={row["quota-limits"]}
+          usage={row["quota-usage"]?.total}
+          inFlight={row["quota-usage"]?.["in-flight"]}
+        />
+      ),
     },
     {
       key: "models",
