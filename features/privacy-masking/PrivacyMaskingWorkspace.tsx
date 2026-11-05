@@ -78,7 +78,11 @@ export function PrivacyMaskingWorkspace({ scope, canWrite }: { scope: "tenant" |
   return (
     <Tabs value={tab} onValueChange={(next) => setTab(next as Tab)} size="sm">
       <section className="flex flex-col gap-4">
-        <div className="sticky top-0 z-20 -mx-4 bg-canvas px-4 pt-3 pb-1 sm:-mx-6 sm:px-6">
+        {/* 钉住区：主内容区的顶部渐隐从这条栏的下沿开始，栏本身不被淡掉。 */}
+        <div
+          data-scroll-fade-pin="top"
+          className="sticky top-0 z-20 -mx-4 bg-canvas px-4 pt-3 pb-1 sm:-mx-6 sm:px-6"
+        >
           <TabsList aria-label={t("privacy_masking.title")} className="max-w-full">
             <TabsTrigger value="overview">{t("privacy_masking.tab.overview")}</TabsTrigger>
             <TabsTrigger value="settings">{t("privacy_masking.tab.settings")}</TabsTrigger>

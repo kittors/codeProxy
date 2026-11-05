@@ -2,7 +2,7 @@ import { useId, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { motion, useReducedMotion } from "framer-motion";
 import { CircleAlert } from "lucide-react";
-import { cn, DialogIcon, NavList, useScrollFade, type NavListGroup } from "@code-proxy/ui";
+import { DialogIcon, NavList, useScrollFade, type NavListGroup } from "@code-proxy/ui";
 
 export interface PolicyEditorSection {
   id: string;
@@ -58,6 +58,7 @@ export function PolicyEditorLayout({
   const idPrefix = `policy-tab-${useId().replace(/:/g, "")}`;
   const panelId = `${idPrefix}-panel`;
   const reduceMotion = useReducedMotion();
+  const navFade = useScrollFade<HTMLElement>({ size: 24 });
   const active = sections.find((section) => section.id === value) ?? sections[0];
   const navGroups: NavListGroup[] = groups
     .map((group) => ({
@@ -93,7 +94,7 @@ export function PolicyEditorLayout({
             {subtitle ? <p className="truncate text-xs text-ink-3">{subtitle}</p> : null}
           </div>
         </div>
-        <nav className="min-h-0 sm:flex-1 sm:overflow-y-auto">
+        <nav ref={navFade.ref} className="min-h-0 sm:flex-1 sm:overflow-y-auto">
           <NavList
             mode="tabs"
             groups={navGroups}
@@ -135,9 +136,7 @@ function SectionPane({ section, animate }: { section: PolicyEditorSection; anima
   return (
     <motion.div
       ref={fade.ref}
-      onScroll={fade.onScroll}
-      className={cn("min-h-0 flex-1 overflow-y-auto px-6 pb-6 pt-5 sm:pt-6", fade.className)}
-      style={fade.style}
+      className="min-h-0 flex-1 overflow-y-auto px-6 pb-6 pt-5 sm:pt-6"
       initial={animate ? { opacity: 0, y: 6 } : false}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}

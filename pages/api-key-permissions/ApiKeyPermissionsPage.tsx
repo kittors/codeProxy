@@ -20,6 +20,7 @@ import {
   HUE_SOFT,
   cn,
   entityCardGridClass,
+  ScrollFade,
   useToast,
   type MultiSelectOption,
 } from "@code-proxy/ui";
@@ -247,7 +248,7 @@ export function ApiKeyPermissionsPage() {
             }
           />
         ) : (
-          <div className="md:min-h-0 md:flex-1 md:overflow-y-auto">
+          <ScrollFade className="md:min-h-0 md:flex-1 md:overflow-y-auto">
             <div className={entityCardGridClass({ columns: 3, align: "start" })}>
               {profiles.map((profile) => {
                 const bound = boundProfileCount(profile, accounts);
@@ -310,7 +311,7 @@ export function ApiKeyPermissionsPage() {
                 );
               })}
             </div>
-          </div>
+          </ScrollFade>
         )}
       </Card>
 

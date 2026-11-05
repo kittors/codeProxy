@@ -1,75 +1,70 @@
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useRef, type RefObject } from "react";
 import "../primitives/ScrollArea.css";
-
-export interface ScrollFadeEdges {
-  /** 内容高过容器（真的需要滚动）。 */
-  overflow: boolean;
-  /** 上方还有内容（已经往下滚过）。 */
-  top: boolean;
-  /** 下方还有内容。 */
-  bottom: boolean;
-}
+import {
+  clearScrollFade,
+  SCROLL_FADE_HOST_ATTR,
+  SCROLL_FADE_MEASURE_EVENT,
+  syncScrollFade,
+  type ScrollFadeAxis,
+} from "./scrollFadeDom";
 
 /**
- * 普通滚动容器的上下渐隐：上面还有内容时顶部淡出，下面还有内容时底部淡出，到顶 / 到底就收起。
- * 用来替代「内容在边缘被一刀切断」或「滚动后浮出一条分隔线」——渐隐告诉用户「还能滚」，
- * 又不会在头尾留下割裂的硬边。
+ * 滚动容器的边缘渐隐，全站唯一的实现（ScrollFade 组件、ScrollArea 的 edgeFade、弹窗 / 抽屉正文、
+ * 主内容区和表格都走这里）：上面还有内容时顶部淡出，下面还有时底部淡出，到顶 / 到底那一侧不淡，
+ * 滚不动的区域完全不淡。替代「内容在边缘被一刀切断」或「滚动后浮出一条分隔线」。
  *
- * 和 ScrollArea 的 `edgeFade` 共用同一个 CSS（`code-proxy-scroll-edge-fade`）。只在内容确实溢出时
- * 才挂类：mask 会把子孙的绘制裁到盒子以内，fixed 定位、伸出盒子的浮层也会被裁，
- * 所以容器里不该有不走 portal 的浮层（下拉、日期选择器、提示气泡都走 portal，不受影响）。
+ * 宿主上会带 `data-scroll-more-top` / `data-scroll-more-bottom`（横向是 left / right）两个标记，
+ * 由 scrollFadeDom 直接写 DOM，滚动时不触发重渲染。
  *
- * 用法：`const fade = useScrollFade();` →
- * `<div ref={fade.ref} onScroll={fade.onScroll} className={cn("overflow-y-auto", fade.className)} style={fade.style}>`
+ * 遮罩会把宿主子孙的绘制一起裁到盒子以内：没走 portal 的 fixed 浮层、视觉上伸出盒子的浮层都会被裁。
+ * 下拉、日期选择器、提示气泡、弹窗都走 portal，不受影响；新写的浮层也要走 portal。
+ *
+ * sticky 的页签栏、操作栏、表头加 `data-scroll-fade-pin="top" | "bottom"`，渐隐从它的边缘开始。
+ *
+ * 用法：`const fade = useScrollFade();` → `<div ref={fade.ref} className="overflow-y-auto">`。
+ * 滚动条、浮层不该被淡掉时，传 `host` 把遮罩挂到只包内容的那一层（见 DataTable 的 TableFadeFrame）。
  */
 export function useScrollFade<T extends HTMLElement = HTMLDivElement>({
   size = 28,
   enabled = true,
   axis = "y",
+  scroller,
+  host,
 }: {
+  /** 渐隐长度上限（px）。实际长度等于这一侧还能滚的距离，最多到这个值。 */
   size?: number;
   enabled?: boolean;
-  /** `x`：横向滚动（胶囊条、横向页签），左右两端渐隐；`top` / `bottom` 对应左 / 右。 */
-  axis?: "x" | "y";
+  /** `x`：横向滚动（胶囊条、横向页签），左右两端渐隐。 */
+  axis?: ScrollFadeAxis;
+  /** 已有的滚动容器 ref；不传时用返回的 `ref`。 */
+  scroller?: RefObject<T | null>;
+  /** 挂遮罩的元素，默认是滚动容器本身。 */
+  host?: RefObject<HTMLElement | null>;
 } = {}) {
-  const ref = useRef<T | null>(null);
-  const [edges, setEdges] = useState<ScrollFadeEdges>({ overflow: false, top: false, bottom: false });
+  const ownRef = useRef<T | null>(null);
+  const ref = scroller ?? ownRef;
 
   const measure = useCallback(() => {
     const node = ref.current;
-    if (!node) return;
-    const scrollSize = axis === "x" ? node.scrollWidth : node.scrollHeight;
-    const clientSize = axis === "x" ? node.clientWidth : node.clientHeight;
-    const offset = axis === "x" ? Math.abs(node.scrollLeft) : node.scrollTop;
-    // overflow: hidden / clip 的容器滚不动，渐隐只会把边缘的内容抹掉。子元素的 transform
-    // （入场动画的位移）也会让 scrollHeight 短暂大于 clientHeight，而 transform 变化不触发
-    // ResizeObserver，量到的「溢出」会一直留着。
-    const style = typeof window === "undefined" ? null : window.getComputedStyle(node);
-    const overflowStyle = style ? (axis === "x" ? style.overflowX : style.overflowY) : "";
-    const scrollable = overflowStyle !== "hidden" && overflowStyle !== "clip";
-    const overflow = scrollable && scrollSize - clientSize > 1;
-    const top = overflow && offset > 1;
-    const bottom = overflow && offset + clientSize < scrollSize - 1;
-    setEdges((previous) =>
-      previous.overflow === overflow && previous.top === top && previous.bottom === bottom
-        ? previous
-        : { overflow, top, bottom },
-    );
-  }, [axis]);
+    if (!enabled || !node) return;
+    syncScrollFade(node, host?.current ?? node, axis, size);
+  }, [axis, enabled, host, ref, size]);
 
   useEffect(() => {
     const node = ref.current;
-    if (!enabled || !node) return;
+    const target = host?.current ?? node;
+    if (!enabled || !node || !target) return;
+    target.setAttribute(SCROLL_FADE_HOST_ATTR, "");
     measure();
     const frame = window.requestAnimationFrame(measure);
-    if (typeof ResizeObserver === "undefined") {
-      return () => window.cancelAnimationFrame(frame);
-    }
+    node.addEventListener("scroll", measure, { passive: true });
+    node.addEventListener(SCROLL_FADE_MEASURE_EVENT, measure);
     // 容器自身尺寸变化、子元素增删或长高（展开一段内容、异步数据到达）都要重新量一次。
-    const resize = new ResizeObserver(measure);
-    resize.observe(node);
+    const resize = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(measure);
+    resize?.observe(node);
+    if (target !== node) resize?.observe(target);
     const observeChildren = () => {
-      for (const child of Array.from(node.children)) resize.observe(child);
+      for (const child of Array.from(node.children)) resize?.observe(child);
     };
     observeChildren();
     const mutation =
@@ -82,27 +77,18 @@ export function useScrollFade<T extends HTMLElement = HTMLDivElement>({
     mutation?.observe(node, { childList: true });
     return () => {
       window.cancelAnimationFrame(frame);
-      resize.disconnect();
+      node.removeEventListener("scroll", measure);
+      node.removeEventListener(SCROLL_FADE_MEASURE_EVENT, measure);
+      resize?.disconnect();
       mutation?.disconnect();
+      clearScrollFade(target);
+      target.removeAttribute(SCROLL_FADE_HOST_ATTR);
     };
-  }, [enabled, measure]);
-
-  const active = enabled && edges.overflow;
-  const start = edges.top ? `${size}px` : "0px";
-  const end = edges.bottom ? `${size}px` : "0px";
-  const style: CSSProperties | undefined = active
-    ? ((axis === "x"
-        ? { "--scroll-fade-left": start, "--scroll-fade-right": end }
-        : { "--scroll-fade-top": start, "--scroll-fade-bottom": end }) as unknown as CSSProperties)
-    : undefined;
+  }, [enabled, host, measure, ref]);
 
   return {
     ref,
-    onScroll: measure,
-    className: active ? (axis === "x" ? "code-proxy-scroll-edge-fade-x" : "code-proxy-scroll-edge-fade") : "",
-    style,
-    edges,
-    /** 内容变化后手动重新测量（例如切换分组后内容整体替换）。 */
+    /** 内容整体替换后手动重新测量（例如切换分组）。 */
     measure,
   };
 }

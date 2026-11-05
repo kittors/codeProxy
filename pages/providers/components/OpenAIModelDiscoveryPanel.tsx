@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Check, RefreshCw } from "lucide-react";
-import { Button } from "@code-proxy/ui";
+import { Button, useScrollFade } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
 import { useOptionalAuth } from "@app/providers/AuthProvider";
 
@@ -31,6 +31,8 @@ export function OpenAIModelDiscoveryPanel({
     : true;
   const [discoverQuery, setDiscoverQuery] = useState("");
   const discoveredListRef = useRef<HTMLDivElement | null>(null);
+  // 列表只在发现到模型后才渲染：渐隐跟着它一起挂上。
+  useScrollFade({ scroller: discoveredListRef, size: 24, enabled: discoveredModels.length > 0 });
   const discoveredSectionRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {

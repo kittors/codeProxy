@@ -3,7 +3,7 @@ import type {
   ProviderModel,
   ProviderSimpleConfig,
 } from "@code-proxy/api-client";
-import { Card, entityCardGridClass } from "@code-proxy/ui";
+import { Card, entityCardGridClass, ScrollFade } from "@code-proxy/ui";
 import { ProviderCard, ProviderCardSkeleton } from "./ProviderCard";
 import { EmptyState } from "@code-proxy/ui";
 import { ProviderSuccessRateBar } from "./components/ProviderSuccessRateBar";
@@ -170,7 +170,7 @@ export function ProviderKeyListCard({
           />
         </div>
       ) : (
-        <div
+        <ScrollFade
           data-testid="providers-tab-scroll"
           className={`${CARD_GRID_CLASS} overflow-y-auto`}
         >
@@ -348,7 +348,7 @@ export function ProviderKeyListCard({
               </ProviderCard>
             );
           })}
-        </div>
+        </ScrollFade>
       )}
     </Card>
   );

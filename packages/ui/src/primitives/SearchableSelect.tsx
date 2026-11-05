@@ -366,9 +366,7 @@ export function SearchableSelect({
               {/* Options list：选项多到要滚时上下渐隐。 */}
               <div
                 ref={listFade.ref}
-                onScroll={listFade.onScroll}
-                style={listFade.style}
-                className={cn("flex-1 overflow-y-auto overscroll-contain p-1.5", listFade.className)}
+                className="flex-1 overflow-y-auto overscroll-contain p-1.5"
               >
                 {filtered.length === 0 && !canCreate ? (
                   <div className={selectEmptyState}>{t("ui.no_match")}</div>

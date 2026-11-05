@@ -12,6 +12,7 @@ import {
   Button,
   Callout,
   ConfirmModal,
+  ScrollFade,
   SkeletonLines,
   Tabs,
   TabsList,
@@ -348,7 +349,7 @@ export function WordPolicyEditor({
       </div>
 
       {/* 卡片的投影伸出盒子一点：这一页自己滚动时用等量内边距和负边距留出位置，不被裁掉。 */}
-      <div
+      <ScrollFade
         role="tabpanel"
         id={`${panelIds}-handling`}
         aria-labelledby={`${panelIds}-tab-handling`}
@@ -371,7 +372,7 @@ export function WordPolicyEditor({
           unboundedRegex={unbounded.size}
           onChange={editor.update}
         />
-      </div>
+      </ScrollFade>
 
       {!readOnly && editor.dirty ? (
         // 有改动才出现，贴在可视区底部：改了什么都不会因为滚动而找不到保存按钮。

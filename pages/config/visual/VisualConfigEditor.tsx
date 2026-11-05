@@ -310,14 +310,12 @@ export function VisualConfigEditor({
 
       <div
         ref={fade.ref}
-        onScroll={fade.onScroll}
-        style={fade.style}
         id={panelId}
         role="tabpanel"
         aria-labelledby={searching ? undefined : `${idPrefix}-tab-${group}`}
         aria-label={searching ? t("config_ui.search_results") : undefined}
         data-testid="config-visual-scroll"
-        className={`min-h-0 flex-1 space-y-8 overflow-y-auto pt-2 pr-1 pb-28 ${fade.className}`}
+        className="min-h-0 flex-1 space-y-8 overflow-y-auto pt-2 pr-1 pb-28"
       >
         {/* 推荐档位动的主要是日志、保留与监控：在打开页面看到的「基础」和「日志与数据」两组都放一份。 */}
         {!searching && (group === "basics" || group === "data") ? (

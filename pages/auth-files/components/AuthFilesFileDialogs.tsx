@@ -7,6 +7,7 @@ import {
   EmptyState,
   FormField,
   Modal,
+  ScrollFade,
   SearchableSelect,
   SettingRow,
   Skeleton,
@@ -314,22 +315,24 @@ export function ModelOwnerGroupDialog({
                   description={t("auth_files.no_owner_group_models")}
                 />
               ) : (
-                <ul className="max-h-[340px] space-y-1.5 overflow-y-auto pr-1">
-                  {models.map((model) => {
-                    const modelMeta = [
-                      model.display_name ? `display_name: ${model.display_name}` : "",
-                      model.owned_by ? `owned_by: ${model.owned_by}` : "",
-                    ].filter(Boolean);
-                    return (
-                      <li key={model.id} className="rounded-xl bg-subtle px-3 py-2">
-                        <p className="truncate font-mono text-xs font-medium text-ink">{model.id}</p>
-                        {modelMeta.length > 0 ? (
-                          <p className="mt-0.5 truncate text-xs text-ink-3">{modelMeta.join(" · ")}</p>
-                        ) : null}
-                      </li>
-                    );
-                  })}
-                </ul>
+                <ScrollFade className="max-h-[340px] overflow-y-auto pr-1">
+                  <ul className="space-y-1.5">
+                    {models.map((model) => {
+                      const modelMeta = [
+                        model.display_name ? `display_name: ${model.display_name}` : "",
+                        model.owned_by ? `owned_by: ${model.owned_by}` : "",
+                      ].filter(Boolean);
+                      return (
+                        <li key={model.id} className="rounded-xl bg-subtle px-3 py-2">
+                          <p className="truncate font-mono text-xs font-medium text-ink">{model.id}</p>
+                          {modelMeta.length > 0 ? (
+                            <p className="mt-0.5 truncate text-xs text-ink-3">{modelMeta.join(" · ")}</p>
+                          ) : null}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </ScrollFade>
               )
             ) : (
               <EmptyState
