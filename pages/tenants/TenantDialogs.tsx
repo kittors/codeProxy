@@ -77,7 +77,13 @@ export function TenantDetailsModal({
                 </span>
               ),
             },
-            { label: t("identity_admin.expires"), value: formatTime(tenant.expires_at) },
+            {
+              label: t("identity_admin.expires"),
+              // 没有到期时间是「永不过期」，不是「从未」（那是给最后登录这类事件时间用的）。
+              value: tenant.expires_at
+                ? formatTime(tenant.expires_at)
+                : t("identity_admin.never_expires"),
+            },
             { label: t("identity_admin.version"), value: String(tenant.version) },
             {
               label: t("identity_admin.access_token_ttl_short"),

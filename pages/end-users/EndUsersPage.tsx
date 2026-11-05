@@ -465,7 +465,9 @@ export function EndUsersPage() {
               ) : null}
             </div>
           }
-          loading={loading}
+          // 首次加载交给表格自己的骨架（同一个框，数据回来不跳）；刷新时才罩住旧数据。以前首次加载
+          // 是卡片遮罩罩着一个「暂无门户账号」的空态。
+          loading={loading && users.length > 0}
         >
           <EndUserToolbar
             search={search}
@@ -496,7 +498,9 @@ export function EndUsersPage() {
             }}
           />
           <DataTable
+            fill
             tableId="end-users"
+            loading={loading}
             rows={pageUsers}
             columns={columns}
             rowKey={(row) => row.id}

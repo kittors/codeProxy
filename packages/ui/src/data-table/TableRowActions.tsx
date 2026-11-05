@@ -12,7 +12,15 @@ export type TableRowAction = {
   disabled?: boolean;
   destructive?: boolean;
   className?: string;
+  /** false：整列都用不了（没有权限、页面没配这个动作），不占位置。 */
   visible?: boolean;
+  /**
+   * 只是这一行用不了（行的状态，例如系统租户不能编辑、没有重置记录）：位置留空，
+   * 同一个动作在每一行都落在同一处。以前直接不画，剩下的按钮整组居中，租户页「系统管理」
+   * 那行的查看按钮就比别的行偏了一截。空位也算一个位置：动作多到要收进「更多」时，留空位
+   * 可能把每一行的常用按钮挤进菜单，那种只有少数行才有的动作还是用 visible。
+   */
+  unavailable?: boolean;
   /** 悬停提示和可访问名称不同时用（例如「被覆盖，不能检测」）；默认就是 label。 */
   tooltip?: string;
 };
@@ -68,15 +76,18 @@ export function TableRowActions({
   className?: string;
   align?: "start" | "center" | "end";
 }) {
-  const visibleActions = actions.filter((action) => action.visible !== false);
+  // 位置按「这一列有哪些动作」排，unavailable 的也占一个位置，所以每行的布局一样。
+  const slotActions = actions.filter((action) => action.visible !== false);
   const requested = Math.max(0, Math.floor(maxInline));
   const inlineLimit =
-    visibleActions.length <= Math.min(requested, MAX_INLINE_SLOTS)
-      ? visibleActions.length
+    slotActions.length <= Math.min(requested, MAX_INLINE_SLOTS)
+      ? slotActions.length
       : Math.min(requested, MAX_INLINE_SLOTS - 1);
-  const hasOverflow = visibleActions.length > inlineLimit;
-  const inlineActions = hasOverflow ? visibleActions.slice(0, inlineLimit) : visibleActions;
-  const overflowActions = hasOverflow ? visibleActions.slice(inlineLimit) : [];
+  const hasOverflow = slotActions.length > inlineLimit;
+  const inlineActions = hasOverflow ? slotActions.slice(0, inlineLimit) : slotActions;
+  const overflowActions = hasOverflow
+    ? slotActions.slice(inlineLimit).filter((action) => !action.unavailable)
+    : [];
 
   return (
     <div
@@ -86,22 +97,27 @@ export function TableRowActions({
         className,
       )}
     >
-      {inlineActions.map((action) => (
-        <Button
-          key={action.key}
-          size="xs"
-          variant={action.destructive ? "ghost-danger" : "ghost"}
-          disabled={action.disabled}
-          title={action.tooltip ?? action.label}
-          aria-label={action.label}
-          className={cn("[&_svg]:size-4", action.className)}
-          onClick={action.onClick}
-        >
-          {action.icon}
-        </Button>
-      ))}
+      {inlineActions.map((action) =>
+        action.unavailable ? (
+          <EmptySlot key={action.key} />
+        ) : (
+          <Button
+            key={action.key}
+            size="xs"
+            variant={action.destructive ? "ghost-danger" : "ghost"}
+            disabled={action.disabled}
+            title={action.tooltip ?? action.label}
+            aria-label={action.label}
+            className={cn("[&_svg]:size-4", action.className)}
+            onClick={action.onClick}
+          >
+            {action.icon}
+          </Button>
+        ),
+      )}
 
-      {hasOverflow ? (
+      {hasOverflow && overflowActions.length === 0 ? <EmptySlot /> : null}
+      {overflowActions.length > 0 ? (
         <DropdownMenu.Root size="sm">
           <DropdownMenu.Trigger asChild>
             <Button size="xs" variant="ghost" title={moreLabel} aria-label={moreLabel} className="[&_svg]:size-4">
@@ -129,4 +145,9 @@ export function TableRowActions({
       ) : null}
     </div>
   );
+}
+
+/** 和 xs 图标按钮一样大的空位：看不见、点不到，读屏也跳过。 */
+function EmptySlot() {
+  return <span aria-hidden="true" className="inline-block h-7 w-7 shrink-0" />;
 }

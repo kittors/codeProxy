@@ -4,8 +4,10 @@ import {
   clampColumnWidth,
   resolveColumnDefaultWidth,
   resolveColumnMaxWidth,
+  readStoredColumnWidths,
   resolveColumnMinWidth,
   scaleDesignPx,
+  writeStoredColumnWidths,
 } from "../tableStorage";
 
 const column = (overrides: Partial<DataTableColumn<unknown>> = {}): DataTableColumn<unknown> => ({
@@ -124,5 +126,38 @@ describe("tableStorage width scaling", () => {
 
     await setRootFontSize("12.8px");
     expect(scaleDesignPx(160)).toBe(128);
+  });
+});
+
+describe("stored column widths", () => {
+  afterEach(() => {
+    window.localStorage.clear();
+  });
+
+  test("drops the stretched widths older versions stored when a table reads its widths", () => {
+    // What the tenants page had stored: five columns that need 734px added up to 1344px.
+    window.localStorage.setItem(
+      "codeProxy.dataTable.columnWidths.v2.identity-tenants",
+      JSON.stringify({ tenant: 553, expires: 431 }),
+    );
+    window.localStorage.setItem(
+      "codeProxy.dataTable.columnWidths.v1.identity-tenants",
+      JSON.stringify({ tenant: 400 }),
+    );
+
+    expect(readStoredColumnWidths("identity-tenants")).toEqual({});
+    expect(window.localStorage.getItem("codeProxy.dataTable.columnWidths.v2.identity-tenants")).toBeNull();
+    expect(window.localStorage.getItem("codeProxy.dataTable.columnWidths.v1.identity-tenants")).toBeNull();
+  });
+
+  test("keeps what the current version stored and leaves other tables alone", () => {
+    window.localStorage.setItem(
+      "codeProxy.dataTable.columnWidths.v2.request-logs",
+      JSON.stringify({ id: 124 }),
+    );
+    writeStoredColumnWidths("identity-tenants", { status: 140 });
+
+    expect(readStoredColumnWidths("identity-tenants")).toEqual({ status: 140 });
+    expect(window.localStorage.getItem("codeProxy.dataTable.columnWidths.v2.request-logs")).not.toBeNull();
   });
 });

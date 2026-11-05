@@ -241,8 +241,8 @@ export function VirtualModelsPanel() {
       <Card
         title={t("models_page.virtual.title")}
         description={t("models_page.virtual.description")}
-        // 不撑满：卡片跟着表格按行数收高，行少时不在卡片里留一大片空白；行多时最多占到剩余高度。
-        className="flex flex-col overflow-hidden md:min-h-0"
+        // 撑满页面剩余高度、表格铺满卡片（fill）：行少、为空、加载中都是同一个框，不随行数伸缩。
+        className="flex flex-col overflow-hidden md:min-h-0 md:flex-1"
         bodyClassName="relative flex min-h-0 flex-1 flex-col"
         actions={
           <div className="flex flex-wrap items-center justify-end gap-2">
@@ -284,6 +284,7 @@ export function VirtualModelsPanel() {
         }
       >
         <DataTable<RoutingVirtualModel>
+          fill
           tableId="virtual-models"
           rows={filtered}
           columns={columns}

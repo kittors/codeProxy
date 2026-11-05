@@ -204,9 +204,9 @@ export function WordRuleTable({
   );
 
   return (
-    // 一页最多 20 行：表格按行数收高，上层给出确定高度时最多占到剩余高度、在内部滚动，
-    // 分页条紧跟在下面，不用滚到列表底部才看得到。
-    <div className="flex min-h-0 flex-col gap-3">
+    // 一页最多 20 行。上层给出确定高度时（管理端敏感词页宽屏两栏）撑满它、表格铺满（fill）并在
+    // 内部滚动，分页条在下面不随行数移动；随页面流动时（门户、窄屏）表格跟着行数走。
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
         <div className="w-full min-w-48 sm:w-72">
           <TextInput
@@ -246,6 +246,7 @@ export function WordRuleTable({
       </div>
 
       <DataTable<DraftRule>
+        fill
         tableId="word-policy-rules"
         rows={pageRules}
         columns={columns}

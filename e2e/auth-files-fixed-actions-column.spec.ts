@@ -37,7 +37,7 @@ const openListView = async (page: Page) => {
     );
     localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("table"));
     localStorage.setItem("authFilesPage.quotaAutoRefreshMs.v1", JSON.stringify(0));
-    localStorage.removeItem("codeProxy.dataTable.columnWidths.v2.auth-files");
+    localStorage.removeItem("codeProxy.dataTable.columnWidths.v3.auth-files");
     localStorage.removeItem("codeProxy.dataTable.columnOrder.v1.auth-files");
   });
   await page.route("**/v0/management/**", async (route) => {
@@ -105,14 +105,15 @@ test("AI accounts: the fixed actions column's shadow hugs the column and stops a
   expectShadowHugsTheFixedColumn(geometry);
 });
 
-test("AI accounts: the overlays follow the rendered column when the table is stretched", async ({
+test("AI accounts: a table wider than its columns leaves the fixed column at its width", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await openListView(page);
 
-  // A table wider than the sum of its columns stretches every column, the fixed
-  // one included; the overlays must follow the rendered width, not the nominal one.
+  // A table wider than the sum of its columns used to stretch every column, the fixed one
+  // included, and a drag then stored the stretched width. Now the spare width goes to the flex
+  // column only: the fixed column keeps its width and the overlays still hug it.
   const nominalWidth = (await readGeometry(page)).header.width;
   await page.evaluate(() => {
     const table = document.querySelector<HTMLTableElement>("[data-vt-scroll-content] table");
@@ -120,7 +121,7 @@ test("AI accounts: the overlays follow the rendered column when the table is str
     table.style.minWidth = `${table.getBoundingClientRect().width + 600}px`;
   });
 
-  const stretched = await readGeometry(page);
-  expect(stretched.header.width).toBeGreaterThan(nominalWidth + 20);
-  expectShadowHugsTheFixedColumn(stretched);
+  const widened = await readGeometry(page);
+  expect(Math.abs(widened.header.width - nominalWidth)).toBeLessThanOrEqual(1);
+  expectShadowHugsTheFixedColumn(widened);
 });

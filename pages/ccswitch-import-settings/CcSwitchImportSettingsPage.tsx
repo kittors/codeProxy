@@ -394,6 +394,7 @@ export function CcSwitchImportSettingsPage() {
         bodyClassName="md:flex md:min-h-0 md:flex-1 md:flex-col"
       >
         <DataTable<CcSwitchImportConfigListItem>
+          fill
           tableId="ccswitch-import-configs"
           rows={configs}
           columns={columns}

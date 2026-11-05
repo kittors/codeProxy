@@ -1046,6 +1046,7 @@ export function ModelsPage() {
               ) : null}
 
               <DataTable<ModelItem>
+                fill
                 tableId="models-library"
                 rows={filteredModels}
                 columns={modelColumns}
@@ -1053,9 +1054,7 @@ export function ModelsPage() {
                 loading={loading}
                 rowHeight={52}
                 caption={t("models_page.table_caption")}
-                emptyText={
-                  searchFilter ? t("models_page.no_results") : t("models_page.no_model_data")
-                }
+                emptyText={searchFilter ? t("models_page.no_results") : t("models_page.no_model_data")}
                 minWidth="min-w-[1440px]"
               />
             </Card>
@@ -1065,7 +1064,7 @@ export function ModelsPage() {
         <Card
           title={t("models_page.model_configs")}
           description={t("models_page.model_configs_desc")}
-          className="flex flex-col overflow-hidden md:min-h-0"
+          className="flex flex-col overflow-hidden md:min-h-0 md:flex-1"
           bodyClassName="relative flex min-h-0 flex-1 flex-col"
           actions={
             <div className="flex flex-wrap items-center justify-end gap-2">
@@ -1100,6 +1099,7 @@ export function ModelsPage() {
           }
         >
           <DataTable<ModelItem>
+            fill
             tableId="model-configs"
             rows={filteredModels}
             columns={modelColumns}

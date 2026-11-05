@@ -1016,17 +1016,15 @@ export function AuthFilesFilesTab({
         <>
           <div
             ref={cardGridHostRef}
-            className={[
-              "md:min-h-0 md:overflow-hidden",
-              // 表格按行数收高（最多占到剩余高度），分页条紧跟最后一行；卡片视图的滚动区要撑满剩余高度，
-              // 并且自己留出投影的空间，这里用等量负边距把卡片拉回和筛选行对齐。
-              filesViewMode === "table" ? "pt-4 md:flex md:flex-col" : "-mx-4 sm:-mx-5 md:flex-1",
-            ]
-              .filter(Boolean)
-              .join(" ")}
+            // 两种视图都撑满剩余高度：表格铺满它（fill），分页条在下面不随行数移动；卡片视图的滚动区
+            // 自己留出投影的空间，这里用等量负边距把卡片拉回和筛选行对齐。
+            className={`md:min-h-0 md:overflow-hidden ${
+              filesViewMode === "table" ? "pt-4 md:flex md:flex-1 md:flex-col" : "-mx-4 sm:-mx-5 md:flex-1"
+            }`}
           >
             {filesViewMode === "table" ? (
               <DataTable<AuthFileItem>
+                fill
                 tableId="auth-files"
                 rows={pageItems}
                 columns={fileColumns}

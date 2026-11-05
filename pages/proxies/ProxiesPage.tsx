@@ -360,6 +360,7 @@ export function ProxiesPage() {
                   key: "switch",
                   label: t("proxies.switch_label", { name: entry.name }),
                   icon: <ArrowRightLeft />,
+                  // 只有被覆盖的共享代理才有：不留空位，留了每行就多一个位置，删除会被挤进「更多」。
                   visible: overriddenSharedKeys.has(proxyIdKey(entry.id)),
                   onClick: () => setSwitchTarget(entry),
                 },
@@ -435,6 +436,8 @@ export function ProxiesPage() {
         loading={loading && entries.length === 0}
       >
         <DataTable<ProxyPoolEntry>
+          // 有共享区时整页随内容流动，两张表都按行数收高；没有时这张表铺满页面。
+            fill={!hasSharedSection}
           tableId="proxy-pool"
           rows={sortedEntries}
           columns={columns}
