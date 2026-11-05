@@ -206,8 +206,8 @@ export function PortalAccessPanel({ canWrite, onOpenUser, onChanged }: PortalAcc
   if (!view) return <SkeletonLines rows={5} />;
 
   return (
-    // 宽屏下上层把这一栏钉满一屏：开关和筛选不动，账号表按行数收高、最多占到剩余高度后在内部滚动，
-    // 分页条紧跟在表格下面；窄屏随页面流动。
+    // 宽屏下上层把这一栏钉满一屏：开关和筛选不动，账号表铺满剩余高度（fill）、在内部滚动，
+    // 分页条在下面不随行数移动；窄屏随页面流动。
     <div className="flex min-h-0 flex-1 flex-col gap-6">
       <header className="space-y-1">
         <h3 className="text-base font-semibold text-ink">{t("content_moderation.words.portal_title")}</h3>
@@ -263,6 +263,7 @@ export function PortalAccessPanel({ canWrite, onOpenUser, onChanged }: PortalAcc
         </div>
 
         <DataTable<WordPortalUser>
+          fill
           tableId="word-policy-portal-users"
           rows={pageUsers}
           columns={columns}

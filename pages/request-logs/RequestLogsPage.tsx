@@ -17,6 +17,7 @@ import {
   readCacheRate,
 } from "@code-proxy/domain";
 import {
+  Button,
   DataTable,
   HoverTooltip,
   MaskToggleButton,
@@ -66,15 +67,24 @@ const DEFAULT_LOG_STATS: UsageLogsResponse["stats"] = {
   cache_rate: 0,
 };
 
+/** 统计还没算出来时的占位，和缓存占比「没有数据」时用的是同一个字符。 */
+const STAT_PENDING = "—";
+
 const isRequestCancelled = (err: unknown, signal?: AbortSignal) =>
   signal?.aborted || (err instanceof Error && err.message === "Request was cancelled");
 
 // Newer backends report a hit rate, null when no request in the selection
 // reported its cache use; older ones a share of cached tokens under its own name.
-function RequestLogsCacheRate({ stats }: { stats: UsageLogsResponse["stats"] }) {
+function RequestLogsCacheRate({
+  stats,
+  pending,
+}: {
+  stats: UsageLogsResponse["stats"];
+  pending: boolean;
+}) {
   const { t } = useTranslation();
   const view = readCacheRate(stats);
-  const rate = cacheRatePercent(view, stats.total > 0);
+  const rate = pending ? null : cacheRatePercent(view, stats.total > 0);
   return (
     <span>
       {t(view.kind === "hit_rate" ? "request_logs.cache_hit_rate" : "request_logs.cache_rate")}{" "}
@@ -85,9 +95,9 @@ function RequestLogsCacheRate({ stats }: { stats: UsageLogsResponse["stats"] }) 
   );
 }
 
-function RequestLogsRecordsCount({ count }: { count: number }) {
+function RequestLogsRecordsCount({ count, pending }: { count: number; pending: boolean }) {
   const { t } = useTranslation();
-  const compact = isUsageMetricCompact(count);
+  const compact = !pending && isUsageMetricCompact(count);
 
   return (
     <HoverTooltip
@@ -98,7 +108,7 @@ function RequestLogsRecordsCount({ count }: { count: number }) {
     >
       <span>
         {t("request_logs.records_count", {
-          count: formatUsageMetricNumber(count),
+          count: pending ? STAT_PENDING : formatUsageMetricNumber(count),
         } as Record<string, string>)}
       </span>
     </HoverTooltip>
@@ -506,6 +516,10 @@ export function RequestLogsPage() {
     }
   }, [clearOptions, fetchLogs, notify, pageSize, t]);
 
+  // 第一页还没回来时，统计和分页都还没算出来：显示占位，不显示 0。
+  // 「0 条记录、成功率 0.0%」看起来像真的没有数据。
+  const statsPending = loading && rows.length === 0;
+
   return (
     <section data-page-fill="always" className="flex flex-1 flex-col">
       <h1 className="sr-only">{t("request_logs.title")}</h1>
@@ -529,30 +543,38 @@ export function RequestLogsPage() {
             </h2>
             <div className="hidden min-[640px]:flex items-center gap-2 text-xs text-ink-3">
               <span className="text-ink-4">|</span>
-              <RequestLogsRecordsCount count={stats.total} />
+              <RequestLogsRecordsCount count={stats.total} pending={statsPending} />
               <span className="text-ink-4">|</span>
               <span>
                 {t("common.success_rate")}{" "}
                 <span className="font-mono tabular-nums text-ink">
-                  {stats.success_rate.toFixed(1)}%
+                  {statsPending ? STAT_PENDING : `${stats.success_rate.toFixed(1)}%`}
                 </span>
               </span>
               <span className="text-ink-4">|</span>
               <span>
                 {t("request_logs.col_total_token")}{" "}
                 <span className="font-mono tabular-nums text-ink">
-                  <RequestLogUsageMetricValue value={stats.total_tokens} compact />
+                  {statsPending ? (
+                    STAT_PENDING
+                  ) : (
+                    <RequestLogUsageMetricValue value={stats.total_tokens} compact />
+                  )}
                 </span>
               </span>
               <span className="text-ink-4">|</span>
               <span>
                 {t("request_logs.col_cost")}{" "}
                 <span className="font-mono tabular-nums text-ink">
-                  <RequestLogUsageMetricValue value={stats.total_cost} variant="currency" compact />
+                  {statsPending ? (
+                    STAT_PENDING
+                  ) : (
+                    <RequestLogUsageMetricValue value={stats.total_cost} variant="currency" compact />
+                  )}
                 </span>
               </span>
               <span className="text-ink-4">|</span>
-              <RequestLogsCacheRate stats={stats} />
+              <RequestLogsCacheRate stats={stats} pending={statsPending} />
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -562,31 +584,33 @@ export function RequestLogsPage() {
               onToggle={() => setMasked((prev) => !prev)}
               className="h-9 w-9"
             />
-            <button
-              type="button"
+            {/* 三个圆按钮同一个底（白底 + 阴影，隐私开着时是实心），清空只把图标换成红色。
+                以前清空是透明底、刷新是手写的白底，三颗按钮三种样子。 */}
+            <Button
+              variant="secondary-danger"
               onClick={handleOpenClearDialog}
               disabled={loading || clearingLogs}
               aria-label={t("request_logs.clear_database_logs")}
               title={t("request_logs.clear_database_logs")}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-rose-600 transition-colors hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:opacity-50 dark:text-rose-400"
+              className="h-9 w-9"
             >
               <Trash2 size={14} aria-hidden="true" />
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
               onClick={() => fetchLogs(1, pageSize)}
               disabled={loading}
               aria-busy={loading}
               aria-label={t("request_logs.refresh")}
               title={t("request_logs.refresh")}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-surface text-ink shadow-control transition-[background-color,box-shadow] hover:bg-surface-hover hover:shadow-control-hover disabled:cursor-not-allowed disabled:opacity-70"
+              // 加载中刷新按钮禁用但图标在转，别淡到看不清。
+              className="h-9 w-9 disabled:opacity-70"
             >
               <RefreshCw
                 size={14}
                 className={loading ? "motion-reduce:animate-none motion-safe:animate-spin" : ""}
                 aria-hidden="true"
               />
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -618,16 +642,19 @@ export function RequestLogsPage() {
         />
 
         {/*
-          表格区域 — 按行数收高，最多占到标题、筛选、分页之外剩下的高度，再多就内部滚动。
-          不写 flex-1：行少时表格不被拉成一整屏的空框，分页条紧跟在最后一行下面。
-          也不用 h-[calc(100dvh-300px)]：那个 300 是标题栏 + 筛选区 + 分页条的手工累加，
+          表格区域 — flex-1 占满标题、筛选、分页之外剩下的高度，表格 fill 铺满它：加载、空、
+          行少、行多都是同一个框，分页条和横向滚动条不随行数移动，数据回来时也不跳。
+          （#1085 曾改成按行数收高：行少时表格只到页面中间，首次加载时骨架只有五行高、
+          数据回来再整块撑开，分页条跟着跳 200 多 px。）
+          不用 h-[calc(100dvh-300px)]：那个 300 是标题栏 + 筛选区 + 分页条的手工累加，
           筛选区换行、字号或密度一变就对不上，表格要么矮一截、要么高出去把分页顶掉。
           min-h-0 覆盖 flex item 默认的 min-height:auto（否则表格会被内容撑开，整页变长而不是
           内部滚动）。这里不能写 min-h-[360px] 之类的保底：页面高度被窗口钉死，
           窗口一矮，保底高度只会把表格和分页条挤出页面之外，而不是让页面滚动。
         */}
-        <div className="relative flex min-h-0 flex-col overflow-hidden">
+        <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
           <DataTable
+            fill
             tableId="request-logs"
             rows={rows}
             columns={logColumns}
@@ -642,8 +669,9 @@ export function RequestLogsPage() {
             showAllLoadedMessage={false}
           />
 
-          {/* Loading overlay */}
-          {loading ? (
+          {/* 刷新、翻页、换筛选时罩住旧数据。首次加载还没有行，交给表格自己的骨架：
+              以前两样叠在一起，骨架被糊掉白画，读屏还要念两遍「加载中」。 */}
+          {loading && rows.length > 0 ? (
             <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-canvas/70 backdrop-blur-sm">
               <div className="inline-flex items-center gap-2 rounded-full bg-elevated px-3.5 py-2 text-sm font-medium text-ink-2 shadow-pop">
                 <span
@@ -659,6 +687,7 @@ export function RequestLogsPage() {
         {/* 分页控件 — flex-shrink-0 固定在底部 */}
         <RequestLogsPaginationBar
           flush
+          pending={statsPending}
           currentPage={currentPage}
           totalPages={totalPages}
           totalCount={totalCount}

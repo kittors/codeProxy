@@ -1,14 +1,17 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
 
 /**
- * 表格的高度模型：按行数收高，最多占到所在区域，再多就在内部滚动。
+ * 表格的高度模型。整页列表（fill）：表格占满标题、筛选、分页之外剩下的高度，加载中、为空、
+ * 行少、行多都是同一个框，分页条和横向滚动条不随行数移动；嵌在表单、弹窗、两栏里的小表才按
+ * 行数收高。
  *
- * 以前 DataTable 默认钉成视口高度（h-[calc(100dvh-260px)]），整页表格的页面再用 flex-1 把表格区
- * 拉满。行少时表格下面是一整屏的空框，横向滚动条贴着空框底边飘着，分页条远在最下面；嵌在
- * 表单里的小表为了不留白改成随内容流动，分页条又得把整页滚到底才看得到。这里按用户截图里
- * 的几种情形量几何，不靠截图对比：
+ * 来回改过两次：最早 DataTable 默认钉成视口高度（h-[calc(100dvh-260px)]），嵌在表单里的小表
+ * 也留一整屏空白；#1085 改成一律按行数收高，整页列表行少时表格只到页面中间、横向滚动条悬在
+ * 页面中部，首次加载时骨架只有五行高、数据回来再整块撑开。2026-11-05 用户看了上线效果：
+ * 表格应该默认占满可视区域、离窗口底部留间距。这里按用户截图里的情形量几何，不靠截图对比：
  *
- * - 行少：分页条紧跟最后一行，横向滚动条就在最后一行下面。
+ * - 行少：表格框仍延伸到分页条上方，空白留在框里；分页条贴在窗口底部，横向滚动条贴着框底边。
+ * - 首次加载：骨架铺满同一个框，数据回来时框和分页条都不动。
  * - 行多：表格占满剩余高度、在内部滚动，分页条在窗口里，整页不滚。
  * - 敏感词：宽屏两栏钉满一屏，列表滚到底时顶部标签和左侧清单不动，分页条和保存栏一直看得见。
  */
@@ -149,27 +152,52 @@ const outerOverflow = (page: Page) =>
     return scroller ? scroller.scrollHeight - scroller.clientHeight : 0;
   });
 
-test.describe("表格按行数收高，最多占到剩余高度", () => {
+test.describe("整页列表：表格占满剩余高度，框不随行数变", () => {
   test.use({ viewport: { width: 1470, height: 800 } });
 
-  test("行少时分页条和横向滚动条紧跟最后一行，不留一整屏的空框", async ({ page }) => {
+  test("行少时表格框仍延伸到分页条上方，分页条贴在窗口底部，横向滚动条贴着框底边", async ({ page }) => {
     await mockAdmin(page, { endUsers: 6 });
     await page.goto("/#/access/end-users");
     await expect(page.locator("tr[data-vt-row-index]")).toHaveCount(6);
 
     const lastRow = await rectOf(page, "tr[data-vt-row-index='5']");
-    const table = await rectOf(page, "[data-vt-scroll-content]");
+    const frame = await rectOf(page, "[data-scrollbar-visibility='hover']");
     const pager = await rectOf(page, "text=第 1-6 条，共 6 条");
-    // 表格区到最后一行为止（下面只留横向滚动条那一条），分页条紧跟在下面。
-    expect(table.bottom - lastRow.bottom).toBeLessThanOrEqual(16);
-    expect(pager.top - lastRow.bottom).toBeLessThan(48);
-    // 横向滚动条在最后一行下面，而不是飘在一大片空白的底边上。
-    const scrollbar = await page.locator("[data-vt-scrollbar='x']").evaluate((el) => {
-      const r = el.getBoundingClientRect();
-      return { top: r.top, bottom: r.bottom };
+    // 空白留在框里：框的底边离最后一行还远，紧挨着分页条。
+    expect(frame.bottom - lastRow.bottom).toBeGreaterThan(200);
+    expect(pager.top - frame.bottom).toBeLessThan(24);
+    // 分页条在窗口底部（下面只剩外壳的底部内边距），不是悬在页面中间。
+    expect(800 - pager.bottom).toBeLessThan(48);
+    expect(await outerOverflow(page)).toBeLessThanOrEqual(1);
+    // 横向滚动条（有的话）贴着框的底边，在分页条上方，不跟着最后一行跑到页面中间。
+    const scrollbar = page.locator("[data-vt-scrollbar='x']");
+    if ((await scrollbar.count()) > 0) {
+      const bar = await scrollbar.evaluate((el) => el.getBoundingClientRect().bottom);
+      expect(frame.bottom - bar).toBeLessThanOrEqual(8);
+    }
+  });
+
+  test("首次加载时骨架铺满同一个框，数据回来时框和分页条都不动", async ({ page }) => {
+    await mockAdmin(page, { endUsers: 6 });
+    let release: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
     });
-    expect(scrollbar.top).toBeGreaterThanOrEqual(lastRow.bottom - 2);
-    expect(scrollbar.bottom - lastRow.bottom).toBeLessThanOrEqual(16);
+    // 后注册的路由先匹配：把列表接口挡住，量完加载中的框再放行给 mockAdmin。
+    await page.route(/\/v0\/management\/end-users(\?|$)/, async (route) => {
+      await gate;
+      await route.fallback();
+    });
+    await page.goto("/#/access/end-users");
+    await expect(page.locator("tbody tr[aria-hidden='true']").first()).toBeAttached();
+    const loadingFrame = await rectOf(page, "[data-scrollbar-visibility='hover']");
+    expect(await page.locator("tbody tr[aria-hidden='true']").count()).toBeGreaterThan(5);
+
+    release();
+    await expect(page.locator("tr[data-vt-row-index]")).toHaveCount(6);
+    const loadedFrame = await rectOf(page, "[data-scrollbar-visibility='hover']");
+    expect(Math.abs(loadedFrame.top - loadingFrame.top)).toBeLessThanOrEqual(1);
+    expect(Math.abs(loadedFrame.bottom - loadingFrame.bottom)).toBeLessThanOrEqual(1);
   });
 
   test("行多时表格占满剩余高度、在内部滚动，分页条常驻在窗口里", async ({ page }) => {

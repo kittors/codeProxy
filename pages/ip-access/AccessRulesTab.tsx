@@ -369,7 +369,8 @@ export function AccessRulesTab({
                   key: "unban",
                   label: t("ip_access.unban_and_allow"),
                   icon: <ShieldCheck />,
-                  visible: item.effect === "deny",
+                  // 只有封禁规则能解封：放行规则这里留空，删除按钮不跟着挪位置。
+                  unavailable: item.effect !== "deny",
                   disabled: busy,
                   onClick: () => void unbanAndAllow(item),
                 },
@@ -462,8 +463,9 @@ export function AccessRulesTab({
         </div>
       </div>
 
-      <div className="relative flex min-h-0 flex-col overflow-hidden">
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
         <DataTable<IpAccessRule>
+          fill
           tableId="ip-access-rules"
           rows={items}
           columns={columns}

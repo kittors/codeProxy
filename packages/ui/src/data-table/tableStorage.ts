@@ -5,6 +5,7 @@ import {
   COLUMN_WIDTH_STORAGE_PREFIX,
   DEFAULT_MAX_COLUMN_WIDTH,
   DEFAULT_MIN_COLUMN_WIDTH,
+  LEGACY_COLUMN_WIDTH_STORAGE_PREFIXES,
   NON_RESIZABLE_COLUMN_KEYS,
   TAILWIND_SPACING_UNIT_PX,
   type ColumnOrder,
@@ -83,32 +84,34 @@ function resolveRootFontSizePx() {
  * `minWidthPx` / `maxWidthPx` 这类直接写死的 px 也走这里，否则它们和 Tailwind
  * class 推出来的宽度会处在两个尺度上，同一张表的固定列轨道会按列而异地错位。
  */
-export function scaleDesignPx(designPx: number) {
-  return Math.round((designPx * resolveRootFontSizePx()) / TAILWIND_BASE_ROOT_FONT_SIZE_PX);
+export function scaleDesignPx(designPx: number, round = true) {
+  const px = (designPx * resolveRootFontSizePx()) / TAILWIND_BASE_ROOT_FONT_SIZE_PX;
+  return round ? Math.round(px) : px;
 }
 
-function parseTailwindSizePx(token: string) {
+function parseTailwindSizePx(token: string, round = true) {
   const arbitrary = token.match(/^\[(\d+(?:\.\d+)?)(px|rem)\]$/);
   if (arbitrary) {
     const value = Number(arbitrary[1]);
     if (!Number.isFinite(value)) return null;
     // 任意值里的 px 编译成字面像素，本来就不吃根字号；只有 rem 需要换算。
     return arbitrary[2] === "rem"
-      ? scaleDesignPx(value * TAILWIND_BASE_ROOT_FONT_SIZE_PX)
+      ? scaleDesignPx(value * TAILWIND_BASE_ROOT_FONT_SIZE_PX, round)
       : Math.round(value);
   }
   if (token === "px") return 1;
   const numeric = Number(token);
   if (!Number.isFinite(numeric)) return null;
-  return scaleDesignPx(numeric * TAILWIND_SPACING_UNIT_PX);
+  return scaleDesignPx(numeric * TAILWIND_SPACING_UNIT_PX, round);
 }
 
-function resolveWidthClassPx(width: string | undefined, prefix: string) {
+/** round=false 给出 rem 换算后的原值（浏览器实际渲染的小数宽度），见 resolveTableMinWidthPx。 */
+export function resolveWidthClassPx(width: string | undefined, prefix: string, round = true) {
   if (!width) return null;
   const classes = width.split(/\s+/).filter(Boolean).reverse();
   for (const className of classes) {
     if (!className.startsWith(`${prefix}-`)) continue;
-    const parsed = parseTailwindSizePx(className.slice(prefix.length + 1));
+    const parsed = parseTailwindSizePx(className.slice(prefix.length + 1), round);
     if (parsed !== null) return parsed;
   }
   return null;
@@ -126,8 +129,8 @@ export function resolveColumnMinWidth<T>(column: DataTableColumn<T>) {
  * `w-40 min-w-40` 这种写法下恰好相等，但 `w-[360px] min-w-[280px]` 一写开就差
  * 80px，轨道会短一截，固定列右边缘外露出下层内容。
  */
-export function resolveColumnDefaultWidth<T>(column: DataTableColumn<T>) {
-  return resolveWidthClassPx(column.width, "w") ?? resolveColumnMinWidth(column);
+export function resolveColumnDefaultWidth<T>(column: DataTableColumn<T>, round = true) {
+  return resolveWidthClassPx(column.width, "w", round) ?? resolveColumnMinWidth(column);
 }
 
 export function resolveColumnMaxWidth<T>(
@@ -152,6 +155,10 @@ export function readStoredColumnWidths(tableId?: string): ColumnWidthMap {
   const key = getColumnWidthStorageKey(tableId);
   if (!key || typeof window === "undefined") return {};
   try {
+    // 旧版本存的列宽已经作废（见 COLUMN_WIDTH_STORAGE_PREFIX），别让它们一直留在浏览器里。
+    for (const prefix of LEGACY_COLUMN_WIDTH_STORAGE_PREFIXES) {
+      window.localStorage.removeItem(key.replace(COLUMN_WIDTH_STORAGE_PREFIX, prefix));
+    }
     const raw = window.localStorage.getItem(key);
     if (!raw) return {};
     const parsed = JSON.parse(raw) as unknown;

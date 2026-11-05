@@ -115,4 +115,37 @@ describe("TableRowActions", () => {
       "data-disabled",
     );
   });
+  test("keeps a row's unavailable actions as empty slots so the rest stay in place", () => {
+    const actions = createActions().map((action) =>
+      action.key === "view" ? action : { ...action, unavailable: true },
+    );
+    const { container } = render(<TableRowActions actions={actions} moreLabel="More actions" />);
+
+    // Same four places as a row that can do everything: View, two empty inline slots, an empty
+    // "More". The tenants page used to centre a lone View button away from the other rows' one.
+    expect(screen.getAllByRole("button")).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "View" })).toBeInTheDocument();
+    expect(container.querySelectorAll("span.h-7.w-7[aria-hidden='true']")).toHaveLength(3);
+  });
+
+  test("leaves an unavailable action out of the menu and keeps the menu's place empty", () => {
+    const actions = createActions().map((action) =>
+      action.key === "delete" ? { ...action, unavailable: true } : action,
+    );
+    const { container } = render(<TableRowActions actions={actions} moreLabel="More actions" />);
+
+    expect(screen.getAllByRole("button")).toHaveLength(3);
+    expect(screen.queryByRole("button", { name: "More actions" })).not.toBeInTheDocument();
+    expect(container.querySelectorAll("span.h-7.w-7[aria-hidden='true']")).toHaveLength(1);
+  });
+
+  test("visible: false still takes no place at all (the whole column lacks it)", () => {
+    const actions = createActions().map((action) =>
+      action.key === "view" ? action : { ...action, visible: false },
+    );
+    const { container } = render(<TableRowActions actions={actions} moreLabel="More actions" />);
+
+    expect(screen.getAllByRole("button")).toHaveLength(1);
+    expect(container.querySelectorAll("span.h-7.w-7[aria-hidden='true']")).toHaveLength(0);
+  });
 });
