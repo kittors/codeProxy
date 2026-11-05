@@ -84,6 +84,19 @@ export const LEGACY_SERVICE_MENUS: MenuIdentity[] = [
     sort_order: 20,
   }),
   menu({
+    code: "runtime.privacy-masking",
+    parent_code: "group.runtime",
+    type: "menu",
+    path: "/runtime/privacy-masking",
+    component: "privacy-masking",
+    label_key: "shell.nav_privacy_masking",
+    icon: "shield-check",
+    permission_code: "content_moderation.read",
+    sort_order: 25,
+    // 旧后端没有这个页面的接口，也不会下发这个菜单；只在后端下发菜单失败、回退到这份清单时出现，
+    // 页面会先看 GET /config 的能力声明，旧后端上只显示一张说明。
+  }),
+  menu({
     code: "runtime.logs",
     parent_code: "group.runtime",
     type: "menu",

@@ -31,6 +31,7 @@ import { auditLogsRoute } from "./audit-logs/route";
 import { ipAccessRoute } from "./ip-access/route";
 import { menuManagementRoute } from "./menu-management/route";
 import { alertsRoute } from "./alerts/route";
+import { privacyMaskingRoute } from "./privacy-masking/route";
 
 export interface PageRoute {
   path: string;
@@ -61,6 +62,7 @@ export const pageRoutes: PageRoute[] = [
   dashboardRoute,
   monitorRoute,
   requestLogsRoute,
+  privacyMaskingRoute,
   contentModerationRoute,
   providersRoute,
   accountSecurityRoute,

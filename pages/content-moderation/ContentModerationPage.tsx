@@ -20,6 +20,7 @@ import {
 } from "@code-proxy/api-client";
 import {
   Button,
+  buttonClassName,
   COLUMN_WIDTH,
   Callout,
   Card,
@@ -38,6 +39,7 @@ import {
   type DataTableColumn,
 } from "@code-proxy/ui";
 import { useOptionalAuth } from "@app/providers/AuthProvider";
+import { useConfigCapabilities } from "@features/backend-capabilities";
 import { ModerationChannelPickerModal } from "./components/ModerationChannelPickerModal";
 import { ModerationMetricsModal } from "./components/ModerationMetricsModal";
 import { ModerationTestModal } from "./components/ModerationTestModal";
@@ -84,6 +86,9 @@ export function ContentModerationPage() {
   const [pendingTab, setPendingTab] = useState<PageTab | null>(null);
   // 敏感词规则和密钥脱敏的接口只有新后端才有：后端没声明时不显示对应的标签，也不会去请求它。
   const wordsAvailable = capabilities.wordGuard;
+  // 后端有新的「隐私脱敏」页时，这里只留一行指过去：设置和记录都在那边，这个开关只管密钥一项。
+  const configCapabilities = useConfigCapabilities();
+  const maskingMoved = configCapabilities.status === "ready" && configCapabilities.capabilities.privacyMasking;
   const activeTab: PageTab =
     (tab === "words" && !wordsAvailable) || (tab === "masking" && !capabilities.secretMasking)
       ? "profiles"
@@ -458,6 +463,19 @@ export function ContentModerationPage() {
           portalSupported={capabilities.wordPortal}
           onDirtyChange={setWordsDirty}
         />
+      ) : activeTab === "masking" && maskingMoved ? (
+        <Callout
+          tone="neutral"
+          title={t("content_moderation.secret_masking.moved_title")}
+          actions={
+            // 面板用 hash 路由：普通链接就能跳过去，不依赖路由上下文
+            <a href="#/runtime/privacy-masking" className={buttonClassName({ size: "sm", variant: "secondary" })}>
+              {t("content_moderation.secret_masking.moved_open")}
+            </a>
+          }
+        >
+          {t("content_moderation.secret_masking.moved_desc")}
+        </Callout>
       ) : activeTab === "masking" ? (
         <section className="max-w-3xl space-y-3">
           <h3 className="text-base font-semibold text-ink">
