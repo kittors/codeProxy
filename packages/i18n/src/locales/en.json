@@ -4306,7 +4306,8 @@
     "words_clear_title": "Clear all your sensitive words?",
     "words_clear_consequence": "Your requests are no longer checked against these words; your administrator's rules are not affected.",
     "words_forbidden_title": "Your administrator has not opened sensitive words to you",
-    "words_forbidden_description": "Your account cannot set sensitive words right now. Words you set before are kept but not applied; ask your administrator if you need them."
+    "words_forbidden_description": "Your account cannot set sensitive words right now. Words you set before are kept but not applied; ask your administrator if you need them.",
+    "privacy_tab": "Privacy masking"
   },
   "auth_files_page": {
     "files_tab": "Files",
@@ -8351,7 +8352,8 @@
     "off": {
       "title": "Requests go upstream as they are",
       "description": "Turned on, API keys, private keys, tokens and passwords become placeholders before they leave CliRelay, and are put back in each reply. Emails, phone numbers and other personal data can be masked too. What each request had masked shows here.",
-      "turn_on": "Turn on masking"
+      "turn_on": "Turn on masking",
+      "view_settings": "View settings"
     },
     "flow": {
       "more": "{{count}} more",
@@ -8561,6 +8563,26 @@
       "key_protected": "The placeholder key is stored encrypted with the server's master key.",
       "key_plain": "The server has no master key yet, so the placeholder key is stored in plain text: if the database and its backups leaked, weak passwords could be guessed offline. Setting a master key means editing the server's .env.",
       "kinds_hint": "Emails, phone, ID and bank card numbers are masked with personal data; pick the other kinds here. Home folder names, user and host names, public IPs and buckets are all over agents' requests, so they're off by default."
+    },
+    "portal": {
+      "tab_settings": "My settings",
+      "readonly_title": "Your administrator has not opened privacy masking to you",
+      "readonly_desc": "Your requests are masked the way your administrator set it up, and here you can only look. Overview still shows what was masked in your requests. Settings you saved before are kept and apply again once your administrator opens this to you.",
+      "default_title": "You're on your administrator's default settings",
+      "default_desc": "Once you save a change, these become your own settings for the requests of all your API keys, and later changes to the defaults no longer affect you.",
+      "own_title": "You're using your own settings",
+      "own_desc": "They apply to the requests of all your API keys.",
+      "hidden_note": "The masked words, rules and Never mask list your administrator set always apply and aren't shown here.",
+      "reset": "Restore defaults",
+      "reset_title": "Go back to your administrator's default settings?",
+      "reset_desc": "Your own settings are deleted, and from then on your requests are masked with your administrator's defaults.",
+      "reset_confirm": "Restore defaults",
+      "reset_done": "Back on your administrator's default settings",
+      "forbidden_now": "Your administrator has just stopped letting you change privacy masking, so this change wasn't saved. Your requests are masked the way your administrator set it up.",
+      "try_desc": "Paste some text to see what upstream would get. It uses the settings here, unsaved changes included, without your administrator's masked words, rules and Never mask list, and is kept nowhere.",
+      "allow_enforced": "A value listed here is still masked if it is of a kind your administrator turned on for everyone.",
+      "action_enforced": "Turned on by an administrator: mask or block only",
+      "upstream_other": "Other upstreams"
     }
   }
 }

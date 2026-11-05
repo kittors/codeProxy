@@ -165,7 +165,7 @@ export type * from "./endpoints/ip-access";
 export { observabilityApi } from "./endpoints/observability";
 export type * from "./endpoints/observability";
 export { alertsApi } from "./endpoints/alerts";
-export { privacyMaskingApi } from "./endpoints/privacy-masking";
+export { portalPrivacyMaskingApi, privacyMaskingApi } from "./endpoints/privacy-masking";
 export type * from "./endpoints/privacy-masking";
 export type * from "./endpoints/alerts";
 export { poolCapacityApi } from "./endpoints/poolCapacity";

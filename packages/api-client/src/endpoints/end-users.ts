@@ -403,6 +403,13 @@ export const portalApi = {
      * backend does not say, which reads as not allowed.
      */
     wordPolicyAllowed: boolean;
+    /**
+     * Whether the account may keep privacy masking settings of its own (portalPrivacyMaskingApi);
+     * the masking records of its own requests are there to see either way. Null when the backend
+     * does not say: an older backend has no portal privacy masking at all, so the portal must not
+     * offer it, nor ask for it.
+     */
+    privacyMaskingAllowed: boolean | null;
   }> => {
     const raw = await portalClient.get<unknown>("/v0/portal/auth/me");
     const record = isRecord(raw) ? raw : {};
@@ -410,6 +417,8 @@ export const portalApi = {
       user: normalizeEndUser(record.user),
       capabilities: readAccessPolicyCapabilities(record.capabilities),
       wordPolicyAllowed: record.word_policy_allowed === true,
+      privacyMaskingAllowed:
+        typeof record.privacy_masking_allowed === "boolean" ? record.privacy_masking_allowed : null,
     };
   },
   /**

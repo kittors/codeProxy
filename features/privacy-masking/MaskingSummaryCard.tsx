@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { ShieldCheck, ShieldOff } from "lucide-react";
+import { Settings2, ShieldCheck, ShieldOff } from "lucide-react";
 import { AnimatedNumber, Button, SegmentedControl, Skeleton, surface } from "@code-proxy/ui";
 import type { MaskSummary } from "@code-proxy/api-client";
 import { formatCompact } from "./format";
@@ -11,7 +11,8 @@ import { MaskingFlow } from "./MaskingFlow";
  * 请求），每天各多少，以及从哪些客户端来、发往哪些渠道。
  *
  * 脱敏关着、也从没遮过任何东西时，不摆一个 0 出来让人以为「坏了」，而是说清现在请求原样发往
- * 上游，并给出打开的入口。
+ * 上游，并给出打开的入口；自己改不了的（没有写权限、门户里管理员没开放）给的是「查看设置」，
+ * 那边写着为什么。
  */
 export function MaskingSummaryCard({
   summary,
@@ -22,6 +23,8 @@ export function MaskingSummaryCard({
   selectedChannel,
   onSelect,
   onOpenSettings,
+  canTurnOn = true,
+  channelsSelectable = true,
 }: {
   summary: MaskSummary | null;
   enabled: boolean;
@@ -31,6 +34,9 @@ export function MaskingSummaryCard({
   selectedChannel?: string;
   onSelect: (side: "client" | "channel", id: string) => void;
   onOpenSettings: () => void;
+  canTurnOn?: boolean;
+  /** 门户里右边是上游厂商，不是渠道，接口没法按它筛选。 */
+  channelsSelectable?: boolean;
 }) {
   const { t, i18n } = useTranslation();
   const card = `${surface({ radius: "3xl" })} p-5`;
@@ -43,9 +49,9 @@ export function MaskingSummaryCard({
         </span>
         <h2 className="text-base font-semibold text-ink">{t("privacy_masking.off.title")}</h2>
         <p className="max-w-md text-sm text-ink-3">{t("privacy_masking.off.description")}</p>
-        <Button size="sm" variant="primary" onClick={onOpenSettings}>
-          <ShieldCheck size={14} aria-hidden="true" />
-          {t("privacy_masking.off.turn_on")}
+        <Button size="sm" variant={canTurnOn ? "primary" : "secondary"} onClick={onOpenSettings}>
+          {canTurnOn ? <ShieldCheck size={14} aria-hidden="true" /> : <Settings2 size={14} aria-hidden="true" />}
+          {canTurnOn ? t("privacy_masking.off.turn_on") : t("privacy_masking.off.view_settings")}
         </Button>
       </section>
     );
@@ -125,6 +131,7 @@ export function MaskingSummaryCard({
               selectedClient={selectedClient}
               selectedChannel={selectedChannel}
               onSelect={onSelect}
+              channelsSelectable={channelsSelectable}
             />
           ) : (
             <div className="grid place-items-center rounded-2xl bg-subtle px-6 py-10 text-center text-sm text-ink-3">

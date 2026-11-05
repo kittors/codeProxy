@@ -188,4 +188,19 @@ describe("endUsersApi", () => {
     });
     expect(mocks.get).toHaveBeenCalledWith("/end-users/user-1/api-keys/key-1/secret");
   });
+
+  test("the portal account view says whether privacy masking is the account's to set, and null on an older backend", async () => {
+    const get = vi.spyOn(portalApi.client, "get");
+    get.mockResolvedValueOnce({ user: { id: "u1" }, privacy_masking_allowed: true });
+    get.mockResolvedValueOnce({ user: { id: "u1" }, privacy_masking_allowed: false });
+    get.mockResolvedValueOnce({ user: { id: "u1" }, word_policy_allowed: true });
+
+    expect((await portalApi.me()).privacyMaskingAllowed).toBe(true);
+    expect((await portalApi.me()).privacyMaskingAllowed).toBe(false);
+    // 旧后端不带这个字段：不是「不允许」，是根本没有门户脱敏，门户不能去请求它的接口
+    const legacy = await portalApi.me();
+    expect(legacy.privacyMaskingAllowed).toBeNull();
+    expect(legacy.wordPolicyAllowed).toBe(true);
+    expect(get).toHaveBeenCalledWith("/v0/portal/auth/me");
+  });
 });

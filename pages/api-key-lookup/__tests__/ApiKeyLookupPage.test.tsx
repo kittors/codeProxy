@@ -151,6 +151,15 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
       deleteKey: vi.fn(),
       changePassword: vi.fn(),
     },
+    portalPrivacyMaskingApi: {
+      getSummary: vi.fn(),
+      listRecords: vi.fn(),
+      getRecord: vi.fn(),
+      getSettings: vi.fn(),
+      putSettings: vi.fn(),
+      resetSettings: vi.fn(),
+      preview: vi.fn(),
+    },
   };
 });
 
@@ -387,6 +396,59 @@ describe("ApiKeyLookupPage", () => {
       screen.queryByRole("button", { name: /set as default|设默认/i }),
     ).not.toBeInTheDocument();
     expect(screen.queryByText(/^default$|^默认$/i)).not.toBeInTheDocument();
+  });
+
+  test.each([
+    ["an account that may set it", true],
+    ["a read-only account", false],
+    ["an older backend", null],
+  ] as const)("privacy masking tab for %s", async (_name, allowed) => {
+    const { portalApi, portalPrivacyMaskingApi } = await import("@code-proxy/api-client");
+    vi.mocked(portalApi.loadSession).mockReturnValue({
+      apiBase: "http://relay.test",
+      accessToken: "cpt_account",
+      refreshToken: "cpr_account",
+      remember: false,
+      expiresAt: Date.now() + 60_000,
+    });
+    vi.mocked(portalApi.me).mockResolvedValue({
+      user: { id: "u-account", tenant_id: "t-account", username: "alice", display_name: "Alice", status: "active", must_change_password: false, created_at: "", updated_at: "", version: 1 },
+      privacyMaskingAllowed: allowed,
+    } as never);
+    vi.mocked(portalApi.listKeys).mockResolvedValue({ items: [] } as never);
+    vi.mocked(portalPrivacyMaskingApi.getSummary).mockResolvedValue({ days: [], places: 0, distinct: 0, requests: 0, blocked: 0, warned: 0, kinds: [], clients: [], channels: [], values: [] });
+    vi.mocked(portalPrivacyMaskingApi.listRecords).mockResolvedValue({ items: [] });
+    vi.mocked(portalPrivacyMaskingApi.getSettings).mockResolvedValue({
+      policy: { secrets: true, personal: false, kinds: {}, words: [], words_any_case: false, words_whole: false, rules: [], allow: [], actions: {} },
+      own: false,
+      allowed: allowed === true,
+      enforced: [],
+      portal_default_allowed: allowed === true,
+      persistent: true,
+    });
+
+    render(
+      <ThemeProvider>
+        <ToastProvider>
+          <ApiKeyLookupPage />
+        </ToastProvider>
+      </ThemeProvider>,
+    );
+    await screen.findByRole("tab", { name: /manage api keys|管理 api key/i });
+    const tab = screen.queryByRole("tab", { name: /^(privacy masking|隐私脱敏|Маскирование данных)$/i });
+    if (allowed === null) {
+      // 旧后端没有门户脱敏：不给标签，也不去请求它的接口
+      expect(tab).not.toBeInTheDocument();
+      expect(portalPrivacyMaskingApi.listRecords).not.toHaveBeenCalled();
+      return;
+    }
+    // 第一次点开才请求：只看用量的门户用户不该在后台每 15 秒查一次脱敏记录
+    expect(portalPrivacyMaskingApi.listRecords).not.toHaveBeenCalled();
+    await userEvent.click(tab!);
+    expect(await screen.findByRole("tab", { name: /my settings|我的设置/i })).toBeVisible();
+    await waitFor(() => expect(portalPrivacyMaskingApi.listRecords).toHaveBeenCalled());
+    // 这个标签有自己的刷新，工具栏上的刷新会打断设置的草稿（按钮还在，所在的一栏 hidden）
+    expect(screen.getByRole("button", { name: /^(refresh|刷新)$/i }).closest(".hidden")).not.toBeNull();
   });
 
   test("hides channel controls and keeps input/output cells non-interactive on public logs", async () => {

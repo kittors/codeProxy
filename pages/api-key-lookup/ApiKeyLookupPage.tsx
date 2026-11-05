@@ -38,7 +38,8 @@ import { isPinnedLookupTab, lookupMainClassName, lookupShellClassName } from "./
 import { ManageKeysTabContent } from "./components/ManageKeysTabContent";
 import { ModelsTabContent } from "./components/ModelsTabContent";
 import { OperationalKeyRequired } from "./components/OperationalKeyRequired";
-import { PortalWordsTab } from "./components/PortalWordsTab";
+import { PortalSelfServiceTabs } from "./components/PortalSelfServiceTabs";
+import { NO_PORTAL_GRANTS, portalGrantsOf, portalTabAvailable, type PortalGrants } from "./portalGrants";
 import { PublicLogsSection } from "./components/PublicLogsSection";
 import { QuickImportTabContent } from "./components/QuickImportTabContent";
 import { UsageTabSection } from "./components/UsageTabSection";
@@ -197,7 +198,7 @@ export function ApiKeyLookupPage() {
   const [secretOnce, setSecretOnce] = useState<string | null>(null);
   const [keyEditor, setKeyEditor] = useState<PortalKeyEditorState>(null);
   const [portalCaps, setPortalCaps] = useState<AccessPolicyCapabilities>(NO_ACCESS_POLICY_CAPABILITIES);
-  const [portalWordsAllowed, setPortalWordsAllowed] = useState(false);
+  const [portalGrants, setPortalGrants] = useState<PortalGrants>(NO_PORTAL_GRANTS);
   const [resetSpendingTarget, setResetSpendingTarget] = useState<EndUserAPIKey | null>(null);
   const [deleteKeyTarget, setDeleteKeyTarget] = useState<EndUserAPIKey | null>(null);
   const [portalKeysBusy, setPortalKeysBusy] = useState(false);
@@ -216,10 +217,10 @@ export function ApiKeyLookupPage() {
 
   // ── Tab state ──
   const [activeTab, setActiveTab] = useState<ApiKeyLookupTab>("usage");
-  // 敏感词标签只给有权限的账号：退出、切换账号或权限被收回后不再停在它上面。
+  // 敏感词、隐私脱敏标签只给有权限（后端支持）的账号：退出、切换账号或权限被收回后不再停在它上面。
   useEffect(() => {
-    if (activeTab === "words" && !(portalUser && portalWordsAllowed)) setActiveTab("usage");
-  }, [activeTab, portalUser, portalWordsAllowed]);
+    if (!portalTabAvailable(activeTab, Boolean(portalUser), portalGrants)) setActiveTab("usage");
+  }, [activeTab, portalUser, portalGrants]);
   const [quickImportReloadToken, setQuickImportReloadToken] = useState(0);
 
   // ── Logs state (server-side pagination) ──
@@ -700,7 +701,7 @@ export function ApiKeyLookupPage() {
         setPortalUser(res.user);
         // 刷新页面恢复会话时同样要带上能力声明和敏感词授权，否则要重新登录才显示。
         setPortalCaps(res.capabilities ?? NO_ACCESS_POLICY_CAPABILITIES);
-        setPortalWordsAllowed(res.wordPolicyAllowed);
+        setPortalGrants(portalGrantsOf(res));
         setSavedPortalAccounts(portalApi.listSavedAccounts());
         if (res.user.must_change_password) {
           setChangePasswordOpen(true);
@@ -735,7 +736,7 @@ export function ApiKeyLookupPage() {
     const res = await portalApi.me();
     setPortalUser(res.user);
     setPortalCaps(res.capabilities ?? NO_ACCESS_POLICY_CAPABILITIES);
-    setPortalWordsAllowed(res.wordPolicyAllowed);
+    setPortalGrants(portalGrantsOf(res));
     setSavedPortalAccounts(portalApi.listSavedAccounts());
     if (res.user.must_change_password) {
       setChangePasswordOpen(true);
@@ -772,7 +773,7 @@ export function ApiKeyLookupPage() {
           const me = await portalApi.me();
           setPortalUser(me.user);
           setPortalCaps(me.capabilities ?? NO_ACCESS_POLICY_CAPABILITIES);
-          setPortalWordsAllowed(me.wordPolicyAllowed);
+          setPortalGrants(portalGrantsOf(me));
         } catch {
           // 拿不到时保持登录响应里的账号，按旧后端的能力显示。
         }
@@ -1165,7 +1166,8 @@ export function ApiKeyLookupPage() {
                 quotaLimits={quotaLimits}
                 quotaScopes={quotaScopes}
                 showKeysTab={Boolean(portalUser)}
-                showWordsTab={Boolean(portalUser) && portalWordsAllowed}
+                showWordsTab={Boolean(portalUser) && portalGrants.words}
+                showPrivacyTab={Boolean(portalUser) && portalGrants.privacyMasking !== null}
               />
 
               {activeTab === "usage" && usageReady ? (
@@ -1229,12 +1231,7 @@ export function ApiKeyLookupPage() {
                 </Reveal>
               ) : null}
 
-              {/* 一直挂着、只在当前标签时显示：切到别的标签再回来，未保存的修改还在。 */}
-              {portalUser && portalWordsAllowed ? (
-                <div hidden={activeTab !== "words"} className="flex flex-col md:min-h-0 md:flex-1">
-                  <PortalWordsTab />
-                </div>
-              ) : null}
+              {portalUser ? <PortalSelfServiceTabs key={portalUser.id} activeTab={activeTab} grants={portalGrants} /> : null}
 
               {activeTab === "logs" && usageReady ? (
                 <PublicLogsSection

@@ -66,12 +66,15 @@ export function MaskingFlow({
   selectedClient,
   selectedChannel,
   onSelect,
+  channelsSelectable = true,
 }: {
   clients: MaskCount[];
   channels: MaskCount[];
   selectedClient?: string;
   selectedChannel?: string;
   onSelect: (side: Side, id: string) => void;
+  /** false：右边的节点只显示、不能点（门户里是上游厂商，不是渠道）。 */
+  channelsSelectable?: boolean;
 }) {
   const { t } = useTranslation();
   const middle = useRef<HTMLDivElement>(null);
@@ -138,19 +141,20 @@ export function MaskingFlow({
     const meta = side === "client" ? clientMeta(node.id) : null;
     const vendor = side === "client" ? meta?.vendor : node.vendor;
     const Fallback = side === "client" ? TerminalSquare : Boxes;
+    const pickable = !node.more && (side === "client" || channelsSelectable);
     return (
       <button
         key={`${side}-${node.id || "more"}`}
         type="button"
-        disabled={node.more}
+        disabled={!pickable}
         onClick={() => onSelect(side, selected ? "" : node.id)}
-        title={node.more ? undefined : t(`privacy_masking.flow.filter_${side}`, { name: node.label })}
-        aria-pressed={node.more ? undefined : selected}
+        title={pickable ? t(`privacy_masking.flow.filter_${side}`, { name: node.label }) : undefined}
+        aria-pressed={pickable ? selected : undefined}
         className={[
           // max-w-full：右列按内容右对齐，不封顶的话长渠道名（常是 OAuth 邮箱）会向左压到线上，truncate 也不生效
           "flex h-9 max-w-full min-w-0 items-center gap-2 rounded-xl px-2 text-left transition-colors",
           side === "channel" ? "flex-row-reverse text-right" : "",
-          node.more ? "cursor-default text-ink-3" : "hover:bg-ink/[0.04] dark:hover:bg-white/[0.06]",
+          node.more ? "cursor-default text-ink-3" : pickable ? "hover:bg-ink/[0.04] dark:hover:bg-white/[0.06]" : "cursor-default",
           selected ? "bg-violet-500/10 dark:bg-violet-400/15" : "",
         ].join(" ")}
       >

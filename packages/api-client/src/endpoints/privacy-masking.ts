@@ -1,11 +1,13 @@
 import { apiClient } from "../client/client";
+import { portalClient } from "../client/portal-client";
 
 /**
  * 隐私脱敏：请求发往上游前把密钥、个人信息、脱敏词换成占位符，回复里再换回来（CliRelay
  * internal/privacymask）。这里是观测页和设置页用的接口。
  *
  * 记录里从不出现原值：每个值只有类型、是谁找到的、开头几个字符和长度；「上游看到的」片段里是
- * 占位符。只有后端在 GET /config 声明 `privacy-masking` 时才请求这些接口。
+ * 占位符。控制台只有后端在 GET /config 声明 `privacy-masking` 时才请求这些接口；门户的
+ * （portalPrivacyMaskingApi）看 /v0/portal/auth/me 有没有带 privacy_masking_allowed。
  */
 
 /** 谁找到的：内置规则、用户自己的规则、脱敏词、之前遮过的值（同一个值再出现）。 */
@@ -197,4 +199,45 @@ export const privacyMaskingApi = {
     apiClient.put<PrivacyMaskSettings>("/privacy-masking/settings", settings),
   preview: (text: string, policy?: PrivacyMaskPolicy) =>
     apiClient.post<PrivacyMaskPreview>("/privacy-masking/preview", { text, policy }),
+};
+
+/**
+ * 门户里的设置：门户用户自己的，没设过时是管理员的默认设置，但去掉了管理员的脱敏词、自定义规则和
+ * 「从不脱敏」——它们照样作用于这个用户的请求，只是不给门户用户看，免得用试一试把管理员没公开的词
+ * 一个个试出来（CliRelay privacy_masking_portal.go）。门户视图没有 key_protected 和 server_disabled。
+ */
+export interface PortalPrivacyMaskSettings extends PrivacyMaskSettings {
+  /** 用户有自己的设置；false 时 policy 是管理员的默认设置。 */
+  own: boolean;
+  /**
+   * 用户能否自己设置（保存或删除）。管理员收回后为 false：之前存的设置还在库里，但不生效，也不返回，
+   * 请求按管理员的设置脱敏。portal_default_allowed 与它相同。
+   */
+  allowed: boolean;
+}
+
+const PORTAL = "/v0/portal/privacy-masking";
+
+/**
+ * 门户用户自己的脱敏（/v0/portal/privacy-masking）。记录只有本人名下 API Key 的请求，服务器按会话
+ * 定范围，不认 end_user_id、api_key_id；设置只在管理员允许时能写，否则答 403
+ * privacy_masking_portal_forbidden。
+ */
+export const portalPrivacyMaskingApi = {
+  getSummary: (query: MaskQuery) =>
+    portalClient.get<MaskSummary>(`${PORTAL}/summary${queryString(query)}`),
+  listRecords: (query: MaskQuery, page: { before?: string; limit?: number } = {}) =>
+    portalClient.get<MaskRecordPage>(`${PORTAL}/records${queryString({ ...query, ...page })}`),
+  getRecord: (key: string) =>
+    portalClient.get<MaskRecordDetail>(`${PORTAL}/records/${encodeURIComponent(key)}`),
+  clearRecords: () => portalClient.delete<{ deleted: number }>(`${PORTAL}/records`),
+  getSettings: () => portalClient.get<PortalPrivacyMaskSettings>(`${PORTAL}/settings`),
+  /** 存成用户自己的设置。强制开启的类目和管理员的词由服务器合并，这里只发用户自己的。 */
+  putSettings: (policy: PrivacyMaskPolicy) =>
+    portalClient.put<PortalPrivacyMaskSettings>(`${PORTAL}/settings`, { policy }),
+  /** 删掉用户自己的设置，回到管理员的默认设置；返回之后的视图。 */
+  resetSettings: () => portalClient.delete<PortalPrivacyMaskSettings>(`${PORTAL}/settings`),
+  /** 按用户的草稿和强制开启的类目试一段文字，不含管理员的脱敏词、规则和「从不脱敏」。 */
+  preview: (text: string, policy?: PrivacyMaskPolicy) =>
+    portalClient.post<PrivacyMaskPreview>(`${PORTAL}/preview`, { text, policy }),
 };
