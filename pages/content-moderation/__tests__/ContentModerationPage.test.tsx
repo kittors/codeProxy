@@ -1,5 +1,6 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import type {
   ContentModerationProfileCapabilities,
@@ -20,11 +21,13 @@ const mocks = vi.hoisted(() => ({
   patchBindings: vi.fn(),
   getSecretMasking: vi.fn(),
   setSecretMasking: vi.fn(),
+  getConfig: vi.fn(),
 }));
 
 vi.mock("@code-proxy/api-client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@code-proxy/api-client")>()),
   contentModerationApi: mocks,
+  configApi: { getConfig: mocks.getConfig },
   extractApiErrorCode: () => "",
   isApiClientError: () => false,
 }));
@@ -70,11 +73,16 @@ const profile = {
 
 function renderPage() {
   return render(
-    <ThemeProvider>
-      <ToastProvider>
-        <ContentModerationPage />
-      </ToastProvider>
-    </ThemeProvider>,
+    <MemoryRouter initialEntries={["/content-moderation"]}>
+      <ThemeProvider>
+        <ToastProvider>
+          <Routes>
+            <Route path="/content-moderation" element={<ContentModerationPage />} />
+            <Route path="/runtime/privacy-masking" element={<p>privacy masking page</p>} />
+          </Routes>
+        </ToastProvider>
+      </ThemeProvider>
+    </MemoryRouter>,
   );
 }
 
@@ -91,6 +99,8 @@ describe("ContentModerationPage", () => {
     mocks.patchBindings.mockReset();
     mocks.getSecretMasking.mockReset();
     mocks.setSecretMasking.mockReset();
+    mocks.getConfig.mockReset();
+    mocks.getConfig.mockResolvedValue({});
     mocks.getMetrics.mockResolvedValue({
       requests: 12,
       allows: 9,
@@ -324,5 +334,18 @@ describe("ContentModerationPage", () => {
     await userEvent.click(toggle);
     expect(mocks.setSecretMasking).toHaveBeenCalledWith(true);
     await waitFor(() => expect(toggle).toHaveAttribute("aria-checked", "true"));
+  });
+
+  test("sends the secret masking tab to the privacy masking page when the backend has one", async () => {
+    mocks.getConfig.mockResolvedValue({ capabilities: { "privacy-masking": true } });
+    mocks.listProfiles.mockResolvedValue(
+      listResponse([profile], { ...NOTHING_DECLARED, secretMasking: true }),
+    );
+    renderPage();
+    await userEvent.click(await screen.findByRole("tab", { name: "Secret masking" }));
+    // 新后端上这个标签只剩说明和跳转，不再读写旧开关
+    await userEvent.click(await screen.findByRole("link", { name: "Open privacy masking" }));
+    expect(await screen.findByText("privacy masking page")).toBeInTheDocument();
+    expect(mocks.getSecretMasking).not.toHaveBeenCalled();
   });
 });

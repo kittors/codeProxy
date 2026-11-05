@@ -147,7 +147,8 @@ export function MaskingFlow({
         title={node.more ? undefined : t(`privacy_masking.flow.filter_${side}`, { name: node.label })}
         aria-pressed={node.more ? undefined : selected}
         className={[
-          "flex h-9 min-w-0 items-center gap-2 rounded-xl px-2 text-left transition-colors",
+          // max-w-full：右列按内容右对齐，不封顶的话长渠道名（常是 OAuth 邮箱）会向左压到线上，truncate 也不生效
+          "flex h-9 max-w-full min-w-0 items-center gap-2 rounded-xl px-2 text-left transition-colors",
           side === "channel" ? "flex-row-reverse text-right" : "",
           node.more ? "cursor-default text-ink-3" : "hover:bg-ink/[0.04] dark:hover:bg-white/[0.06]",
           selected ? "bg-violet-500/10 dark:bg-violet-400/15" : "",
@@ -170,7 +171,7 @@ export function MaskingFlow({
 
   return (
     <figure className="m-0 flex min-w-0 flex-col gap-2">
-      <div className="grid grid-cols-[minmax(0,8.5rem)_minmax(0,1fr)_minmax(0,8.5rem)] items-center gap-1">
+      <div className="grid grid-cols-[minmax(0,10rem)_minmax(0,1fr)_minmax(0,10rem)] items-center gap-1">
         <div className="flex flex-col justify-center gap-1" style={{ minHeight: height }}>
           {left.map((node) => nodeButton(node, "client", !!selectedClient && selectedClient === node.id))}
         </div>

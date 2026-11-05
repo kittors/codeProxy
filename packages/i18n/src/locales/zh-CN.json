@@ -8397,7 +8397,7 @@
       "content": "请求内容",
       "view_upstream": "上游看到的",
       "view_yours": "你的请求",
-      "snippets_gone": "原文片段已过保留期，记录里只剩类型、开头和长度",
+      "snippets_gone": "没有原文片段：服务器没存请求正文，或片段已过保留期。记录里只有类型、开头和长度",
       "values": "每个值（{{count}} 个，共 {{places}} 处）",
       "as_written": "原样发出",
       "not_sent_short": "未发出",

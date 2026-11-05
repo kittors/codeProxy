@@ -8462,7 +8462,7 @@
       "content": "Request content",
       "view_upstream": "What upstream saw",
       "view_yours": "Your request",
-      "snippets_gone": "The text is past its retention; the record keeps kinds, first characters and lengths",
+      "snippets_gone": "No text here: the server doesn't keep request bodies, or the text is past its retention. The record keeps kinds, first characters and lengths",
       "values": "Values: {{count}} · places: {{places}}",
       "as_written": "Sent as written",
       "not_sent_short": "Not sent",

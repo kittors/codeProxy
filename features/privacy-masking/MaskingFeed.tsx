@@ -211,12 +211,13 @@ function RecordRow({ record, onOpen }: { record: MaskRecord; onOpen: (record: Ma
       <button
         type="button"
         onClick={() => onOpen(record)}
-        className="group grid w-full grid-cols-[3.25rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-5 py-2.5 text-left transition-colors hover:bg-ink/[0.025] md:grid-cols-[3.25rem_minmax(0,15rem)_minmax(0,1fr)_auto_2.5rem_1rem] dark:hover:bg-white/[0.04]"
+        className="group grid w-full grid-cols-[3.25rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-5 py-2.5 text-left transition-colors hover:bg-ink/[0.025] md:grid-cols-[3.25rem_minmax(0,2fr)_minmax(0,1fr)_auto_2.5rem_1rem] dark:hover:bg-white/[0.04]"
       >
         <span className="text-xs text-ink-3 tabular-nums">{time}</span>
         <span className="flex min-w-0 items-center gap-1.5 text-sm text-ink">
+          {/* 客户端名都很短，不让它跟渠道名一起按比例收缩（会被挤成「C…」）；渠道名常是长 OAuth 邮箱，只截它 */}
           {client.vendor ? <VendorIcon modelId={client.vendor} size={13} /> : null}
-          <span className="truncate">{client.label ?? t("privacy_masking.client.other")}</span>
+          <span className="shrink-0 whitespace-nowrap">{client.label ?? t("privacy_masking.client.other")}</span>
           <ArrowRight size={12} aria-hidden="true" className="shrink-0 text-ink-3" />
           {record.blocked ? (
             <span className="truncate text-rose-600 dark:text-rose-300">{t("privacy_masking.feed.not_sent")}</span>
