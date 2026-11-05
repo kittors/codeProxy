@@ -14,6 +14,9 @@ const dayKey = (daysAgo: number) => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
 
+// 线上渠道名常是 OAuth 账号邮箱；短名的假数据看不出它压到流向图的线上、把客户端名挤成「C…」
+const LONG_CHANNEL = "k3v9x2mq7z@privaterelay.appleid.com";
+
 const SUMMARY = {
   days: [0, 1, 2, 3, 4, 5, 6].reverse().map((ago) => ({
     day: dayKey(ago),
@@ -41,7 +44,7 @@ const SUMMARY = {
   channels: [
     { name: "土豆 Codex 池", places: 51920, requests: 1590, vendor: "openai" },
     { name: "Claude 官方", places: 8100, requests: 271, vendor: "claude" },
-    { name: "Antigravity", places: 605, requests: 39, vendor: "gemini" },
+    { name: LONG_CHANNEL, places: 605, requests: 39, vendor: "gemini" },
   ],
   values: [
     { id: "v1", kind: "API_KEY", by: "rule", head: "sk-", len: 52, places: 38440, requests: 1580, last_at: at(1) },
@@ -65,7 +68,7 @@ const RECORDS = [
     { kind: "PRIVATE_KEY", by: "rule", head: "-", len: 411, n: 2, action: "block" }] },
   { key: "r5", at: at(9), client: "codex", channel: "土豆 Codex 池", provider: "openai", model: "gpt-5-codex", places: 15, distinct: 2, values: [
     { kind: "API_KEY", by: "rule", head: "sk-", len: 52, n: 9 }, { kind: "TOKEN", by: "rule", head: "eyJ", len: 164, n: 6 }] },
-  { key: "r6", at: at(15), client: "gemini-cli", channel: "Antigravity", provider: "gemini", model: "gemini-3.1-pro", places: 4, distinct: 2, values: [
+  { key: "r6", at: at(15), client: "gemini-cli", channel: LONG_CHANNEL, provider: "gemini", model: "gemini-3.1-pro", places: 4, distinct: 2, values: [
     { kind: "TERM", by: "word", head: "N", len: 8, n: 3 }, { kind: "EMAIL", by: "rule", head: "l", len: 21, n: 1 }] },
   { key: "r7", at: at(60 * 24 + 30), client: "codex", channel: "土豆 Codex 池", provider: "openai", model: "gpt-5-codex", places: 15, distinct: 2, values: [
     { kind: "API_KEY", by: "rule", head: "sk-", len: 52, n: 9 }, { kind: "PASSWORD", by: "rule", head: "Q", len: 12, n: 6 }] },
@@ -184,6 +187,12 @@ test.describe("privacy masking page", () => {
     // 致谢 magpie：识别规则与还原做法移植自它
     await expect(page.getByRole("link", { name: "magpie" })).toHaveAttribute("href", "https://github.com/yetone/magpie");
     await page.waitForTimeout(2600); // 流向图的线画完
+    const flow = page.locator("figure").filter({ hasText: "CliRelay 在服务器上把值换成占位符" });
+    const lines = await flow.locator("svg").first().boundingBox();
+    const node = await flow.getByRole("button").filter({ hasText: LONG_CHANNEL }).boundingBox();
+    expect(node!.x).toBeGreaterThanOrEqual(lines!.x + lines!.width - 1);
+    const row = page.locator("li button").filter({ hasText: LONG_CHANNEL }).first();
+    expect(await row.getByText("Gemini CLI", { exact: true }).evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
     await shoot(page, "1-overview");
 
     await page.getByRole("button", { name: "脱敏是怎么工作的" }).click();

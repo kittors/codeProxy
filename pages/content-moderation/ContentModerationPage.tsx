@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 import {
   Activity,
   FlaskConical,
@@ -469,10 +470,11 @@ export function ContentModerationPage() {
           tone="neutral"
           title={t("content_moderation.secret_masking.moved_title")}
           actions={
-            // 面板用 hash 路由：普通链接就能跳过去，不依赖路由上下文
-            <a href="#/runtime/privacy-masking" className={buttonClassName({ size: "sm", variant: "secondary" })}>
+            // 线上 /manage 是 BrowserRouter（basename /manage），本地开发是 HashRouter：手写 href 总有一边
+            // 指错地方（hash 链接在 /manage 下点了不跳），只有路由的 Link 两边都对
+            <Link to="/runtime/privacy-masking" className={buttonClassName({ size: "sm", variant: "secondary" })}>
               {t("content_moderation.secret_masking.moved_open")}
-            </a>
+            </Link>
           }
         >
           {t("content_moderation.secret_masking.moved_desc")}
