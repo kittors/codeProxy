@@ -180,7 +180,8 @@ export function MaskingRulesView({
         </SettingGroup>
       </Section>
 
-      <aside className="flex flex-col gap-3 xl:sticky xl:top-16">
+      {/* 同设置页：top 落在子标签栏下方的渐隐带以下，贴在渐隐带里会被淡掉一截 */}
+      <aside className="flex flex-col gap-3 xl:sticky xl:top-20">
         <Section
           title={t("privacy_masking.try.title")}
           description={t("privacy_masking.portal.try_desc")}

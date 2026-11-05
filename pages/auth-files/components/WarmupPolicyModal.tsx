@@ -9,6 +9,7 @@ import {
   FormField,
   FormSection,
   Modal,
+  ScrollFade,
   SettingRow,
   Skeleton,
   TextInput,
@@ -416,7 +417,7 @@ export function WarmupPolicyModal({ open, onClose, allFileNames }: WarmupPolicyM
                     />
                   </div>
                 ) : null}
-                <div className="max-h-48 space-y-0.5 overflow-y-auto p-1.5">
+                <ScrollFade className="max-h-48 space-y-0.5 overflow-y-auto p-1.5">
                   {visibleAccounts.map((name) => {
                     const excluded = excludedAuthIds.includes(name);
                     return (
@@ -451,7 +452,7 @@ export function WarmupPolicyModal({ open, onClose, allFileNames }: WarmupPolicyM
                       </label>
                     );
                   })}
-                </div>
+                </ScrollFade>
               </div>
             </FormSection>
           ) : null}

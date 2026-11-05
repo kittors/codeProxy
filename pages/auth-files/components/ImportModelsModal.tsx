@@ -1,7 +1,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
 import { Check, ListPlus, Search } from "lucide-react";
-import { Button, Checkbox, EmptyState, Modal, Skeleton, TextInput } from "@code-proxy/ui";
+import { Button, Checkbox, EmptyState, Modal, ScrollFade, Skeleton, TextInput } from "@code-proxy/ui";
 import type { AuthFileModelItem } from "@code-proxy/domain";
 
 interface ImportModelsModalProps {
@@ -145,7 +145,7 @@ export function ImportModelsModal({
                 {t("auth_files.import_no_match", { query: importSearch.trim() })}
               </p>
             ) : (
-              <div className="max-h-72 space-y-0.5 overflow-y-auto p-1.5">
+              <ScrollFade className="max-h-72 space-y-0.5 overflow-y-auto p-1.5">
                 {importFilteredModels.map((model) => {
                   const checked = importSelected.has(model.id);
                   return (
@@ -168,7 +168,7 @@ export function ImportModelsModal({
                     </label>
                   );
                 })}
-              </div>
+              </ScrollFade>
             )}
           </div>
         </div>

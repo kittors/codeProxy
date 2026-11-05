@@ -1,6 +1,6 @@
 import { lazy, Suspense, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { PageLoader } from "@code-proxy/ui";
+import { PageLoader, ScrollFade } from "@code-proxy/ui";
 import type { PortalGrants } from "../portalGrants";
 import type { ApiKeyLookupTab } from "./LookupResultsToolbar";
 import { PortalWordsTab } from "./PortalWordsTab";
@@ -40,9 +40,10 @@ export function PortalSelfServiceTabs({
         </div>
       ) : null}
       {grants.privacyMasking && privacyOpened ? (
-        // 桌面上是这个标签自己的滚动区（钉满一屏，见 lookupLayout.ts）；左右各借出 main 的内边距，
-        // 子标签栏的底色才能铺到边、卡片投影不被滚动区裁掉
-        <div
+        // 桌面上是这个标签自己的滚动区（钉满一屏，见 lookupLayout.ts），和其他内部滚动区一样两端渐隐，
+        // 吸顶的子标签栏自己声明了钉住区。左右各借出 main 的内边距，子标签栏的底色才能铺到边、卡片
+        // 投影不被滚动区裁掉。记录详情是 portal 到 body 的抽屉，不受渐隐的 mask 影响。
+        <ScrollFade
           hidden={activeTab !== "privacy"}
           className="-mx-4 flex flex-col px-4 sm:-mx-6 sm:px-6 md:min-h-0 md:flex-1 md:overflow-y-auto"
         >
@@ -60,7 +61,7 @@ export function PortalSelfServiceTabs({
               active={activeTab === "privacy"}
             />
           </Suspense>
-        </div>
+        </ScrollFade>
       ) : null}
     </>
   );

@@ -268,8 +268,6 @@ export function Modal({
 
         <div
           ref={fade.ref}
-          onScroll={fade.onScroll}
-          style={fade.style}
           data-testid={bodyTestId}
           className={[
             "min-h-0",
@@ -278,7 +276,6 @@ export function Modal({
             "overscroll-contain px-6",
             hideHeader ? "pt-6" : "pt-4",
             snapshot.footer ? "pb-2" : "pb-6",
-            fade.className,
             bodyClassName ?? "",
           ].join(" ")}
         >

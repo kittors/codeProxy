@@ -28,6 +28,7 @@ import {
   DateTimePicker,
   EmptyState,
   Modal,
+  ScrollFade,
   Select,
   Tabs,
   TabsContent,
@@ -39,6 +40,7 @@ import {
 } from "@code-proxy/ui";
 import { CodexImageGenerationBridgePanel } from "./CodexImageGenerationBridgePanel";
 import { AuthFilePlanBadge } from "./AuthFilePlanBadge";
+import { useIdentityDesktopLayout } from "./useIdentityDesktopLayout";
 import { AuthFileSchedulingFields } from "./AuthFileSchedulingFields";
 import { buildDetailTrendChartOption } from "./detailTrendChartOption";
 import { TrendSummaryGrid } from "./TrendSummaryGrid";
@@ -106,26 +108,6 @@ const IDENTITY_FINGERPRINT_SOURCE_ORDER: IdentityFingerprintFieldSource[] = [
   "preset",
   "builtin_default",
 ];
-const IDENTITY_DESKTOP_MEDIA_QUERY = "(min-width: 1024px)";
-
-const useIdentityDesktopLayout = () => {
-  const [matches, setMatches] = useState(() => {
-    if (typeof window === "undefined" || !window.matchMedia) return false;
-    return window.matchMedia(IDENTITY_DESKTOP_MEDIA_QUERY).matches;
-  });
-
-  useEffect(() => {
-    if (typeof window === "undefined" || !window.matchMedia) return;
-    const media = window.matchMedia(IDENTITY_DESKTOP_MEDIA_QUERY);
-    const updateMatches = (event: MediaQueryListEvent) => setMatches(event.matches);
-    setMatches(media.matches);
-    media.addEventListener("change", updateMatches);
-    return () => media.removeEventListener("change", updateMatches);
-  }, []);
-
-  return matches;
-};
-
 interface AuthFileDetailModalProps {
   open: boolean;
   detailFile: AuthFileItem | null;
@@ -1172,7 +1154,7 @@ export function AuthFileDetailModal({
               </TabsList>
             </div>
 
-            <div
+            <ScrollFade
               // 左右各留 4px（再用负边距拉回对齐）：输入框的阴影描边和聚焦光晕画在框外，贴着滚动区的边会被裁掉。
               className={[
                 "-mx-1 mt-4 min-h-0 flex-1 px-1",
@@ -1801,7 +1783,7 @@ export function AuthFileDetailModal({
                   </div>
                 )}
               </TabsContent>
-            </div>
+            </ScrollFade>
           </div>
         </Tabs>
       )}

@@ -86,7 +86,10 @@ export function MaskingSettingsPanel({
   return (
     <div className="flex flex-col gap-6">
       {dirty ? (
-        <div className="sticky top-0 z-20 -mx-1 flex flex-wrap items-center justify-end gap-2 rounded-2xl bg-canvas/95 px-1 py-2 backdrop-blur-sm">
+        <div
+          data-scroll-fade-pin="top"
+          className="sticky top-0 z-20 -mx-1 flex flex-wrap items-center justify-end gap-2 rounded-2xl bg-canvas/95 px-1 py-2 backdrop-blur-sm"
+        >
           <span className="mr-auto inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-800 dark:text-amber-200">
             <span aria-hidden="true" className="size-1.5 rounded-full bg-amber-500" />
             {t("privacy_masking.settings.unsaved")}
@@ -296,7 +299,8 @@ export function MaskingSettingsPanel({
       ) : null}
 
       </div>
-      <aside className="flex flex-col gap-3 xl:sticky xl:top-16">
+      {/* top 落在页签栏下方的渐隐带以下：侧栏不是整行宽，不能当钉住区，贴在渐隐带里会被淡掉一截。 */}
+      <aside className="flex flex-col gap-3 xl:sticky xl:top-20">
         <Section title={t("privacy_masking.try.title")} description={t("privacy_masking.try.desc")}>
           <SettingGroup>
             <div className="px-4 py-3.5">

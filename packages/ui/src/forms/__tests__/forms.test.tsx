@@ -207,7 +207,7 @@ describe("NavList", () => {
       />,
     );
     const list = screen.getByRole("tablist", { name: "Providers" });
-    expect(list).not.toHaveClass("code-proxy-scroll-edge-fade-x");
+    expect(list).not.toHaveAttribute("data-scroll-fade");
     // 窄屏横排时列表自己横向滚动；竖排后没有横向溢出，遮罩随之收起。
     Object.defineProperty(list, "scrollWidth", { configurable: true, value: 500 });
     Object.defineProperty(list, "clientWidth", { configurable: true, value: 320 });
@@ -215,12 +215,12 @@ describe("NavList", () => {
       list.scrollLeft = 0;
       fireEvent.scroll(list);
     });
-    expect(list).toHaveClass("code-proxy-scroll-edge-fade-x");
+    expect(list).toHaveAttribute("data-scroll-fade", "x");
     expect(list.style.getPropertyValue("--scroll-fade-right")).toBe("24px");
     Object.defineProperty(list, "scrollWidth", { configurable: true, value: 320 });
     act(() => {
       fireEvent.scroll(list);
     });
-    expect(list).not.toHaveClass("code-proxy-scroll-edge-fade-x");
+    expect(list).not.toHaveAttribute("data-scroll-fade");
   });
 });

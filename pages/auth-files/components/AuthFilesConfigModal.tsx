@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { EyeOff, Replace } from "lucide-react";
-import { Button, Modal, Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
+import { Button, Modal, ScrollFade, Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import type { AuthFilesConfigModalTab } from "../AuthFilesPage";
 import type { TFunction } from "i18next";
 
@@ -94,9 +94,9 @@ export function AuthFilesConfigModal({
           </TabsList>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+        <ScrollFade className="min-h-0 flex-1 overflow-y-auto pr-1">
           {configModalTab === "excluded" ? excludedContent : aliasContent}
-        </div>
+        </ScrollFade>
       </Tabs>
     </Modal>
   );

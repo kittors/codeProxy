@@ -1,6 +1,6 @@
 import { useMemo, type ReactNode } from "react";
 import { Activity, Coins, MessagesSquare, ShieldCheck, Sigma } from "lucide-react";
-import { AnimatedNumber } from "@code-proxy/ui";
+import { AnimatedNumber, ScrollFade } from "@code-proxy/ui";
 import { Reveal } from "@code-proxy/ui";
 import { Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { EChart } from "@code-proxy/ui";
@@ -415,7 +415,7 @@ export function UsageTabSection({
             ) : apiKeyDistributionData.length > 0 ? (
               <div className="grid gap-4 md:h-72 md:grid-cols-[minmax(0,1fr)_minmax(16rem,20rem)]">
                 <EChart option={apiKeyDistributionOption} className="h-52 min-w-0 md:h-72" />
-                <div className="flex max-h-72 min-w-0 flex-col gap-2 overflow-y-auto pr-1">
+                <ScrollFade className="flex max-h-72 min-w-0 flex-col gap-2 overflow-y-auto pr-1">
                   {apiKeyDistributionLegend.map((item) => (
                     <div
                       key={item.name}
@@ -434,7 +434,7 @@ export function UsageTabSection({
                       <span className="text-right tabular-nums text-ink-3">{item.percentLabel}</span>
                     </div>
                   ))}
-                </div>
+                </ScrollFade>
               </div>
             ) : (
               <p className="py-8 text-center text-sm text-ink-3">
@@ -470,7 +470,7 @@ export function UsageTabSection({
             ) : modelDistributionData.length > 0 ? (
               <div className="flex flex-col gap-4 sm:grid sm:h-72 sm:grid-cols-[minmax(0,1fr)_220px]">
                 <EChart option={modelDistributionOption} className="h-52 min-w-0 sm:h-72" />
-                <div className="flex flex-row flex-wrap justify-center gap-2 overflow-y-auto pr-1 sm:h-72 sm:flex-col">
+                <ScrollFade className="flex flex-row flex-wrap justify-center gap-2 overflow-y-auto pr-1 sm:h-72 sm:flex-col">
                   {modelDistributionLegend.map((item) => (
                     <div
                       key={item.name}
@@ -491,7 +491,7 @@ export function UsageTabSection({
                       </span>
                     </div>
                   ))}
-                </div>
+                </ScrollFade>
               </div>
             ) : (
               <p className="py-8 text-center text-sm text-ink-3">
