@@ -36,6 +36,7 @@ describe("useConfigCapabilities", () => {
       payloadRulesDryRun: false,
       alerts: false,
       poolCapacity: false,
+      privacyMasking: false,
     });
   });
 
