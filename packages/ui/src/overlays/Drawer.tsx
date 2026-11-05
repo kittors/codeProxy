@@ -146,9 +146,7 @@ export function Drawer({
         </div>
         <div
           ref={fade.ref}
-          onScroll={fade.onScroll}
-          style={fade.style}
-          className={`min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-3 ${fade.className} ${bodyClassName ?? ""}`}
+          className={`min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-3 ${bodyClassName ?? ""}`}
         >
           {children}
         </div>

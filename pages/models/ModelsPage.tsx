@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Plus, RefreshCw, Search, Trash2 } from "lucide-react";
-import { Button } from "@code-proxy/ui";
+import { Button, ScrollFade } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
 import { ConfirmModal } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
@@ -861,7 +861,7 @@ export function ModelsPage() {
                 </span>
               </button>
 
-              <div
+              <ScrollFade
                 data-testid="owner-sidebar-list"
                 className="-mx-1 min-h-0 flex-1 space-y-2 overflow-x-hidden overflow-y-auto px-1 py-1"
               >
@@ -886,7 +886,7 @@ export function ModelsPage() {
                     />
                   ))
                 )}
-              </div>
+              </ScrollFade>
             </Card>
           </div>
 

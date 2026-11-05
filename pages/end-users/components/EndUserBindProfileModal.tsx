@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ShieldCheck } from "lucide-react";
 import type { ApiKeyPermissionProfile } from "@code-proxy/api-client";
-import { Button, Callout, Modal } from "@code-proxy/ui";
+import { Button, Callout, Modal, ScrollFade } from "@code-proxy/ui";
 import { ProfilePicker } from "@features/access-policy";
 
 /**
@@ -56,7 +56,7 @@ export function EndUserBindProfileModal({
       }
     >
       <div className="space-y-4">
-        <div className="max-h-[22rem] overflow-y-auto pr-1">
+        <ScrollFade className="max-h-[22rem] overflow-y-auto pr-1">
           <ProfilePicker
             profiles={profiles}
             value={profileId}
@@ -65,7 +65,7 @@ export function EndUserBindProfileModal({
             ariaLabel={t("access_policy.pick_profile")}
             disabled={busy}
           />
-        </div>
+        </ScrollFade>
         <Callout tone="warning">{t("access_policy.batch_bind_consequence")}</Callout>
       </div>
     </Modal>

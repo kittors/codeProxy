@@ -81,8 +81,6 @@ export function Tabs({
 export function TabsList({
   children,
   className,
-  style,
-  onScroll,
   ...divProps
 }: PropsWithChildren<HTMLAttributes<HTMLDivElement>>) {
   const { size, value, tone } = useTabs();
@@ -134,11 +132,6 @@ export function TabsList({
     <div
       ref={setContainerRef}
       {...divProps}
-      onScroll={(event) => {
-        fade.onScroll();
-        onScroll?.(event);
-      }}
-      style={fade.style ? { ...style, ...fade.style } : style}
       role="tablist"
       className={[
         // w-fit + self-start: stay content-sized even when parent is flex-col
@@ -147,7 +140,6 @@ export function TabsList({
         // horizontal overscroll chains to the viewport and rubber-bands PageBackground.
         "scrollbar-hidden relative inline-flex w-fit max-w-full shrink-0 self-start gap-0.5 overflow-x-auto overscroll-x-contain whitespace-nowrap rounded-full bg-track p-0.5",
         tabsListHeightBySize[size],
-        fade.className,
         className,
       ].join(" ")}
     >

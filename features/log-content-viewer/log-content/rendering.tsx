@@ -14,7 +14,7 @@ import {
   Wrench,
   Zap,
 } from "lucide-react";
-import { Modal, surface } from "@code-proxy/ui";
+import { Modal, surface, useScrollFade } from "@code-proxy/ui";
 
 const LARGE_TEXT_CHAR_THRESHOLD = 50_000;
 const LARGE_TEXT_LINE_THRESHOLD = 400;
@@ -423,6 +423,7 @@ export function MessageList({ messages }: { messages: LogMessage[] }) {
 
 function VirtualMessageList({ messages }: { messages: { role: string; content: string }[] }) {
   const parentRef = useRef<HTMLDivElement | null>(null);
+  useScrollFade({ scroller: parentRef });
   const virtualizer = useVirtualizer({
     count: messages.length,
     getScrollElement: () => parentRef.current,

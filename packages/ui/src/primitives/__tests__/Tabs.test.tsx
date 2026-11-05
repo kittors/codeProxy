@@ -30,7 +30,7 @@ describe("TabsList", () => {
     );
     const tablist = screen.getByRole("tablist");
     // 放得下：不挂遮罩，桌面宽度下的标签条和以前一样。
-    expect(tablist).not.toHaveClass("code-proxy-scroll-edge-fade-x");
+    expect(tablist).not.toHaveAttribute("data-scroll-fade");
 
     // jsdom 没有布局：钉住滚动尺寸，模拟窄屏上标签比条长。
     Object.defineProperty(tablist, "scrollWidth", { configurable: true, value: 600 });
@@ -39,7 +39,7 @@ describe("TabsList", () => {
       tablist.scrollLeft = 0;
       fireEvent.scroll(tablist);
     });
-    expect(tablist).toHaveClass("code-proxy-scroll-edge-fade-x");
+    expect(tablist).toHaveAttribute("data-scroll-fade", "x");
     expect(tablist.style.getPropertyValue("--scroll-fade-left")).toBe("0px");
     expect(tablist.style.getPropertyValue("--scroll-fade-right")).toBe("20px");
 

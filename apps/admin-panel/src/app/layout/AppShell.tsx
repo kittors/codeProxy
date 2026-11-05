@@ -1,7 +1,7 @@
 import { type PropsWithChildren, useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { PageBackground } from "@code-proxy/ui";
+import { PageBackground, ScrollFade } from "@code-proxy/ui";
 import { useOptionalAuth } from "@app/providers/AuthProvider";
 import { MobileSidebar } from "./shell/MobileSidebar";
 import { getPageTitleKey, resolveActiveTo } from "./shell/navModel";
@@ -186,7 +186,12 @@ export function AppShell({ children, onLogout }: PropsWithChildren<{ onLogout?: 
             mobileNavOpen={mobileNavOpen}
             onToggleMobileNav={toggleMobile}
           />
-          <div className="flex-1 overflow-x-hidden overflow-y-auto">
+          {/*
+           * 主内容区上下渐隐（ScrollFade）：还能往上 / 往下滚时那一侧淡出，到头不淡。遮罩会裁掉
+           * 区内没走 portal 的 fixed 浮层，页面里的浮层（下拉、浮动保存条、全屏加载）都要走 portal；
+           * sticky 页签栏、操作栏加 data-scroll-fade-pin，渐隐从它们下沿开始。
+           */}
+          <ScrollFade className="flex-1 overflow-x-hidden overflow-y-auto">
             {/*
              * 默认 min-h-full：内容长了 main 跟着长高，底部内边距排在内容之后。
              * 页面根声明了 data-page-fill 时改 h-full，给「表格吃满剩余高度、内部滚动」的
@@ -203,7 +208,7 @@ export function AppShell({ children, onLogout }: PropsWithChildren<{ onLogout?: 
             >
               {children}
             </main>
-          </div>
+          </ScrollFade>
         </div>
       </div>
     </PageBackground>

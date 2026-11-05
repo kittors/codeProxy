@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Check, RefreshCw, Save } from "lucide-react";
 import { Button } from "@code-proxy/ui";
@@ -106,7 +107,9 @@ export function FloatingSaveBar({
       ? t("config_ui.unsaved_count", { count: changeCount })
       : t(justSaved ? STATUS_LABEL_KEYS.saved : STATUS_LABEL_KEYS[status]);
 
-  return (
+  // 挂到 body 上：主内容区有滚动渐隐遮罩，mask 会把区内 fixed 定位的子孙一起裁掉、淡掉，
+  // 这条贴在窗口底部的保存条正好落在底部渐隐带里。
+  const bar = (
     <div
       className="pointer-events-none fixed inset-x-0 bottom-6 z-50 flex justify-center px-4"
       aria-live="polite"
@@ -167,4 +170,5 @@ export function FloatingSaveBar({
       </div>
     </div>
   );
+  return createPortal(bar, document.body);
 }

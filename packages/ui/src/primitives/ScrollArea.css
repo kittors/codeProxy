@@ -1,9 +1,19 @@
 /*
- * 滚动区上下渐隐（ScrollArea 的 edgeFade）：只在该方向还有内容可滚时出现，到顶 / 到底就收起。
+ * 滚动区边缘渐隐，属性与变量由 useScrollFade 写入（见 hooks/scrollFadeDom.ts）。
  *
- * 两个渐隐长度注册成 <length>，渐变停点才能平滑过渡；不支持 @property 的浏览器直接切换，
- * 不影响使用。只在内容确实溢出时才挂这个类：mask 会把子孙的绘制一起裁到盒子以内，
- * fixed 定位、视觉上伸出盒子的浮层（侧边栏收起后的分区浮层）也会被裁掉。
+ * 只在内容确实溢出时才有 data-scroll-fade：mask 会把子孙的绘制一起裁到盒子以内，fixed 定位、
+ * 视觉上伸出盒子的浮层（侧边栏收起后的分区浮层）也会被裁掉。
+ *
+ * 遮罩只是一条 alpha 渐变：内容淡出后露出的是宿主背后本来的底色，深浅色主题都不会出现色带。
+ *
+ * 竖向遮罩由四层取并集：
+ *   1. 顶部钉住区（sticky 页签栏、表头），全不透明，栏本身不淡；
+ *   2. 底部钉住区（贴底操作条）；
+ *   3. 右侧滚动条那一条，全不透明，经典滚动条两头不会被抹淡；
+ *   4. 两段钉住区之间的内容，上下两端按剩余可滚距离渐隐。
+ * 尺寸为 0 的层不绘制：没有钉住区、滚动条是覆盖式时，就只剩第 4 层。
+ *
+ * 渐隐长度注册成 <length>，渐变停点才能平滑过渡；不支持 @property 的浏览器直接切换，不影响使用。
  */
 @property --scroll-fade-top {
   syntax: "<length>";
@@ -17,21 +27,70 @@
   initial-value: 0px;
 }
 
-.code-proxy-scroll-edge-fade {
-  -webkit-mask-image: linear-gradient(
-    to bottom,
-    transparent 0,
-    #000 var(--scroll-fade-top),
-    #000 calc(100% - var(--scroll-fade-bottom)),
-    transparent 100%
-  );
-  mask-image: linear-gradient(
-    to bottom,
-    transparent 0,
-    #000 var(--scroll-fade-top),
-    #000 calc(100% - var(--scroll-fade-bottom)),
-    transparent 100%
-  );
+/* 钉住区与滚动条宽度不过渡（sticky 栏被推走时要跟手）；不继承，嵌套的滚动区拿不到外层的值。 */
+@property --scroll-fade-top-inset {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --scroll-fade-bottom-inset {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --scroll-fade-gutter {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+[data-scroll-fade="y"] {
+  -webkit-mask-image:
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(
+      to bottom,
+      transparent 0,
+      #000 var(--scroll-fade-top),
+      #000 calc(100% - var(--scroll-fade-bottom)),
+      transparent 100%
+    );
+  mask-image:
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(
+      to bottom,
+      transparent 0,
+      #000 var(--scroll-fade-top),
+      #000 calc(100% - var(--scroll-fade-bottom)),
+      transparent 100%
+    );
+  -webkit-mask-size:
+    100% var(--scroll-fade-top-inset),
+    100% var(--scroll-fade-bottom-inset),
+    var(--scroll-fade-gutter) 100%,
+    100% calc(100% - var(--scroll-fade-top-inset) - var(--scroll-fade-bottom-inset));
+  mask-size:
+    100% var(--scroll-fade-top-inset),
+    100% var(--scroll-fade-bottom-inset),
+    var(--scroll-fade-gutter) 100%,
+    100% calc(100% - var(--scroll-fade-top-inset) - var(--scroll-fade-bottom-inset));
+  -webkit-mask-position:
+    0 0,
+    0 100%,
+    100% 0,
+    0 var(--scroll-fade-top-inset);
+  mask-position:
+    0 0,
+    0 100%,
+    100% 0,
+    0 var(--scroll-fade-top-inset);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
   transition:
     --scroll-fade-top 180ms cubic-bezier(0.2, 0.8, 0.2, 1),
     --scroll-fade-bottom 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -50,7 +109,7 @@
   initial-value: 0px;
 }
 
-.code-proxy-scroll-edge-fade-x {
+[data-scroll-fade="x"] {
   -webkit-mask-image: linear-gradient(
     to right,
     transparent 0,
@@ -71,8 +130,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .code-proxy-scroll-edge-fade,
-  .code-proxy-scroll-edge-fade-x {
+  [data-scroll-fade] {
     transition: none;
   }
 }
