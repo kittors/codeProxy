@@ -61,9 +61,12 @@ export function summaryByUpstream(summary: MaskSummary, other: string): MaskSumm
   return { ...summary, channels: [...merged.values()] };
 }
 
-/** 记录里的渠道换成上游厂商；拦下没发的（渠道为空）照旧为空。 */
+/**
+ * 记录里的渠道换成上游厂商。按 provider 换，不看渠道名有没有：以后服务器不再给门户渠道名，照样显示
+ * 厂商。拦下没发的（blocked）原样返回，界面显示「未发出」。
+ */
 export function recordByUpstream<T extends MaskRecord>(record: T, other: string): T {
-  if (!record.channel) return record;
+  if (record.blocked || (!record.channel && !record.provider)) return record;
   const upstream = upstreamOf(record.provider, other);
   return { ...record, channel: upstream.label, provider: upstream.vendor };
 }

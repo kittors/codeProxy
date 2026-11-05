@@ -1,7 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button, Callout, PageLoader, Tabs, TabsContent, TabsList, TabsTrigger, useToast } from "@code-proxy/ui";
-import { privacyMaskingApi, type MaskRecord } from "@code-proxy/api-client";
+import {
+  privacyMaskingApi,
+  privacyMaskingPortalApi,
+  type MaskRecord,
+  type PortalPrivacyMaskSettings,
+  type PrivacyMaskPolicy,
+  type PrivacyMaskSettings,
+} from "@code-proxy/api-client";
 import { clientMeta } from "./maskKinds";
 import { MaskingCredit } from "./MaskingCredit";
 import { MaskingExplainer } from "./MaskingExplainer";
@@ -12,32 +19,26 @@ import { MaskingSettingsPanel } from "./MaskingSettingsPanel";
 import { MaskingSummaryCard } from "./MaskingSummaryCard";
 import { useKindLabel } from "./KindChip";
 import { recordByUpstream, summaryByUpstream } from "./portalUpstreams";
-import { portalMaskingSource, tenantMaskingSource, type MaskingSettingsView } from "./source";
+import { portalMaskingSource, tenantMaskingSource } from "./source";
 import { useMaskingOverview, useMaskingRecord } from "./useMaskingOverview";
 
 type Tab = "overview" | "settings";
 
-/**
- * 设置里要求了任何脱敏：密钥、个人信息，或者有脱敏词、自定义规则（这两样不管开关，单独也会遮）。
- * 门户里强制开启的类目也算：门户用户的设置里关着，也照样遮。
- */
-const maskingOn = (settings: MaskingSettingsView | null, scope: "tenant" | "portal") =>
+/** 设置里要求了任何脱敏：密钥、个人信息，或者有脱敏词、自定义规则（这两样不管开关，单独也会遮）。 */
+const maskingOn = (settings: { policy: PrivacyMaskPolicy } | null) =>
   !!settings &&
-  (settings.policy.secrets ||
-    settings.policy.personal ||
-    settings.policy.words.length > 0 ||
-    settings.policy.rules.length > 0 ||
-    (scope === "portal" && settings.enforced.length > 0));
+  (settings.policy.secrets || settings.policy.personal || settings.policy.words.length > 0 || settings.policy.rules.length > 0);
 
 /**
  * 隐私脱敏：「概览」看没让上游看到的（头卡、原理说明、按请求或按值的列表、单条详情）。控制台
  * （scope="tenant"）和门户（scope="portal"）共用。
  *
  * - 控制台另有「设置」：配要遮什么、怎么处理、例外和试一试。
- * - 门户只读：要不要脱敏、遮什么由管理员决定，门户只让用户知道脱敏怎么做、自己的请求遮了什么。
- *   第二个标签是「生效的规则」（只读的规则加试一试），不调任何写接口；canWrite 不起作用。渠道换成
- *   上游厂商显示，流向图右边不能点来筛选（门户不显示渠道是谁，见 portalUpstreams.ts）。active 为
- *   false 时概览不自动刷新。
+ * - 门户只读：要不要脱敏、遮什么全由租户管理员决定，门户只让用户知道脱敏怎么做、自己的请求遮了
+ *   什么。第二个标签是「生效的规则」（只读的规则加试一试），不调任何写接口；canWrite 不起作用。
+ *   门户的设置形状和控制台的不同（privacyMaskingPortalApi），单独存一份。服务器关掉了脱敏时
+ *   如实说明。渠道换成上游厂商显示，流向图右边不能点来筛选（门户不显示渠道是谁，见
+ *   portalUpstreams.ts）。active 为 false 时概览不自动刷新。
  *
  * 子标签栏吸顶要外面有一个会滚的容器：控制台的内容区，门户里是这个标签自己的滚动区。
  */
@@ -58,7 +59,8 @@ export function PrivacyMaskingWorkspace({
   const [tab, setTab] = useState<Tab>("overview");
   const [mode, setMode] = useState<FeedMode>("request");
   const [openKey, setOpenKey] = useState<string | null>(null);
-  const [settings, setSettings] = useState<MaskingSettingsView | null>(null);
+  const [settings, setSettings] = useState<PrivacyMaskSettings | null>(null);
+  const [portalSettings, setPortalSettings] = useState<PortalPrivacyMaskSettings | null>(null);
   const [settingsError, setSettingsError] = useState("");
   const [saving, setSaving] = useState(false);
   const overview = useMaskingOverview(source, active);
@@ -79,15 +81,14 @@ export function PrivacyMaskingWorkspace({
 
   const loadSettings = useCallback(() => {
     setSettingsError("");
-    source
-      .getSettings()
-      .then(setSettings)
-      .catch((e: unknown) => setSettingsError(e instanceof Error ? e.message : String(e)));
-  }, [source]);
+    const loaded = portal
+      ? privacyMaskingPortalApi.getSettings().then(setPortalSettings)
+      : privacyMaskingApi.getSettings().then(setSettings);
+    loaded.catch((e: unknown) => setSettingsError(e instanceof Error ? e.message : String(e)));
+  }, [portal]);
   useEffect(loadSettings, [loadSettings]);
 
-  // 只有控制台的设置页会保存；门户只读，没有入口走到这里
-  const save = async (next: MaskingSettingsView) => {
+  const save = async (next: PrivacyMaskSettings) => {
     setSaving(true);
     try {
       const saved = await privacyMaskingApi.putSettings({
@@ -137,6 +138,12 @@ export function PrivacyMaskingWorkspace({
           </TabsList>
         </div>
 
+        {portalSettings?.server_disabled ? (
+          <Callout tone="warning" role="status">
+            {t("privacy_masking.portal.server_disabled")}
+          </Callout>
+        ) : null}
+
         <TabsContent value="overview">
           <div className="flex flex-col gap-4">
             {overview.error ? (
@@ -147,7 +154,7 @@ export function PrivacyMaskingWorkspace({
             <MaskingSummaryCard
               summary={summary}
               scope={scope}
-              enabled={maskingOn(settings, scope)}
+              enabled={portal ? !portalSettings?.server_disabled && maskingOn(portalSettings) : maskingOn(settings)}
               days={overview.days}
               onDays={overview.setDays}
               selectedClient={filters.client}
@@ -197,8 +204,8 @@ export function PrivacyMaskingWorkspace({
             >
               {settingsError}
             </Callout>
-          ) : settings && portal ? (
-            <MaskingRulesView settings={settings} preview={source.preview} />
+          ) : portalSettings ? (
+            <MaskingRulesView settings={portalSettings} />
           ) : settings ? (
             <MaskingSettingsPanel key={settings.updated_at ?? "initial"} settings={settings} scope={scope} canWrite={canWrite} saving={saving} onSave={(next) => void save(next)} />
           ) : (

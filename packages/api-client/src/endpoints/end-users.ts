@@ -404,13 +404,11 @@ export const portalApi = {
      */
     wordPolicyAllowed: boolean;
     /**
-     * Whether the tenant lets the account keep privacy masking settings of its own. The portal
-     * shows privacy masking read-only either way (the administrator decides what is masked); what
-     * matters to it is that the field is there at all. Null when the backend does not say: an
-     * older backend has no portal privacy masking (portalPrivacyMaskingApi), so the portal must
-     * not offer it, nor ask for it.
+     * The backend serves the portal's read-only privacy masking (privacyMaskingPortalApi): its
+     * capabilities say `"privacy-masking": true`, explicitly, as readConfigCapabilities reads the
+     * console's. An older backend does not, and the portal then neither offers it nor asks for it.
      */
-    privacyMaskingAllowed: boolean | null;
+    privacyMasking: boolean;
   }> => {
     const raw = await portalClient.get<unknown>("/v0/portal/auth/me");
     const record = isRecord(raw) ? raw : {};
@@ -418,8 +416,7 @@ export const portalApi = {
       user: normalizeEndUser(record.user),
       capabilities: readAccessPolicyCapabilities(record.capabilities),
       wordPolicyAllowed: record.word_policy_allowed === true,
-      privacyMaskingAllowed:
-        typeof record.privacy_masking_allowed === "boolean" ? record.privacy_masking_allowed : null,
+      privacyMasking: isRecord(record.capabilities) && record.capabilities["privacy-masking"] === true,
     };
   },
   /**

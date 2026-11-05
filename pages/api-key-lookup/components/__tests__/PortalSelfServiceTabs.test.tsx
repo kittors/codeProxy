@@ -16,7 +16,7 @@ const portal = vi.hoisted(() => ({
 
 vi.mock("@code-proxy/api-client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@code-proxy/api-client")>()),
-  portalPrivacyMaskingApi: portal,
+  privacyMaskingPortalApi: portal,
 }));
 
 // 敏感词标签有自己的单测，这里只看两个标签怎么挂
@@ -65,11 +65,6 @@ describe("the portal's self-service tabs", () => {
         allow: [],
         actions: {},
       },
-      own: false,
-      allowed: false,
-      enforced: [],
-      portal_default_allowed: false,
-      persistent: true,
     });
   });
 

@@ -199,18 +199,14 @@ const policy = (patch: Record<string, unknown> = {}) => ({
   ...patch,
 });
 
-/** 有记录：管理员强制了密钥，默认设置里还开了个人信息，私钥和邮箱另有处理方式，另有脱敏词（不显示内容）。 */
+/** 有记录：租户开了密钥和个人信息，私钥和邮箱另有处理方式，另有脱敏词（不显示内容）。 */
 const MASKING_ON = {
   settings: {
     policy: policy({
       personal: true,
       actions: { PRIVATE_KEY: "block", EMAIL: "warn", TERM: "block" },
     }),
-    own: false,
-    allowed: false,
-    enforced: ["secrets"],
-    portal_default_allowed: false,
-    persistent: true,
+    updated_at: at(60 * 24),
   },
   summary: SUMMARY,
   records: RECORDS,
@@ -220,11 +216,7 @@ const MASKING_ON = {
 const MASKING_OFF = {
   settings: {
     policy: policy({ secrets: false }),
-    own: false,
-    allowed: true,
-    enforced: [],
-    portal_default_allowed: true,
-    persistent: true,
+    updated_at: at(60 * 24),
   },
   summary: EMPTY_SUMMARY,
   records: [],
@@ -235,7 +227,7 @@ type Backend = typeof MASKING_ON | typeof MASKING_OFF | null;
 const json = (route: Route, body: unknown, status = 200) =>
   route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
 
-/** backend 为 null：旧后端，/auth/me 不带 privacy_masking_allowed，也没有门户脱敏接口。 */
+/** backend 为 null：旧后端，/auth/me 的 capabilities 不声明 privacy-masking，也没有门户脱敏接口。 */
 async function mockPortal(page: Page, backend: Backend) {
   const seen = { asked: 0, writes: [] as string[] };
   await page.addInitScript(() => {
@@ -265,9 +257,11 @@ async function mockPortal(page: Page, backend: Backend) {
           display_name: "Alice 工作室",
           status: "active",
         },
-        capabilities: { "access-policy": true },
+        capabilities: {
+          "access-policy": true,
+          ...(backend === null ? {} : { "privacy-masking": true }),
+        },
         word_policy_allowed: false,
-        ...(backend === null ? {} : { privacy_masking_allowed: backend.settings.allowed }),
       });
     }
     if (path === "/v0/portal/api-keys") return json(route, { items: [], capabilities: {} });
@@ -289,8 +283,9 @@ async function mockPortal(page: Page, backend: Backend) {
       if (sub === "/settings") return json(route, backend.settings);
       if (sub === "/preview") {
         const body = JSON.parse(request.postData() ?? "{}") as Record<string, unknown>;
-        // 门户的试一试按现在生效的规则处理，不带草稿
-        if ("policy" in body) seen.writes.push("preview with a policy");
+        // 门户的试一试只发文字，由服务器按租户的设置处理
+        if (Object.keys(body).join() !== "text")
+          seen.writes.push(`preview with ${Object.keys(body).join()}`);
         return json(route, {
           text: "用密钥 {{API_KEY_7moi35iu}} 部署，数据库密码：{{PASSWORD_n5t7zt53}}，发邮件给 {{EMAIL_q2wn3k5d}}",
           values: [
@@ -371,7 +366,8 @@ for (const scheme of ["light", "dark"] as const) {
 
       await page.getByRole("tab", { name: "生效的规则" }).click();
       await expect(page.getByRole("heading", { name: "对你生效的脱敏规则" })).toBeVisible();
-      await expect(page.getByText("管理员已强制开启")).toBeVisible();
+      // 没有「管理员强制」这回事：所有规则都由管理员定
+      await expect(page.getByText("管理员已强制开启")).toHaveCount(0);
       await expect(
         page.getByText("管理员可能还配置了脱敏词和自定义规则，内容不对你显示。"),
       ).toBeVisible();

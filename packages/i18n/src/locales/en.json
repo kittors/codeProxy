@@ -8575,7 +8575,8 @@
       "try_desc": "Paste some text to see what upstream would get. It uses the rules on your requests now, without your administrator's masked words and rules, and is kept nowhere.",
       "off_title": "Masking isn't on for your requests",
       "off_desc": "Once it's on, API keys, private keys, tokens and passwords become placeholders before they leave CliRelay and are put back in each reply, and what each request had masked shows here. Your administrator decides whether it's on.",
-      "upstream_other": "Other upstreams"
+      "upstream_other": "Other upstreams",
+      "server_disabled": "Masking is switched off on the server for now: until it is back on, your requests go upstream unmasked."
     }
   }
 }

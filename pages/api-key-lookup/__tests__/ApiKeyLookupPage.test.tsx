@@ -151,7 +151,7 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
       deleteKey: vi.fn(),
       changePassword: vi.fn(),
     },
-    portalPrivacyMaskingApi: {
+    privacyMaskingPortalApi: {
       getSummary: vi.fn(),
       listRecords: vi.fn(),
       getRecord: vi.fn(),
@@ -396,13 +396,12 @@ describe("ApiKeyLookupPage", () => {
     expect(screen.queryByText(/^default$|^默认$/i)).not.toBeInTheDocument();
   });
 
-  // 门户的隐私脱敏一律只读：允不允许自设都给标签，只有旧后端（不带这个字段）没有
+  // 门户的隐私脱敏一律只读：后端在 capabilities 里声明了就给标签，旧后端没有
   test.each([
-    ["an account the tenant lets set its own", true],
-    ["an account the tenant does not", false],
-    ["an older backend", null],
-  ] as const)("privacy masking tab for %s", async (_name, allowed) => {
-    const { portalApi, portalPrivacyMaskingApi } = await import("@code-proxy/api-client");
+    ["a backend that serves it", true],
+    ["an older backend", false],
+  ] as const)("privacy masking tab on %s", async (_name, supported) => {
+    const { portalApi, privacyMaskingPortalApi } = await import("@code-proxy/api-client");
     vi.mocked(portalApi.loadSession).mockReturnValue({
       apiBase: "http://relay.test",
       accessToken: "cpt_account",
@@ -412,18 +411,13 @@ describe("ApiKeyLookupPage", () => {
     });
     vi.mocked(portalApi.me).mockResolvedValue({
       user: { id: "u-account", tenant_id: "t-account", username: "alice", display_name: "Alice", status: "active", must_change_password: false, created_at: "", updated_at: "", version: 1 },
-      privacyMaskingAllowed: allowed,
+      privacyMasking: supported,
     } as never);
     vi.mocked(portalApi.listKeys).mockResolvedValue({ items: [] } as never);
-    vi.mocked(portalPrivacyMaskingApi.getSummary).mockResolvedValue({ days: [], places: 0, distinct: 0, requests: 0, blocked: 0, warned: 0, kinds: [], clients: [], channels: [], values: [] });
-    vi.mocked(portalPrivacyMaskingApi.listRecords).mockResolvedValue({ items: [] });
-    vi.mocked(portalPrivacyMaskingApi.getSettings).mockResolvedValue({
+    vi.mocked(privacyMaskingPortalApi.getSummary).mockResolvedValue({ days: [], places: 0, distinct: 0, requests: 0, blocked: 0, warned: 0, kinds: [], clients: [], channels: [], values: [] });
+    vi.mocked(privacyMaskingPortalApi.listRecords).mockResolvedValue({ items: [] });
+    vi.mocked(privacyMaskingPortalApi.getSettings).mockResolvedValue({
       policy: { secrets: true, personal: false, kinds: {}, words: [], words_any_case: false, words_whole: false, rules: [], allow: [], actions: {} },
-      own: false,
-      allowed: allowed === true,
-      enforced: [],
-      portal_default_allowed: allowed === true,
-      persistent: true,
     });
 
     render(
@@ -435,18 +429,18 @@ describe("ApiKeyLookupPage", () => {
     );
     await screen.findByRole("tab", { name: /manage api keys|管理 api key/i });
     const tab = screen.queryByRole("tab", { name: /^(privacy masking|隐私脱敏|Маскирование данных)$/i });
-    if (allowed === null) {
+    if (!supported) {
       // 旧后端没有门户脱敏：不给标签，也不去请求它的接口
       expect(tab).not.toBeInTheDocument();
-      expect(portalPrivacyMaskingApi.listRecords).not.toHaveBeenCalled();
+      expect(privacyMaskingPortalApi.listRecords).not.toHaveBeenCalled();
       return;
     }
     // 第一次点开才请求：只看用量的门户用户不该在后台每 15 秒查一次脱敏记录
-    expect(portalPrivacyMaskingApi.listRecords).not.toHaveBeenCalled();
+    expect(privacyMaskingPortalApi.listRecords).not.toHaveBeenCalled();
     await userEvent.click(tab!);
     expect(await screen.findByRole("tab", { name: /rules in effect|生效的规则/i })).toBeVisible();
-    await waitFor(() => expect(portalPrivacyMaskingApi.listRecords).toHaveBeenCalled());
-    // 这个标签有自己的刷新，工具栏上的刷新会打断设置的草稿（按钮还在，所在的一栏 hidden）
+    await waitFor(() => expect(privacyMaskingPortalApi.listRecords).toHaveBeenCalled());
+    // 这个标签有自己的刷新，工具栏上的刷新不放（按钮还在，所在的一栏 hidden）
     expect(screen.getByRole("button", { name: /^(refresh|刷新)$/i }).closest(".hidden")).not.toBeNull();
   });
 

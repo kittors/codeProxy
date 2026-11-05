@@ -1,8 +1,12 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Check, Lock } from "lucide-react";
+import { Check } from "lucide-react";
 import { SettingGroup, SettingRow } from "@code-proxy/ui";
-import type { MaskKindAction, PrivacyMaskPolicy, PrivacyMaskPreview } from "@code-proxy/api-client";
+import {
+  privacyMaskingPortalApi,
+  type MaskKindAction,
+  type PortalPrivacyMaskSettings,
+} from "@code-proxy/api-client";
 import { KindDot, useKindLabel } from "./KindChip";
 import {
   ACTION_CHIP,
@@ -12,7 +16,9 @@ import {
   maskCategory,
 } from "./maskKinds";
 import { MaskingTryIt } from "./MaskingTryIt";
-import type { MaskingSettingsView } from "./source";
+
+// 门户的试一试只发文字，由服务器按租户的设置处理；模块级的函数引用稳定，不让试一试反复重发
+const portalPreview = (text: string) => privacyMaskingPortalApi.preview(text);
 
 function Section({
   title,
@@ -35,35 +41,20 @@ function Section({
 }
 
 /**
- * 门户的「生效的规则」：现在对这个门户用户的请求生效的脱敏规则，只读。要不要脱敏、遮什么由管理员
- * 决定，这里只让用户知道哪些类别在遮、每类怎么处理、哪些是管理员强制的，再配一个试一试看效果。
+ * 门户的「生效的规则」：租户管理员定的脱敏规则，只读。要不要脱敏、遮什么全由管理员决定，这里只让
+ * 门户用户知道哪些类别在遮、每类怎么处理，再配一个试一试看效果。
  *
- * 数据是门户的 GET settings：门户用户没有自己的设置时是管理员的默认设置，但服务器去掉了管理员的
- * 脱敏词、自定义规则和「从不脱敏」——有意不给门户看，这里也不设法去拿，只写一句说明。
- *
- * 强制开启的类目：开着；存着的「提醒」按服务器的合并显示成脱敏（原样发出正是强制要排除的）。
- * 试一试不传 policy，由服务器按同一份规则处理，同样不含管理员的脱敏词和规则。
+ * 数据是门户的 GET settings：租户的设置，但脱敏词、自定义规则和「从不脱敏」被服务器清空了——有意
+ * 不给门户看，这里也不设法去拿，只写一句说明；actions 里另记了处理方式的脱敏词、规则类型照样列出
+ * （命中时会被拦下的，用户该知道）。试一试只发文字，同样不含它们。
  */
-export function MaskingRulesView({
-  settings,
-  preview,
-}: {
-  settings: MaskingSettingsView;
-  preview: (text: string, policy?: PrivacyMaskPolicy) => Promise<PrivacyMaskPreview>;
-}) {
+export function MaskingRulesView({ settings }: { settings: PortalPrivacyMaskSettings }) {
   const { t } = useTranslation();
   const kindLabel = useKindLabel();
   const { policy } = settings;
-  const enforced = new Set(settings.enforced);
-  const secretsOn = policy.secrets || enforced.has("secrets");
-  const personalOn = policy.personal || enforced.has("personal");
-  const locked = (category: string) =>
-    (category === "secret" && enforced.has("secrets")) ||
-    (category === "personal" && enforced.has("personal"));
-  const actionOf = (kind: string): MaskKindAction => {
-    const action = policy.actions[kind] ?? "mask";
-    return action === "warn" && locked(maskCategory(kind)) ? "mask" : action;
-  };
+  const secretsOn = policy.secrets;
+  const personalOn = policy.personal;
+  const actionOf = (kind: string): MaskKindAction => policy.actions[kind] ?? "mask";
   // 设置页能逐类选的那些，加上 actions 里另记了处理方式的同类类型
   const kindsOf = (category: string, base: string[]) => [
     ...base,
@@ -92,13 +83,6 @@ export function MaskingRulesView({
       {on ? t("privacy_masking.portal.state_on") : t("privacy_masking.portal.state_off")}
     </span>
   );
-  const enforcedBadge = (id: string) =>
-    enforced.has(id) ? (
-      <span className="inline-flex items-center gap-1 rounded-md bg-violet-500/10 px-1.5 py-0.5 text-2xs font-medium text-violet-700 dark:bg-violet-400/15 dark:text-violet-200">
-        <Lock size={11} aria-hidden="true" />
-        {t("privacy_masking.settings.enforced_badge")}
-      </span>
-    ) : null;
   const kindActions = (kinds: string[]) => (
     <ul
       className="mt-3 flex flex-wrap gap-1.5"
@@ -137,7 +121,6 @@ export function MaskingRulesView({
           <SettingRow
             label={t("privacy_masking.facet.secret")}
             description={t("privacy_masking.settings.secrets_desc")}
-            badges={enforcedBadge("secrets")}
             controlWidth="auto"
             control={state(secretsOn)}
           >
@@ -146,7 +129,6 @@ export function MaskingRulesView({
           <SettingRow
             label={t("privacy_masking.facet.personal")}
             description={t("privacy_masking.settings.personal_desc")}
-            badges={enforcedBadge("personal")}
             controlWidth="auto"
             control={state(personalOn)}
           >
@@ -188,7 +170,7 @@ export function MaskingRulesView({
         >
           <SettingGroup>
             <div className="px-4 py-3.5">
-              <MaskingTryIt preview={preview} stacked />
+              <MaskingTryIt preview={portalPreview} stacked />
             </div>
           </SettingGroup>
         </Section>

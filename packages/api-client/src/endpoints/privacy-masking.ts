@@ -1,13 +1,11 @@
 import { apiClient } from "../client/client";
-import { portalClient } from "../client/portal-client";
 
 /**
  * 隐私脱敏：请求发往上游前把密钥、个人信息、脱敏词换成占位符，回复里再换回来（CliRelay
  * internal/privacymask）。这里是观测页和设置页用的接口。
  *
  * 记录里从不出现原值：每个值只有类型、是谁找到的、开头几个字符和长度；「上游看到的」片段里是
- * 占位符。控制台只有后端在 GET /config 声明 `privacy-masking` 时才请求这些接口；门户的
- * （portalPrivacyMaskingApi）看 /v0/portal/auth/me 有没有带 privacy_masking_allowed。
+ * 占位符。只有后端在 GET /config 声明 `privacy-masking` 时才请求这些接口。
  */
 
 /** 谁找到的：内置规则、用户自己的规则、脱敏词、之前遮过的值（同一个值再出现）。 */
@@ -199,37 +197,4 @@ export const privacyMaskingApi = {
     apiClient.put<PrivacyMaskSettings>("/privacy-masking/settings", settings),
   preview: (text: string, policy?: PrivacyMaskPolicy) =>
     apiClient.post<PrivacyMaskPreview>("/privacy-masking/preview", { text, policy }),
-};
-
-/**
- * 门户里看到的设置（GET /v0/portal/privacy-masking/settings）：现在对这个门户用户生效的那份。
- * 门户用户没有自己的设置时是管理员的默认设置，但去掉了管理员的脱敏词、自定义规则和「从不脱敏」——
- * 它们照样作用于这个用户的请求，只是不给门户用户看，免得用试一试把没公开的词一个个试出来
- * （CliRelay privacy_masking_portal.go）。门户视图没有 key_protected 和 server_disabled。
- */
-export interface PortalPrivacyMaskSettings extends PrivacyMaskSettings {
-  /** 用户有自己的设置；false 时 policy 是管理员的默认设置。 */
-  own: boolean;
-  /** 管理员是否允许这个用户自己设置。门户界面一律只读，不看它。 */
-  allowed: boolean;
-}
-
-const PORTAL = "/v0/portal/privacy-masking";
-
-/**
- * 门户用户名下请求的脱敏（/v0/portal/privacy-masking），只读：要不要脱敏、遮什么由管理员决定，
- * 门户只用来让用户知道脱敏怎么做、自己的请求遮了什么。后端另有写设置和清空记录的接口，门户不调用，
- * 这里也不提供。记录只有本人名下 API Key 的请求，服务器按会话定范围，不认 end_user_id、api_key_id。
- */
-export const portalPrivacyMaskingApi = {
-  getSummary: (query: MaskQuery) =>
-    portalClient.get<MaskSummary>(`${PORTAL}/summary${queryString(query)}`),
-  listRecords: (query: MaskQuery, page: { before?: string; limit?: number } = {}) =>
-    portalClient.get<MaskRecordPage>(`${PORTAL}/records${queryString({ ...query, ...page })}`),
-  getRecord: (key: string) =>
-    portalClient.get<MaskRecordDetail>(`${PORTAL}/records/${encodeURIComponent(key)}`),
-  getSettings: () => portalClient.get<PortalPrivacyMaskSettings>(`${PORTAL}/settings`),
-  /** 试一试：不带 policy 时按现在对这个用户生效的规则处理，不含管理员的脱敏词、规则和「从不脱敏」。 */
-  preview: (text: string, policy?: PrivacyMaskPolicy) =>
-    portalClient.post<PrivacyMaskPreview>(`${PORTAL}/preview`, { text, policy }),
 };

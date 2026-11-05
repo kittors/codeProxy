@@ -7,8 +7,8 @@ import { ThemeProvider, ToastProvider } from "@code-proxy/ui";
 import { PrivacyMaskingWorkspace } from "../PrivacyMaskingWorkspace";
 
 /**
- * 门户里的隐私脱敏，只读：门户用户看自己请求遮了什么、现在对自己生效的规则，用试一试看效果；
- * 要不要脱敏、遮什么由管理员决定，门户里没有任何设置入口。接口按模块替换成假的。
+ * 门户里的隐私脱敏，只读：门户用户看自己请求遮了什么、租户管理员定的规则，用试一试看效果；要不要
+ * 脱敏、遮什么全由管理员决定，门户里没有任何设置入口。接口按模块替换成假的。
  */
 
 const portal = vi.hoisted(() => ({
@@ -28,7 +28,7 @@ const tenant = vi.hoisted(() => ({
 
 vi.mock("@code-proxy/api-client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@code-proxy/api-client")>()),
-  portalPrivacyMaskingApi: portal,
+  privacyMaskingPortalApi: portal,
   privacyMaskingApi: tenant,
 }));
 
@@ -39,6 +39,7 @@ const policy = (patch: Partial<PrivacyMaskPolicy> = {}): PrivacyMaskPolicy => ({
   secrets: true,
   personal: false,
   kinds: {},
+  // 门户拿到的是租户设置，脱敏词、规则和「从不脱敏」被服务器清空
   words: [],
   words_any_case: false,
   words_whole: false,
@@ -50,12 +51,7 @@ const policy = (patch: Partial<PrivacyMaskPolicy> = {}): PrivacyMaskPolicy => ({
 
 const view = (patch: Partial<PortalPrivacyMaskSettings> = {}): PortalPrivacyMaskSettings => ({
   policy: policy(),
-  own: false,
-  allowed: true,
-  enforced: [],
-  portal_default_allowed: true,
-  persistent: true,
-  updated_at: "",
+  updated_at: "2026-11-05T08:00:00Z",
   ...patch,
 });
 
@@ -149,14 +145,11 @@ describe("privacy masking in the portal", () => {
     );
   });
 
-  test("lists the rules in effect read-only: what is masked, how, and what the administrator enforces", async () => {
+  test("lists the tenant's rules read-only: what is masked and how each kind is handled", async () => {
     const user = userEvent.setup();
     portal.getSettings.mockResolvedValue(
       view({
-        allowed: true,
-        enforced: ["secrets"],
         policy: policy({
-          secrets: false,
           personal: true,
           kinds: { ip: true, ssn: false },
           actions: { API_KEY: "warn", EMAIL: "block", TERM: "block", GATEWAY_KEY: "warn" },
@@ -169,17 +162,16 @@ describe("privacy masking in the portal", () => {
     expect(
       await screen.findByRole("heading", { name: "Masking rules on your requests" }),
     ).toBeInTheDocument();
-    // 只读：没有开关、没有保存，管理员允不允许自设都一样
+    // 只读：没有开关、没有保存；也没有「管理员强制」这回事
     expect(screen.queryAllByRole("switch")).toHaveLength(0);
     expect(screen.queryByRole("button", { name: "Save" })).not.toBeInTheDocument();
-    expect(screen.queryByText("Portal users can choose their own")).not.toBeInTheDocument();
+    expect(screen.queryByText("Turned on by an administrator")).not.toBeInTheDocument();
 
-    // 强制开启的密钥：用户设置里关着也是开的，存着的「提醒」按服务器的合并显示成脱敏
-    expect(screen.getByText("Turned on by an administrator")).toBeInTheDocument();
     const [secretActions, personalActions, otherActions] = screen.getAllByRole("list", {
       name: "When a value is found",
     });
-    expect(within(secretActions).getByText("API key").closest("li")).toHaveTextContent("Mask");
+    expect(within(secretActions).getByText("API key").closest("li")).toHaveTextContent("Warn");
+    expect(within(secretActions).getByText("Private key").closest("li")).toHaveTextContent("Mask");
     expect(within(personalActions).getByText("Email").closest("li")).toHaveTextContent("Block");
     const categories = screen.getByRole("list", { name: "Other personal data masked" });
     expect(within(categories).getByText("Public IP addresses")).toBeInTheDocument();
@@ -195,13 +187,14 @@ describe("privacy masking in the portal", () => {
     expect(within(otherActions).getByText("GATEWAY_KEY").closest("li")).toHaveTextContent("Warn");
   });
 
-  test("tries a text out under the rules in effect, sending no draft", async () => {
+  test("tries a text out with nothing but the text", async () => {
     const user = userEvent.setup();
     renderPortal();
     await openRules(user);
 
     await user.type(await screen.findByRole("textbox", { name: "Try it" }), "sk-proj-abc");
-    await waitFor(() => expect(portal.preview).toHaveBeenCalledWith("sk-proj-abc", undefined));
+    await waitFor(() => expect(portal.preview).toHaveBeenCalled());
+    expect(portal.preview.mock.calls[0]).toEqual(["sk-proj-abc"]);
     expect(await screen.findByText("Upstream would get")).toBeInTheDocument();
     expect(tenant.preview).not.toHaveBeenCalled();
   });
@@ -215,5 +208,17 @@ describe("privacy masking in the portal", () => {
     expect(await screen.findByText("Masking isn't on for your requests")).toBeInTheDocument();
     expect(screen.getByText(/Your administrator decides whether it's on/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Turn on masking" })).not.toBeInTheDocument();
+  });
+
+  test("says so when masking is switched off on the server, whatever the rules say", async () => {
+    portal.getSettings.mockResolvedValue(view({ server_disabled: true }));
+    renderPortal();
+
+    expect(
+      await screen.findByText(/Masking is switched off on the server for now/),
+    ).toBeInTheDocument();
+    // 规则里开着密钥，但服务器没在遮：头卡不能写「脱敏中」
+    const card = screen.getByRole("heading", { name: "Kept from upstream" }).closest("section")!;
+    expect(within(card).getByText("Off")).toBeInTheDocument();
   });
 });

@@ -2,18 +2,14 @@ import { describe, expect, test } from "vitest";
 import { NO_PORTAL_GRANTS, portalGrantsOf, portalTabAvailable } from "../portalGrants";
 
 describe("portal grants", () => {
-  test("privacy masking is there whenever the backend says anything about it, allowed or not", () => {
+  test("privacy masking is there when the backend declares it", () => {
+    // 字段缺省按旧后端处理
     expect(portalGrantsOf({})).toEqual({ words: false, privacyMasking: false });
-    expect(portalGrantsOf({ wordPolicyAllowed: true, privacyMaskingAllowed: null })).toEqual({
+    expect(portalGrantsOf({ wordPolicyAllowed: true, privacyMasking: false })).toEqual({
       words: true,
       privacyMasking: false,
     });
-    // 门户一律只读：允不允许自设都一样有这个标签
-    expect(portalGrantsOf({ privacyMaskingAllowed: false })).toEqual({
-      words: false,
-      privacyMasking: true,
-    });
-    expect(portalGrantsOf({ privacyMaskingAllowed: true })).toEqual({
+    expect(portalGrantsOf({ privacyMasking: true })).toEqual({
       words: false,
       privacyMasking: true,
     });
