@@ -46,7 +46,19 @@ export interface MonitorTotals {
   cache_write_tokens?: number;
   latency_avg_ms: number;
   first_token_avg_ms: number;
-  output_tokens_per_second: number;
+  /**
+   * Generation speed: per request, output tokens over the time after the first token, over
+   * successful streams with at least 0.5 s of generation and 50 output tokens (reasoning tokens
+   * do not count). `generation_samples` counts those requests and `generation_tokens_per_second`
+   * is the mean of their speeds, null without a sample. Both are null from a backend older than
+   * these fields: its `output_tokens_per_second` divided by the whole duration, first-token wait
+   * included, and is deliberately not read.
+   */
+  generation_samples: number | null;
+  generation_tokens_per_second: number | null;
+  /** Output tokens and time after the first token, summed over the same samples. */
+  generation_output_tokens: number;
+  generation_ms: number;
 }
 
 export interface MonitorSeriesPoint extends MonitorTotals {
@@ -73,6 +85,11 @@ export interface MonitorBreakdownRow extends MonitorTotals {
   kind: string;
   /** Masked key hint such as `sk-…ab12`; never the secret. */
   key_hint: string;
+  /**
+   * Per-request distributions read from the request details. Model rows only; null from older
+   * backends, on other rankings, and when the backend could not read the details.
+   */
+  performance: MonitorModelPerformance | null;
   /** Requests per series bucket; only the top rows carry it. */
   trend: number[];
   trend_failed: number[];
@@ -82,6 +99,30 @@ export interface MonitorBreakdown {
   rows: MonitorBreakdownRow[];
   /** Distinct values in the window, of which `rows` are the heaviest. */
   total: number;
+  /**
+   * Oldest request detail behind the rows' `performance` (model ranking only; "" otherwise).
+   * Details expire before rollups do, so on long ranges it is later than the range start.
+   */
+  performance_coverage_start: string;
+}
+
+/** One per-request measurement; p50 and p90 are 0 when there is no sample. */
+export interface MonitorQuantiles {
+  samples: number;
+  p50: number;
+  p90: number;
+}
+
+export interface MonitorModelPerformance {
+  /** Tokens per second, over the samples of `generation_tokens_per_second`. */
+  generation_speed: MonitorQuantiles;
+  /** Time to the first token in ms, over successful streams that recorded one. */
+  first_token_ms: MonitorQuantiles;
+  /**
+   * Summed first-token time over summed input tokens, per thousand input tokens, over the same
+   * streams (those that reported their input); null without one.
+   */
+  first_token_ms_per_1k_input: number | null;
 }
 
 export interface MonitorLatencyStats {
@@ -299,7 +340,8 @@ const TOTAL_FIELDS = [
   "success_rate",
   "latency_avg_ms",
   "first_token_avg_ms",
-  "output_tokens_per_second",
+  "generation_output_tokens",
+  "generation_ms",
 ] as const satisfies readonly (keyof MonitorTotals)[];
 
 const asRecord = (value: unknown): Record<string, unknown> =>
@@ -314,6 +356,13 @@ const toNumber = (value: unknown): number => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
+/** null for a field that is absent (an older backend) or null (nothing measured it). */
+const toNullableNumber = (value: unknown): number | null => {
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
 const toText = (value: unknown): string => (typeof value === "string" ? value : "");
 
 const toNumbers = (value: unknown): number[] => asArray(value).map(toNumber);
@@ -324,6 +373,10 @@ export function normalizeMonitorTotals(raw: unknown): MonitorTotals {
   const record = asRecord(raw);
   const totals = {} as MonitorTotals;
   for (const field of TOTAL_FIELDS) totals[field] = toNumber(record[field]);
+  // The generation speed is null, never 0, when nothing measured it, so a dash
+  // can tell "no sample" from a speed; toNumber would turn both into 0.
+  totals.generation_samples = toNullableNumber(record.generation_samples);
+  totals.generation_tokens_per_second = toNullableNumber(record.generation_tokens_per_second);
   // The cache fields keep the difference between "absent" (an older backend)
   // and null (no request reported its cache use), which toNumber would erase.
   return Object.assign(totals, pickCacheRateFields(record));
@@ -338,6 +391,25 @@ const normalizeSeries = (raw: unknown): MonitorSeriesPoint[] =>
 const isRangeKey = (value: string): value is MonitorRangeKey =>
   (MONITOR_RANGE_KEYS as readonly string[]).includes(value);
 
+const normalizeQuantiles = (raw: unknown): MonitorQuantiles => {
+  const record = asRecord(raw);
+  return {
+    samples: toNumber(record.samples),
+    p50: toNumber(record.p50),
+    p90: toNumber(record.p90),
+  };
+};
+
+const normalizePerformance = (raw: unknown): MonitorModelPerformance | null => {
+  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const record = raw as Record<string, unknown>;
+  return {
+    generation_speed: normalizeQuantiles(record.generation_speed),
+    first_token_ms: normalizeQuantiles(record.first_token_ms),
+    first_token_ms_per_1k_input: toNullableNumber(record.first_token_ms_per_1k_input),
+  };
+};
+
 const normalizeBreakdown = (raw: unknown): MonitorBreakdown => {
   const record = asRecord(raw);
   const rows = asArray(record.rows).map((item) => {
@@ -350,11 +422,16 @@ const normalizeBreakdown = (raw: unknown): MonitorBreakdown => {
       auth_type: toText(row.auth_type),
       kind: toText(row.kind),
       key_hint: toText(row.key_hint),
+      performance: normalizePerformance(row.performance),
       trend: toNumbers(row.trend),
       trend_failed: toNumbers(row.trend_failed),
     };
   });
-  return { rows, total: Math.max(toNumber(record.total), rows.length) };
+  return {
+    rows,
+    total: Math.max(toNumber(record.total), rows.length),
+    performance_coverage_start: toText(record.performance_coverage_start),
+  };
 };
 
 const normalizeLatencyStats = (raw: unknown, bins: number): MonitorLatencyStats => {
