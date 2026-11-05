@@ -171,6 +171,8 @@ const shoot = async (page: Page, name: string) => {
 
 test.describe("privacy masking page", () => {
   test("overview, a request's detail and the settings", async ({ page }) => {
+    // 走完整页：概览、说明、按值、详情、设置和试一试；冷启动的开发服务器上会超过默认 30 秒
+    test.slow();
     await page.setViewportSize({ width: 1470, height: 900 });
     await mock(page);
     await page.goto("/#/runtime/privacy-masking");
