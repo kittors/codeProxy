@@ -11,8 +11,6 @@ const portal = vi.hoisted(() => ({
   listRecords: vi.fn(),
   getRecord: vi.fn(),
   getSettings: vi.fn(),
-  putSettings: vi.fn(),
-  resetSettings: vi.fn(),
   preview: vi.fn(),
 }));
 
@@ -76,27 +74,27 @@ describe("the portal's self-service tabs", () => {
   });
 
   test("privacy masking asks for nothing until its tab is opened, then stays mounted behind other tabs", async () => {
-    const grants: PortalGrants = { words: true, privacyMasking: false };
+    const grants: PortalGrants = { words: true, privacyMasking: true };
     const view = render(ui("usage", grants));
     expect(screen.getByText("sensitive words")).not.toBeVisible();
     expect(asked()).toBe(0);
 
     view.rerender(ui("privacy", grants));
-    expect(await screen.findByRole("tab", { name: "My settings" })).toBeVisible();
+    expect(await screen.findByRole("tab", { name: "Rules in effect" })).toBeVisible();
     expect(portal.listRecords).toHaveBeenCalledTimes(1);
     expect(portal.getSettings).toHaveBeenCalledTimes(1);
 
     // 切走只是藏起来：再回来不重新挂，不重新读
     view.rerender(ui("usage", grants));
-    expect(screen.getByRole("tab", { name: "My settings", hidden: true })).not.toBeVisible();
+    expect(screen.getByRole("tab", { name: "Rules in effect", hidden: true })).not.toBeVisible();
     view.rerender(ui("privacy", grants));
-    expect(screen.getByRole("tab", { name: "My settings" })).toBeVisible();
+    expect(screen.getByRole("tab", { name: "Rules in effect" })).toBeVisible();
     expect(portal.getSettings).toHaveBeenCalledTimes(1);
   });
 
   test("an older backend gets no privacy masking at all", () => {
-    render(ui("privacy", { words: false, privacyMasking: null }));
-    expect(screen.queryByRole("tab", { name: "My settings" })).not.toBeInTheDocument();
+    render(ui("privacy", { words: false, privacyMasking: false }));
+    expect(screen.queryByRole("tab", { name: "Rules in effect" })).not.toBeInTheDocument();
     expect(screen.queryByText("sensitive words")).not.toBeInTheDocument();
     expect(asked()).toBe(0);
   });

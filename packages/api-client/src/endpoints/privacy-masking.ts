@@ -202,26 +202,24 @@ export const privacyMaskingApi = {
 };
 
 /**
- * 门户里的设置：门户用户自己的，没设过时是管理员的默认设置，但去掉了管理员的脱敏词、自定义规则和
- * 「从不脱敏」——它们照样作用于这个用户的请求，只是不给门户用户看，免得用试一试把管理员没公开的词
- * 一个个试出来（CliRelay privacy_masking_portal.go）。门户视图没有 key_protected 和 server_disabled。
+ * 门户里看到的设置（GET /v0/portal/privacy-masking/settings）：现在对这个门户用户生效的那份。
+ * 门户用户没有自己的设置时是管理员的默认设置，但去掉了管理员的脱敏词、自定义规则和「从不脱敏」——
+ * 它们照样作用于这个用户的请求，只是不给门户用户看，免得用试一试把没公开的词一个个试出来
+ * （CliRelay privacy_masking_portal.go）。门户视图没有 key_protected 和 server_disabled。
  */
 export interface PortalPrivacyMaskSettings extends PrivacyMaskSettings {
   /** 用户有自己的设置；false 时 policy 是管理员的默认设置。 */
   own: boolean;
-  /**
-   * 用户能否自己设置（保存或删除）。管理员收回后为 false：之前存的设置还在库里，但不生效，也不返回，
-   * 请求按管理员的设置脱敏。portal_default_allowed 与它相同。
-   */
+  /** 管理员是否允许这个用户自己设置。门户界面一律只读，不看它。 */
   allowed: boolean;
 }
 
 const PORTAL = "/v0/portal/privacy-masking";
 
 /**
- * 门户用户自己的脱敏（/v0/portal/privacy-masking）。记录只有本人名下 API Key 的请求，服务器按会话
- * 定范围，不认 end_user_id、api_key_id；设置只在管理员允许时能写，否则答 403
- * privacy_masking_portal_forbidden。
+ * 门户用户名下请求的脱敏（/v0/portal/privacy-masking），只读：要不要脱敏、遮什么由管理员决定，
+ * 门户只用来让用户知道脱敏怎么做、自己的请求遮了什么。后端另有写设置和清空记录的接口，门户不调用，
+ * 这里也不提供。记录只有本人名下 API Key 的请求，服务器按会话定范围，不认 end_user_id、api_key_id。
  */
 export const portalPrivacyMaskingApi = {
   getSummary: (query: MaskQuery) =>
@@ -230,14 +228,8 @@ export const portalPrivacyMaskingApi = {
     portalClient.get<MaskRecordPage>(`${PORTAL}/records${queryString({ ...query, ...page })}`),
   getRecord: (key: string) =>
     portalClient.get<MaskRecordDetail>(`${PORTAL}/records/${encodeURIComponent(key)}`),
-  clearRecords: () => portalClient.delete<{ deleted: number }>(`${PORTAL}/records`),
   getSettings: () => portalClient.get<PortalPrivacyMaskSettings>(`${PORTAL}/settings`),
-  /** 存成用户自己的设置。强制开启的类目和管理员的词由服务器合并，这里只发用户自己的。 */
-  putSettings: (policy: PrivacyMaskPolicy) =>
-    portalClient.put<PortalPrivacyMaskSettings>(`${PORTAL}/settings`, { policy }),
-  /** 删掉用户自己的设置，回到管理员的默认设置；返回之后的视图。 */
-  resetSettings: () => portalClient.delete<PortalPrivacyMaskSettings>(`${PORTAL}/settings`),
-  /** 按用户的草稿和强制开启的类目试一段文字，不含管理员的脱敏词、规则和「从不脱敏」。 */
+  /** 试一试：不带 policy 时按现在对这个用户生效的规则处理，不含管理员的脱敏词、规则和「从不脱敏」。 */
   preview: (text: string, policy?: PrivacyMaskPolicy) =>
     portalClient.post<PrivacyMaskPreview>(`${PORTAL}/preview`, { text, policy }),
 };

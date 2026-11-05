@@ -9,32 +9,16 @@ import {
   SettingRow,
   TextInput,
   ToggleSwitch,
-  surface,
 } from "@code-proxy/ui";
-import type { MaskKindAction, MaskRule, PrivacyMaskPolicy, PrivacyMaskPreview } from "@code-proxy/api-client";
+import type { MaskKindAction, MaskRule, PrivacyMaskPolicy, PrivacyMaskSettings } from "@code-proxy/api-client";
 import { KindDot, useKindLabel } from "./KindChip";
-import { maskCategory } from "./maskKinds";
+import {
+  ACTION_PERSONAL_KINDS as PERSONAL_KINDS,
+  ACTION_SECRET_KINDS as SECRET_KINDS,
+  PERSONAL_CATEGORIES,
+} from "./maskKinds";
 import { MaskingTryIt } from "./MaskingTryIt";
-import { PortalMaskingStatus } from "./PortalMaskingStatus";
-import type { MaskingSettingsView } from "./source";
 import { WordListEditor } from "./WordListEditor";
-
-/** 打开「个人信息」后另有的类别：前六个默认开，后四个噪声大（agent 每个请求都带）默认关。 */
-const PERSONAL_CATEGORIES: Array<{ id: string; on: boolean }> = [
-  { id: "ssn", on: true },
-  { id: "passport", on: true },
-  { id: "iban", on: true },
-  { id: "birthday", on: true },
-  { id: "mac", on: true },
-  { id: "serial", on: true },
-  { id: "home", on: false },
-  { id: "userhost", on: false },
-  { id: "ip", on: false },
-  { id: "bucket", on: false },
-];
-
-const SECRET_KINDS = ["API_KEY", "PRIVATE_KEY", "TOKEN", "PASSWORD", "SECRET"];
-const PERSONAL_KINDS = ["EMAIL", "PHONE", "ID_CARD", "BANK_CARD"];
 
 function Section({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
   return (
@@ -52,11 +36,7 @@ function Section({ title, description, children }: { title: string; description?
  * 脱敏设置。控制台里是租户的默认设置，外加「强制开启」和「门户账号能否自己设置」；门户里是
  * 门户用户自己的设置，被租户强制开启的类目显示成锁定的行，关不掉。
  *
- * 改动先放在草稿里，出现保存栏；「试一试」用的是草稿，保存前就能看到效果。控制台的保存栏钉在
- * 顶上；门户里钉在标签滚动区的底部，和门户的敏感词一样。
- *
- * 门户里强制开启的类目：开关锁定；处理方式不能选「提醒」（服务器会改回脱敏，原样发出正是强制
- * 要排除的）；「从不脱敏」对它们无效，在那一组写明。
+ * 改动先放在草稿里，顶部出现保存栏；「试一试」用的是草稿，保存前就能看到效果。
  */
 export function MaskingSettingsPanel({
   settings,
@@ -64,17 +44,12 @@ export function MaskingSettingsPanel({
   canWrite,
   saving,
   onSave,
-  onReset,
-  preview,
 }: {
-  settings: MaskingSettingsView;
+  settings: PrivacyMaskSettings;
   scope: "tenant" | "portal";
   canWrite: boolean;
   saving: boolean;
-  onSave: (next: MaskingSettingsView) => void;
-  /** 门户：删掉自己的设置，回到管理员的默认设置。 */
-  onReset?: () => Promise<void>;
-  preview: (text: string, policy: PrivacyMaskPolicy) => Promise<PrivacyMaskPreview>;
+  onSave: (next: PrivacyMaskSettings) => void;
 }) {
   const { t } = useTranslation();
   const kindLabel = useKindLabel();
@@ -82,23 +57,11 @@ export function MaskingSettingsPanel({
   const dirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(settings), [draft, settings]);
   const policy = draft.policy;
   const locked = !canWrite || saving;
-  const portal = scope === "portal";
-  const enforced = new Set(portal ? settings.enforced : []);
-  const secretsOn = policy.secrets || enforced.has("secrets");
-  const personalOn = policy.personal || enforced.has("personal");
-  /** 这个类型属于强制开启的类目（只在门户里有）。 */
-  const enforcedKind = (kind: string) => {
-    const category = maskCategory(kind);
-    return (category === "secret" && enforced.has("secrets")) || (category === "personal" && enforced.has("personal"));
-  };
+  const enforced = new Set(scope === "portal" ? settings.enforced : []);
 
   const update = (patch: Partial<PrivacyMaskPolicy>) => setDraft((d) => ({ ...d, policy: { ...d.policy, ...patch } }));
   const kindOn = (id: string, fallback: boolean) => policy.kinds[id] ?? fallback;
-  // 强制的类目存着「提醒」也按脱敏处理（服务器这样合并），显示成实际生效的那个
-  const actionOf = (kind: string): MaskKindAction => {
-    const action = policy.actions[kind] ?? "mask";
-    return action === "warn" && enforcedKind(kind) ? "mask" : action;
-  };
+  const actionOf = (kind: string): MaskKindAction => policy.actions[kind] ?? "mask";
   const setAction = (kind: string, action: MaskKindAction) => {
     const next = { ...policy.actions };
     if (action === "mask") delete next[kind];
@@ -107,8 +70,8 @@ export function MaskingSettingsPanel({
   };
 
   const actionKinds = [
-    ...(secretsOn ? SECRET_KINDS : []),
-    ...(personalOn ? PERSONAL_KINDS : []),
+    ...(policy.secrets ? SECRET_KINDS : []),
+    ...(policy.personal ? PERSONAL_KINDS : []),
     ...(policy.words.length > 0 ? ["TERM"] : []),
     ...policy.rules.map((r) => r.kind).filter((k, i, all) => k && all.indexOf(k) === i),
   ];
@@ -120,35 +83,24 @@ export function MaskingSettingsPanel({
       </span>
     ) : null;
 
-  const saveBar = dirty ? (
-    <div
-      role="region"
-      aria-label={t("privacy_masking.settings.unsaved")}
-      className={
-        portal
-          ? `${surface({ tone: "card", radius: "2xl" })} sticky bottom-3 z-20 flex flex-wrap items-center justify-end gap-2 px-3 py-2`
-          : "sticky top-0 z-20 -mx-1 flex flex-wrap items-center justify-end gap-2 rounded-2xl bg-canvas/95 px-1 py-2 backdrop-blur-sm"
-      }
-    >
-      <span className="mr-auto inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-800 dark:text-amber-200">
-        <span aria-hidden="true" className="size-1.5 rounded-full bg-amber-500" />
-        {t("privacy_masking.settings.unsaved")}
-      </span>
-      <Button size="sm" variant="ghost" disabled={saving} onClick={() => setDraft(settings)}>
-        <Undo2 size={14} aria-hidden="true" />
-        {t("privacy_masking.settings.discard")}
-      </Button>
-      <Button size="sm" variant="primary" disabled={locked} onClick={() => onSave(draft)}>
-        <Save size={14} aria-hidden="true" />
-        {saving ? t("common.saving") : t("common.save")}
-      </Button>
-    </div>
-  ) : null;
-
   return (
     <div className="flex flex-col gap-6">
-      {portal ? null : saveBar}
-      {portal ? <PortalMaskingStatus settings={settings} busy={saving} onReset={onReset} /> : null}
+      {dirty ? (
+        <div className="sticky top-0 z-20 -mx-1 flex flex-wrap items-center justify-end gap-2 rounded-2xl bg-canvas/95 px-1 py-2 backdrop-blur-sm">
+          <span className="mr-auto inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-800 dark:text-amber-200">
+            <span aria-hidden="true" className="size-1.5 rounded-full bg-amber-500" />
+            {t("privacy_masking.settings.unsaved")}
+          </span>
+          <Button size="sm" variant="ghost" disabled={saving} onClick={() => setDraft(settings)}>
+            <Undo2 size={14} aria-hidden="true" />
+            {t("privacy_masking.settings.discard")}
+          </Button>
+          <Button size="sm" variant="primary" disabled={locked} onClick={() => onSave(draft)}>
+            <Save size={14} aria-hidden="true" />
+            {saving ? t("common.saving") : t("common.save")}
+          </Button>
+        </div>
+      ) : null}
 
       {settings.server_disabled ? (
         <Callout tone="danger" role="alert">
@@ -168,7 +120,7 @@ export function MaskingSettingsPanel({
             controlWidth="auto"
             control={
               <ToggleSwitch
-                checked={secretsOn}
+                checked={policy.secrets || enforced.has("secrets")}
                 disabled={locked || enforced.has("secrets")}
                 onCheckedChange={(secrets) => update({ secrets })}
                 ariaLabel={t("privacy_masking.settings.secrets")}
@@ -182,14 +134,14 @@ export function MaskingSettingsPanel({
             controlWidth="auto"
             control={
               <ToggleSwitch
-                checked={personalOn}
+                checked={policy.personal || enforced.has("personal")}
                 disabled={locked || enforced.has("personal")}
                 onCheckedChange={(personal) => update({ personal })}
                 ariaLabel={t("privacy_masking.settings.personal")}
               />
             }
           >
-            {personalOn ? (
+            {policy.personal || enforced.has("personal") ? (
               <PersonalKinds kindOn={kindOn} disabled={locked} onToggle={(id, on) => update({ kinds: { ...policy.kinds, [id]: on } })} />
             ) : null}
           </SettingRow>
@@ -254,11 +206,7 @@ export function MaskingSettingsPanel({
                   {kindLabel(kind)}
                 </span>
               }
-              description={
-                enforcedKind(kind)
-                  ? `${t(`privacy_masking.settings.action_${actionOf(kind)}_desc`)} · ${t("privacy_masking.portal.action_enforced")}`
-                  : t(`privacy_masking.settings.action_${actionOf(kind)}_desc`)
-              }
+              description={t(`privacy_masking.settings.action_${actionOf(kind)}_desc`)}
               controlWidth="auto"
               control={
                 <SegmentedControl
@@ -269,7 +217,7 @@ export function MaskingSettingsPanel({
                   disabled={locked}
                   options={[
                     { value: "mask", label: t("privacy_masking.action.mask") },
-                    { value: "warn", label: t("privacy_masking.action.warn"), disabled: enforcedKind(kind) },
+                    { value: "warn", label: t("privacy_masking.action.warn") },
                     { value: "block", label: t("privacy_masking.action.block") },
                   ]}
                 />
@@ -279,14 +227,7 @@ export function MaskingSettingsPanel({
         </SettingGroup>
       </Section>
 
-      <Section
-        title={t("privacy_masking.settings.allow_title")}
-        description={
-          enforced.size > 0
-            ? `${t("privacy_masking.settings.allow_desc")} ${t("privacy_masking.portal.allow_enforced")}`
-            : t("privacy_masking.settings.allow_desc")
-        }
-      >
+      <Section title={t("privacy_masking.settings.allow_title")} description={t("privacy_masking.settings.allow_desc")}>
         <SettingGroup>
           <div className="px-4 py-3.5">
             <WordListEditor
@@ -356,17 +297,16 @@ export function MaskingSettingsPanel({
 
       </div>
       <aside className="flex flex-col gap-3 xl:sticky xl:top-16">
-        <Section title={t("privacy_masking.try.title")} description={portal ? t("privacy_masking.portal.try_desc") : t("privacy_masking.try.desc")}>
+        <Section title={t("privacy_masking.try.title")} description={t("privacy_masking.try.desc")}>
           <SettingGroup>
             <div className="px-4 py-3.5">
-              <MaskingTryIt policy={policy} preview={preview} stacked />
+              <MaskingTryIt policy={policy} stacked />
             </div>
           </SettingGroup>
         </Section>
         <p className="px-1 text-xs leading-relaxed text-ink-3">{t("privacy_masking.explain.where")}</p>
       </aside>
       </div>
-      {portal ? saveBar : null}
     </div>
   );
 }

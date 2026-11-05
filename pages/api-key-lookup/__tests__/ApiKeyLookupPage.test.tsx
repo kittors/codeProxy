@@ -156,8 +156,6 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
       listRecords: vi.fn(),
       getRecord: vi.fn(),
       getSettings: vi.fn(),
-      putSettings: vi.fn(),
-      resetSettings: vi.fn(),
       preview: vi.fn(),
     },
   };
@@ -398,9 +396,10 @@ describe("ApiKeyLookupPage", () => {
     expect(screen.queryByText(/^default$|^默认$/i)).not.toBeInTheDocument();
   });
 
+  // 门户的隐私脱敏一律只读：允不允许自设都给标签，只有旧后端（不带这个字段）没有
   test.each([
-    ["an account that may set it", true],
-    ["a read-only account", false],
+    ["an account the tenant lets set its own", true],
+    ["an account the tenant does not", false],
     ["an older backend", null],
   ] as const)("privacy masking tab for %s", async (_name, allowed) => {
     const { portalApi, portalPrivacyMaskingApi } = await import("@code-proxy/api-client");
@@ -445,7 +444,7 @@ describe("ApiKeyLookupPage", () => {
     // 第一次点开才请求：只看用量的门户用户不该在后台每 15 秒查一次脱敏记录
     expect(portalPrivacyMaskingApi.listRecords).not.toHaveBeenCalled();
     await userEvent.click(tab!);
-    expect(await screen.findByRole("tab", { name: /my settings|我的设置/i })).toBeVisible();
+    expect(await screen.findByRole("tab", { name: /rules in effect|生效的规则/i })).toBeVisible();
     await waitFor(() => expect(portalPrivacyMaskingApi.listRecords).toHaveBeenCalled());
     // 这个标签有自己的刷新，工具栏上的刷新会打断设置的草稿（按钮还在，所在的一栏 hidden）
     expect(screen.getByRole("button", { name: /^(refresh|刷新)$/i }).closest(".hidden")).not.toBeNull();

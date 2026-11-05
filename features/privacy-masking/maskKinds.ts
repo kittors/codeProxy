@@ -39,6 +39,27 @@ export function maskCategory(kind: string): MaskCategory {
 /** 内置的类型名有译文，用户规则的类型名原样显示。 */
 export const KNOWN_KINDS = [...SECRET_KINDS, ...PERSONAL_KINDS, "TERM"];
 
+/**
+ * 能逐类选处理方式（脱敏 / 提醒 / 拦截）的类型：密钥五类，以及打开「个人信息」后固定一起遮的四类。
+ * 控制台的设置页和门户的「生效的规则」共用，两边列出的类型才一致。
+ */
+export const ACTION_SECRET_KINDS = ["API_KEY", "PRIVATE_KEY", "TOKEN", "PASSWORD", "SECRET"];
+export const ACTION_PERSONAL_KINDS = ["EMAIL", "PHONE", "ID_CARD", "BANK_CARD"];
+
+/** 打开「个人信息」后另有的类别：前六个默认开，后四个噪声大（agent 每个请求都带）默认关。 */
+export const PERSONAL_CATEGORIES: Array<{ id: string; on: boolean }> = [
+  { id: "ssn", on: true },
+  { id: "passport", on: true },
+  { id: "iban", on: true },
+  { id: "birthday", on: true },
+  { id: "mac", on: true },
+  { id: "serial", on: true },
+  { id: "home", on: false },
+  { id: "userhost", on: false },
+  { id: "ip", on: false },
+  { id: "bucket", on: false },
+];
+
 type CategoryStyle = {
   /** 小圆点 */
   dot: string;

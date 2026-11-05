@@ -47,7 +47,7 @@ export function LookupResultsToolbar({
   showKeysTab?: boolean;
   /** Portal login whose tenant lets the account keep sensitive words of its own. */
   showWordsTab?: boolean;
-  /** Portal login on a backend with portal privacy masking (editable or read-only). */
+  /** Portal login on a backend with portal privacy masking (read-only for every account). */
   showPrivacyTab?: boolean;
   /** Restrict visible tabs (e.g. public key usage page only needs logs + quick import). */
   tabs?: ApiKeyLookupTab[];

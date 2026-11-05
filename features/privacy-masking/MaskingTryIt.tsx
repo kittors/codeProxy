@@ -2,25 +2,28 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { ShieldAlert } from "lucide-react";
 import { Textarea } from "@code-proxy/ui";
-import type { PrivacyMaskPolicy, PrivacyMaskPreview } from "@code-proxy/api-client";
+import { privacyMaskingApi, type PrivacyMaskPolicy, type PrivacyMaskPreview } from "@code-proxy/api-client";
 import { kindStyle } from "./maskKinds";
 import { KindChip } from "./KindChip";
 
 const PLACEHOLDER = /\{\{[A-Z][A-Z0-9_]*_[a-z2-7]{8}(?:[a-z2-7]{8})?\}\}/g;
 
+const tenantPreview = (text: string, policy?: PrivacyMaskPolicy) => privacyMaskingApi.preview(text, policy);
+
 /**
  * 试一试：粘一段 agent 可能发出的文字，按当前（还没保存的）设置在服务器上脱敏一遍，显示上游会
  * 收到什么、找到了哪些值。文字只用来预览，不保存，也不进任何记录。
  *
- * preview 是控制台或门户的接口：门户的不含管理员的脱敏词、规则和「从不脱敏」。
+ * 控制台传设置页的草稿 policy；门户只读，不传 policy，由门户的 preview 按现在对这个用户生效的
+ * 规则处理（不含管理员的脱敏词和自定义规则）。
  */
 export function MaskingTryIt({
   policy,
-  preview,
+  preview = tenantPreview,
   stacked = false,
 }: {
-  policy: PrivacyMaskPolicy;
-  preview: (text: string, policy: PrivacyMaskPolicy) => Promise<PrivacyMaskPreview>;
+  policy?: PrivacyMaskPolicy;
+  preview?: (text: string, policy?: PrivacyMaskPolicy) => Promise<PrivacyMaskPreview>;
   stacked?: boolean;
 }) {
   const { t } = useTranslation();

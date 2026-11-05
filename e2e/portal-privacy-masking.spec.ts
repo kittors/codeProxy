@@ -1,9 +1,11 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
 
 /**
- * 门户的「隐私脱敏」标签：门户用户看自己请求的脱敏记录、改自己的设置。三种账号：能自己设置的、
- * 管理员没开放的（只读）、旧后端（没有这个标签，也不发请求）。后端全部是内存里的假数据，保存会真的
- * 改动它，下一次读取能读到。PORTAL_PRIVACY_SHOTS 指定一个目录时顺便截图（本地看效果用，CI 不设）。
+ * 门户的「隐私脱敏」标签，只读：门户用户看自己请求的脱敏概览和记录、现在对自己生效的规则，用试一试
+ * 看效果；要不要脱敏、遮什么由管理员决定，门户里没有任何设置入口，也不调任何写接口。
+ *
+ * 三种状态各跑浅色和深色：有记录；没有记录（租户没开脱敏）；旧后端（没有这个标签，也不发请求）。
+ * 后端全部是内存里的假数据。PORTAL_PRIVACY_SHOTS 指定一个目录时顺便截图（本地看效果用，CI 不设）。
  */
 
 const NOW = new Date();
@@ -79,6 +81,19 @@ const SUMMARY = {
       last_at: at(40),
     },
   ],
+};
+
+const EMPTY_SUMMARY = {
+  days: [6, 5, 4, 3, 2, 1, 0].map((ago) => ({ day: dayKey(ago), places: 0, requests: 0 })),
+  places: 0,
+  distinct: 0,
+  requests: 0,
+  blocked: 0,
+  warned: 0,
+  kinds: [],
+  clients: [],
+  channels: [],
+  values: [],
 };
 
 const RECORDS = [
@@ -170,49 +185,59 @@ const DETAIL = {
   ],
 };
 
-type Policy = Record<string, unknown> & { personal?: boolean };
-
-/** 管理员的默认设置：门户视图里去掉了管理员的脱敏词、规则和「从不脱敏」。 */
-const TENANT_DEFAULT: Policy = {
+const policy = (patch: Record<string, unknown> = {}) => ({
   secrets: true,
   personal: false,
   kinds: {},
+  // 门户用户没有自己的设置时，服务器给的是管理员的默认设置，脱敏词、规则和「从不脱敏」已清空
   words: [],
   words_any_case: false,
   words_whole: false,
   rules: [],
   allow: [],
   actions: {},
+  ...patch,
+});
+
+/** 有记录：管理员强制了密钥，默认设置里还开了个人信息，私钥和邮箱另有处理方式，另有脱敏词（不显示内容）。 */
+const MASKING_ON = {
+  settings: {
+    policy: policy({
+      personal: true,
+      actions: { PRIVATE_KEY: "block", EMAIL: "warn", TERM: "block" },
+    }),
+    own: false,
+    allowed: false,
+    enforced: ["secrets"],
+    portal_default_allowed: false,
+    persistent: true,
+  },
+  summary: SUMMARY,
+  records: RECORDS,
 };
 
-class FakePortalMasking {
-  own: Policy | null = null;
-  updatedAt = "";
-  writes: Array<{ method: string; path: string; body: unknown }> = [];
-  asked = 0;
-  constructor(
-    public allowed: boolean,
-    public enforced: string[] = ["secrets"],
-  ) {}
-  view() {
-    const own = this.allowed && this.own !== null;
-    return {
-      policy: own ? this.own : TENANT_DEFAULT,
-      own,
-      allowed: this.allowed,
-      enforced: this.enforced,
-      portal_default_allowed: this.allowed,
-      persistent: true,
-      updated_at: this.updatedAt,
-    };
-  }
-}
+/** 没有记录：租户没开脱敏。 */
+const MASKING_OFF = {
+  settings: {
+    policy: policy({ secrets: false }),
+    own: false,
+    allowed: true,
+    enforced: [],
+    portal_default_allowed: true,
+    persistent: true,
+  },
+  summary: EMPTY_SUMMARY,
+  records: [],
+};
+
+type Backend = typeof MASKING_ON | typeof MASKING_OFF | null;
 
 const json = (route: Route, body: unknown, status = 200) =>
   route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
 
-/** allowed 为 null：旧后端，/auth/me 不带 privacy_masking_allowed，也没有门户脱敏接口。 */
-async function mockPortal(page: Page, backend: FakePortalMasking, allowed: boolean | null) {
+/** backend 为 null：旧后端，/auth/me 不带 privacy_masking_allowed，也没有门户脱敏接口。 */
+async function mockPortal(page: Page, backend: Backend) {
+  const seen = { asked: 0, writes: [] as string[] };
   await page.addInitScript(() => {
     localStorage.setItem(
       "code-proxy-portal-auth",
@@ -229,12 +254,8 @@ async function mockPortal(page: Page, backend: FakePortalMasking, allowed: boole
   });
   await page.route("**/v0/**", async (route) => {
     const request = route.request();
-    const url = new URL(request.url());
-    const path = url.pathname;
+    const path = new URL(request.url()).pathname;
     const method = request.method();
-    const body = request.postData()
-      ? (JSON.parse(request.postData() ?? "{}") as Record<string, unknown>)
-      : {};
     if (path === "/v0/portal/auth/me") {
       return json(route, {
         user: {
@@ -246,42 +267,39 @@ async function mockPortal(page: Page, backend: FakePortalMasking, allowed: boole
         },
         capabilities: { "access-policy": true },
         word_policy_allowed: false,
-        ...(allowed === null ? {} : { privacy_masking_allowed: allowed }),
+        ...(backend === null ? {} : { privacy_masking_allowed: backend.settings.allowed }),
       });
     }
     if (path === "/v0/portal/api-keys") return json(route, { items: [], capabilities: {} });
     if (path.startsWith("/v0/portal/privacy-masking")) {
-      backend.asked += 1;
-      if (allowed === null) return json(route, { error: "not found" }, 404);
-      if (method !== "GET") backend.writes.push({ method, path, body });
+      seen.asked += 1;
+      if (backend === null) return json(route, { error: "not found" }, 404);
       const sub = path.slice("/v0/portal/privacy-masking".length);
-      if (sub === "/summary") return json(route, SUMMARY);
-      if (sub === "/records") return json(route, { items: RECORDS });
+      if (method !== "GET" && sub !== "/preview") {
+        seen.writes.push(`${method} ${path}`);
+        return json(
+          route,
+          { error: { code: "unexpected", message: "the portal is read-only" } },
+          405,
+        );
+      }
+      if (sub === "/summary") return json(route, backend.summary);
+      if (sub === "/records") return json(route, { items: backend.records });
       if (sub.startsWith("/records/")) return json(route, DETAIL);
+      if (sub === "/settings") return json(route, backend.settings);
       if (sub === "/preview") {
+        const body = JSON.parse(request.postData() ?? "{}") as Record<string, unknown>;
+        // 门户的试一试按现在生效的规则处理，不带草稿
+        if ("policy" in body) seen.writes.push("preview with a policy");
         return json(route, {
-          text: "用密钥 {{API_KEY_7moi35iu}} 部署，数据库密码：{{PASSWORD_n5t7zt53}}，发邮件给 lin@corp.example",
+          text: "用密钥 {{API_KEY_7moi35iu}} 部署，数据库密码：{{PASSWORD_n5t7zt53}}，发邮件给 {{EMAIL_q2wn3k5d}}",
           values: [
             { kind: "API_KEY", by: "rule", head: "sk-", len: 52, n: 1 },
             { kind: "PASSWORD", by: "rule", head: "Q", len: 12, n: 1 },
+            { kind: "EMAIL", by: "rule", head: "l", len: 21, n: 1, action: "warn" },
           ],
           blocked: false,
         });
-      }
-      if (sub === "/settings") {
-        if (method !== "GET" && !backend.allowed) {
-          return json(
-            route,
-            { error: { code: "privacy_masking_portal_forbidden", message: "no" } },
-            403,
-          );
-        }
-        if (method === "PUT") {
-          backend.own = body.policy as Policy;
-          backend.updatedAt = new Date().toISOString();
-        }
-        if (method === "DELETE") backend.own = null;
-        return json(route, backend.view());
       }
     }
     if (path.endsWith("/usage/chart-data")) {
@@ -294,169 +312,138 @@ async function mockPortal(page: Page, backend: FakePortalMasking, allowed: boole
     }
     return json(route, { items: [], total: 0, data: [] });
   });
+  return seen;
 }
 
 const SHOTS = process.env.PORTAL_PRIVACY_SHOTS;
-const shoot = async (page: Page, name: string, fullPage = true) => {
+const shoot = async (page: Page, name: string) => {
   if (!SHOTS) return;
   await page.waitForTimeout(500); // 等切换、展开这类动画走完
-  await page.screenshot({ path: `${SHOTS}/${name}.png`, fullPage });
+  await page.screenshot({ path: `${SHOTS}/${name}.png` });
 };
 
 const openPrivacyTab = async (page: Page) => {
   await page.goto("/#/apikey-lookup");
   await page.getByRole("tab", { name: "隐私脱敏", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "没让上游看到的" })).toBeVisible();
 };
 
 const expectNoChannelNames = async (page: Page) => {
   for (const name of CHANNELS) await expect(page.getByText(name)).toHaveCount(0);
 };
 
-test.describe("privacy masking in the portal", () => {
-  test("an account that may set its own sees its records and keeps its own settings", async ({
-    page,
-  }) => {
-    test.slow(); // 概览、详情、设置、保存、恢复默认一路走下来，冷启动的开发服务器上会超过 30 秒
-    const backend = new FakePortalMasking(true);
-    await page.setViewportSize({ width: 1280, height: 720 });
-    await mockPortal(page, backend, true);
-    await openPrivacyTab(page);
+/** 门户里没有任何设置入口。 */
+const expectReadOnly = async (page: Page) => {
+  await expect(page.getByRole("switch")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "保存" })).toHaveCount(0);
+  await expect(page.getByRole("tab", { name: "设置" })).toHaveCount(0);
+  await expect(page.getByText("门户用户可以自己设置")).toHaveCount(0);
+};
 
-    await expect(page.getByText("1,284")).toBeVisible();
-    // 流向图右边是上游厂商：四个渠道合成 OpenAI、Claude 和「其他上游」，只显示、不能点
-    const flow = page.locator("figure").filter({ hasText: "CliRelay 在服务器上把值换成占位符" });
-    await expect(flow.getByRole("button", { name: /OpenAI/ })).toBeDisabled();
-    await expect(flow.getByRole("button", { name: /^Claude(?! Code)/ })).toBeDisabled();
-    await expect(flow.getByRole("button", { name: /^Claude Code/ })).toBeEnabled();
-    await expect(flow.getByRole("button", { name: /其他上游/ })).toBeDisabled();
-    await expectNoChannelNames(page);
-    // 致谢 magpie：识别规则与还原做法移植自它
-    await expect(page.getByRole("link", { name: "magpie" })).toHaveAttribute(
-      "href",
-      "https://github.com/yetone/magpie",
-    );
-    await page.waitForTimeout(2600); // 流向图的线画完
-    await shoot(page, "portal-1-overview");
+for (const scheme of ["light", "dark"] as const) {
+  test.describe(`privacy masking in the portal (${scheme})`, () => {
+    test.use({ colorScheme: scheme, viewport: { width: 1280, height: 720 } });
 
-    await page.getByRole("tab", { name: "我的设置" }).click();
-    await expect(page.getByText("现在用的是管理员的默认设置")).toBeVisible();
-    await expect(
-      page.getByText("管理员设置的脱敏词、自定义规则和「从不脱敏」始终生效，这里不显示。"),
-    ).toBeVisible();
-    // 管理员强制了「脱敏密钥」：锁着，提醒选不了
-    const secrets = page.getByRole("switch", { name: "脱敏密钥" });
-    await expect(secrets).toBeChecked();
-    await expect(secrets).toBeDisabled();
-    await expect(
-      page.getByRole("radiogroup", { name: "API 密钥" }).getByRole("radio", { name: "提醒" }),
-    ).toBeDisabled();
-    // 控制台才有的「管理」一组不出现
-    await expect(page.getByText("门户用户可以自己设置")).toHaveCount(0);
-    await shoot(page, "portal-3-settings-default");
+    test("an account with masked requests sees them, the rules in effect and a try-it", async ({
+      page,
+    }) => {
+      test.slow(); // 概览、规则、试一试、详情一路走下来，冷启动的开发服务器上会超过 30 秒
+      const seen = await mockPortal(page, MASKING_ON);
+      await openPrivacyTab(page);
 
-    await page.getByRole("switch", { name: "脱敏个人信息" }).click();
-    const bar = page.getByRole("region", { name: "有未保存的修改" });
-    await expect(bar).toBeVisible();
-    // 保存栏钉在标签滚动区的底部（门户的敏感词也是这样）
-    const box = await bar.boundingBox();
-    expect(box!.y + box!.height).toBeLessThanOrEqual(720);
-    expect(box!.y + box!.height).toBeGreaterThan(720 - 80);
-    await shoot(page, "portal-4-unsaved", false);
-    await bar.getByRole("button", { name: "保存" }).click();
-    await expect(page.getByText("你在用自己的设置")).toBeVisible();
-    const put = backend.writes.find((w) => w.method === "PUT");
-    // 强制的类目、门户用户能否自设都是管理员的，门户只发自己的设置
-    expect(Object.keys(put!.body as object)).toEqual(["policy"]);
-    expect((put!.body as { policy: Policy }).policy.personal).toBe(true);
+      await expect(page.getByRole("heading", { name: "没让上游看到的" })).toBeVisible();
+      await expect(page.getByText("1,284")).toBeVisible();
+      // 流向图右边是上游厂商：四个渠道合成 OpenAI、Claude 和「其他上游」，只显示、不能点
+      const flow = page.locator("figure").filter({ hasText: "CliRelay 在服务器上把值换成占位符" });
+      await expect(flow.getByRole("button", { name: /OpenAI/ })).toBeDisabled();
+      await expect(flow.getByRole("button", { name: /^Claude(?! Code)/ })).toBeDisabled();
+      await expect(flow.getByRole("button", { name: /其他上游/ })).toBeDisabled();
+      await expect(flow.getByRole("button", { name: /^Claude Code/ })).toBeEnabled();
+      await expectNoChannelNames(page);
+      await expect(page.getByRole("button", { name: "脱敏是怎么工作的" })).toBeVisible();
+      // 致谢 magpie：识别规则与还原做法移植自它
+      await expect(page.getByRole("link", { name: "magpie" })).toHaveAttribute(
+        "href",
+        "https://github.com/yetone/magpie",
+      );
+      await expectReadOnly(page);
+      await page.waitForTimeout(2600); // 流向图的线画完
+      await shoot(page, `portal-1-overview-${scheme}`);
 
-    await page
-      .getByRole("textbox", { name: "试一试" })
-      .fill("用密钥 sk-proj-AbCd… 部署，数据库密码：Qx7mP2vL9kR4，发邮件给 lin@corp.example");
-    await expect(page.getByText("上游会收到", { exact: true })).toBeVisible();
-    await shoot(page, "portal-5-own");
+      await page.getByRole("tab", { name: "生效的规则" }).click();
+      await expect(page.getByRole("heading", { name: "对你生效的脱敏规则" })).toBeVisible();
+      await expect(page.getByText("管理员已强制开启")).toBeVisible();
+      await expect(
+        page.getByText("管理员可能还配置了脱敏词和自定义规则，内容不对你显示。"),
+      ).toBeVisible();
+      const actions = page.getByRole("list", { name: "发现敏感值时" }).getByRole("listitem");
+      await expect(actions.filter({ hasText: "私钥" })).toContainText("拦截");
+      await expect(actions.filter({ hasText: "邮箱" })).toContainText("提醒");
+      await expect(actions.filter({ hasText: "脱敏词" })).toContainText("拦截");
+      await expectReadOnly(page);
+      await page
+        .getByRole("textbox", { name: "试一试" })
+        .fill("用密钥 sk-proj-AbCd… 部署，数据库密码：Qx7mP2vL9kR4，发邮件给 lin@corp.example");
+      await expect(page.getByText("上游会收到", { exact: true })).toBeVisible();
+      await shoot(page, `portal-2-rules-${scheme}`);
 
-    await page.getByRole("button", { name: "恢复默认设置" }).click();
-    const dialog = page.getByRole("dialog", { name: "恢复为管理员的默认设置？" });
-    await dialog.getByRole("button", { name: "恢复默认" }).click();
-    await expect(page.getByText("现在用的是管理员的默认设置")).toBeVisible();
-    expect(
-      backend.writes.some(
-        (w) => w.method === "DELETE" && w.path === "/v0/portal/privacy-masking/settings",
-      ),
-    ).toBe(true);
-    await expect(page.getByRole("switch", { name: "脱敏个人信息" })).not.toBeChecked();
+      // 单条详情放最后：点列表里的一条会把标签的滚动区滚下去
+      await page.getByRole("tab", { name: "概览" }).click();
+      await page.locator("li button").filter({ hasText: "gpt-5-codex" }).first().click();
+      const drawer = page.getByRole("dialog");
+      await expect(drawer.getByRole("list", { name: "这个请求经历了什么" })).toBeVisible();
+      // 「发给」那一步写的是上游厂商，不是渠道
+      await expect(drawer.getByText("OpenAI").first()).toBeVisible();
+      await expectNoChannelNames(page);
+      await shoot(page, `portal-3-detail-${scheme}`);
 
-    // 单条详情放在最后：点列表里的一条会把标签的滚动区滚下去，切到「我的设置」时还停在那里
-    await expect(page.getByText("已恢复为管理员的默认设置")).toBeHidden({ timeout: 10_000 });
-    await page.getByRole("tab", { name: "概览" }).click();
-    await page.locator("li button").filter({ hasText: "gpt-5-codex" }).first().click();
-    const drawer = page.getByRole("dialog");
-    await expect(drawer.getByRole("list", { name: "这个请求经历了什么" })).toBeVisible();
-    // 「发给」那一步写的是上游厂商，不是渠道
-    await expect(drawer.getByText("OpenAI").first()).toBeVisible();
-    await expectNoChannelNames(page);
-    await shoot(page, "portal-2-detail", false);
-    await page.keyboard.press("Escape");
+      expect(seen.writes).toEqual([]);
+    });
+
+    test("an account whose tenant has not turned masking on is told so, with nothing to turn on", async ({
+      page,
+    }) => {
+      const seen = await mockPortal(page, MASKING_OFF);
+      await openPrivacyTab(page);
+
+      await expect(page.getByText("你的请求还没有开启脱敏")).toBeVisible();
+      await expect(page.getByText(/要不要开启由管理员决定/)).toBeVisible();
+      await expect(page.getByRole("button", { name: "去开启脱敏" })).toHaveCount(0);
+      await expect(page.getByText("还没有脱敏过任何内容")).toBeVisible();
+      await expectReadOnly(page);
+      await shoot(page, `portal-4-off-${scheme}`);
+
+      await page.getByRole("tab", { name: "生效的规则" }).click();
+      await expect(page.getByText("未开启").first()).toBeVisible();
+      await shoot(page, `portal-5-off-rules-${scheme}`);
+      expect(seen.writes).toEqual([]);
+    });
+
+    test("an older backend gets no privacy masking tab and no requests for it", async ({
+      page,
+    }) => {
+      const seen = await mockPortal(page, null);
+      await page.goto("/#/apikey-lookup");
+      await expect(page.getByRole("tab", { name: "管理 API Key" })).toBeVisible();
+      await expect(page.getByRole("tab", { name: "隐私脱敏", exact: true })).toHaveCount(0);
+      await page.waitForTimeout(500);
+      expect(seen.asked).toBe(0);
+      await shoot(page, `portal-6-old-backend-${scheme}`);
+    });
   });
+}
 
-  test("an account the administrator has not allowed sees its records and read-only settings", async ({
-    page,
-  }) => {
-    const backend = new FakePortalMasking(false);
-    await page.setViewportSize({ width: 1280, height: 720 });
-    await mockPortal(page, backend, false);
-    await openPrivacyTab(page);
-    await expectNoChannelNames(page);
-
-    await page.getByRole("tab", { name: "我的设置" }).click();
-    await expect(page.getByText("管理员没有开放自定义脱敏")).toBeVisible();
-    await expect(page.getByRole("switch", { name: "脱敏密钥" })).toBeDisabled();
-    await expect(page.getByRole("switch", { name: "脱敏个人信息" })).toBeDisabled();
-    await expect(page.getByRole("button", { name: "恢复默认设置" })).toHaveCount(0);
-    await shoot(page, "portal-6-readonly");
-    expect(backend.writes).toEqual([]);
-  });
-
-  test("an older backend gets no privacy masking tab and no requests for it", async ({ page }) => {
-    const backend = new FakePortalMasking(true);
-    await mockPortal(page, backend, null);
-    await page.goto("/#/apikey-lookup");
-    await expect(page.getByRole("tab", { name: "管理 API Key" })).toBeVisible();
-    await expect(page.getByRole("tab", { name: "隐私脱敏", exact: true })).toHaveCount(0);
-    await page.waitForTimeout(500);
-    expect(backend.asked).toBe(0);
-  });
-
-  test("dark appearance", async ({ page }) => {
-    await page.emulateMedia({ colorScheme: "dark" });
-    await page.setViewportSize({ width: 1470, height: 800 });
-    const backend = new FakePortalMasking(true);
-    backend.own = {
-      ...TENANT_DEFAULT,
-      personal: true,
-      words: ["Nightjar"],
-      allow: ["ops@company.com"],
-    };
-    backend.updatedAt = at(60);
-    await mockPortal(page, backend, true);
-    await openPrivacyTab(page);
-    await page.waitForTimeout(2600);
-    await shoot(page, "portal-7-overview-dark");
-    await page.getByRole("tab", { name: "我的设置" }).click();
-    await expect(page.getByText("你在用自己的设置")).toBeVisible();
-    await shoot(page, "portal-8-settings-dark");
-  });
-
-  test("a phone-sized window", async ({ page }) => {
-    await page.setViewportSize({ width: 390, height: 844 });
-    const backend = new FakePortalMasking(true);
-    await mockPortal(page, backend, true);
-    await openPrivacyTab(page);
-    // 窄屏不出现横向滚动
-    expect(
-      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
-    ).toBe(true);
-    await shoot(page, "portal-9-phone");
-  });
+test("a phone-sized window has no horizontal scroll", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await mockPortal(page, MASKING_ON);
+  await openPrivacyTab(page);
+  await expect(page.getByText("1,284")).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+  await page.getByRole("tab", { name: "生效的规则" }).click();
+  await expect(page.getByRole("heading", { name: "对你生效的脱敏规则" })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/portal-7-phone-rules.png`, fullPage: true });
 });

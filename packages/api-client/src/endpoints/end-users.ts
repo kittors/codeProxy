@@ -404,10 +404,11 @@ export const portalApi = {
      */
     wordPolicyAllowed: boolean;
     /**
-     * Whether the account may keep privacy masking settings of its own (portalPrivacyMaskingApi);
-     * the masking records of its own requests are there to see either way. Null when the backend
-     * does not say: an older backend has no portal privacy masking at all, so the portal must not
-     * offer it, nor ask for it.
+     * Whether the tenant lets the account keep privacy masking settings of its own. The portal
+     * shows privacy masking read-only either way (the administrator decides what is masked); what
+     * matters to it is that the field is there at all. Null when the backend does not say: an
+     * older backend has no portal privacy masking (portalPrivacyMaskingApi), so the portal must
+     * not offer it, nor ask for it.
      */
     privacyMaskingAllowed: boolean | null;
   }> => {

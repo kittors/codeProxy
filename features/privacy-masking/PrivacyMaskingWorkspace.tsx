@@ -1,24 +1,25 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button, Callout, PageLoader, Tabs, TabsContent, TabsList, TabsTrigger, useToast } from "@code-proxy/ui";
-import type { MaskRecord } from "@code-proxy/api-client";
+import { privacyMaskingApi, type MaskRecord } from "@code-proxy/api-client";
 import { clientMeta } from "./maskKinds";
 import { MaskingCredit } from "./MaskingCredit";
 import { MaskingExplainer } from "./MaskingExplainer";
 import { MaskingFeed, type FeedMode } from "./MaskingFeed";
 import { MaskingRecordDrawer } from "./MaskingRecordDrawer";
+import { MaskingRulesView } from "./MaskingRulesView";
 import { MaskingSettingsPanel } from "./MaskingSettingsPanel";
 import { MaskingSummaryCard } from "./MaskingSummaryCard";
 import { useKindLabel } from "./KindChip";
 import { recordByUpstream, summaryByUpstream } from "./portalUpstreams";
-import { isPortalMaskingForbidden, portalMaskingSource, tenantMaskingSource, type MaskingSettingsView } from "./source";
+import { portalMaskingSource, tenantMaskingSource, type MaskingSettingsView } from "./source";
 import { useMaskingOverview, useMaskingRecord } from "./useMaskingOverview";
 
 type Tab = "overview" | "settings";
 
 /**
  * 设置里要求了任何脱敏：密钥、个人信息，或者有脱敏词、自定义规则（这两样不管开关，单独也会遮）。
- * 门户里强制开启的类目也算：门户用户自己关了，也照样遮。
+ * 门户里强制开启的类目也算：门户用户的设置里关着，也照样遮。
  */
 const maskingOn = (settings: MaskingSettingsView | null, scope: "tenant" | "portal") =>
   !!settings &&
@@ -28,17 +29,17 @@ const maskingOn = (settings: MaskingSettingsView | null, scope: "tenant" | "port
     settings.policy.rules.length > 0 ||
     (scope === "portal" && settings.enforced.length > 0));
 
-const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
-
 /**
- * 隐私脱敏：「概览」看没让上游看到的（头卡、原理说明、按请求或按值的列表、单条详情），「设置」
- * 配要遮什么、怎么处理、例外和试一试。控制台（scope="tenant"）和门户（scope="portal"）共用，
- * 门户只看得到、只改得了自己名下的。
+ * 隐私脱敏：「概览」看没让上游看到的（头卡、原理说明、按请求或按值的列表、单条详情）。控制台
+ * （scope="tenant"）和门户（scope="portal"）共用。
  *
- * 门户里能不能改以服务器返回的 allowed 为准（页面打开期间管理员可能改了），canWrite 只是上限；
- * 渠道换成上游厂商显示，流向图右边不能点来筛选（门户不显示渠道是谁，见 portalUpstreams.ts）。
- * active 为 false 时概览不自动刷新。子标签栏吸顶要求外面有一个会滚的容器：控制台的内容区，
- * 门户里是这个标签自己的滚动区。
+ * - 控制台另有「设置」：配要遮什么、怎么处理、例外和试一试。
+ * - 门户只读：要不要脱敏、遮什么由管理员决定，门户只让用户知道脱敏怎么做、自己的请求遮了什么。
+ *   第二个标签是「生效的规则」（只读的规则加试一试），不调任何写接口；canWrite 不起作用。渠道换成
+ *   上游厂商显示，流向图右边不能点来筛选（门户不显示渠道是谁，见 portalUpstreams.ts）。active 为
+ *   false 时概览不自动刷新。
+ *
+ * 子标签栏吸顶要外面有一个会滚的容器：控制台的内容区，门户里是这个标签自己的滚动区。
  */
 export function PrivacyMaskingWorkspace({
   scope,
@@ -52,7 +53,8 @@ export function PrivacyMaskingWorkspace({
   const { t } = useTranslation();
   const { notify } = useToast();
   const kindLabel = useKindLabel();
-  const source = scope === "portal" ? portalMaskingSource : tenantMaskingSource;
+  const portal = scope === "portal";
+  const source = portal ? portalMaskingSource : tenantMaskingSource;
   const [tab, setTab] = useState<Tab>("overview");
   const [mode, setMode] = useState<FeedMode>("request");
   const [openKey, setOpenKey] = useState<string | null>(null);
@@ -61,20 +63,18 @@ export function PrivacyMaskingWorkspace({
   const [saving, setSaving] = useState(false);
   const overview = useMaskingOverview(source, active);
   const record = useMaskingRecord(source, openKey);
-  const writable = canWrite && (scope !== "portal" || settings?.allowed === true);
-  const hideChannels = scope === "portal";
   const otherUpstream = t("privacy_masking.portal.upstream_other");
   const summary = useMemo(
-    () => (hideChannels && overview.summary ? summaryByUpstream(overview.summary, otherUpstream) : overview.summary),
-    [hideChannels, overview.summary, otherUpstream],
+    () => (portal && overview.summary ? summaryByUpstream(overview.summary, otherUpstream) : overview.summary),
+    [portal, overview.summary, otherUpstream],
   );
   const records = useMemo(
-    () => (hideChannels ? overview.records.map((r) => recordByUpstream(r, otherUpstream)) : overview.records),
-    [hideChannels, overview.records, otherUpstream],
+    () => (portal ? overview.records.map((r) => recordByUpstream(r, otherUpstream)) : overview.records),
+    [portal, overview.records, otherUpstream],
   );
   const detail = useMemo(
-    () => (hideChannels && record.detail ? recordByUpstream(record.detail, otherUpstream) : record.detail),
-    [hideChannels, record.detail, otherUpstream],
+    () => (portal && record.detail ? recordByUpstream(record.detail, otherUpstream) : record.detail),
+    [portal, record.detail, otherUpstream],
   );
 
   const loadSettings = useCallback(() => {
@@ -82,31 +82,27 @@ export function PrivacyMaskingWorkspace({
     source
       .getSettings()
       .then(setSettings)
-      .catch((e: unknown) => setSettingsError(message(e)));
+      .catch((e: unknown) => setSettingsError(e instanceof Error ? e.message : String(e)));
   }, [source]);
   useEffect(loadSettings, [loadSettings]);
 
-  // 保存与恢复默认共用：门户里写入答 403 说明管理员刚收回了权限，重读设置变成只读
-  const write = async (run: () => Promise<MaskingSettingsView>, done: string) => {
+  // 只有控制台的设置页会保存；门户只读，没有入口走到这里
+  const save = async (next: MaskingSettingsView) => {
     setSaving(true);
     try {
-      setSettings(await run());
-      notify({ type: "success", message: done });
+      const saved = await privacyMaskingApi.putSettings({
+        policy: next.policy,
+        enforced: next.enforced,
+        portal_default_allowed: next.portal_default_allowed,
+      });
+      setSettings(saved);
+      notify({ type: "success", message: t("privacy_masking.settings.saved") });
     } catch (e) {
-      if (isPortalMaskingForbidden(e)) {
-        notify({ type: "error", message: t("privacy_masking.portal.forbidden_now") });
-        loadSettings();
-      } else {
-        notify({ type: "error", message: message(e) });
-      }
+      notify({ type: "error", message: e instanceof Error ? e.message : String(e) });
     } finally {
       setSaving(false);
     }
   };
-  const save = (next: MaskingSettingsView) => write(() => source.saveSettings(next), t("privacy_masking.settings.saved"));
-  const reset = source.resetSettings
-    ? () => write(source.resetSettings!, t("privacy_masking.portal.reset_done"))
-    : undefined;
 
   const { filters, setFilters } = overview;
   const filterChips = useMemo(() => {
@@ -128,11 +124,11 @@ export function PrivacyMaskingWorkspace({
     <Tabs value={tab} onValueChange={(next) => setTab(next as Tab)} size="sm">
       <section className="flex flex-col gap-4">
         {/* 门户里上面紧挨着门户自己的标签栏，不再留顶部的空 */}
-        <div className={`sticky top-0 z-20 -mx-4 bg-canvas px-4 pb-1 sm:-mx-6 sm:px-6 ${scope === "portal" ? "" : "pt-3"}`}>
+        <div className={`sticky top-0 z-20 -mx-4 bg-canvas px-4 pb-1 sm:-mx-6 sm:px-6 ${portal ? "" : "pt-3"}`}>
           <TabsList aria-label={t("privacy_masking.title")} className="max-w-full">
             <TabsTrigger value="overview">{t("privacy_masking.tab.overview")}</TabsTrigger>
             <TabsTrigger value="settings">
-              {scope === "portal" ? t("privacy_masking.portal.tab_settings") : t("privacy_masking.tab.settings")}
+              {portal ? t("privacy_masking.portal.tab_rules") : t("privacy_masking.tab.settings")}
             </TabsTrigger>
           </TabsList>
         </div>
@@ -146,9 +142,8 @@ export function PrivacyMaskingWorkspace({
             ) : null}
             <MaskingSummaryCard
               summary={summary}
-              channelsSelectable={!hideChannels}
+              scope={scope}
               enabled={maskingOn(settings, scope)}
-              canTurnOn={writable || settings === null}
               days={overview.days}
               onDays={overview.setDays}
               selectedClient={filters.client}
@@ -198,18 +193,10 @@ export function PrivacyMaskingWorkspace({
             >
               {settingsError}
             </Callout>
+          ) : settings && portal ? (
+            <MaskingRulesView settings={settings} preview={source.preview} />
           ) : settings ? (
-            <MaskingSettingsPanel
-              // 保存、恢复默认、权限变化后都换一份草稿：门户删掉设置时 updated_at 不变，要连 own、allowed 一起看
-              key={[settings.updated_at ?? "initial", settings.own, settings.allowed].join(":")}
-              settings={settings}
-              scope={scope}
-              canWrite={writable}
-              saving={saving}
-              onSave={(next) => void save(next)}
-              onReset={reset}
-              preview={source.preview}
-            />
+            <MaskingSettingsPanel key={settings.updated_at ?? "initial"} settings={settings} scope={scope} canWrite={canWrite} saving={saving} onSave={(next) => void save(next)} />
           ) : (
             <div className="flex items-center justify-center py-16">
               <PageLoader variant="inline" text={t("common.loading")} />

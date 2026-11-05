@@ -1167,7 +1167,7 @@ export function ApiKeyLookupPage() {
                 quotaScopes={quotaScopes}
                 showKeysTab={Boolean(portalUser)}
                 showWordsTab={Boolean(portalUser) && portalGrants.words}
-                showPrivacyTab={Boolean(portalUser) && portalGrants.privacyMasking !== null}
+                showPrivacyTab={Boolean(portalUser) && portalGrants.privacyMasking}
               />
 
               {activeTab === "usage" && usageReady ? (
