@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Check, Lock, Plus, Save, Trash2, Undo2 } from "lucide-react";
+import { Check, Plus, Save, Trash2, Undo2 } from "lucide-react";
 import {
   Button,
   Callout,
@@ -33,8 +33,8 @@ function Section({ title, description, children }: { title: string; description?
 }
 
 /**
- * 脱敏设置。控制台里是租户的默认设置，外加「强制开启」和「门户账号能否自己设置」；门户里是
- * 门户用户自己的设置，被租户强制开启的类目显示成锁定的行，关不掉。
+ * 租户的脱敏设置。遮什么、怎么处理都由管理员在控制台决定；门户用户只在门户里看生效的规则和自己
+ * 的记录，不能改（2026-11-05 起撤掉了门户自设，连同「强制开启」「门户能否自己设置」）。
  *
  * 改动先放在草稿里，顶部出现保存栏；「试一试」用的是草稿，保存前就能看到效果。
  */
@@ -57,7 +57,6 @@ export function MaskingSettingsPanel({
   const dirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(settings), [draft, settings]);
   const policy = draft.policy;
   const locked = !canWrite || saving;
-  const enforced = new Set(scope === "portal" ? settings.enforced : []);
 
   const update = (patch: Partial<PrivacyMaskPolicy>) => setDraft((d) => ({ ...d, policy: { ...d.policy, ...patch } }));
   const kindOn = (id: string, fallback: boolean) => policy.kinds[id] ?? fallback;
@@ -75,13 +74,6 @@ export function MaskingSettingsPanel({
     ...(policy.words.length > 0 ? ["TERM"] : []),
     ...policy.rules.map((r) => r.kind).filter((k, i, all) => k && all.indexOf(k) === i),
   ];
-  const lockedRow = (id: string) =>
-    enforced.has(id) ? (
-      <span className="inline-flex items-center gap-1 rounded-md bg-violet-500/10 px-1.5 py-0.5 text-2xs font-medium text-violet-700 dark:bg-violet-400/15 dark:text-violet-200">
-        <Lock size={11} aria-hidden="true" />
-        {t("privacy_masking.settings.enforced_badge")}
-      </span>
-    ) : null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -119,12 +111,11 @@ export function MaskingSettingsPanel({
           <SettingRow
             label={t("privacy_masking.settings.secrets")}
             description={t("privacy_masking.settings.secrets_desc")}
-            badges={lockedRow("secrets")}
             controlWidth="auto"
             control={
               <ToggleSwitch
-                checked={policy.secrets || enforced.has("secrets")}
-                disabled={locked || enforced.has("secrets")}
+                checked={policy.secrets}
+                disabled={locked}
                 onCheckedChange={(secrets) => update({ secrets })}
                 ariaLabel={t("privacy_masking.settings.secrets")}
               />
@@ -133,18 +124,17 @@ export function MaskingSettingsPanel({
           <SettingRow
             label={t("privacy_masking.settings.personal")}
             description={t("privacy_masking.settings.personal_desc")}
-            badges={lockedRow("personal")}
             controlWidth="auto"
             control={
               <ToggleSwitch
-                checked={policy.personal || enforced.has("personal")}
-                disabled={locked || enforced.has("personal")}
+                checked={policy.personal}
+                disabled={locked}
                 onCheckedChange={(personal) => update({ personal })}
                 ariaLabel={t("privacy_masking.settings.personal")}
               />
             }
           >
-            {policy.personal || enforced.has("personal") ? (
+            {policy.personal ? (
               <PersonalKinds kindOn={kindOn} disabled={locked} onToggle={(id, on) => update({ kinds: { ...policy.kinds, [id]: on } })} />
             ) : null}
           </SettingRow>
@@ -246,56 +236,9 @@ export function MaskingSettingsPanel({
 
 
       {scope === "tenant" ? (
-        <Section title={t("privacy_masking.settings.manage_title")} description={t("privacy_masking.settings.manage_desc")}>
-          <SettingGroup>
-            <SettingRow
-              label={t("privacy_masking.settings.enforce")}
-              description={t("privacy_masking.settings.enforce_desc")}
-              controlWidth="lg"
-              control={
-                <div className="flex flex-wrap justify-end gap-1.5">
-                  {["secrets", "personal"].map((id) => {
-                    const on = draft.enforced.includes(id);
-                    return (
-                      <button
-                        key={id}
-                        type="button"
-                        disabled={locked}
-                        aria-pressed={on}
-                        onClick={() =>
-                          setDraft((d) => ({ ...d, enforced: on ? d.enforced.filter((x) => x !== id) : [...d.enforced, id] }))
-                        }
-                        className={[
-                          "inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition-colors",
-                          on ? "bg-violet-500/12 text-violet-700 dark:bg-violet-400/15 dark:text-violet-200" : "bg-ink/[0.04] text-ink-2 hover:bg-ink/[0.07] dark:bg-white/[0.06]",
-                        ].join(" ")}
-                      >
-                        {on ? <Lock size={11} aria-hidden="true" /> : null}
-                        {t(`privacy_masking.settings.${id}`)}
-                      </button>
-                    );
-                  })}
-                </div>
-              }
-            />
-            <SettingRow
-              controlWidth="auto"
-              label={t("privacy_masking.settings.portal")}
-              description={t("privacy_masking.settings.portal_desc")}
-              control={
-                <ToggleSwitch
-                  checked={draft.portal_default_allowed}
-                  disabled={locked}
-                  onCheckedChange={(v) => setDraft((d) => ({ ...d, portal_default_allowed: v }))}
-                  ariaLabel={t("privacy_masking.settings.portal")}
-                />
-              }
-            />
-          </SettingGroup>
-          <Callout tone={settings.key_protected ? "neutral" : "warning"}>
-            {settings.key_protected ? t("privacy_masking.settings.key_protected") : t("privacy_masking.settings.key_plain")}
-          </Callout>
-        </Section>
+        <Callout tone={settings.key_protected ? "neutral" : "warning"}>
+          {settings.key_protected ? t("privacy_masking.settings.key_protected") : t("privacy_masking.settings.key_plain")}
+        </Callout>
       ) : null}
 
       </div>

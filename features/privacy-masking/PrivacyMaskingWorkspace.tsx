@@ -91,11 +91,7 @@ export function PrivacyMaskingWorkspace({
   const save = async (next: PrivacyMaskSettings) => {
     setSaving(true);
     try {
-      const saved = await privacyMaskingApi.putSettings({
-        policy: next.policy,
-        enforced: next.enforced,
-        portal_default_allowed: next.portal_default_allowed,
-      });
+      const saved = await privacyMaskingApi.putSettings({ policy: next.policy });
       setSettings(saved);
       notify({ type: "success", message: t("privacy_masking.settings.saved") });
     } catch (e) {
