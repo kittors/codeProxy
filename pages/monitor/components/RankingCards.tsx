@@ -10,10 +10,13 @@ import {
   formatMonitorCost,
   formatMonitorDuration,
   formatMonitorPercent,
+  formatMonitorStamp,
 } from "../model/monitorFormat";
 import { MONITOR_CHANNEL_MIN_REQUESTS } from "../model/monitorHealth";
+import { modelPerformanceCoverage } from "../model/modelPerformance";
 import type { MonitorFilterDimension } from "../model/monitorQueryState";
 import { MonitorCardTitle, MonitorInlineNotice } from "./MonitorCardTitle";
+import { useModelPerformanceColumns } from "./ModelPerformanceColumns";
 import { MonitorRankingTable, ShareBar, type RankingColumn } from "./MonitorRankingTable";
 import { MonitorSparkline } from "./MonitorSparkline";
 import { metricColor, successLevel, successTextClass } from "./monitorTheme";
@@ -139,8 +142,13 @@ export function ModelLeaderboardCard({
 }: RankingCardProps) {
   const { t } = useTranslation();
   const columns = useCommonColumns(overview, legacy);
+  const performance = useModelPerformanceColumns();
   const requestsColor = metricColor("requests", isDark);
   const rows = overview.models.rows;
+  const coverage = modelPerformanceCoverage(overview);
+  const coverageNote = coverage
+    ? t("monitor_center.ranking.performance_coverage", { since: formatMonitorStamp(coverage) })
+    : null;
 
   return (
     <Card
@@ -148,7 +156,12 @@ export function ModelLeaderboardCard({
         <MonitorCardTitle
           icon={Boxes}
           label={t("monitor_center.models.title")}
-          note={t("monitor_center.ranking.count_models", { count: overview.models.total })}
+          note={
+            <>
+              {t("monitor_center.ranking.count_models", { count: overview.models.total })}
+              {coverageNote ? ` · ${coverageNote}` : null}
+            </>
+          }
         />
       }
       loading={loading}
@@ -187,36 +200,9 @@ export function ModelLeaderboardCard({
             columns.requests,
             columns.success,
             withClass(columns.latency, "hidden sm:table-cell"),
-            {
-              key: "first_token",
-              header: t("monitor_center.ranking.first_token"),
-              align: "right",
-              className: "hidden w-24 xl:table-cell",
-              render: (row) =>
-                row.first_token_avg_ms > 0 ? (
-                  <span className="text-ink-2">
-                    {formatMonitorDuration(row.first_token_avg_ms)}
-                  </span>
-                ) : (
-                  dash
-                ),
-            },
-            {
-              key: "speed",
-              header: t("monitor_center.ranking.speed"),
-              align: "right",
-              className: "hidden w-24 xl:table-cell",
-              render: (row) =>
-                row.output_tokens_per_second > 0 ? (
-                  <span className="text-ink-2">
-                    {t("monitor_center.ranking.speed_value", {
-                      value: formatMonitorCompact(Math.round(row.output_tokens_per_second)),
-                    })}
-                  </span>
-                ) : (
-                  dash
-                ),
-            },
+            performance.firstToken,
+            performance.speed,
+            performance.firstTokenPer1k,
             withClass(columns.tokens, "hidden lg:table-cell"),
             withClass(columns.cost, "hidden md:table-cell"),
             withClass(

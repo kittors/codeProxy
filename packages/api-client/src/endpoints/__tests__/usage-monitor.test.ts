@@ -38,7 +38,7 @@ describe("usageMonitorApi", () => {
     ]) {
       const overview = normalizeMonitorOverview(raw);
       expect(overview.series).toEqual([]);
-      expect(overview.models).toEqual({ rows: [], total: 0 });
+      expect(overview.models).toEqual({ rows: [], total: 0, performance_coverage_start: "" });
       expect(overview.filters).toEqual({ models: [], channels: [], consumers: [] });
       expect(overview.range.key).toBe("24h");
       expect(overview.summary.current.requests).toBe(0);
@@ -107,6 +107,78 @@ describe("usageMonitorApi", () => {
       cache_write_tokens: 1000,
     });
     expect(overview.series[0].cache_hit_rate).toBeNull();
+  });
+
+  // A null speed is "nothing measured it" and must not turn into 0 tok/s; an older backend
+  // sends neither field, and its output_tokens_per_second (first-token wait included) is dropped.
+  test("keeps the generation speed null when nothing measured it", async () => {
+    const { normalizeMonitorTotals, normalizeMonitorOverview } = await import("../usage-monitor");
+
+    const older = normalizeMonitorTotals({ requests: 3, output_tokens_per_second: 17.5 });
+    expect(older).toMatchObject({
+      generation_samples: null,
+      generation_tokens_per_second: null,
+      generation_output_tokens: 0,
+      generation_ms: 0,
+    });
+    expect(Object.prototype.hasOwnProperty.call(older, "output_tokens_per_second")).toBe(false);
+
+    expect(
+      normalizeMonitorTotals({ generation_samples: 0, generation_tokens_per_second: null }),
+    ).toMatchObject({ generation_samples: 0, generation_tokens_per_second: null });
+    expect(
+      normalizeMonitorTotals({
+        generation_samples: "1081",
+        generation_tokens_per_second: 152.4,
+        generation_output_tokens: 300000,
+        generation_ms: 2000000,
+      }),
+    ).toMatchObject({
+      generation_samples: 1081,
+      generation_tokens_per_second: 152.4,
+      generation_output_tokens: 300000,
+      generation_ms: 2000000,
+    });
+    expect(
+      normalizeMonitorTotals({ generation_tokens_per_second: "NaN" }).generation_tokens_per_second,
+    ).toBeNull();
+
+    const overview = normalizeMonitorOverview({
+      models: {
+        rows: [
+          {
+            key: "gemini",
+            performance: {
+              generation_speed: { samples: 1081, p50: 146.3, p90: "207.3" },
+              first_token_ms: { samples: 11667, p50: 8425, p90: 24950 },
+              first_token_ms_per_1k_input: 112,
+            },
+          },
+          {
+            key: "plain",
+            performance: { generation_speed: {}, first_token_ms_per_1k_input: null },
+          },
+          { key: "older" },
+        ],
+        performance_coverage_start: "2026-10-27T14:56:28+08:00",
+      },
+      channels: { rows: [{ key: "a" }] },
+    });
+    const [gemini, plain, older2] = overview.models.rows;
+    expect(gemini.performance).toEqual({
+      generation_speed: { samples: 1081, p50: 146.3, p90: 207.3 },
+      first_token_ms: { samples: 11667, p50: 8425, p90: 24950 },
+      first_token_ms_per_1k_input: 112,
+    });
+    expect(plain.performance).toEqual({
+      generation_speed: { samples: 0, p50: 0, p90: 0 },
+      first_token_ms: { samples: 0, p50: 0, p90: 0 },
+      first_token_ms_per_1k_input: null,
+    });
+    expect(older2.performance).toBeNull();
+    expect(overview.models.performance_coverage_start).toBe("2026-10-27T14:56:28+08:00");
+    expect(overview.channels.rows[0].performance).toBeNull();
+    expect(overview.channels.performance_coverage_start).toBe("");
   });
 
   // The backend sends loop_guard with every overview, zeros included, so its
