@@ -152,12 +152,8 @@ export interface PrivacyMaskPolicy {
 }
 
 export interface PrivacyMaskSettings {
-  /** 租户的默认设置（门户用户没设过时用它）。 */
+  /** 租户的脱敏设置，由管理员决定；门户用户只能看，不能改。 */
   policy: PrivacyMaskPolicy;
-  /** 强制开启的类目（secrets、personal 或某个个人信息类别），门户用户关不掉。 */
-  enforced: string[];
-  /** 门户用户能否自己设置，没逐个改过的都按它。 */
-  portal_default_allowed: boolean;
   /** 设置能不能保存（没接数据库时为 false）。 */
   persistent: boolean;
   /** 占位符密钥是否加密存库（服务器配了主密钥）。 */

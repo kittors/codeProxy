@@ -104,8 +104,6 @@ const SETTINGS = {
     allow: ["ops@company.com"],
     actions: { PRIVATE_KEY: "block", EMAIL: "warn" },
   },
-  enforced: ["secrets"],
-  portal_default_allowed: true,
   persistent: true,
   key_protected: false,
   updated_at: "2026-11-05T08:00:00Z",
@@ -211,6 +209,10 @@ test.describe("privacy masking page", () => {
 
     await page.getByRole("tab", { name: "设置" }).click();
     await expect(page.getByText("要遮什么")).toBeVisible();
+    // 遮什么由管理员决定，门户用户不能自己设置（11-05 撤掉）：没有「强制开启」和门户开关，密钥保护提示还在
+    await expect(page.getByText("强制开启")).toHaveCount(0);
+    await expect(page.getByText("门户用户可以自己设置")).toHaveCount(0);
+    await expect(page.getByText(/占位符密钥以明文存库/)).toBeVisible();
     await page.getByRole("textbox", { name: "试一试" }).fill("用密钥 sk-proj-AbCd… 部署，数据库密码：Qx7mP2vL9kR4，发邮件给 ops@company.com");
     await expect(page.getByText("上游会收到", { exact: true })).toBeVisible();
     await shoot(page, "5-settings");

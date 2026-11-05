@@ -8551,13 +8551,6 @@
       "allow_title": "Never mask",
       "allow_desc": "Values a task must use as written, like a team address or a test key. Matched whole, in any case.",
       "allow_placeholder": "ops@company.com",
-      "manage_title": "Management",
-      "manage_desc": "These are the tenant's defaults; portal users can change them for themselves in the portal.",
-      "enforce": "Always on",
-      "enforce_desc": "Kinds picked here stay on for every portal user, who can't turn them off or add them to Never mask",
-      "portal": "Portal users can choose their own",
-      "portal_desc": "On by default. Turned off, portal users can view records and use the tenant's settings",
-      "enforced_badge": "Turned on by an administrator",
       "key_protected": "The placeholder key is stored encrypted with the server's master key.",
       "key_plain": "The server has no master key yet, so the placeholder key is stored in plain text: if the database and its backups leaked, weak passwords could be guessed offline. Setting a master key means editing the server's .env.",
       "kinds_hint": "Emails, phone, ID and bank card numbers are masked with personal data; pick the other kinds here. Home folder names, user and host names, public IPs and buckets are all over agents' requests, so they're off by default."
