@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { Plus } from "lucide-react";
 import type { OpenAIProvider } from "@code-proxy/api-client";
-import { Button } from "@code-proxy/ui";
+import { Button, ScrollFade } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
 import { EmptyState } from "@code-proxy/ui";
 import { ProviderCard, ProviderCardSkeleton } from "../ProviderCard";
@@ -101,7 +101,7 @@ export function OpenAIProvidersTab({
           />
         </div>
       ) : (
-        <div
+        <ScrollFade
           data-testid="providers-tab-scroll"
           className={`${CARD_GRID_CLASS} overflow-y-auto`}
         >
@@ -225,7 +225,7 @@ export function OpenAIProvidersTab({
               </ProviderCard>
             );
           })}
-        </div>
+        </ScrollFade>
       )}
     </Card>
   );

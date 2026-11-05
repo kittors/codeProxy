@@ -1,4 +1,5 @@
 import { useEffect, useState, type FC } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { BRAND_NAME, LogoMark } from "@code-proxy/assets";
 
@@ -50,7 +51,9 @@ export const PageLoader: FC<PageLoaderProps> = ({
 
   const label = text ?? BRAND_NAME;
 
-  return (
+  // 全屏态挂到 body 上：页面里也会用到它（例如 IP 访问控制），而主内容区有滚动渐隐遮罩，
+  // mask 会把区内 fixed 定位的子孙裁到内容区以内、边缘还被淡掉。
+  return createPortal(
     <AnimatePresence>
       {mounted && (
         <motion.div
@@ -100,6 +103,7 @@ export const PageLoader: FC<PageLoaderProps> = ({
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 };
