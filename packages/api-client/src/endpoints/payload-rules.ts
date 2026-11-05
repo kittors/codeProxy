@@ -72,6 +72,8 @@ export interface ConfigCapabilities {
   payloadRulesDryRun: boolean;
   alerts: boolean;
   poolCapacity: boolean;
+  /** 隐私脱敏的观测页与设置页（/privacy-masking/*）。 */
+  privacyMasking: boolean;
 }
 
 export function readConfigCapabilities(
@@ -86,5 +88,6 @@ export function readConfigCapabilities(
     payloadRulesDryRun: capabilities["payload-rules-dry-run"] === true,
     alerts: capabilities["alerts"] === true,
     poolCapacity: capabilities["pool-capacity"] === true,
+    privacyMasking: capabilities["privacy-masking"] === true,
   };
 }
