@@ -12,25 +12,13 @@ import {
 } from "@code-proxy/ui";
 import type { MaskKindAction, MaskRule, PrivacyMaskPolicy, PrivacyMaskSettings } from "@code-proxy/api-client";
 import { KindDot, useKindLabel } from "./KindChip";
+import {
+  ACTION_PERSONAL_KINDS as PERSONAL_KINDS,
+  ACTION_SECRET_KINDS as SECRET_KINDS,
+  PERSONAL_CATEGORIES,
+} from "./maskKinds";
 import { MaskingTryIt } from "./MaskingTryIt";
 import { WordListEditor } from "./WordListEditor";
-
-/** 打开「个人信息」后另有的类别：前六个默认开，后四个噪声大（agent 每个请求都带）默认关。 */
-const PERSONAL_CATEGORIES: Array<{ id: string; on: boolean }> = [
-  { id: "ssn", on: true },
-  { id: "passport", on: true },
-  { id: "iban", on: true },
-  { id: "birthday", on: true },
-  { id: "mac", on: true },
-  { id: "serial", on: true },
-  { id: "home", on: false },
-  { id: "userhost", on: false },
-  { id: "ip", on: false },
-  { id: "bucket", on: false },
-];
-
-const SECRET_KINDS = ["API_KEY", "PRIVATE_KEY", "TOKEN", "PASSWORD", "SECRET"];
-const PERSONAL_KINDS = ["EMAIL", "PHONE", "ID_CARD", "BANK_CARD"];
 
 function Section({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
   return (

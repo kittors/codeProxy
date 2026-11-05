@@ -4306,7 +4306,8 @@
     "words_clear_title": "Clear all your sensitive words?",
     "words_clear_consequence": "Your requests are no longer checked against these words; your administrator's rules are not affected.",
     "words_forbidden_title": "Your administrator has not opened sensitive words to you",
-    "words_forbidden_description": "Your account cannot set sensitive words right now. Words you set before are kept but not applied; ask your administrator if you need them."
+    "words_forbidden_description": "Your account cannot set sensitive words right now. Words you set before are kept but not applied; ask your administrator if you need them.",
+    "privacy_tab": "Privacy masking"
   },
   "auth_files_page": {
     "files_tab": "Files",
@@ -8554,6 +8555,21 @@
       "key_protected": "The placeholder key is stored encrypted with the server's master key.",
       "key_plain": "The server has no master key yet, so the placeholder key is stored in plain text: if the database and its backups leaked, weak passwords could be guessed offline. Setting a master key means editing the server's .env.",
       "kinds_hint": "Emails, phone, ID and bank card numbers are masked with personal data; pick the other kinds here. Home folder names, user and host names, public IPs and buckets are all over agents' requests, so they're off by default."
+    },
+    "portal": {
+      "tab_rules": "Rules in effect",
+      "rules_title": "Masking rules on your requests",
+      "rules_desc": "Your administrator decides whether and what to mask; here you can only look.",
+      "state_on": "On",
+      "state_off": "Off",
+      "categories": "Other personal data masked",
+      "hidden_title": "Masked words and rules",
+      "hidden_note": "Your administrator may also have set masked words and rules of their own, which aren't shown to you.",
+      "try_desc": "Paste some text to see what upstream would get. It uses the rules on your requests now, without your administrator's masked words and rules, and is kept nowhere.",
+      "off_title": "Masking isn't on for your requests",
+      "off_desc": "Once it's on, API keys, private keys, tokens and passwords become placeholders before they leave CliRelay and are put back in each reply, and what each request had masked shows here. Your administrator decides whether it's on.",
+      "upstream_other": "Other upstreams",
+      "server_disabled": "Masking is switched off on the server for now: until it is back on, your requests go upstream unmasked."
     }
   }
 }

@@ -7,8 +7,12 @@ import type { ApiKeyLookupTab } from "./components/LookupResultsToolbar";
  * 请求日志和敏感词是「一张列表」：桌面宽度改成钉满一屏，列表最多占到剩余高度、在内部滚动，
  * 分页条和保存栏始终看得见；以前靠 h-[calc(100dvh-300px)] 这类手算高度钉住表格，行少时留下
  * 一大块空框，敏感词的分页条则要把整页滚到底才看得到。窄屏照样随内容流动。
+ *
+ * 隐私脱敏也钉满一屏，内容在标签自己的滚动区里滚：它的子标签栏吸顶、设置的保存栏钉在底部、
+ * 「试一试」跟着滚，都靠 sticky；整页滚动时 sticky 不起作用（PageBackground 的 app 底色带着
+ * overflow-hidden，它成了 sticky 的滚动容器，却从不滚动）。
  */
-export const isPinnedLookupTab = (tab: ApiKeyLookupTab) => tab === "logs" || tab === "words";
+export const isPinnedLookupTab = (tab: ApiKeyLookupTab) => tab === "logs" || tab === "words" || tab === "privacy";
 
 export function lookupShellClassName(showLanding: boolean, pinned: boolean): string {
   return [

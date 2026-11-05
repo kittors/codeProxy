@@ -8,11 +8,24 @@ import { KindChip } from "./KindChip";
 
 const PLACEHOLDER = /\{\{[A-Z][A-Z0-9_]*_[a-z2-7]{8}(?:[a-z2-7]{8})?\}\}/g;
 
+const tenantPreview = (text: string, policy?: PrivacyMaskPolicy) => privacyMaskingApi.preview(text, policy);
+
 /**
  * 试一试：粘一段 agent 可能发出的文字，按当前（还没保存的）设置在服务器上脱敏一遍，显示上游会
  * 收到什么、找到了哪些值。文字只用来预览，不保存，也不进任何记录。
+ *
+ * 控制台传设置页的草稿 policy；门户只读，不传 policy，由门户的 preview 按现在对这个用户生效的
+ * 规则处理（不含管理员的脱敏词和自定义规则）。
  */
-export function MaskingTryIt({ policy, stacked = false }: { policy: PrivacyMaskPolicy; stacked?: boolean }) {
+export function MaskingTryIt({
+  policy,
+  preview = tenantPreview,
+  stacked = false,
+}: {
+  policy?: PrivacyMaskPolicy;
+  preview?: (text: string, policy?: PrivacyMaskPolicy) => Promise<PrivacyMaskPreview>;
+  stacked?: boolean;
+}) {
   const { t } = useTranslation();
   const [text, setText] = useState("");
   const [result, setResult] = useState<PrivacyMaskPreview | null>(null);
@@ -25,8 +38,7 @@ export function MaskingTryIt({ policy, stacked = false }: { policy: PrivacyMaskP
     }
     let cancelled = false;
     const timer = window.setTimeout(() => {
-      privacyMaskingApi
-        .preview(text, policy)
+      preview(text, policy)
         .then((value) => {
           if (cancelled) return;
           setResult(value);
@@ -38,7 +50,7 @@ export function MaskingTryIt({ policy, stacked = false }: { policy: PrivacyMaskP
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [text, policy]);
+  }, [text, policy, preview]);
 
   const ink = (value: string): ReactNode[] => {
     const out: ReactNode[] = [];

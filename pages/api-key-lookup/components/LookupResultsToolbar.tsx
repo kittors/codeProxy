@@ -6,14 +6,14 @@ import type { TimeRange } from "@features/monitor-widgets/monitor-constants";
 import type { PublicQuotaScope, PublicUsageLimits } from "../types";
 import { buildQuotaKpiItems } from "./QuotaLimitsBanner";
 
-export type ApiKeyLookupTab = "usage" | "keys" | "words" | "logs" | "models" | "quickImport";
+export type ApiKeyLookupTab = "usage" | "keys" | "words" | "privacy" | "logs" | "models" | "quickImport";
 
 /** sticky top-3 = 0.75rem */
 const STICKY_TOP_OFFSET_PX = 12;
 /** 亚像素容差，避免临界抖动 */
 const STUCK_EPSILON_PX = 1;
 
-const DEFAULT_TABS: ApiKeyLookupTab[] = ["usage", "keys", "words", "logs", "models", "quickImport"];
+const DEFAULT_TABS: ApiKeyLookupTab[] = ["usage", "keys", "words", "privacy", "logs", "models", "quickImport"];
 
 export function LookupResultsToolbar({
   t,
@@ -29,6 +29,7 @@ export function LookupResultsToolbar({
   quotaScopes,
   showKeysTab = false,
   showWordsTab = false,
+  showPrivacyTab = false,
   tabs,
 }: {
   t: (key: string, options?: Record<string, unknown>) => string;
@@ -46,6 +47,8 @@ export function LookupResultsToolbar({
   showKeysTab?: boolean;
   /** Portal login whose tenant lets the account keep sensitive words of its own. */
   showWordsTab?: boolean;
+  /** Portal login on a backend with portal privacy masking (read-only for every account). */
+  showPrivacyTab?: boolean;
   /** Restrict visible tabs (e.g. public key usage page only needs logs + quick import). */
   tabs?: ApiKeyLookupTab[];
 }) {
@@ -119,6 +122,9 @@ export function LookupResultsToolbar({
               {showTab("words") && showWordsTab ? (
                 <TabsTrigger value="words">{t("apikey_lookup.words_tab")}</TabsTrigger>
               ) : null}
+              {showTab("privacy") && showPrivacyTab ? (
+                <TabsTrigger value="privacy">{t("apikey_lookup.privacy_tab")}</TabsTrigger>
+              ) : null}
               {showTab("logs") ? (
                 <TabsTrigger value="logs">{t("apikey_lookup.request_logs")}</TabsTrigger>
               ) : null}
@@ -152,10 +158,10 @@ export function LookupResultsToolbar({
             </div>
           ) : null}
         </div>
-        {/* 敏感词标签有自己的保存与重新载入；这里的刷新会打断草稿，不放。 */}
+        {/* 敏感词、隐私脱敏标签有自己的保存与刷新；这里的刷新会打断草稿，不放。 */}
         <div
           className={
-            activeTab === "words"
+            activeTab === "words" || activeTab === "privacy"
               ? "hidden"
               : activeTab === "keys"
                 ? "hidden items-center gap-2 sm:flex"

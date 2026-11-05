@@ -403,6 +403,12 @@ export const portalApi = {
      * backend does not say, which reads as not allowed.
      */
     wordPolicyAllowed: boolean;
+    /**
+     * The backend serves the portal's read-only privacy masking (privacyMaskingPortalApi): its
+     * capabilities say `"privacy-masking": true`, explicitly, as readConfigCapabilities reads the
+     * console's. An older backend does not, and the portal then neither offers it nor asks for it.
+     */
+    privacyMasking: boolean;
   }> => {
     const raw = await portalClient.get<unknown>("/v0/portal/auth/me");
     const record = isRecord(raw) ? raw : {};
@@ -410,6 +416,7 @@ export const portalApi = {
       user: normalizeEndUser(record.user),
       capabilities: readAccessPolicyCapabilities(record.capabilities),
       wordPolicyAllowed: record.word_policy_allowed === true,
+      privacyMasking: isRecord(record.capabilities) && record.capabilities["privacy-masking"] === true,
     };
   },
   /**

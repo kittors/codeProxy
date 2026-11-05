@@ -11,7 +11,8 @@ import { MaskingFlow } from "./MaskingFlow";
  * 请求），每天各多少，以及从哪些客户端来、发往哪些渠道。
  *
  * 脱敏关着、也从没遮过任何东西时，不摆一个 0 出来让人以为「坏了」，而是说清现在请求原样发往
- * 上游，并给出打开的入口。
+ * 上游，并给出打开的入口。门户只读、开不开由管理员决定：那里只说明，不给入口；流向图右边是上游
+ * 厂商而不是渠道，不能点来筛选。
  */
 export function MaskingSummaryCard({
   summary,
@@ -22,6 +23,7 @@ export function MaskingSummaryCard({
   selectedChannel,
   onSelect,
   onOpenSettings,
+  scope = "tenant",
 }: {
   summary: MaskSummary | null;
   enabled: boolean;
@@ -31,6 +33,7 @@ export function MaskingSummaryCard({
   selectedChannel?: string;
   onSelect: (side: "client" | "channel", id: string) => void;
   onOpenSettings: () => void;
+  scope?: "tenant" | "portal";
 }) {
   const { t, i18n } = useTranslation();
   const card = `${surface({ radius: "3xl" })} p-5`;
@@ -41,12 +44,21 @@ export function MaskingSummaryCard({
         <span className="grid size-11 place-items-center rounded-full bg-ink/[0.05] text-ink-3 dark:bg-white/[0.07]">
           <ShieldOff size={20} aria-hidden="true" />
         </span>
-        <h2 className="text-base font-semibold text-ink">{t("privacy_masking.off.title")}</h2>
-        <p className="max-w-md text-sm text-ink-3">{t("privacy_masking.off.description")}</p>
-        <Button size="sm" variant="primary" onClick={onOpenSettings}>
-          <ShieldCheck size={14} aria-hidden="true" />
-          {t("privacy_masking.off.turn_on")}
-        </Button>
+        {scope === "portal" ? (
+          <>
+            <h2 className="text-base font-semibold text-ink">{t("privacy_masking.portal.off_title")}</h2>
+            <p className="max-w-md text-sm text-ink-3">{t("privacy_masking.portal.off_desc")}</p>
+          </>
+        ) : (
+          <>
+            <h2 className="text-base font-semibold text-ink">{t("privacy_masking.off.title")}</h2>
+            <p className="max-w-md text-sm text-ink-3">{t("privacy_masking.off.description")}</p>
+            <Button size="sm" variant="primary" onClick={onOpenSettings}>
+              <ShieldCheck size={14} aria-hidden="true" />
+              {t("privacy_masking.off.turn_on")}
+            </Button>
+          </>
+        )}
       </section>
     );
   }
@@ -125,6 +137,7 @@ export function MaskingSummaryCard({
               selectedClient={selectedClient}
               selectedChannel={selectedChannel}
               onSelect={onSelect}
+              channelsSelectable={scope !== "portal"}
             />
           ) : (
             <div className="grid place-items-center rounded-2xl bg-subtle px-6 py-10 text-center text-sm text-ink-3">
