@@ -382,7 +382,8 @@ export function buildRequestLogsColumns(
     {
       key: "id",
       label: t("request_logs.col_id"),
-      width: "w-20",
+      // 放得下「#1001709206」和带拖拽把手的「ID」表头；w-20 只剩「I.」，以前靠用户自己拖宽。
+      width: "w-32",
       headerClassName: "text-left",
       cellClassName: "text-left font-mono text-xs tabular-nums text-slate-500 dark:text-white/50",
       render: (row) => (
@@ -719,6 +720,7 @@ export function RequestLogsPaginationBar({
   onPageChange,
   onPageSizeChange,
   flush = false,
+  pending = false,
 }: {
   currentPage: number;
   totalPages: number;
@@ -728,6 +730,8 @@ export function RequestLogsPaginationBar({
   onPageSizeChange: (size: number) => void;
   /** 直接放在内容区上（没有外层卡片）时不再留左右内边距，和上方表格左右对齐。 */
   flush?: boolean;
+  /** 第一页还没回来：条数显示占位，不显示「第 0-0 条，共 0 条」。 */
+  pending?: boolean;
 }) {
   const { t } = useTranslation();
 
@@ -748,7 +752,8 @@ export function RequestLogsPaginationBar({
         nextPage: t("request_logs.next_page"),
         lastPage: t("request_logs.last_page"),
         rowsPerPage: t("request_logs.rows_per_page"),
-        pageInfo: ({ start, end, total }) => t("request_logs.page_info", { start, end, total }),
+        pageInfo: ({ start, end, total }) =>
+          pending ? "—" : t("request_logs.page_info", { start, end, total }),
       }}
     />
   );

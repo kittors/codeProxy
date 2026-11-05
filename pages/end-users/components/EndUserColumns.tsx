@@ -382,7 +382,7 @@ export function getEndUserColumns({
                 key: "reset-history",
                 label: t("access_policy.reset_history_count", { count: resets }),
                 icon: <History className="h-4 w-4" />,
-                visible: resets > 0,
+                unavailable: resets === 0,
                 onClick: () => onViewResetHistory(row),
               },
               {

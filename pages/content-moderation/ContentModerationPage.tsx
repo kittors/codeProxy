@@ -417,6 +417,7 @@ export function ContentModerationPage() {
         />
       ) : (
         <DataTable<ContentModerationProfileView>
+          fill
           tableId="content-moderation-profiles"
           rows={profiles}
           columns={columns}

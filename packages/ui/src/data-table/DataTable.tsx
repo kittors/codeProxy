@@ -7,12 +7,13 @@ import {
   useState,
   type PointerEvent as ReactPointerEvent,
 } from "react";
-import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { ArrowDown, ArrowUp, ArrowUpDown, Check, GripVertical } from "lucide-react";
 import { DropdownMenu } from "../primitives/DropdownMenu";
 import { TableEmptyRow, TableLoadingRows } from "./TableBodyPlaceholder";
+import { ColumnResizePreviewOverlay } from "./ColumnResizePreviewOverlay";
 import { TableCellOverflowTooltip } from "./TableCellOverflowTooltip";
+import { TableScrollbars } from "./TableScrollbars";
 
 export type {
   DataTableColumn,
@@ -59,10 +60,14 @@ import {
 import {
   areColumnWidthMapsEqual,
   normalizeColumnWidths,
+  resolveColumnLayoutWidth,
   resolveColumnResizeWidth,
+  resolveFlexColumnKey,
   resolveHeaderContentJustifyClass,
   resolveStickyColumnPlacements,
   resolveStickyRailWidth,
+  resolveTableMinWidthPx,
+  writeColumnWidthToDom,
 } from "./columnLayout";
 import {
   findColumnReorderTargetIndex,
@@ -149,6 +154,7 @@ export function DataTable<T>({
   rowAriaSelected,
   allowWheelPropagationAtBoundary = false,
   naturalFlow = false,
+  fill = false,
   scrollContentClassName,
   columnResizable = true,
   columnReorderable = true,
@@ -187,6 +193,7 @@ export function DataTable<T>({
   const headerRef = useRef<HTMLTableSectionElement | null>(null);
   const headerCellsRef = useRef<Record<string, HTMLTableCellElement | null>>({});
   const columnElementsRef = useRef<Record<string, HTMLTableColElement | null>>({});
+  const flexColumnKeyRef = useRef<string | null>(null);
   const headerHeightRef = useRef(0);
   const [columnWidths, setColumnWidths] = useState<ColumnWidthMap>(() =>
     normalizeColumnWidths(columns, readStoredColumnWidths(tableId)),
@@ -200,7 +207,7 @@ export function DataTable<T>({
   const renderedStickyWidthsRef = useRef<ColumnWidthMap>({});
   // Inputs the fixed-column overlays need while scrolling, kept out of state.
   const stickyOverlayInputsRef = useRef({ tableHeight: 0, bottomInset: 0 });
-  const tableHeight = useObservedHeight(tableRef);
+  const tableHeight = useObservedHeight(tableRef, `${rows.length}:${loading}`);
   const [headerHeight, setHeaderHeight] = useState(0);
   const [scrollTop, setScrollTop] = useState(0);
   const [viewportHeight, setViewportHeight] = useState(480);
@@ -1062,14 +1069,18 @@ export function DataTable<T>({
     [t],
   );
 
-  const applyColumnWidthToDom = useCallback((columnKey: string, width: number) => {
-    const col = columnElementsRef.current[columnKey];
-    if (!col) return;
-    const widthPx = `${width}px`;
-    col.style.width = widthPx;
-    col.style.minWidth = widthPx;
-    col.style.maxWidth = widthPx;
-  }, []);
+  // Drag preview writes <col> widths straight to the DOM; null hands the column back to render.
+  const applyColumnWidthToDom = useCallback(
+    (columnKey: string, width: number | null) => {
+      const widths = { ...columnWidthsRef.current, [columnKey]: width ?? 0 };
+      if (width === null) delete widths[columnKey];
+      const tableMinWidthPx = resolveTableMinWidthPx(orderedColumnsRef.current, widths, minWidth);
+      // The flex column keeps no width of its own: dragging it only moves the table's floor.
+      const col = columnKey === flexColumnKeyRef.current ? null : columnElementsRef.current[columnKey];
+      writeColumnWidthToDom(col, tableRef.current, width, tableMinWidthPx);
+    },
+    [minWidth],
+  );
 
   const applyStickyLayoutToDom = useCallback(
     (widths: ColumnWidthMap) => {
@@ -1204,20 +1215,30 @@ export function DataTable<T>({
     applyPendingColumnResize();
   }, [applyPendingColumnResize]);
 
+  // Settles widths after a drag or a reset: state, its ref and the persisted map.
+  const commitColumnWidths = useCallback(
+    (nextWidths: ColumnWidthMap) => {
+      columnWidthsRef.current = nextWidths;
+      setColumnWidths(nextWidths);
+      writeStoredColumnWidths(tableId, nextWidths);
+      updateScrollMetrics();
+    },
+    [tableId, updateScrollMetrics],
+  );
+
   const finishColumnResize = useCallback(() => {
     const active = columnResizeRef.current;
     if (!active) return;
 
     flushPendingColumnResize();
 
-    const nextWidths = {
-      ...columnWidthsRef.current,
-      [active.columnKey]: active.currentWidth,
-    };
-    columnWidthsRef.current = nextWidths;
-    setColumnWidths(nextWidths);
-    writeStoredColumnWidths(tableId, nextWidths);
-    updateScrollMetrics();
+    // A press on the handle without a drag must not pin the column's current width (that is how
+    // stretched widths used to get stored); hand the column back to render instead.
+    if (Math.round(active.currentWidth) !== Math.round(active.startWidth)) {
+      commitColumnWidths({ ...columnWidthsRef.current, [active.columnKey]: active.currentWidth });
+    } else {
+      applyColumnWidthToDom(active.columnKey, columnWidthsRef.current[active.columnKey] ?? null);
+    }
 
     columnResizeRef.current = null;
     pendingColumnResizePointerRef.current = null;
@@ -1226,7 +1247,18 @@ export function DataTable<T>({
     document.body.style.cursor = "";
     document.body.style.userSelect = "";
     document.documentElement.style.cursor = "";
-  }, [flushPendingColumnResize, tableId, updateScrollMetrics]);
+  }, [applyColumnWidthToDom, commitColumnWidths, flushPendingColumnResize]);
+
+  // Double-clicking a resize handle puts the column back to its default width.
+  const resetColumnWidth = useCallback(
+    (columnKey: string) => {
+      const nextWidths = { ...columnWidthsRef.current };
+      delete nextWidths[columnKey];
+      commitColumnWidths(nextWidths);
+      applyColumnWidthToDom(columnKey, null);
+    },
+    [applyColumnWidthToDom, commitColumnWidths],
+  );
 
   const handleColumnResizePointerDown = useCallback(
     (column: DataTableColumn<T>, e: ReactPointerEvent<HTMLButtonElement>) => {
@@ -1238,7 +1270,12 @@ export function DataTable<T>({
       const rect = headerCell.getBoundingClientRect();
       const containerRect = containerRef.current?.getBoundingClientRect();
       const railWidths = naturalFlow ? { start: 0, end: 0 } : stickyRailWidthsRef.current;
-      const startWidth = rect.width;
+      // The flex column is wider than its own width whenever there is room to spare; a drag sets
+      // that width (its floor), so start from it rather than from the width it soaked up.
+      const startWidth =
+        column.key === flexColumnKeyRef.current
+          ? resolveColumnLayoutWidth(column, columnWidthsRef.current)
+          : rect.width;
       const minWidth = resolveColumnMinWidth(column);
       const maxWidth = resolveColumnMaxWidth(column, minWidth);
       const nextStartWidth = Math.max(minWidth, Math.min(maxWidth, startWidth));
@@ -1266,6 +1303,7 @@ export function DataTable<T>({
           containerRect && !naturalFlow && railWidths.end > 0
             ? containerRect.right - railWidths.end
             : Number.POSITIVE_INFINITY,
+        startWidth: nextStartWidth,
         currentWidth: nextStartWidth,
         lastDebugAtMs: 0,
         debugEnabled: shouldDebugColumnResize(),
@@ -1987,10 +2025,15 @@ export function DataTable<T>({
   // that data rows need; otherwise the empty body scrolls horizontally for
   // no content. Keep headers for context, but collapse to the viewport width.
   const tableMinWidthClass = isEmpty ? "min-w-0" : minWidth;
+  const flexColumnKey = useMemo(() => resolveFlexColumnKey(orderedColumns), [orderedColumns]);
+  flexColumnKeyRef.current = flexColumnKey;
+  const tableMinWidthPx = resolveTableMinWidthPx(orderedColumns, columnWidths, minWidth);
+  // Full-page list: the body under the header, so the skeleton and the empty state fill the frame.
+  const fillBodyHeight = fill ? Math.max(0, scrollMetrics.clientHeight - headerHeight) : undefined;
 
   const resolveColumnStyle = useCallback(
     (column: DataTableColumn<T>, area: "header" | "cell" = "cell"): DataTableColumnStyle => {
-      const width = isEmpty ? undefined : columnWidths[column.key];
+      const width = isEmpty || column.key === flexColumnKey ? undefined : columnWidths[column.key];
       const placement = naturalFlow || isEmpty ? undefined : stickyColumnPlacements[column.key];
       const style: DataTableColumnStyle = {};
 
@@ -2012,56 +2055,23 @@ export function DataTable<T>({
 
       return style;
     },
-    [columnWidths, isEmpty, naturalFlow, stickyColumnPlacements],
+    [columnWidths, flexColumnKey, isEmpty, naturalFlow, stickyColumnPlacements],
   );
-
-  const resizePreviewOverlay =
-    resizePreview && typeof document !== "undefined"
-      ? createPortal(
-          <>
-            <div
-              ref={resizePreviewLineRef}
-              data-vt-column-resize-preview-line
-              aria-hidden="true"
-              className="pointer-events-none fixed z-[1000] w-0.5 bg-slate-500/70"
-              style={{
-                left: resizePreview.left,
-                top: resizePreview.top,
-                height: resizePreview.height,
-                display: resizePreview.visible ? undefined : "none",
-              }}
-            />
-            <div
-              ref={resizePreviewTooltipRef}
-              data-vt-column-resize-preview-tooltip
-              role="status"
-              className="pointer-events-none fixed z-[1001] rounded-md bg-slate-900 px-2 py-1 text-xs font-medium text-white shadow-lg dark:bg-white dark:text-neutral-950"
-              style={{
-                left: resizePreview.left + 10,
-                top: resizePreview.tooltipTop,
-                display: resizePreview.visible ? undefined : "none",
-              }}
-            >
-              {t("common.column_width_px", { width: resizePreview.width })}
-            </div>
-          </>,
-          document.body,
-        )
-      : null;
 
   return (
     <div
       ref={rootRef}
       aria-busy={loading || loadingMore ? true : undefined}
       data-vt-natural-flow={naturalFlow ? true : undefined}
-      // Height model: as tall as the rows, never taller than the box it sits in (maxHeight,
-      // or flex-shrink in a flex column). Few rows: no blank body and the pager and
-      // horizontal scrollbar stay right under the last row. Many rows: it fills what is
-      // left and scrolls inside. Nothing pins it to the viewport any more.
+      // Height model. fill (full-page lists): exactly the box the page gives it (h-full, or the
+      // rest of a flex column next to a pager), so loading, empty, few and many rows share one
+      // frame and the pager / horizontal scrollbar never move.
+      // Otherwise (forms, dialogs, split panes): as tall as the rows, capped by maxHeight or by
+      // flex-shrink in a flex column. Nothing pins a table to the viewport with calc() any more.
       className={
         naturalFlow
           ? `${height} ${minHeight} relative min-w-0 overflow-visible`
-          : `${height} ${minHeight} ${maxHeight} group relative isolate grid min-w-0 overflow-hidden rounded-xl ${vThumb ? "grid-cols-[minmax(0,1fr)_0.75rem]" : "grid-cols-1"}`
+          : `${fill ? `h-full min-h-0 flex-1 ${maxHeight}` : `${height} ${minHeight} ${maxHeight}`} group relative isolate grid min-w-0 overflow-hidden rounded-xl ${vThumb ? "grid-cols-[minmax(0,1fr)_0.75rem]" : "grid-cols-1"}`
       }
     >
       {!naturalFlow ? (
@@ -2124,6 +2134,7 @@ export function DataTable<T>({
           <table
             ref={tableRef}
             className={`relative w-full ${tableMinWidthClass} table-fixed border-separate border-spacing-0 text-sm`}
+            style={isEmpty ? undefined : { minWidth: tableMinWidthPx }}
             data-vt-empty={isEmpty ? true : undefined}
           >
             <caption className="sr-only">{caption}</caption>
@@ -2206,7 +2217,7 @@ export function DataTable<T>({
                       } ${
                         stickyPlacement?.edge === "end" ? "md:right-[var(--vt-sticky-right)]" : ""
                       } ${headerChromeClass} ${headerCornerClass} ${
-                        isEmpty ? "" : (col.width ?? "")
+                        isEmpty || col.key === flexColumnKey ? "" : (col.width ?? "")
                       } ${col.headerClassName ?? ""} ${
                         stickyPlacement ? "z-[70]" : ""
                       } ${
@@ -2320,6 +2331,7 @@ export function DataTable<T>({
                           className="group/resize absolute -right-2 top-0 z-30 h-full w-4 cursor-col-resize touch-none bg-transparent outline-none"
                           style={{ cursor: "col-resize" }}
                           onPointerDown={(event) => handleColumnResizePointerDown(col, event)}
+                          onDoubleClick={() => resetColumnWidth(col.key)}
                         >
                           <span
                             aria-hidden="true"
@@ -2340,10 +2352,15 @@ export function DataTable<T>({
             {/* ── Body ── */}
             <tbody className="relative z-0 text-slate-900 dark:text-white">
               {loading && rows.length === 0 ? (
-                <TableLoadingRows columns={orderedColumns} colCount={colCount} />
+                <TableLoadingRows
+                  columns={orderedColumns}
+                  colCount={colCount}
+                  fillHeight={fillBodyHeight}
+                />
               ) : isEmpty ? (
                 <TableEmptyRow
                   colCount={colCount}
+                  fillHeight={fillBodyHeight}
                   title={emptyText}
                   description={emptyDescription}
                   icon={emptyIcon}
@@ -2540,54 +2557,22 @@ export function DataTable<T>({
         />
       ) : null}
 
-      {!naturalFlow && vThumb ? (
-        <div
-          data-vt-scrollbar-gutter
-          className="relative z-30 col-start-2 row-start-1 h-full w-3 justify-self-end"
-        >
-          <div
-            data-vt-header-gutter
-            className="absolute inset-x-0 top-0 rounded-r-xl bg-slate-100 dark:bg-neutral-800"
-            style={{ height: headerHeight }}
-          />
-          <div
-            data-vt-scrollbar="y"
-            className="group/scrollbar pointer-events-auto absolute right-0 z-30 w-2 opacity-0 transition-opacity hover:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100"
-            style={{ top: headerHeight + 8, bottom: 8 }}
-          >
-            <div
-              ref={verticalThumbRef}
-              role="presentation"
-              className="pointer-events-auto absolute right-0 w-1.5 cursor-pointer rounded-full bg-[#C7C7C7] transition-[width] duration-150 ease-out hover:w-2 active:w-2 group-hover/scrollbar:w-2 dark:bg-white/25"
-              style={{ top: vThumb.top, height: vThumb.height }}
-              onPointerDown={(e) => handleThumbPointerDown("y", e)}
-              onPointerMove={handleThumbPointerMove}
-              onPointerUp={handleThumbPointerUp}
-              onPointerCancel={handleThumbPointerUp}
-            />
-          </div>
-        </div>
-      ) : null}
+      <TableScrollbars
+        vThumb={naturalFlow ? null : vThumb}
+        hThumb={naturalFlow ? null : hThumb}
+        headerHeight={headerHeight}
+        verticalThumbRef={verticalThumbRef}
+        horizontalThumbRef={horizontalThumbRef}
+        onThumbPointerDown={handleThumbPointerDown}
+        onThumbPointerMove={handleThumbPointerMove}
+        onThumbPointerUp={handleThumbPointerUp}
+      />
 
-      {!naturalFlow && hThumb ? (
-        <div
-          data-vt-scrollbar="x"
-          className={`group/scrollbar pointer-events-auto absolute bottom-1 left-2 ${vThumb ? "right-5" : "right-2"} z-30 h-2 opacity-0 transition-opacity hover:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100`}
-        >
-          <div
-            ref={horizontalThumbRef}
-            role="presentation"
-            className="pointer-events-auto absolute bottom-0 h-1.5 cursor-pointer rounded-full bg-[#C7C7C7] transition-[height] duration-150 ease-out hover:h-2 active:h-2 group-hover/scrollbar:h-2 dark:bg-white/25"
-            style={{ left: hThumb.left, width: hThumb.width }}
-            onPointerDown={(e) => handleThumbPointerDown("x", e)}
-            onPointerMove={handleThumbPointerMove}
-            onPointerUp={handleThumbPointerUp}
-            onPointerCancel={handleThumbPointerUp}
-          />
-        </div>
-      ) : null}
-
-      {resizePreviewOverlay}
+      <ColumnResizePreviewOverlay
+        preview={resizePreview}
+        lineRef={resizePreviewLineRef}
+        tooltipRef={resizePreviewTooltipRef}
+      />
     </div>
   );
 }

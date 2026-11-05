@@ -18,7 +18,7 @@ const HORIZONTAL_SCROLLBAR_INSET = 14;
 const setAuthed = async (page: Page) => {
   await page.addInitScript(() => {
     localStorage.removeItem("codeProxy.dataTable.columnOrder.v1.end-users");
-    localStorage.removeItem("codeProxy.dataTable.columnWidths.v2.end-users");
+    localStorage.removeItem("codeProxy.dataTable.columnWidths.v3.end-users");
     localStorage.setItem(
       "code-proxy-admin-auth",
       JSON.stringify({
@@ -33,7 +33,7 @@ const setAuthed = async (page: Page) => {
 
 const setStoredColumnWidths = async (page: Page, widths: Record<string, number>) => {
   await page.addInitScript((stored: Record<string, number>) => {
-    localStorage.setItem("codeProxy.dataTable.columnWidths.v2.end-users", JSON.stringify(stored));
+    localStorage.setItem("codeProxy.dataTable.columnWidths.v3.end-users", JSON.stringify(stored));
   }, widths);
 };
 

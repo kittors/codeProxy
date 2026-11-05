@@ -282,9 +282,10 @@ export function AuditLogsPage() {
             </Button>
           </PermissionGate>
         </div>
-        {/* 表格按行数收高，最多占到页面剩余高度、再多就内部滚动，分页条始终紧跟在下面；不设最小高度保底——页面高度被窗口钉死，保底只会在矮窗口下把表格挤出页面（见请求日志页）。 */}
-        <div className="relative flex min-h-0 flex-col overflow-hidden">
+        {/* 表格 fill 铺满页面剩余高度、再多就内部滚动：加载、空、行少、行多都是同一个框，分页条和横向滚动条不随行数移动；不设最小高度保底——页面高度被窗口钉死，保底只会在矮窗口下把表格挤出页面（见请求日志页）。 */}
+        <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
           <DataTable<AuditLogIdentity>
+            fill
             tableId="identity-audit-logs"
             rows={items}
             columns={columns}

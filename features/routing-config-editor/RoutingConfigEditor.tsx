@@ -970,7 +970,7 @@ export function RoutingConfigEditor({
                 label: t("visual_config.delete_group"),
                 icon: <Trash2 />,
                 destructive: true,
-                visible: !group.system,
+                unavailable: group.system,
                 disabled,
                 onClick: () => setDeleteGroupTarget(group),
               },
@@ -1172,12 +1172,11 @@ export function RoutingConfigEditor({
         </div>
 
         <DataTable<RoutingChannelGroupEntry>
+          fill
           tableId="routing-channel-groups"
           rows={displayGroups}
           columns={groupColumns}
           rowKey={(group) => group.id}
-          virtualize={false}
-          rowHeight={44}
           minWidth="min-w-[1360px]"
           caption={t("channel_groups_page.table_group")}
           emptyText={t("channel_groups_page.empty_groups")}

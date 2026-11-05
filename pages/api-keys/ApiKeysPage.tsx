@@ -843,20 +843,20 @@ export function ApiKeysPage({
       icon={<KeyRound size={32} className="text-ink-3" />}
     />
   ) : (
-    <div className="space-y-3 md:flex md:min-h-0 md:flex-1 md:flex-col">
-      <DataTable<ApiKeyEntry>
-        tableId="api-keys"
-        rows={entries}
-        columns={apiKeyColumns}
-        rowKey={(row) => row.key}
-        rowHeight={52}
-        minWidth="min-w-[2500px]"
-        caption={t("api_keys_page.table_caption")}
-        emptyText={t("api_keys_page.no_api_keys")}
-        showAllLoadedMessage={false}
-        rowClassName={(row) => (row.disabled ? "opacity-50" : "")}
-      />
-    </div>
+    // 表格自己 fill（h-full + flex-1），直接放进卡片或嵌入区的 flex 列里就能撑满。
+    <DataTable<ApiKeyEntry>
+      fill
+      tableId="api-keys"
+      rows={entries}
+      columns={apiKeyColumns}
+      rowKey={(row) => row.key}
+      rowHeight={52}
+      minWidth="min-w-[2500px]"
+      caption={t("api_keys_page.table_caption")}
+      emptyText={t("api_keys_page.no_api_keys")}
+      showAllLoadedMessage={false}
+      rowClassName={(row) => (row.disabled ? "opacity-50" : "")}
+    />
   );
 
   return (
