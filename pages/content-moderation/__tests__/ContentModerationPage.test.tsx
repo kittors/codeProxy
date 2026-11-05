@@ -123,10 +123,12 @@ describe("ContentModerationPage", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Strict prompts")).toBeInTheDocument();
     expect(screen.getByText("4 channels")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Manage channels" })).toBeInTheDocument();
+    // 行操作列只放得下四个位置：常用的三个平铺，查看状态和删除收进「更多」，不溢出列宽。
     expect(screen.getByRole("button", { name: "Edit Profile" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Delete Profile" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "More profile actions" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Manage channels" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Test profile" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Delete Profile" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "More profile actions" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Test profile" }));
     expect(screen.getByText(/does not save test input/i)).toBeInTheDocument();
@@ -194,7 +196,9 @@ describe("ContentModerationPage", () => {
     const user = userEvent.setup();
     renderPage();
 
-    await user.click(await screen.findByRole("button", { name: "View status" }));
+    // 「查看状态」在行操作的「更多」里（常用的三个平铺在前面）。
+    await user.click(await screen.findByRole("button", { name: "More profile actions" }));
+    await user.click(await screen.findByRole("menuitem", { name: "View status" }));
 
     await waitFor(() => expect(mocks.getMetrics).toHaveBeenCalledTimes(1));
     const dialog = await screen.findByRole("dialog", { name: "Pre-block moderation status" });
@@ -230,7 +234,8 @@ describe("ContentModerationPage", () => {
     const user = userEvent.setup();
     renderPage();
 
-    await user.click(await screen.findByRole("button", { name: "Delete Profile" }));
+    await user.click(await screen.findByRole("button", { name: "More profile actions" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Delete Profile" }));
     const dialog = await screen.findByRole("dialog", {
       name: "Delete moderation profile “Strict prompts”?",
     });

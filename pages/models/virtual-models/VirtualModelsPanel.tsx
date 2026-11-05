@@ -15,7 +15,7 @@ import {
   Card,
   ConfirmModal,
   DataTable,
-  TABLE_ROW_ACTIONS_COLUMN,
+  TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
   TableRowActions,
   TextInput,
   useToast,
@@ -206,7 +206,7 @@ export function VirtualModelsPanel() {
             {
               key: "actions",
               label: t("models_page.col_actions"),
-              ...TABLE_ROW_ACTIONS_COLUMN,
+              ...TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
               render: (vm: RoutingVirtualModel) => (
                 <TableRowActions
                   moreLabel={t("common.more_actions")}
@@ -241,7 +241,8 @@ export function VirtualModelsPanel() {
       <Card
         title={t("models_page.virtual.title")}
         description={t("models_page.virtual.description")}
-        className="flex flex-1 flex-col overflow-hidden md:min-h-0"
+        // 不撑满：卡片跟着表格按行数收高，行少时不在卡片里留一大片空白；行多时最多占到剩余高度。
+        className="flex flex-col overflow-hidden md:min-h-0"
         bodyClassName="relative flex min-h-0 flex-1 flex-col"
         actions={
           <div className="flex flex-wrap items-center justify-end gap-2">
@@ -304,8 +305,6 @@ export function VirtualModelsPanel() {
             ) : undefined
           }
           minWidth="min-w-[960px]"
-          height="h-[calc(100vh-430px)] md:h-auto md:flex-1"
-          minHeight="min-h-[360px] md:min-h-0"
         />
       </Card>
 

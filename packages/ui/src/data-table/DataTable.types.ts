@@ -90,10 +90,16 @@ export interface DataTableProps<T> {
   bottomDebounceMs?: number;
   /** Minimum table width class (default "min-w-[1320px]") */
   minWidth?: string;
-  /** Container height class (default "h-[calc(100dvh-260px)]") */
+  /**
+   * Container height class (default "h-auto"). By default the table is as tall as its rows
+   * and never taller than the box it sits in, so a page only needs to give it a bounded
+   * flex column; pass a fixed height only where the table must keep its size regardless of rows.
+   */
   height?: string;
-  /** Container minimum height class (default "min-h-[360px]") */
+  /** Container minimum height class (default "min-h-0") */
   minHeight?: string;
+  /** Container maximum height class (default "max-h-full": capped by the box it sits in) */
+  maxHeight?: string;
   /** Screen-reader caption */
   caption?: string;
   /** Empty state title shown via the shared EmptyState component */

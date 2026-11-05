@@ -1017,9 +1017,10 @@ export function AuthFilesFilesTab({
           <div
             ref={cardGridHostRef}
             className={[
-              "md:min-h-0 md:flex-1 md:overflow-hidden",
-              // 卡片视图：滚动区自己留出投影的空间，这里用等量负边距把卡片拉回和筛选行对齐。
-              filesViewMode === "table" ? "pt-4" : "-mx-4 sm:-mx-5",
+              "md:min-h-0 md:overflow-hidden",
+              // 表格按行数收高（最多占到剩余高度），分页条紧跟最后一行；卡片视图的滚动区要撑满剩余高度，
+              // 并且自己留出投影的空间，这里用等量负边距把卡片拉回和筛选行对齐。
+              filesViewMode === "table" ? "pt-4 md:flex md:flex-col" : "-mx-4 sm:-mx-5 md:flex-1",
             ]
               .filter(Boolean)
               .join(" ")}
@@ -1036,8 +1037,6 @@ export function AuthFilesFilesTab({
                 caption={t("auth_files.table_caption")}
                 emptyText={t("auth_files_page.no_files_desc")}
                 minWidth="min-w-[2420px]"
-                height="h-full"
-                minHeight="min-h-[360px] md:min-h-0"
                 allowWheelPropagationAtBoundary
                 rowClassName={(row) => {
                   const runtimeOnly = isRuntimeOnlyAuthFile(row);

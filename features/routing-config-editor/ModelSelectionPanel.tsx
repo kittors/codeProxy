@@ -351,8 +351,8 @@ export function ModelSelectionPanel({
           {modelsError}
         </div>
       ) : (
-        <div data-testid="group-editor-model-list" className="min-h-0 flex-1 -mx-5">
-          <div data-testid="group-editor-model-list-content" className="h-full min-h-0 px-5">
+        <div data-testid="group-editor-model-list" className="flex min-h-0 flex-col -mx-5">
+          <div data-testid="group-editor-model-list-content" className="flex min-h-0 flex-col px-5">
             <DataTable<RoutingModelOption>
               tableId="routing-model-options-v2"
               rows={modelOptions}
@@ -361,8 +361,6 @@ export function ModelSelectionPanel({
               loading={modelsLoading}
               virtualize={false}
               rowHeight={58}
-              height="h-full"
-              minHeight="min-h-[360px]"
               minWidth="min-w-[760px]"
               caption={t("channel_groups_page.allowed_models_label")}
               emptyText={t("channel_groups_page.no_channel_models")}

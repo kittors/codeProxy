@@ -17,7 +17,7 @@ import { Button, COLUMN_WIDTH } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
 import { ConfirmModal } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
-import { DataTable, TABLE_ROW_ACTIONS_COLUMN, type DataTableColumn } from "@code-proxy/ui";
+import { DataTable, TABLE_ROW_ACTIONS_STICKY_END_COLUMN, TableRowActions, type DataTableColumn } from "@code-proxy/ui";
 import { HoverTooltip } from "@code-proxy/ui";
 import {
   CcSwitchClientIcon,
@@ -324,32 +324,29 @@ export function CcSwitchImportSettingsPage() {
       {
         key: "actions",
         label: t("ccswitch.config_table_actions"),
-        ...TABLE_ROW_ACTIONS_COLUMN,
-        headerClassName: "text-right",
-        cellClassName: "text-right",
+        ...TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
         render: (row) => (
-          <div className="flex justify-end gap-1">
-            <Button
-              size="xs"
-              variant="ghost"
-              aria-label={t("ccswitch.config_edit")}
-              onClick={() => {
-                setModalMode("edit");
-                setDraft(row);
-                setModalOpen(true);
-              }}
-            >
-              <Pencil size={14} />
-            </Button>
-            <Button
-              size="xs"
-              variant="ghost-danger"
-              aria-label={t("ccswitch.config_delete")}
-              onClick={() => setPendingDelete(row)}
-            >
-              <Trash2 size={14} />
-            </Button>
-          </div>
+          <TableRowActions
+            actions={[
+              {
+                key: "edit",
+                label: t("ccswitch.config_edit"),
+                icon: <Pencil />,
+                onClick: () => {
+                  setModalMode("edit");
+                  setDraft(row);
+                  setModalOpen(true);
+                },
+              },
+              {
+                key: "delete",
+                label: t("ccswitch.config_delete"),
+                icon: <Trash2 />,
+                destructive: true,
+                onClick: () => setPendingDelete(row),
+              },
+            ]}
+          />
         ),
       },
     ],
@@ -404,8 +401,6 @@ export function CcSwitchImportSettingsPage() {
           loading={loading}
           virtualize={false}
           minWidth="min-w-[960px]"
-          height="h-[420px] md:h-auto md:flex-1"
-          minHeight="min-h-[280px] md:min-h-0"
           caption={t("ccswitch.config_table_caption")}
           emptyText={t("ccswitch.config_list_empty")}
           showAllLoadedMessage={false}

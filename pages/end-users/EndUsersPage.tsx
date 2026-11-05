@@ -502,8 +502,6 @@ export function EndUsersPage() {
             rowKey={(row) => row.id}
             virtualize={false}
             rowHeight={64}
-            height="h-[calc(100dvh-360px)] md:h-auto md:flex-1"
-            minHeight="min-h-[320px] md:min-h-0"
             minWidth="min-w-[1520px]"
             rowClassName={(row) => (selected.has(row.id) ? "bg-accent-soft/60" : "")}
             emptyText={hasFilters ? t("end_users.filtered_empty") : t("end_users.empty")}

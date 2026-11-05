@@ -3,11 +3,11 @@ import { useTranslation } from "react-i18next";
 import { CheckCircle2, RefreshCw } from "lucide-react";
 import type { SharedProxyEntry } from "@code-proxy/api-client/endpoints/proxies";
 import {
-  Button,
   Card,
   COLUMN_WIDTH,
   DataTable,
-  TABLE_ROW_ACTIONS_COLUMN,
+  TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
+  TableRowActions,
   type DataTableColumn,
 } from "@code-proxy/ui";
 import {
@@ -108,28 +108,23 @@ export function SharedProxiesSection({
       {
         key: "actions",
         label: t("proxies.actions"),
-        ...TABLE_ROW_ACTIONS_COLUMN,
-        headerClassName: "text-right",
-        cellClassName: "text-right",
+        ...TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
         render: (entry) => {
           const checking = Boolean(checkState[entry.id]?.checking);
           const label = t("proxies.check_label", { name: entry.name });
           return (
-            <div className="flex justify-end gap-1">
-              <Button
-                aria-label={label}
-                title={entry.overridden ? t("proxies.shared_overridden_tooltip") : label}
-                onClick={() => onCheck(entry)}
-                disabled={checking || entry.overridden}
-                size="xs"
-              >
-                {checking ? (
-                  <RefreshCw size={14} className="animate-spin" />
-                ) : (
-                  <CheckCircle2 size={14} />
-                )}
-              </Button>
-            </div>
+            <TableRowActions
+              actions={[
+                {
+                  key: "check",
+                  label,
+                  tooltip: entry.overridden ? t("proxies.shared_overridden_tooltip") : label,
+                  icon: checking ? <RefreshCw className="animate-spin" /> : <CheckCircle2 />,
+                  disabled: checking || entry.overridden,
+                  onClick: () => onCheck(entry),
+                },
+              ]}
+            />
           );
         },
       },
@@ -149,8 +144,7 @@ export function SharedProxiesSection({
         columns={columns}
         rowKey={(entry) => entry.id}
         rowHeight={56}
-        height="h-auto max-h-[40vh]"
-        minHeight="min-h-0"
+        maxHeight="max-h-[40vh]"
         minWidth="min-w-[960px]"
         caption={t("proxies.shared_table_caption")}
         emptyText={t("proxies.shared_section_title")}

@@ -147,8 +147,7 @@ export function SpendingResetHistoryModal({
         loading={loading}
         emptyText={label("empty")}
         rowKey={(row) => String(row.id)}
-        height="h-[360px]"
-        minHeight="min-h-[200px]"
+        maxHeight="max-h-[360px]"
         minWidth={showEventId ? "min-w-[1080px]" : "min-w-[940px]"}
       />
     </Modal>

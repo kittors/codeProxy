@@ -124,7 +124,7 @@ export function PortalAccessPanel({ canWrite, onOpenUser, onChanged }: PortalAcc
       {
         key: "user",
         label: t("content_moderation.words.portal_col_user"),
-        width: COLUMN_WIDTH.composite,
+        width: COLUMN_WIDTH.name,
         render: (user) => (
           <div className="min-w-0">
             <p className="truncate text-sm font-medium text-ink">{user.display_name || user.username}</p>
@@ -174,6 +174,10 @@ export function PortalAccessPanel({ canWrite, onOpenUser, onChanged }: PortalAcc
         key: "open",
         label: t("content_moderation.actions"),
         width: COLUMN_WIDTH.name,
+        // 右栏放不下全部列时（1280 宽左右）固定在右侧，「代为设置」不会被横向滚动藏起来。
+        lockOrder: "end",
+        headerClassName: "md:sticky md:z-40 md:bg-slate-100 md:dark:bg-neutral-800",
+        cellClassName: "whitespace-nowrap md:sticky md:z-30 md:bg-backdrop",
         render: (user) => (
           <Button variant="secondary" size="sm" onClick={() => onOpenUser(user)}>
             <ListChecks size={14} />
@@ -202,7 +206,9 @@ export function PortalAccessPanel({ canWrite, onOpenUser, onChanged }: PortalAcc
   if (!view) return <SkeletonLines rows={5} />;
 
   return (
-    <div className="space-y-6">
+    // 宽屏下上层把这一栏钉满一屏：开关和筛选不动，账号表按行数收高、最多占到剩余高度后在内部滚动，
+    // 分页条紧跟在表格下面；窄屏随页面流动。
+    <div className="flex min-h-0 flex-1 flex-col gap-6">
       <header className="space-y-1">
         <h3 className="text-base font-semibold text-ink">{t("content_moderation.words.portal_title")}</h3>
         <p className="text-xs leading-5 text-ink-3">{t("content_moderation.words.portal_description")}</p>
@@ -224,7 +230,7 @@ export function PortalAccessPanel({ canWrite, onOpenUser, onChanged }: PortalAcc
         />
       </SettingGroup>
 
-      <section className="space-y-3">
+      <section className="flex min-h-0 flex-1 flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <h4 className="mr-auto text-sm font-semibold text-ink">{t("content_moderation.words.portal_users_title")}</h4>
           <div className="w-full sm:w-64">
@@ -262,13 +268,9 @@ export function PortalAccessPanel({ canWrite, onOpenUser, onChanged }: PortalAcc
           columns={columns}
           rowKey={(user) => user.id}
           virtualize={false}
-          naturalFlow
-          // 一页最多 20 行，按内容撑开就好；默认的「占满视口」会在规则少的时候留下一大片空白。
-          height="h-auto"
-          minHeight="min-h-0"
           columnResizable={false}
           columnReorderable={false}
-          minWidth="min-w-[720px]"
+          minWidth="min-w-[680px]"
           caption={t("content_moderation.words.portal_users_title")}
           emptyText={
             view.users.length === 0

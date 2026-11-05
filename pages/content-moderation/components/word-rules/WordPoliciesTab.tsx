@@ -249,8 +249,11 @@ export function WordPoliciesTab({ canWrite, canTest, portalSupported, onDirtyCha
   );
 
   return (
-    <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-      <aside className="lg:sticky lg:top-0 lg:w-64 lg:shrink-0">
+    // 宽屏两栏钉满一屏（页面声明 data-page-fill="lg"）：顶部标签和左侧规则集清单不动，右侧内容自己
+    // 占满剩余高度——列表在内部滚动，分页条和保存栏始终看得见。以前整页一起滚，左栏靠 sticky
+    // 勉强留住，顶部标签却被滚走，分页条也要滚到底才看得到。窄屏上下堆叠，随页面流动。
+    <div className="flex flex-col gap-6 lg:min-h-0 lg:flex-1 lg:flex-row">
+      <aside className="lg:w-64 lg:shrink-0">
         <WordScopeRail
           overview={overview}
           value={selection.rail}
@@ -260,7 +263,7 @@ export function WordPoliciesTab({ canWrite, canTest, portalSupported, onDirtyCha
         <p className="mt-3 hidden px-3 text-xs leading-5 text-ink-3 lg:block">{t("content_moderation.words.rail_order_hint")}</p>
       </aside>
 
-      <div className="min-w-0 flex-1 space-y-4">
+      <div className="flex min-w-0 flex-1 flex-col gap-4 lg:min-h-0">
         {selection.rail === "keys" ? (
           <div className="space-y-3">
             <div className="w-full sm:w-96">
@@ -278,7 +281,12 @@ export function WordPoliciesTab({ canWrite, canTest, portalSupported, onDirtyCha
         ) : null}
 
         {selection.rail === "portal" && selection.endUser ? (
-          <Button variant="ghost" size="sm" onClick={() => select({ rail: "portal", keyId: "", endUser: null })}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="self-start"
+            onClick={() => select({ rail: "portal", keyId: "", endUser: null })}
+          >
             <ArrowLeft size={14} />
             {t("content_moderation.words.back_to_portal")}
           </Button>

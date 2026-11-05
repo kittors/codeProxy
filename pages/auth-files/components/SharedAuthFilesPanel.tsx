@@ -241,8 +241,8 @@ export function SharedAuthFilesPanel({
         columns={columns}
         rowKey={(file) => file.name}
         rowHeight={64}
-        height="h-auto max-h-[70vh] md:max-h-none md:flex-1"
-        minHeight="min-h-[240px] md:min-h-0"
+        // 窄屏随页面流动，表格最多占七成屏高；桌面宽度由分区钉住，按剩余高度封顶。
+        maxHeight="max-h-[70vh] md:max-h-full"
         minWidth="min-w-[1180px]"
         caption={t("auth_files.shared_table_caption")}
         emptyText={t("auth_files.shared_empty")}

@@ -65,10 +65,8 @@ export function ManageKeysTabContent({
           <PolicyBadges rules={account["model-rules"]} routes={account["model-routes"]} usage={account["quota-usage"]} />
         </div>
       ) : null}
-      <div
-        data-testid="apikey-lookup-keys-table-viewport"
-        className="relative min-h-[360px] h-[calc(100dvh-240px)] overflow-hidden"
-      >
+      {/* Key 通常就几条：表格按行数收高，下面的「最近登录」紧跟着，不再被一整屏的空框推到下一屏。 */}
+      <div data-testid="apikey-lookup-keys-table-viewport" className="relative">
         <OwnedApiKeysTable
           t={t}
           keys={keys}
@@ -102,8 +100,6 @@ export function ManageKeysTabContent({
                 ]
               : undefined
           }
-          height="h-full"
-          minHeight="min-h-full"
           actions={{
             onRotate,
             onDelete,

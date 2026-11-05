@@ -797,7 +797,7 @@ export function ApiKeysPage({
   );
 
   const tableBody = endUserIdFilter ? (
-    <div className={embed ? "flex min-h-0 flex-1 flex-col" : "space-y-3"}>
+    <div className={embed ? "flex min-h-0 flex-1 flex-col" : "space-y-3 md:flex md:min-h-0 md:flex-col"}>
       <OwnedApiKeysTable
         t={t}
         keys={ownedKeys}
@@ -805,7 +805,6 @@ export function ApiKeysPage({
         busy={saving}
         loading={loading}
         canDelete={() => ownedKeys.length > 1}
-        height={embed ? "min-h-0 flex-1" : "h-[calc(100dvh-260px)]"}
         actions={{
           onToggleDisabled: (key) => {
             const index = entries.findIndex((entry) => entry.id === key.id);
@@ -851,8 +850,6 @@ export function ApiKeysPage({
         columns={apiKeyColumns}
         rowKey={(row) => row.key}
         rowHeight={52}
-        height="h-[calc(100dvh-260px)] md:h-auto md:flex-1"
-        minHeight="min-h-[320px] md:min-h-0"
         minWidth="min-w-[2500px]"
         caption={t("api_keys_page.table_caption")}
         emptyText={t("api_keys_page.no_api_keys")}
@@ -863,7 +860,7 @@ export function ApiKeysPage({
   );
 
   return (
-    <div data-page-fill="always" className={embed ? "flex h-full min-h-0 flex-col" : "flex flex-1 flex-col"}>
+    <div data-page-fill="md" className={embed ? "flex h-full min-h-0 flex-col" : "flex flex-1 flex-col"}>
       {embed ? (
         <div className="flex h-full min-h-0 flex-col">
           <div className="flex shrink-0 items-center justify-end px-6 pt-3">{toolbar}</div>

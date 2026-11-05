@@ -21,7 +21,7 @@ import { Button, Callout, Checkbox, COLUMN_WIDTH, ConfirmModal, Modal, ScrollAre
 import { SearchableCheckboxMultiSelect, surface, TextInput, useToast } from "@code-proxy/ui";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { HoverTooltip, OverflowTooltip, TooltipChip } from "@code-proxy/ui";
-import { DataTable, TABLE_ROW_ACTIONS_COLUMN, TABLE_ROW_ACTIONS_STICKY_END_COLUMN, type DataTableColumn } from "@code-proxy/ui";
+import { DataTable, TABLE_ROW_ACTIONS_COLUMN, TABLE_ROW_ACTIONS_STICKY_END_COLUMN, TableRowActions, type DataTableColumn } from "@code-proxy/ui";
 import { Field, InfoTooltip, TooltipHeader, renderChannelTags } from "./fields";
 import type { RoutingModelLoadResult, RoutingModelOption } from "./types";
 import {
@@ -955,32 +955,27 @@ export function RoutingConfigEditor({
         key: "actions",
         label: t("common.action"),
         ...TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
-        cellClassName: "whitespace-nowrap md:sticky md:z-30 md:bg-backdrop", // 冻结列底色跟随所在底（--cp-backdrop）
         render: (group) => (
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => openEditGroup(group)}
-              disabled={disabled}
-              className="rounded-lg p-1.5 text-ink-2 transition-colors hover:bg-hover hover:text-ink disabled:opacity-40 icon-hue:hover:text-amber-600 icon-hue:dark:hover:text-amber-400"
-              title={t("channel_groups_page.edit_group")}
-              aria-label={t("channel_groups_page.edit_group")}
-            >
-              <Pencil size={15} />
-            </button>
-            {group.system ? null : (
-              <button
-                type="button"
-                onClick={() => setDeleteGroupTarget(group)}
-                disabled={disabled}
-                className="rounded-lg p-1.5 text-ink-2 transition-colors hover:bg-rose-500/10 hover:text-rose-600 disabled:opacity-40 dark:hover:text-rose-400"
-                title={t("visual_config.delete_group")}
-                aria-label={t("visual_config.delete_group")}
-              >
-                <Trash2 size={15} />
-              </button>
-            )}
-          </div>
+          <TableRowActions
+            actions={[
+              {
+                key: "edit",
+                label: t("channel_groups_page.edit_group"),
+                icon: <Pencil />,
+                disabled,
+                onClick: () => openEditGroup(group),
+              },
+              {
+                key: "delete",
+                label: t("visual_config.delete_group"),
+                icon: <Trash2 />,
+                destructive: true,
+                visible: !group.system,
+                disabled,
+                onClick: () => setDeleteGroupTarget(group),
+              },
+            ]}
+          />
         ),
       },
     ],
@@ -1066,20 +1061,18 @@ export function RoutingConfigEditor({
               key: "actions",
               label: t("common.action"),
               ...TABLE_ROW_ACTIONS_COLUMN,
-              headerClassName: "text-right",
-              cellClassName: "whitespace-nowrap text-right",
               render: (channel) => (
-                <div className="flex justify-end">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeDraftChannel(channel.id)}
-                    disabled={disabled}
-                    aria-label={t("channel_groups_page.remove_channel")}
-                  >
-                    <X size={14} />
-                  </Button>
-                </div>
+                <TableRowActions
+                  actions={[
+                    {
+                      key: "remove",
+                      label: t("channel_groups_page.remove_channel"),
+                      icon: <X />,
+                      disabled,
+                      onClick: () => removeDraftChannel(channel.id),
+                    },
+                  ]}
+                />
               ),
             } satisfies DataTableColumn<RoutingChannelGroupMemberEntry>,
           ]),
@@ -1185,8 +1178,6 @@ export function RoutingConfigEditor({
           rowKey={(group) => group.id}
           virtualize={false}
           rowHeight={44}
-          height="h-[calc(100dvh-200px)] md:h-auto md:flex-1"
-          minHeight="min-h-[320px] md:min-h-0"
           minWidth="min-w-[1360px]"
           caption={t("channel_groups_page.table_group")}
           emptyText={t("channel_groups_page.empty_groups")}
@@ -1552,8 +1543,6 @@ export function RoutingConfigEditor({
                       rowKey={(channel) => channel.id}
                       virtualize={false}
                       rowHeight={52}
-                      height="h-auto"
-                      minHeight="min-h-0"
                       minWidth="min-w-[640px]"
                       caption={
                         editingSystemDefaultGroup
