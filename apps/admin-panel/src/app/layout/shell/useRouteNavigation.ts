@@ -13,7 +13,10 @@ const ROUTE_PROGRESS_HIDE_MS = 360;
  * - `pendingTo` 让点击的那一项立刻高亮，不必等懒加载和路由更新；
  * - 进度条至少跑 680ms、收尾 360ms，快网络下也不会一闪而过；
  * - 连续点击以最后一次为准（requestId），旧请求的回调全部作废；
- * - 代码块加载失败时交给 recoverFromChunkLoadError 硬刷新，而不是跳进一个空白的 Suspense。
+ * - 代码块加载失败时交给 recoverFromChunkLoadError 硬刷新，而不是跳进一个空白的 Suspense；
+ * - `pendingTo` 等新 location 真正提交了才清：React Router 7 的 BrowserRouter / HashRouter 用
+ *   startTransition 提交 location，比普通 setState 晚一拍。navigate() 之后同步清掉的话，中间会按旧路径
+ *   渲染一次，面包屑和侧边栏高亮闪回上一页（11-07 录屏第 188 帧）。
  */
 export function useRouteNavigation() {
   const location = useLocation();
@@ -23,6 +26,8 @@ export function useRouteNavigation() {
   const progressStartedAt = useRef(0);
   const progressTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const navigationRequestId = useRef(0);
+  /** 已经 navigate()、等新 location 提交的那次导航；0 表示没有。 */
+  const awaitingCommit = useRef(0);
 
   const clearProgressTimers = useCallback(() => {
     progressTimers.current.forEach(clearTimeout);
@@ -60,9 +65,8 @@ export function useRouteNavigation() {
 
           const navigateTimer = setTimeout(() => {
             if (navigationRequestId.current !== requestId) return;
+            awaitingCommit.current = requestId;
             navigate(to, { viewTransition: true });
-            setPendingTo("");
-            setProgressDone(false);
             progressTimers.current = [];
           }, ROUTE_PROGRESS_HIDE_MS);
           progressTimers.current.push(navigateTimer);
@@ -70,16 +74,30 @@ export function useRouteNavigation() {
         .catch((error: unknown) => {
           if (navigationRequestId.current !== requestId) return;
           clearProgressTimers();
-          setPendingTo("");
           setProgressDone(false);
-          if (recoverFromChunkLoadError(error)) return;
+          if (recoverFromChunkLoadError(error)) {
+            setPendingTo("");
+            return;
+          }
           // Non-chunk failure: fall back to navigation so Suspense can surface
           // the error boundary on render rather than stranding the progress bar.
+          awaitingCommit.current = requestId;
           navigate(to, { viewTransition: true });
         });
     },
     [clearProgressTimers, location.pathname, navigate],
   );
+
+  // 新 location 提交后（这一帧已经按新路径渲染）再清 pendingTo 和进度条。等待期间又点了别的页，
+  // 那次导航还在进行，pendingTo 留给它。
+  useEffect(() => {
+    const requestId = awaitingCommit.current;
+    if (!requestId) return;
+    awaitingCommit.current = 0;
+    if (navigationRequestId.current !== requestId) return;
+    setPendingTo("");
+    setProgressDone(false);
+  }, [location.key]);
 
   /** 链接点击：修饰键/中键交给浏览器；`afterSelect` 用来立刻收起手机抽屉或浮层。 */
   const handleNavClick = useCallback(

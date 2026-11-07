@@ -63,6 +63,7 @@ export function PrivacyMaskingWorkspace({
   const [portalSettings, setPortalSettings] = useState<PortalPrivacyMaskSettings | null>(null);
   const [settingsError, setSettingsError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [actionsSlot, setActionsSlot] = useState<HTMLDivElement | null>(null);
   const overview = useMaskingOverview(source, active);
   const record = useMaskingRecord(source, openKey);
   const otherUpstream = t("privacy_masking.portal.upstream_other");
@@ -121,10 +122,11 @@ export function PrivacyMaskingWorkspace({
     <Tabs value={tab} onValueChange={(next) => setTab(next as Tab)} size="sm">
       <section className="flex flex-col gap-4">
         {/* 钉住区：外面滚动区的顶部渐隐从这条栏的下沿开始，栏本身不被淡掉。门户里上面紧挨着门户
-            自己的标签栏，不再留顶部的空。 */}
+            自己的标签栏，不再留顶部的空。右边的 actionsSlot 放设置页的「未保存 · 放弃 · 保存」
+            （MaskingSettingsPanel portal 进来），钉住区只有这一条，不会两条都吸在 top-0 互相盖住。 */}
         <div
           data-scroll-fade-pin="top"
-          className={`sticky top-0 z-20 -mx-4 bg-canvas px-4 pb-1 sm:-mx-6 sm:px-6 ${portal ? "" : "pt-3"}`}
+          className={`sticky top-0 z-20 -mx-4 flex flex-wrap items-center gap-2 bg-canvas px-4 pb-1 sm:-mx-6 sm:px-6 ${portal ? "" : "pt-3"}`}
         >
           <TabsList aria-label={t("privacy_masking.title")} className="max-w-full">
             <TabsTrigger value="overview">{t("privacy_masking.tab.overview")}</TabsTrigger>
@@ -132,6 +134,7 @@ export function PrivacyMaskingWorkspace({
               {portal ? t("privacy_masking.portal.tab_rules") : t("privacy_masking.tab.settings")}
             </TabsTrigger>
           </TabsList>
+          <div ref={setActionsSlot} className="ml-auto flex flex-wrap items-center justify-end gap-2 empty:hidden" />
         </div>
 
         {portalSettings?.server_disabled ? (
@@ -203,7 +206,7 @@ export function PrivacyMaskingWorkspace({
           ) : portalSettings ? (
             <MaskingRulesView settings={portalSettings} />
           ) : settings ? (
-            <MaskingSettingsPanel key={settings.updated_at ?? "initial"} settings={settings} scope={scope} canWrite={canWrite} saving={saving} onSave={(next) => void save(next)} />
+            <MaskingSettingsPanel key={settings.updated_at ?? "initial"} settings={settings} scope={scope} canWrite={canWrite} saving={saving} onSave={(next) => void save(next)} actionsSlot={actionsSlot} />
           ) : (
             <div className="flex items-center justify-center py-16">
               <PageLoader variant="inline" text={t("common.loading")} />

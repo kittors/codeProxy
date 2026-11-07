@@ -43,9 +43,10 @@ export function PortalSelfServiceTabs({
         // 桌面上是这个标签自己的滚动区（钉满一屏，见 lookupLayout.ts），和其他内部滚动区一样两端渐隐，
         // 吸顶的子标签栏自己声明了钉住区。左右各借出 main 的内边距，子标签栏的底色才能铺到边、卡片
         // 投影不被滚动区裁掉。记录详情是 portal 到 body 的抽屉，不受渐隐的 mask 影响。
+        // overscroll-y-none 同控制台内容区：触控板橡皮筋会把吸顶的子标签栏一起拉走（只对鼠标 / 触控板）。
         <ScrollFade
           hidden={activeTab !== "privacy"}
-          className="-mx-4 flex flex-col px-4 sm:-mx-6 sm:px-6 md:min-h-0 md:flex-1 md:overflow-y-auto"
+          className="-mx-4 flex flex-col px-4 sm:-mx-6 sm:px-6 md:min-h-0 md:flex-1 md:overflow-y-auto md:pointer-fine:overscroll-y-none"
         >
           <Suspense
             fallback={
