@@ -7,5 +7,5 @@ export {
   type WordmarkProps,
 } from "./brand/Wordmark";
 export { ClaudeLogo, GeminiLogo, OpenAILogo, VertexLogo } from "./vendor-icons/ProviderLogos";
-export { VendorIcon } from "./vendor-icons/VendorIcon";
+export { VendorIcon, hasVendorIcon } from "./vendor-icons/VendorIcon";
 export { vendorBrand, vendorBrandStyle, type VendorBrand } from "./vendor-icons/vendorBrands";

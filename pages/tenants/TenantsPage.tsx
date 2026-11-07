@@ -6,7 +6,7 @@ import {
   Button,
   COLUMN_WIDTH,
   DataTable,
-  TABLE_ROW_ACTIONS_COLUMN,
+  TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
   TableRowActions,
   useToast,
   type DataTableColumn,
@@ -148,7 +148,7 @@ export function TenantsPage() {
         render: (item) =>
           item.expires_at
             ? new Date(item.expires_at).toLocaleString(i18n.language)
-            : t("identity_admin.never"),
+            : t("identity_admin.never_expires"),
       },
       {
         key: "version",
@@ -159,14 +159,15 @@ export function TenantsPage() {
       {
         key: "actions",
         label: t("identity_admin.actions"),
-        ...TABLE_ROW_ACTIONS_COLUMN,
-        lockOrder: "end",
+        ...TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
         render: (item) => {
-          const canUpdateTenant = item.type !== "system" && can("platform.tenants.update");
+          // 没有权限：整列都没有这几个按钮（visible）。系统租户：只是这一行不能改，
+          // 位置留空（unavailable），查看按钮和别的行对齐。
+          const canUpdateTenants = can("platform.tenants.update");
+          const isSystemTenant = item.type === "system";
           return (
             <TableRowActions
               moreLabel={t("common.more_actions")}
-              align="start"
               actions={[
                 {
                   key: "view",
@@ -178,21 +179,24 @@ export function TenantsPage() {
                   key: "edit",
                   label: t("identity_admin.edit"),
                   icon: <Pencil size={14} />,
-                  visible: canUpdateTenant,
+                  visible: canUpdateTenants,
+                  unavailable: isSystemTenant,
                   onClick: () => setEditTenant(item),
                 },
                 {
                   key: "renew",
                   label: t("identity_admin.renew"),
                   icon: <CalendarClock size={14} />,
-                  visible: canUpdateTenant,
+                  visible: canUpdateTenants,
+                  unavailable: isSystemTenant,
                   onClick: () => setRenewTenant(item),
                 },
                 {
                   key: "disable",
                   label: t("identity_admin.disable"),
                   icon: <Ban size={14} />,
-                  visible: canUpdateTenant,
+                  visible: canUpdateTenants,
+                  unavailable: isSystemTenant,
                   destructive: true,
                   onClick: () => setDisableTenant(item),
                 },
@@ -270,9 +274,10 @@ export function TenantsPage() {
           </PermissionGate>
         </div>
 
-        {/* 表格吃掉页面剩余高度、内部滚动；不设最小高度保底——页面高度被窗口钉死，保底只会在矮窗口下把表格挤出页面（见请求日志页）。 */}
-        <div className="relative min-h-0 flex-1 overflow-hidden">
+        {/* 表格 fill 铺满页面剩余高度、再多就内部滚动：加载、空、行少、行多都是同一个框，分页条和横向滚动条不随行数移动；不设最小高度保底——页面高度被窗口钉死，保底只会在矮窗口下把表格挤出页面（见请求日志页）。 */}
+        <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
           <DataTable<TenantIdentity>
+            fill
             tableId="identity-tenants"
             rows={items}
             columns={columns}
@@ -280,8 +285,6 @@ export function TenantsPage() {
             loading={loading}
             virtualize={false}
             rowHeight={60}
-            height="h-full"
-            minHeight="min-h-full"
             minWidth="min-w-[980px]"
             emptyText={t("identity_admin.no_tenants")}
             showAllLoadedMessage={false}

@@ -17,12 +17,15 @@ const MAX_LISTED_NAMES = 4;
 export function AuthFilesConfirmModal({
   confirm,
   resetCreditCount,
+  sharedCount = 0,
   busy,
   onClose,
   onConfirm,
 }: {
   confirm: AuthFilesConfirmAction | null;
   resetCreditCount: number;
+  /** 要删除的账号里有几个共享给了其它租户：删除会让那些租户也失去它们。 */
+  sharedCount?: number;
   busy: boolean;
   onClose: () => void;
   onConfirm: (action: AuthFilesConfirmAction) => void;
@@ -65,7 +68,13 @@ export function AuthFilesConfirmModal({
       consequences={
         reset
           ? undefined
-          : [t("auth_files.batch_delete_consequence_files"), t("auth_files.batch_delete_consequence_traffic")]
+          : [
+              t("auth_files.batch_delete_consequence_files"),
+              t("auth_files.batch_delete_consequence_traffic"),
+              ...(sharedCount > 0
+                ? [t("auth_files.batch_delete_consequence_shared", { count: sharedCount })]
+                : []),
+            ]
       }
       confirmText={reset ? t("auth_files.reset_credit_confirm_button") : t("common.delete")}
       cancelText={t("common.cancel")}

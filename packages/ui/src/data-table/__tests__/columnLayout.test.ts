@@ -2,9 +2,12 @@ import { afterEach, describe, expect, test } from "vitest";
 import type { DataTableColumn } from "../DataTable.types";
 import {
   resolveColumnLayoutWidth,
+  resolveFlexColumnKey,
   resolveStickyColumnPlacements,
   resolveStickyRailWidth,
+  resolveTableMinWidthPx,
 } from "../columnLayout";
+import { ROW_REORDER_COLUMN_KEY } from "../dataTableModel";
 
 /**
  * 固定列的轨道和边缘阴影按这里算出来的宽度绝对定位，所以它必须等于列在 DOM 上
@@ -241,5 +244,47 @@ describe("resolveColumnLayoutWidth", () => {
 
     expect(resolveColumnLayoutWidth(target, {})).toBe(144);
     expect(resolveColumnLayoutWidth(target, { actions: 300 })).toBe(300);
+  });
+});
+
+describe("flex column (takes the width the others leave)", () => {
+  test("a column that asks for it wins", () => {
+    const columns = [
+      column({ key: "name", width: "w-72" }),
+      column({ key: "note", width: "w-40", flex: true }),
+    ];
+    expect(resolveFlexColumnKey(columns)).toBe("note");
+  });
+
+  test("a regular column without a width already soaks up the leftover width, so it stays the one", () => {
+    const columns = [column({ key: "name", width: "w-72" }), column({ key: "detail" })];
+    expect(resolveFlexColumnKey(columns)).toBe("detail");
+  });
+
+  test("otherwise the widest regular column; pinned, edge-locked and row-reorder columns never", () => {
+    const columns = [
+      column({ key: ROW_REORDER_COLUMN_KEY, width: "w-96" }),
+      column({ key: "select", width: "w-96" }),
+      column({ key: "name", width: "w-64" }),
+      column({ key: "expires", width: "w-40" }),
+      column({ key: "pinned", width: "w-96", headerClassName: STICKY_HEADER_CLASS }),
+      column({ key: "actions", width: "w-96" }),
+    ];
+    expect(resolveFlexColumnKey(columns)).toBe("name");
+    expect(resolveFlexColumnKey([column({ key: "actions", width: "w-40" })])).toBeNull();
+  });
+
+  test("table floor: every column at its width, dragged ones as dragged (the flex one too)", () => {
+    const columns = [
+      column({ key: "tenant", width: "w-64" }),
+      column({ key: "status", width: "w-32" }),
+      column({ key: "expires", width: "w-40" }),
+    ];
+    // 256 + 128 + 160 at a 16px root.
+    expect(resolveTableMinWidthPx(columns, {})).toBe(544);
+    expect(resolveTableMinWidthPx(columns, { expires: 200 })).toBe(584);
+    expect(resolveTableMinWidthPx(columns, { tenant: 300 })).toBe(588);
+    // The page's own minWidth wins when it is wider.
+    expect(resolveTableMinWidthPx(columns, {}, "min-w-[980px]")).toBe(980);
   });
 });

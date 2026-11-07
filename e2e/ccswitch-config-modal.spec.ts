@@ -1,13 +1,13 @@
 import { expect, test, type Page } from "@playwright/test";
 
 /**
- * Regression cover for the CC Switch config modal.
+ * Regression cover for the CC Switch preset editor.
  *
- * Two defects this locks down:
- *  - Light mode: the modal skinned every control with `bg-white` on top of a white card, so
- *    inputs/selects read as plain text. Controls must keep the shared filled surface.
- *  - The mapping table had a fixed inner height inside the scrollable modal body, which clipped
- *    the last Claude role behind a second, undiscoverable scroll area.
+ *  - Light mode: controls keep their shadow edge instead of melting into the white dialog.
+ *  - The dialog body owns the only vertical scroll area: every Claude Code tier stays
+ *    reachable, and the import preview scrolls with the form.
+ *  - Presets saved by the earlier editor keep their request names: a cleared tier moves to
+ *    the "names kept for imported clients" list instead of disappearing.
  */
 
 const CONFIG = {
@@ -15,7 +15,7 @@ const CONFIG = {
   "client-type": "claude",
   "provider-name": "grok 版本的 claude code",
   note: "grok 版本的 claude code",
-  "route-path": "/grok",
+  "route-path": "/grok/cs_grok01",
   "endpoint-path": "",
   "default-model": "grok-4.5",
   "allowed-channel-groups": ["grok"],
@@ -38,7 +38,10 @@ const CLAUDE_ROLE_LABELS = [
   "Fable 默认模型",
 ];
 
-const setup = async (page: Page, { dark = false }: { dark?: boolean } = {}) => {
+const setup = async (
+  page: Page,
+  { dark = false, clientTypes }: { dark?: boolean; clientTypes?: string[] } = {},
+) => {
   await page.addInitScript(
     ([isDark]) => {
       localStorage.setItem(
@@ -80,7 +83,12 @@ const setup = async (page: Page, { dark = false }: { dark?: boolean } = {}) => {
     ),
   );
   await page.route("**/v0/management/ccswitch-import-configs", (route) =>
-    route.fulfill(json({ "ccswitch-import-configs": [CONFIG] })),
+    route.fulfill(
+      json({
+        "ccswitch-import-configs": [CONFIG],
+        ...(clientTypes ? { "client-types": clientTypes } : {}),
+      }),
+    ),
   );
   await page.route("**/v0/management/auth-group-model-owner-mappings*", (route) =>
     route.fulfill(json({ items: [] })),
@@ -96,7 +104,9 @@ const setup = async (page: Page, { dark = false }: { dark?: boolean } = {}) => {
       }),
     ),
   );
-  await page.route("**/v0/management/model-configs*", (route) => route.fulfill(json({ items: [] })));
+  await page.route("**/v0/management/model-configs*", (route) =>
+    route.fulfill(json({ items: [] })),
+  );
   await page.route("**/v0/management/model-owner-presets*", (route) =>
     route.fulfill(json({ items: [] })),
   );
@@ -106,23 +116,23 @@ const setup = async (page: Page, { dark = false }: { dark?: boolean } = {}) => {
   );
 };
 
-const openModal = async (page: Page) => {
+const openEditor = async (page: Page) => {
   await page.goto("/#/access/ccswitch-import-settings");
   await page.getByRole("button", { name: "编辑配置" }).first().click();
   await expect(page.getByRole("dialog")).toBeVisible();
-  await expect(page.getByTestId("ccswitch-model-mapping-table")).toBeVisible();
+  await expect(page.getByTestId("ccswitch-import-preview")).toBeVisible();
 };
 
-test("每个 Claude 角色行都能直接看到，映射表不再嵌套第二层滚动", async ({ page }) => {
+test("每个 Claude 档位都能直接看到，弹窗只有正文一个纵向滚动区", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await setup(page);
-  await openModal(page);
+  await openEditor(page);
 
-  const table = page.getByTestId("ccswitch-model-mapping-table");
-  // The table must grow with its rows: no vertical scrollport of its own.
-  // (sr-only caption clips its own text with overflow:hidden — that is not a scroll area.)
-  const innerScrollers = await table.evaluate((el) => {
-    const nodes = [el, ...Array.from(el.querySelectorAll("*"))] as HTMLElement[];
+  const dialog = page.getByRole("dialog");
+  // Nothing inside the form or the preview scrolls vertically on its own.
+  const innerScrollers = await dialog.evaluate((root) => {
+    const body = root.querySelector(".overflow-y-auto");
+    const nodes = Array.from(body?.querySelectorAll("*") ?? []) as HTMLElement[];
     return nodes
       .filter((node) => {
         const overflowY = getComputedStyle(node).overflowY;
@@ -135,53 +145,92 @@ test("每个 Claude 角色行都能直接看到，映射表不再嵌套第二层
 
   const body = page.locator('[role="dialog"] .overflow-y-auto').first();
   await body.evaluate((el) => el.scrollTo(0, el.scrollHeight));
-
   for (const label of CLAUDE_ROLE_LABELS) {
-    await expect(table.getByText(label, { exact: true })).toBeVisible();
+    await expect(dialog.getByRole("combobox", { name: new RegExp(`^${label}`) })).toBeVisible();
   }
 });
 
-test("表格改为自然高度后，排序和行拖拽仍然可用", async ({ page }) => {
+test("清空旧预设的别名档位后，名字留在「已导入客户端仍在使用的模型名」里，预览同步", async ({
+  page,
+}) => {
   await setup(page);
-  await openModal(page);
+  await openEditor(page);
 
-  const table = page.getByTestId("ccswitch-model-mapping-table");
-  await expect(table.locator("[data-vt-row-reorder-handle]").first()).toBeVisible();
+  const dialog = page.getByRole("dialog");
+  const preview = page.getByTestId("ccswitch-import-preview");
+  await expect(preview).toContainText('"ANTHROPIC_DEFAULT_HAIKU_MODEL": "claude-haiku-4-5"');
 
-  await table.getByRole("button", { name: /CC Switch 请求模型/ }).click();
-  await page.getByRole("menuitem", { name: /升序/ }).click();
+  await dialog.getByRole("combobox", { name: /^Haiku 默认模型/ }).click();
+  await page.getByRole("option", { name: "跟随主模型" }).click();
 
-  const requestModels = await table
-    .locator("tbody tr[data-vt-row-index] input")
-    .evaluateAll((inputs) => inputs.map((input) => (input as HTMLInputElement).value));
-  expect(requestModels).toEqual([...requestModels].sort());
+  await expect(preview).not.toContainText("ANTHROPIC_DEFAULT_HAIKU_MODEL");
+  const aliases = page.getByTestId("ccswitch-alias-list");
+  await expect(aliases).toContainText("claude-haiku-4-5");
+  await expect(aliases).toContainText("grok-4.5");
 });
 
-test("浅色模式下输入控件保持统一填充表面，不与白色卡片糊在一起", async ({ page }) => {
+// #970: controls once rendered as bare text on the white dialog. Since the quiet-UI pass every
+// control is a white field shaped by a shadow edge (shadow-control), so the edge is what
+// keeps it from melting into the dialog.
+test("浅色模式下输入控件有阴影描边，不与白色弹窗糊在一起", async ({ page }) => {
   await setup(page);
-  await openModal(page);
+  await openEditor(page);
 
-  const providerInput = page.getByRole("dialog").getByLabel("供应商名称");
-  const surfaces = await providerInput.evaluate((el) => {
-    const control = getComputedStyle(el).backgroundColor;
-    const card = getComputedStyle(el.closest("section") as HTMLElement).backgroundColor;
-    return { control, card };
-  });
-
-  expect(surfaces.control).not.toBe(surfaces.card);
-  expect(surfaces.control).not.toBe("rgba(0, 0, 0, 0)");
+  const dialog = page.getByRole("dialog");
+  for (const control of [
+    dialog.getByRole("textbox", { name: /^名称/ }),
+    dialog.getByRole("combobox", { name: /^渠道分组/ }),
+    dialog.getByRole("combobox", { name: /^主模型/ }),
+  ]) {
+    const surface = await control.evaluate((el) => {
+      const style = getComputedStyle(el);
+      return { background: style.backgroundColor, shadow: style.boxShadow };
+    });
+    expect(surface.background).not.toBe("rgba(0, 0, 0, 0)");
+    expect(surface.shadow).not.toBe("none");
+  }
 });
 
 test("接入地址可一键复制", async ({ page, context }) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await setup(page);
-  await openModal(page);
+  await openEditor(page);
 
-  const preview = page.getByTestId("ccswitch-config-endpoint-preview");
-  const shown = (await preview.innerText()).trim();
-  expect(shown).toContain("/grok");
+  const endpoint = page.getByTestId("ccswitch-config-endpoint-preview");
+  const shown = (await endpoint.innerText()).trim();
+  expect(shown).toMatch(/\/grok\/cs_grok01$/);
 
-  await page.getByRole("dialog").getByRole("button", { name: "复制" }).click();
-  await expect(page.getByRole("dialog").getByRole("button", { name: "已复制" })).toBeVisible();
+  const preview = page.getByTestId("ccswitch-import-preview");
+  await preview.getByRole("button", { name: "复制" }).click();
+  await expect(preview.getByRole("button", { name: "已复制" })).toBeVisible();
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(shown);
+});
+
+test("后端声明了 client-types 时，新建预设可选 OpenCode / OpenClaw / Hermes", async ({ page }) => {
+  await setup(page, {
+    clientTypes: ["claude", "codex", "gemini", "opencode", "openclaw", "hermes"],
+  });
+  await page.goto("/#/access/ccswitch-import-settings");
+  await page.getByRole("button", { name: "新建配置" }).click();
+
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByRole("tab")).toHaveText([
+    "Claude Code",
+    "Codex",
+    "Gemini CLI",
+    "OpenCode",
+    "OpenClaw",
+    "Hermes",
+  ]);
+  await dialog.getByRole("tab", { name: "Hermes" }).click();
+  // No group yet, so no route: the preview waits rather than showing a wrong endpoint.
+  await expect(page.getByTestId("ccswitch-import-preview-pending")).toBeVisible();
+
+  await dialog.getByRole("combobox", { name: /^渠道分组/ }).click();
+  await page.getByRole("option", { name: /grok/ }).click();
+  const preview = page.getByTestId("ccswitch-import-preview");
+  await expect(preview).toContainText("~/.hermes/config.yaml");
+  await expect(page.getByTestId("ccswitch-config-endpoint-preview")).toHaveText(
+    /\/grok\/cs_[a-z0-9]+\/v1$/,
+  );
 });

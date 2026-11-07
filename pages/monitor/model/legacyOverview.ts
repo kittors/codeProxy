@@ -57,7 +57,11 @@ function totalsFrom(fields: {
     cache_rate: 0,
     latency_avg_ms: 0,
     first_token_avg_ms: 0,
-    output_tokens_per_second: 0,
+    // chart-data says nothing about generation speed: unknown, not zero.
+    generation_samples: null,
+    generation_tokens_per_second: null,
+    generation_output_tokens: 0,
+    generation_ms: 0,
   };
 }
 
@@ -94,6 +98,7 @@ export function legacyChartDataToOverview(
     auth_type: "",
     kind: "api_key",
     key_hint: "",
+    performance: null,
     trend: [],
     trend_failed: [],
   }));
@@ -107,6 +112,7 @@ export function legacyChartDataToOverview(
       auth_type: "",
       kind: "",
       key_hint: "",
+      performance: null,
       trend: [],
       trend_failed: [],
     }));
@@ -122,7 +128,7 @@ export function legacyChartDataToOverview(
     },
     summary: { current, previous: overview.summary.previous },
     series,
-    models: { rows: modelRows, total: modelRows.length },
-    consumers: { rows: consumerRows, total: consumerRows.length },
+    models: { rows: modelRows, total: modelRows.length, performance_coverage_start: "" },
+    consumers: { rows: consumerRows, total: consumerRows.length, performance_coverage_start: "" },
   };
 }

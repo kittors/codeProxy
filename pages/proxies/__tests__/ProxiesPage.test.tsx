@@ -38,6 +38,7 @@ vi.mock("@code-proxy/api-client/endpoints/proxies", async (importOriginal) => {
             : [];
         return items.map(mod.normalizeProxyEntry).filter(Boolean);
       },
+      listWithSharing: async () => mod.normalizeProxyPoolListing(await mocks.apiGet("/proxy-pool")),
       saveAll: (entries: unknown[]) => mocks.apiPut("/proxy-pool", { items: entries }),
       update: (id: string, entry: unknown) => mocks.apiPatch(`/proxy-pool/${id}`, entry),
       check: async (request: { id?: string; url?: string; testUrl?: string }) =>

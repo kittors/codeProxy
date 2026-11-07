@@ -8,7 +8,7 @@ import {
   type ApiKeyEntry,
   type ApiKeyDailySpendingResetEvent,
 } from "@code-proxy/api-client/endpoints/api-keys";
-import { endUsersApi, type EndUserAPIKey } from "@code-proxy/api-client/endpoints/end-users";
+import { endUsersApi, normalizeEndUserAPIKey, type EndUserAPIKey } from "@code-proxy/api-client/endpoints/end-users";
 import {
   applyApiKeyPermissionProfile,
   apiKeyPermissionProfilesApi,
@@ -28,13 +28,13 @@ import { generateApiKey, makeEmptyApiKeyForm, maskApiKey } from "./apiKeyPageUti
 import { createApiKeyColumns } from "./components/ApiKeyColumns";
 import { DeleteApiKeyModal } from "./components/DeleteApiKeyModal";
 import { copyTextToClipboard } from "@code-proxy/ui";
-import { Card } from "@code-proxy/ui";
-import { Button, buttonClassName } from "@code-proxy/ui";
+import { Button, Card, buttonClassName } from "@code-proxy/ui";
 import { EmptyState } from "@code-proxy/ui";
 import { ConfirmModal, SecretRevealModal } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
 import { DataTable } from "@code-proxy/ui";
 import { ApiKeyFormModal } from "./components/ApiKeyFormModal";
+import { OwnedApiKeyEditModal } from "./components/OwnedApiKeyEditModal";
 import { ApiKeyPeriodQuotaResetModal } from "./components/ApiKeyPeriodQuotaResetModal";
 import { ApiKeyUsageDialogs } from "./components/ApiKeyUsageDialogs";
 import { ApiKeySubject } from "./components/ApiKeySubject";
@@ -43,10 +43,7 @@ import { useApiKeyPermissionOptions } from "@features/api-key-restrictions";
 import { useApiKeyUsageView } from "./hooks/useApiKeyUsageView";
 import { CcSwitchImportCardList } from "./components/CcSwitchImportCardList";
 import { openCcSwitchImportUrl } from "@code-proxy/domain/ccswitch/ccswitchImport";
-import {
-  appendCcSwitchRoutePath,
-  buildCcSwitchImportUrlForConfig,
-} from "@code-proxy/domain/ccswitch/ccswitchImportLinks";
+import { buildCcSwitchImportUrlForConfig } from "@code-proxy/domain/ccswitch/ccswitchImportLinks";
 import type { CcSwitchImportConfigListItem } from "@code-proxy/domain/ccswitch/ccswitchImportConfigList";
 import { ccSwitchConfigMatchesApiKeyPermissions } from "@code-proxy/domain/ccswitch/ccswitchImportCompatibility";
 import type { ApiKeyFormValues } from "./types";
@@ -258,7 +255,7 @@ export function ApiKeysPage({
   );
   const ownedKeys = useMemo<EndUserAPIKey[]>(
     () =>
-      entries.map((entry) => ({
+      entries.map((entry) => normalizeEndUserAPIKey({
         id: entry.id ?? entry.key,
         tenant_id: "",
         end_user_id: endUserIdFilter,
@@ -677,23 +674,21 @@ export function ApiKeysPage({
             .trim()
             .toLowerCase() === matchingGroup,
       );
-      const routePath = Array.isArray(groupItem?.["path-routes"])
+      const groupRoutePath = Array.isArray(groupItem?.["path-routes"])
         ? groupItem["path-routes"][0]
         : "";
-      const baseApiUrl = auth?.state.apiBase || detectApiBaseFromLocation();
-      const baseUrl = appendCcSwitchRoutePath(baseApiUrl, config.routePath || routePath || "");
 
       return buildCcSwitchImportUrlForConfig({
         apiKey: ccSwitchImportEntry.key,
-        baseUrl,
+        baseUrl: auth?.state.apiBase || detectApiBaseFromLocation(),
         config,
-        configs: ccSwitchImportConfigs,
+        // Presets saved before presets had their own route fall back to the group's path.
+        routePath: config.routePath || groupRoutePath || "",
         providerName: ccSwitchImportEntry.name,
-        usageBaseUrl: baseApiUrl,
         usageLanguage: i18n.language,
       });
     },
-    [ccSwitchImportEntry, ccSwitchImportConfigs, channelGroupItems, auth, i18n.language],
+    [ccSwitchImportEntry, channelGroupItems, auth, i18n.language],
   );
 
   const handleImportWithConfig = useCallback(
@@ -802,7 +797,7 @@ export function ApiKeysPage({
   );
 
   const tableBody = endUserIdFilter ? (
-    <div className={embed ? "flex min-h-0 flex-1 flex-col" : "space-y-3"}>
+    <div className={embed ? "flex min-h-0 flex-1 flex-col" : "space-y-3 md:flex md:min-h-0 md:flex-col"}>
       <OwnedApiKeysTable
         t={t}
         keys={ownedKeys}
@@ -810,7 +805,6 @@ export function ApiKeysPage({
         busy={saving}
         loading={loading}
         canDelete={() => ownedKeys.length > 1}
-        height={embed ? "min-h-0 flex-1" : "h-[calc(100dvh-260px)]"}
         actions={{
           onToggleDisabled: (key) => {
             const index = entries.findIndex((entry) => entry.id === key.id);
@@ -849,26 +843,24 @@ export function ApiKeysPage({
       icon={<KeyRound size={32} className="text-ink-3" />}
     />
   ) : (
-    <div className="space-y-3 md:flex md:min-h-0 md:flex-1 md:flex-col">
-      <DataTable<ApiKeyEntry>
-        tableId="api-keys"
-        rows={entries}
-        columns={apiKeyColumns}
-        rowKey={(row) => row.key}
-        rowHeight={52}
-        height="h-[calc(100dvh-260px)] md:h-auto md:flex-1"
-        minHeight="min-h-[320px] md:min-h-0"
-        minWidth="min-w-[2500px]"
-        caption={t("api_keys_page.table_caption")}
-        emptyText={t("api_keys_page.no_api_keys")}
-        showAllLoadedMessage={false}
-        rowClassName={(row) => (row.disabled ? "opacity-50" : "")}
-      />
-    </div>
+    // 表格自己 fill（h-full + flex-1），直接放进卡片或嵌入区的 flex 列里就能撑满。
+    <DataTable<ApiKeyEntry>
+      fill
+      tableId="api-keys"
+      rows={entries}
+      columns={apiKeyColumns}
+      rowKey={(row) => row.key}
+      rowHeight={52}
+      minWidth="min-w-[2500px]"
+      caption={t("api_keys_page.table_caption")}
+      emptyText={t("api_keys_page.no_api_keys")}
+      showAllLoadedMessage={false}
+      rowClassName={(row) => (row.disabled ? "opacity-50" : "")}
+    />
   );
 
   return (
-    <div data-page-fill="always" className={embed ? "flex h-full min-h-0 flex-col" : "flex flex-1 flex-col"}>
+    <div data-page-fill="md" className={embed ? "flex h-full min-h-0 flex-col" : "flex flex-1 flex-col"}>
       {embed ? (
         <div className="flex h-full min-h-0 flex-col">
           <div className="flex shrink-0 items-center justify-end px-6 pt-3">{toolbar}</div>
@@ -921,10 +913,10 @@ export function ApiKeysPage({
             }}
             onSubmit={() => void handleCreate()}
           />
-          <OwnedApiKeyQuotaModal
+          <OwnedApiKeyEditModal
             t={t}
             open={editIndex !== null}
-            mode="edit"
+            keyId={editIndex === null ? undefined : entries[editIndex]?.id}
             value={{ name: form.name, periods: form.periodSpending }}
             accountLimits={accountPeriodSpendingLimits}
             saving={saving}

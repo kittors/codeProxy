@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import type { ProxyPoolEntry } from "@code-proxy/api-client/endpoints/proxies";
 import {
   Button,
+  Callout,
   FormField,
   Modal,
   rules,
@@ -111,6 +112,14 @@ export function ProxyFormModal({
           submit();
         }}
       >
+        {/* 系统租户编辑已共享的代理：改动会立刻落到被授权租户的账号上，保存前说清楚。 */}
+        {editing && draft.sharing ? (
+          <Callout tone="warning">
+            {draft.sharing.all
+              ? t("proxies.edit_shared_all_notice")
+              : t("proxies.edit_shared_notice", { count: draft.sharing.tenantIds.length })}
+          </Callout>
+        ) : null}
         <FormField
           label={t("proxies.name")}
           required

@@ -9,12 +9,15 @@ import type {
   UsageLogsResponse,
 } from "@code-proxy/api-client/endpoints/usage";
 import {
+  cacheRatePercent,
   formatUsageMetricNumber,
   formatUsageMetricRate,
   formatUsageMetricTooltipNumber,
   isUsageMetricCompact,
+  readCacheRate,
 } from "@code-proxy/domain";
 import {
+  Button,
   DataTable,
   HoverTooltip,
   MaskToggleButton,
@@ -28,27 +31,35 @@ import { ClearDatabaseLogsDialog, DEFAULT_CLEAR_OPTIONS } from "./ClearDatabaseL
 import { RequestLogsFilters } from "./RequestLogsFilters";
 import type { SearchableCheckboxMultiSelectOption } from "@code-proxy/ui";
 import {
-  buildRequestLogKeyOptions,
+  buildRequestLogKeyOptionsFromFacet,
   buildRequestLogsColumns,
   ChannelIdentityLabel,
   DEFAULT_REQUEST_LOG_PAGE_SIZE,
+  EMPTY_REQUEST_LOG_KEY_FACET,
+  guardFilterVisible,
+  guardKindsOfFilter,
   hasActiveFilterSelection,
   normalizeFilterSelection,
+  readRequestLogKeyFacet,
   RequestLogFilterCount,
+  requestLogKeyFilterQuery,
   RequestLogUsageMetricValue,
   RequestLogsPaginationBar,
   RequestLogsTimeRangeSelector,
   sortRequestLogKeyOptionsByCount,
   toFilterParam,
+  requestLogsHaveCacheBreakdown,
   toRequestLogsRow,
   toStatusFilterValues,
+  type GuardFilterValue,
   type MultiSelectFilterState,
+  type RequestLogKeyFacet,
   type StatusFilterValue,
   type RequestLogsRow as LogRow,
   type TimeRange,
 } from "@features/request-log-viewer";
 
-const DEFAULT_LOG_STATS = {
+const DEFAULT_LOG_STATS: UsageLogsResponse["stats"] = {
   total: 0,
   success_rate: 0,
   total_tokens: 0,
@@ -56,12 +67,37 @@ const DEFAULT_LOG_STATS = {
   cache_rate: 0,
 };
 
+/** 统计还没算出来时的占位，和缓存占比「没有数据」时用的是同一个字符。 */
+const STAT_PENDING = "—";
+
 const isRequestCancelled = (err: unknown, signal?: AbortSignal) =>
   signal?.aborted || (err instanceof Error && err.message === "Request was cancelled");
 
-function RequestLogsRecordsCount({ count }: { count: number }) {
+// Newer backends report a hit rate, null when no request in the selection
+// reported its cache use; older ones a share of cached tokens under its own name.
+function RequestLogsCacheRate({
+  stats,
+  pending,
+}: {
+  stats: UsageLogsResponse["stats"];
+  pending: boolean;
+}) {
   const { t } = useTranslation();
-  const compact = isUsageMetricCompact(count);
+  const view = readCacheRate(stats);
+  const rate = pending ? null : cacheRatePercent(view, stats.total > 0);
+  return (
+    <span>
+      {t(view.kind === "hit_rate" ? "request_logs.cache_hit_rate" : "request_logs.cache_rate")}{" "}
+      <span className="font-mono tabular-nums text-ink">
+        {rate === null ? "—" : formatUsageMetricRate(rate)}
+      </span>
+    </span>
+  );
+}
+
+function RequestLogsRecordsCount({ count, pending }: { count: number; pending: boolean }) {
+  const { t } = useTranslation();
+  const compact = !pending && isUsageMetricCompact(count);
 
   return (
     <HoverTooltip
@@ -72,7 +108,7 @@ function RequestLogsRecordsCount({ count }: { count: number }) {
     >
       <span>
         {t("request_logs.records_count", {
-          count: formatUsageMetricNumber(count),
+          count: pending ? STAT_PENDING : formatUsageMetricNumber(count),
         } as Record<string, string>)}
       </span>
     </HoverTooltip>
@@ -129,12 +165,6 @@ export function RequestLogsPage() {
     setErrorModalOpen(true);
   }, []);
 
-  // Build columns with content click handler
-  const logColumns = useMemo(
-    () => buildRequestLogsColumns(t, handleContentClick, handleErrorClick, { masked }),
-    [t, handleContentClick, handleErrorClick, masked],
-  );
-
   // Data state (page-based, no accumulation)
   const [rawItems, setRawItems] = useState<UsageLogItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -146,29 +176,22 @@ export function RequestLogsPage() {
 
   // Backend-provided metadata
   const [filterOptions, setFilterOptions] = useState<{
-    api_keys: string[];
-    api_key_names: Record<string, string>;
-    api_key_counts: Record<string, number>;
     models: string[];
     channels: string[];
     channel_options: UsageChannelFilterOption[];
     statuses: string[];
   }>({
-    api_keys: [],
-    api_key_names: {},
-    api_key_counts: {},
     models: [],
     channels: [],
     channel_options: [],
     statuses: ["success", "failed"],
   });
-  const [stats, setStats] = useState<{
-    total: number;
-    success_rate: number;
-    total_tokens: number;
-    total_cost: number;
-    cache_rate: number;
-  }>(DEFAULT_LOG_STATS);
+  // The key facet, and the vocabulary (key ids or the older secrets) the last
+  // response offered it in. The ref lets a request be built in that vocabulary
+  // without making every response re-create fetchLogs.
+  const [keyFacet, setKeyFacet] = useState<RequestLogKeyFacet>(EMPTY_REQUEST_LOG_KEY_FACET);
+  const keyFacetRef = useRef<RequestLogKeyFacet>(EMPTY_REQUEST_LOG_KEY_FACET);
+  const [stats, setStats] = useState<UsageLogsResponse["stats"]>(DEFAULT_LOG_STATS);
 
   // Multi-value filters
   const [timeRange, setTimeRange] = useState<TimeRange>(7);
@@ -177,6 +200,13 @@ export function RequestLogsPage() {
   const [selectedChannels, setSelectedChannels] = useState<MultiSelectFilterState<string>>(null);
   const [selectedStatuses, setSelectedStatuses] =
     useState<MultiSelectFilterState<StatusFilterValue>>(null);
+  // Loop protection: the choice, and what the last response said about it (whether the
+  // backend has it, which kinds the other filters leave).
+  const [guardFilter, setGuardFilter] = useState<GuardFilterValue>("all");
+  const [guardFacet, setGuardFacet] = useState<{ supported: boolean; kinds: string[] }>({
+    supported: false,
+    kinds: [],
+  });
   const [confirmClearOpen, setConfirmClearOpen] = useState(false);
   const [clearingLogs, setClearingLogs] = useState(false);
   const [clearOptions, setClearOptions] = useState<ClearUsageLogsPayload>(DEFAULT_CLEAR_OPTIONS);
@@ -190,17 +220,21 @@ export function RequestLogsPage() {
     [rawItems],
   );
 
+  // Build columns with content click handler. Cache reads and writes get a
+  // column each once the backend stores them apart.
+  const cacheBreakdown = useMemo(() => requestLogsHaveCacheBreakdown(rows), [rows]);
+  const logColumns = useMemo(
+    () =>
+      buildRequestLogsColumns(t, handleContentClick, handleErrorClick, { masked, cacheBreakdown }),
+    [t, handleContentClick, handleErrorClick, masked, cacheBreakdown],
+  );
+
   // Build multi-select options from backend filter data (exclude the "" "all" option)
   const keyOptions = useMemo<SearchableCheckboxMultiSelectOption[]>(() => {
-    const opts = buildRequestLogKeyOptions(
-      filterOptions.api_keys,
-      filterOptions.api_key_names ?? {},
-      {
-        allKeys: t("request_logs.all_users"),
-        systemCall: t("request_logs.system_call"),
-      },
-      filterOptions.api_key_counts,
-    );
+    const opts = buildRequestLogKeyOptionsFromFacet(keyFacet, {
+      allKeys: t("request_logs.all_users"),
+      systemCall: t("request_logs.system_call"),
+    });
     return sortRequestLogKeyOptionsByCount(opts, i18n.resolvedLanguage)
       .filter((option) => option.value !== "")
       .map((option) => ({
@@ -209,13 +243,7 @@ export function RequestLogsPage() {
         searchText: option.searchText,
         trailing: <RequestLogFilterCount count={option.count} />,
       }));
-  }, [
-    filterOptions.api_key_counts,
-    filterOptions.api_key_names,
-    filterOptions.api_keys,
-    i18n.resolvedLanguage,
-    t,
-  ]);
+  }, [i18n.resolvedLanguage, keyFacet, t]);
 
   const modelOptions = useMemo<SearchableCheckboxMultiSelectOption[]>(() => {
     return filterOptions.models.map((m) => ({
@@ -293,7 +321,8 @@ export function RequestLogsPage() {
     hasActiveFilterSelection(selectedApiKeys, apiKeyFilterValues) ||
     hasActiveFilterSelection(selectedModels, modelFilterValues) ||
     hasActiveFilterSelection(selectedChannels, channelFilterValues) ||
-    hasActiveFilterSelection(selectedStatuses, statusFilterValues);
+    hasActiveFilterSelection(selectedStatuses, statusFilterValues) ||
+    guardFilter !== "all";
 
   const handleApiKeysChange = useCallback(
     (value: string[]) => {
@@ -328,6 +357,7 @@ export function RequestLogsPage() {
     setSelectedModels(null);
     setSelectedChannels(null);
     setSelectedStatuses(null);
+    setGuardFilter("all");
   }, []);
 
   const clearApiKeyFilter = useCallback(() => {
@@ -361,14 +391,14 @@ export function RequestLogsPage() {
             page,
             size,
             days: timeRange,
-            api_keys: apiKeyFilterParam.values,
+            ...requestLogKeyFilterQuery(keyFacetRef.current, apiKeyFilterParam),
             models: modelFilterParam.values,
             channels: channelFilterParam.values,
             statuses: statusFilterParam.values,
-            api_keys_empty: apiKeyFilterParam.matchesNone,
             models_empty: modelFilterParam.matchesNone,
             channels_empty: channelFilterParam.matchesNone,
             statuses_empty: statusFilterParam.matchesNone,
+            guard_kinds: guardKindsOfFilter(guardFilter),
           },
           { signal: controller.signal },
         );
@@ -378,10 +408,25 @@ export function RequestLogsPage() {
         setRawItems(resp.items ?? []);
         setTotalCount(resp.total ?? 0);
         setCurrentPage(page);
+        const facet = readRequestLogKeyFacet(resp);
+        if (
+          facet.byId !== keyFacetRef.current.byId &&
+          (apiKeyFilterParam.values || apiKeyFilterParam.matchesNone)
+        ) {
+          // The backend changed vocabulary under an open page (upgraded, or rolled
+          // back): the selection names keys the new facet does not know.
+          setSelectedApiKeys(null);
+        }
+        keyFacetRef.current = facet;
+        setKeyFacet(facet);
+        // The API client fills every capability, but a response that declares nothing is, by
+        // definition, from a backend that predates loop protection.
+        const guardSupported = resp.capabilities?.loopGuard === true;
+        setGuardFacet({ supported: guardSupported, kinds: resp.filters?.guard_kinds ?? [] });
+        // A backend that lost loop protection under an open page (rolled back) would answer
+        // every request to a filter it ignores, which would read as "nothing was stopped".
+        if (!guardSupported) setGuardFilter("all");
         setFilterOptions({
-          api_keys: resp.filters?.api_keys ?? [],
-          api_key_names: resp.filters?.api_key_names ?? {},
-          api_key_counts: resp.filters?.api_key_counts ?? {},
           models: resp.filters?.models ?? [],
           channels: resp.filters?.channels ?? [],
           channel_options: resp.filters?.channel_options ?? [],
@@ -403,6 +448,7 @@ export function RequestLogsPage() {
     [
       apiKeyFilterParam,
       channelFilterParam,
+      guardFilter,
       modelFilterParam,
       notify,
       statusFilterParam,
@@ -439,7 +485,7 @@ export function RequestLogsPage() {
   // Fetch page 1 when filters change
   useEffect(() => {
     fetchLogs(1, pageSize);
-  }, [timeRange, selectedApiKeys, selectedModels, selectedChannels, selectedStatuses]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [timeRange, selectedApiKeys, selectedModels, selectedChannels, selectedStatuses, guardFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleOpenClearDialog = useCallback(() => {
     setClearOptions(DEFAULT_CLEAR_OPTIONS);
@@ -470,6 +516,10 @@ export function RequestLogsPage() {
     }
   }, [clearOptions, fetchLogs, notify, pageSize, t]);
 
+  // 第一页还没回来时，统计和分页都还没算出来：显示占位，不显示 0。
+  // 「0 条记录、成功率 0.0%」看起来像真的没有数据。
+  const statsPending = loading && rows.length === 0;
+
   return (
     <section data-page-fill="always" className="flex flex-1 flex-col">
       <h1 className="sr-only">{t("request_logs.title")}</h1>
@@ -493,35 +543,38 @@ export function RequestLogsPage() {
             </h2>
             <div className="hidden min-[640px]:flex items-center gap-2 text-xs text-ink-3">
               <span className="text-ink-4">|</span>
-              <RequestLogsRecordsCount count={stats.total} />
+              <RequestLogsRecordsCount count={stats.total} pending={statsPending} />
               <span className="text-ink-4">|</span>
               <span>
                 {t("common.success_rate")}{" "}
                 <span className="font-mono tabular-nums text-ink">
-                  {stats.success_rate.toFixed(1)}%
+                  {statsPending ? STAT_PENDING : `${stats.success_rate.toFixed(1)}%`}
                 </span>
               </span>
               <span className="text-ink-4">|</span>
               <span>
                 {t("request_logs.col_total_token")}{" "}
                 <span className="font-mono tabular-nums text-ink">
-                  <RequestLogUsageMetricValue value={stats.total_tokens} compact />
+                  {statsPending ? (
+                    STAT_PENDING
+                  ) : (
+                    <RequestLogUsageMetricValue value={stats.total_tokens} compact />
+                  )}
                 </span>
               </span>
               <span className="text-ink-4">|</span>
               <span>
                 {t("request_logs.col_cost")}{" "}
                 <span className="font-mono tabular-nums text-ink">
-                  <RequestLogUsageMetricValue value={stats.total_cost} variant="currency" compact />
+                  {statsPending ? (
+                    STAT_PENDING
+                  ) : (
+                    <RequestLogUsageMetricValue value={stats.total_cost} variant="currency" compact />
+                  )}
                 </span>
               </span>
               <span className="text-ink-4">|</span>
-              <span>
-                {t("request_logs.cache_rate")}{" "}
-                <span className="font-mono tabular-nums text-ink">
-                  {formatUsageMetricRate(stats.cache_rate)}
-                </span>
-              </span>
+              <RequestLogsCacheRate stats={stats} pending={statsPending} />
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -531,31 +584,33 @@ export function RequestLogsPage() {
               onToggle={() => setMasked((prev) => !prev)}
               className="h-9 w-9"
             />
-            <button
-              type="button"
+            {/* 三个圆按钮同一个底（白底 + 阴影，隐私开着时是实心），清空只把图标换成红色。
+                以前清空是透明底、刷新是手写的白底，三颗按钮三种样子。 */}
+            <Button
+              variant="secondary-danger"
               onClick={handleOpenClearDialog}
               disabled={loading || clearingLogs}
               aria-label={t("request_logs.clear_database_logs")}
               title={t("request_logs.clear_database_logs")}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-rose-600 transition-colors hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:opacity-50 dark:text-rose-400"
+              className="h-9 w-9"
             >
               <Trash2 size={14} aria-hidden="true" />
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
               onClick={() => fetchLogs(1, pageSize)}
               disabled={loading}
               aria-busy={loading}
               aria-label={t("request_logs.refresh")}
               title={t("request_logs.refresh")}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-surface text-ink shadow-control transition-[background-color,box-shadow] hover:bg-surface-hover hover:shadow-control-hover disabled:cursor-not-allowed disabled:opacity-70"
+              // 加载中刷新按钮禁用但图标在转，别淡到看不清。
+              className="h-9 w-9 disabled:opacity-70"
             >
               <RefreshCw
                 size={14}
                 className={loading ? "motion-reduce:animate-none motion-safe:animate-spin" : ""}
                 aria-hidden="true"
               />
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -579,19 +634,27 @@ export function RequestLogsPage() {
           onStatusesClear={clearStatusFilter}
           onResetFilters={resetFilters}
           hasActiveFilters={hasActiveFilters}
+          guardFilter={
+            guardFilterVisible(guardFacet.supported, guardFacet.kinds, guardFilter)
+              ? { value: guardFilter, kinds: guardFacet.kinds, onChange: setGuardFilter }
+              : undefined
+          }
         />
 
         {/*
-          表格区域 — 吃掉卡片里剩下的高度，内部滚动。
-          用 flex-1 而不是 h-[calc(100dvh-300px)]：那个 300 是标题栏 + 筛选区 + 分页条的
-          手工累加，筛选区换行、字号或密度一变就对不上，表格要么矮一截、下面空一块滚不动，
-          要么高出去把分页顶掉。
+          表格区域 — flex-1 占满标题、筛选、分页之外剩下的高度，表格 fill 铺满它：加载、空、
+          行少、行多都是同一个框，分页条和横向滚动条不随行数移动，数据回来时也不跳。
+          （#1085 曾改成按行数收高：行少时表格只到页面中间，首次加载时骨架只有五行高、
+          数据回来再整块撑开，分页条跟着跳 200 多 px。）
+          不用 h-[calc(100dvh-300px)]：那个 300 是标题栏 + 筛选区 + 分页条的手工累加，
+          筛选区换行、字号或密度一变就对不上，表格要么矮一截、要么高出去把分页顶掉。
           min-h-0 覆盖 flex item 默认的 min-height:auto（否则表格会被内容撑开，整页变长而不是
-          内部滚动）。这里不能写 min-h-[360px] 之类的保底：卡片本身是 min-h-0、高度被窗口钉死，
-          窗口一矮，保底高度只会把表格和分页条挤出卡片边框之外，而不是让页面滚动。
+          内部滚动）。这里不能写 min-h-[360px] 之类的保底：页面高度被窗口钉死，
+          窗口一矮，保底高度只会把表格和分页条挤出页面之外，而不是让页面滚动。
         */}
-        <div className="relative min-h-0 flex-1 overflow-hidden">
+        <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
           <DataTable
+            fill
             tableId="request-logs"
             rows={rows}
             columns={logColumns}
@@ -599,8 +662,6 @@ export function RequestLogsPage() {
             loading={loading}
             virtualize={false}
             minWidth="min-w-[1240px]"
-            height="h-full"
-            minHeight="min-h-full"
             caption={t("request_logs.table_caption")}
             emptyText={t("request_logs.no_data")}
             emptyDescription={t("request_logs.no_data_desc")}
@@ -608,8 +669,9 @@ export function RequestLogsPage() {
             showAllLoadedMessage={false}
           />
 
-          {/* Loading overlay */}
-          {loading ? (
+          {/* 刷新、翻页、换筛选时罩住旧数据。首次加载还没有行，交给表格自己的骨架：
+              以前两样叠在一起，骨架被糊掉白画，读屏还要念两遍「加载中」。 */}
+          {loading && rows.length > 0 ? (
             <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-canvas/70 backdrop-blur-sm">
               <div className="inline-flex items-center gap-2 rounded-full bg-elevated px-3.5 py-2 text-sm font-medium text-ink-2 shadow-pop">
                 <span
@@ -625,6 +687,7 @@ export function RequestLogsPage() {
         {/* 分页控件 — flex-shrink-0 固定在底部 */}
         <RequestLogsPaginationBar
           flush
+          pending={statsPending}
           currentPage={currentPage}
           totalPages={totalPages}
           totalCount={totalCount}

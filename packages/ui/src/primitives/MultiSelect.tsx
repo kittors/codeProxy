@@ -233,9 +233,7 @@ export function MultiSelect({
           )}
           <div
             ref={listFade.ref}
-            onScroll={listFade.onScroll}
-            style={listFade.style}
-            className={cn("min-h-0 flex-1 overflow-y-auto overscroll-contain p-1.5", listFade.className)}
+            className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-1.5"
           >
             {/* Select All option */}
             <button

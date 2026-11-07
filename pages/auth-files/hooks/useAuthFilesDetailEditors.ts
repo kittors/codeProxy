@@ -32,6 +32,7 @@ import {
   type PrefixProxyEditorState,
   type XAIEndpointEditorState,
 } from "@code-proxy/domain";
+import { coolingModeFromAuthJson, writeCoolingModeToAuthJson } from "@features/channel-cooling";
 import {
   buildCodexImageGenerationBridgeEditorState,
   createCodexImageGenerationBridgeEditorState,
@@ -57,6 +58,7 @@ const createPrefixProxyEditorState = (): PrefixProxyEditorState => ({
   concurrencyLimit: "",
   codexConvergenceMode: "",
   codexServiceTier: "",
+  disableCooling: "",
 });
 
 const createChannelEditorState = (): ChannelEditorState => ({
@@ -694,20 +696,10 @@ export function useAuthFilesDetailEditors(
   const openPrefixProxyEditor = useCallback(
     async (file: AuthFileItem) => {
       setPrefixProxyEditor({
+        ...createPrefixProxyEditorState(),
         open: true,
         fileName: file.name,
         loading: true,
-        saving: false,
-        error: null,
-        json: null,
-        prefix: "",
-        proxyUrl: "",
-        proxyId: "",
-        subscriptionStartedAt: "",
-        subscriptionPeriod: "monthly",
-        concurrencyLimit: "",
-        codexConvergenceMode: "",
-        codexServiceTier: "",
       });
 
       try {
@@ -776,6 +768,7 @@ export function useAuthFilesDetailEditors(
           concurrencyLimit,
           codexConvergenceMode,
           codexServiceTier,
+          disableCooling: coolingModeFromAuthJson(json),
           error: null,
         }));
       } catch (err: unknown) {
@@ -1101,6 +1094,7 @@ export function useAuthFilesDetailEditors(
       originalSubscriptionStartedAt !== prefixProxyEditor.subscriptionStartedAt ||
       originalSubscriptionPeriod !== prefixProxyEditor.subscriptionPeriod ||
       originalConcurrencyLimit !== prefixProxyEditor.concurrencyLimit.trim() ||
+      coolingModeFromAuthJson(prefixProxyEditor.json) !== prefixProxyEditor.disableCooling ||
       String(
         prefixProxyEditor.json.codex_convergence_mode ??
           prefixProxyEditor.json.convergence_mode ??
@@ -1122,6 +1116,7 @@ export function useAuthFilesDetailEditors(
     prefixProxyEditor.codexConvergenceMode,
     prefixProxyEditor.codexServiceTier,
     prefixProxyEditor.concurrencyLimit,
+    prefixProxyEditor.disableCooling,
     prefixProxyEditor.json,
     prefixProxyEditor.prefix,
     prefixProxyEditor.proxyId,
@@ -1172,11 +1167,13 @@ export function useAuthFilesDetailEditors(
     const codexServiceTier = prefixProxyEditor.codexServiceTier.trim().toLowerCase();
     delete next.service_tier;
     delete next["codex-service-tier"];
-    if (codexServiceTier && ["pass", "priority", "flex", "drop"].includes(codexServiceTier)) {
+    if (codexServiceTier && ["pass", "priority", "ultrafast", "flex", "drop"].includes(codexServiceTier)) {
       next.codex_service_tier = codexServiceTier;
     } else {
       delete next.codex_service_tier;
     }
+
+    writeCoolingModeToAuthJson(next, prefixProxyEditor.disableCooling);
 
     removeSubscriptionFields(next);
     const subscriptionStartedAt = prefixProxyEditor.subscriptionStartedAt.trim();
@@ -1193,6 +1190,7 @@ export function useAuthFilesDetailEditors(
     prefixProxyEditor.codexConvergenceMode,
     prefixProxyEditor.codexServiceTier,
     prefixProxyEditor.concurrencyLimit,
+    prefixProxyEditor.disableCooling,
     prefixProxyEditor.json,
     prefixProxyEditor.prefix,
     prefixProxyEditor.proxyId,

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Plus, RefreshCw, Search, Trash2 } from "lucide-react";
-import { Button } from "@code-proxy/ui";
+import { Button, ScrollFade } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
 import { ConfirmModal } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
@@ -29,7 +29,6 @@ import type {
   ModelFormState,
   ModelItem,
   ModelOwnerPreset,
-  ModelPageTab,
   ModelScope,
   OpenRouterModelSyncState,
   OwnerFormState,
@@ -51,23 +50,17 @@ import {
   normalizeOwnerPresetItems,
   normalizeOwnerValue,
   patchModelsPageSnapshot,
+  readOpenRouterSyncCache,
   saveModelConfig,
   setModelsPageSnapshot,
   syncIntervalHoursValue,
   syncIntervalMinutesFromHours,
   toFormState,
   toOwnerFormState,
+  writeOpenRouterSyncCache,
 } from "./modelsUtils";
-
-const openRouterSyncStateByTenant = new Map<string, OpenRouterModelSyncState>();
-
-function readOpenRouterSyncCache(tenantKey: string): OpenRouterModelSyncState | null {
-  return openRouterSyncStateByTenant.get(tenantKey) ?? null;
-}
-
-function writeOpenRouterSyncCache(tenantKey: string, state: OpenRouterModelSyncState): void {
-  openRouterSyncStateByTenant.set(tenantKey, state);
-}
+import { useModelsPageTabs } from "./hooks/useModelsPageTabs";
+import { VirtualModelsPanel } from "./virtual-models/VirtualModelsPanel";
 
 export function ModelsPage() {
   const { t } = useTranslation();
@@ -86,7 +79,7 @@ export function ModelsPage() {
   const [totalCost, setTotalCost] = useState(() => initialActiveSnapshot?.totalCost ?? 0);
   const [form, setForm] = useState<ModelFormState | null>(null);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<ModelPageTab>("active");
+  const { activeTab, modelScope, selectTab, virtualModelsSupported } = useModelsPageTabs();
   const [ownerPresets, setOwnerPresets] = useState<ModelOwnerPreset[]>(
     () => initialActiveSnapshot?.ownerPresets ?? [],
   );
@@ -150,8 +143,6 @@ export function ModelsPage() {
   useEffect(() => {
     totalCostRef.current = totalCost;
   }, [totalCost]);
-
-  const modelScope: ModelScope = activeTab;
 
   const applyScopeSnapshot = useCallback((scope: ModelScope) => {
     const snapshot = getModelsPageSnapshot(scope);
@@ -820,9 +811,11 @@ export function ModelsPage() {
     <section data-page-fill="md" className="flex flex-1 flex-col gap-4 md:min-h-0 md:overflow-hidden">
       <ModelsStatsCards stats={totalStats} totalCost={totalCost} />
 
-      <ModelsPageTabs activeTab={activeTab} onTabChange={setActiveTab} />
+      <ModelsPageTabs activeTab={activeTab} onTabChange={selectTab} showVirtual={virtualModelsSupported} />
 
-      {activeTab === "library" ? (
+      {activeTab === "virtual" ? (
+        <VirtualModelsPanel />
+      ) : activeTab === "library" ? (
         <div
           data-testid="owner-library-layout"
           className="grid h-[calc(100dvh-300px)] min-h-[28rem] gap-4 md:h-auto md:min-h-0 md:flex-1 lg:grid-cols-[18rem_minmax(0,1fr)]"
@@ -868,7 +861,7 @@ export function ModelsPage() {
                 </span>
               </button>
 
-              <div
+              <ScrollFade
                 data-testid="owner-sidebar-list"
                 className="-mx-1 min-h-0 flex-1 space-y-2 overflow-x-hidden overflow-y-auto px-1 py-1"
               >
@@ -893,7 +886,7 @@ export function ModelsPage() {
                     />
                   ))
                 )}
-              </div>
+              </ScrollFade>
             </Card>
           </div>
 
@@ -1053,6 +1046,7 @@ export function ModelsPage() {
               ) : null}
 
               <DataTable<ModelItem>
+                fill
                 tableId="models-library"
                 rows={filteredModels}
                 columns={modelColumns}
@@ -1060,12 +1054,8 @@ export function ModelsPage() {
                 loading={loading}
                 rowHeight={52}
                 caption={t("models_page.table_caption")}
-                emptyText={
-                  searchFilter ? t("models_page.no_results") : t("models_page.no_model_data")
-                }
+                emptyText={searchFilter ? t("models_page.no_results") : t("models_page.no_model_data")}
                 minWidth="min-w-[1440px]"
-                height="h-full"
-                minHeight="min-h-0"
               />
             </Card>
           </div>
@@ -1074,7 +1064,7 @@ export function ModelsPage() {
         <Card
           title={t("models_page.model_configs")}
           description={t("models_page.model_configs_desc")}
-          className="flex flex-1 flex-col overflow-hidden md:min-h-0"
+          className="flex flex-col overflow-hidden md:min-h-0 md:flex-1"
           bodyClassName="relative flex min-h-0 flex-1 flex-col"
           actions={
             <div className="flex flex-wrap items-center justify-end gap-2">
@@ -1109,6 +1099,7 @@ export function ModelsPage() {
           }
         >
           <DataTable<ModelItem>
+            fill
             tableId="model-configs"
             rows={filteredModels}
             columns={modelColumns}
@@ -1118,8 +1109,6 @@ export function ModelsPage() {
             caption={t("models_page.table_caption")}
             emptyText={searchFilter ? t("models_page.no_results") : t("models_page.no_model_data")}
             minWidth="min-w-[1440px]"
-            height="h-[calc(100vh-430px)] md:h-auto md:flex-1"
-            minHeight="min-h-[360px] md:min-h-0"
           />
         </Card>
       )}

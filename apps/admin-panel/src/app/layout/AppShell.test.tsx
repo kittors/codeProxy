@@ -338,6 +338,42 @@ describe("AppShell route progress", () => {
     expect(document.querySelector(".rp")).not.toBeInTheDocument();
   });
 
+  test("keeps the target highlighted until the route commits, without flashing back to the old page", async () => {
+    vi.useFakeTimers();
+    renderShell("/runtime/request-logs");
+    const from = document.querySelector<HTMLAnchorElement>('a[href="/runtime/request-logs"]')!;
+    const to = document.querySelector<HTMLAnchorElement>('a[href="/runtime/monitor"]')!;
+    fireEvent.click(to);
+    expect(to).toHaveAttribute("aria-current", "page");
+    expect(from).not.toHaveAttribute("aria-current");
+
+    // 路由用 startTransition 提交新 location，比普通 setState 晚一拍。导航收尾时若先清掉 pendingTo，
+    // 中间会按旧路径渲染一次：旧页那一项重新拿到 aria-current、面包屑闪回旧页名（11-07 录屏第 188 帧）。
+    const observer = new MutationObserver(() => {});
+    observer.observe(document.body, {
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["aria-current"],
+      attributeOldValue: true,
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(680);
+      await Promise.resolve();
+    });
+    act(() => {
+      vi.advanceTimersByTime(360);
+    });
+    const records = observer.takeRecords();
+    observer.disconnect();
+
+    expect(screen.getByTestId("location")).toHaveTextContent("/runtime/monitor");
+    expect(to).toHaveAttribute("aria-current", "page");
+    // 旧页那一项在点击之后一次都没再变回当前页（有 oldValue 为 page 的记录，说明中途被设回过）
+    expect(records.filter((record) => record.target === from && record.oldValue === "page")).toEqual([]);
+    expect(records.filter((record) => record.target === to)).toEqual([]);
+    expect(document.querySelector(".rp")).not.toBeInTheDocument();
+  });
+
   test("restarts the progress animation on rapid navigation", async () => {
     vi.useFakeTimers();
     renderShell("/runtime/request-logs");

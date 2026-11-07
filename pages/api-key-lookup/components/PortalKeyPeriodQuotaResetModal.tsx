@@ -4,19 +4,23 @@ import {
   normalizePeriodSpendingLimits,
   portalApi,
   type EndUserAPIKey,
-  type PeriodSpendingPeriod,
+  type QuotaResetPeriod,
 } from "@code-proxy/api-client";
+import { describeWindowParts, resettableWindows } from "@features/access-policy";
 import { PeriodQuotaResetModal } from "@features/period-spending";
 
 export function PortalKeyPeriodQuotaResetModal({
   target,
   busy,
+  accessPolicy = false,
   onBusyChange,
   onClose,
   onReset,
 }: {
   target: EndUserAPIKey | null;
   busy: boolean;
+  /** 后端支持访问策略时，按完整矩阵与 Key 规则列出可重置的窗口（含累计）。 */
+  accessPolicy?: boolean;
   onBusyChange: (busy: boolean) => void;
   onClose: () => void;
   onReset: () => Promise<void>;
@@ -29,7 +33,7 @@ export function PortalKeyPeriodQuotaResetModal({
     if (target) setError("");
   }, [target]);
 
-  const handleConfirm = async (periods: PeriodSpendingPeriod[]) => {
+  const handleConfirm = async (periods: QuotaResetPeriod[]) => {
     if (!target || periods.length === 0) return;
     onBusyChange(true);
     setError("");
@@ -60,15 +64,22 @@ export function PortalKeyPeriodQuotaResetModal({
           : undefined
       }
       periodSpendingItems={target?.["period-spending"]}
+      windows={
+        accessPolicy && target
+          ? resettableWindows(target["quota-limits"], target["model-rules"], target["quota-usage"]).map((item) => ({
+              period: item.window,
+              description: describeWindowParts(t, item.parts),
+            }))
+          : undefined
+      }
       busy={busy}
       error={error}
       onClose={() => {
         if (!busy) onClose();
       }}
       onConfirm={(periods) =>
-        // Keys have no cumulative allowance, so this dialog only ever yields
-        // rolling periods; narrow before handing them to the key-scoped API.
-        void handleConfirm(periods.filter((p): p is PeriodSpendingPeriod => p !== "lifetime"))
+        // 旧后端的 Key 没有累计额度，只会产出滚动周期；新后端的 Key 可以有累计格子，原样提交。
+        void handleConfirm(accessPolicy ? periods : periods.filter((p) => p !== "lifetime"))
       }
     />
   );

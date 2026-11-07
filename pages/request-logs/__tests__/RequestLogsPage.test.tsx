@@ -644,11 +644,11 @@ describe("RequestLogsPage", () => {
       expect(mocks.getUsageLogs).toHaveBeenNthCalledWith(
         1,
         expect.objectContaining({
-          api_keys: undefined,
+          api_key_ids: undefined,
           models: undefined,
           channels: undefined,
           statuses: undefined,
-          api_keys_empty: false,
+          api_key_ids_empty: false,
           models_empty: false,
           channels_empty: false,
           statuses_empty: false,
@@ -763,6 +763,137 @@ describe("RequestLogsPage", () => {
         expectSignalOptions(),
       ),
     );
+  });
+
+  describe("key filter", () => {
+    const idKeyResponse = {
+      ...responseWithFilterOptions,
+      capabilities: { apiKeyIdFilters: true },
+      filters: {
+        ...responseWithFilterOptions.filters,
+        api_key_ids: ["key-primary", "key-secondary", "__system__"],
+        api_key_id_names: { "key-primary": "Primary", "key-secondary": "Secondary" },
+        api_key_id_counts: { "key-primary": 12, "key-secondary": 37, __system__: 4 },
+        api_keys: [],
+        api_key_names: {},
+        api_key_counts: {},
+      },
+    };
+
+    test("selects keys by id when the backend declares the id filters", async () => {
+      await i18n.changeLanguage("en");
+      const user = userEvent.setup();
+      mocks.getUsageLogs.mockResolvedValue(idKeyResponse);
+
+      render(
+        <ThemeProvider>
+          <ToastProvider>
+            <RequestLogsPage />
+          </ToastProvider>
+        </ThemeProvider>,
+      );
+
+      const [keyFilter] = await screen.findAllByRole("combobox");
+      await user.click(keyFilter);
+      // Names for keys, one entry for every system call.
+      expect(await screen.findByRole("option", { name: /Secondary/i })).toBeInTheDocument();
+      expect(screen.getByRole("option", { name: /System call/i })).toBeInTheDocument();
+      await user.click(screen.getByRole("option", { name: /Primary/i }));
+      await user.click(screen.getByRole("button", { name: "Apply filters" }));
+
+      await waitFor(() =>
+        expect(mocks.getUsageLogs).toHaveBeenNthCalledWith(
+          2,
+          expect.objectContaining({ api_key_ids: ["key-primary"], api_key_ids_empty: false }),
+          expectSignalOptions(),
+        ),
+      );
+      // An older backend would ignore key ids, so the selectors are not sent as well.
+      expect(mocks.getUsageLogs.mock.calls[1]?.[0]).not.toHaveProperty("api_keys");
+
+      await user.click(keyFilter);
+      await user.click(screen.getByRole("option", { name: /System call/i }));
+      await user.click(screen.getByRole("button", { name: "Apply filters" }));
+
+      await waitFor(() =>
+        expect(mocks.getUsageLogs).toHaveBeenNthCalledWith(
+          3,
+          expect.objectContaining({
+            api_key_ids: ["key-primary", "__system__"],
+            api_key_ids_empty: false,
+          }),
+          expectSignalOptions(),
+        ),
+      );
+    });
+
+    test("never shows the secret of a key an older backend lists", async () => {
+      await i18n.changeLanguage("en");
+      const user = userEvent.setup();
+      mocks.getUsageLogs.mockResolvedValue({
+        ...responseWithFilterOptions,
+        filters: {
+          ...responseWithFilterOptions.filters,
+          api_keys: ["sk-unnamed-secret-0001"],
+          api_key_names: {},
+          api_key_counts: { "sk-unnamed-secret-0001": 3 },
+        },
+      });
+
+      render(
+        <ThemeProvider>
+          <ToastProvider>
+            <RequestLogsPage />
+          </ToastProvider>
+        </ThemeProvider>,
+      );
+
+      const [keyFilter] = await screen.findAllByRole("combobox");
+      await user.click(keyFilter);
+
+      expect(await screen.findByRole("option", { name: /sk-unn\*\*\*0001/ })).toBeInTheDocument();
+      expect(document.body.textContent).not.toContain("sk-unnamed-secret-0001");
+    });
+
+    test("drops a selection the new backend does not know when the vocabulary changes", async () => {
+      await i18n.changeLanguage("en");
+      const user = userEvent.setup();
+      // The page was opened against an older backend, which has since been upgraded.
+      mocks.getUsageLogs
+        .mockResolvedValueOnce(responseWithFilterOptions)
+        .mockResolvedValueOnce(idKeyResponse)
+        .mockResolvedValue(idKeyResponse);
+
+      render(
+        <ThemeProvider>
+          <ToastProvider>
+            <RequestLogsPage />
+          </ToastProvider>
+        </ThemeProvider>,
+      );
+
+      const [keyFilter] = await screen.findAllByRole("combobox");
+      await user.click(keyFilter);
+      await user.click(await screen.findByRole("option", { name: /Primary/i }));
+      await user.click(screen.getByRole("button", { name: "Apply filters" }));
+
+      await waitFor(() =>
+        expect(mocks.getUsageLogs).toHaveBeenNthCalledWith(
+          2,
+          expect.objectContaining({ api_keys: ["sk-primary"] }),
+          expectSignalOptions(),
+        ),
+      );
+      // The answer came in key ids: the secret that was selected means nothing to it, so
+      // the page goes back to every key instead of showing an empty list.
+      await waitFor(() =>
+        expect(mocks.getUsageLogs).toHaveBeenNthCalledWith(
+          3,
+          expect.objectContaining({ api_key_ids: undefined, api_key_ids_empty: false }),
+          expectSignalOptions(),
+        ),
+      );
+    });
   });
 
   test("clears a request-log filter from the trigger and refreshes table data", async () => {

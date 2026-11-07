@@ -1,7 +1,7 @@
 import { type PropsWithChildren, useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { PageBackground } from "@code-proxy/ui";
+import { PageBackground, ScrollFade } from "@code-proxy/ui";
 import { useOptionalAuth } from "@app/providers/AuthProvider";
 import { MobileSidebar } from "./shell/MobileSidebar";
 import { getPageTitleKey, resolveActiveTo } from "./shell/navModel";
@@ -186,7 +186,18 @@ export function AppShell({ children, onLogout }: PropsWithChildren<{ onLogout?: 
             mobileNavOpen={mobileNavOpen}
             onToggleMobileNav={toggleMobile}
           />
-          <div className="flex-1 overflow-x-hidden overflow-y-auto">
+          {/*
+           * 主内容区上下渐隐（ScrollFade）：还能往上 / 往下滚时那一侧淡出，到头不淡。遮罩会裁掉
+           * 区内没走 portal 的 fixed 浮层，页面里的浮层（下拉、浮动保存条、全屏加载）都要走 portal；
+           * sticky 页签栏、操作栏加 data-scroll-fade-pin，渐隐从它们下沿开始。
+           *
+           * overscroll-y-none：macOS 触控板滚到顶 / 底再往前推，Chrome 会让这个内层滚动区整块橡皮筋回弹，
+           * 吸顶的页签栏、右侧吸顶栏跟着内容一起被拉走约一秒（页签栏滑出视口、顶端露出一截空白）；
+           * 内容不满一屏的页面（运行日志）滚动会一路传到窗口，侧边栏连同整页一起弹（11-07 录屏）。
+           * 内容区是固定外框里的面板，到头就停，也不再把滚动传给窗口。只对鼠标 / 触控板生效：手机、
+           * 平板上的回弹和下拉刷新是系统行为，保持原样。
+           */}
+          <ScrollFade className="flex-1 overflow-x-hidden overflow-y-auto pointer-fine:overscroll-y-none">
             {/*
              * 默认 min-h-full：内容长了 main 跟着长高，底部内边距排在内容之后。
              * 页面根声明了 data-page-fill 时改 h-full，给「表格吃满剩余高度、内部滚动」的
@@ -198,11 +209,12 @@ export function AppShell({ children, onLogout }: PropsWithChildren<{ onLogout?: 
               className={[
                 "flex min-h-full flex-col px-4 pt-1 pb-4 focus-visible:outline-none sm:px-6 sm:pb-6",
                 "has-[[data-page-fill=always]]:h-full md:has-[[data-page-fill=md]]:h-full",
+                "lg:has-[[data-page-fill=lg]]:h-full",
               ].join(" ")}
             >
               {children}
             </main>
-          </div>
+          </ScrollFade>
         </div>
       </div>
     </PageBackground>

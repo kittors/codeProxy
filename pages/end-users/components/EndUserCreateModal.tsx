@@ -1,6 +1,16 @@
 import { useEffect, useRef, type Dispatch, type FormEvent, type SetStateAction } from "react";
-import { UserPlus } from "lucide-react";
-import { Button, Callout, FormField, Modal, TextInput, useFormValidation } from "@code-proxy/ui";
+import { ShieldCheck, UserPlus } from "lucide-react";
+import type { ApiKeyPermissionProfile } from "@code-proxy/api-client";
+import {
+  Button,
+  Callout,
+  FormField,
+  Modal,
+  Select,
+  TextInput,
+  useFormValidation,
+} from "@code-proxy/ui";
+import { summarizePolicy } from "@features/access-policy";
 import { displayNameRules, optionalPasswordRules } from "@features/identity-rules";
 import type { EndUserForm } from "../endUserForm";
 
@@ -14,6 +24,8 @@ const FORM_ID = "create-end-user-form";
  * 填了密码就必须满足和服务端相同的密码策略，失焦或提交时就地报错；以前只在
  * 提交后才报，或者干脆等服务端用英文拒绝。服务端的拒绝原因（`createPasswordError`）
  * 照样显示在密码框下面。
+ *
+ * 后端支持时创建即绑定权限模板：模板是成批管理的入口，建完再逐个去编辑页绑定太繁琐。
  */
 export function EndUserCreateModal({
   t,
@@ -23,6 +35,8 @@ export function EndUserCreateModal({
   busy,
   createPasswordError,
   setCreatePasswordError,
+  profiles,
+  allowProfile,
   onSubmit,
   onClose,
 }: {
@@ -33,6 +47,9 @@ export function EndUserCreateModal({
   busy: boolean;
   createPasswordError: string;
   setCreatePasswordError: Dispatch<SetStateAction<string>>;
+  profiles: ApiKeyPermissionProfile[];
+  /** 后端声明了 create-with-profile 才显示模板选择。 */
+  allowProfile: boolean;
   onSubmit: (event: FormEvent) => void;
   onClose: () => void;
 }) {
@@ -49,6 +66,7 @@ export function EndUserCreateModal({
 
   // 服务端的拒绝原因优先：前端规则和服务端可能有出入，以服务端为准。
   const passwordError = createPasswordError || validation.error("password");
+  const selectedProfile = profiles.find((profile) => profile.id === form.permissionProfileId);
 
   return (
     <Modal
@@ -124,6 +142,45 @@ export function EndUserCreateModal({
             {...validation.bind("password")}
           />
         </FormField>
+        {allowProfile && profiles.length > 0 ? (
+          <FormField
+            label={t("access_policy.create_profile_label")}
+            optional
+            description={
+              selectedProfile
+                ? summarizePolicy(t, {
+                    limits: selectedProfile["quota-limits"],
+                    rules: selectedProfile["model-rules"],
+                    routes: selectedProfile["model-routes"],
+                  })
+                : t("access_policy.create_profile_hint")
+            }
+          >
+            <Select
+              value={form.permissionProfileId}
+              onChange={(value) => setForm((f) => ({ ...f, permissionProfileId: value }))}
+              options={[
+                { value: "", label: t("access_policy.create_profile_none") },
+                ...profiles.map((profile) => ({
+                  value: profile.id,
+                  label: (
+                    <span className="inline-flex items-center gap-1.5">
+                      <ShieldCheck
+                        size={14}
+                        aria-hidden="true"
+                        className="text-ink-3 icon-hue:text-violet-500 icon-hue:dark:text-violet-400"
+                      />
+                      {profile.name}
+                    </span>
+                  ),
+                  triggerLabel: profile.name,
+                })),
+              ]}
+              aria-label={t("access_policy.create_profile_label")}
+              fullWidth
+            />
+          </FormField>
+        ) : null}
         <Callout tone="info">{t("end_users.password_hint")}</Callout>
       </form>
     </Modal>

@@ -8,6 +8,24 @@ import {
 } from "./period-spending";
 import { apiClient } from "../client/client";
 import { isRecord } from "../client/response";
+import {
+  PROFILE_FORBIDDEN_CELLS,
+  QUOTA_METRICS,
+  QUOTA_WINDOWS,
+  legacyQuotaMatrix,
+  normalizeCappedCells,
+  normalizeModelRoutes,
+  normalizeModelRules,
+  normalizeQuotaMatrix,
+  periodLimitsFromQuotaMatrix,
+  quotaCellKey,
+  readAccessPolicyCapabilities,
+  type AccessPolicyCapabilities,
+  type CappedCell,
+  type ModelRoute,
+  type ModelRule,
+  type QuotaMatrix,
+} from "./access-policy";
 
 export const CUSTOM_PERMISSION_PROFILE_ID = "__custom__";
 
@@ -25,16 +43,39 @@ export interface ApiKeyPermissionProfile {
   "allowed-channels": string[];
   "allowed-channel-groups": string[];
   "system-prompt": string;
+  /** 模板的完整额度矩阵（不含累计消费，那一格属于账号）；旧后端时由扁平字段拼出。 */
+  "quota-limits": QuotaMatrix;
+  "model-rules": ModelRule[];
+  "model-routes": ModelRoute[];
 }
 
 export interface ReplaceApiKeyPermissionProfilesOptions {
   syncAccounts?: boolean;
+  /** 后端声明了 access-policy 时才提交矩阵、规则与路由。 */
+  accessPolicy?: boolean;
 }
 
 export interface ReplaceApiKeyPermissionProfilesResult {
   appliedCount: number;
   cappedKeys: CappedKey[];
+  cappedCells: CappedCell[];
 }
+
+export interface ApiKeyPermissionProfileList {
+  items: ApiKeyPermissionProfile[];
+  capabilities: AccessPolicyCapabilities;
+}
+
+/** 清掉模板不拥有的格子（累计消费）。 */
+const stripProfileForbiddenCells = (matrix: QuotaMatrix): QuotaMatrix => {
+  const out = normalizeQuotaMatrix(matrix);
+  for (const metric of QUOTA_METRICS) {
+    for (const window of QUOTA_WINDOWS) {
+      if (PROFILE_FORBIDDEN_CELLS.has(quotaCellKey(metric, window))) out[metric][window] = 0;
+    }
+  }
+  return out;
+};
 
 const normalizeString = (value: unknown): string => String(value ?? "").trim();
 
@@ -104,32 +145,64 @@ export function normalizeApiKeyPermissionProfiles(raw: unknown): ApiKeyPermissio
           record["allowed-channel-groups"] ?? record.allowedChannelGroups,
         ),
         "system-prompt": normalizeString(record["system-prompt"] ?? record.systemPrompt),
+        "quota-limits": stripProfileForbiddenCells(
+          isRecord(record["quota-limits"])
+            ? normalizeQuotaMatrix(record["quota-limits"])
+            : legacyQuotaMatrix({
+                periodSpendingLimits: record["period-spending-limits"] ?? record.periodSpendingLimits,
+                dailySpendingLimit: record["daily-spending-limit"] ?? record.dailySpendingLimit,
+                dailyLimit: record["daily-limit"] ?? record.dailyLimit,
+                totalQuota: record["total-quota"] ?? record.totalQuota,
+              }),
+        ),
+        "model-rules": normalizeModelRules(record["model-rules"]),
+        "model-routes": normalizeModelRoutes(record["model-routes"]),
       };
     })
     .filter((profile): profile is ApiKeyPermissionProfile => profile !== null);
 }
 
-export const serializeApiKeyPermissionProfile = (profile: ApiKeyPermissionProfile) => ({
-  id: profile.id,
-  name: profile.name,
-  "daily-limit": normalizeLimit(profile["daily-limit"]),
-  "total-quota": normalizeLimit(profile["total-quota"]),
-  "daily-spending-limit": normalizePeriodSpendingLimits(
-    profile["period-spending-limits"],
-    profile["daily-spending-limit"],
-  ).day,
-  "period-spending-limits": normalizePeriodSpendingLimits(
-    profile["period-spending-limits"],
-    profile["daily-spending-limit"],
-  ),
-  "concurrency-limit": normalizeLimit(profile["concurrency-limit"]),
-  "rpm-limit": normalizeLimit(profile["rpm-limit"]),
-  "tpm-limit": normalizeLimit(profile["tpm-limit"]),
-  "allowed-channel-groups": normalizeStringList(profile["allowed-channel-groups"]),
-  "allowed-channels": normalizeStringList(profile["allowed-channels"]),
-  "allowed-models": normalizeStringList(profile["allowed-models"]),
-  "system-prompt": normalizeString(profile["system-prompt"]),
-});
+/**
+ * 序列化一个模板。扁平字段始终从矩阵同步写出，旧后端照样能保存它认识的格子；
+ * accessPolicy 时再带上完整矩阵、规则与路由。
+ */
+export const serializeApiKeyPermissionProfile = (
+  profile: ApiKeyPermissionProfile,
+  options: { accessPolicy?: boolean } = {},
+) => {
+  const matrix = stripProfileForbiddenCells(
+    profile["quota-limits"] ??
+      legacyQuotaMatrix({
+        periodSpendingLimits: profile["period-spending-limits"],
+        dailySpendingLimit: profile["daily-spending-limit"],
+        dailyLimit: profile["daily-limit"],
+        totalQuota: profile["total-quota"],
+      }),
+  );
+  const period = periodLimitsFromQuotaMatrix(matrix);
+  const base = {
+    id: profile.id,
+    name: profile.name,
+    "daily-limit": normalizeLimit(matrix.requests.day),
+    "total-quota": normalizeLimit(matrix.requests.lifetime),
+    "daily-spending-limit": period.day,
+    "period-spending-limits": normalizePeriodSpendingLimits(period),
+    "concurrency-limit": normalizeLimit(profile["concurrency-limit"]),
+    "rpm-limit": normalizeLimit(profile["rpm-limit"]),
+    "tpm-limit": normalizeLimit(profile["tpm-limit"]),
+    "allowed-channel-groups": normalizeStringList(profile["allowed-channel-groups"]),
+    "allowed-channels": normalizeStringList(profile["allowed-channels"]),
+    "allowed-models": normalizeStringList(profile["allowed-models"]),
+    "system-prompt": normalizeString(profile["system-prompt"]),
+  };
+  if (!options.accessPolicy) return base;
+  return {
+    ...base,
+    "quota-limits": matrix,
+    "model-rules": profile["model-rules"] ?? [],
+    "model-routes": profile["model-routes"] ?? [],
+  };
+};
 
 export function applyApiKeyPermissionProfile(
   entry: ApiKeyEntry,
@@ -234,18 +307,32 @@ export function resolveEntryPermissionProfileId(
 
 export const apiKeyPermissionProfilesApi = {
   async list(): Promise<ApiKeyPermissionProfile[]> {
-    const data = await apiClient.get<Record<string, unknown>>("/api-key-permission-profiles");
-    return normalizeApiKeyPermissionProfiles(
-      data["api-key-permission-profiles"] ?? data.items ?? data,
-    );
+    return (await this.listDetailed()).items;
+  },
+
+  async listDetailed(): Promise<ApiKeyPermissionProfileList> {
+    const data = await apiClient.get<unknown>("/api-key-permission-profiles");
+    const record = isRecord(data) ? data : {};
+    return {
+      items: normalizeApiKeyPermissionProfiles(
+        record["api-key-permission-profiles"] ?? record.items ?? data,
+      ),
+      capabilities: readAccessPolicyCapabilities(record.capabilities),
+    };
   },
 
   async replace(
     profiles: ApiKeyPermissionProfile[],
     options: ReplaceApiKeyPermissionProfilesOptions = {},
   ): Promise<ReplaceApiKeyPermissionProfilesResult> {
-    const items = profiles.map(serializeApiKeyPermissionProfile);
-    const data = await apiClient.put<{ applied_count?: unknown; "capped-keys"?: unknown }>(
+    const items = profiles.map((profile) =>
+      serializeApiKeyPermissionProfile(profile, { accessPolicy: options.accessPolicy }),
+    );
+    const data = await apiClient.put<{
+      applied_count?: unknown;
+      "capped-keys"?: unknown;
+      "capped-cells"?: unknown;
+    }>(
       "/api-key-permission-profiles",
       options.syncAccounts ? { items, "sync-accounts": true } : items,
     );
@@ -263,6 +350,10 @@ export const apiKeyPermissionProfilesApi = {
           );
         })
       : [];
-    return { appliedCount: Number.isFinite(appliedCount) ? appliedCount : 0, cappedKeys };
+    return {
+      appliedCount: Number.isFinite(appliedCount) ? appliedCount : 0,
+      cappedKeys,
+      cappedCells: normalizeCappedCells(data?.["capped-cells"]),
+    };
   },
 };

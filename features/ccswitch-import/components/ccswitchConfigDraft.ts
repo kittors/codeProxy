@@ -1,412 +1,335 @@
 import {
-  CC_SWITCH_CODEX_MODEL_CATALOG_FILENAME,
-  buildCcSwitchCodexModelCatalog,
   getCcSwitchClientConfig,
   type CcSwitchClaudeModelRole,
   type CcSwitchClientType,
-} from "@code-proxy/domain/ccswitch/ccswitchImport";
-import { DEFAULT_CC_SWITCH_IMPORT_SETTINGS } from "@code-proxy/domain/ccswitch/ccswitchImportSettings";
+} from "@code-proxy/domain/ccswitch/ccswitchClients";
+import { pickCcSwitchDefaultModel } from "@code-proxy/domain/ccswitch/ccswitchDefaultModel";
 import {
-  filterModelsServedByChannelGroup,
-  type ChannelGroupModelGate,
-} from "@code-proxy/domain/models/channelGroupModelGate";
-import {
+  createCcSwitchImportConfig,
+  defaultCcSwitchProviderName,
   ensureCcSwitchRoutePath,
-  type CcSwitchImportCodexModelCatalog,
+  normalizeCcSwitchContextWindow,
   type CcSwitchImportConfigListItem,
   type CcSwitchModelMapping,
 } from "@code-proxy/domain/ccswitch/ccswitchImportConfigList";
 
+/**
+ * Editing operations for a preset, as pure functions on the preset itself.
+ *
+ * The route behind a preset is a table of request name → target model. The editor only
+ * lets an admin pick target models; request names follow these rules so links that are
+ * already imported keep working:
+ * - a mapping whose request name equals its target ("identity") changes both;
+ * - a mapping whose request name differs ("alias", saved by earlier editors) keeps its
+ *   request name and only changes the target — every mapping sharing that request name
+ *   moves with it, since the route can only send one name to one model;
+ * - new mappings are identities;
+ * - nothing here drops an alias unless the admin deletes it.
+ */
 export type ConfigDraft = CcSwitchImportConfigListItem;
 
-export type ModelMetadataLike = {
-  id: string;
-  owned_by?: string;
-  source?: string;
-  enabled?: boolean;
-};
+export type ClaudeTierRole = Exclude<CcSwitchClaudeModelRole, "main">;
 
-export const CLAUDE_ROLE_ORDER: CcSwitchClaudeModelRole[] = [
-  "main",
-  "haiku",
-  "sonnet",
-  "opus",
-  "fable",
-];
+const sameModel = (left: string, right: string) =>
+  left.trim().toLowerCase() === right.trim().toLowerCase();
 
-export const DEFAULT_CODEX_CONTEXT_WINDOW = 128_000;
+export const isAliasMapping = (mapping: CcSwitchModelMapping) =>
+  !sameModel(mapping.requestModel, mapping.targetModel);
 
-const rolePriority: Record<CcSwitchClaudeModelRole, string[]> = {
-  main: ["sonnet", "opus", "haiku", "claude"],
-  haiku: ["haiku", "sonnet", "claude"],
-  sonnet: ["sonnet", "claude"],
-  opus: ["opus", "sonnet", "claude"],
-  // fable → opus fallback mirrors cc-switch / Claude Code official downgrade
-  fable: ["fable", "opus", "sonnet", "claude"],
-};
-
-const GENERIC_MODEL_CONFIG_OWNER_KEYS = new Set([
-  "all",
-  "default",
-  "openai",
-  "openai-api",
-  "openai-compat",
-  "openai-compatible",
-  "provider",
-  "registry",
-]);
-
-export const normalizeRoutePath = (path: string | undefined): string => {
-  const trimmed = String(path ?? "").trim();
-  if (!trimmed || trimmed === "/") return "";
-  return `/${trimmed.replace(/^\/+|\/+$/g, "")}`;
-};
-
-export const appendUrlPath = (baseUrl: string, path: string): string => {
-  const normalizedBase = String(baseUrl ?? "")
-    .trim()
-    .replace(/\/+$/, "");
-  const normalizedPath = normalizeRoutePath(path);
-  if (!normalizedBase) return normalizedPath;
-  if (!normalizedPath) return normalizedBase;
-  if (normalizedBase.toLowerCase().endsWith(normalizedPath.toLowerCase())) {
-    return normalizedBase;
-  }
-  return `${normalizedBase}${normalizedPath}`;
-};
-
-export const routeLabel = (routePath: string | undefined): string =>
-  normalizeRoutePath(routePath) || "/";
-
-export function defaultProviderName(clientType: CcSwitchClientType) {
-  return `CliProxy ${getCcSwitchClientConfig(clientType).fallbackLabel}`;
+export function createConfigDraft(clientType: CcSwitchClientType = "claude"): ConfigDraft {
+  return createCcSwitchImportConfig({ clientType });
 }
 
-export function dedupeModels(models: readonly string[]): string[] {
-  const seen = new Set<string>();
-  const result: string[] = [];
-  models.forEach((model) => {
-    const normalized = String(model ?? "").trim();
-    const key = normalized.toLowerCase();
-    if (!normalized || seen.has(key)) return;
-    seen.add(key);
-    result.push(normalized);
-  });
-  return result.sort((a, b) => a.localeCompare(b));
+export const getRoleMapping = (draft: ConfigDraft, role: CcSwitchClaudeModelRole) =>
+  draft.modelMappings.find((mapping) => mapping.role === role);
+
+/** Non-Claude presets: the role-less mapping that carries the link's `model`. */
+export function getDefaultMapping(draft: ConfigDraft): CcSwitchModelMapping | undefined {
+  const model = draft.defaultModel.trim();
+  if (!model || draft.clientType === "claude") return undefined;
+  return draft.modelMappings.find(
+    (mapping) => !mapping.role && sameModel(mapping.requestModel, model),
+  );
+}
+
+/** The model the main / default picker shows: the target the route sends it to. */
+export function getPrimaryModel(draft: ConfigDraft): string {
+  if (draft.clientType === "claude") return getRoleMapping(draft, "main")?.targetModel ?? "";
+  return getDefaultMapping(draft)?.targetModel ?? draft.defaultModel.trim();
+}
+
+/** Non-Claude presets: the models the route serves under their own names. */
+export function getRouteModels(draft: ConfigDraft): string[] {
+  return draft.modelMappings
+    .filter((mapping) => !mapping.role && !isAliasMapping(mapping))
+    .map((mapping) => mapping.targetModel);
+}
+
+/** Role-less aliases: names imported clients may still send, rewritten to another model. */
+export function getAliasMappings(draft: ConfigDraft): CcSwitchModelMapping[] {
+  return draft.modelMappings.filter((mapping) => !mapping.role && isAliasMapping(mapping));
 }
 
 /**
- * The models out of `models` that a channel group actually serves, deduplicated.
- * A group refuses what it excludes — loosely, across route prefixes and "*"
- * wildcards, the same way the backend does — so offering one of those as a
- * mapping target saves a config whose requests are rejected with a 403.
+ * Request names an alias already owns. Offering one of them as a model would put a second
+ * target behind the same name, and the route can only follow one.
  */
-export function modelsServedByChannelGroup(
-  models: Iterable<string>,
-  group: ChannelGroupModelGate | undefined,
-): string[] {
-  return filterModelsServedByChannelGroup(dedupeModels(Array.from(models)), group ?? {});
+export function getAliasRequestNames(
+  draft: ConfigDraft,
+  except?: CcSwitchModelMapping,
+): Set<string> {
+  return new Set(
+    draft.modelMappings
+      .filter((mapping) => mapping !== except && isAliasMapping(mapping))
+      .map((mapping) => mapping.requestModel.trim().toLowerCase()),
+  );
 }
 
-export const normalizeModelOwnerKey = (value: unknown): string =>
-  String(value ?? "")
-    .trim()
-    .replace(/\s+/g, "-")
-    .toLowerCase();
+const ownedByAlias = (draft: ConfigDraft, model: string, except?: CcSwitchModelMapping) =>
+  getAliasRequestNames(draft, except).has(model.trim().toLowerCase());
 
-export const isSpecificModelConfigOwnerKey = (value: string): boolean => {
-  const key = normalizeModelOwnerKey(value);
-  return Boolean(key && !GENERIC_MODEL_CONFIG_OWNER_KEYS.has(key));
-};
+/** Points every mapping that answers to `requestModel` at `target`. */
+const retarget = (
+  mappings: readonly CcSwitchModelMapping[],
+  requestModel: string,
+  target: string,
+): CcSwitchModelMapping[] =>
+  mappings.map((mapping) =>
+    sameModel(mapping.requestModel, requestModel) ? { ...mapping, targetModel: target } : mapping,
+  );
 
-export const modelMetadataMatchesOwnerKeys = (
-  model: ModelMetadataLike,
-  ownerKeys: ReadonlySet<string>,
-): boolean =>
-  model.enabled !== false &&
-  (ownerKeys.has(normalizeModelOwnerKey(model.owned_by)) ||
-    ownerKeys.has(normalizeModelOwnerKey(model.source)));
+/** Claude Code keeps storing the main model's target as default-model, as earlier panels did. */
+const withClaudeDefault = (draft: ConfigDraft): ConfigDraft =>
+  draft.clientType === "claude"
+    ? { ...draft, defaultModel: getRoleMapping(draft, "main")?.targetModel ?? "" }
+    : draft;
 
-export function pickClaudeRoleModel(
+/**
+ * Sets a Claude Code role. Clearing a tier lets it follow the main model again; a tier that
+ * was an alias stays on the route as a role-less mapping, because clients imported with it
+ * still send that name.
+ */
+export function setClaudeRoleModel(
+  draft: ConfigDraft,
   role: CcSwitchClaudeModelRole,
-  models: readonly string[],
-): string {
-  const normalized = dedupeModels(models);
-  const priorities = rolePriority[role];
-  for (const priority of priorities) {
-    const match = normalized.find((model) => model.toLowerCase().includes(priority));
-    if (match) return match;
-  }
-  return normalized[0] ?? "";
-}
-
-const asRecord = (value: unknown): Record<string, unknown> | null =>
-  value !== null && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : null;
-
-const normalizeOptionalContextWindow = (value: unknown): number | undefined => {
-  const parsed = typeof value === "number" ? value : Number(String(value ?? ""));
-  if (!Number.isFinite(parsed) || parsed <= 0) return undefined;
-  return Math.round(parsed);
-};
-
-export const normalizeContextWindow = (value: unknown): number =>
-  normalizeOptionalContextWindow(value) ?? DEFAULT_CODEX_CONTEXT_WINDOW;
-
-function reconcileGenericMappings(
-  currentMappings: readonly CcSwitchModelMapping[],
-  models: readonly string[],
-  fallbackModel: string,
-): CcSwitchModelMapping[] {
-  const currentNonRole = currentMappings.filter((mapping) => !mapping.role);
-  if (currentNonRole.length > 0) {
-    return currentNonRole.map((mapping) => ({
-      ...mapping,
-      contextWindow: normalizeContextWindow(mapping.contextWindow),
-    }));
-  }
-
-  const autoMappings = dedupeModels(models).map((targetModel) => ({
-    requestModel: targetModel,
-    targetModel,
-    contextWindow: DEFAULT_CODEX_CONTEXT_WINDOW,
-  }));
-  if (autoMappings.length > 0) return autoMappings;
-
-  return dedupeModels([fallbackModel]).map((targetModel) => ({
-    requestModel: targetModel,
-    targetModel,
-    contextWindow: DEFAULT_CODEX_CONTEXT_WINDOW,
-  }));
-}
-
-function reconcileClaudeMappings(
-  currentMappings: readonly CcSwitchModelMapping[],
-  models: readonly string[],
-  fallbackModel: string,
-): CcSwitchModelMapping[] {
-  const currentByRole = new Map(
-    currentMappings.filter((mapping) => mapping.role).map((mapping) => [mapping.role, mapping]),
-  );
-  const seenRoles = new Set<CcSwitchClaudeModelRole>();
-  const orderedRoles: CcSwitchClaudeModelRole[] = [];
-  for (const mapping of currentMappings) {
-    if (!mapping.role || seenRoles.has(mapping.role)) continue;
-    seenRoles.add(mapping.role);
-    orderedRoles.push(mapping.role);
-  }
-  for (const role of CLAUDE_ROLE_ORDER) {
-    if (seenRoles.has(role)) continue;
-    seenRoles.add(role);
-    orderedRoles.push(role);
-  }
-
-  return orderedRoles.map((role) => {
-    const existing = currentByRole.get(role);
-    const targetModel =
-      existing?.targetModel.trim() ||
-      pickClaudeRoleModel(role, models) ||
-      (role === "main" ? fallbackModel.trim() : "");
-    const existingRequestModel = existing?.requestModel.trim() ?? "";
-    // Claude Code sends claude-fable-5; cc-switch deeplink still ignores fableModel, so default request id for rewrite.
-    const defaultRequestModel = role === "fable" ? "claude-fable-5" : targetModel;
-    return {
-      role,
-      requestModel:
-        existingRequestModel && existingRequestModel !== role
-          ? existingRequestModel
-          : defaultRequestModel,
-      targetModel,
-    };
-  });
-}
-
-export function resolveGenericDefaultModel(
-  modelMappings: readonly CcSwitchModelMapping[],
-  fallbackModel: string,
-): string {
-  const normalizedFallback = fallbackModel.trim();
-  if (
-    normalizedFallback &&
-    modelMappings.some(
-      (mapping) =>
-        !mapping.role &&
-        mapping.requestModel.trim().toLowerCase() === normalizedFallback.toLowerCase(),
-    )
-  ) {
-    return normalizedFallback;
-  }
-  return (
-    modelMappings
-      .find((mapping) => !mapping.role && mapping.requestModel.trim())
-      ?.requestModel.trim() || ""
-  );
-}
-
-export function reconcileModelMappings(
-  draft: ConfigDraft,
-  models: readonly string[],
+  model: string,
 ): ConfigDraft {
-  const modelMappings =
-    draft.clientType === "claude"
-      ? reconcileClaudeMappings(draft.modelMappings, models, draft.defaultModel)
-      : reconcileGenericMappings(draft.modelMappings, models, draft.defaultModel);
-  const defaultModel =
-    draft.clientType === "claude"
-      ? modelMappings.find((mapping) => mapping.role === "main")?.targetModel || ""
-      : resolveGenericDefaultModel(modelMappings, draft.defaultModel);
+  const next = model.trim();
+  const existing = getRoleMapping(draft, role);
+  let mappings: CcSwitchModelMapping[];
 
+  if (!next) {
+    if (role === "main" || !existing) return draft;
+    mappings = draft.modelMappings.filter((mapping) => mapping !== existing);
+    const stillServed = mappings.some((mapping) =>
+      sameModel(mapping.requestModel, existing.requestModel),
+    );
+    if (isAliasMapping(existing) && !stillServed) {
+      mappings.push({ requestModel: existing.requestModel, targetModel: existing.targetModel });
+    }
+  } else if (existing && isAliasMapping(existing)) {
+    mappings = retarget(draft.modelMappings, existing.requestModel, next);
+  } else {
+    if (ownedByAlias(draft, next, existing)) return draft;
+    mappings = existing
+      ? draft.modelMappings.map((mapping) =>
+          mapping === existing ? { ...mapping, requestModel: next, targetModel: next } : mapping,
+        )
+      : [...draft.modelMappings, { role, requestModel: next, targetModel: next }];
+  }
+
+  return withClaudeDefault({ ...draft, modelMappings: mappings });
+}
+
+/** Non-Claude presets: picks the model the link sends as `model`. */
+export function setDefaultModel(draft: ConfigDraft, model: string): ConfigDraft {
+  const next = model.trim();
+  if (!next) return { ...draft, defaultModel: "" };
+  const current = getDefaultMapping(draft);
+  if (current && isAliasMapping(current)) {
+    return { ...draft, modelMappings: retarget(draft.modelMappings, current.requestModel, next) };
+  }
+  if (ownedByAlias(draft, next)) return draft;
+  const served = draft.modelMappings.some(
+    (mapping) => !mapping.role && sameModel(mapping.requestModel, next),
+  );
   return {
     ...draft,
-    modelMappings,
-    defaultModel,
+    defaultModel: next,
+    modelMappings: served
+      ? draft.modelMappings
+      : [...draft.modelMappings, { requestModel: next, targetModel: next }],
   };
 }
 
-export function getDuplicateGenericRequestModels(
-  modelMappings: readonly CcSwitchModelMapping[],
-): string[] {
-  const counts = new Map<string, { label: string; count: number }>();
-  for (const mapping of modelMappings) {
-    if (mapping.role) continue;
-    const requestModel = mapping.requestModel.trim();
-    if (!requestModel) continue;
-    const key = requestModel.toLowerCase();
-    const current = counts.get(key);
-    counts.set(key, { label: current?.label ?? requestModel, count: (current?.count ?? 0) + 1 });
-  }
-  return Array.from(counts.values())
-    .filter((item) => item.count > 1)
-    .map((item) => item.label);
+/**
+ * Non-Claude presets: the models the route serves (and lists on /v1/models). The default
+ * model always stays; aliases are untouched.
+ */
+export function setRouteModels(draft: ConfigDraft, models: readonly string[]): ConfigDraft {
+  const wanted: string[] = [];
+  const wantedKeys = new Set<string>();
+  const add = (model: string) => {
+    const name = model.trim();
+    const key = name.toLowerCase();
+    if (!name || wantedKeys.has(key) || ownedByAlias(draft, name)) return;
+    wantedKeys.add(key);
+    wanted.push(name);
+  };
+  models.forEach(add);
+  const defaultMapping = getDefaultMapping(draft);
+  if (defaultMapping && !isAliasMapping(defaultMapping)) add(defaultMapping.targetModel);
+
+  const kept = draft.modelMappings.filter(
+    (mapping) =>
+      mapping.role || isAliasMapping(mapping) || wantedKeys.has(mapping.targetModel.toLowerCase()),
+  );
+  const present = new Set(
+    kept.filter((mapping) => !mapping.role).map((mapping) => mapping.requestModel.toLowerCase()),
+  );
+  const added = wanted
+    .filter((model) => !present.has(model.toLowerCase()))
+    .map((model) => ({ requestModel: model, targetModel: model }));
+  return { ...draft, modelMappings: [...kept, ...added] };
 }
 
-function getCodexCatalogContextWindow(draft: ConfigDraft, modelId: string): number | undefined {
-  const normalizedModelId = modelId.trim().toLowerCase();
-  if (!normalizedModelId) return undefined;
-  for (const model of draft.codexModelCatalog?.models ?? []) {
-    const id = String(model.slug ?? model.model ?? "")
-      .trim()
-      .toLowerCase();
-    if (id !== normalizedModelId) continue;
-    const topLevel = normalizeOptionalContextWindow(model.context_window ?? model.contextWindow);
-    if (topLevel) return topLevel;
-    const messages = asRecord(model.model_messages);
-    if (messages) {
-      const nested = normalizeOptionalContextWindow(
-        messages.context_window ?? messages.contextWindow,
-      );
-      if (nested) return nested;
+/**
+ * Deletes a role-less alias. When it was the default model, the default keeps pointing at
+ * the same model, now under the model's own name.
+ */
+export function removeAliasMapping(draft: ConfigDraft, requestModel: string): ConfigDraft {
+  const alias = draft.modelMappings.find(
+    (mapping) =>
+      !mapping.role && isAliasMapping(mapping) && sameModel(mapping.requestModel, requestModel),
+  );
+  if (!alias) return draft;
+  let mappings = draft.modelMappings.filter((mapping) => mapping !== alias);
+  let defaultModel = draft.defaultModel;
+  if (draft.clientType !== "claude" && sameModel(draft.defaultModel, alias.requestModel)) {
+    defaultModel = alias.targetModel;
+    const served = mappings.some(
+      (mapping) => !mapping.role && sameModel(mapping.requestModel, alias.targetModel),
+    );
+    if (!served) {
+      mappings = [...mappings, { requestModel: alias.targetModel, targetModel: alias.targetModel }];
     }
   }
-  return undefined;
+  return { ...draft, defaultModel, modelMappings: mappings };
 }
 
-export function withCodexMappingContextWindows(draft: ConfigDraft): CcSwitchModelMapping[] {
-  if (draft.clientType !== "codex") return draft.modelMappings;
-  return draft.modelMappings.map((mapping) => {
-    if (mapping.role) return mapping;
-    return {
-      ...mapping,
-      contextWindow: normalizeContextWindow(
-        mapping.contextWindow ??
-          getCodexCatalogContextWindow(draft, mapping.requestModel || mapping.targetModel),
-      ),
-    };
+/**
+ * Codex: the preset's context window (`model_context_window`); empty leaves it to Codex.
+ * Per-mapping windows from earlier editors are not touched — links no longer read them.
+ */
+export function setCodexContextWindow(draft: ConfigDraft, value: unknown): ConfigDraft {
+  const { codexContextWindow: _previous, ...rest } = draft;
+  const contextWindow = normalizeCcSwitchContextWindow(value);
+  return contextWindow ? { ...rest, codexContextWindow: contextWindow } : rest;
+}
+
+/**
+ * Moves the preset to another channel group. The route path follows the group (restoring
+ * the saved one when the admin switches back). The new group serves other models, so plain
+ * models go and get re-seeded from its list; aliases stay.
+ */
+export function setChannelGroup(
+  draft: ConfigDraft,
+  group: string,
+  savedRoutePath: string,
+): ConfigDraft {
+  const modelMappings = draft.modelMappings.filter(isAliasMapping);
+  const keepsDefault =
+    draft.clientType !== "claude" &&
+    modelMappings.some(
+      (mapping) => !mapping.role && sameModel(mapping.requestModel, draft.defaultModel),
+    );
+  return withClaudeDefault({
+    ...draft,
+    allowedChannelGroups: group ? [group] : [],
+    routePath: group ? ensureCcSwitchRoutePath(savedRoutePath, group, draft.id) : "",
+    modelMappings,
+    defaultModel: keepsDefault ? draft.defaultModel : "",
   });
 }
 
-function buildDraftCodexModelCatalog(
+/**
+ * Fills a fresh model selection from the group's models (new presets, or a new group). A
+ * main / default model that is not set yet becomes the admin's own earlier pick when the
+ * group serves it — a pick the group does not serve is not replaced by a guess. Without an
+ * earlier pick it becomes the only model, or the app's usual first choice. Claude Code's
+ * tiers stay empty and follow the main model.
+ */
+export function seedModels(
   draft: ConfigDraft,
-): CcSwitchImportCodexModelCatalog | undefined {
-  if (draft.clientType !== "codex") return undefined;
-
-  const existingByModel = new Map<string, Record<string, unknown>>();
-  for (const entry of draft.codexModelCatalog?.models ?? []) {
-    const modelId = String(entry.slug ?? entry.model ?? "")
-      .trim()
-      .toLowerCase();
-    if (modelId) existingByModel.set(modelId, entry);
+  models: readonly string[],
+  earlierPick = "",
+): ConfigDraft {
+  const pick = earlierPick.trim()
+    ? (models.find((model) => sameModel(model, earlierPick)) ?? "")
+    : models.length === 1
+      ? models[0]!
+      : (pickCcSwitchDefaultModel(draft.clientType, models) ?? "");
+  if (draft.clientType === "claude") {
+    return !getRoleMapping(draft, "main") && pick ? setClaudeRoleModel(draft, "main", pick) : draft;
   }
-
-  const models: Array<{ model: string; contextWindow?: number }> = [];
-  const addModel = (model: string, contextWindow?: number) => {
-    const normalized = model.trim();
-    if (normalized) models.push({ model: normalized, contextWindow });
-  };
-  for (const mapping of draft.modelMappings) {
-    if (mapping.role) continue;
-    addModel(
-      mapping.requestModel || mapping.targetModel,
-      normalizeContextWindow(mapping.contextWindow),
-    );
-  }
-  addModel(draft.defaultModel);
-  if (models.length === 0) return undefined;
-
-  const seen = new Set<string>();
-  const entries: Array<Record<string, unknown>> = [];
-  for (const model of models) {
-    const key = model.model.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-
-    const existing = existingByModel.get(key);
-    if (!existing) {
-      const generated = buildCcSwitchCodexModelCatalog([model]).models[0];
-      if (generated) entries.push({ ...generated, priority: 1000 + entries.length });
-      continue;
-    }
-
-    const entry = { ...existing };
-    if (model.contextWindow) {
-      entry.context_window = model.contextWindow;
-      const messages = asRecord(entry.model_messages);
-      if (messages) {
-        entry.model_messages = { ...messages, context_window: model.contextWindow };
-      }
-    }
-    entries.push(entry);
-  }
-  return entries.length > 0 ? { models: entries } : undefined;
+  const seeded = setRouteModels(draft, models);
+  return !seeded.defaultModel && pick ? setDefaultModel(seeded, pick) : seeded;
 }
 
-export function prepareDraftForSave(draft: ConfigDraft): ConfigDraft {
-  const endpointPath = DEFAULT_CC_SWITCH_IMPORT_SETTINGS[draft.clientType].endpointPath;
-  const selectedGroup = draft.allowedChannelGroups[0] ?? "";
-  const routePath = ensureCcSwitchRoutePath(draft.routePath, selectedGroup, draft.id);
-  const normalizedMappings = draft.modelMappings
-    .map((mapping) => {
-      const targetModel = mapping.targetModel.trim();
-      const requestModel = mapping.requestModel.trim() || targetModel;
-      return {
-        ...(mapping.role ? { role: mapping.role } : {}),
-        requestModel,
-        targetModel,
-        ...(!mapping.role ? { contextWindow: normalizeContextWindow(mapping.contextWindow) } : {}),
-      };
-    })
-    .filter((mapping) => mapping.targetModel && (mapping.role || mapping.requestModel));
-  const defaultModel =
-    draft.clientType === "claude"
-      ? normalizedMappings.find((mapping) => mapping.role === "main")?.targetModel || ""
-      : resolveGenericDefaultModel(normalizedMappings, draft.defaultModel);
-  const normalizedDraft = {
-    ...draft,
-    defaultModel,
-    modelMappings: normalizedMappings,
-  };
-  const codexModelCatalog = buildDraftCodexModelCatalog(normalizedDraft);
-
+/** New presets only: an existing preset's app is fixed, its imported clients depend on it. */
+export function setClientType(draft: ConfigDraft, clientType: CcSwitchClientType): ConfigDraft {
+  if (draft.clientType === clientType) return draft;
+  const name = draft.providerName.trim();
+  const keepsName = name && name !== defaultCcSwitchProviderName(draft.clientType);
+  const crossesClaude = (draft.clientType === "claude") !== (clientType === "claude");
   return {
-    ...normalizedDraft,
-    allowedChannelGroups: selectedGroup ? [selectedGroup] : [],
-    routePath,
-    endpointPath,
-    codexModelCatalogFilename:
-      draft.clientType === "codex" && codexModelCatalog
-        ? draft.codexModelCatalogFilename || CC_SWITCH_CODEX_MODEL_CATALOG_FILENAME
-        : undefined,
-    codexModelCatalog,
+    ...draft,
+    clientType,
+    providerName: keepsName ? draft.providerName : defaultCcSwitchProviderName(clientType),
+    endpointPath: getCcSwitchClientConfig(clientType).endpointSuffix,
+    modelMappings: crossesClaude ? [] : draft.modelMappings,
+    defaultModel: crossesClaude ? "" : draft.defaultModel,
+  };
+}
+
+/**
+ * The preset as saved: the route path settled for the group, the endpoint path kept in step
+ * with the app (older panels read it) and the default model on the route. Mappings are kept
+ * as they are, per-mapping context windows from earlier editors included.
+ */
+export function prepareDraftForSave(draft: ConfigDraft): ConfigDraft {
+  const group = draft.allowedChannelGroups[0] ?? "";
+  const mappings = draft.modelMappings
+    .map((mapping) => ({
+      ...mapping,
+      requestModel: mapping.requestModel.trim(),
+      targetModel: mapping.targetModel.trim(),
+    }))
+    .filter((mapping) => mapping.targetModel && mapping.requestModel);
+
+  let defaultModel = draft.defaultModel.trim();
+  if (draft.clientType === "claude") {
+    defaultModel = mappings.find((mapping) => mapping.role === "main")?.targetModel || defaultModel;
+  } else if (
+    defaultModel &&
+    !mappings.some((mapping) => !mapping.role && sameModel(mapping.requestModel, defaultModel))
+  ) {
+    mappings.push({ requestModel: defaultModel, targetModel: defaultModel });
+  }
+
+  const { codexContextWindow: _window, ...rest } = draft;
+  return {
+    ...rest,
+    // Only Codex reads it; switching a new preset to another app drops it.
+    ...(draft.clientType === "codex" && draft.codexContextWindow
+      ? { codexContextWindow: draft.codexContextWindow }
+      : {}),
+    providerName: draft.providerName.trim(),
+    note: draft.note.trim(),
+    defaultModel,
+    modelMappings: mappings,
+    allowedChannelGroups: group ? [group] : [],
+    routePath: ensureCcSwitchRoutePath(draft.routePath, group, draft.id),
+    endpointPath: getCcSwitchClientConfig(draft.clientType).endpointSuffix,
   };
 }

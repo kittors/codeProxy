@@ -20,7 +20,7 @@ export function ApiKeyUsageDialogs({
     <>
       <ApiKeyUsageModal
         {...view}
-        open={view.usageViewKey !== null}
+        open={view.usageOpen}
         onClose={view.closeUsageModal}
         maskedKey={maskedKey}
       />

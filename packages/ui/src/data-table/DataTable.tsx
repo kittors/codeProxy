@@ -7,12 +7,14 @@ import {
   useState,
   type PointerEvent as ReactPointerEvent,
 } from "react";
-import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { ArrowDown, ArrowUp, ArrowUpDown, Check, GripVertical } from "lucide-react";
-import { EmptyState } from "../feedback/EmptyState";
 import { DropdownMenu } from "../primitives/DropdownMenu";
+import { TableEmptyRow, TableLoadingRows } from "./TableBodyPlaceholder";
+import { ColumnResizePreviewOverlay } from "./ColumnResizePreviewOverlay";
 import { TableCellOverflowTooltip } from "./TableCellOverflowTooltip";
+import { TableContentFrame } from "./TableContentFrame";
+import { TableScrollbars } from "./TableScrollbars";
 
 export type {
   DataTableColumn,
@@ -59,10 +61,14 @@ import {
 import {
   areColumnWidthMapsEqual,
   normalizeColumnWidths,
+  resolveColumnLayoutWidth,
   resolveColumnResizeWidth,
+  resolveFlexColumnKey,
   resolveHeaderContentJustifyClass,
   resolveStickyColumnPlacements,
   resolveStickyRailWidth,
+  resolveTableMinWidthPx,
+  writeColumnWidthToDom,
 } from "./columnLayout";
 import {
   findColumnReorderTargetIndex,
@@ -134,8 +140,9 @@ export function DataTable<T>({
   scrollThreshold = DEFAULT_SCROLL_THRESHOLD,
   bottomDebounceMs = DEFAULT_BOTTOM_DEBOUNCE_MS,
   minWidth = "min-w-[1320px]",
-  height = "h-[calc(100dvh-260px)]",
-  minHeight = "min-h-[360px]",
+  height = "h-auto",
+  minHeight = "min-h-0",
+  maxHeight = "max-h-full",
   caption = "data table",
   emptyText = "",
   emptyDescription,
@@ -148,6 +155,7 @@ export function DataTable<T>({
   rowAriaSelected,
   allowWheelPropagationAtBoundary = false,
   naturalFlow = false,
+  fill = false,
   scrollContentClassName,
   columnResizable = true,
   columnReorderable = true,
@@ -186,6 +194,7 @@ export function DataTable<T>({
   const headerRef = useRef<HTMLTableSectionElement | null>(null);
   const headerCellsRef = useRef<Record<string, HTMLTableCellElement | null>>({});
   const columnElementsRef = useRef<Record<string, HTMLTableColElement | null>>({});
+  const flexColumnKeyRef = useRef<string | null>(null);
   const headerHeightRef = useRef(0);
   const [columnWidths, setColumnWidths] = useState<ColumnWidthMap>(() =>
     normalizeColumnWidths(columns, readStoredColumnWidths(tableId)),
@@ -199,7 +208,7 @@ export function DataTable<T>({
   const renderedStickyWidthsRef = useRef<ColumnWidthMap>({});
   // Inputs the fixed-column overlays need while scrolling, kept out of state.
   const stickyOverlayInputsRef = useRef({ tableHeight: 0, bottomInset: 0 });
-  const tableHeight = useObservedHeight(tableRef);
+  const tableHeight = useObservedHeight(tableRef, `${rows.length}:${loading}`);
   const [headerHeight, setHeaderHeight] = useState(0);
   const [scrollTop, setScrollTop] = useState(0);
   const [viewportHeight, setViewportHeight] = useState(480);
@@ -854,7 +863,8 @@ export function DataTable<T>({
       }
 
       if (wantsY || wantsX) {
-        if (allowWheelPropagationAtBoundary && wantsY) {
+        // A table with nothing to scroll vertically never keeps the wheel from the page.
+        if ((allowWheelPropagationAtBoundary || !canScrollY) && wantsY) {
           const parentScrollTarget = findVerticalScrollTarget(el, e.deltaY);
           if (parentScrollTarget) {
             const maxParentScrollTop = Math.max(
@@ -1060,14 +1070,18 @@ export function DataTable<T>({
     [t],
   );
 
-  const applyColumnWidthToDom = useCallback((columnKey: string, width: number) => {
-    const col = columnElementsRef.current[columnKey];
-    if (!col) return;
-    const widthPx = `${width}px`;
-    col.style.width = widthPx;
-    col.style.minWidth = widthPx;
-    col.style.maxWidth = widthPx;
-  }, []);
+  // Drag preview writes <col> widths straight to the DOM; null hands the column back to render.
+  const applyColumnWidthToDom = useCallback(
+    (columnKey: string, width: number | null) => {
+      const widths = { ...columnWidthsRef.current, [columnKey]: width ?? 0 };
+      if (width === null) delete widths[columnKey];
+      const tableMinWidthPx = resolveTableMinWidthPx(orderedColumnsRef.current, widths, minWidth);
+      // The flex column keeps no width of its own: dragging it only moves the table's floor.
+      const col = columnKey === flexColumnKeyRef.current ? null : columnElementsRef.current[columnKey];
+      writeColumnWidthToDom(col, tableRef.current, width, tableMinWidthPx);
+    },
+    [minWidth],
+  );
 
   const applyStickyLayoutToDom = useCallback(
     (widths: ColumnWidthMap) => {
@@ -1202,20 +1216,30 @@ export function DataTable<T>({
     applyPendingColumnResize();
   }, [applyPendingColumnResize]);
 
+  // Settles widths after a drag or a reset: state, its ref and the persisted map.
+  const commitColumnWidths = useCallback(
+    (nextWidths: ColumnWidthMap) => {
+      columnWidthsRef.current = nextWidths;
+      setColumnWidths(nextWidths);
+      writeStoredColumnWidths(tableId, nextWidths);
+      updateScrollMetrics();
+    },
+    [tableId, updateScrollMetrics],
+  );
+
   const finishColumnResize = useCallback(() => {
     const active = columnResizeRef.current;
     if (!active) return;
 
     flushPendingColumnResize();
 
-    const nextWidths = {
-      ...columnWidthsRef.current,
-      [active.columnKey]: active.currentWidth,
-    };
-    columnWidthsRef.current = nextWidths;
-    setColumnWidths(nextWidths);
-    writeStoredColumnWidths(tableId, nextWidths);
-    updateScrollMetrics();
+    // A press on the handle without a drag must not pin the column's current width (that is how
+    // stretched widths used to get stored); hand the column back to render instead.
+    if (Math.round(active.currentWidth) !== Math.round(active.startWidth)) {
+      commitColumnWidths({ ...columnWidthsRef.current, [active.columnKey]: active.currentWidth });
+    } else {
+      applyColumnWidthToDom(active.columnKey, columnWidthsRef.current[active.columnKey] ?? null);
+    }
 
     columnResizeRef.current = null;
     pendingColumnResizePointerRef.current = null;
@@ -1224,7 +1248,18 @@ export function DataTable<T>({
     document.body.style.cursor = "";
     document.body.style.userSelect = "";
     document.documentElement.style.cursor = "";
-  }, [flushPendingColumnResize, tableId, updateScrollMetrics]);
+  }, [applyColumnWidthToDom, commitColumnWidths, flushPendingColumnResize]);
+
+  // Double-clicking a resize handle puts the column back to its default width.
+  const resetColumnWidth = useCallback(
+    (columnKey: string) => {
+      const nextWidths = { ...columnWidthsRef.current };
+      delete nextWidths[columnKey];
+      commitColumnWidths(nextWidths);
+      applyColumnWidthToDom(columnKey, null);
+    },
+    [applyColumnWidthToDom, commitColumnWidths],
+  );
 
   const handleColumnResizePointerDown = useCallback(
     (column: DataTableColumn<T>, e: ReactPointerEvent<HTMLButtonElement>) => {
@@ -1236,7 +1271,12 @@ export function DataTable<T>({
       const rect = headerCell.getBoundingClientRect();
       const containerRect = containerRef.current?.getBoundingClientRect();
       const railWidths = naturalFlow ? { start: 0, end: 0 } : stickyRailWidthsRef.current;
-      const startWidth = rect.width;
+      // The flex column is wider than its own width whenever there is room to spare; a drag sets
+      // that width (its floor), so start from it rather than from the width it soaked up.
+      const startWidth =
+        column.key === flexColumnKeyRef.current
+          ? resolveColumnLayoutWidth(column, columnWidthsRef.current)
+          : rect.width;
       const minWidth = resolveColumnMinWidth(column);
       const maxWidth = resolveColumnMaxWidth(column, minWidth);
       const nextStartWidth = Math.max(minWidth, Math.min(maxWidth, startWidth));
@@ -1264,6 +1304,7 @@ export function DataTable<T>({
           containerRect && !naturalFlow && railWidths.end > 0
             ? containerRect.right - railWidths.end
             : Number.POSITIVE_INFINITY,
+        startWidth: nextStartWidth,
         currentWidth: nextStartWidth,
         lastDebugAtMs: 0,
         debugEnabled: shouldDebugColumnResize(),
@@ -1985,10 +2026,15 @@ export function DataTable<T>({
   // that data rows need; otherwise the empty body scrolls horizontally for
   // no content. Keep headers for context, but collapse to the viewport width.
   const tableMinWidthClass = isEmpty ? "min-w-0" : minWidth;
+  const flexColumnKey = useMemo(() => resolveFlexColumnKey(orderedColumns), [orderedColumns]);
+  flexColumnKeyRef.current = flexColumnKey;
+  const tableMinWidthPx = resolveTableMinWidthPx(orderedColumns, columnWidths, minWidth);
+  // Full-page list: the body under the header, so the skeleton and the empty state fill the frame.
+  const fillBodyHeight = fill ? Math.max(0, scrollMetrics.clientHeight - headerHeight) : undefined;
 
   const resolveColumnStyle = useCallback(
     (column: DataTableColumn<T>, area: "header" | "cell" = "cell"): DataTableColumnStyle => {
-      const width = isEmpty ? undefined : columnWidths[column.key];
+      const width = isEmpty || column.key === flexColumnKey ? undefined : columnWidths[column.key];
       const placement = naturalFlow || isEmpty ? undefined : stickyColumnPlacements[column.key];
       const style: DataTableColumnStyle = {};
 
@@ -2010,611 +2056,519 @@ export function DataTable<T>({
 
       return style;
     },
-    [columnWidths, isEmpty, naturalFlow, stickyColumnPlacements],
+    [columnWidths, flexColumnKey, isEmpty, naturalFlow, stickyColumnPlacements],
   );
-
-  const resizePreviewOverlay =
-    resizePreview && typeof document !== "undefined"
-      ? createPortal(
-          <>
-            <div
-              ref={resizePreviewLineRef}
-              data-vt-column-resize-preview-line
-              aria-hidden="true"
-              className="pointer-events-none fixed z-[1000] w-0.5 bg-slate-500/70"
-              style={{
-                left: resizePreview.left,
-                top: resizePreview.top,
-                height: resizePreview.height,
-                display: resizePreview.visible ? undefined : "none",
-              }}
-            />
-            <div
-              ref={resizePreviewTooltipRef}
-              data-vt-column-resize-preview-tooltip
-              role="status"
-              className="pointer-events-none fixed z-[1001] rounded-md bg-slate-900 px-2 py-1 text-xs font-medium text-white shadow-lg dark:bg-white dark:text-neutral-950"
-              style={{
-                left: resizePreview.left + 10,
-                top: resizePreview.tooltipTop,
-                display: resizePreview.visible ? undefined : "none",
-              }}
-            >
-              {t("common.column_width_px", { width: resizePreview.width })}
-            </div>
-          </>,
-          document.body,
-        )
-      : null;
 
   return (
     <div
       ref={rootRef}
       aria-busy={loading || loadingMore ? true : undefined}
       data-vt-natural-flow={naturalFlow ? true : undefined}
+      // Height model. fill (full-page lists): exactly the box the page gives it (h-full, or the
+      // rest of a flex column next to a pager), so loading, empty, few and many rows share one
+      // frame and the pager / horizontal scrollbar never move.
+      // Otherwise (forms, dialogs, split panes): as tall as the rows, capped by maxHeight or by
+      // flex-shrink in a flex column. Nothing pins a table to the viewport with calc() any more.
       className={
         naturalFlow
           ? `${height} ${minHeight} relative min-w-0 overflow-visible`
-          : `${height} ${minHeight} group relative isolate grid min-w-0 overflow-hidden rounded-xl ${vThumb ? "grid-cols-[minmax(0,1fr)_0.75rem]" : "grid-cols-1"}`
+          : `${fill ? `h-full min-h-0 flex-1 ${maxHeight}` : `${height} ${minHeight} ${maxHeight}`} group relative isolate grid min-w-0 overflow-hidden rounded-xl ${vThumb ? "grid-cols-[minmax(0,1fr)_0.75rem]" : "grid-cols-1"}`
       }
     >
-      {!naturalFlow ? (
-        <StickyRails
-          startWidth={stickyStartRailWidth}
-          endWidth={stickyEndRailWidth}
-          endLeft={stickyEndRailLeft}
-          top={stickyRailTop}
-          height={stickyOverlayHeights.rail}
-        />
-      ) : null}
-      {/* Viewport-fixed header plate: only as wide as the table viewport, not content.
-          Column labels still live in thead and scroll horizontally with body cells. */}
-      {!naturalFlow && !isEmpty ? (
-        <div
-          data-vt-header-chrome
-          aria-hidden="true"
-          className={`pointer-events-none absolute left-0 top-0 z-40 col-start-1 row-start-1 ${
-            vThumb ? "rounded-l-xl" : "rounded-xl"
-          } bg-slate-100 dark:bg-neutral-800`}
-          style={{
-            width: scrollMetrics.clientWidth || "100%",
-            height: headerHeight > 0 ? headerHeight : "2.75rem",
-          }}
-        />
-      ) : null}
-      <div
-        ref={containerRef}
-        onScroll={naturalFlow ? undefined : onScroll}
-        tabIndex={naturalFlow ? undefined : 0}
-        data-scrollbar-visibility={naturalFlow ? undefined : "hover"}
-        className={
-          naturalFlow
-            ? "relative z-10 min-h-0 overflow-visible rounded-xl"
-            : // Always contain vertical overscroll so sticky headers never rubber-band;
-              // boundary wheel handoff is handled in JS (handleWheel), not overscroll-behavior.
-              `relative col-start-1 row-start-1 h-full min-h-0 table-scrollbar overscroll-x-none overscroll-y-none ${
-                isEmpty ? "overflow-x-hidden overflow-y-auto" : "overflow-auto"
-              }`
+      <TableContentFrame
+        scrollerRef={containerRef}
+        naturalFlow={naturalFlow}
+        headerPlate={
+          naturalFlow || isEmpty
+            ? null
+            : { width: scrollMetrics.clientWidth, height: headerHeight, squareRight: Boolean(vThumb) }
         }
       >
+        {!naturalFlow ? (
+          <StickyRails
+            startWidth={stickyStartRailWidth}
+            endWidth={stickyEndRailWidth}
+            endLeft={stickyEndRailLeft}
+            top={stickyRailTop}
+            height={stickyOverlayHeights.rail}
+          />
+        ) : null}
         <div
-          data-vt-scroll-content
-          className={`relative min-h-full ${scrollContentClassName ?? ""}`}
+          ref={containerRef}
+          onScroll={naturalFlow ? undefined : onScroll}
+          tabIndex={naturalFlow ? undefined : 0}
+          data-scrollbar-visibility={naturalFlow ? undefined : "hover"}
+          className={
+            naturalFlow
+              ? "relative z-10 min-h-0 overflow-visible rounded-xl"
+              : // Contain vertical overscroll while the table scrolls vertically, so sticky headers
+                // never rubber-band (boundary wheel handoff is JS, see handleWheel). A short table
+                // leaves it alone: vertical swipes over it must reach the page it sits in.
+                `relative col-start-1 row-start-1 h-full min-h-0 table-scrollbar overscroll-x-none ${
+                  vThumb ? "overscroll-y-none" : ""
+                } ${isEmpty ? "overflow-x-hidden overflow-y-auto" : "overflow-auto"}`
+          }
         >
-          {!naturalFlow && rowHoverOverlay ? (
-            <div
-              data-vt-row-hover-overlay
-              aria-hidden="true"
-              className="pointer-events-none absolute z-0 rounded-lg bg-slate-50 dark:bg-white/[0.04]"
-              style={{
-                transform: `translate(${rowHoverOverlay.left}px, ${rowHoverOverlay.top}px)`,
-                width: rowHoverOverlay.width,
-                height: rowHoverOverlay.height,
-              }}
-            />
-          ) : null}
-          <table
-            ref={tableRef}
-            className={`relative w-full ${tableMinWidthClass} table-fixed border-separate border-spacing-0 text-sm`}
-            data-vt-empty={isEmpty ? true : undefined}
+          <div
+            data-vt-scroll-content
+            // A lane for the horizontal scrollbar, so it sits under the last row instead of on it.
+            className={`relative min-h-full ${hThumb ? "pb-3.5" : ""} ${scrollContentClassName ?? ""}`}
           >
-            <caption className="sr-only">{caption}</caption>
-            <colgroup>
-              {orderedColumns.map((col) => (
-                <col
-                  key={col.key}
-                  ref={(node) => {
-                    columnElementsRef.current[col.key] = node;
-                  }}
-                  style={resolveColumnStyle(col)}
-                />
-              ))}
-            </colgroup>
-
-            {/* ── HeroUI-styled header ── */}
-            <thead
-              ref={headerRef}
-              className={naturalFlow ? "bg-slate-100 dark:bg-neutral-800" : ""}
+            {!naturalFlow && rowHoverOverlay ? (
+              <div
+                data-vt-row-hover-overlay
+                aria-hidden="true"
+                className="pointer-events-none absolute z-0 rounded-lg bg-slate-50 dark:bg-white/[0.04]"
+                style={{
+                  transform: `translate(${rowHoverOverlay.left}px, ${rowHoverOverlay.top}px)`,
+                  width: rowHoverOverlay.width,
+                  height: rowHoverOverlay.height,
+                }}
+              />
+            ) : null}
+            <table
+              ref={tableRef}
+              className={`relative w-full ${tableMinWidthClass} table-fixed border-separate border-spacing-0 text-sm`}
+              style={isEmpty ? undefined : { minWidth: tableMinWidthPx }}
+              data-vt-empty={isEmpty ? true : undefined}
             >
-              <tr className="text-left text-xs font-medium text-slate-500 dark:text-white/55">
-                {orderedColumns.map((col, colIndex) => {
-                  const isRowReorderColumn = col.key === ROW_REORDER_COLUMN_KEY;
-                  const canResize =
-                    columnResizable && shouldAllowColumnResize(col, colIndex, orderedColumns);
-                  const canReorder = canUseColumnOrder && shouldAllowColumnReorder(col);
-                  const canSort = Boolean(col.sort && onRowsChange);
-                  const sortDirection =
-                    activeSortState?.columnKey === col.key ? activeSortState.direction : null;
-                  const isResizingThisColumn = activeResizeColumnKey === col.key;
-                  const isSettledReorderColumn = settledReorderColumnKey === col.key;
-                  const stickyPlacement =
-                    naturalFlow || isEmpty ? undefined : stickyColumnPlacements[col.key];
-                  // Stack: chrome z-40 < free headers z-50 < locked headers z-70.
-                  // Free must sit above chrome so labels stay visible; locked must
-                  // sit above free so horizontal scroll cannot overlay titles.
-                  // headerClassName may ship md:z-40 — put our z after it.
-                  const headerPositionClass =
-                    naturalFlow || isEmpty
-                      ? "relative"
-                      : stickyPlacement
-                        ? "sticky top-0"
-                        : "sticky top-0 z-50";
-                  // Viewport header-chrome owns the top plate. Opaque sticky
-                  // headers cover scrolling middle labels; outer sticky cells
-                  // still need side radius so bottom corners aren't squared off.
-                  // Free-scroll headers stay transparent over the chrome plate.
-                  const isOuterStickyStart =
-                    stickyPlacement?.edge === "start" && stickyPlacement.offset === 0;
-                  const isOuterStickyEnd =
-                    stickyPlacement?.edge === "end" && stickyPlacement.offset === 0;
-                  const headerChromeClass =
-                    naturalFlow || isEmpty || stickyPlacement
-                      ? "bg-slate-100 dark:bg-neutral-800"
-                      : "bg-transparent";
-                  const headerCornerClass = [
-                    naturalFlow && colIndex === 0 ? "rounded-l-xl" : "",
-                    naturalFlow && colIndex === orderedColumns.length - 1 ? "rounded-r-xl" : "",
-                    !naturalFlow && (colIndex === 0 || isOuterStickyStart) ? "rounded-l-xl" : "",
-                    // Gutter only paints the scrollbar strip; actions column owns right radius.
-                    !naturalFlow &&
-                    (isOuterStickyEnd || colIndex === orderedColumns.length - 1)
-                      ? "rounded-r-xl"
-                      : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" ");
-                  return (
-                    <th
-                      key={col.key}
-                      aria-label={col.label}
-                      data-vt-column-key={col.key}
-                      data-vt-column-settled-cell={isSettledReorderColumn ? true : undefined}
-                      ref={(node) => {
-                        headerCellsRef.current[col.key] = node;
-                      }}
-                      style={resolveColumnStyle(col, "header")}
-                      className={`group/column ${headerPositionClass} overflow-hidden px-4 py-3 whitespace-nowrap ${
-                        stickyPlacement?.edge === "start" ? "md:left-[var(--vt-sticky-left)]" : ""
-                      } ${
-                        stickyPlacement?.edge === "end" ? "md:right-[var(--vt-sticky-right)]" : ""
-                      } ${headerChromeClass} ${headerCornerClass} ${
-                        isEmpty ? "" : (col.width ?? "")
-                      } ${col.headerClassName ?? ""} ${
-                        stickyPlacement ? "z-[70]" : ""
-                      } ${
-                        activeReorderColumnKey === col.key
-                          ? "cursor-grabbing bg-slate-100 text-slate-700 shadow-[inset_2px_0_0_rgba(37,99,235,0.42),inset_-2px_0_0_rgba(14,165,233,0.28)] dark:bg-neutral-800 dark:text-white/80"
-                          : ""
-                      }`}
-                    >
-                      {canReorder ? (
-                        <button
-                          type="button"
-                          data-vt-column-reorder-handle
-                          className={`absolute left-1 top-1/2 z-10 -translate-y-1/2 inline-flex h-5 w-5 items-center justify-center rounded-md cursor-grab touch-none text-slate-400/55 opacity-0 transition-opacity hover:bg-slate-200/60 hover:text-slate-600 focus-visible:opacity-100 active:cursor-grabbing dark:text-white/30 dark:hover:bg-white/10 dark:hover:text-white/65 ${
-                            activeResizeColumnKey !== null
-                              ? "pointer-events-none"
-                              : activeReorderColumnKey === col.key
-                                ? "pointer-events-none opacity-100"
-                                : "group-hover/column:opacity-100"
-                          }`}
-                          onPointerDown={(event) => handleColumnReorderPointerDown(col, event)}
-                        >
-                          <GripVertical size={13} aria-hidden="true" />
-                          <span className="sr-only">
-                            {t("common.reorder_column", { column: col.label })}
-                          </span>
-                        </button>
-                      ) : null}
-                      {/* Always reserve handle-width gutters when reorderable so the absolute grip never covers the label; keep L/R symmetric so centered headers do not shift on hover. */}
-                      <div
-                        data-vt-column-header-content
-                        className={`min-w-0 max-w-full overflow-hidden ${canReorder ? "px-5" : ""}`}
-                      >
-                        {isRowReorderColumn ? (
-                          <span className="flex items-center justify-center text-slate-400/70 dark:text-white/35">
-                            <GripVertical size={14} aria-hidden="true" />
-                            <span className="sr-only">{col.label}</span>
-                          </span>
-                        ) : (
-                          <span
-                            className={`flex min-w-0 items-center gap-1.5 ${resolveHeaderContentJustifyClass(col.headerClassName)}`}
-                          >
-                            <span className="min-w-0 truncate" title={col.headerRender ? undefined : col.label}>
-                              {col.headerRender ? col.headerRender() : col.label}
-                            </span>
-                            {canSort ? (
-                              <DropdownMenu.Root size="sm">
-                                <DropdownMenu.Trigger asChild>
-                                  <button
-                                    type="button"
-                                    data-vt-sort-trigger={col.key}
-                                    data-vt-sort-direction={sortDirection ?? "none"}
-                                    aria-label={t("common.sort_column", {
-                                      column: col.label,
-                                    })}
-                                    title={t("common.sort_column", {
-                                      column: col.label,
-                                    })}
-                                    className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md outline-none transition-colors hover:bg-slate-200/75 focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:hover:bg-white/10 dark:focus-visible:ring-white/15 ${
-                                      sortDirection
-                                        ? "text-slate-900 dark:text-white"
-                                        : "text-slate-400 dark:text-white/35"
-                                    }`}
-                                    onPointerDown={(event) => event.stopPropagation()}
-                                  >
-                                    {sortDirection === "asc" ? (
-                                      <ArrowUp size={14} aria-hidden="true" />
-                                    ) : sortDirection === "desc" ? (
-                                      <ArrowDown size={14} aria-hidden="true" />
-                                    ) : (
-                                      <ArrowUpDown size={14} aria-hidden="true" />
-                                    )}
-                                  </button>
-                                </DropdownMenu.Trigger>
-                                <DropdownMenu.Portal>
-                                  <DropdownMenu.Content align="start">
-                                    <DropdownMenu.Item
-                                      onSelect={() => handleColumnSort(col, "asc")}
-                                    >
-                                      <ArrowUp size={13} aria-hidden="true" />
-                                      <span>{t("common.sort_ascending")}</span>
-                                      {sortDirection === "asc" ? (
-                                        <Check className="ml-auto" size={13} aria-hidden="true" />
-                                      ) : null}
-                                    </DropdownMenu.Item>
-                                    <DropdownMenu.Item
-                                      onSelect={() => handleColumnSort(col, "desc")}
-                                    >
-                                      <ArrowDown size={13} aria-hidden="true" />
-                                      <span>{t("common.sort_descending")}</span>
-                                      {sortDirection === "desc" ? (
-                                        <Check className="ml-auto" size={13} aria-hidden="true" />
-                                      ) : null}
-                                    </DropdownMenu.Item>
-                                  </DropdownMenu.Content>
-                                </DropdownMenu.Portal>
-                              </DropdownMenu.Root>
-                            ) : null}
-                          </span>
-                        )}
-                      </div>
-                      {canResize ? (
-                        <button
-                          type="button"
-                          data-vt-column-resizer
-                          aria-label={t("common.resize_column", {
-                            column: col.label,
-                          })}
-                          title={t("common.resize_column", {
-                            column: col.label,
-                          })}
-                          className="group/resize absolute -right-2 top-0 z-30 h-full w-4 cursor-col-resize touch-none bg-transparent outline-none"
-                          style={{ cursor: "col-resize" }}
-                          onPointerDown={(event) => handleColumnResizePointerDown(col, event)}
-                        >
-                          <span
-                            aria-hidden="true"
-                            className={`mx-auto block h-6 w-px rounded-full bg-slate-900/12 transition-[width,background-color,opacity] dark:bg-white/15 ${
-                              isResizingThisColumn
-                                ? "opacity-0"
-                                : "opacity-70 group-hover/resize:w-0.5 group-hover/resize:bg-slate-500 group-hover/resize:opacity-100 group-focus-visible/resize:w-0.5 group-focus-visible/resize:bg-slate-500 group-focus-visible/resize:opacity-100 dark:group-hover/resize:bg-white/55 dark:group-focus-visible/resize:bg-white/55"
-                            }`}
-                          />
-                        </button>
-                      ) : null}
-                    </th>
-                  );
-                })}
-              </tr>
-            </thead>
+              <caption className="sr-only">{caption}</caption>
+              <colgroup>
+                {orderedColumns.map((col) => (
+                  <col
+                    key={col.key}
+                    ref={(node) => {
+                      columnElementsRef.current[col.key] = node;
+                    }}
+                    style={resolveColumnStyle(col)}
+                  />
+                ))}
+              </colgroup>
 
-            {/* ── Body ── */}
-            <tbody className="relative z-0 text-slate-900 dark:text-white">
-              {loading && rows.length === 0 ? (
-                <>
-                  <tr>
-                    <td colSpan={colCount} className="p-0">
-                      <span role="status" className="sr-only">
-                        {t("common.loading")}
-                      </span>
-                    </td>
-                  </tr>
-                  {Array.from({ length: 5 }, (_, rowIndex) => (
-                    <tr key={`loading-${rowIndex}`} aria-hidden="true">
-                      {orderedColumns.map((col, colIndex) => (
-                        <td
-                          key={col.key}
-                          data-vt-column-key={col.key}
-                          className={`overflow-hidden px-4 py-3 align-middle ${col.cellClassName ?? ""}`}
-                        >
-                          <div
-                            className={[
-                              "h-3 animate-pulse rounded-full bg-slate-200 dark:bg-white/10",
-                              colIndex === 0 ? "w-2/3" : "w-4/5",
-                            ].join(" ")}
-                          />
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </>
-              ) : isEmpty ? (
-                <tr data-vt-empty-row className="h-full">
-                  <td colSpan={colCount} className="h-full px-4 py-8 align-middle sm:px-6 sm:py-10">
-                    {/*
-                      Fill the remaining table viewport so EmptyState sits in the
-                      middle of the blank body, not stuck under the header.
-                    */}
-                    <div className="flex min-h-[min(18rem,calc(100dvh-28rem))] w-full items-center justify-center">
-                      <EmptyState
-                        title={emptyText || t("common.no_data")}
-                        description={emptyDescription}
-                        icon={emptyIcon}
-                        action={emptyAction}
-                      />
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                <>
-                  {virtualize ? (
-                    <tr aria-hidden="true">
-                      <td colSpan={colCount} height={topSpacerHeight} className="p-0" />
-                    </tr>
-                  ) : null}
-                  {visibleRows.map((row, localIdx) => {
-                    const globalIdx = virtualize ? startIndex + localIdx : localIdx;
-                    const key = rowKey(row, globalIdx);
-                    const extraCls =
-                      typeof rowClassName === "function"
-                        ? rowClassName(row, globalIdx)
-                        : (rowClassName ?? "");
-                    const rowSelected = rowAriaSelected?.(row, globalIdx);
-                    const rowInteractive = Boolean(onRowClick);
-                    const isActiveRowReorder = activeRowReorderIndex === globalIdx;
+              {/* ── HeroUI-styled header ── */}
+              <thead
+                ref={headerRef}
+                className={naturalFlow ? "bg-slate-100 dark:bg-neutral-800" : ""}
+              >
+                <tr className="text-left text-xs font-medium text-slate-500 dark:text-white/55">
+                  {orderedColumns.map((col, colIndex) => {
+                    const isRowReorderColumn = col.key === ROW_REORDER_COLUMN_KEY;
+                    const canResize =
+                      columnResizable && shouldAllowColumnResize(col, colIndex, orderedColumns);
+                    const canReorder = canUseColumnOrder && shouldAllowColumnReorder(col);
+                    const canSort = Boolean(col.sort && onRowsChange);
+                    const sortDirection =
+                      activeSortState?.columnKey === col.key ? activeSortState.direction : null;
+                    const isResizingThisColumn = activeResizeColumnKey === col.key;
+                    const isSettledReorderColumn = settledReorderColumnKey === col.key;
+                    const stickyPlacement =
+                      naturalFlow || isEmpty ? undefined : stickyColumnPlacements[col.key];
+                    // Stack: chrome z-40 < free headers z-50 < locked headers z-70.
+                    // Free must sit above chrome so labels stay visible; locked must
+                    // sit above free so horizontal scroll cannot overlay titles.
+                    // headerClassName may ship md:z-40 — put our z after it.
+                    const headerPositionClass =
+                      naturalFlow || isEmpty
+                        ? "relative"
+                        : stickyPlacement
+                          ? "sticky top-0"
+                          : "sticky top-0 z-50";
+                    // Viewport header-chrome owns the top plate. Opaque sticky
+                    // headers cover scrolling middle labels; outer sticky cells
+                    // still need side radius so bottom corners aren't squared off.
+                    // Free-scroll headers stay transparent over the chrome plate.
+                    const isOuterStickyStart =
+                      stickyPlacement?.edge === "start" && stickyPlacement.offset === 0;
+                    const isOuterStickyEnd =
+                      stickyPlacement?.edge === "end" && stickyPlacement.offset === 0;
+                    const headerChromeClass =
+                      naturalFlow || isEmpty || stickyPlacement
+                        ? "bg-slate-100 dark:bg-neutral-800"
+                        : "bg-transparent";
+                    const headerCornerClass = [
+                      naturalFlow && colIndex === 0 ? "rounded-l-xl" : "",
+                      naturalFlow && colIndex === orderedColumns.length - 1 ? "rounded-r-xl" : "",
+                      !naturalFlow && (colIndex === 0 || isOuterStickyStart) ? "rounded-l-xl" : "",
+                      // Gutter only paints the scrollbar strip; actions column owns right radius.
+                      !naturalFlow &&
+                      (isOuterStickyEnd || colIndex === orderedColumns.length - 1)
+                        ? "rounded-r-xl"
+                        : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ");
                     return (
-                      <tr
-                        key={key}
-                        data-vt-row-index={globalIdx}
-                        data-vt-row-key={key}
-                        data-vt-row-reorder-active={isActiveRowReorder ? true : undefined}
-                        tabIndex={rowInteractive ? 0 : undefined}
-                        aria-selected={rowSelected}
-                        className={`group/row relative z-0 text-sm transition-[opacity,background-color] ${
-                          rowInteractive ? "cursor-pointer outline-none" : ""
-                        } ${naturalFlow ? "hover:bg-slate-50 dark:hover:bg-white/[0.04]" : ""} ${
-                          isActiveRowReorder
-                            ? "z-20 bg-blue-50/70 opacity-35 dark:bg-blue-500/10"
+                      <th
+                        key={col.key}
+                        aria-label={col.label}
+                        data-vt-column-key={col.key}
+                        data-vt-column-settled-cell={isSettledReorderColumn ? true : undefined}
+                        ref={(node) => {
+                          headerCellsRef.current[col.key] = node;
+                        }}
+                        style={resolveColumnStyle(col, "header")}
+                        className={`group/column ${headerPositionClass} overflow-hidden px-4 py-3 whitespace-nowrap ${
+                          stickyPlacement?.edge === "start" ? "md:left-[var(--vt-sticky-left)]" : ""
+                        } ${
+                          stickyPlacement?.edge === "end" ? "md:right-[var(--vt-sticky-right)]" : ""
+                        } ${headerChromeClass} ${headerCornerClass} ${
+                          isEmpty || col.key === flexColumnKey ? "" : (col.width ?? "")
+                        } ${col.headerClassName ?? ""} ${
+                          stickyPlacement ? "z-[70]" : ""
+                        } ${
+                          activeReorderColumnKey === col.key
+                            ? "cursor-grabbing bg-slate-100 text-slate-700 shadow-[inset_2px_0_0_rgba(37,99,235,0.42),inset_-2px_0_0_rgba(14,165,233,0.28)] dark:bg-neutral-800 dark:text-white/80"
                             : ""
-                        } ${extraCls}`}
-                        style={virtualize ? { height: rowHeight } : undefined}
-                        onClick={
-                          rowInteractive
-                            ? () => {
-                                onRowClick?.(row, globalIdx);
-                              }
-                            : undefined
-                        }
-                        onKeyDown={
-                          rowInteractive
-                            ? (event) => {
-                                if (event.key !== "Enter" && event.key !== " ") return;
-                                event.preventDefault();
-                                onRowClick?.(row, globalIdx);
-                              }
-                            : undefined
-                        }
-                        onMouseEnter={
-                          naturalFlow
-                            ? undefined
-                            : (event) => updateRowHoverOverlay(event.currentTarget)
-                        }
-                        onMouseLeave={naturalFlow ? undefined : () => updateRowHoverOverlay(null)}
+                        }`}
                       >
-                        {orderedColumns.map((col, colIdx) => {
-                          const isFirst = colIdx === 0;
-                          const isLast = colIdx === orderedColumns.length - 1;
-                          const isRowReorderColumn = col.key === ROW_REORDER_COLUMN_KEY;
-                          const isSettledReorderColumn = settledReorderColumnKey === col.key;
-                          const stickyPlacement = naturalFlow
-                            ? undefined
-                            : stickyColumnPlacements[col.key];
-                          const content = col.render(row, globalIdx);
-                          const overflowTooltip = resolveCellOverflowTooltip(col, row, globalIdx);
-                          const roundCls = rowDividers
-                            ? ""
-                            : [
-                                isFirst ? "first:rounded-l-lg" : "",
-                                isLast ? "last:rounded-r-lg" : "",
-                              ]
-                                .filter(Boolean)
-                                .join(" ");
-                          const rowDividerClass =
-                            rowDividers && globalIdx < rows.length - 1
-                              ? "border-b border-slate-900/8 dark:border-white/8"
-                              : "";
-                          const hoverChromeClass = naturalFlow
-                            ? ""
-                            : stickyPlacement
-                              ? "group-hover/row:bg-backdrop-hover"
-                              : "group-hover/row:bg-slate-50 dark:group-hover/row:bg-white/[0.04]";
-                          return (
-                            <td
-                              key={col.key}
-                              data-vt-column-key={col.key}
-                              data-vt-column-settled-cell={
-                                isSettledReorderColumn ? true : undefined
-                              }
-                              style={resolveColumnStyle(col, "cell")}
-                              className={`overflow-hidden align-middle ${
-                                isRowReorderColumn ? "px-1 py-2.5 text-center" : "px-4 py-2.5"
-                              } ${
-                                stickyPlacement?.edge === "start"
-                                  ? "md:left-[var(--vt-sticky-left)]"
-                                  : ""
-                              } ${
-                                stickyPlacement?.edge === "end"
-                                  ? "md:right-[var(--vt-sticky-right)]"
-                                  : ""
-                              } ${hoverChromeClass} ${rowDividerClass} ${col.cellClassName ?? ""} ${roundCls}`}
+                        {canReorder ? (
+                          <button
+                            type="button"
+                            data-vt-column-reorder-handle
+                            className={`absolute left-1 top-1/2 z-10 -translate-y-1/2 inline-flex h-5 w-5 items-center justify-center rounded-md cursor-grab touch-none text-slate-400/55 opacity-0 transition-opacity hover:bg-slate-200/60 hover:text-slate-600 focus-visible:opacity-100 active:cursor-grabbing dark:text-white/30 dark:hover:bg-white/10 dark:hover:text-white/65 ${
+                              activeResizeColumnKey !== null
+                                ? "pointer-events-none"
+                                : activeReorderColumnKey === col.key
+                                  ? "pointer-events-none opacity-100"
+                                  : "group-hover/column:opacity-100"
+                            }`}
+                            onPointerDown={(event) => handleColumnReorderPointerDown(col, event)}
+                          >
+                            <GripVertical size={13} aria-hidden="true" />
+                            <span className="sr-only">
+                              {t("common.reorder_column", { column: col.label })}
+                            </span>
+                          </button>
+                        ) : null}
+                        {/* Always reserve handle-width gutters when reorderable so the absolute grip never covers the label; keep L/R symmetric so centered headers do not shift on hover. */}
+                        <div
+                          data-vt-column-header-content
+                          className={`min-w-0 max-w-full overflow-hidden ${canReorder ? "px-5" : ""}`}
+                        >
+                          {isRowReorderColumn ? (
+                            <span className="flex items-center justify-center text-slate-400/70 dark:text-white/35">
+                              <GripVertical size={14} aria-hidden="true" />
+                              <span className="sr-only">{col.label}</span>
+                            </span>
+                          ) : (
+                            <span
+                              className={`flex min-w-0 items-center gap-1.5 ${resolveHeaderContentJustifyClass(col.headerClassName)}`}
                             >
-                              {isRowReorderColumn ? (
-                                <button
-                                  type="button"
-                                  data-vt-row-reorder-handle
-                                  data-tooltip-managed="true"
-                                  aria-label={
-                                    isActiveRowReorder
-                                      ? undefined
-                                      : t("common.reorder_row", {
-                                          index: globalIdx + 1,
-                                        })
-                                  }
-                                  disabled={!onRowsChange || rows.length < 2 || loading}
-                                  className={`inline-flex h-7 w-7 touch-none items-center justify-center rounded-lg text-slate-400 outline-none transition-colors hover:bg-slate-200/80 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-slate-400/35 disabled:cursor-default disabled:opacity-35 dark:text-white/35 dark:hover:bg-white/10 dark:hover:text-white/75 dark:focus-visible:ring-white/15 ${
-                                    isActiveRowReorder
-                                      ? "cursor-grabbing bg-slate-200 text-slate-800 dark:bg-white/15 dark:text-white"
-                                      : "cursor-grab"
-                                  }`}
-                                  onPointerDown={(event) =>
-                                    handleRowReorderPointerDown(globalIdx, event)
-                                  }
-                                  onKeyDown={(event) => handleRowReorderKeyDown(globalIdx, event)}
-                                >
-                                  <GripVertical size={15} aria-hidden="true" />
-                                </button>
-                              ) : (
-                                <div
-                                  data-vt-cell-content-clip
-                                  className="min-w-0 max-w-full overflow-hidden"
-                                >
-                                  <TableCellOverflowTooltip
-                                    tooltipContent={overflowTooltip}
-                                    className={col.cellContentClassName ?? col.cellClassName}
-                                  >
-                                    {content}
-                                  </TableCellOverflowTooltip>
-                                </div>
-                              )}
-                            </td>
-                          );
-                        })}
-                      </tr>
+                              <span className="min-w-0 truncate" title={col.headerRender ? undefined : col.label}>
+                                {col.headerRender ? col.headerRender() : col.label}
+                              </span>
+                              {canSort ? (
+                                <DropdownMenu.Root size="sm">
+                                  <DropdownMenu.Trigger asChild>
+                                    <button
+                                      type="button"
+                                      data-vt-sort-trigger={col.key}
+                                      data-vt-sort-direction={sortDirection ?? "none"}
+                                      aria-label={t("common.sort_column", {
+                                        column: col.label,
+                                      })}
+                                      title={t("common.sort_column", {
+                                        column: col.label,
+                                      })}
+                                      className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md outline-none transition-colors hover:bg-slate-200/75 focus-visible:ring-2 focus-visible:ring-slate-400/35 dark:hover:bg-white/10 dark:focus-visible:ring-white/15 ${
+                                        sortDirection
+                                          ? "text-slate-900 dark:text-white"
+                                          : "text-slate-400 dark:text-white/35"
+                                      }`}
+                                      onPointerDown={(event) => event.stopPropagation()}
+                                    >
+                                      {sortDirection === "asc" ? (
+                                        <ArrowUp size={14} aria-hidden="true" />
+                                      ) : sortDirection === "desc" ? (
+                                        <ArrowDown size={14} aria-hidden="true" />
+                                      ) : (
+                                        <ArrowUpDown size={14} aria-hidden="true" />
+                                      )}
+                                    </button>
+                                  </DropdownMenu.Trigger>
+                                  <DropdownMenu.Portal>
+                                    <DropdownMenu.Content align="start">
+                                      <DropdownMenu.Item
+                                        onSelect={() => handleColumnSort(col, "asc")}
+                                      >
+                                        <ArrowUp size={13} aria-hidden="true" />
+                                        <span>{t("common.sort_ascending")}</span>
+                                        {sortDirection === "asc" ? (
+                                          <Check className="ml-auto" size={13} aria-hidden="true" />
+                                        ) : null}
+                                      </DropdownMenu.Item>
+                                      <DropdownMenu.Item
+                                        onSelect={() => handleColumnSort(col, "desc")}
+                                      >
+                                        <ArrowDown size={13} aria-hidden="true" />
+                                        <span>{t("common.sort_descending")}</span>
+                                        {sortDirection === "desc" ? (
+                                          <Check className="ml-auto" size={13} aria-hidden="true" />
+                                        ) : null}
+                                      </DropdownMenu.Item>
+                                    </DropdownMenu.Content>
+                                  </DropdownMenu.Portal>
+                                </DropdownMenu.Root>
+                              ) : null}
+                            </span>
+                          )}
+                        </div>
+                        {canResize ? (
+                          <button
+                            type="button"
+                            data-vt-column-resizer
+                            aria-label={t("common.resize_column", {
+                              column: col.label,
+                            })}
+                            title={t("common.resize_column", {
+                              column: col.label,
+                            })}
+                            className="group/resize absolute -right-2 top-0 z-30 h-full w-4 cursor-col-resize touch-none bg-transparent outline-none"
+                            style={{ cursor: "col-resize" }}
+                            onPointerDown={(event) => handleColumnResizePointerDown(col, event)}
+                            onDoubleClick={() => resetColumnWidth(col.key)}
+                          >
+                            <span
+                              aria-hidden="true"
+                              className={`mx-auto block h-6 w-px rounded-full bg-slate-900/12 transition-[width,background-color,opacity] dark:bg-white/15 ${
+                                isResizingThisColumn
+                                  ? "opacity-0"
+                                  : "opacity-70 group-hover/resize:w-0.5 group-hover/resize:bg-slate-500 group-hover/resize:opacity-100 group-focus-visible/resize:w-0.5 group-focus-visible/resize:bg-slate-500 group-focus-visible/resize:opacity-100 dark:group-hover/resize:bg-white/55 dark:group-focus-visible/resize:bg-white/55"
+                              }`}
+                            />
+                          </button>
+                        ) : null}
+                      </th>
                     );
                   })}
-                  {virtualize ? (
-                    <tr aria-hidden="true">
-                      <td colSpan={colCount} height={bottomSpacerHeight} className="p-0" />
-                    </tr>
-                  ) : null}
-                </>
-              )}
-            </tbody>
-          </table>
+                </tr>
+              </thead>
 
-          {/* Infinite scroll loading indicator */}
-          {loadingMore && (
-            <div className="flex items-center justify-center py-4">
-              <div className="inline-flex items-center gap-2 text-sm text-slate-500 dark:text-white/55">
-                <span
-                  className="h-4 w-4 rounded-full border-2 border-ink/15 border-t-ink motion-reduce:animate-none motion-safe:animate-spin"
-                  aria-hidden="true"
-                />
-                {t("common.loading_more")}
+              {/* ── Body ── */}
+              <tbody className="relative z-0 text-slate-900 dark:text-white">
+                {loading && rows.length === 0 ? (
+                  <TableLoadingRows
+                    columns={orderedColumns}
+                    colCount={colCount}
+                    fillHeight={fillBodyHeight}
+                  />
+                ) : isEmpty ? (
+                  <TableEmptyRow
+                    colCount={colCount}
+                    fillHeight={fillBodyHeight}
+                    title={emptyText}
+                    description={emptyDescription}
+                    icon={emptyIcon}
+                    action={emptyAction}
+                  />
+                ) : (
+                  <>
+                    {virtualize ? (
+                      <tr aria-hidden="true">
+                        <td colSpan={colCount} height={topSpacerHeight} className="p-0" />
+                      </tr>
+                    ) : null}
+                    {visibleRows.map((row, localIdx) => {
+                      const globalIdx = virtualize ? startIndex + localIdx : localIdx;
+                      const key = rowKey(row, globalIdx);
+                      const extraCls =
+                        typeof rowClassName === "function"
+                          ? rowClassName(row, globalIdx)
+                          : (rowClassName ?? "");
+                      const rowSelected = rowAriaSelected?.(row, globalIdx);
+                      const rowInteractive = Boolean(onRowClick);
+                      const isActiveRowReorder = activeRowReorderIndex === globalIdx;
+                      return (
+                        <tr
+                          key={key}
+                          data-vt-row-index={globalIdx}
+                          data-vt-row-key={key}
+                          data-vt-row-reorder-active={isActiveRowReorder ? true : undefined}
+                          tabIndex={rowInteractive ? 0 : undefined}
+                          aria-selected={rowSelected}
+                          className={`group/row relative z-0 text-sm transition-[opacity,background-color] ${
+                            rowInteractive ? "cursor-pointer outline-none" : ""
+                          } ${naturalFlow ? "hover:bg-slate-50 dark:hover:bg-white/[0.04]" : ""} ${
+                            isActiveRowReorder
+                              ? "z-20 bg-blue-50/70 opacity-35 dark:bg-blue-500/10"
+                              : ""
+                          } ${extraCls}`}
+                          style={virtualize ? { height: rowHeight } : undefined}
+                          onClick={
+                            rowInteractive
+                              ? () => {
+                                  onRowClick?.(row, globalIdx);
+                                }
+                              : undefined
+                          }
+                          onKeyDown={
+                            rowInteractive
+                              ? (event) => {
+                                  if (event.key !== "Enter" && event.key !== " ") return;
+                                  event.preventDefault();
+                                  onRowClick?.(row, globalIdx);
+                                }
+                              : undefined
+                          }
+                          onMouseEnter={
+                            naturalFlow
+                              ? undefined
+                              : (event) => updateRowHoverOverlay(event.currentTarget)
+                          }
+                          onMouseLeave={naturalFlow ? undefined : () => updateRowHoverOverlay(null)}
+                        >
+                          {orderedColumns.map((col, colIdx) => {
+                            const isFirst = colIdx === 0;
+                            const isLast = colIdx === orderedColumns.length - 1;
+                            const isRowReorderColumn = col.key === ROW_REORDER_COLUMN_KEY;
+                            const isSettledReorderColumn = settledReorderColumnKey === col.key;
+                            const stickyPlacement = naturalFlow
+                              ? undefined
+                              : stickyColumnPlacements[col.key];
+                            const content = col.render(row, globalIdx);
+                            const overflowTooltip = resolveCellOverflowTooltip(col, row, globalIdx);
+                            const roundCls = rowDividers
+                              ? ""
+                              : [
+                                  isFirst ? "first:rounded-l-lg" : "",
+                                  isLast ? "last:rounded-r-lg" : "",
+                                ]
+                                  .filter(Boolean)
+                                  .join(" ");
+                            const rowDividerClass =
+                              rowDividers && globalIdx < rows.length - 1
+                                ? "border-b border-slate-900/8 dark:border-white/8"
+                                : "";
+                            const hoverChromeClass = naturalFlow
+                              ? ""
+                              : stickyPlacement
+                                ? "group-hover/row:bg-backdrop-hover"
+                                : "group-hover/row:bg-slate-50 dark:group-hover/row:bg-white/[0.04]";
+                            return (
+                              <td
+                                key={col.key}
+                                data-vt-column-key={col.key}
+                                data-vt-column-settled-cell={
+                                  isSettledReorderColumn ? true : undefined
+                                }
+                                style={resolveColumnStyle(col, "cell")}
+                                className={`overflow-hidden align-middle ${
+                                  isRowReorderColumn ? "px-1 py-2.5 text-center" : "px-4 py-2.5"
+                                } ${
+                                  stickyPlacement?.edge === "start"
+                                    ? "md:left-[var(--vt-sticky-left)]"
+                                    : ""
+                                } ${
+                                  stickyPlacement?.edge === "end"
+                                    ? "md:right-[var(--vt-sticky-right)]"
+                                    : ""
+                                } ${hoverChromeClass} ${rowDividerClass} ${col.cellClassName ?? ""} ${roundCls}`}
+                              >
+                                {isRowReorderColumn ? (
+                                  <button
+                                    type="button"
+                                    data-vt-row-reorder-handle
+                                    data-tooltip-managed="true"
+                                    aria-label={
+                                      isActiveRowReorder
+                                        ? undefined
+                                        : t("common.reorder_row", {
+                                            index: globalIdx + 1,
+                                          })
+                                    }
+                                    disabled={!onRowsChange || rows.length < 2 || loading}
+                                    className={`inline-flex h-7 w-7 touch-none items-center justify-center rounded-lg text-slate-400 outline-none transition-colors hover:bg-slate-200/80 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-slate-400/35 disabled:cursor-default disabled:opacity-35 dark:text-white/35 dark:hover:bg-white/10 dark:hover:text-white/75 dark:focus-visible:ring-white/15 ${
+                                      isActiveRowReorder
+                                        ? "cursor-grabbing bg-slate-200 text-slate-800 dark:bg-white/15 dark:text-white"
+                                        : "cursor-grab"
+                                    }`}
+                                    onPointerDown={(event) =>
+                                      handleRowReorderPointerDown(globalIdx, event)
+                                    }
+                                    onKeyDown={(event) => handleRowReorderKeyDown(globalIdx, event)}
+                                  >
+                                    <GripVertical size={15} aria-hidden="true" />
+                                  </button>
+                                ) : (
+                                  <div
+                                    data-vt-cell-content-clip
+                                    className="min-w-0 max-w-full overflow-hidden"
+                                  >
+                                    <TableCellOverflowTooltip
+                                      tooltipContent={overflowTooltip}
+                                      className={col.cellContentClassName ?? col.cellClassName}
+                                    >
+                                      {content}
+                                    </TableCellOverflowTooltip>
+                                  </div>
+                                )}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      );
+                    })}
+                    {virtualize ? (
+                      <tr aria-hidden="true">
+                        <td colSpan={colCount} height={bottomSpacerHeight} className="p-0" />
+                      </tr>
+                    ) : null}
+                  </>
+                )}
+              </tbody>
+            </table>
+
+            {/* Infinite scroll loading indicator */}
+            {loadingMore && (
+              <div className="flex items-center justify-center py-4">
+                <div className="inline-flex items-center gap-2 text-sm text-slate-500 dark:text-white/55">
+                  <span
+                    className="h-4 w-4 rounded-full border-2 border-ink/15 border-t-ink motion-reduce:animate-none motion-safe:animate-spin"
+                    aria-hidden="true"
+                  />
+                  {t("common.loading_more")}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* All data loaded */}
-          {showAllLoadedMessage && !hasMore && rows.length > 0 && !loading && (
-            <div className="py-3 text-center text-xs text-slate-400 dark:text-white/30">
-              {t("common.all_records_loaded", { count: rows.length })}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {!naturalFlow ? (
-        <StickyBoundaries
-          startWidth={stickyStartRailWidth}
-          endWidth={stickyEndRailWidth}
-          startLeft={stickyStartBoundaryLeft}
-          endLeft={stickyEndBoundaryLeft}
-          height={stickyOverlayHeights.boundary}
-          startOpacity={stickyStartShadowOpacity}
-          endOpacity={stickyEndShadowOpacity}
-        />
-      ) : null}
-
-      {!naturalFlow && vThumb ? (
-        <div
-          data-vt-scrollbar-gutter
-          className="relative z-30 col-start-2 row-start-1 h-full w-3 justify-self-end"
-        >
-          <div
-            data-vt-header-gutter
-            className="absolute inset-x-0 top-0 rounded-r-xl bg-slate-100 dark:bg-neutral-800"
-            style={{ height: headerHeight }}
-          />
-          <div
-            data-vt-scrollbar="y"
-            className="group/scrollbar pointer-events-auto absolute right-0 z-30 w-2 opacity-0 transition-opacity hover:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100"
-            style={{ top: headerHeight + 8, bottom: 8 }}
-          >
-            <div
-              ref={verticalThumbRef}
-              role="presentation"
-              className="pointer-events-auto absolute right-0 w-1.5 cursor-pointer rounded-full bg-[#C7C7C7] transition-[width] duration-150 ease-out hover:w-2 active:w-2 group-hover/scrollbar:w-2 dark:bg-white/25"
-              style={{ top: vThumb.top, height: vThumb.height }}
-              onPointerDown={(e) => handleThumbPointerDown("y", e)}
-              onPointerMove={handleThumbPointerMove}
-              onPointerUp={handleThumbPointerUp}
-              onPointerCancel={handleThumbPointerUp}
-            />
+            {/* All data loaded */}
+            {showAllLoadedMessage && !hasMore && rows.length > 0 && !loading && (
+              <div className="py-3 text-center text-xs text-slate-400 dark:text-white/30">
+                {t("common.all_records_loaded", { count: rows.length })}
+              </div>
+            )}
           </div>
         </div>
-      ) : null}
 
-      {!naturalFlow && hThumb ? (
-        <div
-          data-vt-scrollbar="x"
-          className={`group/scrollbar pointer-events-auto absolute bottom-1 left-2 ${vThumb ? "right-5" : "right-2"} z-30 h-2 opacity-0 transition-opacity hover:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100`}
-        >
-          <div
-            ref={horizontalThumbRef}
-            role="presentation"
-            className="pointer-events-auto absolute bottom-0 h-1.5 cursor-pointer rounded-full bg-[#C7C7C7] transition-[height] duration-150 ease-out hover:h-2 active:h-2 group-hover/scrollbar:h-2 dark:bg-white/25"
-            style={{ left: hThumb.left, width: hThumb.width }}
-            onPointerDown={(e) => handleThumbPointerDown("x", e)}
-            onPointerMove={handleThumbPointerMove}
-            onPointerUp={handleThumbPointerUp}
-            onPointerCancel={handleThumbPointerUp}
+        {!naturalFlow ? (
+          <StickyBoundaries
+            startWidth={stickyStartRailWidth}
+            endWidth={stickyEndRailWidth}
+            startLeft={stickyStartBoundaryLeft}
+            endLeft={stickyEndBoundaryLeft}
+            height={stickyOverlayHeights.boundary}
+            startOpacity={stickyStartShadowOpacity}
+            endOpacity={stickyEndShadowOpacity}
           />
-        </div>
-      ) : null}
+        ) : null}
+      </TableContentFrame>
 
-      {resizePreviewOverlay}
+      <TableScrollbars
+        vThumb={naturalFlow ? null : vThumb}
+        hThumb={naturalFlow ? null : hThumb}
+        headerHeight={headerHeight}
+        verticalThumbRef={verticalThumbRef}
+        horizontalThumbRef={horizontalThumbRef}
+        onThumbPointerDown={handleThumbPointerDown}
+        onThumbPointerMove={handleThumbPointerMove}
+        onThumbPointerUp={handleThumbPointerUp}
+      />
+
+      <ColumnResizePreviewOverlay
+        preview={resizePreview}
+        lineRef={resizePreviewLineRef}
+        tooltipRef={resizePreviewTooltipRef}
+      />
     </div>
   );
 }

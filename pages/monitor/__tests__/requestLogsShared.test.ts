@@ -1,4 +1,5 @@
 import { createElement } from "react";
+import i18n from "@code-proxy/i18n";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, test } from "vitest";
 import {
@@ -8,6 +9,7 @@ import {
   computeOutputTokensPerSecond,
   formatTokensPerSecond,
   isSystemRequestLogKey,
+  requestLogsHaveCacheBreakdown,
   sortRequestLogKeyOptionsByCount,
   SYSTEM_REQUEST_LOG_FILTER_VALUE,
   toFilterParam,
@@ -200,6 +202,73 @@ describe("requestLogsShared", () => {
     render(createElement("div", null, column.render(row, 0)));
     expect(screen.getByText("Laptop")).toBeInTheDocument();
     expect(screen.queryByText("Alice")).not.toBeInTheDocument();
+  });
+
+  test("shows cache reads and writes apart once the backend stores them apart", async () => {
+    await i18n.changeLanguage("en");
+    const base = {
+      id: 1,
+      timestamp: "2026-10-30T00:00:00Z",
+      api_key: "sk-cache-123456",
+      api_key_name: "",
+      model: "claude-opus-5-5",
+      source: "claude",
+      channel_name: "Claude",
+      auth_index: "auth-1",
+      failed: false,
+      latency_ms: 100,
+      first_token_ms: 20,
+      input_tokens: 21,
+      output_tokens: 5,
+      reasoning_tokens: 0,
+      total_tokens: 26,
+      cost: 0,
+      has_content: false,
+    };
+    // A turn that only wrote the cache: the legacy figure holds the write.
+    const writeOnly = toRequestLogsRow({
+      ...base,
+      cached_tokens: 50000,
+      cache_read_tokens: 0,
+      cache_write_tokens: 50000,
+    });
+    const unknown = toRequestLogsRow({
+      ...base,
+      cached_tokens: 7000,
+      cache_read_tokens: null,
+      cache_write_tokens: null,
+    });
+    const older = toRequestLogsRow({ ...base, cached_tokens: 7000 });
+
+    expect(requestLogsHaveCacheBreakdown([older])).toBe(false);
+    expect(requestLogsHaveCacheBreakdown([older, unknown])).toBe(true);
+
+    const legacyKeys = buildRequestLogsColumns((key) => key).map((column) => column.key);
+    expect(legacyKeys).not.toContain("cacheWriteTokens");
+
+    const columns = buildRequestLogsColumns((key) => key, undefined, undefined, {
+      cacheBreakdown: true,
+    });
+    const keys = columns.map((column) => column.key);
+    expect(keys.indexOf("cacheWriteTokens")).toBe(keys.indexOf("cachedTokens") + 1);
+    const read = columns.find((column) => column.key === "cachedTokens");
+    const write = columns.find((column) => column.key === "cacheWriteTokens");
+    if (!read || !write) throw new Error("missing cache columns");
+    expect(write.label).toBe("request_logs.col_cache_write");
+
+    const cell = (column: typeof read, row: typeof writeOnly) =>
+      render(createElement("div", null, column.render(row, 0))).container;
+    expect(cell(read, writeOnly)).toHaveTextContent(/^0$/);
+    expect(cell(write, writeOnly)).toHaveTextContent("50,000");
+    // Unknown is "—", never 0, and an old row's single figure is only a hint.
+    expect(cell(read, unknown)).toHaveTextContent(/^—$/);
+    expect(
+      screen.getByLabelText(
+        "Older record: 7,000 cached tokens, reads and writes not recorded apart",
+      ),
+    ).toBeInTheDocument();
+    // An older backend keeps its single column.
+    expect(cell(read, older)).toHaveTextContent("7,000");
   });
 
   test("can omit the channel column for public api key lookup logs", () => {

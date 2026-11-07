@@ -223,9 +223,8 @@ export function Select({
               {/* 面板本身保留圆角与投影，滚动交给里面这一层：选项多到要滚时上下渐隐，不会被面板边缘一刀切断。 */}
               <div
                 ref={listFade.ref}
-                onScroll={listFade.onScroll}
-                style={{ ...listFade.style, maxHeight: 280 }}
-                className={cn("overflow-y-auto overscroll-contain p-1.5", listFade.className)}
+                style={{ maxHeight: 280 }}
+                className="overflow-y-auto overscroll-contain p-1.5"
               >
               {options.map((opt) => {
                 const selected = opt.value === value;

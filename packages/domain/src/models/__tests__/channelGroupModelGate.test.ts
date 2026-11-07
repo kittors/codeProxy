@@ -94,6 +94,17 @@ describe("channelGroupServesModel", () => {
     expect(channelGroupServesModel({ excludedModels: ["grok-4.6"] }, "grok-5")).toBe(true);
   });
 
+  // A group that follows upstream also serves what discovery listed since its
+  // allow list was saved; an exclusion still wins over that.
+  test("serves the discovered models of a following group, exclusions first", () => {
+    const gate = { allowedModels: ["gpt-6.1-sol"], discoveredModels: ["gpt-6.1-terra"] };
+    expect(channelGroupServesModel(gate, "gpt-6.1-terra")).toBe(true);
+    expect(channelGroupServesModel(gate, "gpt-6.2-unlisted")).toBe(false);
+    expect(
+      channelGroupServesModel({ ...gate, excludedModels: ["gpt-6.1-*"] }, "gpt-6.1-terra"),
+    ).toBe(false);
+  });
+
   test("filters a candidate list and keeps its order", () => {
     expect(
       filterModelsServedByChannelGroup(

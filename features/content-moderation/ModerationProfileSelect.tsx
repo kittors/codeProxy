@@ -93,7 +93,7 @@ function BoundModerationProfileSelect({
         const exact = page.items.find(
           (item) => item.channel_type === channelType && item.channel_id === channelId,
         );
-        setProfiles(nextProfiles);
+        setProfiles(nextProfiles.items);
         setProfileId(exact?.profile_id ?? "");
       })
       .catch((error: unknown) => {

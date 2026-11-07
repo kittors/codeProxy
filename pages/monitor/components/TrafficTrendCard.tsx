@@ -47,6 +47,8 @@ export function TrafficTrendCard({
       tokens: t("monitor_center.series.tokens"),
       reasoning: t("monitor_center.series.reasoning"),
       cached: t("monitor_center.series.cached"),
+      cache_read: t("monitor_center.series.cache_read"),
+      cache_write: t("monitor_center.series.cache_write"),
     }),
     [t],
   );

@@ -1,3 +1,4 @@
+import { pickCacheRateFields, type CacheRateFields } from "@code-proxy/domain/usage/cacheRate";
 import { apiClient } from "../client/client";
 import type { UsageData, ChartDataResponse, EntityStatsResponse } from "../dto/types";
 
@@ -362,31 +363,59 @@ export const usageApi = {
       page?: number;
       size?: number;
       days?: number;
+      /**
+       * Key selectors the caller already holds (a client secret). A current backend
+       * resolves them to key ids and compares nothing against the log rows; a
+       * backend without the api-key-id-filters capability only understands these.
+       */
       api_key?: string;
       model?: string;
       channel?: string;
       status?: string;
       api_keys?: string[];
+      /**
+       * Key filter by the stable ids the response's key facet offers (and
+       * "__system__" for system calls). Only a backend that declares the
+       * api-key-id-filters capability reads it; an older one ignores it and would
+       * return every key's logs, so send it only after a response declared that.
+       */
+      api_key_ids?: string[];
       models?: string[];
       channels?: string[];
       statuses?: string[];
+      /**
+       * Requests loop protection ended (see UsageLogItem.guard_kind). Only a backend
+       * that declares the loop-guard capability reads it; an older one ignores it
+       * and would return every request, so send it only after a response declared
+       * that.
+       */
+      guard_kinds?: string[];
       api_keys_empty?: boolean;
+      /** Explicit empty selection of api_key_ids: match no key at all. */
+      api_key_ids_empty?: boolean;
       models_empty?: boolean;
       channels_empty?: boolean;
       statuses_empty?: boolean;
+      /** 按门户账号查看：后端按账号名下 Key 的稳定 ID 过滤，不必携带 Key 明文。 */
+      end_user_id?: string;
     },
     options?: { signal?: AbortSignal },
   ): Promise<UsageLogsResponse> {
     const qs = new URLSearchParams();
+    if (params.end_user_id) qs.set("end_user_id", params.end_user_id);
     if (params.page) qs.set("page", String(params.page));
     if (params.size) qs.set("size", String(params.size));
     if (params.days) qs.set("days", String(params.days));
     // Multi-value params take priority
     appendUniqueParams(qs, "api_key", params.api_keys);
+    // The backend reads repeated api_key_id values; its plural form is one comma list.
+    appendUniqueParams(qs, "api_key_id", params.api_key_ids);
     appendUniqueParams(qs, "model", params.models);
     appendUniqueParams(qs, "channel", params.channels);
     appendUniqueParams(qs, "status", params.statuses);
+    appendUniqueParams(qs, "guard_kind", params.guard_kinds);
     if (params.api_keys_empty) qs.set("api_keys_empty", "1");
+    if (params.api_key_ids_empty) qs.set("api_key_ids_empty", "1");
     if (params.models_empty) qs.set("models_empty", "1");
     if (params.channels_empty) qs.set("channels_empty", "1");
     if (params.statuses_empty) qs.set("statuses_empty", "1");
@@ -401,26 +430,41 @@ export const usageApi = {
       ? apiClient.get<UsageLogsPayload | null>(path, { signal: options.signal })
       : apiClient.get<UsageLogsPayload | null>(path));
     const filters = resp?.filters;
+    const capabilities = readUsageLogsCapabilities(resp?.capabilities);
+    // A backend that declares the id filters has no secret-keyed facet; ignore one
+    // even if it were sent, so nothing downstream can fall back to showing it.
+    const secretFacet = !capabilities.apiKeyIdFilters;
     return {
       items: Array.isArray(resp?.items) ? resp.items : [],
       total: resp?.total ?? 0,
       page: resp?.page ?? 1,
       size: resp?.size ?? params.size ?? 50,
+      capabilities,
       filters: {
-        api_keys: Array.isArray(filters?.api_keys) ? filters.api_keys : [],
-        api_key_names: isStringRecord(filters?.api_key_names) ? filters.api_key_names : {},
-        api_key_counts: isNumberRecord(filters?.api_key_counts) ? filters.api_key_counts : {},
+        api_key_ids: Array.isArray(filters?.api_key_ids) ? filters.api_key_ids : [],
+        api_key_id_names: isStringRecord(filters?.api_key_id_names) ? filters.api_key_id_names : {},
+        api_key_id_counts: isNumberRecord(filters?.api_key_id_counts)
+          ? filters.api_key_id_counts
+          : {},
+        api_keys: secretFacet && Array.isArray(filters?.api_keys) ? filters.api_keys : [],
+        api_key_names:
+          secretFacet && isStringRecord(filters?.api_key_names) ? filters.api_key_names : {},
+        api_key_counts:
+          secretFacet && isNumberRecord(filters?.api_key_counts) ? filters.api_key_counts : {},
         models: Array.isArray(filters?.models) ? filters.models : [],
         channels: Array.isArray(filters?.channels) ? filters.channels : [],
         channel_options: normalizeChannelOptions(filters?.channel_options, filters?.channels),
         statuses: Array.isArray(filters?.statuses) ? filters.statuses : ["success", "failed"],
+        guard_kinds: Array.isArray(filters?.guard_kinds)
+          ? filters.guard_kinds.filter((kind): kind is string => typeof kind === "string")
+          : [],
       },
       stats: {
         total: resp?.stats?.total ?? 0,
         success_rate: resp?.stats?.success_rate ?? 0,
         total_tokens: resp?.stats?.total_tokens ?? 0,
         total_cost: resp?.stats?.total_cost ?? 0,
-        cache_rate: resp?.stats?.cache_rate ?? 0,
+        ...pickCacheRateFields(resp?.stats),
       },
     };
   },
@@ -508,8 +552,7 @@ export interface DashboardSummary {
     cached_tokens: number;
     total_tokens: number;
     total_cost: number;
-    cache_rate: number;
-  };
+  } & CacheRateFields;
   trends?: {
     request_volume?: DashboardTrendPoint[];
     success_rate?: DashboardTrendPoint[];
@@ -567,6 +610,11 @@ export interface UsageChannelFilterOption {
 export interface UsageLogItem {
   id: number;
   timestamp: string;
+  /**
+   * What the log row says about its key. A current backend never returns the
+   * secret here: it is a mask ("sk-abc***wxyz") or a route / internal origin
+   * ("POST /v1/models", "warmup"). Only a backend that predates that stored it.
+   */
   api_key: string;
   api_key_id?: string;
   api_key_masked?: string;
@@ -594,17 +642,70 @@ export interface UsageLogItem {
   output_tokens: number;
   reasoning_tokens: number;
   cached_tokens: number;
+  /**
+   * Cache reads and writes, and the prompt size, from backends that store them
+   * apart; null when the request's cache use is unknown. Absent on older
+   * backends. See readRequestCacheUse.
+   */
+  cache_read_tokens?: number | null;
+  cache_write_tokens?: number | null;
+  prompt_tokens?: number | null;
   total_tokens: number;
   cost: number;
   has_content: boolean;
+  /**
+   * Which loop protection check ended the request, "reply_loop" (the reply was cut)
+   * or "tool_loop" (the gateway answered, nothing went upstream). Such a request is
+   * also failed. Absent on backends without loop protection and on every other row;
+   * a value this panel does not know is shown like the known ones.
+   */
+  guard_kind?: string;
 }
+
+/** What /usage/logs says about itself. */
+export interface UsageLogsCapabilities {
+  /**
+   * The key filter is id-based ("api-key-id-filters"): the key facet is
+   * filters.api_key_ids / api_key_id_names / api_key_id_counts, the api_key_id
+   * query parameters select from it, and no field of the response holds a client
+   * secret. A backend without it is older and still speaks the secret-keyed facet
+   * (filters.api_keys / api_key_names / api_key_counts).
+   */
+  apiKeyIdFilters: boolean;
+  /**
+   * The backend has loop protection ("loop-guard"): rows carry guard_kind, the
+   * guard_kind query parameters filter by it and filters.guard_kinds is its facet.
+   */
+  loopGuard: boolean;
+}
+
+/** Only an explicit true counts: a backend that predates a capability sends no object. */
+export const readUsageLogsCapabilities = (value: unknown): UsageLogsCapabilities => {
+  const declared = (name: string) =>
+    value !== null && typeof value === "object" && (value as Record<string, unknown>)[name] === true;
+  return {
+    apiKeyIdFilters: declared("api-key-id-filters"),
+    loopGuard: declared("loop-guard"),
+  };
+};
 
 export interface UsageLogsResponse {
   items: UsageLogItem[];
   total: number;
   page: number;
   size: number;
+  capabilities: UsageLogsCapabilities;
   filters: {
+    /** Key facet: stable key ids, "__system__" standing for system calls. */
+    api_key_ids: string[];
+    api_key_id_names: Record<string, string>;
+    api_key_id_counts: Record<string, number>;
+    /**
+     * Key facet of a backend WITHOUT the api-key-id-filters capability, keyed by
+     * client secret. Empty whenever the capability is declared. Only the
+     * compatibility path of the request log filters reads these, and they are never
+     * displayed as they are.
+     */
     api_keys: string[];
     api_key_names: Record<string, string>;
     api_key_counts: Record<string, number>;
@@ -612,17 +713,21 @@ export interface UsageLogsResponse {
     channels: string[];
     channel_options: UsageChannelFilterOption[];
     statuses: string[];
+    /** The loop protection kinds present in the selection; empty without the loop-guard capability. */
+    guard_kinds: string[];
   };
   stats: {
     total: number;
     success_rate: number;
     total_tokens: number;
     total_cost: number;
-    cache_rate: number;
-  };
+  } & CacheRateFields;
 }
 
 type UsageLogsFilterPayload = {
+  api_key_ids?: unknown;
+  api_key_id_names?: unknown;
+  api_key_id_counts?: unknown;
   api_keys?: unknown;
   api_key_names?: unknown;
   api_key_counts?: unknown;
@@ -630,6 +735,7 @@ type UsageLogsFilterPayload = {
   channels?: unknown;
   channel_options?: unknown;
   statuses?: unknown;
+  guard_kinds?: unknown;
 };
 
 type UsageLogsPayload = {
@@ -639,6 +745,7 @@ type UsageLogsPayload = {
   size?: number | null;
   filters?: UsageLogsFilterPayload | null;
   stats?: Partial<UsageLogsResponse["stats"]> | null;
+  capabilities?: unknown;
 };
 
 export interface LogContentResponse {

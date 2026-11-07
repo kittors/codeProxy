@@ -934,6 +934,20 @@ html.theme-transition-lock *::after {
   }
 }
 
+/* 隐私脱敏按天柱条首次出现时从 0 长到实际高度（只写 from，终点是行内的 height） */
+@keyframes pm-bar-grow {
+  from {
+    height: 0;
+  }
+}
+
+/* 隐私脱敏流向图的细线首次出现时从起点画到终点（路径的 pathLength 是 1） */
+@keyframes pm-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
 /* 额度条、资源条首次出现时从 0 长到实际宽度（只写 from，终点就是行内的 width） */
 @keyframes quota-bar-grow {
   from {

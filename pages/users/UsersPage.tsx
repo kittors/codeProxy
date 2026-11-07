@@ -7,7 +7,8 @@ import {
   COLUMN_WIDTH,
   DataTable,
   SecretRevealModal,
-  TABLE_ROW_ACTIONS_COLUMN,
+  TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
+  TableRowActions,
   ToggleSwitch,
   useToast,
   type DataTableColumn,
@@ -46,6 +47,8 @@ export function UsersPage() {
   const [busy, setBusy] = useState(false);
   const canReadRoles = can("tenant.roles.read");
   const canAssignRoles = can("tenant.users.assign_roles");
+  const canResetPassword = can("tenant.users.reset_password");
+  const canDeleteUsers = can("tenant.users.delete");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -247,60 +250,56 @@ export function UsersPage() {
       {
         key: "actions",
         label: t("identity_admin.actions"),
-        ...TABLE_ROW_ACTIONS_COLUMN,
-        lockOrder: "end",
+        ...TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
         render: (user) => {
           const protectedUser = isProtected(user);
           const rolesDisabled = cannotAssignRoles(user);
           const deleteDisabled = cannotDelete(user);
           return (
-            <div className="flex items-center gap-1.5">
-              <PermissionGate permission="tenant.users.assign_roles">
-                <Button
-                  size="xs"
-                  variant="ghost"
-                  disabled={rolesDisabled || busy || !canReadRoles}
-                  tooltip={t("identity_admin.set_roles")}
-                  onClick={() => {
+            <TableRowActions
+              actions={[
+                {
+                  key: "roles",
+                  label: t("identity_admin.set_roles"),
+                  icon: <Shield />,
+                  visible: canAssignRoles,
+                  disabled: rolesDisabled || busy || !canReadRoles,
+                  onClick: () => {
                     if (cannotAssignRoles(user)) return;
                     setRolesUser(user);
-                  }}
-                >
-                  <Shield size={15} />
-                </Button>
-              </PermissionGate>
-              <PermissionGate permission="tenant.users.reset_password">
-                <Button
-                  size="xs"
-                  variant="ghost"
-                  disabled={protectedUser || busy}
-                  tooltip={t("identity_admin.reset_password")}
-                  onClick={() => setResetUser(user)}
-                >
-                  <KeyRound size={15} />
-                </Button>
-              </PermissionGate>
-              <PermissionGate permission="tenant.users.delete">
-                <Button
-                  size="xs"
-                  variant="ghost-danger"
-                  disabled={deleteDisabled || busy}
-                  tooltip={t("identity_admin.delete")}
-                  onClick={() => {
+                  },
+                },
+                {
+                  key: "reset-password",
+                  label: t("identity_admin.reset_password"),
+                  icon: <KeyRound />,
+                  visible: canResetPassword,
+                  disabled: protectedUser || busy,
+                  onClick: () => setResetUser(user),
+                },
+                {
+                  key: "delete",
+                  label: t("identity_admin.delete"),
+                  icon: <Trash2 />,
+                  destructive: true,
+                  visible: canDeleteUsers,
+                  disabled: deleteDisabled || busy,
+                  onClick: () => {
                     if (!cannotDelete(user)) setDeleteUser(user);
-                  }}
-                >
-                  <Trash2 size={15} />
-                </Button>
-              </PermissionGate>
-            </div>
+                  },
+                },
+              ]}
+            />
           );
         },
       },
     ],
     [
       busy,
+      canAssignRoles,
+      canDeleteUsers,
       canReadRoles,
+      canResetPassword,
       cannotAssignRoles,
       cannotDelete,
       i18n.language,
@@ -386,9 +385,10 @@ export function UsersPage() {
           </PermissionGate>
         </div>
 
-        {/* 表格吃掉页面剩余高度、内部滚动；不设最小高度保底——页面高度被窗口钉死，保底只会在矮窗口下把表格挤出页面（见请求日志页）。 */}
-        <div className="relative min-h-0 flex-1 overflow-hidden">
+        {/* 表格 fill 铺满页面剩余高度、再多就内部滚动：加载、空、行少、行多都是同一个框，分页条和横向滚动条不随行数移动；不设最小高度保底——页面高度被窗口钉死，保底只会在矮窗口下把表格挤出页面（见请求日志页）。 */}
+        <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
           <DataTable<UserIdentity>
+            fill
             tableId="identity-users"
             rows={users}
             columns={columns}
@@ -396,8 +396,6 @@ export function UsersPage() {
             loading={loading}
             virtualize={false}
             rowHeight={60}
-            height="h-full"
-            minHeight="min-h-full"
             minWidth="min-w-[900px]"
             emptyText={t("identity_admin.no_users")}
             showAllLoadedMessage={false}

@@ -24,6 +24,7 @@ const DATABASE_SETTINGS = {
   "proxy-url": (v) => v.proxyUrl,
   "request-retry": (v) => v.requestRetry,
   "max-retry-interval": (v) => v.maxRetryInterval,
+  "disable-cooling": (v) => v.disableCooling,
   "force-model-prefix": (v) => v.forceModelPrefix,
   "ws-auth": (v) => v.wsAuth,
   "quota-exceeded": (v) => [v.quotaSwitchProject, v.quotaSwitchPreviewModel],

@@ -151,6 +151,13 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
       deleteKey: vi.fn(),
       changePassword: vi.fn(),
     },
+    privacyMaskingPortalApi: {
+      getSummary: vi.fn(),
+      listRecords: vi.fn(),
+      getRecord: vi.fn(),
+      getSettings: vi.fn(),
+      preview: vi.fn(),
+    },
   };
 });
 
@@ -387,6 +394,54 @@ describe("ApiKeyLookupPage", () => {
       screen.queryByRole("button", { name: /set as default|设默认/i }),
     ).not.toBeInTheDocument();
     expect(screen.queryByText(/^default$|^默认$/i)).not.toBeInTheDocument();
+  });
+
+  // 门户的隐私脱敏一律只读：后端在 capabilities 里声明了就给标签，旧后端没有
+  test.each([
+    ["a backend that serves it", true],
+    ["an older backend", false],
+  ] as const)("privacy masking tab on %s", async (_name, supported) => {
+    const { portalApi, privacyMaskingPortalApi } = await import("@code-proxy/api-client");
+    vi.mocked(portalApi.loadSession).mockReturnValue({
+      apiBase: "http://relay.test",
+      accessToken: "cpt_account",
+      refreshToken: "cpr_account",
+      remember: false,
+      expiresAt: Date.now() + 60_000,
+    });
+    vi.mocked(portalApi.me).mockResolvedValue({
+      user: { id: "u-account", tenant_id: "t-account", username: "alice", display_name: "Alice", status: "active", must_change_password: false, created_at: "", updated_at: "", version: 1 },
+      privacyMasking: supported,
+    } as never);
+    vi.mocked(portalApi.listKeys).mockResolvedValue({ items: [] } as never);
+    vi.mocked(privacyMaskingPortalApi.getSummary).mockResolvedValue({ days: [], places: 0, distinct: 0, requests: 0, blocked: 0, warned: 0, kinds: [], clients: [], channels: [], values: [] });
+    vi.mocked(privacyMaskingPortalApi.listRecords).mockResolvedValue({ items: [] });
+    vi.mocked(privacyMaskingPortalApi.getSettings).mockResolvedValue({
+      policy: { secrets: true, personal: false, kinds: {}, words: [], words_any_case: false, words_whole: false, rules: [], allow: [], actions: {} },
+    });
+
+    render(
+      <ThemeProvider>
+        <ToastProvider>
+          <ApiKeyLookupPage />
+        </ToastProvider>
+      </ThemeProvider>,
+    );
+    await screen.findByRole("tab", { name: /manage api keys|管理 api key/i });
+    const tab = screen.queryByRole("tab", { name: /^(privacy masking|隐私脱敏|Маскирование данных)$/i });
+    if (!supported) {
+      // 旧后端没有门户脱敏：不给标签，也不去请求它的接口
+      expect(tab).not.toBeInTheDocument();
+      expect(privacyMaskingPortalApi.listRecords).not.toHaveBeenCalled();
+      return;
+    }
+    // 第一次点开才请求：只看用量的门户用户不该在后台每 15 秒查一次脱敏记录
+    expect(privacyMaskingPortalApi.listRecords).not.toHaveBeenCalled();
+    await userEvent.click(tab!);
+    expect(await screen.findByRole("tab", { name: /rules in effect|生效的规则/i })).toBeVisible();
+    await waitFor(() => expect(privacyMaskingPortalApi.listRecords).toHaveBeenCalled());
+    // 这个标签有自己的刷新，工具栏上的刷新不放（按钮还在，所在的一栏 hidden）
+    expect(screen.getByRole("button", { name: /^(refresh|刷新)$/i }).closest(".hidden")).not.toBeNull();
   });
 
   test("hides channel controls and keeps input/output cells non-interactive on public logs", async () => {
@@ -800,11 +855,12 @@ describe("ApiKeyLookupPage", () => {
       within(cardToolbar).getByRole("button", { name: /new key|新建 key/i }),
     ).toBeInTheDocument();
 
-    // 表格仍是固定高度、内部滚动的视口；没有外层卡片后不再留左右内边距，和操作行左右对齐。
+    // Key 通常就几条：表格按行数收高，不再钉成一屏高的视口（行少时下面是一整屏空框）；
+    // 没有外层卡片后不再留左右内边距，和操作行左右对齐。
     const tableViewport = screen.getByTestId("apikey-lookup-keys-table-viewport");
-    expect(tableViewport).toHaveClass("min-h-[360px]", "h-[calc(100dvh-240px)]");
+    expect(tableViewport.className).not.toMatch(/100dvh|min-h-\[360px\]/);
     expect(tableViewport).not.toHaveClass("px-3");
-    expect(tableViewport.querySelector(".h-full.min-h-full")).not.toBeNull();
+    expect(tableViewport.querySelector(".h-auto.min-h-0.max-h-full")).not.toBeNull();
 
     await waitFor(() => {
       expect(portalApi.listKeys).toHaveBeenCalledTimes(2);
@@ -852,7 +908,9 @@ describe("ApiKeyLookupPage", () => {
       refresh_token: "cpr_test",
       must_change_password: false,
     } as never);
-    vi.mocked(portalApi.listKeys).mockResolvedValue({ items: [key] } as never);
+    // 真实的 portalApi.listKeys 会归一化（补齐额度矩阵与规则）；这里被替换了，手动归一化。
+    const { normalizeEndUserAPIKey } = await import("@code-proxy/api-client");
+    vi.mocked(portalApi.listKeys).mockResolvedValue({ items: [normalizeEndUserAPIKey(key)] } as never);
     vi.mocked(portalApi.keySecret).mockResolvedValue({ id: "k1", key: "sk-primary" });
     vi.mocked(portalApi.updateKey).mockResolvedValue({ ...key, name: "renamed" } as never);
     vi.mocked(portalApi.resetKeyPeriodSpending).mockResolvedValue({ status: "ok" } as never);
@@ -884,14 +942,16 @@ describe("ApiKeyLookupPage", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Edit Key quota" }));
     const editDialog = await screen.findByRole("dialog", { name: "Edit Key quota" });
-    const dayInput = within(editDialog).getByRole("spinbutton", { name: "Daily quota (USD)" });
+    await userEvent.click(within(editDialog).getByRole("tab", { name: /Quota/ }));
+    // 旧后端（没有声明访问策略）只开放美元四周期子额度。
+    expect(within(editDialog).queryByRole("textbox", { name: "Tokens · Daily" })).toBeNull();
+    const dayInput = within(editDialog).getByRole("textbox", { name: "Spend · Daily" });
     await userEvent.clear(dayInput);
     await userEvent.type(dayInput, "80");
     await userEvent.click(within(editDialog).getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
       expect(portalApi.updateKey).toHaveBeenCalledWith("k1", {
-        name: "primary",
         "daily-spending-limit": 80,
         "period-spending-limits": { "5h": 50, day: 80, week: 300, month: 1000 },
       });

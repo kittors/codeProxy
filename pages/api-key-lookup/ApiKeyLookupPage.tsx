@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  NO_ACCESS_POLICY_CAPABILITIES,
+  normalizeEndUser,
   portalApi,
-  normalizePeriodSpendingLimits,
+  type AccessPolicyCapabilities,
   type EndUser,
   type EndUserAPIKey,
   type SavedPortalAccount,
@@ -18,33 +20,31 @@ import type { SearchableCheckboxMultiSelectOption } from "@code-proxy/ui";
 import type { TimeRange } from "@features/monitor-widgets/monitor-constants";
 import { ModelTag } from "@features/model-tags";
 import {
-  OwnedApiKeyQuotaModal,
-  emptyPeriodSpendingDraft,
-  formatQuotaValidationError,
-  limitsToPeriodSpendingDraft,
-  periodSpendingDraftToLimits,
-} from "@features/period-spending";
-import {
   fetchAvailableModels,
   fetchPublicChartData,
   fetchPublicLogs,
   fetchPublicUsageSummary,
   type PublicModelItem,
 } from "./api";
-import { toLogRow } from "./toLogRow";
 import { LookupHeader } from "./components/LookupHeader";
 import { PortalChangePasswordModal } from "./components/PortalChangePasswordModal";
 import { PortalDeleteKeyModal } from "./components/PortalDeleteKeyModal";
 import { PortalLoginForm } from "./components/PortalLoginForm";
 import { PortalKeyPeriodQuotaResetModal } from "./components/PortalKeyPeriodQuotaResetModal";
+import { PortalKeyEditor, type PortalKeyEditorState } from "./components/PortalKeyEditor";
 import { LookupEmptyState } from "./components/LookupEmptyState";
 import { LookupResultsToolbar, type ApiKeyLookupTab } from "./components/LookupResultsToolbar";
+import { isPinnedLookupTab, lookupMainClassName, lookupShellClassName } from "./lookupLayout";
 import { ManageKeysTabContent } from "./components/ManageKeysTabContent";
 import { ModelsTabContent } from "./components/ModelsTabContent";
+import { OperationalKeyRequired } from "./components/OperationalKeyRequired";
+import { PortalSelfServiceTabs } from "./components/PortalSelfServiceTabs";
+import { NO_PORTAL_GRANTS, portalGrantsOf, portalTabAvailable, type PortalGrants } from "./portalGrants";
 import { PublicLogsSection } from "./components/PublicLogsSection";
 import { QuickImportTabContent } from "./components/QuickImportTabContent";
 import { UsageTabSection } from "./components/UsageTabSection";
 import { useApiKeyLookupCharts } from "./hooks/useApiKeyLookupCharts";
+import { useLookupLogTable } from "./hooks/useLookupLogTable";
 import type {
   ChartDataResponse,
   PublicLogItem,
@@ -52,146 +52,30 @@ import type {
   PublicUsageLimits,
 } from "./types";
 import {
-  buildRequestLogsColumns,
   normalizeFilterSelection,
   RequestLogFilterCount,
   sortRequestLogKeyOptionsByCount,
   toFilterParam,
   toStatusFilterValues,
   type MultiSelectFilterState,
-  type RequestLogsRow,
   type StatusFilterValue,
 } from "@features/request-log-viewer";
 import {
-  clearTenantBucketMap,
-  getActiveCacheTenantId,
-  readTenantBucketMapEntry,
-  updateTenantBucketMapEntry,
-} from "@code-proxy/domain";
+  clearStoredChartCache,
+  readStoredChartCache,
+  readStoredModelsCache,
+  samePublicModelArray,
+  writeStoredChartCache,
+  writeStoredModelsCache,
+} from "./lookupCache";
 
 const DEFAULT_PAGE_SIZE = 50;
-/** Tenant-scoped chart cache (v2). Legacy v1 migrates into the default tenant only. */
-const LOOKUP_CHART_CACHE_STORAGE_KEY = "apiKeyLookup.chartCache.v2";
-const LOOKUP_CHART_CACHE_STORAGE_KEY_V1 = "apiKeyLookup.chartCache.v1";
-const LOOKUP_MODELS_CACHE_STORAGE_KEY = "apiKeyLookup.modelsCache.v3";
-const LOOKUP_MODELS_CACHE_STORAGE_KEY_V2 = "apiKeyLookup.modelsCache.v2";
-const LOOKUP_MODELS_CACHE_STORAGE_KEY_V1 = "apiKeyLookup.modelsCache.v1";
 
 type UsageLookupSubject =
   | { mode: "portal"; apiKey: ""; cacheKey: string }
   | { mode: "legacy"; apiKey: string; cacheKey: string };
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
-
-function isChartDataResponse(value: unknown): value is ChartDataResponse {
-  if (!isRecord(value)) return false;
-  return (
-    Array.isArray(value.daily_series) &&
-    Array.isArray(value.model_distribution) &&
-    isRecord(value.stats)
-  );
-}
-
-const readStoredChartCache = (cacheKey: string): ChartDataResponse | null => {
-  return readTenantBucketMapEntry({
-    key: LOOKUP_CHART_CACHE_STORAGE_KEY,
-    kind: "session",
-    tenantId: getActiveCacheTenantId(),
-    entryKey: cacheKey,
-    legacyKey: LOOKUP_CHART_CACHE_STORAGE_KEY_V1,
-    isEntry: isChartDataResponse,
-  });
-};
-
-const writeStoredChartCache = (cacheKey: string, data: ChartDataResponse): void => {
-  updateTenantBucketMapEntry({
-    key: LOOKUP_CHART_CACHE_STORAGE_KEY,
-    kind: "session",
-    tenantId: getActiveCacheTenantId(),
-    entryKey: cacheKey,
-    entryValue: data,
-    maxEntries: 8,
-    legacyKey: LOOKUP_CHART_CACHE_STORAGE_KEY_V1,
-    legacyKeysToRemove: [LOOKUP_CHART_CACHE_STORAGE_KEY_V1],
-  });
-};
-
-const clearStoredChartCache = (): void => {
-  clearTenantBucketMap({
-    key: LOOKUP_CHART_CACHE_STORAGE_KEY,
-    kind: "session",
-    tenantId: getActiveCacheTenantId(),
-  });
-  try {
-    window.sessionStorage.removeItem(LOOKUP_CHART_CACHE_STORAGE_KEY_V1);
-  } catch {
-    // ignore storage failures
-  }
-};
-
-const isPublicModelItem = (value: unknown): value is PublicModelItem => {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
-  const item = value as PublicModelItem;
-  return (
-    typeof item.id === "string" &&
-    typeof item.description === "string" &&
-    typeof item.ownedBy === "string" &&
-    Boolean(item.pricing) &&
-    typeof item.pricing === "object" &&
-    Array.isArray(item.inputModalities) &&
-    Array.isArray(item.outputModalities) &&
-    typeof item.supportsVision === "boolean"
-  );
-};
-
-const isPublicModelArray = (value: unknown): value is PublicModelItem[] =>
-  Array.isArray(value) && value.every(isPublicModelItem);
-
-const samePublicModelArray = (left: PublicModelItem[], right: PublicModelItem[]): boolean => {
-  if (left.length !== right.length) return false;
-  return left.every((item, index) => {
-    const other = right[index];
-    return (
-      item.id === other.id &&
-      item.description === other.description &&
-      item.ownedBy === other.ownedBy &&
-      item.supportsVision === other.supportsVision &&
-      item.pricing.mode === other.pricing.mode &&
-      item.pricing.inputPricePerMillion === other.pricing.inputPricePerMillion &&
-      item.pricing.outputPricePerMillion === other.pricing.outputPricePerMillion &&
-      item.pricing.cachedPricePerMillion === other.pricing.cachedPricePerMillion &&
-      item.pricing.cacheReadPricePerMillion === other.pricing.cacheReadPricePerMillion &&
-      item.pricing.cacheWritePricePerMillion === other.pricing.cacheWritePricePerMillion &&
-      item.pricing.pricePerCall === other.pricing.pricePerCall
-    );
-  });
-};
-
-const readStoredModelsCache = (cacheKey: string): PublicModelItem[] | null => {
-  return readTenantBucketMapEntry({
-    key: LOOKUP_MODELS_CACHE_STORAGE_KEY,
-    kind: "session",
-    tenantId: getActiveCacheTenantId(),
-    entryKey: cacheKey,
-    isEntry: isPublicModelArray,
-  });
-};
-
-const writeStoredModelsCache = (cacheKey: string, models: PublicModelItem[]): void => {
-  updateTenantBucketMapEntry({
-    key: LOOKUP_MODELS_CACHE_STORAGE_KEY,
-    kind: "session",
-    tenantId: getActiveCacheTenantId(),
-    entryKey: cacheKey,
-    entryValue: models,
-    maxEntries: 8,
-    legacyKeysToRemove: [LOOKUP_MODELS_CACHE_STORAGE_KEY_V2, LOOKUP_MODELS_CACHE_STORAGE_KEY_V1],
-  });
-};
 
 const extractServerErrorMessage = (raw: unknown): string => {
   if (raw instanceof Error) return extractServerErrorMessage(raw.message);
@@ -312,25 +196,13 @@ export function ApiKeyLookupPage() {
   const [pwdForm, setPwdForm] = useState({ current: "", next: "" });
   const [pwdError, setPwdError] = useState<string | null>(null);
   const [secretOnce, setSecretOnce] = useState<string | null>(null);
-  const [createKeyOpen, setCreateKeyOpen] = useState(false);
-  const [portalKeyForm, setPortalKeyForm] = useState({
-    name: "",
-    periods: emptyPeriodSpendingDraft(),
-  });
-  const [editKeyTarget, setEditKeyTarget] = useState<EndUserAPIKey | null>(null);
-  const [portalKeyQuotaError, setPortalKeyQuotaError] = useState("");
+  const [keyEditor, setKeyEditor] = useState<PortalKeyEditorState>(null);
+  const [portalCaps, setPortalCaps] = useState<AccessPolicyCapabilities>(NO_ACCESS_POLICY_CAPABILITIES);
+  const [portalGrants, setPortalGrants] = useState<PortalGrants>(NO_PORTAL_GRANTS);
   const [resetSpendingTarget, setResetSpendingTarget] = useState<EndUserAPIKey | null>(null);
   const [deleteKeyTarget, setDeleteKeyTarget] = useState<EndUserAPIKey | null>(null);
   const [portalKeysBusy, setPortalKeysBusy] = useState(false);
   const [portalKeysLoading, setPortalKeysLoading] = useState(false);
-  const portalAccountPeriodLimits = useMemo(
-    () =>
-      normalizePeriodSpendingLimits(
-        portalUser?.["period-spending-limits"],
-        portalUser?.["daily-spending-limit"],
-      ),
-    [portalUser],
-  );
 
   const usageSubject = useMemo<UsageLookupSubject | null>(() => {
     if (portalUser) {
@@ -343,16 +215,12 @@ export function ApiKeyLookupPage() {
   // ponytail: landing first; open login only via CTA / header
   const [loginModalOpen, setLoginModalOpen] = useState(false);
 
-  const logColumns = useMemo(
-    () =>
-      buildRequestLogsColumns((key) => t(key), undefined, undefined, {
-        identityColumn: "key",
-        hideChannel: true,
-      }),
-    [t],
-  );
   // ── Tab state ──
   const [activeTab, setActiveTab] = useState<ApiKeyLookupTab>("usage");
+  // 敏感词、隐私脱敏标签只给有权限（后端支持）的账号：退出、切换账号或权限被收回后不再停在它上面。
+  useEffect(() => {
+    if (!portalTabAvailable(activeTab, Boolean(portalUser), portalGrants)) setActiveTab("usage");
+  }, [activeTab, portalUser, portalGrants]);
   const [quickImportReloadToken, setQuickImportReloadToken] = useState(0);
 
   // ── Logs state (server-side pagination) ──
@@ -378,6 +246,7 @@ export function ApiKeyLookupPage() {
 
   // ── Models state ──
   const [availableModels, setAvailableModels] = useState<PublicModelItem[]>([]);
+  const portalModelCatalog = useMemo(() => availableModels.map((model) => ({ value: model.id })), [availableModels]);
   const [modelsLoading, setModelsLoading] = useState(false);
   const [modelsError, setModelsError] = useState<string | null>(null);
   const [modelsSearchFilter, setModelsSearchFilter] = useState("");
@@ -664,7 +533,7 @@ export function ApiKeyLookupPage() {
   //  Derived rows for VirtualTable
   // ================================================================
 
-  const rows = useMemo<RequestLogsRow[]>(() => rawItems.map((item) => toLogRow(item)), [rawItems]);
+  const { rows, logColumns } = useLookupLogTable(rawItems);
 
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
@@ -830,6 +699,9 @@ export function ApiKeyLookupPage() {
       .then(async (res) => {
         if (cancelled) return;
         setPortalUser(res.user);
+        // 刷新页面恢复会话时同样要带上能力声明和敏感词授权，否则要重新登录才显示。
+        setPortalCaps(res.capabilities ?? NO_ACCESS_POLICY_CAPABILITIES);
+        setPortalGrants(portalGrantsOf(res));
         setSavedPortalAccounts(portalApi.listSavedAccounts());
         if (res.user.must_change_password) {
           setChangePasswordOpen(true);
@@ -863,6 +735,8 @@ export function ApiKeyLookupPage() {
   const hydratePortalSession = useCallback(async () => {
     const res = await portalApi.me();
     setPortalUser(res.user);
+    setPortalCaps(res.capabilities ?? NO_ACCESS_POLICY_CAPABILITIES);
+    setPortalGrants(portalGrantsOf(res));
     setSavedPortalAccounts(portalApi.listSavedAccounts());
     if (res.user.must_change_password) {
       setChangePasswordOpen(true);
@@ -893,6 +767,16 @@ export function ApiKeyLookupPage() {
         setChangePasswordOpen(true);
         setPortalKeys([]);
       } else {
+        // 登录响应里的账号没有模板覆盖后的额度与用量，也没有能力声明：再取一次 /auth/me，
+        // 否则刚登录时 Key 的子额度天花板和「我的账号额度」都是空的，要刷新页面才对。
+        try {
+          const me = await portalApi.me();
+          setPortalUser(me.user);
+          setPortalCaps(me.capabilities ?? NO_ACCESS_POLICY_CAPABILITIES);
+          setPortalGrants(portalGrantsOf(me));
+        } catch {
+          // 拿不到时保持登录响应里的账号，按旧后端的能力显示。
+        }
         const keys = await portalApi.listKeys();
         const items = keys.items ?? [];
         setPortalKeys(items);
@@ -1015,7 +899,7 @@ export function ApiKeyLookupPage() {
       setChartLoading(false);
 
       // Align usageSubject immediately so the effect can revalidate under the new id.
-      setPortalUser({
+      setPortalUser(normalizeEndUser({
         id: target.user.id,
         tenant_id: "",
         username: target.user.username,
@@ -1025,7 +909,7 @@ export function ApiKeyLookupPage() {
         created_at: "",
         updated_at: "",
         version: 0,
-      });
+      }));
 
       try {
         await hydratePortalSession();
@@ -1233,15 +1117,11 @@ export function ApiKeyLookupPage() {
   // ================================================================
 
   const showLanding = !queriedKey && !portalUser && !portalSessionPending && !error;
+  const pinnedTab = isPinnedLookupTab(activeTab);
 
   return (
     <PageBackground variant={showLanding ? "landing" : "app"}>
-      <div
-        className={[
-          "relative min-h-dvh pt-14",
-          showLanding ? "" : "bg-canvas",
-        ].join(" ")}
-      >
+      <div className={lookupShellClassName(showLanding, pinnedTab)}>
         <LookupHeader
           t={t}
           showLanding={showLanding}
@@ -1261,7 +1141,7 @@ export function ApiKeyLookupPage() {
         />
 
         <main
-          className={showLanding ? "w-full" : "mx-auto max-w-screen-xl space-y-5 px-4 py-6 sm:px-6"}
+          className={lookupMainClassName(showLanding, pinnedTab)}
         >
           {/* Error */}
           {error && (
@@ -1286,6 +1166,8 @@ export function ApiKeyLookupPage() {
                 quotaLimits={quotaLimits}
                 quotaScopes={quotaScopes}
                 showKeysTab={Boolean(portalUser)}
+                showWordsTab={Boolean(portalUser) && portalGrants.words}
+                showPrivacyTab={Boolean(portalUser) && portalGrants.privacyMasking}
               />
 
               {activeTab === "usage" && usageReady ? (
@@ -1324,14 +1206,9 @@ export function ApiKeyLookupPage() {
                     busy={portalKeysBusy}
                     loading={portalKeysLoading}
                     onRefresh={() => void syncPortalKeys()}
-                    onCreate={() => {
-                      setPortalKeyForm({
-                        name: "",
-                        periods: emptyPeriodSpendingDraft(),
-                      });
-                      setPortalKeyQuotaError("");
-                      setCreateKeyOpen(true);
-                    }}
+                    account={portalUser}
+                    accessPolicy={portalCaps.accessPolicy}
+                    onCreate={() => setKeyEditor({ mode: "create" })}
                     onRotate={(key) => {
                       setPortalKeysBusy(true);
                       void portalApi
@@ -1347,24 +1224,14 @@ export function ApiKeyLookupPage() {
                         })
                         .finally(() => setPortalKeysBusy(false));
                     }}
-                    onEdit={(key) => {
-                      setEditKeyTarget(key);
-                      setPortalKeyQuotaError("");
-                      setPortalKeyForm({
-                        name: key.name ?? "",
-                        periods: limitsToPeriodSpendingDraft(
-                          normalizePeriodSpendingLimits(
-                            key["period-spending-limits"],
-                            key["daily-spending-limit"],
-                          ),
-                        ),
-                      });
-                    }}
+                    onEdit={(key) => setKeyEditor({ mode: "edit", key })}
                     onResetPeriodSpending={setResetSpendingTarget}
                     onDelete={setDeleteKeyTarget}
                   />
                 </Reveal>
               ) : null}
+
+              {portalUser ? <PortalSelfServiceTabs key={portalUser.id} activeTab={activeTab} grants={portalGrants} /> : null}
 
               {activeTab === "logs" && usageReady ? (
                 <PublicLogsSection
@@ -1413,15 +1280,8 @@ export function ApiKeyLookupPage() {
                 </Reveal>
               ) : null}
 
-              {(activeTab === "models" || activeTab === "quickImport") &&
-              !queriedKey &&
-              portalUser ? (
-                <div className="bg-subtle rounded-2xl px-6 py-12 text-center text-sm text-ink-3">
-                  {t("apikey_lookup.operational_key_required", {
-                    defaultValue:
-                      "请先创建一把可用 Key；模型列表和快速导入需要凭证，用量与日志仍按账号聚合。",
-                  })}
-                </div>
+              {(activeTab === "models" || activeTab === "quickImport") && !queriedKey && portalUser ? (
+                <OperationalKeyRequired t={t} />
               ) : null}
             </>
           )}
@@ -1490,84 +1350,29 @@ export function ApiKeyLookupPage() {
           }}
         />
 
-        <OwnedApiKeyQuotaModal
-          t={t}
-          open={createKeyOpen}
-          mode="create"
-          value={portalKeyForm}
-          accountLimits={portalAccountPeriodLimits}
-          saving={portalKeysBusy}
-          serverError={portalKeyQuotaError}
-          onChange={setPortalKeyForm}
-          onClose={() => {
-            if (portalKeysBusy) return;
-            setCreateKeyOpen(false);
-            setPortalKeyQuotaError("");
-          }}
-          // 名称必填与重名由表单就地校验（existingNames），走到这里时已经通过。
-          existingNames={portalKeys.map((key) => key.name || "")}
-          onSubmit={() => {
-            const name = portalKeyForm.name.trim();
-            const limits = periodSpendingDraftToLimits(portalKeyForm.periods);
-            setPortalKeysBusy(true);
-            setPortalKeyQuotaError("");
-            void portalApi
-              .createKey({
-                name,
-                "daily-spending-limit": limits.day,
-                "period-spending-limits": limits,
-              })
-              .then(async (response) => {
-                if (response.plaintext_key) {
-                  setSecretOnce(response.plaintext_key);
-                  setOperationalKeyId(response.api_key.id);
-                  setApiKeyInput(response.plaintext_key);
-                  setQueriedKey(response.plaintext_key);
-                }
-                setCreateKeyOpen(false);
-                await refreshPortalKeys();
-              })
-              .catch((err) => setPortalKeyQuotaError(formatQuotaValidationError(err, t)))
-              .finally(() => setPortalKeysBusy(false));
-          }}
-        />
-
-        <OwnedApiKeyQuotaModal
-          t={t}
-          open={editKeyTarget !== null}
-          mode="edit"
-          value={portalKeyForm}
-          accountLimits={portalAccountPeriodLimits}
-          saving={portalKeysBusy}
-          serverError={portalKeyQuotaError}
-          onChange={setPortalKeyForm}
-          onClose={() => {
-            if (portalKeysBusy) return;
-            setEditKeyTarget(null);
-            setPortalKeyQuotaError("");
-          }}
-          onSubmit={() => {
-            if (!editKeyTarget) return;
-            const limits = periodSpendingDraftToLimits(portalKeyForm.periods);
-            setPortalKeysBusy(true);
-            setPortalKeyQuotaError("");
-            void portalApi
-              .updateKey(editKeyTarget.id, {
-                name: portalKeyForm.name.trim(),
-                "daily-spending-limit": limits.day,
-                "period-spending-limits": limits,
-              })
-              .then(async () => {
-                setEditKeyTarget(null);
-                await refreshPortalKeys();
-              })
-              .catch((err) => setPortalKeyQuotaError(formatQuotaValidationError(err, t)))
-              .finally(() => setPortalKeysBusy(false));
+        <PortalKeyEditor
+          state={keyEditor}
+          account={portalUser}
+          keys={portalKeys}
+          capabilities={portalCaps}
+          catalog={portalModelCatalog}
+          busy={portalKeysBusy}
+          onBusyChange={setPortalKeysBusy}
+          onClose={() => setKeyEditor(null)}
+          onSaved={refreshPortalKeys}
+          onCreated={async (response) => {
+            if (response.plaintext_key) {
+              setSecretOnce(response.plaintext_key);
+              setOperationalKeyId(response.api_key.id);
+              setApiKeyInput(response.plaintext_key);
+              setQueriedKey(response.plaintext_key);
+            }
+            await refreshPortalKeys();
           }}
         />
 
         <PortalKeyPeriodQuotaResetModal
-          target={resetSpendingTarget} busy={portalKeysBusy}
+          target={resetSpendingTarget} busy={portalKeysBusy} accessPolicy={portalCaps.accessPolicy}
           onClose={() => setResetSpendingTarget(null)}
           onReset={refreshPortalKeys} onBusyChange={setPortalKeysBusy}
         />

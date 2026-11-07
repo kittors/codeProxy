@@ -259,16 +259,15 @@ export function AttemptsTab({
         </div>
       </div>
 
-      <div className="relative min-h-0 flex-1 overflow-hidden">
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
         <DataTable<AuthAttempt>
+          fill
           tableId="ip-access-attempts"
           rows={items}
           columns={columns}
           rowKey={(item) => String(item.id)}
           loading={loading}
           virtualize={false}
-          height="h-full"
-          minHeight="min-h-full"
           minWidth="min-w-[1100px]"
           emptyText={t("ip_access.no_attempts")}
           showAllLoadedMessage={false}

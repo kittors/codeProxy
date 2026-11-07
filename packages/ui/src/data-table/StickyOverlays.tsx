@@ -70,7 +70,7 @@ export function syncStickyOverlayHeights(
 }
 
 /** Border-box height of an element, kept current with a ResizeObserver. */
-export function useObservedHeight(ref: RefObject<HTMLElement | null>): number {
+export function useObservedHeight(ref: RefObject<HTMLElement | null>, measureKey?: unknown): number {
   const [height, setHeight] = useState(0);
   useLayoutEffect(() => {
     const element = ref.current;
@@ -79,6 +79,13 @@ export function useObservedHeight(ref: RefObject<HTMLElement | null>): number {
     observer.observe(element);
     return () => observer.disconnect();
   }, [ref]);
+  // ResizeObserver reports a frame late. When measureKey changes (rows arrive, loading ends),
+  // measure before paint too: a fill table's empty state spans the whole frame, and the sticky
+  // rails sized from it would hang below the last row until the observer caught up.
+  useLayoutEffect(() => {
+    const element = ref.current;
+    if (element) setHeight(Math.ceil(element.offsetHeight));
+  }, [ref, measureKey]);
   return height;
 }
 

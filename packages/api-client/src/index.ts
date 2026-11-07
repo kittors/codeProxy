@@ -64,17 +64,27 @@ export {
 } from "./client/portal-client";
 export type { PortalAuthSnapshot, SavedPortalAccount } from "./client/portal-client";
 export type * from "./dto/types";
-export { endUsersApi, portalApi } from "./endpoints/end-users";
+export {
+  endUsersApi,
+  normalizeEndUser,
+  normalizeEndUserAPIKey,
+  portalApi,
+} from "./endpoints/end-users";
+export * from "./endpoints/access-policy";
 export type * from "./endpoints/end-users";
 
 export { configApi } from "./endpoints/config";
 export type * from "./endpoints/config";
+export { payloadRulesApi, readConfigCapabilities } from "./endpoints/payload-rules";
+export type * from "./endpoints/payload-rules";
 export { usageApi } from "./endpoints/usage";
 export type * from "./endpoints/usage";
 export {
+  MONITOR_IN_FLIGHT_STAGES,
   MONITOR_RANGE_KEYS,
   buildMonitorQueryString,
   emptyMonitorTotals,
+  normalizeMonitorInFlight,
   normalizeMonitorOverview,
   normalizeMonitorRealtime,
   normalizeMonitorTotals,
@@ -82,6 +92,18 @@ export {
 } from "./endpoints/usage-monitor";
 export type * from "./endpoints/usage-monitor";
 export { providersApi } from "./endpoints/providers";
+export {
+  isChannelCoolingSupported,
+  readChannelCoolingSupport,
+  rememberChannelCoolingSupport,
+  subscribeChannelCoolingSupport,
+} from "./endpoints/channel-cooling";
+export {
+  loopGuardApi,
+  normalizeLoopGuardKey,
+  normalizeLoopGuardTenant,
+} from "./endpoints/loop-guard";
+export type * from "./endpoints/loop-guard";
 export { configFileApi } from "./endpoints/config-file";
 export { logsApi } from "./endpoints/logs";
 export { oauthApi } from "./endpoints/oauth";
@@ -90,7 +112,21 @@ export type {
   OAuthCallbackSubmission,
   OAuthProxyOptions,
 } from "./endpoints/oauth";
-export { authFilesApi } from "./endpoints/auth-files";
+export {
+  authFilesApi,
+  authFileSharingId,
+  readAuthFileSharing,
+  readAuthFilesSharing,
+} from "./endpoints/auth-files";
+export type { AuthFilesSharingView } from "./endpoints/auth-files";
+export {
+  NO_SHARING_CAPABILITY,
+  normalizeResourceSharing,
+  normalizeSharingCapability,
+  normalizeTenantRefs,
+  toRawResourceSharing,
+} from "./endpoints/resource-sharing";
+export type * from "./endpoints/resource-sharing";
 export { apiCallApi, getApiCallErrorMessage } from "./endpoints/api-call";
 export { ampcodeApi } from "./endpoints/ampcode";
 export { vertexApi } from "./endpoints/vertex";
@@ -126,6 +162,16 @@ export { identityFingerprintApi } from "./endpoints/identity-fingerprint";
 export type * from "./endpoints/identity-fingerprint";
 export { ipAccessApi } from "./endpoints/ip-access";
 export type * from "./endpoints/ip-access";
+export { observabilityApi } from "./endpoints/observability";
+export type * from "./endpoints/observability";
+export { alertsApi } from "./endpoints/alerts";
+export { privacyMaskingApi } from "./endpoints/privacy-masking";
+export type * from "./endpoints/privacy-masking";
+export { privacyMaskingPortalApi } from "./endpoints/privacy-masking-portal";
+export type * from "./endpoints/privacy-masking-portal";
+export type * from "./endpoints/alerts";
+export { poolCapacityApi } from "./endpoints/poolCapacity";
+export type * from "./endpoints/poolCapacity";
 export { updateApi } from "./endpoints/update";
 export type * from "./endpoints/update";
 export { imageGenerationApi } from "./endpoints/image-generation";
@@ -137,16 +183,37 @@ export type * from "./endpoints/proxies";
 export {
   contentModerationApi,
   CONTENT_MODERATION_SCANNERS,
+  NO_CONTENT_MODERATION_PROFILE_CAPABILITIES,
+  readContentModerationProfileCapabilities,
 } from "./endpoints/content-moderation";
 export type * from "./endpoints/content-moderation";
 export {
+  WORD_ACTIONS,
+  WORD_SCAN_SCOPES,
+  isWordPolicyVersionConflict,
+  readWordRuleProblems,
+  wordPolicyApi,
+} from "./endpoints/content-moderation-words";
+export type * from "./endpoints/content-moderation-words";
+export { portalWordPolicyApi } from "./endpoints/portal-word-policy";
+export type * from "./endpoints/portal-word-policy";
+export {
   ccSwitchImportConfigsApi,
+  NO_CC_SWITCH_IMPORT_CAPABILITIES,
   normalizeCcSwitchImportConfigs,
+  parseCcSwitchImportCapabilities,
+  serializeCcSwitchImportConfig,
+} from "./endpoints/ccswitch-import-configs";
+export type {
+  CcSwitchImportCapabilities,
+  CcSwitchImportConfigsSnapshot,
 } from "./endpoints/ccswitch-import-configs";
 export { channelGroupsApi } from "./endpoints/channel-groups";
 export type * from "./endpoints/channel-groups";
-export { routingConfigApi } from "./endpoints/routing-config";
+export { routingConfigApi, routingVirtualModelsApi } from "./endpoints/routing-config";
 export type * from "./endpoints/routing-config";
+export { routingSimulationApi } from "./endpoints/routing-simulation";
+export type * from "./endpoints/routing-simulation";
 export {
   isRecord,
   extractArrayPayload,
@@ -165,6 +232,7 @@ export {
   normalizeOauthModelAlias,
   normalizeApiKeyEntries,
 } from "./endpoints/helpers";
+export { carryRawRecord, readRawRecord, withRawRecord } from "./endpoints/provider-raw";
 
 export {
   identityApi,

@@ -1,26 +1,29 @@
 import {
+  CC_SWITCH_CLAUDE_ROLES,
   getCcSwitchClientConfig,
-  normalizeCcSwitchCodexInlineModelCatalog,
+  isCcSwitchClientType,
   type CcSwitchClaudeModelRole,
   type CcSwitchClientType,
-} from "./ccswitchImport";
-import {
-  DEFAULT_CC_SWITCH_IMPORT_SETTINGS,
-  normalizeCcSwitchClaudeAuthField,
-  normalizeCcSwitchEndpointPath,
-  normalizeCcSwitchImportSettings,
-  type CcSwitchClaudeAuthField,
-} from "./ccswitchImportSettings";
+} from "./ccswitchClients";
 
+/**
+ * One model the preset's route serves.
+ *
+ * The desktop app sends `requestModel`; the backend rewrites it to `targetModel` on this
+ * preset's route (Claude in the Claude handler, the OpenAI-protocol apps in middleware) and
+ * only lets the route reach the models listed here. Links that are already imported keep
+ * sending the request names they were given, so a mapping whose request name differs from
+ * its target must survive edits.
+ */
 export interface CcSwitchModelMapping {
+  role?: CcSwitchClaudeModelRole;
   requestModel: string;
   targetModel: string;
-  role?: CcSwitchClaudeModelRole;
+  /**
+   * Per-model context window saved by earlier editors. Links no longer read it (the preset's
+   * `codexContextWindow` replaced it); it is kept as stored and never edited.
+   */
   contextWindow?: number;
-}
-
-export interface CcSwitchImportCodexModelCatalog {
-  models: Array<Record<string, unknown>>;
 }
 
 export interface CcSwitchImportConfigListItem {
@@ -28,21 +31,37 @@ export interface CcSwitchImportConfigListItem {
   clientType: CcSwitchClientType;
   providerName: string;
   note: string;
+  /**
+   * Claude Code: the main model's target, as earlier panels stored it. Other apps: the
+   * request name of the default model, which the link sends as `model`.
+   */
   defaultModel: string;
   modelMappings: CcSwitchModelMapping[];
   allowedChannelGroups: string[];
   routePath: string;
+  /**
+   * Older panels join this onto the route path when they build a link, so saves keep it
+   * equal to the app's suffix. The current link derives the suffix from the app instead.
+   */
   endpointPath: string;
   usageAutoInterval: number;
-  apiKeyField?: CcSwitchClaudeAuthField;
-  codexModelCatalogFilename?: string;
-  codexModelCatalog?: CcSwitchImportCodexModelCatalog;
+  /**
+   * Codex: the `model_context_window` the link writes into config.toml. Unset leaves the
+   * window to Codex. Stored by backends that report the `codex-context-window` capability.
+   */
+  codexContextWindow?: number;
+  /**
+   * Codex: each request model's default reasoning effort, lower-cased id → effort, read from
+   * the catalog the backend generates on GET. Never saved back.
+   */
+  codexReasoningEfforts?: Record<string, string>;
 }
 
-const CLIENT_TYPES: CcSwitchClientType[] = ["claude", "codex", "gemini"];
+export const DEFAULT_CC_SWITCH_USAGE_AUTO_INTERVAL = 30;
 
-const defaultProviderName = (clientType: CcSwitchClientType) =>
-  `CliProxy ${getCcSwitchClientConfig(clientType).fallbackLabel}`;
+export function defaultCcSwitchProviderName(clientType: CcSwitchClientType): string {
+  return `CliProxy ${getCcSwitchClientConfig(clientType).fallbackLabel}`;
+}
 
 const normalizeChannelGroups = (value: unknown): string[] => {
   if (!Array.isArray(value)) return [];
@@ -61,26 +80,37 @@ const normalizeChannelGroups = (value: unknown): string[] => {
   return items;
 };
 
-const normalizeClaudeRole = (value: unknown): CcSwitchClaudeModelRole | undefined => {
+export function normalizeCcSwitchClaudeRole(value: unknown): CcSwitchClaudeModelRole | undefined {
   const normalized = String(value ?? "")
     .trim()
     .toLowerCase();
-  return normalized === "main" ||
-    normalized === "haiku" ||
-    normalized === "sonnet" ||
-    normalized === "opus" ||
-    normalized === "fable"
-    ? normalized
+  return (CC_SWITCH_CLAUDE_ROLES as readonly string[]).includes(normalized)
+    ? (normalized as CcSwitchClaudeModelRole)
     : undefined;
-};
+}
 
-const normalizeContextWindow = (value: unknown): number | undefined => {
+export function normalizeCcSwitchContextWindow(value: unknown): number | undefined {
   const parsed = typeof value === "number" ? value : Number(String(value ?? ""));
   if (!Number.isFinite(parsed) || parsed <= 0) return undefined;
   return Math.round(parsed);
+}
+
+const firstText = (...values: unknown[]): string => {
+  for (const value of values) {
+    const text = typeof value === "string" ? value.trim() : "";
+    if (text) return text;
+  }
+  return "";
 };
 
-const normalizeModelMappings = (value: unknown): CcSwitchModelMapping[] => {
+/**
+ * Accepts the backend's kebab-case rows and the panel's camelCase objects.
+ *
+ * A missing request name means "the target itself", as the backend stores it. A Claude
+ * request name equal to its role ("haiku") is treated the same way: earlier panels filled
+ * the role in as a placeholder and never sent it in a link.
+ */
+export function normalizeCcSwitchModelMappings(value: unknown): CcSwitchModelMapping[] {
   if (!Array.isArray(value)) return [];
   const seen = new Set<string>();
   const mappings: CcSwitchModelMapping[] = [];
@@ -88,47 +118,89 @@ const normalizeModelMappings = (value: unknown): CcSwitchModelMapping[] => {
   value.forEach((entry) => {
     if (!entry || typeof entry !== "object" || Array.isArray(entry)) return;
     const record = entry as Record<string, unknown>;
-    const role = normalizeClaudeRole(record.role);
-    const targetModel = String(
-      record["target-model"] ?? record.targetModel ?? record.target ?? record.name ?? "",
-    ).trim();
-    const requestModel = String(
-      record["request-model"] ??
-        record.requestModel ??
-        record.request ??
-        record.alias ??
-        record.from ??
-        (role ? role : targetModel),
-    ).trim();
-    if (!targetModel || (!role && !requestModel)) return;
+    const role = normalizeCcSwitchClaudeRole(record.role);
+    const targetModel = firstText(
+      record["target-model"],
+      record.targetModel,
+      record.target,
+      record.name,
+    );
+    if (!targetModel) return;
+    const rawRequestModel = firstText(
+      record["request-model"],
+      record.requestModel,
+      record.request,
+      record.alias,
+    );
+    const requestModel =
+      !rawRequestModel || (role && rawRequestModel.toLowerCase() === role)
+        ? targetModel
+        : rawRequestModel;
     const key = role
       ? `role:${role}`
       : `${requestModel.toLowerCase()}::${targetModel.toLowerCase()}`;
     if (seen.has(key)) return;
     seen.add(key);
+    const contextWindow = normalizeCcSwitchContextWindow(
+      record["context-window"] ?? record.contextWindow,
+    );
     mappings.push({
       ...(role ? { role } : {}),
       requestModel,
       targetModel,
-      ...(normalizeContextWindow(record["context-window"] ?? record.contextWindow) !== undefined
-        ? {
-            contextWindow: normalizeContextWindow(record["context-window"] ?? record.contextWindow),
-          }
-        : {}),
+      ...(contextWindow !== undefined ? { contextWindow } : {}),
     });
   });
 
   return mappings;
+}
+
+const normalizeReasoningEfforts = (value: unknown): Record<string, string> | undefined => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const efforts: Record<string, string> = {};
+  for (const [model, effort] of Object.entries(value as Record<string, unknown>)) {
+    const key = model.trim().toLowerCase();
+    const level = typeof effort === "string" ? effort.trim() : "";
+    if (key && level) efforts[key] = level;
+  }
+  return Object.keys(efforts).length > 0 ? efforts : undefined;
 };
 
-const normalizeUsageAutoInterval = (value: unknown, fallback: number) => {
+/**
+ * Pulls the per-model default reasoning effort out of the backend's Codex catalog
+ * (`codex-model-catalog`, generated on GET from the model registry). The rest of the
+ * catalog is not used: CC Switch keeps its own model catalog file and ignores one in a link.
+ */
+export function ccSwitchCodexReasoningEffortsFromCatalog(
+  catalog: unknown,
+): Record<string, string> | undefined {
+  if (!catalog || typeof catalog !== "object" || Array.isArray(catalog)) return undefined;
+  const models = (catalog as { models?: unknown }).models;
+  if (!Array.isArray(models)) return undefined;
+  const efforts: Record<string, string> = {};
+  for (const entry of models) {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) continue;
+    const record = entry as Record<string, unknown>;
+    const model = firstText(record.slug, record.model).toLowerCase();
+    const effort = firstText(record.default_reasoning_level, record.defaultReasoningLevel);
+    if (model && effort && !(model in efforts)) efforts[model] = effort;
+  }
+  return Object.keys(efforts).length > 0 ? efforts : undefined;
+}
+
+const normalizeUsageAutoInterval = (value: unknown) => {
   const parsed = Number(value);
-  if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
+  if (!Number.isFinite(parsed) || parsed <= 0) return DEFAULT_CC_SWITCH_USAGE_AUTO_INTERVAL;
   return Math.round(parsed);
 };
 
-const normalizeCodexModelCatalog = (value: unknown): CcSwitchImportCodexModelCatalog | undefined =>
-  normalizeCcSwitchCodexInlineModelCatalog(value);
+/** `/a/b` with no trailing slash, or "" for the root. */
+export function normalizeCcSwitchRoutePath(value: unknown): string {
+  const raw = String(value ?? "").trim();
+  if (!raw || raw === "/") return "";
+  const withSlash = raw.startsWith("/") ? raw : `/${raw}`;
+  return withSlash.replace(/\/+$/, "");
+}
 
 const createConfigId = () => {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -164,6 +236,10 @@ export function createCcSwitchRoutePath(group: string, seed: string = createConf
   return `/${groupSegment}/cs_${routeTokenFromSeed(seed)}`;
 }
 
+/**
+ * Keeps an existing route path while it still starts with the group; otherwise derives a
+ * new one. The token comes from the preset id, so it stays the same across group changes.
+ */
 export function ensureCcSwitchRoutePath(
   routePath: string | undefined,
   group: string,
@@ -171,98 +247,47 @@ export function ensureCcSwitchRoutePath(
 ): string {
   const groupSegment = normalizeRouteSegment(group);
   if (!groupSegment) return "";
-  const normalizedRoutePath = normalizeCcSwitchEndpointPath(routePath);
+  const normalizedRoutePath = normalizeCcSwitchRoutePath(routePath);
   if (normalizedRoutePath.toLowerCase().startsWith(`/${groupSegment}/`)) {
     return normalizedRoutePath;
   }
   return createCcSwitchRoutePath(groupSegment, seed);
 }
 
-export function deriveCcSwitchImportSettingsFromConfigList(
-  configs: readonly CcSwitchImportConfigListItem[],
-) {
-  return normalizeCcSwitchImportSettings({
-    claude: {
-      endpointPath:
-        configs.find((item) => item.clientType === "claude")?.endpointPath ??
-        DEFAULT_CC_SWITCH_IMPORT_SETTINGS.claude.endpointPath,
-      defaultModel:
-        configs.find((item) => item.clientType === "claude")?.defaultModel ??
-        DEFAULT_CC_SWITCH_IMPORT_SETTINGS.claude.defaultModel,
-      usageAutoInterval:
-        configs.find((item) => item.clientType === "claude")?.usageAutoInterval ??
-        DEFAULT_CC_SWITCH_IMPORT_SETTINGS.claude.usageAutoInterval,
-      apiKeyField:
-        configs.find((item) => item.clientType === "claude")?.apiKeyField ??
-        DEFAULT_CC_SWITCH_IMPORT_SETTINGS.claude.apiKeyField,
-    },
-    codex: {
-      endpointPath:
-        configs.find((item) => item.clientType === "codex")?.endpointPath ??
-        DEFAULT_CC_SWITCH_IMPORT_SETTINGS.codex.endpointPath,
-      defaultModel:
-        configs.find((item) => item.clientType === "codex")?.defaultModel ??
-        DEFAULT_CC_SWITCH_IMPORT_SETTINGS.codex.defaultModel,
-      usageAutoInterval:
-        configs.find((item) => item.clientType === "codex")?.usageAutoInterval ??
-        DEFAULT_CC_SWITCH_IMPORT_SETTINGS.codex.usageAutoInterval,
-    },
-    gemini: {
-      endpointPath:
-        configs.find((item) => item.clientType === "gemini")?.endpointPath ??
-        DEFAULT_CC_SWITCH_IMPORT_SETTINGS.gemini.endpointPath,
-      defaultModel:
-        configs.find((item) => item.clientType === "gemini")?.defaultModel ??
-        DEFAULT_CC_SWITCH_IMPORT_SETTINGS.gemini.defaultModel,
-      usageAutoInterval:
-        configs.find((item) => item.clientType === "gemini")?.usageAutoInterval ??
-        DEFAULT_CC_SWITCH_IMPORT_SETTINGS.gemini.usageAutoInterval,
-    },
-  });
-}
-
 export function createCcSwitchImportConfig(
   input: Partial<CcSwitchImportConfigListItem> & Pick<CcSwitchImportConfigListItem, "clientType">,
 ): CcSwitchImportConfigListItem {
-  const defaults = DEFAULT_CC_SWITCH_IMPORT_SETTINGS[input.clientType];
-  const modelMappings = normalizeModelMappings(input.modelMappings);
-  const codexModelCatalog =
-    input.clientType === "codex" ? normalizeCodexModelCatalog(input.codexModelCatalog) : undefined;
+  const client = getCcSwitchClientConfig(input.clientType);
+  const modelMappings = normalizeCcSwitchModelMappings(input.modelMappings);
   const mappedDefaultModel =
     input.clientType === "claude"
       ? modelMappings.find((mapping) => mapping.role === "main")?.targetModel
-      : modelMappings.find((mapping) => mapping.requestModel)?.requestModel;
-
-  const id = String(input.id ?? "").trim() || createConfigId();
+      : modelMappings.find((mapping) => !mapping.role)?.requestModel;
+  const codexReasoningEfforts =
+    input.clientType === "codex"
+      ? normalizeReasoningEfforts(input.codexReasoningEfforts)
+      : undefined;
+  // Only Codex reads a context window; the backend stores 0 for every other app.
+  const codexContextWindow =
+    input.clientType === "codex"
+      ? normalizeCcSwitchContextWindow(input.codexContextWindow)
+      : undefined;
 
   return {
-    id,
+    id: String(input.id ?? "").trim() || createConfigId(),
     clientType: input.clientType,
-    providerName: String(input.providerName ?? "").trim() || defaultProviderName(input.clientType),
+    providerName:
+      String(input.providerName ?? "").trim() || defaultCcSwitchProviderName(input.clientType),
     note: String(input.note ?? "").trim(),
     defaultModel:
-      String(input.defaultModel ?? "").trim() ||
-      String(mappedDefaultModel ?? "").trim() ||
-      String(defaults.defaultModel ?? "").trim(),
+      String(input.defaultModel ?? "").trim() || String(mappedDefaultModel ?? "").trim(),
     modelMappings,
     allowedChannelGroups: normalizeChannelGroups(input.allowedChannelGroups),
-    routePath: normalizeCcSwitchEndpointPath(input.routePath),
-    endpointPath: normalizeCcSwitchEndpointPath(input.endpointPath ?? defaults.endpointPath),
-    usageAutoInterval: normalizeUsageAutoInterval(
-      input.usageAutoInterval,
-      defaults.usageAutoInterval,
-    ),
-    ...(input.clientType === "claude"
-      ? {
-          apiKeyField: normalizeCcSwitchClaudeAuthField(input.apiKeyField ?? defaults.apiKeyField),
-        }
-      : {}),
-    ...(input.clientType === "codex" && codexModelCatalog
-      ? {
-          codexModelCatalogFilename: String(input.codexModelCatalogFilename ?? "").trim(),
-          codexModelCatalog,
-        }
-      : {}),
+    routePath: normalizeCcSwitchRoutePath(input.routePath),
+    endpointPath: normalizeCcSwitchRoutePath(input.endpointPath ?? client.endpointSuffix),
+    usageAutoInterval: normalizeUsageAutoInterval(input.usageAutoInterval),
+    ...(codexContextWindow ? { codexContextWindow } : {}),
+    ...(codexReasoningEfforts ? { codexReasoningEfforts } : {}),
   };
 }
 
@@ -272,11 +297,8 @@ export function normalizeCcSwitchImportConfigList(
   return configs
     .map((item) => {
       const clientType = item.clientType;
-      if (!clientType || !CLIENT_TYPES.includes(clientType)) return null;
-      return createCcSwitchImportConfig({
-        ...item,
-        clientType,
-      });
+      if (!isCcSwitchClientType(clientType)) return null;
+      return createCcSwitchImportConfig({ ...item, clientType });
     })
     .filter((item): item is CcSwitchImportConfigListItem => Boolean(item));
 }

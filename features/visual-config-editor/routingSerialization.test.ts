@@ -25,6 +25,11 @@ describe("routing scheduling weight round-trip", () => {
     expect(result?.["channel-priorities"]).toEqual({ A: 0, B: 4 });
   });
 
+  it("keeps the reset-aware distribution and mirrors fill-first for older readers", () => {
+    const result = roundTrip({ scheduling: { distribution: "reset-aware" } });
+    expect(result).toMatchObject({ scheduling: { distribution: "reset-aware" }, strategy: "fill-first" });
+  });
+
   it("retains legacy priorities when scheduling has no weight map", () => {
     const result = roundTrip({
       scheduling: { distribution: "least-load" },
@@ -83,5 +88,50 @@ describe("routing scheduling weight round-trip", () => {
     });
     expect(result?.["allowed-models"]).toEqual(["grok-4.5", "grok-4.6"]);
     expect(result?.["excluded-models"]).toEqual(["grok-4.6", "grok-imagine-*"]);
+  });
+
+  // Only a setting that was read (or set) is written: leaving it out resets a
+  // following group, and writing it for every group would freeze each unset one
+  // at today's default.
+  it("writes follow-upstream-models back exactly as read", () => {
+    expect(roundTrip({ "allowed-models": ["gpt-6.1-sol"], "follow-upstream-models": true })).toMatchObject({
+      "follow-upstream-models": true,
+    });
+    expect(roundTrip({ name: "default", "follow-upstream-models": false })).toMatchObject({
+      "follow-upstream-models": false,
+    });
+    expect(roundTrip({ "allowed-models": ["gpt-6.1-sol"] })).not.toHaveProperty("follow-upstream-models");
+  });
+});
+
+describe("channel-group stream guards round-trip", () => {
+  const roundTrip = (fields: Record<string, unknown>) =>
+    serializeRoutingChannelGroupsForYaml(
+      parseRoutingChannelGroups([{ name: "group", match: { channels: ["A"] }, ...fields }]),
+    )[0];
+
+  // Routing is saved whole: a key the panel drops is a setting it resets.
+  it("writes both back exactly as stored", () => {
+    expect(
+      roundTrip({ "first-token-timeout-seconds": 30, "busy-wait-max-seconds": 120 }),
+    ).toMatchObject({ "first-token-timeout-seconds": 30, "busy-wait-max-seconds": 120 });
+  });
+
+  // Both are off, but a stored 0 is an explicit choice and must not turn into unset.
+  it("keeps a busy wait of 0 apart from an unset one", () => {
+    expect(roundTrip({ "busy-wait-max-seconds": 0 })).toMatchObject({ "busy-wait-max-seconds": 0 });
+    expect(roundTrip({})).not.toHaveProperty("busy-wait-max-seconds");
+  });
+
+  it("leaves out what was never set, and an off timeout", () => {
+    const result = roundTrip({ "first-token-timeout-seconds": 0 });
+    expect(result).not.toHaveProperty("first-token-timeout-seconds");
+    expect(result).not.toHaveProperty("busy-wait-max-seconds");
+  });
+
+  it("ignores values that are not whole seconds", () => {
+    const result = roundTrip({ "first-token-timeout-seconds": "30", "busy-wait-max-seconds": -1 });
+    expect(result).not.toHaveProperty("first-token-timeout-seconds");
+    expect(result).not.toHaveProperty("busy-wait-max-seconds");
   });
 });

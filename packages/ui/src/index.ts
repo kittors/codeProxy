@@ -83,7 +83,6 @@ export {
 export type { Hue } from "./theme/hues";
 export { useScrollFade } from "./hooks/useScrollFade";
 export { ScrollFade } from "./primitives/ScrollFade";
-export type { ScrollFadeEdges } from "./hooks/useScrollFade";
 export { PlanBadge, ProviderTag, brandVars } from "./brand/BrandBadges";
 export type { PlanBadgeTier } from "./brand/BrandBadges";
 export type { ModalSize } from "./overlays/Modal";
@@ -225,6 +224,7 @@ export {
   controlTextBySize,
   controlPaddingBySize,
   controlSurface,
+  controlMultilineSurface,
   controlSurfaceTrigger,
 } from "./utils/controlStyles";
 export {

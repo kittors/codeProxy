@@ -23,10 +23,11 @@ export function DashboardLayout() {
          * - 默认「随内容流动」：<main> 是 min-h-full，内容长了 main 跟着长高，底部内边距
          *   始终排在最后一块内容之后——滚到底时内容离底边仍留着一条和左右一样宽的留白。
          *   仪表盘、监控中心这类长页面都是这种。
-         * - data-page-fill="always" | "md"「钉满一屏、内部滚动」：表格类页面让表格吃掉剩余
-         *   高度、自己在内部滚。这需要一条确定高度的 flex 链：<main> 改 h-full，这一层与
-         *   页面根都补 min-h-0（flex item 默认 min-height:auto 会被内容撑开，断一层约束
-         *   整条就失效）。"md" 只在桌面宽度钉高，窄屏照样随内容流动。
+         * - data-page-fill="always" | "md" | "lg"「钉满一屏、内部滚动」：表格类页面让表格最多
+         *   占到剩余高度、再多就自己在内部滚。这需要一条确定高度的 flex 链：<main> 改 h-full，
+         *   这一层与页面根都补 min-h-0（flex item 默认 min-height:auto 会被内容撑开，断一层约束
+         *   整条就失效）。"md" / "lg" 只在对应宽度以上钉高，更窄时照样随内容流动——"lg" 给
+         *   宽屏才分左右两栏的页面用（例如敏感词：左侧清单、右侧列表各自不动 / 滚动）。
          *
          * 以前（#909）是反过来的：对所有页面一律钉高。表格页因此不用声明，但长页面的内容
          * 会溢出被钉死的页面根，<main> 的底部内边距停在一屏高的位置，滚到底内容紧贴底边。
@@ -49,6 +50,7 @@ export function DashboardLayout() {
             "flex flex-1 flex-col [&>*:only-child]:flex-1",
             "has-[>[data-page-fill=always]]:min-h-0 [&>[data-page-fill=always]]:min-h-0",
             "md:has-[>[data-page-fill=md]]:min-h-0 md:[&>[data-page-fill=md]]:min-h-0",
+            "lg:has-[>[data-page-fill=lg]]:min-h-0 lg:[&>[data-page-fill=lg]]:min-h-0",
           ].join(" ")}
         >
           {outlet}

@@ -1,6 +1,8 @@
 import type { UsageLogItem } from "@code-proxy/api-client/endpoints/usage";
+import { readRequestCacheUse, type RequestCacheUse } from "@code-proxy/domain";
 import { parseUsageTimestampMs } from "@features/monitor-widgets/monitor-utils";
 import { normalizeChannelAuthType } from "./ChannelIdentityLabel";
+import { normalizeGuardKind } from "./requestLogGuard";
 
 // Row mapping and cell formatting for request logs, split out of
 // requestLogsShared.tsx to keep that file to its table/filter components.
@@ -29,6 +31,12 @@ export type RequestLogsRow = {
   upstreamModelMismatch: boolean;
   visionFallbackModel: string;
   failed: boolean;
+  /**
+   * Which loop protection check ended the request ("reply_loop", "tool_loop"; a kind
+   * this panel does not know is kept as it came), "" for every other request and
+   * for backends without loop protection. Such a request is also failed.
+   */
+  guardKind: string;
   streaming: boolean;
   latencyMs?: number;
   firstTokenMs?: number;
@@ -36,17 +44,38 @@ export type RequestLogsRow = {
   firstTokenText: string;
   inputTokens: number;
   cachedTokens: number;
+  /** Cache reads and writes where the backend stores them apart. */
+  cacheUse: RequestCacheUse;
   outputTokens: number;
   totalTokens: number;
   cost: number;
   hasContent: boolean;
 };
 
+/**
+ * Whether the backend behind these rows stores cache reads and writes apart,
+ * which is when the table shows them as two columns.
+ */
+export const requestLogsHaveCacheBreakdown = (rows: readonly RequestLogsRow[]): boolean =>
+  rows.some((row) => row.cacheUse.kind !== "legacy");
+
+const KEY_MASK_FILLER = "***";
+
+/**
+ * The twin of the backend's MaskAPIKey (internal/usage/api_key_mask.go): the same
+ * shape on both sides, so a mask the server stored reads the same as one built
+ * here, and masking a mask returns it unchanged. Counts code points, not UTF-16
+ * units, as the server counts runes. Nothing is left of a key of 4 or fewer.
+ */
 export const maskRequestLogApiKey = (value: string): string => {
   const trimmed = value.trim();
   if (!trimmed) return "--";
-  if (trimmed.length <= 10) return `${trimmed.slice(0, 2)}***${trimmed.slice(-2)}`;
-  return `${trimmed.slice(0, 6)}***${trimmed.slice(-4)}`;
+  const chars = Array.from(trimmed);
+  if (chars.length <= 4) return KEY_MASK_FILLER;
+  if (chars.length <= 10) {
+    return `${chars.slice(0, 2).join("")}${KEY_MASK_FILLER}${chars.slice(-2).join("")}`;
+  }
+  return `${chars.slice(0, 6).join("")}${KEY_MASK_FILLER}${chars.slice(-4).join("")}`;
 };
 
 export const formatRequestLogTimestamp = (value: string): string => {
@@ -95,6 +124,7 @@ export const toRequestLogsRow = (item: UsageLogItem): RequestLogsRow => {
     upstreamModelMismatch: item.upstream_model_mismatch === true,
     visionFallbackModel: item.vision_fallback_model || "",
     failed: item.failed,
+    guardKind: normalizeGuardKind(item.guard_kind),
     streaming: item.streaming === true,
     latencyMs: item.latency_ms,
     firstTokenMs: item.first_token_ms,
@@ -102,6 +132,7 @@ export const toRequestLogsRow = (item: UsageLogItem): RequestLogsRow => {
     firstTokenText: formatOptionalRequestLogLatencyMs(item.first_token_ms),
     inputTokens: item.input_tokens,
     cachedTokens: item.cached_tokens,
+    cacheUse: readRequestCacheUse(item),
     outputTokens: item.output_tokens,
     totalTokens: item.total_tokens,
     cost: item.cost ?? 0,

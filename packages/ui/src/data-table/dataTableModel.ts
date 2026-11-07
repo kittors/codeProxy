@@ -4,9 +4,17 @@ export const DEFAULT_ROW_HEIGHT = 44;
 export const DEFAULT_OVERSCAN = 12;
 export const DEFAULT_SCROLL_THRESHOLD = 100;
 export const DEFAULT_BOTTOM_DEBOUNCE_MS = 120;
-// v2：列宽默认值整体按语义令牌重排（见 columnWidths.ts）。v1 里保存的手动拖拽
-// 结果是针对旧默认值的，继续沿用会盖掉新默认值，因此换 key 让旧记录自然失效。
-export const COLUMN_WIDTH_STORAGE_PREFIX = "codeProxy.dataTable.columnWidths.v2";
+// v2：列宽默认值整体按语义令牌重排（见 columnWidths.ts），v1 里的拖拽结果是针对旧默认值的。
+// v3：表格不再把各列按比例拉伸，剩余宽度只给弹性列（见 columnLayout.ts 的 resolveFlexColumnKey）。
+// v2 存的是从拉伸后的宽度起算的像素：在宽屏上拖一下（以前只点一下手柄也算）就把拉伸宽度
+// 存死了，回到窄窗口加起来超过容器，表格横向溢出，右边的列整列压在固定的操作列下面
+// （2026-11 租户页：存着租户 553px、到期时间 431px，五列默认只要 734px）。这些值还原不出
+// 用户真正想要的宽度，所以换 key 作废，读取时把同一张表的旧 key 一并删掉。
+export const COLUMN_WIDTH_STORAGE_PREFIX = "codeProxy.dataTable.columnWidths.v3";
+export const LEGACY_COLUMN_WIDTH_STORAGE_PREFIXES = [
+  "codeProxy.dataTable.columnWidths.v1",
+  "codeProxy.dataTable.columnWidths.v2",
+] as const;
 export const COLUMN_RESIZE_DEBUG_STORAGE_KEY = "codeProxy.dataTable.debugResize";
 export const DEFAULT_MIN_COLUMN_WIDTH = 72;
 export const DEFAULT_MAX_COLUMN_WIDTH = 640;
@@ -95,6 +103,8 @@ export interface ColumnResizeState {
   previewBottom: number;
   previewMinClientX: number;
   previewMaxClientX: number;
+  /** 按下手柄时的宽度：松手时没变就不写存储，免得一次点击把当前宽度钉成列宽。 */
+  startWidth: number;
   currentWidth: number;
   lastDebugAtMs: number;
   debugEnabled: boolean;

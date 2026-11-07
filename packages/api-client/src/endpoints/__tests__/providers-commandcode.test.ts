@@ -110,7 +110,7 @@ describe("providersApi Command Code", () => {
 
     expect(patchMock).toHaveBeenCalledWith("/commandcode-api-key", {
       index: 2,
-      value: { name: "renamed" },
+      value: { name: "renamed", "disable-cooling": null },
     });
   });
 });

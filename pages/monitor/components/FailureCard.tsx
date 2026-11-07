@@ -12,6 +12,7 @@ import {
   formatMonitorPercent,
 } from "../model/monitorFormat";
 import type { MonitorFilterDimension } from "../model/monitorQueryState";
+import { hasLoopGuardActivity, LoopGuardSummary } from "./LoopGuardSummary";
 import { MonitorCardTitle, MonitorInlineNotice } from "./MonitorCardTitle";
 
 const SOURCE_DIMENSIONS: MonitorFilterDimension[] = ["channels", "models", "consumers"];
@@ -108,6 +109,10 @@ export function FailureCard({
         />
       ) : (
         <>
+          {hasLoopGuardActivity(overview.loop_guard) ? (
+            <LoopGuardSummary guard={overview.loop_guard} />
+          ) : null}
+
           <section aria-label={t("monitor_center.failures.sources")} className="space-y-1">
             <h4 className="text-xs font-medium text-ink-3">
               {t("monitor_center.failures.sources")}

@@ -47,6 +47,17 @@ export const emptyOwnerForm: OwnerFormState = {
   enabled: true,
 };
 
+// The last OpenRouter sync state per tenant, so the library tab paints it at once.
+const openRouterSyncStateByTenant = new Map<string, OpenRouterModelSyncState>();
+
+export function readOpenRouterSyncCache(tenantKey: string): OpenRouterModelSyncState | null {
+  return openRouterSyncStateByTenant.get(tenantKey) ?? null;
+}
+
+export function writeOpenRouterSyncCache(tenantKey: string, state: OpenRouterModelSyncState): void {
+  openRouterSyncStateByTenant.set(tenantKey, state);
+}
+
 export const defaultOpenRouterSyncState: OpenRouterModelSyncState = {
   enabled: false,
   intervalMinutes: 1440,

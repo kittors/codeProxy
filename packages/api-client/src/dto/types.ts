@@ -61,6 +61,18 @@ export interface AuthFileRestriction {
   retryable?: boolean;
   next_retry_after?: string | number;
   next_recover_at?: string | number;
+  /** 为什么被暂停调度的原因码；只在确实有东西被暂停时才有，旧后端没有。 */
+  cooldown_reason?: string;
+}
+
+/** 账号上一个正在冷却的模型（GET /auth-files 的 `model_cooldowns`）；旧后端没有这个字段。 */
+export interface AuthFileModelCooldown {
+  model: string;
+  reason?: string;
+  /** 暂停到何时（ISO 时间）；没有表示要等探测确认才恢复。 */
+  until?: string | number;
+  http_status?: number;
+  quota_exceeded?: boolean;
 }
 
 export interface ClaudeOAuthHealthWindow {
@@ -188,6 +200,7 @@ export interface AuthFileItem extends TagDisplayFields {
   unavailable?: boolean;
   next_retry_after?: string | number;
   restrictions?: AuthFileRestriction[];
+  model_cooldowns?: AuthFileModelCooldown[];
   modified?: number;
   modtime?: number;
   subscription_started_at?: string;
@@ -218,14 +231,43 @@ export interface AuthFileItem extends TagDisplayFields {
   concurrency_limit?: number;
   /** Codex identity fingerprint convergence mode override: "off", "device", "session", "full", or unset. */
   codex_convergence_mode?: "off" | "device" | "session" | "full" | "";
-  /** Codex service_tier policy override: "default", "pass", "priority", "flex", "drop", or unset. */
-  codex_service_tier?: "default" | "pass" | "priority" | "flex" | "drop" | "";
+  /** Codex service_tier policy override; upstream enforces model/account eligibility. */
+  codex_service_tier?: "default" | "pass" | "priority" | "ultrafast" | "flex" | "drop" | "";
+  /**
+   * 系统租户视角：平台把这个账号共享给了谁（未共享时没有），原样 `{all, tenant_ids}`，
+   * 读的时候用 normalizeResourceSharing。
+   */
+  sharing?: { all?: boolean; tenant_ids?: string[] } | null;
+  /**
+   * 系统租户视角：还各自持有同一上游账号副本凭据的租户。副本和共享凭据每次刷新都会让对方的
+   * refresh token 失效，应该删掉副本改用共享。
+   */
+  tenant_copies?: { id: string; name: string }[];
+  /** 非系统租户视角：这个自有账号与某个平台共享账号是同一上游账号。 */
+  duplicates_shared?: boolean;
+  /**
+   * 非系统租户视角：另外还有几个租户导入了同一个上游账号（启用中的凭据，不含 API Key、
+   * 不含已共享给本租户的那份平台账号）。额度共用；若是同一份凭据文件，各自刷新还会互相
+   * 顶掉 refresh token。旧后端没有这个字段。
+   */
+  copies_elsewhere?: number;
+  /** 同上，只有平台管理员能看到是哪几个租户。 */
+  copies_elsewhere_tenants?: { id: string; name: string }[];
+  /** shared_files 里的条目恒为 true：平台共享给本租户的只读账号。 */
+  shared?: boolean;
   [key: string]: unknown;
 }
 
 export interface AuthFilesResponse {
   files: AuthFileItem[];
   total?: number;
+  /**
+   * 非系统租户视角：平台共享给本租户的账号（只读摘要，没有 path、token 等）。
+   * 旧后端、系统租户都没有这个字段。
+   */
+  shared_files?: AuthFileItem[];
+  /** 平台共享能力；旧后端没有这个字段，此时所有共享界面都要隐藏。 */
+  sharing?: { supported?: boolean; manageable?: boolean };
 }
 
 export interface UsageDetail {
@@ -331,6 +373,8 @@ export interface OpenAIProvider {
   apiKeyEntries?: ProviderApiKeyEntry[];
   priority?: number;
   testModel?: string;
+  /** 覆盖全局 disable-cooling，对这个供应商的所有 Key 生效；undefined 表示跟随全局。 */
+  disableCooling?: boolean;
 }
 
 export interface ProviderSimpleConfig {
@@ -350,6 +394,8 @@ export interface ProviderSimpleConfig {
   /** Dashboard session for Cline and Ollama Cloud usage checks. */
   authCookie?: string;
   skipAnthropicProcessing?: boolean;
+  /** 覆盖全局 disable-cooling；undefined 表示跟随全局。 */
+  disableCooling?: boolean;
 }
 
 export interface OpenCodeGoUsageItem {

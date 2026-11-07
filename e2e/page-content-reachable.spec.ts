@@ -28,11 +28,14 @@ const principal = {
 // 行数足够多，确保每个列表页都必须滚动才能看全
 const ROWS = 60;
 
+// 与升级后的后端一致：声明 api-key-id-filters 能力，行里只有掩码和 key id，筛选项按 key id 列出。
 const usageLogs = {
+  capabilities: { "api-key-id-filters": true },
   items: Array.from({ length: ROWS }, (_, i) => ({
     id: i + 1,
     timestamp: new Date(1786000000000 + i * 1000).toISOString(),
-    api_key: "cps_x",
+    api_key: "cp***_x",
+    api_key_id: "key-x",
     api_key_name: `key-${i}`,
     model: "gpt-5.3",
     source: "codex",
@@ -50,9 +53,9 @@ const usageLogs = {
   page: 1,
   size: ROWS,
   filters: {
-    api_keys: ["cps_x"],
-    api_key_names: { cps_x: "key" },
-    api_key_counts: { cps_x: ROWS },
+    api_key_ids: ["key-x"],
+    api_key_id_names: { "key-x": "key" },
+    api_key_id_counts: { "key-x": ROWS },
     models: ["gpt-5.3"],
     channels: ["codex"],
     channel_options: [],

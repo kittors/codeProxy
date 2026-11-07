@@ -10,9 +10,13 @@ import {
   Search,
 } from "lucide-react";
 import { parse as parseYaml } from "yaml";
-import { configApi, configFileApi } from "@code-proxy/api-client";
+import { configApi, configFileApi, readConfigCapabilities } from "@code-proxy/api-client";
 import { FloatingSaveBar } from "./FloatingSaveBar";
 import { CodexOAuthAdmissionPanel } from "./CodexOAuthAdmissionPanel";
+import { LoopGuardPanel } from "./loop-guard/LoopGuardPanel";
+import { useLoopGuardTenant } from "./loop-guard/useLoopGuardTenant";
+import { ObservabilityMetricsPanel } from "./observability/ObservabilityMetricsPanel";
+import { useObservabilityMetrics } from "./observability/useObservabilityMetrics";
 import { VisualConfigEditor } from "./visual/VisualConfigEditor";
 import { collectInvalidFields, collectModified } from "./visual/configSchema";
 import { configFieldDomId } from "./visual/ConfigFieldRow";
@@ -172,6 +176,8 @@ export function ConfigPage() {
   const { t } = useTranslation();
   const { notify } = useToast();
   const [tab, setTab] = useStickyTab();
+  const metricsSettings = useObservabilityMetrics();
+  const loopGuardSettings = useLoopGuardTenant();
 
   const {
     visualValues,
@@ -567,6 +573,15 @@ export function ConfigPage() {
                     lockDatabaseSettings={Boolean(liveError)}
                     onChange={setVisualValues}
                     codexAdmission={<CodexOAuthAdmissionPanel />}
+                    observability={
+                      metricsSettings ? (
+                        <ObservabilityMetricsPanel initial={metricsSettings} />
+                      ) : undefined
+                    }
+                    loopGuard={
+                      loopGuardSettings ? <LoopGuardPanel initial={loopGuardSettings} /> : undefined
+                    }
+                    payloadDryRun={readConfigCapabilities(live?.config).payloadRulesDryRun}
                     toolbarEnd={modeSwitch}
                   />
                 </div>

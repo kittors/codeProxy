@@ -1,14 +1,21 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
+import { MemoryRouter } from "react-router-dom";
 import { ThemeProvider, ToastProvider } from "@code-proxy/ui";
 import i18n from "@code-proxy/i18n";
-import type { ApiKeyPermissionProfile } from "@code-proxy/api-client";
+import {
+  NO_ACCESS_POLICY_CAPABILITIES,
+  normalizeEndUser,
+  type ApiKeyPermissionProfileList,
+} from "@code-proxy/api-client";
 import { EndUsersPage } from "../EndUsersPage";
 
 const mocks = vi.hoisted(() => ({
   list: vi.fn(),
-  permissionProfiles: vi.fn(async (): Promise<ApiKeyPermissionProfile[]> => []),
+  permissionProfiles: vi.fn(
+    async (): Promise<ApiKeyPermissionProfileList> => ({ items: [], capabilities: {} as never }),
+  ),
 }));
 
 vi.mock("@app/providers/PermissionGate", () => ({
@@ -23,7 +30,7 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@code-proxy/api-client")>();
   return {
     ...actual,
-    apiKeyPermissionProfilesApi: { list: mocks.permissionProfiles },
+    apiKeyPermissionProfilesApi: { listDetailed: mocks.permissionProfiles },
     endUsersApi: {
       ...actual.endUsersApi,
       list: mocks.list,
@@ -57,17 +64,22 @@ describe("EndUsersPage masking toggle", () => {
     window.localStorage.clear();
     await i18n.changeLanguage("zh-CN");
     mocks.list.mockReset();
-    mocks.list.mockResolvedValue({ items: mockUsers });
+    mocks.list.mockResolvedValue({
+      items: mockUsers.map(normalizeEndUser),
+      capabilities: NO_ACCESS_POLICY_CAPABILITIES,
+    });
   });
 
   test("toggles masking of display name and username when toggle button is clicked", async () => {
     const user = userEvent.setup();
     render(
-      <ThemeProvider>
-        <ToastProvider>
-          <EndUsersPage />
-        </ToastProvider>
-      </ThemeProvider>,
+      <MemoryRouter>
+        <ThemeProvider>
+          <ToastProvider>
+            <EndUsersPage />
+          </ToastProvider>
+        </ThemeProvider>
+      </MemoryRouter>,
     );
 
     await waitFor(() => {

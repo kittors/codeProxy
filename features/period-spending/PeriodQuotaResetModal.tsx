@@ -21,6 +21,11 @@ export interface PeriodQuotaResetModalProps {
   periodSpendingItems?: PeriodSpendingItem[];
   /** Account cumulative allowance; enables the "grant again" option. */
   lifetimeLimit?: number;
+  /**
+   * 后端支持访问策略时由页面算好的可重置窗口：一个窗口下可能同时有花费、请求、Token 与按模型
+   * 规则的限额，重置会一起清零，description 把它们都列出来。传入时取代上面三项推出来的周期。
+   */
+  windows?: ReadonlyArray<{ period: QuotaResetPeriod; description: string }>;
   busy?: boolean;
   /** 重置失败的原因：留在弹窗里显示，用户可以直接重试或取消。 */
   error?: string;
@@ -33,6 +38,8 @@ interface ConfiguredPeriod {
   limit: number;
   /** 当前周期已用（来自 period-spending 明细；累计额度没有这项）。 */
   used?: number;
+  /** 访问策略给出的完整说明，优先于 limit / used。 */
+  description?: string;
 }
 
 const configuredPeriodsFrom = (
@@ -69,15 +76,19 @@ export function PeriodQuotaResetModal({
   configuredLimits,
   periodSpendingItems,
   lifetimeLimit,
+  windows,
   busy = false,
   error,
   onClose,
   onConfirm,
 }: PeriodQuotaResetModalProps) {
   const { t } = useTranslation();
-  const configuredPeriods = useMemo(
-    () => configuredPeriodsFrom(configuredLimits, periodSpendingItems, lifetimeLimit),
-    [configuredLimits, periodSpendingItems, lifetimeLimit],
+  const configuredPeriods = useMemo<ConfiguredPeriod[]>(
+    () =>
+      windows
+        ? windows.map((item) => ({ period: item.period, limit: 0, description: item.description }))
+        : configuredPeriodsFrom(configuredLimits, periodSpendingItems, lifetimeLimit),
+    [configuredLimits, periodSpendingItems, lifetimeLimit, windows],
   );
   const [selectedPeriods, setSelectedPeriods] = useState<Set<QuotaResetPeriod>>(
     () => new Set(),
@@ -103,12 +114,16 @@ export function PeriodQuotaResetModal({
   );
 
   if (configuredPeriods.length === 1) {
-    const [{ period }] = configuredPeriods;
+    const [{ period, description }] = configuredPeriods;
     return (
       <ConfirmModal
         open={open}
         title={title}
-        description={t(`quota.reset.${scope}_single_lead`, { period: t(`quota.period.${period}`) })}
+        description={
+          description
+            ? `${t(`quota.reset.${scope}_single_lead`, { period: t(`quota.period.${period}`) })} ${description}`
+            : t(`quota.reset.${scope}_single_lead`, { period: t(`quota.period.${period}`) })
+        }
         variant="warning"
         icon={<RotateCcw />}
         subject={subject}
@@ -160,7 +175,7 @@ export function PeriodQuotaResetModal({
           {subject}
         </div>
         <div className="space-y-2">
-          {configuredPeriods.map(({ period, limit, used }) => (
+          {configuredPeriods.map(({ period, limit, used, description }) => (
             <CheckboxField
               key={period}
               checked={selectedPeriods.has(period)}
@@ -176,12 +191,13 @@ export function PeriodQuotaResetModal({
               // 可访问名称保持「重置 X 配额」：读屏只听到勾选项本身时也知道勾下去会做什么。
               label={t("quota.reset.period_checkbox", { period: t(`quota.period.${period}`) })}
               description={
-                typeof used === "number"
+                description ??
+                (typeof used === "number"
                   ? t("quota.reset.option_usage", {
                       used: formatQuotaUsd(used),
                       limit: formatQuotaUsd(limit),
                     })
-                  : t("quota.reset.option_limit", { limit: formatQuotaUsd(limit) })
+                  : t("quota.reset.option_limit", { limit: formatQuotaUsd(limit) }))
               }
             />
           ))}

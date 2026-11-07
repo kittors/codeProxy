@@ -1,4 +1,5 @@
 import {
+  Activity,
   Archive,
   BadgeCheck,
   Braces,
@@ -9,6 +10,7 @@ import {
   MonitorDot,
   Network,
   RefreshCw,
+  Repeat,
   ScrollText,
   Server,
   ShieldCheck,
@@ -40,9 +42,11 @@ export type ConfigSectionId =
   | "access"
   | "streaming"
   | "quota"
+  | "loop_guard"
   | "logging"
   | "retention"
   | "monitoring"
+  | "observability"
   | "payload"
   | "kimi"
   | "codex";
@@ -58,7 +62,7 @@ export interface ConfigSectionDef {
    * 配色风格多彩时用于选中胶囊的淡底；都关掉时是中性线性图标 + 强调色选中态。
    */
   hue: Hue;
-  /** 自定义内容（规则编辑器、准入面板）的分区没有字段，搜索时额外匹配这些词。 */
+  /** 自定义内容（规则编辑器、准入面板、指标接口）的分区没有字段，搜索时额外匹配这些词。 */
   keywords?: string[];
 }
 
@@ -90,9 +94,23 @@ export const CONFIG_SECTIONS: readonly ConfigSectionDef[] = [
   { id: "access", group: "behavior", icon: KeyRound, hue: "amber" },
   { id: "streaming", group: "behavior", icon: Waves, hue: "teal" },
   { id: "quota", group: "behavior", icon: Gauge, hue: "orange" },
+  {
+    id: "loop_guard",
+    group: "behavior",
+    icon: Repeat,
+    hue: "pink",
+    keywords: ["loop", "repeat", "stuck", "tool call", "agent", "guard", "stop"],
+  },
   { id: "logging", group: "data", icon: ScrollText, hue: "orange" },
   { id: "retention", group: "data", icon: Archive, hue: "lime" },
   { id: "monitoring", group: "data", icon: MonitorDot, hue: "emerald" },
+  {
+    id: "observability",
+    group: "data",
+    icon: Activity,
+    hue: "violet",
+    keywords: ["metrics", "prometheus", "grafana", "opentelemetry", "otel", "scrape", "/metrics"],
+  },
   {
     id: "payload",
     group: "advanced",
@@ -368,6 +386,14 @@ export const CONFIG_FIELDS: readonly ConfigFieldDef[] = [
     (_, maxRetryInterval) => ({ maxRetryInterval }),
     { placeholder: "30", unit: "seconds" },
   ),
+  // 各渠道和账号可以在自己的编辑页覆盖这个开关。
+  toggle(
+    "disable_cooling",
+    "network",
+    "disable-cooling",
+    (v) => v.disableCooling,
+    (_, disableCooling) => ({ disableCooling }),
+  ),
 
   // 访问规则
   toggle(
@@ -396,7 +422,7 @@ export const CONFIG_FIELDS: readonly ConfigFieldDef[] = [
     "streaming.bootstrap-retries",
     (v) => v.streaming.bootstrapRetries,
     (v, bootstrapRetries) => streaming(v, { bootstrapRetries }),
-    { placeholder: "1" },
+    { placeholder: "2" },
   ),
   number(
     "nonstream_keepalive",

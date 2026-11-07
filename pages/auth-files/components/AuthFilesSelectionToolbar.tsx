@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { CircleOff, Download, Power, Zap } from "lucide-react";
+import { CircleOff, Download, Power, Share2, Zap } from "lucide-react";
 import { Button } from "@code-proxy/ui";
 
 interface AuthFilesSelectionToolbarProps {
@@ -14,6 +14,8 @@ interface AuthFilesSelectionToolbarProps {
   onDownloadSelection: (names: string[]) => void;
   onBatchWarmup?: (names: string[]) => void;
   batchWarmupBusy?: boolean;
+  /** 平台共享：只有能管理共享（平台管理员、系统租户视角）时才传。 */
+  onShareSelection?: (names: string[]) => void;
 }
 
 /**
@@ -32,6 +34,7 @@ export function AuthFilesSelectionToolbar({
   onDownloadSelection,
   onBatchWarmup,
   batchWarmupBusy,
+  onShareSelection,
 }: AuthFilesSelectionToolbarProps) {
   const { t } = useTranslation();
   const selectedCount = selectedFileNames.length;
@@ -88,6 +91,18 @@ export function AuthFilesSelectionToolbar({
         <Download size={13} className="shrink-0" />
         <span>{t("auth_files.batch_download_action", { count: selectedCount })}</span>
       </Button>
+      {onShareSelection ? (
+        <Button
+          variant="secondary"
+          size="xs"
+          className="px-2"
+          onClick={() => onShareSelection(names())}
+          disabled={busy}
+        >
+          <Share2 size={13} className="shrink-0" />
+          <span>{t("resource_sharing.batch_share_action", { count: selectedCount })}</span>
+        </Button>
+      ) : null}
       {onBatchWarmup ? (
         <Button
           variant="secondary"

@@ -71,6 +71,11 @@ function getVendorPrefix(modelId: string): string {
   return "";
 }
 
+/** VendorIcon 认得这个名字吗（认不得时它什么都不画）。要画回退图标、保住占位的地方先问一声。 */
+export function hasVendorIcon(modelId: string): boolean {
+  return getVendorPrefix(modelId) !== "";
+}
+
 /**
  * 单色黑的 logo（没写 fill，或写的是 currentColor）：通过 <img> 加载时拿不到页面的文字色，
  * 一律画成黑色，深色界面上几乎看不见。这些在深色下整体反色成白色；彩色 logo 不能反色。

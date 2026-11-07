@@ -15,6 +15,18 @@ export interface AuthFileRestriction {
   retryable?: boolean;
   next_retry_after?: string | number;
   next_recover_at?: string | number;
+  /** 为什么被暂停调度的原因码（见 cooldowns.ts）；只在确实有东西被暂停时才有，旧后端没有。 */
+  cooldown_reason?: string;
+}
+
+/** 账号上一个正在冷却的模型；旧后端的列表里没有 `model_cooldowns`。 */
+export interface AuthFileModelCooldown {
+  model: string;
+  reason?: string;
+  /** 暂停到何时（ISO 时间）；没有表示要等探测确认才恢复。 */
+  until?: string | number;
+  http_status?: number;
+  quota_exceeded?: boolean;
 }
 
 export interface ClaudeOAuthHealthWindow {
@@ -108,6 +120,7 @@ export interface AuthFileItem extends AuthFileTagDisplayFields {
   unavailable?: boolean;
   next_retry_after?: string | number;
   restrictions?: AuthFileRestriction[];
+  model_cooldowns?: AuthFileModelCooldown[];
   modified?: number;
   modtime?: number;
   subscription_started_at?: string;
@@ -130,7 +143,7 @@ export interface AuthFileItem extends AuthFileTagDisplayFields {
   identity_fingerprint_summary?: AuthFileIdentityFingerprintSummary;
   concurrency_limit?: number;
   codex_convergence_mode?: "off" | "device" | "session" | "full" | "";
-  codex_service_tier?: "default" | "pass" | "priority" | "flex" | "drop" | "";
+  codex_service_tier?: "default" | "pass" | "priority" | "ultrafast" | "flex" | "drop" | "";
   id_token?: unknown;
   attributes?: unknown;
   metadata?: unknown;
@@ -155,3 +168,23 @@ export interface OAuthModelAliasEntry {
   alias: string;
   fork?: boolean;
 }
+
+/** 账号详情「字段」页的编辑状态：从账号 JSON 读出、改完写回整个 JSON 再上传。 */
+export type PrefixProxyEditorState = {
+  open: boolean;
+  fileName: string;
+  loading: boolean;
+  saving: boolean;
+  error: string | null;
+  json: Record<string, unknown> | null;
+  prefix: string;
+  proxyUrl: string;
+  proxyId: string;
+  subscriptionStartedAt: string;
+  subscriptionPeriod: AuthFileSubscriptionPeriod;
+  concurrencyLimit: string;
+  codexConvergenceMode: string;
+  codexServiceTier: string;
+  /** 账号 JSON 的 disable_cooling：""=跟随全局，"off"=关闭冷却，"on"=开启冷却（同 features/channel-cooling 的 CoolingMode）。 */
+  disableCooling: "" | "off" | "on";
+};

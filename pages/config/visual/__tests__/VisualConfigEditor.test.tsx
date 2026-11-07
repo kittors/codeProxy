@@ -171,6 +171,70 @@ describe("VisualConfigEditor auto update config", () => {
     expect(screen.getByRole("heading", { name: "Logging" })).toBeInTheDocument();
   });
 
+  test("shows the metrics section only when the page supplies its content", async () => {
+    const { unmount } = render(
+      <ThemeProvider>
+        <VisualConfigEditor values={DEFAULT_VISUAL_VALUES} onChange={vi.fn()} />
+      </ThemeProvider>,
+    );
+    await userEvent.click(screen.getByRole("tab", { name: /^Logs & data/ }));
+    expect(screen.getByRole("heading", { name: "Logging" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Metrics endpoint" })).toBeNull();
+    unmount();
+
+    render(
+      <ThemeProvider>
+        <VisualConfigEditor
+          values={DEFAULT_VISUAL_VALUES}
+          onChange={vi.fn()}
+          observability={<p>metrics panel</p>}
+        />
+      </ThemeProvider>,
+    );
+    await userEvent.click(screen.getByRole("tab", { name: /^Logs & data/ }));
+    expect(screen.getByRole("heading", { name: "Metrics endpoint" })).toBeInTheDocument();
+    expect(screen.getByText("metrics panel")).toBeInTheDocument();
+
+    // 分区没有字段，靠关键词被搜到。
+    await userEvent.type(screen.getByRole("textbox", { name: "Search settings" }), "prometheus");
+    await waitFor(() =>
+      expect(screen.getByRole("tabpanel", { name: "Search results" })).toBeInTheDocument(),
+    );
+    expect(screen.getByRole("heading", { name: "Metrics endpoint" })).toBeInTheDocument();
+  });
+
+  test("shows the loop protection section only when the page supplies its content", async () => {
+    const { unmount } = render(
+      <ThemeProvider>
+        <VisualConfigEditor values={DEFAULT_VISUAL_VALUES} onChange={vi.fn()} />
+      </ThemeProvider>,
+    );
+    await userEvent.click(screen.getByRole("tab", { name: /^Behavior/ }));
+    expect(screen.getByRole("heading", { name: "Streaming" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Loop protection" })).toBeNull();
+    unmount();
+
+    render(
+      <ThemeProvider>
+        <VisualConfigEditor
+          values={DEFAULT_VISUAL_VALUES}
+          onChange={vi.fn()}
+          loopGuard={<p>loop protection panel</p>}
+        />
+      </ThemeProvider>,
+    );
+    await userEvent.click(screen.getByRole("tab", { name: /^Behavior/ }));
+    expect(screen.getByRole("heading", { name: "Loop protection" })).toBeInTheDocument();
+    expect(screen.getByText("loop protection panel")).toBeInTheDocument();
+
+    // 分区没有字段，靠关键词被搜到。
+    await userEvent.type(screen.getByRole("textbox", { name: "Search settings" }), "stuck");
+    await waitFor(() =>
+      expect(screen.getByRole("tabpanel", { name: "Search results" })).toBeInTheDocument(),
+    );
+    expect(screen.getByRole("heading", { name: "Loop protection" })).toBeInTheDocument();
+  });
+
   test("search spans every group, shows hits per tab, and picking a tab ends the search", async () => {
     renderEditor();
     await userEvent.type(screen.getByRole("textbox", { name: "Search settings" }), "retry");
@@ -497,5 +561,30 @@ describe("VisualConfigEditor auto update config", () => {
       expect(yaml).not.toContain("vacuum-on-cleanup");
       expect(yaml).not.toContain("request-log: true");
     });
+  });
+});
+
+describe("VisualConfigEditor payload rules trial", () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage("en");
+  });
+
+  test("offers the trial under the payload rules only when the backend has it", async () => {
+    const editor = (payloadDryRun: boolean) => (
+      <ThemeProvider>
+        <VisualConfigEditor
+          values={DEFAULT_VISUAL_VALUES}
+          onChange={vi.fn()}
+          payloadDryRun={payloadDryRun}
+        />
+      </ThemeProvider>
+    );
+    const view = render(editor(false));
+    await userEvent.click(screen.getByRole("tab", { name: /^Advanced/ }));
+    expect(screen.getByRole("heading", { name: "Remove parameters" })).toBeVisible();
+    expect(screen.queryByRole("heading", { name: "Try it" })).toBeNull();
+
+    view.rerender(editor(true));
+    expect(screen.getByRole("heading", { name: "Try it" })).toBeVisible();
   });
 });

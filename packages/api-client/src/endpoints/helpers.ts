@@ -6,6 +6,19 @@ import type {
   ProviderModel,
   ProviderSimpleConfig,
 } from "../dto/types";
+import { writeDisableCooling } from "./channel-cooling";
+import {
+  BEDROCK_KEY_WIRE_KEYS,
+  CLINE_KEY_WIRE_KEYS,
+  COMMAND_CODE_KEY_WIRE_KEYS,
+  GEMINI_KEY_WIRE_KEYS,
+  OLLAMA_CLOUD_KEY_WIRE_KEYS,
+  OPENAI_PROVIDER_WIRE_KEYS,
+  OPENCODE_GO_KEY_WIRE_KEYS,
+  PROVIDER_KEY_WIRE_KEYS,
+  PROVIDER_NESTED_LISTS,
+} from "./provider-fields";
+import { mergeUnmodeledRecord } from "./provider-raw";
 
 export const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === "object" && !Array.isArray(value);
@@ -118,7 +131,23 @@ export const serializeModels = (models?: ProviderModel[]) =>
 
 type SerializeProviderKeyOptions = {
   includeApiKey?: boolean;
+  /**
+   * 默认把 config 上挂的后端原始记录里没建模的字段一起写出（整表 PUT 不合并旧值，不写就丢）。
+   * PATCH 由后端对没写的键保留原值，body 只能写要改的建模字段，传 false。
+   */
+  keepUnmodeled?: boolean;
 };
+
+// 序列化的最后一步：没建模的字段原样带上。owned 是该 serializer 负责的键，见 provider-fields.ts。
+const keepUnmodeled = (
+  payload: Record<string, unknown>,
+  config: unknown,
+  owned: readonly string[],
+  options?: SerializeProviderKeyOptions,
+): Record<string, unknown> =>
+  options?.keepUnmodeled === false
+    ? payload
+    : mergeUnmodeledRecord(payload, config, owned, PROVIDER_NESTED_LISTS);
 
 const modelAccessExcludedModels = (models?: string[]) =>
   Array.isArray(models)
@@ -154,7 +183,8 @@ export const serializeProviderKey = (config: ProviderSimpleConfig) => {
   if (config.skipAnthropicProcessing) {
     payload["skip-anthropic-processing"] = true;
   }
-  return payload;
+  writeDisableCooling(payload, config.disableCooling);
+  return keepUnmodeled(payload, config, PROVIDER_KEY_WIRE_KEYS);
 };
 
 export const serializeOpenCodeGoKey = (
@@ -185,7 +215,8 @@ export const serializeOpenCodeGoKey = (
   const visionFallbackModel = normalizeString(config.visionFallbackModel);
   if (visionFallbackModel)
     payload["vision-fallback-model"] = visionFallbackModel;
-  return payload;
+  writeDisableCooling(payload, config.disableCooling);
+  return keepUnmodeled(payload, config, OPENCODE_GO_KEY_WIRE_KEYS, options);
 };
 
 export const serializeClineKey = (
@@ -220,7 +251,8 @@ export const serializeClineKey = (
     payload["vision-fallback-model"] = visionFallbackModel;
   const authCookie = normalizeString(config.authCookie);
   if (authCookie) payload["auth-cookie"] = authCookie;
-  return payload;
+  writeDisableCooling(payload, config.disableCooling);
+  return keepUnmodeled(payload, config, CLINE_KEY_WIRE_KEYS, options);
 };
 
 export const serializeOllamaCloudKey = (
@@ -255,7 +287,8 @@ export const serializeOllamaCloudKey = (
     payload["vision-fallback-model"] = visionFallbackModel;
   const authCookie = normalizeString(config.authCookie);
   if (authCookie) payload["auth-cookie"] = authCookie;
-  return payload;
+  writeDisableCooling(payload, config.disableCooling);
+  return keepUnmodeled(payload, config, OLLAMA_CLOUD_KEY_WIRE_KEYS, options);
 };
 
 // Command Code carries no auth-cookie: its plan usage authenticates with the
@@ -291,7 +324,8 @@ export const serializeCommandCodeKey = (
   const visionFallbackModel = normalizeString(config.visionFallbackModel);
   if (visionFallbackModel)
     payload["vision-fallback-model"] = visionFallbackModel;
-  return payload;
+  writeDisableCooling(payload, config.disableCooling);
+  return keepUnmodeled(payload, config, COMMAND_CODE_KEY_WIRE_KEYS, options);
 };
 
 export const serializeGeminiKey = (config: ProviderSimpleConfig) => {
@@ -313,7 +347,8 @@ export const serializeGeminiKey = (config: ProviderSimpleConfig) => {
   if (config.excludedModels && config.excludedModels.length) {
     payload["excluded-models"] = config.excludedModels;
   }
-  return payload;
+  writeDisableCooling(payload, config.disableCooling);
+  return keepUnmodeled(payload, config, GEMINI_KEY_WIRE_KEYS);
 };
 
 export const serializeBedrockKey = (config: BedrockProviderConfig) => {
@@ -354,7 +389,8 @@ export const serializeBedrockKey = (config: BedrockProviderConfig) => {
     if (sessionToken) payload["session-token"] = sessionToken;
   }
 
-  return payload;
+  writeDisableCooling(payload, config.disableCooling);
+  return keepUnmodeled(payload, config, BEDROCK_KEY_WIRE_KEYS);
 };
 
 export const serializeOpenAIProvider = (provider: OpenAIProvider) => {
@@ -403,7 +439,8 @@ export const serializeOpenAIProvider = (provider: OpenAIProvider) => {
     }
   }
 
-  return payload;
+  writeDisableCooling(payload, provider.disableCooling);
+  return keepUnmodeled(payload, provider, OPENAI_PROVIDER_WIRE_KEYS);
 };
 
 export const normalizeOauthExcludedModels = (

@@ -225,8 +225,6 @@ function SpecTable({ tableId, title, rows }: { tableId: string; title: string; r
           columns={columns}
           rowKey={(row) => row.name}
           virtualize={false}
-          height="h-auto"
-          minHeight="min-h-0"
           minWidth="min-w-[560px]"
           caption={`${title} table`}
           rowHeight={48}

@@ -20,6 +20,10 @@ import {
   type LiveConfig,
 } from "./databaseSettings";
 import {
+  serializePayloadFilterRulesForYaml,
+  serializePayloadRulesForYaml,
+} from "./payloadSerialization";
+import {
   parseRoutingChannelGroups,
   parseRoutingPathRoutes,
   parseRoutingStrategy,
@@ -214,63 +218,6 @@ function parsePayloadFilterRules(rules: unknown): PayloadFilterRule[] {
 }
 
 
-function serializePayloadRulesForYaml(rules: PayloadRule[]): Array<Record<string, unknown>> {
-  return rules
-    .map((rule) => {
-      const models = (rule.models || [])
-        .filter((m) => m.name?.trim())
-        .map((m) => {
-          const obj: Record<string, unknown> = { name: m.name.trim() };
-          if (m.protocol) obj.protocol = m.protocol;
-          return obj;
-        });
-
-      const params: Record<string, unknown> = {};
-      for (const param of rule.params || []) {
-        if (!param.path?.trim()) continue;
-        let value: unknown = param.value;
-        if (param.valueType === "number") {
-          const num = Number(param.value);
-          value = Number.isFinite(num) ? num : param.value;
-        } else if (param.valueType === "boolean") {
-          value = param.value === "true";
-        } else if (param.valueType === "json") {
-          try {
-            value = JSON.parse(param.value);
-          } catch {
-            value = param.value;
-          }
-        }
-        params[param.path.trim()] = value;
-      }
-
-      return { models, params };
-    })
-    .filter((rule) => rule.models.length > 0);
-}
-
-function serializePayloadFilterRulesForYaml(
-  rules: PayloadFilterRule[],
-): Array<Record<string, unknown>> {
-  return rules
-    .map((rule) => {
-      const models = (rule.models || [])
-        .filter((m) => m.name?.trim())
-        .map((m) => {
-          const obj: Record<string, unknown> = { name: m.name.trim() };
-          if (m.protocol) obj.protocol = m.protocol;
-          return obj;
-        });
-
-      const params = (Array.isArray(rule.params) ? rule.params : [])
-        .map((path) => String(path).trim())
-        .filter(Boolean);
-
-      return { models, params };
-    })
-    .filter((rule) => rule.models.length > 0);
-}
-
 export function useVisualConfig() {
   const [visualValues, setVisualValuesState] = useState<VisualConfigValues>({
     ...DEFAULT_VISUAL_VALUES,
@@ -355,6 +302,7 @@ export function useVisualConfig() {
           forceModelPrefix: Boolean(parsed["force-model-prefix"]),
           requestRetry: String(parsed["request-retry"] ?? ""),
           maxRetryInterval: String(parsed["max-retry-interval"] ?? ""),
+          disableCooling: Boolean(parsed["disable-cooling"]),
           wsAuth: Boolean(parsed["ws-auth"]),
 
           quotaSwitchProject: Boolean(quotaExceeded?.["switch-project"] ?? true),
@@ -499,6 +447,7 @@ export function useVisualConfig() {
         parsed["force-model-prefix"] = values.forceModelPrefix;
         parsed["request-retry"] = databaseInteger(values.requestRetry);
         parsed["max-retry-interval"] = databaseInteger(values.maxRetryInterval);
+        parsed["disable-cooling"] = values.disableCooling;
         parsed["ws-auth"] = values.wsAuth;
 
         parsed["quota-exceeded"] = {

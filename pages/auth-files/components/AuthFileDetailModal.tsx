@@ -28,6 +28,7 @@ import {
   DateTimePicker,
   EmptyState,
   Modal,
+  ScrollFade,
   Select,
   Tabs,
   TabsContent,
@@ -39,6 +40,8 @@ import {
 } from "@code-proxy/ui";
 import { CodexImageGenerationBridgePanel } from "./CodexImageGenerationBridgePanel";
 import { AuthFilePlanBadge } from "./AuthFilePlanBadge";
+import { useIdentityDesktopLayout } from "./useIdentityDesktopLayout";
+import { AuthFileSchedulingFields } from "./AuthFileSchedulingFields";
 import { buildDetailTrendChartOption } from "./detailTrendChartOption";
 import { TrendSummaryGrid } from "./TrendSummaryGrid";
 import { EChart, useTheme } from "@code-proxy/ui";
@@ -105,26 +108,6 @@ const IDENTITY_FINGERPRINT_SOURCE_ORDER: IdentityFingerprintFieldSource[] = [
   "preset",
   "builtin_default",
 ];
-const IDENTITY_DESKTOP_MEDIA_QUERY = "(min-width: 1024px)";
-
-const useIdentityDesktopLayout = () => {
-  const [matches, setMatches] = useState(() => {
-    if (typeof window === "undefined" || !window.matchMedia) return false;
-    return window.matchMedia(IDENTITY_DESKTOP_MEDIA_QUERY).matches;
-  });
-
-  useEffect(() => {
-    if (typeof window === "undefined" || !window.matchMedia) return;
-    const media = window.matchMedia(IDENTITY_DESKTOP_MEDIA_QUERY);
-    const updateMatches = (event: MediaQueryListEvent) => setMatches(event.matches);
-    setMatches(media.matches);
-    media.addEventListener("change", updateMatches);
-    return () => media.removeEventListener("change", updateMatches);
-  }, []);
-
-  return matches;
-};
-
 interface AuthFileDetailModalProps {
   open: boolean;
   detailFile: AuthFileItem | null;
@@ -940,7 +923,7 @@ export function AuthFileDetailModal({
                 </div>
                 {isIdentityDesktopLayout ? (
                   <div
-                    className="min-h-0 flex-1 overflow-hidden"
+                    className="flex min-h-0 flex-col overflow-hidden"
                     data-testid="auth-file-identity-table-desktop"
                   >
                     <DataTable<IdentityFingerprintFieldRow>
@@ -949,8 +932,6 @@ export function AuthFileDetailModal({
                       rowKey={(row) => row.id}
                       rowHeight={48}
                       minWidth="min-w-[920px]"
-                      minHeight="min-h-0"
-                      height="h-full"
                       caption={t("auth_files.identity_fingerprint_title")}
                       emptyText={t("auth_files.identity_fingerprint_no_fields")}
                       showAllLoadedMessage={false}
@@ -969,8 +950,6 @@ export function AuthFileDetailModal({
                       rowKey={(row) => row.id}
                       rowHeight={48}
                       minWidth="min-w-[920px]"
-                      minHeight="min-h-0"
-                      height="h-auto"
                       caption={t("auth_files.identity_fingerprint_title")}
                       emptyText={t("auth_files.identity_fingerprint_no_fields")}
                       showAllLoadedMessage={false}
@@ -1175,7 +1154,7 @@ export function AuthFileDetailModal({
               </TabsList>
             </div>
 
-            <div
+            <ScrollFade
               // 左右各留 4px（再用负边距拉回对齐）：输入框的阴影描边和聚焦光晕画在框外，贴着滚动区的边会被裁掉。
               className={[
                 "-mx-1 mt-4 min-h-0 flex-1 px-1",
@@ -1625,29 +1604,10 @@ export function AuthFileDetailModal({
                             setPrefixProxyEditor((prev) => ({ ...prev, proxyUrl }))
                           }
                         />
-                        <div className="grid gap-2">
-                          <p className="text-xs font-semibold text-ink-2">
-                            {t("auth_files.concurrency_limit_label")}
-                          </p>
-                          <TextInput
-                            type="number"
-                            min="0"
-                            step="1"
-                            value={prefixProxyEditor.concurrencyLimit}
-                            onChange={(e) => {
-                              const value = e.currentTarget.value;
-                              setPrefixProxyEditor((prev) => ({
-                                ...prev,
-                                concurrencyLimit: value,
-                              }));
-                            }}
-                            placeholder={t("auth_files.concurrency_limit_placeholder")}
-                            aria-label={t("auth_files.concurrency_limit_label")}
-                          />
-                          <p className="text-xs text-ink-3">
-                            {t("auth_files.concurrency_limit_hint")}
-                          </p>
-                        </div>
+                        <AuthFileSchedulingFields
+                          editor={prefixProxyEditor}
+                          setEditor={setPrefixProxyEditor}
+                        />
 
                         {normalizeProviderKey(resolveFileType(detailFile)) === "codex" ? (
                           <>
@@ -1705,26 +1665,18 @@ export function AuthFileDetailModal({
                                   }))
                                 }
                                 options={[
-                                  {
-                                    value: "",
-                                    label: t("auth_files.codex_service_tier_default"),
-                                  },
-                                  {
-                                    value: "pass",
-                                    label: t("auth_files.codex_service_tier_pass"),
-                                  },
+                                  { value: "", label: t("auth_files.codex_service_tier_default") },
+                                  { value: "pass", label: t("auth_files.codex_service_tier_pass") },
                                   {
                                     value: "priority",
                                     label: t("auth_files.codex_service_tier_priority"),
                                   },
                                   {
-                                    value: "flex",
-                                    label: t("auth_files.codex_service_tier_flex"),
+                                    value: "ultrafast",
+                                    label: t("auth_files.codex_service_tier_ultrafast"),
                                   },
-                                  {
-                                    value: "drop",
-                                    label: t("auth_files.codex_service_tier_drop"),
-                                  },
+                                  { value: "flex", label: t("auth_files.codex_service_tier_flex") },
+                                  { value: "drop", label: t("auth_files.codex_service_tier_drop") },
                                 ]}
                                 aria-label={t("auth_files.codex_service_tier_label")}
                               />
@@ -1831,7 +1783,7 @@ export function AuthFileDetailModal({
                   </div>
                 )}
               </TabsContent>
-            </div>
+            </ScrollFade>
           </div>
         </Tabs>
       )}

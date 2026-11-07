@@ -61,7 +61,7 @@ vi.mock("@code-proxy/api-client/endpoints/channel-groups", () => ({
 
 vi.mock("@code-proxy/api-client/endpoints/proxies", () => ({
   proxiesApi: {
-    list: mocks.proxiesList,
+    listSelectable: mocks.proxiesList,
   },
 }));
 

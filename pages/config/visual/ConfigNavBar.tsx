@@ -152,9 +152,7 @@ export function ConfigSectionChips({
     <nav aria-label={t("config_ui.nav_label")} className="min-w-0">
       <div
         ref={fade.ref}
-        onScroll={fade.onScroll}
-        style={fade.style}
-        className={cn("scrollbar-hidden flex gap-1.5 overflow-x-auto py-0.5", fade.className)}
+        className="scrollbar-hidden flex gap-1.5 overflow-x-auto py-0.5"
       >
         {sections.map((section) => {
           const selected = section.id === active;

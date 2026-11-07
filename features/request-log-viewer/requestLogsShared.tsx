@@ -9,6 +9,8 @@ import { SearchableCheckboxMultiSelect, Tabs, TabsList, TabsTrigger } from "@cod
 import type { SearchableCheckboxMultiSelectOption } from "@code-proxy/ui";
 import { HoverTooltip, OverflowTooltip } from "@code-proxy/ui";
 import { PaginationBar } from "@code-proxy/ui";
+import { loopStoppedExplanation } from "./requestLogGuard";
+import { RequestLogCacheCell } from "./RequestLogCacheCell";
 import { RequestLogModelCell } from "./RequestLogModelCell";
 import {
   formatRequestLogTimestamp,
@@ -284,6 +286,12 @@ export const buildRequestLogKeyOptions = (
     systemCall: string;
   },
   apiKeyCounts: Record<string, number> = {},
+  /**
+   * What to call a key that has no name. The default masks the value, which is
+   * right when the values are client secrets (the older facet); a facet of key ids
+   * passes something that shortens an id instead.
+   */
+  fallbackLabel: (value: string) => string = maskRequestLogApiKey,
 ): RequestLogKeyOption[] => {
   const countFor = (key: string) => {
     const count = apiKeyCounts[key];
@@ -317,7 +325,7 @@ export const buildRequestLogKeyOptions = (
     }
     options.push({
       value: key,
-      label: name || maskRequestLogApiKey(key),
+      label: name || fallbackLabel(key),
       searchText: `${name || ""} ${key}`,
       count,
     });
@@ -361,6 +369,8 @@ export function buildRequestLogsColumns(
     identityColumn?: "user" | "key" | "none";
     hideChannel?: boolean;
     masked?: boolean;
+    /** Show cache reads and writes as two columns; see requestLogsHaveCacheBreakdown. */
+    cacheBreakdown?: boolean;
   } = {},
 ): RequestLogsTableColumn<RequestLogsRow>[] {
   const apiLabel = t("request_logs.auth_type_api");
@@ -372,7 +382,8 @@ export function buildRequestLogsColumns(
     {
       key: "id",
       label: t("request_logs.col_id"),
-      width: "w-20",
+      // 放得下「#1001709206」和带拖拽把手的「ID」表头；w-20 只剩「I.」，以前靠用户自己拖宽。
+      width: "w-32",
       headerClassName: "text-left",
       cellClassName: "text-left font-mono text-xs tabular-nums text-slate-500 dark:text-white/50",
       render: (row) => (
@@ -445,7 +456,20 @@ export function buildRequestLogsColumns(
       headerClassName: CENTERED_REQUEST_LOG_HEADER_CLASS,
       cellClassName: "text-center",
       render: (row) =>
-        row.failed ? (
+        row.failed && row.guardKind ? (
+          // Loop protection ended it on purpose: not the model or the upstream failing,
+          // so not the red of a failure. It still opens the same detail. The column is
+          // fixed (72px of content, 54px for the text): keep this label to a word in every
+          // language, the sentence is the title.
+          <button
+            type="button"
+            onClick={() => onErrorClick?.(Number(row.id), row.displayModel || row.model)}
+            className="inline-flex min-w-[52px] cursor-pointer justify-center rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 transition hover:bg-amber-100 hover:shadow-sm dark:bg-amber-500/15 dark:text-amber-300 dark:hover:bg-amber-500/25"
+            title={loopStoppedExplanation(t, row.guardKind)}
+          >
+            {t("request_logs.status_loop_stopped")}
+          </button>
+        ) : row.failed ? (
           <button
             type="button"
             onClick={() => onErrorClick?.(Number(row.id), row.displayModel || row.model)}
@@ -546,17 +570,22 @@ export function buildRequestLogsColumns(
       width: "w-24",
       headerClassName: CENTERED_REQUEST_LOG_HEADER_CLASS,
       cellClassName: "text-center font-mono text-xs tabular-nums",
-      render: (row) => (
-        <RequestLogUsageMetricValue
-          value={row.cachedTokens}
-          className={
-            row.cachedTokens > 0
-              ? "font-medium text-ink"
-              : "text-ink-4"
-          }
-        />
-      ),
+      render: (row) => <RequestLogCacheCell use={row.cacheUse} side="read" />,
     },
+    ...(options.cacheBreakdown === true
+      ? [
+          {
+            key: "cacheWriteTokens",
+            label: t("request_logs.col_cache_write"),
+            width: "w-24",
+            headerClassName: CENTERED_REQUEST_LOG_HEADER_CLASS,
+            cellClassName: "text-center font-mono text-xs tabular-nums",
+            render: (row: RequestLogsRow) => (
+              <RequestLogCacheCell use={row.cacheUse} side="write" />
+            ),
+          },
+        ]
+      : []),
     {
       key: "outputTokens",
       label: t("request_logs.col_output"),
@@ -691,6 +720,7 @@ export function RequestLogsPaginationBar({
   onPageChange,
   onPageSizeChange,
   flush = false,
+  pending = false,
 }: {
   currentPage: number;
   totalPages: number;
@@ -700,6 +730,8 @@ export function RequestLogsPaginationBar({
   onPageSizeChange: (size: number) => void;
   /** 直接放在内容区上（没有外层卡片）时不再留左右内边距，和上方表格左右对齐。 */
   flush?: boolean;
+  /** 第一页还没回来：条数显示占位，不显示「第 0-0 条，共 0 条」。 */
+  pending?: boolean;
 }) {
   const { t } = useTranslation();
 
@@ -720,7 +752,8 @@ export function RequestLogsPaginationBar({
         nextPage: t("request_logs.next_page"),
         lastPage: t("request_logs.last_page"),
         rowsPerPage: t("request_logs.rows_per_page"),
-        pageInfo: ({ start, end, total }) => t("request_logs.page_info", { start, end, total }),
+        pageInfo: ({ start, end, total }) =>
+          pending ? "—" : t("request_logs.page_info", { start, end, total }),
       }}
     />
   );

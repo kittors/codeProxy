@@ -170,6 +170,7 @@ describe("providersApi Cline", () => {
         "excluded-models": [],
         "vision-fallback-model": "cline-pass/mimo-v2.5-pro",
         "auth-cookie": "session=cline",
+        "disable-cooling": null,
       },
     });
 
@@ -200,6 +201,7 @@ describe("providersApi Cline", () => {
         "base-url": "https://api.cline.bot/api/v1",
         models: [{ name: "cline-pass/glm-5.2" }],
         "vision-fallback-model": "cline-pass/mimo-v2.5-pro",
+        "disable-cooling": null,
       },
     });
   });

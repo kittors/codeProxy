@@ -32,8 +32,9 @@ const SAME_AS_ENGLISH = new Set<string>([
   "ccswitch.client_claude_code",
   "ccswitch.client_codex",
   "ccswitch.client_gemini_cli",
-  "apikey_lookup.quick_import_codex",
-  "apikey_lookup.quick_import_claude",
+  "ccswitch.client_opencode",
+  "ccswitch.client_openclaw",
+  "ccswitch.client_hermes",
   "content_moderation.backend_openai_moderations",
   "content_moderation.backend_qwen3guard",
   "add_account.providers.codex.name",
@@ -95,8 +96,6 @@ const SAME_AS_ENGLISH = new Set<string>([
   // The language switcher names each language in itself
   "language.english",
   // Header and environment variable names, config syntax
-  "ccswitch.auth_field_anthropic_api_key",
-  "ccswitch.auth_field_anthropic_auth_token",
   "identity_fingerprint.user_agent",
   "identity_fingerprint.version",
   "identity_fingerprint.originator",

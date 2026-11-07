@@ -137,9 +137,7 @@ export function NavList({
       aria-orientation={isTabs ? "vertical" : undefined}
       aria-label={ariaLabel}
       onKeyDown={onKeyDown}
-      onScroll={fade.onScroll}
-      style={fade.style}
-      className={cn(layout.root, fade.className, className)}
+      className={cn(layout.root, className)}
     >
       {groups.map((group) => {
         if (group.items.length === 0) return null;

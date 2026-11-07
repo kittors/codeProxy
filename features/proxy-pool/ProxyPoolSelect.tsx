@@ -4,6 +4,7 @@ import { Network } from "lucide-react";
 import type { ProxyPoolEntry } from "@code-proxy/api-client/endpoints/proxies";
 import { Select, type SelectOption } from "@code-proxy/ui";
 import {
+  proxyDisplayURL,
   proxyEndpoint,
   proxyLatencyTone,
   proxyProtocol,
@@ -36,6 +37,10 @@ const latencyToneClasses: Record<ProxyLatencyTone, string> = {
   failed: "bg-rose-500/10 text-rose-700 dark:text-rose-300",
 };
 
+/** 平台共享的代理：说明性质的天蓝淡底标签，和代理池页、账号页的共享徽标同色。 */
+const SHARED_TAG_CLASS =
+  "shrink-0 rounded-md bg-sky-500/10 px-1.5 py-0.5 text-2xs font-semibold text-sky-700 dark:text-sky-300";
+
 export function ProxyPoolSelect({
   value,
   onChange,
@@ -60,8 +65,12 @@ export function ProxyPoolSelect({
       seen.add(id);
       const result = checkState[id];
       const tone = proxyLatencyTone(result);
-      const protocol = proxyProtocol(entry.url);
+      // 平台共享的条目没有 url，只有打码后的 maskedUrl（协议 + 主机），协议也从它读。
+      const protocol = proxyProtocol(proxyDisplayURL(entry));
       const endpoint = proxyEndpoint(entry);
+      const sharedTag = entry.shared ? (
+        <span className={SHARED_TAG_CLASS}>{t("proxies.shared_tag")}</span>
+      ) : null;
       const displayName = entry.name || id;
       const latencyText =
         typeof result?.latencyMs === "number"
@@ -82,6 +91,7 @@ export function ProxyPoolSelect({
           <span className="flex min-w-0 items-center gap-2">
             <Network size={14} className="shrink-0 text-ink-3" />
             <span className="min-w-0 flex-1 truncate">{displayName}</span>
+            {sharedTag}
             <span className="shrink-0 text-xs font-semibold text-ink-3">
               {protocol} · {endpoint}
             </span>
@@ -120,6 +130,7 @@ export function ProxyPoolSelect({
                 {checkSummary}
               </span>
             ) : null}
+            {sharedTag}
             {!entry.enabled ? (
               <span className="shrink-0 rounded-md bg-amber-500/10 px-1.5 py-0.5 text-2xs font-semibold text-amber-700 dark:text-amber-300">
                 {t("proxies.disabled")}

@@ -235,6 +235,50 @@ describe("DashboardPage", () => {
     expect(tooltipValues).toContain("$12,345.6789");
   });
 
+  test("names the cache metric after what the backend reports", async () => {
+    // An older backend: a share of cached tokens, under its own name.
+    mocks.getDashboardSummary.mockResolvedValueOnce(summary);
+    const { unmount } = render(<DashboardPage />);
+    expect(await screen.findByText("Cache Token Ratio")).toBeInTheDocument();
+    expect(await screen.findByText("30.00%")).toBeInTheDocument();
+    unmount();
+
+    // A newer backend: the hit rate, with reads and writes beside it.
+    mocks.getDashboardSummary.mockResolvedValueOnce({
+      ...summary,
+      kpi: {
+        ...summary.kpi,
+        cache_rate: 45.5,
+        cache_hit_rate: 45.5,
+        cache_read_tokens: 900,
+        cache_write_tokens: 1000,
+      },
+    });
+    const second = render(<DashboardPage />);
+    expect(await screen.findByText("Cache hit rate")).toBeInTheDocument();
+    expect(await screen.findByText("45.50%")).toBeInTheDocument();
+    expect(screen.queryByText("Cache Token Ratio")).not.toBeInTheDocument();
+    second.unmount();
+
+    // No request reported its cache use: unknown, not 0%.
+    mocks.getDashboardSummary.mockResolvedValueOnce({
+      ...summary,
+      kpi: {
+        ...summary.kpi,
+        cache_rate: 0,
+        cache_hit_rate: null,
+        cache_read_tokens: 0,
+        cache_write_tokens: 0,
+      },
+    });
+    render(<DashboardPage />);
+    expect(await screen.findByText("Cache hit rate")).toBeInTheDocument();
+    expect(await screen.findByLabelText("No request reported its cache use")).toHaveTextContent(
+      "—",
+    );
+    expect(screen.queryByText("0.00%")).not.toBeInTheDocument();
+  });
+
   test("hides system monitor without system.status.read but still shows tenant throughput", async () => {
     mocks.can.mockImplementation((permission: string) => permission === "dashboard.read");
     mocks.getDashboardSummary.mockResolvedValueOnce(summary);

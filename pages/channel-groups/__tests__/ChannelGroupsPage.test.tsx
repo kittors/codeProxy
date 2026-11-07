@@ -1,6 +1,6 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import i18n from "@code-proxy/i18n";
 import { apiClient } from "@code-proxy/api-client";
 import { ChannelGroupsPage } from "@pages/channel-groups/ChannelGroupsPage";
@@ -18,6 +18,26 @@ const toastMocks = vi.hoisted(() => ({
 const apiMocks = vi.hoisted(() => ({
   get: vi.fn(),
   put: vi.fn(),
+}));
+
+// 页面顺带读 GET /config 的能力声明（池容量卡的门控）。这里的用例都不关心它：什么能力都没声明，
+// 卡片不出现、也不会发池容量请求。
+const capabilityMocks = vi.hoisted(() => ({
+  getConfig: vi.fn(async (): Promise<Record<string, unknown>> => ({})),
+}));
+
+// Signed-in admin for the simulator's permission checks; null renders the page without an
+// AuthProvider, which is how every other test here sees it.
+const authMocks = vi.hoisted(() => ({
+  current: null as null | { can: (permission: string) => boolean },
+}));
+
+vi.mock("@app/providers/AuthProvider", () => ({
+  useOptionalAuth: () => authMocks.current,
+}));
+
+vi.mock("@code-proxy/api-client/endpoints/api-keys", () => ({
+  apiKeyEntriesApi: { list: async () => [] },
 }));
 
 function deferred<T>() {
@@ -72,6 +92,13 @@ vi.mock("@code-proxy/api-client", () => ({
     get: apiMocks.get,
     put: apiMocks.put,
   },
+  configApi: { getConfig: capabilityMocks.getConfig },
+  readConfigCapabilities: () => ({
+    payloadRulesDryRun: false,
+    alerts: false,
+    poolCapacity: false,
+    privacyMasking: false,
+  }),
   authFilesApi: {
     list: () => apiMocks.get("/auth-files"),
     getModelsForAuthFile: async (name: string) => {
@@ -173,6 +200,10 @@ vi.mock("@code-proxy/api-client/endpoints/channel-groups", () => ({
             name,
             channels: Array.isArray(item.channels)
               ? item.channels.map((channel) => String(channel ?? "").trim()).filter(Boolean)
+              : [],
+            "follow-upstream-models": item["follow-upstream-models"] === true,
+            "discovered-models": Array.isArray(item["discovered-models"])
+              ? item["discovered-models"]
               : [],
             channelDetails: Array.isArray(item["channel-details"])
               ? item["channel-details"]
@@ -1281,6 +1312,87 @@ describe("ChannelGroupsPage", () => {
       expect(payload).not.toHaveProperty("capabilities");
     });
 
+    // The page saves the whole routing config, so follow-upstream-models has to
+    // survive for a group nobody opened, and the preview of what following
+    // would open is display-only: it must never be sent back as config.
+    test("saves follow-upstream-models and never sends the preview back", async () => {
+      const fallback = mockedApiGet.getMockImplementation();
+      mockedApiGet.mockImplementation((...args: Parameters<typeof apiClient.get>) => {
+        const [path] = args;
+        if (path === "/routing-config") {
+          return Promise.resolve({
+            strategy: "round-robin",
+            "include-default-group": true,
+            "channel-groups": [
+              {
+                name: "claude-pool",
+                strategy: "round-robin",
+                match: { channels: ["Team A Claude"] },
+                "allowed-models": ["claude-3-7-sonnet-latest", "claude-opus-4-5"],
+              },
+              {
+                name: "codex-pool",
+                strategy: "round-robin",
+                match: { channels: ["Main Codex"] },
+                "allowed-models": ["gpt-6.1-sol"],
+                "follow-upstream-models": true,
+              },
+            ],
+            "path-routes": [{ path: "/claude-pool", group: "claude-pool" }],
+            capabilities: {
+              "channel-group-excluded-models": true,
+              "channel-group-follow-upstream-models": true,
+            },
+          });
+        }
+        if (path === "/channel-groups") {
+          return Promise.resolve({
+            items: [
+              { name: "claude-pool", channels: ["Team A Claude"], "discovered-models": ["claude-sonnet-5"] },
+              {
+                name: "codex-pool",
+                channels: ["Main Codex"],
+                "follow-upstream-models": true,
+                "discovered-models": ["gpt-6.1-terra"],
+              },
+            ],
+          });
+        }
+        if (path.startsWith("/models/configured-availability?allowed_channel_groups=claude-pool")) {
+          return Promise.resolve({ scoped: true, data: MODELS });
+        }
+        if (path.startsWith("/models?")) {
+          return Promise.resolve({ data: MODELS.map(({ id }) => ({ id })) });
+        }
+        return fallback!(...args);
+      });
+      const user = userEvent.setup();
+      renderPage();
+
+      await openGroupModels(user);
+      const toggle = screen.getByRole("switch", { name: "跟随上游新模型" });
+      expect(toggle).not.toBeChecked();
+      expect(screen.getByTestId("follow-upstream-models-preview")).toHaveTextContent(
+        "开启后还会放行：claude-sonnet-5",
+      );
+      await user.click(toggle);
+      await user.click(screen.getByRole("button", { name: "保存" }));
+      await waitFor(() => expect(mockedApiPut).toHaveBeenCalled());
+
+      const payload = mockedApiPut.mock.calls[0]?.[1] as Record<string, unknown>;
+      const groups = payload["channel-groups"] as Array<Record<string, unknown>>;
+      const byName = Object.fromEntries(groups.map((group) => [group.name, group]));
+      expect(byName["claude-pool"]).toMatchObject({
+        "allowed-models": ["claude-3-7-sonnet-latest", "claude-opus-4-5"],
+        "follow-upstream-models": true,
+      });
+      expect(byName["codex-pool"]).toMatchObject({ "follow-upstream-models": true });
+      for (const group of groups) {
+        expect(group).not.toHaveProperty("discovered-models");
+        expect(group).not.toHaveProperty("discoveredModels");
+      }
+    });
+
     // An older backend drops excluded-models silently: saving "all but one" as
     // exclusions there would store a group that serves every model.
     test("saves a fixed allow list for a backend that does not advertise exclusions", async () => {
@@ -1294,6 +1406,167 @@ describe("ChannelGroupsPage", () => {
 
       expect(group).toMatchObject({ "allowed-models": ["claude-3-7-sonnet-latest"] });
       expect(group).not.toHaveProperty("excluded-models");
+    });
+  });
+
+  describe("stream guards capability", () => {
+    // Serves routing-config with the default group and one group over
+    // "Team A Claude", plus whatever a test adds.
+    const serveRoutingConfig = (
+      groups: { default?: Record<string, unknown>; pool?: Record<string, unknown> },
+      extra: Record<string, unknown>,
+    ) => {
+      const fallback = mockedApiGet.getMockImplementation();
+      mockedApiGet.mockImplementation((...args: Parameters<typeof apiClient.get>) => {
+        const [path] = args;
+        if (path === "/routing-config") {
+          return Promise.resolve({
+            strategy: "round-robin",
+            "include-default-group": true,
+            "channel-groups": [
+              { name: "default", strategy: "round-robin", ...groups.default },
+              {
+                name: "claude-pool",
+                strategy: "round-robin",
+                match: { channels: ["Team A Claude"] },
+                ...groups.pool,
+              },
+            ],
+            "path-routes": [{ path: "/claude-pool", group: "claude-pool" }],
+            ...extra,
+          });
+        }
+        return fallback!(...args);
+      });
+    };
+
+    const saveClaudePool = async (
+      user: ReturnType<typeof userEvent.setup>,
+      edit?: () => Promise<void>,
+    ) => {
+      const row = await screen.findByRole("row", { name: /claude-pool/ });
+      await user.click(within(row).getByRole("button", { name: "编辑分组" }));
+      await edit?.();
+      await user.click(screen.getByRole("button", { name: "保存" }));
+      await waitFor(() => expect(mockedApiPut).toHaveBeenCalled());
+      const payload = mockedApiPut.mock.calls[0]?.[1] as Record<string, unknown>;
+      const groups = payload["channel-groups"] as Array<Record<string, unknown>>;
+      return Object.fromEntries(groups.map((group) => [group.name, group]));
+    };
+
+    // The page saves the whole routing config: a group nobody opened keeps its
+    // guards, and an explicit busy-wait 0 is not turned into unset.
+    test("edits the guards and keeps them on groups nobody opened", async () => {
+      serveRoutingConfig(
+        { default: { "busy-wait-max-seconds": 0 }, pool: { "first-token-timeout-seconds": 20 } },
+        {
+          capabilities: {
+            "channel-group-first-token-timeout": true,
+            "channel-group-busy-wait": true,
+          },
+        },
+      );
+      const user = userEvent.setup();
+      renderPage();
+
+      const byName = await saveClaudePool(user, async () => {
+        expect(screen.getByRole("textbox", { name: "首 token 超时（秒）" })).toHaveValue("20");
+        await user.type(screen.getByRole("textbox", { name: "全员繁忙等待上限（秒）" }), "120");
+      });
+
+      expect(byName["claude-pool"]).toMatchObject({
+        "first-token-timeout-seconds": 20,
+        "busy-wait-max-seconds": 120,
+      });
+      expect(byName.default).toMatchObject({ "busy-wait-max-seconds": 0 });
+      expect(byName.default).not.toHaveProperty("first-token-timeout-seconds");
+    });
+
+    // The panel updates on its own; against an older backend the editor and
+    // what it saves must stay exactly as before.
+    test("shows and writes nothing new for a backend without the capability", async () => {
+      serveRoutingConfig({}, {});
+      const user = userEvent.setup();
+      renderPage();
+
+      const byName = await saveClaudePool(user, async () => {
+        expect(screen.queryByRole("textbox", { name: "首 token 超时（秒）" })).not.toBeInTheDocument();
+        expect(
+          screen.queryByRole("textbox", { name: "全员繁忙等待上限（秒）" }),
+        ).not.toBeInTheDocument();
+      });
+
+      for (const group of Object.values(byName)) {
+        expect(group).not.toHaveProperty("first-token-timeout-seconds");
+        expect(group).not.toHaveProperty("busy-wait-max-seconds");
+      }
+    });
+  });
+
+  describe("routing simulator", () => {
+    const serveRoutingConfig = (capabilities?: Record<string, boolean>) => {
+      const fallback = mockedApiGet.getMockImplementation();
+      mockedApiGet.mockImplementation((...args: Parameters<typeof apiClient.get>) => {
+        const [path] = args;
+        if (path === "/routing-config") {
+          return Promise.resolve({
+            strategy: "round-robin",
+            "include-default-group": true,
+            "channel-groups": [],
+            "path-routes": [],
+            ...(capabilities ? { capabilities } : {}),
+          });
+        }
+        return fallback!(...args);
+      });
+    };
+
+    const waitForLoad = () =>
+      waitFor(() => expect(screen.getByRole("button", { name: "新增分组" })).toBeEnabled());
+
+    afterEach(() => {
+      authMocks.current = null;
+    });
+
+    test("opens the simulator when the backend can run it", async () => {
+      serveRoutingConfig({ "routing-simulation": true });
+      const user = userEvent.setup();
+      renderPage();
+
+      await waitForLoad();
+      await user.click(screen.getByRole("button", { name: "模拟请求" }));
+      expect(await screen.findByRole("dialog", { name: "模拟一次请求" })).toBeInTheDocument();
+    });
+
+    test("leaves it out for a backend that does not offer it", async () => {
+      serveRoutingConfig();
+      renderPage();
+
+      await waitForLoad();
+      expect(screen.queryByRole("button", { name: "模拟请求" })).not.toBeInTheDocument();
+    });
+
+    // The simulation shows the key's scope and the accounts with their cooldowns; the backend
+    // refuses an admin who could not read those pages, so the panel does not offer it either.
+    test.each(["api_keys.read", "auth_files.read"])(
+      "leaves it out for an admin without %s",
+      async (missing) => {
+        authMocks.current = { can: (permission) => permission !== missing };
+        serveRoutingConfig({ "routing-simulation": true });
+        renderPage();
+
+        await waitForLoad();
+        expect(screen.queryByRole("button", { name: "模拟请求" })).not.toBeInTheDocument();
+      },
+    );
+
+    test("offers it to an admin who can read both", async () => {
+      authMocks.current = { can: () => true };
+      serveRoutingConfig({ "routing-simulation": true });
+      renderPage();
+
+      await waitForLoad();
+      expect(screen.getByRole("button", { name: "模拟请求" })).toBeEnabled();
     });
   });
 });

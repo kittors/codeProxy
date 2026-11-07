@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { TextInput } from "@code-proxy/ui";
+import { ChannelCoolingField, useChannelCoolingSupported } from "@features/channel-cooling";
 import { KeyValueInputList } from "../KeyValueInputList";
 import { buildModelsEndpoint } from "../providers-helpers";
 import type { OpenAIDraft } from "../providers-helpers";
@@ -20,6 +21,7 @@ export function OpenAIProviderBasicSection({
   setOpenaiDraft,
 }: OpenAIProviderBasicSectionProps) {
   const { t } = useTranslation();
+  const coolingSupported = useChannelCoolingSupported();
 
   return (
     <div className="space-y-6">
@@ -118,6 +120,16 @@ export function OpenAIProviderBasicSection({
           onChange={(next) => setOpenaiDraft((prev) => ({ ...prev, headersEntries: next }))}
         />
       </FieldGroup>
+
+      {coolingSupported ? (
+        <FieldGroup>
+          <ChannelCoolingField
+            scope="channel"
+            value={openaiDraft.coolingMode}
+            onChange={(coolingMode) => setOpenaiDraft((prev) => ({ ...prev, coolingMode }))}
+          />
+        </FieldGroup>
+      ) : null}
     </div>
   );
 }
