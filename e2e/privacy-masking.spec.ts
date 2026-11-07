@@ -70,6 +70,8 @@ const RECORDS = [
     { kind: "API_KEY", by: "rule", head: "sk-", len: 52, n: 9 }, { kind: "TOKEN", by: "rule", head: "eyJ", len: 164, n: 6 }] },
   { key: "r6", at: at(15), client: "gemini-cli", channel: LONG_CHANNEL, provider: "gemini", model: "gemini-3.1-pro", places: 4, distinct: 2, values: [
     { kind: "TERM", by: "word", head: "N", len: 8, n: 3 }, { kind: "EMAIL", by: "rule", head: "l", len: 21, n: 1 }] },
+  { key: "r6b", at: at(20), client: "", channel: "自建中转", provider: "my-relay", model: "gpt-5-codex", places: 1, distinct: 1, values: [
+    { kind: "EMAIL", by: "rule", head: "l", len: 21, n: 1 }] },
   { key: "r7", at: at(60 * 24 + 30), client: "codex", channel: "土豆 Codex 池", provider: "openai", model: "gpt-5-codex", places: 15, distinct: 2, values: [
     { kind: "API_KEY", by: "rule", head: "sk-", len: 52, n: 9 }, { kind: "PASSWORD", by: "rule", head: "Q", len: 12, n: 6 }] },
   { key: "r8", at: at(60 * 24 + 95), client: "claude-code", channel: "Claude 官方", provider: "claude", model: "claude-opus-5-5", places: 6, distinct: 1, values: [
@@ -216,6 +218,66 @@ test.describe("privacy masking page", () => {
     await page.getByRole("textbox", { name: "试一试" }).fill("用密钥 sk-proj-AbCd… 部署，数据库密码：Qx7mP2vL9kR4，发邮件给 ops@company.com");
     await expect(page.getByText("上游会收到", { exact: true })).toBeVisible();
     await shoot(page, "5-settings");
+  });
+
+  test("every row lines its columns up, and the tab bar stays put while scrolling", async ({ page }) => {
+    test.slow();
+    await page.setViewportSize({ width: 1470, height: 900 });
+    await mock(page);
+    await page.goto("/#/runtime/privacy-masking");
+    const rows = page.locator("li > button");
+    await expect(rows.filter({ hasText: "自建中转" })).toBeVisible();
+
+    // 每行是独立的 grid：标签多少、客户端名长短、有没有 logo 都不能让后面的列左右漂（11-07 线上截图里
+    // 模型名随标签多少错开）。箭头、渠道名、模型、标签右沿每行都在同一处，标签不撑出自己的列。
+    const columns = await rows.evaluateAll((buttons) =>
+      buttons.map((button) => {
+        const [, who, model, chips] = [...button.children] as HTMLElement[];
+        const x = (value: number) => Math.round(value * 10) / 10;
+        const box = chips.getBoundingClientRect();
+        return {
+          arrow: x(who.querySelector(":scope > svg")!.getBoundingClientRect().left),
+          channel: x(who.lastElementChild!.getBoundingClientRect().left),
+          model: x(model.getBoundingClientRect().left),
+          chipsRight: x(Math.max(...[...chips.children].map((chip) => chip.getBoundingClientRect().right))),
+          overflow: [...chips.children].some((chip) => chip.getBoundingClientRect().right > box.right + 0.5),
+        };
+      }),
+    );
+    expect(columns.length).toBeGreaterThan(5);
+    for (const key of ["arrow", "channel", "model", "chipsRight"] as const) {
+      expect(new Set(columns.map((column) => column[key])), key).toHaveProperty("size", 1);
+    }
+    expect(columns.filter((column) => column.overflow)).toEqual([]);
+
+    // 控制台内容区不做橡皮筋回弹（鼠标 / 触控板设备）：macOS 触控板滚到头再推，整块内容连同吸顶的
+    // 页签栏被拉走约一秒；内容不满一屏的页面，滚动一路传到窗口，侧边栏连同整页一起弹（11-07 录屏）。
+    // CI 的 Linux Chrome 没有回弹，这里锁住样式；回弹本身在 macOS Chrome 上用合成手势逐帧验证过
+    // （修复前设置页 336 帧里 267 帧页签栏离位、运行日志页整页最多偏 68px，修复后都是 0）。
+    const shell = page.locator("#main-content").locator("xpath=..");
+    expect(await shell.evaluate((el) => getComputedStyle(el).overscrollBehaviorY)).toBe("none");
+
+    // 有未保存的修改时，保存操作在页签栏里：滚下去只有一条钉住区，页签条没被别的吸顶条盖住
+    await page.getByRole("tab", { name: "设置" }).click();
+    await page.getByRole("switch", { name: "不区分大小写" }).click();
+    const pin = page.locator("[data-scroll-fade-pin='top']");
+    await expect(pin.getByRole("button", { name: "保存" })).toBeVisible();
+    await shell.evaluate((el) => {
+      el.scrollTop = 600;
+    });
+    await expect(pin).toHaveCount(1);
+    const tabs = page.getByRole("tablist", { name: "隐私脱敏" });
+    await expect
+      .poll(() =>
+        tabs.evaluate((el) => {
+          const r = el.getBoundingClientRect();
+          return el.contains(document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2));
+        }),
+      )
+      .toBe(true);
+    const [pinBox, shellBox] = await Promise.all([pin.boundingBox(), shell.boundingBox()]);
+    expect(Math.abs(pinBox!.y - shellBox!.y)).toBeLessThanOrEqual(1);
+    await shoot(page, "7-settings-unsaved-scrolled");
   });
 
   test("dark appearance", async ({ page }) => {

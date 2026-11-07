@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Check, Plus, Save, Trash2, Undo2 } from "lucide-react";
 import {
@@ -36,7 +37,10 @@ function Section({ title, description, children }: { title: string; description?
  * 租户的脱敏设置。遮什么、怎么处理都由管理员在控制台决定；门户用户只在门户里看生效的规则和自己
  * 的记录，不能改（2026-11-05 起撤掉了门户自设，连同「强制开启」「门户能否自己设置」）。
  *
- * 改动先放在草稿里，顶部出现保存栏；「试一试」用的是草稿，保存前就能看到效果。
+ * 改动先放在草稿里，页签栏右侧出现「未保存 · 放弃 · 保存」；「试一试」用的是草稿，保存前就能看到效果。
+ *
+ * 保存操作 portal 进工作区页签栏里的 actionsSlot，跟页签栏一起吸顶。原来是自己的一条 sticky top-0：
+ * 一滚动就和同样吸在 top-0 的页签栏叠在一起、把它整个盖住，出现时还把整页内容往下推一截。
  */
 export function MaskingSettingsPanel({
   settings,
@@ -44,12 +48,15 @@ export function MaskingSettingsPanel({
   canWrite,
   saving,
   onSave,
+  actionsSlot,
 }: {
   settings: PrivacyMaskSettings;
   scope: "tenant" | "portal";
   canWrite: boolean;
   saving: boolean;
   onSave: (next: PrivacyMaskSettings) => void;
+  /** 页签栏里留给保存操作的位置；还没挂载时为 null，这一刻不画。 */
+  actionsSlot: HTMLElement | null;
 }) {
   const { t } = useTranslation();
   const kindLabel = useKindLabel();
@@ -77,25 +84,26 @@ export function MaskingSettingsPanel({
 
   return (
     <div className="flex flex-col gap-6">
-      {dirty ? (
-        <div
-          data-scroll-fade-pin="top"
-          className="sticky top-0 z-20 -mx-1 flex flex-wrap items-center justify-end gap-2 rounded-2xl bg-canvas/95 px-1 py-2 backdrop-blur-sm"
-        >
-          <span className="mr-auto inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-800 dark:text-amber-200">
-            <span aria-hidden="true" className="size-1.5 rounded-full bg-amber-500" />
-            {t("privacy_masking.settings.unsaved")}
-          </span>
-          <Button size="sm" variant="ghost" disabled={saving} onClick={() => setDraft(settings)}>
-            <Undo2 size={14} aria-hidden="true" />
-            {t("privacy_masking.settings.discard")}
-          </Button>
-          <Button size="sm" variant="primary" disabled={locked} onClick={() => onSave(draft)}>
-            <Save size={14} aria-hidden="true" />
-            {saving ? t("common.saving") : t("common.save")}
-          </Button>
-        </div>
-      ) : null}
+      {dirty && actionsSlot
+        ? createPortal(
+            <>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-800 dark:text-amber-200">
+                <span aria-hidden="true" className="size-1.5 rounded-full bg-amber-500" />
+                {t("privacy_masking.settings.unsaved")}
+              </span>
+              {/* xs 和页签条同高（h-8）：钉住区出现保存操作时不长高，下面的内容不跳 */}
+              <Button size="xs" variant="ghost" disabled={saving} onClick={() => setDraft(settings)}>
+                <Undo2 size={13} aria-hidden="true" />
+                {t("privacy_masking.settings.discard")}
+              </Button>
+              <Button size="xs" variant="primary" disabled={locked} onClick={() => onSave(draft)}>
+                <Save size={13} aria-hidden="true" />
+                {saving ? t("common.saving") : t("common.save")}
+              </Button>
+            </>,
+            actionsSlot,
+          )
+        : null}
 
       {settings.server_disabled ? (
         <Callout tone="danger" role="alert">

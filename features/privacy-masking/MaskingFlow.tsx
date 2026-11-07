@@ -1,7 +1,7 @@
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Boxes, ShieldCheck, TerminalSquare } from "lucide-react";
-import { VendorIcon } from "@code-proxy/assets";
+import { VendorIcon, hasVendorIcon } from "@code-proxy/assets";
 import type { MaskCount } from "@code-proxy/api-client";
 import { formatCompact } from "./format";
 import { CATEGORY_STYLE, clientMeta } from "./maskKinds";
@@ -159,7 +159,7 @@ export function MaskingFlow({
         ].join(" ")}
       >
         <span className="grid size-6 shrink-0 place-items-center rounded-lg bg-subtle text-ink-3">
-          {node.more ? null : vendor ? <VendorIcon modelId={vendor} size={14} /> : <Fallback size={14} aria-hidden="true" />}
+          {node.more ? null : vendor && hasVendorIcon(vendor) ? <VendorIcon modelId={vendor} size={14} /> : <Fallback size={14} aria-hidden="true" />}
         </span>
         <span className="min-w-0 leading-tight">
           <span className={`block truncate text-sm ${selected ? "font-medium text-violet-700 dark:text-violet-200" : "text-ink"}`}>

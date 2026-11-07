@@ -361,6 +361,17 @@ for (const scheme of ["light", "dark"] as const) {
         "https://github.com/yetone/magpie",
       );
       await expectReadOnly(page);
+      // 标签自己的滚动区和控制台内容区一样不做橡皮筋回弹，吸顶的子标签栏不会被拉走
+      expect(
+        await page
+          .locator("[data-scroll-fade-pin='top']")
+          .first()
+          .evaluate((el) => {
+            let node = el.parentElement;
+            while (node && getComputedStyle(node).overflowY !== "auto") node = node.parentElement;
+            return node ? getComputedStyle(node).overscrollBehaviorY : "no scroller";
+          }),
+      ).toBe("none");
       await page.waitForTimeout(2600); // 流向图的线画完
       await shoot(page, `portal-1-overview-${scheme}`);
 
