@@ -1,64 +1,25 @@
-import { apiCallApi, authFilesApi, getApiCallErrorMessage } from "@code-proxy/api-client";
-import type { ApiCallResult, AuthFileItem } from "@code-proxy/api-client";
+import { apiCallApi, getApiCallErrorMessage } from "@code-proxy/api-client";
+import type { AuthFileItem } from "@code-proxy/api-client";
 import {
-  ANTIGRAVITY_LOAD_CODE_ASSIST_URLS,
-  ANTIGRAVITY_QUOTA_SUMMARY_URLS,
-  ANTIGRAVITY_QUOTA_URLS,
-  ANTIGRAVITY_REQUEST_HEADERS,
-  CLAUDE_REQUEST_HEADERS,
-  CLAUDE_USAGE_URL,
   CODEX_REQUEST_HEADERS,
   CODEX_RESET_CREDITS_URL,
   CODEX_RESET_CREDITS_CONSUME_URL,
-  CODEX_USAGE_URL,
-  DEFAULT_ANTIGRAVITY_PROJECT_ID,
-  GEMINI_CLI_QUOTA_URL,
-  GEMINI_CLI_REQUEST_HEADERS,
-  KIMI_REQUEST_HEADERS,
-  KIMI_USAGE_URL,
-  KIRO_QUOTA_URL,
-  KIRO_REQUEST_BODY,
-  KIRO_REQUEST_HEADERS,
-  XAI_BILLING_MONTHLY_URL,
-  XAI_BILLING_WEEKLY_URL,
-  XAI_REQUEST_HEADERS,
-  buildAntigravityItems,
-  buildAntigravitySummaryItems,
-  buildClaudeItems,
-  buildCodexItems,
-  buildGeminiCliBuckets,
-  buildKimiItems,
-  buildKiroItems,
-  buildXaiBillingSummary,
-  buildXaiItems,
-  clampPercent,
-  isRecord,
-  mergeXaiBillingSummaries,
   normalizeAuthIndexValue,
-  normalizeGeminiCliModelId,
-  normalizeNumberValue,
-  normalizeQuotaFraction,
   normalizeStringValue,
-  parseAntigravityPayload,
-  parseClaudeUsagePayload,
-  parseCodexUsagePayload,
-  parseGeminiCliQuotaPayload,
-  parseKimiUsagePayload,
-  parseKiroQuotaPayload,
-  parseXaiBillingPayload,
-  parseResetTimeToMs,
   resolveAuthProvider,
   resolveCodexChatgptAccountId,
-  resolveCodexResetCreditExpirations,
-  resolveCodexResetCreditCount,
   resolveCodexResetCreditCandidates,
-  resolveXaiPlanType,
-  resolveGeminiCliProjectId,
-  resolveXaiUserId,
-  type XaiBillingSummary,
-  type QuotaItem,
 } from "@features/quota-preview/quota-helpers";
 
+/**
+ * Quota itself is probed by the backend: the AI accounts page starts a status
+ * refresh job (CliRelay internal/management/aiaccountstatus), and that probe
+ * owns each upstream's URLs and client identity, such as the Grok CLI version.
+ * The panel's own per-provider quota fetchers sat unused after the page moved
+ * to that job and kept identities that had gone stale (Grok 0.2.91), so they
+ * were removed rather than kept in step. Only the Codex reset-credit action
+ * below still calls an upstream through api-call.
+ */
 export type QuotaProvider =
   | "antigravity"
   | "claude"
@@ -67,12 +28,6 @@ export type QuotaProvider =
   | "kimi"
   | "kiro"
   | "xai";
-export type QuotaFetchResult = {
-  items: QuotaItem[];
-  planType?: string | null;
-  resetCreditCount?: number;
-  resetCreditExpirations?: string[];
-};
 
 const createRedeemRequestId = (): string =>
   globalThis.crypto?.randomUUID?.() ??
@@ -98,13 +53,6 @@ const buildCodexRequestHeaders = (file: AuthFileItem): Record<string, string> =>
   return requestHeader;
 };
 
-const buildXaiRequestHeaders = (file: AuthFileItem): Record<string, string> => {
-  const headers: Record<string, string> = { ...XAI_REQUEST_HEADERS };
-  const userId = resolveXaiUserId(file);
-  if (userId) headers["x-userid"] = userId;
-  return headers;
-};
-
 export const resolveQuotaProvider = (file: AuthFileItem): QuotaProvider | null => {
   const provider = resolveAuthProvider(file);
   if (provider === "antigravity") return "antigravity";
@@ -117,9 +65,6 @@ export const resolveQuotaProvider = (file: AuthFileItem): QuotaProvider | null =
   if (provider === "xai") return "xai";
   return null;
 };
-
-export const isQuotaSupportedAuthFile = (file: AuthFileItem): boolean =>
-  resolveQuotaProvider(file) !== null;
 
 export const consumeCodexResetCredit = async (
   file: AuthFileItem,
@@ -168,325 +113,10 @@ export const consumeCodexResetCredit = async (
   }
 };
 
-const resolveStoredAntigravityProjectId = async (file: AuthFileItem): Promise<string | null> => {
-  try {
-    const text = await authFilesApi.downloadText(file.name);
-    const trimmed = text.trim();
-    if (!trimmed) return null;
-    const parsed = JSON.parse(trimmed) as Record<string, unknown>;
-    const top = normalizeStringValue(parsed.project_id ?? parsed.projectId);
-    if (top) return top;
-    const installed = isRecord(parsed.installed)
-      ? (parsed.installed as Record<string, unknown>)
-      : null;
-    const installedId = installed
-      ? normalizeStringValue(installed.project_id ?? installed.projectId)
-      : null;
-    if (installedId) return installedId;
-    const web = isRecord(parsed.web) ? (parsed.web as Record<string, unknown>) : null;
-    const webId = web ? normalizeStringValue(web.project_id ?? web.projectId) : null;
-    if (webId) return webId;
-  } catch {
-    return null;
-  }
-  return null;
-};
-
-/**
- * Ask the upstream which project this account actually owns.
- *
- * Quota is reported per project, so querying under a project the account does
- * not own reports that project's remaining fraction — an exhausted account can
- * come back reading 100%. The shared fallback id is only reached when the
- * account genuinely has no project of its own.
- */
-const fetchAntigravityProjectId = async (authIndex: string): Promise<string | null> => {
-  const body = JSON.stringify({
-    metadata: { ideType: "ANTIGRAVITY", platform: "PLATFORM_UNSPECIFIED", pluginType: "GEMINI" },
-  });
-  for (const url of ANTIGRAVITY_LOAD_CODE_ASSIST_URLS) {
-    try {
-      const result = await apiCallApi.request({
-        authIndex,
-        method: "POST",
-        url,
-        header: { ...ANTIGRAVITY_REQUEST_HEADERS },
-        data: body,
-      });
-      if (result.statusCode < 200 || result.statusCode >= 300) continue;
-      const parsed = parseAntigravityPayload(result.body ?? result.bodyText);
-      if (!parsed) continue;
-      const project = parsed.cloudaicompanionProject;
-      const id = isRecord(project)
-        ? normalizeStringValue(project.id)
-        : normalizeStringValue(project);
-      if (id) return id;
-    } catch {
-      continue;
-    }
-  }
-  return null;
-};
-
-const resolveAntigravityProjectId = async (
-  file: AuthFileItem,
-  authIndex: string,
-): Promise<string> => {
-  const stored = await resolveStoredAntigravityProjectId(file);
-  if (stored) return stored;
-  const fetched = await fetchAntigravityProjectId(authIndex);
-  return fetched ?? DEFAULT_ANTIGRAVITY_PROJECT_ID;
-};
-
-/**
- * POST the project-scoped body and, on 403, retry once without the project
- * field. A project the account cannot read is rejected outright, and the
- * projectless form is what the upstream falls back to internally.
- */
-const requestAntigravityQuota = async (
-  authIndex: string,
-  urls: string[],
-  projectId: string,
-): Promise<{ result: ApiCallResult | null; payload: Record<string, unknown> | null }> => {
-  let last: ApiCallResult | null = null;
-  for (const url of urls) {
-    for (const body of [JSON.stringify({ project: projectId }), "{}"]) {
-      const result = await apiCallApi.request({
-        authIndex,
-        method: "POST",
-        url,
-        header: { ...ANTIGRAVITY_REQUEST_HEADERS },
-        data: body,
-      });
-      last = result;
-      if (result.statusCode >= 200 && result.statusCode < 300) {
-        return { result, payload: parseAntigravityPayload(result.body ?? result.bodyText) };
-      }
-      if (result.statusCode !== 403) break;
-    }
-  }
-  return { result: last, payload: null };
-};
-
 const isClaudeOAuthLikeFile = (file: AuthFileItem): boolean => {
   const accountType = normalizeStringValue(file.account_type ?? file.accountType)?.toLowerCase();
   if (accountType === "api-key" || accountType === "apikey" || accountType === "api_key") {
     return false;
   }
   return true;
-};
-
-const requestXaiBilling = async (
-  authIndex: string,
-  url: string,
-  header: Record<string, string>,
-): Promise<XaiBillingSummary | null> => {
-  const result = await apiCallApi.request({
-    authIndex,
-    method: "GET",
-    url,
-    header,
-  });
-  if (result.statusCode < 200 || result.statusCode >= 300)
-    throw new Error(getApiCallErrorMessage(result));
-  const payload = parseXaiBillingPayload(result.body ?? result.bodyText);
-  return buildXaiBillingSummary(payload?.config);
-};
-
-export const fetchQuota = async (
-  type: QuotaProvider,
-  file: AuthFileItem,
-): Promise<QuotaFetchResult> => {
-  const authIndex = resolveAuthIndex(file);
-
-  if (type === "antigravity") {
-    const projectId = await resolveAntigravityProjectId(file, authIndex);
-
-    // The grouped summary is the authoritative view — it carries both the weekly
-    // and the 5h window and groups them the way the upstream does. The flat
-    // model list is the fallback: 5h only, grouped by us.
-    const summary = await requestAntigravityQuota(
-      authIndex,
-      ANTIGRAVITY_QUOTA_SUMMARY_URLS,
-      projectId,
-    );
-    if (summary.payload) {
-      const items = buildAntigravitySummaryItems(summary.payload);
-      if (items.length > 0) return { items };
-    }
-
-    const models = await requestAntigravityQuota(authIndex, ANTIGRAVITY_QUOTA_URLS, projectId);
-    if (models.payload) {
-      if (!isRecord(models.payload.models)) throw new Error("no_model_quota");
-      return { items: buildAntigravityItems(models.payload) };
-    }
-    if (models.result) throw new Error(getApiCallErrorMessage(models.result));
-    if (summary.result) throw new Error(getApiCallErrorMessage(summary.result));
-    throw new Error("request_failed");
-  }
-
-  if (type === "codex") {
-    const header = buildCodexRequestHeaders(file);
-    const result = await apiCallApi.request({
-      authIndex,
-      method: "GET",
-      url: CODEX_USAGE_URL,
-      header,
-    });
-    if (result.statusCode < 200 || result.statusCode >= 300)
-      throw new Error(getApiCallErrorMessage(result));
-    const payload = parseCodexUsagePayload(result.body ?? result.bodyText);
-    if (!payload) throw new Error("parse_codex_failed");
-    const resetCreditCount = resolveCodexResetCreditCount(payload);
-    let resetCreditExpirations: string[] | undefined;
-    if (resetCreditCount > 0) {
-      try {
-        const details = await apiCallApi.request({
-          authIndex,
-          method: "GET",
-          url: CODEX_RESET_CREDITS_URL,
-          header,
-        });
-        if (details.statusCode >= 200 && details.statusCode < 300) {
-          const expirations = resolveCodexResetCreditExpirations(details.body ?? details.bodyText);
-          resetCreditExpirations = expirations.length > 0 ? expirations : undefined;
-        }
-      } catch {
-        resetCreditExpirations = undefined;
-      }
-    }
-    return {
-      items: buildCodexItems(payload),
-      planType: normalizeStringValue(payload.plan_type ?? payload.planType)?.toLowerCase() ?? null,
-      resetCreditCount,
-      resetCreditExpirations,
-    };
-  }
-
-  if (type === "claude") {
-    const result = await apiCallApi.request({
-      authIndex,
-      method: "GET",
-      url: CLAUDE_USAGE_URL,
-      header: { ...CLAUDE_REQUEST_HEADERS },
-    });
-    if (result.statusCode < 200 || result.statusCode >= 300)
-      throw new Error(getApiCallErrorMessage(result));
-    const payload = parseClaudeUsagePayload(result.body ?? result.bodyText);
-    if (!payload) throw new Error("parse_claude_failed");
-    return { items: buildClaudeItems(payload) };
-  }
-
-  if (type === "gemini-cli") {
-    const projectId = resolveGeminiCliProjectId(file);
-    if (!projectId) throw new Error("missing_project_id");
-    const result = await apiCallApi.request({
-      authIndex,
-      method: "POST",
-      url: GEMINI_CLI_QUOTA_URL,
-      header: { ...GEMINI_CLI_REQUEST_HEADERS },
-      data: JSON.stringify({ project: projectId }),
-    });
-    if (result.statusCode < 200 || result.statusCode >= 300)
-      throw new Error(getApiCallErrorMessage(result));
-    const payload = parseGeminiCliQuotaPayload(result.body ?? result.bodyText);
-    const buckets = Array.isArray(payload?.buckets) ? payload?.buckets : [];
-    const parsed = buckets
-      .map((bucket) => {
-        const modelId = normalizeGeminiCliModelId(bucket.modelId ?? bucket.model_id);
-        if (!modelId) return null;
-        const tokenType = normalizeStringValue(bucket.tokenType ?? bucket.token_type);
-        const remainingFractionRaw = normalizeQuotaFraction(
-          bucket.remainingFraction ?? bucket.remaining_fraction,
-        );
-        const remainingAmount = normalizeNumberValue(
-          bucket.remainingAmount ?? bucket.remaining_amount,
-        );
-        const resetTime = normalizeStringValue(bucket.resetTime ?? bucket.reset_time) ?? undefined;
-        let fallbackFraction: number | null = null;
-        if (remainingAmount !== null) fallbackFraction = remainingAmount <= 0 ? 0 : null;
-        else if (resetTime) fallbackFraction = 0;
-        return {
-          modelId,
-          tokenType: tokenType ?? null,
-          remainingFraction: remainingFractionRaw ?? fallbackFraction,
-          remainingAmount,
-          resetTime,
-        };
-      })
-      .filter(Boolean) as {
-      modelId: string;
-      tokenType: string | null;
-      remainingFraction: number | null;
-      remainingAmount: number | null;
-      resetTime?: string;
-    }[];
-    const grouped = buildGeminiCliBuckets(parsed);
-    return {
-      items: grouped.map((b) => {
-        const percent =
-          b.remainingFraction === null ? null : Math.round(clampPercent(b.remainingFraction * 100));
-        const amount =
-          b.remainingAmount !== null
-            ? `${Math.round(b.remainingAmount).toLocaleString()} tokens`
-            : null;
-        const tokenType = b.tokenType ? `tokenType=${b.tokenType}` : null;
-        const meta = [tokenType, amount].filter(Boolean).join(" · ");
-        return {
-          label: b.label,
-          percent,
-          resetAtMs: parseResetTimeToMs(b.resetTime),
-          meta: meta || undefined,
-        };
-      }),
-    };
-  }
-
-  if (type === "kimi") {
-    const result = await apiCallApi.request({
-      authIndex,
-      method: "GET",
-      url: KIMI_USAGE_URL,
-      header: { ...KIMI_REQUEST_HEADERS },
-    });
-    if (result.statusCode < 200 || result.statusCode >= 300)
-      throw new Error(getApiCallErrorMessage(result));
-    const payload = parseKimiUsagePayload(result.body ?? result.bodyText);
-    if (!payload) throw new Error("parse_kimi_failed");
-    return { items: buildKimiItems(payload) };
-  }
-
-  if (type === "xai") {
-    const header = buildXaiRequestHeaders(file);
-    const [weeklyResult, monthlyResult] = await Promise.allSettled([
-      requestXaiBilling(authIndex, XAI_BILLING_WEEKLY_URL, header),
-      requestXaiBilling(authIndex, XAI_BILLING_MONTHLY_URL, header),
-    ]);
-    const weeklySummary = weeklyResult.status === "fulfilled" ? weeklyResult.value : null;
-    const monthlySummary = monthlyResult.status === "fulfilled" ? monthlyResult.value : null;
-    const summary = mergeXaiBillingSummaries(weeklySummary, monthlySummary);
-    if (!summary) {
-      if (weeklyResult.status === "rejected" && monthlyResult.status === "rejected") {
-        throw weeklyResult.reason;
-      }
-      throw new Error("empty_data");
-    }
-    return {
-      items: buildXaiItems(summary),
-      planType: resolveXaiPlanType(summary.monthlyLimitCents),
-    };
-  }
-
-  const result = await apiCallApi.request({
-    authIndex,
-    method: "POST",
-    url: KIRO_QUOTA_URL,
-    header: { ...KIRO_REQUEST_HEADERS },
-    data: KIRO_REQUEST_BODY,
-  });
-  if (result.statusCode < 200 || result.statusCode >= 300)
-    throw new Error(getApiCallErrorMessage(result));
-  const payload = parseKiroQuotaPayload(result.body ?? result.bodyText);
-  if (!payload) throw new Error("parse_kiro_failed");
-  return { items: buildKiroItems(payload) };
 };
