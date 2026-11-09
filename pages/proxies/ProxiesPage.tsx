@@ -397,12 +397,15 @@ export function ProxiesPage() {
   const hasSharedSection = sharedEntries.length > 0;
 
   return (
+    // 钉满一屏时页面根 md:overflow-hidden，裁剪框就是它的内边距盒：页头的描边按钮贴着上沿，
+    // 画在盒外的 1px 描边整条被裁掉（2026-11-09「刷新」只剩两个上角）。四边各让出 4px
+    // （-m-1 p-1）：内容位置不变，描边和键盘焦点框（2px + 2px 偏移）都落在裁剪框里。
     <div
       data-page-fill={hasSharedSection ? undefined : "always"}
       className={
         hasSharedSection
           ? "flex flex-col gap-5"
-          : "flex min-h-0 flex-1 flex-col gap-5 md:overflow-hidden"
+          : "flex min-h-0 flex-1 flex-col gap-5 md:-m-1 md:overflow-hidden md:p-1"
       }
     >
       <div className="flex flex-wrap items-start justify-between gap-3">

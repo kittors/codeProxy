@@ -1159,9 +1159,9 @@ export function ProvidersPage() {
   ]);
 
   return (
-    <div
+    <div // overflow-hidden 是裁剪框：-my-1 py-1 给贴上沿的描边按钮让出画线的 4px（e2e/control-edge-clipping）
       data-testid="providers-page-shell" data-page-fill="always"
-      className="-mx-3 flex min-h-0 flex-1 flex-col gap-6 overflow-hidden px-3"
+      className="-mx-3 -my-1 flex min-h-0 flex-1 flex-col gap-6 overflow-hidden px-3 py-1"
     >
       {canWriteProviders ? (
         <input
