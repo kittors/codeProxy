@@ -45,7 +45,6 @@ const mocks = vi.hoisted(() => ({
   })),
   recordAuthFileQuotaSnapshot: vi.fn(async () => ({})),
   reconcile: vi.fn(async () => ({})),
-  fetchQuota: vi.fn(async () => ({ items: [] })),
   apiCall: vi.fn(async () => ({})),
 }));
 
@@ -90,14 +89,6 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
       ...mod.apiCallApi,
       call: mocks.apiCall,
     },
-  };
-});
-
-vi.mock("@features/quota-preview/quota-fetch", async (importOriginal) => {
-  const mod = await importOriginal<typeof import("@features/quota-preview/quota-fetch")>();
-  return {
-    ...mod,
-    fetchQuota: mocks.fetchQuota,
   };
 });
 
@@ -174,7 +165,6 @@ describe("AuthFilesPage status read-model request shape", () => {
     mocks.getAuthFileTrend.mockClear();
     mocks.recordAuthFileQuotaSnapshot.mockClear();
     mocks.reconcile.mockClear();
-    mocks.fetchQuota.mockClear();
     mocks.apiCall.mockClear();
   });
 
@@ -182,7 +172,7 @@ describe("AuthFilesPage status read-model request shape", () => {
     cleanup();
   });
 
-  test("first paint: auth-files + status then one quiet visible probe; no entity-stats/api-call/trend/reconcile/snapshot/fetchQuota", async () => {
+  test("first paint: auth-files + status then one quiet visible probe; no entity-stats/api-call/trend/reconcile/snapshot", async () => {
     render(
       <MemoryRouter initialEntries={["/auth-files"]}>
         <ThemeProvider>
@@ -204,7 +194,6 @@ describe("AuthFilesPage status read-model request shape", () => {
     expect(mocks.getAuthFileTrend).not.toHaveBeenCalled();
     expect(mocks.recordAuthFileQuotaSnapshot).not.toHaveBeenCalled();
     expect(mocks.reconcile).not.toHaveBeenCalled();
-    expect(mocks.fetchQuota).not.toHaveBeenCalled();
     expect(mocks.apiCall).not.toHaveBeenCalled();
   });
 
@@ -240,7 +229,6 @@ describe("AuthFilesPage status read-model request shape", () => {
       expect(mocks.getStatusRefreshJob).toHaveBeenCalledTimes(1);
       expect(mocks.getStatus).toHaveBeenCalled();
     });
-    expect(mocks.fetchQuota).not.toHaveBeenCalled();
     expect(mocks.getEntityStats).not.toHaveBeenCalled();
     expect(mocks.getAuthFileTrend).not.toHaveBeenCalled();
   });

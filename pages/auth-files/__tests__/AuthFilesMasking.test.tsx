@@ -45,7 +45,6 @@ const mocks = vi.hoisted(() => ({
     quota_series: [],
   })),
   getUsageLogs: vi.fn(async () => ({ items: [], total: 0, page: 1, size: 200 })),
-  fetchQuota: vi.fn(() => new Promise(() => {})),
   getStatus: vi.fn(async () => ({ items: [] as Array<Record<string, unknown>> })),
   startStatusRefresh: vi.fn(async () => ({ job_id: "job-1", accepted: 0, deduplicated: 0 })),
   getStatusRefreshJob: vi.fn(async () => ({ job_id: "job-1", state: "completed", total: 0, completed: 0, failed: 0, results: [] })),
@@ -128,7 +127,6 @@ vi.mock("@features/quota-preview/quota-fetch", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@features/quota-preview/quota-fetch")>();
   return {
     ...actual,
-    fetchQuota: mocks.fetchQuota,
     consumeCodexResetCredit: vi.fn(async () => undefined),
   };
 });

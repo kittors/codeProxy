@@ -66,7 +66,8 @@ const mocks = vi.hoisted(() => ({
     quota_series: [],
   })),
   recordAuthFileQuotaSnapshot: vi.fn(async () => ({})),
-  fetchQuota: vi.fn((_provider?: unknown, _file?: { name?: string }) => new Promise(() => {})),
+  // Stands in for the backend's per-account quota probe behind the status job.
+  quotaProbe: vi.fn((_provider?: unknown, _file?: { name?: string }) => new Promise(() => {})),
   getStatus: vi.fn(async () => ({ items: [] as Array<Record<string, unknown>> })),
   startStatusRefresh: vi.fn(async () => ({ job_id: "job-1", accepted: 0, deduplicated: 0 })),
   getStatusRefreshJob: vi.fn(async () => ({
@@ -152,7 +153,6 @@ vi.mock("@features/quota-preview/quota-fetch", async (importOriginal) => {
   const mod = await importOriginal<typeof import("@features/quota-preview/quota-fetch")>();
   return {
     ...mod,
-    fetchQuota: mocks.fetchQuota,
     consumeCodexResetCredit: mocks.consumeCodexResetCredit,
   };
 });
@@ -257,9 +257,10 @@ describe("AuthFilesPage files table", () => {
     }));
     mocks.recordAuthFileQuotaSnapshot.mockReset();
     mocks.recordAuthFileQuotaSnapshot.mockImplementation(async () => ({}));
-    mocks.fetchQuota.mockReset();
-    mocks.fetchQuota.mockImplementation(() => new Promise(() => {}));
-    // Bridge: status GET never calls fetchQuota (no fan-out). Refresh job does.
+    mocks.quotaProbe.mockReset();
+    mocks.quotaProbe.mockImplementation(() => new Promise(() => {}));
+    // Bridge: the mocked status job answers each account from quotaProbe, the way
+    // the backend probes it; the page itself never calls an upstream.
     const mapQuotaResult = (raw: unknown) => {
       const result = Array.isArray(raw) ? { items: raw } : (raw as Record<string, unknown> | null);
       const items = Array.isArray(result?.items) ? result.items : [];
@@ -323,7 +324,7 @@ describe("AuthFilesPage files table", () => {
       if (options?.probeQuota) {
         try {
           const provider = String(file.type ?? file.provider ?? "codex").toLowerCase();
-          const mapped = mapQuotaResult(await mocks.fetchQuota(provider, file));
+          const mapped = mapQuotaResult(await mocks.quotaProbe(provider, file));
           quotas = mapped.quotas;
           planType = mapped.planType;
           resetCreditCount = mapped.resetCreditCount;
@@ -352,7 +353,7 @@ describe("AuthFilesPage files table", () => {
       const filesList = Array.isArray(listed?.files) ? listed.files : [];
       const items = await Promise.all(
         filesList.map(async (file) => {
-          // UI regression tests: probe quota via fetchQuota mock (not production path).
+          // UI regression tests: answer quota from the quotaProbe mock (not production path).
           // Request-shape O(1) guarantees live in AuthFilesPage.status-read-model.test.tsx.
           return buildStatusItemFromFile(file, { probeQuota: true });
         }),
@@ -1036,7 +1037,7 @@ describe("AuthFilesPage files table", () => {
       .mockImplementationOnce(async () => ({ files: [initialFile] }))
       .mockImplementation(async () => ({ files: [initialFile, uploadedFile] }));
     mocks.upload.mockResolvedValue({});
-    mocks.fetchQuota.mockImplementation(async () => ({
+    mocks.quotaProbe.mockImplementation(async () => ({
       items: [{ key: "code_5h", label: "m_quota.code_5h", percent: 11 }],
     }));
 
@@ -1207,7 +1208,7 @@ describe("AuthFilesPage files table", () => {
     await waitFor(() => {
       expect(mocks.getStatus).toHaveBeenCalled();
     });
-    // Enter path may quiet-probe visible cards (fetchQuota only via test bridge); never entity-stats.
+    // Enter path may quiet-probe visible cards (quotaProbe only via test bridge); never entity-stats.
     expect(mocks.getEntityStats).not.toHaveBeenCalled();
   });
 
@@ -1511,7 +1512,7 @@ describe("AuthFilesPage files table", () => {
 
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     mocks.list.mockImplementation(async () => ({ files: [xaiFile] }));
-    mocks.fetchQuota.mockResolvedValue({
+    mocks.quotaProbe.mockResolvedValue({
       items: [
         {
           key: "weekly_limit",
@@ -1576,7 +1577,7 @@ describe("AuthFilesPage files table", () => {
     const quota = within(card as HTMLElement).getByTestId("auth-file-card-quota");
 
     await waitFor(() => {
-      expect(mocks.fetchQuota).toHaveBeenCalledWith(
+      expect(mocks.quotaProbe).toHaveBeenCalledWith(
         "xai",
         expect.objectContaining({ name: "xai-user.json" }),
       );
@@ -1816,7 +1817,7 @@ describe("AuthFilesPage files table", () => {
     };
 
     mocks.list.mockImplementation(async () => ({ files: [file] }));
-    mocks.fetchQuota.mockResolvedValue({
+    mocks.quotaProbe.mockResolvedValue({
       items: [{ key: "code_5h", label: "m_quota.code_5h", percent: 88 }],
     });
     window.localStorage.setItem(AUTH_FILES_QUOTA_AUTO_REFRESH_KEY, JSON.stringify(0));
@@ -1894,7 +1895,7 @@ describe("AuthFilesPage files table", () => {
     mocks.list
       .mockImplementationOnce(async () => ({ files: [initialFile] }))
       .mockImplementation(async () => ({ files: [initialFile, authorizedFile] }));
-    mocks.fetchQuota.mockResolvedValue({
+    mocks.quotaProbe.mockResolvedValue({
       items: [{ key: "code_5h", label: "m_quota.code_5h", percent: 91 }],
     });
 
@@ -1924,7 +1925,7 @@ describe("AuthFilesPage files table", () => {
     });
 
     expect(await screen.findByText("codex-authorized.json")).toBeInTheDocument();
-    // New visible scope: snapshot + quiet probe (not the legacy per-file fetchQuota fan-out).
+    // New visible scope: snapshot + quiet probe (not the legacy per-file quota fan-out).
     await waitFor(() => expect(mocks.getStatus).toHaveBeenCalled());
     await waitFor(() => expect(mocks.startStatusRefresh).toHaveBeenCalled());
   });
@@ -2451,7 +2452,7 @@ describe("AuthFilesPage files table", () => {
       hourly_usage: [],
       quota_series: [],
     }));
-    mocks.fetchQuota.mockResolvedValue({
+    mocks.quotaProbe.mockResolvedValue({
       items: [
         {
           key: "weekly_limit",
@@ -2765,7 +2766,7 @@ describe("AuthFilesPage files table", () => {
           { entity_name: "88", requests: 99, failed: 0, avg_latency: 0, total_tokens: 0 },
         ],
       } as any);
-    mocks.fetchQuota.mockImplementation(async () => [
+    mocks.quotaProbe.mockImplementation(async () => [
       { key: "code_5h", label: "m_quota.code_5h", percent: 60 },
     ]);
     // Stable until card refresh advances 77 → 4 (enter quiet probe must not burn the sequence).
@@ -2799,7 +2800,7 @@ describe("AuthFilesPage files table", () => {
     expect(await within(otherCard as HTMLElement).findByText("Cycle 10")).toBeInTheDocument();
 
     await waitFor(() => expect(mocks.startStatusRefresh).toHaveBeenCalled());
-    mocks.fetchQuota.mockClear();
+    mocks.quotaProbe.mockClear();
     mocks.startStatusRefresh.mockClear();
     cycleCountByAuthIndex.set("77", 4);
 
@@ -2849,7 +2850,7 @@ describe("AuthFilesPage files table", () => {
     );
 
     mocks.list.mockImplementation(async () => ({ files }));
-    mocks.fetchQuota.mockResolvedValue({
+    mocks.quotaProbe.mockResolvedValue({
       items: [{ label: "m_quota.code_5h", percent: 60 }],
     });
 
@@ -2869,7 +2870,7 @@ describe("AuthFilesPage files table", () => {
     await waitFor(() => expect(mocks.getStatus).toHaveBeenCalled());
     mocks.startStatusRefresh.mockClear();
     mocks.getStatusRefreshJob.mockClear();
-    mocks.fetchQuota.mockClear();
+    mocks.quotaProbe.mockClear();
 
     const refreshButton = screen.getAllByRole("button", { name: "Refresh" })[0];
     fireEvent.click(refreshButton);
@@ -2884,7 +2885,7 @@ describe("AuthFilesPage files table", () => {
     expect(firstCall).toBeDefined();
     const payload = firstCall?.[0];
     expect(payload?.auth_indexes).toHaveLength(9);
-    expect(mocks.fetchQuota).toHaveBeenCalled(); // bridge probes only during batch job
+    expect(mocks.quotaProbe).toHaveBeenCalled(); // bridge probes only during batch job
   });
 
   test("switching to all refreshes the visible page even when file names stay the same", async () => {
@@ -2909,7 +2910,7 @@ describe("AuthFilesPage files table", () => {
     ] as any[];
 
     mocks.list.mockImplementation(async () => ({ files }));
-    mocks.fetchQuota.mockResolvedValue({
+    mocks.quotaProbe.mockResolvedValue({
       items: [{ label: "m_quota.code_5h", percent: 66, resetAtMs: now + 60_000 }],
     });
 
@@ -2950,7 +2951,7 @@ describe("AuthFilesPage files table", () => {
     expect(await screen.findByText("codex-1.json")).toBeInTheDocument();
     await waitFor(() => expect(mocks.getStatus).toHaveBeenCalled());
     mocks.startStatusRefresh.mockClear();
-    mocks.fetchQuota.mockClear();
+    mocks.quotaProbe.mockClear();
 
     await selectFileGroup(/^All/i);
 
@@ -2958,7 +2959,7 @@ describe("AuthFilesPage files table", () => {
     expect(await screen.findByText("codex-1.json")).toBeInTheDocument();
     expect(mocks.startStatusRefresh).not.toHaveBeenCalled();
     // No per-account probe fan-out on filter switch.
-    expect(mocks.fetchQuota).not.toHaveBeenCalled();
+    expect(mocks.quotaProbe).not.toHaveBeenCalled();
   });
 
   test("switching provider after entering from request logs refreshes visible cards with auto-refresh off", async () => {
@@ -2982,7 +2983,7 @@ describe("AuthFilesPage files table", () => {
     const files = [...qwenFiles, ...codexFiles] as any[];
 
     mocks.list.mockImplementation(async () => ({ files }));
-    mocks.fetchQuota.mockResolvedValue({
+    mocks.quotaProbe.mockResolvedValue({
       items: [{ label: "m_quota.code_5h", percent: 66, resetAtMs: now + 60_000 }],
     });
 
@@ -3036,7 +3037,7 @@ describe("AuthFilesPage files table", () => {
     await waitFor(() => expect(mocks.getStatus).toHaveBeenCalled());
     const statusBefore = mocks.getStatus.mock.calls.length;
     mocks.startStatusRefresh.mockClear();
-    mocks.fetchQuota.mockClear();
+    mocks.quotaProbe.mockClear();
 
     await selectFileGroup(/^codex\s*2/i);
 
@@ -3630,7 +3631,7 @@ describe("AuthFilesPage files table", () => {
     } as any;
 
     mocks.list.mockImplementation(async () => ({ files: [file] }));
-    mocks.fetchQuota.mockResolvedValue({
+    mocks.quotaProbe.mockResolvedValue({
       items: [
         { label: "m_quota.code_5h", percent: 12, resetAtMs: now + 60_000 },
         { label: "m_quota.code_weekly", percent: 34, resetAtMs: now + 120_000 },
@@ -4246,7 +4247,7 @@ describe("AuthFilesPage files table", () => {
     } as any;
 
     mocks.list.mockImplementation(async () => ({ files: [file] }));
-    mocks.fetchQuota.mockImplementation(() => new Promise(() => {}));
+    mocks.quotaProbe.mockImplementation(() => new Promise(() => {}));
 
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     window.localStorage.setItem(
@@ -4282,7 +4283,7 @@ describe("AuthFilesPage files table", () => {
     expect(await screen.findByText("codex.json")).toBeInTheDocument();
     expect(screen.getByText("22%")).toBeInTheDocument();
     expect(screen.getByText("44%")).toBeInTheDocument();
-    await waitFor(() => expect(mocks.fetchQuota).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(mocks.quotaProbe).toHaveBeenCalledTimes(1));
     expect(screen.getByText("22%")).toBeInTheDocument();
     expect(screen.getByText("44%")).toBeInTheDocument();
   });
@@ -4334,7 +4335,7 @@ describe("AuthFilesPage files table", () => {
     let hangJobPoll = false;
 
     mocks.list.mockImplementation(async () => ({ files }));
-    mocks.fetchQuota.mockResolvedValue({
+    mocks.quotaProbe.mockResolvedValue({
       items: [{ label: "m_quota.code_5h", percent: 88, resetAtMs: now + 60_000 }],
     });
     // Enter/scope quiet probes complete immediately; hang only the toolbar refresh job.
@@ -4463,7 +4464,7 @@ describe("AuthFilesPage files table", () => {
     } as any;
 
     mocks.list.mockImplementation(async () => ({ files: [file] }));
-    mocks.fetchQuota.mockImplementation(() => new Promise(() => {}));
+    mocks.quotaProbe.mockImplementation(() => new Promise(() => {}));
 
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     window.localStorage.setItem("authFilesPage.quotaAutoRefreshMs.v1", JSON.stringify(0));
@@ -4518,7 +4519,7 @@ describe("AuthFilesPage files table", () => {
     } as any;
 
     mocks.list.mockImplementation(async () => ({ files: [file] }));
-    mocks.fetchQuota.mockImplementation(() => new Promise(() => {}));
+    mocks.quotaProbe.mockImplementation(() => new Promise(() => {}));
 
     window.localStorage.setItem("authFilesPage.quotaAutoRefreshMs.v1", JSON.stringify(0));
     window.localStorage.setItem(
@@ -4600,7 +4601,7 @@ describe("AuthFilesPage files table", () => {
         },
       })),
     }));
-    mocks.fetchQuota.mockResolvedValue({
+    mocks.quotaProbe.mockResolvedValue({
       items: [{ label: "m_quota.code_5h", percent: 55, resetAtMs: now + 60_000 }],
     });
 
@@ -4690,7 +4691,7 @@ describe("AuthFilesPage files table", () => {
     ] as any[];
 
     mocks.list.mockImplementation(async () => ({ files }));
-    mocks.fetchQuota.mockResolvedValue({
+    mocks.quotaProbe.mockResolvedValue({
       items: [{ label: "m_quota.code_5h", percent: 12, resetAtMs: now + 60_000 }],
     });
 
@@ -4736,7 +4737,7 @@ describe("AuthFilesPage files table", () => {
 
     await waitFor(() => expect(mocks.getStatus).toHaveBeenCalled());
     mocks.startStatusRefresh.mockClear();
-    mocks.fetchQuota.mockClear();
+    mocks.quotaProbe.mockClear();
 
     fireEvent.click(within(firstCard as HTMLElement).getByRole("button", { name: "Refresh" }));
 
@@ -4771,7 +4772,7 @@ describe("AuthFilesPage files table", () => {
     ] as any[];
 
     mocks.list.mockImplementation(async () => ({ files }));
-    mocks.fetchQuota.mockResolvedValue({
+    mocks.quotaProbe.mockResolvedValue({
       items: [{ label: "m_quota.code_5h", percent: 18, resetAtMs: now + 60_000 }],
     });
 
@@ -4838,7 +4839,7 @@ describe("AuthFilesPage files table", () => {
     } as any;
 
     mocks.list.mockImplementation(async () => ({ files: [file] }));
-    mocks.fetchQuota.mockResolvedValue({
+    mocks.quotaProbe.mockResolvedValue({
       items: [
         { label: "m_quota.code_5h", percent: 90, resetAtMs: now + 60_000 },
         { label: "m_quota.code_weekly", percent: 80, resetAtMs: now + 120_000 },
@@ -4903,7 +4904,7 @@ describe("AuthFilesPage files table", () => {
     ] as any[];
 
     mocks.list.mockImplementation(async () => ({ files }));
-    mocks.fetchQuota.mockImplementation(async (_provider, file) => ({
+    mocks.quotaProbe.mockImplementation(async (_provider, file) => ({
       items:
         file?.name === "codex-spark.json"
           ? [
@@ -5029,7 +5030,7 @@ describe("AuthFilesPage files table", () => {
     } as any;
 
     mocks.list.mockImplementation(async () => ({ files: [file] }));
-    mocks.fetchQuota.mockResolvedValue({
+    mocks.quotaProbe.mockResolvedValue({
       items: [
         { label: "GPT-5.3-Codex-Spark: 5h", percent: 100, resetAtMs: now + 60_000 },
         { label: "GPT-5.3-Codex-Spark: Weekly", percent: 96, resetAtMs: now + 120_000 },
@@ -5080,7 +5081,7 @@ describe("AuthFilesPage files table", () => {
     } as any;
 
     mocks.list.mockImplementation(async () => ({ files: [file] }));
-    mocks.fetchQuota.mockResolvedValue({
+    mocks.quotaProbe.mockResolvedValue({
       items: [
         { label: "m_quota.code_5h", percent: 100, resetAtMs: now + 60_000 },
         { label: "m_quota.code_weekly", percent: 0, resetAtMs: now + 120_000 },
@@ -5133,7 +5134,7 @@ describe("AuthFilesPage files table", () => {
     } as any;
 
     mocks.list.mockImplementation(async () => ({ files: [file] }));
-    mocks.fetchQuota.mockResolvedValue({
+    mocks.quotaProbe.mockResolvedValue({
       planType: "team",
       items: [
         {
@@ -5191,7 +5192,7 @@ describe("AuthFilesPage files table", () => {
     } as any;
 
     mocks.list.mockImplementationOnce(async () => ({ files: [file] }));
-    mocks.fetchQuota.mockResolvedValue({
+    mocks.quotaProbe.mockResolvedValue({
       items: [
         { label: "m_quota.code_5h", percent: 88, resetAtMs: now + 60_000 },
         { label: "m_quota.code_weekly", percent: 0, resetAtMs: now + 120_000 },
@@ -5276,7 +5277,7 @@ describe("AuthFilesPage files table", () => {
       createAuthFileTrend(authIndex, 0),
     );
     let resetCredits = 3;
-    mocks.fetchQuota.mockImplementation(async () => ({
+    mocks.quotaProbe.mockImplementation(async () => ({
       items: [{ label: "m_quota.code_5h", percent: 12, resetAtMs: now + 60_000 }],
       planType: "plus",
       resetCreditCount: resetCredits,
@@ -5373,7 +5374,7 @@ describe("AuthFilesPage files table", () => {
     } as any;
 
     mocks.list.mockImplementationOnce(async () => ({ files: [file] }));
-    mocks.fetchQuota
+    mocks.quotaProbe
       .mockResolvedValueOnce({
         items: [{ label: "m_quota.code_5h", percent: 12, resetAtMs: now + 60_000 }],
         planType: "plus",
@@ -5470,7 +5471,7 @@ describe("AuthFilesPage files table", () => {
     } as any;
 
     mocks.list.mockImplementation(async () => ({ files: [currentFile] }));
-    mocks.fetchQuota.mockImplementation(() => new Promise(() => {}));
+    mocks.quotaProbe.mockImplementation(() => new Promise(() => {}));
 
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     window.localStorage.setItem("authFilesPage.quotaAutoRefreshMs.v1", JSON.stringify(0));
@@ -5523,7 +5524,7 @@ describe("AuthFilesPage files table", () => {
     } as any;
 
     mocks.list.mockImplementationOnce(async () => ({ files: [file] }));
-    mocks.fetchQuota.mockResolvedValue({
+    mocks.quotaProbe.mockResolvedValue({
       items: [{ label: "claude_quota.five_hour", percent: 88, resetAtMs: now + 60_000 }],
     });
 
@@ -5582,7 +5583,7 @@ describe("AuthFilesPage files table", () => {
     } as any;
 
     mocks.list.mockImplementationOnce(async () => ({ files: [file] }));
-    mocks.fetchQuota.mockRejectedValue(new Error("request_failed"));
+    mocks.quotaProbe.mockRejectedValue(new Error("request_failed"));
 
     window.localStorage.setItem("authFilesPage.filesViewMode.v1", JSON.stringify("cards"));
     window.localStorage.setItem(
