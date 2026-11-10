@@ -4218,6 +4218,7 @@
     "password": "Password",
     "username_placeholder": "Enter username",
     "password_placeholder": "Enter password",
+    "forgot_password_hint": "Forgot your password? Ask your admin to reset it.",
     "unnamed_key": "Unnamed key",
     "change_password": "Change password",
     "copy_secret": "Copy now",

@@ -173,6 +173,18 @@ export function PortalLoginForm({
             t("common.login", { defaultValue: "登录" })
           )}
         </LandingButton>
+
+        {/*
+          门户没有自助找回密码，忘了只能请管理员在「门户账号」页重置（会发新密码，并清掉失败次数和冷却）。
+          失败提示只说「用户名或密码错误」，用户看不出该找谁，只会接着试到被锁，所以这里常驻一句出路。
+          它是静态说明，不加 live region，免得和上面的错误条重复播报。
+          俄文这类长文案在弹窗宽度下会折行，text-balance 让两行等长，不把最后一个词单独挤到第二行。
+        */}
+        <p className="text-center text-sm text-balance text-ink-3">
+          {t("apikey_lookup.forgot_password_hint", {
+            defaultValue: "忘记密码？请联系管理员重置。",
+          })}
+        </p>
       </form>
     </div>
   );

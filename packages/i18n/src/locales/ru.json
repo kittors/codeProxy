@@ -5431,6 +5431,7 @@
     "password": "Пароль",
     "username_placeholder": "Введите имя пользователя",
     "password_placeholder": "Введите пароль",
+    "forgot_password_hint": "Забыли пароль? Попросите администратора сбросить его.",
     "unnamed_key": "Ключ без названия",
     "change_password": "Изменить пароль",
     "copy_secret": "Скопируйте сейчас",

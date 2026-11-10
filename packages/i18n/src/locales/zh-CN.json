@@ -4512,6 +4512,7 @@
     "password": "密码",
     "username_placeholder": "请输入账号",
     "password_placeholder": "请输入密码",
+    "forgot_password_hint": "忘记密码？请联系管理员重置。",
     "unnamed_key": "未命名密钥",
     "change_password": "修改密码",
     "copy_secret": "请立即复制",
