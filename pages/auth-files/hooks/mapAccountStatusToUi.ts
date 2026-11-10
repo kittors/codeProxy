@@ -133,6 +133,10 @@ export const mapQuotaItemDto = (item: AiAccountQuotaItemDto): QuotaItem => {
         ? item.window_seconds
         : undefined,
     meta: item.meta,
+    usedCostUsd:
+      typeof item.used_cost_usd === "number" && Number.isFinite(item.used_cost_usd)
+        ? Math.max(0, item.used_cost_usd)
+        : undefined,
   };
 };
 

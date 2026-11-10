@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Clock } from "lucide-react";
 import { Skeleton } from "@code-proxy/ui";
 import { type QuotaItem } from "@features/quota-preview/quota-helpers";
+import { useQuotaWindowSpendText } from "@features/quota-preview/quota-spend";
 // Tone and bar live in the quota-preview feature so the AI accounts and AI
 // providers cards render the same quota visual; re-exported here for the
 // existing call sites on this page.
@@ -100,6 +101,9 @@ export function QuotaMetricChips({
   const wideFlags = resolveQuotaMetricWideFlags(
     slots.map((slot, index) => ({ label: slot.label, metaText: metaTexts[index] ?? null })),
   );
+  // Half-width chips have no room for another figure, so the window's spend is
+  // on hover here; the card view prints it on the bar's line.
+  const describeSpend = useQuotaWindowSpendText();
 
   return (
     <div
@@ -112,10 +116,13 @@ export function QuotaMetricChips({
         const metaText = metaTexts[index] ?? null;
         const resetText = resolveResetText(slot.item);
         const wide = wideFlags[index] ?? false;
+        const spend = describeSpend(slot.item);
+        const chipTitle = spend ? `${slot.label} · ${spend.title}` : undefined;
 
         return (
           <div
             key={slot.id}
+            title={chipTitle}
             className={[
               "flex min-w-0 items-center gap-1.5 rounded-md px-2 py-1",
               tone.chipClass,
@@ -128,7 +135,7 @@ export function QuotaMetricChips({
           >
             <QuotaProgressRing percent={slot.item?.percent ?? null} />
             <span
-              title={slot.label}
+              title={chipTitle ?? slot.label}
               className={["min-w-0 flex-1 truncate text-2xs font-semibold", tone.chipLabelClass].join(
                 " ",
               )}

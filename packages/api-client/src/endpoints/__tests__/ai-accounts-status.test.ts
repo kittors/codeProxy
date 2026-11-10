@@ -159,6 +159,38 @@ describe("aiAccountsStatusApi (authoritative contract)", () => {
     expect(snapshot.items[0]?.quotas[0]?.observed_at).toBeNull();
   });
 
+  // CliRelay#1103: each window may carry what the proxy spent inside it. The
+  // allow-list above is the contract, so the field has to be copied here or the
+  // card never sees it; a zero must stay a zero and an absent one stay absent.
+  test("carries window spend and the backend's capabilities through normalization", async () => {
+    const { aiAccountsStatusApi } = await import("../ai-accounts-status");
+    getMock.mockResolvedValue({
+      capabilities: { "quota-window-spend": true, unrelated: "yes" },
+      items: [
+        {
+          auth_index: "auth-1",
+          quotas: [
+            { quota_key: "code_5h", percent: 60, used_cost_usd: 12.5 },
+            { quota_key: "code_week", percent: 90, usedCostUsd: 0 },
+            { quota_key: "review_5h", percent: 100 },
+          ],
+        },
+      ],
+    });
+
+    const snapshot = await aiAccountsStatusApi.getStatus();
+    expect(snapshot.capabilities).toEqual({ "quota-window-spend": true });
+    const quotas = snapshot.items[0]?.quotas ?? [];
+    expect(quotas.map((quota) => quota.used_cost_usd)).toEqual([12.5, 0, null]);
+  });
+
+  test("reports no capabilities from a backend that sends none", async () => {
+    const { aiAccountsStatusApi } = await import("../ai-accounts-status");
+    getMock.mockResolvedValue({ items: [] });
+    const snapshot = await aiAccountsStatusApi.getStatus();
+    expect(snapshot.capabilities).toBeUndefined();
+  });
+
   test("filters status snapshot by auth_index query params", async () => {
     const { aiAccountsStatusApi } = await import("../ai-accounts-status");
     getMock.mockResolvedValue({ items: [] });

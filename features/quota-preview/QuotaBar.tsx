@@ -118,6 +118,13 @@ const TONE_SAMPLE: Record<Exclude<QuotaBarTone, "auto">, number> = {
 
 export interface QuotaBarProps {
   label: string;
+  /**
+   * The part of the label that has to stay readable when the line runs out of
+   * room — the window in "Claude and GPT · 每周". Printed after `label`, which
+   * truncates first; when two rows share a group name, the window is the only
+   * thing telling them apart.
+   */
+  labelSuffix?: string | null;
   /** Remaining percent, 0-100. `null` renders the neutral "unknown" tone. */
   percent: number | null | undefined;
   /** Colour band. Defaults to deriving it from `percent`. */
@@ -134,6 +141,13 @@ export interface QuotaBarProps {
   detailTitle?: string | null;
   /** Icon before `detailText`. Defaults to a clock, which suits a countdown. */
   detailIcon?: ReactNode;
+  /**
+   * What was spent inside the window ("$12.34"), beside the countdown. The
+   * figure behind it — and what it implies about the window's size — is
+   * `spendTitle`, shown on hover so the row stays one line.
+   */
+  spendText?: string | null;
+  spendTitle?: string | null;
   /** Explains what the window means; rendered as a hoverable info icon. */
   hint?: string;
   compact?: boolean;
@@ -159,12 +173,15 @@ export interface QuotaBarProps {
  */
 export function QuotaBar({
   label,
+  labelSuffix,
   percent,
   tone: toneBand = "auto",
   percentText,
   detailText,
   detailTitle,
   detailIcon,
+  spendText,
+  spendTitle,
   hint,
   compact = false,
   testId,
@@ -196,6 +213,11 @@ export function QuotaBar({
           ].join(" ")}
         >
           <span className="min-w-0 truncate">{label}</span>
+          {labelSuffix ? (
+            <span data-testid="quota-bar-label-suffix" className="shrink-0 whitespace-nowrap">
+              {labelSuffix}
+            </span>
+          ) : null}
           {hint ? (
             <HoverTooltip content={hint} placement="top" className="shrink-0">
               <span
@@ -229,6 +251,17 @@ export function QuotaBar({
               <Clock size={10} className="shrink-0" aria-hidden />
             )}
             <span className="min-w-0 truncate">{detailText}</span>
+          </span>
+        ) : null}
+        {spendText ? (
+          // Ink-2 rather than the countdown's ink-3: it is a figure to read, not
+          // an annotation. Never truncated: a clipped amount reads as a smaller one.
+          <span
+            data-testid="quota-bar-spend"
+            title={spendTitle ?? undefined}
+            className="shrink-0 whitespace-nowrap font-medium tabular-nums text-ink-2"
+          >
+            {spendText}
           </span>
         ) : null}
         <span

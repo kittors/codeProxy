@@ -58,6 +58,20 @@ describe("mapAccountStatusToUi", () => {
     expect(patch.planTypeByKey["sub-77"]).toBe("plus");
   });
 
+  test("carries each window's spend, keeping zero apart from unknown", () => {
+    const state = mapAccountStatusToQuotaState({
+      auth_index: "x",
+      health_status: "ok",
+      quotas: [
+        { quota_key: "code_5h", percent: 40, used_cost_usd: 12.5 },
+        { quota_key: "code_week", percent: 90, used_cost_usd: 0 },
+        { quota_key: "review_5h", percent: 100, used_cost_usd: null },
+        { quota_key: "code_subscription_2592000", percent: 80 },
+      ],
+    });
+    expect(state.items.map((item) => item.usedCostUsd)).toEqual([12.5, 0, undefined, undefined]);
+  });
+
   test("error health without quotas becomes error state", () => {
     const state = mapAccountStatusToQuotaState({
       auth_index: "x",
