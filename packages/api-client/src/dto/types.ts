@@ -561,6 +561,13 @@ export interface AiAccountQuotaItemDto {
    * merge keeps an older timestamp than its siblings. Absent on pre-migration rows.
    */
   observed_at?: string | null;
+  /**
+   * What the proxy spent inside this window so far, in USD at its own model
+   * prices — an estimate, not the upstream's bill. Absent from backends before
+   * `capabilities["quota-window-spend"]`, and on windows whose start is unknown or
+   * that no model request draws on; absent never means "nothing spent".
+   */
+  used_cost_usd?: number | null;
 }
 
 /** Backend AccountStatusView usage summary (authoritative). */
@@ -635,6 +642,8 @@ export interface AiAccountLatestStatusDto {
 /** GET /ai-accounts/status */
 export interface AiAccountsStatusSnapshotDto {
   items: AiAccountLatestStatusDto[];
+  /** What the backend adds to the items, e.g. `quota-window-spend`. */
+  capabilities?: Record<string, boolean>;
 }
 
 /** POST /ai-accounts/status-refresh */

@@ -34,6 +34,22 @@ describe("mergeQuotaState", () => {
     expect(merged.error).toBe("429");
   });
 
+  // The spend belongs to the reading its percent came from: a newer reading
+  // without one (an older backend, a window that renewed) must not keep the old
+  // dollar figure next to the new percent.
+  test("takes a window's spend from the newest payload only", () => {
+    const previous = state([{ key: "code_5h", label: "5h", percent: 40, usedCostUsd: 12 }]);
+
+    const updated = mergeQuotaState(
+      previous,
+      state([{ key: "code_5h", label: "5h", percent: 30, usedCostUsd: 14.5 }]),
+    );
+    expect(updated.items[0]?.usedCostUsd).toBe(14.5);
+
+    const unknown = mergeQuotaState(previous, state([{ key: "code_5h", label: "5h", percent: 30 }]));
+    expect(unknown.items[0]?.usedCostUsd).toBeUndefined();
+  });
+
   test("does not resurrect a stale percent when the new value is unknown", () => {
     const previous = state([{ key: "five_hour", label: "5h", percent: 80, resetAtMs: 111 }]);
     const incoming = state([{ key: "five_hour", label: "5h", percent: null }]);
