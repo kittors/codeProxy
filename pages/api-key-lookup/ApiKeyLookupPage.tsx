@@ -1295,8 +1295,8 @@ export function ApiKeyLookupPage() {
           hideHeader
           size="sm"
           bodyClassName="!px-7 !py-9 sm:!px-9"
+          // 内容区沿用默认的 overflow-y-auto：面板限高且 overflow-hidden，设成 visible 时窗口一矮就裁掉底部的登录按钮和提示。
           bodyHeightClassName="max-h-none"
-          bodyOverflowClassName="overflow-visible"
           onClose={closeLoginModal}
         >
           <PortalLoginForm
