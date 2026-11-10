@@ -52,7 +52,16 @@ const normalizeQuotaItem = (value: unknown): AiAccountQuotaItemDto | null => {
     // This allow-list is the runtime contract; a field the DTO type declares but
     // that is not copied here silently reaches the UI as undefined.
     observed_at: normalizeString(value.observed_at ?? value.observedAt),
+    used_cost_usd: toFiniteNumber(value.used_cost_usd ?? value.usedCostUsd),
   };
+};
+
+const normalizeCapabilities = (value: unknown): Record<string, boolean> | undefined => {
+  if (!isRecord(value)) return undefined;
+  const entries = Object.entries(value).filter(
+    (entry): entry is [string, boolean] => typeof entry[1] === "boolean",
+  );
+  return entries.length > 0 ? Object.fromEntries(entries) : undefined;
 };
 
 const normalizeUsageSummary = (value: unknown): AiAccountUsageSummaryDto | null => {
@@ -212,7 +221,8 @@ const normalizeSnapshot = (value: unknown): AiAccountsStatusSnapshotDto => {
   const items = value.items
     .map(normalizeAccountStatusView)
     .filter((item): item is AiAccountLatestStatusDto => item != null);
-  return { items };
+  const capabilities = normalizeCapabilities(value.capabilities);
+  return capabilities ? { items, capabilities } : { items };
 };
 
 const normalizeRefreshAccepted = (value: unknown): AiAccountStatusRefreshAcceptedDto => {

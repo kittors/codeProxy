@@ -25,8 +25,10 @@ export const mergeQuotaItem = (previous: QuotaItem, incoming: QuotaItem): QuotaI
   // percent/resetAtMs are taken from the newest payload only: an absent or null
   // value means "unknown now" and must not resurrect a stale percentage or
   // countdown. Assigned explicitly so a payload missing the key still clears it.
+  // The window's spend belongs to the same reading, so it follows the same rule.
   percent: incoming.percent ?? null,
   resetAtMs: incoming.resetAtMs,
+  usedCostUsd: incoming.usedCostUsd,
   value: incoming.value ?? previous.value,
   windowSeconds: incoming.windowSeconds ?? previous.windowSeconds,
   meta: incoming.meta ?? previous.meta,

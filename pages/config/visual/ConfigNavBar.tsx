@@ -150,9 +150,14 @@ export function ConfigSectionChips({
   if (sections.length === 0) return null;
   return (
     <nav aria-label={t("config_ui.nav_label")} className="min-w-0">
+      {/*
+        横向滚动条是裁剪框：首尾胶囊贴着它的左右沿，未选中时画在盒外的 1px 描边会被裁掉一边
+        （选中别的分区后第一颗「服务监听」只剩三条边），键盘焦点框（2px + 2px 偏移）上下也会被裁。
+        四边各让出 4px：-mx-1 px-1，上下 -my-0.5 py-1 净值仍是原来的 2px，版面不变。
+      */}
       <div
         ref={fade.ref}
-        className="scrollbar-hidden flex gap-1.5 overflow-x-auto py-0.5"
+        className="scrollbar-hidden -mx-1 -my-0.5 flex gap-1.5 overflow-x-auto px-1 py-1"
       >
         {sections.map((section) => {
           const selected = section.id === active;
