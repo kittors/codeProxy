@@ -90,3 +90,35 @@ describe("PortalLoginForm attempt limits", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 });
+
+// Reported: a portal user who had changed their password months earlier only
+// ever saw "incorrect username or password" and kept retrying, with no idea an
+// admin could reset it. The portal has no self-service recovery, so the form
+// says where to go instead.
+describe("PortalLoginForm password recovery hint", () => {
+  const hint = "Forgot your password? Ask your admin to reset it.";
+
+  beforeEach(async () => {
+    await i18n.changeLanguage("en");
+  });
+
+  test("tells people who forgot their password to ask an admin", () => {
+    render(<Harness error={null} onSubmit={vi.fn()} />);
+    expect(screen.getByText(hint)).toBeInTheDocument();
+  });
+
+  test("sits beside a failure without being announced a second time", () => {
+    render(
+      <Harness
+        error={{
+          message: "Incorrect username or password. 4 attempts left.",
+          remainingAttempts: 4,
+          username: "lockout_pg",
+        }}
+        onSubmit={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(hint).closest('[role="alert"], [role="status"], [aria-live]')).toBeNull();
+    expect(screen.getAllByRole("alert")).toHaveLength(1);
+  });
+});
