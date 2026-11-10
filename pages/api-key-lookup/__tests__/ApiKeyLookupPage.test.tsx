@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { ApiKeyLookupPage } from "../ApiKeyLookupPage";
@@ -438,7 +438,9 @@ describe("ApiKeyLookupPage", () => {
     // 第一次点开才请求：只看用量的门户用户不该在后台每 15 秒查一次脱敏记录
     expect(privacyMaskingPortalApi.listRecords).not.toHaveBeenCalled();
     await userEvent.click(tab!);
-    expect(await screen.findByRole("tab", { name: /rules in effect|生效的规则/i })).toBeVisible();
+    // 脱敏界面 lazy 加载，等这次 import 落定再找，不用 findByRole 的 1 秒（原因见 PortalSelfServiceTabs.test.tsx）
+    await act(() => vi.dynamicImportSettled());
+    expect(screen.getByRole("tab", { name: /rules in effect|生效的规则/i })).toBeVisible();
     await waitFor(() => expect(privacyMaskingPortalApi.listRecords).toHaveBeenCalled());
     // 这个标签有自己的刷新，工具栏上的刷新不放（按钮还在，所在的一栏 hidden）
     expect(screen.getByRole("button", { name: /^(refresh|刷新)$/i }).closest(".hidden")).not.toBeNull();
