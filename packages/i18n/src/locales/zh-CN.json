@@ -2634,6 +2634,23 @@
     "url_hint": "支持 http、https、socks5，账号密码直接写在地址里。",
     "remark_placeholder": "例如：Codex 专用出口",
     "enabled_hint": "停用后不会出现在可选列表里，已绑定的配置不受影响。",
+    "egress_column": "出口状态",
+    "egress_ok": "正常",
+    "egress_open": "已熔断 · {{reason}}",
+    "egress_fault_auth_rejected": "认证被拒",
+    "egress_fault_unreachable": "连不上",
+    "egress_fault_unknown": "不可用",
+    "egress_since": "{{time}} 起",
+    "egress_next_probe": "下次试探 {{time}}",
+    "egress_probing": "正在试探",
+    "egress_waiting_probe": "等下一个请求来试探",
+    "egress_tooltip_reason": "原因",
+    "egress_tooltip_since": "熔断开始",
+    "egress_tooltip_next": "下次试探",
+    "egress_tooltip_refused": "拦下的请求尝试",
+    "egress_tooltip_failed_probes": "失败的试探",
+    "egress_tooltip_note": "经这个代理的请求直接返回 503、不再发出，也不记到账号头上；有一次试探通过就自动恢复。显示的是响应本页面的节点看到的状态。",
+    "egress_disabled_notice": "本节点关闭了出口熔断（CLIRELAY_EGRESS_BREAKER=off）：代理出故障时请求仍会照常发出，这里也不显示熔断状态。",
     "delete_lead": "删除后无法恢复。",
     "delete_consequence_bindings": "AI 供应商和 AI 账号将不能再选择这个代理。",
     "shared_tag": "平台共享",
@@ -8160,6 +8177,12 @@
         "min_remaining_hint": "默认 40%。剩得比这少，就不值得专门提醒。",
         "hours_before_reset": "距重置不到",
         "hours_before_reset_hint": "默认 24 小时。再早提醒没意义，还会连着重复好几天。"
+      },
+      "egress_breaker": {
+        "label": "出口代理熔断",
+        "desc": "代理拒绝账号密码或连不上时，系统会停止经它转发（熔断），请求直接返回 503。熔断持续到下面的时长、且至少一次试探也失败才告警；请求重新通过后再发一条恢复通知。",
+        "for_minutes": "熔断多久才告警",
+        "for_minutes_hint": "默认 3 分钟。熔断后会在第 15、45、105 秒各试探一次，一分半内恢复的不会告警。"
       }
     },
     "events": {
@@ -8183,6 +8206,8 @@
         "account_failure": "账号异常",
         "spending": "消费限额",
         "use_it_or_lose_it": "重置前提醒",
+        "egress_breaker": "出口熔断",
+        "egress_recovered": "出口恢复",
         "test": "测试消息"
       },
       "severity": {
@@ -8194,7 +8219,8 @@
         "account": "AI 账号",
         "key": "API Key",
         "end_user": "门户账号",
-        "channel": "通道"
+        "channel": "通道",
+        "proxy": "代理"
       },
       "delivery": {
         "sent": "已发送",

@@ -255,4 +255,57 @@ describe("proxiesApi", () => {
     expect(postMock).toHaveBeenCalledWith("/proxy-pool/hk/adopt");
     expect(tenants).toEqual([{ id: "t2", name: "Potato" }]);
   });
+  test("reads the egress breaker state; a backend without it is unsupported, not an error", async () => {
+    const { proxiesApi, egressStatusFor } = await import("@code-proxy/api-client/endpoints/proxies");
+    const { ApiError } = await import("../../client/errors");
+    getMock.mockResolvedValueOnce({
+      enabled: true,
+      items: [
+        {
+          id: "HK 1",
+          shared: false,
+          fault: "auth_rejected",
+          since: "2026-11-11T08:17:00Z",
+          next_probe_at: "2026-11-11T08:19:00Z",
+          probing: false,
+          refused: "4",
+          failed_probes: 2,
+        },
+        { name: "no id, dropped" },
+      ],
+    });
+
+    const listing = await proxiesApi.egressStatus();
+
+    expect(getMock).toHaveBeenCalledWith("/proxy-pool/egress-status", undefined);
+    expect(listing).toEqual({
+      supported: true,
+      enabled: true,
+      items: [
+        {
+          id: "HK 1",
+          shared: false,
+          fault: "auth_rejected",
+          since: "2026-11-11T08:17:00Z",
+          nextProbeAt: "2026-11-11T08:19:00Z",
+          probing: false,
+          refused: 4,
+          failedProbes: 2,
+        },
+      ],
+    });
+    // Looked up by the backend's ID rule, own and shared entries apart.
+    expect(egressStatusFor(listing, "hk-1", false)?.id).toBe("HK 1");
+    expect(egressStatusFor(listing, "hk-1", true)).toBeUndefined();
+
+    getMock.mockRejectedValueOnce(new ApiError({ message: "Not Found", status: 404 }));
+    await expect(proxiesApi.egressStatus()).resolves.toEqual({
+      supported: false,
+      enabled: false,
+      items: [],
+    });
+
+    getMock.mockRejectedValueOnce(new ApiError({ message: "Bad Gateway", status: 502 }));
+    await expect(proxiesApi.egressStatus()).rejects.toThrow("Bad Gateway");
+  });
 });

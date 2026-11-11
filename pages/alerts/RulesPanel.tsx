@@ -5,8 +5,10 @@ import { NumberField } from "./NumberField";
 import type { SaveError } from "./useAlertSettings";
 
 type Rules = AlertDraft["rules"];
+/** 每个后端都有的四条规则；出口熔断只在后端支持时才有（见 AlertDraft）。 */
+type CoreRule = Exclude<keyof Rules, "egress_breaker">;
 
-/** 「规则」页签：四条规则各自一个开关，阈值的默认值和理由写在字段说明里。 */
+/** 「规则」页签：每条规则各自一个开关，阈值的默认值和理由写在字段说明里。 */
 export function RulesPanel({
   rules,
   update,
@@ -20,13 +22,26 @@ export function RulesPanel({
 }) {
   const { t } = useTranslation();
   const serverError = (path: string) => (saveError?.field === path ? saveError.message : undefined);
-  const set = <K extends keyof Rules>(rule: K, patch: Partial<Rules[K]>) =>
+  const set = <K extends CoreRule>(rule: K, patch: Partial<Rules[K]>) =>
     update((current) => ({
       ...current,
       rules: { ...current.rules, [rule]: { ...current.rules[rule], ...patch } },
     }));
+  const setEgress = (patch: Partial<NonNullable<Rules["egress_breaker"]>>) =>
+    update((current) =>
+      current.rules.egress_breaker
+        ? {
+            ...current,
+            rules: {
+              ...current.rules,
+              egress_breaker: { ...current.rules.egress_breaker, ...patch },
+            },
+          }
+        : current,
+    );
+  const egress = rules.egress_breaker;
 
-  const toggle = (rule: keyof Rules) => (
+  const toggle = (rule: CoreRule) => (
     <ToggleSwitch
       id={`alerts-rule-${rule}`}
       checked={rules[rule].enabled}
@@ -37,6 +52,36 @@ export function RulesPanel({
 
   return (
     <SettingGroup>
+      {egress ? (
+        <SettingRow
+          label={t("alerts_page.rules.egress_breaker.label")}
+          description={t("alerts_page.rules.egress_breaker.desc")}
+          controlWidth="auto"
+          htmlFor="alerts-rule-egress_breaker"
+          control={
+            <ToggleSwitch
+              id="alerts-rule-egress_breaker"
+              checked={egress.enabled}
+              disabled={locked}
+              onCheckedChange={(enabled) => setEgress({ enabled })}
+            />
+          }
+        >
+          <div className="grid gap-4 sm:grid-cols-2">
+            <NumberField
+              label={t("alerts_page.rules.egress_breaker.for_minutes")}
+              description={t("alerts_page.rules.egress_breaker.for_minutes_hint")}
+              value={egress.forMinutes}
+              onChange={(forMinutes) => setEgress({ forMinutes })}
+              {...ALERT_LIMITS.egress_for_minutes}
+              unit={t("alerts_page.unit.minutes")}
+              disabled={locked || !egress.enabled}
+              serverError={serverError("rules.egress_breaker.for_minutes")}
+            />
+          </div>
+        </SettingRow>
+      ) : null}
+
       <SettingRow
         label={t("alerts_page.rules.quota_window.label")}
         description={t("alerts_page.rules.quota_window.desc")}

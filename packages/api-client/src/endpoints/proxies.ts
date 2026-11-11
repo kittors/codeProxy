@@ -1,4 +1,5 @@
 import { apiClient } from "../client/client";
+import { isApiClientError } from "../client/errors";
 import {
   normalizeResourceSharing,
   normalizeSharingCapability,
@@ -58,6 +59,39 @@ export interface ProxyCheckResult {
   statusCode?: number;
   latencyMs?: number;
   message?: string;
+}
+
+/** 出口熔断的原因：代理拒绝了账号密码，或者连不上代理。 */
+export type ProxyEgressFault = "auth_rejected" | "unreachable";
+
+/**
+ * 正被出口熔断的一条代理：后端暂停经它转发，请求直接返回 503（egress_unavailable）。
+ * 熔断器每隔一段时间放一个真实请求过去试探，通过就恢复。
+ */
+export interface ProxyEgressStatus {
+  id: string;
+  /** 平台共享给本租户的条目（共享分区里那张表）；自有条目为 false。 */
+  shared: boolean;
+  /** 已知原因；后端以后新增的原因原样保留，界面按「不可用」显示。 */
+  fault: ProxyEgressFault | string;
+  /** ISO 时间。 */
+  since: string;
+  /** ISO 时间。已经过了表示之后还没有请求来，下一个请求到来时试探。 */
+  nextProbeAt: string;
+  /** 试探请求正在路上。 */
+  probing: boolean;
+  /** 被拦下没发出去的请求尝试次数（一个请求试了几个账号就算几次）。 */
+  refused: number;
+  failedProbes: number;
+}
+
+export interface ProxyEgressListing {
+  /** 后端有这个接口。旧后端（404）为 false：界面不显示熔断状态，也不再轮询。 */
+  supported: boolean;
+  /** 本节点开着出口熔断；关着（CLIRELAY_EGRESS_BREAKER=off）时什么都不会被熔断。 */
+  enabled: boolean;
+  /** 只列出正被熔断的条目；不在里面的照常转发。 */
+  items: ProxyEgressStatus[];
 }
 
 export interface ProxyPoolUpdateInput {
@@ -220,6 +254,51 @@ export const normalizeProxyCheckResult = (item: RawProxyCheckResult): ProxyCheck
   };
 };
 
+export const EGRESS_UNSUPPORTED: ProxyEgressListing = { supported: false, enabled: false, items: [] };
+
+type RawProxyEgressStatus = {
+  id?: unknown;
+  shared?: unknown;
+  fault?: unknown;
+  since?: unknown;
+  next_probe_at?: unknown;
+  probing?: unknown;
+  refused?: unknown;
+  failed_probes?: unknown;
+};
+
+export const normalizeProxyEgressListing = (data: unknown): ProxyEgressListing => {
+  const body = data && typeof data === "object" && !Array.isArray(data) ? (data as Record<string, unknown>) : {};
+  const rawItems = Array.isArray(body.items) ? (body.items as RawProxyEgressStatus[]) : [];
+  const items = rawItems
+    .map((item): ProxyEgressStatus | null => {
+      const id = normalizeString(item?.id);
+      if (!id) return null;
+      return {
+        id,
+        shared: item.shared === true,
+        fault: normalizeString(item.fault),
+        since: normalizeString(item.since),
+        nextProbeAt: normalizeString(item.next_probe_at),
+        probing: item.probing === true,
+        refused: normalizeNumber(item.refused) ?? 0,
+        failedProbes: normalizeNumber(item.failed_probes) ?? 0,
+      };
+    })
+    .filter((item): item is ProxyEgressStatus => item !== null);
+  return { supported: true, enabled: body.enabled !== false, items };
+};
+
+/** 某条代理现在的熔断状态；没有表示照常转发。自有条目和共享条目分开找（ID 可能相同）。 */
+export const egressStatusFor = (
+  listing: ProxyEgressListing,
+  id: string,
+  shared: boolean,
+): ProxyEgressStatus | undefined => {
+  const key = proxyIdKey(id);
+  return listing.items.find((item) => item.shared === shared && proxyIdKey(item.id) === key);
+};
+
 export const proxiesApi = {
   /** 只返回本租户自己的代理（契约不变）。要共享信息用 listWithSharing，给下拉用 listSelectable。 */
   async list(): Promise<ProxyPoolEntry[]> {
@@ -275,6 +354,23 @@ export const proxiesApi = {
       { timeoutMs: 12000 },
     );
     return normalizeProxyCheckResult(data ?? {});
+  },
+
+  /**
+   * 正被出口熔断的代理。旧后端没有这个接口（404）时返回 supported=false，不抛错；其它错误照常抛出，
+   * 调用方保留上一次的结果。
+   */
+  async egressStatus(options?: { signal?: AbortSignal }): Promise<ProxyEgressListing> {
+    try {
+      const data = await apiClient.get<unknown>(
+        "/proxy-pool/egress-status",
+        options?.signal ? { signal: options.signal } : undefined,
+      );
+      return normalizeProxyEgressListing(data);
+    } catch (error) {
+      if (isApiClientError(error) && error.status === 404) return EGRESS_UNSUPPORTED;
+      throw error;
+    }
   },
 
   /** 系统租户的代理共享给谁（平台管理员、系统租户视角）；都为空表示取消共享。 */
