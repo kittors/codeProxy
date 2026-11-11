@@ -274,6 +274,40 @@ describe("AlertsPage", () => {
       });
     });
 
+    test("offers the egress breaker rule when the backend has it and saves only that rule", async () => {
+      const user = userEvent.setup();
+      mocks.getSettings.mockResolvedValue(
+        settings({
+          rules: { ...settings().rules, egress_breaker: { enabled: true, for_minutes: 3 } },
+        }),
+      );
+      mocks.updateSettings.mockResolvedValue(settings());
+      renderPage();
+      await user.click(await screen.findByRole("tab", { name: "Rules" }));
+
+      const minutes = screen.getByLabelText("Alert once tripped for");
+      expect(minutes).toHaveValue("3");
+      await user.clear(minutes);
+      await user.type(minutes, "0");
+      expect(screen.getByRole("button", SAVE)).toBeDisabled();
+      await user.clear(minutes);
+      await user.type(minutes, "5");
+      await user.click(screen.getByRole("button", SAVE));
+      await waitFor(() => expect(mocks.updateSettings).toHaveBeenCalledTimes(1));
+      expect(mocks.updateSettings).toHaveBeenCalledWith({
+        rules: { egress_breaker: { enabled: true, for_minutes: 5 } },
+      });
+    });
+
+    test("hides the egress breaker rule on a backend that would drop it", async () => {
+      const user = userEvent.setup();
+      renderPage();
+      await user.click(await screen.findByRole("tab", { name: "Rules" }));
+      expect(await screen.findAllByLabelText("Usage threshold")).not.toHaveLength(0);
+      expect(screen.queryByLabelText("Alert once tripped for")).not.toBeInTheDocument();
+      expect(screen.queryByText("Egress proxy tripped")).not.toBeInTheDocument();
+    });
+
     test("a test message goes out as the channel is on the page, masks included", async () => {
       const user = userEvent.setup();
       mocks.sendTest.mockResolvedValue({

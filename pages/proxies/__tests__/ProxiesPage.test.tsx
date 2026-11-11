@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   apiPut: vi.fn(),
   apiPatch: vi.fn(),
   apiPost: vi.fn(),
+  egressStatus: vi.fn(),
 }));
 
 const proxyCheckCacheKeyV1 = "proxiesPage.checkState.v1";
@@ -39,6 +40,7 @@ vi.mock("@code-proxy/api-client/endpoints/proxies", async (importOriginal) => {
         return items.map(mod.normalizeProxyEntry).filter(Boolean);
       },
       listWithSharing: async () => mod.normalizeProxyPoolListing(await mocks.apiGet("/proxy-pool")),
+      egressStatus: () => mocks.egressStatus(),
       saveAll: (entries: unknown[]) => mocks.apiPut("/proxy-pool", { items: entries }),
       update: (id: string, entry: unknown) => mocks.apiPatch(`/proxy-pool/${id}`, entry),
       check: async (request: { id?: string; url?: string; testUrl?: string }) =>
@@ -75,6 +77,9 @@ describe("ProxiesPage", () => {
     mocks.apiPut.mockReset();
     mocks.apiPatch.mockReset();
     mocks.apiPost.mockReset();
+    mocks.egressStatus.mockReset();
+    // Older backends have no egress endpoint; the page must look as it did before.
+    mocks.egressStatus.mockResolvedValue({ supported: false, enabled: false, items: [] });
     mocks.apiGet.mockResolvedValue({
       items: [
         {
@@ -495,5 +500,123 @@ describe("ProxiesPage", () => {
     expect(tooltip).toBeDefined();
     expect(tooltip).toHaveTextContent(/proxy dial timeout/i);
     expect(tooltip).toHaveTextContent(/latency:\s*12001 ms/i);
+  });
+  describe("egress breaker", () => {
+    const withTwoProxies = () =>
+      mocks.apiGet.mockResolvedValue({
+        items: [
+          { id: "hk", name: "HK Proxy", url: "socks5://u:p@127.0.0.1:1080", enabled: true },
+          { id: "sg", name: "SG Proxy", url: "socks5://u:p@127.0.0.2:1080", enabled: true },
+          { id: "us", name: "US Proxy", url: "socks5://u:p@127.0.0.3:1080", enabled: false },
+        ],
+      });
+
+    test("shows which proxies the breaker refuses requests through", async () => {
+      withTwoProxies();
+      mocks.egressStatus.mockResolvedValue({
+        supported: true,
+        enabled: true,
+        items: [
+          {
+            id: "hk",
+            shared: false,
+            fault: "auth_rejected",
+            since: "2026-11-11T08:17:00Z",
+            nextProbeAt: new Date(Date.now() + 60_000).toISOString(),
+            probing: false,
+            refused: 12,
+            failedProbes: 2,
+          },
+          // The same ID on a platform proxy belongs to the shared table, not this one.
+          { id: "sg", shared: true, fault: "unreachable", since: "", nextProbeAt: "", probing: false, refused: 0, failedProbes: 0 },
+        ],
+      });
+      renderPage();
+
+      expect(await screen.findByRole("columnheader", { name: /^egress$/i })).toBeInTheDocument();
+      const hkRow = (await screen.findByText("HK Proxy")).closest("tr") as HTMLElement;
+      expect(within(hkRow).getByTestId("proxy-egress-open")).toHaveTextContent("Tripped · login rejected");
+      expect(within(hkRow).getByText(/next probe/i)).toBeInTheDocument();
+      const sgRow = screen.getByText("SG Proxy").closest("tr") as HTMLElement;
+      expect(within(sgRow).getByText("Working")).toBeInTheDocument();
+      // A switched-off proxy carries no traffic: no state either way.
+      const usRow = screen.getByText("US Proxy").closest("tr") as HTMLElement;
+      expect(within(usRow).queryByText("Working")).not.toBeInTheDocument();
+    });
+
+    test("the column sits next to the latency column even when the state comes in late", async () => {
+      withTwoProxies();
+      let answer: (value: unknown) => void = () => {};
+      mocks.egressStatus.mockReturnValue(new Promise((resolve) => (answer = resolve)));
+      renderPage();
+
+      expect(await screen.findByText("HK Proxy")).toBeInTheDocument();
+      answer({ supported: true, enabled: true, items: [] });
+      await screen.findAllByText("Working");
+      const headers = screen.getAllByRole("columnheader").map((cell) => cell.textContent ?? "");
+      const latency = headers.findIndex((text) => /server latency/i.test(text));
+      expect(latency).toBeGreaterThan(-1);
+      expect(headers[latency + 1]).toMatch(/egress/i);
+    });
+
+    test("an outage nobody probed yet says the next request will", async () => {
+      withTwoProxies();
+      mocks.egressStatus.mockResolvedValue({
+        supported: true,
+        enabled: true,
+        items: [
+          {
+            id: "sg",
+            shared: false,
+            fault: "unreachable",
+            since: "2026-11-11T08:17:00Z",
+            nextProbeAt: "2026-11-11T08:17:15Z",
+            probing: false,
+            refused: 3,
+            failedProbes: 0,
+          },
+        ],
+      });
+      renderPage();
+
+      const sgRow = (await screen.findByText("SG Proxy")).closest("tr") as HTMLElement;
+      expect(await within(sgRow).findByText(/the next request probes it/i)).toBeInTheDocument();
+      expect(within(sgRow).getByTestId("proxy-egress-open")).toHaveTextContent("Tripped · unreachable");
+    });
+
+    test("hides the column on a backend without the breaker endpoint", async () => {
+      withTwoProxies();
+      renderPage();
+
+      expect(await screen.findByText("HK Proxy")).toBeInTheDocument();
+      await waitFor(() => expect(mocks.egressStatus).toHaveBeenCalled());
+      // The column holds its place until the backend answers, then goes.
+      await waitFor(() =>
+        expect(screen.queryByRole("columnheader", { name: /^egress$/i })).not.toBeInTheDocument(),
+      );
+      expect(screen.queryByText("Working")).not.toBeInTheDocument();
+    });
+
+    test("says so when the breaker is switched off on the node", async () => {
+      withTwoProxies();
+      mocks.egressStatus.mockResolvedValue({ supported: true, enabled: false, items: [] });
+      renderPage();
+
+      expect(await screen.findByText(/CLIRELAY_EGRESS_BREAKER=off/)).toBeInTheDocument();
+      await waitFor(() =>
+        expect(screen.queryByRole("columnheader", { name: /^egress$/i })).not.toBeInTheDocument(),
+      );
+    });
+
+    test("the refresh button also refreshes the breaker state", async () => {
+      withTwoProxies();
+      mocks.egressStatus.mockResolvedValue({ supported: true, enabled: true, items: [] });
+      renderPage();
+
+      expect(await screen.findByRole("columnheader", { name: /^egress$/i })).toBeInTheDocument();
+      const before = mocks.egressStatus.mock.calls.length;
+      await userEvent.click(screen.getByRole("button", { name: /refresh/i }));
+      await waitFor(() => expect(mocks.egressStatus.mock.calls.length).toBe(before + 1));
+    });
   });
 });

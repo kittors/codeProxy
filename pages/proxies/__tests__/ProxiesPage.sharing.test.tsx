@@ -325,6 +325,39 @@ describe("ProxiesPage platform sharing", () => {
       );
     });
 
+    test("shows the breaker state of own and platform proxies apart", async () => {
+      mocks.get.mockImplementation(async (path: string) => {
+        if (path === "/proxy-pool") return tenantPool;
+        if (path === "/proxy-pool/egress-status")
+          return {
+            enabled: true,
+            items: [
+              {
+                id: "sg",
+                shared: true,
+                fault: "unreachable",
+                since: "2026-11-11T08:17:00Z",
+                next_probe_at: "2026-11-11T08:19:00Z",
+                probing: true,
+                refused: 3,
+                failed_probes: 1,
+              },
+            ],
+          };
+        throw new Error(`unexpected GET ${path}`);
+      });
+      renderPage();
+
+      const sgRow = await rowOf("Platform SG");
+      expect(await within(sgRow).findByTestId("proxy-egress-open")).toHaveTextContent(
+        "Tripped · unreachable",
+      );
+      expect(within(sgRow).getByText(/probing now/i)).toBeInTheDocument();
+      expect(within(await rowOf("My HK")).getByText("Working")).toBeInTheDocument();
+      // The tenant's own hk overrides the platform one, whose state is not the tenant's concern.
+      expect(within(await rowOf("Platform HK")).queryByText("Working")).not.toBeInTheDocument();
+    });
+
     test("adding a proxy never copies platform proxies into the tenant pool", async () => {
       serve(tenantPool);
       renderPage();

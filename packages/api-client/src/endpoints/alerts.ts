@@ -3,11 +3,19 @@ import { apiClient } from "../client/client";
 /** Language of the alert message text (not of the panel). */
 export type AlertLanguage = "en" | "zh-CN";
 export type AlertChannelKind = "webhook" | "feishu" | "telegram";
-export type AlertRuleKey = "quota_window" | "account_failure" | "spending" | "use_it_or_lose_it";
+export type AlertRuleKey =
+  | "quota_window"
+  | "account_failure"
+  | "spending"
+  | "use_it_or_lose_it"
+  | "egress_breaker";
 export type AlertSeverity = "info" | "warning" | "critical";
-/** `test` is the message the "send a test" button produces; it is never raised by a rule. */
-export type AlertEventRule = AlertRuleKey | "test";
-export type AlertSubjectKind = "account" | "key" | "end_user" | "channel";
+/**
+ * `test` is the message the "send a test" button produces; it is never raised by a rule.
+ * `egress_recovered` reports that an outage `egress_breaker` reported is over.
+ */
+export type AlertEventRule = AlertRuleKey | "egress_recovered" | "test";
+export type AlertSubjectKind = "account" | "key" | "end_user" | "channel" | "proxy";
 export type AlertDeliveryStatus = "sent" | "failed";
 
 /**
@@ -43,6 +51,12 @@ export interface AlertRules {
     min_remaining_percent: number;
     hours_before_reset: number;
   };
+  /**
+   * A proxy the egress breaker keeps shut for `for_minutes` (1–1440), with at least one failed probe;
+   * another message follows once requests get through it again. Absent from backends older than the
+   * rule: they drop it on save, so the panel only offers it when the backend returned it.
+   */
+  egress_breaker?: { enabled: boolean; for_minutes: number };
 }
 
 export interface AlertSettings {
