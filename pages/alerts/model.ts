@@ -15,6 +15,7 @@ export const ALERT_RULE_KEYS: AlertRuleKey[] = [
   "account_failure",
   "spending",
   "use_it_or_lose_it",
+  "egress_breaker",
 ];
 
 /** 各数值字段的取值范围，和后端校验一致；超出的在页面上就地标红，不用等保存时被后端退回。 */
@@ -24,6 +25,8 @@ export const ALERT_LIMITS = {
   for_minutes: { min: 0, max: 1440 },
   min_remaining_percent: { min: 1, max: 100 },
   hours_before_reset: { min: 1, max: 168 },
+  /** 出口熔断没有 0：熔断器刚打开时可能在第一次试探就恢复。 */
+  egress_for_minutes: { min: 1, max: 1440 },
 } as const;
 
 /**
@@ -80,6 +83,11 @@ export interface AlertDraft {
     account_failure: { enabled: boolean; forMinutes: string };
     spending: { enabled: boolean; threshold: string };
     use_it_or_lose_it: { enabled: boolean; minRemaining: string; hoursBeforeReset: string };
+    /**
+     * 出口熔断告警。只有后端的设置里带这条规则时才有：旧后端保存时会静默丢掉它，开关不能出现，
+     * 否则管理员以为开了、其实没有。
+     */
+    egress_breaker?: { enabled: boolean; forMinutes: string };
   };
 }
 
@@ -159,6 +167,14 @@ export function draftFromSettings(settings: AlertSettings, uiLanguage: string): 
         minRemaining: text(rules?.use_it_or_lose_it?.min_remaining_percent, 40),
         hoursBeforeReset: text(rules?.use_it_or_lose_it?.hours_before_reset, 24),
       },
+      ...(rules?.egress_breaker
+        ? {
+            egress_breaker: {
+              enabled: rules.egress_breaker.enabled ?? true,
+              forMinutes: text(rules.egress_breaker.for_minutes, 3),
+            },
+          }
+        : {}),
     },
   };
 }
@@ -220,6 +236,15 @@ const NUMERIC_FIELDS = (draft: AlertDraft) =>
       draft.rules.use_it_or_lose_it.hoursBeforeReset,
       ALERT_LIMITS.hours_before_reset,
     ],
+    ...(draft.rules.egress_breaker
+      ? ([
+          [
+            "rules.egress_breaker.for_minutes",
+            draft.rules.egress_breaker.forMinutes,
+            ALERT_LIMITS.egress_for_minutes,
+          ],
+        ] as const)
+      : []),
   ] as const;
 
 export interface RangeIssue {
@@ -260,6 +285,14 @@ function snapshot(draft: AlertDraft): string {
         minRemaining: draft.rules.use_it_or_lose_it.minRemaining.trim(),
         hoursBeforeReset: draft.rules.use_it_or_lose_it.hoursBeforeReset.trim(),
       },
+      ...(draft.rules.egress_breaker
+        ? {
+            egress_breaker: {
+              ...draft.rules.egress_breaker,
+              forMinutes: draft.rules.egress_breaker.forMinutes.trim(),
+            },
+          }
+        : {}),
     },
   });
 }
@@ -299,6 +332,7 @@ export function buildUpdate(
     account_failure: af,
     spending: sp,
     use_it_or_lose_it: ul,
+    egress_breaker: eb,
   } = draft.rules;
   const base = baseline.rules;
   if (!sameJson(qw, base.quota_window)) {
@@ -316,6 +350,9 @@ export function buildUpdate(
       min_remaining_percent: number(ul.minRemaining),
       hours_before_reset: number(ul.hoursBeforeReset),
     };
+  }
+  if (eb && !sameJson(eb, base.egress_breaker)) {
+    rules.egress_breaker = { enabled: eb.enabled, for_minutes: number(eb.forMinutes) };
   }
   if (Object.keys(rules).length > 0) body.rules = rules;
   return body;

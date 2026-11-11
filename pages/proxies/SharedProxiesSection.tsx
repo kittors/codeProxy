@@ -1,7 +1,11 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { CheckCircle2, RefreshCw } from "lucide-react";
-import type { SharedProxyEntry } from "@code-proxy/api-client/endpoints/proxies";
+import {
+  egressStatusFor,
+  type ProxyEgressListing,
+  type SharedProxyEntry,
+} from "@code-proxy/api-client/endpoints/proxies";
 import {
   Card,
   COLUMN_WIDTH,
@@ -16,6 +20,7 @@ import {
   type ProxyCheckState,
 } from "@features/proxy-pool/proxy-utils";
 import { SharingNoticeBadge } from "@features/resource-sharing";
+import { ProxyEgressCell } from "./ProxyEgressCell";
 import { ProxyLatencyCell } from "./ProxyLatencyCell";
 
 /**
@@ -29,10 +34,13 @@ export function SharedProxiesSection({
   entries,
   checkState,
   onCheck,
+  egress,
 }: {
   entries: readonly SharedProxyEntry[];
   checkState: ProxyCheckState;
   onCheck: (entry: SharedProxyEntry) => void;
+  /** 出口熔断状态；后端不支持或节点关了熔断时不传，这一列就不显示。 */
+  egress?: { listing: ProxyEgressListing; known: boolean };
 }) {
   const { t } = useTranslation();
   const rows = useMemo(() => [...entries].sort((a, b) => a.name.localeCompare(b.name)), [entries]);
@@ -97,6 +105,25 @@ export function SharedProxiesSection({
             <ProxyLatencyCell result={checkState[entry.id]} />
           ),
       },
+      ...(egress
+        ? [
+            {
+              key: "egress",
+              label: t("proxies.egress_column"),
+              width: COLUMN_WIDTH.name,
+              // 被覆盖的共享代理本租户的账号用不到，停用的不承载流量，都没有熔断可言。
+              render: (entry: SharedProxyEntry) =>
+                entry.enabled && !entry.overridden ? (
+                  <ProxyEgressCell
+                    known={egress.known}
+                    status={egressStatusFor(egress.listing, entry.id, true)}
+                  />
+                ) : (
+                  <span className="text-xs text-ink-3">--</span>
+                ),
+            },
+          ]
+        : []),
       {
         key: "description",
         label: t("proxies.remark_label"),
@@ -129,7 +156,7 @@ export function SharedProxiesSection({
         },
       },
     ],
-    [checkState, onCheck, t],
+    [checkState, egress, onCheck, t],
   );
 
   return (

@@ -2632,6 +2632,23 @@
     "url_hint": "http, https or socks5; put credentials in the address.",
     "remark_placeholder": "e.g. Codex egress",
     "enabled_hint": "Disabled proxies disappear from pickers; existing bindings are unaffected.",
+    "egress_column": "Egress",
+    "egress_ok": "Working",
+    "egress_open": "Tripped · {{reason}}",
+    "egress_fault_auth_rejected": "login rejected",
+    "egress_fault_unreachable": "unreachable",
+    "egress_fault_unknown": "not working",
+    "egress_since": "since {{time}}",
+    "egress_next_probe": "next probe {{time}}",
+    "egress_probing": "probing now",
+    "egress_waiting_probe": "the next request probes it",
+    "egress_tooltip_reason": "Reason",
+    "egress_tooltip_since": "Tripped at",
+    "egress_tooltip_next": "Next probe",
+    "egress_tooltip_refused": "Attempts refused",
+    "egress_tooltip_failed_probes": "Failed probes",
+    "egress_tooltip_note": "Requests through this proxy are answered with 503 instead of being sent, and the account is not blamed for it. The first probe that gets through restores the proxy. Shown is what the node serving this page has seen.",
+    "egress_disabled_notice": "The egress breaker is switched off on this node (CLIRELAY_EGRESS_BREAKER=off): requests keep going out through a proxy that fails, and no breaker state is shown here.",
     "delete_lead": "This can't be undone.",
     "delete_consequence_bindings": "AI providers and AI accounts can no longer pick this proxy.",
     "shared_tag": "Shared",
@@ -8219,6 +8236,12 @@
         "min_remaining_hint": "Default 40%. If less is left, it isn't worth a nudge.",
         "hours_before_reset": "Resets within",
         "hours_before_reset_hint": "Default 24 hours. Reminding earlier gives you nothing to act on yet, and the message would repeat for days."
+      },
+      "egress_breaker": {
+        "label": "Egress proxy tripped",
+        "desc": "When a proxy rejects its login or cannot be reached, requests through it are stopped (the egress breaker trips) and answered with 503. Alerts once it has stayed tripped this long and at least one probe failed too, and sends another message when requests get through again.",
+        "for_minutes": "Alert once tripped for",
+        "for_minutes_hint": "Default 3 minutes. The breaker probes the proxy 15, 45 and 105 seconds after it trips, so a proxy that is back within about a minute and a half never alerts."
       }
     },
     "events": {
@@ -8242,6 +8265,8 @@
         "account_failure": "Account failure",
         "spending": "Spending limit",
         "use_it_or_lose_it": "Use before reset",
+        "egress_breaker": "Egress tripped",
+        "egress_recovered": "Egress restored",
         "test": "Test message"
       },
       "severity": {
@@ -8253,7 +8278,8 @@
         "account": "AI account",
         "key": "API key",
         "end_user": "Portal account",
-        "channel": "Channel"
+        "channel": "Channel",
+        "proxy": "Proxy"
       },
       "delivery": {
         "sent": "Sent",

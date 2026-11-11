@@ -6,6 +6,7 @@ import {
   type ResourceSharingCapability,
 } from "@code-proxy/api-client/endpoints/resource-sharing";
 import {
+  egressStatusFor,
   proxiesApi,
   proxyIdKey,
   type ProxyCheckResult,
@@ -29,11 +30,13 @@ import {
   type ProxyCheckState,
 } from "@features/proxy-pool/proxy-utils";
 import { SharingNoticeBadge } from "@features/resource-sharing";
+import { ProxyEgressCell } from "./ProxyEgressCell";
 import { ProxyFormModal, type ProxyFormField } from "./ProxyFormModal";
 import { ProxyLatencyCell } from "./ProxyLatencyCell";
 import { ProxySharingCell } from "./ProxySharingCell";
 import { ProxySharingDialogs } from "./ProxySharingDialogs";
 import { SharedProxiesSection } from "./SharedProxiesSection";
+import { useEgressStatus } from "./useEgressStatus";
 import { useProxySharing } from "./useProxySharing";
 
 export function ProxiesPage() {
@@ -53,6 +56,14 @@ export function ProxiesPage() {
   const [sharingCapability, setSharingCapability] =
     useState<ResourceSharingCapability>(NO_SHARING_CAPABILITY);
   const [switchTarget, setSwitchTarget] = useState<ProxyPoolEntry | null>(null);
+  // 出口熔断：旧后端没有接口时整列不显示；节点关了熔断时也不显示，改为一行提示。第一次回答
+  // 到达之前先占住这一列（见 useEgressStatus），免得它被表格排到最后。
+  const {
+    listing: egressListing,
+    known: egressKnown,
+    refresh: refreshEgress,
+  } = useEgressStatus();
+  const showEgressColumn = !egressKnown || (egressListing.supported && egressListing.enabled);
 
   const sortedEntries = useMemo(
     () => [...entries].sort((a, b) => a.name.localeCompare(b.name)),
@@ -298,6 +309,25 @@ export function ProxiesPage() {
         width: COLUMN_WIDTH.badgeStacked,
         render: (entry) => <ProxyLatencyCell result={checkState[entry.id]} />,
       },
+      ...(showEgressColumn
+        ? [
+            {
+              key: "egress",
+              label: t("proxies.egress_column"),
+              width: COLUMN_WIDTH.name,
+              // 停用的代理不承载流量（选它的账号会回落到别的出口），没有熔断可言。
+              render: (entry: ProxyPoolEntry) =>
+                entry.enabled ? (
+                  <ProxyEgressCell
+                    known={egressKnown}
+                    status={egressStatusFor(egressListing, entry.id, false)}
+                  />
+                ) : (
+                  <span className="text-xs text-ink-3">--</span>
+                ),
+            },
+          ]
+        : []),
       ...(showSharingColumn
         ? [
             {
@@ -380,12 +410,15 @@ export function ProxiesPage() {
     [
       checkEntry,
       checkState,
+      egressKnown,
+      egressListing,
       openAdopt,
       openEdit,
       openSharing,
       overriddenSharedKeys,
       sharingManageable,
       sharingTenantNames,
+      showEgressColumn,
       showSharingColumn,
       t,
     ],
@@ -416,7 +449,14 @@ export function ProxiesPage() {
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <Button onClick={loadEntries} disabled={loading} size="sm">
+          <Button
+            onClick={() => {
+              void loadEntries();
+              void refreshEgress();
+            }}
+            disabled={loading}
+            size="sm"
+          >
             <RefreshCw size={15} />
             {t("common.refresh")}
           </Button>
@@ -426,6 +466,10 @@ export function ProxiesPage() {
           </Button>
         </div>
       </div>
+
+      {egressListing.supported && !egressListing.enabled ? (
+        <Callout tone="warning">{t("proxies.egress_disabled_notice")}</Callout>
+      ) : null}
 
       {/* flat：外壳内容区就是这一页的面板，表格直接落在上面，不再套一张卡片。 */}
       <Card
@@ -462,6 +506,7 @@ export function ProxiesPage() {
           entries={sharedEntries}
           checkState={checkState}
           onCheck={checkSharedEntry}
+          egress={showEgressColumn ? { listing: egressListing, known: egressKnown } : undefined}
         />
       ) : null}
 

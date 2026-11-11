@@ -304,3 +304,30 @@ describe("channelIndexOfField", () => {
     expect(channelIndexOfField("rules.spending.threshold_percent")).toBeNull();
   });
 });
+
+describe("egress breaker rule", () => {
+  const withEgress = (rule = { enabled: true, for_minutes: 3 }) =>
+    draftOf({ rules: { ...settings().rules, egress_breaker: rule } });
+
+  test("is only in the draft when the backend returned it", () => {
+    // An older backend drops the rule on save: offering its switch would be a lie.
+    expect(draftOf().rules.egress_breaker).toBeUndefined();
+    expect(withEgress().rules.egress_breaker).toEqual({ enabled: true, forMinutes: "3" });
+    expect(buildUpdate(draftOf(), draftOf())).toEqual({});
+  });
+
+  test("is validated, compared and sent like the other rules", () => {
+    const base = withEgress();
+    const draft = withEgress();
+    draft.rules.egress_breaker = { enabled: true, forMinutes: "0" };
+    expect(Object.keys(validateDraft(draft))).toEqual(["rules.egress_breaker.for_minutes"]);
+
+    draft.rules.egress_breaker = { enabled: false, forMinutes: " 15 " };
+    expect(validateDraft(draft)).toEqual({});
+    expect(isDirty(base, draft)).toBe(true);
+    expect(buildUpdate(base, draft)).toEqual({
+      rules: { egress_breaker: { enabled: false, for_minutes: 15 } },
+    });
+    expect(isDirty(base, withEgress())).toBe(false);
+  });
+});
