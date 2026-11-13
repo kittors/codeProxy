@@ -152,6 +152,7 @@ describe("endUsersApi", () => {
       batchProfileBinding: true,
       createWithProfile: false,
       ownedKeyAdmin: false,
+      accessFreezes: false,
     });
     const [fresh, legacy] = items;
     expect(fresh["quota-limits"].cost.day).toBe(10);
@@ -205,5 +206,22 @@ describe("endUsersApi", () => {
     expect(legacy.privacyMasking).toBe(false);
     expect(legacy.wordPolicyAllowed).toBe(true);
     expect(get).toHaveBeenCalledWith("/v0/portal/auth/me");
+  });
+
+  test("every account endpoint that carries capabilities says whether access freezes exist, only when explicitly true", async () => {
+    // The console's account list and key list, and the portal's account view and key list: the
+    // panel updates itself onto older backends, which send none of this.
+    mocks.get.mockResolvedValueOnce({ items: [], capabilities: { "access-freezes": true } });
+    mocks.get.mockResolvedValueOnce({ items: [], capabilities: { "access-freezes": "yes" } });
+    expect((await endUsersApi.list()).capabilities.accessFreezes).toBe(true);
+    expect((await endUsersApi.listKeys("user-1")).capabilities.accessFreezes).toBe(false);
+
+    const get = vi.spyOn(portalApi.client, "get");
+    get.mockResolvedValueOnce({ user: { id: "u1" }, capabilities: { "access-freezes": true } });
+    get.mockResolvedValueOnce({ items: [], capabilities: { "access-freezes": true } });
+    get.mockResolvedValueOnce({ user: { id: "u1" } });
+    expect((await portalApi.me()).capabilities.accessFreezes).toBe(true);
+    expect((await portalApi.listKeys()).capabilities.accessFreezes).toBe(true);
+    expect((await portalApi.me()).capabilities.accessFreezes).toBe(false);
   });
 });

@@ -23,6 +23,14 @@ describe("access policy normalization", () => {
     expect(readAccessPolicyCapabilities(null).accessPolicy).toBe(false);
   });
 
+  test("access freezes are offered only when the backend says so, explicitly", () => {
+    expect(readAccessPolicyCapabilities({ "access-freezes": true }).accessFreezes).toBe(true);
+    expect(readAccessPolicyCapabilities({ "access-freezes": "true" }).accessFreezes).toBe(false);
+    // An older backend sends no such flag; neither does one that sends no capabilities at all.
+    expect(readAccessPolicyCapabilities({ "access-policy": true }).accessFreezes).toBe(false);
+    expect(readAccessPolicyCapabilities(undefined).accessFreezes).toBe(false);
+  });
+
   test("matrices drop junk and negative values", () => {
     const matrix = normalizeQuotaMatrix({ cost: { day: "12", week: -3 }, requests: { "5h": 40 }, tokens: "x" });
     expect(matrix.cost.day).toBe(12);

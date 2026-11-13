@@ -11,12 +11,9 @@ import {
 } from "@code-proxy/api-client";
 import type { LoginFailure } from "@features/login-lock";
 import { describeLoginFailure } from "../login/loginErrors";
-import { useTheme } from "@code-proxy/ui";
-import { Reveal } from "@code-proxy/ui";
-import { Modal } from "@code-proxy/ui";
-import { PageBackground } from "@code-proxy/ui";
-import { SecretRevealModal } from "@code-proxy/ui";
+import { Modal, PageBackground, Reveal, SecretRevealModal, useTheme } from "@code-proxy/ui";
 import type { SearchableCheckboxMultiSelectOption } from "@code-proxy/ui";
+import { PortalAccessFreezes } from "@features/access-freeze";
 import type { TimeRange } from "@features/monitor-widgets/monitor-constants";
 import { ModelTag } from "@features/model-tags";
 import {
@@ -1153,6 +1150,7 @@ export function ApiKeyLookupPage() {
           {/* Results: portal keys tab can show without an activated key */}
           {(queriedKey || portalUser) && !error && (
             <>
+              {portalUser ? <PortalAccessFreezes enabled={portalCaps.accessFreezes} accountId={portalUser.id} /> : null}
               <LookupResultsToolbar
                 t={t}
                 activeTab={activeTab}

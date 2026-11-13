@@ -42,6 +42,7 @@ const KNOWN_EXCLUSIONS = new Set([
   "pinned",
   "channel",
   "allowed-groups",
+  "frozen",
   "route-group",
   "tried",
   "model",

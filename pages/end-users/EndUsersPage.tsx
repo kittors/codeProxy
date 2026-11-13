@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router-dom";
-import { ShieldCheck } from "lucide-react";
+import { Lock, ShieldCheck } from "lucide-react";
 import {
   NO_ACCESS_POLICY_CAPABILITIES,
   apiKeyEntriesApi,
@@ -28,6 +28,12 @@ import {
 } from "@code-proxy/ui";
 import { PermissionGate } from "@app/providers/PermissionGate";
 import { useAuth } from "@app/providers/AuthProvider";
+import {
+  AccessFreezeDetailModal,
+  AccessFreezeOverviewModal,
+  useAccessFreezeOverview,
+  type AccessFreezeSubjectRef,
+} from "@features/access-freeze";
 import { describeWindowParts, formatAccessPolicyError, resettableWindows } from "@features/access-policy";
 import { useApiKeyPermissionOptions } from "@features/api-key-restrictions";
 import { resolvePasswordApiError } from "@features/password-policy";
@@ -97,7 +103,14 @@ export function EndUsersPage() {
   /** 用量弹窗描述里的对象：「账号下全部密钥」或单把 Key 的名称。 */
   const [usageLabel, setUsageLabel] = useState("");
   const [optionsLoaded, setOptionsLoaded] = useState(false);
+  /** 上游冻结的总览弹窗，和正在看详情的那一方（账号，或总览里列出的 Key）。 */
+  const [freezesOpen, setFreezesOpen] = useState(false);
+  const [freezeSubject, setFreezeSubject] = useState<AccessFreezeSubjectRef | null>(null);
   const canWrite = can("end_users.write");
+  // 按上游的冻结要后端声明能力（面板会自动更新到旧后端），读它们要 end_users.read；后端没有数据库
+  // （503）时整块界面不出现。它和账号状态的「已冻结」（status: locked，整个账号停用）不是一回事。
+  const accessFreezes = useAccessFreezeOverview(capabilities.accessFreezes && can("end_users.read"));
+  const freezeEnabled = capabilities.accessFreezes && can("end_users.read") && !accessFreezes.unavailable;
   const permissionOptions = useApiKeyPermissionOptions();
   const { fetchModelOptions, refreshPermissionOptions, loadModels } = permissionOptions;
   const usageView = useApiKeyUsageView();
@@ -149,6 +162,14 @@ export function EndUsersPage() {
       { replace: true },
     );
   }, [ensurePolicyOptions, keysParam, loading, setSearchParams, users]);
+
+  const endUserName = useCallback(
+    (id: string) => {
+      const user = users.find((candidate) => candidate.id === id);
+      return user ? endUserLabel(user) : undefined;
+    },
+    [users],
+  );
 
   const profileById = useMemo(() => new Map(profiles.map((profile) => [profile.id, profile])), [profiles]);
   const boundCounts = useMemo(() => {
@@ -309,6 +330,10 @@ export function EndUsersPage() {
                 }),
             }
           : undefined,
+        accessFreezes: freezeEnabled ? accessFreezes.byEndUser : undefined,
+        onViewAccessFreezes: freezeEnabled
+          ? (user) => setFreezeSubject({ kind: "end_user", id: user.id, name: endUserLabel(user) })
+          : undefined,
         onViewUsage: viewUsage,
         onManageKeys: (user) => {
           ensurePolicyOptions();
@@ -326,7 +351,7 @@ export function EndUsersPage() {
       }),
     // pageIds 由 pageUsers 推出，allPageSelected 由 selected 推出。
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [allPageSelected, batchEnabled, busy, can, canWrite, ensurePolicyOptions, i18n.resolvedLanguage, masked, openEdit, openHistory, pageUsers, profileById, selected, t, toggleFrozen, viewUsage],
+    [accessFreezes.byEndUser, allPageSelected, batchEnabled, busy, can, canWrite, ensurePolicyOptions, freezeEnabled, i18n.resolvedLanguage, masked, openEdit, openHistory, pageUsers, profileById, selected, t, toggleFrozen, viewUsage],
   );
 
   const onCreate = async (event: FormEvent) => {
@@ -452,6 +477,17 @@ export function EndUsersPage() {
           actions={
             <div className="flex items-center gap-2">
               <MaskToggleButton masked={masked} onToggle={() => setMasked((prev) => !prev)} />
+              {freezeEnabled ? (
+                <Button variant="secondary" size="sm" onClick={() => setFreezesOpen(true)}>
+                  <Lock size={14} aria-hidden="true" />
+                  {t("access_freeze.toolbar_button")}
+                  {accessFreezes.freezes.length > 0 ? (
+                    <span className="rounded-full bg-rose-500/10 px-1.5 text-2xs font-semibold tabular-nums text-rose-700 dark:text-rose-300">
+                      {accessFreezes.freezes.length}
+                    </span>
+                  ) : null}
+                </Button>
+              ) : null}
               {can("api_key_profiles.read") ? (
                 <Link to="/access/api-key-permissions" className={buttonClassName({ size: "sm", variant: "secondary" })}>
                   <ShieldCheck size={14} aria-hidden="true" />
@@ -650,6 +686,24 @@ export function EndUsersPage() {
         rawTodayCost={historyRawTodayCost}
         dailySpendingUsed={historyDailyUsed}
       />
+      {freezeEnabled ? (
+        <>
+          <AccessFreezeOverviewModal
+            open={freezesOpen}
+            onClose={() => setFreezesOpen(false)}
+            canWrite={canWrite}
+            overview={accessFreezes}
+            endUserName={endUserName}
+            onOpenSubject={setFreezeSubject}
+          />
+          <AccessFreezeDetailModal
+            subject={freezeSubject}
+            canWrite={canWrite}
+            onClose={() => setFreezeSubject(null)}
+            onChanged={() => void accessFreezes.refresh()}
+          />
+        </>
+      ) : null}
       <ApiKeyUsageDialogs view={usageView} maskedKey={usageView.usageOpen ? usageLabel : ""} />
     </PermissionGate>
   );

@@ -158,6 +158,7 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
       getSettings: vi.fn(),
       preview: vi.fn(),
     },
+    portalAccessFreezesApi: { list: vi.fn() },
   };
 });
 
@@ -444,6 +445,56 @@ describe("ApiKeyLookupPage", () => {
     await waitFor(() => expect(privacyMaskingPortalApi.listRecords).toHaveBeenCalled());
     // 这个标签有自己的刷新，工具栏上的刷新不放（按钮还在，所在的一栏 hidden）
     expect(screen.getByRole("button", { name: /^(refresh|刷新)$/i }).closest(".hidden")).not.toBeNull();
+  });
+
+  // 被上游冻结的账号在门户里看到说明：后端在 capabilities 里声明了才去请求，旧后端没有这个接口
+  test.each([
+    ["a backend that serves access freezes", true],
+    ["an older backend", false],
+  ] as const)("frozen upstreams card on %s", async (_name, supported) => {
+    const { portalApi, portalAccessFreezesApi, NO_ACCESS_POLICY_CAPABILITIES } = await import("@code-proxy/api-client");
+    vi.mocked(portalApi.loadSession).mockReturnValue({
+      apiBase: "http://relay.test",
+      accessToken: "cpt_account",
+      refreshToken: "cpr_account",
+      remember: false,
+      expiresAt: Date.now() + 60_000,
+    });
+    vi.mocked(portalApi.me).mockResolvedValue({
+      user: { id: "u-account", tenant_id: "t-account", username: "alice", display_name: "Alice", status: "active", must_change_password: false, created_at: "", updated_at: "", version: 1 },
+      capabilities: { ...NO_ACCESS_POLICY_CAPABILITIES, accessFreezes: supported },
+    } as never);
+    vi.mocked(portalApi.listKeys).mockResolvedValue({ items: [] } as never);
+    vi.mocked(portalAccessFreezesApi.list).mockResolvedValue([
+      {
+        provider: "codex",
+        provider_name: "Codex",
+        reason_code: "cyber_policy",
+        model: "gpt-6.1-sol",
+        frozen_at: "2026-11-13T02:00:00Z",
+        notice: "Access to Codex is frozen for this account. 本账号的 Codex 使用权限已冻结。",
+      },
+    ]);
+
+    render(
+      <ThemeProvider>
+        <ToastProvider>
+          <ApiKeyLookupPage />
+        </ToastProvider>
+      </ThemeProvider>,
+    );
+    await screen.findByRole("tab", { name: /manage api keys|管理 api key/i });
+    if (!supported) {
+      expect(screen.queryByTestId("portal-access-freezes")).not.toBeInTheDocument();
+      expect(portalAccessFreezesApi.list).not.toHaveBeenCalled();
+      return;
+    }
+    const card = await screen.findByTestId("portal-access-freezes");
+    expect(card).toHaveTextContent("Codex");
+    expect(card).toHaveTextContent("本账号的 Codex 使用权限已冻结。");
+    // 说明在结果栏（标签）上面，所有标签页都看得到
+    const toolbar = screen.getByTestId("apikey-lookup-toolbar-sticky");
+    expect(card.compareDocumentPosition(toolbar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   test("hides channel controls and keeps input/output cells non-interactive on public logs", async () => {
