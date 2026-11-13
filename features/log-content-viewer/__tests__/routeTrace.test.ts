@@ -162,7 +162,9 @@ describe("routeTraceVerdict", () => {
       kind: "not_retried",
       why: "pinned",
     });
-    for (const cause of ["request_invalid", "content_policy"]) {
+    // An upstream's safety refusal is the sender's content, not the account: another account would
+    // refuse it the same way, and the scheduler does not try one.
+    for (const cause of ["request_invalid", "content_policy", "upstream_content_refusal"]) {
       expect(
         routeTraceVerdict(trace({ steps: [{ ...failedOnA, status: 400, cause }] })).next,
       ).toEqual({ kind: "not_retried", why: "request" });

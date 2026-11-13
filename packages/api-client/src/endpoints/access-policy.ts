@@ -90,6 +90,11 @@ export interface AccessPolicyCapabilities {
   createWithProfile: boolean;
   /** 账号 Key 的暂停 / 恢复与按需取明文。 */
   ownedKeyAdmin: boolean;
+  /**
+   * 按上游的访问冻结（accessFreezesApi、portalAccessFreezesApi）。旧后端没有这些接口，面板不显示
+   * 冻结的界面，也不请求它们。
+   */
+  accessFreezes: boolean;
 }
 
 export const NO_ACCESS_POLICY_CAPABILITIES: AccessPolicyCapabilities = {
@@ -98,6 +103,7 @@ export const NO_ACCESS_POLICY_CAPABILITIES: AccessPolicyCapabilities = {
   batchProfileBinding: false,
   createWithProfile: false,
   ownedKeyAdmin: false,
+  accessFreezes: false,
 };
 
 /** 只认显式 true：旧后端没有这个对象，缺省一律当作不支持。 */
@@ -109,6 +115,7 @@ export const readAccessPolicyCapabilities = (value: unknown): AccessPolicyCapabi
     batchProfileBinding: value["batch-profile-binding"] === true,
     createWithProfile: value["create-with-profile"] === true,
     ownedKeyAdmin: value["owned-key-admin"] === true,
+    accessFreezes: value["access-freezes"] === true,
   };
 };
 

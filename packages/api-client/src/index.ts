@@ -72,6 +72,15 @@ export {
 } from "./endpoints/end-users";
 export * from "./endpoints/access-policy";
 export type * from "./endpoints/end-users";
+export {
+  accessFreezesApi,
+  normalizeAccessFreeze,
+  normalizeAccessFreezeSettings,
+  normalizeAccessFreezeStrike,
+  normalizePortalAccessFreeze,
+  portalAccessFreezesApi,
+} from "./endpoints/access-freezes";
+export type * from "./endpoints/access-freezes";
 
 export { configApi } from "./endpoints/config";
 export type * from "./endpoints/config";

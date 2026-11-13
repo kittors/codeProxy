@@ -3,6 +3,7 @@ import {
   History,
   Key,
   KeyRound,
+  Lock,
   Pencil,
   RotateCcw,
   ShieldAlert,
@@ -12,7 +13,7 @@ import {
   Trash2,
   Unlock,
 } from "lucide-react";
-import type { ApiKeyPermissionProfile, EndUser } from "@code-proxy/api-client";
+import type { AccessFreeze, ApiKeyPermissionProfile, EndUser } from "@code-proxy/api-client";
 import {
   COLUMN_WIDTH,
   Checkbox,
@@ -27,6 +28,7 @@ import {
   type Hue,
 } from "@code-proxy/ui";
 import { maskSensitiveIdentity } from "@code-proxy/domain";
+import { AccessFreezeChips } from "@features/access-freeze";
 import { PolicyBadges, QuotaUsageCell, formatQuotaAmount, formatUsdAmount } from "@features/access-policy";
 import { hasResettableQuota } from "../endUserForm";
 
@@ -170,6 +172,13 @@ export interface EndUserColumnsParams {
     onSelectAll: (checked: boolean) => void;
     onSelect: (id: string, checked: boolean) => void;
   };
+  /**
+   * 门户账号 id → 它名下生效中的上游冻结（后端声明 access-freezes 能力时才传）。账号状态的「已冻结」
+   * 是整个账号停用，和这里按上游的冻结是两回事：前者在状态徽章上，后者是下面一枚枚「Codex 已冻结」。
+   */
+  accessFreezes?: ReadonlyMap<string, readonly AccessFreeze[]>;
+  /** 打开某个账号的上游冻结详情；不传时没有这个入口。 */
+  onViewAccessFreezes?: (user: EndUser) => void;
   onViewUsage: (user: EndUser) => void;
   onManageKeys: (user: EndUser) => void;
   onEdit: (user: EndUser) => void;
@@ -194,6 +203,8 @@ export function getEndUserColumns({
   masked,
   profileById,
   selection,
+  accessFreezes,
+  onViewAccessFreezes,
   onViewUsage,
   onManageKeys,
   onEdit,
@@ -249,6 +260,7 @@ export function getEndUserColumns({
       cellClassName: "text-center",
       render: (row) => {
         const active = row.status === "active";
+        const upstreamFreezes = accessFreezes?.get(row.id) ?? [];
         return (
           <div className="flex flex-col items-center gap-1">
             <span
@@ -261,6 +273,9 @@ export function getEndUserColumns({
             >
               {active ? t("end_users.status_active") : t("end_users.status_frozen")}
             </span>
+            {onViewAccessFreezes ? (
+              <AccessFreezeChips freezes={upstreamFreezes} onOpen={() => onViewAccessFreezes(row)} />
+            ) : null}
             <span
               className="text-2xs text-ink-3"
               title={row.last_login_at ? new Date(row.last_login_at).toLocaleString() : undefined}
@@ -335,6 +350,7 @@ export function getEndUserColumns({
       render: (row) => {
         const resettable = hasResettableQuota(row);
         const resets = row["daily-spending-reset-count"] ?? 0;
+        const upstreamFreezeCount = accessFreezes?.get(row.id)?.length ?? 0;
         return (
           <TableRowActions
             moreLabel={t("common.more_actions")}
@@ -384,6 +400,16 @@ export function getEndUserColumns({
                 icon: <History className="h-4 w-4" />,
                 unavailable: resets === 0,
                 onClick: () => onViewResetHistory(row),
+              },
+              {
+                key: "access-freezes",
+                label:
+                  upstreamFreezeCount > 0
+                    ? t("access_freeze.row_action_active", { count: upstreamFreezeCount })
+                    : t("access_freeze.row_action"),
+                icon: <Lock className="h-4 w-4" />,
+                visible: Boolean(onViewAccessFreezes),
+                onClick: () => onViewAccessFreezes?.(row),
               },
               {
                 key: "reset-password",

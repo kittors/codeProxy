@@ -8,6 +8,7 @@ import {
   NO_ACCESS_POLICY_CAPABILITIES,
   emptyQuotaMatrix,
   normalizeEndUser,
+  type AccessFreeze,
   type AccessPolicyCapabilities,
   type ApiKeyPermissionProfile,
   type ApiKeyPermissionProfileList,
@@ -21,6 +22,7 @@ const FULL: AccessPolicyCapabilities = {
   batchProfileBinding: true,
   createWithProfile: true,
   ownedKeyAdmin: true,
+  accessFreezes: false,
 };
 
 const mocks = vi.hoisted(() => ({
@@ -30,15 +32,21 @@ const mocks = vi.hoisted(() => ({
   resetPeriodSpending: vi.fn(),
   listDailySpendingResetHistory: vi.fn(),
   getUsageLogs: vi.fn(),
+  freezes: vi.fn(),
+  freezeStrikes: vi.fn(),
+  keyEntries: vi.fn(),
   profiles: vi.fn(async (): Promise<ApiKeyPermissionProfileList> => ({ items: [], capabilities: {} as never })),
 }));
+
+// Permissions the signed-in admin lacks; a plain set, so a mock reset leaves it alone.
+const denied = vi.hoisted(() => new Set<string>());
 
 vi.mock("@app/providers/PermissionGate", () => ({
   PermissionGate: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 vi.mock("@app/providers/AuthProvider", () => ({
-  useAuth: () => ({ can: () => true }),
+  useAuth: () => ({ can: (permission: string) => !denied.has(permission) }),
 }));
 
 // 渠道、分组与模型选项只在打开弹窗时才拉；这里给空选项，不发真实请求。
@@ -61,6 +69,8 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
     ...actual,
     apiKeyPermissionProfilesApi: { ...actual.apiKeyPermissionProfilesApi, listDetailed: mocks.profiles },
     usageApi: { ...actual.usageApi, getUsageLogs: mocks.getUsageLogs },
+    accessFreezesApi: { ...actual.accessFreezesApi, list: mocks.freezes, strikes: mocks.freezeStrikes },
+    apiKeyEntriesApi: { ...actual.apiKeyEntriesApi, list: mocks.keyEntries },
     endUsersApi: {
       ...actual.endUsersApi,
       list: mocks.list,
@@ -178,8 +188,12 @@ async function openRowMoreActions(name: string) {
 describe("EndUsersPage", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
+    denied.clear();
     window.localStorage.clear();
     await i18n.changeLanguage("en");
+    mocks.freezes.mockResolvedValue([]);
+    mocks.freezeStrikes.mockResolvedValue([]);
+    mocks.keyEntries.mockResolvedValue([]);
     mocks.list.mockResolvedValue({ items: users, capabilities: FULL });
     mocks.profiles.mockResolvedValue({ items: [gold], capabilities: FULL });
     mocks.update.mockResolvedValue(users[0]);
@@ -403,5 +417,146 @@ describe("EndUsersPage", () => {
     await userEvent.click(screen.getByRole("button", { name: "Clear filters" }));
     expect(await screen.findByText("User 01")).toBeInTheDocument();
     expect(screen.getByText("1-20 of 25")).toBeInTheDocument();
+  });
+
+  describe("upstream freezes", () => {
+    const frozenFor = (
+      id: number,
+      kind: "end_user" | "api_key",
+      subjectId: string,
+      extra: Partial<AccessFreeze> = {},
+    ): AccessFreeze => ({
+      id,
+      subject: { tenant_id: "tenant-1", kind, id: subjectId },
+      subject_name: "",
+      provider: "codex",
+      provider_name: "Codex",
+      reason_code: "cyber_policy",
+      upstream_message: "This content was flagged for possible cybersecurity risk.",
+      model: "gpt-6.1-sol",
+      strike_count: 2,
+      frozen_at: "2026-11-13T02:00:00Z",
+      notice: "frozen",
+      ...extra,
+    });
+    const aliceFreeze = frozenFor(7, "end_user", "user-active");
+    const keyFreeze = frozenFor(8, "api_key", "key-1");
+
+    beforeEach(() => {
+      mocks.list.mockResolvedValue({ items: users, capabilities: { ...FULL, accessFreezes: true } });
+      // What the backend does with the filter: asked for one requester, only that one's freezes.
+      mocks.freezes.mockImplementation(async (query: { subjectId?: string }) =>
+        [aliceFreeze, keyFreeze].filter((item) => !query.subjectId || item.subject.id === query.subjectId),
+      );
+    });
+
+    test("tags the account an upstream froze next to its own status, and counts every freeze in effect", async () => {
+      renderPage();
+      await screen.findByText("Alice");
+
+      const alice = rowOf("Alice");
+      expect(await within(alice).findByRole("button", { name: "Codex frozen" })).toBeInTheDocument();
+      // The account's own status is untouched: this freeze is one upstream's, not the account's.
+      expect(within(alice).getByText("Active")).toBeInTheDocument();
+      expect(within(rowOf("Carol")).queryByRole("button", { name: /frozen/i })).toBeNull();
+      // Bob's own status reads "Frozen" too, and is a status, not a freeze of an upstream.
+      expect(within(rowOf("Bob")).getByText("Frozen")).toBeInTheDocument();
+      expect(within(rowOf("Bob")).queryByRole("button", { name: /frozen/i })).toBeNull();
+
+      // The key no portal account owns counts as well: the toolbar button says how many are in effect.
+      const toolbar = await screen.findByRole("button", { name: /Upstream freezes/ });
+      expect(toolbar).toHaveTextContent("2");
+      expect(mocks.freezes).toHaveBeenCalledWith({ status: "active", limit: 1000 });
+    });
+
+    test("opens the account's freezes from its tag, asking for that account's whole history", async () => {
+      renderPage();
+      await screen.findByText("Alice");
+      await userEvent.click(await within(rowOf("Alice")).findByRole("button", { name: "Codex frozen" }));
+
+      const dialog = await screen.findByRole("dialog", { name: "Upstream freezes · Alice / alice" });
+      await waitFor(() =>
+        expect(mocks.freezes).toHaveBeenCalledWith({
+          status: "all",
+          subjectKind: "end_user",
+          subjectId: "user-active",
+          limit: 200,
+        }),
+      );
+      expect(mocks.freezeStrikes).toHaveBeenCalledWith({
+        subjectKind: "end_user",
+        subjectId: "user-active",
+        limit: 200,
+      });
+      expect(await within(dialog).findByRole("button", { name: "Release" })).toBeInTheDocument();
+    });
+
+    test("the actions menu reaches the same freezes, with the count that is in effect", async () => {
+      renderPage();
+      await screen.findByText("Alice");
+      await within(rowOf("Alice")).findByRole("button", { name: "Codex frozen" });
+
+      await openRowMoreActions("Alice");
+      await userEvent.click(screen.getByRole("menuitem", { name: "Upstream freezes (1)" }));
+      expect(await screen.findByRole("dialog", { name: "Upstream freezes · Alice / alice" })).toBeInTheDocument();
+    });
+
+    test("an account with no freeze in effect can still be looked up for its history", async () => {
+      renderPage();
+      await screen.findByText("Carol");
+      await within(rowOf("Alice")).findByRole("button", { name: "Codex frozen" });
+
+      await openRowMoreActions("Carol");
+      expect(screen.getByRole("menuitem", { name: "Upstream freezes" })).toBeInTheDocument();
+    });
+
+    test("the overview lists them all, the key included, and the threshold next to them", async () => {
+      renderPage();
+      await screen.findByText("Alice");
+      await userEvent.click(await screen.findByRole("button", { name: /Upstream freezes/ }));
+
+      const dialog = await screen.findByRole("dialog", { name: "Upstream freezes" });
+      const rows = within(within(dialog).getByRole("table")).getAllByRole("row");
+      expect(rows).toHaveLength(3);
+      expect(rows[1]).toHaveTextContent("Alice / alice");
+      expect(rows[2]).toHaveTextContent("API key");
+      expect(rows[2]).toHaveTextContent("Key key-1");
+    });
+
+    test("asks nothing and shows nothing on a backend that does not declare freezes", async () => {
+      mocks.list.mockResolvedValue({ items: users, capabilities: FULL });
+      renderPage();
+      await screen.findByText("Alice");
+
+      expect(mocks.freezes).not.toHaveBeenCalled();
+      expect(screen.queryByRole("button", { name: /Upstream freezes/ })).toBeNull();
+      expect(screen.queryByRole("button", { name: /Codex frozen/ })).toBeNull();
+      await openRowMoreActions("Alice");
+      expect(screen.queryByRole("menuitem", { name: /Upstream freezes/ })).toBeNull();
+    });
+
+    test("a reader without end_users.read is not shown, or asked for, any of it", async () => {
+      denied.add("end_users.read");
+      renderPage();
+      await screen.findByText("Alice");
+
+      expect(mocks.freezes).not.toHaveBeenCalled();
+      expect(screen.queryByRole("button", { name: /Upstream freezes/ })).toBeNull();
+    });
+
+    test("a backend with no database leaves the whole thing out", async () => {
+      const { ApiClientError } = await import("@code-proxy/api-client");
+      mocks.freezes.mockRejectedValue(
+        new ApiClientError({
+          message: "unavailable",
+          status: 503,
+          data: { error: { code: "access_freezes_unavailable", message: "unavailable" } },
+        }),
+      );
+      renderPage();
+      await screen.findByText("Alice");
+      await waitFor(() => expect(mocks.freezes).toHaveBeenCalled());
+      await waitFor(() => expect(screen.queryByRole("button", { name: /Upstream freezes/ })).toBeNull());
+    });
   });
 });

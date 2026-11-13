@@ -178,10 +178,15 @@ export function readRouteTrace(details: unknown): RouteTrace | null {
 export const routeTraceAccountName = (step: Pick<RouteTraceStep, "authLabel" | "authId">) =>
   step.authLabel || step.authId;
 
-/** 上游拒绝的是请求本身，换个账号也一样：调度器不会换号重试。 */
+/**
+ * 上游拒绝的是请求本身，换个账号也一样：调度器不会换号重试。upstream_content_refusal 是上游的安全
+ * 检查以内容为由拒绝（CliRelay `conductor_error_helpers.go` 把它和无效请求、内容审核归在一起），
+ * 换号只会再被拒、再多记一次。
+ */
 export const REQUEST_FAULT_CAUSES: ReadonlySet<string> = new Set([
   "request_invalid",
   "content_policy",
+  "upstream_content_refusal",
 ]);
 
 /**
