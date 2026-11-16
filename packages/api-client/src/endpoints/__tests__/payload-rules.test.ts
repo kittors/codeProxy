@@ -26,6 +26,7 @@ describe("payload rules dry-run", () => {
       alerts: false,
       poolCapacity: false,
       privacyMasking: false,
+      nodeMetrics: false,
     });
     for (const config of [
       { capabilities: { "payload-rules-dry-run": "true" } },
@@ -40,6 +41,7 @@ describe("payload rules dry-run", () => {
         alerts: false,
         poolCapacity: false,
         privacyMasking: false,
+        nodeMetrics: false,
       });
     }
   });
@@ -48,11 +50,29 @@ describe("payload rules dry-run", () => {
     const { readConfigCapabilities } = await import("../payload-rules");
     expect(
       readConfigCapabilities({ capabilities: { alerts: true, "pool-capacity": true } }),
-    ).toEqual({ payloadRulesDryRun: false, alerts: true, poolCapacity: true, privacyMasking: false });
+    ).toEqual({
+      payloadRulesDryRun: false,
+      alerts: true,
+      poolCapacity: true,
+      privacyMasking: false,
+      nodeMetrics: false,
+    });
     // Only an explicit true unlocks a page: a truthy string or a camelCase key is not a declaration.
     expect(
       readConfigCapabilities({ capabilities: { alerts: "yes", poolCapacity: true, "pool-capacity": 1 } }),
-    ).toEqual({ payloadRulesDryRun: false, alerts: false, poolCapacity: false, privacyMasking: false });
+    ).toEqual({
+      payloadRulesDryRun: false,
+      alerts: false,
+      poolCapacity: false,
+      privacyMasking: false,
+      nodeMetrics: false,
+    });
+  });
+
+  test("reads the node metrics declaration by its kebab-case key", async () => {
+    const { readConfigCapabilities } = await import("../payload-rules");
+    expect(readConfigCapabilities({ capabilities: { "node-metrics": true } }).nodeMetrics).toBe(true);
+    expect(readConfigCapabilities({ capabilities: { nodeMetrics: true, node_metrics: true, "node-metrics": 1 } }).nodeMetrics).toBe(false);
   });
 
   test("reads the privacy masking declaration by its kebab-case key", async () => {
