@@ -74,6 +74,8 @@ export interface ConfigCapabilities {
   poolCapacity: boolean;
   /** 隐私脱敏的观测页与设置页（/privacy-masking/*）。 */
   privacyMasking: boolean;
+  /** GET /cluster 给每个节点带资源快照：仪表盘的「服务器节点」。 */
+  nodeMetrics: boolean;
 }
 
 export function readConfigCapabilities(
@@ -89,5 +91,6 @@ export function readConfigCapabilities(
     alerts: capabilities["alerts"] === true,
     poolCapacity: capabilities["pool-capacity"] === true,
     privacyMasking: capabilities["privacy-masking"] === true,
+    nodeMetrics: capabilities["node-metrics"] === true,
   };
 }
