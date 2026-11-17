@@ -139,6 +139,13 @@ async function mockAdmin(page: Page, { endUsers = 6, portalUsers = 33, platformR
   });
 }
 
+/** 表格的结构（DataGrid）：外框 .cp-grid，内部滚动的视口 .cp-grid-viewport，分页在框底的 nav。 */
+const ROWS = "tr[data-row-key]";
+const FRAME = ".cp-grid";
+const VIEWPORT = ".cp-grid-viewport";
+const PAGER = 'nav[aria-label="分页"]';
+const SKELETON_ROWS = "tbody[aria-hidden='true'] tr";
+
 const rectOf = (page: Page, selector: string) =>
   page.locator(selector).first().evaluate((el) => {
     const r = el.getBoundingClientRect();
@@ -158,22 +165,25 @@ test.describe("整页列表：表格占满剩余高度，框不随行数变", ()
   test("行少时表格框仍延伸到分页条上方，分页条贴在窗口底部，横向滚动条贴着框底边", async ({ page }) => {
     await mockAdmin(page, { endUsers: 6 });
     await page.goto("/#/access/end-users");
-    await expect(page.locator("tr[data-vt-row-index]")).toHaveCount(6);
+    await expect(page.locator(ROWS)).toHaveCount(6);
 
-    const lastRow = await rectOf(page, "tr[data-vt-row-index='5']");
-    const frame = await rectOf(page, "[data-scrollbar-visibility='hover']");
-    const pager = await rectOf(page, "text=第 1-6 条，共 6 条");
-    // 空白留在框里：框的底边离最后一行还远，紧挨着分页条。
-    expect(frame.bottom - lastRow.bottom).toBeGreaterThan(200);
-    expect(pager.top - frame.bottom).toBeLessThan(24);
-    // 分页条在窗口底部（下面只剩外壳的底部内边距），不是悬在页面中间。
-    expect(800 - pager.bottom).toBeLessThan(48);
+    const lastRow = await page.locator(ROWS).nth(5).evaluate((el) => el.getBoundingClientRect().bottom);
+    const viewport = await rectOf(page, VIEWPORT);
+    const frame = await rectOf(page, FRAME);
+    const pager = await rectOf(page, PAGER);
+    await expect(page.locator(PAGER)).toContainText("第 1–6 条，共 6 条");
+    // 空白留在框里：表体视口的底边离最后一行还远，紧挨着分页条（中间至多隔一条横向滚动条通道）。
+    expect(viewport.bottom - lastRow).toBeGreaterThan(200);
+    expect(pager.top - viewport.bottom).toBeLessThan(24);
+    // 分页条在框里、框底贴着窗口底部（下面只剩外壳的底部内边距），不是悬在页面中间。
+    expect(pager.bottom).toBeLessThanOrEqual(frame.bottom);
+    expect(800 - frame.bottom).toBeLessThan(48);
     expect(await outerOverflow(page)).toBeLessThanOrEqual(1);
-    // 横向滚动条（有的话）贴着框的底边，在分页条上方，不跟着最后一行跑到页面中间。
-    const scrollbar = page.locator("[data-vt-scrollbar='x']");
-    if ((await scrollbar.count()) > 0) {
-      const bar = await scrollbar.evaluate((el) => el.getBoundingClientRect().bottom);
-      expect(frame.bottom - bar).toBeLessThanOrEqual(8);
+    // 横向滚动条（有的话）在自己的通道里，紧贴表体视口的底边，不跟着最后一行跑到页面中间。
+    const lane = page.locator("[data-grid-x-lane]");
+    if ((await lane.count()) > 0) {
+      const laneTop = await lane.evaluate((el) => el.getBoundingClientRect().top);
+      expect(Math.abs(laneTop - viewport.bottom)).toBeLessThanOrEqual(1);
     }
   });
 
@@ -189,26 +199,30 @@ test.describe("整页列表：表格占满剩余高度，框不随行数变", ()
       await route.fallback();
     });
     await page.goto("/#/access/end-users");
-    await expect(page.locator("tbody tr[aria-hidden='true']").first()).toBeAttached();
-    const loadingFrame = await rectOf(page, "[data-scrollbar-visibility='hover']");
-    expect(await page.locator("tbody tr[aria-hidden='true']").count()).toBeGreaterThan(5);
+    await expect(page.locator(SKELETON_ROWS).first()).toBeAttached();
+    const loadingFrame = await rectOf(page, FRAME);
+    const loadingPager = await rectOf(page, PAGER);
+    expect(await page.locator(SKELETON_ROWS).count()).toBeGreaterThan(5);
 
     release();
-    await expect(page.locator("tr[data-vt-row-index]")).toHaveCount(6);
-    const loadedFrame = await rectOf(page, "[data-scrollbar-visibility='hover']");
+    await expect(page.locator(ROWS)).toHaveCount(6);
+    const loadedFrame = await rectOf(page, FRAME);
+    const loadedPager = await rectOf(page, PAGER);
     expect(Math.abs(loadedFrame.top - loadingFrame.top)).toBeLessThanOrEqual(1);
     expect(Math.abs(loadedFrame.bottom - loadingFrame.bottom)).toBeLessThanOrEqual(1);
+    expect(Math.abs(loadedPager.top - loadingPager.top)).toBeLessThanOrEqual(1);
   });
 
   test("行多时表格占满剩余高度、在内部滚动，分页条常驻在窗口里", async ({ page }) => {
     await mockAdmin(page, { endUsers: 40 });
     await page.goto("/#/access/end-users");
-    await expect(page.locator("tr[data-vt-row-index]")).toHaveCount(20);
+    await expect(page.locator(ROWS)).toHaveCount(20);
 
-    const viewport = page.locator("[data-scrollbar-visibility='hover']").first();
+    const viewport = page.locator(VIEWPORT).first();
     const sizes = await viewport.evaluate((el) => ({ scroll: el.scrollHeight, client: el.clientHeight }));
     expect(sizes.scroll).toBeGreaterThan(sizes.client);
-    const pager = await rectOf(page, "text=第 1-20 条，共 40 条");
+    await expect(page.locator(PAGER)).toContainText("第 1–20 条，共 40 条");
+    const pager = await rectOf(page, PAGER);
     expect(pager.bottom).toBeLessThanOrEqual(800);
     expect(await outerOverflow(page)).toBeLessThanOrEqual(1);
   });
@@ -222,13 +236,13 @@ test.describe("敏感词：宽屏两栏钉满一屏", () => {
     await page.goto("/#/access/content-moderation");
     const rail = page.getByRole("navigation", { name: "规则集" });
     await rail.getByRole("button", { name: /门户账号/ }).click();
-    await expect(page.locator("tr[data-vt-row-index]")).toHaveCount(20);
+    await expect(page.locator(ROWS)).toHaveCount(20);
 
     const pageTab = page.getByRole("tab", { name: "敏感词", exact: true });
     const tabBefore = await pageTab.boundingBox();
     const railBefore = await rail.boundingBox();
 
-    const viewport = page.locator("[data-scrollbar-visibility='hover']").first();
+    const viewport = page.locator(VIEWPORT).first();
     await viewport.hover();
     await page.mouse.wheel(0, 4000);
     await expect
@@ -239,7 +253,8 @@ test.describe("敏感词：宽屏两栏钉满一屏", () => {
     expect(await outerOverflow(page)).toBeLessThanOrEqual(1);
     expect((await pageTab.boundingBox())?.y).toBe(tabBefore?.y);
     expect((await rail.boundingBox())?.y).toBe(railBefore?.y);
-    const pager = await rectOf(page, "text=第 1-20 条，共 33 条");
+    await expect(page.locator(PAGER)).toContainText("第 1–20 条，共 33 条");
+    const pager = await rectOf(page, PAGER);
     expect(pager.bottom).toBeLessThanOrEqual(800);
   });
 
@@ -247,12 +262,13 @@ test.describe("敏感词：宽屏两栏钉满一屏", () => {
     await mockAdmin(page, { platformRules: 45 });
     await page.goto("/#/access/content-moderation");
     await page.getByRole("navigation", { name: "规则集" }).getByRole("button", { name: /平台规则/ }).click();
-    await expect(page.locator("tr[data-vt-row-index]")).toHaveCount(20);
+    await expect(page.locator(ROWS)).toHaveCount(20);
 
     await page.getByRole("textbox", { name: "添加敏感词" }).fill("新词");
     await page.getByRole("button", { name: "添加", exact: true }).click();
     const saveBar = await rectOf(page, "[role='region'][aria-label='有未保存的修改']");
-    const pager = await rectOf(page, "text=第 1-20 条，共 46 条");
+    await expect(page.locator(PAGER)).toContainText("第 1–20 条，共 46 条");
+    const pager = await rectOf(page, PAGER);
     expect(saveBar.bottom).toBeLessThanOrEqual(800);
     expect(pager.bottom).toBeLessThanOrEqual(saveBar.top);
     expect(await outerOverflow(page)).toBeLessThanOrEqual(1);
@@ -263,6 +279,6 @@ test.describe("敏感词：宽屏两栏钉满一屏", () => {
     await expect(page.getByRole("region", { name: "有未保存的修改" })).toBeVisible();
     // 切回词表，搜索和页码这类列表状态还在（两页都挂着，只是隐藏）。
     await page.getByRole("tab", { name: /词表/ }).click();
-    await expect(page.locator("tr[data-vt-row-index]")).toHaveCount(20);
+    await expect(page.locator(ROWS)).toHaveCount(20);
   });
 });

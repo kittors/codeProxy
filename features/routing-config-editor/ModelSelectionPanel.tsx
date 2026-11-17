@@ -1,11 +1,11 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { X } from "lucide-react";
-import { Button, COLUMN_WIDTH, surface } from "@code-proxy/ui";
+import { Button, GRID_WIDTH, surface } from "@code-proxy/ui";
 import { Checkbox } from "@code-proxy/ui";
 import { ToggleSwitch } from "@code-proxy/ui";
 import { OverflowTooltip } from "@code-proxy/ui";
-import { DataTable, type DataTableColumn } from "@code-proxy/ui";
+import { DataGrid, type DataGridColumn } from "@code-proxy/ui";
 import { VendorIcon } from "@code-proxy/assets";
 import { emptyModelPricing, formatModelPrice } from "@features/model-availability";
 import type { RoutingModelOption } from "./types";
@@ -111,15 +111,21 @@ export function ModelSelectionPanel({
         ? "channel_groups_page.auto_allow_new_models_off_following_hint"
         : "channel_groups_page.auto_allow_new_models_off_hint";
 
-  const columns = useMemo<DataTableColumn<RoutingModelOption>[]>(
+  const columns = useMemo<DataGridColumn<RoutingModelOption>[]>(
     () => [
       {
-        key: "select",
-        label: "",
-        width: COLUMN_WIDTH.checkbox,
-        headerClassName: "text-center",
-        cellClassName: "text-center",
-        headerRender: () => (
+        // 勾选的是「允许的模型」这份持久设置，不是批量操作的临时选择，所以不用表格自带的多选：
+        // 那会在有勾选时把表头换成选择条。全选框放在表头的附加控件里。
+        id: "select",
+        header: t("channel_groups_page.allowed_models_label"),
+        hideHeaderLabel: true,
+        align: "center",
+        width: 56,
+        resizable: false,
+        reorderable: false,
+        hideable: false,
+        overflowTooltip: false,
+        headerAccessory: (
           <Checkbox
             checked={allSelected}
             indeterminate={someSelected}
@@ -134,7 +140,7 @@ export function ModelSelectionPanel({
             aria-label={t("channel_groups_page.allowed_models_label")}
           />
         ),
-        render: (model) => {
+        cell: (model) => {
           const rule = locked.get(model.id);
           return (
             <Checkbox
@@ -152,13 +158,13 @@ export function ModelSelectionPanel({
         },
       },
       {
-        key: "model",
-        label: t("models_page.col_model"),
-        width: "w-[28rem]",
-        minWidthPx: 220,
-        maxWidthPx: 640,
-        cellClassName: "min-w-0",
-        render: (model) => (
+        id: "model",
+        header: t("models_page.col_model"),
+        width: 448,
+        minWidth: 220,
+        maxWidth: 640,
+        grow: true,
+        cell: (model) => (
           <div className="flex min-w-0 items-center gap-2">
             <VendorIcon modelId={model.id} size={16} />
             <div className="min-w-0">
@@ -177,25 +183,27 @@ export function ModelSelectionPanel({
         ),
       },
       {
-        key: "owner",
-        label: t("models_page.col_owner"),
-        width: COLUMN_WIDTH.numericWide,
-        minWidthPx: 120,
-        maxWidthPx: 360,
-        cellClassName: "min-w-0 whitespace-nowrap text-ink-2",
-        render: (model) => model.owned_by || "-",
+        id: "owner",
+        header: t("models_page.col_owner"),
+        width: GRID_WIDTH.numericWide,
+        minWidth: 120,
+        maxWidth: 360,
+        cell: (model) => (
+          <span className="truncate whitespace-nowrap text-ink-2">{model.owned_by || "-"}</span>
+        ),
         overflowTooltip: (model) => model.owned_by || "-",
       },
       {
-        key: "price",
-        label: t("models_page.col_price"),
-        width: "w-56",
-        minWidthPx: 180,
-        maxWidthPx: 420,
-        cellClassName:
-          "whitespace-nowrap font-mono text-xs tabular-nums text-ink-2",
-        render: (model) =>
-          formatModelPrice(model.pricing ?? emptyModelPricing(), t("models_page.not_priced")),
+        id: "price",
+        header: t("models_page.col_price"),
+        width: 224,
+        minWidth: 180,
+        maxWidth: 420,
+        cell: (model) => (
+          <span className="truncate whitespace-nowrap font-mono text-xs tabular-nums text-ink-2">
+            {formatModelPrice(model.pricing ?? emptyModelPricing(), t("models_page.not_priced"))}
+          </span>
+        ),
       },
     ],
     [
@@ -346,25 +354,20 @@ export function ModelSelectionPanel({
         >
           {t("channel_groups_page.models_need_channels")}
         </div>
-      ) : modelsError ? (
-        <div className="rounded-2xl bg-rose-500/[0.08] px-4 py-3 text-sm text-rose-700 dark:text-rose-300">
-          {modelsError}
-        </div>
       ) : (
         <div data-testid="group-editor-model-list" className="flex min-h-0 flex-col -mx-5">
           <div data-testid="group-editor-model-list-content" className="flex min-h-0 flex-col px-5">
-            <DataTable<RoutingModelOption>
-              tableId="routing-model-options-v2"
+            {/* 编辑器里的列表：不套外框，按行收高；读不到模型列表时错误落在同一个框里。 */}
+            <DataGrid<RoutingModelOption>
+              id="routing-model-options-v2"
+              frame={false}
               rows={modelOptions}
               columns={columns}
               rowKey={(model) => model.id}
               loading={modelsLoading}
-              virtualize={false}
-              rowHeight={58}
-              minWidth="min-w-[760px]"
-              caption={t("channel_groups_page.allowed_models_label")}
-              emptyText={t("channel_groups_page.no_channel_models")}
-              showAllLoadedMessage={false}
+              error={modelsError || null}
+              label={t("channel_groups_page.allowed_models_label")}
+              empty={{ title: t("channel_groups_page.no_channel_models") }}
             />
           </div>
         </div>

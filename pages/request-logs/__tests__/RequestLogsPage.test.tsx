@@ -1,159 +1,27 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import i18n from "@code-proxy/i18n";
-import { RequestLogsPage } from "@pages/request-logs/RequestLogsPage";
-import { ThemeProvider } from "@code-proxy/ui";
-import { ToastProvider } from "@code-proxy/ui";
-import type { UsageLogItem } from "@code-proxy/api-client/endpoints/usage";
-
-function deferred<T>() {
-  let resolve!: (value: T | PromiseLike<T>) => void;
-  let reject!: (reason?: unknown) => void;
-  const promise = new Promise<T>((res, rej) => {
-    resolve = res;
-    reject = rej;
-  });
-  return { promise, resolve, reject };
-}
-
-const emptyLogsResponse = {
-  items: [],
-  total: 0,
-  page: 1,
-  size: 50,
-  filters: {
-    api_keys: [],
-    api_key_names: {},
-    models: [],
-    channels: [],
-    channel_options: [],
-    statuses: [],
-  },
-  stats: {
-    total: 0,
-    success_rate: 0,
-    total_tokens: 0,
-    total_cost: 0,
-  },
-};
-
-const responseWithFilterOptions = {
-  items: [],
-  total: 0,
-  page: 1,
-  size: 50,
-  filters: {
-    api_keys: ["sk-primary", "sk-secondary"],
-    api_key_names: {
-      "sk-primary": "Primary",
-      "sk-secondary": "Secondary",
-    },
-    api_key_counts: {
-      "sk-primary": 12,
-      "sk-secondary": 37,
-    },
-    models: ["gpt-5.4", "gpt-4.1"],
-    channels: ["Codex", "Relay"],
-    channel_options: [
-      {
-        value: "auth-codex",
-        label: "Codex",
-        provider: "codex",
-        auth_type: "oauth",
-        auth_index: "auth-codex",
-      },
-      {
-        value: "auth-relay",
-        label: "Relay",
-        provider: "openai",
-        auth_type: "api",
-        auth_index: "auth-relay",
-      },
-    ],
-    statuses: ["success", "failed"],
-  },
-  stats: {
-    total: 0,
-    success_rate: 0,
-    total_tokens: 0,
-    total_cost: 0,
-  },
-};
-
-const buildUsageLogItem = (overrides: Partial<UsageLogItem> = {}): UsageLogItem => ({
-  id: 1,
-  timestamp: "2026-04-08T12:00:00Z",
-  api_key: "sk-test-123456",
-  api_key_name: "Primary",
-  model: "gpt-5.4",
-  source: "codex",
-  channel_name: "Codex",
-  provider: "codex",
-  auth_type: "oauth",
-  auth_index: "auth-1",
-  failed: false,
-  latency_ms: 1200,
-  first_token_ms: 183,
-  input_tokens: 10,
-  output_tokens: 20,
-  reasoning_tokens: 0,
-  cached_tokens: 0,
-  total_tokens: 30,
-  cost: 0.0123,
-  has_content: false,
-  ...overrides,
-});
-
-const responseWithRows = (items: UsageLogItem[]) => ({
-  ...responseWithFilterOptions,
-  items,
-  total: items.length,
-  stats: {
-    ...responseWithFilterOptions.stats,
-    total: items.length,
-    success_rate: 100,
-    total_tokens: items.reduce((sum, item) => sum + item.total_tokens, 0),
-  },
-});
+import type { UsageLogsResponse } from "@code-proxy/api-client/endpoints/usage";
+import {
+  chooseInFacet,
+  deferred,
+  facetButton,
+  findLogGrid,
+  legacyItem,
+  logItem,
+  logsAnswer,
+  queryOf,
+  renderRequestLogsPage,
+} from "./requestLogsTestKit";
 
 const mocks = vi.hoisted(() => ({
   getUsageLogs: vi.fn(),
   getLogContent: vi.fn(),
   clearUsageLogs: vi.fn(),
   getRequestLogBodyStorage: vi.fn(),
+  getConfig: vi.fn(),
 }));
-
-const expectSignalOptions = () => expect.objectContaining({ signal: expect.any(AbortSignal) });
-
-function installLocalStorageMock() {
-  const store = new Map<string, string>();
-  const localStorageMock = {
-    getItem: (key: string) => store.get(key) ?? null,
-    setItem: (key: string, value: string) => {
-      store.set(key, value);
-    },
-    removeItem: (key: string) => {
-      store.delete(key);
-    },
-    clear: () => {
-      store.clear();
-    },
-    key: (index: number) => Array.from(store.keys())[index] ?? null,
-    get length() {
-      return store.size;
-    },
-  };
-
-  Object.defineProperty(globalThis, "localStorage", {
-    value: localStorageMock,
-    configurable: true,
-  });
-  Object.defineProperty(window, "localStorage", {
-    value: localStorageMock,
-    configurable: true,
-  });
-}
 
 vi.mock("@code-proxy/api-client", async (importOriginal) => {
   const mod = await importOriginal<typeof import("@code-proxy/api-client")>();
@@ -168,17 +36,66 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
     configApi: {
       ...mod.configApi,
       getRequestLogBodyStorage: mocks.getRequestLogBodyStorage,
+      getConfig: mocks.getConfig,
     },
   };
 });
 
-describe("RequestLogsPage", () => {
-  beforeAll(() => {
-    installLocalStorageMock();
-  });
+/** Facets of an older backend: keys by their (masked) secret. */
+const secretFacet: Partial<UsageLogsResponse["filters"]> = {
+  api_keys: ["sk-primary", "sk-secondary"],
+  api_key_names: { "sk-primary": "Primary", "sk-secondary": "Secondary" },
+  api_key_counts: { "sk-primary": 12, "sk-secondary": 37 },
+  models: ["gpt-5.4", "gpt-4.1"],
+  channels: ["Codex", "Relay"],
+  channel_options: [
+    {
+      value: "auth-codex",
+      label: "Codex",
+      provider: "codex",
+      auth_type: "oauth",
+      auth_index: "auth-codex",
+    },
+    {
+      value: "auth-relay",
+      label: "Relay",
+      provider: "openai",
+      auth_type: "api",
+      auth_index: "auth-relay",
+    },
+  ],
+  statuses: ["success", "failed"],
+};
 
-  beforeEach(() => {
+/** A current backend: keys by their stable id, system calls as one entry. */
+const idFacet: Partial<UsageLogsResponse["filters"]> = {
+  ...secretFacet,
+  api_key_ids: ["key-primary", "key-secondary", "__system__"],
+  api_key_id_names: { "key-primary": "Primary", "key-secondary": "Secondary" },
+  api_key_id_counts: { "key-primary": 12, "key-secondary": 37, __system__: 4 },
+  api_keys: [],
+  api_key_names: {},
+  api_key_counts: {},
+};
+
+const calls = () => mocks.getUsageLogs.mock.calls;
+const nthQuery = (n: number) => queryOf(calls(), n) ?? {};
+const lastQuery = () => queryOf(calls()) ?? {};
+
+async function tooltipOf(user: ReturnType<typeof userEvent.setup>, target: HTMLElement) {
+  await user.hover(target);
+  const tooltip = await screen.findByRole("tooltip");
+  const text = tooltip.textContent ?? "";
+  await user.unhover(target);
+  await waitFor(() => expect(screen.queryByRole("tooltip")).toBeNull());
+  return text;
+}
+
+describe("RequestLogsPage", () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage("en");
     mocks.getRequestLogBodyStorage.mockResolvedValue(false);
+    mocks.getConfig.mockResolvedValue({});
   });
 
   afterEach(async () => {
@@ -188,265 +105,192 @@ describe("RequestLogsPage", () => {
     mocks.getLogContent.mockReset();
     mocks.clearUsageLogs.mockReset();
     mocks.getRequestLogBodyStorage.mockReset();
+    mocks.getConfig.mockReset();
   });
 
-  test("renders first token latency value in the response metrics column", async () => {
-    await i18n.changeLanguage("en");
-    const user = userEvent.setup();
+  describe("cells", () => {
+    test("a row says who sent it, on which channel and how long it took; exact values are in the tooltips", async () => {
+      const user = userEvent.setup();
+      mocks.getUsageLogs.mockResolvedValue(
+        logsAnswer(
+          [
+            logItem({
+              id: 1,
+              end_user_display_name: "Zhang Bolun",
+              api_key_own_name: "Laptop",
+              channel_name: "asherandersenloqv@outlook.com",
+              provider: "xai",
+              auth_type: "oauth",
+            }),
+            logItem({ id: 2, channel_name: "Relay", provider: "openai", auth_type: "api" }),
+          ],
+          { filters: secretFacet },
+        ),
+      );
+      renderRequestLogsPage();
+      const grid = await findLogGrid();
 
-    mocks.getUsageLogs.mockResolvedValue({
-      items: [
-        {
-          id: 1,
-          timestamp: "2026-04-08T12:00:00Z",
-          api_key: "sk-test-123456",
-          api_key_id: "key-laptop-123456",
-          api_key_name: "Zhang Bolun",
-          end_user_display_name: "Zhang Bolun",
-          api_key_own_name: "Laptop",
-          model: "gpt-5.4",
-          source: "codex",
-          channel_name: "Codex",
-          provider: "codex",
-          auth_type: "oauth",
-          auth_index: "auth-1",
-          failed: false,
-          streaming: true,
-          latency_ms: 1200,
-          first_token_ms: 183,
-          input_tokens: 10,
-          output_tokens: 20,
-          reasoning_tokens: 0,
-          cached_tokens: 0,
-          total_tokens: 30,
-          cost: 0.0123,
-          has_content: false,
-        },
-      ],
-      total: 1,
-      page: 1,
-      size: 50,
-      filters: {
-        api_keys: [],
-        api_key_names: {},
-        models: [],
-        channels: [],
-      },
-      stats: {
-        total: 1,
-        success_rate: 100,
-        total_tokens: 30,
-      },
+      expect(within(grid).getByRole("columnheader", { name: "User / key" })).toBeInTheDocument();
+      expect(await within(grid).findByText("Zhang Bolun")).toBeInTheDocument();
+      // The key's own name is the second line when it differs from the person.
+      expect(within(grid).getByText("Laptop")).toBeInTheDocument();
+      expect(await tooltipOf(user, within(grid).getByText("Zhang Bolun"))).toContain("Laptop");
+
+      expect(within(grid).getByText("asherandersenloqv@outlook.com")).toBeInTheDocument();
+      expect(within(grid).getByText("Relay")).toBeInTheDocument();
+      expect(within(grid).getAllByText(/OAuth/).length).toBeGreaterThanOrEqual(1);
+      expect(within(grid).getAllByText(/^API$/).length).toBeGreaterThanOrEqual(1);
+
+      // Duration on the first line, the first token under it; the split is in the tooltip.
+      const durations = within(grid).getAllByText("1.2s");
+      expect(durations).toHaveLength(2);
+      expect(within(grid).getAllByText("183ms").length).toBeGreaterThanOrEqual(2);
+      const latencyTip = await tooltipOf(user, durations[0]);
+      expect(latencyTip).toContain("First Token Latency");
+      expect(latencyTip).toContain("183ms");
+      expect(latencyTip).toContain("Streaming");
     });
 
-    render(
-      <ThemeProvider>
-        <ToastProvider>
-          <RequestLogsPage />
-        </ToastProvider>
-      </ThemeProvider>,
-    );
+    test("a non-streaming request says so instead of a first-token placeholder", async () => {
+      mocks.getUsageLogs.mockResolvedValue(
+        logsAnswer([logItem({ streaming: false, first_token_ms: 0 })]),
+      );
+      renderRequestLogsPage();
+      const grid = await findLogGrid();
+      expect((await within(grid).findAllByText("Non-streaming")).length).toBeGreaterThanOrEqual(1);
+      expect(within(grid).queryByText("First token")).toBeNull();
+    });
 
-    const table = await screen.findByRole("table", { name: "Request Logs Table" });
-    expect(
-      within(table).getByRole("columnheader", { name: "Response Metrics" }),
-    ).toBeInTheDocument();
-    expect(within(table).getByRole("columnheader", { name: "User Name" })).toBeInTheDocument();
-    expect(within(table).getByText("Zhang Bolun")).toBeInTheDocument();
-    expect(within(table).getByText("Laptop")).toBeInTheDocument();
-    expect(within(table).getByText("Streaming")).toBeInTheDocument();
-    expect(within(table).getByText("1.20s")).toBeInTheDocument();
-    expect(within(table).getByText("183ms")).toBeInTheDocument();
-    expect(within(table).queryByText("First Token Latency")).not.toBeInTheDocument();
+    test("a thinking level is its own tag next to the model, and an empty one adds nothing", async () => {
+      mocks.getUsageLogs.mockResolvedValue(
+        logsAnswer([
+          logItem({ id: 1, model: "gpt-5.6-sol", thinking_level: " max " }),
+          logItem({ id: 2, model: "gpt-5.4", thinking_level: "" }),
+        ]),
+      );
+      renderRequestLogsPage();
+      const grid = await findLogGrid();
+      expect(await within(grid).findByText("gpt-5.6-sol")).toBeInTheDocument();
+      expect(within(grid).getByText("max")).toBeInTheDocument();
+      expect(within(grid).getByText("gpt-5.4")).toBeInTheDocument();
+      expect(within(grid).queryByText("gpt-5.4()")).toBeNull();
+    });
 
-    await user.hover(within(table).getByText("Zhang Bolun"));
-    expect(await screen.findByRole("tooltip")).toHaveTextContent("Zhang Bolun · Laptop");
-    await user.unhover(within(table).getByText("Zhang Bolun"));
-    await waitFor(() => expect(screen.queryByRole("tooltip")).not.toBeInTheDocument());
+    test("a vision fallback and a real-model mapping are told apart", async () => {
+      const user = userEvent.setup();
+      mocks.getUsageLogs.mockResolvedValue(
+        logsAnswer([
+          logItem({
+            id: 1,
+            model: "cline-pass/deepseek-v4-pro",
+            upstream_model: "",
+            vision_fallback_model: "cline-pass/mimo-v2.5-pro",
+          }),
+          logItem({
+            id: 2,
+            model: "alias-model",
+            upstream_model: "real-model",
+            vision_fallback_model: "",
+          }),
+        ]),
+      );
+      renderRequestLogsPage();
+      const grid = await findLogGrid();
+      expect(await within(grid).findByText("cline-pass/deepseek-v4-pro")).toBeInTheDocument();
+      expect(within(grid).getByText("alias-model")).toBeInTheDocument();
 
-    await user.hover(within(table).getByLabelText("Duration: 1.20s"));
-    expect(await screen.findByRole("tooltip")).toHaveTextContent("First Token Latency: 183ms");
-  });
+      const vision = within(grid).getByLabelText(
+        "Vision fallback model ID: cline-pass/mimo-v2.5-pro",
+      );
+      expect(await tooltipOf(user, vision)).toContain("cline-pass/mimo-v2.5-pro");
+      const real = within(grid).getByLabelText("Real model ID: real-model");
+      expect(await tooltipOf(user, real)).toContain("real-model");
+    });
 
-  test("renders channel column with vendor identity and auth-type badge", async () => {
-    await i18n.changeLanguage("en");
+    test("no real-model marker when the upstream name is only the alias without its prefix", async () => {
+      mocks.getUsageLogs.mockResolvedValue(
+        logsAnswer([
+          logItem({
+            model: "ollama/deepseek-v4-flash:0731",
+            upstream_model: "deepseek-v4-flash:0731",
+          }),
+        ]),
+      );
+      renderRequestLogsPage();
+      const grid = await findLogGrid();
+      expect(await within(grid).findByText("ollama/deepseek-v4-flash:0731")).toBeInTheDocument();
+      expect(within(grid).queryByLabelText(/^Real model ID/)).toBeNull();
+    });
 
-    mocks.getUsageLogs.mockResolvedValue(
-      responseWithRows([
-        buildUsageLogItem({
-          channel_name: "asherandersenloqv@outlook.com",
-          provider: "xai",
-          auth_type: "oauth",
-        }),
-        buildUsageLogItem({
-          id: 2,
-          channel_name: "Relay",
-          provider: "openai",
-          auth_type: "api",
-        }),
-      ]),
-    );
+    test("an empty answer is the no-data state, not a no-match one", async () => {
+      mocks.getUsageLogs.mockResolvedValue(logsAnswer([], { filters: { statuses: [] } }));
+      renderRequestLogsPage();
+      const grid = await findLogGrid();
+      expect(await within(grid).findByText("No request logs yet")).toBeInTheDocument();
+      expect(within(grid).queryByText("No requests match")).toBeNull();
+    });
 
-    render(
-      <ThemeProvider>
-        <ToastProvider>
-          <RequestLogsPage />
-        </ToastProvider>
-      </ThemeProvider>,
-    );
+    test("missing values are a dash, never a -- placeholder", async () => {
+      mocks.getUsageLogs.mockResolvedValue(
+        logsAnswer([
+          logItem({ id: 1, latency_ms: 354, first_token_ms: 0, output_tokens: 0, streaming: true }),
+          logItem({ id: 2, latency_ms: -1, first_token_ms: 0, output_tokens: 0, streaming: false }),
+        ]),
+      );
+      renderRequestLogsPage();
+      const grid = await findLogGrid();
+      expect(await within(grid).findByText("354ms")).toBeInTheDocument();
+      expect(within(grid).getAllByText("—").length).toBeGreaterThan(0);
+      expect(within(grid).queryByText("--")).toBeNull();
+      expect(grid.textContent).not.toContain("--");
+    });
 
-    const table = await screen.findByRole("table", { name: "Request Logs Table" });
-    expect(within(table).getByText("asherandersenloqv@outlook.com")).toBeInTheDocument();
-    expect(within(table).getByText("Relay")).toBeInTheDocument();
-    expect(within(table).getAllByText("OAuth").length).toBeGreaterThanOrEqual(1);
-    expect(within(table).getByText("API")).toBeInTheDocument();
-  });
+    test("cells stay compact; the exact numbers are on the content buttons and in the summary's hints", async () => {
+      const user = userEvent.setup();
+      mocks.getUsageLogs.mockResolvedValue(
+        logsAnswer(
+          [
+            logItem({
+              input_tokens: 2_806_800_000,
+              cached_tokens: 2_576_200_000,
+              output_tokens: 13_100_000,
+              total_tokens: 2_819_900_000,
+              cost: 12_345.67891,
+              has_content: true,
+            }),
+          ],
+          {
+            stats: {
+              total: 1,
+              success_rate: 100,
+              total_tokens: 2_819_900_000,
+              total_cost: 12_345.67891,
+            },
+          },
+        ),
+      );
+      renderRequestLogsPage();
+      const grid = await findLogGrid();
 
-  test("labels non-streaming logs without rendering a first token placeholder", async () => {
-    await i18n.changeLanguage("en");
+      const input = await within(grid).findByRole("button", {
+        name: "Click to view input · 2,806,800,000",
+      });
+      expect(input).toHaveTextContent("2.81B");
+      expect(
+        within(grid).getByRole("button", { name: "Click to view output · 13,100,000" }),
+      ).toHaveTextContent("13.1M");
 
-    mocks.getUsageLogs.mockResolvedValue(
-      responseWithRows([
-        buildUsageLogItem({
-          streaming: false,
-          first_token_ms: 0,
-        }),
-      ]),
-    );
-
-    render(
-      <ThemeProvider>
-        <ToastProvider>
-          <RequestLogsPage />
-        </ToastProvider>
-      </ThemeProvider>,
-    );
-
-    expect(await screen.findByText("Non-streaming")).toBeInTheDocument();
-    expect(screen.queryByLabelText("First Token Latency: --")).not.toBeInTheDocument();
-  });
-
-  test("shows a non-empty thinking level in the model tag", async () => {
-    await i18n.changeLanguage("en");
-
-    mocks.getUsageLogs.mockResolvedValue(
-      responseWithRows([
-        buildUsageLogItem({ id: 1, model: "gpt-5.6-sol", thinking_level: " max " }),
-        buildUsageLogItem({ id: 2, model: "gpt-5.4", thinking_level: "" }),
-      ]),
-    );
-
-    render(
-      <ThemeProvider>
-        <ToastProvider>
-          <RequestLogsPage />
-        </ToastProvider>
-      </ThemeProvider>,
-    );
-
-    const table = await screen.findByRole("table", { name: "Request Logs Table" });
-    expect(within(table).getByText("gpt-5.6-sol(max)")).toBeInTheDocument();
-    expect(within(table).getByText("gpt-5.4")).toBeInTheDocument();
-    expect(within(table).queryByText("gpt-5.4()")).not.toBeInTheDocument();
-  });
-
-  test("shows vision fallback model separately from real model mapping", async () => {
-    await i18n.changeLanguage("en");
-    const user = userEvent.setup();
-
-    mocks.getUsageLogs.mockResolvedValue(
-      responseWithRows([
-        buildUsageLogItem({
-          id: 1,
-          model: "cline-pass/deepseek-v4-pro",
-          upstream_model: "",
-          vision_fallback_model: "cline-pass/mimo-v2.5-pro",
-        }),
-        buildUsageLogItem({
-          id: 2,
-          model: "alias-model",
-          upstream_model: "real-model",
-          vision_fallback_model: "",
-        }),
-      ]),
-    );
-
-    render(
-      <ThemeProvider>
-        <ToastProvider>
-          <RequestLogsPage />
-        </ToastProvider>
-      </ThemeProvider>,
-    );
-
-    const table = await screen.findByRole("table", { name: "Request Logs Table" });
-    expect(within(table).getByText("cline-pass/deepseek-v4-pro")).toBeInTheDocument();
-    expect(within(table).getByText("alias-model")).toBeInTheDocument();
-
-    const visionMarker = within(table).getByLabelText("Vision fallback model ID");
-    await user.hover(visionMarker);
-    expect(await screen.findByRole("tooltip")).toHaveTextContent(
-      "Vision fallback model ID cline-pass/mimo-v2.5-pro",
-    );
-    await user.unhover(visionMarker);
-    await waitFor(() => expect(screen.queryByRole("tooltip")).not.toBeInTheDocument());
-
-    const realModelMarker = within(table).getByLabelText("Real model ID");
-    await user.hover(realModelMarker);
-    expect(await screen.findByRole("tooltip")).toHaveTextContent("Real model ID real-model");
-  });
-
-  test("hides the real-model marker when the upstream name is only the alias prefix", async () => {
-    await i18n.changeLanguage("en");
-
-    mocks.getUsageLogs.mockResolvedValue(
-      responseWithRows([
-        buildUsageLogItem({
-          id: 1,
-          // How an Ollama Cloud account alias reaches the log: same model, two names.
-          model: "ollama/deepseek-v4-flash:0731",
-          upstream_model: "deepseek-v4-flash:0731",
-          vision_fallback_model: "",
-        }),
-      ]),
-    );
-
-    render(
-      <ThemeProvider>
-        <ToastProvider>
-          <RequestLogsPage />
-        </ToastProvider>
-      </ThemeProvider>,
-    );
-
-    const table = await screen.findByRole("table", { name: "Request Logs Table" });
-    expect(within(table).getByText("ollama/deepseek-v4-flash:0731")).toBeInTheDocument();
-    expect(within(table).queryByLabelText("Real model ID")).not.toBeInTheDocument();
-  });
-
-  test("renders empty state with normalized empty filter arrays", async () => {
-    await i18n.changeLanguage("en");
-
-    mocks.getUsageLogs.mockResolvedValue(emptyLogsResponse);
-
-    render(
-      <ThemeProvider>
-        <ToastProvider>
-          <RequestLogsPage />
-        </ToastProvider>
-      </ThemeProvider>,
-    );
-
-    expect(await screen.findByText("No Data")).toBeInTheDocument();
+      const tokens = screen.getByText("Total Token", { selector: "span.text-ink-3" });
+      expect(tokens.nextElementSibling).toHaveTextContent("2.82B");
+      expect(await tooltipOf(user, tokens)).toContain("2,819,900,000");
+    });
   });
 
   test("aborts stale request-log loads and keeps the latest response", async () => {
-    await i18n.changeLanguage("en");
     const user = userEvent.setup();
-    const first = deferred<ReturnType<typeof responseWithRows>>();
-    const second = deferred<ReturnType<typeof responseWithRows>>();
+    const first = deferred<UsageLogsResponse>();
+    const second = deferred<UsageLogsResponse>();
     let firstSignal: AbortSignal | undefined;
-
     mocks.getUsageLogs
       .mockImplementationOnce((_params, options?: { signal?: AbortSignal }) => {
         firstSignal = options?.signal;
@@ -456,900 +300,480 @@ describe("RequestLogsPage", () => {
         expect(options?.signal).toBeInstanceOf(AbortSignal);
         return second.promise;
       });
-
-    render(
-      <ThemeProvider>
-        <ToastProvider>
-          <RequestLogsPage />
-        </ToastProvider>
-      </ThemeProvider>,
-    );
+    renderRequestLogsPage();
 
     await waitFor(() => expect(mocks.getUsageLogs).toHaveBeenCalledTimes(1));
-
     await user.click(screen.getByRole("tab", { name: "Today" }));
-
     await waitFor(() => expect(mocks.getUsageLogs).toHaveBeenCalledTimes(2));
     expect(firstSignal?.aborted).toBe(true);
 
-    second.resolve(responseWithRows([buildUsageLogItem({ id: 2, model: "latest-model" })]));
+    second.resolve(logsAnswer([logItem({ id: 2, model: "latest-model" })]));
     expect(await screen.findByText("latest-model")).toBeInTheDocument();
-
-    first.resolve(responseWithRows([buildUsageLogItem({ id: 1, model: "stale-model" })]));
-    await waitFor(() => expect(screen.queryByText("stale-model")).not.toBeInTheDocument());
+    first.resolve(logsAnswer([logItem({ id: 1, model: "stale-model" })]));
+    await waitFor(() => expect(screen.queryByText("stale-model")).toBeNull());
   });
 
-  test("keeps the committed channel filter when a time range has no facet options", async () => {
-    await i18n.changeLanguage("en");
-    const user = userEvent.setup();
-    const restoredResponse = responseWithRows([
-      buildUsageLogItem({ id: 7, model: "restored-model" }),
-    ]);
+  describe("filters", () => {
+    test("users are listed by call count, most first, and nothing is selected by default", async () => {
+      const user = userEvent.setup();
+      mocks.getUsageLogs.mockResolvedValue(logsAnswer([], { filters: secretFacet }));
+      renderRequestLogsPage();
+      await waitFor(() => expect(mocks.getUsageLogs).toHaveBeenCalledTimes(1));
 
-    mocks.getUsageLogs.mockImplementation((params) => {
-      if (params.days === 1 || params.channels_empty) {
-        return Promise.resolve(emptyLogsResponse);
+      // Nothing selected means no filter: the empty selection is never sent as "match nothing".
+      // (Before the first answer the page speaks the key-id vocabulary of a current backend.)
+      const first = nthQuery(1);
+      expect(first.api_key_ids).toBeUndefined();
+      expect(first.api_key_ids_empty).toBe(false);
+      for (const key of ["models", "channels", "statuses"]) expect(first[key]).toBeUndefined();
+      for (const key of ["models_empty", "channels_empty", "statuses_empty"]) {
+        expect(first).not.toHaveProperty(key);
       }
-      return Promise.resolve(restoredResponse);
+
+      await user.click(facetButton("User / key"));
+      const dialog = await screen.findByRole("dialog", { name: /Filter .User \/ key./ });
+      const options = within(dialog).getAllByRole("checkbox");
+      expect(options).toHaveLength(2);
+      expect(options[0]).toHaveAccessibleName(/Secondary.*37/);
+      expect(options[1]).toHaveAccessibleName(/Primary.*12/);
+      for (const option of options) expect(option).not.toBeChecked();
     });
 
-    render(
-      <ThemeProvider>
-        <ToastProvider>
-          <RequestLogsPage />
-        </ToastProvider>
-      </ThemeProvider>,
-    );
-
-    expect(await screen.findByText("restored-model")).toBeInTheDocument();
-
-    const [, , channelFilter] = await screen.findAllByRole("combobox");
-    await user.click(channelFilter);
-    await user.click(await screen.findByRole("option", { name: /Relay.*API/i }));
-    await user.click(screen.getByRole("button", { name: "Apply filters" }));
-
-    await waitFor(() =>
-      expect(mocks.getUsageLogs).toHaveBeenNthCalledWith(
-        2,
-        expect.objectContaining({
-          days: 7,
-          channels: ["auth-codex"],
-          channels_empty: false,
+    test("user selections apply only after Apply, several at a time, and Reset goes back to everyone", async () => {
+      const user = userEvent.setup();
+      mocks.getUsageLogs.mockResolvedValue(
+        logsAnswer([], {
+          filters: {
+            ...secretFacet,
+            api_keys: ["sk-primary", "sk-secondary", "sk-tertiary"],
+            api_key_names: { ...secretFacet.api_key_names, "sk-tertiary": "Tertiary" },
+            api_key_counts: { ...secretFacet.api_key_counts, "sk-tertiary": 5 },
+          },
         }),
-        expectSignalOptions(),
-      ),
-    );
+      );
+      renderRequestLogsPage();
+      await waitFor(() => expect(mocks.getUsageLogs).toHaveBeenCalledTimes(1));
 
-    await user.click(screen.getByRole("tab", { name: "Today" }));
+      await chooseInFacet(user, "User / key", [/Primary/], { apply: false });
+      // Ticking is a draft: nothing is fetched until Apply.
+      expect(mocks.getUsageLogs).toHaveBeenCalledTimes(1);
+      await user.click(screen.getByRole("button", { name: "Apply" }));
+      await waitFor(() => expect(nthQuery(2).api_keys).toEqual(["sk-primary"]));
+      expect(nthQuery(2).api_keys_empty).toBe(false);
+      expect(facetButton("User / key")).toHaveTextContent("1");
 
-    await waitFor(() =>
-      expect(mocks.getUsageLogs).toHaveBeenNthCalledWith(
-        3,
-        expect.objectContaining({
-          days: 1,
-          channels: ["auth-codex"],
-          channels_empty: false,
-        }),
-        expectSignalOptions(),
-      ),
-    );
-    await waitFor(() => expect(screen.queryByText("restored-model")).not.toBeInTheDocument());
+      await chooseInFacet(user, "User / key", [/Secondary/]);
+      // The selection is kept in the facet's own order (by call count).
+      await waitFor(() => expect(nthQuery(3).api_keys).toEqual(["sk-secondary", "sk-primary"]));
 
-    await user.click(screen.getByRole("tab", { name: "7 days" }));
-
-    await waitFor(() =>
-      expect(mocks.getUsageLogs).toHaveBeenNthCalledWith(
-        4,
-        expect.objectContaining({
-          days: 7,
-          channels: ["auth-codex"],
-          channels_empty: false,
-        }),
-        expectSignalOptions(),
-      ),
-    );
-    expect(await screen.findByText("restored-model")).toBeInTheDocument();
-  });
-
-  test("shows request-log user counts in descending order with an unrestricted default", async () => {
-    await i18n.changeLanguage("en");
-    const user = userEvent.setup();
-
-    mocks.getUsageLogs.mockResolvedValue(responseWithFilterOptions);
-
-    render(
-      <ThemeProvider>
-        <ToastProvider>
-          <RequestLogsPage />
-        </ToastProvider>
-      </ThemeProvider>,
-    );
-
-    const [keyFilter, modelFilter, channelFilter, statusFilter] =
-      await screen.findAllByRole("combobox");
-    expect(keyFilter).toHaveTextContent("All Users");
-    expect(modelFilter).toHaveTextContent("All Models");
-    expect(channelFilter).toHaveTextContent("All Channels");
-    expect(statusFilter).toHaveTextContent("All Status");
-
-    await user.click(keyFilter);
-
-    const options = await screen.findAllByRole("option");
-    expect(options).toHaveLength(2);
-    expect(options[0]).toHaveAccessibleName(/Secondary,?\s*37 calls/i);
-    expect(options[1]).toHaveAccessibleName(/Primary,?\s*12 calls/i);
-    expect(options[0]).toHaveAttribute("aria-selected", "false");
-    expect(options[1]).toHaveAttribute("aria-selected", "false");
-    expect(screen.getByText("Sorted by calls in the current log range")).toBeInTheDocument();
-  });
-
-  test("uses backend status filter candidates", async () => {
-    await i18n.changeLanguage("en");
-    const user = userEvent.setup();
-
-    mocks.getUsageLogs.mockResolvedValue({
-      ...responseWithFilterOptions,
-      filters: {
-        ...responseWithFilterOptions.filters,
-        statuses: ["success"],
-      },
+      await user.click(facetButton("User / key"));
+      const dialog = await screen.findByRole("dialog", { name: /Filter .User \/ key./ });
+      await user.click(within(dialog).getByRole("button", { name: "Reset" }));
+      expect(mocks.getUsageLogs).toHaveBeenCalledTimes(3);
+      await user.click(within(dialog).getByRole("button", { name: "Apply" }));
+      await waitFor(() => expect(calls()).toHaveLength(4));
+      expect(nthQuery(4).api_keys).toBeUndefined();
+      expect(nthQuery(4).api_keys_empty).toBe(false);
     });
 
-    render(
-      <ThemeProvider>
-        <ToastProvider>
-          <RequestLogsPage />
-        </ToastProvider>
-      </ThemeProvider>,
-    );
+    test("unticking the last selected user goes back to every user", async () => {
+      const user = userEvent.setup();
+      mocks.getUsageLogs.mockResolvedValue(logsAnswer([], { filters: secretFacet }));
+      renderRequestLogsPage();
+      await waitFor(() => expect(mocks.getUsageLogs).toHaveBeenCalledTimes(1));
 
-    const [, , , statusFilter] = await screen.findAllByRole("combobox");
-    await user.click(statusFilter);
+      await chooseInFacet(user, "User / key", [/Primary/]);
+      await waitFor(() => expect(nthQuery(2).api_keys).toEqual(["sk-primary"]));
 
-    expect(await screen.findByRole("option", { name: "Success" })).toBeInTheDocument();
-    expect(screen.queryByRole("option", { name: "Failed" })).not.toBeInTheDocument();
-  });
-
-  test("applies neutral user selections only after confirmation and supports multi-select", async () => {
-    await i18n.changeLanguage("en");
-    const user = userEvent.setup();
-
-    mocks.getUsageLogs.mockResolvedValue({
-      ...responseWithFilterOptions,
-      filters: {
-        ...responseWithFilterOptions.filters,
-        api_keys: ["sk-primary", "sk-secondary", "sk-tertiary"],
-        api_key_names: {
-          ...responseWithFilterOptions.filters.api_key_names,
-          "sk-tertiary": "Tertiary",
-        },
-        api_key_counts: {
-          ...responseWithFilterOptions.filters.api_key_counts,
-          "sk-tertiary": 5,
-        },
-      },
+      await user.click(facetButton("User / key"));
+      const dialog = await screen.findByRole("dialog", { name: /Filter .User \/ key./ });
+      const primary = within(dialog).getByRole("checkbox", { name: /Primary/ });
+      expect(primary).toBeChecked();
+      await user.click(primary);
+      await user.click(within(dialog).getByRole("button", { name: "Apply" }));
+      await waitFor(() => expect(calls()).toHaveLength(3));
+      expect(nthQuery(3).api_keys).toBeUndefined();
+      // The facet button drops its count badge: nothing is filtered by user any more.
+      expect(facetButton("User / key")).toHaveAccessibleName("User / key");
     });
 
-    render(
-      <ThemeProvider>
-        <ToastProvider>
-          <RequestLogsPage />
-        </ToastProvider>
-      </ThemeProvider>,
-    );
+    test("a channel filter survives a time range whose answer has no channel options", async () => {
+      const user = userEvent.setup();
+      const restored = logsAnswer([logItem({ id: 7, model: "restored-model" })], {
+        filters: secretFacet,
+      });
+      mocks.getUsageLogs.mockImplementation((params: { days?: number }) =>
+        Promise.resolve(
+          params.days === 1 ? logsAnswer([], { filters: { statuses: [] } }) : restored,
+        ),
+      );
+      renderRequestLogsPage();
+      expect(await screen.findByText("restored-model")).toBeInTheDocument();
 
-    const [keyFilter] = await screen.findAllByRole("combobox");
+      await chooseInFacet(user, "Channel", [/Relay/]);
+      await waitFor(() => expect(nthQuery(2)).toMatchObject({ days: 7, channels: ["auth-relay"] }));
 
-    await waitFor(() =>
-      expect(mocks.getUsageLogs).toHaveBeenNthCalledWith(
-        1,
-        expect.objectContaining({
-          api_key_ids: undefined,
-          models: undefined,
-          channels: undefined,
-          statuses: undefined,
-          api_key_ids_empty: false,
-          models_empty: false,
-          channels_empty: false,
-          statuses_empty: false,
-        }),
-        expectSignalOptions(),
-      ),
-    );
+      await user.click(screen.getByRole("tab", { name: "Today" }));
+      await waitFor(() => expect(nthQuery(3)).toMatchObject({ days: 1, channels: ["auth-relay"] }));
+      await waitFor(() => expect(screen.queryByText("restored-model")).toBeNull());
+      // The chip still says what is filtered, so it can be removed from here.
+      expect(screen.getByRole("button", { name: /^Remove filter: Channel/ })).toBeInTheDocument();
 
-    await user.click(keyFilter);
-    await user.click(await screen.findByRole("option", { name: /Primary/i }));
+      await user.click(screen.getByRole("tab", { name: "7 days" }));
+      await waitFor(() => expect(nthQuery(4)).toMatchObject({ days: 7, channels: ["auth-relay"] }));
+      expect(await screen.findByText("restored-model")).toBeInTheDocument();
+    });
 
-    expect(mocks.getUsageLogs).toHaveBeenCalledTimes(1);
+    test("the status tabs pick one status; the status column offers only the statuses the backend lists", async () => {
+      const user = userEvent.setup();
+      mocks.getUsageLogs.mockResolvedValue(
+        logsAnswer([logItem()], { filters: { ...secretFacet, statuses: ["success"] } }),
+      );
+      renderRequestLogsPage();
+      const grid = await findLogGrid();
+      await within(grid).findByText("Primary");
 
-    await user.click(screen.getByRole("button", { name: "Apply filters" }));
+      const tabs = screen.getByRole("tablist", { name: "Filter by status" });
+      await user.click(within(tabs).getByRole("tab", { name: "Failed" }));
+      await waitFor(() => expect(lastQuery().statuses).toEqual(["failed"]));
+      await user.click(within(tabs).getByRole("tab", { name: "All" }));
+      await waitFor(() => expect(lastQuery().statuses).toBeUndefined());
 
-    await waitFor(() =>
-      expect(mocks.getUsageLogs).toHaveBeenNthCalledWith(
-        2,
-        expect.objectContaining({
-          api_keys: ["sk-primary"],
-          api_keys_empty: false,
-        }),
-        expectSignalOptions(),
-      ),
-    );
+      await user.click(within(grid).getByRole("button", { name: /Filter .Status./ }));
+      const menu = await screen.findByRole("dialog", { name: /Status. column options/ });
+      const statuses = within(menu).getAllByRole("checkbox");
+      expect(statuses).toHaveLength(1);
+      expect(statuses[0]).toHaveAccessibleName(/Success/);
+    });
 
-    await user.click(keyFilter);
-    await user.click(screen.getByRole("option", { name: /Secondary/i }));
+    test("removing a chip clears that filter and loads the table again", async () => {
+      const user = userEvent.setup();
+      mocks.getUsageLogs
+        .mockResolvedValueOnce(
+          logsAnswer([logItem({ model: "gpt-5.4" })], { filters: secretFacet }),
+        )
+        .mockResolvedValueOnce(
+          logsAnswer([logItem({ model: "gpt-5.4" })], { filters: secretFacet }),
+        )
+        .mockResolvedValue(
+          logsAnswer([logItem({ id: 9, model: "gpt-4.1" })], { filters: secretFacet }),
+        );
+      renderRequestLogsPage();
+      expect(await screen.findByText("gpt-5.4", { selector: "span" })).toBeInTheDocument();
 
-    expect(mocks.getUsageLogs).toHaveBeenCalledTimes(2);
+      await chooseInFacet(user, "Model", [/gpt-5\.4/]);
+      await waitFor(() => expect(nthQuery(2).models).toEqual(["gpt-5.4"]));
 
-    await user.click(screen.getByRole("button", { name: "Apply filters" }));
+      await user.click(screen.getByRole("button", { name: "Remove filter: Model: gpt-5.4" }));
+      await waitFor(() => expect(calls()).toHaveLength(3));
+      expect(nthQuery(3).models).toBeUndefined();
+      expect(await within(await findLogGrid()).findByText("gpt-4.1")).toBeInTheDocument();
+    });
 
-    await waitFor(() =>
-      expect(mocks.getUsageLogs).toHaveBeenNthCalledWith(
-        3,
-        expect.objectContaining({
-          api_keys: ["sk-primary", "sk-secondary"],
-          api_keys_empty: false,
-        }),
-        expectSignalOptions(),
-      ),
-    );
+    test("the bulk action selects every option, or only the matches while searching", async () => {
+      const user = userEvent.setup();
+      const models = [
+        "gpt-5.4",
+        "gpt-4.1",
+        "gpt-5.1-codex",
+        "claude-opus-5",
+        "claude-sonnet-5",
+        "gemini-3",
+        "glm-5",
+        "kimi-k3",
+      ];
+      mocks.getUsageLogs.mockResolvedValue(logsAnswer([], { filters: { ...secretFacet, models } }));
+      renderRequestLogsPage();
+      await waitFor(() => expect(mocks.getUsageLogs).toHaveBeenCalledTimes(1));
 
-    await user.click(keyFilter);
-    await user.click(screen.getByRole("button", { name: "Any" }));
+      await user.click(facetButton("Model"));
+      const dialog = await screen.findByRole("dialog", { name: /Filter .Model./ });
+      expect(within(dialog).getByRole("button", { name: "Select all" })).toBeInTheDocument();
+      expect(within(dialog).queryByRole("button", { name: "Select matches" })).toBeNull();
 
-    expect(mocks.getUsageLogs).toHaveBeenCalledTimes(3);
+      await user.type(within(dialog).getByRole("textbox", { name: "Search options" }), "claude");
+      await user.click(within(dialog).getByRole("button", { name: "Select matches" }));
+      await user.click(within(dialog).getByRole("button", { name: "Apply" }));
+      await waitFor(() => expect(nthQuery(2).models).toEqual(["claude-opus-5", "claude-sonnet-5"]));
+    });
 
-    await user.click(screen.getByRole("button", { name: "Apply filters" }));
+    describe("key filter", () => {
+      test("selects keys by id when the backend declares the id filters", async () => {
+        const user = userEvent.setup();
+        mocks.getUsageLogs.mockResolvedValue(
+          logsAnswer([], { capabilities: { apiKeyIdFilters: true }, filters: idFacet }),
+        );
+        renderRequestLogsPage();
+        await waitFor(() => expect(mocks.getUsageLogs).toHaveBeenCalledTimes(1));
 
-    await waitFor(() =>
-      expect(mocks.getUsageLogs).toHaveBeenNthCalledWith(
-        4,
-        expect.objectContaining({
-          api_keys: undefined,
-          api_keys_empty: false,
-        }),
-        expectSignalOptions(),
-      ),
-    );
+        const dialog = await chooseInFacet(user, "User / key", [], { apply: false });
+        // Names for keys, one entry for every system call.
+        expect(within(dialog).getByRole("checkbox", { name: /Secondary/ })).toBeInTheDocument();
+        expect(within(dialog).getByRole("checkbox", { name: /System Call/ })).toBeInTheDocument();
+        await user.click(within(dialog).getByRole("checkbox", { name: /Primary/ }));
+        await user.click(within(dialog).getByRole("button", { name: "Apply" }));
+        await waitFor(() => expect(nthQuery(2).api_key_ids).toEqual(["key-primary"]));
+        expect(nthQuery(2).api_key_ids_empty).toBe(false);
+        // An older backend would ignore key ids, so the selectors are not sent as well.
+        expect(nthQuery(2)).not.toHaveProperty("api_keys");
+
+        await chooseInFacet(user, "User / key", [/System Call/]);
+        await waitFor(() => expect(nthQuery(3).api_key_ids).toEqual(["key-primary", "__system__"]));
+      });
+
+      test("never shows the secret of a key an older backend lists", async () => {
+        const user = userEvent.setup();
+        mocks.getUsageLogs.mockResolvedValue(
+          logsAnswer([], {
+            filters: {
+              ...secretFacet,
+              api_keys: ["sk-unnamed-secret-0001"],
+              api_key_names: {},
+              api_key_counts: { "sk-unnamed-secret-0001": 3 },
+            },
+          }),
+        );
+        renderRequestLogsPage();
+        await waitFor(() => expect(mocks.getUsageLogs).toHaveBeenCalledTimes(1));
+        const dialog = await chooseInFacet(user, "User / key", [], { apply: false });
+        expect(
+          within(dialog).getByRole("checkbox", { name: /sk-unn\*\*\*0001/ }),
+        ).toBeInTheDocument();
+        expect(document.body.textContent).not.toContain("sk-unnamed-secret-0001");
+      });
+
+      test("drops a selection the new backend does not know when the vocabulary changes", async () => {
+        const user = userEvent.setup();
+        // The page was opened against an older backend, which has since been upgraded.
+        mocks.getUsageLogs
+          .mockResolvedValueOnce(logsAnswer([], { filters: secretFacet }))
+          .mockResolvedValue(
+            logsAnswer([], { capabilities: { apiKeyIdFilters: true }, filters: idFacet }),
+          );
+        renderRequestLogsPage();
+        await waitFor(() => expect(mocks.getUsageLogs).toHaveBeenCalledTimes(1));
+
+        await chooseInFacet(user, "User / key", [/Primary/]);
+        await waitFor(() => expect(nthQuery(2).api_keys).toEqual(["sk-primary"]));
+        // The answer came in key ids: the secret that was selected means nothing to it, so the page
+        // goes back to every key instead of showing an empty list.
+        await waitFor(() => expect(calls().length).toBeGreaterThanOrEqual(3));
+        expect(nthQuery(3).api_key_ids).toBeUndefined();
+        expect(nthQuery(3).api_key_ids_empty).toBe(false);
+        expect(facetButton("User / key")).toHaveAccessibleName("User / key");
+      });
+    });
   });
 
-  test("returns to unrestricted when the last selected user is cleared", async () => {
-    await i18n.changeLanguage("en");
-    const user = userEvent.setup();
-
-    mocks.getUsageLogs.mockResolvedValue(responseWithFilterOptions);
-
-    render(
-      <ThemeProvider>
-        <ToastProvider>
-          <RequestLogsPage />
-        </ToastProvider>
-      </ThemeProvider>,
-    );
-
-    const [keyFilter] = await screen.findAllByRole("combobox");
-
-    await user.click(keyFilter);
-    await user.click(await screen.findByRole("option", { name: /Primary/i }));
-    await user.click(screen.getByRole("button", { name: "Apply filters" }));
-
-    await waitFor(() =>
-      expect(mocks.getUsageLogs).toHaveBeenNthCalledWith(
-        2,
-        expect.objectContaining({
-          api_keys: ["sk-primary"],
-          api_keys_empty: false,
-        }),
-        expectSignalOptions(),
-      ),
-    );
-
-    await user.click(keyFilter);
-    const selectedPrimary = await screen.findByRole("option", { name: /Primary/i });
-    expect(selectedPrimary).toHaveAttribute("aria-selected", "true");
-    await user.click(selectedPrimary);
-    expect(screen.getByRole("combobox", { name: "Filter by user name" })).toHaveTextContent(
-      "All Users",
-    );
-
-    await user.click(screen.getByRole("button", { name: "Apply filters" }));
-
-    await waitFor(() =>
-      expect(mocks.getUsageLogs).toHaveBeenNthCalledWith(
-        3,
-        expect.objectContaining({
-          api_keys: undefined,
-          api_keys_empty: false,
-        }),
-        expectSignalOptions(),
-      ),
-    );
-  });
-
-  describe("key filter", () => {
-    const idKeyResponse = {
-      ...responseWithFilterOptions,
-      capabilities: { apiKeyIdFilters: true },
-      filters: {
-        ...responseWithFilterOptions.filters,
-        api_key_ids: ["key-primary", "key-secondary", "__system__"],
-        api_key_id_names: { "key-primary": "Primary", "key-secondary": "Secondary" },
-        api_key_id_counts: { "key-primary": 12, "key-secondary": 37, __system__: 4 },
-        api_keys: [],
-        api_key_names: {},
-        api_key_counts: {},
-      },
+  describe("the Agent column", () => {
+    const clientFacet: Partial<UsageLogsResponse["filters"]> = {
+      ...secretFacet,
+      client_names: ["codex-cli", "claude-code", "__unknown__"],
+      client_name_counts: { "codex-cli": 5, "claude-code": 9, __unknown__: 1 },
     };
 
-    test("selects keys by id when the backend declares the id filters", async () => {
-      await i18n.changeLanguage("en");
+    test("shows the client, its version and, on hover, the raw User-Agent", async () => {
       const user = userEvent.setup();
-      mocks.getUsageLogs.mockResolvedValue(idKeyResponse);
-
-      render(
-        <ThemeProvider>
-          <ToastProvider>
-            <RequestLogsPage />
-          </ToastProvider>
-        </ThemeProvider>,
-      );
-
-      const [keyFilter] = await screen.findAllByRole("combobox");
-      await user.click(keyFilter);
-      // Names for keys, one entry for every system call.
-      expect(await screen.findByRole("option", { name: /Secondary/i })).toBeInTheDocument();
-      expect(screen.getByRole("option", { name: /System call/i })).toBeInTheDocument();
-      await user.click(screen.getByRole("option", { name: /Primary/i }));
-      await user.click(screen.getByRole("button", { name: "Apply filters" }));
-
-      await waitFor(() =>
-        expect(mocks.getUsageLogs).toHaveBeenNthCalledWith(
-          2,
-          expect.objectContaining({ api_key_ids: ["key-primary"], api_key_ids_empty: false }),
-          expectSignalOptions(),
+      mocks.getUsageLogs.mockResolvedValue(
+        logsAnswer(
+          [
+            logItem({ id: 1 }),
+            logItem({ id: 2, client_name: "", client_version: "", user_agent: "" }),
+          ],
+          { capabilities: { requestLogClients: true }, filters: clientFacet },
         ),
       );
-      // An older backend would ignore key ids, so the selectors are not sent as well.
-      expect(mocks.getUsageLogs.mock.calls[1]?.[0]).not.toHaveProperty("api_keys");
+      renderRequestLogsPage();
+      const grid = await findLogGrid();
 
-      await user.click(keyFilter);
-      await user.click(screen.getByRole("option", { name: /System call/i }));
-      await user.click(screen.getByRole("button", { name: "Apply filters" }));
-
-      await waitFor(() =>
-        expect(mocks.getUsageLogs).toHaveBeenNthCalledWith(
-          3,
-          expect.objectContaining({
-            api_key_ids: ["key-primary", "__system__"],
-            api_key_ids_empty: false,
-          }),
-          expectSignalOptions(),
-        ),
+      expect(within(grid).getByRole("columnheader", { name: "Agent" })).toBeInTheDocument();
+      const client = await within(grid).findByText("Codex CLI");
+      expect(within(grid).getByText("0.125.0")).toBeInTheDocument();
+      expect(await tooltipOf(user, client)).toContain(
+        "codex_cli_rs/0.125.0 (Mac OS 26.1.0; arm64) Apple_Terminal/464",
       );
+      // A request without a User-Agent reads as unknown, not as a blank cell.
+      expect(within(grid).getByText("Unknown")).toBeInTheDocument();
     });
 
-    test("never shows the secret of a key an older backend lists", async () => {
-      await i18n.changeLanguage("en");
+    test("its facet lists clients by count and filters by the normalised name", async () => {
       const user = userEvent.setup();
-      mocks.getUsageLogs.mockResolvedValue({
-        ...responseWithFilterOptions,
-        filters: {
-          ...responseWithFilterOptions.filters,
-          api_keys: ["sk-unnamed-secret-0001"],
-          api_key_names: {},
-          api_key_counts: { "sk-unnamed-secret-0001": 3 },
-        },
-      });
-
-      render(
-        <ThemeProvider>
-          <ToastProvider>
-            <RequestLogsPage />
-          </ToastProvider>
-        </ThemeProvider>,
-      );
-
-      const [keyFilter] = await screen.findAllByRole("combobox");
-      await user.click(keyFilter);
-
-      expect(await screen.findByRole("option", { name: /sk-unn\*\*\*0001/ })).toBeInTheDocument();
-      expect(document.body.textContent).not.toContain("sk-unnamed-secret-0001");
-    });
-
-    test("drops a selection the new backend does not know when the vocabulary changes", async () => {
-      await i18n.changeLanguage("en");
-      const user = userEvent.setup();
-      // The page was opened against an older backend, which has since been upgraded.
-      mocks.getUsageLogs
-        .mockResolvedValueOnce(responseWithFilterOptions)
-        .mockResolvedValueOnce(idKeyResponse)
-        .mockResolvedValue(idKeyResponse);
-
-      render(
-        <ThemeProvider>
-          <ToastProvider>
-            <RequestLogsPage />
-          </ToastProvider>
-        </ThemeProvider>,
-      );
-
-      const [keyFilter] = await screen.findAllByRole("combobox");
-      await user.click(keyFilter);
-      await user.click(await screen.findByRole("option", { name: /Primary/i }));
-      await user.click(screen.getByRole("button", { name: "Apply filters" }));
-
-      await waitFor(() =>
-        expect(mocks.getUsageLogs).toHaveBeenNthCalledWith(
-          2,
-          expect.objectContaining({ api_keys: ["sk-primary"] }),
-          expectSignalOptions(),
-        ),
-      );
-      // The answer came in key ids: the secret that was selected means nothing to it, so
-      // the page goes back to every key instead of showing an empty list.
-      await waitFor(() =>
-        expect(mocks.getUsageLogs).toHaveBeenNthCalledWith(
-          3,
-          expect.objectContaining({ api_key_ids: undefined, api_key_ids_empty: false }),
-          expectSignalOptions(),
-        ),
-      );
-    });
-  });
-
-  test("clears a request-log filter from the trigger and refreshes table data", async () => {
-    await i18n.changeLanguage("en");
-    const user = userEvent.setup();
-
-    mocks.getUsageLogs
-      .mockResolvedValueOnce(
-        responseWithRows([
-          buildUsageLogItem({ id: 1, model: "gpt-5.4" }),
-          buildUsageLogItem({ id: 2, model: "gpt-4.1" }),
-        ]),
-      )
-      .mockResolvedValueOnce(responseWithRows([buildUsageLogItem({ id: 3, model: "gpt-5.4" })]))
-      .mockResolvedValueOnce(responseWithRows([buildUsageLogItem({ id: 4, model: "gpt-4.1" })]));
-
-    render(
-      <ThemeProvider>
-        <ToastProvider>
-          <RequestLogsPage />
-        </ToastProvider>
-      </ThemeProvider>,
-    );
-
-    const [, modelFilter] = await screen.findAllByRole("combobox");
-
-    await user.click(modelFilter);
-    await user.click(await screen.findByRole("option", { name: "gpt-4.1" }));
-    await user.click(screen.getByRole("button", { name: "Apply filters" }));
-
-    await waitFor(() =>
-      expect(mocks.getUsageLogs).toHaveBeenNthCalledWith(
-        2,
-        expect.objectContaining({
-          models: ["gpt-5.4"],
-          models_empty: false,
+      mocks.getUsageLogs.mockResolvedValue(
+        logsAnswer([logItem()], {
+          capabilities: { requestLogClients: true },
+          filters: clientFacet,
         }),
-        expectSignalOptions(),
-      ),
-    );
-    expect(screen.getByRole("combobox", { name: "Filter by model" })).toHaveTextContent("gpt-5.4");
+      );
+      renderRequestLogsPage();
+      await within(await findLogGrid()).findByText("Codex CLI");
 
-    await user.click(screen.getByRole("button", { name: "Clear model filter" }));
-
-    await waitFor(() =>
-      expect(mocks.getUsageLogs).toHaveBeenNthCalledWith(
-        3,
-        expect.objectContaining({
-          models: undefined,
-          models_empty: false,
-        }),
-        expectSignalOptions(),
-      ),
-    );
-    await waitFor(() =>
-      expect(screen.queryByRole("button", { name: "Clear model filter" })).not.toBeInTheDocument(),
-    );
-    expect(screen.getByRole("combobox", { name: "Filter by model" })).toHaveTextContent(
-      "All Models",
-    );
-    expect(await screen.findByText("gpt-4.1")).toBeInTheDocument();
-  });
-
-  test("keeps the filtered-results bulk action hidden until the user actually searches", async () => {
-    await i18n.changeLanguage("en");
-    const user = userEvent.setup();
-
-    mocks.getUsageLogs.mockResolvedValue(responseWithFilterOptions);
-
-    render(
-      <ThemeProvider>
-        <ToastProvider>
-          <RequestLogsPage />
-        </ToastProvider>
-      </ThemeProvider>,
-    );
-
-    const [, modelFilter] = await screen.findAllByRole("combobox");
-
-    await user.click(modelFilter);
-    await user.click(await screen.findByRole("option", { name: "gpt-5.4" }));
-
-    expect(screen.getByRole("button", { name: /Select all/i })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Select shown/i })).not.toBeInTheDocument();
-
-    await user.type(screen.getByRole("textbox"), "gpt");
-
-    expect(screen.getByRole("button", { name: /Select shown/i })).toBeInTheDocument();
-  });
-
-  test("renders request logs table through the shared DataTable wrapper", async () => {
-    await i18n.changeLanguage("zh-CN");
-
-    mocks.getUsageLogs.mockResolvedValue({
-      items: [
-        {
-          id: 1,
-          timestamp: "2026-04-08T12:00:00Z",
-          api_key: "sk-test-123456",
-          api_key_name: "Primary",
-          model: "gpt-5.4",
-          source: "codex",
-          channel_name: "Codex",
-          auth_index: "auth-1",
-          failed: false,
-          latency_ms: 1200,
-          first_token_ms: 183,
-          input_tokens: 10,
-          output_tokens: 20,
-          reasoning_tokens: 0,
-          cached_tokens: 0,
-          total_tokens: 30,
-          cost: 0.0123,
-          has_content: false,
-        },
-      ],
-      total: 1,
-      page: 1,
-      size: 50,
-      filters: {
-        api_keys: [],
-        api_key_names: {},
-        models: [],
-        channels: [],
-      },
-      stats: {
-        total: 1,
-        success_rate: 100,
-        total_tokens: 30,
-      },
+      const dialog = await chooseInFacet(user, "Agent", [], { apply: false });
+      const options = within(dialog).getAllByRole("checkbox");
+      expect(options).toHaveLength(3);
+      expect(options[0]).toHaveAccessibleName(/Claude Code.*9/);
+      expect(options[1]).toHaveAccessibleName(/Codex CLI.*5/);
+      expect(options[2]).toHaveAccessibleName(/Unknown.*1/);
+      await user.click(options[1]);
+      await user.click(within(dialog).getByRole("button", { name: "Apply" }));
+      await waitFor(() => expect(lastQuery().client_names).toEqual(["codex-cli"]));
     });
 
-    const { container } = render(
-      <ThemeProvider>
-        <ToastProvider>
-          <RequestLogsPage />
-        </ToastProvider>
-      </ThemeProvider>,
-    );
+    test("a backend without the caller fields gets no Agent column, no facet and no client filter", async () => {
+      mocks.getUsageLogs.mockResolvedValue(logsAnswer([legacyItem()], { filters: secretFacet }));
+      renderRequestLogsPage();
+      const grid = await findLogGrid();
+      await within(grid).findByText("Primary");
+      await waitFor(() =>
+        expect(within(grid).queryByRole("columnheader", { name: "Agent" })).toBeNull(),
+      );
+      expect(
+        within(screen.getByRole("search")).queryByRole("button", { name: /^Agent/ }),
+      ).toBeNull();
+      expect(lastQuery().client_names).toBeUndefined();
+    });
 
-    await screen.findByRole("table", { name: "请求日志表" });
-    expect(container.querySelector(".table-scrollbar")).not.toBeNull();
+    test("holds its place until support is known, then goes away on an older backend", async () => {
+      const first = deferred<UsageLogsResponse>();
+      mocks.getUsageLogs.mockReturnValueOnce(first.promise);
+      renderRequestLogsPage();
+      const grid = await findLogGrid();
+      // Unknown yet: the column is a placeholder so it keeps its position in the order.
+      expect(within(grid).getByRole("columnheader", { name: "Agent" })).toBeInTheDocument();
+
+      first.resolve(logsAnswer([legacyItem()], { filters: secretFacet }));
+      await within(grid).findByText("Primary");
+      await waitFor(() =>
+        expect(within(grid).queryByRole("columnheader", { name: "Agent" })).toBeNull(),
+      );
+    });
+
+    // 支持与否只看日志接口自己的 capabilities（GET /config 不声明它）：第一页回来之前不出 Agent 筛选，
+    // 即使配置里写了什么也一样。
+    test("offers the Agent facet only once the logs response declares it", async () => {
+      mocks.getConfig.mockResolvedValue({ capabilities: { "request-log-clients": true } });
+      const first = deferred<UsageLogsResponse>();
+      mocks.getUsageLogs.mockReturnValueOnce(first.promise);
+      renderRequestLogsPage();
+      const grid = await findLogGrid();
+      expect(within(grid).getByRole("columnheader", { name: "Agent" })).toBeInTheDocument();
+      expect(within(screen.getByRole("search")).queryByRole("button", { name: /^Agent/ })).toBeNull();
+
+      first.resolve(logsAnswer([logItem()], { capabilities: { requestLogClients: true } }));
+      await waitFor(() => expect(facetButton("Agent")).toBeInTheDocument());
+    });
   });
 
-  test("renders response metrics without missing-value placeholders", async () => {
-    await i18n.changeLanguage("zh-CN");
+  test("time and status are pinned, and a row opens its full detail", async () => {
     const user = userEvent.setup();
-
     mocks.getUsageLogs.mockResolvedValue(
-      responseWithRows([
-        buildUsageLogItem({
-          id: 1,
-          streaming: true,
-          latency_ms: 354,
-          first_token_ms: 0,
-          output_tokens: 0,
-        }),
-        buildUsageLogItem({
-          id: 2,
-          streaming: false,
-          latency_ms: -1,
-          first_token_ms: 0,
-          output_tokens: 0,
-        }),
-      ]),
+      logsAnswer([logItem({ id: 4242 })], { capabilities: { requestLogClients: true } }),
     );
+    const { container } = renderRequestLogsPage();
+    const grid = await findLogGrid();
+    await within(grid).findByText("Primary");
 
-    render(
-      <ThemeProvider>
-        <ToastProvider>
-          <RequestLogsPage />
-        </ToastProvider>
-      </ThemeProvider>,
-    );
+    expect(container.querySelector('th[data-col="time"]')).toHaveAttribute("data-pin", "start");
+    expect(container.querySelector('th[data-col="status"]')).toHaveAttribute("data-pin", "end");
 
-    const table = await screen.findByRole("table", { name: "请求日志表" });
-    expect(within(table).getByRole("columnheader", { name: "响应指标" })).toBeInTheDocument();
-    expect(within(table).queryByRole("columnheader", { name: "类型" })).not.toBeInTheDocument();
-    expect(within(table).getByText("354ms")).toBeInTheDocument();
-    expect(within(table).getByText("流式")).toBeInTheDocument();
-    expect(within(table).getByText("非流式")).toBeInTheDocument();
-    expect(within(table).queryByText("--")).not.toBeInTheDocument();
-
-    await user.hover(within(table).getByLabelText("耗时: 354ms"));
-    const tooltip = await screen.findByRole("tooltip");
-    expect(tooltip).toHaveTextContent("耗时: 354ms");
-    expect(tooltip).not.toHaveTextContent("首 Token 耗时");
-    expect(tooltip).not.toHaveTextContent("每秒 Token");
-    expect(tooltip).not.toHaveTextContent("--");
-    await user.unhover(within(table).getByLabelText("耗时: 354ms"));
-    await waitFor(() => expect(screen.queryByRole("tooltip")).not.toBeInTheDocument());
-
-    await user.hover(within(table).getByText("非流式"));
-    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
-  });
-
-  test("shows full numeric values in the table while keeping the summary bar compact", async () => {
-    await i18n.changeLanguage("en");
-    const user = userEvent.setup();
-
-    mocks.getUsageLogs.mockResolvedValue({
-      items: [
-        buildUsageLogItem({
-          input_tokens: 2_806_800_000,
-          cached_tokens: 2_576_200_000,
-          output_tokens: 13_100_000,
-          total_tokens: 2_819_900_000,
-          cost: 12_345.67891,
-          has_content: true,
-        }),
-      ],
-      total: 23_800,
-      page: 1,
-      size: 50,
-      filters: {
-        api_keys: [],
-        api_key_names: {},
-        models: [],
-        channels: [],
-      },
-      stats: {
-        total: 23_800,
-        success_rate: 99.5,
-        total_tokens: 2_819_900_000,
-        total_cost: 12_345.67891,
-        cache_rate: 91.234,
-      },
+    await user.click(within(grid).getByRole("button", { name: "Show details" }));
+    const detail = await waitFor(() => {
+      const node = container.querySelector("[data-grid-detail]");
+      expect(node).not.toBeNull();
+      return node as HTMLElement;
     });
-
-    render(
-      <ThemeProvider>
-        <ToastProvider>
-          <RequestLogsPage />
-        </ToastProvider>
-      </ThemeProvider>,
-    );
-
-    const recordsCount = await screen.findByText("23.8K records");
-    expect(screen.queryByText(/Updated at/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Not yet refreshed/i)).not.toBeInTheDocument();
-    expect(screen.getByText("91.23%")).toBeInTheDocument();
-
-    // Summary bar keeps compact metric formatting, with a full-precision tooltip.
-    expect(screen.getAllByText("2.8B").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("$12.35K").length).toBeGreaterThan(0);
-
-    // Table rows render complete numeric values (no k/M/B compact suffix).
-    expect(screen.getByText("2,806,800,000")).toBeInTheDocument();
-    expect(screen.getByText("2,576,200,000")).toBeInTheDocument();
-    expect(screen.getByText("13,100,000")).toBeInTheDocument();
-    expect(screen.getByText("2,819,900,000")).toBeInTheDocument();
-    expect(screen.getByText("$12,345.6789")).toBeInTheDocument();
-
-    await user.hover(recordsCount);
-    expect(await screen.findByRole("tooltip")).toHaveTextContent("23,800.00");
-    await user.unhover(recordsCount);
-
-    const summaryTotalTokens = screen.getAllByText("2.8B")[0];
-    await user.hover(summaryTotalTokens);
-    expect(await screen.findByRole("tooltip")).toHaveTextContent("2,819,900,000.00");
-    await user.unhover(summaryTotalTokens);
-
-    const summaryCost = screen.getAllByText("$12.35K")[0];
-    await user.hover(summaryCost);
-    expect(await screen.findByRole("tooltip")).toHaveTextContent("$12,345.6789");
+    expect(detail).toHaveTextContent("#4242");
+    expect(detail).toHaveTextContent("codex_cli_rs/0.125.0");
   });
 
-  test("clears bulky request-log content by default while preserving request rows", async () => {
-    await i18n.changeLanguage("en");
-    const user = userEvent.setup();
+  describe("clearing database logs", () => {
+    test("clears bulky request-log content by default while preserving request rows", async () => {
+      const user = userEvent.setup();
+      mocks.getUsageLogs
+        .mockResolvedValueOnce(logsAnswer([logItem({ has_content: true })]))
+        .mockResolvedValueOnce(logsAnswer([logItem({ has_content: false })]));
+      mocks.clearUsageLogs.mockResolvedValue({ deleted_logs: 0, deleted_contents: 1 });
+      renderRequestLogsPage();
+      await within(await findLogGrid()).findByText("Primary");
 
-    mocks.getUsageLogs
-      .mockResolvedValueOnce({
-        items: [
-          {
-            id: 1,
-            timestamp: "2026-04-08T12:00:00Z",
-            api_key: "sk-test-123456",
-            api_key_name: "Primary",
-            model: "gpt-5.4",
-            source: "codex",
-            channel_name: "Codex",
-            auth_index: "auth-1",
-            failed: false,
-            latency_ms: 1200,
-            first_token_ms: 183,
-            input_tokens: 10,
-            output_tokens: 20,
-            reasoning_tokens: 0,
-            cached_tokens: 0,
-            total_tokens: 30,
-            cost: 0.0123,
-            has_content: true,
-          },
-        ],
-        total: 1,
-        page: 1,
-        size: 50,
-        filters: {
-          api_keys: [],
-          api_key_names: {},
-          models: [],
-          channels: [],
-        },
-        stats: {
-          total: 1,
-          success_rate: 100,
-          total_tokens: 30,
-          total_cost: 0.0123,
-        },
-      })
-      .mockResolvedValueOnce({
-        items: [
-          {
-            id: 1,
-            timestamp: "2026-04-08T12:00:00Z",
-            api_key: "sk-test-123456",
-            api_key_name: "Primary",
-            model: "gpt-5.4",
-            source: "codex",
-            channel_name: "Codex",
-            auth_index: "auth-1",
-            failed: false,
-            latency_ms: 1200,
-            first_token_ms: 183,
-            input_tokens: 10,
-            output_tokens: 20,
-            reasoning_tokens: 0,
-            cached_tokens: 0,
-            total_tokens: 30,
-            cost: 0.0123,
-            has_content: false,
-          },
-        ],
-        total: 1,
-        page: 1,
-        size: 50,
-        filters: {
-          api_keys: [],
-          api_key_names: {},
-          models: [],
-          channels: [],
-        },
-        stats: {
-          total: 1,
-          success_rate: 100,
-          total_tokens: 30,
-          total_cost: 0.0123,
-        },
-      });
-    mocks.clearUsageLogs.mockResolvedValue({
-      deleted_logs: 0,
-      deleted_contents: 1,
-    });
+      await user.click(screen.getByRole("button", { name: "Clear Database Logs" }));
+      await user.click(await screen.findByRole("button", { name: "Clear Selected Data" }));
 
-    render(
-      <ThemeProvider>
-        <ToastProvider>
-          <RequestLogsPage />
-        </ToastProvider>
-      </ThemeProvider>,
-    );
-
-    await user.click(await screen.findByRole("button", { name: "Clear Database Logs" }));
-    await user.click(await screen.findByRole("button", { name: "Clear Selected Data" }));
-
-    await waitFor(() => expect(mocks.clearUsageLogs).toHaveBeenCalledTimes(1));
-    expect(mocks.clearUsageLogs).toHaveBeenCalledWith({
-      clear_body_content: true,
-      clear_detail_content: true,
-      clear_request_records: false,
-    });
-    expect(await screen.findByText("Primary")).toBeInTheDocument();
-  });
-
-  test("keeps the clear dialog open until cleanup and refresh both finish", async () => {
-    await i18n.changeLanguage("en");
-    const user = userEvent.setup();
-    const cleanup = deferred<{ deleted_logs: number; deleted_contents: number }>();
-    const refresh = deferred<typeof emptyLogsResponse>();
-
-    mocks.getUsageLogs
-      .mockResolvedValueOnce(emptyLogsResponse)
-      .mockImplementationOnce(() => refresh.promise);
-    mocks.clearUsageLogs.mockImplementationOnce(() => cleanup.promise);
-
-    render(
-      <ThemeProvider>
-        <ToastProvider>
-          <RequestLogsPage />
-        </ToastProvider>
-      </ThemeProvider>,
-    );
-
-    await user.click(await screen.findByRole("button", { name: "Clear Database Logs" }));
-    await user.click(await screen.findByRole("button", { name: "Clear Selected Data" }));
-
-    cleanup.resolve({ deleted_logs: 0, deleted_contents: 1 });
-    await waitFor(() => expect(mocks.getUsageLogs).toHaveBeenCalledTimes(2));
-
-    await new Promise((resolve) => window.setTimeout(resolve, 220));
-
-    expect(screen.getByRole("dialog", { name: "Clear database logs?" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Clear Selected Data" })).toBeDisabled();
-
-    refresh.resolve(emptyLogsResponse);
-
-    await waitFor(() =>
-      expect(screen.queryByRole("dialog", { name: "Clear database logs?" })).not.toBeInTheDocument(),
-    );
-  });
-
-  test("explains the cleanup scope, locks content options behind records and needs one option", async () => {
-    await i18n.changeLanguage("en");
-    const user = userEvent.setup();
-    mocks.getUsageLogs.mockResolvedValue(emptyLogsResponse);
-    mocks.clearUsageLogs.mockResolvedValue({ deleted_logs: 3, deleted_contents: 3 });
-
-    render(
-      <ThemeProvider>
-        <ToastProvider>
-          <RequestLogsPage />
-        </ToastProvider>
-      </ThemeProvider>,
-    );
-
-    await user.click(await screen.findByRole("button", { name: "Clear Database Logs" }));
-    const dialog = await screen.findByRole("dialog", { name: "Clear database logs?" });
-    // 清理范围与列表筛选无关：弹窗里要明说，不能让人以为只清当前筛选出来的那些。
-    expect(within(dialog).getByText("All request logs in the current tenant")).toBeInTheDocument();
-    expect(within(dialog).getByText(/Not limited by the current filters/)).toBeInTheDocument();
-    expect(within(dialog).getByText(/request records and stats stay/)).toBeInTheDocument();
-
-    const body = within(dialog).getByRole("checkbox", { name: /Clear request\/response bodies/ });
-    const details = within(dialog).getByRole("checkbox", { name: /Clear request detail payloads/ });
-    const records = within(dialog).getByRole("checkbox", { name: /Clear request records/ });
-    const confirm = within(dialog).getByRole("button", { name: "Clear Selected Data" });
-
-    await user.click(body);
-    await user.click(details);
-    expect(confirm).toBeDisabled();
-
-    await user.click(records);
-    expect(body).toBeChecked();
-    expect(details).toBeChecked();
-    expect(body).toBeDisabled();
-    expect(within(dialog).getByText(/Request records are deleted too/)).toBeInTheDocument();
-    expect(confirm).toBeEnabled();
-
-    await user.click(confirm);
-    await waitFor(() =>
+      await waitFor(() => expect(mocks.clearUsageLogs).toHaveBeenCalledTimes(1));
       expect(mocks.clearUsageLogs).toHaveBeenCalledWith({
         clear_body_content: true,
         clear_detail_content: true,
-        clear_request_records: true,
-      }),
-    );
+        clear_request_records: false,
+      });
+      expect(await within(await findLogGrid()).findByText("Primary")).toBeInTheDocument();
+    });
+
+    test("keeps the clear dialog open until cleanup and refresh both finish", async () => {
+      const user = userEvent.setup();
+      const cleanup = deferred<{ deleted_logs: number; deleted_contents: number }>();
+      const refresh = deferred<UsageLogsResponse>();
+      mocks.getUsageLogs
+        .mockResolvedValueOnce(logsAnswer([]))
+        .mockImplementationOnce(() => refresh.promise);
+      mocks.clearUsageLogs.mockImplementationOnce(() => cleanup.promise);
+      renderRequestLogsPage();
+      await within(await findLogGrid()).findByText("No request logs yet");
+
+      await user.click(screen.getByRole("button", { name: "Clear Database Logs" }));
+      await user.click(await screen.findByRole("button", { name: "Clear Selected Data" }));
+      cleanup.resolve({ deleted_logs: 0, deleted_contents: 1 });
+
+      await waitFor(() => expect(mocks.getUsageLogs).toHaveBeenCalledTimes(2));
+      await new Promise((resolve) => window.setTimeout(resolve, 220));
+      expect(screen.getByRole("dialog", { name: "Clear database logs?" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Clear Selected Data" })).toBeDisabled();
+
+      refresh.resolve(logsAnswer([]));
+      await waitFor(() =>
+        expect(screen.queryByRole("dialog", { name: "Clear database logs?" })).toBeNull(),
+      );
+    });
+
+    test("explains the cleanup scope, locks content options behind records and needs one option", async () => {
+      const user = userEvent.setup();
+      mocks.getUsageLogs.mockResolvedValue(logsAnswer([]));
+      mocks.clearUsageLogs.mockResolvedValue({ deleted_logs: 3, deleted_contents: 3 });
+      renderRequestLogsPage();
+      await within(await findLogGrid()).findByText("No request logs yet");
+
+      await user.click(screen.getByRole("button", { name: "Clear Database Logs" }));
+      const dialog = await screen.findByRole("dialog", { name: "Clear database logs?" });
+      expect(
+        within(dialog).getByText("All request logs in the current tenant"),
+      ).toBeInTheDocument();
+      expect(within(dialog).getByText(/Not limited by the current filters/)).toBeInTheDocument();
+      expect(within(dialog).getByText(/request records and stats stay/)).toBeInTheDocument();
+
+      const body = within(dialog).getByRole("checkbox", { name: /Clear request\/response bodies/ });
+      const details = within(dialog).getByRole("checkbox", {
+        name: /Clear request detail payloads/,
+      });
+      const records = within(dialog).getByRole("checkbox", { name: /Clear request records/ });
+      const confirm = within(dialog).getByRole("button", { name: "Clear Selected Data" });
+
+      await user.click(body);
+      await user.click(details);
+      expect(confirm).toBeDisabled();
+
+      await user.click(records);
+      expect(body).toBeChecked();
+      expect(details).toBeChecked();
+      expect(body).toBeDisabled();
+      expect(within(dialog).getByText(/Request records are deleted too/)).toBeInTheDocument();
+      expect(confirm).toBeEnabled();
+
+      await user.click(confirm);
+      await waitFor(() =>
+        expect(mocks.clearUsageLogs).toHaveBeenCalledWith({
+          clear_body_content: true,
+          clear_detail_content: true,
+          clear_request_records: true,
+        }),
+      );
+    });
   });
 });

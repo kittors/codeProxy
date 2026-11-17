@@ -116,7 +116,7 @@ describe("AccessRulesTab", () => {
     // Nothing selected: no bulk affordance.
     expect(screen.queryByRole("button", { name: "ip_access.bulk_disable" })).toBeNull();
 
-    await userEvent.click(await screen.findByRole("checkbox", { name: /select_rule/ }));
+    await userEvent.click((await screen.findAllByRole("checkbox", { name: /data_grid\.select_named/ }))[0]);
     await userEvent.click(await screen.findByRole("button", { name: "ip_access.bulk_disable" }));
 
     await waitFor(() =>
@@ -141,7 +141,7 @@ describe("AccessRulesTab", () => {
     renderTab();
     await screen.findByText("45.83.0.0/16");
 
-    await userEvent.click(await screen.findByRole("checkbox", { name: "ip_access.select_all" }));
+    await userEvent.click(await screen.findByRole("checkbox", { name: "data_grid.select_page" }));
     await userEvent.click(await screen.findByRole("button", { name: "ip_access.bulk_enable" }));
 
     await waitFor(() =>
@@ -165,7 +165,7 @@ describe("AccessRulesTab", () => {
     renderTab();
     await screen.findByText("10.0.0.0/8");
 
-    await userEvent.click(await screen.findByRole("checkbox", { name: "ip_access.select_all" }));
+    await userEvent.click(await screen.findByRole("checkbox", { name: "data_grid.select_page" }));
     await userEvent.click(await screen.findByRole("button", { name: "ip_access.bulk_delete" }));
     let dialog = await screen.findByRole("dialog", {
       name: 'ip_access.bulk_delete_title:{"count":3}',

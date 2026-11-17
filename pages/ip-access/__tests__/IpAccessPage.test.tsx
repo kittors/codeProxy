@@ -101,6 +101,31 @@ describe("TrustBanner", () => {
     render(<TrustBanner status={statusFixture({ dropped_events: 42 })} />);
     expect(screen.getByText(/ip_access.banner_dropped/)).toBeInTheDocument();
   });
+
+  // 提醒是标题行里的一枚胶囊（不再是标题上方的整行横幅，那样状态读回来时会把整页往下推）：
+  // 需要处理的情况点一下去「防护策略」，补充说明既在悬停提示里，也在读屏读到的名称里。
+  test("the untrusted notice opens the protection tab and explains itself on hover", async () => {
+    const user = userEvent.setup();
+    const onOpenPolicy = vi.fn();
+    render(
+      <TrustBanner
+        status={statusFixture({ trusted: false, trusted_proxies_configured: false, client_ip: "172.17.0.1" })}
+        onOpenPolicy={onOpenPolicy}
+      />,
+    );
+    const notice = screen.getByRole("button", { name: /ip_access\.banner_untrusted/ });
+    expect(notice).toHaveAccessibleName(/ip_access\.banner_fix_hint/);
+    await user.hover(notice);
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("172.17.0.1");
+    await user.click(notice);
+    expect(onOpenPolicy).toHaveBeenCalledTimes(1);
+  });
+
+  test("a notice without a remedy is plain text, not a button", () => {
+    render(<TrustBanner status={statusFixture({ storage_available: false })} onOpenPolicy={vi.fn()} />);
+    expect(screen.getByText("ip_access.banner_no_storage")).toBeInTheDocument();
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
 });
 
 describe("ProtectionPolicyTab", () => {

@@ -5,7 +5,7 @@ import type { RoutingVirtualModel } from "@code-proxy/api-client/endpoints/routi
 import {
   Button,
   Callout,
-  DataTable,
+  DataGrid,
   FormField,
   Modal,
   SearchableSelect,
@@ -13,9 +13,11 @@ import {
   Select,
   SettingGroup,
   SettingRow,
-  TableRowActions,
+  GridRowActions,
   TextInput,
-  type DataTableColumn,
+  gridRowActionsColumn,
+  moveGridRow,
+  type DataGridColumn,
   type SearchableSelectOption,
 } from "@code-proxy/ui";
 import {
@@ -113,24 +115,25 @@ export function VirtualModelEditorModal({
 
   const weighted = draft?.weighted === true;
   const memberCount = members?.length ?? 0;
-  const columns = useMemo<DataTableColumn<VirtualModelMemberDraft>[]>(
+  // 每格都是表单控件：不要截断提示，列宽也不用拖（resizable={false} 在表格上统一关掉）。
+  const columns = useMemo<DataGridColumn<VirtualModelMemberDraft>[]>(
     () => [
       {
-        key: "position",
-        label: "#",
-        width: "w-12 min-w-12",
-        resizable: false,
+        id: "position",
+        header: "#",
+        align: "end",
+        width: 48,
         overflowTooltip: false,
-        render: (_member, index) => (
+        cell: (_member, { rowIndex: index }) => (
           <span className="text-sm tabular-nums text-ink-3">{index + 1}</span>
         ),
       },
       {
-        key: "group",
-        label: t("models_page.virtual.member_group"),
-        width: "w-48 min-w-48",
+        id: "group",
+        header: t("models_page.virtual.member_group"),
+        width: 192,
         overflowTooltip: false,
-        render: (member, index) => (
+        cell: (member, { rowIndex: index }) => (
           <Select
             value={member.group}
             onChange={(group) => updateMember(member.id, { group })}
@@ -143,10 +146,12 @@ export function VirtualModelEditorModal({
         ),
       },
       {
-        key: "model",
-        label: t("models_page.virtual.member_model"),
+        id: "model",
+        header: t("models_page.virtual.member_model"),
+        width: 220,
+        grow: true,
         overflowTooltip: false,
-        render: (member, index) => (
+        cell: (member, { rowIndex: index }) => (
           <SearchableSelect
             value={member.model}
             onChange={(model) => updateMember(member.id, { model })}
@@ -167,11 +172,11 @@ export function VirtualModelEditorModal({
       ...(weighted
         ? [
             {
-              key: "weight",
-              label: t("models_page.virtual.member_weight"),
-              width: "w-40 min-w-40",
+              id: "weight",
+              header: t("models_page.virtual.member_weight"),
+              width: 160,
               overflowTooltip: false,
-              render: (member: VirtualModelMemberDraft, index: number) => (
+              cell: (member: VirtualModelMemberDraft, { rowIndex: index }: { rowIndex: number }) => (
                 <div className="flex items-center gap-2">
                   <TextInput
                     value={member.weight}
@@ -196,14 +201,16 @@ export function VirtualModelEditorModal({
           ]
         : []),
       {
-        key: "remove",
-        label: "",
-        // 一个图标按钮加单元格左右内边距正好放下；删除和其它表格的行操作同一种按钮、红色区分。
-        width: "w-16 min-w-16",
-        resizable: false,
-        overflowTooltip: false,
-        render: (member, index) => (
-          <TableRowActions
+        id: "remove",
+        header: t("common.action"),
+        // 一个图标按钮加单元格左右内边距正好放下（表头文字只给读屏）；删除和其它表格的行操作同一种按钮、红色区分。
+        ...gridRowActionsColumn(1),
+        hideHeaderLabel: true,
+        width: 64,
+        minWidth: 64,
+        maxWidth: 64,
+        cell: (member, { rowIndex: index }) => (
+          <GridRowActions
             actions={[
               {
                 key: "remove",
@@ -367,20 +374,21 @@ export function VirtualModelEditorModal({
                 })}
               </span>
             </div>
-            <DataTable<VirtualModelMemberDraft>
+            {/* 成员的先后就是回退顺序：拖行首把手（或聚焦把手按 ↑/↓）调整。表单里的小表，不套外框、按行收高。 */}
+            <DataGrid<VirtualModelMemberDraft>
+              frame={false}
               rows={draft.members}
               columns={columns}
               rowKey={(member) => member.id}
-              virtualize={false}
-              rowHeight={52}
-              minWidth={draft.weighted ? "min-w-[760px]" : "min-w-[600px]"}
-              caption={t("models_page.virtual.members")}
-              emptyText={t("models_page.virtual.errors.members_none")}
-              columnResizable={false}
-              columnReorderable={false}
-              rowReorderable={!saving}
-              onRowsChange={(next) => onChange({ ...draft, members: next })}
-              naturalFlow
+              label={t("models_page.virtual.members")}
+              empty={{ title: t("models_page.virtual.errors.members_none") }}
+              resizable={false}
+              columnReorder={false}
+              rowReorder={{
+                disabled: saving,
+                onMove: (from, to) =>
+                  onChange({ ...draft, members: moveGridRow(draft.members, from, to) }),
+              }}
             />
             <Button
               variant="secondary"

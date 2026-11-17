@@ -4,13 +4,12 @@ import { useTranslation } from "react-i18next";
 import type { AccessFreeze } from "@code-proxy/api-client";
 import {
   Button,
-  Callout,
-  DataTable,
+  DataGrid,
+  GridRowActions,
   Modal,
   ProviderTag,
-  TABLE_ROW_ACTIONS_COLUMN,
-  TableRowActions,
-  type DataTableColumn,
+  gridRowActionsColumn,
+  type DataGridColumn,
 } from "@code-proxy/ui";
 import { FreezeThresholdSetting } from "./FreezeThresholdSetting";
 import { ReleaseFreezeModal } from "./ReleaseFreezeModal";
@@ -80,13 +79,15 @@ export function AccessFreezeOverviewModal({
     [endUserName, t],
   );
 
-  const columns = useMemo<DataTableColumn<AccessFreeze>[]>(
+  const columns = useMemo<DataGridColumn<AccessFreeze>[]>(
     () => [
       {
-        key: "subject",
-        label: t("access_freeze.col_subject"),
-        width: "w-40 min-w-[9rem]",
-        render: (row) => {
+        id: "subject",
+        header: t("access_freeze.col_subject"),
+        width: 160,
+        minWidth: 144,
+        grow: true,
+        cell: (row) => {
           const subject = subjectOf(row);
           return (
             <div className="min-w-0">
@@ -103,42 +104,50 @@ export function AccessFreezeOverviewModal({
         },
       },
       {
-        key: "provider",
-        label: t("access_freeze.col_provider"),
-        width: "w-32 min-w-[7rem]",
-        render: (row) => (
+        id: "provider",
+        header: t("access_freeze.col_provider"),
+        width: 128,
+        minWidth: 112,
+        cell: (row) => (
           <ProviderTag vendor={row.provider} withLogo>
             {freezeProviderName(t, row)}
           </ProviderTag>
         ),
       },
       {
-        key: "model",
-        label: t("access_freeze.col_model"),
-        width: "w-36 min-w-[8rem]",
-        cellClassName: "font-mono text-xs text-ink-2",
-        render: (row) => row.model || "—",
+        id: "model",
+        header: t("access_freeze.col_model"),
+        width: 144,
+        minWidth: 128,
+        cell: (row) => (
+          <span className="truncate font-mono text-xs text-ink-2">{row.model || "—"}</span>
+        ),
       },
       {
-        key: "frozen_at",
-        label: t("access_freeze.col_frozen_at"),
-        width: "w-[184px] min-w-[170px]",
-        cellClassName: "whitespace-nowrap tabular-nums text-ink-2",
-        render: (row) => formatFreezeTime(row.frozen_at, language),
+        id: "frozen_at",
+        header: t("access_freeze.col_frozen_at"),
+        width: 184,
+        minWidth: 170,
+        cell: (row) => (
+          <span className="truncate whitespace-nowrap tabular-nums text-ink-2">
+            {formatFreezeTime(row.frozen_at, language)}
+          </span>
+        ),
       },
       {
-        key: "strikes",
-        label: t("access_freeze.col_strikes"),
-        width: "w-24 min-w-[5rem]",
-        cellClassName: "tabular-nums text-ink-2",
-        render: (row) => row.strike_count,
+        id: "strikes",
+        header: t("access_freeze.col_strikes"),
+        align: "end",
+        width: 96,
+        minWidth: 80,
+        cell: (row) => <span className="tabular-nums text-ink-2">{row.strike_count}</span>,
       },
       {
-        key: "actions",
-        label: t("common.action"),
-        ...TABLE_ROW_ACTIONS_COLUMN,
-        render: (row) => (
-          <TableRowActions
+        id: "actions",
+        header: t("common.action"),
+        ...gridRowActionsColumn(2),
+        cell: (row) => (
+          <GridRowActions
             moreLabel={t("common.more_actions")}
             actions={[
               {
@@ -198,31 +207,20 @@ export function AccessFreezeOverviewModal({
                 {freezes.length}
               </span>
             </h3>
-            {error ? (
-              <Callout
-                tone="danger"
-                role="alert"
-                title={t("access_freeze.load_failed")}
-                actions={
-                  <Button size="sm" variant="secondary" onClick={() => void refresh()}>
-                    {t("common.retry")}
-                  </Button>
-                }
-              >
-                {describeFreezeError(t, error, t("access_freeze.load_failed"))}
-              </Callout>
-            ) : (
-              <DataTable
-                columns={columns}
-                rows={freezes}
-                rowKey={(row) => String(row.id)}
-                loading={loading && freezes.length === 0}
-                emptyText={t("access_freeze.overview_empty")}
-                maxHeight="max-h-[360px]"
-                // 弹窗内容区在 1280px 视口下约 870px：最小宽度比它小，操作列才不会被挤到横向滚动区外。
-                minWidth="min-w-[820px]"
-              />
-            )}
+            {/* 弹窗里的小表：不套外框，按行收高、最高 360px 后表内滚动；读取失败也落在同一个框里，
+                表头不消失，「重试」就在原处。 */}
+            <DataGrid
+              frame={false}
+              label={t("access_freeze.overview_active_title")}
+              columns={columns}
+              rows={freezes}
+              rowKey={(row) => String(row.id)}
+              loading={loading && freezes.length === 0}
+              error={error ? describeFreezeError(t, error, t("access_freeze.load_failed")) : null}
+              onRetry={() => void refresh()}
+              empty={{ title: t("access_freeze.overview_empty") }}
+              maxHeight="360px"
+            />
           </section>
         </div>
       </Modal>

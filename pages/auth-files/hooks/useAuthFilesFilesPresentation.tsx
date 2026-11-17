@@ -16,9 +16,8 @@ import { formatLatency } from "@features/provider-latency";
 import { AuthFileSuccessRateCell } from "../components/AuthFileSuccessRateCell";
 import { AuthFilePlanBadge } from "../components/AuthFilePlanBadge";
 import { ProviderTag, Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
-import { COLUMN_WIDTH, HoverTooltip } from "@code-proxy/ui";
-import { ToggleSwitch } from "@code-proxy/ui";
-import { TABLE_ROW_ACTIONS_COLUMN, TableRowActions, type DataTableColumn } from "@code-proxy/ui";
+import { GRID_ROW_ACTIONS_COLUMN, GRID_WIDTH, GridRowActions, HoverTooltip } from "@code-proxy/ui";
+import { ToggleSwitch, type DataGridColumn } from "@code-proxy/ui";
 import {
   type FilesViewMode,
   type UsageIndex,
@@ -52,8 +51,6 @@ import {
   CLAUDE_OAUTH_HEALTH_TONE_CLASSES,
   KNOWN_QUOTA_TEXT_KEYS,
   RESTRICTION_TONE_CLASSES,
-  STICKY_ACTIONS_CELL_CLASS,
-  STICKY_ACTIONS_HEADER_CLASS,
   SUBSCRIPTION_TONE_CLASSES,
 } from "./presentationStyles";
 
@@ -415,54 +412,58 @@ export function useAuthFilesFilesPresentation({
     formatQuotaItemDetailTextShort,
   );
 
-  const fileColumns = useMemo<DataTableColumn<AuthFileItem>[]>(() => {
+  const fileColumns = useMemo<DataGridColumn<AuthFileItem>[]>(() => {
     return [
       {
-        key: "select",
-        label: "",
-        width: COLUMN_WIDTH.checkbox,
-        headerClassName: "text-center",
-        cellClassName: "text-center",
-        headerRender: () => (
-          <div className="flex items-center justify-center">
-            <input
-              type="checkbox"
-              aria-label={t("auth_files.select_current_page")}
-              checked={allPageSelected}
-              disabled={selectablePageNames.length === 0}
-              ref={(node) => {
-                if (node) node.indeterminate = somePageSelected;
-              }}
-              onChange={(event) => selectCurrentPage(event.currentTarget.checked)}
-              className="h-4 w-4 accent-accent disabled:cursor-not-allowed disabled:opacity-40"
-            />
-          </div>
+        // 勾选列自己画：运行时虚拟账号没有文件、不能批量操作，那一行没有勾选框；
+        // 表头勾选框只管当前页可勾选的行（DataGrid 的 selectable 还不支持逐行禁用）。
+        id: "select",
+        header: t("auth_files.select_current_page"),
+        hideHeaderLabel: true,
+        pin: "start",
+        align: "center",
+        width: 44,
+        minWidth: 44,
+        maxWidth: 44,
+        resizable: false,
+        hideable: false,
+        overflowTooltip: false,
+        skeleton: "box",
+        headerAccessory: (
+          <input
+            type="checkbox"
+            aria-label={t("auth_files.select_current_page")}
+            checked={allPageSelected}
+            disabled={selectablePageNames.length === 0}
+            ref={(node) => {
+              if (node) node.indeterminate = somePageSelected;
+            }}
+            onChange={(event) => selectCurrentPage(event.currentTarget.checked)}
+            className="h-4 w-4 accent-accent disabled:cursor-not-allowed disabled:opacity-40"
+          />
         ),
-        render: (file) => {
+        cell: (file) => {
           if (isRuntimeOnlyAuthFile(file)) {
             return <span className="text-xs text-ink-3">--</span>;
           }
-          const checked = selectedFileNameSet.has(file.name);
           return (
-            <div className="flex items-center justify-center">
-              <input
-                type="checkbox"
-                aria-label={t("auth_files.select_file", {
-                  name: resolveAuthFileDisplayName(file) || file.name,
-                })}
-                checked={checked}
-                onChange={(event) => toggleFileSelection(file.name, event.currentTarget.checked)}
-                className="h-4 w-4 accent-accent"
-              />
-            </div>
+            <input
+              type="checkbox"
+              aria-label={t("auth_files.select_file", {
+                name: resolveAuthFileDisplayName(file) || file.name,
+              })}
+              checked={selectedFileNameSet.has(file.name)}
+              onChange={(event) => toggleFileSelection(file.name, event.currentTarget.checked)}
+              className="h-4 w-4 accent-accent"
+            />
           );
         },
       },
       {
-        key: "name",
-        label: t("auth_files.col_name"),
-        width: COLUMN_WIDTH.nameStacked,
-        render: (file) => {
+        id: "name",
+        header: t("auth_files.col_name"),
+        width: GRID_WIDTH.nameStacked,
+        cell: (file) => {
           const supplementalTags = resolveAuthFileSupplementalTags(
             file,
             quotaByFileName[file.name],
@@ -497,10 +498,10 @@ export function useAuthFilesFilesPresentation({
         },
       },
       {
-        key: "type",
-        label: t("auth_files.col_type"),
-        width: COLUMN_WIDTH.badgeStacked,
-        render: (file) => {
+        id: "type",
+        header: t("auth_files.col_type"),
+        width: GRID_WIDTH.badgeStacked,
+        cell: (file) => {
           const typeKey = resolveFileType(file);
           const authIndex = normalizeAuthIndexValue(file.auth_index ?? file.authIndex);
           const basePlanType = resolveAuthFilePlanType(file, quotaByFileName[file.name]);
@@ -535,29 +536,29 @@ export function useAuthFilesFilesPresentation({
         },
       },
       {
-        key: "subscription",
-        label: t("auth_files.col_subscription"),
-        width: COLUMN_WIDTH.metric,
-        render: (file) =>
+        id: "subscription",
+        header: t("auth_files.col_subscription"),
+        width: GRID_WIDTH.metric,
+        cell: (file) =>
           renderSubscriptionBadge(file) ?? (
             <span className="text-xs text-slate-400 dark:text-white/40">--</span>
           ),
       },
       {
-        key: "modified",
-        label: t("auth_files.file_modified"),
-        width: COLUMN_WIDTH.metric,
-        render: (file) => (
+        id: "modified",
+        header: t("auth_files.file_modified"),
+        width: GRID_WIDTH.metric,
+        cell: (file) => (
           <span className="text-xs tabular-nums text-slate-700 dark:text-white/70">
             {formatModified(file)}
           </span>
         ),
       },
       {
-        key: "connectivity",
-        label: t("auth_files.col_connectivity"),
-        width: COLUMN_WIDTH.metric,
-        render: (file) => {
+        id: "connectivity",
+        header: t("auth_files.col_connectivity"),
+        width: GRID_WIDTH.metric,
+        cell: (file) => {
           const state = connectivityState.get(file.name);
           return (
             <button
@@ -582,12 +583,11 @@ export function useAuthFilesFilesPresentation({
         },
       },
       {
-        key: "cycle_calls",
-        label: t("auth_files.col_cycle_calls"),
-        width: COLUMN_WIDTH.numericWide,
-        headerClassName: "text-right",
-        cellClassName: "text-right",
-        render: (file) => {
+        id: "cycle_calls",
+        header: t("auth_files.col_cycle_calls"),
+        width: GRID_WIDTH.numericWide,
+        align: "end",
+        cell: (file) => {
           const authIndex = normalizeAuthIndexValue(file.auth_index ?? file.authIndex);
           const calls = authIndex ? cycleCallsByAuthIndex[authIndex] : undefined;
           return (
@@ -604,12 +604,11 @@ export function useAuthFilesFilesPresentation({
         },
       },
       {
-        key: "success",
-        label: t("common.success"),
-        width: COLUMN_WIDTH.numeric,
-        headerClassName: "text-right",
-        cellClassName: "text-right",
-        render: (file) => {
+        id: "success",
+        header: t("common.success"),
+        width: GRID_WIDTH.numeric,
+        align: "end",
+        cell: (file) => {
           const stats = resolveAuthFileStats(file, usageIndex);
           const hasUsage = stats.success + stats.failure > 0;
           return (
@@ -620,12 +619,11 @@ export function useAuthFilesFilesPresentation({
         },
       },
       {
-        key: "failure",
-        label: t("common.failure"),
-        width: COLUMN_WIDTH.numeric,
-        headerClassName: "text-right",
-        cellClassName: "text-right",
-        render: (file) => {
+        id: "failure",
+        header: t("common.failure"),
+        width: GRID_WIDTH.numeric,
+        align: "end",
+        cell: (file) => {
           const stats = resolveAuthFileStats(file, usageIndex);
           const hasUsage = stats.success + stats.failure > 0;
           return (
@@ -636,10 +634,10 @@ export function useAuthFilesFilesPresentation({
         },
       },
       {
-        key: "rate",
-        label: t("common.success_rate"),
-        width: COLUMN_WIDTH.metric,
-        render: (file) => (
+        id: "rate",
+        header: t("common.success_rate"),
+        width: GRID_WIDTH.metric,
+        cell: (file) => (
           <AuthFileSuccessRateCell
             data={resolveAuthFileStatusBar(file, usageIndex)}
             ready={statusUsageReady}
@@ -648,14 +646,13 @@ export function useAuthFilesFilesPresentation({
         ),
       },
       {
-        key: "quota",
-        label: t("auth_files.col_quota"),
-        width: COLUMN_WIDTH.composite, // chips 两列排布约 290px 够用；36rem 是旧进度条布局的尺寸
-        minWidthPx: 288,
-        maxWidthPx: 640,
+        id: "quota",
+        header: t("auth_files.col_quota"),
+        width: 352, // chips 两列约需 290 实际像素（352×0.9≈317 含内边距）；composite 304 会把 chip 标签挤成 0 宽
+        minWidth: 336,
+        maxWidth: 712,
         overflowTooltip: false,
-        headerClassName: "text-center",
-        render: (file) => (
+        cell: (file) => (
           <AuthFileQuotaCell
             provider={resolveQuotaProvider(file)}
             state={quotaByFileName[file.name] ?? { status: "idle", items: [] }}
@@ -673,12 +670,11 @@ export function useAuthFilesFilesPresentation({
         ),
       },
       {
-        key: "enabled",
-        label: t("auth_files.enable"),
-        width: COLUMN_WIDTH.toggle,
-        headerClassName: "text-center",
-        cellClassName: "text-center",
-        render: (file) => {
+        id: "enabled",
+        header: t("auth_files.enable"),
+        width: GRID_WIDTH.toggle,
+        align: "center",
+        cell: (file) => {
           if (isRuntimeOnlyAuthFile(file)) {
             return <span className="text-xs text-ink-3">--</span>;
           }
@@ -693,13 +689,10 @@ export function useAuthFilesFilesPresentation({
         },
       },
       {
-        key: "actions",
-        label: t("common.action"),
-        ...TABLE_ROW_ACTIONS_COLUMN,
-        lockOrder: "end",
-        headerClassName: STICKY_ACTIONS_HEADER_CLASS,
-        cellClassName: STICKY_ACTIONS_CELL_CLASS,
-        render: (file) => {
+        id: "actions",
+        header: t("common.action"),
+        ...GRID_ROW_ACTIONS_COLUMN,
+        cell: (file) => {
           if (isRuntimeOnlyAuthFile(file)) {
             return (
               <span className="text-xs text-slate-500 dark:text-white/55">
@@ -729,7 +722,7 @@ export function useAuthFilesFilesPresentation({
               : t("auth_files.reset_credit_no_credits");
 
           return (
-            <TableRowActions
+            <GridRowActions
               moreLabel={t("common.more_actions")}
               actions={[
                 // Keep high-frequency open/edit actions inline; overflow rarer ops.

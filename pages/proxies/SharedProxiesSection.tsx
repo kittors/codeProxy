@@ -8,11 +8,11 @@ import {
 } from "@code-proxy/api-client/endpoints/proxies";
 import {
   Card,
-  COLUMN_WIDTH,
-  DataTable,
-  TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
-  TableRowActions,
-  type DataTableColumn,
+  DataGrid,
+  GRID_WIDTH,
+  GridRowActions,
+  gridRowActionsColumn,
+  type DataGridColumn,
 } from "@code-proxy/ui";
 import {
   proxyEndpoint,
@@ -45,13 +45,13 @@ export function SharedProxiesSection({
   const { t } = useTranslation();
   const rows = useMemo(() => [...entries].sort((a, b) => a.name.localeCompare(b.name)), [entries]);
 
-  const columns = useMemo<DataTableColumn<SharedProxyEntry>[]>(
+  const columns = useMemo<DataGridColumn<SharedProxyEntry>[]>(
     () => [
       {
-        key: "name",
-        label: t("proxies.name"),
-        width: COLUMN_WIDTH.nameStacked,
-        render: (entry) => (
+        id: "name",
+        header: t("proxies.name"),
+        width: GRID_WIDTH.nameStacked,
+        cell: (entry) => (
           <div className="min-w-0">
             <div className="flex min-w-0 items-center gap-1.5">
               <p className="truncate font-semibold text-ink">{entry.name}</p>
@@ -69,10 +69,10 @@ export function SharedProxiesSection({
         ),
       },
       {
-        key: "endpoint",
-        label: t("proxies.endpoint_label"),
-        width: COLUMN_WIDTH.badgeGroup,
-        render: (entry) => (
+        id: "endpoint",
+        header: t("proxies.endpoint_label"),
+        width: GRID_WIDTH.badgeGroup,
+        cell: (entry) => (
           <div className="flex min-w-0 items-center gap-2">
             <span className="rounded-full bg-ink/[0.05] px-2 py-0.5 text-xs font-semibold text-ink-2 dark:bg-white/[0.07]">
               {proxyProtocol(entry.maskedUrl)}
@@ -82,10 +82,10 @@ export function SharedProxiesSection({
         ),
       },
       {
-        key: "enabled",
-        label: t("proxies.shared_status_label"),
-        width: COLUMN_WIDTH.badge,
-        render: (entry) =>
+        id: "enabled",
+        header: t("proxies.shared_status_label"),
+        width: GRID_WIDTH.badge,
+        cell: (entry) =>
           entry.enabled ? (
             <span className="text-xs text-ink-2">{t("proxies.shared_status_enabled")}</span>
           ) : (
@@ -95,10 +95,10 @@ export function SharedProxiesSection({
           ),
       },
       {
-        key: "status",
-        label: t("proxies.latency"),
-        width: COLUMN_WIDTH.badgeStacked,
-        render: (entry) =>
+        id: "status",
+        header: t("proxies.latency"),
+        width: GRID_WIDTH.badgeStacked,
+        cell: (entry) =>
           entry.overridden ? (
             <span className="text-xs text-ink-3">--</span>
           ) : (
@@ -108,11 +108,11 @@ export function SharedProxiesSection({
       ...(egress
         ? [
             {
-              key: "egress",
-              label: t("proxies.egress_column"),
-              width: COLUMN_WIDTH.name,
+              id: "egress",
+              header: t("proxies.egress_column"),
+              width: GRID_WIDTH.name,
               // 被覆盖的共享代理本租户的账号用不到，停用的不承载流量，都没有熔断可言。
-              render: (entry: SharedProxyEntry) =>
+              cell: (entry: SharedProxyEntry) =>
                 entry.enabled && !entry.overridden ? (
                   <ProxyEgressCell
                     known={egress.known}
@@ -125,22 +125,22 @@ export function SharedProxiesSection({
           ]
         : []),
       {
-        key: "description",
-        label: t("proxies.remark_label"),
-        width: COLUMN_WIDTH.badgeGroup,
-        render: (entry) => (
+        id: "description",
+        header: t("proxies.remark_label"),
+        width: GRID_WIDTH.badgeGroup,
+        cell: (entry) => (
           <p className="truncate text-xs text-ink-2">{entry.description || "--"}</p>
         ),
       },
       {
-        key: "actions",
-        label: t("proxies.actions"),
-        ...TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
-        render: (entry) => {
+        id: "actions",
+        header: t("proxies.actions"),
+        ...gridRowActionsColumn(1),
+        cell: (entry) => {
           const checking = Boolean(checkState[entry.id]?.checking);
           const label = t("proxies.check_label", { name: entry.name });
           return (
-            <TableRowActions
+            <GridRowActions
               actions={[
                 {
                   key: "check",
@@ -165,17 +165,15 @@ export function SharedProxiesSection({
       title={t("proxies.shared_section_title")}
       description={t("proxies.shared_section_desc")}
     >
-      <DataTable<SharedProxyEntry>
-        tableId="proxy-pool-shared"
+      {/* 页面在有共享分区时随内容流动：这张表按行收高，最高四成屏高，超出在表内滚动。 */}
+      <DataGrid<SharedProxyEntry>
+        id="proxy-pool-shared"
+        label={t("proxies.shared_table_caption")}
         rows={rows}
         columns={columns}
         rowKey={(entry) => entry.id}
-        rowHeight={56}
-        maxHeight="max-h-[40vh]"
-        minWidth="min-w-[960px]"
-        caption={t("proxies.shared_table_caption")}
-        emptyText={t("proxies.shared_section_title")}
-        showAllLoadedMessage={false}
+        maxHeight="40vh"
+        empty={{ title: t("proxies.shared_section_title") }}
       />
     </Card>
   );

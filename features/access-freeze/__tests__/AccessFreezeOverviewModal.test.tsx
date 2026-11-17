@@ -211,7 +211,8 @@ describe("AccessFreezeOverviewModal", () => {
     renderOverview(overview);
     const dialog = await screen.findByRole("dialog", { name: "Upstream freezes" });
     const alert = within(dialog).getByRole("alert");
-    expect(alert).toHaveTextContent("Could not load the upstream freezes");
+    // 读取失败落在表格自己的错误态里：表头还在，原因和「重试」在表体中间。
+    expect(alert).toHaveTextContent("Couldn't load the data");
     expect(alert).toHaveTextContent("offline");
     await userEvent.click(within(alert).getByRole("button", { name: "Retry" }));
     expect(overview.refresh).toHaveBeenCalledTimes(2);

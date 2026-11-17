@@ -14,7 +14,7 @@ function resolve(resource: Record<string, unknown>, key: string): unknown {
   return cur;
 }
 
-// Keys used as DataTable column labels (uppercase CSS would expose missing keys loudly).
+// Keys used as table column labels (uppercase CSS would expose missing keys loudly).
 const REQUIRED_KEYS = [
   "providers.model_alias",
   "providers.real_model_id",

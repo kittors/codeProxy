@@ -91,11 +91,12 @@ export function ManageKeysTabContent({
             accessPolicy
               ? [
                   {
-                    key: "rules",
-                    label: t("access_policy.col_model_policy"),
-                    width: "w-40 min-w-[9rem]",
+                    id: "rules",
+                    header: t("access_policy.col_model_policy"),
+                    width: 160,
+                    minWidth: 144,
                     overflowTooltip: false,
-                    render: (row) => <PolicyBadges rules={row["model-rules"]} usage={row["quota-usage"]} />,
+                    cell: (row) => <PolicyBadges rules={row["model-rules"]} usage={row["quota-usage"]} />,
                   },
                 ]
               : undefined

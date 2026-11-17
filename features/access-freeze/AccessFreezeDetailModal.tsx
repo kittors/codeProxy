@@ -9,12 +9,12 @@ import {
 import {
   Button,
   Callout,
-  DataTable,
+  DataGrid,
   DetailList,
   Modal,
   ProviderTag,
   SkeletonLines,
-  type DataTableColumn,
+  type DataGridColumn,
   type DetailItem,
 } from "@code-proxy/ui";
 import {
@@ -138,54 +138,64 @@ function ReleasedFreezeRow({ freeze }: { freeze: AccessFreeze }) {
   );
 }
 
-const CELL = "whitespace-nowrap tabular-nums text-ink-2";
+/** 等宽小字的取值（模型、上游账号、请求 ID）：截断时悬停看全文。 */
+const mono = (value: string | null | undefined) => (
+  <span className="truncate font-mono text-xs text-ink-2">{value || "—"}</span>
+);
 
 /** 每次被上游拒绝的证据：冻结是据此做出的，管理员解冻前要看的也是它。 */
 function strikeColumns(
   t: Translate,
   language: string | undefined,
-): DataTableColumn<AccessFreezeStrike>[] {
+): DataGridColumn<AccessFreezeStrike>[] {
   return [
     {
-      key: "created_at",
-      label: t("access_freeze.col_time"),
-      width: "w-[184px] min-w-[170px]",
-      cellClassName: CELL,
-      render: (row) => formatFreezeTime(row.created_at, language),
+      id: "created_at",
+      header: t("access_freeze.col_time"),
+      width: 184,
+      minWidth: 170,
+      cell: (row) => (
+        <span className="truncate whitespace-nowrap tabular-nums text-ink-2">
+          {formatFreezeTime(row.created_at, language)}
+        </span>
+      ),
     },
     {
-      key: "provider",
-      label: t("access_freeze.col_provider"),
-      width: "w-28 min-w-[6rem]",
-      render: (row) => freezeProviderName(t, row),
+      id: "provider",
+      header: t("access_freeze.col_provider"),
+      width: 112,
+      minWidth: 96,
+      cell: (row) => freezeProviderName(t, row),
     },
     {
-      key: "model",
-      label: t("access_freeze.col_model"),
-      width: "w-36 min-w-[7rem]",
-      cellClassName: "font-mono text-xs text-ink-2",
-      render: (row) => row.model || "—",
+      id: "model",
+      header: t("access_freeze.col_model"),
+      width: 144,
+      minWidth: 112,
+      cell: (row) => mono(row.model),
     },
     {
-      key: "message",
-      label: t("access_freeze.col_message"),
-      width: "w-48 min-w-[10rem]",
-      cellClassName: "text-ink-2",
-      render: (row) => row.upstream_message || "—",
+      id: "message",
+      header: t("access_freeze.col_message"),
+      // 上游原话最长，吃掉弹窗里剩下的宽度；放不下时截断，悬停看全文。
+      width: 192,
+      minWidth: 160,
+      grow: true,
+      cell: (row) => <span className="truncate text-ink-2">{row.upstream_message || "—"}</span>,
     },
     {
-      key: "auth_label",
-      label: t("access_freeze.col_upstream_account"),
-      width: "w-40 min-w-[8rem]",
-      cellClassName: "font-mono text-xs text-ink-2",
-      render: (row) => row.auth_label || "—",
+      id: "auth_label",
+      header: t("access_freeze.col_upstream_account"),
+      width: 160,
+      minWidth: 128,
+      cell: (row) => mono(row.auth_label),
     },
     {
-      key: "request_id",
-      label: t("access_freeze.col_request_id"),
-      width: "w-32 min-w-[6rem]",
-      cellClassName: "font-mono text-xs text-ink-2",
-      render: (row) => row.request_id || "—",
+      id: "request_id",
+      header: t("access_freeze.col_request_id"),
+      width: 128,
+      minWidth: 96,
+      cell: (row) => mono(row.request_id),
     },
   ];
 }
@@ -344,14 +354,16 @@ export function AccessFreezeDetailModal({
               <h3 id={`${headingId}-strikes`} className="mb-2 text-sm font-medium text-ink">
                 {t("access_freeze.strikes_title")}
               </h3>
-              <DataTable
+              {/* 弹窗里的小表：不再套外框（不要卡中卡），按行收高、最高 320px 后在表内滚动；
+                  列宽合计约 920 设计像素，放得进约 870px 的弹窗内容区，长的上游原话截断并带悬浮提示。 */}
+              <DataGrid
+                frame={false}
+                label={t("access_freeze.strikes_title")}
                 columns={columns}
                 rows={data.strikes}
                 rowKey={(row) => String(row.id)}
-                emptyText={t("access_freeze.strikes_empty")}
-                maxHeight="max-h-[320px]"
-                // 与总览同理：放得进约 870px 的弹窗内容区，长的上游原话在单元格里截断并带悬浮提示。
-                minWidth="min-w-[860px]"
+                empty={{ title: t("access_freeze.strikes_empty") }}
+                maxHeight="320px"
               />
             </section>
           </div>

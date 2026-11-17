@@ -3,15 +3,16 @@ import { useTranslation } from "react-i18next";
 import { Pencil, Search, Trash2 } from "lucide-react";
 import type { WordPolicyLimits, WordRuleKind } from "@code-proxy/api-client";
 import {
-  COLUMN_WIDTH,
-  DataTable,
-  PaginationBar,
+  Button,
+  DataGrid,
+  DataGridPagination,
+  GRID_ROW_ACTIONS_COLUMN,
+  GRID_WIDTH,
   Select,
-  TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
-  TableRowActions,
+  GridRowActions,
   TextInput,
   ToggleSwitch,
-  type DataTableColumn,
+  type DataGridColumn,
 } from "@code-proxy/ui";
 import { filterRules, type DraftRule } from "./wordPolicyModel";
 
@@ -103,13 +104,13 @@ export function WordRuleTable({
   );
   const regexCount = useMemo(() => rules.filter((rule) => rule.kind === "regex").length, [rules]);
 
-  const columns = useMemo<DataTableColumn<DraftRule>[]>(
+  const columns = useMemo<DataGridColumn<DraftRule>[]>(
     () => [
       {
-        key: "pattern",
-        label: t("content_moderation.words.col_pattern"),
-        width: COLUMN_WIDTH.composite,
-        render: (rule) => {
+        id: "pattern",
+        header: t("content_moderation.words.col_pattern"),
+        width: GRID_WIDTH.composite,
+        cell: (rule) => {
           const problem = problems.get(rule.key);
           // 绝大多数规则是关键词：只给正则挂类型标签，免得每一行都重复「关键词」三个字。
           return (
@@ -151,17 +152,17 @@ export function WordRuleTable({
         },
       },
       {
-        key: "note",
-        label: t("content_moderation.words.col_note"),
-        width: COLUMN_WIDTH.name,
-        cellClassName: "text-xs text-ink-2",
-        render: (rule) => rule.note ?? "",
+        id: "note",
+        header: t("content_moderation.words.col_note"),
+        width: GRID_WIDTH.name,
+        className: "text-xs text-ink-2",
+        cell: (rule) => rule.note ?? "",
       },
       {
-        key: "enabled",
-        label: t("content_moderation.words.col_enabled"),
-        width: COLUMN_WIDTH.toggle,
-        render: (rule) => (
+        id: "enabled",
+        header: t("content_moderation.words.col_enabled"),
+        width: GRID_WIDTH.toggle,
+        cell: (rule) => (
           <ToggleSwitch
             checked={rule.enabled}
             disabled={readOnly}
@@ -174,11 +175,11 @@ export function WordRuleTable({
         ? []
         : [
             {
-              key: "actions",
-              label: t("content_moderation.actions"),
-              ...TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
-              render: (rule: DraftRule) => (
-                <TableRowActions
+              id: "actions",
+              header: t("content_moderation.actions"),
+              ...GRID_ROW_ACTIONS_COLUMN,
+              cell: (rule: DraftRule) => (
+                <GridRowActions
                   moreLabel={t("content_moderation.more_actions")}
                   actions={[
                     {
@@ -197,7 +198,7 @@ export function WordRuleTable({
                   ]}
                 />
               ),
-            } satisfies DataTableColumn<DraftRule>,
+            } satisfies DataGridColumn<DraftRule>,
           ]),
     ],
     [onDelete, onEdit, onToggle, problems, readOnly, t, unbounded],
@@ -245,48 +246,51 @@ export function WordRuleTable({
         </p>
       </div>
 
-      <DataTable<DraftRule>
+      <DataGrid<DraftRule>
         fill
-        tableId="word-policy-rules"
+        id="word-policy-rules"
+        label={t("content_moderation.words.table_caption")}
         rows={pageRules}
         columns={columns}
         rowKey={(rule) => rule.key}
-        virtualize={false}
-        columnResizable={false}
-        columnReorderable={false}
-        minWidth="min-w-[760px]"
-        caption={t("content_moderation.words.table_caption")}
-        emptyText={
+        resizable={false}
+        columnReorder={false}
+        empty={
           rules.length === 0
-            ? t("content_moderation.words.empty_rules")
-            : t("content_moderation.words.no_match")
+            ? {
+                title: t("content_moderation.words.empty_rules"),
+                description: readOnly ? undefined : t("content_moderation.words.empty_rules_hint"),
+              }
+            : {
+                title: t("content_moderation.words.no_match"),
+                action: (
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setQuery("");
+                      setKind("all");
+                      setPage(1);
+                    }}
+                  >
+                    {t("common.clear_filters")}
+                  </Button>
+                ),
+              }
         }
-        emptyDescription={
-          rules.length === 0 && !readOnly
-            ? t("content_moderation.words.empty_rules_hint")
-            : undefined
+        // 有问题的规则整行淡红。
+        rowTone={(rule) => (problems.has(rule.key) ? "danger" : undefined)}
+        resetScrollKey={`${current}|${kind}|${query}`}
+        // 分页一直在：筛选让条数跨过一页时，框的高度不会因为分页出现、消失而跳动。
+        footer={
+          <DataGridPagination
+            page={current}
+            pageSize={PAGE_SIZE}
+            total={filtered.length}
+            onPageChange={setPage}
+          />
         }
-        showAllLoadedMessage={false}
-        rowClassName={(rule) => (problems.has(rule.key) ? "bg-rose-500/[0.05]" : "")}
       />
 
-      {filtered.length > PAGE_SIZE ? (
-        <PaginationBar
-          currentPage={current}
-          totalPages={totalPages}
-          totalCount={filtered.length}
-          pageSize={PAGE_SIZE}
-          onPageChange={setPage}
-          labels={{
-            firstPage: t("content_moderation.first_page"),
-            previousPage: t("content_moderation.previous_page"),
-            nextPage: t("content_moderation.next_page"),
-            lastPage: t("content_moderation.last_page"),
-            pageInfo: ({ start, end, total }) =>
-              t("content_moderation.page_info", { start, end, total }),
-          }}
-        />
-      ) : null}
     </div>
   );
 }

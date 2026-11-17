@@ -39,16 +39,18 @@ const t = (key: string) => {
 };
 
 describe("OwnedApiKeysTable", () => {
-  test("shows loading state instead of empty while first fetch is in flight", () => {
+  test("shows a skeleton instead of empty while first fetch is in flight", () => {
     render(<OwnedApiKeysTable t={t} keys={[]} loading actions={{}} />);
-    expect(screen.getByRole("status")).toHaveTextContent("Loading…");
+    // 首次加载是表格自己的骨架：同一个框，数据回来不跳
+    expect(screen.getByRole("table", { name: "Owned keys" })).toHaveAttribute("aria-busy", "true");
     expect(screen.queryByText("No API keys")).not.toBeInTheDocument();
   });
 
   test("shows empty state only after loading finishes with no keys", () => {
     render(<OwnedApiKeysTable t={t} keys={[]} loading={false} actions={{}} />);
     expect(screen.getByText("No API keys")).toBeInTheDocument();
-    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(screen.getByText("Create the first key.")).toBeInTheDocument();
+    expect(screen.getByRole("table", { name: "Owned keys" })).not.toHaveAttribute("aria-busy");
   });
 
   test("allows a parent viewport to make the table fill its available height", () => {
@@ -69,12 +71,13 @@ describe("OwnedApiKeysTable", () => {
           },
         ]}
         actions={{}}
-        height="h-full"
-        minHeight="min-h-full"
+        fill
       />,
     );
 
-    expect(container.firstElementChild).toHaveClass("h-full", "min-h-full");
+    expect(container.firstElementChild).toHaveAttribute("data-fill", "true");
+    // 嵌在卡片和弹窗里：不再套一层外框
+    expect(container.firstElementChild).not.toHaveClass("cp-grid-frame");
   });
   test("exposes period reset and reset history for an owned week-only key", async () => {
     const row = {
@@ -105,14 +108,14 @@ describe("OwnedApiKeysTable", () => {
       },
     });
 
-    const resetCountColumn = columns.find((column) => column.key === "resetCount");
+    const resetCountColumn = columns.find((column) => column.id === "resetCount");
     expect(resetCountColumn).toBeDefined();
 
-    const actionsColumn = columns.find((column) => column.key === "actions");
+    const actionsColumn = columns.find((column) => column.id === "actions");
     render(
       <div>
-        {resetCountColumn?.render(row, 0)}
-        {actionsColumn?.render(row, 0)}
+        {resetCountColumn?.cell(row, { rowIndex: 0, selected: false, expanded: false })}
+        {actionsColumn?.cell(row, { rowIndex: 0, selected: false, expanded: false })}
       </div>,
     );
 
@@ -130,13 +133,15 @@ describe("OwnedApiKeysTable", () => {
 describe("createOwnedApiKeyColumns", () => {
   test("disables overflow tooltip on secret and actions columns", () => {
     const columns = createOwnedApiKeyColumns({ t, actions: {} });
-    expect(columns.find((column) => column.key === "key")?.overflowTooltip).toBe(false);
-    expect(columns.find((column) => column.key === "actions")?.overflowTooltip).toBe(false);
-    expect(columns.find((column) => column.key === "actions")?.width).toBe(
-      "w-40 min-w-40 max-w-40",
-    );
-    expect(columns.find((column) => column.key === "actions")?.minWidthPx).toBe(160);
-    expect(columns.find((column) => column.key === "actions")?.maxWidthPx).toBe(160);
+    expect(columns.find((column) => column.id === "key")?.overflowTooltip).toBe(false);
+    expect(columns.find((column) => column.id === "actions")?.overflowTooltip).toBe(false);
+    const actionsColumn = columns.find((column) => column.id === "actions");
+    // 固定 160 设计像素、冻结在右侧、不能拖宽：四个图标按钮的位置
+    expect(actionsColumn?.width).toBe(160);
+    expect(actionsColumn?.minWidth).toBe(160);
+    expect(actionsColumn?.maxWidth).toBe(160);
+    expect(actionsColumn?.pin).toBe("end");
+    expect(actionsColumn?.resizable).toBe(false);
   });
 
   test("keeps edit and two more actions inline and moves the rest, rotation included, into the more menu", async () => {
@@ -158,9 +163,9 @@ describe("createOwnedApiKeyColumns", () => {
         onDelete: vi.fn(),
       },
     });
-    const actionsColumn = columns.find((column) => column.key === "actions");
+    const actionsColumn = columns.find((column) => column.id === "actions");
 
-    render(<div>{actionsColumn?.render(row, 0)}</div>);
+    render(<div>{actionsColumn?.cell(row, { rowIndex: 0, selected: false, expanded: false })}</div>);
 
     expect(screen.getAllByRole("button")).toHaveLength(4);
     await userEvent.click(screen.getByRole("button", { name: "Edit quota" }));
@@ -194,17 +199,17 @@ describe("injected columns for the access-policy view", () => {
       t,
       actions: { onViewUsage, onCopy, onResetPeriodSpending },
       renderQuota: () => <span>matrix-cell</span>,
-      extraColumns: [{ key: "rules", label: "Rules", render: () => "2 rules" }],
+      extraColumns: [{ id: "rules", header: "Rules", cell: () => "2 rules" }],
       copyOnDemand: true,
       canResetQuota: () => true,
     });
-    expect(columns.map((column) => column.key)).toContain("rules");
-    const quotaColumn = columns.find((column) => column.key === "quota");
-    const actionsColumn = columns.find((column) => column.key === "actions");
+    expect(columns.map((column) => column.id)).toContain("rules");
+    const quotaColumn = columns.find((column) => column.id === "quota");
+    const actionsColumn = columns.find((column) => column.id === "actions");
     render(
       <div>
-        {quotaColumn?.render(row, 0)}
-        {actionsColumn?.render(row, 0)}
+        {quotaColumn?.cell(row, { rowIndex: 0, selected: false, expanded: false })}
+        {actionsColumn?.cell(row, { rowIndex: 0, selected: false, expanded: false })}
       </div>,
     );
     expect(screen.getByText("matrix-cell")).toBeInTheDocument();
@@ -230,16 +235,16 @@ describe("injected columns for the access-policy view", () => {
       t,
       actions: { onCopy: vi.fn() },
       renderQuota: () => <span>matrix-cell</span>,
-      extraColumns: [{ key: "rules", label: "Rules", render: () => "2 rules" }],
+      extraColumns: [{ id: "rules", header: "Rules", cell: () => "2 rules" }],
       quotaLabel: "Quota usage",
       compact: true,
     });
     // 弹窗里放得下：密钥、状态、当日、重置次数、创建时间不单列。
-    expect(columns.map((column) => column.key)).toEqual(["name", "quota", "rules", "lifetimeSpending", "actions"]);
-    expect(columns.find((column) => column.key === "quota")?.label).toBe("Quota usage");
+    expect(columns.map((column) => column.id)).toEqual(["name", "quota", "rules", "lifetimeSpending", "actions"]);
+    expect(columns.find((column) => column.id === "quota")?.header).toBe("Quota usage");
 
-    const nameColumn = columns.find((column) => column.key === "name");
-    render(<div>{nameColumn?.render({ ...row, disabled: true }, 0)}</div>);
+    const nameColumn = columns.find((column) => column.id === "name");
+    render(<div>{nameColumn?.cell({ ...row, disabled: true }, { rowIndex: 0, selected: false, expanded: false })}</div>);
     expect(screen.getByText("Policy key")).toBeInTheDocument();
     expect(screen.getByText("sk-****abcd")).toBeInTheDocument();
     expect(screen.getByText("Disabled")).toBeInTheDocument();
@@ -247,7 +252,7 @@ describe("injected columns for the access-policy view", () => {
 
   test("full layout keeps the key and status columns and the default quota header", () => {
     const columns = createOwnedApiKeyColumns({ t, actions: {} });
-    expect(columns.map((column) => column.key)).toEqual([
+    expect(columns.map((column) => column.id)).toEqual([
       "name",
       "key",
       "status",
@@ -258,6 +263,6 @@ describe("injected columns for the access-policy view", () => {
       "created",
       "actions",
     ]);
-    expect(columns.find((column) => column.key === "quota")?.label).toBe("Quota");
+    expect(columns.find((column) => column.id === "quota")?.header).toBe("Quota");
   });
 });

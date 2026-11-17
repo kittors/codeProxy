@@ -1,0 +1,181 @@
+import {
+  Button,
+  DataGrid,
+  DataGridPagination,
+  listGridFilterChips,
+  type DataGridColumn,
+  type GridEmptyState,
+  type GridFilters,
+  type UseGridPreferencesResult,
+} from "@code-proxy/ui";
+import { ScrollText, SearchX } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
+import { RequestLogDetailPanel } from "./RequestLogDetailPanel";
+import type { RequestLogsRow } from "./requestLogsRow";
+
+export const REQUEST_LOG_PAGE_SIZES = [20, 50, 100] as const;
+
+/**
+ * 请求日志三处表格的偏好 id（列宽、列顺序、显隐、密度都按它存）。
+ * 带「.v2」：11-18 把输入 / 缓存 / 输出合成 Token 一列、整体收窄了默认列宽。旧 DataTable 存下的列宽是旧列、
+ * 旧根字号下的实际像素，迁移（按 id 找旧键）搬过来只会把新默认布局撑宽、留下错位的宽度；换个 id，旧键
+ * 就不再迁移，三处都从新默认开始。以后列模型再大改，就递增这个版本。
+ */
+export const REQUEST_LOG_GRID_IDS = {
+  page: "request-logs.v2",
+  lookup: "apikey-lookup-request-logs.v2",
+  keyUsage: "api-key-usage-logs.v2",
+} as const;
+
+/**
+ * 请求日志表格（管理端整页、Key 用量弹窗、公开查询共用）：DataGrid + 行展开详情 + 分页。
+ *
+ * 三种空状态都铺满表体、和有数据时同高：完全没有数据 / 当前筛选下没有结果（列出生效的条件，
+ * 给「清除筛选」）/ 加载失败（给「重试」）。加载、翻页时表格只在表头下沿出一条进度条、行变淡，
+ * 框、分页、横向滚动条都不动。
+ */
+export function RequestLogGrid({
+  id,
+  label,
+  columns,
+  rows,
+  loading,
+  error,
+  onRetry,
+  filters,
+  onFiltersChange,
+  extraFilterLabels = [],
+  onClearFilters,
+  prefs,
+  masked,
+  hideChannel,
+  onOpenContent,
+  onOpenError,
+  page,
+  pageSize,
+  total,
+  pending,
+  onPageChange,
+  onPageSizeChange,
+  fill = true,
+  frame = true,
+  maxHeight,
+  resetScrollKey,
+  noDataTitle,
+}: {
+  id: string;
+  label: string;
+  columns: DataGridColumn<RequestLogsRow>[];
+  rows: readonly RequestLogsRow[];
+  loading: boolean;
+  error?: string | null;
+  onRetry?: () => void;
+  filters: GridFilters;
+  onFiltersChange?: (filters: GridFilters) => void;
+  /** 不在列上的条件（循环保护）也要写进「无匹配」的条件列表。 */
+  extraFilterLabels?: readonly string[];
+  onClearFilters: () => void;
+  prefs: UseGridPreferencesResult;
+  masked: boolean;
+  hideChannel?: boolean;
+  onOpenContent?: (row: RequestLogsRow, side: "input" | "output") => void;
+  onOpenError?: (row: RequestLogsRow) => void;
+  page: number;
+  pageSize: number;
+  total: number;
+  pending: boolean;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
+  fill?: boolean;
+  frame?: boolean;
+  maxHeight?: string;
+  resetScrollKey?: string;
+  /** 「完全没有数据」时的标题；默认「还没有请求日志」，只看一把 Key 时写「没有用量记录」之类。 */
+  noDataTitle?: string;
+}) {
+  const { t } = useTranslation();
+  const [expandedKeys, setExpandedKeys] = useState<Set<string>>(() => new Set());
+  const activeLabels = [
+    ...listGridFilterChips(columns, filters, t).map((chip) => chip.label),
+    ...extraFilterLabels,
+  ];
+  const hasFilters = activeLabels.length > 0;
+  const empty: GridEmptyState = hasFilters
+    ? {
+        icon: <SearchX aria-hidden="true" />,
+        title: t("request_logs.no_match_title"),
+        description: t("request_logs.no_match_desc"),
+        details: (
+          <ul
+            className="flex flex-wrap justify-center gap-1.5"
+            aria-label={t("request_logs.active_filters")}
+          >
+            {activeLabels.map((text) => (
+              <li
+                key={text}
+                className="rounded-full bg-ink/[0.05] px-2.5 py-1 text-xs text-ink-2 dark:bg-white/[0.07]"
+              >
+                {text}
+              </li>
+            ))}
+          </ul>
+        ),
+        action: (
+          <Button size="sm" onClick={onClearFilters}>
+            {t("request_logs.clear_filters")}
+          </Button>
+        ),
+      }
+    : {
+        icon: <ScrollText aria-hidden="true" />,
+        title: noDataTitle ?? t("request_logs.no_data_title"),
+        description: t("request_logs.no_data_hint"),
+      };
+  const footer: ReactNode = (
+    <DataGridPagination
+      page={page}
+      pageSize={pageSize}
+      total={total}
+      pending={pending}
+      onPageChange={onPageChange}
+      onPageSizeChange={onPageSizeChange}
+      pageSizeOptions={REQUEST_LOG_PAGE_SIZES}
+    />
+  );
+  return (
+    <DataGrid
+      id={id}
+      label={label}
+      fill={fill}
+      fitColumns
+      frame={frame}
+      maxHeight={maxHeight}
+      columns={columns}
+      rows={rows}
+      rowKey={(row) => row.id}
+      loading={loading}
+      error={error}
+      onRetry={onRetry}
+      empty={empty}
+      density={prefs.density}
+      hiddenColumnIds={prefs.hiddenColumnIds}
+      onHiddenColumnIdsChange={prefs.setHiddenColumnIds}
+      filters={filters}
+      onFiltersChange={onFiltersChange}
+      renderExpanded={(row) => (
+        <RequestLogDetailPanel
+          row={row}
+          masked={masked}
+          hideChannel={hideChannel}
+          onOpenContent={onOpenContent}
+          onOpenError={onOpenError}
+        />
+      )}
+      expandedKeys={expandedKeys}
+      onExpandedKeysChange={setExpandedKeys}
+      resetScrollKey={resetScrollKey}
+      footer={footer}
+    />
+  );
+}

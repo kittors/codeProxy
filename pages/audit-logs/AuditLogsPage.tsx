@@ -4,15 +4,15 @@ import { Eye, Trash2 } from "lucide-react";
 import { identityApi, type AuditLogIdentity } from "@code-proxy/api-client";
 import {
   Button,
-  COLUMN_WIDTH,
+  GRID_WIDTH,
   ConfirmModal,
-  DataTable,
-  PaginationBar,
-  TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
-  TableRowActions,
+  DataGrid,
+  DataGridPagination,
+  GRID_ROW_ACTIONS_COLUMN,
+  GridRowActions,
   useToast,
-  type DataTableColumn,
-  type TableRowAction,
+  type DataGridColumn,
+  type GridRowAction,
 } from "@code-proxy/ui";
 import { useOptionalAuth } from "@app/providers/AuthProvider";
 import { PermissionGate } from "@app/providers/PermissionGate";
@@ -29,6 +29,7 @@ export function AuditLogsPage() {
   const clearsAllTenants = useOptionalAuth()?.can("platform.audit.read") ?? false;
   const [items, setItems] = useState<AuditLogIdentity[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
@@ -57,12 +58,11 @@ export function AuditLogsPage() {
         setTotalCount(response.total ?? 0);
         setCurrentPage(response.page || page);
         setPageSize(response.size || size);
+        setLoadError(null);
       } catch (error) {
         if (seq !== requestSeqRef.current || controller.signal.aborted) return;
-        notify({
-          type: "error",
-          message: error instanceof Error ? error.message : t("identity_admin.operation_failed"),
-        });
+        // 读不到记录时表格显示出错态和「重试」，而不是一张看起来「没有记录」的空表。
+        setLoadError(error instanceof Error ? error.message : "");
       } finally {
         if (requestAbortRef.current === controller) requestAbortRef.current = null;
         if (seq === requestSeqRef.current && !controller.signal.aborted) {
@@ -70,7 +70,7 @@ export function AuditLogsPage() {
         }
       }
     },
-    [notify, t],
+    [],
   );
 
   useEffect(() => {
@@ -173,34 +173,34 @@ export function AuditLogsPage() {
     }
   }, [closeDetail, fetchLogs, notify, pageSize, t]);
 
-  const columns = useMemo<DataTableColumn<AuditLogIdentity>[]>(
+  const columns = useMemo<DataGridColumn<AuditLogIdentity>[]>(
     () => [
       {
-        key: "time",
-        label: t("identity_admin.time"),
-        width: COLUMN_WIDTH.timestamp,
-        render: (item) => new Date(item.created_at).toLocaleString(i18n.language),
+        id: "time",
+        header: t("identity_admin.time"),
+        width: GRID_WIDTH.timestamp,
+        cell: (item) => new Date(item.created_at).toLocaleString(i18n.language),
       },
       {
-        key: "actor",
-        label: t("identity_admin.actor"),
-        width: COLUMN_WIDTH.nameStacked,
+        id: "actor",
+        header: t("identity_admin.actor"),
+        width: GRID_WIDTH.nameStacked,
         overflowTooltip: true,
-        render: (item) => formatActor(item),
+        cell: (item) => formatActor(item),
       },
       {
-        key: "what",
-        label: t("identity_admin.what_happened"),
+        id: "what",
+        header: t("identity_admin.what_happened"),
         overflowTooltip: true,
-        render: (item) => formatWhatHappened(item),
+        cell: (item) => formatWhatHappened(item),
       },
       {
-        key: "ip",
-        label: t("identity_admin.source_ip"),
-        width: COLUMN_WIDTH.compact,
+        id: "ip",
+        header: t("identity_admin.source_ip"),
+        width: GRID_WIDTH.compact,
         overflowTooltip: true,
         // "Who changed this" is only half an answer without "from where".
-        render: (item) =>
+        cell: (item) =>
           item.ip_address ? (
             <span className="font-mono text-xs text-ink-2">{item.ip_address}</span>
           ) : (
@@ -208,12 +208,11 @@ export function AuditLogsPage() {
           ),
       },
       {
-        key: "result",
-        label: t("identity_admin.result"),
-        width: COLUMN_WIDTH.badge,
-        headerClassName: "text-center",
-        cellClassName: "text-center",
-        render: (item) => {
+        id: "result",
+        header: t("identity_admin.result"),
+        width: GRID_WIDTH.badge,
+        align: "center",
+        cell: (item) => {
           const badge = resultBadge(item.result);
           return (
             <span
@@ -225,11 +224,11 @@ export function AuditLogsPage() {
         },
       },
       {
-        key: "actions",
-        label: t("identity_admin.actions"),
-        ...TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
-        render: (item) => {
-          const view: TableRowAction = {
+        id: "actions",
+        header: t("identity_admin.actions"),
+        ...GRID_ROW_ACTIONS_COLUMN,
+        cell: (item) => {
+          const view: GridRowAction = {
             key: "view",
             label: t("identity_admin.view"),
             icon: <Eye />,
@@ -238,8 +237,8 @@ export function AuditLogsPage() {
           };
           // 没有删除权限时只剩「查看」，仍是同一组按钮、同一种对齐。
           return (
-            <PermissionGate permission="tenant.audit.delete" fallback={<TableRowActions actions={[view]} />}>
-              <TableRowActions
+            <PermissionGate permission="tenant.audit.delete" fallback={<GridRowActions actions={[view]} />}>
+              <GridRowActions
                 actions={[
                   view,
                   {
@@ -283,39 +282,33 @@ export function AuditLogsPage() {
           </PermissionGate>
         </div>
         {/* 表格 fill 铺满页面剩余高度、再多就内部滚动：加载、空、行少、行多都是同一个框，分页条和横向滚动条不随行数移动；不设最小高度保底——页面高度被窗口钉死，保底只会在矮窗口下把表格挤出页面（见请求日志页）。 */}
-        <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
-          <DataTable<AuditLogIdentity>
+        <div className="flex min-h-0 flex-1 flex-col">
+          <DataGrid<AuditLogIdentity>
             fill
-            tableId="identity-audit-logs"
+            id="identity-audit-logs"
+            label={t("identity_admin.audit_logs_title")}
             rows={items}
             columns={columns}
             rowKey={(item) => String(item.id)}
             loading={loading}
-            virtualize={false}
-            minWidth="min-w-[960px]"
-            emptyText={t("identity_admin.no_audit_logs")}
-            showAllLoadedMessage={false}
+            error={loadError === null ? null : loadError || t("identity_admin.operation_failed")}
+            onRetry={() => void fetchLogs(currentPage, pageSize)}
+            empty={{ title: t("identity_admin.no_audit_logs") }}
+            resetScrollKey={`${currentPage}|${pageSize}`}
+            footer={
+              <DataGridPagination
+                page={currentPage}
+                pageSize={pageSize}
+                total={totalCount}
+                pending={loading && items.length === 0 && totalCount === 0}
+                onPageChange={handlePageChange}
+                onPageSizeChange={handlePageSizeChange}
+                pageSizeOptions={PAGE_SIZE_OPTIONS}
+              />
+            }
           />
         </div>
-        <PaginationBar
-          currentPage={currentPage}
-          totalPages={totalPages}
-          totalCount={totalCount}
-          pageSize={pageSize}
-          onPageChange={handlePageChange}
-          onPageSizeChange={handlePageSizeChange}
-          pageSizeOptions={PAGE_SIZE_OPTIONS}
-          // 分页条和表格之间靠留白分开，不画分隔线；左右与表格对齐（同请求日志页的 flush）。
-          className="pt-3"
-          labels={{
-            firstPage: t("request_logs.first_page"),
-            previousPage: t("request_logs.prev_page"),
-            nextPage: t("request_logs.next_page"),
-            lastPage: t("request_logs.last_page"),
-            rowsPerPage: t("request_logs.rows_per_page"),
-            pageInfo: ({ start, end, total }) => t("request_logs.page_info", { start, end, total }),
-          }}
-        />
+
       </div>
 
       <AuditLogDetailModal

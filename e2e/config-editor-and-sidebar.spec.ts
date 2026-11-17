@@ -312,6 +312,27 @@ test("API Keys: table should scroll vertically when many keys are listed", async
       return;
     }
 
+    // Key 表只在单个门户账号下打开（不带 endUserId 会被重定向到门户账号页），读的是这个账号名下的 Key。
+    if (url.endsWith("/v0/management/end-users/end-user-1/api-keys")) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          items: entries.map((entry, index) => ({
+            id: `owned-scroll-${index}`,
+            tenant_id: "tenant-1",
+            end_user_id: "end-user-1",
+            key_masked: `sk-e2e•••${String(index).padStart(3, "0")}`,
+            name: entry.name,
+            disabled: false,
+            is_default: index === 0,
+            created_at: entry["created-at"],
+          })),
+        }),
+      });
+      return;
+    }
+
     if (url.endsWith("/v0/management/channel-groups")) {
       await route.fulfill({
         status: 200,
@@ -346,11 +367,11 @@ test("API Keys: table should scroll vertically when many keys are listed", async
     });
   });
 
-  await page.goto("/#/api-keys");
+  await page.goto("/#/access/api-keys?endUserId=end-user-1");
+  await expect(page.getByText("Scroll Key 01")).toBeVisible();
 
-  const tableScroller = page
-    .locator("[data-vt-scroll-content]")
-    .locator("xpath=..");
+  // DataGrid 的表体视口：整页列表铺满剩余高度、在自己的视口里滚动。
+  const tableScroller = page.locator(".cp-grid-viewport").first();
   await expect(tableScroller).toBeVisible();
 
   await expect

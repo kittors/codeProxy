@@ -19,7 +19,7 @@ import {
   copyTextToClipboard,
   surface,
   useToast,
-  type DataTableColumn,
+  type DataGridColumn,
 } from "@code-proxy/ui";
 import {
   PolicyBadges,
@@ -88,16 +88,17 @@ export function EndUserKeysModal({
     void copyTextToClipboard(plain).catch(() => undefined);
   };
 
-  const keyColumns = useMemo<DataTableColumn<EndUserAPIKey>[]>(
+  const keyColumns = useMemo<DataGridColumn<EndUserAPIKey>[]>(
     () =>
       policyCaps
         ? [
             {
-              key: "rules",
-              label: t("access_policy.col_model_policy"),
-              width: "w-40 min-w-[9rem]",
+              id: "rules",
+              header: t("access_policy.col_model_policy"),
+              width: 160,
+              minWidth: 144,
               overflowTooltip: false,
-              render: (row) => <PolicyBadges rules={row["model-rules"]} usage={row["quota-usage"]} />,
+              cell: (row) => <PolicyBadges rules={row["model-rules"]} usage={row["quota-usage"]} />,
             },
           ]
         : [],
@@ -289,16 +290,17 @@ export function EndUserKeysModal({
             </div>
           </div>
           <div className="flex min-h-0 flex-1 flex-col">
+            {/* 弹窗正文是固定高度：表格铺满剩下的槽位，加载、空、行少行多都是同一个框。 */}
             <OwnedApiKeysTable
               t={t}
-              tableId="end-user-owned-keys"
+              id="end-user-owned-keys"
+              fill
               keys={keys}
               busyKeyId={busyKeyId}
               busy={saving}
               loading={loading}
               // 紧凑布局：密钥、状态并进名称格，弹窗宽度内放得下全部列，不用横向滚动。
               compact
-              minWidth={policyCaps ? "min-w-[960px]" : "min-w-[820px]"}
               quotaLabel={policyCaps ? t("access_policy.col_quota") : undefined}
               canDelete={() => keys.length > 1}
               copyOnDemand

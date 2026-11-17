@@ -697,7 +697,7 @@ html.theme-transition-lock *::after {
   }
 }
 
-/* DataTable：隐藏原生滚动条，改用 DOM 自定义滚动条 */
+/* 隐藏原生滚动条、改用 DOM 自定义滚动条的滚动区（ScrollArea）。 */
 .table-scrollbar {
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -706,74 +706,6 @@ html.theme-transition-lock *::after {
 .table-scrollbar::-webkit-scrollbar {
   width: 0;
   height: 0;
-}
-
-/* 列拖动落位后的短暂高亮：中性底色 + 两侧细线，说明「这一列刚被移到这里」 */
-@keyframes dataTableColumnSettle {
-  0% {
-    background-color: rgb(13 13 13 / 0.07);
-    box-shadow:
-      inset 2px 0 0 rgb(13 13 13 / 0.35),
-      inset -2px 0 0 rgb(13 13 13 / 0.18);
-  }
-  48% {
-    background-color: rgb(13 13 13 / 0.04);
-    box-shadow:
-      inset 2px 0 0 rgb(13 13 13 / 0.25),
-      inset -2px 0 0 rgb(13 13 13 / 0.12);
-  }
-  100% {
-    background-color: rgb(13 13 13 / 0);
-    box-shadow:
-      inset 0 0 0 rgb(13 13 13 / 0),
-      inset 0 0 0 rgb(13 13 13 / 0);
-  }
-}
-
-@keyframes dataTableColumnSettleDark {
-  0% {
-    background-color: rgb(255 255 255 / 0.08);
-    box-shadow:
-      inset 2px 0 0 rgb(255 255 255 / 0.4),
-      inset -2px 0 0 rgb(255 255 255 / 0.2);
-  }
-  48% {
-    background-color: rgb(255 255 255 / 0.05);
-    box-shadow:
-      inset 2px 0 0 rgb(255 255 255 / 0.28),
-      inset -2px 0 0 rgb(255 255 255 / 0.14);
-  }
-  100% {
-    background-color: rgb(255 255 255 / 0);
-    box-shadow:
-      inset 0 0 0 rgb(255 255 255 / 0),
-      inset 0 0 0 rgb(255 255 255 / 0);
-  }
-}
-
-[data-vt-column-settled-cell="true"] {
-  animation: dataTableColumnSettle 860ms cubic-bezier(0.2, 0, 0, 1) both;
-}
-
-.dark [data-vt-column-settled-cell="true"] {
-  animation-name: dataTableColumnSettleDark;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  [data-vt-column-settled-cell="true"] {
-    animation: none;
-    background-color: rgb(13 13 13 / 0.05);
-    box-shadow:
-      inset 2px 0 0 rgb(13 13 13 / 0.25),
-      inset -2px 0 0 rgb(13 13 13 / 0.12);
-  }
-
-  .dark [data-vt-column-settled-cell="true"] {
-    background-color: rgb(255 255 255 / 0.06);
-    box-shadow:
-      inset 2px 0 0 rgb(255 255 255 / 0.28),
-      inset -2px 0 0 rgb(255 255 255 / 0.14);
-  }
 }
 
 /* 滚动条：浅色与深色都用细的圆角滑块，轨道透明 */

@@ -303,37 +303,49 @@ test.describe("内部滚动区的上下渐隐", () => {
     await expect.poll(() => fadeState(shell)).toMatchObject({ top: true, bottom: false });
   });
 
-  test("表格的遮罩挂在内容层上：渐隐从表头下沿开始，滚动条和钉满一屏的外壳都不淡", async ({
+  test("表格不挂遮罩：滚动时表头投影接替渐隐，滚动条和外壳都不淡，浮层走 portal", async ({
     page,
   }) => {
     await mock(page);
     await page.goto("/#/runtime/request-logs");
-    await expect(page.locator("tr[data-vt-row-index]").first()).toBeVisible();
-    const frame = page.locator("[data-vt-content-frame]").first();
-    const scroller = page.locator("[data-scrollbar-visibility='hover']").first();
-    await expect
-      .poll(() => fadeState(frame))
-      .toMatchObject({ fade: "y", top: false, bottom: true });
+    await expect(page.locator("tr[data-row-key]").first()).toBeVisible();
+    const grid = page.locator(".cp-grid").first();
+    const viewport = page.locator(".cp-grid-viewport").first();
     // 整页表格钉满一屏，外壳滚不动：主内容区完全不淡。
     expect(await fadeState(mainScroller(page))).toMatchObject({
       fade: null,
       top: false,
       bottom: false,
     });
+    // 表格的视口自己不挂遮罩，也不在任何挂着遮罩的祖先里：mask 会把吸顶表头关进它自己的
+    // 层叠上下文、压到表头背衬下面，还会裁掉 fixed 定位的浮层。
+    expect(await fadeState(viewport)).toMatchObject({ fade: null });
+    expect(await grid.evaluate((el) => el.closest("[data-scroll-fade]") === null)).toBe(true);
+    await expect(grid).toHaveAttribute("data-y-scrolled", "false");
 
-    await scrollTo(scroller, 200);
-    await expect.poll(() => fadeState(frame)).toMatchObject({ top: true, bottom: true });
-    const headerHeight = await page
-      .locator("[data-vt-header-chrome]")
-      .evaluate((el) => el.getBoundingClientRect().height);
-    expect(Math.abs((await fadeState(frame)).topInset - headerHeight)).toBeLessThanOrEqual(1);
-    // 滚动区自己不挂遮罩：mask 会把 sticky 表头关进它自己的层叠上下文、压到表头背衬下面。
-    expect(await fadeState(scroller)).toMatchObject({ fade: null });
-    // 自绘滚动条在遮罩外面，不会被淡掉。
+    await scrollTo(viewport, 200);
+    // 内容滚到表头下面时，表头底边多一道投影（取代旧表格从表头下沿开始的渐隐）。
+    await expect(grid).toHaveAttribute("data-y-scrolled", "true");
+    const headShadow = await page
+      .locator(".cp-grid thead th")
+      .first()
+      .evaluate((el) => getComputedStyle(el).boxShadow);
+    expect(headShadow).not.toBe("none");
+    // 自绘滚动条叠在视口外面、不在遮罩里，不会被淡掉。
     const scrollbarOutside = await page
-      .locator("[data-vt-scrollbar='y']")
-      .evaluate((el) => el.closest("[data-scroll-fade]") === null);
+      .locator('[data-grid-scrollbar="y"]')
+      .first()
+      .evaluate(
+        (el) => el.closest("[data-scroll-fade]") === null && el.closest(".cp-grid-viewport") === null,
+      );
     expect(scrollbarOutside).toBe(true);
+
+    // 表头上的筛选浮层挂在 body 下（portal），不在表格里，不会被外框的圆角或视口裁掉。
+    await page.locator(".cp-grid thead").getByRole("button", { name: "筛选「状态」" }).click();
+    const popover = page.getByRole("dialog").first();
+    await expect(popover).toBeVisible();
+    expect(await popover.evaluate((el) => el.closest(".cp-grid") === null)).toBe(true);
+    await page.keyboard.press("Escape");
   });
 
   test("卡片区（ScrollArea）默认渐隐，旁边的下拉面板走 portal、不在遮罩里", async ({ page }) => {
@@ -410,8 +422,8 @@ test.describe("截图走查", () => {
         await shoot("6-privacy-settings");
 
         await page.goto("/#/runtime/request-logs");
-        await expect(page.locator("tr[data-vt-row-index]").first()).toBeVisible();
-        await scrollTo(page.locator("[data-scrollbar-visibility='hover']").first(), 200);
+        await expect(page.locator("tr[data-row-key]").first()).toBeVisible();
+        await scrollTo(page.locator(".cp-grid-viewport").first(), 200);
         await shoot("2-request-logs");
 
         await page.goto("/#/access/ai-accounts");

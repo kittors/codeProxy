@@ -9,13 +9,13 @@ import {
 } from "@code-proxy/api-client";
 import {
   Button,
-  COLUMN_WIDTH,
-  DataTable,
-  TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
-  TableRowActions,
+  GRID_WIDTH,
+  DataGrid,
+  GRID_ROW_ACTIONS_COLUMN,
+  GridRowActions,
   resolveMenuIcon,
   useToast,
-  type DataTableColumn,
+  type DataGridColumn,
 } from "@code-proxy/ui";
 import { useAuth } from "@app/providers/AuthProvider";
 import { MenuDeleteConfirm } from "./MenuDeleteConfirm";
@@ -50,6 +50,7 @@ export function MenuManagementPage() {
   const canUpdate = can("platform.menus.update");
   const [menus, setMenus] = useState<MenuIdentity[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const expansionInitialized = useRef(false);
@@ -63,6 +64,10 @@ export function MenuManagementPage() {
     setLoading(true);
     try {
       setMenus((await identityApi.menus()).items ?? []);
+      setLoadError(null);
+    } catch (error) {
+      // 读不到列表时表格显示出错态和「重试」，而不是一张看起来「没有数据」的空表。
+      setLoadError(error instanceof Error ? error.message : "");
     } finally {
       setLoading(false);
     }
@@ -212,13 +217,13 @@ export function MenuManagementPage() {
     }
   };
 
-  const columns = useMemo<DataTableColumn<(typeof rows)[number]>[]>(
+  const columns = useMemo<DataGridColumn<(typeof rows)[number]>[]>(
     () => [
       {
-        key: "menu",
-        label: t("identity_admin.menu"),
-        width: "w-64",
-        render: (menu) => {
+        id: "menu",
+        header: t("identity_admin.menu"),
+        width: 256,
+        cell: (menu) => {
           const isExpanded = expanded.has(menu.code);
           const label = t(menu.label_key, { defaultValue: menu.title || menu.code });
           const Icon = resolveMenuIcon(menu.icon);
@@ -246,9 +251,7 @@ export function MenuManagementPage() {
                 >
                   <ChevronRight
                     size={15}
-                    className={
-                      isExpanded ? "rotate-90 transition-transform" : "transition-transform"
-                    }
+                    className={`transition-[rotate] duration-200 ease-pop ${isExpanded ? "rotate-90" : ""}`}
                   />
                 </Button>
               ) : (
@@ -273,10 +276,10 @@ export function MenuManagementPage() {
         },
       },
       {
-        key: "type",
-        label: t("identity_admin.menu_type"),
-        width: COLUMN_WIDTH.badge,
-        render: (menu) => (
+        id: "type",
+        header: t("identity_admin.menu_type"),
+        width: GRID_WIDTH.badge,
+        cell: (menu) => (
           <span
             className={`inline-flex rounded-md px-2 py-0.5 text-xs font-medium ${NEUTRAL_TAG} ${TYPE_TAG_HUE[menu.type] ?? ""}`}
           >
@@ -285,20 +288,20 @@ export function MenuManagementPage() {
         ),
       },
       {
-        key: "permission",
-        label: t("identity_admin.permission_code"),
-        width: COLUMN_WIDTH.badgeStacked,
-        render: (menu) => (
+        id: "permission",
+        header: t("identity_admin.permission_code"),
+        width: GRID_WIDTH.badgeStacked,
+        cell: (menu) => (
           <span className="truncate text-xs text-ink-2">
             {displayCell(menu.permission_code)}
           </span>
         ),
       },
       {
-        key: "route",
-        label: t("identity_admin.route_address"),
-        width: COLUMN_WIDTH.badgeStacked,
-        render: (menu) => (
+        id: "route",
+        header: t("identity_admin.route_address"),
+        width: GRID_WIDTH.badgeStacked,
+        cell: (menu) => (
           <div className="min-w-0 text-xs">
             <div className="truncate text-ink-2">{displayCell(menu.path)}</div>
             {menu.link_url ? <div className="truncate text-ink-3">{menu.link_url}</div> : null}
@@ -306,10 +309,10 @@ export function MenuManagementPage() {
         ),
       },
       {
-        key: "component",
-        label: t("identity_admin.page_component"),
-        width: COLUMN_WIDTH.timestamp,
-        render: (menu) => (
+        id: "component",
+        header: t("identity_admin.page_component"),
+        width: GRID_WIDTH.timestamp,
+        cell: (menu) => (
           <span className="truncate text-xs text-ink-2">
             {menu.type === "directory"
               ? displayCell(menu.component, "Layout")
@@ -318,10 +321,10 @@ export function MenuManagementPage() {
         ),
       },
       {
-        key: "status",
-        label: t("identity_admin.status"),
-        width: COLUMN_WIDTH.badge,
-        render: (menu) => (
+        id: "status",
+        header: t("identity_admin.status"),
+        width: GRID_WIDTH.badge,
+        cell: (menu) => (
           <span
             className={
               menu.enabled
@@ -336,11 +339,11 @@ export function MenuManagementPage() {
         ),
       },
       {
-        key: "actions",
-        label: t("identity_admin.actions"),
-        ...TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
-        render: (menu) => (
-          <TableRowActions
+        id: "actions",
+        header: t("identity_admin.actions"),
+        ...GRID_ROW_ACTIONS_COLUMN,
+        cell: (menu) => (
+          <GridRowActions
             actions={[
               {
                 key: "add-child",
@@ -391,20 +394,20 @@ export function MenuManagementPage() {
           ) : null}
         </div>
         {/* 表格 fill 铺满页面剩余高度、再多就内部滚动：加载、空、行少、行多都是同一个框，分页条和横向滚动条不随行数移动；不设最小高度保底——页面高度被窗口钉死，保底只会在矮窗口下把表格挤出页面（见请求日志页）。 */}
-        <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
-          <DataTable<(typeof rows)[number]>
+        <div className="flex min-h-0 flex-1 flex-col">
+          <DataGrid<(typeof rows)[number]>
             fill
-            tableId="identity-menus"
+            id="identity-menus"
+            label={t("identity_admin.menu_management_title")}
             rows={rows}
             columns={columns}
             rowKey={(menu) => menu.code}
             loading={loading}
-            virtualize={false}
-            rowHeight={60}
-            minWidth="min-w-[1100px]"
-            emptyText={t("identity_admin.no_menus")}
-            showAllLoadedMessage={false}
-            columnReorderable={false}
+            error={loadError === null ? null : loadError || t("identity_admin.operation_failed")}
+            onRetry={() => void load()}
+            empty={{ title: t("identity_admin.no_menus") }}
+            // 树形菜单：行的先后就是层级关系，列也不让拖乱。
+            columnReorder={false}
           />
         </div>
       </div>

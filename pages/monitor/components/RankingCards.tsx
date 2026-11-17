@@ -17,7 +17,12 @@ import { modelPerformanceCoverage } from "../model/modelPerformance";
 import type { MonitorFilterDimension } from "../model/monitorQueryState";
 import { MonitorCardTitle, MonitorInlineNotice } from "./MonitorCardTitle";
 import { useModelPerformanceColumns } from "./ModelPerformanceColumns";
-import { MonitorRankingTable, ShareBar, type RankingColumn } from "./MonitorRankingTable";
+import {
+  MonitorRankingTable,
+  ShareBar,
+  type RankingBreakpoint,
+  type RankingColumn,
+} from "./MonitorRankingTable";
 import { MonitorSparkline } from "./MonitorSparkline";
 import { metricColor, successLevel, successTextClass } from "./monitorTheme";
 
@@ -32,13 +37,10 @@ interface RankingCardProps {
 
 const dash = <span className="text-ink-4">—</span>;
 
-/**
- * 窄屏按重要性收起次要列，而不是让表格横向滚出卡片：成功率、请求、耗时最后才收。
- * 类名必须是完整的静态字符串，Tailwind 才能扫描到。
- */
-const withClass = (column: RankingColumn, extra: string): RankingColumn => ({
+/** 窄屏按重要性收起次要列，而不是让表格横向滚出卡片：成功率、请求、耗时最后才收。 */
+const fromBreakpoint = (column: RankingColumn, minBreakpoint: RankingBreakpoint): RankingColumn => ({
   ...column,
-  className: [column.className, extra].filter(Boolean).join(" "),
+  minBreakpoint,
 });
 
 const shareOf = (row: MonitorBreakdownRow, overview: MonitorOverview) =>
@@ -49,12 +51,12 @@ const shareOf = (row: MonitorBreakdownRow, overview: MonitorOverview) =>
 /** 两列布局里的渠道 / 门户用户表用紧凑列宽，把空间留给名称列。 */
 function useCommonColumns(overview: MonitorOverview, legacy: boolean, compact = false) {
   const { t } = useTranslation();
-  const width = compact ? "w-20" : "w-24";
+  const width = compact ? 80 : 96;
   const requests: RankingColumn = {
     key: "requests",
     header: t("monitor_center.ranking.requests"),
     align: "right",
-    className: width,
+    width,
     render: (row) => (
       <span className="flex flex-col items-end leading-tight">
         <span className="font-medium text-ink">{formatMonitorCompact(row.requests)}</span>
@@ -68,7 +70,7 @@ function useCommonColumns(overview: MonitorOverview, legacy: boolean, compact = 
     key: "success",
     header: t("monitor_center.ranking.success_rate"),
     align: "right",
-    className: width,
+    width,
     render: (row) =>
       legacy ? (
         dash
@@ -85,7 +87,7 @@ function useCommonColumns(overview: MonitorOverview, legacy: boolean, compact = 
     key: "latency",
     header: t("monitor_center.ranking.latency_avg"),
     align: "right",
-    className: width,
+    width,
     render: (row) =>
       row.latency_avg_ms > 0 ? (
         <span className="text-ink-2">{formatMonitorDuration(row.latency_avg_ms)}</span>
@@ -97,14 +99,14 @@ function useCommonColumns(overview: MonitorOverview, legacy: boolean, compact = 
     key: "tokens",
     header: t("monitor_center.ranking.tokens"),
     align: "right",
-    className: width,
+    width,
     render: (row) => <span className="text-ink-2">{formatMonitorCompact(row.total_tokens)}</span>,
   };
   const cost: RankingColumn = {
     key: "cost",
     header: t("monitor_center.ranking.cost"),
     align: "right",
-    className: width,
+    width,
     render: (row) =>
       legacy ? dash : <span className="text-ink-2">{formatMonitorCost(row.cost)}</span>,
   };
@@ -116,7 +118,7 @@ function trendColumn(header: string, color: string, compact = false): RankingCol
     key: "trend",
     header,
     align: "right",
-    className: compact ? "w-24" : "w-28",
+    width: compact ? 96 : 112,
     render: (row) =>
       row.trend.length > 0 ? (
         <MonitorSparkline
@@ -178,7 +180,6 @@ export function ModelLeaderboardCard({
           total={overview.models.total}
           selected={selected}
           onSelect={legacy ? undefined : (key) => onSelect("models", key)}
-          minWidth="min-w-0"
           primary={(row) => (
             <span className="block min-w-0">
               <span className="flex min-w-0 items-center gap-2">
@@ -194,20 +195,21 @@ export function ModelLeaderboardCard({
             {
               key: "model",
               header: t("monitor_center.models.model"),
-              className: "min-w-40 xl:min-w-56",
+              width: 160,
+              widthAt: { xl: 224 },
               render: () => null,
             },
             columns.requests,
             columns.success,
-            withClass(columns.latency, "hidden sm:table-cell"),
+            fromBreakpoint(columns.latency, "sm"),
             performance.firstToken,
             performance.speed,
             performance.firstTokenPer1k,
-            withClass(columns.tokens, "hidden lg:table-cell"),
-            withClass(columns.cost, "hidden md:table-cell"),
-            withClass(
+            fromBreakpoint(columns.tokens, "lg"),
+            fromBreakpoint(columns.cost, "md"),
+            fromBreakpoint(
               trendColumn(t("monitor_center.ranking.trend"), requestsColor),
-              "hidden md:table-cell",
+              "md",
             ),
           ]}
         />
@@ -264,7 +266,6 @@ export function ChannelHealthCard({
           selected={selected}
           onSelect={(key) => onSelect("channels", key)}
           initialLimit={8}
-          minWidth="min-w-0"
           primary={(row) => {
             const level = successLevel(row.success_rate);
             const idle = row.requests < MONITOR_CHANNEL_MIN_REQUESTS;
@@ -296,15 +297,16 @@ export function ChannelHealthCard({
             {
               key: "channel",
               header: t("monitor_center.channels.channel"),
-              className: "min-w-40 sm:min-w-48",
+              width: 160,
+              widthAt: { sm: 192 },
               render: () => null,
             },
             columns.requests,
             columns.success,
-            withClass(columns.latency, "hidden sm:table-cell"),
-            withClass(
+            fromBreakpoint(columns.latency, "sm"),
+            fromBreakpoint(
               trendColumn(t("monitor_center.ranking.trend"), metricColor("requests", isDark), true),
-              "hidden sm:table-cell",
+              "sm",
             ),
           ]}
         />
@@ -353,7 +355,6 @@ export function ConsumerLeaderboardCard({
           selected={selected}
           onSelect={legacy ? undefined : (key) => onSelect("consumers", key)}
           initialLimit={8}
-          minWidth="min-w-0"
           primary={(row) => {
             const Icon = row.kind === "end_user" ? UserRound : KeyRound;
             return (
@@ -375,12 +376,13 @@ export function ConsumerLeaderboardCard({
             {
               key: "consumer",
               header: t("monitor_center.consumers.consumer"),
-              className: "min-w-36 sm:min-w-44",
+              width: 144,
+              widthAt: { sm: 176 },
               render: () => null,
             },
             columns.requests,
-            withClass(columns.success, "hidden sm:table-cell"),
-            withClass(columns.tokens, "hidden md:table-cell"),
+            fromBreakpoint(columns.success, "sm"),
+            fromBreakpoint(columns.tokens, "md"),
             columns.cost,
           ]}
         />

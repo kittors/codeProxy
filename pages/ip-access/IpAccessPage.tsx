@@ -71,31 +71,39 @@ export function IpAccessPage() {
 
   return (
     <section data-page-fill="always" className="flex min-h-0 flex-1 flex-col gap-3">
-      <TrustBanner status={status} />
-
       {/*
         不再包一层卡片：外壳内容区就是这一页的面板，标题、页签、筛选、表格直接落在上面（同请求日志页）。
         各页签自己的筛选行、表格、分页也随之去掉左右内边距和分隔线，和标题左右对齐。
       */}
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="flex flex-wrap items-center justify-between gap-3 pb-3">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <h2 className="flex items-center gap-2 text-base font-semibold text-ink">
+        {/*
+          状态提醒（TrustBanner）放在标题行里、不另起一行：状态是异步读回来的，单独一行会在读回来那一刻
+          把页签、筛选和表格整体往下推。标题行高由右侧刷新按钮撑着，左侧一组不换行（flex-1 basis-0），
+          放不下时提醒自己截断，所以读回状态前后这一行和下面的内容都不动。
+        */}
+        <div data-ip-access-header className="flex items-center justify-between gap-3 pb-3">
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <h2 className="flex shrink-0 items-center gap-2 text-base font-semibold text-ink">
               <ShieldBan size={18} className="text-ink-3" aria-hidden="true" />
               {t("ip_access.page_title")}
             </h2>
             {status ? (
-              <div className="hidden min-[720px]:flex items-center gap-2 text-xs text-ink-3">
+              <div className="hidden shrink-0 items-center gap-2 text-xs text-ink-3 min-[720px]:flex">
                 <span className="text-ink-4">|</span>
                 <span>
                   {t("ip_access.stat_active_rules")}{" "}
-                  <span className="font-mono tabular-nums text-ink">{status.active_rules}</span>
+                  <span className="font-mono tabular-nums text-ink">{status.active_rules ?? "—"}</span>
                 </span>
                 <span className="text-ink-4">|</span>
                 <span>
                   {t("ip_access.stat_auto_ban")}{" "}
                   <span className="font-mono text-ink">
-                    {t(`ip_access.auto_ban_mode_${status.auto_ban_mode}`)}
+                    {/* 字段缺失（旧后端）时写「—」，未知取值原样显示，不把 i18n 键名露出来。 */}
+                    {status.auto_ban_mode
+                      ? t(`ip_access.auto_ban_mode_${status.auto_ban_mode}`, {
+                          defaultValue: status.auto_ban_mode,
+                        })
+                      : "—"}
                   </span>
                 </span>
                 {status.lockdown ? (
@@ -108,9 +116,11 @@ export function IpAccessPage() {
                 ) : null}
               </div>
             ) : null}
+            <TrustBanner status={status} onOpenPolicy={() => setTab("policy")} />
           </div>
           <Button
             variant="secondary"
+            className="shrink-0"
             onClick={() => void refreshAll()}
             disabled={refreshing}
             aria-busy={refreshing}

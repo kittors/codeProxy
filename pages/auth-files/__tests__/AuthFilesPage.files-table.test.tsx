@@ -1139,14 +1139,15 @@ describe("AuthFilesPage files table", () => {
     const row = await screen.findByRole("row", { name: /codex-pro\.json/ });
     const actionGroup = within(row).getByRole("button", { name: "Refresh" }).closest("div");
     const actionHeader = screen.getByRole("columnheader", { name: "Action" });
-    const actionCell = row.querySelector<HTMLElement>('td[data-vt-column-key="actions"]');
+    const actionCell = row.querySelector<HTMLElement>('td[data-col="actions"]');
 
     expect(actionGroup).not.toBeNull();
     expect(actionGroup).toHaveClass("flex");
     expect(actionGroup).toHaveClass("flex-nowrap");
     expect(actionGroup).toHaveClass("whitespace-nowrap");
     expect(actionGroup).not.toHaveClass("flex-wrap");
-    expect(actionHeader).toHaveClass("w-40");
+    // 操作列冻结在右侧、固定 160 设计像素（四个图标位），宽度写在 colgroup 上。
+    expect(actionHeader).toHaveAttribute("data-pin", "end");
     expect(actionCell).not.toBeNull();
     expect(within(actionCell as HTMLElement).getAllByRole("button")).toHaveLength(4);
     expect(
@@ -2534,7 +2535,7 @@ describe("AuthFilesPage files table", () => {
 
     expect(screen.getByText("codex-vip.json")).toBeInTheDocument();
     expect(screen.queryByText("qwen-lab.json")).not.toBeInTheDocument();
-    expect(screen.getByText("Total 1 · Page 1 / 1")).toBeInTheDocument();
+    expect(screen.getByText("1–1 of 1")).toBeInTheDocument();
   });
 
   test("keeps an emptied custom tag filter clearable after deleting selected files", async () => {
@@ -4660,7 +4661,7 @@ describe("AuthFilesPage files table", () => {
       expect(within(firstCard as HTMLElement).getByText("Cycle 101")).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    fireEvent.click(screen.getByRole("button", { name: "Next page" }));
 
     const tenthTitle = await screen.findByText("auth-10.json");
     const tenthCard = tenthTitle.closest("section");
@@ -5252,10 +5253,11 @@ describe("AuthFilesPage files table", () => {
     await Promise.resolve();
     expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
 
-    const actionsHeader = table.querySelector<HTMLElement>('th[data-vt-column-key="actions"]');
-    const actionsCell = row?.querySelector<HTMLElement>('td[data-vt-column-key="actions"]');
-    expect(actionsHeader).toHaveClass("md:sticky");
-    expect(actionsCell).toHaveClass("md:sticky");
+    const actionsHeader = table.querySelector<HTMLElement>('th[data-col="actions"]');
+    const actionsCell = row?.querySelector<HTMLElement>('td[data-col="actions"]');
+    // 操作列冻结在右侧：表头和单元格都是 sticky 的冻结格。
+    expect(actionsHeader).toHaveAttribute("data-pin", "end");
+    expect(actionsCell).toHaveAttribute("data-pin", "end");
   });
 
   test("quota refresh preserves tenant plan override and updates reset credit badges", async () => {

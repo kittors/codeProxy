@@ -836,9 +836,15 @@ describe("ModelsPage", () => {
     await userEvent.click(await screen.findByRole("tab", { name: /model library/i }));
     const libraryCard = await screen.findByTestId("model-library-card");
 
-    await userEvent.click(within(libraryCard).getByLabelText(/select seed-only-model/i));
+    // 勾选列是表格自己的（每行一个「Select row」）：按模型所在的行找它的勾选框。
+    const seedRow = within(libraryCard).getByText("seed-only-model").closest("tr") as HTMLElement;
+    await userEvent.click(within(seedRow).getByRole("checkbox", { name: "Select row" }));
 
-    expect(within(libraryCard).getByText(/1 selected/i)).toBeInTheDocument();
+    expect(
+      within(libraryCard.querySelector("[data-grid-selection-bar]") as HTMLElement).getByText(
+        /1 selected/i,
+      ),
+    ).toBeInTheDocument();
     await userEvent.click(
       within(libraryCard).getByRole("button", { name: /delete selected \(1\)/i }),
     );
@@ -906,11 +912,23 @@ describe("ModelsPage", () => {
     await userEvent.click(await screen.findByRole("tab", { name: /model library/i }));
     const libraryCard = await screen.findByTestId("model-library-card");
 
-    await userEvent.click(within(libraryCard).getByLabelText(/select all visible models/i));
+    // 表头勾选框只管当前可见（筛选后）的行。
+    await userEvent.click(
+      within(libraryCard).getByRole("checkbox", { name: "Select all rows on this page" }),
+    );
 
-    expect(within(libraryCard).getByText(/2 selected/i)).toBeInTheDocument();
-    expect(within(libraryCard).getByLabelText(/select gpt-5\.5/i)).toBeChecked();
-    expect(within(libraryCard).getByLabelText(/select claude-sonnet-4-6/i)).toBeChecked();
+    expect(
+      within(libraryCard.querySelector("[data-grid-selection-bar]") as HTMLElement).getByText(
+        /2 selected/i,
+      ),
+    ).toBeInTheDocument();
+    const rowBox = (model: string) =>
+      within(within(libraryCard).getByText(model).closest("tr") as HTMLElement).getByRole(
+        "checkbox",
+        { name: "Select row" },
+      );
+    expect(rowBox("gpt-5.5")).toBeChecked();
+    expect(rowBox("claude-sonnet-4-6")).toBeChecked();
   });
 
   test("saves model id, description, enabled state, pricing mode, and per-call price", async () => {

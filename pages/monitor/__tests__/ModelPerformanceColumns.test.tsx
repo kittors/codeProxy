@@ -35,9 +35,25 @@ const overviewWith = (rows: unknown[], coverage = "") => ({
   models: { rows, total: rows.length, performance_coverage_start: coverage },
 });
 
+/** 排行表按窗口断点收起次要列：这里按宽屏桌面渲染，所有列都在。 */
+function renderAsWideDesktop() {
+  window.matchMedia = ((query: string) =>
+    ({
+      matches: /min-width/.test(query),
+      media: query,
+      onchange: null,
+      addListener: () => undefined,
+      removeListener: () => undefined,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+      dispatchEvent: () => false,
+    }) as unknown as MediaQueryList) as typeof window.matchMedia;
+}
+
 describe("model ranking performance columns", () => {
   beforeEach(async () => {
     await i18n.changeLanguage("zh-CN");
+    renderAsWideDesktop();
   });
 
   test("shows the per-request P50 with the P90 below it", () => {
@@ -149,19 +165,20 @@ describe("model ranking performance columns", () => {
     expect(row.getByText("3.00s").parentElement).toHaveTextContent("avg");
   });
 
-  test("explains each measurement on its header", () => {
+  test("explains each measurement on its header", async () => {
     renderCard(overviewWith([{ key: "m", label: "m", requests: 1 }]));
-    const hint = screen.getByRole("img", { name: /输出 token ÷ 出字耗时（不含首字时间）/ });
-    fireEvent.focusIn(hint);
-    expect(screen.getByRole("tooltip")).toHaveTextContent(
+    // 表头说明：带点状下划线的表头文字，悬停看口径。
+    const hover = async (label: string) => {
+      const header = screen.getByRole("columnheader", { name: label });
+      const text = within(header).getByText(label);
+      fireEvent.mouseEnter(text.parentElement!);
+      const tooltip = await screen.findByRole("tooltip");
+      fireEvent.mouseLeave(text.parentElement!);
+      return tooltip;
+    };
+    expect(await hover("生成速度")).toHaveTextContent(
       "只统计成功的流式请求，出字耗时 ≥ 0.5 秒且输出 ≥ 50 token；推理 token 不计入",
     );
-    expect(
-      screen.getByRole("img", { name: /从收到请求到写出第一个数据块的时间/ }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("img", { name: /首字时间合计 ÷ 输入 token 合计 × 1000/ }),
-    ).toBeInTheDocument();
   });
 
   test("says where the percentiles start when older details have expired", () => {

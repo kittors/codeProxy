@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, test } from "vitest";
 import { GlobalIconButtonTooltip } from "../Tooltip";
 
@@ -62,5 +62,51 @@ describe("GlobalIconButtonTooltip", () => {
     fireEvent.mouseOut(screen.getByRole("link", { name: "Dashboard" }));
     fireEvent.mouseOver(screen.getByRole("link", { name: "Monitor" }));
     expect(screen.queryByRole("tooltip")).toBeNull();
+  });
+
+  // 点按会让按钮拿到焦点；按焦点弹回来的提示是点之前的名字（展开 / 收起切换后仍写「展开详情」）。
+  test("a pointer click does not bring the tooltip back through focus", () => {
+    render(
+      <>
+        <GlobalIconButtonTooltip />
+        <button type="button" aria-label="展开详情">
+          <svg aria-hidden="true" />
+        </button>
+      </>,
+    );
+    const button = screen.getByRole("button", { name: "展开详情" });
+    fireEvent.mouseOver(button);
+    expect(screen.getByRole("tooltip")).toHaveTextContent("展开详情");
+    fireEvent.pointerDown(button);
+    fireEvent.focusIn(button);
+    expect(screen.queryByRole("tooltip")).toBeNull();
+
+    // 之后用键盘把焦点移回来，照常弹提示。
+    fireEvent.focusOut(button);
+    fireEvent.keyDown(document.body, { key: "Tab" });
+    fireEvent.focusIn(button);
+    expect(screen.getByRole("tooltip")).toHaveTextContent("展开详情");
+  });
+
+  test("an open tooltip follows a label that changes underneath it", async () => {
+    const { rerender } = render(
+      <>
+        <GlobalIconButtonTooltip />
+        <button type="button" aria-label="展开详情" aria-expanded={false}>
+          <svg aria-hidden="true" />
+        </button>
+      </>,
+    );
+    fireEvent.mouseOver(screen.getByRole("button", { name: "展开详情" }));
+    expect(screen.getByRole("tooltip")).toHaveTextContent("展开详情");
+    rerender(
+      <>
+        <GlobalIconButtonTooltip />
+        <button type="button" aria-label="收起详情" aria-expanded>
+          <svg aria-hidden="true" />
+        </button>
+      </>,
+    );
+    await waitFor(() => expect(screen.getByRole("tooltip")).toHaveTextContent("收起详情"));
   });
 });

@@ -564,7 +564,8 @@ describe("ApiKeyLookupPage", () => {
     expect(screen.queryByText("owner@example.com")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "12,345" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "6,789" })).not.toBeInTheDocument();
-    expect(screen.getByText("12,345")).toBeInTheDocument();
+    // 格子里写短（12.3K），精确值在悬停提示里。
+    expect(screen.getByText("12.3K")).toBeInTheDocument();
     expect(screen.getByText("6,789")).toBeInTheDocument();
   });
 
@@ -649,12 +650,12 @@ describe("ApiKeyLookupPage", () => {
         expect.objectContaining({ apiKey: "sk-restored-key", page: 1 }),
       );
     });
-    expect(screen.getAllByText(/response metrics/i).length).toBeGreaterThan(0);
+    expect(screen.getByRole("columnheader", { name: "Duration" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Throughput" })).toBeInTheDocument();
     expect(screen.queryByText("Codex 主渠道")).not.toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: /key name|Key 名称/i })).toBeInTheDocument();
     expect(screen.queryByText("Alice")).not.toBeInTheDocument();
     expect(screen.getByText("Laptop")).toBeInTheDocument();
-    expect(screen.queryByRole("columnheader", { name: /^duration$/i })).not.toBeInTheDocument();
 
     const logsQuota = await screen.findByTestId("apikey-lookup-logs-quota");
     expect(logsQuota).toHaveTextContent(/daily requests/i);
@@ -725,36 +726,30 @@ describe("ApiKeyLookupPage", () => {
 
     await userEvent.click(await screen.findByRole("tab", { name: /request logs/i }));
 
-    expect(await screen.findByRole("combobox", { name: /filter by key/i })).toHaveTextContent(
-      /all keys/i,
-    );
-    expect(await screen.findByRole("combobox", { name: /filter by model/i })).toHaveTextContent(
-      /all models/i,
-    );
-    expect(screen.queryByRole("combobox", { name: /filter by channel/i })).not.toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: /filter by status/i })).toHaveTextContent(
-      /all status/i,
-    );
+    // 筛选区：状态页签 + 分面按钮（Key 名称、模型）；公开查询不暴露渠道。
+    const search = await screen.findByRole("search");
+    const keyFacet = await within(search).findByRole("button", { name: /^key name/i });
+    expect(within(search).getByRole("button", { name: /^model/i })).toBeInTheDocument();
+    expect(within(search).queryByRole("button", { name: /^channel/i })).not.toBeInTheDocument();
+    expect(within(search).getByRole("tab", { name: "All" })).toHaveAttribute("aria-selected", "true");
 
-    await userEvent.click(screen.getByRole("combobox", { name: /filter by key/i }));
-    const keyOptions = await screen.findAllByRole("option");
-    expect(keyOptions[0]).toHaveAccessibleName(/Automation,?\s*37 calls/i);
-    expect(keyOptions[1]).toHaveAccessibleName(/Laptop,?\s*12 calls/i);
-    expect(keyOptions[0]).toHaveAttribute("aria-selected", "false");
-    expect(keyOptions[1]).toHaveAttribute("aria-selected", "false");
-    expect(screen.getByRole("listbox", { name: /filter by key/i })).not.toHaveTextContent(
-      "sk-restored-key",
-    );
+    await userEvent.click(keyFacet);
+    const dialog = await screen.findByRole("dialog");
+    const keyOptions = within(dialog).getAllByRole("checkbox");
+    // 按调用次数从多到少排，后面带次数；选项里不出现 Key 明文。
+    expect(keyOptions[0]).toHaveAccessibleName(/Automation/);
+    expect(keyOptions[1]).toHaveAccessibleName(/Laptop/);
+    expect(dialog).toHaveTextContent("37");
+    expect(dialog).not.toHaveTextContent("sk-restored-key");
 
-    await userEvent.click(screen.getByRole("option", { name: /Laptop/i }));
-    await userEvent.click(screen.getByRole("button", { name: /apply filters/i }));
+    await userEvent.click(within(dialog).getByRole("checkbox", { name: /Laptop/ }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Apply" }));
 
     await waitFor(() => {
       expect(mocks.fetchPublicLogs).toHaveBeenLastCalledWith(
         expect.objectContaining({
           apiKey: "sk-restored-key",
           apiKeyIds: ["key-laptop"],
-          apiKeyIdsEmpty: false,
         }),
       );
     });
@@ -913,7 +908,7 @@ describe("ApiKeyLookupPage", () => {
     const tableViewport = screen.getByTestId("apikey-lookup-keys-table-viewport");
     expect(tableViewport.className).not.toMatch(/100dvh|min-h-\[360px\]/);
     expect(tableViewport).not.toHaveClass("px-3");
-    expect(tableViewport.querySelector(".h-auto.min-h-0.max-h-full")).not.toBeNull();
+    expect(tableViewport.querySelector('.cp-grid[data-fill="false"]')).not.toBeNull();
 
     await waitFor(() => {
       expect(portalApi.listKeys).toHaveBeenCalledTimes(2);

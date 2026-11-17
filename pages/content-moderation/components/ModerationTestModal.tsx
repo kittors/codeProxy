@@ -6,7 +6,22 @@ import {
   type ContentModerationDecision,
   type ContentModerationProfileView,
 } from "@code-proxy/api-client";
-import { Button, Callout, FormField, Modal, Textarea, surface } from "@code-proxy/ui";
+import {
+  Button,
+  Callout,
+  DataGrid,
+  FormField,
+  Modal,
+  Textarea,
+  surface,
+  type DataGridColumn,
+} from "@code-proxy/ui";
+
+interface ScoreRow {
+  category: string;
+  score: number;
+  threshold?: number;
+}
 
 export interface ModerationTestModalProps {
   profile: ContentModerationProfileView | null;
@@ -40,12 +55,54 @@ export function ModerationTestModal({ profile, onClose }: ModerationTestModalPro
     setError("");
   }, [profile]);
 
-  const scoreRows = useMemo(
+  const scoreRows = useMemo<ScoreRow[]>(
     () =>
-      Object.entries(decision?.category_scores ?? {}).sort(([left], [right]) =>
-        left.localeCompare(right),
-      ),
+      Object.entries(decision?.category_scores ?? {})
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([category, score]) => ({
+          category,
+          score,
+          threshold: decision?.thresholds[category],
+        })),
     [decision],
+  );
+  const scoreColumns = useMemo<DataGridColumn<ScoreRow>[]>(
+    () => [
+      {
+        id: "category",
+        header: t("content_moderation.category"),
+        width: 200,
+        grow: true,
+        cell: (row) => <span className="truncate font-mono text-xs text-ink-2">{row.category}</span>,
+      },
+      {
+        id: "score",
+        header: t("content_moderation.score"),
+        align: "end",
+        width: 112,
+        cell: (row) => {
+          // 与服务端判定一致（backend_openai.go：score >= threshold 即命中），超线的分数标红。
+          const over = row.threshold !== undefined && row.score >= row.threshold;
+          return (
+            <span
+              className={`text-xs tabular-nums ${over ? "font-semibold text-rose-600 dark:text-rose-400" : "text-ink-2"}`}
+            >
+              {row.score.toFixed(4)}
+            </span>
+          );
+        },
+      },
+      {
+        id: "threshold",
+        header: t("content_moderation.threshold"),
+        align: "end",
+        width: 112,
+        cell: (row) => (
+          <span className="text-xs tabular-nums text-ink-3">{row.threshold?.toFixed(4) ?? "--"}</span>
+        ),
+      },
+    ],
+    [t],
   );
 
   const run = async () => {
@@ -203,47 +260,20 @@ export function ModerationTestModal({ profile, onClose }: ModerationTestModalPro
             ) : null}
 
             {scoreRows.length ? (
+              // 浅底框里的小表：不再套外框，最高 13rem 后表内滚动（表头吸顶）；
+              // 浅底框不设 --cp-backdrop，这里补上，行底色才和框一致。
               <div
-                className={`max-h-52 overflow-y-auto ${surface({ tone: "inset", radius: "xl" })}`}
+                className={`overflow-hidden [--cp-backdrop:var(--cp-subtle)] ${surface({ tone: "inset", radius: "xl" })}`}
               >
-                <table className="w-full text-left text-xs">
-                  <thead className="sticky top-0 bg-subtle text-ink-3">
-                    <tr>
-                      <th className="px-3 py-2 font-semibold">
-                        {t("content_moderation.category")}
-                      </th>
-                      <th className="px-3 py-2 text-right font-semibold">
-                        {t("content_moderation.score")}
-                      </th>
-                      <th className="px-3 py-2 text-right font-semibold">
-                        {t("content_moderation.threshold")}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {scoreRows.map(([category, score]) => {
-                      const threshold = decision.thresholds[category];
-                      // 与服务端判定一致（backend_openai.go：score >= threshold 即命中），超线的分数标红。
-                      const over = threshold !== undefined && score >= threshold;
-                      return (
-                        <tr key={category} className="border-t border-line">
-                          <td className="px-3 py-2 font-mono text-ink-2">{category}</td>
-                          <td
-                            className={[
-                              "px-3 py-2 text-right tabular-nums",
-                              over ? "font-semibold text-rose-600 dark:text-rose-400" : "text-ink-2",
-                            ].join(" ")}
-                          >
-                            {score.toFixed(4)}
-                          </td>
-                          <td className="px-3 py-2 text-right tabular-nums text-ink-3">
-                            {threshold?.toFixed(4) ?? "--"}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                <DataGrid<ScoreRow>
+                  frame={false}
+                  density="compact"
+                  label={t("content_moderation.score")}
+                  columns={scoreColumns}
+                  rows={scoreRows}
+                  rowKey={(row) => row.category}
+                  maxHeight="13rem"
+                />
               </div>
             ) : null}
           </section>

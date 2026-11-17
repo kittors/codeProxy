@@ -302,13 +302,14 @@ describe("RoutingConfigEditor", () => {
       />,
     );
 
-    const actionsHeader = document.querySelector('th[data-vt-column-key="actions"]');
-    const actionsCell = document.querySelector('td[data-vt-column-key="actions"]');
+    // 操作列冻结在右侧（DataGrid 的 pin: "end"：吸附在右缘，横向滚动时一直在眼前）。
+    const actionsHeader = document.querySelector('th[data-col="actions"]');
+    const actionsCell = document.querySelector('td[data-col="actions"]');
 
-    expect(actionsHeader).toHaveClass("md:sticky", "md:right-[var(--vt-sticky-right)]", "z-[70]");
-    expect(actionsHeader).toHaveStyle({ zIndex: "70" });
-    expect(actionsCell).toHaveClass("md:sticky", "md:right-[var(--vt-sticky-right)]");
-    expect(actionsCell).toHaveStyle({ zIndex: "30" });
+    expect(actionsHeader).toHaveAttribute("data-pin", "end");
+    expect(actionsHeader).toHaveStyle({ right: "0px" });
+    expect(actionsCell).toHaveAttribute("data-pin", "end");
+    expect(actionsCell).toHaveStyle({ right: "0px" });
   });
 
 
@@ -921,7 +922,7 @@ describe("RoutingConfigEditor", () => {
     expect(await screen.findByTestId("group-editor-model-list")).toHaveClass("-mx-5");
     expect(screen.getByTestId("group-editor-model-list-content")).toHaveClass("px-5");
     expect(
-      screen.getByRole("table", { name: "允许模型" }).closest("[data-vt-scroll-content]"),
+      screen.getByRole("table", { name: "允许模型" }).closest(".cp-grid-viewport"),
     ).not.toHaveClass("pr-5");
     expect(screen.getByRole("table", { name: "允许模型" })).toBeInTheDocument();
     expect(screen.getByRole("tablist")).toBeInTheDocument();
@@ -940,14 +941,13 @@ describe("RoutingConfigEditor", () => {
     await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
 
     const channelTable = screen.getByRole("table", { name: "选择渠道" });
-    const tableShell = channelTable.closest("[data-vt-natural-flow]") as HTMLDivElement | null;
+    const grid = channelTable.closest(".cp-grid") as HTMLDivElement | null;
 
-    expect(tableShell).not.toBeNull();
-    expect(tableShell).toHaveClass("h-auto");
-    expect(tableShell).toHaveClass("min-h-0");
-    expect(tableShell).not.toHaveClass("h-[248px]");
-    expect(tableShell!.querySelector(".table-scrollbar")).toBeNull();
-    expect(tableShell!.querySelector("[data-vt-scrollbar]")).toBeNull();
+    // 表单里的小表按行收高、跟着编辑器一起滚，不铺满、不套外框，也没有自己的固定高度。
+    expect(grid).not.toBeNull();
+    expect(grid).toHaveAttribute("data-fill", "false");
+    expect(grid).not.toHaveClass("cp-grid-frame");
+    expect(grid).not.toHaveClass("h-[248px]");
   });
 
   test("keeps the model list table visible while channel models are loading", async () => {
@@ -967,9 +967,8 @@ describe("RoutingConfigEditor", () => {
 
     expect(screen.getByTestId("group-editor-model-list")).toHaveClass("-mx-5");
     expect(screen.getByTestId("group-editor-model-list-content")).toHaveClass("px-5");
-    expect(screen.getByRole("table", { name: "允许模型" })).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("加载中");
-    expect(screen.getByRole("status")).toHaveClass("sr-only");
+    // 加载中是表格自己的骨架：表格一直在，读屏读到「忙」。
+    expect(screen.getByRole("table", { name: "允许模型" })).toHaveAttribute("aria-busy", "true");
   });
 
   test("sets path routes directly inside group editor", async () => {
@@ -1169,11 +1168,15 @@ describe("RoutingConfigEditor", () => {
 
     render(<Harness />);
 
-    await user.hover(screen.getByLabelText(/这里不是访问路径/));
+    // 表头说明：带点状下划线的表头文字，悬停看口径。
+    const scopeHeader = within(screen.getByRole("columnheader", { name: /默认路径/ })).getByText(
+      "默认路径",
+    );
+    await user.hover(scopeHeader);
     expect(await screen.findByRole("tooltip")).toHaveTextContent(
       "默认可用表示请求没有命中自定义路径时",
     );
-    await user.unhover(screen.getByLabelText(/这里不是访问路径/));
+    await user.unhover(scopeHeader);
 
     await user.click(screen.getByRole("button", { name: "新增分组" }));
     await user.hover(screen.getByLabelText(/开启后，这个分组只会在请求命中自己的分组路径/));

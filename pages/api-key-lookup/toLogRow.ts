@@ -4,6 +4,8 @@ import {
   maskRequestLogApiKey,
   normalizeChannelAuthType,
   normalizeGuardKind,
+  readPromptTokens,
+  readRequestLogClient,
   type RequestLogsRow,
 } from "@features/request-log-viewer";
 import { readRequestCacheUse } from "@code-proxy/domain";
@@ -44,7 +46,9 @@ export function toLogRow(item: PublicLogItem): RequestLogsRow {
     cacheUse: readRequestCacheUse(item),
     outputTokens: item.output_tokens,
     totalTokens: item.total_tokens,
+    promptTokens: readPromptTokens(item.prompt_tokens),
     cost: item.cost ?? 0,
     hasContent: item.has_content,
+    ...readRequestLogClient(item),
   };
 }

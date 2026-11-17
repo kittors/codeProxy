@@ -2,40 +2,24 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronRight, Key, KeyRound, LogOut } from "lucide-react";
 import { isApiClientError } from "@code-proxy/api-client";
-import { readRequestCacheUse } from "@code-proxy/domain";
 import { Button } from "@code-proxy/ui";
 import { DropdownMenu } from "@code-proxy/ui";
 import { LanguageSelector } from "@code-proxy/ui";
 import { PageBackground } from "@code-proxy/ui";
 import { Reveal } from "@code-proxy/ui";
 import { ThemeToggleButton } from "@code-proxy/ui";
-import type { SearchableCheckboxMultiSelectOption } from "@code-proxy/ui";
 import type { TimeRange } from "@features/monitor-widgets/monitor-constants";
-import { ModelTag } from "@features/model-tags";
 import { fetchPublicLogs, fetchPublicUsageSummary } from "../api-key-lookup/api";
 import {
   LookupResultsToolbar,
   type ApiKeyLookupTab,
 } from "../api-key-lookup/components/LookupResultsToolbar";
 import { PublicLogsSection } from "../api-key-lookup/components/PublicLogsSection";
+import { toLogRow } from "../api-key-lookup/toLogRow";
+import { usePublicLogFilters } from "../api-key-lookup/hooks/usePublicLogFilters";
 import { QuickImportTabContent } from "../api-key-lookup/components/QuickImportTabContent";
 import type { PublicLogItem, PublicQuotaScope, PublicUsageLimits } from "../api-key-lookup/types";
 import { ApiKeyUsageKeyModal } from "./ApiKeyUsageKeyModal";
-import {
-  buildRequestLogsColumns,
-  requestLogsHaveCacheBreakdown,
-  formatOptionalRequestLogLatencyMs,
-  formatRequestLogLatencyMs,
-  maskRequestLogApiKey,
-  normalizeChannelAuthType,
-  normalizeFilterSelection,
-  normalizeGuardKind,
-  toFilterParam,
-  toStatusFilterValues,
-  type MultiSelectFilterState,
-  type RequestLogsRow,
-  type StatusFilterValue,
-} from "@features/request-log-viewer";
 
 const DEFAULT_PAGE_SIZE = 50;
 // ponytail: plain localStorage key; no multi-account until users ask
@@ -135,44 +119,6 @@ const writeStoredUsageKey = (value: StoredUsageKey | null): void => {
   }
 };
 
-function toLogRow(item: PublicLogItem): RequestLogsRow {
-  const channelAuthType = normalizeChannelAuthType(item.auth_type);
-  return {
-    id: String(item.id),
-    timestamp: item.timestamp,
-    timestampMs: new Date(item.timestamp).getTime(),
-    apiKey: item.api_key || "",
-    apiKeyId: item.api_key_id || "",
-    apiKeyName: item.api_key_name || "",
-    apiKeyOwnName: item.api_key_own_name || "",
-    endUserDisplayName: item.end_user_display_name || item.api_key_name || "",
-    isSystemCall: false,
-    channelName: item.channel_name || "",
-    channelProvider: String(item.provider ?? "").trim() || undefined,
-    channelAuthType: channelAuthType || undefined,
-    maskedApiKey: item.api_key_masked || maskRequestLogApiKey(item.api_key || ""),
-    model: item.model,
-    upstreamModel: item.upstream_model || "",
-    upstreamResponseModel: item.upstream_response_model || "",
-    upstreamModelMismatch: item.upstream_model_mismatch === true,
-    visionFallbackModel: item.vision_fallback_model || "",
-    failed: item.failed,
-    guardKind: normalizeGuardKind(item.guard_kind),
-    streaming: item.streaming === true,
-    latencyMs: item.latency_ms,
-    firstTokenMs: item.first_token_ms ?? 0,
-    latencyText: formatRequestLogLatencyMs(item.latency_ms),
-    firstTokenText: formatOptionalRequestLogLatencyMs(item.first_token_ms ?? 0),
-    inputTokens: item.input_tokens,
-    cachedTokens: item.cached_tokens,
-    cacheUse: readRequestCacheUse(item),
-    outputTokens: item.output_tokens,
-    totalTokens: item.total_tokens,
-    cost: item.cost ?? 0,
-    hasContent: item.has_content,
-  };
-}
-
 export function ApiKeyUsagePage() {
   const { t } = useTranslation();
 
@@ -203,16 +149,7 @@ export function ApiKeyUsagePage() {
     total_tokens: 0,
     total_cost: 0,
   });
-  const [filterOptions, setFilterOptions] = useState<{
-    models: string[];
-    statuses: string[];
-  }>({
-    models: [],
-    statuses: ["success", "failed"],
-  });
-  const [selectedModels, setSelectedModels] = useState<MultiSelectFilterState<string>>(null);
-  const [selectedStatuses, setSelectedStatuses] =
-    useState<MultiSelectFilterState<StatusFilterValue>>(null);
+  const logFilters = usePublicLogFilters();
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const fetchIdRef = useRef(0);
@@ -223,55 +160,6 @@ export function ApiKeyUsagePage() {
   const [quotaScopes, setQuotaScopes] = useState<PublicQuotaScope[]>([]);
   const summaryAbortControllerRef = useRef<AbortController | null>(null);
   const summaryFetchIdRef = useRef(0);
-
-  const modelOptions = useMemo<SearchableCheckboxMultiSelectOption[]>(() => {
-    return filterOptions.models.map((model) => ({
-      value: model,
-      label: <ModelTag id={model} size="sm" />,
-      searchText: model,
-    }));
-  }, [filterOptions.models]);
-
-  const statusOptions = useMemo<SearchableCheckboxMultiSelectOption[]>(() => {
-    const statuses =
-      filterOptions.statuses.length > 0 ? filterOptions.statuses : ["success", "failed"];
-    return statuses.map((status) => ({
-      value: status,
-      label:
-        status === "success"
-          ? t("request_logs.status_success")
-          : status === "failed"
-            ? t("request_logs.status_failed")
-            : status,
-      searchText: status,
-    }));
-  }, [filterOptions.statuses, t]);
-
-  const modelFilterValues = useMemo(
-    () => modelOptions.map((option) => option.value),
-    [modelOptions],
-  );
-  const statusFilterValues = useMemo<StatusFilterValue[]>(
-    () => toStatusFilterValues(statusOptions.map((option) => option.value)),
-    [statusOptions],
-  );
-  const modelFilterParam = useMemo(() => toFilterParam(selectedModels), [selectedModels]);
-  const statusFilterParam = useMemo(() => toFilterParam(selectedStatuses), [selectedStatuses]);
-
-  const handleModelsChange = useCallback(
-    (value: string[]) => {
-      setSelectedModels(normalizeFilterSelection(value, modelFilterValues));
-    },
-    [modelFilterValues],
-  );
-  const handleStatusesChange = useCallback(
-    (value: StatusFilterValue[]) => {
-      setSelectedStatuses(normalizeFilterSelection(value, statusFilterValues));
-    },
-    [statusFilterValues],
-  );
-  const clearModelFilter = useCallback(() => setSelectedModels(null), []);
-  const clearStatusFilter = useCallback(() => setSelectedStatuses(null), []);
 
   const resetResults = useCallback(() => {
     abortControllerRef.current?.abort();
@@ -286,16 +174,11 @@ export function ApiKeyUsagePage() {
     setCurrentPage(1);
     setLastUpdatedAt(null);
     setStats({ total: 0, success_rate: 0, total_tokens: 0, total_cost: 0 });
-    setFilterOptions({
-      models: [],
-      statuses: ["success", "failed"],
-    });
-    setSelectedModels(null);
-    setSelectedStatuses(null);
+    logFilters.reset();
     setApiKeyName("");
     setQuotaLimits(null);
     setQuotaScopes([]);
-  }, []);
+  }, [logFilters.reset]);
 
   const fetchQuotaLimits = useCallback(async (apiKey: string) => {
     const trimmed = apiKey.trim();
@@ -343,10 +226,9 @@ export function ApiKeyUsagePage() {
           page,
           size: size ?? pageSize,
           days: timeRange,
-          models: modelFilterParam.values,
-          statuses: statusFilterParam.values,
-          modelsEmpty: modelFilterParam.matchesNone,
-          statusesEmpty: statusFilterParam.matchesNone,
+          models: logFilters.query.models,
+          statuses: logFilters.query.statuses,
+          clientNames: logFilters.query.clientNames,
           signal: controller.signal,
         });
         if (myFetchId !== fetchIdRef.current) return;
@@ -363,10 +245,7 @@ export function ApiKeyUsagePage() {
             total_cost: 0,
           },
         );
-        setFilterOptions({
-          models: resp.filters?.models ?? [],
-          statuses: resp.filters?.statuses ?? ["success", "failed"],
-        });
+        logFilters.readResponse(resp);
         setLastUpdatedAt(Date.now());
         setApiKeyName(nextName);
         writeStoredUsageKey({ apiKey: trimmed, ...(nextName ? { name: nextName } : {}) });
@@ -386,20 +265,10 @@ export function ApiKeyUsagePage() {
         if (myFetchId === fetchIdRef.current) setLoading(false);
       }
     },
-    [fetchQuotaLimits, modelFilterParam, pageSize, statusFilterParam, t, timeRange],
+    [fetchQuotaLimits, logFilters.query, logFilters.readResponse, pageSize, t, timeRange],
   );
 
   const rows = useMemo(() => rawItems.map((item) => toLogRow(item)), [rawItems]);
-  const cacheBreakdown = useMemo(() => requestLogsHaveCacheBreakdown(rows), [rows]);
-  const logColumns = useMemo(
-    () =>
-      buildRequestLogsColumns((key) => t(key), undefined, undefined, {
-        identityColumn: "none",
-        hideChannel: true,
-        cacheBreakdown,
-      }),
-    [t, cacheBreakdown],
-  );
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
   const handlePageChange = useCallback(
@@ -427,13 +296,12 @@ export function ApiKeyUsagePage() {
       // Drop previous key label immediately so a stale localStorage/account name cannot flash.
       setApiKeyName("");
       setActiveTab("logs");
-      setSelectedModels(null);
-      setSelectedStatuses(null);
+      logFilters.reset();
       setQuickImportReloadToken((value) => value + 1);
       writeStoredUsageKey({ apiKey: next });
       fetchLogs(next, 1);
     },
-    [apiKeyInput, fetchLogs],
+    [apiKeyInput, fetchLogs, logFilters.reset],
   );
 
   const handleLogout = useCallback(() => {
@@ -459,7 +327,7 @@ export function ApiKeyUsagePage() {
       void fetchQuotaLimits(queriedKey);
       fetchLogs(queriedKey, 1);
     }
-  }, [timeRange, selectedModels, selectedStatuses]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [timeRange, logFilters.filters]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!bootstrap?.apiKey || restoredLookupFetchedRef.current) return;
@@ -485,13 +353,6 @@ export function ApiKeyUsagePage() {
       // ignore
     }
   }, []);
-
-  const lastUpdatedText = useMemo(() => {
-    if (!lastUpdatedAt) return "";
-    const d = new Date(lastUpdatedAt);
-    const pad = (n: number) => String(n).padStart(2, "0");
-    return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-  }, [lastUpdatedAt]);
 
   const displayName = apiKeyName || (queriedKey ? t("apikey_lookup.unnamed_key") : "");
   const headerControlClass =
@@ -592,22 +453,13 @@ export function ApiKeyUsagePage() {
 
               {activeTab === "logs" ? (
                 <PublicLogsSection
-                  t={t}
-                  modelOptions={modelOptions}
-                  statusOptions={statusOptions}
-                  selectedModels={selectedModels}
-                  selectedStatuses={selectedStatuses}
-                  onModelsChange={handleModelsChange}
-                  onStatusesChange={handleStatusesChange}
-                  onModelsClear={clearModelFilter}
-                  onStatusesClear={clearStatusFilter}
+                  logFilters={logFilters}
+                  identity="none"
                   stats={stats}
-                  lastUpdatedText={lastUpdatedText}
+                  lastUpdatedAt={lastUpdatedAt}
                   loading={loading}
-                  logColumns={logColumns}
                   rows={rows}
                   currentPage={currentPage}
-                  totalPages={totalPages}
                   totalCount={totalCount}
                   pageSize={pageSize}
                   onPageChange={handlePageChange}

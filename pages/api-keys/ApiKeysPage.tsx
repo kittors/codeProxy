@@ -29,10 +29,9 @@ import { createApiKeyColumns } from "./components/ApiKeyColumns";
 import { DeleteApiKeyModal } from "./components/DeleteApiKeyModal";
 import { copyTextToClipboard } from "@code-proxy/ui";
 import { Button, Card, buttonClassName } from "@code-proxy/ui";
-import { EmptyState } from "@code-proxy/ui";
 import { ConfirmModal, SecretRevealModal } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
-import { DataTable } from "@code-proxy/ui";
+import { DataGrid } from "@code-proxy/ui";
 import { ApiKeyFormModal } from "./components/ApiKeyFormModal";
 import { OwnedApiKeyEditModal } from "./components/OwnedApiKeyEditModal";
 import { ApiKeyPeriodQuotaResetModal } from "./components/ApiKeyPeriodQuotaResetModal";
@@ -74,6 +73,7 @@ export function ApiKeysPage({
   const [entries, setEntries] = useState<ApiKeyEntry[]>([]);
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(() => new Set());
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [rotateIndex, setRotateIndex] = useState<number | null>(null);
@@ -106,6 +106,7 @@ export function ApiKeysPage({
 
   const loadEntries = useCallback(async () => {
     setLoading(true);
+    setLoadError(null); // 先清上次的失败（重试回到加载态）：门户账号那一支会提前返回，放末尾清会漏掉
     try {
       if (endUserIdFilter) {
         const ownerResponse = await endUsersApi.listKeys(endUserIdFilter);
@@ -177,10 +178,8 @@ export function ApiKeysPage({
       }
       void refreshPermissionOptions();
     } catch (err: unknown) {
-      notify({
-        type: "error",
-        message: err instanceof Error ? err.message : t("api_keys_page.load_failed"),
-      });
+      // 读取失败写在表格里（给「重试」），不只弹一条会消失的提示。
+      setLoadError(err instanceof Error ? err.message : t("api_keys_page.load_failed"));
     } finally {
       setLoading(false);
     }
@@ -277,29 +276,6 @@ export function ApiKeysPage({
       })),
     [endUserIdFilter, entries],
   );
-  const allRowsSelected =
-    entries.length > 0 && entries.every((entry) => selectedKeys.has(entry.key));
-  const someRowsSelected = selectedEntries.length > 0 && !allRowsSelected;
-
-  const handleSelectAll = useCallback(
-    (checked: boolean) => {
-      setSelectedKeys(checked ? new Set(entries.map((entry) => entry.key)) : new Set());
-    },
-    [entries],
-  );
-
-  const handleSelectRow = useCallback((key: string, checked: boolean) => {
-    setSelectedKeys((prev) => {
-      const next = new Set(prev);
-      if (checked) {
-        next.add(key);
-      } else {
-        next.delete(key);
-      }
-      return next;
-    });
-  }, []);
-
   const clearSelection = useCallback(() => {
     setSelectedKeys(new Set());
   }, []);
@@ -726,11 +702,6 @@ export function ApiKeysPage({
     () =>
       createApiKeyColumns({
         t,
-        selectedKeys,
-        allRowsSelected,
-        someRowsSelected,
-        onSelectAll: handleSelectAll,
-        onSelectRow: handleSelectRow,
         onToggleDisable: (index) => void handleToggleDisable(index),
         onViewUsage: handleViewUsage,
         onCopy: (key) => void handleCopy(key),
@@ -753,12 +724,7 @@ export function ApiKeysPage({
       handleOpenEdit,
       handleOpenDelete,
       handleViewResetHistory,
-      handleSelectAll,
-      handleSelectRow,
       t,
-      selectedKeys,
-      allRowsSelected,
-      someRowsSelected,
       resettingPeriodSpendingKey,
       entries,
     ],
@@ -778,17 +744,6 @@ export function ApiKeysPage({
         <Plus size={14} />
         {t("api_keys_page.create_key")}
       </Button>
-      {selectedEntries.length > 0 && !endUserIdFilter ? (
-        <Button
-          variant="secondary-danger"
-          size="sm"
-          onClick={() => setBatchDeleteOpen(true)}
-          disabled={saving}
-        >
-          <Trash2 size={14} />
-          {t("api_keys_page.batch_delete")}
-        </Button>
-      ) : null}
       <Button variant="secondary" size="sm" onClick={() => void loadEntries()} disabled={loading}>
         <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
         {t("api_keys_page.refresh")}
@@ -797,13 +752,13 @@ export function ApiKeysPage({
   );
 
   const tableBody = endUserIdFilter ? (
-    <div className={embed ? "flex min-h-0 flex-1 flex-col" : "space-y-3 md:flex md:min-h-0 md:flex-col"}>
+    <div className={embed ? "flex min-h-0 flex-1 flex-col" : "space-y-3 md:flex md:min-h-0 md:flex-1 md:flex-col"}>
       <OwnedApiKeysTable
         t={t}
         keys={ownedKeys}
         busyKeyId={resettingPeriodSpendingKey}
         busy={saving}
-        loading={loading}
+        loading={loading} fill frame={!embed} error={loadError} onRetry={() => void loadEntries()}
         canDelete={() => ownedKeys.length > 1}
         actions={{
           onToggleDisabled: (key) => {
@@ -836,26 +791,39 @@ export function ApiKeysPage({
         }}
       />
     </div>
-  ) : entries.length === 0 ? (
-    <EmptyState
-      title={t("api_keys_page.no_keys")}
-      description={t("api_keys_page.no_keys_desc")}
-      icon={<KeyRound size={32} className="text-ink-3" />}
-    />
   ) : (
-    // 表格自己 fill（h-full + flex-1），直接放进卡片或嵌入区的 flex 列里就能撑满。
-    <DataTable<ApiKeyEntry>
+    // 表格自己 fill（h-full + flex-1），直接放进卡片或嵌入区的 flex 列里就能撑满；
+    // 加载、空、出错都在同一个框里。勾选后表头换成选择条，批量删除在选择条上。
+    <DataGrid<ApiKeyEntry>
+      id="api-keys"
+      label={t("api_keys_page.table_caption")}
       fill
-      tableId="api-keys"
       rows={entries}
       columns={apiKeyColumns}
       rowKey={(row) => row.key}
-      rowHeight={52}
-      minWidth="min-w-[2500px]"
-      caption={t("api_keys_page.table_caption")}
-      emptyText={t("api_keys_page.no_api_keys")}
-      showAllLoadedMessage={false}
-      rowClassName={(row) => (row.disabled ? "opacity-50" : "")}
+      loading={loading}
+      error={loadError}
+      onRetry={() => void loadEntries()}
+      empty={{
+        icon: <KeyRound aria-hidden="true" />,
+        title: t("api_keys_page.no_keys"),
+        description: t("api_keys_page.no_keys_desc"),
+      }}
+      selectable
+      selectedKeys={selectedKeys}
+      onSelectedKeysChange={setSelectedKeys}
+      selectionActions={() => (
+        <Button
+          variant="secondary-danger"
+          size="xs"
+          onClick={() => setBatchDeleteOpen(true)}
+          disabled={saving}
+        >
+          <Trash2 size={12} />
+          {t("api_keys_page.batch_delete")}
+        </Button>
+      )}
+      rowClassName={(row) => (row.disabled ? "opacity-50" : undefined)}
     />
   );
 
@@ -884,7 +852,6 @@ export function ApiKeysPage({
               : t("api_keys_page.description")
           }
           actions={toolbar}
-          loading={loading}
         >
           {tableBody}
         </Card>

@@ -894,12 +894,12 @@ describe("AuthFileDetailModal", () => {
     expect(within(fields).getByText("realtime=v1")).toBeInTheDocument();
     expect(within(panel).queryByText("Custom")).not.toBeInTheDocument();
     const mobileTable = within(fields).getByTestId("auth-file-identity-table-mobile");
-    expect(mobileTable.className).toContain("overflow-x-auto");
     expect(
       within(fields).queryByTestId("auth-file-identity-table-desktop"),
     ).not.toBeInTheDocument();
-    expect(fields.querySelector("[data-vt-natural-flow]")).toBeInTheDocument();
-    expect(fields.querySelector('[data-scrollbar-visibility="hover"]')).toBeNull();
+    // 窄屏：表格按行收高、跟着详情一起纵向滚，横向在表格自己的视口里滚。
+    expect(mobileTable.querySelector('.cp-grid[data-fill="false"]')).toBeInTheDocument();
+    expect(mobileTable.querySelector(".cp-grid-viewport")?.className).toContain("overflow-auto");
   });
 
   test("lists isolated Codex identities and selects exactly one outbound profile", async () => {
@@ -1096,15 +1096,15 @@ describe("AuthFileDetailModal", () => {
 
     const fields = screen.getByTestId("auth-file-identity-fields");
     const desktopTable = within(fields).getByTestId("auth-file-identity-table-desktop");
-    expect(desktopTable.className).toContain("overflow-hidden");
+    expect(desktopTable.className).toContain("min-h-0");
     expect(within(fields).queryByTestId("auth-file-identity-table-mobile")).not.toBeInTheDocument();
-    const tableViewport = fields.querySelector('[data-scrollbar-visibility="hover"]');
+    // 宽屏：表格铺满右栏，自己的视口纵横都能滚。
+    expect(desktopTable.querySelector('.cp-grid[data-fill="true"]')).toBeInTheDocument();
+    const tableViewport = desktopTable.querySelector(".cp-grid-viewport");
     if (!(tableViewport instanceof HTMLElement)) {
       throw new Error("identity fingerprint fields table must own its scroll viewport");
     }
     expect(tableViewport.className).toContain("overflow-auto");
-    expect(tableViewport.className).toContain("overscroll-x-none");
-    expect(fields.querySelector("[data-vt-natural-flow]")).toBeNull();
   });
 
   test("five-hour trend uses only the latest five hourly buckets and maps quota timestamps to local hours", () => {

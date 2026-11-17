@@ -419,7 +419,7 @@ for (const width of [1280, 1470]) {
     await expectNoHorizontalOverflow(page, width);
 
     await page.getByRole("tab", { name: "最近记录" }).click();
-    await expect(page.getByTestId("alert-event-row")).toHaveCount(EVENTS.length);
+    await expect(page.locator("tr[data-row-key]")).toHaveCount(EVENTS.length);
     await expect(page.getByText("连接超时（5s）")).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath(`alerts-events-${width}.png`) });
     await expectNoHorizontalOverflow(page, width);

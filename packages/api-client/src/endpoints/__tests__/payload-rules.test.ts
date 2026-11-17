@@ -75,6 +75,7 @@ describe("payload rules dry-run", () => {
     expect(readConfigCapabilities({ capabilities: { nodeMetrics: true, node_metrics: true, "node-metrics": 1 } }).nodeMetrics).toBe(false);
   });
 
+
   test("reads the privacy masking declaration by its kebab-case key", async () => {
     const { readConfigCapabilities } = await import("../payload-rules");
     expect(readConfigCapabilities({ capabilities: { "privacy-masking": true } }).privacyMasking).toBe(true);

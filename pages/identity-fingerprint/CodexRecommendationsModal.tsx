@@ -9,15 +9,15 @@ import {
 import {
   Button,
   Callout,
-  COLUMN_WIDTH,
   ConfirmModal,
-  DataTable,
+  DataGrid,
   EmptyState,
+  GRID_WIDTH,
   Modal,
   Skeleton,
   SkeletonLines,
   surface,
-  type DataTableColumn,
+  type DataGridColumn,
 } from "@code-proxy/ui";
 import { codexFromRecommendation } from "./codexRecommendation";
 
@@ -186,15 +186,14 @@ export function CodexRecommendationsModal({
     return lines;
   }, [i18n.resolvedLanguage, selectedDiffs, t]);
 
-  const columns = useMemo<DataTableColumn<CodexFingerprintRecommendation>[]>(
+  const columns = useMemo<DataGridColumn<CodexFingerprintRecommendation>[]>(
     () => [
       {
-        key: "last_seen",
-        label: t("identity_fingerprint.recommend_last_seen"),
-        width: COLUMN_WIDTH.numericWide,
+        id: "last_seen",
+        header: t("identity_fingerprint.recommend_last_seen"),
+        width: GRID_WIDTH.timestamp,
         resizable: false,
-        reorderable: false,
-        render: (item) => (
+        cell: (item) => (
           <div className="text-xs">
             <div className="font-medium text-ink">{formatDateTime(item.last_seen_at)}</div>
             <div className="mt-1 text-ink-3">
@@ -204,25 +203,25 @@ export function CodexRecommendationsModal({
         ),
       },
       {
-        key: "originator",
-        label: t("identity_fingerprint.originator"),
-        width: COLUMN_WIDTH.badgeGroup,
+        id: "originator",
+        header: t("identity_fingerprint.originator"),
+        width: GRID_WIDTH.badgeGroup,
         resizable: false,
-        reorderable: false,
         overflowTooltip: (item) => item.headers.Originator || item.recommended.originator || "",
-        render: (item) => (
+        cell: (item) => (
           <span className="block truncate font-mono text-xs text-ink-2">
             {item.headers.Originator || item.recommended.originator || "-"}
           </span>
         ),
       },
       {
-        key: "version",
-        label: t("identity_fingerprint.version"),
+        id: "version",
+        header: t("identity_fingerprint.version"),
+        width: 120,
+        grow: true,
         resizable: false,
-        reorderable: false,
         overflowTooltip: (item) => item.recommended.version || item.headers.Version || "",
-        render: (item) => (
+        cell: (item) => (
           <span className="block truncate font-mono text-xs text-ink-2">
             {item.recommended.version || item.headers.Version || "-"}
           </span>
@@ -285,26 +284,21 @@ export function CodexRecommendationsModal({
         ) : null}
 
         <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(460px,0.95fr)_minmax(0,1.05fr)]">
-          <div className="min-w-0">
-            <DataTable<CodexFingerprintRecommendation>
+          {/* 封顶高度随断点变（窄屏详情在下面，表格矮一些）：写成变量交给 DataGrid 的 maxHeight。
+              点一行在右边看详情；当前那一行是选中行的底色与左侧色条。 */}
+          <div className="min-w-0 [--rec-max:220px] sm:[--rec-max:300px] lg:[--rec-max:430px]">
+            <DataGrid<CodexFingerprintRecommendation>
+              frame={false}
               rows={items}
               columns={columns}
               rowKey={(item) => item.id}
               loading={loading && !hasLoaded && items.length === 0}
-              rowHeight={58}
-              maxHeight="max-h-[220px] sm:max-h-[300px] lg:max-h-[430px]"
-              minWidth="min-w-full"
-              caption={t("identity_fingerprint.recommend_table_caption")}
-              emptyText={t("identity_fingerprint.recommend_empty")}
-              showAllLoadedMessage={false}
-              columnReorderable={false}
+              maxHeight="var(--rec-max)"
+              label={t("identity_fingerprint.recommend_table_caption")}
+              empty={{ title: t("identity_fingerprint.recommend_empty") }}
+              columnReorder={false}
               onRowClick={(item) => setSelectedId(item.id)}
-              rowAriaSelected={(item) => item.id === selected?.id}
-              rowClassName={(item) =>
-                item.id === selected?.id
-                  ? "[&>td]:!bg-accent-soft colorful:[&>td]:!bg-sky-500/10"
-                  : "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent colorful:focus-visible:outline-sky-500"
-              }
+              isRowActive={(item) => item.id === selected?.id}
             />
           </div>
 

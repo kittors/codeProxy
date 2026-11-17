@@ -39,9 +39,15 @@ export interface PublicLogItem {
   /** Absent on older backends, null when the request's cache use is unknown. */
   cache_read_tokens?: number | null;
   cache_write_tokens?: number | null;
+  /** 整个提示的大小（含缓存读取）；旧后端没有。 */
+  prompt_tokens?: number | null;
   total_tokens: number;
   cost: number;
   has_content: boolean;
+  /** 调用方（后端支持时每行都有，旧行与没带 User-Agent 的请求是空串）；旧后端没有这三个键。 */
+  client_name?: string;
+  client_version?: string;
+  user_agent?: string;
 }
 
 export interface PublicLogsResponse {
@@ -65,6 +71,9 @@ export interface PublicLogsResponse {
     channels: string[];
     channel_options?: PublicChannelFilterOption[];
     statuses: string[];
+    /** Agent 筛选项；"__unknown__" 代表没有客户端名的请求。旧后端没有。 */
+    client_names?: string[];
+    client_name_counts?: Record<string, number>;
   };
 }
 

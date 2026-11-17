@@ -1,19 +1,23 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import i18n from "@code-proxy/i18n";
-import { RequestLogsPage } from "@pages/request-logs/RequestLogsPage";
-import { ThemeProvider, ToastProvider } from "@code-proxy/ui";
-import type { UsageLogItem } from "@code-proxy/api-client/endpoints/usage";
+import {
+  findLogGrid,
+  legacyItem,
+  logsAnswer,
+  queryOf,
+  renderRequestLogsPage,
+} from "./requestLogsTestKit";
 
-// Loop protection on the request log page: the amber "Stopped" tag in the status
-// column, and the filter that selects what it ended. Both must be absent on a backend
-// without loop protection.
+// Loop protection on the request log page: the amber "Stopped" tag in the status column, and the
+// filter that selects what it ended. Both must be absent on a backend without loop protection.
 
 const mocks = vi.hoisted(() => ({
   getUsageLogs: vi.fn(),
   getLogContent: vi.fn(),
   getRequestLogBodyStorage: vi.fn(),
+  getConfig: vi.fn(),
 }));
 
 vi.mock("@code-proxy/api-client", async (importOriginal) => {
@@ -25,110 +29,55 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
       getUsageLogs: mocks.getUsageLogs,
       getLogContent: mocks.getLogContent,
     },
-    configApi: { ...mod.configApi, getRequestLogBodyStorage: mocks.getRequestLogBodyStorage },
-  };
-});
-
-function installLocalStorageMock() {
-  const store = new Map<string, string>();
-  const localStorageMock = {
-    getItem: (key: string) => store.get(key) ?? null,
-    setItem: (key: string, value: string) => void store.set(key, value),
-    removeItem: (key: string) => void store.delete(key),
-    clear: () => store.clear(),
-    key: (index: number) => Array.from(store.keys())[index] ?? null,
-    get length() {
-      return store.size;
+    configApi: {
+      ...mod.configApi,
+      getRequestLogBodyStorage: mocks.getRequestLogBodyStorage,
+      getConfig: mocks.getConfig,
     },
   };
-  Object.defineProperty(globalThis, "localStorage", {
-    value: localStorageMock,
-    configurable: true,
-  });
-  Object.defineProperty(window, "localStorage", { value: localStorageMock, configurable: true });
-}
-
-const item = (overrides: Partial<UsageLogItem> = {}): UsageLogItem => ({
-  id: 1,
-  timestamp: "2026-04-08T12:00:00Z",
-  api_key: "sk-test-123456",
-  api_key_name: "Primary",
-  model: "gpt-5.4",
-  source: "codex",
-  channel_name: "Codex",
-  provider: "codex",
-  auth_type: "oauth",
-  auth_index: "auth-1",
-  failed: false,
-  latency_ms: 1200,
-  first_token_ms: 183,
-  input_tokens: 10,
-  output_tokens: 20,
-  reasoning_tokens: 0,
-  cached_tokens: 0,
-  total_tokens: 30,
-  cost: 0.0123,
-  has_content: false,
-  ...overrides,
 });
 
 /** What the API client hands the page for a backend with or without loop protection. */
 const answer = (
-  items: UsageLogItem[],
+  items: ReturnType<typeof legacyItem>[],
   guard: { supported: boolean; kinds?: string[] } = { supported: false },
-) => ({
-  items,
-  total: items.length,
-  page: 1,
-  size: 50,
-  capabilities: { apiKeyIdFilters: false, loopGuard: guard.supported },
-  filters: {
-    api_key_ids: [],
-    api_key_id_names: {},
-    api_key_id_counts: {},
-    api_keys: [],
-    api_key_names: {},
-    api_key_counts: {},
-    models: [],
-    channels: [],
-    channel_options: [],
-    statuses: [],
-    guard_kinds: guard.kinds ?? [],
-  },
-  stats: { total: items.length, success_rate: 50, total_tokens: 30, total_cost: 0 },
-});
-
-function renderPage() {
-  return render(
-    <ThemeProvider>
-      <ToastProvider>
-        <RequestLogsPage />
-      </ToastProvider>
-    </ThemeProvider>,
-  );
-}
+) =>
+  logsAnswer(items, {
+    capabilities: { loopGuard: guard.supported },
+    filters: { statuses: [], guard_kinds: guard.kinds ?? [] },
+    stats: { success_rate: 50 },
+  });
 
 const guardFilter = () => screen.queryByRole("combobox", { name: "Loop protection" });
-const lastQuery = () => mocks.getUsageLogs.mock.calls.at(-1)?.[0] as Record<string, unknown>;
+const lastQuery = () => queryOf(mocks.getUsageLogs.mock.calls) ?? {};
 
 async function choose(option: string) {
   await userEvent.click(screen.getByRole("combobox", { name: "Loop protection" }));
   await userEvent.click(await screen.findByRole("option", { name: option }));
 }
 
-describe("request log page and loop protection", () => {
-  beforeAll(() => {
-    installLocalStorageMock();
-  });
+/** The status tag's explanation is its hover tooltip. */
+async function hintOf(tag: HTMLElement) {
+  await userEvent.hover(tag);
+  const tooltip = await screen.findByRole("tooltip");
+  const text = tooltip.textContent;
+  await userEvent.unhover(tag);
+  await waitFor(() => expect(screen.queryByRole("tooltip")).toBeNull());
+  return text;
+}
 
+describe("request log page and loop protection", () => {
   beforeEach(async () => {
     await i18n.changeLanguage("en");
     mocks.getRequestLogBodyStorage.mockResolvedValue(false);
+    mocks.getConfig.mockResolvedValue({});
   });
 
   afterEach(async () => {
     await i18n.changeLanguage("zh-CN");
     window.localStorage.clear();
+    mocks.getUsageLogs.mockReset();
+    mocks.getLogContent.mockReset();
   });
 
   describe("the status tag", () => {
@@ -136,50 +85,48 @@ describe("request log page and loop protection", () => {
       mocks.getUsageLogs.mockResolvedValue(
         answer(
           [
-            item({ id: 1, failed: true, guard_kind: "reply_loop" }),
-            item({ id: 2, failed: true, guard_kind: "tool_loop" }),
-            item({ id: 3, failed: true }),
-            item({ id: 4, failed: false }),
+            legacyItem({ id: 1, failed: true, guard_kind: "reply_loop" }),
+            legacyItem({ id: 2, failed: true, guard_kind: "tool_loop" }),
+            legacyItem({ id: 3, failed: true }),
+            legacyItem({ id: 4, failed: false }),
           ],
           { supported: true, kinds: ["reply_loop", "tool_loop"] },
         ),
       );
-      renderPage();
+      renderRequestLogsPage();
 
-      const table = await screen.findByRole("table", { name: "Request Logs Table" });
-      const stopped = within(table).getAllByRole("button", { name: "Stopped" });
+      const grid = await findLogGrid();
+      const stopped = await within(grid).findAllByRole("button", { name: "Stopped" });
       expect(stopped).toHaveLength(2);
-      expect(stopped[0]).toHaveAttribute(
-        "title",
-        expect.stringMatching(/ended this reply because the model kept repeating itself/),
+      expect(await hintOf(stopped[0])).toMatch(
+        /ended this reply because the model kept repeating itself/,
       );
-      expect(stopped[1]).toHaveAttribute(
-        "title",
-        expect.stringMatching(/answered this request itself.*Nothing was sent upstream/),
+      expect(await hintOf(stopped[1])).toMatch(
+        /answered this request itself.*Nothing was sent upstream/,
       );
       // The plain failure and the success keep the words they always had.
-      expect(within(table).getAllByRole("button", { name: "Failed" })).toHaveLength(1);
-      expect(within(table).getAllByText("Success")).toHaveLength(1);
+      expect(within(grid).getAllByRole("button", { name: "Failed" })).toHaveLength(1);
+      expect(within(grid).getAllByText("Success")).toHaveLength(1);
     });
 
     test("a kind this panel does not know still gets the tag, with the general sentence", async () => {
       mocks.getUsageLogs.mockResolvedValue(
-        answer([item({ failed: true, guard_kind: "something_new" })], { supported: true }),
+        answer([legacyItem({ failed: true, guard_kind: "something_new" })], { supported: true }),
       );
-      renderPage();
-      const table = await screen.findByRole("table", { name: "Request Logs Table" });
-      expect(within(table).getByRole("button", { name: "Stopped" })).toHaveAttribute(
-        "title",
+      renderRequestLogsPage();
+      const grid = await findLogGrid();
+      const tag = await within(grid).findByRole("button", { name: "Stopped" });
+      expect(await hintOf(tag)).toBe(
         "Loop protection ended this request. Click to see the detail.",
       );
     });
 
     test("a row of a backend without loop protection is what it always was", async () => {
-      mocks.getUsageLogs.mockResolvedValue(answer([item({ failed: true })]));
-      renderPage();
-      const table = await screen.findByRole("table", { name: "Request Logs Table" });
-      expect(within(table).getByRole("button", { name: "Failed" })).toBeInTheDocument();
-      expect(within(table).queryByText("Stopped")).toBeNull();
+      mocks.getUsageLogs.mockResolvedValue(answer([legacyItem({ failed: true })]));
+      renderRequestLogsPage();
+      const grid = await findLogGrid();
+      expect(await within(grid).findByRole("button", { name: "Failed" })).toBeInTheDocument();
+      expect(within(grid).queryByText("Stopped")).toBeNull();
     });
 
     test("the tag opens the same detail a failure opens", async () => {
@@ -190,11 +137,11 @@ describe("request log page and loop protection", () => {
         model: "gpt-5.4",
       });
       mocks.getUsageLogs.mockResolvedValue(
-        answer([item({ id: 7, failed: true, guard_kind: "tool_loop" })], { supported: true }),
+        answer([legacyItem({ id: 7, failed: true, guard_kind: "tool_loop" })], { supported: true }),
       );
-      renderPage();
-      const table = await screen.findByRole("table", { name: "Request Logs Table" });
-      await userEvent.click(within(table).getByRole("button", { name: "Stopped" }));
+      renderRequestLogsPage();
+      const grid = await findLogGrid();
+      await userEvent.click(await within(grid).findByRole("button", { name: "Stopped" }));
       await waitFor(() => expect(mocks.getLogContent).toHaveBeenCalledWith(7));
     });
   });
@@ -202,38 +149,37 @@ describe("request log page and loop protection", () => {
   describe("the filter", () => {
     test("is not offered by a backend without loop protection, even if a facet were sent", async () => {
       mocks.getUsageLogs.mockResolvedValue(
-        answer([item()], { supported: false, kinds: ["reply_loop"] }),
+        answer([legacyItem()], { supported: false, kinds: ["reply_loop"] }),
       );
-      renderPage();
-      await screen.findByRole("table", { name: "Request Logs Table" });
+      renderRequestLogsPage();
+      await within(await findLogGrid()).findByText("Primary");
       expect(guardFilter()).toBeNull();
       expect(lastQuery().guard_kinds).toBeUndefined();
     });
 
     test("is not offered while nothing was ever stopped", async () => {
-      mocks.getUsageLogs.mockResolvedValue(answer([item()], { supported: true, kinds: [] }));
-      renderPage();
-      await screen.findByRole("table", { name: "Request Logs Table" });
+      mocks.getUsageLogs.mockResolvedValue(answer([legacyItem()], { supported: true, kinds: [] }));
+      renderRequestLogsPage();
+      await within(await findLogGrid()).findByText("Primary");
       expect(guardFilter()).toBeNull();
     });
 
     test("is offered once something was stopped, listing only the kinds that exist", async () => {
       mocks.getUsageLogs.mockResolvedValue(
-        answer([item()], { supported: true, kinds: ["reply_loop"] }),
+        answer([legacyItem()], { supported: true, kinds: ["reply_loop"] }),
       );
-      renderPage();
-      await screen.findByRole("table", { name: "Request Logs Table" });
-      await userEvent.click(screen.getByRole("combobox", { name: "Loop protection" }));
+      renderRequestLogsPage();
+      await userEvent.click(await screen.findByRole("combobox", { name: "Loop protection" }));
       const options = (await screen.findAllByRole("option")).map((option) => option.textContent);
       expect(options).toEqual(["All requests", "Replies cut for repeating"]);
     });
 
     test("choosing a kind asks the backend for exactly that kind", async () => {
       mocks.getUsageLogs.mockResolvedValue(
-        answer([item()], { supported: true, kinds: ["reply_loop", "tool_loop"] }),
+        answer([legacyItem()], { supported: true, kinds: ["reply_loop", "tool_loop"] }),
       );
-      renderPage();
-      await screen.findByRole("table", { name: "Request Logs Table" });
+      renderRequestLogsPage();
+      await screen.findByRole("combobox", { name: "Loop protection" });
       expect(lastQuery().guard_kinds).toBeUndefined();
 
       await choose("Tool-call loops answered");
@@ -251,37 +197,43 @@ describe("request log page and loop protection", () => {
 
     test("a choice stays on screen when the other filters leave no such request, so it can be undone", async () => {
       mocks.getUsageLogs
-        .mockResolvedValueOnce(answer([item()], { supported: true, kinds: ["tool_loop"] }))
+        .mockResolvedValueOnce(answer([legacyItem()], { supported: true, kinds: ["tool_loop"] }))
         .mockResolvedValue(answer([], { supported: true, kinds: [] }));
-      renderPage();
-      await screen.findByRole("table", { name: "Request Logs Table" });
+      renderRequestLogsPage();
+      await screen.findByRole("combobox", { name: "Loop protection" });
 
       await choose("Tool-call loops answered");
       await waitFor(() => expect(lastQuery().guard_kinds).toEqual(["tool_loop"]));
       expect(guardFilter()).toHaveTextContent("Tool-call loops answered");
+      // The empty table says which condition left nothing, and the chip row can undo it.
+      const grid = await findLogGrid();
+      expect(await within(grid).findByText("No requests match")).toBeInTheDocument();
+      expect(within(grid).getByRole("list", { name: "Filters in effect" })).toHaveTextContent(
+        "Loop protection：Tool-call loops answered",
+      );
     });
 
-    test("reset filters clears it with the others", async () => {
+    test("clearing all filters clears it with the others", async () => {
       mocks.getUsageLogs.mockResolvedValue(
-        answer([item()], { supported: true, kinds: ["reply_loop", "tool_loop"] }),
+        answer([legacyItem()], { supported: true, kinds: ["reply_loop", "tool_loop"] }),
       );
-      renderPage();
-      await screen.findByRole("table", { name: "Request Logs Table" });
+      renderRequestLogsPage();
+      await screen.findByRole("combobox", { name: "Loop protection" });
       await choose("Replies cut for repeating");
       await waitFor(() => expect(lastQuery().guard_kinds).toEqual(["reply_loop"]));
 
-      await userEvent.click(screen.getByRole("button", { name: "Reset filters" }));
+      await userEvent.click(screen.getByRole("button", { name: "Clear all" }));
       await waitFor(() => expect(lastQuery().guard_kinds).toBeUndefined());
       expect(guardFilter()).toHaveTextContent("Loop protection");
     });
 
     test("a backend that loses loop protection under an open page drops the choice instead of asking for it", async () => {
       mocks.getUsageLogs
-        .mockResolvedValueOnce(answer([item()], { supported: true, kinds: ["tool_loop"] }))
-        .mockResolvedValueOnce(answer([item()], { supported: false }))
-        .mockResolvedValue(answer([item()], { supported: false }));
-      renderPage();
-      await screen.findByRole("table", { name: "Request Logs Table" });
+        .mockResolvedValueOnce(answer([legacyItem()], { supported: true, kinds: ["tool_loop"] }))
+        .mockResolvedValueOnce(answer([legacyItem()], { supported: false }))
+        .mockResolvedValue(answer([legacyItem()], { supported: false }));
+      renderRequestLogsPage();
+      await screen.findByRole("combobox", { name: "Loop protection" });
 
       await choose("Tool-call loops answered");
       await waitFor(() => expect(guardFilter()).toBeNull());
@@ -290,10 +242,10 @@ describe("request log page and loop protection", () => {
     });
 
     test("a response that declares no capabilities at all is read as a backend without them", async () => {
-      const bare = answer([item()]);
+      const bare = answer([legacyItem()]);
       mocks.getUsageLogs.mockResolvedValue({ ...bare, capabilities: undefined });
-      renderPage();
-      await screen.findByRole("table", { name: "Request Logs Table" });
+      renderRequestLogsPage();
+      await within(await findLogGrid()).findByText("Primary");
       expect(guardFilter()).toBeNull();
     });
   });

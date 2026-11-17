@@ -2,12 +2,11 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Check, Edit3, FlaskConical, Power, Trash2 } from "lucide-react";
 import {
-  COLUMN_WIDTH,
-  Checkbox,
+  GRID_ROW_ACTIONS_COLUMN,
+  GRID_WIDTH,
+  GridRowActions,
   OverflowTooltip,
-  TABLE_ROW_ACTIONS_COLUMN,
-  TableRowActions,
-  type DataTableColumn,
+  type DataGridColumn,
 } from "@code-proxy/ui";
 import { ModelOwnerTag } from "@features/model-tags";
 import { ModelCapabilityBadges } from "../components/ModelCapabilityBadges";
@@ -15,18 +14,12 @@ import { ModelVendorIcon as VendorIcon } from "../components/ModelVendorIcon";
 import { formatPrice } from "../modelsUtils";
 import type { ModelItem } from "../types";
 
-const stickyActionsHeaderClass =
-  "text-center md:sticky md:z-40 md:bg-slate-100 md:dark:bg-neutral-800";
-const stickyActionsCellClass = "md:sticky md:z-30 md:bg-backdrop";
-
+/**
+ * 模型库 / 模型配置两张表共用的列。勾选（批量删除）不在这里：表格自己的复选框列负责，
+ * 表头全选只管当前可见的行（见 ModelsPage 的 selectable）。
+ */
 interface UseModelColumnsOptions {
   canDeleteModels: boolean;
-  allVisibleModelsSelected: boolean;
-  someVisibleModelsSelected: boolean;
-  visibleModelCount: number;
-  selectedModelIds: Set<string>;
-  onSelectModel: (modelId: string, checked: boolean) => void;
-  onSelectVisibleModels: (checked: boolean) => void;
   onEditModel: (modelId: string) => void;
   onDeleteModel: (model: ModelItem) => void;
   onToggleEnabled?: (model: ModelItem) => void;
@@ -36,54 +29,24 @@ interface UseModelColumnsOptions {
 
 export function useModelColumns({
   canDeleteModels,
-  allVisibleModelsSelected,
-  someVisibleModelsSelected,
-  visibleModelCount,
-  selectedModelIds,
-  onSelectModel,
-  onSelectVisibleModels,
   onEditModel,
   onDeleteModel,
   onToggleEnabled,
   onTestModel,
   togglingModelId = null,
-}: UseModelColumnsOptions): DataTableColumn<ModelItem>[] {
+}: UseModelColumnsOptions): DataGridColumn<ModelItem>[] {
   const { t } = useTranslation();
 
-  return useMemo<DataTableColumn<ModelItem>[]>(
+  return useMemo<DataGridColumn<ModelItem>[]>(
     () => [
-      ...(canDeleteModels
-        ? [
-            {
-              key: "select",
-              label: "",
-              width: COLUMN_WIDTH.checkbox,
-              headerClassName: "text-center",
-              cellClassName: "text-center",
-              headerRender: () => (
-                <Checkbox
-                  aria-label={t("models_page.select_all_visible_models")}
-                  checked={allVisibleModelsSelected}
-                  indeterminate={someVisibleModelsSelected && !allVisibleModelsSelected}
-                  disabled={visibleModelCount === 0}
-                  onCheckedChange={onSelectVisibleModels}
-                />
-              ),
-              render: (row) => (
-                <Checkbox
-                  aria-label={t("models_page.select_model_aria", { model: row.id })}
-                  checked={selectedModelIds.has(row.id)}
-                  onCheckedChange={(checked) => onSelectModel(row.id, checked)}
-                />
-              ),
-            } satisfies DataTableColumn<ModelItem>,
-          ]
-        : []),
       {
-        key: "model",
-        label: t("models_page.col_model"),
-        width: "w-[22rem]",
-        render: (row) => (
+        id: "model",
+        header: t("models_page.col_model"),
+        // 主文字列：吸收宽屏多出来的宽度，窄屏不小于 240。
+        width: 352,
+        minWidth: 240,
+        grow: true,
+        cell: (row) => (
           <div className="flex min-w-0 items-center gap-2">
             <VendorIcon modelId={row.id} size={16} />
             <div className="min-w-0">
@@ -102,39 +65,38 @@ export function useModelColumns({
         ),
       },
       {
-        key: "owner",
-        label: t("models_page.col_owner"),
-        width: COLUMN_WIDTH.compact,
+        id: "owner",
+        header: t("models_page.col_owner"),
+        width: 128,
         // 归属标签 + 归属方 logo；标签配色（多彩风格下的品牌淡底）由 ModelOwnerTag 统一决定。
-        render: (row) => (row.owned_by ? <ModelOwnerTag owner={row.owned_by} withLogo /> : "-"),
+        cell: (row) => (row.owned_by ? <ModelOwnerTag owner={row.owned_by} withLogo /> : "-"),
       },
       {
-        key: "capabilities",
-        label: t("models_page.col_capabilities"),
-        width: COLUMN_WIDTH.badgeStacked,
-        render: (row) => <ModelCapabilityBadges model={row} />,
+        id: "capabilities",
+        header: t("models_page.col_capabilities"),
+        width: GRID_WIDTH.badgeStacked,
+        cell: (row) => <ModelCapabilityBadges model={row} />,
       },
       {
-        key: "mode",
-        label: t("models_page.col_pricing_mode"),
-        width: COLUMN_WIDTH.numericWide,
-        render: (row) =>
+        id: "mode",
+        header: t("models_page.col_pricing_mode"),
+        width: GRID_WIDTH.numericWide,
+        cell: (row) =>
           row.pricing.mode === "call" ? t("models_page.mode_call") : t("models_page.mode_token"),
       },
       {
-        key: "price",
-        label: t("models_page.col_price"),
-        width: COLUMN_WIDTH.name,
-        cellClassName: "font-mono text-xs tabular-nums text-ink-2",
-        render: (row) => formatPrice(row, t("models_page.not_priced")),
+        id: "price",
+        header: t("models_page.col_price"),
+        width: GRID_WIDTH.name,
+        className: "font-mono text-xs tabular-nums text-ink-2",
+        cell: (row) => formatPrice(row, t("models_page.not_priced")),
       },
       {
-        key: "status",
-        label: t("models_page.col_status"),
-        width: COLUMN_WIDTH.badge,
-        headerClassName: "text-center",
-        cellClassName: "text-center",
-        render: (row) => (
+        id: "status",
+        header: t("models_page.col_status"),
+        width: GRID_WIDTH.badge,
+        align: "center",
+        cell: (row) => (
           <span
             className={[
               "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-2xs font-semibold",
@@ -149,13 +111,10 @@ export function useModelColumns({
         ),
       },
       {
-        key: "actions",
-        label: t("models_page.col_actions"),
-        ...TABLE_ROW_ACTIONS_COLUMN,
-        lockOrder: "end",
-        headerClassName: stickyActionsHeaderClass,
-        cellClassName: stickyActionsCellClass,
-        render: (row) => {
+        id: "actions",
+        header: t("models_page.col_actions"),
+        ...GRID_ROW_ACTIONS_COLUMN,
+        cell: (row) => {
           const toggleLabel = row.enabled
             ? t("models_page.click_disable")
             : t("models_page.click_enable");
@@ -165,7 +124,7 @@ export function useModelColumns({
           const isToggling = togglingModelId === row.id;
 
           return (
-            <TableRowActions
+            <GridRowActions
               moreLabel={t("common.more_actions")}
               actions={[
                 {
@@ -209,20 +168,6 @@ export function useModelColumns({
         },
       },
     ],
-    [
-      allVisibleModelsSelected,
-      canDeleteModels,
-      onDeleteModel,
-      onEditModel,
-      onSelectModel,
-      onSelectVisibleModels,
-      onTestModel,
-      onToggleEnabled,
-      selectedModelIds,
-      someVisibleModelsSelected,
-      t,
-      togglingModelId,
-      visibleModelCount,
-    ],
+    [canDeleteModels, onDeleteModel, onEditModel, onTestModel, onToggleEnabled, t, togglingModelId],
   );
 }

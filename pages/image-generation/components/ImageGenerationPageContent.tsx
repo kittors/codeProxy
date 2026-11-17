@@ -5,14 +5,14 @@ import {
   Callout,
   Card,
   CodeBlock,
-  COLUMN_WIDTH,
-  DataTable,
+  DataGrid,
+  GRID_WIDTH,
   surface,
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-  type DataTableColumn,
+  type DataGridColumn,
 } from "@code-proxy/ui";
 import { useImageGenerationChannels } from "../hooks/useImageGenerationChannels";
 import { VISIBLE_ENDPOINT_DOCS, type EndpointDoc, type SpecRow } from "./apiDocs";
@@ -178,34 +178,37 @@ function EndpointCallDoc({ doc }: { doc: EndpointDoc }) {
 
 function SpecTable({ tableId, title, rows }: { tableId: string; title: string; rows: SpecRow[] }) {
   const { t } = useTranslation();
-  const columns = useMemo<DataTableColumn<SpecRow>[]>(
+  const columns = useMemo<DataGridColumn<SpecRow>[]>(
     () => [
       {
-        key: "name",
-        label: t("image_generation.table_param"),
-        width: COLUMN_WIDTH.badgeStacked,
-        cellClassName: "font-mono text-xs break-all leading-5 text-ink",
-        render: (row) => row.name,
+        id: "name",
+        header: t("image_generation.table_param"),
+        width: GRID_WIDTH.badgeStacked,
+        // 参数名可能很长（response_format），按字符折行而不是截断：说明文档要看全。
+        cell: (row) => (
+          <span className="min-w-0 break-all font-mono text-xs leading-5 text-ink">{row.name}</span>
+        ),
       },
       {
-        key: "type",
-        label: t("image_generation.table_type"),
-        width: COLUMN_WIDTH.badge,
-        cellClassName: "font-mono text-xs text-ink-2",
-        render: (row) => row.type,
+        id: "type",
+        header: t("image_generation.table_type"),
+        width: GRID_WIDTH.badge,
+        cell: (row) => <span className="truncate font-mono text-xs text-ink-2">{row.type}</span>,
       },
       {
-        key: "required",
-        label: t("image_generation.table_required"),
-        width: COLUMN_WIDTH.badge,
-        cellClassName: "text-xs text-ink-2",
-        render: (row) => (row.required ? t("common.yes") : t("common.no")),
+        id: "required",
+        header: t("image_generation.table_required"),
+        width: GRID_WIDTH.badge,
+        cell: (row) => (
+          <span className="text-xs text-ink-2">{row.required ? t("common.yes") : t("common.no")}</span>
+        ),
       },
       {
-        key: "description",
-        label: t("image_generation.table_description"),
-        cellClassName: "text-xs leading-5 text-ink-2",
-        render: (row) => t(row.descriptionKey),
+        id: "description",
+        header: t("image_generation.table_description"),
+        width: 240,
+        grow: true,
+        cell: (row) => <span className="text-xs leading-5 text-ink-2">{t(row.descriptionKey)}</span>,
       },
     ],
     [t],
@@ -219,16 +222,14 @@ function SpecTable({ tableId, title, rows }: { tableId: string; title: string; r
     >
       <h4 className="text-sm font-semibold text-ink">{title}</h4>
       <div className="mt-4">
-        <DataTable<SpecRow>
-          tableId={tableId}
+        {/* 卡片里的小表：不再套外框，按行收高。 */}
+        <DataGrid<SpecRow>
+          id={tableId}
+          frame={false}
           rows={rows}
           columns={columns}
           rowKey={(row) => row.name}
-          virtualize={false}
-          minWidth="min-w-[560px]"
-          caption={`${title} table`}
-          rowHeight={48}
-          showAllLoadedMessage={false}
+          label={`${title} table`}
         />
       </div>
     </div>
