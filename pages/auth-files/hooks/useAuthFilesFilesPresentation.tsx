@@ -648,9 +648,9 @@ export function useAuthFilesFilesPresentation({
       {
         id: "quota",
         header: t("auth_files.col_quota"),
-        width: GRID_WIDTH.composite, // chips 两列排布约 290px 够用；36rem 是旧进度条布局的尺寸
-        minWidth: 288,
-        maxWidth: 640,
+        width: 352, // chips 两列约需 290 实际像素（352×0.9≈317 含内边距）；composite 304 会把 chip 标签挤成 0 宽
+        minWidth: 336,
+        maxWidth: 712,
         overflowTooltip: false,
         cell: (file) => (
           <AuthFileQuotaCell
