@@ -9,6 +9,9 @@ import { usageLevel, type UsageLevel } from "@features/monitor-widgets/monitorVi
 /** 快照比心跳旧这么多秒就标成「数据过时」：采样每 5 秒一次，心跳也是 5 秒。 */
 export const SNAPSHOT_STALE_SECONDS = 30;
 
+/** 机器想用的 CPU（执行 + steal）至少占整机这么多，steal 占比才算数；见 nodeCpuView。 */
+export const STEAL_MIN_RUNNABLE_SHARE = 0.15;
+
 const ORDER: Record<UsageLevel, number> = { normal: 0, warn: 1, critical: 2 };
 
 export function worstLevel(...levels: UsageLevel[]): UsageLevel {
@@ -46,7 +49,7 @@ export interface NodeCpuView {
   /** 占整机 CPU 的百分比，堆叠条两段的宽度。 */
   busyPct: number;
   stealPct: number;
-  /** steal 占「想运行的时间」（执行 + steal）的比例，0–1；几乎空闲时没有意义，为 null。 */
+  /** steal 占「想运行的时间」（执行 + steal）的比例，0–1；想运行的不到整机 15% 时没有意义，为 null。 */
   stealShare: number | null;
   /** 执行 + steal 占整机的档位，和 steal 占比的档位分开，状态标签要分别说原因。 */
   usageLevel: UsageLevel;
@@ -65,8 +68,10 @@ export function nodeCpuView(snapshot: NodeSnapshot | undefined): NodeCpuView | n
   const busyPct = (cpu.busy_cores / cpus) * 100;
   const stealPct = (cpu.steal_cores / cpus) * 100;
   const runnable = cpu.busy_cores + cpu.steal_cores;
-  // 不到 0.1 核时比例只是噪声。
-  const stealShare = runnable >= 0.1 ? cpu.steal_cores / runnable : null;
+  // 机器想用的 CPU 不到整机 15% 时，比例只是几个零点零几核之间的比值：2026-11-17 n43 空闲时想用
+  // 0.17 核、其中 0.12 核在等宿主机，算出 steal 75%，其实只占 4 核整机的 3%，对服务没有影响。
+  // hk-155 那种 8 核里 2.76 核被拿走的情况（想用 3.5 核）照样报。
+  const stealShare = runnable >= Math.max(0.1, cpus * STEAL_MIN_RUNNABLE_SHARE) ? cpu.steal_cores / runnable : null;
   const stealLevel: UsageLevel =
     stealShare === null
       ? "normal"

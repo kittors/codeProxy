@@ -56,21 +56,49 @@ describe("clusterDiskView", () => {
   });
 
   test("estimates when a growing disk fills, and ignores shrinking ones", () => {
-    // 2 GB in the last hour with 17.2 GB free: full in about 8.6 hours.
+    // 2 GB in the last hour with 17.2 GB free: full in about 8.6 hours. At 46% used that is
+    // shown, but not yet an alarm: the forecast only counts on a disk that is filling up.
     const growing = diskView(disk({ growth: { window_seconds: 3600, used_delta_bytes: 2 * GB } }));
     expect(growing.fillSeconds).toBeCloseTo((17_238_941_696 / (2 * GB)) * 3600, 0);
-    expect(growing).toMatchObject({ level: "critical", concern: "fill" });
     expect(formatFillTime(growing.fillSeconds ?? 0)).toBe("8h");
+    expect(growing).toMatchObject({ level: "normal", concern: null });
 
-    // 200 MB an hour fills it in about 3.4 days, just past the 3-day line; 250 MB in 2.7 days.
-    const slow = diskView(disk({ growth: { window_seconds: 3600, used_delta_bytes: 200 * 1024 ** 2 } }));
+    // 70% used, 9.6 GB free: 100 MB an hour is 3.8 days away, 160 MB 2.4 days.
+    const seventy = { used_bytes: 22_500_000_000, available_bytes: 9_644_076_800 };
+    const slow = diskView(disk({ ...seventy, growth: { window_seconds: 3600, used_delta_bytes: 100 * 1024 ** 2 } }));
     expect(slow.level).toBe("normal");
-    const steady = diskView(disk({ growth: { window_seconds: 3600, used_delta_bytes: 250 * 1024 ** 2 } }));
+    const steady = diskView(disk({ ...seventy, growth: { window_seconds: 3600, used_delta_bytes: 160 * 1024 ** 2 } }));
     expect(steady).toMatchObject({ level: "warn", concern: "fill" });
+
+    // 85% used (already a space warning) and 1 GB an hour: full in 4.5 hours.
+    const fast = diskView(
+      disk({
+        used_bytes: 27_322_465_280,
+        available_bytes: 4_821_611_520,
+        growth: { window_seconds: 3600, used_delta_bytes: GB },
+      }),
+    );
+    expect(fast).toMatchObject({ level: "critical", concern: "fill" });
 
     const shrinking = diskView(disk({ growth: { window_seconds: 3600, used_delta_bytes: -3 * GB } }));
     expect(shrinking.fillSeconds).toBeNull();
     expect(shrinking.level).toBe("normal");
+  });
+
+  test("does not forecast a nearly empty disk full", () => {
+    // n143's /tmp on 2026-11-17: a 1.9 GB tmpfs holding only request bodies in flight, 0.5% used.
+    // One 10 MB body over ten minutes extrapolates to "full in 32 hours"; that is noise.
+    const tmp = diskView({
+      mount: "/tmp",
+      fs_type: "tmpfs",
+      paths: [{ use: "body_cache", path: "/tmp/clirelay-request-body-cache" }],
+      total_bytes: 2_032_197_632,
+      used_bytes: 11_114_496,
+      available_bytes: 2_021_083_136,
+      growth: { window_seconds: 600, used_delta_bytes: 10 * 1024 ** 2 },
+    });
+    expect(tmp.fillSeconds).not.toBeNull();
+    expect(tmp).toMatchObject({ level: "normal", concern: null });
   });
 
   test("puts the disk most in need of attention first", () => {

@@ -10,6 +10,10 @@ import { worstLevel } from "./clusterNodeView";
  *   inode 同样。
  * - 后端给最近约 1 小时的用量变化，面板据此线性外推多久写满：3 天内留意、1 天内告急。只在增长时外推，
  *   日志轮转、缓存清理带来的下降不算。
+ * - 写满预测只在盘已经用掉不少时才告警：留意要已用 60% 以上，告急要 80% 以上（和 node-exporter 的
+ *   NodeFilesystemSpaceFillingUp 一样，要可用空间不多「且」预测会写满）。把一小时的变化外推到几天后，
+ *   在几乎空的盘上噪声远大于信号：2026-11-17 n143 的 /tmp（1.9 GB tmpfs，只放处理中的请求体）只用了
+ *   0.5%，一个 10 MB 的请求体就被算成「约 30 小时写满」，反复出现。
  */
 
 export const DISK_WARN_PCT = 80;
@@ -17,19 +21,20 @@ export const DISK_CRITICAL_PCT = 90;
 const DAY_SECONDS = 86_400;
 export const DISK_FILL_WARN_SECONDS = 3 * DAY_SECONDS;
 export const DISK_FILL_CRITICAL_SECONDS = DAY_SECONDS;
+export const DISK_FILL_WARN_MIN_PCT = 60;
+export const DISK_FILL_CRITICAL_MIN_PCT = 80;
 
 export function diskPctLevel(pct: number | null): UsageLevel {
   if (pct === null) return "normal";
   return pct >= DISK_CRITICAL_PCT ? "critical" : pct >= DISK_WARN_PCT ? "warn" : "normal";
 }
 
-export function fillLevel(seconds: number | null): UsageLevel {
+/** 写满预测的档位：时间够近，且盘已经用到相应的程度。 */
+export function fillLevel(seconds: number | null, pct: number): UsageLevel {
   if (seconds === null) return "normal";
-  return seconds <= DISK_FILL_CRITICAL_SECONDS
-    ? "critical"
-    : seconds <= DISK_FILL_WARN_SECONDS
-      ? "warn"
-      : "normal";
+  if (seconds <= DISK_FILL_CRITICAL_SECONDS && pct >= DISK_FILL_CRITICAL_MIN_PCT) return "critical";
+  if (seconds <= DISK_FILL_WARN_SECONDS && pct >= DISK_FILL_WARN_MIN_PCT) return "warn";
+  return "normal";
 }
 
 /** 这块盘最该注意的是哪一项，卡片和状态标签据此写原因。 */
@@ -76,7 +81,7 @@ export function diskView(disk: NodeDisk): DiskView {
 
   const spaceLevel = diskPctLevel(pct);
   const inodeLevel = diskPctLevel(inodePct);
-  const growthLevel = fillLevel(fillSeconds);
+  const growthLevel = fillLevel(fillSeconds, pct);
   const level: UsageLevel = readOnly ? "critical" : worstLevel(spaceLevel, inodeLevel, growthLevel);
   let concern: DiskConcern = null;
   if (readOnly) concern = "read_only";
