@@ -50,11 +50,53 @@ function sanitize(raw: unknown): GridPreferences {
   return prefs;
 }
 
+/** 旧 DataTable 存列宽、列顺序的键（按 tableId；DataGrid 的 id 沿用了同一个值）。 */
+const LEGACY_WIDTHS_PREFIX = "codeProxy.dataTable.columnWidths.v3.";
+const LEGACY_ORDER_PREFIX = "codeProxy.dataTable.columnOrder.v1.";
+
+/**
+ * 第一次打开迁移后的表：把旧表格存下的列宽、列顺序搬过来，用户拖过的宽度不会因为换组件就丢了。
+ * 旧列宽是当时根字号下的实际像素，这里换成设计像素；列 id 改了名的旧值留着也不生效（按 id 取）。
+ * 搬完写进新键并删掉旧键，只搬一次。
+ */
+function migrateLegacyPreferences(id: string): GridPreferences {
+  const storage = window.localStorage;
+  const widthsKey = `${LEGACY_WIDTHS_PREFIX}${id}`;
+  const orderKey = `${LEGACY_ORDER_PREFIX}${id}`;
+  const rawWidths = storage.getItem(widthsKey);
+  const rawOrder = storage.getItem(orderKey);
+  if (rawWidths === null && rawOrder === null) return {};
+  const fontSize = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize);
+  const scale = Number.isFinite(fontSize) && fontSize > 0 ? fontSize / 16 : 1;
+  const prefs: GridPreferences = {};
+  try {
+    const widths = rawWidths ? (JSON.parse(rawWidths) as Record<string, unknown>) : {};
+    const designWidths: Record<string, number> = {};
+    for (const [columnId, value] of Object.entries(widths ?? {})) {
+      if (typeof value === "number" && Number.isFinite(value) && value > 0) {
+        designWidths[columnId] = Math.round(value / scale);
+      }
+    }
+    if (Object.keys(designWidths).length > 0) prefs.widths = designWidths;
+    const order = rawOrder ? (JSON.parse(rawOrder) as unknown) : null;
+    if (Array.isArray(order)) {
+      const ids = order.filter((item): item is string => typeof item === "string");
+      if (ids.length > 0) prefs.order = ids;
+    }
+  } catch {
+    // 旧值读不出来就当没有。
+  }
+  storage.setItem(storageKey(id), JSON.stringify(prefs));
+  storage.removeItem(widthsKey);
+  storage.removeItem(orderKey);
+  return prefs;
+}
+
 export function readGridPreferences(id: string | undefined): GridPreferences {
   if (!id || typeof window === "undefined") return {};
   try {
     const raw = window.localStorage.getItem(storageKey(id));
-    return raw ? sanitize(JSON.parse(raw)) : {};
+    return raw ? sanitize(JSON.parse(raw)) : sanitize(migrateLegacyPreferences(id));
   } catch {
     return {};
   }

@@ -67,3 +67,27 @@ describe("findDropTarget", () => {
     expect(findDropTarget(items, "c", 290)).toBeNull();
   });
 });
+
+describe("旧表格偏好迁移", () => {
+  test("第一次读取时把旧列宽（实际像素）换成设计像素、带上列顺序，搬完删掉旧键", async () => {
+    const { readGridPreferences } = await import("../gridStorage");
+    document.documentElement.style.fontSize = "14.4px";
+    window.localStorage.setItem(
+      "codeProxy.dataTable.columnWidths.v3.legacy-table",
+      JSON.stringify({ name: 216, count: "bad" }),
+    );
+    window.localStorage.setItem(
+      "codeProxy.dataTable.columnOrder.v1.legacy-table",
+      JSON.stringify(["count", "name"]),
+    );
+    expect(readGridPreferences("legacy-table")).toEqual({ widths: { name: 240 }, order: ["count", "name"] });
+    expect(window.localStorage.getItem("codeProxy.dataTable.columnWidths.v3.legacy-table")).toBeNull();
+    expect(window.localStorage.getItem("codeProxy.dataTable.columnOrder.v1.legacy-table")).toBeNull();
+    expect(JSON.parse(window.localStorage.getItem("cp-grid:legacy-table:v1") ?? "{}")).toEqual({
+      widths: { name: 240 },
+      order: ["count", "name"],
+    });
+    document.documentElement.style.fontSize = "";
+    window.localStorage.clear();
+  });
+});
