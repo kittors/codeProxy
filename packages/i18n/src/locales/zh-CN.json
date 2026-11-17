@@ -23,6 +23,7 @@
     "apply": "应用",
     "select_page": "选择本页全部行",
     "select_row": "选择此行",
+    "select_named": "选择 {{name}}",
     "details": "详情",
     "expand_row": "展开详情",
     "collapse_row": "收起详情",
@@ -80,6 +81,9 @@
     "reset_view": "恢复默认视图"
   },
   "common": {
+    "grid_search_chip": "搜索「{{query}}」",
+    "grid_filters_in_effect": "当前生效的筛选条件：",
+    "grid_clear_filters": "清除筛选",
     "login": "登录",
     "logout": "登出",
     "back": "返回",

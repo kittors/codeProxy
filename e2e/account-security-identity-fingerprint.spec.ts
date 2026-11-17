@@ -784,9 +784,7 @@ test("AI Accounts shows auth files and account identity fingerprint details", as
   const identityDetailScroller = dialog.getByTestId("auth-file-detail-scroll");
   await expect(identityDetailScroller).toHaveCSS("overflow-x", "hidden");
   await expect(identityDetailScroller).toHaveCSS("overflow-y", "hidden");
-  const identityTableViewport = identityFields.locator(
-    '[data-scrollbar-visibility="hover"]',
-  );
+  const identityTableViewport = identityFields.locator(".cp-grid-viewport");
   await expect(identityTableViewport).toBeVisible();
   const desktopTableScrollState = await identityTableViewport.evaluate(
     (node: HTMLElement) => {
@@ -1175,10 +1173,9 @@ test("AI Accounts identity detail stacks cleanly on mobile", async ({
     "auth-file-identity-table-mobile",
   );
   await expect(mobileTable).toBeVisible();
-  await expect(mobileTable.locator("[data-vt-natural-flow]")).toBeVisible();
-  await expect(
-    identityFields.locator('[data-scrollbar-visibility="hover"]'),
-  ).toHaveCount(0);
+  // 窄屏：表格按行收高（不铺满），横向在表格自己的视口里滚。
+  await expect(mobileTable.locator('.cp-grid[data-fill="false"]')).toBeVisible();
+  const mobileTableViewport = mobileTable.locator(".cp-grid-viewport");
 
   const detailScrollState = await detailScroller.evaluate(
     (node: HTMLElement) => {
@@ -1195,7 +1192,7 @@ test("AI Accounts identity detail stacks cleanly on mobile", async ({
   expect(detailScrollState.canScrollY).toBe(true);
   expect(detailScrollState.scrollTop).toBeGreaterThan(0);
 
-  const mobileTableScrollState = await mobileTable.evaluate(
+  const mobileTableScrollState = await mobileTableViewport.evaluate(
     (node: HTMLElement) => {
       node.scrollLeft = 160;
       const style = window.getComputedStyle(node);

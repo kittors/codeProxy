@@ -1,9 +1,10 @@
 import { ArrowUp, GripHorizontal, GripVertical, ListFilter } from "lucide-react";
-import type {
-  CSSProperties,
-  KeyboardEvent,
-  PointerEvent as ReactPointerEvent,
-  ReactNode,
+import {
+  useId,
+  type CSSProperties,
+  type KeyboardEvent,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
 } from "react";
 import { useTranslation } from "react-i18next";
 import { Checkbox } from "../primitives/Checkbox";
@@ -66,10 +67,20 @@ function SortGlyph({ direction, reverse }: { direction: "asc" | "desc" | null; r
  * 表头文字。带说明的列在文字下画一条点状下划线，悬停文字看说明（不再单独放一个 ⓘ 图标占宽度）；
  * 没有说明的列只在文字被截断时提示全名。同一处只套一层提示，不会叠出两个气泡。
  */
-function HeaderLabel({ header, hint }: { header: string; hint?: ReactNode }) {
+function HeaderLabel({
+  header,
+  hint,
+  focusable = false,
+}: {
+  header: string;
+  hint?: ReactNode;
+  /** 不在按钮里（不可排序）时自己可聚焦：键盘也能打开说明。 */
+  focusable?: boolean;
+}) {
   if (hint) {
     return (
       <GridCellTooltip
+        focusable={focusable}
         placement="top"
         content={
           <span className="block max-w-[18rem]">
@@ -154,6 +165,7 @@ export function DataGridHeader<T>({
   rowGrip,
 }: HeaderProps<T>) {
   const { t } = useTranslation();
+  const idBase = useId();
   const headHeight = HEAD_HEIGHT[density];
   const hasLeading = selectable || expandable || rowGrip;
 
@@ -225,6 +237,8 @@ export function DataGridHeader<T>({
           const reverse = align === "end";
           const sortable = Boolean(column.sortable && onSortClick);
           const movable = columnGrip?.isMovable(column) ?? false;
+          // 说明文字给读屏：排序按钮或可聚焦的表头文字用 aria-describedby 指向它。
+          const hintId = column.headerHint ? `${idBase}-hint-${index}` : undefined;
           return (
             <th
               key={column.id}
@@ -242,6 +256,8 @@ export function DataGridHeader<T>({
                       : undefined
               }
               data-dragging={draggingColumnId === column.id ? "true" : undefined}
+              // 表头的可访问名称就是列名：拖宽把手、换列把手各有自己的名字，不并进列名里。
+              aria-label={column.header}
               className={`cp-grid-head-cell group/head select-none p-0 text-left font-normal ${headHeight}`}
               style={pinStyle(column.id, column.pin, layout)}
             >
@@ -276,6 +292,7 @@ export function DataGridHeader<T>({
                 ) : sortable ? (
                   <button
                     type="button"
+                    aria-describedby={hintId}
                     onClick={() => onSortClick?.(column)}
                     className={[
                       "group/sort relative inline-flex min-w-0 max-w-full items-center rounded-md text-xs font-medium transition-colors",
@@ -286,13 +303,24 @@ export function DataGridHeader<T>({
                     <SortGlyph direction={direction} reverse={reverse} />
                   </button>
                 ) : (
-                  <span className="inline-flex min-w-0 max-w-full text-xs font-medium text-ink-2">
-                    <HeaderLabel header={column.header} hint={column.headerHint} />
+                  <span
+                    className="inline-flex min-w-0 max-w-full text-xs font-medium text-ink-2"
+                    aria-describedby={hintId}
+                  >
+                    <HeaderLabel header={column.header} hint={column.headerHint} focusable />
                   </span>
                 )}
                 {column.headerAccessory ? (
-                  <span data-grid-no-drag="" className="ml-1.5 inline-flex shrink-0 items-center">
+                  <span
+                    data-grid-no-drag=""
+                    className={`inline-flex shrink-0 items-center ${column.hideHeaderLabel ? "" : "ml-1.5"}`}
+                  >
                     {column.headerAccessory}
+                  </span>
+                ) : null}
+                {hintId ? (
+                  <span id={hintId} hidden>
+                    {column.headerHint}
                   </span>
                 ) : null}
                 {column.filter && onOpenMenu ? (

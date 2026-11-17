@@ -23,6 +23,7 @@
     "apply": "Apply",
     "select_page": "Select all rows on this page",
     "select_row": "Select row",
+    "select_named": "Select {{name}}",
     "details": "Details",
     "expand_row": "Show details",
     "collapse_row": "Hide details",
@@ -80,6 +81,9 @@
     "reset_view": "Reset view"
   },
   "common": {
+    "grid_search_chip": "Search “{{query}}”",
+    "grid_filters_in_effect": "Filters in effect:",
+    "grid_clear_filters": "Clear filters",
     "login": "Login",
     "logout": "Logout",
     "back": "Back",

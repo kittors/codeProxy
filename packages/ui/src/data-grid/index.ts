@@ -51,6 +51,7 @@ export type {
   GridFilters,
   GridPin,
   GridRangePreset,
+  GridRowTone,
   GridSelectionContext,
   GridSort,
   GridSortDirection,

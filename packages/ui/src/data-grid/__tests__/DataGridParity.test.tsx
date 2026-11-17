@@ -98,7 +98,7 @@ describe("拖动换列", () => {
     expect(
       JSON.parse(window.localStorage.getItem("cp-grid:parity-order:v1") ?? "{}").order,
     ).toEqual(["tokens", "name", "note"]);
-    expect(screen.getByRole("status")).toHaveTextContent(
+    expect(document.querySelector("[data-grid-announcer]")).toHaveTextContent(
       tr("data_grid.announce_column_moved", { column: "Name", position: 2 }),
     );
     // 焦点留在被移动那一列的把手上，可以接着按

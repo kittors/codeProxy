@@ -15,16 +15,15 @@ import {
 } from "lucide-react";
 import type { AccessFreeze, ApiKeyPermissionProfile, EndUser } from "@code-proxy/api-client";
 import {
-  COLUMN_WIDTH,
-  Checkbox,
+  GRID_WIDTH,
   HUES,
   HUE_GLYPH,
   HUE_SOFT,
   HoverTooltip,
-  TABLE_ROW_ACTIONS_COLUMN,
-  TableRowActions,
+  GRID_ROW_ACTIONS_COLUMN,
+  GridRowActions,
   cn,
-  type DataTableColumn,
+  type DataGridColumn,
   type Hue,
 } from "@code-proxy/ui";
 import { maskSensitiveIdentity } from "@code-proxy/domain";
@@ -35,8 +34,6 @@ import { hasResettableQuota } from "../endUserForm";
 type Translate = (key: string, options?: Record<string, unknown>) => string;
 
 // 表格直接放在页面上（外壳内容区 canvas），冻结列的底色跟着它走；用 surface 的话深色下是一条亮一档的竖条。
-const STICKY_HEADER = "md:sticky md:z-40 md:bg-slate-100 md:dark:bg-neutral-800";
-const STICKY_CELL = "md:sticky md:z-30 md:bg-backdrop";
 const CHIP = "inline-flex max-w-full items-center gap-1 rounded-full px-2 py-1 text-xs font-medium";
 const NEUTRAL = "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]";
 
@@ -165,13 +162,6 @@ export interface EndUserColumnsParams {
   masked: boolean;
   profileById: ReadonlyMap<string, ApiKeyPermissionProfile>;
   /** 传入时显示多选列（批量绑定模板）。 */
-  selection?: {
-    selected: ReadonlySet<string>;
-    allSelected: boolean;
-    someSelected: boolean;
-    onSelectAll: (checked: boolean) => void;
-    onSelect: (id: string, checked: boolean) => void;
-  };
   /**
    * 门户账号 id → 它名下生效中的上游冻结（后端声明 access-freezes 能力时才传）。账号状态的「已冻结」
    * 是整个账号停用，和这里按上游的冻结是两回事：前者在状态徽章上，后者是下面一枚枚「Codex 已冻结」。
@@ -202,7 +192,6 @@ export function getEndUserColumns({
   busy,
   masked,
   profileById,
-  selection,
   accessFreezes,
   onViewAccessFreezes,
   onViewUsage,
@@ -213,52 +202,24 @@ export function getEndUserColumns({
   onViewResetHistory,
   onResetPassword,
   onDelete,
-}: EndUserColumnsParams): DataTableColumn<EndUser>[] {
-  const columns: DataTableColumn<EndUser>[] = [];
-  if (selection) {
-    columns.push({
-      key: "select",
-      label: t("access_policy.select_all_accounts"),
-      width: COLUMN_WIDTH.checkbox,
-      lockOrder: "start",
-      headerClassName: STICKY_HEADER,
-      cellClassName: STICKY_CELL,
-      headerRender: () => (
-        <Checkbox
-          checked={selection.allSelected}
-          indeterminate={selection.someSelected}
-          onCheckedChange={selection.onSelectAll}
-          aria-label={t("access_policy.select_all_accounts")}
-        />
-      ),
-      render: (row) => (
-        <Checkbox
-          checked={selection.selected.has(row.id)}
-          onCheckedChange={(checked) => selection.onSelect(row.id, checked)}
-          aria-label={t("access_policy.select_account", { name: row.display_name || row.username })}
-        />
-      ),
-    });
-  }
+}: EndUserColumnsParams): DataGridColumn<EndUser>[] {
+  const columns: DataGridColumn<EndUser>[] = [];
   columns.push(
     {
-      key: "account",
-      label: t("end_users.username"),
-      width: "w-60 min-w-[15rem]",
-      minWidthPx: 180,
-      maxWidthPx: 480,
-      lockOrder: "start",
-      headerClassName: STICKY_HEADER,
-      cellClassName: cn("text-left", STICKY_CELL),
-      render: (row) => <AccountCell row={row} masked={masked} t={t} />,
+      id: "account",
+      header: t("end_users.username"),
+      width: 240,
+      minWidth: 180,
+      maxWidth: 480,
+      pin: "start",
+      cell: (row) => <AccountCell row={row} masked={masked} t={t} />,
     },
     {
-      key: "status",
-      label: t("end_users.status"),
-      width: COLUMN_WIDTH.badgeStacked,
-      headerClassName: "text-center",
-      cellClassName: "text-center",
-      render: (row) => {
+      id: "status",
+      header: t("end_users.status"),
+      width: GRID_WIDTH.badgeStacked,
+      align: "center",
+      cell: (row) => {
         const active = row.status === "active";
         const upstreamFreezes = accessFreezes?.get(row.id) ?? [];
         return (
@@ -289,17 +250,19 @@ export function getEndUserColumns({
       },
     },
     {
-      key: "source",
-      label: t("access_policy.col_source"),
-      width: "w-44 min-w-[9rem]",
-      render: (row) => <SourceCell row={row} profileById={profileById} t={t} />,
+      id: "source",
+      header: t("access_policy.col_source"),
+      width: 176,
+      cell: (row) => <SourceCell row={row} profileById={profileById} t={t} />,
     },
     {
-      key: "quota",
-      label: t("access_policy.col_quota"),
-      width: "w-[22rem] min-w-[18rem]",
+      id: "quota",
+      header: t("access_policy.col_quota"),
+      // 额度条带多段文字，放不进语义令牌的刻度：22rem（352 设计像素），最窄 18rem。
+      width: 352,
+      minWidth: 288,
       overflowTooltip: false,
-      render: (row) => (
+      cell: (row) => (
         <QuotaUsageCell
           limits={row["quota-limits"]}
           usage={row["quota-usage"]?.total}
@@ -308,20 +271,20 @@ export function getEndUserColumns({
       ),
     },
     {
-      key: "models",
-      label: t("access_policy.col_model_policy"),
-      width: "w-44 min-w-[10rem]",
+      id: "models",
+      header: t("access_policy.col_model_policy"),
+      width: 176,
       overflowTooltip: false,
-      render: (row) => (
+      cell: (row) => (
         <PolicyBadges rules={row["model-rules"]} routes={row["model-routes"]} usage={row["quota-usage"]} />
       ),
     },
     {
-      key: "spend",
-      label: t("access_policy.col_spend"),
-      width: COLUMN_WIDTH.numericWide,
-      cellClassName: "whitespace-nowrap tabular-nums",
-      render: (row) => (
+      id: "spend",
+      header: t("access_policy.col_spend"),
+      width: GRID_WIDTH.numericWide,
+      className: "whitespace-nowrap tabular-nums",
+      cell: (row) => (
         <div className="leading-tight">
           <div className="text-xs text-ink-2">
             <span className="mr-1 text-ink-3">{t("access_policy.spend_today")}</span>
@@ -335,24 +298,21 @@ export function getEndUserColumns({
       ),
     },
     {
-      key: "rate",
-      label: t("access_policy.col_rate"),
-      width: "w-40 min-w-[8rem]",
-      render: (row) => <RateCell row={row} t={t} />,
+      id: "rate",
+      header: t("access_policy.col_rate"),
+      width: 160,
+      cell: (row) => <RateCell row={row} t={t} />,
     },
     {
-      key: "actions",
-      label: t("common.action"),
-      ...TABLE_ROW_ACTIONS_COLUMN,
-      lockOrder: "end",
-      headerClassName: cn("text-center", STICKY_HEADER),
-      cellClassName: STICKY_CELL,
-      render: (row) => {
+      id: "actions",
+      header: t("common.action"),
+      ...GRID_ROW_ACTIONS_COLUMN,
+      cell: (row) => {
         const resettable = hasResettableQuota(row);
         const resets = row["daily-spending-reset-count"] ?? 0;
         const upstreamFreezeCount = accessFreezes?.get(row.id)?.length ?? 0;
         return (
-          <TableRowActions
+          <GridRowActions
             moreLabel={t("common.more_actions")}
             actions={[
               {

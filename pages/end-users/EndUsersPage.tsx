@@ -18,9 +18,9 @@ import {
 import {
   Button,
   Card,
-  DataTable,
+  DataGrid,
+  DataGridPagination,
   MaskToggleButton,
-  PaginationBar,
   buttonClassName,
   useSensitiveDataMasking,
   useToast,
@@ -201,6 +201,12 @@ export function EndUsersPage() {
     [currentPage, filteredUsers, pageSize],
   );
   const hasFilters = search.trim().length > 0 || statusFilter !== "all" || sourceFilter !== "all";
+  const clearFilters = () => {
+    setSearch("");
+    setStatusFilter("all");
+    setSourceFilter("all");
+    setPage(1);
+  };
 
   // 列表刷新或筛选后，选中项只保留仍然存在的账号。
   useEffect(() => {
@@ -213,8 +219,6 @@ export function EndUsersPage() {
   }, [users]);
 
   const batchEnabled = canWrite && capabilities.batchProfileBinding && profiles.length > 0;
-  const pageIds = pageUsers.map((user) => user.id);
-  const allPageSelected = pageIds.length > 0 && pageIds.every((id) => selected.has(id));
 
   const openEdit = useCallback(
     (user: EndUser) => {
@@ -307,29 +311,6 @@ export function EndUsersPage() {
         busy,
         masked,
         profileById,
-        selection: batchEnabled
-          ? {
-              selected,
-              allSelected: allPageSelected,
-              someSelected: !allPageSelected && pageIds.some((id) => selected.has(id)),
-              onSelectAll: (checked) =>
-                setSelected((current) => {
-                  const next = new Set(current);
-                  for (const id of pageIds) {
-                    if (checked) next.add(id);
-                    else next.delete(id);
-                  }
-                  return next;
-                }),
-              onSelect: (id, checked) =>
-                setSelected((current) => {
-                  const next = new Set(current);
-                  if (checked) next.add(id);
-                  else next.delete(id);
-                  return next;
-                }),
-            }
-          : undefined,
         accessFreezes: freezeEnabled ? accessFreezes.byEndUser : undefined,
         onViewAccessFreezes: freezeEnabled
           ? (user) => setFreezeSubject({ kind: "end_user", id: user.id, name: endUserLabel(user) })
@@ -349,9 +330,8 @@ export function EndUsersPage() {
         onResetPassword: setResetUser,
         onDelete: setDeleteUser,
       }),
-    // pageIds 由 pageUsers 推出，allPageSelected 由 selected 推出。
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [accessFreezes.byEndUser, allPageSelected, batchEnabled, busy, can, canWrite, ensurePolicyOptions, freezeEnabled, i18n.resolvedLanguage, masked, openEdit, openHistory, pageUsers, profileById, selected, t, toggleFrozen, viewUsage],
+    [accessFreezes.byEndUser, busy, can, canWrite, ensurePolicyOptions, freezeEnabled, i18n.resolvedLanguage, masked, openEdit, openHistory, profileById, t, toggleFrozen, viewUsage],
   );
 
   const onCreate = async (event: FormEvent) => {
@@ -501,9 +481,7 @@ export function EndUsersPage() {
               ) : null}
             </div>
           }
-          // 首次加载交给表格自己的骨架（同一个框，数据回来不跳）；刷新时才罩住旧数据。以前首次加载
-          // 是卡片遮罩罩着一个「暂无门户账号」的空态。
-          loading={loading && users.length > 0}
+          // 加载由表格自己表示：首次是骨架，刷新是表头下沿的进度条，框都不动。
         >
           <EndUserToolbar
             search={search}
@@ -523,52 +501,56 @@ export function EndUsersPage() {
             }}
             profiles={profiles}
             showSourceFilter={profiles.length > 0}
-            selectedCount={selected.size}
-            onBindSelected={batchEnabled ? () => setBindOpen(true) : undefined}
-            onClearSelection={() => setSelected(new Set())}
-            onClearFilters={() => {
-              setSearch("");
-              setStatusFilter("all");
-              setSourceFilter("all");
-              setPage(1);
-            }}
+            onClearFilters={clearFilters}
           />
-          <DataTable
+          <DataGrid
             fill
-            tableId="end-users"
+            id="end-users"
+            label={t("end_users.title")}
             loading={loading}
             rows={pageUsers}
             columns={columns}
             rowKey={(row) => row.id}
-            virtualize={false}
-            rowHeight={64}
-            minWidth="min-w-[1520px]"
-            rowClassName={(row) => (selected.has(row.id) ? "bg-accent-soft/60" : "")}
-            emptyText={hasFilters ? t("end_users.filtered_empty") : t("end_users.empty")}
-            showAllLoadedMessage={false}
-            columnResizable
+            // 批量绑定权限策略：表头复选框全选本页、Shift 连选，选中后表头换成选择条，翻页保留选择。
+            selectable={batchEnabled}
+            rowLabel={(row) => row.display_name || row.username}
+            selectedKeys={selected}
+            onSelectedKeysChange={setSelected}
+            selectionActions={() => (
+              <Button size="xs" variant="primary" onClick={() => setBindOpen(true)}>
+                <ShieldCheck size={12} aria-hidden="true" />
+                {t("access_policy.batch_bind_action")}
+              </Button>
+            )}
+            empty={
+              hasFilters
+                ? {
+                    title: t("end_users.filtered_empty"),
+                    action: (
+                      <Button size="sm" onClick={clearFilters}>
+                        {t("common.clear_filters")}
+                      </Button>
+                    ),
+                  }
+                : { title: t("end_users.empty") }
+            }
+            resetScrollKey={`${currentPage}|${pageSize}|${search}|${statusFilter}|${sourceFilter}`}
+            footer={
+              <DataGridPagination
+                page={currentPage}
+                pageSize={pageSize}
+                total={filteredUsers.length}
+                pending={loading && users.length === 0}
+                onPageChange={setPage}
+                onPageSizeChange={(size) => {
+                  setPageSize(size);
+                  setPage(1);
+                }}
+                pageSizeOptions={PAGE_SIZE_OPTIONS}
+              />
+            }
           />
-          <PaginationBar
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalCount={filteredUsers.length}
-            pageSize={pageSize}
-            onPageChange={setPage}
-            onPageSizeChange={(size) => {
-              setPageSize(size);
-              setPage(1);
-            }}
-            pageSizeOptions={PAGE_SIZE_OPTIONS}
-            className="mt-3"
-            labels={{
-              firstPage: t("end_users.first_page"),
-              previousPage: t("end_users.previous_page"),
-              nextPage: t("end_users.next_page"),
-              lastPage: t("end_users.last_page"),
-              rowsPerPage: t("end_users.rows_per_page"),
-              pageInfo: ({ start, end, total }) => t("end_users.page_info", { start, end, total }),
-            }}
-          />
+
         </Card>
       </div>
 

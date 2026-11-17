@@ -17,12 +17,12 @@ import {
   schedulingFromStrategy,
   strategyFromScheduling,
 } from "@features/visual-config-editor";
-import { Button, Callout, Checkbox, COLUMN_WIDTH, ConfirmModal, Modal, ScrollArea, Select } from "@code-proxy/ui";
+import { Button, Callout, Checkbox, ConfirmModal, GRID_WIDTH, Modal, ScrollArea, Select } from "@code-proxy/ui";
 import { SearchableCheckboxMultiSelect, surface, TextInput, useToast } from "@code-proxy/ui";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { HoverTooltip, OverflowTooltip, TooltipChip } from "@code-proxy/ui";
-import { DataTable, TABLE_ROW_ACTIONS_COLUMN, TABLE_ROW_ACTIONS_STICKY_END_COLUMN, TableRowActions, type DataTableColumn } from "@code-proxy/ui";
-import { Field, InfoTooltip, TooltipHeader, renderChannelTags } from "./fields";
+import { DataGrid, GridRowActions, gridRowActionsColumn, type DataGridColumn } from "@code-proxy/ui";
+import { Field, InfoTooltip, renderChannelTags } from "./fields";
 import type { RoutingModelLoadResult, RoutingModelOption } from "./types";
 import {
   channelMatchesTags,
@@ -59,6 +59,9 @@ import {
   serializeModelSelection,
   type ModelSelectionDraft,
 } from "./modelSelectionDraft";
+
+/** 有失效渠道的行淡淡染红（走 DataGrid 的行底色变量，冻结格一起变）。 */
+const STALE_ROW_TINT = "[--grid-bg:color-mix(in_srgb,var(--cp-backdrop)_95%,var(--color-rose-500))]";
 
 const SYSTEM_DEFAULT_GROUP_NAME = "default";
 const SYSTEM_DEFAULT_GROUP_ID = "system-default-root";
@@ -727,47 +730,46 @@ export function RoutingConfigEditor({
     setDeleteGroupTarget(null);
   }, [deleteGroupTarget, removeRoutingGroup]);
 
-  const groupColumns = useMemo<DataTableColumn<RoutingChannelGroupEntry>[]>(
+  const groupColumns = useMemo<DataGridColumn<RoutingChannelGroupEntry>[]>(
     () => [
       {
-        key: "name",
-        label: t("channel_groups_page.table_group"),
-        width: COLUMN_WIDTH.numericWide,
-        cellClassName: "min-w-0 whitespace-nowrap font-medium",
-        render: (group, index) => {
+        id: "name",
+        header: t("channel_groups_page.table_group"),
+        pin: "start",
+        width: GRID_WIDTH.numericWide,
+        cell: (group, { rowIndex }) => {
           const name = group.system
             ? t("channel_groups_page.system_default_route")
-            : group.name.trim() || t("visual_config.group_n", { n: index + 1 });
+            : group.name.trim() || t("visual_config.group_n", { n: rowIndex + 1 });
           return (
             <OverflowTooltip content={name} className="block min-w-0">
-              <span className="block truncate">{name}</span>
+              <span className="block truncate whitespace-nowrap font-medium">{name}</span>
             </OverflowTooltip>
           );
         },
       },
       {
-        key: "description",
-        label: t("channel_groups_page.description_label"),
-        width: "w-[220px] min-w-[220px]",
-        cellClassName: "min-w-0 whitespace-nowrap text-ink-3",
-        render: (group) => {
+        id: "description",
+        header: t("channel_groups_page.description_label"),
+        width: 220,
+        grow: true,
+        cell: (group) => {
           const description = group.system
             ? t("channel_groups_page.system_default_route_description")
             : group.description.trim() || t("channel_groups_page.no_description");
           return (
             <OverflowTooltip content={description} className="block min-w-0">
-              <span className="block truncate">{description}</span>
+              <span className="block truncate whitespace-nowrap text-ink-3">{description}</span>
             </OverflowTooltip>
           );
         },
       },
       {
-        key: "channelCount",
-        label: t("channel_groups_page.table_channel_count"),
-        width: COLUMN_WIDTH.toggle,
-        headerClassName: "text-center",
-        cellClassName: "whitespace-nowrap text-center",
-        render: (group) => {
+        id: "channelCount",
+        header: t("channel_groups_page.table_channel_count"),
+        align: "center",
+        width: GRID_WIDTH.toggle,
+        cell: (group) => {
           if (group.system) {
             return (
               <span className="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]">
@@ -784,11 +786,10 @@ export function RoutingConfigEditor({
         },
       },
       {
-        key: "status",
-        label: t("channel_groups_page.table_status"),
-        width: COLUMN_WIDTH.badge,
-        cellClassName: "whitespace-nowrap",
-        render: (group) => {
+        id: "status",
+        header: t("channel_groups_page.table_status"),
+        width: GRID_WIDTH.badge,
+        cell: (group) => {
           const staleChannels = staleChannelsByGroup.get(group.id) ?? [];
           if (staleChannels.length === 0) {
             return (
@@ -812,17 +813,11 @@ export function RoutingConfigEditor({
         },
       },
       {
-        key: "defaultScope",
-        label: t("channel_groups_page.table_default_scope"),
-        headerRender: () => (
-          <TooltipHeader
-            label={t("channel_groups_page.table_default_scope")}
-            tooltip={t("channel_groups_page.table_default_scope_tooltip")}
-          />
-        ),
-        width: COLUMN_WIDTH.compact,
-        cellClassName: "whitespace-nowrap",
-        render: (group) => {
+        id: "defaultScope",
+        header: t("channel_groups_page.table_default_scope"),
+        headerHint: t("channel_groups_page.table_default_scope_tooltip"),
+        width: GRID_WIDTH.compact,
+        cell: (group) => {
           if (group.system) {
             return (
               <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]">
@@ -842,11 +837,10 @@ export function RoutingConfigEditor({
         },
       },
       {
-        key: "channels",
-        label: t("channel_groups_page.table_channels"),
-        width: COLUMN_WIDTH.nameStacked,
-        cellClassName: "min-w-0 whitespace-nowrap text-ink-2",
-        render: (group) => {
+        id: "channels",
+        header: t("channel_groups_page.table_channels"),
+        width: GRID_WIDTH.nameStacked,
+        cell: (group) => {
           if (group.system) {
             return (
               <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]">
@@ -881,7 +875,7 @@ export function RoutingConfigEditor({
                 </div>
               }
             >
-              <span className="block min-w-0 truncate">
+              <span className="block min-w-0 truncate whitespace-nowrap text-ink-2">
                 {summarizeList(names, t("channel_groups_page.more_suffix"))}
               </span>
             </HoverTooltip>
@@ -889,11 +883,10 @@ export function RoutingConfigEditor({
         },
       },
       {
-        key: "priorityMode",
-        label: t("channel_groups_page.table_priority_mode"),
-        width: "w-[190px] min-w-[190px]",
-        cellClassName: "min-w-0 whitespace-nowrap text-ink-2",
-        render: (group) => {
+        id: "priorityMode",
+        header: t("channel_groups_page.table_priority_mode"),
+        width: 190,
+        cell: (group) => {
           // The distribution and the weights are independent facts, so both are
           // shown. The old column hid weights entirely for sticky/fill-first
           // groups, which is exactly where a mis-set weight did the most damage.
@@ -908,17 +901,16 @@ export function RoutingConfigEditor({
             : schedulingLabel(t, scheduling);
           return (
             <OverflowTooltip content={summary} className="block min-w-0">
-              <span className="block truncate">{summary}</span>
+              <span className="block truncate whitespace-nowrap text-ink-2">{summary}</span>
             </OverflowTooltip>
           );
         },
       },
       {
-        key: "routes",
-        label: t("channel_groups_page.table_routes"),
-        width: "w-[220px] min-w-[220px]",
-        cellClassName: "min-w-0 whitespace-nowrap text-ink-2",
-        render: (group) => {
+        id: "routes",
+        header: t("channel_groups_page.table_routes"),
+        width: 220,
+        cell: (group) => {
           if (group.system) {
             return <span className="font-mono text-ink">/</span>;
           }
@@ -944,7 +936,7 @@ export function RoutingConfigEditor({
                 </div>
               }
             >
-              <span className="block min-w-0 truncate">
+              <span className="block min-w-0 truncate whitespace-nowrap text-ink-2">
                 {summarizeList(routePaths, t("channel_groups_page.more_suffix"))}
               </span>
             </HoverTooltip>
@@ -952,11 +944,11 @@ export function RoutingConfigEditor({
         },
       },
       {
-        key: "actions",
-        label: t("common.action"),
-        ...TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
-        render: (group) => (
-          <TableRowActions
+        id: "actions",
+        header: t("common.action"),
+        ...gridRowActionsColumn(2),
+        cell: (group) => (
+          <GridRowActions
             actions={[
               {
                 key: "edit",
@@ -982,20 +974,21 @@ export function RoutingConfigEditor({
     [disabled, openEditGroup, resolveGroupChannels, routesByGroup, staleChannelsByGroup, t],
   );
 
-  const groupMemberColumns = useMemo<DataTableColumn<RoutingChannelGroupMemberEntry>[]>(
+  const groupMemberColumns = useMemo<DataGridColumn<RoutingChannelGroupMemberEntry>[]>(
     () => [
       {
-        key: "channel",
-        label: t("channel_groups_page.table_channels"),
-        cellClassName: "min-w-0 whitespace-nowrap",
-        render: (channel) => {
+        id: "channel",
+        header: t("channel_groups_page.table_channels"),
+        width: 240,
+        grow: true,
+        cell: (channel) => {
           const detail = getChannelDetail(channel.name, groupDraft.name);
           const displayTags = readChannelDisplayTags(detail);
           const isStale = draftStaleChannelIds.has(channel.id);
           const isDisabled = isDisabledChannel(detail);
           return (
             <OverflowTooltip content={channel.name} className="block min-w-0">
-              <span className="block min-w-0">
+              <span className="block min-w-0 whitespace-nowrap">
                 <span
                   className={`flex min-w-0 items-center gap-2 truncate text-sm ${
                     isStale
@@ -1035,11 +1028,11 @@ export function RoutingConfigEditor({
         },
       },
       {
-        key: "priority",
-        label: t("channel_groups_page.channel_weight_label"),
-        width: COLUMN_WIDTH.badgeGroup,
-        cellClassName: "whitespace-nowrap",
-        render: (channel) => (
+        id: "priority",
+        header: t("channel_groups_page.channel_weight_label"),
+        width: GRID_WIDTH.badgeGroup,
+        overflowTooltip: false,
+        cell: (channel) => (
           <TextInput
             value={channel.priority}
             onChange={(event) => {
@@ -1058,11 +1051,11 @@ export function RoutingConfigEditor({
         ? []
         : [
             {
-              key: "actions",
-              label: t("common.action"),
-              ...TABLE_ROW_ACTIONS_COLUMN,
-              render: (channel) => (
-                <TableRowActions
+              id: "actions",
+              header: t("common.action"),
+              ...gridRowActionsColumn(1),
+              cell: (channel) => (
+                <GridRowActions
                   actions={[
                     {
                       key: "remove",
@@ -1074,7 +1067,7 @@ export function RoutingConfigEditor({
                   ]}
                 />
               ),
-            } satisfies DataTableColumn<RoutingChannelGroupMemberEntry>,
+            } satisfies DataGridColumn<RoutingChannelGroupMemberEntry>,
           ]),
     ],
     [
@@ -1171,22 +1164,21 @@ export function RoutingConfigEditor({
           </div>
         </div>
 
-        <DataTable<RoutingChannelGroupEntry>
+        {/* 行底色走 DataGrid 的 --grid-bg：悬停、选中色在它之上照常叠加，冻结列也跟着变色。 */}
+        <DataGrid<RoutingChannelGroupEntry>
           fill
-          tableId="routing-channel-groups"
+          id="routing-channel-groups"
           rows={displayGroups}
           columns={groupColumns}
           rowKey={(group) => group.id}
-          minWidth="min-w-[1360px]"
-          caption={t("channel_groups_page.table_group")}
-          emptyText={t("channel_groups_page.empty_groups")}
-          allowWheelPropagationAtBoundary
+          label={t("channel_groups_page.table_group")}
+          empty={{ title: t("channel_groups_page.empty_groups") }}
           rowClassName={(group) =>
             group.system
-              ? "bg-subtle"
+              ? "[--grid-bg:var(--cp-subtle)]"
               : (staleChannelsByGroup.get(group.id)?.length ?? 0) > 0
-                ? "bg-rose-500/[0.04]"
-                : ""
+                ? STALE_ROW_TINT
+                : undefined
           }
         />
       </div>
@@ -1535,32 +1527,28 @@ export function RoutingConfigEditor({
                     {/* Shown for every group, including the root path: this is
                         the only place per-channel weights can be set, and the
                         root group used to hide it entirely. */}
-                    <DataTable<RoutingChannelGroupMemberEntry>
-                      tableId="routing-channel-group-members"
+                    <DataGrid<RoutingChannelGroupMemberEntry>
+                      id="routing-channel-group-members"
+                      frame={false}
                       rows={resolvedDraftChannels}
                       columns={groupMemberColumns}
                       rowKey={(channel) => channel.id}
-                      virtualize={false}
-                      rowHeight={52}
-                      minWidth="min-w-[640px]"
-                      caption={
+                      label={
                         editingSystemDefaultGroup
                           ? t("channel_groups_page.default_members_label")
                           : groupDraft.matchMode === "tags"
                             ? t("channel_groups_page.matched_channel_label")
                             : t("channel_groups_page.select_channel_label")
                       }
-                      emptyText={
-                        groupDraft.matchMode === "tags"
-                          ? t("channel_groups_page.empty_matched_channels")
-                          : t("channel_groups_page.empty_group_channels")
-                      }
+                      empty={{
+                        title:
+                          groupDraft.matchMode === "tags"
+                            ? t("channel_groups_page.empty_matched_channels")
+                            : t("channel_groups_page.empty_group_channels"),
+                      }}
                       rowClassName={(channel) =>
-                        draftStaleChannelIds.has(channel.id)
-                          ? "bg-rose-500/[0.06]"
-                          : ""
+                        draftStaleChannelIds.has(channel.id) ? STALE_ROW_TINT : undefined
                       }
-                      naturalFlow
                     />
                   </ScrollArea>
                 </TabsContent>

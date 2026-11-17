@@ -10,19 +10,18 @@ import {
 } from "@code-proxy/api-client";
 import {
   Button,
-  Checkbox,
-  COLUMN_WIDTH,
+  GRID_WIDTH,
   ConfirmModal,
   confirmDialog,
-  DataTable,
-  PaginationBar,
+  DataGrid,
+  DataGridPagination,
   Select,
-  TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
-  TableRowActions,
+  GRID_ROW_ACTIONS_COLUMN,
+  GridRowActions,
   TextInput,
   ToggleSwitch,
   useToast,
-  type DataTableColumn,
+  type DataGridColumn,
 } from "@code-proxy/ui";
 import { PermissionGate } from "@app/providers/PermissionGate";
 import { RuleEditModal } from "./RuleEditModal";
@@ -56,6 +55,13 @@ export function AccessRulesTab({
   const [effect, setEffect] = useState<IpAccessEffect | "">("");
   const [source, setSource] = useState<IpAccessSource | "">("");
   const [search, setSearch] = useState("");
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const hasRuleFilters = Boolean(effect || source || search.trim());
+  const clearRuleFilters = () => {
+    setEffect("");
+    setSource("");
+    setSearch("");
+  };
   const [selected, setSelected] = useState<string[]>([]);
   const [editTarget, setEditTarget] = useState<IpAccessRule | null>(null);
   const [formOpen, setFormOpen] = useState(false);
@@ -82,16 +88,15 @@ export function AccessRulesTab({
         setTotal(response.total ?? 0);
         setPage(response.page || nextPage);
         setPageSize(response.size || size);
+        setLoadError(null);
       } catch (error) {
-        notify({
-          type: "error",
-          message: error instanceof Error ? error.message : t("ip_access.load_failed"),
-        });
+        // 读不到时表格显示出错态和「重试」，不是一张看起来「没有规则」的空表。
+        setLoadError(error instanceof Error ? error.message : "");
       } finally {
         setLoading(false);
       }
     },
-    [effect, notify, search, source, t],
+    [effect, search, source],
   );
 
   useEffect(() => {
@@ -240,49 +245,24 @@ export function AccessRulesTab({
     [load, notify, onRulesChanged, page, pageSize, t],
   );
 
-  const allSelected = items.length > 0 && selected.length === items.length;
+  const selectedKeys = useMemo(() => new Set(selected), [selected]);
 
-  const columns = useMemo<DataTableColumn<IpAccessRule>[]>(
+  const columns = useMemo<DataGridColumn<IpAccessRule>[]>(
     () => [
       {
-        key: "select",
-        label: "",
-        width: COLUMN_WIDTH.checkbox,
-        resizable: false,
-        headerRender: () => (
-          <Checkbox
-            checked={allSelected}
-            indeterminate={selected.length > 0 && !allSelected}
-            onCheckedChange={(next) => setSelected(next ? items.map((row) => row.id) : [])}
-            aria-label={t("ip_access.select_all")}
-          />
-        ),
-        render: (item) => (
-          <Checkbox
-            checked={selected.includes(item.id)}
-            onCheckedChange={(next) =>
-              setSelected((prev) =>
-                next ? [...prev, item.id] : prev.filter((id) => id !== item.id),
-              )
-            }
-            aria-label={t("ip_access.select_rule", { cidr: item.cidr })}
-          />
-        ),
-      },
-      {
-        key: "cidr",
-        label: t("ip_access.col_cidr"),
-        width: COLUMN_WIDTH.name,
+        id: "cidr",
+        header: t("ip_access.col_cidr"),
+        width: GRID_WIDTH.name,
         overflowTooltip: true,
-        render: (item) => (
+        cell: (item) => (
           <span className="font-mono text-sm text-ink">{item.cidr}</span>
         ),
       },
       {
-        key: "effect",
-        label: t("ip_access.col_effect"),
-        width: COLUMN_WIDTH.compact,
-        render: (item) => (
+        id: "effect",
+        header: t("ip_access.col_effect"),
+        width: GRID_WIDTH.compact,
+        cell: (item) => (
           <span
             className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
               item.effect === "deny"
@@ -295,20 +275,20 @@ export function AccessRulesTab({
         ),
       },
       {
-        key: "source",
-        label: t("ip_access.col_rule_source"),
-        width: COLUMN_WIDTH.compact,
-        render: (item) => (
+        id: "source",
+        header: t("ip_access.col_rule_source"),
+        width: GRID_WIDTH.compact,
+        cell: (item) => (
           <span className="text-sm text-ink-2">
             {t(`ip_access.source_${item.source}`)}
           </span>
         ),
       },
       {
-        key: "expires",
-        label: t("ip_access.col_expires"),
-        width: COLUMN_WIDTH.timestamp,
-        render: (item) =>
+        id: "expires",
+        header: t("ip_access.col_expires"),
+        width: GRID_WIDTH.timestamp,
+        cell: (item) =>
           item.expires_at ? (
             new Date(item.expires_at).toLocaleString(i18n.language)
           ) : (
@@ -316,27 +296,27 @@ export function AccessRulesTab({
           ),
       },
       {
-        key: "hits",
-        label: t("ip_access.col_hits"),
-        width: COLUMN_WIDTH.numericWide,
-        render: (item) => <span className="tabular-nums">{item.hit_count}</span>,
+        id: "hits",
+        header: t("ip_access.col_hits"),
+        width: GRID_WIDTH.numericWide,
+        cell: (item) => <span className="tabular-nums">{item.hit_count}</span>,
       },
       {
-        key: "note",
-        label: t("ip_access.col_note"),
-        width: COLUMN_WIDTH.composite,
+        id: "note",
+        header: t("ip_access.col_note"),
+        width: GRID_WIDTH.composite,
         overflowTooltip: true,
-        render: (item) => (
+        cell: (item) => (
           <span className="text-sm text-ink-2">
             {item.note || item.reason || "—"}
           </span>
         ),
       },
       {
-        key: "enabled",
-        label: t("ip_access.col_enabled"),
-        width: COLUMN_WIDTH.toggle,
-        render: (item) => (
+        id: "enabled",
+        header: t("ip_access.col_enabled"),
+        width: GRID_WIDTH.toggle,
+        cell: (item) => (
           <PermissionGate
             permission="platform.ip_access.write"
             fallback={<span>{item.enabled ? t("common.yes") : t("common.no")}</span>}
@@ -351,12 +331,12 @@ export function AccessRulesTab({
         ),
       },
       {
-        key: "actions",
-        label: t("ip_access.col_actions"),
-        ...TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
-        render: (item) => (
+        id: "actions",
+        header: t("ip_access.col_actions"),
+        ...GRID_ROW_ACTIONS_COLUMN,
+        cell: (item) => (
           <PermissionGate permission="platform.ip_access.write">
-            <TableRowActions
+            <GridRowActions
               actions={[
                 {
                   key: "edit",
@@ -388,7 +368,7 @@ export function AccessRulesTab({
         ),
       },
     ],
-    [allSelected, busy, i18n.language, items, selected, t, toggleEnabled, unbanAndAllow],
+    [busy, i18n.language, t, toggleEnabled, unbanAndAllow],
   );
 
   return (
@@ -431,24 +411,6 @@ export function AccessRulesTab({
               aria-label={t("ip_access.col_rule_source")}
             />
           </div>
-          {selected.length > 0 ? (
-            <PermissionGate permission="platform.ip_access.write">
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-ink-3">
-                  {t("ip_access.selected_count", { count: selected.length })}
-                </span>
-                <Button size="sm" variant="secondary" disabled={busy} onClick={() => void bulkApply({ enabled: false })}>
-                  {t("ip_access.bulk_disable")}
-                </Button>
-                <Button size="sm" variant="secondary" disabled={busy} onClick={() => void bulkApply({ enabled: true })}>
-                  {t("ip_access.bulk_enable")}
-                </Button>
-                <Button size="sm" variant="secondary-danger" disabled={busy} onClick={() => void requestBulkDelete()}>
-                  {t("ip_access.bulk_delete")}
-                </Button>
-              </div>
-            </PermissionGate>
-          ) : null}
           <PermissionGate permission="platform.ip_access.write">
             <Button
               variant="primary"
@@ -463,18 +425,64 @@ export function AccessRulesTab({
         </div>
       </div>
 
-      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
-        <DataTable<IpAccessRule>
+      <div className="flex min-h-0 flex-1 flex-col">
+        <DataGrid<IpAccessRule>
           fill
-          tableId="ip-access-rules"
+          id="ip-access-rules"
+          label={t("ip_access.tab_rules")}
           rows={items}
           columns={columns}
           rowKey={(item) => item.id}
           loading={loading}
-          virtualize={false}
-          minWidth="min-w-[1040px]"
-          emptyText={t("ip_access.no_rules")}
-          showAllLoadedMessage={false}
+          error={loadError === null ? null : loadError || t("ip_access.load_failed")}
+          onRetry={() => void load(page, pageSize)}
+          // 批量启用 / 停用 / 删除：表头复选框全选本页、Shift 连选，选中后表头换成选择条。
+          selectable
+          rowLabel={(item) => item.cidr}
+          selectedKeys={selectedKeys}
+          onSelectedKeysChange={(keys) => setSelected([...keys])}
+          selectionActions={() => (
+            <PermissionGate permission="platform.ip_access.write">
+              <Button size="xs" disabled={busy} onClick={() => void bulkApply({ enabled: false })}>
+                {t("ip_access.bulk_disable")}
+              </Button>
+              <Button size="xs" disabled={busy} onClick={() => void bulkApply({ enabled: true })}>
+                {t("ip_access.bulk_enable")}
+              </Button>
+              <Button
+                size="xs"
+                variant="secondary-danger"
+                disabled={busy}
+                onClick={() => void requestBulkDelete()}
+              >
+                {t("ip_access.bulk_delete")}
+              </Button>
+            </PermissionGate>
+          )}
+          empty={
+            hasRuleFilters
+              ? {
+                  title: t("ip_access.no_rules"),
+                  action: (
+                    <Button size="sm" onClick={clearRuleFilters}>
+                      {t("common.clear_filters")}
+                    </Button>
+                  ),
+                }
+              : { title: t("ip_access.no_rules") }
+          }
+          resetScrollKey={`${page}|${pageSize}|${effect}|${source}|${search}`}
+          footer={
+            <DataGridPagination
+              page={page}
+              pageSize={pageSize}
+              total={total}
+              pending={loading && items.length === 0 && total === 0}
+              onPageChange={(next) => void load(Math.max(1, Math.min(next, totalPages)), pageSize)}
+              onPageSizeChange={(size) => void load(1, size)}
+              pageSizeOptions={PAGE_SIZE_OPTIONS}
+            />
+          }
         />
       </div>
 
@@ -500,26 +508,7 @@ export function AccessRulesTab({
         </div>
       ) : null}
 
-      <PaginationBar
-        currentPage={page}
-        totalPages={totalPages}
-        totalCount={total}
-        pageSize={pageSize}
-        onPageChange={(next) => void load(Math.max(1, Math.min(next, totalPages)), pageSize)}
-        onPageSizeChange={(size) => void load(1, size)}
-        pageSizeOptions={PAGE_SIZE_OPTIONS}
-        // 分页条和表格之间靠留白分开，不画分隔线（同请求日志页）。
-        className="pt-3"
-        labels={{
-          firstPage: t("request_logs.first_page"),
-          previousPage: t("request_logs.prev_page"),
-          nextPage: t("request_logs.next_page"),
-          lastPage: t("request_logs.last_page"),
-          rowsPerPage: t("request_logs.rows_per_page"),
-          pageInfo: ({ start, end, total: count }) =>
-            t("request_logs.page_info", { start, end, total: count }),
-        }}
-      />
+
 
       <RuleFormModal
         open={formOpen}

@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { ShieldAlert, ShieldCheck, ShieldX, TriangleAlert } from "lucide-react";
 import type { WordTestResult as WordTestOutcome } from "@code-proxy/api-client";
-import { Callout, surface } from "@code-proxy/ui";
+import { Callout, DataGrid, surface, type DataGridColumn } from "@code-proxy/ui";
 import { highlightSegments } from "./wordPolicyModel";
 
 export interface WordTestResultProps {
@@ -26,6 +26,60 @@ export function WordTestResult({ input, result }: WordTestResultProps) {
   const hasNormalizedOnly = result.matches.some((match) => match.normalized_only);
   const showOutput = result.action === "replace" || result.output !== input;
   const layers = result.layers.map((layer) => t(`content_moderation.words.scope_${layer}`)).join(" · ");
+  type Match = WordTestOutcome["matches"][number];
+  const matchColumns = useMemo<DataGridColumn<Match>[]>(
+    () => [
+      {
+        id: "layer",
+        header: t("content_moderation.words.col_layer"),
+        width: 112,
+        cell: (match) => (
+          <span className="truncate text-xs text-ink-2">
+            {t(`content_moderation.words.scope_${match.layer}`)}
+          </span>
+        ),
+      },
+      {
+        id: "pattern",
+        header: t("content_moderation.words.col_pattern"),
+        width: 200,
+        grow: true,
+        cell: (match) => (
+          <span className="min-w-0 truncate text-xs">
+            <span className="mr-1.5 text-ink-3">{t(`content_moderation.words.kind_${match.kind}`)}</span>
+            {match.pattern_hidden ? (
+              <span className="text-ink-3">{t("content_moderation.words.pattern_hidden")}</span>
+            ) : (
+              <span className="font-mono text-ink-2">{match.pattern}</span>
+            )}
+          </span>
+        ),
+      },
+      {
+        id: "action",
+        header: t("content_moderation.words.col_action"),
+        width: 96,
+        cell: (match) => (
+          <span className="truncate text-xs text-ink-2">
+            {t(`content_moderation.words.action_${match.action}`)}
+          </span>
+        ),
+      },
+      {
+        id: "matched",
+        header: t("content_moderation.words.col_matched"),
+        width: 128,
+        cell: (match) => (
+          <span className="truncate text-xs text-ink-3">
+            {match.normalized_only
+              ? t("content_moderation.words.matched_normalized")
+              : t("content_moderation.words.matched_as_written")}
+          </span>
+        ),
+      },
+    ],
+    [t],
+  );
 
   const verdict = {
     block: {
@@ -137,44 +191,20 @@ export function WordTestResult({ input, result }: WordTestResultProps) {
 
       {result.matches.length > 0 ? (
         <div className="space-y-1.5">
-          <div className={`max-h-52 overflow-y-auto ${surface({ tone: "inset", radius: "xl" })}`}>
-            <table className="w-full text-left text-xs">
-              <thead className="sticky top-0 bg-subtle text-ink-3">
-                <tr>
-                  <th className="px-3 py-2 font-semibold">{t("content_moderation.words.col_layer")}</th>
-                  <th className="px-3 py-2 font-semibold">{t("content_moderation.words.col_pattern")}</th>
-                  <th className="px-3 py-2 font-semibold">{t("content_moderation.words.col_action")}</th>
-                  <th className="px-3 py-2 font-semibold">{t("content_moderation.words.col_matched")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {result.matches.map((match, index) => (
-                  <tr key={`${match.rule_id}:${match.start}:${index}`} className="border-t border-line">
-                    <td className="px-3 py-2 text-ink-2">
-                      {t(`content_moderation.words.scope_${match.layer}`)}
-                    </td>
-                    <td className="px-3 py-2">
-                      <span className="mr-1.5 text-ink-3">
-                        {t(`content_moderation.words.kind_${match.kind}`)}
-                      </span>
-                      {match.pattern_hidden ? (
-                        <span className="text-ink-3">{t("content_moderation.words.pattern_hidden")}</span>
-                      ) : (
-                        <span className="font-mono text-ink-2">{match.pattern}</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2 text-ink-2">
-                      {t(`content_moderation.words.action_${match.action}`)}
-                    </td>
-                    <td className="px-3 py-2 text-ink-3">
-                      {match.normalized_only
-                        ? t("content_moderation.words.matched_normalized")
-                        : t("content_moderation.words.matched_as_written")}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          {/* 浅底框里的小表：不再套外框，最高 13rem 后表内滚动（表头吸顶）。
+              浅底框不设 --cp-backdrop，这里补上，表格的行底色、悬停色才和框一致。 */}
+          <div
+            className={`overflow-hidden [--cp-backdrop:var(--cp-subtle)] ${surface({ tone: "inset", radius: "xl" })}`}
+          >
+            <DataGrid<Match>
+              frame={false}
+              density="compact"
+              label={t("content_moderation.words.test_hits_in_text")}
+              columns={matchColumns}
+              rows={result.matches}
+              rowKey={(match) => `${match.layer}:${match.rule_id}:${match.start}:${match.end}`}
+              maxHeight="13rem"
+            />
           </div>
           {result.match_count > result.matches.length ? (
             <p className="text-xs text-ink-3">

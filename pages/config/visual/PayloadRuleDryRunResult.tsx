@@ -5,7 +5,7 @@ import type {
   PayloadRulesDryRunResult,
 } from "@code-proxy/api-client";
 import type { PayloadDraftSection } from "@features/visual-config-editor";
-import { Callout } from "@code-proxy/ui";
+import { Callout, DataGrid, type DataGridColumn } from "@code-proxy/ui";
 
 /** 后端按草稿里的序号回报；草稿去掉了没填模型的规则，要对回页面上的「规则 N」。 */
 function ruleNumber(
@@ -64,6 +64,37 @@ export function PayloadRuleDryRunResult({
   const { t } = useTranslation();
   const sectionLabel = (section: PayloadRuleOutcome["section"]) =>
     t(`config_ui.payload.dry_run.section.${section}`);
+  type Change = PayloadRulesDryRunResult["changes"][number];
+  // 路径、改前、改后三列等分；JSON 值按字符折行，看得到全文。
+  const changeColumns: DataGridColumn<Change>[] = [
+    {
+      id: "path",
+      header: t("config_ui.payload.dry_run.path"),
+      width: 160,
+      grow: true,
+      cell: (change) => (
+        <code className="min-w-0 break-all font-mono text-xs text-ink">{change.path}</code>
+      ),
+    },
+    {
+      id: "before",
+      header: t("config_ui.payload.dry_run.before"),
+      width: 160,
+      grow: true,
+      cell: (change) => (
+        <JsonValue value={change.before} empty={t("config_ui.payload.dry_run.absent")} />
+      ),
+    },
+    {
+      id: "after",
+      header: t("config_ui.payload.dry_run.after"),
+      width: 160,
+      grow: true,
+      cell: (change) => (
+        <JsonValue value={change.after} empty={t("config_ui.payload.dry_run.removed")} />
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-3" aria-live="polite">
@@ -88,36 +119,17 @@ export function PayloadRuleDryRunResult({
             : t("config_ui.payload.dry_run.no_changes")}
         </h4>
         {result.changes.length > 0 ? (
-          <table className="mt-2 w-full table-fixed text-left">
-            <thead>
-              <tr className="text-2xs text-ink-3">
-                <th className="w-1/3 pb-1 font-medium">{t("config_ui.payload.dry_run.path")}</th>
-                <th className="w-1/3 pb-1 font-medium">{t("config_ui.payload.dry_run.before")}</th>
-                <th className="w-1/3 pb-1 font-medium">{t("config_ui.payload.dry_run.after")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {result.changes.map((change) => (
-                <tr key={change.path} className="align-top">
-                  <td className="py-1 pr-3">
-                    <code className="font-mono text-xs break-all text-ink">{change.path}</code>
-                  </td>
-                  <td className="py-1 pr-3">
-                    <JsonValue
-                      value={change.before}
-                      empty={t("config_ui.payload.dry_run.absent")}
-                    />
-                  </td>
-                  <td className="py-1">
-                    <JsonValue
-                      value={change.after}
-                      empty={t("config_ui.payload.dry_run.removed")}
-                    />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          // 浅底框里的小表：不套外框、按行收高；框不设 --cp-backdrop，这里补上，行底色才和框一致。
+          <div className="mt-2 [--cp-backdrop:var(--cp-subtle)]">
+            <DataGrid<Change>
+              frame={false}
+              density="compact"
+              label={t("config_ui.payload.dry_run.changes", { count: result.changes.length })}
+              columns={changeColumns}
+              rows={result.changes}
+              rowKey={(change) => change.path}
+            />
+          </div>
         ) : null}
       </div>
 

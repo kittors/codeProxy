@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Check, RefreshCw, X, type LucideIcon } from "lucide-react";
 import type {
@@ -6,7 +7,7 @@ import type {
   AlertEventDelivery,
   AlertSeverity,
 } from "@code-proxy/api-client";
-import { Button, Callout, EmptyState, SkeletonLines, surface } from "@code-proxy/ui";
+import { Button, DataGrid, surface, type DataGridColumn } from "@code-proxy/ui";
 import { formatEventTime } from "./eventFormat";
 
 // 语义色只用淡底 + 同色字（和 IP 防护的尝试记录同一套），深色下换浅一档的字色。
@@ -69,6 +70,96 @@ export function EventsPanel({
 }) {
   const { t, i18n } = useTranslation();
   const locale = i18n.resolvedLanguage || i18n.language || "en";
+  const columns = useMemo<DataGridColumn<AlertEvent>[]>(() => {
+    const header = (column: string) => t(`alerts_page.events.column.${column}`);
+    return [
+      {
+        id: "time",
+        header: header("time"),
+        width: 128,
+        cell: (event) => {
+          const time = formatEventTime(event.at, locale);
+          return (
+            <time dateTime={event.at} title={time.full} className="whitespace-nowrap tabular-nums text-ink-2">
+              {time.short}
+            </time>
+          );
+        },
+      },
+      {
+        id: "rule",
+        header: header("rule"),
+        width: 144,
+        cell: (event) => (
+          <span className="truncate whitespace-nowrap text-ink">
+            {t(`alerts_page.events.rule.${event.rule}`, { defaultValue: event.rule })}
+          </span>
+        ),
+      },
+      {
+        id: "severity",
+        header: header("severity"),
+        width: 96,
+        cell: (event) => (
+          <span
+            className={`inline-flex whitespace-nowrap rounded-full px-2 py-px text-2xs font-medium ${SEVERITY_TONE[event.severity] ?? SEVERITY_TONE.info}`}
+          >
+            {t(`alerts_page.events.severity.${event.severity}`, { defaultValue: event.severity })}
+          </span>
+        ),
+      },
+      {
+        id: "subject",
+        header: header("subject"),
+        width: 176,
+        overflowTooltip: (event) => event.subject.name || event.subject.id,
+        cell: (event) => (
+          <span className="flex min-w-0 flex-col">
+            <span className="truncate text-ink">{event.subject.name || event.subject.id}</span>
+            <span className="text-2xs text-ink-3">
+              {t(`alerts_page.events.subject.${event.subject.kind}`, {
+                defaultValue: event.subject.kind,
+              })}
+            </span>
+          </span>
+        ),
+      },
+      {
+        id: "title",
+        header: header("title"),
+        width: 200,
+        grow: true,
+        // 正文最多两行，被截掉时悬停看全文。
+        overflowTooltip: (event) => (event.text && event.text !== event.title ? event.text : null),
+        cell: (event) => (
+          <span className="flex min-w-0 flex-col py-1">
+            <span className="font-medium text-ink">{event.title}</span>
+            {event.text && event.text !== event.title ? (
+              <span className="mt-0.5 line-clamp-2 text-xs leading-5 text-ink-3">{event.text}</span>
+            ) : null}
+          </span>
+        ),
+      },
+      {
+        id: "deliveries",
+        header: header("deliveries"),
+        width: 176,
+        overflowTooltip: false,
+        cell: (event) => {
+          const deliveries = event.deliveries ?? [];
+          return deliveries.length === 0 ? (
+            <span className="text-xs text-ink-3">{t("alerts_page.events.delivery.none")}</span>
+          ) : (
+            <ul className="min-w-0 space-y-1.5 py-1">
+              {deliveries.map((delivery) => (
+                <DeliveryItem key={`${delivery.channel_id}:${delivery.status}`} delivery={delivery} />
+              ))}
+            </ul>
+          );
+        },
+      },
+    ];
+  }, [locale, t]);
 
   return (
     <section
@@ -102,113 +193,23 @@ export function EventsPanel({
         </Button>
       </header>
 
-      {error ? (
-        <Callout tone="danger" role="alert" className="mt-3">
-          {t("alerts_page.events.load_failed", { error })}
-        </Callout>
-      ) : null}
-
-      {items === null ? (
-        error ? null : (
-          <SkeletonLines rows={5} className="mt-4" />
-        )
-      ) : items.length === 0 ? (
-        <EmptyState
-          title={t("alerts_page.events.empty_title")}
-          description={t("alerts_page.events.empty_desc")}
+      {/* 卡片里的小表：不再套外框，按行收高。首次读取是骨架，读不到时错误和「重试」落在同一个框里。 */}
+      <div className="mt-3">
+        <DataGrid<AlertEvent>
+          frame={false}
+          label={t("alerts_page.events.title")}
+          columns={columns}
+          rows={items ?? []}
+          rowKey={(event) => event.id}
+          loading={items === null && !error}
+          error={error ? t("alerts_page.events.load_failed", { error }) : null}
+          onRetry={onReload}
+          empty={{
+            title: t("alerts_page.events.empty_title"),
+            description: t("alerts_page.events.empty_desc"),
+          }}
         />
-      ) : (
-        <div className="-mx-1 mt-3 overflow-x-auto px-1">
-          <table className="w-full min-w-[760px] border-separate border-spacing-0 text-sm">
-            <thead>
-              <tr>
-                {(["time", "rule", "severity", "subject", "title", "deliveries"] as const).map(
-                  (column) => (
-                    <th
-                      key={column}
-                      scope="col"
-                      className="border-b border-line px-2.5 pb-2 text-left text-xs font-medium whitespace-nowrap text-ink-3"
-                    >
-                      {t(`alerts_page.events.column.${column}`)}
-                    </th>
-                  ),
-                )}
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((event) => {
-                const time = formatEventTime(event.at, locale);
-                const deliveries = event.deliveries ?? [];
-                return (
-                  <tr key={event.id} data-testid="alert-event-row">
-                    <td className="border-b border-line px-2.5 py-2.5 align-top whitespace-nowrap">
-                      <time
-                        dateTime={event.at}
-                        title={time.full}
-                        className="tabular-nums text-ink-2"
-                      >
-                        {time.short}
-                      </time>
-                    </td>
-                    <td className="border-b border-line px-2.5 py-2.5 align-top whitespace-nowrap text-ink">
-                      {t(`alerts_page.events.rule.${event.rule}`, { defaultValue: event.rule })}
-                    </td>
-                    <td className="border-b border-line px-2.5 py-2.5 align-top whitespace-nowrap">
-                      <span
-                        className={`inline-flex rounded-full px-2 py-px text-2xs font-medium ${SEVERITY_TONE[event.severity] ?? SEVERITY_TONE.info}`}
-                      >
-                        {t(`alerts_page.events.severity.${event.severity}`, {
-                          defaultValue: event.severity,
-                        })}
-                      </span>
-                    </td>
-                    <td className="max-w-[12rem] border-b border-line px-2.5 py-2.5 align-top">
-                      <span
-                        className="block truncate text-ink"
-                        title={event.subject.name || event.subject.id}
-                      >
-                        {event.subject.name || event.subject.id}
-                      </span>
-                      <span className="block text-2xs text-ink-3">
-                        {t(`alerts_page.events.subject.${event.subject.kind}`, {
-                          defaultValue: event.subject.kind,
-                        })}
-                      </span>
-                    </td>
-                    <td className="w-full min-w-[14rem] border-b border-line px-2.5 py-2.5 align-top">
-                      <span className="block font-medium text-ink">{event.title}</span>
-                      {event.text && event.text !== event.title ? (
-                        <span
-                          className="mt-0.5 line-clamp-2 block text-xs leading-5 text-ink-3"
-                          title={event.text}
-                        >
-                          {event.text}
-                        </span>
-                      ) : null}
-                    </td>
-                    <td className="min-w-[10rem] border-b border-line px-2.5 py-2.5 align-top">
-                      {deliveries.length === 0 ? (
-                        <span className="text-xs text-ink-3">
-                          {t("alerts_page.events.delivery.none")}
-                        </span>
-                      ) : (
-                        <ul className="space-y-1.5">
-                          {deliveries.map((delivery) => (
-                            <DeliveryItem
-                              key={`${delivery.channel_id}:${delivery.status}`}
-                              delivery={delivery}
-                            />
-                          ))}
-                        </ul>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+      </div>
     </section>
   );
 }

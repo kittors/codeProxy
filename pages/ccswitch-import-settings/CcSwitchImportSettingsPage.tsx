@@ -13,11 +13,11 @@ import {
   NO_CC_SWITCH_IMPORT_CAPABILITIES,
   type CcSwitchImportCapabilities,
 } from "@code-proxy/api-client/endpoints/ccswitch-import-configs";
-import { Button, COLUMN_WIDTH } from "@code-proxy/ui";
+import { Button, GRID_WIDTH } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
 import { ConfirmModal } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
-import { DataTable, TABLE_ROW_ACTIONS_STICKY_END_COLUMN, TableRowActions, type DataTableColumn } from "@code-proxy/ui";
+import { DataGrid, GRID_ROW_ACTIONS_COLUMN, GridRowActions, type DataGridColumn } from "@code-proxy/ui";
 import { HoverTooltip } from "@code-proxy/ui";
 import {
   CcSwitchClientIcon,
@@ -106,6 +106,8 @@ export function CcSwitchImportSettingsPage() {
   const { notify } = useToast();
   const [configs, setConfigs] = useState<CcSwitchImportConfigListItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadToken, setReloadToken] = useState(0);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"create" | "edit">("create");
   const [draft, setDraft] = useState<CcSwitchImportConfigListItem>(() =>
@@ -192,13 +194,12 @@ export function CcSwitchImportSettingsPage() {
         setConfigs(snapshot.configs);
         setClientTypes(snapshot.clientTypes ?? LEGACY_CC_SWITCH_CLIENT_TYPES);
         setCapabilities(snapshot.capabilities);
+        setLoadError(null);
       })
       .catch((error: unknown) => {
         if (cancelled) return;
-        notify({
-          type: "error",
-          message: error instanceof Error ? error.message : t("common.load_failed"),
-        });
+        // 读不到时表格显示出错态和「重试」，不是一张看起来「还没有配置」的空表。
+        setLoadError(error instanceof Error ? error.message : "");
         setConfigs([]);
       })
       .finally(() => {
@@ -210,15 +211,15 @@ export function CcSwitchImportSettingsPage() {
     return () => {
       cancelled = true;
     };
-  }, [notify, t]);
+  }, [reloadToken]);
 
-  const columns = useMemo<DataTableColumn<CcSwitchImportConfigListItem>[]>(
+  const columns = useMemo<DataGridColumn<CcSwitchImportConfigListItem>[]>(
     () => [
       {
-        key: "client",
-        label: t("ccswitch.config_table_client"),
-        width: "w-56",
-        render: (row) => (
+        id: "client",
+        header: t("ccswitch.config_table_client"),
+        width: 224,
+        cell: (row) => (
           <div className="flex min-w-0 items-center gap-3">
             <CcSwitchClientIcon clientType={row.clientType} className="h-5 w-5" />
             <div className="min-w-0">
@@ -231,12 +232,12 @@ export function CcSwitchImportSettingsPage() {
         ),
       },
       {
-        key: "provider",
-        label: t("ccswitch.config_table_provider"),
-        width: COLUMN_WIDTH.nameStacked,
+        id: "provider",
+        header: t("ccswitch.config_table_provider"),
+        width: GRID_WIDTH.nameStacked,
         overflowTooltip: (row) =>
           row.note ? `${row.providerName}\n${row.note}` : row.providerName,
-        render: (row) => (
+        cell: (row) => (
           <div className="min-w-0">
             <div className="truncate font-medium text-ink">
               {row.providerName}
@@ -248,14 +249,14 @@ export function CcSwitchImportSettingsPage() {
         ),
       },
       {
-        key: "model",
-        label: t("ccswitch.config_table_model"),
-        width: COLUMN_WIDTH.name,
+        id: "model",
+        header: t("ccswitch.config_table_model"),
+        width: GRID_WIDTH.name,
         overflowTooltip: (row) => {
           const models = row.clientType === "claude" ? [] : getRouteModels(row);
           return models.length > 1 ? models.join("\n") : getPrimaryModel(row);
         },
-        render: (row) => {
+        cell: (row) => {
           const primary = getPrimaryModel(row);
           const others =
             row.clientType === "claude"
@@ -298,12 +299,12 @@ export function CcSwitchImportSettingsPage() {
         },
       },
       {
-        key: "groups",
-        label: t("ccswitch.config_table_groups"),
-        width: COLUMN_WIDTH.nameStacked,
+        id: "groups",
+        header: t("ccswitch.config_table_groups"),
+        width: GRID_WIDTH.nameStacked,
         overflowTooltip: (row) =>
           row.allowedChannelGroups.length > 0 ? row.allowedChannelGroups.join(", ") : null,
-        render: (row) =>
+        cell: (row) =>
           row.allowedChannelGroups.length > 0 ? (
             <div className="flex flex-wrap gap-1">
               {row.allowedChannelGroups.map((group) => (
@@ -322,11 +323,11 @@ export function CcSwitchImportSettingsPage() {
           ),
       },
       {
-        key: "actions",
-        label: t("ccswitch.config_table_actions"),
-        ...TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
-        render: (row) => (
-          <TableRowActions
+        id: "actions",
+        header: t("ccswitch.config_table_actions"),
+        ...GRID_ROW_ACTIONS_COLUMN,
+        cell: (row) => (
+          <GridRowActions
             actions={[
               {
                 key: "edit",
@@ -393,18 +394,17 @@ export function CcSwitchImportSettingsPage() {
         className="md:flex md:min-h-0 md:flex-1 md:flex-col"
         bodyClassName="md:flex md:min-h-0 md:flex-1 md:flex-col"
       >
-        <DataTable<CcSwitchImportConfigListItem>
+        <DataGrid<CcSwitchImportConfigListItem>
           fill
-          tableId="ccswitch-import-configs"
+          id="ccswitch-import-configs"
+          label={t("ccswitch.config_table_caption")}
           rows={configs}
           columns={columns}
           rowKey={(row) => row.id}
           loading={loading}
-          virtualize={false}
-          minWidth="min-w-[960px]"
-          caption={t("ccswitch.config_table_caption")}
-          emptyText={t("ccswitch.config_list_empty")}
-          showAllLoadedMessage={false}
+          error={loadError === null ? null : loadError || t("common.load_failed")}
+          onRetry={() => setReloadToken((value) => value + 1)}
+          empty={{ title: t("ccswitch.config_list_empty") }}
         />
       </Card>
 

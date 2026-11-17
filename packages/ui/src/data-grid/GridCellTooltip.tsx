@@ -24,12 +24,15 @@ export function GridCellTooltip({
   placement = "top",
   className,
   overflowOnly = false,
+  focusable = false,
 }: {
   content: ReactNode;
   children: ReactNode;
   placement?: TooltipPlacement;
   className?: string;
   overflowOnly?: boolean;
+  /** 自己可聚焦（键盘 Tab 到这里也弹出），用于不在按钮里的表头说明。 */
+  focusable?: boolean;
 }) {
   const id = useId();
   const ref = useRef<HTMLSpanElement>(null);
@@ -70,6 +73,9 @@ export function GridCellTooltip({
       className={["inline-flex min-w-0 max-w-full", className ?? ""].join(" ")}
       onMouseEnter={show}
       onMouseLeave={hide}
+      tabIndex={focusable ? 0 : undefined}
+      onFocus={focusable ? show : undefined}
+      onBlur={focusable ? hide : undefined}
       aria-describedby={open ? id : undefined}
     >
       {children}

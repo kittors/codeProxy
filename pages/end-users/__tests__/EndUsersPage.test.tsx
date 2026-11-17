@@ -291,7 +291,8 @@ describe("EndUsersPage", () => {
 
     await userEvent.click(screen.getByRole("checkbox", { name: "Select Alice" }));
     await userEvent.click(screen.getByRole("checkbox", { name: "Select Carol" }));
-    expect(screen.getByText("2 accounts selected")).toBeInTheDocument();
+    // 选中后表头换成选择条（读屏另有一句播报，所以按选择条本身查）。
+    expect(document.querySelector("[data-grid-selection-bar]")).toHaveTextContent("2 selected");
 
     await userEvent.click(screen.getByRole("button", { name: "Bind template" }));
     const dialog = await screen.findByRole("dialog", { name: "Bind a permission template to 2 accounts" });
@@ -300,7 +301,7 @@ describe("EndUsersPage", () => {
 
     await waitFor(() => expect(mocks.bindProfile).toHaveBeenCalledWith(["user-active", "user-carol"], "gold"));
     await waitFor(() => expect(mocks.list).toHaveBeenCalledTimes(2));
-    expect(screen.queryByText("2 accounts selected")).toBeNull();
+    await waitFor(() => expect(document.querySelector("[data-grid-selection-bar]")).toBeNull());
   });
 
   test("old backends get no selection column and keep legacy reset periods", async () => {
@@ -404,19 +405,19 @@ describe("EndUsersPage", () => {
 
     expect(await screen.findByText("User 01")).toBeInTheDocument();
     expect(screen.queryByText("User 21")).toBeNull();
-    expect(screen.getByText("1-20 of 25")).toBeInTheDocument();
+    expect(screen.getByText("1–20 of 25")).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("combobox", { name: "Filter by status" }));
     await userEvent.click(screen.getByRole("option", { name: "Frozen" }));
     expect(await screen.findByText("User 05")).toBeInTheDocument();
-    expect(screen.getByText("1-5 of 5")).toBeInTheDocument();
+    expect(screen.getByText("1–5 of 5")).toBeInTheDocument();
 
     await userEvent.type(screen.getByRole("textbox", { name: "Search user accounts" }), "missing");
     expect(await screen.findByText("No user accounts match the filters")).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Clear filters" }));
     expect(await screen.findByText("User 01")).toBeInTheDocument();
-    expect(screen.getByText("1-20 of 25")).toBeInTheDocument();
+    expect(screen.getByText("1–20 of 25")).toBeInTheDocument();
   });
 
   describe("upstream freezes", () => {

@@ -229,9 +229,11 @@ for (const width of [1280, 1470]) {
     const card = page
       .getByRole("heading", { name: /^在途请求/ })
       .locator("xpath=ancestor::section[1]");
-    await expect(card.getByTestId("in-flight-row")).toHaveCount(3);
+    await expect(card.locator("tr[data-row-key]")).toHaveCount(3);
     await expect(card.getByText("流式中")).toBeVisible();
-    await expect(card.getByTestId("in-flight-row").nth(1)).toHaveAttribute("data-slow", "true");
+    await expect(
+      card.locator("tr[data-row-key]").nth(1).locator('[data-slow="true"]'),
+    ).toHaveCount(1);
     await card.scrollIntoViewIfNeeded();
     await page.screenshot({ path: testInfo.outputPath(`in-flight-${width}.png`) });
 

@@ -16,6 +16,7 @@ export type GridAlign = "start" | "center" | "end";
 export type GridPin = "start" | "end";
 export type GridDensity = "compact" | "default" | "comfortable";
 export type GridSortDirection = "asc" | "desc";
+export type GridRowTone = "danger" | "warning" | "muted";
 
 export interface GridSort {
   columnId: string;
@@ -172,6 +173,8 @@ export interface DataGridProps<T> {
 
   /** 开启首列复选框。 */
   selectable?: boolean;
+  /** 这一行叫什么（账号名、地址）：行复选框读作「选择 Alice」，而不是每行都是「选择此行」。 */
+  rowLabel?: (row: T) => string;
   selectedKeys?: ReadonlySet<string>;
   onSelectedKeysChange?: (keys: Set<string>) => void;
   /** 有选中行时表头换成选择条，这里渲染选择条右侧的批量操作。 */
@@ -191,8 +194,13 @@ export interface DataGridProps<T> {
   onRowClick?: (row: T) => void;
   /** 「当前选中的那一行」（单选列表、正在编辑的项）：行底色与左侧色条同多选的选中行，读屏报「已选择」。 */
   isRowActive?: (row: T) => boolean;
-  /** 附加在 tr 上的类名（例如停用的行整行变淡）。 */
+  /** 附加在 tr 上的类名。行底色由单元格自己画，改底色用 rowTone，不要给 tr 写 bg-*。 */
   rowClassName?: (row: T) => string | undefined;
+  /**
+   * 整行的语气：danger / warning 给行一层淡淡的红 / 琥珀底（校验不过、快到期），
+   * muted 让内容变淡（停用、已过期），冻结列一起变、底色保持不透明。
+   */
+  rowTone?: (row: T) => GridRowTone | undefined;
   /**
    * 拖动行调整先后（行首多一列把手；聚焦把手按 ↑/↓ 也能移动）。toIndex 是移动后这一行所在的位置。
    * 有排序生效时不能拖：显示顺序不是数据本身的顺序。

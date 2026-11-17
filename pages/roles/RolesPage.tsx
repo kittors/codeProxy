@@ -9,12 +9,12 @@ import {
 } from "@code-proxy/api-client";
 import {
   Button,
-  COLUMN_WIDTH,
-  DataTable,
-  TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
-  TableRowActions,
+  GRID_WIDTH,
+  DataGrid,
+  GRID_ROW_ACTIONS_COLUMN,
+  GridRowActions,
   useToast,
-  type DataTableColumn,
+  type DataGridColumn,
 } from "@code-proxy/ui";
 import { PermissionGate } from "@app/providers/PermissionGate";
 import { useAuth } from "@app/providers/AuthProvider";
@@ -40,6 +40,7 @@ export function RolesPage() {
   const [permissions, setPermissions] = useState<PermissionIdentity[]>([]);
   const [users, setUsers] = useState<UserIdentity[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [permissionRole, setPermissionRole] = useState<RoleIdentity | null>(null);
   const [selectedPermissions, setSelectedPermissions] = useState<Set<string>>(new Set());
@@ -63,6 +64,10 @@ export function RolesPage() {
       setRoles(rolesResponse.items ?? []);
       setPermissions(permissionsResponse.items ?? []);
       setUsers(usersResponse.items ?? []);
+      setLoadError(null);
+    } catch (error) {
+      // 读不到列表时表格显示出错态和「重试」，而不是一张看起来「没有数据」的空表。
+      setLoadError(error instanceof Error ? error.message : "");
     } finally {
       setLoading(false);
     }
@@ -164,13 +169,13 @@ export function RolesPage() {
     return counts;
   }, [users]);
 
-  const columns = useMemo<DataTableColumn<RoleIdentity>[]>(
+  const columns = useMemo<DataGridColumn<RoleIdentity>[]>(
     () => [
       {
-        key: "role",
-        label: t("identity_admin.roles"),
-        width: "w-64",
-        render: (role) => (
+        id: "role",
+        header: t("identity_admin.roles"),
+        width: 256,
+        cell: (role) => (
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <span className="truncate font-medium text-ink">{roleName(role)}</span>
@@ -186,33 +191,33 @@ export function RolesPage() {
         ),
       },
       {
-        key: "scope",
-        label: t("identity_admin.scope"),
-        width: COLUMN_WIDTH.compact,
-        render: (role) =>
+        id: "scope",
+        header: t("identity_admin.scope"),
+        width: GRID_WIDTH.compact,
+        cell: (role) =>
           role.scope === "platform"
             ? t("identity_admin.scope_platform")
             : t("identity_admin.scope_tenant"),
       },
       {
-        key: "permissions",
-        label: t("identity_admin.permissions"),
-        width: COLUMN_WIDTH.numericWide,
-        render: (role) => t("identity_admin.permission_count", { count: role.permissions.length }),
+        id: "permissions",
+        header: t("identity_admin.permissions"),
+        width: GRID_WIDTH.numericWide,
+        cell: (role) => t("identity_admin.permission_count", { count: role.permissions.length }),
       },
       {
-        key: "users",
-        label: t("identity_admin.assigned_users"),
-        width: COLUMN_WIDTH.timestamp,
-        render: (role) =>
+        id: "users",
+        header: t("identity_admin.assigned_users"),
+        width: GRID_WIDTH.timestamp,
+        cell: (role) =>
           t("identity_admin.user_count", { count: assignedUserCount.get(role.id) ?? 0 }),
       },
       {
-        key: "actions",
-        label: t("identity_admin.actions"),
-        ...TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
-        render: (role) => (
-          <TableRowActions
+        id: "actions",
+        header: t("identity_admin.actions"),
+        ...GRID_ROW_ACTIONS_COLUMN,
+        cell: (role) => (
+          <GridRowActions
             actions={[
               {
                 key: "permissions",
@@ -307,19 +312,18 @@ export function RolesPage() {
         </div>
 
         {/* 表格 fill 铺满页面剩余高度、再多就内部滚动：加载、空、行少、行多都是同一个框，分页条和横向滚动条不随行数移动；不设最小高度保底——页面高度被窗口钉死，保底只会在矮窗口下把表格挤出页面（见请求日志页）。 */}
-        <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
-          <DataTable<RoleIdentity>
+        <div className="flex min-h-0 flex-1 flex-col">
+          <DataGrid<RoleIdentity>
             fill
-            tableId="identity-roles"
+            id="identity-roles"
+            label={t("identity_admin.roles_title")}
             rows={roles}
             columns={columns}
             rowKey={(role) => role.id}
             loading={loading}
-            virtualize={false}
-            rowHeight={64}
-            minWidth="min-w-[920px]"
-            emptyText={t("identity_admin.no_roles")}
-            showAllLoadedMessage={false}
+            error={loadError === null ? null : loadError || t("identity_admin.operation_failed")}
+            onRetry={() => void load()}
+            empty={{ title: t("identity_admin.no_roles") }}
           />
         </div>
       </div>

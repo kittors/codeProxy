@@ -28,7 +28,7 @@ import {
   cellPadding,
 } from "./gridLayout";
 import type { GridColumnLayout } from "./gridModel";
-import type { DataGridColumn, GridDensity, GridEmptyState } from "./types";
+import type { DataGridColumn, GridDensity, GridEmptyState, GridRowTone } from "./types";
 
 const ALIGN_CELL: Record<"start" | "center" | "end", string> = {
   start: "text-left",
@@ -182,6 +182,8 @@ export interface DataGridBodyProps<T> {
   onRowClick?: (row: T) => void;
   isRowActive?: (row: T) => boolean;
   rowClassName?: (row: T) => string | undefined;
+  rowTone?: (row: T) => GridRowTone | undefined;
+  rowLabel?: (row: T) => string;
   rowGrip: GridRowGripProps | null;
   /** 正在被拖动换位置的列：内容变淡，表示「它在被搬走」。 */
   draggingColumnId: string | null;
@@ -217,6 +219,8 @@ export function DataGridBody<T>({
   onRowClick,
   isRowActive,
   rowClassName,
+  rowTone,
+  rowLabel,
   rowGrip,
   draggingColumnId,
 }: DataGridBodyProps<T>) {
@@ -232,6 +236,7 @@ export function DataGridBody<T>({
     expanded: boolean,
     skeleton: boolean,
     rowIndex = 0,
+    name?: string,
   ) => (
     <>
       {rowGrip ? (
@@ -273,7 +278,7 @@ export function DataGridBody<T>({
               <Checkbox
                 checked={selected}
                 tabIndex={-1}
-                aria-label={t("data_grid.select_row")}
+                aria-label={name ? t("data_grid.select_named", { name }) : t("data_grid.select_row")}
                 onClick={(event) => {
                   event.stopPropagation();
                   onToggleRow(key, event.shiftKey);
@@ -418,6 +423,7 @@ export function DataGridBody<T>({
               aria-expanded={expandable ? expanded : undefined}
               data-expanded={expanded ? "true" : undefined}
               data-active={active ? "true" : undefined}
+              data-tone={rowTone?.(row)}
               data-dragging={rowGrip?.draggingKey === key ? "true" : undefined}
               tabIndex={focusedKey === key ? 0 : -1}
               onFocus={(event) => {
@@ -433,7 +439,7 @@ export function DataGridBody<T>({
               ].join(" ")}
               style={{ ["--row-index" as string]: rowIndex }}
             >
-              {leadingCells(key, selected, expanded, false, rowIndex)}
+              {leadingCells(key, selected, expanded, false, rowIndex, rowLabel?.(row))}
               {columns.map((column, index) => {
                 const align = column.align ?? "start";
                 const content = column.cell(row, { rowIndex, selected, expanded });

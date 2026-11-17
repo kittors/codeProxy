@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FileUp } from "lucide-react";
 import type { WordPolicyLimits, WordRuleKind } from "@code-proxy/api-client";
@@ -6,16 +6,19 @@ import {
   Button,
   Callout,
   CheckboxField,
+  DataGrid,
   FormField,
   Modal,
   SegmentedControl,
   Textarea,
   surface,
+  type DataGridColumn,
 } from "@code-proxy/ui";
 import {
   parseRuleFile,
   reviewImport,
   type DraftRule,
+  type ImportProblem,
   type ImportReview,
   type WordRuleValidator,
 } from "./wordPolicyModel";
@@ -76,6 +79,33 @@ export function WordImportModal({
   onImport,
 }: WordImportModalProps) {
   const { t } = useTranslation();
+  const problemColumns = useMemo<DataGridColumn<ImportProblem>[]>(
+    () => [
+      {
+        id: "line",
+        header: t("content_moderation.words.import_col_line"),
+        align: "end",
+        width: 72,
+        cell: (item) => <span className="tabular-nums text-xs text-ink-3">{item.line}</span>,
+      },
+      {
+        id: "text",
+        header: t("content_moderation.words.col_pattern"),
+        width: 192,
+        cell: (item) => <span className="truncate font-mono text-xs text-ink-2">{item.text}</span>,
+      },
+      {
+        id: "message",
+        header: t("content_moderation.words.import_col_problem"),
+        width: 200,
+        grow: true,
+        cell: (item) => (
+          <span className="text-xs text-rose-600 dark:text-rose-400">{item.message}</span>
+        ),
+      },
+    ],
+    [t],
+  );
   const fileInput = useRef<HTMLInputElement | null>(null);
   const [kind, setKind] = useState<WordRuleKind>("keyword");
   const [ignoreSeparators, setIgnoreSeparators] = useState(false);
@@ -323,33 +353,22 @@ export function WordImportModal({
                     count: review.invalid.length,
                   })}
                 </p>
-                <div className={`max-h-52 overflow-y-auto ${surface({ tone: "inset", radius: "xl" })}`}>
-                  <table className="w-full text-left text-xs">
-                    <thead className="sticky top-0 bg-subtle text-ink-3">
-                      <tr>
-                        <th className="px-3 py-2 font-semibold">
-                          {t("content_moderation.words.import_col_line")}
-                        </th>
-                        <th className="px-3 py-2 font-semibold">
-                          {t("content_moderation.words.col_pattern")}
-                        </th>
-                        <th className="px-3 py-2 font-semibold">
-                          {t("content_moderation.words.import_col_problem")}
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {review.invalid.slice(0, PROBLEM_PREVIEW_LIMIT).map((item) => (
-                        <tr key={`${item.line}:${item.text}`} className="border-t border-line align-top">
-                          <td className="px-3 py-2 tabular-nums text-ink-3">{item.line}</td>
-                          <td className="max-w-48 truncate px-3 py-2 font-mono text-ink-2" title={item.text}>
-                            {item.text}
-                          </td>
-                          <td className="px-3 py-2 text-rose-600 dark:text-rose-400">{item.message}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                {/* 弹窗里的小表：嵌在浅底框里、不再套外框，最高 13rem 后表内滚动（表头吸顶）。
+                    浅底框不设 --cp-backdrop，这里补上，表格的行底色、悬停色才和框一致。 */}
+                <div
+                  className={`overflow-hidden [--cp-backdrop:var(--cp-subtle)] ${surface({ tone: "inset", radius: "xl" })}`}
+                >
+                  <DataGrid<ImportProblem>
+                    frame={false}
+                    density="compact"
+                    label={t("content_moderation.words.import_invalid_title", {
+                      count: review.invalid.length,
+                    })}
+                    columns={problemColumns}
+                    rows={review.invalid.slice(0, PROBLEM_PREVIEW_LIMIT)}
+                    rowKey={(item) => `${item.line}:${item.text}`}
+                    maxHeight="13rem"
+                  />
                 </div>
                 {review.invalid.length > PROBLEM_PREVIEW_LIMIT ? (
                   <p className="text-xs text-ink-3">

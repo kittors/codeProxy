@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Save, ShieldAlert, Wand2, X } from "lucide-react";
 import {
@@ -11,6 +11,7 @@ import {
 import {
   Button,
   ConfirmModal,
+  DataGrid,
   PageLoader,
   Select,
   TextInput,
@@ -18,6 +19,7 @@ import {
   useToast,
   ScrollFade,
   surface,
+  type DataGridColumn,
 } from "@code-proxy/ui";
 import { PermissionGate } from "@app/providers/PermissionGate";
 
@@ -35,6 +37,48 @@ export function ProtectionPolicyTab({ status, onPolicySaved }: ProtectionPolicyT
   const [saving, setSaving] = useState(false);
   const [proxyDraft, setProxyDraft] = useState("");
   const [lockdownConfirm, setLockdownConfirm] = useState(false);
+  // 生效中的限流：只读的小表，放在分区卡片里，不再套外框。
+  const throttleColumns = useMemo<DataGridColumn<ThrottleScopeView>[]>(() => {
+    const value = (text: string) => <span className="tabular-nums text-ink-2">{text}</span>;
+    return [
+      {
+        id: "scope",
+        header: t("ip_access.effective_scope"),
+        width: 144,
+        cell: (row) => <span className="truncate text-ink-2">{t(`ip_access.scope_${row.scope}`)}</span>,
+      },
+      {
+        id: "key",
+        header: t("ip_access.effective_key"),
+        width: 144,
+        grow: true,
+        cell: (row) => (
+          <span className="truncate text-ink-3">{t(`ip_access.dimension_${row.key_dimension}`)}</span>
+        ),
+      },
+      {
+        id: "short",
+        header: t("ip_access.effective_short"),
+        align: "end",
+        width: 112,
+        cell: (row) => value(row.short_limit > 0 ? `${row.short_limit} / ${row.short_window}` : "—"),
+      },
+      {
+        id: "long",
+        header: t("ip_access.effective_long"),
+        align: "end",
+        width: 112,
+        cell: (row) => value(row.long_limit > 0 ? `${row.long_limit} / ${row.long_window}` : "—"),
+      },
+      {
+        id: "reset",
+        header: t("ip_access.effective_reset"),
+        align: "end",
+        width: 112,
+        cell: (row) => value(String(row.reset_after)),
+      },
+    ];
+  }, [t]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -385,36 +429,14 @@ export function ProtectionPolicyTab({ status, onPolicySaved }: ProtectionPolicyT
         title={t("ip_access.section_effective")}
         description={t("ip_access.section_effective_desc")}
       >
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[560px] text-left text-sm">
-            <thead className="text-xs text-ink-3">
-              <tr>
-                <th className="py-1.5 pr-3 font-medium">{t("ip_access.effective_scope")}</th>
-                <th className="py-1.5 pr-3 font-medium">{t("ip_access.effective_key")}</th>
-                <th className="py-1.5 pr-3 font-medium">{t("ip_access.effective_short")}</th>
-                <th className="py-1.5 pr-3 font-medium">{t("ip_access.effective_long")}</th>
-                <th className="py-1.5 font-medium">{t("ip_access.effective_reset")}</th>
-              </tr>
-            </thead>
-            <tbody className="text-ink-2">
-              {throttle.map((row) => (
-                <tr key={row.scope} className="border-t border-line">
-                  <td className="py-1.5 pr-3">{t(`ip_access.scope_${row.scope}`)}</td>
-                  <td className="py-1.5 pr-3 text-ink-3">
-                    {t(`ip_access.dimension_${row.key_dimension}`)}
-                  </td>
-                  <td className="py-1.5 pr-3 tabular-nums">
-                    {row.short_limit > 0 ? `${row.short_limit} / ${row.short_window}` : "—"}
-                  </td>
-                  <td className="py-1.5 pr-3 tabular-nums">
-                    {row.long_limit > 0 ? `${row.long_limit} / ${row.long_window}` : "—"}
-                  </td>
-                  <td className="py-1.5 tabular-nums">{row.reset_after}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataGrid<ThrottleScopeView>
+          frame={false}
+          density="compact"
+          label={t("ip_access.section_effective")}
+          columns={throttleColumns}
+          rows={throttle}
+          rowKey={(row) => row.scope}
+        />
       </Section>
 
       {/* 开启仅白名单可以随时关掉，不是删除：琥珀色 + 盾牌图标，后果逐条列出。

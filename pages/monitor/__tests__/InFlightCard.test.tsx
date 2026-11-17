@@ -73,7 +73,7 @@ describe("InFlightCard", () => {
     expect(screen.getByRole("heading", { name: /^Requests in flight/ })).toHaveTextContent(
       "3 requests on this node",
     );
-    const rows = screen.getAllByTestId("in-flight-row");
+    const rows = screen.getAllByRole("row").slice(1);
     expect(rows).toHaveLength(3);
 
     expect(rows[0]).toHaveTextContent("Streaming");
@@ -87,7 +87,7 @@ describe("InFlightCard", () => {
     // A long channel name is cut off in the cell; hovering shows it in full with the account id.
     expect(within(rows[0]).getByText("Team A")).toHaveAttribute("title", "Team A\nclaude-a.json");
     // A long stream is not stuck: streaming never counts as slow.
-    expect(rows[0]).not.toHaveAttribute("data-slow");
+    expect(rows[0].querySelector('[data-slow="true"]')).toBeNull();
 
     // No channel name: the account id stands in; the upstream model shows when an alias changed it.
     expect(rows[1]).toHaveTextContent("Waiting for first token");
@@ -103,16 +103,16 @@ describe("InFlightCard", () => {
 
   test("times keep running between two fetches and a stage stuck past 15s is marked", () => {
     renderCard(inFlight([firstToken]));
-    const row = () => screen.getByTestId("in-flight-row");
+    const row = () => screen.getAllByRole("row")[1];
     expect(row()).toHaveTextContent("13.0s in this stage");
-    expect(row()).not.toHaveAttribute("data-slow");
+    expect(row().querySelector('[data-slow="true"]')).toBeNull();
 
     act(() => {
       vi.advanceTimersByTime(2_000);
     });
     expect(row()).toHaveTextContent("12.0s so far");
     expect(row()).toHaveTextContent("15.0s in this stage");
-    expect(row()).toHaveAttribute("data-slow", "true");
+    expect(row().querySelector('[data-slow="true"]')).not.toBeNull();
     expect(within(row()).getByTitle("In this stage for over 15 seconds")).toBeInTheDocument();
   });
 
@@ -139,7 +139,7 @@ describe("InFlightCard", () => {
         { ...firstToken, stage: "queued" },
       ]),
     );
-    const rows = screen.getAllByTestId("in-flight-row");
+    const rows = screen.getAllByRole("row").slice(1);
     expect(rows[0]).toHaveTextContent("moderating");
     expect(rows[1]).toHaveTextContent("排队");
     expect(screen.getByRole("heading", { name: /^在途请求/ })).toHaveTextContent("本节点 2 个");

@@ -23,6 +23,7 @@
     "apply": "Применить",
     "select_page": "Выбрать все строки на странице",
     "select_row": "Выбрать строку",
+    "select_named": "Выбрать: {{name}}",
     "details": "Подробности",
     "expand_row": "Показать подробности",
     "collapse_row": "Скрыть подробности",
@@ -80,6 +81,9 @@
     "reset_view": "Вернуть вид по умолчанию"
   },
   "common": {
+    "grid_search_chip": "Поиск «{{query}}»",
+    "grid_filters_in_effect": "Действующие фильтры:",
+    "grid_clear_filters": "Сбросить фильтры",
     "login": "Войти",
     "logout": "Выйти",
     "back": "Назад",

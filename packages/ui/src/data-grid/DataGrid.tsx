@@ -78,6 +78,7 @@ export function DataGrid<T>({
   filters,
   onFiltersChange,
   selectable = false,
+  rowLabel,
   selectedKeys,
   onSelectedKeysChange,
   selectionActions,
@@ -86,6 +87,7 @@ export function DataGrid<T>({
   onRowClick,
   isRowActive,
   rowClassName,
+  rowTone,
   rowReorder,
   columnReorder,
   resizable = true,
@@ -587,6 +589,8 @@ export function DataGrid<T>({
               onRowClick={onRowClick}
               isRowActive={isRowActive}
               rowClassName={rowClassName}
+              rowTone={rowTone}
+              rowLabel={rowLabel}
               rowGrip={
                 rowReorder
                   ? {
@@ -711,7 +715,8 @@ export function DataGrid<T>({
         </div>
       ) : null}
 
-      <div role="status" aria-live="polite" className="sr-only">
+      {/* 不用 role="status"：页面自己常有一个状态区，两个同角色的区域会互相抢。 */}
+      <div aria-live="polite" aria-atomic="true" data-grid-announcer="" className="sr-only">
         {announcement}
       </div>
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CircleCheck, Hourglass } from "lucide-react";
 import {
@@ -7,7 +7,7 @@ import {
   type MonitorInFlightAccount,
   type MonitorInFlightRequest,
 } from "@code-proxy/api-client";
-import { Card, ScrollArea } from "@code-proxy/ui";
+import { Card, DataGrid, type DataGridColumn } from "@code-proxy/ui";
 import { formatMonitorDuration } from "../model/monitorFormat";
 import { usePageVisible } from "../hooks/usePageVisible";
 import { MonitorCardTitle, MonitorInlineNotice } from "./MonitorCardTitle";
@@ -74,6 +74,7 @@ export function InFlightCard({
 
   const since = receivedAt > 0 ? Math.max(0, now - receivedAt) : 0;
   const total = inFlight?.total ?? 0;
+  const columns = useInFlightColumns(since);
 
   return (
     <Card
@@ -107,110 +108,135 @@ export function InFlightCard({
           className="py-6"
         />
       ) : (
-        <ScrollArea viewportClassName="max-h-96" edgeFade scrollbarVisibility="hover">
-          <div className="-mx-1 overflow-x-auto px-1">
-            <table className="w-full min-w-[720px] border-separate border-spacing-0 text-sm">
-              <thead>
-                <tr>
-                  {(["started", "stage", "request", "account", "key"] as const).map((column) => (
-                    <th
-                      key={column}
-                      scope="col"
-                      className="border-b border-line px-2.5 pb-2 text-left text-xs font-medium whitespace-nowrap text-ink-3"
-                    >
-                      {t(`monitor_center.in_flight.col_${column}`)}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {requests.map((request, index) => (
-                  <InFlightRow
-                    key={request.request_id || `row-${index}`}
-                    request={request}
-                    since={since}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </ScrollArea>
+        // 卡片里的小表：不再套外框，按行收高、最高 24rem 后表内滚动；放不下时横向在表格里滚。
+        <DataGrid<MonitorInFlightRequest>
+          frame={false}
+          label={t("monitor_center.in_flight.title")}
+          columns={columns}
+          rows={requests}
+          rowKey={(request) => request.request_id || `row-${requests.indexOf(request)}`}
+          maxHeight="24rem"
+        />
       )}
     </Card>
   );
 }
 
-function InFlightRow({ request, since }: { request: MonitorInFlightRequest; since: number }) {
+/**
+ * 在途请求的列。耗时每秒往上走（since 是距上次拉取过了多久），所以列跟着 since 重建。
+ * 单元格里的截断文字自带原生 title（完整渠道名 + 账号 id、完整路径），不再叠表格的截断提示。
+ */
+function useInFlightColumns(since: number): DataGridColumn<MonitorInFlightRequest>[] {
   const { t } = useTranslation();
-  const elapsed = request.elapsed_ms + since;
-  const inStage = request.stage_elapsed_ms + since;
-  const known = KNOWN_STAGES.has(request.stage);
-  const slow = known && request.stage !== "streaming" && inStage >= IN_FLIGHT_SLOW_STAGE_MS;
-  const account = request.account;
-  const cell = "border-b border-line px-2.5 py-2 align-top";
-  return (
-    <tr data-testid="in-flight-row" data-slow={slow ? "true" : undefined}>
-      <td className={`${cell} whitespace-nowrap`} title={request.request_id || undefined}>
-        <span className="block tabular-nums text-ink">{clockOf(request.started_at)}</span>
-        <span className="block text-xs tabular-nums text-ink-3">
-          {t("monitor_center.in_flight.elapsed", { duration: formatMonitorDuration(elapsed) })}
-        </span>
-      </td>
-      <td className={`${cell} whitespace-nowrap`}>
-        <span
-          className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${STAGE_TONE[request.stage] ?? NEUTRAL_TONE}`}
-        >
-          {known ? t(`monitor_center.in_flight.stage.${request.stage}`) : request.stage || "—"}
-        </span>
-        <span
-          className={`mt-0.5 block text-xs tabular-nums ${slow ? "font-medium text-amber-700 dark:text-amber-300" : "text-ink-3"}`}
-          title={slow ? t("monitor_center.in_flight.slow_hint") : undefined}
-        >
-          {t("monitor_center.in_flight.in_stage", { duration: formatMonitorDuration(inStage) })}
-        </span>
-      </td>
-      <td className={`${cell} max-w-0 w-[34%]`}>
-        <span className="block truncate text-ink" title={request.model || undefined}>
-          {request.model || "—"}
-          {request.stream ? (
-            <span className="text-ink-3"> · {t("monitor_center.in_flight.stream")}</span>
-          ) : null}
-        </span>
-        <span
-          className="block truncate font-mono text-xs text-ink-3"
-          title={request.path || undefined}
-        >
-          {[request.method, request.path].filter(Boolean).join(" ") || "—"}
-        </span>
-      </td>
-      <td className={`${cell} max-w-0 w-[30%]`}>
-        {account ? (
-          <>
-            <span className="block truncate text-ink" title={accountTitle(account)}>
-              {account.label || account.auth_id}
-              {account.provider ? <span className="text-ink-3"> · {account.provider}</span> : null}
+  return useMemo(
+    () => [
+      {
+        id: "started",
+        header: t("monitor_center.in_flight.col_started"),
+        width: 128,
+        overflowTooltip: false,
+        cell: (request) => (
+          <span className="flex flex-col whitespace-nowrap" title={request.request_id || undefined}>
+            <span className="tabular-nums text-ink">{clockOf(request.started_at)}</span>
+            <span className="text-xs tabular-nums text-ink-3">
+              {t("monitor_center.in_flight.elapsed", {
+                duration: formatMonitorDuration(request.elapsed_ms + since),
+              })}
             </span>
-            <span className="block truncate text-xs text-ink-3">
-              {[
-                request.attempt > 0
-                  ? t("monitor_center.in_flight.attempt", { attempt: request.attempt })
-                  : "",
-                account.group ? t("monitor_center.in_flight.group", { group: account.group }) : "",
-                account.model && account.model !== request.model ? account.model : "",
-              ]
-                .filter(Boolean)
-                .join(" · ")}
+          </span>
+        ),
+      },
+      {
+        id: "stage",
+        header: t("monitor_center.in_flight.col_stage"),
+        width: 160,
+        overflowTooltip: false,
+        cell: (request) => {
+          const inStage = request.stage_elapsed_ms + since;
+          const known = KNOWN_STAGES.has(request.stage);
+          const slow = known && request.stage !== "streaming" && inStage >= IN_FLIGHT_SLOW_STAGE_MS;
+          return (
+            <span className="flex flex-col items-start whitespace-nowrap">
+              <span
+                className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${STAGE_TONE[request.stage] ?? NEUTRAL_TONE}`}
+              >
+                {known ? t(`monitor_center.in_flight.stage.${request.stage}`) : request.stage || "—"}
+              </span>
+              <span
+                data-slow={slow ? "true" : undefined}
+                className={`mt-0.5 text-xs tabular-nums ${slow ? "font-medium text-amber-700 dark:text-amber-300" : "text-ink-3"}`}
+                title={slow ? t("monitor_center.in_flight.slow_hint") : undefined}
+              >
+                {t("monitor_center.in_flight.in_stage", { duration: formatMonitorDuration(inStage) })}
+              </span>
             </span>
-          </>
-        ) : (
-          <span className="text-xs text-ink-3">{t("monitor_center.in_flight.no_account")}</span>
-        )}
-      </td>
-      <td className={`${cell} max-w-0 w-[16%]`}>
-        <span className="block truncate text-ink-2" title={request.api_key_id || undefined}>
-          {request.api_key_name || request.api_key_id || "—"}
-        </span>
-      </td>
-    </tr>
+          );
+        },
+      },
+      {
+        id: "request",
+        header: t("monitor_center.in_flight.col_request"),
+        width: 220,
+        grow: 1.2,
+        overflowTooltip: false,
+        cell: (request) => (
+          <span className="flex min-w-0 flex-col">
+            <span className="truncate text-ink" title={request.model || undefined}>
+              {request.model || "—"}
+              {request.stream ? (
+                <span className="text-ink-3"> · {t("monitor_center.in_flight.stream")}</span>
+              ) : null}
+            </span>
+            <span className="truncate font-mono text-xs text-ink-3" title={request.path || undefined}>
+              {[request.method, request.path].filter(Boolean).join(" ") || "—"}
+            </span>
+          </span>
+        ),
+      },
+      {
+        id: "account",
+        header: t("monitor_center.in_flight.col_account"),
+        width: 200,
+        grow: 1,
+        overflowTooltip: false,
+        cell: (request) => {
+          const account = request.account;
+          if (!account) {
+            return <span className="text-xs text-ink-3">{t("monitor_center.in_flight.no_account")}</span>;
+          }
+          return (
+            <span className="flex min-w-0 flex-col">
+              <span className="truncate text-ink" title={accountTitle(account)}>
+                {account.label || account.auth_id}
+                {account.provider ? <span className="text-ink-3"> · {account.provider}</span> : null}
+              </span>
+              <span className="truncate text-xs text-ink-3">
+                {[
+                  request.attempt > 0
+                    ? t("monitor_center.in_flight.attempt", { attempt: request.attempt })
+                    : "",
+                  account.group ? t("monitor_center.in_flight.group", { group: account.group }) : "",
+                  account.model && account.model !== request.model ? account.model : "",
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </span>
+            </span>
+          );
+        },
+      },
+      {
+        id: "key",
+        header: t("monitor_center.in_flight.col_key"),
+        width: 128,
+        overflowTooltip: false,
+        cell: (request) => (
+          <span className="truncate text-ink-2" title={request.api_key_id || undefined}>
+            {request.api_key_name || request.api_key_id || "—"}
+          </span>
+        ),
+      },
+    ],
+    [since, t],
   );
 }
