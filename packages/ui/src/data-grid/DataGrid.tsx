@@ -458,6 +458,8 @@ export function DataGrid<T>({
     ? visibleColumns.find((column) => column.id === sizing.resizing?.columnId)
     : undefined;
   let guideX: number | null = null;
+  let badgeX: number | null = null;
+  let guideUnderPinned = false;
   if (resizingColumn) {
     const width = layout.widths[resizingColumn.id] ?? 0;
     if (resizingColumn.pin === "start") {
@@ -471,7 +473,15 @@ export function DataGrid<T>({
         left += layout.widths[column.id] ?? 0;
       }
       guideX = left + width - (viewportRef.current?.scrollLeft ?? 0);
+      // 普通列的右缘可能已经滚到冻结列底下（例如滚到最右、把最后一列往操作列下面拖）：
+      // 那里看不到列的边，参考线画上去会压在冻结列上、像是在拖冻结列，所以只在中间可滚动的那一段画线。
+      // 宽度角标照常显示，收进这一段里，拖到哪里都读得到当前宽度。
+      const laneStart = layout.startPinnedWidth;
+      const laneEnd = viewport.width - layout.endPinnedWidth;
+      guideUnderPinned = guideX < laneStart - 0.5 || guideX > laneEnd + 0.5;
+      badgeX = Math.min(Math.max(guideX, laneStart + 32), Math.max(laneStart + 32, laneEnd - 32));
     }
+    badgeX ??= guideX;
   }
 
   const rowHeightPx = ROW_HEIGHT_REM[density] * 16 * viewport.scale;
@@ -648,15 +658,19 @@ export function DataGrid<T>({
 
         {guideX !== null && sizing.resizing ? (
           <>
+            {guideUnderPinned ? null : (
+              <div
+                aria-hidden="true"
+                data-grid-resize-guide
+                className="pointer-events-none absolute z-[10] w-0.5 rounded-full bg-[var(--cp-focus)]"
+                style={{ left: guideX - 1, top: 0, height: viewport.height }}
+              />
+            )}
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute z-[10] w-0.5 rounded-full bg-[var(--cp-focus)]"
-              style={{ left: guideX - 1, top: 0, height: viewport.height }}
-            />
-            <div
-              aria-hidden="true"
+              data-grid-resize-badge
               className="pointer-events-none absolute z-[11] -translate-x-1/2 rounded-full bg-ink px-2 py-0.5 text-2xs font-medium tabular-nums text-canvas shadow-pop"
-              style={{ left: guideX, top: viewport.headerHeight + 8 }}
+              style={{ left: badgeX ?? guideX, top: viewport.headerHeight + 8 }}
             >
               {t("data_grid.width_px", {
                 width: Math.round(layout.widths[sizing.resizing.columnId] ?? 0),

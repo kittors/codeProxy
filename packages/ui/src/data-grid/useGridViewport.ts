@@ -43,6 +43,12 @@ export function useGridViewport(
     root.dataset.xScrolled = String(viewport.scrollLeft > 0.5);
     root.dataset.xAtEnd = String(viewport.scrollLeft >= maxX - 1);
     root.dataset.yScrolled = String(viewport.scrollTop > 0.5);
+    // 表体真的能纵向滚时才关回弹（DataGrid.css）：窄窗口下表格放得下全部行、由页面滚动，
+    // 这时滚轮落在表上要接着滚页面，overscroll-behavior 设成 none 会把滚动拦在表里。
+    // 量表格的布局高度而不是 scrollHeight：行浮入动画的位移会让 scrollHeight 暂时多出几像素，
+    // 动画结束时表格尺寸没变、ResizeObserver 不再触发，标记就一直停在「能滚」。
+    const content = viewport.firstElementChild instanceof HTMLElement ? viewport.firstElementChild : null;
+    root.dataset.yOverflow = String((content?.offsetHeight ?? viewport.scrollHeight) - viewport.clientHeight > 1);
   }, [rootRef, viewportRef]);
 
   const measure = useCallback(() => {

@@ -57,9 +57,11 @@
 /*
  * 整页表格在 macOS 触控板上滚过头会回弹，吸顶表头和冻结列跟着被拉走（见计划 104 引用的记忆）。
  * 只在精确指针设备上关掉；手机平板保留系统回弹。嵌入小表不关，滚到底的滚轮要能接着滚外层弹窗。
+ * 也只在表体真的能纵向滚时关（data-y-overflow，useGridViewport 写入）：窄窗口下页面不钉高、
+ * 表格随内容长高，表体没有纵向滚动，这时设成 none 会让落在表上的滚轮滚不动页面。
  */
 @media (pointer: fine) {
-  .cp-grid[data-fill="true"] .cp-grid-viewport {
+  .cp-grid[data-fill="true"][data-y-overflow="true"] .cp-grid-viewport {
     overscroll-behavior-y: none;
   }
 
@@ -284,7 +286,12 @@ body[data-grid-dragging="true"] * {
   }
 }
 
-/* ---------- 换页、换筛选后行依次浮入 ---------- */
+/*
+ * ---------- 换页、换筛选后行依次浮入 ----------
+ * 从上方 4px 落到位，不从下方升起：向下的位移会把表体的可滚动高度在动画期间撑高几像素，
+ * 行放得下的表也会短暂「能滚」——滚轮能滚动几像素再弹回、纵向滚动条可能闪一下。
+ * 向上的位移落在表头底下（表头吸顶、盖在行上面），不产生可滚动区域。
+ */
 
 .cp-grid-body[data-animate="true"] > .cp-grid-row {
   animation: cp-grid-row-in 260ms var(--ease-pop) both;
@@ -294,7 +301,7 @@ body[data-grid-dragging="true"] * {
 @keyframes cp-grid-row-in {
   from {
     opacity: 0;
-    transform: translateY(4px);
+    transform: translateY(-4px);
   }
   to {
     opacity: 1;
