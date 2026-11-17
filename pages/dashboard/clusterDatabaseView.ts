@@ -11,7 +11,7 @@ import {
 import { nodeCpuView, nodeMemoryView, secondsSince, worstLevel } from "./clusterNodeView";
 
 /*
- * 数据库卡片的显示口径。数据来自主节点快照里的 database 段（主节点每 30 秒查一次 PostgreSQL 的统计视图），
+ * 数据库卡片的显示口径。数据来自 leader 快照里的 database 段（leader 每 30 秒查一次 PostgreSQL 的统计视图），
  * 数据库主机的 CPU、内存和磁盘来自 hosts 里 role = database 的那台（clirelay-hostagent 每 15 秒上报）。
  *
  * 告警档（在 PR 和文档里写明，改的话两边一起改）：
@@ -71,7 +71,7 @@ export interface DatabaseHostView {
 
 export interface DatabaseView {
   db: NodeDatabase;
-  /** 查库的主节点。 */
+  /** 查库的 leader 节点。 */
   leaderId: string;
   ageSeconds: number | null;
   stale: boolean;
@@ -135,7 +135,7 @@ function replicaView(replica: NonNullable<NodeDatabase["replication"]>[number]):
   };
 }
 
-/** 主节点快照里的数据库段；集群里只该有一个，万一有两个（交接瞬间）取更新的那份。 */
+/** leader 快照里的数据库段；集群里只该有一个，万一有两个（交接瞬间）取更新的那份。 */
 export function findDatabase(status: ClusterStatus): { db: NodeDatabase; leaderId: string } | null {
   let found: { db: NodeDatabase; leaderId: string } | null = null;
   for (const node of status.nodes ?? []) {
