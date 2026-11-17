@@ -454,6 +454,9 @@ export function GlobalIconButtonTooltip({
   const id = useId();
   const activeRef = useRef<GlobalTooltipState | null>(null);
   const [active, setActive] = useState<GlobalTooltipState | null>(null);
+  // 最近一次交互是指针还是键盘。鼠标点按时提示已在 pointerdown 收起，紧接着按钮拿到焦点；
+  // 这时若按焦点再弹出来，内容是点击之前的名字（展开 / 收起这类切换按钮会一直显示「展开详情」）。
+  const pointerInteractionRef = useRef(false);
 
   const dismiss = useCallback(() => {
     const current = activeRef.current;
@@ -490,15 +493,26 @@ export function GlobalIconButtonTooltip({
   useEffect(() => {
     const handleMouseOver = (event: MouseEvent) => show(event.target);
     const handleMouseOut = (event: MouseEvent) => hide(event.relatedTarget);
-    const handleFocusIn = (event: FocusEvent) => show(event.target);
+    // 只给键盘带来的焦点弹提示；指针点出来的焦点不弹（理由见 pointerInteractionRef）。
+    const handleFocusIn = (event: FocusEvent) => {
+      if (pointerInteractionRef.current) return;
+      show(event.target);
+    };
     const handleFocusOut = (event: FocusEvent) => hide(event.relatedTarget);
-    const handlePointerDown = () => dismiss();
+    const handlePointerDown = () => {
+      pointerInteractionRef.current = true;
+      dismiss();
+    };
+    const handleKeyDown = () => {
+      pointerInteractionRef.current = false;
+    };
 
     document.addEventListener("mouseover", handleMouseOver);
     document.addEventListener("mouseout", handleMouseOut);
     document.addEventListener("focusin", handleFocusIn);
     document.addEventListener("focusout", handleFocusOut);
     document.addEventListener("pointerdown", handlePointerDown, true);
+    document.addEventListener("keydown", handleKeyDown, true);
 
     return () => {
       restoreNativeTitle(activeRef.current?.anchor);
@@ -507,8 +521,35 @@ export function GlobalIconButtonTooltip({
       document.removeEventListener("focusin", handleFocusIn);
       document.removeEventListener("focusout", handleFocusOut);
       document.removeEventListener("pointerdown", handlePointerDown, true);
+      document.removeEventListener("keydown", handleKeyDown, true);
     };
   }, [dismiss, hide, show]);
+
+  // 提示开着时按钮的名字变了（键盘按 Enter 切换展开 / 收起），跟着换内容，不留旧名字。
+  const activeAnchor = active?.anchor ?? null;
+  useEffect(() => {
+    if (!activeAnchor || typeof MutationObserver === "undefined") return undefined;
+    const observer = new MutationObserver(() => {
+      const current = activeRef.current;
+      if (!current || current.anchor !== activeAnchor) return;
+      const content = (
+        activeAnchor.getAttribute("data-tooltip") ||
+        activeAnchor.getAttribute("aria-label") ||
+        activeAnchor.dataset.tooltipNativeTitle ||
+        ""
+      ).trim();
+      if (!content) {
+        dismiss();
+        return;
+      }
+      if (content === current.content) return;
+      const next = { ...current, content };
+      activeRef.current = next;
+      setActive(next);
+    });
+    observer.observe(activeAnchor, { attributes: true, attributeFilter: ["aria-label", "data-tooltip"] });
+    return () => observer.disconnect();
+  }, [activeAnchor, dismiss]);
 
   return (
     <TooltipBubble
