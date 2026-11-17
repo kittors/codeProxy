@@ -6,6 +6,12 @@
       "package": "react-router",
       "reason": "CSRF bypass in React Router's RSC mode. This app is a client-rendered SPA: it mounts createBrowserRouter/HashRouter and has no RSC entry, server actions, or single-fetch handlers, so the affected code path is never reached. The fix only ships in React Router 8.x, a breaking major. Revisit when upgrading to 8.x or if RSC/server-action APIs are adopted.",
       "reviewed": "2026-07-26"
+    },
+    {
+      "advisory": "https://github.com/advisories/GHSA-fc5q-39xc-vjpf",
+      "package": "picomatch",
+      "reason": "ReDoS when a glob pattern with repeated single-branch extglobs is compiled. picomatch is only pulled in by build and test tooling (vite, vitest, tinyglobby, fdir, and @parcel/watcher via the Tailwind Vite plugin), all devDependencies. It matches glob patterns written in this repository (Vite and Vitest config, Tailwind @source paths), never patterns from users or from network input, and it is not in the shipped panel: the production bundle contains no picomatch code. No fixed version exists yet: the advisory covers <= 4.0.7 and 4.0.7 is the latest release. Upgrade and drop this waiver once a patched picomatch is published.",
+      "reviewed": "2026-11-18"
     }
   ]
 }
