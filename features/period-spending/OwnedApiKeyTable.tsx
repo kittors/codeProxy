@@ -72,7 +72,8 @@ const buildOwnedApiKeyColumns = ({
   {
     id: "name",
     header: t("api_keys_page.col_name"),
-    width: compact ? GRID_WIDTH.name : GRID_WIDTH.numericWide,
+    // 名称是用户自己起的，还可能带 default 徽章；按数值列的宽度给，「Default」就被截成「Defa…」。
+    width: GRID_WIDTH.name,
     // 紧凑布局的名称格是两行（名称、掩码密钥），整格的溢出提示只会重复第一行。
     overflowTooltip: compact ? false : undefined,
     cell: (row) => (
@@ -322,6 +323,7 @@ export function OwnedApiKeysTable({
   id = "owned-api-keys",
   error,
   onRetry,
+  frame = false,
   ...columnOptions
 }: {
   t: (key: string, options?: Record<string, unknown>) => string;
@@ -340,11 +342,13 @@ export function OwnedApiKeysTable({
   /** 读取失败：表格里显示出错态，有 onRetry 时给「重试」（整页的 Key 管理用）。 */
   error?: string | null;
   onRetry?: () => void;
+  /** 整页的 Key 管理和其它整页列表一样带外框；卡片、弹窗里嵌入时不带。 */
+  frame?: boolean;
 } & OwnedApiKeyColumnOptions) {
   return (
     <DataGrid
       id={id}
-      frame={false}
+      frame={frame}
       fill={fill}
       maxHeight={maxHeight}
       label={t("api_keys_page.table_caption")}

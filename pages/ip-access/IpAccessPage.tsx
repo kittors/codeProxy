@@ -92,7 +92,7 @@ export function IpAccessPage() {
                 <span className="text-ink-4">|</span>
                 <span>
                   {t("ip_access.stat_active_rules")}{" "}
-                  <span className="font-mono tabular-nums text-ink">{status.active_rules}</span>
+                  <span className="font-mono tabular-nums text-ink">{status.active_rules ?? "—"}</span>
                 </span>
                 <span className="text-ink-4">|</span>
                 <span>

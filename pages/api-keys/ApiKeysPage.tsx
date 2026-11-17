@@ -758,7 +758,7 @@ export function ApiKeysPage({
         keys={ownedKeys}
         busyKeyId={resettingPeriodSpendingKey}
         busy={saving}
-        loading={loading} fill error={loadError} onRetry={() => void loadEntries()}
+        loading={loading} fill frame={!embed} error={loadError} onRetry={() => void loadEntries()}
         canDelete={() => ownedKeys.length > 1}
         actions={{
           onToggleDisabled: (key) => {
