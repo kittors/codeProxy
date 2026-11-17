@@ -14,12 +14,12 @@ import {
   Button,
   Card,
   ConfirmModal,
-  DataTable,
-  TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
-  TableRowActions,
+  DataGrid,
+  GridRowActions,
   TextInput,
+  gridRowActionsColumn,
   useToast,
-  type DataTableColumn,
+  type DataGridColumn,
   type SearchableSelectOption,
 } from "@code-proxy/ui";
 import { useOptionalAuth } from "@app/providers/AuthProvider";
@@ -58,6 +58,8 @@ export function VirtualModelsPanel() {
     snapshotRef.current = snapshot;
   }, [snapshot]);
   const [loading, setLoading] = useState(true);
+  // 读取失败写在表格里（给「重试」），保存冲突后的重新读取也走这里。
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [groups, setGroups] = useState<string[]>([]);
   const [modelOptions, setModelOptions] = useState<SearchableSelectOption[]>([]);
   const [search, setSearch] = useState("");
@@ -69,17 +71,15 @@ export function VirtualModelsPanel() {
     setLoading(true);
     try {
       setSnapshot(await routingVirtualModelsApi.get());
+      setLoadError(null);
       return true;
     } catch (err: unknown) {
-      notify({
-        type: "error",
-        message: err instanceof Error ? err.message : t("models_page.virtual.load_failed"),
-      });
+      setLoadError(err instanceof Error ? err.message : t("models_page.virtual.load_failed"));
       return false;
     } finally {
       setLoading(false);
     }
-  }, [notify, t]);
+  }, [t]);
 
   useEffect(() => {
     void reload();
@@ -146,14 +146,15 @@ export function VirtualModelsPanel() {
     return original ? list.filter((vm) => vm.name.toLowerCase() !== original) : list;
   }, [draft?.originalName, list]);
 
-  const columns = useMemo<DataTableColumn<RoutingVirtualModel>[]>(
+  const columns = useMemo<DataGridColumn<RoutingVirtualModel>[]>(
     () => [
       {
-        key: "name",
-        label: t("models_page.virtual.col_name"),
-        width: "w-72 min-w-72",
+        id: "name",
+        header: t("models_page.virtual.col_name"),
+        width: 288,
+        minWidth: 200,
         overflowTooltip: (vm) => vm.description || vm.name,
-        render: (vm) => (
+        cell: (vm) => (
           <span className="block min-w-0">
             <span className="block truncate font-mono text-sm font-medium text-ink">{vm.name}</span>
             {vm.description ? (
@@ -163,10 +164,14 @@ export function VirtualModelsPanel() {
         ),
       },
       {
-        key: "members",
-        label: t("models_page.virtual.col_members"),
+        id: "members",
+        header: t("models_page.virtual.col_members"),
+        // 成员链是最长的内容：吸收剩余宽度。
+        width: 320,
+        minWidth: 200,
+        grow: true,
         overflowTooltip: (vm) => vm.members.map(memberRoute).join(" → "),
-        render: (vm) => (
+        cell: (vm) => (
           <ol className="flex min-w-0 flex-wrap items-center gap-1.5">
             {vm.members.map((member, index) => (
               <li
@@ -192,11 +197,11 @@ export function VirtualModelsPanel() {
         ),
       },
       {
-        key: "strategy",
-        label: t("models_page.virtual.col_strategy"),
-        // 表头旁还有拖动手柄：w-32 时「第一个成员」「Первый участник」都会被截断。
-        width: "w-44 min-w-44",
-        render: (vm) =>
+        id: "strategy",
+        header: t("models_page.virtual.col_strategy"),
+        // 放得下「第一个成员」「Первый участник」（俄文最长）。
+        width: 168,
+        cell: (vm) =>
           vm.strategy === "weighted"
             ? t("models_page.virtual.strategy_weighted")
             : t("models_page.virtual.strategy_order"),
@@ -204,11 +209,11 @@ export function VirtualModelsPanel() {
       ...(canEdit
         ? [
             {
-              key: "actions",
-              label: t("models_page.col_actions"),
-              ...TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
-              render: (vm: RoutingVirtualModel) => (
-                <TableRowActions
+              id: "actions",
+              header: t("models_page.col_actions"),
+              ...gridRowActionsColumn(2),
+              cell: (vm: RoutingVirtualModel) => (
+                <GridRowActions
                   moreLabel={t("common.more_actions")}
                   actions={[
                     {
@@ -283,29 +288,46 @@ export function VirtualModelsPanel() {
           </div>
         }
       >
-        <DataTable<RoutingVirtualModel>
+        <DataGrid<RoutingVirtualModel>
+          id="virtual-models"
+          label={t("models_page.virtual.title")}
           fill
-          tableId="virtual-models"
+          frame={false}
           rows={filtered}
           columns={columns}
           rowKey={(vm) => vm.name}
           loading={loading && !snapshot}
-          rowHeight={56}
-          caption={t("models_page.virtual.title")}
-          emptyText={
-            search ? t("models_page.virtual.no_results") : t("models_page.virtual.empty_title")
+          error={loadError}
+          onRetry={() => void reload()}
+          empty={
+            search
+              ? {
+                  title: t("models_page.virtual.no_results"),
+                  description: t("common.grid_filters_in_effect"),
+                  details: (
+                    <span className="rounded-full bg-ink/[0.05] px-2.5 py-1 text-xs text-ink-2 dark:bg-white/[0.07]">
+                      {t("common.grid_search_chip", { query: search.trim() })}
+                    </span>
+                  ),
+                  action: (
+                    <Button size="sm" onClick={() => setSearch("")}>
+                      {t("common.grid_clear_filters")}
+                    </Button>
+                  ),
+                }
+              : {
+                  icon: <Shuffle aria-hidden="true" />,
+                  title: t("models_page.virtual.empty_title"),
+                  description: t("models_page.virtual.empty_description"),
+                  action:
+                    canEdit && snapshot ? (
+                      <Button variant="primary" size="sm" onClick={() => setDraft(toDraft())}>
+                        <Plus size={14} />
+                        {t("models_page.virtual.add")}
+                      </Button>
+                    ) : undefined,
+                }
           }
-          emptyDescription={search ? undefined : t("models_page.virtual.empty_description")}
-          emptyIcon={<Shuffle size={20} aria-hidden />}
-          emptyAction={
-            !search && canEdit && snapshot ? (
-              <Button variant="primary" size="sm" onClick={() => setDraft(toDraft())}>
-                <Plus size={14} />
-                {t("models_page.virtual.add")}
-              </Button>
-            ) : undefined
-          }
-          minWidth="min-w-[960px]"
         />
       </Card>
 

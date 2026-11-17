@@ -104,7 +104,15 @@ export function computeGridLayout(
   }
 
   // 剩余宽度按权重分给 grow 列；取整的零头给权重最大的那列，总宽正好等于视口。
-  const growColumns = columns.filter((column) => !column.pin && growWeight(column.grow) > 0);
+  // 没有列声明 grow 时由最宽的普通列吸收：否则表格比框窄，表头底色和行线在右边断掉一截。
+  const declared = columns.filter((column) => !column.pin && growWeight(column.grow) > 0);
+  const regular = columns.filter((column) => !column.pin && !column.id.startsWith("__"));
+  const widest = regular.reduce<GridLayoutColumn | null>(
+    (best, column) => (!best || column.width > best.width ? column : best),
+    null,
+  );
+  const growColumns =
+    declared.length > 0 ? declared : widest ? [{ ...widest, grow: true as const }] : [];
   const spare = Math.floor(viewportWidth) - totalWidth;
   if (growColumns.length > 0 && spare > 0) {
     const totalWeight = growColumns.reduce((sum, column) => sum + growWeight(column.grow), 0);

@@ -85,6 +85,22 @@ describe("orderGridColumns", () => {
 });
 
 describe("computeGridLayout", () => {
+  test("没有 grow 列时由最宽的普通列吸收剩余宽度，表格正好铺满框", () => {
+    const layout = computeGridLayout(
+      [
+        { id: "__select", width: 40, pin: "start" },
+        { id: "name", width: 200 },
+        { id: "count", width: 80 },
+        { id: "actions", width: 100, pin: "end" },
+      ],
+      1,
+      600,
+    );
+    expect(layout.widths.name).toBe(380);
+    expect(layout.widths.count).toBe(80);
+    expect(layout.totalWidth).toBe(600);
+  });
+
   const layoutColumns = [
     { id: "select", width: 40, pin: "start" as const },
     { id: "time", width: 104, pin: "start" as const },

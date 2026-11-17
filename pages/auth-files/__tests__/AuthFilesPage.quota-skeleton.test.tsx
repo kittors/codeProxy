@@ -122,8 +122,10 @@ describe("AI accounts loading placeholders", () => {
 
     renderPage();
 
-    const skeleton = await screen.findByTestId("auth-files-table-skeleton");
-    expect(within(skeleton).queryByTestId("auth-files-card-skeleton")).not.toBeInTheDocument();
+    // 表格视图的首屏骨架画在表格自己的框里（表头在、行是骨架），不是卡片形状的占位。
+    const table = await screen.findByRole("table", { name: "Auth files table" });
+    expect(table).toHaveAttribute("aria-busy", "true");
+    expect(screen.queryByTestId("auth-files-card-skeleton")).not.toBeInTheDocument();
   });
 
   test("the silent probe on entry places holders, not an empty state", async () => {

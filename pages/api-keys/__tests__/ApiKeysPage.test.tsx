@@ -886,11 +886,16 @@ describe("ApiKeysPage", () => {
     expect(await screen.findByText("Existing Key")).toBeInTheDocument();
     expect(screen.getByText("Second Key")).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("checkbox", { name: "Select Existing Key" }));
-    await userEvent.click(screen.getByRole("checkbox", { name: "Select Second Key" }));
+    // 勾选列是表格自己的：每行一个「Select row」，勾选后表头换成选择条，批量删除在选择条上。
+    const [first, second] = screen.getAllByRole("checkbox", { name: "Select row" });
+    await userEvent.click(first);
+    await userEvent.click(second);
 
-    expect(screen.queryByText("2 API keys selected")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /clear selection/i })).not.toBeInTheDocument();
+    // 「2 selected」也会出现在读屏播报区里：只看选择条上的那一处。
+    const selectionBar = document.querySelector<HTMLElement>("[data-grid-selection-bar]");
+    expect(selectionBar).not.toBeNull();
+    expect(within(selectionBar as HTMLElement).getByText("2 selected")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /clear selection/i })).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: /batch delete/i }));
     await userEvent.click(screen.getByRole("button", { name: /confirm delete/i }));

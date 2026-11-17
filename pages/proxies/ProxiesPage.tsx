@@ -13,11 +13,10 @@ import {
   type ProxyPoolEntry,
   type SharedProxyEntry,
 } from "@code-proxy/api-client/endpoints/proxies";
-import { Button, Callout, COLUMN_WIDTH } from "@code-proxy/ui";
-import { Card } from "@code-proxy/ui";
+import { Button, Callout, GRID_WIDTH } from "@code-proxy/ui";
 import { ConfirmModal } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
-import { DataTable, TABLE_ROW_ACTIONS_STICKY_END_COLUMN, TableRowActions, type DataTableColumn } from "@code-proxy/ui";
+import { DataGrid, GRID_ROW_ACTIONS_COLUMN, GridRowActions, type DataGridColumn } from "@code-proxy/ui";
 import {
   emptyProxyDraft,
   proxyEndpoint,
@@ -44,6 +43,8 @@ export function ProxiesPage() {
   const { notify } = useToast();
   const [entries, setEntries] = useState<ProxyPoolEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  // 读取失败写在表格里（给「重试」），不只弹一条会消失的提示。
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [draft, setDraft] = useState<ProxyPoolEntry>(() => emptyProxyDraft());
@@ -117,6 +118,7 @@ export function ProxiesPage() {
     setLoading(true);
     try {
       const listing = await proxiesApi.listWithSharing();
+      setLoadError(null);
       setEntries(listing.items);
       setSharedEntries(listing.sharedItems);
       setSharingCapability(listing.sharing);
@@ -126,14 +128,11 @@ export function ProxiesPage() {
         ...listing.sharedItems.filter((entry) => !entry.overridden).map((entry) => entry.id),
       ]);
     } catch (error) {
-      notify({
-        type: "error",
-        message: error instanceof Error ? error.message : t("common.error"),
-      });
+      setLoadError(error instanceof Error ? error.message : t("common.error"));
     } finally {
       setLoading(false);
     }
-  }, [notify, refreshCheckResults, t]);
+  }, [refreshCheckResults, t]);
 
   useEffect(() => {
     void loadEntries();
@@ -264,13 +263,13 @@ export function ProxiesPage() {
     : undefined;
   const switchBlocked = switchSharedEntry ? !switchSharedEntry.enabled : false;
 
-  const columns = useMemo<DataTableColumn<ProxyPoolEntry>[]>(
+  const columns = useMemo<DataGridColumn<ProxyPoolEntry>[]>(
     () => [
       {
-        key: "name",
-        label: t("proxies.name"),
-        width: COLUMN_WIDTH.badgeGroup,
-        render: (entry) => (
+        id: "name",
+        header: t("proxies.name"),
+        width: GRID_WIDTH.badgeGroup,
+        cell: (entry) => (
           <div className="min-w-0">
             <div className="flex min-w-0 items-center gap-1.5">
               <p className="truncate font-semibold text-ink">{entry.name}</p>
@@ -289,10 +288,10 @@ export function ProxiesPage() {
         ),
       },
       {
-        key: "endpoint",
-        label: t("proxies.endpoint_label"),
-        width: COLUMN_WIDTH.badgeGroup,
-        render: (entry) => (
+        id: "endpoint",
+        header: t("proxies.endpoint_label"),
+        width: GRID_WIDTH.badgeGroup,
+        cell: (entry) => (
           <div className="flex min-w-0 items-center gap-2">
             <span className="rounded-full bg-ink/[0.05] px-2 py-0.5 text-xs font-semibold text-ink-2 dark:bg-white/[0.07]">
               {proxyProtocol(entry.url)}
@@ -304,19 +303,19 @@ export function ProxiesPage() {
         ),
       },
       {
-        key: "status",
-        label: t("proxies.latency"),
-        width: COLUMN_WIDTH.badgeStacked,
-        render: (entry) => <ProxyLatencyCell result={checkState[entry.id]} />,
+        id: "status",
+        header: t("proxies.latency"),
+        width: GRID_WIDTH.badgeStacked,
+        cell: (entry) => <ProxyLatencyCell result={checkState[entry.id]} />,
       },
       ...(showEgressColumn
         ? [
             {
-              key: "egress",
-              label: t("proxies.egress_column"),
-              width: COLUMN_WIDTH.name,
+              id: "egress",
+              header: t("proxies.egress_column"),
+              width: GRID_WIDTH.name,
               // 停用的代理不承载流量（选它的账号会回落到别的出口），没有熔断可言。
-              render: (entry: ProxyPoolEntry) =>
+              cell: (entry: ProxyPoolEntry) =>
                 entry.enabled ? (
                   <ProxyEgressCell
                     known={egressKnown}
@@ -331,10 +330,10 @@ export function ProxiesPage() {
       ...(showSharingColumn
         ? [
             {
-              key: "sharing",
-              label: t("resource_sharing.column"),
-              width: COLUMN_WIDTH.name,
-              render: (entry: ProxyPoolEntry) => (
+              id: "sharing",
+              header: t("resource_sharing.column"),
+              width: GRID_WIDTH.name,
+              cell: (entry: ProxyPoolEntry) => (
                 <ProxySharingCell
                   entry={entry}
                   tenantNames={sharingTenantNames}
@@ -345,23 +344,23 @@ export function ProxiesPage() {
           ]
         : []),
       {
-        key: "description",
-        label: t("proxies.remark_label"),
-        width: COLUMN_WIDTH.badgeGroup,
-        render: (entry) => (
+        id: "description",
+        header: t("proxies.remark_label"),
+        width: GRID_WIDTH.badgeGroup,
+        cell: (entry) => (
           <p className="truncate text-xs text-ink-2">
             {entry.description || "--"}
           </p>
         ),
       },
       {
-        key: "actions",
-        label: t("proxies.actions"),
-        ...TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
-        render: (entry) => {
+        id: "actions",
+        header: t("proxies.actions"),
+        ...GRID_ROW_ACTIONS_COLUMN,
+        cell: (entry) => {
           const result = checkState[entry.id];
           return (
-            <TableRowActions
+            <GridRowActions
               // 普通租户三个（检测、编辑、删除）；平台管理员多出共享、切换时最多平铺四个，再多收进「更多」。
               maxInline={4}
               moreLabel={t("common.more_actions")}
@@ -471,34 +470,23 @@ export function ProxiesPage() {
         <Callout tone="warning">{t("proxies.egress_disabled_notice")}</Callout>
       ) : null}
 
-      {/* flat：外壳内容区就是这一页的面板，表格直接落在上面，不再套一张卡片。 */}
-      <Card
-        flat
-        className={
-          hasSharedSection
-            ? "overflow-hidden"
-            : "overflow-hidden md:flex md:min-h-0 md:flex-1 md:flex-col"
-        }
-        bodyClassName={hasSharedSection ? undefined : "md:flex md:min-h-0 md:flex-1 md:flex-col"}
-        loading={loading && entries.length === 0}
-      >
-        <DataTable<ProxyPoolEntry>
-          // 有共享区时整页随内容流动，两张表都按行数收高；没有时这张表铺满页面。
-            fill={!hasSharedSection}
-          tableId="proxy-pool"
+      {/* 没有共享分区时表格铺满剩余高度（加载、空、行少行多同一个框）；有共享分区时整页随内容
+          流动，两张表都按行数收高，自有表最高六成屏高，两张表都留在一屏里。 */}
+      <div className={hasSharedSection ? "flex flex-col" : "flex min-h-0 flex-1 flex-col"}>
+        <DataGrid<ProxyPoolEntry>
+          id="proxy-pool"
+          label={t("proxies.table_caption")}
+          fill={!hasSharedSection}
+          maxHeight={hasSharedSection ? "60vh" : undefined}
           rows={sortedEntries}
           columns={columns}
           rowKey={(entry) => entry.id}
-          rowHeight={56}
-          // 下面还有共享分区时给自有表封个顶，两张表都留在一屏里；否则桌面宽度按页面剩余高度封顶，
-          // 窄屏（卡片不是 flex，拿不到确定高度）最多占七成屏高。
-          maxHeight={hasSharedSection ? "max-h-[60vh]" : "max-h-[70vh] md:max-h-full"}
-          minWidth="min-w-[960px]"
-          caption={t("proxies.table_caption")}
-          emptyText={t("proxies.empty_title")}
-          showAllLoadedMessage={false}
+          loading={loading}
+          error={loadError}
+          onRetry={() => void loadEntries()}
+          empty={{ title: t("proxies.empty_title") }}
         />
-      </Card>
+      </div>
 
       {/* 租户视角：平台共享给本租户的代理，只读；和上面同为页面级分区，不再套卡片。 */}
       {hasSharedSection ? (

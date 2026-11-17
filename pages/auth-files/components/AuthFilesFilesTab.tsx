@@ -32,11 +32,10 @@ import { Card, EntityCard, entityCardGridClass } from "@code-proxy/ui";
 import { EmptyState } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
 import { HoverTooltip } from "@code-proxy/ui";
-import { PaginationBar } from "@code-proxy/ui";
 import { ScrollArea } from "@code-proxy/ui";
 import { Select } from "@code-proxy/ui";
 import { SearchableSelect, type SearchableSelectOption } from "@code-proxy/ui";
-import { DataTable, type DataTableColumn } from "@code-proxy/ui";
+import { DataGrid, DataGridPagination, type DataGridColumn } from "@code-proxy/ui";
 import { ToggleSwitch } from "@code-proxy/ui";
 import type { AuthFilesUploadProgress } from "@pages/auth-files/hooks/useAuthFilesFileActions";
 import type {
@@ -75,6 +74,7 @@ import { AuthFileCardQuota } from "./AuthFileCardQuota";
 import { AuthFilePlanBadge } from "./AuthFilePlanBadge";
 import { AuthFileWarmupButton } from "./AuthFileWarmupButton";
 import { ModelOwnerGroupDialog, PasteJsonDialog, UploadProgressDialog } from "./AuthFilesFileDialogs";
+import { authFilesEmptyState } from "./authFilesEmptyState";
 import { AuthFilesLoadingSkeleton } from "./AuthFilesLoadingSkeleton";
 import { AuthFilesSelectionActionsMenu } from "./AuthFilesSelectionActionsMenu";
 import { AuthFilesSelectionToolbar } from "./AuthFilesSelectionToolbar";
@@ -156,7 +156,7 @@ interface AuthFilesFilesTabProps {
   batchWarmupBusy?: boolean;
   onOpenWarmupPolicy?: () => void;
   pageItems: AuthFileItem[];
-  fileColumns: DataTableColumn<AuthFileItem>[];
+  fileColumns: DataGridColumn<AuthFileItem>[];
   filesViewMode: FilesViewMode;
   masked?: boolean;
   onToggleMask?: () => void;
@@ -307,7 +307,6 @@ export function AuthFilesFilesTab({
   downloadAuthFile,
   handleDownloadSelection,
   safePage,
-  totalPages,
   setPage,
   usageData,
 }: AuthFilesFilesTabProps) {
@@ -733,33 +732,39 @@ export function AuthFilesFilesTab({
   ) : null;
 
   const paginationBar = (
-    <PaginationBar
-      currentPage={safePage}
-      totalPages={totalPages}
-      totalCount={filteredFiles.length}
+    <DataGridPagination
+      page={safePage}
       pageSize={pageSize}
+      total={filteredFiles.length}
       onPageChange={setPage}
       onPageSizeChange={(size) => {
         setPageSize(alignAuthFilesPageSizeToColumns(size, cardColumns));
         setPage(1);
       }}
       pageSizeOptions={pageSizeOptions}
-      className="pt-3"
-      labels={{
-        firstPage: t("request_logs.first_page"),
-        previousPage: t("auth_files.prev"),
-        nextPage: t("auth_files.next"),
-        lastPage: t("request_logs.last_page"),
-        rowsPerPage: t("auth_files.rows_per_page"),
-        pageInfo: ({ total, currentPage, totalPages: pages }) =>
-          t("auth_files.total_page", {
-            total,
-            page: currentPage,
-            pages,
-          }),
-      }}
+      className={filesViewMode === "table" ? undefined : "pt-3"}
     />
   );
+  const filesEmpty = authFilesEmptyState(t, {
+    hasFiles: filesLength > 0,
+    labels: [
+      normalizedFilter !== "all" ? `${t("auth_files.col_type")}：${normalizedFilter}` : "",
+      normalizedTagFilter ? `${t("auth_files.tag_filter")}：${normalizedTagFilter}` : "",
+      statusFilter !== "all"
+        ? `${t("auth_files.status_filter")}：${t(`auth_files.status_filter_${statusFilter}`)}`
+        : "",
+      search.trim() ? t("common.grid_search_chip", { query: search.trim() }) : "",
+      canSetModelOwnerGroup && selectedModelOwner.trim()
+        ? `${t("auth_files.model_owner_group")}：${selectedModelOwner}`
+        : "",
+    ].filter(Boolean),
+    onClear: () => {
+      setFilter("all");
+      setTagFilter("");
+      setStatusFilter("all");
+      setSearch("");
+    },
+  });
 
   return (
     // 页面级分区而不是卡片：内容区就是面板，里面只有账号卡片这一层（不再裁剪，卡片投影要伸出去）。
@@ -982,7 +987,25 @@ export function AuthFilesFilesTab({
         </div>
       </div>
 
-      {loading && filesLength === 0 ? (
+      {filesViewMode === "table" ? (
+        // 表格视图：加载、空、行少行多都在表格自己的框里，分页固定在框底，数据回来时不跳。
+        <div className="pt-4 md:flex md:min-h-0 md:flex-1 md:flex-col">
+          <DataGrid<AuthFileItem>
+            id="auth-files"
+            label={t("auth_files.table_caption")}
+            fill
+            columns={fileColumns}
+            rows={pageItems}
+            rowKey={(row) => row.name}
+            loading={loading}
+            empty={filesEmpty}
+            resetScrollKey={`${safePage}|${pageSize}`}
+            isRowActive={(row) => selectedFileNameSet.has(row.name)}
+            rowClassName={(row) => (row.disabled || isRuntimeOnlyAuthFile(row) ? "opacity-85" : "")}
+            footer={paginationBar}
+          />
+        </div>
+      ) : loading && filesLength === 0 ? (
         <>
           <div
             className="md:min-h-0 md:flex-1 md:overflow-hidden"
@@ -1016,40 +1039,9 @@ export function AuthFilesFilesTab({
         <>
           <div
             ref={cardGridHostRef}
-            // 两种视图都撑满剩余高度：表格铺满它（fill），分页条在下面不随行数移动；卡片视图的滚动区
-            // 自己留出投影的空间，这里用等量负边距把卡片拉回和筛选行对齐。
-            className={`md:min-h-0 md:overflow-hidden ${
-              filesViewMode === "table" ? "pt-4 md:flex md:flex-1 md:flex-col" : "-mx-4 sm:-mx-5 md:flex-1"
-            }`}
+            // 卡片视图的滚动区自己留出投影的空间，这里用等量负边距把卡片拉回和筛选行对齐。
+            className="-mx-4 sm:-mx-5 md:min-h-0 md:flex-1 md:overflow-hidden"
           >
-            {filesViewMode === "table" ? (
-              <DataTable<AuthFileItem>
-                fill
-                tableId="auth-files"
-                rows={pageItems}
-                columns={fileColumns}
-                rowKey={(row) => row.name}
-                loading={false}
-                virtualize={false}
-                rowHeight={84}
-                caption={t("auth_files.table_caption")}
-                emptyText={t("auth_files_page.no_files_desc")}
-                minWidth="min-w-[2420px]"
-                allowWheelPropagationAtBoundary
-                rowClassName={(row) => {
-                  const runtimeOnly = isRuntimeOnlyAuthFile(row);
-                  const disabled = Boolean(row.disabled);
-                  const selected = selectedFileNameSet.has(row.name);
-                  return [
-                    selected ? "bg-selected hover:bg-selected" : "",
-                    runtimeOnly ? "bg-subtle hover:bg-hover" : "",
-                    disabled ? "opacity-85" : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" ");
-                }}
-              />
-            ) : (
               <ScrollArea
                 data-testid="auth-files-cards"
                 className="items-stretch md:h-full"
@@ -1606,7 +1598,6 @@ export function AuthFilesFilesTab({
                   );
                 })}
               </ScrollArea>
-            )}
           </div>
           {paginationBar}
         </>
