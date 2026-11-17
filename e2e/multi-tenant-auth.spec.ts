@@ -659,13 +659,13 @@ test("shows tenant row actions including protected system tenant details", async
   await mockIdentity(page, [principal.home_tenant, standardTenant]);
   await page.goto("/#/tenants");
 
-  const systemRow = page.locator('[data-vt-row-key="t-system"]');
+  const systemRow = page.locator('tr[data-row-key="t-system"]');
   await expect(systemRow.getByRole("button", { name: "View" })).toBeVisible();
   await systemRow.getByRole("button", { name: "View" }).click();
   await expect(page.getByRole("dialog", { name: "System Administration" })).toBeVisible();
   await page.keyboard.press("Escape");
 
-  const tenantRow = page.locator('[data-vt-row-key="t-acme"]');
+  const tenantRow = page.locator('tr[data-row-key="t-acme"]');
   await expect(tenantRow.getByRole("button", { name: "Edit" })).toBeVisible();
   await expect(tenantRow.getByRole("button", { name: "Renew" })).toBeVisible();
   await expect(tenantRow.getByRole("button", { name: "Disable" })).toBeVisible();
@@ -691,7 +691,7 @@ test("uses a switch for the two user availability states", async ({ page }) => {
   );
   await page.goto("/#/governance/users");
 
-  const memberRow = page.locator('[data-vt-row-key="u-member"]');
+  const memberRow = page.locator('tr[data-row-key="u-member"]');
   await expect(memberRow.getByRole("switch")).toHaveAttribute("aria-checked", "true");
   await expect(memberRow.getByRole("combobox")).toHaveCount(0);
   await expect(memberRow.getByRole("button", { name: "Reset password" })).toHaveText("");
@@ -723,17 +723,17 @@ test("protects tenant admin role assignment and deletion actions", async ({ page
   );
 
   await page.goto("/#/governance/users");
-  const tenantAdminRow = page.locator('[data-vt-row-key="u-tenant-admin"]');
+  const tenantAdminRow = page.locator('tr[data-row-key="u-tenant-admin"]');
   await expect(tenantAdminRow.getByRole("button", { name: "Set roles" })).toBeDisabled();
   await expect(tenantAdminRow.getByRole("button", { name: "Delete" })).toBeDisabled();
   await expect(tenantAdminRow.getByRole("button", { name: "Reset password" })).toBeEnabled();
   await expect(tenantAdminRow.getByRole("switch")).toBeEnabled();
 
   await page.goto("/#/roles");
-  const tenantAdminRoleRow = page.locator('[data-vt-row-key="r-tenant-admin"]');
+  const tenantAdminRoleRow = page.locator('tr[data-row-key="r-tenant-admin"]');
   await expect(tenantAdminRoleRow.getByRole("button", { name: "Assign users" })).toBeDisabled();
 
-  const operatorRoleRow = page.locator('[data-vt-row-key="r-operator"]');
+  const operatorRoleRow = page.locator('tr[data-row-key="r-operator"]');
   await operatorRoleRow.getByRole("button", { name: "Assign users" }).click();
   const dialog = page.getByRole("dialog", { name: "Assign users to Operator" });
   const tenantAdminCheckbox = dialog.getByRole("checkbox", { name: /Tenant Admin User/ });
@@ -769,7 +769,7 @@ test("edits role permissions and assigns users from action modals", async ({ pag
   );
   await page.keyboard.press("Escape");
 
-  const roleRow = page.locator('[data-vt-row-key="r-operator"]');
+  const roleRow = page.locator('tr[data-row-key="r-operator"]');
   const permissionButton = roleRow.getByRole("button", { name: "Edit permissions" });
   const assignButton = roleRow.getByRole("button", { name: "Assign users" });
   await expect(permissionButton).toHaveText("");
@@ -804,11 +804,11 @@ test("manages dynamic menu visibility and ordering", async ({ page }) => {
   await page.goto("/#/system/menu-management");
 
   await expect(page.getByRole("heading", { name: "Menu Management", level: 2 })).toBeVisible();
-  const systemGroupRow = page.locator('[data-vt-row-key="group.system"]');
+  const systemGroupRow = page.locator('tr[data-row-key="group.system"]');
   await systemGroupRow.getByRole("button", { name: "Collapse" }).click();
-  await expect(page.locator('[data-vt-row-key="system.config"]')).toHaveCount(0);
+  await expect(page.locator('tr[data-row-key="system.config"]')).toHaveCount(0);
   await systemGroupRow.getByRole("button", { name: "Expand", exact: true }).click();
-  const menuRow = page.locator('[data-vt-row-key="system.config"]');
+  const menuRow = page.locator('tr[data-row-key="system.config"]');
   await expect(menuRow.getByRole("switch")).toHaveCount(2);
   await menuRow.getByRole("button", { name: "Adjust order" }).click();
   await expect(page.getByRole("dialog", { name: "Adjust order" })).toBeVisible();
@@ -872,7 +872,7 @@ test("shows the built-in administrator role and super administrator account", as
   await mockIdentity(page);
 
   await page.goto("/#/governance/users");
-  const adminRow = page.locator('[data-vt-row-key="u-admin"]');
+  const adminRow = page.locator('tr[data-row-key="u-admin"]');
   await expect(adminRow).toBeVisible();
   await expect(adminRow.getByText("Super Administrator", { exact: true })).toBeVisible();
   await expect(adminRow.getByText("Administrator", { exact: true })).toBeVisible();
