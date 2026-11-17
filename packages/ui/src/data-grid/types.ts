@@ -92,8 +92,10 @@ export interface DataGridColumn<T> {
    */
   grow?: boolean | number;
   pin?: GridPin;
-  /** 默认可拖拽调宽。 */
+  /** 能否拖拽调宽；不写时跟随表格的 resizable（默认可以）。 */
   resizable?: boolean;
+  /** 能否拖动换位置；冻结列永远不动。默认跟随表格的 columnReorder。 */
+  reorderable?: boolean;
   /** 能否在「视图」里隐藏；固定列默认不可隐藏。 */
   hideable?: boolean;
   defaultHidden?: boolean;
@@ -108,6 +110,13 @@ export interface DataGridColumn<T> {
   cell: (row: T, context: GridCellContext) => ReactNode;
   /** 骨架屏里这一列的占位形状。 */
   skeleton?: "text" | "two-line" | "number" | "pill" | "box";
+  /**
+   * 内容被截断时悬停显示全文。默认开启：单元格返回纯文本，或返回的元素里只有文字、没有自带提示时，
+   * 取出其中的文字作为提示；传函数自己给提示文字；传 false 关掉（单元格自己管提示、或内容是控件）。
+   */
+  overflowTooltip?: boolean | ((row: T) => string | null | undefined);
+  /** 表头文字后面的控件（例如「全部允许」的勾选框），点它不会触发排序或拖动。 */
+  headerAccessory?: ReactNode;
   /** 附加在 td 上的类名。 */
   className?: string;
 }
@@ -149,7 +158,13 @@ export interface DataGridProps<T> {
   /** 传了才在列菜单里出现「隐藏此列」。 */
   onHiddenColumnIdsChange?: (ids: Set<string>) => void;
 
+  /**
+   * 受控排序；不传（undefined）时表格自己记排序状态、按列的 sortValue 在本地排好再显示，
+   * 适合一次拿全的小表。传了（包括 null）就是受控：表格只显示箭头，排序由页面负责。
+   */
   sort?: GridSort | null;
+  /** 非受控时的初始排序。 */
+  defaultSort?: GridSort | null;
   onSortChange?: (sort: GridSort | null) => void;
 
   filters?: GridFilters;
@@ -168,6 +183,25 @@ export interface DataGridProps<T> {
    * （跨页、不逐条列出 key）时传真实条数。
    */
   selectionCount?: number;
+
+  /**
+   * 点行（不含行里的按钮、链接、勾选框）或在行上按回车时调用：选中一项、打开详情。
+   * 和 renderExpanded 同时传时，点行展开，回车也是展开。
+   */
+  onRowClick?: (row: T) => void;
+  /** 「当前选中的那一行」（单选列表、正在编辑的项）：行底色与左侧色条同多选的选中行，读屏报「已选择」。 */
+  isRowActive?: (row: T) => boolean;
+  /** 附加在 tr 上的类名（例如停用的行整行变淡）。 */
+  rowClassName?: (row: T) => string | undefined;
+  /**
+   * 拖动行调整先后（行首多一列把手；聚焦把手按 ↑/↓ 也能移动）。toIndex 是移动后这一行所在的位置。
+   * 有排序生效时不能拖：显示顺序不是数据本身的顺序。
+   */
+  rowReorder?: { onMove: (fromIndex: number, toIndex: number) => void; disabled?: boolean };
+  /** 列能否拖动换位置；默认有 id（能持久化）时开启。 */
+  columnReorder?: boolean;
+  /** 列能否拖宽的默认值（列上的 resizable 优先）；默认可以。 */
+  resizable?: boolean;
 
   /** 行展开后的详情；传了才可展开。 */
   renderExpanded?: (row: T) => ReactNode;

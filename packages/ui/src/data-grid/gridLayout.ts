@@ -6,7 +6,8 @@ import type { GridDensity } from "./types";
  * 数值写成 rem，跟着面板根字号一起缩放。
  */
 
-/** 合成列：复选框与展开按钮。 */
+/** 合成列：行拖动把手、复选框与展开按钮（从左到右依次排在数据列前面）。 */
+export const GRID_REORDER_COLUMN_ID = "__reorder";
 export const GRID_SELECT_COLUMN_ID = "__select";
 export const GRID_EXPAND_COLUMN_ID = "__expand";
 

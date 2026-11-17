@@ -13,16 +13,24 @@ export const DEFAULT_MAX_COLUMN_WIDTH = 960;
 export const SELECT_COLUMN_WIDTH = 40;
 /** 展开列（行首的 ›）的设计宽度。 */
 export const EXPAND_COLUMN_WIDTH = 28;
+/** 行拖动把手列的设计宽度。 */
+export const REORDER_COLUMN_WIDTH = 32;
 
-/** 固定在左侧的列在前、普通列居中、固定在右侧的列在后，组内保持声明顺序。 */
+/**
+ * 固定在左侧的列在前、普通列居中、固定在右侧的列在后。组内按用户拖过的顺序 order
+ * （gridOrder.mergeColumnOrder 合并过的完整列表），没拖过就是声明顺序。
+ */
 export function orderGridColumns<T>(
   columns: readonly DataGridColumn<T>[],
   hidden?: ReadonlySet<string>,
+  order?: readonly string[],
 ): DataGridColumn<T>[] {
   const visible = columns.filter((column) => !hidden?.has(column.id));
+  const position = new Map((order ?? []).map((id, index) => [id, index]));
+  const offset = position.size;
   const rank = (pin: GridPin | undefined) => (pin === "start" ? 0 : pin === "end" ? 2 : 1);
   return visible
-    .map((column, index) => ({ column, index }))
+    .map((column, index) => ({ column, index: position.get(column.id) ?? offset + index }))
     .sort((a, b) => rank(a.column.pin) - rank(b.column.pin) || a.index - b.index)
     .map(({ column }) => column);
 }

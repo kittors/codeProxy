@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
-import { TooltipBubble, type TooltipPlacement } from "../overlays/Tooltip";
+import { TooltipBubble, hasOverflowingContent, type TooltipPlacement } from "../overlays/Tooltip";
 
 /**
  * 单元格里关键数据的提示（精确值、拆分明细、口径说明）。
@@ -10,6 +10,8 @@ import { TooltipBubble, type TooltipPlacement } from "../overlays/Tooltip";
  * 嵌了两层提示，底部会叠出两个一模一样的气泡）。
  *
  * 提示里的内容在行展开详情里都有一份，键盘和读屏用户不依赖悬停。
+ *
+ * overflowOnly：只在内容被截断时才弹（单元格自动的「全文提示」用它），放得下就不重复一遍。
  */
 
 const OPEN_DELAY_MS = 320;
@@ -21,11 +23,13 @@ export function GridCellTooltip({
   children,
   placement = "top",
   className,
+  overflowOnly = false,
 }: {
   content: ReactNode;
   children: ReactNode;
   placement?: TooltipPlacement;
   className?: string;
+  overflowOnly?: boolean;
 }) {
   const id = useId();
   const ref = useRef<HTMLSpanElement>(null);
@@ -42,13 +46,14 @@ export function GridCellTooltip({
 
   const show = useCallback(() => {
     if (content === null || content === undefined || content === false || content === "") return;
+    if (overflowOnly && ref.current && !hasOverflowingContent(ref.current)) return;
     clear();
     const wait = Date.now() < warmUntil ? 0 : OPEN_DELAY_MS;
     timer.current = window.setTimeout(() => {
       timer.current = null;
       setOpen(true);
     }, wait);
-  }, [clear, content]);
+  }, [clear, content, overflowOnly]);
 
   const hide = useCallback(() => {
     clear();

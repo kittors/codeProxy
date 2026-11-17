@@ -2,12 +2,14 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
   type CSSProperties,
   type KeyboardEvent,
 } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Button } from "../primitives/Button";
 import { surface } from "../primitives/Surface";
@@ -18,21 +20,30 @@ import { DataGridHeader } from "./DataGridHeader";
 import { GridColumnMenu } from "./GridColumnMenu";
 import { GridPopover } from "./GridPopover";
 import { GridScrollbar } from "./GridScrollbar";
-import { GRID_EXPAND_COLUMN_ID, GRID_SELECT_COLUMN_ID, ROW_HEIGHT_REM } from "./gridLayout";
+import {
+  GRID_EXPAND_COLUMN_ID,
+  GRID_REORDER_COLUMN_ID,
+  GRID_SELECT_COLUMN_ID,
+  ROW_HEIGHT_REM,
+} from "./gridLayout";
 import {
   EXPAND_COLUMN_WIDTH,
+  REORDER_COLUMN_WIDTH,
   SELECT_COLUMN_WIDTH,
   firstSortDirection,
   getGridSelectionState,
   nextGridSort,
   orderGridColumns,
   setGridFilter,
+  sortGridRows,
   toggleGridRowSelection,
   toggleGridSelectAll,
   type GridLayoutColumn,
 } from "./gridModel";
+import { cssEscape, useColumnReorder } from "./useColumnReorder";
 import { useColumnSizing } from "./useColumnSizing";
 import { useGridViewport } from "./useGridViewport";
+import { useRowReorder } from "./useRowReorder";
 import { useRowReorderMotion } from "./useRowReorderMotion";
 import type { DataGridColumn, DataGridProps, GridFilterValue, GridSort } from "./types";
 
@@ -62,6 +73,7 @@ export function DataGrid<T>({
   hiddenColumnIds,
   onHiddenColumnIdsChange,
   sort,
+  defaultSort = null,
   onSortChange,
   filters,
   onFiltersChange,
@@ -71,6 +83,12 @@ export function DataGrid<T>({
   selectionActions,
   selectionSummary,
   selectionCount,
+  onRowClick,
+  isRowActive,
+  rowClassName,
+  rowReorder,
+  columnReorder,
+  resizable = true,
   renderExpanded,
   expandedKeys,
   onExpandedKeysChange,
@@ -81,9 +99,10 @@ export function DataGrid<T>({
   resetScrollKey,
   className,
 }: DataGridProps<T>) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const reduceMotion = useReducedMotion();
   const rootRef = useRef<HTMLDivElement>(null);
+  const areaRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLTableSectionElement>(null);
   const selectionAnchor = useRef<string | null>(null);
@@ -92,18 +111,36 @@ export function DataGrid<T>({
   const [announcement, setAnnouncement] = useState("");
 
   const expandable = Boolean(renderExpanded);
+
+  // ---------- 列顺序（拖表头换位置） ----------
+  const pinnedRef = useRef({ start: 0, end: 0 });
+  const movedColumn = useRef<{ columnId: string; viaKeyboard: boolean } | null>(null);
+  const columnOrder = useColumnReorder({
+    id,
+    columns,
+    hidden: hiddenColumnIds,
+    enabled: columnReorder ?? Boolean(id),
+    viewportRef,
+    areaRef,
+    pinnedRef,
+    onMoved: (columnId, viaKeyboard) => {
+      movedColumn.current = { columnId, viaKeyboard };
+    },
+  });
   const visibleColumns = useMemo(
-    () => orderGridColumns(columns, hiddenColumnIds),
-    [columns, hiddenColumnIds],
+    () => orderGridColumns(columns, hiddenColumnIds, columnOrder.order),
+    [columnOrder.order, columns, hiddenColumnIds],
   );
   const leadingColumns = useMemo<GridLayoutColumn[]>(() => {
     const leading: GridLayoutColumn[] = [];
+    if (rowReorder)
+      leading.push({ id: GRID_REORDER_COLUMN_ID, width: REORDER_COLUMN_WIDTH, pin: "start" });
     if (selectable)
       leading.push({ id: GRID_SELECT_COLUMN_ID, width: SELECT_COLUMN_WIDTH, pin: "start" });
     if (expandable)
       leading.push({ id: GRID_EXPAND_COLUMN_ID, width: EXPAND_COLUMN_WIDTH, pin: "start" });
     return leading;
-  }, [expandable, selectable]);
+  }, [expandable, rowReorder, selectable]);
 
   const viewport = useGridViewport(rootRef, viewportRef);
   const sizing = useColumnSizing({
@@ -114,8 +151,19 @@ export function DataGrid<T>({
     scale: viewport.scale,
   });
   const { layout } = sizing;
+  pinnedRef.current = { start: layout.startPinnedWidth, end: layout.endPinnedWidth };
 
-  const keys = useMemo(() => rows.map((row) => rowKey(row)), [rowKey, rows]);
+  // ---------- 排序：受控（sort 传了，含 null）只画箭头；非受控自己记状态、本地排好 ----------
+  const sortControlled = sort !== undefined;
+  const [innerSort, setInnerSort] = useState<GridSort | null>(defaultSort);
+  const activeSort = sortControlled ? sort : innerSort;
+  const displayRows = useMemo(
+    () =>
+      sortControlled || !activeSort ? rows : sortGridRows(rows, columns, activeSort, i18n.language),
+    [activeSort, columns, i18n.language, rows, sortControlled],
+  );
+
+  const keys = useMemo(() => displayRows.map((row) => rowKey(row)), [displayRows, rowKey]);
   const orderSignature = keys.join("\u0001");
   const animationKey = useMemo(() => [...keys].sort().join("\u0001"), [keys]);
   const captureRowPositions = useRowReorderMotion(bodyRef, orderSignature);
@@ -131,6 +179,61 @@ export function DataGrid<T>({
     if (viewportRef.current) viewportRef.current.scrollTop = 0;
   }, [resetScrollKey]);
   const status = error ? "error" : rows.length === 0 ? (loading ? "skeleton" : "empty") : "rows";
+
+  // 键盘移动列之后：报出新位置，把焦点还给这一列的把手（DOM 换了位置，焦点会丢）。
+  useLayoutEffect(() => {
+    const moved = movedColumn.current;
+    if (!moved) return;
+    movedColumn.current = null;
+    const index = visibleColumns.findIndex((column) => column.id === moved.columnId);
+    if (index < 0) return;
+    setAnnouncement(
+      t("data_grid.announce_column_moved", {
+        column: visibleColumns[index].header,
+        position: index + 1,
+      }),
+    );
+    if (moved.viaKeyboard) {
+      viewportRef.current
+        ?.querySelector<HTMLElement>(
+          `th[data-col="${cssEscape(moved.columnId)}"] [data-grid-col-grip]`,
+        )
+        ?.focus();
+    }
+  }, [t, visibleColumns]);
+
+  // ---------- 行顺序（拖行首把手） ----------
+  const headerHeightRef = useRef(0);
+  headerHeightRef.current = viewport.headerHeight;
+  const movedRow = useRef<{ key: string; viaKeyboard: boolean } | null>(null);
+  const rowDrag = useRowReorder({
+    enabled: Boolean(rowReorder) && !rowReorder?.disabled && !activeSort,
+    keys,
+    viewportRef,
+    areaRef,
+    headerHeightRef,
+    onMove: rowReorder
+      ? (fromIndex, toIndex) => {
+          captureRowPositions();
+          rowReorder.onMove(fromIndex, toIndex);
+        }
+      : undefined,
+    onMoved: (key, toIndex, viaKeyboard) => {
+      movedRow.current = { key, viaKeyboard };
+      setAnnouncement(t("data_grid.announce_row_moved", { position: toIndex + 1 }));
+    },
+  });
+  useLayoutEffect(() => {
+    const moved = movedRow.current;
+    if (!moved) return;
+    movedRow.current = null;
+    if (!moved.viaKeyboard) return;
+    bodyRef.current
+      ?.querySelector<HTMLElement>(
+        `tr[data-row-key="${cssEscape(moved.key)}"] [data-grid-row-grip]`,
+      )
+      ?.focus();
+  }, [orderSignature]);
 
   // ---------- 排序 ----------
   const announceSort = useCallback(
@@ -152,20 +255,22 @@ export function DataGrid<T>({
     [columns, t],
   );
 
+  const canSort = sortControlled ? Boolean(onSortChange) : true;
   const changeSort = useCallback(
     (next: GridSort | null) => {
-      if (!onSortChange) return;
+      if (sortControlled && !onSortChange) return;
       captureRowPositions();
-      onSortChange(next);
+      if (!sortControlled) setInnerSort(next);
+      onSortChange?.(next);
       announceSort(next);
     },
-    [announceSort, captureRowPositions, onSortChange],
+    [announceSort, captureRowPositions, onSortChange, sortControlled],
   );
 
   const onSortClick = useCallback(
     (column: DataGridColumn<T>) =>
-      changeSort(nextGridSort(sort, column.id, firstSortDirection(column))),
-    [changeSort, sort],
+      changeSort(nextGridSort(activeSort, column.id, firstSortDirection(column))),
+    [activeSort, changeSort],
   );
 
   // ---------- 选择 ----------
@@ -252,12 +357,14 @@ export function DataGrid<T>({
           focusRowAt(keys.length - 1);
           break;
         case " ":
-          if (!selectable) return;
-          toggleRow(key, event.shiftKey);
+          if (selectable) toggleRow(key, event.shiftKey);
+          else if (onRowClick && !expandable) onRowClick(displayRows[index]);
+          else return;
           break;
         case "Enter":
-          if (!expandable) return;
-          toggleExpand(key);
+          if (expandable) toggleExpand(key);
+          else if (onRowClick) onRowClick(displayRows[index]);
+          else return;
           break;
         case "Escape":
           if (expandedKeys?.has(key)) toggleExpand(key);
@@ -276,10 +383,12 @@ export function DataGrid<T>({
     },
     [
       clearSelection,
+      displayRows,
       expandable,
       expandedKeys,
       focusRowAt,
       keys,
+      onRowClick,
       selectable,
       selectedCount,
       selectedKeys,
@@ -367,8 +476,10 @@ export function DataGrid<T>({
   const bodyHeight = Math.max(0, viewport.height - viewport.headerHeight);
   const skeletonRows = fill ? Math.max(5, Math.ceil(bodyHeight / Math.max(1, rowHeightPx))) : 5;
   const stateHeight = fill ? Math.max(180, bodyHeight) : EMBEDDED_STATE_HEIGHT;
-  const selectWidth = layout.widths[GRID_SELECT_COLUMN_ID] ?? 0;
-  const interactive = selectable || expandable;
+  const selectionBarLeft =
+    (layout.startOffsets[GRID_SELECT_COLUMN_ID] ?? 0) + (layout.widths[GRID_SELECT_COLUMN_ID] ?? 0);
+  const interactive = selectable || expandable || Boolean(onRowClick) || Boolean(rowReorder);
+  const columnDrag = columnOrder.drag;
 
   const viewportStyle: CSSProperties = {
     ["--grid-head-h" as string]: `${viewport.headerHeight}px`,
@@ -391,7 +502,10 @@ export function DataGrid<T>({
       data-fill={fill ? "true" : "false"}
       data-density={density}
     >
-      <div className={`relative flex min-w-0 flex-col ${fill ? "min-h-0 flex-1" : ""}`}>
+      <div
+        ref={areaRef}
+        className={`relative flex min-w-0 flex-col ${fill ? "min-h-0 flex-1" : ""}`}
+      >
         <div
           ref={viewportRef}
           className={`cp-grid-viewport min-w-0 overflow-auto ${fill ? "min-h-0 flex-1" : ""}`}
@@ -421,8 +535,8 @@ export function DataGrid<T>({
               selectionState={selectionState}
               selectionDisabled={status !== "rows"}
               onToggleAll={toggleAll}
-              sort={sort}
-              onSortClick={onSortChange ? onSortClick : undefined}
+              sort={activeSort}
+              onSortClick={canSort ? onSortClick : undefined}
               filters={filters}
               openMenuColumnId={menu?.columnId ?? null}
               onOpenMenu={(column, anchor) =>
@@ -434,13 +548,21 @@ export function DataGrid<T>({
               onResizeStart={sizing.startResize}
               onResizeBy={sizing.resizeBy}
               onAutoFit={autoFit}
+              resizableDefault={resizable}
+              columnGrip={{
+                isMovable: columnOrder.isMovable,
+                onPointerDown: columnOrder.startDrag,
+                onKeyDown: columnOrder.onGripKeyDown,
+              }}
+              draggingColumnId={columnDrag?.columnId ?? null}
+              rowGrip={Boolean(rowReorder)}
             />
             <DataGridBody
               bodyRef={bodyRef}
               columns={visibleColumns}
               layout={layout}
               density={density}
-              rows={rows}
+              rows={displayRows}
               rowKey={rowKey}
               selectable={selectable}
               selectedKeys={selectedKeys}
@@ -449,7 +571,7 @@ export function DataGrid<T>({
               expandedKeys={expandedKeys}
               onToggleExpand={toggleExpand}
               renderExpanded={renderExpanded}
-              sortColumnId={sort?.columnId ?? null}
+              sortColumnId={activeSort?.columnId ?? null}
               status={status}
               skeletonRows={skeletonRows}
               empty={empty}
@@ -462,6 +584,20 @@ export function DataGrid<T>({
               onRowKeyDown={onRowKeyDown}
               animationKey={animationKey}
               dimmed={loading && rows.length > 0}
+              onRowClick={onRowClick}
+              isRowActive={isRowActive}
+              rowClassName={rowClassName}
+              rowGrip={
+                rowReorder
+                  ? {
+                      enabled: Boolean(!rowReorder.disabled && !activeSort),
+                      draggingKey: rowDrag.drag?.key ?? null,
+                      onPointerDown: rowDrag.startDrag,
+                      onKeyDown: rowDrag.onGripKeyDown,
+                    }
+                  : null
+              }
+              draggingColumnId={columnDrag?.columnId ?? null}
             />
           </table>
         </div>
@@ -486,7 +622,7 @@ export function DataGrid<T>({
               animate={{ opacity: 1, y: 0, transition: popoverEnterTransition }}
               exit={{ opacity: 0, y: reduceMotion ? 0 : -4, transition: popoverExitTransition }}
               className="absolute right-0 top-0 z-[9] flex items-center gap-3 bg-[var(--grid-head-bg)] pr-3 shadow-[inset_0_-1px_0_var(--cp-line-strong)]"
-              style={{ left: selectWidth, height: viewport.headerHeight }}
+              style={{ left: selectionBarLeft, height: viewport.headerHeight }}
             >
               <span className="whitespace-nowrap text-xs font-semibold tabular-nums text-ink">
                 {t("data_grid.selected_rows", { count: selectedCount })}
@@ -523,6 +659,22 @@ export function DataGrid<T>({
               })}
             </div>
           </>
+        ) : null}
+
+        {/* 拖动换列：插入线贯穿表头与表体；换行：一道横线落在两行之间。 */}
+        {columnDrag?.indicatorX != null ? (
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute top-0 z-[10] w-0.5 rounded-full bg-[var(--cp-focus)] transition-[left] duration-100 ease-soft"
+            style={{ left: columnDrag.indicatorX - 1, height: viewport.height }}
+          />
+        ) : null}
+        {rowDrag.drag?.indicatorY != null ? (
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-2 z-[10] h-0.5 rounded-full bg-[var(--cp-focus)] transition-[top] duration-100 ease-soft"
+            style={{ top: rowDrag.drag.indicatorY - 1 }}
+          />
         ) : null}
 
         <GridScrollbar
@@ -574,8 +726,8 @@ export function DataGrid<T>({
           <GridColumnMenu
             key={menuColumn.id}
             column={menuColumn}
-            sort={sort}
-            onSortChange={onSortChange ? changeSort : undefined}
+            sort={activeSort}
+            onSortChange={canSort ? changeSort : undefined}
             filterValue={filters?.[menuColumn.id]}
             onApplyFilter={
               onFiltersChange ? (value) => applyFilter(menuColumn.id, value) : undefined
@@ -590,6 +742,20 @@ export function DataGrid<T>({
           />
         ) : null}
       </GridPopover>
+
+      {/* 跟着指针走的列名标签，和拖宽时的宽度角标同一个样式。 */}
+      {columnDrag && typeof document !== "undefined"
+        ? createPortal(
+            <div
+              aria-hidden="true"
+              className="pointer-events-none fixed z-[1000] rounded-full bg-ink px-2.5 py-1 text-xs font-medium text-canvas shadow-pop"
+              style={{ left: columnDrag.pointerX + 12, top: columnDrag.pointerY + 14 }}
+            >
+              {columnDrag.header}
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }

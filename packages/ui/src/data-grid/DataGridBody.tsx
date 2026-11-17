@@ -1,5 +1,5 @@
 import { motion, useReducedMotion } from "framer-motion";
-import { AlertTriangle, ChevronRight } from "lucide-react";
+import { AlertTriangle, ChevronRight, GripVertical } from "lucide-react";
 import {
   Fragment,
   useEffect,
@@ -7,6 +7,7 @@ import {
   type CSSProperties,
   type KeyboardEvent,
   type MouseEvent,
+  type PointerEvent as ReactPointerEvent,
   type ReactNode,
   type RefObject,
 } from "react";
@@ -17,8 +18,11 @@ import { Button } from "../primitives/Button";
 import { Checkbox } from "../primitives/Checkbox";
 import { EASE_OUT } from "../utils/motion";
 import { pinEdge, pinStyle } from "./DataGridHeader";
+import { GridCellTooltip } from "./GridCellTooltip";
+import { resolveCellTooltip } from "./gridCellText";
 import {
   GRID_EXPAND_COLUMN_ID,
+  GRID_REORDER_COLUMN_ID,
   GRID_SELECT_COLUMN_ID,
   ROW_HEIGHT,
   cellPadding,
@@ -122,6 +126,30 @@ function ExpandedRow({
   );
 }
 
+/** 行首拖动把手（rowReorder 开启时）。 */
+export interface GridRowGripProps {
+  enabled: boolean;
+  draggingKey: string | null;
+  onPointerDown: (key: string, event: ReactPointerEvent<HTMLElement>) => void;
+  onKeyDown: (key: string, event: KeyboardEvent<HTMLElement>) => void;
+}
+
+/** 单元格内容：纯文本套一层可截断的 span；内容被截断时悬停显示全文。 */
+function CellContent({ content, tooltip }: { content: ReactNode; tooltip: string | null }) {
+  const body =
+    typeof content === "string" || typeof content === "number" ? (
+      <span className="min-w-0 truncate">{content}</span>
+    ) : (
+      content
+    );
+  if (!tooltip) return <>{body}</>;
+  return (
+    <GridCellTooltip overflowOnly content={tooltip}>
+      {body}
+    </GridCellTooltip>
+  );
+}
+
 export interface DataGridBodyProps<T> {
   bodyRef: RefObject<HTMLTableSectionElement | null>;
   columns: readonly DataGridColumn<T>[];
@@ -151,6 +179,12 @@ export interface DataGridBodyProps<T> {
   /** 行集合的签名：变了就整体重挂，触发「依次浮入」。 */
   animationKey: string;
   dimmed: boolean;
+  onRowClick?: (row: T) => void;
+  isRowActive?: (row: T) => boolean;
+  rowClassName?: (row: T) => string | undefined;
+  rowGrip: GridRowGripProps | null;
+  /** 正在被拖动换位置的列：内容变淡，表示「它在被搬走」。 */
+  draggingColumnId: string | null;
 }
 
 export function DataGridBody<T>({
@@ -180,14 +214,51 @@ export function DataGridBody<T>({
   onRowKeyDown,
   animationKey,
   dimmed,
+  onRowClick,
+  isRowActive,
+  rowClassName,
+  rowGrip,
+  draggingColumnId,
 }: DataGridBodyProps<T>) {
   const { t } = useTranslation();
-  const hasLeading = selectable || expandable;
-  const totalColumns = columns.length + (selectable ? 1 : 0) + (expandable ? 1 : 0);
+  const hasLeading = selectable || expandable || Boolean(rowGrip);
+  const totalColumns =
+    columns.length + (selectable ? 1 : 0) + (expandable ? 1 : 0) + (rowGrip ? 1 : 0);
   const rowHeight = ROW_HEIGHT[density];
 
-  const leadingCells = (key: string, selected: boolean, expanded: boolean, skeleton: boolean) => (
+  const leadingCells = (
+    key: string,
+    selected: boolean,
+    expanded: boolean,
+    skeleton: boolean,
+    rowIndex = 0,
+  ) => (
     <>
+      {rowGrip ? (
+        <td
+          className="cp-grid-cell p-0"
+          data-pin="start"
+          data-pin-edge={pinEdge(GRID_REORDER_COLUMN_ID, layout)}
+          style={pinStyle(GRID_REORDER_COLUMN_ID, "start", layout)}
+        >
+          {skeleton ? null : (
+            <div className="flex h-full items-center justify-center">
+              <button
+                type="button"
+                data-grid-row-grip=""
+                disabled={!rowGrip.enabled}
+                aria-label={t("common.reorder_row", { index: rowIndex + 1 })}
+                title={t("common.reorder_row", { index: rowIndex + 1 })}
+                onPointerDown={(event) => rowGrip.onPointerDown(key, event)}
+                onKeyDown={(event) => rowGrip.onKeyDown(key, event)}
+                className="inline-flex h-7 w-6 cursor-grab touch-none items-center justify-center rounded-md text-ink-4 transition-colors hover:bg-hover hover:text-ink-2 active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+              >
+                <GripVertical size={14} aria-hidden="true" />
+              </button>
+            </div>
+          )}
+        </td>
+      ) : null}
       {selectable ? (
         <td
           className="cp-grid-cell p-0"
@@ -316,13 +387,14 @@ export function DataGridBody<T>({
     );
   }
 
-  const handleRowClick = (event: MouseEvent<HTMLTableRowElement>, key: string) => {
-    if (!expandable) return;
+  const handleRowClick = (event: MouseEvent<HTMLTableRowElement>, row: T, key: string) => {
+    if (!expandable && !onRowClick) return;
     const target = event.target as HTMLElement | null;
     if (target?.closest(INTERACTIVE_SELECTOR)) return;
     // 正在拖选文字（复制模型名、渠道名）时不展开。
     if (window.getSelection?.()?.toString()) return;
-    onToggleExpand(key);
+    if (expandable) onToggleExpand(key);
+    else onRowClick?.(row);
   };
 
   return (
@@ -337,25 +409,34 @@ export function DataGridBody<T>({
         const key = rowKey(row);
         const selected = selectedKeys?.has(key) ?? false;
         const expanded = expandedKeys?.has(key) ?? false;
+        const active = isRowActive?.(row) ?? false;
         return (
           <Fragment key={key}>
             <tr
               data-row-key={key}
-              aria-selected={selectable ? selected : undefined}
+              aria-selected={selectable ? selected : isRowActive ? active : undefined}
               aria-expanded={expandable ? expanded : undefined}
               data-expanded={expanded ? "true" : undefined}
+              data-active={active ? "true" : undefined}
+              data-dragging={rowGrip?.draggingKey === key ? "true" : undefined}
               tabIndex={focusedKey === key ? 0 : -1}
               onFocus={(event) => {
                 if (event.target === event.currentTarget) onFocusRow(key);
               }}
               onKeyDown={(event) => onRowKeyDown(event, key, rowIndex)}
-              onClick={(event) => handleRowClick(event, key)}
-              className={`cp-grid-row group/row ${rowHeight} ${expandable ? "cursor-pointer" : ""}`}
+              onClick={(event) => handleRowClick(event, row, key)}
+              className={[
+                "cp-grid-row group/row",
+                rowHeight,
+                expandable || onRowClick ? "cursor-pointer" : "",
+                rowClassName?.(row) ?? "",
+              ].join(" ")}
               style={{ ["--row-index" as string]: rowIndex }}
             >
-              {leadingCells(key, selected, expanded, false)}
+              {leadingCells(key, selected, expanded, false, rowIndex)}
               {columns.map((column, index) => {
                 const align = column.align ?? "start";
+                const content = column.cell(row, { rowIndex, selected, expanded });
                 return (
                   <td
                     key={column.id}
@@ -363,6 +444,7 @@ export function DataGridBody<T>({
                     data-pin={column.pin}
                     data-pin-edge={pinEdge(column.id, layout)}
                     data-sorted={sortColumnId === column.id ? "true" : undefined}
+                    data-dragging={draggingColumnId === column.id ? "true" : undefined}
                     className={[
                       "cp-grid-cell align-middle text-sm text-ink",
                       cellPadding(index, columns.length, hasLeading),
@@ -375,7 +457,10 @@ export function DataGridBody<T>({
                       data-cell-inner=""
                       className={`flex min-w-0 items-center overflow-hidden ${ALIGN_INNER[align]}`}
                     >
-                      {column.cell(row, { rowIndex, selected, expanded })}
+                      <CellContent
+                        content={content}
+                        tooltip={resolveCellTooltip(column, row, content)}
+                      />
                     </div>
                   </td>
                 );

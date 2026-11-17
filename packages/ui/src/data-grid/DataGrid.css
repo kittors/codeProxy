@@ -165,8 +165,39 @@
   position: relative;
 }
 
-.cp-grid-row[aria-selected="true"] > .cp-grid-cell:first-child::before {
+.cp-grid-row[aria-selected="true"] > .cp-grid-cell:first-child::before,
+.cp-grid-row[data-active="true"] > .cp-grid-cell:first-child::before {
   transform: scaleY(1);
+}
+
+/* 单选列表里「当前这一项」（isRowActive）：底色同多选的选中行。 */
+.cp-grid-row[data-active="true"] {
+  --grid-cell-bg: var(--grid-row-selected);
+}
+
+.cp-grid-row[data-active="true"]:hover {
+  --grid-cell-bg: var(--grid-row-selected-hover);
+}
+
+/* ---------- 拖动换列、换行 ---------- */
+
+/* 正在被搬走的列 / 行：内容变淡，框和底色不变，读起来是「它在别处」。 */
+.cp-grid-head-cell[data-dragging="true"] > div,
+.cp-grid-cell[data-dragging="true"] > [data-cell-inner],
+.cp-grid-row[data-dragging="true"] > .cp-grid-cell > * {
+  opacity: 0.35;
+  transition: opacity 120ms var(--ease-soft);
+}
+
+/* 表头上沿的拖动把手贴着表格顶边：焦点环往里收，不被外框裁掉。 */
+.cp-grid [data-grid-col-grip]:focus-visible {
+  outline-offset: -2px;
+}
+
+body[data-grid-dragging="true"],
+body[data-grid-dragging="true"] * {
+  cursor: grabbing !important;
+  user-select: none;
 }
 
 /* ---------- 冻结列边缘阴影：离开起点才出现左侧阴影，没到终点才出现右侧阴影 ---------- */

@@ -1,4 +1,4 @@
-import { ArrowUp, ListFilter } from "lucide-react";
+import { ArrowUp, GripHorizontal, GripVertical, ListFilter } from "lucide-react";
 import type {
   CSSProperties,
   KeyboardEvent,
@@ -18,6 +18,7 @@ import {
 } from "./gridModel";
 import {
   GRID_EXPAND_COLUMN_ID,
+  GRID_REORDER_COLUMN_ID,
   GRID_SELECT_COLUMN_ID,
   HEAD_HEIGHT,
   cellPadding,
@@ -90,6 +91,17 @@ function HeaderLabel({ header, hint }: { header: string; hint?: ReactNode }) {
   );
 }
 
+/** 表头拖动换列（columnReorder 开启时）。 */
+export interface GridColumnGripProps<T> {
+  isMovable: (column: DataGridColumn<T>) => boolean;
+  onPointerDown: (
+    column: DataGridColumn<T>,
+    event: ReactPointerEvent<HTMLElement>,
+    fromGrip: boolean,
+  ) => void;
+  onKeyDown: (column: DataGridColumn<T>, event: KeyboardEvent<HTMLElement>) => void;
+}
+
 interface HeaderProps<T> {
   columns: readonly DataGridColumn<T>[];
   layout: GridColumnLayout;
@@ -109,6 +121,12 @@ interface HeaderProps<T> {
   onResizeStart: (columnId: string, event: ReactPointerEvent<HTMLElement>, invert: boolean) => void;
   onResizeBy: (columnId: string, delta: number) => void;
   onAutoFit: (columnId: string) => void;
+  /** 列上没写 resizable 时是否可拖宽。 */
+  resizableDefault: boolean;
+  columnGrip: GridColumnGripProps<T> | null;
+  draggingColumnId: string | null;
+  /** 行首有拖动把手列。 */
+  rowGrip: boolean;
 }
 
 export function DataGridHeader<T>({
@@ -130,9 +148,14 @@ export function DataGridHeader<T>({
   onResizeStart,
   onResizeBy,
   onAutoFit,
+  resizableDefault,
+  columnGrip,
+  draggingColumnId,
+  rowGrip,
 }: HeaderProps<T>) {
   const { t } = useTranslation();
   const headHeight = HEAD_HEIGHT[density];
+  const hasLeading = selectable || expandable || rowGrip;
 
   const onHandleKeyDown = (column: DataGridColumn<T>, event: KeyboardEvent<HTMLDivElement>) => {
     const step = event.shiftKey ? 32 : 8;
@@ -149,6 +172,20 @@ export function DataGridHeader<T>({
   return (
     <thead>
       <tr className="cp-grid-head-row">
+        {rowGrip ? (
+          <th
+            scope="col"
+            data-pin="start"
+            data-pin-edge={pinEdge(GRID_REORDER_COLUMN_ID, layout)}
+            className={`cp-grid-head-cell p-0 ${headHeight}`}
+            style={pinStyle(GRID_REORDER_COLUMN_ID, "start", layout)}
+          >
+            <span className="flex h-full items-center justify-center text-ink-4">
+              <GripVertical size={14} aria-hidden="true" />
+              <span className="sr-only">{t("common.row_order")}</span>
+            </span>
+          </th>
+        ) : null}
         {selectable ? (
           <th
             scope="col"
@@ -184,9 +221,10 @@ export function DataGridHeader<T>({
           const direction = sort?.columnId === column.id ? sort.direction : null;
           const filterActive = isGridFilterActive(filters?.[column.id]);
           const menuOpen = openMenuColumnId === column.id;
-          const resizable = column.resizable !== false;
+          const resizable = column.resizable ?? resizableDefault;
           const reverse = align === "end";
           const sortable = Boolean(column.sortable && onSortClick);
+          const movable = columnGrip?.isMovable(column) ?? false;
           return (
             <th
               key={column.id}
@@ -203,13 +241,31 @@ export function DataGridHeader<T>({
                       ? "none"
                       : undefined
               }
-              className={`cp-grid-head-cell group/head p-0 text-left font-normal ${headHeight}`}
+              data-dragging={draggingColumnId === column.id ? "true" : undefined}
+              className={`cp-grid-head-cell group/head select-none p-0 text-left font-normal ${headHeight}`}
               style={pinStyle(column.id, column.pin, layout)}
             >
+              {movable ? (
+                // 把手在表头上沿正中，悬停或聚焦才出现，不占文字的宽度；整个表头也能直接拖。
+                <button
+                  type="button"
+                  data-grid-col-grip=""
+                  aria-label={t("common.reorder_column", { column: column.header })}
+                  title={t("common.reorder_column", { column: column.header })}
+                  onPointerDown={(event) => columnGrip?.onPointerDown(column, event, true)}
+                  onKeyDown={(event) => columnGrip?.onKeyDown(column, event)}
+                  className="absolute left-1/2 top-0 z-[2] inline-flex h-3 w-7 -translate-x-1/2 cursor-grab touch-none items-center justify-center rounded-b-md text-ink-4 opacity-0 transition-[opacity,color] duration-150 ease-soft hover:text-ink-2 focus-visible:opacity-100 group-hover/head:opacity-100 active:cursor-grabbing"
+                >
+                  <GripHorizontal size={12} aria-hidden="true" />
+                </button>
+              ) : null}
               <div
+                onPointerDown={
+                  movable ? (event) => columnGrip?.onPointerDown(column, event, false) : undefined
+                }
                 className={[
                   "relative flex h-full min-w-0 items-center",
-                  cellPadding(index, columns.length, selectable || expandable),
+                  cellPadding(index, columns.length, hasLeading),
                   align === "end" ? "justify-end" : align === "center" ? "justify-center" : "",
                   // 筛选生效后按钮常驻，给它让出位置，免得压住窄列的表头文字。
                   filterActive ? (reverse ? "!pl-7" : "!pr-7") : "",
@@ -234,11 +290,17 @@ export function DataGridHeader<T>({
                     <HeaderLabel header={column.header} hint={column.headerHint} />
                   </span>
                 )}
+                {column.headerAccessory ? (
+                  <span data-grid-no-drag="" className="ml-1.5 inline-flex shrink-0 items-center">
+                    {column.headerAccessory}
+                  </span>
+                ) : null}
                 {column.filter && onOpenMenu ? (
                   <button
                     type="button"
                     aria-haspopup="dialog"
                     aria-expanded={menuOpen}
+                    data-grid-no-drag=""
                     aria-label={t("data_grid.filter_column", { column: column.header })}
                     data-active={filterActive ? "true" : undefined}
                     onClick={(event) => onOpenMenu(column, event.currentTarget)}
@@ -263,6 +325,7 @@ export function DataGridHeader<T>({
               {resizable ? (
                 <div
                   role="separator"
+                  data-grid-no-drag=""
                   aria-orientation="vertical"
                   aria-label={t("data_grid.resize_column", { column: column.header })}
                   aria-valuenow={Math.round(designWidths[column.id] ?? 0)}

@@ -2,9 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 import type { GridDensity } from "./types";
 
 /**
- * 每张表的视图偏好（列宽、隐藏列、密度）存在 localStorage 的同一个键里。
+ * 每张表的视图偏好（列宽、列顺序、隐藏列、密度）存在 localStorage 的同一个键里。
  *
- * 列宽由 DataGrid 自己读写，隐藏列和密度由页面通过 useGridPreferences 读写——两边各管各的字段，
+ * 列宽与列顺序由 DataGrid 自己读写，隐藏列和密度由页面通过 useGridPreferences 读写——两边各管各的字段，
  * 所以每次写入都是「读最新值 → 只改自己的字段 → 写回」，不会拿着一份旧快照把对方的改动盖掉。
  * 写完派发 cp-grid-prefs 事件，另一方据此重新读取（例如页面上「恢复默认视图」同时清掉列宽）。
  *
@@ -15,6 +15,8 @@ export interface GridPreferences {
   widths?: Record<string, number>;
   hidden?: string[];
   density?: GridDensity;
+  /** 用户拖过的列顺序（列 id），没拖过就没有这一项。 */
+  order?: string[];
 }
 
 const STORAGE_PREFIX = "cp-grid:";
@@ -38,6 +40,9 @@ function sanitize(raw: unknown): GridPreferences {
   }
   if (Array.isArray(value.hidden)) {
     prefs.hidden = value.hidden.filter((item): item is string => typeof item === "string");
+  }
+  if (Array.isArray(value.order)) {
+    prefs.order = value.order.filter((item): item is string => typeof item === "string");
   }
   if (typeof value.density === "string" && DENSITIES.includes(value.density as GridDensity)) {
     prefs.density = value.density as GridDensity;
@@ -88,7 +93,7 @@ export interface UseGridPreferencesResult {
   setDensity: (density: GridDensity) => void;
   hiddenColumnIds: ReadonlySet<string>;
   setHiddenColumnIds: (ids: ReadonlySet<string>) => void;
-  /** 清掉这张表的全部偏好（列宽、隐藏列、密度）。 */
+  /** 清掉这张表的全部偏好（列宽、列顺序、隐藏列、密度）。 */
   resetView: () => void;
 }
 

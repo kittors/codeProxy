@@ -10,6 +10,10 @@ export {
 export { GridViewMenu } from "./GridViewMenu";
 export { GridCellTooltip, GridTooltipRows } from "./GridCellTooltip";
 export { GridPopover } from "./GridPopover";
+export { GRID_ROW_ACTIONS_COLUMN, GridRowActions, gridRowActionsColumn } from "./GridRowActions";
+export type { GridRowAction } from "./GridRowActions";
+export { GRID_WIDTH } from "./gridWidths";
+export { moveGridRow } from "./gridOrder";
 export { describeGridFilter, listGridFilterChips } from "./gridFilterText";
 export {
   applyGridFilters,

@@ -193,7 +193,7 @@ function isElementOverflowing(element: HTMLElement) {
   );
 }
 
-function hasOverflowingContent(element: HTMLElement) {
+export function hasOverflowingContent(element: HTMLElement) {
   if (isElementOverflowing(element)) return true;
 
   for (const child of element.querySelectorAll("*")) {
