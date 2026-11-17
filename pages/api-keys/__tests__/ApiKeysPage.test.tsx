@@ -622,6 +622,47 @@ describe("ApiKeysPage", () => {
     expect(mocks.apiKeyEntriesResetPeriodSpending).not.toHaveBeenCalled();
   });
 
+  // 门户账号下的 Key 表读取失败时在表格里给「重试」；这一支提前返回，重试成功后必须清掉出错态。
+  test("an owner-scoped retry after a failed load shows the keys instead of the error", async () => {
+    state.entries = [
+      {
+        id: "owned-retry-key",
+        key: "sk-owned-retry",
+        name: "Retry Owned Key",
+        end_user_id: "end-user-1",
+        disabled: false,
+        is_default: true,
+        "created-at": "2026-07-21T00:00:00Z",
+      },
+    ];
+    // 挂载时可能读不止一次，所以用开关控制「失败中」，而不是只让第一次失败。
+    const listKeys = mocks.endUserListKeys.getMockImplementation();
+    let failing = true;
+    mocks.endUserListKeys.mockImplementation(async (userId: string) => {
+      if (failing) throw new Error("owner keys unavailable");
+      return listKeys!(userId);
+    });
+    try {
+      render(
+        <MemoryRouter initialEntries={["/access/api-keys?endUserId=end-user-1"]}>
+          <ThemeProvider>
+            <ToastProvider>
+              <ApiKeysPage />
+            </ToastProvider>
+          </ThemeProvider>
+        </MemoryRouter>,
+      );
+
+      expect(await screen.findByText("Couldn't load the data")).toBeInTheDocument();
+      failing = false;
+      await userEvent.click(screen.getByRole("button", { name: "Retry" }));
+      expect(await screen.findByText("Retry Owned Key")).toBeInTheDocument();
+      expect(screen.queryByText("Couldn't load the data")).not.toBeInTheDocument();
+    } finally {
+      if (listKeys) mocks.endUserListKeys.mockImplementation(listKeys);
+    }
+  });
+
   test("uses owner-scoped rename and explicit rotation for an end-user key", async () => {
     state.entries = [
       {

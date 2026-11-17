@@ -320,6 +320,8 @@ export function OwnedApiKeysTable({
   fill = false,
   maxHeight,
   id = "owned-api-keys",
+  error,
+  onRetry,
   ...columnOptions
 }: {
   t: (key: string, options?: Record<string, unknown>) => string;
@@ -335,6 +337,9 @@ export function OwnedApiKeysTable({
   maxHeight?: string;
   /** 列宽、列顺序按表格 id 记忆；列不同的两处用法用不同的 id。 */
   id?: string;
+  /** 读取失败：表格里显示出错态，有 onRetry 时给「重试」（整页的 Key 管理用）。 */
+  error?: string | null;
+  onRetry?: () => void;
 } & OwnedApiKeyColumnOptions) {
   return (
     <DataGrid
@@ -347,6 +352,8 @@ export function OwnedApiKeysTable({
       rows={keys}
       rowKey={(row) => row.id}
       loading={loading}
+      error={error}
+      onRetry={onRetry}
       empty={{
         title: t("api_keys_page.no_keys"),
         description: t("api_keys_page.no_keys_desc"),

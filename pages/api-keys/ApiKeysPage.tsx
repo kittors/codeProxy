@@ -106,6 +106,7 @@ export function ApiKeysPage({
 
   const loadEntries = useCallback(async () => {
     setLoading(true);
+    setLoadError(null); // 先清上次的失败（重试回到加载态）：门户账号那一支会提前返回，放末尾清会漏掉
     try {
       if (endUserIdFilter) {
         const ownerResponse = await endUsersApi.listKeys(endUserIdFilter);
@@ -176,7 +177,6 @@ export function ApiKeysPage({
         setEntries(entriesData);
       }
       void refreshPermissionOptions();
-      setLoadError(null);
     } catch (err: unknown) {
       // 读取失败写在表格里（给「重试」），不只弹一条会消失的提示。
       setLoadError(err instanceof Error ? err.message : t("api_keys_page.load_failed"));
@@ -752,13 +752,13 @@ export function ApiKeysPage({
   );
 
   const tableBody = endUserIdFilter ? (
-    <div className={embed ? "flex min-h-0 flex-1 flex-col" : "space-y-3 md:flex md:min-h-0 md:flex-col"}>
+    <div className={embed ? "flex min-h-0 flex-1 flex-col" : "space-y-3 md:flex md:min-h-0 md:flex-1 md:flex-col"}>
       <OwnedApiKeysTable
         t={t}
         keys={ownedKeys}
         busyKeyId={resettingPeriodSpendingKey}
         busy={saving}
-        loading={loading}
+        loading={loading} fill error={loadError} onRetry={() => void loadEntries()}
         canDelete={() => ownedKeys.length > 1}
         actions={{
           onToggleDisabled: (key) => {
