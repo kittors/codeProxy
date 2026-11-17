@@ -40,11 +40,17 @@ export interface NodeCpuView {
   cpus: number;
   busyCores: number;
   stealCores: number;
+  iowaitCores: number;
+  idleCores: number;
+  windowSeconds: number;
   /** 占整机 CPU 的百分比，堆叠条两段的宽度。 */
   busyPct: number;
   stealPct: number;
   /** steal 占「想运行的时间」（执行 + steal）的比例，0–1；几乎空闲时没有意义，为 null。 */
   stealShare: number | null;
+  /** 执行 + steal 占整机的档位，和 steal 占比的档位分开，状态标签要分别说原因。 */
+  usageLevel: UsageLevel;
+  stealLevel: UsageLevel;
   level: UsageLevel;
 }
 
@@ -69,14 +75,20 @@ export function nodeCpuView(snapshot: NodeSnapshot | undefined): NodeCpuView | n
         : stealShare >= 0.2
           ? "warn"
           : "normal";
+  const loadLevel = usageLevel(busyPct + stealPct);
   return {
     cpus,
     busyCores: cpu.busy_cores,
     stealCores: cpu.steal_cores,
+    iowaitCores: cpu.iowait_cores,
+    idleCores: cpu.idle_cores,
+    windowSeconds: cpu.window_seconds,
     busyPct,
     stealPct,
     stealShare,
-    level: worstLevel(usageLevel(busyPct + stealPct), stealLevel),
+    usageLevel: loadLevel,
+    stealLevel,
+    level: worstLevel(loadLevel, stealLevel),
   };
 }
 

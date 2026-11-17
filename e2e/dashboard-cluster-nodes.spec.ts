@@ -2,8 +2,9 @@ import { expect, test, type Page, type Route } from "@playwright/test";
 
 /**
  * 仪表盘的「服务器节点」：新后端在 GET /config 的 capabilities 里声明 node-metrics，并在
- * GET /cluster 里给每个节点带资源快照，面板每台一张卡；没声明的旧后端连 /cluster 都不请求；
- * 声明了却答 404 的（请求落到没有这个接口的节点）不报错、停止轮询。接口全部 mock，不需要后端。
+ * GET /cluster 里给每个节点带资源快照（含磁盘），主节点的快照带数据库，hosts 带数据库主机；面板每台
+ * 节点一张紧凑卡片，数据库一张，宽屏一行放下。没声明的旧后端连 /cluster 都不请求；声明了却答 404 的
+ * （请求落到没有这个接口的节点）不报错、停止轮询。接口全部 mock，不需要后端。
  */
 
 const NOW = Date.now();
@@ -54,10 +55,116 @@ const snapshot = (over: Record<string, unknown> = {}) => ({
     unreachable: 0,
     check: { total: 4, unreachable: 0 },
   },
+  disks: [
+    {
+      mount: "/",
+      fs_type: "xfs",
+      paths: [
+        { use: "root", path: "/" },
+        { use: "workdir", path: "/opt/clirelay2" },
+        { use: "auth", path: "/opt/clirelay2/data/auth" },
+        { use: "logs", path: "/opt/clirelay2/logs" },
+      ],
+      total_bytes: 32_144_076_800,
+      used_bytes: 14_905_135_104,
+      available_bytes: 17_238_941_696,
+      inodes_total: 15_728_064,
+      inodes_free: 15_634_235,
+      growth: { window_seconds: 3_600, used_delta_bytes: 52_428_800 },
+    },
+    {
+      mount: "/tmp",
+      fs_type: "tmpfs",
+      paths: [{ use: "body_cache", path: "/tmp/clirelay-request-bodies" }],
+      total_bytes: 2_055_684_096,
+      used_bytes: 4_096,
+      available_bytes: 2_055_680_000,
+      inodes_total: 1_048_576,
+      inodes_free: 1_048_570,
+    },
+  ],
   db: { rtt_ms: 8.2 },
   redis: { role: "cluster", rtt_ms: 7.9 },
+  shared_redis: { configured: true, available: true },
   ...over,
 });
+
+// 生产库 2026-11-17 的样子（149 上 PostgreSQL 15.19，探针的几条查询只读跑出来的数）。
+const database = {
+  collected_at: iso(-12_000),
+  engine: "postgres",
+  version: "15.19",
+  started_at: iso(-16 * 3_600_000),
+  in_recovery: false,
+  size_bytes: 561_995_111,
+  xid_age: 89_696,
+  connections: { max: 200, reserved: 3, client: 19, active: 0, idle: 18, idle_in_transaction: 0, wal_senders: 1 },
+  activity: {
+    longest_transaction_seconds: 0,
+    long_transactions: 0,
+    longest_idle_in_transaction_seconds: 0,
+    lock_waits: 0,
+    longest_lock_wait_seconds: 0,
+  },
+  wal: { bytes: 83_886_080, files: 5, max_wal_size_bytes: 1_073_741_824, max_slot_keep_bytes: 4_294_967_296 },
+  slots: [
+    {
+      name: "clirelay_walarchive",
+      type: "physical",
+      active: true,
+      wal_status: "reserved",
+      retained_bytes: 834_064,
+      safe_wal_size_bytes: 4_310_910_448,
+    },
+  ],
+  replication: [
+    {
+      name: "pg_receivewal",
+      state: "streaming",
+      sync_state: "async",
+      sent_lag_bytes: 0,
+      flush_lag_bytes: 834_064,
+      reply_age_seconds: 0.9,
+    },
+  ],
+  window: { seconds: 300, commits: 3_600, rollbacks: 2, blocks_hit: 550_000, blocks_read: 1_100, deadlocks: 0, temp_bytes: 0 },
+};
+
+const databaseHost = {
+  host_id: "db-149",
+  role: "database",
+  version: "dev-1234567",
+  snapshot_at: iso(-6_000),
+  age_seconds: 6,
+  snapshot: snapshot({
+    host: {
+      cpus: 4,
+      cpu: { window_seconds: 30, busy_cores: 0.62, steal_cores: 0.04, iowait_cores: 0.01, idle_cores: 3.33 },
+      load: { load1: 0.8, load5: 0.7, load15: 0.6 },
+      memory: { total_bytes: 8_322_871_296, available_bytes: 3_310_891_008 },
+    },
+    cgroup: undefined,
+    egress: undefined,
+    db: undefined,
+    redis: undefined,
+    shared_redis: undefined,
+    disks: [
+      {
+        mount: "/",
+        fs_type: "ext4",
+        paths: [
+          { use: "root", path: "/" },
+          { use: "database", path: "/opt/clirelay-data/pg" },
+        ],
+        total_bytes: 41_429_692_416,
+        used_bytes: 26_669_805_568,
+        available_bytes: 14_743_109_632,
+        inodes_total: 5_160_960,
+        inodes_free: 4_821_091,
+      },
+    ],
+  }),
+};
 
 const newBackendCluster = {
   enabled: true,
@@ -68,7 +175,7 @@ const newBackendCluster = {
     {
       node_id: "n149",
       version: "dev-1234567",
-      advertise: "149.104.0.173",
+      advertise: "198.51.100.10",
       started_at: iso(-3_600_000),
       last_seen: iso(-3_000),
       leader: false,
@@ -82,19 +189,19 @@ const newBackendCluster = {
     {
       node_id: "n155",
       version: "dev-1234567",
-      advertise: "103.42.31.155",
+      advertise: "198.51.100.20",
       started_at: iso(-3 * 3_600_000),
       last_seen: iso(-2_000),
       leader: true,
       active: true,
       self: true,
-      snapshot: snapshot(),
+      snapshot: snapshot({ database }),
       snapshot_at: iso(-2_000),
     },
     {
       node_id: "n43",
       version: "dev-0000000",
-      advertise: "43.255.122.4",
+      advertise: "198.51.100.30",
       started_at: iso(-86_400_000),
       last_seen: iso(-10 * 60_000),
       leader: false,
@@ -102,6 +209,7 @@ const newBackendCluster = {
       self: false,
     },
   ],
+  hosts: [databaseHost],
 };
 
 const tenant = {
@@ -243,41 +351,100 @@ const openDashboard = async (
   return calls;
 };
 
-test("每台节点一张卡，CPU 的执行与 steal 分开，slot 配额与出口状态都在", async ({ page }) => {
+const CARDS = ["n149", "n155", "n43", "数据库"];
+
+const sectionOf = (page: Page) =>
+  page.getByRole("heading", { name: "服务器节点" }).locator("xpath=ancestor::section[1]");
+
+test("每台节点一张紧凑卡片，数据库并排；要注意的情况写在卡片右上角", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await openDashboard(page, (route) => json(route, newBackendCluster));
 
   await expect(page.getByRole("heading", { name: "服务器节点" })).toBeVisible();
   await expect(page.getByText("2 / 3 在线")).toBeVisible();
+  await expect(page.getByText("3 处告急")).toBeVisible();
 
   const self = page.getByRole("group", { name: "n155" });
   await expect(self.getByText("主节点")).toBeVisible();
   await expect(self.getByText("当前节点")).toBeVisible();
+  await expect(self.getByTestId("health-pill").getByText("steal 78%")).toBeVisible();
   await expect(self.getByText("CPU · 8 核")).toBeVisible();
-  await expect(
-    self.getByRole("img", { name: "执行 0.76 核，steal 2.76 核，共 8 核" }),
-  ).toBeVisible();
-  await expect(self.getByText("steal 占想运行时间的 78%")).toBeVisible();
-  await expect(self.getByText("7.00 核")).toBeVisible();
-  await expect(self.getByText("12%")).toBeVisible();
-  await expect(self.getByText("共享 Redis 往返")).toBeVisible();
+  await expect(self.getByRole("img", { name: "执行 0.76 核，steal 2.76 核，共 8 核" })).toBeVisible();
+  await expect(self.getByText("磁盘 · /", { exact: true })).toBeVisible();
+  await expect(self.getByText("Slot · 7.00 核")).toBeVisible();
+  await expect(self.getByText("共享 Redis 7.9 ms")).toBeVisible();
 
-  await expect(page.getByRole("group", { name: "n149" }).getByText("熔断 1 个代理")).toBeVisible();
+  await expect(page.getByRole("group", { name: "n149" }).getByText("出口 熔断 1 个代理")).toBeVisible();
   const offline = page.getByRole("group", { name: "n43" });
-  await expect(offline.getByText("离线")).toBeVisible();
+  await expect(offline.getByTestId("health-pill").getByText("离线")).toBeVisible();
   await expect(offline.getByText(/还没有上报资源数据/)).toBeVisible();
 
-  // 三张卡在 1280 宽下并排或分两行都可以，但都得完整落在分区里，不能被挤出去。
-  const section = page
-    .getByRole("heading", { name: "服务器节点" })
-    .locator("xpath=ancestor::section[1]");
-  const sectionBox = await section.boundingBox();
-  for (const name of ["n149", "n155", "n43"]) {
+  const database = page.getByRole("group", { name: "数据库" });
+  await expect(database.getByText(/PostgreSQL 15\.19/)).toBeVisible();
+  await expect(database.getByText("19 / 200")).toBeVisible();
+  await expect(database.getByText("主机磁盘 · /")).toBeVisible();
+  await expect(database.getByText("pg_receivewal · streaming")).toBeVisible();
+  await expect(database.getByTestId("health-pill").getByText("正常")).toBeVisible();
+
+  // 1280 宽下卡片分两行，但每张都完整落在分区里。
+  const sectionBox = await sectionOf(page).boundingBox();
+  for (const name of CARDS) {
     const box = await page.getByRole("group", { name }).boundingBox();
     expect(box && sectionBox).toBeTruthy();
     expect(box!.x).toBeGreaterThanOrEqual(sectionBox!.x - 1);
     expect(box!.x + box!.width).toBeLessThanOrEqual(sectionBox!.x + sectionBox!.width + 1);
   }
+});
+
+test("宽屏一行放下三台节点和数据库，关键数值都不被截断", async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await openDashboard(page, (route) => json(route, newBackendCluster));
+  await expect(page.getByRole("group", { name: "数据库" })).toBeVisible();
+
+  const boxes = [];
+  for (const name of CARDS) {
+    const box = await page.getByRole("group", { name }).boundingBox();
+    expect(box).toBeTruthy();
+    boxes.push(box!);
+  }
+  for (const box of boxes) {
+    expect(Math.abs(box.y - boxes[0].y)).toBeLessThanOrEqual(1);
+  }
+  for (let i = 1; i < boxes.length; i++) {
+    expect(boxes[i].x).toBeGreaterThanOrEqual(boxes[i - 1].x + boxes[i - 1].width);
+  }
+
+  // 指标格里的数值、角标和脚注用了 truncate：内容一旦比格子宽就会被省略号吃掉。
+  // 1470 是三列最窄的时候（笔记本常见宽度），2026-11-17 回放线上响应时 WAL 格的槽名在这里被截断过。
+  for (const width of [1920, 1470, 1280]) {
+    await page.setViewportSize({ width, height: 1080 });
+    const clipped = await page.evaluate(() =>
+      [...document.querySelectorAll('[data-testid^="node-"] p, [data-testid^="node-"] span, [data-testid^="db-"] p, [data-testid^="db-"] span')]
+        .filter((el) => el instanceof HTMLElement && el.scrollWidth > el.clientWidth + 1)
+        .map((el) => el.textContent),
+    );
+    expect(clipped, `clipped at ${width}px`).toEqual([]);
+  }
+});
+
+test("展开一张卡的详情，同一行的其他卡不被拉高", async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await openDashboard(page, (route) => json(route, newBackendCluster));
+  const self = page.getByRole("group", { name: "n155" });
+  const neighbour = page.getByRole("group", { name: "n149" });
+  await expect(self).toBeVisible();
+  const before = await neighbour.boundingBox();
+  const selfBefore = await self.boundingBox();
+
+  await self.getByRole("button", { name: /详情/ }).click();
+  await expect(self.getByTestId("node-details")).toBeVisible();
+  await expect(self.getByText("需要注意")).toBeVisible();
+  await expect(self.getByText("clirelay2-8318.service")).toBeVisible();
+  await expect(self.getByText("请求体缓存")).toBeVisible();
+
+  await expect.poll(async () => (await self.boundingBox())!.height).toBeGreaterThan(selfBefore!.height + 100);
+  const after = await neighbour.boundingBox();
+  expect(Math.abs(after!.height - before!.height)).toBeLessThanOrEqual(1);
 });
 
 test("旧后端没有在 /config 里声明 node-metrics：不请求 /cluster，也不显示节点视图", async ({
