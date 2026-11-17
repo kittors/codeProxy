@@ -32,6 +32,7 @@ import { ipAccessRoute } from "./ip-access/route";
 import { menuManagementRoute } from "./menu-management/route";
 import { alertsRoute } from "./alerts/route";
 import { privacyMaskingRoute } from "./privacy-masking/route";
+import { dataGridLabRoute } from "./data-grid-lab/route";
 
 export interface PageRoute {
   path: string;
@@ -83,6 +84,8 @@ export const pageRoutes: PageRoute[] = [
   ccswitchImportSettingsRoute,
   apiKeyLookupRoute,
   apiKeyUsageRoute,
+  // 开发环境专用的表格演示页（计划 104），生产构建里是 null。
+  ...(dataGridLabRoute ? [dataGridLabRoute] : []),
 ];
 
 const normalizePathname = (to: string) => to.split(/[?#]/, 1)[0] || "/";

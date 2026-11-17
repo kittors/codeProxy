@@ -31,6 +31,8 @@ export {
   extractTableCellTextContent,
 } from "./data-table/TableCellOverflowTooltip";
 
+export * from "./data-grid";
+
 export { ChartLegend } from "./charts/ChartLegend";
 export {
   CHART_CATEGORICAL,

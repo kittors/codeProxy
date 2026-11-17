@@ -214,6 +214,8 @@ export const getPageTitleKey = (pathname: string, menus?: MenuIdentity[] | null)
   if (pathname.startsWith("/system/config") || pathname.startsWith("/config")) {
     return "shell.nav_config";
   }
+  // 开发环境专用的组件演示页（/lab/*，计划 104），不在任何菜单里。
+  if (pathname.startsWith("/lab/")) return "shell.page_lab";
   return "shell.page_home";
 };
 
