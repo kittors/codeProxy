@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Reveal, useGridPreferences } from "@code-proxy/ui";
 import {
+  REQUEST_LOG_GRID_IDS,
   RequestLogFilterBar,
   RequestLogGrid,
   RequestLogSummary,
@@ -68,7 +69,7 @@ export function PublicLogsSection({
     () => columns.filter((column) => column.defaultHidden).map((column) => column.id),
     [columns],
   );
-  const prefs = useGridPreferences("apikey-lookup-request-logs", { hidden: defaultHidden });
+  const prefs = useGridPreferences(REQUEST_LOG_GRID_IDS.lookup, { hidden: defaultHidden });
   const facets: RequestLogFacet[] = [
     ...(identity === "key" && options.identity.length > 1
       ? [{ columnId: "identity" as const, label: t("request_logs.col_key_name"), options: options.identity }]
@@ -110,7 +111,7 @@ export function PublicLogsSection({
       />
       <div className="flex flex-col md:min-h-0 md:flex-1">
         <RequestLogGrid
-          id="apikey-lookup-request-logs"
+          id={REQUEST_LOG_GRID_IDS.lookup}
           label={t("request_logs.table_caption")}
           columns={columns}
           rows={rows}

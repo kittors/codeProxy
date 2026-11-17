@@ -167,15 +167,17 @@ export function RequestLogChannelCell({ row, masked }: { row: RequestLogsRow; ma
         <span className="flex min-w-0 flex-col leading-tight">
           <span className="truncate text-sm text-ink">{name}</span>
           {auth || provider ? (
-            <span className="mt-0.5 flex min-w-0 items-center gap-1 text-2xs text-ink-3">
+            // 列被压窄时（1366 宽）厂商名只剩一个字母没有意义：放不下 4 个字宽就整个折到看不见的第二行，
+            // 放得下就照常截断出省略号。完整信息在悬停提示里。
+            <span className="mt-0.5 flex h-[1.4em] min-w-0 flex-wrap items-center gap-x-1 overflow-hidden text-2xs text-ink-3">
               {auth ? (
                 <span
-                  className={`rounded px-1 font-medium ${channelAuthTypeBadgeClass(row.channelAuthType === "oauth" ? "oauth" : "api")}`}
+                  className={`shrink-0 rounded px-1 font-medium ${channelAuthTypeBadgeClass(row.channelAuthType === "oauth" ? "oauth" : "api")}`}
                 >
                   {auth}
                 </span>
               ) : null}
-              <span className="truncate">{provider}</span>
+              {provider ? <span className="min-w-[4ch] flex-1 basis-0 truncate">{provider}</span> : null}
             </span>
           ) : null}
         </span>
@@ -231,66 +233,139 @@ export function RequestLogAgentCell({ row }: { row: RequestLogsRow }) {
 }
 
 /**
- * 输入 / 输出 token：存了正文时数字是按钮，点开看这次请求的输入或输出。
- * 悬停看精确值；输入的拆分（缓存读取、写入、未命中）在提示里。
+ * Token 一列（输入 → 输出 + 缓存命中），计划 104 第二阶段验收：原来输入、缓存命中、输出各占一列，
+ * 1470 宽的笔记本上请求日志默认列放不下。合成一列后：
+ * - 主行「输入 → 输出」，写短（86.1K → 3,314）；存了正文时两个数字都是按钮，点开看这次的输入或输出；
+ * - 副行是缓存命中率（缓存读取 ÷ 整个提示，同后端 cache_hit_rate 的口径）和一条细进度条；
+ * - 悬停看精确值：输入及其拆分（缓存读取、写入、未命中）、输出、总计、命中率。
  */
-export function RequestLogTokenCell({
+export function RequestLogTokensCell({
   row,
-  side,
   onOpen,
 }: {
   row: RequestLogsRow;
-  side: "input" | "output";
   onOpen?: (row: RequestLogsRow, side: "input" | "output") => void;
 }) {
   const { t } = useTranslation();
-  const value = side === "input" ? row.inputTokens : row.outputTokens;
-  if (!Number.isFinite(value) || (side === "output" && value <= 0)) return <Dash />;
+  const input = row.inputTokens;
+  const output = row.outputTokens;
+  if (!Number.isFinite(input) && !Number.isFinite(output)) return <Dash />;
   const use = row.cacheUse;
-  const rows: (readonly [string, string])[] =
-    side !== "input"
-      ? []
-      : use.kind === "known"
-        ? [
-            [t("request_logs.cache_read_tokens"), formatInteger(use.readTokens)],
-            [t("request_logs.col_cache_write"), formatInteger(use.writeTokens)],
-            [
-              t("request_logs.cache_miss"),
-              formatInteger(Math.max(0, value - use.readTokens - use.writeTokens)),
-            ],
-          ]
-        : use.kind === "legacy" && use.cachedTokens > 0
-          ? [[t("request_logs.cache_read_tokens"), formatInteger(use.cachedTokens)]]
-          : [];
-  const title = `${t(side === "input" ? "request_logs.col_input" : "request_logs.col_output")} ${formatInteger(value)} tokens`;
-  const text = <span className="tabular-nums text-ink">{formatCompactNumber(value)}</span>;
+  const prompt = row.promptTokens ?? input;
+  const ratio =
+    use.kind === "known" && prompt > 0 ? Math.max(0, Math.min(1, use.readTokens / prompt)) : null;
+  const canOpen = row.hasContent && Boolean(onOpen);
+  const number = (side: "input" | "output", value: number) => {
+    const text = <span className="tabular-nums">{formatCompactNumber(value)}</span>;
+    if (!canOpen) return text;
+    const label = t(side === "input" ? "request_logs.view_input" : "request_logs.view_output");
+    return (
+      <button
+        type="button"
+        onClick={() => onOpen?.(row, side)}
+        aria-label={`${label} · ${formatInteger(value)}`}
+        className="-mx-1 rounded-md px-1 underline decoration-ink-4 decoration-dotted underline-offset-[3px] transition-colors hover:bg-hover hover:decoration-current"
+      >
+        {text}
+      </button>
+    );
+  };
+  const rows: (readonly [string, string])[] = [[t("request_logs.col_input"), formatInteger(input)]];
+  if (use.kind === "known") {
+    rows.push(
+      [`· ${t("request_logs.cache_read_tokens")}`, formatInteger(use.readTokens)],
+      [`· ${t("request_logs.col_cache_write")}`, formatInteger(use.writeTokens)],
+      [`· ${t("request_logs.cache_miss")}`, formatInteger(Math.max(0, input - use.readTokens - use.writeTokens))],
+    );
+  } else if (use.kind === "legacy" && use.cachedTokens > 0) {
+    rows.push([`· ${t("request_logs.cache_read_tokens")}`, formatInteger(use.cachedTokens)]);
+  }
+  rows.push([t("request_logs.col_output"), formatInteger(output)]);
+  rows.push([t("request_logs.col_total_token"), formatInteger(row.totalTokens)]);
+  if (ratio !== null) rows.push([t("request_logs.cache_hit_rate"), `${(ratio * 100).toFixed(1)}%`]);
+  const unknownHint =
+    use.kind === "unknown"
+      ? use.legacyCachedTokens > 0
+        ? t("request_logs.cache_unknown_legacy", { cached: formatInteger(use.legacyCachedTokens) })
+        : t("request_logs.cache_unknown")
+      : undefined;
+  const footnote = [
+    ratio !== null ? t("request_logs.cache_hit_formula") : (unknownHint ?? null),
+    canOpen ? t("request_logs.tokens_open_hint") : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
   return (
     <GridCellTooltip
       content={
         <GridTooltipRows
-          title={title}
+          title={`${t("request_logs.col_tokens")} ${formatInteger(row.totalTokens)}`}
           rows={rows}
-          footnote={
-            row.hasContent && onOpen
-              ? t(side === "input" ? "request_logs.view_input" : "request_logs.view_output")
-              : undefined
-          }
+          footnote={footnote || undefined}
         />
       }
     >
-      {row.hasContent && onOpen ? (
-        <button
-          type="button"
-          onClick={() => onOpen(row, side)}
-          aria-label={`${t(side === "input" ? "request_logs.view_input" : "request_logs.view_output")} · ${formatInteger(value)}`}
-          className="-mx-1.5 rounded-md px-1.5 py-0.5 underline decoration-ink-4 decoration-dotted underline-offset-[3px] transition-colors hover:bg-hover hover:decoration-current"
-        >
-          {text}
-        </button>
-      ) : (
-        text
-      )}
+      <span className="flex min-w-0 flex-col items-end gap-1">
+        <span className="flex items-baseline gap-1 whitespace-nowrap text-ink">
+          {number("input", input)}
+          <span className="text-2xs text-ink-4" aria-hidden="true">
+            →
+          </span>
+          {output > 0 ? number("output", output) : <span className="text-ink-4">{DASH}</span>}
+        </span>
+        <CacheMeter
+          ratio={ratio}
+          legacyCached={use.kind === "legacy" ? use.cachedTokens : 0}
+          unknownHint={unknownHint}
+        />
+      </span>
     </GridCellTooltip>
+  );
+}
+
+/**
+ * 副行：「缓存」+ 细进度条 + 命中率。上游没报缓存用量写「—」（不写 0%，读屏读到原因）；
+ * 旧后端只有一个 cached_tokens（读取，或没读时是写入），那不是命中率，写 token 数。
+ */
+function CacheMeter({
+  ratio,
+  legacyCached,
+  unknownHint,
+}: {
+  ratio: number | null;
+  legacyCached: number;
+  unknownHint?: string;
+}) {
+  const { t } = useTranslation();
+  const label = <span className="text-ink-4">{t("request_logs.cache_short")}</span>;
+  if (ratio === null) {
+    return (
+      <span className="flex items-center gap-1.5 text-2xs leading-none">
+        {label}
+        {legacyCached > 0 ? (
+          <span className="tabular-nums text-ink-3">{formatCompactNumber(legacyCached)}</span>
+        ) : (
+          <span className="text-ink-4" aria-label={unknownHint}>
+            {DASH}
+          </span>
+        )}
+      </span>
+    );
+  }
+  const tone =
+    ratio >= 0.8
+      ? "bg-ink/40 bar-semantic:bg-emerald-500"
+      : ratio >= 0.4
+        ? "bg-ink/30 bar-semantic:bg-amber-500"
+        : "bg-ink/20 bar-semantic:bg-rose-400";
+  return (
+    <span className="flex items-center gap-1.5 text-2xs leading-none">
+      {label}
+      <span className="h-1 w-9 overflow-hidden rounded-full bg-ink/[0.07] dark:bg-white/[0.08]" aria-hidden="true">
+        <span className={`block h-full rounded-full ${tone}`} style={{ width: `${Math.max(2, ratio * 100)}%` }} />
+      </span>
+      <span className="w-[5ch] text-right tabular-nums text-ink-2">{Math.round(ratio * 100)}%</span>
+    </span>
   );
 }
 
@@ -449,81 +524,6 @@ export function RequestLogStatusCell({
       ) : (
         <span className={className}>{pill}</span>
       )}
-    </GridCellTooltip>
-  );
-}
-
-/**
- * 缓存列：命中率 = 缓存读取 ÷ 整个提示（同后端 cache_hit_rate 的口径），带一条细进度条；
- * 读取、写入、提示大小在悬停提示里。上游没报缓存用量的请求写「—」，不写 0%。
- * 旧后端的行只有一个 cached_tokens（读取，或没读时是写入），那不是命中率，直接写 token 数。
- */
-export function RequestLogCacheCell({ row }: { row: RequestLogsRow }) {
-  const { t } = useTranslation();
-  const use = row.cacheUse;
-  if (use.kind === "unknown") {
-    const hint =
-      use.legacyCachedTokens > 0
-        ? t("request_logs.cache_unknown_legacy", { cached: formatInteger(use.legacyCachedTokens) })
-        : t("request_logs.cache_unknown");
-    return (
-      <GridCellTooltip content={<span className="block max-w-[16rem] text-xs">{hint}</span>}>
-        <span className="text-ink-4" aria-label={hint}>
-          {DASH}
-        </span>
-      </GridCellTooltip>
-    );
-  }
-  if (use.kind === "legacy") {
-    if (!(use.cachedTokens > 0)) return <Dash />;
-    return (
-      <GridCellTooltip
-        content={
-          <span className="block max-w-[16rem] text-xs">
-            {t("request_logs.cache_unknown_legacy", { cached: formatInteger(use.cachedTokens) })}
-          </span>
-        }
-      >
-        <span className="tabular-nums text-ink">{formatCompactNumber(use.cachedTokens)}</span>
-      </GridCellTooltip>
-    );
-  }
-  const prompt = row.promptTokens ?? row.inputTokens;
-  if (!(prompt > 0)) return <Dash />;
-  const ratio = Math.max(0, Math.min(1, use.readTokens / prompt));
-  const tone =
-    ratio >= 0.8
-      ? "bg-ink/40 bar-semantic:bg-emerald-500"
-      : ratio >= 0.4
-        ? "bg-ink/30 bar-semantic:bg-amber-500"
-        : "bg-ink/20 bar-semantic:bg-rose-400";
-  const percent = `${Math.round(ratio * 100)}%`;
-  return (
-    <GridCellTooltip
-      content={
-        <GridTooltipRows
-          title={`${t("request_logs.cache_hit_rate")} ${(ratio * 100).toFixed(1)}%`}
-          rows={[
-            [t("request_logs.cache_read_tokens"), formatInteger(use.readTokens)],
-            [t("request_logs.col_cache_write"), formatInteger(use.writeTokens)],
-            [t("request_logs.prompt_tokens"), formatInteger(prompt)],
-          ]}
-          footnote={t("request_logs.cache_hit_formula")}
-        />
-      }
-    >
-      <span className="flex min-w-0 flex-col items-end gap-1">
-        <span className="tabular-nums text-ink">{percent}</span>
-        <span
-          className="h-1 w-12 overflow-hidden rounded-full bg-ink/[0.07] dark:bg-white/[0.08]"
-          aria-hidden="true"
-        >
-          <span
-            className={`block h-full rounded-full ${tone}`}
-            style={{ width: `${Math.max(2, ratio * 100)}%` }}
-          />
-        </span>
-      </span>
     </GridCellTooltip>
   );
 }

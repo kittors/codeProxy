@@ -12,7 +12,6 @@ import { AlertTriangle, Copy, FileInput, FileOutput, MoreHorizontal } from "luci
 import type { TFunction } from "i18next";
 import {
   RequestLogAgentCell,
-  RequestLogCacheCell,
   RequestLogChannelCell,
   RequestLogCostCell,
   RequestLogIdentityCell,
@@ -20,7 +19,7 @@ import {
   RequestLogStatusCell,
   RequestLogThroughputCell,
   RequestLogTimeCell,
-  RequestLogTokenCell,
+  RequestLogTokensCell,
 } from "./RequestLogGridCells";
 import { RequestLogModelCell } from "./RequestLogModelCell";
 import type { RequestLogsRow } from "./requestLogsRow";
@@ -118,6 +117,12 @@ function RowActions({
 /**
  * 请求日志的列。服务端分页、按时间倒序，所以这些列都不开表头排序（只排当前页会误导）；
  * 筛选由页面把芯片与表头筛选换成查询参数，表格本身不在本地筛。
+ *
+ * 默认宽度按「1440 宽的窗口、侧栏展开时默认列一屏放下」定（11-18 验收）：设计像素合计 1312（含展开列 28），
+ * 1470 宽正好放下；表格打开 fitColumns，更窄时用户 / Key、模型、渠道、Agent 四列按余量往 minWidth 收：1440、1366 都不横向滚动，
+ * 1280 才开始滚（滚动时冻结列边缘有阴影和渐隐）。
+ * 模型列给得最宽、下限最高：线上模型名后面常跟思考档位徽章（xhigh），压得太窄只剩「gpt-6.1-…」。
+ * 截断处都有悬停全文。加列或加宽前先算一遍这笔账，并跑 e2e/request-logs-fit.spec.ts。
  */
 export function buildRequestLogGridColumns(
   t: TFunction,
@@ -140,8 +145,8 @@ export function buildRequestLogGridColumns(
       id: "identity",
       header:
         opts.identity === "key" ? t("request_logs.col_key_name") : t("request_logs.col_user_key"),
-      width: 168,
-      minWidth: 132,
+      width: 140,
+      minWidth: 104,
       grow: 1,
       filter: options(opts.facets?.identity),
       skeleton: "two-line",
@@ -151,7 +156,7 @@ export function buildRequestLogGridColumns(
   columns.push({
     id: "model",
     header: t("request_logs.col_model"),
-    width: 208,
+    width: 200,
     minWidth: 168,
     grow: 2,
     filter: options(opts.facets?.model),
@@ -162,8 +167,8 @@ export function buildRequestLogGridColumns(
     columns.push({
       id: "channel",
       header: t("request_logs.col_channel"),
-      width: 176,
-      minWidth: 140,
+      width: 136,
+      minWidth: 104,
       grow: 1,
       filter: options(opts.facets?.channel),
       skeleton: "two-line",
@@ -175,8 +180,9 @@ export function buildRequestLogGridColumns(
       id: "agent",
       header: t("request_logs.col_agent"),
       headerHint: t("request_logs.agent_hint"),
-      width: 148,
+      width: 156,
       minWidth: 120,
+      grow: 0.5,
       filter: opts.clients === "supported" ? options(opts.facets?.agent) : undefined,
       skeleton: "two-line",
       cell: (row) =>
@@ -185,30 +191,16 @@ export function buildRequestLogGridColumns(
   }
   columns.push(
     {
-      id: "input",
-      header: t("request_logs.col_input"),
-      headerHint: t("request_logs.input_hint"),
+      // 输入 → 输出 + 缓存命中合成一列（见 RequestLogTokensCell）：原来三列一共 260，放进 1440 宽就得合并。
+      // 128 正好放下「142K → 4,854」和「缓存 ▬ 100%」；省下的给 Agent，常见客户端名（Claude Code）在 1440 宽不被截断。
+      id: "tokens",
+      header: t("request_logs.col_tokens"),
+      headerHint: t("request_logs.tokens_hint"),
       align: "end",
-      width: 84,
-      minWidth: 72,
-      cell: (row) => <RequestLogTokenCell row={row} side="input" onOpen={opts.onOpenContent} />,
-    },
-    {
-      id: "cache",
-      header: t("request_logs.col_cache_hit"),
-      headerHint: t("request_logs.cache_hint"),
-      align: "end",
-      width: 96,
-      minWidth: 84,
-      cell: (row) => <RequestLogCacheCell row={row} />,
-    },
-    {
-      id: "output",
-      header: t("request_logs.col_output"),
-      align: "end",
-      width: 80,
-      minWidth: 64,
-      cell: (row) => <RequestLogTokenCell row={row} side="output" onOpen={opts.onOpenContent} />,
+      width: 128,
+      minWidth: 120,
+      skeleton: "two-line",
+      cell: (row) => <RequestLogTokensCell row={row} onOpen={opts.onOpenContent} />,
     },
     {
       id: "total",
@@ -228,8 +220,8 @@ export function buildRequestLogGridColumns(
       header: t("request_logs.col_duration"),
       headerHint: t("request_logs.latency_hint"),
       align: "end",
-      width: 96,
-      minWidth: 80,
+      width: 88,
+      minWidth: 76,
       skeleton: "two-line",
       cell: (row) => <RequestLogLatencyCell row={row} />,
     },
@@ -238,7 +230,7 @@ export function buildRequestLogGridColumns(
       header: t("request_logs.col_throughput"),
       headerHint: t("request_logs.throughput_hint"),
       align: "end",
-      width: 96,
+      width: 92,
       minWidth: 80,
       cell: (row) => <RequestLogThroughputCell row={row} />,
     },

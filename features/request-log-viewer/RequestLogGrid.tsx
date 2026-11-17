@@ -17,6 +17,18 @@ import type { RequestLogsRow } from "./requestLogsRow";
 export const REQUEST_LOG_PAGE_SIZES = [20, 50, 100] as const;
 
 /**
+ * 请求日志三处表格的偏好 id（列宽、列顺序、显隐、密度都按它存）。
+ * 带「.v2」：11-18 把输入 / 缓存 / 输出合成 Token 一列、整体收窄了默认列宽。旧 DataTable 存下的列宽是旧列、
+ * 旧根字号下的实际像素，迁移（按 id 找旧键）搬过来只会把新默认布局撑宽、留下错位的宽度；换个 id，旧键
+ * 就不再迁移，三处都从新默认开始。以后列模型再大改，就递增这个版本。
+ */
+export const REQUEST_LOG_GRID_IDS = {
+  page: "request-logs.v2",
+  lookup: "apikey-lookup-request-logs.v2",
+  keyUsage: "api-key-usage-logs.v2",
+} as const;
+
+/**
  * 请求日志表格（管理端整页、Key 用量弹窗、公开查询共用）：DataGrid + 行展开详情 + 分页。
  *
  * 三种空状态都铺满表体、和有数据时同高：完全没有数据 / 当前筛选下没有结果（列出生效的条件，
@@ -136,6 +148,7 @@ export function RequestLogGrid({
       id={id}
       label={label}
       fill={fill}
+      fitColumns
       frame={frame}
       maxHeight={maxHeight}
       columns={columns}

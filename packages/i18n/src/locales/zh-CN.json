@@ -3671,6 +3671,10 @@
     "confirm_import_with_removals": "导入并删除 {{count}} 项"
   },
   "request_logs": {
+    "col_tokens": "Token",
+    "tokens_hint": "输入 → 输出；第二行是缓存命中率（缓存读取 ÷ 整个提示）。悬停看精确值，存了正文时点数字查看请求或响应内容。",
+    "tokens_open_hint": "点输入或输出的数字查看内容。",
+    "cache_short": "缓存",
     "request_id": "请求 ID",
     "time_ago": "距现在",
     "time_range": "时间范围",
@@ -3686,7 +3690,6 @@
     "cache_miss": "未命中",
     "prompt_tokens": "提示合计",
     "cache_hit_formula": "命中率 = 缓存读取 ÷ 整个提示",
-    "col_cache_hit": "缓存命中",
     "not_recorded": "未记录",
     "generation_time": "生成",
     "first_token_short": "首字",
@@ -3696,8 +3699,6 @@
     "throughput_basis_total": "非流式或没有首字时间，按总耗时算",
     "throughput_basis_burst": "首字后几乎立刻结束（缓冲后一次性写出），按总耗时算",
     "cost_estimated": "按模型目录价格估算",
-    "input_hint": "发给上游的输入 token，含缓存读取与写入；悬停单元格看拆分，存了正文时点数字看输入",
-    "cache_hint": "缓存读取 ÷ 整个提示。命中越高，同样的上下文越便宜、首字越快；上游没报告缓存用量的请求显示「—」",
     "latency_hint": "第一行是总耗时，第二行是首字时间（非流式请求写「非流式」）；10 秒以上标琥珀、30 秒以上标红",
     "throughput_hint": "输出 token ÷ 生成时间（总耗时减首字；非流式或没有首字时间按总耗时）。悬停单元格看算式",
     "col_actions": "操作",

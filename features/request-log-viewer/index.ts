@@ -8,6 +8,6 @@ export * from "./requestLogClients";
 export * from "./requestLogFilters";
 export * from "./requestLogGridColumns";
 export { RequestLogFilterBar, type RequestLogFacet } from "./RequestLogFilterBar";
-export { RequestLogGrid, REQUEST_LOG_PAGE_SIZES } from "./RequestLogGrid";
+export { RequestLogGrid, REQUEST_LOG_GRID_IDS, REQUEST_LOG_PAGE_SIZES } from "./RequestLogGrid";
 export { RequestLogSummary, type RequestLogSummaryStats } from "./RequestLogSummary";
 export { RequestLogDetailPanel } from "./RequestLogDetailPanel";

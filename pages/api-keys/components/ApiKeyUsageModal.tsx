@@ -10,6 +10,7 @@ import {
   type SearchableSelectOption,
 } from "@code-proxy/ui";
 import {
+  REQUEST_LOG_GRID_IDS,
   RequestLogGrid,
   RequestLogsTimeRangeSelector,
   RequestLogUsageMetricValue,
@@ -87,7 +88,7 @@ export function ApiKeyUsageModal({
     () => usageLogColumns.filter((column) => column.defaultHidden).map((column) => column.id),
     [usageLogColumns],
   );
-  const prefs = useGridPreferences("api-key-usage-logs", { hidden: defaultHidden });
+  const prefs = useGridPreferences(REQUEST_LOG_GRID_IDS.keyUsage, { hidden: defaultHidden });
   // 弹窗自己的四个筛选不在列上：「无匹配」空状态把它们写成条件，「清除筛选」一并重置。
   const optionText = (options: SearchableSelectOption[], value: string) => {
     const option = options.find((item) => item.value === value);
@@ -248,7 +249,7 @@ export function ApiKeyUsageModal({
             弹窗本身就是面板，表格不再套一层卡片外框。 */}
         <div className="flex min-h-0 flex-1 flex-col pt-1">
           <RequestLogGrid
-            id="api-key-usage-logs"
+            id={REQUEST_LOG_GRID_IDS.keyUsage}
             label={t("api_keys_page.usage_table_caption")}
             frame={false}
             columns={usageLogColumns}

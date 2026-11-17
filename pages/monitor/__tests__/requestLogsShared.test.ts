@@ -155,9 +155,7 @@ describe("requestLogsShared", () => {
       "identity",
       "model",
       "channel",
-      "input",
-      "cache",
-      "output",
+      "tokens",
       "total",
       "latency",
       "throughput",
@@ -169,7 +167,7 @@ describe("requestLogsShared", () => {
     expect(columns.find((column) => column.id === "status")?.pin).toBe("end");
     // 服务端分页、按时间倒序：只排当前页会误导，所以没有一列开表头排序。
     expect(columns.some((column) => column.sortable)).toBe(false);
-    // 总 Token 默认收起（输入、输出两列已经在），可在视图菜单里打开。
+    // 总 Token 默认收起（Token 列的悬停提示里有总计），可在视图菜单里打开。
     expect(columns.find((column) => column.id === "total")?.defaultHidden).toBe(true);
     expect(columns.every((column) => column.id === "actions" || column.header.length > 0)).toBe(true);
   });
@@ -296,22 +294,27 @@ describe("requestLogsShared", () => {
       cache_write_tokens: null,
     });
     const older = toRequestLogsRow({ ...base, cached_tokens: 7000 });
-    const cache = gridColumns().find((column) => column.id === "cache");
-    if (!cache) throw new Error("missing cache column");
+    // 输入、缓存命中、输出合成了 Token 一列：主行「输入 → 输出」，副行是缓存命中率。
+    const tokens = gridColumns().find((column) => column.id === "tokens");
+    if (!tokens) throw new Error("missing tokens column");
     const cell = (row: typeof read) =>
       render(
-        createElement("div", null, cache.cell(row, { rowIndex: 0, selected: false, expanded: false })),
+        createElement("div", null, tokens.cell(row, { rowIndex: 0, selected: false, expanded: false })),
       ).container;
-    expect(cell(read)).toHaveTextContent(/^75%$/);
-    expect(cell(writeOnly)).toHaveTextContent(/^0%$/);
-    expect(cell(unknown)).toHaveTextContent(/^—$/);
+    const readCell = cell(read);
+    expect(readCell).toHaveTextContent(/80K\s*→\s*5/);
+    expect(readCell).toHaveTextContent(/Cache\s*75%/);
+    expect(cell(writeOnly)).toHaveTextContent(/Cache\s*0%/);
+    const unknownCell = cell(unknown);
+    expect(unknownCell).toHaveTextContent(/Cache\s*—/);
+    expect(unknownCell).not.toHaveTextContent("%");
     expect(
       screen.getByLabelText(
         "Older record: 7,000 cached tokens, reads and writes not recorded apart",
       ),
     ).toBeInTheDocument();
     // An older backend has one cached figure, which is not a hit rate: the count is shown.
-    expect(cell(older)).toHaveTextContent("7,000");
+    expect(cell(older)).toHaveTextContent(/Cache\s*7,000/);
   });
 
   test("can omit the channel column for public api key lookup logs", () => {

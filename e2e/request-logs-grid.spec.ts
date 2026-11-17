@@ -10,7 +10,8 @@ import { expect, test, type Page } from "@playwright/test";
  * 管理端接口全部用 page.route 假数据，契约同 kittors/CliRelay#1311（已上线 dev-6322d74）。
  */
 
-const PREFS_KEY = "cp-grid:request-logs:v1";
+// 请求日志的偏好 id 带版本（REQUEST_LOG_GRID_IDS），旧表格的键不再迁移。
+const PREFS_KEY = "cp-grid:request-logs.v2:v1";
 
 type Row = Record<string, unknown>;
 
@@ -156,8 +157,11 @@ test.describe("request logs grid", () => {
     await page.mouse.move(x - 600, y, { steps: 12 });
     await page.mouse.up();
     const narrowed = await headerBox(page, "model");
-    // 模型列最小 168 设计像素，按 0.9 的根字号缩放。
-    expect(narrowed?.width).toBeCloseTo(168 * 0.9, 0);
+    // 模型列最小 168 设计像素：存下的就是下限。表格这时放得下、有剩余宽度，模型列是 grow 列会再分到一点，
+    // 所以显示宽度不小于下限（0.9 的根字号）即可。
+    expect(await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? "{}").widths?.model, PREFS_KEY)).toBe(168);
+    expect(narrowed?.width ?? 0).toBeGreaterThanOrEqual(168 * 0.9 - 0.5);
+    expect(narrowed?.width ?? 0).toBeLessThan(before.width);
 
     await handle.dblclick();
     await expect.poll(async () => (await headerBox(page, "model"))?.width ?? 0).toBeGreaterThan(narrowed?.width ?? 0);
@@ -167,7 +171,7 @@ test.describe("request logs grid", () => {
     await openRequestLogs(page);
     const initial = await headerOrder(page);
     expect(initial[0]).toBe("time");
-    const input = await headerBox(page, "input");
+    const input = await headerBox(page, "tokens");
     const model = await headerBox(page, "model");
     if (!input || !model) throw new Error("missing headers");
 
@@ -179,16 +183,16 @@ test.describe("request logs grid", () => {
     await page.mouse.up();
     expect(await headerOrder(page)).toEqual(initial);
 
-    // 真拖过去：输入列落到模型列前面，时间列仍在最前
+    // 真拖过去：Token 列落到模型列前面，时间列仍在最前
     await page.mouse.move(input.x + input.width / 2, input.y + input.height / 2);
     await page.mouse.down();
     await page.mouse.move(model.x + 10, model.y + model.height / 2, { steps: 10 });
     await page.mouse.up();
     const after = await headerOrder(page);
     expect(after[0]).toBe("time");
-    expect(after.indexOf("input")).toBeLessThan(after.indexOf("model"));
+    expect(after.indexOf("tokens")).toBeLessThan(after.indexOf("model"));
     const stored = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? "{}").order, PREFS_KEY);
-    expect(stored.indexOf("input")).toBeLessThan(stored.indexOf("model"));
+    expect(stored.indexOf("tokens")).toBeLessThan(stored.indexOf("model"));
   });
 
   test("Agent 列：显示名与版本，悬停看原始 User-Agent，没有客户端名写「未知」", async ({ page }) => {

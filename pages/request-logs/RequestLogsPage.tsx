@@ -20,6 +20,7 @@ import {
 } from "@code-proxy/ui";
 import { ErrorDetailModal, LogContentModal } from "@features/log-content-viewer";
 import {
+  REQUEST_LOG_GRID_IDS,
   DEFAULT_REQUEST_LOG_PAGE_SIZE,
   EMPTY_REQUEST_LOG_KEY_FACET,
   RequestLogFilterBar,
@@ -190,7 +191,7 @@ export function RequestLogsPage() {
     () => columns.filter((column) => column.defaultHidden).map((column) => column.id),
     [columns],
   );
-  const prefs = useGridPreferences("request-logs", { hidden: defaultHidden });
+  const prefs = useGridPreferences(REQUEST_LOG_GRID_IDS.page, { hidden: defaultHidden });
 
   const facets = useMemo<RequestLogFacet[]>(
     () => [
@@ -417,7 +418,7 @@ export function RequestLogsPage() {
       */}
       <div className="flex min-h-0 flex-1 flex-col">
         <RequestLogGrid
-          id="request-logs"
+          id={REQUEST_LOG_GRID_IDS.page}
           label={t("request_logs.table_caption")}
           columns={columns}
           rows={rows}
