@@ -48,16 +48,33 @@ export type RequestLogsRow = {
   cacheUse: RequestCacheUse;
   outputTokens: number;
   totalTokens: number;
+  /** 整个提示的大小（含缓存读取），缓存命中率的分母；后端没给时为 null，用 inputTokens 代替。 */
+  promptTokens: number | null;
   cost: number;
   hasContent: boolean;
+  /**
+   * 调用方（Agent 列）：归一化的客户端 ID（"claude-code"、认不得时是 UA 的第一个产品名），
+   * 版本与原始 User-Agent。旧数据、没带 UA 的请求和旧后端都是空串；后端是否支持看
+   * itemsCarryClientFields（行上有没有这几个键），不看值。
+   */
+  clientName: string;
+  clientVersion: string;
+  userAgent: string;
 };
 
-/**
- * Whether the backend behind these rows stores cache reads and writes apart,
- * which is when the table shows them as two columns.
- */
-export const requestLogsHaveCacheBreakdown = (rows: readonly RequestLogsRow[]): boolean =>
-  rows.some((row) => row.cacheUse.kind !== "legacy");
+export const readPromptTokens = (value: unknown): number | null =>
+  typeof value === "number" && Number.isFinite(value) && value > 0 ? value : null;
+
+/** 两种日志条目（管理端 UsageLogItem、公开查询 PublicLogItem）共用的调用方字段读取。 */
+export const readRequestLogClient = (item: {
+  client_name?: string;
+  client_version?: string;
+  user_agent?: string;
+}): Pick<RequestLogsRow, "clientName" | "clientVersion" | "userAgent"> => ({
+  clientName: String(item.client_name ?? "").trim(),
+  clientVersion: String(item.client_version ?? "").trim(),
+  userAgent: String(item.user_agent ?? "").trim(),
+});
 
 const KEY_MASK_FILLER = "***";
 
@@ -135,8 +152,10 @@ export const toRequestLogsRow = (item: UsageLogItem): RequestLogsRow => {
     cacheUse: readRequestCacheUse(item),
     outputTokens: item.output_tokens,
     totalTokens: item.total_tokens,
+    promptTokens: readPromptTokens(item.prompt_tokens),
     cost: item.cost ?? 0,
     hasContent: item.has_content ?? false,
+    ...readRequestLogClient(item),
   };
 };
 const KNOWN_SYSTEM_INTERNAL_KEYS = new Set([

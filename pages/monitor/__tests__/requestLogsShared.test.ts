@@ -2,30 +2,25 @@ import { createElement } from "react";
 import i18n from "@code-proxy/i18n";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, test } from "vitest";
+import type { TFunction } from "i18next";
 import {
-  buildRequestLogsColumns,
+  buildRequestLogGridColumns,
   buildRequestLogKeyOptions,
   ChannelIdentityLabel,
   computeOutputTokensPerSecond,
   formatTokensPerSecond,
   isSystemRequestLogKey,
-  requestLogsHaveCacheBreakdown,
   sortRequestLogKeyOptionsByCount,
   SYSTEM_REQUEST_LOG_FILTER_VALUE,
-  toFilterParam,
   toRequestLogsRow,
+  type RequestLogGridOptions,
 } from "@features/request-log-viewer";
 
-describe("requestLogsShared", () => {
-  test("builds request filters from the committed selection", () => {
-    expect(toFilterParam(null)).toEqual({ values: undefined, matchesNone: false });
-    expect(toFilterParam([])).toEqual({ values: undefined, matchesNone: true });
-    expect(toFilterParam(["auth-codex"])).toEqual({
-      values: ["auth-codex"],
-      matchesNone: false,
-    });
-  });
+const keyT = ((key: string) => key) as unknown as TFunction;
+const gridColumns = (options: Partial<RequestLogGridOptions> = {}) =>
+  buildRequestLogGridColumns(keyT, { identity: "user", clients: "unsupported", now: 0, ...options });
 
+describe("requestLogsShared", () => {
   test("exposes the full channel name on the truncated identity label", () => {
     const name = "ryskt8qjfg@privaterelay.appleid.com";
 
@@ -152,21 +147,78 @@ describe("requestLogsShared", () => {
     ]);
   });
 
-  test("keeps high-signal request metrics before bulky identifier columns", () => {
-    const columns = buildRequestLogsColumns((key) => key);
-    const keys = columns.map((column) => column.key);
+  test("puts time first and status last, with the metrics in between and no client sort", () => {
+    const columns = gridColumns({ onOpenError: () => undefined });
+    const ids = columns.map((column) => column.id);
+    expect(ids).toEqual([
+      "time",
+      "identity",
+      "model",
+      "channel",
+      "input",
+      "cache",
+      "output",
+      "total",
+      "latency",
+      "throughput",
+      "cost",
+      "status",
+      "actions",
+    ]);
+    expect(columns.find((column) => column.id === "time")?.pin).toBe("start");
+    expect(columns.find((column) => column.id === "status")?.pin).toBe("end");
+    // 服务端分页、按时间倒序：只排当前页会误导，所以没有一列开表头排序。
+    expect(columns.some((column) => column.sortable)).toBe(false);
+    // 总 Token 默认收起（输入、输出两列已经在），可在视图菜单里打开。
+    expect(columns.find((column) => column.id === "total")?.defaultHidden).toBe(true);
+    expect(columns.every((column) => column.id === "actions" || column.header.length > 0)).toBe(true);
+  });
 
-    expect(keys).not.toContain("mode");
-    expect(columns.find((column) => column.key === "latency")?.label).toBe(
-      "request_logs.col_response_metrics",
+  test("places the Agent column after the channel, as a placeholder until support is known", async () => {
+    await i18n.changeLanguage("en");
+    const row = toRequestLogsRow({
+      id: 3,
+      timestamp: "2026-11-18T08:00:00Z",
+      api_key: "sk-agent-123456",
+      api_key_name: "Ops",
+      model: "claude-opus-5-5",
+      source: "claude",
+      channel_name: "Claude",
+      auth_index: "auth-3",
+      failed: false,
+      latency_ms: 100,
+      first_token_ms: 20,
+      input_tokens: 1,
+      output_tokens: 1,
+      reasoning_tokens: 0,
+      cached_tokens: 0,
+      total_tokens: 2,
+      cost: 0,
+      has_content: false,
+      client_name: "claude-code",
+      client_version: "2.1.3",
+      user_agent: "claude-cli/2.1.3 (external, cli)",
+    });
+    expect(row).toMatchObject({ clientName: "claude-code", clientVersion: "2.1.3" });
+    for (const clients of ["pending", "supported"] as const) {
+      const ids = gridColumns({ clients }).map((column) => column.id);
+      expect(ids.indexOf("agent")).toBe(ids.indexOf("channel") + 1);
+    }
+    expect(gridColumns({ clients: "unsupported" }).map((column) => column.id)).not.toContain(
+      "agent",
     );
-    expect(columns.find((column) => column.key === "latency")?.minWidthPx).toBe(240);
-    expect(keys.indexOf("latency")).toBeLessThan(keys.indexOf("apiKeyName"));
-    expect(keys.indexOf("inputTokens")).toBeLessThan(keys.indexOf("apiKeyName"));
-    expect(keys.indexOf("cachedTokens")).toBeLessThan(keys.indexOf("model"));
-    expect(keys.indexOf("cost")).toBeLessThan(keys.indexOf("model"));
-    expect(columns.find((column) => column.key === "apiKeyName")?.width).toBe("w-40");
-    expect(columns.find((column) => column.key === "model")?.width).toBe("w-44");
+    const agent = gridColumns({ clients: "supported" }).find((column) => column.id === "agent");
+    if (!agent) throw new Error("missing agent column");
+    render(createElement("div", null, agent.cell(row, { rowIndex: 0, selected: false, expanded: false })));
+    expect(screen.getByText("Claude Code")).toBeInTheDocument();
+    expect(screen.getByText("2.1.3")).toBeInTheDocument();
+    // 没有客户端名（旧数据、请求没带 UA）写「未知」；认不得的客户端原样显示它的 ID。
+    const plain = { ...row, clientName: "", clientVersion: "", userAgent: "" };
+    render(createElement("div", null, agent.cell(plain, { rowIndex: 0, selected: false, expanded: false })));
+    expect(screen.getByText("Unknown")).toBeInTheDocument();
+    const custom = { ...row, clientName: "okhttp", clientVersion: "", userAgent: "okhttp/4.12.0" };
+    render(createElement("div", null, agent.cell(custom, { rowIndex: 0, selected: false, expanded: false })));
+    expect(screen.getByText("okhttp")).toBeInTheDocument();
   });
 
   test("builds a key-primary identity column for account usage and portal logs", () => {
@@ -193,18 +245,16 @@ describe("requestLogsShared", () => {
       cost: 0,
       has_content: false,
     });
-    const column = buildRequestLogsColumns((key) => key, undefined, undefined, {
-      identityColumn: "key",
-    }).find((item) => item.key === "apiKeyName");
+    const column = gridColumns({ identity: "key" }).find((item) => item.id === "identity");
 
-    expect(column?.label).toBe("request_logs.col_key_name");
-    if (!column) throw new Error("missing apiKeyName column");
-    render(createElement("div", null, column.render(row, 0)));
+    expect(column?.header).toBe("request_logs.col_key_name");
+    if (!column) throw new Error("missing identity column");
+    render(createElement("div", null, column.cell(row, { rowIndex: 0, selected: false, expanded: false })));
     expect(screen.getByText("Laptop")).toBeInTheDocument();
     expect(screen.queryByText("Alice")).not.toBeInTheDocument();
   });
 
-  test("shows cache reads and writes apart once the backend stores them apart", async () => {
+  test("shows the cache hit rate, and never a 0% for a request whose cache use is unknown", async () => {
     await i18n.changeLanguage("en");
     const base = {
       id: 1,
@@ -218,14 +268,21 @@ describe("requestLogsShared", () => {
       failed: false,
       latency_ms: 100,
       first_token_ms: 20,
-      input_tokens: 21,
+      input_tokens: 80000,
       output_tokens: 5,
       reasoning_tokens: 0,
-      total_tokens: 26,
+      total_tokens: 80005,
       cost: 0,
       has_content: false,
     };
-    // A turn that only wrote the cache: the legacy figure holds the write.
+    const read = toRequestLogsRow({
+      ...base,
+      cached_tokens: 60000,
+      cache_read_tokens: 60000,
+      cache_write_tokens: 0,
+      prompt_tokens: 80000,
+    });
+    // A turn that only wrote the cache: nothing was read, so the hit rate is 0%.
     const writeOnly = toRequestLogsRow({
       ...base,
       cached_tokens: 50000,
@@ -239,50 +296,30 @@ describe("requestLogsShared", () => {
       cache_write_tokens: null,
     });
     const older = toRequestLogsRow({ ...base, cached_tokens: 7000 });
-
-    expect(requestLogsHaveCacheBreakdown([older])).toBe(false);
-    expect(requestLogsHaveCacheBreakdown([older, unknown])).toBe(true);
-
-    const legacyKeys = buildRequestLogsColumns((key) => key).map((column) => column.key);
-    expect(legacyKeys).not.toContain("cacheWriteTokens");
-
-    const columns = buildRequestLogsColumns((key) => key, undefined, undefined, {
-      cacheBreakdown: true,
-    });
-    const keys = columns.map((column) => column.key);
-    expect(keys.indexOf("cacheWriteTokens")).toBe(keys.indexOf("cachedTokens") + 1);
-    const read = columns.find((column) => column.key === "cachedTokens");
-    const write = columns.find((column) => column.key === "cacheWriteTokens");
-    if (!read || !write) throw new Error("missing cache columns");
-    expect(write.label).toBe("request_logs.col_cache_write");
-
-    const cell = (column: typeof read, row: typeof writeOnly) =>
-      render(createElement("div", null, column.render(row, 0))).container;
-    expect(cell(read, writeOnly)).toHaveTextContent(/^0$/);
-    expect(cell(write, writeOnly)).toHaveTextContent("50,000");
-    // Unknown is "—", never 0, and an old row's single figure is only a hint.
-    expect(cell(read, unknown)).toHaveTextContent(/^—$/);
+    const cache = gridColumns().find((column) => column.id === "cache");
+    if (!cache) throw new Error("missing cache column");
+    const cell = (row: typeof read) =>
+      render(
+        createElement("div", null, cache.cell(row, { rowIndex: 0, selected: false, expanded: false })),
+      ).container;
+    expect(cell(read)).toHaveTextContent(/^75%$/);
+    expect(cell(writeOnly)).toHaveTextContent(/^0%$/);
+    expect(cell(unknown)).toHaveTextContent(/^—$/);
     expect(
       screen.getByLabelText(
         "Older record: 7,000 cached tokens, reads and writes not recorded apart",
       ),
     ).toBeInTheDocument();
-    // An older backend keeps its single column.
-    expect(cell(read, older)).toHaveTextContent("7,000");
+    // An older backend has one cached figure, which is not a hit rate: the count is shown.
+    expect(cell(older)).toHaveTextContent("7,000");
   });
 
   test("can omit the channel column for public api key lookup logs", () => {
-    const keys = buildRequestLogsColumns((key) => key, undefined, undefined, {
-      hideChannel: true,
-    }).map((column) => column.key);
-    expect(keys).not.toContain("channelName");
+    expect(gridColumns({ hideChannel: true }).map((column) => column.id)).not.toContain("channel");
   });
 
   test("can omit the identity column for public api key lookup logs", () => {
-    const keys = buildRequestLogsColumns((key) => key, undefined, undefined, {
-      identityColumn: "none",
-    }).map((column) => column.key);
-    expect(keys).not.toContain("apiKeyName");
+    expect(gridColumns({ identity: "none" }).map((column) => column.id)).not.toContain("identity");
   });
 
   describe("computeOutputTokensPerSecond", () => {

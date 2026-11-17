@@ -24,12 +24,14 @@ const emptyFilters: UsageLogsResponse["filters"] = {
   channel_options: [],
   statuses: [],
   guard_kinds: [],
+  client_names: [],
+  client_name_counts: {},
 };
 
 describe("readRequestLogKeyFacet", () => {
   test("reads the key ids of a backend that declares the id filters", () => {
     const facet = readRequestLogKeyFacet({
-      capabilities: { apiKeyIdFilters: true, loopGuard: false },
+      capabilities: { apiKeyIdFilters: true, loopGuard: false, requestLogClients: false },
       filters: {
         ...emptyFilters,
         api_key_ids: ["key-a", SYSTEM_REQUEST_LOG_FILTER_VALUE],
@@ -48,7 +50,7 @@ describe("readRequestLogKeyFacet", () => {
 
   test("reads the secret-keyed facet of a backend that predates the capability", () => {
     const facet = readRequestLogKeyFacet({
-      capabilities: { apiKeyIdFilters: false, loopGuard: false },
+      capabilities: { apiKeyIdFilters: false, loopGuard: false, requestLogClients: false },
       filters: {
         ...emptyFilters,
         api_keys: ["sk-legacy-secret-0001"],
@@ -72,7 +74,7 @@ describe("readRequestLogKeyFacet", () => {
 
   test("an id facet never falls back to the secret-keyed one", () => {
     const facet = readRequestLogKeyFacet({
-      capabilities: { apiKeyIdFilters: true, loopGuard: false },
+      capabilities: { apiKeyIdFilters: true, loopGuard: false, requestLogClients: false },
       filters: { ...emptyFilters, api_key_ids: [], api_keys: ["sk-legacy-secret-0001"] },
     });
 

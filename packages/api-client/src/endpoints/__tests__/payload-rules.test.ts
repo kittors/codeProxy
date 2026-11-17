@@ -27,6 +27,7 @@ describe("payload rules dry-run", () => {
       poolCapacity: false,
       privacyMasking: false,
       nodeMetrics: false,
+      requestLogClients: false,
     });
     for (const config of [
       { capabilities: { "payload-rules-dry-run": "true" } },
@@ -42,6 +43,7 @@ describe("payload rules dry-run", () => {
         poolCapacity: false,
         privacyMasking: false,
         nodeMetrics: false,
+        requestLogClients: false,
       });
     }
   });
@@ -56,6 +58,7 @@ describe("payload rules dry-run", () => {
       poolCapacity: true,
       privacyMasking: false,
       nodeMetrics: false,
+      requestLogClients: false,
     });
     // Only an explicit true unlocks a page: a truthy string or a camelCase key is not a declaration.
     expect(
@@ -66,6 +69,7 @@ describe("payload rules dry-run", () => {
       poolCapacity: false,
       privacyMasking: false,
       nodeMetrics: false,
+      requestLogClients: false,
     });
   });
 
@@ -73,6 +77,12 @@ describe("payload rules dry-run", () => {
     const { readConfigCapabilities } = await import("../payload-rules");
     expect(readConfigCapabilities({ capabilities: { "node-metrics": true } }).nodeMetrics).toBe(true);
     expect(readConfigCapabilities({ capabilities: { nodeMetrics: true, node_metrics: true, "node-metrics": 1 } }).nodeMetrics).toBe(false);
+  });
+
+  test("reads the request log clients declaration by its kebab-case key", async () => {
+    const { readConfigCapabilities } = await import("../payload-rules");
+    expect(readConfigCapabilities({ capabilities: { "request-log-clients": true } }).requestLogClients).toBe(true);
+    expect(readConfigCapabilities({ capabilities: { requestLogClients: true, "request-log-clients": "true" } }).requestLogClients).toBe(false);
   });
 
   test("reads the privacy masking declaration by its kebab-case key", async () => {

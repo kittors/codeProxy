@@ -8,56 +8,45 @@ import type {
   UsageLogItem,
   UsageLogsResponse,
 } from "@code-proxy/api-client/endpoints/usage";
-import {
-  cacheRatePercent,
-  formatUsageMetricNumber,
-  formatUsageMetricRate,
-  formatUsageMetricTooltipNumber,
-  isUsageMetricCompact,
-  readCacheRate,
-} from "@code-proxy/domain";
+import { cacheRatePercent, readCacheRate } from "@code-proxy/domain";
 import {
   Button,
-  DataTable,
-  HoverTooltip,
   MaskToggleButton,
+  iconHueClass,
+  useGridPreferences,
   useSensitiveDataMasking,
   useToast,
-  iconHueClass,
+  type GridFilters,
 } from "@code-proxy/ui";
+import { useConfigCapabilities } from "@features/backend-capabilities";
 import { ErrorDetailModal, LogContentModal } from "@features/log-content-viewer";
-import { ModelTag } from "@features/model-tags";
-import { ClearDatabaseLogsDialog, DEFAULT_CLEAR_OPTIONS } from "./ClearDatabaseLogsDialog";
-import { RequestLogsFilters } from "./RequestLogsFilters";
-import type { SearchableCheckboxMultiSelectOption } from "@code-proxy/ui";
 import {
-  buildRequestLogKeyOptionsFromFacet,
-  buildRequestLogsColumns,
-  ChannelIdentityLabel,
   DEFAULT_REQUEST_LOG_PAGE_SIZE,
   EMPTY_REQUEST_LOG_KEY_FACET,
+  RequestLogFilterBar,
+  RequestLogGrid,
+  RequestLogSummary,
+  RequestLogsTimeRangeSelector,
+  buildChannelFacetOptions,
+  buildClientFacetOptions,
+  buildKeyFacetOptions,
+  buildModelFacetOptions,
+  buildRequestLogGridColumns,
+  buildStatusFacetOptions,
   guardFilterVisible,
   guardKindsOfFilter,
-  hasActiveFilterSelection,
-  normalizeFilterSelection,
+  itemsCarryClientFields,
   readRequestLogKeyFacet,
-  RequestLogFilterCount,
-  requestLogKeyFilterQuery,
-  RequestLogUsageMetricValue,
-  RequestLogsPaginationBar,
-  RequestLogsTimeRangeSelector,
-  sortRequestLogKeyOptionsByCount,
-  toFilterParam,
-  requestLogsHaveCacheBreakdown,
+  requestLogQueryFromFilters,
   toRequestLogsRow,
-  toStatusFilterValues,
   type GuardFilterValue,
-  type MultiSelectFilterState,
+  type RequestLogClientsSupport,
+  type RequestLogFacet,
   type RequestLogKeyFacet,
-  type StatusFilterValue,
-  type RequestLogsRow as LogRow,
+  type RequestLogsRow,
   type TimeRange,
 } from "@features/request-log-viewer";
+import { ClearDatabaseLogsDialog, DEFAULT_CLEAR_OPTIONS } from "./ClearDatabaseLogsDialog";
 
 const DEFAULT_LOG_STATS: UsageLogsResponse["stats"] = {
   total: 0,
@@ -67,68 +56,47 @@ const DEFAULT_LOG_STATS: UsageLogsResponse["stats"] = {
   cache_rate: 0,
 };
 
-/** 统计还没算出来时的占位，和缓存占比「没有数据」时用的是同一个字符。 */
-const STAT_PENDING = "—";
-
 const isRequestCancelled = (err: unknown, signal?: AbortSignal) =>
   signal?.aborted || (err instanceof Error && err.message === "Request was cancelled");
 
-// Newer backends report a hit rate, null when no request in the selection
-// reported its cache use; older ones a share of cached tokens under its own name.
-function RequestLogsCacheRate({
-  stats,
-  pending,
-}: {
-  stats: UsageLogsResponse["stats"];
-  pending: boolean;
-}) {
-  const { t } = useTranslation();
-  const view = readCacheRate(stats);
-  const rate = pending ? null : cacheRatePercent(view, stats.total > 0);
-  return (
-    <span>
-      {t(view.kind === "hit_rate" ? "request_logs.cache_hit_rate" : "request_logs.cache_rate")}{" "}
-      <span className="font-mono tabular-nums text-ink">
-        {rate === null ? "—" : formatUsageMetricRate(rate)}
-      </span>
-    </span>
-  );
-}
+type FilterOptions = {
+  models: string[];
+  channels: string[];
+  channel_options: UsageChannelFilterOption[];
+  statuses: string[];
+  client_names: string[];
+  client_name_counts: Record<string, number>;
+};
 
-function RequestLogsRecordsCount({ count, pending }: { count: number; pending: boolean }) {
-  const { t } = useTranslation();
-  const compact = !pending && isUsageMetricCompact(count);
+const EMPTY_FILTER_OPTIONS: FilterOptions = {
+  models: [],
+  channels: [],
+  channel_options: [],
+  statuses: ["success", "failed"],
+  client_names: [],
+  client_name_counts: {},
+};
 
-  return (
-    <HoverTooltip
-      content={formatUsageMetricTooltipNumber(count)}
-      disabled={!compact}
-      placement="top"
-      className={compact ? "cursor-help" : undefined}
-    >
-      <span>
-        {t("request_logs.records_count", {
-          count: pending ? STAT_PENDING : formatUsageMetricNumber(count),
-        } as Record<string, string>)}
-      </span>
-    </HoverTooltip>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Main page
-// ---------------------------------------------------------------------------
-
+/**
+ * 请求日志（计划 104）：标题与汇总、独立的筛选区、铺满剩余高度的 DataGrid（表头吸顶、时间与状态
+ * 冻结、行展开看完整详情、分页固定在框底）。服务端分页、按时间倒序；筛选状态只有一份 GridFilters，
+ * 分面按钮、表头筛选、芯片都改它，发请求时换成查询参数。
+ */
 export function RequestLogsPage() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { notify } = useToast();
   const [masked, setMasked] = useSensitiveDataMasking();
+  const configCapabilities = useConfigCapabilities();
 
-  // Content modal state
-  const [contentModalOpen, setContentModalOpen] = useState(false);
-  const [contentModalLogId, setContentModalLogId] = useState<number | null>(null);
-  const [contentModalModel, setContentModalModel] = useState("");
-  const [contentModalTab, setContentModalTab] = useState<"input" | "output">("input");
+  const [content, setContent] = useState<{
+    open: boolean;
+    logId: number | null;
+    model: string;
+    tab: "input" | "output";
+  }>({ open: false, logId: null, model: "", tab: "input" });
+  const [errorModal, setErrorModal] = useState<{ open: boolean; logId: number | null; model: string }>(
+    { open: false, logId: null, model: "" },
+  );
   const [requestBodyStorageEnabled, setRequestBodyStorageEnabled] = useState(false);
 
   useEffect(() => {
@@ -144,64 +112,35 @@ export function RequestLogsPage() {
     };
   }, []);
 
-  const handleContentClick = useCallback(
-    (logId: number, tab: "input" | "output", model: string) => {
-      setContentModalLogId(logId);
-      setContentModalModel(model);
-      setContentModalTab(tab);
-      setContentModalOpen(true);
-    },
-    [],
-  );
-
-  // Error modal state
-  const [errorModalOpen, setErrorModalOpen] = useState(false);
-  const [errorModalLogId, setErrorModalLogId] = useState<number | null>(null);
-  const [errorModalModel, setErrorModalModel] = useState("");
-
-  const handleErrorClick = useCallback((logId: number, model: string) => {
-    setErrorModalLogId(logId);
-    setErrorModalModel(model);
-    setErrorModalOpen(true);
+  const openContent = useCallback((row: RequestLogsRow, tab: "input" | "output") => {
+    setContent({ open: true, logId: Number(row.id), model: row.displayModel || row.model, tab });
+  }, []);
+  const openError = useCallback((row: RequestLogsRow) => {
+    setErrorModal({ open: true, logId: Number(row.id), model: row.displayModel || row.model });
   }, []);
 
-  // Data state (page-based, no accumulation)
   const [rawItems, setRawItems] = useState<UsageLogItem[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  // Pagination state
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadedAt, setLoadedAt] = useState(() => Date.now());
   const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_REQUEST_LOG_PAGE_SIZE);
-
-  // Backend-provided metadata
-  const [filterOptions, setFilterOptions] = useState<{
-    models: string[];
-    channels: string[];
-    channel_options: UsageChannelFilterOption[];
-    statuses: string[];
-  }>({
-    models: [],
-    channels: [],
-    channel_options: [],
-    statuses: ["success", "failed"],
-  });
-  // The key facet, and the vocabulary (key ids or the older secrets) the last
-  // response offered it in. The ref lets a request be built in that vocabulary
-  // without making every response re-create fetchLogs.
+  const [filterOptions, setFilterOptions] = useState<FilterOptions>(EMPTY_FILTER_OPTIONS);
+  // The key facet, and the vocabulary (key ids or the older secrets) the last response offered it
+  // in. The ref lets a request be built in that vocabulary without making every response re-create
+  // fetchLogs.
   const [keyFacet, setKeyFacet] = useState<RequestLogKeyFacet>(EMPTY_REQUEST_LOG_KEY_FACET);
   const keyFacetRef = useRef<RequestLogKeyFacet>(EMPTY_REQUEST_LOG_KEY_FACET);
   const [stats, setStats] = useState<UsageLogsResponse["stats"]>(DEFAULT_LOG_STATS);
+  const [hasResponse, setHasResponse] = useState(false);
+  // Whether the logs endpoint carries the caller fields: null until a response came back.
+  const [clientsFromLogs, setClientsFromLogs] = useState<boolean | null>(null);
 
-  // Multi-value filters
   const [timeRange, setTimeRange] = useState<TimeRange>(7);
-  const [selectedApiKeys, setSelectedApiKeys] = useState<MultiSelectFilterState<string>>(null);
-  const [selectedModels, setSelectedModels] = useState<MultiSelectFilterState<string>>(null);
-  const [selectedChannels, setSelectedChannels] = useState<MultiSelectFilterState<string>>(null);
-  const [selectedStatuses, setSelectedStatuses] =
-    useState<MultiSelectFilterState<StatusFilterValue>>(null);
-  // Loop protection: the choice, and what the last response said about it (whether the
-  // backend has it, which kinds the other filters leave).
+  const [filters, setFilters] = useState<GridFilters>({});
+  // Loop protection: the choice, and what the last response said about it (whether the backend
+  // has it, which kinds the other filters leave).
   const [guardFilter, setGuardFilter] = useState<GuardFilterValue>("all");
   const [guardFacet, setGuardFacet] = useState<{ supported: boolean; kinds: string[] }>({
     supported: false,
@@ -214,169 +153,70 @@ export function RequestLogsPage() {
   const requestSeqRef = useRef(0);
   const requestAbortRef = useRef<AbortController | null>(null);
 
-  // Derive display rows from raw items
-  const rows = useMemo<LogRow[]>(
-    () => (rawItems ?? []).map((item) => toRequestLogsRow(item)),
-    [rawItems],
+  // Agent 列：日志接口自己声明或行上带了字段就是支持；第一页回来前先看 GET /config 的声明。
+  // 两样都还不知道时列先占位（列顺序在首次挂载时定下，晚到的列会被排到最后），确认不支持才去掉。
+  const clients: RequestLogClientsSupport =
+    clientsFromLogs === true
+      ? "supported"
+      : clientsFromLogs === false
+        ? "unsupported"
+        : configCapabilities.status === "ready" && configCapabilities.capabilities.requestLogClients
+          ? "supported"
+          : "pending";
+
+  const rows = useMemo<RequestLogsRow[]>(() => rawItems.map((item) => toRequestLogsRow(item)), [rawItems]);
+
+  const facetOptions = useMemo(
+    () => ({
+      identity: buildKeyFacetOptions(keyFacet, t),
+      model: buildModelFacetOptions(filterOptions.models),
+      channel: buildChannelFacetOptions(
+        filterOptions.channel_options.length > 0
+          ? filterOptions.channel_options
+          : filterOptions.channels.map((value) => ({ value, label: value })),
+      ),
+      agent: buildClientFacetOptions(filterOptions.client_names, filterOptions.client_name_counts, t),
+      status: buildStatusFacetOptions(filterOptions.statuses, t),
+    }),
+    [filterOptions, keyFacet, t],
   );
 
-  // Build columns with content click handler. Cache reads and writes get a
-  // column each once the backend stores them apart.
-  const cacheBreakdown = useMemo(() => requestLogsHaveCacheBreakdown(rows), [rows]);
-  const logColumns = useMemo(
+  const columns = useMemo(
     () =>
-      buildRequestLogsColumns(t, handleContentClick, handleErrorClick, { masked, cacheBreakdown }),
-    [t, handleContentClick, handleErrorClick, masked, cacheBreakdown],
+      buildRequestLogGridColumns(t, {
+        identity: "user",
+        masked,
+        clients,
+        now: loadedAt,
+        facets: facetOptions,
+        onOpenContent: openContent,
+        onOpenError: openError,
+      }),
+    [clients, facetOptions, loadedAt, masked, openContent, openError, t],
+  );
+  const defaultHidden = useMemo(
+    () => columns.filter((column) => column.defaultHidden).map((column) => column.id),
+    [columns],
+  );
+  const prefs = useGridPreferences("request-logs", { hidden: defaultHidden });
+
+  const facets = useMemo<RequestLogFacet[]>(
+    () => [
+      { columnId: "identity", label: t("request_logs.col_user_key"), options: facetOptions.identity },
+      { columnId: "model", label: t("request_logs.col_model"), options: facetOptions.model },
+      { columnId: "channel", label: t("request_logs.col_channel"), options: facetOptions.channel },
+      ...(clients === "supported"
+        ? [{ columnId: "agent" as const, label: t("request_logs.col_agent"), options: facetOptions.agent }]
+        : []),
+    ],
+    [clients, facetOptions, t],
   );
 
-  // Build multi-select options from backend filter data (exclude the "" "all" option)
-  const keyOptions = useMemo<SearchableCheckboxMultiSelectOption[]>(() => {
-    const opts = buildRequestLogKeyOptionsFromFacet(keyFacet, {
-      allKeys: t("request_logs.all_users"),
-      systemCall: t("request_logs.system_call"),
-    });
-    return sortRequestLogKeyOptionsByCount(opts, i18n.resolvedLanguage)
-      .filter((option) => option.value !== "")
-      .map((option) => ({
-        value: option.value,
-        label: option.label,
-        searchText: option.searchText,
-        trailing: <RequestLogFilterCount count={option.count} />,
-      }));
-  }, [i18n.resolvedLanguage, keyFacet, t]);
-
-  const modelOptions = useMemo<SearchableCheckboxMultiSelectOption[]>(() => {
-    return filterOptions.models.map((m) => ({
-      value: m,
-      label: <ModelTag id={m} size="sm" />,
-      searchText: m,
-    }));
-  }, [filterOptions.models]);
-
-  const channelOptions = useMemo<SearchableCheckboxMultiSelectOption[]>(() => {
-    const source: UsageChannelFilterOption[] =
-      filterOptions.channel_options.length > 0
-        ? filterOptions.channel_options
-        : filterOptions.channels.map((ch) => ({
-            value: ch,
-            label: ch,
-          }));
-    const apiLabel = t("request_logs.auth_type_api");
-    const oauthLabel = t("request_logs.auth_type_oauth");
-    return source.map((option) => {
-      const provider = String(option.provider ?? "").trim();
-      const authType = String(option.auth_type ?? "").trim();
-      return {
-        value: option.value,
-        label: (
-          <ChannelIdentityLabel
-            name={option.label}
-            provider={option.provider}
-            authType={option.auth_type}
-            apiLabel={apiLabel}
-            oauthLabel={oauthLabel}
-            className="w-full"
-            nameClassName="text-sm font-normal text-inherit"
-          />
-        ),
-        searchText: [option.label, provider, authType, option.value].filter(Boolean).join(" "),
-        title: option.label,
-      };
-    });
-  }, [filterOptions.channel_options, filterOptions.channels, t]);
-
-  const statusOptions = useMemo<SearchableCheckboxMultiSelectOption[]>(() => {
-    return (filterOptions.statuses ?? ["success", "failed"]).map((status) => ({
-      value: status,
-      label:
-        status === "success"
-          ? t("request_logs.status_success")
-          : status === "failed"
-            ? t("request_logs.status_failed")
-            : status,
-      searchText: status,
-    }));
-  }, [filterOptions.statuses, t]);
-
-  const apiKeyFilterValues = useMemo(() => keyOptions.map((option) => option.value), [keyOptions]);
-  const modelFilterValues = useMemo(
-    () => modelOptions.map((option) => option.value),
-    [modelOptions],
-  );
-  const channelFilterValues = useMemo(
-    () => channelOptions.map((option) => option.value),
-    [channelOptions],
-  );
-  const statusFilterValues = useMemo<StatusFilterValue[]>(
-    () => toStatusFilterValues(statusOptions.map((option) => option.value)),
-    [statusOptions],
-  );
-
-  const apiKeyFilterParam = useMemo(() => toFilterParam(selectedApiKeys), [selectedApiKeys]);
-  const modelFilterParam = useMemo(() => toFilterParam(selectedModels), [selectedModels]);
-  const channelFilterParam = useMemo(() => toFilterParam(selectedChannels), [selectedChannels]);
-  const statusFilterParam = useMemo(() => toFilterParam(selectedStatuses), [selectedStatuses]);
-
-  const hasActiveFilters =
-    hasActiveFilterSelection(selectedApiKeys, apiKeyFilterValues) ||
-    hasActiveFilterSelection(selectedModels, modelFilterValues) ||
-    hasActiveFilterSelection(selectedChannels, channelFilterValues) ||
-    hasActiveFilterSelection(selectedStatuses, statusFilterValues) ||
-    guardFilter !== "all";
-
-  const handleApiKeysChange = useCallback(
-    (value: string[]) => {
-      setSelectedApiKeys(normalizeFilterSelection(value, apiKeyFilterValues));
-    },
-    [apiKeyFilterValues],
-  );
-
-  const handleModelsChange = useCallback(
-    (value: string[]) => {
-      setSelectedModels(normalizeFilterSelection(value, modelFilterValues));
-    },
-    [modelFilterValues],
-  );
-
-  const handleChannelsChange = useCallback(
-    (value: string[]) => {
-      setSelectedChannels(normalizeFilterSelection(value, channelFilterValues));
-    },
-    [channelFilterValues],
-  );
-
-  const handleStatusesChange = useCallback(
-    (value: StatusFilterValue[]) => {
-      setSelectedStatuses(normalizeFilterSelection(value, statusFilterValues));
-    },
-    [statusFilterValues],
-  );
-
-  const resetFilters = useCallback(() => {
-    setSelectedApiKeys(null);
-    setSelectedModels(null);
-    setSelectedChannels(null);
-    setSelectedStatuses(null);
+  const clearFilters = useCallback(() => {
+    setFilters({});
     setGuardFilter("all");
   }, []);
 
-  const clearApiKeyFilter = useCallback(() => {
-    setSelectedApiKeys(null);
-  }, []);
-
-  const clearModelFilter = useCallback(() => {
-    setSelectedModels(null);
-  }, []);
-
-  const clearChannelFilter = useCallback(() => {
-    setSelectedChannels(null);
-  }, []);
-
-  const clearStatusFilter = useCallback(() => {
-    setSelectedStatuses(null);
-  }, []);
-
-  // Fetch logs from backend (server-side pagination)
   const fetchLogs = useCallback(
     async (page: number, size: number) => {
       requestAbortRef.current?.abort();
@@ -391,13 +231,7 @@ export function RequestLogsPage() {
             page,
             size,
             days: timeRange,
-            ...requestLogKeyFilterQuery(keyFacetRef.current, apiKeyFilterParam),
-            models: modelFilterParam.values,
-            channels: channelFilterParam.values,
-            statuses: statusFilterParam.values,
-            models_empty: modelFilterParam.matchesNone,
-            channels_empty: channelFilterParam.matchesNone,
-            statuses_empty: statusFilterParam.matchesNone,
+            ...requestLogQueryFromFilters(filters, keyFacetRef.current, clients === "supported"),
             guard_kinds: guardKindsOfFilter(guardFilter),
           },
           { signal: controller.signal },
@@ -408,53 +242,56 @@ export function RequestLogsPage() {
         setRawItems(resp.items ?? []);
         setTotalCount(resp.total ?? 0);
         setCurrentPage(page);
+        setLoadError(null);
+        setLoadedAt(Date.now());
+        setHasResponse(true);
         const facet = readRequestLogKeyFacet(resp);
-        if (
-          facet.byId !== keyFacetRef.current.byId &&
-          (apiKeyFilterParam.values || apiKeyFilterParam.matchesNone)
-        ) {
-          // The backend changed vocabulary under an open page (upgraded, or rolled
-          // back): the selection names keys the new facet does not know.
-          setSelectedApiKeys(null);
+        if (facet.byId !== keyFacetRef.current.byId && filters.identity) {
+          // The backend changed vocabulary under an open page (upgraded, or rolled back): the
+          // selection names keys the new facet does not know.
+          setFilters((prev) => {
+            const next = { ...prev };
+            delete next.identity;
+            return next;
+          });
         }
         keyFacetRef.current = facet;
         setKeyFacet(facet);
+        const clientsSupported =
+          resp.capabilities?.requestLogClients === true || itemsCarryClientFields(resp.items ?? []);
+        setClientsFromLogs(clientsSupported);
+        if (!clientsSupported && filters.agent) {
+          setFilters((prev) => {
+            const next = { ...prev };
+            delete next.agent;
+            return next;
+          });
+        }
         // The API client fills every capability, but a response that declares nothing is, by
         // definition, from a backend that predates loop protection.
         const guardSupported = resp.capabilities?.loopGuard === true;
         setGuardFacet({ supported: guardSupported, kinds: resp.filters?.guard_kinds ?? [] });
-        // A backend that lost loop protection under an open page (rolled back) would answer
-        // every request to a filter it ignores, which would read as "nothing was stopped".
+        // A backend that lost loop protection under an open page (rolled back) would answer every
+        // request to a filter it ignores, which would read as "nothing was stopped".
         if (!guardSupported) setGuardFilter("all");
         setFilterOptions({
           models: resp.filters?.models ?? [],
           channels: resp.filters?.channels ?? [],
           channel_options: resp.filters?.channel_options ?? [],
           statuses: resp.filters?.statuses ?? ["success", "failed"],
+          client_names: resp.filters?.client_names ?? [],
+          client_name_counts: resp.filters?.client_name_counts ?? {},
         });
-        setStats({
-          ...DEFAULT_LOG_STATS,
-          ...resp.stats,
-        });
+        setStats({ ...DEFAULT_LOG_STATS, ...resp.stats });
       } catch (err) {
         if (seq !== requestSeqRef.current || isRequestCancelled(err, controller.signal)) return;
-        const message = err instanceof Error ? err.message : t("request_logs.refresh_failed");
-        notify({ type: "error", message });
+        setLoadError(err instanceof Error ? err.message : t("request_logs.refresh_failed"));
       } finally {
         if (requestAbortRef.current === controller) requestAbortRef.current = null;
         if (seq === requestSeqRef.current && !controller.signal.aborted) setLoading(false);
       }
     },
-    [
-      apiKeyFilterParam,
-      channelFilterParam,
-      guardFilter,
-      modelFilterParam,
-      notify,
-      statusFilterParam,
-      t,
-      timeRange,
-    ],
+    [clients, filters, guardFilter, t, timeRange],
   );
 
   useEffect(() => {
@@ -464,131 +301,63 @@ export function RequestLogsPage() {
     };
   }, []);
 
-  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
-
-  const handlePageChange = useCallback(
-    (page: number) => {
-      const clamped = Math.max(1, Math.min(page, totalPages));
-      fetchLogs(clamped, pageSize);
-    },
-    [fetchLogs, pageSize, totalPages],
-  );
-
-  const handlePageSizeChange = useCallback(
-    (newSize: number) => {
-      setPageSize(newSize);
-      fetchLogs(1, newSize);
-    },
-    [fetchLogs],
-  );
-
-  // Fetch page 1 when filters change
+  // Fetch page 1 when the range or a filter changes.
   useEffect(() => {
-    fetchLogs(1, pageSize);
-  }, [timeRange, selectedApiKeys, selectedModels, selectedChannels, selectedStatuses, guardFilter]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const handleOpenClearDialog = useCallback(() => {
-    setClearOptions(DEFAULT_CLEAR_OPTIONS);
-    setConfirmClearOpen(true);
-  }, []);
+    void fetchLogs(1, pageSize);
+  }, [timeRange, filters, guardFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleClearDatabaseLogs = useCallback(async () => {
     setClearingLogs(true);
     try {
       const result = await usageApi.clearUsageLogs(clearOptions);
       await fetchLogs(1, pageSize);
-      const successMessage = clearOptions.clear_request_records
-        ? t("request_logs.clear_database_logs_success_records", {
-            count: result.deleted_logs,
-          })
-        : t("request_logs.clear_database_logs_success_content");
       notify({
         type: "success",
-        message: successMessage,
+        message: clearOptions.clear_request_records
+          ? t("request_logs.clear_database_logs_success_records", { count: result.deleted_logs })
+          : t("request_logs.clear_database_logs_success_content"),
       });
       setConfirmClearOpen(false);
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : t("request_logs.clear_database_logs_failed");
-      notify({ type: "error", message });
+      notify({
+        type: "error",
+        message: err instanceof Error ? err.message : t("request_logs.clear_database_logs_failed"),
+      });
     } finally {
       setClearingLogs(false);
     }
   }, [clearOptions, fetchLogs, notify, pageSize, t]);
 
-  // 第一页还没回来时，统计和分页都还没算出来：显示占位，不显示 0。
-  // 「0 条记录、成功率 0.0%」看起来像真的没有数据。
-  const statsPending = loading && rows.length === 0;
+  const statsPending = !hasResponse;
+  const cacheView = readCacheRate(stats);
+  const guardVisible = guardFilterVisible(guardFacet.supported, guardFacet.kinds, guardFilter);
 
   return (
-    <section data-page-fill="always" className="flex flex-1 flex-col">
+    <section data-page-fill="always" className="flex min-h-0 flex-1 flex-col gap-3">
       <h1 className="sr-only">{t("request_logs.title")}</h1>
-
-      {/*
-        不再包一层卡片：外壳的内容区就是这一页的面板，标题、筛选、表格、分页直接落在上面。
-        以前这里是「内容区 → 大卡片 → 表头灰条」三层，和其它页面叠出了太多层级。
-      */}
-      {/* min-h-0：flex item 默认 min-height:auto，会被表格内容撑开，把「内部滚动」变成整页变长 */}
-      <div className="flex min-h-0 flex-1 flex-col">
-        {/* 标题栏 */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pb-3">
-          <div className="flex flex-wrap items-center gap-3">
-            <h2 className="flex items-center gap-2 text-base font-semibold tracking-tight text-ink">
-              <ScrollText
-                size={18}
-                className={`text-ink-3 ${iconHueClass(ScrollText)}`}
-                aria-hidden="true"
-              />
-              {t("request_logs.heading")}
-            </h2>
-            <div className="hidden min-[640px]:flex items-center gap-2 text-xs text-ink-3">
-              <span className="text-ink-4">|</span>
-              <RequestLogsRecordsCount count={stats.total} pending={statsPending} />
-              <span className="text-ink-4">|</span>
-              <span>
-                {t("common.success_rate")}{" "}
-                <span className="font-mono tabular-nums text-ink">
-                  {statsPending ? STAT_PENDING : `${stats.success_rate.toFixed(1)}%`}
-                </span>
-              </span>
-              <span className="text-ink-4">|</span>
-              <span>
-                {t("request_logs.col_total_token")}{" "}
-                <span className="font-mono tabular-nums text-ink">
-                  {statsPending ? (
-                    STAT_PENDING
-                  ) : (
-                    <RequestLogUsageMetricValue value={stats.total_tokens} compact />
-                  )}
-                </span>
-              </span>
-              <span className="text-ink-4">|</span>
-              <span>
-                {t("request_logs.col_cost")}{" "}
-                <span className="font-mono tabular-nums text-ink">
-                  {statsPending ? (
-                    STAT_PENDING
-                  ) : (
-                    <RequestLogUsageMetricValue value={stats.total_cost} variant="currency" compact />
-                  )}
-                </span>
-              </span>
-              <span className="text-ink-4">|</span>
-              <RequestLogsCacheRate stats={stats} pending={statsPending} />
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
+      <header className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="flex items-center gap-2 text-base font-semibold tracking-tight text-ink">
+            <ScrollText
+              size={18}
+              className={`text-ink-3 ${iconHueClass(ScrollText)}`}
+              aria-hidden="true"
+            />
+            {t("request_logs.heading")}
+          </h2>
+          <div className="-m-1 flex flex-wrap items-center gap-2 p-1">
             <RequestLogsTimeRangeSelector value={timeRange} onChange={setTimeRange} />
             <MaskToggleButton
               masked={masked}
               onToggle={() => setMasked((prev) => !prev)}
               className="h-9 w-9"
             />
-            {/* 三个圆按钮同一个底（白底 + 阴影，隐私开着时是实心），清空只把图标换成红色。
-                以前清空是透明底、刷新是手写的白底，三颗按钮三种样子。 */}
             <Button
               variant="secondary-danger"
-              onClick={handleOpenClearDialog}
+              onClick={() => {
+                setClearOptions(DEFAULT_CLEAR_OPTIONS);
+                setConfirmClearOpen(true);
+              }}
               disabled={loading || clearingLogs}
               aria-label={t("request_logs.clear_database_logs")}
               title={t("request_logs.clear_database_logs")}
@@ -597,7 +366,8 @@ export function RequestLogsPage() {
               <Trash2 size={14} aria-hidden="true" />
             </Button>
             <Button
-              onClick={() => fetchLogs(1, pageSize)}
+              // 刷新回到第一页：日志按时间倒序，新请求都在第一页。
+              onClick={() => void fetchLogs(1, pageSize)}
               disabled={loading}
               aria-busy={loading}
               aria-label={t("request_logs.refresh")}
@@ -613,104 +383,94 @@ export function RequestLogsPage() {
             </Button>
           </div>
         </div>
-
-        {/* 筛选 */}
-        <RequestLogsFilters
-          keyOptions={keyOptions}
-          modelOptions={modelOptions}
-          channelOptions={channelOptions}
-          statusOptions={statusOptions}
-          selectedApiKeys={selectedApiKeys}
-          selectedModels={selectedModels}
-          selectedChannels={selectedChannels}
-          selectedStatuses={selectedStatuses}
-          onApiKeysChange={handleApiKeysChange}
-          onModelsChange={handleModelsChange}
-          onChannelsChange={handleChannelsChange}
-          onStatusesChange={handleStatusesChange}
-          onApiKeysClear={clearApiKeyFilter}
-          onModelsClear={clearModelFilter}
-          onChannelsClear={clearChannelFilter}
-          onStatusesClear={clearStatusFilter}
-          onResetFilters={resetFilters}
-          hasActiveFilters={hasActiveFilters}
-          guardFilter={
-            guardFilterVisible(guardFacet.supported, guardFacet.kinds, guardFilter)
-              ? { value: guardFilter, kinds: guardFacet.kinds, onChange: setGuardFilter }
-              : undefined
-          }
-        />
-
-        {/*
-          表格区域 — flex-1 占满标题、筛选、分页之外剩下的高度，表格 fill 铺满它：加载、空、
-          行少、行多都是同一个框，分页条和横向滚动条不随行数移动，数据回来时也不跳。
-          （#1085 曾改成按行数收高：行少时表格只到页面中间，首次加载时骨架只有五行高、
-          数据回来再整块撑开，分页条跟着跳 200 多 px。）
-          不用 h-[calc(100dvh-300px)]：那个 300 是标题栏 + 筛选区 + 分页条的手工累加，
-          筛选区换行、字号或密度一变就对不上，表格要么矮一截、要么高出去把分页顶掉。
-          min-h-0 覆盖 flex item 默认的 min-height:auto（否则表格会被内容撑开，整页变长而不是
-          内部滚动）。这里不能写 min-h-[360px] 之类的保底：页面高度被窗口钉死，
-          窗口一矮，保底高度只会把表格和分页条挤出页面之外，而不是让页面滚动。
-        */}
-        <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
-          <DataTable
-            fill
-            tableId="request-logs"
-            rows={rows}
-            columns={logColumns}
-            rowKey={(row) => row.id}
-            loading={loading}
-            virtualize={false}
-            minWidth="min-w-[1240px]"
-            caption={t("request_logs.table_caption")}
-            emptyText={t("request_logs.no_data")}
-            emptyDescription={t("request_logs.no_data_desc")}
-            emptyIcon={<ScrollText size={20} strokeWidth={1.5} aria-hidden />}
-            showAllLoadedMessage={false}
-          />
-
-          {/* 刷新、翻页、换筛选时罩住旧数据。首次加载还没有行，交给表格自己的骨架：
-              以前两样叠在一起，骨架被糊掉白画，读屏还要念两遍「加载中」。 */}
-          {loading && rows.length > 0 ? (
-            <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-canvas/70 backdrop-blur-sm">
-              <div className="inline-flex items-center gap-2 rounded-full bg-elevated px-3.5 py-2 text-sm font-medium text-ink-2 shadow-pop">
-                <span
-                  className="h-4 w-4 rounded-full border-2 border-ink/15 border-t-ink motion-reduce:animate-none motion-safe:animate-spin"
-                  aria-hidden="true"
-                />
-                <span role="status">{t("common.loading_ellipsis")}</span>
-              </div>
-            </div>
-          ) : null}
-        </div>
-
-        {/* 分页控件 — flex-shrink-0 固定在底部 */}
-        <RequestLogsPaginationBar
-          flush
+        <RequestLogSummary
           pending={statsPending}
-          currentPage={currentPage}
-          totalPages={totalPages}
-          totalCount={totalCount}
+          stats={{
+            total: stats.total,
+            successRate: stats.success_rate,
+            totalTokens: stats.total_tokens,
+            totalCost: stats.total_cost,
+            cache: {
+              percent: cacheRatePercent(cacheView, stats.total > 0),
+              label: t(
+                cacheView.kind === "hit_rate" ? "request_logs.cache_hit_rate" : "request_logs.cache_rate",
+              ),
+              hint: t(
+                cacheView.kind === "hit_rate"
+                  ? "request_logs.summary_cache_hit_hint"
+                  : "request_logs.summary_cache_share_hint",
+              ),
+            },
+          }}
+        />
+      </header>
+
+      <RequestLogFilterBar
+        columns={columns}
+        filters={filters}
+        onFiltersChange={setFilters}
+        facets={facets}
+        prefs={prefs}
+        guard={
+          guardVisible
+            ? { value: guardFilter, kinds: guardFacet.kinds, onChange: setGuardFilter }
+            : undefined
+        }
+      />
+
+      {/*
+        表格区域 — flex-1 占满标题、筛选之外剩下的高度，表格 fill 铺满它：加载、空、行少、行多都是
+        同一个框，分页和横向滚动条不随行数移动，数据回来时也不跳。不写 min-h 保底：页面高度被窗口
+        钉死，窗口一矮，保底高度只会把表格和分页挤出页面之外。
+      */}
+      <div className="flex min-h-0 flex-1 flex-col">
+        <RequestLogGrid
+          id="request-logs"
+          label={t("request_logs.table_caption")}
+          columns={columns}
+          rows={rows}
+          loading={loading}
+          error={loadError}
+          onRetry={() => void fetchLogs(currentPage, pageSize)}
+          filters={filters}
+          onFiltersChange={setFilters}
+          extraFilterLabels={
+            guardFilter !== "all"
+              ? [`${t("request_logs.guard_filter_label")}：${t(`request_logs.guard_filter_${guardFilter}`)}`]
+              : []
+          }
+          onClearFilters={clearFilters}
+          prefs={prefs}
+          masked={masked}
+          onOpenContent={openContent}
+          onOpenError={openError}
+          page={currentPage}
           pageSize={pageSize}
-          onPageChange={handlePageChange}
-          onPageSizeChange={handlePageSizeChange}
+          total={totalCount}
+          pending={statsPending}
+          onPageChange={(page) => void fetchLogs(page, pageSize)}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            void fetchLogs(1, size);
+          }}
+          resetScrollKey={`${currentPage}|${pageSize}|${timeRange}|${JSON.stringify(filters)}|${guardFilter}`}
         />
       </div>
 
       <LogContentModal
-        open={contentModalOpen}
-        logId={contentModalLogId}
-        displayModel={contentModalModel}
-        initialTab={contentModalTab}
-        onClose={() => setContentModalOpen(false)}
+        open={content.open}
+        logId={content.logId}
+        displayModel={content.model}
+        initialTab={content.tab}
+        onClose={() => setContent((prev) => ({ ...prev, open: false }))}
         showRequestDetails
         showBodyContent={requestBodyStorageEnabled}
       />
       <ErrorDetailModal
-        open={errorModalOpen}
-        logId={errorModalLogId}
-        model={errorModalModel}
-        onClose={() => setErrorModalOpen(false)}
+        open={errorModal.open}
+        logId={errorModal.logId}
+        model={errorModal.model}
+        onClose={() => setErrorModal((prev) => ({ ...prev, open: false }))}
       />
       <ClearDatabaseLogsDialog
         open={confirmClearOpen}

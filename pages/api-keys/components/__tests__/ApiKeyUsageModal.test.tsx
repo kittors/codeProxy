@@ -5,7 +5,7 @@ import { ThemeProvider } from "@code-proxy/ui";
 import { ApiKeyUsageModal } from "../ApiKeyUsageModal";
 
 describe("ApiKeyUsageModal", () => {
-  test("uses shared DataTable empty state when there are no usage rows", async () => {
+  test("uses the shared grid empty state when there are no usage rows", async () => {
     await i18n.changeLanguage("en");
 
     render(
@@ -41,16 +41,9 @@ describe("ApiKeyUsageModal", () => {
           usageStatusFilter=""
           setUsageStatusFilter={vi.fn()}
           usageStatusOptions={[]}
-          usageLogColumns={[
-            {
-              key: "id",
-              label: "ID",
-              render: (row) => row.id,
-            },
-          ]}
+          usageLogColumns={[{ id: "id", header: "ID", cell: (row) => row.id }]}
           usageRows={[]}
           usageCurrentPage={1}
-          usageTotalPages={1}
           setUsagePageSize={vi.fn()}
         />
       </ThemeProvider>,
@@ -58,7 +51,7 @@ describe("ApiKeyUsageModal", () => {
 
     expect(await screen.findByText("No usage records")).toBeInTheDocument();
     expect(document.querySelector("[data-empty-state]")).not.toBeNull();
-    expect(document.querySelector("table[data-vt-empty='true']")).not.toBeNull();
+    expect(screen.getByRole("grid", { name: "Usage records" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Token usage" })).toHaveTextContent(
       "Input120Current pageOutput30Current pageTotal tokens150Filtered results",
     );
@@ -106,10 +99,9 @@ describe("ApiKeyUsageModal", () => {
           usageStatusFilter=""
           setUsageStatusFilter={vi.fn()}
           usageStatusOptions={[{ value: "", label: "All Status" }]}
-          usageLogColumns={[{ key: "id", label: "ID", render: (row) => row.id }]}
+          usageLogColumns={[{ id: "id", header: "ID", cell: (row) => row.id }]}
           usageRows={[]}
           usageCurrentPage={1}
-          usageTotalPages={1}
           setUsagePageSize={vi.fn()}
         />
       </ThemeProvider>,

@@ -143,7 +143,11 @@ describe("usage logs api", () => {
 
     const result = await usageApi.getUsageLogs({});
 
-    expect(result.capabilities).toEqual({ apiKeyIdFilters: true, loopGuard: false });
+    expect(result.capabilities).toEqual({
+      apiKeyIdFilters: true,
+      loopGuard: false,
+      requestLogClients: false,
+    });
     expect(result.filters).toMatchObject({
       api_key_ids: ["key-primary", "__system__"],
       api_key_id_names: { "key-primary": "Primary" },
@@ -160,9 +164,14 @@ describe("usage logs api", () => {
     expect(readUsageLogsCapabilities({ "api-key-id-filters": true })).toEqual({
       apiKeyIdFilters: true,
       loopGuard: false,
+      requestLogClients: false,
     });
     for (const value of [undefined, null, "yes", [], {}, { "api-key-id-filters": "true" }]) {
-      expect(readUsageLogsCapabilities(value)).toEqual({ apiKeyIdFilters: false, loopGuard: false });
+      expect(readUsageLogsCapabilities(value)).toEqual({
+        apiKeyIdFilters: false,
+        loopGuard: false,
+        requestLogClients: false,
+      });
     }
   });
 
@@ -174,10 +183,11 @@ describe("usage logs api", () => {
     expect(readUsageLogsCapabilities({ "loop-guard": true })).toEqual({
       apiKeyIdFilters: false,
       loopGuard: true,
+      requestLogClients: false,
     });
     expect(
       readUsageLogsCapabilities({ "api-key-id-filters": true, "loop-guard": true }),
-    ).toEqual({ apiKeyIdFilters: true, loopGuard: true });
+    ).toEqual({ apiKeyIdFilters: true, loopGuard: true, requestLogClients: false });
     for (const value of [undefined, null, "yes", [], {}, { "loop-guard": "true" }, { "loop-guard": 1 }]) {
       expect(readUsageLogsCapabilities(value).loopGuard).toBe(false);
     }
@@ -330,5 +340,43 @@ describe("usage logs api", () => {
     expect(getMock).toHaveBeenCalledWith("/usage/logs?page=2", {
       signal: controller.signal,
     });
+  });
+  // request-log-clients：行上带调用方三个字段，筛选项里有 client_names（"__unknown__" 代表没有客户端名的请求），
+  // Agent 筛选走重复的 client_name 参数，和 model 一样。
+  test("reads the Agent facet and sends the Agent filter like the model filter", async () => {
+    const { usageApi, readUsageLogsCapabilities } = await import(
+      "@code-proxy/api-client/endpoints/usage"
+    );
+    expect(readUsageLogsCapabilities({ "request-log-clients": true }).requestLogClients).toBe(true);
+    expect(readUsageLogsCapabilities({ "request-log-clients": "true" }).requestLogClients).toBe(false);
+    getMock.mockResolvedValue({
+      items: [
+        {
+          id: 1,
+          client_name: "claude-code",
+          client_version: "2.1.3",
+          user_agent: "claude-cli/2.1.3 (external, cli)",
+        },
+      ],
+      total: 1,
+      capabilities: { "request-log-clients": true },
+      filters: {
+        client_names: ["claude-code", "__unknown__", 7],
+        client_name_counts: { "claude-code": 9, __unknown__: 2 },
+      },
+      stats: {},
+    });
+    const result = await usageApi.getUsageLogs({
+      client_names: ["claude-code", "__unknown__", "claude-code"],
+      client_names_empty: true,
+    });
+    expect(result.capabilities.requestLogClients).toBe(true);
+    expect(result.filters.client_names).toEqual(["claude-code", "__unknown__"]);
+    expect(result.filters.client_name_counts).toEqual({ "claude-code": 9, __unknown__: 2 });
+    expect(result.items[0]).toMatchObject({ client_name: "claude-code", client_version: "2.1.3" });
+    const path = String(getMock.mock.calls.at(-1)?.[0]);
+    const query = new URLSearchParams(path.slice(path.indexOf("?") + 1));
+    expect(query.getAll("client_name")).toEqual(["claude-code", "__unknown__"]);
+    expect(query.get("client_names_empty")).toBe("1");
   });
 });

@@ -30,8 +30,12 @@ const baseRow: RequestLogsRow = {
   cacheUse: { kind: "legacy", cachedTokens: 0 },
   outputTokens: 1,
   totalTokens: 2,
+  promptTokens: null,
   cost: 0,
   hasContent: false,
+  clientName: "",
+  clientVersion: "",
+  userAgent: "",
 };
 
 const MISMATCH_LABEL = /Upstream answered as a different model|上游响应模型不一致/;
