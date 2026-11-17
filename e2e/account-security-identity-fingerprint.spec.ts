@@ -825,7 +825,8 @@ test("AI Accounts shows auth files and account identity fingerprint details", as
   await expect(identityFields).toContainText(codexDesktopUserAgent);
   await expect(identityFields).not.toContainText(codexCLIUserAgent);
 
-  await dialog.getByRole("button", { name: /^(Close|关闭)$/ }).click();
+  // 详情弹窗有右上角的 ×，底部也有「关闭」：哪个都行，点第一个。
+  await dialog.getByRole("button", { name: /^(Close|关闭)$/ }).first().click();
 
   const geminiRow = page.locator("tr", { hasText: "Gemini CLI Primary" });
   await expect(geminiRow).toBeVisible();
@@ -851,8 +852,9 @@ test("AI Accounts table shows direct quota metrics and keeps actions fixed", asy
 
   await page.goto("/#/access/ai-accounts");
 
-  const table = page.getByRole("table");
-  const codexRow = page.locator("tr", { hasText: "Codex Terminal OAuth" });
+  // DataGrid：带批量选择的列表是 role="grid"，只读的是 table，按结构找更稳。
+  const table = page.locator("table.cp-grid-table").first();
+  const codexRow = page.locator("tr[data-row-key]", { hasText: "Codex Terminal OAuth" });
   await expect(codexRow).toBeVisible();
   await expect(page.getByRole("combobox", { name: /Quota|配额/i })).toHaveCount(0);
   await expect(codexRow.getByText("Code: 5h")).toBeVisible();
@@ -867,10 +869,10 @@ test("AI Accounts table shows direct quota metrics and keeps actions fixed", asy
   await expect(metrics.nth(1)).toHaveAttribute("data-layout", "compact");
   await expect(metrics.nth(2)).toHaveAttribute("data-layout", "wide");
 
-  const viewport = table.locator(
-    "xpath=ancestor::div[@data-scrollbar-visibility='hover'][1]",
-  );
-  const actionsCell = codexRow.locator('td[data-vt-column-key="actions"]');
+  // 表体视口是 table 的父元素；操作列冻结在右侧（data-pin="end"）。
+  const viewport = table.locator("xpath=..");
+  const actionsCell = codexRow.locator('td[data-col="actions"]');
+  await expect(actionsCell).toHaveAttribute("data-pin", "end");
   const viewportBox = await viewport.boundingBox();
   const actionsBefore = await actionsCell.boundingBox();
   if (!viewportBox || !actionsBefore) {
@@ -1051,9 +1053,8 @@ test("AI Accounts mobile table scroll chains from the middle of the page", async
   await filterToggle.click();
   await expect(filterToggle).toHaveAttribute("aria-expanded", "true");
 
-  const tableViewport = page
-    .locator('[data-scrollbar-visibility="hover"]')
-    .first();
+  // DataGrid 的表体视口。
+  const tableViewport = page.locator(".cp-grid-viewport").first();
   await expect(tableViewport).toBeVisible();
   await expect(tableViewport).toHaveCSS("overscroll-behavior-y", "auto");
   const tableScrollMetrics = await tableViewport.evaluate(
