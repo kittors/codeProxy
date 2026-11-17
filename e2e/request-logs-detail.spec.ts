@@ -117,7 +117,8 @@ test("Request Logs: opens full detail content and switches output raw view", asy
   await expect(page.getByText("Streaming")).toBeVisible();
   await expect(page.getByText("120ms")).toBeVisible();
 
-  await page.getByTitle("Click to view output").click();
+  // 输出 token 数本身就是打开内容的按钮；新表格用悬停提示代替原生 title，按钮名是「Click to view output · 34」。
+  await page.getByRole("button", { name: /^Click to view output/ }).click();
   await expect(page.getByText("hello output payload")).toBeVisible();
 
   const detailDialog = page.getByRole("dialog");
